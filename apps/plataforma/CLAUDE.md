@@ -753,10 +753,18 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
     Claude Chrome y bajó **18 documentos de las 9 fichas con muro en dos minutos**. Solo una
     (`SUB-JA-2026-265289`, Barbate) publica edicto y **no** certificación de cargas: esa sí hay que pedirla
     al Registro. **Ninguna de las otras 8 carecía de documentación.**
-  - **El camino bueno, por tanto, es el buzón de entrada del lector**, no el login: el cron ya sabe QUÉ
-    fichas tienen muro, Alberto baja los PDFs con Chrome y los deja en Drive (el repo ya escribe en Drive
-    para las facturas) → el lector los procesa. No depende de burlar nada ni se rompe si el BOE cambia una
-    palabra. **PENDIENTE de construir.**
+  - **El camino bueno, por tanto, es el buzón de entrada del lector**, no el login — **CONSTRUIDO el
+    24/08/2026, por la FICHA y no por Drive**: botón «📥 Aportar documentos» en `/subastas` (componente
+    `DocsAportados`, multi-fichero, en cada ficha) → `POST /api/subastas/documentos` → el MISMO lector
+    registral que los adjuntos del BOE (doble pasada + consenso, visión para escaneados) → las cargas
+    leídas van al corpus `subastas.cargas_*` **con la semántica exacta del cron** (solo pisa cuando hay
+    cargas leídas; un PDF ilegible se registra como ilegible, jamás como «sin cargas»). Histórico en la
+    tabla **`subastas_docs_aportados`** (migración `2026-08-24_subastas_docs_aportados.sql`, aplicada).
+    Dos decisiones no obvias: (a) a diferencia de la nota simple, lo aportado SÍ escribe el corpus global
+    — son los MISMOS documentos oficiales del Portal, solo que bajados con sesión; (b) las señales del
+    edicto se guardan en `subastas_docs_aportados.notas`, **NO en `subastas.notas_edicto`** — esa columna
+    la pisa el cron incondicionalmente en cada pasada del muro y se llevaría lo aportado. Lógica pura en
+    `lib/subastas/docs-aportados-logica.ts` (testeada); BD/red en `lib/subastas/docs-aportados.ts`.
   - 🚨 **Dos bugs propios que este episodio destapó, y que son la lección de método:**
     · El detector de sesión buscaba «Cerrar sesión»; la barra del Portal dice **«Desconectar»**. Constaba
       por escrito en dos observaciones de la página viva, y **el fixture del test se redactó con la misma
@@ -819,10 +827,37 @@ Radar de subastas judiciales/notariales del BOE con coste real de adquisición. 
     revisado» **con solo tocarla**. Ahora la documentación viaja con la fila y el cliente FUSIONA en vez de
     sustituir (el endpoint no calcula `escenarios` ni la foto viva de la subasta).
   - **PENDIENTE:** llevar el estado de pujas a la ficha de `/subastas` (hoy solo va en el Telegram);
-    registrar el MOTIVO del descarte para que el radar aprenda; y `SUB-JA-2026-262310`, cuya certificación
-    está descargada y sin cuadro — 26 páginas CCITT/JBIG2 con **OCR basura** (553.750 chars del tipo
-    «puntaumbña@registrodelapropiedad.org»): `pareceEscaneado()` mide CANTIDAD de texto, no calidad, y
-    `localizarJpegs()` solo ve JPEG (ahí no hay ninguno). Pide rasterizador de PDF, no un umbral.
+    registrar el MOTIVO del descarte para que el radar aprenda.
+  - **🖨️ Rasterizador de PDF (24/08/2026):** los registros escanean en **CCITT G4/JBIG2** (compresión de
+    fax, sin un solo JPEG embebido) → `localizarJpegs()` devolvía 0 bandas y la certificación salía
+    «ilegible» con el PDF delante (`SUB-JA-2026-262310`, 26 páginas; la de Siero en la prueba del buzón).
+    Respaldo en `lib/subastas/rasterizar-pdf.ts`: **PDFium en WASM** (`@hyzyla/pdfium`, MIT, sin binarios
+    nativos — en `serverExternalPackages` para que webpack no empaquete el .wasm) renderiza las páginas en
+    GRIS y `sharp` las codifica a JPEG; `leerDocumento` lo usa SOLO cuando no hay JPEGs que rescatar (es
+    más caro: ~0,8 s/página). Validado contra la certificación real de Punta Umbría (12 páginas legibles).
+    OJO: el caso «OCR basura» (texto extraíble pero ilegible, `pareceEscaneado()` mide cantidad y no
+    calidad) sigue entrando por la vía de texto — si reaparece, la señal es un cuadro vacío con confianza
+    baja sobre un doc con muchos chars.
+  - **🚨 LANDMINE — enrutado de IA del lector: `modelo` ≠ `categoria` en `chatConDirector` (24/08/2026,
+    PR #1675):** `modelo` es un PIN que SALTA OpenRouter entero (la petición va a la cadena clásica NIM);
+    `categoria` elige por catálogo DENTRO de OpenRouter. `leerTexto` pinó un id de catálogo OpenRouter
+    (`google/gemini-2.5-flash`) como `modelo` → NVIDIA devolvía 404 → **el lector de TEXTO llevaba muerto
+    desde su estreno** (solo funcionaba la visión de escaneados), y lo destapó la primera prueba real del
+    buzón. Regla: el lector registral usa `categoria: 'registral'`, jamás `modelo`; lo vigila el guardián
+    `lib/subastas/lector-registral-enrutado.test.ts` (lee el FUENTE — ni tsc ni build cazan este bug).
+  - **🧑‍⚖️ VEREDICTO en la ficha + ref catastral desde los aportados (24/08/2026, PR #1680):**
+    `module-subastas/veredicto.ts` (puro, 11 tests) pinta arriba de cada `FichaSubasta` un titular:
+    🟢 interesa (con techo de puja por bisección sobre `calcularCoste`, descuento objetivo 25%) /
+    🔴 no interesa / 🟠 faltan datos (y dice CUÁLES) / ⚫ cerrada. **Asimetría deliberada:** el 🔴 es
+    afirmable con piezas sin resolver (lo que falta solo empeora); el 🟢 exige valor de mercado REAL
+    (la estimación m²×€/m² de zona NUNCA sentencia — siempre 🟠) y cargas resueltas. Razones: techo vs
+    `cantidad_reclamada` («hasta ahí el ejecutante puede sobrepujarte sin gastar un euro»), ocupada→
+    lanzamiento, y **📊 probabilidad de quedártela** por calibración de remates (`calibracionAdjudicaciones`):
+    compara techo/tipo contra el ratio mediano de SU provincia, y el agregado nacional se DECLARA como tal
+    («sin muestra de Asturias; mediana global 0,64×»), nunca disfrazado de local. Además
+    `procesarDocAportado` extrae la **referencia catastral** del texto/literales de cargas
+    (`extraerRefCatastral`) → tapa `subastas.ref_catastral` SOLO si estaba NULL y pone `enriquecida_at=NULL`
+    para que el cron nocturno traiga m²/año/uso del Catastro (idea de Alberto: Siero no publicaba m²).
 
 ## 🔓 `/api/publico/*` — el único endpoint sin sesión, y su landmine de CORS (20/08/2026)
 `GET /api/publico/disponibilidad?piso=<slug>&meses=<1..12>` alimenta el calendario de la landing de

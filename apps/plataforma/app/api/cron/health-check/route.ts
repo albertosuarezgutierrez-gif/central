@@ -10,6 +10,7 @@ import { facturasMensualesFaltantes } from '@/lib/sivra/facturas-mensuales'
 import { eur } from '@/lib/dinero'
 import { veredictoLiquidacion } from '@/lib/cuadre-tarjetas'
 import { sondearProveedoresIA, TIMEOUT_MS as SONDA_TIMEOUT_MS } from '@/lib/monitoring/sonda-ia'
+import { estadoPresupuesto, PROVEEDOR_PASARELA } from '@/lib/ai-gateway'
 import { veredictoSonda } from '@/lib/monitoring/sonda-veredicto'
 import type { TraficoRealProveedor } from '@/lib/monitoring/sonda-veredicto'
 import type { NextRequest } from 'next/server'
@@ -254,6 +255,28 @@ export async function GET(req: NextRequest) {
       fallos.push(`🧺 Factura mensual sin rastro del mes pasado: ${proveedoresFaltan.join(' · ')} — ni en gastos ni pagada en el banco (¿se quedó sin pagar como la AFV-11625 de mayo?)`)
     } else ok.push('✅ Facturas mensuales (lavandería/limpieza) al día')
 
+    // Check 11-bis: el desglose de la limpieza DEGRADÓ (25/08/2026). El P&L por piso reparte cada
+    // pago a Sique Brilla con su factura si está aportada y, si no, la INFIERE por mejor ajuste al
+    // importe. Esa inferencia se rompe sola el día que suban las tarifas o que un movimiento pague
+    // dos facturas: el pago cae al reparto proporcional y la pantalla SIGUE enseñando números
+    // plausibles. Sin este aviso, la degradación es invisible — que es justo lo que la regla «un
+    // dato que NO hay ≠ un dato que no se ha mirado» prohíbe. El aviso lleva a la cura: aportar
+    // la factura en /sivra/resultado-pisos.
+    for (const m of [mesPorDefecto(), `${ahora.getUTCFullYear()}-${String(ahora.getUTCMonth() + 1).padStart(2, '0')}`]) {
+      const pl = await getPLMensual(m).catch(() => null)
+      if (pl?.desglose.facturasIlegibles) {
+        fallos.push(`🧹 No se pueden leer las facturas de limpieza aportadas (${m}): ${pl.desglose.facturasIlegibles} — el P&L está estimando lo que ya está medido`)
+      }
+      const aOjo = pl?.desglose.pagos.filter(p => p.origen === 'proporcional' || p.origen === 'partes_iguales') ?? []
+      if (aOjo.length) {
+        const total = aOjo.reduce((s, p) => s + p.importe, 0)
+        fallos.push(
+          `🧹 Limpieza sin desglosar en ${m}: ${eur(total)} repartido en proporción (no cuadra con salidas × tarifa) — ` +
+          '¿han subido las tarifas o un pago junta dos facturas? Aporta la factura en /sivra/resultado-pisos',
+        )
+      }
+    }
+
     // Check 9: Smoke-test de los CARGADORES de las páginas clave. Ejecuta las funciones que
     // alimentan /sivra/resultado-pisos, /finanzas y «Mi declaración»; si alguna lanza (p.ej.
     // drift de esquema como una vista sin una columna nueva), avisa. Los demás checks miran
@@ -295,6 +318,13 @@ export async function GET(req: NextRequest) {
     // condición el check repetiría la misma alerta cada día sobre un problema ya resuelto — ruido
     // que entrena a ignorar el canal. Un proveedor muerto con cadencia semanal sigue disparando:
     // cada pasada suya renueva los 3 días.
+    //
+    // ⚠️ Se excluye el pseudo-proveedor 'pasarela' (rechazos PRE-VUELO del propio gate: presupuesto
+    // mensual excedido, búsqueda sin configurar): ahí no se llamó a ningún proveedor, así que por
+    // definición nunca tendrán un ok=true y dispararían este check para siempre. Caso 25/08/2026:
+    // esos rechazos iban atribuidos a 'gemini' y el check acusó a Gemini —desenchufado desde el
+    // 01/08— de «15 llamadas y ninguna correcta»; el agotamiento del presupuesto lo canta ahora
+    // su propio check (12-bis), con su nombre.
     const proveedoresMuertos = await prisma.$queryRaw<
       { proveedor: string; llamadas: bigint; dias: number; ultimo_error: string | null }[]
     >`
@@ -304,6 +334,7 @@ export async function GET(req: NextRequest) {
              MAX(left(COALESCE(error, ''), 140)) AS ultimo_error
       FROM ai_usos
       WHERE creada_at > now() - interval '30 days' AND proveedor IS NOT NULL
+        AND proveedor <> ${PROVEEDOR_PASARELA}
       GROUP BY proveedor
       HAVING COUNT(*) >= 10 AND COUNT(*) FILTER (WHERE ok) = 0
          AND MAX(creada_at) > now() - interval '3 days'`
@@ -315,6 +346,26 @@ export async function GET(req: NextRequest) {
       )
     }
     if (!proveedoresMuertos.length) ok.push('✅ Ningún proveedor de IA muerto')
+
+    // Check 12-bis: presupuesto MENSUAL de la pasarela (AI_GATEWAY_LIMITE_MENSUAL, nº de llamadas
+    // OK). Cuando se agota, TODOS los /api/ai/* responden 429 hasta el día 1 — incluida la cadena
+    // gratis (chat/tools por NIM→Groq), que no cuesta nada bloquear. Antes ese estado solo se veía
+    // en el god-panel /operador/ia (nadie lo mira a diario) y, disfrazado, en el Check 12 acusando
+    // al proveedor equivocado. El límite vigente sale de la fila única de `ia_limite_mensual`
+    // (editable por Supabase sin redeploy; sin fila, manda la env AI_GATEWAY_LIMITE_MENSUAL).
+    const presupuestoMensual = await estadoPresupuesto()
+    if (presupuestoMensual.limite > 0 && presupuestoMensual.ratio >= 1) {
+      fallos.push(
+        `🔴 Pasarela IA: presupuesto mensual AGOTADO (${presupuestoMensual.usado}/${presupuestoMensual.limite} llamadas OK) — ` +
+        `todos los /api/ai/* responden 429 hasta el día 1. Si no es esperado, sube el límite en la tabla ia_limite_mensual (UPDATE ... SET limite_mensual = N; 0 = sin límite).`,
+      )
+    } else if (presupuestoMensual.limite > 0 && presupuestoMensual.ratio >= 0.8) {
+      fallos.push(`🟡 Pasarela IA: presupuesto mensual al ${Math.round(presupuestoMensual.ratio * 100)}% (${presupuestoMensual.usado}/${presupuestoMensual.limite} llamadas OK)`)
+    } else {
+      ok.push(presupuestoMensual.limite > 0
+        ? `✅ Presupuesto mensual IA: ${presupuestoMensual.usado}/${presupuestoMensual.limite} llamadas OK`
+        : '✅ Presupuesto mensual IA: sin límite configurado')
+    }
 
     // Check 13: sonda ACTIVA de proveedores de IA — no espera al tráfico.
     //

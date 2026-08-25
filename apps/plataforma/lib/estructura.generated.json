@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-24T11:20:10Z",
+  "generadoEn": "2026-08-25T11:42:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -355,7 +355,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 30
+        "evidencias": 31
       },
       "rrhh": {
         "estado": "usado",
@@ -1783,7 +1783,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 37
       },
       "rrhh": {
         "estado": "no",
@@ -2289,7 +2289,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 20
+        "evidencias": 19
       },
       "rrhh": {
         "presente": false,
@@ -2297,7 +2297,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 24
+        "evidencias": 23
       },
       "transporte": {
         "presente": false,
@@ -2625,7 +2625,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "rrhh": {
         "presente": false,
@@ -3882,6 +3882,7 @@
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
       "/api/sivra/facturas-control",
+      "/api/sivra/facturas-limpieza",
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
@@ -3931,17 +3932,16 @@
       "/api/sivra/pricing/config",
       "/api/sivra/pricing/experiments",
       "/api/sivra/pricing/experiments/check-results",
-      "/api/sivra/pricing/experiments/digest",
       "/api/sivra/pricing/guard",
       "/api/sivra/pricing/historial",
       "/api/sivra/pricing/pilot-track",
       "/api/sivra/pricing/pilot-track/historial",
       "/api/sivra/pricing/recommend",
+      "/api/sivra/pricing/rentabilidad",
       "/api/sivra/pricing/restore",
       "/api/sivra/pricing/resultados",
       "/api/sivra/pricing/resumen-diario",
       "/api/sivra/pricing/settings",
-      "/api/sivra/pricing/stats",
       "/api/sivra/rates/snapshot",
       "/api/sivra/resumen-semanal",
       "/api/sivra/seo-proposals",
@@ -3954,6 +3954,7 @@
       "/api/sociedades/[id]",
       "/api/subastas",
       "/api/subastas/criterios",
+      "/api/subastas/documentos",
       "/api/subastas/fase3-debug",
       "/api/subastas/mapa",
       "/api/subastas/nota-simple",
@@ -3974,6 +3975,7 @@
       "/api/trading/operaciones",
       "/api/trading/paper",
       "/api/trading/puntuar",
+      "/api/trading/radar",
       "/api/trading/saldo",
       "/api/trading/screener",
       "/api/trading/seleccion",
@@ -4120,7 +4122,6 @@
       "/api/pricing/resultados",
       "/api/pricing/resumen-diario",
       "/api/pricing/settings",
-      "/api/pricing/stats",
       "/api/properties",
       "/api/propietario/push-subscribe",
       "/api/rates",
@@ -4336,8 +4337,10 @@
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
+      "ia_limite_mensual",
       "ia_presupuestos",
       "idealista_api_usos",
+      "limpieza_facturas",
       "mapa_arquitectura",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
@@ -4376,6 +4379,7 @@
       "subastas_criterios",
       "subastas_debug_token",
       "subastas_descartes",
+      "subastas_docs_aportados",
       "subastas_notas_simples",
       "subastas_pujas_obs",
       "subastas_radar",
@@ -4613,6 +4617,38 @@
   ],
   "novedades": [
     {
+      "titulo": "PR #1702 mergeado a main",
+      "fecha": ""
+    },
+    {
+      "titulo": "Backfill disparado en prod",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente (decisión de Alberto, antes del 06/12/2026):",
+      "fecha": "06/12/2026"
+    },
+    {
+      "titulo": "Motor vs PriceLabs:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Salida de Chekin",
+      "fecha": ""
+    },
+    {
+      "titulo": "Booking directo",
+      "fecha": ""
+    },
+    {
+      "titulo": "Cuadro «Motor vs PL» construido (misma sesión):",
+      "fecha": ""
+    },
+    {
+      "titulo": "DECISIÓN de Alberto (mismo día, tras estudio de facturas en Gmail):",
+      "fecha": ""
+    },
+    {
       "titulo": "Canal conversacional del patrimonio + dossier inicial del CFO (24/08/2026).",
       "fecha": "24/08/2026"
     },
@@ -4638,38 +4674,6 @@
     },
     {
       "titulo": "Siguen abiertos:",
-      "fecha": ""
-    },
-    {
-      "titulo": "3 🔴:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Comprobado a mano que el 2 NO está ocurriendo:",
-      "fecha": ""
-    },
-    {
-      "titulo": "2 🟡:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente de Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "NO borrar `Cloude`",
-      "fecha": ""
-    },
-    {
-      "titulo": "La banda naranja de Supabase era un aviso legal, no una alarma.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Regla:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Verificado el trabajo del 20/08:",
       "fecha": ""
     }
   ],
@@ -5080,7 +5084,7 @@
     "packages": 38,
     "capacidades": 23,
     "skills": 35,
-    "apis": 1177,
+    "apis": 1178,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

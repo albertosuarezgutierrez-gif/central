@@ -109,14 +109,14 @@ export async function GET() {
   const occByScenario: Record<string, number> = {}
   for (const o of occ) occByScenario[o.scenario] = Number(o.occupancy)
 
-  // Precio BASE actual en Smoobu (price_pricelabs del snapshot más reciente) por piso —
+  // Precio BASE actual en Smoobu (price_live del snapshot más reciente) por piso —
   // mediana de los próximos días disponibles, como referencia de "lo que hay hoy".
   const baseNow = await prisma.$queryRaw<{ scenario: string; base_actual: number | null }[]>(Prisma.sql`
     SELECT property_id AS scenario,
-      percentile_cont(0.5) WITHIN GROUP (ORDER BY price_pricelabs)::int AS base_actual
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY price_live)::int AS base_actual
     FROM rate_snapshots
     WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
-      AND rate_date >= CURRENT_DATE AND price_pricelabs IS NOT NULL
+      AND rate_date >= CURRENT_DATE AND price_live IS NOT NULL
     GROUP BY property_id
   `)
   const baseByScenario: Record<string, number | null> = {}

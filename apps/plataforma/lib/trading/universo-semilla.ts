@@ -1,6 +1,6 @@
 // Semilla de RESPALDO del universo (solo si company_tickers.json cambia de forma o no responde):
 // las mayores de EEUU con su nombre. Con la semilla el radar degrada a ~60 nombres y lo AVISA en la
-// línea de salud — nunca falla en silencio. El universo normal (1000) viene de la SEC en runtime.
+// línea de salud — nunca falla en silencio. El universo normal (1200) viene de la SEC en runtime.
 export const UNIVERSO_SEMILLA: Array<{ simbolo: string; nombre: string }> = [
   { simbolo: 'AAPL', nombre: 'Apple Inc.' }, { simbolo: 'MSFT', nombre: 'Microsoft Corp' },
   { simbolo: 'NVDA', nombre: 'NVIDIA Corp' }, { simbolo: 'AMZN', nombre: 'Amazon.com Inc' },

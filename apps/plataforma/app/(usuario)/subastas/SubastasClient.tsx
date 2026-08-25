@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
-import { calcularCoste, direccionCatastro, esCasa, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, viviendaHabitualDeNotas, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
+import { calcularCoste, direccionCatastro, esCasa, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, veredicto, viviendaHabitualDeNotas, type CalibracionZona, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
 
 const PAGE = 50
@@ -855,6 +855,150 @@ function NotaSimpleViva({ dedupeKey }: { dedupeKey: string }) {
   )
 }
 
+interface RespuestaAportado {
+  titulo?: string
+  legible?: boolean
+  cargas?: number
+  aplicado?: boolean
+  refCatastral?: string | null
+  refAplicada?: boolean
+  importeSubsistente?: number | null
+  resumen?: string | null
+  avisos?: string[]
+  notas?: string[]
+  error?: string
+}
+
+interface DocAportadoPrevio { id: string; titulo: string; legible: boolean; cargas: number; notas: string[]; creadaEn: string }
+
+/**
+ * «Aportar documentos»: la puerta de entrada del lector para los PDFs que el
+ * cron no puede bajar. El Portal esconde los documentos de muchas fichas tras
+ * el login y el login automático no es viable (2FA + captcha) — pero Alberto
+ * los baja con su sesión en dos minutos. Aquí se los da al MISMO lector que
+ * procesa los adjuntos del BOE y la subasta queda analizada como si no hubiera
+ * muro (las cargas leídas van al corpus con la semántica del cron).
+ *
+ * `<details>` con montaje perezoso, igual que la nota simple.
+ */
+function DocsAportados({ dedupeKey, muro }: { dedupeKey: string; muro: 'ninguno' | 'parcial' | 'total' }) {
+  const [abierto, setAbierto] = useState(false)
+  const [previos, setPrevios] = useState<DocAportadoPrevio[] | null>(null)
+  const [ficheros, setFicheros] = useState<File[]>([])
+  const [leyendo, setLeyendo] = useState<string | null>(null)
+  const [resultados, setResultados] = useState<Array<{ nombre: string; r: RespuestaAportado }>>([])
+
+  useEffect(() => {
+    if (!abierto || previos !== null) return
+    fetch(`/api/subastas/documentos?dedupe_key=${encodeURIComponent(dedupeKey)}`)
+      .then((res) => res.json())
+      .then((j) => setPrevios(Array.isArray(j?.docs) ? j.docs : []))
+      .catch(() => setPrevios([]))
+  }, [abierto, previos, dedupeKey])
+
+  async function enviar() {
+    if (!ficheros.length || leyendo) return
+    setResultados([])
+    // De uno en uno: cada documento paga su propia lectura (doble pasada del
+    // lector registral) y así un PDF que falle no arrastra a los demás.
+    for (const f of ficheros) {
+      setLeyendo(f.name)
+      try {
+        const form = new FormData()
+        form.append('dedupe_key', dedupeKey)
+        form.append('fichero', f)
+        const res = await fetch('/api/subastas/documentos', { method: 'POST', body: form })
+        const r: RespuestaAportado = await res.json()
+        setResultados((prev) => [...prev, { nombre: f.name, r }])
+      } catch (e: any) {
+        setResultados((prev) => [...prev, { nombre: f.name, r: { error: e?.message ?? 'No se ha podido leer' } }])
+      }
+    }
+    setLeyendo(null)
+    setFicheros([])
+    setPrevios(null) // se relee la lista en el próximo render del efecto
+  }
+
+  return (
+    <details style={{ marginTop: 6 }} onToggle={(e) => setAbierto((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text)', minHeight: 36, display: 'flex', alignItems: 'center' }}>
+        {muro !== 'ninguno'
+          ? '📥 El Portal esconde los documentos: bájalos con tu sesión y súbemelos aquí'
+          : '📥 ¿Tienes PDFs de esta subasta (edicto, certificación…)? Súbelos y los leo'}
+      </summary>
+      {abierto && (
+        <div style={{ marginTop: 8 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted)' }}>
+            {muro !== 'ninguno'
+              ? 'El cron entra en anónimo y esta ficha solo enseña sus documentos con sesión iniciada. Descárgalos desde la ficha oficial y súbelos: se leen con el mismo lector (cargas incluidas) y la subasta queda analizada.'
+              : 'Se leen con el mismo lector registral que los adjuntos del BOE y las cargas encontradas se suman al análisis de la ficha.'}
+          </p>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            multiple
+            onChange={(e) => setFicheros(Array.from(e.target.files ?? []))}
+            style={{ ...control, width: '100%', maxWidth: '100%', padding: 8, display: 'block' }}
+          />
+          <button type="button" onClick={enviar} disabled={!!leyendo || ficheros.length === 0} style={{ ...boton(true), marginTop: 8 }}>
+            {leyendo ? `Leyendo ${leyendo}…` : `🔍 Leer ${ficheros.length > 1 ? `los ${ficheros.length} documentos` : 'el documento'}`}
+          </button>
+
+          {resultados.map(({ nombre, r }) => (
+            <div key={nombre} style={{ marginTop: 10 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text)' }}>
+                {r.error
+                  ? `⚠️ ${nombre}: ${r.error}`
+                  : !r.legible
+                    ? `🟠 ${nombre}: no se ha podido sacar nada — léelo a mano.`
+                    : r.aplicado
+                      ? `✅ ${r.titulo}: ${r.cargas === 1 ? '1 carga leída' : `${r.cargas ?? 0} cargas leídas`}${
+                          r.importeSubsistente != null
+                            ? r.importeSubsistente > 0
+                              ? ` — hereda ${eur(r.importeSubsistente)}`
+                              : ' — no subsiste ninguna'
+                            : ' — subsistentes sin cuantificar'
+                        }. Ficha actualizada.`
+                      : `✅ ${r.titulo}: leído (sin cuadro de cargas).`}
+              </p>
+              {r.refAplicada && r.refCatastral && (
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text)' }}>
+                  🏛️ Referencia catastral encontrada: <strong>{r.refCatastral}</strong> — el Catastro rellenará m², año y uso en la próxima pasada nocturna.
+                </p>
+              )}
+              {(r.notas ?? []).map((n) => (
+                <p key={n} style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text)' }}>📄 {n}</p>
+              ))}
+              {(r.avisos ?? []).map((a) => (
+                <p key={a} style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>· {a}</p>
+              ))}
+            </div>
+          ))}
+          {resultados.some(({ r }) => r.aplicado) && (
+            <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+              Recarga la página para ver el titular de cargas de la ficha con lo recién leído.
+            </p>
+          )}
+
+          {previos && previos.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>📥 Ya aportados a esta subasta:</div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text)' }}>
+                {previos.map((d) => (
+                  <li key={d.id} style={{ marginBottom: 3 }}>
+                    {d.titulo} · {new Date(d.creadaEn).toLocaleDateString('es-ES')} ·{' '}
+                    {d.legible ? (d.cargas > 0 ? `${d.cargas} carga${d.cargas === 1 ? '' : 's'}` : 'leído') : 'ilegible (léelo a mano)'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </details>
+  )
+}
+
 /**
  * Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba,
  * valor con peso debajo. La jerarquía la da la tipografía — antes todos los
@@ -986,9 +1130,30 @@ function SimuladorPuja({ s, o, params }: { s: Subasta; o?: Oportunidad | null; p
   )
 }
 
-function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }) {
+function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params, precioM2Zona, calibracion }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste; precioM2Zona?: number | null; calibracion?: CalibracionZona[] | null }) {
   const [abierto, setAbierto] = useState(false)
   const cierre = fecha(s.fechaFin)
+  // 🧑‍⚖️ El titular que Alberto pidió: interesa / no interesa / faltan datos
+  // (y CUÁLES). Todo determinista (helper puro del módulo, mismos cálculos que
+  // el resto de la ficha) — aquí no hay IA ni cifras inventadas.
+  const v = veredicto({
+    s: aInmueble(s),
+    valorMercado: o?.valorMercado ?? null,
+    valorOrientativo: o?.valorOrientativo,
+    cargas: {
+      cargas: s.cargas,
+      cargasConocidas: s.cargasConocidas,
+      documentos: doc?.documentos ?? null,
+      publicaAdjuntos: (s.fuente ?? 'boe') === 'boe',
+      muro: doc?.documentosMuro,
+      sesion: doc?.documentosSesion,
+    },
+    superficie: s.superficie,
+    precioM2Zona,
+    cerrada: s.fechaFin != null && new Date(s.fechaFin).getTime() < Date.now(),
+    params,
+    calibracion,
+  })
   // Dirección oficial del Catastro troceada (planta/puerta aparte) y, con ella,
   // el enlace al PORTAL en vez de a un pin anónimo. Sin ninguna pista de
   // ubicación, el botón no sale.
@@ -1014,6 +1179,29 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', justifyContent: 'space-between' }}>
         <strong style={{ color: 'var(--text)' }}>{s.identificador ?? s.dedupeKey}</strong>
         {o && <Puntuacion v={o.puntuacion} />}
+      </div>
+
+      {/* 🧑‍⚖️ Veredicto: el resumen accionable, arriba del todo. El detalle
+          (razones + qué falta) plegado — regla de rendimiento del repo. */}
+      <div style={{ margin: '8px 0 0', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card, transparent)' }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+          {v.emoji} Veredicto: {v.titular}
+        </p>
+        {(v.razones.length > 0 || v.faltan.length > 0) && (
+          <details style={{ marginTop: 2 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)', minHeight: 32, display: 'flex', alignItems: 'center' }}>
+              Por qué{v.faltan.length > 0 ? ` · falta${v.faltan.length === 1 ? '' : 'n'} ${v.faltan.length} dato${v.faltan.length === 1 ? '' : 's'}` : ''}
+            </summary>
+            {v.faltan.length > 0 && (
+              <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--text)' }}>
+                {v.faltan.map((f) => <li key={f}>Falta {f}</li>)}
+              </ul>
+            )}
+            {v.razones.map((rz) => (
+              <p key={rz} style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>· {rz}</p>
+            ))}
+          </details>
+        )}
       </div>
 
       {/* Primero QUÉ es (tipo, m², distribución); la descripción registral
@@ -1261,6 +1449,7 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params }: { s: S
 
       {/* Cargas + documentación: en TODAS las pestañas, no solo en «Todas». */}
       <ResumenDocumental s={s} d={doc} />
+      <DocsAportados dedupeKey={s.dedupeKey} muro={doc?.documentosMuro ?? 'ninguno'} />
       <NotaSimpleViva dedupeKey={s.dedupeKey} />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
@@ -1597,6 +1786,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   doc={r.doc}
                   escenarios={r.escenarios}
                   params={paramsCoste}
+                  calibracion={datos.calibracion}
                   o={{
                     puntuacion: r.puntuacion,
                     descuento: null,
@@ -1954,6 +2144,8 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                 doc={{ semaforo: r.semaforo, analisis: r.analisis, notasEdicto: r.notasEdicto, documentos: r.documentos, documentosMuro: r.documentosMuro, documentosSesion: r.documentosSesion, caducidad: r.caducidad }}
                 escenarios={r.escenarios}
                 params={paramsCoste}
+                precioM2Zona={r.precioM2Zona}
+                calibracion={datos.calibracion}
                 acciones={<button onClick={() => seguir(r.subasta)} style={boton()}>👀 Seguir</button>}
                 extra={
                   <>

@@ -25,7 +25,7 @@ export default function ActualizarConsulta({ consultaDe }: { consultaDe: string 
         {pendiente ? '⏳ Actualizando…' : '🔄 Actualizar'}
       </button>
       <span style={{ color: 'var(--muted)', fontSize: 12 }}>
-        consulta de las {consultaDe} · relee precios públicos en vivo; las ideas y la foto de IBKR llegan con la pasada diaria
+        consulta de las {consultaDe} · relee precios públicos en vivo; las ideas, la foto de IBKR y la fecha de «Última pasada» las trae la pasada nocturna del agente
       </span>
     </div>
   )

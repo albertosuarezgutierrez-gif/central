@@ -282,8 +282,8 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'LEE EL DETALLE, que distingue tres averías distintas y mandan a sitios opuestos: ' +
       '(1) «🛑 Smoobu RECHAZÓ» = el motor calculó bien y el CANAL no lo aceptó — mira la API key de ' +
       'Smoobu, no el pricing; esas noches NO se anotaron en `pricing_applied` a propósito, así que ' +
-      'la tabla de auditoría sigue siendo verdad; (2) «degradado» = tarificó sin eventos o sin el ' +
-      'suelo de PriceLabs, y esos precios no son de fiar para fechas de evento; (3) «pasada en ' +
+      'la tabla de auditoría sigue siendo verdad; (2) «degradado» = tarificó sin eventos, y esos ' +
+      'precios no son de fiar para fechas de evento; (3) «pasada en ' +
       'curso — aún sin completar» con horas encima = arranca y muere antes de terminar (mira si hay ' +
       '504 en los logs: son 365 días × 4 pisos contra Smoobu con maxDuration 300). ' +
       '⚠️ «0 noche(s) escritas en 4 piso(s)» NO es una avería: es que nada cruzó el umbral del 3%. ' +
@@ -322,7 +322,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     maxHoras: 30,
     nota:
       'Es el job que MÁS pesa de la cadena de pricing: alimenta la ocupación y el precio VIVO ' +
-      '(`rate_snapshots.price_pricelabs`) con el que se compara todo — el motor, el pilot-track, la ' +
+      '(`rate_snapshots.price_live`) con el que se compara todo — el motor, el pilot-track, la ' +
       'ocupación por mes y el fallback `actual` del raíl. Si calla, todos ellos trabajan sobre la ' +
       'foto de ayer sin saberlo. Si el detalle trae «HTTP 401/403», la API key de Smoobu; si trae ' +
       'una excepción de BD, este cron. Huella: agente_latidos.sivra_rates_snapshot.',

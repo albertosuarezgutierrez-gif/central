@@ -9,12 +9,14 @@ import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// ⚠️ `price_pricelabs` = el precio REAL vivo en Smoobu (GET /rates), lo haya escrito quien lo haya
-// escrito (nuestro motor u otra cosa) — pese al nombre, es la columna a leer para saber "qué precio
-// tiene ahora mismo el piso". `price_ours` = una fórmula estática LEGACY (`calcOurs`, base fija ×
-// estacional × día-semana) de antes del motor real anclado al mercado — es un "shadow" histórico que
-// NADIE debería confundir con el precio vivo (causó una falsa alarma el 27/07/2026: ver calcOurs en
-// pricing-calendar.ts). Para diagnosticar pricing en vivo, usa price_pricelabs o pricing_applied.
+// `price_live` = el precio REAL vivo en Smoobu (GET /rates), lo haya escrito quien lo haya escrito
+// (nuestro motor u otra cosa). Es la columna a leer para saber "qué precio tiene ahora mismo el
+// piso". Se llamaba `price_pricelabs` —de cuando lo escribía PriceLabs, de baja el 09/08/2026— y
+// ese nombre causó dos bugs; se renombró el 25/08/2026 y ambas conviven hasta el DROP (un trigger
+// las sincroniza). `price_ours` = una fórmula estática LEGACY (`calcOurs`, base fija × estacional ×
+// día-semana) de antes del motor real anclado al mercado — es un "shadow" histórico que NADIE
+// debería confundir con el precio vivo (causó una falsa alarma el 27/07/2026: ver calcOurs en
+// pricing-calendar.ts). Para diagnosticar pricing en vivo, usa `price_live` o `pricing_applied`.
 const PROPS = [
   { smoobuId: '352007', propId: 'prop_house_sevillana', base: 380 },
   { smoobuId: '352418', propId: 'prop_busto_reform', base: 175 },
@@ -50,29 +52,35 @@ export async function GET(req: NextRequest) {
       )
       if (!res.ok) { errors.push(`${prop.propId}: HTTP ${res.status}`); continue }
 
-      const plRates: Record<string, { price: number; available: number; min_length_of_stay: number }> =
+      const tarifas: Record<string, { price: number; available: number; min_length_of_stay: number }> =
         (await res.json()).data?.[prop.smoobuId] ?? {}
 
       const rows: Prisma.Sql[] = []
       const cur = new Date(today)
       while (cur <= endDay) {
         const dateStr = fmtDate(cur)
-        const pl = plRates[dateStr]
+        const t = tarifas[dateStr]
+        const vivo = t?.price != null ? Math.round(t.price) : null
         rows.push(Prisma.sql`(${prop.propId}, ${dateStr}::date, ${snapshotDate}::date,
-          ${pl?.price != null ? Math.round(pl.price) : null}::integer,
+          ${vivo}::integer,
+          ${vivo}::integer,
           ${calcOurs(prop.base, dateStr)}::integer,
-          ${pl?.available != null ? (pl.available ? 1 : 0) : null}::smallint,
-          ${pl?.min_length_of_stay ?? null}::smallint)`)
+          ${t?.available != null ? (t.available ? 1 : 0) : null}::smallint,
+          ${t?.min_length_of_stay ?? null}::smallint)`)
         cur.setDate(cur.getDate() + 1)
       }
 
       if (rows.length) {
         await prisma.$executeRaw(Prisma.sql`
           INSERT INTO rate_snapshots
-            (property_id, rate_date, snapshot_date, price_pricelabs, price_ours, available, min_stay)
+            (property_id, rate_date, snapshot_date, price_live, price_pricelabs, price_ours,
+             available, min_stay)
           VALUES ${Prisma.join(rows)}
           ON CONFLICT (property_id, rate_date, snapshot_date)
           DO UPDATE SET
+            -- Fase EXPAND: se escriben las DOS mientras el código viejo pueda seguir vivo.
+            -- La vieja se va en la migración de contract (2026-08-26_pricelabs_drop.sql).
+            price_live      = EXCLUDED.price_live,
             price_pricelabs = EXCLUDED.price_pricelabs,
             price_ours      = EXCLUDED.price_ours,
             available       = EXCLUDED.available,

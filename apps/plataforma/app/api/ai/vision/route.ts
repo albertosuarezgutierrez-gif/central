@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { nimVision, type ImageInput } from '@central/core-ai'
-import { verificarSecreto, registrarUso, dentroDePresupuesto, estimarTokens, costeEur } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto, PROVEEDOR_PASARELA, estimarTokens, costeEur } from '@/lib/ai-gateway'
 
 const VISION_MODEL = 'meta/llama-3.2-90b-vision-instruct'
 
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Visión IA no configurada (falta NVIDIA_API_KEY)' }, { status: 503 })
   }
   if (!(await dentroDePresupuesto())) {
-    await registrarUso({ app, endpoint: 'vision', proveedor: 'nim', modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido' })
+    await registrarUso({ app, endpoint: 'vision', proveedor: PROVEEDOR_PASARELA, modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido' })
     return NextResponse.json({ error: 'Límite mensual de IA alcanzado' }, { status: 429 })
   }
 

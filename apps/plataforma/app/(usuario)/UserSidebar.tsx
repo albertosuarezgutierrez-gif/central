@@ -37,6 +37,7 @@ const NAV_PISOS = [
   { href: '/sivra/mercado', icon: '📊', label: 'Competencia' },
   { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
   { href: '/sivra/pricing-auto', icon: '⚙️', label: 'Pricing auto' },
+  { href: '/sivra/pricing-rentabilidad', icon: '⚖️', label: 'Motor vs PL' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
   { href: '/sivra/limpiadoras', icon: '🛠️', label: 'Admin limpiezas' },
   { href: '/sivra/domotica', icon: '🌀', label: 'Domótica' },

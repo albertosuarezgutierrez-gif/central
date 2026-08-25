@@ -71,7 +71,6 @@ export const CRON_JOBS: CronJob[] = [
   // ANTES de `apply-auto` (08:30) para que el motor tarife el mismo día con lo recalibrado.
   { path: '/api/sivra/pricing/canal', schedule: '45 7 * * *' },
   { path: '/api/sivra/pricing/experiments/check-results', schedule: '0 8 * * *' },
-  { path: '/api/sivra/pricing/experiments/digest', schedule: '0 9 * * 1' },
   { path: '/api/sivra/pricing/apply-auto', schedule: '30 8,14,20 * * *' },
   { path: '/api/sivra/pricing/resumen-diario', schedule: '0 9 * * *' },
   { path: '/api/sivra/pricing/pilot-track', schedule: '15 9 * * *' },

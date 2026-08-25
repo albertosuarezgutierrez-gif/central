@@ -34,6 +34,7 @@ import {
   type CuadroCargas,
 } from '@central/module-subastas'
 import type { ImageInput } from '@central/core-ai'
+import { rasterizarPdf } from '@/lib/subastas/rasterizar-pdf'
 import { aiVision } from '@/lib/ai-client'
 import { chatConDirector } from '@/lib/pasarela'
 import { elegirPorCategoria } from '@/lib/ia-director'
@@ -126,17 +127,26 @@ async function modeloRegistral(): Promise<string | undefined> {
 }
 
 /** Una pasada de lectura sobre texto. */
-async function leerTexto(texto: string, modelo: string | undefined): Promise<CuadroCargas> {
-  // Por `chatConDirector` y no por `aiComplete`: hace falta fijar el modelo del
-  // catálogo y subir el techo de salida (un cuadro de cargas con literales no
-  // cabe en los 700 tokens por defecto de la pasarela).
+async function leerTexto(texto: string): Promise<CuadroCargas> {
+  // Por `chatConDirector` y no por `aiComplete`: hace falta el modelo de la
+  // categoría `registral` del catálogo y subir el techo de salida (un cuadro de
+  // cargas con literales no cabe en los 700 tokens por defecto de la pasarela).
+  //
+  // 🚨 El modelo del catálogo se pide con `categoria`, NUNCA con `modelo`
+  // (medido en producción, 24/08/2026): `modelo` es el PIN que salta OpenRouter
+  // y se fija también en la cadena clásica, así que el id del catálogo
+  // (`google/gemini-2.5-flash`, un id de OpenRouter) acababa en el API de
+  // NVIDIA → «NVIDIA HTTP 404» y el lector de texto llevaba muerto desde que
+  // el catálogo eligió ese modelo. Con `categoria`, la pasarela lo resuelve
+  // DENTRO del camino OpenRouter y conserva sus fallbacks (modelo seguro →
+  // cadena clásica sin pin).
   const { text } = await chatConDirector(
     [{ role: 'user', content: `--- DOCUMENTO ---\n${texto.slice(0, 60_000)}` }],
     {
       app: 'plataforma',
       endpoint: 'registral',
       system: PROMPT_LECTOR_REGISTRAL,
-      modelo,
+      categoria: 'registral',
       maxTokens: 2000,
       timeoutMs: 60_000,
     },
@@ -257,15 +267,21 @@ export async function leerDocumento(
 
     // 2. PDF con capa de texto.
     if (contenido.texto && !pareceEscaneado(contenido.texto)) {
-      const a = await leerTexto(contenido.texto, modelo)
-      const b = await leerTexto(contenido.texto, modelo)
+      const a = await leerTexto(contenido.texto)
+      const b = await leerTexto(contenido.texto)
       const { cuadro, discrepancias } = consensoCuadros(a, b)
       return { cuadro, via: 'texto', paginas: 0, discrepancias, modelo: modelo ?? null }
     }
 
     // 3. PDF escaneado: rescatar las páginas y leerlas con visión.
     if (contenido.pdf) {
-      const paginas = await paginasDePdfEscaneado(contenido.pdf)
+      let paginas = await paginasDePdfEscaneado(contenido.pdf)
+      // 🚨 Los registros escanean en CCITT G4/JBIG2 (compresión de fax, sin un
+      // solo JPEG dentro): ahí `localizarJpegs` devuelve 0 bandas y la
+      // certificación salía «ilegible» con el PDF delante (SUB-JA-2026-262310,
+      // 26 páginas; la de Siero, 24/08). El respaldo renderiza las páginas con
+      // PDFium/WASM — más caro, por eso solo cuando no hay JPEGs que rescatar.
+      if (!paginas.length) paginas = await rasterizarPdf(contenido.pdf, MAX_PAGINAS)
       if (!paginas.length) return vacio('vision')
       const a = await leerImagenes(paginas, modelo)
       const b = await leerImagenes(paginas, modelo)

@@ -5,16 +5,19 @@ import { cierresDiarios } from './precios-stooq'
 import { UNIVERSO_SEMILLA } from './universo-semilla'
 
 // Refresco INCREMENTAL del radar (Fase 1): mantiene trading_universo con fundamentales+precio de las
-// ~1000 mayores de EEUU. Lotes pequeños, los más rancios primero, a ritmo suave (la SEC limita ~10 req/s;
+// ~1200 mayores de EEUU. Lotes pequeños, los más rancios primero, a ritmo suave (la SEC limita ~10 req/s;
 // vamos muy por debajo). Un fallo por símbolo se anota en la fila y NO rompe el lote. SOLO lectura.
-// El tope se subió de 550→800 el 22/07/2026 (con soporte IFRS entran los emisores extranjeros; a 550
-// quedaban fuera mega-caps foráneas — AstraZeneca/Novo Nordisk/Sea…) y de 800→1000 el 24/08/2026
-// (equivalente al Russell 1000 del backlog Fase 1.5; el caso que lo destapó fue DBX, ~8-9 B$, fuera
-// del corte de 800). El lote sigue siendo 50/pasada (coste por invocación IGUAL); solo baja la
-// frecuencia de refresco por símbolo (cron cada 6 h → 200 símbolos/día → ciclo ~5 días, sobra para
-// fundamentales trimestrales y muy por debajo de los 14 días de frescura que exige el ranking, cuyo
-// umbral de cobertura del 50% queda igualmente lejos).
-export const UNIVERSO_TAM = 1000
+// Historia del tope: 550→800 el 22/07/2026 (con soporte IFRS entran los emisores extranjeros; a 550
+// quedaban fuera mega-caps foráneas — AstraZeneca/Novo Nordisk/Sea…); 800→1000 el 24/08/2026 por el
+// caso DBX; y 1000→1200 ESE MISMO DÍA al medir contra el fichero real (vía pg_net desde Supabase) que
+// DBX caía en la POSICIÓN 1131 del listado filtrado — company_tickers.json solo está ~ordenado por
+// capitalización, así que un corte "por capitalización" estimado a ojo no garantiza la posición real.
+// Lección: antes de prometer que un símbolo entra con un corte, medir su posición en el fichero.
+// El lote sigue siendo 50/pasada (coste por invocación IGUAL); solo baja la frecuencia de refresco por
+// símbolo (cron cada 6 h → 200 símbolos/día → ciclo ~6 días, sobra para fundamentales trimestrales y
+// muy por debajo de los 14 días de frescura que exige el ranking, cuyo umbral de cobertura del 50%
+// queda igualmente lejos).
+export const UNIVERSO_TAM = 1200
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 const hoyIso = () => new Date().toISOString().slice(0, 10)
 const haceDias = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10)

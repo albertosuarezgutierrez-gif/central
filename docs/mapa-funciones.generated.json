@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-24T11:20:10Z",
-  "sha": "0d32ec7ee3dde6f265db6f57241957ff85ab9616",
+  "generadoEn": "2026-08-25T11:42:02Z",
+  "sha": "e3ad1cfdd5ba2019e85ae80576019b9a152495cd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49373,7 +49373,7 @@
           "exportada": false,
           "params": "{ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }",
           "retorno": null,
-          "linea": 423
+          "linea": 426
         },
         {
           "nombre": "Toggle",
@@ -49381,7 +49381,7 @@
           "exportada": false,
           "params": "{ label, checked, onChange, warn }: { label: string; checked: boolean; onChange: (v: boolean) => void; warn?: boolean }",
           "retorno": null,
-          "linea": 433
+          "linea": 436
         },
         {
           "nombre": "btn",
@@ -49389,12 +49389,32 @@
           "exportada": false,
           "params": "bg: string, disabled: boolean",
           "retorno": "CSSProperties",
-          "linea": 442
+          "linea": 445
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1e596f71c3fc"
+      "hash": "9d19e1361983"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/pricing-rentabilidad/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PricingRentabilidadPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PricingRentabilidadPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 50
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c7b73d57d9c8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing/page.tsx",
@@ -49409,14 +49429,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 35
+          "linea": 32
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "d608fdb92ac8"
+      "hash": "4e4da38532af"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/page.tsx",
@@ -49431,7 +49451,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 26
+          "linea": 36
         },
         {
           "nombre": "fmtDec",
@@ -49439,7 +49459,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 29
+          "linea": 39
         },
         {
           "nombre": "colorMargen",
@@ -49447,7 +49467,7 @@
           "exportada": false,
           "params": "m: number",
           "retorno": null,
-          "linea": 33
+          "linea": 43
         },
         {
           "nombre": "ResultadoPisosPage",
@@ -49455,7 +49475,24 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 39
+          "linea": 49
+        },
+        {
+          "nombre": "detalleLavanderia",
+          "kind": "function",
+          "exportada": false,
+          "params": "g: PLGastosPiso",
+          "retorno": "string",
+          "linea": 257
+        },
+        {
+          "nombre": "DesgloseLimpieza",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ desglose, onCambio }: { desglose?: PLMensual['desglose']; onCambio: () => void }",
+          "retorno": null,
+          "linea": 274,
+          "resumen": "De dónde sale el desglose de cada pago a Sique Brilla, y qué hacer si no se ha podido hacer. Un pago repartido «a ojo» y uno leído de su factura NO pueden verse igual: la tabla enseña números plausibl"
         },
         {
           "nombre": "KpiCard",
@@ -49463,7 +49500,7 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color: string }",
           "retorno": null,
-          "linea": 228
+          "linea": 364
         },
         {
           "nombre": "Th",
@@ -49471,12 +49508,12 @@
           "exportada": false,
           "params": "{ children, left }: { children: React.ReactNode; left?: boolean }",
           "retorno": null,
-          "linea": 240
+          "linea": 376
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c50159a375e7"
+      "hash": "15ddeafc3c22"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/seo/page.tsx",
@@ -49731,12 +49768,21 @@
           "resumen": "«Nota simple viva»: la certificación que adjunta el juzgado es de hace años y las cargas se mueven. Aquí se sube una nota simple recién pedida al registro y el agente dice QUÉ HA CAMBIADO — es lo únic"
         },
         {
+          "nombre": "DocsAportados",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ dedupeKey, muro }: { dedupeKey: string; muro: 'ninguno' | 'parcial' | 'total' }",
+          "retorno": null,
+          "linea": 884,
+          "resumen": "«Aportar documentos»: la puerta de entrada del lector para los PDFs que el cron no puede bajar. El Portal esconde los documentos de muchas fichas tras el login y el login automático no es viable (2FA "
+        },
+        {
           "nombre": "Dato",
           "kind": "function",
           "exportada": false,
           "params": "{ etiqueta, sub, children }: { etiqueta: string; sub?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 863,
+          "linea": 1007,
           "resumen": "Par etiqueta→valor del bloque «💶 Los números»: etiqueta pequeña arriba, valor con peso debajo. La jerarquía la da la tipografía — antes todos los importes eran chips/líneas del mismo peso y se confun"
         },
         {
@@ -49745,7 +49791,7 @@
           "exportada": false,
           "params": "{ u }: { u: ReturnType<typeof umbralesPuja> }",
           "retorno": null,
-          "linea": 881,
+          "linea": 1025,
           "resumen": "Umbrales de APROBACIÓN del remate. Corrige la confusión de «hay que pujar el 70% de la deuda»: el 70% de la LEC es del VALOR DE SUBASTA, y la deuda entra como vía alternativa (y como techo probable de"
         },
         {
@@ -49754,7 +49800,7 @@
           "exportada": false,
           "params": "s: Subasta",
           "retorno": "SubastaInmueble",
-          "linea": 897,
+          "linea": 1041,
           "resumen": "El `Subasta` del cliente, como lo espera la lógica pura del módulo."
         },
         {
@@ -49763,16 +49809,16 @@
           "exportada": false,
           "params": "{ s, o, params }: { s: Subasta; o?: Oportunidad | null; params?: ParamsCoste }",
           "retorno": null,
-          "linea": 924,
+          "linea": 1068,
           "resumen": "«¿Y si pujo X?»: coste puerta abierta, descuento real y banda de aprobación de UNA puja concreta. Mismo motor que el resto de la ficha (`calcularCoste` + `umbralesPuja` del módulo, con la financiación"
         },
         {
           "nombre": "FichaSubasta",
           "kind": "function",
           "exportada": false,
-          "params": "{ s, o, acciones, extra, doc, escenarios, params }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: ParamsCoste }",
+          "params": "{ s, o, acciones, extra, doc, escenarios, params, precioM2Zona, calibracion }: { s: Subasta; o?: Oportunidad | null; acciones?: React.ReactNode; extra?: React.ReactNode; doc?: Documental | null; escenarios?: EscenarioUI[] | null; params?: P",
           "retorno": null,
-          "linea": 989
+          "linea": 1133
         },
         {
           "nombre": "SubastasClient",
@@ -49780,14 +49826,14 @@
           "exportada": true,
           "params": "{ inicial }: { inicial: Inicial | null }",
           "retorno": null,
-          "linea": 1296
+          "linea": 1485
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "5005817aecd5"
+      "hash": "a2ddfc0bad24"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -49836,7 +49882,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7e2176f5982f"
+      "hash": "a09c408f3ada"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/AnalisisSimbolo.tsx",
@@ -50151,7 +50197,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "93c65c4b2f06"
+      "hash": "5b407be883e2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -50166,12 +50212,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 70
+          "linea": 71
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "add23948820d"
+      "hash": "4e39f8511c0f"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -51018,7 +51064,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/chat",
-      "hash": "c5875203eb97"
+      "hash": "0268ea433511"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/codigo/route.ts",
@@ -51039,7 +51085,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/codigo",
-      "hash": "2c5266efb849"
+      "hash": "ddb33a9ce9be"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/ejecutar/route.ts",
@@ -51068,7 +51114,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/ejecutar",
-      "hash": "e35421b1d31f"
+      "hash": "1421334cd01c"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/health/route.ts",
@@ -51110,7 +51156,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/programar",
-      "hash": "50d336fa665e"
+      "hash": "c9e3d3eaa0b1"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/search/route.ts",
@@ -51131,7 +51177,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/search",
-      "hash": "38875ecf8d31"
+      "hash": "04895fcd4b35"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/tools/route.ts",
@@ -51152,7 +51198,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/tools",
-      "hash": "60a2df7bbe3e"
+      "hash": "c1731f256dcd"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/video/route.ts",
@@ -51194,7 +51240,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/vision",
-      "hash": "3e6a2ab23c68"
+      "hash": "07b2f71438cb"
     },
     {
       "ruta": "apps/plataforma/app/api/alertas-categoria/route.ts",
@@ -53333,7 +53379,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         }
       ],
       "tablas": [
@@ -53349,7 +53395,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "d08cf6b88e1c"
+      "hash": "07441d9ccbf2"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -55670,6 +55716,47 @@
       "hash": "d949c4bd9ec1"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/facturas-limpieza/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Facturas de limpieza (Sique Brilla) con su desglose REAL por piso. El P&L por piso infiere el desglose de cada pago por mejor ajuste al importe; la factura lo dice. Aquí se aporta: un PDF (lo lee la IA) o el desglose a mano. En ambos casos pasa por la MISMA validación aritmética (`validarFactura`): ",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 23
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 42
+        }
+      ],
+      "tablas": [
+        "limpieza_facturas",
+        "next"
+      ],
+      "rutaApi": "/api/sivra/facturas-limpieza",
+      "hash": "543a7abc49e3"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/fiscal/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -57116,12 +57203,13 @@
         "lateral",
         "market_rates",
         "next",
+        "pricing_applied",
         "pricing_escaparate",
         "rate_snapshots",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "2c2754b10627"
+      "hash": "75e97ae42b79"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/plan/route.ts",
@@ -57149,7 +57237,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "97a165aacd08"
+      "hash": "f90ff4a66c81"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -57400,7 +57488,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/pricing/apply-auto",
-      "hash": "6abde35f1c5a"
+      "hash": "9bd2505536f8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/apply/route.ts",
@@ -57432,7 +57520,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 78,
+          "linea": 65,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57441,7 +57529,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 82
+          "linea": 69
         }
       ],
       "tablas": [
@@ -57459,13 +57547,12 @@
         "pricing_eventos_auto",
         "pricing_flight_demand",
         "pricing_piso_zona",
-        "pricing_pl_referencia",
         "pricing_settings",
         "rate_snapshots",
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "ea6397dc1f2c"
+      "hash": "5a3e9aaa1c96"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -57545,7 +57632,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/canal",
-      "hash": "40c6852d6f41"
+      "hash": "69ad9f3db2b6"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -57605,30 +57692,6 @@
       "hash": "3589b0b04982"
     },
     {
-      "ruta": "apps/plataforma/app/api/sivra/pricing/experiments/digest/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 20
-        }
-      ],
-      "tablas": [
-        "next",
-        "pricing_experiments",
-        "properties"
-      ],
-      "rutaApi": "/api/sivra/pricing/experiments/digest",
-      "hash": "f7e3ef0d4010"
-    },
-    {
       "ruta": "apps/plataforma/app/api/sivra/pricing/experiments/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -57652,7 +57715,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 56,
+          "linea": 51,
           "resumen": "POST /api/sivra/pricing/experiments — registrar override manual"
         },
         {
@@ -57661,7 +57724,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 86,
+          "linea": 79,
           "resumen": "DELETE /api/sivra/pricing/experiments?id=X"
         }
       ],
@@ -57671,7 +57734,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/experiments",
-      "hash": "b50c901e61fc"
+      "hash": "15c62cbdc525"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/guard/route.ts",
@@ -57686,7 +57749,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 74
+          "linea": 75
         }
       ],
       "tablas": [
@@ -57715,7 +57778,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "60b0fb33a2ff"
+      "hash": "e8ab50e34aa5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -57795,7 +57858,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "b02ba71ff006"
+      "hash": "6699531f3bc2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -57823,6 +57886,38 @@
       ],
       "rutaApi": "/api/sivra/pricing/recommend",
       "hash": "8dd8fe208552"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/pricing/rentabilidad/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 23,
+          "resumen": "GET /api/sivra/pricing/rentabilidad — estudio «Motor vs PriceLabs». Tres piezas, cada una con su estado explícito (nunca un 0 que parezca resultado): 1. BACKTEST lista-vs-lista: noches VENDIDAS bajo e"
+        }
+      ],
+      "tablas": [
+        "con_ref",
+        "gastos",
+        "generate_series",
+        "go_live",
+        "incomes",
+        "lateral",
+        "next",
+        "noches",
+        "pricing_applied",
+        "pricing_pl_referencia"
+      ],
+      "rutaApi": "/api/sivra/pricing/rentabilidad",
+      "hash": "5586071e8781"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/restore/route.ts",
@@ -57860,8 +57955,8 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 11,
-          "resumen": "GET /api/sivra/pricing/resultados Medidor de resultados: euros extra generados por el motor vs lo que habría cobrado PriceLabs. Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked (si"
+          "linea": 16,
+          "resumen": "GET /api/sivra/pricing/resultados Medidor de resultados: Δ CON SIGNO (precio nuevo − precio anterior) del motor en noches que luego se vendieron. Cruza pricing_applied (cambios reales) con rate_snapsh"
         }
       ],
       "tablas": [
@@ -57872,7 +57967,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/resultados",
-      "hash": "5d08d9400774"
+      "hash": "a833a26acf60"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/resumen-diario/route.ts",
@@ -57933,30 +58028,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "a482dab412eb"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/sivra/pricing/stats/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 8
-        }
-      ],
-      "tablas": [
-        "next",
-        "rate_snapshots"
-      ],
-      "rutaApi": "/api/sivra/pricing/stats",
-      "hash": "466f31d04f2b"
+      "hash": "a1419e2af12e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/rates/snapshot/route.ts",
@@ -57971,7 +58043,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 25
+          "linea": 27
         },
         {
           "nombre": "GET",
@@ -57979,7 +58051,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 29
+          "linea": 31
         }
       ],
       "tablas": [
@@ -57988,7 +58060,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/rates/snapshot",
-      "hash": "de4eef9dbf09"
+      "hash": "411b1c87bc83"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/resumen-semanal/route.ts",
@@ -58163,7 +58235,8 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 13,
+          "resumen": "El handler revalida SIEMPRE (isRoutineAuthorized = ALERTA_TOKEN o CRON_SECRET): hasta ahora dependía solo del gate del middleware, y para que una rutina pueda disparar un backfill por ventana (p.ej. r"
         },
         {
           "nombre": "GET",
@@ -58171,12 +58244,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 23
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/updates/sync",
-      "hash": "a56a2ae26ed0"
+      "hash": "7eae293e4fe8"
     },
     {
       "ruta": "apps/plataforma/app/api/sociedades/[id]/route.ts",
@@ -58269,6 +58342,44 @@
       ],
       "rutaApi": "/api/subastas/criterios",
       "hash": "cabc1a2cdeab"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/subastas/documentos/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Documentos aportados a mano a una subasta (el caso de uso: fichas cuyo muro documental el cron no puede cruzar — Alberto los baja con su sesión del Portal y los sube aquí). Se leen con el lector registral y escriben el corpus con la semántica del cron. Ver `lib/subastas/docs-aportados.ts`.",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 13
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/subastas/documentos",
+      "hash": "5557790209cd"
     },
     {
       "ruta": "apps/plataforma/app/api/subastas/fase3-debug/route.ts",
@@ -58830,6 +58941,26 @@
       ],
       "rutaApi": "/api/trading/puntuar",
       "hash": "6fea9f5739ef"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/trading/radar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/trading/radar",
+      "hash": "9fe3ffab58f1"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/saldo/route.ts",
@@ -60572,7 +60703,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 6,
+          "linea": 7,
           "resumen": "Valida el secreto Bearer entrante (las verticales llaman con AI_GATEWAY_SECRET)."
         },
         {
@@ -60581,7 +60712,7 @@
           "exportada": true,
           "params": "...partes: (string | null | undefined)[]",
           "retorno": "number",
-          "linea": 14,
+          "linea": 15,
           "resumen": "Estimación barata de tokens (~4 chars/token) sumando varias cadenas de entrada/salida."
         },
         {
@@ -60590,7 +60721,7 @@
           "exportada": true,
           "params": "proveedor: string, tokens: number",
           "retorno": "number",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Coste € estimado de una llamada según proveedor y tokens."
         },
         {
@@ -60599,7 +60730,7 @@
           "exportada": true,
           "params": "modeloId: string, usage: OpenRouterUsage | undefined, modelos: Array<{ id: string; precio_in?: number; precio_out?: number }>,",
           "retorno": "number",
-          "linea": 36,
+          "linea": 37,
           "resumen": "Coste € REAL de una llamada OpenRouter usando el usage devuelto y los precios del catálogo del Director (USD por millón de tokens, prompt/completion por separado). Si el modelo no está en el catálogo "
         },
         {
@@ -60608,7 +60739,7 @@
           "exportada": true,
           "params": "u: { app: string; endpoint: string; proveedor: string; modelo: string | null; ok: boolean; ms: number tokens?: number; costeEur?: number; error?: string | null; clienteRef?: string | null }",
           "retorno": "Promise<void>",
-          "linea": 54,
+          "linea": 66,
           "resumen": "Registra una llamada de IA (para control de coste). Nunca lanza: un fallo de log no rompe la IA."
         },
         {
@@ -60617,7 +60748,7 @@
           "exportada": false,
           "params": "app?: string, clienteRef?: string",
           "retorno": "Promise<number>",
-          "linea": 74
+          "linea": 86
         },
         {
           "nombre": "limiteAmbito",
@@ -60625,7 +60756,7 @@
           "exportada": false,
           "params": "ambito: 'app' | 'cliente', ref: string",
           "retorno": "Promise<number>",
-          "linea": 89
+          "linea": 101
         },
         {
           "nombre": "avisarBloqueo",
@@ -60633,7 +60764,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "Promise<void>",
-          "linea": 98,
+          "linea": 110,
           "resumen": "Aviso Telegram con dedup diario: solo si hoy aún no hay ningún registro de bloqueo con este motivo."
         },
         {
@@ -60642,7 +60773,7 @@
           "exportada": true,
           "params": "app: string, clienteRef?: string | null",
           "retorno": "Promise<",
-          "linea": 114,
+          "linea": 126,
           "resumen": "¿Se puede hacer una llamada DE PAGO (OpenRouter/Kimi) ahora mismo? Nunca lanza. Si devuelve { ok: false }, la pasarela salta el camino de pago y sirve con la cadena gratis (el servicio no muere: degra"
         },
         {
@@ -60651,8 +60782,17 @@
           "exportada": true,
           "params": "app: string, clienteRef?: string | null",
           "retorno": "Promise<number>",
-          "linea": 149,
+          "linea": 161,
           "resumen": "Presión de presupuesto diario AHORA: máx (gasto de hoy / límite) entre los ámbitos con límite>0 (global/app/cliente). 0 = sin límite o sin gasto. Lo consume el Agente Director para degradar a modelos "
+        },
+        {
+          "nombre": "limiteMensual",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<number>",
+          "linea": 184,
+          "resumen": "Límite mensual VIGENTE (nº de llamadas OK/mes): la fila única de la tabla `ia_limite_mensual` manda sobre la env `AI_GATEWAY_LIMITE_MENSUAL` cuando tiene valor (patrón `trading_acceso_token`: editable"
         },
         {
           "nombre": "dentroDePresupuesto",
@@ -60660,7 +60800,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<boolean>",
-          "linea": 166,
+          "linea": 193,
           "resumen": "Presupuesto mensual GLOBAL (nº de llamadas OK). 0/no definido = sin límite."
         },
         {
@@ -60669,7 +60809,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 175,
+          "linea": 202,
           "resumen": "Estado del presupuesto mensual (para avisos en el god-panel). ratio>=0.8 → alerta."
         },
         {
@@ -60678,7 +60818,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 205
+          "linea": 232
         },
         {
           "nombre": "resumenIA",
@@ -60686,17 +60826,18 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<ResumenIA>",
-          "linea": 208,
+          "linea": 235,
           "resumen": "Datos para el dashboard de gasto de IA del god-panel."
         }
       ],
       "tablas": [
         "ai_usos",
         "ia_director_prompt",
+        "ia_limite_mensual",
         "ia_presupuestos"
       ],
       "rutaApi": null,
-      "hash": "8712a3f67f68"
+      "hash": "ff9a1db59fa4"
     },
     {
       "ruta": "apps/plataforma/lib/alerta-botones.ts",
@@ -63516,7 +63657,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 120,
+          "linea": 119,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -63525,7 +63666,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 150,
+          "linea": 149,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -63534,7 +63675,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 172
+          "linea": 171
         },
         {
           "nombre": "ventanaMinutos",
@@ -63542,7 +63683,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 180,
+          "linea": 179,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -63551,13 +63692,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 192,
+          "linea": 191,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d8226b75b79"
+      "hash": "117149d2af97"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -66130,6 +66271,28 @@
       "hash": "cf6d59f18b17"
     },
     {
+      "ruta": "apps/plataforma/lib/ia-limite-mensual.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Límite MENSUAL de la pasarela de IA (nº de llamadas OK/mes) — resolución del valor efectivo. Por qué existe (25/08/2026): la env `AI_GATEWAY_LIMITE_MENSUAL` se agotó el 24/08 y los /api/ai/* pasaron a 429 hasta el día 1. Alberto pidió subirla, pero las sesiones de Claude no pueden escribir envs de V",
+      "exporta": [
+        "limiteMensualEfectivo"
+      ],
+      "funciones": [
+        {
+          "nombre": "limiteMensualEfectivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "db: number | null | undefined, env: string | undefined",
+          "retorno": "number",
+          "linea": 15,
+          "resumen": "Valor efectivo del límite mensual: `db` (la fila de `ia_limite_mensual`) manda si es un número válido; si no, la env. 0 = sin límite. Un valor negativo o ilegible se trata como 0 (sin límite) y no com"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6b81685fe32a"
+    },
+    {
       "ruta": "apps/plataforma/lib/iarest-port-core.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA del puerto plataforma → ia-rest (sin `next`, testeable con node --test). El wrapper con NextResponse vive en `iarest-port.ts`. Mapea el fallo del puerto a {status, error}. Regla clave: un 401/403 de ia-rest NO es un fallo de sesión del operador (ese 401 lo emite plataforma cuando getAdmi",
@@ -66409,7 +66572,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "88bbe5f704a2"
+      "hash": "94335aa42b0f"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -67006,7 +67169,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "442fe5379192"
+      "hash": "92fe3c9b3595"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -67462,13 +67625,13 @@
           "exportada": true,
           "params": "pathname: string",
           "retorno": "boolean",
-          "linea": 50,
+          "linea": 55,
           "resumen": "¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e2e5a99ac2b5"
+      "hash": "e1e88fdae670"
     },
     {
       "ruta": "apps/plataforma/lib/rutina-tokens.ts",
@@ -69592,6 +69755,136 @@
       "hash": "61e1f1812ee2"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/factura-limpieza-lectura.ts — leer la factura de Sique Brilla y guardarla si cuadra. El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación aritmética → BD. T",
+      "exporta": [
+        "guardarFactura",
+        "procesarFacturaLimpieza",
+        "facturasParaImportes"
+      ],
+      "funciones": [
+        {
+          "nombre": "textoDePdf",
+          "kind": "function",
+          "exportada": false,
+          "params": "buf: Buffer",
+          "retorno": "Promise<string>",
+          "linea": 54
+        },
+        {
+          "nombre": "leerConIa",
+          "kind": "function",
+          "exportada": false,
+          "params": "contenido: { texto?: string | null; pdf?: Buffer | null; mediaType?: string | null }",
+          "retorno": "Promise<",
+          "linea": 63
+        },
+        {
+          "nombre": "guardarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, factura: FacturaLimpieza, fuente: 'pdf_ia' | 'manual', avisos: string[], nombreFichero: string | null = null,",
+          "retorno": "Promise<void>",
+          "linea": 131,
+          "resumen": "Guarda una factura ya validada. Reimportar la misma NUNCA duplica: sería gasto doble en el P&L. 🚨 Dos caminos porque Postgres no puede deduplicar el segundo: con número, el índice único parcial y `ON"
+        },
+        {
+          "nombre": "procesarFacturaLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, doc: { texto?: string | null; pdf?: Buffer | null; mediaType?: string | null; nombreFichero?: string | null }, tarifas: Record<string, number>,",
+          "retorno": "Promise<ResultadoFactura>",
+          "linea": 179,
+          "resumen": "Lee una factura de limpieza y la guarda SOLO si sus líneas cuadran con su total. Nunca lanza por un documento ilegible: devuelve el motivo y el P&L sigue con su inferencia."
+        },
+        {
+          "nombre": "facturasParaImportes",
+          "kind": "function",
+          "exportada": true,
+          "params": "importes: number[]",
+          "retorno": "Promise<FacturaGuardada[]>",
+          "linea": 218,
+          "resumen": "Facturas cuyo TOTAL podría casar con un pago del mes. Se piden por importe (no por periodo): el mes de servicio de la factura y el mes de caja del pago son distintos por diseño. 🚨 El filtro por impor"
+        }
+      ],
+      "tablas": [
+        "limpieza_facturas",
+        "node",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "add3d962e31f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/factura-limpieza.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/factura-limpieza.ts — la factura REAL de Sique Brilla, validada (puro, testeable). Contexto (25/08/2026). El P&L desglosa cada pago a Sique Brilla INFIRIENDO el mes facturado por mejor ajuste al importe (`reparto-siquebrilla.ts`). Funciona porque las tarifas cuadran al céntimo con `incomes",
+      "exporta": [
+        "pisoDeConcepto",
+        "validarFactura",
+        "desgloseDeFactura",
+        "casarFacturaConPago"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 83
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 84
+        },
+        {
+          "nombre": "pisoDeConcepto",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string",
+          "retorno": "string | null",
+          "linea": 90,
+          "resumen": "El piso que nombra un concepto de la factura; `null` si no es ninguno de los conocidos."
+        },
+        {
+          "nombre": "validarFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cruda: FacturaCruda, tarifas: Record<string, number>",
+          "retorno": "FacturaValidada",
+          "linea": 102,
+          "resumen": "Valida una lectura contra su propio total. Devuelve la factura SOLO si cuadra. `tarifas` son las contratadas: no se usan para calcular (manda lo que dice la factura), sino para AVISAR de una divergenc"
+        },
+        {
+          "nombre": "desgloseDeFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "factura: FacturaLimpieza",
+          "retorno": "DesgloseFactura",
+          "linea": 193,
+          "resumen": "Pasa la factura a los importes que pinta el P&L. El residuo de redondeo se carga a la lavandería a propósito: es el concepto que se reparte después por capacidad × reservas, así que un céntimo ahí no "
+        },
+        {
+          "nombre": "casarFacturaConPago",
+          "kind": "function",
+          "exportada": true,
+          "params": "importe: number, facturas: F[], yaUsadas: ReadonlySet<F>,",
+          "retorno": "F | null",
+          "linea": 209,
+          "resumen": "Elige la factura que paga un movimiento. Casa por TOTAL (las facturas de Sique Brilla se pagan enteras), y una factura ya casada con otro apunte no vuelve a usarse: dos pagos idénticos el mismo mes so"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "de7f93b42d77"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/facturas-control.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -70118,15 +70411,15 @@
           "exportada": false,
           "params": "",
           "retorno": "PLGastosPiso",
-          "linea": 46
+          "linea": 74
         },
         {
           "nombre": "catToField",
           "kind": "function",
           "exportada": false,
           "params": "categoria: string",
-          "retorno": "keyof Omit<PLGastosPiso, 'total'>",
-          "linea": 50
+          "retorno": "CampoGasto",
+          "linea": 85
         },
         {
           "nombre": "getPLMensual",
@@ -70134,7 +70427,7 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "Promise<PLMensual>",
-          "linea": 61
+          "linea": 96
         },
         {
           "nombre": "mesPorDefecto",
@@ -70142,7 +70435,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 239,
+          "linea": 377,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
@@ -70156,7 +70449,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "3d5bcfc02fa5"
+      "hash": "d3ff437bced7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",
@@ -70520,7 +70813,7 @@
           "exportada": true,
           "params": "saltados: PisoSaltado[], minSample: number, maxEdad: number",
           "retorno": "string | null",
-          "linea": 65,
+          "linea": 64,
           "resumen": "Texto del aviso cuando el motor deja pisos sin tarifar. `null` si no hay ninguno: un aviso que salta siempre deja de leerse. Que un piso no se tarifique es CARO y hasta hoy era invisible — vivía solo "
         }
       ],
@@ -70528,7 +70821,7 @@
         "market_rates"
       ],
       "rutaApi": null,
-      "hash": "d4ce69ca95bf"
+      "hash": "88750502028e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
@@ -70712,12 +71005,12 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "089c84cdb09a"
+      "hash": "a3378f0fba3a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-lecturas.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Lecturas auxiliares del motor de precios que pueden caerse SIN invalidar la pasada — pero que hasta hoy se caían EN SILENCIO (hallazgo 🟡 4 de `docs/AUDITORIA-2026-08-pricing-mudo.md`). El `apply` tiene once lecturas que degradan. Tres ya se declaraban (eventos, PriceLabs, ocupación-por-mes) y dos a",
+      "resumen": "Lecturas auxiliares del motor de precios que pueden caerse SIN invalidar la pasada — pero que hasta hoy se caían EN SILENCIO (hallazgo 🟡 4 de `docs/AUDITORIA-2026-08-pricing-mudo.md`). El `apply` tiene diez lecturas que degradan. Dos ya se declaraban (eventos y ocupación-por-mes; una tercera, la re",
       "exporta": [
         "resumenLecturasCaidas",
         "avisoLecturasCaidas"
@@ -70729,7 +71022,7 @@
           "exportada": true,
           "params": "fallos: LecturaCaida[]",
           "retorno": "string | null",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Resumen corto para la respuesta HTTP y el parte del latido. `null` si no cayó ninguna. Va nombre a nombre porque el vigía de las 07:45 decide con esto a qué log ir."
         },
         {
@@ -70738,13 +71031,13 @@
           "exportada": true,
           "params": "fallos: LecturaCaida[]",
           "retorno": "string | null",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Aviso de Telegram cuando alguna lectura auxiliar falla. `null` si ninguna. Deja claro lo que separa esto de un `rail_ciego`: la pasada SÍ tarificó, con fallback — los precios están escritos y son plau"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "736059ce458f"
+      "hash": "cebbef821a17"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-precio-huesped.ts",
@@ -70801,25 +71094,68 @@
       "hash": "ed2c7536f612"
     },
     {
-      "ruta": "apps/plataforma/lib/sivra/pricing-suelo-pl.ts",
+      "ruta": "apps/plataforma/lib/sivra/pricing-rentabilidad.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/pricing-suelo-pl.ts — el suelo PriceLabs cede ante el mercado MEDIDO de la fecha. POR QUÉ (15/08/2026). La referencia PL (`pricing_pl_referencia`) es una foto ESTÁTICA del pasado que actúa de suelo (PL_FLOOR_RATIO×PL) hasta caducar. Ese día se descubrió que la foto congelada por el PR #141",
+      "resumen": "lib/sivra/pricing-rentabilidad.ts — helpers PUROS del estudio «Motor vs PriceLabs». El estudio compara PRECIO DE LISTA contra PRECIO DE LISTA: el precio base que el motor tenía aplicado (pricing_applied, dry_run=false) en el momento de la reserva, contra el que pedía la curva PriceLabs congelada (pr",
       "exporta": [
-        "acotarSueloPL"
+        "resumirBacktest",
+        "diasRestantesReferencia"
       ],
       "funciones": [
         {
-          "nombre": "acotarSueloPL",
+          "nombre": "resumirBacktest",
           "kind": "function",
           "exportada": true,
-          "params": "i: SueloPLInput",
-          "retorno": "SueloPLResult",
-          "linea": 39
+          "params": "f: FilaBacktest",
+          "retorno": "ResumenBacktest",
+          "linea": 53,
+          "resumen": "Clasifica la cobertura del backtest de un piso. Conservador a propósito: sin noches comparables el delta es null («no lo sé»), jamás 0."
+        },
+        {
+          "nombre": "diasRestantesReferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: Date",
+          "retorno": "number",
+          "linea": 75,
+          "resumen": "Días que le quedan de vida a la referencia PL (0 si ya caducó)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53e1ea612f18"
+      "hash": "e9fe46fa5ef7"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-techo-mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-techo-mercado.ts — el TECHO de mercado medido: no listar al huésped a ×3-×5. POR QUÉ (25/08/2026). El motor tiene varios caminos que SUBEN el precio saltándose el raíl ±%/día a propósito (salto de evento, suelo PL, premio de mercado) y varias guardas que impiden BAJARLO (outlier +4",
+      "exporta": [
+        "techoMercado",
+        "acotarPorTecho"
+      ],
+      "funciones": [
+        {
+          "nombre": "techoMercado",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: TechoMercadoInput, o: TechoMercadoOpts = {}",
+          "retorno": "TechoMercado",
+          "linea": 80,
+          "resumen": "Techo de precio BASE que el mercado MEDIDO justifica para un día. `techo: 0` significa «no hay con qué acotar» (sin corpus fiable, o fecha de evento sin medición propia) — nunca «techo cero»."
+        },
+        {
+          "nombre": "acotarPorTecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { target: number techo: number /** precio vivo de la fecha; null = fecha sin precio (sin congelación que liberar) */ old: number | null /** suelo del raíl del día (`ancla × (1 − max_change_pct)`); null = sin raíl (fecha nueva) */ railLo:",
+          "retorno": "AcoteTecho",
+          "linea": 135,
+          "resumen": "Aplica el techo al objetivo del día. El descenso respeta los suelos de siempre: nunca por debajo del suelo del raíl (±%/día sobre el ancla — un ×4 se deshace en varias pasadas, no de golpe) ni del `mi"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "308f62d891a8"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/prior-estacional.ts",
@@ -70860,6 +71196,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cb436c13ce68"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/reparto-siquebrilla.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Sique Brilla (puro, testeable). Contexto (25/08/2026): la factura de Sique Brilla ya NO es solo limpieza — desde junio incluye líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex + 3×90€ Casa Socorro = 4",
+      "exporta": [
+        "esperadoLimpieza",
+        "repartirPagoSiqueBrilla"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "esperadoLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "salidas: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
+          "retorno": "number",
+          "linea": 34,
+          "resumen": "Limpieza esperada CON IVA para unas salidas × tarifas dadas."
+        },
+        {
+          "nombre": "repartirPagoSiqueBrilla",
+          "kind": "function",
+          "exportada": true,
+          "params": "total: number, salidasServicio: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
+          "retorno": "RepartoSiqueBrilla | null",
+          "linea": 71,
+          "resumen": "Desglosa el total pagado a Sique Brilla en limpieza por piso + resto de lavandería. `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`). Devuelve null si no hay salidas con "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "09f7f0488028"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -71699,6 +72075,111 @@
       "hash": "b0d0847c2c2d"
     },
     {
+      "ruta": "apps/plataforma/lib/subastas/docs-aportados-logica.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos APORTADOS A MANO a una subasta — la parte PURA (sin BD, red ni IA), testeada con `node --test`. Por qué existe: el Portal del BOE esconde los documentos de muchas subastas tras el login, el login automático NO es",
+      "exporta": [
+        "tituloDesdeTexto",
+        "tituloDeAportado",
+        "aportaAlgo",
+        "revivirCuadroGuardado",
+        "cuadroParaCorpus"
+      ],
+      "funciones": [
+        {
+          "nombre": "tituloDesdeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 43,
+          "resumen": "Qué ES el documento, leído de su propio texto. Hace falta porque el Portal sirve las descargas con nombres genéricos (`documento1_4.pdf`) que no dicen nada — y el título importa: es lo que usa `autori"
+        },
+        {
+          "nombre": "tituloDeAportado",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombreFichero: string | null | undefined, titulo?: string | null, texto?: string | null",
+          "retorno": "string",
+          "linea": 65,
+          "resumen": "Título con el que se registra el documento: el que dé el usuario > el que declare el propio texto (`tituloDesdeTexto`) > el nombre del fichero. El contenido gana al fichero a propósito: «documento2_4."
+        },
+        {
+          "nombre": "aportaAlgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LecturaAportada",
+          "retorno": "boolean",
+          "linea": 80,
+          "resumen": "¿Esta lectura dice ALGO utilizable? Un edicto sin cargas pero con señales («vivienda habitual: no consta») aporta; un PDF del que no salió nada, no — y ese «nada» se guarda como ilegible, nunca como «"
+        },
+        {
+          "nombre": "revivirCuadroGuardado",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: unknown",
+          "retorno": "CuadroCargas | null",
+          "linea": 102,
+          "resumen": "Revive el `cargas_detalle` guardado en la BD como un cuadro de confianza. `null` si no hay nada guardado o lo guardado no trae cargas. Matiz asumido (el mismo que la nota simple): `normalizarCuadroCar"
+        },
+        {
+          "nombre": "cuadroParaCorpus",
+          "kind": "function",
+          "exportada": true,
+          "params": "previo: CuadroCargas | null, nuevos: CuadroCargas[]",
+          "retorno": "CuadroCargas | null",
+          "linea": 121,
+          "resumen": "El cuadro que se escribe al corpus: lo que ya se sabía + lo recién leído, fusionado con UNA fila por asiento registral (`fusionarCargas` del módulo, el mismo que usa el cron — dedupe por identidad, im"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "373ac945d63b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/docs-aportados.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos APORTADOS A MANO a una subasta: red + BD. La lógica es pura (`docs-aportados-logica.ts`) y la lectura por IA vive en `lector-registral`. El caso de uso: las fichas con muro documental (`documentos_muro` total o p",
+      "exporta": [
+        "procesarDocAportado",
+        "docsAportadosDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "procesarDocAportado",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, dedupeKey: string, doc: { nombreFichero?: string | null; titulo?: string | null; texto?: string | null; pdf?: Buffer | null; mediaType?: string | null },",
+          "retorno": "Promise<ResultadoAportado>",
+          "linea": 79,
+          "resumen": "Lee un documento aportado, lo guarda en el histórico y —si trae cargas— actualiza el corpus de la subasta como lo haría el cron."
+        },
+        {
+          "nombre": "docsAportadosDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, dedupeKey: string",
+          "retorno": "Promise<DocAportadoGuardado[]>",
+          "linea": 198,
+          "resumen": "Los documentos que la cuenta ya aportó a esta subasta, el más nuevo primero."
+        },
+        {
+          "nombre": "textoDePdf",
+          "kind": "function",
+          "exportada": false,
+          "params": "buf: Buffer",
+          "retorno": "Promise<string>",
+          "linea": 216
+        }
+      ],
+      "tablas": [
+        "subastas",
+        "subastas_docs_aportados"
+      ],
+      "rutaApi": null,
+      "hash": "8c00afa8b03d"
+    },
+    {
       "ruta": "apps/plataforma/lib/subastas/documentos.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Documentos adjuntos a la ficha del BOE: descarga + lectura completa. Aquí va SOLO la red y la BD; el parseo y la lógica son puros (`@central/module-subastas`), y la lectura por IA vive en `lector-registral`. Qué hace por su",
@@ -72082,7 +72563,7 @@
           "exportada": true,
           "params": "pdf: Buffer",
           "retorno": "Promise<ImageInput[]>",
-          "linea": 79,
+          "linea": 80,
           "resumen": "Recompone las páginas de un PDF escaneado. Devuelve JPEG en base64, listos para el modelo de visión. `[]` si el PDF no lleva imágenes aprovechables. Por qué hay que agrupar: los escáneres guardan cada"
         },
         {
@@ -72091,16 +72572,16 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<string | undefined>",
-          "linea": 119,
+          "linea": 120,
           "resumen": "Modelo de la categoría `registral` del catálogo del Director (o el de la pasarela)."
         },
         {
           "nombre": "leerTexto",
           "kind": "function",
           "exportada": false,
-          "params": "texto: string, modelo: string | undefined",
+          "params": "texto: string",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 129,
+          "linea": 130,
           "resumen": "Una pasada de lectura sobre texto."
         },
         {
@@ -72109,7 +72590,7 @@
           "exportada": false,
           "params": "paginas: ImageInput[], modelo: string | undefined",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 165,
+          "linea": 175,
           "resumen": "Una pasada de lectura sobre imágenes. Camino BUENO: el documento ENTERO en una sola llamada a un modelo multimodal. Es lo único que permite acertar el RANGO de cada carga —anterior, posterior o la que"
         },
         {
@@ -72118,7 +72599,7 @@
           "exportada": false,
           "params": "paginas: ImageInput[], modelo: string | undefined",
           "retorno": "Promise<CuadroCargas>",
-          "linea": 189,
+          "linea": 199,
           "resumen": "Respaldo: una llamada por página, en tandas. Peor contexto, pero siempre lee."
         },
         {
@@ -72127,7 +72608,7 @@
           "exportada": true,
           "params": "contenido: { texto: string | null; pdf: Buffer | null; imagen: ImageInput | null },",
           "retorno": "Promise<LecturaDocumento>",
-          "linea": 237,
+          "linea": 247,
           "resumen": "Lee UN documento y devuelve su cuadro de cargas. Hace la doble pasada y aplica el consenso. Nunca lanza: un documento ilegible devuelve un cuadro vacío con confianza 0, y el pipeline sigue con el sigu"
         },
         {
@@ -72136,13 +72617,13 @@
           "exportada": true,
           "params": "lecturas: LecturaDocumento[]",
           "retorno": "CuadroCargas",
-          "linea": 290,
+          "linea": 306,
           "resumen": "Fusiona los cuadros de varios documentos de la MISMA ficha (edicto + certificación + cesión…). Se queda con la vía del procedimiento que algún documento haya sabido determinar y deduplica cargas por I"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2553effcbcad"
+      "hash": "0779d5714f7b"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/mercado.ts",
@@ -72601,6 +73082,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3bf29330838a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/subastas/rasterizar-pdf.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── RASTERIZADOR de PDF: renderiza las páginas como imágenes cuando el PDF no trae ni capa de texto útil ni JPEGs embebidos que rescatar. El hueco que cierra (documentado el 20/08/2026 con SUB-JA-2026-262310 y reconfirmado el 2",
+      "exporta": [
+        "rasterizarPdf"
+      ],
+      "funciones": [
+        {
+          "nombre": "rasterizarPdf",
+          "kind": "function",
+          "exportada": true,
+          "params": "pdf: Buffer, maxPaginas: number",
+          "retorno": "Promise<ImageInput[]>",
+          "linea": 40,
+          "resumen": "Renderiza hasta `maxPaginas` páginas del PDF como JPEG en base64, listas para el modelo de visión. `[]` si el documento no se puede abrir — el llamador ya trata «sin páginas» como ilegible, nunca como"
+        },
+        {
+          "nombre": "cargarPdfium",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 82
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "89b4dc02b4b2"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/reapariciones.ts",
@@ -73341,7 +73852,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "843618d03823"
+      "hash": "63d5a33855c5"
     },
     {
       "ruta": "apps/plataforma/lib/trading/auth.ts",
@@ -75405,7 +75916,7 @@
           "exportada": false,
           "params": "ms: number",
           "retorno": null,
-          "linea": 16
+          "linea": 21
         },
         {
           "nombre": "hoyIso",
@@ -75413,7 +75924,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 17
+          "linea": 22
         },
         {
           "nombre": "haceDias",
@@ -75421,7 +75932,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 18
+          "linea": 23
         },
         {
           "nombre": "listaUniversoActual",
@@ -75429,7 +75940,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 21,
+          "linea": 26,
           "resumen": "Lista del universo: SEC primero; si viene rota/corta, degrada a la semilla (y el caller lo anota)."
         },
         {
@@ -75438,13 +75949,13 @@
           "exportada": true,
           "params": "lote = 50",
           "retorno": "Promise<",
-          "linea": 29,
+          "linea": 34,
           "resumen": "Refresca el siguiente lote: siembra filas nuevas, elige las `lote` más rancias y las rellena."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a8c119d750ea"
+      "hash": "296a42f8c7c5"
     },
     {
       "ruta": "apps/plataforma/lib/trading/velas.ts",
@@ -80620,7 +81131,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "845fbcc12d9d"
+      "hash": "282cc879f366"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/pricing/page.tsx",
@@ -80635,14 +81146,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 54
+          "linea": 39
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "574e1494bf6f"
+      "hash": "c1000732ad41"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/properties/page.tsx",
@@ -83549,7 +84060,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/pricing/apply",
-      "hash": "18c1e916c3f6"
+      "hash": "6599d6fb0190"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/config/route.ts",
@@ -83632,7 +84143,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 52,
+          "linea": 47,
           "resumen": "POST /api/pricing/experiments — registrar override manual"
         },
         {
@@ -83641,7 +84152,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 79,
+          "linea": 72,
           "resumen": "DELETE /api/pricing/experiments?id=X"
         }
       ],
@@ -83651,7 +84162,7 @@
         "set"
       ],
       "rutaApi": "/api/pricing/experiments",
-      "hash": "3320bd07ee9f"
+      "hash": "cd164e2a6793"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/guard/route.ts",
@@ -83666,7 +84177,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [
@@ -83679,7 +84190,7 @@
         "snap"
       ],
       "rutaApi": "/api/pricing/guard",
-      "hash": "451a5248d30b"
+      "hash": "cb3e6e6a99a9"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/historial/route.ts",
@@ -83759,7 +84270,7 @@
         "set"
       ],
       "rutaApi": "/api/pricing/pilot-track",
-      "hash": "c6736a7a25dc"
+      "hash": "80c26f221194"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/pisos-zona/route.ts",
@@ -83848,8 +84359,8 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 11,
-          "resumen": "GET /api/pricing/resultados Medidor de resultados: euros extra generados por el motor vs lo que habría cobrado PriceLabs. Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked (si la no"
+          "linea": 17,
+          "resumen": "GET /api/pricing/resultados Medidor de resultados: suma de las SUBIDAS que aplicó el motor en noches que luego se vendieron. Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked (si la"
         }
       ],
       "tablas": [
@@ -83860,7 +84371,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/pricing/resultados",
-      "hash": "a549349d3804"
+      "hash": "0885b0c3b09f"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/resumen-diario/route.ts",
@@ -83921,30 +84432,7 @@
         "set"
       ],
       "rutaApi": "/api/pricing/settings",
-      "hash": "549e7e43ca06"
-    },
-    {
-      "ruta": "apps/sivra/app/api/pricing/stats/route.ts",
-      "ambito": "apps/sivra",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 7
-        }
-      ],
-      "tablas": [
-        "next",
-        "rate_snapshots"
-      ],
-      "rutaApi": "/api/pricing/stats",
-      "hash": "ecc6eb20bf79"
+      "hash": "3b2335df3db7"
     },
     {
       "ruta": "apps/sivra/app/api/properties/route.ts",
@@ -84060,7 +84548,7 @@
         "set"
       ],
       "rutaApi": "/api/rates/snapshot",
-      "hash": "c4e061dcccca"
+      "hash": "720e96191e0e"
     },
     {
       "ruta": "apps/sivra/app/api/resumen-semanal/route.ts",
@@ -94987,6 +95475,61 @@
       "hash": "3de8482c029a"
     },
     {
+      "ruta": "packages/module-subastas/src/veredicto.ts",
+      "ambito": "packages/module-subastas",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── VEREDICTO de una subasta: el titular «interesa / no interesa / faltan datos» que Alberto pidió el 24/08/2026 («que me haga una especie de resumen: no interesa, o sí interesa»). Módulo PURO: la UI le pasa lo que ya sabe y aq",
+      "exporta": [
+        "veredicto"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 70
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": null,
+          "linea": 72
+        },
+        {
+          "nombre": "motivoCargas",
+          "kind": "function",
+          "exportada": false,
+          "params": "estado: EstadoCargas",
+          "retorno": "string",
+          "linea": 75,
+          "resumen": "Por qué las cargas no están resueltas, en el recado corto de cada estado."
+        },
+        {
+          "nombre": "razonProbabilidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EntradaVeredicto, hastaPuja: number | null, tieneTipo: boolean",
+          "retorno": "string | null",
+          "linea": 93,
+          "resumen": "El techo como probabilidad: tu ×tipo frente al ×tipo mediano de las adjudicadas."
+        },
+        {
+          "nombre": "veredicto",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaVeredicto",
+          "retorno": "Veredicto",
+          "linea": 112
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a6026bd265bf"
+    },
+    {
       "ruta": "packages/module-subastas/src/zona.ts",
       "ambito": "packages/module-subastas",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Referencia €/m² por zona vía la página de búsqueda de Fotocasa. La descarga y la mediana las hace la edge function `zona-fotocasa` (Supabase, región EU — Fotocasa geobloquea datacenters de EE.UU.); aquí vive lo puro: conver",
@@ -96753,7 +97296,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2559,
-    "funciones": 7031
+    "archivos": 2570,
+    "funciones": 7074
   }
 }
