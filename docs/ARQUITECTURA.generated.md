@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-25T11:42:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-25T13:23:24Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -237,14 +237,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Bloque 1-bis en `/sivra/pricing-rentabilidad` (PR #1712, mergeado):
+- `target_pctl` de House Sevillana 0,50→0,60 APLICADO en prod
 - PR #1702 mergeado a main
 - Backfill disparado en prod
-- (06/12/2026) Pendiente (decisión de Alberto, antes del 06/12/2026):
+- DECISIÓN de Alberto (25/08, chat):
 - Motor vs PriceLabs:
 - Salida de Chekin
 - Booking directo
 - Cuadro «Motor vs PL» construido (misma sesión):
 - DECISIÓN de Alberto (mismo día, tras estudio de facturas en Gmail):
-- (24/08/2026) Canal conversacional del patrimonio + dossier inicial del CFO (24/08/2026).
-- 4:
 
