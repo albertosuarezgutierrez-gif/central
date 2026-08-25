@@ -32,6 +32,19 @@
 
 ---
 
+### 📐 (25/08/2026) Canal Booking: el «sesgo del portal» era nuestro; techo de mercado en apply
+Alberto, sobre el parte del canal: dos averías reales. (1) La rutina mide el escaparate a las 03:40
+pero `base_total` salía del snapshot de AYER 07:00 — sin las 3 pasadas de apply de ayer: el «+12/+26%
+de sesgo» era nuestra propia subida intradía y el calibrado se corregía contra un fantasma. Fix en
+`mercado/ingest` (superpone `pricing_applied` al snapshot) + backfill `2026-08-25_escaparate_base_viva.sql`
+(aplicado; el sesgo del Dúplex pasó de +3%/err 14% a −0,6%/err 0,6%). (2) 238 fechas listadas a >1,5×
+la mediana FIABLE de su fecha (55 a >×3; Duplex 29/09 460€ vs 175€) — los saltos de evento/premio suben
+sin raíl y la guarda de outlier congela >30 días. Nuevo `pricing-techo-mercado.ts` (fecha fiable ×1,5;
+mes fiable ×2,5 sin evento; desciende a velocidad de raíl y libera las congelaciones). PR #1698
+MERGEADO (orden de Alberto). Skill `pricing-agente` (estado-y-protocolo) actualizada. Verificar tras
+el deploy: pasada apply de las 14:30 con `techo_mercado` bajando las fechas ×3-×5, y parte del canal
+de mañana 07:45 sin sesgo positivo sistemático.
+
 ### 🔀 (25/08/2026) «IA gemini muerta» del health-check: era el gate mensual disfrazado
 El 🔴 «gemini: 15 llamadas, ninguna correcta» NO eran llamadas a Gemini (apagado desde 01/08, última
 real 01/08): eran rechazos PRE-VUELO del gate `AI_GATEWAY_LIMITE_MENSUAL` (cruzado el 24/08 con
