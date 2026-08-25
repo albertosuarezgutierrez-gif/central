@@ -42,7 +42,7 @@ no colisionan en Postgres → un índice único no protegía ese caso). (2) La d
 devuelve el origen de cada pago (factura/ajuste/proporcional) y el health-check avisa cuando cae al
 proporcional (= subida de tarifas o dos facturas en un pago). (3) Lavandería Giraldillo vs Sique Brilla,
 separadas en la tabla. Probado contra la BD real (dedupe en Postgres, no solo tsc) — la factura 2025/333
-da los mismos importes que la inferencia. PR #1696. 1594 tests · tsc 0 · build OK.
+da los mismos importes que la inferencia. PR #1699. 1594 tests · tsc 0 · build OK.
 
 ### 🧹 (25/08/2026) P&L pisos: el pago a Sique Brilla se desglosa limpieza vs lavandería
 Alberto (captura + factura 2025/333): House salía con 610,51€ de limpieza cuando la factura dice 270€.
