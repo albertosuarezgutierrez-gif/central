@@ -255,6 +255,28 @@ export async function GET(req: NextRequest) {
       fallos.push(`🧺 Factura mensual sin rastro del mes pasado: ${proveedoresFaltan.join(' · ')} — ni en gastos ni pagada en el banco (¿se quedó sin pagar como la AFV-11625 de mayo?)`)
     } else ok.push('✅ Facturas mensuales (lavandería/limpieza) al día')
 
+    // Check 11-bis: el desglose de la limpieza DEGRADÓ (25/08/2026). El P&L por piso reparte cada
+    // pago a Sique Brilla con su factura si está aportada y, si no, la INFIERE por mejor ajuste al
+    // importe. Esa inferencia se rompe sola el día que suban las tarifas o que un movimiento pague
+    // dos facturas: el pago cae al reparto proporcional y la pantalla SIGUE enseñando números
+    // plausibles. Sin este aviso, la degradación es invisible — que es justo lo que la regla «un
+    // dato que NO hay ≠ un dato que no se ha mirado» prohíbe. El aviso lleva a la cura: aportar
+    // la factura en /sivra/resultado-pisos.
+    for (const m of [mesPorDefecto(), `${ahora.getUTCFullYear()}-${String(ahora.getUTCMonth() + 1).padStart(2, '0')}`]) {
+      const pl = await getPLMensual(m).catch(() => null)
+      if (pl?.desglose.facturasIlegibles) {
+        fallos.push(`🧹 No se pueden leer las facturas de limpieza aportadas (${m}): ${pl.desglose.facturasIlegibles} — el P&L está estimando lo que ya está medido`)
+      }
+      const aOjo = pl?.desglose.pagos.filter(p => p.origen === 'proporcional' || p.origen === 'partes_iguales') ?? []
+      if (aOjo.length) {
+        const total = aOjo.reduce((s, p) => s + p.importe, 0)
+        fallos.push(
+          `🧹 Limpieza sin desglosar en ${m}: ${eur(total)} repartido en proporción (no cuadra con salidas × tarifa) — ` +
+          '¿han subido las tarifas o un pago junta dos facturas? Aporta la factura en /sivra/resultado-pisos',
+        )
+      }
+    }
+
     // Check 9: Smoke-test de los CARGADORES de las páginas clave. Ejecuta las funciones que
     // alimentan /sivra/resultado-pisos, /finanzas y «Mi declaración»; si alguna lanza (p.ej.
     // drift de esquema como una vista sin una columna nueva), avisa. Los demás checks miran

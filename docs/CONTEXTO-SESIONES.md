@@ -32,6 +32,17 @@
 
 ---
 
+### 📄 (25/08/2026) La FACTURA de Sique Brilla manda sobre la inferencia del P&L
+Cierra los tres huecos que quedaban del #1692. (1) El desglose se DEDUCÍA del importe; ahora se lee la
+factura: tabla `limpieza_facturas` + helper puro `lib/sivra/factura-limpieza.ts`. El layout lo lee la IA
+(nunca un regex de memoria) y el código aplica una prueba que no depende del formato: si las líneas × 1,21
+no suman el total, NO hay desglose y se sigue infiriendo. Se aporta el PDF o el desglose a mano, mismo
+validador. Dedupe: con número por índice parcial, sin número por DELETE `IS NOT DISTINCT FROM` (dos NULL
+no colisionan en Postgres → un índice único no protegía ese caso). (2) La degradación era MUDA: el P&L
+devuelve el origen de cada pago (factura/ajuste/proporcional) y el health-check avisa cuando cae al
+proporcional (= subida de tarifas o dos facturas en un pago). (3) Lavandería Giraldillo vs Sique Brilla,
+separadas en la tabla. Probado contra la BD real (dedupe en Postgres, no solo tsc) — la factura 2025/333
+da los mismos importes que la inferencia. PR #1699. 1594 tests · tsc 0 · build OK.
 ### 📐 (25/08/2026) Canal Booking: el «sesgo del portal» era nuestro; techo de mercado en apply
 Alberto, sobre el parte del canal: dos averías reales. (1) La rutina mide el escaparate a las 03:40
 pero `base_total` salía del snapshot de AYER 07:00 — sin las 3 pasadas de apply de ayer: el «+12/+26%
