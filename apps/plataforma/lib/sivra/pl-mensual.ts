@@ -50,6 +50,8 @@ export interface PLDesglose {
   pagos: PagoLimpiezaDesglosado[]
   /** Pagos que NO se han podido desglosar con la estructura de una factura. */
   sinDesglosar: number
+  /** Mensaje si las facturas aportadas no se han podido leer: lo estimado puede estar medido. */
+  facturasIlegibles: string | null
 }
 
 export interface PLPiso {
@@ -273,7 +275,17 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // su propio total, ver `factura-limpieza.ts`), su desglose es el real y no hay nada que inferir.
   // Sin factura se sigue infiriendo exactamente como antes.
   const pagos = limpiezaMov.filter(r => !r.en_reparto)
-  const facturas = await facturasParaImportes(pagos.map(p => Number(p.importe))).catch(() => [])
+  // 🚨 Si la lectura de facturas revienta NO se puede callar: el P&L caería a la inferencia con
+  // la factura guardada en la BD, y la pantalla diría «estimado» sobre algo que está medido. Se
+  // degrada (la inferencia es el comportamiento válido de siempre) pero se DECLARA.
+  let facturas: Awaited<ReturnType<typeof facturasParaImportes>> = []
+  let facturasIlegibles: string | null = null
+  try {
+    facturas = await facturasParaImportes(pagos.map(p => Number(p.importe)))
+  } catch (e) {
+    facturasIlegibles = e instanceof Error ? e.message : String(e)
+    console.error('[pl-mensual] no se han podido leer las facturas de limpieza:', e)
+  }
   const facturasUsadas = new Set<(typeof facturas)[number]>()
 
   const desglosados: PagoLimpiezaDesglosado[] = []
@@ -353,7 +365,11 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   return {
     mes,
     pisos,
-    desglose: { pagos: desglosados, sinDesglosar: Math.round(limpiezaSinDesglosar * 100) / 100 },
+    desglose: {
+      pagos: desglosados,
+      sinDesglosar: Math.round(limpiezaSinDesglosar * 100) / 100,
+      facturasIlegibles,
+    },
   }
 }
 

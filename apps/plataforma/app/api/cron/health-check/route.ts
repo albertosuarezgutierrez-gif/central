@@ -263,6 +263,9 @@ export async function GET(req: NextRequest) {
     // la factura en /sivra/resultado-pisos.
     for (const m of [mesPorDefecto(), `${ahora.getUTCFullYear()}-${String(ahora.getUTCMonth() + 1).padStart(2, '0')}`]) {
       const pl = await getPLMensual(m).catch(() => null)
+      if (pl?.desglose.facturasIlegibles) {
+        fallos.push(`🧹 No se pueden leer las facturas de limpieza aportadas (${m}): ${pl.desglose.facturasIlegibles} — el P&L está estimando lo que ya está medido`)
+      }
       const aOjo = pl?.desglose.pagos.filter(p => p.origen === 'proporcional' || p.origen === 'partes_iguales') ?? []
       if (aOjo.length) {
         const total = aOjo.reduce((s, p) => s + p.importe, 0)

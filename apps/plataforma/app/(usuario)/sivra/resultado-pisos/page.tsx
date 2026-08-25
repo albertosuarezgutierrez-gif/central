@@ -30,7 +30,7 @@ interface PLPiso {
 interface PLMensual {
   mes: string
   pisos: PLPiso[]
-  desglose?: { pagos: PagoLimpieza[]; sinDesglosar: number }
+  desglose?: { pagos: PagoLimpieza[]; sinDesglosar: number; facturasIlegibles?: string | null }
 }
 
 function fmt(n: number) {
@@ -312,6 +312,12 @@ function DesgloseLimpieza({ desglose, onCambio }: { desglose?: PLMensual['desglo
       background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, fontSize: 13,
     }}>
       <div style={{ fontWeight: 600, marginBottom: 6 }}>🧹 Desglose de la limpieza de este mes</div>
+      {desglose.facturasIlegibles && (
+        <p style={{ margin: '0 0 8px', color: 'var(--danger, #dc2626)' }}>
+          ⚠️ No se han podido leer las facturas aportadas, así que lo de abajo puede salir como
+          «estimado» estándolo ya medido. ({desglose.facturasIlegibles})
+        </p>
+      )}
       <ul style={{ margin: '0 0 8px', paddingLeft: 18, color: 'var(--muted)' }}>
         {conFactura.map((p, i) => (
           <li key={`f${i}`}>

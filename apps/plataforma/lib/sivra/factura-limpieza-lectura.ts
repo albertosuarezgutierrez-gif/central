@@ -208,9 +208,17 @@ export interface FacturaGuardada {
 /**
  * Facturas cuyo TOTAL podría casar con un pago del mes. Se piden por importe (no por periodo):
  * el mes de servicio de la factura y el mes de caja del pago son distintos por diseño.
+ *
+ * 🚨 El filtro por importe se hace con un RANGO (dos params escalares) y el casado exacto queda
+ * en JS. Nada de `total = ANY(${importes}::numeric[])`: pasar un array de Prisma por el pooler es
+ * el patrón que ya falló en `ia-director-codigo.ts` (landmine 17/07/2026, `ILIKE ANY(array)`), y
+ * aquí fallaría DEVOLVIENDO CERO FILAS — es decir, el P&L volvería a inferir en silencio con la
+ * factura guardada en la BD. Sique Brilla emite una factura al mes: el rango no trae volumen.
  */
 export async function facturasParaImportes(importes: number[]): Promise<FacturaGuardada[]> {
   if (!importes.length) return []
+  const min = Math.min(...importes) - 0.01
+  const max = Math.max(...importes) + 0.01
   const filas = await prisma.$queryRaw<Array<{
     id: string; numero: string | null; periodo: string | null; total: string | number
     lavanderia: string | number; limpieza: unknown
@@ -218,7 +226,7 @@ export async function facturasParaImportes(importes: number[]): Promise<FacturaG
     SELECT id, numero, periodo, total, lavanderia, limpieza
     FROM limpieza_facturas
     WHERE proveedor = ${PROVEEDOR_LIMPIEZA}
-      AND total = ANY(${importes}::numeric[])
+      AND total >= ${min}::numeric AND total <= ${max}::numeric
     ORDER BY creada_at
   `)
   return filas.map(f => {
