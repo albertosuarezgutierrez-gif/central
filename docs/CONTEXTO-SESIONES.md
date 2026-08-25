@@ -42,6 +42,18 @@ la mediana FIABLE de su fecha (55 a >×3; Duplex 29/09 460€ vs 175€) — los
 sin raíl y la guarda de outlier congela >30 días. Nuevo `pricing-techo-mercado.ts` (fecha fiable ×1,5;
 mes fiable ×2,5 sin evento; desciende a velocidad de raíl y libera las congelaciones). PR draft de esta rama.
 
+### 🔀 (25/08/2026) «IA gemini muerta» del health-check: era el gate mensual disfrazado
+El 🔴 «gemini: 15 llamadas, ninguna correcta» NO eran llamadas a Gemini (apagado desde 01/08, última
+real 01/08): eran rechazos PRE-VUELO del gate `AI_GATEWAY_LIMITE_MENSUAL` (cruzado el 24/08 con
+5.120 llamadas OK) que `/api/ai/search` registraba con `proveedor:'gemini'` hardcodeado (y chat/tools
+con 'nim', codigo/ejecutar/programar con 'openrouter'). Fix: `PROVEEDOR_PASARELA='pasarela'` en los 7
+routes, Check 12 lo excluye, y Check 12-bis nuevo canta el presupuesto mensual con su nombre (🔴 al
+100%, 🟡 al 80%). Guardián `lib/ai-gateway-preflight.test.ts`. tsc 0 · 1.576 tests OK.
+**Desbloqueo (mismo día, «hazlo tú»):** el límite vive ahora en la tabla BD `ia_limite_mensual`
+(fila única, manda sobre la env — patrón `trading_acceso_token`, las sesiones no pueden escribir
+envs de Vercel), fijado a **12.000** llamadas OK/mes (~2x el ritmo real); el gasto lo sigue
+frenando el presupuesto diario en €. Migración aplicada; efectivo al desplegar `main`.
+
 ### 🧹 (25/08/2026) P&L pisos: el pago a Sique Brilla se desglosa limpieza vs lavandería
 Alberto (captura + factura 2025/333): House salía con 610,51€ de limpieza cuando la factura dice 270€.
 Dos fallos en `pl-mensual.ts`: (1) la factura de Sique Brilla YA incluye lavandería por peso (172,71€+IVA
