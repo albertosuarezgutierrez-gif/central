@@ -23,6 +23,11 @@
   ventas +47% sobre el p50 de mercado. Registrado en `pricing_aprendizaje` id 76 **con criterio de
   reversión**: si sept cae de ~30% de ocupación a 30 días vista, revertir a 0,50. Mismo experimento que el
   Dúplex del 20/08 (que sigue en 0,60 y en observación 3 meses).
+- **Centinela #11 `ritmo_venta_destacado` en el guardián** (mismo día): compara la ocupación de los meses
+  futuros ENTRE pisos y avisa por Telegram cuando uno vende muy por delante de los hermanos en un mes flojo
+  (≥35% ocupado, ≥2,5× la mediana de los otros y ≥20 pp de brecha) — la señal que destapó lo de House la vio
+  Alberto a ojo; ahora la vigila el sistema. Al recibir este aviso, la respuesta es revisar `target_pctl`/
+  suelo de ese mes al alza, no ignorarlo.
 - **Hueco jun-jul 2025 REPARADO** (backfill 25/08 vía `/api/sivra/updates/sync` con `ALERTA_TOKEN`, ruta ya
   en `RUTAS_RUTINA` con auth propia): jun = 13 reservas / jul = 7, con `reserved_at`. El interanual del
   cuadro está desbloqueado. Veredicto prerregistrado: RevPAR neto sept-nov 2026 vs mismo tramo de PL.

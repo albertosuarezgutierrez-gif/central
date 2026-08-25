@@ -35,6 +35,8 @@
 ### 📈 (25/08/2026) Cuadro gana «Motor vs mercado real» (#1712) + target_pctl de House 0,50→0,60
 - **Bloque 1-bis en `/sivra/pricing-rentabilidad` (PR #1712, mergeado):** las noches vendidas bajo el motor contra el p50 de comparables fiables de su noche (±10d de la reserva, mismos filtros que el motor). No caduca — releva a PL el 06/12. Primeros datos: Dúplex **−0,4%**, House **+47%**, Luxury **−28%**, Busto sin comps fiables aún.
 - **`target_pctl` de House Sevillana 0,50→0,60 APLICADO en prod** (OK de Alberto en chat): sept al **43% vendido** a >1 mes vista (antelación mediana 24-39d; los otros pisos al 10-13%) y ventas +47% sobre mercado. Registrado en `pricing_aprendizaje` id 76 con criterio de reversión (sept <~30% a 30 días vista → revertir). Mismo experimento que el Dúplex del 20/08.
+- **Centinela #11 `ritmo_venta_destacado`** (petición de Alberto: «importante que el agente se dé cuenta de esas cosas»): el guardián compara la ocupación de los meses futuros ENTRE pisos y avisa cuando uno arrasa en un mes flojo (con los datos del 25/08 salta sept y no oct/nov — sin falsas alarmas). Puro en `pricing-centinelas.ts::decidirRitmoDestacado`, 6 tests, SQL validado contra BD.
+- **Encargo permanente a `patrimonio-cfo`** (petición de Alberto): estudiar la **rotación de activos tipo Socorro** — vender un piso pequeño de bajo rendimiento (Dúplex candidato natural) y redeplegar en casa grande en otra zona (campo Aljarafe, costa de Huelva), cruzando yield real por activo + subastas 🏖️ + radar-espana. Añadido a la skill (Paso 4).
 
 ### ✅ (25/08/2026) Bonificación hipoteca: traslado de 1.065€ FIRMADO — período 2026-27 cubierto
 Alberto firmó por banca online (14:38, copia certificada subida a la sesión) el traslado de **1.065,00€**

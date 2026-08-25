@@ -7,6 +7,7 @@ import {
   decidirCompsDeOtroAforo,
   factorAforo,
   decidirEventoACiegas,
+  decidirRitmoDestacado,
 } from './pricing-centinelas.ts'
 
 // ─── 1. Evento declarado que el mercado no respalda ──────────────────────────────────────────
@@ -202,4 +203,89 @@ test('un factor por debajo del umbral (puente flojo 1,1) tampoco congela', () =>
 test('2 comps fiables siguen siendo a ciegas (el umbral es el del bucket por fecha)', () => {
   const v = decidirEventoACiegas({ factorEvento: 2.2, compsFiablesFecha: 2 })
   assert.equal(v.congelar, true)
+})
+
+// ─── 6. Ritmo de venta destacado ─────────────────────────────────────────────────────────────
+// Caso fundacional (25/08/2026, foto real de rate_snapshots): septiembre con House al 43% y los
+// otros tres al 10-13% — lo vio Alberto a ojo, ningún vigilante lo decía.
+
+const SEPT_REAL = {
+  mes: '2026-09',
+  diasHastaMes: 7,
+  pisos: [
+    { property_id: 'prop_busto_reform', noches: 30, ocupadas: 3, antelacionMediana: 108 },
+    { property_id: 'prop_duplex_center', noches: 30, ocupadas: 3, antelacionMediana: 7 },
+    { property_id: 'prop_house_sevillana', noches: 30, ocupadas: 13, antelacionMediana: 32 },
+    { property_id: 'prop_luxury_busto', noches: 30, ocupadas: 4, antelacionMediana: 57 },
+  ],
+}
+
+test('ritmo: el caso fundacional salta — House 43% vs mediana 13%', () => {
+  const hits = decidirRitmoDestacado(SEPT_REAL)
+  assert.equal(hits.length, 1)
+  assert.equal(hits[0].property_id, 'prop_house_sevillana')
+  assert.equal(hits[0].ocupPct, 43)
+  assert.ok(hits[0].motivo.includes('2026-09'))
+})
+
+test('ritmo: octubre real (26% vs mediana 23%) NO salta — sin falsa alarma', () => {
+  const hits = decidirRitmoDestacado({
+    mes: '2026-10', diasHastaMes: 37,
+    pisos: [
+      { property_id: 'prop_busto_reform', noches: 31, ocupadas: 7, antelacionMediana: 108 },
+      { property_id: 'prop_duplex_center', noches: 31, ocupadas: 7, antelacionMediana: 7 },
+      { property_id: 'prop_house_sevillana', noches: 31, ocupadas: 8, antelacionMediana: 32 },
+      { property_id: 'prop_luxury_busto', noches: 31, ocupadas: 9, antelacionMediana: 57 },
+    ],
+  })
+  assert.equal(hits.length, 0)
+})
+
+test('ritmo: el mes corriente no se juzga (mezcla noches pasadas)', () => {
+  assert.equal(decidirRitmoDestacado({ ...SEPT_REAL, diasHastaMes: 0 }).length, 0)
+})
+
+test('ritmo: sin hermanos con muestra no hay contraste (2 pisos no bastan)', () => {
+  const hits = decidirRitmoDestacado({
+    mes: '2026-09', diasHastaMes: 7,
+    pisos: [
+      { property_id: 'a', noches: 30, ocupadas: 15, antelacionMediana: 20 },
+      { property_id: 'b', noches: 30, ocupadas: 2, antelacionMediana: 20 },
+    ],
+  })
+  assert.equal(hits.length, 0)
+})
+
+test('ritmo: brecha absoluta chica no salta aunque el ratio sea enorme (6% vs 2%)', () => {
+  const hits = decidirRitmoDestacado({
+    mes: '2027-01', diasHastaMes: 60,
+    pisos: [
+      { property_id: 'a', noches: 31, ocupadas: 11, antelacionMediana: 20 }, // 35%… pero
+      { property_id: 'b', noches: 31, ocupadas: 1, antelacionMediana: 20 },
+      { property_id: 'c', noches: 31, ocupadas: 1, antelacionMediana: 20 },
+      { property_id: 'd', noches: 31, ocupadas: 1, antelacionMediana: 20 },
+    ],
+    // 35% vs mediana 3%: ratio y brecha (32pp) pasan → SÍ salta. Bajamos la ocupación del candidato:
+  })
+  assert.equal(hits.length, 1)
+  const pocos = decidirRitmoDestacado({
+    mes: '2027-01', diasHastaMes: 60,
+    pisos: [
+      { property_id: 'a', noches: 31, ocupadas: 6, antelacionMediana: 20 }, // 19% < minOcup
+      { property_id: 'b', noches: 31, ocupadas: 1, antelacionMediana: 20 },
+      { property_id: 'c', noches: 31, ocupadas: 1, antelacionMediana: 20 },
+      { property_id: 'd', noches: 31, ocupadas: 1, antelacionMediana: 20 },
+    ],
+  })
+  assert.equal(pocos.length, 0)
+})
+
+test('ritmo: antelación sin muestra se declara, no se calla ni bloquea', () => {
+  const hits = decidirRitmoDestacado({
+    ...SEPT_REAL,
+    pisos: SEPT_REAL.pisos.map(p =>
+      p.property_id === 'prop_house_sevillana' ? { ...p, antelacionMediana: null } : p),
+  })
+  assert.equal(hits.length, 1)
+  assert.ok(hits[0].motivo.includes('sin muestra'))
 })
