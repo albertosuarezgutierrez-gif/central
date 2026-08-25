@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-25T11:42:02Z",
-  "sha": "e3ad1cfdd5ba2019e85ae80576019b9a152495cd",
+  "generadoEn": "2026-08-25T13:18:25Z",
+  "sha": "9d8a28db2581b4cde98adb9641a06e9f3040607d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49409,12 +49409,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 50
+          "linea": 60
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7b73d57d9c8"
+      "hash": "67206469de5d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing/page.tsx",
@@ -57900,24 +57900,28 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 23,
+          "linea": 24,
           "resumen": "GET /api/sivra/pricing/rentabilidad — estudio «Motor vs PriceLabs». Tres piezas, cada una con su estado explícito (nunca un 0 que parezca resultado): 1. BACKTEST lista-vs-lista: noches VENDIDAS bajo e"
         }
       ],
       "tablas": [
+        "con_mkt",
+        "con_motor",
         "con_ref",
         "gastos",
         "generate_series",
         "go_live",
         "incomes",
         "lateral",
+        "market_rates",
         "next",
         "noches",
         "pricing_applied",
+        "pricing_piso_zona",
         "pricing_pl_referencia"
       ],
       "rutaApi": "/api/sivra/pricing/rentabilidad",
-      "hash": "5586071e8781"
+      "hash": "648a37d6533b"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/restore/route.ts",
@@ -71099,6 +71103,7 @@
       "resumen": "lib/sivra/pricing-rentabilidad.ts — helpers PUROS del estudio «Motor vs PriceLabs». El estudio compara PRECIO DE LISTA contra PRECIO DE LISTA: el precio base que el motor tenía aplicado (pricing_applied, dry_run=false) en el momento de la reserva, contra el que pedía la curva PriceLabs congelada (pr",
       "exporta": [
         "resumirBacktest",
+        "resumirMercado",
         "diasRestantesReferencia"
       ],
       "funciones": [
@@ -71112,18 +71117,27 @@
           "resumen": "Clasifica la cobertura del backtest de un piso. Conservador a propósito: sin noches comparables el delta es null («no lo sé»), jamás 0."
         },
         {
+          "nombre": "resumirMercado",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaMercado",
+          "retorno": "ResumenMercado",
+          "linea": 106,
+          "resumen": "Misma regla que el backtest PL: sin noches con mercado el delta es null, jamás 0."
+        },
+        {
           "nombre": "diasRestantesReferencia",
           "kind": "function",
           "exportada": true,
           "params": "hoy: Date",
           "retorno": "number",
-          "linea": 75,
+          "linea": 122,
           "resumen": "Días que le quedan de vida a la referencia PL (0 si ya caducó)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e9fe46fa5ef7"
+      "hash": "a09ba3972323"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-techo-mercado.ts",
@@ -97297,6 +97311,6 @@
   ],
   "resumen": {
     "archivos": 2570,
-    "funciones": 7074
+    "funciones": 7075
   }
 }
