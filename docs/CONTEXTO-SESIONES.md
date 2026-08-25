@@ -32,6 +32,15 @@
 
 ---
 
+### 📉 (25/08/2026) Google Finance como fuente del agente de bolsa: DESCARTADO con prueba, no de memoria
+Idea de Alberto. No tiene API pública desde 2012; la única vía sancionada es `GOOGLEFINANCE()` en Sheets
+leído por el conector de Drive. **Probado y muerto:** en la MISMA hoja y la MISMA lectura, un literal
+`231.55` y un `USD` se leen bien, pero `=2*3` vuelve VACÍO → el conector devuelve literales, NO valores
+calculados; aunque GOOGLEFINANCE computara, el número nunca llega. La vía scraping no se pudo probar
+(el sandbox no sale a internet: 403 del proxy también a Yahoo y Stooq) y de todas formas es ToS + IP de
+datacenter. Tampoco cierra **H1** (no da serie total-return). Sigue vigente: EODHD como 3er fallback.
+Sin cambios de código; 3 hojas de prueba creadas en el Drive de Alberto y ya enviadas a la papelera.
+
 ### 🏖️ (25/08/2026) Rotación Dúplex→costa de Huelva: estudio completo cerrado, tiro centrado en La Antilla
 Sesión de estrategia con Alberto (sin código; se anota a mano). Todo el detalle vive en
 `patrimonio_recomendaciones` **id 4** (lo retoma el CFO el 02/09). Decisiones: rotar el Dúplex hacia casa
