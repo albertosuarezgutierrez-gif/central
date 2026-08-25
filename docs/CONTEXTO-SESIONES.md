@@ -41,6 +41,17 @@ routes, Check 12 lo excluye, y Check 12-bis nuevo canta el presupuesto mensual c
 100%, 🟡 al 80%). Guardián `lib/ai-gateway-preflight.test.ts`. tsc 0 · 1.576 tests OK.
 **Pendiente de Alberto:** los /api/ai/* siguen en 429 hasta el día 1 salvo que suba la env en Vercel.
 
+### 🧹 (25/08/2026) P&L pisos: el pago a Sique Brilla se desglosa limpieza vs lavandería
+Alberto (captura + factura 2025/333): House salía con 610,51€ de limpieza cuando la factura dice 270€.
+Dos fallos en `pl-mensual.ts`: (1) la factura de Sique Brilla YA incluye lavandería por peso (172,71€+IVA
+en julio) y se repartía toda como limpieza; (2) los pesos usaban las salidas del mes de CAJA (agosto: 2)
+en vez del mes FACTURADO (julio: 11). Nuevo helper puro `lib/sivra/reparto-siquebrilla.ts` (fixtures =
+los 5 pagos reales de 2026): limpieza = salidas del mes facturado × tarifa × IVA; `elegirMesFacturado`
+decide entre mes anterior/caja por mejor ajuste (30/04 y 30/06 pagan el MISMO mes); el resto = lavandería
+con la MISMA fórmula que Giraldillo (capacidad × reservas del mes de caja — dictado por Alberto). Desglose
+POR movimiento. El P&L es en vivo:
+el año entero queda recalculado al mergear. PR #1692 MERGEADO (OK de Alberto). tsc 0 · 1584 tests.
+
 ### 📧 (25/08/2026) facturas-correo — pasada diaria: solo el hueco Paso 4.0 cerrado
 Sin novedades de Gmail (Amazon cosmética y carta de no-renovación de seguro de un cliente, ambos
 sin archivar por no ser gasto). Paso 4.0 encontró 1 `sin_revisar` en `v_facturas_sin_cargo`
