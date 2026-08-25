@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db'
 import { elegirMesFacturado, repartirPagoSiqueBrilla } from './reparto-siquebrilla'
+import { casarFacturaConPago } from './factura-limpieza'
+import { facturasParaImportes } from './factura-limpieza-lectura'
 
 // Pisos que comparten lavandería (Giraldillo y la incluida en la factura de Sique Brilla).
 // Confirmado por Alberto el 25/08/2026 que el Dúplex TAMBIÉN entra en el reparto — sustituye
@@ -13,7 +15,7 @@ const LAVANDERIA_CONTRAPARTE_LIKE = '%LAVANDERIA%'
 const LIMPIEZA_CONTRAPARTE_PREFIJO = 'SI QUE BRILLA%'
 // Tarifa por sesión de limpieza que factura Sique Brilla (desglose real de sus facturas
 // mensuales: "Luxury (5x28€) + Bustos Reforma (3x20€) + Duplex (4x25€) + Casa Socorro…").
-const LIMPIEZA_TARIFAS: Record<string, number> = {
+export const LIMPIEZA_TARIFAS: Record<string, number> = {
   prop_busto_reform: 20,
   prop_duplex_center: 25,
   prop_luxury_busto: 28,
@@ -22,12 +24,32 @@ const LIMPIEZA_TARIFAS: Record<string, number> = {
 
 export interface PLGastosPiso {
   lavanderia: number
+  /** De dónde sale la lavandería del piso. Suman `lavanderia`; se separan porque son dos
+   *  proveedores distintos y verlas juntas impide cuadrar el mes contra una factura. */
+  lavanderiaDetalle: { giraldillo: number; siqueBrilla: number }
   limpieza: number    // Sique Brilla, repartida por salidas × tarifa por piso
   alquiler: number    // alquiler del local al propietario (Bustos Tavera)
   suministros: number // electricidad, internet
   comunidad: number
   otros: number
   total: number
+}
+
+/** Cómo se ha desglosado cada pago a Sique Brilla del mes. */
+export interface PagoLimpiezaDesglosado {
+  importe: number
+  /** `factura` = leído de la factura real · `ajuste` = inferido por mejor ajuste al importe ·
+   *  `proporcional`/`partes_iguales` = no se pudo desglosar y se repartió sin afirmar nada. */
+  origen: 'factura' | 'ajuste' | 'proporcional' | 'partes_iguales'
+  /** Número de la factura cuando el desglose viene de ella. */
+  factura: string | null
+}
+
+/** Calidad del desglose del mes: lo que la UI necesita para no afirmar de más. */
+export interface PLDesglose {
+  pagos: PagoLimpiezaDesglosado[]
+  /** Pagos que NO se han podido desglosar con la estructura de una factura. */
+  sinDesglosar: number
 }
 
 export interface PLPiso {
@@ -44,13 +66,21 @@ export interface PLPiso {
 export interface PLMensual {
   mes: string       // 'YYYY-MM'
   pisos: PLPiso[]
+  desglose: PLDesglose
 }
 
 function emptyGastos(): PLGastosPiso {
-  return { lavanderia: 0, limpieza: 0, alquiler: 0, suministros: 0, comunidad: 0, otros: 0, total: 0 }
+  return {
+    lavanderia: 0,
+    lavanderiaDetalle: { giraldillo: 0, siqueBrilla: 0 },
+    limpieza: 0, alquiler: 0, suministros: 0, comunidad: 0, otros: 0, total: 0,
+  }
 }
 
-function catToField(categoria: string): keyof Omit<PLGastosPiso, 'total'> {
+/** Campos NUMÉRICOS de gasto (excluye `total` y el desglose de lavandería, que no son categorías). */
+type CampoGasto = Exclude<keyof PLGastosPiso, 'total' | 'lavanderiaDetalle'>
+
+function catToField(categoria: string): CampoGasto {
   switch (categoria.toUpperCase()) {
     case 'ALQUILER':    return 'alquiler'
     case 'SUMINISTROS': return 'suministros'
@@ -204,24 +234,26 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // Reparto de lavandería (Giraldillo y la incluida en el pago a Sique Brilla): capacidad ×
   // reservas del mes de caja. Sin reservas en el mes, a partes iguales entre los pisos que
   // comparten lavandería — nunca se evapora el gasto del P&L.
-  const repartirLavanderia = (importe: number) => {
+  const repartirLavanderia = (importe: number, proveedor: 'giraldillo' | 'siqueBrilla') => {
+    const sumar = (pid: string, imp: number) => {
+      if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
+      const g = mGastos.get(pid)!
+      g.lavanderia += imp
+      g.lavanderiaDetalle[proveedor] += imp
+    }
     if (pesoTotal > 0) {
       for (const [pid, peso] of pesos) {
         if (peso <= 0) continue
-        if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
-        mGastos.get(pid)!.lavanderia += Math.round((peso / pesoTotal) * importe * 100) / 100
+        sumar(pid, Math.round((peso / pesoTotal) * importe * 100) / 100)
       }
     } else {
       const compartidos = props.filter(p => PISOS_LAVANDERIA.includes(p.id))
-      for (const p of compartidos) {
-        if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
-        mGastos.get(p.id)!.lavanderia += Math.round((importe / compartidos.length) * 100) / 100
-      }
+      for (const p of compartidos) sumar(p.id, Math.round((importe / compartidos.length) * 100) / 100)
     }
   }
 
   // Añadir El Giraldillo repartido por fórmula
-  if (lavanderiaLibre > 0) repartirLavanderia(lavanderiaLibre)
+  if (lavanderiaLibre > 0) repartirLavanderia(lavanderiaLibre, 'giraldillo')
 
   // Añadir Sique Brilla. Su factura mensual trae DOS servicios (25/08/2026, factura 2025/333):
   // limpieza (salidas × tarifa contratada) Y lavandería por peso. Y el mes facturado no siempre
@@ -237,17 +269,42 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // Orden de candidatos = preferencia en empate: primero el mes anterior (mes vencido).
   const candidatos = [{ salidas: mSalidasPrev }, { salidas: mSalidasCaja }]
 
+  // La FACTURA manda sobre la inferencia: si la de este pago está leída y validada (cuadra con
+  // su propio total, ver `factura-limpieza.ts`), su desglose es el real y no hay nada que inferir.
+  // Sin factura se sigue infiriendo exactamente como antes.
+  const pagos = limpiezaMov.filter(r => !r.en_reparto)
+  const facturas = await facturasParaImportes(pagos.map(p => Number(p.importe))).catch(() => [])
+  const facturasUsadas = new Set<(typeof facturas)[number]>()
+
+  const desglosados: PagoLimpiezaDesglosado[] = []
   let limpiezaSinDesglosar = 0
-  for (const mov of limpiezaMov.filter(r => !r.en_reparto)) {
+  for (const mov of pagos) {
     const total = Number(mov.importe)
+
+    const factura = casarFacturaConPago(total, facturas, facturasUsadas)
+    if (factura) {
+      facturasUsadas.add(factura)
+      for (const [pid, imp] of factura.limpieza) {
+        if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
+        mGastos.get(pid)!.limpieza += imp
+      }
+      if (factura.lavanderia > 0) repartirLavanderia(factura.lavanderia, 'siqueBrilla')
+      desglosados.push({ importe: total, origen: 'factura', factura: factura.numero })
+      continue
+    }
+
     const mesFact = elegirMesFacturado(total, candidatos, LIMPIEZA_TARIFAS)
     const reparto = mesFact && repartirPagoSiqueBrilla(total, mesFact.salidas, LIMPIEZA_TARIFAS)
-    if (!mesFact || !reparto) { limpiezaSinDesglosar += total; continue }
+    if (!mesFact || !reparto) {
+      limpiezaSinDesglosar += total
+      continue
+    }
     for (const [pid, imp] of reparto.limpieza) {
       if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
       mGastos.get(pid)!.limpieza += imp
     }
-    if (reparto.lavanderia > 0) repartirLavanderia(reparto.lavanderia)
+    if (reparto.lavanderia > 0) repartirLavanderia(reparto.lavanderia, 'siqueBrilla')
+    desglosados.push({ importe: total, origen: 'ajuste', factura: null })
   }
 
   // Fallback sin desglose creíble: reparto anterior (salidas del mes de caja); sin salidas
@@ -264,12 +321,14 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
         if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
         mGastos.get(pid)!.limpieza += Math.round((peso / pesoLimpTotal) * limpiezaSinDesglosar * 100) / 100
       }
+      desglosados.push({ importe: limpiezaSinDesglosar, origen: 'proporcional', factura: null })
     } else {
       const compartidos = props.filter(p => PISOS_LAVANDERIA.includes(p.id))
       for (const p of compartidos) {
         if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
         mGastos.get(p.id)!.limpieza += Math.round((limpiezaSinDesglosar / compartidos.length) * 100) / 100
       }
+      desglosados.push({ importe: limpiezaSinDesglosar, origen: 'partes_iguales', factura: null })
     }
   }
 
@@ -291,7 +350,11 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     }
   })
 
-  return { mes, pisos }
+  return {
+    mes,
+    pisos,
+    desglose: { pagos: desglosados, sinDesglosar: Math.round(limpiezaSinDesglosar * 100) / 100 },
+  }
 }
 
 /** Mes anterior al actual en formato 'YYYY-MM' */
