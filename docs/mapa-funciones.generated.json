@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-25T08:32:51Z",
-  "sha": "5133f8449e60ff72101d7d9ed7bb1a26f8cc9f31",
+  "generadoEn": "2026-08-25T11:09:07Z",
+  "sha": "c7df41ae781f966ebbdc71c84e73900f1c107062",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49394,7 +49394,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1e596f71c3fc"
+      "hash": "986eeda6a638"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing/page.tsx",
@@ -49409,14 +49409,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 35
+          "linea": 32
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "d608fdb92ac8"
+      "hash": "4e4da38532af"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/page.tsx",
@@ -57189,7 +57189,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "dd739f602346"
+      "hash": "75e97ae42b79"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/plan/route.ts",
@@ -57217,7 +57217,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "97a165aacd08"
+      "hash": "f90ff4a66c81"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -57468,7 +57468,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/pricing/apply-auto",
-      "hash": "6abde35f1c5a"
+      "hash": "9bd2505536f8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/apply/route.ts",
@@ -57484,7 +57484,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 46
+          "linea": 45
         },
         {
           "nombre": "fmt",
@@ -57492,7 +57492,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 47
+          "linea": 46
         },
         {
           "nombre": "GET",
@@ -57500,7 +57500,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 79,
+          "linea": 65,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57509,7 +57509,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 83
+          "linea": 69
         }
       ],
       "tablas": [
@@ -57527,13 +57527,12 @@
         "pricing_eventos_auto",
         "pricing_flight_demand",
         "pricing_piso_zona",
-        "pricing_pl_referencia",
         "pricing_settings",
         "rate_snapshots",
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "ee5c64623d17"
+      "hash": "5a3e9aaa1c96"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -57613,7 +57612,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/canal",
-      "hash": "40c6852d6f41"
+      "hash": "69ad9f3db2b6"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -57673,30 +57672,6 @@
       "hash": "3589b0b04982"
     },
     {
-      "ruta": "apps/plataforma/app/api/sivra/pricing/experiments/digest/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 20
-        }
-      ],
-      "tablas": [
-        "next",
-        "pricing_experiments",
-        "properties"
-      ],
-      "rutaApi": "/api/sivra/pricing/experiments/digest",
-      "hash": "f7e3ef0d4010"
-    },
-    {
       "ruta": "apps/plataforma/app/api/sivra/pricing/experiments/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -57720,7 +57695,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 56,
+          "linea": 51,
           "resumen": "POST /api/sivra/pricing/experiments — registrar override manual"
         },
         {
@@ -57729,7 +57704,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 86,
+          "linea": 79,
           "resumen": "DELETE /api/sivra/pricing/experiments?id=X"
         }
       ],
@@ -57739,7 +57714,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/experiments",
-      "hash": "b50c901e61fc"
+      "hash": "15c62cbdc525"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/guard/route.ts",
@@ -57754,7 +57729,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 74
+          "linea": 75
         }
       ],
       "tablas": [
@@ -57783,7 +57758,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "60b0fb33a2ff"
+      "hash": "e8ab50e34aa5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -57863,7 +57838,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "b02ba71ff006"
+      "hash": "6699531f3bc2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -57928,8 +57903,8 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 11,
-          "resumen": "GET /api/sivra/pricing/resultados Medidor de resultados: euros extra generados por el motor vs lo que habría cobrado PriceLabs. Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked (si"
+          "linea": 17,
+          "resumen": "GET /api/sivra/pricing/resultados Medidor de resultados: suma de las SUBIDAS que aplicó el motor en noches que luego se vendieron. Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked "
         }
       ],
       "tablas": [
@@ -57940,7 +57915,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/resultados",
-      "hash": "5d08d9400774"
+      "hash": "d887018d5327"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/resumen-diario/route.ts",
@@ -58001,30 +57976,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "a482dab412eb"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/sivra/pricing/stats/route.ts",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 8
-        }
-      ],
-      "tablas": [
-        "next",
-        "rate_snapshots"
-      ],
-      "rutaApi": "/api/sivra/pricing/stats",
-      "hash": "466f31d04f2b"
+      "hash": "a1419e2af12e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/rates/snapshot/route.ts",
@@ -58039,7 +57991,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 25
+          "linea": 27
         },
         {
           "nombre": "GET",
@@ -58047,7 +57999,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 29
+          "linea": 31
         }
       ],
       "tablas": [
@@ -58056,7 +58008,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/rates/snapshot",
-      "hash": "de4eef9dbf09"
+      "hash": "411b1c87bc83"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/resumen-semanal/route.ts",
@@ -63652,7 +63604,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 120,
+          "linea": 119,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -63661,7 +63613,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 150,
+          "linea": 149,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -63670,7 +63622,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 172
+          "linea": 171
         },
         {
           "nombre": "ventanaMinutos",
@@ -63678,7 +63630,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 180,
+          "linea": 179,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -63687,13 +63639,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 192,
+          "linea": 191,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d8226b75b79"
+      "hash": "117149d2af97"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -66567,7 +66519,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "88bbe5f704a2"
+      "hash": "94335aa42b0f"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -67164,7 +67116,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "442fe5379192"
+      "hash": "92fe3c9b3595"
     },
     {
       "ruta": "apps/plataforma/lib/programador.ts",
@@ -70808,7 +70760,7 @@
           "exportada": true,
           "params": "saltados: PisoSaltado[], minSample: number, maxEdad: number",
           "retorno": "string | null",
-          "linea": 65,
+          "linea": 64,
           "resumen": "Texto del aviso cuando el motor deja pisos sin tarifar. `null` si no hay ninguno: un aviso que salta siempre deja de leerse. Que un piso no se tarifique es CARO y hasta hoy era invisible — vivía solo "
         }
       ],
@@ -70816,7 +70768,7 @@
         "market_rates"
       ],
       "rutaApi": null,
-      "hash": "d4ce69ca95bf"
+      "hash": "88750502028e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
@@ -71000,12 +70952,12 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "089c84cdb09a"
+      "hash": "a3378f0fba3a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-lecturas.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Lecturas auxiliares del motor de precios que pueden caerse SIN invalidar la pasada — pero que hasta hoy se caían EN SILENCIO (hallazgo 🟡 4 de `docs/AUDITORIA-2026-08-pricing-mudo.md`). El `apply` tiene once lecturas que degradan. Tres ya se declaraban (eventos, PriceLabs, ocupación-por-mes) y dos a",
+      "resumen": "Lecturas auxiliares del motor de precios que pueden caerse SIN invalidar la pasada — pero que hasta hoy se caían EN SILENCIO (hallazgo 🟡 4 de `docs/AUDITORIA-2026-08-pricing-mudo.md`). El `apply` tiene diez lecturas que degradan. Dos ya se declaraban (eventos y ocupación-por-mes; una tercera, la re",
       "exporta": [
         "resumenLecturasCaidas",
         "avisoLecturasCaidas"
@@ -71017,7 +70969,7 @@
           "exportada": true,
           "params": "fallos: LecturaCaida[]",
           "retorno": "string | null",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Resumen corto para la respuesta HTTP y el parte del latido. `null` si no cayó ninguna. Va nombre a nombre porque el vigía de las 07:45 decide con esto a qué log ir."
         },
         {
@@ -71026,13 +70978,13 @@
           "exportada": true,
           "params": "fallos: LecturaCaida[]",
           "retorno": "string | null",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Aviso de Telegram cuando alguna lectura auxiliar falla. `null` si ninguna. Deja claro lo que separa esto de un `rail_ciego`: la pasada SÍ tarificó, con fallback — los precios están escritos y son plau"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "736059ce458f"
+      "hash": "cebbef821a17"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-precio-huesped.ts",
@@ -71087,27 +71039,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ed2c7536f612"
-    },
-    {
-      "ruta": "apps/plataforma/lib/sivra/pricing-suelo-pl.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/pricing-suelo-pl.ts — el suelo PriceLabs cede ante el mercado MEDIDO de la fecha. POR QUÉ (15/08/2026). La referencia PL (`pricing_pl_referencia`) es una foto ESTÁTICA del pasado que actúa de suelo (PL_FLOOR_RATIO×PL) hasta caducar. Ese día se descubrió que la foto congelada por el PR #141",
-      "exporta": [
-        "acotarSueloPL"
-      ],
-      "funciones": [
-        {
-          "nombre": "acotarSueloPL",
-          "kind": "function",
-          "exportada": true,
-          "params": "i: SueloPLInput",
-          "retorno": "SueloPLResult",
-          "linea": 39
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "53e1ea612f18"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-techo-mercado.ts",
@@ -81115,7 +81046,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "845fbcc12d9d"
+      "hash": "282cc879f366"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/pricing/page.tsx",
@@ -81130,14 +81061,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 54
+          "linea": 39
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "574e1494bf6f"
+      "hash": "c1000732ad41"
     },
     {
       "ruta": "apps/sivra/app/(dashboard)/properties/page.tsx",
@@ -84044,7 +83975,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/pricing/apply",
-      "hash": "18c1e916c3f6"
+      "hash": "6599d6fb0190"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/config/route.ts",
@@ -84127,7 +84058,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 52,
+          "linea": 47,
           "resumen": "POST /api/pricing/experiments — registrar override manual"
         },
         {
@@ -84136,7 +84067,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 79,
+          "linea": 72,
           "resumen": "DELETE /api/pricing/experiments?id=X"
         }
       ],
@@ -84146,7 +84077,7 @@
         "set"
       ],
       "rutaApi": "/api/pricing/experiments",
-      "hash": "3320bd07ee9f"
+      "hash": "cd164e2a6793"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/guard/route.ts",
@@ -84161,7 +84092,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [
@@ -84174,7 +84105,7 @@
         "snap"
       ],
       "rutaApi": "/api/pricing/guard",
-      "hash": "451a5248d30b"
+      "hash": "cb3e6e6a99a9"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/historial/route.ts",
@@ -84254,7 +84185,7 @@
         "set"
       ],
       "rutaApi": "/api/pricing/pilot-track",
-      "hash": "c6736a7a25dc"
+      "hash": "80c26f221194"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/pisos-zona/route.ts",
@@ -84343,8 +84274,8 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 11,
-          "resumen": "GET /api/pricing/resultados Medidor de resultados: euros extra generados por el motor vs lo que habría cobrado PriceLabs. Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked (si la no"
+          "linea": 17,
+          "resumen": "GET /api/pricing/resultados Medidor de resultados: suma de las SUBIDAS que aplicó el motor en noches que luego se vendieron. Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked (si la"
         }
       ],
       "tablas": [
@@ -84355,7 +84286,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/pricing/resultados",
-      "hash": "a549349d3804"
+      "hash": "0885b0c3b09f"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/resumen-diario/route.ts",
@@ -84416,30 +84347,7 @@
         "set"
       ],
       "rutaApi": "/api/pricing/settings",
-      "hash": "549e7e43ca06"
-    },
-    {
-      "ruta": "apps/sivra/app/api/pricing/stats/route.ts",
-      "ambito": "apps/sivra",
-      "exporta": [
-        "GET"
-      ],
-      "funciones": [
-        {
-          "nombre": "GET",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 7
-        }
-      ],
-      "tablas": [
-        "next",
-        "rate_snapshots"
-      ],
-      "rutaApi": "/api/pricing/stats",
-      "hash": "ecc6eb20bf79"
+      "hash": "3b2335df3db7"
     },
     {
       "ruta": "apps/sivra/app/api/properties/route.ts",
@@ -84555,7 +84463,7 @@
         "set"
       ],
       "rutaApi": "/api/rates/snapshot",
-      "hash": "c4e061dcccca"
+      "hash": "720e96191e0e"
     },
     {
       "ruta": "apps/sivra/app/api/resumen-semanal/route.ts",
@@ -97303,7 +97211,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2571,
-    "funciones": 7074
+    "archivos": 2567,
+    "funciones": 7070
   }
 }
