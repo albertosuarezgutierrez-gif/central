@@ -1,5 +1,43 @@
 # Salida de Chekin — partes de viajeros propios · plan por fases
 
+> ## 🛑 DECISIÓN 25/08/2026 (Alberto): desarrollo CONGELADO — Chekin se queda
+>
+> El mismo día de escribirse este plan se hizo el estudio de coste real leyendo las facturas
+> del Gmail, y el número tumba el proyecto:
+>
+> - **Chekin directo (Stripe, mensual): 2,01€/mes ≈ 24€/año.** La cuenta está en plan
+>   **«Basic free»**: 7 propiedades a 0,00€; lo único que se paga son 2 propiedades
+>   *deshabilitadas* a 0,83€/ud. **No hay cobro por check-in** (recibos idénticos ene-jun 2026).
+> - **Integración vía Smoobu: «Chekin.com Integration Yearly» 36€ × 7 uds = 252€/año** de
+>   lista, embebida en la renovación anual (y esa factura ya viene negociada −40% de la lista).
+> - **Total Chekin ≈ 275€/año.** El plan de abajo son ~3 meses de desarrollo + soporte propio
+>   + riesgo sancionador en casa, para ahorrar eso. No compensa. (La motivación de «quedarnos
+>   los datos del huésped» sigue siendo real, pero no paga sola el proyecto hoy.)
+> - **El misterio de las 7 unidades quedó resuelto en el propio correo:** son Casa Palacio,
+>   Suit y Enjoy (pisos que Alberto ya no tiene). Lo peleó en feb-2026: Smoobu no las quitó
+>   («aparecerán de todos modos») pero aplicó descuento — lista 1.407,60€+IVA → pactado
+>   841,36€+IVA = 1.018,05€ (ticket 1659351, oferta 945 → 860 → cobrado 841,36).
+>
+> **Qué se conserva:** `packages/module-ses` (transporte validado contra producción) se queda
+> en el repo tal cual — no caduca, no cuesta nada, y es la opción lista si Chekin/Smoobu suben
+> precio o si el módulo se vende a terceros con la plataforma. **Condición de reapertura:** la
+> línea Chekin de la renovación sube materialmente, o dejamos de ser 4 pisos.
+>
+> **Lo que SÍ sigue vivo de este documento** (nada es programar):
+> 1. **§2.1 — ¿dos emisores?** Sigue pendiente e importa igual con Chekin quedándose: en el
+>    Gmail hay avisos reales de SES «comunicaciones erróneas» (oct-nov 2025, mar 2026). Mirar
+>    en el portal SES quién emite por piso y apagar el envío automático de Smoobu si duplica.
+> 2. **Renovación Smoobu del 07/03/2027** (ticket en feb): pedir la baja REAL de las 3
+>    unidades muertas y presupuesto por 4 (la lista por 4 sería ~804€ vs 1.407,60€ por 7:
+>    la negociación parte mucho más abajo), y de paso las 2 «disabled» del Stripe de Chekin
+>    (~24€/año, es un clic).
+> 3. Los avisos de error de SES llegan al Gmail de Pilar/María Antonia y se arreglan a mano
+>    con soporte de Chekin — si algún día cansa, ESE es el dolor que reabriría esto, no la cuota.
+>
+> El plan original se conserva íntegro debajo como referencia para el día que se reabra.
+
+---
+
 > **Qué es esto:** un plan de PROYECTO (fases, fechas, decisiones y bloqueantes), no un plan
 > TDD ejecutable tarea a tarea. El plan TDD del código se escribe cuando cierren los cuatro
 > bloqueantes de §2 — hoy hay decisiones abiertas que cambiarían el alcance.

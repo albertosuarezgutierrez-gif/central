@@ -5,6 +5,16 @@
 > cuenta para ahorrarnos Smoobu) **no es viable hoy**, y que además persigue el dinero pequeño.
 > Abajo está el orden por el que sí sale rentable, con los números reales.
 
+> ## ✅ DECISIÓN 25/08/2026 (Alberto): descartado — Smoobu se queda como partner de conectividad
+>
+> Confirmado con las facturas del Gmail: la renovación 2026 se pagó **841,36€ + IVA =
+> 1.018,05€** tras negociar (lista 1.407,60€+IVA; ofertas 945 → 860 → cobrado 841,36€, ticket
+> 1659351), e incluye Booking, Airbnb, Expedia, Agoda y la integración de Chekin. Por ese
+> precio, el desarrollo de conectividad propia no se justifica. El proyecto queda descartado;
+> las condiciones de reapertura de §4.4 siguen en pie. Lo accionable que queda es §4.1
+> (renovación feb-2027 pidiendo la baja real de las 3 unidades muertas) y §4.2 (reserva
+> directa, donde está el dinero grande).
+
 ---
 
 ## 1. Los números primero
