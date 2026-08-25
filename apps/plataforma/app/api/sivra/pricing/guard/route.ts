@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client"
 import { tgAlert } from "@/lib/telegram"
 import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
 import {
-  decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza,
+  decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza, decidirRitmoDestacado,
   decidirCompsDeOtroAforo,
 } from "@/lib/sivra/pricing-centinelas"
 import { eventFactor } from "@/lib/pricing-calendar"
@@ -303,6 +303,49 @@ export async function GET(req: NextRequest) {
     }))
     .filter(a => a.ev.alerta)
 
+  // #11 Ritmo de venta DESTACADO (25/08/2026, petición de Alberto: «importante que el agente se dé
+  // cuenta de esas cosas — septiembre mes regular y Socorro está arrasando con el resto»). Compara
+  // la ocupación de los MESES FUTUROS entre pisos: uno vendiendo muy por delante de los hermanos en
+  // un mes flojo es la señal de precio corto más limpia que hay, y el motor no la ve porque nunca
+  // mira a los hermanos. Lógica pura en decidirRitmoDestacado (con los datos reales del 25/08 salta
+  // septiembre y no salta octubre). La antelación mediana sale de incomes.reserved_at (24 meses).
+  const ritmoRaw = await prisma.$queryRaw<{
+    property_id: string; mes: string; dias_hasta: number; noches: number; ocupadas: number
+    antelacion: number | null
+  }[]>(Prisma.sql`
+    WITH ult AS (
+      SELECT property_id, MAX(snapshot_date) AS sd FROM rate_snapshots GROUP BY property_id
+    ),
+    antel AS (
+      SELECT i."propertyId" AS property_id,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY (i."checkIn"::date - i.reserved_at::date))::float8 AS antelacion
+      FROM incomes i
+      WHERE i.reserved_at IS NOT NULL AND i."checkIn"::date >= i.reserved_at::date
+        AND i.reserved_at >= CURRENT_DATE - INTERVAL '24 months'
+      GROUP BY 1
+    )
+    SELECT r.property_id, to_char(r.rate_date, 'YYYY-MM') AS mes,
+      (date_trunc('month', r.rate_date)::date - CURRENT_DATE)::int AS dias_hasta,
+      COUNT(*)::int AS noches,
+      COUNT(*) FILTER (WHERE r.available = 0)::int AS ocupadas,
+      a.antelacion
+    FROM rate_snapshots r
+    JOIN ult ON ult.property_id = r.property_id AND ult.sd = r.snapshot_date
+    LEFT JOIN antel a ON a.property_id = r.property_id
+    WHERE r.rate_date >= date_trunc('month', CURRENT_DATE + INTERVAL '1 month')
+      AND r.rate_date < date_trunc('month', CURRENT_DATE + INTERVAL '4 months')
+    GROUP BY 1, 2, date_trunc('month', r.rate_date), a.antelacion
+  `).catch(() => [])
+
+  const ritmoPorMes = new Map<string, { diasHasta: number; pisos: { property_id: string; noches: number; ocupadas: number; antelacionMediana: number | null }[] }>()
+  for (const r of ritmoRaw) {
+    const e = ritmoPorMes.get(r.mes) ?? { diasHasta: Number(r.dias_hasta), pisos: [] }
+    e.pisos.push({ property_id: r.property_id, noches: Number(r.noches), ocupadas: Number(r.ocupadas), antelacionMediana: r.antelacion == null ? null : Number(r.antelacion) })
+    ritmoPorMes.set(r.mes, e)
+  }
+  const ritmoHits = [...ritmoPorMes.entries()].flatMap(([mes, e]) =>
+    decidirRitmoDestacado({ mes, diasHastaMes: e.diasHasta, pisos: e.pisos }).map(h => ({ ...h, mes })))
+
   // #10 Noche bloqueada SIN income (24/08/2026). El calendario dice «no disponible» y ningún
   // income cubre la noche. Caso fundacional: Busto 15-17 abr 2027 (Feria) — una reserva de Airbnb
   // que el sync incremental se saltó estuvo TRES ciclos del agente apareciendo «vendida a 103€ sin
@@ -560,6 +603,16 @@ export async function GET(req: NextRequest) {
       tipo: "comps_otro_aforo", prioridad: "alta", property_id: a.property_id,
       titulo: `${PROP_NAMES[a.property_id] ?? a.property_id}: su mercado se está leyendo de pisos de otro tamaño`,
       detalle: `${a.ev.motivo} Mientras siga así, NO bajes el precio de este piso con el dato de mercado: revisa que la rutina de Booking (mercado-booking) esté midiendo su aforo y vuelve a mirarlo.`,
+    })
+    if (ok) created++
+  }
+  for (const h of ritmoHits) {
+    const ok = await pushAlert({
+      tipo: "ritmo_venta_destacado", prioridad: "media", property_id: h.property_id,
+      titulo: `${PROP_NAMES[h.property_id] ?? h.property_id}: ${h.mes} al ${h.ocupPct}% vendido con el resto al ${h.medianaOtrosPct}%`,
+      detalle: `${h.motivo} (El aviso se repite si se resuelve y el contraste persiste.)`,
+      dato_actual: h.ocupPct, dato_mercado: h.medianaOtrosPct,
+      fecha_ref: `${h.mes}-01`,
     })
     if (ok) created++
   }
