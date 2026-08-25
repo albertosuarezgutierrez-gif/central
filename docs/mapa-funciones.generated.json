@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-25T13:53:07Z",
-  "sha": "7ceb34eceedcc9031c49f4f8c3efa2cb60b08acd",
+  "generadoEn": "2026-08-25T16:11:57Z",
+  "sha": "08c7776401396caabf28c4fce2987e321640b05f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57504,7 +57504,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "fmt",
@@ -57512,7 +57512,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "GET",
@@ -57520,7 +57520,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 65,
+          "linea": 66,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57529,7 +57529,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 69
+          "linea": 70
         }
       ],
       "tablas": [
@@ -57552,7 +57552,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "5a3e9aaa1c96"
+      "hash": "4d30b1900ad1"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -70560,6 +70560,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8dc407af5c6c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-base-evento.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-base-evento.ts — sobre QUÉ base se multiplica el factor de un evento. 🚨 EL SERRUCHO (diagnosticado el 25/08/2026). Durante semanas los precios de casi todas las fechas subían y bajaban dentro de la misma semana —el 74% del calendario, con un factor 1,44 entre su máximo y su mínimo",
+      "exporta": [
+        "baseSaltoEvento"
+      ],
+      "funciones": [
+        {
+          "nombre": "baseSaltoEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: BaseEventoInput",
+          "retorno": "BaseEventoResult",
+          "linea": 59,
+          "resumen": "Base del salto de evento. El bucket del MES manda siempre que exista; la global es el respaldo. `baseMes` no válida (null, 0, negativa, NaN) cae a la global — un mes sin mercado medido no es un mes a "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7eceff433a7f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-bucket-fuente.ts",
@@ -97349,7 +97371,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2570,
-    "funciones": 7079
+    "archivos": 2571,
+    "funciones": 7080
   }
 }
