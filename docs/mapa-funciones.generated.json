@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-25T13:23:24Z",
-  "sha": "adc40b4d017c08e8a1dca940d2a116bf679d39af",
+  "generadoEn": "2026-08-25T13:53:07Z",
+  "sha": "7ceb34eceedcc9031c49f4f8c3efa2cb60b08acd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51198,7 +51198,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/tools",
-      "hash": "c1731f256dcd"
+      "hash": "8752dbbe02db"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/video/route.ts",
@@ -57753,6 +57753,7 @@
         }
       ],
       "tablas": [
+        "antel",
         "barato",
         "base",
         "incomes",
@@ -57778,7 +57779,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "e8ab50e34aa5"
+      "hash": "093080636281"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -66865,7 +66866,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7fb1c52514e3"
+      "hash": "1b674091285b"
     },
     {
       "ruta": "apps/plataforma/lib/patrimonio-chat.ts",
@@ -70704,6 +70705,7 @@
         "decidirPrecioPorPlaza",
         "factorAforo",
         "decidirCompsDeOtroAforo",
+        "decidirRitmoDestacado",
         "decidirEventoACiegas"
       ],
       "funciones": [
@@ -70760,17 +70762,34 @@
           "resumen": "⚠️ EL UMBRAL ES HOLGADO A PROPÓSITO (1,35). Con 1,25 saltaría también Luxury Busto, que son 5 plazas medidas con comps de 4 (factor 1,28): esa diferencia de UNA plaza es ruido de cómo cada anfitrión c"
         },
         {
+          "nombre": "medianaDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number",
+          "linea": 341
+        },
+        {
+          "nombre": "decidirRitmoDestacado",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: RitmoDestacadoInput, o: RitmoDestacadoOpts = {},",
+          "retorno": "VeredictoRitmo[]",
+          "linea": 348,
+          "resumen": "Devuelve un veredicto por piso destacado (lista vacía = nada que destacar o sin muestra)."
+        },
+        {
           "nombre": "decidirEventoACiegas",
           "kind": "function",
           "exportada": true,
           "params": "i: EventoACiegasInput, o: EventoACiegasOpts = {},",
           "retorno": "VeredictoCongelacion",
-          "linea": 334
+          "linea": 434
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d97d7fbaea59"
+      "hash": "f48335b281b4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-comps-plausibles.ts",
@@ -87435,7 +87454,9 @@
       "ambito": "packages/core-ai",
       "resumen": "Wrapper de alto nivel que lee NVIDIA_API_KEY del entorno (con fallback gratis a Groq). Las apps que necesiten config explícita (tests, multi-proveedor) siguen usando nimChat/nimText directamente con su NimConfig inyectado. Política de fallback de TEXTO (compartida por todas las verticales que usan e",
       "exporta": [
+        "aiCompleteConProveedor",
         "aiComplete",
+        "aiToolsConProveedor",
         "aiTools"
       ],
       "funciones": [
@@ -87493,13 +87514,31 @@
           "resumen": "Config OpenRouter PRIMARIO desde el entorno. null si no hay OPENROUTER_API_KEY (queda inactivo y la cadena arranca en NIM como siempre → rollout por proyecto poniendo la env). OPENROUTER_MODEL = model"
         },
         {
-          "nombre": "aiComplete",
+          "nombre": "aiCompleteConProveedor",
           "kind": "function",
           "exportada": true,
           "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string /** La PASARELA lo pone a true cuando ya intentó/bloqueó OpenRouter (presupuesto): evita reint",
+          "retorno": "Promise<AiCompleteResult>",
+          "linea": 143,
+          "resumen": "Completion de texto CON PROCEDENCIA: igual que `aiComplete`, pero devuelve qué proveedor/ modelo sirvió de verdad la respuesta, en vez de un `string` opaco. 🚨 Por qué existe (25/08/2026): `aiComplete"
+        },
+        {
+          "nombre": "aiComplete",
+          "kind": "function",
+          "exportada": true,
+          "params": "promptOrMessages: string | NimChatMessage[], options: { system?: string maxTokens?: number temperature?: number timeoutMs?: number model?: string skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<string>",
-          "linea": 120,
-          "resumen": "Completion de texto: OpenRouter (agregador, si hay key) → NVIDIA NIM (gratis) → Groq (gratis) → Cerebras (gratis) → [Gemini, solo con GEMINI_TEXTO=1] → Kimi (de pago). Cada eslabón se activa solo si e"
+          "linea": 241,
+          "resumen": "Completion de texto: mismo contrato de siempre (devuelve solo el `string`). Atajo de `aiCompleteConProveedor` para los ~70 callers del monorepo a los que no les importa QUÉ proveedor sirvió — solo la "
+        },
+        {
+          "nombre": "aiToolsConProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
+          "retorno": "Promise<AiToolsResult>",
+          "linea": 271,
+          "resumen": "Function-calling CON PROCEDENCIA: mismo mecanismo que `aiCompleteConProveedor` — devuelve qué proveedor/modelo sirvió de verdad, en vez de dejar que el caller adivine (ver el LANDMINE en la cabecera d"
         },
         {
           "nombre": "aiTools",
@@ -87507,13 +87546,13 @@
           "exportada": true,
           "params": "messages: NimToolMessage[], tools: unknown[], options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},",
           "retorno": "Promise<NimToolResult>",
-          "linea": 211,
-          "resumen": "Function-calling: OpenRouter (si hay key) → NVIDIA NIM (gratis) → Groq (gratis) de fallback. Lee `OPENROUTER_API_KEY`/`NVIDIA_API_KEY`/`GROQ_API_KEY` del entorno. Wrapper usado por la pasarela central"
+          "linea": 310,
+          "resumen": "Function-calling: mismo contrato de siempre (`NimToolResult`, sin procedencia). Atajo de `aiToolsConProveedor` para los callers a los que no les importa qué proveedor sirvió."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0388c13cc180"
+      "hash": "514c7403b4f1"
     },
     {
       "ruta": "packages/core-ai/src/embeddings.ts",
@@ -87999,14 +88038,14 @@
           "kind": "function",
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimToolMessage[], tools: unknown[], opts: OpenRouterChatOptions = {},",
-          "retorno": "Promise<NimToolResult>",
-          "linea": 235,
-          "resumen": "Function-calling con OpenRouter (formato de tools OpenAI). Espejo de `groqChatTools`, con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools`."
+          "retorno": "Promise<NimToolResult &",
+          "linea": 237,
+          "resumen": "Function-calling con OpenRouter (formato de tools OpenAI). Espejo de `groqChatTools`, con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools` — más el modelo REAL usado (p"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3fa067521099"
+      "hash": "9ec92507dbee"
     },
     {
       "ruta": "packages/core-ai/src/stt.ts",
@@ -97311,6 +97350,6 @@
   ],
   "resumen": {
     "archivos": 2570,
-    "funciones": 7075
+    "funciones": 7079
   }
 }
