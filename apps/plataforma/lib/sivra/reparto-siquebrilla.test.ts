@@ -37,6 +37,12 @@ test('sin salidas del mes facturado devuelve null (no se puede desglosar), nunca
   assert.equal(repartirPagoSiqueBrilla(780.10, new Map([['prop_desconocido', 3]]), TARIFAS), null)
 })
 
+test('un resto mayor que la propia limpieza no se afirma como lavandería: null (sin desglose creíble)', () => {
+  // Limpieza esperada de julio con IVA = 571,12€; un pago de 1.500€ deja 928,88€ de resto —
+  // más que la limpieza misma. Eso no es lavandería: el desglose se rechaza.
+  assert.equal(repartirPagoSiqueBrilla(1500, SALIDAS_JULIO, TARIFAS), null)
+})
+
 test('total no positivo devuelve null', () => {
   assert.equal(repartirPagoSiqueBrilla(0, SALIDAS_JULIO, TARIFAS), null)
   assert.equal(repartirPagoSiqueBrilla(-780.10, SALIDAS_JULIO, TARIFAS), null)

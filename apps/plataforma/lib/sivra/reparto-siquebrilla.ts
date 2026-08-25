@@ -89,6 +89,11 @@ export function repartirPagoSiqueBrilla(
 
   const limpieza = new Map<string, number>()
   if (total >= esperadoTotal) {
+    // Un resto mayor que la propia limpieza no es lavandería creíble (en las facturas reales
+    // ronda el 10-40% de la limpieza): probablemente el pago cubre algo que estas salidas no
+    // explican (p. ej. dos facturas en una transferencia). Mejor «no sé desglosar» que etiquetar
+    // de lavandería un mes entero de limpiezas.
+    if (total - esperadoTotal > esperadoTotal) return null
     for (const [pid, imp] of esperado) limpieza.set(pid, r2(imp))
     return { limpieza, lavanderia: r2(total - esperadoTotal) }
   }

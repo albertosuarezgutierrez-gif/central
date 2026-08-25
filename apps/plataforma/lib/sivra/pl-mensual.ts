@@ -201,13 +201,27 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     mGastos.get(row.propiedad)!.lavanderia += Number(row.importe)
   }
 
-  // Añadir El Giraldillo repartido por fórmula
-  if (lavanderiaLibre > 0 && pesoTotal > 0) {
-    for (const [pid, peso] of pesos) {
-      if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
-      mGastos.get(pid)!.lavanderia += Math.round((peso / pesoTotal) * lavanderiaLibre * 100) / 100
+  // Reparto de lavandería (Giraldillo y la incluida en el pago a Sique Brilla): capacidad ×
+  // reservas del mes de caja. Sin reservas en el mes, a partes iguales entre los pisos que
+  // comparten lavandería — nunca se evapora el gasto del P&L.
+  const repartirLavanderia = (importe: number) => {
+    if (pesoTotal > 0) {
+      for (const [pid, peso] of pesos) {
+        if (peso <= 0) continue
+        if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
+        mGastos.get(pid)!.lavanderia += Math.round((peso / pesoTotal) * importe * 100) / 100
+      }
+    } else {
+      const compartidos = props.filter(p => PISOS_LAVANDERIA.includes(p.id))
+      for (const p of compartidos) {
+        if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
+        mGastos.get(p.id)!.lavanderia += Math.round((importe / compartidos.length) * 100) / 100
+      }
     }
   }
+
+  // Añadir El Giraldillo repartido por fórmula
+  if (lavanderiaLibre > 0) repartirLavanderia(lavanderiaLibre)
 
   // Añadir Sique Brilla. Su factura mensual trae DOS servicios (25/08/2026, factura 2025/333):
   // limpieza (salidas × tarifa contratada) Y lavandería por peso. Y el mes facturado no siempre
@@ -223,26 +237,6 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // Orden de candidatos = preferencia en empate: primero el mes anterior (mes vencido).
   const candidatos = [{ salidas: mSalidasPrev }, { salidas: mSalidasCaja }]
 
-  const repartirLavanderiaSB = (importe: number) => {
-    // TODA lavandería va con la fórmula de El Giraldillo (decisión de Alberto, 25/08/2026):
-    // capacidad × reservas del mes de caja — los mismos pesos ya calculados arriba.
-    if (pesoTotal > 0) {
-      for (const [pid, peso] of pesos) {
-        if (peso <= 0) continue
-        if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
-        mGastos.get(pid)!.lavanderia += Math.round((peso / pesoTotal) * importe * 100) / 100
-      }
-    } else {
-      // Sin reservas del mes no hay pesos: a partes iguales entre los pisos que
-      // comparten lavandería, antes que evaporar el gasto del P&L.
-      const compartidos = props.filter(p => PISOS_LAVANDERIA.includes(p.id))
-      for (const p of compartidos) {
-        if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
-        mGastos.get(p.id)!.lavanderia += Math.round((importe / compartidos.length) * 100) / 100
-      }
-    }
-  }
-
   let limpiezaSinDesglosar = 0
   for (const mov of limpiezaMov.filter(r => !r.en_reparto)) {
     const total = Number(mov.importe)
@@ -253,10 +247,11 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
       mGastos.get(pid)!.limpieza += imp
     }
-    if (reparto.lavanderia > 0) repartirLavanderiaSB(reparto.lavanderia)
+    if (reparto.lavanderia > 0) repartirLavanderia(reparto.lavanderia)
   }
 
-  // Fallback sin datos de ningún mes candidato: reparto anterior (salidas del mes de caja).
+  // Fallback sin desglose creíble: reparto anterior (salidas del mes de caja); sin salidas
+  // tampoco, a partes iguales — el pago nunca se evapora del P&L.
   if (limpiezaSinDesglosar > 0) {
     let pesoLimpTotal = 0
     const pesosLimp = new Map<string, number>()
@@ -268,6 +263,12 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       for (const [pid, peso] of pesosLimp) {
         if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
         mGastos.get(pid)!.limpieza += Math.round((peso / pesoLimpTotal) * limpiezaSinDesglosar * 100) / 100
+      }
+    } else {
+      const compartidos = props.filter(p => PISOS_LAVANDERIA.includes(p.id))
+      for (const p of compartidos) {
+        if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
+        mGastos.get(p.id)!.limpieza += Math.round((limpiezaSinDesglosar / compartidos.length) * 100) / 100
       }
     }
   }
