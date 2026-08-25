@@ -2,6 +2,20 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 25/08/2026 (tarde) — cuadro «Motor vs PL» en producción + medidor con signo (PR #1702)
+- **El contrafactual PriceLabs vive en `/sivra/pricing-rentabilidad`** (`GET /api/sivra/pricing/rentabilidad`,
+  con sesión): backtest **lista-vs-lista** — noches ya vendidas bajo el motor, al precio que el motor tenía
+  aplicado al reservarse contra la curva congelada de `pricing_pl_referencia` de esa noche — + cohorte de
+  venta mensual por go-live + serie real de cargos de PL. Cada piso sale con estado explícito
+  (`completa`/`parcial`/`sin_datos`/`sin_referencia`, helper `lib/sivra/pricing-rentabilidad.ts`); solo
+  Dúplex/House tienen referencia. **La referencia caduca el 06/12/2026** — la página lleva la cuenta atrás;
+  pendiente de decisión de Alberto si se paga 1 listado de PL (~16,24€/mes) como espejo para la temporada alta.
+- **El medidor de `pricing-auto` ya suma CON SIGNO** (el `GREATEST(delta,0)` que recortaba las bajadas se
+  retiró en #1702/#1703): mide «Δ vs precio anterior DEL MOTOR en noches vendidas», NO es comparación con PL.
+- **Hueco jun-jul 2025 REPARADO** (backfill 25/08 vía `/api/sivra/updates/sync` con `ALERTA_TOKEN`, ruta ya
+  en `RUTAS_RUTINA` con auth propia): jun = 13 reservas / jul = 7, con `reserved_at`. El interanual del
+  cuadro está desbloqueado. Veredicto prerregistrado: RevPAR neto sept-nov 2026 vs mismo tramo de PL.
+
 ### 🚨 Actualización 25/08/2026 — el «sesgo del canal» era NUESTRO desfase de base + TECHO de mercado medido (PR #1698)
 - **El calibrado del canal medía contra una base MUERTA.** La rutina mide el escaparate a las ~03:40
   UTC pero `base_total` salía del snapshot de AYER 07:00 — sin las 3 pasadas de `apply` de ese día.
