@@ -32,6 +32,13 @@
 
 ---
 
+### 📧 (25/08/2026) facturas-correo — pasada diaria: solo el hueco Paso 4.0 cerrado
+Sin novedades de Gmail (Amazon cosmética y carta de no-renovación de seguro de un cliente, ambos
+sin archivar por no ser gasto). Paso 4.0 encontró 1 `sin_revisar` en `v_facturas_sin_cargo`
+(financialdatasets.ai 17,78€, archivada el 21/08) — casó exacto con el cargo del 24/08, conciliado
++ FK escrita. Vía B sana (1 día), sin backlog `PDF-pendiente`/`Revisar`. Detalle en
+`docs/AGENTES-BITACORA.md` (entrada 25/08 facturas-correo).
+
 ### 🖨️ (24/08/2026) Rasterizador de PDF: los escaneos CCITT/JBIG2 ya se leen
 Cierra el pendiente del 20/08 («pide rasterizador, no un umbral»): `lib/subastas/rasterizar-pdf.ts`
 (PDFium WASM `@hyzyla/pdfium` + sharp, en `serverExternalPackages`) como respaldo de
