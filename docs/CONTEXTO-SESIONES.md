@@ -32,6 +32,25 @@
 
 ---
 
+### 📉 (25/08/2026) EODHD gratis MEDIDO: da el ajuste por dividendo, pero NO cierra H1 (bulk vetado + 1 año de historia)
+Alberto pasó una API key del plan free. Probada de verdad contra la API (pg_net desde el egress de Supabase; el
+sandbox no sale a internet). **SÍ:** `adjusted_close` ajustado por splits Y dividendos (CVX 10/08: close 194,91 vs
+adj 193,2237) y sin limitarse a tickers demo. **NO:** `eod-bulk-last-day` responde **HTTP 423 «Bulk requests are
+prohibited for free users»** (adiós al «1 request = todos los cierres») y la historia está **capada a 1 año**
+(pedí `from=2010-01-01` y el registro más viejo es 2025-08-25 → adiós al retrovisor de 15 años y al sesgo de
+supervivencia). Cuota: **20 llamadas/día** vs universo de 1.244 símbolos → 1,6%/día, ~62 días por pasada:
+inservible como 3er fallback de la cadena de precios. **H1 sigue abierto**; solo lo cierra el plan de pago.
+Único uso que cabe: contraste diario de cierre ajustado de las 12 posiciones vivas (11 paper + 1 real) — sin montar.
+
+### 📉 (25/08/2026) Google Finance como fuente del agente de bolsa: DESCARTADO con prueba, no de memoria
+Idea de Alberto. No tiene API pública desde 2012; la única vía sancionada es `GOOGLEFINANCE()` en Sheets
+leído por el conector de Drive. **Probado y muerto:** en la MISMA hoja y la MISMA lectura, un literal
+`231.55` y un `USD` se leen bien, pero `=2*3` vuelve VACÍO → el conector devuelve literales, NO valores
+calculados; aunque GOOGLEFINANCE computara, el número nunca llega. La vía scraping no se pudo probar
+(el sandbox no sale a internet: 403 del proxy también a Yahoo y Stooq) y de todas formas es ToS + IP de
+datacenter. Tampoco cierra **H1** (no da serie total-return). Sigue vigente: EODHD como 3er fallback.
+Sin cambios de código; 3 hojas de prueba creadas en el Drive de Alberto y ya enviadas a la papelera.
+
 ### 🪚 (25/08/2026) EL SERRUCHO: diagnosticado y arreglado — el salto de evento se anclaba al ruido del barrido
 Causa raíz del 74% de fechas subiendo y bajando en la misma semana (factor 1,44). NO era el mercado:
 `med_guest_global` es el percentil de la ÚLTIMA pasada de Booking, que muestrea cada mañana 5-19 fechas
