@@ -41,6 +41,23 @@ calculados; aunque GOOGLEFINANCE computara, el número nunca llega. La vía scra
 datacenter. Tampoco cierra **H1** (no da serie total-return). Sigue vigente: EODHD como 3er fallback.
 Sin cambios de código; 3 hojas de prueba creadas en el Drive de Alberto y ya enviadas a la papelera.
 
+### 🪚 (25/08/2026) EL SERRUCHO: diagnosticado y arreglado — el salto de evento se anclaba al ruido del barrido
+Causa raíz del 74% de fechas subiendo y bajando en la misma semana (factor 1,44). NO era el mercado:
+`med_guest_global` es el percentil de la ÚLTIMA pasada de Booking, que muestrea cada mañana 5-19 fechas
+distintas de las ~111 del horizonte — Duplex hizo 129€→205€→146€ del 23 al 25/08 (el 24 cayeron Feria y
+S.Santa; el 25, cinco noches muertas de enero). Ese número multiplicaba el factor de evento y, como el
+salto de evento SALTA el raíl ±20%/día a propósito, viajaba entero en UNA pasada: Duplex 16/09 (Betis-
+Getafe) 158€→289€ (+83%) y a bajar. Con el Sevilla FC y el Betis jugando casi cada semana, casi toda fecha
+es de evento → el 74%. **Fix:** el salto se ancla al bucket del MES, que EXCLUYE fechas con evento (no hay
+doble conteo, que era el motivo de #985), distingue temporada y se mide sobre 120 días (122€→123€ esa
+semana). Sin bucket del mes sigue cayendo a la global y **se cuenta** (`saltos_evento_sin_mes`). Helper puro
+`lib/sivra/pricing-base-evento.ts` + test de regresión con las cifras reales. Medido: 159 fechas afectadas;
+el objetivo nuevo queda a 1,29-1,35× el mercado medido de esa noche (dentro del techo de 1,5×).
+**Descartado por ahora:** rehacer `med_guest_global` sobre el corpus acumulado con mediana por fecha — es
+lo correcto (111 fechas en vez de 6) pero mueve el nivel −15%/+39% según piso, y eso es una decisión de
+precio, no un arreglo de bug. Sigue abierto: cobertura del corpus (~28% del horizonte con ≥5 comps) y
+`was_booked` informado solo en el 10,4% de las filas (sin eso no se puede medir si el motor vende más).
+
 ### 🏖️ (25/08/2026) Rotación Dúplex→costa de Huelva: estudio completo cerrado, tiro centrado en La Antilla
 Sesión de estrategia con Alberto (sin código; se anota a mano). Todo el detalle vive en
 `patrimonio_recomendaciones` **id 4** (lo retoma el CFO el 02/09). Decisiones: rotar el Dúplex hacia casa
