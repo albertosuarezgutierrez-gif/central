@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-24T19:09:05Z",
-  "sha": "80527b65b89bbd80df731e4d546ec796482fe669",
+  "generadoEn": "2026-08-25T07:58:58Z",
+  "sha": "b12e18cf6688e36f3df8c250ad8225a964a91c00",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49463,7 +49463,7 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color: string }",
           "retorno": null,
-          "linea": 228
+          "linea": 232
         },
         {
           "nombre": "Th",
@@ -49471,12 +49471,12 @@
           "exportada": false,
           "params": "{ children, left }: { children: React.ReactNode; left?: boolean }",
           "retorno": null,
-          "linea": 240
+          "linea": 244
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c50159a375e7"
+      "hash": "ab68fb51cfa2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/seo/page.tsx",
@@ -70185,7 +70185,7 @@
           "exportada": false,
           "params": "",
           "retorno": "PLGastosPiso",
-          "linea": 46
+          "linea": 49
         },
         {
           "nombre": "catToField",
@@ -70193,7 +70193,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "keyof Omit<PLGastosPiso, 'total'>",
-          "linea": 50
+          "linea": 53
         },
         {
           "nombre": "getPLMensual",
@@ -70201,7 +70201,7 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "Promise<PLMensual>",
-          "linea": 61
+          "linea": 64
         },
         {
           "nombre": "mesPorDefecto",
@@ -70209,7 +70209,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 239,
+          "linea": 298,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
@@ -70223,7 +70223,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "3d5bcfc02fa5"
+      "hash": "83006098160d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",
@@ -70927,6 +70927,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cb436c13ce68"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/reparto-siquebrilla.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Sique Brilla (puro, testeable). Contexto (25/08/2026): la factura de Sique Brilla ya NO es solo limpieza — desde junio incluye líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex + 3×90€ Casa Socorro = 4",
+      "exporta": [
+        "esperadoLimpieza",
+        "repartirPagoSiqueBrilla"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "esperadoLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "salidas: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
+          "retorno": "number",
+          "linea": 34,
+          "resumen": "Limpieza esperada CON IVA para unas salidas × tarifas dadas."
+        },
+        {
+          "nombre": "repartirPagoSiqueBrilla",
+          "kind": "function",
+          "exportada": true,
+          "params": "total: number, salidasServicio: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
+          "retorno": "RepartoSiqueBrilla | null",
+          "linea": 71,
+          "resumen": "Desglosa el total pagado a Sique Brilla en limpieza por piso + resto de lavandería. `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`). Devuelve null si no hay salidas con "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "09f7f0488028"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -97010,7 +97050,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2565,
-    "funciones": 7051
+    "archivos": 2566,
+    "funciones": 7054
   }
 }
