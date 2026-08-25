@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-24T16:42:05Z",
+  "generadoEn": "2026-08-25T08:32:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1783,7 +1783,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 36
+        "evidencias": 37
       },
       "rrhh": {
         "estado": "no",
@@ -2625,7 +2625,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "rrhh": {
         "presente": false,
@@ -3882,6 +3882,7 @@
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
       "/api/sivra/facturas-control",
+      "/api/sivra/facturas-limpieza",
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
@@ -4338,8 +4339,10 @@
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
+      "ia_limite_mensual",
       "ia_presupuestos",
       "idealista_api_usos",
+      "limpieza_facturas",
       "mapa_arquitectura",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
@@ -5083,7 +5086,7 @@
     "packages": 38,
     "capacidades": 23,
     "skills": 35,
-    "apis": 1179,
+    "apis": 1180,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
