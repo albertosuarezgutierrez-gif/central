@@ -214,11 +214,12 @@ export default function ResultadoPisosPage() {
           </div>
 
           <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 16 }}>
-            Lavandería (El Giraldillo) repartida por capacidad × reservas. El pago a Sique Brilla se desglosa con
-            la estructura de su factura: Limpieza = salidas del mes facturado (el anterior al pago) × tarifa por
-            piso con IVA (Busto 20€ · Dúplex 25€ · Luxury 28€ · House 90€), y el resto del pago es su lavandería
-            por peso, repartida por capacidad × reservas del mes facturado. Todo por CAJA del mes (si un mes se
-            pagan dos facturas, salen las dos). Costes directos desde tabla de gastos.
+            Lavandería (El Giraldillo) repartida por capacidad × reservas. Cada pago a Sique Brilla se desglosa
+            con la estructura de su factura: Limpieza = salidas del mes facturado × tarifa por piso con IVA
+            (Busto 20€ · Dúplex 25€ · Luxury 28€ · House 90€), y el resto del pago es su lavandería por peso,
+            repartida por capacidad × reservas del mes facturado (el mes facturado es el que mejor ajusta al
+            importe: el anterior al pago o el mismo). Todo por CAJA del mes (si un mes se pagan dos facturas,
+            salen las dos). Costes directos desde tabla de gastos.
             Los gastos sin asignar a piso (EMASESA, etc.) no están incluidos aún.
           </p>
         </>

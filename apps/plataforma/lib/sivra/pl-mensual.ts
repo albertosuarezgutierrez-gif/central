@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { repartirPagoSiqueBrilla } from './reparto-siquebrilla'
+import { elegirMesFacturado, repartirPagoSiqueBrilla } from './reparto-siquebrilla'
 
 // Pisos de explotación turística Kutxa (comparten lavandería)
 const KUTXA_PISOS = ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto']
@@ -63,8 +63,8 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   const [year, month] = mes.split('-').map(Number)
   const start = new Date(year, month - 1, 1)
   const end   = new Date(year, month, 1)
-  // Mes FACTURADO por Sique Brilla: factura a mes vencido y se paga a primeros del siguiente,
-  // así que el pago que cae en el mes de caja corresponde a los servicios del mes anterior.
+  // Mes anterior: candidato a mes FACTURADO por Sique Brilla (cobra unas veces a primeros del
+  // mes siguiente y otras a fin del mismo mes — elige `elegirMesFacturado` por mejor ajuste).
   const prevStart = new Date(year, month - 2, 1)
 
   const [props, incomes, gastosDirect, repartoRows, movPropAsignados, lavanderiaMov, limpiezaMov, salidas, salidasPrev, reservasPrev] = await Promise.all([
@@ -215,60 +215,74 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   }
 
   // Añadir Sique Brilla. Su factura mensual trae DOS servicios (25/08/2026, factura 2025/333):
-  // limpieza (salidas × tarifa contratada) Y lavandería por peso. Y factura a mes vencido, así
-  // que el pago del mes de caja corresponde a las salidas del mes ANTERIOR — repartir el total
-  // como limpieza del mes de caja le cargaba a un piso la lavandería de todos y las limpiezas
-  // de un mes que no era el suyo. Caja del mes sigue mandando: si un mes se pagan dos facturas
+  // limpieza (salidas × tarifa contratada) Y lavandería por peso. Y el mes facturado no siempre
+  // es el de caja: unas veces cobra a primeros del mes siguiente y otras el último día del mismo
+  // mes — `elegirMesFacturado` lo decide por mejor ajuste al importe. Repartir el total como
+  // limpieza del mes de caja le cargaba a un piso la lavandería de todos y las limpiezas de un
+  // mes que no era el suyo. Caja del mes sigue mandando: si un mes se pagan dos facturas
   // (o ninguna), el P&L lo refleja.
-  const limpiezaLibre = limpiezaMov
-    .filter(r => !r.en_reparto)
-    .reduce((s, r) => s + Number(r.importe), 0)
-  if (limpiezaLibre > 0) {
-    const salidasServicio = new Map(salidasPrev.map(s => [s.pid, Number(s.salidas)]))
-    const reparto = repartirPagoSiqueBrilla(limpiezaLibre, salidasServicio, LIMPIEZA_TARIFAS)
-    if (reparto) {
-      for (const [pid, imp] of reparto.limpieza) {
+  // Cada movimiento paga UNA factura, así que se desglosa POR MOVIMIENTO (abril y junio
+  // tienen dos pagos en caja que facturan meses distintos).
+  const mSalidasCaja = new Map(salidas.map(s => [s.pid, Number(s.salidas)]))
+  const mSalidasPrev = new Map(salidasPrev.map(s => [s.pid, Number(s.salidas)]))
+  const mReservasPrev = new Map(reservasPrev.map(r => [r.pid, Number(r.reservas)]))
+  const mReservasCaja = new Map(incomes.map(r => [r.pid, Number(r.reservas)]))
+  // Orden de candidatos = preferencia en empate: primero el mes anterior (mes vencido).
+  const candidatos = [
+    { salidas: mSalidasPrev, reservas: mReservasPrev },
+    { salidas: mSalidasCaja, reservas: mReservasCaja },
+  ]
+
+  const repartirLavanderiaSB = (importe: number, reservasMes: Map<string, number>) => {
+    // Misma regla acordada que El Giraldillo (capacidad × reservas, pisos Kutxa),
+    // con las reservas del mes FACTURADO, que es el que generó esa ropa.
+    let pesoTotal = 0
+    const pesosSB = new Map<string, number>()
+    for (const p of props.filter(p => KUTXA_PISOS.includes(p.id))) {
+      const w = (p.maxGuests ?? 0) * (reservasMes.get(p.id) ?? 0)
+      if (w > 0) { pesosSB.set(p.id, w); pesoTotal += w }
+    }
+    if (pesoTotal > 0) {
+      for (const [pid, peso] of pesosSB) {
         if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
-        mGastos.get(pid)!.limpieza += imp
-      }
-      if (reparto.lavanderia > 0) {
-        // El resto es lavandería: misma regla acordada que El Giraldillo (capacidad × reservas,
-        // pisos Kutxa), pero con las reservas del mes FACTURADO, que es el que generó esa ropa.
-        const mReservasPrev = new Map(reservasPrev.map(r => [r.pid, Number(r.reservas)]))
-        let pesoPrevTotal = 0
-        const pesosPrev = new Map<string, number>()
-        for (const p of props.filter(p => KUTXA_PISOS.includes(p.id))) {
-          const w = (p.maxGuests ?? 0) * (mReservasPrev.get(p.id) ?? 0)
-          if (w > 0) { pesosPrev.set(p.id, w); pesoPrevTotal += w }
-        }
-        if (pesoPrevTotal > 0) {
-          for (const [pid, peso] of pesosPrev) {
-            if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
-            mGastos.get(pid)!.lavanderia += Math.round((peso / pesoPrevTotal) * reparto.lavanderia * 100) / 100
-          }
-        } else {
-          // Sin reservas del mes facturado no hay pesos: a partes iguales entre los
-          // pisos Kutxa antes que evaporar el gasto del P&L.
-          const kutxa = props.filter(p => KUTXA_PISOS.includes(p.id))
-          for (const p of kutxa) {
-            if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
-            mGastos.get(p.id)!.lavanderia += Math.round((reparto.lavanderia / kutxa.length) * 100) / 100
-          }
-        }
+        mGastos.get(pid)!.lavanderia += Math.round((peso / pesoTotal) * importe * 100) / 100
       }
     } else {
-      // Fallback sin datos del mes facturado: reparto anterior (salidas del mes de caja).
-      let pesoLimpTotal = 0
-      const pesosLimp = new Map<string, number>()
-      for (const s of salidas) {
-        const w = Number(s.salidas) * (LIMPIEZA_TARIFAS[s.pid] ?? 0)
-        if (w > 0) { pesosLimp.set(s.pid, w); pesoLimpTotal += w }
+      // Sin reservas del mes facturado no hay pesos: a partes iguales entre los
+      // pisos Kutxa antes que evaporar el gasto del P&L.
+      const kutxa = props.filter(p => KUTXA_PISOS.includes(p.id))
+      for (const p of kutxa) {
+        if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
+        mGastos.get(p.id)!.lavanderia += Math.round((importe / kutxa.length) * 100) / 100
       }
-      if (pesoLimpTotal > 0) {
-        for (const [pid, peso] of pesosLimp) {
-          if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
-          mGastos.get(pid)!.limpieza += Math.round((peso / pesoLimpTotal) * limpiezaLibre * 100) / 100
-        }
+    }
+  }
+
+  let limpiezaSinDesglosar = 0
+  for (const mov of limpiezaMov.filter(r => !r.en_reparto)) {
+    const total = Number(mov.importe)
+    const mesFact = elegirMesFacturado(total, candidatos, LIMPIEZA_TARIFAS)
+    const reparto = mesFact && repartirPagoSiqueBrilla(total, mesFact.salidas, LIMPIEZA_TARIFAS)
+    if (!mesFact || !reparto) { limpiezaSinDesglosar += total; continue }
+    for (const [pid, imp] of reparto.limpieza) {
+      if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
+      mGastos.get(pid)!.limpieza += imp
+    }
+    if (reparto.lavanderia > 0) repartirLavanderiaSB(reparto.lavanderia, mesFact.reservas)
+  }
+
+  // Fallback sin datos de ningún mes candidato: reparto anterior (salidas del mes de caja).
+  if (limpiezaSinDesglosar > 0) {
+    let pesoLimpTotal = 0
+    const pesosLimp = new Map<string, number>()
+    for (const [pid, n] of mSalidasCaja) {
+      const w = n * (LIMPIEZA_TARIFAS[pid] ?? 0)
+      if (w > 0) { pesosLimp.set(pid, w); pesoLimpTotal += w }
+    }
+    if (pesoLimpTotal > 0) {
+      for (const [pid, peso] of pesosLimp) {
+        if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
+        mGastos.get(pid)!.limpieza += Math.round((peso / pesoLimpTotal) * limpiezaSinDesglosar * 100) / 100
       }
     }
   }

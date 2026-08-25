@@ -1,18 +1,23 @@
 // lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Sique Brilla (puro, testeable).
 //
-// Contexto (25/08/2026): la factura de Sique Brilla ya NO es solo limpieza — desde julio incluye
+// Contexto (25/08/2026): la factura de Sique Brilla ya NO es solo limpieza — desde junio incluye
 // líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex +
 // 3×90€ Casa Socorro = 472€ de limpieza, + 172,71€ de lavandería, + IVA = 780,10€). Repartir el
 // pago entero como "limpieza por salidas" mezclaba los dos servicios y encima usaba las salidas
 // del mes de CAJA (agosto, con 2 salidas aún) en vez de las del mes FACTURADO (julio, 11 salidas):
 // a House Sevillana le caían 610,51€ cuando su limpieza real era 270€ + IVA.
 //
-// Este helper separa el pago en dos partes con la estructura conocida de la factura:
+// Estos helpers separan cada pago en dos partes con la estructura conocida de la factura:
 //   limpieza_i  = salidas del mes facturado × tarifa contratada del piso × (1+IVA)
 //   lavandería  = el resto del pago (se reparte aguas arriba por capacidad × reservas,
 //                 la misma regla acordada para El Giraldillo)
-// Sique Brilla factura a mes vencido y se paga a primeros del siguiente, así que el mes
-// facturado es el ANTERIOR al del pago (mes de caja del P&L).
+//
+// ¿Y cuál es el mes facturado? No siempre el anterior: contra los pagos reales de 2026, Sique
+// Brilla cobra unas veces a primeros del mes siguiente (03/04 marzo · 02/06 mayo · 03/08 julio)
+// y otras el último día del MISMO mes (30/04 abril · 30/06 junio). Por eso `elegirMesFacturado`
+// prueba los candidatos (mes anterior y mes de caja) y se queda con el que mejor AJUSTA al
+// importe pagado — las tarifas cuadran al céntimo con las salidas de `incomes` (la factura de
+// marzo: 888€ × 1,21 = 1.074,48€ exacto), así que el ajuste distingue los meses sin ambigüedad.
 
 export const IVA_LIMPIEZA = 0.21
 
@@ -25,11 +30,43 @@ export interface RepartoSiqueBrilla {
 
 const r2 = (n: number) => Math.round(n * 100) / 100
 
+/** Limpieza esperada CON IVA para unas salidas × tarifas dadas. */
+export function esperadoLimpieza(
+  salidas: ReadonlyMap<string, number>,
+  tarifas: Record<string, number>,
+): number {
+  let total = 0
+  for (const [pid, n] of salidas) total += Number(n) * (tarifas[pid] ?? 0)
+  return r2(total * (1 + IVA_LIMPIEZA))
+}
+
+/**
+ * Entre varios meses candidatos, el facturado es el que deja el resto (pago − limpieza esperada)
+ * más pequeño en valor absoluto. Empate → gana el primero de la lista (el caller ordena por
+ * preferencia). Candidatos sin salidas con tarifa no compiten; sin ninguno válido → null.
+ */
+export function elegirMesFacturado<C extends { salidas: ReadonlyMap<string, number> }>(
+  total: number,
+  candidatos: C[],
+  tarifas: Record<string, number>,
+): C | null {
+  if (!(total > 0)) return null
+  let mejor: C | null = null
+  let mejorDiff = Infinity
+  for (const c of candidatos) {
+    const esperado = esperadoLimpieza(c.salidas, tarifas)
+    if (esperado <= 0) continue
+    const diff = Math.abs(total - esperado)
+    if (diff < mejorDiff) { mejor = c; mejorDiff = diff }
+  }
+  return mejor
+}
+
 /**
  * Desglosa el total pagado a Sique Brilla en limpieza por piso + resto de lavandería.
- * `salidasServicio` son las salidas del MES FACTURADO (anterior al de caja), no las del mes del P&L.
- * Devuelve null si no hay salidas con tarifa con las que desglosar (sin datos del mes facturado):
- * el caller decide el fallback — null significa «no se ha podido desglosar», nunca «lavandería 0».
+ * `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`).
+ * Devuelve null si no hay salidas con tarifa con las que desglosar: el caller decide el
+ * fallback — null significa «no se ha podido desglosar», nunca «lavandería 0».
  */
 export function repartirPagoSiqueBrilla(
   total: number,
