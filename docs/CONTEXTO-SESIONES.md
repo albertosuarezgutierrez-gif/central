@@ -39,7 +39,8 @@ en julio) y se repartía toda como limpieza; (2) los pesos usaban las salidas de
 en vez del mes FACTURADO (julio: 11). Nuevo helper puro `lib/sivra/reparto-siquebrilla.ts` (fixtures =
 los 5 pagos reales de 2026): limpieza = salidas del mes facturado × tarifa × IVA; `elegirMesFacturado`
 decide entre mes anterior/caja por mejor ajuste (30/04 y 30/06 pagan el MISMO mes); el resto = lavandería
-por capacidad × reservas del mes facturado (regla Giraldillo). Desglose POR movimiento. El P&L es en vivo:
+con la MISMA fórmula que Giraldillo (capacidad × reservas del mes de caja — dictado por Alberto). Desglose
+POR movimiento. El P&L es en vivo:
 el año entero queda recalculado al mergear. PR #1692 (draft, pendiente de OK de Alberto). tsc 0 · 1583 tests.
 
 ### 🖨️ (24/08/2026) Rasterizador de PDF: los escaneos CCITT/JBIG2 ya se leen

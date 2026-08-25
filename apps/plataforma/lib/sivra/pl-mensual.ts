@@ -67,7 +67,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // mes siguiente y otras a fin del mismo mes — elige `elegirMesFacturado` por mejor ajuste).
   const prevStart = new Date(year, month - 2, 1)
 
-  const [props, incomes, gastosDirect, repartoRows, movPropAsignados, lavanderiaMov, limpiezaMov, salidas, salidasPrev, reservasPrev] = await Promise.all([
+  const [props, incomes, gastosDirect, repartoRows, movPropAsignados, lavanderiaMov, limpiezaMov, salidas, salidasPrev] = await Promise.all([
     // Propiedades (excluye multi/personal)
     prisma.$queryRaw<Array<{ id: string; name: string; maxGuests: number | null }>>`
       SELECT id, name, "maxGuests" FROM properties
@@ -160,13 +160,6 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       GROUP BY "propertyId"
     `,
 
-    // Reservas del mes ANTERIOR (pesos de la lavandería incluida en la factura de Sique Brilla)
-    prisma.$queryRaw<Array<{ pid: string; reservas: number }>>`
-      SELECT "propertyId" AS pid, COUNT(*)::int AS reservas
-      FROM incomes
-      WHERE "checkIn" >= ${prevStart} AND "checkIn" < ${start}
-      GROUP BY "propertyId"
-    `,
   ])
 
   // Lavandería no asignada todavía
@@ -225,31 +218,21 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // tienen dos pagos en caja que facturan meses distintos).
   const mSalidasCaja = new Map(salidas.map(s => [s.pid, Number(s.salidas)]))
   const mSalidasPrev = new Map(salidasPrev.map(s => [s.pid, Number(s.salidas)]))
-  const mReservasPrev = new Map(reservasPrev.map(r => [r.pid, Number(r.reservas)]))
-  const mReservasCaja = new Map(incomes.map(r => [r.pid, Number(r.reservas)]))
   // Orden de candidatos = preferencia en empate: primero el mes anterior (mes vencido).
-  const candidatos = [
-    { salidas: mSalidasPrev, reservas: mReservasPrev },
-    { salidas: mSalidasCaja, reservas: mReservasCaja },
-  ]
+  const candidatos = [{ salidas: mSalidasPrev }, { salidas: mSalidasCaja }]
 
-  const repartirLavanderiaSB = (importe: number, reservasMes: Map<string, number>) => {
-    // Misma regla acordada que El Giraldillo (capacidad × reservas, pisos Kutxa),
-    // con las reservas del mes FACTURADO, que es el que generó esa ropa.
-    let pesoTotal = 0
-    const pesosSB = new Map<string, number>()
-    for (const p of props.filter(p => KUTXA_PISOS.includes(p.id))) {
-      const w = (p.maxGuests ?? 0) * (reservasMes.get(p.id) ?? 0)
-      if (w > 0) { pesosSB.set(p.id, w); pesoTotal += w }
-    }
+  const repartirLavanderiaSB = (importe: number) => {
+    // TODA lavandería va con la fórmula de El Giraldillo (decisión de Alberto, 25/08/2026):
+    // capacidad × reservas del mes de caja, pisos Kutxa — los mismos pesos ya calculados arriba.
     if (pesoTotal > 0) {
-      for (const [pid, peso] of pesosSB) {
+      for (const [pid, peso] of pesos) {
+        if (peso <= 0) continue
         if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
         mGastos.get(pid)!.lavanderia += Math.round((peso / pesoTotal) * importe * 100) / 100
       }
     } else {
-      // Sin reservas del mes facturado no hay pesos: a partes iguales entre los
-      // pisos Kutxa antes que evaporar el gasto del P&L.
+      // Sin reservas del mes no hay pesos: a partes iguales entre los pisos Kutxa
+      // antes que evaporar el gasto del P&L.
       const kutxa = props.filter(p => KUTXA_PISOS.includes(p.id))
       for (const p of kutxa) {
         if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
@@ -268,7 +251,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())
       mGastos.get(pid)!.limpieza += imp
     }
-    if (reparto.lavanderia > 0) repartirLavanderiaSB(reparto.lavanderia, mesFact.reservas)
+    if (reparto.lavanderia > 0) repartirLavanderiaSB(reparto.lavanderia)
   }
 
   // Fallback sin datos de ningún mes candidato: reparto anterior (salidas del mes de caja).
