@@ -13,6 +13,15 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-25** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · pasada ligera diaria,
+  rango `f6e54a2..5f94da6` (38 commits, 24/08): corregido dato stale en la entrada del universo del
+  radar de trading (decía "800→1000", el corte real quedó en 1200 tras PR #1687, DBX en la posición
+  1131 del fichero SEC); añadido el fix de `force_reply` (#1655) a la entrada del canal conversacional
+  del patrimonio y cerrado el intake a "4 de 5 preguntas"; refrescado el bloque «Estado vivo» — cerrado
+  el pendiente de las 3 rutinas silenciosas del 22/08 (no se repitió el 23-24/08) y retirados los dos
+  bullets de mezcla Serper+Booking que quedaron obsoletos con la retirada de Serper el 24/08. Sin
+  hallazgos de código/infra nuevos (heartbeat 13+12 huellas sin ⛔, backlog 3 PRs draft dirty pero
+  ninguno >7 días, `rutinas-automerge.yml` corriendo cada hora sin huecos) → sin PR de carril 2.
 - **2026-08-24** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · 4 commits del 23/08 sin
   entrada propia reconciliados (vigía hipoteca #1612, amortización Monte Carmelo #1609, colisiones de
   numeración de rutinas #1604, `paper-tracker` sin vigilante en `agentes-latido`); dato stale corregido
