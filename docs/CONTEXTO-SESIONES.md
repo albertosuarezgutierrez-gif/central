@@ -32,6 +32,21 @@
 
 ---
 
+### ✅ (25/08/2026) TRAMO 1 EJECUTADO: primera compra con dinero real (6 CVX a 199,87$)
+
+Alberto confirmó la instrucción en IBKR y entró: **6 CVX a 199,87$** (por debajo del límite de 200),
+comisión 1,00$, total 1.200,22$ ≈ 1.027,70€, a las 21:57:44 UTC por DARK. Registrada en el libro
+(`/api/trading/operaciones`, 571 filas, `tipo_cambio` 1,16788 puesto desde el primer momento — la
+invariante) y NAV a **32.714,15€**.
+⚠️ **Fleco vivo y con coste:** no se convirtieron los euros, así que IBKR financió la compra en
+margen: **USD −1.200,22$** con **1.410,46€** intactos al lado. Se paga interés por un dinero que ya
+está en la cuenta. Avisado por Telegram con la acción concreta (orden de divisa EUR.USD por ~1.210$);
+si mañana sigue igual, preparar la instrucción de cambio.
+**Lección de método (error propio):** el aviso mandaba a «Órdenes pendientes» y la orden no aparecía
+ahí — una `create_order_instruction` NO es una orden viva, vive en Órdenes → **Instrucciones** hasta
+que el humano la envía. Corregido en el aviso; al decirle a alguien dónde confirmar algo, nombrar la
+pantalla exacta, no la que suena razonable.
+
 ### 💶 (25/08/2026) TRAMO 1 ABIERTO: primera orden con dinero real preparada (CVX)
 
 Llegaron los 1.000€ (cash IBKR 1.410,46€, NAV 32.715€) y se activó la escalera. Tras la pasada
