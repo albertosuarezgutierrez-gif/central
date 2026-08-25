@@ -71,6 +71,53 @@ export function resumirBacktest(f: FilaBacktest): ResumenBacktest {
   }
 }
 
+// ── Motor vs MERCADO REAL (Booking) ─────────────────────────────────────────
+// Segundo contrafactual, pedido por Alberto el 25/08/2026 («cuanto antes mejor,
+// es información real y actualizada»): el precio del motor al reservarse contra el
+// p50 de los comparables FIABLES (booking_mcp/manual, plausibles, normalizados por
+// aforo) de ESA noche, medidos a ±10 días de la reserva. No caduca — sustituye a la
+// curva PL cuando esta muera el 06/12/2026. El corpus fiable nació el 06/08/2026:
+// las ventas anteriores salen 'sin_datos' y la cobertura crece con cada rutina diaria.
+
+export type FilaMercado = {
+  property_id: string
+  /** Noches vendidas bajo el motor (reserva >= go-live). */
+  noches_vendidas: number
+  /** De ellas, cuántas tenían precio del motor aplicado ANTES de la reserva. */
+  con_precio_motor: number
+  /** De esas, cuántas tienen p50 fiable (≥5 comps) medido cerca de la reserva. */
+  con_mercado: number
+  /** Suma € de lista del motor en las noches con mercado (null si ninguna). */
+  motor_lista: number | null
+  /** Suma € del p50 de mercado en LAS MISMAS noches (null si ninguna). */
+  mercado_p50: number | null
+}
+
+export type ResumenMercado = {
+  property_id: string
+  estado: 'completa' | 'parcial' | 'sin_datos'
+  noches_comparables: number
+  /** motor − p50 mercado. Positivo = el motor pidió MÁS que la mediana de su competencia. */
+  delta_eur: number | null
+  delta_pct: number | null
+}
+
+/** Misma regla que el backtest PL: sin noches con mercado el delta es null, jamás 0. */
+export function resumirMercado(f: FilaMercado): ResumenMercado {
+  if (f.con_mercado === 0 || f.motor_lista == null || f.mercado_p50 == null) {
+    return { property_id: f.property_id, estado: 'sin_datos', noches_comparables: 0,
+      delta_eur: null, delta_pct: null }
+  }
+  const delta = f.motor_lista - f.mercado_p50
+  return {
+    property_id: f.property_id,
+    estado: f.con_mercado === f.noches_vendidas ? 'completa' : 'parcial',
+    noches_comparables: f.con_mercado,
+    delta_eur: delta,
+    delta_pct: f.mercado_p50 > 0 ? (delta / f.mercado_p50) * 100 : null,
+  }
+}
+
 /** Días que le quedan de vida a la referencia PL (0 si ya caducó). */
 export function diasRestantesReferencia(hoy: Date): number {
   const fin = new Date(PL_REFERENCIA_CADUCA + 'T00:00:00Z')

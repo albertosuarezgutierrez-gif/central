@@ -29,9 +29,19 @@ type Backtest = {
   delta_eur: number | null
   delta_pct: number | null
 }
+type Mercado = {
+  property_id: string
+  estado: 'completa' | 'parcial' | 'sin_datos'
+  noches_vendidas: number
+  con_precio_motor: number
+  noches_comparables: number
+  delta_eur: number | null
+  delta_pct: number | null
+}
 type Cohorte = { property_id: string; mes: string; reservas: number; noches: number; bruto: number | null; neto: number | null }
 type Data = {
   backtest: Backtest[]
+  mercado: Mercado[]
   cohorte: Cohorte[]
   hueco_2025: { reparado: boolean; meses_vacios: string[] }
   gastos_pricelabs: { fecha: string; total: number }[]
@@ -114,6 +124,45 @@ export default function PricingRentabilidadPage() {
                   <td style={{ ...td, color: ESTADO_TXT[b.estado].color, fontSize: 12 }}>
                     {ESTADO_TXT[b.estado].txt}
                     {b.noches_sin_precio_motor > 0 ? ` (${b.noches_sin_precio_motor} noches sin precio motor)` : ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 1-bis · Motor vs mercado real */}
+      <div style={card}>
+        <h2 style={h2}>1-bis · Motor vs mercado real (Booking) — no caduca</h2>
+        <p style={sub}>
+          Las mismas noches vendidas, contra la <b>mediana de los comparables fiables de Booking</b> de esa noche
+          (medidos a ±10 días de la reserva, normalizados por aforo, ≥5 comps o no se juzga). Positivo = vendimos
+          por encima de la mediana de la competencia. El corpus fiable nació el 06/08/2026: la cobertura crece a
+          diario con la rutina de mercado, y este bloque releva a PriceLabs cuando su curva caduque.
+        </p>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead><tr>
+              <th style={th}>Piso</th><th style={th}>Vendidas</th><th style={th}>Con mercado</th>
+              <th style={th}>Δ € (motor − p50)</th><th style={th}>Δ %</th><th style={th}>Estado</th>
+            </tr></thead>
+            <tbody>
+              {data.mercado.map((m) => (
+                <tr key={m.property_id}>
+                  <td style={td}>{NOMBRE[m.property_id] ?? m.property_id}</td>
+                  <td style={td}>{m.noches_vendidas}</td>
+                  <td style={td}>{m.noches_comparables}</td>
+                  <td style={{ ...td, color: m.delta_eur == null ? C.soft : C.ink }}>
+                    {m.delta_eur == null ? 'sin dato' : eur(m.delta_eur)}
+                  </td>
+                  <td style={td}>{m.delta_pct == null ? '—' : `${m.delta_pct.toFixed(1)}%`}</td>
+                  <td style={{ ...td, color: m.estado === 'sin_datos' ? C.warn : m.estado === 'parcial' ? C.warn : C.ok, fontSize: 12 }}>
+                    {m.estado === 'sin_datos'
+                      ? 'sin comps fiables cerca de la reserva — pendiente'
+                      : m.estado === 'parcial'
+                        ? `cobertura parcial (${m.noches_comparables}/${m.noches_vendidas} noches)`
+                        : 'cobertura completa'}
                   </td>
                 </tr>
               ))}
