@@ -51,6 +51,22 @@ calculados; aunque GOOGLEFINANCE computara, el número nunca llega. La vía scra
 datacenter. Tampoco cierra **H1** (no da serie total-return). Sigue vigente: EODHD como 3er fallback.
 Sin cambios de código; 3 hojas de prueba creadas en el Drive de Alberto y ya enviadas a la papelera.
 
+### 🔬 (25/08/2026, 20:30 UTC) Serrucho: 1ª pasada con el fix — corrió bien, pero NO prueba el arreglo
+El motor corrió con el código nuevo (latido `sivra_pricing_apply` ok, «6 noches escritas en 4 pisos»),
+sin saltos de raíl y con cambios de ±6%. Contra las dos pasadas anteriores del MISMO día con el código
+viejo: 08:30 → 664 noches, todas clavadas en ±20%; 14:30 → 76 noches, una +37% saltándose el raíl.
+🚨 **Pero esta pasada no demuestra nada del serrucho**: el raíl se ancla a `ref24` (precio de AYER), así
+que las pasadas 2ª y 3ª del día se mueven DENTRO de la misma banda diaria — a las 20:30 casi todo estaba
+ya en el suelo del día. **La prueba real es mañana a las 08:30 UTC**, con banda nueva.
+Verificación offline previa (rebobinando 7 días de corpus, día a día): volatilidad SEMANAL del objetivo
+de evento ×2,10→×1,07 (Busto), ×1,75→×1,10 (Duplex), ×3,40→×1,18 (House), ×2,00→×1,10 (Luxury).
+✅ Cerrado aparte: el cron de snapshots con las dos columnas da `sin_live=0` y `descuadradas=0` — la
+fase expand del rename `price_pricelabs`→`price_live` queda verificada en producción.
+⚠️ **Abierto y CARO**: 207 de 371 fechas con mercado medido siguen por encima del techo de 1,5× (medias
+1,49-2,01×, máx 5,24× en Busto). Es la inflación heredada del pico del 24/08 deshaciéndose a −20%/día;
+1-2 días para la mayoría, ~5 para las peores. No se toca el raíl para acelerarlo: es el que acaba de
+impedir el latigazo. Vigilar que de verdad converge.
+
 ### 🪚 (25/08/2026) EL SERRUCHO: diagnosticado y arreglado — el salto de evento se anclaba al ruido del barrido
 Causa raíz del 74% de fechas subiendo y bajando en la misma semana (factor 1,44). NO era el mercado:
 `med_guest_global` es el percentil de la ÚLTIMA pasada de Booking, que muestrea cada mañana 5-19 fechas
