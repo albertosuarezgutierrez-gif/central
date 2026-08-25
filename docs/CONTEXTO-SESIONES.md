@@ -32,6 +32,15 @@
 
 ---
 
+### ✅ (25/08/2026) Bonificación hipoteca: traslado de 1.065€ FIRMADO — período 2026-27 cubierto
+Alberto firmó por banca online (14:38, copia certificada subida a la sesión) el traslado de **1.065,00€**
+del PPA GENERALI PPA III-1 (póliza 3V-G-410.000.330) al plan **KUTXABANK RENTA FIJA MIXTO 15** (Kutxabank
+Pensiones, contrato 992116397-2). Acumulado del período 5-abr-26→5-abr-27: 936,59 + 1.065 = **2.001,59€ ≥
+2.000€** → bonificación 0,20% (tipo 1,20%) asegurada, pendiente solo de la ejecución (revocable hasta el
+5º día hábil) y de la revisión de abril. Registrado en reco #1 (`datos`: `traslado_2026_08_25`) y
+`docs/PATRIMONIO-CFO.md`. Siguiente hito del ciclo: período abr-27→abr-28 (quedan ~2.700€ en el PPA).
+PR de esta entrada.
+
 ### 🔁 (24/08/2026) ESTRATEGIA FIJA: bonificación de la hipoteca por planes, renovada año tras año
 Alberto: «lo ideal es ir pasando año tras año». La gestora (intranet Kutxabank) confirmó la mecánica:
 2.000€/año de incremento neto en planes de Kutxabank por período de revisión (5-abr) → bonif. 0,20% →
