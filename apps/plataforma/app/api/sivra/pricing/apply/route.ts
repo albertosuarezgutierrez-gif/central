@@ -9,6 +9,7 @@ import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { acotarSueloPL } from "@/lib/sivra/pricing-suelo-pl"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
+import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
@@ -700,6 +701,10 @@ export async function POST(req: NextRequest) {
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
     const congeladas: { fecha: string; precio: number; factor: number }[] = []
+    // Fechas donde el techo de mercado medido recortó el objetivo (pricing-techo-mercado.ts). En
+    // la respuesta a propósito: un precio que baja por el techo debe poder distinguirse de uno que
+    // baja porque el mercado del mes se hundió.
+    const techoAcotadas: { fecha: string; techo: number; origen: "fecha" | "mes" }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -847,6 +852,9 @@ export async function POST(req: NextRequest) {
       )
       if (lm.factor < 1) target = Math.round(target * lm.factor)
 
+      // Suelo del raíl del día: lo captura también el techo de mercado de más abajo, para que un
+      // precio inflado DESCIENDA a velocidad de raíl (varias pasadas), nunca de golpe.
+      let railLo: number | null = null
       if (old != null) {
         // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
         // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
@@ -859,6 +867,7 @@ export async function POST(req: NextRequest) {
         })
         const lo = Math.round(ancla * (1 - Number(r.max_change_pct)))
         const hi = Math.round(ancla * (1 + Number(r.max_change_pct)))
+        railLo = lo
         target = clamp(target, lo, hi)
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
@@ -915,12 +924,37 @@ export async function POST(req: NextRequest) {
         }
       }
       if (r.max_price != null) target = Math.min(target, r.max_price)
+      // 🏷️ TECHO de mercado MEDIDO (25/08/2026, ver pricing-techo-mercado.ts). Todo lo de arriba
+      // puede SUBIR el objetivo saltándose el raíl (salto de evento, premio, suelo PL) y las
+      // guardas de abajo pueden impedir que baje — pero nada miraba lo que el mercado de ESA fecha
+      // cobra de verdad. Medido el día del fix: 238 fechas listadas a >1,5× la mediana fiable de su
+      // propia fecha (55 a >×3), congeladas por la guarda de outlier hasta 30 días del check-in.
+      // Con la fecha medida (≥5 comps fiables) el huésped no puede ver más de 1,5× su mediana; sin
+      // evento, tampoco más de 2,5× el mes fiable. El descenso respeta raíl y min_price, y
+      // `liberaCongelacion` impide que las guardas retengan un precio por encima del techo.
+      const fbT = fechaProp?.get(date)
+      const tMkt = techoMercado({
+        medFechaGuest: fbT?.med ?? null, compsFecha: fbT?.n ?? 0, fuenteFecha: fbT?.fuente ?? null,
+        medMesGuest: useMonth ? mb!.med : null, fuenteMes: useMonth ? mb!.fuente : null,
+        factorEvento: evFactor, markup, fijoNoche, dqFactor: dqDate,
+      })
+      const acote = acotarPorTecho({
+        target, techo: tMkt.techo, old, railLo, minPrice: r.min_price,
+      })
+      target = acote.target
+      // Los suelos del acote (raíl del día, min_price) no pueden re-subir por encima del techo
+      // del PROPIETARIO: max_price manda siempre (hoy NULL en los cuatro, pero el orden importa).
+      if (r.max_price != null) target = Math.min(target, r.max_price)
+      if (acote.acotado) techoAcotadas.push({ fecha: date, techo: tMkt.techo, origen: tMkt.origen! })
+      const liberaTecho = acote.liberaCongelacion
       // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
       // mes (fallback global), el precio NUNCA baja — el bucket global (dominado por temporada
       // media/baja) arrastraría la noche de evento hacia abajo (788→283 en jun-2027) y el factor
       // solo multiplica esa base hundida. Se CONGELA el precio actual hasta tener comps del mes.
       // Excepción: si el techo del propietario (max_price) exige bajar, manda el techo.
-      if (evFactor >= 2 && !useMonth && old != null && target < old
+      // `liberaTecho` la desactiva: la congelación existe para fechas SIN mercado con el que
+      // juzgar, y el techo solo está definido cuando ese mercado SÍ está medido.
+      if (evFactor >= 2 && !useMonth && old != null && target < old && !liberaTecho
           && (r.max_price == null || old <= r.max_price)) continue
       // 🧊 Guarda «evento a ciegas» (caso Bienal, 13/08/2026 — decisión Fable delegada por
       // Alberto): generaliza la de Karol G por FECHA en vez de por mes y desde factor 1,15. Un
@@ -947,8 +981,10 @@ export async function POST(req: NextRequest) {
       // esa noche es especial (un puente/evento que el bucket del mes no ve). Lejos de la fecha
       // (>N días) NO la hundimos por debajo del actual a ciegas; cerca dejamos que el last-minute
       // suavice. El techo del propietario manda (si max_price obliga a bajar, no congelamos).
+      // `liberaTecho` la desactiva: «esa noche es especial» deja de ser una hipótesis defendible
+      // cuando el mercado MEDIDO de la fecha dice que estamos por encima de su techo.
       if (old != null && normalBase > 0 && old > normalBase * OUTLIER_RATIO
-          && target < old && daysOut > OUTLIER_HORIZON_DAYS
+          && target < old && daysOut > OUTLIER_HORIZON_DAYS && !liberaTecho
           && (r.max_price == null || old <= r.max_price)) continue
       if (old != null && target === old) continue
       // 🔇 Banda muerta anti-churn (fix auditoría 18/07/2026): el motor escribía 3.400+ cambios
@@ -1053,6 +1089,10 @@ export async function POST(req: NextRequest) {
         ),
       },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
+      // Fechas recortadas por el techo de mercado medido en esta pasada (y de dónde salió el techo).
+      techo_mercado: techoAcotadas.length > 0
+        ? { fechas: techoAcotadas.length, sample: techoAcotadas.slice(0, 5) }
+        : undefined,
       // Fechas de evento confirmado que NO se bajaron por falta de mercado fiable propio. Van en la
       // respuesta a propósito: un precio congelado que no se declara es indistinguible de uno olvidado.
       congeladas,

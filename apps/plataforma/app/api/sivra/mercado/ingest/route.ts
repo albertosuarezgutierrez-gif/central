@@ -135,11 +135,24 @@ export async function POST(req: NextRequest) {
           // 🚨 `base_total` lo calcula el SERVIDOR, no quien llama. Es la mitad del par: si la
           // rutina mandara el precio del portal Y la base que ella cree, un desfase entre las dos
           // (un snapshot viejo, otro piso) produciría una recta plausible y falsa, y esa recta
-          // decide el precio de TODAS las fechas. Aquí se suma `rate_snapshots.price_pricelabs`
-          // —que PESE AL NOMBRE es el precio vivo de Smoobu— de las noches de la ventana, con el
-          // snapshot más cercano al día de la medición. Si falta el precio de alguna noche,
+          // decide el precio de TODAS las fechas. Si falta el precio de alguna noche,
           // `base_total` queda NULL y el ajuste descarta la ventana: una base a medias no es una
           // base baja, es una base desconocida.
+          //
+          // 🚨 La base tiene que ser la VIVA en el momento de MEDIR, no la del último snapshot
+          // (25/08/2026). La rutina mide a las ~03:40 UTC y el snapshot corre a las 07:00, así que
+          // «el snapshot más reciente» es el de AYER a las 07:00 — anterior a las TRES pasadas de
+          // `apply` de ayer (08:30/14:30/20:30, hasta ±20% de movimiento, y más si saltó un premio
+          // de evento). El portal enseña la base nueva y aquí se apuntaba la vieja: la recta salía
+          // con un sesgo sistemático del signo del movimiento del día (medido el 25/08: la ventana
+          // 29/08-01/09 de Busto Reform con base_total=365€ y base viva 469€ → «+30% de error» que
+          // era nuestra PROPIA subida intradía, no Booking). Con el motor subiendo, la validación
+          // cantaba «el portal cobra MÁS de lo que predecimos» en los cuatro pisos y el calibrado
+          // se corregía contra un fantasma. Por eso cada noche superpone el último precio APLICADO
+          // (`pricing_applied`, dry_run=false) sobre el snapshot: el aplicado gana si es del mismo
+          // día del snapshot o posterior (el snapshot corre a las 07:00 y las pasadas a las 08:30+,
+          // así que «mismo día» significa «después del snapshot»); si es anterior, el snapshot ya
+          // lo contiene y además caza los cambios hechos a mano en Smoobu.
           await prisma.$executeRaw(Prisma.sql`
             INSERT INTO pricing_escaparate
               (property_id, checkin, noches, guests, precio_total, base_total, portal, fuente)
@@ -149,12 +162,21 @@ export async function POST(req: NextRequest) {
               SELECT CASE WHEN COUNT(n.precio) = ${noches}::integer THEN SUM(n.precio)::int END AS base_total
               FROM generate_series(${checkin}::date, ${checkin}::date + (${noches}::integer - 1), INTERVAL '1 day') AS d(dia)
               LEFT JOIN LATERAL (
-                SELECT rs.price_pricelabs AS precio
+                SELECT rs.price_pricelabs AS precio, rs.snapshot_date
                 FROM rate_snapshots rs
                 WHERE rs.property_id = ${String(scenario)} AND rs.rate_date = d.dia::date
                   AND rs.price_pricelabs IS NOT NULL AND rs.snapshot_date <= CURRENT_DATE
                 ORDER BY rs.snapshot_date DESC LIMIT 1
-              ) n ON true
+              ) rs ON true
+              LEFT JOIN LATERAL (
+                SELECT pa.new_price AS precio
+                FROM pricing_applied pa
+                WHERE pa.property_id = ${String(scenario)} AND pa.rate_date = d.dia::date
+                  AND pa.dry_run = false
+                  AND (rs.snapshot_date IS NULL OR pa.applied_at::date >= rs.snapshot_date)
+                ORDER BY pa.applied_at DESC LIMIT 1
+              ) ap ON true
+              LEFT JOIN LATERAL (SELECT COALESCE(ap.precio, rs.precio) AS precio) n ON true
             ) b
             ON CONFLICT (property_id, checkin, noches, guests, portal, medido_el)
             DO UPDATE SET precio_total = EXCLUDED.precio_total, base_total = EXCLUDED.base_total,
