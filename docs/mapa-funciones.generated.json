@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-24T19:09:05Z",
-  "sha": "80527b65b89bbd80df731e4d546ec796482fe669",
+  "generadoEn": "2026-08-25T08:26:06Z",
+  "sha": "5c1ea658ea03539a1f60cf652a28a037df1e999c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49463,7 +49463,7 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color: string }",
           "retorno": null,
-          "linea": 228
+          "linea": 232
         },
         {
           "nombre": "Th",
@@ -49471,12 +49471,12 @@
           "exportada": false,
           "params": "{ children, left }: { children: React.ReactNode; left?: boolean }",
           "retorno": null,
-          "linea": 240
+          "linea": 244
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c50159a375e7"
+      "hash": "ab68fb51cfa2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/seo/page.tsx",
@@ -51027,7 +51027,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/chat",
-      "hash": "c5875203eb97"
+      "hash": "0268ea433511"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/codigo/route.ts",
@@ -51048,7 +51048,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/codigo",
-      "hash": "2c5266efb849"
+      "hash": "ddb33a9ce9be"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/ejecutar/route.ts",
@@ -51077,7 +51077,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/ejecutar",
-      "hash": "e35421b1d31f"
+      "hash": "1421334cd01c"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/health/route.ts",
@@ -51119,7 +51119,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/programar",
-      "hash": "50d336fa665e"
+      "hash": "c9e3d3eaa0b1"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/search/route.ts",
@@ -51140,7 +51140,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/search",
-      "hash": "38875ecf8d31"
+      "hash": "04895fcd4b35"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/tools/route.ts",
@@ -51161,7 +51161,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/tools",
-      "hash": "60a2df7bbe3e"
+      "hash": "c1731f256dcd"
     },
     {
       "ruta": "apps/plataforma/app/api/ai/video/route.ts",
@@ -51203,7 +51203,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/ai/vision",
-      "hash": "3e6a2ab23c68"
+      "hash": "07b2f71438cb"
     },
     {
       "ruta": "apps/plataforma/app/api/alertas-categoria/route.ts",
@@ -53342,7 +53342,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         }
       ],
       "tablas": [
@@ -53358,7 +53358,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "d08cf6b88e1c"
+      "hash": "3e7dce656a4d"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -57125,12 +57125,13 @@
         "lateral",
         "market_rates",
         "next",
+        "pricing_applied",
         "pricing_escaparate",
         "rate_snapshots",
         "set"
       ],
       "rutaApi": "/api/sivra/mercado/ingest",
-      "hash": "2c2754b10627"
+      "hash": "dd739f602346"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/plan/route.ts",
@@ -57425,7 +57426,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "fmt",
@@ -57433,7 +57434,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "GET",
@@ -57441,7 +57442,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 78,
+          "linea": 79,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57450,7 +57451,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 82
+          "linea": 83
         }
       ],
       "tablas": [
@@ -57474,7 +57475,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "ea6397dc1f2c"
+      "hash": "ee5c64623d17"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -60639,7 +60640,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 6,
+          "linea": 7,
           "resumen": "Valida el secreto Bearer entrante (las verticales llaman con AI_GATEWAY_SECRET)."
         },
         {
@@ -60648,7 +60649,7 @@
           "exportada": true,
           "params": "...partes: (string | null | undefined)[]",
           "retorno": "number",
-          "linea": 14,
+          "linea": 15,
           "resumen": "Estimación barata de tokens (~4 chars/token) sumando varias cadenas de entrada/salida."
         },
         {
@@ -60657,7 +60658,7 @@
           "exportada": true,
           "params": "proveedor: string, tokens: number",
           "retorno": "number",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Coste € estimado de una llamada según proveedor y tokens."
         },
         {
@@ -60666,7 +60667,7 @@
           "exportada": true,
           "params": "modeloId: string, usage: OpenRouterUsage | undefined, modelos: Array<{ id: string; precio_in?: number; precio_out?: number }>,",
           "retorno": "number",
-          "linea": 36,
+          "linea": 37,
           "resumen": "Coste € REAL de una llamada OpenRouter usando el usage devuelto y los precios del catálogo del Director (USD por millón de tokens, prompt/completion por separado). Si el modelo no está en el catálogo "
         },
         {
@@ -60675,7 +60676,7 @@
           "exportada": true,
           "params": "u: { app: string; endpoint: string; proveedor: string; modelo: string | null; ok: boolean; ms: number tokens?: number; costeEur?: number; error?: string | null; clienteRef?: string | null }",
           "retorno": "Promise<void>",
-          "linea": 54,
+          "linea": 66,
           "resumen": "Registra una llamada de IA (para control de coste). Nunca lanza: un fallo de log no rompe la IA."
         },
         {
@@ -60684,7 +60685,7 @@
           "exportada": false,
           "params": "app?: string, clienteRef?: string",
           "retorno": "Promise<number>",
-          "linea": 74
+          "linea": 86
         },
         {
           "nombre": "limiteAmbito",
@@ -60692,7 +60693,7 @@
           "exportada": false,
           "params": "ambito: 'app' | 'cliente', ref: string",
           "retorno": "Promise<number>",
-          "linea": 89
+          "linea": 101
         },
         {
           "nombre": "avisarBloqueo",
@@ -60700,7 +60701,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "Promise<void>",
-          "linea": 98,
+          "linea": 110,
           "resumen": "Aviso Telegram con dedup diario: solo si hoy aún no hay ningún registro de bloqueo con este motivo."
         },
         {
@@ -60709,7 +60710,7 @@
           "exportada": true,
           "params": "app: string, clienteRef?: string | null",
           "retorno": "Promise<",
-          "linea": 114,
+          "linea": 126,
           "resumen": "¿Se puede hacer una llamada DE PAGO (OpenRouter/Kimi) ahora mismo? Nunca lanza. Si devuelve { ok: false }, la pasarela salta el camino de pago y sirve con la cadena gratis (el servicio no muere: degra"
         },
         {
@@ -60718,8 +60719,17 @@
           "exportada": true,
           "params": "app: string, clienteRef?: string | null",
           "retorno": "Promise<number>",
-          "linea": 149,
+          "linea": 161,
           "resumen": "Presión de presupuesto diario AHORA: máx (gasto de hoy / límite) entre los ámbitos con límite>0 (global/app/cliente). 0 = sin límite o sin gasto. Lo consume el Agente Director para degradar a modelos "
+        },
+        {
+          "nombre": "limiteMensual",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<number>",
+          "linea": 184,
+          "resumen": "Límite mensual VIGENTE (nº de llamadas OK/mes): la fila única de la tabla `ia_limite_mensual` manda sobre la env `AI_GATEWAY_LIMITE_MENSUAL` cuando tiene valor (patrón `trading_acceso_token`: editable"
         },
         {
           "nombre": "dentroDePresupuesto",
@@ -60727,7 +60737,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<boolean>",
-          "linea": 166,
+          "linea": 193,
           "resumen": "Presupuesto mensual GLOBAL (nº de llamadas OK). 0/no definido = sin límite."
         },
         {
@@ -60736,7 +60746,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 175,
+          "linea": 202,
           "resumen": "Estado del presupuesto mensual (para avisos en el god-panel). ratio>=0.8 → alerta."
         },
         {
@@ -60745,7 +60755,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 205
+          "linea": 232
         },
         {
           "nombre": "resumenIA",
@@ -60753,17 +60763,18 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<ResumenIA>",
-          "linea": 208,
+          "linea": 235,
           "resumen": "Datos para el dashboard de gasto de IA del god-panel."
         }
       ],
       "tablas": [
         "ai_usos",
         "ia_director_prompt",
+        "ia_limite_mensual",
         "ia_presupuestos"
       ],
       "rutaApi": null,
-      "hash": "8712a3f67f68"
+      "hash": "ff9a1db59fa4"
     },
     {
       "ruta": "apps/plataforma/lib/alerta-botones.ts",
@@ -66197,6 +66208,28 @@
       "hash": "cf6d59f18b17"
     },
     {
+      "ruta": "apps/plataforma/lib/ia-limite-mensual.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Límite MENSUAL de la pasarela de IA (nº de llamadas OK/mes) — resolución del valor efectivo. Por qué existe (25/08/2026): la env `AI_GATEWAY_LIMITE_MENSUAL` se agotó el 24/08 y los /api/ai/* pasaron a 429 hasta el día 1. Alberto pidió subirla, pero las sesiones de Claude no pueden escribir envs de V",
+      "exporta": [
+        "limiteMensualEfectivo"
+      ],
+      "funciones": [
+        {
+          "nombre": "limiteMensualEfectivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "db: number | null | undefined, env: string | undefined",
+          "retorno": "number",
+          "linea": 15,
+          "resumen": "Valor efectivo del límite mensual: `db` (la fila de `ia_limite_mensual`) manda si es un número válido; si no, la env. 0 = sin límite. Un valor negativo o ilegible se trata como 0 (sin límite) y no com"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6b81685fe32a"
+    },
+    {
       "ruta": "apps/plataforma/lib/iarest-port-core.ts",
       "ambito": "apps/plataforma",
       "resumen": "Lógica PURA del puerto plataforma → ia-rest (sin `next`, testeable con node --test). El wrapper con NextResponse vive en `iarest-port.ts`. Mapea el fallo del puerto a {status, error}. Regla clave: un 401/403 de ia-rest NO es un fallo de sesión del operador (ese 401 lo emite plataforma cuando getAdmi",
@@ -70185,7 +70218,7 @@
           "exportada": false,
           "params": "",
           "retorno": "PLGastosPiso",
-          "linea": 46
+          "linea": 49
         },
         {
           "nombre": "catToField",
@@ -70193,7 +70226,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "keyof Omit<PLGastosPiso, 'total'>",
-          "linea": 50
+          "linea": 53
         },
         {
           "nombre": "getPLMensual",
@@ -70201,7 +70234,7 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "Promise<PLMensual>",
-          "linea": 61
+          "linea": 64
         },
         {
           "nombre": "mesPorDefecto",
@@ -70209,7 +70242,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 239,
+          "linea": 298,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
@@ -70223,7 +70256,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "3d5bcfc02fa5"
+      "hash": "83006098160d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",
@@ -70889,6 +70922,38 @@
       "hash": "53e1ea612f18"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-techo-mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-techo-mercado.ts — el TECHO de mercado medido: no listar al huésped a ×3-×5. POR QUÉ (25/08/2026). El motor tiene varios caminos que SUBEN el precio saltándose el raíl ±%/día a propósito (salto de evento, suelo PL, premio de mercado) y varias guardas que impiden BAJARLO (outlier +4",
+      "exporta": [
+        "techoMercado",
+        "acotarPorTecho"
+      ],
+      "funciones": [
+        {
+          "nombre": "techoMercado",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: TechoMercadoInput, o: TechoMercadoOpts = {}",
+          "retorno": "TechoMercado",
+          "linea": 80,
+          "resumen": "Techo de precio BASE que el mercado MEDIDO justifica para un día. `techo: 0` significa «no hay con qué acotar» (sin corpus fiable, o fecha de evento sin medición propia) — nunca «techo cero»."
+        },
+        {
+          "nombre": "acotarPorTecho",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { target: number techo: number /** precio vivo de la fecha; null = fecha sin precio (sin congelación que liberar) */ old: number | null /** suelo del raíl del día (`ancla × (1 − max_change_pct)`); null = sin raíl (fecha nueva) */ railLo:",
+          "retorno": "AcoteTecho",
+          "linea": 135,
+          "resumen": "Aplica el techo al objetivo del día. El descenso respeta los suelos de siempre: nunca por debajo del suelo del raíl (±%/día sobre el ancla — un ×4 se deshace en varias pasadas, no de golpe) ni del `mi"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "308f62d891a8"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/prior-estacional.ts",
       "ambito": "apps/plataforma",
       "resumen": "Prior estacional del pricing: qué dice MI propio histórico (`incomes`) sobre cada mes. Módulo PURO (sin BD ni `@/`), testeable con `node --test`. Lo consume `pricing/apply`. 🚨 LA ASIMETRÍA ES EL MÓDULO (06/08/2026). Subir y bajar NO se deciden con el mismo índice: · Para SUBIR vale el índice comple",
@@ -70927,6 +70992,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cb436c13ce68"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/reparto-siquebrilla.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Sique Brilla (puro, testeable). Contexto (25/08/2026): la factura de Sique Brilla ya NO es solo limpieza — desde junio incluye líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex + 3×90€ Casa Socorro = 4",
+      "exporta": [
+        "esperadoLimpieza",
+        "repartirPagoSiqueBrilla"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 31
+        },
+        {
+          "nombre": "esperadoLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "salidas: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
+          "retorno": "number",
+          "linea": 34,
+          "resumen": "Limpieza esperada CON IVA para unas salidas × tarifas dadas."
+        },
+        {
+          "nombre": "repartirPagoSiqueBrilla",
+          "kind": "function",
+          "exportada": true,
+          "params": "total: number, salidasServicio: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
+          "retorno": "RepartoSiqueBrilla | null",
+          "linea": 71,
+          "resumen": "Desglosa el total pagado a Sique Brilla en limpieza por piso + resto de lavandería. `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`). Devuelve null si no hay salidas con "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "09f7f0488028"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -97010,7 +97115,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2565,
-    "funciones": 7051
+    "archivos": 2568,
+    "funciones": 7058
   }
 }
