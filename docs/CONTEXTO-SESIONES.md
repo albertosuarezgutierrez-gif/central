@@ -32,19 +32,21 @@
 
 ---
 
-### 🪦 (25/08/2026) PriceLabs a retirar del todo — y el A/B lleva 16 días midiéndose contra sí mismo
-Alberto pregunta por el aviso «2 fechas bajo el 70% de PriceLabs»: es la resaca esperada del #1698 (techo
-de mercado + canal recalibrado), que bajó 572 fechas ~16-19% en la 1ª pasada; House tocó su `min_price`
-(300€) y PL —foto congelada del 08/08— cantó. Decisión de Alberto: **quitar PriceLabs entero**. Al mapear
-el alcance aparece el 2º bug de la MISMA clase que el suelo autorreferente del 14/08, y **vivo**:
-`auto_register_experiments()` rellena el «baseline de PL» con `rate_snapshots.price_pricelabs` (que pese al
-nombre es el precio VIVO en Smoobu, o sea el nuestro) con fallback a `pricing_applied.old_price` — prueba:
-Busto 2027-08-24 registrada hoy con baseline 87€ y Busto nunca tuvo curva PL. El cron `experiments/digest`
-(lunes 09:00, «resumen para decidir la baja de PL») publica esa victoria falsa desde el 09/08.
-Plan por tareas en `docs/superpowers/plans/2026-08-25-retirada-pricelabs.md`: 3 categorías (PL real → borrar;
-`price_pricelabs` → rename a `price_live` por expand/contract, 2 PRs; PriceLabs-proveedor de gasto → intacto).
-**Abiertos, independientes de PL:** diente de sierra (74% de fechas subieron Y bajaron en la misma semana,
-amplitud ×1,44, sin diagnosticar) y cobertura del corpus (solo 28% del horizonte con ancla fiable ≥5 comps).
+### 🪦 (25/08/2026) PriceLabs retirado del motor — y el A/B llevaba 16 días midiéndose contra sí mismo
+Arranca por el aviso «2 fechas bajo el 70% de PriceLabs»: era la resaca esperada del #1698 (572 fechas
+−16/19% en la 1ª pasada); House tocó su `min_price` (300€) y PL —foto del 08/08— cantó. Alberto decide
+quitar PL entero. Al mapear el alcance aparece el 2º caso de la MISMA clase que el suelo autorreferente
+del 14/08, y VIVO: `auto_register_experiments()` rellenaba el «baseline de PL» con
+`rate_snapshots.price_pricelabs` (que pese al nombre es el precio VIVO en Smoobu, el nuestro) y el cron
+`experiments/digest` («resumen para decidir la baja de PL») publicaba esa victoria falsa desde el 09/08.
+Hecho en PR #1703: fuera suelo+tripwire, digest, stats, baseline y las etiquetas «extra vs PriceLabs» de
+`resultados`/`pilot-track` (publicaban 0€ donde el neto real era −42€, por `GREATEST(…,0)`). Rename
+`price_pricelabs`→`price_live` por expand/contract: migración aditiva **aplicada** (100.861 filas, 0
+descuadradas, trigger de sincronía). **Pendiente:** aplicar `experiments_sin_baseline_pl.sql` TRAS el
+deploy, y el `DROP` en PR aparte tras un ciclo verde. PriceLabs-proveedor-de-gasto NO se toca.
+**Abiertos, ajenos a PL:** diente de sierra (74,4% de fechas subieron Y bajaron la misma semana, ×1,44,
+sin diagnosticar); corpus (28% del horizonte con ancla ≥5 comps); `was_booked` solo en el 10,4% de
+`rate_snapshots` y casi sin solape con `pricing_applied` → el bucle de aprendizaje cruza 2 noches.
 
 ### 📄 (25/08/2026) La FACTURA de Sique Brilla manda sobre la inferencia del P&L
 Cierra los tres huecos que quedaban del #1692. (1) El desglose se DEDUCÍA del importe; ahora se lee la
