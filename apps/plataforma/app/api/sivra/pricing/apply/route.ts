@@ -9,6 +9,7 @@ import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
+import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
@@ -644,6 +645,11 @@ export async function POST(req: NextRequest) {
     // porque el mes está flojo» de «no se tocó porque todavía no se vende».
     const demFuentes: Record<DemandaFechaResult["fuente"], number> = { mes: 0, global: 0 }
     let demGateadas = 0
+    // Fechas de evento cuyo salto se ancló al ancla GLOBAL por no haber bucket del mes. Va a la
+    // respuesta a propósito: es el único camino que queda por el que la composición del barrido
+    // puede mover un precio de golpe (ver `lib/sivra/pricing-base-evento.ts`), y un 0 aquí es la
+    // prueba de que no ha pasado — distinto de «no se ha mirado».
+    let saltosEventoSinMes = 0
     const ops: { dates: string[]; daily_price: number; min_length_of_stay?: number }[] = []
     // La procedencia del factor viaja hasta la fila persistida: sin ella, una pasada degradada al
     // factor global es indistinguible de una buena en cuanto la respuesta HTTP se pierde.
@@ -719,11 +725,25 @@ export async function POST(req: NextRequest) {
           // YA SON precio-de-evento — multiplicarlas por ev otra vez infló Karol G hacia ~2.000€
           // (bug introducido en #985; la rampa 112→701 iba camino de eso). Prioridad:
           //   fecha exacta (n≥MIN_FECHA_BUCKET) → su mediana TAL CUAL (sin ×ev);
-          //   si no                             → global×ev (comportamiento pre-#985).
+          //   si no                             → base normal del mes × ev.
           // En ambos casos compite por MAX con el target del mes (que tampoco se multiplica).
+          //
+          // 🚨 La base de ese `× ev` es el bucket del MES, NO el ancla global (fix del SERRUCHO,
+          // 25/08/2026 — ver la cabecera de `lib/sivra/pricing-base-evento.ts`). El bucket del mes
+          // EXCLUYE las fechas con evento, así que no hay el doble conteo que motivó elegir la
+          // global en #985; y a diferencia de la global —que es el percentil del puñado de fechas
+          // que el barrido de Booking muestreó esta mañana, y que saltaba 129€→205€→146€ en tres
+          // días— no se mueve con la composición de la muestra. Como el salto de evento se salta
+          // el raíl ±%/día a propósito, esa inestabilidad viajaba entera al precio en UNA pasada:
+          // Duplex 16/09/2026 hizo 158€→289€ (+83%) el 24/08 y volvió a caer al día siguiente.
           const fb = fechaProp?.get(date)
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
-          const globalEvent = Math.round(clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal) * ev)
+          const baseEv = baseSaltoEvento({
+            baseMes: useMonth ? clamp(baseD, floorD, ceilD) : null,
+            baseGlobal: clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal),
+          })
+          if (baseEv.origen === "global") saltosEventoSinMes++
+          const globalEvent = Math.round(baseEv.base * ev)
           const bestEvent = useFecha
             ? Math.max(globalEvent, aBase(fb!.med * dqDate))
             : globalEvent
@@ -985,6 +1005,10 @@ export async function POST(req: NextRequest) {
             .map(([k, v]) => [k, v.fuente]))
         : {},
       meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
+      // Fechas de evento cuyo salto tuvo que anclarse al ancla GLOBAL (mes sin mercado medido). Es el
+      // único resto del serrucho: el ancla global se mueve con lo que el barrido muestree hoy y el
+      // salto de evento no pasa por el raíl. Un 0 aquí es una AFIRMACIÓN, no un silencio.
+      saltos_evento_sin_mes: saltosEventoSinMes,
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
       // Antelación MEDIDA del piso POR MES (mes → días de mediana). Sin ella la palanca de urgencia
       // queda inerte, así que conviene verla para distinguir «no hacía falta bajar» de «no lo sé».
