@@ -599,9 +599,14 @@ DROP FUNCTION IF EXISTS public.rate_snapshots_sync_price_live();
 ALTER TABLE rate_snapshots       DROP COLUMN IF EXISTS price_pricelabs;
 ALTER TABLE pricing_experiments  DROP COLUMN IF EXISTS price_pricelabs;
 
--- 732 filas (366 días × prop_duplex_center y prop_house_sevillana), captured_at = 2026-08-08.
--- Habría caducado sola el 06/12/2026 por PL_REF_MAX_AGE_DAYS; el motor ya no la lee.
-DROP TABLE IF EXISTS pricing_pl_referencia;
+-- 🚨 `pricing_pl_referencia` NO SE BORRA (corregido el 25/08/2026, después de escribir este
+-- plan). El motor ya no la lee, pero `/sivra/pricing-rentabilidad` (PR #1702, desplegado ese
+-- mismo día) hace `JOIN pricing_pl_referencia` para responder «¿mereció la pena el motor
+-- frente a PL?». Un DROP deja esa página en 500. Su propio código declara que el
+-- contrafactual de MERCADO la relevará cuando la curva caduque el 06/12/2026: hasta entonces
+-- la tabla se queda. Quién depende de ella está fijado en
+-- `test/regression-pricelabs-retirado.test.ts` (TABLA_PL_OK); cuando esa lista quede vacía,
+-- la tabla se puede soltar.
 ```
 
 - [ ] **Step 3: Aplicar y verificar**
