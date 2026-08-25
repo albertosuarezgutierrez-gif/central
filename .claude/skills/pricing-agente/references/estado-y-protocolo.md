@@ -14,6 +14,15 @@
   `market_rates` (rutina `mercado-booking` diaria) y su propio interanual. **No volver a proponerlo.**
 - **El medidor de `pricing-auto` ya suma CON SIGNO** (el `GREATEST(delta,0)` que recortaba las bajadas se
   retiró en #1702/#1703): mide «Δ vs precio anterior DEL MOTOR en noches vendidas», NO es comparación con PL.
+- **Bloque 1-bis «Motor vs mercado real» en el mismo cuadro (PR #1712, 25/08 tarde):** las mismas noches
+  vendidas contra el p50 de comparables FIABLES de su noche (±10 días de la reserva, mismos filtros que el
+  motor: fuentes fiables + €/plaza + aforo, ≥5 comps o no se juzga). NO caduca — releva a PL el 06/12.
+  Primeros datos: Dúplex −0,4% (clavado) · House +47% · Luxury −28% · Busto sin comps fiables aún.
+- **`target_pctl` de House Sevillana 0,50 → 0,60 (25/08/2026, OK de Alberto en chat, aplicado en prod):**
+  evidencia = sept al 43% vendido a >1 mes vista (antelación mediana 24-39d; los otros pisos al 10-13%) y
+  ventas +47% sobre el p50 de mercado. Registrado en `pricing_aprendizaje` id 76 **con criterio de
+  reversión**: si sept cae de ~30% de ocupación a 30 días vista, revertir a 0,50. Mismo experimento que el
+  Dúplex del 20/08 (que sigue en 0,60 y en observación 3 meses).
 - **Hueco jun-jul 2025 REPARADO** (backfill 25/08 vía `/api/sivra/updates/sync` con `ALERTA_TOKEN`, ruta ya
   en `RUTAS_RUTINA` con auth propia): jun = 13 reservas / jul = 7, con `reserved_at`. El interanual del
   cuadro está desbloqueado. Veredicto prerregistrado: RevPAR neto sept-nov 2026 vs mismo tramo de PL.
