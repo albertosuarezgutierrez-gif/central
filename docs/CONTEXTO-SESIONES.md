@@ -32,6 +32,17 @@
 
 ---
 
+### 🏖️ (25/08/2026) Rotación Dúplex→costa de Huelva: estudio completo cerrado, tiro centrado en La Antilla
+Sesión de estrategia con Alberto (sin código; se anota a mano). Todo el detalle vive en
+`patrimonio_recomendaciones` **id 4** (lo retoma el CFO el 02/09). Decisiones: rotar el Dúplex hacia casa
+6+ dorm (12-14 plazas) en costa de Huelva; hipótesis «Socorro rinde por falta de competencia» VALIDADA
+(170 competidores aforo-12 vs 304-348 pequeños; costa: 0-3 casas grandes por playa, 100% vendidas el finde
+28-30/08); financiación ABIERTA (hipoteca con aval, quizá sin vender Dúplex: fricción venta ~32.400€);
+erosión de Matalascañas = SOLO la 1ª línea oeste (Caño Guerrero→Pueblo Andaluz→Alcotán; corrección de
+Alberto verificada) — sectores centrales (zona Hotel Flamero) OK; **tiro: 1º Matalascañas sectores centrales ·
+2º La Antilla/Islantilla · 3º El Rompido/El Portil · 4º Mazagón; Cádiz descartada (Conil 6 dorm 1,75M€)**.
+Pricing Dúplex: motor ya clavado al mercado (−0,4%), recorrido ~+5-8% — la palanca grande es la rotación.
+
 ### 🔀 (25/08/2026) `aiComplete`/`aiTools` eran cajas negras: mismo fallo del gemini/pasarela, pero en la cadena clásica
 Alberto: «revisa si este fallo está en algún sitio más». Sí: `aiComplete`/`aiTools` de `@central/core-ai`
 devolvían solo el `string`/`NimToolResult`, sin decir qué eslabón (NIM/Groq/Cerebras/Gemini/Kimi) sirvió
