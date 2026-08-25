@@ -65,6 +65,16 @@ monetario (tipo actual con fuente), alquiler de larga duración de la zona. Y la
 sistema: *¿qué rinde este dinero aquí frente a lo que rendiría allí?* Con la valoración DUAL,
 señala también cuánto vale la licencia VUT y qué pasaría si la regulación la toca.
 
+**Variable obligatoria del «modelo Socorro» (Alberto, 25/08/2026):** para los activos turísticos,
+calcula y compara SIEMPRE la **eficiencia operativa por rotación** — `€ neto / nº de reservas` y
+`€ neto / noche vendida` (de `incomes`, 12 meses por fecha de entrada). Cada reserva es una
+limpieza + un check-in + un desgaste: coste operativo casi fijo por rotación, sea el piso chico o
+la casa grande. Medido el 25/08/2026: Socorro **1.241€/reserva y 409€/noche** contra 362€/88€ del
+Dúplex — «menos reservas (menos costes) y más dinero». Un activo con € por rotación bajo es el
+candidato a rotar; uno alto es el patrón a replicar. Esta variable manda en los escenarios de
+rotación del Paso 4, no solo el yield sobre valoración (que castiga injustamente al activo caro
+bien explotado y favorece al barato que muele rotaciones).
+
 ## Paso 4 — Escenarios de decisión (máx. 2-3 por pasada, los que muevan dinero de verdad)
 Plantilla: el estudio del Dúplex. Cada escenario con números completos: precio de salida
 (valoración vigente + termómetro del radar), **impuestos** (ganancia patrimonial IRPF con el
