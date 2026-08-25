@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client"
 import { tgAlert } from "@/lib/telegram"
 import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
 import {
-  decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza,
+  decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza, decidirRitmoDestacado,
   decidirCompsDeOtroAforo,
 } from "@/lib/sivra/pricing-centinelas"
 import { eventFactor } from "@/lib/pricing-calendar"
@@ -28,7 +28,8 @@ export const maxDuration = 60
 //
 // Chequeos:
 //   #1 Reversión: el precio BASE en Smoobu ya no coincide con lo último que aplicó el motor → algo
-//      (PriceLabs u otro) lo pisó.
+//      lo pisó (una edición a mano en Smoobu, otra integración…). PriceLabs, que era el
+//      sospechoso habitual, está de baja desde el 09/08/2026: ya no puede ser la causa.
 //   #3 Suelo de coste: el motor fija el mínimo en ≥3 fechas → margen justo.
 //   #4 Sub-mercado (NUEVO): el precio VIVO del piso va sistemáticamente por debajo de su MERCADO REAL
 //      por piso (`market_rates.scenario = property_id`, datos de conector), casando fecha a fecha.
@@ -93,16 +94,16 @@ export async function GET(req: NextRequest) {
       ORDER BY property_id, rate_date, applied_at DESC
     ),
     snap AS (
-      SELECT property_id, rate_date, price_pricelabs
+      SELECT property_id, rate_date, price_live
       FROM rate_snapshots
       WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
-        AND price_pricelabs IS NOT NULL
+        AND price_live IS NOT NULL
     )
-    SELECT la.property_id, la.rate_date::text, la.new_price, snap.price_pricelabs AS base_now
+    SELECT la.property_id, la.rate_date::text, la.new_price, snap.price_live AS base_now
     FROM last_applied la
     JOIN snap USING (property_id, rate_date)
     WHERE la.rate_date >= CURRENT_DATE
-      AND snap.price_pricelabs <> la.new_price
+      AND snap.price_live <> la.new_price
     ORDER BY la.property_id, la.rate_date
   `)
 
@@ -152,11 +153,11 @@ export async function GET(req: NextRequest) {
         HAVING COUNT(*) >= 8
       ),
       live AS (
-        SELECT rate_date, price_pricelabs AS live
+        SELECT rate_date, price_live AS live
         FROM rate_snapshots
         WHERE property_id = ${property_id}
           AND snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots WHERE property_id = ${property_id})
-          AND available = 1 AND price_pricelabs IS NOT NULL
+          AND available = 1 AND price_live IS NOT NULL
           AND rate_date >= CURRENT_DATE
       )
       SELECT COUNT(*)::int AS matched,
@@ -242,11 +243,11 @@ export async function GET(req: NextRequest) {
     ),
     barato AS (
       SELECT DISTINCT ON (r.property_id)
-        r.property_id, r.price_pricelabs::float8 AS vivo, r.rate_date::text AS fecha
+        r.property_id, r.price_live::float8 AS vivo, r.rate_date::text AS fecha
       FROM rate_snapshots r
       JOIN ult ON ult.property_id = r.property_id AND ult.sd = r.snapshot_date
-      WHERE r.rate_date >= CURRENT_DATE AND r.available = 1 AND r.price_pricelabs IS NOT NULL
-      ORDER BY r.property_id, r.price_pricelabs ASC, r.rate_date
+      WHERE r.rate_date >= CURRENT_DATE AND r.available = 1 AND r.price_live IS NOT NULL
+      ORDER BY r.property_id, r.price_live ASC, r.rate_date
     )
     SELECT s.property_id, z.max_guests::int AS plazas, s.min_price::float8 AS min_price,
            b.vivo, b.fecha
@@ -301,6 +302,49 @@ export async function GET(req: NextRequest) {
       ev: decidirCompsDeOtroAforo({ plazasPiso: e.plazas, comps: e.comps }),
     }))
     .filter(a => a.ev.alerta)
+
+  // #11 Ritmo de venta DESTACADO (25/08/2026, petición de Alberto: «importante que el agente se dé
+  // cuenta de esas cosas — septiembre mes regular y Socorro está arrasando con el resto»). Compara
+  // la ocupación de los MESES FUTUROS entre pisos: uno vendiendo muy por delante de los hermanos en
+  // un mes flojo es la señal de precio corto más limpia que hay, y el motor no la ve porque nunca
+  // mira a los hermanos. Lógica pura en decidirRitmoDestacado (con los datos reales del 25/08 salta
+  // septiembre y no salta octubre). La antelación mediana sale de incomes.reserved_at (24 meses).
+  const ritmoRaw = await prisma.$queryRaw<{
+    property_id: string; mes: string; dias_hasta: number; noches: number; ocupadas: number
+    antelacion: number | null
+  }[]>(Prisma.sql`
+    WITH ult AS (
+      SELECT property_id, MAX(snapshot_date) AS sd FROM rate_snapshots GROUP BY property_id
+    ),
+    antel AS (
+      SELECT i."propertyId" AS property_id,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY (i."checkIn"::date - i.reserved_at::date))::float8 AS antelacion
+      FROM incomes i
+      WHERE i.reserved_at IS NOT NULL AND i."checkIn"::date >= i.reserved_at::date
+        AND i.reserved_at >= CURRENT_DATE - INTERVAL '24 months'
+      GROUP BY 1
+    )
+    SELECT r.property_id, to_char(r.rate_date, 'YYYY-MM') AS mes,
+      (date_trunc('month', r.rate_date)::date - CURRENT_DATE)::int AS dias_hasta,
+      COUNT(*)::int AS noches,
+      COUNT(*) FILTER (WHERE r.available = 0)::int AS ocupadas,
+      a.antelacion
+    FROM rate_snapshots r
+    JOIN ult ON ult.property_id = r.property_id AND ult.sd = r.snapshot_date
+    LEFT JOIN antel a ON a.property_id = r.property_id
+    WHERE r.rate_date >= date_trunc('month', CURRENT_DATE + INTERVAL '1 month')
+      AND r.rate_date < date_trunc('month', CURRENT_DATE + INTERVAL '4 months')
+    GROUP BY 1, 2, date_trunc('month', r.rate_date), a.antelacion
+  `).catch(() => [])
+
+  const ritmoPorMes = new Map<string, { diasHasta: number; pisos: { property_id: string; noches: number; ocupadas: number; antelacionMediana: number | null }[] }>()
+  for (const r of ritmoRaw) {
+    const e = ritmoPorMes.get(r.mes) ?? { diasHasta: Number(r.dias_hasta), pisos: [] }
+    e.pisos.push({ property_id: r.property_id, noches: Number(r.noches), ocupadas: Number(r.ocupadas), antelacionMediana: r.antelacion == null ? null : Number(r.antelacion) })
+    ritmoPorMes.set(r.mes, e)
+  }
+  const ritmoHits = [...ritmoPorMes.entries()].flatMap(([mes, e]) =>
+    decidirRitmoDestacado({ mes, diasHastaMes: e.diasHasta, pisos: e.pisos }).map(h => ({ ...h, mes })))
 
   // #10 Noche bloqueada SIN income (24/08/2026). El calendario dice «no disponible» y ningún
   // income cubre la noche. Caso fundacional: Busto 15-17 abr 2027 (Feria) — una reserva de Airbnb
@@ -499,7 +543,7 @@ export async function GET(req: NextRequest) {
     const ok = await pushAlert({
       tipo: "precio_revertido", prioridad: "alta", property_id: r.property_id,
       titulo: `${PROP_NAMES[r.property_id] ?? r.property_id}: precio revertido el ${r.rate_date}`,
-      detalle: `Fijamos ${r.new_price}€ base y ahora hay ${r.base_now}€ en Smoobu. Revisa que PriceLabs esté desconectado en este piso.`,
+      detalle: `Fijamos ${r.new_price}€ base y ahora hay ${r.base_now}€ en Smoobu. Alguien o algo lo ha pisado en Smoobu.`,
       dato_actual: r.new_price, dato_mercado: r.base_now, fecha_ref: r.rate_date,
     })
     if (ok) { created++; newReversions.push(r) }
@@ -559,6 +603,16 @@ export async function GET(req: NextRequest) {
       tipo: "comps_otro_aforo", prioridad: "alta", property_id: a.property_id,
       titulo: `${PROP_NAMES[a.property_id] ?? a.property_id}: su mercado se está leyendo de pisos de otro tamaño`,
       detalle: `${a.ev.motivo} Mientras siga así, NO bajes el precio de este piso con el dato de mercado: revisa que la rutina de Booking (mercado-booking) esté midiendo su aforo y vuelve a mirarlo.`,
+    })
+    if (ok) created++
+  }
+  for (const h of ritmoHits) {
+    const ok = await pushAlert({
+      tipo: "ritmo_venta_destacado", prioridad: "media", property_id: h.property_id,
+      titulo: `${PROP_NAMES[h.property_id] ?? h.property_id}: ${h.mes} al ${h.ocupPct}% vendido con el resto al ${h.medianaOtrosPct}%`,
+      detalle: `${h.motivo} (El aviso se repite si se resuelve y el contraste persiste.)`,
+      dato_actual: h.ocupPct, dato_mercado: h.medianaOtrosPct,
+      fecha_ref: `${h.mes}-01`,
     })
     if (ok) created++
   }

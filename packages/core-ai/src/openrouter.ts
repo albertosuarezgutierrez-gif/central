@@ -230,14 +230,16 @@ export async function openrouterSearchEx(
 
 /**
  * Function-calling con OpenRouter (formato de tools OpenAI). Espejo de `groqChatTools`,
- * con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools`.
+ * con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools`
+ * — más el modelo REAL usado (puede ser un suplente del fallback nativo), para que el
+ * auditor de coste de la pasarela no tenga que adivinarlo.
  */
 export async function openrouterChatTools(
   config: OpenRouterConfig,
   messages: NimToolMessage[],
   tools: unknown[],
   opts: OpenRouterChatOptions = {},
-): Promise<NimToolResult> {
+): Promise<NimToolResult & { model: string }> {
   const key = requireKey(config)
   const doFetch = opts.fetchImpl ?? fetch
   const msgs = [...systemMsgs(opts), ...messages]
@@ -251,5 +253,5 @@ export async function openrouterChatTools(
   const data = await res.json()
   const msg = data?.choices?.[0]?.message
   if (!msg) throw new Error('OpenRouter-Tools: respuesta vacía')
-  return { content: msg.content ?? null, tool_calls: msg.tool_calls }
+  return { content: msg.content ?? null, tool_calls: msg.tool_calls, model: data?.model ?? 'desconocido' }
 }

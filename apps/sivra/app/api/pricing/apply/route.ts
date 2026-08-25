@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic"
 // ⛔ RETIRADO (auditoría pricing 18/07/2026, R5 — docs/AUDITORIA-PRICING-2026-07.md).
 //
 // Este era el motor de pricing ORIGINAL. Los crons se migraron a plataforma (17/06/2026) y el
-// motor de allí siguió evolucionando (prior estacional, velocity, suelo PriceLabs, salto de
+// motor de allí siguió evolucionando (prior estacional, velocity, techo de mercado, salto de
 // evento, raíl por día real, banda muerta…) mientras esta copia se quedó congelada en junio.
 // Seguía siendo invocable desde el panel legacy /pricing-auto o con CRON_SECRET — un clic aquí
 // escribía en Smoobu con la lógica vieja (sin ninguna guarda), pisando al motor vivo.

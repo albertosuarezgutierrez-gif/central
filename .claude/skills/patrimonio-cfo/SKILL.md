@@ -65,6 +65,16 @@ monetario (tipo actual con fuente), alquiler de larga duración de la zona. Y la
 sistema: *¿qué rinde este dinero aquí frente a lo que rendiría allí?* Con la valoración DUAL,
 señala también cuánto vale la licencia VUT y qué pasaría si la regulación la toca.
 
+**Variable obligatoria del «modelo Socorro» (Alberto, 25/08/2026):** para los activos turísticos,
+calcula y compara SIEMPRE la **eficiencia operativa por rotación** — `€ neto / nº de reservas` y
+`€ neto / noche vendida` (de `incomes`, 12 meses por fecha de entrada). Cada reserva es una
+limpieza + un check-in + un desgaste: coste operativo casi fijo por rotación, sea el piso chico o
+la casa grande. Medido el 25/08/2026: Socorro **1.241€/reserva y 409€/noche** contra 362€/88€ del
+Dúplex — «menos reservas (menos costes) y más dinero». Un activo con € por rotación bajo es el
+candidato a rotar; uno alto es el patrón a replicar. Esta variable manda en los escenarios de
+rotación del Paso 4, no solo el yield sobre valoración (que castiga injustamente al activo caro
+bien explotado y favorece al barato que muele rotaciones).
+
 ## Paso 4 — Escenarios de decisión (máx. 2-3 por pasada, los que muevan dinero de verdad)
 Plantilla: el estudio del Dúplex. Cada escenario con números completos: precio de salida
 (valoración vigente + termómetro del radar), **impuestos** (ganancia patrimonial IRPF con el
@@ -73,6 +83,25 @@ destino del dinero (fondo de aparcamiento — traspasos entre fondos sin peaje f
 recompra vs amortizar deuda). Si hay escenario de recompra, cruza con el corpus REAL de
 `subastas` (ya vigila Asturias/Cantabria/Sevilla/Huelva/Cádiz con criterios de Alberto).
 El termómetro del radar decide el «cuándo»: señales de agotamiento = ventana de venta.
+
+**Rotación de activos tipo «Socorro» (petición de Alberto, 25/08/2026):** los datos de pricing
+demuestran que la casa GRANDE (House Sevillana/Socorro: 12 plazas) arrasa mientras los pisos
+pequeños van regulares — sept-2026 al 43% vendido con el resto al 10-13%, ventas un +47% sobre
+el p50 de su mercado. Alberto quiere que este agente estudie explícitamente la casuística de
+**vender un piso pequeño de bajo rendimiento (el Dúplex es el candidato natural) y redeplegar
+en OTRO activo tipo Socorro en otra zona**: casa de campo en el Aljarafe, casa en la costa de
+Huelva. En cada pasada con escenario de venta abierto:
+- Compara el **yield neto real por activo** (Paso 3) separando el patrón casa-grande vs
+  piso-pequeño — es la evidencia que motiva la rotación, cítala con los números del mes
+  (fuente: `/api/sivra/pricing/rentabilidad` + `incomes`).
+- Para el destino, cruza con el corpus REAL: `subastas` ya filtra 🏖️ costa de Huelva sin tope
+  de precio y el radar-espana valora por zona. Una casa de 10-12 plazas en costa/campo se
+  estima con el patrón de House (`lib/subastas/rendimiento.ts` usa la mediana real de los 4
+  pisos — declara siempre el caveat de que asume rendimiento similar y otra estacionalidad:
+  la costa vende verano, Sevilla lo tiene de mes flojo).
+- Números completos de la plantilla del Dúplex (impuestos de la venta + ITP de la recompra +
+  reforma si es subasta) y registro en `patrimonio_recomendaciones`. Solo orienta: la
+  decisión es de Alberto.
 
 **Amortización anticipada de la hipoteca (petición de Alberto, 22/08/2026 — «a veces merece
 la pena amortizar»):** las condiciones REALES de la hipoteca de Monte Carmelo viven en

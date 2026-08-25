@@ -13,7 +13,7 @@ export const maxDuration = 60
 // GET /api/pricing/pilot-track  (cron diario ~09:15)
 //
 // Agente de seguimiento del piloto de precio dinámico. Por cada piso con pilot_enabled=true:
-//   - Mide ocupación/noches libres a 90d, días sin reserva NUEVA, € extra vs PriceLabs, ritmo (pace),
+//   - Mide ocupación/noches libres a 90d, días sin reserva NUEVA, € subidos en noches vendidas, ritmo (pace),
 //     y mediana del mercado (precio huésped).
 //   - Decide un veredicto (lib/pilot-track) con anti-falso-positivo y diagnóstico (caros / sin demanda).
 //   - Solo PROPONE bajadas (no escribe precio en Smoobu); persiste histórico y avisa al propietario.
@@ -111,10 +111,10 @@ export async function GET(req: NextRequest) {
   // Precio base actual: el de la fecha futura más próxima del último snapshot.
   const base = await prisma.$queryRaw<{ property_id: string; current_base: number | null }[]>(Prisma.sql`
     WITH latest AS (SELECT property_id, MAX(snapshot_date) sd FROM rate_snapshots GROUP BY property_id)
-    SELECT DISTINCT ON (rs.property_id) rs.property_id, rs.price_pricelabs AS current_base
+    SELECT DISTINCT ON (rs.property_id) rs.property_id, rs.price_live AS current_base
     FROM rate_snapshots rs
     JOIN latest l ON l.property_id = rs.property_id AND l.sd = rs.snapshot_date
-    WHERE rs.rate_date >= CURRENT_DATE AND rs.price_pricelabs IS NOT NULL
+    WHERE rs.rate_date >= CURRENT_DATE AND rs.price_live IS NOT NULL
     ORDER BY rs.property_id, rs.rate_date`)
 
   // Días desde la última reserva NUEVA creada.
@@ -138,7 +138,8 @@ export async function GET(req: NextRequest) {
     if (r.score != null) g.scores.push(Number(r.score))
   }
 
-  // € extra vs PriceLabs (misma lógica que /api/pricing/resultados, por piso).
+  // Suma de SUBIDAS del motor en noches vendidas (misma lógica que /api/pricing/resultados,
+  // por piso). No es «extra vs PriceLabs»: old_price es nuestro propio precio anterior.
   const extra = await prisma.$queryRaw<{ property_id: string; extra_eur: number | null }[]>(Prisma.sql`
     WITH applied AS (
       SELECT DISTINCT ON (property_id, rate_date) property_id, rate_date, old_price, new_price

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto, PROVEEDOR_PASARELA } from '@/lib/ai-gateway'
 import { acotarArchivos } from '@/lib/ia-director-codigo'
 
 export const maxDuration = 30
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (!tarea.trim()) return NextResponse.json({ error: 'Falta tarea' }, { status: 400 })
 
   if (!(await dentroDePresupuesto())) {
-    await registrarUso({ app, endpoint: 'codigo', proveedor: 'openrouter', modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
+    await registrarUso({ app, endpoint: 'codigo', proveedor: PROVEEDOR_PASARELA, modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
     return NextResponse.json({ error: 'Límite mensual de IA alcanzado' }, { status: 429 })
   }
 

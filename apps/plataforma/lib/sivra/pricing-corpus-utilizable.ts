@@ -58,9 +58,8 @@ export type PisoSaltado = { property: string; sample_n: number; market_age_days:
  * salta siempre deja de leerse.
  *
  * Que un piso no se tarifique es CARO y hasta hoy era invisible — vivía solo en el array `results`
- * de la respuesta HTTP, que no lee nadie. Es hermano de los avisos de `pl_degradado` y de eventos
- * ilegibles: la pasada no es inválida (los demás pisos sí se tarificaron), pero el hueco tiene que
- * verse sin deducirlo.
+ * de la respuesta HTTP, que no lee nadie. Es hermano del aviso de eventos ilegibles: la pasada no
+ * es inválida (los demás pisos sí se tarificaron), pero el hueco tiene que verse sin deducirlo.
  */
 export function avisoPisosSinTarifar(saltados: PisoSaltado[], minSample: number, maxEdad: number): string | null {
   if (saltados.length === 0) return null

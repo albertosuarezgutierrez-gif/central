@@ -292,6 +292,106 @@ export function decidirCompsDeOtroAforo(
   }
 }
 
+// ─── 6. Ritmo de venta DESTACADO: un piso arrasa mientras el mes es flojo ────────────────────
+// Nace del 25/08/2026: Alberto vio a ojo lo que ningún vigilante decía — septiembre iba regular
+// (10-13% vendido en tres pisos) y House Sevillana ya llevaba el 43%. Ese contraste es la señal de
+// «precio corto» más limpia que existe, y el motor no la ve porque mira cada piso contra SU mercado
+// y SU ocupación, nunca a los hermanos. «Importante que el agente se dé cuenta de esas cosas.»
+//
+// Solo avisa del lado rápido A PROPÓSITO: la demanda floja ya la maneja el descuento gateado por
+// antelación del motor, y un aviso simétrico («todos van lentos») sonaría cada semana en un
+// calendario que se vende a 7-39 días vista. Umbrales holgados (lección del 19/07): con los datos
+// reales del 25/08 salta septiembre (43% vs mediana 13%) y NO salta octubre (26% vs 23%).
+
+export type RitmoPisoMes = {
+  property_id: string
+  /** noches del mes en la última foto de rate_snapshots */
+  noches: number
+  ocupadas: number
+  /** antelación mediana de venta del piso en días (de incomes.reserved_at); null = sin muestra */
+  antelacionMediana: number | null
+}
+
+export type RitmoDestacadoInput = {
+  mes: string
+  /** días desde hoy hasta el día 1 del mes (solo meses futuros: >0) */
+  diasHastaMes: number
+  pisos: RitmoPisoMes[]
+}
+
+export type RitmoDestacadoOpts = {
+  /** noches mínimas del mes en la foto para opinar de un piso */
+  minNoches?: number
+  /** ocupación mínima del candidato: por debajo no hay nada que destacar */
+  minOcup?: number
+  /** el candidato debe ir al menos a este múltiplo de la mediana de los demás */
+  ratioMin?: number
+  /** …y además con esta brecha absoluta en puntos porcentuales (evita 6% vs 2%) */
+  gapMinPp?: number
+  /** pisos comparables mínimos APARTE del candidato */
+  minOtros?: number
+}
+
+export type VeredictoRitmo = Veredicto & {
+  property_id: string
+  ocupPct: number
+  medianaOtrosPct: number
+}
+
+const medianaDe = (xs: number[]): number => {
+  const s = [...xs].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
+/** Devuelve un veredicto por piso destacado (lista vacía = nada que destacar o sin muestra). */
+export function decidirRitmoDestacado(
+  i: RitmoDestacadoInput,
+  o: RitmoDestacadoOpts = {},
+): VeredictoRitmo[] {
+  const minNoches = o.minNoches ?? 20
+  const minOcup = o.minOcup ?? 0.35
+  const ratioMin = o.ratioMin ?? 2.5
+  const gapMinPp = o.gapMinPp ?? 20
+  const minOtros = o.minOtros ?? 2
+
+  // Solo meses FUTUROS: en el mes corriente la foto mezcla noches ya pasadas y el % no es comparable.
+  if (!(i.diasHastaMes > 0)) return []
+
+  const evaluables = i.pisos.filter(p => p.noches >= minNoches)
+  const hits: VeredictoRitmo[] = []
+  for (const p of evaluables) {
+    const otros = evaluables.filter(x => x.property_id !== p.property_id)
+    if (otros.length < minOtros) continue // sin hermanos con muestra no hay contraste que medir
+    const ocup = p.ocupadas / p.noches
+    if (ocup < minOcup) continue
+    const mediana = medianaDe(otros.map(x => x.ocupadas / x.noches))
+    const gapPp = (ocup - mediana) * 100
+    if (!(mediana === 0 ? ocup >= minOcup : ocup >= ratioMin * mediana) || gapPp < gapMinPp) continue
+
+    const antel = p.antelacionMediana
+    const ventana =
+      antel == null
+        ? 'antelación del piso sin muestra suficiente'
+        : i.diasHastaMes >= antel
+          ? `y su ventana normal de venta (mediana ${Math.round(antel)}d) NI SIQUIERA ha abierto`
+          : `con su ventana de venta (mediana ${Math.round(antel)}d) recién abierta`
+    hits.push({
+      alerta: true,
+      evaluado: true,
+      property_id: p.property_id,
+      ocupPct: Math.round(ocup * 100),
+      medianaOtrosPct: Math.round(mediana * 100),
+      motivo:
+        `${i.mes}: ${Math.round(ocup * 100)}% vendido a ${i.diasHastaMes} días vista ${ventana}, ` +
+        `mientras la mediana de los otros ${otros.length} pisos va al ${Math.round(mediana * 100)}%. ` +
+        `Vender tan por delante del resto en un mes flojo suele significar precio corto: ` +
+        `revisa target_pctl/suelo de ese mes al alza.`,
+    })
+  }
+  return hits
+}
+
 // ─── 5. Evento CONFIRMADO que se tarifica A CIEGAS ───────────────────────────────────────────
 // Nace del caso Bienal 2026 (13/08/2026): el verificador confirmó 6 noches (×1,25) a las 05:31 y a
 // las 08:30 el motor las siguió BAJANDO −20%/día hacia el ancla global — porque esas fechas tenían

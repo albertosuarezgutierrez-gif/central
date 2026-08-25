@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { aiTools, openrouterChatTools, type NimToolMessage } from '@central/core-ai'
+import { aiToolsConProveedor, openrouterChatTools, type NimToolMessage } from '@central/core-ai'
 import {
   verificarSecreto, registrarUso, dentroDePresupuesto, dentroDePresupuestoDiario,
-  estimarTokens, costeEur,
+  estimarTokens, costeEur, PROVEEDOR_PASARELA,
 } from '@/lib/ai-gateway'
 import { openrouterConfigPasarela, modelosPorDefecto } from '@/lib/ia-director'
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const clienteRef = typeof body?.cliente === 'string' && body.cliente.trim() ? body.cliente.trim().slice(0, 120) : null
 
   if (!(await dentroDePresupuesto())) {
-    await registrarUso({ app, endpoint: 'tools', proveedor: 'nim', modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
+    await registrarUso({ app, endpoint: 'tools', proveedor: PROVEEDOR_PASARELA, modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
     return NextResponse.json({ error: 'Límite mensual de IA alcanzado' }, { status: 429 })
   }
 
@@ -56,7 +56,9 @@ export async function POST(req: Request) {
           signal: AbortSignal.timeout(Number(body?.timeoutMs) || 25_000),
         })
         const tokens = tokensDe(result.content, result.tool_calls)
-        await registrarUso({ app, endpoint: 'tools', proveedor: 'openrouter', modelo: model, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('openrouter', tokens), clienteRef })
+        // `result.model` (no `model`): el fallback nativo de OpenRouter puede haber servido
+        // con un suplente distinto del primario pedido.
+        await registrarUso({ app, endpoint: 'tools', proveedor: 'openrouter', modelo: result.model, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('openrouter', tokens), clienteRef })
         return NextResponse.json({ content: result.content, tool_calls: result.tool_calls })
       } catch (e) {
         const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
@@ -70,12 +72,15 @@ export async function POST(req: Request) {
   // ── Cadena clásica (NIM → Groq) — comportamiento de siempre ────────────────────────────────
   const t0 = Date.now()
   try {
-    const result = await aiTools(messages, tools, {
+    // 🚨 `aiTools` (sin procedencia) siempre habría dicho 'nim' aunque Groq fuera quien
+    // respondió — mismo defecto que `aiComplete` en pasarela.ts (25/08/2026). Se usa la
+    // variante `Con Proveedor` para registrar quién sirvió de verdad.
+    const result = await aiToolsConProveedor(messages, tools, {
       system, model: modelo, maxTokens,
       skipOpenRouter: openrouterBloqueado || !!or, // la pasarela ya gestionó OpenRouter aquí arriba
     })
     const tokens = tokensDe(result.content, result.tool_calls)
-    await registrarUso({ app, endpoint: 'tools', proveedor: 'nim', modelo: modelo ?? null, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('nim', tokens), clienteRef })
+    await registrarUso({ app, endpoint: 'tools', proveedor: result.proveedor, modelo: result.modelo, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur(result.proveedor, tokens), clienteRef })
     return NextResponse.json({ content: result.content, tool_calls: result.tool_calls })
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'

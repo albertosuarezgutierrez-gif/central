@@ -75,8 +75,12 @@ vivienda) en `patrimonio_valoraciones` junto a las de Alberto — ver `docs/RADA
   2.000€/año en planes de Kutxabank por período de revisión** (revisión cada **5 de abril**;
   valen aportaciones o traslados). Con los 936,59€ ya trasladados el 23/04/2026 **faltan
   1.063,41€** este período; cumpliéndolo (y el resto de bonificaciones), **el tipo quedaría en
-  el 1,20%**. Pendiente de Alberto: darle el **nombre exacto del producto de Generali** (la
-  gestora prepara la solicitud de traslado con firma online) y completar los 1.063,41€.
+  el 1,20%**. **✅ TRASLADO FIRMADO el 25/08/2026** (banca online 14:38, copia certificada
+  subida por Alberto): **1.065,00€** desde el PPA GENERALI PPA III-1 (póliza 3V-G-410.000.330)
+  al plan **KUTXABANK RENTA FIJA MIXTO 15** (Kutxabank Pensiones, contrato 992116397-2) →
+  acumulado del período **2.001,59€ ≥ 2.000€: período 2026-27 CUBIERTO**, pendiente solo de que
+  el traslado se ejecute (revocable hasta las 16:00 del 5º día hábil) y de que la gestora lo
+  compute en la revisión del 5-abr-2027.
   Matiz del CFO (y de la propia gestora): comparar la rentabilidad del plan de Kutxabank vs el
   PPA de Generali antes de cada traslado — la bonificación no compensa si el destino rinde
   mucho peor.
@@ -106,6 +110,9 @@ valen aportaciones o traslados) → bonificación 0,20% → tipo 1,20%. Fuente d
 pierde), pero FINITA: tras el traslado de 2026 quedan ~2.700€ (~2 períodos); desde ~2028 la vía
 son aportaciones directas (que además deducen IRPF). El CFO vigila el acumulado del período en
 cada pasada mensual y avisa si en enero-marzo faltan euros para los 2.000€ (skill, Paso 4).
+**Período 2026-27: hecho** — traslado de 1.065€ firmado el 25/08/2026 (ver recomendación #1);
+el destino elegido por la gestora es KUTXABANK RENTA FIJA MIXTO 15 (contrato 992116397-2).
+El siguiente hito del ciclo es el período abr-2027 → abr-2028.
 
 **Vigilancia continua (23/08/2026):** el agente contable proactivo (cron lunes 09:00) vigila
 los recibos `CUOTA PTMO 856289293-5` de la banca — si la cuota cambia entre recibos, o la

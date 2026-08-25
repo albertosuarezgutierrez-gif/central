@@ -7,8 +7,9 @@ import { combinarEventosDeFecha, normalizarEstado, type EventoBruto } from "@/li
 import { decidirEventoACiegas } from "@/lib/sivra/pricing-centinelas"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
-import { acotarSueloPL } from "@/lib/sivra/pricing-suelo-pl"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
+import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
+import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
@@ -45,22 +46,9 @@ const SMOOBU_ID: Record<string, number> = {
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x))
 const fmt = (d: Date) => d.toISOString().slice(0, 10)
 
-// Suelo PriceLabs: fracción del último precio conocido de PL por debajo de la cual el motor NO
-// escribe mientras PL siga conectado como referencia (hasta ~ago-2026). 0 = desactivado. El
-// aviso del tripwire salta a <70%; el suelo (85%) deja holgura para que el motor cotice algo por
-// debajo de PL cuando su propia señal lo justifique, pero corta el desplome a ~64% de las minas.
-const PL_FLOOR_RATIO: number = 0.85
-// Cota de cordura del suelo PL: con ancla fiable de la FECHA, el suelo no retiene el precio a más
-// de este margen sobre el mercado medido (lección del 15/08/2026 — referencia PL contaminada con
-// los precios del propio motor reteniendo 359€ en una fecha medida a 77€). Ver pricing-suelo-pl.ts.
-const PL_FLOOR_VS_ANCLA = 1.2
-// Idea #1: la referencia PL persistida (`pricing_pl_referencia`) actúa como suelo hasta N días
-// tras la última captura, para que SOBREVIVA a la cancelación de PL (~ago-2026). Pasado ese
-// plazo caduca sola y el suelo queda inerte (el motor ya se apoya en las ideas #2/#4).
-const PL_REF_MAX_AGE_DAYS = 120
-// Idea #2: si el precio ACTUAL supera en +40% la base "normal" del mes/global, esa noche es
-// especial (alguien/mercado/PL la subió). Lejos de la fecha NO la hundimos a ciegas por debajo
-// del actual; cerca (≤N días) dejamos que el last-minute suavice. Funciona SIN PriceLabs.
+// Si el precio ACTUAL supera en +40% la base "normal" del mes/global, esa noche es especial
+// (alguien o el mercado la subió). Lejos de la fecha NO la hundimos a ciegas por debajo del
+// actual; cerca (≤N días) dejamos que el last-minute suavice.
 const OUTLIER_RATIO = 1.4
 const OUTLIER_HORIZON_DAYS = 30
 // Idea #3: min-stay en noches de evento fuerte y lejanas para no malvender una única noche
@@ -537,39 +525,6 @@ export async function POST(req: NextRequest) {
     velocidad.get(v.pid)!.set(v.ym, Number(v.n))
   }
 
-  // PriceLabs como referencia por FECHA, que el motor —anclado al mercado por MES— no reproduce en
-  // las noches especiales (puente del Pilar, Todos los Santos, Feria, Karol G). Idea #1: la curva de
-  // PL vive PERSISTIDA en `pricing_pl_referencia` para sobrevivir a la cancelación: el suelo sigue
-  // anclado a la última curva conocida hasta PL_REF_MAX_AGE_DAYS y luego caduca solo.
-  // Usos del dato: (1) SUELO PL_FLOOR_RATIO×PL en el bucle; (2) tripwire de aviso a <70%.
-  //
-  // 🚨 LANDMINE (14/08/2026): aquí había un upsert que RE-CAPTURABA la referencia a diario desde
-  // `rate_snapshots`, asumiendo que «al cancelar PL el snapshot caduca». Falso: el snapshot lee
-  // SMOOBU (que sigue vivo siempre), así que tras desconectar PriceLabs (10/08/2026) la "referencia
-  // PL" pasaba a capturar los precios del PROPIO motor — un suelo autorreferente que nunca caducaba
-  // y dejaba cada precio blindado a −15% de sí mismo para siempre. La tabla queda CONGELADA con la
-  // última curva real de PL (`captured_at='2026-08-10'`, migración 2026-08-14_pl_referencia_congelada.sql)
-  // y el reloj de PL_REF_MAX_AGE_DAYS corre de verdad (suelo inerte desde el 08/12/2026). Regla
-  // general: una referencia EXTERNA no puede recapturarse de un espejo que escribes tú mismo.
-  // 🚨 Un `catch` que devuelve [] aquí es indistinguible de «no hay curva de PriceLabs», y esa
-  // confusión APAGA el suelo del 85% en silencio (regla del CLAUDE.md raíz: un dato que no se ha
-  // podido mirar no autoriza a afirmar que no lo hay). La pasada sigue —tarificar sin suelo PL es
-  // mejor que no tarificar— pero se declara degradada y avisa.
-  let plIlegible: string | null = null
-  const plRows = await prisma.$queryRaw<{ pid: string; rate_date: string; pl: number }[]>(Prisma.sql`
-    SELECT property_id AS pid, rate_date::text AS rate_date, pl_price::float8 AS pl
-    FROM pricing_pl_referencia
-    WHERE rate_date >= CURRENT_DATE AND pl_price > 0
-      -- 🚨 ::int OBLIGATORIO: Prisma manda el número de JS como int8 y en Postgres el
-      -- operador «date - bigint» NO EXISTE (42883). Sin el cast esto lanza, y el catch de
-      -- abajo lo convertía en «no hay referencia PL»: el suelo del 85% quedaba INERTE y su
-      -- propio tripwire del 70% tampoco podía saltar. Detectado el 20/08/2026.
-      AND captured_at >= CURRENT_DATE - ${PL_REF_MAX_AGE_DAYS}::int
-  `).catch((e: unknown) => { plIlegible = String(e).slice(0, 200); return [] })
-  const plPrice = new Map(plRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.pl)]))
-  const plAvisos: string[] = []
-  /** fechas donde el mercado fiable de la fecha acotó el suelo PL (referencia desfasada/corrupta) */
-  let plSueloAcotadas = 0
   /** congelaciones de TODOS los pisos, para el aviso agrupado (una pasada = un mensaje como mucho) */
   const congeladasGlobal: { property: string; fecha: string; precio: number; factor: number }[] = []
 
@@ -578,7 +533,7 @@ export async function POST(req: NextRequest) {
   // (1,2³) — la V de Karol G: 326→112 y 112→701 en pocos días, con reservas cazando los valles
   // (344€ una noche de mercado ~930€). Referencia del raíl = último precio aplicado ANTES de hoy;
   // las pasadas 2ª/3ª del día se mueven dentro del MISMO rango diario. Los saltos legítimos al
-  // alza (evento de calendario, suelo PL, suelo estacional) siguen saltando el raíl como antes.
+  // alza (evento de calendario, suelo estacional) siguen saltando el raíl como antes.
   // Lecturas del ancla que han reventado. Vacío = las dos respondieron (aunque sea con 0 filas).
   const anclaCaida: LecturaAncla[] = []
   const ref24Rows = await prisma.$queryRaw<{ pid: string; rate_date: string; p: number }[]>(Prisma.sql`
@@ -690,6 +645,11 @@ export async function POST(req: NextRequest) {
     // porque el mes está flojo» de «no se tocó porque todavía no se vende».
     const demFuentes: Record<DemandaFechaResult["fuente"], number> = { mes: 0, global: 0 }
     let demGateadas = 0
+    // Fechas de evento cuyo salto se ancló al ancla GLOBAL por no haber bucket del mes. Va a la
+    // respuesta a propósito: es el único camino que queda por el que la composición del barrido
+    // puede mover un precio de golpe (ver `lib/sivra/pricing-base-evento.ts`), y un 0 aquí es la
+    // prueba de que no ha pasado — distinto de «no se ha mirado».
+    let saltosEventoSinMes = 0
     const ops: { dates: string[]; daily_price: number; min_length_of_stay?: number }[] = []
     // La procedencia del factor viaja hasta la fila persistida: sin ella, una pasada degradada al
     // factor global es indistinguible de una buena en cuanto la respuesta HTTP se pierde.
@@ -700,6 +660,10 @@ export async function POST(req: NextRequest) {
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
     const congeladas: { fecha: string; precio: number; factor: number }[] = []
+    // Fechas donde el techo de mercado medido recortó el objetivo (pricing-techo-mercado.ts). En
+    // la respuesta a propósito: un precio que baja por el techo debe poder distinguirse de uno que
+    // baja porque el mercado del mes se hundió.
+    const techoAcotadas: { fecha: string; techo: number; origen: "fecha" | "mes" }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -761,11 +725,25 @@ export async function POST(req: NextRequest) {
           // YA SON precio-de-evento — multiplicarlas por ev otra vez infló Karol G hacia ~2.000€
           // (bug introducido en #985; la rampa 112→701 iba camino de eso). Prioridad:
           //   fecha exacta (n≥MIN_FECHA_BUCKET) → su mediana TAL CUAL (sin ×ev);
-          //   si no                             → global×ev (comportamiento pre-#985).
+          //   si no                             → base normal del mes × ev.
           // En ambos casos compite por MAX con el target del mes (que tampoco se multiplica).
+          //
+          // 🚨 La base de ese `× ev` es el bucket del MES, NO el ancla global (fix del SERRUCHO,
+          // 25/08/2026 — ver la cabecera de `lib/sivra/pricing-base-evento.ts`). El bucket del mes
+          // EXCLUYE las fechas con evento, así que no hay el doble conteo que motivó elegir la
+          // global en #985; y a diferencia de la global —que es el percentil del puñado de fechas
+          // que el barrido de Booking muestreó esta mañana, y que saltaba 129€→205€→146€ en tres
+          // días— no se mueve con la composición de la muestra. Como el salto de evento se salta
+          // el raíl ±%/día a propósito, esa inestabilidad viajaba entera al precio en UNA pasada:
+          // Duplex 16/09/2026 hizo 158€→289€ (+83%) el 24/08 y volvió a caer al día siguiente.
           const fb = fechaProp?.get(date)
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
-          const globalEvent = Math.round(clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal) * ev)
+          const baseEv = baseSaltoEvento({
+            baseMes: useMonth ? clamp(baseD, floorD, ceilD) : null,
+            baseGlobal: clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal),
+          })
+          if (baseEv.origen === "global") saltosEventoSinMes++
+          const globalEvent = Math.round(baseEv.base * ev)
           const bestEvent = useFecha
             ? Math.max(globalEvent, aBase(fb!.med * dqDate))
             : globalEvent
@@ -799,7 +777,6 @@ export async function POST(req: NextRequest) {
       // El bucket del MES mezcla entre semana y findes y el premio de evento exige ≥1,5×, así que un
       // sábado a 1,1-1,4× su mes era invisible (3 reservas vendidas un 36-43% bajo el p50 de su fecha).
       // Solo corpus FIABLE y ≥5 comps; solo SUBE y NO salta el raíl ±%/día (escala en 1-2 pasadas).
-      // Se conserva en `anclaF` porque el suelo PL de más abajo la usa como cota de cordura.
       let anclaF = 0
       {
         const fbA = fechaProp?.get(date)
@@ -847,6 +824,9 @@ export async function POST(req: NextRequest) {
       )
       if (lm.factor < 1) target = Math.round(target * lm.factor)
 
+      // Suelo del raíl del día: lo captura también el techo de mercado de más abajo, para que un
+      // precio inflado DESCIENDA a velocidad de raíl (varias pasadas), nunca de golpe.
+      let railLo: number | null = null
       if (old != null) {
         // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
         // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
@@ -859,6 +839,7 @@ export async function POST(req: NextRequest) {
         })
         const lo = Math.round(ancla * (1 - Number(r.max_change_pct)))
         const hi = Math.round(ancla * (1 + Number(r.max_change_pct)))
+        railLo = lo
         target = clamp(target, lo, hi)
       }
       if (r.min_price != null) target = Math.max(target, r.min_price)
@@ -886,41 +867,38 @@ export async function POST(req: NextRequest) {
       // ALZA (las bajadas siguen el raíl). Resuelve la malventa por antelación: quien reserva una
       // fecha de evento la ve ya a su precio aunque el apply no haya escalado día a día.
       if (eventTarget > target) target = eventTarget
-      // 🛡️ Suelo PriceLabs (raíl, no solo aviso): NO deshacer los precios altos de la última curva
-      // PL por debajo de PL_FLOOR_RATIO×PL. Las noches-mina (puente del Pilar, Todos los Santos,
-      // Feria, Karol G) valen mucho más que el bucket del MES —que las promedia— y su premio de
-      // evento se ancla a la base global baja, así que el objetivo se queda muy por debajo y el
-      // raíl ±%/día va hundiendo el precio (392→314→… a 0,64×PL en oct-26). PL tenía resolución
-      // por fecha y sí las veía. Solo SUBE (nunca baja), respeta el techo del propietario, y
-      // caduca solo: la tabla quedó CONGELADA al desconectar PL (PR #1416) y el reloj de
-      // PL_REF_MAX_AGE_DAYS deja el suelo inerte desde diciembre de 2026.
-      // Actúa CON o SIN bucket del mes (a diferencia de la guarda Karol G, solo !useMonth): el
-      // fallo del Pilar ocurrió teniendo bucket de octubre.
-      //
-      // 🚨 Cota de cordura (15/08/2026): la referencia es una foto ESTÁTICA y ya estuvo una vez
-      // contaminada con los precios del propio motor (la congelación del #1416 re-etiquetó
-      // `captured_at` sin restaurar valores → un piso de 2 plazas a 359€ con su fecha medida en
-      // 77€). Con ancla fiable de la fecha (`anclaF`), el suelo no puede retenerla a más de
-      // PL_FLOOR_VS_ANCLA× el mercado — ver lib/sivra/pricing-suelo-pl.ts y su test.
-      if (PL_FLOOR_RATIO > 0) {
-        const plRef = plPrice.get(`${r.property_id}|${date}`)
-        if (plRef && plRef > 0) {
-          const suelo = acotarSueloPL({
-            plRef, ratio: PL_FLOOR_RATIO, anclaFecha: anclaF, margen: PL_FLOOR_VS_ANCLA,
-          })
-          let plFloor = suelo.floor
-          if (r.max_price != null) plFloor = Math.min(plFloor, r.max_price)
-          if (plFloor > target) target = plFloor
-          if (suelo.acotado) plSueloAcotadas++
-        }
-      }
       if (r.max_price != null) target = Math.min(target, r.max_price)
+      // 🏷️ TECHO de mercado MEDIDO (25/08/2026, ver pricing-techo-mercado.ts). Todo lo de arriba
+      // puede SUBIR el objetivo saltándose el raíl (salto de evento, premio de mercado) y las
+      // guardas de abajo pueden impedir que baje — pero nada miraba lo que el mercado de ESA fecha
+      // cobra de verdad. Medido el día del fix: 238 fechas listadas a >1,5× la mediana fiable de su
+      // propia fecha (55 a >×3), congeladas por la guarda de outlier hasta 30 días del check-in.
+      // Con la fecha medida (≥5 comps fiables) el huésped no puede ver más de 1,5× su mediana; sin
+      // evento, tampoco más de 2,5× el mes fiable. El descenso respeta raíl y min_price, y
+      // `liberaCongelacion` impide que las guardas retengan un precio por encima del techo.
+      const fbT = fechaProp?.get(date)
+      const tMkt = techoMercado({
+        medFechaGuest: fbT?.med ?? null, compsFecha: fbT?.n ?? 0, fuenteFecha: fbT?.fuente ?? null,
+        medMesGuest: useMonth ? mb!.med : null, fuenteMes: useMonth ? mb!.fuente : null,
+        factorEvento: evFactor, markup, fijoNoche, dqFactor: dqDate,
+      })
+      const acote = acotarPorTecho({
+        target, techo: tMkt.techo, old, railLo, minPrice: r.min_price,
+      })
+      target = acote.target
+      // Los suelos del acote (raíl del día, min_price) no pueden re-subir por encima del techo
+      // del PROPIETARIO: max_price manda siempre (hoy NULL en los cuatro, pero el orden importa).
+      if (r.max_price != null) target = Math.min(target, r.max_price)
+      if (acote.acotado) techoAcotadas.push({ fecha: date, techo: tMkt.techo, origen: tMkt.origen! })
+      const liberaTecho = acote.liberaCongelacion
       // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
       // mes (fallback global), el precio NUNCA baja — el bucket global (dominado por temporada
       // media/baja) arrastraría la noche de evento hacia abajo (788→283 en jun-2027) y el factor
       // solo multiplica esa base hundida. Se CONGELA el precio actual hasta tener comps del mes.
       // Excepción: si el techo del propietario (max_price) exige bajar, manda el techo.
-      if (evFactor >= 2 && !useMonth && old != null && target < old
+      // `liberaTecho` la desactiva: la congelación existe para fechas SIN mercado con el que
+      // juzgar, y el techo solo está definido cuando ese mercado SÍ está medido.
+      if (evFactor >= 2 && !useMonth && old != null && target < old && !liberaTecho
           && (r.max_price == null || old <= r.max_price)) continue
       // 🧊 Guarda «evento a ciegas» (caso Bienal, 13/08/2026 — decisión Fable delegada por
       // Alberto): generaliza la de Karol G por FECHA en vez de por mes y desde factor 1,15. Un
@@ -942,13 +920,15 @@ export async function POST(req: NextRequest) {
           continue
         }
       }
-      // Idea #2 — guarda de outlier por precio ACTUAL (funciona SIN PriceLabs, es la red para
-      // cuando PL se cancele): si el precio de hoy supera en +40% la base normal del mes/global,
-      // esa noche es especial (un puente/evento que el bucket del mes no ve). Lejos de la fecha
-      // (>N días) NO la hundimos por debajo del actual a ciegas; cerca dejamos que el last-minute
-      // suavice. El techo del propietario manda (si max_price obliga a bajar, no congelamos).
+      // Guarda de outlier por precio ACTUAL: si el precio de hoy supera en +40% la base normal
+      // del mes/global, esa noche es especial (un puente/evento que el bucket del mes no ve).
+      // Lejos de la fecha (>N días) NO la hundimos por debajo del actual a ciegas; cerca
+      // dejamos que el last-minute suavice. El techo del propietario manda (si max_price
+      // obliga a bajar, no congelamos).
+      // `liberaTecho` la desactiva: «esa noche es especial» deja de ser una hipótesis defendible
+      // cuando el mercado MEDIDO de la fecha dice que estamos por encima de su techo.
       if (old != null && normalBase > 0 && old > normalBase * OUTLIER_RATIO
-          && target < old && daysOut > OUTLIER_HORIZON_DAYS
+          && target < old && daysOut > OUTLIER_HORIZON_DAYS && !liberaTecho
           && (r.max_price == null || old <= r.max_price)) continue
       if (old != null && target === old) continue
       // 🔇 Banda muerta anti-churn (fix auditoría 18/07/2026): el motor escribía 3.400+ cambios
@@ -973,10 +953,6 @@ export async function POST(req: NextRequest) {
         rate_date: date, old_price: old, new_price: target,
         demanda_fuente: dGate.fuente, demanda_gateada: dGate.gateado,
       })
-      const pl = plPrice.get(`${r.property_id}|${date}`)
-      if (!dryRun && pl && target < pl * 0.7) {
-        plAvisos.push(`${r.property_id.replace("prop_", "")} ${date}: ${eur(target)} vs PL ${eur(Math.round(pl))}`)
-      }
     }
 
     let written = false
@@ -1029,6 +1005,10 @@ export async function POST(req: NextRequest) {
             .map(([k, v]) => [k, v.fuente]))
         : {},
       meses_calientes: [...(velocidad.get(r.property_id)?.entries() ?? [])].filter(([, n]) => n >= 2).map(([k, n]) => `${k}:${n}`),
+      // Fechas de evento cuyo salto tuvo que anclarse al ancla GLOBAL (mes sin mercado medido). Es el
+      // único resto del serrucho: el ancla global se mueve con lo que el barrido muestree hoy y el
+      // salto de evento no pasa por el raíl. Un 0 aquí es una AFIRMACIÓN, no un silencio.
+      saltos_evento_sin_mes: saltosEventoSinMes,
       bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
       // Antelación MEDIDA del piso POR MES (mes → días de mediana). Sin ella la palanca de urgencia
       // queda inerte, así que conviene verla para distinguir «no hacía falta bajar» de «no lo sé».
@@ -1053,6 +1033,10 @@ export async function POST(req: NextRequest) {
         ),
       },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
+      // Fechas recortadas por el techo de mercado medido en esta pasada (y de dónde salió el techo).
+      techo_mercado: techoAcotadas.length > 0
+        ? { fechas: techoAcotadas.length, sample: techoAcotadas.slice(0, 5) }
+        : undefined,
       // Fechas de evento confirmado que NO se bajaron por falta de mercado fiable propio. Van en la
       // respuesta a propósito: un precio congelado que no se declara es indistinguible de uno olvidado.
       congeladas,
@@ -1122,29 +1106,10 @@ export async function POST(req: NextRequest) {
     } catch { /* best-effort: el fallo ya va en la respuesta y en el latido de apply-auto */ }
   }
 
-  if (plAvisos.length > 0) {
-    try {
-      await tgSend(
-        `⚠️ Pricing: ${plAvisos.length} fecha(s) escritas por debajo del 70% de PriceLabs\n` +
-        plAvisos.slice(0, 8).join("\n") +
-        (plAvisos.length > 8 ? `\n… y ${plAvisos.length - 8} más` : ""),
-      )
-    } catch { /* no crítico */ }
-  }
-
   // 🚨 Si no se pudieron leer los eventos, esta pasada tarificó Semana Santa como un martes de
   // febrero. Hasta el 01/08/2026 eso salía como `ok:true` y nadie se enteraba nunca: el `.catch`
   // devolvía un mapa vacío, que es indistinguible de «no hay eventos». Ahora la pasada se declara
   // degradada Y avisa, porque es de las averías más caras que puede tener el motor.
-  if (plIlegible) {
-    try {
-      await tgSend(
-        `🚨 Pricing: no se ha podido leer la referencia de PriceLabs — esta pasada ha tarificado ` +
-        `SIN el suelo del ${Math.round(PL_FLOOR_RATIO * 100)}% (y sin su aviso del 70%).\n${plIlegible}`,
-      )
-    } catch { /* no crítico */ }
-  }
-
   if (eventosIlegibles) {
     try {
       await tgSend(
@@ -1187,7 +1152,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     // 🛑 Un rechazo de Smoobu invalida la pasada: el precio no ha llegado al huésped, que es lo
     // único que este endpoint existe para conseguir. Hasta el 23/08/2026 esto salía `ok:true`.
-    ok: !eventosIlegibles && !plIlegible && fallosSmoobu.length === 0 && lecturasCaidas.length === 0,
+    ok: !eventosIlegibles && fallosSmoobu.length === 0 && lecturasCaidas.length === 0,
     // Escrituras rechazadas por el canal, con las noches que se quedaron sin aplicar. Las lee
     // `apply-auto` para teñir su latido; van en la respuesta para que el camino manual las vea igual.
     smoobu_rechazos: fallosSmoobu.length > 0 ? fallosSmoobu : undefined,
@@ -1195,7 +1160,6 @@ export async function POST(req: NextRequest) {
     // último lo dice la AUSENCIA de latido, no este número.
     fechas_escritas: fechasEscritas,
     degradado: eventosIlegibles ? "pricing_eventos_auto ilegible: tarificado SIN eventos" : undefined,
-    pl_degradado: plIlegible ? `referencia PriceLabs ilegible: tarificado SIN suelo PL (${plIlegible})` : undefined,
     // Degradación menor: no invalida la pasada, pero tiene que verse sin tener que deducirlo.
     demanda_degradada: ocupacionMesIlegible ? "ocupación por mes ilegible: tarificado con la anual" : undefined,
     // Lecturas auxiliares que fallaron (hallazgo 4): la pasada tarificó con fallback, pero ciega a
@@ -1204,7 +1168,6 @@ export async function POST(req: NextRequest) {
     // Pisos que esta pasada dejó sin tarificar. En la respuesta a propósito: sus precios se quedan
     // como estaban, y eso NO es «el mercado dice que están bien» — es «no se ha podido mirar».
     sin_tarifar: sinTarifar.length > 0 ? sinTarifar : undefined,
-    dryRun, paused, days, properties: recs.length, results, pl_avisos: plAvisos.length,
-    pl_suelo_acotadas: plSueloAcotadas,
+    dryRun, paused, days, properties: recs.length, results,
   })
 }

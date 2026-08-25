@@ -1217,3 +1217,38 @@ PR — no hizo falta un PR nuevo. Resto del backlog (#1517, #1555, #1568, #1570)
 
 ## ✅ Manuales de usuario — nada que tocar
 Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango.
+
+# Actualización 2026-08-25 — auditoría diaria (ligera)
+
+Rango: 38 commits desde la pasada del 24/08 03:27 UTC (`f6e54a2..5f94da6`) — día 24/08 muy activo:
+cierre de la cadena de subastas (veredicto + rasterizador + buzón de aportados), pricing (Busto Feria,
+check #10, tres amarillos cerrados, retirada de Serper), patrimonio (canal Telegram, dossier, decisión
+hipoteca, tramo 1 de la escalera), trading (universo 800→1000→1200, digest, endpoint manual del radar) y
+Vercel (`--sin-previews`). La mayoría de los commits ya traían su propia entrada de memoria (varios son
+`docs(memoria): ...`); esta pasada solo tuvo que reconciliar lo que quedó desalineado dentro de esas
+mismas entradas (ver `docs/AUTO-APLICADOS.md`, entrada de hoy, para el detalle línea a línea).
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK. `pnpm auditar:check`: radiografía al día (último commit del rango
+es precisamente una regeneración, #1688).
+
+## ✅ Heartbeat de crons y agentes (13+12 huellas) — sin ⛔ nuevos
+- **a) Latidos `agente_latidos` (13):** todos `ok=true` salvo `ses_transporte` (conocido, no nuevo —
+  «no hay ningún establecimiento dado de alta», acción de Alberto, no de código) y `trading_watchdog`
+  a 67,5h sin `ok` (umbral 80h por diseño — cron `mar-sáb 06:30`, el hueco sáb→mar son 72h legítimas
+  sin avería; la pasada de hoy martes 06:30 UTC aún no había corrido a la hora de esta auditoría).
+- **b) Tablas de dominio (12):** todas ✅, la más rezagada `correo-triaje` fresquísima (0,0h) y
+  `AGENTE mercado-booking (diario)` a 20,6h — ambas dentro de umbral.
+- `agente_reparaciones`: sin intentos de auto-reparación en los últimos 7 días (nada que coordinar).
+
+## 🟡 Backlog de PRs de rutinas — 3 draft, todos `dirty`, ninguno estancado
+Solo 3 PRs abiertos (#1600 auditoría profunda 23/08, #1602 agentes-entrenador, #1639 buscador-ia
+semanal), los 3 en `mergeable_state: dirty` por el aluvión de commits posteriores en `main` que tocan
+los mismos ficheros de memoria/bitácora. Ninguno toca SOLO ficheros de registro puro (mezclan skill/
+código con doc), así que quedan correctamente fuera del alcance de `rutinas-automerge.yml`; ninguno
+supera las 48h ni se acerca a los 7 días de "olvidado" — quedan para que Alberto los lleve a conversación
+cuando quiera (ya llevan su propio resumen ejecutivo en el body). `rutinas-automerge.yml`: última
+ejecución 2026-08-25T01:56 UTC, `success`, cadencia horaria sin huecos.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango.

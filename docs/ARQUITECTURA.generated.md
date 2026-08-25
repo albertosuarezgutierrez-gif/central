@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-24T16:42:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-25T13:53:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 10 apps · 38 packages · 23 capacidades · 35 skills · 1179 rutas API.
+**Resumen:** 10 apps · 38 packages · 23 capacidades · 35 skills · 1178 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -40,7 +40,7 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (111):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias…
+- **Tablas (113):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias…
 - **Rutas API:** 296
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
@@ -51,7 +51,7 @@
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
-- **Rutas API:** 94
+- **Rutas API:** 93
 ### transporte
 - **Módulos que usa:** core-identity, module-flota, module-geo, module-transporte
 - **Capacidades:** —
@@ -237,14 +237,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (24/08/2026) Canal conversacional del patrimonio + dossier inicial del CFO (24/08/2026).
-- 4:
-- Cura: abortar, no adivinar.
-- Auditoría: los 3 🔴 cerrados.
-- Latido `sivra_pricing_apply`
-- Smoobu rechaza → Telegram + `ok:false` + latido rojo
-- Siguen abiertos:
-- 3 🔴:
-- Comprobado a mano que el 2 NO está ocurriendo:
-- 2 🟡:
+- Bloque 1-bis en `/sivra/pricing-rentabilidad` (PR #1712, mergeado):
+- `target_pctl` de House Sevillana 0,50→0,60 APLICADO en prod
+- Centinela #11 `ritmo_venta_destacado`
+- Encargo permanente a `patrimonio-cfo`
+- PR #1702 mergeado a main
+- Backfill disparado en prod
+- DECISIÓN de Alberto (25/08, chat):
+- Motor vs PriceLabs:
+- Salida de Chekin
+- Booking directo
 

@@ -2,6 +2,59 @@
 
 ## Estado vivo (13/07/2026) — leer al empezar el ciclo
 
+### Actualización 25/08/2026 (tarde) — cuadro «Motor vs PL» en producción + medidor con signo (PR #1702)
+- **El contrafactual PriceLabs vive en `/sivra/pricing-rentabilidad`** (`GET /api/sivra/pricing/rentabilidad`,
+  con sesión): backtest **lista-vs-lista** — noches ya vendidas bajo el motor, al precio que el motor tenía
+  aplicado al reservarse contra la curva congelada de `pricing_pl_referencia` de esa noche — + cohorte de
+  venta mensual por go-live + serie real de cargos de PL. Cada piso sale con estado explícito
+  (`completa`/`parcial`/`sin_datos`/`sin_referencia`, helper `lib/sivra/pricing-rentabilidad.ts`); solo
+  Dúplex/House tienen referencia. **La referencia caduca el 06/12/2026** — la página lleva la cuenta atrás.
+  **DECIDIDO por Alberto (25/08/2026): NO se paga el espejo de PL** (~16,24€/mes) — la referencia congelada
+  cubre el veredicto prerregistrado (sept-nov) entero, y tras la caducidad el motor se juzga contra
+  `market_rates` (rutina `mercado-booking` diaria) y su propio interanual. **No volver a proponerlo.**
+- **El medidor de `pricing-auto` ya suma CON SIGNO** (el `GREATEST(delta,0)` que recortaba las bajadas se
+  retiró en #1702/#1703): mide «Δ vs precio anterior DEL MOTOR en noches vendidas», NO es comparación con PL.
+- **Bloque 1-bis «Motor vs mercado real» en el mismo cuadro (PR #1712, 25/08 tarde):** las mismas noches
+  vendidas contra el p50 de comparables FIABLES de su noche (±10 días de la reserva, mismos filtros que el
+  motor: fuentes fiables + €/plaza + aforo, ≥5 comps o no se juzga). NO caduca — releva a PL el 06/12.
+  Primeros datos: Dúplex −0,4% (clavado) · House +47% · Luxury −28% · Busto sin comps fiables aún.
+- **`target_pctl` de House Sevillana 0,50 → 0,60 (25/08/2026, OK de Alberto en chat, aplicado en prod):**
+  evidencia = sept al 43% vendido a >1 mes vista (antelación mediana 24-39d; los otros pisos al 10-13%) y
+  ventas +47% sobre el p50 de mercado. Registrado en `pricing_aprendizaje` id 76 **con criterio de
+  reversión**: si sept cae de ~30% de ocupación a 30 días vista, revertir a 0,50. Mismo experimento que el
+  Dúplex del 20/08 (que sigue en 0,60 y en observación 3 meses).
+- **Centinela #11 `ritmo_venta_destacado` en el guardián** (mismo día): compara la ocupación de los meses
+  futuros ENTRE pisos y avisa por Telegram cuando uno vende muy por delante de los hermanos en un mes flojo
+  (≥35% ocupado, ≥2,5× la mediana de los otros y ≥20 pp de brecha) — la señal que destapó lo de House la vio
+  Alberto a ojo; ahora la vigila el sistema. Al recibir este aviso, la respuesta es revisar `target_pctl`/
+  suelo de ese mes al alza, no ignorarlo.
+- **Hueco jun-jul 2025 REPARADO** (backfill 25/08 vía `/api/sivra/updates/sync` con `ALERTA_TOKEN`, ruta ya
+  en `RUTAS_RUTINA` con auth propia): jun = 13 reservas / jul = 7, con `reserved_at`. El interanual del
+  cuadro está desbloqueado. Veredicto prerregistrado: RevPAR neto sept-nov 2026 vs mismo tramo de PL.
+
+### 🚨 Actualización 25/08/2026 — el «sesgo del canal» era NUESTRO desfase de base + TECHO de mercado medido (PR #1698)
+- **El calibrado del canal medía contra una base MUERTA.** La rutina mide el escaparate a las ~03:40
+  UTC pero `base_total` salía del snapshot de AYER 07:00 — sin las 3 pasadas de `apply` de ese día.
+  Con el motor subiendo, la validación cantaba «el portal cobra MÁS de lo que predecimos» (+3/+12/
+  +15/+26% en los 4 pisos el 25/08) y el recalibrado bajaba las bases contra un fantasma. **Si ves
+  un sesgo POSITIVO y sistemático en la validación del canal, sospecha primero del desfase de
+  medición, no de un cambio de política de Booking.** Fix: `mercado/ingest` superpone
+  `pricing_applied` (dry_run=false) al snapshot noche a noche; backfill
+  `2026-08-25_escaparate_base_viva.sql` aplicado (el sesgo del Dúplex pasó de +3%/err 14% a
+  −0,6%/err 0,6%). Los `channel_markup` recalibrados el 25/08 con bases envenenadas se
+  auto-corrigen en las pasadas siguientes del cron `canal` (paso acotado ±15%).
+- **TECHO de mercado medido en `apply`** (`lib/sivra/pricing-techo-mercado.ts`): con ≥5 comps
+  FIABLES de la fecha, el huésped no puede ver más de **1,5×** su mediana; sin evento conocido,
+  tampoco más de **2,5×** el bucket fiable del mes. Motivo: los saltos de evento/premio/suelo PL
+  suben SIN raíl y las guardas de congelación (outlier +40% a >30 días, Karol G) impedían bajar —
+  medido ese día, 238 fechas a >1,5× la mediana fiable de su fecha, 55 a >×3 (Duplex 29/09 a 460€
+  de huésped contra 138-175€ por el factor 2,2 del España–Croacia; Busto 17/01/27 a 496€ contra
+  94€, fósil de la era Serper). El descenso va a velocidad de raíl y `liberaCongelacion` desactiva
+  las guardas cuando el precio vivo supera el techo. **Un evento real MEDIDO caro no se recorta**
+  (Karol G a 931€ → techo 1.397€). Las fechas acotadas salen en `results[].techo_mercado`.
+- Al auditar precios altos «que no bajan»: mira si la fecha tiene comps fiables. Con ≥5, el techo
+  los está bajando ~20%/día; sin comps, la congelación sigue siendo deliberada (no hay con qué juzgar).
+
 ### Actualización 20/08/2026 — 🪤 el motor tiene una COPIA RETIRADA que engaña, y `target_pctl` del dúplex a 0,60
 
 **El landmine, porque costó un diagnóstico entero equivocado.** `apps/sivra/lib/pricing-engine.ts`
