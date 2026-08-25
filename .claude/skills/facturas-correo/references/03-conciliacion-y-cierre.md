@@ -283,6 +283,33 @@ CASA SOCORRO = `House sevillana`, BUSTOS REFORMA = `Busto Reform`.
   mes siguiente. Una diferencia de ±1 unidad en el último día del mes es normal y esperada.
 - Diferencia > 1 o en pisos que no son el último día → preguntar a Alberto.
 
+**🧹 APORTA EL DESGLOSE AL P&L POR PISO (desde el 25/08/2026).** La factura de SIQUE trae DOS
+servicios —limpieza por piso Y lavandería por peso— y el P&L de `/sivra/resultado-pisos` lo
+INFIERE del importe cuando no tiene la factura (`lib/sivra/reparto-siquebrilla.ts`). Tú la tienes
+delante: anótala en **`limpieza_facturas`** por Supabase MCP y el P&L pasa de estimado a medido.
+Importes **SIN IVA**, como los imprime la factura; `total` **CON IVA** (es lo que casa con el banco):
+
+```sql
+INSERT INTO limpieza_facturas
+  (id, cuenta_id, proveedor, numero, periodo, fecha, total, base, iva, lavanderia, limpieza, fuente, avisos)
+VALUES (gen_random_uuid()::text, '<cuenta_id>', 'sique_brilla', '<nº factura>', '<YYYY-MM del SERVICIO>',
+        '<fecha factura>'::date, <total con IVA>, <base>, <iva>, <lavandería sin IVA>,
+        '[{"propertyId":"prop_luxury_busto","sesiones":4,"tarifa":28,"importe":112}, …]'::jsonb,
+        'manual', '[]'::jsonb)
+ON CONFLICT (cuenta_id, proveedor, numero) WHERE numero IS NOT NULL
+DO UPDATE SET periodo=EXCLUDED.periodo, total=EXCLUDED.total, base=EXCLUDED.base, iva=EXCLUDED.iva,
+              lavanderia=EXCLUDED.lavanderia, limpieza=EXCLUDED.limpieza;
+```
+
+🚨 **Antes de insertar, haz la MISMA comprobación que el validador** (`lib/sivra/factura-limpieza.ts`):
+`(Σ importes de limpieza + lavandería) × 1,21` tiene que dar el **total** con ±0,02€. Si no cuadra,
+**NO insertes**: una fila que no cuadra ensucia el P&L con un desglose falso, y el sistema ya sabe
+seguir infiriendo. Reporta la discrepancia y sigue. Los `propertyId` válidos son los cuatro:
+`prop_luxury_busto` · `prop_busto_reform` · `prop_duplex_center` · `prop_house_sevillana`.
+Si una **tarifa** difiere de la contratada (28/20/25/90€), anótalo igualmente pero **dilo en el
+parte**: es la señal de que SIQUE ha subido precios y la inferencia dejará de cuadrar.
+Alternativa sin SQL: Alberto sube el PDF con «📄 Aportar factura» en `/sivra/resultado-pisos`.
+
 **Facturas en Drive:** se guardan en `FACTURAS Apartamentos/<año>/<mes>/` con nombre
 `<YYYY-MM-DD>_SiQueBrella_<importe>EUR.pdf`. Las de 2026 que ya están conciliadas:
 - Enero (798,60 €) — banco 2026-02-01, Drive `14eDOiWG9SZKlP2p6tOWukm-8NK9_rgPw`
