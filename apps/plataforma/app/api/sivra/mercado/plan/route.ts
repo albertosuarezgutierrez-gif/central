@@ -147,19 +147,18 @@ export async function GET(req: NextRequest) {
 
   // ── Plan del ESCAPARATE propio ───────────────────────────────────────────────────────────────
   // Mismas fechas del calendario, pero midiendo NUESTRO anuncio. La base de cada ventana se calcula
-  // aquí (suma de `rate_snapshots.price_pricelabs` de sus noches, que PESE AL NOMBRE es el precio
-  // vivo de Smoobu): sin base conocida la ventana no se propone — medir el portal para una noche
-  // que no se puede cruzar con nada no aporta al ajuste.
+  // aquí (suma de `rate_snapshots.price_live` de sus noches): sin base conocida la ventana no se
+  // propone — medir el portal para una noche que no se puede cruzar con nada no aporta al ajuste.
   let escaparate: ReturnType<typeof planEscaparate> = { peticiones: [], huecos: [] }
   try {
     const aforoPorPiso = new Map<string, number>()
     for (const f of filas) aforoPorPiso.set(f.property_id, Number(f.max_guests) > 0 ? Number(f.max_guests) : 4)
 
     const base = await prisma.$queryRaw<{ property_id: string; rate_date: Date; precio: number }[]>(Prisma.sql`
-      SELECT property_id, rate_date, price_pricelabs AS precio
+      SELECT property_id, rate_date, price_live AS precio
       FROM rate_snapshots
       WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
-        AND rate_date >= CURRENT_DATE AND price_pricelabs IS NOT NULL`)
+        AND rate_date >= CURRENT_DATE AND price_live IS NOT NULL`)
     const precioNoche = new Map<string, number>()
     for (const b of base) {
       precioNoche.set(`${b.property_id}|${new Date(b.rate_date).toISOString().slice(0, 10)}`, Number(b.precio))

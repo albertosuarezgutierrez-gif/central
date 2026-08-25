@@ -1,8 +1,9 @@
 // Lecturas auxiliares del motor de precios que pueden caerse SIN invalidar la pasada — pero que
 // hasta hoy se caían EN SILENCIO (hallazgo 🟡 4 de `docs/AUDITORIA-2026-08-pricing-mudo.md`).
 //
-// El `apply` tiene once lecturas que degradan. Tres ya se declaraban (eventos, PriceLabs,
-// ocupación-por-mes) y dos abortan la pasada desde el 23/08 (las anclas del raíl, PR #1634).
+// El `apply` tiene diez lecturas que degradan. Dos ya se declaraban (eventos y ocupación-por-mes;
+// una tercera, la referencia de PriceLabs, se retiró con PL el 25/08/2026) y dos abortan la pasada
+// desde el 23/08 (las anclas del raíl, PR #1634).
 // Las SEIS de este módulo caían a `[]` con un `.catch(() => [])`: el motor seguía tarificando
 // con precios de toda la pinta de estar bien, pero ciego a la señal que perdía — y las dos
 // primeras son las señales PRINCIPALES de mercado. Un fallo de red un martes cualquiera dejaba

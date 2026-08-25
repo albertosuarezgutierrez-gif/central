@@ -6,8 +6,14 @@ import { Prisma } from "@prisma/client"
 export const dynamic = "force-dynamic"
 
 // GET /api/sivra/pricing/resultados
-// Medidor de resultados: euros extra generados por el motor vs lo que habría cobrado PriceLabs.
+// Medidor de resultados: suma de las SUBIDAS que aplicó el motor en noches que luego se vendieron.
 // Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked (si la noche se vendió).
+//
+// ⚠️ NO es «extra vs PriceLabs» (así se etiquetaba hasta el 25/08/2026): `old_price` es el precio
+// que puso el PROPIO motor en su pasada anterior, no PL. Y `GREATEST(…, 0)` cuenta solo las
+// subidas e ignora las bajadas, así que el número es un tope optimista, no un beneficio neto —
+// con el motor moviendo precios a diario, la diferencia importa. Léelo como «cuánto subimos en
+// noches que acabaron vendiéndose», nunca como euros ganados frente a una alternativa.
 export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "no autorizado" }, { status: 401 })
@@ -50,6 +56,6 @@ export async function GET() {
     total_extra_eur: total,
     noches_reservadas: nochesReservadas,
     por_piso: porPiso,
-    nota: "Extra = (precio motor − precio PriceLabs) en noches aplicadas que se reservaron.",
+    nota: "Suma de subidas (precio nuevo − precio anterior DEL MOTOR, solo si >0) en noches aplicadas que se reservaron. No es un neto ni una comparación con PriceLabs.",
   })
 }

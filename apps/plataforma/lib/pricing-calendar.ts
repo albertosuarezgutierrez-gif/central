@@ -40,9 +40,9 @@ export const EVENTS: Record<string, number> = {
   // 🚨 AMPLIADO Y MEDIDO el 18/08/2026 (reserva de House 21-25/12). El bloque tenía factor SOLO en
   // 24, 25, 26 y 31: del 27 al 30 —que el mercado paga más caro que ninguna otra noche de
   // diciembre salvo Nochevieja— eran «diciembre normal» para el motor, sin premio y, lo que más
-  // duele, SIN SUELO de evento. Con la curva de PriceLabs congelada desde el 10/08 y su suelo
-  // caducando el 08/12, esas noches se quedaban sin nada que las sostuviera en cuanto entraran en
-  // los 30 días de la guarda de outlier.
+  // duele, SIN SUELO de evento: esas noches se quedaban sin nada que las sostuviera en cuanto
+  // entraran en los 30 días de la guarda de outlier. (Entonces aún quedaba de red la curva
+  // congelada de PriceLabs; se retiró el 25/08/2026, así que el factor de aquí es lo único.)
   //
   // Los factores NO son a ojo: son el cociente contra la mediana de diciembre medida ese día con
   // el conector de Booking para aforo 12 (comps de Sevilla centro, p50 de las fechas normales
@@ -94,11 +94,11 @@ export const DOW      = [0.95,0.88,0.88,0.90,0.95,1.12,1.18]
 // estática (base fija × estacional × día-semana) es de ANTES de que existiera el motor anclado al
 // mercado (`apply/route.ts`). Solo alimenta `rate_snapshots.price_ours` como referencia "shadow" de
 // aquella época; el motor real NUNCA la usa para decidir ni para escribir en Smoobu. El precio REAL
-// vivo (lo que nuestro motor aplicó, esté quien esté conectado en Smoobu) es `rate_snapshots.price_
-// pricelabs` — el nombre es confuso pero es la columna que de verdad refleja `pricing_applied`.
+// vivo (lo que nuestro motor aplicó, esté quien esté conectado en Smoobu) es
+// `rate_snapshots.price_live` — la columna que de verdad refleja `pricing_applied`.
 // Un check puntual (27/07/2026) leyó `price_ours` creyendo que era "nuestro precio vivo" y disparó
 // una falsa alarma (Luxury Busto "a 214€, 2x mercado" cuando el precio real aplicado era 95€, en
-// línea con mercado). NO uses `price_ours` para diagnosticar pricing en vivo — usa `price_pricelabs`
+// línea con mercado). NO uses `price_ours` para diagnosticar pricing en vivo — usa `price_live`
 // o mejor `pricing_applied.new_price` directamente.
 export function calcOurs(base: number, dateStr: string): number {
   const d   = new Date(dateStr + "T00:00:00")

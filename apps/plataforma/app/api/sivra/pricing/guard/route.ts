@@ -28,7 +28,8 @@ export const maxDuration = 60
 //
 // Chequeos:
 //   #1 Reversión: el precio BASE en Smoobu ya no coincide con lo último que aplicó el motor → algo
-//      (PriceLabs u otro) lo pisó.
+//      lo pisó (una edición a mano en Smoobu, otra integración…). PriceLabs, que era el
+//      sospechoso habitual, está de baja desde el 09/08/2026: ya no puede ser la causa.
 //   #3 Suelo de coste: el motor fija el mínimo en ≥3 fechas → margen justo.
 //   #4 Sub-mercado (NUEVO): el precio VIVO del piso va sistemáticamente por debajo de su MERCADO REAL
 //      por piso (`market_rates.scenario = property_id`, datos de conector), casando fecha a fecha.
@@ -93,16 +94,16 @@ export async function GET(req: NextRequest) {
       ORDER BY property_id, rate_date, applied_at DESC
     ),
     snap AS (
-      SELECT property_id, rate_date, price_pricelabs
+      SELECT property_id, rate_date, price_live
       FROM rate_snapshots
       WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
-        AND price_pricelabs IS NOT NULL
+        AND price_live IS NOT NULL
     )
-    SELECT la.property_id, la.rate_date::text, la.new_price, snap.price_pricelabs AS base_now
+    SELECT la.property_id, la.rate_date::text, la.new_price, snap.price_live AS base_now
     FROM last_applied la
     JOIN snap USING (property_id, rate_date)
     WHERE la.rate_date >= CURRENT_DATE
-      AND snap.price_pricelabs <> la.new_price
+      AND snap.price_live <> la.new_price
     ORDER BY la.property_id, la.rate_date
   `)
 
@@ -152,11 +153,11 @@ export async function GET(req: NextRequest) {
         HAVING COUNT(*) >= 8
       ),
       live AS (
-        SELECT rate_date, price_pricelabs AS live
+        SELECT rate_date, price_live AS live
         FROM rate_snapshots
         WHERE property_id = ${property_id}
           AND snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots WHERE property_id = ${property_id})
-          AND available = 1 AND price_pricelabs IS NOT NULL
+          AND available = 1 AND price_live IS NOT NULL
           AND rate_date >= CURRENT_DATE
       )
       SELECT COUNT(*)::int AS matched,
@@ -242,11 +243,11 @@ export async function GET(req: NextRequest) {
     ),
     barato AS (
       SELECT DISTINCT ON (r.property_id)
-        r.property_id, r.price_pricelabs::float8 AS vivo, r.rate_date::text AS fecha
+        r.property_id, r.price_live::float8 AS vivo, r.rate_date::text AS fecha
       FROM rate_snapshots r
       JOIN ult ON ult.property_id = r.property_id AND ult.sd = r.snapshot_date
-      WHERE r.rate_date >= CURRENT_DATE AND r.available = 1 AND r.price_pricelabs IS NOT NULL
-      ORDER BY r.property_id, r.price_pricelabs ASC, r.rate_date
+      WHERE r.rate_date >= CURRENT_DATE AND r.available = 1 AND r.price_live IS NOT NULL
+      ORDER BY r.property_id, r.price_live ASC, r.rate_date
     )
     SELECT s.property_id, z.max_guests::int AS plazas, s.min_price::float8 AS min_price,
            b.vivo, b.fecha
@@ -499,7 +500,7 @@ export async function GET(req: NextRequest) {
     const ok = await pushAlert({
       tipo: "precio_revertido", prioridad: "alta", property_id: r.property_id,
       titulo: `${PROP_NAMES[r.property_id] ?? r.property_id}: precio revertido el ${r.rate_date}`,
-      detalle: `Fijamos ${r.new_price}€ base y ahora hay ${r.base_now}€ en Smoobu. Revisa que PriceLabs esté desconectado en este piso.`,
+      detalle: `Fijamos ${r.new_price}€ base y ahora hay ${r.base_now}€ en Smoobu. Alguien o algo lo ha pisado en Smoobu.`,
       dato_actual: r.new_price, dato_mercado: r.base_now, fecha_ref: r.rate_date,
     })
     if (ok) { created++; newReversions.push(r) }
