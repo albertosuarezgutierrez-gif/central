@@ -32,6 +32,19 @@
 
 ---
 
+### 💶 (25/08/2026) TRAMO 1 ABIERTO: primera orden con dinero real preparada (CVX)
+
+Llegaron los 1.000€ (cash IBKR 1.410,46€, NAV 32.715€) y se activó la escalera. Tras la pasada
+nocturna, la señal elegida es **CVX (Chevron)**: alcista por momentum, confianza 63 —la más alta
+del día junto a ABNB— y ninguna tesis de hoy la señala a la baja; momentum 12-1 +26,9%, earnings
+yield 4,69%, FCF yield 4,36% PUBLICADO (ABNB no publica capex → su flujo libre es «no se sabe», y
+además arrastraba una tesis bajista). Fuera del clúster de memoria y de BKNG, como pidió Alberto.
+**Instrucción** (nunca ejecución): BUY 6 CVX límite 200,00$ DAY ≈ 1.027,50€ — Alberto la confirma
+en su app. Precio contrastado en vivo (199,83$ vs 199,89$ de la tesis): sin veneno tipo 03/08.
+⚠️ La cuenta tiene 0 USD: al confirmar hay que convertir euros o IBKR lo financia en margen.
+También salió el aviso de **SPCX**: primera tesis, **neutral** (40/35/30) a 137,94$ — el sistema no
+ve señal; el ruido mediático no es una señal. Universo 1200: 1248 filas, 1077 con datos, 3 semillas
+pendientes; el ranking se dispara en cuanto queden a 0 (vigilancia armada a las 00:40 UTC).
 ### 📉 (25/08/2026) EODHD gratis MEDIDO: da el ajuste por dividendo, pero NO cierra H1 (bulk vetado + 1 año de historia)
 Alberto pasó una API key del plan free. Probada de verdad contra la API (pg_net desde el egress de Supabase; el
 sandbox no sale a internet). **SÍ:** `adjusted_close` ajustado por splits Y dividendos (CVX 10/08: close 194,91 vs
