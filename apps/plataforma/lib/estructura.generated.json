@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-25T13:23:24Z",
+  "generadoEn": "2026-08-25T13:50:36Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4625,6 +4625,14 @@
       "fecha": ""
     },
     {
+      "titulo": "Centinela #11 `ritmo_venta_destacado`",
+      "fecha": ""
+    },
+    {
+      "titulo": "Encargo permanente a `patrimonio-cfo`",
+      "fecha": ""
+    },
+    {
       "titulo": "PR #1702 mergeado a main",
       "fecha": ""
     },
@@ -4666,14 +4674,6 @@
     },
     {
       "titulo": "Cura: abortar, no adivinar.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Auditoría: los 3 🔴 cerrados.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Latido `sivra_pricing_apply`",
       "fecha": ""
     }
   ],

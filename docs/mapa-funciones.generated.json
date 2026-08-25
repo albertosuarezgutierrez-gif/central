@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-25T13:23:24Z",
-  "sha": "adc40b4d017c08e8a1dca940d2a116bf679d39af",
+  "generadoEn": "2026-08-25T13:50:36Z",
+  "sha": "1f8c7a8d7f8cd643f5c196ef9823492326fe4429",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57753,6 +57753,7 @@
         }
       ],
       "tablas": [
+        "antel",
         "barato",
         "base",
         "incomes",
@@ -57778,7 +57779,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "e8ab50e34aa5"
+      "hash": "093080636281"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -70704,6 +70705,7 @@
         "decidirPrecioPorPlaza",
         "factorAforo",
         "decidirCompsDeOtroAforo",
+        "decidirRitmoDestacado",
         "decidirEventoACiegas"
       ],
       "funciones": [
@@ -70760,17 +70762,34 @@
           "resumen": "⚠️ EL UMBRAL ES HOLGADO A PROPÓSITO (1,35). Con 1,25 saltaría también Luxury Busto, que son 5 plazas medidas con comps de 4 (factor 1,28): esa diferencia de UNA plaza es ruido de cómo cada anfitrión c"
         },
         {
+          "nombre": "medianaDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number",
+          "linea": 341
+        },
+        {
+          "nombre": "decidirRitmoDestacado",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: RitmoDestacadoInput, o: RitmoDestacadoOpts = {},",
+          "retorno": "VeredictoRitmo[]",
+          "linea": 348,
+          "resumen": "Devuelve un veredicto por piso destacado (lista vacía = nada que destacar o sin muestra)."
+        },
+        {
           "nombre": "decidirEventoACiegas",
           "kind": "function",
           "exportada": true,
           "params": "i: EventoACiegasInput, o: EventoACiegasOpts = {},",
           "retorno": "VeredictoCongelacion",
-          "linea": 334
+          "linea": 434
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d97d7fbaea59"
+      "hash": "f48335b281b4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-comps-plausibles.ts",
@@ -97311,6 +97330,6 @@
   ],
   "resumen": {
     "archivos": 2570,
-    "funciones": 7075
+    "funciones": 7077
   }
 }
