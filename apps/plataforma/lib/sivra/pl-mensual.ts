@@ -1,8 +1,10 @@
 import { prisma } from '@/lib/db'
 import { elegirMesFacturado, repartirPagoSiqueBrilla } from './reparto-siquebrilla'
 
-// Pisos de explotación turística Kutxa (comparten lavandería)
-const KUTXA_PISOS = ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto']
+// Pisos que comparten lavandería (Giraldillo y la incluida en la factura de Sique Brilla).
+// Confirmado por Alberto el 25/08/2026 que el Dúplex TAMBIÉN entra en el reparto — sustituye
+// a la lista anterior de solo pisos Kutxa (28/07/2026).
+const PISOS_LAVANDERIA = ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto', 'prop_duplex_center']
 // Decisión de Alberto (28/07/2026): la lavandería es Giraldillo HOY pero puede cambiar de
 // proveedor — el reparto no se casa con un nombre: cualquier contraparte "LAVANDERIA…" del
 // negocio de pisos cuenta (cubre también la errata "GIRANDILLO" del feed). El filtro
@@ -170,10 +172,10 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // Ingresos y reservas por piso
   const mIncome = new Map(incomes.map(r => [r.pid, { ingresos: Number(r.ingresos), reservas: Number(r.reservas) }]))
 
-  // Pesos para reparto El Giraldillo: maxHuespedes × reservas (solo Kutxa pisos)
+  // Pesos para reparto de lavandería: maxHuespedes × reservas (los 4 pisos, Dúplex incluido)
   let pesoTotal = 0
   const pesos = new Map<string, number>()
-  for (const p of props.filter(p => KUTXA_PISOS.includes(p.id))) {
+  for (const p of props.filter(p => PISOS_LAVANDERIA.includes(p.id))) {
     const w = (p.maxGuests ?? 0) * (mIncome.get(p.id)?.reservas ?? 0)
     pesos.set(p.id, w)
     pesoTotal += w
@@ -223,7 +225,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
 
   const repartirLavanderiaSB = (importe: number) => {
     // TODA lavandería va con la fórmula de El Giraldillo (decisión de Alberto, 25/08/2026):
-    // capacidad × reservas del mes de caja, pisos Kutxa — los mismos pesos ya calculados arriba.
+    // capacidad × reservas del mes de caja — los mismos pesos ya calculados arriba.
     if (pesoTotal > 0) {
       for (const [pid, peso] of pesos) {
         if (peso <= 0) continue
@@ -231,12 +233,12 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
         mGastos.get(pid)!.lavanderia += Math.round((peso / pesoTotal) * importe * 100) / 100
       }
     } else {
-      // Sin reservas del mes no hay pesos: a partes iguales entre los pisos Kutxa
-      // antes que evaporar el gasto del P&L.
-      const kutxa = props.filter(p => KUTXA_PISOS.includes(p.id))
-      for (const p of kutxa) {
+      // Sin reservas del mes no hay pesos: a partes iguales entre los pisos que
+      // comparten lavandería, antes que evaporar el gasto del P&L.
+      const compartidos = props.filter(p => PISOS_LAVANDERIA.includes(p.id))
+      for (const p of compartidos) {
         if (!mGastos.has(p.id)) mGastos.set(p.id, emptyGastos())
-        mGastos.get(p.id)!.lavanderia += Math.round((importe / kutxa.length) * 100) / 100
+        mGastos.get(p.id)!.lavanderia += Math.round((importe / compartidos.length) * 100) / 100
       }
     }
   }
