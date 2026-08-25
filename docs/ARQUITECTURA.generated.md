@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-25T11:42:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-25T13:08:48Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -239,7 +239,7 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - PR #1702 mergeado a main
 - Backfill disparado en prod
-- (06/12/2026) Pendiente (decisión de Alberto, antes del 06/12/2026):
+- DECISIÓN de Alberto (25/08, chat):
 - Motor vs PriceLabs:
 - Salida de Chekin
 - Booking directo
