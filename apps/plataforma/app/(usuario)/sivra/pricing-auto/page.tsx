@@ -247,9 +247,11 @@ export default function PricingAutoPage() {
       {/* Barra superior: resultados + pausa + push */}
       <div className="pricingauto-top-bar" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
         <div style={{ flex: "1 1 240px", background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 16px" }}>
-          <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Generado vs ref. PriceLabs (de baja)</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.ok }}>
-            +{resultados?.total_extra_eur ?? 0}€
+          {/* Δ vs el precio ANTERIOR (el propio motor salvo el 1er cambio) — NO es el contrafactual
+              PriceLabs; ese vive en /sivra/pricing-rentabilidad. Con signo: una bajada vendida resta. */}
+          <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Δ vs precio anterior (contrafactual PL → Motor vs PL)</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: (resultados?.total_extra_eur ?? 0) >= 0 ? C.ok : C.warn }}>
+            {(resultados?.total_extra_eur ?? 0) >= 0 ? '+' : ''}{resultados?.total_extra_eur ?? 0}€
             <span style={{ fontSize: 12, fontWeight: 500, color: C.soft }}> · {resultados?.noches_reservadas ?? 0} noches reservadas</span>
           </div>
         </div>

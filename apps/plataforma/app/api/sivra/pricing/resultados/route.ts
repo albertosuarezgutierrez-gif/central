@@ -34,7 +34,7 @@ export async function GET() {
       a.property_id,
       COUNT(*)::int AS noches_aplicadas,
       COUNT(*) FILTER (WHERE b.was_booked)::int AS noches_reservadas,
-      SUM(GREATEST(a.new_price - a.old_price, 0)) FILTER (WHERE b.was_booked)::int AS extra_eur,
+      SUM(a.new_price - a.old_price) FILTER (WHERE b.was_booked)::int AS extra_eur,
       COUNT(*) FILTER (WHERE a.rate_date >= CURRENT_DATE)::int AS pendientes
     FROM applied a
     LEFT JOIN booked b USING (property_id, rate_date)
@@ -50,6 +50,10 @@ export async function GET() {
     total_extra_eur: total,
     noches_reservadas: nochesReservadas,
     por_piso: porPiso,
-    nota: "Extra = (precio motor − precio PriceLabs) en noches aplicadas que se reservaron.",
+    // 🚨 Dos honestidades añadidas el 25/08/2026: (a) el GREATEST(...,0) anterior recortaba los
+    // deltas NEGATIVOS (toda bajada contaba 0 → el medidor solo podía subir); (b) `old_price` es el
+    // precio ANTERIOR — desde la baja de PL, el del propio motor salvo en el primer cambio tras el
+    // go-live, así que esto NO es un contrafactual PriceLabs. El de verdad: /sivra/pricing-rentabilidad.
+    nota: "Extra = (precio nuevo − precio anterior) en noches aplicadas que se reservaron. OJO: el precio anterior es el del PROPIO motor salvo el primer cambio tras el go-live; el contrafactual PriceLabs real vive en Motor vs PL.",
   })
 }
