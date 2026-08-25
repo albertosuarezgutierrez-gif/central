@@ -38,8 +38,9 @@ Sesión de estrategia con Alberto (sin código; se anota a mano). Todo el detall
 6+ dorm (12-14 plazas) en costa de Huelva; hipótesis «Socorro rinde por falta de competencia» VALIDADA
 (170 competidores aforo-12 vs 304-348 pequeños; costa: 0-3 casas grandes por playa, 100% vendidas el finde
 28-30/08); financiación ABIERTA (hipoteca con aval, quizá sin vender Dúplex: fricción venta ~32.400€);
-🔴 Matalascañas degradada (top-10 erosión España, Estado planteó derribar 1ª línea ene-2026); **tiro: 1º La
-Antilla/Islantilla · 2º El Rompido/El Portil · 3º Mazagón; Cádiz descartada (Conil 6 dorm 1,75M€)**.
+erosión de Matalascañas = SOLO la 1ª línea oeste (Caño Guerrero→Pueblo Andaluz→Alcotán; corrección de
+Alberto verificada) — sectores centrales (zona Hotel Flamero) OK; **tiro: 1º Matalascañas sectores centrales ·
+2º La Antilla/Islantilla · 3º El Rompido/El Portil · 4º Mazagón; Cádiz descartada (Conil 6 dorm 1,75M€)**.
 Pricing Dúplex: motor ya clavado al mercado (−0,4%), recorrido ~+5-8% — la palanca grande es la rotación.
 
 ### 🔀 (25/08/2026) `aiComplete`/`aiTools` eran cajas negras: mismo fallo del gemini/pasarela, pero en la cadena clásica
