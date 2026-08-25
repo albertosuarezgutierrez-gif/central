@@ -32,6 +32,15 @@
 
 ---
 
+### ✅ (25/08/2026) Bonificación hipoteca: traslado de 1.065€ FIRMADO — período 2026-27 cubierto
+Alberto firmó por banca online (14:38, copia certificada subida a la sesión) el traslado de **1.065,00€**
+del PPA GENERALI PPA III-1 (póliza 3V-G-410.000.330) al plan **KUTXABANK RENTA FIJA MIXTO 15** (Kutxabank
+Pensiones, contrato 992116397-2). Acumulado del período 5-abr-26→5-abr-27: 936,59 + 1.065 = **2.001,59€ ≥
+2.000€** → bonificación 0,20% (tipo 1,20%) asegurada, pendiente solo de la ejecución (revocable hasta el
+5º día hábil) y de la revisión de abril. Registrado en reco #1 (`datos`: `traslado_2026_08_25`) y
+`docs/PATRIMONIO-CFO.md`. Siguiente hito del ciclo: período abr-27→abr-28 (quedan ~2.700€ en el PPA).
+PR de esta entrada.
+
 ### ✅ (25/08/2026) Motor vs PL mergeado (#1702) + backfill jun-jul 2025 ejecutado
 - **PR #1702 mergeado a main** (tras resolver conflicto con #1703 conservando la SUMA CON SIGNO del medidor). Deploy de producción verificado: `/sivra/pricing-rentabilidad` responde (307→login sin sesión, como toca).
 - **Backfill disparado en prod** con `ALERTA_TOKEN` (`/api/sivra/updates/sync?days=1100&maxPages=30&from=2025-05-01&to=2025-09-15`): 40 nuevas + 12 modificadas. **Hueco reparado y verificado en BD:** jun-2025 = 13 reservas (5.352,97€ neto), jul-2025 = 7 (1.485,37€), todas con `reserved_at` → la comparación interanual del cuadro queda desbloqueada.
