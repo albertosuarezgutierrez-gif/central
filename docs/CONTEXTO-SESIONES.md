@@ -41,7 +41,14 @@ los 5 pagos reales de 2026): limpieza = salidas del mes facturado × tarifa × I
 decide entre mes anterior/caja por mejor ajuste (30/04 y 30/06 pagan el MISMO mes); el resto = lavandería
 con la MISMA fórmula que Giraldillo (capacidad × reservas del mes de caja — dictado por Alberto). Desglose
 POR movimiento. El P&L es en vivo:
-el año entero queda recalculado al mergear. PR #1692 (draft, pendiente de OK de Alberto). tsc 0 · 1583 tests.
+el año entero queda recalculado al mergear. PR #1692 MERGEADO (OK de Alberto). tsc 0 · 1584 tests.
+
+### 📧 (25/08/2026) facturas-correo — pasada diaria: solo el hueco Paso 4.0 cerrado
+Sin novedades de Gmail (Amazon cosmética y carta de no-renovación de seguro de un cliente, ambos
+sin archivar por no ser gasto). Paso 4.0 encontró 1 `sin_revisar` en `v_facturas_sin_cargo`
+(financialdatasets.ai 17,78€, archivada el 21/08) — casó exacto con el cargo del 24/08, conciliado
++ FK escrita. Vía B sana (1 día), sin backlog `PDF-pendiente`/`Revisar`. Detalle en
+`docs/AGENTES-BITACORA.md` (entrada 25/08 facturas-correo).
 
 ### 🖨️ (24/08/2026) Rasterizador de PDF: los escaneos CCITT/JBIG2 ya se leen
 Cierra el pendiente del 20/08 («pide rasterizador, no un umbral»): `lib/subastas/rasterizar-pdf.ts`
