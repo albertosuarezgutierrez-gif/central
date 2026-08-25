@@ -36,10 +36,11 @@
 Alberto (captura + factura 2025/333): House salía con 610,51€ de limpieza cuando la factura dice 270€.
 Dos fallos en `pl-mensual.ts`: (1) la factura de Sique Brilla YA incluye lavandería por peso (172,71€+IVA
 en julio) y se repartía toda como limpieza; (2) los pesos usaban las salidas del mes de CAJA (agosto: 2)
-en vez del mes FACTURADO (julio: 11 — factura a mes vencido, pagada a primeros). Nuevo helper puro
-`lib/sivra/reparto-siquebrilla.ts` (testeado con la factura real): limpieza = salidas mes anterior ×
-tarifa × IVA por piso; el resto = lavandería repartida por capacidad × reservas del mes facturado
-(regla Giraldillo). Nota al pie de `/sivra/resultado-pisos` actualizada. tsc 0 · 1578 tests OK.
+en vez del mes FACTURADO (julio: 11). Nuevo helper puro `lib/sivra/reparto-siquebrilla.ts` (fixtures =
+los 5 pagos reales de 2026): limpieza = salidas del mes facturado × tarifa × IVA; `elegirMesFacturado`
+decide entre mes anterior/caja por mejor ajuste (30/04 y 30/06 pagan el MISMO mes); el resto = lavandería
+por capacidad × reservas del mes facturado (regla Giraldillo). Desglose POR movimiento. El P&L es en vivo:
+el año entero queda recalculado al mergear. PR #1692 (draft, pendiente de OK de Alberto). tsc 0 · 1583 tests.
 
 ### 🖨️ (24/08/2026) Rasterizador de PDF: los escaneos CCITT/JBIG2 ya se leen
 Cierra el pendiente del 20/08 («pide rasterizador, no un umbral»): `lib/subastas/rasterizar-pdf.ts`
