@@ -92,10 +92,10 @@ en skill `patrimonio-cfo` (Paso 4, vigilancia del acumulado en cada pasada + avi
 faltan €), `docs/PATRIMONIO-CFO.md` y reco #1 (`datos`). Pendiente de Alberto: enviar a la gestora el
 nombre del producto (texto ya redactado) y completar 1.063,41€ este período. PRs #1658/#1660/#1662/#1663.
 
-### 📈 (24/08/2026) TRADING — universo del radar 800→1000 (caso DBX)
+### 📈 (24/08/2026) TRADING — universo del radar 800→1000→1200 (caso DBX)
 Alberto preguntó por qué Dropbox (DBX, ~8-9 B$) no salía en el radar: no estaba en el universo — el
 corte de las 800 primeras de company_tickers.json (SEC) la dejaba fuera; `trading_universo` sin fila.
-Decisión suya («¿hacemos punto 2?»): `UNIVERSO_TAM` 800→**1000** (el "Russell 1000" del backlog Fase
+Decisión suya («¿hacemos punto 2?»): `UNIVERSO_TAM` 800→1000 (el "Russell 1000" del backlog Fase
 1.5). Lote sigue 50/pasada (coste igual); cron cada 6 h → ciclo ~5 días < 14 de frescura; cobertura
 ~75-80% > umbral 50%. Las ~200 nuevas se siembran en la siguiente pasada del cron (rancias → van
 primero). Alberto pidió no esperar al lunes: nuevo `POST /api/trading/radar` (auth `isRoutineAuthorized`,
@@ -104,6 +104,10 @@ vigilante armado que lo dispara y avisa (incluye puesto de NKE y DBX). PRs #1666
 DECISIÓN (chat): el universo se queda SOLO en EEUU — la ventaja es el dato (EDGAR/Form 4/8-K); el
 núcleo VWCE ya cubre el resto del mundo. Ampliar = más profundidad EEUU (small caps), candidata
 Fase 2 SOLO si el forward valida; exigiría tocar la cadencia del refresco.
+**Corrección el mismo día (PR #1687):** el corte de 1000 se decidió ESTIMANDO la posición de DBX por
+capitalización; medido contra el fichero real de la SEC, DBX cae en la **posición 1131** — fuera del
+corte. `UNIVERSO_TAM` sube a **1200** (ciclo del refresco ~6 días, sigue por debajo del umbral de 14).
+Lección: antes de prometer que un símbolo entra con un corte, medir su posición real, no estimarla.
 
 ### 💸 (24/08/2026) Vercel 126,77€: el 79% siguen siendo Build CPU Minutes → previews apagadas (`--sin-previews`)
 Factura 14 jul–13 ago (recibo 2886-1078): Build CPU Minutes 32.708 min ≈ 92,51 US$ de 117 US$ de subtotal
@@ -135,8 +139,12 @@ Tramos 2 (~nov) y 3 (~ene) siguen siendo decisiones separadas cuando la 🪜 los
   `decision_alberto`), skill `patrimonio-cfo` actualizada. Además se ejecutó la 1ª pasada del CFO
   a mano (el trigger de agente no puede clonar conectores): neto mínimo 1.756.976,88€,
   recomendaciones #1-#3 en BD, Telegram msg 3554, termómetro sin medir declarado (radar 01/09).
-  Pendiente: respuestas de intake de Alberto (5 preguntas). La reco #1 (bonificación hipoteca)
-  quedó decidida el mismo día en la sesión de charla (entrada 💶 de abajo) → anotada `aceptada`.
+  Intake del dossier: **4 de 5 preguntas cerradas** por Alberto el mismo día (`docs/PATRIMONIO-CFO.md`).
+  La reco #1 (bonificación hipoteca) quedó decidida el mismo día en la sesión de charla (entrada 💶
+  de abajo) → anotada `aceptada`. **Fix del mismo carril (PR #1655):** un `force_reply` pendiente del
+  agente de huéspedes (🔧 Retocar) secuestraba el SIGUIENTE mensaje de Alberto — su «/patrimonio» se
+  colaba como retoque de una reserva. El webhook enruta ahora el comando explícito ANTES de mirar el
+  pendiente (`esComandoPatrimonio`, puro y testeado), dejando el retoque intacto para después.
 
 ### 🌎 (24/08/2026) Digest del radar S&P 500: par más correlacionado, 🚀 en insiders y errores desglosados
 Revisión del digest semanal con Alberto (verificado contra `trading_ranking` del 24/08: cuadraba todo).
@@ -2732,14 +2740,12 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 23/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 25/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
-  - **🔴 Nuevo (23/08, auditoría diaria): 3 rutinas Claude programadas sin rastro el 22/08** —
-    `auditoria-diaria`, `mercado-booking` y `facturas-correo` no dejaron commit ese día (sí lo hicieron
-    el 21/08 y el 23/08); los crons de Vercel sí corrieron con normalidad y otras sesiones (health-check
-    IA→`buscador-ia`, patrimonio-cfo, fix `sivra_canal`) sí se dispararon. Efecto medido: `market_rates
-    booking_mcp` lleva desde el 21/08 03:40 sin fila nueva (46h). Revisar en claude.ai la configuración
-    de los 3 triggers (¿deshabilitado, hora movida, fallo del scheduler?) — no hay causa visible desde el repo.
+  - **✅ Cerrado (25/08, auditoría diaria): las 3 rutinas del 23/08 no volvieron a saltarse.**
+    `auditoria-diaria`, `mercado-booking` y `facturas-correo` dejaron su auto-informe con normalidad el
+    23/08 y el 24/08 (commits `6f977e9`/`fa14bc6`/PR #1639); no se identificó la causa raíz del hueco
+    puntual del 22/08 (no hay señal desde el repo), pero no se repitió — se deja de vigilar como abierto.
   - **🚨 La UI de Rutinas aceptó clicks sin persistirlos (23/08)** — al crear la rutina 16 se
     guardó con **25 conectores adjuntos** (Gmail, Stripe, Supabase con ESCRITURA, Booking) pese a
     haberlos desmarcado; los clicks iban por script y la UI los aceptó sin guardarlos. Cazado al
@@ -2803,15 +2809,15 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
   - **Pricing SIVRA (motor vivo en los 4 pisos, resuelto desde el 09-10/08):** #1323 (ocupación
     POR MES) rehecho y mergeado sobre `pricing-demanda.ts`, `channel_markup_sin_recargo.sql`
     aplicado, last-minute encendido (`lastminute_k=0,5`) y reparto mes/global ya se persiste en
-    `pricing_applied` (#1361, 10/08). Sigue abierto: el bucket mensual mezcla Serper+Booking sin
-    filtrar `fuente` (propuesta: preferencia condicional + `bucket_fuente`, informe
-    `docs/AUDITORIA-2026-08-precios-dinamicos.md`). feb→jul-2027 sin bucket (fallback de diseño;
-    la rutina Booking lo va rellenando). A vigilar: 23-oct y 27-nov muy por encima de su mes sin
-    evento catalogado.
-  - **Mercado SIVRA:** `sivra_mercado_sweep` con latido rojo A PROPÓSITO hasta que la Rutina Booking
-    consolide (Serper no distingue fecha). Incidente sin diagnosticar: 2º disparo de `mercado-booking`
-    el mismo día sin huella del 1º (08/08, `docs/AGENTES-BITACORA.md`). Tope real ≈10-12 ventanas por
-    pasada (las respuestas del conector no caben en contexto).
+    `pricing_applied` (#1361, 10/08). **Cerrado 24/08:** la mezcla Serper+Booking en el bucket mensual
+    ya no aplica — la vía Serper se retiró (créditos agotados, decisión de Alberto de no pagarla; ver
+    entrada 🪦 del 24/08), `mercado-booking` es desde entonces la fuente ÚNICA del corpus por fecha.
+    feb→jul-2027 sin bucket (fallback de diseño; la rutina Booking lo va rellenando). A vigilar: 23-oct
+    y 27-nov muy por encima de su mes sin evento catalogado.
+  - **Mercado SIVRA:** `sivra_mercado_sweep` y `mercado/cron` (Serper) salieron de `CRON_JOBS` y de los
+    vigilantes de latido el 24/08 (retirada de la vía, ver 🪦) — dejan de estar "en rojo a propósito"
+    porque ya no corren; sus rutas quedan vivas solo para uso manual. Incidente sin diagnosticar: 2º
+    disparo de `mercado-booking` el mismo día sin huella del 1º (08/08, `docs/AGENTES-BITACORA.md`).
   - **Trading (solo paper):** auditoría del laboratorio 11/08 — el 🔴 gordo (walk-forward de la
     escalera desalineado entre cesta y bench) YA ARREGLADO en la misma sesión (`medicionAlineada.ts`,
     gate `COBERTURA_MIN_ESCALERA=0,8`, PR #1377). Quedan 🟡: momentum sin ventana declarada ni guarda
