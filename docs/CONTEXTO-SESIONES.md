@@ -45,7 +45,7 @@ PR de esta entrada.
 - **PR #1702 mergeado a main** (tras resolver conflicto con #1703 conservando la SUMA CON SIGNO del medidor). Deploy de producción verificado: `/sivra/pricing-rentabilidad` responde (307→login sin sesión, como toca).
 - **Backfill disparado en prod** con `ALERTA_TOKEN` (`/api/sivra/updates/sync?days=1100&maxPages=30&from=2025-05-01&to=2025-09-15`): 40 nuevas + 12 modificadas. **Hueco reparado y verificado en BD:** jun-2025 = 13 reservas (5.352,97€ neto), jul-2025 = 7 (1.485,37€), todas con `reserved_at` → la comparación interanual del cuadro queda desbloqueada.
 - Skill `pricing-agente` actualizada con el cuadro, el medidor con signo y la caducidad de la referencia.
-- **Pendiente (decisión de Alberto, antes del 06/12/2026):** ¿pagar 1 listado de PL (~16,24€/mes) como espejo contrafactual para temporada alta?
+- **DECISIÓN de Alberto (25/08, chat):** NO se paga el espejo de PL (~16,24€/mes). La referencia congelada cubre el veredicto prerregistrado (RevPAR neto sept-nov) hasta su caducidad del 06/12/2026; después el motor se juzga contra `market_rates` (rutina `mercado-booking` diaria) y su propio interanual. Cerrado — no volver a proponerlo.
 
 ### 🧭 (25/08/2026) Estudio: rentabilidad del motor de precios · salida de Chekin · Booking directo
 - **Motor vs PriceLabs:** medible, pero NO como «2026 vs 2025». PL costaba 64,96€/mes (49,97€ en ago) ≈ 780€/año de ahorro directo. Contrafactual = `pricing_pl_referencia` (Dúplex/House) y **caduca el 06/12/2026**: decidir antes si se paga 1 listado de PL como espejo (~16,24€/mes).
