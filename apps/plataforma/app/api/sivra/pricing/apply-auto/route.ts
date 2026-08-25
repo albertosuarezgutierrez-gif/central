@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     const b = await res.clone().json() as {
       ok?: boolean; properties?: number; fechas_escritas?: number
       smoobu_rechazos?: FalloEscritura[]; sin_tarifar?: unknown[]; dryRun?: boolean
-      degradado?: string; pl_degradado?: string; demanda_degradada?: string
+      degradado?: string; demanda_degradada?: string
       paused?: boolean; message?: string; rail_ciego?: string; lecturas_degradadas?: string
     }
     const parte = {
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
       // `rail_ciego` SÍ entra: la pasada se abortó entera, es lo más grave que puede pasar aquí.
       // `lecturas_degradadas` también (hallazgo 4, 24/08/2026): la pasada tarificó con fallback y
       // los precios parecen bien — el latido rojo es la única forma de que alguien lo mire.
-      degradaciones: [b.degradado, b.pl_degradado, b.rail_ciego, b.lecturas_degradadas].filter((x): x is string => !!x),
+      degradaciones: [b.degradado, b.rail_ciego, b.lecturas_degradadas].filter((x): x is string => !!x),
       dryRun: b.dryRun ?? false,
       paused: b.paused ?? false,
       nota: b.message ?? null,

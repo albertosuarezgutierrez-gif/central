@@ -162,10 +162,10 @@ export async function POST(req: NextRequest) {
               SELECT CASE WHEN COUNT(n.precio) = ${noches}::integer THEN SUM(n.precio)::int END AS base_total
               FROM generate_series(${checkin}::date, ${checkin}::date + (${noches}::integer - 1), INTERVAL '1 day') AS d(dia)
               LEFT JOIN LATERAL (
-                SELECT rs.price_pricelabs AS precio, rs.snapshot_date
+                SELECT rs.price_live AS precio, rs.snapshot_date
                 FROM rate_snapshots rs
                 WHERE rs.property_id = ${String(scenario)} AND rs.rate_date = d.dia::date
-                  AND rs.price_pricelabs IS NOT NULL AND rs.snapshot_date <= CURRENT_DATE
+                  AND rs.price_live IS NOT NULL AND rs.snapshot_date <= CURRENT_DATE
                 ORDER BY rs.snapshot_date DESC LIMIT 1
               ) rs ON true
               LEFT JOIN LATERAL (

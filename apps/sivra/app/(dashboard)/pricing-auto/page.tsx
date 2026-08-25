@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, type CSSProperties } from "react"
 // ─── Panel del PROPIETARIO ────────────────────────────────────────────────────
 // Alberto ve sus 4 pisos y configura A MANO todos los parámetros del motor de
 // precio automático (pricing_settings). Además: medidor de resultados (€ extra vs
-// PriceLabs), botón de pánico (pausa global), avisos push, restaurar precio e
+// el precio vivo en Smoobu), botón de pánico (pausa global), avisos push, restaurar precio e
 // histórico por piso. Cada piso muestra mercado real, ocupación, base actual y
 // recomendado. Botones por piso: Guardar / Simular / Aplicar / Restaurar.
 
@@ -226,7 +226,7 @@ export default function PricingAutoPage() {
       {/* Barra superior: resultados + pausa + push */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
         <div style={{ flex: "1 1 240px", background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 16px" }}>
-          <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Generado vs PriceLabs</div>
+          <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Subido en noches vendidas</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: C.ok }}>
             +{resultados?.total_extra_eur ?? 0}€
             <span style={{ fontSize: 12, fontWeight: 500, color: C.soft }}> · {resultados?.noches_reservadas ?? 0} noches reservadas</span>
