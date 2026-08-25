@@ -43,6 +43,30 @@ devuelve el origen de cada pago (factura/ajuste/proporcional) y el health-check 
 proporcional (= subida de tarifas o dos facturas en un pago). (3) Lavandería Giraldillo vs Sique Brilla,
 separadas en la tabla. Probado contra la BD real (dedupe en Postgres, no solo tsc) — la factura 2025/333
 da los mismos importes que la inferencia. PR #1699. 1594 tests · tsc 0 · build OK.
+### 📐 (25/08/2026) Canal Booking: el «sesgo del portal» era nuestro; techo de mercado en apply
+Alberto, sobre el parte del canal: dos averías reales. (1) La rutina mide el escaparate a las 03:40
+pero `base_total` salía del snapshot de AYER 07:00 — sin las 3 pasadas de apply de ayer: el «+12/+26%
+de sesgo» era nuestra propia subida intradía y el calibrado se corregía contra un fantasma. Fix en
+`mercado/ingest` (superpone `pricing_applied` al snapshot) + backfill `2026-08-25_escaparate_base_viva.sql`
+(aplicado; el sesgo del Dúplex pasó de +3%/err 14% a −0,6%/err 0,6%). (2) 238 fechas listadas a >1,5×
+la mediana FIABLE de su fecha (55 a >×3; Duplex 29/09 460€ vs 175€) — los saltos de evento/premio suben
+sin raíl y la guarda de outlier congela >30 días. Nuevo `pricing-techo-mercado.ts` (fecha fiable ×1,5;
+mes fiable ×2,5 sin evento; desciende a velocidad de raíl y libera las congelaciones). PR #1698
+MERGEADO (orden de Alberto). Skill `pricing-agente` (estado-y-protocolo) actualizada. Verificar tras
+el deploy: pasada apply de las 14:30 con `techo_mercado` bajando las fechas ×3-×5, y parte del canal
+de mañana 07:45 sin sesgo positivo sistemático.
+
+### 🔀 (25/08/2026) «IA gemini muerta» del health-check: era el gate mensual disfrazado
+El 🔴 «gemini: 15 llamadas, ninguna correcta» NO eran llamadas a Gemini (apagado desde 01/08, última
+real 01/08): eran rechazos PRE-VUELO del gate `AI_GATEWAY_LIMITE_MENSUAL` (cruzado el 24/08 con
+5.120 llamadas OK) que `/api/ai/search` registraba con `proveedor:'gemini'` hardcodeado (y chat/tools
+con 'nim', codigo/ejecutar/programar con 'openrouter'). Fix: `PROVEEDOR_PASARELA='pasarela'` en los 7
+routes, Check 12 lo excluye, y Check 12-bis nuevo canta el presupuesto mensual con su nombre (🔴 al
+100%, 🟡 al 80%). Guardián `lib/ai-gateway-preflight.test.ts`. tsc 0 · 1.576 tests OK.
+**Desbloqueo (mismo día, «hazlo tú»):** el límite vive ahora en la tabla BD `ia_limite_mensual`
+(fila única, manda sobre la env — patrón `trading_acceso_token`, las sesiones no pueden escribir
+envs de Vercel), fijado a **12.000** llamadas OK/mes (~2x el ritmo real); el gasto lo sigue
+frenando el presupuesto diario en €. Migración aplicada; efectivo al desplegar `main`.
 
 ### 🧹 (25/08/2026) P&L pisos: el pago a Sique Brilla se desglosa limpieza vs lavandería
 Alberto (captura + factura 2025/333): House salía con 610,51€ de limpieza cuando la factura dice 270€.

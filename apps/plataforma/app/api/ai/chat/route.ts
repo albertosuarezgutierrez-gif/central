@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NimChatMessage } from '@central/core-ai'
-import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto, PROVEEDOR_PASARELA } from '@/lib/ai-gateway'
 import { chatConDirector } from '@/lib/pasarela'
 
 export const maxDuration = 60
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const clienteRef = typeof body?.cliente === 'string' && body.cliente.trim() ? body.cliente.trim().slice(0, 120) : null
 
   if (!(await dentroDePresupuesto())) {
-    await registrarUso({ app, endpoint: 'chat', proveedor: 'nim', modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
+    await registrarUso({ app, endpoint: 'chat', proveedor: PROVEEDOR_PASARELA, modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
     return NextResponse.json({ error: 'Límite mensual de IA alcanzado' }, { status: 429 })
   }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto, PROVEEDOR_PASARELA } from '@/lib/ai-gateway'
 import { chatConDirector } from '@/lib/pasarela'
 import { validarReescritura } from '@/lib/reescritura-guardia'
 import type { NimChatMessage } from '@central/core-ai'
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   }
 
   if (!(await dentroDePresupuesto())) {
-    await registrarUso({ app, endpoint: 'ejecutar', proveedor: 'openrouter', modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
+    await registrarUso({ app, endpoint: 'ejecutar', proveedor: PROVEEDOR_PASARELA, modelo: null, ok: false, ms: 0, error: 'presupuesto mensual excedido', clienteRef })
     return NextResponse.json({ error: 'Límite mensual de IA alcanzado' }, { status: 429 })
   }
 
