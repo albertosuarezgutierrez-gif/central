@@ -8,8 +8,10 @@
   aplicado al reservarse contra la curva congelada de `pricing_pl_referencia` de esa noche — + cohorte de
   venta mensual por go-live + serie real de cargos de PL. Cada piso sale con estado explícito
   (`completa`/`parcial`/`sin_datos`/`sin_referencia`, helper `lib/sivra/pricing-rentabilidad.ts`); solo
-  Dúplex/House tienen referencia. **La referencia caduca el 06/12/2026** — la página lleva la cuenta atrás;
-  pendiente de decisión de Alberto si se paga 1 listado de PL (~16,24€/mes) como espejo para la temporada alta.
+  Dúplex/House tienen referencia. **La referencia caduca el 06/12/2026** — la página lleva la cuenta atrás.
+  **DECIDIDO por Alberto (25/08/2026): NO se paga el espejo de PL** (~16,24€/mes) — la referencia congelada
+  cubre el veredicto prerregistrado (sept-nov) entero, y tras la caducidad el motor se juzga contra
+  `market_rates` (rutina `mercado-booking` diaria) y su propio interanual. **No volver a proponerlo.**
 - **El medidor de `pricing-auto` ya suma CON SIGNO** (el `GREATEST(delta,0)` que recortaba las bajadas se
   retiró en #1702/#1703): mide «Δ vs precio anterior DEL MOTOR en noches vendidas», NO es comparación con PL.
 - **Hueco jun-jul 2025 REPARADO** (backfill 25/08 vía `/api/sivra/updates/sync` con `ALERTA_TOKEN`, ruta ya
