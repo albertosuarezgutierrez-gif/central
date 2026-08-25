@@ -6,14 +6,13 @@ import { Prisma } from "@prisma/client"
 export const dynamic = "force-dynamic"
 
 // GET /api/sivra/pricing/resultados
-// Medidor de resultados: suma de las SUBIDAS que aplicó el motor en noches que luego se vendieron.
-// Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked (si la noche se vendió).
+// Medidor de resultados: Δ CON SIGNO (precio nuevo − precio anterior) del motor en noches que
+// luego se vendieron. Cruza pricing_applied (cambios reales) con rate_snapshots.was_booked.
 //
 // ⚠️ NO es «extra vs PriceLabs» (así se etiquetaba hasta el 25/08/2026): `old_price` es el precio
-// que puso el PROPIO motor en su pasada anterior, no PL. Y `GREATEST(…, 0)` cuenta solo las
-// subidas e ignora las bajadas, así que el número es un tope optimista, no un beneficio neto —
-// con el motor moviendo precios a diario, la diferencia importa. Léelo como «cuánto subimos en
-// noches que acabaron vendiéndose», nunca como euros ganados frente a una alternativa.
+// que puso el PROPIO motor en su pasada anterior, no PL. Hasta ese día un GREATEST(…,0) además
+// recortaba las bajadas (publicaba 0€ donde el neto real era −42€); ahora suma con signo — una
+// bajada vendida resta. El contrafactual PriceLabs de verdad es /sivra/pricing-rentabilidad.
 export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "no autorizado" }, { status: 401 })
@@ -40,7 +39,7 @@ export async function GET() {
       a.property_id,
       COUNT(*)::int AS noches_aplicadas,
       COUNT(*) FILTER (WHERE b.was_booked)::int AS noches_reservadas,
-      SUM(GREATEST(a.new_price - a.old_price, 0)) FILTER (WHERE b.was_booked)::int AS extra_eur,
+      SUM(a.new_price - a.old_price) FILTER (WHERE b.was_booked)::int AS extra_eur,
       COUNT(*) FILTER (WHERE a.rate_date >= CURRENT_DATE)::int AS pendientes
     FROM applied a
     LEFT JOIN booked b USING (property_id, rate_date)
@@ -56,6 +55,6 @@ export async function GET() {
     total_extra_eur: total,
     noches_reservadas: nochesReservadas,
     por_piso: porPiso,
-    nota: "Suma de subidas (precio nuevo − precio anterior DEL MOTOR, solo si >0) en noches aplicadas que se reservaron. No es un neto ni una comparación con PriceLabs.",
+    nota: "Δ con signo (precio nuevo − precio anterior DEL MOTOR) en noches aplicadas que se reservaron. No es una comparación con PriceLabs: el contrafactual real vive en Motor vs PL (/sivra/pricing-rentabilidad).",
   })
 }

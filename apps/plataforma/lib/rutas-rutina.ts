@@ -44,6 +44,11 @@ export const RUTAS_RUTINA: string[] = [
   // latido lo desmienta). No mueve dinero, no borra nada y no expone datos personales.
   '/api/internal/reclamar-reparacion',
   '/api/internal/reparacion-resultado',
+  // Sync de reservas Smoobu→incomes con ventana de llegada opcional (?from=&to=&days=): permite a
+  // una rutina reparar huecos del histórico (caso jun-jul 2025, detectado 25/08/2026) sin tocar la
+  // BD a mano. Idempotente (upsert por reservationId); lo peor que permite un token filtrado es
+  // forzar re-sincronizaciones (gasto de cuota Smoobu), no borrar ni exponer datos del huésped.
+  '/api/sivra/updates/sync',
 ]
 
 /** ¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`). */
