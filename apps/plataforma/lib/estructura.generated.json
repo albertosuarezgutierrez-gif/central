@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-24T16:42:05Z",
+  "generadoEn": "2026-08-25T08:08:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4338,6 +4338,7 @@
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
+      "ia_limite_mensual",
       "ia_presupuestos",
       "idealista_api_usos",
       "mapa_arquitectura",
