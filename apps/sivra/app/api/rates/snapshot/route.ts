@@ -59,11 +59,11 @@ export async function GET(req: NextRequest) {
       if (rows.length) {
         await prisma.$executeRaw(Prisma.sql`
           INSERT INTO rate_snapshots
-            (property_id, rate_date, snapshot_date, price_pricelabs, price_ours, available, min_stay)
+            (property_id, rate_date, snapshot_date, price_live, price_ours, available, min_stay)
           VALUES ${Prisma.join(rows)}
           ON CONFLICT (property_id, rate_date, snapshot_date)
           DO UPDATE SET
-            price_pricelabs = EXCLUDED.price_pricelabs,
+            price_live      = EXCLUDED.price_live,
             price_ours      = EXCLUDED.price_ours,
             available       = EXCLUDED.available,
             min_stay        = EXCLUDED.min_stay,

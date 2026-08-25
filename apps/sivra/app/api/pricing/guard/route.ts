@@ -10,9 +10,10 @@ export const maxDuration = 60
 // GET /api/pricing/guard
 //
 // Red de seguridad "no puede fallar". Corre tras el snapshot diario:
-//   #1 Detector de reversión: si el precio BASE actual en Smoobu (rate_snapshots.price_pricelabs
+//   #1 Detector de reversión: si el precio BASE actual en Smoobu (rate_snapshots.price_live
 //      del snapshot más reciente) ya NO coincide con el último precio que aplicó nuestro motor
-//      (pricing_applied, dry_run=false) en una fecha futura → algo (PriceLabs u otro) lo pisó.
+//      (pricing_applied, dry_run=false) en una fecha futura → algo lo pisó (PriceLabs, que era el
+//      sospechoso habitual, está de baja desde el 09/08/2026).
 //   #3 Suelo de coste agobiado: si el motor aplicó el precio mínimo (new_price = min_price) en
 //      ≥3 fechas de un piso → señal de que a precio de mercado ese piso no cubre costes con holgura.
 // Crea alertas en pricing_alerts (dedup 24h) y avisa al propietario (email + push).
@@ -41,16 +42,16 @@ export async function GET(req: NextRequest) {
       ORDER BY property_id, rate_date, applied_at DESC
     ),
     snap AS (
-      SELECT property_id, rate_date, price_pricelabs
+      SELECT property_id, rate_date, price_live
       FROM rate_snapshots
       WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
-        AND price_pricelabs IS NOT NULL
+        AND price_live IS NOT NULL
     )
-    SELECT la.property_id, la.rate_date::text, la.new_price, snap.price_pricelabs AS base_now
+    SELECT la.property_id, la.rate_date::text, la.new_price, snap.price_live AS base_now
     FROM last_applied la
     JOIN snap USING (property_id, rate_date)
     WHERE la.rate_date >= CURRENT_DATE
-      AND snap.price_pricelabs <> la.new_price
+      AND snap.price_live <> la.new_price
     ORDER BY la.property_id, la.rate_date
   `)
 
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
     const ok = await pushAlert({
       tipo: "precio_revertido", prioridad: "alta", property_id: r.property_id,
       titulo: `${PROP_NAMES[r.property_id] ?? r.property_id}: precio revertido el ${r.rate_date}`,
-      detalle: `Fijamos ${r.new_price}€ base y ahora hay ${r.base_now}€ en Smoobu. Revisa que PriceLabs esté desconectado en este piso.`,
+      detalle: `Fijamos ${r.new_price}€ base y ahora hay ${r.base_now}€ en Smoobu. Alguien o algo lo ha pisado en Smoobu.`,
       dato_actual: r.new_price, dato_mercado: r.base_now, fecha_ref: r.rate_date,
     })
     if (ok) { created++; newReversions.push(r) }
@@ -120,7 +121,7 @@ export async function GET(req: NextRequest) {
       subject: `⚠️ SIVRA Pricing: ${newReversions.length} precio(s) revertido(s)`,
       html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
         <h2 style="color:#b91c1c">⚠️ Alguien revirtió tu precio</h2>
-        <p style="color:#6b7280">El motor fijó estos precios base y ahora hay otros en Smoobu. Probablemente PriceLabs sigue activo en ese piso.</p>
+        <p style="color:#6b7280">El motor fijó estos precios base y ahora hay otros en Smoobu.</p>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <tr style="background:#f9fafb"><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb">Piso</th>
           <th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb">Fecha</th>
@@ -130,7 +131,7 @@ export async function GET(req: NextRequest) {
         </table></div>`,
       push: {
         title: "⚠️ Precio revertido",
-        body: `${newReversions.length} fecha(s): PriceLabs pisó tu precio. Revisa SIVRA.`,
+        body: `${newReversions.length} fecha(s): algo pisó tu precio en Smoobu. Revisa SIVRA.`,
         url: "/pricing-auto",
       },
     })

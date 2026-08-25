@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, type CSSProperties } from "react"
 // Panel del PROPIETARIO — Pricing Auto
 // Alberto ve sus 4 pisos y configura A MANO todos los parámetros del motor de
 // precio automático (pricing_settings). Además: medidor de resultados (€ extra vs
-// la referencia PriceLabs, servicio de baja el 09/08/2026), botón de pánico (pausa
+// el precio vivo en Smoobu), botón de pánico (pausa
 // global), avisos push, restaurar precio e
 // histórico por piso. Cada piso muestra mercado real, ocupación, base actual y
 // recomendado. Botones por piso: Guardar / Simular / Aplicar / Restaurar.
@@ -247,9 +247,10 @@ export default function PricingAutoPage() {
       {/* Barra superior: resultados + pausa + push */}
       <div className="pricingauto-top-bar" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
         <div style={{ flex: "1 1 240px", background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 16px" }}>
-          {/* Δ vs el precio ANTERIOR (el propio motor salvo el 1er cambio) — NO es el contrafactual
-              PriceLabs; ese vive en /sivra/pricing-rentabilidad. Con signo: una bajada vendida resta. */}
-          <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Δ vs precio anterior (contrafactual PL → Motor vs PL)</div>
+          {/* Δ CON SIGNO vs el precio ANTERIOR (el propio motor salvo el 1er cambio tras el go-live):
+              desde el 25/08 el endpoint ya no recorta las bajadas con GREATEST, así que esto puede ser
+              negativo. NO es el contrafactual PriceLabs; ese vive en /sivra/pricing-rentabilidad. */}
+          <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Δ vs precio anterior en noches vendidas</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: (resultados?.total_extra_eur ?? 0) >= 0 ? C.ok : C.warn }}>
             {(resultados?.total_extra_eur ?? 0) >= 0 ? '+' : ''}{resultados?.total_extra_eur ?? 0}€
             <span style={{ fontSize: 12, fontWeight: 500, color: C.soft }}> · {resultados?.noches_reservadas ?? 0} noches reservadas</span>

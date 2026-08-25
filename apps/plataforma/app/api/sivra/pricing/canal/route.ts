@@ -276,11 +276,11 @@ async function coberturaCanales(): Promise<{
 async function centinelaHuesped(pisos: MedicionCanal[]): Promise<Map<string, ResumenHuesped>> {
   const filas = await prisma.$queryRaw<{ property_id: string; fecha: string; base: number; med: number | null }[]>(Prisma.sql`
     WITH base AS (
-      SELECT property_id, rate_date, price_pricelabs AS base
+      SELECT property_id, rate_date, price_live AS base
       FROM rate_snapshots
       WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
         AND rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 180
-        AND price_pricelabs IS NOT NULL AND available = 1
+        AND price_live IS NOT NULL AND available = 1
     ),
     mkt AS (
       SELECT scenario, to_char(checkin_date, 'YYYY-MM') AS ym,

@@ -39,6 +39,21 @@
 - **Booking directo** (`2026-08-25-booking-directo-y-smoobu.md`): **no viable hoy** (hay que ser Connectivity Partner, con mínimo de propiedades; altas al parecer pausadas — sin confirmar, proxy bloquea sus dominios). Smoobu lo tocan **155 ficheros**. El dinero está en la comisión: **25.610€ en 2026** (19,72%, 92,3% del ingreso) frente a 1.018,05€ de licencia.
 - **Cuadro «Motor vs PL» construido (misma sesión):** página `/sivra/pricing-rentabilidad` + `GET /api/sivra/pricing/rentabilidad` (backtest lista-vs-lista contra `pricing_pl_referencia` con 4 estados, cohorte de venta por go-live, serie de coste PL, caducidad 06/12). Medidor de `pricing-auto` corregido: el `GREATEST(...,0)` recortaba deltas negativos y la nota vendía `old_price` como PriceLabs. `/api/sivra/updates/sync` gana `isRoutineAuthorized` + entra en `RUTAS_RUTINA` → el backfill de jun-jul 2025 (verificado: 0 filas) se dispara con `ALERTA_TOKEN` tras mergear. SQL validado contra BD real; tsc 0; 48 tests.
 - **DECISIÓN de Alberto (mismo día, tras estudio de facturas en Gmail):** desarrollo SES **CONGELADO** y Booking directo **descartado** — Chekin cuesta ~275€/año real (Stripe 2,01€/mes plan Basic free + integración Smoobu 36€×7) y la renovación Smoobu ya está negociada a 841,36€+IVA (lista 1.407,60€; las 7 uds son 3 pisos muertos —Casa Palacio/Suit/Enjoy— que Smoobu descontó pero no borró, ticket 1659351). `module-ses` se queda como opción. Vivo: ¿dos emisores a SES? (hay correos de «comunicaciones erróneas»), renovación feb-2027 pidiendo baja real de las 3 uds, y foco en reserva directa. Decisiones anotadas en cabecera de ambos planes.
+### 🪦 (25/08/2026) PriceLabs retirado del motor — y el A/B llevaba 16 días midiéndose contra sí mismo
+Arranca por el aviso «2 fechas bajo el 70% de PriceLabs»: era la resaca esperada del #1698 (572 fechas
+−16/19% en la 1ª pasada); House tocó su `min_price` (300€) y PL —foto del 08/08— cantó. Alberto decide
+quitar PL entero. Al mapear el alcance aparece el 2º caso de la MISMA clase que el suelo autorreferente
+del 14/08, y VIVO: `auto_register_experiments()` rellenaba el «baseline de PL» con
+`rate_snapshots.price_pricelabs` (que pese al nombre es el precio VIVO en Smoobu, el nuestro) y el cron
+`experiments/digest` («resumen para decidir la baja de PL») publicaba esa victoria falsa desde el 09/08.
+Hecho en PR #1703: fuera suelo+tripwire, digest, stats, baseline y las etiquetas «extra vs PriceLabs» de
+`resultados`/`pilot-track` (publicaban 0€ donde el neto real era −42€, por `GREATEST(…,0)`). Rename
+`price_pricelabs`→`price_live` por expand/contract: migración aditiva **aplicada** (100.861 filas, 0
+descuadradas, trigger de sincronía). **Pendiente:** aplicar `experiments_sin_baseline_pl.sql` TRAS el
+deploy, y el `DROP` en PR aparte tras un ciclo verde. PriceLabs-proveedor-de-gasto NO se toca.
+**Abiertos, ajenos a PL:** diente de sierra (74,4% de fechas subieron Y bajaron la misma semana, ×1,44,
+sin diagnosticar); corpus (28% del horizonte con ancla ≥5 comps); `was_booked` solo en el 10,4% de
+`rate_snapshots` y casi sin solape con `pricing_applied` → el bucle de aprendizaje cruza 2 noches.
 
 ### 📄 (25/08/2026) La FACTURA de Sique Brilla manda sobre la inferencia del P&L
 Cierra los tres huecos que quedaban del #1692. (1) El desglose se DEDUCÍA del importe; ahora se lee la

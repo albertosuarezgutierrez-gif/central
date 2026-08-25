@@ -35,7 +35,7 @@ export type ParteApply = {
   /** Pisos que la pasada no llegó a tarificar (corpus insuficiente o mercado viejo). */
   sinTarifar: number
   fallos: FalloEscritura[]
-  /** Degradaciones ya declaradas por el motor (eventos ilegibles, PriceLabs, ocupación…). */
+  /** Degradaciones ya declaradas por el motor (eventos ilegibles, ocupación…). */
   degradaciones: string[]
   dryRun: boolean
   /** Pausa global del motor (`pricing_config.paused`), que convierte la pasada en simulacro. */
