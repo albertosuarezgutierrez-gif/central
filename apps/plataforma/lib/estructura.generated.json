@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-25T11:42:02Z",
+  "generadoEn": "2026-08-25T13:23:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4617,6 +4617,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Bloque 1-bis en `/sivra/pricing-rentabilidad` (PR #1712, mergeado):",
+      "fecha": ""
+    },
+    {
+      "titulo": "`target_pctl` de House Sevillana 0,50→0,60 APLICADO en prod",
+      "fecha": ""
+    },
+    {
       "titulo": "PR #1702 mergeado a main",
       "fecha": ""
     },
@@ -4625,8 +4633,8 @@
       "fecha": ""
     },
     {
-      "titulo": "Pendiente (decisión de Alberto, antes del 06/12/2026):",
-      "fecha": "06/12/2026"
+      "titulo": "DECISIÓN de Alberto (25/08, chat):",
+      "fecha": ""
     },
     {
       "titulo": "Motor vs PriceLabs:",
@@ -4666,14 +4674,6 @@
     },
     {
       "titulo": "Latido `sivra_pricing_apply`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Smoobu rechaza → Telegram + `ok:false` + latido rojo",
-      "fecha": ""
-    },
-    {
-      "titulo": "Siguen abiertos:",
       "fecha": ""
     }
   ],
