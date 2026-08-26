@@ -1573,9 +1573,14 @@ Comprobado, no supuesto: el conector entra en el proyecto de Manuel
 (`uijsgeocgdaxkhvwtjqs`, «ASEGURA-prod-eu», región `eu-central-1`) y `select current_user` devuelve
 **`supabase_read_only_user`**. Es decir: **acceso de SOLO LECTURA**.
 
+> ⚠️ **El volcado NO está hecho — no confundirlo con el inventario.** Lo que se hizo el 26/08 fueron
+> **recuentos** (`count(*)` por tabla). **No se ha copiado ni un dato**: no existe ningún `.sql` ni
+> `.dump` de la correduría, ni en disco ni en la historia del repo (comprobado). El dump sigue
+> necesitando cadena de conexión y contraseña, que este acceso no da.
+
 | Sirve para | NO sirve para |
 |---|---|
-| Todo el inventario y los recuentos (ya hecho) | **Transferir el proyecto**: eso es gestión de organización, no SQL. Sigue haciendo falta que Manuel invite a Alberto a su organización |
+| Todo el inventario y los recuentos (ya hecho) | **Transferir el proyecto**: eso es gestión de organización, no SQL. ⚠️ Lo que ya NO se sostiene es el «hace falta que Manuel invite a Alberto»: **ya está invitado y dentro** (org `PISO`). Queda por comprobar si desde ahí ya puede recibirse el traspaso o si hace falta que Manuel le suba el rol — **no darlo por sabido** |
 | Comprobar el estado de CIMA día a día | **Hacer el dump**: `pg_dump` necesita la cadena de conexión y su contraseña, que el conector no da |
 | Verificar después del traspaso que **se encuentra** un cliente por email/DNI (la prueba del índice ciego) | **Descifrar** un IBAN: eso lo hace la app con su clave, no una consulta SQL |
 | Resolver dudas sin molestar a Manuel — como la de abajo | Escribir nada. Es de solo lectura, punto |
@@ -1611,7 +1616,7 @@ lo que diría algo es una racha larga justo después de tocar el `CRON_SECRET`.
 
 | Sistema | Estado | Evidencia |
 |---|---|---|
-| **Supabase** | ⛔ **Invitación recibida pero NO ACEPTABLE**: el enlace cae en un muro de «Sign in» con la sesión activa | `welcome@supabase.com` → `alberto.suarez.gutierrez@gmail.com`, hoy **07:42**. Probado 3 veces, misma pestaña con sesión buena. **Bloqueado a la espera de que Manuel lea el destinatario exacto y el estado.** (El token no se guarda aquí) |
+| **Supabase** | ✅ **YA ACEPTADA Y DENTRO** — aparece en el panel como **`PISO`**, no como «LOOR» | `get_project("uijsgeocgdaxkhvwtjqs")` → `organization_id: qdrmgpvqhcmhmpcrvtan`, la organización de la invitación. Lectura viva confirmada: 32.600 clientes / 28.843 pólizas. El enlace del correo daba un muro de login porque **el token ya estaba consumido** |
 | **Fly.io** | ✅ **Invitado y dentro** | `noreply@email.fly.io`, «Manuel Suárez wants you to join Manuel Suárez», hoy **13:29** + cuenta de Alberto creada a las 13:29-13:30 |
 | **GitHub** | ❌ **No ha llegado nada** | Sin correo de invitación a colaborar, ni hoy ni en 7 días |
 | **Vercel** | ❌ Sin invitación — Manuel dice que **«hay que pagar»** | — |
@@ -1659,6 +1664,29 @@ es gratis y no ha llegado.
 
 Ambas salieron de una revisión desde el navegador que **se negó a pulsar botones sobre premisas sin
 verificar**. Las dos objeciones eran correctas; las dos premisas, mías.
+
+> # 🟢 26/08/2026 — CIERRE: NO HABÍA NINGÚN PROBLEMA. La invitación ya estaba aceptada.
+>
+> Todo lo que sigue en esta sección se investigó **sobre un problema inexistente**. El hecho, ahora
+> comprobado tres veces: `get_project("uijsgeocgdaxkhvwtjqs")` devuelve
+> `organization_id: qdrmgpvqhcmhmpcrvtan`, **la misma organización** que el correo de invitación
+> llamaba `LOOR` y que **el panel de Alberto muestra como `PISO`** — la que la revisión desde el
+> navegador vio («PISO, plan gratuito, 1 proyecto») y descartó por suponerla suya. **Ese único
+> proyecto es el CRM de Manuel.** Alberto ya era miembro; el enlace caía en un muro de login porque
+> **el token ya estaba consumido**, no porque fallara nada.
+>
+> **La lección, y es la más cara del día:** este mismo documento ya decía, escrito esta mañana unas
+> 1.500 líneas más arriba, *«organización `qdrmgpvqhcmhmpcrvtan` (el panel la muestra como `PISO`, el
+> correo de invitación la llamaba `LOOR`)»*. **El dato que cerraba el caso estaba en el sitio donde se
+> estaba escribiendo la investigación.** Se produjeron tres explicaciones nuevas, se mandó al navegador
+> a buscar un nombre que el panel no muestra y se le pasó un enlace ya gastado. Antes de explicar por
+> qué algo no aparece, **releer lo que ya se sabía de ese mismo algo**; y desconfiar en especial cuando
+> un sistema tiene **dos nombres para la misma cosa** (aquí: `LOOR` en el correo y en la API, `PISO` en
+> el panel), porque entonces «no lo encuentro» es casi siempre un problema de nombre, no de acceso.
+>
+> Lo que sigue queda como registro de las correcciones intermedias, que eran válidas cada una en su
+> momento. **Ninguna acción pendiente sale de aquí:** no hay que aceptar nada, ni pedirle a Manuel
+> nada de Supabase.
 
 **1. ~~Una invitación de Supabase NO se ve en el panel.~~ — RETIRADO, era otra suposición mía.**
 Se dijo que Supabase no lista invitaciones pendientes y que por eso el panel no mostraba nada. **No
