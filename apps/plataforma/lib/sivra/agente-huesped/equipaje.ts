@@ -13,7 +13,8 @@
 // REDES con puntos por toda la ciudad:
 //  - Socorro 24 / Bustos Tavera (House Sevillana, Busto Reform, Luxury Busto) → Lock & Explore
 //    Castellar (C/ Castellar 60A, el más cercano) y, como alternativa, Locker in the City Alfalfa.
-//  - Dúplex Center (Pasaje Francisco Molina / C. Martín Villa, La Campana) → Plaza del Duque.
+//  - Dúplex Center (Pasaje Villasís 1, 41003; también se entra por Pasaje Francisco Molina 4 —
+//    son dos accesos del MISMO piso. Zona La Campana / C. Martín Villa) → Plaza del Duque.
 // Datos obtenidos por búsqueda web (junio 2026); reserva por web/app. Si una cierra/cambia, edita aquí.
 
 export type Consigna = { nombre: string; web: string; nota: string }

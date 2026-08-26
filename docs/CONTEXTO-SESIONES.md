@@ -32,6 +32,21 @@
 
 ---
 
+### 📍 (26/08/2026) Repaso de las direcciones del portfolio: el lado de los Busto está bien, faltaba el CP
+Tras cerrar lo de House Sevillana, Alberto pidió repasar Bustos Tavera y el Dúplex. **El lado NO
+estaba cruzado en ningún sitio**: dcha=Luxury Busto, izda=Busto Reform, coherente en BD, skills
+`perfil-fiscal`/`facturas-correo`, CUPS de Endesa, contratos EMASESA y `agente-facturas.test.ts`.
+Lo que sí faltaba: **el CP**. Sólo House Sevillana lo llevaba; los dos Busto y el Dúplex decían
+«…, Sevilla» a secas. Los cuatro son **41003** (Alberto; el del Dúplex sale además de su nota
+simple). Del Dúplex se fija la puerta registral —**Pasaje Villasís 1, Es:2 Pl:01 Pt:C**, con acceso
+alternativo por Pasaje Francisco Molina 4— porque la dirección guardada yuxtaponía los dos portales
+sin decir cuál mandaba, y `equipaje.ts`/`sivra-maestro` daban «C. Martín Villa» como si fuera la
+dirección (es la zona). SQL `2026-08-26_direcciones_cp.sql` (el seed lleva `ON CONFLICT DO NOTHING`,
+así que hacía falta UPDATE) aplicado ya a prod. Guardián nuevo:
+`test/regression-direcciones-pisos.test.ts` (7 tests; verificado por mutación que muerde al cruzar
+los lados, al quitar un CP y al cruzar el lado en la skill). Pendiente de Alberto: los dos Busto
+siguen sin ref. catastral (NULL) y Monte Carmelo 68 sin CP — no se inventan. PR draft.
+
 ### ✅ (26/08/2026) House Sevillana: la dirección mala, resuelta de raíz — la skill sincronizada se trae al repo
 Tercera detección seguida de lo mismo (19, 25 y 26/08) sin poder tocarlo: `seo-house-sevillana` vivía
 FUERA de git (copia sincronizada de la cuenta) y avisar por Telegram no arreglaba nada. **Descubrimiento
