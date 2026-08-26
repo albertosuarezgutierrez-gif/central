@@ -59,6 +59,24 @@ conversión — IBKR no rechaza por falta de divisa, financia en margen y cobra 
 
 ---
 
+### ✅ (26/08/2026) Serrucho CONFIRMADO arreglado donde hay mercado medido — y el resto queda acotado
+Pasada de las 08:30 con banda de raíl NUEVA (la prueba que la de anoche no podía dar): 637 noches en 4
+pisos, **399 BAJANDO**. Subieron por encima del +21% **once**, y las once son fechas de EVENTO con el
+salto haciendo justo su trabajo:
+· **cinco** son el derbi Betis–Sevilla (13/11/26 y 23/02/27) subiendo **exactamente ×1,35** = el factor
+  del evento sobre una base estable. Son meses CON bucket → salto de una vez y se quedan.
+· **seis** son House en abr/jun/ago-2027: Feria (×2,50), Copa del Rey (×2,20), Mundial de Remo (×1,55)
+  y las vísperas/resacas de Karol G a ×1,75 (regla R6). Tres caen en 1.349€ exactos = 771€ × 1,75, no
+  es un tope: es el mismo cálculo sobre la misma base.
+🚨 **El residuo declarado, ya CUANTIFICADO:** esos seis viven en meses **SIN bucket** — abr/may/jun/jul
+2027 tienen solo **2 fechas medidas** y hacen falta **3**. Ahí el salto sigue anclado a la global, que
+es la que se mueve sola. Sep-2026→mar-2027 sí tienen bucket y están protegidos. **Remedio barato: que
+la rutina de Booking mida UNA fecha más al mes en abr-jul 2027** y esos cuatro meses pasan al camino
+estable. Sin eso, el serrucho sobrevive en las fechas lejanas de House, que son las más caras.
+📉 Inflación heredada del pico del 24/08, bajando como se esperaba: **207/371 → 148/393** por encima del
+techo de 1,5×; medias por piso 2,01→1,72 (Busto) · 1,92→1,60 (House) · 1,53→1,41 (Luxury) · 1,49→1,37
+(Dúplex); máximo 5,24→4,71. Converge sola; no se toca el raíl.
+
 ### 🏠 (26/08/2026) El radar de mercado avisa SOLO de casas — y deja de medirlas contra pisos
 Alberto, sobre el aviso 💡 de chollos (3 de 4 eran pisos): «solo buscamos casas, no pisos». Filtro
 aplicado a los DOS avisos de Telegram (💡 chollos y ⬇️ bajadas de precio); el corpus y la lista de
