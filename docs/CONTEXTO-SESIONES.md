@@ -2941,6 +2941,16 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## ✅ (26/08/2026) Cierre del caso DIGI: PRs #1737 y #1740 mergeados, verde sobre `main`
+
+- Ambos mergeados en squash (`3e12616` y `6b9c541`). Verificado DESPUÉS del merge, sobre `main` real:
+  guardia 61/61 · packages todos `fail 0` · vitest 53/53 · tsc de plataforma 0 · 55 tests de
+  agente-facturas · 16 checks de CI en verde. Las 9 previews de Vercel salieron `Ignored` (el
+  `--sin-previews` hizo su trabajo; los «Building» intermedios no llegaron a gastar build).
+- Salvedad honesta: `auditar-estructura --check` marca `estructura.generated.json` desfasado, pero ya
+  lo estaba en `main` limpio antes de tocar nada (comprobado con stash) — no es de este trabajo.
+- Lo que queda abierto (datos, no código) está en el bloque «Estado vivo» al final del archivo.
+
 ## 🏦 (26/08/2026) El agente APRENDE: un gasto domiciliado tiene que acabar cargado en cuenta
 
 - Alberto, sobre el aviso de DIGI: «está domiciliado en banco, tiene q estar cargado en cuenta». El cargo
@@ -3062,8 +3072,19 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
 
 
-- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 25/08/2026).** Detalle en
+- **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 26/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.
+  - **🟠 Caso DIGI — cerrado el código, abiertos los datos (26/08, PRs #1737 y #1740, ambos mergeados).**
+    El agente ya vigila que un gasto domiciliado acabe cargado en cuenta y las skills recogen la lección.
+    Queda: (a) **`fecha_vencimiento` solo la llevan las facturas imputadas desde hoy** (+ la de agosto de
+    DIGI, puesta con el 28/08 que anuncia su correo) — el vigilante no ve las anteriores, es un hueco
+    conocido, no un olvido; (b) decidir el **reparto por piso** del 76,00€ (falta saber qué fibra está en
+    cada sitio: 2× 300Mb + 1 SMART 1Gb de 20,00€ entre Socorro, los dos de Bustos Tavera y Monte Carmelo;
+    el Dúplex NO es DIGI); (c) **facturas que faltan con el cargo ya cobrado**: Endesa jun–ago (6 recibos,
+    ~477€), Si Que Brilla y lavandería de jul–ago, EMASESA may y jul, IONOS feb/mar/may/jun, PriceLabs may
+    — Netflix nunca ha traído factura y las comisiones de Booking van ya en el neto de `incomes`; (d) la
+    **bandeja acumula ~30 facturas sin revisar** desde junio; (e) cambio de titular con DIGI (pedido el
+    01/02, incompleto el 08/07) y confirmar con Asecon el trato de las facturas a nombre de la SL.
   - **✅ Cerrado (25/08, auditoría diaria): las 3 rutinas del 23/08 no volvieron a saltarse.**
     `auditoria-diaria`, `mercado-booking` y `facturas-correo` dejaron su auto-informe con normalidad el
     23/08 y el 24/08 (commits `6f977e9`/`fa14bc6`/PR #1639); no se identificó la causa raíz del hueco
