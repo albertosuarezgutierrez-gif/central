@@ -25,6 +25,107 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🕐 (26/08/2026) Correduría: guion del corte minuto a minuto listo — y una TERCERA cosa irrecuperable
+
+Plan cerrado por ambas partes → escrito el **guion del corte** en `docs/TRASPASO-CORREDURIA.md`:
+preparativos de Alberto a **T-7** (crear org de **Fly** — el único de los 5 sistemas donde no tiene
+cuenta —, 3 invitaciones, gestor de contraseñas), copias de Manuel a **T-1**, ventana **13:00–15:00**
+(tras el pull de 11:30, lejos del de 5:30) y la prueba que cierra: el cron **automático** de D+1.
+🚨 Hallazgo: además de las dos claves, **los secrets de Fly (TIREA) son irrecuperables** — `fly secrets
+list` solo muestra NOMBRES. Se respaldan la víspera. Ese día **solo cambia la propiedad**: ni BD, ni
+auth, ni despliegues (eso es Fase 2). Mensaje **v7** a Manuel redactado, **sin enviar**, a falta de fecha. PR #1752.
+
+---
+
+### 🛡️ (26/08/2026) Correduría: FASE 1 CERRADA — el CRM de Manuel tiene 32.600 clientes reales
+
+Manuel dio acceso a su Supabase. **El conector lee su proyecto `uijsgeocgdaxkhvwtjqs` por
+`project_id`**; que `list_projects` no lo enumere (solo lista la organización propia) me hizo concluir
+por error que había que reautorizar el OAuth: **no hacía falta nada**. 🚨 *«No sale en el listado» ≠
+«no tengo acceso»*. Inventario en `docs/TRASPASO-CORREDURIA.md`: 52 tablas, **32.600 clientes / 28.843
+pólizas**, BD 92 MB (~75 MB el `public`) → **free basta, los ~200 MB estimados eran casi el triple**.
+NO hay Edge Functions, buckets, `pg_cron`, triggers, vistas ni secuencias. Tres decisiones abiertas:
+**RLS** (86 políticas y `prisma_seguros` tiene BYPASSRLS → al conectar deja de aislar sin fallar),
+**auth** (9 en `auth.users` vs 17 en `public.usuarios` → re-plataformar), y 0 claves foráneas.
+**Contrato de encargado ahora es lo urgente** (carnets de conducir, teléfonos, emails).
+🚨 **Y es una migración EN CALIENTE:** CIMA/EIAC 6.0 descargó ficheros **ayer** (188 pólizas, 184
+recibos y 67/67 siniestros vienen de ahí, 4 compañías) → si Manuel apaga su Vercel, la correduría deja
+de recibir de las compañías. El corte necesita fecha acordada. Codeoscopic, en cambio, lleva parada
+desde el 29/07 y **nunca ha emitido** (todo en `cotizacion`; participants/product_forms/documents a 0):
+cotizar está probado, emitir no. Las 132 funciones de su BD no tienen lógica de integración → **está
+toda en el código**. Nueva estrategia: no pedirle el repo entero, sino **2 carpetas (ingestor EIAC +
+cliente Codeoscopic), los nombres de sus envs y crons, y una fecha de corte**; la intranet la rehacemos.
+⚠️ **CORRECCIÓN de alcance:** la intranet de Manuel **SÍ se queda** (tiene un diseño ya hecho + web
+pública) → se traspasa TODO, no dos carpetas. Vía elegida para unificar Vercel: **invitar a Manuel al
+equipo Pro de Alberto y que despliegue él**, así **las credenciales no viajan por ningún canal** (ocupa
+un asiento temporal; el proyecto en sí no cuesta). Y el repo se transfiere YA a la cuenta de Alberto —
+la cautela de «transferir al final» protegía a un tercero que aquí no existe; lo que hay que proteger
+es que CIMA no deje de descargar. **Manuel es HERMANO de Alberto y todo está a nombre de Alberto** (Codeoscopic incluido) → cae el riesgo
+contractual. Objetivo: que Manuel deje de pagar. **Ni API ni conector MCP: atacan un problema ya
+resuelto** (los datos se leen por `project_id`); lo que falta es CÓDIGO → un ZIP de 2 carpetas, 15 min
+suyos. Su Supabase es FREE; **solo paga Vercel Pro** (Hobby prohíbe uso comercial), y **Alberto ya tiene
+equipo Pro** → meter la app ahí no añade coste y él cancela. Ojo al corte: **Codeoscopic y Meta/WhatsApp
+apuntan a SU URL** en sus paneles y eso no viaja en ningún ZIP. PR #1752.
+- **Vía elegida (v5):** transferencia NATIVA de proyecto en Vercel y Supabase (3 clics de Manuel) en vez de
+  redesplegar: arrastra env vars CON VALORES y dominios → ninguna credencial viaja. Pasos ordenados en el doc.
+- **Mensaje enviado a Manuel** (26/08, con permiso de Alberto), a la espera de respuesta.
+- **Adelanto sin él — RLS y auth eran UNA decisión:** las 86 políticas pasan TODAS por
+  `get_user_correduria_id()`/`get_user_role()`, y ambas son `... WHERE auth_user_id = auth.uid()`. Re-plataformar
+  la auth deja las políticas sin sujeto; con `prisma_seguros` BYPASSRLS el efecto no es «no se ve nada» sino
+  **se ve TODO sin fallar**. Se decide ANTES de restaurar, no después. Lo desactiva el dato: **1 sola correduría**,
+  **2 clientes con portal de 32.600**, 9 cuentas vivas (2 admin) → re-plataformar es barato; lo que hay que
+  reproducir es «un cliente solo ve lo suyo», no el andamiaje multi-tenant. Rol `corredor` lo exigen 45 políticas
+  y **no lo tiene nadie**.
+- 🔴 **Corrección de tamaño:** `central` está hoy en **204 MB** (no lo que suponía el plan) → con los ~75 MB de
+  Manuel quedaría en **~279 MB de 500**, no ~255. Free sigue bastando, pero el colchón es la mitad: re-medir
+  justo antes de restaurar.
+- ⚠️ **Hallazgo colateral:** las 17 filas de `usuarios` dicen `activo=true` pero **8 apuntan a un `auth.users`
+  borrado** → la intranet afirma «activo» sobre gente que no puede entrar. Al portarlo, cruzar `activo` con la
+  credencial real.
+- `central` verificada como destino: **pgvector ✅**, schema `seguros` ✅ (0 tablas), rol `prisma_seguros` ✅ inerte (sin contraseña).
+- 📬 **MANUEL CONTESTÓ el mismo día. El traspaso son CINCO sistemas, no tres.** CIMA no es SFTP ni portal:
+  es una cadena **GitHub Actions (cron 5:30/11:30) → `/api/crons/cima-pull` en Vercel (Bearer `CRON_SECRET`)
+  → adaptador Java en Fly.io (`asegura-app-cima-adapter`) → JAR oficial de TIREA por SOAP WSE 2.17**.
+  Compañías: Mapfre C0058, Allianz C0109, Generali C0072, Occident C0468, Reale C0613. Credenciales TIREA
+  en **secrets de Fly**, y la cuenta TIREA es de Alberto (`albertosuarez.testws` era homologación).
+  → **4º sistema: Fly.io** (Java, NO cabe en el monorepo, se queda como servicio aparte).
+  → **5º: `CRON_SECRET`**, que **no viaja al transferir el repo** → si no se repone, CIMA deja de traer datos
+  **sin que falle nada visible**. Es el riesgo más traicionero del corte.
+- 🚨 **Lo único IRREVERSIBLE: la clave de cifrado de datos personales** en las env vars. Su paso Cero decía
+  «export de la LISTA de env vars» — una lista de NOMBRES no restaura una clave. Hay que copiar **el VALOR**
+  a un gestor antes de tocar Vercel, y verificar **descifrando un registro real**, no viendo la variable.
+- Resto de respuestas: **UN solo proyecto Vercel** (`asegura`; web+intranet+portal+login son la misma app
+  Next.js bajo `app.grupoasegura.com`); ficheros en **Vercel Blob** (~4, atado a la cuenta → puede no viajar;
+  los EIAC se parsean a tablas, no se guardan); dominios `grupoasegura.com` + `grupoasegura.es` (**solo correo
+  `info@`** → ojo a los MX). **Codeoscopic nunca emitió**: el código existe tras un **flag jamás activado**.
+- Huecos añadidos a su plan: Actions puede quedar deshabilitado tras transferir (verificar una ejecución REAL
+  del cron, no el secret); **transferir Fly mejor que redesplegar** (si sus secrets son de producción y se
+  redespliega sin ellos, levanta pero no descarga); cortar **fuera de 5:30/11:30 y tras un pull correcto**;
+  el dump del paso Cero **no se commitea jamás** (32.600 personas). Runbook de 11 pasos en el doc.
+- ✅ **PLAN TÉCNICO CERRADO** con Manuel el mismo día; solo falta fijar día y hora. Tres datos suyos:
+  🔑 **son DOS claves, no una** — la de cifrado (si se pierde, IBANs ilegibles: falla RUIDOSO) y la del
+  **índice ciego** para buscar por email/DNI sin descifrar (si cambia, los datos siguen legibles pero
+  **dejan de encontrarse**: falla en SILENCIO, y la pantalla dice «no existe» sobre un cliente que está ahí).
+  → se respaldan las dos y la verificación son **dos** pruebas: **descifrar Y buscar**. Rotar el índice
+  ciego obliga a recalcular los 32.600 y mientras tanto las búsquedas mienten.
+  🟢 **Fly apunta a PRODUCCIÓN y con credenciales de Alberto** (`ws.cimaseg.es/wsEstandar/`, plataforma
+  `ALBERTOSUAREZ_6393`, mediador **CS-F/0170**); el `testws` de antes era homologación → **se transfiere
+  la app, no se redespliega** (decidido, ya no opcional).
+  🟡 **Codeoscopic:** la idempotencia no está a medias — es que **no llega hasta el final**: el candado y
+  la UUID son nuestros, pero **ellos no deduplican por `attempt_id`** → un reintento tras respuesta perdida
+  puede duplicar en su lado. Condición para encender el flag algún día: probar el doble envío con el mismo
+  `attempt_id`. Hoy no afecta (flag apagado).
+- 🚧 **Montado el ESQUELETO de `apps/asegura`** (sin esperar a Manuel): auth propia (cookie `asegura_session`
+  + `jose` contra `public.cuentas`, molde `apps/mariscos`), layout, login, `prisma` con **multiSchema**
+  (`public` + `seguros`), `lib/dinero.ts` (`eur()`, null→`—` nunca `0,00€`) y `vercel.json` **con su
+  `ignoreCommand --sin-previews`**. El dashboard NO pinta KPIs a 0 mientras no haya migración: distingue
+  **tres** estados vía `lib/estado-migracion.ts` (error / pendiente / migrado). Añadida a la matriz de
+  typecheck de CI, a `MATRIZ.md`, al `CLAUDE.md` raíz y a la skill `central-maestro`. `tsc --noEmit` limpio
+  y `pnpm test:guardia` 61/61. **Pendiente para darla por viva:** proyecto Vercel, contraseña al rol, y la
+  migración en sí.
+
+---
+
 ### 🔭 (26/08/2026) Booking ya puede confirmar las fechas caras: horizonte 12 meses + meses sin bucket primero
 
 Regla de Alberto («sube en cuanto se huela el evento y confirma después con Booking»): la primera

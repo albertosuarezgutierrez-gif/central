@@ -1,8 +1,29 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: FASE 0 — enviada la petición a Manuel (WhatsApp, 20/08/2026), esperando respuesta.**
-> Ningún dato se ha migrado todavía; lo único hecho en `central` son los cimientos vacíos (ver
-> «Hecho ya»). Este documento es el runbook del traspaso y **la ÚNICA fuente de verdad** mientras dure.
+> **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Solo falta fijar día y hora.**
+> 🕐 El **guion del corte minuto a minuto** ya está escrito (ver «GUION DEL CORTE», abajo): preparativos
+> de Alberto a T-7, copias de Manuel a T-1, ventana **13:00–15:00** y la prueba que cierra de verdad,
+> que es el cron **automático** de las 5:30 del día siguiente. Solo hay que poner la fecha encima.
+> 🔑 Y son **DOS claves**, no una: la de cifrado (si se pierde, los IBANs quedan ilegibles — falla
+> ruidoso) y la del **índice ciego** (si cambia, los clientes **dejan de encontrarse** aunque estén
+> ahí — **falla en silencio**, y una búsqueda vacía se lee como «no existe»). Se respaldan las dos y
+> se verifican con **dos** pruebas: descifrar Y buscar. Ver «CIERRE TÉCNICO», abajo.
+>
+> **Estado previo: el traspaso son 5 sistemas, no 3.**
+> A los tres conocidos (Vercel, Supabase, GitHub) se suman **Fly.io** (el adaptador Java que habla con
+> TIREA: sin él NO entra ninguna póliza de las compañías) y el **`CRON_SECRET` de GitHub Actions**, que
+> **no viaja al transferir el repo** y cuya pérdida corta CIMA **en silencio**. Y hay un punto
+> irreversible: **la clave de cifrado de datos personales** — si se pierde, los IBANs quedan ilegibles
+> para siempre. Ver «RESPUESTA DE MANUEL» y el runbook del corte, abajo: mandan sobre el resto del doc.
+>
+> **Estado anterior: FASE 1 COMPLETADA (26/08/2026).** Manuel dio acceso a su Supabase y el inventario está
+> hecho y medido — ver «FASE 1 CERRADA» abajo. Faltan el **código** (repo, bloqueado) y el **Vercel**
+> (sin invitación). **Nada se ha migrado todavía**, y antes de migrar hay que firmar el contrato de
+> encargado de tratamiento: son 32.600 clientes reales.
+> Ningún dato se ha migrado todavía. Lo hecho en `central`: los cimientos de BD (ver «Hecho ya») y,
+> desde el **26/08/2026, el ESQUELETO de `apps/asegura`** — auth propia, layout, manifiestos, gate de
+> build y `lib/estado-migracion.ts`. Se montó a propósito **antes** de la respuesta de Manuel: el día
+> del corte solo habrá que verter el modelo y las pantallas. Ver `apps/asegura/CLAUDE.md`. Este documento es el runbook del traspaso y **la ÚNICA fuente de verdad** mientras dure.
 > Cuando el traspaso se cierre, esto se sustituye por `apps/asegura/CLAUDE.md` y una entrada en
 > `docs/CONTEXTO-SESIONES.md`.
 >
@@ -11,6 +32,719 @@
 > y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`). Se han **fundido en este**, que absorbe todo lo
 > que el otro tenía y el otro se ha borrado. Si encuentras una referencia suelta a `apps/seguros`, es de
 > antes de la fusión: el nombre bueno es **`apps/asegura`**.
+
+## 📍 Estado de los tres accesos (comprobado el 26/08/2026, no supuesto)
+
+| Acceso | Estado real | Qué falta |
+|---|---|---|
+| **Supabase** | ✅ **RESUELTO.** Manuel invitó a Alberto a su organización (`qdrmgpvqhcmhmpcrvtan`) el 26/08/2026 y el conector **lee el proyecto `uijsgeocgdaxkhvwtjqs` sin problema**. La Fase 1 está hecha | ✅ Nada. ~~Reconectar el conector marcando la organización~~ — **era innecesario**: `list_projects` no enumera proyectos de otras organizaciones, pero el acceso por `project_id` funciona igual |
+| **GitHub** | ⚠️ Invitación del **12/08/2026** a `manuelsuarez/asegura`, sin confirmar que esté aceptada | 🔴 **Claude no puede leer ese repo desde esta sesión, pase lo que pase**: `add_repo` → *cross-tier adds are not supported* (esta sesión ya tiene fuentes de `albertosuarezgutierrez-gif`). Haría falta una sesión NUEVA con `manuelsuarez/asegura` como fuente inicial, y eso exige que la app de Claude esté instalada en la cuenta de Manuel. Mientras tanto, el rodeo sigue siendo `docs/ASEGURA-PROMPT-CHROME.md` (Claude Chrome) o un ZIP del árbol de trabajo |
+| **Vercel** | 🔴 Sin invitación: `list_teams` solo devuelve `pisos-turisticos-projects` | Pedírsela a Manuel (o, si su cuenta es Hobby, la lista de **nombres** de variables por aquí y los **valores** por gestor de contraseñas) |
+
+> **Regla de esta tabla:** «no lo veo» ≠ «no existe». Que un proyecto no salga en `list_projects` no
+> dice nada del CRM de Manuel; dice que este conector todavía no tiene permiso para mirarlo.
+
+**Nada se ha copiado todavía.** La Fase 1 (inventario y medición) no puede empezar hasta que el
+proyecto de `LOOR` sea visible desde el conector.
+
+## ✅ FASE 1 CERRADA — inventario real del Supabase de Manuel (26/08/2026)
+
+> **Cómo se entró, y la corrección que importa:** el conector de Supabase de Claude **sí puede leer el
+> proyecto de Manuel**, por referencia directa. Lo que NO hace es *enumerarlo*: `list_projects` solo
+> lista los proyectos de la organización propia, y de ahí salió la conclusión equivocada de que hacía
+> falta reautorizar el OAuth por organización. **No hacía falta nada: solo el `project_id`.**
+> Lección de método: *«no aparece en el listado» ≠ «no tengo acceso»* — antes de pedirle a nadie que
+> toque permisos, prueba el acceso directo.
+
+**Proyecto: `uijsgeocgdaxkhvwtjqs`** · `ASEGURA-prod-eu` · AWS `eu-central-1` · Postgres 17.6 ·
+compute NANO · plan free · `ACTIVE_HEALTHY` · creado el 20/04/2026 · organización
+`qdrmgpvqhcmhmpcrvtan` (el panel la muestra como `PISO`, el correo de invitación la llamaba `LOOR`).
+
+### 🚨 Esto NO es un prototipo: es una correduría con cartera real
+
+| Tabla | Filas | Tabla | Filas |
+|---|---:|---|---:|
+| `clientes` | **32.600** | `bienes_asegurables` | 1.614 |
+| `polizas` | **28.843** | `poliza_coberturas` | 1.425 |
+| `cliente_telefonos` | 4.794 | `gestiones` | 694 |
+| `cliente_emails` | 4.017 | `poliza_intervinientes` | 504 |
+| `oportunidades` | 3.676 | `poliza_recibos` | 186 |
+| `operational_events` | 3.518 | `cima_ficheros` | 125 |
+| `cliente_carnets_conducir` | **2.189** | `siniestros` | 69 |
+| `cliente_relaciones` | 1.710 | `usuarios` | 17 |
+
+**52 tablas en `public`.** Y con eso, el punto 6 del mensaje a Manuel deja de ser papeleo: hay
+**32.600 clientes reales** con teléfonos, correos, **carnets de conducir** y relaciones familiares.
+El **contrato de encargado de tratamiento (`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`) pasa a ser
+lo más urgente del traspaso**, por delante de cualquier decisión técnica.
+
+### Veredicto free vs. Pro: **FREE**, y ahora medido
+
+- BD total del proyecto: **92 MB** (el panel dice 112 MB: incluye WAL y overhead).
+- Las dos tablas gordas son `clientes` (38 MB) y `polizas` (22 MB); el resto no llega a 3 MB cada una.
+- El schema `public` a trasladar ronda los **~75 MB**. Sobre los ~180 MB que ocupa `central` hoy,
+  quedaría en **~255 MB de 500 MB**. Cabe holgado. **La estimación de ~200 MB era casi triple de la real.**
+- Egress 36 MB de 5 GB. No hay presión por ningún lado.
+
+### Lo que NO hay (y por tanto no hay que migrar)
+
+| | |
+|---|---|
+| **Edge Functions** | **Ninguna** |
+| **Buckets de Storage** | **0**, y **0 objetos** |
+| **`pg_cron`** | **No instalada** → cero tareas programadas en la BD |
+| **Triggers** | **0** |
+| **Vistas / vistas materializadas** | **0 / 0** |
+| **Secuencias** | **0** (todo son UUID, no hay contadores que resincronizar) |
+| **Secretos en Vault** | **0** |
+
+Extensiones realmente instaladas: `pgcrypto`, `uuid-ossp`, `supabase_vault`, `pg_stat_statements`,
+`plpgsql` y **`vector` 0.8.0 (pgvector) en `public`** — esta última la usa `whatsapp_kb_chunks`, así
+que **hay que asegurarse de que `vector` está disponible en `central` antes de restaurar**.
+
+### 🚩 Los tres asuntos que decide Alberto, no la sesión
+
+1. **RLS: 86 políticas, y RLS activo en las 52 tablas.** El aislamiento multi-tenant del CRM
+   (`correduria_id`) vive **en las políticas RLS**, no en el código. Pero `prisma_seguros` se creó con
+   **`BYPASSRLS`** (como el resto de roles de la casa) → **al conectar la app, las 86 políticas dejan de
+   aplicarse y nadie se entera: no falla, simplemente deja de aislar.** Es el patrón de fallo silencioso
+   que más caro sale. Hay dos salidas y hay que elegir a conciencia: (a) `prisma_seguros` **sin**
+   BYPASSRLS y se conservan las políticas, o (b) con BYPASSRLS y el aislamiento pasa al código de la app.
+   Hoy la correduría es un solo tenant (`corredurias` = 1 fila), así que el riesgo es bajo *ahora* —
+   pero la decisión se toma antes de restaurar, no después.
+2. **Autenticación: `auth.users` = 9 usuarios, los 9 han entrado alguna vez.** Con nueve, la bifurcación
+   se resuelve sola: **re-plataformar al patrón de la casa** (tabla propia + cookie + `jose`, como
+   `apps/mariscos`) sale más barato que migrar `auth.users`. ⚠️ Ojo al descuadre: `public.usuarios`
+   tiene **17** filas frente a 9 en `auth.users` — hay 8 usuarios lógicos sin cuenta de acceso, o
+   bajas. Mirarlo antes de dar la lista por buena.
+3. **Cero claves foráneas en 52 tablas.** La integridad referencial está en el código, no en la BD.
+   Para el volcado es buena noticia (no hay orden de carga que respetar); como herencia, es deuda que
+   conviene conocer antes de construir encima. **132 funciones en `public`** sí viajan en el dump, pero
+   hay que revisarlas: si alguna usa `auth.uid()`, depende del Supabase Auth que estamos quitando.
+
+### Lo que sigue sin saberse
+
+- **Dónde viven los documentos.** Storage está vacío, pero existen `bien_documentos`,
+  `poliza_documentos`, `solicitud_cambio_documentos` (4 filas) y `cima_ficheros` (125). Esta última
+  guarda **metadatos** (`nombre_fichero`, `xml_hash`, `zip_entry_count`), no el binario. Así que
+  «0 buckets» significa **«los ficheros no están en Supabase»**, no «no hay ficheros»: hay que
+  averiguar a dónde apuntan antes de apagar nada de Manuel.
+- **Los crons y las integraciones**, que viven en su Vercel (el comentario de una tabla menciona un
+  «vencimientos-detector»). Sigue haciendo falta la invitación a Vercel, o al menos los nombres de las
+  variables de entorno.
+- **El código**: sigue bloqueado (`add_repo` cross-tier). Vía Chrome o ZIP.
+
+### Rastro de su forma de trabajar (útil para leer el código)
+
+Los comentarios de tabla citan tickets **`LOO-xxx`** (Linear) y normas españolas por su nombre:
+`lds_consent` referencia la **Ley de Distribución de Seguros art. 19** y el **RDLeg 6/2004 art. 173**;
+`cotizaciones_anonimas` describe un «flipped funnel» con TTL de 7 días. Hay integración con **CIMA/EIAC**
+(el estándar de intercambio con aseguradoras), con **Codeoscopic** (7 tablas `codeoscopic_*`) y un canal
+de **WhatsApp** con base de conocimiento vectorial. No es un CRM genérico: es software de correduría.
+
+---
+
+## 📬 RESPUESTA DE MANUEL (26/08/2026) — el traspaso no son 3 sistemas, son 5
+
+Contestó a las cuatro preguntas. **Lo que da por escrito cambia el plan de arriba**, así que esta
+sección manda sobre todo lo anterior en lo que se contradiga.
+
+### 1. Cómo entra CIMA de verdad: una cadena de TRES saltos, no una descarga
+
+No es SFTP ni portal. La cadena real, y cada eslabón puede romperla:
+
+```
+GitHub Actions (cron 5:30 y 11:30)
+   └─ HTTPS + Bearer CRON_SECRET
+      └─ app.grupoasegura.com/api/crons/cima-pull        (Vercel, Next.js)
+         └─ asegura-app-cima-adapter.fly.dev             (Fly.io, Java/Spring Boot)
+            └─ JAR oficial de TIREA · WSE v2.17 (SOAP)
+               └─ TIREA  →  Mapfre C0058 · Allianz C0109 · Generali C0072
+                            Occident C0468 · Reale C0613
+```
+
+**Las credenciales de TIREA viven como secrets de Fly.io** — no en Vercel ni en la base. El usuario de
+homologación era `albertosuarez.testws`: **la cuenta TIREA es de Alberto**, no de Manuel.
+
+### 🚨 Los DOS sistemas que no estaban en ningún inventario
+
+| # | Sistema | Por qué es bloqueante |
+|---|---|---|
+| **4** | **Fly.io** — app `asegura-app-cima-adapter` + su repo propio | Es quien habla con TIREA. **Sin él no entra ni una póliza de las compañías.** No es Next.js ni cabe en el monorepo: es Java. Se queda como servicio aparte |
+| **5** | **`CRON_SECRET`** en los secrets de **GitHub Actions** | **Los secrets NO viajan cuando cambia el dueño del repo.** Si no se vuelve a poner, el cron dispara y el endpoint responde 401: CIMA deja de traer datos **en silencio** |
+
+El 5 es el más traicionero de todo el traspaso: no rompe nada visible. La web sigue en pie, la app
+responde, nadie ve un error — simplemente dejan de entrar pólizas, recibos y siniestros. Y como la
+única señal es «hoy no ha llegado nada», se puede tardar días en notarlo.
+
+### 2, 3 y 4 — lo demás que preguntamos
+
+- **Vercel: UN solo proyecto** (`asegura`). Web, intranet, portal de cliente y login son **la misma app
+  Next.js** bajo `app.grupoasegura.com`. Cae la duda de «¿van juntas o separadas?».
+- **Ficheros: Vercel Blob** (privado, URLs firmadas), **~4 ficheros**. La BD solo guarda la referencia.
+  ⚠️ **El Blob va atado a la cuenta y puede NO viajar con el proyecto.** Con 4 ficheros da igual: se
+  mueven a mano. Los **EIAC de CIMA no se guardan como archivo**, se parsean a tablas.
+- **Dominios:** `grupoasegura.com` (el `app.` sirve toda la app) y `grupoasegura.es` (**solo para el
+  correo `info@`**).
+- **Codeoscopic:** confirmado, **nunca se emitió en producción**. Solo se probó cotizar (1 proyecto,
+  15 precios). **El código de emisión existe pero está tras un flag que jamás se activó** — por eso las
+  tablas están vacías. Coincide con lo que medimos: cero filas no probaba que no hubiera código.
+
+---
+
+## 🔴 Lo que hay que atar ANTES de fijar fecha (huecos de su plan, no objeciones)
+
+Su secuencia (0-8) es correcta y el orden es sensato. Estos son los puntos donde, tal como está
+escrita, el traspaso puede salir mal:
+
+### 1. La clave de cifrado: es lo ÚNICO irreversible de todo el traspaso
+
+Manuel avisa —bien— de que en las env vars hay una **clave de cifrado de datos personales**: si se
+pierde o se rota, **los IBANs y demás datos cifrados quedan ilegibles para siempre**. Pero su paso Cero
+dice «export de **la lista** de env vars».
+
+🚨 **Una LISTA DE NOMBRES no restaura una clave.** Si la transferencia no arrastra ese valor, el backup
+de nombres no sirve de nada y la cartera queda con campos muertos. Antes de tocar Vercel:
+
+1. **El VALOR de esa clave, copiado a un gestor de contraseñas** (no a un fichero del repo, no a un
+   mensaje). Es el único backup que importa.
+2. Tras la transferencia, **verificación FUNCIONAL, no visual**: descifrar un registro conocido y
+   comprobar que sale el dato correcto. «La variable aparece en el panel» no demuestra que su valor
+   sea el mismo.
+3. **No rotar esa clave** ni antes ni durante el corte. Después, y con la cartera ya verificada.
+
+### 2. Los crons de GitHub Actions no vuelven solos
+
+Además del `CRON_SECRET` que él ya señala: **un repositorio transferido puede quedarse con Actions
+deshabilitado y los `schedule:` no re-armados**. Por eso la verificación no es «he puesto el secret»,
+sino **ver una ejecución real del cron entrando en su franja** (5:30 u 11:30) y contar filas nuevas.
+
+### 3. Ojo con redesplegar el adaptador en vez de transferirlo
+
+Manuel ofrece dos vías para Fly: transferir, o que Alberto redespliegue desde el repo con sus secrets
+de TIREA. **La segunda tiene una trampa**: el usuario que él nombra (`albertosuarez.testws`) es de
+**homologación**. Si los secrets vivos de Fly son de PRODUCCIÓN y se redespliega desde cero sin ellos,
+el adaptador levanta pero **no descarga nada de las compañías**.
+
+→ **Preferir la transferencia de la app de Fly.** Y antes de decidir, preguntar qué credenciales hay
+realmente en esos secrets (homologación o producción) y si las de producción están en manos de Alberto.
+
+### 4. La franja horaria del corte sale sola de los crons
+
+El cron corre a **5:30 y 11:30**. El corte se hace **fuera de esas franjas y justo DESPUÉS de un pull
+correcto** — así, si algo se tuerce, hay medio día de margen antes de la siguiente descarga y no se
+pierde ningún fichero de las compañías.
+
+### 5. `grupoasegura.es` es correo, y el correo se rompe distinto
+
+Ese dominio **solo sirve `info@`**. Tocar su DNS puede tumbar los **registros MX** sin que nadie lo
+vea hasta que un cliente escriba y el correo rebote. Se anota aparte de la app: **no se toca su MX**, y
+si hay que moverlo, se copian los MX ANTES.
+
+### 6. Discrepancia menor sobre la idempotencia de Codeoscopic
+
+Manuel dice que «el envío a Codeoscopic no es idempotente». En su esquema aparecen `submit_attempt_id`
+y `submit_in_flight_at`, que son justo las columnas de un envío idempotente. Puede que el diseño esté y
+la implementación no. **Riesgo real hoy: ninguno** —nunca se emitió, y el flag está apagado—, pero
+conviene aclararlo antes de encender ese flag algún día.
+
+### 7. El backup previo lleva datos de 32.600 personas
+
+Su paso Cero (dump de Supabase) es correcto y necesario. Ese dump **no se commitea jamás** ni se sube a
+ningún sitio compartido: son datos personales reales. Vive en local durante la ventana del corte y se
+borra después.
+
+---
+
+---
+
+---
+
+## ✅ CIERRE TÉCNICO con Manuel (26/08/2026) — todo confirmado, y aparece una SEGUNDA clave
+
+Segunda respuesta de Manuel. Acepta los cuatro puntos y aporta tres datos que **cambian el runbook**.
+
+### 🔑 No es una clave de cifrado: son DOS, y fallan de forma distinta
+
+| Clave | Para qué | Qué pasa si se pierde |
+|---|---|---|
+| **Cifrado de valores** | IBAN, DNI y demás campos cifrados | Los datos quedan **ilegibles para siempre**. Falla RUIDOSO: se ve que algo está roto |
+| **Índice ciego** (*blind index*) | Buscar un cliente por email o DNI **sin descifrar** | 🚨 Los datos siguen ahí y legibles, pero **dejan de encontrarse**. Falla **SILENCIOSO** |
+
+**El índice ciego es el peligroso de los dos**, y no por lo que rompe sino por cómo lo rompe. Si esa
+clave cambia, buscar un cliente por su DNI **no da error: devuelve vacío**. Y una pantalla que recibe
+cero resultados dice «no existe ese cliente» — sobre uno de los 32.600 que está ahí, entero y
+perfectamente legible. Es exactamente la regla **«dato que NO hay ≠ dato que NO se ha mirado»**, pero
+metida en la capa de búsqueda, donde no hay `NULL` que delate nada.
+
+Consecuencias operativas:
+
+- **Se respaldan las DOS**, no solo la de cifrado. Manuel ya ha dicho que guarda el valor de ambas.
+- **La verificación post-transferencia son DOS pruebas, no una:** (a) descifrar un registro real y
+  ver el dato correcto, y (b) **buscar por email y por DNI un cliente conocido y que aparezca**.
+  Solo la primera dejaría pasar el fallo silencioso.
+- **Ninguna de las dos se rota durante el traspaso.** Y ojo a futuro: rotar el índice ciego obliga a
+  **recalcular el índice de los 32.600 clientes**; mientras dure ese recálculo, las búsquedas mienten.
+
+### 🟢 Fly: mejor noticia de lo que pensábamos — son credenciales de PRODUCCIÓN y son de Alberto
+
+Manuel lo verificó y corrigió su dato anterior. El adaptador **no apunta a homologación**:
+
+| Dato | Valor |
+|---|---|
+| `WSE_ENDPOINT` | `https://ws.cimaseg.es/wsEstandar/` (**producción**) |
+| Usuario | `cima.albertocsf0170ws` |
+| Plataforma | `ALBERTOSUAREZ_6393` |
+| Clave de mediador | **CS-F/0170 — de Alberto** |
+
+El `albertosuarez.testws` que citó antes era el de homologación. **Los secrets vivos de Fly son de
+producción y la cuenta TIREA es de Alberto** → se confirma la decisión: **se transfiere la app tal cual,
+no se redespliega**. (Las contraseñas siguen donde están, en los secrets de Fly; aquí solo van
+identificadores.)
+
+### 🟡 Codeoscopic: la idempotencia no está a medias, es que no llega hasta el final
+
+Aclarado, y su explicación es correcta:
+- `submit_in_flight_at` = **candado** contra dos envíos simultáneos.
+- `submit_attempt_id` = **UUID propia** para poder reconciliar después.
+- **Lo que falta es del lado de ELLOS:** Codeoscopic no deduplica por nuestro `attempt_id`, así que un
+  reintento tras una respuesta perdida **puede crear un duplicado en su sistema**.
+
+O sea: idempotente por dentro, **no de punta a punta**. Con el flag apagado no afecta a nada. **Antes de
+encenderlo algún día**, la prueba concreta es: mandar el **mismo `attempt_id` dos veces** y ver si ellos
+deduplican. Anotado como condición para activar la emisión, no como bug de hoy.
+
+### Lo demás, cerrado y de acuerdo
+
+`CRON_SECRET` se valida con una **ejecución real del cron**, no con el secret puesto · corte **fuera de
+5:30/11:30 y tras un pull correcto** · **`grupoasegura.es` no se toca** (solo sirve `info@`, los MX
+quietos) · el **dump se queda en local** y se borra tras la ventana · **emisión de Codeoscopic: nunca
+probada en producción**.
+
+**Solo queda fijar día y hora.** El plan técnico está cerrado por ambas partes.
+
+### 🔧 Cambios que esto mete en el runbook
+
+- **Paso 0a:** respaldar **las dos** claves (cifrado + índice ciego), no una.
+- **Paso 2:** la verificación pasa a ser doble — **descifrar** un registro **y buscar** por email/DNI.
+- **Paso 5:** Fly se **transfiere** (decidido, no opcional): sus secrets son de producción.
+- **Nuevo, para el futuro:** no encender el flag de emisión de Codeoscopic sin probar antes el
+  doble envío con el mismo `attempt_id`.
+
+### 📝 Respuesta a Manuel — v6 (26/08/2026) — **ENVIADA y ya respondida. Histórico: la versión vigente es la v7**
+
+Contesta a su mensaje del 26/08. **Confirma su secuencia** (es buena) y le añade lo que le falta:
+el VALOR de la clave de cifrado (no la lista), verificar el cron con una ejecución real, transferir
+Fly en vez de redesplegar, y qué credenciales de TIREA hay en sus secrets. **No se manda hasta que
+Alberto dé el visto bueno a este envío concreto.**
+
+> Manuel, perfecto, con esto ya sé lo que hay. Tu secuencia me vale tal cual, solo le añado cuatro
+> cosas y te pido que dos de ellas las hagas antes de que toquemos nada.
+>
+> **1. La clave de cifrado: pásala a un gestor de contraseñas ANTES de mover el proyecto.**
+> Dices de exportar «la lista» de env vars, y ahí está el problema: una lista de nombres no me
+> devuelve la clave si la transferencia no arrastra su valor. Y si esa clave se pierde, los IBANs y
+> lo demás cifrado no hay quien los recupere. Es lo único de todo el traspaso que no tiene marcha
+> atrás, así que quiero el **valor** guardado antes de empezar, y no la rotamos ni tú ni yo hasta
+> que la cartera esté verificada al otro lado.
+> Y cuando el proyecto ya esté en mi equipo, en vez de mirar que la variable aparezca en el panel,
+> **desciframos un registro de verdad** y comprobamos que sale bien. Que la variable exista no
+> demuestra que su valor sea el mismo.
+>
+> **2. Del CRON_SECRET: buen apunte, y le añado una vuelta.** Además de volver a ponerlo, al
+> transferir un repo **Actions se puede quedar deshabilitado y los `schedule:` sin re-armar**. Así
+> que no doy por bueno «ya está el secret»: lo damos por bueno cuando **veamos una ejecución real
+> del cron en su franja trayendo filas nuevas**. Si no, esto falla de la peor manera posible —sin
+> error, sin caída, simplemente dejan de entrar pólizas y nos enteramos días después.
+>
+> **3. Fly: prefiero transferir la app, no redesplegarla.** El usuario que me pasas
+> (`albertosuarez.testws`) es de homologación. Si en tus secrets de Fly están las credenciales de
+> **producción** y yo redespliego desde cero sin ellas, el adaptador arranca y no descarga nada de
+> las compañías: parece que funciona y no funciona. Dime **qué credenciales hay realmente ahí**
+> (homologación o producción) y, si puede ser, méteme en tu org de Fly y lo transferimos.
+>
+> **4. La hora del corte sale sola de tus crons.** Como corren a 5:30 y 11:30, lo hacemos **fuera
+> de esas franjas y justo después de un pull correcto**. Así, si algo se tuerce, tenemos medio día
+> de margen antes de la siguiente descarga y no perdemos ningún fichero de las compañías.
+>
+> Tres cosas menores:
+>
+> - **`grupoasegura.es`**: como solo sirve el `info@`, ojo con tocarle el DNS — si se caen los **MX**
+>   no lo ve nadie hasta que un cliente escriba y le rebote. Lo tratamos aparte de la app.
+> - **El dump del paso Cero**: son datos de 32.600 personas, así que no lo subimos a ningún sitio
+>   compartido; se queda en local durante la ventana y se borra después.
+> - **Curiosidad, sin prisa:** dices que el envío a Codeoscopic no es idempotente, pero en el
+>   esquema veo `submit_attempt_id` y `submit_in_flight_at`, que es justo lo que se pone para que lo
+>   sea. ¿Se quedó a medias? Hoy da igual porque el flag está apagado, pero mejor saberlo antes de
+>   encenderlo algún día.
+>
+> Lo de la emisión me queda claro, y me vale: cotizar probado, emitir no. Mejor saberlo ahora.
+>
+> Con esto por mi parte podemos fijar día y hora. Dime cuándo te viene bien y lo montamos.
+
+## 🗺️ Runbook del corte (secuencia de Manuel + lo que falta)
+
+| # | Quién | Paso | Verificación que lo cierra |
+|---|---|---|---|
+| **0a** | Manuel | **Copiar el VALOR de las DOS claves a un gestor: la de cifrado Y la del índice ciego** | Alberto confirma que puede leer ambas |
+| **0a-bis** | Manuel | **Copiar también el VALOR de los secrets de Fly (credenciales TIREA)** — `fly secrets list` solo muestra NOMBRES, nunca valores | Alberto confirma que puede leerlos. Si el movimiento entre orgs los perdiera, solo se recuperan pidiéndolos otra vez a TIREA |
+| 0b | Manuel | Dump de Supabase + lista de Blob + export de env vars | Dump restaurable en local. **No se commitea** |
+| 0c | Los dos | Elegir hora **fuera de 5:30/11:30**, justo tras un pull correcto | Último `cima_ficheros` del día ya cargado |
+| 1 | Manuel | Acepta la invitación al equipo Vercel Pro | — |
+| 2 | Manuel | **Transfer Project** del proyecto `asegura` | Dominio re-verificado + **descifrar un registro real** + **buscar un cliente conocido por email y por DNI** (el índice ciego falla en silencio) |
+| 3 | Manuel | Supabase → Transfer project (mismo ref, conexiones intactas) | La app sigue leyendo |
+| 4 | Los dos | Blob: re-apuntar token o mover los 4 ficheros | Los 4 se abren desde la app |
+| 5 | Manuel | **Fly.io: TRANSFERIR la app del adaptador** (decidido: sus secrets son de producción) | `/health` del adaptador + un pull manual con datos |
+| 6 | Manuel | GitHub: transferir los dos repos (app y adapter) | — |
+| 7 | **Alberto** | Reconectar el Git en Vercel + **volver a poner `CRON_SECRET`** + **comprobar que Actions y sus `schedule:` están activos** | **Una ejecución REAL del cron en su franja, con filas nuevas** |
+| 8 | Los dos | Repunte de Codeoscopic y Meta/WhatsApp (si el dominio se mueve limpio, no cambian) | — |
+| 9 | Alberto | Pull completo de CIMA + una cotización de punta a punta | Ambos verdes **antes** de sacar a Manuel del equipo |
+| 10 | Alberto | Quitar a Manuel del equipo → **Manuel cancela su Pro** | — |
+
+**Nada se apaga hasta el 9.** Manuel ya lo ha dicho por escrito: no borra ni apaga nada.
+
+---
+
+## 🕐 GUION DEL CORTE, minuto a minuto (preparado el 26/08/2026, a falta de fecha)
+
+> El runbook de arriba dice **qué** pasos hay. Esto dice **cuándo, quién y qué se verifica antes de
+> seguir**. Sale de la secuencia que propuso Manuel más los huecos que le encontramos. Cuando Alberto
+> fije la fecha, esto se ejecuta tal cual.
+
+### ⚠️ Lo que ese día NO se hace (y conviene tenerlo escrito para no improvisar)
+
+El día del corte **solo cambia la PROPIEDAD de las cosas**, no su forma. Ese día **no** se fusiona la
+base en `central`, **no** se toca RLS ni la autenticación, **no** se emite ninguna póliza por
+Codeoscopic y **no** se despliega nada nuevo. La app sigue siendo la misma app, en la misma URL, con
+la misma base — solo que las factura Alberto. Todo lo demás (verter el modelo al schema `seguros`,
+re-plataformar la auth, las pantallas en `apps/asegura`) es **Fase 2, con calma y sin reloj**.
+
+Mezclar las dos cosas el mismo día es la forma más fácil de convertir un traspaso reversible en una
+migración irreversible.
+
+### 🧰 T-7 a T-2 — preparación de Alberto, sin depender de Manuel
+
+| # | Qué | Por qué |
+|---|---|---|
+| A1 | **Crear cuenta y organización en Fly.io** | Es el **único** de los 5 sistemas donde Alberto no tiene cuenta. Sin org de destino, la app del adaptador no se puede mover |
+| A2 | Invitar a Manuel a **Vercel** (equipo `pisos-turisticos-projects`, plan **Pro** ✅) | Un *Transfer Project* solo puede apuntar a un equipo del que el emisor sea miembro |
+| A3 | Invitar a Manuel a la **organización Supabase** (`fzagbwkkzfjlsvflkkvn`, plan **free**, hoy con 1 proyecto: `central`) | Igual: el traspaso va de organización a organización |
+| A4 | Invitar a Manuel a la **org de Fly** recién creada | Para poder mover la app entre orgs |
+| A5 | Abrir en el gestor de contraseñas una entrada **«Grupo Asegura»** con huecos para: clave de cifrado, clave de índice ciego, `CRON_SECRET`, secrets de TIREA/Fly, `wa_access_token` | Es el sitio donde aterrizan los valores. Ni WhatsApp ni email |
+| A6 | **Comprobar que la org free acepta un 2º proyecto** y si el de Manuel es de pago | 🔴 Ver abajo. Se comprueba **el día antes**, no el mismo día |
+
+**A6 en detalle — el único hueco que puede obligar a cambiar de plan sobre la marcha.** La
+organización Supabase de Alberto está en **free** y tiene **un** proyecto (`central`). El traspaso
+mete un segundo proyecto en esa organización. Si Supabase rechaza el destino —por el límite de
+proyectos de free, o porque el proyecto de Manuel esté en un plan de pago que la org destino no
+soporta— el corte no se cae: **plan B, restaurar el dump del paso 0b en `central`** ese mismo día.
+Pero es una decisión que **no se improvisa a las 13:30**: se comprueba la víspera y, si hace falta,
+se sube la org a Pro antes de empezar.
+
+### 🌙 T-1 — Manuel hace copias, sin tocar producción
+
+| # | Qué | Detalle |
+|---|---|---|
+| M1 | **Valor** de la clave de **cifrado** y **valor** de la clave del **índice ciego** | Al gestor. Son las dos únicas cosas verdaderamente irreversibles |
+| M2 | **Valores de los secrets de Fly** (credenciales TIREA) | 🚨 Nuevo, y no estaba en el runbook: **`fly secrets list` NO muestra los valores**, solo los nombres. Si el movimiento entre orgs los perdiera, no hay de dónde recuperarlos: hay que volver a pedirlos a TIREA. Se apuntan **antes** |
+| M3 | `CRON_SECRET` de GitHub Actions | No viaja en la transferencia del repo |
+| M4 | Dump de la base + export de env vars + lista de los ~4 ficheros de Blob | El dump se queda **en local** y se borra al acabar: son datos de 32.600 personas. **Jamás se commitea** |
+
+### ⏱️ T-0 — el corte
+
+**Ventana propuesta: día laborable, 13:00–15:00.** Sale sola de los crons: justo después del pull de
+las **11:30** (así el día ya está cargado) y a 16 horas del de las **5:30** del día siguiente, que es
+la prueba que de verdad cierra el traspaso. ~2 horas, de las cuales trabajo efectivo ~1.
+
+| Hora | Quién | Paso | 🚦 No se sigue hasta que… |
+|---|---|---|---|
+| 12:45 | Alberto | Comprobar que el pull de 11:30 entró | Hay un `cima_ficheros` de hoy |
+| 13:00 | Manuel | Acepta las 3 invitaciones (Vercel, Supabase, Fly) | Aparece en los tres |
+| 13:05 | Manuel | Vercel → **Transfer Project** | El proyecto sale en el equipo de Alberto |
+| 13:15 | Alberto | Dominio y app | `app.grupoasegura.com` carga y se puede entrar |
+| 13:20 | Manuel | Supabase → **Transfer project** | Mismo ref; la app sigue leyendo |
+| 13:30 | Alberto | 🔑 **LAS DOS PRUEBAS** | **(1)** se **descifra** un IBAN real **y (2)** se **encuentra** un cliente conocido buscando por email **y** por DNI. Una sola no vale: el índice ciego falla en silencio |
+| 13:40 | Manuel | Fly → mover la app del adaptador a la org de Alberto | La app aparece en su org |
+| 13:45 | Alberto | `fly secrets list` + `/health` del adaptador | Están los nombres de los secrets **y** el health responde |
+| 13:50 | Manuel | GitHub → transferir los dos repos (app y adapter) | — |
+| 13:55 | Alberto | Aceptar la transferencia + **reconectar el Git en Vercel** | El proyecto vuelve a apuntar al repo |
+| 14:00 | Alberto | **Volver a poner `CRON_SECRET`** + comprobar que Actions está habilitado y los `schedule:` vivos | Los workflows aparecen activos, no en gris |
+| 14:10 | Alberto | 🔴 **Disparar el cron a mano** (`workflow_dispatch`) | Devuelve **filas nuevas**, no un 200 vacío. Un 200 sin datos es exactamente el fallo silencioso que buscamos |
+| 14:25 | Los dos | Blob: re-apuntar el token o mover los ~4 ficheros | Los 4 se abren desde la app |
+| 14:35 | Los dos | Codeoscopic y Meta/WhatsApp: repuntar URLs si el dominio se movió | — |
+| 14:45 | Alberto | Una **cotización** de punta a punta en Codeoscopic | Verde. **Cotizar sí; emitir NO** (no es idempotente extremo a extremo: dos intentos = dos pólizas) |
+| ~15:00 | — | 🚧 **PUERTA** | Nada se apaga si 13:30, 14:10 o 14:45 no están en verde |
+| **D+1 5:30** | Alberto | **La prueba que cierra de verdad**: el cron **automático** | Entran filas **solo**, sin que nadie lo dispare |
+| D+1 | Alberto | Sacar a Manuel del equipo → **Manuel cancela su Pro** | Fin de la duplicidad de pagos |
+
+### 🔙 Marcha atrás
+
+No hace falta ensayarla: **nada se borra ni se apaga durante el corte** —Manuel lo ha puesto por
+escrito— así que si un paso falla, el estado anterior sigue entero y se reintenta otro día. El único
+punto sin retorno de todo el traspaso son **las claves y los secrets de TIREA**, y por eso viven en
+T-1, la víspera, y no en la ventana del corte.
+
+
+---
+
+
+### 📝 Mensaje para Manuel — BORRADOR (26/08/2026, v7 — fijar fecha). **NO se envía sin que Alberto lo diga**
+
+> Sustituye a la v6. Solo falta que Alberto ponga el día. Va sin RGPD por indicación suya.
+
+```
+Manuel, con lo que me contaste ya lo tengo todo claro. Te propongo cerrarlo así.
+
+DÍA Y HORA: ¿te viene bien el [DÍA] de 13:00 a 15:00? Lo pongo ahí a propósito: después del
+pull de las 11:30 (así el día ya está cargado) y bien lejos del de las 5:30. De trabajo real
+es una hora; el resto es comprobar.
+
+LA VÍSPERA, lo único que necesito de ti — y por el gestor de contraseñas que te comparto,
+nada de WhatsApp ni correo:
+ 1) el valor de las dos claves, la de cifrado y la del índice ciego
+ 2) el valor de los secrets de Fly (los de TIREA). Esto lo pido por algo concreto:
+    `fly secrets list` solo enseña los nombres, nunca los valores. Si al mover la app de
+    organización se perdieran, no hay de dónde sacarlos: habría que volver a pedirlos a TIREA.
+ 3) el CRON_SECRET de Actions, que ese no viaja al transferir el repo
+ 4) el dump, el export de las env vars y la lista de los ficheros de Blob
+
+Esta semana te llegan tres invitaciones: Vercel, Supabase y Fly (esta última la he creado yo,
+que no tenía cuenta). Con que las aceptes el mismo día a las 13:00, vale.
+
+Una pregunta suelta: tu proyecto de Supabase, ¿está en free o en algún plan de pago? Mi
+organización está en free y quiero comprobar la víspera que acepta el traspaso. Si no lo
+acepta no pasa nada: restauramos el dump y seguimos igual.
+
+Y para que quede claro qué hacemos ese día: SOLO cambiamos de dueño las cosas. No tocamos la
+base, ni la autenticación, ni desplegamos nada nuevo. Sigue siendo tu misma app, en la misma
+URL, con la misma base — solo que la pago yo. Lo de integrarlo en mi monorepo lo hago yo
+después, con calma y sin reloj.
+
+No apagues nada ese día. La prueba que de verdad cierra esto es la mañana siguiente: que el
+cron de las 5:30 entre solo y traiga pólizas. Cuando lo veamos, cancelas el Pro y ya está.
+
+Gracias por dejarlo todo tan atado, de verdad.
+```
+
+## 🔄 CORRECCIÓN (26/08/2026): la intranet SÍ se queda, y cómo se unifican los Vercel
+
+> **Alberto rectifica el alcance:** Manuel tiene **una intranet ya diseñada y una web pública**, y
+> **quiere quedarse ambas** para seguir trabajando sobre ellas. **Queda sin efecto** lo escrito más
+> abajo sobre «la intranet la rehacemos nosotros» y sobre pedirle solo dos carpetas: **se traspasa
+> TODO**. Lo que no cambia: los datos ya se leen, así que sigue sin hacer falta API ni conector.
+
+### La pregunta real: cómo mete Manuel su Vercel en el de Alberto
+
+**Recomendada — que Manuel entre un rato en el equipo Pro de Alberto y despliegue él mismo.**
+
+1. Alberto lo invita a `pisos-turisticos-projects` (*Settings → Members → Invite*).
+2. **Manuel importa el proyecto ahí y mete él mismo las variables de entorno.**
+3. Se verifica con el suyo todavía encendido.
+4. Se apaga el suyo, **se le quita del equipo** y cancela su Pro.
+
+> 🔑 **La ventaja que decide:** así **las credenciales no viajan por ningún canal**. No hay que
+> pasarlas por WhatsApp ni por gestor de contraseñas: las escribe él directamente en el destino. Es la
+> parte más delicada de todo el traspaso y esta vía la elimina de raíz.
+>
+> ⚠️ **Matiz de coste, para no repetir lo que este documento dijo mal:** meter un **proyecto** más en
+> un equipo Pro no cuesta nada, pero meter a **Manuel como miembro** sí ocupa **un asiento** mientras
+> esté dentro (Vercel Pro se factura por miembro). Es temporal y sale mucho más barato que el riesgo
+> de pasear secretos.
+
+**Alternativa — transferir el proyecto** (*Project Settings → Transfer*). Se lleva despliegues,
+dominios y variables de golpe. **Pero deja el proyecto conectado a un repositorio que sigue siendo
+suyo**, así que hay que reconectar el git igualmente. Solo compensa si además transfiere el repo.
+
+**Lo que NO recomiendo:** que Manuel invite a Alberto a su cuenta. Si está en Hobby ni siquiera puede
+—las cuentas personales Hobby no admiten miembros—, y aunque pudiera, no resuelve el pago: seguiría
+siendo su cuenta y su factura.
+
+### Y el repositorio, ¿dónde acaba?
+
+El destino final es **`apps/asegura` dentro de `central`**, como manda la matriz. Pero eso no tiene que
+bloquear el corte del gasto: se puede hacer en dos velocidades.
+
+1. **Rápido (corta el gasto ya):** Manuel **transfiere el repo a la cuenta de GitHub de Alberto**,
+   despliega en su equipo Pro apuntando a ese repo, y cancela lo suyo.
+2. **Después, con calma:** el árbol de trabajo se integra en `central` como `apps/asegura` (con su
+   `vercel.json`, su `ignoreCommand` y Root Directory), y el repo suelto queda archivado.
+
+Esto **invierte el orden** que este documento defendía («la transferencia del repo, la última, porque
+le tumba el despliegue»): esa cautela existía para no dejar sin servicio a un tercero. **Siendo su
+hermano y con todo a nombre de Alberto, el despliegue va a moverse igualmente**, así que lo que hay que
+proteger no es su despliegue: es que **CIMA no deje de descargar** — y eso se protege con la fecha
+acordada, no retrasando la transferencia.
+
+### 🚨 Su Vercel puede tener más que código: mirar antes de apagar
+
+- **¿Un almacén de ficheros?** `codeoscopic_documents` tiene una columna **`blob_url`**. Hoy está a
+  cero, pero si en algún momento se usó **Vercel Blob**, ese almacén vive **en su cuenta**, no en el
+  código ni en la BD. **Y sigue sin saberse dónde están los ficheros de CIMA** (`cima_ficheros` solo
+  guarda metadatos): mirar si están ahí.
+- **Los crons**, que son los que mantienen viva la ingesta de CIMA y el detector de vencimientos.
+- **Los dominios** asignados, y a nombre de quién está registrado cada uno.
+- **¿Cuántos proyectos tiene?** Si la web pública y la intranet son dos proyectos separados, son dos
+  traspasos, no uno. **No consta: hay que mirarlo en su panel.**
+
+---
+
+## 💸 Cómo se corta la duplicidad de pagos, y por qué NO hace falta API ni conector (26/08/2026)
+
+> **Contexto que lo simplifica todo (dicho por Alberto, 26/08/2026): Manuel es su hermano y TODO está a
+> nombre de Alberto** — los contratos, Codeoscopic incluido. **Queda cerrado el riesgo contractual** que
+> este documento marcaba como «puede tumbarlo todo»: no hay que renegociar nada con Avant2, ni hay
+> conflicto de intereses. Esto no es un traspaso entre proveedor y cliente: es mover de sitio algo que
+> ya es suyo, y el objetivo declarado es **que Manuel deje de pagar duplicidades**.
+
+### La pregunta: ¿API a medida, conector MCP, o acceso a su Vercel?
+
+**Ninguna de las dos primeras.** Y el motivo es que resuelven un problema que ya está resuelto:
+
+| Opción | Veredicto |
+|---|---|
+| **Que Manuel monte una API y nosotros «chupemos» los datos** | ❌ **Innecesario.** Ya tenemos **lectura completa** de su Supabase por el `project_id`. Los datos ya se leen hoy. Montar una API sería trabajo nuevo **para él** que replicaría peor lo que ya funciona: fila a fila, en JSON, y perdiendo tipos, índices y constraints |
+| **Un conector MCP enchufado a su proyecto** | ❌ **Lo mismo, con más pasos.** Un MCP sirve para *mirar*, y para mirar ya estamos dentro. Y para *copiar*, la herramienta es `pg_dump`, que se lleva el esquema entero de una vez |
+| **El código por ZIP** | ✅ **Lo más simple que existe.** Dos carpetas comprimidas por el canal que quiera. **15 minutos de su tiempo**, cero infraestructura nueva |
+| **Acceso/transferencia de su Vercel** | ✅ **Lo que de verdad corta el gasto.** Ver abajo |
+
+🚨 **La clave: lo que falta NO son datos, es código.** Los datos ya los tenemos. Cualquier solución
+pensada para «traer los datos» —API, MCP, sincronización— está atacando el problema equivocado.
+
+### El gasto duplicado: qué paga Manuel de verdad
+
+- **Supabase: 0 €.** Su organización está en **plan FREE** (comprobado). La base de datos no le cuesta nada.
+- **Vercel: sí paga.** Dice que le obligan a **Pro** (~20 $/mes). Es coherente: los términos de Vercel
+  **no permiten uso comercial en el plan Hobby**, y esto es una correduría facturando. Además, Hobby no
+  admite invitar miembros de equipo — que es justo por lo que la invitación nunca llegó.
+- Quedan por confirmar: **dominio propio** y el coste de **WhatsApp Business API**, si lo hay.
+
+**Así que la duplicidad es esencialmente el Vercel.** Y aquí está lo bueno: **Alberto YA tiene un equipo
+Vercel en plan Pro** (`pisos-turisticos-projects`). Meter esta app ahí **no añade coste**: el Pro se
+paga por miembro, no por proyecto. **En cuanto la app corra en el equipo de Alberto, Manuel cancela su
+Pro y la duplicidad desaparece.**
+
+### La ruta más corta, en orden
+
+1. **Manuel comprime dos carpetas** (ingestor EIAC/CIMA + cliente Codeoscopic) y las manda. Y con ellas,
+   **la lista de nombres de sus variables de entorno y de sus crons**. *(Si prefiere, el repo entero
+   comprimido también vale: lo que no entra en `central` es su historia git.)*
+2. **Los valores de los secretos, por gestor de contraseñas** — nunca por WhatsApp ni correo.
+3. **Se despliega en el equipo Pro de Alberto**, apuntando ya al Supabase de `central`.
+4. **Se verifica en paralelo** contra su sistema, todavía encendido.
+5. **Se acuerda fecha y hora del corte**, se apaga el suyo y **Manuel cancela el Pro**.
+
+> **Alternativa que ahorra el paso 3:** Vercel permite **transferir un proyecto** de una cuenta a otra.
+> Si se transfiere el suyo al equipo de Alberto, se lleva configuración y variables de golpe. **Pero
+> obliga a reconectar el repositorio de git**, así que solo compensa si además se mueve el repo. Con el
+> ZIP se llega igual y sin sorpresas.
+
+### 🚨 Lo que ningún ZIP trae: los terceros que apuntan a SU URL
+
+Esto es lo que se olvida en todas las migraciones y revienta el día del corte. Hay proveedores externos
+con **la dirección de su despliegue configurada en su propio panel**:
+
+- **Codeoscopic** tiene registrada una URL de webhook suya (lo prueba `codeoscopic_webhook_events`).
+- **Meta / WhatsApp Business** tiene registrado su webhook de mensajes entrantes
+  (lo prueban `channel_inbound_messages` y las columnas `wa_*` de `corredurias`).
+- **Lo que descargue los ficheros de CIMA** puede tener IP o credencial asociada a su lado.
+
+**Cambiar esas URLs se hace en el panel de cada proveedor, no en el código.** Va en la lista del corte,
+junto a la fecha — y es el motivo por el que el corte tiene que ser un momento acordado y no un apagón.
+
+---
+
+## 🔌 Las dos integraciones: qué está en la BD y qué NO (26/08/2026)
+
+Alberto lo planteó bien: **la intranet da igual, se rehace**. Lo que no se rehace barato son las dos
+conexiones. Esto es lo que se puede afirmar mirando su base de datos.
+
+> **Dato de método:** de las **132 funciones** de `public`, ninguna implementa lógica de Codeoscopic
+> ni de CIMA (solo dos guardas de inmutabilidad, `poliza_documentos_reject_update` y
+> `poliza_merge_log_reject_modification`). **Toda la integración vive en el código, no en la BD.**
+> La base de datos es el destino del dato, no el motor que lo trae.
+
+### 🔴 CIMA / EIAC — está VIVA y alimentándose HOY
+
+| | |
+|---|---|
+| Estándar | **EIAC 6.0** |
+| Compañías conectadas | **4** |
+| Ficheros procesados | 125 (86 en estado `confirmed`) |
+| Tipos de objeto | **CEF** (certificado) · **POL** (póliza) · **REC** (recibo) · **SIN** (siniestro) |
+| Lo que ha metido en la BD | **188 pólizas**, 184 recibos, 96 intervinientes, y **67 de los 67 siniestros** |
+| **Último fichero descargado** | **25/08/2026 — ayer.** La última póliza creada es del 24/08 |
+
+🚨 **Esto no es una migración de un sistema parado: es una migración EN CALIENTE.** Hay un proceso
+corriendo en el Vercel de Manuel que descarga ficheros de las aseguradoras **todos los días** y los
+vuelca aquí. El día que se apague su despliegue, la correduría deja de recibir pólizas, recibos y
+siniestros de sus compañías. Eso convierte el punto «no desactives nada» del mensaje a Manuel en el
+más importante de todos, y obliga a que el corte tenga **fecha y hora acordadas**, no «cuando acabemos».
+
+Los estados del ingestor (`pending | persisted | confirmed | review | review_salud | deferred | error`)
+son la prueba de que **el parser está rodado**: `review_salud` y `deferred` no se diseñan de antemano,
+salen de casos reales que fallaron. Rehacer eso desde cero es meses, no semanas.
+
+### 🟡 Codeoscopic (multitarificador) — desarrollada, pero PARADA y sin emisión ejercitada
+
+El esquema describe una integración seria: flujo `cotizacion → preemision → emitida / rechazada /
+riesgo_condicionado / vencida / error`, **doble raíl de sincronización** (polling con
+`polling_next_at`/`polling_attempts` **y** webhooks con `payload_hash` para deduplicar), control de
+idempotencia en el envío (`submit_attempt_id`, `submit_in_flight_at`) y almacenamiento del
+**`raw_payload`** de cada precio y cada webhook.
+
+**Pero los datos dicen que no ha llegado a emitir:**
+
+| Tabla | Filas | Qué significa |
+|---|---:|---|
+| `codeoscopic_projects` | 1 | y su estado es **`cotizacion`**, nunca `emitida` |
+| `codeoscopic_prices` / `offers` | 15 / 15 | cotizar sí funciona |
+| `codeoscopic_participants` | **0** | los intervinientes de emisión, sin estrenar |
+| `codeoscopic_product_forms` | **0** | los formularios de preemisión/emisión, sin estrenar |
+| `codeoscopic_documents` | **0** | ni pólizas, ni recibos, ni SEPA, ni IPID descargados |
+| `codeoscopic_webhook_events` | 2 | uno de tipo `emision_ok` |
+| **Último proyecto** | **29/07/2026** | lleva **casi un mes parada** |
+
+⚠️ **Cero filas no prueba que el código no exista** — prueba que **no se ha ejercitado**. Puede estar
+escrito y sin probar, o probado en un entorno de pruebas que no es este. Pero cambia la conversación:
+antes de dar por hecho que «la emisión ya está», hay que verla funcionar. **La cotización sí está
+demostrada; la emisión no.**
+
+> 💡 **Lo que salva el día si el código no llegara:** guardan el `raw_payload` crudo de cada respuesta.
+> Aunque no consiguiéramos una línea de su código, esos payloads **documentan el formato real de la API
+> de Codeoscopic** mejor que cualquier manual. Eso ya está en nuestra copia.
+
+### 🔑 Credenciales: parte están en la BD, no solo en Vercel
+
+`corredurias` tiene columnas **`wa_access_token`, `wa_phone_number_id`, `wa_business_account_id`** —
+credenciales de WhatsApp Business **dentro de la tabla**. Hoy están a NULL (0 filas con token), así que
+el dump no arrastra nada, pero **hay que tratar esa columna como campo de secreto** en el traspaso y en
+cualquier exportación futura. Y confirma que el inventario de credenciales no se agota en los envs de
+Vercel: hay que mirar también dentro de la base.
+
+### ➡️ Lo que esto cambia en la petición a Manuel
+
+No hace falta el repositorio entero, ni la transferencia, ni pelearse por el historial. **Hacen falta
+cuatro cosas concretas**, y son mucho más fáciles de conceder:
+
+1. **La carpeta del cliente de Codeoscopic** — endpoints, autenticación, y el mapeo de formularios por
+   producto/compañía. Y la respuesta a: *¿la emisión llegó a probarse?*
+2. **La carpeta del ingestor EIAC/CIMA** — cómo se descargan los ficheros (¿SFTP, portal, API de
+   TIREA?), el parser del ZIP/XML y las reglas de conciliación. **Es la pieza más valiosa del traspaso.**
+3. **La lista de variables de entorno** (solo nombres aquí; los valores por gestor de contraseñas) y
+   **la lista de crons** de su Vercel — ahí está el «vencimientos-detector» que dispara
+   `ofertas_automaticas` a 30/15/7 días del vencimiento.
+4. **Una fecha y hora acordadas para el corte**, por lo de CIMA.
+
+### 🧾 Y lo que no es técnico y puede tumbarlo todo
+
+- ~~**Codeoscopic/Avant2 es un contrato de licencia** y hay que saber a nombre de quién está.~~
+  ✅ **RESUELTO (26/08/2026): está todo a nombre de Alberto**, Codeoscopic incluido. Manuel es su
+  hermano y desarrolló el proyecto adelantándoselo; no hay tercero con quien negociar.
+- **CIMA/TIREA va asociada a la clave de mediador**, que es de la correduría — es decir, de Alberto.
+  Esa parte no tiene sorpresa contractual, pero hay que confirmar con qué credenciales se está
+  descargando hoy.
+
+---
 
 ## 🏷️ Cómo se llama cada cosa (y por qué no todo igual)
 
@@ -135,7 +869,7 @@ código nuevo de fontanería.
 | Cosa | Estado |
 |---|---|
 | El repo | **`manuelsuarez/asegura`** en GitHub. **787 commits, 258 ramas**, suite e2e, tickets de Linear (`LOO-xxx`), desplegado en `asegura.vercel.app`. No es un prototipo: es un proyecto con historia |
-| Invitación a Alberto | Enviada el **12/08/2026** (correo de `noreply@github.com`) como colaborador. **Sin aceptar** — no aparece entre los repos accesibles |
+| Invitación a Alberto | Enviada el **12/08/2026** (correo de `noreply@github.com`) como colaborador. Sin confirmar que esté aceptada — el repo no aparece entre los accesibles (ver «Estado de los tres accesos», 26/08/2026) |
 | Acceso de Claude a ese repo | **NO, y no se puede arreglar desde aquí.** La app de Claude solo está instalada en `albertosuarezgutierrez-gif`, y una sesión no admite añadir repos de otro dueño (`add_repo` → *cross-tier adds are not supported*) |
 
 **El rodeo mientras siga bloqueado:** `docs/ASEGURA-PROMPT-CHROME.md` es un prompt listo para que
@@ -310,6 +1044,150 @@ Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
    estos dos puntos no son negociables en ninguna de las dos opciones).
 
 ---
+
+### 📝 Mensaje para Manuel — v5 (26/08/2026) — **ENVIADO y ya respondido. Histórico: la versión vigente es la v7**
+
+Quinta versión. **Cambio de vía respecto a la v4:** en vez de que Manuel vuelva a desplegar el
+proyecto en el equipo de Alberto, se usa la **transferencia nativa de proyecto de Vercel** y la
+**transferencia de proyecto de Supabase**. Es lo de MENOS trabajo para él (dos o tres clics por
+plataforma) y lo que MÁS trae: la transferencia de Vercel arrastra las **variables de entorno con sus
+valores** y los **dominios**, así que ninguna credencial viaja por WhatsApp, correo ni gestor de
+contraseñas. **No se manda hasta que Alberto dé el visto bueno a este envío concreto.**
+
+> Manuel, ya tengo acceso a la base de datos y he estado mirándolo todo. Te escribo para organizar el
+> traspaso y, sobre todo, para que dejes de pagar lo que estás pagando.
+>
+> **Los datos no me los tienes que pasar** y **no montes ninguna API ni ningún conector**: los leo yo
+> directamente de Supabase, sería trabajo tuyo para algo que ya funciona.
+>
+> **Lo que sí quiero es todo lo demás, tal cual está**: la intranet, la web y las dos integraciones
+> (Codeoscopic y CIMA). La intranet me gusta como la has dejado y quiero seguir trabajando sobre ella,
+> no rehacerla.
+>
+> Lo he mirado y hay una forma que te lleva tres clics y no te obliga a pasarme ninguna contraseña:
+> **transferirme los proyectos**, en vez de volver a montarlos.
+>
+> 1. Te llega una **invitación a mi equipo de Vercel** (ya lo tengo Pro, no me cuesta más). Acéptala.
+> 2. En cada proyecto tuyo: **Settings → Transfer Project → mi equipo**. Eso se lleva el proyecto con
+>    **sus variables de entorno y sus dominios**, así que no tienes que escribirme ninguna clave.
+> 3. En Supabase, lo mismo: **Project Settings → General → Transfer project** a mi organización.
+> 4. Y el repositorio: **Settings → Transfer ownership** a mi cuenta de GitHub. Este déjalo para
+>    **después** de mover el proyecto de Vercel, porque al transferirlo se desconecta el Git y lo
+>    tengo que reconectar yo.
+> 5. Cuando esté todo movido y verificado, **te quito del equipo y cancelas tu Pro**.
+>
+> Si algún paso no te deja (a veces la transferencia falla si hay recursos atados a tu cuenta), me lo
+> dices y lo hacemos por las bravas: me das acceso y lo despliego yo.
+>
+> Y necesito que me digas cuatro cosas que no están en el código:
+>
+> - **Cómo se descargan los ficheros de las compañías** (CIMA/EIAC): ¿SFTP, portal, API de TIREA? ¿con
+>   qué credenciales y desde dónde se lanza?
+> - **Qué proyectos tienes en Vercel** — ¿la web y la intranet van juntas o separadas?
+> - **Si guardas ficheros en Vercel Blob** o en algún sitio parecido. En la base veo referencias a
+>   documentos pero los ficheros no están en Supabase, y quiero saber dónde viven antes de tocar nada.
+> - **Qué dominios tienes puestos** y dónde están registrados.
+>
+> Dos avisos importantes:
+>
+> - **No apagues ni borres nada, y avísame antes de hacerlo.** He visto que CIMA descargó ficheros ayer
+>   mismo: tu despliegue está alimentando la correduría todos los días, y si se apaga dejamos de
+>   recibir pólizas, recibos y siniestros de las compañías. Lo cortamos con fecha y hora, los dos
+>   delante.
+> - Ese día hay que **cambiar las URLs que tienen apuntadas Codeoscopic y WhatsApp/Meta en sus
+>   paneles**, que ahora van a tu despliegue. Eso no viaja en ninguna transferencia.
+>
+> Y una duda: **la emisión de Codeoscopic, ¿llegó a probarse?** En la base solo veo cotizaciones,
+> ninguna póliza emitida por ahí, y las tablas de emisión están vacías.
+
+> 📄 **Pendiente de decisión de Alberto:** si se añade la frase del **contrato de encargado de
+> tratamiento**. Que sea su hermano no cambia el RGPD —ha tenido en su infraestructura los datos de
+> 32.600 clientes con teléfonos, correos y carnets—, pero es Alberto quien decide si lo formaliza.
+
+### 🪜 Los pasos, en orden, y quién hace cada uno
+
+| # | Quién | Paso | Por qué en este orden |
+|---|---|---|---|
+| 1 | **Alberto** | Invita a Manuel a su equipo de Vercel Pro (Settings → Members → Invite) | Vercel **solo deja transferir un proyecto a un equipo del que eres miembro**. Sin esto, el paso 2 no aparece |
+| 2 | **Manuel** | Acepta la invitación | — |
+| 3 | **Manuel** | En cada proyecto: Settings → Transfer Project → equipo de Alberto | Arrastra **env vars con sus valores** y dominios. Es el paso que evita que viaje ninguna credencial |
+| 4 | **Manuel** | Supabase: Project Settings → General → Transfer project → organización de Alberto | Deja de ser suyo; migramos al schema `seguros` a nuestro ritmo, sin prisa |
+| 5 | **Manuel** | GitHub: Settings → Transfer ownership | **Después del 3**: transferir el repo desconecta el Git del proyecto de Vercel |
+| 6 | **Claude** | Reconectar el repo en el proyecto de Vercel ya transferido | Un clic, y vuelve a desplegar solo |
+| 7 | **Claude** | Verificar que todo responde con lo de Manuel **todavía encendido** | Nunca se apaga nada sin comprobar antes |
+| 8 | **Los dos** | Fecha y hora de corte. Cambiar las URLs en los paneles de **Codeoscopic** y **Meta/WhatsApp** | Es lo único que no viaja en ninguna transferencia |
+| 9 | **Alberto** | Quitar a Manuel del equipo → Manuel **cancela su Pro** | El seat solo se ocupa mientras dure el traspaso |
+
+**Si un paso falla** (Vercel a veces bloquea la transferencia si hay Blob u otros recursos atados a la
+cuenta origen): se cae a la vía de la v4 —Manuel despliega él mismo en el equipo de Alberto y escribe
+él las variables—. No es bloqueante.
+
+---
+
+## 🔍 Adelanto sin Manuel (26/08/2026): RLS y auth eran UNA decisión, no dos
+
+Mientras llega su respuesta se cerraron las tres incógnitas que NO dependían de él. Todo medido,
+solo lectura, cero escrituras.
+
+### 1. `central` está preparada para recibir — y el margen es más justo de lo que decía el plan
+
+| Comprobación en `wswbehlcuxqxyinousql` | Resultado |
+|---|---|
+| `pgvector` instalado | ✅ **sí** (lo exigen las funciones de `whatsapp_kb_chunks`) |
+| Schema `seguros` | ✅ existe, **0 tablas** |
+| Rol `prisma_seguros` | ✅ existe, `BYPASSRLS = true`, **sin contraseña** (inerte, como estaba documentado) |
+| Tamaño actual de `central` | **204 MB** · 280 tablas en `public` |
+
+🔴 **Corrección al veredicto de tamaño.** La sección de arriba estimaba que `central` quedaría en
+**~255 MB de 500**; ese número usaba un tamaño de `central` desactualizado. Medido hoy: **204 MB + ~75 MB
+del `public` de Manuel ≈ 279 MB**, con ~221 MB de margen. **El veredicto no cambia (free basta), pero el
+colchón es la mitad de holgado de lo que parecía** — y `central` crece sola todos los días. Conviene
+volver a medir justo antes de restaurar, no fiarse de este número dentro de un mes.
+
+### 2. 🚨 Las 86 políticas RLS y la autenticación son **la misma decisión**
+
+El plan las listaba como dos decisiones independientes. No lo son. De las 86 políticas de `public`:
+
+- **67** filtran por `correduria_id`, **17** por `auth.uid()` — pero las 67 lo hacen a través de
+  `get_user_correduria_id()`, y esa función es, literalmente:
+  ```sql
+  SELECT correduria_id FROM usuarios WHERE auth_user_id = auth.uid()
+  ```
+  Igual `get_user_role()`. **Las 86 acaban, sin excepción, en `auth.uid()` de Supabase Auth.**
+
+**Consecuencia:** si se re-plataforma la auth al patrón de la casa (cookie propia + `jose` contra la
+tabla de cuentas, como `apps/mariscos`), `auth.uid()` devuelve NULL → las dos funciones devuelven NULL
+→ **ninguna política concede nada**. Y como `prisma_seguros` tiene `BYPASSRLS`, el efecto real no es
+«no se ve nada»: es que **las políticas dejan de ejecutarse y se ve TODO, sin que falle nada**. Los dos
+extremos, y ninguno avisa. No se puede migrar el schema y decidir la auth después.
+
+### 3. Y lo que desactiva el drama: **hay UNA sola correduría, y el portal del cliente casi no existe**
+
+| Medida | Valor |
+|---|---|
+| Corredurías distintas en `usuarios` | **1** |
+| Filas en `public.usuarios` | 17 (15 `usuario`, 2 `admin`) |
+| …con `auth_user_id` **vivo** en `auth.users` | **9** → **8 fichas apuntan a un usuario de Auth borrado** |
+| …y sin embargo `activo = true` | **las 17** |
+| Clientes con portal (`clientes.usuario_id` no nulo) | **2 de 32.600** |
+| Usuarios de rol `usuario` que llegan a ver algo | **2** (los otros 13 pasan la política y no encuentran cliente) |
+| Rol `corredor`, exigido por 45 políticas | **0 usuarios lo tienen** |
+| Último login registrado | 12/08/2026 · 5 entradas en 90 días |
+
+**El multi-tenant que sostienen las 86 políticas es futuro, no presente.** Lo único que protegen HOY es
+que un cliente con portal no vea las pólizas de otro — y eso son **2 fichas**. Con 9 cuentas vivas, 2 de
+ellas administradoras, **re-plataformar la auth es barato y la recomendación se sostiene sola**; lo que
+hay que reproducir en el código de `central` no es el andamiaje multi-tenant, es la regla «un cliente
+solo ve lo suyo».
+
+⚠️ **Y un aviso que sale de aquí y no es del traspaso:** las 17 fichas dicen `activo = true`, pero 8 de
+ellas no pueden entrar porque su usuario de Auth ya no existe. La pantalla de usuarios de esa intranet
+está afirmando «activo» sobre gente que no puede acceder — el patrón exacto que prohíbe la regla
+«dato que NO hay ≠ dato que NO se ha mirado». Al portarlo, `activo` debe cruzarse con la existencia
+real de la credencial, no leerse solo.
+
+**Qué queda pendiente de Manuel (sin cambios):** las cuatro preguntas del mensaje y las transferencias.
+Nada de lo de aquí las adelanta ni las sustituye.
 
 ## Fase 1 — Inventario y medición (antes de tocar nada)
 

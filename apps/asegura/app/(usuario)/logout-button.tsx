@@ -1,0 +1,21 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+
+export default function LogoutButton() {
+  const router = useRouter()
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.replace('/login')
+    router.refresh()
+  }
+  return (
+    <button
+      onClick={logout}
+      className="ghost"
+      style={{ background: 'transparent', color: '#fff', borderColor: 'rgba(255,255,255,0.35)' }}
+    >
+      Salir
+    </button>
+  )
+}
