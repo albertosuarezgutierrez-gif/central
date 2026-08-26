@@ -1,9 +1,12 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Solo falta fijar día y hora.**
-> 🕐 El **guion del corte minuto a minuto** ya está escrito (ver «GUION DEL CORTE», abajo): preparativos
-> de Alberto a T-7, copias de Manuel a T-1, ventana **13:00–15:00** y la prueba que cierra de verdad,
-> que es el cron **automático** de las 5:30 del día siguiente. Solo hay que poner la fecha encima.
+> **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Ejecución EN MARCHA, paso a paso.**
+> 🔁 **No hay cita:** Alberto le pide a Manuel **una cosa cada vez** y él responde cuando puede. Ver
+> «CAMBIO DE MODO», abajo — manda sobre el guion de la ventana 13:00–15:00, que queda de alternativa.
+> ⚪ **Y NO hay ningún paso con reloj** (corregido por Alberto el 26/08): el CRM aún no está operativo
+> y **los ficheros de EIAC se piden cuando se quiera**, así que una pausa del cron no deja sin servicio
+> a nadie ni pierde datos. Lo único irreversible siguen siendo **las claves y los secrets de TIREA**.
+> Paso 1 en curso: las copias de seguridad.
 > 🔑 Y son **DOS claves**, no una: la de cifrado (si se pierde, los IBANs quedan ilegibles — falla
 > ruidoso) y la del **índice ciego** (si cambia, los clientes **dejan de encontrarse** aunque estén
 > ahí — **falla en silencio**, y una búsqueda vacía se lee como «no existe»). Se respaldan las dos y
@@ -405,7 +408,7 @@ Alberto dé el visto bueno a este envío concreto.**
 
 ---
 
-## 🕐 GUION DEL CORTE, minuto a minuto (preparado el 26/08/2026, a falta de fecha)
+## 🕐 GUION DEL CORTE, minuto a minuto — **PLAN ALTERNATIVO** (si algún día se hace todo de una sentada)
 
 > El runbook de arriba dice **qué** pasos hay. Esto dice **cuándo, quién y qué se verifica antes de
 > seguir**. Sale de la secuencia que propuso Manuel más los huecos que le encontramos. Cuando Alberto
@@ -488,7 +491,168 @@ T-1, la víspera, y no en la ventana del corte.
 ---
 
 
-### 📝 Mensaje para Manuel — BORRADOR (26/08/2026, v7 — fijar fecha). **NO se envía sin que Alberto lo diga**
+
+---
+
+## 🔁 CAMBIO DE MODO (26/08/2026): **sin cita, paso a paso** — manda esto sobre el guion de arriba
+
+> **Decisión de Alberto:** no se fija día ni hora. Se le va pidiendo a Manuel **una cosa cada vez**,
+> y él responde cuando puede. El guion de las 13:00–15:00 de arriba queda como **plan alternativo**
+> por si algún día se hace todo de una sentada; **el modo vigente es este**.
+
+**Por qué se puede hacer así, técnicamente.** Casi todos los pasos son *transferencias de propiedad
+que no rompen nada*: Vercel se lleva los valores de las env vars y los dominios, Supabase conserva el
+mismo `ref` (las cadenas de conexión no cambian) y mover la app de Fly entre organizaciones le
+mantiene el nombre, así que `asegura-app-cima-adapter.fly.dev` sigue respondiendo. **Nadie se entera
+de que la cosa ha cambiado de dueño.** Cada paso se puede hacer un martes y el siguiente el jueves.
+
+### 🔴→⚪ CORRECCIÓN DE ALBERTO (26/08/2026): **no hay servicio que cortar. Se cae la urgencia entera**
+
+> Palabras suyas: *«el programa aún no está operativo, no dejaría sin servicio y EIAC se puede
+> consultar cuando queramos, no hay miedo de dejar sin servicio nada.»*
+
+Dos hechos que este documento no tenía y que **invalidan** el andamiaje de urgencia que se montó sobre
+la respuesta de Manuel:
+
+1. **El CRM todavía no está en uso.** No hay usuarios dentro, así que ninguna transferencia —Vercel,
+   Supabase, Fly— deja a nadie tirado aunque la app parpadee.
+2. **Los ficheros de EIAC se pueden consultar y descargar cuando se quiera.** El cron es una
+   *comodidad*, no la única ventana al dato: si deja de tirar tres días, los ficheros **siguen ahí** y
+   entran en cuanto se relance el pull. Y el ingestor deduplica por hash, así que re-tirar es seguro.
+
+**Qué deja de ser verdad, dicho sin rodeos:**
+
+| Lo que decía este doc | Lo correcto |
+|---|---|
+| «Migración **en caliente**: el día que Manuel apague su Vercel, la correduría deja de recibir de sus compañías» | **No.** No hay servicio vivo y el dato no se pierde: se vuelve a pedir |
+| «El corte necesita **fecha y hora acordadas**» | **No hace falta ninguna.** Paso a paso, al ritmo de Manuel |
+| Ventana **13:00–15:00**, fuera de los pulls de 5:30/11:30 | **Irrelevante.** Cualquier hora vale |
+| El repo va el último, **con Alberto delante**, porque el `CRON_SECRET` no viaja | El secreto **sigue sin viajar**, pero su pérdida ya no «para la correduría»: **pausa el pull**. Se repone cuando se pueda y se relanza. Deja de ser 🔴 y pasa a ser una casilla más de la lista |
+| La prueba que cierra es el cron **automático** de las 5:30 del día siguiente | Sigue siendo **la buena** —demuestra que la cadena entera funciona sola— pero ya no es una cuenta atrás: si falla, se arregla al día siguiente y no ha pasado nada |
+
+**Lo que NO cambia, y es lo único que de verdad importa:** las **dos claves de cifrado** y los
+**secrets de Fly (TIREA)** siguen siendo irrecuperables. Que no haya prisa no las hace menos
+irreversibles — al contrario: ahora **no hay ninguna excusa** para no tener las copias antes de tocar
+nada. Y la verificación de Supabase sigue siendo **dos pruebas, no una** (descifrar Y buscar), porque
+el índice ciego falla en silencio y eso no depende de que haya usuarios o no.
+
+**Consecuencia práctica:** la tabla de 11 pasos de abajo se mantiene **en su orden**, porque el orden
+sigue siendo el sensato (copias primero, invitaciones, transferencias, repo, verificación). Lo que se
+borra es **el reloj**: ningún paso tiene ventana, ninguno exige a los dos a la vez, y ninguno urge.
+
+
+### ⚪ El repositorio: lo que sí sigue siendo cierto, sin el drama
+
+Transferir el repo **sí interrumpe el pull de CIMA**, y lo hace **sin avisar**: el workflow viaja, pero
+el `CRON_SECRET` **no** (es un secret de GitHub Actions, no del repositorio). El cron se seguiría
+disparando, la app le contestaría que no está autorizado y **no entraría nada sin que nada diera error**.
+
+Lo que cambia tras la corrección de Alberto es la **consecuencia**, no el mecanismo: eso ya no deja a
+la correduría sin recibir de sus compañías —**los ficheros siguen en EIAC y se piden cuando se
+quiera**—, así que es una **pausa**, no una pérdida. Se repone el secreto cuando se pueda y se relanza
+el pull; el ingestor deduplica por hash, o sea que re-tirar no duplica nada.
+
+Sigue siendo el paso que **conviene** dejar para el final —es el único que requiere que Alberto haga
+tres cosas seguidas (reconectar el Git en Vercel, reponer el secreto, comprobar que Actions sigue
+habilitado)— pero **ya no hay que estar delante ni elegir la hora**.
+
+### 🎯 REPLANTEAMIENTO (26/08/2026): pedirle **ACCESOS**, no tareas
+
+> Decisión de Alberto: *«que él tenga menos trabajo, lo que podamos hacer nosotros mejor».*
+
+La lista de cinco cosas del Mensaje 1 anterior le cargaba a Manuel un trabajo que **en su mayor parte
+puede hacer Alberto solo**, si tiene acceso. Repartido de nuevo:
+
+| Lo que se le pedía | ¿Puede hacerlo Alberto? | Cómo |
+|---|---|---|
+| Copiar el valor de **las dos claves** | ✅ **Sí** | Son variables de entorno del proyecto de Vercel: siendo miembro del equipo se leen y se exportan |
+| **Export de env vars** y **lista de Blob** | ✅ **Sí** | Igual: desde el panel del equipo |
+| **Dump** de la base | ✅ **Sí** | Con acceso a la organización de Supabase |
+| **`CRON_SECRET`** | ✅ **Sí, y mejor** | 🔑 **No tiene por qué ser el mismo valor.** GitHub no enseña el valor de un secret a nadie, ni a su dueño. Alberto **genera uno nuevo** y lo pone en los dos sitios (secret de Actions + env var de la app) cuando sea suyo. Esto borra el punto entero de la lista de Manuel |
+| **Secrets de Fly (TIREA)** | ❌ **No** | `fly secrets list` muestra nombres, nunca valores — tampoco a Manuel. Solo los tiene si los apuntó fuera. Se pide **como favor, no como requisito**: si no los tiene, se piden a TIREA el día que hagan falta |
+
+**Trabajo real de Manuel, reducido a esto:**
+
+1. **Cuatro invitaciones** (Vercel como owner, organización Supabase como owner, organización Fly, y
+   colaborador en los dos repos). Cuatro clics.
+2. **Aceptar** las dos invitaciones de vuelta a las cuentas de Alberto (destino de las transferencias).
+3. **Transferir los dos repos** de GitHub — esto sí es suyo: un repo personal solo lo transfiere su dueño.
+4. **Cancelar su Pro** al final.
+
+⚠️ **A confirmar en el panel, no darlo por hecho:** si siendo *owner* de sus cuentas Alberto puede
+**iniciar él mismo** el *Transfer Project* de Vercel y el *Transfer project* de Supabase. Si se puede,
+a Manuel le quedan literalmente los repos y cancelar el Pro. Si no se puede, son **un clic cada una**
+para él, que tampoco es nada. Se mira cuando esté dentro; no se le promete de antemano.
+
+
+### 🪜 La secuencia, y qué cierra cada paso
+
+| # | Quién | Qué pide / hace | ✅ Cerrado cuando… | Riesgo si se queda a medias |
+|---|---|---|---|---|
+| ~~1~~ | Manuel | ~~Cuatro invitaciones~~ → **Supabase ✅ y Fly ✅ ya hechas (26/08)**. **Vercel NO hace falta**: el traspaso va por código, sin invitación ni asiento | — | — |
+| **1-bis** | **Manuel** | **Lo único que queda: colaborador en los dos repos de GitHub** | Llega el correo de invitación | Es gratis, y sin esto no se pueden transferir los repos |
+| ~~1b~~ | — | ~~¿su Supabase es free o de pago?~~ **RESUELTO sin preguntar (26/08)**: organización **LOOR**, plan **free**, igual que la de Alberto | Comprobado por el conector | — |
+| **1c** | Manuel | *Si los tiene apuntados*: los secrets de Fly (TIREA). **Favor, no requisito** | Alberto los guarda | Si no los tiene, se piden a TIREA el día que hagan falta |
+| **2** | **Alberto** | **Todas las copias**, él solo — pero las dos claves ahora se leen **DESPUÉS** del traspaso (no entra en el Vercel de Manuel). Seguro porque él no borra nada | Puede descifrar y buscar con lo que tiene guardado | — |
+| **3** | Alberto | Crear la **organización en Fly** e invitar a Manuel a **sus** cuentas (destino de las transferencias) | Enviadas | — |
+| **4** | Manuel | Aceptar esas dos | Aparece en ellas | — |
+| **5** | Los dos, **por código** | Manuel genera la solicitud de traspaso (código de 24 h) y se lo pasa; Alberto lo acepta en su equipo | El dominio carga y se entra | Ninguno: envs y dominio viajan. **Sin asientos ni invitaciones** |
+| **6** | Alberto *(o Manuel, un clic)* | **Supabase → Transfer project** | 🔑 **LAS DOS PRUEBAS**: **descifrar** un IBAN real **y encontrar** un cliente por email **y** por DNI | Con una sola prueba, un índice ciego roto pasa desapercibido |
+| **7** | Alberto | **Fly → mover la app** del adaptador a su org | `fly secrets list` muestra los nombres **y** `/health` responde | Bajo; el 1c lo cubre si lo tenemos |
+| **8** | Alberto | **Blob**: re-apuntar el token o mover los ~4 ficheros | Los 4 se abren desde la app | — |
+| **9** | **Manuel** | **GitHub: transferir los dos repos** — esto sí es suyo, un repo personal solo lo transfiere su dueño | Alberto los ve en su cuenta | — |
+| **10** | Alberto | Reconectar el Git en Vercel + **generar un `CRON_SECRET` NUEVO** y ponerlo en Actions y en la app + comprobar que Actions sigue habilitado + **disparar el cron a mano** | Devuelve **filas nuevas**, no un 200 vacío | El pull se **pausa** en silencio si el secreto no cuadra. No se pierde nada: los ficheros siguen en EIAC |
+| **11** | Alberto | Repunte de Codeoscopic/Meta + una **cotización** de punta a punta (**cotizar sí, emitir NO**) + ver el cron **automático** entrar solo | Ambos verdes | — |
+| **12** | Los dos | Sacar a Manuel del equipo → **Manuel cancela su Pro** | Fin de la duplicidad | — |
+
+**Nada se apaga hasta el 10.** Y como no hay cita ni servicio vivo, **nada obliga a seguir**: si un
+paso se atasca, el anterior sigue en pie y no hay nadie esperando al otro lado.
+
+### 📨 Mensajes por paso — **BORRADORES. Ninguno se envía sin que Alberto lo diga**
+
+**Mensaje 1 — el que se manda ahora** (v2: pide **accesos**, no tareas; tono relajado y sin plazos):
+
+```
+Manuel, sin prisa ninguna. Lo vamos haciendo poco a poco, cuando tú puedas.
+
+Y sobre todo, que no te comas trabajo: casi todo lo puedo hacer yo si tengo acceso, así
+que en vez de pedirte tareas te pido invitaciones. Con esto ya me apaño solo:
+
+ - Vercel: invítame a tu equipo, como owner si puede ser
+ - Supabase: invítame a tu organización, igual
+ - Fly: invítame a tu organización
+ - GitHub: añádeme de colaborador en los dos repos, el de la app y el del adaptador
+
+Con eso me saco yo las copias de seguridad —las claves de cifrado, las variables de
+entorno, el dump de la base, la lista de ficheros— y voy dejándolo todo preparado sin
+darte la lata.
+
+Solo hay una cosa que no puedo sacar de ningún sitio: los secrets de Fly, los de TIREA.
+`fly secrets list` enseña los nombres pero nunca los valores, ni a ti. Si los tienes
+apuntados por ahí, pásamelos cuando te venga bien; y si no los tienes, tampoco pasa
+nada, se los pedimos a TIREA el día que haga falta.
+
+Del CRON_SECRET ni te preocupes: no hace falta que busques el tuyo, genero uno nuevo yo
+y lo pongo en los dos sitios cuando toque.
+
+Lo demás lo vamos viendo sobre la marcha. Al final tú solo tendrás que pasarme los dos
+repos y cancelar el Pro, y ya está. Tranquilo con los tiempos: la app no la usa nadie
+todavía y los ficheros de EIAC se pueden pedir cuando queramos, así que no hay nada que
+se rompa por esperar. A tu ritmo.
+```
+
+> ~~Mensaje 1 v1~~ — pedía cinco cosas *hechas* (copiar claves, exportar envs, hacer el dump…).
+> **Descartado sin enviar**: le cargaba a Manuel trabajo que Alberto puede hacer él con solo tener
+> acceso. Ver «REPLANTEAMIENTO», arriba.
+
+**Mensaje 2** — cuando el 1 esté cerrado y Alberto haya creado la org de Fly: avisar de las tres
+invitaciones y pedir que las acepte.
+**Mensaje 3** — pedir el *Transfer Project* de Vercel. **Mensaje 4** — el de Supabase. **Mensaje 5** —
+mover la app de Fly. **Mensaje 6** — 🔴 acordar un rato de tarde para los repos, que es el único con
+reloj. Se redactan cuando toque, no antes: cada uno depende de cómo haya ido el anterior.
+
+
+### 📝 Mensaje para Manuel — v7 (26/08/2026) — **DESCARTADO sin enviar: proponía fijar día y hora, y Alberto decidió ir paso a paso.** El vigente es el «Mensaje 1» de «CAMBIO DE MODO», arriba
 
 > Sustituye a la v6. Solo falta que Alberto ponga el día. Va sin RGPD por indicación suya.
 
@@ -674,11 +838,17 @@ conexiones. Esto es lo que se puede afirmar mirando su base de datos.
 | Lo que ha metido en la BD | **188 pólizas**, 184 recibos, 96 intervinientes, y **67 de los 67 siniestros** |
 | **Último fichero descargado** | **25/08/2026 — ayer.** La última póliza creada es del 24/08 |
 
-🚨 **Esto no es una migración de un sistema parado: es una migración EN CALIENTE.** Hay un proceso
-corriendo en el Vercel de Manuel que descarga ficheros de las aseguradoras **todos los días** y los
-vuelca aquí. El día que se apague su despliegue, la correduría deja de recibir pólizas, recibos y
-siniestros de sus compañías. Eso convierte el punto «no desactives nada» del mensaje a Manuel en el
-más importante de todos, y obliga a que el corte tenga **fecha y hora acordadas**, no «cuando acabemos».
+~~🚨 **Esto no es una migración de un sistema parado: es una migración EN CALIENTE.**~~
+🔴 **CORREGIDO el 26/08/2026 por Alberto, y era el error de fondo de este documento.** Sí hay un
+proceso corriendo en el Vercel de Manuel que descarga ficheros de las aseguradoras **todos los días** y
+los vuelca aquí — eso es cierto y sigue siéndolo. Lo que era falso es la conclusión: **el CRM todavía
+no está operativo** (nadie lo usa) y **los ficheros de EIAC se pueden consultar y descargar cuando se
+quiera**. Así que apagar su despliegue **pausa** el pull, no corta el suministro, y lo pendiente entra
+en cuanto se relance (el ingestor deduplica por hash). **No hacen falta fecha ni hora acordadas.**
+
+Que un proceso corra a diario no significa que alguien dependa de él **hoy**: eso es lo que se dio por
+supuesto sin preguntar. Lo que sí sigue en pie del párrafo original es el «no desactives nada» —por
+prudencia, no por urgencia— y el valor del parser.
 
 Los estados del ingestor (`pending | persisted | confirmed | review | review_salud | deferred | error`)
 son la prueba de que **el parser está rodado**: `review_salud` y `deferred` no se diseñan de antemano,
@@ -733,7 +903,7 @@ cuatro cosas concretas**, y son mucho más fáciles de conceder:
 3. **La lista de variables de entorno** (solo nombres aquí; los valores por gestor de contraseñas) y
    **la lista de crons** de su Vercel — ahí está el «vencimientos-detector» que dispara
    `ofertas_automaticas` a 30/15/7 días del vencimiento.
-4. **Una fecha y hora acordadas para el corte**, por lo de CIMA.
+4. ~~**Una fecha y hora acordadas para el corte**, por lo de CIMA.~~ **Ya no hace falta** (26/08/2026): sin servicio vivo y con EIAC consultable a demanda, el traspaso va paso a paso.
 
 ### 🧾 Y lo que no es técnico y puede tumbarlo todo
 
@@ -1394,3 +1564,226 @@ su sistema tiene que seguir en pie para la comparación lado a lado.
 | Datos personales de clientes (posible art. 9 RGPD) | Contrato de encargado de tratamiento; el dump nunca se commitea |
 | Manuel borra su proyecto antes de tiempo | Punto 5 explícito en el mensaje |
 | Reconstrucción de las ~10 apps en cada push | `ignoreCommand` desde el primer commit |
+
+---
+
+## 🔑 Qué acceso a Supabase tenemos YA, y para qué NO sirve (26/08/2026)
+
+Comprobado, no supuesto: el conector entra en el proyecto de Manuel
+(`uijsgeocgdaxkhvwtjqs`, «ASEGURA-prod-eu», región `eu-central-1`) y `select current_user` devuelve
+**`supabase_read_only_user`**. Es decir: **acceso de SOLO LECTURA**.
+
+> ⚠️ **El volcado NO está hecho — no confundirlo con el inventario.** Lo que se hizo el 26/08 fueron
+> **recuentos** (`count(*)` por tabla). **No se ha copiado ni un dato**: no existe ningún `.sql` ni
+> `.dump` de la correduría, ni en disco ni en la historia del repo (comprobado). El dump sigue
+> necesitando cadena de conexión y contraseña, que este acceso no da.
+
+| Sirve para | NO sirve para |
+|---|---|
+| Todo el inventario y los recuentos (ya hecho) | **Transferir el proyecto**: eso es gestión de organización, no SQL. ⚠️ Lo que ya NO se sostiene es el «hace falta que Manuel invite a Alberto»: **ya está invitado y dentro** (org `PISO`). Queda por comprobar si desde ahí ya puede recibirse el traspaso o si hace falta que Manuel le suba el rol — **no darlo por sabido** |
+| Comprobar el estado de CIMA día a día | **Hacer el dump**: `pg_dump` necesita la cadena de conexión y su contraseña, que el conector no da |
+| Verificar después del traspaso que **se encuentra** un cliente por email/DNI (la prueba del índice ciego) | **Descifrar** un IBAN: eso lo hace la app con su clave, no una consulta SQL |
+| Resolver dudas sin molestar a Manuel — como la de abajo | Escribir nada. Es de solo lectura, punto |
+
+### ✅ Resuelto sin preguntar: su organización es **LOOR**, plan **FREE**
+
+La pregunta «¿free o de pago?» del Mensaje 1 **ya no hace falta**: `get_organization` la contesta.
+Ambas organizaciones —la suya (`LOOR`) y la de Alberto (`fzagbwkkzfjlsvflkkvn`)— están en **free**, así
+que el traspaso va de free a free, que es el caso simple. Queda igualmente comprobar el día antes que
+la organización de Alberto admite un **segundo** proyecto activo; si no, plan B es restaurar el dump.
+
+### 📅 De paso: los huecos de CIMA son NORMALES, no una avería
+
+Al mirarlo salió que el último fichero sigue siendo del **25/08** y hoy es 26. Antes de leer eso como
+un fallo, se miró la serie: `21/08 · 22 · 23 · 24 · 25` seguidos, pero antes **19 y 20 en blanco**, y
+un hueco de **06 al 15**. Las compañías no mandan todos los días. **Un día sin fichero no dice nada**;
+lo que diría algo es una racha larga justo después de tocar el `CRON_SECRET`.
+
+
+---
+
+## 📬 ESTADO REAL DE LOS ACCESOS (26/08/2026, comprobado en el correo de Alberto)
+
+> 📧 **La cuenta de Manuel para TODAS las invitaciones: `manuelsuarezz@gmail.com`** (con doble `z`).
+> Dato de Alberto, 26/08/2026. Vale para Vercel, Supabase, Fly y GitHub.
+>
+> ⚠️ **`manuelsuarez` (una sola `z`) NO es una dirección de correo: es su USUARIO de Supabase.**
+> Aparece así en el asunto de la invitación («manuelsuarez has invited you…») y en el cuerpo («This
+> organization is owned by manuelsuarez»). Este documento llegó a citar ese asunto como si fuera
+> evidencia de una dirección, y eso paró en seco una invitación de pago el 26/08/2026 — con razón.
+> **Lección: un identificador de plataforma no es un correo.** Antes de dar acceso a algo que factura,
+> la dirección se confirma contra el campo `To:`/`Members`, nunca contra un nombre para mostrar.
+
+| Sistema | Estado | Evidencia |
+|---|---|---|
+| **Supabase** | ✅ **YA ACEPTADA Y DENTRO** — aparece en el panel como **`PISO`**, no como «LOOR» | `get_project("uijsgeocgdaxkhvwtjqs")` → `organization_id: qdrmgpvqhcmhmpcrvtan`, la organización de la invitación. Lectura viva confirmada: 32.600 clientes / 28.843 pólizas. El enlace del correo daba un muro de login porque **el token ya estaba consumido** |
+| **Fly.io** | ✅ **Invitado y dentro** | `noreply@email.fly.io`, «Manuel Suárez wants you to join Manuel Suárez», hoy **13:29** + cuenta de Alberto creada a las 13:29-13:30 |
+| **GitHub** | ❌ **No ha llegado nada** | Sin correo de invitación a colaborar, ni hoy ni en 7 días |
+| **Vercel** | ❌ Sin invitación — Manuel dice que **«hay que pagar»** | — |
+
+### 🔑 Vercel NO está bloqueado: la transferencia va **por código**, no por pertenencia
+
+Se pidió mal, y luego se razonó mal dos veces seguidas. Queda la versión buena:
+
+1. ~~«Manuel invita a Alberto a su equipo»~~ — solo servía para leer las env vars **antes** del
+   traspaso. Y cuesta un asiento, de ahí su «hay que pagar».
+2. ~~«Entonces al revés: Alberto invita a Manuel a SU equipo»~~ — **también falso**, y también
+   costaría un asiento.
+3. ⚠️ **«Va por código, no por pertenencia»** — cierto **de la API**, pero **NO de la pantalla**. La
+   captura de Manuel (26/08, 15:36) lo zanja: su diálogo *Transfer Project To* solo lista **equipos a
+   los que él pertenece**, y como no pertenece a ninguno, la única opción que le sale es *Create Team*.
+   **Las dos vías existen y hay que elegir una:**
+
+**Vía A — la del panel (la que él está usando):** requiere que Manuel sea miembro de un equipo de
+Alberto. **No hay que crear ningún trial**: Alberto **ya tiene equipo**, `pisos-turisticos-projects`,
+en plan **Pro**. Basta invitarle ahí y le aparecerá en el desplegable.
+- ⚠️ **Mirar el coste en el propio diálogo de invitación antes de confirmar** — Vercel Pro factura por
+  asiento y lo dice ahí. Hay roles distintos (existe `VIEWER`) y no todos ocupan asiento facturable,
+  pero **eso lo dice la pantalla, no este documento**.
+- 🔴 **Y sacarle del equipo en cuanto el traspaso esté hecho.** Si se queda, el asiento **sigue
+  facturando mes tras mes sin que nadie avise** — el mismo goteo silencioso del incidente de los
+  ~600 US$ en builds (PR #904).
+
+**Vía B — la de la API (coste cero, si la A cobra):**
+   - Manuel, en su equipo: `POST /projects/{idOrName}/transfer-request` → Vercel devuelve un
+     **`code` válido 24 h**.
+   - Alberto, en el suyo: `PUT /projects/transfer-request/{code}` con su `teamId`.
+
+   **Ninguno de los dos entra en la cuenta del otro y no se añade ningún asiento a nadie.**
+   (Fuente: docs de la REST API de Vercel, *create/accept project transfer request*.)
+
+**Lo que esto cambia en el plan:** las **dos claves de cifrado** ya no se le piden a Manuel por
+adelantado — Alberto las lee **él solo, después del traspaso**, porque los valores de las env vars
+viajan con el proyecto. Y es seguro precisamente porque **Manuel no borra nada**: su proyecto sigue
+en pie como copia viva hasta que él lo retire. Una cosa menos en la lista de Manuel.
+
+**Lo único que sigue pendiente de él: la invitación de GitHub** (colaborador en los dos repos), que
+es gratis y no ha llegado.
+
+#### 🔎 Dos comprobaciones del 26/08/2026 que desmontan dos atajos
+
+Ambas salieron de una revisión desde el navegador que **se negó a pulsar botones sobre premisas sin
+verificar**. Las dos objeciones eran correctas; las dos premisas, mías.
+
+> # 🟢 26/08/2026 — CIERRE: NO HABÍA NINGÚN PROBLEMA. La invitación ya estaba aceptada.
+>
+> Todo lo que sigue en esta sección se investigó **sobre un problema inexistente**. El hecho, ahora
+> comprobado tres veces: `get_project("uijsgeocgdaxkhvwtjqs")` devuelve
+> `organization_id: qdrmgpvqhcmhmpcrvtan`, **la misma organización** que el correo de invitación
+> llamaba `LOOR` y que **el panel de Alberto muestra como `PISO`** — la que la revisión desde el
+> navegador vio («PISO, plan gratuito, 1 proyecto») y descartó por suponerla suya. **Ese único
+> proyecto es el CRM de Manuel.** Alberto ya era miembro; el enlace caía en un muro de login porque
+> **el token ya estaba consumido**, no porque fallara nada.
+>
+> **La lección, y es la más cara del día:** este mismo documento ya decía, escrito esta mañana unas
+> 1.500 líneas más arriba, *«organización `qdrmgpvqhcmhmpcrvtan` (el panel la muestra como `PISO`, el
+> correo de invitación la llamaba `LOOR`)»*. **El dato que cerraba el caso estaba en el sitio donde se
+> estaba escribiendo la investigación.** Se produjeron tres explicaciones nuevas, se mandó al navegador
+> a buscar un nombre que el panel no muestra y se le pasó un enlace ya gastado. Antes de explicar por
+> qué algo no aparece, **releer lo que ya se sabía de ese mismo algo**; y desconfiar en especial cuando
+> un sistema tiene **dos nombres para la misma cosa** (aquí: `LOOR` en el correo y en la API, `PISO` en
+> el panel), porque entonces «no lo encuentro» es casi siempre un problema de nombre, no de acceso.
+>
+> Lo que sigue queda como registro de las correcciones intermedias, que eran válidas cada una en su
+> momento. **Ninguna acción pendiente sale de aquí:** no hay que aceptar nada, ni pedirle a Manuel
+> nada de Supabase.
+
+**1. ~~Una invitación de Supabase NO se ve en el panel.~~ — RETIRADO, era otra suposición mía.**
+Se dijo que Supabase no lista invitaciones pendientes y que por eso el panel no mostraba nada. **No
+puedo sostenerlo.** El contraargumento es mejor: si la invitación fuera válida y estuviera dirigida a
+la cuenta con sesión abierta, el enlace mostraría una tarjeta *Join organization*; lo que muestra es
+un **muro de «Sign in or create an account»** con la sesión de Alberto demostrablemente activa
+(misma pestaña, mismo minuto, `/dashboard/organizations` cargando bien justo antes). **Ese muro es la
+señal de fallo, no una peculiaridad de la interfaz.**
+
+**2. ~~«Verificado por API: LOOR es free, luego aceptar no cuesta nada».~~ — El dato es cierto; la
+conclusión que colgué de él, no.** `get_organization("qdrmgpvqhcmhmpcrvtan")` sí devuelve
+`{"name":"LOOR","plan":"free"}` — **pero `list_projects` con ese mismo conector no devuelve ni un
+solo proyecto de LOOR**, solo el de la organización de Alberto. Es decir: **el conector NO es miembro
+de LOOR y aun así el endpoint contesta.** Ese endpoint responde sobre organizaciones ajenas, así que
+prueba que LOOR existe y en qué plan está — **no** que la invitación siga viva, ni que Alberto tenga
+acceso. Se presentó como si cerrara el asunto y no lo cerraba.
+
+**3. El conector y el navegador NO están mirando la misma cuenta.** El conector de Supabase de la
+sesión ve **una** organización de Alberto; su navegador ve **dos** (la suya y `PISO`). Mientras eso
+siga así, **ninguna consulta por API sirve para dictaminar lo que Alberto ve en su sesión**: contesta
+desde otra identidad. Es la trampa más fina de las tres, porque la API responde con seguridad y suena
+a verificación.
+
+**Hipótesis viva, NO comprobable desde aquí:** Gmail entrega igual `alberto.suarez.gutierrez@`,
+`albertosuarezgutierrez@` (sin puntos) y `…+sufijo@`, pero **Supabase compara la cadena exacta**. Si
+la invitación se emitió contra una variante, el correo llega y el token queda atado a una dirección
+que la cuenta no reconoce — exactamente el síntoma observado. El conector de Gmail devuelve el
+destinatario ya normalizado y no da acceso a las cabeceras crudas, así que **no se puede confirmar ni
+descartar desde el repo**: lo resuelve Manuel leyendo el destinatario en su panel.
+
+**Lo que hay que hacer, y por qué no es «insistir con el enlace»:** el enlace no distingue entre
+«token consumido», «token emitido a otra dirección» y «invitación revocada» — las tres caen en el
+mismo muro de login. La única fuente que las separa está **en el lado de Manuel**: LOOR → Settings →
+Members, la dirección EXACTA de la invitación pendiente y su estado. Eso convierte tres hipótesis en
+un hecho, y él la reenvía en el acto.
+
+#### 🖥️ Vercel: por qué NO se invita a Manuel al equipo Pro (decisión del 26/08/2026)
+
+La Vía A queda **descartada como primera opción**, con dos datos nuevos leídos en la pantalla real:
+
+- **El formulario de invitación no dice lo que cuesta.** Ni precio, ni aviso de asiento, ni
+  confirmación de cargo: pulsar *Invitar* añade el asiento **sin enseñar antes el importe**. El único
+  precio visible en esa pantalla es el de un interruptor no relacionado (alta automática de
+  colaboradores de repos privados, **$20/mes por usuario**, apagado).
+- **`Viewer` —el único rol etiquetado «Gratis»— no sirve.** Es de solo lectura: no puede recibir ni
+  ejecutar un traspaso de proyecto. Invitarle gratis como Viewer obligaría a subirlo a `Member` y
+  pagar el asiento igual, habiendo perdido una vuelta.
+
+El asiento de `Member` sale por **20 US$/mes** (encaja con la factura: crédito 20,00/20,00 + 4,57 de
+on-demand = próxima 24,57 US$). Son 20 US$/mes recurrentes por **diez minutos** de traspaso, y el
+riesgo real no es el primer mes: es **olvidarse de quitarlo** — el mismo goteo silencioso del
+incidente de los ~600 US$ en builds (PR #904).
+
+🚫 **La «ruta inversa» (que Manuel invite a Alberto a SU equipo) no existe.** Se propuso, y es un buen
+reflejo, pero **Manuel no tiene equipo**: su diálogo *Transfer Project To* solo ofrecía *Create Team*,
+que es lo que ocurre en una **cuenta Hobby personal**, y una Hobby **no tiene miembros que invitar**.
+De ahí su «me pide crear un team y entonces pagar». No hay a dónde invitar a nadie.
+
+✅ **Queda la Vía B (API)**, que es justo la que no necesita equipo, ni asiento, ni que ninguno de los
+dos entre en la cuenta del otro. Y si fallara, **no se ha pagado nada por intentarlo** — el orden
+correcto es probar lo gratuito antes que lo recurrente.
+
+#### 📋 Vía B, escrita entera para copiar y pegar (26/08/2026)
+
+Se deja preparada **antes** de saber lo que cuesta el asiento, para que el día que se elija no haya
+que investigar nada. Es la vía que **menos trabajo le da a Manuel**: dos comandos, ninguno en la
+cuenta del otro.
+
+**Paso 1 — lo hace Manuel** (necesita un token suyo: Vercel → Account Settings → Tokens → *Create*,
+scope = su cuenta personal; el token es **suyo y no se comparte con nadie**):
+
+```bash
+# Repetir para cada proyecto: "asegura" (app) y el del adaptador CIMA, si también está en Vercel.
+curl -X POST "https://api.vercel.com/v1/projects/asegura/transfer-request" \
+  -H "Authorization: Bearer $VERCEL_TOKEN_MANUEL"
+```
+
+Devuelve un JSON con un **`code`**. Ese código **caduca a las 24 h** y es lo único que Manuel pasa a
+Alberto (no es un secreto permanente: solo autoriza ese traspaso concreto). Si caduca, se repite el
+paso 1 y ya está.
+
+**Paso 2 — lo hace Alberto**, con un token de SU cuenta y el `teamId` de su equipo
+`pisos-turisticos-projects`:
+
+```bash
+curl -X PUT "https://api.vercel.com/v1/projects/transfer-request/<CODE>" \
+  -H "Authorization: Bearer $VERCEL_TOKEN_ALBERTO" \
+  -H "Content-Type: application/json" \
+  -d '{"teamId":"team_f4gPpt6dPuNcd5YyMt3q27uf"}'
+```
+
+⚠️ **Lo que hay que comprobar después, no dar por hecho:** que las **env vars llegaron con valor** y
+no vacías, y que el **dominio** sigue apuntando al proyecto. Se mira en el panel del proyecto ya bajo
+`pisos-turisticos-projects` (Settings → Environment Variables / Domains). Si algo llegó vacío,
+**avisar antes de tocar nada** — el proyecto de Manuel sigue en pie como copia viva.
+
+🔴 **En cuanto el proyecto esté dentro, añadirle su `ignoreCommand`** como a todas las apps del
+monorepo (`node ../../scripts/vercel-ignore-build.mjs apps/asegura`), o cada push al monorepo se
+pondrá a construirlo. Es la regla de `CLAUDE.md` y es la que costó ~600 US$ una vez.
+

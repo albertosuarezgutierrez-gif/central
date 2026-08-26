@@ -16,6 +16,12 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main]
+  # Disparo a mano: los pushes hechos con token de App NO disparan workflows, así que un PR
+  # de un agente se queda con los checks requeridos en «Expected». OJO: lanzarlo a mano sirve
+  # para VERIFICAR que el código está sano, pero NO desbloquea el merge — el ruleset no cuenta
+  # los check runs de workflow_dispatch (comprobado 26/08/2026 con los 12 en verde sobre dos
+  # heads). Eso lo desbloquea solo un push de una persona. Ver CLAUDE.md § «CI: por qué un PR
+  # de Claude se queda con los checks Expected».
   workflow_dispatch:
 
 concurrency:
