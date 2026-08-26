@@ -55,6 +55,14 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   (+8,72%), y forzar el cierre diario destruye del 80% al 100% del retorno de la misma señal; lo
   mejor del intradía sale a 0,016%/día, entre 31 y 61 veces por debajo de un objetivo de 0,5-1%.
   **Veredicto completo, método y errata del 13/08 en `docs/INVERSION-VEREDICTO-2026-08.md`.**
+- **🧱 «Base» y ruptura de base: MEDIDAS y DESCARTADAS (26/08/2026).** No propongas entradas «porque está
+  haciendo una base perfecta» ni «porque rompe con volumen». Umbral firmado antes de mirar y medido sobre
+  177.282 observaciones del retrovisor: estar en la base (pegado a máximos + volumen seco + sobre la media)
+  **resta 1,64 pp** de `ret91` y lo hace en las DOS mitades; la ruptura con volumen **invierte el signo**
+  (+1,44 pp en 2011-18, −2,72 pp en 2019-26, n=1.257) — el modo de muerte de H8 — y su `ret28` es menos de
+  la mitad que el del universo en ambas mitades. Matiz que SÍ puedes decir: lo descartado es la BASE; la
+  **acumulación por picos de volumen (📊↑) sigue sin medir** (necesita serie diaria, que el retrovisor no
+  guarda) y sigue siendo CONTEXTO, nunca filtro. Detalle en `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
 - **🛡️ Los endpoints VETAN precios que no se creen — hay que CANTARLO en el resumen (08/08/2026).**
   `/analizar` y `/puntuar` ya no se tragan `precios[simbolo]` a ciegas: cada precio pasa una guardia de
   ×2 contra el último `precio_ref` y un CONTRASTE contra la fuente propia del servidor (Stooq/Yahoo,

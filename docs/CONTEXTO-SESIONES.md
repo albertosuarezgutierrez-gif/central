@@ -25,6 +25,18 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🧱 (26/08/2026) «Base perfecta» + acumulación: medida sobre 177.000 observaciones y RECHAZADA
+
+Idea de Alberto. La **acumulación** ya existía como contexto (`volumen.ts`, 📊↑); de **base** no había
+nada y el torneo la apaga por diseño (momentum exige ADX≥20). Umbral firmado ANTES de mirar (≥+2 pp de
+`ret91` y mismo signo en ambas mitades) y medido con SQL sobre `trading_backtest`, sin tocar código:
+estar en la base **resta 1,64 pp** (consistente en las dos mitades) y la ruptura con volumen **cambia de
+signo** (+1,44 pp en 2011-18, −2,72 pp en 2019-26) — el modo de muerte de H8. Detalle y límites en
+`docs/TRADING-HIPOTESIS-PREREGISTRO.md`. 🚨 Lo rechazado es la BASE: la acumulación por picos **sigue sin
+medir** (hace falta serie diaria, que el retrovisor no guarda). Protocolo acordado: Alberto propone,
+el agente firma umbral → mide → veredicto, y solo si pasa hay pre-registro y PR. PR #1760 **sin
+mergear**: le pasa lo que documenta la sección «🤖 CI» de `CLAUDE.md` (los 12 requeridos en Expected;
+`workflow_dispatch` no cuenta) — necesita UN push de Alberto a la rama para desatascarlo.
 ### 🟢 (26/08/2026) Correduría: la invitación de Supabase YA estaba aceptada — el bloqueo no existía
 
 `get_project(uijsgeocgdaxkhvwtjqs)` → org `qdrmgpvqhcmhmpcrvtan`: la que el correo llamaba **LOOR** y
