@@ -35,7 +35,15 @@ pólizas**, BD 92 MB (~75 MB el `public`) → **free basta, los ~200 MB estimado
 NO hay Edge Functions, buckets, `pg_cron`, triggers, vistas ni secuencias. Tres decisiones abiertas:
 **RLS** (86 políticas y `prisma_seguros` tiene BYPASSRLS → al conectar deja de aislar sin fallar),
 **auth** (9 en `auth.users` vs 17 en `public.usuarios` → re-plataformar), y 0 claves foráneas.
-**Contrato de encargado ahora es lo urgente** (carnets de conducir, teléfonos, emails). PR #1752.
+**Contrato de encargado ahora es lo urgente** (carnets de conducir, teléfonos, emails).
+🚨 **Y es una migración EN CALIENTE:** CIMA/EIAC 6.0 descargó ficheros **ayer** (188 pólizas, 184
+recibos y 67/67 siniestros vienen de ahí, 4 compañías) → si Manuel apaga su Vercel, la correduría deja
+de recibir de las compañías. El corte necesita fecha acordada. Codeoscopic, en cambio, lleva parada
+desde el 29/07 y **nunca ha emitido** (todo en `cotizacion`; participants/product_forms/documents a 0):
+cotizar está probado, emitir no. Las 132 funciones de su BD no tienen lógica de integración → **está
+toda en el código**. Nueva estrategia: no pedirle el repo entero, sino **2 carpetas (ingestor EIAC +
+cliente Codeoscopic), los nombres de sus envs y crons, y una fecha de corte**; la intranet la rehacemos.
+Pendiente NO técnico: **¿a nombre de quién está el contrato de Codeoscopic/Avant2?** PR #1752.
 
 ### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
 

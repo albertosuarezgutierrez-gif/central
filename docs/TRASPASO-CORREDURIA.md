@@ -126,6 +126,99 @@ de **WhatsApp** con base de conocimiento vectorial. No es un CRM genérico: es s
 
 ---
 
+## 🔌 Las dos integraciones: qué está en la BD y qué NO (26/08/2026)
+
+Alberto lo planteó bien: **la intranet da igual, se rehace**. Lo que no se rehace barato son las dos
+conexiones. Esto es lo que se puede afirmar mirando su base de datos.
+
+> **Dato de método:** de las **132 funciones** de `public`, ninguna implementa lógica de Codeoscopic
+> ni de CIMA (solo dos guardas de inmutabilidad, `poliza_documentos_reject_update` y
+> `poliza_merge_log_reject_modification`). **Toda la integración vive en el código, no en la BD.**
+> La base de datos es el destino del dato, no el motor que lo trae.
+
+### 🔴 CIMA / EIAC — está VIVA y alimentándose HOY
+
+| | |
+|---|---|
+| Estándar | **EIAC 6.0** |
+| Compañías conectadas | **4** |
+| Ficheros procesados | 125 (86 en estado `confirmed`) |
+| Tipos de objeto | **CEF** (certificado) · **POL** (póliza) · **REC** (recibo) · **SIN** (siniestro) |
+| Lo que ha metido en la BD | **188 pólizas**, 184 recibos, 96 intervinientes, y **67 de los 67 siniestros** |
+| **Último fichero descargado** | **25/08/2026 — ayer.** La última póliza creada es del 24/08 |
+
+🚨 **Esto no es una migración de un sistema parado: es una migración EN CALIENTE.** Hay un proceso
+corriendo en el Vercel de Manuel que descarga ficheros de las aseguradoras **todos los días** y los
+vuelca aquí. El día que se apague su despliegue, la correduría deja de recibir pólizas, recibos y
+siniestros de sus compañías. Eso convierte el punto «no desactives nada» del mensaje a Manuel en el
+más importante de todos, y obliga a que el corte tenga **fecha y hora acordadas**, no «cuando acabemos».
+
+Los estados del ingestor (`pending | persisted | confirmed | review | review_salud | deferred | error`)
+son la prueba de que **el parser está rodado**: `review_salud` y `deferred` no se diseñan de antemano,
+salen de casos reales que fallaron. Rehacer eso desde cero es meses, no semanas.
+
+### 🟡 Codeoscopic (multitarificador) — desarrollada, pero PARADA y sin emisión ejercitada
+
+El esquema describe una integración seria: flujo `cotizacion → preemision → emitida / rechazada /
+riesgo_condicionado / vencida / error`, **doble raíl de sincronización** (polling con
+`polling_next_at`/`polling_attempts` **y** webhooks con `payload_hash` para deduplicar), control de
+idempotencia en el envío (`submit_attempt_id`, `submit_in_flight_at`) y almacenamiento del
+**`raw_payload`** de cada precio y cada webhook.
+
+**Pero los datos dicen que no ha llegado a emitir:**
+
+| Tabla | Filas | Qué significa |
+|---|---:|---|
+| `codeoscopic_projects` | 1 | y su estado es **`cotizacion`**, nunca `emitida` |
+| `codeoscopic_prices` / `offers` | 15 / 15 | cotizar sí funciona |
+| `codeoscopic_participants` | **0** | los intervinientes de emisión, sin estrenar |
+| `codeoscopic_product_forms` | **0** | los formularios de preemisión/emisión, sin estrenar |
+| `codeoscopic_documents` | **0** | ni pólizas, ni recibos, ni SEPA, ni IPID descargados |
+| `codeoscopic_webhook_events` | 2 | uno de tipo `emision_ok` |
+| **Último proyecto** | **29/07/2026** | lleva **casi un mes parada** |
+
+⚠️ **Cero filas no prueba que el código no exista** — prueba que **no se ha ejercitado**. Puede estar
+escrito y sin probar, o probado en un entorno de pruebas que no es este. Pero cambia la conversación:
+antes de dar por hecho que «la emisión ya está», hay que verla funcionar. **La cotización sí está
+demostrada; la emisión no.**
+
+> 💡 **Lo que salva el día si el código no llegara:** guardan el `raw_payload` crudo de cada respuesta.
+> Aunque no consiguiéramos una línea de su código, esos payloads **documentan el formato real de la API
+> de Codeoscopic** mejor que cualquier manual. Eso ya está en nuestra copia.
+
+### 🔑 Credenciales: parte están en la BD, no solo en Vercel
+
+`corredurias` tiene columnas **`wa_access_token`, `wa_phone_number_id`, `wa_business_account_id`** —
+credenciales de WhatsApp Business **dentro de la tabla**. Hoy están a NULL (0 filas con token), así que
+el dump no arrastra nada, pero **hay que tratar esa columna como campo de secreto** en el traspaso y en
+cualquier exportación futura. Y confirma que el inventario de credenciales no se agota en los envs de
+Vercel: hay que mirar también dentro de la base.
+
+### ➡️ Lo que esto cambia en la petición a Manuel
+
+No hace falta el repositorio entero, ni la transferencia, ni pelearse por el historial. **Hacen falta
+cuatro cosas concretas**, y son mucho más fáciles de conceder:
+
+1. **La carpeta del cliente de Codeoscopic** — endpoints, autenticación, y el mapeo de formularios por
+   producto/compañía. Y la respuesta a: *¿la emisión llegó a probarse?*
+2. **La carpeta del ingestor EIAC/CIMA** — cómo se descargan los ficheros (¿SFTP, portal, API de
+   TIREA?), el parser del ZIP/XML y las reglas de conciliación. **Es la pieza más valiosa del traspaso.**
+3. **La lista de variables de entorno** (solo nombres aquí; los valores por gestor de contraseñas) y
+   **la lista de crons** de su Vercel — ahí está el «vencimientos-detector» que dispara
+   `ofertas_automaticas` a 30/15/7 días del vencimiento.
+4. **Una fecha y hora acordadas para el corte**, por lo de CIMA.
+
+### 🧾 Y lo que no es técnico y puede tumbarlo todo
+
+- **Codeoscopic/Avant2 es un contrato de licencia.** Hay que saber **a nombre de quién** está y de quién
+  son las credenciales de API. Si el contrato es de Manuel o de su empresa, el código no sirve de nada
+  hasta que exista un contrato a nombre de la correduría. **Preguntarlo antes de tocar código.**
+- **CIMA/TIREA va asociada a la clave de mediador**, que es de la correduría — es decir, de Alberto.
+  Esa parte no tiene sorpresa contractual, pero hay que confirmar con qué credenciales se está
+  descargando hoy.
+
+---
+
 ## 🏷️ Cómo se llama cada cosa (y por qué no todo igual)
 
 | Pieza | Nombre | Por qué |
@@ -425,30 +518,43 @@ Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
 
 ---
 
-### 📝 Recordatorio pendiente para Manuel — BORRADOR, SIN ENVIAR (26/08/2026)
+### 📝 Mensaje pendiente para Manuel — BORRADOR, SIN ENVIAR (26/08/2026)
 
-De los tres accesos que se le pidieron el 20/08, ha dado **uno**: Supabase. Faltan Vercel y confirmar
-que la invitación de GitHub del 12/08 sigue viva. Texto propuesto para WhatsApp — **no se manda hasta
-que Alberto dé el visto bueno a este envío concreto** (regla del repo sobre comunicaciones a terceros):
+Reenfocado tras el inventario: **ya no se le pide el repositorio entero ni la transferencia.** Se le
+piden dos carpetas, dos listas y una fecha. Es una petición mucho más fácil de conceder — y el resto
+(la intranet) lo rehacemos nosotros. **No se manda hasta que Alberto dé el visto bueno a este envío
+concreto** (regla del repo sobre comunicaciones a terceros):
 
-> Hola Manuel: gracias, ya estoy dentro de la organización de Supabase. Me faltan dos cosas para no
-> volver a molestarte:
+> Hola Manuel: ya tengo acceso a la base de datos, gracias. He visto el alcance y te escribo para
+> pedirte mucho menos de lo que te dije al principio.
 >
-> 1. **Vercel** — invítame a tu equipo para ver la configuración y los nombres de las variables de
->    entorno. Si tu cuenta es del plan gratuito no te dejará invitar: dímelo y me pasas solo la lista
->    de **nombres** de las variables; los valores por gestor de contraseñas, no por aquí.
-> 2. **GitHub** — la invitación al repo es del 12 de agosto y creo que ha caducado. ¿Me la vuelves a
->    mandar? Solo lectura, para copiarme el código.
+> **La intranet no te la pido**: esa parte la rehago yo. Lo que me interesa de verdad son las dos
+> integraciones, que es donde está el trabajo bueno:
 >
-> Y una comprobación: en Supabase veo la organización pero no me aparece ningún proyecto dentro.
-> Puede ser cosa mía, pero si me diste un rol acotado a proyectos concretos, ¿puedes ponerlo a nivel
-> de organización?
+> 1. **El ingestor de EIAC/CIMA** — el código que descarga los ficheros de las compañías y los procesa.
+>    Necesito saber sobre todo **cómo se descargan** (¿SFTP, portal, API de TIREA?) y con qué
+>    credenciales.
+> 2. **El cliente de Codeoscopic** — endpoints, autenticación y el mapeo de formularios. Y una
+>    pregunta directa: **¿la emisión llegó a probarse?** En la base solo veo cotizaciones, ninguna
+>    póliza emitida por ahí, así que quiero saber en qué punto está de verdad.
+> 3. **La lista de variables de entorno de tu Vercel** (solo los nombres por aquí; los valores por
+>    gestor de contraseñas) y **la lista de tareas programadas**, que ahí veo un detector de
+>    vencimientos.
+> 4. **Una fecha y hora para el corte.** Esto es lo más importante: he visto que CIMA descargó
+>    ficheros ayer mismo. Tu sistema está alimentando la correduría a diario, así que el día que
+>    apagues el despliegue dejamos de recibir pólizas, recibos y siniestros de las compañías. No lo
+>    apagues sin avisar; lo acordamos con fecha.
 >
-> Recuerda: **no borres ni desactives nada** hasta que te confirme que está todo funcionando en mi
-> lado. Te aviso expresamente. Y te paso el documento de protección de datos que te dije.
+> Y una cosa que no es técnica: **el contrato de Codeoscopic/Avant2, ¿a nombre de quién está?** Si es
+> tuyo o de tu empresa, dímelo, porque entonces hay que contratarlo a nombre de la correduría antes de
+> que el código sirva de algo.
+>
+> Te paso también el documento de protección de datos que te dije: son 32.600 clientes reales y eso
+> hay que dejarlo por escrito.
 
-⚠️ **Lo que NO se le pide todavía:** la transferencia del repositorio. Va la última, ya verificado el
-traspaso, porque al transferirlo se le desconecta el despliegue de Vercel.
+⚠️ **Lo que sigue sin pedirse:** la transferencia del repositorio. Si algún día interesa el «museo»,
+se pide **al final**, porque al transferirlo se le desconecta el despliegue de Vercel — y ahora sabemos
+que ese despliegue es justamente lo que no puede caerse todavía.
 
 ---
 
