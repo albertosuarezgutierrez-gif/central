@@ -100,6 +100,18 @@ cortijo/masía/finca con casa (que además dejan de clasificarse como suelo). Y 
 contra la **mediana de CASAS** de su zona cuando hay ≥3 (`fuente:'casas'`); si no, mixta y el aviso lo
 DICE — medirla contra pisos exageraba el descuento (fixture: 27% real vs 63% inventado). PR #1742, mergeado.
 
+### 🔕 (26/08/2026) PSD2: la nota ℹ️ de la ventana de 89 días deja de mandar Telegram
+Alberto, sobre el aviso de las 08:00 («Kutxabank rechazó la ventana de 89 días»): «¿algo que hacer?
+no me avises entonces, ese mensaje es siempre el mismo». Es una limitación PERMANENTE del banco sin
+acción posible —el propio texto decía «no hay que hacer nada»— y el dedupe por `claveAviso` solo
+evitaba repetirla, no evitaba el ruido. El cron `psd2-sync` ahora manda Telegram SOLO por avisos
+críticos; las notas ℹ️ viajan como contexto dentro de esa alerta y siguen pintándose en permanencia
+en `/banca` (también en verde), que es donde importan: declaran desde cuándo hay datos de verdad.
+Retirados `claveAviso`/`avisosNuevos` y `avisosPersistidos()` (sin consumidor). 1625 tests en verde.
+De paso, respondido el porqué de los 89 días: es el `date_from` que se pide en CADA pasada diaria
+(tope del consentimiento PSD2), para recoger apuntes tardíos y rellenar huecos; el dedupe descarta
+lo repetido.
+
 ### 📍 (26/08/2026) Repaso de las direcciones del portfolio: el lado de los Busto está bien, faltaba el CP
 Tras cerrar lo de House Sevillana, Alberto pidió repasar Bustos Tavera y el Dúplex. **El lado NO
 estaba cruzado en ningún sitio**: dcha=Luxury Busto, izda=Busto Reform, coherente en BD, skills

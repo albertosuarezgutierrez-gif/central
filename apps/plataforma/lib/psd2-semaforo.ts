@@ -46,6 +46,9 @@ const ACCION = 'Re-vincula el banco desde «➕ Añadir → Conectar banco» (pi
 // Un aviso con prefijo ℹ️ es INFORMATIVO: describe una limitación con la que el feed SIGUE
 // funcionando (p. ej. «el banco rechazó la ventana de 89 días»). No es un fallo y por tanto
 // no pone el semáforo en rojo ni dispara la alarma del cron. Los demás son fallos.
+// Tampoco manda Telegram por su cuenta (ver el cron psd2-sync): una limitación permanente sin
+// acción posible repetida cada mañana es ruido, y el sitio donde sí hace falta verla —porque
+// dice desde cuándo hay datos de verdad— es /banca, que la pinta en permanencia.
 export function esNota(aviso: string): boolean {
   return aviso.startsWith('ℹ️')
 }
@@ -53,20 +56,6 @@ export function esNota(aviso: string): boolean {
 export function partirAvisos(avisos: string[] | null): { criticos: string[]; notas: string[] } {
   const todos = avisos ?? []
   return { criticos: todos.filter(a => !esNota(a)), notas: todos.filter(esNota) }
-}
-
-// Clave estable de un aviso para compararlo ENTRE pasadas del cron: las fechas ISO que lleva
-// dentro se mueven solas cada día (la ventana corta es `hoy - 30 días`, ver
-// getMovimientosConVentana), así que comparar el texto crudo haría que la MISMA incidencia
-// pareciese nueva cada mañana — que es justo lo que convierte un aviso en ruido.
-export function claveAviso(aviso: string): string {
-  return aviso.replace(/\d{4}-\d{2}-\d{2}/g, '·').trim()
-}
-
-// Avisos de `actuales` que NO estaban ya en `previos` (comparando por clave estable).
-export function avisosNuevos(previos: string[], actuales: string[]): string[] {
-  const vistos = new Set(previos.map(claveAviso))
-  return actuales.filter(a => !vistos.has(claveAviso(a)))
 }
 
 export function semaforoFeed(p: {

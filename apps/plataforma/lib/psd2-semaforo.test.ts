@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { semaforoFeed, fechaCaducidadConsent, diasEntre, partirAvisos, avisosNuevos, CONSENT_DIAS } from './psd2-semaforo.ts'
+import { semaforoFeed, fechaCaducidadConsent, diasEntre, partirAvisos, CONSENT_DIAS } from './psd2-semaforo.ts'
 
 const CONSENT = '2026-06-14' // consentimiento real (SCA del 14/06/2026)
 
@@ -106,23 +106,15 @@ test('partirAvisos separa fallos de notas (mismo corte que usa el cron)', () => 
   assert.deepEqual(partirAvisos(null), { criticos: [], notas: [] })
 })
 
-test('la MISMA nota con la fecha corrida un día NO cuenta como nueva', () => {
-  // La ventana corta es «hoy − 30 días», así que el texto cambia solo cada mañana: comparar
-  // en crudo repetiría el aviso a diario, que es como se rompió el 21/08/2026.
-  const ayer = ['ℹ️ Kutxabank ****0855: el banco rechazó la ventana de 89 días — importado solo desde 2026-07-21']
-  const hoy = ['ℹ️ Kutxabank ****0855: el banco rechazó la ventana de 89 días — importado solo desde 2026-07-22']
-  assert.deepEqual(avisosNuevos(ayer, hoy), [])
-})
-
-test('una nota de OTRA cuenta sí es nueva aunque ya hubiera una nota', () => {
-  const previos = ['ℹ️ Kutxabank ****0855: el banco rechazó la ventana de 89 días — importado solo desde 2026-07-22']
-  const nuevos = [...previos, 'ℹ️ BBVA ****1175: el banco rechazó la ventana de 89 días — importado solo desde 2026-07-22']
-  assert.deepEqual(avisosNuevos(previos, nuevos), [nuevos[1]])
-})
-
-test('sin avisos previos (primera pasada) la nota se cuenta una vez', () => {
-  const nota = 'ℹ️ Kutxabank ****0855: el banco rechazó la ventana de 89 días — importado solo desde 2026-07-22'
-  assert.deepEqual(avisosNuevos([], [nota]), [nota])
+test('una nota ℹ️ SOLA no deja nada que alarmar: sin críticos, el cron no manda Telegram', () => {
+  // Regla 26/08/2026: la limitación de ventana de Kutxabank no tiene acción posible, así que
+  // avisar de ella (aunque fuese una sola vez) es ruido. `criticos` vacío = el cron calla; la
+  // nota sigue viajando en `notas` para /banca y para el cuerpo de una alerta crítica.
+  const { criticos, notas } = partirAvisos([
+    'ℹ️ Kutxabank ****0855: el banco rechazó la ventana de 89 días — importado solo desde 2026-07-27',
+  ])
+  assert.deepEqual(criticos, [])
+  assert.equal(notas.length, 1)
 })
 
 test('las notas ℹ️ viajan en `notas`, NO mezcladas en `detalles` (la UI las pinta también en verde)', () => {
