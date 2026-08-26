@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-25T16:11:57Z",
-  "sha": "08c7776401396caabf28c4fce2987e321640b05f",
+  "generadoEn": "2026-08-26T06:22:06Z",
+  "sha": "f1270ea54a122dfb24d3bf4bc44a761652ba677b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -68307,7 +68307,7 @@
           "exportada": true,
           "params": "propertyId: string",
           "retorno": "'busto' | 'duplex' | null",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Mapea el property_id interno a su zona (para elegir la consigna más cercana). null = sin zona conocida → solo redes."
         },
         {
@@ -68316,13 +68316,13 @@
           "exportada": true,
           "params": "propertyId = ''",
           "retorno": "string",
-          "linea": 50,
+          "linea": 51,
           "resumen": "Bloque que se añade a la `ficha` del piso. El agente lo usará SOLO si el huésped pregunta por dónde guardar/dejar las maletas (REGLA DE ORO: no añadir info no pedida)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d8c72e8a00ac"
+      "hash": "bef162acf752"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",

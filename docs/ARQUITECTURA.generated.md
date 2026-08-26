@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-25T13:53:07Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-26T06:22:06Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 10 apps · 38 packages · 23 capacidades · 35 skills · 1178 rutas API.
+**Resumen:** 10 apps · 38 packages · 23 capacidades · 36 skills · 1178 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -203,6 +203,7 @@
 - **receiving-code-review** — Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
 - **requesting-code-review** — Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 - **rrhh-compliance-calendar** — Recordatorio mensual de obligaciones legales pendientes de implementar en la vertical RRHH (Portal del Empleado). Lee el roadmap, filtra los ítems 🔴 obligatorios no completados y genera un informe de plazos. Úsala el primer día de cada mes o cuando Alberto quiera un pulso del estado de compliance de RRHH.
+- **seo-house-sevillana** — SEO especializado para la landing page del apartamento turístico House Sevillana (Sevilla, centro histórico, Calle Socorro 24 — barrio de San Julián, 290 m², 6 dormitorios, 4 baños, parking privado). Cubre generación de metadatos (title, meta description, Open Graph, Twitter Cards), schema.org JSON-LD (LodgingBusiness, FAQPage, BreadcrumbList), keyword research multi-idioma (ES/EN/FR/DE/IT), reescritura de copy con foco en conversión y reservas directas para esquivar la comisión de Booking del 19,72%, auditoría SEO técnica para Next.js 15 App Router, y configuración multi-idioma con hreflang. Usa esta skill SIEMPRE que Alberto pida cualquier cosa relacionada con SEO, posicionamiento, metadatos, schema, keywords, copy de la landing, auditoría web, hreflang o multi-idioma de House Sevillana, aunque no diga la palabra SEO explícitamente.
 - **sivra-maestro** — >
 - **systematic-debugging** — Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
 - **trading-analista** — Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales.
