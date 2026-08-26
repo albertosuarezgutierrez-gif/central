@@ -2,6 +2,7 @@
 // resuelven en el flujo principal vía evaluar()/existeDuplicado()).
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { estadoCargo, esAviso, type VeredictoCargo } from './domiciliados'
 
 export interface ReglaFaltante {
   fingerprint: string
@@ -51,4 +52,80 @@ export async function luzPorPisoQueFalta(year: number, month: number): Promise<{
     ORDER BY p.name
   `)
   return rows.map((r) => ({ propiedad: r.propiedad, nombre: r.nombre }))
+}
+
+// ── Domiciliados sin cargo ───────────────────────────────────────────────────
+// «Está domiciliado en el banco, tiene que estar cargado en cuenta» (Alberto, 26/08/2026).
+// Un gasto con fecha de cobro vencida y sin apunte bancario es dinero que se dio por
+// pagado sin comprobarlo. El veredicto lo pone el módulo PURO `domiciliados.ts`.
+
+export interface GastoDomiciliado {
+  id: string
+  proveedor: string | null
+  total: number
+  fecha_vencimiento: string
+  veredicto: VeredictoCargo
+}
+
+/** Hasta qué fecha llega el extracto de las cuentas corrientes. NULL si no se sabe. */
+async function coberturaBanco(): Promise<string | null> {
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT MAX(m.fecha_operacion)::text AS hasta
+    FROM v_movimientos_activos m
+    JOIN cuentas_bancarias cb ON cb.id = m.cuenta_bancaria_id
+    WHERE cb.tipo = 'corriente'
+  `)
+  return rows[0]?.hasta ?? null
+}
+
+/**
+ * Gastos ya imputados cuya domiciliación venció y NO tienen cargo en cuenta.
+ * Devuelve SOLO los accionables (`sin_cargo`): lo pendiente se calla y lo que no se
+ * puede comprobar por falta de extracto NO se reporta como ausencia (se declara aparte).
+ */
+export async function domiciliadosSinCargo(
+  hoy: string,
+  diasAtras = 90,
+): Promise<{ avisos: GastoDomiciliado[]; sinCobertura: number; sinFecha: number }> {
+  const cobertura = await coberturaBanco()
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT g.id::text, g.proveedor, g.total::float AS total,
+           g.fecha_vencimiento::text AS fecha_vencimiento,
+           EXISTS (
+             SELECT 1 FROM v_movimientos_activos m
+             WHERE m.importe < 0
+               AND abs(abs(m.importe) - g.total) < 0.02
+               AND m.fecha_operacion BETWEEN g.fecha_vencimiento::date - INTERVAL '7 days'
+                                         AND g.fecha_vencimiento::date + INTERVAL '7 days'
+           ) AS cargo_casado
+    FROM gastos g
+    WHERE g.fecha_vencimiento IS NOT NULL
+      AND g.total > 0
+      AND g.fecha_vencimiento::date >= ${hoy}::date - (${diasAtras}::int)
+      AND NOT (g.revisado = false AND g.origen IS NOT NULL)
+    ORDER BY g.fecha_vencimiento DESC
+  `)
+
+  const avisos: GastoDomiciliado[] = []
+  let sinCobertura = 0
+  let sinFecha = 0
+  for (const r of rows) {
+    const veredicto = estadoCargo({
+      fechaCargo: r.fecha_vencimiento,
+      hoy,
+      cargoCasado: r.cargo_casado === true,
+      bancoHasta: cobertura,
+    })
+    if (veredicto.estado === 'sin_cobertura') sinCobertura++
+    if (veredicto.estado === 'sin_fecha') sinFecha++
+    if (!esAviso(veredicto)) continue
+    avisos.push({
+      id: r.id,
+      proveedor: r.proveedor,
+      total: Number(r.total ?? 0),
+      fecha_vencimiento: r.fecha_vencimiento,
+      veredicto,
+    })
+  }
+  return { avisos, sinCobertura, sinFecha }
 }

@@ -5,8 +5,8 @@ import { listarCandidatosConLimite, marcarProcesado } from '@/lib/agente-factura
 import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
-import { recurrentesQueFaltan } from '@/lib/agente-facturas/anomalias'
-import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaNoLegibles, avisaAjenas, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
+import { recurrentesQueFaltan, domiciliadosSinCargo } from '@/lib/agente-facturas/anomalias'
+import { avisaBandeja, avisaSinAdjunto, avisaSinDrive, avisaNoLegibles, avisaAjenas, avisaRecurrentesQueFaltan, avisaDomiciliadosSinCargo, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
 import { cargarTitulares } from '@/lib/agente-facturas/titulares'
 
 export const dynamic = 'force-dynamic'
@@ -136,6 +136,10 @@ export async function GET(req: NextRequest) {
     await avisaAjenas(ajenas)
     await avisaBandeja(pendientes)
     await avisaRecurrentesQueFaltan(faltan)
+    // Un gasto domiciliado tiene que acabar cargado en cuenta: si venció y no aparece,
+    // se avisa; si el extracto no llega a esa fecha, se declara el hueco (no se afirma).
+    const dom = await domiciliadosSinCargo(now.toISOString().slice(0, 10))
+    await avisaDomiciliadosSinCargo(dom.avisos, dom.sinCobertura)
     await resumen({ fuente: 'diario', ...stats })
   } catch (e) {
     console.error('[scan] avisos error:', e)
