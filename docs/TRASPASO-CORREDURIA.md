@@ -556,52 +556,96 @@ Sigue siendo el paso que **conviene** dejar para el final —es el único que re
 tres cosas seguidas (reconectar el Git en Vercel, reponer el secreto, comprobar que Actions sigue
 habilitado)— pero **ya no hay que estar delante ni elegir la hora**.
 
+### 🎯 REPLANTEAMIENTO (26/08/2026): pedirle **ACCESOS**, no tareas
+
+> Decisión de Alberto: *«que él tenga menos trabajo, lo que podamos hacer nosotros mejor».*
+
+La lista de cinco cosas del Mensaje 1 anterior le cargaba a Manuel un trabajo que **en su mayor parte
+puede hacer Alberto solo**, si tiene acceso. Repartido de nuevo:
+
+| Lo que se le pedía | ¿Puede hacerlo Alberto? | Cómo |
+|---|---|---|
+| Copiar el valor de **las dos claves** | ✅ **Sí** | Son variables de entorno del proyecto de Vercel: siendo miembro del equipo se leen y se exportan |
+| **Export de env vars** y **lista de Blob** | ✅ **Sí** | Igual: desde el panel del equipo |
+| **Dump** de la base | ✅ **Sí** | Con acceso a la organización de Supabase |
+| **`CRON_SECRET`** | ✅ **Sí, y mejor** | 🔑 **No tiene por qué ser el mismo valor.** GitHub no enseña el valor de un secret a nadie, ni a su dueño. Alberto **genera uno nuevo** y lo pone en los dos sitios (secret de Actions + env var de la app) cuando sea suyo. Esto borra el punto entero de la lista de Manuel |
+| **Secrets de Fly (TIREA)** | ❌ **No** | `fly secrets list` muestra nombres, nunca valores — tampoco a Manuel. Solo los tiene si los apuntó fuera. Se pide **como favor, no como requisito**: si no los tiene, se piden a TIREA el día que hagan falta |
+
+**Trabajo real de Manuel, reducido a esto:**
+
+1. **Cuatro invitaciones** (Vercel como owner, organización Supabase como owner, organización Fly, y
+   colaborador en los dos repos). Cuatro clics.
+2. **Aceptar** las dos invitaciones de vuelta a las cuentas de Alberto (destino de las transferencias).
+3. **Transferir los dos repos** de GitHub — esto sí es suyo: un repo personal solo lo transfiere su dueño.
+4. **Cancelar su Pro** al final.
+
+⚠️ **A confirmar en el panel, no darlo por hecho:** si siendo *owner* de sus cuentas Alberto puede
+**iniciar él mismo** el *Transfer Project* de Vercel y el *Transfer project* de Supabase. Si se puede,
+a Manuel le quedan literalmente los repos y cancelar el Pro. Si no se puede, son **un clic cada una**
+para él, que tampoco es nada. Se mira cuando esté dentro; no se le promete de antemano.
+
+
 ### 🪜 La secuencia, y qué cierra cada paso
 
 | # | Quién | Qué pide / hace | ✅ Cerrado cuando… | Riesgo si se queda a medias |
 |---|---|---|---|---|
-| **1** | Manuel | **Las copias de seguridad**: las 2 claves (cifrado + índice ciego), los secrets de Fly (TIREA) y el `CRON_SECRET`, al gestor compartido. Y el dump + export de env vars + lista de Blob | Alberto puede **leer** los cinco valores en el gestor | Ninguno: no toca producción. Es puro seguro |
+| **1** | **Manuel** | **Cuatro invitaciones**: Vercel (owner), organización Supabase (owner), organización Fly, y colaborador en los dos repos | Alberto entra en los cuatro sitios | Ninguno. Son cuatro clics y no tocan nada |
 | **1b** | Manuel | Responder: **su Supabase, ¿free o de pago?** | Contestado | Ninguno |
-| **2** | Alberto | Crear la **organización en Fly** y mandar las **3 invitaciones** (Vercel `pisos-turisticos-projects`, org Supabase `fzagbwkkzfjlsvflkkvn`, org Fly) | Las tres enviadas | Ninguno |
-| **3** | Manuel | Aceptar las tres | Aparece en los tres sitios | Ninguno |
-| **4** | Manuel | **Vercel → Transfer Project** | Alberto ve el proyecto en su equipo, `app.grupoasegura.com` carga y se entra | Ninguno: los valores de env y el dominio viajan |
-| **5** | Manuel | **Supabase → Transfer project** | 🔑 **LAS DOS PRUEBAS**: Alberto **descifra** un IBAN real **y encuentra** un cliente buscando por email **y** por DNI | Si solo se hace la primera, un índice ciego roto pasa desapercibido |
-| **6** | Manuel | **Fly → mover la app del adaptador** a la org de Alberto | `fly secrets list` muestra los nombres **y** `/health` responde | Bajo, y el paso 1 lo cubre |
-| **7** | Los dos | **Blob**: re-apuntar el token o mover los ~4 ficheros | Los 4 se abren desde la app | — |
-| **8** | Los dos | **GitHub: transferir los dos repos** → aceptar, reconectar Git en Vercel, **reponer `CRON_SECRET`**, comprobar Actions, **disparar el cron a mano** | El disparo manual devuelve **filas nuevas**, no un 200 vacío | El pull se **pausa** en silencio si el secreto no vuelve. No se pierde nada: los ficheros siguen en EIAC y se re-tiran (dedupe por hash) |
-| **9** | Alberto | Repuntar **Codeoscopic** y **Meta/WhatsApp** si el dominio se movió + una **cotización** de punta a punta (**cotizar sí, emitir NO**) | Verde | — |
-| **10** | Alberto | Alguna mañana después del paso 8: que el cron **automático de las 5:30** entre solo | Filas nuevas sin que nadie lo dispare | — |
-| **11** | Los dos | Sacar a Manuel del equipo → **Manuel cancela su Pro** | Fin de la duplicidad | — |
+| **1c** | Manuel | *Si los tiene apuntados*: los secrets de Fly (TIREA). **Favor, no requisito** | Alberto los guarda | Si no los tiene, se piden a TIREA el día que hagan falta |
+| **2** | **Alberto** | **Todas las copias**, él solo: las dos claves (son env vars), export de env vars, dump de la base, lista de Blob | Puede descifrar y buscar con lo que tiene guardado | — |
+| **3** | Alberto | Crear la **organización en Fly** e invitar a Manuel a **sus** cuentas (destino de las transferencias) | Enviadas | — |
+| **4** | Manuel | Aceptar esas dos | Aparece en ellas | — |
+| **5** | Alberto *(o Manuel, un clic)* | **Vercel → Transfer Project** | El dominio carga y se entra | Ninguno: envs y dominio viajan |
+| **6** | Alberto *(o Manuel, un clic)* | **Supabase → Transfer project** | 🔑 **LAS DOS PRUEBAS**: **descifrar** un IBAN real **y encontrar** un cliente por email **y** por DNI | Con una sola prueba, un índice ciego roto pasa desapercibido |
+| **7** | Alberto | **Fly → mover la app** del adaptador a su org | `fly secrets list` muestra los nombres **y** `/health` responde | Bajo; el 1c lo cubre si lo tenemos |
+| **8** | Alberto | **Blob**: re-apuntar el token o mover los ~4 ficheros | Los 4 se abren desde la app | — |
+| **9** | **Manuel** | **GitHub: transferir los dos repos** — esto sí es suyo, un repo personal solo lo transfiere su dueño | Alberto los ve en su cuenta | — |
+| **10** | Alberto | Reconectar el Git en Vercel + **generar un `CRON_SECRET` NUEVO** y ponerlo en Actions y en la app + comprobar que Actions sigue habilitado + **disparar el cron a mano** | Devuelve **filas nuevas**, no un 200 vacío | El pull se **pausa** en silencio si el secreto no cuadra. No se pierde nada: los ficheros siguen en EIAC |
+| **11** | Alberto | Repunte de Codeoscopic/Meta + una **cotización** de punta a punta (**cotizar sí, emitir NO**) + ver el cron **automático** entrar solo | Ambos verdes | — |
+| **12** | Los dos | Sacar a Manuel del equipo → **Manuel cancela su Pro** | Fin de la duplicidad | — |
 
 **Nada se apaga hasta el 10.** Y como no hay cita ni servicio vivo, **nada obliga a seguir**: si un
 paso se atasca, el anterior sigue en pie y no hay nadie esperando al otro lado.
 
 ### 📨 Mensajes por paso — **BORRADORES. Ninguno se envía sin que Alberto lo diga**
 
-**Mensaje 1 — el que se manda ahora** (pasos 1 y 1b, no tocan producción):
+**Mensaje 1 — el que se manda ahora** (v2: pide **accesos**, no tareas; tono relajado y sin plazos):
 
 ```
-Manuel, no hace falta que cuadremos un día: lo vamos haciendo poco a poco y me contestas
-cuando puedas. Casi todo son transferencias de propiedad que no rompen nada — la app se
-queda igual, en la misma URL y con la misma base, solo que pasa a facturarse a mi cuenta.
+Manuel, sin prisa ninguna. Lo vamos haciendo poco a poco, cuando tú puedas.
 
-Lo primero es lo único que de verdad no tiene vuelta atrás, y no toca nada en producción:
-las copias. Te comparto un gestor de contraseñas; ahí necesito que dejes cinco cosas:
+Y sobre todo, que no te comas trabajo: casi todo lo puedo hacer yo si tengo acceso, así
+que en vez de pedirte tareas te pido invitaciones. Con esto ya me apaño solo:
 
- 1) la clave de cifrado de los datos personales
- 2) la clave del índice ciego
- 3) los secrets de Fly, los de TIREA. Estos los pido por algo concreto: `fly secrets list`
-    solo enseña los nombres, nunca los valores, así que si algo se perdiera al mover la app
-    de organización no habría de dónde sacarlos — habría que volver a pedirlos a TIREA.
- 4) el CRON_SECRET de Actions, que ese no viaja al transferir el repo
- 5) el dump de la base, el export de las env vars y la lista de los ficheros de Blob
+ - Vercel: invítame a tu equipo, como owner si puede ser
+ - Supabase: invítame a tu organización, igual
+ - Fly: invítame a tu organización
+ - GitHub: añádeme de colaborador en los dos repos, el de la app y el del adaptador
 
-Y una pregunta suelta: tu proyecto de Supabase, ¿está en free o en algún plan de pago? Es
-para comprobar por adelantado que mi organización lo acepta. Si no lo aceptara no pasa nada,
-tiramos del dump.
+Con eso me saco yo las copias de seguridad —las claves de cifrado, las variables de
+entorno, el dump de la base, la lista de ficheros— y voy dejándolo todo preparado sin
+darte la lata.
 
-Sin prisa. Cuando esto esté, te digo el siguiente paso.
+Solo hay una cosa que no puedo sacar de ningún sitio: los secrets de Fly, los de TIREA.
+`fly secrets list` enseña los nombres pero nunca los valores, ni a ti. Si los tienes
+apuntados por ahí, pásamelos cuando te venga bien; y si no los tienes, tampoco pasa
+nada, se los pedimos a TIREA el día que haga falta.
+
+Del CRON_SECRET ni te preocupes: no hace falta que busques el tuyo, genero uno nuevo yo
+y lo pongo en los dos sitios cuando toque.
+
+Y una pregunta tonta: tu proyecto de Supabase, ¿está en free o en algún plan de pago?
+Es solo para saber si mi organización lo acepta tal cual.
+
+Lo demás lo vamos viendo sobre la marcha. Al final tú solo tendrás que pasarme los dos
+repos y cancelar el Pro, y ya está. Tranquilo con los tiempos: la app no la usa nadie
+todavía y los ficheros de EIAC se pueden pedir cuando queramos, así que no hay nada que
+se rompa por esperar. A tu ritmo.
 ```
+
+> ~~Mensaje 1 v1~~ — pedía cinco cosas *hechas* (copiar claves, exportar envs, hacer el dump…).
+> **Descartado sin enviar**: le cargaba a Manuel trabajo que Alberto puede hacer él con solo tener
+> acceso. Ver «REPLANTEAMIENTO», arriba.
 
 **Mensaje 2** — cuando el 1 esté cerrado y Alberto haya creado la org de Fly: avisar de las tres
 invitaciones y pedir que las acepte.

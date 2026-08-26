@@ -25,6 +25,18 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🎁 (26/08/2026) Correduría: a Manuel se le piden ACCESOS, no tareas
+
+Alberto: «que él tenga menos trabajo, lo que podamos hacer nosotros mejor». Repartido de nuevo: las
+dos claves son **env vars** y el dump y la lista de Blob salen del panel → **los saca Alberto** con
+solo ser miembro. Y el `CRON_SECRET` **no tiene por qué ser el mismo**: GitHub no enseña el valor a
+nadie, así que Alberto **genera uno nuevo** — el punto desaparece de la lista de Manuel. Lo único que
+nadie puede sacar son los **secrets de Fly** (`fly secrets list` solo da nombres): se piden como favor.
+Manuel queda con **4 invitaciones + transferir los 2 repos + cancelar el Pro**. Mensaje 1 v2 redactado,
+**sin enviar**. A confirmar en panel: si como owner Alberto puede iniciar él las transferencias. PR #1759.
+
+---
+
 ### ⚪ (26/08/2026) Correduría: NO es una migración en caliente — se cae la urgencia entera
 
 Alberto corrige el error de fondo del plan: **el CRM aún no está operativo** (nadie lo usa) y **los
