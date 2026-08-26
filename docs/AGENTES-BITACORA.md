@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-26 · mercado-booking** · hizo: pasada diaria completa. Plan pedía 24 ventanas de
+  mercado (de 516 candidatas, todas ronda 1/evento y nunca medidas antes; tope max=24 dejó 492
+  fuera) + 4 de escaparate propio; medidas las 24 (0 sin respuesta) → 240 comps reales escritos
+  con `fuente:"booking_mcp"`, ninguno propio mezclado en el mercado; escaparate 4/4 medido (House
+  Sevillana, Busto Reform, Dúplex center, Luxury Busto) con `hotel_names` y aforo del piso. Latido
+  `ok:true`; dudas: —; fallos: —; PRs/commits: — (solo Supabase, sin tocar código).
 - **2026-08-25 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (última copia a
   `_buzon_pdf` 24/08, 1 día), sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`.
   Paso 4.0 (obligatorio): `v_facturas_sin_cargo` tenía 1 `sin_revisar` (financialdatasets.ai,
