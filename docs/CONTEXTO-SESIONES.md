@@ -25,6 +25,18 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🖥️ (26/08/2026) Correduría/Vercel: el PANEL sí exige pertenencia — y Alberto ya tenía equipo
+
+Captura de Manuel: su diálogo *Transfer Project To* solo lista **equipos a los que él pertenece**, y
+no pertenece a ninguno → única opción, *Create Team*. Así que «va por código, no por pertenencia» era
+cierto **de la API**, no de la pantalla. **Vía A (panel):** no hace falta trial — Alberto **ya tiene**
+`pisos-turisticos-projects` en **Pro**; le invita y listo. ⚠️ Mirar el coste de asiento en el propio
+diálogo, y 🔴 **sacarle del equipo al acabar** o el asiento factura para siempre en silencio (mismo
+goteo que los ~600 US$ de builds). **Vía B (API, coste cero):** `POST .../transfer-request` → código
+24 h → `PUT /projects/transfer-request/{code}`. Sigue faltando la invitación de **GitHub**. PR #1759.
+
+---
+
 ### 📬 (26/08/2026) Correduría: Supabase y Fly ya invitados; Vercel NO se bloquea, va por código
 
 Correo de Alberto: **Supabase ✅** (org LOOR, 07:42) y **Fly ✅** (13:29, cuenta ya creada). **GitHub

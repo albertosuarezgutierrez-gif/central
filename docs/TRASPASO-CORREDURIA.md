@@ -1614,7 +1614,22 @@ Se pidió mal, y luego se razonó mal dos veces seguidas. Queda la versión buen
    traspaso. Y cuesta un asiento, de ahí su «hay que pagar».
 2. ~~«Entonces al revés: Alberto invita a Manuel a SU equipo»~~ — **también falso**, y también
    costaría un asiento.
-3. ✅ **Lo correcto:** el traspaso de un proyecto de Vercel se hace **con un código de un solo uso**:
+3. ⚠️ **«Va por código, no por pertenencia»** — cierto **de la API**, pero **NO de la pantalla**. La
+   captura de Manuel (26/08, 15:36) lo zanja: su diálogo *Transfer Project To* solo lista **equipos a
+   los que él pertenece**, y como no pertenece a ninguno, la única opción que le sale es *Create Team*.
+   **Las dos vías existen y hay que elegir una:**
+
+**Vía A — la del panel (la que él está usando):** requiere que Manuel sea miembro de un equipo de
+Alberto. **No hay que crear ningún trial**: Alberto **ya tiene equipo**, `pisos-turisticos-projects`,
+en plan **Pro**. Basta invitarle ahí y le aparecerá en el desplegable.
+- ⚠️ **Mirar el coste en el propio diálogo de invitación antes de confirmar** — Vercel Pro factura por
+  asiento y lo dice ahí. Hay roles distintos (existe `VIEWER`) y no todos ocupan asiento facturable,
+  pero **eso lo dice la pantalla, no este documento**.
+- 🔴 **Y sacarle del equipo en cuanto el traspaso esté hecho.** Si se queda, el asiento **sigue
+  facturando mes tras mes sin que nadie avise** — el mismo goteo silencioso del incidente de los
+  ~600 US$ en builds (PR #904).
+
+**Vía B — la de la API (coste cero, si la A cobra):**
    - Manuel, en su equipo: `POST /projects/{idOrName}/transfer-request` → Vercel devuelve un
      **`code` válido 24 h**.
    - Alberto, en el suyo: `PUT /projects/transfer-request/{code}` con su `teamId`.
