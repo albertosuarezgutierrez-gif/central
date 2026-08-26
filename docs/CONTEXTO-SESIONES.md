@@ -25,6 +25,17 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🟢 (26/08/2026) Correduría: la invitación de Supabase YA estaba aceptada — el bloqueo no existía
+
+`get_project(uijsgeocgdaxkhvwtjqs)` → org `qdrmgpvqhcmhmpcrvtan`: la que el correo llamaba **LOOR** y
+el panel muestra como **PISO**. Alberto ya era miembro; el enlace daba muro de login por token
+consumido. **El dato estaba en el propio doc desde la mañana** y aun así se dieron 3 explicaciones
+nuevas: cuando algo tiene dos nombres, «no lo encuentro» es problema de nombre, no de acceso.
+Separado inventario (hecho, recuentos) de **volcado (NO hecho ni posible)**. Vercel: NO se invita a
+Manuel (asiento 20 US$/mes, `Viewer` no puede recibir traspaso, y él no tiene equipo) → **Vía B API**.
+Solo queda pedirle **GitHub**. ⚠️ Mis pushes no siempre disparan los workflows: dije «CI verde» 3
+veces leyendo solo check_suites de Vercel. PR #1759.
+
 ### 🖥️ (26/08/2026) Correduría/Vercel: el PANEL sí exige pertenencia — y Alberto ya tenía equipo
 
 Captura de Manuel: su diálogo *Transfer Project To* solo lista **equipos a los que él pertenece**, y
