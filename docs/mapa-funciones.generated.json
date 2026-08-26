@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-26T06:41:46Z",
-  "sha": "3e12616572c80e680ed76cd3e7dadac003ca493e",
+  "generadoEn": "2026-08-26T07:43:22Z",
+  "sha": "6b9c5415068a1b8d11b764fd505a4ec70cb9e878",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55532,7 +55532,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/agent/scan",
-      "hash": "04fa9bf53afb"
+      "hash": "6e3f4eb3fad5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/fijos/generar/route.ts",
@@ -59427,7 +59427,8 @@
       "resumen": "Detección de recurrentes que faltan (las anomalías de importe/duplicado se resuelven en el flujo principal vía evaluar()/existeDuplicado()).",
       "exporta": [
         "recurrentesQueFaltan",
-        "luzPorPisoQueFalta"
+        "luzPorPisoQueFalta",
+        "domiciliadosSinCargo"
       ],
       "funciones": [
         {
@@ -59436,7 +59437,7 @@
           "exportada": true,
           "params": "year: number, month: number",
           "retorno": "Promise<ReglaFaltante[]>",
-          "linea": 15,
+          "linea": 16,
           "resumen": "Reglas mensuales activas (con historial) que NO tienen gasto imputado en el mes/año dados → probable factura recurrente que aún no ha llegado."
         },
         {
@@ -59445,17 +59446,37 @@
           "exportada": true,
           "params": "year: number, month: number",
           "retorno": "Promise<",
-          "linea": 37,
+          "linea": 38,
           "resumen": "Cada piso debe tener su factura de LUZ (electricidad) cada mes. Devuelve los pisos que NO tienen un gasto de electricidad imputado ese mes."
+        },
+        {
+          "nombre": "coberturaBanco",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 71,
+          "resumen": "Hasta qué fecha llega el extracto de las cuentas corrientes. NULL si no se sabe."
+        },
+        {
+          "nombre": "domiciliadosSinCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, diasAtras = 90,",
+          "retorno": "Promise<",
+          "linea": 86,
+          "resumen": "Gastos ya imputados cuya domiciliación venció y NO tienen cargo en cuenta. Devuelve SOLO los accionables (`sin_cargo`): lo pendiente se calla y lo que no se puede comprobar por falta de extracto NO se"
         }
       ],
       "tablas": [
+        "cuentas_bancarias",
         "gastos",
         "gastos_reglas",
-        "properties"
+        "properties",
+        "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "ef524488539b"
+      "hash": "0bdb0be3d063"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/avisos.ts",
@@ -59468,6 +59489,7 @@
         "avisaNoLegibles",
         "avisaAjenas",
         "avisaRecurrentesQueFaltan",
+        "avisaDomiciliadosSinCargo",
         "resumen"
       ],
       "funciones": [
@@ -59534,17 +59556,26 @@
           "resumen": "Aviso: facturas recurrentes que no han llegado este mes."
         },
         {
+          "nombre": "avisaDomiciliadosSinCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: { proveedor: string | null; total: number; fecha_vencimiento: string }[], sinCobertura = 0,",
+          "retorno": "Promise<void>",
+          "linea": 78,
+          "resumen": "Aviso: facturas domiciliadas cuyo cargo venció y NO aparece en cuenta. 🚨 Solo entran aquí las `sin_cargo` (ver `domiciliados.ts`). Lo que no se ha podido comprobar porque el extracto no llega NUNCA s"
+        },
+        {
           "nombre": "resumen",
           "kind": "function",
           "exportada": true,
           "params": "s: ResumenStats",
           "retorno": "Promise<void>",
-          "linea": 85
+          "linea": 112
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f9a80c7ed04"
+      "hash": "9f02d3487968"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/booking.ts",
@@ -59702,6 +59733,47 @@
       "hash": "869bdbdddd5c"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/domiciliados.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Un gasto DOMICILIADO tiene que acabar cargado en cuenta. Este módulo decide, para una factura ya imputada, si su cargo bancario está, aún no toca, o falta de verdad. Módulo PURO (sin imports) para que sea testeable con `node --test`. 🚨 La razón de existir de este archivo (lección DIGI, 26/08/2026):",
+      "exporta": [
+        "sumaDias",
+        "estadoCargo",
+        "esAviso"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumaDias",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, dias: number",
+          "retorno": "string",
+          "linea": 50,
+          "resumen": "Suma días a una fecha YYYY-MM-DD y devuelve YYYY-MM-DD (UTC, sin dependencias)."
+        },
+        {
+          "nombre": "estadoCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCargo",
+          "retorno": "VeredictoCargo",
+          "linea": 59
+        },
+        {
+          "nombre": "esAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: VeredictoCargo",
+          "retorno": "boolean",
+          "linea": 90,
+          "resumen": "Solo `sin_cargo` es un aviso accionable; el resto se informa o se calla."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f343463eaba7"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/drive.ts",
       "ambito": "apps/plataforma",
       "resumen": "Cliente del Apps Script de Drive (DRIVE_SCRIPT_URL). list/get/archive/subir. El contrato del script: action + campos; respuestas con { ok, ... }.",
@@ -59827,12 +59899,12 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<",
-          "linea": 24
+          "linea": 28
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c64bf5fcc282"
+      "hash": "55d962ee67f1"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/fingerprint.ts",
@@ -60064,7 +60136,7 @@
           "exportada": true,
           "params": "fingerprint: string",
           "retorno": "Promise<Regla | null>",
-          "linea": 27
+          "linea": 29
         },
         {
           "nombre": "existeDuplicado",
@@ -60072,7 +60144,7 @@
           "exportada": true,
           "params": "d: { fingerprint: string numero_factura?: string | null fecha: string total: number }",
           "retorno": "Promise<boolean>",
-          "linea": 51,
+          "linea": 53,
           "resumen": "Dedup: misma huella+fecha+importe, o mismo número de factura."
         },
         {
@@ -60081,7 +60153,7 @@
           "exportada": true,
           "params": "d: DatosGasto, meta: { revisado: boolean; origen: string; confianza: number; motivo_revision?: string | null },",
           "retorno": "Promise<string>",
-          "linea": 71
+          "linea": 73
         },
         {
           "nombre": "reforzarRegla",
@@ -60089,7 +60161,7 @@
           "exportada": true,
           "params": "d: DatosGasto",
           "retorno": "Promise<void>",
-          "linea": 104,
+          "linea": 106,
           "resumen": "Crea o refuerza la regla aprendida tras una confirmación/imputación."
         },
         {
@@ -60098,7 +60170,7 @@
           "exportada": true,
           "params": "entry: { fuente: string fingerprint?: string | null gasto_id?: string | null decision: string confianza?: number | null motivo?: string | null payload?: unknown }",
           "retorno": "Promise<void>",
-          "linea": 129
+          "linea": 131
         },
         {
           "nombre": "num",
@@ -60106,7 +60178,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 146
+          "linea": 148
         }
       ],
       "tablas": [
@@ -60116,7 +60188,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "a052c2202b77"
+      "hash": "e63a097797fd"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/pagos.ts",
@@ -60294,7 +60366,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45a8951c19a8"
+      "hash": "e6879b669294"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/receptor.ts",
@@ -60669,7 +60741,7 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 246,
+          "linea": 253,
           "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → pasarela de texto (Director/OpenRouter → cadena gratis). Imagen → pasarela de visión (`aiVision`: OpenRout"
         },
         {
@@ -60678,13 +60750,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 340,
+          "linea": 347,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla. ⚠️ Este `{}` NO distingue «no era una factura» de «no se pudo leer»: si esa diferencia importa (y para contabilida"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5739adab21e8"
+      "hash": "acb79b39cc71"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -97371,7 +97443,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2571,
-    "funciones": 7080
+    "archivos": 2572,
+    "funciones": 7086
   }
 }
