@@ -74,10 +74,10 @@ fiscal, clasificación de gastos, o revisión de movimientos bancarios. Los movi
 ## Mapa propiedad → quién tributa (IRPF personal vs sociedad)
 | Piso (como lo dice Alberto) | Alias en sistemas | Tributa en |
 |---|---|---|
-| **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar — ⚠️ EXCEPCIÓN ejercicio 2025: tributó en Punto y Coma SL (ver nota abajo) |
-| **Villasís** = **el Dúplex** | Duplex Center / `prop_duplex_center` · Pasaje Villasís 1 = Pasaje Francisco Molina 4 (mismo piso) | **IRPF personal** (Alberto) |
-| **Busto Reform** (C/ Bustos Tavera 22, **izquierda**) | `prop_busto_reform` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
-| **Luxury Busto** (C/ Bustos Tavera 22, **derecha**) | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
+| **Socorro** (C/ Socorro 24, 41003) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar — ⚠️ EXCEPCIÓN ejercicio 2025: tributó en Punto y Coma SL (ver nota abajo) |
+| **Villasís** = **el Dúplex** | Duplex Center / `prop_duplex_center` · Pasaje Villasís 1, Es:2 Pl:01 Pt:C, 41003 = Pasaje Francisco Molina 4 (dos accesos del mismo piso; el registral es Villasís) | **IRPF personal** (Alberto) |
+| **Busto Reform** (C/ Bustos Tavera 22, **bajo izquierda**, 41003) | `prop_busto_reform` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
+| **Luxury Busto** (C/ Bustos Tavera 22, **bajo derecha**, 41003) | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
 | **Monte Carmelo 68** | — | **Vivienda habitual** (no es turístico; su IBI = personal) |
 
 > **Riesgo recurrente — Socorro:** las plataformas (Booking/Airbnb) ingresan en una **cuenta de
