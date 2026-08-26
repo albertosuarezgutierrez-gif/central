@@ -590,7 +590,7 @@ para él, que tampoco es nada. Se mira cuando esté dentro; no se le promete de 
 | # | Quién | Qué pide / hace | ✅ Cerrado cuando… | Riesgo si se queda a medias |
 |---|---|---|---|---|
 | **1** | **Manuel** | **Cuatro invitaciones**: Vercel (owner), organización Supabase (owner), organización Fly, y colaborador en los dos repos | Alberto entra en los cuatro sitios | Ninguno. Son cuatro clics y no tocan nada |
-| **1b** | Manuel | Responder: **su Supabase, ¿free o de pago?** | Contestado | Ninguno |
+| ~~1b~~ | — | ~~¿su Supabase es free o de pago?~~ **RESUELTO sin preguntar (26/08)**: organización **LOOR**, plan **free**, igual que la de Alberto | Comprobado por el conector | — |
 | **1c** | Manuel | *Si los tiene apuntados*: los secrets de Fly (TIREA). **Favor, no requisito** | Alberto los guarda | Si no los tiene, se piden a TIREA el día que hagan falta |
 | **2** | **Alberto** | **Todas las copias**, él solo: las dos claves (son env vars), export de env vars, dump de la base, lista de Blob | Puede descifrar y buscar con lo que tiene guardado | — |
 | **3** | Alberto | Crear la **organización en Fly** e invitar a Manuel a **sus** cuentas (destino de las transferencias) | Enviadas | — |
@@ -633,9 +633,6 @@ nada, se los pedimos a TIREA el día que haga falta.
 
 Del CRON_SECRET ni te preocupes: no hace falta que busques el tuyo, genero uno nuevo yo
 y lo pongo en los dos sitios cuando toque.
-
-Y una pregunta tonta: tu proyecto de Supabase, ¿está en free o en algún plan de pago?
-Es solo para saber si mi organización lo acepta tal cual.
 
 Lo demás lo vamos viendo sobre la marcha. Al final tú solo tendrás que pasarme los dos
 repos y cancelar el Pro, y ya está. Tranquilo con los tiempos: la app no la usa nadie
@@ -1566,3 +1563,33 @@ su sistema tiene que seguir en pie para la comparación lado a lado.
 | Datos personales de clientes (posible art. 9 RGPD) | Contrato de encargado de tratamiento; el dump nunca se commitea |
 | Manuel borra su proyecto antes de tiempo | Punto 5 explícito en el mensaje |
 | Reconstrucción de las ~10 apps en cada push | `ignoreCommand` desde el primer commit |
+
+---
+
+## 🔑 Qué acceso a Supabase tenemos YA, y para qué NO sirve (26/08/2026)
+
+Comprobado, no supuesto: el conector entra en el proyecto de Manuel
+(`uijsgeocgdaxkhvwtjqs`, «ASEGURA-prod-eu», región `eu-central-1`) y `select current_user` devuelve
+**`supabase_read_only_user`**. Es decir: **acceso de SOLO LECTURA**.
+
+| Sirve para | NO sirve para |
+|---|---|
+| Todo el inventario y los recuentos (ya hecho) | **Transferir el proyecto**: eso es gestión de organización, no SQL. Sigue haciendo falta que Manuel invite a Alberto a su organización |
+| Comprobar el estado de CIMA día a día | **Hacer el dump**: `pg_dump` necesita la cadena de conexión y su contraseña, que el conector no da |
+| Verificar después del traspaso que **se encuentra** un cliente por email/DNI (la prueba del índice ciego) | **Descifrar** un IBAN: eso lo hace la app con su clave, no una consulta SQL |
+| Resolver dudas sin molestar a Manuel — como la de abajo | Escribir nada. Es de solo lectura, punto |
+
+### ✅ Resuelto sin preguntar: su organización es **LOOR**, plan **FREE**
+
+La pregunta «¿free o de pago?» del Mensaje 1 **ya no hace falta**: `get_organization` la contesta.
+Ambas organizaciones —la suya (`LOOR`) y la de Alberto (`fzagbwkkzfjlsvflkkvn`)— están en **free**, así
+que el traspaso va de free a free, que es el caso simple. Queda igualmente comprobar el día antes que
+la organización de Alberto admite un **segundo** proyecto activo; si no, plan B es restaurar el dump.
+
+### 📅 De paso: los huecos de CIMA son NORMALES, no una avería
+
+Al mirarlo salió que el último fichero sigue siendo del **25/08** y hoy es 26. Antes de leer eso como
+un fallo, se miró la serie: `21/08 · 22 · 23 · 24 · 25` seguidos, pero antes **19 y 20 en blanco**, y
+un hueco de **06 al 15**. Las compañías no mandan todos los días. **Un día sin fichero no dice nada**;
+lo que diría algo es una racha larga justo después de tocar el `CRON_SECRET`.
+

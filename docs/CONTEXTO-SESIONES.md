@@ -25,6 +25,17 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🔑 (26/08/2026) Correduría: el acceso a Supabase es de SOLO LECTURA — y eso resuelve una pregunta
+
+`select current_user` en el proyecto de Manuel devuelve **`supabase_read_only_user`**. Sirve para
+inventariar, para vigilar CIMA y para la prueba del índice ciego post-traspaso; **no** para transferir
+el proyecto (es gestión de organización) ni para el dump (`pg_dump` pide cadena de conexión). ✅ Y
+contesta sola la pregunta 1b: su organización es **LOOR, plan free**, igual que la de Alberto → free a
+free, el caso simple. Se quita del mensaje. 📅 De paso: el último `cima_ficheros` es del 25/08 pero los
+**huecos son normales** (19-20 en blanco, 06→15 también), así que un día sin fichero no es avería. PR #1759.
+
+---
+
 ### 🎁 (26/08/2026) Correduría: a Manuel se le piden ACCESOS, no tareas
 
 Alberto: «que él tenga menos trabajo, lo que podamos hacer nosotros mejor». Repartido de nuevo: las
