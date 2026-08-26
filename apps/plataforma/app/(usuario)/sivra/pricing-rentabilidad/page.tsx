@@ -13,6 +13,8 @@ const C = {
   bg: '#F6F8FB', card: '#FFFFFF', warn: '#C2410C', ok: '#15803D', bad: '#B91C1C',
 }
 
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
 const NOMBRE: Record<string, string> = {
   prop_busto_reform: 'Busto Reform',
   prop_luxury_busto: 'Luxury Busto',
@@ -39,6 +41,18 @@ type Mercado = {
   delta_pct: number | null
 }
 type Cohorte = { property_id: string; mes: string; reservas: number; noches: number; bruto: number | null; neto: number | null }
+type Celda = { bruto: number; noches: number; reservas: number }
+type MesComparado = {
+  property_id: string; mesNum: number; mes: string
+  regimen: 'cerrado' | 'en_curso' | 'cartera'
+  atribucion: 'no' | 'parcial' | 'si'
+  actual: Celda; previo: Celda; deltaEur: number; deltaPct: number | null
+}
+type Totales = { actual: Celda; previo: Celda; deltaEur: number; deltaPct: number | null }
+type Anual = {
+  anio: number; corte_actual: string; corte_previo: string
+  serie: MesComparado[]; total: Totales; total_consumido: Totales; total_cartera: Totales
+}
 type Data = {
   backtest: Backtest[]
   mercado: Mercado[]
@@ -47,6 +61,7 @@ type Data = {
   gastos_pricelabs: { fecha: string; total: number }[]
   referencia_pl: { caduca: string; dias_restantes: number }
   go_live: Record<string, string>
+  anual: Anual
   nota: string
 }
 
@@ -208,6 +223,95 @@ export default function PricingRentabilidadPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* 4 · Facturación mes a mes vs el año anterior */}
+      <div style={card}>
+        <h2 style={h2}>
+          Facturación mes a mes · {data.anual.anio} vs {data.anual.anio - 1}
+        </h2>
+        <p style={sub}>
+          Comparación JUSTA en los tres tramos: los meses ya pasados comparan estancias consumidas;
+          el mes en curso compara lo que va de mes contra lo que iba a la misma altura el año pasado;
+          los meses futuros comparan <b>cartera contra cartera</b> (lo reservado a {data.anual.corte_actual}{' '}
+          contra lo que había a {data.anual.corte_previo}) — el ritmo de venta. La franja marca desde
+          cuándo manda el motor en cada piso.
+        </p>
+
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          {([
+            ['Ya consumido', data.anual.total_consumido],
+            ['En cartera (resto del año)', data.anual.total_cartera],
+          ] as const).map(([rotulo, t]) => (
+            <div key={rotulo} style={{ flex: '1 1 220px', minWidth: 200, border: `1px solid ${C.line}`, borderRadius: 10, padding: 12 }}>
+              <div style={{ fontSize: 11, color: C.soft, textTransform: 'uppercase', letterSpacing: 0.5 }}>{rotulo}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: C.ink, marginTop: 4 }}>{eur(t.actual.bruto)}</div>
+              <div style={{ fontSize: 12, color: C.soft }}>
+                {data.anual.anio - 1}: {eur(t.previo.bruto)}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4, color: t.deltaEur >= 0 ? C.ok : C.warn }}>
+                {t.deltaEur >= 0 ? '+' : ''}{eur(t.deltaEur)}
+                {t.deltaPct != null && <> ({t.deltaPct >= 0 ? '+' : ''}{t.deltaPct}%)</>}
+              </div>
+              <div style={{ fontSize: 11, color: C.soft, marginTop: 6 }}>
+                {t.actual.noches} noches vs {t.previo.noches}
+                {t.actual.noches > 0 && t.previo.noches > 0 && (
+                  <> · {eur(Math.round(t.actual.bruto / t.actual.noches))}/noche vs{' '}
+                    {eur(Math.round(t.previo.bruto / t.previo.noches))}</>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
+            <thead><tr>
+              <th style={th}>Mes</th><th style={th}>{data.anual.anio - 1}</th><th style={th}>{data.anual.anio}</th>
+              <th style={th}>Δ</th><th style={th}>Noches</th><th style={th}>Motor</th>
+            </tr></thead>
+            <tbody>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => {
+                const filas = data.anual.serie.filter((s) => s.mesNum === m)
+                const a = filas.reduce((x, f) => x + f.actual.bruto, 0)
+                const p = filas.reduce((x, f) => x + f.previo.bruto, 0)
+                const nA = filas.reduce((x, f) => x + f.actual.noches, 0)
+                const nP = filas.reduce((x, f) => x + f.previo.noches, 0)
+                const pct = p > 0 ? Math.round(((a - p) / p) * 1000) / 10 : null
+                const reg = filas[0]?.regimen ?? 'cartera'
+                const conMotor = filas.filter((f) => f.atribucion === 'si').length
+                const parcial = filas.filter((f) => f.atribucion === 'parcial').length
+                return (
+                  <tr key={m} style={reg === 'cartera' ? { background: '#FCFDFF' } : undefined}>
+                    <td style={{ ...td, fontWeight: 600 }}>
+                      {MESES[m - 1]}
+                      {reg === 'en_curso' && <span style={{ color: C.soft, fontWeight: 400 }}> · en curso</span>}
+                      {reg === 'cartera' && <span style={{ color: C.soft, fontWeight: 400 }}> · cartera</span>}
+                    </td>
+                    <td style={{ ...td, color: C.soft }}>{p > 0 ? eur(p) : '—'}</td>
+                    <td style={td}>{a > 0 ? eur(a) : '—'}</td>
+                    <td style={{ ...td, color: a - p >= 0 ? C.ok : C.warn }}>
+                      {p === 0 && a === 0 ? '—' : <>{a - p >= 0 ? '+' : ''}{eur(a - p)}{pct != null && <> ({pct >= 0 ? '+' : ''}{pct}%)</>}</>}
+                    </td>
+                    <td style={{ ...td, color: C.soft }}>{nA} vs {nP}</td>
+                    <td style={{ ...td, fontSize: 12, color: conMotor === 4 ? C.ok : conMotor + parcial > 0 ? C.warn : C.soft }}>
+                      {conMotor === 4 ? 'los 4 pisos' : conMotor + parcial === 0 ? '—' : `${conMotor} pisos${parcial ? ` (+${parcial} a medias)` : ''}`}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <p style={{ ...sub, marginTop: 12, marginBottom: 0 }}>
+          ⚠️ <b>La cartera de este año está algo inflada y no se puede corregir.</b> Una reserva cancelada
+          se borra del histórico, así que la cifra del año pasado es «lo que sobrevivió» y la de este año
+          incluye reservas que aún pueden caerse. No hay histórico de cancelaciones anterior al 12/08/2026.
+          <br />
+          ⚠️ <b>Que un mes vaya mejor no demuestra que sea el motor.</b> La columna «Motor» solo dice si
+          mandaba, no que la mejora sea suya: también cambian el mercado, los eventos y la reserva directa.
+        </p>
       </div>
 
       {/* 3 · Coste */}
