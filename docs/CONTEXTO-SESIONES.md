@@ -25,6 +25,14 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
+
+Pasada programada: `origen='psd2'` último movimiento 2026-08-25 (1 día), mov_30d=52 vs
+mov_30d_prev=75 (sin caída >50%). Conexiones activas Kutxabank ****0855 y BBVA con
+`ultimo_sync` de hoy 06:00 UTC; único aviso vivo es informativo (ℹ️ ventana 89d rechazada).
+Estado ✅ OK. Solo cambio: entrada de auto-informe en `docs/AGENTES-BITACORA.md` → PR draft
+**#1741** (push directo a `main` bloqueado por branch protection, de ahí el PR).
+
 Ranking disparado con **1.080 empresas con datos**. Top-5: SNDK · LLYVA · WDC · BKNG · STX (el ciclo
 memoria/almacenamiento domina). **SNDK nº1 con momentum +3.527% y precio 1.596$ olía a dato mal leído
 —el patrón MCD/ORCL— así que se contrastó: es REAL** (Alpha Vantage, 1.480,77$; ×37 desde el spin-off
