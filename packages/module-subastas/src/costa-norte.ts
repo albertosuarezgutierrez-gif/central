@@ -25,12 +25,19 @@
 import { norm } from './parsing.ts'
 import {
   CHOLLO_DESCUENTO_SOSPECHOSO,
+  esCasa,
   esParcela,
   pareceRuina,
   referenciaZona,
   type Comparable,
+  type FuenteReferencia,
   type ZonaPortalRef,
 } from './comparables.ts'
+
+// `esCasa` vive en `comparables.ts` desde el 26/08/2026 (lo usa TODO el agente
+// de mercado, no solo esta lente); se reexporta para no romper a quien lo
+// importe de aquí.
+export { esCasa } from './comparables.ts'
 
 /**
  * Tope de precio de la preferencia (decisión de Alberto, 09/08/2026).
@@ -214,17 +221,6 @@ export function esZonaPreferente(zona: string | null | undefined, titulo?: strin
 }
 
 /**
- * ¿El anuncio es una CASA (chalet/adosado/pareado/casona) y no un piso?
- * Se decide por el título, que el portal siempre encabeza con el tipo
- * («Casa o chalet independiente en…», «casa adosada en…», «Piso en…»).
- * Un dúplex/ático/planta baja sigue siendo un piso: fuera.
- */
-export function esCasa(titulo: string | null | undefined): boolean {
-  const t = norm(titulo ?? '')
-  return /\b(casa|chalet|casona|villa|adosado|adosada|pareado|pareada|caserio)\b/.test(t)
-}
-
-/**
  * ¿Nada en el anuncio delata obra? OJO: esto NO confirma «buen estado» — el
  * correo de alerta no trae la descripción ni fotos. Dice exactamente que ni el
  * título confiesa reforma ni la API lo marcó `a reformar`; el estado real se
@@ -269,7 +265,7 @@ export interface Preferente {
     muestra: number
     /** 1 − precioM2/mediana. Puede ser NEGATIVO (más caro que su zona). */
     descuento: number
-    fuente: 'portal' | 'alertas'
+    fuente: FuenteReferencia
   } | null
 }
 
@@ -294,7 +290,7 @@ export function lentePreferentes(comparables: Comparable[], zonasPortal?: ZonaPo
     // pero su €/m² mide suelo y no se compara con medianas de vivienda.
     if (c.precioM2 != null && c.precioM2 > 0 && !esParcela(c)) {
       const resto = comparables.filter((x) => x.refAnuncio !== c.refAnuncio)
-      const ref = referenciaZona(c, resto, portalPorSlug)
+      const ref = referenciaZona(c, resto, portalPorSlug, 3, true)
       if (ref) {
         const descuento = 1 - c.precioM2 / ref.precioM2Zona
         // Un «descuento» de derribo ES una señal de obra aunque el anuncio

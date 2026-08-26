@@ -123,7 +123,7 @@ export const CRONS_VERCEL: AgenteInfo[] = [
     cadencia: 'cada 6 h + 07:30/09:00', disparo: 'Cron Vercel', entrega: 'accion-directa', telegram: false,
     archivo: '@central/module-concursos + /api/concursos', vertical: 'Plataforma (cuenta)', estado: 'activo' },
   { id: 'subastas', nombre: 'Radar de subastas de inmuebles', tipo: 'cron-vercel',
-    funcion: 'Ingiere BOE + comparables de Idealista, enriquece con ficha y Catastro, calcula coste real, puja máxima y yield turístico con datos propios, detecta chollos y bajadas, vigila el ESTADO DE PUJAS (pestaña ver=5) con su histórico, avisa del depósito a 5 días y del cierre a 24 h, CUENTA CÓMO ACABÓ cada una (remate contra el tipo y contra nuestro techo), proyecta el remate esperado con los remates reales, y vigila la antesala concursal',
+    funcion: 'Ingiere BOE + comparables de Idealista, enriquece con ficha y Catastro, calcula coste real, puja máxima y yield turístico con datos propios, detecta chollos y bajadas (los dos avisos, SOLO de CASAS desde 26/08/2026; los pisos siguen en el corpus por ser la mediana de zona), vigila el ESTADO DE PUJAS (pestaña ver=5) con su histórico, avisa del depósito a 5 días y del cierre a 24 h, CUENTA CÓMO ACABÓ cada una (remate contra el tipo y contra nuestro techo), proyecta el remate esperado con los remates reales, y vigila la antesala concursal',
     cadencia: 'Diaria 06:00/06:15/06:20/06:30/08:00 + cierre 11:30 y 20:30', disparo: 'Cron Vercel', entrega: 'accion-directa', telegram: true,
     archivo: '@central/module-subastas + /api/cron/subastas-*', vertical: 'Plataforma (cuenta)', estado: 'activo' },
   { id: 'facturas-proveedor', nombre: 'Agente de pago de facturas', tipo: 'cron-vercel',

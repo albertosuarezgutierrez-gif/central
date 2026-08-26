@@ -51,6 +51,16 @@ conversión — IBKR no rechaza por falta de divisa, financia en margen y cobra 
 
 ---
 
+### 🏠 (26/08/2026) El radar de mercado avisa SOLO de casas — y deja de medirlas contra pisos
+Alberto, sobre el aviso 💡 de chollos (3 de 4 eran pisos): «solo buscamos casas, no pisos». Filtro
+aplicado a los DOS avisos de Telegram (💡 chollos y ⬇️ bajadas de precio); el corpus y la lista de
+/subastas siguen con pisos a propósito (son la mediana de zona) y a un piso NO se le marca
+`chollo_avisado_at`/`bajada_avisada_n`: no se le ha enseñado nada. `esCasa` se muda a `comparables.ts`
+y mira el TIPO declarado (lo de antes del « en » del título) — «Piso en Villa del Río» ya no cuela; añade
+cortijo/masía/finca con casa (que además dejan de clasificarse como suelo). Y una casa se compara ahora
+contra la **mediana de CASAS** de su zona cuando hay ≥3 (`fuente:'casas'`); si no, mixta y el aviso lo
+DICE — medirla contra pisos exageraba el descuento (fixture: 27% real vs 63% inventado).
+
 ### 📍 (26/08/2026) Repaso de las direcciones del portfolio: el lado de los Busto está bien, faltaba el CP
 Tras cerrar lo de House Sevillana, Alberto pidió repasar Bustos Tavera y el Dúplex. **El lado NO
 estaba cruzado en ningún sitio**: dcha=Luxury Busto, izda=Busto Reform, coherente en BD, skills

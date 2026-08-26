@@ -3,7 +3,7 @@
 // `<mj-raw>` tal cual los manda el portal). `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectarChollos, esAlertaIdealista, estimarAntiguedad, pareceRuina, parsearAlertaIdealista, precioM2Zona, velocidadZona, zonasDeComparable } from '../src/comparables.ts'
+import { detectarChollos, esAlertaIdealista, esCasa, estimarAntiguedad, pareceRuina, parsearAlertaIdealista, precioM2Zona, tipoComparable, velocidadZona, zonasDeComparable } from '../src/comparables.ts'
 import type { ObservacionRef } from '../src/comparables.ts'
 import type { Comparable } from '../src/comparables.ts'
 
@@ -314,16 +314,66 @@ test('mediana del BUSCADOR del portal: manda sobre la de alertas y rescata zonas
   assert.equal(antilla!.fuente, 'portal')
   assert.equal(antilla!.precioM2Zona, 2600)
   assert.equal(antilla!.muestra, 80)
-  // La zona FINA (Islantilla Golf) no casa ningún slug → su mediana sigue
-  // siendo la de alertas, y el top no cambia.
+  // La zona FINA (Islantilla Golf) no casa ningún slug → su mediana sale del
+  // corpus de alertas. Como el anuncio es una CASA y en esa zona hay casas de
+  // sobra, la referencia es la de CASAS (fuente 'casas'): el número coincide
+  // con el mixto porque ese corpus real son todo chalets.
   const [top] = chollos
   assert.equal(top.zona, 'Islantilla Golf, Islantilla')
-  assert.equal(top.fuente, 'alertas')
+  assert.equal(top.fuente, 'casas')
   assert.equal(top.precioM2Zona, 2526)
 })
 
-test('sin zonasPortal todo sale con fuente alertas (compatibilidad)', () => {
-  for (const c of detectarChollos(CORPUS_REAL)) assert.equal(c.fuente, 'alertas')
+test('sin zonasPortal, una casa se mide contra CASAS y lo declara en la fuente', () => {
+  for (const c of detectarChollos(CORPUS_REAL)) assert.equal(c.fuente, 'casas')
+})
+
+test('una casa NO se compara con la mediana de los pisos de su zona (26/08/2026)', () => {
+  // Zona con 3 pisos caros (3.000 €/m²) y 3 casas a 1.500. Una casa a 1.100
+  // €/m² es un 27% más barata que las casas de su zona, no un 63% más barata
+  // que los pisos: medirla contra la mixta infla el descuento a más del doble.
+  const base = { portal: 'idealista' as const, tipo: 'vivienda' as const, zona: 'Colunga', habitaciones: null, url: null }
+  const pisos = [1, 2, 3].map((i) => ({ ...base, refAnuncio: `p${i}`, titulo: `Piso en Colunga`, precio: 300000 + i, superficie: 100, precioM2: 3000 }))
+  const casas = [1, 2, 3].map((i) => ({ ...base, refAnuncio: `c${i}`, titulo: `Casa en Colunga`, precio: 150000 + i, superficie: 100, precioM2: 1500 }))
+  const barata = { ...base, refAnuncio: 'x', titulo: 'Chalet adosado en Colunga', precio: 110000, superficie: 100, precioM2: 1100 }
+
+  const [ch] = detectarChollos([barata, ...casas, ...pisos])
+  assert.equal(ch.comparable.refAnuncio, 'x')
+  assert.equal(ch.fuente, 'casas')
+  assert.equal(ch.precioM2Zona, 1500)
+  assert.equal(ch.muestra, 3)
+  assert.equal(Math.round(ch.descuento * 100), 27)
+
+  // Sin casas suficientes en la zona, la referencia cae a la MIXTA y lo dice:
+  // el descuento sigue calculándose (mejor eso que quedarse mudo), pero quien
+  // lo enseñe sabe que está comparando una casa con pisos.
+  const [soloPisos] = detectarChollos([barata, casas[0], ...pisos])
+  assert.equal(soloPisos.comparable.refAnuncio, 'x')
+  assert.equal(soloPisos.fuente, 'alertas')
+  assert.equal(soloPisos.precioM2Zona, 3000)
+  assert.equal(Math.round(soloPisos.descuento * 100), 63)
+})
+
+test('esCasa mira el TIPO declarado, no el topónimo', () => {
+  assert.equal(esCasa('Chalet pareado en Calle de Los Corrales, Alfoz de Lloredo'), true)
+  assert.equal(esCasa('Casa o chalet independiente en Llanes'), true)
+  assert.equal(esCasa('Casa adosada en Matalascañas'), true)
+  assert.equal(esCasa('Cortijo en Carmona'), true)
+  assert.equal(esCasa('Finca rústica con casa en Aracena'), true)
+  assert.equal(esCasa('Piso en Avenida de la Playa, Isla Cristina'), false)
+  assert.equal(esCasa('Ático en La Antilla'), false)
+  assert.equal(esCasa('Dúplex en Islantilla'), false)
+  // El topónimo NO decide: estos son pisos aunque la calle diga «villa» o «casa».
+  assert.equal(esCasa('Piso en Villa del Río'), false)
+  assert.equal(esCasa('Piso en Calle Casa de la Moneda, Sevilla'), false)
+})
+
+test('el rústico con vivienda deja de clasificarse como suelo', () => {
+  assert.equal(tipoComparable('Cortijo en Carmona'), 'vivienda')
+  assert.equal(tipoComparable('Finca rústica con casa en Aracena'), 'vivienda')
+  // Suelo pelado sigue siendo suelo: prometerlo como casa sería inventar.
+  assert.equal(tipoComparable('Finca rústica en Aracena'), 'terreno')
+  assert.equal(tipoComparable('Parcela en Mazagón'), 'terreno')
 })
 
 // ── Antigüedad estimada por número de referencia ─────────────────────────────

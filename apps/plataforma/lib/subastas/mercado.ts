@@ -18,7 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, dedupeRelistados, detectarChollos, esZonaPreferente, estimarAntiguedad, lentePreferentes, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, TOPE_PREFERENTE_EUR, velocidadZona, type Chollo, type Comparable, type Preferente, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
+import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, dedupeRelistados, detectarChollos, esCasa, esZonaPreferente, estimarAntiguedad, lentePreferentes, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, TOPE_PREFERENTE_EUR, velocidadZona, type Chollo, type Comparable, type Preferente, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
 import { leerAlertasDesde } from '@/lib/subastas/gmail-boe'
 import { guardarCursor, leerCursor } from '@/lib/subastas/correo-cursor'
 import { COSTE_PETICION_PORTAL_MS, motivoCorte, quedaTiempo } from '@/lib/subastas/presupuesto-mercado'
@@ -609,8 +609,16 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
   `)
   const nuevosRefs = new Set(pendientes.map((p) => `${p.portal}|${p.ref_anuncio}`))
   const esNuevo = (c: { comparable: Comparable }) => nuevosRefs.has(`${c.comparable.portal}|${c.comparable.refAnuncio}`)
-  // Los chollos 🌊 de zonas preferentes van primero: es la preferencia declarada.
-  const nuevos = chollos.filter(esNuevo).sort((a, b) => Number(b.preferente) - Number(a.preferente))
+  // SOLO CASAS (Alberto, 26/08/2026): «solo buscamos casas, no pisos». El
+  // filtro es del AVISO, no del corpus: los pisos siguen entrando a
+  // `mercado_comparables` (son parte de la mediana de zona) y siguen listándose
+  // en /subastas — simplemente dejan de gastar un aviso de Telegram. Tampoco se
+  // les marca `chollo_avisado_at`: no se les ha enseñado nada, y si algún día
+  // vuelven a interesar no llegarán quemados.
+  const nuevos = chollos
+    .filter((ch) => esNuevo(ch) && esCasa(ch.comparable.titulo))
+    // Los chollos 🌊 de zonas preferentes van primero: es la preferencia declarada.
+    .sort((a, b) => Number(b.preferente) - Number(a.preferente))
   const nuevosPref = preferentes.filter(esNuevo)
   if (!nuevos.length && !nuevosPref.length) {
     return { chollos: chollos.length, avisados: 0, preferentesNorte: preferentes.length, preferentesAvisados: 0 }
@@ -646,15 +654,21 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
     if (nuevos.length) lineas.push('')
   }
 
-  if (nuevos.length) lineas.push(`💡 <b>Chollos en tus zonas de Idealista</b> — ${nuevos.length} nuevo${nuevos.length > 1 ? 's' : ''}`, '')
+  if (nuevos.length) lineas.push(`💡 <b>Casas por debajo de su zona</b> — ${nuevos.length} nueva${nuevos.length > 1 ? 's' : ''}`, '')
   for (const ch of nuevos.slice(0, 6)) {
     const c = ch.comparable
     lineas.push(`• <b>${escaparHtml(c.titulo)}</b>${ch.preferente ? ' 🌊' : ''}${ch.sospechoso ? ' ⚠️' : ''}`)
+    // Contra QUÉ se compara, siempre dicho: una casa medida contra una mediana
+    // con pisos dentro sale más barata de lo que es, y ese matiz decide.
+    const muestraTxt = ch.fuente === 'casas' ? `${ch.muestra} casas` : `${ch.muestra} anuncios, pisos incluidos`
     lineas.push(
       `  ${eur(c.precio)}${c.superficie ? ` · ${c.superficie} m²` : ''} · ${Math.round(c.precioM2 ?? 0)}€/m² ` +
-        `frente a ${Math.round(ch.precioM2Zona)}€/m² de ${escaparHtml(ch.zona)} (${ch.muestra} anuncios) → ` +
+        `frente a ${Math.round(ch.precioM2Zona)}€/m² de ${escaparHtml(ch.zona)} (${muestraTxt}) → ` +
         `<b>${(ch.descuento * 100).toFixed(0)}% por debajo</b>`,
     )
+    if (ch.fuente !== 'casas') {
+      lineas.push('  <i>Esa zona no tiene casas suficientes para comparar casa con casa: el descuento va contra la mediana mixta y tiende a exagerar.</i>')
+    }
     // Las señales de negociación: bajadas = vendedor nervioso; antigüedad = margen para ofertar a la baja.
     if ((c.bajadas ?? 0) > 0 && c.precioInicial != null && c.precioInicial > c.precio) {
       lineas.push(`  ⬇️ Ha bajado ${c.bajadas} ${c.bajadas === 1 ? 'vez' : 'veces'}: de ${eur(c.precioInicial)} a ${eur(c.precio)}`)
@@ -822,10 +836,15 @@ export async function avisarBajadas(): Promise<{ bajadas: number; avisados: numb
       AND visto_en >= now() - make_interval(months => ${MESES_VIGENCIA}::int)
     ORDER BY bajadas DESC, precio_anterior - precio DESC
   `)
-  if (!filas.length) return { bajadas: 0, avisados: 0 }
+  // SOLO CASAS (Alberto, 26/08/2026), igual que los chollos. Se filtra aquí y
+  // no en el SQL porque el «es casa» vive en el módulo puro (`esCasa`, sobre el
+  // tipo declarado del título) y no en una columna; el coste es una pasada por
+  // una lista de decenas de filas.
+  const casas = filas.filter((f) => esCasa(String(f.titulo)))
+  if (!casas.length) return { bajadas: 0, avisados: 0 }
 
-  const lineas: string[] = [`⬇️ <b>Bajadas de precio en tus zonas</b> — ${filas.length} anuncio${filas.length > 1 ? 's' : ''}`, '']
-  for (const f of filas.slice(0, 8)) {
+  const lineas: string[] = [`⬇️ <b>Bajadas de precio — casas</b> — ${casas.length} anuncio${casas.length > 1 ? 's' : ''}`, '']
+  for (const f of casas.slice(0, 8)) {
     const precio = Number(f.precio)
     const anterior = f.precio_anterior == null ? null : Number(f.precio_anterior)
     const inicial = f.precio_inicial == null ? null : Number(f.precio_inicial)
@@ -839,13 +858,16 @@ export async function avisarBajadas(): Promise<{ bajadas: number; avisados: numb
     )
     if (f.url) lineas.push(`  ${escaparHtml(f.url)}`)
   }
-  if (filas.length > 8) lineas.push('', `…y ${filas.length - 8} más en /subastas`)
+  if (casas.length > 8) lineas.push('', `…y ${casas.length - 8} más en /subastas`)
 
   await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
 
+  // Solo se marca lo AVISADO: un piso que bajó de precio sigue pendiente en la
+  // tabla (no se le ha enseñado nada). Marcarlo sería escribir un «ya te lo
+  // conté» falso y dejarlo mudo el día que las preferencias cambien.
   await prisma.$executeRaw(Prisma.sql`
     UPDATE mercado_comparables SET bajada_avisada_n = bajadas
-    WHERE ref_anuncio = ANY(${filas.map((f) => String(f.ref_anuncio))}::text[])
+    WHERE ref_anuncio = ANY(${casas.map((f) => String(f.ref_anuncio))}::text[])
   `)
-  return { bajadas: filas.length, avisados: Math.min(filas.length, 8) }
+  return { bajadas: casas.length, avisados: Math.min(casas.length, 8) }
 }

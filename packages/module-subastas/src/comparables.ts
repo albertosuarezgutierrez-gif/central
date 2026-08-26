@@ -75,9 +75,50 @@ export function tipoComparable(titulo: string): TipoComparable {
   const t = norm(titulo)
   if (/\b(garaje|plaza de garaje|trastero|aparcamiento)\b/.test(t)) return 'garaje'
   if (/\b(local|nave|oficina|edificio)\b/.test(t)) return 'local'
+  // Casa rural ANTES que el suelo: «Cortijo en…», «Finca rústica con casa en…»
+  // son VIVIENDA aunque el título lleve la palabra del terreno. Sin esto se
+  // clasificaban como 'terreno' y no llegaban nunca a la lente de casas.
+  // El €/m² de suelo no contamina la mediana: `esParcela` (>400 m²) los saca.
+  if (RURAL_CON_VIVIENDA.test(tipoDeclarado(titulo))) return 'vivienda'
   if (/\b(terreno|solar|parcela|finca rustica)\b/.test(t)) return 'terreno'
   if (/\b(piso|chalet|casa|atico|duplex|apartamento|estudio|adosado|pareado|vivienda|loft)\b/.test(t)) return 'vivienda'
   return 'otro'
+}
+
+/**
+ * Cabeza del título: lo que el portal declara como TIPO, que siempre va antes
+ * del « en » de la ubicación («Chalet pareado en Calle de Los Corrales, Alfoz
+ * de Lloredo» → «chalet pareado»). Mirar el título entero confundía el tipo
+ * con el topónimo: un «Piso en Villa del Río» o en «Calle Hacienda» habría
+ * pasado por casa. Sin « en » se devuelve el título entero.
+ */
+function tipoDeclarado(titulo: string | null | undefined): string {
+  const t = norm(titulo ?? '')
+  const i = t.indexOf(' en ')
+  return i > 0 ? t.slice(0, i) : t
+}
+
+/**
+ * Rústico que SÍ es vivienda: o bien el tipo ya la nombra (cortijo, masía,
+ * alquería, caserío…), o bien el título dice explícitamente que la finca
+ * lleva casa («Finca rústica con casa», «Parcela con vivienda»). Una «Finca
+ * rústica» a secas NO entra: es suelo, y venderla como casa sería inventar.
+ */
+const RURAL_CON_VIVIENDA =
+  /\b(cortijo|masia|alqueria|caserio|caseron|hacienda)\b|\b(?:finca|parcela|terreno)\b[^.]{0,40}\bcon (?:casa|vivienda|chalet|cortijo)\b/
+
+/**
+ * ¿El anuncio es una CASA (chalet/adosado/pareado/casona/cortijo…) y no un
+ * piso? Se decide por el título, que el portal siempre encabeza con el tipo
+ * («Casa o chalet independiente en…», «casa adosada en…», «Piso en…»).
+ * Un dúplex/ático/planta baja sigue siendo un piso: fuera.
+ *
+ * Vive aquí (y no en la lente 🌊) porque desde el 26/08/2026 es el filtro de
+ * TODO lo que el agente de mercado avisa: Alberto solo busca casas.
+ */
+export function esCasa(titulo: string | null | undefined): boolean {
+  const t = tipoDeclarado(titulo)
+  return /\b(casa|chalet|casona|villa|adosado|adosada|pareado|pareada)\b/.test(t) || RURAL_CON_VIVIENDA.test(t)
 }
 
 /**
@@ -178,11 +219,18 @@ export function esParcela(c: Comparable): boolean {
  * Se usa la mediana y no la media porque un chalet de lujo suelto dispara la
  * media y dejaría de avisar de gangas reales. Devuelve `null` con menos de
  * `minMuestra` comparables: una referencia con dos anuncios no es referencia.
+ *
+ * `soloCasas` restringe la muestra a CASAS. Una casa tiene €/m² más bajo que
+ * un piso del mismo sitio (paga suelo, no altura): medirla contra una mediana
+ * con pisos dentro la hace parecer chollo sin serlo. Decisión de Alberto
+ * (26/08/2026): casa contra casas cuando la zona dé muestra; si no, mixta —
+ * y quien lo enseñe DEBE decir cuál de las dos usó.
  */
 export function precioM2Zona(
   comparables: Comparable[],
   zona: string,
   minMuestra = 3,
+  soloCasas = false,
 ): { precioM2: number; muestra: number } | null {
   const z = norm(zona)
   if (!z) return null
@@ -193,6 +241,7 @@ export function precioM2Zona(
         c.precioM2 != null &&
         c.tipo === 'vivienda' &&
         !esParcela(c) &&
+        (!soloCasas || esCasa(c.titulo)) &&
         norm(`${c.zona ?? ''} ${c.titulo}`).includes(z),
     )
     .map((c) => c.precioM2!)
@@ -259,9 +308,19 @@ export interface Chollo {
    * título que la confiesa); `null` = anuncio con pinta habitable, sin peaje.
    */
   descuentoNeto: number | null
-  /** De dónde sale la mediana: el buscador del portal (muestra grande) o las alertas. */
-  fuente: 'portal' | 'alertas'
+  /** De dónde sale la mediana. Ver `FuenteReferencia`. */
+  fuente: FuenteReferencia
 }
+
+/**
+ * De dónde sale la mediana con la que se mide el descuento:
+ *  · `casas`   — solo CASAS de esa zona (el patrón bueno para una casa).
+ *  · `portal`  — buscador del portal (muestra grande, pero MEZCLA pisos y casas).
+ *  · `alertas` — corpus de correos de la zona, también mixto.
+ * `portal`/`alertas` sobre una casa son un «lo mejor que hay», no un igual:
+ * quien lo enseñe tiene que decirlo, no dar el descuento por bueno a secas.
+ */
+export type FuenteReferencia = 'casas' | 'portal' | 'alertas'
 
 /** Mediana €/m² de una zona del BUSCADOR del portal (tabla `mercado_zonas`). */
 export interface ZonaPortalRef {
@@ -314,8 +373,16 @@ export function referenciaZona(
   resto: Comparable[],
   portalPorSlug: Map<string, ZonaPortalRef>,
   minMuestra = 3,
-): { zona: string; precioM2Zona: number; muestra: number; fuente: 'portal' | 'alertas' } | null {
+  soloCasas = false,
+): { zona: string; precioM2Zona: number; muestra: number; fuente: FuenteReferencia } | null {
   for (const z of zonasDeComparable(c.zona)) {
+    // Casa contra casas: manda sobre la mixta del buscador aunque su muestra
+    // sea menor — 3 casas de la zona dicen más del precio de UNA casa que 117
+    // anuncios donde casi todo son pisos.
+    if (soloCasas) {
+      const soloC = precioM2Zona(resto, z, minMuestra, true)
+      if (soloC) return { zona: z, precioM2Zona: soloC.precioM2, muestra: soloC.muestra, fuente: 'casas' }
+    }
     const slug = slugZonaFotocasa(z)
     const zp = slug ? portalPorSlug.get(slug) : undefined
     if (zp && zp.muestra >= MIN_MUESTRA_ZONA && zp.p50m2 > 0) {
@@ -340,7 +407,7 @@ export function detectarChollos(
     if (c.tipo !== 'vivienda' || c.precioM2 == null || c.precioM2 <= 0 || esParcela(c)) continue
 
     const resto = comparables.filter((x) => x.refAnuncio !== c.refAnuncio)
-    const ref = referenciaZona(c, resto, portalPorSlug, minMuestra)
+    const ref = referenciaZona(c, resto, portalPorSlug, minMuestra, esCasa(c.titulo))
     if (ref) {
       const descuento = 1 - c.precioM2 / ref.precioM2Zona
       if (descuento >= minDescuento) {

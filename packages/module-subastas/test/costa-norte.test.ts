@@ -81,10 +81,12 @@ test('la lente exige CASA y tope de precio (Matalascañas SIN tope); con referen
   assert.equal(r.find((p) => p.comparable.refAnuncio === '16')?.costa, 'Matalascañas') // sin tope
   const c = r.find((p) => p.comparable.refAnuncio === '10')!
   assert.equal(c.costa, 'Asturias')
-  // La referencia de zona es de VIVIENDA (pisos incluidos): mediana de
-  // 1125 (el piso), 1400, 1500 y 1600 → 1450. El filtro «solo casas» aplica
-  // a lo que se ENSEÑA, no a la referencia de mercado con la que se compara.
-  assert.equal(c.referencia?.precioM2Zona, 1450)
+  // Casa contra CASAS (26/08/2026): la mediana sale de las tres casas de
+  // Colunga (1400, 1500, 1600 → 1500) y el piso de 1.125 €/m² NO la arrastra.
+  // Antes salía 1450 con el piso dentro y la casa parecía más barata de lo
+  // que es respecto de su verdadero comparable.
+  assert.equal(c.referencia?.precioM2Zona, 1500)
+  assert.equal(c.referencia?.fuente, 'casas')
 })
 
 test('orden: primero las REBAJADAS (más bajadas antes), luego PARTICULAR, luego descuento', () => {
