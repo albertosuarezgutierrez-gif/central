@@ -126,6 +126,71 @@ de **WhatsApp** con base de conocimiento vectorial. No es un CRM genérico: es s
 
 ---
 
+## 💸 Cómo se corta la duplicidad de pagos, y por qué NO hace falta API ni conector (26/08/2026)
+
+> **Contexto que lo simplifica todo (dicho por Alberto, 26/08/2026): Manuel es su hermano y TODO está a
+> nombre de Alberto** — los contratos, Codeoscopic incluido. **Queda cerrado el riesgo contractual** que
+> este documento marcaba como «puede tumbarlo todo»: no hay que renegociar nada con Avant2, ni hay
+> conflicto de intereses. Esto no es un traspaso entre proveedor y cliente: es mover de sitio algo que
+> ya es suyo, y el objetivo declarado es **que Manuel deje de pagar duplicidades**.
+
+### La pregunta: ¿API a medida, conector MCP, o acceso a su Vercel?
+
+**Ninguna de las dos primeras.** Y el motivo es que resuelven un problema que ya está resuelto:
+
+| Opción | Veredicto |
+|---|---|
+| **Que Manuel monte una API y nosotros «chupemos» los datos** | ❌ **Innecesario.** Ya tenemos **lectura completa** de su Supabase por el `project_id`. Los datos ya se leen hoy. Montar una API sería trabajo nuevo **para él** que replicaría peor lo que ya funciona: fila a fila, en JSON, y perdiendo tipos, índices y constraints |
+| **Un conector MCP enchufado a su proyecto** | ❌ **Lo mismo, con más pasos.** Un MCP sirve para *mirar*, y para mirar ya estamos dentro. Y para *copiar*, la herramienta es `pg_dump`, que se lleva el esquema entero de una vez |
+| **El código por ZIP** | ✅ **Lo más simple que existe.** Dos carpetas comprimidas por el canal que quiera. **15 minutos de su tiempo**, cero infraestructura nueva |
+| **Acceso/transferencia de su Vercel** | ✅ **Lo que de verdad corta el gasto.** Ver abajo |
+
+🚨 **La clave: lo que falta NO son datos, es código.** Los datos ya los tenemos. Cualquier solución
+pensada para «traer los datos» —API, MCP, sincronización— está atacando el problema equivocado.
+
+### El gasto duplicado: qué paga Manuel de verdad
+
+- **Supabase: 0 €.** Su organización está en **plan FREE** (comprobado). La base de datos no le cuesta nada.
+- **Vercel: sí paga.** Dice que le obligan a **Pro** (~20 $/mes). Es coherente: los términos de Vercel
+  **no permiten uso comercial en el plan Hobby**, y esto es una correduría facturando. Además, Hobby no
+  admite invitar miembros de equipo — que es justo por lo que la invitación nunca llegó.
+- Quedan por confirmar: **dominio propio** y el coste de **WhatsApp Business API**, si lo hay.
+
+**Así que la duplicidad es esencialmente el Vercel.** Y aquí está lo bueno: **Alberto YA tiene un equipo
+Vercel en plan Pro** (`pisos-turisticos-projects`). Meter esta app ahí **no añade coste**: el Pro se
+paga por miembro, no por proyecto. **En cuanto la app corra en el equipo de Alberto, Manuel cancela su
+Pro y la duplicidad desaparece.**
+
+### La ruta más corta, en orden
+
+1. **Manuel comprime dos carpetas** (ingestor EIAC/CIMA + cliente Codeoscopic) y las manda. Y con ellas,
+   **la lista de nombres de sus variables de entorno y de sus crons**. *(Si prefiere, el repo entero
+   comprimido también vale: lo que no entra en `central` es su historia git.)*
+2. **Los valores de los secretos, por gestor de contraseñas** — nunca por WhatsApp ni correo.
+3. **Se despliega en el equipo Pro de Alberto**, apuntando ya al Supabase de `central`.
+4. **Se verifica en paralelo** contra su sistema, todavía encendido.
+5. **Se acuerda fecha y hora del corte**, se apaga el suyo y **Manuel cancela el Pro**.
+
+> **Alternativa que ahorra el paso 3:** Vercel permite **transferir un proyecto** de una cuenta a otra.
+> Si se transfiere el suyo al equipo de Alberto, se lleva configuración y variables de golpe. **Pero
+> obliga a reconectar el repositorio de git**, así que solo compensa si además se mueve el repo. Con el
+> ZIP se llega igual y sin sorpresas.
+
+### 🚨 Lo que ningún ZIP trae: los terceros que apuntan a SU URL
+
+Esto es lo que se olvida en todas las migraciones y revienta el día del corte. Hay proveedores externos
+con **la dirección de su despliegue configurada en su propio panel**:
+
+- **Codeoscopic** tiene registrada una URL de webhook suya (lo prueba `codeoscopic_webhook_events`).
+- **Meta / WhatsApp Business** tiene registrado su webhook de mensajes entrantes
+  (lo prueban `channel_inbound_messages` y las columnas `wa_*` de `corredurias`).
+- **Lo que descargue los ficheros de CIMA** puede tener IP o credencial asociada a su lado.
+
+**Cambiar esas URLs se hace en el panel de cada proveedor, no en el código.** Va en la lista del corte,
+junto a la fecha — y es el motivo por el que el corte tiene que ser un momento acordado y no un apagón.
+
+---
+
 ## 🔌 Las dos integraciones: qué está en la BD y qué NO (26/08/2026)
 
 Alberto lo planteó bien: **la intranet da igual, se rehace**. Lo que no se rehace barato son las dos
@@ -210,9 +275,9 @@ cuatro cosas concretas**, y son mucho más fáciles de conceder:
 
 ### 🧾 Y lo que no es técnico y puede tumbarlo todo
 
-- **Codeoscopic/Avant2 es un contrato de licencia.** Hay que saber **a nombre de quién** está y de quién
-  son las credenciales de API. Si el contrato es de Manuel o de su empresa, el código no sirve de nada
-  hasta que exista un contrato a nombre de la correduría. **Preguntarlo antes de tocar código.**
+- ~~**Codeoscopic/Avant2 es un contrato de licencia** y hay que saber a nombre de quién está.~~
+  ✅ **RESUELTO (26/08/2026): está todo a nombre de Alberto**, Codeoscopic incluido. Manuel es su
+  hermano y desarrolló el proyecto adelantándoselo; no hay tercero con quien negociar.
 - **CIMA/TIREA va asociada a la clave de mediador**, que es de la correduría — es decir, de Alberto.
   Esa parte no tiene sorpresa contractual, pero hay que confirmar con qué credenciales se está
   descargando hoy.
@@ -520,43 +585,38 @@ Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
 
 ### 📝 Mensaje pendiente para Manuel — BORRADOR, SIN ENVIAR (26/08/2026)
 
-Reenfocado tras el inventario: **ya no se le pide el repositorio entero ni la transferencia.** Se le
-piden dos carpetas, dos listas y una fecha. Es una petición mucho más fácil de conceder — y el resto
-(la intranet) lo rehacemos nosotros. **No se manda hasta que Alberto dé el visto bueno a este envío
-concreto** (regla del repo sobre comunicaciones a terceros):
+Tercera versión, ya sabiendo que **es su hermano, que todo está a nombre de Alberto y que el objetivo
+es que deje de pagar**. Se le pide poco y se le quita un gasto. **No se manda hasta que Alberto dé el
+visto bueno a este envío concreto** (regla del repo sobre comunicaciones a terceros):
 
-> Hola Manuel: ya tengo acceso a la base de datos, gracias. He visto el alcance y te escribo para
-> pedirte mucho menos de lo que te dije al principio.
+> Manuel, ya estoy dentro de la base de datos y he visto todo. Te escribo para pedirte poco y para que
+> dejes de pagar el Vercel.
 >
-> **La intranet no te la pido**: esa parte la rehago yo. Lo que me interesa de verdad son las dos
-> integraciones, que es donde está el trabajo bueno:
+> **Los datos no me hacen falta que me los pases**: los leo yo directamente de Supabase. No montes
+> ninguna API ni ningún conector, sería trabajo tuyo para algo que ya funciona.
 >
-> 1. **El ingestor de EIAC/CIMA** — el código que descarga los ficheros de las compañías y los procesa.
->    Necesito saber sobre todo **cómo se descargan** (¿SFTP, portal, API de TIREA?) y con qué
->    credenciales.
-> 2. **El cliente de Codeoscopic** — endpoints, autenticación y el mapeo de formularios. Y una
->    pregunta directa: **¿la emisión llegó a probarse?** En la base solo veo cotizaciones, ninguna
->    póliza emitida por ahí, así que quiero saber en qué punto está de verdad.
-> 3. **La lista de variables de entorno de tu Vercel** (solo los nombres por aquí; los valores por
->    gestor de contraseñas) y **la lista de tareas programadas**, que ahí veo un detector de
->    vencimientos.
-> 4. **Una fecha y hora para el corte.** Esto es lo más importante: he visto que CIMA descargó
->    ficheros ayer mismo. Tu sistema está alimentando la correduría a diario, así que el día que
->    apagues el despliegue dejamos de recibir pólizas, recibos y siniestros de las compañías. No lo
->    apagues sin avisar; lo acordamos con fecha.
+> **La intranet tampoco**: esa la rehago yo.
 >
-> Y una cosa que no es técnica: **el contrato de Codeoscopic/Avant2, ¿a nombre de quién está?** Si es
-> tuyo o de tu empresa, dímelo, porque entonces hay que contratarlo a nombre de la correduría antes de
-> que el código sirva de algo.
+> Lo único que necesito son **dos carpetas del código**: el ingestor de EIAC/CIMA y el cliente de
+> Codeoscopic. Comprímelas y mándamelas (o el repo entero comprimido, me da igual). Con eso:
 >
-> Te paso también el documento de protección de datos que te dije: son 32.600 clientes reales y eso
-> hay que dejarlo por escrito.
-
-⚠️ **Lo que sigue sin pedirse:** la transferencia del repositorio. Si algún día interesa el «museo»,
-se pide **al final**, porque al transferirlo se le desconecta el despliegue de Vercel — y ahora sabemos
-que ese despliegue es justamente lo que no puede caerse todavía.
-
----
+> - **la lista de nombres de tus variables de entorno** y **la de tus tareas programadas** — los
+>   valores de las contraseñas mándalos por gestor de contraseñas, no por WhatsApp;
+> - y dime **cómo se descargan los ficheros de las compañías**: ¿SFTP, portal, API de TIREA?
+>
+> Luego lo despliego en mi equipo de Vercel, que ya es Pro y no me cuesta más por meter un proyecto:
+> **en cuanto esté funcionando, cancelas tu Pro y te quitas ese gasto.**
+>
+> Dos cosas importantes antes:
+>
+> 1. **No apagues nada todavía, y avísame antes de hacerlo.** He visto que CIMA descargó ficheros ayer
+>    mismo: tu despliegue está alimentando la correduría todos los días. Lo cortamos con fecha y hora,
+>    los dos delante.
+> 2. Cuando cortemos hay que **cambiar las URLs que tienen apuntadas Codeoscopic y WhatsApp/Meta en sus
+>    paneles**, que ahora van a tu despliegue. Eso no viaja en el código; lo hacemos ese día.
+>
+> Y una curiosidad para saber por dónde ando: **la emisión de Codeoscopic, ¿llegó a probarse?** En la
+> base solo veo cotizaciones, ninguna póliza emitida por ahí.
 
 ## Fase 1 — Inventario y medición (antes de tocar nada)
 

@@ -43,7 +43,12 @@ desde el 29/07 y **nunca ha emitido** (todo en `cotizacion`; participants/produc
 cotizar está probado, emitir no. Las 132 funciones de su BD no tienen lógica de integración → **está
 toda en el código**. Nueva estrategia: no pedirle el repo entero, sino **2 carpetas (ingestor EIAC +
 cliente Codeoscopic), los nombres de sus envs y crons, y una fecha de corte**; la intranet la rehacemos.
-Pendiente NO técnico: **¿a nombre de quién está el contrato de Codeoscopic/Avant2?** PR #1752.
+**Manuel es HERMANO de Alberto y todo está a nombre de Alberto** (Codeoscopic incluido) → cae el riesgo
+contractual. Objetivo: que Manuel deje de pagar. **Ni API ni conector MCP: atacan un problema ya
+resuelto** (los datos se leen por `project_id`); lo que falta es CÓDIGO → un ZIP de 2 carpetas, 15 min
+suyos. Su Supabase es FREE; **solo paga Vercel Pro** (Hobby prohíbe uso comercial), y **Alberto ya tiene
+equipo Pro** → meter la app ahí no añade coste y él cancela. Ojo al corte: **Codeoscopic y Meta/WhatsApp
+apuntan a SU URL** en sus paneles y eso no viaja en ningún ZIP. PR #1752.
 
 ### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
 
