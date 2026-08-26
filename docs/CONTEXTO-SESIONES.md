@@ -90,6 +90,19 @@ apuntan a SU URL** en sus paneles y eso no viaja en ningún ZIP. PR #1752.
   del cron, no el secret); **transferir Fly mejor que redesplegar** (si sus secrets son de producción y se
   redespliega sin ellos, levanta pero no descarga); cortar **fuera de 5:30/11:30 y tras un pull correcto**;
   el dump del paso Cero **no se commitea jamás** (32.600 personas). Runbook de 11 pasos en el doc.
+- ✅ **PLAN TÉCNICO CERRADO** con Manuel el mismo día; solo falta fijar día y hora. Tres datos suyos:
+  🔑 **son DOS claves, no una** — la de cifrado (si se pierde, IBANs ilegibles: falla RUIDOSO) y la del
+  **índice ciego** para buscar por email/DNI sin descifrar (si cambia, los datos siguen legibles pero
+  **dejan de encontrarse**: falla en SILENCIO, y la pantalla dice «no existe» sobre un cliente que está ahí).
+  → se respaldan las dos y la verificación son **dos** pruebas: **descifrar Y buscar**. Rotar el índice
+  ciego obliga a recalcular los 32.600 y mientras tanto las búsquedas mienten.
+  🟢 **Fly apunta a PRODUCCIÓN y con credenciales de Alberto** (`ws.cimaseg.es/wsEstandar/`, plataforma
+  `ALBERTOSUAREZ_6393`, mediador **CS-F/0170**); el `testws` de antes era homologación → **se transfiere
+  la app, no se redespliega** (decidido, ya no opcional).
+  🟡 **Codeoscopic:** la idempotencia no está a medias — es que **no llega hasta el final**: el candado y
+  la UUID son nuestros, pero **ellos no deduplican por `attempt_id`** → un reintento tras respuesta perdida
+  puede duplicar en su lado. Condición para encender el flag algún día: probar el doble envío con el mismo
+  `attempt_id`. Hoy no afecta (flag apagado).
 - 🚧 **Montado el ESQUELETO de `apps/asegura`** (sin esperar a Manuel): auth propia (cookie `asegura_session`
   + `jose` contra `public.cuentas`, molde `apps/mariscos`), layout, login, `prisma` con **multiSchema**
   (`public` + `seguros`), `lib/dinero.ts` (`eur()`, null→`—` nunca `0,00€`) y `vercel.json` **con su
