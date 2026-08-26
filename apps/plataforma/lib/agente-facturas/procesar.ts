@@ -130,6 +130,9 @@ export async function procesarFactura(
     // recalcula la huella a partir de este campo y volveríamos a envenenar la regla.
     nif_proveedor: nifEmisorFiable ? data.nif_proveedor ?? null : null,
     numero_factura: data.numero_factura ?? null,
+    // Cuándo se cobra. NO se rellena con `fecha` si falta: un vencimiento inventado
+    // haría reclamar cargos que aún no han vencido (o callar los que sí).
+    fecha_vencimiento: data.fecha_cargo ?? null,
     concepto: data.concepto ?? null,
     categoria,
     propiedad,

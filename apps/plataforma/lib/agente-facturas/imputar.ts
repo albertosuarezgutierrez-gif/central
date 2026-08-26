@@ -8,6 +8,8 @@ export interface DatosGasto {
   proveedor?: string | null
   nif_proveedor?: string | null
   numero_factura?: string | null
+  /** Cuándo se COBRA (domiciliación/vencimiento). Lo vigila `domiciliadosSinCargo`. */
+  fecha_vencimiento?: string | null
   concepto?: string | null
   categoria: string
   propiedad?: string | null
@@ -85,12 +87,12 @@ export async function insertarGasto(
   const raw = d.raw_extraction != null ? JSON.stringify(d.raw_extraction) : null
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     INSERT INTO gastos
-      (fecha, proveedor, nif_proveedor, numero_factura, concepto, categoria, propiedad,
+      (fecha, fecha_vencimiento, proveedor, nif_proveedor, numero_factura, concepto, categoria, propiedad,
        base_imponible, iva, iva_porcentaje, irpf, irpf_porcentaje, total,
        drive_url, carpeta_drive, drive_file_name, fingerprint, origen,
        revisado, confianza, motivo_revision, raw_extraction)
     VALUES
-      (${d.fecha}::date, ${d.proveedor}, ${d.nif_proveedor}, ${d.numero_factura}, ${d.concepto},
+      (${d.fecha}::date, ${d.fecha_vencimiento}::date, ${d.proveedor}, ${d.nif_proveedor}, ${d.numero_factura}, ${d.concepto},
        ${d.categoria}, ${d.propiedad},
        ${d.base_imponible}, ${d.iva}, ${d.iva_porcentaje}, ${d.irpf}, ${d.irpf_porcentaje}, ${d.total},
        ${d.drive_url}, ${d.carpeta_drive}, ${d.drive_file_name}, ${d.fingerprint}, ${meta.origen},

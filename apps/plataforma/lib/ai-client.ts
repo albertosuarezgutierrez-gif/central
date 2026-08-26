@@ -188,6 +188,8 @@ Analiza el texto o imagen de la factura y devuelve SOLO JSON sin markdown:
   "nif_cliente": "NIF/CIF del DESTINATARIO si aparece",
   "concepto": "descripción del servicio/producto",
   "numero_factura": "número de factura si aparece",
+  "fecha_cargo": "YYYY-MM-DD: fecha en que se cobra/domicilia, si la factura la indica",
+  "domiciliado": true,
   "base_imponible": 0.00,
   "iva_porcentaje": 21,
   "iva": 0.00,
@@ -205,6 +207,11 @@ pon el otro a null en vez de repetirlo.
 Si es un recibo o adeudo de ALQUILER de local/vivienda con retención de IRPF, rellena "irpf" con el
 importe RETENIDO en positivo (p.ej. 57.63) e "irpf_porcentaje" (p.ej. 19); normalmente
 total = base_imponible + iva - irpf. Si no hay retención, irpf=0 e irpf_porcentaje=0.
+"fecha_cargo" es CUÁNDO SE COBRA, no cuándo se emite: búscala bajo "fecha de vencimiento",
+"fecha de cargo", "se domiciliará el", "cargo en cuenta el". Si la factura no la dice, pon null
+— NO la inventes copiando la fecha de emisión: son cosas distintas y de eso depende que no se
+reclame un cobro que aún no ha vencido. "domiciliado" es true solo si la forma de pago es
+domiciliación/adeudo SEPA/recibo bancario; si se paga por transferencia, tarjeta o no consta, false.
 Si no encuentras un campo, pon null. Solo JSON, sin texto adicional.`
 
 

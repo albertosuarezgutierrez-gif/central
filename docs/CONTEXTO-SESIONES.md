@@ -2931,6 +2931,21 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🏦 (26/08/2026) El agente APRENDE: un gasto domiciliado tiene que acabar cargado en cuenta
+
+- Alberto, sobre el aviso de DIGI: «está domiciliado en banco, tiene q estar cargado en cuenta». El cargo
+  NO faltaba (DIGI emite el 21, avisa el 25 y cobra el 28; el banco estaba fresco al 25), pero el agente no
+  sabía distinguir esos momentos: no guardaba la fecha de cobro ni vigilaba que el cargo llegara.
+- **Módulo PURO `lib/agente-facturas/domiciliados.ts`** (9 tests): 5 estados — `cobrado` · `pendiente`
+  (aún no vence, +3 días de gracia) · **`sin_cobertura`** (venció pero el extracto no llega a esa fecha:
+  NO se afirma ausencia) · `sin_cargo` (el único que avisa) · `sin_fecha` (hueco del extractor, se declara).
+- El extractor pide ahora `fecha_cargo`/`domiciliado` al leer la factura (prompt de `ai-client.ts`), se
+  persiste en `gastos.fecha_vencimiento` (columna que existía y nadie llenaba) y el scan diario cruza contra
+  `v_movimientos_activos` → `avisaDomiciliadosSinCargo`. **Nunca se rellena con la fecha de emisión.**
+- 🚨 Blindado `date - bigint` (42883, el que tumbó `sivra_canal`): enteros casteados e intervalos explícitos.
+  Y la SQL se ejecutó contra la BD real antes de mergear — ni `tsc` ni `next build` miran dentro de un `Prisma.sql`.
+- Verificado: tsc 0 · 55 tests de agente-facturas · guardia 61/61 · `next build` OK · consultas probadas en Supabase.
+
 ## 🛠️ (26/08/2026) Skills al día tras el caso DIGI: huella=NIF, «archivar ≠ imputar» y el agente que no vive donde decía el mapa
 
 - `plataforma-maestro/references/agentes-banca-landmines.md`: sección nueva del **agente de gastos SIVRA**
