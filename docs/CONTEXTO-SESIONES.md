@@ -32,6 +32,15 @@
 
 ---
 
+### 🔍 (26/08/2026) Auditoría ligera diaria — sin hallazgos de código, dirección de House Sevillana sigue mal en la skill sincronizada
+Rango 25/08 03:16→26/08 00:06 (62 commits, día muy activo: serrucho de pricing, retirada de
+PriceLabs, Motor vs mercado real, desglose Sique Brilla, Tramo 1 de trading). Heartbeats (18+12
+huellas) y backlog de PRs (3 draft, sin cambios) limpios; memoria/skills ya venían auto-documentados
+por las propias sesiones del día. Único hallazgo: `seo-house-sevillana` (skill sincronizada, fuera
+de git) sigue diciendo Calle Bustos Tavera 22 en vez de Socorro 24 — 3ª pasada consecutiva desde el
+19/08 sin corregir; avisado por Telegram con los 7 sitios exactos. Detalle en
+`docs/AUDITORIA-2026-08.md` (actualización 26/08).
+
 ### ✅ (25/08/2026) TRAMO 1 EJECUTADO: primera compra con dinero real (6 CVX a 199,87$)
 
 Alberto confirmó la instrucción en IBKR y entró: **6 CVX a 199,87$** (por debajo del límite de 200),

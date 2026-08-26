@@ -1252,3 +1252,60 @@ ejecución 2026-08-25T01:56 UTC, `success`, cadencia horaria sin huecos.
 
 ## ✅ Manuales de usuario — nada que tocar
 Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango.
+
+# Actualización 2026-08-26 — auditoría diaria (ligera)
+
+Rango: desde la pasada del 25/08 (`7557460`, 03:16 UTC) hasta `bfd8763` (26/08 00:06 CEST) — 62
+commits, día muy activo (serrucho de pricing diagnosticado y arreglado, retirada de PriceLabs
+completa con migración `price_pricelabs→price_live` aplicada, cuadro "Motor vs mercado real",
+desglose de Sique Brilla por factura, `aiComplete`/`aiTools` con proveedor real, salida de Chekin/
+Booking directo estudiada y congelada, Tramo 1 de trading ejecutado con dinero real). Los propios
+commits del rango ya traían su entrada de memoria (patrón `docs(memoria): ...` emparejado a cada
+PR) — esta pasada solo tuvo que verificar que no quedó nada suelto, no reescribir nada.
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK. `pnpm auditar:check`: radiografía al día (se regeneró 3 veces
+en el rango, todas `[skip vercel]`, la última tras el último commit relevante).
+
+## ✅ Heartbeat de crons y agentes (18+12 huellas) — sin ⛔
+- **a) Latidos `agente_latidos` (18):** todos `ok=true` salvo el conocido `ses_transporte`
+  (`ok=false`, «no hay ningún establecimiento dado de alta en /sivra/partes/establecimientos» —
+  acción pendiente de Alberto, no de código, sin cambios desde la pasada anterior).
+- **b) Tablas de dominio (12):** todas ✅, ninguna cerca de su umbral (la más rezagada,
+  `ia-director-refresh`, a 45h de 192h).
+- `agente_reparaciones`: sin intentos de auto-reparación en los últimos 7 días — nada que coordinar.
+
+## ✅ Backlog de PRs de rutinas — 3 draft, sin cambios desde ayer
+Mismos 3 PRs que la pasada anterior (#1600 auditoría profunda 23/08, #1602 agentes-entrenador,
+#1639 buscador-ia semanal), todos `mergeable_state: dirty` (mezclan skill/código con doc, fuera
+del alcance de `rutinas-automerge.yml` a propósito), ninguno pasa de 3 días de antigüedad ni se
+acerca a los 7 de "olvidado". `rutinas-automerge.yml`: última ejecución 2026-08-26T02:02:54 UTC,
+`success`, cadencia horaria sin huecos.
+
+## ✅ Reconciliación memoria/skills — sin huecos de código
+`docs/CONTEXTO-SESIONES.md` cubre el rango entrada por entrada (verificado contra el `git log`);
+mes corriente = agosto, sin rotación pendiente. `docs/SKILLS.md` vs `.claude/skills/`: coinciden
+exactamente, sin skill huérfana ni entrada obsoleta. Sin contradicciones en las reglas fiscales
+dictadas por Alberto (`amortizable`, cónyuge sin deducibles propios — mismo texto en `SKILL.md` y
+`references/`). `docs/HUECOS-ABIERTOS.md`: H1 (cierres ajustados EODHD) sigue vivo correctamente —
+la propia sesión de hoy midió que el plan FREE de EODHD no lo cierra (ajusta pero cap a 1 año de
+histórico + bulk vetado), consistente con el doc, que ya apuntaba al plan de pago como candidato;
+H3 (datos en vivo IBKR) sigue vivo, sin conector nuevo en el rango pese al Tramo 1 ejecutado con
+dinero real (el contraste de precio de la orden se hizo con la cadena de fallback existente, no
+con un feed propio de IBKR). Manuales de usuario: sin cambios (ningún archivo de
+`apps/ia-rest/src/app/**` ni `public/**` tocado en el rango).
+
+## 🟡 Skill sincronizada `seo-house-sevillana` — la dirección incorrecta SIGUE sin corregir
+Tercera pasada consecutiva detectándolo (visto por primera vez 19/08/2026). Sigue diciendo **Calle
+Bustos Tavera 22** cuando la dirección real de House Sevillana es **Calle Socorro 24, 41003
+Sevilla, barrio de San Julián** (`apps/housesevillana/CLAUDE.md`, `CLAUDE.md` raíz). Bustos Tavera
+22 son OTROS DOS pisos del grupo (Luxury Busto / Busto Reform). No se puede auto-aplicar — vive en
+la cuenta de Claude, fuera de git — así que sigue por Telegram hasta que Alberto lo corrija a mano:
+- `SKILL.md:3` (description) y `SKILL.md:43` → "Calle Bustos Tavera 22" / "Calle Bustos Tavera"
+- `references/property-data.md:19` → `Dirección: Calle Bustos Tavera 22, 41003 Sevilla, España`
+- `references/technical-audit.md:64` → alt-text propuesto con "Calle Bustos Tavera"
+- `references/keywords.md:9` → "Bustos Tavera" en búsquedas locales por barrio
+- `assets/jsonld/organization.json:25` y `assets/jsonld/lodging-business.json:22` →
+  `"streetAddress": "Calle Bustos Tavera 22"` — **el más caro**: si se publica, es la dirección
+  que Google indexa para el negocio, y coincide con la de dos competidores propios.
+- Valor correcto en los 7 sitios: **Calle Socorro 24, 41003 Sevilla (barrio de San Julián)**.

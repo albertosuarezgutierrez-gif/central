@@ -13,6 +13,12 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-26** · `docs/AUDITORIA-2026-08.md`, `docs/CONTEXTO-SESIONES.md`, este archivo ·
+  pasada ligera diaria (rango 25/08 03:16 → 26/08 00:06, 62 commits): sin hallazgos de código,
+  memoria/skills ya venían auto-documentados por las propias sesiones del rango, backlog de PRs
+  y heartbeats sin cambios reseñables · único hallazgo: `seo-house-sevillana` (skill sincronizada,
+  fuera de git) sigue con la dirección incorrecta — 3ª pasada consecutiva, va por Telegram · commit
+  de esta auditoría
 - **2026-08-25** · `docs/CONTEXTO-SESIONES.md` + `docs/AUDITORIA-2026-08.md` · pasada ligera diaria,
   rango `f6e54a2..5f94da6` (38 commits, 24/08): corregido dato stale en la entrada del universo del
   radar de trading (decía "800→1000", el corte real quedó en 1200 tras PR #1687, DBX en la posición
