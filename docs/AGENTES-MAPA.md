@@ -114,8 +114,13 @@ Envs de control: `DIRECTOR_MODO`, `DIRECTOR_PRESUPUESTO_UMBRAL`, `DIRECTOR_PRESU
 | Agente de concursos | Ingesta PLACSP, radar por CPV, avisos y cierre | cada 6 h | Plataforma | `@central/module-concursos` |
 | Radar de subastas | Ingiere BOE + comparables Idealista, enriquece (ficha, Catastro), calcula coste real, puja máxima y yield con datos propios, detecta chollos/bajadas, captura adjudicaciones, avisa con botones y vigila la antesala concursal (BORME) | diaria 06:00–09:00 | Plataforma | `@central/module-subastas` |
 | Agente de pago de facturas | Escanea facturas proveedor → OCR → paga (PIS/SEPA) → concilia | diaria 06:15 | Plataforma | `lib/agente-facturas/pagos.ts` |
-| Agente de gastos SIVRA | Escaneo de gastos de pisos + resumen | diaria 06:00 | SIVRA | `/api/sivra/expenses/agent/*` |
+| Agente de gastos SIVRA | Escaneo Gmail/Drive → extrae factura → huella → regla → imputa a `gastos` o manda a la **bandeja** `/expenses/pendientes` | diaria 06:00 | **Plataforma** | `apps/plataforma/lib/agente-facturas/*` + `app/api/sivra/expenses/agent/*` |
 | SEO / Instagram / CRM (ia-rest) | Contenido SEO, redes y prospección comercial | varias | ia-rest | `apps/ia-rest /api/cron/*` |
 | Mailing / impagos (ialimp) | Captación en frío y recordatorios de impago | cada 3 min / diaria | IALIMP | `apps/ialimp` |
 
-_Última actualización: 2026-07-09._
+> ⚠️ **El «Agente de gastos SIVRA» corre en `apps/plataforma`, no en `apps/sivra`** (26/08/2026). Existe
+> una copia vieja de `lib/agente-facturas/*` bajo `apps/sivra` que **ya no la ejecuta nadie**: el cron lo
+> despacha `lib/cron-dispatch.ts` contra `/api/sivra/expenses/agent/scan`, que es una ruta de plataforma.
+> Si tocas el agente y solo editas la copia de sivra, no cambia nada en producción.
+
+_Última actualización: 2026-08-26._

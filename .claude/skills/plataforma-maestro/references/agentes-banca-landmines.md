@@ -13,6 +13,39 @@
 - **Fase 3 backlog** (no implementada): foto ticket (`photo` en webhook Telegram), aplazar con email (`core-email`, col `email_proveedor`), scoring proveedores (vista `v_scoring_proveedores`), pago fraccionado (>€500).
 - **Envs pendientes (Alberto):** `EB_PIS_ENABLED=true`, `EB_DEBTOR_IBAN=<IBAN Kutxabank>`.
 
+## Agente de gastos SIVRA — bandeja `/expenses/pendientes` y reglas aprendidas
+**Vive en `apps/plataforma/lib/agente-facturas/*`** (la copia bajo `apps/sivra` es legado MUERTO: el cron
+lo despacha `lib/cron-dispatch.ts` → `/api/sivra/expenses/agent/scan`, ruta de plataforma). Flujo por
+factura: extraer → **huella** (`fingerprint.ts`) → **regla** (`gastos_reglas`) → `evaluar()` decide
+`auto` (se imputa a `gastos` con `revisado=true`) o `bandeja` (`revisado=false` + `motivo_revision`).
+Confirmar en la bandeja (`PATCH /api/expenses/pendientes/[id]`) llama a `reforzarRegla`.
+
+- 🚨 **La huella es el NIF, no el nombre (26/08/2026).** `fingerprint()` usa `normalizaNif(nif_proveedor)`
+  y **solo cae al nombre si no hay NIF**. Consecuencia contraintuitiva: un proveedor con AÑOS de histórico
+  puede salir como **«Proveedor nuevo, sin regla aprendida»** para siempre si las filas viejas se
+  importaron a mano sin NIF ni `fingerprint` (`proveedor:'Importado'`). Pasó con **DIGI** (NIF A84919760):
+  ene/feb-2026 imputados a mano, y desde julio la bandeja lo marcaba «nuevo» cada mes. **Antes de tocar el
+  motor de reglas por un «no aprende», mira si las filas del histórico tienen `fingerprint` y `nif_proveedor`
+  — casi siempre el fallo está ahí, no en `evaluar()`.**
+- **Una confirmación NO basta: `MIN_VISTAS = 2`.** La regla nace con `vistas=1` y sigue mandando a la
+  bandeja («Regla aún sin historial confirmado»). Solo auto-imputa con `vistas>=2` Y el total dentro de
+  `[importe_min, importe_max]` (por defecto ±10% del esperado).
+- 🚨 **Archivar en Drive ≠ imputar (26/08/2026).** Se encontraron 4 facturas de DIGI (mar–jun 2026) con el
+  cargo cobrado en el banco y **sin fila en `gastos`**; el PDF venía adjunto al aviso del proveedor y el de
+  abril llevaba desde el 28/04 archivado en Drive. El agente archivó y no imputó, sin dejar rastro en
+  `agente_log`. **El archivo en Drive no es prueba de que el gasto esté contabilizado**: para saber si falta
+  algo, cruza `movimientos_bancarios` contra `gastos` por proveedor+importe, no mires Drive.
+- **El aviso de Telegram cuenta las de ESA pasada, no la bandeja entera** (`avisaBandeja(items)` recibe los
+  pendientes del escaneo). Un «🧾 1 factura en la bandeja de revisión» puede convivir con ~30 acumuladas:
+  para el estado real, `SELECT … FROM gastos WHERE revisado=false AND origen IS NOT NULL`.
+- **Etiqueta `prop_multi_apartamentos` = «Gastos compartidos», y el P&L por piso la EXCLUYE**
+  (`lib/sivra/pl-mensual.ts`). Un gasto ahí es deducible pero no aterriza en ningún piso; el reparto por
+  piso se hace sobre el MOVIMIENTO bancario (`movimiento_reparto`), no sobre la fila de `gastos`.
+  ⚠️ `GET /api/finanzas/gastos/reparto-sugerido` reparte entre **TODOS** los pisos por huéspedes-mes: vale
+  para lavandería/limpieza (consumo que escala con huéspedes), **no** para una cuota fija que no todos los
+  pisos usan — el Dúplex tiene su propio internet (regla `internet:prop_duplex_center`, 20,90€) y una
+  sugerencia automática le cargaría parte de la factura de DIGI.
+
 ## Módulo banca y finanzas (18/06/2026)
 - **`lib/destino.ts`** (puro, testeable `node --test`): clasifica el destino de un movimiento. En ABONOS recibidos (Norma 43), la contraparte es el TITULAR propio → clasificar por CONCEPTO, NO por nombre (de lo contrario, las comisiones de seguros quedan como 'traspaso_interno' y desaparecen del P&L). En CARGOS, el nombre sí identifica traspasos internos. `lib/categorizar.ts` reexporta.
   - **ABONOS de BBVA (23/06/2026):** los que casan comisión (`RE_COMISIONES`/`RE_SEGUROS`/`RE_LIQUID_SEGUROS` = saldo agente/remsaldo/saldo cuenta/pago saldo cta/PD005) → `seguros`; `RECIBIDO:` (Bizum particular) → `personal`; **Booking del Dúplex se reconoce por el marcador fiable `LIQ. OP. Nº`** (lo trae el feed PSD2) → `turistico_duplex`. Lo que **no casa nada** ya NO cae a Dúplex por descarte: va a `personal` + **`requiere_revision`** (`clasificarDestinoDetalle` → `{destino,revisar}`). **Cerrado "capturar el ordenante":** BBVA NUNCA lo da (ni Excel ni PSD2, que pone el titular en `debtor.name`); el discriminante es `LIQ. OP.`. Excel↔PSD2 se solapaban → depurado el doble conteo (22 cobros, 8.459€; `prisma/sql/2026-06-23_dedupe_booking_psd2_xls.sql`). El cuadre `/cuadre-booking` cuenta por `destino`, no por el concepto.

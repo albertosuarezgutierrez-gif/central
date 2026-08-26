@@ -2931,6 +2931,20 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🛠️ (26/08/2026) Skills al día tras el caso DIGI: huella=NIF, «archivar ≠ imputar» y el agente que no vive donde decía el mapa
+
+- `plataforma-maestro/references/agentes-banca-landmines.md`: sección nueva del **agente de gastos SIVRA**
+  (bandeja `/expenses/pendientes` + `gastos_reglas`) con las 5 trampas del caso: huella=NIF (un proveedor con
+  años de histórico sale «nuevo» si las filas viejas entraron sin NIF), `MIN_VISTAS=2`, **archivar en Drive no
+  es imputar**, el aviso de Telegram cuenta la pasada y no la bandeja, y `prop_multi_apartamentos` fuera del
+  P&L por piso + por qué `reparto-sugerido` no vale para una cuota fija.
+- `facturas-correo`: ficha de DIGI (3 fibras + móvil, qué sitio cubre cada una, 100% a pisos por dictado) y
+  regla general **«factura a nombre de Punto y Coma Gestión SL ≠ factura ajena»** (precedente Endesa 03/07).
+- `perfil-fiscal`: mismo detalle junto a la regla DIGI que ya vivía en `banca_destino_reglas`.
+- `docs/AGENTES-MAPA.md`: la fila decía que el agente de gastos vive en SIVRA. **Corre en `apps/plataforma`**;
+  la copia de `apps/sivra/lib/agente-facturas/*` es legado muerto — editarla no cambia nada en producción.
+- Verificado antes de mergear #1737: guardia 53/53 · packages todos `fail 0` · vitest 53/53 · 16 checks CI verdes.
+
 ## 🧾 (26/08/2026) DIGI no era «proveedor nuevo»: la huella es el NIF, y el histórico entró sin NIF
 
 - La bandeja avisaba «Proveedor nuevo» cada mes porque `gastos_reglas` se indexa por **huella = NIF**
@@ -2939,9 +2953,11 @@ completo `docs/AUDITORIA-2026-08.md`.
 - **Faltaban mar–jun en `gastos`** aunque el recibo estaba cobrado: el PDF venía adjunto al aviso de DIGI
   (y el de abril hasta estaba archivado en Drive) pero el agente **archivó sin imputar**. Imputadas a mano
   las 4 (`origen='manual-claude'`); serie ene–ago 2026 completa = 8 facturas, 608,50€.
-- **⚠️ Titularidad:** las facturas van a nombre de **Punto y Coma Gestión SL** (NIF B90446683), no de Alberto
-  persona física; el cambio de titular lleva pedido desde el 01/02/2026 y DIGI seguía pidiendo documentación
-  el 08/07/2026. Mientras siga así, deducirlas en el IRPF de Alberto no se sostiene con la factura.
+- **Titularidad (matizado tras releer la memoria):** van a nombre de **Punto y Coma Gestión SL** (B90446683),
+  pero eso NO es un hallazgo nuevo ni un bloqueo — es el mismo caso que los Endesa de Bustos Tavera
+  (03/07/2026), donde Alberto ya dictó deducirlas como suyas con el caveat anotado. Lo que sigue abierto es
+  lo de siempre: el cambio de titular (pedido a DIGI el 01/02/2026, incompleto aún el 08/07) y confirmarlo
+  con Asecon.
 - Pendiente de decidir: si se reparte el 76,00€ entre los 3 pisos que sí usan DIGI (Socorro + los 2 de Busto
   Tavera; el Dúplex va con otro proveedor y otra cuenta). Hoy va 100% a «Gastos compartidos», que el P&L por
   piso EXCLUYE. Ojo: el «reparto sugerido» de plataforma reparte entre TODOS los pisos, Dúplex incluido.
