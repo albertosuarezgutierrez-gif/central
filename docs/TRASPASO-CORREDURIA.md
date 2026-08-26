@@ -1601,10 +1601,17 @@ lo que diría algo es una racha larga justo después de tocar el `CRON_SECRET`.
 
 > 📧 **La cuenta de Manuel para TODAS las invitaciones: `manuelsuarezz@gmail.com`** (con doble `z`).
 > Dato de Alberto, 26/08/2026. Vale para Vercel, Supabase, Fly y GitHub.
+>
+> ⚠️ **`manuelsuarez` (una sola `z`) NO es una dirección de correo: es su USUARIO de Supabase.**
+> Aparece así en el asunto de la invitación («manuelsuarez has invited you…») y en el cuerpo («This
+> organization is owned by manuelsuarez»). Este documento llegó a citar ese asunto como si fuera
+> evidencia de una dirección, y eso paró en seco una invitación de pago el 26/08/2026 — con razón.
+> **Lección: un identificador de plataforma no es un correo.** Antes de dar acceso a algo que factura,
+> la dirección se confirma contra el campo `To:`/`Members`, nunca contra un nombre para mostrar.
 
 | Sistema | Estado | Evidencia |
 |---|---|---|
-| **Supabase** | ✅ **Invitado** a la organización **LOOR** | `welcome@supabase.com`, «manuelsuarez has invited you to join an organization», hoy **07:42** |
+| **Supabase** | 📨 **Invitación RECIBIDA, todavía SIN aceptar** | `welcome@supabase.com` → `alberto.suarez.gutierrez@gmail.com`, hoy **07:42**. Enlace `dashboard/join?token=…&slug=qdrmgpvqhcmhmpcrvtan&name=LOOR` (el token NO se guarda aquí: es de un solo uso) |
 | **Fly.io** | ✅ **Invitado y dentro** | `noreply@email.fly.io`, «Manuel Suárez wants you to join Manuel Suárez», hoy **13:29** + cuenta de Alberto creada a las 13:29-13:30 |
 | **GitHub** | ❌ **No ha llegado nada** | Sin correo de invitación a colaborar, ni hoy ni en 7 días |
 | **Vercel** | ❌ Sin invitación — Manuel dice que **«hay que pagar»** | — |
@@ -1647,6 +1654,49 @@ en pie como copia viva hasta que él lo retire. Una cosa menos en la lista de Ma
 
 **Lo único que sigue pendiente de él: la invitación de GitHub** (colaborador en los dos repos), que
 es gratis y no ha llegado.
+
+#### 🔎 Dos comprobaciones del 26/08/2026 que desmontan dos atajos
+
+Ambas salieron de una revisión desde el navegador que **se negó a pulsar botones sobre premisas sin
+verificar**. Las dos objeciones eran correctas; las dos premisas, mías.
+
+**1. Una invitación de Supabase NO se ve en el panel.** Se aceptó como cierto que «estar invitado» se
+comprobaría entrando al dashboard. No: Supabase **no lista invitaciones pendientes** en la interfaz —
+llegan como **enlace por correo** y se aceptan pulsándolo. Buscarla en el panel devuelve exactamente
+lo mismo que si no existiera, y ahí es donde una ausencia mal leída se convierte en «no hay nada».
+Es el caso de libro de la regla «dato que NO hay ≠ dato que NO se ha mirado»: se miró, pero **en el
+sitio donde ese dato nunca aparece**.
+
+**2. Aceptar esa invitación no cuesta nada — pero eso había que comprobarlo, no suponerlo.** En
+Supabase, una organización en plan **Pro/Team sí factura por asiento**, así que «es gratis» no era
+gratis por definición. Verificado contra la API: `get_organization("qdrmgpvqhcmhmpcrvtan")` →
+`{"name":"LOOR","plan":"free"}`. **Free**, luego sin cargo. El dato ahora tiene fuente.
+
+#### 🖥️ Vercel: por qué NO se invita a Manuel al equipo Pro (decisión del 26/08/2026)
+
+La Vía A queda **descartada como primera opción**, con dos datos nuevos leídos en la pantalla real:
+
+- **El formulario de invitación no dice lo que cuesta.** Ni precio, ni aviso de asiento, ni
+  confirmación de cargo: pulsar *Invitar* añade el asiento **sin enseñar antes el importe**. El único
+  precio visible en esa pantalla es el de un interruptor no relacionado (alta automática de
+  colaboradores de repos privados, **$20/mes por usuario**, apagado).
+- **`Viewer` —el único rol etiquetado «Gratis»— no sirve.** Es de solo lectura: no puede recibir ni
+  ejecutar un traspaso de proyecto. Invitarle gratis como Viewer obligaría a subirlo a `Member` y
+  pagar el asiento igual, habiendo perdido una vuelta.
+
+El asiento de `Member` sale por **20 US$/mes** (encaja con la factura: crédito 20,00/20,00 + 4,57 de
+on-demand = próxima 24,57 US$). Son 20 US$/mes recurrentes por **diez minutos** de traspaso, y el
+riesgo real no es el primer mes: es **olvidarse de quitarlo** — el mismo goteo silencioso del
+incidente de los ~600 US$ en builds (PR #904).
+
+🚫 **La «ruta inversa» (que Manuel invite a Alberto a SU equipo) no existe.** Se propuso, y es un buen
+reflejo, pero **Manuel no tiene equipo**: su diálogo *Transfer Project To* solo ofrecía *Create Team*,
+que es lo que ocurre en una **cuenta Hobby personal**, y una Hobby **no tiene miembros que invitar**.
+De ahí su «me pide crear un team y entonces pagar». No hay a dónde invitar a nadie.
+
+✅ **Queda la Vía B (API)**, que es justo la que no necesita equipo, ni asiento, ni que ninguno de los
+dos entre en la cuenta del otro. Y si fallara, **no se ha pagado nada por intentarlo** — el orden
+correcto es probar lo gratuito antes que lo recurrente.
 
 #### 📋 Vía B, escrita entera para copiar y pegar (26/08/2026)
 
