@@ -81,7 +81,7 @@
 
 | Skill sincronizada | Estado |
 |---|---|
-| **`seo-house-sevillana`** | SEO de la landing de House Sevillana. ⚠️ **Dato malo**: le da la dirección de OTROS dos pisos del grupo (Bustos Tavera 22) en la ficha, las keywords, el `SKILL.md` y **sus dos JSON-LD con `streetAddress`**. La buena es **Calle Socorro 24, barrio de San Julián** — ver `apps/housesevillana/CLAUDE.md`, que manda sobre ella. Le asigna además el **ID de Booking de Busto Reform** (`4771238`; el suyo es `2039943`), que es de donde sale todo. Parche listo para pegar en `docs/PARCHE-skill-seo-house-sevillana.md`. |
+| **`seo-house-sevillana`** | ✅ **Ya NO es sincronizada: vive en el repo** (`.claude/skills/seo-house-sevillana/`) desde el 26/08/2026, con la dirección buena (**Calle Socorro 24, barrio de San Julián**), el ID de Booking bueno (`2039943`), coordenadas, licencia `VFT/SE/01179`, teléfono y dominio `.es`. La copia de la cuenta sigue existiendo con los datos malos (Bustos Tavera 22 = Luxury Busto/Busto Reform, ID `4771238`), pero **la del repo tiene precedencia**; Alberto puede borrarla de su cuenta cuando quiera. La protege `test/regression-house-sevillana-direccion.test.ts`. |
 
 ## Hooks (automatización, no se invocan a mano)
 | Hook | Qué hace |

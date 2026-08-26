@@ -33,6 +33,20 @@ Esa limitación técnica es la salvaguarda: el agente prepara, Alberto confirma.
 - **Una instrucción creada NO es una orden ejecutada.** Jamás dar por hecha la compra:
   verificar con `get_account_orders` / `get_account_trades` / `get_account_positions` antes
   de afirmar que algo se ejecutó (regla «dato que no hay ≠ dato no mirado»).
+- **DÓNDE la confirma Alberto — decirlo BIEN (error real, 25/08/2026):** una instrucción vive
+  en **Órdenes → «Instrucciones»**, NO en «Órdenes pendientes» (esa lista es para órdenes ya
+  lanzadas al mercado, y una instrucción sin enviar no aparece ahí). El aviso de la primera
+  compra real mandó a «Órdenes pendientes», Alberto no encontró nada y dio la orden por
+  perdida, cuando estaba creada y correcta. Deep-link directo:
+  `https://ndcdyn.interactivebrokers.com/sso/resolver?action=ACCT-MGMT-MAIN#/orders/instructions`.
+  Generaliza: cuando el aviso pida una acción, nombrar la pantalla EXACTA, no la que suena
+  razonable — un aviso que manda al sitio equivocado se lee como «no ha funcionado».
+- **DIVISA ANTES DE COMPRAR (25/08/2026):** la cuenta es base EUR y las acciones de EEUU se
+  liquidan en USD. Si el cash en USD no cubre el importe, IBKR **no rechaza la orden: la
+  financia en margen** y cobra intereses en silencio. Al preparar una instrucción en USD,
+  leer `get_account_balances` y, si el saldo USD no llega, DECIRLO en el mismo aviso con el
+  importe a convertir (orden de divisa EUR.USD). Pasó en la compra de CVX: quedó USD
+  −1.200,22$ con 1.410,46€ intactos al lado.
 
 ## Vigilancia de la cartera real (paso nuevo de la pasada diaria)
 Tras leer el NAV, leer también `get_account_positions` y añadir al resumen de Telegram un

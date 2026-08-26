@@ -25,8 +25,10 @@
   parking, centro de Sevilla). **Dirección: Calle Socorro 24, 41003 Sevilla, barrio de San Julián**
   (distrito Casco Antiguo; la calle va de la Plaza de San Román a la de San Marcos). ⚠️ **NO confundir
   con Bustos Tavera 22**, que son OTROS dos pisos del grupo (Luxury Busto y Busto Reform, bajo dcha/izda,
-  alquilados a Gutiérrez Alcalá). La skill sincronizada `seo-house-sevillana` tiene esa confusión en su
-  ficha y en sus JSON-LD; vive FUERA del repo, así que la corrección es de Alberto (confirmado 19/08/2026). Next.js mínimo servido por rutas `edge` (`app/route.ts` devuelve el HTML entero); **`/en` y `/it` se DERIVAN de ese mismo HTML por diccionario de cadenas exactas**, así que tocar un texto español rompe su traducción — ver `apps/housesevillana/CLAUDE.md`.
+  alquilados a Gutiérrez Alcalá). La skill `seo-house-sevillana` arrastraba esa confusión
+  en su ficha y en sus dos JSON-LD; **se trajo al repo el 26/08/2026** (`.claude/skills/seo-house-sevillana/`,
+  que tiene precedencia sobre la copia sincronizada del mismo nombre) ya corregida, y la protege
+  `test/regression-house-sevillana-direccion.test.ts` (confirmado 19/08/2026). Next.js mínimo servido por rutas `edge` (`app/route.ts` devuelve el HTML entero); **`/en` y `/it` se DERIVAN de ese mismo HTML por diccionario de cadenas exactas**, así que tocar un texto español rompe su traducción — ver `apps/housesevillana/CLAUDE.md`.
   **Unificada en el monorepo el 12/08/2026** desde el repo suelto `house-sevillana-landing` — vivía fuera y por eso
   era invisible al leer `apps/sivra`, lo que llevó a afirmar por error que «no había web» (PR #1387→#1388). Se
   importó **SIN su historia git a propósito**: esa historia contenía una `service_role` de Supabase (ver

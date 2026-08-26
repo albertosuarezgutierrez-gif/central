@@ -23,7 +23,26 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
+
+Ranking disparado con **1.080 empresas con datos**. Top-5: SNDK · LLYVA · WDC · BKNG · STX (el ciclo
+memoria/almacenamiento domina). **SNDK nº1 con momentum +3.527% y precio 1.596$ olía a dato mal leído
+—el patrón MCD/ORCL— así que se contrastó: es REAL** (Alpha Vantage, 1.480,77$; ×37 desde el spin-off
+de WDC). Comprobar antes de avisar es barato; el nº1 del ranking es lo que Alberto lee como mejor idea.
+**NKE fuera del top-20**: Piotroski 5, ROIC 15,1%, EY 6,64%, pero momentum −46,2% la hunde — la
+capitulación es contexto, no señal (H8 falló). **DBX fuera del top-20**: ROIC 72,4%, FCF yield 9,78%,
+EY 7,99%, pero momentum plano (+3,1%) le quita el tercer factor; la mejor de las que no entran.
+🔍 **Hallazgo:** ACT, EPRT y WEX llevaban horas con `actualizado_en` en epoch y `error IS NULL`. No
+estaban pendientes: **salieron del corte**. Medido contra el fichero real de la SEC (pg_net, replicando
+filtro+dedupe de `listaUniverso`), caen en 1205/1206/1214 de 1200. El lote filtra `simbolo IN (lista
+actual)`, así que una fila que sale del top queda en epoch PARA SIEMPRE. La consulta de vigilancia
+`actualizado_en < '2000-01-01'` nunca puede llegar a cero → entrena a ignorarla. Anotado en la skill.
+💵 **Margen cubierto:** Alberto convirtió; USD pasó de −1.200,22$ a **+443,26$** (convirtió casi todos
+los euros, no solo lo justo: quedan 8,75€ y la munición está ya en dólares). NAV **32.710,26€**.
+Lección a la skill: al preparar una instrucción en USD, mirar `get_account_balances` y avisar de la
+conversión — IBKR no rechaza por falta de divisa, financia en margen y cobra en silencio.
+
+### … (dd/mm/aaaa)` —
 > son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
 > funde con la entrada anterior y se archiva mal.
 >
@@ -44,7 +63,35 @@ De paso, respondido el porqué de los 89 días: es el `date_from` que se pide en
 (tope del consentimiento PSD2), para recoger apuntes tardíos y rellenar huecos; el dedupe descarta
 lo repetido.
 
----
+### 📍 (26/08/2026) Repaso de las direcciones del portfolio: el lado de los Busto está bien, faltaba el CP
+Tras cerrar lo de House Sevillana, Alberto pidió repasar Bustos Tavera y el Dúplex. **El lado NO
+estaba cruzado en ningún sitio**: dcha=Luxury Busto, izda=Busto Reform, coherente en BD, skills
+`perfil-fiscal`/`facturas-correo`, CUPS de Endesa, contratos EMASESA y `agente-facturas.test.ts`.
+Lo que sí faltaba: **el CP**. Sólo House Sevillana lo llevaba; los dos Busto y el Dúplex decían
+«…, Sevilla» a secas. Los cuatro son **41003** (Alberto; el del Dúplex sale además de su nota
+simple). Del Dúplex se fija la puerta registral —**Pasaje Villasís 1, Es:2 Pl:01 Pt:C**, con acceso
+alternativo por Pasaje Francisco Molina 4— porque la dirección guardada yuxtaponía los dos portales
+sin decir cuál mandaba, y `equipaje.ts`/`sivra-maestro` daban «C. Martín Villa» como si fuera la
+dirección (es la zona). SQL `2026-08-26_direcciones_cp.sql` (el seed lleva `ON CONFLICT DO NOTHING`,
+así que hacía falta UPDATE) aplicado ya a prod. Guardián nuevo:
+`test/regression-direcciones-pisos.test.ts` (7 tests; verificado por mutación que muerde al cruzar
+los lados, al quitar un CP y al cruzar el lado en la skill). **Monte Carmelo 68 = 41011** (Alberto,
+en la misma sesión): el único de los cinco fuera del casco antiguo, así que el guardián compara el
+CP EXACTO por piso y no «que haya alguno». Pendiente de Alberto: los dos Busto siguen sin ref.
+catastral (NULL) — no se inventa. PR #1734.
+
+### ✅ (26/08/2026) House Sevillana: la dirección mala, resuelta de raíz — la skill sincronizada se trae al repo
+Tercera detección seguida de lo mismo (19, 25 y 26/08) sin poder tocarlo: `seo-house-sevillana` vivía
+FUERA de git (copia sincronizada de la cuenta) y avisar por Telegram no arreglaba nada. **Descubrimiento
+que lo desbloquea: una skill en `.claude/skills/<nombre>/` tiene PRECEDENCIA sobre la sincronizada del
+mismo nombre** — verificado en vivo (el listado de skills pasó a mostrar la description corregida). Se
+copió al repo ya arreglada: Socorro 24, San Julián, coords, Booking `2039943`, `VFT/SE/01179`, teléfono,
+dominio `.es` (era `.com`) y los dos JSON-LD. **Hallazgo colateral: la contaminación había llegado al
+producto** — `apps/sivra/messages/{es,en,fr,de,it}.json` decían «House Sevillana está en Calle Bustos
+Tavera» en los cinco idiomas (no renderizado hoy, pero cargado por next-intl). Guardián:
+`test/regression-house-sevillana-direccion.test.ts` (7 tests, verificado que muerde). `/auditoria-diaria`
+aprende la regla: ante una skill sincronizada con datos malos, TRAERLA AL REPO, no repetir el aviso.
+Opcional para Alberto: borrar la copia vieja de su cuenta. PR draft.
 
 ### 🔍 (26/08/2026) Auditoría ligera diaria — sin hallazgos de código, dirección de House Sevillana sigue mal en la skill sincronizada
 Rango 25/08 03:16→26/08 00:06 (62 commits, día muy activo: serrucho de pricing, retirada de
@@ -2896,6 +2943,21 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🧾 (26/08/2026) DIGI no era «proveedor nuevo»: la huella es el NIF, y el histórico entró sin NIF
+
+- La bandeja avisaba «Proveedor nuevo» cada mes porque `gastos_reglas` se indexa por **huella = NIF**
+  (`A84919760`) y las filas de ene/feb se importaron a mano (`proveedor:'Importado'`, sin NIF ni huella).
+  Confirmadas jul+ago → regla creada (`prop_multi_apartamentos`/SUMINISTROS, vistas=2, banda 68,40–83,60€).
+- **Faltaban mar–jun en `gastos`** aunque el recibo estaba cobrado: el PDF venía adjunto al aviso de DIGI
+  (y el de abril hasta estaba archivado en Drive) pero el agente **archivó sin imputar**. Imputadas a mano
+  las 4 (`origen='manual-claude'`); serie ene–ago 2026 completa = 8 facturas, 608,50€.
+- **⚠️ Titularidad:** las facturas van a nombre de **Punto y Coma Gestión SL** (NIF B90446683), no de Alberto
+  persona física; el cambio de titular lleva pedido desde el 01/02/2026 y DIGI seguía pidiendo documentación
+  el 08/07/2026. Mientras siga así, deducirlas en el IRPF de Alberto no se sostiene con la factura.
+- Pendiente de decidir: si se reparte el 76,00€ entre los 3 pisos que sí usan DIGI (Socorro + los 2 de Busto
+  Tavera; el Dúplex va con otro proveedor y otra cuenta). Hoy va 100% a «Gastos compartidos», que el P&L por
+  piso EXCLUYE. Ojo: el «reparto sugerido» de plataforma reparte entre TODOS los pisos, Dúplex incluido.
+
 ## 🟡 (21/08/2026) El Telegram del PSD2 contradecía al panel — PR #1575
 - Alberto: «me dice esto y en mi panel pone q todo ok». **Mentía el Telegram**, no el panel:
   Kutxabank ****0855 con último mov. del 20/08 (34 en 30d) y el sync de hoy 06:00 limpio; el único
