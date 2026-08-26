@@ -120,6 +120,14 @@ export type VentanasOpts = {
   horizonteDias?: number
 }
 
+/**
+ * A partir de qué factor una fecha cuenta como EVENTO. Vive aquí y se exporta porque hay dos
+ * consumidores que TIENEN que coincidir: el que decide qué fechas son de evento para el plan, y el
+ * que decide qué fechas NO suman al bucket mensual (`mesesSinBucket`). Si divergen, se marcaría
+ * como «mide aquí para desatascar el mes» una noche que el motor va a excluir del bucket igual.
+ */
+export const FACTOR_EVENTO_MINIMO = 1.15
+
 const DIA_MS = 86_400_000
 
 function aFecha(iso: string): Date {
@@ -180,7 +188,7 @@ export function findeDelMes(hoyIso: string, m: number, orden = 0): string {
  * Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor
  * (empate → la primera). La Feria entera gasta una sola ventana.
  */
-export function picosDeEvento(eventos: EventoFecha[], factorMinimo = 1.15): EventoFecha[] {
+export function picosDeEvento(eventos: EventoFecha[], factorMinimo = FACTOR_EVENTO_MINIMO): EventoFecha[] {
   const dignos = eventos
     .filter(e => Number(e.factor) >= factorMinimo)
     .sort((a, b) => a.fecha.localeCompare(b.fecha))
@@ -219,7 +227,7 @@ export function ventanasDelBarrido(
 ): Ventana[] {
   const mesesBase = opts.mesesBase ?? 8
   const maxEventos = opts.maxEventos ?? 6
-  const factorMinimo = opts.factorMinimo ?? 1.15
+  const factorMinimo = opts.factorMinimo ?? FACTOR_EVENTO_MINIMO
   const noches = opts.noches ?? 2
   const horizonteDias = opts.horizonteDias ?? 365
 
@@ -326,7 +334,7 @@ export function ventanasDeConfirmadosPorFecha(
   plan: Ventana[],
   opts: Pick<VentanasOpts, 'factorMinimo' | 'noches' | 'horizonteDias'> = {},
 ): Ventana[] {
-  const factorMinimo = opts.factorMinimo ?? 1.15
+  const factorMinimo = opts.factorMinimo ?? FACTOR_EVENTO_MINIMO
   const noches = opts.noches ?? 2
   const horizonteDias = opts.horizonteDias ?? 365
 

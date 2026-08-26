@@ -3,9 +3,11 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isRoutineAuthorized } from "@/lib/cron-auth"
 import { EVENTS } from "@/lib/pricing-calendar"
-import { ventanasDelBarrido, ventanasDeConfirmadosPorFecha, type EventoFecha } from "@/lib/sivra/mercado-ventanas"
 import {
-  planDeVentanas, parsearParametrosPlan, FUENTES_FIABLES,
+  ventanasDelBarrido, ventanasDeConfirmadosPorFecha, FACTOR_EVENTO_MINIMO, type EventoFecha,
+} from "@/lib/sivra/mercado-ventanas"
+import {
+  planDeVentanas, parsearParametrosPlan, mesesSinBucket, FUENTES_FIABLES, MIN_FECHAS_BUCKET,
   type CoberturaVentana,
 } from "@/lib/sivra/mercado-cobertura"
 import { NOMBRE_PORTAL } from "@/lib/sivra/mercado-propios"
@@ -22,6 +24,21 @@ export const maxDuration = 60
  * distinta duración (el mismo piso «mide» ×1,33 a 2 noches y ×1,18 a 3 sin haber cambiado nada).
  */
 const NOCHES_ESCAPARATE = [2, 3, 4]
+
+/**
+ * Meses vista de la línea de temporada.
+ *
+ * 🚨 Subido de 8 a 12 el 26/08/2026. Con 8, el plan se acababa en abril-2027 y **mayo, junio y
+ * julio de 2027 no entraban siquiera como candidatas**: no es que se midieran poco, es que no
+ * existían para la rutina. Y ahí es donde caen los eventos que más multiplican (la Feria arrastra
+ * sus vísperas y resacas por la regla R6), así que el motor los tarificaba al triple sobre el ancla
+ * global sin que hubiera forma de contrastarlos nunca. Doce meses cubren el horizonte que el motor
+ * tarifica de verdad (365 días) y el año completo de estacionalidad.
+ *
+ * NO cuesta más consultas: el tope por pasada (`?max=`) no se toca — esto añade CANDIDATAS, y de
+ * cuál se mide antes se encarga la cola de urgencia (que ahora antepone los meses sin bucket).
+ */
+const MESES_BASE_DEFECTO = 12
 /** Ventanas propias que se piden por piso y pasada. Cada una es una consulta al conector. */
 const ESCAPARATE_POR_PISO = 2
 
@@ -108,7 +125,7 @@ export async function GET(req: NextRequest) {
   }
 
   const planBase = ventanasDelBarrido(hoy, eventos, {
-    mesesBase: Number(process.env.SIVRA_SWEEP_MESES ?? 8),
+    mesesBase: Number(process.env.SIVRA_SWEEP_MESES ?? MESES_BASE_DEFECTO),
     maxEventos: Number(process.env.SIVRA_SWEEP_MAX_EVENTOS ?? 6),
     fechasPorMes: Number(process.env.SIVRA_SWEEP_FECHAS_MES ?? 3),
   })
@@ -143,7 +160,19 @@ export async function GET(req: NextRequest) {
     avisos.push(`cobertura ilegible (${String(e).slice(0, 80)}): el plan sale como si nada estuviera medido`)
   }
 
-  const { ventanas, candidatas, recortadas } = planDeVentanas(plan, aforos, cobertura, hoy, max, filtro)
+  // ── Meses SIN bucket elegible ────────────────────────────────────────────────────────────────
+  // La regla de Alberto es «sube en cuanto se huela el evento y confirma después con Booking». La
+  // confirmación no puede llegar a un mes cuyo bucket nunca es elegible: ahí el salto de evento
+  // multiplica el ancla global. Se antepone medir esos meses. Ver `mesesSinBucket`.
+  const fechasEvento = new Set(
+    eventos.filter(e => Number(e.factor) >= FACTOR_EVENTO_MINIMO).map(e => e.fecha),
+  )
+  const mesesEnPlan = new Set(plan.map(v => v.checkin.slice(0, 7)))
+  const mesesCortos = mesesSinBucket(cobertura, fechasEvento, mesesEnPlan)
+
+  const { ventanas, candidatas, recortadas } = planDeVentanas(
+    plan, aforos, cobertura, hoy, max, filtro, { mesesCortos, fechasEvento },
+  )
 
   // ── Plan del ESCAPARATE propio ───────────────────────────────────────────────────────────────
   // Mismas fechas del calendario, pero midiendo NUESTRO anuncio. La base de cada ventana se calcula
@@ -211,6 +240,14 @@ export async function GET(req: NextRequest) {
     avisos.push(`plan de escaparate ilegible (${String(e).slice(0, 80)}): esta pasada NO mide nuestro propio anuncio`)
   }
 
+  if (mesesCortos.size) {
+    avisos.push(
+      `${mesesCortos.size} mes(es) sin bucket elegible (<${MIN_FECHAS_BUCKET} fechas normales medidas): ` +
+      `${[...mesesCortos].sort().join(", ")} — ahí el salto de evento se ancla al percentil GLOBAL, ` +
+      `no al mercado del mes, así que la subida NO está confirmada por Booking`,
+    )
+  }
+
   // Un recorte MUDO se lee como «esto era todo lo que había». Se dice, para que el parte de la
   // rutina pueda distinguir «cubierto» de «cubierto hasta donde cabía en la pasada».
   if (recortadas > 0) {
@@ -230,6 +267,12 @@ export async function GET(req: NextRequest) {
     recortadas,
     pedidas: ventanas.length,
     sin_medir_nunca: ventanas.filter(v => v.diasSinMedir === null).length,
+    // Qué meses del plan NO pueden todavía juzgarse solos (bucket mensual no elegible) y cuántas
+    // de las ventanas de ESTA pasada van a desatascarlos. Va en el contrato para que el parte de
+    // la rutina pueda decir «abril-2027 sigue a ciegas» en vez de callarlo.
+    meses_sin_bucket: [...mesesCortos].sort(),
+    min_fechas_bucket: MIN_FECHAS_BUCKET,
+    pedidas_mes_corto: ventanas.filter(v => v.mesCorto === true).length,
     ventanas,
     // NUESTRO propio anuncio: `hotel_names` + fechas exactas. Alimenta `pricing_escaparate` y con
     // ello el calibrado del canal (`/api/sivra/pricing/canal`), que es quien decide con qué números

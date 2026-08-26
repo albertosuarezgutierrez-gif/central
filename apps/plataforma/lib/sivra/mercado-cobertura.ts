@@ -59,6 +59,12 @@ export type VentanaPedida = {
   /** días desde la última medición fiable; `null` = nunca medida (lo más urgente) */
   diasSinMedir: number | null
   comps: number
+  /**
+   * El MES de esta fecha no llega a las fechas normales que el motor exige para fiarse de él
+   * (`MIN_FECHAS_BUCKET`). Ver `mesesSinBucket`: mientras sea `true`, medir aquí vale mucho más
+   * que refrescar un mes que ya tiene diez fechas.
+   */
+  mesCorto?: boolean
 }
 
 /**
@@ -165,6 +171,72 @@ export function parsearParametrosPlan(
   return { ok: true, valor: { max, filtro }, avisos }
 }
 
+/**
+ * Fechas normales (NO de evento) que el motor exige de un mes para fiarse de su línea de temporada.
+ * Es el mismo umbral que `MIN_FECHAS_MES` de `pricing/apply`; si allí cambia, cambia aquí.
+ */
+export const MIN_FECHAS_BUCKET = 3
+
+/**
+ * Meses del plan que NO llegan al mínimo de fechas NORMALES medidas — o sea, aquellos sobre los que
+ * el motor no puede formarse una opinión propia y acaba anclando al percentil GLOBAL.
+ *
+ * 🚨 POR QUÉ EXISTE (26/08/2026, regla de Alberto «la subida tiene que confirmarla Booking»).
+ * Su regla es: subir en cuanto se huela el evento («ya tendremos tiempo de bajarlo») y CONFIRMAR
+ * después con el mercado, ajustando si la competencia no acompaña. La primera mitad ya funcionaba;
+ * la segunda no podía llegar nunca a las fechas más caras del año, por un círculo cerrado:
+ *   · los eventos gordos caen LEJOS (Feria, Semana Santa, Copa del Rey — todos 2027);
+ *   · el plan SÍ mide esas noches de evento (ronda 1, y la reserva de alto valor);
+ *   · pero el bucket mensual del motor EXCLUYE las fechas de evento a propósito, para que la Feria
+ *     no arrastre la mediana de todo abril;
+ *   · así que esos meses acumulaban mediciones que NO podían hacer elegible su bucket, y el salto
+ *     de evento seguía multiplicando el ancla global — la que se mueve sola (ver el serrucho de
+ *     `pricing-base-evento.ts`).
+ * Medido ese día contra el corpus fiable: sep-2026→mar-2027 tenían 5-13 fechas normales (bucket
+ * vivo) y abr/may/jun/jul-2027 tenían 2, 2, 1 y 1 (bucket muerto). Abril tenía 6 fechas medidas,
+ * pero 4 eran de evento y no contaban.
+ *
+ * Un mes corto es, además, donde una sola medición rinde más: pasa de «no lo sé» a «lo sé».
+ * Refrescar un mes que ya tiene diez fechas no cambia ninguna decisión.
+ *
+ * 🚨 `mesesEnPlan` NO es decorativo: un mes con CERO fechas normales medidas no aparece en la
+ * cobertura, así que contar solo lo medido lo dejaría fuera de la lista — el mes MÁS a ciegas
+ * sería justo el único que no se declara corto. Es la misma trampa que confundir «no lo he mirado»
+ * con «no hay»: aquí el hueco no está en un `NULL`, está en la fila que no existe.
+ */
+export function mesesSinBucket(
+  cobertura: CoberturaVentana[],
+  fechasEvento: ReadonlySet<string>,
+  mesesEnPlan: Iterable<string>,
+  minFechas = MIN_FECHAS_BUCKET,
+): Set<string> {
+  const normalesPorMes = new Map<string, Set<string>>()
+  for (const c of cobertura) {
+    if (c.comps <= 0) continue
+    if (fechasEvento.has(c.checkin)) continue // no suma al bucket: el motor la excluye
+    const mes = c.checkin.slice(0, 7)
+    if (!normalesPorMes.has(mes)) normalesPorMes.set(mes, new Set())
+    normalesPorMes.get(mes)!.add(c.checkin)
+  }
+  const cortos = new Set<string>()
+  for (const mes of mesesEnPlan) {
+    if ((normalesPorMes.get(mes)?.size ?? 0) < minFechas) cortos.add(mes)
+  }
+  return cortos
+}
+
+/**
+ * Lo que hace falta saber para marcar una ventana como «mes corto». Se pasa entero o no se pasa:
+ * sin las fechas de evento, marcar el mes sería mentir a medias — medir una noche de Feria NO
+ * acerca a abril a tener bucket, por muy corto que esté abril.
+ */
+export type ContextoBucket = {
+  /** meses `YYYY-MM` sin bucket elegible. Ver `mesesSinBucket`. */
+  mesesCortos: ReadonlySet<string>
+  /** fechas `YYYY-MM-DD` de evento: el bucket mensual del motor las excluye. */
+  fechasEvento: ReadonlySet<string>
+}
+
 const DIA_MS = 86_400_000
 
 function diasEntre(desdeIso: string, hastaIso: string): number {
@@ -189,15 +261,20 @@ function clave(checkin: string, aforo: number): string {
  *      caso Bienal): el motor CONGELA esas noches a un precio posiblemente falso hasta que se
  *      midan — cada día sin medir es un día congelado. Solo confirmados: un previsto es una
  *      apuesta y no gasta ventana prioritaria.
- *   3. Después, **ronda base antes que evento previsto**: la línea de temporada es lo que hace
+ *   3. Después, **el MES CORTO** (`bucket`, 26/08/2026): una fecha normal de un mes al que le faltan
+ *      una o dos para tener bucket elegible pasa por delante de la 1ª fecha de un mes que ya tiene
+ *      diez. Sin bucket propio, el salto de evento de ese mes multiplica el ancla GLOBAL, y la
+ *      confirmación por mercado que pide Alberto no llega nunca. Ver `mesesSinBucket`.
+ *   4. Luego, **ronda base antes que evento previsto**: la línea de temporada es lo que hace
  *      elegible el bucket mensual del motor (exige ≥3 fechas distintas del mes), y sin bucket no
  *      hay temporada que aplicar a los otros 28 días del mes.
- *   4. A igualdad, **la fecha más cercana primero**: es la que ya se está vendiendo.
+ *   5. A igualdad, **la fecha más cercana primero**: es la que ya se está vendiendo.
  *
  * `hoyIso` entra como parámetro (no `new Date()`) para que la función sea pura y testeable.
  *
  * `filtro` recorta el plan ANTES de aplicar el tope (ver `FiltroVentanas`); sin él se comporta
- * exactamente como antes.
+ * exactamente como antes. `bucket` es OPCIONAL: sin él ninguna ventana se marca `mesCorto` y el
+ * orden es el de siempre — un consumidor que no sepa qué meses están cortos no debe adivinarlo.
  */
 export function planDeVentanas(
   plan: Ventana[],
@@ -206,6 +283,7 @@ export function planDeVentanas(
   hoyIso: string,
   max = 12,
   filtro: FiltroVentanas = {},
+  bucket?: ContextoBucket,
 ): PlanPedido {
   const porClave = new Map<string, CoberturaVentana>()
   for (const c of cobertura) porClave.set(clave(c.checkin, c.aforo), c)
@@ -221,6 +299,11 @@ export function planDeVentanas(
       if (!pisos.length) continue
       const c = porClave.get(clave(v.checkin, aforo))
       const diasSinMedir = c?.ultimaMedicion ? diasEntre(c.ultimaMedicion, hoyIso) : null
+      // Solo cuenta como «mes corto» si medir ESTA ventana acerca al mes a tener bucket: una
+      // noche de evento no suma nunca, esté el mes como esté.
+      const mesCorto = bucket != null
+        && bucket.mesesCortos.has(v.checkin.slice(0, 7))
+        && !bucket.fechasEvento.has(v.checkin)
       pedidas.push({
         checkin: v.checkin,
         checkout: v.checkout,
@@ -233,6 +316,7 @@ export function planDeVentanas(
         factor: Number(v.factor) > 0 ? Number(v.factor) : 1,
         diasSinMedir,
         comps: c?.comps ?? 0,
+        mesCorto,
       })
     }
   }
@@ -247,6 +331,12 @@ export function planDeVentanas(
       const aCong = a.eventoConfirmado === true
       const bCong = b.eventoConfirmado === true
       if (aCong !== bCong) return aCong ? -1 : 1
+      // Después de lo congelado, el MES CORTO — y por delante de la ronda a propósito: la 2ª y 3ª
+      // fecha de un mes sin bucket valen más que la 1ª de un mes que ya tiene diez. Es reordenar,
+      // no medir más: el tope de la pasada no se toca.
+      const aCorto = a.mesCorto === true
+      const bCorto = b.mesCorto === true
+      if (aCorto !== bCorto) return aCorto ? -1 : 1
       if (a.ronda !== b.ronda) return a.ronda - b.ronda
       return a.checkin.localeCompare(b.checkin)
     }
@@ -318,8 +408,9 @@ export function ventanasQuePedir(
   hoyIso: string,
   max = 12,
   filtro: FiltroVentanas = {},
+  bucket?: ContextoBucket,
 ): VentanaPedida[] {
-  return planDeVentanas(plan, aforos, cobertura, hoyIso, max, filtro).ventanas
+  return planDeVentanas(plan, aforos, cobertura, hoyIso, max, filtro, bucket).ventanas
 }
 
 /**

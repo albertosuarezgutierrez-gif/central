@@ -57,6 +57,21 @@ apuntan a SU URL** en sus paneles y eso no viaja en ningún ZIP. PR #1752.
 - **Vía elegida (v5):** transferencia NATIVA de proyecto en Vercel y Supabase (3 clics de Manuel) en vez de
   redesplegar: arrastra env vars CON VALORES y dominios → ninguna credencial viaja. Pasos ordenados en el doc.
 
+---
+
+### 🔭 (26/08/2026) Booking ya puede confirmar las fechas caras: horizonte 12 meses + meses sin bucket primero
+
+Regla de Alberto («sube en cuanto se huela el evento y confirma después con Booking»): la primera
+mitad ya funcionaba, la segunda NO podía llegar a las fechas más caras. Círculo: los eventos gordos
+caen lejos, el plan mide sus noches, pero el bucket mensual EXCLUYE las fechas de evento → esos meses
+nunca eran elegibles y el salto seguía anclado a la global. Medido en prod: abr/may/jun/jul/ago-2027
+con 2/2/1/1/0 fechas normales. Dos cambios: `mesesSinBucket` + nivel nuevo en la cola (tras lo
+congelado, antes que la ronda) y horizonte 8→12 meses (`MESES_BASE_DEFECTO`) — con 8, may/jun tenían
+SOLO fechas de evento y jul/ago no existían. 52 ventanas vírgenes pasan al frente; el tope por pasada
+no se toca. Guardián que lee el fuente para que nadie reacorte el horizonte. PR pendiente.
+
+---
+
 ### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
 
 Pasada programada: `origen='psd2'` último movimiento 2026-08-25 (1 día), mov_30d=52 vs
@@ -90,6 +105,24 @@ conversión — IBKR no rechaza por falta de divisa, financia en margen y cobra 
 > registro de qué se hizo y qué queda.
 
 ---
+
+### ✅ (26/08/2026) Serrucho CONFIRMADO arreglado donde hay mercado medido — y el resto queda acotado
+Pasada de las 08:30 con banda de raíl NUEVA (la prueba que la de anoche no podía dar): 637 noches en 4
+pisos, **399 BAJANDO**. Subieron por encima del +21% **once**, y las once son fechas de EVENTO con el
+salto haciendo justo su trabajo:
+· **cinco** son el derbi Betis–Sevilla (13/11/26 y 23/02/27) subiendo **exactamente ×1,35** = el factor
+  del evento sobre una base estable. Son meses CON bucket → salto de una vez y se quedan.
+· **seis** son House en abr/jun/ago-2027: Feria (×2,50), Copa del Rey (×2,20), Mundial de Remo (×1,55)
+  y las vísperas/resacas de Karol G a ×1,75 (regla R6). Tres caen en 1.349€ exactos = 771€ × 1,75, no
+  es un tope: es el mismo cálculo sobre la misma base.
+🚨 **El residuo declarado, ya CUANTIFICADO:** esos seis viven en meses **SIN bucket** — abr/may/jun/jul
+2027 tienen solo **2 fechas medidas** y hacen falta **3**. Ahí el salto sigue anclado a la global, que
+es la que se mueve sola. Sep-2026→mar-2027 sí tienen bucket y están protegidos. **Remedio barato: que
+la rutina de Booking mida UNA fecha más al mes en abr-jul 2027** y esos cuatro meses pasan al camino
+estable. Sin eso, el serrucho sobrevive en las fechas lejanas de House, que son las más caras.
+📉 Inflación heredada del pico del 24/08, bajando como se esperaba: **207/371 → 148/393** por encima del
+techo de 1,5×; medias por piso 2,01→1,72 (Busto) · 1,92→1,60 (House) · 1,53→1,41 (Luxury) · 1,49→1,37
+(Dúplex); máximo 5,24→4,71. Converge sola; no se toca el raíl.
 
 ### 🏠 (26/08/2026) El radar de mercado avisa SOLO de casas — y deja de medirlas contra pisos
 Alberto, sobre el aviso 💡 de chollos (3 de 4 eran pisos): «solo buscamos casas, no pisos». Filtro
@@ -331,9 +364,13 @@ de sesgo» era nuestra propia subida intradía y el calibrado se corregía contr
 la mediana FIABLE de su fecha (55 a >×3; Duplex 29/09 460€ vs 175€) — los saltos de evento/premio suben
 sin raíl y la guarda de outlier congela >30 días. Nuevo `pricing-techo-mercado.ts` (fecha fiable ×1,5;
 mes fiable ×2,5 sin evento; desciende a velocidad de raíl y libera las congelaciones). PR #1698
-MERGEADO (orden de Alberto). Skill `pricing-agente` (estado-y-protocolo) actualizada. Verificar tras
-el deploy: pasada apply de las 14:30 con `techo_mercado` bajando las fechas ×3-×5, y parte del canal
-de mañana 07:45 sin sesgo positivo sistemático.
+MERGEADO (orden de Alberto). Skill `pricing-agente` (estado-y-protocolo) actualizada.
+**✅ VERIFICADO en producción (26/08 08:17):** el sesgo positivo sistemático DESAPARECIÓ — los 4 pisos
+pasaron de +3/+12/+15/+26% a −12%/−0,5%/−3,2% (los 2 «desviados» del parte son muestra de 1 ventana y
+del signo CONTRARIO, no el fallo original); fechas caras 432 → 402; y las 4 ventanas de escaparate del
+26/08 traen `base_total` == base viva al céntimo (692/162/340/707). El 25/08 el techo bajó las 4 fechas
+centinela al −20% del raíl (Busto 17/01/27 491→393, Dúplex 29/09 471→377, House 02/01/27 1.287→1.030,
+Luxury 29/09 559→447) sobre 664 noches, 0 por debajo de `min_price` y sin rechazos de Smoobu.
 
 ### 🔀 (25/08/2026) «IA gemini muerta» del health-check: era el gate mensual disfrazado
 El 🔴 «gemini: 15 llamadas, ninguna correcta» NO eran llamadas a Gemini (apagado desde 01/08, última
