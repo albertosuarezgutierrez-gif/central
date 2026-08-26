@@ -1648,3 +1648,41 @@ en pie como copia viva hasta que él lo retire. Una cosa menos en la lista de Ma
 **Lo único que sigue pendiente de él: la invitación de GitHub** (colaborador en los dos repos), que
 es gratis y no ha llegado.
 
+#### 📋 Vía B, escrita entera para copiar y pegar (26/08/2026)
+
+Se deja preparada **antes** de saber lo que cuesta el asiento, para que el día que se elija no haya
+que investigar nada. Es la vía que **menos trabajo le da a Manuel**: dos comandos, ninguno en la
+cuenta del otro.
+
+**Paso 1 — lo hace Manuel** (necesita un token suyo: Vercel → Account Settings → Tokens → *Create*,
+scope = su cuenta personal; el token es **suyo y no se comparte con nadie**):
+
+```bash
+# Repetir para cada proyecto: "asegura" (app) y el del adaptador CIMA, si también está en Vercel.
+curl -X POST "https://api.vercel.com/v1/projects/asegura/transfer-request" \
+  -H "Authorization: Bearer $VERCEL_TOKEN_MANUEL"
+```
+
+Devuelve un JSON con un **`code`**. Ese código **caduca a las 24 h** y es lo único que Manuel pasa a
+Alberto (no es un secreto permanente: solo autoriza ese traspaso concreto). Si caduca, se repite el
+paso 1 y ya está.
+
+**Paso 2 — lo hace Alberto**, con un token de SU cuenta y el `teamId` de su equipo
+`pisos-turisticos-projects`:
+
+```bash
+curl -X PUT "https://api.vercel.com/v1/projects/transfer-request/<CODE>" \
+  -H "Authorization: Bearer $VERCEL_TOKEN_ALBERTO" \
+  -H "Content-Type: application/json" \
+  -d '{"teamId":"team_f4gPpt6dPuNcd5YyMt3q27uf"}'
+```
+
+⚠️ **Lo que hay que comprobar después, no dar por hecho:** que las **env vars llegaron con valor** y
+no vacías, y que el **dominio** sigue apuntando al proyecto. Se mira en el panel del proyecto ya bajo
+`pisos-turisticos-projects` (Settings → Environment Variables / Domains). Si algo llegó vacío,
+**avisar antes de tocar nada** — el proyecto de Manuel sigue en pie como copia viva.
+
+🔴 **En cuanto el proyecto esté dentro, añadirle su `ignoreCommand`** como a todas las apps del
+monorepo (`node ../../scripts/vercel-ignore-build.mjs apps/asegura`), o cada push al monorepo se
+pondrá a construirlo. Es la regla de `CLAUDE.md` y es la que costó ~600 US$ una vez.
+
