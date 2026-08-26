@@ -25,6 +25,18 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 📬 (26/08/2026) Correduría: Supabase y Fly ya invitados; Vercel NO se bloquea, va por código
+
+Correo de Alberto: **Supabase ✅** (org LOOR, 07:42) y **Fly ✅** (13:29, cuenta ya creada). **GitHub
+NO ha llegado nada** — es lo único que queda por pedirle. **Vercel**: Manuel dijo «hay que pagar», y
+el razonamiento estaba mal DOS veces (ni él en el equipo de Alberto ni Alberto en el suyo): la
+transferencia de proyecto va **por código de un solo uso** —`POST .../transfer-request` devuelve un
+`code` de 24 h que el otro acepta con `PUT /projects/transfer-request/{code}`— **sin invitaciones ni
+asientos**. Consecuencia buena: las dos claves las lee Alberto **después** del traspaso (las env vars
+viajan), no se le piden a Manuel; seguro porque él no borra nada. PR #1759.
+
+---
+
 ### 🔑 (26/08/2026) Correduría: el acceso a Supabase es de SOLO LECTURA — y eso resuelve una pregunta
 
 `select current_user` en el proyecto de Manuel devuelve **`supabase_read_only_user`**. Sirve para

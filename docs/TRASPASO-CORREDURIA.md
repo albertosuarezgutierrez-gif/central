@@ -589,13 +589,14 @@ para él, que tampoco es nada. Se mira cuando esté dentro; no se le promete de 
 
 | # | Quién | Qué pide / hace | ✅ Cerrado cuando… | Riesgo si se queda a medias |
 |---|---|---|---|---|
-| **1** | **Manuel** | **Cuatro invitaciones**: Vercel (owner), organización Supabase (owner), organización Fly, y colaborador en los dos repos | Alberto entra en los cuatro sitios | Ninguno. Son cuatro clics y no tocan nada |
+| ~~1~~ | Manuel | ~~Cuatro invitaciones~~ → **Supabase ✅ y Fly ✅ ya hechas (26/08)**. **Vercel NO hace falta**: el traspaso va por código, sin invitación ni asiento | — | — |
+| **1-bis** | **Manuel** | **Lo único que queda: colaborador en los dos repos de GitHub** | Llega el correo de invitación | Es gratis, y sin esto no se pueden transferir los repos |
 | ~~1b~~ | — | ~~¿su Supabase es free o de pago?~~ **RESUELTO sin preguntar (26/08)**: organización **LOOR**, plan **free**, igual que la de Alberto | Comprobado por el conector | — |
 | **1c** | Manuel | *Si los tiene apuntados*: los secrets de Fly (TIREA). **Favor, no requisito** | Alberto los guarda | Si no los tiene, se piden a TIREA el día que hagan falta |
-| **2** | **Alberto** | **Todas las copias**, él solo: las dos claves (son env vars), export de env vars, dump de la base, lista de Blob | Puede descifrar y buscar con lo que tiene guardado | — |
+| **2** | **Alberto** | **Todas las copias**, él solo — pero las dos claves ahora se leen **DESPUÉS** del traspaso (no entra en el Vercel de Manuel). Seguro porque él no borra nada | Puede descifrar y buscar con lo que tiene guardado | — |
 | **3** | Alberto | Crear la **organización en Fly** e invitar a Manuel a **sus** cuentas (destino de las transferencias) | Enviadas | — |
 | **4** | Manuel | Aceptar esas dos | Aparece en ellas | — |
-| **5** | Alberto *(o Manuel, un clic)* | **Vercel → Transfer Project** | El dominio carga y se entra | Ninguno: envs y dominio viajan |
+| **5** | Los dos, **por código** | Manuel genera la solicitud de traspaso (código de 24 h) y se lo pasa; Alberto lo acepta en su equipo | El dominio carga y se entra | Ninguno: envs y dominio viajan. **Sin asientos ni invitaciones** |
 | **6** | Alberto *(o Manuel, un clic)* | **Supabase → Transfer project** | 🔑 **LAS DOS PRUEBAS**: **descifrar** un IBAN real **y encontrar** un cliente por email **y** por DNI | Con una sola prueba, un índice ciego roto pasa desapercibido |
 | **7** | Alberto | **Fly → mover la app** del adaptador a su org | `fly secrets list` muestra los nombres **y** `/health` responde | Bajo; el 1c lo cubre si lo tenemos |
 | **8** | Alberto | **Blob**: re-apuntar el token o mover los ~4 ficheros | Los 4 se abren desde la app | — |
@@ -1592,4 +1593,40 @@ Al mirarlo salió que el último fichero sigue siendo del **25/08** y hoy es 26.
 un fallo, se miró la serie: `21/08 · 22 · 23 · 24 · 25` seguidos, pero antes **19 y 20 en blanco**, y
 un hueco de **06 al 15**. Las compañías no mandan todos los días. **Un día sin fichero no dice nada**;
 lo que diría algo es una racha larga justo después de tocar el `CRON_SECRET`.
+
+
+---
+
+## 📬 ESTADO REAL DE LOS ACCESOS (26/08/2026, comprobado en el correo de Alberto)
+
+| Sistema | Estado | Evidencia |
+|---|---|---|
+| **Supabase** | ✅ **Invitado** a la organización **LOOR** | `welcome@supabase.com`, «manuelsuarez has invited you to join an organization», hoy **07:42** |
+| **Fly.io** | ✅ **Invitado y dentro** | `noreply@email.fly.io`, «Manuel Suárez wants you to join Manuel Suárez», hoy **13:29** + cuenta de Alberto creada a las 13:29-13:30 |
+| **GitHub** | ❌ **No ha llegado nada** | Sin correo de invitación a colaborar, ni hoy ni en 7 días |
+| **Vercel** | ❌ Sin invitación — Manuel dice que **«hay que pagar»** | — |
+
+### 🔑 Vercel NO está bloqueado: la transferencia va **por código**, no por pertenencia
+
+Se pidió mal, y luego se razonó mal dos veces seguidas. Queda la versión buena:
+
+1. ~~«Manuel invita a Alberto a su equipo»~~ — solo servía para leer las env vars **antes** del
+   traspaso. Y cuesta un asiento, de ahí su «hay que pagar».
+2. ~~«Entonces al revés: Alberto invita a Manuel a SU equipo»~~ — **también falso**, y también
+   costaría un asiento.
+3. ✅ **Lo correcto:** el traspaso de un proyecto de Vercel se hace **con un código de un solo uso**:
+   - Manuel, en su equipo: `POST /projects/{idOrName}/transfer-request` → Vercel devuelve un
+     **`code` válido 24 h**.
+   - Alberto, en el suyo: `PUT /projects/transfer-request/{code}` con su `teamId`.
+
+   **Ninguno de los dos entra en la cuenta del otro y no se añade ningún asiento a nadie.**
+   (Fuente: docs de la REST API de Vercel, *create/accept project transfer request*.)
+
+**Lo que esto cambia en el plan:** las **dos claves de cifrado** ya no se le piden a Manuel por
+adelantado — Alberto las lee **él solo, después del traspaso**, porque los valores de las env vars
+viajan con el proyecto. Y es seguro precisamente porque **Manuel no borra nada**: su proyecto sigue
+en pie como copia viva hasta que él lo retire. Una cosa menos en la lista de Manuel.
+
+**Lo único que sigue pendiente de él: la invitación de GitHub** (colaborador en los dos repos), que
+es gratis y no ha llegado.
 
