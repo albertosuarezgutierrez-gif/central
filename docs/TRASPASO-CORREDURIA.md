@@ -327,6 +327,33 @@ Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
 
 ---
 
+### 📝 Recordatorio pendiente para Manuel — BORRADOR, SIN ENVIAR (26/08/2026)
+
+De los tres accesos que se le pidieron el 20/08, ha dado **uno**: Supabase. Faltan Vercel y confirmar
+que la invitación de GitHub del 12/08 sigue viva. Texto propuesto para WhatsApp — **no se manda hasta
+que Alberto dé el visto bueno a este envío concreto** (regla del repo sobre comunicaciones a terceros):
+
+> Hola Manuel: gracias, ya estoy dentro de la organización de Supabase. Me faltan dos cosas para no
+> volver a molestarte:
+>
+> 1. **Vercel** — invítame a tu equipo para ver la configuración y los nombres de las variables de
+>    entorno. Si tu cuenta es del plan gratuito no te dejará invitar: dímelo y me pasas solo la lista
+>    de **nombres** de las variables; los valores por gestor de contraseñas, no por aquí.
+> 2. **GitHub** — la invitación al repo es del 12 de agosto y creo que ha caducado. ¿Me la vuelves a
+>    mandar? Solo lectura, para copiarme el código.
+>
+> Y una comprobación: en Supabase veo la organización pero no me aparece ningún proyecto dentro.
+> Puede ser cosa mía, pero si me diste un rol acotado a proyectos concretos, ¿puedes ponerlo a nivel
+> de organización?
+>
+> Recuerda: **no borres ni desactives nada** hasta que te confirme que está todo funcionando en mi
+> lado. Te aviso expresamente. Y te paso el documento de protección de datos que te dije.
+
+⚠️ **Lo que NO se le pide todavía:** la transferencia del repositorio. Va la última, ya verificado el
+traspaso, porque al transferirlo se le desconecta el despliegue de Vercel.
+
+---
+
 ## Fase 1 — Inventario y medición (antes de tocar nada)
 
 Con el acceso a su organización (opción A o B), a través del conector de Supabase, desde una sesión
