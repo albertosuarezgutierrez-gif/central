@@ -25,6 +25,14 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
+
+Pasada programada: `origen='psd2'` último movimiento 2026-08-25 (1 día), mov_30d=52 vs
+mov_30d_prev=75 (sin caída >50%). Conexiones activas Kutxabank ****0855 y BBVA con
+`ultimo_sync` de hoy 06:00 UTC; único aviso vivo es informativo (ℹ️ ventana 89d rechazada).
+Estado ✅ OK. Solo cambio: entrada de auto-informe en `docs/AGENTES-BITACORA.md` → PR draft
+**#1741** (push directo a `main` bloqueado por branch protection, de ahí el PR).
+
 Ranking disparado con **1.080 empresas con datos**. Top-5: SNDK · LLYVA · WDC · BKNG · STX (el ciclo
 memoria/almacenamiento domina). **SNDK nº1 con momentum +3.527% y precio 1.596$ olía a dato mal leído
 —el patrón MCD/ORCL— así que se contrastó: es REAL** (Alpha Vantage, 1.480,77$; ×37 desde el spin-off
@@ -50,6 +58,16 @@ conversión — IBKR no rechaza por falta de divisa, financia en margen y cobra 
 > registro de qué se hizo y qué queda.
 
 ---
+
+### 🏠 (26/08/2026) El radar de mercado avisa SOLO de casas — y deja de medirlas contra pisos
+Alberto, sobre el aviso 💡 de chollos (3 de 4 eran pisos): «solo buscamos casas, no pisos». Filtro
+aplicado a los DOS avisos de Telegram (💡 chollos y ⬇️ bajadas de precio); el corpus y la lista de
+/subastas siguen con pisos a propósito (son la mediana de zona) y a un piso NO se le marca
+`chollo_avisado_at`/`bajada_avisada_n`: no se le ha enseñado nada. `esCasa` se muda a `comparables.ts`
+y mira el TIPO declarado (lo de antes del « en » del título) — «Piso en Villa del Río» ya no cuela; añade
+cortijo/masía/finca con casa (que además dejan de clasificarse como suelo). Y una casa se compara ahora
+contra la **mediana de CASAS** de su zona cuando hay ≥3 (`fuente:'casas'`); si no, mixta y el aviso lo
+DICE — medirla contra pisos exageraba el descuento (fixture: 27% real vs 63% inventado).
 
 ### 🔕 (26/08/2026) PSD2: la nota ℹ️ de la ventana de 89 días deja de mandar Telegram
 Alberto, sobre el aviso de las 08:00 («Kutxabank rechazó la ventana de 89 días»): «¿algo que hacer?
@@ -2943,6 +2961,35 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🏦 (26/08/2026) El agente APRENDE: un gasto domiciliado tiene que acabar cargado en cuenta
+
+- Alberto, sobre el aviso de DIGI: «está domiciliado en banco, tiene q estar cargado en cuenta». El cargo
+  NO faltaba (DIGI emite el 21, avisa el 25 y cobra el 28; el banco estaba fresco al 25), pero el agente no
+  sabía distinguir esos momentos: no guardaba la fecha de cobro ni vigilaba que el cargo llegara.
+- **Módulo PURO `lib/agente-facturas/domiciliados.ts`** (9 tests): 5 estados — `cobrado` · `pendiente`
+  (aún no vence, +3 días de gracia) · **`sin_cobertura`** (venció pero el extracto no llega a esa fecha:
+  NO se afirma ausencia) · `sin_cargo` (el único que avisa) · `sin_fecha` (hueco del extractor, se declara).
+- El extractor pide ahora `fecha_cargo`/`domiciliado` al leer la factura (prompt de `ai-client.ts`), se
+  persiste en `gastos.fecha_vencimiento` (columna que existía y nadie llenaba) y el scan diario cruza contra
+  `v_movimientos_activos` → `avisaDomiciliadosSinCargo`. **Nunca se rellena con la fecha de emisión.**
+- 🚨 Blindado `date - bigint` (42883, el que tumbó `sivra_canal`): enteros casteados e intervalos explícitos.
+  Y la SQL se ejecutó contra la BD real antes de mergear — ni `tsc` ni `next build` miran dentro de un `Prisma.sql`.
+- Verificado: tsc 0 · 55 tests de agente-facturas · guardia 61/61 · `next build` OK · consultas probadas en Supabase.
+
+## 🛠️ (26/08/2026) Skills al día tras el caso DIGI: huella=NIF, «archivar ≠ imputar» y el agente que no vive donde decía el mapa
+
+- `plataforma-maestro/references/agentes-banca-landmines.md`: sección nueva del **agente de gastos SIVRA**
+  (bandeja `/expenses/pendientes` + `gastos_reglas`) con las 5 trampas del caso: huella=NIF (un proveedor con
+  años de histórico sale «nuevo» si las filas viejas entraron sin NIF), `MIN_VISTAS=2`, **archivar en Drive no
+  es imputar**, el aviso de Telegram cuenta la pasada y no la bandeja, y `prop_multi_apartamentos` fuera del
+  P&L por piso + por qué `reparto-sugerido` no vale para una cuota fija.
+- `facturas-correo`: ficha de DIGI (3 fibras + móvil, qué sitio cubre cada una, 100% a pisos por dictado) y
+  regla general **«factura a nombre de Punto y Coma Gestión SL ≠ factura ajena»** (precedente Endesa 03/07).
+- `perfil-fiscal`: mismo detalle junto a la regla DIGI que ya vivía en `banca_destino_reglas`.
+- `docs/AGENTES-MAPA.md`: la fila decía que el agente de gastos vive en SIVRA. **Corre en `apps/plataforma`**;
+  la copia de `apps/sivra/lib/agente-facturas/*` es legado muerto — editarla no cambia nada en producción.
+- Verificado antes de mergear #1737: guardia 53/53 · packages todos `fail 0` · vitest 53/53 · 16 checks CI verdes.
+
 ## 🧾 (26/08/2026) DIGI no era «proveedor nuevo»: la huella es el NIF, y el histórico entró sin NIF
 
 - La bandeja avisaba «Proveedor nuevo» cada mes porque `gastos_reglas` se indexa por **huella = NIF**
@@ -2951,9 +2998,11 @@ completo `docs/AUDITORIA-2026-08.md`.
 - **Faltaban mar–jun en `gastos`** aunque el recibo estaba cobrado: el PDF venía adjunto al aviso de DIGI
   (y el de abril hasta estaba archivado en Drive) pero el agente **archivó sin imputar**. Imputadas a mano
   las 4 (`origen='manual-claude'`); serie ene–ago 2026 completa = 8 facturas, 608,50€.
-- **⚠️ Titularidad:** las facturas van a nombre de **Punto y Coma Gestión SL** (NIF B90446683), no de Alberto
-  persona física; el cambio de titular lleva pedido desde el 01/02/2026 y DIGI seguía pidiendo documentación
-  el 08/07/2026. Mientras siga así, deducirlas en el IRPF de Alberto no se sostiene con la factura.
+- **Titularidad (matizado tras releer la memoria):** van a nombre de **Punto y Coma Gestión SL** (B90446683),
+  pero eso NO es un hallazgo nuevo ni un bloqueo — es el mismo caso que los Endesa de Bustos Tavera
+  (03/07/2026), donde Alberto ya dictó deducirlas como suyas con el caveat anotado. Lo que sigue abierto es
+  lo de siempre: el cambio de titular (pedido a DIGI el 01/02/2026, incompleto aún el 08/07) y confirmarlo
+  con Asecon.
 - Pendiente de decidir: si se reparte el 76,00€ entre los 3 pisos que sí usan DIGI (Socorro + los 2 de Busto
   Tavera; el Dúplex va con otro proveedor y otra cuenta). Hoy va 100% a «Gastos compartidos», que el P&L por
   piso EXCLUYE. Ojo: el «reparto sugerido» de plataforma reparte entre TODOS los pisos, Dúplex incluido.

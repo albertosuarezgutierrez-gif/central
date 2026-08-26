@@ -12,6 +12,10 @@ export interface FacturaExtraida {
   nif_cliente?: string | null
   concepto?: string | null
   numero_factura?: string | null
+  /** Cuándo se COBRA (domiciliación/vencimiento), distinto de `fecha` (emisión). */
+  fecha_cargo?: string | null
+  /** La factura se cobra por domiciliación/adeudo SEPA (y por tanto debe aparecer en cuenta). */
+  domiciliado?: boolean | null
   base_imponible?: number | null
   iva_porcentaje?: number | null
   iva?: number | null

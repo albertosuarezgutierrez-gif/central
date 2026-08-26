@@ -71,6 +71,33 @@ export async function avisaRecurrentesQueFaltan(faltan: ReglaFaltante[]): Promis
   await tgAlert(`⏳ ${faltan.length} gasto(s) recurrente(s) aún sin llegar este mes:\n${lineas.join('\n')}`, 'aviso')
 }
 
+// Aviso: facturas domiciliadas cuyo cargo venció y NO aparece en cuenta.
+// 🚨 Solo entran aquí las `sin_cargo` (ver `domiciliados.ts`). Lo que no se ha podido
+// comprobar porque el extracto no llega NUNCA se cuenta como falta: se DECLARA aparte,
+// porque «no lo he mirado» y «no está» mandan a sitios distintos.
+export async function avisaDomiciliadosSinCargo(
+  avisos: { proveedor: string | null; total: number; fecha_vencimiento: string }[],
+  sinCobertura = 0,
+): Promise<void> {
+  if (avisos.length === 0) {
+    if (sinCobertura > 0) {
+      await tgAlert(
+        `🔍 ${sinCobertura} factura(s) domiciliada(s) no se han podido comprobar: el extracto del banco no llega a su fecha de cargo.`,
+        'aviso',
+      )
+    }
+    return
+  }
+  const lineas = avisos
+    .slice(0, 8)
+    .map((a) => `• ${a.proveedor || 'desconocido'} · ${eur(a.total)} · se domiciliaba el ${a.fecha_vencimiento}`)
+  const cola = sinCobertura > 0 ? `\n\n(${sinCobertura} más sin poder comprobar: el extracto no llega a su fecha.)` : ''
+  await tgAlert(
+    `🏦 <b>${avisos.length}</b> factura(s) domiciliada(s) SIN cargo en cuenta:\n${lineas.join('\n')}${cola}`,
+    'aviso',
+  )
+}
+
 export interface ResumenStats {
   fuente: string
   auto: number

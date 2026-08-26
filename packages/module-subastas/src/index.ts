@@ -103,7 +103,7 @@ export type { Comparable } from './comparables.ts'
 // Chollos de venta directa: el mismo corpus de anuncios, mirado al revés —
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
 export { detectarChollos, referenciaZona, zonasDeComparable, estimarAntiguedad, pareceRuina, esParcela, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO, RECONSTRUIR_EUR_M2 } from './comparables.ts'
-export type { Chollo, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
+export type { Chollo, FuenteReferencia, ObservacionRef, VelocidadZona, ZonaPortalRef } from './comparables.ts'
 // Lente 🌊 de preferencias de mercado: CASAS ≤230k de playa (Asturias/
 // Cantabria/Islantilla) sin señales de obra — rebajadas y de particular primero
 export {

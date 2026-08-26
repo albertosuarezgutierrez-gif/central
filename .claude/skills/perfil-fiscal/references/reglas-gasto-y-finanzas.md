@@ -53,6 +53,15 @@ graba la regla `comercio → destino` y se aplica a los iguales (pasados y futur
   subarrendados Luxury + Busto Reform; vienen 2 cargos/mes, el mayor = Luxury, el menor = Busto Reform),
   y desde la pasada IA del 03/07/2026: **SMOOBU** (channel manager), **SI QUE BRILLA** (limpiezas),
   **LAVANDERIA EL GIRANDILLO** y **DIGI SPAIN TELECO** (fibra de los pisos, Kutxa).
+  - ⚠️ **DIGI incluye la fibra de Monte Carmelo y aun así va ENTERO a los pisos (26/08/2026).** La factura
+    (76,00€/mes, NIF A84919760) desglosa 2× Fibra 300Mb (25,00€) + Fibra SMART 1Gb (20,00€) + móvil (6,00€)
+    y cubre **Socorro 24 + los dos de Bustos Tavera 22 (comparten una) + Monte Carmelo**. Alberto lo dicta
+    así a sabiendas de que la parte de la vivienda habitual no corresponde: **no lo prorratees**. El Dúplex
+    va con otro proveedor y otra cuenta (BBVA), así que un reparto entre «todos los pisos» sería falso.
+    Emitida a **PUNTO Y COMA GESTION SL** → mismo criterio que los Endesa de Bustos Tavera (03/07/2026):
+    se deduce como de Alberto con el caveat anotado, cambio de titular pedido a DIGI desde el 01/02/2026
+    (seguía incompleto el 08/07/2026) y el tratamiento fino de las facturas aún a nombre de la SL sigue
+    **pendiente de confirmar con Asecon**.
 - **Personal** (03/07/2026): **GALOS CMI** (bar del Círculo Mercantil) y **RECIBO CIRCULO MERCAN**
   (cuotas de socio, con `deduccion_cuota_tipo='deportiva_and'`).
 - **⚠️ Regla ELIMINADA (03/07/2026): `TE ELECTRICIDAD Y GAS ESPANA → turistico_duplex`** — era una

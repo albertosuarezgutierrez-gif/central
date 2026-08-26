@@ -109,6 +109,15 @@ deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cad
     `deduccion_cuota_tipo='guarderia'` → incremento de la deducción por maternidad (hasta €1.000/hijo) en
     la renta de **Pilar**. Reglas de comercio ya sembradas (auto-marca los futuros). Sus facturas/recibos
     **SÍ conviene archivarlas** como justificante de la deducción. Detalle completo en `perfil-fiscal`.
+  - ⚠️ **DIGI = internet de TRES sitios, y va ENTERO a los pisos (26/08/2026).** `DIGI Spain Telecom,
+    S.A.U.` (NIF **A84919760**), **76,00€/mes** (76,50€ en feb-2026), cargo a fin de mes en Kutxabank.
+    La factura desglosa **2× Fibra 300Mb a 25,00€ + 1× Fibra SMART 1Gb a 20,00€ + móvil 100GB a 6,00€**,
+    que cubren **Socorro 24, los dos pisos de Bustos Tavera 22 (comparten una fibra) y Monte Carmelo**
+    (vivienda habitual). Alberto dicta que **se imputa el 100% a `turistico_pisos` /
+    `prop_multi_apartamentos` / SUMINISTROS** aunque la parte de Monte Carmelo no corresponda — no lo
+    prorratees por tu cuenta ni lo mandes a `personal`. ⚠️ **El Dúplex NO es DIGI**: tiene otro proveedor
+    (20,90€) y otra cuenta (BBVA). Titularidad: ver el caveat de la SL más abajo.
+
   - ⚠️ **ENERGIA XXI = SIEMPRE la luz de Monte Carmelo → personal** (confirmado por Alberto,
     02/07/2026): es la comercializadora **regulada** de Endesa y solo la tiene la vivienda habitual.
     Sus correos/facturas → `personal`, NO archivar en Drive, NO conciliar como deducible. No confundir
@@ -117,6 +126,16 @@ deducible, archivar + conciliar (Pasos 2-4); si es personal, no archivar. En cad
     regla `ENERGIA XXI` en `banca_destino_reglas` + detección determinista auto-confirmada en
     `apps/plataforma/lib/destino.ts`. Si aprendes reglas de luz, clave ESPECÍFICA — nunca «ENERGIA»
     ni «ELECTRICIDAD» a secas (arrastran la ENDESA de los pisos).
+
+> ⚠️ **Factura a nombre de PUNTO Y COMA GESTION SL ≠ factura ajena.** La SL (NIF **B90446683**) está
+> **dormida desde finales de 2025** y desde 2026 todos los pisos tributan en el IRPF personal de Alberto,
+> pero varios proveedores siguen emitiendo a nombre de la SL porque el contrato nunca se cambió. Alberto
+> ya dictó el criterio con los 4 recibos de Endesa de Bustos Tavera (03/07/2026): **se deducen y archivan
+> como suyos**, dejando el caveat en `comentario`. Aplica igual a **DIGI** (26/08/2026). La SL está en
+> `sociedades`, así que `receptor.ts` la reconoce como titular y NO la descarta como ajena — si alguna vez
+> vuelve a salir «ajena», comprueba esa fila antes que el extractor. **Pendiente de fondo (no lo cierres tú):**
+> el cambio de titular con cada proveedor —con DIGI está pedido desde el 01/02/2026 y seguía incompleto el
+> 08/07/2026— y confirmar con Asecon el tratamiento de las facturas aún tituladas a la SL.
 
 > ⚠️ **La dirección fiscal del cliente en una factura ≠ lugar de uso del artículo.** Alberto usa
 > "Monte Carmelo 68" (vivienda habitual) como dirección de facturación en muchos proveedores, incluso

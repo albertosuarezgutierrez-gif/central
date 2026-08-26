@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-26 · psd2-health-check** · hizo: preflight canal alerta 200 OK; consulta frescura
+  `origen='psd2'` — último movimiento 2026-08-25 (1 día), mov_30d=52 vs mov_30d_prev=75 (sin
+  caída >50%); conexiones activas (`vinculada`) Kutxabank ****0855 y BBVA con `ultimo_sync`
+  hoy 06:00 UTC, único aviso vivo es ℹ️ (ventana 89d rechazada, importado desde 2026-07-27) →
+  estado ✅ OK, sin anomalía, sin escritura en CONTEXTO-SESIONES.md. dudas: —; fallos: —;
+  PRs/commits: — (solo Supabase).
 - **2026-08-26 · mercado-booking** · hizo: pasada diaria completa. Plan pedía 24 ventanas de
   mercado (de 516 candidatas, todas ronda 1/evento y nunca medidas antes; tope max=24 dejó 492
   fuera) + 4 de escaparate propio; medidas las 24 (0 sin respuesta) → 240 comps reales escritos
