@@ -37,16 +37,24 @@
 | Estado vivo del proyecto | `docs/CONTEXTO-SESIONES.md` (entradas de arriba) |
 | Estructura del monorepo | `MATRIZ.md` |
 
-## Mapeo de IDs Booking.com ↔ propertyId Smoobu (verificado 03/08/2026)
-| ID Booking.com | Nombre en factura | propertyId Smoobu | Banco |
+## Mapeo de IDs Booking.com ↔ propertyId Smoobu (CERRADO por Alberto, 26/08/2026)
+| ID Booking.com | Anuncio en la extranet | propertyId Smoobu | Banco |
 |---|---|---|---|
-| 2888928 | Dúplex center | `prop_duplex_center` | BBVA ****1175 |
-| 4340072 | Socorro | pendiente confirmar (`prop_house_sevillana`?) | Kutxa ****0855 |
-| 4771238 | Bustos Tavera | pendiente confirmar (`prop_busto_reform` o `prop_luxury_busto`) | Kutxa ****0855 |
-| 2039943 | Socorro 24 | pendiente confirmar (`prop_house_sevillana`?) | Kutxa ****0855 |
+| 2888928 | Dúplex Center | `prop_duplex_center` | BBVA ****1175 |
+| 4340072 | Luxury Busto Patio privado Centro | `prop_luxury_busto` | Kutxa ****0855 |
+| 4771238 | Busto Reform Apartamento Centro Sevilla | `prop_busto_reform` | Kutxa ****0855 |
+| 2039943 | HOUSE SEVILLANA 6 habitaciones | `prop_house_sevillana` | Kutxa ****0855 |
 
-⚠️ `PISOS_TURISTICOS` en `conciliacion-booking.ts` lista solo 3 IDs internos (sin `prop_duplex_center` que va por BBVA);
-revisar si falta `prop_socorro_24` o si 2039943 es `prop_house_sevillana` con listado propio.
+🚨 **`4340072` NO es Socorro.** Es *Luxury Busto*, y el «Socorro» que ponía aquí venía del NOMBRE
+que sale en la factura, no del anuncio. El de House Sevillana (Socorro 24) es **`2039943`**, el que
+acaba en **43**; el que acaba en **72** es Luxury. Coincide con `docs/BOOKING-DESCUENTOS-INVENTARIO.md`
+y `docs/BOOKING-OFERTAS-INVENTARIO.md`, que ya lo tenían bien. Hay **cuatro** anuncios y **cuatro**
+pisos: no falta ningún `prop_socorro_24`.
+
+`PISOS_TURISTICOS` en `conciliacion-booking.ts` lista 3 propertyId a propósito (los de Kutxa; el
+Dúplex va por BBVA y se concilia aparte) — no es un hueco. El `establishmentId` del PDF **solo se usa
+como huella** (`booking:<id>`, `lib/agente-facturas/booking.ts`): ninguna comisión se imputa a un piso
+a partir de él, así que este mapeo es para leerlo tú, no lo consume el código.
 Las facturas de comisión de Booking llegan a primeros de mes para el mes anterior;
 el agente de monitorización (`trig_012T62U4LsM27GP8VKnBFifG`, 3x/día) las detecta automáticamente en Drive.
 
