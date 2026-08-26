@@ -60,13 +60,26 @@ GitHub Actions (cron 5:30 y 11:30)
 - 🚨 **`CRON_SECRET` no viaja al transferir el repo.** Si falta, el cron dispara, el endpoint responde 401
   y **CIMA deja de traer datos sin que nada falle a la vista**. Es el fallo más caro y más silencioso:
   la app sigue en pie y solo se nota porque «hoy no ha entrado nada».
-- 🔴 **La clave de cifrado de datos personales** (env var) es **irreversible**: si se pierde o se rota,
-  los IBANs y demás campos cifrados quedan ilegibles para siempre. Se respalda su VALOR antes de
-  cualquier transferencia y se verifica **descifrando un registro real**, no mirando el panel.
+- 🔴 **Hay DOS claves de datos personales en las env vars, y fallan distinto** (confirmado por Manuel):
+  - **Cifrado de valores** (IBAN, DNI…): si se pierde, los datos quedan **ilegibles para siempre**.
+    Falla ruidoso — se nota.
+  - **Índice ciego** (buscar por email/DNI sin descifrar): si cambia, los datos siguen legibles pero
+    **dejan de encontrarse**. 🚨 **Falla en SILENCIO**: la búsqueda no da error, devuelve vacío, y la
+    pantalla dice «no existe ese cliente» sobre uno que está ahí. Es la regla «dato que NO hay ≠ dato
+    que NO se ha mirado» metida en la capa de búsqueda, donde no hay NULL que la delate.
+
+  Por eso la verificación son **dos** pruebas, no una: **descifrar** un registro real **y buscar** un
+  cliente conocido por email y por DNI. Rotar el índice ciego obliga a **recalcular los 32.600**, y
+  mientras dura ese recálculo las búsquedas mienten.
 - **Ficheros en Vercel Blob** (privado, URLs firmadas; hoy ~4). Los EIAC de CIMA **no se guardan como
   fichero**: se parsean a tablas.
 - **Codeoscopic:** el código de emisión existe pero está **tras un flag que nunca se activó** — por eso
   sus tablas están vacías. No es un bug; es una función sin estrenar.
+  ⚠️ **Condición para encender ese flag algún día:** el envío es idempotente por dentro
+  (`submit_in_flight_at` es un candado, `submit_attempt_id` una UUID para reconciliar) pero **NO de
+  punta a punta**: Codeoscopic no deduplica por nuestro `attempt_id`, así que un reintento tras una
+  respuesta perdida puede crear un duplicado en su lado. Antes de activarlo hay que probarlo en serio:
+  **mandar el mismo `attempt_id` dos veces y ver si ellos deduplican.**
 
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se

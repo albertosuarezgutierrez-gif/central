@@ -1,6 +1,12 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: MANUEL HA CONTESTADO (26/08/2026) — el traspaso son 5 sistemas, no 3.**
+> **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Solo falta fijar día y hora.**
+> 🔑 Y son **DOS claves**, no una: la de cifrado (si se pierde, los IBANs quedan ilegibles — falla
+> ruidoso) y la del **índice ciego** (si cambia, los clientes **dejan de encontrarse** aunque estén
+> ahí — **falla en silencio**, y una búsqueda vacía se lee como «no existe»). Se respaldan las dos y
+> se verifican con **dos** pruebas: descifrar Y buscar. Ver «CIERRE TÉCNICO», abajo.
+>
+> **Estado previo: el traspaso son 5 sistemas, no 3.**
 > A los tres conocidos (Vercel, Supabase, GitHub) se suman **Fly.io** (el adaptador Java que habla con
 > TIREA: sin él NO entra ninguna póliza de las compañías) y el **`CRON_SECRET` de GitHub Actions**, que
 > **no viaja al transferir el repo** y cuya pérdida corta CIMA **en silencio**. Y hay un punto
@@ -249,6 +255,79 @@ borra después.
 
 ---
 
+---
+
+## ✅ CIERRE TÉCNICO con Manuel (26/08/2026) — todo confirmado, y aparece una SEGUNDA clave
+
+Segunda respuesta de Manuel. Acepta los cuatro puntos y aporta tres datos que **cambian el runbook**.
+
+### 🔑 No es una clave de cifrado: son DOS, y fallan de forma distinta
+
+| Clave | Para qué | Qué pasa si se pierde |
+|---|---|---|
+| **Cifrado de valores** | IBAN, DNI y demás campos cifrados | Los datos quedan **ilegibles para siempre**. Falla RUIDOSO: se ve que algo está roto |
+| **Índice ciego** (*blind index*) | Buscar un cliente por email o DNI **sin descifrar** | 🚨 Los datos siguen ahí y legibles, pero **dejan de encontrarse**. Falla **SILENCIOSO** |
+
+**El índice ciego es el peligroso de los dos**, y no por lo que rompe sino por cómo lo rompe. Si esa
+clave cambia, buscar un cliente por su DNI **no da error: devuelve vacío**. Y una pantalla que recibe
+cero resultados dice «no existe ese cliente» — sobre uno de los 32.600 que está ahí, entero y
+perfectamente legible. Es exactamente la regla **«dato que NO hay ≠ dato que NO se ha mirado»**, pero
+metida en la capa de búsqueda, donde no hay `NULL` que delate nada.
+
+Consecuencias operativas:
+
+- **Se respaldan las DOS**, no solo la de cifrado. Manuel ya ha dicho que guarda el valor de ambas.
+- **La verificación post-transferencia son DOS pruebas, no una:** (a) descifrar un registro real y
+  ver el dato correcto, y (b) **buscar por email y por DNI un cliente conocido y que aparezca**.
+  Solo la primera dejaría pasar el fallo silencioso.
+- **Ninguna de las dos se rota durante el traspaso.** Y ojo a futuro: rotar el índice ciego obliga a
+  **recalcular el índice de los 32.600 clientes**; mientras dure ese recálculo, las búsquedas mienten.
+
+### 🟢 Fly: mejor noticia de lo que pensábamos — son credenciales de PRODUCCIÓN y son de Alberto
+
+Manuel lo verificó y corrigió su dato anterior. El adaptador **no apunta a homologación**:
+
+| Dato | Valor |
+|---|---|
+| `WSE_ENDPOINT` | `https://ws.cimaseg.es/wsEstandar/` (**producción**) |
+| Usuario | `cima.albertocsf0170ws` |
+| Plataforma | `ALBERTOSUAREZ_6393` |
+| Clave de mediador | **CS-F/0170 — de Alberto** |
+
+El `albertosuarez.testws` que citó antes era el de homologación. **Los secrets vivos de Fly son de
+producción y la cuenta TIREA es de Alberto** → se confirma la decisión: **se transfiere la app tal cual,
+no se redespliega**. (Las contraseñas siguen donde están, en los secrets de Fly; aquí solo van
+identificadores.)
+
+### 🟡 Codeoscopic: la idempotencia no está a medias, es que no llega hasta el final
+
+Aclarado, y su explicación es correcta:
+- `submit_in_flight_at` = **candado** contra dos envíos simultáneos.
+- `submit_attempt_id` = **UUID propia** para poder reconciliar después.
+- **Lo que falta es del lado de ELLOS:** Codeoscopic no deduplica por nuestro `attempt_id`, así que un
+  reintento tras una respuesta perdida **puede crear un duplicado en su sistema**.
+
+O sea: idempotente por dentro, **no de punta a punta**. Con el flag apagado no afecta a nada. **Antes de
+encenderlo algún día**, la prueba concreta es: mandar el **mismo `attempt_id` dos veces** y ver si ellos
+deduplican. Anotado como condición para activar la emisión, no como bug de hoy.
+
+### Lo demás, cerrado y de acuerdo
+
+`CRON_SECRET` se valida con una **ejecución real del cron**, no con el secret puesto · corte **fuera de
+5:30/11:30 y tras un pull correcto** · **`grupoasegura.es` no se toca** (solo sirve `info@`, los MX
+quietos) · el **dump se queda en local** y se borra tras la ventana · **emisión de Codeoscopic: nunca
+probada en producción**.
+
+**Solo queda fijar día y hora.** El plan técnico está cerrado por ambas partes.
+
+### 🔧 Cambios que esto mete en el runbook
+
+- **Paso 0a:** respaldar **las dos** claves (cifrado + índice ciego), no una.
+- **Paso 2:** la verificación pasa a ser doble — **descifrar** un registro **y buscar** por email/DNI.
+- **Paso 5:** Fly se **transfiere** (decidido, no opcional): sus secrets son de producción.
+- **Nuevo, para el futuro:** no encender el flag de emisión de Codeoscopic sin probar antes el
+  doble envío con el mismo `attempt_id`.
+
 ### 📝 Respuesta a Manuel — BORRADOR (26/08/2026, v6)
 
 Contesta a su mensaje del 26/08. **Confirma su secuencia** (es buena) y le añade lo que le falta:
@@ -304,14 +383,14 @@ Alberto dé el visto bueno a este envío concreto.**
 
 | # | Quién | Paso | Verificación que lo cierra |
 |---|---|---|---|
-| **0a** | Manuel | **Copiar el VALOR de la clave de cifrado a un gestor de contraseñas** | Alberto confirma que puede leerla |
+| **0a** | Manuel | **Copiar el VALOR de las DOS claves a un gestor: la de cifrado Y la del índice ciego** | Alberto confirma que puede leer ambas |
 | 0b | Manuel | Dump de Supabase + lista de Blob + export de env vars | Dump restaurable en local. **No se commitea** |
 | 0c | Los dos | Elegir hora **fuera de 5:30/11:30**, justo tras un pull correcto | Último `cima_ficheros` del día ya cargado |
 | 1 | Manuel | Acepta la invitación al equipo Vercel Pro | — |
-| 2 | Manuel | **Transfer Project** del proyecto `asegura` | Dominio re-verificado + **descifrar un registro real** |
+| 2 | Manuel | **Transfer Project** del proyecto `asegura` | Dominio re-verificado + **descifrar un registro real** + **buscar un cliente conocido por email y por DNI** (el índice ciego falla en silencio) |
 | 3 | Manuel | Supabase → Transfer project (mismo ref, conexiones intactas) | La app sigue leyendo |
 | 4 | Los dos | Blob: re-apuntar token o mover los 4 ficheros | Los 4 se abren desde la app |
-| 5 | Manuel | **Fly.io: transferir la app del adaptador** (mejor que redesplegar) | `/health` del adaptador + un pull manual con datos |
+| 5 | Manuel | **Fly.io: TRANSFERIR la app del adaptador** (decidido: sus secrets son de producción) | `/health` del adaptador + un pull manual con datos |
 | 6 | Manuel | GitHub: transferir los dos repos (app y adapter) | — |
 | 7 | **Alberto** | Reconectar el Git en Vercel + **volver a poner `CRON_SECRET`** + **comprobar que Actions y sus `schedule:` están activos** | **Una ejecución REAL del cron en su franja, con filas nuevas** |
 | 8 | Los dos | Repunte de Codeoscopic y Meta/WhatsApp (si el dominio se mueve limpio, no cambian) | — |
