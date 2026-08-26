@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-26T12:38:21Z",
-  "sha": "66426f79c15aa0fd002cbb99e8e1a7ce85c21145",
+  "generadoEn": "2026-08-26T13:11:29Z",
+  "sha": "c4895d24daab36260b70f747bc9861f6224fa9f7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2838,6 +2838,321 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "290889117deb"
+    },
+    {
+      "ruta": "apps/asegura/app/(usuario)/dashboard/page.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "DashboardPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "DashboardPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5a74edbc73d1"
+    },
+    {
+      "ruta": "apps/asegura/app/(usuario)/layout.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "UsuarioLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "UsuarioLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3ceee79a9d4e"
+    },
+    {
+      "ruta": "apps/asegura/app/(usuario)/logout-button.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "LogoutButton"
+      ],
+      "funciones": [
+        {
+          "nombre": "LogoutButton",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3f99490f1a22"
+    },
+    {
+      "ruta": "apps/asegura/app/api/auth/login/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [
+        "next",
+        "zod"
+      ],
+      "rutaApi": "/api/auth/login",
+      "hash": "2d6f05ea3dcb"
+    },
+    {
+      "ruta": "apps/asegura/app/api/auth/logout/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 4
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/auth/logout",
+      "hash": "940406db64c5"
+    },
+    {
+      "ruta": "apps/asegura/app/layout.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "RootLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "RootLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "85dd6e2de0d5"
+    },
+    {
+      "ruta": "apps/asegura/app/login/page.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "LoginPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "LoginPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eb05b067da2e"
+    },
+    {
+      "ruta": "apps/asegura/app/page.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "Home"
+      ],
+      "funciones": [
+        {
+          "nombre": "Home",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 3
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ced9dccc438a"
+    },
+    {
+      "ruta": "apps/asegura/lib/auth.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "hashPassword",
+        "verifyPassword",
+        "createSessionToken",
+        "verifySessionToken"
+      ],
+      "funciones": [
+        {
+          "nombre": "SECRET",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "Secreto PROPIO de la vertical. NUNCA fallback a literal en producción (guardián regression-secrets)."
+        },
+        {
+          "nombre": "hashPassword",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: string",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "verifyPassword",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "p: string, hash: string",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "createSessionToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, email: string,",
+          "retorno": "Promise<",
+          "linea": 25
+        },
+        {
+          "nombre": "verifySessionToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string,",
+          "retorno": "Promise<",
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d7c30bf0803d"
+    },
+    {
+      "ruta": "apps/asegura/lib/dinero.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Formato de dinero ESPAÑOL, regla global del monorepo: `2.162,49€` (miles con punto, decimales con coma, € DETRÁS). Nunca `€2162.49`. Espejo de apps/plataforma/lib/dinero.ts — las primas y recibos de la correduría se pintan con esto, en pantalla, en Telegram y en emails.",
+      "exporta": [
+        "eur"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 5,
+          "resumen": "Formato de dinero ESPAÑOL, regla global del monorepo: `2.162,49€` (miles con punto, decimales con coma, € DETRÁS). Nunca `€2162.49`. Espejo de apps/plataforma/lib/dinero.ts — las primas y recibos de l"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "96d636df29e6"
+    },
+    {
+      "ruta": "apps/asegura/lib/estado-migracion.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "estadoMigracion"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoMigracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<EstadoMigracion>",
+          "linea": 17
+        }
+      ],
+      "tablas": [
+        "information_schema"
+      ],
+      "rutaApi": null,
+      "hash": "2973fdc30c86"
+    },
+    {
+      "ruta": "apps/asegura/lib/session.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "getSession",
+        "requireSession"
+      ],
+      "funciones": [
+        {
+          "nombre": "getSession",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Verificación STATELESS (solo firma JWT + existencia de la cuenta), igual que mariscos/alquiler/transporte: no valida `session_jti` para no acoplarse a la sesión de plataforma (comparten la tabla `cuen"
+        },
+        {
+          "nombre": "requireSession",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "c2e738a95f92"
+    },
+    {
+      "ruta": "apps/asegura/middleware.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "middleware"
+      ],
+      "funciones": [
+        {
+          "nombre": "middleware",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 7
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "99dd5c993f82"
     },
     {
       "ruta": "apps/housesevillana/app/barrio/route.ts",
@@ -97493,7 +97808,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2573,
-    "funciones": 7090
+    "archivos": 2586,
+    "funciones": 7108
   }
 }
