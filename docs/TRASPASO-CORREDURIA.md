@@ -247,6 +247,59 @@ borra después.
 
 ---
 
+---
+
+### 📝 Respuesta a Manuel — BORRADOR (26/08/2026, v6)
+
+Contesta a su mensaje del 26/08. **Confirma su secuencia** (es buena) y le añade lo que le falta:
+el VALOR de la clave de cifrado (no la lista), verificar el cron con una ejecución real, transferir
+Fly en vez de redesplegar, y qué credenciales de TIREA hay en sus secrets. **No se manda hasta que
+Alberto dé el visto bueno a este envío concreto.**
+
+> Manuel, perfecto, con esto ya sé lo que hay. Tu secuencia me vale tal cual, solo le añado cuatro
+> cosas y te pido que dos de ellas las hagas antes de que toquemos nada.
+>
+> **1. La clave de cifrado: pásala a un gestor de contraseñas ANTES de mover el proyecto.**
+> Dices de exportar «la lista» de env vars, y ahí está el problema: una lista de nombres no me
+> devuelve la clave si la transferencia no arrastra su valor. Y si esa clave se pierde, los IBANs y
+> lo demás cifrado no hay quien los recupere. Es lo único de todo el traspaso que no tiene marcha
+> atrás, así que quiero el **valor** guardado antes de empezar, y no la rotamos ni tú ni yo hasta
+> que la cartera esté verificada al otro lado.
+> Y cuando el proyecto ya esté en mi equipo, en vez de mirar que la variable aparezca en el panel,
+> **desciframos un registro de verdad** y comprobamos que sale bien. Que la variable exista no
+> demuestra que su valor sea el mismo.
+>
+> **2. Del CRON_SECRET: buen apunte, y le añado una vuelta.** Además de volver a ponerlo, al
+> transferir un repo **Actions se puede quedar deshabilitado y los `schedule:` sin re-armar**. Así
+> que no doy por bueno «ya está el secret»: lo damos por bueno cuando **veamos una ejecución real
+> del cron en su franja trayendo filas nuevas**. Si no, esto falla de la peor manera posible —sin
+> error, sin caída, simplemente dejan de entrar pólizas y nos enteramos días después.
+>
+> **3. Fly: prefiero transferir la app, no redesplegarla.** El usuario que me pasas
+> (`albertosuarez.testws`) es de homologación. Si en tus secrets de Fly están las credenciales de
+> **producción** y yo redespliego desde cero sin ellas, el adaptador arranca y no descarga nada de
+> las compañías: parece que funciona y no funciona. Dime **qué credenciales hay realmente ahí**
+> (homologación o producción) y, si puede ser, méteme en tu org de Fly y lo transferimos.
+>
+> **4. La hora del corte sale sola de tus crons.** Como corren a 5:30 y 11:30, lo hacemos **fuera
+> de esas franjas y justo después de un pull correcto**. Así, si algo se tuerce, tenemos medio día
+> de margen antes de la siguiente descarga y no perdemos ningún fichero de las compañías.
+>
+> Tres cosas menores:
+>
+> - **`grupoasegura.es`**: como solo sirve el `info@`, ojo con tocarle el DNS — si se caen los **MX**
+>   no lo ve nadie hasta que un cliente escriba y le rebote. Lo tratamos aparte de la app.
+> - **El dump del paso Cero**: son datos de 32.600 personas, así que no lo subimos a ningún sitio
+>   compartido; se queda en local durante la ventana y se borra después.
+> - **Curiosidad, sin prisa:** dices que el envío a Codeoscopic no es idempotente, pero en el
+>   esquema veo `submit_attempt_id` y `submit_in_flight_at`, que es justo lo que se pone para que lo
+>   sea. ¿Se quedó a medias? Hoy da igual porque el flag está apagado, pero mejor saberlo antes de
+>   encenderlo algún día.
+>
+> Lo de la emisión me queda claro, y me vale: cotizar probado, emitir no. Mejor saberlo ahora.
+>
+> Con esto por mi parte podemos fijar día y hora. Dime cuándo te viene bien y lo montamos.
+
 ## 🗺️ Runbook del corte (secuencia de Manuel + lo que falta)
 
 | # | Quién | Paso | Verificación que lo cierra |
