@@ -6,6 +6,7 @@ import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "
 import { combinarEventosDeFecha, normalizarEstado, type EventoBruto } from "@/lib/sivra/eventos-estado"
 import { decidirEventoACiegas } from "@/lib/sivra/pricing-centinelas"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
+import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
     channel_markup: number; cuota_fija: number; noches_ref: number
     max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
-    flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
+    flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number; antelacion_k: number
   }[]>(Prisma.sql`
     WITH latest AS (${Prisma.raw(sqlUltimaPasadaUtil())}),
     -- Cada comparable se NORMALIZA al aforo del piso (pricing_factor_aforo) antes de entrar en el
@@ -160,7 +161,8 @@ export async function POST(req: NextRequest) {
       COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
       COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k,
       COALESCE(s.seasonal_floor_k, 0)::float8 AS seasonal_floor_k,
-      COALESCE(s.lastminute_k, 0)::float8 AS lastminute_k
+      COALESCE(s.lastminute_k, 0)::float8 AS lastminute_k,
+      COALESCE(s.antelacion_k, 0)::float8 AS antelacion_k
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
@@ -656,10 +658,15 @@ export async function POST(req: NextRequest) {
     const audit: {
       rate_date: string; old_price: number | null; new_price: number
       demanda_fuente: DemandaFechaResult["fuente"]; demanda_gateada: boolean
+      antelacion_factor: number | null
     }[] = []
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
     const congeladas: { fecha: string; precio: number; factor: number }[] = []
+    // Fechas que se llevaron premio por anticipación en esta pasada. En la respuesta a propósito:
+    // una palanca que sube precios en vivo tiene que poder auditarse sin abrir la BD, y un 0 aquí
+    // es la prueba de que no ha movido nada (distinto de «no se ha mirado» → `antelacion_k = 0`).
+    const premiadas: { fecha: string; factor: number }[] = []
     // Fechas donde el techo de mercado medido recortó el objetivo (pricing-techo-mercado.ts). En
     // la respuesta a propósito: un precio que baja por el techo debe poder distinguirse de uno que
     // baja porque el mercado del mes se hundió.
@@ -807,6 +814,26 @@ export async function POST(req: NextRequest) {
         const nextBooked = plRates[nextD] && !plRates[nextD].available
         if (prevBooked && nextBooked) target = Math.round(target * (1 - Number(r.gap_discount_pct)))
       }
+      // ⏳ ANTICIPACIÓN. El espejo de la urgencia, y va justo antes que ella a propósito: las dos
+      // son excluyentes por construcción (una actúa por debajo de la antelación mediana del mes y la
+      // otra por encima), así que el orden no compone nada — pero deja el par junto y legible. Solo
+      // propone SUBIR el objetivo, y todo lo que viene después —el raíl de ±%/día, los suelos, el
+      // techo del propietario y el techo de mercado MEDIDO— sigue mandando. Inerte con
+      // antelacion_k=0 y en las noches de evento (ver lib/sivra/pricing-antelacion.ts).
+      const antic = factorAntelacion(
+        {
+          diasVista: daysOut,
+          antelacionMediana: ant?.mediana ?? null,
+          muestra: ant?.muestra ?? 0,
+          factorEvento: evFactor,
+        },
+        { k: Number(r.antelacion_k) },
+      )
+      if (antic.factor > 1) {
+        target = Math.round(target * antic.factor)
+        premiadas.push({ fecha: date, factor: Number(antic.factor.toFixed(4)) })
+      }
+
       // ⏳ URGENCIA (last-minute). Va AQUÍ a propósito: solo propone bajar el objetivo, y todo lo
       // que viene después —el raíl de ±%/día, el suelo de coste, el estacional y el techo— sigue
       // mandando. Inerte con lastminute_k=0 y en las noches de evento. La referencia de "cuándo
@@ -952,6 +979,9 @@ export async function POST(req: NextRequest) {
       audit.push({
         rate_date: date, old_price: old, new_price: target,
         demanda_fuente: dGate.fuente, demanda_gateada: dGate.gateado,
+        // NULL = la palanca no llegó a evaluarse (apagada, sin antelación medida o muestra corta).
+        // 1.00 = evaluada y sin premio. La diferencia es lo que separa «no tocaba» de «no se miró».
+        antelacion_factor: antic.evaluado ? Number(antic.factor.toFixed(4)) : null,
       })
     }
 
@@ -986,9 +1016,9 @@ export async function POST(req: NextRequest) {
     if (audit.length > 0 && anotable) {
       try {
         const auditRows = audit.map(a =>
-          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada})`)
+          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada}, ${a.antelacion_factor}::numeric)`)
         await prisma.$executeRaw(Prisma.sql`
-          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada)
+          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada, antelacion_factor)
           VALUES ${Prisma.join(auditRows)}`)
       } catch { /* no crítico */ }
     }
@@ -1020,6 +1050,14 @@ export async function POST(req: NextRequest) {
           .map(a => [a.mes, { mediana: Number(a.mediana), muestra: Number(a.muestra) }]),
       ),
       lastminute_k: Number(r.lastminute_k),
+      // La palanca de anticipación, auditable en la propia respuesta: intensidad, cuántas fechas se
+      // llevaron premio y las 10 primeras con su factor. Con `antelacion_k = 0` esto es `{k:0, fechas:0}`,
+      // que dice «apagada», no «no hizo falta» — la distinción que pide el medidor de resultados.
+      antelacion: {
+        k: Number(r.antelacion_k),
+        fechas: premiadas.length,
+        muestra: premiadas.slice(0, 10),
+      },
       // La palanca de demanda, auditable: la ocupación ANUAL que veía el motor antes, la de cada mes
       // que ahora sí mira, cuántas fechas salieron de cada fuente y cuántas se libraron del descuento.
       demanda: {
