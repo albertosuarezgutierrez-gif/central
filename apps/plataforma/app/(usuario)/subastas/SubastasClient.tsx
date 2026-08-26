@@ -205,7 +205,7 @@ interface Chollo {
   sospechoso: boolean
   /** Descuento tras pagar levantar la casa (solo anuncios con pinta de obra). */
   descuentoNeto?: number | null
-  fuente?: 'portal' | 'alertas'
+  fuente?: 'casas' | 'portal' | 'alertas'
   antiguedadDias?: number | null
   antiguedadCapada?: boolean
   velocidad?: { diasMediana: number; muestra: number } | null
@@ -1987,7 +1987,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                     ch.comparable.habitaciones != null ? `${ch.comparable.habitaciones} hab.` : null,
                   ].filter(Boolean).join(' · ') || null}
                   chips={chipsDeChollo(ch)}
-                  evidencia={`${Math.round(ch.comparable.precioM2 ?? 0)}€/m² vs ${Math.round(ch.precioM2Zona)}€/m² de ${ch.zona} (${ch.muestra} anuncios${ch.fuente === 'portal' ? ' del buscador de Fotocasa' : ''})`}
+                  evidencia={`${Math.round(ch.comparable.precioM2 ?? 0)}€/m² vs ${Math.round(ch.precioM2Zona)}€/m² de ${ch.zona} (${ch.muestra} ${ch.fuente === 'casas' ? 'casas' : `anuncios, pisos incluidos${ch.fuente === 'portal' ? ', del buscador de Fotocasa' : ''}`})`}
                   detalles={
                     <>
                       {bajo && (
