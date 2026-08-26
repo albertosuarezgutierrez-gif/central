@@ -1,0 +1,41 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  // La vertical vive en su PROPIO schema `seguros` (patrón de iarest/rrhh) pero
+  // autentica contra `public.cuentas`, que es de la BD compartida → multiSchema.
+  schemas   = ["public", "seguros"]
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+// Igual que el resto de verticales de la casa: cookie propia + `jose` contra la
+// tabla `cuentas` compartida. NO se usa Supabase Auth.
+//
+// ⚠️ Esto es DELIBERADO y tiene consecuencias: las 86 políticas RLS del CRM de
+// Manuel se resuelven TODAS por `auth.uid()` de Supabase Auth (vía
+// `get_user_correduria_id()` / `get_user_role()`). Al re-plataformar la auth,
+// esas políticas se quedan sin sujeto, y como `prisma_seguros` tiene BYPASSRLS
+// el efecto real no es «no se ve nada» sino «se ve TODO y nada falla».
+// El aislamiento pasa a ser responsabilidad del CÓDIGO de esta app.
+// Ver docs/TRASPASO-CORREDURIA.md.
+model Cuenta {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String
+  email        String
+  passwordHash String? @map("password_hash")
+  sessionJti   String? @map("session_jti")
+
+  @@map("cuentas")
+  @@schema("public")
+}
+
+// ─── Modelo de la correduría ─────────────────────────────────────────────────
+// 🚨 AQUÍ NO HAY MODELOS TODAVÍA, Y ESO NO SIGNIFICA QUE NO EXISTA:
+// el CRM real de Grupo Asegura tiene 52 tablas y 32.600 clientes vivos en el
+// Supabase de Manuel (`uijsgeocgdaxkhvwtjqs`). Entran aquí cuando se restaure
+// su `public` sobre el schema `seguros`. "Sin modelos" = "sin migrar todavía".

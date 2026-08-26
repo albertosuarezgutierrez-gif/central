@@ -71,6 +71,14 @@ apuntan a SU URL** en sus paneles y eso no viaja en ningún ZIP. PR #1752.
   borrado** → la intranet afirma «activo» sobre gente que no puede entrar. Al portarlo, cruzar `activo` con la
   credencial real.
 - `central` verificada como destino: **pgvector ✅**, schema `seguros` ✅ (0 tablas), rol `prisma_seguros` ✅ inerte (sin contraseña).
+- 🚧 **Montado el ESQUELETO de `apps/asegura`** (sin esperar a Manuel): auth propia (cookie `asegura_session`
+  + `jose` contra `public.cuentas`, molde `apps/mariscos`), layout, login, `prisma` con **multiSchema**
+  (`public` + `seguros`), `lib/dinero.ts` (`eur()`, null→`—` nunca `0,00€`) y `vercel.json` **con su
+  `ignoreCommand --sin-previews`**. El dashboard NO pinta KPIs a 0 mientras no haya migración: distingue
+  **tres** estados vía `lib/estado-migracion.ts` (error / pendiente / migrado). Añadida a la matriz de
+  typecheck de CI, a `MATRIZ.md`, al `CLAUDE.md` raíz y a la skill `central-maestro`. `tsc --noEmit` limpio
+  y `pnpm test:guardia` 61/61. **Pendiente para darla por viva:** proyecto Vercel, contraseña al rol, y la
+  migración en sí.
 
 ---
 

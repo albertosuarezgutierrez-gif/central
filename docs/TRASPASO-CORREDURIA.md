@@ -4,8 +4,10 @@
 > hecho y medido — ver «FASE 1 CERRADA» abajo. Faltan el **código** (repo, bloqueado) y el **Vercel**
 > (sin invitación). **Nada se ha migrado todavía**, y antes de migrar hay que firmar el contrato de
 > encargado de tratamiento: son 32.600 clientes reales.
-> Ningún dato se ha migrado todavía; lo único hecho en `central` son los cimientos vacíos (ver
-> «Hecho ya»). Este documento es el runbook del traspaso y **la ÚNICA fuente de verdad** mientras dure.
+> Ningún dato se ha migrado todavía. Lo hecho en `central`: los cimientos de BD (ver «Hecho ya») y,
+> desde el **26/08/2026, el ESQUELETO de `apps/asegura`** — auth propia, layout, manifiestos, gate de
+> build y `lib/estado-migracion.ts`. Se montó a propósito **antes** de la respuesta de Manuel: el día
+> del corte solo habrá que verter el modelo y las pantallas. Ver `apps/asegura/CLAUDE.md`. Este documento es el runbook del traspaso y **la ÚNICA fuente de verdad** mientras dure.
 > Cuando el traspaso se cierre, esto se sustituye por `apps/asegura/CLAUDE.md` y una entrada en
 > `docs/CONTEXTO-SESIONES.md`.
 >

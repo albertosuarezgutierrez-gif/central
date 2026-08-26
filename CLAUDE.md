@@ -73,6 +73,16 @@ corriente; los meses cerrados se rotan a `docs/memoria/AAAA-MM.md` (`scripts/rot
 lo dispara la auditoría a primeros de mes). Historia antigua → leer `docs/memoria/`.
 
 Salvaguardas para no perder información:
+- **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto). **Esqueleto
+  desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
+  manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
+  🚨 **La cartera NO está migrada:** los 32.600 clientes / 28.843 pólizas siguen en el Supabase de **Manuel
+  Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
+  CIMA/EIAC** → el corte necesita fecha acordada, no es una migración en frío. `schema seguros` vacío ≠ la
+  correduría no tiene datos: el dashboard lo dice y no pinta KPIs a 0. ⚠️ Las **86 políticas RLS** de ese CRM
+  se resuelven TODAS por `auth.uid()` de Supabase Auth, así que al re-plataformar la auth el aislamiento pasa
+  a ser cosa del código (con BYPASSRLS el fallo sería «se ve todo sin fallar»). Plan, mensaje a Manuel y pasos
+  del traspaso en **`docs/TRASPASO-CORREDURIA.md`**. Ver `apps/asegura/CLAUDE.md`.
 - **Guardián de cierre** (`persist-memoria.sh`): si la sesión hizo commits que tocan algo
   distinto de la memoria pero NO anotó `CONTEXTO-SESIONES.md`, el hook `Stop` bloquea UNA
   vez y pide anotarlo antes de cerrar. (Se apoya en el SHA base que graba
