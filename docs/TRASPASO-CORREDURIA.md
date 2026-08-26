@@ -1599,6 +1599,9 @@ lo que diría algo es una racha larga justo después de tocar el `CRON_SECRET`.
 
 ## 📬 ESTADO REAL DE LOS ACCESOS (26/08/2026, comprobado en el correo de Alberto)
 
+> 📧 **La cuenta de Manuel para TODAS las invitaciones: `manuelsuarezz@gmail.com`** (con doble `z`).
+> Dato de Alberto, 26/08/2026. Vale para Vercel, Supabase, Fly y GitHub.
+
 | Sistema | Estado | Evidencia |
 |---|---|---|
 | **Supabase** | ✅ **Invitado** a la organización **LOOR** | `welcome@supabase.com`, «manuelsuarez has invited you to join an organization», hoy **07:42** |
