@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-26 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (copias 24/08 y
+  25/08 en `_buzon_pdf`), sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
+  (`list_labels` marcaba 1 en Extraccion-fallida pero `search_threads` confirma 0 — contador
+  desincronizado, ya documentado). `agente_salud` actualizado a ok=true. Paso 4.0:
+  `v_facturas_sin_cargo` sin filas `sin_revisar` (las 8 previas siguen `revisada_sin_cargo`).
+  Candidatos Gmail 48h: 0. `_subir_aqui` y raíz 2026: vacíos. Al mirar el patrón recurrente DIGI
+  encontré un hueco real: el cargo de junio (-76€, 29/06) llevaba desde entonces sin conciliar
+  pese a tener PDF archivado — conciliado + fila `facturas_drive` con FK. Archivada también la
+  factura DIGI de agosto (76€, `08-Agosto-2026`), sin cargo aún (domicilia el 28/08). Auditoría
+  de la papelera `_DUPLICADOS_BORRAR` (22 avisos, ninguno auditado en semanas): los 22 ficheros
+  referenciados siguen existiendo — 0 zombis, nada que resolver. dudas: —; fallos: —;
+  PRs/commits: — (solo Supabase + Gmail + Drive).
 - **2026-08-26 · mercado-booking** · hizo: pasada diaria completa. Plan pedía 24 ventanas de
   mercado (de 516 candidatas, todas ronda 1/evento y nunca medidas antes; tope max=24 dejó 492
   fuera) + 4 de escaparate propio; medidas las 24 (0 sin respuesta) → 240 comps reales escritos

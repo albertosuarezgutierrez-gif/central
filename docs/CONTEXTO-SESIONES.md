@@ -68,6 +68,14 @@ en la misma sesión): el único de los cinco fuera del casco antiguo, así que e
 CP EXACTO por piso y no «que haya alguno». Pendiente de Alberto: los dos Busto siguen sin ref.
 catastral (NULL) — no se inventa. PR #1734.
 
+### 🧾 (26/08/2026) facturas-correo: hueco DIGI junio conciliado + papelera auditada (0 zombis)
+Pasada diaria normal (Vía B sana, 0 candidatos nuevos, `v_facturas_sin_cargo` sin `sin_revisar`).
+Al revisar el patrón recurrente DIGI encontré el cargo de junio (-76€, 29/06) sin conciliar pese a
+tener el PDF archivado desde entonces — conciliado + fila `facturas_drive` con FK. Archivada
+también la factura DIGI de agosto (pendiente de que domicilie el 28/08). Auditados los 22 avisos
+de `_DUPLICADOS_BORRAR` (ninguno tocado en semanas): los 22 ficheros referenciados siguen ahí,
+0 zombis — sigue siendo tarea manual de Alberto. Detalle en `docs/AGENTES-BITACORA.md`.
+
 ### ✅ (26/08/2026) House Sevillana: la dirección mala, resuelta de raíz — la skill sincronizada se trae al repo
 Tercera detección seguida de lo mismo (19, 25 y 26/08) sin poder tocarlo: `seo-house-sevillana` vivía
 FUERA de git (copia sincronizada de la cuenta) y avisar por Telegram no arreglaba nada. **Descubrimiento
