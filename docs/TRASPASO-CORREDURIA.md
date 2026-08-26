@@ -1611,7 +1611,7 @@ lo que diría algo es una racha larga justo después de tocar el `CRON_SECRET`.
 
 | Sistema | Estado | Evidencia |
 |---|---|---|
-| **Supabase** | 📨 **Invitación RECIBIDA, todavía SIN aceptar** | `welcome@supabase.com` → `alberto.suarez.gutierrez@gmail.com`, hoy **07:42**. Enlace `dashboard/join?token=…&slug=qdrmgpvqhcmhmpcrvtan&name=LOOR` (el token NO se guarda aquí: es de un solo uso) |
+| **Supabase** | ⛔ **Invitación recibida pero NO ACEPTABLE**: el enlace cae en un muro de «Sign in» con la sesión activa | `welcome@supabase.com` → `alberto.suarez.gutierrez@gmail.com`, hoy **07:42**. Probado 3 veces, misma pestaña con sesión buena. **Bloqueado a la espera de que Manuel lea el destinatario exacto y el estado.** (El token no se guarda aquí) |
 | **Fly.io** | ✅ **Invitado y dentro** | `noreply@email.fly.io`, «Manuel Suárez wants you to join Manuel Suárez», hoy **13:29** + cuenta de Alberto creada a las 13:29-13:30 |
 | **GitHub** | ❌ **No ha llegado nada** | Sin correo de invitación a colaborar, ni hoy ni en 7 días |
 | **Vercel** | ❌ Sin invitación — Manuel dice que **«hay que pagar»** | — |
@@ -1660,17 +1660,40 @@ es gratis y no ha llegado.
 Ambas salieron de una revisión desde el navegador que **se negó a pulsar botones sobre premisas sin
 verificar**. Las dos objeciones eran correctas; las dos premisas, mías.
 
-**1. Una invitación de Supabase NO se ve en el panel.** Se aceptó como cierto que «estar invitado» se
-comprobaría entrando al dashboard. No: Supabase **no lista invitaciones pendientes** en la interfaz —
-llegan como **enlace por correo** y se aceptan pulsándolo. Buscarla en el panel devuelve exactamente
-lo mismo que si no existiera, y ahí es donde una ausencia mal leída se convierte en «no hay nada».
-Es el caso de libro de la regla «dato que NO hay ≠ dato que NO se ha mirado»: se miró, pero **en el
-sitio donde ese dato nunca aparece**.
+**1. ~~Una invitación de Supabase NO se ve en el panel.~~ — RETIRADO, era otra suposición mía.**
+Se dijo que Supabase no lista invitaciones pendientes y que por eso el panel no mostraba nada. **No
+puedo sostenerlo.** El contraargumento es mejor: si la invitación fuera válida y estuviera dirigida a
+la cuenta con sesión abierta, el enlace mostraría una tarjeta *Join organization*; lo que muestra es
+un **muro de «Sign in or create an account»** con la sesión de Alberto demostrablemente activa
+(misma pestaña, mismo minuto, `/dashboard/organizations` cargando bien justo antes). **Ese muro es la
+señal de fallo, no una peculiaridad de la interfaz.**
 
-**2. Aceptar esa invitación no cuesta nada — pero eso había que comprobarlo, no suponerlo.** En
-Supabase, una organización en plan **Pro/Team sí factura por asiento**, así que «es gratis» no era
-gratis por definición. Verificado contra la API: `get_organization("qdrmgpvqhcmhmpcrvtan")` →
-`{"name":"LOOR","plan":"free"}`. **Free**, luego sin cargo. El dato ahora tiene fuente.
+**2. ~~«Verificado por API: LOOR es free, luego aceptar no cuesta nada».~~ — El dato es cierto; la
+conclusión que colgué de él, no.** `get_organization("qdrmgpvqhcmhmpcrvtan")` sí devuelve
+`{"name":"LOOR","plan":"free"}` — **pero `list_projects` con ese mismo conector no devuelve ni un
+solo proyecto de LOOR**, solo el de la organización de Alberto. Es decir: **el conector NO es miembro
+de LOOR y aun así el endpoint contesta.** Ese endpoint responde sobre organizaciones ajenas, así que
+prueba que LOOR existe y en qué plan está — **no** que la invitación siga viva, ni que Alberto tenga
+acceso. Se presentó como si cerrara el asunto y no lo cerraba.
+
+**3. El conector y el navegador NO están mirando la misma cuenta.** El conector de Supabase de la
+sesión ve **una** organización de Alberto; su navegador ve **dos** (la suya y `PISO`). Mientras eso
+siga así, **ninguna consulta por API sirve para dictaminar lo que Alberto ve en su sesión**: contesta
+desde otra identidad. Es la trampa más fina de las tres, porque la API responde con seguridad y suena
+a verificación.
+
+**Hipótesis viva, NO comprobable desde aquí:** Gmail entrega igual `alberto.suarez.gutierrez@`,
+`albertosuarezgutierrez@` (sin puntos) y `…+sufijo@`, pero **Supabase compara la cadena exacta**. Si
+la invitación se emitió contra una variante, el correo llega y el token queda atado a una dirección
+que la cuenta no reconoce — exactamente el síntoma observado. El conector de Gmail devuelve el
+destinatario ya normalizado y no da acceso a las cabeceras crudas, así que **no se puede confirmar ni
+descartar desde el repo**: lo resuelve Manuel leyendo el destinatario en su panel.
+
+**Lo que hay que hacer, y por qué no es «insistir con el enlace»:** el enlace no distingue entre
+«token consumido», «token emitido a otra dirección» y «invitación revocada» — las tres caen en el
+mismo muro de login. La única fuente que las separa está **en el lado de Manuel**: LOOR → Settings →
+Members, la dirección EXACTA de la invitación pendiente y su estado. Eso convierte tres hipótesis en
+un hecho, y él la reenvía en el acto.
 
 #### 🖥️ Vercel: por qué NO se invita a Manuel al equipo Pro (decisión del 26/08/2026)
 
