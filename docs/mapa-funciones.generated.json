@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-26T09:42:41Z",
-  "sha": "e37eb583ec5d1ea0a9135868b24c5a9224c8b355",
+  "generadoEn": "2026-08-26T12:38:21Z",
+  "sha": "66426f79c15aa0fd002cbb99e8e1a7ce85c21145",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -53524,24 +53524,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
-        },
-        {
-          "nombre": "avisosPersistidos",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": "Promise<string[]>",
-          "linea": 61,
-          "resumen": "Avisos que dejó escritos la pasada anterior en las conexiones vinculadas. Si la consulta falla se devuelve `[]`, que aquí es el lado CONSERVADOR: «no sé qué se avisó ayer» hace que una nota se repita,"
+          "linea": 15
         }
       ],
-      "tablas": [
-        "conexiones_banco",
-        "next"
-      ],
+      "tablas": [],
       "rutaApi": "/api/cron/psd2-sync",
-      "hash": "686f118761e5"
+      "hash": "551a97c204ab"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/resumen-mensual/route.ts",
@@ -67405,8 +67393,6 @@
         "fechaCaducidadConsent",
         "esNota",
         "partirAvisos",
-        "claveAviso",
-        "avisosNuevos",
         "semaforoFeed"
       ],
       "funciones": [
@@ -67440,7 +67426,7 @@
           "exportada": true,
           "params": "aviso: string",
           "retorno": "boolean",
-          "linea": 49,
+          "linea": 52,
           "resumen": "Un aviso con prefijo ℹ️ es INFORMATIVO: describe una limitación con la que el feed SIGUE funcionando (p. ej. «el banco rechazó la ventana de 89 días»). No es un fallo y por tanto no pone el semáforo e"
         },
         {
@@ -67449,25 +67435,7 @@
           "exportada": true,
           "params": "avisos: string[] | null",
           "retorno": "",
-          "linea": 53
-        },
-        {
-          "nombre": "claveAviso",
-          "kind": "function",
-          "exportada": true,
-          "params": "aviso: string",
-          "retorno": "string",
-          "linea": 62,
-          "resumen": "Clave estable de un aviso para compararlo ENTRE pasadas del cron: las fechas ISO que lleva dentro se mueven solas cada día (la ventana corta es `hoy - 30 días`, ver getMovimientosConVentana), así que "
-        },
-        {
-          "nombre": "avisosNuevos",
-          "kind": "function",
-          "exportada": true,
-          "params": "previos: string[], actuales: string[]",
-          "retorno": "string[]",
-          "linea": 67,
-          "resumen": "Avisos de `actuales` que NO estaban ya en `previos` (comparando por clave estable)."
+          "linea": 56
         },
         {
           "nombre": "semaforoFeed",
@@ -67475,12 +67443,12 @@
           "exportada": true,
           "params": "p: { hoyISO: string // Último movimiento psd2 importado (el más reciente entre todas las cuentas del feed). ultimoMovISO: string | null // ultimo_avisos del último sync; null = el sync aún no reporta (fila anterior al cambio) — // NO equiva",
           "retorno": "EstadoFeed",
-          "linea": 72
+          "linea": 61
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "86e4affd958b"
+      "hash": "c3b33db13851"
     },
     {
       "ruta": "apps/plataforma/lib/psd2.ts",
@@ -97526,6 +97494,6 @@
   ],
   "resumen": {
     "archivos": 2573,
-    "funciones": 7093
+    "funciones": 7090
   }
 }
