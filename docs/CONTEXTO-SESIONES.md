@@ -137,6 +137,23 @@ calculados; aunque GOOGLEFINANCE computara, el número nunca llega. La vía scra
 datacenter. Tampoco cierra **H1** (no da serie total-return). Sigue vigente: EODHD como 3er fallback.
 Sin cambios de código; 3 hojas de prueba creadas en el Drive de Alberto y ya enviadas a la papelera.
 
+### 📊 (26/08/2026) Facturación año contra año en `/sivra/pricing-rentabilidad`, con la fecha del go-live encima
+Petición de Alberto: «comparar la evolución de reservas de un año para otro […] y tener en cuenta la
+fecha que activamos 100% nuestros precios dinámicos». Bloque nuevo mes a mes, 2026 vs 2025.
+🚨 **Lo que lo hace honesto son TRES regímenes, no uno** (`lib/sivra/rentabilidad-anual.ts`, puro, 9 tests):
+mes cerrado → consumido vs consumido · mes en curso → lo que va de mes vs lo que iba A LA MISMA ALTURA
+(compararlo con el mes entero del año pasado es la trampa que hace parecer que vas fatal) · meses futuros
+→ **cartera vs cartera** al mismo día del calendario, que es el ritmo de venta. Regla que los unifica:
+la reserva cuenta si `reserved_at <= corte de su año` (informado al 100% desde 2024, verificado).
+Medido a 26/08: consumido 97.882€ vs 98.883€ (−1%) **pero con 511 noches vs 455 → ADR 192€ vs 217€**
+(más noches, más limpiezas, mismo dinero); cartera resto de año 34.484€ vs 16.832€ (+105%), casi toda
+de House. Año a la vista +14%. **Solo 27 reservas de la cartera se hicieron con el motor mandando**
+(go-live: Busto 10/06, Luxury 13/07, Dúplex y House 09/08) — su ADR está por encima del histórico de
+cada piso, pero es muestra corta y las fechas futuras son de por sí más caras. Dos sesgos DECLARADOS en
+la propia pantalla: la cartera de este año está inflada (las canceladas se borran de `incomes`; sin
+histórico anterior al 12/08/2026) y la columna «Motor» dice si mandaba, NO que la mejora sea suya.
+`pricing_pl_referencia` sigue viva: es el «antes» de esta comparación y caduca el 06/12/2026.
+
 ### 🔬 (25/08/2026, 20:30 UTC) Serrucho: 1ª pasada con el fix — corrió bien, pero NO prueba el arreglo
 El motor corrió con el código nuevo (latido `sivra_pricing_apply` ok, «6 noches escritas en 4 pisos»),
 sin saltos de raíl y con cambios de ±6%. Contra las dos pasadas anteriores del MISMO día con el código

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { resumirBacktest, resumirMercado, diasRestantesReferencia, GO_LIVE, PL_REFERENCIA_CADUCA, type FilaBacktest, type FilaMercado } from "@/lib/sivra/pricing-rentabilidad"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
+import { compararAnual, cortePrevio, totalizar, type FilaMesPiso } from "@/lib/sivra/rentabilidad-anual"
 
 export const dynamic = "force-dynamic"
 
@@ -29,7 +30,12 @@ export async function GET() {
     Object.entries(GO_LIVE).map(([pid, f]) => Prisma.sql`(${pid}, ${f}::date)`),
   )
 
-  const [backtestRaw, mercadoRaw, cohorte, hueco2025, gastosPl] = await Promise.all([
+  const hoyISO = new Date().toISOString().slice(0, 10)
+  const anioActual = Number(hoyISO.slice(0, 4))
+  const corteActual = hoyISO
+  const cortePrev = cortePrevio(hoyISO)
+
+  const [backtestRaw, mercadoRaw, cohorte, hueco2025, gastosPl, anualRaw] = await Promise.all([
     // 1) Backtest: cada noche vendida (reserva >= go-live del piso) con referencia PL de su
     // fecha, y el último precio del motor aplicado (no dry-run) ANTES de esa reserva.
     prisma.$queryRaw<{
@@ -134,6 +140,29 @@ export async function GET() {
       WHERE proveedor ILIKE '%pricelab%' OR concepto ILIKE '%pricelab%'
       ORDER BY fecha DESC LIMIT 24
     `),
+    // 5) FACTURACIÓN mes a mes, este año contra el anterior — petición de Alberto (26/08/2026).
+    // El corte por año es lo que hace justa la comparación: una reserva cuenta en el mes M del
+    // año Y solo si se reservó ANTES del corte de ese año (hoy, o el mismo día del año pasado).
+    // Así los meses ya pasados comparan estancias consumidas, el mes en curso compara «lo que va
+    // del mes» contra «lo que iba a la misma altura», y los futuros comparan CARTERA contra
+    // CARTERA — el ritmo de venta, que es lo único que dice si vas por delante.
+    // `reserved_at` está informado al 100% desde 2024 (verificado en BD), así que el corte es exacto.
+    // SQL ejecutado contra la BD real antes de commitear (26/08/2026).
+    prisma.$queryRaw<{ property_id: string; mes: string; bruto: number; noches: number; reservas: number }[]>(Prisma.sql`
+      WITH cortes(anio, corte) AS (
+        VALUES (${anioActual}::int, ${corteActual}::date), (${anioActual - 1}::int, ${cortePrev}::date)
+      )
+      SELECT i."propertyId" AS property_id,
+        to_char(i."checkIn", 'YYYY-MM') AS mes,
+        SUM(i.amount_gross)::float AS bruto,
+        SUM(i.nights)::int AS noches,
+        COUNT(*)::int AS reservas
+      FROM incomes i
+      JOIN cortes c ON c.anio = EXTRACT(YEAR FROM i."checkIn")::int
+      WHERE i.nights > 0 AND i.amount_gross > 0
+        AND i.reserved_at IS NOT NULL AND i.reserved_at::date <= c.corte
+      GROUP BY 1, 2
+    `),
   ])
 
   const porId = new Map(backtestRaw.map((r) => [r.property_id, r]))
@@ -168,6 +197,20 @@ export async function GET() {
 
   const mesesVacios = hueco2025.filter((m) => m.n === 0).map((m) => m.mes)
 
+  const pisos = Object.keys(GO_LIVE)
+  const anualSerie = compararAnual(anualRaw as FilaMesPiso[], { hoyISO, goLive: GO_LIVE, pisos })
+  const anual = {
+    anio: anioActual,
+    corte_actual: corteActual,
+    corte_previo: cortePrev,
+    serie: anualSerie,
+    total: totalizar(anualSerie),
+    // El total de lo que YA se consumió (meses cerrados + el mes en curso), que es la cifra
+    // comparable «a día de hoy»; los meses de cartera van aparte porque miden otra cosa.
+    total_consumido: totalizar(anualSerie.filter((s) => s.regimen !== 'cartera')),
+    total_cartera: totalizar(anualSerie.filter((s) => s.regimen === 'cartera')),
+  }
+
   return NextResponse.json({
     ok: true,
     backtest,
@@ -177,6 +220,7 @@ export async function GET() {
     gastos_pricelabs: gastosPl,
     referencia_pl: { caduca: PL_REFERENCIA_CADUCA, dias_restantes: diasRestantesReferencia(new Date()) },
     go_live: GO_LIVE,
+    anual,
     nota: 'Backtest = lista del motor vs lista de la curva PL congelada, SOLO en noches vendidas con ambas cifras. No dice cuántas noches habría vendido PL: eso lo dirá la ocupación al cierre de sept-nov. El bloque Mercado compara las mismas noches contra el p50 de los comparables fiables de Booking medidos al reservarse — no caduca.',
   })
 }
