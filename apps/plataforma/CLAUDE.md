@@ -341,12 +341,19 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   Telegram «⚠️ el banco no está entregando movimientos» cuyo único contenido era esa nota, mientras
   `/banca` pintaba verde **con razón**. Alarma y panel afirmando lo contrario sobre el MISMO hecho: el
   usuario deja de creerse los dos. El corte es ahora el helper puro **`partirAvisos()`** (con
-  `esNota`/`claveAviso`/`avisosNuevos`, testeados) y lo consumen el semáforo Y el cron.
-  - **Dedupe de un aviso repetido: por clave estable, NUNCA por el texto.** La ventana corta es
-    `hoy − 30 días`, así que la fecha DENTRO del aviso se corre sola cada día: comparar el texto crudo
-    haría que la misma incidencia pareciese nueva cada mañana — exactamente el ruido que se arreglaba.
-    `claveAviso()` neutraliza las fechas ISO antes de comparar. Si no se pueden leer los avisos
-    previos se devuelve `[]`: la nota se REPITE, nunca se silencia.
+  `esNota`, testeado) y lo consumen el semáforo Y el cron.
+  - **Y el desenlace, un escalón más allá (26/08/2026, PR #1739): una nota ℹ️ SOLA no manda Telegram,
+    ni siquiera la primera vez.** El PR #1575 dejó un dedupe por clave estable (`claveAviso` neutralizaba
+    las fechas ISO, que se corren solas cada día con la ventana `hoy − 30 días`) para que la misma
+    incidencia no se contase cada mañana. Alberto, al recibirla igualmente: «¿algo que hacer? no me
+    avises entonces». Y tenía razón — el dedupe atacaba la REPETICIÓN, no el problema: la limitación de
+    Kutxabank es PERMANENTE y no hay ninguna acción posible, así que el aviso era ruido aunque llegara
+    una sola vez (el propio texto terminaba en «no hay que hacer nada»). El cron avisa ahora SOLO por
+    avisos críticos; las notas viajan como contexto dentro de esa alerta y viven en `/banca`. Se
+    retiraron `claveAviso`/`avisosNuevos` y el helper `avisosPersistidos()` del cron, ya sin consumidor.
+    **Regla que deja: antes de silenciar la repetición de un aviso, pregunta si el aviso debía existir.**
+    Un aviso que se cuenta «solo una vez» sigue siendo ruido si su lector no puede hacer nada con él;
+    lo que hay que conservar es el sitio donde el dato SÍ hace falta (aquí, el panel), no el mensaje.
   - **Hermano en la UI:** `banca/page.tsx` renderizaba `estado.detalles` solo cuando el nivel ≠ `ok`,
     y las notas ℹ️ iban dentro de `detalles` → bajo el 🟢 eran **invisibles** y el panel decía «todo
     ok» sin declarar que del feed PSD2 de Kutxabank solo hay datos **desde el 22/07**. Un hueco no
