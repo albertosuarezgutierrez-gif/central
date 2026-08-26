@@ -25,6 +25,18 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🕐 (26/08/2026) Correduría: guion del corte minuto a minuto listo — y una TERCERA cosa irrecuperable
+
+Plan cerrado por ambas partes → escrito el **guion del corte** en `docs/TRASPASO-CORREDURIA.md`:
+preparativos de Alberto a **T-7** (crear org de **Fly** — el único de los 5 sistemas donde no tiene
+cuenta —, 3 invitaciones, gestor de contraseñas), copias de Manuel a **T-1**, ventana **13:00–15:00**
+(tras el pull de 11:30, lejos del de 5:30) y la prueba que cierra: el cron **automático** de D+1.
+🚨 Hallazgo: además de las dos claves, **los secrets de Fly (TIREA) son irrecuperables** — `fly secrets
+list` solo muestra NOMBRES. Se respaldan la víspera. Ese día **solo cambia la propiedad**: ni BD, ni
+auth, ni despliegues (eso es Fase 2). Mensaje **v7** a Manuel redactado, **sin enviar**, a falta de fecha. PR #1752.
+
+---
+
 ### 🛡️ (26/08/2026) Correduría: FASE 1 CERRADA — el CRM de Manuel tiene 32.600 clientes reales
 
 Manuel dio acceso a su Supabase. **El conector lee su proyecto `uijsgeocgdaxkhvwtjqs` por

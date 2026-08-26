@@ -1,6 +1,9 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
 > **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Solo falta fijar día y hora.**
+> 🕐 El **guion del corte minuto a minuto** ya está escrito (ver «GUION DEL CORTE», abajo): preparativos
+> de Alberto a T-7, copias de Manuel a T-1, ventana **13:00–15:00** y la prueba que cierra de verdad,
+> que es el cron **automático** de las 5:30 del día siguiente. Solo hay que poner la fecha encima.
 > 🔑 Y son **DOS claves**, no una: la de cifrado (si se pierde, los IBANs quedan ilegibles — falla
 > ruidoso) y la del **índice ciego** (si cambia, los clientes **dejan de encontrarse** aunque estén
 > ahí — **falla en silencio**, y una búsqueda vacía se lee como «no existe»). Se respaldan las dos y
@@ -328,7 +331,7 @@ probada en producción**.
 - **Nuevo, para el futuro:** no encender el flag de emisión de Codeoscopic sin probar antes el
   doble envío con el mismo `attempt_id`.
 
-### 📝 Respuesta a Manuel — BORRADOR (26/08/2026, v6)
+### 📝 Respuesta a Manuel — v6 (26/08/2026) — **ENVIADA y ya respondida. Histórico: la versión vigente es la v7**
 
 Contesta a su mensaje del 26/08. **Confirma su secuencia** (es buena) y le añade lo que le falta:
 el VALOR de la clave de cifrado (no la lista), verificar el cron con una ejecución real, transferir
@@ -384,6 +387,7 @@ Alberto dé el visto bueno a este envío concreto.**
 | # | Quién | Paso | Verificación que lo cierra |
 |---|---|---|---|
 | **0a** | Manuel | **Copiar el VALOR de las DOS claves a un gestor: la de cifrado Y la del índice ciego** | Alberto confirma que puede leer ambas |
+| **0a-bis** | Manuel | **Copiar también el VALOR de los secrets de Fly (credenciales TIREA)** — `fly secrets list` solo muestra NOMBRES, nunca valores | Alberto confirma que puede leerlos. Si el movimiento entre orgs los perdiera, solo se recuperan pidiéndolos otra vez a TIREA |
 | 0b | Manuel | Dump de Supabase + lista de Blob + export de env vars | Dump restaurable en local. **No se commitea** |
 | 0c | Los dos | Elegir hora **fuera de 5:30/11:30**, justo tras un pull correcto | Último `cima_ficheros` del día ya cargado |
 | 1 | Manuel | Acepta la invitación al equipo Vercel Pro | — |
@@ -400,6 +404,127 @@ Alberto dé el visto bueno a este envío concreto.**
 **Nada se apaga hasta el 9.** Manuel ya lo ha dicho por escrito: no borra ni apaga nada.
 
 ---
+
+## 🕐 GUION DEL CORTE, minuto a minuto (preparado el 26/08/2026, a falta de fecha)
+
+> El runbook de arriba dice **qué** pasos hay. Esto dice **cuándo, quién y qué se verifica antes de
+> seguir**. Sale de la secuencia que propuso Manuel más los huecos que le encontramos. Cuando Alberto
+> fije la fecha, esto se ejecuta tal cual.
+
+### ⚠️ Lo que ese día NO se hace (y conviene tenerlo escrito para no improvisar)
+
+El día del corte **solo cambia la PROPIEDAD de las cosas**, no su forma. Ese día **no** se fusiona la
+base en `central`, **no** se toca RLS ni la autenticación, **no** se emite ninguna póliza por
+Codeoscopic y **no** se despliega nada nuevo. La app sigue siendo la misma app, en la misma URL, con
+la misma base — solo que las factura Alberto. Todo lo demás (verter el modelo al schema `seguros`,
+re-plataformar la auth, las pantallas en `apps/asegura`) es **Fase 2, con calma y sin reloj**.
+
+Mezclar las dos cosas el mismo día es la forma más fácil de convertir un traspaso reversible en una
+migración irreversible.
+
+### 🧰 T-7 a T-2 — preparación de Alberto, sin depender de Manuel
+
+| # | Qué | Por qué |
+|---|---|---|
+| A1 | **Crear cuenta y organización en Fly.io** | Es el **único** de los 5 sistemas donde Alberto no tiene cuenta. Sin org de destino, la app del adaptador no se puede mover |
+| A2 | Invitar a Manuel a **Vercel** (equipo `pisos-turisticos-projects`, plan **Pro** ✅) | Un *Transfer Project* solo puede apuntar a un equipo del que el emisor sea miembro |
+| A3 | Invitar a Manuel a la **organización Supabase** (`fzagbwkkzfjlsvflkkvn`, plan **free**, hoy con 1 proyecto: `central`) | Igual: el traspaso va de organización a organización |
+| A4 | Invitar a Manuel a la **org de Fly** recién creada | Para poder mover la app entre orgs |
+| A5 | Abrir en el gestor de contraseñas una entrada **«Grupo Asegura»** con huecos para: clave de cifrado, clave de índice ciego, `CRON_SECRET`, secrets de TIREA/Fly, `wa_access_token` | Es el sitio donde aterrizan los valores. Ni WhatsApp ni email |
+| A6 | **Comprobar que la org free acepta un 2º proyecto** y si el de Manuel es de pago | 🔴 Ver abajo. Se comprueba **el día antes**, no el mismo día |
+
+**A6 en detalle — el único hueco que puede obligar a cambiar de plan sobre la marcha.** La
+organización Supabase de Alberto está en **free** y tiene **un** proyecto (`central`). El traspaso
+mete un segundo proyecto en esa organización. Si Supabase rechaza el destino —por el límite de
+proyectos de free, o porque el proyecto de Manuel esté en un plan de pago que la org destino no
+soporta— el corte no se cae: **plan B, restaurar el dump del paso 0b en `central`** ese mismo día.
+Pero es una decisión que **no se improvisa a las 13:30**: se comprueba la víspera y, si hace falta,
+se sube la org a Pro antes de empezar.
+
+### 🌙 T-1 — Manuel hace copias, sin tocar producción
+
+| # | Qué | Detalle |
+|---|---|---|
+| M1 | **Valor** de la clave de **cifrado** y **valor** de la clave del **índice ciego** | Al gestor. Son las dos únicas cosas verdaderamente irreversibles |
+| M2 | **Valores de los secrets de Fly** (credenciales TIREA) | 🚨 Nuevo, y no estaba en el runbook: **`fly secrets list` NO muestra los valores**, solo los nombres. Si el movimiento entre orgs los perdiera, no hay de dónde recuperarlos: hay que volver a pedirlos a TIREA. Se apuntan **antes** |
+| M3 | `CRON_SECRET` de GitHub Actions | No viaja en la transferencia del repo |
+| M4 | Dump de la base + export de env vars + lista de los ~4 ficheros de Blob | El dump se queda **en local** y se borra al acabar: son datos de 32.600 personas. **Jamás se commitea** |
+
+### ⏱️ T-0 — el corte
+
+**Ventana propuesta: día laborable, 13:00–15:00.** Sale sola de los crons: justo después del pull de
+las **11:30** (así el día ya está cargado) y a 16 horas del de las **5:30** del día siguiente, que es
+la prueba que de verdad cierra el traspaso. ~2 horas, de las cuales trabajo efectivo ~1.
+
+| Hora | Quién | Paso | 🚦 No se sigue hasta que… |
+|---|---|---|---|
+| 12:45 | Alberto | Comprobar que el pull de 11:30 entró | Hay un `cima_ficheros` de hoy |
+| 13:00 | Manuel | Acepta las 3 invitaciones (Vercel, Supabase, Fly) | Aparece en los tres |
+| 13:05 | Manuel | Vercel → **Transfer Project** | El proyecto sale en el equipo de Alberto |
+| 13:15 | Alberto | Dominio y app | `app.grupoasegura.com` carga y se puede entrar |
+| 13:20 | Manuel | Supabase → **Transfer project** | Mismo ref; la app sigue leyendo |
+| 13:30 | Alberto | 🔑 **LAS DOS PRUEBAS** | **(1)** se **descifra** un IBAN real **y (2)** se **encuentra** un cliente conocido buscando por email **y** por DNI. Una sola no vale: el índice ciego falla en silencio |
+| 13:40 | Manuel | Fly → mover la app del adaptador a la org de Alberto | La app aparece en su org |
+| 13:45 | Alberto | `fly secrets list` + `/health` del adaptador | Están los nombres de los secrets **y** el health responde |
+| 13:50 | Manuel | GitHub → transferir los dos repos (app y adapter) | — |
+| 13:55 | Alberto | Aceptar la transferencia + **reconectar el Git en Vercel** | El proyecto vuelve a apuntar al repo |
+| 14:00 | Alberto | **Volver a poner `CRON_SECRET`** + comprobar que Actions está habilitado y los `schedule:` vivos | Los workflows aparecen activos, no en gris |
+| 14:10 | Alberto | 🔴 **Disparar el cron a mano** (`workflow_dispatch`) | Devuelve **filas nuevas**, no un 200 vacío. Un 200 sin datos es exactamente el fallo silencioso que buscamos |
+| 14:25 | Los dos | Blob: re-apuntar el token o mover los ~4 ficheros | Los 4 se abren desde la app |
+| 14:35 | Los dos | Codeoscopic y Meta/WhatsApp: repuntar URLs si el dominio se movió | — |
+| 14:45 | Alberto | Una **cotización** de punta a punta en Codeoscopic | Verde. **Cotizar sí; emitir NO** (no es idempotente extremo a extremo: dos intentos = dos pólizas) |
+| ~15:00 | — | 🚧 **PUERTA** | Nada se apaga si 13:30, 14:10 o 14:45 no están en verde |
+| **D+1 5:30** | Alberto | **La prueba que cierra de verdad**: el cron **automático** | Entran filas **solo**, sin que nadie lo dispare |
+| D+1 | Alberto | Sacar a Manuel del equipo → **Manuel cancela su Pro** | Fin de la duplicidad de pagos |
+
+### 🔙 Marcha atrás
+
+No hace falta ensayarla: **nada se borra ni se apaga durante el corte** —Manuel lo ha puesto por
+escrito— así que si un paso falla, el estado anterior sigue entero y se reintenta otro día. El único
+punto sin retorno de todo el traspaso son **las claves y los secrets de TIREA**, y por eso viven en
+T-1, la víspera, y no en la ventana del corte.
+
+
+---
+
+
+### 📝 Mensaje para Manuel — BORRADOR (26/08/2026, v7 — fijar fecha). **NO se envía sin que Alberto lo diga**
+
+> Sustituye a la v6. Solo falta que Alberto ponga el día. Va sin RGPD por indicación suya.
+
+```
+Manuel, con lo que me contaste ya lo tengo todo claro. Te propongo cerrarlo así.
+
+DÍA Y HORA: ¿te viene bien el [DÍA] de 13:00 a 15:00? Lo pongo ahí a propósito: después del
+pull de las 11:30 (así el día ya está cargado) y bien lejos del de las 5:30. De trabajo real
+es una hora; el resto es comprobar.
+
+LA VÍSPERA, lo único que necesito de ti — y por el gestor de contraseñas que te comparto,
+nada de WhatsApp ni correo:
+ 1) el valor de las dos claves, la de cifrado y la del índice ciego
+ 2) el valor de los secrets de Fly (los de TIREA). Esto lo pido por algo concreto:
+    `fly secrets list` solo enseña los nombres, nunca los valores. Si al mover la app de
+    organización se perdieran, no hay de dónde sacarlos: habría que volver a pedirlos a TIREA.
+ 3) el CRON_SECRET de Actions, que ese no viaja al transferir el repo
+ 4) el dump, el export de las env vars y la lista de los ficheros de Blob
+
+Esta semana te llegan tres invitaciones: Vercel, Supabase y Fly (esta última la he creado yo,
+que no tenía cuenta). Con que las aceptes el mismo día a las 13:00, vale.
+
+Una pregunta suelta: tu proyecto de Supabase, ¿está en free o en algún plan de pago? Mi
+organización está en free y quiero comprobar la víspera que acepta el traspaso. Si no lo
+acepta no pasa nada: restauramos el dump y seguimos igual.
+
+Y para que quede claro qué hacemos ese día: SOLO cambiamos de dueño las cosas. No tocamos la
+base, ni la autenticación, ni desplegamos nada nuevo. Sigue siendo tu misma app, en la misma
+URL, con la misma base — solo que la pago yo. Lo de integrarlo en mi monorepo lo hago yo
+después, con calma y sin reloj.
+
+No apagues nada ese día. La prueba que de verdad cierra esto es la mañana siguiente: que el
+cron de las 5:30 entre solo y traiga pólizas. Cuando lo veamos, cancelas el Pro y ya está.
+
+Gracias por dejarlo todo tan atado, de verdad.
+```
 
 ## 🔄 CORRECCIÓN (26/08/2026): la intranet SÍ se queda, y cómo se unifican los Vercel
 
@@ -920,7 +1045,7 @@ Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
 
 ---
 
-### 📝 Mensaje para Manuel — BORRADOR, SIN ENVIAR (26/08/2026, v5 — VIGENTE)
+### 📝 Mensaje para Manuel — v5 (26/08/2026) — **ENVIADO y ya respondido. Histórico: la versión vigente es la v7**
 
 Quinta versión. **Cambio de vía respecto a la v4:** en vez de que Manuel vuelva a desplegar el
 proyecto en el equipo de Alberto, se usa la **transferencia nativa de proyecto de Vercel** y la
