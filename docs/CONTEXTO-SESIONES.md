@@ -25,17 +25,17 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
-### 🛡️ (26/08/2026) Correduría: Manuel YA invitó a su Supabase — y aun así el proyecto no se ve
+### 🛡️ (26/08/2026) Correduría: FASE 1 CERRADA — el CRM de Manuel tiene 32.600 clientes reales
 
-Manuel respondió: invitación a su organización de Supabase **`LOOR`** (`qdrmgpvqhcmhmpcrvtan`, free),
-correo del 26/08 07:42, aceptada por Alberto. La membresía es real (`get_organization` responde), pero
-**`list_projects` sigue devolviendo solo `central`** → la app OAuth de Claude se autoriza **por
-organización** y `LOOR` no está autorizada. Acción de Alberto: reconectar el conector de Supabase
-marcando también `LOOR`. GitHub: `add_repo manuelsuarez/asegura` falla por *cross-tier* — hace falta
-sesión nueva con ese repo como fuente, o el rodeo de Claude Chrome. Vercel: aún sin invitación.
-**Nada migrado.** Runbook actualizado (Fase 0 → 1) y `docs/ASEGURA-PROMPT-CHROME.md` reescrito: ahora
-lleva la Fase 1 entera en SQL de solo lectura para sacarla por pantalla si el conector no se arregla. Conversación previa
-del plan: sesión «Migración de datos Superbase a Central» (20/08, rama `claude/superbase-central-migration-xs2z4a`).
+Manuel dio acceso a su Supabase. **El conector lee su proyecto `uijsgeocgdaxkhvwtjqs` por
+`project_id`**; que `list_projects` no lo enumere (solo lista la organización propia) me hizo concluir
+por error que había que reautorizar el OAuth: **no hacía falta nada**. 🚨 *«No sale en el listado» ≠
+«no tengo acceso»*. Inventario en `docs/TRASPASO-CORREDURIA.md`: 52 tablas, **32.600 clientes / 28.843
+pólizas**, BD 92 MB (~75 MB el `public`) → **free basta, los ~200 MB estimados eran casi el triple**.
+NO hay Edge Functions, buckets, `pg_cron`, triggers, vistas ni secuencias. Tres decisiones abiertas:
+**RLS** (86 políticas y `prisma_seguros` tiene BYPASSRLS → al conectar deja de aislar sin fallar),
+**auth** (9 en `auth.users` vs 17 en `public.usuarios` → re-plataformar), y 0 claves foráneas.
+**Contrato de encargado ahora es lo urgente** (carnets de conducir, teléfonos, emails). PR #1752.
 
 ### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
 

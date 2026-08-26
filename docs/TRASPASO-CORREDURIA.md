@@ -1,8 +1,9 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: FASE 0 → 1 — Manuel HA RESPONDIDO: invitación a su Supabase recibida y aceptada
-> (26/08/2026). El inventario sigue bloqueado por un detalle de permisos, ver «Estado de los tres
-> accesos» abajo.**
+> **Estado: FASE 1 COMPLETADA (26/08/2026).** Manuel dio acceso a su Supabase y el inventario está
+> hecho y medido — ver «FASE 1 CERRADA» abajo. Faltan el **código** (repo, bloqueado) y el **Vercel**
+> (sin invitación). **Nada se ha migrado todavía**, y antes de migrar hay que firmar el contrato de
+> encargado de tratamiento: son 32.600 clientes reales.
 > Ningún dato se ha migrado todavía; lo único hecho en `central` son los cimientos vacíos (ver
 > «Hecho ya»). Este documento es el runbook del traspaso y **la ÚNICA fuente de verdad** mientras dure.
 > Cuando el traspaso se cierre, esto se sustituye por `apps/asegura/CLAUDE.md` y una entrada en
@@ -18,7 +19,7 @@
 
 | Acceso | Estado real | Qué falta |
 |---|---|---|
-| **Supabase** | ✅ Manuel invitó a Alberto a su organización (`qdrmgpvqhcmhmpcrvtan`, plan **free**; el correo la llamaba **`LOOR`** y el panel la muestra hoy como **`PISO`** — ver «Lo que se ve del Supabase de Manuel»). Correo de `welcome@supabase.com` del **26/08/2026 07:42**; Alberto la aceptó. Desde esta sesión, `get_organization('qdrmgpvqhcmhmpcrvtan')` **responde** → la membresía es real | 🔴 **`list_projects` NO devuelve ningún proyecto de `LOOR`**: se sigue viendo solo `central`. La causa más probable es que **la app OAuth de Claude se autoriza POR ORGANIZACIÓN** (de ahí los correos «OAuth Application Approval» del 15 y 18/08, uno por organización): la de Alberto está autorizada, `LOOR` no. **Acción de Alberto:** volver a conectar el conector de Supabase y, en el selector de organización, marcar también **LOOR** (o «todas»). Si tras eso sigue sin aparecer, entonces es que Manuel le dio un rol *acotado a proyectos* y hay que pedirle rol de organización |
+| **Supabase** | ✅ **RESUELTO.** Manuel invitó a Alberto a su organización (`qdrmgpvqhcmhmpcrvtan`) el 26/08/2026 y el conector **lee el proyecto `uijsgeocgdaxkhvwtjqs` sin problema**. La Fase 1 está hecha | ✅ Nada. ~~Reconectar el conector marcando la organización~~ — **era innecesario**: `list_projects` no enumera proyectos de otras organizaciones, pero el acceso por `project_id` funciona igual |
 | **GitHub** | ⚠️ Invitación del **12/08/2026** a `manuelsuarez/asegura`, sin confirmar que esté aceptada | 🔴 **Claude no puede leer ese repo desde esta sesión, pase lo que pase**: `add_repo` → *cross-tier adds are not supported* (esta sesión ya tiene fuentes de `albertosuarezgutierrez-gif`). Haría falta una sesión NUEVA con `manuelsuarez/asegura` como fuente inicial, y eso exige que la app de Claude esté instalada en la cuenta de Manuel. Mientras tanto, el rodeo sigue siendo `docs/ASEGURA-PROMPT-CHROME.md` (Claude Chrome) o un ZIP del árbol de trabajo |
 | **Vercel** | 🔴 Sin invitación: `list_teams` solo devuelve `pisos-turisticos-projects` | Pedírsela a Manuel (o, si su cuenta es Hobby, la lista de **nombres** de variables por aquí y los **valores** por gestor de contraseñas) |
 
@@ -28,25 +29,100 @@
 **Nada se ha copiado todavía.** La Fase 1 (inventario y medición) no puede empezar hasta que el
 proyecto de `LOOR` sea visible desde el conector.
 
-## 📊 Lo que se ve del Supabase de Manuel (por pantalla, 26/08/2026)
+## ✅ FASE 1 CERRADA — inventario real del Supabase de Manuel (26/08/2026)
 
-Alberto entró al panel desde el móvil. El conector de Claude **sigue sin ver la organización**
-(`list_projects` devuelve solo `central`), pero lo que muestra el panel ya responde a medias la Fase 1
-y **tumba dos supuestos del plan**:
+> **Cómo se entró, y la corrección que importa:** el conector de Supabase de Claude **sí puede leer el
+> proyecto de Manuel**, por referencia directa. Lo que NO hace es *enumerarlo*: `list_projects` solo
+> lista los proyectos de la organización propia, y de ahí salió la conclusión equivocada de que hacía
+> falta reautorizar el OAuth por organización. **No hacía falta nada: solo el `project_id`.**
+> Lección de método: *«no aparece en el listado» ≠ «no tengo acceso»* — antes de pedirle a nadie que
+> toque permisos, prueba el acceso directo.
 
-| Dato | Valor en pantalla | Qué implica |
-|---|---|---|
-| Organización | **`PISO`** · plan gratuito · **1 proyecto** | ⚠️ El correo de la invitación decía **`LOOR`** (`qdrmgpvqhcmhmpcrvtan`) y `get_organization` sigue devolviendo ese nombre: lo más probable es que se renombrara. **Y tiene UN solo proyecto** → decae el motivo nº1 por el que Manuel podría negarse a invitar como Administrator (no hay proyectos de otros clientes que exponer) |
-| Proyecto | **`ASEGURA-prod-eu`** · AWS **`eu-central-1`** · compute **NANO** | El destino, `central`, está en `eu-west-1`. El `pg_dump` cruza regiones sin problema; solo importa para el tiempo del volcado |
-| Tamaño de la BD | la cifra **está tapada** por el widget flotante del panel; se lee «…2 MB / 500 MB» | 🔴 **La estimación de ~200 MB que arrastraba este documento NO se sostiene**: sea cual sea el dígito oculto, el indicador está lejísimos del tope de 500 MB. **El veredicto free vs. Pro se inclina claramente a FREE**, pero la cifra exacta sigue sin medirse: hay que leerla sin el widget encima, o con la consulta 2 del PROMPT 2 |
-| Egress del ciclo | 36 MB / 5 GB | El límite que se temía que apretara (el egress, no el disco) está al 0,7% |
-| Almacenamiento de archivos | **0 GB** / 1 GB | No hay ficheros en Storage. Un activo menos que migrar — el runbook lo listaba como incógnita |
-| Usuarios activos mensuales | **1** / 50.000 | 🚨 **«Activos» ≠ «existentes».** Dice que **una** persona entró este ciclo de facturación, **no** que haya una fila en `auth.users`. Con esto NO se puede decidir todavía la bifurcación de autenticación: hace falta el `count(*)` de la consulta 9 del PROMPT 2. Lo que sí sugiere es un sistema con poquísimo uso real |
+**Proyecto: `uijsgeocgdaxkhvwtjqs`** · `ASEGURA-prod-eu` · AWS `eu-central-1` · Postgres 17.6 ·
+compute NANO · plan free · `ACTIVE_HEALTHY` · creado el 20/04/2026 · organización
+`qdrmgpvqhcmhmpcrvtan` (el panel la muestra como `PISO`, el correo de invitación la llamaba `LOOR`).
 
-> **Por qué esta tabla es prudente y no un inventario:** un panel muestra indicadores agregados del
-> **ciclo de facturación**, no el contenido. Sirve para descartar (no hay 200 MB, no hay ficheros) y
-> para orientar, no para dar la Fase 1 por hecha. El inventario de verdad —tablas, columnas, claves
-> foráneas, RLS, funciones, `cron.job`— sigue pendiente del conector o del PROMPT 2.
+### 🚨 Esto NO es un prototipo: es una correduría con cartera real
+
+| Tabla | Filas | Tabla | Filas |
+|---|---:|---|---:|
+| `clientes` | **32.600** | `bienes_asegurables` | 1.614 |
+| `polizas` | **28.843** | `poliza_coberturas` | 1.425 |
+| `cliente_telefonos` | 4.794 | `gestiones` | 694 |
+| `cliente_emails` | 4.017 | `poliza_intervinientes` | 504 |
+| `oportunidades` | 3.676 | `poliza_recibos` | 186 |
+| `operational_events` | 3.518 | `cima_ficheros` | 125 |
+| `cliente_carnets_conducir` | **2.189** | `siniestros` | 69 |
+| `cliente_relaciones` | 1.710 | `usuarios` | 17 |
+
+**52 tablas en `public`.** Y con eso, el punto 6 del mensaje a Manuel deja de ser papeleo: hay
+**32.600 clientes reales** con teléfonos, correos, **carnets de conducir** y relaciones familiares.
+El **contrato de encargado de tratamiento (`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`) pasa a ser
+lo más urgente del traspaso**, por delante de cualquier decisión técnica.
+
+### Veredicto free vs. Pro: **FREE**, y ahora medido
+
+- BD total del proyecto: **92 MB** (el panel dice 112 MB: incluye WAL y overhead).
+- Las dos tablas gordas son `clientes` (38 MB) y `polizas` (22 MB); el resto no llega a 3 MB cada una.
+- El schema `public` a trasladar ronda los **~75 MB**. Sobre los ~180 MB que ocupa `central` hoy,
+  quedaría en **~255 MB de 500 MB**. Cabe holgado. **La estimación de ~200 MB era casi triple de la real.**
+- Egress 36 MB de 5 GB. No hay presión por ningún lado.
+
+### Lo que NO hay (y por tanto no hay que migrar)
+
+| | |
+|---|---|
+| **Edge Functions** | **Ninguna** |
+| **Buckets de Storage** | **0**, y **0 objetos** |
+| **`pg_cron`** | **No instalada** → cero tareas programadas en la BD |
+| **Triggers** | **0** |
+| **Vistas / vistas materializadas** | **0 / 0** |
+| **Secuencias** | **0** (todo son UUID, no hay contadores que resincronizar) |
+| **Secretos en Vault** | **0** |
+
+Extensiones realmente instaladas: `pgcrypto`, `uuid-ossp`, `supabase_vault`, `pg_stat_statements`,
+`plpgsql` y **`vector` 0.8.0 (pgvector) en `public`** — esta última la usa `whatsapp_kb_chunks`, así
+que **hay que asegurarse de que `vector` está disponible en `central` antes de restaurar**.
+
+### 🚩 Los tres asuntos que decide Alberto, no la sesión
+
+1. **RLS: 86 políticas, y RLS activo en las 52 tablas.** El aislamiento multi-tenant del CRM
+   (`correduria_id`) vive **en las políticas RLS**, no en el código. Pero `prisma_seguros` se creó con
+   **`BYPASSRLS`** (como el resto de roles de la casa) → **al conectar la app, las 86 políticas dejan de
+   aplicarse y nadie se entera: no falla, simplemente deja de aislar.** Es el patrón de fallo silencioso
+   que más caro sale. Hay dos salidas y hay que elegir a conciencia: (a) `prisma_seguros` **sin**
+   BYPASSRLS y se conservan las políticas, o (b) con BYPASSRLS y el aislamiento pasa al código de la app.
+   Hoy la correduría es un solo tenant (`corredurias` = 1 fila), así que el riesgo es bajo *ahora* —
+   pero la decisión se toma antes de restaurar, no después.
+2. **Autenticación: `auth.users` = 9 usuarios, los 9 han entrado alguna vez.** Con nueve, la bifurcación
+   se resuelve sola: **re-plataformar al patrón de la casa** (tabla propia + cookie + `jose`, como
+   `apps/mariscos`) sale más barato que migrar `auth.users`. ⚠️ Ojo al descuadre: `public.usuarios`
+   tiene **17** filas frente a 9 en `auth.users` — hay 8 usuarios lógicos sin cuenta de acceso, o
+   bajas. Mirarlo antes de dar la lista por buena.
+3. **Cero claves foráneas en 52 tablas.** La integridad referencial está en el código, no en la BD.
+   Para el volcado es buena noticia (no hay orden de carga que respetar); como herencia, es deuda que
+   conviene conocer antes de construir encima. **132 funciones en `public`** sí viajan en el dump, pero
+   hay que revisarlas: si alguna usa `auth.uid()`, depende del Supabase Auth que estamos quitando.
+
+### Lo que sigue sin saberse
+
+- **Dónde viven los documentos.** Storage está vacío, pero existen `bien_documentos`,
+  `poliza_documentos`, `solicitud_cambio_documentos` (4 filas) y `cima_ficheros` (125). Esta última
+  guarda **metadatos** (`nombre_fichero`, `xml_hash`, `zip_entry_count`), no el binario. Así que
+  «0 buckets» significa **«los ficheros no están en Supabase»**, no «no hay ficheros»: hay que
+  averiguar a dónde apuntan antes de apagar nada de Manuel.
+- **Los crons y las integraciones**, que viven en su Vercel (el comentario de una tabla menciona un
+  «vencimientos-detector»). Sigue haciendo falta la invitación a Vercel, o al menos los nombres de las
+  variables de entorno.
+- **El código**: sigue bloqueado (`add_repo` cross-tier). Vía Chrome o ZIP.
+
+### Rastro de su forma de trabajar (útil para leer el código)
+
+Los comentarios de tabla citan tickets **`LOO-xxx`** (Linear) y normas españolas por su nombre:
+`lds_consent` referencia la **Ley de Distribución de Seguros art. 19** y el **RDLeg 6/2004 art. 173**;
+`cotizaciones_anonimas` describe un «flipped funnel» con TTL de 7 días. Hay integración con **CIMA/EIAC**
+(el estándar de intercambio con aseguradoras), con **Codeoscopic** (7 tablas `codeoscopic_*`) y un canal
+de **WhatsApp** con base de conocimiento vectorial. No es un CRM genérico: es software de correduría.
 
 ---
 
