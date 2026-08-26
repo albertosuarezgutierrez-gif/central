@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-26T07:56:49Z",
-  "sha": "80350e8ece4ef236c029d1c6af91e0f42d3272ef",
+  "generadoEn": "2026-08-26T09:42:41Z",
+  "sha": "e37eb583ec5d1ea0a9135868b24c5a9224c8b355",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57224,7 +57224,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 50,
+          "linea": 67,
           "resumen": "· `escaparate` — NUESTRO propio anuncio, ventana a ventana (19/08/2026). Hasta hoy esto pasaba por casualidad —el piso propio aparecía a veces en una búsqueda de comparables— y por eso el motor llevab"
         }
       ],
@@ -57237,7 +57237,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "f90ff4a66c81"
+      "hash": "4acfcd9898f4"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -70157,6 +70157,7 @@
       "resumen": "lib/sivra/mercado-cobertura.ts — QUÉ ventanas pide medir la rutina de Booking, y en qué orden. POR QUÉ (06/08/2026). El barrido por búsqueda web quedó mecánicamente perfecto (120/120 ventanas el 06/08) y aun así NO mide temporada: los precios que devuelven los snippets son de anuncio y vienen SIN fe",
       "exporta": [
         "parsearParametrosPlan",
+        "mesesSinBucket",
         "planDeVentanas",
         "conReservaAltoValor",
         "ventanasQuePedir",
@@ -70170,8 +70171,17 @@
           "exportada": true,
           "params": "qs: URLSearchParams,",
           "retorno": "",
-          "linea": 122,
+          "linea": 128,
           "resumen": "Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string. Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias `@/`, así que su lóg"
+        },
+        {
+          "nombre": "mesesSinBucket",
+          "kind": "function",
+          "exportada": true,
+          "params": "cobertura: CoberturaVentana[], fechasEvento: ReadonlySet<string>, mesesEnPlan: Iterable<string>, minFechas = MIN_FECHAS_BUCKET,",
+          "retorno": "Set<string>",
+          "linea": 207,
+          "resumen": "· así que esos meses acumulaban mediciones que NO podían hacer elegible su bucket, y el salto de evento seguía multiplicando el ancla global — la que se mueve sola (ver el serrucho de `pricing-base-ev"
         },
         {
           "nombre": "diasEntre",
@@ -70179,7 +70189,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 170
+          "linea": 242
         },
         {
           "nombre": "clave",
@@ -70187,15 +70197,15 @@
           "exportada": false,
           "params": "checkin: string, aforo: number",
           "retorno": "string",
-          "linea": 176
+          "linea": 248
         },
         {
           "nombre": "planDeVentanas",
           "kind": "function",
           "exportada": true,
-          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
+          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {}, bucket?: ContextoBucket,",
           "retorno": "PlanPedido",
-          "linea": 202,
+          "linea": 279,
           "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
         },
         {
@@ -70204,16 +70214,16 @@
           "exportada": true,
           "params": "pedidas: VentanaPedida[], tope: number, reserva = RESERVA_ALTO_VALOR,",
           "retorno": "VentanaPedida[]",
-          "linea": 286,
+          "linea": 376,
           "resumen": "Reparte el tope de la pasada entre la cola de urgencia y una RESERVA para lo caro sin medir. 🚨 POR QUÉ (18/08/2026, Navidad de House). La cola ordena por urgencia y, dentro de las vírgenes, por CERCA"
         },
         {
           "nombre": "ventanasQuePedir",
           "kind": "function",
           "exportada": true,
-          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {},",
+          "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {}, bucket?: ContextoBucket,",
           "retorno": "VentanaPedida[]",
-          "linea": 314,
+          "linea": 404,
           "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
@@ -70222,7 +70232,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] /** * Anuncios NUESTROS que el portal devolvió y se descartaron (ver `mercado-propios.ts`). Se * declara aunque sea un descarte correcto: un compar",
           "retorno": "string",
-          "linea": 330,
+          "linea": 421,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -70231,13 +70241,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 363,
+          "linea": 454,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b13a3cc317f"
+      "hash": "741eac614ed5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-propios.ts",
@@ -70308,7 +70318,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "Date",
-          "linea": 125
+          "linea": 133
         },
         {
           "nombre": "fmt",
@@ -70316,7 +70326,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 128
+          "linea": 136
         },
         {
           "nombre": "sumarDias",
@@ -70324,7 +70334,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 131
+          "linea": 139
         },
         {
           "nombre": "diasEntre",
@@ -70332,7 +70342,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 134
+          "linea": 142
         },
         {
           "nombre": "findeDelMes",
@@ -70340,16 +70350,16 @@
           "exportada": true,
           "params": "hoyIso: string, m: number, orden = 0",
           "retorno": "string",
-          "linea": 164,
+          "linea": 172,
           "resumen": "Fecha de muestra nº `orden` del mes a `m` meses vista. `orden` 0 = primer VIERNES (el que se ha barrido siempre; se mantiene para no mover la serie histórica). 🚨 POR QUÉ HAY MÁS DE UNA (01/08/2026, c"
         },
         {
           "nombre": "picosDeEvento",
           "kind": "function",
           "exportada": true,
-          "params": "eventos: EventoFecha[], factorMinimo = 1.15",
+          "params": "eventos: EventoFecha[], factorMinimo = FACTOR_EVENTO_MINIMO",
           "retorno": "EventoFecha[]",
-          "linea": 183,
+          "linea": 191,
           "resumen": "Agrupa fechas de evento CONTIGUAS en bloques y devuelve, de cada bloque, la de mayor factor (empate → la primera). La Feria entera gasta una sola ventana."
         },
         {
@@ -70358,7 +70368,7 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], opts: VentanasOpts = {},",
           "retorno": "Ventana[]",
-          "linea": 215,
+          "linea": 223,
           "resumen": "Ventanas a barrer en una pasada. La base mensual va SIEMPRE (es la línea de temporada); las de evento se añaden por cercanía hasta el tope, sin repetir una fecha que ya cubre la base."
         },
         {
@@ -70367,13 +70377,13 @@
           "exportada": true,
           "params": "hoyIso: string, eventos: EventoFecha[], plan: Ventana[], opts: Pick<VentanasOpts, 'factorMinimo' | 'noches' | 'horizonteDias'> = {},",
           "retorno": "Ventana[]",
-          "linea": 323,
+          "linea": 331,
           "resumen": "Ventanas POR FECHA para los eventos CONFIRMADOS, sin colapsar bloques. SOLO para el plan del conector de Booking — el sweep de Serper sigue con `ventanasDelBarrido` a secas. POR QUÉ (14/08/2026, cazad"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "905221de1dd6"
+      "hash": "b8bd635928ef"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/noches-sin-income.ts",
@@ -97516,6 +97526,6 @@
   ],
   "resumen": {
     "archivos": 2573,
-    "funciones": 7092
+    "funciones": 7093
   }
 }
