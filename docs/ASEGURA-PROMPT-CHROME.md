@@ -93,12 +93,13 @@ claves, no ejecutes nada que escriba (INSERT/UPDATE/DELETE/ALTER/DROP/CREATE). S
 NUNCA reveles ni copies el valor de una API key, contraseña o connection string: si te pido una
 clave, es solo para saber si EXISTE.
 
-A) Dime qué organizaciones y qué proyectos veo, y en cuál está el CRM de correduría (asegura).
-   Si en "LOOR" no aparece NINGÚN proyecto, dímelo tal cual y para: significa que mi rol no
-   alcanza a los proyectos, y hay que pedírselo a Manuel.
+A) Entra en la organización "PISO" (en el correo de invitación se llamaba "LOOR"): dentro está
+   el proyecto **ASEGURA-prod-eu**. Si no aparece ningún proyecto, dímelo tal cual y para:
+   significaría que mi rol no alcanza a los proyectos y hay que pedírselo a Manuel.
 
-B) Del proyecto de asegura, de la pantalla: Reference ID, región, plan, y el uso que muestre
-   (tamaño de base de datos y egress del mes).
+B) Del proyecto ASEGURA-prod-eu, de la pantalla: **Reference ID** (esto es lo que más falta hace,
+   no lo tenemos), y el **tamaño exacto de la base de datos** — el 26/08 la cifra salía TAPADA por
+   el widget flotante de ayuda; ciérralo o haz scroll para leerla entera.
 
 C) Abre el SQL Editor de ESE proyecto y ejecuta estas consultas, una a una, devolviéndome el
    resultado completo de cada una en una tabla Markdown:

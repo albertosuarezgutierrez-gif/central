@@ -18,7 +18,7 @@
 
 | Acceso | Estado real | Qué falta |
 |---|---|---|
-| **Supabase** | ✅ Manuel invitó a Alberto a su organización **`LOOR`** (`qdrmgpvqhcmhmpcrvtan`, plan **free**). Correo de `welcome@supabase.com` del **26/08/2026 07:42**; Alberto la aceptó. Desde esta sesión, `get_organization('qdrmgpvqhcmhmpcrvtan')` **responde** → la membresía es real | 🔴 **`list_projects` NO devuelve ningún proyecto de `LOOR`**: se sigue viendo solo `central`. La causa más probable es que **la app OAuth de Claude se autoriza POR ORGANIZACIÓN** (de ahí los correos «OAuth Application Approval» del 15 y 18/08, uno por organización): la de Alberto está autorizada, `LOOR` no. **Acción de Alberto:** volver a conectar el conector de Supabase y, en el selector de organización, marcar también **LOOR** (o «todas»). Si tras eso sigue sin aparecer, entonces es que Manuel le dio un rol *acotado a proyectos* y hay que pedirle rol de organización |
+| **Supabase** | ✅ Manuel invitó a Alberto a su organización (`qdrmgpvqhcmhmpcrvtan`, plan **free**; el correo la llamaba **`LOOR`** y el panel la muestra hoy como **`PISO`** — ver «Lo que se ve del Supabase de Manuel»). Correo de `welcome@supabase.com` del **26/08/2026 07:42**; Alberto la aceptó. Desde esta sesión, `get_organization('qdrmgpvqhcmhmpcrvtan')` **responde** → la membresía es real | 🔴 **`list_projects` NO devuelve ningún proyecto de `LOOR`**: se sigue viendo solo `central`. La causa más probable es que **la app OAuth de Claude se autoriza POR ORGANIZACIÓN** (de ahí los correos «OAuth Application Approval» del 15 y 18/08, uno por organización): la de Alberto está autorizada, `LOOR` no. **Acción de Alberto:** volver a conectar el conector de Supabase y, en el selector de organización, marcar también **LOOR** (o «todas»). Si tras eso sigue sin aparecer, entonces es que Manuel le dio un rol *acotado a proyectos* y hay que pedirle rol de organización |
 | **GitHub** | ⚠️ Invitación del **12/08/2026** a `manuelsuarez/asegura`, sin confirmar que esté aceptada | 🔴 **Claude no puede leer ese repo desde esta sesión, pase lo que pase**: `add_repo` → *cross-tier adds are not supported* (esta sesión ya tiene fuentes de `albertosuarezgutierrez-gif`). Haría falta una sesión NUEVA con `manuelsuarez/asegura` como fuente inicial, y eso exige que la app de Claude esté instalada en la cuenta de Manuel. Mientras tanto, el rodeo sigue siendo `docs/ASEGURA-PROMPT-CHROME.md` (Claude Chrome) o un ZIP del árbol de trabajo |
 | **Vercel** | 🔴 Sin invitación: `list_teams` solo devuelve `pisos-turisticos-projects` | Pedírsela a Manuel (o, si su cuenta es Hobby, la lista de **nombres** de variables por aquí y los **valores** por gestor de contraseñas) |
 
@@ -27,6 +27,28 @@
 
 **Nada se ha copiado todavía.** La Fase 1 (inventario y medición) no puede empezar hasta que el
 proyecto de `LOOR` sea visible desde el conector.
+
+## 📊 Lo que se ve del Supabase de Manuel (por pantalla, 26/08/2026)
+
+Alberto entró al panel desde el móvil. El conector de Claude **sigue sin ver la organización**
+(`list_projects` devuelve solo `central`), pero lo que muestra el panel ya responde a medias la Fase 1
+y **tumba dos supuestos del plan**:
+
+| Dato | Valor en pantalla | Qué implica |
+|---|---|---|
+| Organización | **`PISO`** · plan gratuito · **1 proyecto** | ⚠️ El correo de la invitación decía **`LOOR`** (`qdrmgpvqhcmhmpcrvtan`) y `get_organization` sigue devolviendo ese nombre: lo más probable es que se renombrara. **Y tiene UN solo proyecto** → decae el motivo nº1 por el que Manuel podría negarse a invitar como Administrator (no hay proyectos de otros clientes que exponer) |
+| Proyecto | **`ASEGURA-prod-eu`** · AWS **`eu-central-1`** · compute **NANO** | El destino, `central`, está en `eu-west-1`. El `pg_dump` cruza regiones sin problema; solo importa para el tiempo del volcado |
+| Tamaño de la BD | la cifra **está tapada** por el widget flotante del panel; se lee «…2 MB / 500 MB» | 🔴 **La estimación de ~200 MB que arrastraba este documento NO se sostiene**: sea cual sea el dígito oculto, el indicador está lejísimos del tope de 500 MB. **El veredicto free vs. Pro se inclina claramente a FREE**, pero la cifra exacta sigue sin medirse: hay que leerla sin el widget encima, o con la consulta 2 del PROMPT 2 |
+| Egress del ciclo | 36 MB / 5 GB | El límite que se temía que apretara (el egress, no el disco) está al 0,7% |
+| Almacenamiento de archivos | **0 GB** / 1 GB | No hay ficheros en Storage. Un activo menos que migrar — el runbook lo listaba como incógnita |
+| Usuarios activos mensuales | **1** / 50.000 | 🚨 **«Activos» ≠ «existentes».** Dice que **una** persona entró este ciclo de facturación, **no** que haya una fila en `auth.users`. Con esto NO se puede decidir todavía la bifurcación de autenticación: hace falta el `count(*)` de la consulta 9 del PROMPT 2. Lo que sí sugiere es un sistema con poquísimo uso real |
+
+> **Por qué esta tabla es prudente y no un inventario:** un panel muestra indicadores agregados del
+> **ciclo de facturación**, no el contenido. Sirve para descartar (no hay 200 MB, no hay ficheros) y
+> para orientar, no para dar la Fase 1 por hecha. El inventario de verdad —tablas, columnas, claves
+> foráneas, RLS, funciones, `cron.job`— sigue pendiente del conector o del PROMPT 2.
+
+---
 
 ## 🏷️ Cómo se llama cada cosa (y por qué no todo igual)
 
