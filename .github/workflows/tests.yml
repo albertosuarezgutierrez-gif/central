@@ -16,6 +16,10 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main]
+  # Disparo a mano: los pushes hechos con token de App NO disparan workflows, así que un PR
+  # de un agente se queda con los checks requeridos en «Expected» y el merge lo rechaza el
+  # ruleset. Relánzalo sobre la RAMA — y SIEMPRE después del último push, porque los check
+  # runs aterrizan en el head del momento. Ver CLAUDE.md § «CI: por qué un PR de Claude…».
   workflow_dispatch:
 
 concurrency:

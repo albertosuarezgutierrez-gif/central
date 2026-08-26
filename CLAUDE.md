@@ -192,6 +192,55 @@ en 4 cifras: `2.000,12€`), decimales con coma, y el **€ DETRÁS** del númer
 aplica igual en pantalla, Telegram y emails. Nada de `€${x.toFixed(2)}` suelto. Las verticales sin ese helper
 replican la misma convención. Si un cambio toca una pantalla con importes mal formateados, corrígelos en el mismo PR.
 
+## 🤖 CI: por qué un PR de Claude se queda con los checks «Expected» (26/08/2026)
+
+**Los pushes hechos con el token de la App de Claude NO disparan los workflows de Actions.** Es una
+limitación de GitHub, no un fallo del repo. Consecuencia: un PR abierto y empujado por un agente puede
+quedarse con **los 12 checks requeridos en «Expected — waiting for status to be reported»** para
+siempre, y el merge lo rechaza la regla con `12 of 12 required status checks are expected`.
+
+🚨 **«Expected» NO es «Failing».** Antes de tocar nada, mira si algún check está en ROJO: si los 12
+están en Expected y ninguno rojo, no hay nada roto — es que **no han arrancado**.
+
+**La salida: `workflow_dispatch` sobre la RAMA.** Los cuatro workflows que aportan checks requeridos ya
+lo llevan (`tests.yml`, `ci.yml`, `qa.yml`, `gitleaks.yml`). Se lanzan con
+`actions_run_trigger` (o Actions → Run workflow) apuntando a la rama del PR.
+
+⚠️ **El orden importa, y es donde se pierde una tarde:** los check runs aterrizan en el **head que
+tenga la rama EN EL MOMENTO del dispatch**. Si luego empujas un commit más, el head cambia y esos
+checks se quedan huérfanos en el sha viejo → el PR sigue bloqueado y parece que el dispatch «no
+cuenta». **Lanza los dispatch SIEMPRE después del último push**, y si vuelves a empujar, relánzalos.
+
+**Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
+salió verde):
+
+| Workflow | Jobs que aportan checks requeridos |
+|---|---|
+| `qa.yml` | `Análisis estático · Patrones conocidos` |
+| `ci.yml` | `Lint · TypeCheck · Build` |
+| `tests.yml` | `Tests (packages + guardián)` + **9** × `Typecheck · <app>` (almacen, alquiler, ia-rest, ialimp, mariscos, plataforma, rrhh, sivra, transporte) |
+
+Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
+desbloquea nada.
+
+🚫 **Lo que NO se hace:**
+- **Bypass del ruleset.** La regla es un **Ruleset**, no una Branch protection clásica: **no hay
+  override implícito de Owner** y el botón «merge without waiting» sencillamente no se renderiza.
+  Concedérselo exige meter la cuenta en la *Bypass list* del ruleset — una puerta que se queda
+  abierta para siempre por un PR de tres `.md`. No compensa.
+- **Commit vacío para «despertar» el CI.** Prohibido: ensucia el historial y esconde el problema.
+  Si hace falta un push que dispare workflows, que sea un commit **con contenido real** hecho desde
+  una cuenta de persona (el token de App no vale).
+
+**Dos trampas de diagnóstico, las dos vistas el 26/08/2026:**
+- Un run en `completed failure` puede ser **11 jobs `cancelled`** por `concurrency:
+  cancel-in-progress` (llegó un push nuevo mientras corría). **Mira los jobs antes de diagnosticar un
+  fallo**: `list_workflow_jobs` lo dice en un segundo.
+- Los eventos `check_suite.completed` que llegan a la sesión son **de Vercel**. Leerlos como «CI
+  verde» es afirmar algo que no se ha mirado — el fallo que `CLAUDE.md` marca como el más caro.
+  Para el estado real: `get_status` (statuses) **y** `get_check_runs` (jobs de Actions), que son
+  cosas distintas.
+
 ## Reglas de la matriz
 - Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un
   proyecto Vercel con **Root Directory `apps/<app>`** + install
