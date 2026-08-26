@@ -420,6 +420,48 @@ es tocar el modelo y necesita su propia entrada firmada.
   los alphas están medidos a PRECIO, no a retorno total. El sesgo es pequeño y simétrico y por eso la
   comparativa se acepta; queda anotado aquí para que ninguna lectura futura lo descubra por sorpresa.
 
+## 🧱 «Base perfecta» + acumulación — MEDIDA y RECHAZADA · umbral firmado antes de mirar, 2026-08-26
+- **Origen:** idea de Alberto («lo veo acumulación y una base perfecta, ¿lo tiene contemplado el agente?»).
+  Estado previo del código: la **acumulación** existe solo como CONTEXTO (`lib/trading/volumen.ts`,
+  badge 📊↑ del radar y de la ficha; nunca filtra ni pesa). De **base/consolidación no había nada**, y el
+  torneo la apaga por diseño: `evaluarMomentum` exige ADX≥20 y una base bien formada tiene ADX bajo →
+  `neutral`; `evaluarReversion` solo dispara con RSI<30/>70. Un valor en base sale MUDO en la pasada.
+- **Regla firmada ANTES de ejecutar la consulta** (proxy mensual sobre los campos que YA trae
+  `trading_backtest`, sin recolectar nada nuevo):
+  - **BASE** en el mes *t*: `caidaMes ≥ −10%` (pegado a su máximo) **y** `volRelMes ≤ 0,9` (volumen
+    secándose) **y** `sobreSmaMes = true`.
+  - **RUPTURA**: BASE en *t* y, en *t+1*, `volRelMes ≥ 1,3` **y** `precio > precio_prev × 1,02`
+    (entrada en *t+1*, medida desde ahí).
+- **Criterio firmado:** ≥ **+2 pp** de `ret91` medio frente al resto del universo **y mismo signo en las
+  dos mitades** (2011-2018 / 2019-2026). La partición es obligatoria por la lección de H8.
+
+| brazo | n | ret91 medio | resto del universo | diferencia |
+|---|---|---|---|---|
+| BASE · 2011-2018 | 23.042 | 3,05% | 3,85% | **−0,80 pp** |
+| BASE · 2019-2026 | 22.303 | 3,19% | 5,47% | **−2,28 pp** |
+| **BASE · total** | **45.345** | **3,12%** | **4,76%** | **−1,64 pp** |
+| RUPTURA · 2011-2018 | 695 | 5,13% | 3,69% | **+1,44 pp** |
+| RUPTURA · 2019-2026 | 562 | 2,23% | 4,95% | **−2,72 pp** |
+| **RUPTURA · total** | **1.257** | **3,83%** | **4,38%** | **−0,55 pp** |
+
+- **Veredicto: NO se cablea.** Estar EN la base resta 1,64 pp y lo hace de forma consistente en las dos
+  mitades. Comprar la RUPTURA no falla por poco: **el signo se invierte entre mitades** (+1,44 → −2,72 pp),
+  el mismo modo de muerte de H8 — sería cablear el régimen 2011-2018. Además el `ret28` de la ruptura es
+  **menos de la mitad** que el del universo en AMBAS mitades (0,63% vs 1,39% agregado): el tirón corto
+  post-ruptura, que es justo lo que se cree ver en el gráfico, no aparece en los datos.
+- **Límites declarados ahora, no cuando molesten:**
+  - Es un proxy **MENSUAL**. En BD no hay serie diaria del universo, así que **esto no es un VCP medido**:
+    no hay rango estrecho de 5-8 semanas, ni contracciones sucesivas, ni pivote. Lo medido es «pegado a
+    máximos + volumen seco + sobre la media» y su ruptura mensual con volumen.
+  - **La mitad «acumulación» de la idea sigue SIN medir**: los picos de volumen de `volumen.ts` necesitan
+    velas diarias y el retrovisor solo guarda volumen relativo mensual. Rechazada está la BASE, no la
+    acumulación — que se queda donde ya estaba, como contexto.
+  - Sesgo de supervivencia del corpus de 15 años: los niveles absolutos están inflados; la comparación
+    cruzada dentro de cada fecha (que es la usada aquí) se mantiene interpretable.
+- **Qué haría falta para re-abrirlo:** series DIARIAS de 15 años para el universo (~1.000 símbolos ×
+  ~3.800 sesiones) para medir la base como se define de verdad. Con dos tests en contra, no se gasta salvo
+  que Alberto lo pida explícitamente.
+
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a
