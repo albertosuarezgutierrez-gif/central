@@ -1295,7 +1295,12 @@ dinero real (el contraste de precio de la orden se hizo con la cadena de fallbac
 con un feed propio de IBKR). Manuales de usuario: sin cambios (ningún archivo de
 `apps/ia-rest/src/app/**` ni `public/**` tocado en el rango).
 
-## 🟡 Skill sincronizada `seo-house-sevillana` — la dirección incorrecta SIGUE sin corregir
+## ✅ Skill `seo-house-sevillana` — RESUELTO el 26/08/2026 (traída al repo)
+> **Cerrado.** Tras la tercera pasada seguida sin poder tocarla, la skill se copió al monorepo
+> ya corregida en `.claude/skills/seo-house-sevillana/` —que tiene precedencia sobre la copia
+> sincronizada del mismo nombre— y se blindó con `test/regression-house-sevillana-direccion.test.ts`.
+> Lo de abajo queda como registro del hallazgo.
+
 Tercera pasada consecutiva detectándolo (visto por primera vez 19/08/2026). Sigue diciendo **Calle
 Bustos Tavera 22** cuando la dirección real de House Sevillana es **Calle Socorro 24, 41003
 Sevilla, barrio de San Julián** (`apps/housesevillana/CLAUDE.md`, `CLAUDE.md` raíz). Bustos Tavera

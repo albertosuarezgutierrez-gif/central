@@ -15,13 +15,17 @@ casco antiguo es un dolor). Licencia **VFT/SE/01179**, obligatoria y visible en 
 
 > 🚨 **NO es Bustos Tavera 22.** Esa es la dirección de OTROS DOS pisos del grupo — *Luxury
 > Busto* y *Busto Reform*, bajo derecha y bajo izquierda, alquilados a Gutiérrez Alcalá. La
-> skill **sincronizada** `seo-house-sevillana` se la atribuye a House Sevillana en siete
-> sitios, **incluidos sus dos JSON-LD con `streetAddress`** — de raíz, porque le asigna el **ID
-> de Booking `4771238`, que es el de Busto Reform** (el de House Sevillana es `2039943`): publicar ese schema le daría a
-> Google una dirección falsa para el negocio, y encima la de dos competidores propios en la
-> misma búsqueda local. Esa skill vive FUERA del repo (`/root/.claude/skills/synced/`, sin
-> git) y **la tiene que corregir Alberto**; hasta entonces, este fichero manda sobre ella. El
-> parche exacto, listo para pegar, está en `docs/PARCHE-skill-seo-house-sevillana.md`.
+> skill `seo-house-sevillana` se la atribuía a House Sevillana en siete sitios, **incluidos sus
+> dos JSON-LD con `streetAddress`** — de raíz, porque le asignaba el **ID de Booking `4771238`,
+> que es el de Busto Reform** (el de House Sevillana es `2039943`): publicar ese schema le habría
+> dado a Google una dirección falsa para el negocio, y encima la de dos competidores propios en la
+> misma búsqueda local.
+>
+> **Resuelto el 26/08/2026** tras detectarlo tres pasadas seguidas sin poder tocarlo: la skill vivía
+> FUERA del repo (`/root/.claude/skills/synced/`, sincronizada de la cuenta de Claude, sin git), así
+> que se **trajo al monorepo** ya corregida —`.claude/skills/seo-house-sevillana/`, que tiene
+> precedencia sobre la copia sincronizada del mismo nombre— y se blindó con
+> `test/regression-house-sevillana-direccion.test.ts`. Este fichero sigue siendo la fuente de verdad.
 > (Confirmado por Alberto y por fuentes públicas el 19/08/2026.)
 >
 > Lo mismo con el barrio: **San Julián**, no la Macarena. La página `/barrio` posiciona la

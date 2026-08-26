@@ -1,0 +1,80 @@
+{
+  "@context": "https://schema.org",
+  "@type": "LodgingBusiness",
+  "@id": "https://www.housesevillana.es/#lodging",
+  "name": "House Sevillana",
+  "alternateName": "HOUSE Sevillana Parking",
+  "description": "Casa palacio reformada de 290 m² con 6 dormitorios, 4 baños y parking privado en el centro histórico de Sevilla. Ideal para familias y grupos grandes.",
+  "url": "https://www.housesevillana.es",
+  "image": [
+    "https://www.housesevillana.es/images/exterior-1200.jpg",
+    "https://www.housesevillana.es/images/patio-1200.jpg",
+    "https://www.housesevillana.es/images/terraza-1200.jpg"
+  ],
+  "logo": "https://www.housesevillana.es/logo.png",
+  "telephone": "+34637349990",
+  "email": "alberto.suarez.gutierrez@gmail.com",
+  "priceRange": "€€€",
+  "currenciesAccepted": "EUR",
+  "paymentAccepted": "Credit Card, Bank Transfer",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Calle Socorro 24",
+    "addressLocality": "Sevilla",
+    "addressRegion": "Andalucía",
+    "postalCode": "41003",
+    "addressCountry": "ES"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": 37.395904,
+    "longitude": -5.987431
+  },
+  "containedInPlace": {
+    "@type": "City",
+    "name": "Sevilla",
+    "sameAs": "https://www.wikidata.org/wiki/Q8717"
+  },
+  "numberOfRooms": 6,
+  "occupancy": {
+    "@type": "QuantitativeValue",
+    "minValue": 1,
+    "maxValue": 12
+  },
+  "floorSize": {
+    "@type": "QuantitativeValue",
+    "value": 290,
+    "unitCode": "MTK"
+  },
+  "petsAllowed": false,
+  "smokingAllowed": false,
+  "checkinTime": "15:00",
+  "checkoutTime": "12:00",
+  "amenityFeature": [
+    { "@type": "LocationFeatureSpecification", "name": "Parking privado", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "WiFi gratuito", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Aire acondicionado", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Cocina totalmente equipada", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Terraza con vistas", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Patio interior", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Jardín", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "TV con canales por satélite", "value": true },
+    { "@type": "LocationFeatureSpecification", "name": "Lavadora", "value": "PENDIENTE_CONFIRMAR" },
+    { "@type": "LocationFeatureSpecification", "name": "Apto para familias", "value": true }
+  ],
+  "_NOTA_STAR_RATING": "NO publicar starRating: una VFT andaluza no tiene categoría de estrellas otorgada por nadie. Inventar un 4 es una afirmación falsa con forma de dato. Si algún día hay una categoría oficial, ponerla aquí.",
+  "_NOTA_AGGREGATE_RATING": "Solo añadir aggregateRating si se tienen reseñas propias verificables. NO copiar las de Booking. Borrar este campo cuando se tengan reseñas reales y rellenar el bloque siguiente:",
+  "_aggregateRating_template": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.5",
+    "reviewCount": "12",
+    "bestRating": "5",
+    "worstRating": "1"
+  },
+  "sameAs": [
+    "https://www.booking.com/hotel/es/house-sevillana.html",
+    "https://www.airbnb.es/PENDIENTE",
+    "https://www.facebook.com/PENDIENTE",
+    "https://www.instagram.com/PENDIENTE"
+  ]
+}

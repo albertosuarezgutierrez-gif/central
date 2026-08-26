@@ -32,6 +32,19 @@
 
 ---
 
+### ✅ (26/08/2026) House Sevillana: la dirección mala, resuelta de raíz — la skill sincronizada se trae al repo
+Tercera detección seguida de lo mismo (19, 25 y 26/08) sin poder tocarlo: `seo-house-sevillana` vivía
+FUERA de git (copia sincronizada de la cuenta) y avisar por Telegram no arreglaba nada. **Descubrimiento
+que lo desbloquea: una skill en `.claude/skills/<nombre>/` tiene PRECEDENCIA sobre la sincronizada del
+mismo nombre** — verificado en vivo (el listado de skills pasó a mostrar la description corregida). Se
+copió al repo ya arreglada: Socorro 24, San Julián, coords, Booking `2039943`, `VFT/SE/01179`, teléfono,
+dominio `.es` (era `.com`) y los dos JSON-LD. **Hallazgo colateral: la contaminación había llegado al
+producto** — `apps/sivra/messages/{es,en,fr,de,it}.json` decían «House Sevillana está en Calle Bustos
+Tavera» en los cinco idiomas (no renderizado hoy, pero cargado por next-intl). Guardián:
+`test/regression-house-sevillana-direccion.test.ts` (7 tests, verificado que muerde). `/auditoria-diaria`
+aprende la regla: ante una skill sincronizada con datos malos, TRAERLA AL REPO, no repetir el aviso.
+Opcional para Alberto: borrar la copia vieja de su cuenta. PR draft.
+
 ### 🔍 (26/08/2026) Auditoría ligera diaria — sin hallazgos de código, dirección de House Sevillana sigue mal en la skill sincronizada
 Rango 25/08 03:16→26/08 00:06 (62 commits, día muy activo: serrucho de pricing, retirada de
 PriceLabs, Motor vs mercado real, desglose Sique Brilla, Tramo 1 de trading). Heartbeats (18+12

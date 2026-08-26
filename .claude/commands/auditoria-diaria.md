@@ -266,18 +266,26 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    - **Skills SINCRONIZADAS** (`/root/.claude/skills/synced/`, si existe la carpeta en la
      sesión): vienen de la cuenta de Claude, **no están en git y nadie las reconcilia**, así
      que su drift no caduca nunca — es un punto ciego, no un olvido puntual. Caso fundacional
-     (19/08/2026): `seo-house-sevillana` lleva desde su creación diciendo que House Sevillana
+     (19/08/2026): `seo-house-sevillana` llevaba desde su creación diciendo que House Sevillana
      está en **Calle Bustos Tavera 22**, que es la dirección de OTROS DOS pisos del grupo
      (Luxury Busto y Busto Reform); el dato bueno es **Calle Socorro 24, barrio de San
-     Julián**, y está en `apps/housesevillana/CLAUDE.md` y en la propia landing. Lo caro no es
-     la ficha: son sus **dos JSON-LD con `streetAddress`**, que si se publican le dan a Google
+     Julián**, y está en `apps/housesevillana/CLAUDE.md` y en la propia landing. Lo caro no era
+     la ficha: eran sus **dos JSON-LD con `streetAddress`**, que si se publican le dan a Google
      una dirección falsa para el negocio y encima la de dos competidores propios en la misma
      búsqueda local. Qué hacer: contrasta los DATOS DUROS de cada skill sincronizada
      (direcciones, licencias, teléfonos, precios, capacidades) contra el código y los
-     `CLAUDE.md` de la app que describen. **No se pueden auto-aplicar** —no hay dónde
-     commitear—, así que todo hallazgo va por **Telegram**, con el fichero y la línea exactos
-     y el valor correcto, para que Alberto lo corrija en su cuenta. Repítelo mientras siga sin
-     corregirse: aquí el recordatorio es el único mecanismo que hay.
+     `CLAUDE.md` de la app que describen.
+   - **El remedio de una skill sincronizada con datos malos es TRAERLA AL REPO, no repetir el
+     aviso.** Avisar por Telegram no arregla nada —`seo-house-sevillana` se detectó tres
+     pasadas seguidas (19, 25 y 26/08/2026) sin que cambiara ni una línea, porque el arreglo
+     dependía de que Alberto lo hiciera a mano en su cuenta—. Una skill copiada a
+     `.claude/skills/<nombre>/` **tiene precedencia sobre la copia sincronizada del mismo
+     nombre**, así que copiarla, corregirla y commitearla la deja arreglada de verdad, la
+     vuelve auditable y permite blindarla con un test (patrón:
+     `test/regression-house-sevillana-direccion.test.ts`). Como toca comportamiento de una
+     skill, va por **PR draft + Telegram**, no auto-aplicado. Solo cuando eso no sea posible
+     (la skill es de terceros y no se quiere versionar) se cae al aviso repetido, y entonces
+     con fichero, línea y valor correcto exactos.
    - **Tabla de rutas del triaje de correo** (`apps/plataforma/lib/correo/rutas.ts`, fuente única):
      Alberto crea agentes/skills continuamente. Comprueba que toda skill/agente que reciba trabajo
      POR CORREO tiene su categoría en `RUTAS[]`. Señales de drift: una skill nueva en `.claude/skills/`

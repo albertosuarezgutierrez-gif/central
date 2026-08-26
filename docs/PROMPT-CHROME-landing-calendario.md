@@ -126,7 +126,9 @@ que son otros dos pisos y tienen sus propias fichas.
 
 ## 5. Fuera del navegador: la skill `seo-house-sevillana`
 
-Sigue atribuyendo a House Sevillana la dirección de **Bustos Tavera 22** (que son Luxury Busto y Busto Reform)
-y el ID de Booking **4771238**, que es el de Busto Reform — el de House Sevillana es **2039943**, confirmado
-hoy contra la ficha real. Esa skill vive fuera del repo (`/root/.claude/skills/synced/`), así que la corrección
-es tuya, en tu máquina. El parche exacto, listo para pegar, está en `docs/PARCHE-skill-seo-house-sevillana.md`.
+**Ya está resuelto (26/08/2026), no tienes que hacer nada.** Atribuía a House Sevillana la dirección de
+**Bustos Tavera 22** (que son Luxury Busto y Busto Reform) y el ID de Booking **4771238**, que es el de Busto
+Reform — el de House Sevillana es **2039943**. Como vivía fuera del repo (`/root/.claude/skills/synced/`) y no
+había forma de corregirla desde una sesión, se **trajo al monorepo** ya corregida:
+`.claude/skills/seo-house-sevillana/`, que tiene precedencia sobre la copia sincronizada del mismo nombre.
+Lo único opcional que te queda: borrar esa copia vieja de tu cuenta de Claude.

@@ -1,0 +1,54 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "¿House Sevillana tiene parking privado?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. House Sevillana cuenta con parking privado dentro del propio alojamiento, lo cual es algo poco habitual en el casco antiguo de Sevilla. La plaza está incluida en el precio de la reserva, sin coste adicional ni necesidad de buscar aparcamiento en zona azul."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Para cuántas personas es House Sevillana?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La casa dispone de 6 dormitorios y 4 baños distribuidos en 290 m², con capacidad para grupos grandes y familias multigeneracionales. Es ideal cuando varias parejas o varias generaciones viajan juntas."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿A qué distancia está la Catedral de Sevilla?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La Catedral y la Giralda están a unos 10 minutos andando desde House Sevillana. El Real Alcázar está aproximadamente a 20 minutos a pie. Todos los puntos icónicos del centro son accesibles caminando."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Se admiten niños?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí, se admiten niños de todas las edades. La distribución de la casa, con 6 dormitorios y 4 baños, la hace especialmente cómoda para familias con hijos."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Se permiten despedidas de soltero o fiestas?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Por respeto al vecindario y a la propia casa, no se permiten despedidas de soltero/a, fiestas ni eventos similares. Hay horario de silencio obligatorio entre las 21:00 y las 09:00."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Por qué reservar en la web oficial y no en Booking o Airbnb?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Reservar directamente en la web oficial garantiza el mejor precio disponible. Las plataformas como Booking aplican una comisión que se traslada al precio final. Reservando en housesevillana.es pagas lo justo, sin intermediarios, y tienes contacto directo con el propietario para resolver cualquier duda antes y durante la estancia."
+      }
+    }
+  ]
+}
