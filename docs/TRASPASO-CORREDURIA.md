@@ -1,6 +1,8 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: FASE 0 — enviada la petición a Manuel (WhatsApp, 20/08/2026), esperando respuesta.**
+> **Estado: FASE 0 → 1 — Manuel HA RESPONDIDO: invitación a su Supabase recibida y aceptada
+> (26/08/2026). El inventario sigue bloqueado por un detalle de permisos, ver «Estado de los tres
+> accesos» abajo.**
 > Ningún dato se ha migrado todavía; lo único hecho en `central` son los cimientos vacíos (ver
 > «Hecho ya»). Este documento es el runbook del traspaso y **la ÚNICA fuente de verdad** mientras dure.
 > Cuando el traspaso se cierre, esto se sustituye por `apps/asegura/CLAUDE.md` y una entrada en
@@ -11,6 +13,20 @@
 > y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`). Se han **fundido en este**, que absorbe todo lo
 > que el otro tenía y el otro se ha borrado. Si encuentras una referencia suelta a `apps/seguros`, es de
 > antes de la fusión: el nombre bueno es **`apps/asegura`**.
+
+## 📍 Estado de los tres accesos (comprobado el 26/08/2026, no supuesto)
+
+| Acceso | Estado real | Qué falta |
+|---|---|---|
+| **Supabase** | ✅ Manuel invitó a Alberto a su organización **`LOOR`** (`qdrmgpvqhcmhmpcrvtan`, plan **free**). Correo de `welcome@supabase.com` del **26/08/2026 07:42**; Alberto la aceptó. Desde esta sesión, `get_organization('qdrmgpvqhcmhmpcrvtan')` **responde** → la membresía es real | 🔴 **`list_projects` NO devuelve ningún proyecto de `LOOR`**: se sigue viendo solo `central`. La causa más probable es que **la app OAuth de Claude se autoriza POR ORGANIZACIÓN** (de ahí los correos «OAuth Application Approval» del 15 y 18/08, uno por organización): la de Alberto está autorizada, `LOOR` no. **Acción de Alberto:** volver a conectar el conector de Supabase y, en el selector de organización, marcar también **LOOR** (o «todas»). Si tras eso sigue sin aparecer, entonces es que Manuel le dio un rol *acotado a proyectos* y hay que pedirle rol de organización |
+| **GitHub** | ⚠️ Invitación del **12/08/2026** a `manuelsuarez/asegura`, sin confirmar que esté aceptada | 🔴 **Claude no puede leer ese repo desde esta sesión, pase lo que pase**: `add_repo` → *cross-tier adds are not supported* (esta sesión ya tiene fuentes de `albertosuarezgutierrez-gif`). Haría falta una sesión NUEVA con `manuelsuarez/asegura` como fuente inicial, y eso exige que la app de Claude esté instalada en la cuenta de Manuel. Mientras tanto, el rodeo sigue siendo `docs/ASEGURA-PROMPT-CHROME.md` (Claude Chrome) o un ZIP del árbol de trabajo |
+| **Vercel** | 🔴 Sin invitación: `list_teams` solo devuelve `pisos-turisticos-projects` | Pedírsela a Manuel (o, si su cuenta es Hobby, la lista de **nombres** de variables por aquí y los **valores** por gestor de contraseñas) |
+
+> **Regla de esta tabla:** «no lo veo» ≠ «no existe». Que un proyecto no salga en `list_projects` no
+> dice nada del CRM de Manuel; dice que este conector todavía no tiene permiso para mirarlo.
+
+**Nada se ha copiado todavía.** La Fase 1 (inventario y medición) no puede empezar hasta que el
+proyecto de `LOOR` sea visible desde el conector.
 
 ## 🏷️ Cómo se llama cada cosa (y por qué no todo igual)
 
@@ -135,7 +151,7 @@ código nuevo de fontanería.
 | Cosa | Estado |
 |---|---|
 | El repo | **`manuelsuarez/asegura`** en GitHub. **787 commits, 258 ramas**, suite e2e, tickets de Linear (`LOO-xxx`), desplegado en `asegura.vercel.app`. No es un prototipo: es un proyecto con historia |
-| Invitación a Alberto | Enviada el **12/08/2026** (correo de `noreply@github.com`) como colaborador. **Sin aceptar** — no aparece entre los repos accesibles |
+| Invitación a Alberto | Enviada el **12/08/2026** (correo de `noreply@github.com`) como colaborador. Sin confirmar que esté aceptada — el repo no aparece entre los accesibles (ver «Estado de los tres accesos», 26/08/2026) |
 | Acceso de Claude a ese repo | **NO, y no se puede arreglar desde aquí.** La app de Claude solo está instalada en `albertosuarezgutierrez-gif`, y una sesión no admite añadir repos de otro dueño (`add_repo` → *cross-tier adds are not supported*) |
 
 **El rodeo mientras siga bloqueado:** `docs/ASEGURA-PROMPT-CHROME.md` es un prompt listo para que

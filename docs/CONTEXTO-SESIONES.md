@@ -25,6 +25,17 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🛡️ (26/08/2026) Correduría: Manuel YA invitó a su Supabase — y aun así el proyecto no se ve
+
+Manuel respondió: invitación a su organización de Supabase **`LOOR`** (`qdrmgpvqhcmhmpcrvtan`, free),
+correo del 26/08 07:42, aceptada por Alberto. La membresía es real (`get_organization` responde), pero
+**`list_projects` sigue devolviendo solo `central`** → la app OAuth de Claude se autoriza **por
+organización** y `LOOR` no está autorizada. Acción de Alberto: reconectar el conector de Supabase
+marcando también `LOOR`. GitHub: `add_repo manuelsuarez/asegura` falla por *cross-tier* — hace falta
+sesión nueva con ese repo como fuente, o el rodeo de Claude Chrome. Vercel: aún sin invitación.
+**Nada migrado.** Runbook actualizado: `docs/TRASPASO-CORREDURIA.md` (Fase 0 → 1). Conversación previa
+del plan: sesión «Migración de datos Superbase a Central» (20/08, rama `claude/superbase-central-migration-xs2z4a`).
+
 ### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
 
 Pasada programada: `origen='psd2'` último movimiento 2026-08-25 (1 día), mov_30d=52 vs
