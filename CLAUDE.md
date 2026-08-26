@@ -78,7 +78,11 @@ Salvaguardas para no perder información:
   manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
   🚨 **La cartera NO está migrada:** los 32.600 clientes / 28.843 pólizas siguen en el Supabase de **Manuel
   Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
-  CIMA/EIAC** → el corte necesita fecha acordada, no es una migración en frío. `schema seguros` vacío ≠ la
+  CIMA/EIAC**. ⚠️ **Eso NO la convierte en una migración en caliente** (se creyó así hasta el 26/08/2026):
+  el CRM **todavía no está operativo** —no hay nadie usándolo— y **los ficheros de EIAC se pueden
+  consultar y descargar cuando se quiera**, así que una pausa del cron no deja sin servicio a nadie ni
+  pierde datos: se re-lanza el pull y entra lo pendiente. El traspaso **no necesita ventana ni fecha
+  acordada**; va paso a paso, al ritmo de Manuel. `schema seguros` vacío ≠ la
   correduría no tiene datos: el dashboard lo dice y no pinta KPIs a 0. ⚠️ Las **86 políticas RLS** de ese CRM
   se resuelven TODAS por `auth.uid()` de Supabase Auth, así que al re-plataformar la auth el aislamiento pasa
   a ser cosa del código (con BYPASSRLS el fallo sería «se ve todo sin fallar»). Plan, mensaje a Manuel y pasos
@@ -187,6 +191,69 @@ en 4 cifras: `2.000,12€`), decimales con coma, y el **€ DETRÁS** del númer
 (`n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })` + `€`);
 aplica igual en pantalla, Telegram y emails. Nada de `€${x.toFixed(2)}` suelto. Las verticales sin ese helper
 replican la misma convención. Si un cambio toca una pantalla con importes mal formateados, corrígelos en el mismo PR.
+
+## 🤖 CI: por qué un PR de Claude se queda con los checks «Expected» (26/08/2026)
+
+**Los pushes hechos con el token de la App de Claude NO disparan los workflows de Actions.** Es una
+limitación de GitHub, no un fallo del repo. Consecuencia: un PR abierto y empujado por un agente puede
+quedarse con **los 12 checks requeridos en «Expected — waiting for status to be reported»** para
+siempre, y el merge lo rechaza la regla con `12 of 12 required status checks are expected`.
+
+🚨 **«Expected» NO es «Failing».** Antes de tocar nada, mira si algún check está en ROJO: si los 12
+están en Expected y ninguno rojo, no hay nada roto — es que **no han arrancado**.
+
+🔴 **`workflow_dispatch` NO desbloquea el merge. Comprobado, no supuesto (26/08/2026).** Se lanzaron
+los tres workflows sobre la rama, los **12 jobs requeridos acabaron en `success` sobre el head exacto
+del PR** — y el merge siguió devolviendo `12 of 12 required status checks are expected`. Se repitió
+sobre **dos heads distintos** (`a1c5b23e` y `4134a64c`) con idéntico resultado. **El ruleset no cuenta
+los check runs que vienen de un `workflow_dispatch`**, aunque el nombre del job y el sha coincidan.
+No pierdas la tarde por ahí: sirve para SABER si el código está sano, no para desbloquear.
+
+⚠️ Y si aun así lo lanzas para verificar: los check runs aterrizan en el **head del momento**. Si
+luego empujas otro commit, se quedan huérfanos en el sha viejo. Lánzalo después del último push.
+
+✅ **Lo que SÍ desbloquea: que un HUMANO toque el PR.** Un push desde una cuenta de persona (no el
+token de App) dispara los workflows por el evento `pull_request` y entonces los 12 sí cuentan. Es
+intervención manual: **no hay forma de que el agente lo resuelva solo**, así que dilo pronto y no
+des veinte vueltas.
+
+**Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
+salió verde):
+
+| Workflow | Jobs que aportan checks requeridos |
+|---|---|
+| `qa.yml` | `Análisis estático · Patrones conocidos` |
+| `ci.yml` | `Lint · TypeCheck · Build` |
+| `tests.yml` | `Tests (packages + guardián)` + **9** × `Typecheck · <app>` (almacen, alquiler, ia-rest, ialimp, mariscos, plataforma, rrhh, sivra, transporte) |
+
+Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
+desbloquea nada.
+
+📌 **Consecuencia estructural, para decidir con calma (pendiente al 26/08/2026):** mientras esto siga
+así, **ningún PR abierto por el agente puede mergearse sin que Alberto intervenga a mano**. Arreglarlo
+de raíz es una decisión suya y hay al menos tres caminos —dar a la App permiso para disparar
+workflows, sacar de «required» los checks que no puede satisfacer, o añadirse a la *Bypass list*—
+y **ninguno debe tomarse sobre la marcha para desatascar un PR**: es configuración del repo.
+
+> ✍️ Alberto, 26/08/2026: visto y pendiente de decidir. No tocar el ruleset por ahora.
+
+🚫 **Lo que NO se hace:**
+- **Bypass del ruleset.** La regla es un **Ruleset**, no una Branch protection clásica: **no hay
+  override implícito de Owner** y el botón «merge without waiting» sencillamente no se renderiza.
+  Concedérselo exige meter la cuenta en la *Bypass list* del ruleset — una puerta que se queda
+  abierta para siempre por un PR de tres `.md`. No compensa.
+- **Commit vacío para «despertar» el CI.** Prohibido: ensucia el historial y esconde el problema.
+  Si hace falta un push que dispare workflows, que sea un commit **con contenido real** hecho desde
+  una cuenta de persona (el token de App no vale).
+
+**Dos trampas de diagnóstico, las dos vistas el 26/08/2026:**
+- Un run en `completed failure` puede ser **11 jobs `cancelled`** por `concurrency:
+  cancel-in-progress` (llegó un push nuevo mientras corría). **Mira los jobs antes de diagnosticar un
+  fallo**: `list_workflow_jobs` lo dice en un segundo.
+- Los eventos `check_suite.completed` que llegan a la sesión son **de Vercel**. Leerlos como «CI
+  verde» es afirmar algo que no se ha mirado — el fallo que `CLAUDE.md` marca como el más caro.
+  Para el estado real: `get_status` (statuses) **y** `get_check_runs` (jobs de Actions), que son
+  cosas distintas.
 
 ## Reglas de la matriz
 - Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un

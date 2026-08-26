@@ -25,6 +25,89 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🟢 (26/08/2026) Correduría: la invitación de Supabase YA estaba aceptada — el bloqueo no existía
+
+`get_project(uijsgeocgdaxkhvwtjqs)` → org `qdrmgpvqhcmhmpcrvtan`: la que el correo llamaba **LOOR** y
+el panel muestra como **PISO**. Alberto ya era miembro; el enlace daba muro de login por token
+consumido. **El dato estaba en el propio doc desde la mañana** y aun así se dieron 3 explicaciones
+nuevas: cuando algo tiene dos nombres, «no lo encuentro» es problema de nombre, no de acceso.
+Separado inventario (hecho, recuentos) de **volcado (NO hecho ni posible)**. Vercel: NO se invita a
+Manuel (asiento 20 US$/mes, `Viewer` no puede recibir traspaso, y él no tiene equipo) → **Vía B API**.
+Solo queda pedirle **GitHub**. ⚠️ Mis pushes no siempre disparan los workflows: dije «CI verde» 3
+veces leyendo solo check_suites de Vercel. PR #1759.
+
+### 🖥️ (26/08/2026) Correduría/Vercel: el PANEL sí exige pertenencia — y Alberto ya tenía equipo
+
+Captura de Manuel: su diálogo *Transfer Project To* solo lista **equipos a los que él pertenece**, y
+no pertenece a ninguno → única opción, *Create Team*. Así que «va por código, no por pertenencia» era
+cierto **de la API**, no de la pantalla. **Vía A (panel):** no hace falta trial — Alberto **ya tiene**
+`pisos-turisticos-projects` en **Pro**; le invita y listo. ⚠️ Mirar el coste de asiento en el propio
+diálogo, y 🔴 **sacarle del equipo al acabar** o el asiento factura para siempre en silencio (mismo
+goteo que los ~600 US$ de builds). **Vía B (API, coste cero):** `POST .../transfer-request` → código
+24 h → `PUT /projects/transfer-request/{code}`. Sigue faltando la invitación de **GitHub**. PR #1759.
+
+---
+
+### 📬 (26/08/2026) Correduría: Supabase y Fly ya invitados; Vercel NO se bloquea, va por código
+
+Correo de Alberto: **Supabase ✅** (org LOOR, 07:42) y **Fly ✅** (13:29, cuenta ya creada). **GitHub
+NO ha llegado nada** — es lo único que queda por pedirle. **Vercel**: Manuel dijo «hay que pagar», y
+el razonamiento estaba mal DOS veces (ni él en el equipo de Alberto ni Alberto en el suyo): la
+transferencia de proyecto va **por código de un solo uso** —`POST .../transfer-request` devuelve un
+`code` de 24 h que el otro acepta con `PUT /projects/transfer-request/{code}`— **sin invitaciones ni
+asientos**. Consecuencia buena: las dos claves las lee Alberto **después** del traspaso (las env vars
+viajan), no se le piden a Manuel; seguro porque él no borra nada. PR #1759.
+
+---
+
+### 🔑 (26/08/2026) Correduría: el acceso a Supabase es de SOLO LECTURA — y eso resuelve una pregunta
+
+`select current_user` en el proyecto de Manuel devuelve **`supabase_read_only_user`**. Sirve para
+inventariar, para vigilar CIMA y para la prueba del índice ciego post-traspaso; **no** para transferir
+el proyecto (es gestión de organización) ni para el dump (`pg_dump` pide cadena de conexión). ✅ Y
+contesta sola la pregunta 1b: su organización es **LOOR, plan free**, igual que la de Alberto → free a
+free, el caso simple. Se quita del mensaje. 📅 De paso: el último `cima_ficheros` es del 25/08 pero los
+**huecos son normales** (19-20 en blanco, 06→15 también), así que un día sin fichero no es avería. PR #1759.
+
+---
+
+### 🎁 (26/08/2026) Correduría: a Manuel se le piden ACCESOS, no tareas
+
+Alberto: «que él tenga menos trabajo, lo que podamos hacer nosotros mejor». Repartido de nuevo: las
+dos claves son **env vars** y el dump y la lista de Blob salen del panel → **los saca Alberto** con
+solo ser miembro. Y el `CRON_SECRET` **no tiene por qué ser el mismo**: GitHub no enseña el valor a
+nadie, así que Alberto **genera uno nuevo** — el punto desaparece de la lista de Manuel. Lo único que
+nadie puede sacar son los **secrets de Fly** (`fly secrets list` solo da nombres): se piden como favor.
+Manuel queda con **4 invitaciones + transferir los 2 repos + cancelar el Pro**. Mensaje 1 v2 redactado,
+**sin enviar**. A confirmar en panel: si como owner Alberto puede iniciar él las transferencias. PR #1759.
+
+---
+
+### ⚪ (26/08/2026) Correduría: NO es una migración en caliente — se cae la urgencia entera
+
+Alberto corrige el error de fondo del plan: **el CRM aún no está operativo** (nadie lo usa) y **los
+ficheros de EIAC se consultan y descargan cuando se quiera**. Que el cron de CIMA corra a diario NO
+significa que alguien dependa de él hoy — eso se dio por supuesto sin preguntar. Apagar el Vercel de
+Manuel **pausa** el pull, no corta suministro, y lo pendiente entra al relanzarlo (dedupe por hash).
+Se cae: «migración en caliente», «fecha y hora acordadas», la ventana 13:00–15:00 y el «con Alberto
+delante» del paso del repo. **Sigue en pie lo único irreversible**: las 2 claves + los secrets de Fly
+(TIREA), y la verificación de Supabase con DOS pruebas (descifrar Y buscar). Corregido también en el
+`CLAUDE.md` raíz, que afirmaba lo contrario. PR #1759.
+
+---
+
+### 🔁 (26/08/2026) Correduría: el traspaso se hace SIN CITA, paso a paso — y PR #1752 mergeado
+
+Alberto descarta fijar día y hora: le pide a Manuel **una cosa cada vez** y él contesta cuando puede.
+Técnicamente se sostiene porque casi todo son **transferencias de propiedad que no rompen nada**
+(Vercel lleva envs y dominios, Supabase conserva el `ref`, Fly mantiene el hostname de la app).
+🔴 **Única excepción: el repo.** Al transferirlo el `CRON_SECRET` no viaja → el cron llama, la app
+responde 401 y **CIMA se para sin que nada dé error**. Va el ÚLTIMO, por la tarde y con Alberto
+delante. Secuencia de 11 pasos y **Mensaje 1** (copias de seguridad + pregunta del plan de Supabase)
+en `docs/TRASPASO-CORREDURIA.md`; el guion de 13:00–15:00 queda de alternativa. #1752 en `main`.
+
+---
+
 ### 🕐 (26/08/2026) Correduría: guion del corte minuto a minuto listo — y una TERCERA cosa irrecuperable
 
 Plan cerrado por ambas partes → escrito el **guion del corte** en `docs/TRASPASO-CORREDURIA.md`:
