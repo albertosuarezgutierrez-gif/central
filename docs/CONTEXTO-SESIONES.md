@@ -33,7 +33,8 @@ correo del 26/08 07:42, aceptada por Alberto. La membresía es real (`get_organi
 organización** y `LOOR` no está autorizada. Acción de Alberto: reconectar el conector de Supabase
 marcando también `LOOR`. GitHub: `add_repo manuelsuarez/asegura` falla por *cross-tier* — hace falta
 sesión nueva con ese repo como fuente, o el rodeo de Claude Chrome. Vercel: aún sin invitación.
-**Nada migrado.** Runbook actualizado: `docs/TRASPASO-CORREDURIA.md` (Fase 0 → 1). Conversación previa
+**Nada migrado.** Runbook actualizado (Fase 0 → 1) y `docs/ASEGURA-PROMPT-CHROME.md` reescrito: ahora
+lleva la Fase 1 entera en SQL de solo lectura para sacarla por pantalla si el conector no se arregla. Conversación previa
 del plan: sesión «Migración de datos Superbase a Central» (20/08, rama `claude/superbase-central-migration-xs2z4a`).
 
 ### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
