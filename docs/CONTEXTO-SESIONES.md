@@ -43,7 +43,12 @@ desde el 29/07 y **nunca ha emitido** (todo en `cotizacion`; participants/produc
 cotizar está probado, emitir no. Las 132 funciones de su BD no tienen lógica de integración → **está
 toda en el código**. Nueva estrategia: no pedirle el repo entero, sino **2 carpetas (ingestor EIAC +
 cliente Codeoscopic), los nombres de sus envs y crons, y una fecha de corte**; la intranet la rehacemos.
-**Manuel es HERMANO de Alberto y todo está a nombre de Alberto** (Codeoscopic incluido) → cae el riesgo
+⚠️ **CORRECCIÓN de alcance:** la intranet de Manuel **SÍ se queda** (tiene un diseño ya hecho + web
+pública) → se traspasa TODO, no dos carpetas. Vía elegida para unificar Vercel: **invitar a Manuel al
+equipo Pro de Alberto y que despliegue él**, así **las credenciales no viajan por ningún canal** (ocupa
+un asiento temporal; el proyecto en sí no cuesta). Y el repo se transfiere YA a la cuenta de Alberto —
+la cautela de «transferir al final» protegía a un tercero que aquí no existe; lo que hay que proteger
+es que CIMA no deje de descargar. **Manuel es HERMANO de Alberto y todo está a nombre de Alberto** (Codeoscopic incluido) → cae el riesgo
 contractual. Objetivo: que Manuel deje de pagar. **Ni API ni conector MCP: atacan un problema ya
 resuelto** (los datos se leen por `project_id`); lo que falta es CÓDIGO → un ZIP de 2 carpetas, 15 min
 suyos. Su Supabase es FREE; **solo paga Vercel Pro** (Hobby prohíbe uso comercial), y **Alberto ya tiene

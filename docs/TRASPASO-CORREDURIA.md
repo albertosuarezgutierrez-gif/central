@@ -126,6 +126,68 @@ de **WhatsApp** con base de conocimiento vectorial. No es un CRM genérico: es s
 
 ---
 
+## 🔄 CORRECCIÓN (26/08/2026): la intranet SÍ se queda, y cómo se unifican los Vercel
+
+> **Alberto rectifica el alcance:** Manuel tiene **una intranet ya diseñada y una web pública**, y
+> **quiere quedarse ambas** para seguir trabajando sobre ellas. **Queda sin efecto** lo escrito más
+> abajo sobre «la intranet la rehacemos nosotros» y sobre pedirle solo dos carpetas: **se traspasa
+> TODO**. Lo que no cambia: los datos ya se leen, así que sigue sin hacer falta API ni conector.
+
+### La pregunta real: cómo mete Manuel su Vercel en el de Alberto
+
+**Recomendada — que Manuel entre un rato en el equipo Pro de Alberto y despliegue él mismo.**
+
+1. Alberto lo invita a `pisos-turisticos-projects` (*Settings → Members → Invite*).
+2. **Manuel importa el proyecto ahí y mete él mismo las variables de entorno.**
+3. Se verifica con el suyo todavía encendido.
+4. Se apaga el suyo, **se le quita del equipo** y cancela su Pro.
+
+> 🔑 **La ventaja que decide:** así **las credenciales no viajan por ningún canal**. No hay que
+> pasarlas por WhatsApp ni por gestor de contraseñas: las escribe él directamente en el destino. Es la
+> parte más delicada de todo el traspaso y esta vía la elimina de raíz.
+>
+> ⚠️ **Matiz de coste, para no repetir lo que este documento dijo mal:** meter un **proyecto** más en
+> un equipo Pro no cuesta nada, pero meter a **Manuel como miembro** sí ocupa **un asiento** mientras
+> esté dentro (Vercel Pro se factura por miembro). Es temporal y sale mucho más barato que el riesgo
+> de pasear secretos.
+
+**Alternativa — transferir el proyecto** (*Project Settings → Transfer*). Se lleva despliegues,
+dominios y variables de golpe. **Pero deja el proyecto conectado a un repositorio que sigue siendo
+suyo**, así que hay que reconectar el git igualmente. Solo compensa si además transfiere el repo.
+
+**Lo que NO recomiendo:** que Manuel invite a Alberto a su cuenta. Si está en Hobby ni siquiera puede
+—las cuentas personales Hobby no admiten miembros—, y aunque pudiera, no resuelve el pago: seguiría
+siendo su cuenta y su factura.
+
+### Y el repositorio, ¿dónde acaba?
+
+El destino final es **`apps/asegura` dentro de `central`**, como manda la matriz. Pero eso no tiene que
+bloquear el corte del gasto: se puede hacer en dos velocidades.
+
+1. **Rápido (corta el gasto ya):** Manuel **transfiere el repo a la cuenta de GitHub de Alberto**,
+   despliega en su equipo Pro apuntando a ese repo, y cancela lo suyo.
+2. **Después, con calma:** el árbol de trabajo se integra en `central` como `apps/asegura` (con su
+   `vercel.json`, su `ignoreCommand` y Root Directory), y el repo suelto queda archivado.
+
+Esto **invierte el orden** que este documento defendía («la transferencia del repo, la última, porque
+le tumba el despliegue»): esa cautela existía para no dejar sin servicio a un tercero. **Siendo su
+hermano y con todo a nombre de Alberto, el despliegue va a moverse igualmente**, así que lo que hay que
+proteger no es su despliegue: es que **CIMA no deje de descargar** — y eso se protege con la fecha
+acordada, no retrasando la transferencia.
+
+### 🚨 Su Vercel puede tener más que código: mirar antes de apagar
+
+- **¿Un almacén de ficheros?** `codeoscopic_documents` tiene una columna **`blob_url`**. Hoy está a
+  cero, pero si en algún momento se usó **Vercel Blob**, ese almacén vive **en su cuenta**, no en el
+  código ni en la BD. **Y sigue sin saberse dónde están los ficheros de CIMA** (`cima_ficheros` solo
+  guarda metadatos): mirar si están ahí.
+- **Los crons**, que son los que mantienen viva la ingesta de CIMA y el detector de vencimientos.
+- **Los dominios** asignados, y a nombre de quién está registrado cada uno.
+- **¿Cuántos proyectos tiene?** Si la web pública y la intranet son dos proyectos separados, son dos
+  traspasos, no uno. **No consta: hay que mirarlo en su panel.**
+
+---
+
 ## 💸 Cómo se corta la duplicidad de pagos, y por qué NO hace falta API ni conector (26/08/2026)
 
 > **Contexto que lo simplifica todo (dicho por Alberto, 26/08/2026): Manuel es su hermano y TODO está a
@@ -583,40 +645,56 @@ Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
 
 ---
 
-### 📝 Mensaje pendiente para Manuel — BORRADOR, SIN ENVIAR (26/08/2026)
+### 📝 Mensaje para Manuel — BORRADOR, SIN ENVIAR (26/08/2026, v4)
 
-Tercera versión, ya sabiendo que **es su hermano, que todo está a nombre de Alberto y que el objetivo
-es que deje de pagar**. Se le pide poco y se le quita un gasto. **No se manda hasta que Alberto dé el
-visto bueno a este envío concreto** (regla del repo sobre comunicaciones a terceros):
+Cuarta versión. **Cambio de alcance: se traspasa TODO** —intranet, web pública e integraciones—, y la
+vía es **que Manuel entre al equipo Pro de Alberto y despliegue él mismo**, para que las credenciales
+no viajen. **No se manda hasta que Alberto dé el visto bueno a este envío concreto.**
 
-> Manuel, ya estoy dentro de la base de datos y he visto todo. Te escribo para pedirte poco y para que
-> dejes de pagar el Vercel.
+> Manuel, ya tengo acceso a la base de datos y he estado mirándolo todo. Te escribo para organizar el
+> traspaso y, sobre todo, para que dejes de pagar el Vercel.
 >
-> **Los datos no me hacen falta que me los pases**: los leo yo directamente de Supabase. No montes
-> ninguna API ni ningún conector, sería trabajo tuyo para algo que ya funciona.
+> **Los datos no me los tienes que pasar**: los leo yo directamente de Supabase. No montes ninguna API
+> ni ningún conector, sería trabajo tuyo para algo que ya funciona.
 >
-> **La intranet tampoco**: esa la rehago yo.
+> **Lo que sí quiero es todo lo demás, tal cual está**: la intranet, la web y las dos integraciones. La
+> intranet me gusta como la has dejado y quiero seguir trabajando sobre ella, no rehacerla.
 >
-> Lo único que necesito son **dos carpetas del código**: el ingestor de EIAC/CIMA y el cliente de
-> Codeoscopic. Comprímelas y mándamelas (o el repo entero comprimido, me da igual). Con eso:
+> La forma más limpia que se me ocurre, y la que menos lío tiene con las contraseñas:
 >
-> - **la lista de nombres de tus variables de entorno** y **la de tus tareas programadas** — los
->   valores de las contraseñas mándalos por gestor de contraseñas, no por WhatsApp;
-> - y dime **cómo se descargan los ficheros de las compañías**: ¿SFTP, portal, API de TIREA?
+> 1. **Te invito a mi equipo de Vercel** (ya es Pro, no me cuesta más).
+> 2. **Despliegas tú el proyecto ahí y metes tú mismo las variables de entorno.** Así no tienes que
+>    pasarme ninguna contraseña por WhatsApp ni por ningún sitio: las escribes directamente donde van.
+> 3. Lo verificamos con el tuyo todavía encendido.
+> 4. Apagamos el tuyo, te quito del equipo y **cancelas tu Pro**.
 >
-> Luego lo despliego en mi equipo de Vercel, que ya es Pro y no me cuesta más por meter un proyecto:
-> **en cuanto esté funcionando, cancelas tu Pro y te quitas ese gasto.**
+> Para el código, lo más rápido es que **me transfieras el repositorio a mi cuenta de GitHub** y
+> conectemos el proyecto ahí. Luego yo ya lo reorganizo por dentro con calma.
 >
-> Dos cosas importantes antes:
+> Y necesito que me digas un par de cosas que no están en el código:
 >
-> 1. **No apagues nada todavía, y avísame antes de hacerlo.** He visto que CIMA descargó ficheros ayer
->    mismo: tu despliegue está alimentando la correduría todos los días. Lo cortamos con fecha y hora,
->    los dos delante.
-> 2. Cuando cortemos hay que **cambiar las URLs que tienen apuntadas Codeoscopic y WhatsApp/Meta en sus
->    paneles**, que ahora van a tu despliegue. Eso no viaja en el código; lo hacemos ese día.
+> - **Cómo se descargan los ficheros de las compañías** (CIMA/EIAC): ¿SFTP, portal, API de TIREA? ¿con
+>   qué credenciales?
+> - **Qué proyectos tienes en Vercel** — ¿la web y la intranet van juntas o separadas?
+> - **Si guardas ficheros en Vercel Blob** o en algún sitio parecido. En la base veo referencias a
+>   documentos pero los ficheros no están en Supabase, y quiero saber dónde viven antes de tocar nada.
+> - **Qué dominios tienes puestos** y dónde están registrados.
 >
-> Y una curiosidad para saber por dónde ando: **la emisión de Codeoscopic, ¿llegó a probarse?** En la
-> base solo veo cotizaciones, ninguna póliza emitida por ahí.
+> Dos cosas importantes:
+>
+> - **No apagues nada todavía, y avísame antes de hacerlo.** He visto que CIMA descargó ficheros ayer
+>   mismo: tu despliegue está alimentando la correduría todos los días, y si se apaga dejamos de
+>   recibir pólizas, recibos y siniestros de las compañías. Lo cortamos con fecha y hora, los dos
+>   delante.
+> - Ese día hay que **cambiar las URLs que tienen apuntadas Codeoscopic y WhatsApp/Meta en sus
+>   paneles**, que ahora van a tu despliegue. Eso no viaja en el código.
+>
+> Y una duda: **la emisión de Codeoscopic, ¿llegó a probarse?** En la base solo veo cotizaciones,
+> ninguna póliza emitida por ahí, y las tablas de emisión están vacías.
+
+> 📄 **Pendiente de decisión de Alberto:** si se añade la frase del **contrato de encargado de
+> tratamiento**. Que sea su hermano no cambia el RGPD —ha tenido en su infraestructura los datos de
+> 32.600 clientes con teléfonos, correos y carnets—, pero es Alberto quien decide si lo formaliza.
 
 ## Fase 1 — Inventario y medición (antes de tocar nada)
 
