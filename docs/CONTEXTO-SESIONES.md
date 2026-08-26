@@ -299,9 +299,13 @@ de sesgo» era nuestra propia subida intradía y el calibrado se corregía contr
 la mediana FIABLE de su fecha (55 a >×3; Duplex 29/09 460€ vs 175€) — los saltos de evento/premio suben
 sin raíl y la guarda de outlier congela >30 días. Nuevo `pricing-techo-mercado.ts` (fecha fiable ×1,5;
 mes fiable ×2,5 sin evento; desciende a velocidad de raíl y libera las congelaciones). PR #1698
-MERGEADO (orden de Alberto). Skill `pricing-agente` (estado-y-protocolo) actualizada. Verificar tras
-el deploy: pasada apply de las 14:30 con `techo_mercado` bajando las fechas ×3-×5, y parte del canal
-de mañana 07:45 sin sesgo positivo sistemático.
+MERGEADO (orden de Alberto). Skill `pricing-agente` (estado-y-protocolo) actualizada.
+**✅ VERIFICADO en producción (26/08 08:17):** el sesgo positivo sistemático DESAPARECIÓ — los 4 pisos
+pasaron de +3/+12/+15/+26% a −12%/−0,5%/−3,2% (los 2 «desviados» del parte son muestra de 1 ventana y
+del signo CONTRARIO, no el fallo original); fechas caras 432 → 402; y las 4 ventanas de escaparate del
+26/08 traen `base_total` == base viva al céntimo (692/162/340/707). El 25/08 el techo bajó las 4 fechas
+centinela al −20% del raíl (Busto 17/01/27 491→393, Dúplex 29/09 471→377, House 02/01/27 1.287→1.030,
+Luxury 29/09 559→447) sobre 664 noches, 0 por debajo de `min_price` y sin rechazos de Smoobu.
 
 ### 🔀 (25/08/2026) «IA gemini muerta» del health-check: era el gate mensual disfrazado
 El 🔴 «gemini: 15 llamadas, ninguna correcta» NO eran llamadas a Gemini (apagado desde 01/08, última
