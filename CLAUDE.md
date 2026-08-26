@@ -235,6 +235,8 @@ de raíz es una decisión suya y hay al menos tres caminos —dar a la App permi
 workflows, sacar de «required» los checks que no puede satisfacer, o añadirse a la *Bypass list*—
 y **ninguno debe tomarse sobre la marcha para desatascar un PR**: es configuración del repo.
 
+> ✍️ Alberto, 26/08/2026: visto y pendiente de decidir. No tocar el ruleset por ahora.
+
 🚫 **Lo que NO se hace:**
 - **Bypass del ruleset.** La regla es un **Ruleset**, no una Branch protection clásica: **no hay
   override implícito de Owner** y el botón «merge without waiting» sencillamente no se renderiza.
