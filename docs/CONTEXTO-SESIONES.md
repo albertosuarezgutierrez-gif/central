@@ -56,6 +56,21 @@ equipo Pro** → meter la app ahí no añade coste y él cancela. Ojo al corte: 
 apuntan a SU URL** en sus paneles y eso no viaja en ningún ZIP. PR #1752.
 - **Vía elegida (v5):** transferencia NATIVA de proyecto en Vercel y Supabase (3 clics de Manuel) en vez de
   redesplegar: arrastra env vars CON VALORES y dominios → ninguna credencial viaja. Pasos ordenados en el doc.
+- **Mensaje enviado a Manuel** (26/08, con permiso de Alberto), a la espera de respuesta.
+- **Adelanto sin él — RLS y auth eran UNA decisión:** las 86 políticas pasan TODAS por
+  `get_user_correduria_id()`/`get_user_role()`, y ambas son `... WHERE auth_user_id = auth.uid()`. Re-plataformar
+  la auth deja las políticas sin sujeto; con `prisma_seguros` BYPASSRLS el efecto no es «no se ve nada» sino
+  **se ve TODO sin fallar**. Se decide ANTES de restaurar, no después. Lo desactiva el dato: **1 sola correduría**,
+  **2 clientes con portal de 32.600**, 9 cuentas vivas (2 admin) → re-plataformar es barato; lo que hay que
+  reproducir es «un cliente solo ve lo suyo», no el andamiaje multi-tenant. Rol `corredor` lo exigen 45 políticas
+  y **no lo tiene nadie**.
+- 🔴 **Corrección de tamaño:** `central` está hoy en **204 MB** (no lo que suponía el plan) → con los ~75 MB de
+  Manuel quedaría en **~279 MB de 500**, no ~255. Free sigue bastando, pero el colchón es la mitad: re-medir
+  justo antes de restaurar.
+- ⚠️ **Hallazgo colateral:** las 17 filas de `usuarios` dicen `activo=true` pero **8 apuntan a un `auth.users`
+  borrado** → la intranet afirma «activo» sobre gente que no puede entrar. Al portarlo, cruzar `activo` con la
+  credencial real.
+- `central` verificada como destino: **pgvector ✅**, schema `seguros` ✅ (0 tablas), rol `prisma_seguros` ✅ inerte (sin contraseña).
 
 ---
 

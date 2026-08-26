@@ -722,6 +722,73 @@ contraseñas. **No se manda hasta que Alberto dé el visto bueno a este envío c
 cuenta origen): se cae a la vía de la v4 —Manuel despliega él mismo en el equipo de Alberto y escribe
 él las variables—. No es bloqueante.
 
+---
+
+## 🔍 Adelanto sin Manuel (26/08/2026): RLS y auth eran UNA decisión, no dos
+
+Mientras llega su respuesta se cerraron las tres incógnitas que NO dependían de él. Todo medido,
+solo lectura, cero escrituras.
+
+### 1. `central` está preparada para recibir — y el margen es más justo de lo que decía el plan
+
+| Comprobación en `wswbehlcuxqxyinousql` | Resultado |
+|---|---|
+| `pgvector` instalado | ✅ **sí** (lo exigen las funciones de `whatsapp_kb_chunks`) |
+| Schema `seguros` | ✅ existe, **0 tablas** |
+| Rol `prisma_seguros` | ✅ existe, `BYPASSRLS = true`, **sin contraseña** (inerte, como estaba documentado) |
+| Tamaño actual de `central` | **204 MB** · 280 tablas en `public` |
+
+🔴 **Corrección al veredicto de tamaño.** La sección de arriba estimaba que `central` quedaría en
+**~255 MB de 500**; ese número usaba un tamaño de `central` desactualizado. Medido hoy: **204 MB + ~75 MB
+del `public` de Manuel ≈ 279 MB**, con ~221 MB de margen. **El veredicto no cambia (free basta), pero el
+colchón es la mitad de holgado de lo que parecía** — y `central` crece sola todos los días. Conviene
+volver a medir justo antes de restaurar, no fiarse de este número dentro de un mes.
+
+### 2. 🚨 Las 86 políticas RLS y la autenticación son **la misma decisión**
+
+El plan las listaba como dos decisiones independientes. No lo son. De las 86 políticas de `public`:
+
+- **67** filtran por `correduria_id`, **17** por `auth.uid()` — pero las 67 lo hacen a través de
+  `get_user_correduria_id()`, y esa función es, literalmente:
+  ```sql
+  SELECT correduria_id FROM usuarios WHERE auth_user_id = auth.uid()
+  ```
+  Igual `get_user_role()`. **Las 86 acaban, sin excepción, en `auth.uid()` de Supabase Auth.**
+
+**Consecuencia:** si se re-plataforma la auth al patrón de la casa (cookie propia + `jose` contra la
+tabla de cuentas, como `apps/mariscos`), `auth.uid()` devuelve NULL → las dos funciones devuelven NULL
+→ **ninguna política concede nada**. Y como `prisma_seguros` tiene `BYPASSRLS`, el efecto real no es
+«no se ve nada»: es que **las políticas dejan de ejecutarse y se ve TODO, sin que falle nada**. Los dos
+extremos, y ninguno avisa. No se puede migrar el schema y decidir la auth después.
+
+### 3. Y lo que desactiva el drama: **hay UNA sola correduría, y el portal del cliente casi no existe**
+
+| Medida | Valor |
+|---|---|
+| Corredurías distintas en `usuarios` | **1** |
+| Filas en `public.usuarios` | 17 (15 `usuario`, 2 `admin`) |
+| …con `auth_user_id` **vivo** en `auth.users` | **9** → **8 fichas apuntan a un usuario de Auth borrado** |
+| …y sin embargo `activo = true` | **las 17** |
+| Clientes con portal (`clientes.usuario_id` no nulo) | **2 de 32.600** |
+| Usuarios de rol `usuario` que llegan a ver algo | **2** (los otros 13 pasan la política y no encuentran cliente) |
+| Rol `corredor`, exigido por 45 políticas | **0 usuarios lo tienen** |
+| Último login registrado | 12/08/2026 · 5 entradas en 90 días |
+
+**El multi-tenant que sostienen las 86 políticas es futuro, no presente.** Lo único que protegen HOY es
+que un cliente con portal no vea las pólizas de otro — y eso son **2 fichas**. Con 9 cuentas vivas, 2 de
+ellas administradoras, **re-plataformar la auth es barato y la recomendación se sostiene sola**; lo que
+hay que reproducir en el código de `central` no es el andamiaje multi-tenant, es la regla «un cliente
+solo ve lo suyo».
+
+⚠️ **Y un aviso que sale de aquí y no es del traspaso:** las 17 fichas dicen `activo = true`, pero 8 de
+ellas no pueden entrar porque su usuario de Auth ya no existe. La pantalla de usuarios de esa intranet
+está afirmando «activo» sobre gente que no puede acceder — el patrón exacto que prohíbe la regla
+«dato que NO hay ≠ dato que NO se ha mirado». Al portarlo, `activo` debe cruzarse con la existencia
+real de la credencial, no leerse solo.
+
+**Qué queda pendiente de Manuel (sin cambios):** las cuatro preguntas del mensaje y las transferencias.
+Nada de lo de aquí las adelanta ni las sustituye.
+
 ## Fase 1 — Inventario y medición (antes de tocar nada)
 
 Con el acceso a su organización (opción A o B), a través del conector de Supabase, desde una sesión
