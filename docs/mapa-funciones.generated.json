@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-26T06:41:46Z",
-  "sha": "3e12616572c80e680ed76cd3e7dadac003ca493e",
+  "generadoEn": "2026-08-26T07:47:50Z",
+  "sha": "0ed6780b8e7dd316732b008232314e79ddb120b6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49833,7 +49833,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "a2ddfc0bad24"
+      "hash": "db085301ccba"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
@@ -55532,7 +55532,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/agent/scan",
-      "hash": "04fa9bf53afb"
+      "hash": "6e3f4eb3fad5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/fijos/generar/route.ts",
@@ -59427,7 +59427,8 @@
       "resumen": "Detección de recurrentes que faltan (las anomalías de importe/duplicado se resuelven en el flujo principal vía evaluar()/existeDuplicado()).",
       "exporta": [
         "recurrentesQueFaltan",
-        "luzPorPisoQueFalta"
+        "luzPorPisoQueFalta",
+        "domiciliadosSinCargo"
       ],
       "funciones": [
         {
@@ -59436,7 +59437,7 @@
           "exportada": true,
           "params": "year: number, month: number",
           "retorno": "Promise<ReglaFaltante[]>",
-          "linea": 15,
+          "linea": 16,
           "resumen": "Reglas mensuales activas (con historial) que NO tienen gasto imputado en el mes/año dados → probable factura recurrente que aún no ha llegado."
         },
         {
@@ -59445,17 +59446,37 @@
           "exportada": true,
           "params": "year: number, month: number",
           "retorno": "Promise<",
-          "linea": 37,
+          "linea": 38,
           "resumen": "Cada piso debe tener su factura de LUZ (electricidad) cada mes. Devuelve los pisos que NO tienen un gasto de electricidad imputado ese mes."
+        },
+        {
+          "nombre": "coberturaBanco",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 71,
+          "resumen": "Hasta qué fecha llega el extracto de las cuentas corrientes. NULL si no se sabe."
+        },
+        {
+          "nombre": "domiciliadosSinCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: string, diasAtras = 90,",
+          "retorno": "Promise<",
+          "linea": 86,
+          "resumen": "Gastos ya imputados cuya domiciliación venció y NO tienen cargo en cuenta. Devuelve SOLO los accionables (`sin_cargo`): lo pendiente se calla y lo que no se puede comprobar por falta de extracto NO se"
         }
       ],
       "tablas": [
+        "cuentas_bancarias",
         "gastos",
         "gastos_reglas",
-        "properties"
+        "properties",
+        "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "ef524488539b"
+      "hash": "0bdb0be3d063"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/avisos.ts",
@@ -59468,6 +59489,7 @@
         "avisaNoLegibles",
         "avisaAjenas",
         "avisaRecurrentesQueFaltan",
+        "avisaDomiciliadosSinCargo",
         "resumen"
       ],
       "funciones": [
@@ -59534,17 +59556,26 @@
           "resumen": "Aviso: facturas recurrentes que no han llegado este mes."
         },
         {
+          "nombre": "avisaDomiciliadosSinCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: { proveedor: string | null; total: number; fecha_vencimiento: string }[], sinCobertura = 0,",
+          "retorno": "Promise<void>",
+          "linea": 78,
+          "resumen": "Aviso: facturas domiciliadas cuyo cargo venció y NO aparece en cuenta. 🚨 Solo entran aquí las `sin_cargo` (ver `domiciliados.ts`). Lo que no se ha podido comprobar porque el extracto no llega NUNCA s"
+        },
+        {
           "nombre": "resumen",
           "kind": "function",
           "exportada": true,
           "params": "s: ResumenStats",
           "retorno": "Promise<void>",
-          "linea": 85
+          "linea": 112
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f9a80c7ed04"
+      "hash": "9f02d3487968"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/booking.ts",
@@ -59702,6 +59733,47 @@
       "hash": "869bdbdddd5c"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/domiciliados.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Un gasto DOMICILIADO tiene que acabar cargado en cuenta. Este módulo decide, para una factura ya imputada, si su cargo bancario está, aún no toca, o falta de verdad. Módulo PURO (sin imports) para que sea testeable con `node --test`. 🚨 La razón de existir de este archivo (lección DIGI, 26/08/2026):",
+      "exporta": [
+        "sumaDias",
+        "estadoCargo",
+        "esAviso"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumaDias",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, dias: number",
+          "retorno": "string",
+          "linea": 50,
+          "resumen": "Suma días a una fecha YYYY-MM-DD y devuelve YYYY-MM-DD (UTC, sin dependencias)."
+        },
+        {
+          "nombre": "estadoCargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCargo",
+          "retorno": "VeredictoCargo",
+          "linea": 59
+        },
+        {
+          "nombre": "esAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: VeredictoCargo",
+          "retorno": "boolean",
+          "linea": 90,
+          "resumen": "Solo `sin_cargo` es un aviso accionable; el resto se informa o se calla."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f343463eaba7"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/drive.ts",
       "ambito": "apps/plataforma",
       "resumen": "Cliente del Apps Script de Drive (DRIVE_SCRIPT_URL). list/get/archive/subir. El contrato del script: action + campos; respuestas con { ok, ... }.",
@@ -59827,12 +59899,12 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<",
-          "linea": 24
+          "linea": 28
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c64bf5fcc282"
+      "hash": "55d962ee67f1"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/fingerprint.ts",
@@ -60064,7 +60136,7 @@
           "exportada": true,
           "params": "fingerprint: string",
           "retorno": "Promise<Regla | null>",
-          "linea": 27
+          "linea": 29
         },
         {
           "nombre": "existeDuplicado",
@@ -60072,7 +60144,7 @@
           "exportada": true,
           "params": "d: { fingerprint: string numero_factura?: string | null fecha: string total: number }",
           "retorno": "Promise<boolean>",
-          "linea": 51,
+          "linea": 53,
           "resumen": "Dedup: misma huella+fecha+importe, o mismo número de factura."
         },
         {
@@ -60081,7 +60153,7 @@
           "exportada": true,
           "params": "d: DatosGasto, meta: { revisado: boolean; origen: string; confianza: number; motivo_revision?: string | null },",
           "retorno": "Promise<string>",
-          "linea": 71
+          "linea": 73
         },
         {
           "nombre": "reforzarRegla",
@@ -60089,7 +60161,7 @@
           "exportada": true,
           "params": "d: DatosGasto",
           "retorno": "Promise<void>",
-          "linea": 104,
+          "linea": 106,
           "resumen": "Crea o refuerza la regla aprendida tras una confirmación/imputación."
         },
         {
@@ -60098,7 +60170,7 @@
           "exportada": true,
           "params": "entry: { fuente: string fingerprint?: string | null gasto_id?: string | null decision: string confianza?: number | null motivo?: string | null payload?: unknown }",
           "retorno": "Promise<void>",
-          "linea": 129
+          "linea": 131
         },
         {
           "nombre": "num",
@@ -60106,7 +60178,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 146
+          "linea": 148
         }
       ],
       "tablas": [
@@ -60116,7 +60188,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "a052c2202b77"
+      "hash": "e63a097797fd"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/pagos.ts",
@@ -60294,7 +60366,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45a8951c19a8"
+      "hash": "e6879b669294"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/receptor.ts",
@@ -60669,7 +60741,7 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 246,
+          "linea": 253,
           "resumen": "Igual que `aiExtractInvoice`, pero dice POR QUÉ no hay datos cuando no los hay. PDF (texto) → pasarela de texto (Director/OpenRouter → cadena gratis). Imagen → pasarela de visión (`aiVision`: OpenRout"
         },
         {
@@ -60678,13 +60750,13 @@
           "exportada": true,
           "params": "input: { text?: string imageBase64?: string mimeType?: string }",
           "retorno": "Promise<Record<string, any>>",
-          "linea": 340,
+          "linea": 347,
           "resumen": "Extrae datos estructurados de una factura. Devuelve {} si NINGÚN modelo logra leerla. ⚠️ Este `{}` NO distingue «no era una factura» de «no se pudo leer»: si esa diferencia importa (y para contabilida"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5739adab21e8"
+      "hash": "acb79b39cc71"
     },
     {
       "ruta": "apps/plataforma/lib/ai-gateway.ts",
@@ -72804,7 +72876,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 697
+          "linea": 711
         },
         {
           "nombre": "refrescarIndiceINE",
@@ -72812,7 +72884,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 725,
+          "linea": 739,
           "resumen": "Refresca la caché del IPV si está caducada. Best-effort (el cron lo llama)."
         },
         {
@@ -72821,7 +72893,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<IndicesVivienda | null>",
-          "linea": 759,
+          "linea": 773,
           "resumen": "Lee el IPV cacheado (sin red). Campos a null si aún no se han capturado."
         },
         {
@@ -72830,7 +72902,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PulsoMercado | null>",
-          "linea": 790
+          "linea": 804
         },
         {
           "nombre": "avisarBajadas",
@@ -72838,7 +72910,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 817,
+          "linea": 831,
           "resumen": "Aviso Telegram de las BAJADAS DE PRECIO nuevas en las zonas vigiladas. Una bajada es señal aunque el anuncio no llegue a chollo: el vendedor ya ha cedido una vez y es el candidato natural a una oferta"
         }
       ],
@@ -72852,7 +72924,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "3970d23d7679"
+      "hash": "f8f0c74c22a8"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -93248,6 +93320,7 @@
       "resumen": "──────────────────────────────────────────────────────────────────────────── Comparables de mercado a partir de las alertas de portales inmobiliarios que Alberto ya recibe. PURO. POR QUÉ EXISTE: el BOE publica «Tasación 0,00 €» en la práctica totalidad de las subastas (comprobado en las 4 reales), y",
       "exporta": [
         "tipoComparable",
+        "esCasa",
         "parsearAlertaIdealista",
         "esAlertaIdealista",
         "esParcela",
@@ -93278,12 +93351,30 @@
           "resumen": "Tipo del anuncio a partir de su título («Chalet adosado en…», «Garaje en…»). El portal siempre lo antepone, así que basta con mirar el principio."
         },
         {
+          "nombre": "tipoDeclarado",
+          "kind": "function",
+          "exportada": false,
+          "params": "titulo: string | null | undefined",
+          "retorno": "string",
+          "linea": 95,
+          "resumen": "Cabeza del título: lo que el portal declara como TIPO, que siempre va antes del « en » de la ubicación («Chalet pareado en Calle de Los Corrales, Alfoz de Lloredo» → «chalet pareado»). Mirar el título"
+        },
+        {
+          "nombre": "esCasa",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 119,
+          "resumen": "¿El anuncio es una CASA (chalet/adosado/pareado/casona/cortijo…) y no un piso? Se decide por el título, que el portal siempre encabeza con el tipo («Casa o chalet independiente en…», «casa adosada en…"
+        },
+        {
           "nombre": "parsearAlertaIdealista",
           "kind": "function",
           "exportada": true,
           "params": "html: string",
           "retorno": "Comparable[]",
-          "linea": 90,
+          "linea": 131,
           "resumen": "Extrae los anuncios de una alerta de Idealista. El correo repite un bloque por anuncio: enlace a `/inmueble/<id>/` con el título en el atributo `title`, y una tabla con el precio en grande y una línea"
         },
         {
@@ -93292,7 +93383,7 @@
           "exportada": true,
           "params": "remitente: string | null | undefined",
           "retorno": "boolean",
-          "linea": 155,
+          "linea": 196,
           "resumen": "¿Es este correo una alerta de Idealista?"
         },
         {
@@ -93301,15 +93392,15 @@
           "exportada": true,
           "params": "c: Comparable",
           "retorno": "boolean",
-          "linea": 170
+          "linea": 211
         },
         {
           "nombre": "precioM2Zona",
           "kind": "function",
           "exportada": true,
-          "params": "comparables: Comparable[], zona: string, minMuestra = 3,",
+          "params": "comparables: Comparable[], zona: string, minMuestra = 3, soloCasas = false,",
           "retorno": "",
-          "linea": 182,
+          "linea": 229,
           "resumen": "€/m² de referencia para una zona: MEDIANA de los comparables de VIVIENDA cuyo texto de zona contiene el término buscado. Se usa la mediana y no la media porque un chalet de lujo suelto dispara la medi"
         },
         {
@@ -93318,7 +93409,7 @@
           "exportada": true,
           "params": "titulo: string",
           "retorno": "boolean",
-          "linea": 241,
+          "linea": 290,
           "resumen": "¿El propio anuncio confiesa que hay obra por delante? Los correos de alerta no traen la descripción, pero el título a veces sí lo dice («Casa a reformar en…»). OJO: «reformado/rehabilitada/restaurada»"
         },
         {
@@ -93327,16 +93418,16 @@
           "exportada": true,
           "params": "zona: string | null | undefined",
           "retorno": "string[]",
-          "linea": 280,
+          "linea": 339,
           "resumen": "Zonas por las que comparar un anuncio, de fina a amplia. Idealista publica la zona a nivel de CALLE («Paseo Flecha de Nueva Umbría, 3, Islantilla Golf, Islantilla»): comparar por la cadena exacta darí"
         },
         {
           "nombre": "referenciaZona",
           "kind": "function",
           "exportada": true,
-          "params": "c: Comparable, resto: Comparable[], portalPorSlug: Map<string, ZonaPortalRef>, minMuestra = 3,",
+          "params": "c: Comparable, resto: Comparable[], portalPorSlug: Map<string, ZonaPortalRef>, minMuestra = 3, soloCasas = false,",
           "retorno": "",
-          "linea": 312,
+          "linea": 371,
           "resumen": "Referencia €/m² para UN comparable: recorre sus zonas de fina a amplia y se queda con la PRIMERA que tenga muestra — del buscador del portal si su muestra es sólida, de las alertas si no. `null` si ni"
         },
         {
@@ -93345,7 +93436,7 @@
           "exportada": true,
           "params": "comparables: Comparable[], minDescuento = CHOLLO_DESCUENTO_MIN, minMuestra = 3, zonasPortal?: ZonaPortalRef[],",
           "retorno": "Chollo[]",
-          "linea": 331
+          "linea": 398
         },
         {
           "nombre": "estimarAntiguedad",
@@ -93353,7 +93444,7 @@
           "exportada": true,
           "params": "refAnuncio: string, observaciones: ObservacionRef[], hoy: string,",
           "retorno": "",
-          "linea": 399,
+          "linea": 466,
           "resumen": "Antigüedad estimada de un anuncio, en días a fecha `hoy`. Calibra el ritmo refs/día con los extremos de las observaciones y extrapola. Devuelve `null` si el corpus aún no da para calibrar (pocas muest"
         },
         {
@@ -93362,12 +93453,12 @@
           "exportada": true,
           "params": "comparables: Comparable[], zona: string, hoy: string, minMuestra = 3,",
           "retorno": "VelocidadZona | null",
-          "linea": 445
+          "linea": 512
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4930f4302960"
+      "hash": "9ab5ace7d027"
     },
     {
       "ruta": "packages/module-subastas/src/comunidad.ts",
@@ -93426,7 +93517,6 @@
         "esCostaNorte",
         "zonaPreferenteDe",
         "esZonaPreferente",
-        "esCasa",
         "sinSenalesDeObra",
         "dedupeRelistados",
         "lentePreferentes"
@@ -93438,7 +93528,7 @@
           "exportada": false,
           "params": "texto: string, termino: string",
           "retorno": "boolean",
-          "linea": 159,
+          "linea": 166,
           "resumen": "¿El texto contiene el término como PALABRA completa? Un `includes` a secas ya mordió con núcleos cortos («isla» dentro de «Islantilla»): se exige frontera de palabra a ambos lados."
         },
         {
@@ -93447,7 +93537,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "'Asturias' | 'Cantabria' | null",
-          "linea": 180,
+          "linea": 187,
           "resumen": "Costa a la que pertenece el anuncio, mirando su zona y su título (las alertas no traen municipio estructurado: la zona es texto libre del portal, «Barrio d'Arriba, Colunga»). `null` = no es costa nort"
         },
         {
@@ -93456,7 +93546,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "boolean",
-          "linea": 190,
+          "linea": 197,
           "resumen": "La costa norte como booleano, para etiquetar sin nombrar la costa."
         },
         {
@@ -93465,7 +93555,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null,",
           "retorno": "ZonaPreferente | null",
-          "linea": 198,
+          "linea": 205,
           "resumen": "Zona de la preferencia completa: costa norte, Islantilla o Matalascañas."
         },
         {
@@ -93474,17 +93564,8 @@
           "exportada": true,
           "params": "zona: string | null | undefined, titulo?: string | null",
           "retorno": "boolean",
-          "linea": 212,
+          "linea": 219,
           "resumen": "¿Está en alguna zona preferente? (para la etiqueta 🌊 de los chollos)."
-        },
-        {
-          "nombre": "esCasa",
-          "kind": "function",
-          "exportada": true,
-          "params": "titulo: string | null | undefined",
-          "retorno": "boolean",
-          "linea": 222,
-          "resumen": "¿El anuncio es una CASA (chalet/adosado/pareado/casona) y no un piso? Se decide por el título, que el portal siempre encabeza con el tipo («Casa o chalet independiente en…», «casa adosada en…», «Piso "
         },
         {
           "nombre": "sinSenalesDeObra",
@@ -93492,7 +93573,7 @@
           "exportada": true,
           "params": "c: Comparable",
           "retorno": "boolean",
-          "linea": 233,
+          "linea": 229,
           "resumen": "¿Nada en el anuncio delata obra? OJO: esto NO confirma «buen estado» — el correo de alerta no trae la descripción ni fotos. Dice exactamente que ni el título confiesa reforma ni la API lo marcó `a ref"
         },
         {
@@ -93501,7 +93582,7 @@
           "exportada": true,
           "params": "comparables: Comparable[]",
           "retorno": "Comparable[]",
-          "linea": 246,
+          "linea": 242,
           "resumen": "Colapsa los RE-LISTADOS del mismo portal: Idealista re-publica el mismo anuncio con un `ref` nuevo (visto en prod el 09/08/2026: el piso de Ceares salía DOS veces, refs 112188897 y 112233004, idéntico"
         },
         {
@@ -93510,13 +93591,13 @@
           "exportada": true,
           "params": "comparables: Comparable[], zonasPortal?: ZonaPortalRef[]",
           "retorno": "Preferente[]",
-          "linea": 283,
+          "linea": 279,
           "resumen": "CASAS ≤230.000€ de las zonas preferentes (Matalascañas sin tope), sin señales de obra, con su comparación de zona si existe. Orden: primero las que YA HAN BAJADO de precio (más bajadas antes), luego l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9336dfccbe1a"
+      "hash": "7be7125f8e17"
     },
     {
       "ruta": "packages/module-subastas/src/costes.ts",
@@ -97371,7 +97452,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2571,
-    "funciones": 7080
+    "archivos": 2572,
+    "funciones": 7087
   }
 }
