@@ -32,6 +32,20 @@
 
 ---
 
+### 🔕 (26/08/2026) PSD2: la nota ℹ️ de la ventana de 89 días deja de mandar Telegram
+Alberto, sobre el aviso de las 08:00 («Kutxabank rechazó la ventana de 89 días»): «¿algo que hacer?
+no me avises entonces, ese mensaje es siempre el mismo». Es una limitación PERMANENTE del banco sin
+acción posible —el propio texto decía «no hay que hacer nada»— y el dedupe por `claveAviso` solo
+evitaba repetirla, no evitaba el ruido. El cron `psd2-sync` ahora manda Telegram SOLO por avisos
+críticos; las notas ℹ️ viajan como contexto dentro de esa alerta y siguen pintándose en permanencia
+en `/banca` (también en verde), que es donde importan: declaran desde cuándo hay datos de verdad.
+Retirados `claveAviso`/`avisosNuevos` y `avisosPersistidos()` (sin consumidor). 1625 tests en verde.
+De paso, respondido el porqué de los 89 días: es el `date_from` que se pide en CADA pasada diaria
+(tope del consentimiento PSD2), para recoger apuntes tardíos y rellenar huecos; el dedupe descarta
+lo repetido.
+
+---
+
 ### 🔍 (26/08/2026) Auditoría ligera diaria — sin hallazgos de código, dirección de House Sevillana sigue mal en la skill sincronizada
 Rango 25/08 03:16→26/08 00:06 (62 commits, día muy activo: serrucho de pricing, retirada de
 PriceLabs, Motor vs mercado real, desglose Sique Brilla, Tramo 1 de trading). Heartbeats (18+12
