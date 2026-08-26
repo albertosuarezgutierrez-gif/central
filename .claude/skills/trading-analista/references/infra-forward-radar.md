@@ -124,6 +124,18 @@
 - **Datos:** caché incremental `trading_universo` (tabla aplicada) — cron **`/api/cron/trading-universo`**
   (`20 */6 * * *`, lotes de 50, SEC companyfacts + histórico Stooq→Yahoo por símbolo, ritmo suave ~4 req/s).
   Universo desde `company_tickers.json` (ticker+**nombre**); semilla de respaldo en `universo-semilla.ts`.
+- **⚠️ `actualizado_en` en epoch NO significa «pendiente de procesar» (medido 26/08/2026).** El lote
+  se elige con `WHERE simbolo IN (lista actual de la SEC)` (`universo.ts`), a propósito, para no
+  arrastrar símbolos que salieron del corte. Consecuencia: una fila sembrada cuando el símbolo SÍ
+  estaba en la lista y que luego cae fuera **queda con `actualizadoEn = new Date(0)` para siempre**,
+  porque el `findMany` ya no la selecciona nunca. Son HUÉRFANAS, no cola de trabajo.
+  Caso: `trading_universo` tenía 1248 filas para un universo de 1200; ACT, EPRT y WEX llevaban horas
+  «pendientes» y estaban en las posiciones **1205, 1206 y 1214** del fichero real de la SEC (medido con
+  `net.http_get` vía pg_net replicando el filtro+dedupe de `listaUniverso`; el sandbox no sale a
+  internet — 403 del proxy). **Para vigilar el avance real del refresco, la condición correcta NO es
+  `actualizado_en < '2000-01-01'`**, que se queda en rojo eternamente: hay que cruzar contra la lista
+  viva o mirar `con_datos` sobre el tamaño del universo. Un contador que nunca puede llegar a cero
+  entrena a ignorarlo.
 - **Ranking:** cron **`/api/cron/trading-ranking`** (lunes 09:00) — lee caché (cero llamadas SEC), rankea,
   persiste snapshot en `trading_ranking` y manda **digest Telegram** (top-10 con `TICKER — Nombre`,
   etiqueta 🟢fuerte/🟡media/⚪débil, badges 🏆 gurús / 📈 técnico, cambios vs semana anterior, **track

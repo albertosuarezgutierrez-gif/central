@@ -23,7 +23,26 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
+
+Ranking disparado con **1.080 empresas con datos**. Top-5: SNDK · LLYVA · WDC · BKNG · STX (el ciclo
+memoria/almacenamiento domina). **SNDK nº1 con momentum +3.527% y precio 1.596$ olía a dato mal leído
+—el patrón MCD/ORCL— así que se contrastó: es REAL** (Alpha Vantage, 1.480,77$; ×37 desde el spin-off
+de WDC). Comprobar antes de avisar es barato; el nº1 del ranking es lo que Alberto lee como mejor idea.
+**NKE fuera del top-20**: Piotroski 5, ROIC 15,1%, EY 6,64%, pero momentum −46,2% la hunde — la
+capitulación es contexto, no señal (H8 falló). **DBX fuera del top-20**: ROIC 72,4%, FCF yield 9,78%,
+EY 7,99%, pero momentum plano (+3,1%) le quita el tercer factor; la mejor de las que no entran.
+🔍 **Hallazgo:** ACT, EPRT y WEX llevaban horas con `actualizado_en` en epoch y `error IS NULL`. No
+estaban pendientes: **salieron del corte**. Medido contra el fichero real de la SEC (pg_net, replicando
+filtro+dedupe de `listaUniverso`), caen en 1205/1206/1214 de 1200. El lote filtra `simbolo IN (lista
+actual)`, así que una fila que sale del top queda en epoch PARA SIEMPRE. La consulta de vigilancia
+`actualizado_en < '2000-01-01'` nunca puede llegar a cero → entrena a ignorarla. Anotado en la skill.
+💵 **Margen cubierto:** Alberto convirtió; USD pasó de −1.200,22$ a **+443,26$** (convirtió casi todos
+los euros, no solo lo justo: quedan 8,75€ y la munición está ya en dólares). NAV **32.710,26€**.
+Lección a la skill: al preparar una instrucción en USD, mirar `get_account_balances` y avisar de la
+conversión — IBKR no rechaza por falta de divisa, financia en margen y cobra en silencio.
+
+### … (dd/mm/aaaa)` —
 > son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
 > funde con la entrada anterior y se archiva mal.
 >
