@@ -1,9 +1,10 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Solo falta fijar día y hora.**
-> 🕐 El **guion del corte minuto a minuto** ya está escrito (ver «GUION DEL CORTE», abajo): preparativos
-> de Alberto a T-7, copias de Manuel a T-1, ventana **13:00–15:00** y la prueba que cierra de verdad,
-> que es el cron **automático** de las 5:30 del día siguiente. Solo hay que poner la fecha encima.
+> **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Ejecución EN MARCHA, paso a paso.**
+> 🔁 **No hay cita:** Alberto le pide a Manuel **una cosa cada vez** y él responde cuando puede. Ver
+> «CAMBIO DE MODO», abajo — manda sobre el guion de la ventana 13:00–15:00, que queda de alternativa.
+> El **único paso con reloj** es transferir el repo: el `CRON_SECRET` no viaja y CIMA se pararía **en
+> silencio**, así que va el último y con Alberto delante. Paso 1 en curso: las copias de seguridad.
 > 🔑 Y son **DOS claves**, no una: la de cifrado (si se pierde, los IBANs quedan ilegibles — falla
 > ruidoso) y la del **índice ciego** (si cambia, los clientes **dejan de encontrarse** aunque estén
 > ahí — **falla en silencio**, y una búsqueda vacía se lee como «no existe»). Se respaldan las dos y
@@ -405,7 +406,7 @@ Alberto dé el visto bueno a este envío concreto.**
 
 ---
 
-## 🕐 GUION DEL CORTE, minuto a minuto (preparado el 26/08/2026, a falta de fecha)
+## 🕐 GUION DEL CORTE, minuto a minuto — **PLAN ALTERNATIVO** (si algún día se hace todo de una sentada)
 
 > El runbook de arriba dice **qué** pasos hay. Esto dice **cuándo, quién y qué se verifica antes de
 > seguir**. Sale de la secuencia que propuso Manuel más los huecos que le encontramos. Cuando Alberto
@@ -488,7 +489,92 @@ T-1, la víspera, y no en la ventana del corte.
 ---
 
 
-### 📝 Mensaje para Manuel — BORRADOR (26/08/2026, v7 — fijar fecha). **NO se envía sin que Alberto lo diga**
+
+---
+
+## 🔁 CAMBIO DE MODO (26/08/2026): **sin cita, paso a paso** — manda esto sobre el guion de arriba
+
+> **Decisión de Alberto:** no se fija día ni hora. Se le va pidiendo a Manuel **una cosa cada vez**,
+> y él responde cuando puede. El guion de las 13:00–15:00 de arriba queda como **plan alternativo**
+> por si algún día se hace todo de una sentada; **el modo vigente es este**.
+
+**Por qué se puede hacer así, técnicamente.** Casi todos los pasos son *transferencias de propiedad
+que no rompen nada*: Vercel se lleva los valores de las env vars y los dominios, Supabase conserva el
+mismo `ref` (las cadenas de conexión no cambian) y mover la app de Fly entre organizaciones le
+mantiene el nombre, así que `asegura-app-cima-adapter.fly.dev` sigue respondiendo. **Nadie se entera
+de que la cosa ha cambiado de dueño.** Cada paso se puede hacer un martes y el siguiente el jueves.
+
+### 🔴 La ÚNICA excepción: el repositorio
+
+Transferir el repo **sí corta CIMA**, y lo corta **en silencio**: el workflow viaja, pero el
+`CRON_SECRET` **no** (es un secret de GitHub Actions, no del repo). El cron sigue disparándose a su
+hora, llama a la app, la app le contesta que no está autorizado, y **no entra ni una póliza sin que
+nada dé error**. Por eso:
+
+- El repo va **el último**, cuando todo lo demás esté hecho y verificado.
+- El día que se haga, **Alberto tiene que estar delante**: aceptar la transferencia, reconectar el
+  Git en Vercel, reponer el `CRON_SECRET`, comprobar que Actions está habilitado y **disparar el cron
+  a mano** para ver filas nuevas. Media hora larga, seguida.
+- Se hace **por la tarde**, después del pull de las 11:30: así hay ~18 h de margen hasta el de las
+  5:30, que es la prueba que cierra.
+
+**Todo lo demás no tiene reloj.**
+
+### 🪜 La secuencia, y qué cierra cada paso
+
+| # | Quién | Qué pide / hace | ✅ Cerrado cuando… | Riesgo si se queda a medias |
+|---|---|---|---|---|
+| **1** | Manuel | **Las copias de seguridad**: las 2 claves (cifrado + índice ciego), los secrets de Fly (TIREA) y el `CRON_SECRET`, al gestor compartido. Y el dump + export de env vars + lista de Blob | Alberto puede **leer** los cinco valores en el gestor | Ninguno: no toca producción. Es puro seguro |
+| **1b** | Manuel | Responder: **su Supabase, ¿free o de pago?** | Contestado | Ninguno |
+| **2** | Alberto | Crear la **organización en Fly** y mandar las **3 invitaciones** (Vercel `pisos-turisticos-projects`, org Supabase `fzagbwkkzfjlsvflkkvn`, org Fly) | Las tres enviadas | Ninguno |
+| **3** | Manuel | Aceptar las tres | Aparece en los tres sitios | Ninguno |
+| **4** | Manuel | **Vercel → Transfer Project** | Alberto ve el proyecto en su equipo, `app.grupoasegura.com` carga y se entra | Ninguno: los valores de env y el dominio viajan |
+| **5** | Manuel | **Supabase → Transfer project** | 🔑 **LAS DOS PRUEBAS**: Alberto **descifra** un IBAN real **y encuentra** un cliente buscando por email **y** por DNI | Si solo se hace la primera, un índice ciego roto pasa desapercibido |
+| **6** | Manuel | **Fly → mover la app del adaptador** a la org de Alberto | `fly secrets list` muestra los nombres **y** `/health` responde | Bajo, y el paso 1 lo cubre |
+| **7** | Los dos | **Blob**: re-apuntar el token o mover los ~4 ficheros | Los 4 se abren desde la app | — |
+| **8** | 🔴 **Los dos, con Alberto delante** | **GitHub: transferir los dos repos** → aceptar, reconectar Git en Vercel, **reponer `CRON_SECRET`**, comprobar Actions, **disparar el cron a mano** | El disparo manual devuelve **filas nuevas**, no un 200 vacío | 🔴 **Aquí sí**: CIMA se para en silencio si el secreto no vuelve |
+| **9** | Alberto | Repuntar **Codeoscopic** y **Meta/WhatsApp** si el dominio se movió + una **cotización** de punta a punta (**cotizar sí, emitir NO**) | Verde | — |
+| **10** | Alberto | **La mañana siguiente al paso 8**: que el cron **automático de las 5:30** entre solo | Filas nuevas sin que nadie lo dispare | — |
+| **11** | Los dos | Sacar a Manuel del equipo → **Manuel cancela su Pro** | Fin de la duplicidad | — |
+
+**Nada se apaga hasta el 10.** Y como no hay cita, **nada obliga a seguir**: si un paso se atasca, el
+anterior sigue en pie y la correduría sigue funcionando exactamente igual.
+
+### 📨 Mensajes por paso — **BORRADORES. Ninguno se envía sin que Alberto lo diga**
+
+**Mensaje 1 — el que se manda ahora** (pasos 1 y 1b, no tocan producción):
+
+```
+Manuel, no hace falta que cuadremos un día: lo vamos haciendo poco a poco y me contestas
+cuando puedas. Casi todo son transferencias de propiedad que no rompen nada — la app se
+queda igual, en la misma URL y con la misma base, solo que pasa a facturarse a mi cuenta.
+
+Lo primero es lo único que de verdad no tiene vuelta atrás, y no toca nada en producción:
+las copias. Te comparto un gestor de contraseñas; ahí necesito que dejes cinco cosas:
+
+ 1) la clave de cifrado de los datos personales
+ 2) la clave del índice ciego
+ 3) los secrets de Fly, los de TIREA. Estos los pido por algo concreto: `fly secrets list`
+    solo enseña los nombres, nunca los valores, así que si algo se perdiera al mover la app
+    de organización no habría de dónde sacarlos — habría que volver a pedirlos a TIREA.
+ 4) el CRON_SECRET de Actions, que ese no viaja al transferir el repo
+ 5) el dump de la base, el export de las env vars y la lista de los ficheros de Blob
+
+Y una pregunta suelta: tu proyecto de Supabase, ¿está en free o en algún plan de pago? Es
+para comprobar por adelantado que mi organización lo acepta. Si no lo aceptara no pasa nada,
+tiramos del dump.
+
+Sin prisa. Cuando esto esté, te digo el siguiente paso.
+```
+
+**Mensaje 2** — cuando el 1 esté cerrado y Alberto haya creado la org de Fly: avisar de las tres
+invitaciones y pedir que las acepte.
+**Mensaje 3** — pedir el *Transfer Project* de Vercel. **Mensaje 4** — el de Supabase. **Mensaje 5** —
+mover la app de Fly. **Mensaje 6** — 🔴 acordar un rato de tarde para los repos, que es el único con
+reloj. Se redactan cuando toque, no antes: cada uno depende de cómo haya ido el anterior.
+
+
+### 📝 Mensaje para Manuel — v7 (26/08/2026) — **DESCARTADO sin enviar: proponía fijar día y hora, y Alberto decidió ir paso a paso.** El vigente es el «Mensaje 1» de «CAMBIO DE MODO», arriba
 
 > Sustituye a la v6. Solo falta que Alberto ponga el día. Va sin RGPD por indicación suya.
 

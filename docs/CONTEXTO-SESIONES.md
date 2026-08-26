@@ -25,6 +25,18 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🔁 (26/08/2026) Correduría: el traspaso se hace SIN CITA, paso a paso — y PR #1752 mergeado
+
+Alberto descarta fijar día y hora: le pide a Manuel **una cosa cada vez** y él contesta cuando puede.
+Técnicamente se sostiene porque casi todo son **transferencias de propiedad que no rompen nada**
+(Vercel lleva envs y dominios, Supabase conserva el `ref`, Fly mantiene el hostname de la app).
+🔴 **Única excepción: el repo.** Al transferirlo el `CRON_SECRET` no viaja → el cron llama, la app
+responde 401 y **CIMA se para sin que nada dé error**. Va el ÚLTIMO, por la tarde y con Alberto
+delante. Secuencia de 11 pasos y **Mensaje 1** (copias de seguridad + pregunta del plan de Supabase)
+en `docs/TRASPASO-CORREDURIA.md`; el guion de 13:00–15:00 queda de alternativa. #1752 en `main`.
+
+---
+
 ### 🕐 (26/08/2026) Correduría: guion del corte minuto a minuto listo — y una TERCERA cosa irrecuperable
 
 Plan cerrado por ambas partes → escrito el **guion del corte** en `docs/TRASPASO-CORREDURIA.md`:
