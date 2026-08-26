@@ -645,49 +645,57 @@ Entonces sí hay que pedirle cosas concretas. Es el mismo traspaso, más lento:
 
 ---
 
-### 📝 Mensaje para Manuel — BORRADOR, SIN ENVIAR (26/08/2026, v4)
+### 📝 Mensaje para Manuel — BORRADOR, SIN ENVIAR (26/08/2026, v5 — VIGENTE)
 
-Cuarta versión. **Cambio de alcance: se traspasa TODO** —intranet, web pública e integraciones—, y la
-vía es **que Manuel entre al equipo Pro de Alberto y despliegue él mismo**, para que las credenciales
-no viajen. **No se manda hasta que Alberto dé el visto bueno a este envío concreto.**
+Quinta versión. **Cambio de vía respecto a la v4:** en vez de que Manuel vuelva a desplegar el
+proyecto en el equipo de Alberto, se usa la **transferencia nativa de proyecto de Vercel** y la
+**transferencia de proyecto de Supabase**. Es lo de MENOS trabajo para él (dos o tres clics por
+plataforma) y lo que MÁS trae: la transferencia de Vercel arrastra las **variables de entorno con sus
+valores** y los **dominios**, así que ninguna credencial viaja por WhatsApp, correo ni gestor de
+contraseñas. **No se manda hasta que Alberto dé el visto bueno a este envío concreto.**
 
 > Manuel, ya tengo acceso a la base de datos y he estado mirándolo todo. Te escribo para organizar el
-> traspaso y, sobre todo, para que dejes de pagar el Vercel.
+> traspaso y, sobre todo, para que dejes de pagar lo que estás pagando.
 >
-> **Los datos no me los tienes que pasar**: los leo yo directamente de Supabase. No montes ninguna API
-> ni ningún conector, sería trabajo tuyo para algo que ya funciona.
+> **Los datos no me los tienes que pasar** y **no montes ninguna API ni ningún conector**: los leo yo
+> directamente de Supabase, sería trabajo tuyo para algo que ya funciona.
 >
-> **Lo que sí quiero es todo lo demás, tal cual está**: la intranet, la web y las dos integraciones. La
-> intranet me gusta como la has dejado y quiero seguir trabajando sobre ella, no rehacerla.
+> **Lo que sí quiero es todo lo demás, tal cual está**: la intranet, la web y las dos integraciones
+> (Codeoscopic y CIMA). La intranet me gusta como la has dejado y quiero seguir trabajando sobre ella,
+> no rehacerla.
 >
-> La forma más limpia que se me ocurre, y la que menos lío tiene con las contraseñas:
+> Lo he mirado y hay una forma que te lleva tres clics y no te obliga a pasarme ninguna contraseña:
+> **transferirme los proyectos**, en vez de volver a montarlos.
 >
-> 1. **Te invito a mi equipo de Vercel** (ya es Pro, no me cuesta más).
-> 2. **Despliegas tú el proyecto ahí y metes tú mismo las variables de entorno.** Así no tienes que
->    pasarme ninguna contraseña por WhatsApp ni por ningún sitio: las escribes directamente donde van.
-> 3. Lo verificamos con el tuyo todavía encendido.
-> 4. Apagamos el tuyo, te quito del equipo y **cancelas tu Pro**.
+> 1. Te llega una **invitación a mi equipo de Vercel** (ya lo tengo Pro, no me cuesta más). Acéptala.
+> 2. En cada proyecto tuyo: **Settings → Transfer Project → mi equipo**. Eso se lleva el proyecto con
+>    **sus variables de entorno y sus dominios**, así que no tienes que escribirme ninguna clave.
+> 3. En Supabase, lo mismo: **Project Settings → General → Transfer project** a mi organización.
+> 4. Y el repositorio: **Settings → Transfer ownership** a mi cuenta de GitHub. Este déjalo para
+>    **después** de mover el proyecto de Vercel, porque al transferirlo se desconecta el Git y lo
+>    tengo que reconectar yo.
+> 5. Cuando esté todo movido y verificado, **te quito del equipo y cancelas tu Pro**.
 >
-> Para el código, lo más rápido es que **me transfieras el repositorio a mi cuenta de GitHub** y
-> conectemos el proyecto ahí. Luego yo ya lo reorganizo por dentro con calma.
+> Si algún paso no te deja (a veces la transferencia falla si hay recursos atados a tu cuenta), me lo
+> dices y lo hacemos por las bravas: me das acceso y lo despliego yo.
 >
-> Y necesito que me digas un par de cosas que no están en el código:
+> Y necesito que me digas cuatro cosas que no están en el código:
 >
 > - **Cómo se descargan los ficheros de las compañías** (CIMA/EIAC): ¿SFTP, portal, API de TIREA? ¿con
->   qué credenciales?
+>   qué credenciales y desde dónde se lanza?
 > - **Qué proyectos tienes en Vercel** — ¿la web y la intranet van juntas o separadas?
 > - **Si guardas ficheros en Vercel Blob** o en algún sitio parecido. En la base veo referencias a
 >   documentos pero los ficheros no están en Supabase, y quiero saber dónde viven antes de tocar nada.
 > - **Qué dominios tienes puestos** y dónde están registrados.
 >
-> Dos cosas importantes:
+> Dos avisos importantes:
 >
-> - **No apagues nada todavía, y avísame antes de hacerlo.** He visto que CIMA descargó ficheros ayer
+> - **No apagues ni borres nada, y avísame antes de hacerlo.** He visto que CIMA descargó ficheros ayer
 >   mismo: tu despliegue está alimentando la correduría todos los días, y si se apaga dejamos de
 >   recibir pólizas, recibos y siniestros de las compañías. Lo cortamos con fecha y hora, los dos
 >   delante.
 > - Ese día hay que **cambiar las URLs que tienen apuntadas Codeoscopic y WhatsApp/Meta en sus
->   paneles**, que ahora van a tu despliegue. Eso no viaja en el código.
+>   paneles**, que ahora van a tu despliegue. Eso no viaja en ninguna transferencia.
 >
 > Y una duda: **la emisión de Codeoscopic, ¿llegó a probarse?** En la base solo veo cotizaciones,
 > ninguna póliza emitida por ahí, y las tablas de emisión están vacías.
@@ -695,6 +703,24 @@ no viajen. **No se manda hasta que Alberto dé el visto bueno a este envío conc
 > 📄 **Pendiente de decisión de Alberto:** si se añade la frase del **contrato de encargado de
 > tratamiento**. Que sea su hermano no cambia el RGPD —ha tenido en su infraestructura los datos de
 > 32.600 clientes con teléfonos, correos y carnets—, pero es Alberto quien decide si lo formaliza.
+
+### 🪜 Los pasos, en orden, y quién hace cada uno
+
+| # | Quién | Paso | Por qué en este orden |
+|---|---|---|---|
+| 1 | **Alberto** | Invita a Manuel a su equipo de Vercel Pro (Settings → Members → Invite) | Vercel **solo deja transferir un proyecto a un equipo del que eres miembro**. Sin esto, el paso 2 no aparece |
+| 2 | **Manuel** | Acepta la invitación | — |
+| 3 | **Manuel** | En cada proyecto: Settings → Transfer Project → equipo de Alberto | Arrastra **env vars con sus valores** y dominios. Es el paso que evita que viaje ninguna credencial |
+| 4 | **Manuel** | Supabase: Project Settings → General → Transfer project → organización de Alberto | Deja de ser suyo; migramos al schema `seguros` a nuestro ritmo, sin prisa |
+| 5 | **Manuel** | GitHub: Settings → Transfer ownership | **Después del 3**: transferir el repo desconecta el Git del proyecto de Vercel |
+| 6 | **Claude** | Reconectar el repo en el proyecto de Vercel ya transferido | Un clic, y vuelve a desplegar solo |
+| 7 | **Claude** | Verificar que todo responde con lo de Manuel **todavía encendido** | Nunca se apaga nada sin comprobar antes |
+| 8 | **Los dos** | Fecha y hora de corte. Cambiar las URLs en los paneles de **Codeoscopic** y **Meta/WhatsApp** | Es lo único que no viaja en ninguna transferencia |
+| 9 | **Alberto** | Quitar a Manuel del equipo → Manuel **cancela su Pro** | El seat solo se ocupa mientras dure el traspaso |
+
+**Si un paso falla** (Vercel a veces bloquea la transferencia si hay Blob u otros recursos atados a la
+cuenta origen): se cae a la vía de la v4 —Manuel despliega él mismo en el equipo de Alberto y escribe
+él las variables—. No es bloqueante.
 
 ## Fase 1 — Inventario y medición (antes de tocar nada)
 

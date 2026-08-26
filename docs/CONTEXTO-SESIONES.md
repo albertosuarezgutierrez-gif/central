@@ -54,6 +54,8 @@ resuelto** (los datos se leen por `project_id`); lo que falta es CÓDIGO → un 
 suyos. Su Supabase es FREE; **solo paga Vercel Pro** (Hobby prohíbe uso comercial), y **Alberto ya tiene
 equipo Pro** → meter la app ahí no añade coste y él cancela. Ojo al corte: **Codeoscopic y Meta/WhatsApp
 apuntan a SU URL** en sus paneles y eso no viaja en ningún ZIP. PR #1752.
+- **Vía elegida (v5):** transferencia NATIVA de proyecto en Vercel y Supabase (3 clics de Manuel) en vez de
+  redesplegar: arrastra env vars CON VALORES y dominios → ninguna credencial viaja. Pasos ordenados en el doc.
 
 ### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
 
