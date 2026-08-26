@@ -1,6 +1,13 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: FASE 1 COMPLETADA (26/08/2026).** Manuel dio acceso a su Supabase y el inventario está
+> **Estado: MANUEL HA CONTESTADO (26/08/2026) — el traspaso son 5 sistemas, no 3.**
+> A los tres conocidos (Vercel, Supabase, GitHub) se suman **Fly.io** (el adaptador Java que habla con
+> TIREA: sin él NO entra ninguna póliza de las compañías) y el **`CRON_SECRET` de GitHub Actions**, que
+> **no viaja al transferir el repo** y cuya pérdida corta CIMA **en silencio**. Y hay un punto
+> irreversible: **la clave de cifrado de datos personales** — si se pierde, los IBANs quedan ilegibles
+> para siempre. Ver «RESPUESTA DE MANUEL» y el runbook del corte, abajo: mandan sobre el resto del doc.
+>
+> **Estado anterior: FASE 1 COMPLETADA (26/08/2026).** Manuel dio acceso a su Supabase y el inventario está
 > hecho y medido — ver «FASE 1 CERRADA» abajo. Faltan el **código** (repo, bloqueado) y el **Vercel**
 > (sin invitación). **Nada se ha migrado todavía**, y antes de migrar hay que firmar el contrato de
 > encargado de tratamiento: son 32.600 clientes reales.
@@ -125,6 +132,140 @@ Los comentarios de tabla citan tickets **`LOO-xxx`** (Linear) y normas española
 `cotizaciones_anonimas` describe un «flipped funnel» con TTL de 7 días. Hay integración con **CIMA/EIAC**
 (el estándar de intercambio con aseguradoras), con **Codeoscopic** (7 tablas `codeoscopic_*`) y un canal
 de **WhatsApp** con base de conocimiento vectorial. No es un CRM genérico: es software de correduría.
+
+---
+
+## 📬 RESPUESTA DE MANUEL (26/08/2026) — el traspaso no son 3 sistemas, son 5
+
+Contestó a las cuatro preguntas. **Lo que da por escrito cambia el plan de arriba**, así que esta
+sección manda sobre todo lo anterior en lo que se contradiga.
+
+### 1. Cómo entra CIMA de verdad: una cadena de TRES saltos, no una descarga
+
+No es SFTP ni portal. La cadena real, y cada eslabón puede romperla:
+
+```
+GitHub Actions (cron 5:30 y 11:30)
+   └─ HTTPS + Bearer CRON_SECRET
+      └─ app.grupoasegura.com/api/crons/cima-pull        (Vercel, Next.js)
+         └─ asegura-app-cima-adapter.fly.dev             (Fly.io, Java/Spring Boot)
+            └─ JAR oficial de TIREA · WSE v2.17 (SOAP)
+               └─ TIREA  →  Mapfre C0058 · Allianz C0109 · Generali C0072
+                            Occident C0468 · Reale C0613
+```
+
+**Las credenciales de TIREA viven como secrets de Fly.io** — no en Vercel ni en la base. El usuario de
+homologación era `albertosuarez.testws`: **la cuenta TIREA es de Alberto**, no de Manuel.
+
+### 🚨 Los DOS sistemas que no estaban en ningún inventario
+
+| # | Sistema | Por qué es bloqueante |
+|---|---|---|
+| **4** | **Fly.io** — app `asegura-app-cima-adapter` + su repo propio | Es quien habla con TIREA. **Sin él no entra ni una póliza de las compañías.** No es Next.js ni cabe en el monorepo: es Java. Se queda como servicio aparte |
+| **5** | **`CRON_SECRET`** en los secrets de **GitHub Actions** | **Los secrets NO viajan cuando cambia el dueño del repo.** Si no se vuelve a poner, el cron dispara y el endpoint responde 401: CIMA deja de traer datos **en silencio** |
+
+El 5 es el más traicionero de todo el traspaso: no rompe nada visible. La web sigue en pie, la app
+responde, nadie ve un error — simplemente dejan de entrar pólizas, recibos y siniestros. Y como la
+única señal es «hoy no ha llegado nada», se puede tardar días en notarlo.
+
+### 2, 3 y 4 — lo demás que preguntamos
+
+- **Vercel: UN solo proyecto** (`asegura`). Web, intranet, portal de cliente y login son **la misma app
+  Next.js** bajo `app.grupoasegura.com`. Cae la duda de «¿van juntas o separadas?».
+- **Ficheros: Vercel Blob** (privado, URLs firmadas), **~4 ficheros**. La BD solo guarda la referencia.
+  ⚠️ **El Blob va atado a la cuenta y puede NO viajar con el proyecto.** Con 4 ficheros da igual: se
+  mueven a mano. Los **EIAC de CIMA no se guardan como archivo**, se parsean a tablas.
+- **Dominios:** `grupoasegura.com` (el `app.` sirve toda la app) y `grupoasegura.es` (**solo para el
+  correo `info@`**).
+- **Codeoscopic:** confirmado, **nunca se emitió en producción**. Solo se probó cotizar (1 proyecto,
+  15 precios). **El código de emisión existe pero está tras un flag que jamás se activó** — por eso las
+  tablas están vacías. Coincide con lo que medimos: cero filas no probaba que no hubiera código.
+
+---
+
+## 🔴 Lo que hay que atar ANTES de fijar fecha (huecos de su plan, no objeciones)
+
+Su secuencia (0-8) es correcta y el orden es sensato. Estos son los puntos donde, tal como está
+escrita, el traspaso puede salir mal:
+
+### 1. La clave de cifrado: es lo ÚNICO irreversible de todo el traspaso
+
+Manuel avisa —bien— de que en las env vars hay una **clave de cifrado de datos personales**: si se
+pierde o se rota, **los IBANs y demás datos cifrados quedan ilegibles para siempre**. Pero su paso Cero
+dice «export de **la lista** de env vars».
+
+🚨 **Una LISTA DE NOMBRES no restaura una clave.** Si la transferencia no arrastra ese valor, el backup
+de nombres no sirve de nada y la cartera queda con campos muertos. Antes de tocar Vercel:
+
+1. **El VALOR de esa clave, copiado a un gestor de contraseñas** (no a un fichero del repo, no a un
+   mensaje). Es el único backup que importa.
+2. Tras la transferencia, **verificación FUNCIONAL, no visual**: descifrar un registro conocido y
+   comprobar que sale el dato correcto. «La variable aparece en el panel» no demuestra que su valor
+   sea el mismo.
+3. **No rotar esa clave** ni antes ni durante el corte. Después, y con la cartera ya verificada.
+
+### 2. Los crons de GitHub Actions no vuelven solos
+
+Además del `CRON_SECRET` que él ya señala: **un repositorio transferido puede quedarse con Actions
+deshabilitado y los `schedule:` no re-armados**. Por eso la verificación no es «he puesto el secret»,
+sino **ver una ejecución real del cron entrando en su franja** (5:30 u 11:30) y contar filas nuevas.
+
+### 3. Ojo con redesplegar el adaptador en vez de transferirlo
+
+Manuel ofrece dos vías para Fly: transferir, o que Alberto redespliegue desde el repo con sus secrets
+de TIREA. **La segunda tiene una trampa**: el usuario que él nombra (`albertosuarez.testws`) es de
+**homologación**. Si los secrets vivos de Fly son de PRODUCCIÓN y se redespliega desde cero sin ellos,
+el adaptador levanta pero **no descarga nada de las compañías**.
+
+→ **Preferir la transferencia de la app de Fly.** Y antes de decidir, preguntar qué credenciales hay
+realmente en esos secrets (homologación o producción) y si las de producción están en manos de Alberto.
+
+### 4. La franja horaria del corte sale sola de los crons
+
+El cron corre a **5:30 y 11:30**. El corte se hace **fuera de esas franjas y justo DESPUÉS de un pull
+correcto** — así, si algo se tuerce, hay medio día de margen antes de la siguiente descarga y no se
+pierde ningún fichero de las compañías.
+
+### 5. `grupoasegura.es` es correo, y el correo se rompe distinto
+
+Ese dominio **solo sirve `info@`**. Tocar su DNS puede tumbar los **registros MX** sin que nadie lo
+vea hasta que un cliente escriba y el correo rebote. Se anota aparte de la app: **no se toca su MX**, y
+si hay que moverlo, se copian los MX ANTES.
+
+### 6. Discrepancia menor sobre la idempotencia de Codeoscopic
+
+Manuel dice que «el envío a Codeoscopic no es idempotente». En su esquema aparecen `submit_attempt_id`
+y `submit_in_flight_at`, que son justo las columnas de un envío idempotente. Puede que el diseño esté y
+la implementación no. **Riesgo real hoy: ninguno** —nunca se emitió, y el flag está apagado—, pero
+conviene aclararlo antes de encender ese flag algún día.
+
+### 7. El backup previo lleva datos de 32.600 personas
+
+Su paso Cero (dump de Supabase) es correcto y necesario. Ese dump **no se commitea jamás** ni se sube a
+ningún sitio compartido: son datos personales reales. Vive en local durante la ventana del corte y se
+borra después.
+
+---
+
+## 🗺️ Runbook del corte (secuencia de Manuel + lo que falta)
+
+| # | Quién | Paso | Verificación que lo cierra |
+|---|---|---|---|
+| **0a** | Manuel | **Copiar el VALOR de la clave de cifrado a un gestor de contraseñas** | Alberto confirma que puede leerla |
+| 0b | Manuel | Dump de Supabase + lista de Blob + export de env vars | Dump restaurable en local. **No se commitea** |
+| 0c | Los dos | Elegir hora **fuera de 5:30/11:30**, justo tras un pull correcto | Último `cima_ficheros` del día ya cargado |
+| 1 | Manuel | Acepta la invitación al equipo Vercel Pro | — |
+| 2 | Manuel | **Transfer Project** del proyecto `asegura` | Dominio re-verificado + **descifrar un registro real** |
+| 3 | Manuel | Supabase → Transfer project (mismo ref, conexiones intactas) | La app sigue leyendo |
+| 4 | Los dos | Blob: re-apuntar token o mover los 4 ficheros | Los 4 se abren desde la app |
+| 5 | Manuel | **Fly.io: transferir la app del adaptador** (mejor que redesplegar) | `/health` del adaptador + un pull manual con datos |
+| 6 | Manuel | GitHub: transferir los dos repos (app y adapter) | — |
+| 7 | **Alberto** | Reconectar el Git en Vercel + **volver a poner `CRON_SECRET`** + **comprobar que Actions y sus `schedule:` están activos** | **Una ejecución REAL del cron en su franja, con filas nuevas** |
+| 8 | Los dos | Repunte de Codeoscopic y Meta/WhatsApp (si el dominio se mueve limpio, no cambian) | — |
+| 9 | Alberto | Pull completo de CIMA + una cotización de punta a punta | Ambos verdes **antes** de sacar a Manuel del equipo |
+| 10 | Alberto | Quitar a Manuel del equipo → **Manuel cancela su Pro** | — |
+
+**Nada se apaga hasta el 9.** Manuel ya lo ha dicho por escrito: no borra ni apaga nada.
 
 ---
 

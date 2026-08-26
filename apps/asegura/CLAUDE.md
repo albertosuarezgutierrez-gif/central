@@ -42,6 +42,32 @@ salidas (`error` / `no migrado` / `migrado`), nunca dos.
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
 proyecto de Vercel de Manuel — **no se piden por mensaje**.
 
+## 🔗 La cadena de CIMA: cinco sistemas, no uno (confirmado por Manuel, 26/08/2026)
+
+La descarga de las compañías **no es un cron nuestro ni un SFTP**. Es una cadena, y cada eslabón la corta:
+
+```
+GitHub Actions (cron 5:30 y 11:30)
+  → HTTPS + Bearer CRON_SECRET
+    → app.grupoasegura.com/api/crons/cima-pull   (esta app, Next.js en Vercel)
+      → asegura-app-cima-adapter.fly.dev         (Fly.io, Java/Spring Boot)
+        → JAR oficial de TIREA · SOAP WSE v2.17
+          → Mapfre C0058 · Allianz C0109 · Generali C0072 · Occident C0468 · Reale C0613
+```
+
+- **El adaptador de Fly NO vive en este monorepo** (es Java) y no debe intentar meterse: es un servicio
+  aparte con su propio repo. Las **credenciales de TIREA son secrets de Fly**, no envs de Vercel.
+- 🚨 **`CRON_SECRET` no viaja al transferir el repo.** Si falta, el cron dispara, el endpoint responde 401
+  y **CIMA deja de traer datos sin que nada falle a la vista**. Es el fallo más caro y más silencioso:
+  la app sigue en pie y solo se nota porque «hoy no ha entrado nada».
+- 🔴 **La clave de cifrado de datos personales** (env var) es **irreversible**: si se pierde o se rota,
+  los IBANs y demás campos cifrados quedan ilegibles para siempre. Se respalda su VALOR antes de
+  cualquier transferencia y se verifica **descifrando un registro real**, no mirando el panel.
+- **Ficheros en Vercel Blob** (privado, URLs firmadas; hoy ~4). Los EIAC de CIMA **no se guardan como
+  fichero**: se parsean a tablas.
+- **Codeoscopic:** el código de emisión existe pero está **tras un flag que nunca se activó** — por eso
+  sus tablas están vacías. No es un bug; es una función sin estrenar.
+
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se
   descargan los ficheros de las compañías, si usa Vercel Blob y qué dominios tiene.

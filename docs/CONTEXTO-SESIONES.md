@@ -71,6 +71,25 @@ apuntan a SU URL** en sus paneles y eso no viaja en ningún ZIP. PR #1752.
   borrado** → la intranet afirma «activo» sobre gente que no puede entrar. Al portarlo, cruzar `activo` con la
   credencial real.
 - `central` verificada como destino: **pgvector ✅**, schema `seguros` ✅ (0 tablas), rol `prisma_seguros` ✅ inerte (sin contraseña).
+- 📬 **MANUEL CONTESTÓ el mismo día. El traspaso son CINCO sistemas, no tres.** CIMA no es SFTP ni portal:
+  es una cadena **GitHub Actions (cron 5:30/11:30) → `/api/crons/cima-pull` en Vercel (Bearer `CRON_SECRET`)
+  → adaptador Java en Fly.io (`asegura-app-cima-adapter`) → JAR oficial de TIREA por SOAP WSE 2.17**.
+  Compañías: Mapfre C0058, Allianz C0109, Generali C0072, Occident C0468, Reale C0613. Credenciales TIREA
+  en **secrets de Fly**, y la cuenta TIREA es de Alberto (`albertosuarez.testws` era homologación).
+  → **4º sistema: Fly.io** (Java, NO cabe en el monorepo, se queda como servicio aparte).
+  → **5º: `CRON_SECRET`**, que **no viaja al transferir el repo** → si no se repone, CIMA deja de traer datos
+  **sin que falle nada visible**. Es el riesgo más traicionero del corte.
+- 🚨 **Lo único IRREVERSIBLE: la clave de cifrado de datos personales** en las env vars. Su paso Cero decía
+  «export de la LISTA de env vars» — una lista de NOMBRES no restaura una clave. Hay que copiar **el VALOR**
+  a un gestor antes de tocar Vercel, y verificar **descifrando un registro real**, no viendo la variable.
+- Resto de respuestas: **UN solo proyecto Vercel** (`asegura`; web+intranet+portal+login son la misma app
+  Next.js bajo `app.grupoasegura.com`); ficheros en **Vercel Blob** (~4, atado a la cuenta → puede no viajar;
+  los EIAC se parsean a tablas, no se guardan); dominios `grupoasegura.com` + `grupoasegura.es` (**solo correo
+  `info@`** → ojo a los MX). **Codeoscopic nunca emitió**: el código existe tras un **flag jamás activado**.
+- Huecos añadidos a su plan: Actions puede quedar deshabilitado tras transferir (verificar una ejecución REAL
+  del cron, no el secret); **transferir Fly mejor que redesplegar** (si sus secrets son de producción y se
+  redespliega sin ellos, levanta pero no descarga); cortar **fuera de 5:30/11:30 y tras un pull correcto**;
+  el dump del paso Cero **no se commitea jamás** (32.600 personas). Runbook de 11 pasos en el doc.
 - 🚧 **Montado el ESQUELETO de `apps/asegura`** (sin esperar a Manuel): auth propia (cookie `asegura_session`
   + `jose` contra `public.cuentas`, molde `apps/mariscos`), layout, login, `prisma` con **multiSchema**
   (`public` + `seguros`), `lib/dinero.ts` (`eur()`, null→`—` nunca `0,00€`) y `vercel.json` **con su
