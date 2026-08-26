@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ventanasDelBarrido, picosDeEvento, findeDelMes, consultasDeVentana, mesEnTexto } from './mercado-ventanas.ts'
+import { readFileSync } from 'node:fs'
+import { ventanasDelBarrido, picosDeEvento, findeDelMes, consultasDeVentana, mesEnTexto, FACTOR_EVENTO_MINIMO } from './mercado-ventanas.ts'
 
 const HOY = '2026-08-01' // sábado
 
@@ -227,4 +228,36 @@ test('mesEnTexto habla español y respeta el año', () => {
   assert.equal(mesEnTexto('2026-11-06'), 'noviembre 2026')
   assert.equal(mesEnTexto('2027-01-08'), 'enero 2027')
   assert.equal(mesEnTexto('2027-12-31'), 'diciembre 2027')
+})
+
+// ── Horizonte de la línea de temporada (26/08/2026) ────────────────────────────────────────────
+
+test('con 12 meses el plan llega al verano del año siguiente', () => {
+  // Con 8 el plan se acababa en abril-2027 y mayo, junio y julio NO existían para la rutina: no es
+  // que se midieran poco, es que no eran ni candidatas. Ahí caen los eventos que más multiplican.
+  const meses = new Set(
+    ventanasDelBarrido('2026-08-26', [], { mesesBase: 12, maxEventos: 0, fechasPorMes: 3 })
+      .map(v => v.checkin.slice(0, 7)),
+  )
+  for (const m of ['2027-04', '2027-05', '2027-06', '2027-07', '2027-08']) {
+    assert.ok(meses.has(m), `${m} tiene que entrar en el plan`)
+  }
+  assert.equal(meses.size, 12)
+})
+
+test('GUARDIÁN: el plan de Booking no vuelve a acortar el horizonte por debajo de 12 meses', () => {
+  // Vive como lectura del FUENTE porque el valor es una constante del route handler, que no se
+  // puede importar desde `node --test` (necesita Prisma y el alias `@/`). Bajarlo deja mayo-julio
+  // fuera del plan otra vez, y eso no lo caza ni `tsc` ni el build: simplemente hay menos fechas.
+  const fuente = readFileSync(new URL('../../app/api/sivra/mercado/plan/route.ts', import.meta.url), 'utf8')
+  const m = fuente.match(/const MESES_BASE_DEFECTO = (\d+)/)
+  assert.ok(m, 'MESES_BASE_DEFECTO tiene que seguir declarada en el route del plan')
+  assert.ok(Number(m[1]) >= 12, `MESES_BASE_DEFECTO = ${m?.[1]}: mayo-julio del año siguiente vuelven a quedar fuera`)
+})
+
+test('el umbral de evento es UNO y se exporta (plan y bucket tienen que coincidir)', () => {
+  assert.equal(FACTOR_EVENTO_MINIMO, 1.15)
+  const conFactorJusto = ventanasDelBarrido('2026-08-26', [{ fecha: '2026-10-10', factor: 1.15 }],
+    { mesesBase: 1, maxEventos: 6 })
+  assert.ok(conFactorJusto.some(v => v.checkin === '2026-10-10' && v.motivo === 'evento'))
 })

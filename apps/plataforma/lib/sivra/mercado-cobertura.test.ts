@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   ventanasQuePedir, planDeVentanas, parsearParametrosPlan, detalleIngesta, ingestaFiable,
-  FUENTES_FIABLES, MAX_VENTANAS_DEFECTO, MAX_VENTANAS_TECHO,
+  mesesSinBucket, FUENTES_FIABLES, MAX_VENTANAS_DEFECTO, MAX_VENTANAS_TECHO, MIN_FECHAS_BUCKET,
 } from './mercado-cobertura.ts'
 import { ventanasDelBarrido } from './mercado-ventanas.ts'
 
@@ -376,4 +376,103 @@ test('un evento PREVISTO no se cuela por delante de una noche congelada', () => 
   ]
   const r = planDeVentanas(pedidas, new Map([[4, ['prop_duplex_center']]]), [], '2026-08-18', 2)
   assert.deepEqual(r.ventanas.map(v => v.checkin), ['2026-09-18', '2026-09-21'])
+})
+
+// ── Meses sin bucket elegible (26/08/2026) ─────────────────────────────────────────────────────
+// El círculo que cerraban: el plan mide las noches de evento de un mes lejano, pero el bucket
+// mensual del motor las excluye, así que ese mes nunca llega a las 3 fechas normales que le hacen
+// falta — y su salto de evento sigue anclado al percentil global. Ver `mesesSinBucket`.
+
+const mesesDe = (...m: string[]) => new Set(m)
+
+test('mesesSinBucket: por debajo del mínimo es corto, en el mínimo ya no', () => {
+  const cobertura = [
+    { checkin: '2026-09-04', aforo: 4, ultimaMedicion: '2026-08-01', comps: 6 },
+    { checkin: '2026-09-12', aforo: 4, ultimaMedicion: '2026-08-01', comps: 6 },
+    { checkin: '2026-09-22', aforo: 4, ultimaMedicion: '2026-08-01', comps: 6 },
+    { checkin: '2027-04-02', aforo: 4, ultimaMedicion: '2026-08-01', comps: 6 },
+    { checkin: '2027-04-10', aforo: 4, ultimaMedicion: '2026-08-01', comps: 6 },
+  ]
+  const cortos = mesesSinBucket(cobertura, new Set(), mesesDe('2026-09', '2027-04'))
+  assert.deepEqual([...cortos], ['2027-04'], 'septiembre llega a 3 fechas; abril se queda en 2')
+  assert.equal(MIN_FECHAS_BUCKET, 3)
+})
+
+test('mesesSinBucket: las fechas de EVENTO no cuentan (el motor las excluye del bucket)', () => {
+  // Caso real de abril-2027: 6 fechas medidas, 4 de ellas de Feria/Semana Santa → 2 útiles.
+  const cobertura = ['2027-04-02', '2027-04-10', '2027-04-16', '2027-04-17', '2027-04-18', '2027-04-19']
+    .map(checkin => ({ checkin, aforo: 12, ultimaMedicion: '2026-08-20', comps: 8 }))
+  const feria = new Set(['2027-04-16', '2027-04-17', '2027-04-18', '2027-04-19'])
+  assert.deepEqual([...mesesSinBucket(cobertura, feria, mesesDe('2027-04'))], ['2027-04'])
+  assert.deepEqual([...mesesSinBucket(cobertura, new Set(), mesesDe('2027-04'))], [],
+    'sin excluir eventos parecería cubierto — que es justo la ilusión que crea el círculo')
+})
+
+test('mesesSinBucket: un mes con CERO mediciones es el MÁS corto, no uno que no existe', () => {
+  // La trampa de contar solo lo medido: julio-2027 no aparece en la cobertura, así que un recuento
+  // ingenuo lo dejaría fuera de la lista de cortos — el mes más a ciegas, el único sin declarar.
+  const cobertura = [{ checkin: '2026-09-04', aforo: 4, ultimaMedicion: '2026-08-01', comps: 6 }]
+  const cortos = mesesSinBucket(cobertura, new Set(), mesesDe('2026-09', '2027-07'))
+  assert.ok(cortos.has('2027-07'), 'un mes sin una sola fecha medida tiene que salir como corto')
+  assert.ok(cortos.has('2026-09'), 'y una sola fecha tampoco llega al mínimo')
+})
+
+test('mesesSinBucket: comps 0 es «medida sin muestra», no una fecha del bucket', () => {
+  const cobertura = ['2027-05-07', '2027-05-08', '2027-05-09']
+    .map(checkin => ({ checkin, aforo: 4, ultimaMedicion: '2026-08-20', comps: 0 }))
+  assert.deepEqual([...mesesSinBucket(cobertura, new Set(), mesesDe('2027-05'))], ['2027-05'])
+})
+
+test('la cola antepone el MES CORTO a la 1ª fecha de un mes que ya tiene bucket', () => {
+  // Sin `bucket` mandaría la ronda: primero la fecha base de septiembre (ronda 0), y las de
+  // profundidad de mayo (ronda 2) se quedarían para el final de la cola — o sea, nunca.
+  const plan = [
+    { checkin: '2026-09-04', checkout: '2026-09-06', motivo: 'mes' as const, ronda: 0 },
+    { checkin: '2027-05-14', checkout: '2027-05-16', motivo: 'mes' as const, ronda: 2 },
+  ]
+  const aforos = new Map([[4, ['prop_duplex_center']]])
+  const sinContexto = planDeVentanas(plan, aforos, [], HOY, 2)
+  assert.deepEqual(sinContexto.ventanas.map(v => v.checkin), ['2026-09-04', '2027-05-14'])
+
+  const conContexto = planDeVentanas(plan, aforos, [], HOY, 2, {}, {
+    mesesCortos: mesesDe('2027-05'), fechasEvento: new Set(),
+  })
+  assert.deepEqual(conContexto.ventanas.map(v => v.checkin), ['2027-05-14', '2026-09-04'])
+  assert.deepEqual(conContexto.ventanas.map(v => v.mesCorto), [true, false])
+})
+
+test('una noche de EVENTO de un mes corto NO se marca: medirla no acerca el bucket', () => {
+  const plan = [
+    { checkin: '2027-04-16', checkout: '2027-04-18', motivo: 'evento' as const, ronda: 1, factor: 3.2 },
+    { checkin: '2027-04-27', checkout: '2027-04-29', motivo: 'mes' as const, ronda: 2 },
+  ]
+  const r = planDeVentanas(plan, new Map([[4, ['prop_duplex_center']]]), [], HOY, 2, {}, {
+    mesesCortos: mesesDe('2027-04'), fechasEvento: new Set(['2027-04-16']),
+  })
+  const porFecha = new Map(r.ventanas.map(v => [v.checkin, v.mesCorto]))
+  assert.equal(porFecha.get('2027-04-27'), true)
+  assert.equal(porFecha.get('2027-04-16'), false, 'el bucket mensual excluye las fechas de evento')
+})
+
+test('lo CONGELADO sigue mandando sobre el mes corto', () => {
+  // El orden importa: una noche de evento confirmado sin medir está congelada a un precio
+  // posiblemente falso HOY. Un mes sin bucket es un problema estructural, no una urgencia diaria.
+  const plan = [
+    { checkin: '2027-05-14', checkout: '2027-05-16', motivo: 'mes' as const, ronda: 2 },
+    { checkin: '2026-09-20', checkout: '2026-09-22', motivo: 'evento' as const, ronda: 1,
+      eventoConfirmado: true, factor: 2.5 },
+  ]
+  const r = planDeVentanas(plan, new Map([[4, ['prop_duplex_center']]]), [], HOY, 2, {}, {
+    mesesCortos: mesesDe('2027-05'), fechasEvento: new Set(['2026-09-20']),
+  })
+  assert.deepEqual(r.ventanas.map(v => v.checkin), ['2026-09-20', '2027-05-14'])
+})
+
+test('sin `bucket` el orden es EXACTAMENTE el de antes', () => {
+  const plan = ventanasDelBarrido(HOY, [], { mesesBase: 8, maxEventos: 0, fechasPorMes: 3 })
+  assert.deepEqual(
+    planDeVentanas(plan, AFOROS, [], HOY, 20).ventanas,
+    planDeVentanas(plan, AFOROS, [], HOY, 20, {}, undefined).ventanas,
+  )
+  assert.ok(planDeVentanas(plan, AFOROS, [], HOY, 20).ventanas.every(v => v.mesCorto === false))
 })
