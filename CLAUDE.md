@@ -202,14 +202,20 @@ siempre, y el merge lo rechaza la regla con `12 of 12 required status checks are
 🚨 **«Expected» NO es «Failing».** Antes de tocar nada, mira si algún check está en ROJO: si los 12
 están en Expected y ninguno rojo, no hay nada roto — es que **no han arrancado**.
 
-**La salida: `workflow_dispatch` sobre la RAMA.** Los cuatro workflows que aportan checks requeridos ya
-lo llevan (`tests.yml`, `ci.yml`, `qa.yml`, `gitleaks.yml`). Se lanzan con
-`actions_run_trigger` (o Actions → Run workflow) apuntando a la rama del PR.
+🔴 **`workflow_dispatch` NO desbloquea el merge. Comprobado, no supuesto (26/08/2026).** Se lanzaron
+los tres workflows sobre la rama, los **12 jobs requeridos acabaron en `success` sobre el head exacto
+del PR** — y el merge siguió devolviendo `12 of 12 required status checks are expected`. Se repitió
+sobre **dos heads distintos** (`a1c5b23e` y `4134a64c`) con idéntico resultado. **El ruleset no cuenta
+los check runs que vienen de un `workflow_dispatch`**, aunque el nombre del job y el sha coincidan.
+No pierdas la tarde por ahí: sirve para SABER si el código está sano, no para desbloquear.
 
-⚠️ **El orden importa, y es donde se pierde una tarde:** los check runs aterrizan en el **head que
-tenga la rama EN EL MOMENTO del dispatch**. Si luego empujas un commit más, el head cambia y esos
-checks se quedan huérfanos en el sha viejo → el PR sigue bloqueado y parece que el dispatch «no
-cuenta». **Lanza los dispatch SIEMPRE después del último push**, y si vuelves a empujar, relánzalos.
+⚠️ Y si aun así lo lanzas para verificar: los check runs aterrizan en el **head del momento**. Si
+luego empujas otro commit, se quedan huérfanos en el sha viejo. Lánzalo después del último push.
+
+✅ **Lo que SÍ desbloquea: que un HUMANO toque el PR.** Un push desde una cuenta de persona (no el
+token de App) dispara los workflows por el evento `pull_request` y entonces los 12 sí cuentan. Es
+intervención manual: **no hay forma de que el agente lo resuelva solo**, así que dilo pronto y no
+des veinte vueltas.
 
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
@@ -222,6 +228,12 @@ salió verde):
 
 Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
 desbloquea nada.
+
+📌 **Consecuencia estructural, para decidir con calma (pendiente al 26/08/2026):** mientras esto siga
+así, **ningún PR abierto por el agente puede mergearse sin que Alberto intervenga a mano**. Arreglarlo
+de raíz es una decisión suya y hay al menos tres caminos —dar a la App permiso para disparar
+workflows, sacar de «required» los checks que no puede satisfacer, o añadirse a la *Bypass list*—
+y **ninguno debe tomarse sobre la marcha para desatascar un PR**: es configuración del repo.
 
 🚫 **Lo que NO se hace:**
 - **Bypass del ruleset.** La regla es un **Ruleset**, no una Branch protection clásica: **no hay
