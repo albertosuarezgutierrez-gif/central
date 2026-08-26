@@ -78,7 +78,11 @@ Salvaguardas para no perder información:
   manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
   🚨 **La cartera NO está migrada:** los 32.600 clientes / 28.843 pólizas siguen en el Supabase de **Manuel
   Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
-  CIMA/EIAC** → el corte necesita fecha acordada, no es una migración en frío. `schema seguros` vacío ≠ la
+  CIMA/EIAC**. ⚠️ **Eso NO la convierte en una migración en caliente** (se creyó así hasta el 26/08/2026):
+  el CRM **todavía no está operativo** —no hay nadie usándolo— y **los ficheros de EIAC se pueden
+  consultar y descargar cuando se quiera**, así que una pausa del cron no deja sin servicio a nadie ni
+  pierde datos: se re-lanza el pull y entra lo pendiente. El traspaso **no necesita ventana ni fecha
+  acordada**; va paso a paso, al ritmo de Manuel. `schema seguros` vacío ≠ la
   correduría no tiene datos: el dashboard lo dice y no pinta KPIs a 0. ⚠️ Las **86 políticas RLS** de ese CRM
   se resuelven TODAS por `auth.uid()` de Supabase Auth, así que al re-plataformar la auth el aislamiento pasa
   a ser cosa del código (con BYPASSRLS el fallo sería «se ve todo sin fallar»). Plan, mensaje a Manuel y pasos

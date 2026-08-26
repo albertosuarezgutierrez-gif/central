@@ -3,8 +3,10 @@
 > **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Ejecución EN MARCHA, paso a paso.**
 > 🔁 **No hay cita:** Alberto le pide a Manuel **una cosa cada vez** y él responde cuando puede. Ver
 > «CAMBIO DE MODO», abajo — manda sobre el guion de la ventana 13:00–15:00, que queda de alternativa.
-> El **único paso con reloj** es transferir el repo: el `CRON_SECRET` no viaja y CIMA se pararía **en
-> silencio**, así que va el último y con Alberto delante. Paso 1 en curso: las copias de seguridad.
+> ⚪ **Y NO hay ningún paso con reloj** (corregido por Alberto el 26/08): el CRM aún no está operativo
+> y **los ficheros de EIAC se piden cuando se quiera**, así que una pausa del cron no deja sin servicio
+> a nadie ni pierde datos. Lo único irreversible siguen siendo **las claves y los secrets de TIREA**.
+> Paso 1 en curso: las copias de seguridad.
 > 🔑 Y son **DOS claves**, no una: la de cifrado (si se pierde, los IBANs quedan ilegibles — falla
 > ruidoso) y la del **índice ciego** (si cambia, los clientes **dejan de encontrarse** aunque estén
 > ahí — **falla en silencio**, y una búsqueda vacía se lee como «no existe»). Se respaldan las dos y
@@ -504,21 +506,55 @@ mismo `ref` (las cadenas de conexión no cambian) y mover la app de Fly entre or
 mantiene el nombre, así que `asegura-app-cima-adapter.fly.dev` sigue respondiendo. **Nadie se entera
 de que la cosa ha cambiado de dueño.** Cada paso se puede hacer un martes y el siguiente el jueves.
 
-### 🔴 La ÚNICA excepción: el repositorio
+### 🔴→⚪ CORRECCIÓN DE ALBERTO (26/08/2026): **no hay servicio que cortar. Se cae la urgencia entera**
 
-Transferir el repo **sí corta CIMA**, y lo corta **en silencio**: el workflow viaja, pero el
-`CRON_SECRET` **no** (es un secret de GitHub Actions, no del repo). El cron sigue disparándose a su
-hora, llama a la app, la app le contesta que no está autorizado, y **no entra ni una póliza sin que
-nada dé error**. Por eso:
+> Palabras suyas: *«el programa aún no está operativo, no dejaría sin servicio y EIAC se puede
+> consultar cuando queramos, no hay miedo de dejar sin servicio nada.»*
 
-- El repo va **el último**, cuando todo lo demás esté hecho y verificado.
-- El día que se haga, **Alberto tiene que estar delante**: aceptar la transferencia, reconectar el
-  Git en Vercel, reponer el `CRON_SECRET`, comprobar que Actions está habilitado y **disparar el cron
-  a mano** para ver filas nuevas. Media hora larga, seguida.
-- Se hace **por la tarde**, después del pull de las 11:30: así hay ~18 h de margen hasta el de las
-  5:30, que es la prueba que cierra.
+Dos hechos que este documento no tenía y que **invalidan** el andamiaje de urgencia que se montó sobre
+la respuesta de Manuel:
 
-**Todo lo demás no tiene reloj.**
+1. **El CRM todavía no está en uso.** No hay usuarios dentro, así que ninguna transferencia —Vercel,
+   Supabase, Fly— deja a nadie tirado aunque la app parpadee.
+2. **Los ficheros de EIAC se pueden consultar y descargar cuando se quiera.** El cron es una
+   *comodidad*, no la única ventana al dato: si deja de tirar tres días, los ficheros **siguen ahí** y
+   entran en cuanto se relance el pull. Y el ingestor deduplica por hash, así que re-tirar es seguro.
+
+**Qué deja de ser verdad, dicho sin rodeos:**
+
+| Lo que decía este doc | Lo correcto |
+|---|---|
+| «Migración **en caliente**: el día que Manuel apague su Vercel, la correduría deja de recibir de sus compañías» | **No.** No hay servicio vivo y el dato no se pierde: se vuelve a pedir |
+| «El corte necesita **fecha y hora acordadas**» | **No hace falta ninguna.** Paso a paso, al ritmo de Manuel |
+| Ventana **13:00–15:00**, fuera de los pulls de 5:30/11:30 | **Irrelevante.** Cualquier hora vale |
+| El repo va el último, **con Alberto delante**, porque el `CRON_SECRET` no viaja | El secreto **sigue sin viajar**, pero su pérdida ya no «para la correduría»: **pausa el pull**. Se repone cuando se pueda y se relanza. Deja de ser 🔴 y pasa a ser una casilla más de la lista |
+| La prueba que cierra es el cron **automático** de las 5:30 del día siguiente | Sigue siendo **la buena** —demuestra que la cadena entera funciona sola— pero ya no es una cuenta atrás: si falla, se arregla al día siguiente y no ha pasado nada |
+
+**Lo que NO cambia, y es lo único que de verdad importa:** las **dos claves de cifrado** y los
+**secrets de Fly (TIREA)** siguen siendo irrecuperables. Que no haya prisa no las hace menos
+irreversibles — al contrario: ahora **no hay ninguna excusa** para no tener las copias antes de tocar
+nada. Y la verificación de Supabase sigue siendo **dos pruebas, no una** (descifrar Y buscar), porque
+el índice ciego falla en silencio y eso no depende de que haya usuarios o no.
+
+**Consecuencia práctica:** la tabla de 11 pasos de abajo se mantiene **en su orden**, porque el orden
+sigue siendo el sensato (copias primero, invitaciones, transferencias, repo, verificación). Lo que se
+borra es **el reloj**: ningún paso tiene ventana, ninguno exige a los dos a la vez, y ninguno urge.
+
+
+### ⚪ El repositorio: lo que sí sigue siendo cierto, sin el drama
+
+Transferir el repo **sí interrumpe el pull de CIMA**, y lo hace **sin avisar**: el workflow viaja, pero
+el `CRON_SECRET` **no** (es un secret de GitHub Actions, no del repositorio). El cron se seguiría
+disparando, la app le contestaría que no está autorizado y **no entraría nada sin que nada diera error**.
+
+Lo que cambia tras la corrección de Alberto es la **consecuencia**, no el mecanismo: eso ya no deja a
+la correduría sin recibir de sus compañías —**los ficheros siguen en EIAC y se piden cuando se
+quiera**—, así que es una **pausa**, no una pérdida. Se repone el secreto cuando se pueda y se relanza
+el pull; el ingestor deduplica por hash, o sea que re-tirar no duplica nada.
+
+Sigue siendo el paso que **conviene** dejar para el final —es el único que requiere que Alberto haga
+tres cosas seguidas (reconectar el Git en Vercel, reponer el secreto, comprobar que Actions sigue
+habilitado)— pero **ya no hay que estar delante ni elegir la hora**.
 
 ### 🪜 La secuencia, y qué cierra cada paso
 
@@ -532,13 +568,13 @@ nada dé error**. Por eso:
 | **5** | Manuel | **Supabase → Transfer project** | 🔑 **LAS DOS PRUEBAS**: Alberto **descifra** un IBAN real **y encuentra** un cliente buscando por email **y** por DNI | Si solo se hace la primera, un índice ciego roto pasa desapercibido |
 | **6** | Manuel | **Fly → mover la app del adaptador** a la org de Alberto | `fly secrets list` muestra los nombres **y** `/health` responde | Bajo, y el paso 1 lo cubre |
 | **7** | Los dos | **Blob**: re-apuntar el token o mover los ~4 ficheros | Los 4 se abren desde la app | — |
-| **8** | 🔴 **Los dos, con Alberto delante** | **GitHub: transferir los dos repos** → aceptar, reconectar Git en Vercel, **reponer `CRON_SECRET`**, comprobar Actions, **disparar el cron a mano** | El disparo manual devuelve **filas nuevas**, no un 200 vacío | 🔴 **Aquí sí**: CIMA se para en silencio si el secreto no vuelve |
+| **8** | Los dos | **GitHub: transferir los dos repos** → aceptar, reconectar Git en Vercel, **reponer `CRON_SECRET`**, comprobar Actions, **disparar el cron a mano** | El disparo manual devuelve **filas nuevas**, no un 200 vacío | El pull se **pausa** en silencio si el secreto no vuelve. No se pierde nada: los ficheros siguen en EIAC y se re-tiran (dedupe por hash) |
 | **9** | Alberto | Repuntar **Codeoscopic** y **Meta/WhatsApp** si el dominio se movió + una **cotización** de punta a punta (**cotizar sí, emitir NO**) | Verde | — |
-| **10** | Alberto | **La mañana siguiente al paso 8**: que el cron **automático de las 5:30** entre solo | Filas nuevas sin que nadie lo dispare | — |
+| **10** | Alberto | Alguna mañana después del paso 8: que el cron **automático de las 5:30** entre solo | Filas nuevas sin que nadie lo dispare | — |
 | **11** | Los dos | Sacar a Manuel del equipo → **Manuel cancela su Pro** | Fin de la duplicidad | — |
 
-**Nada se apaga hasta el 10.** Y como no hay cita, **nada obliga a seguir**: si un paso se atasca, el
-anterior sigue en pie y la correduría sigue funcionando exactamente igual.
+**Nada se apaga hasta el 10.** Y como no hay cita ni servicio vivo, **nada obliga a seguir**: si un
+paso se atasca, el anterior sigue en pie y no hay nadie esperando al otro lado.
 
 ### 📨 Mensajes por paso — **BORRADORES. Ninguno se envía sin que Alberto lo diga**
 
@@ -760,11 +796,17 @@ conexiones. Esto es lo que se puede afirmar mirando su base de datos.
 | Lo que ha metido en la BD | **188 pólizas**, 184 recibos, 96 intervinientes, y **67 de los 67 siniestros** |
 | **Último fichero descargado** | **25/08/2026 — ayer.** La última póliza creada es del 24/08 |
 
-🚨 **Esto no es una migración de un sistema parado: es una migración EN CALIENTE.** Hay un proceso
-corriendo en el Vercel de Manuel que descarga ficheros de las aseguradoras **todos los días** y los
-vuelca aquí. El día que se apague su despliegue, la correduría deja de recibir pólizas, recibos y
-siniestros de sus compañías. Eso convierte el punto «no desactives nada» del mensaje a Manuel en el
-más importante de todos, y obliga a que el corte tenga **fecha y hora acordadas**, no «cuando acabemos».
+~~🚨 **Esto no es una migración de un sistema parado: es una migración EN CALIENTE.**~~
+🔴 **CORREGIDO el 26/08/2026 por Alberto, y era el error de fondo de este documento.** Sí hay un
+proceso corriendo en el Vercel de Manuel que descarga ficheros de las aseguradoras **todos los días** y
+los vuelca aquí — eso es cierto y sigue siéndolo. Lo que era falso es la conclusión: **el CRM todavía
+no está operativo** (nadie lo usa) y **los ficheros de EIAC se pueden consultar y descargar cuando se
+quiera**. Así que apagar su despliegue **pausa** el pull, no corta el suministro, y lo pendiente entra
+en cuanto se relance (el ingestor deduplica por hash). **No hacen falta fecha ni hora acordadas.**
+
+Que un proceso corra a diario no significa que alguien dependa de él **hoy**: eso es lo que se dio por
+supuesto sin preguntar. Lo que sí sigue en pie del párrafo original es el «no desactives nada» —por
+prudencia, no por urgencia— y el valor del parser.
 
 Los estados del ingestor (`pending | persisted | confirmed | review | review_salud | deferred | error`)
 son la prueba de que **el parser está rodado**: `review_salud` y `deferred` no se diseñan de antemano,
@@ -819,7 +861,7 @@ cuatro cosas concretas**, y son mucho más fáciles de conceder:
 3. **La lista de variables de entorno** (solo nombres aquí; los valores por gestor de contraseñas) y
    **la lista de crons** de su Vercel — ahí está el «vencimientos-detector» que dispara
    `ofertas_automaticas` a 30/15/7 días del vencimiento.
-4. **Una fecha y hora acordadas para el corte**, por lo de CIMA.
+4. ~~**Una fecha y hora acordadas para el corte**, por lo de CIMA.~~ **Ya no hace falta** (26/08/2026): sin servicio vivo y con EIAC consultable a demanda, el traspaso va paso a paso.
 
 ### 🧾 Y lo que no es técnico y puede tumbarlo todo
 

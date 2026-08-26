@@ -25,6 +25,19 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### ⚪ (26/08/2026) Correduría: NO es una migración en caliente — se cae la urgencia entera
+
+Alberto corrige el error de fondo del plan: **el CRM aún no está operativo** (nadie lo usa) y **los
+ficheros de EIAC se consultan y descargan cuando se quiera**. Que el cron de CIMA corra a diario NO
+significa que alguien dependa de él hoy — eso se dio por supuesto sin preguntar. Apagar el Vercel de
+Manuel **pausa** el pull, no corta suministro, y lo pendiente entra al relanzarlo (dedupe por hash).
+Se cae: «migración en caliente», «fecha y hora acordadas», la ventana 13:00–15:00 y el «con Alberto
+delante» del paso del repo. **Sigue en pie lo único irreversible**: las 2 claves + los secrets de Fly
+(TIREA), y la verificación de Supabase con DOS pruebas (descifrar Y buscar). Corregido también en el
+`CLAUDE.md` raíz, que afirmaba lo contrario. PR #1759.
+
+---
+
 ### 🔁 (26/08/2026) Correduría: el traspaso se hace SIN CITA, paso a paso — y PR #1752 mergeado
 
 Alberto descarta fijar día y hora: le pide a Manuel **una cosa cada vez** y él contesta cuando puede.
