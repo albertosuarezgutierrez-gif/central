@@ -208,10 +208,14 @@ acción posible —el propio texto decía «no hay que hacer nada»— y el dedu
 evitaba repetirla, no evitaba el ruido. El cron `psd2-sync` ahora manda Telegram SOLO por avisos
 críticos; las notas ℹ️ viajan como contexto dentro de esa alerta y siguen pintándose en permanencia
 en `/banca` (también en verde), que es donde importan: declaran desde cuándo hay datos de verdad.
-Retirados `claveAviso`/`avisosNuevos` y `avisosPersistidos()` (sin consumidor). 1625 tests en verde.
+Retirados `claveAviso`/`avisosNuevos` y `avisosPersistidos()` (sin consumidor). 1634 tests en verde.
 De paso, respondido el porqué de los 89 días: es el `date_from` que se pide en CADA pasada diaria
 (tope del consentimiento PSD2), para recoger apuntes tardíos y rellenar huecos; el dedupe descarta
-lo repetido.
+lo repetido. **PR #1739 MERGEADO y en producción** (deploy `66426f7` READY): verificado sobre `main`
+que solo queda un `tgAlert` y está bajo `if (criticos.length)`, y que la conexión de Kutxabank tiene
+hoy 1 nota ℹ️ y 0 críticos → la pasada de mañana a las 06:00 será muda. Actualizados el landmine del
+PR #1575 en `apps/plataforma/CLAUDE.md` (describía el dedupe que ya no existe) y la skill
+`psd2-health-check` (que no llegue aviso de una nota es lo ESPERADO, no un vigía roto).
 
 ### 📍 (26/08/2026) Repaso de las direcciones del portfolio: el lado de los Busto está bien, faltaba el CP
 Tras cerrar lo de House Sevillana, Alberto pidió repasar Bustos Tavera y el Dúplex. **El lado NO

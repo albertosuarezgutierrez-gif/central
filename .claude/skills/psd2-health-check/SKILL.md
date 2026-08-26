@@ -44,6 +44,10 @@ WHERE origen = 'psd2';
 > `partirAvisos()` de `apps/plataforma/lib/psd2-semaforo.ts` — úsalo como criterio, no leas el texto a
 > ojo. Lo que sí hay que decir de una nota `ℹ️` es **desde cuándo hay datos de verdad** en esa cuenta:
 > el hueco anterior no está medido y no se afirma «no hubo movimientos» sobre él (21/08/2026, PR #1575).
+> **Desde el 26/08/2026 (PR #1739) el cron `psd2-sync` NO manda Telegram por una nota `ℹ️` sola** —
+> ni la primera vez: es una limitación permanente del banco sin acción posible. Viaja como contexto
+> dentro de una alerta crítica y se pinta en permanencia en `/banca`. Que no llegue aviso de una nota
+> es lo ESPERADO, no un vigía roto; esta skill sí debe seguir mirándola en `ultimo_avisos` y contarla.
 
 Evalúa:
 - `ultimo_movimiento < CURRENT_DATE - 2` → **anomalía crítica** (>48h sin datos)
