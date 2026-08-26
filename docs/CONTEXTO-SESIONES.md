@@ -2895,6 +2895,21 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 🧾 (26/08/2026) DIGI no era «proveedor nuevo»: la huella es el NIF, y el histórico entró sin NIF
+
+- La bandeja avisaba «Proveedor nuevo» cada mes porque `gastos_reglas` se indexa por **huella = NIF**
+  (`A84919760`) y las filas de ene/feb se importaron a mano (`proveedor:'Importado'`, sin NIF ni huella).
+  Confirmadas jul+ago → regla creada (`prop_multi_apartamentos`/SUMINISTROS, vistas=2, banda 68,40–83,60€).
+- **Faltaban mar–jun en `gastos`** aunque el recibo estaba cobrado: el PDF venía adjunto al aviso de DIGI
+  (y el de abril hasta estaba archivado en Drive) pero el agente **archivó sin imputar**. Imputadas a mano
+  las 4 (`origen='manual-claude'`); serie ene–ago 2026 completa = 8 facturas, 608,50€.
+- **⚠️ Titularidad:** las facturas van a nombre de **Punto y Coma Gestión SL** (NIF B90446683), no de Alberto
+  persona física; el cambio de titular lleva pedido desde el 01/02/2026 y DIGI seguía pidiendo documentación
+  el 08/07/2026. Mientras siga así, deducirlas en el IRPF de Alberto no se sostiene con la factura.
+- Pendiente de decidir: si se reparte el 76,00€ entre los 3 pisos que sí usan DIGI (Socorro + los 2 de Busto
+  Tavera; el Dúplex va con otro proveedor y otra cuenta). Hoy va 100% a «Gastos compartidos», que el P&L por
+  piso EXCLUYE. Ojo: el «reparto sugerido» de plataforma reparte entre TODOS los pisos, Dúplex incluido.
+
 ## 🟡 (21/08/2026) El Telegram del PSD2 contradecía al panel — PR #1575
 - Alberto: «me dice esto y en mi panel pone q todo ok». **Mentía el Telegram**, no el panel:
   Kutxabank ****0855 con último mov. del 20/08 (34 en 30d) y el sync de hoy 06:00 limpio; el único
