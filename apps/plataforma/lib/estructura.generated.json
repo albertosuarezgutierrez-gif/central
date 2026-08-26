@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-25T13:53:07Z",
+  "generadoEn": "2026-08-26T06:07:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4580,6 +4580,11 @@
       "description": "Recordatorio mensual de obligaciones legales pendientes de implementar en la vertical RRHH (Portal del Empleado). Lee el roadmap, filtra los ítems 🔴 obligatorios no completados y genera un informe de plazos. Úsala el primer día de cada mes o cuando Alberto quiera un pulso del estado de compliance de RRHH."
     },
     {
+      "id": "seo-house-sevillana",
+      "name": "seo-house-sevillana",
+      "description": "SEO especializado para la landing page del apartamento turístico House Sevillana (Sevilla, centro histórico, Calle Socorro 24 — barrio de San Julián, 290 m², 6 dormitorios, 4 baños, parking privado). Cubre generación de metadatos (title, meta description, Open Graph, Twitter Cards), schema.org JSON-LD (LodgingBusiness, FAQPage, BreadcrumbList), keyword research multi-idioma (ES/EN/FR/DE/IT), reescritura de copy con foco en conversión y reservas directas para esquivar la comisión de Booking del 19,72%, auditoría SEO técnica para Next.js 15 App Router, y configuración multi-idioma con hreflang. Usa esta skill SIEMPRE que Alberto pida cualquier cosa relacionada con SEO, posicionamiento, metadatos, schema, keywords, copy de la landing, auditoría web, hreflang o multi-idioma de House Sevillana, aunque no diga la palabra SEO explícitamente."
+    },
+    {
       "id": "sivra-maestro",
       "name": "sivra-maestro",
       "description": ">"
@@ -5083,7 +5088,7 @@
     "verticales": 10,
     "packages": 38,
     "capacidades": 23,
-    "skills": 35,
+    "skills": 36,
     "apis": 1178,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
