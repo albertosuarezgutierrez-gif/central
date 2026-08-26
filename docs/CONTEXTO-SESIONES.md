@@ -25,6 +25,19 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🔭 (26/08/2026) Booking ya puede confirmar las fechas caras: horizonte 12 meses + meses sin bucket primero
+
+Regla de Alberto («sube en cuanto se huela el evento y confirma después con Booking»): la primera
+mitad ya funcionaba, la segunda NO podía llegar a las fechas más caras. Círculo: los eventos gordos
+caen lejos, el plan mide sus noches, pero el bucket mensual EXCLUYE las fechas de evento → esos meses
+nunca eran elegibles y el salto seguía anclado a la global. Medido en prod: abr/may/jun/jul/ago-2027
+con 2/2/1/1/0 fechas normales. Dos cambios: `mesesSinBucket` + nivel nuevo en la cola (tras lo
+congelado, antes que la ronda) y horizonte 8→12 meses (`MESES_BASE_DEFECTO`) — con 8, may/jun tenían
+SOLO fechas de evento y jul/ago no existían. 52 ventanas vírgenes pasan al frente; el tope por pasada
+no se toca. Guardián que lee el fuente para que nadie reacorte el horizonte. PR pendiente.
+
+---
+
 ### 🏦 (26/08/2026) psd2-health-check — feed sano, sin anomalía
 
 Pasada programada: `origen='psd2'` último movimiento 2026-08-25 (1 día), mov_30d=52 vs
