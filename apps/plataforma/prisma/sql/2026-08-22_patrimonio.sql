@@ -166,7 +166,7 @@ SELECT v.* FROM (
     'act_monte_carmelo',
     (SELECT id FROM cuentas WHERE email = 'alberto.suarez.gutierrez@gmail.com'),
     'Monte Carmelo 68 — vivienda habitual', 'inmueble', NULL,
-    'Calle Monte Carmelo 68, Sevilla', NULL, NULL, NULL,
+    'Calle Monte Carmelo 68, 41011 Sevilla', NULL, NULL, NULL,
     'vivienda_habitual', 'propiedad', NULL, NULL, NULL,
     NULL, NULL,
     NULL, NULL,

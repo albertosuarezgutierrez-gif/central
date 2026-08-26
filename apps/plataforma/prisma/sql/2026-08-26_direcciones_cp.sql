@@ -14,8 +14,8 @@
 -- «Francisco Molina» porque el piso tiene DOS accesos, y hasta ahora la dirección guardada
 -- yuxtaponía los dos portales sin decir cuál era el registral. El registral es Villasís 1.
 --
--- Monte Carmelo 68 (vivienda habitual) se deja como está: no consta su CP en ninguna fuente del
--- repo y no se inventa.
+-- Monte Carmelo 68 (vivienda habitual) es 41011 — Los Remedios / Triana, el ÚNICO de los cinco
+-- que no está en el casco antiguo (confirmado por Alberto, 26/08/2026).
 
 UPDATE patrimonio_activos SET direccion = 'Calle Bustos Tavera 22, bajo derecha, 41003 Sevilla'
  WHERE id = 'act_luxury_busto';
@@ -26,3 +26,6 @@ UPDATE patrimonio_activos SET direccion = 'Calle Bustos Tavera 22, bajo izquierd
 UPDATE patrimonio_activos
    SET direccion = 'Pasaje Villasís 1, Es:2 Pl:01 Pt:C, 41003 Sevilla (acceso alternativo por Pasaje Francisco Molina 4)'
  WHERE id = 'act_duplex_center';
+
+UPDATE patrimonio_activos SET direccion = 'Calle Monte Carmelo 68, 41011 Sevilla'
+ WHERE id = 'act_monte_carmelo';

@@ -44,8 +44,10 @@ sin decir cuál mandaba, y `equipaje.ts`/`sivra-maestro` daban «C. Martín Vill
 dirección (es la zona). SQL `2026-08-26_direcciones_cp.sql` (el seed lleva `ON CONFLICT DO NOTHING`,
 así que hacía falta UPDATE) aplicado ya a prod. Guardián nuevo:
 `test/regression-direcciones-pisos.test.ts` (7 tests; verificado por mutación que muerde al cruzar
-los lados, al quitar un CP y al cruzar el lado en la skill). Pendiente de Alberto: los dos Busto
-siguen sin ref. catastral (NULL) y Monte Carmelo 68 sin CP — no se inventan. PR draft.
+los lados, al quitar un CP y al cruzar el lado en la skill). **Monte Carmelo 68 = 41011** (Alberto,
+en la misma sesión): el único de los cinco fuera del casco antiguo, así que el guardián compara el
+CP EXACTO por piso y no «que haya alguno». Pendiente de Alberto: los dos Busto siguen sin ref.
+catastral (NULL) — no se inventa. PR #1734.
 
 ### ✅ (26/08/2026) House Sevillana: la dirección mala, resuelta de raíz — la skill sincronizada se trae al repo
 Tercera detección seguida de lo mismo (19, 25 y 26/08) sin poder tocarlo: `seo-house-sevillana` vivía
