@@ -32,6 +32,22 @@
 
 ---
 
+### 🎢 (27/08/2026) La segunda llave funciona — y Luxury no sube a ciegas: OSCILA
+Primera pasada con la segunda llave (14:30, deploy READY 09:29 → las 494 noches de las 08:30 son de
+código viejo). Escribió **243 noches, TODAS a la baja**, ratios **0,798–0,929**, cero fuera del raíl
+de ±20%: Busto 95 · Luxury 63 · House 56 · Dúplex 29. El raíl aguanta.
+⚠️ **No se puede afirmar aún que la corrección llegara al mercado:** las 243/243 tenían todavía el
+precio VIEJO en el último snapshot, así que los ratios (1,92/1,61/1,42/1,31×) miden el estado ANTERIOR.
+Chequeo re-armado al 28/08 10:30 UTC; si sigue viejo, el problema es de propagación al canal, no del motor.
+🚩 **Hipótesis anterior CORREGIDA:** el bloque de 51 noches de Luxury (1-jul→23-ago-2027, cero comps)
+no «sube a ciegas ~+19%/día» — **oscila** en el tope del raíl: 149 → 119 → 95 → 114 en cuatro pasadas
+de las 08:00. El precio de la misma noche baila ±20% al día sin información nueva. Sospecha a
+comprobar (no confirmada): realimentación del objetivo sobre el precio previo del propio piso.
+🔓 **Se ACOTA (no se resuelve) el CI mudo que dejó abierto #1789** (allí cambiaron el merge de la base
+Y 56 minutos): en el #1799 el push mudo fue a las 15:08 con 0 runs y el que traía `main` mergeado
+disparó los 12 a las **15:11** — tres minutos, así que **el tiempo queda descartado**. Lo que NO se
+puede decir es que la causa sea traer la base: el push siguiente (15:12), que no la tocaba, también
+disparó los 12. Encaja con lo ya escrito en `CLAUDE.md`: una vez que arrancan, cada push los dispara.
 ### 🏘️ (27/08/2026) Agente de inversión inmobiliaria CONSTRUIDO y probado con los 12 meses de Conil
 
 Fases 2 y 3 del spec, completas. Motor PURO `apps/plataforma/lib/inversion/{tipos,curva-mercado,competencia,
