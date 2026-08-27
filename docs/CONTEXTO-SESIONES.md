@@ -32,6 +32,21 @@
 
 ---
 
+### 📅 (27/08/2026) Semana Santa 2027 no existía en la tabla de eventos — y Busto vendió la Madrugá a 141€
+Al medir el «retraso de descubrimiento» salió que NO es cadencia: un evento a <60 días vista se
+convierte en precio en **3,5 h** (mediana de 141 eventos/60 días), y los que no movieron precio eran
+noches ya vendidas. El agujero es OTRO: **las cuatro fuentes descubren un evento cuando alguien lo
+publica**, y lo que más manda en Sevilla no se publica. `pricing_eventos_auto` no tenía **ni una fila**
+entre el 21 y el 28-mar-2027; lo único de esa semana era un Sevilla-Elche. Resultado, con las reservas
+reales: Busto Reform 139€/155€/**141€ la Madrugá** y Luxury 330€, **los cuatro cerrados en junio de
+2026**, nueve meses antes, a precio de marzo corriente (0,97× su marzo normal). Nuevo módulo PURO
+`lib/sivra/eventos-calendario.ts` (20 tests): Semana Santa **derivada de la Pascua** (Meeus, contrastada
+2026-2038) y el resto **por tabla año a año** — la Feria NO se deriva a propósito, su encaje con la
+Pascua ha cambiado y una regla obsoleta pondría el ×2,5 en la semana equivocada; el año sin tabla se
+DECLARA (`aniosSinDatos`). Cron `/api/sivra/eventos/calendario` (03:30) **INERTE sin
+`SIVRA_CALENDARIO_ACTIVO=1`**: sembrar sube precios publicados. PR #1776, pendiente del OK de Alberto
+sobre los factores.
+
 ### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
 Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
 separado se encadenan en un precio IRREVERSIBLE — un evento salta el raíl (Busto 21-feb-2027: 221€→717€
