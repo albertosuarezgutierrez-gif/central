@@ -3,8 +3,8 @@ import { Prisma } from '@prisma/client'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { puntuarTesis, agregarStats, aplicarStop, cerrar } from '@central/module-trading'
-import type { Tesis } from '@central/module-trading'
+import { puntuarTesis, agregarStats, aplicarStop, cerrar, atribuirPorEvento, cruzaEvento, finDeVentana, resumenAtribucion } from '@central/module-trading'
+import type { Tesis, EstadoEarnings } from '@central/module-trading'
 import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, HUERFANA_GRACIA_DIAS, HUERFANA_MAX_DIAS, DIAS_REFERENCIA_MAX, type ParDiferido, type HuerfanaNoResuelta } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 import { tgSend } from '@/lib/telegram'
@@ -221,6 +221,29 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // 2-ter) 📅 ATRIBUCIÓN POR EVENTO — ¿el rendimiento lo produjo la señal o el calendario?
+  //
+  // Se calcula sobre EXACTAMENTE el mismo conjunto que acaba de alimentar `trading_estrategia_stats`,
+  // pero NO lo modifica: las stats que consume `ajustesDeStats` (y por tanto la confianza del torneo)
+  // salen intactas de aquí. Esto solo ETIQUETA y publica. Que la atribución cambie una decisión sería
+  // un cambio de MODELO y va por `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
+  //
+  // Motivo (26-27/08/2026, NVDA): una posición que la víspera de sus resultados estaba en pérdida y a
+  // un 3% del stop acabó en verde por un hueco del +6,79% al publicar. Ese acierto no lo produjo
+  // ninguna estrategia, y sumado sin distinguir infla el track record que decide si se pone dinero.
+  // La ventana es la REALMENTE medida (`ventanaDias`), no el horizonte teórico.
+  const atribucion = atribuirPorEvento(
+    resultados,
+    r => cruzaEvento(
+      r.tesis.proximoEarnings ? r.tesis.proximoEarnings.toISOString().slice(0, 10) : null,
+      r.tesis.earningsEstado as EstadoEarnings,
+      r.tesis.fecha.toISOString().slice(0, 10),
+      finDeVentana(r.tesis.fecha.toISOString().slice(0, 10), r.ventanaDias),
+    ),
+    r => r.retorno,
+  )
+  const parteEvento = resumenAtribucion(atribucion)
+
   // 2-bis) Deslizamiento (proxy): a las órdenes de días ANTERIORES sin dato se les apunta el precio de
   // hoy si es su primer día hábil siguiente. En real no se ejecuta al cierre de la señal — esta columna
   // mide cuánto cuesta esa espera, y decidirá si el tramo 1 real replica al paper. Best-effort.
@@ -246,8 +269,17 @@ export async function POST(req: NextRequest) {
     if (precio === undefined) continue
     if (aplicarStop({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio)) {
       const o = cerrar({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio, hoy, 'stop')
+      // 📅 ¿Cruzó unos resultados mientras estaba abierta? Se resuelve AQUÍ porque la fila de la
+      // posición se borra tres líneas más abajo: esta orden es la única huella que sobrevive al cierre.
+      // No cambia el cierre ni el precio — solo deja el trade clasificable después.
+      const eventoDentro = cruzaEvento(
+        p.proximoEarnings ? p.proximoEarnings.toISOString().slice(0, 10) : null,
+        p.earningsEstado as EstadoEarnings,
+        p.abiertaEn.toISOString().slice(0, 10),
+        hoy,
+      )
       // createMany+skipDuplicates: con el único (simbolo,lado,fecha) un reintento de la pasada no duplica ni revienta.
-      await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: o.simbolo, lado: 'SELL', cantidad: o.cantidad, precio: o.precio, fecha: new Date(hoy), motivo: o.motivo }], skipDuplicates: true })
+      await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: o.simbolo, lado: 'SELL', cantidad: o.cantidad, precio: o.precio, fecha: new Date(hoy), motivo: o.motivo, eventoDentro }], skipDuplicates: true })
       await prisma.tradingPaperPosicion.delete({ where: { simbolo: p.simbolo } })
       cerradas++
     }
@@ -264,6 +296,7 @@ export async function POST(req: NextRequest) {
     'trading_puntuar',
     true,
     `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${Object.keys(stats).length} estrategias` +
+      (parteEvento ? ` · ${parteEvento}` : '') +
       (resumen ? ` · ⚠️ ${resumen}` : '') +
       (tesisAnuladas > 0 ? ` · ${tesisAnuladas} tesis anulada(s) por la 2ª fuente` : '') +
       (parteDiferido ? ` · ${parteDiferido}` : '') +
@@ -290,5 +323,8 @@ export async function POST(req: NextRequest) {
     contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, desfasados: contraste.desfasados, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
     diferido: { ...diferido, tesisAnuladas },
     huerfanas: { puntuadas: huerfanasPuntuadas, sinResolver: huerfanasSinResolver, fueraDePlazo: huerfanasFueraDePlazo },
+    // 📅 Para que la sesión lo cante en el resumen: un track record que no separa la señal del
+    // calendario dice que el agente acierta cuando lo que pasó es que publicó resultados.
+    atribucionEvento: atribucion,
   })
 }
