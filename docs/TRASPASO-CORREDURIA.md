@@ -2302,3 +2302,80 @@ estados y pintar además el ámbito sería ruido hasta que haya datos. Eso es Fa
 saberse si el CRM de origen filtraba por `correduria_id` o delegaba todo en RLS** — y de eso depende si
 el dump trae la columna con datos fiables. El cepo protege lo que escribamos nosotros; no adivina lo
 que hay en el dump.
+
+---
+
+## 🔴 27/08/2026 — HALLAZGO: CIMA **ya existe en `apps/plataforma`**, y está apagado
+
+Auditoría del solape de comisiones (pregunta A5). El resultado cambia una suposición de fondo de este
+documento: **creíamos que CIMA solo existía en el adaptador Java de Manuel.** No es cierto. Hay un
+**segundo cliente de CIMA, propio, dentro de `apps/plataforma`**, escrito y sin usar.
+
+| Pieza | Dónde | Estado |
+|---|---|---|
+| Cliente SOAP del WSE de TIREA | `apps/plataforma/lib/cima.ts` | Escrito. Endpoint `https://ws.cimaseg.es/wsEstandar/`, ops `recibirFicherosPendientes` / `confirmarFicherosRecibidos` |
+| Parser **EIAC 6.0 LIQ** (ancho fijo) | `lib/cima.ts:96-112` | Escrito. Cabecera tipo 0 → `codigoCompania`, `periodoRaw` (AAAAMM); pie tipo 9 → importes |
+| Tabla `cima_liquidaciones` | `prisma/sql/2026-06-24_cima_liquidaciones.sql` | Creada. `UNIQUE (cuenta_id, nombre_fichero)` |
+| Cron `cima-liq` | `lib/cron-dispatch.ts:101`, `'30 7 * * *'` | Registrado |
+| **El interruptor** | `app/api/cron/cima-liq/route.ts:26-28` | 🔴 **Sale sin hacer nada si `CIMA_WSE_ENABLED != true`.** El comentario dice que el endpoint WSE «devuelve 404» y que no está confirmado |
+
+**No es lo mismo que el adaptador de Manuel, pero se solapa.** El de plataforma baja **solo ficheros
+LIQ** (liquidaciones de comisiones); el de Manuel hace el pull completo de EIAC (CEF/POL/REC/SIN). Dos
+clientes, la misma cuenta de TIREA, la misma clave de mediador.
+
+### ✅ La pregunta A5 ya tiene respuesta escrita en el código
+
+El cron no duplica la cifra: **la contrasta**. `cima-liq/route.ts:71-89` suma los movimientos
+bancarios de esa compañía y periodo y los compara con lo que dice el fichero de TIREA, con
+`UMBRAL_DESCUADRE_EUR = 5` y `VENTANA_DIAS = 45`; si no cuadra, avisa por Telegram con un «Revisa en
+**/correduria**».
+
+➡️ **El diseño ya elegido es: el banco es la CIFRA, CIMA es el CONTRASTE.** Es una respuesta sensata
+—el dinero cobrado es el que entra en la cuenta— y **resuelve A5 sin mover nada**: `/correduria` se
+queda en `apps/plataforma`.
+
+### Y moverlo sería caro, no una mudanza de carpeta
+
+- `/correduria` lee `public.movimientos_bancarios` + `public.cuentas_bancarias` por `$queryRaw`, y
+  `apps/asegura` conecta con `prisma_seguros`, cuyo acceso a `public` se limita a `cuentas`.
+- **La ingesta bancaria (PSD2, Norma 43, categorización) se queda en plataforma**: quien escribe
+  `destino='seguros'` vive ahí. Sin eso la matriz no tiene entrada.
+- `lib/correduria.ts` **no es solo de esta pantalla**: exporta `claveReglaValida` / `claveReferencia` /
+  `claveComercio`, la guardia antitrampa de las reglas aprendidas de TODA la banca, y lo importan
+  **~24 ficheros** (banca, finanzas, contable, correo, el propio `cima-liq`). Está mal factorizado para
+  una mudanza: mezcla «detectar aseguradora» con «validar clave de regla bancaria».
+- El número alimenta el **IRPF** (`lib/finanzas.ts:733-742` → base imponible y trimestres) y tres
+  pantallas más.
+
+### 🟠 Deuda encontrada de paso (NO tocada — es de plataforma, no de este traspaso)
+
+Se anota para decidir aparte; ninguna se ha corregido en este PR.
+
+1. **Cuatro listas de compañías que no coinciden.** `detectarCompania` (18 `if`, strings legibles),
+   `COMPANIAS_CONOCIDAS` (17 entradas), una **cascada duplicada en `lib/finanzas.ts:684-711` con
+   etiquetas DISTINTAS** (`'Otras comisiones'` vs `'Otras'`, `'CSR/Caser'`, `'M1454 (por identificar)'`)
+   y `CODIGO_COMPANIA` de `lib/cima.ts:81-94` (12 códigos de 4 dígitos). **La misma comisión puede
+   salir con etiqueta distinta en `/correduria` y en `/finanzas`**, y la de `finanzas.ts` ni siquiera
+   lee `correduria_reglas`.
+2. **Los códigos de 4 dígitos de `cima.ts` (`'0131': 'Mapfre'`…) NO son los `C0058/C0109/C0072/C0468/C0613`**
+   que este documento cita como compañías conectadas. De dónde salen **no está en el código**.
+   Antes de encender nada hay que cuadrarlo.
+3. 🚨 **`pendiente = 0` se pinta como «✓ Todo revisado»** — pero `motivoSeguros` **no consulta
+   `RE_LIQUID_SEGUROS`**, así que los abonos clasificados por código de agente (`M00171`, `PD005`,
+   `8/92361`) se etiquetan «por descarte» y no entran en ese contador. Es un verde que no ha mirado
+   todo lo que dice haber mirado.
+4. **El estado vacío no distingue «no cobré» de «la clasificación está rota»** — que es exactamente
+   el incidente ya documentado (la regla `"TRANSF" → turistico_pisos` dejó la correduría a 0 € en
+   silencio). Hay mitigación fuera de la pantalla (health-check *Check 10* por Telegram), no dentro.
+5. `motivoSeguros` recibe un parámetro `banco` **que no usa**, y su comentario afirma un
+   comportamiento por banco que el cuerpo no implementa.
+6. `/correduria` lee `movimientos_bancarios` **directo** en vez de la vista canónica
+   `v_movimientos_activos`, y reproduce a mano el filtro de duplicados. El cron `cima-liq` sí usa la
+   vista. Dos criterios para lo mismo.
+
+### Consecuencia para el plan por fases
+
+La Fase 4 ya no es «traer CIMA»: es **«decidir qué CIMA»**. Hay dos clientes —el LIQ de plataforma,
+apagado, y el pull completo de Manuel, vivo— y hay que elegir si conviven (uno para comisiones, otro
+para cartera) o si uno absorbe al otro. **Eso no cambia el orden**: CIMA sigue al final. Cambia lo que
+hay que decidir cuando se llegue.
