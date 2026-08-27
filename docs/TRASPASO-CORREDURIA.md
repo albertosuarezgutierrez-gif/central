@@ -2222,3 +2222,44 @@ dónde se crea el de la correduría.
 Manuel dice que **Alberto ya tiene acceso a todo**. La invitación al repo del adaptador está aceptada
 (comprobado el 26/08). **Del resto no hay confirmación**, y desde esta sesión no se pueden leer repos
 de la cuenta de Manuel. Antes de cerrar la Fase 0 hay que abrir cada repo y ver que carga.
+
+### ✅ DECISIÓN DE ALBERTO (27/08/2026) — Manuel entra en el team y SE QUEDA
+
+**Esta decisión manda sobre el análisis de arriba en todo lo que lo contradiga.** Quien lea esto más
+adelante: la sección anterior recomendaba no meter a Manuel en el team existente. **Alberto lo ha
+decidido dos veces, en sus palabras: «da igual q manuel lea todo».** No se re-abre.
+
+| | |
+|---|---|
+| **Qué se hace** | Manuel entra como **miembro del team `pisos-turisticos-projects`** (plan Pro) y **se queda**, no se le saca al acabar |
+| **Quién paga** | **Alberto.** Manuel está en Hobby, que no admite miembros — por eso la invitación solo puede ir en esta dirección |
+| **Coste** | Un **asiento Pro recurrente mensual** mientras esté dentro. ⚠️ **No es un pago único** (Alberto lo había entendido así). El precio por asiento **no se ha verificado**: Vercel lo muestra antes de confirmar la invitación |
+| **Descartado** | El trial de 14 días que proponía Manuel — innecesario (el Pro ya está pagado) y reintroducía una fecha límite |
+
+**Por qué dejarlo dentro es lo correcto:** el traspaso son cinco fases repartidas en semanas —
+cimientos, cartera, portal, Codeoscopic y CIMA— y a Manuel hay que preguntarle en todas. Meterlo y
+sacarlo en cada una es fricción, y **cada re-alta vuelve a generar un cargo prorrateado**: sale igual
+de caro y molesta más.
+
+**El email:** hay que preguntarle **con cuál entra en Vercel**. El único que consta es
+`manuelsuarezz@gmail.com`, que es el de **facturación de Fly** — puede no ser el mismo, y si no lo es
+la invitación no llega y parecerá que «no funciona».
+
+**Herramienta:** el conector MCP de Vercel **no expone la gestión de miembros** (lee proyectos y
+despliega, nada más). La invitación la hace Alberto a mano en
+`Settings → Members → Invite`, rol **Member**.
+
+### 📋 Checklist de la primera sesión con Manuel dentro
+
+1. **Envs del proyecto `asegura`: production Y preview.** Suelen diferir, y coger solo una es el fallo
+   clásico. Los **valores** al gestor de contraseñas; aquí solo nombres.
+2. **Los ~4 ficheros del Vercel Blob.**
+3. **Las seis de Fase 0** (M1-M6): el dump, qué tablas no volcar, las dos claves, si el aislamiento está
+   solo en RLS o el código filtra por `correduria_id`, qué columnas están cifradas y sobre qué campos va
+   el índice ciego, y si los usuarios están en Supabase Auth.
+4. **Dónde viven ADR-007 y ADR-009.**
+5. **La lista de crons de su Vercel** — ahí está el detector de vencimientos a 30/15/7 días.
+
+🚫 **Lo que NO se hace en esta sesión: transferir el proyecto.** Eso arrastra
+`app.grupoasegura.com/api/crons/cima-pull`, o sea adelanta CIMA a hoy, y CIMA es Fase 4 por decisión
+del propio Alberto. La transferencia va con Fly, al final.

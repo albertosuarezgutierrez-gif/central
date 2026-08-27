@@ -37,7 +37,10 @@ Fly: pagada la factura de julio (5,96 €); compra un mes, el medio de pago sigu
 🚨 **Descartado el «team de Vercel con 14 días gratis» de Manuel:** Alberto YA tiene Pro, y ese team
 aloja `plataforma` (banca PSD2/fiscal) — meterlo ahí le daría las envs de todo. Además el trial
 reintroduce la fecha límite que se quitó el 26/08. Lo único que Vercel tiene en exclusiva son los
-VALORES de las envs → `vercel env pull` + gestor de contraseñas. Team separado solo en Fase 4.
+VALORES de las envs. ✅ **Alberto decide (2ª vez): Manuel ENTRA en el team y se queda** — «da igual
+que lea todo». Manuel está en Hobby (sin miembros), así que la invitación solo puede ir en esa
+dirección y paga Alberto: asiento Pro **recurrente**, no pago único. NO se transfiere el proyecto
+todavía (arrastraría CIMA, que es Fase 4).
 
 ### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
