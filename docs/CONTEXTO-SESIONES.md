@@ -50,6 +50,18 @@ financiación y si compra él o Punto y Coma SL.
 de `CLAUDE.md` que decía «hace falta mano de Alberto». **La causa sigue sin aislar** (entre el último
 push mudo y el que funcionó cambiaron el merge de la base Y 56 minutos).
 
+### 📅 (27/08/2026) El libro paper ya sabe qué resultado vino de la SEÑAL y cuál del CALENDARIO
+NVDA (PAPER, no cartera real — la real solo tiene VWCE + CVX) acabó en verde por un hueco del +6,79%
+tras resultados. **Nadie decidió aguantar:** `earningsInminente` solo veta ABRIR ≤3d; entró el 21/08,
+a 5 días, y una vez dentro el evento no se vuelve a mirar. La víspera estaba EN PÉRDIDA y a ~3% del
+stop; un hueco simétrico habría abierto BAJO el stop (precedente medido: 25/02 → −5,46% y −9,39% en
+dos sesiones). El agujero era el REGISTRO: la fecha de earnings se usaba pero solo vivía como texto en
+`rationale`. Añadidas `proximo_earnings`/`earnings_estado` (tesis y posición), `evento_dentro` en las
+SELL y la atribución por evento en `/puntuar`. **Carril de datos: no toca stats, confianza ni sizing.**
+Hallazgo: FD dice BEAT +33% y Alpha Vantage MISS −52,6% del MISMO trimestre (GAAP vs non-GAAP) → no se
+cablea ningún «comprar si bate». Detalle en `docs/TRADING-POSTMORTEM-NVDA-2026-08.md`.
+⚠️ Encuadre: la cohorte con más recorrido va **−4,17 pp vs SPY** (−0,99% contra +3,18%, 37 días).
+
 ### 🌱 (27/08/2026) El calendario, SEMBRADO en producción y medido: 0 precios movidos
 Cerrada la prueba de punta a punta (PRs #1787 → siembra). Antes de sembrar se arregló el nombre de
 las noches de tabla (`Feria de Abril 2027 — 2027-04-12` → `… — noche del alumbrado`): el nombre es
