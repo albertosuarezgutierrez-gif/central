@@ -114,6 +114,21 @@ descuenta al acercarse la fecha y **no existía la palanca simétrica**. Nueva `
 ocupación no caiga contra los mismos meses de años anteriores). DDL aplicada. Corregido de paso: el
 suplemento por huésped que propuse NO vale — Alberto no distingue 8 de 12 (6 huéspedes = 6 habitaciones).
 
+### 🏖️ (27/08/2026) Agente de inversión inmobiliaria (VUT): spec aprobado, estudio del inmueble BLOQUEADO
+
+Alberto pasa un anuncio de idealista de Conil de la Frontera (Cádiz) —edificio/casa con ~14 estancias y
+dos entradas, Calle José Tomás Borrego— y pide estudio económico + saber si hay agente para esto. **No lo
+hay**: existe la criba (`inmuebles_busqueda`, "chollo" por IA), la medición (`mercado-booking`), la
+financiera de subastas y `patrimonio-cfo`, pero nadie hace el **underwriting de una compra**. Diseño
+aprobado (híbrido: helper puro en plataforma + skill que mide con conector) en
+`docs/superpowers/specs/2026-08-27-agente-inversion-inmobiliaria-design.md`. Medido con Booking ese día en
+Conil: pico/valle **3,6×** (332,50€ vs 92,24€/noche a 4 plazas) y el mercado de aforo 10 es **fino pero
+más barato por plaza** (66,50€ vs 83,10€) → «entero vs segregado» es escenario obligatorio del cálculo.
+Hallazgo legal: BOE-A-2026-5827 (caso Conil) — el registro único se deniega sin acuerdo de la comunidad si
+la licencia es posterior al 3/4/2025; **comprar el edificio entero elimina ese veto**. ⛔ Idealista está
+bloqueado por el proxy de egress: la fase 1 (estudio del inmueble) espera a que Alberto dé precio, m²,
+qué es exactamente, explotación prevista, financiación y si compra él o Punto y Coma SL.
+
 ### 🧱 (26/08/2026) «Base perfecta» + acumulación: medida sobre 177.000 observaciones y RECHAZADA
 
 Idea de Alberto. La **acumulación** ya existía como contexto (`volumen.ts`, 📊↑); de **base** no había
