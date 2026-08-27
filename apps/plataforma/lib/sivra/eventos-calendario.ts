@@ -144,6 +144,13 @@ type Fijo = {
   nombre: string
   /** fecha `YYYY-MM-DD` → factor. Día a día: una Feria no pesa lo mismo el lunes que el sábado. */
   dias: Record<string, number>
+  /**
+   * Etiqueta legible por día. Opcional, pero piénsatelo antes de omitirla: el nombre completo es la
+   * CLAVE del upsert (`ON CONFLICT (fuente, nombre, rate_date)`), así que cambiarlo DESPUÉS de la
+   * primera siembra no renombra nada — crea filas nuevas y deja las viejas empujando el precio para
+   * siempre. Sin etiqueta se cae a «12 de abril», que es correcto y estable.
+   */
+  etiquetas?: Record<string, string>
   tipo: NocheCalendario['tipo']
 }
 
@@ -155,6 +162,13 @@ const FIJOS: Fijo[] = [
   { anio: 2027, nombre: 'Feria de Abril 2027', dias: {
     '2027-04-12': 2.50, '2027-04-13': 2.60, '2027-04-14': 2.80,
     '2027-04-15': 3.00, '2027-04-16': 3.20, '2027-04-17': 3.20, '2027-04-18': 2.60,
+  }, etiquetas: {
+    // Días de la semana COMPROBADOS, no supuestos: el 12 de abril de 2027 es lunes, así que el
+    // alumbrado cae esa noche y la feria corre de martes a domingo.
+    '2027-04-12': 'noche del alumbrado', '2027-04-13': 'martes de feria',
+    '2027-04-14': 'miércoles de feria', '2027-04-15': 'jueves de feria',
+    '2027-04-16': 'viernes de feria', '2027-04-17': 'sábado de feria',
+    '2027-04-18': 'domingo de feria',
   }, tipo: 'festival' },
 ]
 
@@ -163,12 +177,22 @@ function aniosSinTabla(anios: number[]): number[] {
   return anios.filter((a) => !FIJOS.some((f) => f.anio === a))
 }
 
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/** «2027-04-12» → «12 de abril». Respaldo del nombre cuando el fijo no trae etiqueta. */
+function diaLegible(fecha: string): string {
+  const [, m, d] = fecha.split('-')
+  const mes = MESES[Number(m) - 1]
+  return mes ? `${Number(d)} de ${mes}` : fecha
+}
+
 function expandir(f: Fijo): NocheCalendario[] {
   return Object.entries(f.dias)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([fecha, factor]) => ({
       fecha,
-      nombre: `${f.nombre} — ${fecha}`,
+      nombre: `${f.nombre} — ${f.etiquetas?.[fecha] ?? diaLegible(fecha)}`,
       factor: Math.min(factor, FACTOR_MAX),
       tipo: f.tipo,
       derivado: false,
