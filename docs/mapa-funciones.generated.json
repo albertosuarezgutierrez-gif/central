@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T17:56:09Z",
-  "sha": "d6d9187ea9302e6b7a81a5acf1a3080502d24044",
+  "generadoEn": "2026-08-27T18:57:21Z",
+  "sha": "e0116ab67ec343125aa0fc704614fb8484fd2285",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -58021,7 +58021,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "fmt",
@@ -58029,7 +58029,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 49
+          "linea": 50
         },
         {
           "nombre": "GET",
@@ -58037,7 +58037,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 68,
+          "linea": 69,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -58046,10 +58046,11 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 72
+          "linea": 73
         }
       ],
       "tablas": [
+        "anc",
         "checkin",
         "eventos",
         "incomes",
@@ -58069,7 +58070,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "32a9d0aae1d8"
+      "hash": "4583c66d3eee"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -58359,7 +58360,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 42
+          "linea": 41
         }
       ],
       "tablas": [
@@ -58376,7 +58377,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "6699531f3bc2"
+      "hash": "a720adbbac8e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -58530,7 +58531,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 47
+          "linea": 46
         },
         {
           "nombre": "PATCH",
@@ -58538,12 +58539,10 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 195
+          "linea": 191
         }
       ],
       "tablas": [
-        "latest",
-        "market_rates",
         "next",
         "pricing_settings",
         "properties",
@@ -58551,7 +58550,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/settings",
-      "hash": "a1419e2af12e"
+      "hash": "bf866250c93d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/rates/snapshot/route.ts",
@@ -64400,7 +64399,7 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number, titular: 'titular' | 'conyuge' = 'titular',",
           "retorno": "DestinoDetalle",
-          "linea": 80
+          "linea": 83
         },
         {
           "nombre": "clasificarDestino",
@@ -64408,13 +64407,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number",
           "retorno": "Destino",
-          "linea": 161,
+          "linea": 164,
           "resumen": "Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "834954a0e2a6"
+      "hash": "c8917d46785d"
     },
     {
       "ruta": "apps/plataforma/lib/devoluciones-sepa.ts",
@@ -71411,6 +71410,65 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8c368d2f053c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-ancla-global.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-ancla-global.ts — de qué corpus sale el ANCLA GLOBAL del motor de precios. 🚨 EL SERRUCHO, SEGUNDA MITAD (diagnosticado el 27/08/2026). El 25/08 se documentó «el serrucho» en `pricing-base-evento.ts` y se arregló SOLO la rama de EVENTO: el salto de evento pasó a multiplicarse sobre",
+      "exporta": [
+        "sqlCorpusAncla",
+        "sqlAnclaGlobalAcumulada",
+        "sqlCompsAncla",
+        "elegirAnclaGlobal"
+      ],
+      "funciones": [
+        {
+          "nombre": "sqlCorpusAncla",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 73,
+          "resumen": "Cuerpo del CTE del CORPUS del ancla: una fila por comparable × fecha (la lectura MÁS RECIENTE) en los últimos `VENTANA_ANCLA_DIAS` días, **ya elegida entre corpus fiable y mezcla**. 🚨 La preferencia "
+        },
+        {
+          "nombre": "sqlAnclaGlobalAcumulada",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 108,
+          "resumen": "Cuerpo del CTE `anc` del motor: una fila por `scenario` con los percentiles objetivo/suelo/techo sobre el corpus de `sqlCorpusAncla()`, más cuántas fechas distintas cubre y si salió del corpus fiable."
+        },
+        {
+          "nombre": "sqlCompsAncla",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 128,
+          "resumen": "Cuerpo de la consulta de COMPARABLES del ancla, en filas, para los consumidores que calculan su propio percentil (el panel `pricing/settings`, vía `computeRecommendation`). Mismo corpus exacto que el "
+        },
+        {
+          "nombre": "elegirAnclaGlobal",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: AnclaGlobalInput",
+          "retorno": "AnclaGlobalResult",
+          "linea": 158,
+          "resumen": "Elige el ancla global. El corpus ACUMULADO manda siempre que cubra `MIN_FECHAS_ANCLA` fechas distintas y dé un percentil utilizable; si no, se cae al barrido de la última pasada útil. 🚨 Nunca devuelv"
+        }
+      ],
+      "tablas": [
+        "acum",
+        "dedup",
+        "fiab",
+        "market_rates",
+        "pricing_piso_zona",
+        "pricing_settings"
+      ],
+      "rutaApi": null,
+      "hash": "5af69e70cf38"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-ancla-rail.ts",
@@ -98514,7 +98572,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2600,
-    "funciones": 7166
+    "archivos": 2601,
+    "funciones": 7170
   }
 }
