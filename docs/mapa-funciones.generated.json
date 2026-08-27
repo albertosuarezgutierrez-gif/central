@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T13:04:26Z",
-  "sha": "98235feb0fa852d7e730446c86a6064eb0ae2d1e",
+  "generadoEn": "2026-08-27T14:08:41Z",
+  "sha": "e57da5db178be635850d59461fe5e2107b8a418b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47843,6 +47843,100 @@
       "hash": "d151d16fa8eb"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/inversion/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AnalizarCompraPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "number | null",
+          "linea": 19
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "AnalizarCompraPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "Informe",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ res, guardado }: { res: Underwriting; guardado: { ok: boolean; motivo: string | null } | null }",
+          "retorno": null,
+          "linea": 320
+        },
+        {
+          "nombre": "Bloque",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 433
+        },
+        {
+          "nombre": "Grid",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ children }: { children: React.ReactNode }",
+          "retorno": null,
+          "linea": 442
+        },
+        {
+          "nombre": "Campo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor, set, ancho }: { label: string; valor: string; set: (v: string) => void; ancho?: boolean }",
+          "retorno": null,
+          "linea": 446
+        },
+        {
+          "nombre": "Selector",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor, set, opciones }: { label: string; valor: T; set: (v: T) => void; opciones: [T, string][] }",
+          "retorno": null,
+          "linea": 459
+        },
+        {
+          "nombre": "Dato",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor }: { label: string; valor: string }",
+          "retorno": null,
+          "linea": 474
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, ers, pinta, fuerte, }: { etiqueta: string ers: Underwriting['escenarios'] pinta: (e: NonNullable<Underwriting['escenarios']>[number]) => string fuerte?: boolean }",
+          "retorno": null,
+          "linea": 483
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "361eb92fd1a3"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/layout.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -50547,12 +50641,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 71
+          "linea": 72
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4e39f8511c0f"
+      "hash": "3f9ff3cf3df7"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -55216,6 +55310,50 @@
       "hash": "3f3a2cff45be"
     },
     {
+      "ruta": "apps/plataforma/app/api/inversion/underwrite/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── POST /api/inversion/underwrite — analiza si comprar un inmueble concreto renta. Vive FUERA de `/api/sivra/*` a propósito: esto no es de la vertical de Sevilla (el primer caso analizado es Conil de la Frontera). El cálculo e",
+      "exporta": [
+        "POST",
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 76
+        },
+        {
+          "nombre": "mejorYieldNeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "escenarios: { yieldNeto: number }[] | null",
+          "retorno": "number | null",
+          "linea": 124,
+          "resumen": "`null` cuando no hay escenarios: el veredicto no es calculable, no es un yield de 0."
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 130,
+          "resumen": "Últimos análisis, para ver qué se estimó y poder contrastarlo con el tiempo."
+        }
+      ],
+      "tablas": [
+        "inversion_analisis",
+        "next",
+        "zod"
+      ],
+      "rutaApi": "/api/inversion/underwrite",
+      "hash": "6d2137b78865"
+    },
+    {
       "ruta": "apps/plataforma/app/api/negocios/[id]/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -59025,7 +59163,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         }
       ],
       "tablas": [
@@ -59035,7 +59173,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "f448d7ecd725"
+      "hash": "fa5b868c8452"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -59325,7 +59463,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "6fea9f5739ef"
+      "hash": "5bbad2c099c3"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/radar/route.ts",
@@ -66885,6 +67023,204 @@
       ],
       "rutaApi": null,
       "hash": "e477be37ba4e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/inversion/competencia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Campo competitivo de un municipio para UN aforo concreto. Puro. «Competencia» no es un número: son cuatro cosas, y solo dos salen de Booking. · densidad de oferta → Registro de Turismo de Andalucía / INE (fuera de aquí) · p",
+      "exporta": [
+        "analizarCompetencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "rampa",
+          "kind": "function",
+          "exportada": false,
+          "params": "nota: number | null, resenas: number | null",
+          "retorno": "",
+          "linea": 52,
+          "resumen": "El coste de arranque que nadie mete en el Excel: un anuncio nuevo entra con cero reseñas contra vecinos de 9,2 con 296 opiniones. El ranking del canal lo entierra y la visibilidad hay que comprarla co"
+        },
+        {
+          "nombre": "analizarCompetencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "comparables: ComparableVecino[], aforo: number",
+          "retorno": "CampoCompetitivo",
+          "linea": 65
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dbf4fa6a262b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/inversion/curva-mercado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Mediciones del conector de Booking → curva de temporada mes a mes. Puro: no habla con la red ni con la BD, así que se puede testear entero. Existe porque un VUT de playa no tiene «una ocupación» ni «un precio»: en Conil el ",
+      "exporta": [
+        "mediana",
+        "preciosPorNoche",
+        "construirCurva"
+      ],
+      "funciones": [
+        {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": true,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 34,
+          "resumen": "Mediana de una muestra. `null` con muestra vacía: no medir no es medir cero."
+        },
+        {
+          "nombre": "preciosPorNoche",
+          "kind": "function",
+          "exportada": true,
+          "params": "totales: number[], noches: number",
+          "retorno": "number[]",
+          "linea": 42,
+          "resumen": "Convierte totales de estancia en precios por noche. Sin noches no hay conversión posible."
+        },
+        {
+          "nombre": "construirCurva",
+          "kind": "function",
+          "exportada": true,
+          "params": "mediciones: MedicionVentana[], aforo: number",
+          "retorno": "MesMercado[]",
+          "linea": 54,
+          "resumen": "Agrupa las ventanas del aforo pedido por mes y devuelve la curva ordenada. Un mes medido que no devolvió nada sale con `comparables: 0` y `adrGuest: null`: «el conector no contestó» y «no hay mercado»"
+        },
+        {
+          "nombre": "proxyOcupacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "disponibles: number, universo: number | null",
+          "retorno": "number | null",
+          "linea": 85,
+          "resumen": "Saturación como proxy de ocupación: si de 10 comparables conocidos solo quedan 2 libres, el mercado va al 80%. Es una ESTIMACIÓN, no un dato de ocupación — Booking no publica ocupación— y por eso viaj"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "73df6dfa600c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/inversion/underwriting.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Motor de underwriting de una compra inmobiliaria para explotación turística. PURO: no habla con la red ni con la BD. Lo consume `/api/inversion/underwrite` y la pantalla solo pinta lo que sale de aquí — ninguna aritmética e",
+      "exporta": [
+        "anualidad",
+        "saldoPendiente",
+        "tir",
+        "analizarInversion"
+      ],
+      "funciones": [
+        {
+          "nombre": "centimos",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": "number",
+          "linea": 46,
+          "resumen": "El dinero tiene dos decimales. Se redondea al SALIR del motor (no en mitad del cálculo) para que lo que se guarda y se pinta sea un importe de verdad y no un 440000.00000000006 de coma flotante. Los r"
+        },
+        {
+          "nombre": "calcularIngresos",
+          "kind": "function",
+          "exportada": false,
+          "params": "curva: MesMercado[], ocupacionPorDefecto: number | null, unidades: number",
+          "retorno": "Ingresos",
+          "linea": 83,
+          "resumen": "Recorre los 12 meses y suma solo lo que se puede sostener con datos. Un mes sin ADR medido o sin ocupación NO aporta ingreso estimado: queda anotado y baja la cobertura, de modo que el resultado se pr"
+        },
+        {
+          "nombre": "calcularCostes",
+          "kind": "function",
+          "exportada": false,
+          "params": "bruto: number, noches: number, c: Costes",
+          "retorno": "DesgloseCostes",
+          "linea": 124
+        },
+        {
+          "nombre": "anualidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "principal: number, tipo: number, anios: number",
+          "retorno": "number",
+          "linea": 148,
+          "resumen": "Cuota anual de un préstamo francés. Con tipo 0 es el principal repartido."
+        },
+        {
+          "nombre": "saldoPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "principal: number, tipo: number, anios: number, t: number",
+          "retorno": "number",
+          "linea": 155,
+          "resumen": "Saldo vivo tras `t` años de un préstamo francés."
+        },
+        {
+          "nombre": "van",
+          "kind": "function",
+          "exportada": false,
+          "params": "flujos: number[], tasa: number",
+          "retorno": "number",
+          "linea": 165
+        },
+        {
+          "nombre": "tir",
+          "kind": "function",
+          "exportada": true,
+          "params": "flujos: number[]",
+          "retorno": "number | null",
+          "linea": 170,
+          "resumen": "TIR por bisección. `null` si no hay cambio de signo: mejor sin número que con uno inventado."
+        },
+        {
+          "nombre": "construirEscenario",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: 'entero' | 'segregado', curva: MesMercado[], unidades: number, plazas: number, e: EntradaUnderwriting, inversionTotal: number, capitalAportado: number, deuda: number,",
+          "retorno": "Escenario",
+          "linea": 192
+        },
+        {
+          "nombre": "revisarPuertaLegal",
+          "kind": "function",
+          "exportada": false,
+          "params": "legal: PuertaLegal",
+          "retorno": "",
+          "linea": 256
+        },
+        {
+          "nombre": "construirAlternativas",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: EntradaUnderwriting, inversionTotal: number",
+          "retorno": "Alternativa[]",
+          "linea": 294
+        },
+        {
+          "nombre": "decidir",
+          "kind": "function",
+          "exportada": false,
+          "params": "mejor: Escenario | null, alternativas: Alternativa[], faltan: string[], motivos: string[],",
+          "retorno": "Veredicto",
+          "linea": 344
+        },
+        {
+          "nombre": "analizarInversion",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaUnderwriting",
+          "retorno": "Underwriting",
+          "linea": 401
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "19f9c752a45a"
     },
     {
       "ruta": "apps/plataforma/lib/limpiadoras-early.ts",
@@ -96676,6 +97012,95 @@
       "hash": "4151562bf728"
     },
     {
+      "ruta": "packages/module-trading/src/evento.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "¿El resultado de una operación vino de la SEÑAL o de un EVENTO que el modelo no modela? Caso fundacional (26-27/08/2026, NVDA). El libro paper abrió NVDA el 21/08 a 214,72 con stop en 203,22. La víspera de sus resultados cotizaba a 209,96 —ya en pérdida y a un 3,3% del stop— y el 27/08, tras publica",
+      "exporta": [
+        "estadoEarnings",
+        "cruzaEvento",
+        "finDeVentana",
+        "partirPorEvento",
+        "atribuirPorEvento",
+        "resumenAtribucion"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoEarnings",
+          "kind": "function",
+          "exportada": true,
+          "params": "consultado: boolean, fecha: string | null | undefined",
+          "retorno": "EstadoEarnings",
+          "linea": 52,
+          "resumen": "Estado a partir de lo que devolvió la fuente. `consultado` distingue «no pregunté» de «pregunté y no hay», que es toda la razón de ser de este tipo."
+        },
+        {
+          "nombre": "ms",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "number",
+          "linea": 58,
+          "resumen": "Fechas ISO (YYYY-MM-DD) en ms UTC. Devuelve NaN si no es una fecha legible."
+        },
+        {
+          "nombre": "cruzaEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | null | undefined, estado: EstadoEarnings, desde: string, hasta: string,",
+          "retorno": "CruceEvento",
+          "linea": 74,
+          "resumen": "¿Cayó el evento dentro de [desde, hasta]? Ambos extremos INCLUIDOS a propósito. Los resultados se publican casi siempre después del cierre (`post-market`), así que el evento del día D mueve el precio "
+        },
+        {
+          "nombre": "finDeVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, dias: number",
+          "retorno": "string",
+          "linea": 92,
+          "resumen": "Fecha ISO `dias` naturales después de `desde`. Ventana de medición de una tesis."
+        },
+        {
+          "nombre": "partirPorEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "items: T[], cruceDe: (item: T) => CruceEvento",
+          "retorno": "ParticionEvento<T>",
+          "linea": 100,
+          "resumen": "Parte una lista en los tres montones. Ninguno se funde con otro."
+        },
+        {
+          "nombre": "atribuirPorEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "items: T[], cruceDe: (item: T) => CruceEvento, retornoDe: (item: T) => number,",
+          "retorno": "AtribucionEvento",
+          "linea": 128,
+          "resumen": "Retorno medio partido por si hubo evento dentro de la ventana. Cada media es `null` cuando su montón está vacío — nunca 0, que se leería como «midió y salió plano». Los `sin_consultar` NO entran en ni"
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": null,
+          "linea": 144
+        },
+        {
+          "nombre": "resumenAtribucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AtribucionEvento",
+          "retorno": "string",
+          "linea": 153,
+          "resumen": "Línea para el resumen de la pasada. Cadena vacía cuando no hay NADA que decir (ni eventos ni huecos de conocimiento), para no añadir ruido a un Telegram que ya es largo. Dice explícitamente lo que no "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9a5f3423f464"
+    },
+    {
       "ruta": "packages/module-trading/src/factores.ts",
       "ambito": "packages/module-trading",
       "resumen": "Modelo de factores (value + quality + momentum): el núcleo de la SELECCIÓN de la Fase B. La idea NO es acertar el timing (eso pierde, medido) sino ELEGIR qué comprar: empresas baratas (value), sanas (quality) y con inercia de precio a medio plazo (momentum), y mantenerlas. El scoring es CROSS-SECCIO",
@@ -98068,7 +98493,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2593,
-    "funciones": 7126
+    "archivos": 2599,
+    "funciones": 7165
   }
 }
