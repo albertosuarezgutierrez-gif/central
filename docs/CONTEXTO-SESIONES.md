@@ -157,8 +157,13 @@ creado por `create_trigger` **NO hereda `mcp_connections` ni el repo**, así que
 corrido sin conectores → auditoría que se pone verde por no poder mirar. Se creó una y se borró.
 La UI **no tiene «Duplicar»**, así que replicar a mano eran 5+6+18 chips de conectores por quitar.
 📌 Regla: para estas rutinas, cualquier cambio es por interfaz (pestaña «Personalizado»), y el cron
-está en **UTC** (local = +2 en CEST). ⚠️ `trading-analista` (`15 20,23 * * 1-5`) sigue cayendo el
-viernes a las 23:15 UTC, dentro de la misma franja de cuota agotada — no falló nunca, pero está ahí.
+está en **UTC** (local = +2 en CEST). 🕐 **El cambio de hora del 25/10 NO rompe esto:** el reset es
+un instante fijo en UTC —el propio error lo dice, «resets 7am (UTC)», y el banner solo lo pinta en
+hora local—, así que `0 8 * * *` seguirá siendo 08:00 UTC y el colchón de 1h se mantiene; lo único
+que cambia es la etiqueta local (10:00 CEST → 09:00 CET). Si alguna vez se ve un fallo de cuota
+después de octubre, ESA es la suposición a revisar primero. ⚠️ `trading-analista` (`15 20,23 * * 1-5`)
+sigue cayendo el viernes a las 23:15 UTC, dentro de la misma franja de cuota agotada — no falló
+nunca, pero está ahí.
 
 ### 🧹 (27/08/2026) Backlog de PRs de rutinas a CERO — y el bump de seguridad que llevaba 4 días sin aplicarse
 Cerrados los dos que quedaban del 23/08. **#1602** (entrenador): caveat en `facturas-correo/SKILL.md`
