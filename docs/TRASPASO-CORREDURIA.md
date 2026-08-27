@@ -2263,3 +2263,42 @@ despliega, nada más). La invitación la hace Alberto a mano en
 🚫 **Lo que NO se hace en esta sesión: transferir el proyecto.** Eso arrastra
 `app.grupoasegura.com/api/crons/cima-pull`, o sea adelanta CIMA a hoy, y CIMA es Fase 4 por decisión
 del propio Alberto. La transferencia va con Fly, al final.
+
+### 🛡️ 27/08/2026 — Fase 0 adelantada: el aislamiento por correduría, ANTES del dump
+
+Hecho sin depender de Manuel, porque es la pieza que hay que tener puesta **antes** de que llegue el
+dato, no después: cuando aterricen las 52 tablas, el código ya no puede filtrarlas mal por descuido.
+
+| Fichero | Qué es |
+|---|---|
+| `apps/asegura/lib/tenant-ambito.ts` | **Lógica pura, sin BD.** Tres estados (`pendiente` / `sin-asignar` / `ok`), tratamiento de valores centinela, y `exigirCorreduriaId()` que **lanza** en vez de devolver un valor de relleno |
+| `apps/asegura/lib/tenant.ts` | El envoltorio con Prisma. Hoy devuelve siempre `pendiente` — que es la verdad mientras el schema esté vacío |
+| `test/regression-asegura-aislamiento.test.ts` | Guardián en `pnpm test:guardia`: 8 pruebas |
+
+**Los tres estados, otra vez, porque aquí es donde importan:**
+
+- `pendiente` → el schema está vacío: **no se sabe** a qué correduría pertenece la cuenta, porque la
+  tabla que lo dice aún no existe. **No es** «no tiene ninguna».
+- `sin-asignar` → migrado, pero la cuenta no está vinculada. Esto **sí** es una ausencia comprobada.
+- `ok` → hay `correduriaId` y toda consulta filtra por él.
+
+Y `migrado: false` devuelve `pendiente` **aunque venga un `correduriaId`**: antes del volcado ese
+valor no es fiable, y aceptarlo sería exactamente el fallo que se quiere evitar.
+
+**Los valores centinela se tratan como ausencia** (`''`, `'otro'`, `'desconocido'`, `'N/A'`,
+`'sin asignar'`, `'null'`). Es la lección de `subastas.tipo_bien`: un `'otro'` es un «no lo he sabido
+leer» disfrazado de dato, y por eso se cuela por todas las guardas basadas en NULL.
+
+**El cepo está verificado, no supuesto.** Se creó a propósito un fichero que consulta
+`seguros.clientes` sin importar el ámbito y el guardián falló con el mensaje correcto; luego se borró.
+Un guardián que pasa en vacío no protege nada, así que se comprobó que muerde.
+
+Estado al cerrar: `tsc --noEmit` de `apps/asegura` **exit 0**, guardianes **69/69**.
+
+**Lo que NO se ha hecho, y es deliberado:** no se ha tocado el dashboard. Ya distingue bien los tres
+estados y pintar además el ámbito sería ruido hasta que haya datos. Eso es Fase 1.
+
+⚠️ **Esto no sustituye a la pregunta M4.** El código ya no puede consultar sin filtro, pero **sigue sin
+saberse si el CRM de origen filtraba por `correduria_id` o delegaba todo en RLS** — y de eso depende si
+el dump trae la columna con datos fiables. El cepo protege lo que escribamos nosotros; no adivina lo
+que hay en el dump.
