@@ -25,6 +25,17 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🔑 (26/08/2026) Correduría: GitHub CERRADO, Fly listo — solo queda cuadrar el rato con Manuel
+Manuel respondió: en el repo de la app Alberto ya era colaborador; mandó la del adaptador CIMA
+(`asegura-app-cima-adapter`, sidecar Java del JAR de TIREA) y **está aceptada**. Alberto creó su org
+de Fly, invitó a Manuel y **añadió tarjeta** — Fly va a pago por uso desde oct-2024, sin tier gratis,
+y la pide para que corra una app, no para crear la org (~3,19 US$/mes orientativo, **no leído de
+primera mano**: fly.io bloqueado por el proxy). ⚠️ Sin confirmar a qué org exacta se invitó (el panel
+mostraba `Personal`, no `grupo-asegura`). Supabase sigue **dentro ≠ transferido**. Nuevo: el repo cita
+ADR-007/ADR-009 — documentación que pedir. Y una sesión sobre `central` NO puede añadir el repo de
+Manuel (`cross-tier adds`): hay que abrirla con ese repo como fuente. Pendiente: Vercel (Vía B),
+`CRON_SECRET` y fecha. Detalle en `docs/TRASPASO-CORREDURIA.md`.
+
 ### 🟢 (26/08/2026) Correduría: la invitación de Supabase YA estaba aceptada — el bloqueo no existía
 
 `get_project(uijsgeocgdaxkhvwtjqs)` → org `qdrmgpvqhcmhmpcrvtan`: la que el correo llamaba **LOOR** y

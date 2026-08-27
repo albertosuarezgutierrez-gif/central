@@ -1787,3 +1787,69 @@ no vacías, y que el **dominio** sigue apuntando al proyecto. Se mira en el pane
 monorepo (`node ../../scripts/vercel-ignore-build.mjs apps/asegura`), o cada push al monorepo se
 pondrá a construirlo. Es la regla de `CLAUDE.md` y es la que costó ~600 US$ una vez.
 
+
+---
+
+# 🟢 26/08/2026 (noche) — GITHUB CERRADO Y FLY LISTO. Solo queda cuadrar el rato
+
+## Lo que respondió Manuel
+
+> «En el de la app ya estabas desde hace tiempo. En el del adaptador de CIMA te acabo de mandar la
+> invitación. Es `asegura-app-cima-adapter`, el sidecar Java que envuelve el JAR de TIREA; ese es el
+> que hay que mover a tu Fly para que siga entrando la cartera. Con esto los repos quedan resueltos.
+> Sigue pendiente que me metas en tu org de Fly y que fijemos día y hora del cutover.»
+
+## Estado verificado esta noche
+
+| Sistema | Estado | Cómo se comprobó |
+|---|---|---|
+| **GitHub — app** | ✅ Alberto ya era colaborador de antes | Manuel |
+| **GitHub — adaptador CIMA** | ✅ **invitación aceptada** | Repo **privado** renderizando contenido en su móvil |
+| **Supabase** | ⚠️ **DENTRO, no transferido** | Es miembro de la org (`PISO`). La propiedad del proyecto sigue siendo de Manuel |
+| **Fly — org de Manuel** | ✅ dentro | 26/08 |
+| **Fly — org de Alberto** | ✅ **creada, Manuel invitado, tarjeta añadida** | — |
+| **Vercel** | ❌ pendiente — Vía B (API) el día del corte | — |
+| **`CRON_SECRET`** | ❌ pendiente — **no viaja con la transferencia del repo** | — |
+
+⚠️ **Sin confirmar:** el panel que se revisó mostraba la organización **`Personal`**, no
+`grupo-asegura`. Queda por verificar **a qué org exacta** se invitó a Manuel. Importa: el día del
+corte él va a buscar un nombre concreto al que mover la app.
+
+## 💳 Fly cuesta dinero, y por qué la tarjeta no era opcional
+
+Fly **eliminó los planes Hobby/Launch/Scale en octubre de 2024** y va a **pago por uso puro**: sin
+cuota fija, sin mínimo mensual, y **sin tier gratis útil** para cuentas nuevas. La tarjeta no la pide
+para crear la organización — la pide **para que corra una app**, y recibir el adaptador transferido
+es exactamente eso.
+
+Orden de magnitud: una `shared-cpu-1x` de 512 MB ronda **3,19 US$/mes**. ⚠️ Ese número sale de la
+documentación de Fly pero **puede ser de 2024-25**: su página de precios está bloqueada por el proxy
+de egress, así que **no está leído de primera mano**. El dato bueno no está en ninguna página de
+precios: **Manuel ya lo paga hoy**, y su factura dice la cifra real. Dos variables que solo él sabe:
+cuánta RAM tiene puesta (es JVM, 512 MB se le puede quedar corto) y si la máquina se apaga sola entre
+las pasadas de las 5:30 y 11:30 o está encendida 24 h.
+
+## 🆕 Hay ADRs que pedir, y no estaban en la lista
+
+La descripción del repo del adaptador cita **«Per ADR-007 + ADR-009»** y un ticket **`LOO-138`**.
+Manuel lleva registros de decisiones de arquitectura en algún sitio que **no es el repo**. Eso es
+documentación heredable y vale más que el código el día que haya que tocar la integración con TIREA:
+explica *por qué* está montado así. **Pedírsela.**
+
+(El prefijo `LOO-` probablemente explique el nombre «LOOR» de la organización de Supabase que costó
+una tarde entera — sería su nomenclatura de tickets, no nada de Alberto. **Inferencia, no
+comprobado.**)
+
+## ⚙️ Límite de sesión que hay que saber ANTES del corte
+
+Una sesión de Claude arrancada sobre `central` **no puede añadir el repo de Manuel**: devuelve
+`cross-tier adds are not supported in v1` porque ya tiene fuentes de otro propietario. Para leer,
+portar o revisar el adaptador hay que **abrir una sesión nueva con `manuelsuarez/asegura-app-cima-adapter`
+como fuente inicial**. Descubrirlo el día del corte cuesta la tarde.
+
+## 🗓️ Sobre «fijemos día y hora»
+
+No es contradicción con lo establecido esta mañana, es un matiz: **no hace falta ventana de
+mantenimiento** —el CRM no lo usa nadie y los ficheros EIAC se re-descargan— pero el movimiento de
+Fly y la transferencia de Supabase **sí piden que estén los dos a la vez** un par de horas. Quedar
+sí; reloj de mantenimiento no.
