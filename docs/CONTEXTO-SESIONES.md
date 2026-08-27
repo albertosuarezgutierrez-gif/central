@@ -47,8 +47,8 @@ financiación y si compra él o Punto y Coma SL.
 🔓 **De regalo, el CI:** el PR #1789 se pasó 3 h sin que GitHub le creara ni uno de los 12 requeridos
 (abrir, des-draftear y dos pushes con contenido: 0 runs). Lo desatascó **mergear `main` en la rama**
 —que además hacía falta, el PR estaba en conflicto—: los 12 arrancaron en segundos. Corregida la frase
-de `CLAUDE.md` que decía «hace falta mano de Alberto». **La causa sigue sin aislar** (entre el push
-mudo y el que funcionó cambiaron el merge de la base Y 95 minutos).
+de `CLAUDE.md` que decía «hace falta mano de Alberto». **La causa sigue sin aislar** (entre el último
+push mudo y el que funcionó cambiaron el merge de la base Y 56 minutos).
 
 ### 🌱 (27/08/2026) El calendario, SEMBRADO en producción y medido: 0 precios movidos
 Cerrada la prueba de punta a punta (PRs #1787 → siembra). Antes de sembrar se arregló el nombre de

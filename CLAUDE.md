@@ -288,10 +288,10 @@ conflicto y se empujó el commit de merge → **los 12 requeridos arrancaron a l
 evento `pull_request`, sobre el head `b93d472e`. O sea: **el agente sí pudo desatascarlo solo**, y la
 frase que había aquí —«hace falta mano de Alberto»— era falsa.
 
-⚠️ **Lo que NO se sabe: por qué.** Un push con contenido real ya se había probado a las ~12:20 y no
-disparó nada. Entre uno y otro cambiaron dos cosas a la vez —pasaron ~95 minutos y el PR estuvo en
-conflicto— así que **no está aislado** si lo que desatasca es el merge de la base, el que la
-mergeability se recalcule, o simplemente el tiempo. No lo des por causa medida.
+⚠️ **Lo que NO se sabe: por qué.** Dos pushes con contenido real (12:57 y 12:59 UTC) no habían
+disparado nada. Entre el último mudo y el que funcionó cambiaron dos cosas a la vez —pasaron 56
+minutos y el PR entró en conflicto— así que **no está aislado** si lo que desatasca es el merge de la
+base, el que la mergeability se recalcule, o simplemente el tiempo. No lo des por causa medida.
 
 **Orden a seguir cuando un PR no arranca los checks:** (1) mira si hay conflicto con `main`, y si lo
 hay resuélvelo —es trabajo obligatorio de todas formas y encima puede desatascar; (2) si no lo hay,
