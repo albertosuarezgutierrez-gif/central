@@ -3476,6 +3476,22 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🪚 (27/08/2026) EL SERRUCHO, segunda mitad: el ancla global salía del barrido de UNA mañana
+- **Causa raíz medida.** `med_guest_global` era el percentil de la última pasada de Booking, y esa
+  pasada muestrea **6-7 fechas de entrada** de las ~110 del horizonte, distintas cada día. En
+  `prop_busto_reform` el ancla valió 153·145·118·135·130·110·180·**95**·**208**·114 en 10 días
+  (2,19×); el precio del 30-ago la persiguió saturando el raíl ±20% en direcciones alternas
+  (99→95→78→94→105→84→101→81→97→78). Dirección del precio = dirección del ancla en **8 de 9** días.
+- **Alcance:** el 35-47% de las noches tarifadas (550 de 1.360) cae a ese ancla — no hay bucket de
+  mes para el mes en curso ni para los meses con <3 fechas medidas.
+- **Cura:** corpus ACUMULADO de 30 días, una lectura por comparable×fecha (`pricing-ancla-global.ts`).
+  Volatilidad 1,96/2,19/2,27/**8,34**× → **1,03-1,07×**; fechas muestreadas 6-7 → 112-119. El 25/08
+  se arregló SOLO la rama de evento (`pricing-base-evento.ts`); esto cierra la otra mitad.
+- **Una definición del corpus, tres consumidores:** motor, panel `settings` y vigía `pilot-track`
+  leen el MISMO `sqlCorpusAncla()`; antes los tres medían contra el barrido. `sample_n` y
+  `market_age_days` siguen midiéndose sobre la última pasada útil: la frescura es otra pregunta.
+- Sin explicar todavía: por qué House Sevillana no oscilaba pese a tener el ancla más volátil.
+
 ## 💰 (27/08/2026) Auditoría del PRICING: el motor está sano, pero oscila — y ya se vigila solo
 
 Alberto: «que todo esté al 100% en precios, y que la auditoría diaria y semanal revise bien esto,

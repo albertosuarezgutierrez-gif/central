@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
-import { sqlUltimaPasadaUtil } from "@/lib/sivra/pricing-corpus-utilizable"
+import { sqlCompsAncla } from "@/lib/sivra/pricing-ancla-global"
 import { clamp, percentile, computeRecommendation, recommendedBaseFromEngine } from "@/lib/sivra/pricing-engine"
 
 export const dynamic = "force-dynamic"
@@ -82,15 +81,12 @@ export async function GET() {
     ORDER BY p."maxGuests"
   `)
 
-  // Mercado del snapshot más reciente por piso (precios + notas).
-  const market = await prisma.$queryRaw<{ scenario: string; price: number; score: number | null }[]>(Prisma.sql`
-    WITH latest AS (${Prisma.raw(sqlUltimaPasadaUtil())})
-    SELECT m.scenario, m.price_night::float8 AS price, m.score::float8 AS score
-    FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
-    WHERE m.price_night > 0
-      -- Plausibilidad €/plaza, igual que el motor (ver pricing-comps-plausibles.ts).
-      AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
-  `)
+  // 🚨 MISMO corpus que el ancla global del motor (`pricing-ancla-global.ts`): una lectura por
+  // comparable × fecha en 30 días, no el barrido de esta mañana. Si el panel siguiera leyendo la
+  // última pasada, enseñaría un recomendado que el motor NO usa —y que además salta 95↔208 de un
+  // día para otro—, que es el fallo de «alarma y panel afirmando lo contrario del mismo hecho».
+  const market = await prisma.$queryRaw<{ scenario: string; price: number; score: number | null }[]>(
+    Prisma.sql`${Prisma.raw(sqlCompsAncla())}`)
   const byScenario: Record<string, { prices: number[]; scores: number[] }> = {}
   for (const r of market) {
     const g = (byScenario[r.scenario] ??= { prices: [], scores: [] })
