@@ -212,10 +212,41 @@ No pierdas la tarde por ahí: sirve para SABER si el código está sano, no para
 ⚠️ Y si aun así lo lanzas para verificar: los check runs aterrizan en el **head del momento**. Si
 luego empujas otro commit, se quedan huérfanos en el sha viejo. Lánzalo después del último push.
 
-✅ **Lo que SÍ desbloquea: que un HUMANO toque el PR.** Un push desde una cuenta de persona (no el
-token de App) dispara los workflows por el evento `pull_request` y entonces los 12 sí cuentan. Es
-intervención manual: **no hay forma de que el agente lo resuelva solo**, así que dilo pronto y no
-des veinte vueltas.
+✅ **SÍ hay forma de que el agente lo resuelva solo: SACAR EL PR DE DRAFT (27/08/2026).** Medido de
+punta a punta en el PR #1763, sin que Alberto tocara nada:
+
+| hora (UTC) | qué hizo el agente | qué pasó |
+|---|---|---|
+| 26/08 23:08 | push de la rama + PR abierto **en draft** (token de App) | **0 runs**; los 12 requeridos en «Expected» |
+| 27/08 ~02:15 | intento de merge | `405 — 12 of 12 required status checks have not succeeded` |
+| 27/08 ~06:11 | 2º push a la rama (mismo token de App) | (ver nota de abajo) |
+| 27/08 06:12:18 | **PR marcado «ready for review»** (`draft:false` por la API) | **arrancan los 3 workflows** sobre `4efa129f`, evento `pull_request` |
+| 27/08 06:15 | los 12 jobs requeridos en `success` (~3,5 min) | ✅ |
+| 27/08 06:16 | merge (squash) | **`merged: true`** → `ba6ca86b` |
+| 27/08 06:19 | PR #1768: rama nueva, PR en draft, des-draft **sin 2º push** | runs otra vez → mergeado |
+
+**Confirmado con un SEGUNDO PR el mismo día (#1768).** Rama empujada, PR abierto en draft y sacado de
+draft acto seguido — **sin ningún 2º push**: los runs arrancaron igual (`06:19:25`, evento
+`pull_request`). Eso mata la explicación alternativa: el `synchronize` de un push **no** era lo que
+disparaba nada en #1763, porque aquí no hubo ninguno.
+
+**Y el tercer dato lo cierra:** un push posterior a #1768, con el PR **ya fuera de draft**, disparó los
+runs otra vez (`06:21:48`). O sea, el `synchronize` SÍ funciona… cuando el PR no es draft.
+
+🚨 **Conclusión: es el estado DRAFT lo que silencia los workflows.** Un PR en draft no produce runs ni
+al abrirlo ni al empujarle commits; en cuanto se saca de draft, los dispara — y a partir de ahí cada
+push vuelve a dispararlos con normalidad. Encaja con las cinco observaciones (dos `opened` en draft
+mudos · el push a #1763 en draft, mudo · los dos des-drafteos que dispararon · el push a #1768 ya sin
+draft, que disparó). Único fleco teórico: `ready_for_review` no está en los `types` por defecto de
+`on: pull_request` y el `event` del run no distingue la acción, así que el mecanismo interno de GitHub
+no se ha visto — pero el comportamiento está medido cinco veces y es reproducible.
+
+✅ **El procedimiento, que es lo que importa:** abre el PR en draft (como siempre), y cuando esté listo
+**quítale el draft**. Los 12 requeridos arrancan solos y en ~3,5 min está mergeable. **Ya no hace
+falta que Alberto toque nada.**
+
+⚠️ Lo que sigue siendo cierto: **el `workflow_dispatch` no vale** (ver arriba) y **el ruleset no se
+toca**.
 
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
@@ -229,13 +260,17 @@ salió verde):
 Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
 desbloquea nada.
 
-📌 **Consecuencia estructural, para decidir con calma (pendiente al 26/08/2026):** mientras esto siga
-así, **ningún PR abierto por el agente puede mergearse sin que Alberto intervenga a mano**. Arreglarlo
-de raíz es una decisión suya y hay al menos tres caminos —dar a la App permiso para disparar
-workflows, sacar de «required» los checks que no puede satisfacer, o añadirse a la *Bypass list*—
-y **ninguno debe tomarse sobre la marcha para desatascar un PR**: es configuración del repo.
+📌 **Consecuencia estructural — REVISADA el 27/08/2026.** La conclusión del 26/08 («ningún PR abierto
+por el agente puede mergearse sin que Alberto intervenga a mano») **resultó ser falsa**: el PR #1763 se
+mergeó entero sin intervención humana. Se mantiene abierta la decisión de fondo —dar a la App permiso
+para disparar workflows, sacar de «required» los checks que no puede satisfacer, o la *Bypass list*—
+pero ya **no es un bloqueo operativo**, así que hay menos prisa. **Ninguno de esos caminos se toma
+sobre la marcha para desatascar un PR**: es configuración del repo.
 
 > ✍️ Alberto, 26/08/2026: visto y pendiente de decidir. No tocar el ruleset por ahora.
+>
+> 🔎 27/08/2026: sigue sin tocarse el ruleset. Lo que cambió es que se encontró la salida por dentro
+> (sacar el PR de draft), no que se cambiara ninguna configuración.
 
 🚫 **Lo que NO se hace:**
 - **Bypass del ruleset.** La regla es un **Ruleset**, no una Branch protection clásica: **no hay
