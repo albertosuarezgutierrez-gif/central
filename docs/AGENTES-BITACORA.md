@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-27 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (copias en
+  `_buzon_pdf` 25/08 y 27/08, `dias_caido=0`), sin backlog real en `PDF-pendiente`/`Revisar`/
+  `Extraccion-fallida` (`search_threads` confirma 0 en las tres; `agente_salud` actualizado).
+  Candidatos Gmail 48h: 1 solo hilo (DNI para baja de seguro de moto de un cliente de la
+  correduría — no es gasto), cerrado con `Facturas/Procesada`. `_subir_aqui` y raíz de
+  `FACTURAS Apartamentos/2026` sin subidas nuevas (los PDFs sueltos que quedan ahí son deuda
+  histórica ya cubierta por avisos previos en `_DUPLICADOS_BORRAR`). Paso 4.0 (obligatorio):
+  `v_facturas_sin_cargo` solo tenía 1 `sin_revisar` nuevo (DIGI agosto, 76,00€, archivada
+  25/08) — su cargo aún no ha entrado en banco (domiciliación anunciada para el 28/08); se deja
+  pendiente, no es backlog olvidado. Resto de filas en `revisada_sin_cargo` (Pepephone
+  ene-jun, Giraldillo mayo, CREATE duplicada) sin cambios. dudas: —; fallos: —; PRs/commits: —
+  (solo Supabase + Gmail).
 - **2026-08-26 · psd2-health-check** · hizo: preflight canal alerta 200 OK; consulta frescura
   `origen='psd2'` — último movimiento 2026-08-25 (1 día), mov_30d=52 vs mov_30d_prev=75 (sin
   caída >50%); conexiones activas (`vinculada`) Kutxabank ****0855 y BBVA con `ultimo_sync`
