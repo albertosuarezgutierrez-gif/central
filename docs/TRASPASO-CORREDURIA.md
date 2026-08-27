@@ -1924,6 +1924,17 @@ que se le iban a hacer:
 **Consecuencia para el traspaso:** asumir el adaptador cuesta **unos 6 US$ al mes**. La decisión de
 moverlo no es económica.
 
+### ✅ 27/08/2026 — Alberto PAGÓ la factura de julio
+
+Liquidada la **RTAKOYRK-0003** (5,96 €) desde la página de pago pública, con tarjeta propia. Con eso
+**el adaptador deja de estar en riesgo de suspensión por el impago de julio** y la cartera sigue
+entrando mientras se organiza el traspaso.
+
+⚠️ **Lo que esto NO resuelve, y hay que decirlo aunque el banner rojo desaparezca:** el medio de pago
+de la organización `manuel-suarez-678` **sigue siendo el de Manuel**. La factura de agosto vencerá
+igual. Esto compra un mes, no cierra nada. Y a Manuel **se le dice** — le aparece en su cuenta un
+pago que él no hizo.
+
 ⚠️ **Pagar esta factura NO arregla el problema de fondo.** La página de pago es pública (Google Pay o
 tarjeta, sin login), así que Alberto puede liquidarla — y con 5,96 € compra tiempo para hacer el
 traspaso con calma. Pero el medio de pago de la organización sigue siendo el de Manuel: al mes
