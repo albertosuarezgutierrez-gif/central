@@ -21,7 +21,7 @@
 │   ├── module-contabilidad ← dominio: IVA/PyG/tesorería/rentabilidad (puro, agnóstico de BD)
 │   ├── module-concursos    ← dominio: agente de concursos públicos/LCSP (lee pliego→ficha+checklist+Go-No-Go; LLM por puerto AiRunner)
 │   ├── module-flota        ← dominio: vehículos, portes, asignación por capacidad/tipo, rentabilidad, documental ITV/seguro, intercompany (extraído 25/06/2026; consumido por `apps/transporte`; pendiente adaptador en ia-rest)
-│   └── ... (38 packages total: 26 `module-*` + 12 `core-*`/`brand`/`legal-templates` — ver `docs/ESTRUCTURA.md` para la lista completa)
+│   └── ... (40 packages total: 28 `module-*` + 12 `core-*`/`brand`/`legal-templates` — ver `docs/ESTRUCTURA.md` para la lista completa)
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)
 │   ├── sivra          ← intranet de pisos turísticos (Sevilla)            [✅ en apps/]
 │   ├── ialimp         ← SaaS multi-tenant de limpiezas (app.ialimp.es)    [✅ en apps/]
@@ -32,11 +32,12 @@
 │   ├── alquiler       ← Alquiler de materiales/menaje (grupo + terceros)  [✅ en apps/]
 │   ├── almacen        ← Almacén de eventos/catering (cliente Joaquín Jaén) [✅ en apps/]
 │   ├── mariscos       ← Trazabilidad pesquera + etiquetado (Mariscos González) [✅ en apps/]
+│   ├── housesevillana ← landing pública House Sevillana (housesevillana.es)  [✅ en apps/]
 │   └── asegura       ← Correduría de seguros (Grupo Asegura)              [🚧 esqueleto]
 └── docs/              ← runbook del corte, contexto de sesiones, arquitectura
 ```
 
-## Verticales (las 3 son hermanas; ninguna es la matriz)
+## Verticales (todas son hermanas; ninguna es la matriz)
 
 | Vertical | Producto | Proyecto Vercel | Estado |
 |---|---|---|---|
@@ -50,6 +51,7 @@
 | **almacen** | Almacén de eventos/catering (cliente Joaquín Jaén) | `almacen` | ✅ En `apps/almacen`, Root Directory `apps/almacen` (desplegada 15/07/2026, tenant DEMO poblado; tenant real de Joaquín pendiente). Compone `@central/module-materiales`. BD compartida. `ignoreCommand` YA puesto en `vercel.json` (17/07/2026, PR #945); añadida a la matriz de typecheck de CI y wireado su test (26/07/2026, PR #1093 — sustituyó a los duplicados #917/#936). Rol `prisma_almacen` acotado a least-privilege (26/07/2026): solo `SELECT/INSERT/UPDATE/DELETE` en `almacen_*` + `SELECT` en `cuentas` (antes tenía DML sobre las 254 tablas de `public`, igual que el resto de `prisma_*`); `negocios` deliberadamente FUERA del grant (declarado en `schema.prisma` para la Fase 2 pero sin ningún uso real en el código hoy — añadir GRANT cuando se use de verdad). ⚠️ Sigue sin `CLAUDE.md` propio ni fila en `docs/FUENTES-DE-VERDAD.md`. |
 | **mariscos** | Trazabilidad pesquera + etiquetado por peso (cliente Mariscos González) | `mariscos` | ✅ En `apps/mariscos`, Root Directory `apps/mariscos` (Fase 1, PR #1055, 11/08/2026). Compone `@central/module-pesca`. BD compartida (tablas `mariscos_partidas`/`mariscos_envasados`, SQL en `prisma/sql/2026-07-21_mariscos_schema.sql`, aplicación preview→prod pendiente). `CLAUDE.md` propio. **Pendiente para darla por viva:** proyecto Vercel, ejecutar su SQL, sembrar cuenta real. |
 | **asegura** | Correduría de seguros (nombre comercial **Grupo Asegura**) | `asegura` *(pendiente de crear)* | 🚧 **Esqueleto** en `apps/asegura` (26/08/2026): auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout, manifiestos e `ignoreCommand`. Schema **propio `seguros`** + rol `prisma_seguros` (existe, `BYPASSRLS`, **sin contraseña** → inerte). Prisma con `multiSchema`. **La cartera real (32.600 clientes / 28.843 pólizas) NO está migrada:** vive en el Supabase de Manuel Suárez y se alimenta a diario por CIMA/EIAC. `schema seguros` vacío ≠ correduría sin datos — el dashboard lo dice explícitamente en vez de pintar KPIs a 0 (`lib/estado-migracion.ts`). Traspaso en curso: **`docs/TRASPASO-CORREDURIA.md`**. |
+| **housesevillana** | Landing pública de House Sevillana (canal directo: motor de reservas, WhatsApp de grupos, teléfono) | `house-sevillana-landing` | ✅ En `apps/housesevillana`, Root Directory `apps/housesevillana`. **Unificada en el monorepo el 12/08/2026** desde el repo suelto `house-sevillana-landing`; vivía FUERA y por eso era invisible al leer `apps/sivra` (llevó a afirmar por error que «no había web», PR #1387→#1388). Importada **sin su historia git a propósito** (contenía una `service_role`). Next.js mínimo por rutas `edge`; `/en` e `/it` se DERIVAN del HTML español por diccionario de cadenas exactas → tocar un texto español rompe su traducción. La reescribe sola el agente SEO de `apps/sivra` (`/api/seo-refresh`, lunes) por la GitHub Contents API. |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 

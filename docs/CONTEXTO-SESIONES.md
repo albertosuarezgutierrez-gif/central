@@ -3457,6 +3457,21 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+
+## 🔒 (27/08/2026) Auditoría completa: 39 RPC de `iarest` las puede llamar `anon` sin guarda
+
+Pasada completa (install, radiografía, typecheck **11/11 apps**, build REAL de plataforma, tests,
+audit, advisors). 🔴 **Hallazgo:** en el schema `iarest` hay **39 funciones `SECURITY DEFINER`
+que escriben, expuestas como RPC y con `EXECUTE` para `anon` sin ninguna comprobación de
+autorización** — entre ellas `activar_plan` (pone cualquier restaurante en plan activo con
+límites 999). La anon key es pública por diseño. Radio HOY ~nulo (2 restaurantes, 0 planes
+activos, 0 comandas) → es el momento de arreglarlo. **No se ha tocado** (gran radio): plan con
+rollback en `docs/AUDITORIA-2026-08-27.md`. Falta la sonda HTTP real (el sandbox bloqueó el curl).
+Arreglado de paso: `transpilePackages` de plataforma (era coherencia, **no rompía** — build verde
+antes y después), tsconfig de housesevillana (5 × TS5097), override de `nanoid` (5→4 vulns), y
+`MATRIZ.md`, que **no listaba `apps/housesevillana`** — la misma invisibilidad del «no había web».
+Ojo estructural: el job `Build` del CI **solo construye ia-rest**; typecheck ≠ build.
+
 ## 📈 (27/08/2026) El traspaso a Interactive Brokers no es un gasto de la correduría — PR #1798 ✅
 
 - Alberto avisa: el cargo de BBVA de **-1.000,00€** del 24/08 («ORDENES PAGO EMITIDAS… // U9007431 /

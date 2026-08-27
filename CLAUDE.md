@@ -317,6 +317,14 @@ salió verde):
 Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
 desbloquea nada.
 
+⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 11** (se añadió `asegura` el 26/08 y
+`housesevillana` el 27/08). Los 9 de la tabla son los que el **ruleset exige**; los dos nuevos
+**corren pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que no se
+afirma). `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
+sus 5 errores `TS5097` vivieron 15 días sin que nadie los viera: una app que no está en la matriz
+no la typechequea nadie. **Al crear una app nueva, añadirla a la matriz es parte del alta**, igual
+que el `ignoreCommand`.
+
 📌 **Consecuencia estructural — REVISADA el 27/08/2026.** La conclusión del 26/08 («ningún PR abierto
 por el agente puede mergearse sin que Alberto intervenga a mano») **resultó ser falsa**: el PR #1763 se
 mergeó entero sin intervención humana. Se mantiene abierta la decisión de fondo —dar a la App permiso
