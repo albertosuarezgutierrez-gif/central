@@ -44,7 +44,7 @@ reales: Busto Reform 139€/155€/**141€ la Madrugá** y Luxury 330€, **los
 2026-2038) y el resto **por tabla año a año** — la Feria NO se deriva a propósito, su encaje con la
 Pascua ha cambiado y una regla obsoleta pondría el ×2,5 en la semana equivocada; el año sin tabla se
 DECLARA (`aniosSinDatos`). Cron `/api/sivra/eventos/calendario` (03:30) **INERTE sin
-`SIVRA_CALENDARIO_ACTIVO=1`**: sembrar sube precios publicados. PR #1776, pendiente del OK de Alberto
+`SIVRA_CALENDARIO_ACTIVO=1`**: sembrar sube precios publicados. PR #1778, pendiente del OK de Alberto
 sobre los factores.
 
 ### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
