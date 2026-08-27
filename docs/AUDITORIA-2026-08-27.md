@@ -144,6 +144,17 @@ su vertical. **No se toca nada** — queda anotado para decidir si se consumen o
 | `deepmerge-ts` 7.1.5 | high | `plataforma>mailparser>html-to-text` | Requiere v8 (major). `html-to-text` lo usa para fusionar **opciones**, no el correo entrante → no alcanzable por el atacante. Forzar el major arriesga el triaje de correo. |
 | `file-type` 16.5.4 | moderate | `ialimp>jimp>…` | El parche es la v21 (salto de 5 majors, ESM-only); `jimp` lo pinnea. Un override rompería jimp. |
 
+## 🟡 H5 — `housesevillana` no estaba en la matriz de typecheck del CI
+
+La causa raíz de H-arreglo-2: la app entró en el monorepo el **12/08/2026** y nunca se añadió a la
+matriz de `tests.yml`, así que **nadie la typechequeaba**. Sus 5 errores `TS5097` llevaban 15 días
+ahí. Se ha añadido a la matriz (ya en verde en local) y se ha anotado en `CLAUDE.md` que dar de alta
+una app incluye meterla en la matriz, igual que el `ignoreCommand`.
+
+De paso: la matriz tiene ahora **11 apps** (entró `asegura` el 26/08), mientras la tabla de
+`CLAUDE.md` lista **9** como requeridos. Los dos nuevos corren, pero **no consta** que el ruleset los
+exija — no se puede leer el ruleset desde aquí, así que se documenta como lo que es y no se afirma.
+
 ## 🔵 Observaciones (sin acción)
 
 - **El job `Build` del CI solo construye `apps/ia-rest`** (`ci.yml`, `working-directory:
