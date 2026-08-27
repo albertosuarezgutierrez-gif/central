@@ -1053,6 +1053,15 @@ aplica a CUALQUIER rutina en esa franja (trading-analista corre mar-sáb de madr
 límite hoy no alerta a nadie: se supo 2 días tarde por el heartbeat. El sweep de Serper es cron de
 VERCEL, ajeno al límite de Claude — por eso gastaba a las 03:00 con las rutinas bloqueadas.
 
+### 🎓 (23/08/2026) agentes-entrenador: pasada semanal (rango 16/08→23/08)
+20 entradas de bitácora procesadas y podadas. Único fix: caveat aditivo en
+`facturas-correo/SKILL.md` — 2 fallos propios en la semana con la misma raíz (copiar a Drive /
+sobrescribir `factura_ref` sin comprobar antes qué había). `buscador-ia` validado: la regla del
+17/08 (verificar contra `/v1/models` antes de dar un id por vivo) funcionó en el incidente del
+22/08. Resto de agentes sin patrones repetidos. Backlog de PRs abiertos: 4, ninguno de 2+ semanas
+— sano. Nota fuera de carril: `facturas-scan` (cron de `apps/plataforma`) sigue mal-archivando en
+`PERSONAL (SEGUROS)` desde el 01/08 (23 días) — es código, no prompt, señalado por Telegram.
+
 ### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
 Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
 puros nuevos en `@central/module-trading` (173 tests verdes): **`splits.ts`** (reexpresa lo anterior a
