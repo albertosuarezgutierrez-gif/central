@@ -4,6 +4,10 @@ export { sma, ema, rsi, macd, atr, adx, indicadoresDe, regimenDe } from './indic
 export { evaluarMomentum, evaluarReversion, evaluarValor, evaluarCatalizador, torneo } from './estrategias.ts'
 export { superaConcentracion, esPromediarPerdedor, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo } from './riesgo.ts'
 export { dimensionar, abrir, aplicarStop, cerrar, pnlPosicion } from './paper.ts'
+// ¿El resultado vino de la SEÑAL o de un EVENTO de calendario? Solo ETIQUETA (no veta ni dimensiona):
+// cambiar el comportamiento a partir de esta etiqueta es modelo → preregistro. Ver `evento.ts`.
+export { estadoEarnings, cruzaEvento, finDeVentana, partirPorEvento, atribuirPorEvento, resumenAtribucion } from './evento.ts'
+export type { EstadoEarnings, CruceEvento, ParticionEvento, AtribucionEvento } from './evento.ts'
 export { puntuarTesis, agregarStats, ajustesDeStats } from './scoring.ts'
 export type { Resultado, StatsEstrategia } from './scoring.ts'
 export { rvol, tendenciaVolumen, volumenInusual, confirmaVolumen } from './volumen.ts'

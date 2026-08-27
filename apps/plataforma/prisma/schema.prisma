@@ -173,6 +173,15 @@ model TradingTesis {
   // Casos verificados contra IBKR: 17/07, 03/08 y 04/08 de 2026 (ver `lib/trading/precios-guardia.ts`).
   anulado       Boolean                @default(false)
   anuladoMotivo String?                @map("anulado_motivo")
+  // 📅 Fecha de resultados conocida al EMITIR la tesis, con su estado al lado. Se usaba (barrera
+  // `earningsInminente` y estrategia `catalizador`) pero no se guardaba: solo quedaba como texto en
+  // `rationale` («earnings en 2d»), que no se puede agregar. Sin esto no se puede responder con
+  // números a «¿cuánto del rendimiento del libro viene de días de evento y cuánto de la señal?»
+  // (caso NVDA del 26-27/08/2026: +6,79% de hueco tras resultados sobre una posición que la víspera
+  // estaba en pérdida). NULL NO es «no hay evento» — eso lo dice `earningsEstado`:
+  // sin_consultar | con_fecha | sin_fecha | reconstruido. Solo ETIQUETA: no cambia ninguna decisión.
+  proximoEarnings DateTime?            @map("proximo_earnings") @db.Date
+  earningsEstado  String               @default("sin_consultar") @map("earnings_estado")
   createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   resultado     TradingTesisResultado?
 
@@ -217,6 +226,12 @@ model TradingPaperOrden {
   // ejecuta al cierre de la señal sino al día siguiente — esta columna mide cuánto cuesta esa espera,
   // la única incógnita que el paper no medía. NULL = aún sin dato (no 0).
   precioDiaSiguiente Float?   @map("precio_dia_siguiente")
+  // 📅 Solo en las SELL: ¿hubo resultados entre la apertura y el cierre de la posición?
+  // `cruzado` | `limpio` | `sin_consultar` (tres estados en texto, nunca un boolean: «no lo sé» no es
+  // «no hubo»). NULL = fila anterior a este registro. Es la ÚNICA huella que sobrevive al cierre —
+  // la fila de `TradingPaperPosicion` se borra— y lo que permite separar el rendimiento del libro
+  // entre lo que produjo la señal y lo que produjo el calendario. No decide nada.
+  eventoDentro       String?  @map("evento_dentro")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   // Una orden por símbolo+lado+día: los reintentos de la pasada nocturna no duplican el libro
@@ -242,6 +257,11 @@ model TradingPaperPosicion {
   precioEntrada Float    @map("precio_entrada")
   stop          Float
   abiertaEn     DateTime @map("abierta_en") @db.Date
+  // Fecha de resultados que se conocía AL ABRIR (misma semántica que en `TradingTesis`). Se captura
+  // aquí porque al cerrar hay que saber si el evento cayó dentro de la ventana, y para entonces la
+  // pasada ya no tiene los fundamentales de aquel día.
+  proximoEarnings DateTime? @map("proximo_earnings") @db.Date
+  earningsEstado  String    @default("sin_consultar") @map("earnings_estado")
 
   @@map("trading_paper_posicion")
 }
