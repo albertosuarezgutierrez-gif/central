@@ -41,9 +41,14 @@ anon/authenticated + RLS), endpoint `POST /api/inversion/underwrite`, pantalla `
 mes, aforo 4) → curva en `docs/INVERSION-CONIL-2026-08-27.md`; **pico/valle 5,79×** (ago 488,50€ vs mar 84,36€),
 no el 3,6× de las dos ventanas del spec. Esa pasada destapó **dos mentiras en los mensajes del veredicto** —citaba
 el yield neto junto al listón cuando comparaba el cash-on-cash («8,27% bate el listón de 9,00%»), y decía «año
-entero medido» con la ocupación 100% supuesta—; corregidas y con test. Verificado: tsc 0 · 1.745 tests de
-plataforma · 61 del guardián. ⛔ Sigue faltando lo de Alberto: precio, m², qué es el inmueble, explotación,
+entero medido» con la ocupación 100% supuesta—; corregidas y con test. Verificado tras mergear `main`: tsc 0 · 1.766 tests de
+plataforma · 75 del guardián. ⛔ Sigue faltando lo de Alberto: precio, m², qué es el inmueble, explotación,
 financiación y si compra él o Punto y Coma SL.
+🔓 **De regalo, el CI:** el PR #1789 se pasó 3 h sin que GitHub le creara ni uno de los 12 requeridos
+(abrir, des-draftear y dos pushes con contenido: 0 runs). Lo desatascó **mergear `main` en la rama**
+—que además hacía falta, el PR estaba en conflicto—: los 12 arrancaron en segundos. Corregida la frase
+de `CLAUDE.md` que decía «hace falta mano de Alberto». **La causa sigue sin aislar** (entre el push
+mudo y el que funcionó cambiaron el merge de la base Y 95 minutos).
 
 ### 🌱 (27/08/2026) El calendario, SEMBRADO en producción y medido: 0 precios movidos
 Cerrada la prueba de punta a punta (PRs #1787 → siembra). Antes de sembrar se arregló el nombre de

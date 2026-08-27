@@ -281,11 +281,25 @@ posterior lo desatasca»): es lo que había funcionado hasta ahora, pero en #178
 desconocida.** Lo que queda documentado no es un remedio, es qué NO gastar tiempo probando la
 próxima vez.
 
-**Cuando pase, lo que hay es esto:** el PR no se puede mergear (la regla exige los 12) y ninguna
-palanca del agente lo arregla. Hace falta mano de Alberto: un push desde su máquina, o cerrar y
-reabrir el PR desde la web, o abrir el PR de nuevo desde una rama con OTRO nombre. **El agente no
-crea ramas nuevas por su cuenta** (solo empuja a la rama designada) y el commit vacío sigue
-prohibido.
+✅ **CUARTA palanca, y ESTA SÍ funcionó (27/08/2026, 13:55 UTC, mismo PR #1789): MERGEAR `main` EN
+LA RAMA.** Tres horas después de los tres intentos fallidos, `main` había avanzado dos commits y el
+PR pasó a `mergeable_state: "dirty"` (conflicto en `CLAUDE.md` y en la memoria). Se resolvió el
+conflicto y se empujó el commit de merge → **los 12 requeridos arrancaron a los pocos segundos**,
+evento `pull_request`, sobre el head `b93d472e`. O sea: **el agente sí pudo desatascarlo solo**, y la
+frase que había aquí —«hace falta mano de Alberto»— era falsa.
+
+⚠️ **Lo que NO se sabe: por qué.** Un push con contenido real ya se había probado a las ~12:20 y no
+disparó nada. Entre uno y otro cambiaron dos cosas a la vez —pasaron ~95 minutos y el PR estuvo en
+conflicto— así que **no está aislado** si lo que desatasca es el merge de la base, el que la
+mergeability se recalcule, o simplemente el tiempo. No lo des por causa medida.
+
+**Orden a seguir cuando un PR no arranca los checks:** (1) mira si hay conflicto con `main`, y si lo
+hay resuélvelo —es trabajo obligatorio de todas formas y encima puede desatascar; (2) si no lo hay,
+**mergea `main` en la rama igualmente** (es un push con contenido real y no ensucia el historial como
+un commit vacío); (3) solo si eso tampoco funciona, hace falta mano de Alberto: un push desde su
+máquina, o cerrar y reabrir el PR desde la web, o abrir el PR de nuevo desde una rama con OTRO
+nombre. **El agente no crea ramas nuevas por su cuenta** (solo empuja a la rama designada) y el
+commit vacío sigue prohibido.
 
 **Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
 de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
