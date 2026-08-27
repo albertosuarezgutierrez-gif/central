@@ -45,8 +45,15 @@ medido que la **cadencia NO es el cuello de botella**: un evento a <60 días vis
 **3,5 h** (mediana de 141 eventos/60 días) y los que no movieron precio eran noches ya vendidas. Módulo
 `lib/sivra/eventos-calendario.ts` (puro, 21 tests): Semana Santa DERIVADA de la Pascua (Meeus) con la curva
 EXACTA de `EVENTS` día por día, Feria por tabla año a año (no se deriva: su encaje con la Pascua ya cambió
-una vez y costó una corrección el 31/07). Cron `/api/sivra/eventos/calendario` (03:30) **INERTE sin
-`SIVRA_CALENDARIO_ACTIVO=1`**. PR #1778.
+una vez y costó una corrección el 31/07). Cron `/api/sivra/eventos/calendario` (03:30). **PR #1778
+MERGEADO** (`50fa787a`) y verificado sobre `main` (575/575 en `lib/sivra`, 61/61 del guardián).
+🚨 **Nació gateado tras `SIVRA_CALENDARIO_ACTIVO` y Alberto retiró el interruptor el mismo día**, con
+el argumento que lo zanja: **no hay otro proveedor de precio que este motor**. La regla de «no tocar
+precios sin permiso» protege de un TERCERO moviéndolos; aquí no hay tercero, así que el gate no
+evitaba ningún riesgo y solo dejaba el dato fuera hasta que alguien se acordara de la env — el fallo
+exacto que el módulo viene a evitar. Y estaba medido que no costaba nada: encenderlo cambiaba **0
+noches** (las 15 fechas de la ventana ya estaban en `EVENTS` con el mismo factor y el motor combina
+por MAX). Empieza a morder hacia **abril de 2027**, cuando el horizonte cruce a la Semana Santa de 2028.
 
 ### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
 Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
