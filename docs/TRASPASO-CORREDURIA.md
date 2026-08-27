@@ -1897,3 +1897,35 @@ está en la página de facturación de esa organización, que no se ha abierto.
    `alberto-suarez-83`), así que quizá pueda mover la app él mismo sin esperar a Manuel.
    ⚠️ **No verificado:** mover una app entre orgs puede exigir rol de **administrador en la de origen**,
    y en la de Manuel él es miembro normal. Se comprueba antes de prometerlo.
+
+### 💶 El coste real del adaptador, ya no estimado (factura de julio 2026)
+
+Factura **RTAKOYRK-0003** de Fly.io a `manuelsuarezz@gmail.com`, periodo 1–31 de julio de 2026:
+
+| Concepto | Importe |
+|---|---|
+| Pay-as-you-go Plan | 0,00 US$ |
+| Machines Shared CPU 1x (cdg) | 2,28 US$ |
+| **Machines Shared 1x: Additional RAM (cdg)** | **4,40 US$** |
+| Bandwidth egress (arn + cdg) | 0,00 US$ |
+| **TOTAL** | **6,68 US$** (5,96 €, a 1 USD = 0,8925 EUR) |
+
+Esto **sustituye la estimación de ~3,19 US$/mes** que este documento marcaba como no verificada. El dato
+bueno estaba donde se dijo que estaría: en la factura de Manuel.
+
+**Lo caro es la RAM, no la CPU** — coherente con que sea una JVM. Y responde dos de las tres preguntas
+que se le iban a hacer:
+
+- **La máquina NO se apaga entre pasadas.** La cantidad facturada de CPU son **2.678.393 s** y un mes de
+  31 días son 2.678.400 s: está encendida **24/7**, sin `auto_stop`.
+- **RAM:** ~0,75 GB de RAM adicional (2.008.794,75 GB·s / 2.678.400 s). Probablemente **1 GB en total**
+  contando la incluida. ⚠️ **Inferencia**, la factura no lo dice.
+
+**Consecuencia para el traspaso:** asumir el adaptador cuesta **unos 6 US$ al mes**. La decisión de
+moverlo no es económica.
+
+⚠️ **Pagar esta factura NO arregla el problema de fondo.** La página de pago es pública (Google Pay o
+tarjeta, sin login), así que Alberto puede liquidarla — y con 5,96 € compra tiempo para hacer el
+traspaso con calma. Pero el medio de pago de la organización sigue siendo el de Manuel: al mes
+siguiente vuelve a vencer. Lo único que lo cierra es mover la app. Y si se paga, **se le dice**: le
+aparecerá en su cuenta un pago que él no hizo.
