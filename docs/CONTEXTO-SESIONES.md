@@ -32,6 +32,17 @@
 
 ---
 
+### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
+Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
+separado se encadenan en un precio IRREVERSIBLE — un evento salta el raíl (Busto 21-feb-2027: 221€→717€
+en una pasada), el precio pasa a ser outlier (>1,4× a >30 días) y la ÚNICA llave era el techo de mercado
+MEDIDO, que exige ≥5 comps fiables de la fecha exacta (solo el 25% del calendario los tiene). Medido:
+**279 noches a la venta congeladas, 249 (89%) sin poder descongelarse nunca**. Nueva **segunda llave**
+(`lib/sivra/pricing-descongelar.ts`, puro + 13 tests + guardián de cableado): **antigüedad** (21 días sin
+poder reescribirse) y **rumor caído** (evento descartado y sin evento vivo → libera YA, decisión de
+Alberto: «no se puede coger un rumor, subir el precio y dejarlos trancados»). Simulado contra prod: ~270
+noches liberadas. Bajar es reversible (raíl ±20%/día + suelos); quedarse a 2,3× dos meses, no. PR pendiente.
+
 ### 🧹 (27/08/2026) Backlog de PRs de rutinas a CERO — y el bump de seguridad que llevaba 4 días sin aplicarse
 Cerrados los dos que quedaban del 23/08. **#1602** (entrenador): caveat en `facturas-correo/SKILL.md`
 + poda de 20 entradas de bitácora. Su conflicto NO era inserción pura —podaba mientras `main`

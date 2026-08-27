@@ -10,6 +10,7 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
+import { descongelar, detalleDescongeladas } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
@@ -213,6 +214,13 @@ export async function POST(req: NextRequest) {
    * apuesta — congelarle la bajada sería tratar un rumor como un hecho (decisión Fable 13/08/2026).
    */
   const autoEvConfirmado = new Map<string, number>()
+  /**
+   * Fechas cuyo precio lo subió un evento que DESPUÉS se descartó y que hoy no tienen ningún evento
+   * vivo. Es la mitad que faltaba del ciclo del rumor (decisión de Alberto, 27/08/2026): sin esto la
+   * apuesta se deshace en `pricing_eventos_auto` pero NO en el precio, que se queda arriba y cae en
+   * la guarda de outlier. Ver `lib/sivra/pricing-descongelar.ts`.
+   */
+  const rumorCaido = new Set<string>()
   for (const [fecha, lista] of porFecha) {
     // Los previstos LEJANOS suben el precio ponderado por confianza (v2, decisión de Alberto
     // 09/08/2026); cerca de la fecha vuelven a solo-suelo. El contexto de distancia va aquí.
@@ -224,6 +232,11 @@ export async function POST(req: NextRequest) {
       .filter(e => normalizarEstado(e.estado) === 'confirmado')
       .map(e => Number(e.factor) || 1))
     if (confirmado > 1) autoEvConfirmado.set(fecha, confirmado)
+    // Hubo un descartado Y no queda premio vivo de ninguna otra fila de la misma fecha: la razón
+    // que justificaba el precio alto ya no existe. Si SIGUE habiendo evento vivo no se marca — ahí
+    // el objetivo sube por su cuenta y las guardas ni llegan a plantearse retener nada.
+    const hayDescartado = lista.some(e => normalizarEstado(e.estado) === 'descartado')
+    if (hayDescartado && ef.factorPrecio <= 1 && confirmado <= 1) rumorCaido.add(fecha)
   }
 
   // 🟠 Lecturas auxiliares que pueden caerse sin invalidar la pasada — pero que se DECLARAN
@@ -529,6 +542,8 @@ export async function POST(req: NextRequest) {
 
   /** congelaciones de TODOS los pisos, para el aviso agrupado (una pasada = un mensaje como mucho) */
   const congeladasGlobal: { property: string; fecha: string; precio: number; factor: number }[] = []
+  /** descongelaciones de TODOS los pisos, para el parte de la respuesta (ver pricing-descongelar.ts) */
+  const descongeladasGlobal: { property: string; fecha: string; motivo: string }[] = []
 
   // ⏱️ Raíl por DÍA de verdad (fix auditoría 18/07/2026): `max_change_pct` está documentado como
   // tope "±/día", pero anclado al precio de la PASADA anterior con 3 crons/día era ±73%/día real
@@ -560,6 +575,23 @@ export async function POST(req: NextRequest) {
     ORDER BY property_id, rate_date, applied_at ASC
   `).catch((e) => { anclaCaida.push({ nombre: 'anclaHoy', error: String(e).slice(0, 120) }); return [] })
   const anclaHoy = new Map(anclaHoyRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
+
+  // 🔓 Días desde la ÚLTIMA escritura de cada fecha — la segunda llave de los congeladores
+  // (`lib/sivra/pricing-descongelar.ts`). Va con las auxiliares y NO con las anclas del raíl: si
+  // esta lectura revienta, el mapa queda vacío, ninguna fecha recibe la llave por antigüedad y el
+  // motor se comporta EXACTAMENTE como antes del 27/08/2026. Es la degradación conservadora — un
+  // fallo aquí no puede descongelar de más, solo de menos — pero se declara igual, porque un
+  // candado que deja de abrirse en silencio es lo que costó 279 noches.
+  const escrituraRows = await prisma.$queryRaw<{ pid: string; rate_date: string; dias: number }[]>(Prisma.sql`
+    SELECT property_id AS pid, rate_date::text AS rate_date,
+           (CURRENT_DATE - MAX(applied_at)::date)::int AS dias
+    FROM pricing_applied
+    WHERE dry_run = false AND rate_date >= CURRENT_DATE
+    GROUP BY property_id, rate_date
+  `).catch((e) => { lecturasCaidas.push({ nombre: 'ultima_escritura', error: String(e).slice(0, 120) }); return [] })
+  const diasSinEscribir = new Map(escrituraRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.dias)]))
+  /** true = la lectura respondió (aunque sea con 0 filas). Sin ella, «nunca escrita» no es afirmable. */
+  const hayHistorialEscrituras = !lecturasCaidas.some(l => l.nombre === 'ultima_escritura')
 
   // 🛑 Si CUALQUIERA de las dos lecturas reventó, esta pasada NO tarifica. Ver la cabecera de
   // `pricing-ancla-rail.ts`: un `[]` por excepción es indistinguible del `[]` legítimo (fecha sin
@@ -667,6 +699,10 @@ export async function POST(req: NextRequest) {
     // una palanca que sube precios en vivo tiene que poder auditarse sin abrir la BD, y un 0 aquí
     // es la prueba de que no ha movido nada (distinto de «no se ha mirado» → `antelacion_k = 0`).
     const premiadas: { fecha: string; factor: number }[] = []
+    // Fechas a las que la SEGUNDA llave (antigüedad o rumor caído) les ha quitado el veto de las
+    // guardas en esta pasada. En la respuesta a propósito: una descongelación en masa tiene que
+    // poder verse sin abrir la BD, y un 0 aquí es la prueba de que el candado no se ha tocado.
+    const descongeladas: { fecha: string; motivo: string }[] = []
     // Fechas donde el techo de mercado medido recortó el objetivo (pricing-techo-mercado.ts). En
     // la respuesta a propósito: un precio que baja por el techo debe poder distinguirse de uno que
     // baja porque el mercado del mes se hundió.
@@ -918,6 +954,20 @@ export async function POST(req: NextRequest) {
       if (r.max_price != null) target = Math.min(target, r.max_price)
       if (acote.acotado) techoAcotadas.push({ fecha: date, techo: tMkt.techo, origen: tMkt.origen! })
       const liberaTecho = acote.liberaCongelacion
+      // 🔓 Segunda llave (27/08/2026). El techo solo abre donde hay mercado MEDIDO de la fecha, y
+      // eso es una cuarta parte del calendario: 249 de 279 noches congeladas no podían salir nunca.
+      // Ver la cabecera de `lib/sivra/pricing-descongelar.ts` para el caso completo.
+      const desc = liberaTecho
+        ? { libera: false, motivo: '' }   // el techo ya la abre: no hay nada que añadir
+        : descongelar({
+            // Sin la lectura de historial no se puede afirmar «nunca escrita»: se trata como
+            // reciente (0 días) para que un fallo de consulta NO descongele por la puerta de atrás.
+            diasSinEscribir: hayHistorialEscrituras
+              ? (diasSinEscribir.get(`${r.property_id}|${date}`) ?? null)
+              : 0,
+            rumorCaido: rumorCaido.has(date),
+          })
+      const liberaGuardas = liberaTecho || desc.libera
       // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
       // mes (fallback global), el precio NUNCA baja — el bucket global (dominado por temporada
       // media/baja) arrastraría la noche de evento hacia abajo (788→283 en jun-2027) y el factor
@@ -935,7 +985,7 @@ export async function POST(req: NextRequest) {
       // automático — en cuanto la rutina de Booking mida la fecha, la condición deja de cumplirse
       // y el raíl deshace en 2-3 pasadas lo que estuviera inflado. Solo confirmados: los previstos
       // son apuestas y su premio ya va ponderado. `max_price` manda si obligara a bajar (hoy NULL).
-      if (r.events_enabled && old != null && target < old
+      if (r.events_enabled && old != null && target < old && !liberaGuardas
           && (r.max_price == null || old <= r.max_price)) {
         const evConfirmado = Math.max(eventFactor(date), autoEvConfirmado.get(date) ?? 1)
         const ciegas = decidirEventoACiegas({
@@ -955,8 +1005,12 @@ export async function POST(req: NextRequest) {
       // `liberaTecho` la desactiva: «esa noche es especial» deja de ser una hipótesis defendible
       // cuando el mercado MEDIDO de la fecha dice que estamos por encima de su techo.
       if (old != null && normalBase > 0 && old > normalBase * OUTLIER_RATIO
-          && target < old && daysOut > OUTLIER_HORIZON_DAYS && !liberaTecho
+          && target < old && daysOut > OUTLIER_HORIZON_DAYS && !liberaGuardas
           && (r.max_price == null || old <= r.max_price)) continue
+      // Se anota DESPUÉS de las dos guardas y solo si la fecha va a escribirse de verdad: contar
+      // aquí una llave que luego frena la banda muerta sería inflar el parte con trabajo que no se
+      // hizo — el mismo error que este PR viene a corregir, por la otra punta.
+      if (desc.libera && old != null && target < old) descongeladas.push({ fecha: date, motivo: desc.motivo })
       if (old != null && target === old) continue
       // 🔇 Banda muerta anti-churn (fix auditoría 18/07/2026): el motor escribía 3.400+ cambios
       // por semana para 2 pisos (media 4-6 reescrituras por fecha, 78% de fechas subiendo Y
@@ -1078,8 +1132,14 @@ export async function POST(req: NextRequest) {
       // Fechas de evento confirmado que NO se bajaron por falta de mercado fiable propio. Van en la
       // respuesta a propósito: un precio congelado que no se declara es indistinguible de uno olvidado.
       congeladas,
+      // 🔓 Lo contrario: fechas a las que la segunda llave les quitó el veto y por fin vuelven a
+      // moverse. `0` significa «el candado no ha tenido que abrirse», no «no hay candado».
+      descongeladas: descongeladas.length > 0
+        ? { fechas: descongeladas.length, sample: descongeladas.slice(0, 5) }
+        : undefined,
     })
     for (const c of congeladas) congeladasGlobal.push({ property: r.property_id, ...c })
+    for (const d of descongeladas) descongeladasGlobal.push({ property: r.property_id, ...d })
   }
 
   // 🧊 Aviso AGRUPADO de las fechas congeladas por «evento a ciegas», con dedupe de 7 días por
@@ -1206,6 +1266,10 @@ export async function POST(req: NextRequest) {
     // Pisos que esta pasada dejó sin tarificar. En la respuesta a propósito: sus precios se quedan
     // como estaban, y eso NO es «el mercado dice que están bien» — es «no se ha podido mirar».
     sin_tarifar: sinTarifar.length > 0 ? sinTarifar : undefined,
+    // 🔓 Parte de la segunda llave de los congeladores. Sale a nivel de pasada, no solo por piso,
+    // porque el día que se estrene va a mover cientos de noches a la vez y eso debe verse de un
+    // vistazo (ver `lib/sivra/pricing-descongelar.ts`).
+    descongeladas: detalleDescongeladas(descongeladasGlobal) ?? undefined,
     dryRun, paused, days, properties: recs.length, results,
   })
 }
