@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-26T13:11:29Z",
-  "sha": "c4895d24daab36260b70f747bc9861f6224fa9f7",
+  "generadoEn": "2026-08-27T06:27:30Z",
+  "sha": "88150a4afd89a07ee27c7c5fcf67902c157974db",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49672,7 +49672,7 @@
           "exportada": false,
           "params": "base64String: string",
           "retorno": null,
-          "linea": 69
+          "linea": 77
         },
         {
           "nombre": "PricingAutoPage",
@@ -49680,7 +49680,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 78
+          "linea": 86
         },
         {
           "nombre": "Stat",
@@ -49688,7 +49688,7 @@
           "exportada": false,
           "params": "{ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }",
           "retorno": null,
-          "linea": 426
+          "linea": 469
         },
         {
           "nombre": "Toggle",
@@ -49696,7 +49696,7 @@
           "exportada": false,
           "params": "{ label, checked, onChange, warn }: { label: string; checked: boolean; onChange: (v: boolean) => void; warn?: boolean }",
           "retorno": null,
-          "linea": 436
+          "linea": 479
         },
         {
           "nombre": "btn",
@@ -49704,12 +49704,12 @@
           "exportada": false,
           "params": "bg: string, disabled: boolean",
           "retorno": "CSSProperties",
-          "linea": 445
+          "linea": 488
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9d19e1361983"
+      "hash": "e12bbcceb038"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/pricing-rentabilidad/page.tsx",
@@ -57721,6 +57721,38 @@
       "hash": "152ff7ff2597"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/pricing/antelacion/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "GET /api/sivra/pricing/antelacion Medidor de resultados de la palanca de ANTICIPACIÓN (ver lib/sivra/pricing-antelacion.ts): ¿cobrar más a quien reserva con mucha antelación sale a cuenta, o espanta r"
+        }
+      ],
+      "tablas": [
+        "booked",
+        "dia",
+        "incomes",
+        "lateral",
+        "next",
+        "noches",
+        "prem",
+        "pricing_applied",
+        "pricing_settings",
+        "rate_snapshots"
+      ],
+      "rutaApi": "/api/sivra/pricing/antelacion",
+      "hash": "902d1a686cc0"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/pricing/aplicar-propuesta/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -57807,7 +57839,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "fmt",
@@ -57815,7 +57847,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "GET",
@@ -57823,7 +57855,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 66,
+          "linea": 67,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57832,7 +57864,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 70
+          "linea": 71
         }
       ],
       "tablas": [
@@ -57855,7 +57887,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "4d30b1900ad1"
+      "hash": "e1cf2b1ad1a8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -69548,6 +69580,43 @@
       "hash": "dfd30e2112c5"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/antelacion-resultado.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/antelacion-resultado.ts — el VEREDICTO de la palanca de anticipación: ¿interesa o no? Lógica PURA (sin BD ni red): el endpoint /api/sivra/pricing/antelacion aporta los agregados y aquí solo se decide qué se puede AFIRMAR con ellos. 🚨 EL CONTRAFACTUAL NO EXISTE, Y ESO MANDA EN TODO LO DEMÁ",
+      "exporta": [
+        "evaluarAntelacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": null,
+          "linea": 64
+        },
+        {
+          "nombre": "pp",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": null,
+          "linea": 65
+        },
+        {
+          "nombre": "evaluarAntelacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: AntelacionInput",
+          "retorno": "AntelacionVeredicto",
+          "linea": 67
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8d4f2002d6a2"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/atribucion-canal.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/sivra/atribucion-canal.ts De dónde vino REALMENTE una reserva de SIVRA. El problema que resuelve (12/08/2026): el cuadro de mando decía «canal directo = 0 €» en 2026 mientras la landing de housesevillana YA cerraba reservas directas por su motor, su WhatsApp de grupos y su teléfo",
@@ -70926,6 +70995,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8dc407af5c6c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-antelacion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-antelacion.ts — la palanca de ANTICIPACIÓN: el espejo que le faltaba a la urgencia. POR QUÉ (26/08/2026). `pricing-lastminute.ts` sabe BAJAR el precio cuando la fecha se acerca sin venderse. No existía la mitad simétrica: nada subía el precio por el hecho de que la fecha esté LEJOS",
+      "exporta": [
+        "factorAntelacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "NEUTRO",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "motivo: string, evaluado = false",
+          "retorno": "AntelacionResult",
+          "linea": 82
+        },
+        {
+          "nombre": "factorAntelacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: AntelacionInput, o: AntelacionOpts = {}",
+          "retorno": "AntelacionResult",
+          "linea": 84
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0d7d3c8780ed"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-base-evento.ts",
@@ -97808,7 +97906,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2586,
-    "funciones": 7108
+    "archivos": 2589,
+    "funciones": 7114
   }
 }
