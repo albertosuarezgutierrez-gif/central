@@ -21,16 +21,17 @@ export const maxDuration = 60
 // tarde cuesta: las entradas de 2027 se añadieron el 17/06/2026 y Busto Reform había vendido la noche
 // de la Madrugá a 141,00€ el 14/06 — tres días antes.
 //
-// 🚨 INERTE POR DEFECTO. Sembrar estas filas SUBE precios publicados, y eso no se hace sin permiso
-// explícito de Alberto para ese cambio concreto (regla del repo). Sin `SIVRA_CALENDARIO_ACTIVO=1`
-// la ruta calcula y devuelve la PREVISUALIZACIÓN completa —qué fechas y con qué factor— sin tocar
-// una sola fila. Con la env a `1`, siembra. La env se pone desde el god-panel → 🔑 Secretos.
+// Siembra SIEMPRE, sin interruptor. La primera versión venía gateada tras `SIVRA_CALENDARIO_ACTIVO`
+// por la regla de no tocar precios publicados sin permiso; Alberto lo retiró el 27/08/2026 con el
+// argumento que lo zanja: **no hay otro proveedor de precio que este motor**. Pedirle permiso para
+// usar su propio calendario no protege nada — solo deja el dato fuera hasta que alguien se acuerde,
+// que es exactamente el fallo que este módulo existe para evitar. Medido ese día: encenderlo no
+// movía ni una noche (las 15 fechas de la ventana ya estaban en `EVENTS` con el mismo factor y el
+// motor combina por MAX), así que el interruptor solo tenía coste, nunca beneficio.
 //
 // Es idempotente: `ON CONFLICT (fuente, nombre, rate_date)` y el nombre es estable, así que correr
 // dos veces no duplica ni mueve nada. Y NO pisa a nadie: el motor combina todas las fuentes por
 // MAX(factor), de modo que si el agente ya metió la Feria 2027 a 2,50 esto no la cambia.
-
-const ACTIVO = process.env.SIVRA_CALENDARIO_ACTIVO === '1'
 
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) {
@@ -43,20 +44,6 @@ export async function GET(req: NextRequest) {
 
   const cal = calendarioEntre(desde, hasta)
   const detalle = detalleCalendario(cal)
-
-  if (!ACTIVO) {
-    // Ni `ok:false` ni un 500: no está roto, está esperando permiso. Pero la respuesta tiene que
-    // decir en qué estado corre — un preview silencioso se leería como una siembra hecha.
-    return NextResponse.json({
-      ok: true,
-      sembrado: false,
-      motivo: "SIVRA_CALENDARIO_ACTIVO no está a 1 — previsualización, no se ha escrito nada",
-      ventana: { desde, hasta },
-      detalle,
-      anios_sin_datos: cal.aniosSinDatos,
-      previsualizacion: cal.noches,
-    })
-  }
 
   let upserted = 0
   const errores: string[] = []
@@ -86,7 +73,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok,
-    sembrado: true,
     ventana: { desde, hasta },
     detalle,
     upserted,
