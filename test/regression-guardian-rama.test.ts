@@ -81,6 +81,26 @@ test('pero un push REAL después del heredoc sí se ve', () => {
   assert.equal(decidirPush({ comando, ramaActual: RAMA }).bloquear, true)
 })
 
+// 🚨 Segundo autobloqueo, al ir a empujar el propio guardián: `2>&1` se leía como nombre de rama.
+// Las redirecciones y las comillas son ruido de shell, no refspecs.
+test('las redirecciones no son nombres de rama', () => {
+  for (const comando of [
+    'git push -u origin HEAD 2>&1 | tail -3',
+    'git push -u origin HEAD 2>/dev/null',
+    'git push -u origin HEAD > /tmp/salida.txt',
+    'git push -u origin HEAD >> /tmp/salida.txt 2>&1',
+    'git push -u origin HEAD &> /tmp/salida.txt',
+  ]) {
+    assert.equal(decidirPush({ comando, ramaActual: RAMA }).bloquear, false, comando)
+  }
+})
+
+test('las comillas alrededor de la rama no cuentan', () => {
+  assert.equal(decidirPush({ comando: `git push origin "${RAMA}"`, ramaActual: RAMA }).bloquear, false)
+  assert.equal(decidirPush({ comando: `git push origin '${RAMA}'`, ramaActual: RAMA }).bloquear, false)
+  assert.equal(decidirPush({ comando: 'git push origin "claude/otra"', ramaActual: RAMA }).bloquear, true)
+})
+
 test('fail-open: sin rama (HEAD desprendido) o con sustitución de comandos, pasa', () => {
   assert.equal(decidirPush({ comando: `git push origin ${RAMA}`, ramaActual: '' }).bloquear, false)
   assert.equal(decidirPush({ comando: 'git push origin $(git branch --show-current)', ramaActual: EN_MAIN }).bloquear, false)

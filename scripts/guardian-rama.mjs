@@ -45,6 +45,10 @@ import { readFileSync } from 'node:fs'
 const FLAGS_CON_VALOR = new Set(['--repo', '-o', '--push-option', '--receive-pack', '--exec'])
 // Flags que hacen el push inofensivo para este control (borrar ramas, tags, espejo).
 const FLAGS_PERMISIVAS = new Set(['--delete', '-d', '--all', '--mirror', '--tags', '--prune', '--follow-tags'])
+// Redirecciones. Sin esto, `git push -u origin HEAD 2>&1 | tail -3` lee «2>&1» como nombre de rama
+// y bloquea — pasó al ir a empujar este mismo guardián.
+const REDIRECCION = /^&?\d*(?:>>?|<<?|>&|<&)/
+const REDIRECCION_SOLA = /^&?\d*(?:>>?|<<?|>&|<&)$/
 
 /**
  * Quita el CUERPO de los heredocs (`<<EOF` … `EOF`), conservando la línea que los ABRE (ahí sí va
@@ -96,6 +100,10 @@ export function ramasQueEmpuja(segmento) {
   for (let k = 0; k < args.length; k++) {
     const a = args[k]
     if (a === '--') continue
+    if (REDIRECCION.test(a)) {                    // `2>&1`, `>out`, `2>/dev/null`, `<f`…
+      if (REDIRECCION_SOLA.test(a)) k++           // operador suelto: se come también su destino
+      continue
+    }
     if (a.startsWith('-')) {
       if (FLAGS_PERMISIVAS.has(a)) return []      // borrado / tags / --all: no es trabajo de rama
       if (FLAGS_CON_VALOR.has(a)) k++             // consume su valor
@@ -108,7 +116,9 @@ export function ramasQueEmpuja(segmento) {
 
   const ramas = []
   for (const spec of refspecs) {
-    let src = spec.split(':')[0].replace(/^\+/, '')
+    // Las comillas se quitan: `git push origin "claude/x"` es la misma rama que sin ellas, y
+    // compararla con comillas contra `git branch --show-current` daría un falso positivo.
+    let src = spec.replace(/^['"]|['"]$/g, '').split(':')[0].replace(/^\+/, '')
     if (!src || src === 'HEAD') continue          // HEAD siempre es la rama actual
     if (src.startsWith('refs/tags/')) continue
     src = src.replace(/^refs\/heads\//, '')
