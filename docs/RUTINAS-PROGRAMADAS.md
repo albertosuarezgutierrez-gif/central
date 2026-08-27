@@ -336,6 +336,19 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | **Resultado** | Informe mensual por Telegram + `docs/PATRIMONIO-CFO.md` actualizado; PR draft solo si propone un agente nuevo. |
 | **Verificar** | Filas nuevas en `patrimonio_recomendaciones` + informe en el doc de estado. |
 
+### 20. Seguimiento — ¿dejó de oscilar el motor de precios? — *UN SOLO DISPARO, 03/09/2026*
+
+| | |
+|---|---|
+| **Trigger** | `trig_01NAHokomrh55TLYde6jddti` |
+| **Cuándo** | **Una vez**, el **03/09/2026 ~09:30 UTC** (después de la pasada de las 08:30 del motor). |
+| **Por qué existe** | El arreglo del ancla global (PR #1811, 27/08) está **simulado, no observado**: se calculó qué habría valido el ancla nueva, no se vio al motor tarifar con ella. Sin esta pasada, «el motor ya no oscila» sería una afirmación sobre un dato que nadie ha mirado. |
+| **Prompt** | Autocontenido (sesión nueva). Lee `docs/SEGUIMIENTO-ancla-pricing.md`, que trae la línea base, las tres consultas ya probadas contra la BD y el criterio de cierre. |
+| **MCPs** | Supabase (lectura). GitHub nativo. 🔴 **PENDIENTE DE ALBERTO: la rutina se creó SIN conectores** (`create_trigger` solo puede pasar los que tiene la sesión que la crea, y esta no tenía ninguno pasable). Hay que adjuntar Supabase en la UI de Rutinas de claude.ai **y volver a abrir la rutina para confirmar que quedó guardado** — el formulario no es evidencia, el estado guardado sí (landmine del 23/08). Mientras tanto el PASO 0 del prompt la hace abortar con aviso en vez de improvisar un veredicto. |
+| **Qué hace** | Mide sobre los datos del motor NUEVO (`applied_at >= 2026-08-27 19:00 UTC`): volatilidad del ancla, **% de noches oscilantes por piso** (el criterio de éxito), amplitud y los tres invariantes de seguridad. Compara contra la línea base y rellena la tabla de veredicto del documento. |
+| **Resultado** | PR con el documento cerrado + entrada de memoria. **Si la muestra es corta o el resultado es ambiguo, NO cierra: re-arma el seguimiento** unos días más. Un «parece que va mejor» sobre pocos días es justo lo que este repo trata como fallo. |
+| **Verificar** | La tabla «Veredicto» de `docs/SEGUIMIENTO-ancla-pricing.md` rellenada con fecha y cifras. |
+
 ---
 
 ## Resumen de cadencias

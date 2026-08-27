@@ -3476,6 +3476,20 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🔎 (27/08/2026) Corrección de las cifras del serrucho + seguimiento abierto — PR #1811 ✅
+- **Tres números del PR #1811 estaban mal y se corrigen en `docs/SEGUIMIENTO-ancla-pricing.md`:**
+  (a) las volatilidades por piso iban cruzadas (busto_reform es 2,19× y duplex_center 1,96×, no al
+  revés) y el **8,34× citado no se reproduce en ningún piso**; (b) **House Sevillana NUNCA estuvo a
+  «0%»** de noches oscilantes —es **3,2%** a 7 días, medido— y ese 0% venía del enunciado inicial
+  sin haberse verificado nunca contra la BD; (c) los otros dos pisos, que se daban por no medidos,
+  **también oscilaban**: 20,5% y 27,2%. El problema era de los CUATRO pisos, no de uno.
+- **La conclusión del PR NO cambia** (ancla vieja ~1,94-2,52×, nueva ~1,03-1,09×), pero las cifras
+  por piso de aquel PR no se deben reutilizar: la tabla buena está en el doc de seguimiento.
+- **El arreglo está SIMULADO, no OBSERVADO.** Se calculó qué habría valido el ancla nueva, no se ha
+  visto al motor tarifar con ella. Seguimiento programado al **03/09/2026** con línea base, SQL ya
+  probado contra la BD y criterio de cierre en `docs/SEGUIMIENTO-ancla-pricing.md`.
+- Sigue sin explicar por qué House oscila ~10× menos teniendo el ancla MÁS volátil (2,52×).
+
 ## 🪚 (27/08/2026) EL SERRUCHO, segunda mitad: el ancla global salía del barrido de UNA mañana
 - **Causa raíz medida.** `med_guest_global` era el percentil de la última pasada de Booking, y esa
   pasada muestrea **6-7 fechas de entrada** de las ~110 del horizonte, distintas cada día. En
