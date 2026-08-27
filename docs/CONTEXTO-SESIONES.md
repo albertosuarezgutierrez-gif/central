@@ -46,7 +46,9 @@ medido que la **cadencia NO es el cuello de botella**: un evento a <60 días vis
 `lib/sivra/eventos-calendario.ts` (puro, 21 tests): Semana Santa DERIVADA de la Pascua (Meeus) con la curva
 EXACTA de `EVENTS` día por día, Feria por tabla año a año (no se deriva: su encaje con la Pascua ya cambió
 una vez y costó una corrección el 31/07). Cron `/api/sivra/eventos/calendario` (03:30) **INERTE sin
-`SIVRA_CALENDARIO_ACTIVO=1`**. PR #1778.
+`SIVRA_CALENDARIO_ACTIVO=1`**. **PR #1778 MERGEADO** (`50fa787a`; verificado sobre `main`: 575/575
+en `lib/sivra`, 61/61 del guardián). Encender el env es decisión de Alberto (god-panel → 🔑 Secretos);
+mientras tanto la ruta calcula la previsualización y no toca un precio.
 
 ### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
 Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
