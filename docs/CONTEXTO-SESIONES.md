@@ -32,6 +32,22 @@
 
 ---
 
+### 📅 (27/08/2026) Me equivoqué: el motor SÍ conoce la Semana Santa — el problema es que su calendario CADUCA
+Diagnostiqué que Semana Santa 2027 «no existía» tras ver `pricing_eventos_auto` vacía en esas fechas.
+**Falso, y la corrección es la lección:** vive en el mapa `EVENTS` de `lib/pricing-calendar.ts`, que
+`eventFactor()` consulta y el `apply` combina por MAX. **Hay DOS fuentes de eventos y miré una.** Lo real:
+`EVENTS` está ESCRITO A MANO, tiene 118 entradas y **acaba el 2027-05-02**, mientras el horizonte de
+tarificación ya llega al 2027-08-27 — `eventFactor('2028-04-13')` (Jueves Santo 2028) vale hoy **1.0**. Y
+llegar tarde cuesta: las entradas de 2027 se añadieron el **17/06/2026** y Busto Reform ya había vendido
+25-28 mar a **141€/noche el 14/06** y 22-24 mar a 155€ el 15/06 — tres y dos días antes. En cuanto el mapa
+cubrió 2027 el motor reaccionó bien (24-mar: 180€→216€→210€→298€→**503€** en doce días). De paso quedó
+medido que la **cadencia NO es el cuello de botella**: un evento a <60 días vista se convierte en precio en
+**3,5 h** (mediana de 141 eventos/60 días) y los que no movieron precio eran noches ya vendidas. Módulo
+`lib/sivra/eventos-calendario.ts` (puro, 21 tests): Semana Santa DERIVADA de la Pascua (Meeus) con la curva
+EXACTA de `EVENTS` día por día, Feria por tabla año a año (no se deriva: su encaje con la Pascua ya cambió
+una vez y costó una corrección el 31/07). Cron `/api/sivra/eventos/calendario` (03:30) **INERTE sin
+`SIVRA_CALENDARIO_ACTIVO=1`**. PR #1778.
+
 ### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
 Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
 separado se encadenan en un precio IRREVERSIBLE — un evento salta el raíl (Busto 21-feb-2027: 221€→717€
