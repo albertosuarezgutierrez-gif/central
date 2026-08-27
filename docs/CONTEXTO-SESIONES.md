@@ -41,7 +41,10 @@ MEDIDO, que exige ≥5 comps fiables de la fecha exacta (solo el 25% del calenda
 (`lib/sivra/pricing-descongelar.ts`, puro + 13 tests + guardián de cableado): **antigüedad** (21 días sin
 poder reescribirse) y **rumor caído** (evento descartado y sin evento vivo → libera YA, decisión de
 Alberto: «no se puede coger un rumor, subir el precio y dejarlos trancados»). Simulado contra prod: ~270
-noches liberadas. Bajar es reversible (raíl ±20%/día + suelos); quedarse a 2,3× dos meses, no. PR pendiente.
+noches liberadas. Bajar es reversible (raíl ±20%/día + suelos); quedarse a 2,3× dos meses, no. **PR #1773
+mergeado** (`4efd9327`, deploy de producción READY); la 1ª pasada que lo usa es la de las 14:30 UTC.
+Base medida antes de esa pasada: **386 noches lejanas a la venta** por encima de 1,4× la mediana del piso, de
+las que **226 tienen ya llave nueva** (Busto 98 · Luxury 62 por antigüedad; Dúplex 27 · House 39 nunca escritas).
 
 ### 🧹 (27/08/2026) Backlog de PRs de rutinas a CERO — y el bump de seguridad que llevaba 4 días sin aplicarse
 Cerrados los dos que quedaban del 23/08. **#1602** (entrenador): caveat en `facturas-correo/SKILL.md`
