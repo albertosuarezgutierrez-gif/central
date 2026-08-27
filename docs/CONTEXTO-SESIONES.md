@@ -43,6 +43,9 @@ Chequeo re-armado al 28/08 10:30 UTC; si sigue viejo, el problema es de propagac
 no «sube a ciegas ~+19%/día» — **oscila** en el tope del raíl: 149 → 119 → 95 → 114 en cuatro pasadas
 de las 08:00. El precio de la misma noche baila ±20% al día sin información nueva. Sospecha a
 comprobar (no confirmada): realimentación del objetivo sobre el precio previo del propio piso.
+🔓 **Y de paso se aísla el confusor del CI mudo que dejó abierto #1789** (allí cambiaron el merge de
+la base Y 56 minutos): en el PR #1799 el push mudo fue a las 15:08 con 0 runs, y el push que traía
+`main` mergeado disparó los 12 a las **15:11** — tres minutos. No es el tiempo: es traer la base.
 ### 🏘️ (27/08/2026) Agente de inversión inmobiliaria CONSTRUIDO y probado con los 12 meses de Conil
 
 Fases 2 y 3 del spec, completas. Motor PURO `apps/plataforma/lib/inversion/{tipos,curva-mercado,competencia,
