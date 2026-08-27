@@ -23,7 +23,23 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
+> funde con la entrada anterior y se archiva mal.
+>
+> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
+> registro de qué se hizo y qué queda.
+
+---
+
+### 🧹 (27/08/2026) Auditoría 27/08 resuelta a mano — y la cabecera de ESTA memoria estaba partida en dos
+Los dos PRs de registro que señalaba #1764: **#1735** cerrado (su contenido —hueco DIGI de junio— ya
+estaba en `main` vía #1737/#1740, y su diff arrastraba ficheros ajenos de #1734) y **#1639** cerrado
+tras **rescatar a mano** su texto (pasada `buscador-ia` del 24/08) a `docs/BUSCADOR-IA.md` y
+`docs/AGENTES-BITACORA.md`. 🔎 De propina, al tocar este fichero se destapó que **#1730 (26/08) insertó
+su entrada DENTRO del blockquote de cabecera**: partió la instrucción de formato en dos, dejó la
+entrada «Universo 1200» decapitada en mitad del fichero y creó una falsa cabecera `### … (dd/mm/aaaa)`
+que `rotar-memoria.mjs` habría archivado como si fuera una entrada. Reparado en el mismo PR.
 
 ### 🧱 (26/08/2026) «Base perfecta» + acumulación: medida sobre 177.000 observaciones y RECHAZADA
 
@@ -242,6 +258,8 @@ mov_30d_prev=75 (sin caída >50%). Conexiones activas Kutxabank ****0855 y BBVA 
 Estado ✅ OK. Solo cambio: entrada de auto-informe en `docs/AGENTES-BITACORA.md` → PR draft
 **#1741** (push directo a `main` bloqueado por branch protection, de ahí el PR).
 
+### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
+
 Ranking disparado con **1.080 empresas con datos**. Top-5: SNDK · LLYVA · WDC · BKNG · STX (el ciclo
 memoria/almacenamiento domina). **SNDK nº1 con momentum +3.527% y precio 1.596$ olía a dato mal leído
 —el patrón MCD/ORCL— así que se contrastó: es REAL** (Alpha Vantage, 1.480,77$; ×37 desde el spin-off
@@ -258,15 +276,6 @@ actual)`, así que una fila que sale del top queda en epoch PARA SIEMPRE. La con
 los euros, no solo lo justo: quedan 8,75€ y la munición está ya en dólares). NAV **32.710,26€**.
 Lección a la skill: al preparar una instrucción en USD, mirar `get_account_balances` y avisar de la
 conversión — IBKR no rechaza por falta de divisa, financia en margen y cobra en silencio.
-
-### … (dd/mm/aaaa)` —
-> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
-> funde con la entrada anterior y se archiva mal.
->
-> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
-> registro de qué se hizo y qué queda.
-
----
 
 ### ✅ (26/08/2026) Serrucho CONFIRMADO arreglado donde hay mercado medido — y el resto queda acotado
 Pasada de las 08:30 con banda de raíl NUEVA (la prueba que la de anoche no podía dar): 637 noches en 4
@@ -747,6 +756,14 @@ sin saltar, 48 decisiones en `pricing_decisiones`. Fechas calientes próximas: N
 29-sep (×2,2), LOVE THE 90's 26-sep (×2,2), Bienal Flamenco 10-sep/03-oct. Pendiente sin resolver:
 Busto Feria 17-abr-2027 sigue "vendida" a 103€ sin income que lo explique (3er ciclo). Detalle en
 `pricing_aprendizaje` (`ciclo_24_08_2026`).
+
+### 🧠 (24/08/2026) buscador-ia: pasada semanal — 5 eslabones vivos, sin swaps
+Sin API keys en sesión y con WebFetch a los 5 catálogos (NIM/Groq/Gemini/Kimi/Cerebras) bloqueado por
+el proxy, verificación por WebSearch dirigido. Groq `openai/gpt-oss-120b` reforzado (destino de
+migración de 6 modelos que Groq ha ido deprecando en 2026). Descartada una señal de "End of Support"
+del NIM autoalojado por no aplicar al endpoint hosted que usamos. 2 candidatos (DeepSeek V4 Pro,
+qwen3.6-27b) en seguimiento sin mini-eval, ninguno cruza el listón. Detalle en `docs/BUSCADOR-IA.md`.
+*(Rescatado el 27/08 del PR #1639, atascado sin poder mergearse.)*
 
 ### 🔎 (24/08/2026) Auditoría ligera: 4 commits del 23/08 sin entrada propia, reconciliados
 Rango 4f25e64..ed12004 (26 commits, todo el 23/08). Backlog PRs: #1600 y #1602 (ambos draft de carril 2
