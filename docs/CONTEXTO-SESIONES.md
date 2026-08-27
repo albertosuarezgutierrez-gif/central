@@ -3457,6 +3457,7 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+
 ## 🔒 (27/08/2026) Auditoría completa: 39 RPC de `iarest` las puede llamar `anon` sin guarda
 
 Pasada completa (install, radiografía, typecheck **11/11 apps**, build REAL de plataforma, tests,
@@ -3471,7 +3472,7 @@ antes y después), tsconfig de housesevillana (5 × TS5097), override de `nanoid
 `MATRIZ.md`, que **no listaba `apps/housesevillana`** — la misma invisibilidad del «no había web».
 Ojo estructural: el job `Build` del CI **solo construye ia-rest**; typecheck ≠ build.
 
-## 📈 (27/08/2026) El traspaso a Interactive Brokers no es un gasto de la correduría
+## 📈 (27/08/2026) El traspaso a Interactive Brokers no es un gasto de la correduría — PR #1798 ✅
 
 - Alberto avisa: el cargo de BBVA de **-1.000,00€** del 24/08 («ORDENES PAGO EMITIDAS… // U9007431 /
   Alberto Suarez Gutierrez», contraparte «Interactive broker») salía como **🛡️ Seguros (correduría)**.
@@ -3483,6 +3484,11 @@ Ojo estructural: el job `Build` del CI **solo construye ia-rest**; typecheck ≠
 - Backfill de la fila ya ingestada (`prisma/sql/2026-08-27_traspaso_interactive_brokers.sql`, aplicado):
   `destino_confirmado=true` la saca de la re-clasificación automática. Los 2 traspasos de -15.000€ de
   2025 a la misma cuenta ya estaban bien a mano.
+- **Mergeado y verificado sobre `main`:** 75/75 del guardián + 306/306 de plataforma, y réplica del
+  regex sobre los 2.110 movimientos del libro → casa 3 filas (las 3 de IBKR) y ninguna cambia de
+  destino. Agosto queda: seguros -505,54€ · traspaso_interno -3.643,23€.
+- 🔎 **Suelto detectado, sin tocar:** `FINANCIALDATASETS.AI` (-17,78€, 24/08) sigue cayendo en el
+  mismo cajón de descarte → `seguros` + revisar. Es la API del radar de trading, no correduría.
 
 ## 👁️ (27/08/2026) Botón «ocultar saldo» en el inicio de plataforma (estilo banco) — PR #1783
 - Alberto enseña el panel a gente: `/banca` lleva ahora un botón 👁/🙈 junto al «Saldo total del grupo»
