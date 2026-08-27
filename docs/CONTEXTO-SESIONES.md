@@ -3521,8 +3521,10 @@ Ojo estructural: el job `Build` del CI **solo construye ia-rest**; typecheck ≠
 - **Mergeado y verificado sobre `main`:** 75/75 del guardián + 306/306 de plataforma, y réplica del
   regex sobre los 2.110 movimientos del libro → casa 3 filas (las 3 de IBKR) y ninguna cambia de
   destino. Agosto queda: seguros -505,54€ · traspaso_interno -3.643,23€.
-- 🔎 **Suelto detectado, sin tocar:** `FINANCIALDATASETS.AI` (-17,78€, 24/08) sigue cayendo en el
-  mismo cajón de descarte → `seguros` + revisar. Es la API del radar de trading, no correduría.
+- ✅ **`FINANCIALDATASETS.AI` (-17,78€), cerrado (PR #1811):** el mismo cajón de descarte lo mandaba a
+  `seguros` + revisar cada mes. Alberto decide que es **herramienta profesional** → entra en
+  `RE_SOFTWARE` (como Vercel/Anthropic): sigue deducible pero con subcategoría `informatica` y
+  auto-confirmado, que es lo que lo saca de la bandeja. Backfill aplicado (1 fila).
 - 🧰 **Hallazgo transversal (PR #1807): los 12 requeridos se corren EN LOCAL.** Reproducidos enteros
   sobre `main` — 3.149 tests + 107 vitest, 11 typechecks, QA, lint, build: todo verde. Los comandos,
   en `CLAUDE.md`; ojo que QA y `Lint·TypeCheck·Build` van **desde `apps/ia-rest`**, no desde la raíz.

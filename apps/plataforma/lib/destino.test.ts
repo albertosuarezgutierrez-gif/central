@@ -229,3 +229,20 @@ test('la regla del broker NO secuestra los conceptos normales de BBVA', () => {
   assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // LIQ.COMISIONES 202608', TITULAR, 302.06), 'seguros')
   assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77), 'turistico_duplex')
 })
+
+test('FINANCIALDATASETS.AI en BBVA → seguros/informatica auto-confirmado (herramienta profesional)', () => {
+  // 27/08/2026, decisión de Alberto: la API de fundamentales del radar de trading es herramienta de la
+  // actividad, como Vercel/Anthropic. Antes caía al cajón por DESCARTE de BBVA → 'seguros' + revisar,
+  // así que volvía a la bandeja cada mes aunque ya se hubiera confirmado.
+  assert.deepEqual(
+    clasificarDestinoDetalle(
+      'BBVA',
+      'PAGO CON TARJETA DE SERVICIOS VARIOS // PAGO CON TARJETA // FINANCIALDATASETS.AI',
+      'FINANCIALDATASETS.AI',
+      -17.78,
+    ),
+    { destino: 'seguros', revisar: false, confirmado: true, subcategoria: 'informatica' },
+  )
+  // Fuera de BBVA sigue su camino normal: RE_SOFTWARE solo aplica en la cuenta de la correduría.
+  assert.equal(clasificarDestino('Kutxabank', 'COMPRA EN FINANCIALDATASETS.AI', '', -17.78), 'personal')
+})
