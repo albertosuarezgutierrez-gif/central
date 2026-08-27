@@ -1807,13 +1807,23 @@ pondrá a construirlo. Es la regla de `CLAUDE.md` y es la que costó ~600 US$ un
 | **GitHub — adaptador CIMA** | ✅ **invitación aceptada** | Repo **privado** renderizando contenido en su móvil |
 | **Supabase** | ⚠️ **DENTRO, no transferido** | Es miembro de la org (`PISO`). La propiedad del proyecto sigue siendo de Manuel |
 | **Fly — org de Manuel** | ✅ dentro | 26/08 |
-| **Fly — org de Alberto** | ✅ **creada, Manuel invitado, tarjeta añadida** | — |
+| **Fly — destino** | ✅ **ya existe: la org `Personal` de Alberto, slug `alberto-suarez-83`** (vacía, 0 apps, pago por uso, sin aviso de pago) | Panel, 27/08 |
 | **Vercel** | ❌ pendiente — Vía B (API) el día del corte | — |
 | **`CRON_SECRET`** | ❌ pendiente — **no viaja con la transferencia del repo** | — |
 
-⚠️ **Sin confirmar:** el panel que se revisó mostraba la organización **`Personal`**, no
-`grupo-asegura`. Queda por verificar **a qué org exacta** se invitó a Manuel. Importa: el día del
-corte él va a buscar un nombre concreto al que mover la app.
+🔴 **CORREGIDO el 27/08 — la suposición estaba INVERTIDA.** Este documento llegó a decir que
+Alberto «creó su organización de Fly e invitó a Manuel». **Es falso, y venía de darlo por bueno sin
+mirar el panel.** Lo que hay:
+
+- **`Personal`** (slug `alberto-suarez-83`): 1 miembro (solo Alberto), 0 apps. Nunca se invitó a nadie.
+- **`Manuel Suárez`** (slug `manuel-suarez-678`): 2 miembros — Manuel como **administrador** y Alberto
+  como **miembro normal**. Ninguno pendiente: los dos activos. **Ahí vive la app del adaptador**
+  (2 máquinas, región CDG).
+
+O sea: **la invitación fue en sentido contrario** — Manuel metió a Alberto en la suya. No hay
+invitación pendiente que mandar ni nombre de org que comunicarle: **el acceso mutuo ya está resuelto**.
+Y no hace falta crear ninguna organización: el destino de la transferencia puede ser `Personal`, que
+ya existe y está limpia.
 
 ## 💳 Fly cuesta dinero, y por qué la tarjeta no era opcional
 
@@ -1853,3 +1863,37 @@ No es contradicción con lo establecido esta mañana, es un matiz: **no hace fal
 mantenimiento** —el CRM no lo usa nadie y los ficheros EIAC se re-descargan— pero el movimiento de
 Fly y la transferencia de Supabase **sí piden que estén los dos a la vez** un par de horas. Quedar
 sí; reloj de mantenimiento no.
+
+---
+
+## 🔴 27/08/2026 — RIESGO VIVO: la facturación de la org de Fly de Manuel está VENCIDA
+
+Encontrado al verificar el punto anterior. En el panel de Fly, la organización **`manuel-suarez-678`**
+—la que aloja `asegura-app-cima-adaptador`— muestra:
+
+- Banner rojo: *«El pago de su organización está vencido. Visite la página de facturación de su
+  organización para obtener más detalles»*.
+- Etiqueta **«Vencido»** en el selector de organizaciones.
+
+**Por qué importa más que todo lo demás de este documento ahora mismo:** si Fly suspende las máquinas
+por impago, **el adaptador se cae y deja de entrar la cartera de las compañías** — y falla en
+silencio, que es el modo de fallo que este traspaso lleva semanas intentando evitar. No es un riesgo
+del corte: es un riesgo de **hoy**, con el sistema todavía en manos de Manuel.
+
+**No lo puede arreglar Alberto.** Es la organización de Manuel y él es solo miembro normal, no
+administrador: la factura se paga con la tarjeta de Manuel. Lo único que puede hacer Alberto es
+avisarle, y hacerlo pronto.
+
+⚠️ **Sin comprobar:** cuántos días lleva vencida y si la suspensión es inminente. Que la app siga con
+sus 2 máquinas desplegadas sugiere que aún no se ha suspendido, **pero es una inferencia, no un dato**:
+está en la página de facturación de esa organización, que no se ha abierto.
+
+### Lo que esto cambia en el plan
+
+1. **Sube al primer puesto:** avisar a Manuel de la factura vencida, por delante de cuadrar la fecha.
+2. **Refuerza el argumento de mover el adaptador pronto.** Mientras viva en una org con la
+   facturación vencida, la entrada de la cartera depende de que otro pague a tiempo.
+3. **Posible atajo a comprobar:** Alberto es miembro de las DOS organizaciones (`manuel-suarez-678` y
+   `alberto-suarez-83`), así que quizá pueda mover la app él mismo sin esperar a Manuel.
+   ⚠️ **No verificado:** mover una app entre orgs puede exigir rol de **administrador en la de origen**,
+   y en la de Manuel él es miembro normal. Se comprueba antes de prometerlo.
