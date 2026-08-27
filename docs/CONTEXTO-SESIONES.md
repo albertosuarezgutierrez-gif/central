@@ -45,6 +45,57 @@ entero medido» con la ocupación 100% supuesta—; corregidas y con test. Verif
 plataforma · 61 del guardián. ⛔ Sigue faltando lo de Alberto: precio, m², qué es el inmueble, explotación,
 financiación y si compra él o Punto y Coma SL.
 
+### 🌱 (27/08/2026) El calendario, SEMBRADO en producción y medido: 0 precios movidos
+Cerrada la prueba de punta a punta (PRs #1787 → siembra). Antes de sembrar se arregló el nombre de
+las noches de tabla (`Feria de Abril 2027 — 2027-04-12` → `… — noche del alumbrado`): el nombre es
+la CLAVE del upsert, o sea que cambiarlo DESPUÉS habría creado 7 filas nuevas dejando las viejas
+empujando precio para siempre. Sembradas las **15 filas** (`fuente='calendario'`), re-ejecutado →
+sigue en 15 (idempotente). **Factor efectivo `MAX(tabla, EVENTS)` comparado noche a noche: 0 cambian**
+— la tabla sube donde `EVENTS` ya tapaba el hueco. El valor llega cuando `EVENTS` caduca (2027-05-02):
+Semana Santa 2028 sale 2,20–2,50 del calendario contra **1,00** de `EVENTS`, y la Feria 2028 se
+declara «sin tabla» en vez de inventarse.
+⚠️ **Fallo propio, y la corrección de lo que conté.** Commiteé el arreglo en `main` local, no en la
+rama: `git push -u origin <rama>` empuja la rama NOMBRADA, no HEAD, y respondió `* [new branch]`, que
+se lee como éxito. El PR #1787 se abrió con el head viejo y 12 checks verdes sobre él. 🚨 **Y lo que
+escribí después era FALSO:** dije que ese PR «borraba el botón 👁 (#1783) y la regeneración de #1786».
+No: su diff de TRES puntos era «34 inserciones, 0 borrados» y el merge simulado sobre el `main` de
+entonces da diff **vacío**. La alarma salió de leer un diff de DOS puntos (`origin/main..HEAD`), que
+pinta como borrados los commits que `main` tiene y la rama no. Verde ≠ el diff que crees; y para ver
+lo que un PR aplica, **TRES** puntos. Guardián automático desde hoy: `scripts/guardian-rama.mjs`.
+
+### 🩺 (27/08/2026) El calendario de eventos latía pero NADIE lo escuchaba
+Prueba final de punta a punta antes de dar el calendario por bueno. Todo verde salvo un hueco real:
+`/api/sivra/eventos/calendario` **escribía** `registrarLatido('sivra_eventos_calendario')` pero NO
+estaba en `AGENTES_VIGILADOS`, así que el vigía diario no lo miraba. Es el landmine del 16/08 (PR
+#1447) por la otra cara: allí un agente vigilado sin sonda, aquí un agente con huella y sin vigilante.
+🚨 **Y este es el peor caso posible de cron mudo**: el calendario REPONE lo que ya se sabe, así que si
+muere, las otras cuatro fuentes siguen llenando `pricing_eventos_auto` y el hueco no se ve por ningún
+lado — hasta que llega Semana Santa tarificada como un abril cualquiera. Declarado + sonda en el mismo
+cambio (30 h, como sus hermanos diarios); el guardián se probó EN ROJO quitando la sonda a propósito.
+
+### 📅 (27/08/2026) Me equivoqué: el motor SÍ conoce la Semana Santa — el problema es que su calendario CADUCA
+Diagnostiqué que Semana Santa 2027 «no existía» tras ver `pricing_eventos_auto` vacía en esas fechas.
+**Falso, y la corrección es la lección:** vive en el mapa `EVENTS` de `lib/pricing-calendar.ts`, que
+`eventFactor()` consulta y el `apply` combina por MAX. **Hay DOS fuentes de eventos y miré una.** Lo real:
+`EVENTS` está ESCRITO A MANO, tiene 118 entradas y **acaba el 2027-05-02**, mientras el horizonte de
+tarificación ya llega al 2027-08-27 — `eventFactor('2028-04-13')` (Jueves Santo 2028) vale hoy **1.0**. Y
+llegar tarde cuesta: las entradas de 2027 se añadieron el **17/06/2026** y Busto Reform ya había vendido
+25-28 mar a **141€/noche el 14/06** y 22-24 mar a 155€ el 15/06 — tres y dos días antes. En cuanto el mapa
+cubrió 2027 el motor reaccionó bien (24-mar: 180€→216€→210€→298€→**503€** en doce días). De paso quedó
+medido que la **cadencia NO es el cuello de botella**: un evento a <60 días vista se convierte en precio en
+**3,5 h** (mediana de 141 eventos/60 días) y los que no movieron precio eran noches ya vendidas. Módulo
+`lib/sivra/eventos-calendario.ts` (puro, 21 tests): Semana Santa DERIVADA de la Pascua (Meeus) con la curva
+EXACTA de `EVENTS` día por día, Feria por tabla año a año (no se deriva: su encaje con la Pascua ya cambió
+una vez y costó una corrección el 31/07). Cron `/api/sivra/eventos/calendario` (03:30). **PR #1778
+MERGEADO** (`50fa787a`) y verificado sobre `main` (575/575 en `lib/sivra`, 61/61 del guardián).
+🚨 **Nació gateado tras `SIVRA_CALENDARIO_ACTIVO` y Alberto retiró el interruptor el mismo día**, con
+el argumento que lo zanja: **no hay otro proveedor de precio que este motor**. La regla de «no tocar
+precios sin permiso» protege de un TERCERO moviéndolos; aquí no hay tercero, así que el gate no
+evitaba ningún riesgo y solo dejaba el dato fuera hasta que alguien se acordara de la env — el fallo
+exacto que el módulo viene a evitar. Y estaba medido que no costaba nada: encenderlo cambiaba **0
+noches** (las 15 fechas de la ventana ya estaban en `EVENTS` con el mismo factor y el motor combina
+por MAX). Empieza a morder hacia **abril de 2027**, cuando el horizonte cruce a la Semana Santa de 2028.
+
 ### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
 Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
 separado se encadenan en un precio IRREVERSIBLE — un evento salta el raíl (Busto 21-feb-2027: 221€→717€
@@ -3370,6 +3421,17 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 👁️ (27/08/2026) Botón «ocultar saldo» en el inicio de plataforma (estilo banco) — PR #1783
+- Alberto enseña el panel a gente: `/banca` lleva ahora un botón 👁/🙈 junto al «Saldo total del grupo»
+  que lo **desenfoca** (no lo sustituye → el bloque no salta de ancho) y recuerda la elección.
+- Piezas: `app/(usuario)/banca/SaldoTotal.tsx` (cliente) · clase `.saldo-privado` en `globals.css`
+  (`html[data-saldo-oculto='1']`) · el script anti-parpadeo de `app/layout.tsx` aplica el estado
+  ANTES del primer pintado (si no, al recargar se ve un fotograma con la cifra y el botón no sirve).
+- **Alcance elegido por Alberto: SOLO el saldo total.** Los importes de los movimientos de abajo se
+  siguen viendo; extenderlo es añadir la clase, sin tocar lógica. Es ocultación VISUAL (sigue en el HTML).
+- Probado end-to-end con el build real (Playwright): alternar, persistir, 320px, localStorage bloqueado y
+  **cero parpadeo** (al entrar el nodo en el DOM ya venía `blur(10px)`). Skill al día: `plataforma-maestro/references/ui-inicio-dashboard.md`.
+
 ## ✅ (26/08/2026) Cierre del caso DIGI: PRs #1737 y #1740 mergeados, verde sobre `main`
 
 - Ambos mergeados en squash (`3e12616` y `6b9c541`). Verificado DESPUÉS del merge, sobre `main` real:

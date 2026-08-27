@@ -93,6 +93,12 @@ export const CRON_JOBS: CronJob[] = [
   // cuando encuentran algo nuevo, así que repetirlos es barato: el de Ticketmaster no cuesta tokens y
   // el de búsqueda web va contra el presupuesto diario de la pasarela como cualquier otra llamada.
   { path: '/api/sivra/eventos/sync', schedule: '0 4 * * *' },
+  // Calendario fijo de Sevilla (27/08/2026): Semana Santa derivada de la Pascua + las fechas de
+  // tabla. Va DELANTE de los descubridores a propósito — lo que ya se sabe no hace falta buscarlo,
+  // y así el listado de «ya registrado» que se le pasa a la IA en /websearch incluye estas fechas y
+  // no gasta huecos redescubriéndolas. Siembra siempre: no hay más proveedor de precio que este
+  // motor, así que gatear su propio calendario tras una env solo lo dejaba fuera (Alberto, 27/08).
+  { path: '/api/sivra/eventos/calendario', schedule: '30 3 * * *' },
   { path: '/api/sivra/eventos/websearch', schedule: '0 5 * * *' },
   // Verificación automática de los PREVISTOS (12/08/2026): va DETRÁS de los dos descubridores
   // para juzgar en la misma mañana lo que acaban de encontrar. Antes esto lo hacía Alberto a mano

@@ -103,3 +103,20 @@ input, select, textarea { font: inherit; }
 @media (max-width: 480px) {
   .hide-xs { display: none !important; }
 }
+
+/* === Modo «saldo oculto» (botón 👁 de /banca) ===
+   Alberto enseña el panel a menudo; el botón desenfoca la cifra sin cambiar el layout.
+   El atributo lo pone el script anti-parpadeo de layout.tsx ANTES del primer pintado, así que al
+   recargar con el modo activo NO hay un fotograma con el importe legible.
+   Ojo: es ocultación VISUAL — el importe sigue en el HTML (quien abra el inspector lo ve). */
+.saldo-privado { transition: filter .18s ease; }
+html[data-saldo-oculto='1'] .saldo-privado {
+  filter: blur(10px);
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+/* Sin animación para quien pide menos movimiento (el blur entra/sale de golpe). */
+@media (prefers-reduced-motion: reduce) {
+  .saldo-privado { transition: none; }
+}

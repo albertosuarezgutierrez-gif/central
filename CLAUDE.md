@@ -324,6 +324,21 @@ sobre la marcha para desatascar un PR**: es configuración del repo.
   Si hace falta un push que dispare workflows, que sea un commit **con contenido real** hecho desde
   una cuenta de persona (el token de App no vale).
 
+🚨 **VERDE NO DICE QUE EL DIFF SEA EL TUYO (27/08/2026, PR #1787).** `git push origin <rama>` empuja
+la **rama nombrada, no HEAD**. Si commiteas estando en `main` y luego empujas la rama por su nombre,
+se manda la rama tal cual estaba —sin tu commit— y git responde `* [new branch]`, que se lee como
+éxito. El PR se abre con el head viejo y **los 12 checks salen verdes sobre él**: validan lo que hay
+en el head, no tu intención. Lo previene el hook `scripts/guardian-rama.mjs` (`PreToolUse`, con
+guardián en `test/regression-guardian-rama.test.ts`), que bloquea el push cruzado y el abrir/mergear
+un PR con commits que no están en ningún remoto.
+
+⚠️ **Y para MIRAR un diff usa TRES puntos, no dos.** `git diff origin/main..HEAD` (dos) pinta como
+**borrados** todos los commits que `main` tiene y tu rama no; es un artefacto de la forma del diff,
+no un borrado. Lo que GitHub muestra y el merge aplica es `origin/main...HEAD` (tres). Ese mismo día
+se dio por bueno un «este PR borra el botón 👁 y la regeneración de #1786» que era **falso**: el diff
+de tres puntos eran 34 inserciones y 0 borrados, y el merge simulado salía vacío. Antes de anunciar
+que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míralo.
+
 **Dos trampas de diagnóstico, las dos vistas el 26/08/2026:**
 - Un run en `completed failure` puede ser **11 jobs `cancelled`** por `concurrency:
   cancel-in-progress` (llegó un push nuevo mientras corría). **Mira los jobs antes de diagnosticar un
