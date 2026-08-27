@@ -17,6 +17,7 @@ import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
+import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
 import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
@@ -100,7 +101,12 @@ export async function POST(req: NextRequest) {
   const MAX_MARKET_AGE_DAYS = 7
 
   const recs = await prisma.$queryRaw<{
-    property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
+    property_id: string
+    // Ancla del BARRIDO de la última pasada útil (respaldo) y ancla ACUMULADA de 30 días
+    // (la buena, ver pricing-ancla-global.ts). Elige `elegirAnclaGlobal`, no el SQL.
+    med_pasada: number; flo_pasada: number; cei_pasada: number
+    med_anc: number | null; flo_anc: number | null; cei_anc: number | null
+    fechas_anc: number; corpus_fiable: boolean | null
     demand_factor: number; quality_factor: number
     occupancy_global: number; demand_baseline: number; demand_k: number
     channel_markup: number; cuota_fija: number; noches_ref: number
@@ -109,6 +115,10 @@ export async function POST(req: NextRequest) {
     flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number; antelacion_k: number
   }[]>(Prisma.sql`
     WITH latest AS (${Prisma.raw(sqlUltimaPasadaUtil())}),
+    -- Ancla GLOBAL sobre el corpus ACUMULADO (una lectura por comparable x fecha en 30 dias).
+    -- El percentil del barrido de la manana muestreaba 6-7 fechas de las ~110 del horizonte y
+    -- cada dia otras: eso era el serrucho. Ver pricing-ancla-global.ts.
+    anc AS (${Prisma.raw(sqlAnclaGlobalAcumulada())}),
     -- Cada comparable se NORMALIZA al aforo del piso (pricing_factor_aforo) antes de entrar en el
     -- percentil. Sin esto, una casa de 12 plazas se tarificaba contra apartamentos de 4-8 y salia
     -- a mitad de precio (hallazgo 31/07/2026). Con comps del mismo aforo el factor es 1: no cambia nada.
@@ -137,10 +147,11 @@ export async function POST(req: NextRequest) {
     )
     SELECT
       mkt.scenario AS property_id,
-      ROUND(mkt.med
-        * GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)
-        * GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90))::int AS recommended_guest,
-      ROUND(mkt.med)::int AS med_guest_global,
+      -- 🚨 El ancla NO se elige aqui: el SQL devuelve las DOS (barrido y acumulada) y decide
+      -- elegirAnclaGlobal en TS, que es donde hay tests. El recomendado se compone alli con los
+      -- mismos dos factores que viajan abajo, para que no pueda divergir del precio real.
+      -- OJO: sin backticks ni $ { }, esto va dentro de un template literal de TS.
+      ROUND(mkt.med)::int AS med_pasada,
       -- Los dos factores del ajuste, POR SEPARADO: el de demanda se gatea por fecha segun la
       -- antelacion real del piso (ver pricing-demanda.ts) y el de calidad aplica siempre.
       GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)::float8 AS demand_factor,
@@ -151,7 +162,10 @@ export async function POST(req: NextRequest) {
       COALESCE(occ.occupancy, 0.5)::float8 AS occupancy_global,
       s.demand_baseline::float8 AS demand_baseline,
       s.demand_k::float8 AS demand_k,
-      ROUND(mkt.flo)::int AS floor_guest, ROUND(mkt.cei)::int AS ceil_guest,
+      ROUND(mkt.flo)::int AS flo_pasada, ROUND(mkt.cei)::int AS cei_pasada,
+      ROUND(anc.med)::int AS med_anc, ROUND(anc.flo)::int AS flo_anc, ROUND(anc.cei)::int AS cei_anc,
+      COALESCE(anc.fechas, 0) AS fechas_anc,
+      anc.corpus_fiable,
       COALESCE(s.channel_markup, 1.20)::float8 AS channel_markup,
       COALESCE(s.cuota_fija, 0)::float8 AS cuota_fija,
       GREATEST(COALESCE(s.noches_ref, 2), 1)::int AS noches_ref,
@@ -167,6 +181,7 @@ export async function POST(req: NextRequest) {
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
+    LEFT JOIN anc ON anc.scenario = mkt.scenario
     WHERE s.apply_enabled = true
       AND (${onlyProp}::text IS NULL OR mkt.scenario = ${onlyProp})
   `)
@@ -668,9 +683,29 @@ export async function POST(req: NextRequest) {
     const aBase = (guestNoche: number) => baseDesdeGuestConFijo(guestNoche, markup, fijoNoche)
     const demandFactor = Number(r.demand_factor) > 0 ? Number(r.demand_factor) : 1
     const qualityFactor = Number(r.quality_factor) > 0 ? Number(r.quality_factor) : 1
-    const baseTargetGlobal = aBase(r.recommended_guest)
-    const floorBaseGlobal = aBase(r.floor_guest)
-    const ceilBaseGlobal = aBase(r.ceil_guest)
+    // ─── ANCLA GLOBAL: corpus ACUMULADO, no el barrido de esta mañana ────────────────────
+    // Es la base de TODA fecha sin bucket de mes, y era la fuente del serrucho: el percentil de
+    // una sola pasada muestrea 6-7 fechas de entrada distintas cada día, así que el ancla saltaba
+    // 95↔208 y las fechas sin comps propios la perseguían saturando el raíl ±20% en direcciones
+    // alternas. Ver `lib/sivra/pricing-ancla-global.ts` para las mediciones.
+    //
+    // Como en el bucket del mes, el corpus FIABLE (medido por fecha) manda si por sí mismo pasa el
+    // umbral; si no, la mezcla; y si tampoco, el barrido — nunca se queda un piso sin ancla.
+    const ancla = elegirAnclaGlobal({
+      acumulada: {
+        valores: r.med_anc == null ? null : { med: r.med_anc, flo: r.flo_anc!, cei: r.cei_anc! },
+        fechas: Number(r.fechas_anc),
+      },
+      pasada: { med: r.med_pasada, flo: r.flo_pasada, cei: r.cei_pasada },
+    })
+    const anclaOrigen: 'acumulada_fiable' | 'acumulada_mixta' | 'pasada' =
+      ancla.origen !== 'acumulada' ? 'pasada' : r.corpus_fiable ? 'acumulada_fiable' : 'acumulada_mixta'
+    const medGuestGlobal = ancla.valores.med
+    // El "recomendado" se compone con los MISMOS dos factores que aplica cada fecha: si se
+    // calculara aparte (como hacía el SQL) podría contradecir al precio que el motor escribe.
+    const baseTargetGlobal = aBase(medGuestGlobal * demandFactor * qualityFactor)
+    const floorBaseGlobal = aBase(ancla.valores.flo)
+    const ceilBaseGlobal = aBase(ancla.valores.cei)
     const mesProp = mes.get(r.property_id)
     const fechaProp = fecha.get(r.property_id)
 
@@ -735,7 +770,7 @@ export async function POST(req: NextRequest) {
       demFuentes[dGate.fuente]++
       if (dGate.gateado) demGateadas++
       const dqDate = dGate.factor * qualityFactor
-      const baseGlobalD = aBase(r.med_guest_global * dqDate)
+      const baseGlobalD = aBase(medGuestGlobal * dqDate)
       // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
@@ -1079,7 +1114,12 @@ export async function POST(req: NextRequest) {
 
     results.push({
       property: r.property_id,
-      recommended_guest: r.recommended_guest, base_target: baseTargetGlobal,
+      recommended_guest: Math.round(medGuestGlobal * demandFactor * qualityFactor),
+      base_target: baseTargetGlobal,
+      // De dónde sale el ancla global. Un `pasada` es el ancla VIEJA (oscilante) y hay que
+      // poder verlo sin abrir la BD: significa que ese piso no reúne MIN_FECHAS_ANCLA fechas
+      // en el corpus acumulado de 30 días.
+      ancla_global: { origen: anclaOrigen, med: medGuestGlobal, fechas: Number(r.fechas_anc), min_fechas: MIN_FECHAS_ANCLA },
       meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET && v.fechas >= MIN_FECHAS_MES).map(([k]) => k) : [],
       // De QUÉ corpus sale el bucket de cada mes elegible. Un objetivo que no dice su procedencia es
       // indistinguible de uno medido: `mixto` avisa de que ahí todavía pesa el precio de anuncio.
