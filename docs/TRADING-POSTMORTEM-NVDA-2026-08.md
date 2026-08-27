@@ -101,6 +101,44 @@ para medirla hacía falta justo el registro que faltaba.
   no — ya hay cuatro «contextos» que no cambian nada.
 - Con 2-3 meses de atribución acumulada, decidir **con datos** si una regla de evento se preregistra.
 
+## Estado: aplicado y verificado en producción (27/08/2026)
+
+| Paso | Resultado |
+|---|---|
+| PR #1793 | mergeado en `main` (`58d0d2f4`), 12/12 checks requeridos en verde |
+| Despliegue plataforma | producción `READY` sobre ese commit |
+| SQL en Supabase (`central`) | aplicado |
+| Backfill reconstruido | **44 tesis** (11 `catalizador` × 4 estrategias) y **2 posiciones** — NVDA y SQM |
+| Resto | **2.016 tesis** y 9 posiciones quedan en `sin_consultar`, que es la verdad: de ellas no había registro |
+
+La fecha reconstruida de NVDA sale **2026-08-26** en las 20 filas, y coincide con el 8-K real. SQM sale
+con **dos** fechas distintas (18 y 19/08) según el día de la tesis: no es un error — la fecha estimada
+de la fuente se movió entre pasadas, y cada tesis lleva la que se conocía ese día, que es justo lo que
+debe registrar.
+
+**Verificación funcional**, ejecutando las funciones del módulo (`cruzaEvento` + `atribuirPorEvento`)
+sobre las filas reales de producción y contrastando contra la misma clasificación hecha en SQL:
+
+```
+nCruzado      = 12      (SQL: 12)
+medioCruzado  = 2,52%   (SQL: 2,52%)
+nSinConsultar = 1220    (SQL: 1220)   ← no contaminan ninguna media
+nLimpio       = 0 · medioLimpio = null (aún no hay ninguna, y sale null, no 0)
+```
+
+Y los tres casos de borde sobre la posición viva: NVDA (abierta 21/08, evento 26/08) → `cruzado`; la
+misma cerrada el 25/08 → `limpio`; NFLX, sin fecha comprobada → `sin_consultar`.
+
+### Primer dato de la atribución — con su salvedad
+
+Las 12 tesis con evento dentro de la ventana rinden **+2,52% de media** frente a **−0,12%** de las
+1.220 sin comprobar. Va en la dirección de la sospecha que motivó el PR, pero **no sostiene nada
+todavía**: son 12 observaciones de **un solo símbolo** (SQM), y este repo descarta por «muestra sin
+valor» tamaños así cuando salen a favor — la misma vara que se usó para no citar el «+1,16% a >10
+días» del veredicto de agosto. Las tesis de NVDA aún no han vencido su ventana. El dato que valdrá
+algo es el de dentro de 2-3 meses, cuando la mayoría de las filas tengan `con_fecha` en vez de
+`sin_consultar`.
+
 ## Nota de encuadre
 
 A 24/08/2026, la cohorte forward con más recorrido (`2026-07-18.v1`, 37 días, n=8) va **−0,99%
