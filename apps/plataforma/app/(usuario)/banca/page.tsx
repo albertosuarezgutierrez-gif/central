@@ -21,6 +21,7 @@ import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
 import TicketsSuper from './TicketsSuper'
 import SegTabs from './SegTabs'
+import SaldoTotal from './SaldoTotal'
 import NegociosResumen from './NegociosResumen'
 import FiscalResumen from './FiscalResumen'
 import CategoriasTab from '../finanzas/CategoriasTab'
@@ -188,10 +189,9 @@ export default async function BancaPage({ searchParams }: {
         <div style={{ margin: '8px 0 20px' }}><SegTabs active="dinero" /></div>
 
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
-          <div>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: totalGrupo >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(totalGrupo)}</div>
-          </div>
+          {/* El saldo se pinta con su botón 👁 (SaldoTotal.tsx): desenfoca la cifra para poder
+              enseñar el panel sin que se lea, y recuerda la elección entre visitas. */}
+          <SaldoTotal texto={fmtEur(totalGrupo)} positivo={totalGrupo >= 0} />
           <div className="banca-acciones" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {saldo.cuentas.length > 0 && <MovimientosBtn />}
             <AccionesBanca
