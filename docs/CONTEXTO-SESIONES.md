@@ -1026,6 +1026,33 @@ cuota) + `docs/PATRIMONIO-CFO.md`. El intake de /patrimonio ya solo pide confirm
 - Pendiente de Alberto: la **brecha escaparate↔caja** de House — lo listado es 1,07–1,47× la base pero
   lo cobrado 0,87–0,98×. Causa sin comprobar (promos de Booking vs limpieza cobrada aparte). Rutina el 30/08.
 
+### 🔎 (23/08/2026) Auditoría profunda semanal: 3 crons mudos reales + reconciliación de docs stale
+Pasada `--profunda` (22 commits desde el 21/08). **Técnico:** typecheck 9 apps + tests (0 fallos) +
+seguridad multi-tenant + advisors Supabase todo limpio; hallazgos menores: `pdfjs-dist` desactualizado
+en `apps/ialimp` (CVE, procesa PDFs de nómina — priorizar bump a ≥6.2.108) y `ia-rest`/`transporte`/
+`central-rrhh` con 20/20 últimos deploys Vercel CANCELED (probable cadencia de pushes, verificar que
+producción sirve `main`). **Heartbeat 🔴:** `psd2-sync` 68h mudo (umbral 54h) y la rutina de sesión
+`sivra_mercado_booking` sin correr desde el viernes (46,5h) — arrastra a `sivra_canal` (4 pisos sin
+ajustar) y `sivra_mercado_sweep` (70 fallos Serper 400). Causa probable común: el trigger de Rutinas
+no disparó en fin de semana — a revisar por Alberto. **PRs:** #1594 en conflicto de inserción pura
+(fácil), #1514 limpio esperando revisión (3 días). **Carril 1 aplicado:** `docs/VIGIA-CONECTORES.md`
+y `docs/HUECOS-ABIERTOS.md` (H2 screener ya cerrado, Alberto recargó saldo el 21/08) al día; fila de
+Patrimonio añadida a `plataforma-maestro`. Informe completo en `docs/AUDITORIA-2026-08.md` y PR draft.
+**REPARADO en la misma sesión («repara»):** sweep = saldo Serper a CERO (degradó a mitad de pasada
+con la key viva; **verificar en Billing si se agotó o CADUCÓ** — la aritmética de gasto no cuadra
+con fundir un paquete entero; recargar el paquete pequeño) + los `throw` de Serper ya incluyen el body;
+psd2 = falsa alarma (cron 200 hoy 06:00, banco sin operaciones; ⚠️ consent BBVA caduca el 11/09);
+mercado-booking se recuperó sola (238 comps hoy); PR #1594 desatascado (merge `7563289f`, 7/7 tests);
+`pdfjs-dist` parcheado a 6.2.108 (GHSA-hq66-cqwq-w95j; tests 22/22, audit limpio); Vercel CANCELED =
+`ignoreCommand` por diseño — `iarest.es` y `central-rrhh` sirven el build del swap NIM, verificado.
+**CAUSA REAL del hueco de rutinas del sábado (dictada por Alberto con el historial de claude.ai):**
+NO fue el trigger — las 3 dispararon puntualmente el 22/08 y las bloqueó el **límite semanal de
+Claude** (reset sábado 07:00 UTC; mismo fallo los sábados 1, 8 y 22/08; el 1 y el 8 el reintento
+post-reset las salvó). Mitigación: mover las rutinas de madrugada del sábado a ≥09:30 CEST — y ojo,
+aplica a CUALQUIER rutina en esa franja (trading-analista corre mar-sáb de madrugada). Un fallo por
+límite hoy no alerta a nadie: se supo 2 días tarde por el heartbeat. El sweep de Serper es cron de
+VERCEL, ajeno al límite de Claude — por eso gastaba a las 03:00 con las rutinas bloqueadas.
+
 ### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
 Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
 puros nuevos en `@central/module-trading` (173 tests verdes): **`splits.ts`** (reexpresa lo anterior a
