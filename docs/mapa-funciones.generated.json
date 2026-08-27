@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T06:27:30Z",
-  "sha": "88150a4afd89a07ee27c7c5fcf67902c157974db",
+  "generadoEn": "2026-08-27T09:29:30Z",
+  "sha": "4efd9327ee6ae1b47a3b88d4264d43820c7e1897",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -57839,7 +57839,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "fmt",
@@ -57847,7 +57847,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "GET",
@@ -57855,7 +57855,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 67,
+          "linea": 68,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -57864,7 +57864,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 71
+          "linea": 72
         }
       ],
       "tablas": [
@@ -57887,7 +57887,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e1cf2b1ad1a8"
+      "hash": "32a9d0aae1d8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -71362,6 +71362,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c71b9aa1afbc"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-descongelar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-descongelar.ts — la SEGUNDA llave de los congeladores. POR QUÉ (27/08/2026). El motor tiene dos guardas que abortan la escritura de una fecha para no bajarle el precio «a ciegas»: la de OUTLIER (el precio vivo supera en +40% lo normal del piso y faltan más de 30 días) y la de EVENT",
+      "exporta": [
+        "descongelar",
+        "detalleDescongeladas"
+      ],
+      "funciones": [
+        {
+          "nombre": "descongelar",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: DescongelarInput, o: DescongelarOpts = {}",
+          "retorno": "Descongelar",
+          "linea": 72
+        },
+        {
+          "nombre": "detalleDescongeladas",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: { fecha: string; motivo: string }[],",
+          "retorno": "string | null",
+          "linea": 96,
+          "resumen": "Parte legible para la respuesta y el latido. Una descongelación en masa tiene que poder distinguirse de una pasada normal sin abrir la BD."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a86f8eb5699b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
@@ -97906,7 +97937,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2589,
-    "funciones": 7114
+    "archivos": 2590,
+    "funciones": 7116
   }
 }
