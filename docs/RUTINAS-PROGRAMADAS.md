@@ -76,6 +76,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
 | **Qué hace** | `auditoria-central` ENTERA: typecheck de las 8 apps + tests + seguridad multi-tenant + `pnpm audit` + infra por MCP (incl. `ignoreCommand` en los 8 `vercel.json`) + coherencia de docs. |
 | **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
+| **💰 Pricing (obligatorio, 27/08/2026)** | Además del bloque 2bis diario, la pasada semanal hace el tramo CARO, que es el que decide dinero a medio plazo: **(a)** re-corre la consulta de posición vs mercado de `docs/POSICION-MERCADO-lejano.md` §«La consulta» y **rellena su tabla de seguimiento** (ratio por piso, «más caros que TODOS los comps», cobertura); **(b)** comprueba las **tres** condiciones para reencender `antelacion_k` y dice explícitamente cuáles se cumplen y cuáles no —nunca la enciende sola: eso lo decide Alberto—; **(c)** mide la **oscilación por piso** en 7 días (la consulta del bloque 2bis, desglosada por `property_id`) y la compara con la semana anterior: si sube, es que el motor se está peleando consigo mismo; **(d)** corre `node --test lib/sivra/pricing-*.test.ts` en `apps/plataforma` (246 tests el 27/08/2026) — si alguno cae, es 🔴 y **el motor tiene prioridad sobre cualquier otro hallazgo de la pasada**. |
 
 ### 3. Facturas correo — *activa*
 | | |
@@ -190,6 +191,15 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Trigger** | `trig_01Eagedr3hBNtpf1oEgDHj5R` — self-bind a la sesión del 09/08 (hereda sus conectores, Supabase incluido; el parámetro `connectors` de la API no está disponible en esta organización) |
 | **Qué hace** | Verifica las últimas 24h: 3 pasadas `apply-auto` escritas en los 4 pisos · ningún precio bajo `min_price` ni fuera del raíl ±20% vs REF24 · PriceLabs sigue mudo en Dúplex/House · last-minute solo dentro de la antelación mediana y sin perforar suelos · alertas del guardián 07:30 · reservas nuevas no bajo el p50 fiable de su fecha |
 | **Si todo bien** | Una línea corta de confirmación a Alberto; si algo grave, pausa el motor (`pricing_config.paused=true`) y avisa con detalle |
+
+> ✅ **Su cobertura ya NO depende de este trigger (27/08/2026).** Todo lo que verificaba esta
+> rutina a mano vive ahora en el bloque **2bis «💰 Salud del precio»** de `/auditoria-diaria`
+> —obligatorio en TODAS las pasadas, también en modo ligero— con los umbrales en un módulo
+> puro y testeado (`apps/plataforma/lib/sivra/pricing-salud.ts`, 13 tests). Es más robusto que
+> la rutina: esta cuelga de un trigger *self-bind* a la sesión del 09/08 (si esa sesión muere,
+> la vigilancia muere con ella y **en silencio**), mientras que el bloque de la auditoría corre
+> con quien corra la auditoría. Cuando Alberto dé por buena la temporada, este trigger se puede
+> borrar sin perder vigilancia.
 
 ### 9. Vigía GitHub/OSS — *pendiente de trigger*
 | | |
