@@ -32,6 +32,19 @@
 
 ---
 
+### 🧹 (27/08/2026) Backlog de PRs de rutinas a CERO — y el bump de seguridad que llevaba 4 días sin aplicarse
+Cerrados los dos que quedaban del 23/08. **#1602** (entrenador): caveat en `facturas-correo/SKILL.md`
++ poda de 20 entradas de bitácora. Su conflicto NO era inserción pura —podaba mientras `main`
+insertaba—, así que `resolver-conflicto-registro.mjs` se plantó BIEN; se resolvió por ESTRUCTURA
+(partir en entradas, quitar las 20 exactas, conservar las 14 nuevas de `main`). **#1600** (auditoría
+profunda): lo único de código vivo era **`pdfjs-dist` 6.0.227→6.2.108 en ialimp**
+(GHSA-hq66-cqwq-w95j) — 4 días expuesto por un PR atascado; lockfile REGENERADO, no copiado. Su
+cambio de Serper se DESCARTÓ: `main` ya lo tenía mejor (3 rutas, con guarda) y mergearlo habría sido
+regresión. 📌 Lección: un PR de rutina viejo no se mergea a ciegas ni se cierra a ciegas — hay que
+mirar dato a dato qué de su diff sigue vivo. ⚠️ Siguen pendientes de Alberto (los traía #1600):
+recargar Serper, renovar el consent PSD2 de BBVA **antes del 11/09** y mover las rutinas de
+madrugada del sábado a ≥09:30 CEST.
+
 ### 🧹 (27/08/2026) Auditoría 27/08 resuelta a mano — y la cabecera de ESTA memoria estaba partida en dos
 Los dos PRs de registro que señalaba #1764: **#1735** cerrado (su contenido —hueco DIGI de junio— ya
 estaba en `main` vía #1737/#1740, y su diff arrastraba ficheros ajenos de #1734) y **#1639** cerrado
