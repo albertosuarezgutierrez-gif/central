@@ -2379,3 +2379,83 @@ La Fase 4 ya no es «traer CIMA»: es **«decidir qué CIMA»**. Hay dos cliente
 apagado, y el pull completo de Manuel, vivo— y hay que elegir si conviven (uno para comisiones, otro
 para cartera) o si uno absorbe al otro. **Eso no cambia el orden**: CIMA sigue al final. Cambia lo que
 hay que decidir cuando se llegue.
+
+---
+
+## 📐 27/08/2026 — El `schema.prisma` NO se puede escribir por adelantado (y qué pedir en su lugar)
+
+Se minó este documento entero buscando lo necesario para dejar el modelo de datos preparado antes del
+dump. **Conclusión: no se puede, y forzarlo produciría un modelo inventado.** Se deja escrito para que
+nadie lo vuelva a intentar.
+
+### Lo que sí se sabe
+
+El doc nombra **32 de las 52 tablas** del origen: `clientes` (32.600) · `polizas` (28.843) ·
+`cliente_telefonos` (4.794) · `cliente_emails` (4.017) · `oportunidades` (3.676) ·
+`operational_events` (3.518) · `cliente_carnets_conducir` (2.189) · `cliente_relaciones` (1.710) ·
+`bienes_asegurables` (1.614) · `poliza_coberturas` (1.425) · `gestiones` (694) ·
+`poliza_intervinientes` (504) · `poliza_recibos` (186) · `cima_ficheros` (125) · `siniestros` (69) ·
+`usuarios` (17) · `corredurias` (1), más `bien_documentos`, `poliza_documentos`,
+`solicitud_cambio_documentos`, `whatsapp_kb_chunks`, `channel_inbound_messages`,
+`cotizaciones_anonimas`, `ofertas_automaticas` y las 7 `codeoscopic_*`.
+
+### 🔴 Lo que falta, y por qué es bloqueante
+
+| Hueco | Consecuencia |
+|---|---|
+| **~19-20 nombres de tabla** de 52 | No hay inventario nominal completo en ninguna parte |
+| **Ni un solo tipo de columna** en todo el doc | Ni `numeric(p,s)` para los importes — en una correduría eso decide si los euros cuadran |
+| **Ninguna clave primaria** nombrada | Ni siquiera consta que se llamen `id` |
+| **CERO claves foráneas en el origen** | 🚨 No es un hueco documental, es real: **`prisma db pull` devolverá 52 modelos aislados, sin una sola relación**. Los nombres de columna de enlace (`poliza_id`, `cliente_id`…) son puro supuesto y **no se escriben** |
+| **Ningún índice**, empezando por el del **índice ciego** | No se dice sobre qué columna vive ni si es índice o columna materializada. Sin eso, el buscador por email/DNI no se reproduce |
+| **Ninguna nulabilidad, default ni CHECK** | Las 7 máquinas de estado no dicen si son `enum` nativo o `text` con `CHECK`. Prisma necesita saberlo |
+| **En qué tablas existe `correduria_id`** | Se sabe que 67 políticas lo usan; no sobre qué tablas |
+| **Dónde vive el IBAN** | Se cita una y otra vez; nunca se dice la tabla ni la columna |
+
+### ✅ Lo que hay que pedir en su lugar — **M1-bis**, y pasa a ser la petición nº 1
+
+En vez de veinte preguntas sobre el esquema, **una sola orden**:
+
+```
+pg_dump --schema-only --no-owner --no-privileges -n public > esquema.sql
+```
+
+**Sin `--data-only`, sin datos: solo la estructura.** Eso responde de golpe los ocho huecos de la tabla
+de arriba, **no contiene ni un dato personal** —así que se puede mandar por un canal normal, a
+diferencia del dump con datos— y ocupa unos pocos cientos de KB. Es la petición de mejor relación
+esfuerzo/valor de todo el traspaso, y no estaba en la lista.
+
+### 🎯 Dos cosas que este análisis YA responde, y que se pueden tachar
+
+- **M6 — ¿los usuarios están en Supabase Auth?** **Sí.** `auth.users` tiene **9 usuarios**, los 9 han
+  entrado alguna vez, último acceso el 12/08/2026. **Confirmado: no viajan en un `pg_dump` de `public`**
+  y hay que recrear las cuentas.
+- 🚨 **Y una trampa que el dato destapa: `usuarios` tiene 17 filas, las 17 con `activo = true`, pero
+  solo 9 tienen `auth_user_id` vivo.** Hay **8 fichas huérfanas** que apuntan a un usuario de Auth
+  borrado. Portar `activo` tal cual crearía **8 cuentas que parecen activas y no pueden entrar**.
+  Al migrar, `activo` se cruza con la existencia real de la credencial — no se copia.
+
+### ⚠️ Y un detalle que cambia la decisión sobre BYPASSRLS
+
+**45 de las 86 políticas RLS exigen el rol `corredor`… que no tiene NINGÚN usuario** (17 filas: 15
+`usuario`, 2 `admin`, 0 `corredor`). Es decir: si se optase por conservar las políticas con un rol sin
+`BYPASSRLS`, **casi la mitad no dejaría pasar a nadie**. Refuerza la vía elegida —aislamiento en el
+código, ver `lib/tenant-ambito.ts`— pero conviene saberlo antes de discutirlo.
+
+### 🟠 Cinco contradicciones internas de este documento, sin resolver
+
+Anotadas para que nadie se apoye en una cifra que no cuadra:
+
+1. **`siniestros`: 69 filas** (recuento) vs. **«67 de los 67»** metidos por CIMA.
+2. **Compañías CIMA: «4 conectadas»** vs. **5 códigos listados** (Mapfre, Allianz, Generali, Occident, Reale).
+3. **RLS: «86 políticas»** vs. el desglose **67 + 17 = 84**.
+4. **Tablas de `public` en `central`:** 280 vs. 281 vs. «~254» según el sitio (medidas en momentos distintos).
+5. **«132 funciones»** y **«132 procedimientos»** se usan como sinónimos.
+
+### La ruta real, entonces
+
+`pg_dump --schema-only` → leerlo → **luego** el dump con datos → restaurar en `seguros` →
+`prisma db pull`, **sabiendo de antemano que no generará relaciones** (0 FKs) y que habrá que
+declararlas a mano. Y **antes de todo eso, M4 y M5**: sin saber qué está cifrado ni si el código
+filtraba por `correduria_id`, el modelo resultante tendría columnas opacas y una columna de tenant de
+fiabilidad desconocida.
