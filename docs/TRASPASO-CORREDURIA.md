@@ -2481,3 +2481,42 @@ estaba analizado en este documento; Alberto lo ha resuelto («da igual q manuel 
 re-abre.** Queda anotado que existe la alternativa —rol restringido acotado por un *Access Group*— por
 si algún día se quiere, y que **sigue sin verificarse si el plan Pro incluye Access Groups**: se ve en
 `Settings → Access Groups`, y si esa sección no aparece, es que no.
+
+### 🔒 27/08/2026 — Access Groups es Enterprise: la decisión de Alberto era la ÚNICA opción real
+
+Verificado en el panel, no supuesto. Queda cerrada la duda que este documento arrastraba desde ayer.
+
+`Settings → Access Groups` **existe en el menú y carga**, pero lo único que muestra es *«Upgrade to
+Enterprise — Create access groups to more easily manage project roles»*, con el botón de crear
+**desactivado** y un «Contact Sales».
+
+➡️ **En el plan Pro NO se puede acotar a un miembro a un solo proyecto.** Las únicas opciones reales
+eran: **Member con acceso a los cinco proyectos, o no invitarlo.** La recomendación de «invitarlo
+acotado por Access Group» que aparecía como alternativa en este documento **no estaba disponible**, y
+se retira. La decisión de Alberto no era la menos segura de dos: era la única que existía sin subir a
+Enterprise.
+
+### 🔴 Corrección: el 2FA de Alberto NO es la mitigación de esa decisión
+
+Este documento (y la recomendación que se le dio a Alberto) planteaba activar su 2FA **antes** de
+invitar, como si eso cubriera el riesgo aceptado. **No lo cubre, y la distinción importa:**
+
+- **El 2FA de Alberto** protege la cuenta de Alberto. Vale la pena por sí mismo —es una cuenta Owner,
+  sin segundo factor, con las envs de `plataforma` dentro— pero es un problema que ya existía y que no
+  tiene nada que ver con Manuel.
+- **La exposición NUEVA que se acepta al invitar es la cuenta de Manuel.** Si esa cuenta se
+  compromete, el radio de daño son los cinco proyectos. **La mitigación real es que Manuel tenga 2FA
+  en su cuenta de Vercel.**
+
+⚠️ Y **no se le puede imponer desde el equipo**: en `Settings → Security & Privacy` del plan Pro **no
+existe la opción de exigir 2FA a los miembros** (solo hay revocación de tokens, commits verificados,
+secretos de producción separados, y ámbitos Git, que son de Enterprise). **Es una petición a Manuel, no
+una política.** Va con la pregunta del email.
+
+### Ruta para activar el 2FA de Alberto
+
+`vercel.com/account/authentication` → estado hoy **Inactivo**, con aviso rojo. Dos vías: *passkey*
+(biométrico) o **TOTP** con 1Password / Google Authenticator / Microsoft Authenticator.
+
+🚨 **Si se usa 1Password para el TOTP, los códigos de recuperación se guardan FUERA de 1Password.** Si
+se pierde el gestor y los códigos están dentro, se pierde el acceso al propio equipo.
