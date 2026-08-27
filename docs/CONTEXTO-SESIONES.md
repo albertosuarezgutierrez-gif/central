@@ -3521,7 +3521,7 @@ Ojo estructural: el job `Build` del CI **solo construye ia-rest**; typecheck ≠
 - **Mergeado y verificado sobre `main`:** 75/75 del guardián + 306/306 de plataforma, y réplica del
   regex sobre los 2.110 movimientos del libro → casa 3 filas (las 3 de IBKR) y ninguna cambia de
   destino. Agosto queda: seguros -505,54€ · traspaso_interno -3.643,23€.
-- ✅ **`FINANCIALDATASETS.AI` (-17,78€), cerrado (PR #1811):** el mismo cajón de descarte lo mandaba a
+- ✅ **`FINANCIALDATASETS.AI` (-17,78€), cerrado (PR #1810):** el mismo cajón de descarte lo mandaba a
   `seguros` + revisar cada mes. Alberto decide que es **herramienta profesional** → entra en
   `RE_SOFTWARE` (como Vercel/Anthropic): sigue deducible pero con subcategoría `informatica` y
   auto-confirmado, que es lo que lo saca de la bandeja. Backfill aplicado (1 fila).
