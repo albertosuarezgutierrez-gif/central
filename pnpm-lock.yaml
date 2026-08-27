@@ -430,8 +430,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.4
       pdfjs-dist:
-        specifier: ^6.0.227
-        version: 6.0.227
+        specifier: ^6.2.108
+        version: 6.2.108
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
@@ -4921,8 +4921,8 @@ packages:
     resolution: {integrity: sha512-/Y3fcFrXEAsMjJXeL9J8+ZG9U01LbuWaYypvDW2ycW1jL269L3js3DVBjDJ0Up9Np1uqDXsDrRihHANhZOlwdQ==}
     engines: {node: '>=20'}
 
-  pdfjs-dist@6.0.227:
-    resolution: {integrity: sha512-/P6M4SXw+70waMVLUM7rdRtvo+dEzqE1t6W/zQNvBETo2MaRa5rrvCcAYdfWGiUzadTgM0lJmRApUrW0d9zgKg==}
+  pdfjs-dist@6.2.108:
+    resolution: {integrity: sha512-YxFb+SQcodN2rnX9Tn3dHYlqfb7NjlzzfONPpJd+AKoKtUjEdevTfbC07d5TcczzOK6261auRkP/M8OBHs9vFQ==}
     engines: {node: '>=22.13.0 || >=24'}
 
   peberminta@0.10.0:
@@ -9907,7 +9907,7 @@ snapshots:
     optionalDependencies:
       '@napi-rs/canvas': 0.1.100
 
-  pdfjs-dist@6.0.227:
+  pdfjs-dist@6.2.108:
     optionalDependencies:
       '@napi-rs/canvas': 1.0.0
 
