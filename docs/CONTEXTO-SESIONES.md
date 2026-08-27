@@ -32,6 +32,24 @@
 
 ---
 
+### 🏘️ (27/08/2026) Agente de inversión inmobiliaria CONSTRUIDO y probado con los 12 meses de Conil
+
+Fases 2 y 3 del spec, completas. Motor PURO `apps/plataforma/lib/inversion/{tipos,curva-mercado,competencia,
+underwriting}.ts` (**52 tests**), tabla `inversion_analisis` (migración aplicada en Supabase, con REVOKE a
+anon/authenticated + RLS), endpoint `POST /api/inversion/underwrite`, pantalla `/inversion` (+ sidebar) y skill
+`inversion-inmueble`. **Prueba end-to-end con mediciones REALES**: 12 búsquedas de Booking para Conil (una por
+mes, aforo 4) → curva en `docs/INVERSION-CONIL-2026-08-27.md`; **pico/valle 5,79×** (ago 488,50€ vs mar 84,36€),
+no el 3,6× de las dos ventanas del spec. Esa pasada destapó **dos mentiras en los mensajes del veredicto** —citaba
+el yield neto junto al listón cuando comparaba el cash-on-cash («8,27% bate el listón de 9,00%»), y decía «año
+entero medido» con la ocupación 100% supuesta—; corregidas y con test. Verificado tras mergear `main`: tsc 0 · 1.766 tests de
+plataforma · 75 del guardián. ⛔ Sigue faltando lo de Alberto: precio, m², qué es el inmueble, explotación,
+financiación y si compra él o Punto y Coma SL.
+🔓 **De regalo, el CI:** el PR #1789 se pasó 3 h sin que GitHub le creara ni uno de los 12 requeridos
+(abrir, des-draftear y dos pushes con contenido: 0 runs). Lo desatascó **mergear `main` en la rama**
+—que además hacía falta, el PR estaba en conflicto—: los 12 arrancaron en segundos. Corregida la frase
+de `CLAUDE.md` que decía «hace falta mano de Alberto». **La causa sigue sin aislar** (entre el último
+push mudo y el que funcionó cambiaron el merge de la base Y 56 minutos).
+
 ### 📅 (27/08/2026) El libro paper ya sabe qué resultado vino de la SEÑAL y cuál del CALENDARIO
 NVDA (PAPER, no cartera real — la real solo tiene VWCE + CVX) acabó en verde por un hueco del +6,79%
 tras resultados. **Nadie decidió aguantar:** `earningsInminente` solo veta ABRIR ≤3d; entró el 21/08,

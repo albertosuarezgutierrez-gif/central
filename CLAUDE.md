@@ -257,6 +257,54 @@ entonces: **abrir el PR por la herramienta MCP** (o des-draftear, que también f
 dispara es el **token de la App**. No des por hecho ninguna de las dos versiones sin mirar el
 `actor` del run.
 
+🚨 **TERCER dato, el mismo día (PR #1789): ni el draft ni la identidad lo explican del todo.** Los
+tres PRs de esta tanda salieron de la MISMA rama, con la MISMA identidad (`actor` = la cuenta de
+Alberto, PR abierto por la herramienta MCP) y los tres **en draft**. Los dos primeros (#1777,
+#1779) dispararon los 12 requeridos al instante; el tercero **no disparó ninguno**: sobre su head
+solo corrió `rutinas-automerge`, que es `pull_request_target` — o sea, el evento
+**`pull_request` no llegó a los workflows requeridos**. Y **sacarlo de draft tampoco lo rescató**
+(se probó: volvió a disparar solo el `pull_request_target`). No fue una caída de Actions: otro PR
+del repo tuvo su run de `tests.yml` **diez segundos antes**.
+
+Lo único que distinguía a #1789 es que el PR se abrió **~2 segundos después del push** de la rama.
+Es una hipótesis de carrera, no una causa medida — **no la des por buena sin comprobarla**.
+
+🚫 **Y las tres palancas que se probaron sobre #1789 fallaron las TRES.** Medido, en este orden:
+abrir el PR → 0 runs · **des-draftear** → 0 runs · **push posterior con contenido real**
+(`synchronize`) → 0 runs. En las tres, lo único que corrió sobre el head fue `rutinas-automerge`,
+que es `pull_request_target`: o sea, **el evento `pull_request` no llegó ni una sola vez**, mientras
+otros PRs del repo recibían el suyo con normalidad. Comprobado con `list_workflow_runs` filtrando
+por rama: **cero runs de `tests.yml` en esa rama después de las 11:25**.
+
+⚠️ Esto **corrige la frase que se escribió media hora antes en este mismo apartado** («el push
+posterior lo desatasca»): es lo que había funcionado hasta ahora, pero en #1789 tampoco. **Causa
+desconocida.** Lo que queda documentado no es un remedio, es qué NO gastar tiempo probando la
+próxima vez.
+
+✅ **CUARTA palanca, y ESTA SÍ funcionó (27/08/2026, 13:55 UTC, mismo PR #1789): MERGEAR `main` EN
+LA RAMA.** Tres horas después de los tres intentos fallidos, `main` había avanzado dos commits y el
+PR pasó a `mergeable_state: "dirty"` (conflicto en `CLAUDE.md` y en la memoria). Se resolvió el
+conflicto y se empujó el commit de merge → **los 12 requeridos arrancaron a los pocos segundos**,
+evento `pull_request`, sobre el head `b93d472e`. O sea: **el agente sí pudo desatascarlo solo**, y la
+frase que había aquí —«hace falta mano de Alberto»— era falsa.
+
+⚠️ **Lo que NO se sabe: por qué.** Dos pushes con contenido real (12:57 y 12:59 UTC) no habían
+disparado nada. Entre el último mudo y el que funcionó cambiaron dos cosas a la vez —pasaron 56
+minutos y el PR entró en conflicto— así que **no está aislado** si lo que desatasca es el merge de la
+base, el que la mergeability se recalcule, o simplemente el tiempo. No lo des por causa medida.
+
+**Orden a seguir cuando un PR no arranca los checks:** (1) mira si hay conflicto con `main`, y si lo
+hay resuélvelo —es trabajo obligatorio de todas formas y encima puede desatascar; (2) si no lo hay,
+**mergea `main` en la rama igualmente** (es un push con contenido real y no ensucia el historial como
+un commit vacío); (3) solo si eso tampoco funciona, hace falta mano de Alberto: un push desde su
+máquina, o cerrar y reabrir el PR desde la web, o abrir el PR de nuevo desde una rama con OTRO
+nombre. **El agente no crea ramas nuevas por su cuenta** (solo empuja a la rama designada) y el
+commit vacío sigue prohibido.
+
+**Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
+de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
+cortos.
+
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
 

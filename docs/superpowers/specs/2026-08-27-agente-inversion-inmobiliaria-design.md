@@ -112,7 +112,7 @@ Medición propia del 27/08/2026 (conector Booking, Conil de la Frontera, ventana
 
 | Aforo | Comparables disponibles | Mediana €/noche | €/plaza/noche |
 |---|---|---|---|
-| 4 plazas | 10 | 332,50€ | **83,10€** |
+| 4 plazas | 10 | 332,50€ | **83,13€** |
 | 10 plazas | 3 | 665,00€ | **66,50€** |
 
 Y la estacionalidad, mismo municipio y aforo 4:
@@ -132,6 +132,12 @@ de ~4 plazas— y no da uno solo por bueno.
 **Limitaciones de estas mediciones, declaradas:** 10 y 3 comparables por ventana (el conector
 pagina), no un censo; y es disponibilidad **a un día vista**, así que en pico lo que queda libre
 tiende a ser lo peor colocado → los 332,50€ probablemente **subestiman** el ADR real de agosto.
+
+📈 **Actualización del mismo día — el año COMPLETO, no dos ventanas.** Al implementar se midieron
+los 12 meses (`docs/INVERSION-CONIL-2026-08-27.md`): el valle real es **marzo a 84,36€** y el pico
+**mediados de agosto a 488,50€**, o sea **5,79×**, no 3,6×. Las dos ventanas de arriba se quedaban
+cortas por los dos lados: el 28–30 de agosto ya es cola de temporada y noviembre no es el mes más
+barato. La conclusión no cambia —cambia de tamaño.
 
 ## 6. Reglas del repo que aplican
 
