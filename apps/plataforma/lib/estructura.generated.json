@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-27T06:27:30Z",
+  "generadoEn": "2026-08-27T12:01:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4121,6 +4121,7 @@
       "/api/sivra/domotica/dispositivos",
       "/api/sivra/domotica/dispositivos/[id]",
       "/api/sivra/domotica/programador",
+      "/api/sivra/eventos/calendario",
       "/api/sivra/eventos/sync",
       "/api/sivra/eventos/verificar",
       "/api/sivra/eventos/websearch",
@@ -5362,7 +5363,7 @@
     "packages": 38,
     "capacidades": 23,
     "skills": 36,
-    "apis": 1181,
+    "apis": 1182,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
