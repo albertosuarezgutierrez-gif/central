@@ -1,5 +1,54 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-27 — auditoría diaria (ligera)
+
+Rango: 13 commits desde la pasada ligera del 26/08 05:29 UTC (`b9c4d30..2049774`) — cierre de la
+dirección de House Sevillana (#1731), repaso de CP de los cinco inmuebles + mapeo Booking cerrado
+(#1734), caso DIGI cerrado (#1737/#1740), esqueleto de `apps/asegura` (#1752), landmine PSD2 89
+días (#1757), plan de Booking confirma fechas caras (#1754), hipótesis «base perfecta» de trading
+medida y rechazada (#1760).
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK. `pnpm auditar:check`: radiografía al día.
+
+## ✅ Heartbeat de crons y agentes — sin ⛔
+- **a) Latidos (`agente_latidos`):** todos `ok=true` salvo `ses_transporte` (pendiente de Alberto,
+  sin establecimiento en `/sivra/partes/establecimientos`, sin cambios) y una racha suelta de
+  `sivra_eventos` (timeout de OpenRouter en una pasada, verificado que su retry `sivra_eventos_verificar`
+  corrió bien 30 min después — no es un patrón).
+- **b) Tablas de dominio (12):** todas ✅, ninguna cerca de su umbral.
+- `agente_reparaciones`: sin intentos en los últimos 7 días.
+
+## 🟡 Backlog de PRs de rutinas — 2 draft de registro atascados, uno de ellos con contenido en riesgo
+`rutinas-automerge.yml` sigue sano (runs horarios, último `success` 26/08 23:46 UTC). Pero dos PRs
+de registro llevan atascados en conflicto pese a los reintentos del bot:
+- **PR #1735** (`docs(agentes): auto-informe facturas-correo 26/08`, abierto 26/08 06:14, `dirty`):
+  el bot ya intentó resolver el conflicto (merge de `main` en la rama, commit `c116f14`) pero el PR
+  sigue `dirty` y su diff ahora arrastra ficheros de `#1734` que NO son de registro (skills, SQL,
+  test) — probablemente por el propio merge de conflicto empujado a la rama, no por contenido nuevo
+  del PR. Efecto práctico: el bot lo salta cada hora en el paso "toca algo que no es registro" sin
+  avisar (ese camino no comenta). **Buena noticia:** su contenido real (hueco DIGI de junio
+  conciliado) ya está en `main` por otra vía — el caso DIGI se cerró completo con #1737/#1740 (ver
+  entrada `✅ (26/08/2026) Cierre del caso DIGI` en `CONTEXTO-SESIONES.md`). El PR es redundante:
+  recomendado cerrarlo sin más acción.
+- **PR #1639** (`docs(buscador-ia): pasada semanal 24/08`, abierto 24/08 05:07, `dirty`, 3 días):
+  el propio bot ya avisó el 24/08 (`mergeStateStatus=BLOCKED`, checks required nunca se dispararon
+  sin push humano — el límite estructural que documenta la sección "🤖 CI" de `CLAUDE.md`, ya
+  conocido y aceptado). A diferencia del #1735, **este contenido NO está rescatado en ningún
+  sitio**: ni `docs/BUSCADOR-IA.md` ni `docs/AGENTES-BITACORA.md` en `main` tienen la pasada del
+  24/08 (5 eslabones vivos, sin swaps). Si se cierra sin rescatar el texto, se pierde esa pasada.
+- Resto del backlog (#1602 agentes-entrenador, #1600 auditoría profunda 23/08): código/skill
+  esperando ojo humano por diseño, 4 días, por debajo del umbral de "olvidado" (7 días).
+- PR nuevo #1763 (palanca de anticipación de pricing): `clean`, recién abierto, en revisión normal.
+
+## ✅ Reconciliación memoria/skills — sin huecos de código
+Los 13 commits del rango ya traían su propia entrada en `CONTEXTO-SESIONES.md`/`AGENTES-BITACORA.md`
+(patrón autodocumentado). `docs/HUECOS-ABIERTOS.md`: H1/H3 siguen vivos correctamente, sin código
+nuevo en el rango que los cierre. `docs/SKILLS.md` vs `.claude/skills/`: sin cambios en el rango
+(36 skills, 3 comandos). Manuales de usuario: sin features visibles nuevas en el rango.
+
+<!-- verificado: 2026-08-27 -->
+
 # Actualización 2026-08-24 — auditoría diaria (ligera)
 
 Rango: 26 commits desde la pasada del 23/08 05:26 UTC (`4f25e64..ed12004`) — día muy activo: cierre de
