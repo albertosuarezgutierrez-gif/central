@@ -70,6 +70,12 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_eventos_verificar: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_eventos_verificar'`,
+  // El calendario fijo escribe su latido desde el 27/08/2026. Va vigilado desde el mismo PR que
+  // lo declara: un cron que repone lo que YA se sabe puede morirse sin que se note, porque la
+  // tabla de eventos sigue llenándose por las otras fuentes.
+  sivra_eventos_calendario: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_eventos_calendario'`,
   // Canal: la huella es la de la PASADA de calibrado, no `pricing_settings.updated_at` — esa
   // columna solo se mueve cuando hay algo que corregir, así que un canal ya alineado y un cron
   // muerto darían la misma señal (que es como el ×1,20 supuesto sobrevivió sin que saltara nada).

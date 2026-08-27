@@ -224,6 +224,24 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.sivra_eventos_verificar.',
   },
   {
+    id: 'sivra_eventos_calendario',
+    etiqueta: '📅 Calendario fijo de Sevilla (diario 03:30)',
+    maxHoras: 30,
+    nota:
+      'Nadie está sembrando las fechas de Sevilla que se CALCULAN en vez de buscarse (Semana Santa ' +
+      'derivada de la Pascua, y la Feria por tabla). Este cron no descubre nada: repone lo que ya se ' +
+      'sabe, y por eso su silencio es especialmente traicionero — las otras cuatro fuentes de ' +
+      '`pricing_eventos_auto` seguirán llenando la tabla y el hueco no se verá por ninguna parte. ' +
+      'EXISTE porque el mapa `EVENTS` de lib/pricing-calendar.ts está ESCRITO A MANO y CADUCA ' +
+      '(hoy, el 2027-05-02) mientras el horizonte de tarificación son 365 días: en cuanto el ' +
+      'horizonte cruza el final del mapa, la Semana Santa se tarifica como un abril cualquiera. Eso ' +
+      'ya costó dinero una vez — Busto Reform vendió la noche de la Madrugá a 141,00€ tres días ' +
+      'antes de que alguien escribiera 2027 en el mapa. EL DETALLE DICE QUÉ PASÓ: los «años sin ' +
+      'fechas de tabla» son un hueco DECLARADO (falta la Feria de ese año, hay que añadirla a mano ' +
+      'en FIJOS), no un fallo del cron. ' +
+      'Huella: agente_latidos.sivra_eventos_calendario.',
+  },
+  {
     id: 'sivra_canal',
     etiqueta: '📐 Calibrado del canal Booking (diario 07:45)',
     maxHoras: 30,

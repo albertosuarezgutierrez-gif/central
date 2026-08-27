@@ -32,6 +32,16 @@
 
 ---
 
+### 🩺 (27/08/2026) El calendario de eventos latía pero NADIE lo escuchaba
+Prueba final de punta a punta antes de dar el calendario por bueno. Todo verde salvo un hueco real:
+`/api/sivra/eventos/calendario` **escribía** `registrarLatido('sivra_eventos_calendario')` pero NO
+estaba en `AGENTES_VIGILADOS`, así que el vigía diario no lo miraba. Es el landmine del 16/08 (PR
+#1447) por la otra cara: allí un agente vigilado sin sonda, aquí un agente con huella y sin vigilante.
+🚨 **Y este es el peor caso posible de cron mudo**: el calendario REPONE lo que ya se sabe, así que si
+muere, las otras cuatro fuentes siguen llenando `pricing_eventos_auto` y el hueco no se ve por ningún
+lado — hasta que llega Semana Santa tarificada como un abril cualquiera. Declarado + sonda en el mismo
+cambio (30 h, como sus hermanos diarios); el guardián se probó EN ROJO quitando la sonda a propósito.
+
 ### 📅 (27/08/2026) Me equivoqué: el motor SÍ conoce la Semana Santa — el problema es que su calendario CADUCA
 Diagnostiqué que Semana Santa 2027 «no existía» tras ver `pricing_eventos_auto` vacía en esas fechas.
 **Falso, y la corrección es la lección:** vive en el mapa `EVENTS` de `lib/pricing-calendar.ts`, que
