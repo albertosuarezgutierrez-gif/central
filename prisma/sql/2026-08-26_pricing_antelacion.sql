@@ -4,9 +4,12 @@
 -- nada lo SUBÍA por estar lejos. El 8-9 de enero de 2027 se vendió el 26/08/2026 —a 135 días vista,
 -- casi 5× la antelación mediana de House en enero (28 días)— a precio de enero corriente.
 --
--- Nació APAGADA en los cuatro (0), igual que `lastminute_k`, porque mueve precios en vivo. Alberto la
--- encendió en los CUATRO el 27/08/2026 con `antelacion_k = 1` (intensidad plena: hasta +25% a 4× la
--- antelación mediana del mes, nunca antes del día 60); los valores intermedios raman el efecto.
+-- Nació APAGADA en los cuatro (0), igual que `lastminute_k`, porque mueve precios en vivo. Se encendió
+-- a 1 el 27/08/2026 y se APAGÓ ese mismo día, antes de su primera pasada real: al medir el mercado con
+-- los comparables de Booking resultó que a >60 días ya íbamos a 1,31×-1,92× el p50 de la fecha, y que
+-- solo el 25% de esas noches tiene mercado medido — el premio habría caído justo donde no vemos a la
+-- competencia. **Hoy los cuatro están a 0.** Qué tiene que ser cierto para reencenderla (ratio, cobertura
+-- y fuga de canal): `docs/POSICION-MERCADO-lejano.md`. Los valores intermedios gradúan el efecto.
 --
 -- 🚨 El suelo de 60 días de `pricing-antelacion.ts` es lo que hace que esto signifique lo mismo en los
 -- cuatro pisos: Busto Reform y Dúplex Center venden con 12 días de mediana típica, así que sin él el
