@@ -47,8 +47,12 @@ medido que la **cadencia NO es el cuello de botella**: un evento a <60 días vis
 EXACTA de `EVENTS` día por día, Feria por tabla año a año (no se deriva: su encaje con la Pascua ya cambió
 una vez y costó una corrección el 31/07). Cron `/api/sivra/eventos/calendario` (03:30) **INERTE sin
 `SIVRA_CALENDARIO_ACTIVO=1`**. **PR #1778 MERGEADO** (`50fa787a`; verificado sobre `main`: 575/575
-en `lib/sivra`, 61/61 del guardián). Encender el env es decisión de Alberto (god-panel → 🔑 Secretos);
-mientras tanto la ruta calcula la previsualización y no toca un precio.
+en `lib/sivra`, 61/61 del guardián). **Medido el 27/08: encenderlo HOY cambia 0 noches** — las 15 fechas que
+sembraría (Semana Santa y Feria 2027) ya están en `EVENTS` con el mismo factor y el motor se queda con
+el MAX. El interruptor no protege nada todavía: **empieza a importar hacia abril de 2027**, cuando el
+horizonte de 365 días cruce a la Semana Santa de 2028, que es donde el mapa a mano ya no llega. O sea,
+encenderlo es gratis y es lo único que evita que alguien tenga que acordarse entonces. Pendiente de que
+Alberto elija: encenderlo (god-panel → 🔑 Secretos) o que se retire el interruptor y quede activo sin más.
 
 ### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
 Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
