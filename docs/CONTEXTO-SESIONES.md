@@ -34,6 +34,10 @@ lo que se mira sin preguntar), pensada para pedirle a Manuel **solo M1-M6 ahora*
 🚨 Riesgo mayor identificado: las 86 RLS van por `auth.uid()`; con `BYPASSRLS` el aislamiento pasa al
 código y el fallo sería «ver todo sin que nada falle» (pregunta M4).
 Fly: pagada la factura de julio (5,96 €); compra un mes, el medio de pago sigue siendo el de Manuel.
+🚨 **Descartado el «team de Vercel con 14 días gratis» de Manuel:** Alberto YA tiene Pro, y ese team
+aloja `plataforma` (banca PSD2/fiscal) — meterlo ahí le daría las envs de todo. Además el trial
+reintroduce la fecha límite que se quitó el 26/08. Lo único que Vercel tiene en exclusiva son los
+VALORES de las envs → `vercel env pull` + gestor de contraseñas. Team separado solo en Fase 4.
 
 ### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 

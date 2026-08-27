@@ -2124,3 +2124,101 @@ Para no gastar el tiempo de Manuel en cosas que salen solas:
 **Mandarle a Manuel el bloque de Fase 0 (M1-M6) y nada más.** Seis preguntas que puede contestar en un
 rato. Todo lo demás espera: pedirle las diecisiete de golpe es la forma más segura de no recibir
 ninguna.
+
+---
+
+## 🔎 27/08/2026 — La propuesta del «team de Vercel con 14 días gratis», mirada de verdad
+
+Manuel propone **crear un team de Vercel aprovechando los 14 días gratis**, darle acceso, y desde ahí
+recoger toda la información. También dice que **Alberto ya tiene acceso a todo** (repos), y que **lo de
+Fly se deja para más adelante, junto con CIMA** — esto último encaja con el plan por fases y se acepta
+sin más.
+
+Lo del team **no**. Tres razones, y la segunda es de seguridad.
+
+### 1. La premisa es falsa: Alberto ya tiene Vercel Pro
+
+Consultado por MCP el 27/08/2026:
+
+| Team | Slug | Plan |
+|---|---|---|
+| `Pisos turisticos' projects` | `pisos-turisticos-projects` | **pro** |
+
+No hacen falta 14 días de prueba de nada: **el Pro ya está pagado**. La prueba gratuita solo tendría
+sentido si se partiera de cero, y no es el caso.
+
+### 2. 🚨 Lo que NO se puede hacer: meter a Manuel en el team que ya existe
+
+Ese team aloja **cinco proyectos**, todos colgando del mismo repo `central`:
+
+`ia-rest` · `ialimp` · `central-rrhh` · **`plataforma`** · `transporte`
+
+**`plataforma` es el cuadro de mando consolidado**: banca PSD2, movimientos bancarios, fiscal,
+patrimonio, trading. Un miembro del team puede leer las **variables de entorno** de los proyectos —
+que es justo donde viven las credenciales de Supabase, de la banca, del bot de Telegram y del resto.
+
+Invitar a Manuel a ese team para pasarse los datos de la correduría **le daría, de paso, la vida
+financiera entera de Alberto**. No es desconfianza hacia él: es que el permiso no se puede recortar a
+mano en el sitio donde hace falta. El control por proyecto de Vercel (*access groups*) es un
+**entitlement** aparte —la propia documentación del CLI dice literalmente «*Requires the access groups
+entitlement*»— y **está sin confirmar si el plan Pro lo incluye**. No se apuesta la banca a una
+suposición sobre un plan.
+
+➡️ **Si se usa un team, tiene que ser uno NUEVO y separado, con el proyecto de asegura y nada más.**
+Nunca el que ya existe.
+
+### 3. Los 14 días reintroducen la fecha límite que Alberto acababa de quitar
+
+Este es el argumento de fondo. El 26/08 se corrigió el error central del documento: **no hace falta
+ventana ni fecha acordada**, porque el CRM no lo usa nadie y los ficheros de EIAC se re-descargan. El
+traspaso va al ritmo de Manuel.
+
+Un trial de 14 días **fabrica exactamente el plazo que se acaba de eliminar** — y encima uno que no
+llega: las fases 0 a 3 no caben en dos semanas. Al día 15 el team decae y algo se rompe en silencio,
+que es el modo de fallo más caro de todo este proyecto.
+
+### ✅ Lo que sí resuelve el problema, gratis y sin reloj
+
+La intención de Manuel es buena —un sitio común donde soltar las cosas— pero el mecanismo sobra,
+porque **casi nada de lo que necesitamos vive solo en Vercel**:
+
+| Qué necesitamos | ¿Está en Vercel? | Cómo se consigue de verdad |
+|---|---|---|
+| El código | ❌ Está en **GitHub** | Alberto ya tiene acceso a los dos repos |
+| La lista de crons | ❌ Está en `vercel.json`, **en el repo** | Se lee, no se pide |
+| **Los VALORES de las variables de entorno** | ✅ **Solo aquí** | `vercel env pull` → un fichero, por gestor de contraseñas |
+| Los ~4 ficheros del Blob | ✅ | Se descargan a mano |
+| Los logs de ejecución | ✅ | Solo hacen falta si hay que depurar algo |
+
+**El único premio real del team son los valores de las variables de entorno.** Y eso se resuelve con
+un comando:
+
+```
+vercel env pull .env.produccion --environment=production
+```
+
+Manuel lo ejecuta, y el fichero se entrega **por el gestor de contraseñas** — nunca por WhatsApp ni
+por correo. Cero coste, cero plazo, cero acceso cruzado.
+
+### Cuándo SÍ hará falta un team
+
+Cuando se quiera **asumir el despliegue vivo**, no antes. Eso es Fase 4, junto con CIMA y con Fly — que
+es justo donde Manuel propone dejarlo. Para entonces se sabrá exactamente qué proyecto se mueve y a
+dónde, y se crea el team separado en ese momento, sin prisa y sin trial.
+
+### 🟡 Observación de paso, sin conclusión
+
+El team tiene **5 proyectos**, pero el monorepo tiene **11 apps con `vercel.json`** (`almacen`,
+`alquiler`, `asegura`, `housesevillana`, `ia-rest`, `ialimp`, `mariscos`, `plataforma`, `rrhh`,
+`sivra`, `transporte`). Faltan seis, **`sivra` entre ellas**, que sí está desplegada.
+
+⚠️ **Esto no prueba que no existan**: pueden estar en la cuenta personal de Alberto (otro *scope*, que
+esta consulta no ve) en vez de en el team. **No se ha mirado**, y no se afirma nada hasta mirarlo.
+Anotado para revisar, porque si de verdad hay proyectos repartidos entre dos scopes, eso afecta a
+dónde se crea el de la correduría.
+
+### Y una que hay que verificar, no dar por buena
+
+Manuel dice que **Alberto ya tiene acceso a todo**. La invitación al repo del adaptador está aceptada
+(comprobado el 26/08). **Del resto no hay confirmación**, y desde esta sesión no se pueden leer repos
+de la cuenta de Manuel. Antes de cerrar la Fase 0 hay que abrir cada repo y ver que carga.
