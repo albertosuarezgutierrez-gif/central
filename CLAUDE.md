@@ -325,6 +325,28 @@ sus 5 errores `TS5097` vivieron 15 días sin que nadie los viera: una app que no
 no la typechequea nadie. **Al crear una app nueva, añadirla a la matriz es parte del alta**, igual
 que el `ignoreCommand`.
 
+✅ **Y los 12 se pueden correr EN LOCAL, en el contenedor de la sesión (27/08/2026).** Media sección de
+aquí arriba da por hecho que el `workflow_dispatch` es la única forma de «SABER si el código está sano».
+No lo es: con `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (≈20 s, el contenedor arranca **sin
+`node_modules`**) se reproducen los tres workflows enteros, gratis y sin depender de que Actions dispare:
+
+| Check requerido | Comando local | Desde |
+|---|---|---|
+| `Tests (packages + guardián)` | `pnpm test` | raíz |
+| `Typecheck · <app>` (×11) | `pnpm exec prisma generate` (si hay `prisma/schema.prisma`) + `pnpm exec tsc --noEmit -p tsconfig.json` | `apps/<app>` |
+| `Análisis estático · Patrones conocidos` | `pnpm exec tsx scripts/qa-check.ts` | **`apps/ia-rest`** (el workflow lleva `working-directory`) |
+| `Lint · TypeCheck · Build` | `pnpm run lint` · `pnpm exec tsc --noEmit` · `pnpm run build` | **`apps/ia-rest`** (idem) |
+
+Medido entero el 27/08: `pnpm test` = **3.149 tests `node --test` + 107 vitest, 0 fallos**; los 11
+typechecks en verde; QA «817 archivos, sin problemas»; lint **0 errores** (1.225 *warnings*, que no
+bloquean) y build OK. ⚠️ Los dos últimos corren **desde `apps/ia-rest`**, no desde la raíz — desde la
+raíz `qa-check.ts` ni existe y te crees que el check está roto. Esto NO sustituye al CI (el merge sigue
+exigiendo los check runs), pero convierte «no sé si está sano» en algo comprobable en 3 minutos.
+
+⚠️ **Un fallo local que NO es un fallo:** sin `pnpm install`, `node --test` sobre un test que importa un
+`@central/*` peta con `ERR_MODULE_NOT_FOUND` (le pasó a `lib/fmp.test.ts` → `@central/module-trading`).
+Es el symlink del workspace que no existe, no el código. Instala antes de diagnosticar nada.
+
 📌 **Consecuencia estructural — REVISADA el 27/08/2026.** La conclusión del 26/08 («ningún PR abierto
 por el agente puede mergearse sin que Alberto intervenga a mano») **resultó ser falsa**: el PR #1763 se
 mergeó entero sin intervención humana. Se mantiene abierta la decisión de fondo —dar a la App permiso
