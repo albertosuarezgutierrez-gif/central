@@ -32,8 +32,9 @@ intervenga a mano»). Con el PR #1763 en draft: 0 runs y merge rechazado con `40
 status checks have not succeeded`. Al marcarlo **ready for review** arrancaron los 3 workflows sobre
 `4efa129f`, los 12 requeridos pasaron en 3,5 min y el squash entró (`ba6ca86b`) — **sin que Alberto
 tocara nada**. 🚨 La causa exacta NO está establecida (el run se creó entre el 2º push y el
-des-drafteo; `ready_for_review` no está en los `types` por defecto), y así queda escrito en CLAUDE.md
-con el experimento que lo zanjaría: abrir el siguiente PR directamente sin draft. Ruleset sin tocar.
+des-drafteo; `ready_for_review` no está en los `types` por defecto). Un SEGUNDO PR el mismo día (#1768)
+descartó la vía del push: sin ningún 2º push, los runs arrancaron igual al sacarlo de draft. Hipótesis
+en pie: **un PR en draft no produce runs y sacarlo de draft los dispara**. Ruleset sin tocar.
 
 ### ⏳ (27/08/2026) La anticipación, ENCENDIDA en los cuatro — y el suelo de 60 días que hacía falta
 

@@ -223,19 +223,24 @@ punta a punta en el PR #1763, sin que Alberto tocara nada:
 | 27/08 06:12:18 | **PR marcado «ready for review»** (`draft:false` por la API) | **arrancan los 3 workflows** sobre `4efa129f`, evento `pull_request` |
 | 27/08 06:15 | los 12 jobs requeridos en `success` (~3,5 min) | ✅ |
 | 27/08 06:16 | merge (squash) | **`merged: true`** → `ba6ca86b` |
+| 27/08 06:19 | PR #1768: rama nueva, PR en draft, des-draft **sin 2º push** | runs otra vez → mergeado |
 
-🚨 **La causa EXACTA no está establecida y no conviene fingir que sí.** El run se creó a las
-`06:12:18`, entre el 2º push y el des-drafteo, y su `event` es `pull_request` (que no distingue la
-acción). Los dos candidatos son el `synchronize` del 2º push y el `ready_for_review` del des-drafteo
-— y ninguno encaja del todo: `ready_for_review` **no** está en los `types` por defecto de
-`on: pull_request`, y si hubiera bastado el push, el `opened` del PR original tendría que haber
-disparado también. La hipótesis que mejor casa con lo observado es que **un PR abierto en DRAFT no
-produce runs, y el estado deja de bloquear en cuanto se saca de draft**; queda por confirmar.
+**Confirmado con un SEGUNDO PR el mismo día (#1768).** Rama empujada, PR abierto en draft y sacado de
+draft acto seguido — **sin ningún 2º push**: los runs arrancaron igual (`06:19:25`, evento
+`pull_request`). Eso mata la explicación alternativa: el `synchronize` de un push **no** era lo que
+disparaba nada en #1763, porque aquí no hubo ninguno.
 
-**Qué hacer mientras tanto (barato y ordenado):** abre el PR en draft como siempre, y cuando esté
-listo **quítale el draft y espera**; si a los ~2 min no hay runs, empuja un commit con contenido real.
-El experimento que zanja la duda es abrir el siguiente PR **directamente sin draft** y mirar si
-arranca solo. Anota el resultado aquí.
+🚨 **Lo que queda en pie, y es una hipótesis fuerte pero no una certeza: un PR en DRAFT no produce
+runs — ni al abrirlo ni al empujarle commits — y sacarlo de draft los dispara.** Explica las cuatro
+observaciones (los dos `opened` en draft mudos, el push a #1763 mudo, y los dos des-drafteos que sí
+dispararon). Lo que NO encaja con la documentación de GitHub es que `ready_for_review` **no** está en
+los `types` por defecto de `on: pull_request`; el `event` del run es `pull_request` y no distingue la
+acción, así que la acción concreta no se ha visto. Si alguien quiere cerrarlo del todo: mirar el
+`event.action` en los logs del run, o abrir un PR directamente sin draft.
+
+✅ **El procedimiento, que es lo que importa:** abre el PR en draft (como siempre), y cuando esté listo
+**quítale el draft**. Los 12 requeridos arrancan solos y en ~3,5 min está mergeable. **Ya no hace
+falta que Alberto toque nada.**
 
 ⚠️ Lo que sigue siendo cierto: **el `workflow_dispatch` no vale** (ver arriba) y **el ruleset no se
 toca**.
