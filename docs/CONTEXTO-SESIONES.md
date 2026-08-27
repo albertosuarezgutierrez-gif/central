@@ -32,6 +32,21 @@
 
 ---
 
+### 🌱 (27/08/2026) El calendario, SEMBRADO en producción y medido: 0 precios movidos
+Cerrada la prueba de punta a punta (PRs #1787 → siembra). Antes de sembrar se arregló el nombre de
+las noches de tabla (`Feria de Abril 2027 — 2027-04-12` → `… — noche del alumbrado`): el nombre es
+la CLAVE del upsert, o sea que cambiarlo DESPUÉS habría creado 7 filas nuevas dejando las viejas
+empujando precio para siempre. Sembradas las **15 filas** (`fuente='calendario'`), re-ejecutado →
+sigue en 15 (idempotente). **Factor efectivo `MAX(tabla, EVENTS)` comparado noche a noche: 0 cambian**
+— la tabla sube donde `EVENTS` ya tapaba el hueco. El valor llega cuando `EVENTS` caduca (2027-05-02):
+Semana Santa 2028 sale 2,20–2,50 del calendario contra **1,00** de `EVENTS`, y la Feria 2028 se
+declara «sin tabla» en vez de inventarse.
+⚠️ **Fallo propio que casi cuesta caro:** commiteé el arreglo en `main` local, no en la rama, así que
+NO llegó al remoto; el PR #1787 arrancó con la rama vieja y **su diff borraba el botón 👁 (#1783) y
+la regeneración de #1786**. Los 10 checks en verde estaban validando el diff equivocado. Reconstruida
+la rama sobre `main` al día. Lección: **verde ≠ el diff que crees**; mira `git diff origin/main..HEAD`
+antes de mergear.
+
 ### 🩺 (27/08/2026) El calendario de eventos latía pero NADIE lo escuchaba
 Prueba final de punta a punta antes de dar el calendario por bueno. Todo verde salvo un hueco real:
 `/api/sivra/eventos/calendario` **escribía** `registrarLatido('sivra_eventos_calendario')` pero NO
