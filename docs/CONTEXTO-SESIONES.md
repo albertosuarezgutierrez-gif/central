@@ -3441,6 +3441,19 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+## 📈 (27/08/2026) El traspaso a Interactive Brokers no es un gasto de la correduría
+
+- Alberto avisa: el cargo de BBVA de **-1.000,00€** del 24/08 («ORDENES PAGO EMITIDAS… // U9007431 /
+  Alberto Suarez Gutierrez», contraparte «Interactive broker») salía como **🛡️ Seguros (correduría)**.
+- Causa: es el **cajón por DESCARTE** de los cargos de BBVA en `lib/destino.ts` — `RE_TITULAR` solo mira
+  `contraparte`, y ahí BBVA pone el BROKER, no el titular. Se contaba como gasto deducible.
+- Fix: `RE_BROKER` (`INTERACTIVE BROKER` / `IBKR` / cuenta IBKR `U`+7-8 dígitos) → `traspaso_interno`
+  auto-confirmado, en los dos sentidos (también la retirada de vuelta). Verificado que ese patrón NO
+  casa ningún otro concepto del libro; 2 tests nuevos, uno de ellos anti-secuestro de «TRANSFERENCIA».
+- Backfill de la fila ya ingestada (`prisma/sql/2026-08-27_traspaso_interactive_brokers.sql`, aplicado):
+  `destino_confirmado=true` la saca de la re-clasificación automática. Los 2 traspasos de -15.000€ de
+  2025 a la misma cuenta ya estaban bien a mano.
+
 ## 👁️ (27/08/2026) Botón «ocultar saldo» en el inicio de plataforma (estilo banco) — PR #1783
 - Alberto enseña el panel a gente: `/banca` lleva ahora un botón 👁/🙈 junto al «Saldo total del grupo»
   que lo **desenfoca** (no lo sustituye → el bloque no salta de ancho) y recuerda la elección.

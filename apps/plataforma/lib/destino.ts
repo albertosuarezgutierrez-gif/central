@@ -52,6 +52,17 @@ const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bP
 
 const RE_TGSS = /TGSS|TESORERÍA\s+GENERAL|TESORERIA\s+GENERAL|SEGURIDAD\s+SOCIAL|T\.?G\.?S\.?S/i
 
+// Traspaso a la cuenta de VALORES de Alberto en Interactive Brokers (IBKR): el dinero SALE de BBVA
+// pero sigue siendo suyo (cambia de bolsillo, no es gasto ni deducible). BBVA lo rotula con la
+// cuenta de destino IBKR, que es "U" + 7-8 dígitos: "ORDENES PAGO EMITIDAS EN MONEDA LOCAL //
+// TRANSFERENCIA REALIZADA // U9007431 / Alberto Suarez Gutierrez" (PSD2, contraparte "Interactive
+// broker") y, en los extractos Excel viejos, el escueto "U9007431 / alberto suarez gutierrez".
+// RE_TITULAR NO lo caza porque solo mira `contraparte` (que aquí es el broker, no el titular), así
+// que sin esta regla caía al cajón de DESCARTE de BBVA → 'seguros', o sea contado como gasto
+// deducible de la correduría (pasó con el traspaso de 1.000€ del 24/08/2026). Vale en los dos
+// sentidos: una retirada de IBKR a BBVA también es traspaso interno, no un ingreso del negocio.
+const RE_BROKER = /\bINTERACTIVE\s*BROKERS?\b|\bIBKR\b|\bU\d{7,8}\b/i
+
 // Software / infraestructura PROFESIONAL (hosting, IA, cloud, repos) que Alberto paga con la cuenta de
 // la correduría (BBVA): son herramientas de su actividad → gasto deducible del negocio. Se marcan con
 // subcategoría 'informatica' para distinguirlos de las pólizas/comisiones de seguros, y se auto-confirman
@@ -87,6 +98,10 @@ export function clasificarDestinoDetalle(
   // propia tarjeta): es un movimiento entre cuenta y tarjeta, NO un gasto real → no duplicar,
   // porque el gasto real ya está en el detalle de la tarjeta.
   if (/TARJ\.?\s*CR[EÉ]?DTO|PAGO RECIBO 466|466203201|PAGO DE TARJETA|LIQUIDACION? (DE )?TARJETA/i.test(txt)) return { destino: 'traspaso_interno', revisar: false }
+
+  // Traspaso a/desde la cuenta de valores de IBKR (ver RE_BROKER): movimiento entre cuentas propias
+  // en cualquier banco y en cualquier sentido. Determinista → auto-confirmado, no va a «por revisar».
+  if (RE_BROKER.test(txt)) return { destino: 'traspaso_interno', revisar: false, confirmado: true }
 
   // Bizum (de Alberto) = SIEMPRE personal, entre o salga y sea cual sea el banco. Sin esto, un Bizum
   // ENVIADO desde BBVA caía a 'seguros' por descarte (los cargos de BBVA que no son del Dúplex). Va
