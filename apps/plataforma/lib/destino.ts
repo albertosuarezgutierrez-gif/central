@@ -69,7 +69,10 @@ const RE_BROKER = /\bINTERACTIVE\s*BROKERS?\b|\bIBKR\b|\bU\d{7,8}\b/i
 // (no van a «por revisar» cada mes). NARROW a propósito: solo proveedores claramente profesionales; el
 // ocio (Netflix/Spotify/Disney…) NO entra aquí y sigue su camino normal a personal. OJO: NO incluir
 // STRIPE (es cobro de Booking de los pisos, ya en RE_PISOS) ni AMAZON a secas (compras = ocio).
-const RE_SOFTWARE = /\b(VERCEL|ANTHROPIC|OPENAI|OPENROUTER|GITHUB|CLOUDFLARE|SUPABASE|DIGITALOCEAN|NETLIFY|HETZNER|VULTR|LINODE|MONGODB|GOOGLE CLOUD|AMAZON WEB SERVICES|AWS)\b/i
+// FINANCIALDATASETS.AI = la API de fundamentales que alimenta el radar de trading. Decisión de
+// Alberto (27/08/2026): entra aquí como herramienta profesional, igual que Vercel o Anthropic.
+// Sin ella caía al cajón por DESCARTE de BBVA → 'seguros' + revisar cada mes (ver RE_BROKER).
+const RE_SOFTWARE = /\b(VERCEL|ANTHROPIC|OPENAI|OPENROUTER|GITHUB|CLOUDFLARE|SUPABASE|DIGITALOCEAN|NETLIFY|HETZNER|VULTR|LINODE|MONGODB|FINANCIALDATASETS|GOOGLE CLOUD|AMAZON WEB SERVICES|AWS)\b/i
 
 // Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
 // confirme (`revisar`). `confirmado` marca una clasificación TAN determinista que no necesita
