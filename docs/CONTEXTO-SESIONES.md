@@ -127,7 +127,10 @@ más barato por plaza** (66,50€ vs 83,10€) → «entero vs segregado» es es
 Hallazgo legal: BOE-A-2026-5827 (caso Conil) — el registro único se deniega sin acuerdo de la comunidad si
 la licencia es posterior al 3/4/2025; **comprar el edificio entero elimina ese veto**. ⛔ Idealista está
 bloqueado por el proxy de egress: la fase 1 (estudio del inmueble) espera a que Alberto dé precio, m²,
-qué es exactamente, explotación prevista, financiación y si compra él o Punto y Coma SL.
+qué es exactamente, explotación prevista, financiación y si compra él o Punto y Coma SL. **PR #1777
+mergeado** (verde y merge sin intervención humana) → de paso, matiz al CI de `CLAUDE.md`: el PR se abrió
+**en draft** por la herramienta MCP y los 12 requeridos dispararon igual (`actor` del run = la cuenta de
+Alberto), así que «el draft es mudo» no es universal: lo que manda es la IDENTIDAD que abre el PR.
 
 ### 🧱 (26/08/2026) «Base perfecta» + acumulación: medida sobre 177.000 observaciones y RECHAZADA
 

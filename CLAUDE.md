@@ -248,6 +248,15 @@ falta que Alberto toque nada.**
 ⚠️ Lo que sigue siendo cierto: **el `workflow_dispatch` no vale** (ver arriba) y **el ruleset no se
 toca**.
 
+🔬 **Matiz medido el 27/08/2026 (PR #1777): un draft NO siempre es mudo — lo que manda es la
+IDENTIDAD que abre el PR.** Ese PR se abrió **en draft** con la herramienta MCP de GitHub y los 12
+requeridos arrancaron **al instante**, sin des-draftear: verdes en ~3 min y mergeado sin que Alberto
+tocara nada. El run lo dice: `event: pull_request`, `actor: albertosuarezgutierrez-gif` — o sea, el
+PR lo abre **tu cuenta de usuario**, no la App, y por eso el evento sí dispara. La regla útil es
+entonces: **abrir el PR por la herramienta MCP** (o des-draftear, que también funciona), y lo que no
+dispara es el **token de la App**. No des por hecho ninguna de las dos versiones sin mirar el
+`actor` del run.
+
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
 
