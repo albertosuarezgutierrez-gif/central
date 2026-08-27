@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T12:06:05Z",
-  "sha": "efe543747211124e88a0f4289e9150a4ab92b027",
+  "generadoEn": "2026-08-27T13:04:26Z",
+  "sha": "98235feb0fa852d7e730446c86a6064eb0ae2d1e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -70110,8 +70110,17 @@
           "exportada": false,
           "params": "anios: number[]",
           "retorno": "number[]",
-          "linea": 162,
+          "linea": 176,
           "resumen": "Años del rango para los que la tabla NO tiene ninguna entrada. Un hueco declarado, no un cero."
+        },
+        {
+          "nombre": "diaLegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 184,
+          "resumen": "«2027-04-12» → «12 de abril». Respaldo del nombre cuando el fijo no trae etiqueta."
         },
         {
           "nombre": "expandir",
@@ -70119,7 +70128,7 @@
           "exportada": false,
           "params": "f: Fijo",
           "retorno": "NocheCalendario[]",
-          "linea": 166
+          "linea": 190
         },
         {
           "nombre": "calendarioEntre",
@@ -70127,7 +70136,7 @@
           "exportada": true,
           "params": "desde: string, hasta: string",
           "retorno": "Calendario",
-          "linea": 190,
+          "linea": 214,
           "resumen": "Todas las noches de calendario entre dos fechas (ambas inclusive), ordenadas. `desde`/`hasta` en `YYYY-MM-DD`."
         },
         {
@@ -70136,13 +70145,13 @@
           "exportada": true,
           "params": "c: Calendario",
           "retorno": "string",
-          "linea": 211,
+          "linea": 235,
           "resumen": "Parte legible para la respuesta y el latido. Una siembra muda no se distingue de un cron caído."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "73fd69e8b2f1"
+      "hash": "f06237fd5ec6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-estado.ts",
@@ -98060,6 +98069,6 @@
   ],
   "resumen": {
     "archivos": 2593,
-    "funciones": 7125
+    "funciones": 7126
   }
 }
