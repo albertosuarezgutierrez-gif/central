@@ -75,6 +75,15 @@ Se reencendería `antelacion_k` cuando las **tres** sean ciertas, no antes:
 3. **Fuga de canal medida** (rutina del 30/08): saber por qué un anuncio a 433,50€ se cobra a 319,86€.
    Si el canal se come el 26%, subir la base es empujar contra una puerta que descuenta sola.
 
+### Tabla de seguimiento (la rellena la rutina semanal, lunes 09:00 UTC)
+
+Ratio mediano vs p50 de la fecha · **(T)** = fechas en que somos más caros que TODOS los comps ·
+cobertura = % de noches lejanas con ≥5 comps fiables.
+
+| Semana | Busto Reform | House Sevillana | Dúplex Center | Luxury Busto | Cobertura | Nota |
+|---|---|---|---|---|---|---|
+| 27/08/2026 (base) | 1,92× (47) | 1,61× (45) | 1,42× (40) | 1,31× (29) | 25% | Palanca apagada; el techo de mercado lleva 2 días desinflando |
+
 ### La consulta (reproducible tal cual)
 
 ```sql
