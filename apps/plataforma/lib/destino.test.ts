@@ -203,3 +203,29 @@ test('ABONO BBVA con código de agente (SALDO. M00171 / M1454 / 8/92361) → seg
   // El cobro de Booking del Dúplex ("LIQ. OP. Nº …") NO debe verse arrastrado a seguros por el código.
   assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TIT, 856.77), 'turistico_duplex')
 })
+
+test('traspaso a Interactive Brokers (cuenta IBKR "U…") → traspaso_interno, no gasto de la correduría', () => {
+  // 24/08/2026: BBVA rotula la salida hacia la cuenta de valores con el código IBKR del beneficiario.
+  // RE_TITULAR no lo caza (contraparte = el broker, no el titular) → caía al DESCARTE de BBVA y se
+  // contaba como gasto deducible de seguros. Es dinero que cambia de bolsillo, no un gasto.
+  assert.deepEqual(
+    clasificarDestinoDetalle(
+      'BBVA',
+      'ORDENES PAGO EMITIDAS EN MONEDA LOCAL // TRANSFERENCIA REALIZADA // U9007431 / Alberto Suarez Gutierrez',
+      'Interactive broker',
+      -1000,
+    ),
+    { destino: 'traspaso_interno', revisar: false, confirmado: true },
+  )
+  // Extractos Excel viejos: el concepto es solo el código IBKR + el nombre, sin contraparte.
+  assert.equal(clasificarDestino('BBVA', 'U9007431 / alberto suarez gutierrez', '', -15000), 'traspaso_interno')
+  // Retirada de vuelta del broker a BBVA: tampoco es ingreso del negocio.
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIA RECIBIDA // U9007431 / Alberto Suarez Gutierrez', TITULAR, 2500), 'traspaso_interno')
+})
+
+test('la regla del broker NO secuestra los conceptos normales de BBVA', () => {
+  // Guardia anti-"TRANSF": el discriminante es el código IBKR completo (U + 7-8 dígitos), no la
+  // palabra "transferencia". Las comisiones de la correduría deben seguir entrando como seguros.
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // LIQ.COMISIONES 202608', TITULAR, 302.06), 'seguros')
+  assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77), 'turistico_duplex')
+})
