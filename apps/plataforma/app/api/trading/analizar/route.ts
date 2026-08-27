@@ -7,6 +7,7 @@ import { mensajeCompraPaper } from '@/lib/trading-notify'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
   superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
+  estadoEarnings, type EstadoEarnings,
   evaluarStop, tamanoPorRiesgo,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
   const datosPorSimbolo = await Promise.all(simbolos.map(async s => ({ simbolo: s.simbolo, datos: await datosYahoo(s.simbolo, fecha) })))
   const datosPor = new Map(datosPorSimbolo.map(d => [d.simbolo, d.datos]))
   const fechasEarnings: Array<{ simbolo: string; earnings: FechaEarnings | null }> = []
+  const earningsPor = new Map<string, { fecha: string | null; estado: EstadoEarnings }>()
   for (const s of simbolos) {
     const d = datosPor.get(s.simbolo)
     fechasEarnings.push({
@@ -68,6 +70,15 @@ export async function POST(req: NextRequest) {
       earnings: s.fundamentales?.proximoEarnings
         ? { fecha: s.fundamentales.proximoEarnings, confirmada: false }   // la fecha de FMP no dice si la anunció la empresa
         : d?.earnings ?? null,
+    })
+    // 📅 Estado de la fecha de resultados TAL Y COMO SE SABE HOY, para persistirlo con la tesis.
+    // `d == null` = Yahoo no respondió; una fecha del payload (FMP) también cuenta como consultada.
+    // Sin esto, un NULL en la columna no distinguiría «no hay evento» de «no lo miramos» — y decir lo
+    // primero cuando es lo segundo es atribuir a la señal un movimiento que pudo ser del calendario.
+    const fechaEv = s.fundamentales?.proximoEarnings ?? d?.earnings?.fecha ?? null
+    earningsPor.set(s.simbolo, {
+      fecha: fechaEv,
+      estado: estadoEarnings(d != null || s.fundamentales?.proximoEarnings != null, fechaEv),
     })
     if (!d) continue
     s.fundamentales = {
@@ -152,6 +163,7 @@ export async function POST(req: NextRequest) {
     const precioRef = s.velas[s.velas.length - 1].cierre
     const volumenRel = rvol(s.velas.map(v => v.volumen))   // volumen de hoy vs su media
     const señales = torneo(ind, s.fundamentales ?? {}, fecha, ajustes)
+    const evEarn = earningsPor.get(s.simbolo) ?? { fecha: null, estado: 'sin_consultar' as EstadoEarnings }
 
     // Persistir todas las señales como tesis. skipDuplicates + único (simbolo,fecha,estrategia):
     // si la pasada se reintenta el mismo día, no duplica filas (el 04/08 corrió 5 veces y dejó
@@ -161,6 +173,10 @@ export async function POST(req: NextRequest) {
         simbolo: s.simbolo, fecha: new Date(fecha), estrategia: se.estrategia,
         direccion: se.direccion, confianza: se.confianza, horizonteDias: 10,
         precioRef, precioFuente: 'sesion', indicadores: ind as object, rationale: se.rationale,
+        // 📅 La fecha de resultados viaja CON la tesis (antes solo existía como texto en `rationale`).
+        // Es lo que después permite separar el rendimiento de la señal del rendimiento del calendario.
+        proximoEarnings: evEarn.fecha ? new Date(evEarn.fecha) : null,
+        earningsEstado: evEarn.estado,
       })),
       skipDuplicates: true,
     })
@@ -230,7 +246,11 @@ export async function POST(req: NextRequest) {
       })
       await prisma.tradingPaperPosicion.upsert({
         where: { simbolo: s.simbolo },
-        create: { simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha) },
+        create: {
+          simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha),
+          // Se congela lo que se sabía AL ABRIR: al cerrar, la pasada ya no tiene los fundamentales de hoy.
+          proximoEarnings: evEarn.fecha ? new Date(evEarn.fecha) : null, earningsEstado: evEarn.estado,
+        },
         update: {},   // no promediar: si ya existe, no se toca
       })
       // Aviso inmediato por Telegram (aquí la posición es siempre nueva: `yaAbierta` es barrera arriba). Best-effort.

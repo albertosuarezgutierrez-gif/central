@@ -43,6 +43,38 @@ Chequeo re-armado al 28/08 10:30 UTC; si sigue viejo, el problema es de propagac
 no «sube a ciegas ~+19%/día» — **oscila** en el tope del raíl: 149 → 119 → 95 → 114 en cuatro pasadas
 de las 08:00. El precio de la misma noche baila ±20% al día sin información nueva. Sospecha a
 comprobar (no confirmada): realimentación del objetivo sobre el precio previo del propio piso.
+### 🏘️ (27/08/2026) Agente de inversión inmobiliaria CONSTRUIDO y probado con los 12 meses de Conil
+
+Fases 2 y 3 del spec, completas. Motor PURO `apps/plataforma/lib/inversion/{tipos,curva-mercado,competencia,
+underwriting}.ts` (**52 tests**), tabla `inversion_analisis` (migración aplicada en Supabase, con REVOKE a
+anon/authenticated + RLS), endpoint `POST /api/inversion/underwrite`, pantalla `/inversion` (+ sidebar) y skill
+`inversion-inmueble`. **Prueba end-to-end con mediciones REALES**: 12 búsquedas de Booking para Conil (una por
+mes, aforo 4) → curva en `docs/INVERSION-CONIL-2026-08-27.md`; **pico/valle 5,79×** (ago 488,50€ vs mar 84,36€),
+no el 3,6× de las dos ventanas del spec. Esa pasada destapó **dos mentiras en los mensajes del veredicto** —citaba
+el yield neto junto al listón cuando comparaba el cash-on-cash («8,27% bate el listón de 9,00%»), y decía «año
+entero medido» con la ocupación 100% supuesta—; corregidas y con test. Verificado tras mergear `main`: tsc 0 · 1.766 tests de
+plataforma · 75 del guardián. ⛔ Sigue faltando lo de Alberto: precio, m², qué es el inmueble, explotación,
+financiación y si compra él o Punto y Coma SL.
+🔓 **De regalo, el CI:** el PR #1789 se pasó 3 h sin que GitHub le creara ni uno de los 12 requeridos
+(abrir, des-draftear y dos pushes con contenido: 0 runs). Lo desatascó **mergear `main` en la rama**
+—que además hacía falta, el PR estaba en conflicto—: los 12 arrancaron en segundos. Corregida la frase
+de `CLAUDE.md` que decía «hace falta mano de Alberto». **La causa sigue sin aislar** (entre el último
+push mudo y el que funcionó cambiaron el merge de la base Y 56 minutos).
+
+### 📅 (27/08/2026) El libro paper ya sabe qué resultado vino de la SEÑAL y cuál del CALENDARIO
+NVDA (PAPER, no cartera real — la real solo tiene VWCE + CVX) acabó en verde por un hueco del +6,79%
+tras resultados. **Nadie decidió aguantar:** `earningsInminente` solo veta ABRIR ≤3d; entró el 21/08,
+a 5 días, y una vez dentro el evento no se vuelve a mirar. La víspera estaba EN PÉRDIDA y a ~3% del
+stop; un hueco simétrico habría abierto BAJO el stop (precedente: 25/02 → −5,46% y −9,39% en dos
+sesiones). El agujero era el REGISTRO: la fecha de earnings se usaba pero solo vivía como texto en
+`rationale`. **PR #1793 mergeado + SQL aplicado + producción READY**: `proximo_earnings`/`earnings_estado`
+(tesis y posición), `evento_dentro` en las SELL y atribución por evento en `/puntuar`. **Carril de datos:
+no toca stats, confianza ni sizing.** Backfill: 44 tesis y 2 posiciones `reconstruido`; 2.016 quedan
+`sin_consultar` (que es la verdad). Primer dato: 12 tesis con evento dentro dan +2,52% vs −0,12% de las
+1.220 sin comprobar — **n=12 de UN símbolo (SQM), no sostiene nada aún**. Detalle en
+`docs/TRADING-POSTMORTEM-NVDA-2026-08.md`.
+⚠️ Hallazgo: FD dice BEAT +33% y Alpha Vantage MISS −52,6% del MISMO trimestre (GAAP vs non-GAAP) → no
+se cablea ningún «comprar si bate». Encuadre: la cohorte con más recorrido va **−4,17 pp vs SPY**.
 
 ### 🌱 (27/08/2026) El calendario, SEMBRADO en producción y medido: 0 precios movidos
 Cerrada la prueba de punta a punta (PRs #1787 → siembra). Antes de sembrar se arregló el nombre de

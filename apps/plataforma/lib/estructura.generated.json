@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-27T12:06:05Z",
+  "generadoEn": "2026-08-27T14:12:17Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2478,7 +2478,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 20
+        "evidencias": 21
       },
       "rrhh": {
         "presente": false,
@@ -4105,6 +4105,7 @@
       "/api/internal/mapa-arquitectura",
       "/api/internal/reclamar-reparacion",
       "/api/internal/reparacion-resultado",
+      "/api/inversion/underwrite",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/operador/flota-mapa",
@@ -4777,6 +4778,11 @@
       "description": ">"
     },
     {
+      "id": "inversion-inmueble",
+      "name": "inversion-inmueble",
+      "description": "Analiza si comprar UN inmueble concreto renta como piso turístico (VUT). Mide el mercado real por fecha y aforo con el conector de Booking, resuelve la puerta legal (licencia + Registro Único), llama al motor de underwriting de plataforma y devuelve veredicto con los dos escenarios —entero y segregado—. Úsala cuando Alberto pase un anuncio (\"¿me interesa esto?\", \"hazme el estudio de este piso\", \"¿cuánto rentaría?\"). NO decide compras. Sin secretos - solo nombres de variable."
+    },
+    {
       "id": "marca-cliente",
       "name": "marca-cliente",
       "description": "Alta/intake de la identidad corporativa de un cliente/tenant y aplicación 100% a su app — convierte su marca real (logo, web, fotos) en un objeto `Marca` de `@central/brand` y lo enchufa dejando la UI IDÉNTICA a su marca. Úsala con cliente nuevo, rebrand, o si Alberto pide \"adáptalo a la imagen corporativa de X\". Complementa `adobe-diseno` y Adobe Fonts."
@@ -5362,8 +5368,8 @@
     "verticales": 11,
     "packages": 38,
     "capacidades": 23,
-    "skills": 36,
-    "apis": 1182,
+    "skills": 37,
+    "apis": 1183,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
