@@ -41,11 +41,14 @@ sigue en 15 (idempotente). **Factor efectivo `MAX(tabla, EVENTS)` comparado noch
 — la tabla sube donde `EVENTS` ya tapaba el hueco. El valor llega cuando `EVENTS` caduca (2027-05-02):
 Semana Santa 2028 sale 2,20–2,50 del calendario contra **1,00** de `EVENTS`, y la Feria 2028 se
 declara «sin tabla» en vez de inventarse.
-⚠️ **Fallo propio que casi cuesta caro:** commiteé el arreglo en `main` local, no en la rama, así que
-NO llegó al remoto; el PR #1787 arrancó con la rama vieja y **su diff borraba el botón 👁 (#1783) y
-la regeneración de #1786**. Los 10 checks en verde estaban validando el diff equivocado. Reconstruida
-la rama sobre `main` al día. Lección: **verde ≠ el diff que crees**; mira `git diff origin/main..HEAD`
-antes de mergear.
+⚠️ **Fallo propio, y la corrección de lo que conté.** Commiteé el arreglo en `main` local, no en la
+rama: `git push -u origin <rama>` empuja la rama NOMBRADA, no HEAD, y respondió `* [new branch]`, que
+se lee como éxito. El PR #1787 se abrió con el head viejo y 12 checks verdes sobre él. 🚨 **Y lo que
+escribí después era FALSO:** dije que ese PR «borraba el botón 👁 (#1783) y la regeneración de #1786».
+No: su diff de TRES puntos era «34 inserciones, 0 borrados» y el merge simulado sobre el `main` de
+entonces da diff **vacío**. La alarma salió de leer un diff de DOS puntos (`origin/main..HEAD`), que
+pinta como borrados los commits que `main` tiene y la rama no. Verde ≠ el diff que crees; y para ver
+lo que un PR aplica, **TRES** puntos. Guardián automático desde hoy: `scripts/guardian-rama.mjs`.
 
 ### 🩺 (27/08/2026) El calendario de eventos latía pero NADIE lo escuchaba
 Prueba final de punta a punta antes de dar el calendario por bueno. Todo verde salvo un hueco real:
