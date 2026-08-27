@@ -146,6 +146,20 @@ mergeado** (`4efd9327`, deploy de producción READY); la 1ª pasada que lo usa e
 Base medida antes de esa pasada: **386 noches lejanas a la venta** por encima de 1,4× la mediana del piso, de
 las que **226 tienen ya llave nueva** (Busto 98 · Luxury 62 por antigüedad; Dúplex 27 · House 39 nunca escritas).
 
+### ⏰ (27/08/2026) El hueco de rutinas del sábado, CERRADO: se mueve la hora, no el día
+Las 3 rutinas que el 22/08 se comió el límite semanal de Claude (auditoría 04:00, mercado-booking
+05:30, facturas 08:00 CEST) corrían ANTES del reset de cuota (sáb 09:00 CEST = 07:00 UTC). Ya no:
+`0 8`/`30 8`/`0 9 * * *` UTC = **10:00 / 10:30 / 11:00 CEST, los siete días**. Verificado en el
+servidor: conectores intactos (16/1/14) y 29 rutinas, ninguna nueva. 🚧 Se intentó antes la vía
+elegante —`* * 0-5` + tres triggers de sábado— y **se abandonó por dos límites reales**: (a) la API
+**rechaza que un agente edite rutinas creadas por `http_api`** (las del panel), y (b) un trigger
+creado por `create_trigger` **NO hereda `mcp_connections` ni el repo**, así que la copia habría
+corrido sin conectores → auditoría que se pone verde por no poder mirar. Se creó una y se borró.
+La UI **no tiene «Duplicar»**, así que replicar a mano eran 5+6+18 chips de conectores por quitar.
+📌 Regla: para estas rutinas, cualquier cambio es por interfaz (pestaña «Personalizado»), y el cron
+está en **UTC** (local = +2 en CEST). ⚠️ `trading-analista` (`15 20,23 * * 1-5`) sigue cayendo el
+viernes a las 23:15 UTC, dentro de la misma franja de cuota agotada — no falló nunca, pero está ahí.
+
 ### 🧹 (27/08/2026) Backlog de PRs de rutinas a CERO — y el bump de seguridad que llevaba 4 días sin aplicarse
 Cerrados los dos que quedaban del 23/08. **#1602** (entrenador): caveat en `facturas-correo/SKILL.md`
 + poda de 20 entradas de bitácora. Su conflicto NO era inserción pura —podaba mientras `main`
@@ -156,8 +170,7 @@ profunda): lo único de código vivo era **`pdfjs-dist` 6.0.227→6.2.108 en ial
 cambio de Serper se DESCARTÓ: `main` ya lo tenía mejor (3 rutas, con guarda) y mergearlo habría sido
 regresión. 📌 Lección: un PR de rutina viejo no se mergea a ciegas ni se cierra a ciegas — hay que
 mirar dato a dato qué de su diff sigue vivo. ⚠️ Siguen pendientes de Alberto (los traía #1600):
-recargar Serper, renovar el consent PSD2 de BBVA **antes del 11/09** y mover las rutinas de
-madrugada del sábado a ≥09:30 CEST.
+recargar Serper y renovar el consent PSD2 de BBVA **antes del 11/09**.
 
 ### 🧹 (27/08/2026) Auditoría 27/08 resuelta a mano — y la cabecera de ESTA memoria estaba partida en dos
 Los dos PRs de registro que señalaba #1764: **#1735** cerrado (su contenido —hueco DIGI de junio— ya
