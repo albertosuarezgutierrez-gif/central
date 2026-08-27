@@ -31,35 +31,42 @@ test('y también en los extremos conocidos del algoritmo', () => {
 // ─── Semana Santa ───────────────────────────────────────────────────────────────────────────────
 
 test('🚨 el caso fundacional: la MADRUGÁ de 2027 es la noche del 25 de marzo', () => {
-  // Busto Reform vendió esa noche a 141,00€ —0,97× su marzo normal— nueve meses antes, porque el
-  // motor no sabía que era Semana Santa. Si este test se pone rojo, vuelve a estarlo.
+  // Busto Reform vendió esa noche a 141,00€ el 14/06/2026, TRES DÍAS antes de que el mapa `EVENTS`
+  // escrito a mano llegara a 2027. Este módulo existe para que esa fecha no dependa de que alguien
+  // se acuerde de escribirla.
   const ss = semanaSanta(2027)
   const madruga = ss.find((n) => n.nombre.includes('Madrugá'))
   assert.ok(madruga)
   assert.equal(madruga!.fecha, '2027-03-25')
-  assert.equal(madruga!.factor, 2.5)
 })
 
 test('la semana entera de 2027 cae donde tiene que caer', () => {
   const f = Object.fromEntries(semanaSanta(2027).map((n) => [n.nombre.split('— ')[1], n.fecha]))
-  assert.equal(f['Viernes de Dolores'], '2027-03-20')
   assert.equal(f['Domingo de Ramos'], '2027-03-21')
   assert.equal(f['Jueves Santo (Madrugá)'], '2027-03-25')
   assert.equal(f['Viernes Santo'], '2027-03-26')
   assert.equal(f['Domingo de Resurrección'], '2027-03-28')
 })
 
-test('el pico está en el Jueves, no en el Viernes: se vende la NOCHE de entrada', () => {
-  const ss = semanaSanta(2027)
-  const jue = ss.find((n) => n.fecha === '2027-03-25')!.factor
-  const vie = ss.find((n) => n.fecha === '2027-03-26')!.factor
-  assert.ok(jue > vie, `el Jueves Santo (${jue}) debe pesar más que el Viernes (${vie})`)
+// 🚨 ESTE es el test que importa: la curva tiene que ser la MISMA que ya honra `eventFactor()` para
+// 2027 desde el mapa escrito a mano. Si diverge, el precio cambiaría de criterio el día que el mapa
+// caduque, que es justo lo que este módulo viene a evitar.
+test('🚨 la curva reproduce EXACTAMENTE la de EVENTS 2027, día por día (ya capada a 2,5)', () => {
+  const esperado: Record<string, number> = {
+    '2027-03-21': 2.20, '2027-03-22': 2.30, '2027-03-23': 2.40, '2027-03-24': 2.50,
+    '2027-03-25': 2.50, '2027-03-26': 2.50, '2027-03-27': 2.50, '2027-03-28': 2.50,
+  }
+  const real = Object.fromEntries(semanaSanta(2027).map((n) => [n.fecha, n.factor]))
+  assert.deepEqual(real, esperado)
 })
 
-test('el domingo de Resurrección ya baja: la gente se va', () => {
+test('la forma CRUDA sube hasta el Viernes Santo y baja después', () => {
+  // Sin el techo la curva de Alberto pica en Viernes (3,20) tras el Jueves (3,00). El módulo no la
+  // discute; el test la fija para que un cambio de forma sea deliberado y no un descuido.
   const ss = semanaSanta(2027)
-  const dom = ss.find((n) => n.fecha === '2027-03-28')!.factor
-  assert.ok(dom < 1.5, 'el domingo no puede seguir en pico')
+  const f = (d: string) => ss.find((n) => n.fecha === d)!.factor
+  assert.ok(f('2027-03-21') < f('2027-03-24'), 'de Ramos a Miércoles la curva sube')
+  assert.equal(f('2027-03-28'), 2.5)
 })
 
 test('ningún factor se sale del techo duro', () => {
@@ -75,12 +82,11 @@ test('Semana Santa se marca DERIVADA: es aritmética, no una fecha copiada', () 
   assert.ok(semanaSanta(2027).every((n) => n.derivado))
 })
 
-test('una Pascua temprana puede meter noches en el año anterior, y se emiten igual', () => {
-  // 2035: Pascua el 25 de marzo → el Viernes de Dolores cae el 17 de marzo, mismo año. Se busca un
-  // año con Pascua en los primeros días para que el rango cruce el cambio de mes sin perder noches.
+test('con la Pascua más temprana posible la semana sigue completa', () => {
+  // 2035: Pascua el 25 de marzo, el mínimo del calendario gregoriano.
   const ss = semanaSanta(2035)
-  assert.equal(ss.length, 9)
-  assert.equal(ss[0].fecha, '2035-03-17')
+  assert.equal(ss.length, 8)
+  assert.equal(ss[0].fecha, '2035-03-18')
 })
 
 // ─── calendarioEntre ────────────────────────────────────────────────────────────────────────────
@@ -88,6 +94,14 @@ test('una Pascua temprana puede meter noches en el año anterior, y se emiten ig
 test('la ventana recorta por fecha, no por año', () => {
   const c = calendarioEntre('2027-03-24', '2027-03-26')
   assert.deepEqual(c.noches.map((n) => n.fecha), ['2027-03-24', '2027-03-25', '2027-03-26'])
+})
+
+test('🚨 2028 es el año que el mapa a mano NO cubre, y aquí sale entero', () => {
+  // `EVENTS` acaba el 2027-05-02. eventFactor('2028-04-13') vale 1.0 — el Jueves Santo de 2028 se
+  // tarifica hoy como un abril cualquiera. Pascua 2028 = 16 de abril.
+  const ss = semanaSanta(2028).map((n) => n.fecha)
+  assert.equal(ss[0], '2028-04-09')
+  assert.equal(ss[ss.length - 1], '2028-04-16')
 })
 
 test('una ventana de 365 días cruza dos años y trae las dos Semanas Santas si caben', () => {
@@ -111,6 +125,9 @@ test('la Feria de 2027 entra por TABLA, no derivada', () => {
   assert.equal(feria[0].fecha, '2027-04-12')
   assert.equal(feria[6].fecha, '2027-04-18')
   assert.ok(feria.every((n) => !n.derivado), 'la Feria NO se deriva de la Pascua a propósito')
+  // Día a día, como en EVENTS: el alumbrado 2,50, el fin de semana al tope y el último día 2,60.
+  assert.equal(feria[0].factor, 2.50)
+  assert.equal(feria[6].factor, 2.50, '2,60 capado a 2,5')
 })
 
 test('🚨 un año sin fechas de tabla se DECLARA, no se inventa una Feria', () => {

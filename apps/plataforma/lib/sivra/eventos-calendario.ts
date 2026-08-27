@@ -1,46 +1,55 @@
-// lib/sivra/eventos-calendario.ts — las fechas de Sevilla que NO hay que salir a buscar.
+// lib/sivra/eventos-calendario.ts — el calendario de Sevilla que NO puede caducar.
 //
-// POR QUÉ (27/08/2026). Las cuatro fuentes de `pricing_eventos_auto` —websearch, agente, prensa,
-// ticketmaster— comparten un defecto: descubren un evento cuando ALGUIEN LO PUBLICA. Y lo que más
-// dinero mueve en Sevilla no se publica: se sabe desde siempre.
+// POR QUÉ (27/08/2026). El motor SÍ conoce la Semana Santa: vive en el mapa `EVENTS` de
+// `lib/pricing-calendar.ts`, que `eventFactor()` consulta y que el `apply` combina por MAX con
+// `pricing_eventos_auto`. 🚨 Escrito así de claro porque yo mismo me equivoqué al diagnosticar:
+// miré la TABLA de eventos, vi Semana Santa 2027 vacía y concluí que el motor no la conocía. Es
+// falso. Antes de afirmar que al motor le falta una fecha hay que mirar las DOS fuentes.
 //
-// Medido ese día contra producción, Semana Santa 2027 (21→28 de marzo) NO TENÍA NI UNA FILA en la
-// tabla de eventos. Lo único que había en esa semana era un Sevilla-Elche. Consecuencia, con las
-// reservas reales delante:
+// El problema real es otro, y el propio código lo anticipa: `EVENTS` es un mapa ESCRITO A MANO que
+// hay que extender cada año, y `EVENTS_LAST_DATE` existe justamente «para que el calendario de
+// eventos NO caduque en silencio». Medido ese día:
 //
-//     Busto Reform   20-22 mar   139€/noche   reservado el 21/06/2026
-//     Busto Reform   22-24 mar   155€/noche   reservado el 15/06/2026
-//     Busto Reform   25-28 mar   141€/noche   reservado el 14/06/2026   ← la MADRUGÁ
-//     Luxury Busto   20-27 mar   330€/noche   reservado el 23/06/2026
+//     EVENTS: 118 entradas, de 2026-03-29 a 2027-05-02
+//     horizonte de tarificación: 365 días → hoy llega a 2027-08-27
+//     → el motor ya tarifica 117 días MÁS ALLÁ del final del calendario
+//     eventFactor('2028-04-13')  (Jueves Santo de 2028)  =  1.0
 //
-// Busto Reform vendió la noche de la Madrugá a 141€, que es 0,97× su precio de un marzo corriente:
-// el motor no sabía que esa semana era Semana Santa, así que la tarificó como marzo. Los cuatro
-// contratos se cerraron en junio de 2026, NUEVE MESES antes. Ninguna mejora de cadencia del cron
-// habría llegado a tiempo — cuando el evento se «descubre» ya se vendió.
+// Y lo que cuesta llegar tarde está medido, no supuesto. Las entradas de 2027 se añadieron el
+// 17/06/2026 (commit 8a8e007f). Busto Reform vendió:
 //
-// Lo que sí llega a tiempo es un calendario que no dependa de que nadie publique nada.
+//     25-28 mar a 141€/noche   el 14/06/2026   ← 3 días ANTES de que el calendario llegara a 2027
+//     22-24 mar a 155€/noche   el 15/06/2026   ← 2 días antes
+//
+// En cuanto el calendario cubrió 2027, el motor reaccionó como debía: el 24-mar pasó de 180€ a
+// 216€, 210€, 298€ y 503€ entre el 17 y el 29 de junio. No falló el motor — faltaba el dato, y
+// faltaba porque alguien tenía que escribirlo a mano.
+//
+// Este módulo quita esa dependencia para lo que se puede calcular.
 //
 // ─── LA LÍNEA QUE SEPARA LO CALCULADO DE LO SUPUESTO ────────────────────────────────────────────
-// Este módulo hace DOS cosas distintas y no las mezcla, porque la confianza que merecen es distinta:
 //
 //   · **DERIVADO** (`derivado: true`) — Semana Santa. La Pascua se calcula con el algoritmo
-//     gregoriano anónimo (Meeus/Butcher) y de ahí salen los ocho días. Es aritmética: vale para
-//     cualquier año, sin mirar nada. Verificado contra 2026 (5-abr) y 2027 (28-mar).
+//     gregoriano anónimo (Meeus/Butcher) y de ahí los ocho días. Es aritmética: vale para cualquier
+//     año sin que nadie la escriba. Verificada contra 2026 (5-abr) y 2027 (28-mar).
 //
-//   · **DE TABLA** (`derivado: false`) — Feria de Abril, Bienal de Flamenco, SICAB, Maratón. Estas
-//     NO se derivan. 🚨 Es deliberado: la Feria se movía «dos semanas después de Pascua» con
-//     alumbrado en lunes, y el Ayuntamiento ha cambiado ese encaje varias veces en los últimos años
-//     (alumbrado en sábado, feria de domingo a sábado…). Derivarla con una regla que ya no se cumple
-//     pondría un ×2,5 en la semana equivocada, que es peor que no ponerlo: mueve el precio de siete
-//     noches buenas y deja las de verdad a precio de abril normal. Van por tabla, año a año, y el
-//     año que no esté en la tabla se DECLARA como hueco (`aniosSinDatos`) en vez de inventarse.
+//   · **DE TABLA** (`derivado: false`) — Feria de Abril y demás. NO se derivan. 🚨 Es deliberado: la
+//     Feria se movía «dos semanas después de Pascua» con alumbrado en lunes, y ese encaje ha
+//     cambiado. El propio `pricing-calendar.ts` guarda la cicatriz — el 31/07/2026 hubo que corregir
+//     la Feria 2027, estimada una semana TARDE, que tarificaba de Feria una semana normal Y dejaba
+//     los días reales sin suelo de evento. Derivarla con una regla obsoleta repetiría eso. Van año a
+//     año, y el año que no está se DECLARA como hueco (`aniosSinDatos`) en vez de inventarse.
 //
-// Regla del repo aplicada a un calendario: un año sin datos es «no lo sé», no «no hay Feria».
+// ─── LOS FACTORES NO SON MÍOS ───────────────────────────────────────────────────────────────────
+// La curva de abajo es EXACTAMENTE la que Alberto ya tiene en `EVENTS` para 2027, día por día. No se
+// reinventa: se generaliza a cualquier año. Así, el día que el mapa caduque, el motor sigue viendo
+// la misma forma que veía antes y no cambia de criterio a mitad de camino.
 //
-// ─── LOS FACTORES SON UNA PROPUESTA, NO UN HECHO ────────────────────────────────────────────────
-// Los multiplicadores de abajo son el reparto que propongo, no una medición. Aguas abajo pasan por
-// el mercado real de la fecha (si hay comparables, mandan ellos), por el techo de mercado y por el
-// raíl de ±%/día — igual que los de `eventos-impacto.ts`. Cambiarlos es editar esta tabla.
+// Observación que NO se aplica sola: la curva pica en VIERNES Santo (3,20) y la noche que de verdad
+// se vende para la Madrugá es la del JUEVES (la madrugada es del viernes). Da casi igual en la
+// práctica —`eventFactor` capa a 2,5 y ambos días llegan al tope—, pero si algún día se sube el
+// techo, ese medio punto está en el día de después. Queda anotado, no corregido: la curva es de
+// Alberto y este módulo no es el sitio para discutirla.
 //
 // Módulo PURO (sin BD ni `@/`), testeable con `node --test`.
 
@@ -92,29 +101,30 @@ function sumarDias(iso: string, dias: number): string {
 
 // ─── Semana Santa ───────────────────────────────────────────────────────────────────────────────
 //
-// El día que se tarifica es la NOCHE DE ENTRADA. La Madrugá es la madrugada del Viernes Santo, así
-// que la noche que se vende es la del JUEVES SANTO: por eso el pico está en `-4` (Pascua menos
-// cuatro días) y no en el Viernes.
+// Los ocho días, con los factores TAL CUAL están en `EVENTS` para 2027 (Ramos 2,20 → Viernes Santo
+// 3,20). El offset es respecto al Domingo de Resurrección. `EVENTS` no incluye el Viernes de
+// Dolores y aquí tampoco: sumar un día por mi cuenta sería cambiar la curva de Alberto, no
+// generalizarla.
 //
-// El Viernes de Dolores (`-8`) entra a propósito con un factor bajo: la ciudad empieza a llenarse
-// el viernes anterior a Ramos, y esa noche se vende como si fuera un viernes de marzo cualquiera.
+// Los valores >2,5 se guardan crudos y se capan al emitir, igual que hace `eventFactor()`: si algún
+// día sube el techo, la forma de la curva ya está aquí y no hay que volver a escribirla.
 const SEMANA_SANTA: { offset: number; dia: string; factor: number }[] = [
-  { offset: -8, dia: 'Viernes de Dolores', factor: 1.35 },
-  { offset: -7, dia: 'Domingo de Ramos', factor: 1.80 },
-  { offset: -6, dia: 'Lunes Santo', factor: 1.70 },
-  { offset: -5, dia: 'Martes Santo', factor: 1.80 },
-  { offset: -4, dia: 'Miércoles Santo', factor: 2.00 },
-  { offset: -3, dia: 'Jueves Santo (Madrugá)', factor: 2.50 },
-  { offset: -2, dia: 'Viernes Santo', factor: 2.00 },
-  { offset: -1, dia: 'Sábado Santo', factor: 1.60 },
-  { offset: 0, dia: 'Domingo de Resurrección', factor: 1.30 },
+  { offset: -7, dia: 'Domingo de Ramos', factor: 2.20 },
+  { offset: -6, dia: 'Lunes Santo', factor: 2.30 },
+  { offset: -5, dia: 'Martes Santo', factor: 2.40 },
+  { offset: -4, dia: 'Miércoles Santo', factor: 2.50 },
+  { offset: -3, dia: 'Jueves Santo (Madrugá)', factor: 3.00 },
+  { offset: -2, dia: 'Viernes Santo', factor: 3.20 },
+  { offset: -1, dia: 'Sábado Santo', factor: 2.80 },
+  { offset: 0, dia: 'Domingo de Resurrección', factor: 2.50 },
 ]
 
 /** Las noches de Semana Santa del año dado. 100% derivadas de la Pascua. */
 export function semanaSanta(anio: number): NocheCalendario[] {
   const pascua = domingoDePascua(anio)
-  // El Sábado de Pasión cae ocho días antes de Pascua, así que un año con Pascua muy temprana puede
-  // meter noches en el año anterior. Se emiten igual: el consumidor filtra por ventana, no por año.
+  // Con una Pascua muy temprana (25 de marzo es el mínimo posible) el Domingo de Ramos cae en la
+  // segunda quincena de marzo, siempre dentro del mismo año. Aun así el consumidor filtra por
+  // VENTANA y no por año, así que un desbordamiento futuro no perdería noches.
   return SEMANA_SANTA.map((n) => ({
     fecha: sumarDias(pascua, n.offset),
     nombre: `Semana Santa ${anio} — ${n.dia}`,
@@ -126,25 +136,26 @@ export function semanaSanta(anio: number): NocheCalendario[] {
 
 // ─── Fechas de tabla ────────────────────────────────────────────────────────────────────────────
 //
-// 🚨 Aquí NO se deriva nada. Cada entrada es una fecha CONFIRMADA para ese año concreto. Al añadir
-// un año, se comprueban las fechas en la fuente oficial y se anotan; lo que no esté, se declara.
-//
-// `hasta` es INCLUSIVO y es la última noche de entrada que se tarifica.
+// 🚨 Aquí NO se deriva nada. Cada entrada es una fecha CONFIRMADA para ese año concreto, día a día.
+// Al añadir un año se comprueban las fechas en la fuente oficial y se anotan; lo que no esté, se
+// declara como hueco.
 type Fijo = {
   anio: number
   nombre: string
-  desde: string
-  hasta: string
-  factor: number
+  /** fecha `YYYY-MM-DD` → factor. Día a día: una Feria no pesa lo mismo el lunes que el sábado. */
+  dias: Record<string, number>
   tipo: NocheCalendario['tipo']
 }
 
 const FIJOS: Fijo[] = [
-  // Feria de Abril 2027: fechas oficiales 13-18 abr, alumbrado la noche del 12. Coinciden con la
-  // fila que ya metió el agente a mano en `pricing_eventos_auto` (factor 2,50), así que sembrar
-  // esta NO cambia nada en 2027 — el motor combina por MAX(factor). Está aquí para que 2028 y
-  // siguientes no dependan de que alguien se acuerde.
-  { anio: 2027, nombre: 'Feria de Abril 2027', desde: '2027-04-12', hasta: '2027-04-18', factor: 2.50, tipo: 'festival' },
+  // Feria de Abril 2027: fechas OFICIALES 13-18 abr, alumbrado la noche del lunes 12. Factores
+  // copiados uno a uno de `EVENTS` (no promediados: el sábado y el domingo de Feria pesan 3,20 y el
+  // último día baja a 2,60). Sembrarla NO cambia nada en 2027 —`EVENTS` ya la tiene y el motor toma
+  // el MAX—; está aquí para el día que el mapa caduque.
+  { anio: 2027, nombre: 'Feria de Abril 2027', dias: {
+    '2027-04-12': 2.50, '2027-04-13': 2.60, '2027-04-14': 2.80,
+    '2027-04-15': 3.00, '2027-04-16': 3.20, '2027-04-17': 3.20, '2027-04-18': 2.60,
+  }, tipo: 'festival' },
 ]
 
 /** Años del rango para los que la tabla NO tiene ninguna entrada. Un hueco declarado, no un cero. */
@@ -153,21 +164,15 @@ function aniosSinTabla(anios: number[]): number[] {
 }
 
 function expandir(f: Fijo): NocheCalendario[] {
-  const out: NocheCalendario[] = []
-  let cur = f.desde
-  // Tope de seguridad: una entrada mal escrita (`hasta` anterior a `desde`, o un rango absurdo) no
-  // puede colgar el cron ni sembrar mil noches.
-  for (let i = 0; i < 31 && cur <= f.hasta; i++) {
-    out.push({
-      fecha: cur,
-      nombre: `${f.nombre} — ${cur}`,
-      factor: Math.min(f.factor, FACTOR_MAX),
+  return Object.entries(f.dias)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([fecha, factor]) => ({
+      fecha,
+      nombre: `${f.nombre} — ${fecha}`,
+      factor: Math.min(factor, FACTOR_MAX),
       tipo: f.tipo,
       derivado: false,
-    })
-    cur = sumarDias(cur, 1)
-  }
-  return out
+    }))
 }
 
 // ─── Salida ─────────────────────────────────────────────────────────────────────────────────────

@@ -11,13 +11,15 @@ export const maxDuration = 60
 
 // GET /api/sivra/eventos/calendario  (cron diario)
 //
-// Siembra en `pricing_eventos_auto` las fechas de Sevilla que NO hay que salir a buscar porque se
-// saben de antemano: Semana Santa (derivada de la Pascua) y las de tabla (Feria…). El porqué, con
-// las cuatro reservas reales que lo destaparon, está en la cabecera de `lib/sivra/eventos-calendario.ts`.
+// Siembra en `pricing_eventos_auto` las fechas de Sevilla que se CALCULAN en vez de buscarse: Semana
+// Santa (derivada de la Pascua) y las de tabla (Feria…). El porqué completo está en la cabecera de
+// `lib/sivra/eventos-calendario.ts`.
 //
-// Titular: Semana Santa 2027 no tenía NI UNA FILA en la tabla de eventos, y Busto Reform vendió la
-// noche de la Madrugá a 141,00€ nueve meses antes. Ninguna de las cuatro fuentes existentes podía
-// haberlo evitado: todas descubren un evento cuando alguien lo publica, y esto no se publica.
+// Titular: el motor SÍ conoce la Semana Santa —vive en el mapa `EVENTS` de `lib/pricing-calendar.ts`—
+// pero ese mapa está ESCRITO A MANO y **caduca el 2027-05-02**, mientras el horizonte de tarificación
+// ya llega al 2027-08-27. `eventFactor('2028-04-13')` (Jueves Santo de 2028) vale hoy **1.0**. Y llegar
+// tarde cuesta: las entradas de 2027 se añadieron el 17/06/2026 y Busto Reform había vendido la noche
+// de la Madrugá a 141,00€ el 14/06 — tres días antes.
 //
 // 🚨 INERTE POR DEFECTO. Sembrar estas filas SUBE precios publicados, y eso no se hace sin permiso
 // explícito de Alberto para ese cambio concreto (regla del repo). Sin `SIVRA_CALENDARIO_ACTIVO=1`
