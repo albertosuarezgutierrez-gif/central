@@ -25,6 +25,28 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### ⏳ (27/08/2026) La anticipación, ENCENDIDA en los cuatro — y el suelo de 60 días que hacía falta
+
+Alberto: «enciéndelo también en los otros tres y mergea». Al mirar sus antelaciones medianas apareció
+el fallo de diseño: Busto Reform y Dúplex venden con **12 días** de mediana típica, así que el tope de
+4× caía en el **día 48** → todo su calendario más allá de mes y medio al +25% fijo (y meses con mediana
+de 2-4 días topaban el día 8). Eso no es premio por anticipación, es una subida lineal. Añadido
+`saturacionMinDias = 60` (3 tests más; House no se entera, su 4×28 = 112 ya lo supera). `antelacion_k = 1`
+en los **cuatro**. **El merge NO lo puede hacer el agente**: el ruleset exige 12 checks que un push con
+token de App nunca dispara — hace falta que Alberto toque la rama desde su cuenta. PR #1763.
+
+### ⏳ (26/08/2026) Pricing: el motor sabía bajar por urgencia pero no SUBIR por anticipación
+
+Alberto ve entrar el 8-10 ene-27 a 639,71€ (12 adultos) y pregunta si no es barato. Lo era en un
+sentido concreto: se vendió a **135 días vista** con la antelación mediana de House en enero en **28
+días** (n=12), al precio de un enero corriente (365+342, suelo 300). Causa: `pricing-lastminute.ts`
+descuenta al acercarse la fecha y **no existía la palanca simétrica**. Nueva `pricing-antelacion.ts`
+(pura, 13 tests; premio hasta +25% a 4× la mediana del mes, curva cuadrática, inerte en eventos,
+`antelacion_k` por piso, **arranca APAGADA**) + `antelacion_factor` en `pricing_applied` y medidor
+`/api/sivra/pricing/antelacion` con veredicto honesto (el contrafactual no existe → exige que la
+ocupación no caiga contra los mismos meses de años anteriores). DDL aplicada. Corregido de paso: el
+suplemento por huésped que propuse NO vale — Alberto no distingue 8 de 12 (6 huéspedes = 6 habitaciones).
+
 ### 🧱 (26/08/2026) «Base perfecta» + acumulación: medida sobre 177.000 observaciones y RECHAZADA
 
 Idea de Alberto. La **acumulación** ya existía como contexto (`volumen.ts`, 📊↑); de **base** no había

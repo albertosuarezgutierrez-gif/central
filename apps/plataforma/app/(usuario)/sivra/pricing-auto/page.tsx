@@ -33,6 +33,14 @@ type Resultados = {
   por_piso: { property_id: string; noches_aplicadas: number; noches_reservadas: number; extra_eur: number | null; pendientes: number }[]
 }
 type HistRow = { property_id: string; rate_date: string; old_price: number | null; new_price: number; dry_run: boolean; created_at: string }
+// Seguimiento de la palanca de ANTICIPACIÓN (ver lib/sivra/pricing-antelacion.ts). Los tres recuentos
+// van separados a propósito: `pendientes` son noches que aún no han llegado, NO noches vacías.
+type AntelacionRow = {
+  property_id: string; noches_con_premio: number; premio_medio_pct: number
+  pendientes: number; resueltas: number; vendidas: number; sin_dato: number
+  extra_eur: number; ocupacion_referencia: number | null; dias_referencia: number
+  veredicto: { estado: string; titular: string; detalle: string; ocupacion: number | null; deltaOcupacionPp: number | null }
+}
 type PilotRow = {
   property_id: string; tracked_on: string; verdict: "verde" | "amarillo" | "rojo"
   days_since_booking: number | null; free_nights_60: number | null; occupancy_60: number | null
@@ -87,6 +95,7 @@ export default function PricingAutoPage() {
   const [pushMsg, setPushMsg] = useState("")
   const [loadError, setLoadError] = useState<string | null>(null)
   const [pilot, setPilot] = useState<Record<string, PilotRow>>({})
+  const [antelacion, setAntelacion] = useState<AntelacionRow[]>([])
   const [pilotBusy, setPilotBusy] = useState(false)
 
   const load = useCallback(async () => {
@@ -96,12 +105,14 @@ export default function PricingAutoPage() {
       if (sr.status === 401) { window.location.href = "/login?callbackUrl=/sivra/pricing-auto"; return }
       if (!sr.ok) throw new Error(`settings ${sr.status}`)
       const s = await sr.json()
-      const [c, r, pt] = await Promise.all([
+      const [c, r, pt, an] = await Promise.all([
         fetch("/api/sivra/pricing/config", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
         fetch("/api/sivra/pricing/resultados", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
         fetch("/api/sivra/pricing/pilot-track/historial", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
+        fetch("/api/sivra/pricing/antelacion", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
       ])
       if (pt?.ok) setPilot(pt.ultimo ?? {})
+      if (an?.ok) setAntelacion(an.resultados ?? [])
       if (s.ok) {
         setProps(s.properties)
         const d: Record<string, Settings> = {}
@@ -291,6 +302,38 @@ export default function PricingAutoPage() {
                   </div>
                   {p.proposal && <div style={{ fontSize: 12, color: "#1e40af", marginTop: 4 }}>💡 {p.proposal}</div>}
                   <div style={{ fontSize: 10, color: C.soft, marginTop: 4 }}>act. {p.tracked_on}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      {/* ⏳ Anticipación: ¿sale a cuenta cobrar más a quien reserva con mucho tiempo? */}
+      {antelacion.length > 0 && (
+        <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginBottom: 4 }}>⏳ Premio por anticipación</div>
+          <div style={{ fontSize: 11, color: C.soft, marginBottom: 10 }}>
+            Sube el precio de las fechas que están mucho más lejos de lo que ese piso suele venderse EN ESE MES.
+            Lo cobrado de más supone que esas reservas se habrían hecho igual; la ocupación contra años
+            anteriores es lo que delataría lo contrario.
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {antelacion.map((a) => {
+              const est = a.veredicto.estado
+              const color = est === "en_contra" ? C.warn : est === "a_favor" ? C.ok : C.soft
+              const dot = est === "a_favor" ? "🟢" : est === "en_contra" ? "🔴" : est === "apagada" ? "⚫" : "🟠"
+              const name = props.find(x => x.property_id === a.property_id)?.name ?? a.property_id
+              return (
+                <div key={a.property_id} style={{ flex: "1 1 280px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${color}`, borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{dot} {name}</div>
+                  <div style={{ fontSize: 12, color: C.ink, margin: "4px 0" }}>{a.veredicto.titular}</div>
+                  <div style={{ fontSize: 11, color: C.soft }}>
+                    Noches con premio: <b style={{ color: C.ink }}>{a.noches_con_premio}</b> (+{a.premio_medio_pct}% medio) ·
+                    Pendientes: <b style={{ color: C.ink }}>{a.pendientes}</b> ·
+                    Resueltas: <b style={{ color: C.ink }}>{a.resueltas}</b>
+                    {a.sin_dato > 0 && <> · Sin dato: <b style={{ color: C.ink }}>{a.sin_dato}</b></>}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.soft, marginTop: 4 }}>{a.veredicto.detalle}</div>
                 </div>
               )
             })}
