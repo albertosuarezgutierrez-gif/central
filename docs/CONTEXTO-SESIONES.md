@@ -25,6 +25,18 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 📉 (27/08/2026) La palanca de anticipación se apagó el mismo día: ya estábamos por encima del mercado
+
+Encendida en los cuatro por la mañana y **apagada antes de su primera pasada** (`antelacion_k = 0`;
+código y medidor siguen en `main`). Motivo: con los comparables reales de Booking, a >60 días ya
+íbamos a 1,31×-1,92× el p50 de la fecha y éramos más caros que TODOS los comps en 29-47 de ~75
+fechas por piso. Y solo el 25% de las noches lejanas tiene mercado medido → el premio caería justo
+donde no vemos a la competencia. El caso que la motivó tampoco la sostenía: el 8-ene estaba
+publicado a 433,50€/noche contra 368-410€ de mercado (bien puesto) y se cobró a 319,86€ — la fuga es
+de CANAL, no de anticipación. Línea base, trampas (`cuota_fija` es por ESTANCIA; el precio de
+huésped se MIDE en `pricing_escaparate`, no se deriva) y condiciones para reencender:
+`docs/POSICION-MERCADO-lejano.md`. PR #1763/#1768 ya mergeados.
+
 ### 🔓 (27/08/2026) Un PR del agente SÍ se puede mergear solo: sacarlo de draft dispara los checks
 
 Era falso lo anotado el 26/08 («ningún PR abierto por el agente puede mergearse sin que Alberto
