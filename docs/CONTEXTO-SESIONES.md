@@ -3458,6 +3458,22 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 💰 (27/08/2026) Auditoría del PRICING: el motor está sano, pero oscila — y ya se vigila solo
+
+Alberto: «que todo esté al 100% en precios, y que la auditoría diaria y semanal revise bien esto,
+que nos jugamos mucho dinero». **Motor SANO**: 246 tests verdes, 4/4 pisos encendidos,
+`antelacion_k`=0, min_price en los 4, **0 roturas del raíl A LA BAJA en 10 días (~4.200 noches)**,
+0 por debajo del suelo, cadena de crons entera fresca. 🟠 **Lo que sí hay: OSCILACIÓN** — Dúplex
+32% de sus noches, Busto 21%, Luxury 24%, **House Sevillana 0%**, con amplitud media 1,5× en la
+misma noche dentro de una semana. Hipótesis (NO medida, no se tocó el motor): el techo de mercado
+empuja abajo y un suelo/premio vuelve a subir. Investigar la causa exige tocar `apply/route.ts` →
+**pendiente de autorización**. Se evitaron DOS falsas alarmas: el raíl se ancla en `ref24`, no en
+`old_price` (112 «violaciones» falsas), y al alza hay DOS vías legítimas (salto de evento **y**
+premio de mercado, el hueco por el que Karol G se vendió barata) → de 23 sospechosas quedan 4.
+**Construido:** `lib/sivra/pricing-salud.ts` + 13 tests (probado por sabotaje), bloque 2bis
+obligatorio en `/auditoria-diaria` y tramo caro en la semanal. La rutina temporal 8-ter ya no es
+necesaria. Informe: `docs/AUDITORIA-2026-08-27-pricing.md`.
+
 ## 🔒 (27/08/2026) Auditoría completa: 39 RPC de `iarest` las puede llamar `anon` sin guarda
 
 Pasada completa (install, radiografía, typecheck **11/11 apps**, build REAL de plataforma, tests,
