@@ -269,11 +269,27 @@ del repo tuvo su run de `tests.yml` **diez segundos antes**.
 Lo único que distinguía a #1789 es que el PR se abrió **~2 segundos después del push** de la rama.
 Es una hipótesis de carrera, no una causa medida — **no la des por buena sin comprobarla**.
 
-✅ **Lo que SÍ funciona cuando pasa: un push POSTERIOR con contenido real** (evento `synchronize`).
-Que es justo lo que ya dice el apartado de arriba, y por eso el commit vacío sigue prohibido: si no
-tienes nada real que empujar, espera o pídeselo a Alberto. **Regla de método: mira siempre el
-`event` y el `actor` de los runs antes de dar por buena cualquiera de las tres versiones de esta
-sección.** Llevamos tres modelos en dos días y los tres se han quedado cortos.
+🚫 **Y las tres palancas que se probaron sobre #1789 fallaron las TRES.** Medido, en este orden:
+abrir el PR → 0 runs · **des-draftear** → 0 runs · **push posterior con contenido real**
+(`synchronize`) → 0 runs. En las tres, lo único que corrió sobre el head fue `rutinas-automerge`,
+que es `pull_request_target`: o sea, **el evento `pull_request` no llegó ni una sola vez**, mientras
+otros PRs del repo recibían el suyo con normalidad. Comprobado con `list_workflow_runs` filtrando
+por rama: **cero runs de `tests.yml` en esa rama después de las 11:25**.
+
+⚠️ Esto **corrige la frase que se escribió media hora antes en este mismo apartado** («el push
+posterior lo desatasca»): es lo que había funcionado hasta ahora, pero en #1789 tampoco. **Causa
+desconocida.** Lo que queda documentado no es un remedio, es qué NO gastar tiempo probando la
+próxima vez.
+
+**Cuando pase, lo que hay es esto:** el PR no se puede mergear (la regla exige los 12) y ninguna
+palanca del agente lo arregla. Hace falta mano de Alberto: un push desde su máquina, o cerrar y
+reabrir el PR desde la web, o abrir el PR de nuevo desde una rama con OTRO nombre. **El agente no
+crea ramas nuevas por su cuenta** (solo empuja a la rama designada) y el commit vacío sigue
+prohibido.
+
+**Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
+de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
+cortos.
 
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
