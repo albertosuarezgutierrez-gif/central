@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T13:04:26Z",
-  "sha": "98235feb0fa852d7e730446c86a6064eb0ae2d1e",
+  "generadoEn": "2026-08-27T14:01:50Z",
+  "sha": "58d0d2f435c126405fdc27ae4506c85bb02cdb4b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -59025,7 +59025,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         }
       ],
       "tablas": [
@@ -59035,7 +59035,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "f448d7ecd725"
+      "hash": "fa5b868c8452"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -59325,7 +59325,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "6fea9f5739ef"
+      "hash": "5bbad2c099c3"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/radar/route.ts",
@@ -96676,6 +96676,95 @@
       "hash": "4151562bf728"
     },
     {
+      "ruta": "packages/module-trading/src/evento.ts",
+      "ambito": "packages/module-trading",
+      "resumen": "¿El resultado de una operación vino de la SEÑAL o de un EVENTO que el modelo no modela? Caso fundacional (26-27/08/2026, NVDA). El libro paper abrió NVDA el 21/08 a 214,72 con stop en 203,22. La víspera de sus resultados cotizaba a 209,96 —ya en pérdida y a un 3,3% del stop— y el 27/08, tras publica",
+      "exporta": [
+        "estadoEarnings",
+        "cruzaEvento",
+        "finDeVentana",
+        "partirPorEvento",
+        "atribuirPorEvento",
+        "resumenAtribucion"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoEarnings",
+          "kind": "function",
+          "exportada": true,
+          "params": "consultado: boolean, fecha: string | null | undefined",
+          "retorno": "EstadoEarnings",
+          "linea": 52,
+          "resumen": "Estado a partir de lo que devolvió la fuente. `consultado` distingue «no pregunté» de «pregunté y no hay», que es toda la razón de ser de este tipo."
+        },
+        {
+          "nombre": "ms",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "number",
+          "linea": 58,
+          "resumen": "Fechas ISO (YYYY-MM-DD) en ms UTC. Devuelve NaN si no es una fecha legible."
+        },
+        {
+          "nombre": "cruzaEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string | null | undefined, estado: EstadoEarnings, desde: string, hasta: string,",
+          "retorno": "CruceEvento",
+          "linea": 74,
+          "resumen": "¿Cayó el evento dentro de [desde, hasta]? Ambos extremos INCLUIDOS a propósito. Los resultados se publican casi siempre después del cierre (`post-market`), así que el evento del día D mueve el precio "
+        },
+        {
+          "nombre": "finDeVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, dias: number",
+          "retorno": "string",
+          "linea": 92,
+          "resumen": "Fecha ISO `dias` naturales después de `desde`. Ventana de medición de una tesis."
+        },
+        {
+          "nombre": "partirPorEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "items: T[], cruceDe: (item: T) => CruceEvento",
+          "retorno": "ParticionEvento<T>",
+          "linea": 100,
+          "resumen": "Parte una lista en los tres montones. Ninguno se funde con otro."
+        },
+        {
+          "nombre": "atribuirPorEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "items: T[], cruceDe: (item: T) => CruceEvento, retornoDe: (item: T) => number,",
+          "retorno": "AtribucionEvento",
+          "linea": 128,
+          "resumen": "Retorno medio partido por si hubo evento dentro de la ventana. Cada media es `null` cuando su montón está vacío — nunca 0, que se leería como «midió y salió plano». Los `sin_consultar` NO entran en ni"
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: number",
+          "retorno": null,
+          "linea": 144
+        },
+        {
+          "nombre": "resumenAtribucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AtribucionEvento",
+          "retorno": "string",
+          "linea": 153,
+          "resumen": "Línea para el resumen de la pasada. Cadena vacía cuando no hay NADA que decir (ni eventos ni huecos de conocimiento), para no añadir ruido a un Telegram que ya es largo. Dice explícitamente lo que no "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9a5f3423f464"
+    },
+    {
       "ruta": "packages/module-trading/src/factores.ts",
       "ambito": "packages/module-trading",
       "resumen": "Modelo de factores (value + quality + momentum): el núcleo de la SELECCIÓN de la Fase B. La idea NO es acertar el timing (eso pierde, medido) sino ELEGIR qué comprar: empresas baratas (value), sanas (quality) y con inercia de precio a medio plazo (momentum), y mantenerlas. El scoring es CROSS-SECCIO",
@@ -98068,7 +98157,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2593,
-    "funciones": 7126
+    "archivos": 2594,
+    "funciones": 7134
   }
 }
