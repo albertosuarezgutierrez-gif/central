@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T17:56:09Z",
-  "sha": "d6d9187ea9302e6b7a81a5acf1a3080502d24044",
+  "generadoEn": "2026-08-27T18:47:44Z",
+  "sha": "8b304a5c2cf25f51bb2b1efe381b7949663d0c95",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64400,7 +64400,7 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number, titular: 'titular' | 'conyuge' = 'titular',",
           "retorno": "DestinoDetalle",
-          "linea": 80
+          "linea": 83
         },
         {
           "nombre": "clasificarDestino",
@@ -64408,13 +64408,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number",
           "retorno": "Destino",
-          "linea": 161,
+          "linea": 164,
           "resumen": "Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "834954a0e2a6"
+      "hash": "c8917d46785d"
     },
     {
       "ruta": "apps/plataforma/lib/devoluciones-sepa.ts",
