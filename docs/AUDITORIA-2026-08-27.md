@@ -155,6 +155,21 @@ De paso: la matriz tiene ahora **11 apps** (entró `asegura` el 26/08), mientras
 `CLAUDE.md` lista **9** como requeridos. Los dos nuevos corren, pero **no consta** que el ruleset los
 exija — no se puede leer el ruleset desde aquí, así que se documenta como lo que es y no se afirma.
 
+## 🔵 Dato NUEVO sobre el CI mudo (medido en este mismo PR)
+
+`CLAUDE.md` afirma que «una vez que arrancan, cada push los dispara». **En este PR eso no se
+cumplió.** Medido sobre la misma rama, el mismo PR y **fuera de draft** las dos veces:
+
+| head | hora (UTC) | runs de `tests.yml` |
+|---|---|---|
+| `f04bfda3` (merge de `main`) | 16:10 | ✅ los 12 requeridos, evento `pull_request` |
+| `990d8736` (push con contenido real) | 16:17 | 🔴 **cero** — solo corrió `rutinas-automerge`, que es `pull_request_target` |
+
+Comprobado con `list_workflow_runs` filtrando por rama: no existe ningún run de `tests.yml` para
+`990d8736`. O sea que el evento `pull_request` **no llegó**, igual que en el #1789 — pero esta vez
+**sin draft de por medio y después de un push que sí había disparado**. La frase de `CLAUDE.md`
+queda desmentida; la causa sigue sin conocerse. Se deja anotado como observación, no como teoría.
+
 ## 🔵 Observaciones (sin acción)
 
 - **El job `Build` del CI solo construye `apps/ia-rest`** (`ci.yml`, `working-directory:
