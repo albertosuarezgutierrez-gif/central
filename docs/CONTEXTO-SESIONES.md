@@ -23,7 +23,19 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🗺️ (27/08/2026) Correduría: plan POR FASES, CIMA al final + encuesta para Manuel
+
+Alberto ordena el traspaso: **CIMA se deja para lo último** (venta = Codeoscopic, back office = CIMA).
+Cinco fases en `docs/TRASPASO-CORREDURIA.md`: 0 cimientos · 1 cartera en lectura · 2 portal cliente ·
+3 Codeoscopic · 4 CIMA. Con **encuesta partida en tres** (Manuel por fase / decisiones de Alberto /
+lo que se mira sin preguntar), pensada para pedirle a Manuel **solo M1-M6 ahora**.
+🔴 **Verificado y corregido:** la BD **no está volcada** — schema `seguros` existe con **0 tablas**
+(public 281, iarest 252, rrhh 17). La cartera sigue entera en el Supabase de Manuel.
+🚨 Riesgo mayor identificado: las 86 RLS van por `auth.uid()`; con `BYPASSRLS` el aislamiento pasa al
+código y el fallo sería «ver todo sin que nada falle» (pregunta M4).
+Fly: pagada la factura de julio (5,96 €); compra un mes, el medio de pago sigue siendo el de Manuel.
+
+### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
 ### 🔑 (26/08/2026) Correduría: GitHub CERRADO, Fly listo — solo queda cuadrar el rato con Manuel
 Manuel respondió: en el repo de la app Alberto ya era colaborador; mandó la del adaptador CIMA

@@ -1940,3 +1940,187 @@ tarjeta, sin login), así que Alberto puede liquidarla — y con 5,96 € compra
 traspaso con calma. Pero el medio de pago de la organización sigue siendo el de Manuel: al mes
 siguiente vuelve a vencer. Lo único que lo cierra es mover la app. Y si se paga, **se le dice**: le
 aparecerá en su cuenta un pago que él no hizo.
+
+---
+
+# 🗺️ 27/08/2026 — PLAN POR FASES (decisión de Alberto: CIMA al final)
+
+Alberto fija el orden: **CIMA se deja para lo último.** Su razón, en sus palabras: *«hay cosas más
+interesantes que hace CIMA»* y el adaptador es *«un desarrollo un poco más avanzado o diferenciado»*.
+Es una decisión correcta y además barata de sostener: el pull de CIMA sigue corriendo en el despliegue
+de Manuel mientras tanto, y los ficheros de EIAC se re-descargan cuando se quiera.
+
+El objetivo del troceado no es técnico, es de proceso: **que Manuel nos vaya pasando la información
+fase por fase**, en trozos pequeños que pueda contestar en un rato, en vez de un volcado único que se
+queda a medias.
+
+## El negocio, dicho por Alberto (27/08/2026)
+
+- **La correduría es suya.** No hay socio ni tercero. Clave de mediador **CS-F/0170**.
+- **Se opera prácticamente todo online.** Los clientes son online.
+- **La intranet que hizo Manuel tiene dos caras:** el **portal del cliente** (el asegurado ve lo suyo)
+  y la **gestión interna** (Alberto trabaja su cartera). Las dos se aprovechan; no se rehacen.
+- **La VENTA (cotizar y emitir) va por Codeoscopic**, el multitarificador.
+- **El BACK OFFICE con las compañías —siniestros, recibos, comisiones— va por CIMA.** Esto es lo que
+  se deja para el final.
+
+Esa frontera **venta = Codeoscopic / back office = CIMA** es la que ordena las fases. No son dos
+integraciones intercambiables: la primera es sincrónica y de cara al cliente, la segunda es un lote
+nocturno que rellena la base.
+
+## 🔴 Punto de partida, VERIFICADO hoy — la base de datos NO está volcada
+
+Alberto dio por hecho que *«la Supabase ya está creada, toda la base de datos volcada»*. **La primera
+mitad es cierta; la segunda no.** Consultado el Postgres compartido `wswbehlcuxqxyinousql` el
+27/08/2026:
+
+| Schema | Tablas |
+|---|---:|
+| `public` | 281 |
+| `iarest` | 252 |
+| `rrhh` | 17 |
+| **`seguros`** | **0** |
+
+El schema existe y el rol `prisma_seguros` está creado (e inerte, sin contraseña), pero **no hay ni una
+tabla dentro**. Los 32.600 clientes y las 28.843 pólizas siguen íntegramente en el Supabase de Manuel.
+Lo que está hecho son los cimientos vacíos de
+`apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`, nada más.
+
+Esto no es un matiz: **la Fase 0 entera consiste en cerrar ese hueco**, y planificar por encima de él
+daría un calendario falso.
+
+## Las cinco fases
+
+| Fase | Qué se consigue | Depende de Manuel | Se puede empezar |
+|---|---|---|---|
+| **0 · Cimientos** | El dump vive en el schema `seguros` y `apps/asegura` se conecta | 🔴 Sí, bloqueante | Ya |
+| **1 · Cartera en lectura** | Alberto ve sus clientes, pólizas y vencimientos en `central` | 🟡 Poco | Al cerrar la 0 |
+| **2 · Portal del cliente** | El asegurado entra y ve lo suyo | 🟡 Medio | Al cerrar la 1 |
+| **3 · Venta (Codeoscopic)** | Cotizar y emitir desde `central` | 🔴 Sí | Al cerrar la 1 |
+| **4 · Back office (CIMA)** | Siniestros, recibos y comisiones entrando solos | 🔴 Sí | **Al final** |
+
+### Fase 0 — Cimientos
+
+Cerrar el hueco de arriba. Tres cosas, en este orden:
+
+1. **El dump con datos** al schema `seguros`. El dump **no se commitea nunca** — son datos personales
+   reales de 32.600 personas. Vive en local durante la ventana y se borra.
+2. **Contraseña al rol `prisma_seguros`** y `apps/asegura` conectando por él. Nunca como `postgres`.
+3. **Las DOS claves** —la de cifrado y la del índice ciego— guardadas en el gestor de contraseñas.
+
+🚨 **El riesgo de fondo de esta fase, y es el mayor de todo el traspaso:** las **86 políticas RLS** del
+CRM de Manuel se resuelven por `auth.uid()` de Supabase Auth. Al conectar con un rol `BYPASSRLS`,
+**esas políticas dejan de aplicar y el aislamiento pasa a ser responsabilidad del código**. El fallo no
+sería un error: sería **ver datos que no tocan, sin que nada falle**. Antes de enseñar una sola
+pantalla hay que saber si el código de Manuel ya filtra por `correduria_id` o si delegaba todo en RLS.
+Es la pregunta M4 de la encuesta y es la más importante de la lista.
+
+### Fase 1 — La cartera en lectura
+
+Solo leer: clientes, pólizas, vencimientos. Es la fase que **da valor el primer día** (Alberto ve su
+cartera en `central`) y a la vez es la prueba de que la Fase 0 salió bien:
+
+- **Descifrar un registro real** y ver el dato correcto.
+- **Buscar por email y por DNI** un cliente conocido y que aparezca.
+
+Las dos, no solo la primera: descifrar bien pero con el índice ciego roto da un buscador que **miente
+en silencio** — devuelve «no encontrado» para clientes que sí están.
+
+### Fase 2 — El portal del cliente
+
+Login del asegurado y sus pólizas, recibos y documentos. Depende de cómo entren hoy los clientes
+(pregunta M9) y de los ~4 ficheros del Vercel Blob, que se mueven a mano.
+
+### Fase 3 — La venta: Codeoscopic
+
+Aquí está el matiz que ya medimos y que no hay que perder: **cotizar está demostrado** (1 proyecto, 15
+precios, 15 ofertas) y **emitir NO** (`codeoscopic_participants`, `product_forms` y `documents` a cero
+filas). Que el código exista no prueba que funcione. La Fase 3 se planifica asumiendo que **la emisión
+hay que verla funcionar antes de darla por buena**, no como una función heredada.
+
+Lo que salva esta fase aunque no llegara una línea de código de Manuel: guardan el **`raw_payload`
+crudo** de cada respuesta, y eso documenta la API real de Codeoscopic mejor que cualquier manual.
+
+### Fase 4 — El back office: CIMA
+
+Ya está inventariada en este documento. **No se toca hasta cerrar la 3.** Mientras tanto sigue
+corriendo en el despliegue de Manuel, y lo único que hay que vigilar es que la factura de Fly no
+venza otra vez.
+
+---
+
+## 📋 ENCUESTA — lo que hace falta saber
+
+Partida en tres: lo que **solo Manuel** puede contestar (ordenado por fase, para pedírselo a trozos),
+lo que **solo Alberto** puede decidir, y lo que **no se pregunta porque se mira**.
+
+### A · Para Manuel
+
+**Fase 0 — cimientos** *(esto es lo único que bloquea hoy)*
+
+| # | Pregunta | Por qué importa |
+|---|---|---|
+| **M1** | ¿Nos pasas tú el `pg_dump` con datos, o nos das una cadena de conexión de solo lectura y lo sacamos nosotros? | Define quién hace el trabajo y cuándo |
+| **M2** | ¿Qué tablas **no** hay que volcar? (logs, colas, caché, `operational_events`) | 3.518 filas de eventos operativos no aportan nada y ensucian |
+| **M3** | Las **dos claves**: la de cifrado y la del índice ciego. Nombres de variable aquí; **valores por gestor de contraseñas** | Sin ellas el dump es ruido cifrado |
+| **M4** | 🚨 **El aislamiento entre corredurías, ¿está solo en las políticas RLS, o el código también filtra por `correduria_id` en cada consulta?** | Con `BYPASSRLS` las RLS no aplican. Si el código confiaba en ellas, se ve todo **sin que falle nada** |
+| **M5** | ¿Qué columnas están cifradas, con qué librería, y sobre qué campos se calcula el índice ciego (¿email, DNI, teléfono?) | Para poder descifrar y para no romper el buscador |
+| **M6** | ¿Los usuarios están en **Supabase Auth** (`auth.users`)? | Si sí, **no viajan en un dump del schema `public`**: las cuentas hay que recrearlas. Agujero clásico |
+
+**Fase 1-2 — intranet y portal**
+
+| # | Pregunta |
+|---|---|
+| **M7** | El repo de la app Next.js: ¿nos lo transfieres, o acceso de lectura y copiamos lo que sirva? (Alberto ya está dentro) |
+| **M8** | ¿Hay más de una correduría en la base, o solo la de Alberto? ¿Qué representa exactamente `correduria_id`? |
+| **M9** | ¿Cómo entra hoy un asegurado al portal: contraseña, enlace mágico, DNI + nº de póliza? ¿Lo usa alguien ya? |
+| **M10** | Los ~4 ficheros del **Vercel Blob** — pásalos a mano; ¿hay algo más que no esté en la base? |
+| **M11** | Las columnas `wa_access_token` / `wa_phone_number_id` de `corredurias` están a NULL. ¿WhatsApp Business llegó a usarse? ¿A nombre de quién está la cuenta de Meta? |
+
+**Fase 3 — Codeoscopic**
+
+| # | Pregunta |
+|---|---|
+| **M12** | La carpeta del cliente de Codeoscopic: endpoints, autenticación y el mapeo de formularios por producto/compañía |
+| **M13** | **¿La emisión llegó a probarse alguna vez**, aunque fuera en sandbox? Los datos dicen que no |
+| **M14** | ¿Las credenciales apuntan a sandbox o a producción? |
+
+**Transversal — se pide ya, no depende de fase**
+
+| # | Pregunta |
+|---|---|
+| **M15** | **La lista de crons** de tu Vercel (ahí está el detector de vencimientos a 30/15/7 días) |
+| **M16** | **La lista de nombres** de variables de entorno (solo nombres) |
+| **M17** | ¿Dónde viven **ADR-007 y ADR-009**? Los cita la descripción del repo del adaptador |
+
+**Fase 4 — CIMA.** Ya inventariada. Solo queda lo de siempre: los **valores de los secrets de Fly**
+(credenciales TIREA) *si los tiene apuntados* — favor, no requisito: si no los tiene, se piden a TIREA.
+
+### B · Para Alberto (decisiones, no datos)
+
+| # | Pregunta | Por qué cambia el plan |
+|---|---|---|
+| **A1** | ¿Vas a usar la gestión interna **solo tú**, o entrará alguien más? | Decide si hace falta modelo de permisos en la Fase 1 o basta con una cuenta |
+| **A2** | ¿**Los clientes ya usan el portal hoy**, o está a estrenar? | Si no lo usa nadie, la Fase 2 no tiene migración de cuentas y se simplifica mucho |
+| **A3** | `app.grupoasegura.com`, ¿se queda como está o pasa a un dominio de `central`? | Afecta a cookies, sesiones y al corte de la Fase 2 |
+| **A4** | **¿Qué es lo primero que quieres VER funcionando?** | Es lo que ordena la Fase 1. Sin esto elijo yo, y probablemente mal |
+| **A5** | 🔶 **Las comisiones ya existen en `apps/plataforma /correduria`** (matriz compañía×mes desde los movimientos de BBVA). ¿Eso se queda ahí, o se mueve a `apps/asegura` cuando llegue CIMA? | **Hay solape real.** CIMA traerá comisiones por otra vía. Dos fuentes para el mismo número es cómo se acaba discutiendo con el dato |
+| **A6** | RGPD: 32.600 personas. ¿Hay registro de actividades de tratamiento? ¿Manuel figura como encargado del tratamiento? | El dump mueve datos personales de verdad. No es opcional |
+
+### C · Lo que NO se pregunta — se mira
+
+Para no gastar el tiempo de Manuel en cosas que salen solas:
+
+- **La estructura de tablas, tipos y relaciones** → sale del propio dump.
+- **Los 132 procedimientos de `public`** → viajan en el dump.
+- **Qué hay hoy en `apps/asegura`** → auth propia (`asegura_session` + `jose` contra `public.cuentas`),
+  layout, dashboard y los manifiestos. Nada de dominio.
+- **El coste y la forma del adaptador de Fly** → medido: 6,68 US$/mes, 24/7, sin `auto_stop`.
+
+---
+
+## Lo único que hay que hacer ahora
+
+**Mandarle a Manuel el bloque de Fase 0 (M1-M6) y nada más.** Seis preguntas que puede contestar en un
+rato. Todo lo demás espera: pedirle las diecisiete de golpe es la forma más segura de no recibir
+ninguna.
