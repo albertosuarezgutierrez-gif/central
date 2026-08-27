@@ -25,6 +25,16 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### 🔓 (27/08/2026) Un PR del agente SÍ se puede mergear solo: sacarlo de draft dispara los checks
+
+Era falso lo anotado el 26/08 («ningún PR abierto por el agente puede mergearse sin que Alberto
+intervenga a mano»). Con el PR #1763 en draft: 0 runs y merge rechazado con `405 — 12 of 12 required
+status checks have not succeeded`. Al marcarlo **ready for review** arrancaron los 3 workflows sobre
+`4efa129f`, los 12 requeridos pasaron en 3,5 min y el squash entró (`ba6ca86b`) — **sin que Alberto
+tocara nada**. 🚨 La causa exacta NO está establecida (el run se creó entre el 2º push y el
+des-drafteo; `ready_for_review` no está en los `types` por defecto), y así queda escrito en CLAUDE.md
+con el experimento que lo zanjaría: abrir el siguiente PR directamente sin draft. Ruleset sin tocar.
+
 ### ⏳ (27/08/2026) La anticipación, ENCENDIDA en los cuatro — y el suelo de 60 días que hacía falta
 
 Alberto: «enciéndelo también en los otros tres y mergea». Al mirar sus antelaciones medianas apareció
