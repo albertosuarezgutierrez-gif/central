@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T09:44:33Z",
-  "sha": "09bccfe5c09bef9ad671c06486e782e59ca9bca3",
+  "generadoEn": "2026-08-27T11:35:09Z",
+  "sha": "50fa787ab571d53bf1b7c2b816252ee14c187865",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -55657,6 +55657,30 @@
       "hash": "b4f057d2b7a6"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/eventos/calendario/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 35
+        }
+      ],
+      "tablas": [
+        "next",
+        "pricing_eventos_auto",
+        "set"
+      ],
+      "rutaApi": "/api/sivra/eventos/calendario",
+      "hash": "c81dc4a9e3a4"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/eventos/sync/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -64070,7 +64094,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 119,
+          "linea": 125,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -64079,7 +64103,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 149,
+          "linea": 155,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -64088,7 +64112,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 171
+          "linea": 177
         },
         {
           "nombre": "ventanaMinutos",
@@ -64096,7 +64120,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 179,
+          "linea": 185,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -64105,13 +64129,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 191,
+          "linea": 197,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "117149d2af97"
+      "hash": "1de0562cbfb7"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -70021,6 +70045,84 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b94853d34337"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/eventos-calendario.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/eventos-calendario.ts — el calendario de Sevilla que NO puede caducar. POR QUÉ (27/08/2026). El motor SÍ conoce la Semana Santa: vive en el mapa `EVENTS` de `lib/pricing-calendar.ts`, que `eventFactor()` consulta y que el `apply` combina por MAX con `pricing_eventos_auto`. 🚨 Escrito así d",
+      "exporta": [
+        "domingoDePascua",
+        "semanaSanta",
+        "calendarioEntre",
+        "detalleCalendario"
+      ],
+      "funciones": [
+        {
+          "nombre": "domingoDePascua",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": "string",
+          "linea": 76,
+          "resumen": "Domingo de Resurrección del año dado, en el calendario gregoriano (algoritmo anónimo, Meeus). Devuelve `YYYY-MM-DD`. Aritmética pura: ni zonas horarias ni `Date`."
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, dias: number",
+          "retorno": "string",
+          "linea": 95,
+          "resumen": "Suma días a una fecha `YYYY-MM-DD` sin tocar husos: se opera en UTC puro."
+        },
+        {
+          "nombre": "semanaSanta",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number",
+          "retorno": "NocheCalendario[]",
+          "linea": 123,
+          "resumen": "Las noches de Semana Santa del año dado. 100% derivadas de la Pascua."
+        },
+        {
+          "nombre": "aniosSinTabla",
+          "kind": "function",
+          "exportada": false,
+          "params": "anios: number[]",
+          "retorno": "number[]",
+          "linea": 162,
+          "resumen": "Años del rango para los que la tabla NO tiene ninguna entrada. Un hueco declarado, no un cero."
+        },
+        {
+          "nombre": "expandir",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fijo",
+          "retorno": "NocheCalendario[]",
+          "linea": 166
+        },
+        {
+          "nombre": "calendarioEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string",
+          "retorno": "Calendario",
+          "linea": 190,
+          "resumen": "Todas las noches de calendario entre dos fechas (ambas inclusive), ordenadas. `desde`/`hasta` en `YYYY-MM-DD`."
+        },
+        {
+          "nombre": "detalleCalendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Calendario",
+          "retorno": "string",
+          "linea": 211,
+          "resumen": "Parte legible para la respuesta y el latido. Una siembra muda no se distingue de un cron caído."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "73fd69e8b2f1"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-estado.ts",
@@ -97937,7 +98039,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2590,
-    "funciones": 7116
+    "archivos": 2592,
+    "funciones": 7124
   }
 }
