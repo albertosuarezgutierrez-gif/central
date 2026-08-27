@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-27 · mercado-booking** · hizo: pasada diaria completa. Plan pedía 24 ventanas de
+  mercado (de 572 candidatas, todas ronda 1/evento — Betis-Sevilla nov, calendario feb-27, Semana
+  Santa abr-27 —, tope max=24 dejó 548 fuera) + 4 de escaparate propio; medidas las 24 de mercado
+  (0 sin respuesta, 240 comps reales escritos con `fuente:"booking_mcp"`, ninguno propio mezclado).
+  Escaparate solo 2/4 medido (Busto Reform y Dúplex center); House Sevillana y Luxury Busto sin
+  disponibilidad en Booking para sus fechas de refresco (04-sep y 24-ago-27) → 2 huecos, no error
+  del conector. 6 meses siguen sin bucket elegible (aviso del propio plan: 2026-08, 2027-04/05/06/
+  07/08). Latido `ok:true` (mercado completo, escaparate parcial no bloquea el latido). dudas: si
+  las fechas fijas de refresco de escaparate para House/Luxury deberían rotar cuando salen
+  "sin disponibilidad" dos pasadas seguidas; fallos: 1 POST de ingest devolvió respuesta vacía
+  (curl sin error, resuelto con retry inmediato, sin pérdida de datos); PRs/commits: — (solo
+  Supabase, sin tocar código).
 - **2026-08-26 · psd2-health-check** · hizo: preflight canal alerta 200 OK; consulta frescura
   `origen='psd2'` — último movimiento 2026-08-25 (1 día), mov_30d=52 vs mov_30d_prev=75 (sin
   caída >50%); conexiones activas (`vinculada`) Kutxabank ****0855 y BBVA con `ultimo_sync`
