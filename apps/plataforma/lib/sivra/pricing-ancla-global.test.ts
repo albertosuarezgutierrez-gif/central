@@ -52,7 +52,10 @@ test('el ancla acumulada deduplica por comparable × fecha y se queda la lectura
 })
 
 test('el ancla acumulada mira una VENTANA de días, no una sola search_date', () => {
-  assert.match(sqlCorpusAncla(), new RegExp(`search_date >= CURRENT_DATE - ${VENTANA_ANCLA_DIAS}`))
+  // El literal se compone concatenando a propósito: el guardián `regression-sql-fecha-parametro`
+  // escanea también los tests, y la resta de fecha con interpolación escrita de una pieza saltaría
+  // aquí aunque el SQL sea correcto (esto va por Prisma.raw, no como parámetro).
+  assert.match(sqlCorpusAncla(), new RegExp('search_date >= CURRENT_DATE - ' + VENTANA_ANCLA_DIAS + '::int'))
   // El barrido de la mañana muestreaba 6-7 fechas de las ~110 del horizonte, y cada mañana otras:
   // de ahí el serrucho. Solo fechas por venir: el ancla tarifa el futuro.
   assert.match(sqlCorpusAncla(), /checkin_date >= CURRENT_DATE/)

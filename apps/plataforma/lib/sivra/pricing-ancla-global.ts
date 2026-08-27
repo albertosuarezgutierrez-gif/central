@@ -84,7 +84,7 @@ export function sqlCorpusAncla(): string {
           LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
           WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
             AND m.checkin_date >= CURRENT_DATE
-            AND m.search_date >= CURRENT_DATE - ${VENTANA_ANCLA_DIAS}
+            AND m.search_date >= CURRENT_DATE - ${VENTANA_ANCLA_DIAS}::int
             -- Mismas dos guardas que el bucket del mes: pasadas cuyo corpus no distingue la fecha
             -- (estacionalidad inventada) y habitaciones vestidas de piso entero.
             AND NOT m.corpus_clonado
