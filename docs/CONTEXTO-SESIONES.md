@@ -3373,7 +3373,7 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
-## 👁️ (27/08/2026) Botón «ocultar saldo» en el inicio de plataforma (estilo banco)
+## 👁️ (27/08/2026) Botón «ocultar saldo» en el inicio de plataforma (estilo banco) — PR #1783
 - Alberto enseña el panel a gente: `/banca` lleva ahora un botón 👁/🙈 junto al «Saldo total del grupo»
   que lo **desenfoca** (no lo sustituye → el bloque no salta de ancho) y recuerda la elección.
 - Piezas: `app/(usuario)/banca/SaldoTotal.tsx` (cliente) · clase `.saldo-privado` en `globals.css`
@@ -3381,6 +3381,8 @@ completo `docs/AUDITORIA-2026-08.md`.
   ANTES del primer pintado (si no, al recargar se ve un fotograma con la cifra y el botón no sirve).
 - **Alcance elegido por Alberto: SOLO el saldo total.** Los importes de los movimientos de abajo se
   siguen viendo; extenderlo es añadir la clase, sin tocar lógica. Es ocultación VISUAL (sigue en el HTML).
+- Probado end-to-end con el build real (Playwright): alternar, persistir, 320px, localStorage bloqueado y
+  **cero parpadeo** (al entrar el nodo en el DOM ya venía `blur(10px)`). Skill al día: `plataforma-maestro/references/ui-inicio-dashboard.md`.
 
 ## ✅ (26/08/2026) Cierre del caso DIGI: PRs #1737 y #1740 mergeados, verde sobre `main`
 

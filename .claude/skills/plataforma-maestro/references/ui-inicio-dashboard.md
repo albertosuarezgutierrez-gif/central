@@ -27,6 +27,19 @@ pestaña computa SOLO sus datos (Dinero no toca el holding y viceversa; sin rend
 de pestaña es navegación (no conserva los filtros del libro). ⚠️ La sección de abajo describe el estado
 ANTERIOR del dashboard (ya solo redirige); su lógica de widgets vive ahora en `NegociosResumen`.
 
+## 👁️ Botón «ocultar saldo» del Inicio (27/08/2026, PR #1783)
+Alberto enseña el panel a gente: junto al **«Saldo total del grupo»** de `/banca` hay un botón 👁/🙈
+(`app/(usuario)/banca/SaldoTotal.tsx`, cliente) que **desenfoca** la cifra. Piezas:
+- **CSS** `globals.css`: `.saldo-privado` + `html[data-saldo-oculto='1'] .saldo-privado { filter: blur(10px) }`.
+  Se desenfoca, NO se sustituye por `••••`: así el bloque no salta de ancho al alternar.
+- **Estado**: `localStorage('saldo-oculto')`, y lo aplica el **script anti-parpadeo de `app/layout.tsx`**
+  (el mismo del tema) **antes del primer pintado**. Si se aplicara al hidratar, cada recarga enseñaría un
+  fotograma con el saldo legible — que es justo lo que hace inútil el botón. Cualquier ampliación futura
+  debe mantener esa vía, no un `useEffect`.
+- **Alcance actual: SOLO el saldo total** (decisión de Alberto). Extenderlo a los importes de los
+  movimientos = añadir la clase `saldo-privado`, sin tocar lógica.
+- ⚠️ Ocultación **visual**, no de seguridad: el importe sigue en el HTML servido.
+
 ## Home `/dashboard` = RESUMEN de verdad (02/07/2026 — ⚠️ SUPERADO por la fusión del 16/07/2026, ver arriba)
 Decisión de Alberto: la home había acumulado 10+ widgets que duplicaban páginas dedicadas
 ("no mucha información, sino un resumen de mis negocios y cuentas bancarias"). **Todos los
