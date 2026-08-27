@@ -257,6 +257,24 @@ entonces: **abrir el PR por la herramienta MCP** (o des-draftear, que también f
 dispara es el **token de la App**. No des por hecho ninguna de las dos versiones sin mirar el
 `actor` del run.
 
+🚨 **TERCER dato, el mismo día (PR #1789): ni el draft ni la identidad lo explican del todo.** Los
+tres PRs de esta tanda salieron de la MISMA rama, con la MISMA identidad (`actor` = la cuenta de
+Alberto, PR abierto por la herramienta MCP) y los tres **en draft**. Los dos primeros (#1777,
+#1779) dispararon los 12 requeridos al instante; el tercero **no disparó ninguno**: sobre su head
+solo corrió `rutinas-automerge`, que es `pull_request_target` — o sea, el evento
+**`pull_request` no llegó a los workflows requeridos**. Y **sacarlo de draft tampoco lo rescató**
+(se probó: volvió a disparar solo el `pull_request_target`). No fue una caída de Actions: otro PR
+del repo tuvo su run de `tests.yml` **diez segundos antes**.
+
+Lo único que distinguía a #1789 es que el PR se abrió **~2 segundos después del push** de la rama.
+Es una hipótesis de carrera, no una causa medida — **no la des por buena sin comprobarla**.
+
+✅ **Lo que SÍ funciona cuando pasa: un push POSTERIOR con contenido real** (evento `synchronize`).
+Que es justo lo que ya dice el apartado de arriba, y por eso el commit vacío sigue prohibido: si no
+tienes nada real que empujar, espera o pídeselo a Alberto. **Regla de método: mira siempre el
+`event` y el `actor` de los runs antes de dar por buena cualquiera de las tres versiones de esta
+sección.** Llevamos tres modelos en dos días y los tres se han quedado cortos.
+
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
 
