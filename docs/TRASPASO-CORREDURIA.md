@@ -2459,3 +2459,25 @@ Anotadas para que nadie se apoye en una cifra que no cuadra:
 declararlas a mano. Y **antes de todo eso, M4 y M5**: sin saber qué está cifrado ni si el código
 filtraba por `correduria_id`, el modelo resultante tendría columnas opacas y una columna de tenant de
 fiabilidad desconocida.
+
+### 💶 27/08/2026 — El asiento Pro: 20 US$/mes, y el 2FA está apagado
+
+Verificado en el panel (sesión de navegador de Alberto, 27/08):
+
+| Dato | Valor | Fiabilidad |
+|---|---|---|
+| Miembros del team hoy | **Solo Alberto**, rol Owner. Cero invitaciones pendientes | ✅ Leído en Settings → Members |
+| Precio por asiento | **20 US$/mes por usuario** | 🟡 **Probable.** Sale del texto de la propia página de Members («$20/mo per seat» para colaboradores añadidos como Developers), **no de la página de facturación**, que solo muestra método de pago, créditos y add-ons. El cargo exacto y si es prorrateado lo confirma Vercel en el diálogo de invitación |
+| **2FA de la cuenta Owner** | 🔴 **DESACTIVADO**, y Vercel lo está avisando en el dashboard | ✅ Leído |
+| Auto-añadir colaboradores de repos privados como Developers | ✅ **Apagado** — dejarlo así, o entran asientos de pago solos | ✅ Leído |
+
+🔴 **El 2FA es el hallazgo que importa aquí, y no tiene nada que ver con Manuel.** La cuenta que va a
+tener dentro los cinco proyectos —incluido `plataforma`, con la banca— es una cuenta Owner **sin
+segundo factor**. Eso se activa antes de meter a nadie, no después.
+
+**Sobre el rol: decisión de Alberto, ya tomada dos veces — `Member`, sin acotar.** El agente de
+navegador objetó que un Member de un team Pro ve las envs de los cinco proyectos. Es correcto y ya
+estaba analizado en este documento; Alberto lo ha resuelto («da igual q manuel lea todo»). **No se
+re-abre.** Queda anotado que existe la alternativa —rol restringido acotado por un *Access Group*— por
+si algún día se quiere, y que **sigue sin verificarse si el plan Pro incluye Access Groups**: se ve en
+`Settings → Access Groups`, y si esa sección no aparece, es que no.
