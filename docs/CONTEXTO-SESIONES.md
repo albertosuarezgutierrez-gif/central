@@ -33,8 +33,9 @@ status checks have not succeeded`. Al marcarlo **ready for review** arrancaron l
 `4efa129f`, los 12 requeridos pasaron en 3,5 min y el squash entró (`ba6ca86b`) — **sin que Alberto
 tocara nada**. 🚨 La causa exacta NO está establecida (el run se creó entre el 2º push y el
 des-drafteo; `ready_for_review` no está en los `types` por defecto). Un SEGUNDO PR el mismo día (#1768)
-descartó la vía del push: sin ningún 2º push, los runs arrancaron igual al sacarlo de draft. Hipótesis
-en pie: **un PR en draft no produce runs y sacarlo de draft los dispara**. Ruleset sin tocar.
+descartó la vía del push, y un tercer dato (push a #1768 ya sin draft → runs otra vez) lo cerró:
+**es el estado DRAFT lo que silencia los workflows**; sacarlo de draft los dispara y a partir de ahí
+cada push funciona normal. Cinco observaciones, reproducible. Ruleset sin tocar.
 
 ### ⏳ (27/08/2026) La anticipación, ENCENDIDA en los cuatro — y el suelo de 60 días que hacía falta
 

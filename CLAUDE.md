@@ -230,13 +230,16 @@ draft acto seguido — **sin ningún 2º push**: los runs arrancaron igual (`06:
 `pull_request`). Eso mata la explicación alternativa: el `synchronize` de un push **no** era lo que
 disparaba nada en #1763, porque aquí no hubo ninguno.
 
-🚨 **Lo que queda en pie, y es una hipótesis fuerte pero no una certeza: un PR en DRAFT no produce
-runs — ni al abrirlo ni al empujarle commits — y sacarlo de draft los dispara.** Explica las cuatro
-observaciones (los dos `opened` en draft mudos, el push a #1763 mudo, y los dos des-drafteos que sí
-dispararon). Lo que NO encaja con la documentación de GitHub es que `ready_for_review` **no** está en
-los `types` por defecto de `on: pull_request`; el `event` del run es `pull_request` y no distingue la
-acción, así que la acción concreta no se ha visto. Si alguien quiere cerrarlo del todo: mirar el
-`event.action` en los logs del run, o abrir un PR directamente sin draft.
+**Y el tercer dato lo cierra:** un push posterior a #1768, con el PR **ya fuera de draft**, disparó los
+runs otra vez (`06:21:48`). O sea, el `synchronize` SÍ funciona… cuando el PR no es draft.
+
+🚨 **Conclusión: es el estado DRAFT lo que silencia los workflows.** Un PR en draft no produce runs ni
+al abrirlo ni al empujarle commits; en cuanto se saca de draft, los dispara — y a partir de ahí cada
+push vuelve a dispararlos con normalidad. Encaja con las cinco observaciones (dos `opened` en draft
+mudos · el push a #1763 en draft, mudo · los dos des-drafteos que dispararon · el push a #1768 ya sin
+draft, que disparó). Único fleco teórico: `ready_for_review` no está en los `types` por defecto de
+`on: pull_request` y el `event` del run no distingue la acción, así que el mecanismo interno de GitHub
+no se ha visto — pero el comportamiento está medido cinco veces y es reproducible.
 
 ✅ **El procedimiento, que es lo que importa:** abre el PR en draft (como siempre), y cuando esté listo
 **quítale el draft**. Los 12 requeridos arrancan solos y en ~3,5 min está mergeable. **Ya no hace
