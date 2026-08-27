@@ -92,6 +92,9 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   **cántalo en el Telegram**, es lo que impide que un hueco de resultados se contabilice como puntería
   de una estrategia. Origen: NVDA acabó en verde por un hueco del +6,79% el 27/08 sobre una posición
   que la víspera estaba en pérdida y a ~3% del stop — ver `docs/TRADING-POSTMORTEM-NVDA-2026-08.md`.
+  📌 Estado del backfill (27/08/2026, medido en producción): **44 tesis y 2 posiciones** quedaron en
+  `reconstruido` (NVDA y SQM) y **2.016 tesis siguen en `sin_consultar`** — eso NO es un fallo, es que
+  de esas filas no había registro. La atribución las cuenta aparte y nunca las mete en una media.
   🚨 Tres estados: `sin_consultar` ≠ `sin_fecha`, y `reconstruido` marca lo deducido a posteriori del
   texto de `rationale` (no es una medición). Esto solo ETIQUETA: no veta, no dimensiona y no toca
   `trading_estrategia_stats` — usarlo para decidir sería modelo → preregistro.
