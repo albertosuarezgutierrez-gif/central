@@ -32,6 +32,19 @@
 
 ---
 
+### 🏘️ (27/08/2026) Agente de inversión inmobiliaria CONSTRUIDO y probado con los 12 meses de Conil
+
+Fases 2 y 3 del spec, completas. Motor PURO `apps/plataforma/lib/inversion/{tipos,curva-mercado,competencia,
+underwriting}.ts` (**52 tests**), tabla `inversion_analisis` (migración aplicada en Supabase, con REVOKE a
+anon/authenticated + RLS), endpoint `POST /api/inversion/underwrite`, pantalla `/inversion` (+ sidebar) y skill
+`inversion-inmueble`. **Prueba end-to-end con mediciones REALES**: 12 búsquedas de Booking para Conil (una por
+mes, aforo 4) → curva en `docs/INVERSION-CONIL-2026-08-27.md`; **pico/valle 5,79×** (ago 488,50€ vs mar 84,36€),
+no el 3,6× de las dos ventanas del spec. Esa pasada destapó **dos mentiras en los mensajes del veredicto** —citaba
+el yield neto junto al listón cuando comparaba el cash-on-cash («8,27% bate el listón de 9,00%»), y decía «año
+entero medido» con la ocupación 100% supuesta—; corregidas y con test. Verificado: tsc 0 · 1.745 tests de
+plataforma · 61 del guardián. ⛔ Sigue faltando lo de Alberto: precio, m², qué es el inmueble, explotación,
+financiación y si compra él o Punto y Coma SL.
+
 ### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
 Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
 separado se encadenan en un precio IRREVERSIBLE — un evento salta el raíl (Busto 21-feb-2027: 221€→717€
