@@ -25,6 +25,16 @@
 >
 > **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
 
+### ⏳ (27/08/2026) La anticipación, ENCENDIDA en los cuatro — y el suelo de 60 días que hacía falta
+
+Alberto: «enciéndelo también en los otros tres y mergea». Al mirar sus antelaciones medianas apareció
+el fallo de diseño: Busto Reform y Dúplex venden con **12 días** de mediana típica, así que el tope de
+4× caía en el **día 48** → todo su calendario más allá de mes y medio al +25% fijo (y meses con mediana
+de 2-4 días topaban el día 8). Eso no es premio por anticipación, es una subida lineal. Añadido
+`saturacionMinDias = 60` (3 tests más; House no se entera, su 4×28 = 112 ya lo supera). `antelacion_k = 1`
+en los **cuatro**. **El merge NO lo puede hacer el agente**: el ruleset exige 12 checks que un push con
+token de App nunca dispara — hace falta que Alberto toque la rama desde su cuenta. PR #1763.
+
 ### ⏳ (26/08/2026) Pricing: el motor sabía bajar por urgencia pero no SUBIR por anticipación
 
 Alberto ve entrar el 8-10 ene-27 a 639,71€ (12 adultos) y pregunta si no es barato. Lo era en un

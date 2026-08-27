@@ -98,3 +98,28 @@ test('una saturación mal configurada no dispara el premio', () => {
   assert.equal(r.factor, 1)
   assert.equal(r.evaluado, false)
 })
+
+test('el tope no llega a la vuelta de la esquina: suelo de 60 días en la saturación', () => {
+  // Busto Reform / Dúplex Center venden con 12 días de mediana. Sin suelo, 4×12 = día 48 → TODO el
+  // calendario más allá de mes y medio quedaría al +25% fijo, que no es un premio por anticipación.
+  const duplex = { antelacionMediana: 12, muestra: 30, factorEvento: 1 }
+  const a30 = factorAntelacion({ ...duplex, diasVista: 30 }, { k: 1 }).factor
+  const a48 = factorAntelacion({ ...duplex, diasVista: 48 }, { k: 1 }).factor
+  const a60 = factorAntelacion({ ...duplex, diasVista: 60 }, { k: 1 }).factor
+
+  assert.ok(a30 > 1.03 && a30 < 1.04, `a 30 días ~+3,5%, salió ${a30}`)
+  assert.ok(a48 < 1.18, `a 48 días (4× la mediana) NO puede estar ya en el tope, salió ${a48}`)
+  assert.equal(a60, 1.25)
+})
+
+test('un mes que se vende en 2 días tampoco topa el día 8', () => {
+  const r = factorAntelacion({ diasVista: 8, antelacionMediana: 2, muestra: 12, factorEvento: 1 }, { k: 1 })
+  assert.ok(r.factor < 1.02, `salió ${r.factor}`)
+})
+
+test('el suelo no toca a los pisos que ya venden con antelación', () => {
+  // House en enero: 4×28 = 112 días, muy por encima del suelo → la curva no cambia.
+  const conSuelo = factorAntelacion({ ...BASE, diasVista: 90 }, { k: 1 }).factor
+  const sinSuelo = factorAntelacion({ ...BASE, diasVista: 90 }, { k: 1, saturacionMinDias: 0 }).factor
+  assert.equal(conSuelo, sinSuelo)
+})

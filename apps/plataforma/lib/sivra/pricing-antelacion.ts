@@ -19,11 +19,21 @@
 // significa lejos PARA ESE PISO EN ESE MES: 135 días en enero de House es rarísimo; en su Semana
 // Santa sería lo normal.
 //
-// FORMA DE LA CURVA. El premio vale 0 en la mediana y llega al máximo en `saturacion` × mediana
-// (por defecto 4×), creciendo despacio al principio (curva cuadrática). Quien reserva un poco antes
-// de lo normal no paga premio: solo lo paga el madrugador de verdad, que es el que revela que esa
-// fecha le importa más que el precio. Con la mediana de enero de House (28 días): a 60 días +3,6%,
-// a 90 días +13,6%, a 135 días el tope.
+// FORMA DE LA CURVA. El premio vale 0 en la mediana y llega al máximo en `saturacion` × mediana,
+// creciendo despacio al principio (curva cuadrática). Quien reserva un poco antes de lo normal no
+// paga premio: solo lo paga el madrugador de verdad, que es el que revela que esa fecha le importa
+// más que el precio. Con la mediana de enero de House (28 días): a 60 días +3,6%, a 90 días +13,6%,
+// a 135 días el tope.
+//
+// 🚨 Y EL TOPE NO PUEDE LLEGAR A LA VUELTA DE LA ESQUINA (`saturacionMinDias`, 27/08/2026). El 4×
+// mediana funciona para un piso que se vende con un mes de antelación; para uno que se vende en 12
+// días —Busto Reform y Dúplex Center, medianas típicas de 12— dejaría el tope en el día 48, o sea
+// TODO el calendario más allá de mes y medio al +25% fijo. Eso ya no es un premio por anticipación:
+// es una subida lineal a casi todo el año, y encima justo en la franja de 15-45 días donde esos
+// pisos venden de verdad. Peor aún, hay meses con mediana de 2-4 días (agosto de House: 1): el tope
+// caería en el día 8. El suelo de 60 días hace que la palanca signifique lo mismo en los cuatro:
+// «mucho más lejos de lo normal Y encima lejos en términos absolutos». Con mediana 12: a 30 días
+// +3,5%, a 60 días el tope. House no se entera (su 4×28 = 112 ya pasa de 60).
 //
 // SOLO SUBE — nunca baja — y aguas abajo siguen mandando el raíl de ±%/día, el suelo de coste, el
 // techo del propietario y el techo de mercado MEDIDO (`pricing-techo-mercado.ts`), que es el que
@@ -53,6 +63,8 @@ export type AntelacionOpts = {
   muestraMinima?: number
   /** múltiplo de la mediana en el que el premio llega al máximo */
   saturacion?: number
+  /** suelo en DÍAS de ese punto de saturación: un piso que vende en 12 días no llega al tope el 48 */
+  saturacionMinDias?: number
   /** a partir de este factor de evento no se aplica premio (ya lo lleva por su lado) */
   factorEventoProtegido?: number
   /** exponente de la curva: >1 = suave al principio, fuerte al final */
@@ -74,6 +86,7 @@ export function factorAntelacion(i: AntelacionInput, o: AntelacionOpts = {}): An
   const premioMax = o.premioMax ?? 0.25
   const muestraMinima = o.muestraMinima ?? 10
   const saturacion = o.saturacion ?? 4
+  const saturacionMinDias = o.saturacionMinDias ?? 60
   const factorEventoProtegido = o.factorEventoProtegido ?? 1.15
   const curva = o.curva ?? 2
 
@@ -99,11 +112,9 @@ export function factorAntelacion(i: AntelacionInput, o: AntelacionOpts = {}): An
     }
   }
 
-  // 0 en la mediana → 1 en saturacion × mediana.
-  const progreso = Math.min(
-    1,
-    (i.diasVista - i.antelacionMediana) / (i.antelacionMediana * (saturacion - 1)),
-  )
+  // 0 en la mediana → 1 en el punto de saturación (4× la mediana, nunca antes del día 60).
+  const finDias = Math.max(i.antelacionMediana * saturacion, saturacionMinDias)
+  const progreso = Math.min(1, (i.diasVista - i.antelacionMediana) / (finDias - i.antelacionMediana))
   const premio = Math.min(1, Math.max(0, k)) * premioMax * Math.pow(progreso, curva)
   return {
     factor: 1 + premio,

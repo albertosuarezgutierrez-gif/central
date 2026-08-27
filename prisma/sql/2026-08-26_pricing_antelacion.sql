@@ -4,9 +4,13 @@
 -- nada lo SUBÍA por estar lejos. El 8-9 de enero de 2027 se vendió el 26/08/2026 —a 135 días vista,
 -- casi 5× la antelación mediana de House en enero (28 días)— a precio de enero corriente.
 --
--- Arranca APAGADA en los cuatro (0) a propósito, igual que `lastminute_k`: mueve precios en vivo, así
--- que se enciende piso a piso con OK explícito de Alberto. 1 = intensidad plena (hasta +25% a 4× la
--- antelación mediana del mes); los valores intermedios raman el efecto.
+-- Nació APAGADA en los cuatro (0), igual que `lastminute_k`, porque mueve precios en vivo. Alberto la
+-- encendió en los CUATRO el 27/08/2026 con `antelacion_k = 1` (intensidad plena: hasta +25% a 4× la
+-- antelación mediana del mes, nunca antes del día 60); los valores intermedios raman el efecto.
+--
+-- 🚨 El suelo de 60 días de `pricing-antelacion.ts` es lo que hace que esto signifique lo mismo en los
+-- cuatro pisos: Busto Reform y Dúplex Center venden con 12 días de mediana típica, así que sin él el
+-- tope caería en el día 48 y TODO su calendario más allá de mes y medio quedaría al +25% fijo.
 --
 -- La referencia de "qué es lejos" NO se configura aquí: se MIDE en cada pasada del histórico real de
 -- reservas (`incomes.reserved_at`), por piso Y POR MES.
