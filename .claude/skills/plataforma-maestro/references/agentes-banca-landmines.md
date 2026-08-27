@@ -189,5 +189,28 @@ del mensaje afirmaban cosas que su comparación no sostenía:
 aviso del comportamiento normal.** El ruido no es un aviso conservador: entrena a ignorar el mensaje
 entero, y el día que haya un cargo raro de verdad pasará desapercibido entre la paja.
 
+## 🚨 El cajón por DESCARTE de BBVA: `RE_TITULAR` solo mira `contraparte` (27/08/2026, PR #1798)
+En `lib/destino.ts`, **todo CARGO de BBVA que no case el Dúplex cae a `destino='seguros'` + `revisar`**.
+Eso convierte el cajón de sastre en una afirmación cara: se cuenta como **gasto deducible de la
+correduría** hasta que alguien lo revise. Y lo que salva a un traspaso entre cuentas propias de ese
+cajón es `RE_TITULAR`, que **solo se evalúa contra `contraparte`** — a propósito (en los ABONOS el banco
+rotula la contraparte con el TITULAR, así que mirar el concepto reventaría la detección de comisiones).
+
+Consecuencia contraintuitiva: **si el beneficiario real NO es una persona, el nombre del titular viaja
+en el CONCEPTO y nadie lo mira.** Caso fundacional: el traspaso de 1.000€ a la cuenta de valores de
+Interactive Brokers («ORDENES PAGO EMITIDAS EN MONEDA LOCAL // TRANSFERENCIA REALIZADA // U9007431 /
+Alberto Suarez Gutierrez», contraparte `Interactive broker`) salía como 🛡️ Seguros. Fix: `RE_BROKER`
+(`INTERACTIVE BROKER(S)` / `IBKR` / la cuenta IBKR `U`+7-8 dígitos, que es como lo rotulan los extractos
+Excel viejos), evaluado ANTES del reparto abono/cargo para cubrir también la retirada de vuelta.
+
+- **Antes de ampliar `destino.ts` con una clave nueva, cuéntala contra el libro entero** (no solo contra
+  BBVA ni contra fixtures): `WHERE concepto||' '||contraparte ~* '<patrón>'`. Aquí dio 3 filas, las 3
+  de IBKR — por eso la regla no podía secuestrar nada. Es el mismo control que faltó en el incidente
+  de la clave genérica `"TRANSF"`, y el test anti-secuestro (comisiones + `LIQ. OP. Nº`) lo fija.
+- **Backfill obligatorio de lo ya ingestado:** una fila con `destino_confirmado=true` NO se re-clasifica
+  sola nunca (mismo patrón que la cuota RETA de 2026-07-18). La regla arregla el futuro, el SQL el pasado.
+- **Suelto conocido en ese cajón:** `FINANCIALDATASETS.AI` (API del radar de trading) sigue cayendo a
+  `seguros` + revisar. Si se decide que es herramienta profesional, va a `RE_SOFTWARE`, no a mano.
+
 ## Frontera multi-tenant
 Scope `cuenta_id` siempre. BD compartida con sivra/ialimp: cambios transversales de BD → `auditoria-central`.
