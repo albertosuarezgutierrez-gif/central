@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T15:53:00Z",
-  "sha": "7a2a717450b34a564c099b118ffe0fe366bc9639",
+  "generadoEn": "2026-08-27T17:56:09Z",
+  "sha": "d6d9187ea9302e6b7a81a5acf1a3080502d24044",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -72143,6 +72143,27 @@
       "hash": "a09ba3972323"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-salud.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-salud.ts — veredicto PURO de salud del motor de precios de SIVRA. ─── POR QUÉ EXISTE (auditoría 27/08/2026) ────────────────────────────────────────────── La auditoría diaria vigilaba que los crons de pricing CORRIERAN (heartbeat `agente_latidos` + filas frescas en `pricing_applied",
+      "exporta": [
+        "saludPricing"
+      ],
+      "funciones": [
+        {
+          "nombre": "saludPricing",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MedidaPricing",
+          "retorno": "SaludPricing",
+          "linea": 94
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f10c83e4b3d1"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-techo-mercado.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-techo-mercado.ts — el TECHO de mercado medido: no listar al huésped a ×3-×5. POR QUÉ (25/08/2026). El motor tiene varios caminos que SUBEN el precio saltándose el raíl ±%/día a propósito (salto de evento, suelo PL, premio de mercado) y varias guardas que impiden BAJARLO (outlier +4",
@@ -98493,7 +98514,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2599,
-    "funciones": 7165
+    "archivos": 2600,
+    "funciones": 7166
   }
 }
