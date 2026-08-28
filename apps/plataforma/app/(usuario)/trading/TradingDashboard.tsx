@@ -681,7 +681,12 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
         </section>
       )}
 
-      {/* 💡 Ideas de COMPRA — SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
+      {/* 💡 Ideas de COMPRA — PLEGADA (Alberto, 28/08/2026: «los 8 símbolos ya están en la Cartera paper de
+          arriba»). Es cierto que los NOMBRES se repiten, pero el número NO: aquí el retorno está CONGELADO al
+          vencer la ventana (es el que alimenta el acierto por estrategia) y arriba es el P&L VIVO de hoy. Se
+          pliega en vez de borrarse porque es la única traza POR OPERACIÓN detrás de los agregados; el título y
+          el pie dicen ahora de qué precios sale el % para que las dos cifras no se lean como la misma.
+          SOLO compras REALES (petición de Alberto 20/07: «aquí solo interesan las de
           comprar»; auditoría 21/07: `operada`=la señal ganadora del torneo que pasó las barreras y el agente
           compró en paper). Antes se listaba TODA señal alcista en bruto → salían nombres cuyo torneo ganó
           bajista o que las barreras vetaron, contradiciendo la tarjeta «Analiza una acción». El histórico
@@ -712,12 +717,15 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
           )
         }
         const subtitulo = compras.length === 1 ? 'la compra simulada más reciente' : `las ${compras.length} compras simuladas más recientes`
+        const medidas = compras.filter(t => t.resultado).length
         return (
-          <section style={{ marginBottom: 22 }}>
-            <h2 style={{ fontSize: 17, marginBottom: 8 }}>💡 Ideas de compra del agente <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— ¿qué ha comprado en paper? ({subtitulo})</span></h2>
-            <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
+          <DetallePerezoso
+            style={{ marginBottom: 22 }}
+            resumen={<>💡 Ideas de compra del agente <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— el veredicto CONGELADO de cada compra al vencer su ventana ({subtitulo} · {medidas} de {compras.length} ya medidas)</span></>}
+          >
+            <div style={{ ...card, padding: 0, overflowX: 'auto', marginTop: 10 }}>
               <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
-                <thead><tr><th style={th}>Fecha</th><th style={th}>Símbolo</th><th style={th} title="qué regla del torneo interno ganó y motivó la compra">Estrategia</th><th style={th} title="convicción de la señal, de 0 a 100 (ajustada por el acierto real histórico de cada estrategia)">Confianza</th><th style={th} title="se rellena al vencer la ventana de la tesis (walk-forward) — «pendiente» = aún midiéndose, no un fallo">Resultado</th></tr></thead>
+                <thead><tr><th style={th}>Fecha</th><th style={th}>Símbolo</th><th style={th} title="qué regla del torneo interno ganó y motivó la compra">Estrategia</th><th style={th} title="convicción de la señal, de 0 a 100 (ajustada por el acierto real histórico de cada estrategia)">Confianza</th><th style={th} title="(cierre al vencer la ventana − precio de la señal) / precio de la señal. CONGELADO ese día: no se mueve después, así que NO es el P&L vivo de la Cartera paper. «pendiente» = la ventana aún no ha vencido, no un fallo">Resultado a 10 días</th></tr></thead>
                 <tbody>
                   {compras.map(t => (
                     <tr key={t.id}>
@@ -731,7 +739,16 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                 </tbody>
               </table>
             </div>
-            <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>Solo compras REALES en paper: la señal que ganó el torneo de su valor y pasó las barreras de riesgo. El resultado se rellena a posteriori (walk-forward). El histórico completo (señales en bruto, incl. bajistas/neutrales) queda guardado.</p>
+            <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+              Solo compras REALES en paper: la señal que ganó el torneo de su valor y pasó las barreras de riesgo.
+              El % sale de <strong>(cierre al vencer − precio de la señal) / precio de la señal</strong>: el precio de la
+              señal es el último cierre de la pasada que la abrió —el MISMO que la entrada de la Cartera paper—, y el de
+              vencimiento es el cierre del día en que se puntúa (a los {compras[0]?.horizonteDias ?? 10} días declarados; se
+              guarda la ventana REAL medida por si una pasada no corrió). Se congela ahí y ya no cambia, así que{' '}
+              <strong>no coincide con el resultado vivo de la Cartera paper</strong> del mismo símbolo: aquel sigue
+              moviéndose con el precio de hoy. Este es el número que alimenta el acierto histórico por estrategia. El
+              histórico completo (señales en bruto, incl. bajistas/neutrales) queda guardado.
+            </p>
             {vetadasPorMotivo.size > 0 && (
               <details style={{ marginTop: 8 }}>
                 <summary style={{ fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>🚧 Señales ganadoras vetadas por las barreras (últimos 14 días)</summary>
@@ -742,7 +759,7 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                 </ul>
               </details>
             )}
-          </section>
+          </DetallePerezoso>
         )
       })()}
 
