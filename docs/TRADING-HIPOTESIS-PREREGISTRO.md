@@ -656,6 +656,95 @@ precios de entrada (cierre IBKR del 18/07) y la ventana:
 - **Evaluación:** por estado de los datos —cuando `trading_backtest` tenga ≥5.000 snapshots con
   `ret364` no nulo—, no por fecha de calendario. La rotación es de días.
 
+## H13 — El track record mide BETA, no alfa · firmada 2026-08-28, ANTES de medir un solo alfa
+
+- **El hallazgo:** `puntuarTesis` mide el retorno ABSOLUTO, y `acierto` de una tesis alcista es
+  literalmente «el precio subió». En un tramo alcista eso lo hace el MERCADO, no la estrategia. Y ese
+  `hitRate` es exactamente lo que `ajustesDeStats` convierte en delta de confianza del torneo, así que
+  hoy el bucle de aprendizaje puede estar premiando **beta disfrazada de habilidad**.
+- **Lo llamativo:** el módulo YA tiene toda la maquinaria de benchmark —`seleccionEval.ts` (`alpha`),
+  `universo.ts` (`retornoBench`, `baten`), `riesgoCesta.ts`, `medicionAlineada.ts`— pero **solo la usan
+  las cestas**. El track record POR ESTRATEGIA, que es el que ajusta el torneo, nunca restó el índice.
+- **Hipótesis nula:** ordenar las estrategias por alfa da el mismo orden que ordenarlas por retorno
+  absoluto, y por tanto cambiar la medida no cambia ninguna decisión.
+- **Qué se RECOLECTA** (sin tocar ninguna decisión): `retornoAlfa` y `retornoBench` por observación en
+  `trading_tesis_resultado`, y `hitRateAlfa`/`retornoAlfaMedio`/`nAlfa` por estrategia en
+  `trading_estrategia_stats`. El alfa se calcula con el MISMO signo de la tesis que el retorno
+  (`segunDireccion(movimiento − bench)`): una bajista que cae menos que el índice **pierde** alfa
+  aunque «acierte» la caída, y una neutral está fuera del mercado, así que su alfa es 0 igual que su
+  retorno.
+- **Condición de cableado** (sustituir `hitRate`/`retornoMedio` por sus versiones de alfa dentro de
+  `ajustesDeStats`) — las tres a la vez:
+  1. **Muestra:** `nAlfa ≥ 20` (el `minN` vigente) en **≥3 de las 4** estrategias.
+  2. **Diferencia real:** el orden de estrategias por `hitRateAlfa` difiere del orden por `hitRate` en
+     al menos una posición. Si el orden es el mismo, el cambio es cosmético y **no se toca nada**.
+  3. **Guarda de daño:** la estrategia que pase a primera **no** puede tener `retornoAlfaMedio` negativo.
+- **Caveats firmados:**
+  - `nAlfa` cuenta SOLO las observaciones con benchmark medible. Una sin él **no es un alfa de 0**: si
+    se contara, la media se acercaría a cero sola y el alfa parecería más pequeño de lo que es. Por eso
+    es una columna aparte de `n`, y las tesis que se quedan sin alfa se **cuentan y se cantan** en el
+    latido de `/puntuar`.
+  - Las dos puntas del benchmark salen de la MISMA fuente (Stooq→Yahoo, `cierresDeContraste`). Mezclar
+    el cierre de IBKR de la sesión con el de Stooq de hoy metería en el alfa la diferencia entre dos
+    fuentes, que no es alfa de nadie.
+  - Si el índice se queda a más de `TOLERANCIA_BENCH_DIAS` (4) de un extremo, el alfa es **NULL**: sería
+    restar dos ventanas distintas, y eso produce un número plausible que no significa nada — el fallo
+    más caro que documenta el CLAUDE.md (caso ORCL, 31/07/2026).
+  - Benchmark = **SPY**, el mismo que usan el retrovisor y el régimen de mercado, para que «batir al
+    mercado» signifique lo mismo en todo el sistema. Cambiarlo es una hipótesis nueva.
+  - Las observaciones ya puntuadas **no se re-puntúan**: su alfa se queda NULL. La muestra de H13
+    empieza hoy y es más pequeña que la del track record — se dice, no se disimula.
+- **Evaluación:** por estado de la tabla (cuando `nAlfa ≥ 20` en ≥3 estrategias), no por fecha.
+
+---
+
+## H14 — El retorno es BRUTO: nadie ha restado el peaje · firmada 2026-08-28
+
+- **El hallazgo:** ni `puntuarTesis` ni `agregarStats` restaban comisión ni horquilla. Con ventanas de
+  10 días y cuatro tesis por símbolo en cada pasada, la rotación es alta y el peaje no es despreciable
+  frente al **+1,03%** de retorno medio que hoy tienen las alcistas.
+- **El número, y por qué no se defiende como exacto:** `COSTE_ROUNDTRIP = 0,002` (0,2% ida y vuelta) es
+  un **orden de magnitud** —comisión de IBKR más horquilla en valores líquidos—, no una medición. Por
+  eso el criterio de abajo es de **sensibilidad**, no de precisión: si una decisión cambia con 0,1% y no
+  con 0,3%, el resultado lo decide el supuesto y **no se cablea nada**.
+- **Hipótesis nula:** restar el peaje no cambia ninguna decisión del torneo.
+- **Qué se RECOLECTA:** `retornoNeto` por observación y `retornoNetoMedio` por estrategia, **derivados**
+  (`retorno − COSTE_ROUNDTRIP`), NO persistidos. Guardar el neto convertiría las filas viejas en una
+  mentira el día que se ajuste el peaje; guardando solo el bruto, el neto se recalcula entero.
+- **Condición de cableado:** el peaje entra en `ajustesDeStats` si y solo si **le cambia el signo a
+  alguna estrategia** con `n ≥ 20` —es decir, `retornoMedio ≥ 0` pero `retornoMedio − COSTE < 0`, que es
+  el único punto por donde el coste puede alterar el delta hoy (el término `if (retornoMedio < 0) d −= 5`)—
+  **y** ese cambio se mantiene con el peaje a 0,1% y a 0,3%. Si solo aparece con un valor concreto, es
+  el supuesto hablando.
+- **Caveat firmado, y no es menor:** el peaje se resta a TODAS las tesis por igual, **también a las
+  neutrales**, cuyo retorno es 0 por construcción y cuyo neto sale por tanto negativo. Eso es falso en
+  la realidad —una regla que dice «no operes» no paga comisiones— así que **el neto de una neutral no
+  se compara con el de una direccional** sin decir esto. Se recolecta así por simetría de cálculo; si
+  el neto llegara a decidir algo, la exención de las neutrales entra en la misma decisión.
+
+---
+
+## H15 — `minN` y el clamp del aprendizaje nunca se han validado · firmada 2026-08-28
+
+- **El hallazgo:** `ajustesDeStats` tiene dos números con más poder que muchas hipótesis —`minN = 20`
+  (quién recibe ajuste) y el clamp de **±20** (cuánto)— y **ninguno se ha medido**: salieron por
+  analogía con `DIRECTOR_MIN_LLAMADAS` del Director de IA. Con muestras direccionales de 120/51/39/4
+  (H11), el umbral decide él solo qué estrategias entran en el bucle de aprendizaje y cuáles no.
+- **Hipótesis nula:** el orden de estrategias que induce el aprendizaje es estable frente a esos dos
+  parámetros.
+- **Qué se hace:** análisis de **sensibilidad** sobre las stats ya almacenadas (no hace falta código
+  nuevo ni recolectar nada): recalcular los deltas con `minN ∈ {10, 20, 40}` y clamp `∈ {10, 20, 40}` y
+  mirar si cambia **qué estrategia gana el torneo** en las señales del periodo.
+- **Qué significa cada desenlace, firmado por adelantado:**
+  - **Orden estable en las 9 combinaciones** → los parámetros no mandan; se dejan como están y queda
+    escrito que se comprobó.
+  - **El orden cambia** → el bucle de aprendizaje está gobernado por dos números que nadie eligió con
+    datos. Eso **no autoriza a poner los que salgan mejor** —sería elegir el parámetro por el resultado,
+    que es la definición de mover la portería—: obliga a una entrada nueva que fije el criterio ANTES
+    de mirar cuál gana.
+- **Evaluación:** cuando H13 se resuelva (es la misma tabla y el mismo momento; hacerlo antes obligaría
+  a repetirlo con la medida nueva).
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*

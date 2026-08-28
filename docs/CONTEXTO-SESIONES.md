@@ -3573,6 +3573,25 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 📊 (28/08/2026) El track record del trading medía BETA y en BRUTO — H13/H14/H15
+
+- **H13 (alfa).** `puntuarTesis` daba el retorno ABSOLUTO y `acierto` de una alcista era «subió»: en un
+  tramo alcista eso lo hace el MERCADO, y ese hit-rate es lo que `ajustesDeStats` convierte en delta de
+  confianza del torneo. El módulo YA tenía benchmark (`seleccionEval`/`universo`/`riesgoCesta`) pero
+  solo para las cestas. `/puntuar` recoge ya `retorno_alfa`+`retorno_bench` por observación y
+  `hit_rate_alfa`/`retorno_alfa_medio`/`n_alfa` por estrategia (migración `2026-08-28_trading_alfa.sql`,
+  **aplicada y verificada en prod**). El índice viaja en la MISMA petición del contraste (misma fuente
+  en las dos puntas) y con tolerancia de 4 días; fuera de eso, **NULL**.
+- **H14 (costes).** `COSTE_ROUNDTRIP = 0,002` y `retornoNeto` **derivado, no persistido** (guardar el
+  neto haría mentir a las filas viejas al ajustar el peaje). El criterio de cableado es de SENSIBILIDAD:
+  si la decisión cambia con 0,1% y no con 0,3%, manda el supuesto y no se cablea.
+- **H15.** `minN=20` y el clamp ±20 de `ajustesDeStats` **nunca se validaron** (salieron por analogía con
+  el Director de IA). Análisis de sensibilidad firmado; si el orden cambia, NO se elige el parámetro que
+  gane — eso es mover la portería.
+- **Nada de esto decide todavía:** `ajustesDeStats` sigue con lo bruto y absoluto. 322 tests de
+  lib/trading + 16 de scoring, tsc limpio, `pnpm test` exit 0.
+- Antes, en la misma sesión: **#1838 mergeado** (H11 + H12). Sigue abierto el stop de 2·ATR contra H9.
+
 ## 🕰️ (28/08/2026) H11 (piscina del torneo) + H12: la cinta se cortaba en el día 91 — PR #1838
 
 - **H11 (recolección en sombra).** `torneo()` NO aplica el ajuste de confianza a las neutrales, pero

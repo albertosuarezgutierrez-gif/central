@@ -209,6 +209,13 @@ model TradingTesisResultado {
   anuladoMotivo String?      @map("anulado_motivo")
   // Procedencia de `precioDespues` (mismo contrato que `TradingTesis.precioFuente`).
   precioFuente  String       @default("sesion") @map("precio_fuente")
+  // H13 (28/08/2026): el mismo resultado medido contra el MERCADO. `retornoBench` es el retorno del SPY
+  // en la MISMA ventana (misma fuente que el contraste) y `retornoAlfa` el exceso en la dirección de la
+  // tesis. NULL = no se pudo medir (sin serie del índice, o su ventana no era la de la tesis), JAMÁS 0:
+  // un alfa de 0 dice «igualó al mercado». El `retorno` NETO no se guarda — se deriva restando
+  // `COSTE_ROUNDTRIP`, y así un cambio del peaje no convierte las filas viejas en una mentira.
+  retornoAlfa   Float?       @map("retorno_alfa")
+  retornoBench  Float?       @map("retorno_bench")
   tesis         TradingTesis @relation(fields: [tesisId], references: [id], onDelete: Cascade)
 
   @@map("trading_tesis_resultado")
@@ -273,6 +280,11 @@ model TradingEstrategiaStats {
   hitRate       Float    @map("hit_rate")
   retornoMedio  Float    @map("retorno_medio")
   n             Int
+  // H13, en sombra. `nAlfa` cuenta SOLO las observaciones que tenían benchmark — las que no lo tienen
+  // no son un alfa de 0. Con `nAlfa = 0`, las dos medias van a NULL.
+  hitRateAlfa      Float? @map("hit_rate_alfa")
+  retornoAlfaMedio Float? @map("retorno_alfa_medio")
+  nAlfa            Int    @default(0) @map("n_alfa")
   actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
   @@unique([estrategia, regimen])

@@ -4,10 +4,11 @@ import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { PISCINAS, PISCINA_VIVA, enPiscina } from '@/lib/trading/piscinas'
-import { puntuarTesis, agregarStats, aplicarStop, cerrar, atribuirPorEvento, cruzaEvento, finDeVentana, resumenAtribucion } from '@central/module-trading'
+import { puntuarTesis, agregarStats, resultadoDeFila, aplicarStop, cerrar, atribuirPorEvento, cruzaEvento, finDeVentana, resumenAtribucion } from '@central/module-trading'
 import type { Tesis, EstadoEarnings } from '@central/module-trading'
 import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, HUERFANA_GRACIA_DIAS, HUERFANA_MAX_DIAS, DIAS_REFERENCIA_MAX, type ParDiferido, type HuerfanaNoResuelta } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
+import { retornoBench, SIMBOLO_BENCH } from '@/lib/trading/alfa'
 import { tgSend } from '@/lib/telegram'
 
 // El contraste con la 2ª fuente sale a internet una vez por símbolo, así que la ruta necesita techo y
@@ -47,7 +48,10 @@ export async function POST(req: NextRequest) {
                WHERE fecha < ${hoy}::date AND fecha >= ${hoy}::date - ${DIAS_DIFERIDO}::int AND NOT anulado
                ORDER BY simbolo, fecha DESC`,
   )
-  const aContrastarTodo = [...new Set([...Object.keys(precios), ...refsRecientes.map(r => r.simbolo)])]
+  // El índice (SPY) viaja en la MISMA petición que todo lo demás: la serie que hace falta para el ALFA
+  // (H13) es de la misma fuente y la misma ventana que el contraste, así que pedirlo aquí no cuesta ni
+  // una llamada más — y evita mezclar el cierre de IBKR con el de Stooq dentro de una misma resta.
+  const aContrastarTodo = [...new Set([...Object.keys(precios), ...refsRecientes.map(r => r.simbolo), SIMBOLO_BENCH])]
   const contraste = await cierresDeContraste(aContrastarTodo, hoy, { presupuestoMs: 120_000 })
 
   // Pares (cierre publicado de la sesión D, nuestro `precio_ref` de D) de las últimas sesiones. Solo
@@ -149,18 +153,26 @@ export async function POST(req: NextRequest) {
   const vetados = new Set(divergentes.map(d => d.simbolo))
   const conformes = Object.fromEntries(Object.entries(propios).filter(([sim]) => !vetados.has(sim)))
 
+  // ALFA (H13): retorno del índice en la MISMA ventana de cada tesis. `null` en cuanto falta un extremo
+  // o la ventana del índice no es la de la tesis — se recolecta como hueco declarado, no como cero.
+  const serieBench = contraste.series[SIMBOLO_BENCH]
+  const alfaDe = (desde: string, hasta: string) => retornoBench(serieBench, desde, hasta)
+  let sinBench = 0
+
   let puntuadas = 0
   for (const t of pendientes) {
     const vence = new Date(t.fecha).getTime() + t.horizonteDias * 86_400_000
     const precio = conformes[t.simbolo]
     if (vence > hoyMs || precio === undefined) continue
-    const r = puntuarTesis(t as unknown as Tesis, precio)
+    const bench = alfaDe(t.fecha.toISOString().slice(0, 10), hoy)
+    if (bench == null) sinBench++
+    const r = puntuarTesis(t as unknown as Tesis, precio, bench)
     // `ventana_dias` = días REALES transcurridos, no el horizonte declarado. Si una pasada no corre (o
     // la guardia descarta el precio y se puntúa días después), la ventana medida es más larga que el
     // horizonte y etiquetarla con `horizonteDias` sería el error de siempre: un dato correcto leído con
     // el periodo equivocado. Nunca menos que el horizonte: solo se puntúa ya vencida.
     const ventanaReal = Math.round((hoyMs - new Date(t.fecha).getTime()) / 86_400_000)
-    await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: precio, ventanaDias: ventanaReal, retorno: r.retorno, acierto: r.acierto, precioFuente: 'sesion' } })
+    await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: precio, ventanaDias: ventanaReal, retorno: r.retorno, acierto: r.acierto, precioFuente: 'sesion', retornoAlfa: r.retornoAlfa, retornoBench: bench } })
     puntuadas++
   }
 
@@ -198,11 +210,15 @@ export async function POST(req: NextRequest) {
         huerfanasSinResolver.push({ simbolo: t.simbolo, fecha, vence, motivo: v.motivo })
         continue
       }
-      const r = puntuarTesis(t as unknown as Tesis, v.precio)
+      // La ventana de una huérfana acaba en el cierre de SU vencimiento, no hoy: medir su alfa contra
+      // el índice de hoy le sumaría semanas de mercado que esa tesis nunca vivió.
+      const benchH = alfaDe(fecha, v.fecha)
+      if (benchH == null) sinBench++
+      const r = puntuarTesis(t as unknown as Tesis, v.precio, benchH)
       // `precioFuente: 'contraste'` — la procedencia se declara SIEMPRE: este resultado no lo midió la
       // sesión con el precio del bróker, lo midió la 2ª fuente, y además sin nadie con quien contrastarlo
       // (para eso está el ancla). Quien lea el track record tiene que poder distinguirlos.
-      await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: v.precio, ventanaDias: v.ventanaDias, retorno: r.retorno, acierto: r.acierto, precioFuente: 'contraste' } })
+      await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: v.precio, ventanaDias: v.ventanaDias, retorno: r.retorno, acierto: r.acierto, precioFuente: 'contraste', retornoAlfa: r.retornoAlfa, retornoBench: benchH } })
       huerfanasPuntuadas++
     }
   }
@@ -227,13 +243,15 @@ export async function POST(req: NextRequest) {
     // Una piscina sin ni una observación NO se escribe: una fila con n=0 se leería como «medido y
     // vacío» en vez de «todavía no hay nada que medir».
     if (!deLaPiscina.length) continue
-    const stats = agregarStats(deLaPiscina.map(r => ({ estrategia: r.tesis.estrategia as Tesis['estrategia'], acierto: r.acierto, retorno: r.retorno })))
+    const stats = agregarStats(deLaPiscina.map(r => resultadoDeFila({
+      estrategia: r.tesis.estrategia as Tesis['estrategia'], acierto: r.acierto, retorno: r.retorno, retornoAlfa: r.retornoAlfa,
+    })))
     if (piscina === PISCINA_VIVA) estrategiasVivas = Object.keys(stats).length
     for (const [est, s] of Object.entries(stats)) {
       await prisma.tradingEstrategiaStats.upsert({
         where: { estrategia_regimen: { estrategia: est, regimen: piscina } },
-        create: { estrategia: est, regimen: piscina, hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n },
-        update: { hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n },
+        create: { estrategia: est, regimen: piscina, hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n, hitRateAlfa: s.hitRateAlfa, retornoAlfaMedio: s.retornoAlfaMedio, nAlfa: s.nAlfa },
+        update: { hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n, hitRateAlfa: s.hitRateAlfa, retornoAlfaMedio: s.retornoAlfaMedio, nAlfa: s.nAlfa },
       })
     }
   }
@@ -318,6 +336,9 @@ export async function POST(req: NextRequest) {
       (tesisAnuladas > 0 ? ` · ${tesisAnuladas} tesis anulada(s) por la 2ª fuente` : '') +
       (parteDiferido ? ` · ${parteDiferido}` : '') +
       (parteHuerfanas ? ` · ${parteHuerfanas}` : '') +
+      // Un hueco que no se cuenta es un hueco que no existe: si el índice no se pudo leer, el alfa de
+      // esas tesis queda a NULL y el track record de H13 se estrecha en silencio.
+      (sinBench > 0 ? ` · ⚠️ ${sinBench} sin alfa (índice ${SIMBOLO_BENCH} no medible en su ventana)` : '') +
       (desfase ? ` · ${desfase}` : ''),
   )
 
@@ -340,6 +361,8 @@ export async function POST(req: NextRequest) {
     contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, desfasados: contraste.desfasados, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
     diferido: { ...diferido, tesisAnuladas },
     huerfanas: { puntuadas: huerfanasPuntuadas, sinResolver: huerfanasSinResolver, fueraDePlazo: huerfanasFueraDePlazo },
+    // H13: cuántas de las puntuadas hoy se quedaron SIN alfa por no poder leer el índice en su ventana.
+    alfa: { bench: SIMBOLO_BENCH, sinBench, serieBench: serieBench?.length ?? 0 },
     // 📅 Para que la sesión lo cante en el resumen: un track record que no separa la señal del
     // calendario dice que el agente acierta cuando lo que pasó es que publicó resultados.
     atribucionEvento: atribucion,

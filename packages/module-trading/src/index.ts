@@ -8,8 +8,8 @@ export { dimensionar, abrir, aplicarStop, cerrar, pnlPosicion } from './paper.ts
 // cambiar el comportamiento a partir de esta etiqueta es modelo → preregistro. Ver `evento.ts`.
 export { estadoEarnings, cruzaEvento, finDeVentana, partirPorEvento, atribuirPorEvento, resumenAtribucion } from './evento.ts'
 export type { EstadoEarnings, CruceEvento, ParticionEvento, AtribucionEvento } from './evento.ts'
-export { puntuarTesis, agregarStats, ajustesDeStats } from './scoring.ts'
-export type { Resultado, StatsEstrategia } from './scoring.ts'
+export { puntuarTesis, agregarStats, ajustesDeStats, resultadoDeFila, COSTE_ROUNDTRIP } from './scoring.ts'
+export type { Resultado, StatsEstrategia, StatsDecision, FilaResultado } from './scoring.ts'
 export { rvol, tendenciaVolumen, volumenInusual, confirmaVolumen } from './volumen.ts'
 export { infravalorada, pasaScreener, puntuarCandidato, rankearCantera } from './screener.ts'
 export { dedupCandidatos, puntuarDescubrimiento, descubrir } from './descubrimiento.ts'
