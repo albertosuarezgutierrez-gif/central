@@ -9,8 +9,10 @@ import { openrouterConfigPasarela } from '@/lib/ia-director'
 import { registrarUso, estimarTokens, costeEur } from '@/lib/ai-gateway'
 import { parsearJsonIa } from '@/lib/agente-facturas/parsear-json-ia'
 
-// Swap 22/08/2026: `z-ai/glm-5.2` murió (410 Gone, EOL real 21/08/2026) — ver client.ts de core-ai.
-const NVIDIA_TEXT  = 'meta/llama-3.1-70b-instruct'
+// `NVIDIA_TEXT` se borró el 28/08/2026: era una constante MUERTA (cero usos en el repo) que
+// arrastraba el id `meta/llama-3.1-70b-instruct`, muerto por EOL el 26/08. El texto de esta app
+// va por `chatConDirector`, no por NIM. La de VISIÓN sí se usa y NO se toca: es otro modelo y no
+// consta muerto (ver la decisión «todo OpenRouter» en client.ts de core-ai, que es solo de texto).
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
 
 /**

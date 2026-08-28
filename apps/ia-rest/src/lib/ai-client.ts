@@ -76,7 +76,11 @@ export { cleanJSON }
 export type { ImageInput }
 
 // Modelos por defecto (sobrescribibles via env var si hace falta)
-// Swap 22/08/2026: `z-ai/glm-5.2` murió (410 Gone, EOL real 21/08/2026) — ver client.ts de core-ai.
+// 🚨 28/08/2026 — «todo OpenRouter»: el eslabón NIM de TEXTO está APAGADO por defecto en todo el
+// monorepo (ver la cabecera de `client.ts` de core-ai: tres ids muertos por EOL en 11 días y cero
+// respuestas reales servidas en la última semana). Se reactiva con `NVIDIA_TEXTO=1` +
+// `NVIDIA_BRAIN_MODEL`. El default de abajo sigue nombrado solo como referencia histórica: está
+// muerto (410 desde el 26/08) y sin la env de reactivación no se llega a usar nunca.
 const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-3.1-70b-instruct'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
 // Fallback de texto GRATIS: Groq con gpt-oss-120b, en otra infra.
@@ -87,6 +91,12 @@ function nimConfig(): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY
   if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada')
   return { apiKey, textModel: TEXT_MODEL_NVIDIA, visionModel: VISION_MODEL_NVIDIA }
+}
+
+/** ¿Sigue enchufado el eslabón NIM de TEXTO? Apagado por defecto (ver arriba). La VISIÓN no
+ *  depende de esto: usa otro modelo y no consta muerta. */
+function nimActivo(): boolean {
+  return process.env.NVIDIA_TEXTO === '1' && !!process.env.NVIDIA_API_KEY && !!process.env.NVIDIA_BRAIN_MODEL
 }
 
 // Config Groq (fallback de texto). `GROQ_API_KEY` ya existe en producción (la usa el EAR/Whisper).
@@ -194,11 +204,10 @@ export async function callAI(
 
   const user = messages[messages.length - 1]?.content ?? ''
 
-  // Pasarela central primero (si configurada). Si el llamante fuerza un `model` concreto
-  // (p. ej. el 8B rápido de blog-seo para caber en el límite de ~60s de Vercel), saltamos la
-  // pasarela —que usa su modelo por defecto e ignora `model`— y vamos directos a NIM, que sí
-  // lo respeta. Si falla, sigue el camino directo de abajo.
-  const cfg = model ? null : gatewayCfg()
+  // Pasarela central primero (si configurada). Un `model` concreto solo la aparta cuando NIM
+  // sigue enchufado (era el único que respetaba ese id): con NIM apagado, saltarse la pasarela
+  // por un id que ya no puede servir nadie solo dejaría la llamada sin su mejor proveedor.
+  const cfg = model && nimActivo() ? null : gatewayCfg()
   if (cfg) {
     try {
       return await gatewayChat(cfg, messages, { system, maxTokens, timeoutMs })
@@ -207,7 +216,7 @@ export async function callAI(
     }
   }
 
-  const hasNvidia = !!process.env.NVIDIA_API_KEY
+  const hasNvidia = nimActivo()
 
   // NIM y Groq solo aceptan un mensaje user sin historial multi-turn robusto: para multi-turn
   // concatenamos el historial en el system prompt (mismo prompt efectivo para ambos proveedores).
@@ -258,12 +267,15 @@ export async function callAI(
     }
   }
 
-  // NIM no disponible (sin key): Groq y luego OpenRouter antes de rendirse.
-  const groqRes = await groqTextFallback(effectiveSystem, user, maxTokens)
-  if (groqRes !== null) return groqRes
+  // Camino SIN NIM — el normal desde el 28/08/2026. OpenRouter va PRIMERO y Groq queda de
+  // suplente: es la decisión «todo OpenRouter», y además el orden inverso (el de cuando NIM era
+  // el primario) dejaba a OpenRouter de tercero pese a ser el único que sirvió tráfico real la
+  // última semana.
   const orRes = await openrouterTextFallback(effectiveSystem, user, maxTokens)
   if (orRes !== null) return orRes
-  throw new Error('Texto IA no disponible: NIM (NVIDIA_API_KEY), Groq (GROQ_API_KEY) y OpenRouter (OPENROUTER_API_KEY) ausentes')
+  const groqRes = await groqTextFallback(effectiveSystem, user, maxTokens)
+  if (groqRes !== null) return groqRes
+  throw new Error('Texto IA no disponible: sin OpenRouter (OPENROUTER_API_KEY) ni Groq (GROQ_API_KEY); NIM está apagado por defecto (NVIDIA_TEXTO=1 + NVIDIA_BRAIN_MODEL para reactivarlo)')
 }
 
 /**
@@ -327,23 +339,31 @@ export async function callAITools(
     }
   }
   try {
+    // NIM apagado por defecto (ver arriba): se lanza para reutilizar la cadena de fallbacks de
+    // abajo tal cual, con el motivo en el log.
+    if (!nimActivo()) throw new Error('NIM inactivo: apagado por defecto el 28/08/2026 (NVIDIA_TEXTO=1 + NVIDIA_BRAIN_MODEL para reactivarlo)')
     return await nimChatTools(nimConfig(), messages, tools, { system, maxTokens })
   } catch (e) {
-    // Fallback GRATIS a Groq (mismo Llama 3.3 70B, también soporta function-calling OpenAI).
+    // OpenRouter PRIMERO (agregador con function-calling OpenAI). Antes iba de tercero, detrás de
+    // NIM y Groq; desde el 28/08/2026 («todo OpenRouter», con NIM apagado) es el camino normal.
+    const orCfg = openrouterConfig()
+    if (orCfg) {
+      try {
+        console.warn('[AI-CLIENT] tools por OpenRouter:', (e as Error).message)
+        return await openrouterChatTools(orCfg, messages, tools, { system, maxTokens })
+      } catch (oe) {
+        console.warn('[AI-CLIENT] OpenRouter tools falló:', (oe as Error).message)
+      }
+    }
+    // Suplente GRATIS: Groq (también soporta function-calling OpenAI).
     const groqCfg = groqConfig()
     if (groqCfg) {
       try {
-        console.warn('[AI-CLIENT] NIM tools falló → fallback Groq:', (e as Error).message)
+        console.warn('[AI-CLIENT] tools → fallback Groq')
         return await groqChatTools({ ...groqCfg, textModel: TEXT_MODEL_GROQ }, messages, tools, { system, maxTokens })
       } catch (ge) {
         console.warn('[AI-CLIENT] Groq tools también falló:', (ge as Error).message)
       }
-    }
-    // Última red: OpenRouter (agregador con function-calling OpenAI). Inactivo sin OPENROUTER_API_KEY.
-    const orCfg = openrouterConfig()
-    if (orCfg) {
-      console.warn('[AI-CLIENT] NIM+Groq tools fallaron → fallback OpenRouter')
-      return openrouterChatTools(orCfg, messages, tools, { system, maxTokens })
     }
     throw e
   }

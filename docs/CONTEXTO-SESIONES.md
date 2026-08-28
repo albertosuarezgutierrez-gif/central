@@ -32,6 +32,16 @@
 
 ---
 
+### ⚫ (28/08/2026) NIM fuera: «ya NIM nada, todo OpenRouter» (decisión de Alberto)
+Tras la 3ª muerte por EOL en 11 días, Alberto decide apagar NIM en vez de buscar otro id. Dato que
+lo sostiene: en 7 días OpenRouter sirvió el **100%** del texto y NIM **cero** respuestas reales.
+Apagado con el patrón de Gemini (código entero, vuelve con `NVIDIA_TEXTO=1` + `NVIDIA_BRAIN_MODEL`;
+**sin default de modelo**, para obligar a verificar un id vivo). Dos hallazgos: el `model` pinneado
+de NIM **apartaba a OpenRouter** en rrhh e ia-rest (por eso eran los únicos rotos, no degradados), y
+`brain.ts` —cerebro del POS de voz— tenía NIM como ÚNICO proveedor: **roto desde el 26/08** sin que
+se notara (ia-rest sin tráfico). Ambos ya van por la cadena; ojo al nuevo `BRAIN_TIMEOUT_MS` (12 s,
+antes 5 s contra NIM). Guardián de 4 tests en core-ai. **Pendiente: 4 edge functions con NIM crudo.**
+
 ### 🤖 (28/08/2026) «NVIDIA 410»: el briefing no usaba OpenRouter — y perdía los datos por no tener prosa
 Alberto preguntó si el `daily-briefing` va por OpenRouter. **No: nunca ha ido.** `ai_usos` no tiene
 NI UNA fila con app `ia-rest-briefing` — la pasarela (única vía a OpenRouter) fallaba en un `catch {}`
