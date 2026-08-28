@@ -24,6 +24,16 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
   para ella salvo instrucción explícita. La cuota de autónomos (RETA) SÍ se registra siempre
   (`subcategoria='cuota_autonomos'`): es su cotización obligatoria, no una "deducción" opcional que se
   pueda desplazar a Alberto.
+- **Extras cobrados al huésped (SIVRA — cuna+trona, 20€/estancia; dictado 28/08/2026):** Alberto dicta
+  que **suman en contabilidad pero NO se declaran en renta**, y que van **sin IVA**.
+  ⚠️ **PENDIENTE de confirmar con Asecon (Marta) antes de la renta 2026:** «no lleva IVA» y «no tributa
+  en IRPF» son preguntas distintas — un extra cobrado dentro de una estancia turística es rendimiento de
+  la MISMA actividad que la noche, al mismo huésped y en la misma reserva, y no hay umbral por debajo del
+  cual un ingreso deje de declararse. Por eso el código **no cablea la exclusión**: el tipo de IVA vive en
+  `sivra_extras_catalogo.iva_pct` y el ingreso entra en `incomes` **marcado como extra**, así que cambiar
+  el tratamiento es editar una fila, no desplegar. Los agentes fiscales (`fiscal-novedades`,
+  `facturas-correo`) deben tratar estos ingresos como una categoría propia y **no sumarlos al cálculo de
+  IRPF mientras esta regla siga vigente**, pero tampoco darlos por resueltos: siguen en el radar.
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
 - **⚠️ LANDMINE — NUNCA crear una `regla` global para `AYTO SEVILLA`/`RECIBO AYTO. SEVILLA`:** el mismo concepto vale para un piso turístico (deducible) y para la vivienda habitual (personal) → una regla por concepto clasificaría mal. Casar **caso a caso** por importe/fecha/cuenta.
 - **Bizum** → SIEMPRE **personal** (regla pura en `lib/destino.ts`, auto-confirmado → no pide revisión).
