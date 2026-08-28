@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
+import { PISCINAS, PISCINA_VIVA, enPiscina } from '@/lib/trading/piscinas'
 import { puntuarTesis, agregarStats, aplicarStop, cerrar, atribuirPorEvento, cruzaEvento, finDeVentana, resumenAtribucion } from '@central/module-trading'
 import type { Tesis, EstadoEarnings } from '@central/module-trading'
 import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, HUERFANA_GRACIA_DIAS, HUERFANA_MAX_DIAS, DIAS_REFERENCIA_MAX, type ParDiferido, type HuerfanaNoResuelta } from '@/lib/trading/precios-guardia'
@@ -212,13 +213,29 @@ export async function POST(req: NextRequest) {
   // Los resultados ANULADOS (puntuados con un precio que luego se demostró falso) quedan en la tabla como
   // registro pero NO cuentan: son «esto no lo sabemos», no un dato del track record.
   const resultados = await prisma.tradingTesisResultado.findMany({ where: { anulado: false, tesis: { anulado: false } }, include: { tesis: true } })
-  const stats = agregarStats(resultados.map(r => ({ estrategia: r.tesis.estrategia as Tesis['estrategia'], acierto: r.acierto, retorno: r.retorno })))
-  for (const [est, s] of Object.entries(stats)) {
-    await prisma.tradingEstrategiaStats.upsert({
-      where: { estrategia_regimen: { estrategia: est, regimen: 'todos' } },
-      create: { estrategia: est, regimen: 'todos', hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n },
-      update: { hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n },
-    })
+
+  // H11 (firmada 28/08/2026): las stats se recolectan por TRES piscinas, pero solo `'todos'` decide.
+  // `torneo()` NO aplica el ajuste a las señales neutrales, y sin embargo `'todos'` es 82% neutral —
+  // se aprende de lo que nunca se toca. Las otras dos piscinas se escriben EN SOMBRA para poder
+  // resolver H11 con datos; `analizar` sigue leyendo `regimen: 'todos'`, así que el comportamiento no
+  // cambia ni un punto hasta que H11 se cablee por PR con su condición cumplida.
+  // Las estrategias que se reportan aguas abajo (latido y respuesta) son las de la piscina VIVA: es
+  // la que decide, y contar las de sombra inflaría el parte con trabajo que no cambia nada.
+  let estrategiasVivas = 0
+  for (const piscina of PISCINAS) {
+    const deLaPiscina = resultados.filter(r => enPiscina(r.tesis.direccion as Tesis['direccion'], piscina))
+    // Una piscina sin ni una observación NO se escribe: una fila con n=0 se leería como «medido y
+    // vacío» en vez de «todavía no hay nada que medir».
+    if (!deLaPiscina.length) continue
+    const stats = agregarStats(deLaPiscina.map(r => ({ estrategia: r.tesis.estrategia as Tesis['estrategia'], acierto: r.acierto, retorno: r.retorno })))
+    if (piscina === PISCINA_VIVA) estrategiasVivas = Object.keys(stats).length
+    for (const [est, s] of Object.entries(stats)) {
+      await prisma.tradingEstrategiaStats.upsert({
+        where: { estrategia_regimen: { estrategia: est, regimen: piscina } },
+        create: { estrategia: est, regimen: piscina, hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n },
+        update: { hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n },
+      })
+    }
   }
 
   // 2-ter) 📅 ATRIBUCIÓN POR EVENTO — ¿el rendimiento lo produjo la señal o el calendario?
@@ -295,7 +312,7 @@ export async function POST(req: NextRequest) {
   await registrarLatido(
     'trading_puntuar',
     true,
-    `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${Object.keys(stats).length} estrategias` +
+    `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${estrategiasVivas} estrategias` +
       (parteEvento ? ` · ${parteEvento}` : '') +
       (resumen ? ` · ⚠️ ${resumen}` : '') +
       (tesisAnuladas > 0 ? ` · ${tesisAnuladas} tesis anulada(s) por la 2ª fuente` : '') +
@@ -316,7 +333,7 @@ export async function POST(req: NextRequest) {
   // rechazado deja tesis SIN puntuar, y eso hay que verlo — callarlo sería el «no lo sé» disfrazado de
   // «no había trabajo» que ya nos costó el latido de facturas-scan.
   return NextResponse.json({
-    puntuadas, cerradas, estrategias: Object.keys(stats).length,
+    puntuadas, cerradas, estrategias: estrategiasVivas,
     descartados,
     suplantados,
     divergentes,

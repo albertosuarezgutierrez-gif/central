@@ -538,6 +538,69 @@ precios de entrada (cierre IBKR del 18/07) y la ventana:
 - **Evaluación:** por estado de la tabla — ciclo completo con los cuatro campos nuevos presentes en
   ≥5.000 observaciones (no por fecha de calendario; lección del cron muerto del 19/07).
 
+## H11 — ¿De qué piscina deben salir las stats que ajustan la confianza del torneo? · firmada 2026-08-28, ANTES de mirar el resultado de las piscinas alternativas
+
+- **Origen:** Alberto, «¿ya el agente va mejorando?». Al comprobarlo salió una incoherencia INTERNA del
+  código, no una idea nueva: `torneo()` (`packages/module-trading/src/estrategias.ts`) **no aplica el
+  ajuste a las señales neutrales** (`if (!d || s.direccion === 'neutral') return s`) — pero
+  `trading_estrategia_stats`, de donde sale ese ajuste, se calcula sobre una piscina que es **82%
+  neutral**. Se aprende de lo que nunca se toca.
+- **Observación motivadora — POST-HOC, y por eso NO decide nada** (medida el 28/08/2026 sobre las 1.320
+  tesis puntuadas y no anuladas):
+
+  | dirección | n | acierto | retorno medio |
+  |---|---|---|---|
+  | alcista (lo ÚNICO que se compra) | 104 | 59,6% | +1,03% |
+  | neutral | 1.106 | 31,8% | 0,00% |
+  | bajista | 110 | 30,9% | −1,52% |
+
+  Las neutrales tienen retorno **0 por construcción** (`puntuarTesis` devuelve 0 para neutral) y su
+  acierto exige |movimiento| < 2% a 10 días. Hunden el agregado al 31-37% y hoy `ajustesDeStats`
+  penaliza a **las cuatro** estrategias: **momentum −15 · valor −13 · catalizador −8 · reversión −7**.
+  Esos deltas NO son cosméticos: `ganadora` es la señal no-neutral **con más confianza**
+  (`analizar/route.ts`), así que 8 puntos de diferencia entre estrategias cambian cuál gana el torneo.
+- **Hipótesis nula:** cambiar la piscina de la que salen las stats no mejora la decisión del torneo.
+- **Muestra disponible HOY** (solo RECUENTOS; el rendimiento por estrategia de las piscinas alternativas
+  **no se ha mirado** al firmar esto, que es lo que hace preregistrable a H11):
+
+  | estrategia | solo alcistas | direccionales (alc+baj) | todas (actual) |
+  |---|---|---|---|
+  | momentum | 79 | 120 | 330 |
+  | reversión | 12 | 51 | 330 |
+  | valor | 9 | 39 | 330 |
+  | catalizador | 4 | 4 | 330 |
+
+- **Alternativa CONSIDERADA Y DESCARTADA como piscina única: «solo alcistas».** Es la más pura («que
+  aprenda de lo que compra»), pero con `minN = 20` dejaría **a tres de las cuatro estrategias sin
+  ajuste** — el torneo pasaría a comparar una estrategia ajustada contra tres sin ajustar, que es un
+  sesgo peor que el que se quiere corregir. Se recolecta igualmente para poder mirarla, pero no es
+  candidata a cablearse mientras no tenga muestra.
+- **Recolección EN SOMBRA (sin cambio de comportamiento):** `/api/trading/puntuar` escribe además de
+  `regimen='todos'` (la que consume el torneo, INTACTA) dos filas más por estrategia:
+  `regimen='direccional'` (alcista+bajista) y `regimen='alcista'`. `/api/trading/analizar` sigue
+  leyendo **solo `'todos'`**, así que la decisión no cambia ni un punto mientras H11 no se resuelva.
+- **Condición de cableado — de COHERENCIA y MUESTRA, no de rendimiento.** No se finge un A/B que no se
+  puede correr (solo hay un camino vivo: cambiar la piscina cambia lo que se compra, así que las dos
+  ramas no son comparables a posteriori). Se cablea `regimen='direccional'` **si y solo si** se cumplen
+  las tres:
+  1. **Muestra:** ≥`minN` (20) observaciones direccionales en **≥3 de las 4** estrategias.
+  2. **Diferencia real:** el ORDEN por hit rate que induce esa piscina difiere del que induce `'todos'`
+     en al menos una posición. Si el orden es el mismo, el cambio es cosmético y **no se toca nada**.
+  3. **Guarda de daño:** la estrategia que ascienda al primer puesto **no** puede tener retorno medio
+     negativo en su piscina **alcista** — no se promociona al torneo una estrategia que pierde dinero
+     justo donde se ejecuta.
+- **Caveats firmados:**
+  - Los retornos de las bajistas ya vienen con el signo invertido de `puntuarTesis` (una bajista que
+    acierta una caída del 5% anota +5%), así que la piscina direccional es sumable sin corrección.
+  - `catalizador` tiene **4** observaciones direccionales y no va a cruzar `minN` pronto: seguirá sin
+    ajuste en la piscina nueva. Eso es correcto —no aprender de ruido— y NO cuenta para el requisito de
+    «≥3 de 4».
+  - Mismo régimen único (alcista) que el resto de lo medido; se re-mide con H6 si gira.
+  - `ajustesDeStats` y su `minN` **no se tocan** en H11: lo único a decidir es de qué filas salen los
+    números que consume.
+- **Evaluación:** por estado de la tabla — cuando `trading_estrategia_stats` tenga las filas
+  `direccional` con ≥20 observaciones en ≥3 estrategias (no por fecha de calendario).
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*
