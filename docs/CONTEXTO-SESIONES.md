@@ -3539,6 +3539,20 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🍼 (28/08/2026) El agente de huéspedes ya COBRA los extras y avisa a la limpieza — PR #1830
+- Alberto: el agente respondió bien «la cuna son 20€», pero ahí se acababa. Ciclo cerrado: catálogo en BD
+  (`sivra_extras_catalogo`, extensible) → enlace de Stripe → webhook → email a Sique Brilla.
+- **Hallazgo que lo condicionó:** la doc del agente describía una graduación por categorías con allowlist y
+  un «el dinero nunca se auto-envía» que **ya no existían en el código** (desde el 20/08 el criterio es
+  `apoyada_en_fuente`, y `sensibilidad.ts` no tiene NINGUNA regex de dinero). Los 20€ salían del texto libre
+  de la guía. El precio pasa al catálogo y hay guardrail: cifra que no cuadre → a Telegram.
+- **Decisiones de Alberto:** Stripe propio (payout Kutxa ****0855, persona física) · cuna+trona 20€/estancia
+  en los 4 pisos · email automático `hola@ialimp.es` → `limpiezascruzz@gmail.com` (= Sique Brilla) con
+  Reply-To a su Gmail · **enlace de pago automático** si él ya aprobó el precio en ese hilo (atado por código,
+  no por la IA) · **sin IVA y fuera de la renta, sin pasar por Asecon** (anotado en `perfil-fiscal`).
+- **Pendiente suyo:** dar de alta la cuenta Stripe y poner `STRIPE_SECRET_KEY_SIVRA` +
+  `STRIPE_WEBHOOK_SECRET_SIVRA`. Hasta entonces no cobra nada y todo sigue pasando por Telegram.
+
 ## 🔑 (28/08/2026) Dos afirmaciones del doc de rutinas eran falsas, y una env vacía de verdad
 - **Corregido en `RUTINAS-PROGRAMADAS.md`, las dos verificadas por Alberto con Claude Chrome:**
   (a) el «las tres rutinas llevan `ALERTA_TOKEN` con el placeholder» del 23/08 era **FALSO** —

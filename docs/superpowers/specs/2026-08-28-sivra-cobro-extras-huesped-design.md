@@ -144,9 +144,16 @@ Reserva cancelada con el extra pagado → Telegram a Alberto con el enlace del r
 
 ### 11. Contabilidad
 
-El ingreso entra en `incomes` del piso (la tabla de ingreso por piso, en inglés) **marcado como
-extra**, por dos razones: que 20€ sueltos no ensucien el ADR ni alimenten el motor de pricing como si
-fueran alojamiento, y que el tratamiento fiscal sea un dato y no una suposición.
+**⚠️ CAMBIO SOBRE EL DISEÑO INICIAL, decidido al implementar.** La spec decía «el ingreso entra en
+`incomes` marcado como extra». **No se hace, y es a propósito:** `lib/sivra/pl-mensual.ts` cuenta las
+filas de `incomes` con `COUNT(*) AS reservas`, así que una fila por extra inflaría el número de reservas
+del piso y con él el ADR — exactamente el efecto que la spec quería evitar. El registro contable de los
+extras vive en `sivra_extras_reserva` (una fila por extra, con importe y fecha de cobro) y se consulta
+con el helper `totalExtrasPagados(anio, propertyId)`. Cada euro sigue identificado uno a uno; lo que no
+se hace es meterlo en una tabla cuyo recuento significa otra cosa.
+
+**Pendiente declarado:** pintar esa cifra como línea propia en el panel de finanzas. No entra en este PR
+para no ensanchar el diff a la UI financiera; el helper y sus datos ya están.
 
 **Tratamiento fiscal (dictado por Alberto, 28/08/2026, decisión cerrada):** los extras **suman en
 contabilidad pero no se declaran en renta**, y van **sin IVA**. Anotado en la skill `perfil-fiscal` para

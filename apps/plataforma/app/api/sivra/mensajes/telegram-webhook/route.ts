@@ -3,6 +3,9 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
+import { detectarExtra, mencionaImporte } from '@/lib/sivra/agente-huesped/extras'
+import { extraDeCatalogo } from '@/lib/sivra/extras/catalogo'
+import { registrarOferta } from '@/lib/sivra/extras/reserva'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
 import { resolverHecho } from '@/lib/sivra/agente-huesped/hechos'
@@ -758,8 +761,22 @@ export async function POST(req: NextRequest) {
       // El agente aprende de TODAS las respuestas de Alberto, no solo de las correcciones: un borrador
       // aprobado tal cual es un ejemplo de tono/criterio igual de válido para ese piso (lo lee contexto.ts).
       await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '' })
-      // Graduación: explícita con el botón "a partir de ahora solas", o automática tras N aprobaciones.
-      if (pend.categoria) {
+      // 🍼 EXTRAS DE PAGO. Si lo que acabas de aprobar cotiza un extra del catálogo a su precio,
+      // se registra la OFERTA. Esa fila es lo único que autoriza a mandar después el enlace de pago
+      // solo cuando el huésped diga que sí: «el precio lo aprobó Alberto» pasa a ser un hecho de la
+      // BD y no una inferencia sobre el hilo. Si el mensaje habla de la cuna pero NO da el precio,
+      // no hay oferta: el «sí» del huésped volverá a pasar por ti.
+      const codigoExtra = detectarExtra(pend.pregunta || '') || detectarExtra(pend.borrador || '')
+      if (codigoExtra && pend.property_id) {
+        const cat = await extraDeCatalogo(codigoExtra, pend.property_id)
+        if (cat && mencionaImporte(pend.borrador || '', cat.precio_cents)) {
+          await registrarOferta({
+            bookingId,
+            propertyId: pend.property_id,
+            codigo: codigoExtra,
+            precioCents: cat.precio_cents,
+          })
+        }
       }
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
       return NextResponse.json({ ok: true })

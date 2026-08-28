@@ -193,8 +193,28 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   con línea **🔁** (pregunta + borrador). Si Alberto **modifica**, escribe en español y se traduce al idioma
   del huésped antes de enviar (`mensajes_pendientes_tg.idioma`).
 - **Idempotencia:** `claveDedup` + `claimMensaje` (atómico) → no reprocesa/duplica entre sondeo y webhook.
-- **Graduación:** solo categorías básicas (`graduacion.ts` allowlist: wifi/acceso/checkin/checkout/parking/
-  normas/contacto/faq); quejas/dinero/cambios NUNCA se auto-envían.
+- **🚨 La «graduación por categorías» YA NO EXISTE (verificado en el código el 28/08/2026).** Este
+  apartado decía que había una allowlist en `graduacion.ts` y que «quejas/dinero/cambios NUNCA se
+  auto-envían». **Las dos cosas eran falsas:** `graduacion.ts` no existe —desde el 20/08/2026 el
+  criterio de `orquestador.ts` es `autoCortesia || autoApoyada`, donde `autoApoyada` = la respuesta
+  está `apoyada_en_fuente`— y `sensibilidad.ts` tiene regex de queja, avería, cancelación, reembolso
+  y emergencia pero **ninguna de dinero, precio, pagar o cobrar**. Por eso los 20€ de la cuna salían
+  del texto libre de la guía sin pasar por ningún filtro de dinero. Lo que hay HOY sobre dinero:
+  - **El precio de un extra sale del catálogo `sivra_extras_catalogo`, nunca de la IA.** Guardrail en
+    `orquestador.ts` (`importeSospechoso` de `extras.ts`): un borrador con una cifra en euros que no
+    esté en el catálogo del piso pasa a `needs_human` y va a Telegram.
+  - **Enlace de pago automático, y ATADO POR CÓDIGO** (`lib/sivra/extras/cobro-auto.ts`, decisión de
+    Alberto del 28/08/2026, que a sabiendas rompe la regla vieja). Exige las tres a la vez: fila
+    `ofrecido` en `sivra_extras_reserva` —creada SOLO por el botón ✅ de Telegram sobre un borrador
+    que cotiza el precio del catálogo—, `esAceptacion(mensaje)` limpia, e importe del catálogo.
+    Regatear, pedir dos cunas o preguntar por pagar en efectivo NO son aceptaciones y siguen yendo a
+    Telegram. Alberto recibe copia de todo lo que sale.
+  - **Pago → aviso a la limpieza.** Webhook `/api/sivra/extras/webhook` (idempotente por
+    `payment_intent`) → email a Sique Brilla (`limpiezascruzz@gmail.com`) desde `hola@ialimp.es` con
+    Reply-To al Gmail de Alberto. Si el email falla se guarda el motivo y salta Telegram: un extra
+    cobrado con la cuna sin montar y nadie enterado es el fallo caro de este repo.
+  - **Impago:** cron `sivra-extras-impago` (07:00 UTC) — recordatorio a las 24 h, caducidad a 48 h de
+    la entrada. Sin fecha de entrada legible NO se caduca nunca (`decidirImpago`, testeado).
 - **Auto-envío de CORTESÍA de fin de estancia (26/07/2026, rama `claude/automatic-guest-message-q6wzol`):**
   las **despedidas / agradecimientos / cierres puros** ("ya hemos dejado el Dúplex", "gracias por todo",
   "everything was perfect"…) se auto-envían **sin depender del contador de graduación por categoría** — son
