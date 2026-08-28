@@ -32,6 +32,15 @@
 
 ---
 
+### 💵 (28/08/2026) El dinero de la cartera paper, en la tarjeta donde Alberto mira
+- Continuación del PR #1831: las cifras en dólares SÍ estaban desplegadas, pero en la sección
+  «📦 Cartera paper» de más abajo, y Alberto preguntaba desde el hero «📊 Rentabilidad de la
+  cartera (paper)». Lección: **una cifra que existe pero no está donde se pregunta, para el
+  usuario no existe.** Ahora el hero lleva su propio bloque: invertido → valor → ganado/perdido.
+- Van **separados y etiquetados** a propósito: la cifra grande del hero es la CESTA CONGELADA
+  (experimento de medición), el bloque nuevo son las POSICIONES simuladas del agente. Mismo
+  helper `lib/trading/posiciones-paper.ts`, sin queries nuevas.
+
 ### 📦 (28/08/2026) Cartera paper en dólares (invertido/valor/P&L) + fecha de la medición del hero
 - Alberto preguntó si el hero «Rentabilidad de la cartera (paper)» estaba bien y actualizado.
   **Las cifras cuadran byte a byte con `trading_paper_track`** (cohorte `2026-07-18.v1`, fila del

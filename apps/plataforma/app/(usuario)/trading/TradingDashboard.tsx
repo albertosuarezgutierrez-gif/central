@@ -476,6 +476,31 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
               </>
             )
           })()}
+          {/* 💵 EL DINERO, en la tarjeta donde se mira (Alberto, 28/08/2026: «quiero ver la cartera paper
+              en dólares, cantidad invertida y lo que va ganando o perdiendo»). La cifra grande de arriba
+              es la CESTA CONGELADA (un experimento de medición, no posiciones); esto de aquí es lo que el
+              agente tiene comprado de verdad en simulado. Son dos cosas distintas, así que van separadas
+              y etiquetadas — el detalle por posición sigue en «📦 Cartera paper» más abajo. */}
+          {posiciones.length > 0 && (
+            <div style={{ borderTop: '1px solid var(--border)', marginTop: 10, paddingTop: 8 }}>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>📦 Y lo que el agente tiene COMPRADO ahora (simulado, en dólares — no es la cesta de arriba):</div>
+              <div style={{ fontSize: 15, marginTop: 2 }}>
+                Invertido <strong>{usd(resPaper.invertidoTotal)}</strong>
+                {resPaper.valor != null ? (
+                  <> → vale <strong>{usd(resPaper.valor)}</strong>{' '}
+                    <strong style={{ color: (resPaper.pnl ?? 0) >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+                      {resPaper.pnl != null ? <>{resPaper.pnl >= 0 ? '+' : ''}{usd(resPaper.pnl)} ({pctN(resPaper.rentabilidad)})</> : null}
+                    </strong>
+                  </>
+                ) : (
+                  <span style={{ color: 'var(--muted)' }}> — sin precio ahora mismo para valorarla (es «no lo sé», no un 0)</span>
+                )}
+              </div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+                {resPaper.n} posiciones abiertas{resPaper.completo ? '' : ` (${resPaper.nValoradas}/${resPaper.n} valoradas — total PARCIAL)`} · no realizado, nada vendido · detalle por posición en «📦 Cartera paper» abajo.
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
