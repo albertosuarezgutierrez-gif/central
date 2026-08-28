@@ -40,7 +40,11 @@ EOL el **26/08 09:00 UTC** (410; último ✅ de la sonda 26/08 07:03) — tercer
 Arreglado el edge function: sin IA se manda el briefing EN CRUDO con el motivo (antes se perdían los
 datos ya calculados), el modelo sale de `NVIDIA_BRAIN_MODEL`, las alertas de stock leen la vista real
 (`almacen` no existe → «sin alertas» era mentira diaria) y el sello `last_run` usa las columnas reales.
-**Pendiente de decidir:** swap de NIM vs. gatearlo como Gemini (OpenRouter sirve ya el 100%). PR draft.
+PR #1818 **mergeado**, edge function **redesplegada (v24) y probada en vivo**: HTTP 200, briefing en crudo
+a Telegram y el sello `last_run` escrito **por primera vez en su historia**. La ejecución real confirma el
+diagnóstico y añade el dato que faltaba: **faltan LAS DOS envs** (`PLATAFORMA_URL` + `AI_GATEWAY_SECRET`);
+`NVIDIA_API_KEY` sí está. **Pendiente de Alberto:** poner esas dos envs (mete el briefing en OpenRouter) y
+decidir swap de NIM vs. gatearlo como Gemini (OpenRouter sirve ya el 100% del tráfico).
 
 ### 🎢 (27/08/2026) La segunda llave funciona — y Luxury no sube a ciegas: OSCILA
 Primera pasada con la segunda llave (14:30, deploy READY 09:29 → las 494 noches de las 08:30 son de
