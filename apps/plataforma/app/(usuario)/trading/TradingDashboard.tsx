@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db'
 import { eur, eurSinDecimales } from '@/lib/dinero'
 import { curvaEnEuros, CAPITAL_ESTUDIO_EUR } from '@/lib/trading/cartera-estudio'
 import { puntosDiarios } from '@/lib/trading/precios-stooq'
-import { preciosVivos, precioVivoFiable, conPrecioVivo, type PrecioVivo } from '@/lib/trading/precio-vivo'
+import { preciosVivos, precioVivoFiable, conPrecioVivo, simboloYahoo, type PrecioVivo } from '@/lib/trading/precio-vivo'
 import ActualizarConsulta from './ActualizarConsulta'
 import { neutralizarUniverso } from '@/lib/trading/calidad-datos'
 import { etiquetaConcentracion, type ParCorrelacionado } from '@/lib/trading/concentracion'
@@ -281,8 +281,15 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
   // Best-effort con presupuesto corto: sin precio → null y se DECLARA («—»), nunca un 0 ni la
   // entrada disfrazada de precio de hoy. NADA de esto se persiste (el track record se puntúa por
   // la cadena vigilada de precios-guardia, no por lo que pinta el panel).
-  const simbolosReal = carteraReal != null && carteraReal !== 'error' ? carteraReal.posiciones.map(p => p.simbolo) : []
-  const simbolosVivos = [...new Set([...posiciones.map(p => p.simbolo), ...simbolosReal])]
+  // ⚠️ A Yahoo se le pregunta por el símbolo CUALIFICADO por mercado (`VWCE @IBIS2` → `VWCE.DE`):
+  // el ticker pelado de un UCITS europeo devuelve 404 y la posición se quedaba con la foto de
+  // anoche. `simboloYahoo` solo añade sufijo con el mercado en tabla verificada y la divisa
+  // cuadrando; para las acciones USA (paper y CVX) devuelve el ticker tal cual.
+  const consultaVivo = new Map<string, string>()
+  if (carteraReal != null && carteraReal !== 'error') {
+    for (const p of carteraReal.posiciones) consultaVivo.set(p.simbolo, simboloYahoo(p))
+  }
+  const simbolosVivos = [...new Set([...posiciones.map(p => p.simbolo), ...consultaVivo.values()])]
   const [vivos, cierresPaper] = await Promise.all([
     simbolosVivos.length ? preciosVivos(simbolosVivos, 3000) : Promise.resolve(new Map<string, PrecioVivo | null>()),
     posiciones.length
@@ -307,7 +314,7 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
   // 💼 Cartera real re-valorada con el vivo SOLO si divisa y banda ×2 cuadran (conPrecioVivo);
   // si no, la posición queda intacta con la última lectura de IBKR, y se declara cuál es cuál.
   const carteraRealVivo = carteraReal != null && carteraReal !== 'error'
-    ? carteraReal.posiciones.map(p => conPrecioVivo(p, vivos.get(p.simbolo)))
+    ? carteraReal.posiciones.map(p => conPrecioVivo(p, vivos.get(consultaVivo.get(p.simbolo) ?? p.simbolo)))
     : []
   const numVivosReal = carteraRealVivo.filter(x => x.esVivo).length
   // Hora del último precio negociado entre los vivos traídos (para declarar la frescura en el pie).
