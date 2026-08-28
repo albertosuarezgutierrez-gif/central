@@ -8,6 +8,9 @@ import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
 import { logMensaje, registrarGap } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
 import { esEcoPropio } from './atribucion'
+import { importeSospechoso } from './extras'
+import { intentarCobroAutomatico } from '@/lib/sivra/extras/cobro-auto'
+import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
@@ -100,6 +103,16 @@ export async function procesarMensajeHuesped(
     const categoria = detectCategory(pregunta) || 'general'
     const ctx = { ...ctx0, lang }
 
+    // 1-bis) ¿Es el «sí» a un extra que Alberto ya aprobó en este hilo? Entonces la respuesta es el
+    // enlace de pago y no hay borrador que redactar. Todas las guardas viven en `intentarCobroAutomatico`
+    // (fila `ofrecido` creada por el ✅ + aceptación limpia + importe de catálogo); cualquier duda
+    // devuelve `enviado:false` y el mensaje sigue su camino normal hacia Telegram.
+    const cobro = await intentarCobroAutomatico(ctx, pregunta)
+    if (cobro.enviado) {
+      await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: 'extra_cobro', pregunta, respuesta: '(enlace de pago)', fuente: 'catalogo', confidence: 1, sentimiento: 'neutro', needs_human: false, auto_sent: true, edited: false })
+      return { accion: 'cobro_enlace_enviado' }
+    }
+
     // 2) Recomendaciones → búsqueda web; resto → decisión IA con grounding.
     let dec: Decision
     if (categoria === 'faq' || RE_RECO.test(pregunta)) {
@@ -116,6 +129,23 @@ export async function procesarMensajeHuesped(
     if (dec.needs_human && !dec.apoyada_en_fuente && dec.categoria !== 'recomendacion'
         && dec.sentimiento !== 'negativo' && /no cubre|no se pudo verificar/.test(dec.motivo || '')) {
       await registrarGap(ctx.propertyId, pregunta)
+    }
+
+    // 2-bis) 🚨 GUARDRAIL DEL IMPORTE. El precio de un extra sale del catálogo y de ningún otro
+    // sitio; si el borrador menciona una cifra en euros que no cuadra con él, es una cifra que se ha
+    // inventado el modelo (o que arrastra de una guía desactualizada) y NO puede salir sola.
+    if (dec.reply) {
+      const precios = await preciosVigentes(ctx.propertyId)
+      // `null` = no se pudo LEER el catálogo. No se puede validar el importe, así que tampoco se
+      // puede afirmar que sea bueno: escala igual, pero diciendo la verdad de por qué.
+      const sospechoso = precios === null ? null : importeSospechoso(dec.reply, precios)
+      const noVerificable = precios === null && importeSospechoso(dec.reply, []) !== null
+      if (sospechoso !== null || noVerificable) {
+        dec.needs_human = true
+        dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}` + (noVerificable
+          ? 'Menciona un importe y NO he podido leer el catálogo de extras para comprobarlo.'
+          : 'Menciona un importe que no está en el catálogo de extras — revísalo antes de enviarlo.')
+      }
     }
 
     // 3) ¿Auto-envío o propuesta por Telegram?

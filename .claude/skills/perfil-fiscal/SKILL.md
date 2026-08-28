@@ -24,6 +24,14 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
   para ella salvo instrucción explícita. La cuota de autónomos (RETA) SÍ se registra siempre
   (`subcategoria='cuota_autonomos'`): es su cotización obligatoria, no una "deducción" opcional que se
   pueda desplazar a Alberto.
+- **Extras cobrados al huésped (SIVRA — cuna+trona, 20€/estancia; dictado 28/08/2026):** Alberto dicta
+  que **suman en contabilidad pero NO se declaran en renta**, y que van **sin IVA**. Decisión **CERRADA
+  por él, sin pasar por Asecon**: se le planteó que «sin IVA» y «no tributa en IRPF» son preguntas
+  distintas y la descartó (importes pequeños, cobro a su cuenta personal). Los agentes fiscales
+  (`fiscal-novedades`, `facturas-correo`) **no suman estos ingresos al cálculo de IRPF**.
+  Lo que SÍ se conserva pase lo que pase: cada extra queda **identificado uno a uno** en `incomes`
+  (etiqueta de extra) y el tipo de IVA vive en `sivra_extras_catalogo.iva_pct` — nada cableado, nada
+  borrado, así que revertir el criterio es editar una fila y los importes ya están todos ahí.
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
 - **⚠️ LANDMINE — NUNCA crear una `regla` global para `AYTO SEVILLA`/`RECIBO AYTO. SEVILLA`:** el mismo concepto vale para un piso turístico (deducible) y para la vivienda habitual (personal) → una regla por concepto clasificaría mal. Casar **caso a caso** por importe/fecha/cuenta.
 - **Bizum** → SIEMPRE **personal** (regla pura en `lib/destino.ts`, auto-confirmado → no pide revisión).

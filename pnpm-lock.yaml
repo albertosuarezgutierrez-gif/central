@@ -555,6 +555,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-payments':
+        specifier: workspace:*
+        version: link:../../packages/core-payments
       '@central/core-telegram':
         specifier: workspace:*
         version: link:../../packages/core-telegram

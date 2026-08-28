@@ -308,6 +308,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'La avería sería que no hubiera latido. Huella: agente_latidos.sivra_pricing_apply.',
   },
   {
+    id: 'sivra_extras_impago',
+    etiqueta: '🍼 Extras del huésped, cobros pendientes (diario 07:00)',
+    // Cron diario → 30 h, el umbral de los diarios: deja pasar una pasada saltada sin dar la lata.
+    maxHoras: 30,
+    nota:
+      'Nadie está vigilando los extras cobrados a medias. Lo que se pierde con este cron mudo NO es ' +
+      'el cobro (el enlace de Stripe sigue vivo y el webhook seguiría marcando el pago), sino las dos ' +
+      'cosas que dependen del tiempo: el recordatorio de las 24 h al huésped que no pagó, y el aviso a ' +
+      'Alberto cuando quedan 48 h para la entrada y el extra sigue sin cobrar. O sea, el riesgo es un ' +
+      'huésped que llega esperando una cuna que nadie va a montar porque nunca pagó y nadie se enteró. ' +
+      '⚠️ «0 pendiente(s)» NO es una avería: es que no hay ningún enlace esperando cobro, que es lo ' +
+      'normal. La avería sería que no hubiera latido. Huella: agente_latidos.sivra_extras_impago.',
+  },
+  {
     id: 'sivra_pricing_guard',
     etiqueta: '🛡️ Guardián de precios (diario 07:30)',
     // Cron diario → 30 h deja pasar una pasada saltada sin dar la lata.
