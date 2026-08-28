@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-28 · facturas-correo** · hizo: Vía B sana (dias_caido=0), sin backlog en
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (verificado por `search_threads`, no por el
+  contador de `list_labels`). 4 candidatos de correo: Amazon (mochila escolar) y colegio
+  (info comedor) → personal/no-factura, Mercadona vía Pilar (237,06€, entrega Monte Carmelo)
+  → personal (se quita `Extraccion-fallida`, ya resuelto). Barrido Paso 4.0: conciliada DIGI
+  agosto (76€, turistico_pisos, único cargo exacto); resto del backlog (`Pepephone` ene-jun,
+  `Giraldillo` mayo, `CREATE-Socorro` jun) ya estaba `revisada_sin_cargo`, no reabierto.
+  dudas: recibo Fly.io ($6,68) reenviado por Manuel Suárez (info@manuelsuarez.es) a Alberto,
+  originalmente a manuelsuarezz@gmail.com — no encaja en ningún destino conocido, dejado en
+  `Facturas/Revisar` para que Alberto diga si es gasto suyo (¿hosting del CRM de asegura?) o
+  solo FYI de Manuel; fallos: —; PRs/commits: —
 - **2026-08-28 · mercado-booking** · hizo: pasada diaria completa. Plan pedía 24 ventanas de
   mercado (de 572 candidatas, todas ronda 1/evento — Sevilla FC-R.Sociedad mar-27, San José,
   Semana Santa abr-27 —, tope max=24 dejó 548 fuera) + 4 de escaparate propio; medidas las 24 de
@@ -25,7 +36,6 @@
   sin disponibilidad en Booking para su fecha de refresco (24-ago-27) → 1 hueco, no error del
   conector. 6 meses siguen sin bucket elegible (aviso del propio plan: 2026-08, 2027-04/05/06/
   07/08). Latido `ok:true`. dudas: —; fallos: —; PRs/commits: — (solo Supabase, sin tocar código).
-
 - **2026-08-27 · mercado-booking** · hizo: pasada diaria completa. Plan pedía 24 ventanas de
   mercado (de 572 candidatas, todas ronda 1/evento — Betis-Sevilla nov, calendario feb-27, Semana
   Santa abr-27 —, tope max=24 dejó 548 fuera) + 4 de escaparate propio; medidas las 24 de mercado
