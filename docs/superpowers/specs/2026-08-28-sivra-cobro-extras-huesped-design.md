@@ -29,7 +29,7 @@ cosa, o al revés. Actualizar la doc del agente es parte de este trabajo.
 | Decisión | Elegido |
 |---|---|
 | Pasarela | **Stripe propio** (no el enlace de Smoobu): lo importante no es cobrar, es *saber* que ha pagado — sin webhook, «pagado» sería un NULL disfrazado y el aviso a limpieza seguiría siendo manual |
-| Entidad que cobra | **Alberto persona física** (los pisos), payout a **Kutxa ****0855** para los cuatro; la imputación por piso va por metadata |
+| Entidad que cobra | **Alberto persona física** (los pisos), payout a **BBVA ****1175** para los cuatro; la imputación por piso va por metadata |
 | Catálogo | Un solo extra el día 1 — **cuna + trona juntas, 20€ por estancia, igual en los 4 pisos** — pero **el catálogo vive en BD y es extensible** |
 | IVA | **Sin IVA** (dictado por Alberto) |
 | Logística | La cuna y la trona **son nuestras y ya están en el piso/trastero**: el aviso es «móntala», no «consíguela» |
@@ -179,7 +179,21 @@ identificados uno a uno.
   uno a uno y se corrige sin tocar código.
 - **Booking/Airbnb**: cobrar un extra fuera del canal está permitido para servicios no incluidos en la
   reserva, pero es un cambio de práctica que conviene tener presente.
-- **Alta de Stripe**: hace falta cuenta y KYC de persona física con payout a Kutxa ****0855 antes de
-  que nada de esto cobre de verdad. Es trabajo de Alberto, no de código.
+- **Alta de Stripe: HECHA (28/08/2026).** Cuenta **`acct_1U9QrKKBmOvjQ2ll` («Sivra»)**, livemode, EUR,
+  **separada de ia.rest (`acct_1TU6YXK5xixGkeRI`) y de ialimp (`acct_1TdviDGSyhV58RbM`)**. Webhook
+  `we_1U9QwvKBmOvjQ2ll7xWJQqF3` → `/api/sivra/extras/webhook`, evento `checkout.session.completed`.
+  Faltan las dos envs en el proyecto Vercel `plataforma` y ejecutar el SQL en Supabase.
+
+- 🚨 **El payout es BBVA ****1175, NO Kutxa ****0855** (rectificado por Alberto el 28/08/2026; la spec
+  decía Kutxa). Consecuencia que hay que tener presente: ******1175 es la cuenta del Dúplex y de la
+  correduría**, no la de los tres pisos de Kutxa. O sea que el ingreso de un extra de House Sevillana
+  entra por un banco distinto al del alojamiento de ese mismo piso — la imputación por piso sigue
+  saliendo de `sivra_extras_reserva` (metadata de Stripe), no del banco, así que el P&L por piso no se
+  ve afectado; lo que cambia es dónde está el dinero.
+  ⚠️ **Y en el extracto:** `lib/destino.ts` clasifica los ABONOS de BBVA por concepto. Un payout de
+  Stripe no casa ningún patrón conocido, así que caerá a `personal` + `requiere_revision` y aparecerá
+  en la bandeja «🔎 Ingresos por revisar» de `/banca`. Es el comportamiento correcto (visible, no
+  silencioso), pero conviene saberlo para no leerlo como una avería. **NO crear una regla
+  `banca_destino_reglas` para «STRIPE»** sin comprobar antes `claveReglaValida`.
 - **Doc del agente desactualizada**: `contexto-y-agente-huesped.md` describe una graduación por
   categorías que ya no existe. Se corrige en este mismo trabajo.
