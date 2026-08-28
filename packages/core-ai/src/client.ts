@@ -5,11 +5,24 @@
 // Política de fallback de TEXTO (compartida por todas las verticales que usan este
 // wrapper, incluida la PASARELA de plataforma, cuyas rutas /api/ai/chat y /api/ai/tools
 // llaman aquí): OpenRouter (agregador con fallback nativo entre modelos, si hay key) →
-// NIM → Groq (gpt-oss-120b, gratis, otra infra) → Cerebras (gratis, infra WSE
-// independiente) → [Gemini, APAGADO por defecto]
+// [NIM, APAGADO por defecto] → Groq (gpt-oss-120b, gratis, otra infra) → Cerebras (gratis,
+// infra WSE independiente) → [Gemini, APAGADO por defecto]
 // → Kimi/Moonshot (de pago, último recurso). Cada eslabón queda inactivo si no está su
-// API key, sin romper nada: sin OPENROUTER_API_KEY la cadena es EXACTAMENTE la de
-// siempre. Objetivo: que "IA no disponible" sea casi imposible.
+// API key, sin romper nada. Objetivo: que "IA no disponible" sea casi imposible.
+//
+// 🚨 NVIDIA NIM APAGADO POR DEFECTO (28/08/2026). Decisión de Alberto: «ya NIM nada, todo
+// OpenRouter». El motivo no es una avería puntual sino un patrón medido: TRES ids de NIM
+// muertos por EOL en 11 días —`meta/llama-4-maverick-17b-128e-instruct` (17/08),
+// `z-ai/glm-5.2` (21/08) y `meta/llama-3.1-70b-instruct` (EOL 2026-08-26T09:00, 410 Gone)—
+// y cada muerte costaba un PR de ~15 ficheros más el redespliegue de 5 edge functions.
+// Enfrente, el dato de `ai_usos`: en los 7 días previos a la decisión OpenRouter sirvió el
+// 100% del tráfico de texto con éxito y NIM no sirvió ni una sola respuesta real (solo su
+// propia sonda). Un eslabón que no salva ninguna llamada pero exige mantenimiento semanal
+// no es resiliencia, es deuda. Mismo tratamiento que Gemini el 02/08: el código se conserva
+// ENTERO y el eslabón se reactiva con `NVIDIA_TEXTO=1` + `NVIDIA_BRAIN_MODEL` (un id vivo,
+// verificado con llamada real — la ficha del catálogo NO prueba que el modelo viva).
+//
+// ⚠️ Esto NO toca la VISIÓN (`nimVision`), que usa otro modelo y no consta muerto.
 //
 // 🚨 GEMINI APAGADO POR DEFECTO (02/08/2026). Hallazgo del health-check (Check 12):
 // `GEMINI_API_KEY` acumulaba 544 llamadas en 30 días y CERO éxitos (429 de cuota en todos
@@ -47,10 +60,20 @@ const DEFAULT_MOONSHOT_MODEL = 'kimi-k2.6'
 // `gemini-2.5-flash` da 404 en la API directa desde el 09/07/2026; alias rodante vigente.
 const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest'
 
+/**
+ * ¿Está el eslabón NIM enchufado? APAGADO por defecto (ver cabecera): requiere `NVIDIA_TEXTO=1`
+ * ADEMÁS de la key. Se exige también un `NVIDIA_BRAIN_MODEL` explícito porque `DEFAULT_MODEL`
+ * está MUERTO (410 desde el 26/08/2026): reactivar sin nombrar un id vivo solo compraría el
+ * mismo 410 otra vez, y esta función es la que decide si se gasta la llamada.
+ */
+function nimActivo(): boolean {
+  return process.env.NVIDIA_TEXTO === '1' && !!process.env.NVIDIA_API_KEY && !!process.env.NVIDIA_BRAIN_MODEL
+}
+
 function envConfig(model?: string): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY
   if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada')
-  return { apiKey, textModel: model ?? DEFAULT_MODEL }
+  return { apiKey, textModel: model ?? process.env.NVIDIA_BRAIN_MODEL ?? DEFAULT_MODEL }
 }
 
 // Config Groq de fallback desde el entorno. Devuelve null si no hay GROQ_API_KEY (el
@@ -158,16 +181,23 @@ export async function aiCompleteConProveedor(
     : promptOrMessages
   const sig = () => (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined)
   const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
-  // Primario: OpenRouter (solo sin modelo NIM pinneado — ids incompatibles). Su fallback nativo
-  // `models` ya prueba varios modelos dentro de la misma petición; si aun así falla, cadena directa.
+  // Primario: OpenRouter. Su fallback nativo `models` ya prueba varios modelos dentro de la misma
+  // petición; si aun así falla, cadena directa.
+  // El `model` pinneado (id de NIM) solo lo aparta cuando NIM está REALMENTE enchufado: con NIM
+  // apagado ese id no lo puede servir nadie, así que respetarlo solo conseguiría saltarse el único
+  // proveedor vivo. Era el fallo que rompía a rrhh y a ia-rest, que pinnean el 70B muerto.
   const openrouter = options.skipOpenRouter ? null : openrouterEnvConfig()
-  if (openrouter && !model) {
+  const nimEnabled = nimActivo()
+  if (openrouter && (!model || !nimEnabled)) {
     try {
       const res = await openrouterChatEx(openrouter, messages, { system, maxTokens, temperature, signal: sig() })
       return { text: res.text, proveedor: 'openrouter', modelo: res.model }
     } catch (eOr) { console.warn(`[aiComplete] OpenRouter (primario) falló: ${msg(eOr)}; probando cadena directa`) }
   }
   try {
+    // Apagado por defecto (ver cabecera). Se lanza en vez de ramificar para no duplicar la cadena
+    // de fallbacks entera: el motivo viaja en el error y acaba en el log igual que un fallo real.
+    if (!nimEnabled) throw new Error('NIM inactivo: apagado por defecto el 28/08/2026 (requiere NVIDIA_TEXTO=1 + NVIDIA_BRAIN_MODEL con un id vivo)')
     const cfgNim = envConfig(model)
     const text = await nimChat(cfgNim, messages, { system, maxTokens, temperature, signal: sig() })
     return { text, proveedor: 'nim', modelo: cfgNim.textModel ?? DEFAULT_MODEL }
@@ -211,7 +241,7 @@ export async function aiCompleteConProveedor(
     // Fallback 4: OpenRouter si NO se probó como primario (caller con modelo NIM pinneado).
     // Usa SU modelo por defecto: en un escenario de fallo total, una respuesta de otro modelo
     // vale más que "IA no disponible" (misma filosofía que el salto a Groq/Gemini).
-    if (openrouter && model) {
+    if (openrouter && model && nimEnabled) {
       try {
         const res = await openrouterChatEx(openrouter, messages, { system, maxTokens, temperature, signal: sig() })
         return { text: res.text, proveedor: 'openrouter', modelo: res.model }
@@ -273,8 +303,11 @@ export async function aiToolsConProveedor(
   tools: unknown[],
   options: { system?: string; maxTokens?: number; model?: string; skipOpenRouter?: boolean } = {},
 ): Promise<AiToolsResult> {
+  // Mismo criterio que en `aiCompleteConProveedor`: con NIM apagado, un `model` pinneado (id de
+  // NIM) no aparta a OpenRouter — nadie más puede servir ese id.
   const openrouter = options.skipOpenRouter ? null : openrouterEnvConfig()
-  if (openrouter && !options.model) {
+  const nimEnabled = nimActivo()
+  if (openrouter && (!options.model || !nimEnabled)) {
     try {
       const res = await openrouterChatTools(openrouter, messages, tools, {
         system: options.system,
@@ -283,8 +316,9 @@ export async function aiToolsConProveedor(
       return { content: res.content, tool_calls: res.tool_calls, proveedor: 'openrouter', modelo: res.model }
     } catch { /* cae a la cadena directa NIM → Groq */ }
   }
-  const cfgNim = envConfig(options.model)
   try {
+    if (!nimEnabled) throw new Error('NIM inactivo: apagado por defecto el 28/08/2026 (requiere NVIDIA_TEXTO=1 + NVIDIA_BRAIN_MODEL con un id vivo)')
+    const cfgNim = envConfig(options.model)
     const res = await nimChatTools(cfgNim, messages, tools, {
       system: options.system,
       model: options.model,
