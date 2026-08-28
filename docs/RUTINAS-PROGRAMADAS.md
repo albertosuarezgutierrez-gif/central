@@ -171,7 +171,7 @@ caza lo que las sesiones del día no anotaron a mano.
 |---|---|
 | **Cuándo** | Diaria, **10:30 CEST (08:30 UTC)** — cron real del trigger `trig_01Sr5KXErpEhGCtT1F16hv4W`, cambiado el **27/08/2026 16:21 UTC** (antes 05:30 CEST / 03:30 UTC). ⚠️ Este doc decía 03:30 hasta el 28/08 y eso casi produce una falsa alarma: al ver que a las 07:00 UTC no había corpus del día se leyó como «lleva 3,5 h de retraso» cuando sencillamente aún no le tocaba. **El cron que manda es el del trigger, no el de esta tabla** — compruébalo con `list_triggers` antes de declarar un retraso. La razón que justificaba las 03:30 («media hora después del barrido de las 03:00 UTC») **ya no existe**: ese barrido de Serper se apagó el 24/08/2026. Ahora coincide de minuto con la pasada de `apply-auto` de las 08:30, lo cual es inocuo desde el PR #1811: el ancla sale de una ventana acumulada de 30 días, así que los comps del día pesan ~4% y los recoge la pasada de 14:30. |
 | **Prompt** | `Ejecuta la skill mercado-booking` |
-| **MCPs / envs** | **Booking.com y NADA MÁS** (obligatorio; el formulario trae 16 conectores heredados — quitar los otros 15, ver paso 4 de "Cómo se crea un trigger"). GitHub va nativo por el repo; las 3 llamadas a plataforma son HTTPS con Bearer, no necesitan conector. · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
+| **MCPs / envs** | **Booking.com y NADA MÁS** (obligatorio; el formulario trae 16 conectores heredados — quitar los otros 15, ver paso 4 de "Cómo se crea un trigger"). GitHub va nativo por el repo; las 3 llamadas a plataforma son HTTPS con Bearer, no necesitan conector. · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). 🔴 **MEDIDO EL 28/08/2026: esta rutina tiene `ALERTA_TOKEN` VACÍO** (Alberto, por Claude Chrome) — es la única de las seis miradas que lo tiene así. ⚠️ Y eso **desmiente la frase que seguía aquí** («sin esas dos envs no puede ni pedir el plan ni escribir»): lleva **20 días escribiendo 240 filas diarias** con el token vacío, así que el camino de DATOS no depende de él. Lo que queda sin comprobar es qué rompe exactamente: lo más probable es solo su aviso de Telegram. **No se ha verificado**, así que no se afirma. ~~Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo.~~ (frase original, DESMENTIDA por la medición de arriba — se deja tachada para que se vea que estuvo ahí y por qué era falsa). |
 | **Qué hace** | Pide a `GET /api/sivra/mercado/plan?max=12` las ventanas (fecha × aforo) con el corpus fiable más viejo, las mide con el conector de Booking (`number_of_adults` = aforo real del piso), y escribe los comparables en `market_rates` por `POST /api/sivra/mercado/ingest` con **`fuente:"booking_mcp"`**. Cierra con `POST /api/internal/latido` (`sivra_mercado_booking`). |
 | **Por qué existe** | Es la **única** fuente que distingue temporada. El barrido por búsqueda web da precios de anuncio SIN fecha: medido el 06/08/2026 para el Dúplex el 4-sep, Serper decía p50 **171€** y el mercado real era **129€** (−33%), con los mismos comps repitiendo precio en agosto, noviembre y marzo. Ver `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`. |
 | **Verificar** | `SELECT checkin_date, guests, count(*) FROM market_rates WHERE fuente='booking_mcp' AND search_date >= CURRENT_DATE - 1 GROUP BY 1,2` + fila `sivra_mercado_booking` en `agente_latidos` con `ok=true`. |
@@ -348,6 +348,46 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | **Qué hace** | Mide sobre los datos del motor NUEVO (`applied_at >= 2026-08-27 19:00 UTC`): volatilidad del ancla, **% de noches oscilantes por piso** (el criterio de éxito), amplitud y los tres invariantes de seguridad. Compara contra la línea base y rellena la tabla de veredicto del documento. |
 | **Resultado** | PR con el documento cerrado + entrada de memoria. **Si la muestra es corta o el resultado es ambiguo, NO cierra: re-arma el seguimiento** unos días más. Un «parece que va mejor» sobre pocos días es justo lo que este repo trata como fallo. |
 | **Verificar** | La tabla «Veredicto» de `docs/SEGUIMIENTO-ancla-pricing.md` rellenada con fecha y cifras. |
+
+---
+
+## 🔑 `ALERTA_TOKEN` — dónde vive de verdad, y por qué rotarlo es el riesgo (28/08/2026)
+
+**El token va en TEXTO PLANO dentro del prompt de cada rutina** (línea `Variables de sesión:
+ALERTA_TOKEN=…`), replicado en seis rutinas conocidas. Lo levantó Alberto el 28/08/2026 revisando
+las rutinas con Claude Chrome, y la objeción es correcta en su parte importante.
+
+**Lo que YA estaba resuelto por diseño** (ver `apps/plataforma/CLAUDE.md`): `ALERTA_TOKEN` existe
+justamente *porque* tiene que viajar en prompts. Es un token **dedicado y de bajo privilegio** que
+solo abre `/api/internal/alerta`; sustituyó a `CRON_SECRET` —la llave maestra— en esa posición. Si
+se filtra, lo que se puede hacer con él es **mandarle un Telegram a Alberto**. El coste de la fuga
+ya se pagó a conciencia.
+
+**Lo que NO estaba resuelto, y es el hallazgo bueno: la ROTACIÓN.** El día que haya que cambiarlo
+hay que editar N prompts a mano, y basta olvidar uno para dejar un token vivo circulando. Eso no
+estaba escrito en ningún sitio. De ahí la tabla de abajo: **es la lista de rotación.**
+
+🚫 **Lo que NO se hace: quitar el token y que la rutina llame «sin secreto encima».** Se propuso y
+no vale — dejaría `/api/internal/alerta` **sin autenticar**, y entonces cualquiera con la URL puede
+mandarle Telegram a Alberto. Un secreto del lado del servidor solo ayuda si el llamante se puede
+autenticar por otra vía, y una rutina de Claude llamando desde una IP cualquiera no la tiene. El
+cambio sería un downgrade, no un upgrade. Si algún día molesta de verdad, la vía es acortar la vida
+del token o firmar la petición, no quitarla.
+
+### Quién lo lleva (estado medido el 28/08/2026, por hash — el valor NO se mostró ni se registró)
+
+| rutina | `ALERTA_TOKEN` |
+|---|---|
+| `buscador-ia` | ✅ valor bueno (referencia) |
+| `agentes-entrenador` | ✅ valor bueno (referencia) |
+| Vigía de conectores MCP (`trig_01Kf4G2s3rgDzr9GddwXjTNL`) | ✅ idéntico a las de referencia |
+| Radar España (`trig_01NLeiXPfS3PwwyVS4or7geo`) | ✅ idéntico |
+| Coordinador patrimonial (`trig_01NtNkTDWKX7UbDjkWYfQpuq`) | ✅ idéntico |
+| SIVRA mercado booking (`trig_01Sr5KXErpEhGCtT1F16hv4W`) | 🔴 **VACÍO** |
+
+⚠️ **Esta tabla NO es exhaustiva**: son las seis rutinas que se miraron ese día. Las envs de una
+rutina no se leen por API, así que al rotar hay que abrirlas TODAS en la UI y comprobarlas una a
+una — no fiarse de esta lista.
 
 ---
 
@@ -657,6 +697,10 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
     script. Lo cazó **abriendo la rutina ya guardada**, no mirando el formulario. Cuatro minutos
     así, 0 ejecuciones, sin acceso a nada. Regla: **el formulario no es evidencia, el estado
     guardado sí** — tras crear o editar una rutina, vuelve a abrirla y lee lo que quedó.
-    **Pendiente menor:** las tres llevan `ALERTA_TOKEN` con el placeholder literal, así que su
-    aviso de Telegram fallará con error de autenticación hasta que Alberto pegue el valor real
-    (está en las rutinas `buscador-ia` y `agentes-entrenador`).
+    ~~**Pendiente menor:** las tres llevan `ALERTA_TOKEN` con el placeholder literal…~~
+    ✅ **RESUELTO / era FALSO (28/08/2026).** Verificado por Alberto con Claude Chrome: las tres
+    tienen el valor BUENO. Se comparó su `ALERTA_TOKEN` contra el de `buscador-ia` y
+    `agentes-entrenador` **por hash**, sin mostrar ni registrar el valor: los cinco idénticos,
+    misma longitud. No había ningún relleno. Esta línea mandó a arreglar algo que no estaba roto —
+    **antes de dar por buena una env de una rutina, míralas; no lo deduzcas de lo que se escribió
+    el día del alta.**
