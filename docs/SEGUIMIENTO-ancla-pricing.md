@@ -213,3 +213,78 @@ FROM anc a JOIN pricing_settings s ON s.property_id=a.property_id;
 no solo simulado, y este documento se cierra con la fecha y las cifras. Si la muestra es corta o el
 resultado es ambiguo, **no se cierra**: se re-arma el seguimiento unos días más. Un «parece que va
 mejor» sobre 3 días de datos es exactamente el tipo de afirmación que este repo trata como un fallo.
+
+---
+
+## Añadido el 28/08/2026 — dos huecos de la medición, tapados
+
+### 1. La atribución: `pricing_applied.base_fuente` / `.ancla_origen`
+
+El seguimiento tal y como estaba escrito arriba solo podía medir el AGREGADO: vería que el precio
+oscila menos, pero **no podría atribuir la mejora a la rama que se tocó**. Y una mejora que no se
+puede atribuir es indistinguible de un mercado que esa semana estuvo tranquilo — justo el tipo de
+conclusión que este repo trata como un fallo.
+
+Faltaba el dato por noche. El PR #1811 dejó `ancla_global` en la RESPUESTA HTTP del apply, que no
+persiste en ningún sitio. Migración `2026-08-28_pricing_applied_ancla.sql` (aplicada):
+
+| columna | qué dice | valores |
+|---|---|---|
+| `base_fuente` | de qué salió la base de ESA noche | `'mes'` (bucket del mes) · `'global'` (**la rama que oscilaba**) |
+| `ancla_origen` | qué ancla global tenía el PISO en esa pasada | `'acumulada_fiable'` · `'acumulada_mixta'` · `'pasada'` (fallback viejo) |
+
+🚨 **`NULL` = «esa fila es anterior a la columna», NUNCA «usó el ancla global».** Es la mayoría del
+histórico, **incluidas las pasadas nuevas del 27 y 28/08**: de esas se sabe por fuera que usaron el
+ancla acumulada (los 4 pisos cumplían `MIN_FECHAS_ANCLA`), pero eso es una inferencia, no un dato de
+la fila. Toda consulta de abajo filtra `base_fuente IS NOT NULL` en vez de coalescer. Lo vigila
+`lib/sivra/pricing-applied-ancla.test.ts` (6 tests, probado en rojo contra dos mutaciones reales:
+columna sin valor en el INSERT, y `base_fuente` re-derivada de `mb` en vez de `useMonth`).
+
+```sql
+-- (D) Oscilación SEPARADA por rama. Es la consulta que cierra el documento:
+--     si 'global' deja de oscilar y 'mes' se queda como estaba, la mejora ES del ancla.
+WITH pts AS (
+  SELECT property_id, rate_date, applied_at, new_price, base_fuente
+  FROM pricing_applied
+  WHERE dry_run=false AND base_fuente IS NOT NULL      -- NUNCA COALESCE: NULL = sin instrumentar
+),
+dir AS (
+  SELECT base_fuente, property_id, rate_date, new_price,
+         SIGN(new_price - LAG(new_price) OVER w) s
+  FROM pts WINDOW w AS (PARTITION BY property_id, rate_date ORDER BY applied_at)
+),
+giro AS (
+  SELECT base_fuente, property_id, rate_date, new_price,
+         CASE WHEN s<>0 AND LAG(s) OVER w<>0 AND s<>LAG(s) OVER w THEN 1 ELSE 0 END g
+  FROM dir WINDOW w AS (PARTITION BY property_id, rate_date ORDER BY rate_date)
+),
+n AS (
+  SELECT base_fuente, property_id, rate_date, COUNT(*) puntos, SUM(g) giros,
+         MAX(new_price)::numeric/NULLIF(MIN(new_price),0) amplitud
+  FROM giro GROUP BY base_fuente, property_id, rate_date
+)
+SELECT base_fuente, COUNT(*) noches, ROUND(AVG(puntos),1) puntos_por_noche,
+       ROUND(100.0*SUM(giros)/NULLIF(SUM(GREATEST(puntos-2,0)),0),1) pct_transiciones_que_giran,
+       ROUND(AVG(amplitud),3) amplitud_media
+FROM n GROUP BY base_fuente ORDER BY base_fuente;
+```
+
+### 2. La métrica que SÍ da señal con pocos días: giros por TRANSICIÓN
+
+La métrica de arriba («noches con ≥3 giros en 7 días») necesita ≥4 escrituras por noche, o sea
+≥4 días. Con dos días **es aritméticamente imposible que dé un positivo**, así que un cero ahí no
+significa nada — y leerlo como éxito sería cantar victoria sobre una muestra vacía.
+
+`giros / (puntos − 2)` no depende del número de puntos, así que se puede comparar una ventana larga
+contra una corta. Baseline medida el 28/08 sobre el motor VIEJO (18→27/08, 1.338 noches):
+
+| | motor viejo (10 días) | motor nuevo (2 días) |
+|---|---|---|
+| escrituras por noche | 4,2 | 1,0 |
+| **transiciones que cambian de dirección** | **55,7%** | sin serie (n<3 puntos) |
+| amplitud media por noche | 1,340× | 1,004× |
+
+**El 55,7% es el retrato del serrucho:** más de la mitad de los cambios de precio del motor viejo
+eran una vuelta atrás sobre el cambio anterior, cada uno ≥3% (por debajo no se escribe). El motor
+nuevo todavía **no tiene serie con la que medirlo**: 1,0 escrituras por noche en dos días. Eso no es
+un resultado bueno ni malo, es la ausencia de muestra, y así hay que reportarlo hasta el 03/09.

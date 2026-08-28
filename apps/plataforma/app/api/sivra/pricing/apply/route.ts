@@ -726,6 +726,10 @@ export async function POST(req: NextRequest) {
       rate_date: string; old_price: number | null; new_price: number
       demanda_fuente: DemandaFechaResult["fuente"]; demanda_gateada: boolean
       antelacion_factor: number | null
+      // De qué ancla salió ESTA noche. Sin esto, el seguimiento del serrucho solo puede medir el
+      // agregado y no puede atribuir la mejora a la rama que se tocó (ver la migración
+      // 2026-08-28_pricing_applied_ancla.sql).
+      base_fuente: 'mes' | 'global'
     }[] = []
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
@@ -1071,6 +1075,9 @@ export async function POST(req: NextRequest) {
         // NULL = la palanca no llegó a evaluarse (apagada, sin antelación medida o muestra corta).
         // 1.00 = evaluada y sin premio. La diferencia es lo que separa «no tocaba» de «no se miró».
         antelacion_factor: antic.evaluado ? Number(antic.factor.toFixed(4)) : null,
+        // MISMO `useMonth` que eligió `baseD` doce lineas mas arriba: no se re-deriva aqui para que
+        // no puedan divergir. 'global' es la rama que oscilaba antes del PR #1811.
+        base_fuente: useMonth ? 'mes' : 'global',
       })
     }
 
@@ -1105,9 +1112,9 @@ export async function POST(req: NextRequest) {
     if (audit.length > 0 && anotable) {
       try {
         const auditRows = audit.map(a =>
-          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada}, ${a.antelacion_factor}::numeric)`)
+          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada}, ${a.antelacion_factor}::numeric, ${anclaOrigen}, ${a.base_fuente})`)
         await prisma.$executeRaw(Prisma.sql`
-          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada, antelacion_factor)
+          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada, antelacion_factor, ancla_origen, base_fuente)
           VALUES ${Prisma.join(auditRows)}`)
       } catch { /* no crítico */ }
     }
