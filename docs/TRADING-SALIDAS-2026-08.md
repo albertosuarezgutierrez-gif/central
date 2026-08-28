@@ -62,6 +62,34 @@ símbolo cada 2 h — el ciclo completo tarda días):
 Criterio de cableado (idéntico al de H9, sobre ≥5.000 observaciones): recortar batacazos ≥5 pp sin
 ceder más de 1 pp de mediana, **o** mejorar la mediana ≥2 pp sin subir los batacazos.
 
+## 🕰️ H12 (28/08/2026) — la cinta se corta en el día 91, y eso NO es «aguantar sale peor»
+
+Idea de Alberto: *«que una vez vendida siga analizando esa acción… por si vemos algo mejor de lo que
+tenemos»*. Al ir a mirarlo apareció un límite de la propia medición que conviene tener escrito:
+
+**Todo lo de arriba termina en el día 91.** `ret28/56/91` y las siete reglas de `salidas.ts` —que
+cuando no disparan se rellenan con el retorno del horizonte— viven dentro de esa ventana. Así que
+«la salida por tiempo gana» es cierto **entre las reglas medidas y dentro de 91 días**; que aguantar
+182 o 364 días sea mejor o peor **nunca se ha mirado**. 91 es el TECHO de la medición, no un ganador
+frente a horizontes que no se probaron.
+
+Desde hoy el retrovisor recoge también (`apps/plataforma/lib/trading/continuacion.ts`, puro y testeado):
+
+| campo | qué mide |
+|---|---|
+| `ret182` / `ret364` | retorno desde la MISMA entrada a horizontes largos |
+| `mfe364` / `mae364` | techo y suelo desde la entrada dentro de la ventana larga |
+| `diasMfe364` | cuándo se tocó el techo — distingue «vendimos pronto» de «vendimos tarde» |
+| `tendenciaVivaAlSalir` | al cerrar el día 91, ¿el precio seguía sobre su SMA50? |
+
+El **arrepentimiento no se guarda, se deriva**: como todas las reglas miden desde la misma entrada,
+`ret364 − salidaX` es exactamente lo que costó vender por la regla X en vez de aguantar.
+
+**Números: todavía ninguno.** El corpus se rellena símbolo a símbolo cada 2 h y la ventana de 364
+días solo existe para los snapshots con más de un año de vida. Criterios de cableado (dos, uno por
+pregunta) y caveats — ventanas solapadas, muestra desplazada hacia atrás — firmados en
+`TRADING-HIPOTESIS-PREREGISTRO.md` **antes** de ver un solo retorno largo.
+
 ## 🚨 El stop que está VIVO en el paper y no lo mide ninguna hipótesis
 
 `packages/module-trading/src/paper.ts` abre cada posición con un stop fijo a `entrada − 2·ATR14` y

@@ -538,6 +538,124 @@ precios de entrada (cierre IBKR del 18/07) y la ventana:
 - **Evaluación:** por estado de la tabla — ciclo completo con los cuatro campos nuevos presentes en
   ≥5.000 observaciones (no por fecha de calendario; lección del cron muerto del 19/07).
 
+## H11 — ¿De qué piscina deben salir las stats que ajustan la confianza del torneo? · firmada 2026-08-28, ANTES de mirar el resultado de las piscinas alternativas
+
+- **Origen:** Alberto, «¿ya el agente va mejorando?». Al comprobarlo salió una incoherencia INTERNA del
+  código, no una idea nueva: `torneo()` (`packages/module-trading/src/estrategias.ts`) **no aplica el
+  ajuste a las señales neutrales** (`if (!d || s.direccion === 'neutral') return s`) — pero
+  `trading_estrategia_stats`, de donde sale ese ajuste, se calcula sobre una piscina que es **82%
+  neutral**. Se aprende de lo que nunca se toca.
+- **Observación motivadora — POST-HOC, y por eso NO decide nada** (medida el 28/08/2026 sobre las 1.320
+  tesis puntuadas y no anuladas):
+
+  | dirección | n | acierto | retorno medio |
+  |---|---|---|---|
+  | alcista (lo ÚNICO que se compra) | 104 | 59,6% | +1,03% |
+  | neutral | 1.106 | 31,8% | 0,00% |
+  | bajista | 110 | 30,9% | −1,52% |
+
+  Las neutrales tienen retorno **0 por construcción** (`puntuarTesis` devuelve 0 para neutral) y su
+  acierto exige |movimiento| < 2% a 10 días. Hunden el agregado al 31-37% y hoy `ajustesDeStats`
+  penaliza a **las cuatro** estrategias: **momentum −15 · valor −13 · catalizador −8 · reversión −7**.
+  Esos deltas NO son cosméticos: `ganadora` es la señal no-neutral **con más confianza**
+  (`analizar/route.ts`), así que 8 puntos de diferencia entre estrategias cambian cuál gana el torneo.
+- **Hipótesis nula:** cambiar la piscina de la que salen las stats no mejora la decisión del torneo.
+- **Muestra disponible HOY** (solo RECUENTOS; el rendimiento por estrategia de las piscinas alternativas
+  **no se ha mirado** al firmar esto, que es lo que hace preregistrable a H11):
+
+  | estrategia | solo alcistas | direccionales (alc+baj) | todas (actual) |
+  |---|---|---|---|
+  | momentum | 79 | 120 | 330 |
+  | reversión | 12 | 51 | 330 |
+  | valor | 9 | 39 | 330 |
+  | catalizador | 4 | 4 | 330 |
+
+- **Alternativa CONSIDERADA Y DESCARTADA como piscina única: «solo alcistas».** Es la más pura («que
+  aprenda de lo que compra»), pero con `minN = 20` dejaría **a tres de las cuatro estrategias sin
+  ajuste** — el torneo pasaría a comparar una estrategia ajustada contra tres sin ajustar, que es un
+  sesgo peor que el que se quiere corregir. Se recolecta igualmente para poder mirarla, pero no es
+  candidata a cablearse mientras no tenga muestra.
+- **Recolección EN SOMBRA (sin cambio de comportamiento):** `/api/trading/puntuar` escribe además de
+  `regimen='todos'` (la que consume el torneo, INTACTA) dos filas más por estrategia:
+  `regimen='direccional'` (alcista+bajista) y `regimen='alcista'`. `/api/trading/analizar` sigue
+  leyendo **solo `'todos'`**, así que la decisión no cambia ni un punto mientras H11 no se resuelva.
+- **Condición de cableado — de COHERENCIA y MUESTRA, no de rendimiento.** No se finge un A/B que no se
+  puede correr (solo hay un camino vivo: cambiar la piscina cambia lo que se compra, así que las dos
+  ramas no son comparables a posteriori). Se cablea `regimen='direccional'` **si y solo si** se cumplen
+  las tres:
+  1. **Muestra:** ≥`minN` (20) observaciones direccionales en **≥3 de las 4** estrategias.
+  2. **Diferencia real:** el ORDEN por hit rate que induce esa piscina difiere del que induce `'todos'`
+     en al menos una posición. Si el orden es el mismo, el cambio es cosmético y **no se toca nada**.
+  3. **Guarda de daño:** la estrategia que ascienda al primer puesto **no** puede tener retorno medio
+     negativo en su piscina **alcista** — no se promociona al torneo una estrategia que pierde dinero
+     justo donde se ejecuta.
+- **Caveats firmados:**
+  - Los retornos de las bajistas ya vienen con el signo invertido de `puntuarTesis` (una bajista que
+    acierta una caída del 5% anota +5%), así que la piscina direccional es sumable sin corrección.
+  - `catalizador` tiene **4** observaciones direccionales y no va a cruzar `minN` pronto: seguirá sin
+    ajuste en la piscina nueva. Eso es correcto —no aprender de ruido— y NO cuenta para el requisito de
+    «≥3 de 4».
+  - Mismo régimen único (alcista) que el resto de lo medido; se re-mide con H6 si gira.
+  - `ajustesDeStats` y su `minN` **no se tocan** en H11: lo único a decidir es de qué filas salen los
+    números que consume.
+- **Evaluación:** por estado de la tabla — cuando `trading_estrategia_stats` tenga las filas
+  `direccional` con ≥20 observaciones en ≥3 estrategias (no por fecha de calendario).
+
+## H12 — ¿Y si NO vendemos? La cinta se corta en el día 91 · firmada 2026-08-28, ANTES de mirar un solo retorno largo
+
+- **Idea de Alberto (28/08/2026), literal:** «que se venda a los 91 días y ya está… pero también ver
+  qué pasaría en el caso de aguantar más, porque el 91 a lo mejor es el actual. Que una vez vendida
+  siga analizando esa acción, y que lo meta con indicadores, por si vemos algo mejor de lo que
+  tenemos y que dé mayor rentabilidad».
+- **El hueco, dicho con precisión:** TODO lo que mide el retrovisor termina en el día 91 —`ret28/56/91`
+  y las siete reglas de `salidas.ts`, que cuando no disparan **se rellenan con el retorno del
+  horizonte**—. Así que la afirmación «la salida por tiempo gana» (H9, reconfirmada el 28/08 sobre
+  183.093 observaciones) solo es cierta **entre las reglas medidas y dentro de esa ventana**. Que
+  aguantar 182 o 364 días sea mejor o peor **no se ha mirado nunca**. 91 es el TECHO de la medición,
+  no un ganador contra horizontes que no se probaron — y confundir esas dos cosas es exactamente el
+  «dato que no hay ≠ dato que no se ha mirado» del CLAUDE.md, aplicado a nuestra propia conclusión.
+- **Hipótesis nula:** alargar el horizonte no mejora el retorno, y `tendenciaVivaAlSalir` no separa
+  las operaciones en las que conviene aguantar de las que no.
+- **Qué se RECOLECTA** (módulo puro `apps/plataforma/lib/trading/continuacion.ts`, cableado al
+  snapshot del retrovisor junto a `simularSalidas`; nada decide nada):
+  - `ret182` y `ret364` — retorno desde la MISMA entrada a horizontes largos.
+  - `mfe364` / `mae364` / `diasMfe364` — techo, suelo y **cuándo** se tocó el techo. Distinguen
+    «vendimos pronto» (el techo estaba por venir) de «vendimos tarde» (el techo quedó atrás).
+  - `tendenciaVivaAlSalir` — al cerrar el día 91, ¿el precio seguía por encima de su SMA50? Es el
+    indicador que permite contrastar **«vender por tiempo SALVO que la tendencia siga viva»** contra
+    vender siempre. No es look-ahead: solo usa cierres anteriores a ese día.
+- **El arrepentimiento no se guarda, se deriva:** todas las reglas de `salidas.ts` miden desde la
+  misma entrada, así que **`ret364 − salidaX` es literalmente lo que costó vender por la regla X en
+  vez de aguantar**. No hace falta ninguna columna más.
+- **Condición de cableado — dos preguntas distintas, dos criterios distintos:**
+  1. **Alargar el horizonte para todos.** Se cablea 182 o 364 si, con **≥5.000** observaciones de ese
+     horizonte (mismo mínimo que H10): (a) su **mediana** supera a la de `ret91` en **≥2 pp**, **y**
+     (b) el **percentil 25 NO empeora** — no se compra una mejora de la mediana pagándola con la cola
+     mala. Si (a) se cumple y (b) no, se registra y **no se cablea**.
+  2. **Aguantar SOLO si la tendencia sigue viva.** Se cablea si, con **≥1.000** observaciones en CADA
+     subgrupo: la mediana de `ret364 − ret91` del grupo `tendenciaVivaAlSalir = true` supera a la del
+     grupo `false` en **≥5 pp**, **y** el grupo `true` mejora **≥2 pp** sobre vender en el día 91.
+     Que solo se cumpla la primera mitad significa que el indicador ordena pero no paga: no se cablea.
+- **Caveats firmados (van aquí para que no se puedan inventar después):**
+  - **Las ventanas se SOLAPAN.** Los snapshots son mensuales y el horizonte es de 12 meses: cada
+    observación comparte ~11/12 de su ventana con la siguiente. Las observaciones **no son
+    independientes**, así que no se calculan p-valores — se decide por MAGNITUD de la mediana, igual
+    que en H10. Es un caveat más fuerte aquí que allí (a 91 días el solape era de ~2/3).
+  - **La muestra larga excluye el último año POR CONSTRUCCIÓN** (un snapshot de hace 6 meses no puede
+    tener `ret364`). No es una muestra aleatoria del periodo: está desplazada hacia atrás. Cualquier
+    conclusión se lee con eso delante.
+  - **`margenDias` (98) NO se toca.** Subirlo a 371 para que todo snapshot tenga `ret364` borraría un
+    año entero de observaciones de `ret91` — rompería H9/H10 para no ganar nada: los `null` ya dicen
+    «todavía no».
+  - `mfe364`/`mae364` quedan en **NULL** mientras la ventana no esté completa: un máximo sobre media
+    ventana es una **cota inferior**, y publicarlo como «el techo» sería afirmar lo que no se ha visto.
+  - Solo se miden **estos** horizontes (182, 364) y **este** indicador (SMA50 el día de la salida).
+    Probar otro no es «afinar H12»: es una hipótesis nueva, fechada y firmada antes de mirar.
+  - El coste es CPU del retrovisor, no dinero: cada snapshot hace dos barridos más sobre la serie, así
+    que la rotación completa por símbolo tarda algo más. El presupuesto de la pasada ya lo absorbe.
+- **Evaluación:** por estado de los datos —cuando `trading_backtest` tenga ≥5.000 snapshots con
+  `ret364` no nulo—, no por fecha de calendario. La rotación es de días.
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*

@@ -1155,6 +1155,54 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
   uno que hoy no dio señal. Hermanas: `trading_*.precio_fuente` (procedencia, patrón `market_rates.fuente`),
   `ventana_dias` = días reales y no el horizonte declarado, y el aviso de salto del NAV >15% en `/saldo`
   (no bloquea: puede ser un ingreso real, pero con el NAV se dimensiona cada compra).
+- **📉 Reglas de SALIDA del paper: H10 firmada y midiendo, y el stop que sigue vivo contra H9
+  (28/08/2026, PR #1836).** Alberto pidió salida **no** por tiempo («ir subiendo el stop, o pérdida de
+  media») y que decidieran los datos. Medido primero sobre **183.093 observaciones** del retrovisor
+  (**8,6×** la muestra con la que se resolvió H9): la salida por TIEMPO sigue ganando (mediana **+3,12%**
+  frente a +0,45% del stop −10%, +2,75% del −20% y +1,22% del trailing −15%) — y **gana en los CINCO
+  quintiles de momentum**, lo que **REFUTA** el caveat de literatura que H9 dejó firmado («los stops
+  ayudan al momentum»): en Q5, que es justo lo que el agente compra, es donde más cuesta (−4,43 pp).
+  Ese corte por quintil es **post-hoc**: cierra el caveat, no autoriza a cablear nada.
+  - **H10** (firmada ANTES de recolectar un dato) mide las cuatro variantes que H9 nunca probó —
+    `salidaTrail25` (trailing ancho), `salidaCoste10` (stop a coste tras +10%), `salidaSma50` y
+    `salidaSma200` (pérdida de media)— por la MISMA máquina y con los mismos criterios de
+    entrada/horizonte que H9 (`lib/trading/salidas.ts`, comparación manzana-con-manzana contra `ret91`).
+    Las rellena el cron `trading-backtest`, que rota por símbolo cada 2 h: el ciclo completo tarda días.
+  - 🚨 **Dos trampas del módulo, las dos con test:** (a) las SMA se calculan **solo con los cierres ya
+    conocidos** en cada día simulado — con la serie completa sería look-ahead puro; (b) sin historia
+    suficiente, `salidaSma50/200` se quedan en **NULL** = «no se pudo evaluar», y NO se rellenan con el
+    retorno del horizonte: eso contaría como «la regla no vendió» una regla que nadie midió.
+  - **Evaluador** `lib/trading/h10.ts` (PURO) + cron semanal **`trading-h10`** (`40 8 * * 1`). El
+    criterio firmado tiene **una sola puerta** (`decidir`), entren los datos como observaciones sueltas
+    o como agregados de SQL, para que no puedan existir dos umbrales. Agrega **en SQL** a propósito: las
+    7 variantes × 183.093 snapshots serían ~1,3 M de filas dentro de una función serverless. `sin_muestra`
+    NUNCA se colapsa con `rechazada`. **El cron no cablea nada** — el cambio de política entra por PR.
+  - 🚨 **PENDIENTE DE DECISIÓN DE ALBERTO, y NO se tocó en ese PR:** `packages/module-trading/src/paper.ts`
+    abre cada posición con un stop a **`entrada − 2·ATR14`** y `/api/trading/puntuar` lo evalúa cada
+    noche, **pese a que H9 concluyó literalmente «no se ponen stops»**. Y la salida por TIEMPO que el pie
+    de «Cartera paper» promete **no está implementada**: el stop es la única salida del código (por eso
+    MSFT sigue abierta desde el 04/08 con horizonte de 10 días). Daño hasta hoy **cero** — 11 BUY y
+    **0 SELL** en `trading_paper_orden`, ningún stop ha saltado nunca: es una mina sin pisar, no un
+    agujero. Su retirada se rige por **H9 (ya resuelta)**, no por H10. Ojo al quitarlo: el stop no es
+    solo la salida, es también el **ancla del tamaño** de la posición (`dimensionar` reparte el 1% del
+    NAV según la distancia al stop), así que la distancia 2·ATR hay que conservarla como cálculo de
+    tamaño aunque nunca se venda por ella.
+  - **🕰️ H12 (28/08/2026, idea de Alberto): la cinta se cortaba en el día 91.** `ret28/56/91` y las
+    siete reglas de `salidas.ts` —que cuando no disparan se rellenan con el retorno del horizonte—
+    viven TODAS dentro de esa ventana, así que «la salida por tiempo gana» es cierto *entre las
+    reglas medidas y dentro de 91 días*: **que aguantar 182 o 364 días sea mejor o peor no se había
+    mirado nunca**. No es que saliera peor; es que 91 era el TECHO de la medición. El retrovisor
+    recoge ahora `ret182`/`ret364`, el techo y el suelo de la ventana larga (`mfe364`/`mae364`/
+    `diasMfe364`) y `tendenciaVivaAlSalir` (al cerrar el día 91, ¿el precio seguía sobre su SMA50?),
+    que es la pieza para contrastar «vender por tiempo SALVO que la tendencia siga viva».
+    Módulo puro `lib/trading/continuacion.ts`. **El arrepentimiento no se guarda, se deriva:** todas
+    las reglas miden desde la misma entrada, así que `ret364 − salidaX` ES lo que costó vender por X.
+    🚨 Dos trampas firmadas: (a) `mfe364`/`mae364` quedan en **NULL** con la ventana incompleta — un
+    máximo a media ventana es una COTA INFERIOR, no el techo; (b) **`margenDias` (98) de
+    `fechasSnapshot` NO se toca**: subirlo a 371 para que todo snapshot tenga `ret364` borraría un
+    año de observaciones de `ret91` y rompería H9/H10 a cambio de nada.
+  - Informe vivo con las cifras y su muestra: **`docs/TRADING-SALIDAS-2026-08.md`** (se AÑADE una entrada
+    fechada por hito, no se reescriben las anteriores). Hipótesis y criterios: `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
 - **🚨 LANDMINE — SESGO DE SUPERVIVENCIA: la tesis cuyo símbolo se cae del universo no se puntuaba NUNCA
   (12/08/2026).** `/puntuar` solo sabía puntuar con `conformes[simbolo]`, el precio que trae la pasada de
   hoy, así que 16 tesis del 18/07 (CEG, ISRG, SYM, UEC) llevaban desde el 28/07 vencidas y en
