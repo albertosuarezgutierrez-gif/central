@@ -15,6 +15,10 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-28 · ialimp-client-health** · hizo: pasada semanal Sique Brilla (empresa_id
+  `05edacff-ea49-42fe-8997-f9369613a845`). PMS sync activo (Smoobu, sin `sync_error`, último
+  28/08 15:01, 32 sesiones/24h, 33/7d); 0 programaciones sin cubrir; 0 impagos activos. Todo
+  verde, sin aviso Telegram (nada urgente). dudas: —; fallos: —; PRs/commits: este commit.
 - **2026-08-28 · github-vigia** · hizo: Paso 2 a mano (3 búsquedas: EIAC/seguros, pricing dinámico VR, SES.HOSPEDAJES). 1 hallazgo: `pvilas/hospedajes` — GPLv3 + Python + muerto (may-2023, 1 mantenedor), NO integrable, pero trae los XSD/WSDL oficiales 3.0.0 cuyos namespaces casan con `module-ses/src/soap.ts` y nosotros no tenemos ninguno; útil como referencia porque no hay sandbox SES. Las otras 2 búsquedas, sin candidatos (EIAC es de TIREA, cerrado → el parser hay que escribirlo; pricing VR es todo comercial). dudas: si los XSD de 3.0.0 siguen vigentes tras el RD 933/2021 — NO se da por bueno, hay que pedirlos al Ministerio; fallos: canal Telegram omitido, esta sesión no tiene PLATAFORMA_URL/ALERTA_TOKEN (no es un 401, es que no existen las envs); PRs/commits: este commit.
 - **2026-08-28 · facturas-correo** · hizo: Vía B sana (dias_caido=0), sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (verificado por `search_threads`, no por el
