@@ -3573,6 +3573,26 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## ✅ (28/08/2026) El paper ya VENDE (H9 cableada) + vigía de hipótesis + relleno del alfa
+
+- **H9 cableada.** `aplicarStop` fuera; `venceVentana` dentro. La posición guarda `horizonteDias` y esa
+  es su única salida — lo que H9 firmó («no se ponen stops») y lo que el panel prometía. La distancia
+  2·ATR **se conserva** como ancla del TAMAÑO (`dimensionar`), que es otra cosa.
+- 🚨 **10 de las 11 posiciones estaban ya vencidas** (MSFT 24 días con ventana de 10; solo NVDA en
+  plazo). Se cierran con el precio de **su sesión de vencimiento**, no el de hoy: al precio de hoy se
+  apuntarían hasta 14 días extra de mercado como resultado de una regla de 10 días. Reusa
+  `juzgarHuerfana` (ancla + margen). Migración `2026-08-28_paper_salida_ventana.sql` **aplicada**; las
+  11 rellenadas desde su propia tesis y verificadas en prod.
+- **Vigía de hipótesis** en el cron `trading-h10`: H11…H15 tenían criterio pero nadie miraba el «cuando».
+  Avisa solo si alguna ya se puede resolver; `hay=null` («no se pudo consultar») va aparte de «aún no
+  hay muestra». No resuelve ni cablea. 🚨 **Su primera consulta de H12 estaba mal** (iteraba `datos` en
+  la raíz y no `datos->'porFecha'`): habría dado 0 eternamente sin fallar. La cazó ejecutar el SQL
+  contra la BD real antes de mergear. Medido: 221.966 snapshots, 183.841 con ret91, 0 con ret364.
+- **Relleno del alfa hacia atrás** dentro de `/puntuar` (cola de 400/pasada, patrón `facturas-scan`), no
+  en un endpoint que alguien deba recordar. Las 1.320 observaciones existentes tendrán alfa en 3-4
+  noches. ⚠️ **No se pudo ejecutar desde la sesión**: el proxy del contenedor bloquea Stooq y Yahoo.
+- 330 tests de lib/trading, tsc limpio, `pnpm test` exit 0. PRs #1838 y #1840 (este último, en curso).
+
 ## 📊 (28/08/2026) El track record del trading medía BETA y en BRUTO — H13/H14/H15
 
 - **H13 (alfa).** `puntuarTesis` daba el retorno ABSOLUTO y `acierto` de una alcista era «subió»: en un

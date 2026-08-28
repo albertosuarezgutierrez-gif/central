@@ -1177,7 +1177,19 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
     o como agregados de SQL, para que no puedan existir dos umbrales. Agrega **en SQL** a propósito: las
     7 variantes × 183.093 snapshots serían ~1,3 M de filas dentro de una función serverless. `sin_muestra`
     NUNCA se colapsa con `rechazada`. **El cron no cablea nada** — el cambio de política entra por PR.
-  - 🚨 **PENDIENTE DE DECISIÓN DE ALBERTO, y NO se tocó en ese PR:** `packages/module-trading/src/paper.ts`
+  - ✅ **RESUELTO el 28/08/2026 — el paper ya vende por TIEMPO.** `aplicarStop` se retiró y su sitio lo
+    ocupa `venceVentana`: la posición guarda `horizonteDias` (la ventana de su tesis) y esa es su ÚNICA
+    salida, que es lo que H9 firmó y lo que el panel llevaba prometiendo. **La distancia de 2·ATR se
+    conserva**: no es un stop, es el ANCLA DEL TAMAÑO (`dimensionar` reparte el 1% del NAV por ella).
+    🚨 El cierre usa el precio de la **sesión de vencimiento**, no el de hoy — al estrenarlo había 10
+    posiciones vencidas (MSFT, 24 días abierta con ventana de 10) y cerrarlas al precio de hoy habría
+    metido hasta 14 días extra de mercado en el resultado de una regla de 10 días. Se reusa
+    `juzgarHuerfana` (ancla + margen); lo que no se puede medir no se cierra, se cuenta.
+    `horizonteDias` NULL = **no vence** (las 11 vivas se rellenaron desde su tesis, verificado en prod).
+    🔬 Y el cron `trading-h10` es ahora **vigía de las hipótesis abiertas** (H11…H15): avisa cuando una
+    tiene muestra para resolverse, con `hay=null` («no se pudo consultar») en un bloque aparte de
+    «todavía no hay muestra». Lógica pura en `lib/trading/hipotesis.ts`. **No resuelve ni cablea nada.**
+  - 🗄️ **Contexto histórico (ya corregido):** `packages/module-trading/src/paper.ts`
     abre cada posición con un stop a **`entrada − 2·ATR14`** y `/api/trading/puntuar` lo evalúa cada
     noche, **pese a que H9 concluyó literalmente «no se ponen stops»**. Y la salida por TIEMPO que el pie
     de «Cartera paper» promete **no está implementada**: el stop es la única salida del código (por eso

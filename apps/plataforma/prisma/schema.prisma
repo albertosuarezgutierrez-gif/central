@@ -269,6 +269,10 @@ model TradingPaperPosicion {
   // pasada ya no tiene los fundamentales de aquel día.
   proximoEarnings DateTime? @map("proximo_earnings") @db.Date
   earningsEstado  String    @default("sin_consultar") @map("earnings_estado")
+  // Ventana declarada de la tesis que abrió la posición: la ÚNICA salida del paper (H9 — «no se ponen
+  // stops»). NULL = no consta el horizonte de esa posición, y entonces NO se cierra: inventar la venta
+  // con una fecha que nadie declaró es peor que dejarla abierta y contarlo.
+  horizonteDias   Int?      @map("horizonte_dias")
 
   @@map("trading_paper_posicion")
 }

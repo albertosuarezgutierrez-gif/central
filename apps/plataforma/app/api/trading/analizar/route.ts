@@ -22,6 +22,11 @@ type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; 
 // el presupuesto, no el techo (lección de `facturas-scan`, 31/07/2026).
 export const maxDuration = 300
 
+// Ventana declarada de cada tesis, y por tanto la ÚNICA salida de la posición paper que abra (H9). Vive
+// en una constante porque son DOS sitios que tienen que decir lo mismo: la tesis que se guarda y el
+// horizonte que se copia a la posición. Dos literales `10` separados es como se rompen estas cosas.
+const HORIZONTE_TESIS_DIAS = 10
+
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   const { fecha, nav, simbolos, indice, minFactorScore } = (await req.json()) as { fecha: string; nav: number; simbolos: Entrada[]; indice?: { cierres: number[] }; minFactorScore?: number }
@@ -171,7 +176,7 @@ export async function POST(req: NextRequest) {
     await prisma.tradingTesis.createMany({
       data: señales.map(se => ({
         simbolo: s.simbolo, fecha: new Date(fecha), estrategia: se.estrategia,
-        direccion: se.direccion, confianza: se.confianza, horizonteDias: 10,
+        direccion: se.direccion, confianza: se.confianza, horizonteDias: HORIZONTE_TESIS_DIAS,
         precioRef, precioFuente: 'sesion', indicadores: ind as object, rationale: se.rationale,
         // 📅 La fecha de resultados viaja CON la tesis (antes solo existía como texto en `rationale`).
         // Es lo que después permite separar el rendimiento de la señal del rendimiento del calendario.
@@ -234,7 +239,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!motivo) {
-      const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)
+      const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha, HORIZONTE_TESIS_DIAS)
       // createMany+skipDuplicates y no create: con el único (simbolo,lado,fecha) un reintento no revienta ni duplica.
       await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: s.simbolo, lado: 'BUY', cantidad, precio: precioRef, fecha: new Date(fecha), motivo: `${ganadora.estrategia} conf ${ganadora.confianza}` }], skipDuplicates: true })
       // Marca la tesis GANADORA (recién insertada arriba) como comprada de verdad: es la única fila
@@ -248,6 +253,8 @@ export async function POST(req: NextRequest) {
         where: { simbolo: s.simbolo },
         create: {
           simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha),
+          // La ventana con la que esta posición se cerrará por tiempo (H9). Sin ella no habría salida.
+          horizonteDias: pos.horizonteDias,
           // Se congela lo que se sabía AL ABRIR: al cerrar, la pasada ya no tiene los fundamentales de hoy.
           proximoEarnings: evEarn.fecha ? new Date(evEarn.fecha) : null, earningsEstado: evEarn.estado,
         },

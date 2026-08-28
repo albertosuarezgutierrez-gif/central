@@ -745,6 +745,59 @@ precios de entrada (cierre IBKR del 18/07) y la ventana:
 - **Evaluación:** cuando H13 se resuelva (es la misma tabla y el mismo momento; hacerlo antes obligaría
   a repetirlo con la medida nueva).
 
+## ✅ H9 CABLEADA — el paper ya vende por TIEMPO, y el stop de 2·ATR ha dejado de evaluarse · 2026-08-28
+
+- **Esto no es una hipótesis nueva: es ejecutar una ya resuelta.** H9 se cerró el 08/08/2026 con la
+  frase literal «**No se ponen stops**», y la remedición del 28/08 sobre **183.093** observaciones la
+  sostuvo —la salida por tiempo gana, y gana en los CINCO quintiles de momentum—. El código hacía lo
+  contrario: `/puntuar` evaluaba cada noche un stop a `entrada − 2·ATR14` y **no vendía nunca por
+  tiempo**, mientras el panel /trading decía «la salida es por TIEMPO al vencer la ventana de cada
+  tesis». Una pantalla afirmando algo que el código no hacía.
+- **Qué cambia:** `aplicarStop` se retira (no tenía otro consumidor) y su sitio lo ocupa `venceVentana`.
+  La posición guarda ahora `horizonteDias` —la ventana de la tesis que la abrió— y esa es su ÚNICA
+  salida. `HORIZONTE_TESIS_DIAS` es una constante única: la tesis y la posición no pueden divergir.
+- **Qué NO cambia: la distancia de 2·ATR se conserva.** No es un stop de mercado, es el **ancla del
+  tamaño**: `dimensionar` reparte el 1% del NAV según lo lejos que esté. Borrarla dejaría la cartera
+  sin criterio de posición, que es un cambio que H9 nunca autorizó.
+- **🚨 El precio de cierre es el de la SESIÓN DE VENCIMIENTO, no el de hoy.** Al estrenarlo había **10
+  posiciones ya vencidas** (MSFT llevaba 24 días abierta con ventana de 10; NVO/PLTR 19; BKNG 18;
+  LLY/CVX/ABNB 17; ORCL 15; SQM 14; NFLX 11 — solo NVDA, con 7, seguía en plazo). Cerrarlas al precio de
+  hoy habría apuntado como resultado de «vender a los 10 días» un P&L con hasta 14 días extra de mercado
+  dentro: el error de siempre —un dato correcto leído con el periodo equivocado— y encima a favor de la
+  regla que se estrena. Se cierran con el cierre de SU sesión, por el MISMO guardián que rescata las
+  tesis huérfanas (`juzgarHuerfana`: ancla contra el precio de entrada para no colar un split, y margen
+  de ventana). Lo que no se pueda medir NO se cierra: se cuenta y se canta.
+- **`horizonteDias` NULL = no vence.** Las 11 posiciones vivas se rellenaron desde su propia tesis
+  (`simbolo` + `fecha = abierta_en`), verificado en producción: las 11 a 10 días. Una posición futura
+  sin horizonte se quedaría abierta y saldría en el latido — inventar la venta con una fecha que nadie
+  declaró es peor.
+- **Efecto medible que esto abre:** hasta hoy el paper llevaba **11 BUY y 0 SELL**, así que no había ni
+  una operación cerrada de la que aprender. A partir de la próxima pasada las hay.
+
+---
+
+## 🔬 Vigía de hipótesis abiertas — el «cuando» dejó de depender de que alguien se acuerde · 2026-08-28
+
+- **El problema, dicho sin adornos:** firmar una hipótesis es barato y recolectar también; lo caro es
+  RESOLVERLAS. Quedaban seis abiertas (H10…H15) y cada una decía «se evalúa cuando la tabla llegue a X»
+  — pero solo H10 tenía evaluador. Las otras cinco dependían de que alguien se acordara, en un
+  contenedor efímero. Una hipótesis que se queda recolectando para siempre es **peor** que no haberla
+  firmado: da la sensación de que se está midiendo algo.
+- **Qué se hace:** el cron semanal `trading-h10` mira además la muestra de H11…H15 y avisa por Telegram
+  **solo** cuando alguna ya se puede resolver (o cuando no se ha podido comprobar). El progreso
+  («1.200/5.000») vive en el latido, no en el móvil: un aviso semanal que solo dice «sigo esperando»
+  entrena a ignorar el canal.
+- **Lo que el vigía NO hace:** resolver ni cablear. El veredicto sigue siendo un PR con el criterio
+  firmado delante. Lógica pura y testeada en `lib/trading/hipotesis.ts`.
+- 🚨 **`hay = null` («no se pudo consultar») NUNCA se colapsa con «todavía no hay muestra»:** lo primero
+  pide arreglar la consulta, lo segundo pide esperar, y confundirlos dejaría una hipótesis lista sin
+  avisar mientras el parte dice tan tranquilo «recolectando». Va en un bloque aparte del Telegram.
+- **Y el caso real que lo justifica, encontrado al escribirlo:** la primera versión de la consulta de
+  H12 iteraba `trading_backtest.datos` en la raíz, cuando la estructura es `{ porFecha: {...} }`. Habría
+  devuelto **0 para siempre** sin fallar ni una vez — «recolectando» eterno. Se cazó porque el SQL de un
+  cron nuevo **se ejecuta contra la BD real antes de mergear** (landmine del 20/08/2026). Medido ya
+  corregido: 221.966 snapshots, 183.841 con `ret91` y **0 con `ret364`** (H12 empezó hoy).
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*
