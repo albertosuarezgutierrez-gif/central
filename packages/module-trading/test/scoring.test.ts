@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { puntuarTesis, agregarStats, ajustesDeStats } from '../src/scoring.ts'
+import { puntuarTesis, agregarStats, ajustesDeStats, COSTE_ROUNDTRIP } from '../src/scoring.ts'
 import { torneo } from '../src/estrategias.ts'
 import type { Tesis, Indicadores } from '../src/types.ts'
 
@@ -71,4 +71,72 @@ test('agregarStats calcula hit-rate por estrategia', () => {
   ])
   assert.equal(stats.momentum.hitRate, 0.5)
   assert.equal(stats.valor.hitRate, 1)
+})
+
+// ── H13 (alfa) y H14 (costes), 28/08/2026. Se RECOLECTAN: `ajustesDeStats` sigue decidiendo con
+// `hitRate`/`retornoMedio` brutos y absolutos, y estos tests fijan que así siga.
+
+test('alfa: una alcista que sube menos que el índice acierta pero NO bate al mercado', () => {
+  const t: Tesis = { simbolo: 'X', estrategia: 'momentum', direccion: 'alcista', confianza: 60, precioRef: 100, horizonteDias: 10 }
+  const r = puntuarTesis(t, 103, 0.05)   // +3% con el índice al +5%
+  assert.equal(r.acierto, true)
+  assert.ok(Math.abs(r.retorno - 0.03) < 1e-9)
+  assert.ok(Math.abs((r.retornoAlfa as number) + 0.02) < 1e-9)
+  assert.equal(r.aciertoAlfa, false)
+})
+
+test('alfa: una bajista que cae MENOS que el índice pierde alfa (estar corto no basta)', () => {
+  const t: Tesis = { simbolo: 'X', estrategia: 'reversion', direccion: 'bajista', confianza: 60, precioRef: 100, horizonteDias: 10 }
+  const r = puntuarTesis(t, 95, -0.08)   // −5% con el índice al −8%
+  assert.equal(r.acierto, true)          // acertó la caída
+  assert.ok(Math.abs(r.retorno - 0.05) < 1e-9)
+  assert.ok(Math.abs((r.retornoAlfa as number) + 0.03) < 1e-9)   // pero peor que el mercado
+  assert.equal(r.aciertoAlfa, false)
+})
+
+test('alfa: una neutral está fuera del mercado, así que su alfa es 0, no el índice cambiado de signo', () => {
+  const t: Tesis = { simbolo: 'X', estrategia: 'valor', direccion: 'neutral', confianza: 50, precioRef: 100, horizonteDias: 10 }
+  const r = puntuarTesis(t, 101, 0.05)
+  assert.equal(r.retorno, 0)
+  assert.equal(r.retornoAlfa, 0)
+})
+
+test('sin benchmark el alfa es NULL, nunca 0 (no se pudo medir ≠ no batió al mercado)', () => {
+  const t: Tesis = { simbolo: 'X', estrategia: 'momentum', direccion: 'alcista', confianza: 60, precioRef: 100, horizonteDias: 10 }
+  assert.equal(puntuarTesis(t, 110).retornoAlfa, null)
+  assert.equal(puntuarTesis(t, 110).aciertoAlfa, null)
+  assert.equal(puntuarTesis(t, 110, null).retornoAlfa, null)
+})
+
+test('coste: el neto es el bruto menos el peaje, también cuando el bruto es 0', () => {
+  const alc: Tesis = { simbolo: 'X', estrategia: 'momentum', direccion: 'alcista', confianza: 60, precioRef: 100, horizonteDias: 10 }
+  const r = puntuarTesis(alc, 101)
+  assert.ok(Math.abs(r.retornoNeto - (r.retorno - COSTE_ROUNDTRIP)) < 1e-12)
+  const neu: Tesis = { ...alc, direccion: 'neutral' }
+  assert.ok(Math.abs(puntuarTesis(neu, 101).retornoNeto + COSTE_ROUNDTRIP) < 1e-12)
+})
+
+test('agregarStats no cuenta como alfa 0 las observaciones SIN benchmark', () => {
+  const t: Tesis = { simbolo: 'X', estrategia: 'momentum', direccion: 'alcista', confianza: 60, precioRef: 100, horizonteDias: 10 }
+  const stats = agregarStats([
+    puntuarTesis(t, 110, 0.00),   // alfa +10%
+    puntuarTesis(t, 110),         // sin benchmark → fuera de la media de alfa
+  ])
+  assert.equal(stats.momentum.n, 2)
+  assert.equal(stats.momentum.nAlfa, 1)
+  assert.ok(Math.abs((stats.momentum.retornoAlfaMedio as number) - 0.10) < 1e-9)
+})
+
+test('sin ninguna observación con benchmark, el alfa medio es NULL y el hit-rate de alfa también', () => {
+  const t: Tesis = { simbolo: 'X', estrategia: 'valor', direccion: 'alcista', confianza: 60, precioRef: 100, horizonteDias: 10 }
+  const stats = agregarStats([puntuarTesis(t, 110)])
+  assert.equal(stats.valor.retornoAlfaMedio, null)
+  assert.equal(stats.valor.hitRateAlfa, null)
+  assert.equal(stats.valor.nAlfa, 0)
+})
+
+test('el torneo NO usa todavía ni el alfa ni el neto: ajustesDeStats decide con lo bruto', () => {
+  // Misma estrategia, hit-rate bruto bueno pero alfa desastroso: el delta sigue siendo el bruto.
+  const a = ajustesDeStats({ momentum: { hitRate: 0.7, retornoMedio: 0.02, n: 40 } })
+  assert.equal(a.momentum, Math.round((0.7 - 0.5) * 50))
 })

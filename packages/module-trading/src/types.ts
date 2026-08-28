@@ -85,8 +85,16 @@ export type PaperPosicion = {
   simbolo: string
   cantidad: number           // >0 largo
   precioEntrada: number
+  // 🚨 NO es un stop de mercado: NADA vende por este precio. H9 (resuelta 08/08/2026) concluyó
+  // literalmente «No se ponen stops», y la reconfirmación del 28/08 sobre 183.093 observaciones lo
+  // sostuvo en los CINCO quintiles de momentum. Esta distancia sobrevive porque es el ANCLA DEL TAMAÑO:
+  // `dimensionar` reparte el 1% del NAV según lo lejos que esté, así que borrarla dejaría a la cartera
+  // sin criterio de posición. Se conserva como cálculo y como registro de qué distancia se usó.
   stop: number
   abiertaEn: string          // ISO date
+  // Ventana declarada de la tesis que abrió la posición. Es la ÚNICA salida del paper (H9). NULL en las
+  // posiciones abiertas antes de que esto existiera: «no se sabe su horizonte», que no es «no vence».
+  horizonteDias?: number | null
 }
 
 export type PaperOrden = {

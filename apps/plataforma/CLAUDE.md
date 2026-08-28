@@ -1177,7 +1177,19 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
     o como agregados de SQL, para que no puedan existir dos umbrales. Agrega **en SQL** a propósito: las
     7 variantes × 183.093 snapshots serían ~1,3 M de filas dentro de una función serverless. `sin_muestra`
     NUNCA se colapsa con `rechazada`. **El cron no cablea nada** — el cambio de política entra por PR.
-  - 🚨 **PENDIENTE DE DECISIÓN DE ALBERTO, y NO se tocó en ese PR:** `packages/module-trading/src/paper.ts`
+  - ✅ **RESUELTO el 28/08/2026 — el paper ya vende por TIEMPO.** `aplicarStop` se retiró y su sitio lo
+    ocupa `venceVentana`: la posición guarda `horizonteDias` (la ventana de su tesis) y esa es su ÚNICA
+    salida, que es lo que H9 firmó y lo que el panel llevaba prometiendo. **La distancia de 2·ATR se
+    conserva**: no es un stop, es el ANCLA DEL TAMAÑO (`dimensionar` reparte el 1% del NAV por ella).
+    🚨 El cierre usa el precio de la **sesión de vencimiento**, no el de hoy — al estrenarlo había 10
+    posiciones vencidas (MSFT, 24 días abierta con ventana de 10) y cerrarlas al precio de hoy habría
+    metido hasta 14 días extra de mercado en el resultado de una regla de 10 días. Se reusa
+    `juzgarHuerfana` (ancla + margen); lo que no se puede medir no se cierra, se cuenta.
+    `horizonteDias` NULL = **no vence** (las 11 vivas se rellenaron desde su tesis, verificado en prod).
+    🔬 Y el cron `trading-h10` es ahora **vigía de las hipótesis abiertas** (H11…H15): avisa cuando una
+    tiene muestra para resolverse, con `hay=null` («no se pudo consultar») en un bloque aparte de
+    «todavía no hay muestra». Lógica pura en `lib/trading/hipotesis.ts`. **No resuelve ni cablea nada.**
+  - 🗄️ **Contexto histórico (ya corregido):** `packages/module-trading/src/paper.ts`
     abre cada posición con un stop a **`entrada − 2·ATR14`** y `/api/trading/puntuar` lo evalúa cada
     noche, **pese a que H9 concluyó literalmente «no se ponen stops»**. Y la salida por TIEMPO que el pie
     de «Cartera paper» promete **no está implementada**: el stop es la única salida del código (por eso
@@ -1201,6 +1213,21 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
     máximo a media ventana es una COTA INFERIOR, no el techo; (b) **`margenDias` (98) de
     `fechasSnapshot` NO se toca**: subirlo a 371 para que todo snapshot tenga `ret364` borraría un
     año de observaciones de `ret91` y rompería H9/H10 a cambio de nada.
+  - **📊 H13/H14/H15 (28/08/2026): el track record medía BETA y en BRUTO.** `puntuarTesis` daba el
+    retorno ABSOLUTO y `acierto` de una alcista era «subió» — en un tramo alcista eso lo hace el
+    mercado, no la estrategia, y ese hit-rate es justo lo que `ajustesDeStats` convierte en delta de
+    confianza del torneo. Lo llamativo: el módulo YA tenía benchmark (`seleccionEval`, `universo`,
+    `riesgoCesta`) pero **solo para las cestas**. Ahora `/puntuar` recoge `retorno_alfa` y
+    `retorno_bench` por observación y `hit_rate_alfa`/`retorno_alfa_medio`/`n_alfa` por estrategia
+    (migración `2026-08-28_trading_alfa.sql`, **aplicada**), más `retornoNeto` = bruto − `COSTE_ROUNDTRIP`
+    (0,2%), **derivado y NO persistido** — guardar el neto convertiría las filas viejas en mentira el
+    día que se ajuste el peaje. `ajustesDeStats` **sigue decidiendo con lo bruto y absoluto** hasta que
+    los criterios firmados se cumplan. 🚨 Tres trampas: (a) el alfa lleva el **signo de la tesis**
+    (`segunDireccion(mov − bench)`), así que una bajista que cae MENOS que el índice pierde alfa aunque
+    «acierte» la caída; (b) **`nAlfa` es una columna aparte de `n`** — una observación sin benchmark no
+    es un alfa de 0, y contarla acercaría la media a cero sola; (c) las dos puntas del bench salen de la
+    MISMA fuente y con `TOLERANCIA_BENCH_DIAS` (4): restar dos ventanas distintas da un número plausible
+    que no significa nada. Y `minN`/clamp de `ajustesDeStats` **nunca se han validado** (H15).
   - Informe vivo con las cifras y su muestra: **`docs/TRADING-SALIDAS-2026-08.md`** (se AÑADE una entrada
     fechada por hito, no se reescriben las anteriores). Hipótesis y criterios: `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
 - **🚨 LANDMINE — SESGO DE SUPERVIVENCIA: la tesis cuyo símbolo se cae del universo no se puntuaba NUNCA

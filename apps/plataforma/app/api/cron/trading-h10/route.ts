@@ -3,7 +3,8 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { tgSend } from '@central/core-telegram'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { decidir, parteH10, BATACAZO, type VeredictoVariante } from '@/lib/trading/h10'
+import { decidir, parteH10, BATACAZO, MIN_OBSERVACIONES, type VeredictoVariante } from '@/lib/trading/h10'
+import { evaluarTodas, parteHipotesis, detalleHipotesis, type Hipotesis } from '@/lib/trading/hipotesis'
 
 // 🔬 H10 — evaluador SEMANAL de las reglas de salida (pre-registro, firmado 28/08/2026).
 // Lee el corpus del retrovisor (`trading_backtest`, que rellena el cron `trading-backtest`),
@@ -80,10 +81,68 @@ async function handler(req: NextRequest) {
     const cierra = juzgadas.length === VARIANTES.length && !cableables.length
     if (parte && (cableables.length || cierra)) await tgSend(parte).catch(() => {})
 
+    // ── VIGÍA DE LAS DEMÁS HIPÓTESIS ABIERTAS (28/08/2026).
+    //
+    // H10 tenía evaluador; H11…H15 decían «se evalúa cuando la tabla llegue a X» y ese «cuando» no lo
+    // miraba nadie — dependía de acordarse, en un contenedor que se borra al acabar la sesión. Aquí solo
+    // se comprueba si YA hay muestra para resolverlas: el veredicto sigue siendo un PR con su criterio
+    // firmado delante, y este cron NO cablea nada.
+    //
+    // Cada consulta va en su propio try: una que falle deja SU hipótesis en `sin_dato` («no se pudo
+    // mirar»), que se canta aparte, en vez de tumbar el parte entero o —peor— pasar por «recolectando».
+    const cuenta = async (sql: () => Promise<number>): Promise<number | null> => {
+      try { return await sql() } catch (e) { console.warn('[trading-h10] muestra no consultable:', e); return null }
+    }
+    const estrategiasConMuestra = async (regimen: string, campo: 'n' | 'n_alfa') =>
+      Number((await prisma.$queryRaw<Array<{ c: bigint }>>(
+        Prisma.sql`SELECT COUNT(*) AS c FROM trading_estrategia_stats
+                   WHERE regimen = ${regimen} AND ${Prisma.raw(campo)} >= 20`,
+      ))[0]?.c ?? 0)
+
+    const hipotesis: Hipotesis[] = [
+      {
+        id: 'H11', titulo: 'de qué piscina aprende el torneo',
+        criterio: '≥20 observaciones direccionales en ≥3 de las 4 estrategias.',
+        hay: await cuenta(() => estrategiasConMuestra('direccional', 'n')), falta: 3,
+      },
+      {
+        id: 'H12', titulo: '¿y si NO vendemos? (horizontes largos)',
+        criterio: `≥${MIN_OBSERVACIONES} snapshots con ret364 medido.`,
+        hay: await cuenta(async () => Number((await prisma.$queryRaw<Array<{ c: bigint }>>(
+          // 🚨 `datos` es `{ porFecha: { '2011-08-01': {...} } }`: hay que bajar UN nivel. Iterar el
+          // objeto raíz devuelve la clave 'porFecha' y el filtro no casa nunca → 0 para siempre, o sea
+          // «recolectando» eterno sin que nada lo delate. Verificado contra la BD real (28/08/2026):
+          // 221.966 snapshots, 183.841 con ret91 y 0 con ret364 — H12 acaba de empezar a recolectarse.
+          Prisma.sql`SELECT COUNT(*) AS c FROM trading_backtest b,
+                       LATERAL jsonb_each(b.datos->'porFecha') AS d(fecha, v)
+                     WHERE b.datos IS NOT NULL AND d.v ? 'ret364' AND d.v->>'ret364' IS NOT NULL`,
+        ))[0]?.c ?? 0)),
+        falta: MIN_OBSERVACIONES,
+      },
+      {
+        id: 'H13', titulo: 'el track record mide beta, no alfa',
+        criterio: '≥20 observaciones CON alfa en ≥3 de las 4 estrategias.',
+        hay: await cuenta(() => estrategiasConMuestra('todos', 'n_alfa')), falta: 3,
+      },
+      {
+        id: 'H14', titulo: 'el retorno es bruto (peaje sin restar)',
+        criterio: 'Se resuelve junto a H13: misma tabla, mismo momento.',
+        hay: await cuenta(() => estrategiasConMuestra('todos', 'n_alfa')), falta: 3, dependeDe: 'H13',
+      },
+      {
+        id: 'H15', titulo: 'minN y el clamp nunca se validaron',
+        criterio: 'Sensibilidad sobre las stats ya guardadas; se resuelve junto a H13.',
+        hay: await cuenta(() => estrategiasConMuestra('todos', 'n_alfa')), falta: 3, dependeDe: 'H13',
+      },
+    ]
+    const vs = evaluarTodas(hipotesis)
+    const parteHip = parteHipotesis(vs)
+    if (parteHip) await tgSend(parteHip).catch(() => {})
+
     const detalle = veredictos
-      .map(v => `${v.variante}:${v.veredicto}(n=${v.n})`).join(' · ')
+      .map(v => `${v.variante}:${v.veredicto}(n=${v.n})`).join(' · ') + ` · ${detalleHipotesis(vs)}`
     await registrarLatido('trading_h10', true, detalle).catch(() => {})
-    return NextResponse.json({ ok: true, veredictos, avisado: Boolean(parte && (cableables.length || cierra)) })
+    return NextResponse.json({ ok: true, veredictos, hipotesis: vs, avisado: Boolean(parte && (cableables.length || cierra)) || Boolean(parteHip) })
   } catch (e) {
     // Un evaluador que revienta en silencio deja la hipótesis colgada para siempre: se canta.
     const msg = e instanceof Error ? e.message : 'error'

@@ -656,6 +656,148 @@ precios de entrada (cierre IBKR del 18/07) y la ventana:
 - **Evaluación:** por estado de los datos —cuando `trading_backtest` tenga ≥5.000 snapshots con
   `ret364` no nulo—, no por fecha de calendario. La rotación es de días.
 
+## H13 — El track record mide BETA, no alfa · firmada 2026-08-28, ANTES de medir un solo alfa
+
+- **El hallazgo:** `puntuarTesis` mide el retorno ABSOLUTO, y `acierto` de una tesis alcista es
+  literalmente «el precio subió». En un tramo alcista eso lo hace el MERCADO, no la estrategia. Y ese
+  `hitRate` es exactamente lo que `ajustesDeStats` convierte en delta de confianza del torneo, así que
+  hoy el bucle de aprendizaje puede estar premiando **beta disfrazada de habilidad**.
+- **Lo llamativo:** el módulo YA tiene toda la maquinaria de benchmark —`seleccionEval.ts` (`alpha`),
+  `universo.ts` (`retornoBench`, `baten`), `riesgoCesta.ts`, `medicionAlineada.ts`— pero **solo la usan
+  las cestas**. El track record POR ESTRATEGIA, que es el que ajusta el torneo, nunca restó el índice.
+- **Hipótesis nula:** ordenar las estrategias por alfa da el mismo orden que ordenarlas por retorno
+  absoluto, y por tanto cambiar la medida no cambia ninguna decisión.
+- **Qué se RECOLECTA** (sin tocar ninguna decisión): `retornoAlfa` y `retornoBench` por observación en
+  `trading_tesis_resultado`, y `hitRateAlfa`/`retornoAlfaMedio`/`nAlfa` por estrategia en
+  `trading_estrategia_stats`. El alfa se calcula con el MISMO signo de la tesis que el retorno
+  (`segunDireccion(movimiento − bench)`): una bajista que cae menos que el índice **pierde** alfa
+  aunque «acierte» la caída, y una neutral está fuera del mercado, así que su alfa es 0 igual que su
+  retorno.
+- **Condición de cableado** (sustituir `hitRate`/`retornoMedio` por sus versiones de alfa dentro de
+  `ajustesDeStats`) — las tres a la vez:
+  1. **Muestra:** `nAlfa ≥ 20` (el `minN` vigente) en **≥3 de las 4** estrategias.
+  2. **Diferencia real:** el orden de estrategias por `hitRateAlfa` difiere del orden por `hitRate` en
+     al menos una posición. Si el orden es el mismo, el cambio es cosmético y **no se toca nada**.
+  3. **Guarda de daño:** la estrategia que pase a primera **no** puede tener `retornoAlfaMedio` negativo.
+- **Caveats firmados:**
+  - `nAlfa` cuenta SOLO las observaciones con benchmark medible. Una sin él **no es un alfa de 0**: si
+    se contara, la media se acercaría a cero sola y el alfa parecería más pequeño de lo que es. Por eso
+    es una columna aparte de `n`, y las tesis que se quedan sin alfa se **cuentan y se cantan** en el
+    latido de `/puntuar`.
+  - Las dos puntas del benchmark salen de la MISMA fuente (Stooq→Yahoo, `cierresDeContraste`). Mezclar
+    el cierre de IBKR de la sesión con el de Stooq de hoy metería en el alfa la diferencia entre dos
+    fuentes, que no es alfa de nadie.
+  - Si el índice se queda a más de `TOLERANCIA_BENCH_DIAS` (4) de un extremo, el alfa es **NULL**: sería
+    restar dos ventanas distintas, y eso produce un número plausible que no significa nada — el fallo
+    más caro que documenta el CLAUDE.md (caso ORCL, 31/07/2026).
+  - Benchmark = **SPY**, el mismo que usan el retrovisor y el régimen de mercado, para que «batir al
+    mercado» signifique lo mismo en todo el sistema. Cambiarlo es una hipótesis nueva.
+  - Las observaciones ya puntuadas **no se re-puntúan**: su alfa se queda NULL. La muestra de H13
+    empieza hoy y es más pequeña que la del track record — se dice, no se disimula.
+- **Evaluación:** por estado de la tabla (cuando `nAlfa ≥ 20` en ≥3 estrategias), no por fecha.
+
+---
+
+## H14 — El retorno es BRUTO: nadie ha restado el peaje · firmada 2026-08-28
+
+- **El hallazgo:** ni `puntuarTesis` ni `agregarStats` restaban comisión ni horquilla. Con ventanas de
+  10 días y cuatro tesis por símbolo en cada pasada, la rotación es alta y el peaje no es despreciable
+  frente al **+1,03%** de retorno medio que hoy tienen las alcistas.
+- **El número, y por qué no se defiende como exacto:** `COSTE_ROUNDTRIP = 0,002` (0,2% ida y vuelta) es
+  un **orden de magnitud** —comisión de IBKR más horquilla en valores líquidos—, no una medición. Por
+  eso el criterio de abajo es de **sensibilidad**, no de precisión: si una decisión cambia con 0,1% y no
+  con 0,3%, el resultado lo decide el supuesto y **no se cablea nada**.
+- **Hipótesis nula:** restar el peaje no cambia ninguna decisión del torneo.
+- **Qué se RECOLECTA:** `retornoNeto` por observación y `retornoNetoMedio` por estrategia, **derivados**
+  (`retorno − COSTE_ROUNDTRIP`), NO persistidos. Guardar el neto convertiría las filas viejas en una
+  mentira el día que se ajuste el peaje; guardando solo el bruto, el neto se recalcula entero.
+- **Condición de cableado:** el peaje entra en `ajustesDeStats` si y solo si **le cambia el signo a
+  alguna estrategia** con `n ≥ 20` —es decir, `retornoMedio ≥ 0` pero `retornoMedio − COSTE < 0`, que es
+  el único punto por donde el coste puede alterar el delta hoy (el término `if (retornoMedio < 0) d −= 5`)—
+  **y** ese cambio se mantiene con el peaje a 0,1% y a 0,3%. Si solo aparece con un valor concreto, es
+  el supuesto hablando.
+- **Caveat firmado, y no es menor:** el peaje se resta a TODAS las tesis por igual, **también a las
+  neutrales**, cuyo retorno es 0 por construcción y cuyo neto sale por tanto negativo. Eso es falso en
+  la realidad —una regla que dice «no operes» no paga comisiones— así que **el neto de una neutral no
+  se compara con el de una direccional** sin decir esto. Se recolecta así por simetría de cálculo; si
+  el neto llegara a decidir algo, la exención de las neutrales entra en la misma decisión.
+
+---
+
+## H15 — `minN` y el clamp del aprendizaje nunca se han validado · firmada 2026-08-28
+
+- **El hallazgo:** `ajustesDeStats` tiene dos números con más poder que muchas hipótesis —`minN = 20`
+  (quién recibe ajuste) y el clamp de **±20** (cuánto)— y **ninguno se ha medido**: salieron por
+  analogía con `DIRECTOR_MIN_LLAMADAS` del Director de IA. Con muestras direccionales de 120/51/39/4
+  (H11), el umbral decide él solo qué estrategias entran en el bucle de aprendizaje y cuáles no.
+- **Hipótesis nula:** el orden de estrategias que induce el aprendizaje es estable frente a esos dos
+  parámetros.
+- **Qué se hace:** análisis de **sensibilidad** sobre las stats ya almacenadas (no hace falta código
+  nuevo ni recolectar nada): recalcular los deltas con `minN ∈ {10, 20, 40}` y clamp `∈ {10, 20, 40}` y
+  mirar si cambia **qué estrategia gana el torneo** en las señales del periodo.
+- **Qué significa cada desenlace, firmado por adelantado:**
+  - **Orden estable en las 9 combinaciones** → los parámetros no mandan; se dejan como están y queda
+    escrito que se comprobó.
+  - **El orden cambia** → el bucle de aprendizaje está gobernado por dos números que nadie eligió con
+    datos. Eso **no autoriza a poner los que salgan mejor** —sería elegir el parámetro por el resultado,
+    que es la definición de mover la portería—: obliga a una entrada nueva que fije el criterio ANTES
+    de mirar cuál gana.
+- **Evaluación:** cuando H13 se resuelva (es la misma tabla y el mismo momento; hacerlo antes obligaría
+  a repetirlo con la medida nueva).
+
+## ✅ H9 CABLEADA — el paper ya vende por TIEMPO, y el stop de 2·ATR ha dejado de evaluarse · 2026-08-28
+
+- **Esto no es una hipótesis nueva: es ejecutar una ya resuelta.** H9 se cerró el 08/08/2026 con la
+  frase literal «**No se ponen stops**», y la remedición del 28/08 sobre **183.093** observaciones la
+  sostuvo —la salida por tiempo gana, y gana en los CINCO quintiles de momentum—. El código hacía lo
+  contrario: `/puntuar` evaluaba cada noche un stop a `entrada − 2·ATR14` y **no vendía nunca por
+  tiempo**, mientras el panel /trading decía «la salida es por TIEMPO al vencer la ventana de cada
+  tesis». Una pantalla afirmando algo que el código no hacía.
+- **Qué cambia:** `aplicarStop` se retira (no tenía otro consumidor) y su sitio lo ocupa `venceVentana`.
+  La posición guarda ahora `horizonteDias` —la ventana de la tesis que la abrió— y esa es su ÚNICA
+  salida. `HORIZONTE_TESIS_DIAS` es una constante única: la tesis y la posición no pueden divergir.
+- **Qué NO cambia: la distancia de 2·ATR se conserva.** No es un stop de mercado, es el **ancla del
+  tamaño**: `dimensionar` reparte el 1% del NAV según lo lejos que esté. Borrarla dejaría la cartera
+  sin criterio de posición, que es un cambio que H9 nunca autorizó.
+- **🚨 El precio de cierre es el de la SESIÓN DE VENCIMIENTO, no el de hoy.** Al estrenarlo había **10
+  posiciones ya vencidas** (MSFT llevaba 24 días abierta con ventana de 10; NVO/PLTR 19; BKNG 18;
+  LLY/CVX/ABNB 17; ORCL 15; SQM 14; NFLX 11 — solo NVDA, con 7, seguía en plazo). Cerrarlas al precio de
+  hoy habría apuntado como resultado de «vender a los 10 días» un P&L con hasta 14 días extra de mercado
+  dentro: el error de siempre —un dato correcto leído con el periodo equivocado— y encima a favor de la
+  regla que se estrena. Se cierran con el cierre de SU sesión, por el MISMO guardián que rescata las
+  tesis huérfanas (`juzgarHuerfana`: ancla contra el precio de entrada para no colar un split, y margen
+  de ventana). Lo que no se pueda medir NO se cierra: se cuenta y se canta.
+- **`horizonteDias` NULL = no vence.** Las 11 posiciones vivas se rellenaron desde su propia tesis
+  (`simbolo` + `fecha = abierta_en`), verificado en producción: las 11 a 10 días. Una posición futura
+  sin horizonte se quedaría abierta y saldría en el latido — inventar la venta con una fecha que nadie
+  declaró es peor.
+- **Efecto medible que esto abre:** hasta hoy el paper llevaba **11 BUY y 0 SELL**, así que no había ni
+  una operación cerrada de la que aprender. A partir de la próxima pasada las hay.
+
+---
+
+## 🔬 Vigía de hipótesis abiertas — el «cuando» dejó de depender de que alguien se acuerde · 2026-08-28
+
+- **El problema, dicho sin adornos:** firmar una hipótesis es barato y recolectar también; lo caro es
+  RESOLVERLAS. Quedaban seis abiertas (H10…H15) y cada una decía «se evalúa cuando la tabla llegue a X»
+  — pero solo H10 tenía evaluador. Las otras cinco dependían de que alguien se acordara, en un
+  contenedor efímero. Una hipótesis que se queda recolectando para siempre es **peor** que no haberla
+  firmado: da la sensación de que se está midiendo algo.
+- **Qué se hace:** el cron semanal `trading-h10` mira además la muestra de H11…H15 y avisa por Telegram
+  **solo** cuando alguna ya se puede resolver (o cuando no se ha podido comprobar). El progreso
+  («1.200/5.000») vive en el latido, no en el móvil: un aviso semanal que solo dice «sigo esperando»
+  entrena a ignorar el canal.
+- **Lo que el vigía NO hace:** resolver ni cablear. El veredicto sigue siendo un PR con el criterio
+  firmado delante. Lógica pura y testeada en `lib/trading/hipotesis.ts`.
+- 🚨 **`hay = null` («no se pudo consultar») NUNCA se colapsa con «todavía no hay muestra»:** lo primero
+  pide arreglar la consulta, lo segundo pide esperar, y confundirlos dejaría una hipótesis lista sin
+  avisar mientras el parte dice tan tranquilo «recolectando». Va en un bloque aparte del Telegram.
+- **Y el caso real que lo justifica, encontrado al escribirlo:** la primera versión de la consulta de
+  H12 iteraba `trading_backtest.datos` en la raíz, cuando la estructura es `{ porFecha: {...} }`. Habría
+  devuelto **0 para siempre** sin fallar ni una vez — «recolectando» eterno. Se cazó porque el SQL de un
+  cron nuevo **se ejecuta contra la BD real antes de mergear** (landmine del 20/08/2026). Medido ya
+  corregido: 221.966 snapshots, 183.841 con `ret91` y **0 con `ret364`** (H12 empezó hoy).
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*

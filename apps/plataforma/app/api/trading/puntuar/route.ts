@@ -4,10 +4,11 @@ import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { PISCINAS, PISCINA_VIVA, enPiscina } from '@/lib/trading/piscinas'
-import { puntuarTesis, agregarStats, aplicarStop, cerrar, atribuirPorEvento, cruzaEvento, finDeVentana, resumenAtribucion } from '@central/module-trading'
+import { puntuarTesis, agregarStats, resultadoDeFila, venceVentana, cerrar, atribuirPorEvento, cruzaEvento, finDeVentana, resumenAtribucion } from '@central/module-trading'
 import type { Tesis, EstadoEarnings } from '@central/module-trading'
 import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, HUERFANA_GRACIA_DIAS, HUERFANA_MAX_DIAS, DIAS_REFERENCIA_MAX, type ParDiferido, type HuerfanaNoResuelta } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
+import { retornoBench, SIMBOLO_BENCH } from '@/lib/trading/alfa'
 import { tgSend } from '@/lib/telegram'
 
 // El contraste con la 2ª fuente sale a internet una vez por símbolo, así que la ruta necesita techo y
@@ -25,6 +26,10 @@ const DIAS_DIFERIDO = 10   // naturales, para alcanzar esas 3 sesiones con festi
 // que es lo excepcional — un símbolo que se cae del universo con tesis vivas detrás.
 const PRESUPUESTO_HUERFANAS_MS = 45_000
 const MARGEN_VENTANA_HUERFANAS = 7   // días extra para que la serie cubra con holgura la sesión ancla
+
+// Filas por pasada del relleno de alfa (H13). Acotado para no alargar la ruta: con ~1.300 pendientes la
+// cola se vacía en tres o cuatro noches, y mientras tanto la muestra ya crece.
+const TOPE_BACKFILL_ALFA = 400
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
@@ -47,7 +52,10 @@ export async function POST(req: NextRequest) {
                WHERE fecha < ${hoy}::date AND fecha >= ${hoy}::date - ${DIAS_DIFERIDO}::int AND NOT anulado
                ORDER BY simbolo, fecha DESC`,
   )
-  const aContrastarTodo = [...new Set([...Object.keys(precios), ...refsRecientes.map(r => r.simbolo)])]
+  // El índice (SPY) viaja en la MISMA petición que todo lo demás: la serie que hace falta para el ALFA
+  // (H13) es de la misma fuente y la misma ventana que el contraste, así que pedirlo aquí no cuesta ni
+  // una llamada más — y evita mezclar el cierre de IBKR con el de Stooq dentro de una misma resta.
+  const aContrastarTodo = [...new Set([...Object.keys(precios), ...refsRecientes.map(r => r.simbolo), SIMBOLO_BENCH])]
   const contraste = await cierresDeContraste(aContrastarTodo, hoy, { presupuestoMs: 120_000 })
 
   // Pares (cierre publicado de la sesión D, nuestro `precio_ref` de D) de las últimas sesiones. Solo
@@ -149,18 +157,26 @@ export async function POST(req: NextRequest) {
   const vetados = new Set(divergentes.map(d => d.simbolo))
   const conformes = Object.fromEntries(Object.entries(propios).filter(([sim]) => !vetados.has(sim)))
 
+  // ALFA (H13): retorno del índice en la MISMA ventana de cada tesis. `null` en cuanto falta un extremo
+  // o la ventana del índice no es la de la tesis — se recolecta como hueco declarado, no como cero.
+  const serieBench = contraste.series[SIMBOLO_BENCH]
+  const alfaDe = (desde: string, hasta: string) => retornoBench(serieBench, desde, hasta)
+  let sinBench = 0
+
   let puntuadas = 0
   for (const t of pendientes) {
     const vence = new Date(t.fecha).getTime() + t.horizonteDias * 86_400_000
     const precio = conformes[t.simbolo]
     if (vence > hoyMs || precio === undefined) continue
-    const r = puntuarTesis(t as unknown as Tesis, precio)
+    const bench = alfaDe(t.fecha.toISOString().slice(0, 10), hoy)
+    if (bench == null) sinBench++
+    const r = puntuarTesis(t as unknown as Tesis, precio, bench)
     // `ventana_dias` = días REALES transcurridos, no el horizonte declarado. Si una pasada no corre (o
     // la guardia descarta el precio y se puntúa días después), la ventana medida es más larga que el
     // horizonte y etiquetarla con `horizonteDias` sería el error de siempre: un dato correcto leído con
     // el periodo equivocado. Nunca menos que el horizonte: solo se puntúa ya vencida.
     const ventanaReal = Math.round((hoyMs - new Date(t.fecha).getTime()) / 86_400_000)
-    await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: precio, ventanaDias: ventanaReal, retorno: r.retorno, acierto: r.acierto, precioFuente: 'sesion' } })
+    await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: precio, ventanaDias: ventanaReal, retorno: r.retorno, acierto: r.acierto, precioFuente: 'sesion', retornoAlfa: r.retornoAlfa, retornoBench: bench } })
     puntuadas++
   }
 
@@ -198,11 +214,15 @@ export async function POST(req: NextRequest) {
         huerfanasSinResolver.push({ simbolo: t.simbolo, fecha, vence, motivo: v.motivo })
         continue
       }
-      const r = puntuarTesis(t as unknown as Tesis, v.precio)
+      // La ventana de una huérfana acaba en el cierre de SU vencimiento, no hoy: medir su alfa contra
+      // el índice de hoy le sumaría semanas de mercado que esa tesis nunca vivió.
+      const benchH = alfaDe(fecha, v.fecha)
+      if (benchH == null) sinBench++
+      const r = puntuarTesis(t as unknown as Tesis, v.precio, benchH)
       // `precioFuente: 'contraste'` — la procedencia se declara SIEMPRE: este resultado no lo midió la
       // sesión con el precio del bróker, lo midió la 2ª fuente, y además sin nadie con quien contrastarlo
       // (para eso está el ancla). Quien lea el track record tiene que poder distinguirlos.
-      await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: v.precio, ventanaDias: v.ventanaDias, retorno: r.retorno, acierto: r.acierto, precioFuente: 'contraste' } })
+      await prisma.tradingTesisResultado.create({ data: { tesisId: t.id, precioDespues: v.precio, ventanaDias: v.ventanaDias, retorno: r.retorno, acierto: r.acierto, precioFuente: 'contraste', retornoAlfa: r.retornoAlfa, retornoBench: benchH } })
       huerfanasPuntuadas++
     }
   }
@@ -227,16 +247,66 @@ export async function POST(req: NextRequest) {
     // Una piscina sin ni una observación NO se escribe: una fila con n=0 se leería como «medido y
     // vacío» en vez de «todavía no hay nada que medir».
     if (!deLaPiscina.length) continue
-    const stats = agregarStats(deLaPiscina.map(r => ({ estrategia: r.tesis.estrategia as Tesis['estrategia'], acierto: r.acierto, retorno: r.retorno })))
+    const stats = agregarStats(deLaPiscina.map(r => resultadoDeFila({
+      estrategia: r.tesis.estrategia as Tesis['estrategia'], acierto: r.acierto, retorno: r.retorno, retornoAlfa: r.retornoAlfa,
+    })))
     if (piscina === PISCINA_VIVA) estrategiasVivas = Object.keys(stats).length
     for (const [est, s] of Object.entries(stats)) {
       await prisma.tradingEstrategiaStats.upsert({
         where: { estrategia_regimen: { estrategia: est, regimen: piscina } },
-        create: { estrategia: est, regimen: piscina, hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n },
-        update: { hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n },
+        create: { estrategia: est, regimen: piscina, hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n, hitRateAlfa: s.hitRateAlfa, retornoAlfaMedio: s.retornoAlfaMedio, nAlfa: s.nAlfa },
+        update: { hitRate: s.hitRate, retornoMedio: s.retornoMedio, n: s.n, hitRateAlfa: s.hitRateAlfa, retornoAlfaMedio: s.retornoAlfaMedio, nAlfa: s.nAlfa },
       })
     }
   }
+
+  // 2-quater) RELLENO DEL ALFA HACIA ATRÁS (H13). Las observaciones anteriores a hoy se puntuaron sin
+  // benchmark, así que su alfa nació NULL y la muestra de H13 empezaría de cero — semanas hasta cruzar
+  // el `nAlfa ≥ 20` de su criterio. No hace falta esperar: su ventana está cerrada y publicada, y el
+  // índice se baja entero de la MISMA fuente que usa el camino vivo.
+  //
+  // Va aquí dentro y no en un endpoint aparte a propósito: una puerta que alguien tiene que acordarse
+  // de llamar es exactamente el fallo que este PR viene a corregir. Como cola que se retoma en cada
+  // pasada (patrón de `facturas-scan`), se rellena sola y en cuanto no queda nada no cuesta ni una
+  // llamada. Una fila que no se pueda medir se queda NULL y se cuenta — no se rellena con 0.
+  let alfaRellenadas = 0
+  let alfaSinMedir = 0
+  try {
+    const pendientes = await prisma.$queryRaw<Array<{ id: string; fecha: Date; ventanaDias: number }>>(
+      Prisma.sql`SELECT r.id, t.fecha, r.ventana_dias AS "ventanaDias"
+                 FROM trading_tesis_resultado r
+                 JOIN trading_tesis t ON t.id = r.tesis_id
+                 WHERE r.retorno_alfa IS NULL AND NOT r.anulado AND NOT t.anulado
+                 ORDER BY t.fecha
+                 LIMIT ${TOPE_BACKFILL_ALFA}`,
+    )
+    if (pendientes.length > 0) {
+      const masVieja = pendientes.map(x => x.fecha.toISOString().slice(0, 10)).sort()[0]
+      const ventanaDias = diasEntre(masVieja, hoy) + MARGEN_VENTANA_HUERFANAS
+      const { series } = await cierresDeContraste([SIMBOLO_BENCH], hoy, { ventanaDias, presupuestoMs: 30_000 })
+      const serie = series[SIMBOLO_BENCH]
+      for (const x of pendientes) {
+        const desde = x.fecha.toISOString().slice(0, 10)
+        const bench = retornoBench(serie, desde, fechaMas(desde, x.ventanaDias))
+        if (bench == null) { alfaSinMedir++; continue }
+        // El alfa se deriva del retorno YA guardado y del signo de la tesis, sin volver a tocar precios:
+        // `retorno` es `segunDireccion(movimiento)`, así que restarle el bench con el mismo signo da
+        // exactamente lo que habría devuelto `puntuarTesis` con benchmark aquel día. Las neutrales
+        // valen 0 por construcción y ahí se quedan.
+        await prisma.$executeRaw(
+          Prisma.sql`UPDATE trading_tesis_resultado r
+                     SET retorno_bench = ${bench},
+                         retorno_alfa = CASE t.direccion
+                           WHEN 'neutral' THEN 0
+                           WHEN 'bajista' THEN r.retorno + ${bench}
+                           ELSE r.retorno - ${bench} END
+                     FROM trading_tesis t
+                     WHERE t.id = r.tesis_id AND r.id = ${x.id}::uuid AND r.retorno_alfa IS NULL`,
+        )
+        alfaRellenadas++
+      }
+    }
+  } catch (e) { console.warn('[trading/puntuar] relleno de alfa falló (no bloquea):', e) }
 
   // 2-ter) 📅 ATRIBUCIÓN POR EVENTO — ¿el rendimiento lo produjo la señal o el calendario?
   //
@@ -276,30 +346,84 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) { console.warn('[trading/puntuar] deslizamiento falló (no bloquea):', e) }
 
-  // 3) Stops sobre posiciones paper. Va sobre `conformes` (guardia + contraste) igual que todo lo demás:
-  // un precio hundido por error dispararía un stop que en el mercado real nunca saltó, y esa venta
-  // fantasma queda escrita en `trading_paper_orden` como si fuera historia.
+  // 3) SALIDA POR TIEMPO de las posiciones paper — la ÚNICA que hay (H9, resuelta el 08/08/2026:
+  // «No se ponen stops», reconfirmada el 28/08 sobre 183.093 observaciones y en los CINCO quintiles de
+  // momentum). Hasta hoy este bloque evaluaba un stop a 2·ATR cada noche y NO vendía nunca por tiempo,
+  // justo al revés de lo que H9 firmó y de lo que el panel /trading promete desde entonces. Daño real
+  // cero (11 BUY y 0 SELL, ningún stop llegó a saltar), pero era una pantalla diciendo algo falso.
+  //
+  // 🚨 EL PRECIO DE CIERRE ES EL DE LA SESIÓN DE VENCIMIENTO, NO EL DE HOY. Al estrenar esto había 10
+  // posiciones ya vencidas (MSFT llevaba 24 días abierta con ventana de 10). Cerrarlas al precio de hoy
+  // apuntaría como resultado de «vender a los 10 días» un P&L con hasta 14 días extra de mercado dentro:
+  // el error de siempre —un número correcto leído con el periodo equivocado— y encima a favor de una
+  // regla que se está estrenando. Para lo vencido en el pasado se usa el cierre de SU sesión, con el
+  // MISMO guardián que rescata las tesis huérfanas (`juzgarHuerfana`: ancla contra el precio de entrada
+  // para no colar un split, y margen de ventana). Lo que no se puede medir NO se cierra: se cuenta.
+  //
+  // El vencimiento no depende de que el símbolo venga hoy en la pasada — el tiempo pasa igual—, así que
+  // esto tapa además el hermano del sesgo de supervivencia: una posición cuyo símbolo se cae del
+  // universo se quedaba abierta para siempre sin que nada la echara de menos.
   const posiciones = await prisma.tradingPaperPosicion.findMany()
   let cerradas = 0
-  for (const p of posiciones) {
-    const precio = conformes[p.simbolo]
-    if (precio === undefined) continue
-    if (aplicarStop({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio)) {
-      const o = cerrar({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop, abiertaEn: String(p.abiertaEn) }, precio, hoy, 'stop')
-      // 📅 ¿Cruzó unos resultados mientras estaba abierta? Se resuelve AQUÍ porque la fila de la
-      // posición se borra tres líneas más abajo: esta orden es la única huella que sobrevive al cierre.
-      // No cambia el cierre ni el precio — solo deja el trade clasificable después.
-      const eventoDentro = cruzaEvento(
-        p.proximoEarnings ? p.proximoEarnings.toISOString().slice(0, 10) : null,
-        p.earningsEstado as EstadoEarnings,
-        p.abiertaEn.toISOString().slice(0, 10),
-        hoy,
-      )
-      // createMany+skipDuplicates: con el único (simbolo,lado,fecha) un reintento de la pasada no duplica ni revienta.
-      await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: o.simbolo, lado: 'SELL', cantidad: o.cantidad, precio: o.precio, fecha: new Date(hoy), motivo: o.motivo, eventoDentro }], skipDuplicates: true })
-      await prisma.tradingPaperPosicion.delete({ where: { simbolo: p.simbolo } })
-      cerradas++
+  const vencidasSinPrecio: string[] = []
+  const sinHorizonte: string[] = []
+
+  const posVencidas = posiciones
+    .map(p => {
+      const abierta = p.abiertaEn.toISOString().slice(0, 10)
+      const pos = {
+        simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada, stop: p.stop,
+        abiertaEn: abierta, horizonteDias: p.horizonteDias,
+      }
+      return { p, pos, abierta, vence: p.horizonteDias != null ? fechaMas(abierta, p.horizonteDias) : null }
+    })
+    .filter(x => {
+      if (x.p.horizonteDias == null) { sinHorizonte.push(x.p.simbolo); return false }
+      return venceVentana(x.pos, hoy)
+    })
+
+  // Serie histórica SOLO si alguna venció antes de hoy: se paga una salida a internet con ventana y
+  // presupuesto propios, igual que las huérfanas, y solo cuando hace falta.
+  let seriesCierre: Record<string, typeof contraste.series[string]> = {}
+  const atrasadas = posVencidas.filter(x => x.vence! < hoy)
+  if (atrasadas.length > 0) {
+    const masVieja = atrasadas.map(x => x.vence!).sort()[0]
+    const ventanaDias = diasEntre(masVieja, hoy) + MARGEN_VENTANA_HUERFANAS
+    const r = await cierresDeContraste([...new Set(atrasadas.map(x => x.p.simbolo))], hoy, { ventanaDias, presupuestoMs: PRESUPUESTO_HUERFANAS_MS })
+    seriesCierre = r.series
+  }
+
+  for (const { p, pos, abierta, vence } of posVencidas) {
+    let precio: number | undefined
+    let fechaCierre = hoy
+    let motivo = 'ventana'
+    if (vence! < hoy) {
+      // Vencida en el pasado: su precio es el cierre de SU sesión, no el de hoy.
+      const v = juzgarHuerfana({ simbolo: p.simbolo, fecha: abierta, vence: vence!, precioRef: p.precioEntrada }, seriesCierre[p.simbolo] ?? [])
+      if (v.estado !== 'puntuable') { vencidasSinPrecio.push(`${p.simbolo} (${v.motivo})`); continue }
+      precio = v.precio
+      fechaCierre = v.fecha
+      motivo = `ventana · cierre del ${v.fecha} (2ª fuente)`
+    } else {
+      // Vence hoy: el precio de la sesión (ya pasó las guardias) y, si no vino, el de la 2ª fuente.
+      precio = conformes[p.simbolo] ?? contraste.cierres[p.simbolo]
+      if (precio === undefined) { vencidasSinPrecio.push(`${p.simbolo} (sin precio de hoy)`); continue }
+      if (conformes[p.simbolo] === undefined) motivo = 'ventana (2ª fuente)'
     }
+    const o = cerrar(pos, precio, fechaCierre, motivo)
+    // 📅 ¿Cruzó unos resultados mientras estaba abierta? Se resuelve AQUÍ porque la fila de la
+    // posición se borra tres líneas más abajo: esta orden es la única huella que sobrevive al cierre.
+    // No cambia el cierre ni el precio — solo deja el trade clasificable después.
+    const eventoDentro = cruzaEvento(
+      p.proximoEarnings ? p.proximoEarnings.toISOString().slice(0, 10) : null,
+      p.earningsEstado as EstadoEarnings,
+      abierta,
+      fechaCierre,
+    )
+    // createMany+skipDuplicates: con el único (simbolo,lado,fecha) un reintento de la pasada no duplica ni revienta.
+    await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: o.simbolo, lado: 'SELL', cantidad: o.cantidad, precio: o.precio, fecha: new Date(fechaCierre), motivo: o.motivo, eventoDentro }], skipDuplicates: true })
+    await prisma.tradingPaperPosicion.delete({ where: { simbolo: p.simbolo } })
+    cerradas++
   }
 
   // 4) Huella de que la pasada llegó HASTA EL FINAL. Este endpoint es el ÚLTIMO paso de la rutina y,
@@ -312,12 +436,21 @@ export async function POST(req: NextRequest) {
   await registrarLatido(
     'trading_puntuar',
     true,
-    `${puntuadas} tesis puntuadas · ${cerradas} stop(s) · ${estrategiasVivas} estrategias` +
+    `${puntuadas} tesis puntuadas · ${cerradas} cierre(s) por ventana · ${estrategiasVivas} estrategias` +
+      // Una venta que no se pudo hacer se CUENTA: si no, «0 cierres» sería indistinguible de «no vencía
+      // ninguna». Lo mismo con las posiciones sin horizonte, que no tienen salida hasta que se les ponga.
+      (vencidasSinPrecio.length > 0 ? ` · ⚠️ ${vencidasSinPrecio.length} vencida(s) sin precio fiable (${vencidasSinPrecio.join(', ')})` : '') +
+      (sinHorizonte.length > 0 ? ` · ⚠️ ${sinHorizonte.length} sin horizonte, no vencen (${sinHorizonte.join(', ')})` : '') +
+      (alfaRellenadas > 0 ? ` · ${alfaRellenadas} alfa(s) rellenadas hacia atrás` : '') +
+      (alfaSinMedir > 0 ? ` · ${alfaSinMedir} sin alfa medible` : '') +
       (parteEvento ? ` · ${parteEvento}` : '') +
       (resumen ? ` · ⚠️ ${resumen}` : '') +
       (tesisAnuladas > 0 ? ` · ${tesisAnuladas} tesis anulada(s) por la 2ª fuente` : '') +
       (parteDiferido ? ` · ${parteDiferido}` : '') +
       (parteHuerfanas ? ` · ${parteHuerfanas}` : '') +
+      // Un hueco que no se cuenta es un hueco que no existe: si el índice no se pudo leer, el alfa de
+      // esas tesis queda a NULL y el track record de H13 se estrecha en silencio.
+      (sinBench > 0 ? ` · ⚠️ ${sinBench} sin alfa (índice ${SIMBOLO_BENCH} no medible en su ventana)` : '') +
       (desfase ? ` · ${desfase}` : ''),
   )
 
@@ -334,12 +467,15 @@ export async function POST(req: NextRequest) {
   // «no había trabajo» que ya nos costó el latido de facturas-scan.
   return NextResponse.json({
     puntuadas, cerradas, estrategias: estrategiasVivas,
+    salidas: { motivo: 'ventana', cerradas, vencidasSinPrecio, sinHorizonte },
     descartados,
     suplantados,
     divergentes,
     contraste: { consultados: contraste.consultados, sinDato: contraste.sinDato, desfasados: contraste.desfasados, sinTiempo: contraste.sinTiempo, sinJuzgar: sinContraste },
     diferido: { ...diferido, tesisAnuladas },
     huerfanas: { puntuadas: huerfanasPuntuadas, sinResolver: huerfanasSinResolver, fueraDePlazo: huerfanasFueraDePlazo },
+    // H13: cuántas de las puntuadas hoy se quedaron SIN alfa por no poder leer el índice en su ventana.
+    alfa: { bench: SIMBOLO_BENCH, sinBench, serieBench: serieBench?.length ?? 0, rellenadas: alfaRellenadas, sinMedir: alfaSinMedir },
     // 📅 Para que la sesión lo cante en el resumen: un track record que no separa la señal del
     // calendario dice que el agente acierta cuando lo que pasó es que publicó resultados.
     atribucionEvento: atribucion,

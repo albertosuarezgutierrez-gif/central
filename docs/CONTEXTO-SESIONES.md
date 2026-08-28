@@ -3573,6 +3573,45 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## ✅ (28/08/2026) El paper ya VENDE (H9 cableada) + vigía de hipótesis + relleno del alfa
+
+- **H9 cableada.** `aplicarStop` fuera; `venceVentana` dentro. La posición guarda `horizonteDias` y esa
+  es su única salida — lo que H9 firmó («no se ponen stops») y lo que el panel prometía. La distancia
+  2·ATR **se conserva** como ancla del TAMAÑO (`dimensionar`), que es otra cosa.
+- 🚨 **10 de las 11 posiciones estaban ya vencidas** (MSFT 24 días con ventana de 10; solo NVDA en
+  plazo). Se cierran con el precio de **su sesión de vencimiento**, no el de hoy: al precio de hoy se
+  apuntarían hasta 14 días extra de mercado como resultado de una regla de 10 días. Reusa
+  `juzgarHuerfana` (ancla + margen). Migración `2026-08-28_paper_salida_ventana.sql` **aplicada**; las
+  11 rellenadas desde su propia tesis y verificadas en prod.
+- **Vigía de hipótesis** en el cron `trading-h10`: H11…H15 tenían criterio pero nadie miraba el «cuando».
+  Avisa solo si alguna ya se puede resolver; `hay=null` («no se pudo consultar») va aparte de «aún no
+  hay muestra». No resuelve ni cablea. 🚨 **Su primera consulta de H12 estaba mal** (iteraba `datos` en
+  la raíz y no `datos->'porFecha'`): habría dado 0 eternamente sin fallar. La cazó ejecutar el SQL
+  contra la BD real antes de mergear. Medido: 221.966 snapshots, 183.841 con ret91, 0 con ret364.
+- **Relleno del alfa hacia atrás** dentro de `/puntuar` (cola de 400/pasada, patrón `facturas-scan`), no
+  en un endpoint que alguien deba recordar. Las 1.320 observaciones existentes tendrán alfa en 3-4
+  noches. ⚠️ **No se pudo ejecutar desde la sesión**: el proxy del contenedor bloquea Stooq y Yahoo.
+- 330 tests de lib/trading, tsc limpio, `pnpm test` exit 0. PRs #1838 y #1840 (este último, en curso).
+
+## 📊 (28/08/2026) El track record del trading medía BETA y en BRUTO — H13/H14/H15
+
+- **H13 (alfa).** `puntuarTesis` daba el retorno ABSOLUTO y `acierto` de una alcista era «subió»: en un
+  tramo alcista eso lo hace el MERCADO, y ese hit-rate es lo que `ajustesDeStats` convierte en delta de
+  confianza del torneo. El módulo YA tenía benchmark (`seleccionEval`/`universo`/`riesgoCesta`) pero
+  solo para las cestas. `/puntuar` recoge ya `retorno_alfa`+`retorno_bench` por observación y
+  `hit_rate_alfa`/`retorno_alfa_medio`/`n_alfa` por estrategia (migración `2026-08-28_trading_alfa.sql`,
+  **aplicada y verificada en prod**). El índice viaja en la MISMA petición del contraste (misma fuente
+  en las dos puntas) y con tolerancia de 4 días; fuera de eso, **NULL**.
+- **H14 (costes).** `COSTE_ROUNDTRIP = 0,002` y `retornoNeto` **derivado, no persistido** (guardar el
+  neto haría mentir a las filas viejas al ajustar el peaje). El criterio de cableado es de SENSIBILIDAD:
+  si la decisión cambia con 0,1% y no con 0,3%, manda el supuesto y no se cablea.
+- **H15.** `minN=20` y el clamp ±20 de `ajustesDeStats` **nunca se validaron** (salieron por analogía con
+  el Director de IA). Análisis de sensibilidad firmado; si el orden cambia, NO se elige el parámetro que
+  gane — eso es mover la portería.
+- **Nada de esto decide todavía:** `ajustesDeStats` sigue con lo bruto y absoluto. 322 tests de
+  lib/trading + 16 de scoring, tsc limpio, `pnpm test` exit 0.
+- Antes, en la misma sesión: **#1838 mergeado** (H11 + H12). Sigue abierto el stop de 2·ATR contra H9.
+
 ## 🕰️ (28/08/2026) H11 (piscina del torneo) + H12: la cinta se cortaba en el día 91 — PR #1838
 
 - **H11 (recolección en sombra).** `torneo()` NO aplica el ajuste de confianza a las neutrales, pero
