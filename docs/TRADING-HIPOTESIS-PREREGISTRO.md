@@ -478,6 +478,66 @@ precios de entrada (cierre IBKR del 18/07) y la ventana:
 - **Notas firmadas:** la selección arrastra look-ahead/survivorship (elegida sobre histórico
   conocido), por eso el forward es el único test sin sesgo; n=8 pequeño; checkpoint principal 6 meses.
 
+## H10 — Salidas que SUBEN el stop y salida por MEDIA · firmada 2026-08-28, ANTES de recolectar un dato
+
+- **Origen:** Alberto, 28/08/2026 — «salida no por tiempo, ir subiendo el stop no? o pérdida de media
+  o algo… los datos deciden». H9 midió tres reglas y refutó las tres, pero solo probó **una** distancia
+  de trailing (−15%) y **ninguna** regla basada en medias móviles. Ese es el hueco que abre H10.
+- **Estado de partida, medido HOY sobre el corpus ampliado (183.093 obs. con `ret91` y las tres
+  salidas, 8,6× la muestra con la que se resolvió H9) — se anota aquí para que H10 no pueda
+  re-litigar lo ya medido:**
+
+  | regla | mediana | batacazos ≤ −15% |
+  |---|---|---|
+  | salida por tiempo (91 d) | **+3,12%** | 10,26% |
+  | stop fijo −10% | +0,45% | **2,90%** |
+  | stop fijo −20% | +2,75% | 14,86% |
+  | trailing −15% | +1,22% | 10,72% |
+
+  La conclusión de H9 se sostiene con 8,6× los datos. Además, partido por quintil de `momentum`, la
+  salida por tiempo gana la mediana en **los cinco**; en Q5 (lo que compra el agente) el stop −10% es
+  donde MÁS cuesta (−4,43 pp). El caveat de literatura firmado en H9 («los stops ayudan al momentum»)
+  queda así REFUTADO en este universo. ⚠️ Ese corte por quintil es POST-HOC: sirve para cerrar el
+  caveat, no autoriza a cablear nada por sí solo.
+- **Hipótesis nula:** ninguna de las variantes nuevas mejora a la salida por tiempo (91 días).
+- **Recolección (misma máquina y mismos criterios de entrada/horizonte que H9 — `simularSalidas`,
+  módulo puro, comparación manzana-con-manzana contra `ret91`):**
+  1. **`salidaTrail25`** — trailing −25%: vende en el primer cierre ≤ máximo-desde-entrada × 0,75.
+     Es la idea de Alberto a una distancia MÁS ANCHA que la refutada, para que solo dispare ante
+     ruptura real y no ante el bache que H9 demostró que se recupera.
+  2. **`salidaCoste10`** — stop a COSTE: no hay stop hasta que la posición toca +10%; a partir de ahí
+     vende en el primer cierre ≤ precio de entrada. Es «ir subiendo el stop» en su forma mínima
+     (proteger lo ganado) sin cortar la caída inicial, que es lo que mata al stop fijo.
+  3. **`salidaSma50`** — pérdida de media: vende en el primer cierre < SMA50 diaria.
+  4. **`salidaSma200`** — pérdida de media larga: vende en el primer cierre < SMA200 diaria.
+  Si una regla no salta y la serie llega al horizonte, su retorno ES el del horizonte (no vender
+  también es una decisión y se contabiliza), igual que en H9.
+- **Caveats firmados:**
+  - Mismos cierres diarios que H9 (sin intradía): un disparo se ejecuta al primer CIERRE que perfora,
+    no al precio exacto de la regla. Infravalora disparos y captura el hueco a la baja. Conservador.
+  - Las SMA se calculan con los cierres ANTERIORES o iguales a cada día simulado — nunca con la serie
+    completa. Una SMA calculada con datos futuros convertiría H10 en look-ahead puro.
+  - Una entrada puede estar YA por debajo de su SMA el día de la compra: en ese caso la regla vende en
+    el primer cierre disponible y su retorno es ~0, no null. Es un resultado, no un dato ausente.
+  - `salidaCoste10` sin haber tocado nunca +10% no dispara jamás: su retorno es el del horizonte.
+  - Mismo régimen del corpus que el resto del retrovisor; se re-mide con H6 si gira.
+- **Condición de cableado** (idéntica a H9 para que sea comparable, sobre **≥5.000 observaciones** con
+  `ret91` y la variante presentes):
+  1. recorta la tasa de resultados ≤ −15% en **≥5 pp** frente a la salida por tiempo SIN empeorar la
+     mediana en más de 1 pp (perfil freno), **o**
+  2. mejora la mediana en **≥2 pp** sin subir la tasa de batacazos (perfil retorno).
+  Si se cumple, entra como política de salida del PAPER (nunca de órdenes reales por sí sola) vía PR.
+  Si no se cumple ninguna, **la salida por tiempo queda validada por segunda vez y se cablea ella**,
+  sin volver a abrir el debate sin datos nuevos.
+- **Cláusula anti-portería-móvil:** las cuatro variantes se evalúan con el criterio de arriba y NADA
+  más. Si alguna queda cerca pero no llega, NO se cablea «por poco»: se anota y se deja correr.
+- **Independiente de H10 — el stop que YA está vivo:** `paper.ts` abre cada posición con un stop fijo
+  a `entrada − 2·ATR14` y `/puntuar` lo evalúa cada noche, pese a que H9 concluyó «no se ponen stops».
+  Es un stop FIJO a distancia escalada por volatilidad — la misma familia que el `−10%` medido, que
+  cuesta 2,67 pp de mediana. Su retirada NO depende de H10: se rige por H9, que ya está resuelta.
+- **Evaluación:** por estado de la tabla — ciclo completo con los cuatro campos nuevos presentes en
+  ≥5.000 observaciones (no por fecha de calendario; lección del cron muerto del 19/07).
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*

@@ -28,6 +28,10 @@ export const CRON_JOBS: CronJob[] = [
   // no da precios para ellas — es un «no hay», no un «falta por hacer», y el ciclo las reintenta igual.
   // Devuelto a 2 h: en régimen estacionario solo hay que refrescar rancidez y sobra de largo.
   { path: '/api/cron/trading-backtest', schedule: '10 */2 * * *' },
+  // 🔬 H10 — evalúa SEMANALMENTE las reglas de salida contra el criterio firmado en el pre-registro
+  // (lunes 08:40 UTC, con el corpus del retrovisor ya movido por las pasadas del fin de semana).
+  // No cablea nada: avisa cuando una variante cumple, o cuando todas fallan y H10 queda cerrada.
+  { path: '/api/cron/trading-h10', schedule: '40 8 * * 1' },
   // 07:15, treinta minutos ANTES de `agentes-latido`: así el vigía de las 07:45 lee siempre una
   // huella del mismo día en vez de la de ayer. Solo lectura (operación C de SES): no envía ningún
   // parte. La fecha que lo hace urgente es el 03/09/2026, cuando caduca la hoja del certificado
