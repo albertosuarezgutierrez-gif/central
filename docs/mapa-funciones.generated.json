@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-27T18:57:21Z",
-  "sha": "e0116ab67ec343125aa0fc704614fb8484fd2285",
+  "generadoEn": "2026-08-28T07:23:42Z",
+  "sha": "e7fadcd7f0dcad52eda5f86e8c5d73d6604350d1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -32599,9 +32599,61 @@
       "hash": "d395c757b465"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/daily-briefing/formato.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Formato del briefing diario — PURO (sin Deno, sin red, sin imports remotos) para que lo pueda cubrir un test de node en CI: el resto de `index.ts` es un edge function Deno que el typecheck del monorepo ni mira (`tsconfig.json` de ia-rest excluye `supabase/`). Aquí vive lo que el 27-28/08/2026 falló ",
+      "exporta": [
+        "eur",
+        "bloqueContexto",
+        "bloquePlano",
+        "mensajeBriefing"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number",
+          "retorno": "string",
+          "linea": 20,
+          "resumen": "Importe en euros en formato ESPAÑOL (`2.162,49€`) — regla global del monorepo."
+        },
+        {
+          "nombre": "bloqueContexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, m: Metricas",
+          "retorno": "string",
+          "linea": 25,
+          "resumen": "Bloque de un restaurante para el prompt del LLM."
+        },
+        {
+          "nombre": "bloquePlano",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, m: Metricas",
+          "retorno": "string",
+          "linea": 38,
+          "resumen": "Briefing SIN IA: los mismos datos, sin prosa. Es lo que se manda cuando ningún LLM responde."
+        },
+        {
+          "nombre": "mensajeBriefing",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string, filas: Array<{ nombre: string; m: Metricas }>, narrativa: { texto: string | null; via: string | null; fallos: string[] },",
+          "retorno": "string",
+          "linea": 54,
+          "resumen": "Mensaje completo de Telegram. `texto` null = ningún proveedor de IA sirvió → se manda el briefing en crudo y el pie DICE por qué no hay prosa (en vez de un ⚠️ sin datos)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e61b2e64fce2"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/index.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "supabase/functions/daily-briefing/index.ts v2 — Resumen diario IA → Telegram (pasarela Director de plataforma; NVIDIA NIM de fallback) Cron: 0 7 * * * (9:00h Madrid verano / UTC+2)",
+      "resumen": "supabase/functions/daily-briefing/index.ts v3 — Resumen diario IA → Telegram (pasarela Director de plataforma; NVIDIA NIM de fallback) Cron: 0 7 * * * (9:00h Madrid verano / UTC+2) 🚨 v3 (28/08/2026) — por qué se reescribió el camino de fallo. El 27 y el 28/08 el briefing llegó a Telegram como «⚠️ d",
       "exporta": [],
       "funciones": [
         {
@@ -32610,15 +32662,23 @@
           "exportada": false,
           "params": "token: string, chatId: string, text: string",
           "retorno": null,
-          "linea": 13
+          "linea": 39
+        },
+        {
+          "nombre": "motivo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": null,
+          "linea": 62
         },
         {
           "nombre": "generarNarrativa",
           "kind": "function",
           "exportada": false,
           "params": "contexto: string",
-          "retorno": "Promise<",
-          "linea": 37,
+          "retorno": "Promise<Narrativa>",
+          "linea": 74,
           "resumen": "Genera la narrativa del briefing con doble red: 1) PRIMARIO — pasarela IA de plataforma (endpoint /api/ai/chat): el Agente Director elige modelo por petición y detrás tiene la cadena completa OpenRout"
         },
         {
@@ -32626,15 +32686,15 @@
           "kind": "function",
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, restauranteId: string",
-          "retorno": null,
-          "linea": 86
+          "retorno": "Promise<Metricas>",
+          "linea": 151
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "80daa542a9da"
+      "hash": "35782b28aac5"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ear-transcribe/index.ts",
@@ -98572,7 +98632,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2601,
-    "funciones": 7170
+    "archivos": 2602,
+    "funciones": 7175
   }
 }
