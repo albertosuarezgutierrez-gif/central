@@ -32,6 +32,21 @@
 
 ---
 
+### 🎯 (28/08/2026) Instrumentado el ancla: ahora el fin del serrucho se podrá ATRIBUIR, no solo ver
+- **PR #1826** (`16b91f3e`): `pricing_applied` gana `base_fuente` ('mes'|'global', por noche) y
+  `ancla_origen` (por piso/pasada). Sin ellas el seguimiento del 03/09 solo medía el agregado, y una
+  mejora que no se puede atribuir es indistinguible de una semana tranquila de mercado.
+- **NULL = «fila anterior a la columna»**, NO «usó el ancla global» — incluidas las pasadas nuevas del
+  27-28/08. Sin DEFAULT ni NOT NULL a propósito. Guardián `pricing-applied-ancla.test.ts` (6 tests,
+  probado en rojo contra 2 mutaciones reales: columna sin valor, y re-derivar de `mb` en vez de `useMonth`).
+- **Baseline del serrucho, MEDIDA**: motor viejo (18→27/08, 1.338 noches) = **55,7% de las transiciones
+  cambiaban de dirección**, 4,2 escrituras/noche, amplitud 1,34×. El nuevo aún no tiene serie (1,0
+  escrituras/noche en 2 días): ausencia de muestra, no un buen resultado.
+- Verificado: 13/13 checks en local; los 4 pisos usan el ancla acumulada (115-119 fechas, corpus 100%
+  `booking_mcp`); 0 roturas de raíl, 0 avisos; `mercado-booking` corrió a las 08:36 en su horario nuevo.
+- Check-in 14:47 UTC para ver las columnas rellenas en producción (el INSERT vive en un `catch {}`: si
+  falla, el latido seguiría VERDE con la auditoría sin escribirse).
+
 ### ⚫ (28/08/2026) NIM fuera: «ya NIM nada, todo OpenRouter» (decisión de Alberto)
 Tras la 3ª muerte por EOL en 11 días, Alberto decide apagar NIM en vez de buscar otro id. Dato que
 lo sostiene: en 7 días OpenRouter sirvió el **100%** del texto y NIM **cero** respuestas reales.
