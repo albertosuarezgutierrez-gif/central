@@ -32,6 +32,17 @@
 
 ---
 
+### 📦 (28/08/2026) Cartera paper en dólares (invertido/valor/P&L) + fecha de la medición del hero
+- Alberto preguntó si el hero «Rentabilidad de la cartera (paper)» estaba bien y actualizado.
+  **Las cifras cuadran byte a byte con `trading_paper_track`** (cohorte `2026-07-18.v1`, fila del
+  24/08: mediana −0,99% · SPY +3,18% · 3/8 · DD −8,00% · 37 días). Lo que fallaba era la FRESCURA:
+  el snapshot es **semanal** (cron `paper-tracker`, lunes 10:00) y el panel no decía la fecha → se leía
+  como «hoy». Ahora pone «📅 medido el dd/mm/aaaa» en el hero y «últ. fecha» en cada cohorte.
+- **📦 Cartera paper ahora en dólares de verdad:** columnas Invertido/Valor/Resultado por posición y
+  tira-resumen (invertido ~49.755 $ · valor hoy · ganado/perdido). Helper puro
+  `lib/trading/posiciones-paper.ts` + 7 tests: sin precio de hoy no hay valor ni P&L (nunca 0), y el
+  P&L se mide contra el coste de las MISMAS posiciones valoradas (no contra el de todas).
+
 ### 🔍 (28/08/2026) Primera pasada de descubrimiento: el hallazgo NO es una librería, es un esquema
 - 3 búsquedas. `pvilas/hospedajes` **falla los dos filtros** (GPLv3 · Python · muerto desde may-2023,
   1 mantenedor) → no se integra. Pero trae los **7 XSD + WSDL oficiales 3.0.0** y sus `targetNamespace`

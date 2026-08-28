@@ -16,6 +16,7 @@ import DetallePerezoso from './DetallePerezoso'
 import { COHORTES_PAPER } from '@/lib/trading/paper-cartera'
 import { evaluarEscalera, evaluarApagado, emparejarOps } from '@/lib/trading/puerta-fase2'
 import { resumenPorDivisa, rentabilidadPosicion } from '@/lib/trading/cartera-real'
+import { resumenPaper, resultadoPosicion } from '@/lib/trading/posiciones-paper'
 import { serieCartera, divisasDeTrack, type FilaTrack } from '@/lib/trading/cartera-track'
 import type { CarteraRealUI } from '@/lib/trading/cartera-real-io'
 
@@ -314,6 +315,16 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
   const horaVivos = horaVivosISO ? new Date(horaVivosISO).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) : null
   const usd = (n: number): string => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`
 
+  // 📦 Totales EN DÓLARES de la cartera paper (petición de Alberto, 28/08/2026: «cantidad invertida y
+  // dinero que vaya ganando o perdiendo»). Helper puro y testeado (posiciones-paper.ts): el P&L se mide
+  // contra el coste de las posiciones QUE TIENEN precio hoy — mezclar el valor de unas con el coste de
+  // todas fabricaría una pérdida inexistente. Lo que no se puede valorar se declara, no se pone a 0.
+  const resPaper = resumenPaper(
+    posiciones.map(p => ({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada })),
+    s => precioAhora.get(s)?.precio ?? null,
+  )
+  const numVivosPaper = posiciones.filter(p => precioAhora.get(p.simbolo)?.vivo).length
+
   // 📌 Datos del hero (las dos respuestas de la página; cero queries nuevas): cohorte de referencia
   // = la de más recorrido; interesantes = señal 📈 del top-20 + top del ranking; compras reales.
   const cohorteRef = cohortesPaper.reduce<(typeof cohortesPaper)[number] | null>(
@@ -444,6 +455,12 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                   <span style={{ fontSize: 14, color: 'var(--muted)' }}>vs SPY {pct(u.retornoBench)}{bate == null ? '' : bate ? ' ✅ va mejor que el índice' : ' ⚠️ va peor que el índice'}</span>
                 </div>
                 <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }} title="mediana = el valor del medio de la cesta: la mitad de las posiciones lo hace mejor y la otra mitad peor; un pelotazo suelto no la infla">mediana de la cesta congelada · {u.dias} días medidos</div>
+                {/* 🗓️ FECHA de la medición (28/08/2026): el snapshot es SEMANAL (cron lunes 10:00), así que
+                    esta cifra puede tener varios días. Sin decirlo se lee como «hoy» — y eso es afirmar algo
+                    que no se ha mirado. El botón 🔄 Actualizar NO la mueve: solo relee precios, no mide la cesta. */}
+                <div style={{ color: 'var(--muted)', fontSize: 12 }} title="lo mide el cron semanal /api/cron/paper-tracker (lunes 10:00); entre lunes y lunes esta cifra no cambia">
+                  📅 medido el <strong>{fechaCorta(u.fecha)}</strong> — snapshot semanal (lunes); el botón 🔄 Actualizar no la recalcula.
+                </div>
                 {heroEur && (
                   <div style={{ fontSize: 14, marginTop: 4 }}>
                     💼 Con {eurSinDecimales(CAPITAL_ESTUDIO_EUR)} simulados: <strong style={{ color: heroEur.valorEur >= CAPITAL_ESTUDIO_EUR ? 'var(--positive)' : 'var(--negative)' }}>{eur(heroEur.valorEur)}</strong> <span style={{ color: 'var(--muted)' }}>· en SPY serían {eur(heroEur.benchEur)}</span>
@@ -570,14 +587,44 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
       {posiciones.length > 0 && (
         <section style={{ marginBottom: 22 }}>
           <h2 style={{ fontSize: 17, marginBottom: 8 }}>📦 Cartera paper — {posiciones.length} posiciones abiertas <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>— qué tiene comprado el agente AHORA (simulado) y cómo va cada una</span></h2>
+          {/* 💵 Titular en DÓLARES: invertido → valor de hoy → dinero ganado/perdido. Estaba enterrado en
+              el pie como texto gris y sin el resultado en dinero (Alberto, 28/08/2026). El paper cotiza
+              en USD; no se convierte a euros aquí para no inventar un tipo de cambio. */}
+          <div style={{ ...card, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 10 }}>
+            <div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>Invertido (simulado)</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{usd(resPaper.invertidoTotal)}</div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>{resPaper.n} posición{resPaper.n === 1 ? '' : 'es'} · coste de entrada</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>Valor ahora</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{resPaper.valor != null ? usd(resPaper.valor) : <span style={{ color: 'var(--muted)', fontSize: 15 }}>sin precio ahora mismo</span>}</div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+                {resPaper.completo
+                  ? numVivosPaper > 0 ? `${numVivosPaper}/${resPaper.n} con precio en vivo ⚡` : 'último cierre público'
+                  : `${resPaper.nValoradas}/${resPaper.n} valoradas — parcial`}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>Ganado / perdido</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: resPaper.pnl == null ? 'var(--muted)' : resPaper.pnl >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+                {resPaper.pnl != null ? <>{resPaper.pnl >= 0 ? '+' : ''}{usd(resPaper.pnl)}</> : '—'}
+              </div>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+                {resPaper.rentabilidad != null ? <>{pct(resPaper.rentabilidad)} sobre {usd(resPaper.invertidoValorado)}{resPaper.completo ? '' : ' (solo lo valorado)'}</> : 'no realizado — hace falta el precio de hoy'}
+              </div>
+            </div>
+          </div>
           <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 560 }}>
-              <thead><tr><th style={th}>Símbolo</th><th style={th}>Abierta</th><th style={th}>Cantidad</th><th style={th}>Entrada</th><th style={th} title="⚡ = precio público en vivo de hoy (botón Actualizar); sin ⚡ = último cierre público (Stooq→Yahoo); «—» = sin precio ahora mismo, no un 0">Precio ahora</th><th style={th}>Rentabilidad</th></tr></thead>
+              <thead><tr><th style={th}>Símbolo</th><th style={th}>Abierta</th><th style={th}>Cantidad</th><th style={th}>Entrada</th><th style={th} title="⚡ = precio público en vivo de hoy (botón Actualizar); sin ⚡ = último cierre público (Stooq→Yahoo); «—» = sin precio ahora mismo, no un 0">Precio ahora</th><th style={th} title="lo que costó la posición: cantidad × precio de entrada (en dólares, que es en lo que cotiza el paper)">Invertido</th><th style={th} title="lo que vale hoy: cantidad × precio de ahora. «—» = sin precio ahora mismo, no un 0">Valor</th><th style={th} title="dinero ganado o perdido (no realizado) sobre lo invertido, en dólares">Resultado</th></tr></thead>
               <tbody>
                 {posiciones.map(p => {
                   const pa = precioAhora.get(p.simbolo) ?? null
                   const px = pa?.precio ?? null
-                  const ret = px != null && p.precioEntrada > 0 ? px / p.precioEntrada - 1 : null
+                  // Coste, valor y P&L en DÓLARES por el helper puro (mismo que suma los totales de abajo):
+                  // sin precio de hoy no hay valor ni resultado — se pinta «—», nunca un 0 ni la entrada.
+                  const r = resultadoPosicion({ simbolo: p.simbolo, cantidad: p.cantidad, precioEntrada: p.precioEntrada }, px)
                   return (
                     <tr key={p.id}>
                       <td style={{ ...td, fontWeight: 700 }}>{p.simbolo}</td>
@@ -585,31 +632,27 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                       <td style={td}>{p.cantidad}</td>
                       <td style={td}>{usd(p.precioEntrada)}</td>
                       <td style={td} title={pa?.vivo ? 'precio público en vivo de hoy' : 'último cierre público'}>{px != null ? <>{usd(px)}{pa?.vivo ? ' ⚡' : ''}</> : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                      <td style={{ ...td, fontWeight: 700, color: ret == null ? 'var(--muted)' : ret >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{pctN(ret)}</td>
+                      <td style={td}>{r.coste != null ? usd(r.coste) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                      <td style={td}>{r.valor != null ? usd(r.valor) : <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                      <td style={{ ...td, fontWeight: 700, color: r.pnl == null ? 'var(--muted)' : r.pnl >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+                        {r.pnl != null ? <>{r.pnl >= 0 ? '+' : ''}{usd(r.pnl)} <span style={{ fontWeight: 400 }}>({pctN(r.rentabilidad)})</span></> : '—'}
+                      </td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
           </div>
-          {(() => {
-            const conPrecio = posiciones.filter(p => (precioAhora.get(p.simbolo) ?? null) != null && p.precioEntrada > 0)
-            const invertido = conPrecio.reduce((s, p) => s + p.cantidad * p.precioEntrada, 0)
-            const ahora = conPrecio.reduce((s, p) => s + p.cantidad * (precioAhora.get(p.simbolo)!.precio), 0)
-            const completo = conPrecio.length === posiciones.length
-            const numVivosPaper = posiciones.filter(p => precioAhora.get(p.simbolo)?.vivo).length
-            return (
-              <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
-                {invertido > 0 && (
-                  <>Total{completo ? '' : ` (${conPrecio.length}/${posiciones.length} con precio — parcial, no la cartera entera)`}: invertido {usd(invertido)} → ahora <strong style={{ color: ahora >= invertido ? 'var(--positive)' : 'var(--negative)' }}>{usd(ahora)}</strong> ({pct(ahora / invertido - 1)}) · </>
-                )}
-                {numVivosPaper > 0
-                  ? <>Valorada con el precio público EN VIVO (⚡, {numVivosPaper}/{posiciones.length}{horaVivos ? `, últ. negociación ${horaVivos}h Madrid` : ''}; el resto, último cierre) — el botón 🔄 Actualizar la relee. </>
-                  : <>Valorada con el último cierre público (sin precio en vivo fiable ahora mismo). </>}
-                «—» = sin precio ahora mismo (no un 0). Estas posiciones son la razón de los vetos «posición ya abierta»: el agente no duplica compras. La salida es por TIEMPO al vencer la ventana de cada tesis (regla firmada: los stops empeoran, H9).
-              </p>
-            )
-          })()}
+          <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 6 }}>
+            Todo en dólares (el paper cotiza en USD; no se convierte a euros para no inventar un tipo de cambio).{' '}
+            {numVivosPaper > 0
+              ? <>Valorada con el precio público EN VIVO (⚡, {numVivosPaper}/{posiciones.length}{horaVivos ? `, últ. negociación ${horaVivos}h Madrid` : ''}; el resto, último cierre) — el botón 🔄 Actualizar la relee. </>
+              : <>Valorada con el último cierre público (sin precio en vivo fiable ahora mismo). </>}
+            {resPaper.sinPrecio.length > 0
+              ? <>⚠️ Sin precio ahora mismo: <strong>{resPaper.sinPrecio.join(', ')}</strong> — quedan fuera del valor y del resultado (es «no lo sé», no un 0), así que el total es PARCIAL. </>
+              : null}
+            El resultado es NO REALIZADO: son posiciones abiertas, nada vendido. Estas posiciones son la razón de los vetos «posición ya abierta»: el agente no duplica compras. La salida es por TIEMPO al vencer la ventana de cada tesis (regla firmada: los stops empeoran, H9).
+          </p>
         </section>
       )}
 
@@ -699,7 +742,7 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
                 <div key={cohorte} style={card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                     <strong style={{ fontSize: 14 }}>{cohorte}</strong>
-                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>{ultima.dias} días · {filas.length} snapshot{filas.length === 1 ? '' : 's'}</span>
+                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>{ultima.dias} días · {filas.length} snapshot{filas.length === 1 ? '' : 's'} · últ. {fechaCorta(ultima.fecha)}</span>
                   </div>
                   {alias.length > 0 && (
                     <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
