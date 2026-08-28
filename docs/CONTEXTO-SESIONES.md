@@ -3557,7 +3557,8 @@ completo `docs/AUDITORIA-2026-08.md`.
   un «el dinero nunca se auto-envía» que **ya no existían en el código** (desde el 20/08 el criterio es
   `apoyada_en_fuente`, y `sensibilidad.ts` no tiene NINGUNA regex de dinero). Los 20€ salían del texto libre
   de la guía. El precio pasa al catálogo y hay guardrail: cifra que no cuadre → a Telegram.
-- **Decisiones de Alberto:** Stripe propio (payout Kutxa ****0855, persona física) · cuna+trona 20€/estancia
+- **Decisiones de Alberto:** Stripe propio (payout **BBVA ****1175**, persona física — rectificado ese mismo
+  día; la spec decía Kutxa ****0855) · cuna+trona 20€/estancia
   en los 4 pisos · email automático `hola@ialimp.es` → `limpiezascruzz@gmail.com` (= Sique Brilla) con
   Reply-To a su Gmail · **enlace de pago automático** si él ya aprobó el precio en ese hilo (atado por código,
   no por la IA) · **sin IVA y fuera de la renta, sin pasar por Asecon** (anotado en `perfil-fiscal`).
