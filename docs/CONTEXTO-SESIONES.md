@@ -32,6 +32,18 @@
 
 ---
 
+### 🔍 (28/08/2026) Primera pasada de descubrimiento: el hallazgo NO es una librería, es un esquema
+- 3 búsquedas. `pvilas/hospedajes` **falla los dos filtros** (GPLv3 · Python · muerto desde may-2023,
+  1 mantenedor) → no se integra. Pero trae los **7 XSD + WSDL oficiales 3.0.0** y sus `targetNamespace`
+  **coinciden** con los que genera `packages/module-ses/src/soap.ts`. Nosotros **no tenemos ni un `.xsd`**.
+- **Importa por el pendiente de apagar Chekin:** no hay sandbox (`pre-ses` da 502), así que validar
+  nuestro XML contra el XSD en local es el único preflight antes de disparar a producción.
+  ⚠️ Ese repo es un espejo de 2023, **anterior al RD 933/2021 en vigor** — pedir los vigentes al
+  Ministerio; validar contra un esquema viejo daría verde sobre la especificación equivocada.
+- Dos ausencias con fondo: **EIAC/CIMA no tiene OSS** (estándar de TIREA, cerrado) → el parser de la
+  correduría hay que escribirlo, sin atajo; **pricing dinámico VR es todo comercial** → el serrucho se
+  resuelve en casa o no se resuelve.
+
 ### 🔭 (28/08/2026) `github-vigia` llevaba 2 meses escrita y SIN DISPARAR — trigger creado
 - La skill existía desde el 02/07 con su «Paso 2 — Descubrimiento» (busca repos OSS que encajen
   con pendientes reales), pero **no tenía trigger**: 139 triggers vivos, cero suyos. Sus dos
