@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-28 · mercado-booking** · hizo: 2ª pasada del día (tras la de 13:26, PR #1822).
+  Plan pedía 24 ventanas de mercado (de 572 candidatas, todas ronda 1/evento —
+  `sin_medir_nunca`, distintas de las de la pasada anterior: 2027-03-23/25 al 2027-04-18/20,
+  incluye Sevilla FC vs Deportivo abr-11) + 4 de escaparate propio; medidas las 24 de mercado
+  (0 sin respuesta, 240 comps reales escritos con `fuente:"booking_mcp"`; 0 anuncios propios
+  colados entre los comparables esta vez). Escaparate 2/4 medido (Dúplex center, Busto Reform);
+  House Sevillana y Luxury Busto sin disponibilidad en Booking para sus fechas de refresco →
+  2 huecos, no error del conector (el ingest ya distinguía este caso el 27/08). Latido `ok:true`.
+  dudas: si dos pasadas el mismo día es el diseño previsto de la rutina o un disparo duplicado
+  del scheduler — no se toca la cadencia sin que Alberto lo confirme; fallos: —; PRs/commits: —
+  (solo Supabase, sin tocar código).
 - **2026-08-28 · github-vigia** · hizo: Paso 2 a mano (3 búsquedas: EIAC/seguros, pricing dinámico VR, SES.HOSPEDAJES). 1 hallazgo: `pvilas/hospedajes` — GPLv3 + Python + muerto (may-2023, 1 mantenedor), NO integrable, pero trae los XSD/WSDL oficiales 3.0.0 cuyos namespaces casan con `module-ses/src/soap.ts` y nosotros no tenemos ninguno; útil como referencia porque no hay sandbox SES. Las otras 2 búsquedas, sin candidatos (EIAC es de TIREA, cerrado → el parser hay que escribirlo; pricing VR es todo comercial). dudas: si los XSD de 3.0.0 siguen vigentes tras el RD 933/2021 — NO se da por bueno, hay que pedirlos al Ministerio; fallos: canal Telegram omitido, esta sesión no tiene PLATAFORMA_URL/ALERTA_TOKEN (no es un 401, es que no existen las envs); PRs/commits: este commit.
 - **2026-08-28 · facturas-correo** · hizo: Vía B sana (dias_caido=0), sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (verificado por `search_threads`, no por el
