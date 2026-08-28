@@ -3559,6 +3559,23 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 📉 (28/08/2026) «Ideas de compra» de /trading: el mismo símbolo con dos % — PR #1836
+
+- Alberto leyó la columna «Resultado» como los earnings de NVDA. No lo es: es el **walk-forward**,
+  `(precioDespues − precioRef) / precioRef` (`puntuarTesis`), **congelado** al vencer la ventana de 10 días.
+  NVDA salía «pendiente» por llevar 7 de 10 días, no por estar roto.
+- Su segunda pega era buena: los 8 símbolos de la tabla son **exactamente** los 8 más recientes de la
+  Cartera paper de arriba. Pero el número NO es el mismo (arriba, P&L vivo de hoy), y nada lo decía →
+  ORCL aparecía ✗ −6,3% (día 10) con la posición aún abierta a día 15.
+- Hecho: sección **plegada** con `DetallePerezoso`, columna → «Resultado a 10 días» con la fórmula en el
+  tooltip y el pie diciendo de qué precios sale. No se borra: es la única traza POR OPERACIÓN.
+- 🚨 **Pendiente (fuera del PR):** el pie de «Cartera paper» dice que la salida es por TIEMPO al vencer la
+  ventana y **el código no lo hace** — la única salida es el stop (`aplicarStop` = `precio <= stop`). Por eso
+  MSFT sigue abierta desde el 04/08 con horizonte 10. Decidir: ¿corregir el texto o implementar la salida?
+- Nota de entorno: el `main` LOCAL del contenedor venía del 23/08 con 20 commits ajenos al remoto y el
+  guardián de rama bloqueaba el PR. Verificado que su contenido sí está en `origin/main`; se apuntó `main`
+  a `origin/main` dejando el tip viejo en el tag `main-stale-23ago`. Sin tocar el remoto.
+
 ## 🍼 (28/08/2026) El agente de huéspedes ya COBRA los extras y avisa a la limpieza — PR #1830
 - Alberto: el agente respondió bien «la cuna son 20€», pero ahí se acababa. Ciclo cerrado: catálogo en BD
   (`sivra_extras_catalogo`, extensible) → enlace de Stripe → webhook → email a Sique Brilla.
