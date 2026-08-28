@@ -148,13 +148,13 @@ El ingreso entra en `incomes` del piso (la tabla de ingreso por piso, en inglés
 extra**, por dos razones: que 20€ sueltos no ensucien el ADR ni alimenten el motor de pricing como si
 fueran alojamiento, y que el tratamiento fiscal sea un dato y no una suposición.
 
-**Tratamiento fiscal (dictado por Alberto, 28/08/2026):** los extras **suman en contabilidad pero no se
-declaran en renta**, y van **sin IVA**. Queda anotado en la skill `perfil-fiscal` para que los agentes
-fiscales lo respeten. ⚠️ **Marcado como pendiente de confirmar con Asecon**: «no lleva IVA» y «no tributa
-en IRPF» son preguntas distintas, y un extra cobrado dentro de una estancia turística es rendimiento de
-la misma actividad que la noche. Por eso el diseño **no cablea la exclusión en ningún sitio**: el IVA es
-un campo del catálogo y el ingreso va etiquetado en `incomes`, así que si Asecon dice otra cosa se cambia
-una fila y los importes ya están identificados uno a uno.
+**Tratamiento fiscal (dictado por Alberto, 28/08/2026, decisión cerrada):** los extras **suman en
+contabilidad pero no se declaran en renta**, y van **sin IVA**. Anotado en la skill `perfil-fiscal` para
+que los agentes fiscales lo respeten. Se le planteó que «sin IVA» y «no tributa en IRPF» son preguntas
+distintas y que conviniera pasarlo por Asecon; lo descartó (importes pequeños, cobro a cuenta personal).
+El diseño **no cablea la exclusión en ningún sitio**: el IVA es un campo del catálogo y el ingreso va
+etiquetado en `incomes`, así que el criterio se revierte editando una fila y los importes están
+identificados uno a uno.
 
 ## Qué NO entra (YAGNI)
 
@@ -166,10 +166,10 @@ una fila y los importes ya están identificados uno a uno.
 
 ## Riesgos y flecos abiertos
 
-- **Fiscal**: sin IVA y fuera de la renta por decisión de Alberto, **sin confirmar aún con Asecon**. El
-  diseño lo soporta como dato editable (campo `iva_pct` + etiqueta en `incomes`), nunca como exclusión
-  cableada: si la respuesta de la asesoría es otra, los importes ya están identificados uno a uno y se
-  corrige sin tocar código.
+- **Fiscal**: sin IVA y fuera de la renta por decisión cerrada de Alberto, **sin pasar por Asecon** (se
+  propuso y lo descartó). El diseño lo soporta como dato editable (campo `iva_pct` + etiqueta en
+  `incomes`), nunca como exclusión cableada: si el criterio cambia, los importes ya están identificados
+  uno a uno y se corrige sin tocar código.
 - **Booking/Airbnb**: cobrar un extra fuera del canal está permitido para servicios no incluidos en la
   reserva, pero es un cambio de práctica que conviene tener presente.
 - **Alta de Stripe**: hace falta cuenta y KYC de persona física con payout a Kutxa ****0855 antes de
