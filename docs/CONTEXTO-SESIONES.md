@@ -3572,6 +3572,13 @@ completo `docs/AUDITORIA-2026-08.md`.
 - 🚨 **Pendiente (fuera del PR):** el pie de «Cartera paper» dice que la salida es por TIEMPO al vencer la
   ventana y **el código no lo hace** — la única salida es el stop (`aplicarStop` = `precio <= stop`). Por eso
   MSFT sigue abierta desde el 04/08 con horizonte 10. Decidir: ¿corregir el texto o implementar la salida?
+- **H10 firmada y midiendo (misma sesión).** Alberto: «salida no por tiempo, ir subiendo el stop o
+  pérdida de media… los datos deciden». Medido antes de proponer: sobre **183.093 obs** (8,6× la muestra
+  de H9) la salida por TIEMPO sigue ganando (+3,12% vs +0,45%/+2,75%/+1,22%), y **gana en los 5 quintiles
+  de momentum** → queda REFUTADO el caveat de H9 «los stops ayudan al momentum» (en Q5 es donde más cuesta,
+  −4,43 pp). Pero H9 probó UNA distancia de trailing y NINGUNA media: se firma **H10** (trail −25%, stop a
+  coste tras +10%, pérdida de SMA50/SMA200) antes de recolectar, + informe `docs/TRADING-SALIDAS-2026-08.md`
+  + cron semanal `trading-h10` que aplica el criterio firmado y avisa; **no cablea nada** (eso va por PR).
 - Nota de entorno: el `main` LOCAL del contenedor venía del 23/08 con 20 commits ajenos al remoto y el
   guardián de rama bloqueaba el PR. Verificado que su contenido sí está en `origin/main`; se apuntó `main`
   a `origin/main` dejando el tip viejo en el tag `main-stale-23ago`. Sin tocar el remoto.
