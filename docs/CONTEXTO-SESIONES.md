@@ -37,9 +37,12 @@
   con el **ticker PELADO** (`VWCE`), y un UCITS europeo ahí no existe → **404** (comprobado vía pg_net:
   `VWCE` y `VWCE-DE` 404; `VWCE.DE` 200, EUR, XETRA). Encima `urlYahooVivo` convertía el punto en guion.
   Resultado: CVX se refrescaba y el ETF núcleo se quedaba con la foto de IBKR de la noche anterior.
-- Arreglo (PR pendiente): `simboloYahoo()` cualifica por el mercado que IBKR mete en la descripción
+- Arreglo (**PR #1837, mergeado**): `simboloYahoo()` cualifica por el mercado que IBKR mete en la descripción
   (`VWCE @IBIS2` → `VWCE.DE`), con **tabla corta y verificada** + guarda de divisa; sufijo de mercado
   conservado en la URL y punto de clase (BRK.B) intacto. Fixture real del 28/08 en los tests.
+- Probado de punta a punta con el código ya en `main` y la fila real de `trading_cartera_real`:
+  `VWCE @IBIS2` → `/chart/VWCE.DE` → 200 EUR 168,54 → `esVivo:true`, valor pintado **31.685,52€**
+  (la foto de anoche decía 31.497,52€). CVX sigue pidiéndose sin sufijo, como debe.
 - Dato de paso: Yahoo daba el cierre de Xetra **168,54€ (17:36)** y la app de IBKR **167,80€** a las 18:38
   — el feed de IBKR va con retraso; el panel queda igual o más fresco que el móvil.
 
