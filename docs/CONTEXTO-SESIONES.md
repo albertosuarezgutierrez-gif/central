@@ -3559,6 +3559,23 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🕰️ (28/08/2026) H11 (piscina del torneo) + H12: la cinta se cortaba en el día 91 — PR #1838
+
+- **H11 (recolección en sombra).** `torneo()` NO aplica el ajuste de confianza a las neutrales, pero
+  `trading_estrategia_stats` se calcula sobre una piscina **82% neutral** (retorno 0 por construcción):
+  se aprende de lo que nunca se opera, y hoy penaliza a las 4 estrategias (momentum −15 … reversión −7),
+  que es lo que decide quién gana el torneo. `/puntuar` escribe ya `direccional` y `alcista` junto a
+  `todos`; `/analizar` sigue leyendo solo `todos` → **cero cambio de comportamiento**. Se descartó
+  «solo alcistas» como piscina única: con `minN=20` dejaría 3 de 4 estrategias sin ajuste.
+- **H12 (idea de Alberto, firmada antes de mirar nada):** «una vez vendida, seguir analizando la acción
+  por si aguantar da más». Al ir a medirlo salió el límite de fondo: **todo el retrovisor termina en el
+  día 91** (ret28/56/91 y las 7 salidas, que al no disparar se rellenan con el horizonte). Que aguantar
+  182/364 días sea mejor **nunca se había mirado** — 91 era el TECHO de la medición, no un ganador.
+  Nuevo módulo puro `lib/trading/continuacion.ts`: `ret182`/`ret364`, techo/suelo (`mfe364`/`mae364`/
+  `diasMfe364`) y `tendenciaVivaAlSalir` (¿sobre la SMA50 el día que se vende?). El arrepentimiento se
+  DERIVA: `ret364 − salidaX`. Sin cifras aún (la rotación tarda días).
+- **Sigue abierto lo del PR #1836:** el stop de 2·ATR vivo en el paper contra H9 («no se ponen stops»).
+
 ## 📉 (28/08/2026) «Ideas de compra» de /trading + H10 (reglas de salida) — PR #1836 ✅ MERGEADO
 
 - Alberto leyó la columna «Resultado» como los earnings de NVDA. No lo es: es el **walk-forward**,

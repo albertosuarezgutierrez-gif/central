@@ -601,6 +601,61 @@ precios de entrada (cierre IBKR del 18/07) y la ventana:
 - **Evaluación:** por estado de la tabla — cuando `trading_estrategia_stats` tenga las filas
   `direccional` con ≥20 observaciones en ≥3 estrategias (no por fecha de calendario).
 
+## H12 — ¿Y si NO vendemos? La cinta se corta en el día 91 · firmada 2026-08-28, ANTES de mirar un solo retorno largo
+
+- **Idea de Alberto (28/08/2026), literal:** «que se venda a los 91 días y ya está… pero también ver
+  qué pasaría en el caso de aguantar más, porque el 91 a lo mejor es el actual. Que una vez vendida
+  siga analizando esa acción, y que lo meta con indicadores, por si vemos algo mejor de lo que
+  tenemos y que dé mayor rentabilidad».
+- **El hueco, dicho con precisión:** TODO lo que mide el retrovisor termina en el día 91 —`ret28/56/91`
+  y las siete reglas de `salidas.ts`, que cuando no disparan **se rellenan con el retorno del
+  horizonte**—. Así que la afirmación «la salida por tiempo gana» (H9, reconfirmada el 28/08 sobre
+  183.093 observaciones) solo es cierta **entre las reglas medidas y dentro de esa ventana**. Que
+  aguantar 182 o 364 días sea mejor o peor **no se ha mirado nunca**. 91 es el TECHO de la medición,
+  no un ganador contra horizontes que no se probaron — y confundir esas dos cosas es exactamente el
+  «dato que no hay ≠ dato que no se ha mirado» del CLAUDE.md, aplicado a nuestra propia conclusión.
+- **Hipótesis nula:** alargar el horizonte no mejora el retorno, y `tendenciaVivaAlSalir` no separa
+  las operaciones en las que conviene aguantar de las que no.
+- **Qué se RECOLECTA** (módulo puro `apps/plataforma/lib/trading/continuacion.ts`, cableado al
+  snapshot del retrovisor junto a `simularSalidas`; nada decide nada):
+  - `ret182` y `ret364` — retorno desde la MISMA entrada a horizontes largos.
+  - `mfe364` / `mae364` / `diasMfe364` — techo, suelo y **cuándo** se tocó el techo. Distinguen
+    «vendimos pronto» (el techo estaba por venir) de «vendimos tarde» (el techo quedó atrás).
+  - `tendenciaVivaAlSalir` — al cerrar el día 91, ¿el precio seguía por encima de su SMA50? Es el
+    indicador que permite contrastar **«vender por tiempo SALVO que la tendencia siga viva»** contra
+    vender siempre. No es look-ahead: solo usa cierres anteriores a ese día.
+- **El arrepentimiento no se guarda, se deriva:** todas las reglas de `salidas.ts` miden desde la
+  misma entrada, así que **`ret364 − salidaX` es literalmente lo que costó vender por la regla X en
+  vez de aguantar**. No hace falta ninguna columna más.
+- **Condición de cableado — dos preguntas distintas, dos criterios distintos:**
+  1. **Alargar el horizonte para todos.** Se cablea 182 o 364 si, con **≥5.000** observaciones de ese
+     horizonte (mismo mínimo que H10): (a) su **mediana** supera a la de `ret91` en **≥2 pp**, **y**
+     (b) el **percentil 25 NO empeora** — no se compra una mejora de la mediana pagándola con la cola
+     mala. Si (a) se cumple y (b) no, se registra y **no se cablea**.
+  2. **Aguantar SOLO si la tendencia sigue viva.** Se cablea si, con **≥1.000** observaciones en CADA
+     subgrupo: la mediana de `ret364 − ret91` del grupo `tendenciaVivaAlSalir = true` supera a la del
+     grupo `false` en **≥5 pp**, **y** el grupo `true` mejora **≥2 pp** sobre vender en el día 91.
+     Que solo se cumpla la primera mitad significa que el indicador ordena pero no paga: no se cablea.
+- **Caveats firmados (van aquí para que no se puedan inventar después):**
+  - **Las ventanas se SOLAPAN.** Los snapshots son mensuales y el horizonte es de 12 meses: cada
+    observación comparte ~11/12 de su ventana con la siguiente. Las observaciones **no son
+    independientes**, así que no se calculan p-valores — se decide por MAGNITUD de la mediana, igual
+    que en H10. Es un caveat más fuerte aquí que allí (a 91 días el solape era de ~2/3).
+  - **La muestra larga excluye el último año POR CONSTRUCCIÓN** (un snapshot de hace 6 meses no puede
+    tener `ret364`). No es una muestra aleatoria del periodo: está desplazada hacia atrás. Cualquier
+    conclusión se lee con eso delante.
+  - **`margenDias` (98) NO se toca.** Subirlo a 371 para que todo snapshot tenga `ret364` borraría un
+    año entero de observaciones de `ret91` — rompería H9/H10 para no ganar nada: los `null` ya dicen
+    «todavía no».
+  - `mfe364`/`mae364` quedan en **NULL** mientras la ventana no esté completa: un máximo sobre media
+    ventana es una **cota inferior**, y publicarlo como «el techo» sería afirmar lo que no se ha visto.
+  - Solo se miden **estos** horizontes (182, 364) y **este** indicador (SMA50 el día de la salida).
+    Probar otro no es «afinar H12»: es una hipótesis nueva, fechada y firmada antes de mirar.
+  - El coste es CPU del retrovisor, no dinero: cada snapshot hace dos barridos más sobre la serie, así
+    que la rotación completa por símbolo tarda algo más. El presupuesto de la pasada ya lo absorbe.
+- **Evaluación:** por estado de los datos —cuando `trading_backtest` tenga ≥5.000 snapshots con
+  `ret364` no nulo—, no por fecha de calendario. La rotación es de días.
+
 ---
 *Cambios a este documento: solo AÑADIR entradas fechadas; nunca editar una hipótesis ya registrada
 (si una condición resultó mal planteada, se registra una enmienda nueva explicando por qué).*

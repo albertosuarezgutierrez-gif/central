@@ -1187,6 +1187,20 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
     solo la salida, es también el **ancla del tamaño** de la posición (`dimensionar` reparte el 1% del
     NAV según la distancia al stop), así que la distancia 2·ATR hay que conservarla como cálculo de
     tamaño aunque nunca se venda por ella.
+  - **🕰️ H12 (28/08/2026, idea de Alberto): la cinta se cortaba en el día 91.** `ret28/56/91` y las
+    siete reglas de `salidas.ts` —que cuando no disparan se rellenan con el retorno del horizonte—
+    viven TODAS dentro de esa ventana, así que «la salida por tiempo gana» es cierto *entre las
+    reglas medidas y dentro de 91 días*: **que aguantar 182 o 364 días sea mejor o peor no se había
+    mirado nunca**. No es que saliera peor; es que 91 era el TECHO de la medición. El retrovisor
+    recoge ahora `ret182`/`ret364`, el techo y el suelo de la ventana larga (`mfe364`/`mae364`/
+    `diasMfe364`) y `tendenciaVivaAlSalir` (al cerrar el día 91, ¿el precio seguía sobre su SMA50?),
+    que es la pieza para contrastar «vender por tiempo SALVO que la tendencia siga viva».
+    Módulo puro `lib/trading/continuacion.ts`. **El arrepentimiento no se guarda, se deriva:** todas
+    las reglas miden desde la misma entrada, así que `ret364 − salidaX` ES lo que costó vender por X.
+    🚨 Dos trampas firmadas: (a) `mfe364`/`mae364` quedan en **NULL** con la ventana incompleta — un
+    máximo a media ventana es una COTA INFERIOR, no el techo; (b) **`margenDias` (98) de
+    `fechasSnapshot` NO se toca**: subirlo a 371 para que todo snapshot tenga `ret364` borraría un
+    año de observaciones de `ret91` y rompería H9/H10 a cambio de nada.
   - Informe vivo con las cifras y su muestra: **`docs/TRADING-SALIDAS-2026-08.md`** (se AÑADE una entrada
     fechada por hito, no se reescriben las anteriores). Hipótesis y criterios: `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
 - **🚨 LANDMINE — SESGO DE SUPERVIVENCIA: la tesis cuyo símbolo se cae del universo no se puntuaba NUNCA
