@@ -3476,6 +3476,21 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## ✅ (28/08/2026) Primera pasada del motor con el ancla nueva: limpia
+- **Observado, ya no simulado (parcialmente).** Deploy `e0116ab6` READY a las 18:56 UTC del 27/08;
+  la pasada de las **20:30 UTC** corrió con él: 154 noches en 4 pisos, latido `ok`. Invariantes en
+  esa pasada: **0 raíl a la baja roto · 0 alza sin evento · 0 bajo mínimo**. Testigo del ciclo que
+  motivó todo (`busto_reform`/30-ago): 78 → 98, dentro del raíl sobre `ref24`=97.
+- **El ancla ya no se mueve:** 1,03-1,07× a 7 días, y hoy vale lo MISMO que ayer en los cuatro pisos
+  (141 · 173 · 573 · 198) **pese a que hoy aún no ha entrado corpus** — que es exactamente la
+  resiliencia que se buscaba: un barrido que falta ya no mueve el precio.
+- 🚨 **Falsa alarma evitada, y deriva de doc corregida:** al ver a las 07:00 UTC que no había corpus
+  del día iba a reportarse «`mercado-booking` lleva 3,5 h de retraso». Falso: la rutina se **movió el
+  27/08 16:21 UTC de las 03:30 a las 08:30 UTC** y aún no le tocaba. `RUTINAS-PROGRAMADAS.md` seguía
+  diciendo 03:30. **El cron que manda es el del trigger, no el de la tabla.**
+- **Sigue sin poder afirmarse que dejó de oscilar:** hace falta ≥4 pasadas en días distintos para
+  contar 3 cambios de dirección y solo hay 1. Eso lo mide la rutina 20 el 03/09.
+
 ## 🔎 (27/08/2026) Corrección de las cifras del serrucho + seguimiento abierto — PR #1811 ✅
 - **Tres números del PR #1811 estaban mal y se corrigen en `docs/SEGUIMIENTO-ancla-pricing.md`:**
   (a) las volatilidades por piso iban cruzadas (busto_reform es 2,19× y duplex_center 1,96×, no al
