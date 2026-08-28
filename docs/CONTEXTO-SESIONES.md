@@ -32,6 +32,16 @@
 
 ---
 
+### 🤖 (28/08/2026) «NVIDIA 410»: el briefing no usaba OpenRouter — y perdía los datos por no tener prosa
+Alberto preguntó si el `daily-briefing` va por OpenRouter. **No: nunca ha ido.** `ai_usos` no tiene
+NI UNA fila con app `ia-rest-briefing` — la pasarela (única vía a OpenRouter) fallaba en un `catch {}`
+mudo y caía siempre a NVIDIA directo. Y el modelo cableado `meta/llama-3.1-70b-instruct` murió por
+EOL el **26/08 09:00 UTC** (410; último ✅ de la sonda 26/08 07:03) — tercer id de NIM muerto en 11 días.
+Arreglado el edge function: sin IA se manda el briefing EN CRUDO con el motivo (antes se perdían los
+datos ya calculados), el modelo sale de `NVIDIA_BRAIN_MODEL`, las alertas de stock leen la vista real
+(`almacen` no existe → «sin alertas» era mentira diaria) y el sello `last_run` usa las columnas reales.
+**Pendiente de decidir:** swap de NIM vs. gatearlo como Gemini (OpenRouter sirve ya el 100%). PR draft.
+
 ### 🎢 (27/08/2026) La segunda llave funciona — y Luxury no sube a ciegas: OSCILA
 Primera pasada con la segunda llave (14:30, deploy READY 09:29 → las 494 noches de las 08:30 son de
 código viejo). Escribió **243 noches, TODAS a la baja**, ratios **0,798–0,929**, cero fuera del raíl
