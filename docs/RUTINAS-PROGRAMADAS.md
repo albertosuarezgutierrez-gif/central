@@ -201,10 +201,10 @@ caza lo que las sesiones del día no anotaron a mano.
 > con quien corra la auditoría. Cuando Alberto dé por buena la temporada, este trigger se puede
 > borrar sin perder vigilancia.
 
-### 9. Vigía GitHub/OSS — *pendiente de trigger*
+### 9. Vigía GitHub/OSS — *activa*
 | | |
 |---|---|
-| **Cuándo** | Mensual, **día 15 ~07:00 CEST** |
+| **Cuándo** | Mensual, **día 15 ~07:04 CEST** (`0 5 15 * *` UTC) · trigger `trig_017pe2NS4pzKXYhGPM6St7aZ`, creado 28/08/2026 |
 | **Prompt** | `Ejecuta la skill github-vigia` (+ `PLATAFORMA_URL`/`ALERTA_TOKEN` en instrucciones para el aviso, como psd2) |
 | **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para repos externos (el MCP de GitHub va scopeado a `central`) y Bash para `pnpm outdated`/`audit`. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso Telegram (si faltan, se omite). |
 | **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
@@ -460,7 +460,7 @@ hecho contra la configuración de las 30 rutinas, no contra la pantalla.
 | `fiscal-novedades` | fiscal-novedades | Día 1 | ⛔ sin línea |
 | `ialimp-client-health` | ialimp-client-health | Vie | ⛔ sin línea |
 | `rrhh-compliance-calendar` | rrhh-compliance-calendar | Día 1 | ⛔ sin línea |
-| `github-vigia` | — | — | sin trigger (ya sabido) |
+| `github-vigia` | github-vigia — vigía GitHub/OSS (mensual día 15) | Día 15 | ⛔ **placeholder** (`ALERTA_TOKEN` sin pegar → nace mudo) |
 
 **Corrección del mismo día, tras leer el código: el fallo NO es mudo por diseño — es mudo en la
 práctica, que es peor.** Las 13 skills SÍ hacen el preflight `GET /api/internal/alerta` al arrancar,
@@ -543,7 +543,7 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 2. ~~Confirmar MCP Booking.com~~ ✅ Confirmado — Booking.com está disponible y configurado en pricing-agente.
 3. 🔴 **Añadir `ALERTA_TOKEN` al campo "Instrucciones"** de las **8** rutinas con el canal muerto (ver «Auditoría del canal de aviso», 23/08/2026 — NO son solo psd2 y ialimp-client-health, como decía este punto) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** (vive en Vercel plataforma) **ni `CRON_SECRET`** (llave maestra — ver pendiente #9; usa el token estrecho `ALERTA_TOKEN`).
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
-5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (token estrecho, NO `CRON_SECRET` — ver pendiente #9). Al crearlo, cambiar su estado a *activa* en este doc.
+5. ~~Crear el trigger de la rutina 9 (github-vigia)~~ ✅ **Hecho (28/08/2026)** — `trig_017pe2NS4pzKXYhGPM6St7aZ`, mensual día 15 `0 5 15 * *` UTC, rutina 9 marcada *activa*. **Queda medio pendiente:** su prompt lleva `PLATAFORMA_URL` pero `ALERTA_TOKEN` es un **placeholder literal** — hasta pegarlo, la rutina corre pero avisa por el push nativo, no por Telegram (cae dentro del pendiente #3).
 6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
 7. **Crear el trigger de la rutina 11 (buscador-ia)**: semanal lunes ~07:00, prompt `Ejecuta la skill buscador-ia` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (token estrecho, NO `CRON_SECRET` — ver pendiente #9). Opcional: añadir `NVIDIA_API_KEY`/`GROQ_API_KEY` al prompt si quieres que el mini-eval pruebe candidatos en vivo. Al crearlo, cambiar su estado a *activa* en este doc.
 8. ~~Adjuntar el repo `central` a 7 rutinas que corren SIN repo~~ ✅ **NO APLICA — verificado 13/07/2026:

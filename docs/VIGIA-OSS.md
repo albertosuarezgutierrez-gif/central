@@ -20,6 +20,26 @@
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
+- **2026-08-28 — La skill YA TIENE TRIGGER, y alcanza más de lo que creía.**
+  - **Trigger creado** (`trig_017pe2NS4pzKXYhGPM6St7aZ`): mensual **día 15 ~07:04 CEST**
+    (`0 5 15 * *` UTC), sesión nueva por disparo. Llevaba desde el 02/07 escrita pero
+    **sin disparar nunca** — verificado contra la lista real de triggers (139 vivos, cero
+    de `github-vigia`). O sea: sus dos únicas pasadas fueron a mano.
+  - **Corregido el alcance sobre repos externos.** El aviso decía «usa la web y npm» dando
+    por hecho que no había más. Medido hoy: **`git clone --depth 1` de un repo público ajeno
+    FUNCIONA**, y `raw.githubusercontent.com` da 200. Sigue en 403 `curl` a `github.com` (usa
+    WebFetch) y `api.github.com`. Consecuencia práctica: el Paso 2 puede **leerse el código**
+    de un candidato para juzgar madurez (tests, nº de mantenedores, último commit) en vez de
+    fiarse de la ficha y de las estrellas.
+  - **Paso 2 reescrito con criba en dos filtros**: licencia+lenguaje ANTES que nada (AGPL →
+    solo lectura; no-TS → servicio externo o referencia), y madurez leída del clon. Y cada
+    candidato debe proponer **por cuál de las 4 vías entra** (dep npm · envoltorio en
+    `packages/*` · servicio externo · solo referencia), no quedarse en «nos puede servir».
+  - ⚠️ **El canal Telegram del trigger nace mudo**: el prompt lleva `PLATAFORMA_URL` pero
+    `ALERTA_TOKEN` es un placeholder pendiente de que Alberto lo pegue (pendiente manual #3
+    de `RUTINAS-PROGRAMADAS.md`). Hasta entonces la pasada corre igual y degrada por el push
+    nativo + bitácora, según `docs/AVISOS-AGENTES.md`.
+
 - **2026-07-02 — PRIMERA PASADA de la skill (baseline de versiones fijada).**
   - **🔴 npm audit (--prod): 3 high + 5 moderate.** Ninguno tiene bump "pequeño y seguro"
     (todos cruzan major o requieren migración) → decisión de Alberto:
