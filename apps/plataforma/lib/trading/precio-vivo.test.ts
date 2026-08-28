@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { parseYahooVivo, precioVivoFiable, conPrecioVivo, urlYahooVivo } from './precio-vivo.ts'
+import { parseYahooVivo, precioVivoFiable, conPrecioVivo, urlYahooVivo, simboloYahoo, mercadoIbkr } from './precio-vivo.ts'
 import type { PosicionRealIn } from './cartera-real.ts'
 
 // Respuesta REAL de https://query1.finance.yahoo.com/v8/finance/chart/ORCL?interval=1d&range=1d
@@ -96,4 +96,74 @@ test('conPrecioVivo: sin precio medio el P&L queda null (no 0) aunque el precio 
 
 test('urlYahooVivo: mayúsculas y punto de clase a guion (BRK.B), rango de 1 día', () => {
   assert.equal(urlYahooVivo('brk.b'), 'https://query1.finance.yahoo.com/v8/finance/chart/BRK-B?interval=1d&range=1d')
+})
+
+// Meta REAL de https://query1.finance.yahoo.com/v8/finance/chart/VWCE.DE?interval=1d&range=1d
+// capturada el 28/08/2026 (vía pg_net desde Supabase; el sandbox local no sale a Yahoo). Es el
+// ETF núcleo de la cartera real de IBKR — el mismo día, `.../chart/VWCE` (ticker pelado) y
+// `.../chart/VWCE-DE` devolvieron **404 «No data found, symbol may be delisted»**: por eso el
+// botón «Actualizar» no refrescaba esta posición.
+const YAHOO_VWCE_DE = {
+  chart: {
+    result: [{
+      meta: {
+        currency: 'EUR', symbol: 'VWCE.DE', exchangeName: 'GER', fullExchangeName: 'XETRA',
+        instrumentType: 'ETF', firstTradeDate: 1564383600, regularMarketTime: 1787931373,
+        hasPrePostMarketData: false, gmtoffset: 7200, timezone: 'CEST',
+        exchangeTimezoneName: 'Europe/Berlin', regularMarketPrice: 168.54,
+        fiftyTwoWeekHigh: 170.12, fiftyTwoWeekLow: 134.4, regularMarketDayHigh: 168.6,
+        regularMarketDayLow: 167.48, regularMarketVolume: 137448,
+        longName: 'Vanguard FTSE All-World UCITS ETF USD Accumulation',
+        shortName: 'Vanguard FTSE All-World U.ETF R', chartPreviousClose: 167.14,
+        priceHint: 2, dataGranularity: '1d', range: '1d',
+      },
+      timestamp: [1787931373],
+      indicators: { quote: [{ high: [168.60000610351562], low: [167.47999572753906], volume: [137448], open: [167.66000366210938], close: [168.5399932861328] }] },
+    }],
+    error: null,
+  },
+}
+
+// La posición REAL tal y como la deja la pasada nocturna en `trading_cartera_real` (28/08/2026).
+const VWCE: PosicionRealIn = {
+  simbolo: 'VWCE', descripcion: 'VWCE @IBIS2', cantidad: 188,
+  precioMedio: 169.44468, precioActual: 167.539993, valorMercado: 31497.52,
+  pnlNoRealizado: -358.08, pnlDiario: null, divisa: 'EUR',
+}
+
+test('mercadoIbkr saca el mercado de la descripción, y null cuando no lo hay (CVX)', () => {
+  assert.equal(mercadoIbkr('VWCE @IBIS2'), 'IBIS2')
+  assert.equal(mercadoIbkr('VANG FTSE AW USDA (VWCE @IBIS2)'), 'IBIS2')
+  assert.equal(mercadoIbkr('CVX'), null)
+  assert.equal(mercadoIbkr(null), null)
+})
+
+test('simboloYahoo cualifica el UCITS europeo por su mercado y deja en paz al resto', () => {
+  assert.equal(simboloYahoo(VWCE), 'VWCE.DE')                                        // el 404 que rompía el botón
+  assert.equal(simboloYahoo({ simbolo: 'CVX', descripcion: 'CVX', divisa: 'USD' }), 'CVX')
+  assert.equal(simboloYahoo({ simbolo: 'VWCE', descripcion: 'VWCE @BVME.ETF', divisa: 'EUR' }), 'VWCE.MI')
+  assert.equal(simboloYahoo({ simbolo: 'VWCE.DE', descripcion: 'VWCE @IBIS2', divisa: 'EUR' }), 'VWCE.DE') // ya cualificado
+})
+
+test('simboloYahoo: mercado desconocido o divisa que no cuadra → ticker tal cual, nunca un sufijo a ojo', () => {
+  // Un sufijo puesto por intuición no falla en silencio: resuelve a OTRO papel (PR #1189).
+  assert.equal(simboloYahoo({ simbolo: 'ABC', descripcion: 'ABC @NOEXISTE', divisa: 'EUR' }), 'ABC')
+  assert.equal(simboloYahoo({ simbolo: 'ABC', descripcion: 'ABC @IBIS2', divisa: 'USD' }), 'ABC')
+  assert.equal(simboloYahoo({ simbolo: 'abc', descripcion: null, divisa: null }), 'ABC')
+})
+
+test('urlYahooVivo conserva el punto de MERCADO (VWCE.DE) — con guion Yahoo da 404', () => {
+  assert.equal(urlYahooVivo('VWCE.DE'), 'https://query1.finance.yahoo.com/v8/finance/chart/VWCE.DE?interval=1d&range=1d')
+  assert.equal(urlYahooVivo('vwce.mi'), 'https://query1.finance.yahoo.com/v8/finance/chart/VWCE.MI?interval=1d&range=1d')
+})
+
+test('el VWCE de la cartera real SÍ se re-valora con la respuesta real de Xetra (era el bug)', () => {
+  const vivo = parseYahooVivo(YAHOO_VWCE_DE)
+  assert.ok(vivo)
+  assert.equal(vivo.precio, 168.54)
+  assert.equal(vivo.divisa, 'EUR')
+  const { posicion, esVivo } = conPrecioVivo(VWCE, vivo)
+  assert.equal(esVivo, true)
+  assert.equal(posicion.precioActual, 168.54)
+  assert.ok(Math.abs((posicion.valorMercado ?? 0) - 31685.52) < 1e-6)
 })
