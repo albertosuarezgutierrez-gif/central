@@ -3486,6 +3486,21 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🔑 (28/08/2026) Dos afirmaciones del doc de rutinas eran falsas, y una env vacía de verdad
+- **Corregido en `RUTINAS-PROGRAMADAS.md`, las dos verificadas por Alberto con Claude Chrome:**
+  (a) el «las tres rutinas llevan `ALERTA_TOKEN` con el placeholder» del 23/08 era **FALSO** —
+  las tres tienen el valor bueno (comparado por HASH contra `buscador-ia`/`agentes-entrenador`,
+  sin mostrar el valor); (b) la ficha de `mercado-booking` decía «sin esas dos envs no puede ni
+  pedir el plan ni escribir» y lleva **20 días escribiendo 240 filas/día con el token VACÍO**.
+- **Lo que SÍ está roto:** `SIVRA mercado booking` (`trig_01Sr5KXErpEhGCtT1F16hv4W`) tiene
+  `ALERTA_TOKEN` vacío. Probablemente solo afecta a su aviso de Telegram — **no verificado**.
+- **Objeción de Alberto, aceptada a medias:** el token va en TEXTO PLANO en el prompt de ≥6 rutinas.
+  Que se filtre ya estaba asumido (es de bajo privilegio: solo manda un Telegram). Lo que NO estaba
+  escrito es el coste de ROTARLO — N prompts a mano. Ahora hay tabla de rotación en el doc.
+  Se descarta «llamar sin secreto»: dejaría `/api/internal/alerta` sin autenticar.
+- 🚨 **Método:** dos veces seguidas mandé a Alberto a arreglar algo que no estaba roto, las dos
+  leyendo el doc en vez de mirar. **Una env de una rutina no se deduce del día del alta.**
+
 ## ✅ (28/08/2026) Primera pasada del motor con el ancla nueva: limpia
 - **Observado, ya no simulado (parcialmente).** Deploy `e0116ab6` READY a las 18:56 UTC del 27/08;
   la pasada de las **20:30 UTC** corrió con él: 154 noches en 4 pisos, latido `ok`. Invariantes en
