@@ -9,11 +9,20 @@ Vigila **hacia fuera** (el ecosistema), no hacia dentro (eso es `/auditoria-diar
 Entorno **efímero**: cada ejecución es una pasada completa e idempotente. El estado
 entre ejecuciones vive en **`docs/VIGIA-OSS.md`** (commiteado).
 
-> ⚠️ **El MCP de GitHub de la rutina está scopeado al repo `central`** — y el proxy del
-> entorno también intercepta `api.github.com` (403 fuera de `central`, verificado 02/07/2026).
-> Para repos EXTERNOS usa: la **página web** `https://github.com/<owner>/<repo>/releases/latest`
-> por WebFetch, el registro npm `https://registry.npmjs.org/<pkg>/latest` por curl para
-> paquetes npm, y **WebSearch**. No uses `mcp__github__*` fuera de `central`.
+> ⚠️ **Qué alcanzas de un repo EXTERNO, medido (28/08/2026).** El MCP de GitHub va scopeado
+> al repo `central` y el proxy intercepta `api.github.com`, pero eso **no** te deja fuera del
+> código ajeno: el clon directo sí funciona. Tabla comprobada:
+>
+> | Vía | Estado | Para qué |
+> |---|---|---|
+> | `git clone --depth 1 https://github.com/<owner>/<repo>.git` | ✅ | **leerte el código entero** (tests, estructura, quién commitea) |
+> | `curl https://raw.githubusercontent.com/<owner>/<repo>/<rama>/<fichero>` | ✅ 200 | un fichero suelto (LICENSE, package.json) sin clonar |
+> | `WebFetch https://github.com/<owner>/<repo>` y `.../releases/latest` | ✅ | ficha, estrellas, licencia declarada, releases |
+> | `curl https://registry.npmjs.org/<pkg>/latest` | ✅ 200 | versión npm directa |
+> | `curl` a `github.com` | ❌ 403 | — (usa WebFetch) |
+> | `api.github.com` sobre repo ajeno | ❌ 403 | — |
+>
+> No uses `mcp__github__*` fuera de `central`. Clona en un temporal, nunca dentro del repo.
 
 ## Paso 0 — Cargar contexto
 1. Lee `docs/VIGIA-OSS.md`: lista de repos vigilados con su última versión vista y
@@ -37,10 +46,38 @@ Para cada repo de la lista:
 pendientes (ej.: optimización de rutas/flota, channel managers/pisos turísticos,
 TPV/hostelería, RRHH/nóminas, y lo transversal: push, fiscal, Telegram). Regla de
 oro: **solo cuenta lo que resuelve un pendiente real o mejora claramente algo que ya
-tenemos** — nada de listas genéricas de "awesome-X". Máximo 3 candidatos por pasada,
-cada uno con: qué es, licencia, madurez (releases/actividad) y a qué pendiente sirve.
-Los candidatos que pasen el corte se añaden a la bitácora (y a la lista de vigilados
-si merecen seguimiento).
+tenemos** — nada de listas genéricas de "awesome-X". Máximo 3 candidatos por pasada.
+
+**Criba en dos filtros, EN ESTE ORDEN** (los dos primeros son baratos y descartan la
+mitad de candidatos antes de gastar contexto en ellos):
+
+1. **Licencia y lenguaje — antes de leer nada más.** Saca el `LICENSE` por
+   `raw.githubusercontent.com` (no te fíes solo de la etiqueta de la ficha) y mira en
+   qué está escrito:
+   - **MIT / Apache-2.0 / BSD** → puede entrar en código.
+   - 🚫 **AGPL / GPL** → **solo lectura, NUNCA copia-pega**: nuestro SaaS es privado y
+     copiar su código obligaría a publicar el nuestro (caso `OpenBB`, ya en la bitácora).
+     Anótalo como referencia y sigue.
+   - **No es TS/JS** (Python, Java, Go, C#) → no corre en Vercel serverless: solo vale
+     como servicio externo autohospedado/API, o como referencia a reimplementar
+     (casos `VROOM`/`OSRM` y `edgartools`). Dilo explícitamente en el hallazgo.
+2. **Madurez, leyendo el código, no la ficha.** Las estrellas no dicen nada de
+   mantenimiento. `git clone --depth 1` en un temporal y mira de verdad: ¿tiene tests?
+   ¿cuántas personas distintas commitean (`git log --format='%an' | sort -u`)? ¿fecha
+   del último commit? Un repo con 100k estrellas mantenido por una sola persona es un
+   riesgo, y hay que decirlo (así está anotado `edgartools`).
+
+Cada candidato que pase se anota con: qué es, **licencia**, **lenguaje y por qué vía
+entraría**, madurez (último commit + nº de mantenedores) y a qué pendiente sirve. Los
+que merezcan seguimiento van también a la lista de vigilados.
+
+**Cuatro vías de entrada al monorepo** — di siempre cuál propones, no dejes el «nos
+puede servir» a medias:
+1. **dep npm** en la app o package que lo use (precedente: `core-push` → `web-push`).
+2. **envoltorio en `packages/<algo>`** si lo van a usar ≥2 verticales; las apps consumen
+   `@central/*`, nunca la lib directa.
+3. **servicio externo** (autohospedado o API pública) si no es TS/JS.
+4. **solo referencia de lectura**, si la licencia o el lenguaje lo impiden.
 
 ## Paso 3 — Dependencias npm
 1. `npx --yes pnpm@10.33.0 outdated -r` en la raíz (si el recursivo falla en algún

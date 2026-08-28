@@ -32,6 +32,18 @@
 
 ---
 
+### 🔭 (28/08/2026) `github-vigia` llevaba 2 meses escrita y SIN DISPARAR — trigger creado
+- La skill existía desde el 02/07 con su «Paso 2 — Descubrimiento» (busca repos OSS que encajen
+  con pendientes reales), pero **no tenía trigger**: 139 triggers vivos, cero suyos. Sus dos
+  pasadas fueron a mano. Creado `trig_017pe2NS4pzKXYhGPM6St7aZ` (mensual día 15, `0 5 15 * *` UTC).
+- **Su aviso de alcance era falso por defecto:** decía «para repos externos, web + npm». Medido:
+  **`git clone --depth 1` de un repo ajeno funciona** y `raw.githubusercontent` da 200 (siguen en
+  403 `curl` a github.com y `api.github.com`). Puede LEERSE el código de un candidato.
+- Paso 2 reescrito: criba licencia+lenguaje ANTES de nada (AGPL → solo lectura; no-TS → servicio
+  externo), madurez leída del clon (tests, nº de mantenedores) y no de las estrellas, y cada
+  candidato propone por cuál de las 4 vías entra (dep npm · `packages/*` · servicio · referencia).
+- ⚠️ **Nace mudo:** su `ALERTA_TOKEN` es un placeholder pendiente de pegar (pendiente manual #3).
+
 ### 🎯 (28/08/2026) Instrumentado el ancla: ahora el fin del serrucho se podrá ATRIBUIR, no solo ver
 - **PR #1826** (`16b91f3e`): `pricing_applied` gana `base_fuente` ('mes'|'global', por noche) y
   `ancla_origen` (por piso/pasada). Sin ellas el seguimiento del 03/09 solo medía el agregado, y una
