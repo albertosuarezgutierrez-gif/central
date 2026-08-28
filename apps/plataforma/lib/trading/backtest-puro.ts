@@ -91,6 +91,12 @@ export type FactoresFecha = {
   salidaStop10?: number | null
   salidaStop20?: number | null
   salidaTrail15?: number | null
+  // H10 (28/08/2026): las variantes que H9 NO llegó a probar — trailing a otra distancia, stop a
+  // coste y pérdida de media. Se RECOLECTAN; ninguna decide nada hasta que H10 se resuelva.
+  salidaTrail25?: number | null
+  salidaCoste10?: number | null
+  salidaSma50?: number | null
+  salidaSma200?: number | null
 }
 
 // Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes,
