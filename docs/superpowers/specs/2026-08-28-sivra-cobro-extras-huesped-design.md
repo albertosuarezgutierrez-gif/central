@@ -103,8 +103,10 @@ nunca literal de respaldo; lo vigila `test/regression-secrets.test.ts`).
 Lo pidió Alberto y **contradice la regla escrita de que el dinero nunca se auto-envía**, así que se
 ata de forma determinista, no por criterio del modelo. Sale solo si se cumple TODO:
 
-1. Existe fila en `sivra_extras_reserva` con `estado='ofrecido'` para esa reserva y ese extra,
-   creada a partir de un mensaje que **Alberto aprobó con ✅**.
+1. Existe fila en `sivra_extras_reserva` con `estado='ofrecido'` para esa reserva y ese extra.
+   Esa fila la crea **el propio botón ✅ de Telegram**: al enviar un borrador cuya pregunta pasa
+   `detectarExtra`, el flujo de `mensajes_pendientes_tg` inserta el `ofrecido`. No hay otra vía de
+   crearla, así que «lo aprobó Alberto» es un hecho de la BD, no una inferencia sobre el hilo.
 2. El mensaje del huésped pasa `esAceptacion` limpiamente.
 3. El importe sale del catálogo.
 
