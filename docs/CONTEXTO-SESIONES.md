@@ -3573,6 +3573,18 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🧹 (29/08/2026) La card de gastos de SIVRA contaba la BANDEJA: 3,37 M€ → 13.755,66€ (PR #1844)
+- Salió al comprobar que el backfill de IONOS no duplicaba nada. NO duplicaba: el motor fiscal
+  (`getResumenFinanciero`) lee solo `movimientos_bancarios`, así que la renta no se toca.
+- Pero `getResumenSivra(anio)` sumaba `gastos` **sin filtrar `revisado` ni propiedad**. Dentro:
+  3.300.000€ + 33.000€ de la reserva del edificio de C/ San Luis 9 (dos documentos del mismo
+  contrato, y a nombre de «SAN LUIS 9 CB», que NO es titular) y el Modelo 200 de 2025 triplicado.
+- Fix: `lib/sivra/gasto-de-pisos.ts` (puro + guardián sobre el fuente, probado en rojo). 2026:
+  3.372.460,28€ → 13.755,66€. Los 4 pisos no cambian; `prop_multi_apartamentos` baja 5.782,29€
+  (lo que tiene sin revisar). Borrados los 2 duplicados del Modelo 200 (Alberto, 29/08).
+- **Pendiente de Alberto:** decidir qué hacer con las 2 filas de Ariste (reserva del edificio).
+  El agente hoy ya las rechazaría por receptor ajeno; son residuo previo a `receptor.ts` (31/07).
+
 ## 🧾 (29/08/2026) IONOS: importado el histórico entero — 55 facturas, 1.111,70€ (PR #1843)
 - Segunda mitad del trabajo del PR #1842 (que ya movió el negocio a correduría y arregló la huella).
 - Barrido del Gmail: **55 facturas** (03/2023→08/2026), no 46 — el asunto cambió de «Su factura» a
