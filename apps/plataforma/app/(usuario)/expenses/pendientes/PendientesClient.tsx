@@ -192,9 +192,15 @@ export default function PendientesClient() {
 
               {sospecha.esSospechoso && (
                 <div style={{ padding: 10, borderRadius: 8, background: 'var(--warning-bg)', marginTop: 10, fontSize: 13 }}>
-                  ⚠️ <b>Esto parece un INGRESO de tu correduría, no un gasto</b> — {sospecha.motivo}.
-                  Confirmarlo lo contaría como gasto deducible. El cobro ya está en el banco
-                  (abono con negocio «seguros»): aquí lo suyo es <b>descartarlo</b>.
+                  {sospecha.tipo === 'ingreso_correduria' ? (
+                    <>⚠️ <b>Esto parece un INGRESO de tu correduría, no un gasto</b> — {sospecha.motivo}.
+                    Confirmarlo lo contaría como gasto deducible. El cobro ya está en el banco
+                    (abono con negocio «seguros»): aquí lo suyo es <b>descartarlo</b>.</>
+                  ) : (
+                    <>⚠️ <b>Esta comisión YA está contada</b> — {sospecha.motivo}. Confirmarla como
+                    gasto la restaría <b>dos veces</b> y hundiría el resultado del piso sin que nada
+                    lo delate. Aquí lo suyo es <b>descartarla</b>.</>
+                  )}
                 </div>
               )}
               {p.motivo_revision && (

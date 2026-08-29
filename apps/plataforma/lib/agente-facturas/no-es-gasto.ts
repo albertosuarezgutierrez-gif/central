@@ -24,11 +24,39 @@
 // Módulo PURO (sin imports ni BD) para poder testearlo con `node --test`.
 
 export interface SospechaIngreso {
-  /** `true` = parece un ingreso/liquidación, no un gasto. */
+  /** `true` = no debe confirmarse como gasto. */
   esSospechoso: boolean
   /** Qué lo ha activado, para poder decirlo en pantalla. `null` si no hay sospecha. */
   motivo: string | null
+  /** Por qué no es un gasto: cambia el texto de la ficha, porque el motivo es distinto. */
+  tipo: 'ingreso_correduria' | 'ya_descontado' | null
 }
+
+/**
+ * Comisiones que la plataforma de reservas COBRA POR DESCUENTO, no por domiciliación.
+ *
+ * Alberto, sobre las cuatro facturas de Booking de su bandeja (1.371,94 €): «comisiones no son
+ * importes ingresados en cuenta de Booking, tiene que cuadrar con ingresos de reservas». Tenía
+ * razón, y la consecuencia es más grave de lo que parecía: `lib/financiero.ts` suma
+ * `SUM(amount)` de `incomes`, que es el importe **NETO** — la comisión YA está descontada ahí.
+ *
+ * Así que confirmar esa factura como gasto resta la comisión DOS VECES y hunde el resultado del
+ * piso sin que nada lo delate: es un gasto real, con su PDF y su importe correcto, que
+ * sencillamente ya está contado.
+ *
+ * (La alternativa ortodoxa —ingreso BRUTO + comisión como gasto deducible— es igual de válida y
+ * fiscalmente equivalente, pero exige cambiar `SUM(amount)` por `SUM(amount_gross)` en todo el
+ * módulo. Lo que no puede haber es la mezcla, que es lo que este aviso evita.)
+ */
+const PLATAFORMAS_QUE_DESCUENTAN: Array<[RegExp, string]> = [
+  [/\bbooking\.?com\b/i, 'Booking'],
+  [/\bairbnb\b/i, 'Airbnb'],
+  [/\bexpedia\b/i, 'Expedia'],
+  [/\bagoda\b/i, 'Agoda'],
+]
+
+/** Señales de que el documento es la COMISIÓN de la plataforma, no otro servicio suyo. */
+const RE_COMISION_RESERVAS = /\bcomisi[oó]n|\bcommission\b|\bpor\s+reservas\b/i
 
 /**
  * Vocabulario propio de la LIQUIDACIÓN de un mediador de seguros. Son expresiones que solo
@@ -71,7 +99,20 @@ export function pareceIngresoDeCorreduria(f: {
 }): SospechaIngreso {
   const texto = `${f.proveedor ?? ''} ${f.concepto ?? ''}`
   for (const [re, motivo] of [...SENALES_LIQUIDACION, ...SENALES_RETROCESION]) {
-    if (re.test(texto)) return { esSospechoso: true, motivo }
+    if (re.test(texto)) return { esSospechoso: true, motivo, tipo: 'ingreso_correduria' }
   }
-  return { esSospechoso: false, motivo: null }
+
+  // La comisión de la plataforma exige LAS DOS señales: quién la emite y que sea la comisión.
+  // Booking factura también servicios que SÍ se pagan aparte, y marcarlos todos sería el ruido
+  // que hace que se deje de leer el aviso.
+  for (const [re, nombre] of PLATAFORMAS_QUE_DESCUENTAN) {
+    if (re.test(texto) && RE_COMISION_RESERVAS.test(texto)) {
+      return {
+        esSospechoso: true,
+        tipo: 'ya_descontado',
+        motivo: `${nombre} descuenta su comisión del pago de la reserva, y el ingreso que contamos ya es el NETO`,
+      }
+    }
+  }
+  return { esSospechoso: false, motivo: null, tipo: null }
 }

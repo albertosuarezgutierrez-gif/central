@@ -18,14 +18,17 @@ test('los dos documentos REALES de Allianz que aparecieron en la bandeja (29/08/
   assert.match(anulacion.motivo ?? '', /anulaci/i)
 })
 
-test('🚨 «comisión» a secas NO basta: la que cobra Booking SÍ es un gasto', () => {
-  // El caso real que convive con el anterior en la misma bandeja: 938,25 € de Booking.com por
-  // «servicio de los pagos y comisión por reservas». Marcarlo entrenaría a ignorar el aviso.
-  const booking = pareceIngresoDeCorreduria({
-    proveedor: 'Booking.com B.V.',
-    concepto: 'Cargo por servicio de los pagos y comisión por reservas',
+test('«comisión» a secas NO basta: la señal de liquidación es el vocabulario de mediación', () => {
+  // ⚠️ Este test AFIRMABA lo contrario («la comisión de Booking SÍ es un gasto, no marcarla») y
+  // era una suposición mía equivocada, corregida por Alberto: Booking cobra por DESCUENTO y el
+  // ingreso que contamos ya es neto, así que tampoco se contabiliza. Se conserva lo único cierto
+  // de aquel test —que la señal de LIQUIDACIÓN de mediador no puede ser la palabra «comisión»—
+  // con un proveedor al que sí se le paga la suya.
+  const asesor = pareceIngresoDeCorreduria({
+    proveedor: 'Asecon',
+    concepto: 'Comisión por tramitación de expediente',
   })
-  assert.equal(booking.esSospechoso, false)
+  assert.equal(asesor.esSospechoso, false)
 })
 
 test('gastos normales de la bandeja no se marcan', () => {
@@ -72,4 +75,30 @@ test('🚨 pero el SEGURO de un piso sigue siendo un gasto', () => {
   for (const c of ['Recibo seguro hogar Calle Socorro 24', 'Póliza multirriesgo Luxury Busto - anualidad']) {
     assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Allianz', concepto: c }).esSospechoso, false, c)
   }
+})
+
+test('🚨 la comisión de Booking YA está descontada del ingreso: no se contabiliza aparte', () => {
+  // El caso real de Alberto (4 facturas, 1.371,94 €). `lib/financiero.ts` suma `SUM(amount)` de
+  // `incomes`, que es el NETO: confirmarla como gasto restaría la comisión dos veces.
+  const s = pareceIngresoDeCorreduria({
+    proveedor: 'Booking.com B.V.',
+    concepto: 'Cargo por servicio de los pagos y comisión por reservas',
+  })
+  assert.equal(s.esSospechoso, true)
+  assert.equal(s.tipo, 'ya_descontado')
+  assert.match(s.motivo ?? '', /NETO/)
+})
+
+test('los dos motivos NO se confunden: uno es un ingreso, el otro un gasto ya contado', () => {
+  const allianz = pareceIngresoDeCorreduria({ proveedor: 'Allianz', concepto: 'Extracto de Cuenta Mediador' })
+  const booking = pareceIngresoDeCorreduria({ proveedor: 'Booking.com', concepto: 'comisión por reservas' })
+  assert.equal(allianz.tipo, 'ingreso_correduria')
+  assert.equal(booking.tipo, 'ya_descontado')
+})
+
+test('🚨 exige LAS DOS señales: otro servicio de la plataforma sí se paga aparte', () => {
+  // Booking también factura cosas que no son la comisión; marcarlas todas sería el ruido que
+  // hace que se deje de leer el aviso.
+  assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Booking.com B.V.', concepto: 'Campaña de visibilidad patrocinada' }).esSospechoso, false)
+  assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Asecon', concepto: 'comisión de estudio' }).esSospechoso, false)
 })
