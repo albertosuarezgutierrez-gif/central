@@ -33,6 +33,7 @@
 ---
 
 ### 🧽 (29/08/2026) Intranet de limpieza para VANESA en plataforma + pestaña Tareas
+- PRs #1856 (v1) → #1857 (v2) → #1858 (v3) → #1859 (v4) → #1860 (lavandería), todos mergeados el 29/08.
 - Vanesa (Sique Brilla) NO usa el panel de ialimp → pantalla propia por token: `/invitado/limpieza?token=…`
   (patrón invitado empresas/trading; tabla `limpieza_acceso_token`, aplicada y sembrada por Supabase MCP).
 - Ve: calendario 30d × 4 pisos (`incomes`: ocupación+aforo, SIN nombres/importes) + resumen diario con
