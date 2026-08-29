@@ -32,6 +32,15 @@
 
 ---
 
+### 📅 (29/08/2026) mercado-booking: julio y agosto 2027 ya tienen bucket elegible
+Pasada prioritaria pedida por Alberto (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 280 comps
+reales escritos en 25 ventanas (24 del plan + 1 extra en agosto ronda 3, porque la fecha del
+día 1 era "evento" y no cuenta como fecha normal del bucket). **Objetivo cumplido:** julio-2027
+y agosto-2027 ya tienen ≥10 comparables en 3 fechas distintas por piso — verificado con
+`meses_sin_bucket` del endpoint `/api/sivra/mercado/plan` antes/después. Pendiente: la línea
+"PRIORIDAD TEMPORAL" de este prompt vive en la configuración del disparo programado, fuera del
+repo — Alberto tiene que quitarla él, esta sesión no tiene acceso a esa config.
+
 ### 🔎 (29/08/2026) Auditoría diaria (ligera) — sin hallazgos, radiografía regenerada
 Rango 26→29/08 (50 commits, día muy activo: ancla+serrucho de pricing, apagado de NIM, fix VWCE,
 trading H9-H15, card de gastos de sivra). Heartbeat de 22+12 huellas sin `⛔` nuevos (solo el
