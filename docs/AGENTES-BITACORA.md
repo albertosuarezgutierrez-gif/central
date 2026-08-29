@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-29 · mercado-booking** · hizo: pasada PRIORITARIA pedida por Alberto para
+  julio/agosto-2027 (`?desde=2027-07-01&hasta=2027-08-31&max=24`). Medidas las 24 ventanas
+  del plan acotado (280 comps reales `booking_mcp`: 24×10 + 1 ventana extra en agosto ronda 3
+  que hizo falta añadir a mano porque el día 1-ago era "evento", no cuenta como fecha normal
+  del bucket). **Objetivo cumplido: julio-2027 y agosto-2027 ya tienen ≥10 comparables en 3
+  fechas distintas por piso** (bucket mensual elegible en ambos; verificado con
+  `meses_sin_bucket` antes/después del plan). Escaparate 3/4 (House Sevillana sin
+  disponibilidad esas fechas → hueco, no fallo). Sin cupo para pasada normal del resto del
+  plan (572 ventanas totales). dudas: la línea "PRIORIDAD TEMPORAL" vive en el prompt
+  programado fuera del repo (no en `docs/RUTINAS-PROGRAMADAS.md`, que solo documenta el
+  prompt base) — Alberto tiene que quitarla él, esta sesión no tiene acceso a esa config;
+  fallos: —; PRs/commits: este commit.
+
 - **2026-08-28 · ialimp-client-health** · hizo: pasada semanal Sique Brilla (empresa_id
   `05edacff-ea49-42fe-8997-f9369613a845`). PMS sync activo (Smoobu, sin `sync_error`, último
   28/08 15:01, 32 sesiones/24h, 33/7d); 0 programaciones sin cubrir; 0 impagos activos. Todo
