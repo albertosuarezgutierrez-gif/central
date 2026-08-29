@@ -346,7 +346,7 @@ export function planDeVentanas(
   })
 
   const tope = Math.max(1, max)
-  const ventanas = conReservaAltoValor(pedidas, tope, filtro.reservaAltoValor)
+  const ventanas = conReservas(pedidas, tope, { altoValor: filtro.reservaAltoValor })
   return {
     ventanas,
     candidatas: pedidas.length,
@@ -356,6 +356,25 @@ export function planDeVentanas(
 
 /** Cuántas plazas de cada pasada se guardan para los bloques CAROS sin medir. */
 export const RESERVA_ALTO_VALOR = 3
+
+/**
+ * Cuántas plazas de cada pasada se guardan para los MESES SIN BUCKET elegible.
+ *
+ * 🚨 POR QUÉ (28/08/2026, julio y agosto de 2027). Hermano exacto del de arriba, y el mismo fallo por
+ * otra puerta: la cola antepone el evento CONFIRMADO sin medir —correctamente, su precio está
+ * congelado hasta que Booking lo mida— y ese día había suficientes para comerse las 24 ventanas
+ * enteras. Resultado medido: julio-2027 (20 comps en 2 fechas, le falta UNA) y agosto-2027 (cero)
+ * llevaban días en la cola sin que les llegara el turno, y el motor tarificaba sus **62 noches — el
+ * 17% del calendario, iguales en los 4 pisos** — con la mediana ANUAL en vez de con su temporada.
+ * En Sevilla eso no es un detalle: el ADR de agosto es 102€ contra 142€ de media, así que la mediana
+ * anual pide de más justo en el mes más flojo.
+ *
+ * El orden NO se toca: reordenar dejaría precios de evento congelados sin verificar, que es lo que
+ * esa prioridad existe para evitar. Lo que se hace es garantizar SUELO de cuota, igual que con los
+ * bloques caros. Cuatro plazas cubren un mes entero (3 fechas × 4 aforos = 12 ventanas) en tres
+ * pasadas, y si no hay meses cortos que rescatar la reserva no se desperdicia: vuelve a la cola.
+ */
+export const RESERVA_MES_CORTO = 4
 
 /**
  * Reparte el tope de la pasada entre la cola de urgencia y una RESERVA para lo caro sin medir.
@@ -373,6 +392,61 @@ export const RESERVA_ALTO_VALOR = 3
  * en las primeras pasadas aunque estén a ocho meses, y van rotando solos según se van midiendo.
  * Nunca crece por encima del tope: la pasada sigue costando lo mismo.
  */
+/**
+ * Reparte el tope de la pasada entre la cola de urgencia y DOS reservas de suelo.
+ *
+ * Las dos existen por el mismo motivo —la cola de urgencia, siendo correcta, deja fuera para siempre
+ * a un grupo que importa— y cada una lo aprendio con un caso real:
+ *   - `altoValor` -> Navidad de House (18/08/2026): el plan expandido por fecha de los eventos
+ *     confirmados es una cola FIFO por calendario y el bloque mas caro del invierno no se media.
+ *   - `mesCorto`  -> julio y agosto de 2027 (28/08/2026): los eventos confirmados sin medir se comen
+ *     el cupo entero y los meses sin bucket nunca llegan, asi que sus noches se tarifican con la
+ *     mediana ANUAL. Ver `RESERVA_MES_CORTO`.
+ *
+ * Ninguna reordena la cola: las dos RESERVAN plazas del mismo tope, asi que la pasada sigue costando
+ * exactamente lo mismo. Lo que una reserva no llegue a usar vuelve a la cola de urgencia - nunca se
+ * desperdicia una consulta.
+ */
+export function conReservas(
+  pedidas: VentanaPedida[],
+  tope: number,
+  reservas: { altoValor?: number; mesCorto?: number } = {},
+): VentanaPedida[] {
+  const rAlto = Math.max(0, reservas.altoValor ?? RESERVA_ALTO_VALOR)
+  const rMes = Math.max(0, reservas.mesCorto ?? RESERVA_MES_CORTO)
+  // Las reservas nunca dejan la cabeza vacia: si el tope es pequeno, se recortan a la vez.
+  const total = Math.min(rAlto + rMes, Math.max(0, tope - 1))
+  if (total === 0 || pedidas.length <= tope) return pedidas.slice(0, tope)
+  const alto = Math.min(rAlto, total)
+  const mes = Math.min(rMes, total - alto)
+
+  const cabeza = pedidas.slice(0, tope - total)
+  const dentro = new Set(cabeza.map(v => clave(v.checkin, v.aforo)))
+  const fuera = (v: VentanaPedida) => !dentro.has(clave(v.checkin, v.aforo))
+
+  // Solo CONFIRMADOS: un previsto es una apuesta (su premio ya va ponderado y no congela ningun
+  // precio), asi que no puede colarse por delante de una noche que el motor tiene congelada.
+  const caras = pedidas
+    .filter(v => fuera(v) && v.diasSinMedir === null && v.factor > 1 && v.eventoConfirmado === true)
+    .sort((a, b) => (b.factor - a.factor) || a.checkin.localeCompare(b.checkin))
+    .slice(0, alto)
+  const yaCara = new Set(caras.map(v => clave(v.checkin, v.aforo)))
+
+  // Mes corto: la fecha mas CERCANA primero. `mesCorto` ya excluye las noches de evento (medirlas no
+  // acerca al mes a tener bucket), asi que aqui no hay que volver a filtrarlas.
+  const cortos = pedidas
+    .filter(v => fuera(v) && !yaCara.has(clave(v.checkin, v.aforo)) && v.mesCorto === true)
+    .sort((a, b) => a.checkin.localeCompare(b.checkin))
+    .slice(0, mes)
+  const yaCorto = new Set(cortos.map(v => clave(v.checkin, v.aforo)))
+
+  const resto = pedidas.filter(v => {
+    const k = clave(v.checkin, v.aforo)
+    return fuera(v) && !yaCara.has(k) && !yaCorto.has(k)
+  })
+  return [...cabeza, ...caras, ...cortos, ...resto].slice(0, tope)
+}
+
 export function conReservaAltoValor(
   pedidas: VentanaPedida[],
   tope: number,
