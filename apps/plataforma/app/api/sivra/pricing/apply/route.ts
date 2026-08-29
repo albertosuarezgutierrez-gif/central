@@ -15,7 +15,7 @@ import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
-import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
+import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
 import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
 import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
       WHERE m.price_night > 0
         -- Plausibilidad €/plaza (17/08/2026): un comp muy por debajo del minimo por plaza es una
         -- HABITACION vestida de piso entero (ver pricing-comps-plausibles.ts) y no entra al percentil.
-        AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+        AND ${sqlCompPlausible("m.")}
       GROUP BY m.scenario, s.target_pctl, s.floor_pctl, s.ceil_pctl
     ),
     occ AS (
@@ -420,7 +420,7 @@ export async function POST(req: NextRequest) {
         AND NOT m.corpus_clonado
         AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
-        AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+        AND ${sqlCompPlausible("m.")}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
@@ -482,7 +482,7 @@ export async function POST(req: NextRequest) {
         AND m.search_date >= CURRENT_DATE - 120
         AND NOT m.corpus_clonado   -- mismo motivo que en el bucket del mes
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
-        AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+        AND ${sqlCompPlausible("m.")}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,

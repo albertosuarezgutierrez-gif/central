@@ -35,7 +35,7 @@
 // Estabilidad y frescura son dos preguntas distintas y cada una conserva su medida.
 //
 // Módulo PURO (sin Prisma ni `@/`), testeable con `node --test`.
-import { MIN_EUR_PLAZA_COMP } from './pricing-comps-plausibles.ts'
+import { sqlCompPlausible } from './pricing-comps-plausibles.ts'
 
 /** Ventana del corpus acumulado, en días de `search_date`. */
 export const VENTANA_ANCLA_DIAS = 30
@@ -88,7 +88,7 @@ export function sqlCorpusAncla(): string {
             -- Mismas dos guardas que el bucket del mes: pasadas cuyo corpus no distingue la fecha
             -- (estacionalidad inventada) y habitaciones vestidas de piso entero.
             AND NOT m.corpus_clonado
-            AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+            AND ${sqlCompPlausible("m.")}
           ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
         ),
         fiab AS (
