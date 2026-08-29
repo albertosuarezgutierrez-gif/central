@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-29T08:44:57Z",
-  "sha": "3dcd5491776c8539e1659b19e3cd7c0d5b165c2d",
+  "generadoEn": "2026-08-29T09:01:12Z",
+  "sha": "39537e0ed662bcce8a46c34bae06ef16265daa48",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47214,6 +47214,49 @@
       "hash": "e1a4a4e288c0"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/expenses/pendientes/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PendientesPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PendientesPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "/expenses/pendientes — la bandeja de revisión del agente de facturas. Esta ruta es la que el aviso de Telegram enlaza desde el día uno (`lib/agente-facturas/ avisos.ts`), y hasta el 29/08/2026 era un "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5fc37fae55e9"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/expenses/pendientes/PendientesClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PendientesClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "PendientesClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "bb37c0921271"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/CategoriasTab.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -50709,12 +50752,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 72
+          "linea": 76
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f9ff3cf3df7"
+      "hash": "881361bb699e"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -54695,6 +54738,58 @@
       "tablas": [],
       "rutaApi": "/api/empresas/sector-web",
       "hash": "5fc41b3db9d9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/expenses/pendientes/[id]/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PATCH",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "PATCH /api/expenses/pendientes/[id] — confirma (y APRENDE la regla del proveedor). Body: { categoria?, propiedad? }. Omitir un campo = dejarlo como está; '' = vaciarlo a propósito (los gastos de la co"
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 37,
+          "resumen": "DELETE /api/expenses/pendientes/[id] — descarta lo que no es un gasto nuestro."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/expenses/pendientes/[id]",
+      "hash": "2f8e7db376ba"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/expenses/pendientes/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/expenses/pendientes — la bandeja de revisión del agente de facturas. Ruta que el aviso de Telegram (`lib/agente-facturas/avisos.ts`) enlaza desde el día uno."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/expenses/pendientes",
+      "hash": "abc0a305dc5e"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/ayudas/[id]/descartar/route.ts",
@@ -60990,6 +61085,50 @@
       "hash": "e73783c7eda4"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/pendientes.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Bandeja de revisión de facturas: listar, confirmar y descartar. 🚨 Por qué existe este módulo (29/08/2026). El aviso de Telegram enlazaba a `/expenses/pendientes` desde el día uno y esa ruta NUNCA se construyó: era un 404. La única pantalla de gastos (`/sivra/expenses`) las esconde a propósito (`NOT",
+      "exporta": [
+        "listarPendientes",
+        "confirmarPendiente",
+        "descartarPendiente"
+      ],
+      "funciones": [
+        {
+          "nombre": "listarPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "limite = 200",
+          "retorno": "Promise<Pendiente[]>",
+          "linea": 47,
+          "resumen": "Las facturas que el agente dejó sin imputar, más caras primero. El criterio de «pendiente» es el MISMO que usan `/api/sivra/expenses`, el resumen mensual y las anomalías: `revisado = false AND origen "
+        },
+        {
+          "nombre": "confirmarPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, cambios: CambiosPendiente = {}",
+          "retorno": "Promise<boolean>",
+          "linea": 109,
+          "resumen": "Confirma una factura: la da por contabilizada y APRENDE la regla. El refuerzo de la regla es la mitad del trabajo: es lo que hace que la próxima factura del mismo proveedor se impute sola. `reforzarRe"
+        },
+        {
+          "nombre": "descartarPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<boolean>",
+          "linea": 149,
+          "resumen": "Descarta una factura que no es un gasto nuestro (ajena, duplicada, un contrato leído como factura…). Se BORRA en vez de marcarse revisada: dejarla revisada la contaría como gasto."
+        }
+      ],
+      "tablas": [
+        "gastos"
+      ],
+      "rutaApi": null,
+      "hash": "a7b4762907da"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
       "ambito": "apps/plataforma",
       "resumen": "Procesa UNA factura ya extraída: huella → regla → decisión → dedup → imputa. Compartido por el cron `scan` y el `backfill` (DRY).",
@@ -61165,6 +61304,37 @@
       ],
       "rutaApi": null,
       "hash": "71c22b9b3ba1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/sugerencia-pendiente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Qué proponer al revisar una factura de la bandeja, a partir de lo que YA se sabe. Contexto (29/08/2026). El agente lee la factura con IA pero quien decide si se imputa sola es `evaluar()` (reglas puras): sin regla confirmada ≥2 veces, a la bandeja. Y la regla solo nace cuando el dueño confirma. Como",
+      "exporta": [
+        "sugerirDesdeHistorico"
+      ],
+      "funciones": [
+        {
+          "nombre": "mayoritario",
+          "kind": "function",
+          "exportada": false,
+          "params": "valores: Array<string | null | undefined>",
+          "retorno": "string | null",
+          "linea": 41,
+          "resumen": "Valor mayoritario de una lista, o `null` si no hay ninguno claro. «Claro» = aparece al menos una vez y NO empata con otro distinto: un empate es exactamente el caso en que no se sabe, y desempatar por"
+        },
+        {
+          "nombre": "sugerirDesdeHistorico",
+          "kind": "function",
+          "exportada": true,
+          "params": "extraida: { categoria?: string | null }, historico: GastoHistorico[],",
+          "retorno": "Sugerencia",
+          "linea": 57,
+          "resumen": "Propone propiedad y categoría para un pendiente, mirando SOLO el histórico ya revisado del mismo proveedor. La categoría que trajo el extractor manda si no es un cajón de sastre."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "03624f55129f"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/titulares.ts",
@@ -71119,7 +71289,7 @@
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 10,
+          "linea": 11,
           "resumen": "Sin clave configurada NO se cobra: el flujo cae a la propuesta por Telegram de siempre."
         },
         {
@@ -71128,13 +71298,13 @@
           "exportada": true,
           "params": "p: { bookingId: string propertyId: string codigo: string precioCents: number nombre: string }",
           "retorno": "Promise<EnlacePago | null>",
-          "linea": 23,
+          "linea": 24,
           "resumen": "Crea un Payment Link de un solo uso para este extra. La `metadata` es lo que ata el cobro a la reserva: el webhook no adivina nada, lee de aquí. El precio llega en céntimos DESDE EL CATÁLOGO — esta fu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6492378be4a7"
+      "hash": "6b1b0870ada1"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
@@ -99115,7 +99285,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2614,
-    "funciones": 7210
+    "archivos": 2620,
+    "funciones": 7220
   }
 }

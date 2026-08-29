@@ -45,6 +45,15 @@
   `pricing_factor_aforo` fijado (verificada la función en caliente tras el cambio).
 - 🟡 vigilar: bloque Luxury jul-ago 2027 sube a tope de raíl persiguiendo el ancla (03/09 lo mide).
 
+### 🔎 (29/08/2026) Auditoría diaria (ligera) — sin hallazgos, radiografía regenerada
+Rango 26→29/08 (50 commits, día muy activo: ancla+serrucho de pricing, apagado de NIM, fix VWCE,
+trading H9-H15, card de gastos de sivra). Heartbeat de 22+12 huellas sin `⛔` nuevos (solo el
+`ses_transporte` ya conocido, acción pendiente de Alberto). Salud del precio sin 🔴: raíl a la baja
+intacto, sin palancas apagadas; los 187 `oscilantes`/7d son el mismo serrucho YA diagnosticado esta
+semana (PR #1826/#1827), no un hallazgo nuevo. Único arreglo: `estructura.generated.json` estaba
+desfasado → regenerado (carril 1). PR backlog (2 abiertos) y `rutinas-automerge` sanos. Detalle en
+`docs/AUDITORIA-2026-08.md`.
+
 ### ⚡ (28/08/2026) El botón «Actualizar» de /trading no refrescaba el VWCE (el 98,6% de la cuenta)
 - Alberto: «VWCE en mi pantalla ¿cuándo se actualiza?». Diagnóstico: el precio vivo se pedía a Yahoo
   con el **ticker PELADO** (`VWCE`), y un UCITS europeo ahí no existe → **404** (comprobado vía pg_net:
@@ -3585,6 +3594,32 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+
+## Cobro de extras del huésped: EN PRODUCCIÓN, y la prueba real destapó Managed Payments (29/08/2026)
+- Envs de Stripe puestas en Vercel (`plataforma`, solo Production). Webhook 500 → **400 «firma inválida»**
+  a las 08:16:48 UTC. Cuenta `acct_1U9QrKKBmOvjQ2ll` con `charges_enabled`/`payouts_enabled` y payout BBVA ****1175.
+- 🚨 **Managed Payments viene ACTIVADO por defecto en cuentas nuevas y RECHAZA el Payment Link** (exige
+  `tax_code`, solo admite productos digitales; el nuestro es un servicio). El `catch` lo volvía `null` =
+  «Stripe sin configurar»: el huésped no habría recibido nada y nada se habría puesto rojo. Se apaga por
+  llamada (no `tax_code`: eso haría a Stripe merchant of record y el huésped vería `LINK.COM*`).
+- Solo se vio haciendo la llamada REAL contra la cuenta viva: ni tsc, ni build, ni un test con mocks.
+  Guardián `stripe-managed-payments.test.ts` (rojo→verde) y el `catch` ya avisa por Telegram. PR #1849.
+- Pendiente de Alberto: apagar Managed Payments en el panel, `housesevilla.es`→`housesevillana.es`,
+  descriptor de extracto (`CARGO`), y la prueba con un cobro real de 20 €.
+
+## 🧾 (29/08/2026) La bandeja de facturas no tenía PANTALLA — 35.938,20€ atascados (PR #1847)
+- Alberto: «¿dónde reviso gastos? ¿la IA no las clasifica con todo el contexto que tiene?». Dos
+  respuestas incómodas: (1) el Telegram enlazaba a `/expenses/pendientes`, que **nunca se construyó**
+  (404), y `/sivra/expenses` las esconde a propósito; (2) **la IA no decide** — solo lee el PDF; quien
+  decide es `evaluar()` (reglas puras) y la regla SOLO nace al confirmar. Círculo cerrado: 19 de 21
+  pendientes con «Proveedor nuevo, sin regla aprendida».
+- Construida la pantalla (`app/(usuario)/expenses/pendientes`) + `GET/PATCH/DELETE /api/expenses/pendientes`
+  + entrada en el sidebar. Confirmar llama a `reforzarRegla` → a la 2ª confirmación se imputa sola.
+- Precarga determinista (`sugerencia-pendiente.ts`, puro): propone piso/categoría desde el histórico
+  del proveedor. **Nunca inventa**: sin base, campo vacío (un desplegable preseleccionado a ojo se
+  confirma sin mirar y la regla que nace hereda el error).
+- Guardián `avisos-enlace.test.ts`: ata enlace del Telegram + página + endpoints + sidebar. Probado en rojo.
+- **Pendiente:** revisar las 32 (35.938,20€). Y queda ofrecida la 2ª fase: que la IA proponga.
 
 ## 🧹 (29/08/2026) La card de gastos de SIVRA contaba la BANDEJA: 3,37 M€ → 13.755,66€ (PR #1844)
 - Salió al comprobar que el backfill de IONOS no duplicaba nada. NO duplicaba: el motor fiscal

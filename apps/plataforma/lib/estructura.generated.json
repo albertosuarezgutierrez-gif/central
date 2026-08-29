@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-29T08:44:57Z",
+  "generadoEn": "2026-08-29T09:01:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -764,7 +764,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 48
+        "evidencias": 49
       },
       "rrhh": {
         "estado": "usado",
@@ -3974,6 +3974,8 @@
       "/api/empresas/investigar",
       "/api/empresas/invitado",
       "/api/empresas/sector-web",
+      "/api/expenses/pendientes",
+      "/api/expenses/pendientes/[id]",
       "/api/finanzas",
       "/api/finanzas/ayudas/[id]/descartar",
       "/api/finanzas/categorias",
@@ -5268,7 +5270,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 37,
-    "apis": 1186,
+    "apis": 1188,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
