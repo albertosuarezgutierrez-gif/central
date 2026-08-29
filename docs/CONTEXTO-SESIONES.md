@@ -54,6 +54,10 @@
   reservas con aforo NULL (helper puro `lib/sivra/lavanderia-peso.ts` + test). El cron de las 05:15
   lleva `desde=2026-06-01` para retro-rellenar el aforo de los meses ya facturados; quitar el
   `desde` cuando el histórico esté relleno.
+- Factura REAL de Sique Brilla 2025/333 (julio, 780,10€) leída del PDF de Drive e INGERIDA en
+  `limpieza_facturas` (estaba VACÍA: el lector del PR #1699 nunca se usó) — validada con
+  `validarFactura`, cuadre al céntimo, 0 avisos. La limpieza SÍ viene por piso; la lavandería
+  viene por FECHA y KILOS (no por piso) → el reparto por huéspedes sigue siendo necesario.
 - Fase 2 EJECUTADA (29/08, pedida por Alberto): el login de dueña del tenant Sique Brilla en ialimp
   pasó de Vanessa a Alberto — `empresas` (id 05edacff…): email → el de Alberto, contraseña nueva
   (entregada en chat, cambiarla en la app), `session_jti` rotado y `sesion_activa=false`. Sin
