@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { elegirMesFacturado, repartirPagoSiqueBrilla } from './reparto-siquebrilla'
 import { casarFacturaConPago } from './factura-limpieza'
+import { pesoLavanderia } from './lavanderia-peso'
 import { facturasParaImportes } from './factura-limpieza-lectura'
 
 // Pisos que comparten lavandería (Giraldillo y la incluida en la factura de Sique Brilla).
@@ -109,11 +110,16 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       ORDER BY name
     `,
 
-    // Ingresos por piso (checkIn en el mes)
-    prisma.$queryRaw<Array<{ pid: string; ingresos: number; reservas: number }>>`
+    // Ingresos por piso (checkIn en el mes). huespedes/reservas_sin_aforo alimentan el reparto
+    // de lavandería: huéspedes REALES de las reservas con aforo informado, y cuántas reservas
+    // siguen sin aforo (adults y children a NULL = «no se sabe») para su fallback a capacidad.
+    prisma.$queryRaw<Array<{ pid: string; ingresos: number; reservas: number; huespedes: number | null; reservas_sin_aforo: number }>>`
       SELECT "propertyId" AS pid,
         COALESCE(SUM(amount), 0)::float  AS ingresos,
-        COUNT(*)::int                    AS reservas
+        COUNT(*)::int                    AS reservas,
+        SUM(COALESCE(adults, 0) + COALESCE(children, 0))
+          FILTER (WHERE adults IS NOT NULL OR children IS NOT NULL)::int AS huespedes,
+        COUNT(*) FILTER (WHERE adults IS NULL AND children IS NULL)::int AS reservas_sin_aforo
       FROM incomes
       WHERE "checkIn" >= ${start} AND "checkIn" < ${end}
       GROUP BY "propertyId"
@@ -202,13 +208,19 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     .reduce((s, r) => s + Number(r.importe), 0)
 
   // Ingresos y reservas por piso
-  const mIncome = new Map(incomes.map(r => [r.pid, { ingresos: Number(r.ingresos), reservas: Number(r.reservas) }]))
+  const mIncome = new Map(incomes.map(r => [r.pid, {
+    ingresos: Number(r.ingresos), reservas: Number(r.reservas),
+    huespedes: r.huespedes == null ? null : Number(r.huespedes),
+    reservasSinAforo: Number(r.reservas_sin_aforo),
+  }]))
 
-  // Pesos para reparto de lavandería: maxHuespedes × reservas (los 4 pisos, Dúplex incluido)
+  // Pesos para reparto de lavandería (los 4 pisos, Dúplex incluido): huéspedes REALES de las
+  // reservas del mes; las que aún no tienen aforo caen a capacidad (ver lavanderia-peso.ts).
   let pesoTotal = 0
   const pesos = new Map<string, number>()
   for (const p of props.filter(p => PISOS_LAVANDERIA.includes(p.id))) {
-    const w = (p.maxGuests ?? 0) * (mIncome.get(p.id)?.reservas ?? 0)
+    const inc = mIncome.get(p.id)
+    const w = pesoLavanderia(inc?.huespedes ?? null, inc?.reservasSinAforo ?? 0, p.maxGuests ?? null)
     pesos.set(p.id, w)
     pesoTotal += w
   }
@@ -233,9 +245,10 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     mGastos.get(row.propiedad)!.lavanderia += Number(row.importe)
   }
 
-  // Reparto de lavandería (Giraldillo y la incluida en el pago a Sique Brilla): capacidad ×
-  // reservas del mes de caja. Sin reservas en el mes, a partes iguales entre los pisos que
-  // comparten lavandería — nunca se evapora el gasto del P&L.
+  // Reparto de lavandería (Giraldillo y la incluida en el pago a Sique Brilla): huéspedes
+  // reales de las reservas del mes de caja (fallback a capacidad si el aforo aún es NULL).
+  // Sin reservas en el mes, a partes iguales entre los pisos que comparten lavandería —
+  // nunca se evapora el gasto del P&L.
   const repartirLavanderia = (importe: number, proveedor: 'giraldillo' | 'siqueBrilla') => {
     const sumar = (pid: string, imp: number) => {
       if (!mGastos.has(pid)) mGastos.set(pid, emptyGastos())

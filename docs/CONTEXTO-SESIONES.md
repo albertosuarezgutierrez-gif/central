@@ -49,6 +49,11 @@
   cron nuevo `updates/sync?days=800&ventana=45` (05:15) — pasada por ventana de LLEGADA que rellena
   el aforo NULL (8 de 9 reservas del mes lo tenían) y caza cancelaciones a semanas vista.
   Los CAMBIOS de fechas de una reserva existente NO se registran (el sync sobrescribe) — hueco conocido.
+- Reparto de LAVANDERÍA a huéspedes reales (regla confirmada por Alberto: «nº reservas y huéspedes»):
+  `pl-mensual` pesa ahora Σ(adults+children) por reserva del mes, con fallback a capacidad en las
+  reservas con aforo NULL (helper puro `lib/sivra/lavanderia-peso.ts` + test). El cron de las 05:15
+  lleva `desde=2026-06-01` para retro-rellenar el aforo de los meses ya facturados; quitar el
+  `desde` cuando el histórico esté relleno.
 - Fase 2 EJECUTADA (29/08, pedida por Alberto): el login de dueña del tenant Sique Brilla en ialimp
   pasó de Vanessa a Alberto — `empresas` (id 05edacff…): email → el de Alberto, contraseña nueva
   (entregada en chat, cambiarla en la app), `session_jti` rotado y `sesion_activa=false`. Sin

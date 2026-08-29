@@ -32,7 +32,10 @@ export async function GET(req: NextRequest) {
     // adults/children (aforo) de las reservas antiguas y caza cancelaciones a semanas vista.
     const ventana = Number(u.searchParams.get('ventana')) || 0
     const hoy = new Date().toISOString().slice(0, 10)
-    const arrFrom = u.searchParams.get('from') || (ventana > 0 ? hoy : undefined)
+    // ?desde=AAAA-MM-DD ancla el inicio de la ventana en el PASADO (backfill de aforo de meses
+    // ya facturados para el reparto de lavandería); sin él, la ventana empieza hoy.
+    const desde = u.searchParams.get('desde')
+    const arrFrom = u.searchParams.get('from') || desde || (ventana > 0 ? hoy : undefined)
     const arrTo = u.searchParams.get('to')
       || (ventana > 0 ? new Date(Date.now() + ventana * 86400000).toISOString().slice(0, 10) : undefined)
     return NextResponse.json(await runSync(days, maxPages, arrFrom, arrTo))
