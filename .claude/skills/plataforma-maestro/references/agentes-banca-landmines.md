@@ -235,18 +235,34 @@ era de **tres capas a la vez**. Sirve como plantilla para auditar cualquier prov
    variante del caso DIGI. `receptor.ts::nifProveedorEsNuestro` ya lo detecta desde el 26/08, pero
    las filas viejas seguían partidas. Saneadas en `prisma/sql/2026-08-29_ionos_correduria.sql`.
 3. **Y lo más caro: el agente de correo no existía cuando llegaron casi todas las facturas.** En
-   Gmail hay **46 facturas de IONOS desde 09/2023**; en `gastos` hay **6**, y solo UNA imputada (la
-   de abr-2026, metida a mano). El extracto de tarjeta solo cubre dic-2025→jul-2026, así que el
-   resto **no está ni en el banco ni en gastos**: no hay ningún hueco visible que delate la falta.
-   **«El agente no avisó» no es «no hay nada»: el agente solo mira el correo NUEVO.** Para auditar
-   un proveedor, la fuente completa es el buzón, no la bandeja.
+   Gmail hay **55 facturas de IONOS desde marzo de 2023** (1.111,70 €); en `gastos` había **6**, y
+   solo UNA imputada (la de abr-2026, metida a mano). El extracto de tarjeta solo cubre
+   dic-2025→jul-2026, así que el resto **no estaba ni en el banco ni en gastos**: no había ningún
+   hueco visible que delatara la falta. **«El agente no avisó» no es «no hay nada»: el agente solo
+   mira el correo NUEVO.** Para auditar un proveedor, la fuente completa es el buzón, no la bandeja.
+   Backfill completo en `prisma/sql/2026-08-29_ionos_backfill_historico.sql`.
 
-**Limitación estructural que queda abierta:** IONOS factura por CONTRATO (Servidor Virtual Cloud M,
-SSL Ilimitado anual, Domain Pack, Correo Basic…) con importes de 1,82€ a 145,20€. La regla de
-`gastos_reglas` se valida contra una banda de **±10% del importe esperado**, así que aunque Alberto
-confirme dos veces en la bandeja, **IONOS seguirá cayendo en la bandeja cada mes** salvo que se le
-ensanche `importe_min`/`importe_max` a mano. Un proveedor multi-contrato no encaja en «una huella,
-un importe».
+🚨 **Y la trampa de buscarlas: el ASUNTO del proveedor cambia con los años.** Hasta ago-2023 IONOS
+titulaba «**Su** factura N **del** DD/MM/AAAA de su contrato C» y desde sep-2023 «**Tu** factura N
+**con fecha de** DD/MM/AAAA». Un `subject:"Tu factura"` devuelve 46 y parece la lista completa —
+faltan 9, las más antiguas. **Al barrer el buzón de un proveedor, busca por REMITENTE y comprueba
+la fecha de la más antigua contra cuándo se dio de alta el servicio**; si el corpus empieza justo
+donde cambió una plantilla de correo, el corte es tuyo, no suyo.
+
+⚠️ **`base_imponible`/`iva` del backfill son DERIVADOS, no leídos.** El correo de IONOS solo
+publica el importe total; el desglose sale de `round(total/1,21)` y así queda marcado en
+`raw_extraction.iva_derivado`. Se validó contra las 5 facturas que sí pasaron por OCR (coinciden al
+céntimo), pero si algún día hace falta el IVA soportado exacto para un 303, el dato bueno está en
+los PDF adjuntos, no aquí.
+
+**La limitación estructural que esto destapó (resuelta, pero conviene entenderla):** IONOS factura
+por CONTRATO —cuatro vivos bajo el mismo cliente: Servidor Virtual Cloud M mensual, SSL Ilimitado
+anual, y dos Domain Pack— con importes de **1,82 € a 145,20 €**. `evaluar()` valida contra
+`[importe_min, importe_max]`, que por defecto es **±10 % del esperado**, así que por muchas veces
+que se confirme en la bandeja **volvería a caer en ella cada mes**: un proveedor multi-contrato no
+encaja en «una huella, un importe». La regla se sembró a mano con banda **1–200 €**;
+`reforzarRegla` solo ENSANCHA (LEAST/GREATEST), nunca estrecha. Al dar de alta un proveedor así,
+la banda es parte del alta.
 
 ## Frontera multi-tenant
 Scope `cuenta_id` siempre. BD compartida con sivra/ialimp: cambios transversales de BD → `auditoria-central`.
