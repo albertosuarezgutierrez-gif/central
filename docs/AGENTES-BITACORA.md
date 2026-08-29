@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-29 · facturas-correo** · hizo: Vía B sana (`dias_caido=0`, copió 3 PDFs en 48h);
+  backlog `PDF-pendiente`/`Extraccion-fallida` en 0 hilos (verificado por `search_threads`).
+  Paso 1: 0 candidatos nuevos (único match, un ticket de soporte de Smoobu, no es factura).
+  `_subir_aqui` vacío. Paso 4.0: `v_facturas_sin_cargo` sin filas `sin_revisar` — las 8
+  pendientes (Pepephone ene-jun, Giraldillo mayo, CREATE-Socorro jun) siguen
+  `revisada_sin_cargo`, no reabiertas. Preflight Telegram 200 OK, sin aviso (nada urgente).
+  Pasada en blanco: todo lo de hoy ya lo había cerrado la pasada de ayer (28/08). dudas: el
+  Fly.io ($6,68) de Manuel Suárez sigue en `Facturas/Revisar` sin que Alberto haya dicho si es
+  gasto suyo; fallos: —; PRs/commits: este commit.
 - **2026-08-28 · ialimp-client-health** · hizo: pasada semanal Sique Brilla (empresa_id
   `05edacff-ea49-42fe-8997-f9369613a845`). PMS sync activo (Smoobu, sin `sync_error`, último
   28/08 15:01, 32 sesiones/24h, 33/7d); 0 programaciones sin cubrir; 0 impagos activos. Todo
