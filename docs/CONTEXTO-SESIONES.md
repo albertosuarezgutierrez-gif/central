@@ -3573,6 +3573,19 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🧾 (29/08/2026) IONOS: importado el histórico entero — 55 facturas, 1.111,70€ (PR #1843)
+- Segunda mitad del trabajo del PR #1842 (que ya movió el negocio a correduría y arregló la huella).
+- Barrido del Gmail: **55 facturas** (03/2023→08/2026), no 46 — el asunto cambió de «Su factura» a
+  «Tu factura» en sep-2023 y buscar solo el segundo dejaba fuera las 9 más antiguas.
+- Backfill `prisma/sql/2026-08-29_ionos_backfill_historico.sql`: 49 altas + reconciliada la fila
+  manual de abr-2026 + confirmadas las 5 de la bandeja. Reparto: 210,54/260,15/270,52/370,49€.
+- `base_imponible`/`iva` DERIVADOS al 21% (el correo solo da el total); marcado en `raw_extraction`.
+- Regla `gastos_reglas` sembrada con banda **1–200€**: IONOS tiene 4 contratos (1,82€–145,20€) y la
+  banda por defecto de ±10% lo devolvía a la bandeja cada mes.
+- Cuadre banco↔factura 12/12 (11 a +4 días; el del 28/04 va un día ANTES de su factura).
+- **Pendiente de Alberto:** 2023/2024/2025 son ejercicios ya presentados — el dato está, usarlo
+  exigiría complementarias. Y quedan 36 gastos de OTROS proveedores sin confirmar en la bandeja.
+
 ## 🧾 (29/08/2026) IONOS llevaba 3 años sin contabilizarse — negocio mal cableado + huella partida
 - Alberto: «IONOS es dominio web, deducible a correduría; revisa que esté bien». **No lo estaba.**
 - `lib/destino.ts`: IONOS estaba en `RE_PISOS` (por `housesevillana.es`) → los 12 cargos en BD salían
