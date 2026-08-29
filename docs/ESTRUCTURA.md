@@ -19,19 +19,20 @@
 - **Verticales (apps/*):** 8 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`, `rrhh` (iarrhh),
   `transporte`, `alquiler`, `almacen`.
 - **Núcleos compartidos (`packages/core-*`):** **10**.
-- **Módulos de dominio (`packages/module-*`):** **26** + `legal-templates`.
+- **Módulos de dominio (`packages/module-*`):** **24** + `legal-templates`.
 - **Agentes de IA:** 30+ repartidos por vertical.
-- **Estado de los módulos:** **23 de 26 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
+- **Estado de los módulos:** **23 de 24 HECHOS y CONSUMIDOS** por ≥1 vertical (con adaptador real).
   `module-flota` cableado en ia-rest Y en `apps/transporte`; `module-alquiler` cableado en
-  `apps/alquiler`; `module-intercompany` cableado en `apps/plataforma`. Siguen **sin
-  consumo/adaptador**: `module-agenda`, `module-revenue` y `module-encargo` — HECHOS como
-  contrato/lógica + tests, ése es el cableado pendiente (`module-encargo` es el agregado
-  central que une todos, aún sin vertical que lo use directamente).
-- **Pendiente de CABLEADO (el código del núcleo ya existe como módulo):** `module-agenda`
-  (disponibilidad/reserva de recurso) y `module-revenue` (analítica de demanda) siguen sin
-  ninguna vertical consumidora; `module-encargo` (agregado central) tampoco, aunque
-  `module-alquiler` y `module-transporte` ya replican su patrón de agregado sobre sus propios
-  dominios en vez de componerse sobre él.
+  `apps/alquiler`; `module-intercompany` cableado en `apps/plataforma`.
+- **Retirados el 29/08/2026** (auditoría completa, decisión delegada por Alberto; recuperables de
+  git, último commit con ellos: `3dcd5491`): `module-encargo` (el agregado central nunca se adoptó —
+  `module-alquiler`/`module-transporte` replican su patrón por id, `encargoId`, en vez de componerse
+  sobre él; el PATRÓN sigue vigente, el package no) y `module-revenue` (su analítica quedó superada
+  por el motor real de pricing/rentabilidad de plataforma).
+- **Pendiente de CABLEADO (el código ya existe como módulo):** `module-agenda`
+  (disponibilidad/reserva de recurso) — se conserva SIN consumidor a propósito: el plan de
+  `apps/almacen` Fase 2 (`docs/ALMACEN-JJ-reunion-y-auditoria.md`) lo asigna al calendario de
+  eventos + anti-doble-reserva.
 - **BD:** `plataforma`+`ialimp`+`sivra`+`rrhh` comparten Supabase `wswbehlcuxqxyinousql`
   (schema `public`/`rrhh`); `ia-rest` usa schema `iarest`. (Nota histórica: el proyecto viejo
   `efncqyvhniaxsirhdxaa` es pre-migración; los datos vivos de ia-rest están en `wswbehlcuxqxyinousql`,
@@ -97,24 +98,21 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-documental` | Expedientes agnósticos (carpetas categorizadas + permisos por actor). | ✅ rrhh, ialimp |
 | `module-chat` | Mensajería interna 1-a-1 gestor↔titular (no-leídos, cronológico). | ✅ rrhh |
 | `module-rrhh` | Orquestación de firma avanzada OTP (eIDAS) sobre expedientes. | ✅ rrhh, ialimp |
-| `module-agenda` | Disponibilidad + reserva de recurso (sala, vehículo, kit, persona) con detección de solapes. | ⏳ HECHO sin consumo → cablear haciendas/flota/kits |
-| `module-revenue` | Análisis de demanda (ocupación, estacionalidad, lead time, pickup, pace, KPIs). | ⏳ HECHO sin consumo → falta superficie/BI |
+| `module-agenda` | Disponibilidad + reserva de recurso (sala, vehículo, kit, persona) con detección de solapes. | ⏳ HECHO sin consumo → reservado para almacén Fase 2 (calendario de eventos) |
 | `module-flota` | Flota/transporte: vehículos, portes, asignación por capacidad/tipo, rentabilidad por porte/vehículo, documental ITV/seguro, intercompany. | ✅ ia-rest (`flota-adapter.ts` + `/api/owner/flota/resumen`), `apps/transporte` |
 | `module-transporte` | Servicio/orden de transporte (porte interno intercompany o externo a cliente) sobre `module-flota` + Encargo tipo 'porte'. | ✅ apps/transporte |
 | `module-intercompany` | Consolidación con **eliminación** de operaciones entre sociedades del holding (cocina→tiendas, flota→catering, materiales→eventos) → resultado real del grupo + detalle por sociedad. | ✅ apps/plataforma |
-| `module-encargo` | **Agregado central**: une CRM+presupuestos+agenda+inventario+proveedores+portal+feedback+flota+intercompany bajo una identidad (evento/porte/alquiler/cita) con máquina de estados. | ⏳ HECHO+tests sin consumo directo — `module-alquiler`/`module-transporte` replican su patrón en vez de componerse sobre él |
-| `module-alquiler` | **Vertical alquiler de materiales/menaje** (interno a eventos del grupo Y a terceros): se compone sobre `module-encargo` + referencia materiales por id. Precio por días, máquina de estados (reservado→entregado→devuelto), recargo por retraso, disponibilidad por solape de fechas, costura intercompany. | ✅ apps/alquiler (desplegada) |
+| `module-alquiler` | **Vertical alquiler de materiales/menaje** (interno a eventos del grupo Y a terceros): referencia materiales por id y usa el patrón de agregado por id (`encargoId`). Precio por días, máquina de estados (reservado→entregado→devuelto), recargo por retraso, disponibilidad por solape de fechas, costura intercompany. | ✅ apps/alquiler (desplegada) |
 | `module-nominas` | Motor de cálculo de nóminas españolas (SS, IRPF, cuota patronal). | ✅ rrhh |
 | `module-trading` | Análisis de inversión: indicadores técnicos, torneo de estrategias, paper trading, scoring walk-forward, barreras de riesgo. | ✅ plataforma |
 | `module-geo` | Geolocalización (haversine, rumbo, velocidad, señal viva/perdida, geocerca, ETA, km recorridos). | ✅ rrhh, transporte |
 | `module-pagos` | Pago de facturas a proveedores: SEPA XML pain.001, normalización, deduplicación (agnóstico de PIS/banco). | ✅ plataforma |
 | `legal-templates` | Plantillas legales versionadas (RGPD, confidencialidad, código de conducta) → HTML. | ✅ rrhh |
 
-> **Nota:** 23 de 26 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
-> NO es un diseño pendiente: es realidad. Sin cablear aún: `module-agenda`, `module-revenue` y
-> `module-encargo` (agregado central, aún sin vertical que se componga directamente sobre él).
-> El siguiente paso para esos tres es el cableado (adaptadores + UI) en la app que corresponda,
-> que se revisa en preview por tocar runtime vivo.
+> **Nota:** 23 de 24 `module-*` están construidos Y consumidos por ≥1 vertical. La modularización
+> NO es un diseño pendiente: es realidad. Sin cablear aún solo `module-agenda` (reservado para
+> almacén Fase 2). `module-encargo` y `module-revenue` se retiraron el 29/08/2026 sin haberse
+> consumido nunca (recuperables de git, ver el bloque de arriba).
 
 ---
 

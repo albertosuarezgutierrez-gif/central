@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-29T08:02:34Z",
+  "generadoEn": "2026-08-29T09:01:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -106,11 +106,6 @@
       "npm": "@central/module-documental"
     },
     {
-      "id": "module-encargo",
-      "tipo": "module",
-      "npm": "@central/module-encargo"
-    },
-    {
       "id": "module-feedback",
       "tipo": "module",
       "npm": "@central/module-feedback"
@@ -169,11 +164,6 @@
       "id": "module-proveedores",
       "tipo": "module",
       "npm": "@central/module-proveedores"
-    },
-    {
-      "id": "module-revenue",
-      "tipo": "module",
-      "npm": "@central/module-revenue"
     },
     {
       "id": "module-rrhh",
@@ -590,7 +580,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "estado": "no",
@@ -774,7 +764,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 48
+        "evidencias": 49
       },
       "rrhh": {
         "estado": "usado",
@@ -1147,52 +1137,6 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 4
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "transporte": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-encargo": {
-      "almacen": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "alquiler": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "asegura": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "housesevillana": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "mariscos": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -1749,52 +1693,6 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
-      },
-      "transporte": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-revenue": {
-      "almacen": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "alquiler": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "asegura": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "housesevillana": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "mariscos": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
       },
       "transporte": {
         "estado": "no",
@@ -3151,7 +3049,6 @@
     "core-telegram": [],
     "module-agenda": [],
     "module-alquiler": [
-      "module-encargo",
       "module-intercompany",
       "module-materiales"
     ],
@@ -3161,7 +3058,6 @@
     "module-contabilidad": [],
     "module-crm": [],
     "module-documental": [],
-    "module-encargo": [],
     "module-feedback": [],
     "module-flota": [],
     "module-geo": [],
@@ -3177,7 +3073,6 @@
     "module-pesca": [],
     "module-presupuestos": [],
     "module-proveedores": [],
-    "module-revenue": [],
     "module-rrhh": [
       "core-firma",
       "module-documental"
@@ -3188,7 +3083,6 @@
     ],
     "module-trading": [],
     "module-transporte": [
-      "module-encargo",
       "module-flota",
       "module-intercompany"
     ],
@@ -4080,6 +3974,8 @@
       "/api/empresas/investigar",
       "/api/empresas/invitado",
       "/api/empresas/sector-web",
+      "/api/expenses/pendientes",
+      "/api/expenses/pendientes/[id]",
       "/api/finanzas",
       "/api/finanzas/ayudas/[id]/descartar",
       "/api/finanzas/categorias",
@@ -5371,10 +5267,10 @@
   },
   "resumen": {
     "verticales": 11,
-    "packages": 38,
+    "packages": 36,
     "capacidades": 23,
     "skills": 37,
-    "apis": 1186,
+    "apis": 1188,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
