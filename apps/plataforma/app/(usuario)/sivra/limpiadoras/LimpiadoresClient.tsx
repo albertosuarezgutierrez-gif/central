@@ -22,7 +22,7 @@ const TIPO_LENCERIA = [
   'sabana_bajera', 'sabana_encimera', 'funda_almohada', 'toalla_bano',
   'toalla_mano', 'alfombrin', 'colcha', 'almohada', 'nórdico', 'otro',
 ]
-const TABS = ['Hoy', 'Semana', 'Limpiadoras', 'Disponibilidad', 'Proveedores', 'Stock', 'Lencería', 'Checklists', 'Informes', 'Facturación']
+const TABS = ['Hoy', 'Tareas', 'Semana', 'Limpiadoras', 'Disponibilidad', 'Proveedores', 'Stock', 'Lencería', 'Checklists', 'Informes', 'Facturación']
 
 function pBy(id: string) { return PROPS.find(p => p.id === id) }
 function todayISO() { return new Date().toISOString().split('T')[0] }
@@ -183,6 +183,149 @@ function TabHoy() {
       })}
     </div>
   )
+}
+
+// ─── TAB TAREAS ─────────────────────────────────────────────────
+// Tareas sueltas para la limpieza (Vanesa) — aparte de las limpiezas por reserva. Ella las ve y
+// las marca hechas desde su intranet (/invitado/limpieza); aquí se crean, editan y borran.
+function TabTareas() {
+  const [tareas, setTareas] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [enlace, setEnlace] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState(false)
+  const [nueva, setNueva] = useState({ fecha: todayISO(), property_id: '', texto: '' })
+  const [guardando, setGuardando] = useState(false)
+
+  const load = useCallback(async () => {
+    const r = await fetch('/api/sivra/limpiadoras/tareas')
+    const d = await r.json()
+    setTareas(d.tareas || [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    load()
+    fetch('/api/sivra/limpieza-intranet/enlace').then(r => r.json()).then(d => setEnlace(d.enlace || null)).catch(() => {})
+  }, [load])
+
+  async function crear() {
+    if (!nueva.texto.trim() || guardando) return
+    setGuardando(true)
+    await fetch('/api/sivra/limpiadoras/tareas', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fecha: nueva.fecha, property_id: nueva.property_id || null, texto: nueva.texto }),
+    })
+    setNueva(n => ({ ...n, texto: '' }))
+    setGuardando(false)
+    load()
+  }
+  async function toggle(t: any) {
+    await fetch('/api/sivra/limpiadoras/tareas', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: t.id, hecha: !t.hecha }),
+    })
+    load()
+  }
+  async function borrar(id: string) {
+    await fetch('/api/sivra/limpiadoras/tareas', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+    })
+    load()
+  }
+  async function copiarEnlace() {
+    if (!enlace) return
+    try {
+      await navigator.clipboard.writeText(new URL(enlace, window.location.origin).toString())
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch { /* sin permiso de portapapeles: queda el botón Ver */ }
+  }
+
+  const porFecha: Record<string, any[]> = {}
+  for (const t of tareas) {
+    const f = String(t.fecha).slice(0, 10)
+    ;(porFecha[f] ||= []).push(t)
+  }
+
+  if (loading) return <Spinner />
+  return (
+    <div>
+      {/* Acceso de Vanesa */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 14, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>🧽 Intranet de Vanesa</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            {enlace ? 'Calendario + resumen diario con estas tareas y las notas 📌.' : 'Sin token activo (limpieza_acceso_token) — genera uno para poder compartir el enlace.'}
+          </div>
+        </div>
+        {enlace && (
+          <div className="limp-btn-row" style={{ display: 'flex', gap: 8 }}>
+            <a href={enlace} target="_blank" rel="noreferrer" style={{ ...btnTarea, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>👁 Ver pantalla</a>
+            <button onClick={copiarEnlace} style={btnTarea}>{copiado ? '✓ Copiado' : '🔗 Copiar enlace'}</button>
+          </div>
+        )}
+      </div>
+
+      {/* Nueva tarea */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 14, marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 8 }}>➕ Nueva tarea</div>
+        <div className="limp-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+          <input type="date" value={nueva.fecha} min={todayISO()} onChange={e => setNueva(n => ({ ...n, fecha: e.target.value }))} style={inputTarea} />
+          <select value={nueva.property_id} onChange={e => setNueva(n => ({ ...n, property_id: e.target.value }))} style={inputTarea}>
+            <option value="">Todos / general</option>
+            {PROPS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input value={nueva.texto} placeholder="Qué hay que hacer (p. ej. repasar cristales del salón)"
+            onChange={e => setNueva(n => ({ ...n, texto: e.target.value }))}
+            onKeyDown={e => { if (e.key === 'Enter') crear() }}
+            style={{ ...inputTarea, flex: 1 }} />
+          <button onClick={crear} disabled={!nueva.texto.trim() || guardando}
+            style={{ ...btnTarea, background: '#16a34a', color: '#fff', border: 'none', opacity: !nueva.texto.trim() || guardando ? .5 : 1 }}>
+            Añadir
+          </button>
+        </div>
+      </div>
+
+      {/* Lista */}
+      {tareas.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 32, color: 'var(--muted)', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)' }}>
+          Sin tareas apuntadas. Las que añadas le aparecen a Vanesa en su resumen del día.
+        </div>
+      )}
+      {Object.entries(porFecha).map(([fecha, ts]) => (
+        <div key={fecha} style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', margin: '0 0 6px 2px', textTransform: 'capitalize' }}>{fmtDate(fecha)}</div>
+          {ts.map(t => {
+            const p = t.property_id ? pBy(t.property_id) : null
+            return (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', marginBottom: 6 }}>
+                <button onClick={() => toggle(t)} title={t.hecha ? 'Marcar pendiente' : 'Marcar hecha'}
+                  style={{ width: 24, height: 24, minWidth: 24, borderRadius: 8, border: `2px solid ${t.hecha ? '#16a34a' : 'var(--border)'}`, background: t.hecha ? '#16a34a' : 'transparent', color: '#fff', cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>
+                  {t.hecha ? '✓' : ''}
+                </button>
+                <div style={{ flex: 1, fontSize: 13, color: t.hecha ? 'var(--muted)' : 'var(--text)', textDecoration: t.hecha ? 'line-through' : 'none' }}>
+                  {p && <span style={{ fontWeight: 700, color: p.color, marginRight: 6 }}>{p.short}</span>}
+                  {t.texto}
+                </div>
+                <button onClick={() => borrar(t.id)} title="Borrar" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 15, padding: 4 }}>🗑</button>
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const inputTarea: React.CSSProperties = {
+  border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', fontSize: 13,
+  background: 'var(--surface)', color: 'var(--text)', minHeight: 40,
+}
+const btnTarea: React.CSSProperties = {
+  border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 13,
+  fontWeight: 600, background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', minHeight: 40,
 }
 
 // ─── TAB SEMANA ──────────────────────────────────────────────────
@@ -998,15 +1141,16 @@ export default function LimpiadoresClient() {
         {/* Content */}
         <div style={{ maxWidth: 960, margin: '0 auto', padding: 20 }}>
           {activeTab === 0 && <TabHoy />}
-          {activeTab === 1 && <TabSemana />}
-          {activeTab === 2 && <TabLimpiadoras />}
-          {activeTab === 3 && <TabDisponibilidad />}
-          {activeTab === 4 && <TabProveedores />}
-          {activeTab === 5 && <TabStock />}
-          {activeTab === 6 && <TabLenceria />}
-          {activeTab === 7 && <TabChecklists />}
-          {activeTab === 8 && <TabInformes />}
-          {activeTab === 9 && <TabFacturacion />}
+          {activeTab === 1 && <TabTareas />}
+          {activeTab === 2 && <TabSemana />}
+          {activeTab === 3 && <TabLimpiadoras />}
+          {activeTab === 4 && <TabDisponibilidad />}
+          {activeTab === 5 && <TabProveedores />}
+          {activeTab === 6 && <TabStock />}
+          {activeTab === 7 && <TabLenceria />}
+          {activeTab === 8 && <TabChecklists />}
+          {activeTab === 9 && <TabInformes />}
+          {activeTab === 10 && <TabFacturacion />}
         </div>
       </div>
     </>

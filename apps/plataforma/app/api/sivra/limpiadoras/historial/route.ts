@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { PROPS_CALENDARIO_IDS } from '@/lib/sivra/constantes'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,9 +18,11 @@ export async function GET(req: Request) {
   const dateFilter = (from && to)
     ? Prisma.sql`AND cs.session_date BETWEEN ${from}::date AND ${to}::date`
     : Prisma.sql``
+  // cleaning_sessions es multi-tenant (ialimp escribe ahí las limpiezas de otras empresas):
+  // sin acotar a los slugs de Alberto, este panel veía sesiones de TODOS los tenants.
   const propFilter = property_id
     ? Prisma.sql`AND cs.property_id = ${property_id}`
-    : Prisma.sql``
+    : Prisma.sql`AND cs.property_id = ANY(${PROPS_CALENDARIO_IDS}::text[])`
 
   const sessions = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT
