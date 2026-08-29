@@ -33,6 +33,14 @@ import { esRutaDeRutina } from './lib/rutas-rutina'
 const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
   '/api/banca/pago/callback', '/api/internal/alerta',
+  // 🚨 Webhook de Stripe de los extras del huésped. Stripe POSTea desde SUS servidores, sin cookie
+  // y sin seguir redirects: sin esta exención el gate lo manda 307 → /login, Stripe lo apunta como
+  // entrega fallida y el extra se queda para siempre en `enlace_enviado` PESE A ESTAR COBRADO — el
+  // huésped paga, la limpieza no se entera y el cron de impago acaba caducándolo. Detectado el
+  // 28/08/2026 sondeando el endpoint en producción, antes de que llegara ningún pago real.
+  // No amplía privilegio: el handler verifica la FIRMA de Stripe (`constructEvent` con
+  // `STRIPE_WEBHOOK_SECRET_SIVRA` por `requireSecret`) y sin firma válida devuelve 400.
+  '/api/sivra/extras/webhook',
   '/api/sivra/mercado/ingest', '/api/sivra/pricing/aplicar-propuesta',
   // TEMPORAL Fase 3 subastas: puente de exploración de fuentes (auth por token
   // en BD `subastas_debug_token`, hosts oficiales cerrados). Se retira al cerrar la fase.
