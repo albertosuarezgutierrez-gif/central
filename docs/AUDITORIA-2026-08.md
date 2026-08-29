@@ -1517,3 +1517,54 @@ la cuenta de Claude, fuera de git — así que sigue por Telegram hasta que Albe
   `"streetAddress": "Calle Bustos Tavera 22"` — **el más caro**: si se publica, es la dirección
   que Google indexa para el negocio, y coincide con la de dos competidores propios.
 - Valor correcto en los 7 sitios: **Calle Socorro 24, 41003 Sevilla (barrio de San Julián)**.
+
+# Actualización 2026-08-29 — auditoría diaria (ligera)
+
+Rango: desde la pasada del 26/08 (`bfd8763`) hasta `1ec78dc` (29/08 09:10) — 50 commits. Día muy
+activo: instrumentación del ancla de pricing + baseline del serrucho medido (55,7%, PR #1826/#1827),
+apagado de NIM («todo OpenRouter», PR #1823), fix del botón «Actualizar» del VWCE (PR #1837), Tramo
+H9-H15 de trading, cartera paper en dólares, corrección de la card de gastos de sivra (bandeja vs
+reales, PR #1846) y el webhook de Stripe (PR #1845). El propio rango ya traía su entrada de memoria
+emparejada a cada PR (patrón `docs(memoria): ...`); esta pasada solo tuvo que verificar que no
+quedara nada suelto.
+
+## 🟡→✅ Integridad estructural — radiografía desfasada, regenerada
+`pnpm install --frozen-lockfile` OK (lockfile en sync). `pnpm auditar:check` falló (`estructura.generated.json`
+desfasado por la deriva de líneas de los ~50 commits del rango) → `pnpm run auditar` la regenera
+(este PR). Sin huecos nuevos de `transpilePackages` ni de `ignoreCommand` (11/11 apps).
+
+## ✅ Heartbeat de crons y agentes (22+12 huellas) — sin ⛔ nuevos
+- **a) Latidos `agente_latidos` (22):** todos `ok=true` salvo el ya conocido `ses_transporte`
+  (`ok=false`, «no hay ningún establecimiento dado de alta» — acción de Alberto, sin cambios).
+- **b) Tablas de dominio (12):** todas ✅, la más rezagada `trading-ranking (sem L)` a 74,2h de 192h.
+- `agente_reparaciones`: sin intentos de auto-reparación en los últimos 7 días.
+
+## 💰 Salud del precio — sin 🔴
+`horas_desde_ultima_pasada` = 11,5h (última escritura no vacía 28/08 20:31 UTC; la pasada de las
+08:30 UTC de hoy aún no había corrido al medir — 6 pasadas en 48h, cadencia intacta, no es un hueco
+real). `rail_baja_roto` = 0, `bajo_minimo` = 0, `rail_alza_sin_justificar` = 4 (coincide con el
+baseline ya documentado: eventos + premio de mercado, nada nuevo). `oscilantes` = 187 en 7 días —
+alto, pero **consistente con el serrucho ya diagnosticado y medido esta misma semana** (PR #1826/
+#1827: baseline del motor viejo 55,7% de transiciones cambian de dirección; el motor con ancla nueva
+del 28/08 aún no tiene serie suficiente para comparar). No es un hallazgo nuevo, es el mismo problema
+ya bajo seguimiento activo — el check-in de Alberto del 28/08 a las 14:47 UTC sigue siendo el sitio
+donde se mide si el arreglo funciona. Los 4 pisos: `enabled`/`apply_enabled` = true, `min_price`
+puesto, `antelacion_k` = 0 (apagada, correcto) — sin palancas apagadas en silencio.
+
+## ✅ Backlog de PRs de rutinas + salud del automerge — 2 PRs abiertos, ninguno de rutina
+Solo 2 PRs abiertos: **#1803** (correduría, docs-only, `dirty`, 27/08 16:06 — 1,7 días, bajo el
+umbral de 7 días de "olvidado"; conflicto sin resolver, a criterio de Alberto) y **#1847** (abierto
+minutos antes de esta pasada, sesión concurrente, sin tocar). Ninguno es un PR de rutina de
+registro puro esperando automerge. `rutinas-automerge.yml`: runs cada pocos minutos en la última
+hora (08:03, 07:10, 07:05 UTC) — vigilante vivo.
+
+## ✅ Reconciliación memoria/skills — sin huecos
+`docs/CONTEXTO-SESIONES.md` cubre el rango entrada por entrada. `docs/SKILLS.md` vs
+`.claude/skills/` (37 skills) y `.claude/commands/` (3 comandos): coinciden exactamente. Sin
+contradicciones en las reglas fiscales dictadas por Alberto (grep `amortiza|deducible|regla
+permanente` contra `perfil-fiscal` y la memoria: mismo criterio en todas partes). `docs/HUECOS-
+ABIERTOS.md`: H1 (EODHD) y H3 (IBKR en vivo) siguen vivos correctamente, sin cambios en el rango.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (el único
+commit que tocaba una ruta de esas carpetas, #1792, es un guardián de rama sin diff real en ia-rest).

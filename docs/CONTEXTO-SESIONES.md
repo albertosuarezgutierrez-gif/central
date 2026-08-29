@@ -32,6 +32,15 @@
 
 ---
 
+### 🔎 (29/08/2026) Auditoría diaria (ligera) — sin hallazgos, radiografía regenerada
+Rango 26→29/08 (50 commits, día muy activo: ancla+serrucho de pricing, apagado de NIM, fix VWCE,
+trading H9-H15, card de gastos de sivra). Heartbeat de 22+12 huellas sin `⛔` nuevos (solo el
+`ses_transporte` ya conocido, acción pendiente de Alberto). Salud del precio sin 🔴: raíl a la baja
+intacto, sin palancas apagadas; los 187 `oscilantes`/7d son el mismo serrucho YA diagnosticado esta
+semana (PR #1826/#1827), no un hallazgo nuevo. Único arreglo: `estructura.generated.json` estaba
+desfasado → regenerado (carril 1). PR backlog (2 abiertos) y `rutinas-automerge` sanos. Detalle en
+`docs/AUDITORIA-2026-08.md`.
+
 ### ⚡ (28/08/2026) El botón «Actualizar» de /trading no refrescaba el VWCE (el 98,6% de la cuenta)
 - Alberto: «VWCE en mi pantalla ¿cuándo se actualiza?». Diagnóstico: el precio vivo se pedía a Yahoo
   con el **ticker PELADO** (`VWCE`), y un UCITS europeo ahí no existe → **404** (comprobado vía pg_net:
