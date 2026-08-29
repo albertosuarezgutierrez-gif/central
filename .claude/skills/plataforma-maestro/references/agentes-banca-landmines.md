@@ -287,5 +287,35 @@ por huella+importe, y no tenían ninguna de las dos.
   `evaluaReceptor` — la fila es residuo anterior al estreno de `receptor.ts` (31/07/2026), no un
   fallo vivo. Antes de dar por rota una guarda, mira la fecha de la fila contra la del módulo.
 
+## 🚨 La bandeja de revisión NO tenía pantalla: un enlace a un 404 durante meses (29/08/2026)
+Alberto: *«¿dónde reviso gastos? ¿la IA no las clasifica con todo el contexto que tiene?»*. Las dos
+respuestas eran peores de lo que parecía.
+
+1. **La pantalla no existía.** `avisos.ts` enlaza `/expenses/pendientes` desde el día uno y esa ruta
+   **nunca se construyó**. Tampoco el endpoint `PATCH /api/expenses/pendientes/[id]` que esta misma
+   referencia daba por vivo (no había ni carpeta `app/api/expenses`) — **la documentación describía
+   una API inexistente**. Y `/api/sivra/expenses`, la única pantalla de gastos, las ESCONDE a
+   propósito (`NOT (revisado = false AND origen IS NOT NULL)`). Un enlace roto en una plantilla de
+   texto no lo caza `tsc` ni el build: hoy lo vigila `lib/agente-facturas/avisos-enlace.test.ts`,
+   que ata enlace + página + endpoints + entrada de sidebar (probado en rojo).
+2. **La IA no decide, y por eso «todo el contexto» no servía de nada.** La IA solo LEE el PDF; quien
+   decide auto-imputar o mandar a la bandeja es `evaluar()` — reglas puras: ¿hay regla para la huella?
+   ¿`vistas >= 2`? ¿el importe cae en la banda? Y **la regla solo nace al CONFIRMAR**. Sin pantalla no
+   se confirma → no nace la regla → todo sale «Proveedor nuevo, sin regla aprendida». **19 de 21**
+   pendientes con ese motivo exacto, **35.938,20 €** parados: Sique Brilla, la lavandería, Booking,
+   Allianz, Vercel, Anthropic, PriceLabs, Asecon… ninguno remotamente dudoso.
+
+**La regla que deja: un aviso que manda a una pantalla es una promesa, y hay que probar que la
+pantalla existe.** Aquí el bucle entero (leer → decidir → aprender) estaba construido menos el último
+eslabón, y sin él los otros tres no servían de nada.
+
+- La pantalla nueva precarga con **`sugerencia-pendiente.ts`** (PURO): propone piso/categoría desde el
+  histórico ya revisado del MISMO proveedor. 🚨 **Nunca inventa** — sin base deja el campo vacío, y un
+  EMPATE tampoco se desempata. Un desplegable preseleccionado a ojo se confirma sin mirar, y la regla
+  que nace de esa confirmación ya imputa SOLA a partir de la segunda vez: el error se propagaría.
+- Descartar **BORRA** la fila, no la marca revisada: revisada la contaría como gasto.
+- Pendiente ofrecido y no hecho: que la IA proponga con el contexto (histórico + movimiento bancario
+  que casa). Hoy la propuesta es determinista y gratis.
+
 ## Frontera multi-tenant
 Scope `cuenta_id` siempre. BD compartida con sivra/ialimp: cambios transversales de BD → `auditoria-central`.
