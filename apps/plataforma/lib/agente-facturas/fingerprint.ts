@@ -41,3 +41,37 @@ export function fingerprint(f: {
   const disc = discriminador(f.concepto)
   return disc ? `${base}:${disc}` : base
 }
+
+/**
+ * TODAS las huellas bajo las que puede estar registrado el mismo proveedor, la mejor primero.
+ *
+ * 🚨 Por qué hace falta (29/08/2026). `fingerprint()` usa el NIF **si lo hay** y si no el nombre,
+ * o sea la identidad CAMBIA DE EJE según lo que traiga cada factura. Alberto lo vio así:
+ *
+ *   «Anthropic Ireland, Limited»  NIF IE4276970QH  → huella 'IE4276970QH'   (la que confirmó)
+ *   «Anthropic, PBC»              sin NIF          → huella 'anthropic pbc' (seguía pendiente)
+ *
+ * Mismo proveedor, dos identidades, y lo aprendido en una no llega nunca a la otra: «he dado ok a
+ * varios y sigue apareciendo». Le pasa a cualquier proveedor que unas veces publique el NIF en el
+ * PDF y otras no, que son casi todos.
+ *
+ * Buscar por las dos une los ejes sin migrar el corpus ni tocar las reglas ya aprendidas. Es una
+ * lista ORDENADA, no un conjunto: la huella por NIF es la buena (un nombre se escribe de tres
+ * formas; un NIF no), así que va primera y es la que se escribe cuando no hay nada que reutilizar.
+ */
+export function huellasDe(f: {
+  nif_proveedor?: string | null
+  proveedor?: string | null
+  concepto?: string | null
+}): string[] {
+  const disc = discriminador(f.concepto)
+  const con = (base: string) => (disc ? `${base}:${disc}` : base)
+
+  const nif = normalizaNif(f.nif_proveedor)
+  const nombre = normalizaProveedor(f.proveedor || '')
+
+  const out: string[] = []
+  if (nif) out.push(con(nif))
+  if (nombre) out.push(con(nombre))
+  return [...new Set(out)]
+}
