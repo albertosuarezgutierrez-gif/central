@@ -42,6 +42,8 @@
   tenants de ialimp → acotado a los 4 slugs. Spec: `docs/superpowers/specs/2026-08-29-intranet-limpieza-vanesa-design.md`.
 - v2 (mismo día, feedback de Alberto): entradas marcadas en el calendario (→ + sección «Entradas del
   día») y zona «🔔 Novedades» (reservas nuevas por `incomes.createdAt` + `reservas_canceladas`, 14 días).
+- v3 (mismo día): la barra azul cubre la reserva ENTERA (media celda entrada → media celda salida;
+  cambio de huésped = dos medias barras) y los avisos se limitan a los 6 últimos, siempre visibles.
   Los CAMBIOS de fechas de una reserva existente NO se registran (el sync sobrescribe) — hueco conocido.
 - Fase 2 PENDIENTE (decidida por Alberto, tras validar pantalla real): quitar credenciales admin de
   Vanessa en ialimp y tomar él el mando del tenant Sique Brilla.

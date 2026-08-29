@@ -228,11 +228,11 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
 
       {/* Novedades: lo que ha cambiado respecto a lo que ya tenía planificado */}
       <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginTop: 14 }}>
-        <h2 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700 }}>🔔 Novedades · últimos 14 días</h2>
+        <h2 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700 }}>🔔 Últimos avisos</h2>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-          Reservas nuevas y cancelaciones que han entrado después de lo que ya tenías visto.
+          Las últimas reservas nuevas y cancelaciones, por si ya tenías el mes planificado.
         </div>
-        {!cargando && novedades.length === 0 && <div style={vacio}>Sin novedades: todo sigue como estaba. 👍</div>}
+        {!cargando && novedades.length === 0 && <div style={vacio}>Sin avisos nuevos: todo sigue como estaba. 👍</div>}
         {novedades.map((n, i) => {
           const p = propDe(n.propertyId)
           const rango = n.checkIn || n.checkOut
@@ -274,29 +274,33 @@ function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, onSel }: {
       </div>
       {dias.map(d => {
         const k = iso(d)
+        // La barra azul cubre la reserva ENTERA, del día de entrada al día de salida:
+        // media celda al entrar, celdas completas las noches intermedias, media celda al salir.
+        // Con cambio de huésped el mismo día se ven las dos medias barras (sale una, entra otra).
         const res = nocheOcupada(reservas, piso.id, k)
         const empieza = res?.checkIn === k
-        const acaba = res ? iso(addDays(new Date(res.checkOut + 'T12:00:00'), -1)) === k : false
+        const saliente = reservas.find(r => r.propertyId === piso.id && r.checkOut === k)
         const limp = limpiezas.find(l => l.propertyId === piso.id && l.fecha === k)
         const entra = limp ? entradaMismoDia(reservas, piso.id, k) : null
+        const barra = (estilo: React.CSSProperties, contenido?: React.ReactNode) => (
+          <div style={{ position: 'absolute', top: 8, bottom: 8, background: '#3E6AA8', zIndex: 1, ...estilo }}>{contenido}</div>
+        )
         return (
           <div key={k} className="li-cell" onClick={() => onSel(k)} role="button" tabIndex={0}
             onKeyDown={e => { if (e.key === 'Enter') onSel(k) }}
             style={k === sel ? { background: 'var(--primary-light, rgba(79,70,229,.08))' } : undefined}>
             {k === hoy && <div style={{ position: 'absolute', inset: 0, borderLeft: '2px solid var(--primary)', opacity: .4, pointerEvents: 'none' }} />}
-            {res && (
-              <div style={{
-                position: 'absolute', top: 8, bottom: 8, background: '#3E6AA8', zIndex: 1,
-                left: empieza ? '45%' : 0, right: acaba ? '55%' : 0,
+            {saliente && barra({ left: 0, right: '55%', borderTopRightRadius: 20, borderBottomRightRadius: 20 })}
+            {res && barra(
+              {
+                left: empieza ? '45%' : 0, right: 0,
                 borderTopLeftRadius: empieza ? 20 : 0, borderBottomLeftRadius: empieza ? 20 : 0,
-                borderTopRightRadius: acaba ? 20 : 0, borderBottomRightRadius: acaba ? 20 : 0,
-              }}>
-                {empieza && (
-                  <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#fff', fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap' }}>
-                    →{res.pax != null ? `${res.pax}👤` : ''}
-                  </span>
-                )}
-              </div>
+              },
+              empieza ? (
+                <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#fff', fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                  →{res.pax != null ? `${res.pax}👤` : ''}
+                </span>
+              ) : undefined,
             )}
             {limp && (
               <span title="Limpieza" style={{ position: 'absolute', zIndex: 2, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 20, height: 20, borderRadius: '50%', background: entra ? '#d97706' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🧽</span>

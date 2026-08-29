@@ -126,6 +126,7 @@ export async function GET(req: NextRequest) {
           pax: null,
           detectada: new Date(c.detectada).toISOString(),
         })),
+        6, // solo los últimos avisos: la limpieza no necesita el histórico entero
       ),
     })
   } catch (err) {
