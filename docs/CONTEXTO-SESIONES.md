@@ -42,9 +42,14 @@
   tenants de ialimp → acotado a los 4 slugs. Spec: `docs/superpowers/specs/2026-08-29-intranet-limpieza-vanesa-design.md`.
 - v2 (mismo día, feedback de Alberto): entradas marcadas en el calendario (→ + sección «Entradas del
   día») y zona «🔔 Novedades» (reservas nuevas por `incomes.createdAt` + `reservas_canceladas`, 14 días).
+- v3 (mismo día): la barra azul cubre la reserva ENTERA (media celda entrada → media celda salida;
+  cambio de huésped = dos medias barras) y los avisos se limitan a los 6 últimos, siempre visibles.
   Los CAMBIOS de fechas de una reserva existente NO se registran (el sync sobrescribe) — hueco conocido.
-- Fase 2 PENDIENTE (decidida por Alberto, tras validar pantalla real): quitar credenciales admin de
-  Vanessa en ialimp y tomar él el mando del tenant Sique Brilla.
+- Fase 2 EJECUTADA (29/08, pedida por Alberto): el login de dueña del tenant Sique Brilla en ialimp
+  pasó de Vanessa a Alberto — `empresas` (id 05edacff…): email → el de Alberto, contraseña nueva
+  (entregada en chat, cambiarla en la app), `session_jti` rotado y `sesion_activa=false`. Sin
+  `usuarios_empresa`; el acceso de las limpiadoras (token/PIN) NO se tocó. Los emails operativos
+  del tenant (impagos, alertas, reservas urgentes) ahora llegan a Alberto. Reversible por SQL.
 
 ### 🔍 (29/08/2026) Auditoría COMPLETA con foco en pricing — motor validado contra producción
 - Informe: `docs/AUDITORIA-2026-08-29-completa.md`. Todo verde: 12 checks CI en local, 11 typechecks,
