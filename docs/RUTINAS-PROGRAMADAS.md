@@ -76,6 +76,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
 | **Qué hace** | `auditoria-central` ENTERA: typecheck de las 8 apps + tests + seguridad multi-tenant + `pnpm audit` + infra por MCP (incl. `ignoreCommand` en los 8 `vercel.json`) + coherencia de docs. |
 | **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
+| **💰 Pricing (obligatorio, 27/08/2026)** | Además del bloque 2bis diario, la pasada semanal hace el tramo CARO, que es el que decide dinero a medio plazo: **(a)** re-corre la consulta de posición vs mercado de `docs/POSICION-MERCADO-lejano.md` §«La consulta» y **rellena su tabla de seguimiento** (ratio por piso, «más caros que TODOS los comps», cobertura); **(b)** comprueba las **tres** condiciones para reencender `antelacion_k` y dice explícitamente cuáles se cumplen y cuáles no —nunca la enciende sola: eso lo decide Alberto—; **(c)** mide la **oscilación por piso** en 7 días (la consulta del bloque 2bis, desglosada por `property_id`) y la compara con la semana anterior: si sube, es que el motor se está peleando consigo mismo; **(d)** corre `node --test lib/sivra/pricing-*.test.ts` en `apps/plataforma` (246 tests el 27/08/2026) — si alguno cae, es 🔴 y **el motor tiene prioridad sobre cualquier otro hallazgo de la pasada**. |
 
 ### 3. Facturas correo — *activa*
 | | |
@@ -168,9 +169,9 @@ caza lo que las sesiones del día no anotaron a mano.
 
 | | |
 |---|---|
-| **Cuándo** | Diaria, **05:30 CEST** (03:30 UTC — media hora después del barrido de las 03:00 UTC, para que la cobertura del día ya esté escrita cuando se pide el plan) |
+| **Cuándo** | Diaria, **10:30 CEST (08:30 UTC)** — cron real del trigger `trig_01Sr5KXErpEhGCtT1F16hv4W`, cambiado el **27/08/2026 16:21 UTC** (antes 05:30 CEST / 03:30 UTC). ⚠️ Este doc decía 03:30 hasta el 28/08 y eso casi produce una falsa alarma: al ver que a las 07:00 UTC no había corpus del día se leyó como «lleva 3,5 h de retraso» cuando sencillamente aún no le tocaba. **El cron que manda es el del trigger, no el de esta tabla** — compruébalo con `list_triggers` antes de declarar un retraso. La razón que justificaba las 03:30 («media hora después del barrido de las 03:00 UTC») **ya no existe**: ese barrido de Serper se apagó el 24/08/2026. Ahora coincide de minuto con la pasada de `apply-auto` de las 08:30, lo cual es inocuo desde el PR #1811: el ancla sale de una ventana acumulada de 30 días, así que los comps del día pesan ~4% y los recoge la pasada de 14:30. |
 | **Prompt** | `Ejecuta la skill mercado-booking` |
-| **MCPs / envs** | **Booking.com y NADA MÁS** (obligatorio; el formulario trae 16 conectores heredados — quitar los otros 15, ver paso 4 de "Cómo se crea un trigger"). GitHub va nativo por el repo; las 3 llamadas a plataforma son HTTPS con Bearer, no necesitan conector. · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo. |
+| **MCPs / envs** | **Booking.com y NADA MÁS** (obligatorio; el formulario trae 16 conectores heredados — quitar los otros 15, ver paso 4 de "Cómo se crea un trigger"). GitHub va nativo por el repo; las 3 llamadas a plataforma son HTTPS con Bearer, no necesitan conector. · `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `CRON_SECRET`). 🔴 **MEDIDO EL 28/08/2026: esta rutina tiene `ALERTA_TOKEN` VACÍO** (Alberto, por Claude Chrome) — es la única de las seis miradas que lo tiene así. ⚠️ Y eso **desmiente la frase que seguía aquí** («sin esas dos envs no puede ni pedir el plan ni escribir»): lleva **20 días escribiendo 240 filas diarias** con el token vacío, así que el camino de DATOS no depende de él. Lo que queda sin comprobar es qué rompe exactamente: lo más probable es solo su aviso de Telegram. **No se ha verificado**, así que no se afirma. ~~Sin esas dos envs no puede ni pedir el plan ni escribir: el latido saldría en rojo.~~ (frase original, DESMENTIDA por la medición de arriba — se deja tachada para que se vea que estuvo ahí y por qué era falsa). |
 | **Qué hace** | Pide a `GET /api/sivra/mercado/plan?max=12` las ventanas (fecha × aforo) con el corpus fiable más viejo, las mide con el conector de Booking (`number_of_adults` = aforo real del piso), y escribe los comparables en `market_rates` por `POST /api/sivra/mercado/ingest` con **`fuente:"booking_mcp"`**. Cierra con `POST /api/internal/latido` (`sivra_mercado_booking`). |
 | **Por qué existe** | Es la **única** fuente que distingue temporada. El barrido por búsqueda web da precios de anuncio SIN fecha: medido el 06/08/2026 para el Dúplex el 4-sep, Serper decía p50 **171€** y el mercado real era **129€** (−33%), con los mismos comps repitiendo precio en agosto, noviembre y marzo. Ver `docs/superpowers/specs/2026-08-06-mercado-booking-design.md`. |
 | **Verificar** | `SELECT checkin_date, guests, count(*) FROM market_rates WHERE fuente='booking_mcp' AND search_date >= CURRENT_DATE - 1 GROUP BY 1,2` + fila `sivra_mercado_booking` en `agente_latidos` con `ok=true`. |
@@ -191,10 +192,19 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Qué hace** | Verifica las últimas 24h: 3 pasadas `apply-auto` escritas en los 4 pisos · ningún precio bajo `min_price` ni fuera del raíl ±20% vs REF24 · PriceLabs sigue mudo en Dúplex/House · last-minute solo dentro de la antelación mediana y sin perforar suelos · alertas del guardián 07:30 · reservas nuevas no bajo el p50 fiable de su fecha |
 | **Si todo bien** | Una línea corta de confirmación a Alberto; si algo grave, pausa el motor (`pricing_config.paused=true`) y avisa con detalle |
 
-### 9. Vigía GitHub/OSS — *pendiente de trigger*
+> ✅ **Su cobertura ya NO depende de este trigger (27/08/2026).** Todo lo que verificaba esta
+> rutina a mano vive ahora en el bloque **2bis «💰 Salud del precio»** de `/auditoria-diaria`
+> —obligatorio en TODAS las pasadas, también en modo ligero— con los umbrales en un módulo
+> puro y testeado (`apps/plataforma/lib/sivra/pricing-salud.ts`, 13 tests). Es más robusto que
+> la rutina: esta cuelga de un trigger *self-bind* a la sesión del 09/08 (si esa sesión muere,
+> la vigilancia muere con ella y **en silencio**), mientras que el bloque de la auditoría corre
+> con quien corra la auditoría. Cuando Alberto dé por buena la temporada, este trigger se puede
+> borrar sin perder vigilancia.
+
+### 9. Vigía GitHub/OSS — *activa*
 | | |
 |---|---|
-| **Cuándo** | Mensual, **día 15 ~07:00 CEST** |
+| **Cuándo** | Mensual, **día 15 ~07:04 CEST** (`0 5 15 * *` UTC) · trigger `trig_017pe2NS4pzKXYhGPM6St7aZ`, creado 28/08/2026 |
 | **Prompt** | `Ejecuta la skill github-vigia` (+ `PLATAFORMA_URL`/`ALERTA_TOKEN` en instrucciones para el aviso, como psd2) |
 | **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para repos externos (el MCP de GitHub va scopeado a `central`) y Bash para `pnpm outdated`/`audit`. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso Telegram (si faltan, se omite). |
 | **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
@@ -253,6 +263,18 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs / envs** | Ninguno de rutina. Auth `CRON_SECRET`; avisan por `tgSend` (bot único del monorepo). |
 | **Qué hace** | `trading-watchdog` comprueba **3 tramos** de la pasada nocturna de trading: `broker_saldos` (NAV), `trading_tesis` (parte de `/analizar`) y **`/puntuar`** (stops + walk-forward, latido `trading_puntuar` — añadido PR #1291 tras un caso real donde NAV y tesis quedaron frescos pero `/puntuar` nunca se llamó y el watchdog de 2 tramos lo habría dado por bueno). Desde el 08/08/2026 (PR #1322) el propio watchdog **deja su huella** en `agente_latidos.trading_watchdog` (antes, si él mismo dejaba de correr, su silencio se leía como «los tres tramos frescos»; vigilado por `agentes-latido` con 80h de umbral). `agentes-latido` (`lib/monitoring/latidos.ts`, registro `AGENTES_VIGILADOS`) comprueba, por cada agente vigilado, una huella FIABLE en BD que SOLO se refresca cuando ese agente corre — hoy vigila **pricing** (`pricing_decisiones.ciclo_at` por piso — **cambiado desde `market_rates prop_%`** el 08/08/2026, PR #1318: esa huella dejó de ser exclusiva de la Rutina semanal cuando el barrido Serper diario y `mercado-booking` empezaron a escribir en el mismo namespace, y salía verde con la Rutina muerta; 192h), **trading_watchdog** (80h, ver arriba), **correo-triaje** (`correo_cursor.updated_at`, 6h), **facturas-scan**, **ialimp_pms**, **sivra_eventos**, **sivra_eventos_verificar**, **sivra_mercado_sweep**, **sivra_mercado_booking**, **sivra_pricing_guard** y **subastas_mercado** (30h los diarios). Nace de que el agente de pricing dejó de correr en silencio y una reserva entró un 40% bajo mercado sin que nadie se enterara. ⚠️ **Un latido mide FRESCURA, no CORRECCIÓN**, y confundirlo sale caro: el 01/08/2026 `market_rates` estaba fresquísima y aun así el ancla de House venía de comps de otro aforo — eso no lo caza un latido, lo caza el centinela #9 del guardián de precios. Al añadir un vigilante, pregúntate cuál de las dos cosas estás midiendo. |
 | **Resultado** | Sin anomalías → sin ruido. Huella vieja/inexistente → Telegram con el motivo y la acción sugerida. **No duplica** con el heartbeat de `/auditoria-diaria` (paso 2-bis): coordina umbrales para no avisar dos veces por lo mismo — para añadir un agente nuevo al monitor, una fila en `AGENTES_VIGILADOS` + su probe SQL en el route, **en el MISMO PR** (16/08/2026, PR #1447: `sivra_eventos_verificar` se declaró sin sonda y el parte diario lo listaba en «Sin poder comprobar»; lo fija el test de `latidos.test.ts` que compara `AGENTES_VIGILADOS` contra las claves de `PROBES`). |
+
+### 12-ter. Evaluador de las reglas de SALIDA del trading (H10) — *nueva 28/08/2026 (CRON DE VERCEL, no rutina Claude)*
+| | |
+|---|---|
+| **Cuándo** | `lib/cron-dispatch.ts`: `trading-h10` `40 8 * * 1` (lunes 10:40 CEST, con el corpus del retrovisor ya movido por el fin de semana) |
+| **Prompt** | *N/A* — corre como código (`app/api/cron/trading-h10/route.ts`); el criterio vive en el módulo PURO `lib/trading/h10.ts`. |
+| **Qué hace** | Agrega **en SQL** el corpus `trading_backtest` (las observaciones sueltas serían ~1,3 M de filas en una función serverless) y aplica a cada regla de salida el criterio **firmado** en `docs/TRADING-HIPOTESIS-PREREGISTRO.md`: recortar batacazos ≥5 pp cediendo ≤1 pp de mediana, **o** mejorar la mediana ≥2 pp sin subir batacazos, sobre ≥5.000 observaciones. Mide las tres de H9 (stop −10%/−20%, trailing −15%) **y** las cuatro nuevas de H10 (trailing −25%, stop a coste tras +10%, pérdida de SMA50 y de SMA200). Informe vivo con las cifras: `docs/TRADING-SALIDAS-2026-08.md`. |
+| **Qué NO hace** | **No cablea nada.** Si una variante cumple, lo DICE; el cambio de política de salida entra por PR — regla meta del pre-registro («los agentes tienen prohibido cambiar el modelo por su cuenta»). |
+| **Telegram** | SOLO cuando hay algo que decidir: una variante que cumple, o el cierre de H10 (todas con muestra y ninguna cumpliendo). El progreso semanal («1.200/5.000 obs.») vive en el latido `trading_h10`, no en el móvil — un aviso sin acción posible entrena a ignorar el canal. |
+| **Ojo** | `sin_muestra` NUNCA se colapsa con `rechazada`: es «todavía no se puede saber», no «no sirve». Y la cláusula anti-portería-móvil es explícita — si una variante queda cerca pero no llega, **no** se cablea «por poco». |
+
+---
 
 ### 12-bis. Reparación automática de un agente en rojo — *nueva 20/08/2026 (GITHUB ACTIONS, no rutina Claude)*
 | | |
@@ -326,6 +348,59 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | **Resultado** | Informe mensual por Telegram + `docs/PATRIMONIO-CFO.md` actualizado; PR draft solo si propone un agente nuevo. |
 | **Verificar** | Filas nuevas en `patrimonio_recomendaciones` + informe en el doc de estado. |
 
+### 20. Seguimiento — ¿dejó de oscilar el motor de precios? — *UN SOLO DISPARO, 03/09/2026*
+
+| | |
+|---|---|
+| **Trigger** | `trig_01NAHokomrh55TLYde6jddti` |
+| **Cuándo** | **Una vez**, el **03/09/2026 ~09:30 UTC** (después de la pasada de las 08:30 del motor). |
+| **Por qué existe** | El arreglo del ancla global (PR #1811, 27/08) está **simulado, no observado**: se calculó qué habría valido el ancla nueva, no se vio al motor tarifar con ella. Sin esta pasada, «el motor ya no oscila» sería una afirmación sobre un dato que nadie ha mirado. |
+| **Prompt** | Autocontenido (sesión nueva). Lee `docs/SEGUIMIENTO-ancla-pricing.md`, que trae la línea base, las tres consultas ya probadas contra la BD y el criterio de cierre. |
+| **MCPs** | Supabase (lectura). GitHub nativo. 🔴 **PENDIENTE DE ALBERTO: la rutina se creó SIN conectores** (`create_trigger` solo puede pasar los que tiene la sesión que la crea, y esta no tenía ninguno pasable). Hay que adjuntar Supabase en la UI de Rutinas de claude.ai **y volver a abrir la rutina para confirmar que quedó guardado** — el formulario no es evidencia, el estado guardado sí (landmine del 23/08). Mientras tanto el PASO 0 del prompt la hace abortar con aviso en vez de improvisar un veredicto. |
+| **Qué hace** | Mide sobre los datos del motor NUEVO (`applied_at >= 2026-08-27 19:00 UTC`): volatilidad del ancla, **% de noches oscilantes por piso** (el criterio de éxito), amplitud y los tres invariantes de seguridad. Compara contra la línea base y rellena la tabla de veredicto del documento. |
+| **Resultado** | PR con el documento cerrado + entrada de memoria. **Si la muestra es corta o el resultado es ambiguo, NO cierra: re-arma el seguimiento** unos días más. Un «parece que va mejor» sobre pocos días es justo lo que este repo trata como fallo. |
+| **Verificar** | La tabla «Veredicto» de `docs/SEGUIMIENTO-ancla-pricing.md` rellenada con fecha y cifras. |
+
+---
+
+## 🔑 `ALERTA_TOKEN` — dónde vive de verdad, y por qué rotarlo es el riesgo (28/08/2026)
+
+**El token va en TEXTO PLANO dentro del prompt de cada rutina** (línea `Variables de sesión:
+ALERTA_TOKEN=…`), replicado en seis rutinas conocidas. Lo levantó Alberto el 28/08/2026 revisando
+las rutinas con Claude Chrome, y la objeción es correcta en su parte importante.
+
+**Lo que YA estaba resuelto por diseño** (ver `apps/plataforma/CLAUDE.md`): `ALERTA_TOKEN` existe
+justamente *porque* tiene que viajar en prompts. Es un token **dedicado y de bajo privilegio** que
+solo abre `/api/internal/alerta`; sustituyó a `CRON_SECRET` —la llave maestra— en esa posición. Si
+se filtra, lo que se puede hacer con él es **mandarle un Telegram a Alberto**. El coste de la fuga
+ya se pagó a conciencia.
+
+**Lo que NO estaba resuelto, y es el hallazgo bueno: la ROTACIÓN.** El día que haya que cambiarlo
+hay que editar N prompts a mano, y basta olvidar uno para dejar un token vivo circulando. Eso no
+estaba escrito en ningún sitio. De ahí la tabla de abajo: **es la lista de rotación.**
+
+🚫 **Lo que NO se hace: quitar el token y que la rutina llame «sin secreto encima».** Se propuso y
+no vale — dejaría `/api/internal/alerta` **sin autenticar**, y entonces cualquiera con la URL puede
+mandarle Telegram a Alberto. Un secreto del lado del servidor solo ayuda si el llamante se puede
+autenticar por otra vía, y una rutina de Claude llamando desde una IP cualquiera no la tiene. El
+cambio sería un downgrade, no un upgrade. Si algún día molesta de verdad, la vía es acortar la vida
+del token o firmar la petición, no quitarla.
+
+### Quién lo lleva (estado medido el 28/08/2026, por hash — el valor NO se mostró ni se registró)
+
+| rutina | `ALERTA_TOKEN` |
+|---|---|
+| `buscador-ia` | ✅ valor bueno (referencia) |
+| `agentes-entrenador` | ✅ valor bueno (referencia) |
+| Vigía de conectores MCP (`trig_01Kf4G2s3rgDzr9GddwXjTNL`) | ✅ idéntico a las de referencia |
+| Radar España (`trig_01NLeiXPfS3PwwyVS4or7geo`) | ✅ idéntico |
+| Coordinador patrimonial (`trig_01NtNkTDWKX7UbDjkWYfQpuq`) | ✅ idéntico |
+| SIVRA mercado booking (`trig_01Sr5KXErpEhGCtT1F16hv4W`) | 🔴 **VACÍO** |
+
+⚠️ **Esta tabla NO es exhaustiva**: son las seis rutinas que se miraron ese día. Las envs de una
+rutina no se leen por API, así que al rotar hay que abrirlas TODAS en la UI y comprobarlas una a
+una — no fiarse de esta lista.
+
 ---
 
 ## Resumen de cadencias
@@ -397,7 +472,7 @@ hecho contra la configuración de las 30 rutinas, no contra la pantalla.
 | `fiscal-novedades` | fiscal-novedades | Día 1 | ⛔ sin línea |
 | `ialimp-client-health` | ialimp-client-health | Vie | ⛔ sin línea |
 | `rrhh-compliance-calendar` | rrhh-compliance-calendar | Día 1 | ⛔ sin línea |
-| `github-vigia` | — | — | sin trigger (ya sabido) |
+| `github-vigia` | github-vigia — vigía GitHub/OSS (mensual día 15) | Día 15 | ⛔ **placeholder** (`ALERTA_TOKEN` sin pegar → nace mudo) |
 
 **Corrección del mismo día, tras leer el código: el fallo NO es mudo por diseño — es mudo en la
 práctica, que es peor.** Las 13 skills SÍ hacen el preflight `GET /api/internal/alerta` al arrancar,
@@ -480,7 +555,7 @@ Así si el bot cambia, solo se actualiza en Vercel plataforma — ninguna rutina
 2. ~~Confirmar MCP Booking.com~~ ✅ Confirmado — Booking.com está disponible y configurado en pricing-agente.
 3. 🔴 **Añadir `ALERTA_TOKEN` al campo "Instrucciones"** de las **8** rutinas con el canal muerto (ver «Auditoría del canal de aviso», 23/08/2026 — NO son solo psd2 y ialimp-client-health, como decía este punto) para habilitar alertas Telegram (ver sección workaround arriba). `PLATAFORMA_URL` también si no está en el prompt. **NO usar `TELEGRAM_BOT_TOKEN`** (vive en Vercel plataforma) **ni `CRON_SECRET`** (llave maestra — ver pendiente #9; usa el token estrecho `ALERTA_TOKEN`).
 4. **Primer ciclo de pricing-agente** (próximo lunes): revisar el PR draft con propuestas antes de aprobar. La skill impone `dryRun: true` en el primer ciclo automáticamente.
-5. **Crear el trigger de la rutina 9 (github-vigia)**: mensual día 15 ~07:00, prompt `Ejecuta la skill github-vigia` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (token estrecho, NO `CRON_SECRET` — ver pendiente #9). Al crearlo, cambiar su estado a *activa* en este doc.
+5. ~~Crear el trigger de la rutina 9 (github-vigia)~~ ✅ **Hecho (28/08/2026)** — `trig_017pe2NS4pzKXYhGPM6St7aZ`, mensual día 15 `0 5 15 * *` UTC, rutina 9 marcada *activa*. **Queda medio pendiente:** su prompt lleva `PLATAFORMA_URL` pero `ALERTA_TOKEN` es un **placeholder literal** — hasta pegarlo, la rutina corre pero avisa por el push nativo, no por Telegram (cae dentro del pendiente #3).
 6. ~~Crear el trigger de la rutina 10 (agentes-entrenador)~~ ✅ Hecho (03/07/2026) — rutina 10 activa.
 7. **Crear el trigger de la rutina 11 (buscador-ia)**: semanal lunes ~07:00, prompt `Ejecuta la skill buscador-ia` + al final `PLATAFORMA_URL`/`ALERTA_TOKEN` (token estrecho, NO `CRON_SECRET` — ver pendiente #9). Opcional: añadir `NVIDIA_API_KEY`/`GROQ_API_KEY` al prompt si quieres que el mini-eval pruebe candidatos en vivo. Al crearlo, cambiar su estado a *activa* en este doc.
 8. ~~Adjuntar el repo `central` a 7 rutinas que corren SIN repo~~ ✅ **NO APLICA — verificado 13/07/2026:
@@ -634,6 +709,10 @@ allá de `analizar`/`puntuar`: `factores`, `gurus`, `fundamentales`, `insiders`,
     script. Lo cazó **abriendo la rutina ya guardada**, no mirando el formulario. Cuatro minutos
     así, 0 ejecuciones, sin acceso a nada. Regla: **el formulario no es evidencia, el estado
     guardado sí** — tras crear o editar una rutina, vuelve a abrirla y lee lo que quedó.
-    **Pendiente menor:** las tres llevan `ALERTA_TOKEN` con el placeholder literal, así que su
-    aviso de Telegram fallará con error de autenticación hasta que Alberto pegue el valor real
-    (está en las rutinas `buscador-ia` y `agentes-entrenador`).
+    ~~**Pendiente menor:** las tres llevan `ALERTA_TOKEN` con el placeholder literal…~~
+    ✅ **RESUELTO / era FALSO (28/08/2026).** Verificado por Alberto con Claude Chrome: las tres
+    tienen el valor BUENO. Se comparó su `ALERTA_TOKEN` contra el de `buscador-ia` y
+    `agentes-entrenador` **por hash**, sin mostrar ni registrar el valor: los cinco idénticos,
+    misma longitud. No había ningún relleno. Esta línea mandó a arreglar algo que no estaba roto —
+    **antes de dar por buena una env de una rutina, míralas; no lo deduzcas de lo que se escribió
+    el día del alta.**

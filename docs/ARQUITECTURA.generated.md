@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-26T13:11:29Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-29T08:02:34Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 11 apps · 38 packages · 23 capacidades · 36 skills · 1180 rutas API.
+**Resumen:** 11 apps · 38 packages · 23 capacidades · 37 skills · 1186 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -43,10 +43,10 @@
 - **Tablas (2):** mariscos_envasados, mariscos_partidas
 - **Rutas API:** 4
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-email, core-identity, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-ses, module-subastas, module-trading
+- **Módulos que usa:** core-ai, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (113):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias…
-- **Rutas API:** 296
+- **Tablas (115):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias…
+- **Rutas API:** 302
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -80,7 +80,7 @@
   - Lo usan: almacen, alquiler, asegura, ialimp, mariscos, plataforma, rrhh, transporte
   - Depende de: —
 - **core-payments** (core) → `@central/core-payments`
-  - Lo usan: ia-rest, ialimp
+  - Lo usan: ia-rest, ialimp, plataforma
   - Depende de: —
 - **core-push** (core) → `@central/core-push`
   - Lo usan: ia-rest, ialimp, sivra
@@ -197,6 +197,7 @@
 - **ia-rest-maestro** — >
 - **ialimp-client-health** — Monitorización semanal de la salud de la cuenta de Sique Brilla (único cliente en producción de ialimp). Comprueba PMS sync, programaciones sin asignar, impagos activos y errores recientes. Genera un resumen de viernes para cerrar la semana operativa. Úsala en la rutina semanal o cuando Alberto quiera un pulso rápido del cliente. Sin secretos: solo nombres de variable.
 - **ialimp-maestro** — >
+- **inversion-inmueble** — Analiza si comprar UN inmueble concreto renta como piso turístico (VUT). Mide el mercado real por fecha y aforo con el conector de Booking, resuelve la puerta legal (licencia + Registro Único), llama al motor de underwriting de plataforma y devuelve veredicto con los dos escenarios —entero y segregado—. Úsala cuando Alberto pase un anuncio ("¿me interesa esto?", "hazme el estudio de este piso", "¿cuánto rentaría?"). NO decide compras. Sin secretos - solo nombres de variable.
 - **marca-cliente** — Alta/intake de la identidad corporativa de un cliente/tenant y aplicación 100% a su app — convierte su marca real (logo, web, fotos) en un objeto `Marca` de `@central/brand` y lo enchufa dejando la UI IDÉNTICA a su marca. Úsala con cliente nuevo, rebrand, o si Alberto pide "adáptalo a la imagen corporativa de X". Complementa `adobe-diseno` y Adobe Fonts.
 - **mercado-booking** — Rutina PROGRAMADA diaria que mide el precio REAL por fecha y aforo con el conector de Booking.com y lo escribe en market_rates (fuente booking_mcp) — la única fuente de SIVRA que distingue temporada. Úsala al disparo diario o si Alberto pide "mide el mercado de verdad" / "refresca los comparables por fecha". Sin secretos: solo nombres de variable.
 - **patrimonio-cfo** — Agente PROGRAMADO mensual (día 2) — coordinador patrimonial («CFO personal»). Consolida BD + agentes + radar-espana, calcula neto y COSTE DE OPORTUNIDAD por activo, monta escenarios con impuestos (vender/recomprar/bolsa), registra recomendaciones y pregunta lo que falte. Solo orienta, nunca ejecuta. Úsala si Alberto pide «analiza mi patrimonio».
@@ -243,14 +244,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- 📦 Cartera paper ahora en dólares de verdad:
+- Importa por el pendiente de apagar Chekin:
+- Su aviso de alcance era falso por defecto:
+- PR #1826
+- NULL = «fila anterior a la columna»
+- Baseline del serrucho, MEDIDA
 - Vía elegida (v5):
 - Mensaje enviado a Manuel
 - Adelanto sin él — RLS y auth eran UNA decisión:
 - Bloque 1-bis en `/sivra/pricing-rentabilidad` (PR #1712, mergeado):
-- `target_pctl` de House Sevillana 0,50→0,60 APLICADO en prod
-- Centinela #11 `ritmo_venta_destacado`
-- Encargo permanente a `patrimonio-cfo`
-- PR #1702 mergeado a main
-- Backfill disparado en prod
-- DECISIÓN de Alberto (25/08, chat):
 

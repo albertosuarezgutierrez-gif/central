@@ -70,7 +70,7 @@ async function conEntorno<T>(fetchStub: typeof fetch, envs: Record<string, strin
 test('aiCompleteConProveedor: NIM responde → proveedor honesto es nim, no un adivinado', async () => {
   const out = await conEntorno(
     stubFetch([{ match: u => u === NIM_URL, status: 200, body: respuestaChat('hola desde nim') }]),
-    { NVIDIA_API_KEY: 'k', GROQ_API_KEY: undefined, CEREBRAS_API_KEY: undefined, OPENROUTER_API_KEY: undefined, MOONSHOT_API_KEY: undefined, GEMINI_TEXTO: undefined },
+    { NVIDIA_API_KEY: 'k', NVIDIA_TEXTO: '1', NVIDIA_BRAIN_MODEL: 'un/modelo-vivo', GROQ_API_KEY: undefined, CEREBRAS_API_KEY: undefined, OPENROUTER_API_KEY: undefined, MOONSHOT_API_KEY: undefined, GEMINI_TEXTO: undefined },
     () => aiCompleteConProveedor('hola'),
   )
   assert.equal(out.text, 'hola desde nim')
@@ -118,7 +118,7 @@ test('aiComplete (atajo sin procedencia) sigue devolviendo solo el texto — no 
   const { aiComplete } = await import('../src/client.ts')
   const texto = await conEntorno(
     stubFetch([{ match: u => u === NIM_URL, status: 200, body: respuestaChat('solo texto') }]),
-    { NVIDIA_API_KEY: 'k', GROQ_API_KEY: undefined, CEREBRAS_API_KEY: undefined, OPENROUTER_API_KEY: undefined, MOONSHOT_API_KEY: undefined, GEMINI_TEXTO: undefined },
+    { NVIDIA_API_KEY: 'k', NVIDIA_TEXTO: '1', NVIDIA_BRAIN_MODEL: 'un/modelo-vivo', GROQ_API_KEY: undefined, CEREBRAS_API_KEY: undefined, OPENROUTER_API_KEY: undefined, MOONSHOT_API_KEY: undefined, GEMINI_TEXTO: undefined },
     () => aiComplete('hola'),
   )
   assert.equal(texto, 'solo texto')
@@ -145,7 +145,7 @@ test('aiToolsConProveedor: OpenRouter cae, NIM responde → proveedor nim (no op
       { match: u => u === OPENROUTER_URL, status: 404, body: {} },
       { match: u => u === NIM_URL, status: 200, body: respuestaTools('nim-modelo') },
     ]),
-    { NVIDIA_API_KEY: 'k', GROQ_API_KEY: undefined, OPENROUTER_API_KEY: 'k' },
+    { NVIDIA_API_KEY: 'k', NVIDIA_TEXTO: '1', NVIDIA_BRAIN_MODEL: 'un/modelo-vivo', GROQ_API_KEY: undefined, OPENROUTER_API_KEY: 'k' },
     () => aiToolsConProveedor([{ role: 'user', content: 'x' }], [{ type: 'function', function: { name: 'f' } }]),
   )
   assert.equal(out.proveedor, 'nim')
@@ -161,4 +161,60 @@ test('aiToolsConProveedor: NIM cae, Groq responde → proveedor groq (NUNCA nim)
     () => aiToolsConProveedor([{ role: 'user', content: 'x' }], [{ type: 'function', function: { name: 'f' } }]),
   )
   assert.equal(out.proveedor, 'groq')
+})
+
+// ── Guardián de «todo OpenRouter» (28/08/2026) ────────────────────────────────
+// Decisión de Alberto tras tres ids de NIM muertos por EOL en 11 días. NIM queda APAGADO por
+// defecto: tener `NVIDIA_API_KEY` ya NO lo enchufa. Estos tests fijan las dos mitades — que no
+// entra solo, y que un `model` pinneado (id de NIM) deja de apartar a OpenRouter, que era lo que
+// desviaba a rrhh y a ia-rest hacia un modelo muerto.
+
+test('NIM NO entra solo por tener NVIDIA_API_KEY: sin NVIDIA_TEXTO=1 la cadena salta a Groq', async () => {
+  const out = await conEntorno(
+    stubFetch([
+      { match: u => u === NIM_URL, status: 200, body: respuestaChat('esto NO debería servirse') },
+      { match: u => u === GROQ_URL, status: 200, body: respuestaChat('hola desde groq') },
+    ]),
+    { NVIDIA_API_KEY: 'k', NVIDIA_TEXTO: undefined, NVIDIA_BRAIN_MODEL: undefined, GROQ_API_KEY: 'k', CEREBRAS_API_KEY: undefined, OPENROUTER_API_KEY: undefined, MOONSHOT_API_KEY: undefined, GEMINI_TEXTO: undefined },
+    () => aiCompleteConProveedor('hola'),
+  )
+  assert.equal(out.proveedor, 'groq')
+  assert.equal(out.text, 'hola desde groq')
+})
+
+test('NVIDIA_TEXTO=1 sin NVIDIA_BRAIN_MODEL tampoco enchufa NIM (reactivar exige nombrar un id vivo)', async () => {
+  const out = await conEntorno(
+    stubFetch([
+      { match: u => u === NIM_URL, status: 200, body: respuestaChat('esto NO debería servirse') },
+      { match: u => u === GROQ_URL, status: 200, body: respuestaChat('hola desde groq') },
+    ]),
+    { NVIDIA_API_KEY: 'k', NVIDIA_TEXTO: '1', NVIDIA_BRAIN_MODEL: undefined, GROQ_API_KEY: 'k', CEREBRAS_API_KEY: undefined, OPENROUTER_API_KEY: undefined, MOONSHOT_API_KEY: undefined, GEMINI_TEXTO: undefined },
+    () => aiCompleteConProveedor('hola'),
+  )
+  assert.equal(out.proveedor, 'groq')
+})
+
+test('con NIM apagado, un `model` pinneado ya NO aparta a OpenRouter de ser primario', async () => {
+  const out = await conEntorno(
+    stubFetch([
+      { match: u => u === NIM_URL, status: 200, body: respuestaChat('esto NO debería servirse') },
+      { match: u => u === OPENROUTER_URL, status: 200, body: respuestaChat('hola desde openrouter', 'modelo-real') },
+    ]),
+    { NVIDIA_API_KEY: 'k', NVIDIA_TEXTO: undefined, NVIDIA_BRAIN_MODEL: undefined, GROQ_API_KEY: undefined, CEREBRAS_API_KEY: undefined, OPENROUTER_API_KEY: 'k', MOONSHOT_API_KEY: undefined, GEMINI_TEXTO: undefined },
+    () => aiCompleteConProveedor('hola', { model: 'meta/llama-3.1-70b-instruct' }),
+  )
+  assert.equal(out.proveedor, 'openrouter')
+  assert.equal(out.modelo, 'modelo-real')
+})
+
+test('con NIM ENCHUFADO se conserva el comportamiento viejo: el `model` pinneado lo sirve NIM', async () => {
+  const out = await conEntorno(
+    stubFetch([
+      { match: u => u === NIM_URL, status: 200, body: respuestaChat('hola desde nim') },
+      { match: u => u === OPENROUTER_URL, status: 200, body: respuestaChat('no', 'x') },
+    ]),
+    { NVIDIA_API_KEY: 'k', NVIDIA_TEXTO: '1', NVIDIA_BRAIN_MODEL: 'un/modelo-vivo', GROQ_API_KEY: undefined, CEREBRAS_API_KEY: undefined, OPENROUTER_API_KEY: 'k', MOONSHOT_API_KEY: undefined, GEMINI_TEXTO: undefined },
+    () => aiCompleteConProveedor('hola', { model: 'un/modelo-vivo' }),
+  )
+  assert.equal(out.proveedor, 'nim')
 })

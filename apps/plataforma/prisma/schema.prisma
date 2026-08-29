@@ -173,6 +173,15 @@ model TradingTesis {
   // Casos verificados contra IBKR: 17/07, 03/08 y 04/08 de 2026 (ver `lib/trading/precios-guardia.ts`).
   anulado       Boolean                @default(false)
   anuladoMotivo String?                @map("anulado_motivo")
+  // 📅 Fecha de resultados conocida al EMITIR la tesis, con su estado al lado. Se usaba (barrera
+  // `earningsInminente` y estrategia `catalizador`) pero no se guardaba: solo quedaba como texto en
+  // `rationale` («earnings en 2d»), que no se puede agregar. Sin esto no se puede responder con
+  // números a «¿cuánto del rendimiento del libro viene de días de evento y cuánto de la señal?»
+  // (caso NVDA del 26-27/08/2026: +6,79% de hueco tras resultados sobre una posición que la víspera
+  // estaba en pérdida). NULL NO es «no hay evento» — eso lo dice `earningsEstado`:
+  // sin_consultar | con_fecha | sin_fecha | reconstruido. Solo ETIQUETA: no cambia ninguna decisión.
+  proximoEarnings DateTime?            @map("proximo_earnings") @db.Date
+  earningsEstado  String               @default("sin_consultar") @map("earnings_estado")
   createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   resultado     TradingTesisResultado?
 
@@ -200,6 +209,13 @@ model TradingTesisResultado {
   anuladoMotivo String?      @map("anulado_motivo")
   // Procedencia de `precioDespues` (mismo contrato que `TradingTesis.precioFuente`).
   precioFuente  String       @default("sesion") @map("precio_fuente")
+  // H13 (28/08/2026): el mismo resultado medido contra el MERCADO. `retornoBench` es el retorno del SPY
+  // en la MISMA ventana (misma fuente que el contraste) y `retornoAlfa` el exceso en la dirección de la
+  // tesis. NULL = no se pudo medir (sin serie del índice, o su ventana no era la de la tesis), JAMÁS 0:
+  // un alfa de 0 dice «igualó al mercado». El `retorno` NETO no se guarda — se deriva restando
+  // `COSTE_ROUNDTRIP`, y así un cambio del peaje no convierte las filas viejas en una mentira.
+  retornoAlfa   Float?       @map("retorno_alfa")
+  retornoBench  Float?       @map("retorno_bench")
   tesis         TradingTesis @relation(fields: [tesisId], references: [id], onDelete: Cascade)
 
   @@map("trading_tesis_resultado")
@@ -217,6 +233,12 @@ model TradingPaperOrden {
   // ejecuta al cierre de la señal sino al día siguiente — esta columna mide cuánto cuesta esa espera,
   // la única incógnita que el paper no medía. NULL = aún sin dato (no 0).
   precioDiaSiguiente Float?   @map("precio_dia_siguiente")
+  // 📅 Solo en las SELL: ¿hubo resultados entre la apertura y el cierre de la posición?
+  // `cruzado` | `limpio` | `sin_consultar` (tres estados en texto, nunca un boolean: «no lo sé» no es
+  // «no hubo»). NULL = fila anterior a este registro. Es la ÚNICA huella que sobrevive al cierre —
+  // la fila de `TradingPaperPosicion` se borra— y lo que permite separar el rendimiento del libro
+  // entre lo que produjo la señal y lo que produjo el calendario. No decide nada.
+  eventoDentro       String?  @map("evento_dentro")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   // Una orden por símbolo+lado+día: los reintentos de la pasada nocturna no duplican el libro
@@ -242,6 +264,15 @@ model TradingPaperPosicion {
   precioEntrada Float    @map("precio_entrada")
   stop          Float
   abiertaEn     DateTime @map("abierta_en") @db.Date
+  // Fecha de resultados que se conocía AL ABRIR (misma semántica que en `TradingTesis`). Se captura
+  // aquí porque al cerrar hay que saber si el evento cayó dentro de la ventana, y para entonces la
+  // pasada ya no tiene los fundamentales de aquel día.
+  proximoEarnings DateTime? @map("proximo_earnings") @db.Date
+  earningsEstado  String    @default("sin_consultar") @map("earnings_estado")
+  // Ventana declarada de la tesis que abrió la posición: la ÚNICA salida del paper (H9 — «no se ponen
+  // stops»). NULL = no consta el horizonte de esa posición, y entonces NO se cierra: inventar la venta
+  // con una fecha que nadie declaró es peor que dejarla abierta y contarlo.
+  horizonteDias   Int?      @map("horizonte_dias")
 
   @@map("trading_paper_posicion")
 }
@@ -253,6 +284,11 @@ model TradingEstrategiaStats {
   hitRate       Float    @map("hit_rate")
   retornoMedio  Float    @map("retorno_medio")
   n             Int
+  // H13, en sombra. `nAlfa` cuenta SOLO las observaciones que tenían benchmark — las que no lo tienen
+  // no son un alfa de 0. Con `nAlfa = 0`, las dos medias van a NULL.
+  hitRateAlfa      Float? @map("hit_rate_alfa")
+  retornoAlfaMedio Float? @map("retorno_alfa_medio")
+  nAlfa            Int    @default(0) @map("n_alfa")
   actualizadoEn DateTime @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 
   @@unique([estrategia, regimen])

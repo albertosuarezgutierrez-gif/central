@@ -55,6 +55,14 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   (+8,72%), y forzar el cierre diario destruye del 80% al 100% del retorno de la misma señal; lo
   mejor del intradía sale a 0,016%/día, entre 31 y 61 veces por debajo de un objetivo de 0,5-1%.
   **Veredicto completo, método y errata del 13/08 en `docs/INVERSION-VEREDICTO-2026-08.md`.**
+- **🧱 «Base» y ruptura de base: MEDIDAS y DESCARTADAS (26/08/2026).** No propongas entradas «porque está
+  haciendo una base perfecta» ni «porque rompe con volumen». Umbral firmado antes de mirar y medido sobre
+  177.282 observaciones del retrovisor: estar en la base (pegado a máximos + volumen seco + sobre la media)
+  **resta 1,64 pp** de `ret91` y lo hace en las DOS mitades; la ruptura con volumen **invierte el signo**
+  (+1,44 pp en 2011-18, −2,72 pp en 2019-26, n=1.257) — el modo de muerte de H8 — y su `ret28` es menos de
+  la mitad que el del universo en ambas mitades. Matiz que SÍ puedes decir: lo descartado es la BASE; la
+  **acumulación por picos de volumen (📊↑) sigue sin medir** (necesita serie diaria, que el retrovisor no
+  guarda) y sigue siendo CONTEXTO, nunca filtro. Detalle en `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
 - **🛡️ Los endpoints VETAN precios que no se creen — hay que CANTARLO en el resumen (08/08/2026).**
   `/analizar` y `/puntuar` ya no se tragan `precios[simbolo]` a ciegas: cada precio pasa una guardia de
   ×2 contra el último `precio_ref` y un CONTRASTE contra la fuente propia del servidor (Stooq/Yahoo,
@@ -76,6 +84,25 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   servidor**. Guarda cada respuesta con el nombre de su símbolo NADA MÁS recibirla; nunca acumules
   respuestas paralelas para transcribirlas al final. Hueco conocido: la PRIMERA pasada de un símbolo
   (sin referencia) barajada sin duplicar a nadie solo la ve el contraste con la 2ª fuente.
+- **📅 La fecha de EARNINGS se persiste desde el 27/08/2026 — y hay que seguir mandándola.** Nuevas
+  columnas `trading_tesis.proximo_earnings`/`earnings_estado`, las mismas en `trading_paper_posicion`
+  (congeladas al abrir) y `evento_dentro` en las SELL de `trading_paper_orden` (única huella que
+  sobrevive al cierre: la fila de la posición se borra). `/puntuar` devuelve `atribucionEvento`
+  (retorno medio CON evento dentro de la ventana vs SIN, más cuántos **no se han podido comprobar**):
+  **cántalo en el Telegram**, es lo que impide que un hueco de resultados se contabilice como puntería
+  de una estrategia. Origen: NVDA acabó en verde por un hueco del +6,79% el 27/08 sobre una posición
+  que la víspera estaba en pérdida y a ~3% del stop — ver `docs/TRADING-POSTMORTEM-NVDA-2026-08.md`.
+  📌 Estado del backfill (27/08/2026, medido en producción): **44 tesis y 2 posiciones** quedaron en
+  `reconstruido` (NVDA y SQM) y **2.016 tesis siguen en `sin_consultar`** — eso NO es un fallo, es que
+  de esas filas no había registro. La atribución las cuenta aparte y nunca las mete en una media.
+  🚨 Tres estados: `sin_consultar` ≠ `sin_fecha`, y `reconstruido` marca lo deducido a posteriori del
+  texto de `rationale` (no es una medición). Esto solo ETIQUETA: no veta, no dimensiona y no toca
+  `trading_estrategia_stats` — usarlo para decidir sería modelo → preregistro.
+- **⚖️ «Batió» NO es un dato fiable ni a posteriori (27/08/2026).** Del mismo trimestre de NVDA,
+  Financial Datasets da BEAT +33,0% (GAAP 2,46 $ vs 1,85 $) y Alpha Vantage MISS −52,6% (0,99 $ vs
+  2,09 $): es GAAP contra non-GAAP (el 8-K declara non-GAAP 1,01 $ frente a GAAP 2,46 $). **No
+  cablees ninguna regla del tipo «comprar si bate»** — la decidiría el parser, no la empresa. Y batir
+  es la base, no la noticia: NVDA batió en los 12 trimestres anteriores.
 - **Una tesis anulada no existe** (`trading_tesis.anulado`, 28 filas del saneo del 08/08). Se construyó
   con la serie de velas de otra empresa, así que su dirección y su confianza no hablan de ese símbolo:
   ni se puntúa, ni sirve de referencia de precio, ni sale en el panel. **No propongas «recuperarlas»

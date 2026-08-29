@@ -4,6 +4,7 @@ import { recortarFactsHasta, extraerFundamentales, companyfactsCrudo, capitaliza
 import { puntosDiariosVol, type PuntoVol } from './precios-stooq'
 import { barrasCerradas, senalCapitulacion } from './velas'
 import { simularSalidas } from './salidas'
+import { medirContinuacion } from './continuacion'
 import { movimientosGestorDataroma, GESTORES_DEFECTO } from './dataroma'
 import { fechasSnapshot, precioEn, retornoForward, sumarDias, cierresPeriodicos, sobreSma, type FactoresFecha } from './backtest-puro'
 
@@ -64,6 +65,8 @@ export function factoresEnFecha(cf: CompanyFacts | null, puntos: PuntoVol[], fec
     capitulacionSem: sem.activa, caidaSem: sem.caida, volRelSem: sem.volRel,
     // Reglas de salida simuladas sobre la MISMA ventana de 91 días que ret91 (H9).
     ...simularSalidas(puntos, fecha),
+    // Y qué pasó DESPUÉS de vender (H12): la cinta seguía cortada en el día 91 para todo lo anterior.
+    ...medirContinuacion(puntos, fecha),
   }
 }
 

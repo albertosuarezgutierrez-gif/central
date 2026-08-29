@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen, mariscos, asegura]
+        app: [ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen, mariscos, asegura, housesevillana]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

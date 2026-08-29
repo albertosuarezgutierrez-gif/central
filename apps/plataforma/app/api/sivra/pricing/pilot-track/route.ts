@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
-import { sqlUltimaPasadaUtil } from "@/lib/sivra/pricing-corpus-utilizable"
+import { sqlCompsAncla } from "@/lib/sivra/pricing-ancla-global"
 import { evaluatePilot, avisoPilotTrack, type PilotVerdict } from "@/lib/sivra/pilot-track"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { tgSend } from "@central/core-telegram"
@@ -123,16 +122,15 @@ export async function GET(req: NextRequest) {
     SELECT "propertyId" AS property_id, (CURRENT_DATE - MAX("createdAt"::date))::int AS days_since_booking
     FROM incomes GROUP BY "propertyId"`)
 
-  const marketRows = await prisma.$queryRaw<{ property_id: string; price: number; score: number | null }[]>(Prisma.sql`
-    WITH latest AS (${Prisma.raw(sqlUltimaPasadaUtil())})
-    SELECT m.scenario AS property_id, m.price_night::float8 AS price, m.score::float8 AS score
-    FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
-    WHERE m.price_night > 0
-      -- Plausibilidad €/plaza, igual que el motor (ver pricing-comps-plausibles.ts).
-      AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)`)
+  // MISMO corpus que el ancla global del motor (`pricing-ancla-global.ts`). Este vigía juzga el
+  // precio aplicado contra el recomendado: si midiera contra el barrido de esta mañana y el motor
+  // tarifa contra el corpus acumulado, pintaría rojos que no existen — un watchdog que compara con
+  // una referencia que nadie usa.
+  const marketRows = await prisma.$queryRaw<{ scenario: string; price: number; score: number | null }[]>(
+    Prisma.sql`${Prisma.raw(sqlCompsAncla())}`)
   const marketByPiso: Record<string, { prices: number[]; scores: number[] }> = {}
   for (const r of marketRows) {
-    const g = (marketByPiso[r.property_id] ??= { prices: [], scores: [] })
+    const g = (marketByPiso[r.scenario] ??= { prices: [], scores: [] })
     g.prices.push(Number(r.price))
     if (r.score != null) g.scores.push(Number(r.score))
   }

@@ -119,13 +119,23 @@ test("acote: fecha nueva (sin precio vivo ni raíl) baja al techo de una vez", (
 // ─── Guardián de cableado ────────────────────────────────────────────────────────────────────
 // Ni tsc ni next build pueden ver si el motor USA el techo: un import borrado o una guarda que
 // vuelve a congelar sin mirar `liberaTecho` compilan igual. Mismo patrón que cols-subasta.test.ts.
-test("guardián: pricing/apply usa el techo y las guardas de congelación miran liberaTecho", () => {
+test("guardián: pricing/apply usa el techo y las guardas de congelación miran su llave", () => {
   const fuente = readFileSync(RUTA_APPLY, "utf8")
   assert.match(fuente, /techoMercado\(/, "apply/route.ts ya no calcula el techo de mercado")
   assert.match(fuente, /acotarPorTecho\(/, "apply/route.ts ya no acota el objetivo por el techo")
-  const guardas = fuente.match(/&& !liberaTecho/g) ?? []
+  // Desde el 27/08/2026 la llave de las guardas es `liberaGuardas`, que SUMA la segunda llave
+  // (antigüedad / rumor caído, ver pricing-descongelar.ts) al `liberaTecho` de siempre. El guardián
+  // exige las dos cosas: que las guardas la miren, y que esa llave siga conteniendo el techo — si
+  // alguien la redefine sin `liberaTecho`, un precio por encima del mercado medido volvería a
+  // quedarse congelado y este test es lo único que lo vería.
+  const guardas = fuente.match(/&& !liberaGuardas/g) ?? []
   assert.ok(
     guardas.length >= 2,
-    `las guardas de congelación (outlier y Karol G) deben mirar liberaTecho: hay ${guardas.length} de 2`,
+    `las guardas de congelación (outlier y Karol G) deben mirar liberaGuardas: hay ${guardas.length} de 2`,
+  )
+  assert.match(
+    fuente,
+    /const liberaGuardas = liberaTecho \|\|/,
+    "liberaGuardas debe seguir incluyendo liberaTecho: el techo medido no puede dejar de abrir",
   )
 })

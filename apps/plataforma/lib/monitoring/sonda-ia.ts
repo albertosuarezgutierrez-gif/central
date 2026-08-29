@@ -16,7 +16,8 @@
 // - Cada intento queda en `ai_usos` (endpoint 'sonda'): alimenta el Check 12 y el panel de
 //   gasto, y deja histórico de CUÁNDO murió una key (no solo que está muerta).
 // - Gemini solo se sondea si está reactivado (GEMINI_TEXTO=1 o GEMINI_WEBSEARCH=1): sondear un
-//   eslabón desenchufado del código solo repetiría la alerta de una avería ya conocida.
+//   eslabón desenchufado del código solo repetiría la alerta de una avería ya conocida. Desde el
+//   28/08/2026 NIM está en la misma situación (NVIDIA_TEXTO=1 + NVIDIA_BRAIN_MODEL).
 import { nimChat, groqChat, moonshotChat, openrouterChat, geminiChat } from '@central/core-ai'
 import type { NimChatMessage } from '@central/core-ai'
 import { registrarUso } from '@/lib/ai-gateway'
@@ -44,10 +45,16 @@ function sondasConfiguradas(): Sonda[] {
   // (falso positivo del 03/08, primera pasada).
   const opts = { maxTokens: 300, temperature: 0 }
 
+  // NIM se sondea solo si el eslabón sigue ENCHUFADO. Apagado por defecto desde el 28/08/2026
+  // («todo OpenRouter», ver `client.ts` de core-ai): sondear un eslabón desenchufado del código
+  // solo repetiría cada día la alerta de una avería ya conocida y decidida — exactamente el
+  // mismo criterio que ya se aplicaba a Gemini tres líneas más abajo. El modelo sale de la env,
+  // no cableado: el id que había aquí murió por EOL el 26/08 y la sonda debe probar lo que la
+  // app usaría de verdad si se reactivara.
   const nimKey = process.env.NVIDIA_API_KEY
-  if (nimKey) {
-    const modelo = 'meta/llama-3.1-70b-instruct'
-    lista.push({ proveedor: 'nim', modelo, llamar: (signal) => nimChat({ apiKey: nimKey, textModel: modelo }, PING, { ...opts, signal }) })
+  const nimModelo = process.env.NVIDIA_BRAIN_MODEL
+  if (nimKey && nimModelo && process.env.NVIDIA_TEXTO === '1') {
+    lista.push({ proveedor: 'nim', modelo: nimModelo, llamar: (signal) => nimChat({ apiKey: nimKey, textModel: nimModelo }, PING, { ...opts, signal }) })
   }
 
   const groqKey = process.env.GROQ_API_KEY

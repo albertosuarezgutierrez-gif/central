@@ -212,10 +212,98 @@ No pierdas la tarde por ahí: sirve para SABER si el código está sano, no para
 ⚠️ Y si aun así lo lanzas para verificar: los check runs aterrizan en el **head del momento**. Si
 luego empujas otro commit, se quedan huérfanos en el sha viejo. Lánzalo después del último push.
 
-✅ **Lo que SÍ desbloquea: que un HUMANO toque el PR.** Un push desde una cuenta de persona (no el
-token de App) dispara los workflows por el evento `pull_request` y entonces los 12 sí cuentan. Es
-intervención manual: **no hay forma de que el agente lo resuelva solo**, así que dilo pronto y no
-des veinte vueltas.
+✅ **SÍ hay forma de que el agente lo resuelva solo: SACAR EL PR DE DRAFT (27/08/2026).** Medido de
+punta a punta en el PR #1763, sin que Alberto tocara nada:
+
+| hora (UTC) | qué hizo el agente | qué pasó |
+|---|---|---|
+| 26/08 23:08 | push de la rama + PR abierto **en draft** (token de App) | **0 runs**; los 12 requeridos en «Expected» |
+| 27/08 ~02:15 | intento de merge | `405 — 12 of 12 required status checks have not succeeded` |
+| 27/08 ~06:11 | 2º push a la rama (mismo token de App) | (ver nota de abajo) |
+| 27/08 06:12:18 | **PR marcado «ready for review»** (`draft:false` por la API) | **arrancan los 3 workflows** sobre `4efa129f`, evento `pull_request` |
+| 27/08 06:15 | los 12 jobs requeridos en `success` (~3,5 min) | ✅ |
+| 27/08 06:16 | merge (squash) | **`merged: true`** → `ba6ca86b` |
+| 27/08 06:19 | PR #1768: rama nueva, PR en draft, des-draft **sin 2º push** | runs otra vez → mergeado |
+
+**Confirmado con un SEGUNDO PR el mismo día (#1768).** Rama empujada, PR abierto en draft y sacado de
+draft acto seguido — **sin ningún 2º push**: los runs arrancaron igual (`06:19:25`, evento
+`pull_request`). Eso mata la explicación alternativa: el `synchronize` de un push **no** era lo que
+disparaba nada en #1763, porque aquí no hubo ninguno.
+
+**Y el tercer dato lo cierra:** un push posterior a #1768, con el PR **ya fuera de draft**, disparó los
+runs otra vez (`06:21:48`). O sea, el `synchronize` SÍ funciona… cuando el PR no es draft.
+
+🚨 **Conclusión: es el estado DRAFT lo que silencia los workflows.** Un PR en draft no produce runs ni
+al abrirlo ni al empujarle commits; en cuanto se saca de draft, los dispara — y a partir de ahí cada
+push vuelve a dispararlos con normalidad. Encaja con las cinco observaciones (dos `opened` en draft
+mudos · el push a #1763 en draft, mudo · los dos des-drafteos que dispararon · el push a #1768 ya sin
+draft, que disparó). Único fleco teórico: `ready_for_review` no está en los `types` por defecto de
+`on: pull_request` y el `event` del run no distingue la acción, así que el mecanismo interno de GitHub
+no se ha visto — pero el comportamiento está medido cinco veces y es reproducible.
+
+✅ **El procedimiento, que es lo que importa:** abre el PR en draft (como siempre), y cuando esté listo
+**quítale el draft**. Los 12 requeridos arrancan solos y en ~3,5 min está mergeable. **Ya no hace
+falta que Alberto toque nada.**
+
+⚠️ Lo que sigue siendo cierto: **el `workflow_dispatch` no vale** (ver arriba) y **el ruleset no se
+toca**.
+
+🔬 **Matiz medido el 27/08/2026 (PR #1777): un draft NO siempre es mudo — lo que manda es la
+IDENTIDAD que abre el PR.** Ese PR se abrió **en draft** con la herramienta MCP de GitHub y los 12
+requeridos arrancaron **al instante**, sin des-draftear: verdes en ~3 min y mergeado sin que Alberto
+tocara nada. El run lo dice: `event: pull_request`, `actor: albertosuarezgutierrez-gif` — o sea, el
+PR lo abre **tu cuenta de usuario**, no la App, y por eso el evento sí dispara. La regla útil es
+entonces: **abrir el PR por la herramienta MCP** (o des-draftear, que también funciona), y lo que no
+dispara es el **token de la App**. No des por hecho ninguna de las dos versiones sin mirar el
+`actor` del run.
+
+🚨 **TERCER dato, el mismo día (PR #1789): ni el draft ni la identidad lo explican del todo.** Los
+tres PRs de esta tanda salieron de la MISMA rama, con la MISMA identidad (`actor` = la cuenta de
+Alberto, PR abierto por la herramienta MCP) y los tres **en draft**. Los dos primeros (#1777,
+#1779) dispararon los 12 requeridos al instante; el tercero **no disparó ninguno**: sobre su head
+solo corrió `rutinas-automerge`, que es `pull_request_target` — o sea, el evento
+**`pull_request` no llegó a los workflows requeridos**. Y **sacarlo de draft tampoco lo rescató**
+(se probó: volvió a disparar solo el `pull_request_target`). No fue una caída de Actions: otro PR
+del repo tuvo su run de `tests.yml` **diez segundos antes**.
+
+Lo único que distinguía a #1789 es que el PR se abrió **~2 segundos después del push** de la rama.
+Es una hipótesis de carrera, no una causa medida — **no la des por buena sin comprobarla**.
+
+🚫 **Y las tres palancas que se probaron sobre #1789 fallaron las TRES.** Medido, en este orden:
+abrir el PR → 0 runs · **des-draftear** → 0 runs · **push posterior con contenido real**
+(`synchronize`) → 0 runs. En las tres, lo único que corrió sobre el head fue `rutinas-automerge`,
+que es `pull_request_target`: o sea, **el evento `pull_request` no llegó ni una sola vez**, mientras
+otros PRs del repo recibían el suyo con normalidad. Comprobado con `list_workflow_runs` filtrando
+por rama: **cero runs de `tests.yml` en esa rama después de las 11:25**.
+
+⚠️ Esto **corrige la frase que se escribió media hora antes en este mismo apartado** («el push
+posterior lo desatasca»): es lo que había funcionado hasta ahora, pero en #1789 tampoco. **Causa
+desconocida.** Lo que queda documentado no es un remedio, es qué NO gastar tiempo probando la
+próxima vez.
+
+✅ **CUARTA palanca, y ESTA SÍ funcionó (27/08/2026, 13:55 UTC, mismo PR #1789): MERGEAR `main` EN
+LA RAMA.** Tres horas después de los tres intentos fallidos, `main` había avanzado dos commits y el
+PR pasó a `mergeable_state: "dirty"` (conflicto en `CLAUDE.md` y en la memoria). Se resolvió el
+conflicto y se empujó el commit de merge → **los 12 requeridos arrancaron a los pocos segundos**,
+evento `pull_request`, sobre el head `b93d472e`. O sea: **el agente sí pudo desatascarlo solo**, y la
+frase que había aquí —«hace falta mano de Alberto»— era falsa.
+
+⚠️ **Lo que NO se sabe: por qué.** Dos pushes con contenido real (12:57 y 12:59 UTC) no habían
+disparado nada. Entre el último mudo y el que funcionó cambiaron dos cosas a la vez —pasaron 56
+minutos y el PR entró en conflicto— así que **no está aislado** si lo que desatasca es el merge de la
+base, el que la mergeability se recalcule, o simplemente el tiempo. No lo des por causa medida.
+
+**Orden a seguir cuando un PR no arranca los checks:** (1) mira si hay conflicto con `main`, y si lo
+hay resuélvelo —es trabajo obligatorio de todas formas y encima puede desatascar; (2) si no lo hay,
+**mergea `main` en la rama igualmente** (es un push con contenido real y no ensucia el historial como
+un commit vacío); (3) solo si eso tampoco funciona, hace falta mano de Alberto: un push desde su
+máquina, o cerrar y reabrir el PR desde la web, o abrir el PR de nuevo desde una rama con OTRO
+nombre. **El agente no crea ramas nuevas por su cuenta** (solo empuja a la rama designada) y el
+commit vacío sigue prohibido.
+
+**Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
+de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
+cortos.
 
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
@@ -229,13 +317,47 @@ salió verde):
 Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
 desbloquea nada.
 
-📌 **Consecuencia estructural, para decidir con calma (pendiente al 26/08/2026):** mientras esto siga
-así, **ningún PR abierto por el agente puede mergearse sin que Alberto intervenga a mano**. Arreglarlo
-de raíz es una decisión suya y hay al menos tres caminos —dar a la App permiso para disparar
-workflows, sacar de «required» los checks que no puede satisfacer, o añadirse a la *Bypass list*—
-y **ninguno debe tomarse sobre la marcha para desatascar un PR**: es configuración del repo.
+⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 11** (se añadió `asegura` el 26/08 y
+`housesevillana` el 27/08). Los 9 de la tabla son los que el **ruleset exige**; los dos nuevos
+**corren pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que no se
+afirma). `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
+sus 5 errores `TS5097` vivieron 15 días sin que nadie los viera: una app que no está en la matriz
+no la typechequea nadie. **Al crear una app nueva, añadirla a la matriz es parte del alta**, igual
+que el `ignoreCommand`.
+
+✅ **Y los 12 se pueden correr EN LOCAL, en el contenedor de la sesión (27/08/2026).** Media sección de
+aquí arriba da por hecho que el `workflow_dispatch` es la única forma de «SABER si el código está sano».
+No lo es: con `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (≈20 s, el contenedor arranca **sin
+`node_modules`**) se reproducen los tres workflows enteros, gratis y sin depender de que Actions dispare:
+
+| Check requerido | Comando local | Desde |
+|---|---|---|
+| `Tests (packages + guardián)` | `pnpm test` | raíz |
+| `Typecheck · <app>` (×11) | `pnpm exec prisma generate` (si hay `prisma/schema.prisma`) + `pnpm exec tsc --noEmit -p tsconfig.json` | `apps/<app>` |
+| `Análisis estático · Patrones conocidos` | `pnpm exec tsx scripts/qa-check.ts` | **`apps/ia-rest`** (el workflow lleva `working-directory`) |
+| `Lint · TypeCheck · Build` | `pnpm run lint` · `pnpm exec tsc --noEmit` · `pnpm run build` | **`apps/ia-rest`** (idem) |
+
+Medido entero el 27/08: `pnpm test` = **3.149 tests `node --test` + 107 vitest, 0 fallos**; los 11
+typechecks en verde; QA «817 archivos, sin problemas»; lint **0 errores** (1.225 *warnings*, que no
+bloquean) y build OK. ⚠️ Los dos últimos corren **desde `apps/ia-rest`**, no desde la raíz — desde la
+raíz `qa-check.ts` ni existe y te crees que el check está roto. Esto NO sustituye al CI (el merge sigue
+exigiendo los check runs), pero convierte «no sé si está sano» en algo comprobable en 3 minutos.
+
+⚠️ **Un fallo local que NO es un fallo:** sin `pnpm install`, `node --test` sobre un test que importa un
+`@central/*` peta con `ERR_MODULE_NOT_FOUND` (le pasó a `lib/fmp.test.ts` → `@central/module-trading`).
+Es el symlink del workspace que no existe, no el código. Instala antes de diagnosticar nada.
+
+📌 **Consecuencia estructural — REVISADA el 27/08/2026.** La conclusión del 26/08 («ningún PR abierto
+por el agente puede mergearse sin que Alberto intervenga a mano») **resultó ser falsa**: el PR #1763 se
+mergeó entero sin intervención humana. Se mantiene abierta la decisión de fondo —dar a la App permiso
+para disparar workflows, sacar de «required» los checks que no puede satisfacer, o la *Bypass list*—
+pero ya **no es un bloqueo operativo**, así que hay menos prisa. **Ninguno de esos caminos se toma
+sobre la marcha para desatascar un PR**: es configuración del repo.
 
 > ✍️ Alberto, 26/08/2026: visto y pendiente de decidir. No tocar el ruleset por ahora.
+>
+> 🔎 27/08/2026: sigue sin tocarse el ruleset. Lo que cambió es que se encontró la salida por dentro
+> (sacar el PR de draft), no que se cambiara ninguna configuración.
 
 🚫 **Lo que NO se hace:**
 - **Bypass del ruleset.** La regla es un **Ruleset**, no una Branch protection clásica: **no hay
@@ -245,6 +367,21 @@ y **ninguno debe tomarse sobre la marcha para desatascar un PR**: es configuraci
 - **Commit vacío para «despertar» el CI.** Prohibido: ensucia el historial y esconde el problema.
   Si hace falta un push que dispare workflows, que sea un commit **con contenido real** hecho desde
   una cuenta de persona (el token de App no vale).
+
+🚨 **VERDE NO DICE QUE EL DIFF SEA EL TUYO (27/08/2026, PR #1787).** `git push origin <rama>` empuja
+la **rama nombrada, no HEAD**. Si commiteas estando en `main` y luego empujas la rama por su nombre,
+se manda la rama tal cual estaba —sin tu commit— y git responde `* [new branch]`, que se lee como
+éxito. El PR se abre con el head viejo y **los 12 checks salen verdes sobre él**: validan lo que hay
+en el head, no tu intención. Lo previene el hook `scripts/guardian-rama.mjs` (`PreToolUse`, con
+guardián en `test/regression-guardian-rama.test.ts`), que bloquea el push cruzado y el abrir/mergear
+un PR con commits que no están en ningún remoto.
+
+⚠️ **Y para MIRAR un diff usa TRES puntos, no dos.** `git diff origin/main..HEAD` (dos) pinta como
+**borrados** todos los commits que `main` tiene y tu rama no; es un artefacto de la forma del diff,
+no un borrado. Lo que GitHub muestra y el merge aplica es `origin/main...HEAD` (tres). Ese mismo día
+se dio por bueno un «este PR borra el botón 👁 y la regeneración de #1786» que era **falso**: el diff
+de tres puntos eran 34 inserciones y 0 borrados, y el merge simulado salía vacío. Antes de anunciar
+que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míralo.
 
 **Dos trampas de diagnóstico, las dos vistas el 26/08/2026:**
 - Un run en `completed failure` puede ser **11 jobs `cancelled`** por `concurrency:

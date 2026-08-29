@@ -11,12 +11,17 @@ const NAV_NEGOCIO = [
   // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
   { href: '/banca', icon: '🏠', label: 'Inicio' },
   { href: '/banca/transferencia', icon: '💸', label: 'Transferencia' },
+  // Bandeja del agente de facturas. Es el destino del aviso de Telegram, que hasta el 29/08/2026
+  // enlazaba a una página inexistente; sin esta entrada, lo acumulado solo se ve al llegar una
+  // factura nueva (el aviso cuenta las de ESA pasada, no la bandeja entera).
+  { href: '/expenses/pendientes', icon: '🧾', label: 'Facturas por revisar' },
   { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/contable', icon: '🧮', label: 'Contable' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },
   { href: '/subastas', icon: '⚖️', label: 'Subastas y chollos' },
+  { href: '/inversion', icon: '🏘️', label: 'Analizar compra' },
   { href: '/empresas', icon: '🏢', label: 'Empresas' },
   { href: '/trading', icon: '📈', label: 'Inversión' },
   { href: '/patrimonio', icon: '💼', label: 'Patrimonio' },

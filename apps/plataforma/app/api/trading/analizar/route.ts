@@ -7,6 +7,7 @@ import { mensajeCompraPaper } from '@/lib/trading-notify'
 import {
   indicadoresDe, torneo, dimensionar, abrir,
   superaConcentracion, superaLimiteOps, earningsInminente, bajoTendencia, factorFlojo, regimenMercado, ajustesDeStats, rvol, confirmaVolumen,
+  estadoEarnings, type EstadoEarnings,
   evaluarStop, tamanoPorRiesgo,
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
@@ -20,6 +21,11 @@ type Entrada = { simbolo: string; velas: Vela[]; fundamentales?: Fundamentales; 
 // que ya lo hacían). Techo alto + presupuesto acotado dentro: lo que garantiza que la pasada VUELVE es
 // el presupuesto, no el techo (lección de `facturas-scan`, 31/07/2026).
 export const maxDuration = 300
+
+// Ventana declarada de cada tesis, y por tanto la ÚNICA salida de la posición paper que abra (H9). Vive
+// en una constante porque son DOS sitios que tienen que decir lo mismo: la tesis que se guarda y el
+// horizonte que se copia a la posición. Dos literales `10` separados es como se rompen estas cosas.
+const HORIZONTE_TESIS_DIAS = 10
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
@@ -61,6 +67,7 @@ export async function POST(req: NextRequest) {
   const datosPorSimbolo = await Promise.all(simbolos.map(async s => ({ simbolo: s.simbolo, datos: await datosYahoo(s.simbolo, fecha) })))
   const datosPor = new Map(datosPorSimbolo.map(d => [d.simbolo, d.datos]))
   const fechasEarnings: Array<{ simbolo: string; earnings: FechaEarnings | null }> = []
+  const earningsPor = new Map<string, { fecha: string | null; estado: EstadoEarnings }>()
   for (const s of simbolos) {
     const d = datosPor.get(s.simbolo)
     fechasEarnings.push({
@@ -68,6 +75,15 @@ export async function POST(req: NextRequest) {
       earnings: s.fundamentales?.proximoEarnings
         ? { fecha: s.fundamentales.proximoEarnings, confirmada: false }   // la fecha de FMP no dice si la anunció la empresa
         : d?.earnings ?? null,
+    })
+    // 📅 Estado de la fecha de resultados TAL Y COMO SE SABE HOY, para persistirlo con la tesis.
+    // `d == null` = Yahoo no respondió; una fecha del payload (FMP) también cuenta como consultada.
+    // Sin esto, un NULL en la columna no distinguiría «no hay evento» de «no lo miramos» — y decir lo
+    // primero cuando es lo segundo es atribuir a la señal un movimiento que pudo ser del calendario.
+    const fechaEv = s.fundamentales?.proximoEarnings ?? d?.earnings?.fecha ?? null
+    earningsPor.set(s.simbolo, {
+      fecha: fechaEv,
+      estado: estadoEarnings(d != null || s.fundamentales?.proximoEarnings != null, fechaEv),
     })
     if (!d) continue
     s.fundamentales = {
@@ -152,6 +168,7 @@ export async function POST(req: NextRequest) {
     const precioRef = s.velas[s.velas.length - 1].cierre
     const volumenRel = rvol(s.velas.map(v => v.volumen))   // volumen de hoy vs su media
     const señales = torneo(ind, s.fundamentales ?? {}, fecha, ajustes)
+    const evEarn = earningsPor.get(s.simbolo) ?? { fecha: null, estado: 'sin_consultar' as EstadoEarnings }
 
     // Persistir todas las señales como tesis. skipDuplicates + único (simbolo,fecha,estrategia):
     // si la pasada se reintenta el mismo día, no duplica filas (el 04/08 corrió 5 veces y dejó
@@ -159,8 +176,12 @@ export async function POST(req: NextRequest) {
     await prisma.tradingTesis.createMany({
       data: señales.map(se => ({
         simbolo: s.simbolo, fecha: new Date(fecha), estrategia: se.estrategia,
-        direccion: se.direccion, confianza: se.confianza, horizonteDias: 10,
+        direccion: se.direccion, confianza: se.confianza, horizonteDias: HORIZONTE_TESIS_DIAS,
         precioRef, precioFuente: 'sesion', indicadores: ind as object, rationale: se.rationale,
+        // 📅 La fecha de resultados viaja CON la tesis (antes solo existía como texto en `rationale`).
+        // Es lo que después permite separar el rendimiento de la señal del rendimiento del calendario.
+        proximoEarnings: evEarn.fecha ? new Date(evEarn.fecha) : null,
+        earningsEstado: evEarn.estado,
       })),
       skipDuplicates: true,
     })
@@ -218,7 +239,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!motivo) {
-      const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha)
+      const pos = abrir(s.simbolo, cantidad, precioRef, ind.atr14 ?? precioRef * 0.02, fecha, HORIZONTE_TESIS_DIAS)
       // createMany+skipDuplicates y no create: con el único (simbolo,lado,fecha) un reintento no revienta ni duplica.
       await prisma.tradingPaperOrden.createMany({ data: [{ simbolo: s.simbolo, lado: 'BUY', cantidad, precio: precioRef, fecha: new Date(fecha), motivo: `${ganadora.estrategia} conf ${ganadora.confianza}` }], skipDuplicates: true })
       // Marca la tesis GANADORA (recién insertada arriba) como comprada de verdad: es la única fila
@@ -230,7 +251,13 @@ export async function POST(req: NextRequest) {
       })
       await prisma.tradingPaperPosicion.upsert({
         where: { simbolo: s.simbolo },
-        create: { simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha) },
+        create: {
+          simbolo: s.simbolo, cantidad, precioEntrada: precioRef, stop: pos.stop, abiertaEn: new Date(fecha),
+          // La ventana con la que esta posición se cerrará por tiempo (H9). Sin ella no habría salida.
+          horizonteDias: pos.horizonteDias,
+          // Se congela lo que se sabía AL ABRIR: al cerrar, la pasada ya no tiene los fundamentales de hoy.
+          proximoEarnings: evEarn.fecha ? new Date(evEarn.fecha) : null, earningsEstado: evEarn.estado,
+        },
         update: {},   // no promediar: si ya existe, no se toca
       })
       // Aviso inmediato por Telegram (aquí la posición es siempre nueva: `yaAbierta` es barrera arriba). Best-effort.

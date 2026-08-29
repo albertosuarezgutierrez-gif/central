@@ -1,5 +1,7 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { eur } from './dinero'
+import { sqlGastoDePisos } from './sivra/gasto-de-pisos'
 
 export type ResumenFinanciero = {
   ingresosYtd: number
@@ -54,17 +56,24 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
             FROM incomes
             WHERE EXTRACT(YEAR FROM date) = ${anio}
           `,
+      // 🚨 `sqlGastoDePisos()` es obligatorio en las DOS ramas (ver lib/sivra/gasto-de-pisos.ts):
+      // sin él esta suma contaba la BANDEJA como gasto confirmado —3,37 M€ en 2026 contra 13.755,66 €
+      // reales, por la reserva del edificio de C/ San Luis 9 y un Modelo 200 triplicado— y, sin
+      // propertyId, metía además la correduría y lo personal en un total cuyo ingreso sale de
+      // `incomes`, que es solo pisos. Lo vigila gasto-de-pisos.test.ts sobre el fuente.
       propertyId
         ? prisma.$queryRaw<Array<{ total: unknown }>>`
             SELECT COALESCE(SUM(total), 0)::float AS total
             FROM gastos
             WHERE EXTRACT(YEAR FROM fecha) = ${anio}
               AND propiedad = ${propertyId}
+              AND ${Prisma.raw(sqlGastoDePisos())}
           `
         : prisma.$queryRaw<Array<{ total: unknown }>>`
             SELECT COALESCE(SUM(total), 0)::float AS total
             FROM gastos
             WHERE EXTRACT(YEAR FROM fecha) = ${anio}
+              AND ${Prisma.raw(sqlGastoDePisos())}
           `,
       // Solo reservas con checkout ya pasado (cobradas/cerradas a día de hoy)
       propertyId

@@ -23,9 +23,61 @@ export type PrecioVivo = {
   horaISO: string | null
 }
 
+// 🏛️ Mercado de IBKR → sufijo de Yahoo + divisa que DEBE tener la posición para poder usarlo.
+// Por qué existe (28/08/2026): Yahoo NO conoce el ticker pelado de un UCITS europeo — `VWCE`
+// devuelve 404 «symbol may be delisted» y `VWCE.DE` devuelve 200 con `currency:'EUR'` y
+// `fullExchangeName:'XETRA'` (ambas comprobadas contra la fuente real, no supuestas). Sin este
+// mapa el botón «🔄 Actualizar» refrescaba CVX (NYSE) y dejaba el ETF núcleo —el 98,6% de la
+// cuenta— con la foto de IBKR de la pasada de anoche, sin que la pantalla lo distinguiera.
+//
+// La tabla es CORTA a propósito: un sufijo inventado no falla en silencio, resuelve a OTRO
+// instrumento con el mismo ticker (la landmine de unidades del PR #1189, y la que ya avisa la
+// cabecera de este archivo). Para añadir un mercado, pide antes la respuesta REAL de Yahoo y
+// comprueba `currency` + `fullExchangeName`; si no lo has mirado, no lo pongas.
+const MERCADO_YAHOO: Record<string, { sufijo: string; divisa: string }> = {
+  // Xetra (IBKR lo llama IBIS/IBIS2). Verificado 28/08/2026 con VWCE.DE → 200, EUR, XETRA.
+  IBIS: { sufijo: '.DE', divisa: 'EUR' },
+  IBIS2: { sufijo: '.DE', divisa: 'EUR' },
+  // Borsa Italiana. Verificado 28/08/2026 con VWCE.MI → 200, EUR, Milan.
+  BVME: { sufijo: '.MI', divisa: 'EUR' },
+  'BVME.ETF': { sufijo: '.MI', divisa: 'EUR' },
+}
+
+const SUFIJOS_YAHOO = [...new Set(Object.values(MERCADO_YAHOO).map(m => m.sufijo))]
+
+/** Sufijo de mercado que ya trae un símbolo (`VWCE.DE` → `.DE`), o `''` si no trae ninguno de los
+ *  conocidos — un `.B` de clase (BRK.B) NO es un sufijo de mercado. */
+function sufijoDe(simbolo: string): string {
+  return SUFIJOS_YAHOO.find(x => simbolo.endsWith(x) && simbolo.length > x.length) ?? ''
+}
+
+/** Mercado que IBKR incrusta en la descripción de la posición (`VWCE @IBIS2`). null = no lo dice
+ *  (las acciones USA llegan con la descripción a secas, p. ej. `CVX`). */
+export function mercadoIbkr(descripcion: string | null | undefined): string | null {
+  const m = /@([A-Z0-9.-]+)/i.exec(descripcion ?? '')
+  return m ? m[1].toUpperCase() : null
+}
+
+/** Símbolo con el que preguntar a Yahoo por una posición real de IBKR. Solo añade sufijo cuando
+ *  el mercado está en la tabla verificada Y la divisa de la posición coincide con la que cotiza
+ *  ese mercado; ante cualquier duda devuelve el ticker tal cual (que es lo que ya se hacía). */
+export function simboloYahoo(p: { simbolo: string; descripcion?: string | null; divisa?: string | null }): string {
+  const base = p.simbolo.trim().toUpperCase()
+  if (sufijoDe(base)) return base                       // ya viene cualificado
+  const mercado = mercadoIbkr(p.descripcion)
+  const mapa = mercado ? MERCADO_YAHOO[mercado] : undefined
+  if (!mapa) return base
+  if (mapa.divisa !== (p.divisa ?? '').trim().toUpperCase()) return base   // otra divisa = otro papel
+  return base + mapa.sufijo
+}
+
 export function urlYahooVivo(simbolo: string): string {
-  const s = simbolo.trim().toUpperCase().replace(/\./g, '-')
-  return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?interval=1d&range=1d`
+  const s = simbolo.trim().toUpperCase()
+  // El punto de CLASE va a guion (BRK.B → BRK-B); el de MERCADO se conserva (VWCE.DE), que es
+  // justo lo que Yahoo espera — cambiarlo a `VWCE-DE` devuelve 404 (comprobado 28/08/2026).
+  const suf = sufijoDe(s)
+  const consulta = (suf ? s.slice(0, -suf.length) : s).replace(/\./g, '-') + suf
+  return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(consulta)}?interval=1d&range=1d`
 }
 
 // Meta del chart de Yahoo → precio vivo. Defensivo: sin regularMarketPrice finito>0 o sin

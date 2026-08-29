@@ -23,7 +23,122 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🗺️ (27/08/2026) Correduría: plan POR FASES, CIMA al final + encuesta para Manuel
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
+> funde con la entrada anterior y se archiva mal.
+>
+> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
+> registro de qué se hizo y qué queda.
+
+---
+
+### 🔎 (29/08/2026) Auditoría diaria (ligera) — sin hallazgos, radiografía regenerada
+Rango 26→29/08 (50 commits, día muy activo: ancla+serrucho de pricing, apagado de NIM, fix VWCE,
+trading H9-H15, card de gastos de sivra). Heartbeat de 22+12 huellas sin `⛔` nuevos (solo el
+`ses_transporte` ya conocido, acción pendiente de Alberto). Salud del precio sin 🔴: raíl a la baja
+intacto, sin palancas apagadas; los 187 `oscilantes`/7d son el mismo serrucho YA diagnosticado esta
+semana (PR #1826/#1827), no un hallazgo nuevo. Único arreglo: `estructura.generated.json` estaba
+desfasado → regenerado (carril 1). PR backlog (2 abiertos) y `rutinas-automerge` sanos. Detalle en
+`docs/AUDITORIA-2026-08.md`.
+
+### ⚡ (28/08/2026) El botón «Actualizar» de /trading no refrescaba el VWCE (el 98,6% de la cuenta)
+- Alberto: «VWCE en mi pantalla ¿cuándo se actualiza?». Diagnóstico: el precio vivo se pedía a Yahoo
+  con el **ticker PELADO** (`VWCE`), y un UCITS europeo ahí no existe → **404** (comprobado vía pg_net:
+  `VWCE` y `VWCE-DE` 404; `VWCE.DE` 200, EUR, XETRA). Encima `urlYahooVivo` convertía el punto en guion.
+  Resultado: CVX se refrescaba y el ETF núcleo se quedaba con la foto de IBKR de la noche anterior.
+- Arreglo (**PR #1837, mergeado**): `simboloYahoo()` cualifica por el mercado que IBKR mete en la descripción
+  (`VWCE @IBIS2` → `VWCE.DE`), con **tabla corta y verificada** + guarda de divisa; sufijo de mercado
+  conservado en la URL y punto de clase (BRK.B) intacto. Fixture real del 28/08 en los tests.
+- Probado de punta a punta con el código ya en `main` y la fila real de `trading_cartera_real`:
+  `VWCE @IBIS2` → `/chart/VWCE.DE` → 200 EUR 168,54 → `esVivo:true`, valor pintado **31.685,52€**
+  (la foto de anoche decía 31.497,52€). CVX sigue pidiéndose sin sufijo, como debe.
+- Dato de paso: Yahoo daba el cierre de Xetra **168,54€ (17:36)** y la app de IBKR **167,80€** a las 18:38
+  — el feed de IBKR va con retraso; el panel queda igual o más fresco que el móvil.
+
+### 💵 (28/08/2026) El dinero de la cartera paper, en la tarjeta donde Alberto mira
+- Continuación del PR #1831: las cifras en dólares SÍ estaban desplegadas, pero en la sección
+  «📦 Cartera paper» de más abajo, y Alberto preguntaba desde el hero «📊 Rentabilidad de la
+  cartera (paper)». Lección: **una cifra que existe pero no está donde se pregunta, para el
+  usuario no existe.** Ahora el hero lleva su propio bloque: invertido → valor → ganado/perdido.
+- Van **separados y etiquetados** a propósito: la cifra grande del hero es la CESTA CONGELADA
+  (experimento de medición), el bloque nuevo son las POSICIONES simuladas del agente. Mismo
+  helper `lib/trading/posiciones-paper.ts`, sin queries nuevas.
+
+### 📦 (28/08/2026) Cartera paper en dólares (invertido/valor/P&L) + fecha de la medición del hero
+- Alberto preguntó si el hero «Rentabilidad de la cartera (paper)» estaba bien y actualizado.
+  **Las cifras cuadran byte a byte con `trading_paper_track`** (cohorte `2026-07-18.v1`, fila del
+  24/08: mediana −0,99% · SPY +3,18% · 3/8 · DD −8,00% · 37 días). Lo que fallaba era la FRESCURA:
+  el snapshot es **semanal** (cron `paper-tracker`, lunes 10:00) y el panel no decía la fecha → se leía
+  como «hoy». Ahora pone «📅 medido el dd/mm/aaaa» en el hero y «últ. fecha» en cada cohorte.
+- **📦 Cartera paper ahora en dólares de verdad:** columnas Invertido/Valor/Resultado por posición y
+  tira-resumen (invertido ~49.755 $ · valor hoy · ganado/perdido). Helper puro
+  `lib/trading/posiciones-paper.ts` + 7 tests: sin precio de hoy no hay valor ni P&L (nunca 0), y el
+  P&L se mide contra el coste de las MISMAS posiciones valoradas (no contra el de todas).
+
+### 🔍 (28/08/2026) Primera pasada de descubrimiento: el hallazgo NO es una librería, es un esquema
+- 3 búsquedas. `pvilas/hospedajes` **falla los dos filtros** (GPLv3 · Python · muerto desde may-2023,
+  1 mantenedor) → no se integra. Pero trae los **7 XSD + WSDL oficiales 3.0.0** y sus `targetNamespace`
+  **coinciden** con los que genera `packages/module-ses/src/soap.ts`. Nosotros **no tenemos ni un `.xsd`**.
+- **Importa por el pendiente de apagar Chekin:** no hay sandbox (`pre-ses` da 502), así que validar
+  nuestro XML contra el XSD en local es el único preflight antes de disparar a producción.
+  ⚠️ Ese repo es un espejo de 2023, **anterior al RD 933/2021 en vigor** — pedir los vigentes al
+  Ministerio; validar contra un esquema viejo daría verde sobre la especificación equivocada.
+- Dos ausencias con fondo: **EIAC/CIMA no tiene OSS** (estándar de TIREA, cerrado) → el parser de la
+  correduría hay que escribirlo, sin atajo; **pricing dinámico VR es todo comercial** → el serrucho se
+  resuelve en casa o no se resuelve.
+
+### 🔭 (28/08/2026) `github-vigia` llevaba 2 meses escrita y SIN DISPARAR — trigger creado
+- La skill existía desde el 02/07 con su «Paso 2 — Descubrimiento» (busca repos OSS que encajen
+  con pendientes reales), pero **no tenía trigger**: 139 triggers vivos, cero suyos. Sus dos
+  pasadas fueron a mano. Creado `trig_017pe2NS4pzKXYhGPM6St7aZ` (mensual día 15, `0 5 15 * *` UTC).
+- **Su aviso de alcance era falso por defecto:** decía «para repos externos, web + npm». Medido:
+  **`git clone --depth 1` de un repo ajeno funciona** y `raw.githubusercontent` da 200 (siguen en
+  403 `curl` a github.com y `api.github.com`). Puede LEERSE el código de un candidato.
+- Paso 2 reescrito: criba licencia+lenguaje ANTES de nada (AGPL → solo lectura; no-TS → servicio
+  externo), madurez leída del clon (tests, nº de mantenedores) y no de las estrellas, y cada
+  candidato propone por cuál de las 4 vías entra (dep npm · `packages/*` · servicio · referencia).
+- ⚠️ **Nace mudo:** su `ALERTA_TOKEN` es un placeholder pendiente de pegar (pendiente manual #3).
+
+### 🎯 (28/08/2026) Instrumentado el ancla: ahora el fin del serrucho se podrá ATRIBUIR, no solo ver
+- **PR #1826** (`16b91f3e`): `pricing_applied` gana `base_fuente` ('mes'|'global', por noche) y
+  `ancla_origen` (por piso/pasada). Sin ellas el seguimiento del 03/09 solo medía el agregado, y una
+  mejora que no se puede atribuir es indistinguible de una semana tranquila de mercado.
+- **NULL = «fila anterior a la columna»**, NO «usó el ancla global» — incluidas las pasadas nuevas del
+  27-28/08. Sin DEFAULT ni NOT NULL a propósito. Guardián `pricing-applied-ancla.test.ts` (6 tests,
+  probado en rojo contra 2 mutaciones reales: columna sin valor, y re-derivar de `mb` en vez de `useMonth`).
+- **Baseline del serrucho, MEDIDA**: motor viejo (18→27/08, 1.338 noches) = **55,7% de las transiciones
+  cambiaban de dirección**, 4,2 escrituras/noche, amplitud 1,34×. El nuevo aún no tiene serie (1,0
+  escrituras/noche en 2 días): ausencia de muestra, no un buen resultado.
+- Verificado: 13/13 checks en local; los 4 pisos usan el ancla acumulada (115-119 fechas, corpus 100%
+  `booking_mcp`); 0 roturas de raíl, 0 avisos; `mercado-booking` corrió a las 08:36 en su horario nuevo.
+- Check-in 14:47 UTC para ver las columnas rellenas en producción (el INSERT vive en un `catch {}`: si
+  falla, el latido seguiría VERDE con la auditoría sin escribirse).
+
+### ⚫ (28/08/2026) NIM fuera: «ya NIM nada, todo OpenRouter» (decisión de Alberto)
+Tras la 3ª muerte por EOL en 11 días, Alberto decide apagar NIM en vez de buscar otro id. Dato que
+lo sostiene: en 7 días OpenRouter sirvió el **100%** del texto y NIM **cero** respuestas reales.
+Apagado con el patrón de Gemini (código entero, vuelve con `NVIDIA_TEXTO=1` + `NVIDIA_BRAIN_MODEL`;
+**sin default de modelo**, para obligar a verificar un id vivo). Dos hallazgos: el `model` pinneado
+de NIM **apartaba a OpenRouter** en rrhh e ia-rest (por eso eran los únicos rotos, no degradados), y
+`brain.ts` —cerebro del POS de voz— tenía NIM como ÚNICO proveedor: **roto desde el 26/08** sin que
+se notara (ia-rest sin tráfico). Ambos ya van por la cadena; ojo al nuevo `BRAIN_TIMEOUT_MS` (12 s,
+antes 5 s contra NIM). Guardián de 4 tests en core-ai. **Pendiente: 4 edge functions con NIM crudo.**
+
+### 🤖 (28/08/2026) «NVIDIA 410»: el briefing no usaba OpenRouter — y perdía los datos por no tener prosa
+Alberto preguntó si el `daily-briefing` va por OpenRouter. **No: nunca ha ido.** `ai_usos` no tiene
+NI UNA fila con app `ia-rest-briefing` — la pasarela (única vía a OpenRouter) fallaba en un `catch {}`
+mudo y caía siempre a NVIDIA directo. Y el modelo cableado `meta/llama-3.1-70b-instruct` murió por
+EOL el **26/08 09:00 UTC** (410; último ✅ de la sonda 26/08 07:03) — tercer id de NIM muerto en 11 días.
+Arreglado el edge function: sin IA se manda el briefing EN CRUDO con el motivo (antes se perdían los
+datos ya calculados), el modelo sale de `NVIDIA_BRAIN_MODEL`, las alertas de stock leen la vista real
+(`almacen` no existe → «sin alertas» era mentira diaria) y el sello `last_run` usa las columnas reales.
+PR #1818 **mergeado**, edge function **redesplegada (v24) y probada en vivo**: HTTP 200, briefing en crudo
+a Telegram y el sello `last_run` escrito **por primera vez en su historia**. La ejecución real confirma el
+diagnóstico y añade el dato que faltaba: **faltan LAS DOS envs** (`PLATAFORMA_URL` + `AI_GATEWAY_SECRET`);
+`NVIDIA_API_KEY` sí está. **Pendiente de Alberto:** poner esas dos envs (mete el briefing en OpenRouter) y
+decidir swap de NIM vs. gatearlo como Gemini (OpenRouter sirve ya el 100% del tráfico).
+
+### 🗺️ (27/08/2026) Correduría: plan POR FASES, CIMA al final + encuesta para Manuel
 
 Alberto ordena el traspaso: **CIMA se deja para lo último** (venta = Codeoscopic, back office = CIMA).
 Cinco fases en `docs/TRASPASO-CORREDURIA.md`: 0 cimientos · 1 cartera en lectura · 2 portal cliente ·
@@ -42,7 +157,193 @@ que lea todo». Manuel está en Hobby (sin miembros), así que la invitación so
 dirección y paga Alberto: asiento Pro **recurrente**, no pago único. NO se transfiere el proyecto
 todavía (arrastraría CIMA, que es Fase 4).
 
-### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
+### 🎢 (27/08/2026) La segunda llave funciona — y Luxury no sube a ciegas: OSCILA
+Primera pasada con la segunda llave (14:30, deploy READY 09:29 → las 494 noches de las 08:30 son de
+código viejo). Escribió **243 noches, TODAS a la baja**, ratios **0,798–0,929**, cero fuera del raíl
+de ±20%: Busto 95 · Luxury 63 · House 56 · Dúplex 29. El raíl aguanta.
+⚠️ **No se puede afirmar aún que la corrección llegara al mercado:** las 243/243 tenían todavía el
+precio VIEJO en el último snapshot, así que los ratios (1,92/1,61/1,42/1,31×) miden el estado ANTERIOR.
+Chequeo re-armado al 28/08 10:30 UTC; si sigue viejo, el problema es de propagación al canal, no del motor.
+🚩 **Hipótesis anterior CORREGIDA:** el bloque de 51 noches de Luxury (1-jul→23-ago-2027, cero comps)
+no «sube a ciegas ~+19%/día» — **oscila** en el tope del raíl: 149 → 119 → 95 → 114 en cuatro pasadas
+de las 08:00. El precio de la misma noche baila ±20% al día sin información nueva. Sospecha a
+comprobar (no confirmada): realimentación del objetivo sobre el precio previo del propio piso.
+🔓 **Se ACOTA (no se resuelve) el CI mudo que dejó abierto #1789** (allí cambiaron el merge de la base
+Y 56 minutos): en el #1799 el push mudo fue a las 15:08 con 0 runs y el que traía `main` mergeado
+disparó los 12 a las **15:11** — tres minutos, así que **el tiempo queda descartado**. Lo que NO se
+puede decir es que la causa sea traer la base: el push siguiente (15:12), que no la tocaba, también
+disparó los 12. Encaja con lo ya escrito en `CLAUDE.md`: una vez que arrancan, cada push los dispara.
+### 🏘️ (27/08/2026) Agente de inversión inmobiliaria CONSTRUIDO y probado con los 12 meses de Conil
+
+Fases 2 y 3 del spec, completas. Motor PURO `apps/plataforma/lib/inversion/{tipos,curva-mercado,competencia,
+underwriting}.ts` (**52 tests**), tabla `inversion_analisis` (migración aplicada en Supabase, con REVOKE a
+anon/authenticated + RLS), endpoint `POST /api/inversion/underwrite`, pantalla `/inversion` (+ sidebar) y skill
+`inversion-inmueble`. **Prueba end-to-end con mediciones REALES**: 12 búsquedas de Booking para Conil (una por
+mes, aforo 4) → curva en `docs/INVERSION-CONIL-2026-08-27.md`; **pico/valle 5,79×** (ago 488,50€ vs mar 84,36€),
+no el 3,6× de las dos ventanas del spec. Esa pasada destapó **dos mentiras en los mensajes del veredicto** —citaba
+el yield neto junto al listón cuando comparaba el cash-on-cash («8,27% bate el listón de 9,00%»), y decía «año
+entero medido» con la ocupación 100% supuesta—; corregidas y con test. Verificado tras mergear `main`: tsc 0 · 1.766 tests de
+plataforma · 75 del guardián. ⛔ Sigue faltando lo de Alberto: precio, m², qué es el inmueble, explotación,
+financiación y si compra él o Punto y Coma SL.
+🔓 **De regalo, el CI:** el PR #1789 se pasó 3 h sin que GitHub le creara ni uno de los 12 requeridos
+(abrir, des-draftear y dos pushes con contenido: 0 runs). Lo desatascó **mergear `main` en la rama**
+—que además hacía falta, el PR estaba en conflicto—: los 12 arrancaron en segundos. Corregida la frase
+de `CLAUDE.md` que decía «hace falta mano de Alberto». **La causa sigue sin aislar** (entre el último
+push mudo y el que funcionó cambiaron el merge de la base Y 56 minutos).
+
+### 📅 (27/08/2026) El libro paper ya sabe qué resultado vino de la SEÑAL y cuál del CALENDARIO
+NVDA (PAPER, no cartera real — la real solo tiene VWCE + CVX) acabó en verde por un hueco del +6,79%
+tras resultados. **Nadie decidió aguantar:** `earningsInminente` solo veta ABRIR ≤3d; entró el 21/08,
+a 5 días, y una vez dentro el evento no se vuelve a mirar. La víspera estaba EN PÉRDIDA y a ~3% del
+stop; un hueco simétrico habría abierto BAJO el stop (precedente: 25/02 → −5,46% y −9,39% en dos
+sesiones). El agujero era el REGISTRO: la fecha de earnings se usaba pero solo vivía como texto en
+`rationale`. **PR #1793 mergeado + SQL aplicado + producción READY**: `proximo_earnings`/`earnings_estado`
+(tesis y posición), `evento_dentro` en las SELL y atribución por evento en `/puntuar`. **Carril de datos:
+no toca stats, confianza ni sizing.** Backfill: 44 tesis y 2 posiciones `reconstruido`; 2.016 quedan
+`sin_consultar` (que es la verdad). Primer dato: 12 tesis con evento dentro dan +2,52% vs −0,12% de las
+1.220 sin comprobar — **n=12 de UN símbolo (SQM), no sostiene nada aún**. Detalle en
+`docs/TRADING-POSTMORTEM-NVDA-2026-08.md`.
+⚠️ Hallazgo: FD dice BEAT +33% y Alpha Vantage MISS −52,6% del MISMO trimestre (GAAP vs non-GAAP) → no
+se cablea ningún «comprar si bate». Encuadre: la cohorte con más recorrido va **−4,17 pp vs SPY**.
+
+### 🌱 (27/08/2026) El calendario, SEMBRADO en producción y medido: 0 precios movidos
+Cerrada la prueba de punta a punta (PRs #1787 → siembra). Antes de sembrar se arregló el nombre de
+las noches de tabla (`Feria de Abril 2027 — 2027-04-12` → `… — noche del alumbrado`): el nombre es
+la CLAVE del upsert, o sea que cambiarlo DESPUÉS habría creado 7 filas nuevas dejando las viejas
+empujando precio para siempre. Sembradas las **15 filas** (`fuente='calendario'`), re-ejecutado →
+sigue en 15 (idempotente). **Factor efectivo `MAX(tabla, EVENTS)` comparado noche a noche: 0 cambian**
+— la tabla sube donde `EVENTS` ya tapaba el hueco. El valor llega cuando `EVENTS` caduca (2027-05-02):
+Semana Santa 2028 sale 2,20–2,50 del calendario contra **1,00** de `EVENTS`, y la Feria 2028 se
+declara «sin tabla» en vez de inventarse.
+⚠️ **Fallo propio, y la corrección de lo que conté.** Commiteé el arreglo en `main` local, no en la
+rama: `git push -u origin <rama>` empuja la rama NOMBRADA, no HEAD, y respondió `* [new branch]`, que
+se lee como éxito. El PR #1787 se abrió con el head viejo y 12 checks verdes sobre él. 🚨 **Y lo que
+escribí después era FALSO:** dije que ese PR «borraba el botón 👁 (#1783) y la regeneración de #1786».
+No: su diff de TRES puntos era «34 inserciones, 0 borrados» y el merge simulado sobre el `main` de
+entonces da diff **vacío**. La alarma salió de leer un diff de DOS puntos (`origin/main..HEAD`), que
+pinta como borrados los commits que `main` tiene y la rama no. Verde ≠ el diff que crees; y para ver
+lo que un PR aplica, **TRES** puntos. Guardián automático desde hoy: `scripts/guardian-rama.mjs`.
+
+### 🩺 (27/08/2026) El calendario de eventos latía pero NADIE lo escuchaba
+Prueba final de punta a punta antes de dar el calendario por bueno. Todo verde salvo un hueco real:
+`/api/sivra/eventos/calendario` **escribía** `registrarLatido('sivra_eventos_calendario')` pero NO
+estaba en `AGENTES_VIGILADOS`, así que el vigía diario no lo miraba. Es el landmine del 16/08 (PR
+#1447) por la otra cara: allí un agente vigilado sin sonda, aquí un agente con huella y sin vigilante.
+🚨 **Y este es el peor caso posible de cron mudo**: el calendario REPONE lo que ya se sabe, así que si
+muere, las otras cuatro fuentes siguen llenando `pricing_eventos_auto` y el hueco no se ve por ningún
+lado — hasta que llega Semana Santa tarificada como un abril cualquiera. Declarado + sonda en el mismo
+cambio (30 h, como sus hermanos diarios); el guardián se probó EN ROJO quitando la sonda a propósito.
+
+### 📅 (27/08/2026) Me equivoqué: el motor SÍ conoce la Semana Santa — el problema es que su calendario CADUCA
+Diagnostiqué que Semana Santa 2027 «no existía» tras ver `pricing_eventos_auto` vacía en esas fechas.
+**Falso, y la corrección es la lección:** vive en el mapa `EVENTS` de `lib/pricing-calendar.ts`, que
+`eventFactor()` consulta y el `apply` combina por MAX. **Hay DOS fuentes de eventos y miré una.** Lo real:
+`EVENTS` está ESCRITO A MANO, tiene 118 entradas y **acaba el 2027-05-02**, mientras el horizonte de
+tarificación ya llega al 2027-08-27 — `eventFactor('2028-04-13')` (Jueves Santo 2028) vale hoy **1.0**. Y
+llegar tarde cuesta: las entradas de 2027 se añadieron el **17/06/2026** y Busto Reform ya había vendido
+25-28 mar a **141€/noche el 14/06** y 22-24 mar a 155€ el 15/06 — tres y dos días antes. En cuanto el mapa
+cubrió 2027 el motor reaccionó bien (24-mar: 180€→216€→210€→298€→**503€** en doce días). De paso quedó
+medido que la **cadencia NO es el cuello de botella**: un evento a <60 días vista se convierte en precio en
+**3,5 h** (mediana de 141 eventos/60 días) y los que no movieron precio eran noches ya vendidas. Módulo
+`lib/sivra/eventos-calendario.ts` (puro, 21 tests): Semana Santa DERIVADA de la Pascua (Meeus) con la curva
+EXACTA de `EVENTS` día por día, Feria por tabla año a año (no se deriva: su encaje con la Pascua ya cambió
+una vez y costó una corrección el 31/07). Cron `/api/sivra/eventos/calendario` (03:30). **PR #1778
+MERGEADO** (`50fa787a`) y verificado sobre `main` (575/575 en `lib/sivra`, 61/61 del guardián).
+🚨 **Nació gateado tras `SIVRA_CALENDARIO_ACTIVO` y Alberto retiró el interruptor el mismo día**, con
+el argumento que lo zanja: **no hay otro proveedor de precio que este motor**. La regla de «no tocar
+precios sin permiso» protege de un TERCERO moviéndolos; aquí no hay tercero, así que el gate no
+evitaba ningún riesgo y solo dejaba el dato fuera hasta que alguien se acordara de la env — el fallo
+exacto que el módulo viene a evitar. Y estaba medido que no costaba nada: encenderlo cambiaba **0
+noches** (las 15 fechas de la ventana ya estaban en `EVENTS` con el mismo factor y el motor combina
+por MAX). Empieza a morder hacia **abril de 2027**, cuando el horizonte cruce a la Semana Santa de 2028.
+
+### 🔓 (27/08/2026) El CANDADO del pricing: 279 noches congeladas, 249 sin llave — y el ciclo del rumor
+Auditoría completa del motor de precio dinámico (20 etapas). Hallazgo #1: tres reglas correctas por
+separado se encadenan en un precio IRREVERSIBLE — un evento salta el raíl (Busto 21-feb-2027: 221€→717€
+en una pasada), el precio pasa a ser outlier (>1,4× a >30 días) y la ÚNICA llave era el techo de mercado
+MEDIDO, que exige ≥5 comps fiables de la fecha exacta (solo el 25% del calendario los tiene). Medido:
+**279 noches a la venta congeladas, 249 (89%) sin poder descongelarse nunca**. Nueva **segunda llave**
+(`lib/sivra/pricing-descongelar.ts`, puro + 13 tests + guardián de cableado): **antigüedad** (21 días sin
+poder reescribirse) y **rumor caído** (evento descartado y sin evento vivo → libera YA, decisión de
+Alberto: «no se puede coger un rumor, subir el precio y dejarlos trancados»). Simulado contra prod: ~270
+noches liberadas. Bajar es reversible (raíl ±20%/día + suelos); quedarse a 2,3× dos meses, no. **PR #1773
+mergeado** (`4efd9327`, deploy de producción READY); la 1ª pasada que lo usa es la de las 14:30 UTC.
+Base medida antes de esa pasada: **386 noches lejanas a la venta** por encima de 1,4× la mediana del piso, de
+las que **226 tienen ya llave nueva** (Busto 98 · Luxury 62 por antigüedad; Dúplex 27 · House 39 nunca escritas).
+
+### ⏰ (27/08/2026) El hueco de rutinas del sábado, CERRADO: se mueve la hora, no el día
+Las 3 rutinas que el 22/08 se comió el límite semanal de Claude (auditoría 04:00, mercado-booking
+05:30, facturas 08:00 CEST) corrían ANTES del reset de cuota (sáb 09:00 CEST = 07:00 UTC). Ya no:
+`0 8`/`30 8`/`0 9 * * *` UTC = **10:00 / 10:30 / 11:00 CEST, los siete días**. Verificado en el
+servidor: conectores intactos (16/1/14) y 29 rutinas, ninguna nueva. 🚧 Se intentó antes la vía
+elegante —`* * 0-5` + tres triggers de sábado— y **se abandonó por dos límites reales**: (a) la API
+**rechaza que un agente edite rutinas creadas por `http_api`** (las del panel), y (b) un trigger
+creado por `create_trigger` **NO hereda `mcp_connections` ni el repo**, así que la copia habría
+corrido sin conectores → auditoría que se pone verde por no poder mirar. Se creó una y se borró.
+La UI **no tiene «Duplicar»**, así que replicar a mano eran 5+6+18 chips de conectores por quitar.
+📌 Regla: para estas rutinas, cualquier cambio es por interfaz (pestaña «Personalizado»), y el cron
+está en **UTC** (local = +2 en CEST). 🕐 **El cambio de hora del 25/10 NO rompe esto:** el reset es
+un instante fijo en UTC —el propio error lo dice, «resets 7am (UTC)», y el banner solo lo pinta en
+hora local—, así que `0 8 * * *` seguirá siendo 08:00 UTC y el colchón de 1h se mantiene; lo único
+que cambia es la etiqueta local (10:00 CEST → 09:00 CET). Si alguna vez se ve un fallo de cuota
+después de octubre, ESA es la suposición a revisar primero. ⚠️ `trading-analista` (`15 20,23 * * 1-5`)
+sigue cayendo el viernes a las 23:15 UTC, dentro de la misma franja de cuota agotada — no falló
+nunca, pero está ahí.
+
+### 🧹 (27/08/2026) Backlog de PRs de rutinas a CERO — y el bump de seguridad que llevaba 4 días sin aplicarse
+Cerrados los dos que quedaban del 23/08. **#1602** (entrenador): caveat en `facturas-correo/SKILL.md`
++ poda de 20 entradas de bitácora. Su conflicto NO era inserción pura —podaba mientras `main`
+insertaba—, así que `resolver-conflicto-registro.mjs` se plantó BIEN; se resolvió por ESTRUCTURA
+(partir en entradas, quitar las 20 exactas, conservar las 14 nuevas de `main`). **#1600** (auditoría
+profunda): lo único de código vivo era **`pdfjs-dist` 6.0.227→6.2.108 en ialimp**
+(GHSA-hq66-cqwq-w95j) — 4 días expuesto por un PR atascado; lockfile REGENERADO, no copiado. Su
+cambio de Serper se DESCARTÓ: `main` ya lo tenía mejor (3 rutas, con guarda) y mergearlo habría sido
+regresión. 📌 Lección: un PR de rutina viejo no se mergea a ciegas ni se cierra a ciegas — hay que
+mirar dato a dato qué de su diff sigue vivo. ⚠️ Siguen pendientes de Alberto (los traía #1600):
+recargar Serper y renovar el consent PSD2 de BBVA **antes del 11/09**.
+
+### 🧹 (27/08/2026) Auditoría 27/08 resuelta a mano — y la cabecera de ESTA memoria estaba partida en dos
+Los dos PRs de registro que señalaba #1764: **#1735** cerrado (su contenido —hueco DIGI de junio— ya
+estaba en `main` vía #1737/#1740, y su diff arrastraba ficheros ajenos de #1734) y **#1639** cerrado
+tras **rescatar a mano** su texto (pasada `buscador-ia` del 24/08) a `docs/BUSCADOR-IA.md` y
+`docs/AGENTES-BITACORA.md`. 🔎 De propina, al tocar este fichero se destapó que **#1730 (26/08) insertó
+su entrada DENTRO del blockquote de cabecera**: partió la instrucción de formato en dos, dejó la
+entrada «Universo 1200» decapitada en mitad del fichero y creó una falsa cabecera `### … (dd/mm/aaaa)`
+que `rotar-memoria.mjs` habría archivado como si fuera una entrada. Reparado en el mismo PR.
+
+### 📉 (27/08/2026) La palanca de anticipación se apagó el mismo día: ya estábamos por encima del mercado
+
+Encendida en los cuatro por la mañana y **apagada antes de su primera pasada** (`antelacion_k = 0`;
+código y medidor siguen en `main`). Motivo: con los comparables reales de Booking, a >60 días ya
+íbamos a 1,31×-1,92× el p50 de la fecha y éramos más caros que TODOS los comps en 29-47 de ~75
+fechas por piso. Y solo el 25% de las noches lejanas tiene mercado medido → el premio caería justo
+donde no vemos a la competencia. El caso que la motivó tampoco la sostenía: el 8-ene estaba
+publicado a 433,50€/noche contra 368-410€ de mercado (bien puesto) y se cobró a 319,86€ — la fuga es
+de CANAL, no de anticipación. Línea base, trampas (`cuota_fija` es por ESTANCIA; el precio de
+huésped se MIDE en `pricing_escaparate`, no se deriva) y condiciones para reencender:
+`docs/POSICION-MERCADO-lejano.md`. PR #1763/#1768 ya mergeados.
+
+### 🔓 (27/08/2026) Un PR del agente SÍ se puede mergear solo: sacarlo de draft dispara los checks
+
+Era falso lo anotado el 26/08 («ningún PR abierto por el agente puede mergearse sin que Alberto
+intervenga a mano»). Con el PR #1763 en draft: 0 runs y merge rechazado con `405 — 12 of 12 required
+status checks have not succeeded`. Al marcarlo **ready for review** arrancaron los 3 workflows sobre
+`4efa129f`, los 12 requeridos pasaron en 3,5 min y el squash entró (`ba6ca86b`) — **sin que Alberto
+tocara nada**. 🚨 La causa exacta NO está establecida (el run se creó entre el 2º push y el
+des-drafteo; `ready_for_review` no está en los `types` por defecto). Un SEGUNDO PR el mismo día (#1768)
+descartó la vía del push, y un tercer dato (push a #1768 ya sin draft → runs otra vez) lo cerró:
+**es el estado DRAFT lo que silencia los workflows**; sacarlo de draft los dispara y a partir de ahí
+cada push funciona normal. Cinco observaciones, reproducible. Ruleset sin tocar.
+
+### ⏳ (27/08/2026) La anticipación, ENCENDIDA en los cuatro — y el suelo de 60 días que hacía falta
+
+Alberto: «enciéndelo también en los otros tres y mergea». Al mirar sus antelaciones medianas apareció
+el fallo de diseño: Busto Reform y Dúplex venden con **12 días** de mediana típica, así que el tope de
+4× caía en el **día 48** → todo su calendario más allá de mes y medio al +25% fijo (y meses con mediana
+de 2-4 días topaban el día 8). Eso no es premio por anticipación, es una subida lineal. Añadido
+`saturacionMinDias = 60` (3 tests más; House no se entera, su 4×28 = 112 ya lo supera). `antelacion_k = 1`
+en los **cuatro**. **El merge NO lo puede hacer el agente**: el ruleset exige 12 checks que un push con
+token de App nunca dispara — hace falta que Alberto toque la rama desde su cuenta. PR #1763.
 
 ### 🔑 (26/08/2026) Correduría: GitHub CERRADO, Fly listo — solo queda cuadrar el rato con Manuel
 Manuel respondió: en el repo de la app Alberto ya era colaborador; mandó la del adaptador CIMA
@@ -55,6 +356,50 @@ ADR-007/ADR-009 — documentación que pedir. Y una sesión sobre `central` NO p
 Manuel (`cross-tier adds`): hay que abrirla con ese repo como fuente. Pendiente: Vercel (Vía B),
 `CRON_SECRET` y fecha. Detalle en `docs/TRASPASO-CORREDURIA.md`.
 
+---
+
+### ⏳ (26/08/2026) Pricing: el motor sabía bajar por urgencia pero no SUBIR por anticipación
+
+Alberto ve entrar el 8-10 ene-27 a 639,71€ (12 adultos) y pregunta si no es barato. Lo era en un
+sentido concreto: se vendió a **135 días vista** con la antelación mediana de House en enero en **28
+días** (n=12), al precio de un enero corriente (365+342, suelo 300). Causa: `pricing-lastminute.ts`
+descuenta al acercarse la fecha y **no existía la palanca simétrica**. Nueva `pricing-antelacion.ts`
+(pura, 13 tests; premio hasta +25% a 4× la mediana del mes, curva cuadrática, inerte en eventos,
+`antelacion_k` por piso, **arranca APAGADA**) + `antelacion_factor` en `pricing_applied` y medidor
+`/api/sivra/pricing/antelacion` con veredicto honesto (el contrafactual no existe → exige que la
+ocupación no caiga contra los mismos meses de años anteriores). DDL aplicada. Corregido de paso: el
+suplemento por huésped que propuse NO vale — Alberto no distingue 8 de 12 (6 huéspedes = 6 habitaciones).
+
+### 🏖️ (27/08/2026) Agente de inversión inmobiliaria (VUT): spec aprobado, estudio del inmueble BLOQUEADO
+
+Alberto pasa un anuncio de idealista de Conil de la Frontera (Cádiz) —edificio/casa con ~14 estancias y
+dos entradas, Calle José Tomás Borrego— y pide estudio económico + saber si hay agente para esto. **No lo
+hay**: existe la criba (`inmuebles_busqueda`, "chollo" por IA), la medición (`mercado-booking`), la
+financiera de subastas y `patrimonio-cfo`, pero nadie hace el **underwriting de una compra**. Diseño
+aprobado (híbrido: helper puro en plataforma + skill que mide con conector) en
+`docs/superpowers/specs/2026-08-27-agente-inversion-inmobiliaria-design.md`. Medido con Booking ese día en
+Conil: pico/valle **3,6×** (332,50€ vs 92,24€/noche a 4 plazas) y el mercado de aforo 10 es **fino pero
+más barato por plaza** (66,50€ vs 83,10€) → «entero vs segregado» es escenario obligatorio del cálculo.
+Hallazgo legal: BOE-A-2026-5827 (caso Conil) — el registro único se deniega sin acuerdo de la comunidad si
+la licencia es posterior al 3/4/2025; **comprar el edificio entero elimina ese veto**. ⛔ Idealista está
+bloqueado por el proxy de egress: la fase 1 (estudio del inmueble) espera a que Alberto dé precio, m²,
+qué es exactamente, explotación prevista, financiación y si compra él o Punto y Coma SL. **PR #1777
+mergeado** (verde y merge sin intervención humana) → de paso, matiz al CI de `CLAUDE.md`: el PR se abrió
+**en draft** por la herramienta MCP y los 12 requeridos dispararon igual (`actor` del run = la cuenta de
+Alberto), así que «el draft es mudo» no es universal: lo que manda es la IDENTIDAD que abre el PR.
+
+### 🧱 (26/08/2026) «Base perfecta» + acumulación: medida sobre 177.000 observaciones y RECHAZADA
+
+Idea de Alberto. La **acumulación** ya existía como contexto (`volumen.ts`, 📊↑); de **base** no había
+nada y el torneo la apaga por diseño (momentum exige ADX≥20). Umbral firmado ANTES de mirar (≥+2 pp de
+`ret91` y mismo signo en ambas mitades) y medido con SQL sobre `trading_backtest`, sin tocar código:
+estar en la base **resta 1,64 pp** (consistente en las dos mitades) y la ruptura con volumen **cambia de
+signo** (+1,44 pp en 2011-18, −2,72 pp en 2019-26) — el modo de muerte de H8. Detalle y límites en
+`docs/TRADING-HIPOTESIS-PREREGISTRO.md`. 🚨 Lo rechazado es la BASE: la acumulación por picos **sigue sin
+medir** (hace falta serie diaria, que el retrovisor no guarda). Protocolo acordado: Alberto propone,
+el agente firma umbral → mide → veredicto, y solo si pasa hay pre-registro y PR. PR #1760 **sin
+mergear**: le pasa lo que documenta la sección «🤖 CI» de `CLAUDE.md` (los 12 requeridos en Expected;
+`workflow_dispatch` no cuenta) — necesita UN push de Alberto a la rama para desatascarlo.
 ### 🟢 (26/08/2026) Correduría: la invitación de Supabase YA estaba aceptada — el bloqueo no existía
 
 `get_project(uijsgeocgdaxkhvwtjqs)` → org `qdrmgpvqhcmhmpcrvtan`: la que el correo llamaba **LOOR** y
@@ -260,6 +605,8 @@ mov_30d_prev=75 (sin caída >50%). Conexiones activas Kutxabank ****0855 y BBVA 
 Estado ✅ OK. Solo cambio: entrada de auto-informe en `docs/AGENTES-BITACORA.md` → PR draft
 **#1741** (push directo a `main` bloqueado por branch protection, de ahí el PR).
 
+### 🌎 (26/08/2026) Universo 1200 CERRADO y ranking recalculado — y las «3 semillas pendientes» eran huérfanas
+
 Ranking disparado con **1.080 empresas con datos**. Top-5: SNDK · LLYVA · WDC · BKNG · STX (el ciclo
 memoria/almacenamiento domina). **SNDK nº1 con momentum +3.527% y precio 1.596$ olía a dato mal leído
 —el patrón MCD/ORCL— así que se contrastó: es REAL** (Alpha Vantage, 1.480,77$; ×37 desde el spin-off
@@ -276,15 +623,6 @@ actual)`, así que una fila que sale del top queda en epoch PARA SIEMPRE. La con
 los euros, no solo lo justo: quedan 8,75€ y la munición está ya en dólares). NAV **32.710,26€**.
 Lección a la skill: al preparar una instrucción en USD, mirar `get_account_balances` y avisar de la
 conversión — IBKR no rechaza por falta de divisa, financia en margen y cobra en silencio.
-
-### … (dd/mm/aaaa)` —
-> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
-> funde con la entrada anterior y se archiva mal.
->
-> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
-> registro de qué se hizo y qué queda.
-
----
 
 ### ✅ (26/08/2026) Serrucho CONFIRMADO arreglado donde hay mercado medido — y el resto queda acotado
 Pasada de las 08:30 con banda de raíl NUEVA (la prueba que la de anoche no podía dar): 637 noches en 4
@@ -766,6 +1104,14 @@ sin saltar, 48 decisiones en `pricing_decisiones`. Fechas calientes próximas: N
 Busto Feria 17-abr-2027 sigue "vendida" a 103€ sin income que lo explique (3er ciclo). Detalle en
 `pricing_aprendizaje` (`ciclo_24_08_2026`).
 
+### 🧠 (24/08/2026) buscador-ia: pasada semanal — 5 eslabones vivos, sin swaps
+Sin API keys en sesión y con WebFetch a los 5 catálogos (NIM/Groq/Gemini/Kimi/Cerebras) bloqueado por
+el proxy, verificación por WebSearch dirigido. Groq `openai/gpt-oss-120b` reforzado (destino de
+migración de 6 modelos que Groq ha ido deprecando en 2026). Descartada una señal de "End of Support"
+del NIM autoalojado por no aplicar al endpoint hosted que usamos. 2 candidatos (DeepSeek V4 Pro,
+qwen3.6-27b) en seguimiento sin mini-eval, ninguno cruza el listón. Detalle en `docs/BUSCADOR-IA.md`.
+*(Rescatado el 27/08 del PR #1639, atascado sin poder mergearse.)*
+
 ### 🔎 (24/08/2026) Auditoría ligera: 4 commits del 23/08 sin entrada propia, reconciliados
 Rango 4f25e64..ed12004 (26 commits, todo el 23/08). Backlog PRs: #1600 y #1602 (ambos draft de carril 2
 del propio 23/08) siguen abiertos, `mergeable_state: dirty` por el aluvión de inserciones posteriores en
@@ -980,6 +1326,42 @@ cuota) + `docs/PATRIMONIO-CFO.md`. El intake de /patrimonio ya solo pide confirm
   pilot-track), y el salto **ahora avisa** por Telegram (antes solo vivía en el array `results` del HTTP).
 - Pendiente de Alberto: la **brecha escaparate↔caja** de House — lo listado es 1,07–1,47× la base pero
   lo cobrado 0,87–0,98×. Causa sin comprobar (promos de Booking vs limpieza cobrada aparte). Rutina el 30/08.
+
+### 🔎 (23/08/2026) Auditoría profunda semanal: 3 crons mudos reales + reconciliación de docs stale
+Pasada `--profunda` (22 commits desde el 21/08). **Técnico:** typecheck 9 apps + tests (0 fallos) +
+seguridad multi-tenant + advisors Supabase todo limpio; hallazgos menores: `pdfjs-dist` desactualizado
+en `apps/ialimp` (CVE, procesa PDFs de nómina — priorizar bump a ≥6.2.108) y `ia-rest`/`transporte`/
+`central-rrhh` con 20/20 últimos deploys Vercel CANCELED (probable cadencia de pushes, verificar que
+producción sirve `main`). **Heartbeat 🔴:** `psd2-sync` 68h mudo (umbral 54h) y la rutina de sesión
+`sivra_mercado_booking` sin correr desde el viernes (46,5h) — arrastra a `sivra_canal` (4 pisos sin
+ajustar) y `sivra_mercado_sweep` (70 fallos Serper 400). Causa probable común: el trigger de Rutinas
+no disparó en fin de semana — a revisar por Alberto. **PRs:** #1594 en conflicto de inserción pura
+(fácil), #1514 limpio esperando revisión (3 días). **Carril 1 aplicado:** `docs/VIGIA-CONECTORES.md`
+y `docs/HUECOS-ABIERTOS.md` (H2 screener ya cerrado, Alberto recargó saldo el 21/08) al día; fila de
+Patrimonio añadida a `plataforma-maestro`. Informe completo en `docs/AUDITORIA-2026-08.md` y PR draft.
+**REPARADO en la misma sesión («repara»):** sweep = saldo Serper a CERO (degradó a mitad de pasada
+con la key viva; **verificar en Billing si se agotó o CADUCÓ** — la aritmética de gasto no cuadra
+con fundir un paquete entero; recargar el paquete pequeño) + los `throw` de Serper ya incluyen el body;
+psd2 = falsa alarma (cron 200 hoy 06:00, banco sin operaciones; ⚠️ consent BBVA caduca el 11/09);
+mercado-booking se recuperó sola (238 comps hoy); PR #1594 desatascado (merge `7563289f`, 7/7 tests);
+`pdfjs-dist` parcheado a 6.2.108 (GHSA-hq66-cqwq-w95j; tests 22/22, audit limpio); Vercel CANCELED =
+`ignoreCommand` por diseño — `iarest.es` y `central-rrhh` sirven el build del swap NIM, verificado.
+**CAUSA REAL del hueco de rutinas del sábado (dictada por Alberto con el historial de claude.ai):**
+NO fue el trigger — las 3 dispararon puntualmente el 22/08 y las bloqueó el **límite semanal de
+Claude** (reset sábado 07:00 UTC; mismo fallo los sábados 1, 8 y 22/08; el 1 y el 8 el reintento
+post-reset las salvó). Mitigación: mover las rutinas de madrugada del sábado a ≥09:30 CEST — y ojo,
+aplica a CUALQUIER rutina en esa franja (trading-analista corre mar-sáb de madrugada). Un fallo por
+límite hoy no alerta a nadie: se supo 2 días tarde por el heartbeat. El sweep de Serper es cron de
+VERCEL, ajeno al límite de Claude — por eso gastaba a las 03:00 con las rutinas bloqueadas.
+
+### 🎓 (23/08/2026) agentes-entrenador: pasada semanal (rango 16/08→23/08)
+20 entradas de bitácora procesadas y podadas. Único fix: caveat aditivo en
+`facturas-correo/SKILL.md` — 2 fallos propios en la semana con la misma raíz (copiar a Drive /
+sobrescribir `factura_ref` sin comprobar antes qué había). `buscador-ia` validado: la regla del
+17/08 (verificar contra `/v1/models` antes de dar un id por vivo) funcionó en el incidente del
+22/08. Resto de agentes sin patrones repetidos. Backlog de PRs abiertos: 4, ninguno de 2+ semanas
+— sano. Nota fuera de carril: `facturas-scan` (cron de `apps/plataforma`) sigue mal-archivando en
+`PERSONAL (SEGUROS)` desde el 01/08 (23 días) — es código, no prompt, señalado por Telegram.
 
 ### 📈 (22/08/2026) Alpha Vantage: el barrido de splits dice que el FIFO está limpio (por poco)
 Conector nuevo → cubre lo que IBKR no da (su `get_price_snapshot` tiene el enum CERRADO). Dos módulos
@@ -3231,6 +3613,298 @@ completo `docs/AUDITORIA-2026-08.md`.
 - Nuevo `module-subastas/src/umbrales.ts` (`umbralesPuja`/`estadoPujaMinima`) + `escenariosCoste` (70% del
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
+
+## Cobro de extras del huésped: EN PRODUCCIÓN, y la prueba real destapó Managed Payments (29/08/2026)
+- Envs de Stripe puestas en Vercel (`plataforma`, solo Production). Webhook 500 → **400 «firma inválida»**
+  a las 08:16:48 UTC. Cuenta `acct_1U9QrKKBmOvjQ2ll` con `charges_enabled`/`payouts_enabled` y payout BBVA ****1175.
+- 🚨 **Managed Payments viene ACTIVADO por defecto en cuentas nuevas y RECHAZA el Payment Link** (exige
+  `tax_code`, solo admite productos digitales; el nuestro es un servicio). El `catch` lo volvía `null` =
+  «Stripe sin configurar»: el huésped no habría recibido nada y nada se habría puesto rojo. Se apaga por
+  llamada (no `tax_code`: eso haría a Stripe merchant of record y el huésped vería `LINK.COM*`).
+- Solo se vio haciendo la llamada REAL contra la cuenta viva: ni tsc, ni build, ni un test con mocks.
+  Guardián `stripe-managed-payments.test.ts` (rojo→verde) y el `catch` ya avisa por Telegram. PR #1849.
+- Pendiente de Alberto: apagar Managed Payments en el panel, `housesevilla.es`→`housesevillana.es`,
+  descriptor de extracto (`CARGO`), y la prueba con un cobro real de 20 €.
+
+## 🧾 (29/08/2026) La bandeja de facturas no tenía PANTALLA — 35.938,20€ atascados (PR #1847)
+- Alberto: «¿dónde reviso gastos? ¿la IA no las clasifica con todo el contexto que tiene?». Dos
+  respuestas incómodas: (1) el Telegram enlazaba a `/expenses/pendientes`, que **nunca se construyó**
+  (404), y `/sivra/expenses` las esconde a propósito; (2) **la IA no decide** — solo lee el PDF; quien
+  decide es `evaluar()` (reglas puras) y la regla SOLO nace al confirmar. Círculo cerrado: 19 de 21
+  pendientes con «Proveedor nuevo, sin regla aprendida».
+- Construida la pantalla (`app/(usuario)/expenses/pendientes`) + `GET/PATCH/DELETE /api/expenses/pendientes`
+  + entrada en el sidebar. Confirmar llama a `reforzarRegla` → a la 2ª confirmación se imputa sola.
+- Precarga determinista (`sugerencia-pendiente.ts`, puro): propone piso/categoría desde el histórico
+  del proveedor. **Nunca inventa**: sin base, campo vacío (un desplegable preseleccionado a ojo se
+  confirma sin mirar y la regla que nace hereda el error).
+- Guardián `avisos-enlace.test.ts`: ata enlace del Telegram + página + endpoints + sidebar. Probado en rojo.
+- **Pendiente:** revisar las 32 (35.938,20€). Y queda ofrecida la 2ª fase: que la IA proponga.
+
+## 🧹 (29/08/2026) La card de gastos de SIVRA contaba la BANDEJA: 3,37 M€ → 13.755,66€ (PR #1844)
+- Salió al comprobar que el backfill de IONOS no duplicaba nada. NO duplicaba: el motor fiscal
+  (`getResumenFinanciero`) lee solo `movimientos_bancarios`, así que la renta no se toca.
+- Pero `getResumenSivra(anio)` sumaba `gastos` **sin filtrar `revisado` ni propiedad**. Dentro:
+  3.300.000€ + 33.000€ de la reserva del edificio de C/ San Luis 9 (dos documentos del mismo
+  contrato, y a nombre de «SAN LUIS 9 CB», que NO es titular) y el Modelo 200 de 2025 triplicado.
+- Fix: `lib/sivra/gasto-de-pisos.ts` (puro + guardián sobre el fuente, probado en rojo). 2026:
+  3.372.460,28€ → 13.755,66€. Los 4 pisos no cambian; `prop_multi_apartamentos` baja 5.782,29€
+  (lo que tiene sin revisar). Borrados los 2 duplicados del Modelo 200 (Alberto, 29/08).
+- **Pendiente de Alberto:** decidir qué hacer con las 2 filas de Ariste (reserva del edificio).
+  El agente hoy ya las rechazaría por receptor ajeno; son residuo previo a `receptor.ts` (31/07).
+
+## 🧾 (29/08/2026) IONOS: importado el histórico entero — 55 facturas, 1.111,70€ (PR #1843)
+- Segunda mitad del trabajo del PR #1842 (que ya movió el negocio a correduría y arregló la huella).
+- Barrido del Gmail: **55 facturas** (03/2023→08/2026), no 46 — el asunto cambió de «Su factura» a
+  «Tu factura» en sep-2023 y buscar solo el segundo dejaba fuera las 9 más antiguas.
+- Backfill `prisma/sql/2026-08-29_ionos_backfill_historico.sql`: 49 altas + reconciliada la fila
+  manual de abr-2026 + confirmadas las 5 de la bandeja. Reparto: 210,54/260,15/270,52/370,49€.
+- `base_imponible`/`iva` DERIVADOS al 21% (el correo solo da el total); marcado en `raw_extraction`.
+- Regla `gastos_reglas` sembrada con banda **1–200€**: IONOS tiene 4 contratos (1,82€–145,20€) y la
+  banda por defecto de ±10% lo devolvía a la bandeja cada mes.
+- Cuadre banco↔factura 12/12 (11 a +4 días; el del 28/04 va un día ANTES de su factura).
+- **Pendiente de Alberto:** 2023/2024/2025 son ejercicios ya presentados — el dato está, usarlo
+  exigiría complementarias. Y quedan 36 gastos de OTROS proveedores sin confirmar en la bandeja.
+
+## 🧾 (29/08/2026) IONOS llevaba 3 años sin contabilizarse — negocio mal cableado + huella partida
+- Alberto: «IONOS es dominio web, deducible a correduría; revisa que esté bien». **No lo estaba.**
+- `lib/destino.ts`: IONOS estaba en `RE_PISOS` (por `housesevillana.es`) → los 12 cargos en BD salían
+  repartidos entre pisos (9) y correduría (3 a mano). Movido a `RE_SOFTWARE` + regla aprendida
+  `IONOS → seguros` (RE_SOFTWARE solo aplica en BBVA y esto se cobra por PayPal/tarjeta Kutxa).
+- Backfill `prisma/sql/2026-08-29_ionos_correduria.sql`: 12 movimientos → seguros/informatica, y 2
+  filas de `gastos` con el NIF de Alberto como CIF de IONOS (variante del caso DIGI) saneadas.
+- **Pendiente de Alberto:** en Gmail hay **46 facturas desde 09/2023** y en `gastos` solo 6 (1 imputada).
+  Falta decidir si se importa el histórico. Las 5 de la bandeja siguen sin confirmar.
+
+## ✅ (28/08/2026) El paper ya VENDE (H9 cableada) + vigía de hipótesis + relleno del alfa — PR #1840 ✅ MERGEADO
+
+- **H9 cableada.** `aplicarStop` fuera; `venceVentana` dentro. La posición guarda `horizonteDias` y esa
+  es su única salida — lo que H9 firmó («no se ponen stops») y lo que el panel prometía. La distancia
+  2·ATR **se conserva** como ancla del TAMAÑO (`dimensionar`), que es otra cosa.
+- 🚨 **10 de las 11 posiciones estaban ya vencidas** (MSFT 24 días con ventana de 10; solo NVDA en
+  plazo). Se cierran con el precio de **su sesión de vencimiento**, no el de hoy: al precio de hoy se
+  apuntarían hasta 14 días extra de mercado como resultado de una regla de 10 días. Reusa
+  `juzgarHuerfana` (ancla + margen). Migración `2026-08-28_paper_salida_ventana.sql` **aplicada**; las
+  11 rellenadas desde su propia tesis y verificadas en prod.
+- **Vigía de hipótesis** en el cron `trading-h10`: H11…H15 tenían criterio pero nadie miraba el «cuando».
+  Avisa solo si alguna ya se puede resolver; `hay=null` («no se pudo consultar») va aparte de «aún no
+  hay muestra». No resuelve ni cablea. 🚨 **Su primera consulta de H12 estaba mal** (iteraba `datos` en
+  la raíz y no `datos->'porFecha'`): habría dado 0 eternamente sin fallar. La cazó ejecutar el SQL
+  contra la BD real antes de mergear. Medido: 221.966 snapshots, 183.841 con ret91, 0 con ret364.
+- **Relleno del alfa hacia atrás** dentro de `/puntuar` (cola de 400/pasada, patrón `facturas-scan`), no
+  en un endpoint que alguien deba recordar. Las 1.320 observaciones existentes tendrán alfa en 3-4
+  noches. ⚠️ **No se pudo ejecutar desde la sesión**: el proxy del contenedor bloquea Stooq y Yahoo.
+- **Verificado sobre `main` ya fusionado** (c7cf8ab9): `pnpm test` **exit 0** — 75 guardianes de raíz,
+  200 del módulo de trading, 330 de `lib/trading`, vitest 53; `tsc --noEmit` de plataforma limpio.
+- 🔭 **Lo que hay que mirar mañana:** la 1ª pasada de `/puntuar` cierra de golpe **10 posiciones** vencidas
+  (con el precio de SU vencimiento) y empieza a rellenar alfa a 400/pasada. Si el latido dice
+  «vencida(s) sin precio fiable» o «sin alfa medible», es un hueco declarado, no un fallo mudo.
+
+## 📊 (28/08/2026) El track record del trading medía BETA y en BRUTO — H13/H14/H15 (PR #1840 ✅)
+
+- **H13 (alfa).** `puntuarTesis` daba el retorno ABSOLUTO y `acierto` de una alcista era «subió»: en un
+  tramo alcista eso lo hace el MERCADO, y ese hit-rate es lo que `ajustesDeStats` convierte en delta de
+  confianza del torneo. El módulo YA tenía benchmark (`seleccionEval`/`universo`/`riesgoCesta`) pero
+  solo para las cestas. `/puntuar` recoge ya `retorno_alfa`+`retorno_bench` por observación y
+  `hit_rate_alfa`/`retorno_alfa_medio`/`n_alfa` por estrategia (migración `2026-08-28_trading_alfa.sql`,
+  **aplicada y verificada en prod**). El índice viaja en la MISMA petición del contraste (misma fuente
+  en las dos puntas) y con tolerancia de 4 días; fuera de eso, **NULL**.
+- **H14 (costes).** `COSTE_ROUNDTRIP = 0,002` y `retornoNeto` **derivado, no persistido** (guardar el
+  neto haría mentir a las filas viejas al ajustar el peaje). El criterio de cableado es de SENSIBILIDAD:
+  si la decisión cambia con 0,1% y no con 0,3%, manda el supuesto y no se cablea.
+- **H15.** `minN=20` y el clamp ±20 de `ajustesDeStats` **nunca se validaron** (salieron por analogía con
+  el Director de IA). Análisis de sensibilidad firmado; si el orden cambia, NO se elige el parámetro que
+  gane — eso es mover la portería.
+- **Nada de esto decide todavía:** `ajustesDeStats` sigue con lo bruto y absoluto. 322 tests de
+  lib/trading + 16 de scoring, tsc limpio, `pnpm test` exit 0.
+- Antes, en la misma sesión: **#1838 mergeado** (H11 + H12). Sigue abierto el stop de 2·ATR contra H9.
+
+## 🕰️ (28/08/2026) H11 (piscina del torneo) + H12: la cinta se cortaba en el día 91 — PR #1838 ✅ MERGEADO
+
+- **H11 (recolección en sombra).** `torneo()` NO aplica el ajuste de confianza a las neutrales, pero
+  `trading_estrategia_stats` se calcula sobre una piscina **82% neutral** (retorno 0 por construcción):
+  se aprende de lo que nunca se opera, y hoy penaliza a las 4 estrategias (momentum −15 … reversión −7),
+  que es lo que decide quién gana el torneo. `/puntuar` escribe ya `direccional` y `alcista` junto a
+  `todos`; `/analizar` sigue leyendo solo `todos` → **cero cambio de comportamiento**. Se descartó
+  «solo alcistas» como piscina única: con `minN=20` dejaría 3 de 4 estrategias sin ajuste.
+- **H12 (idea de Alberto, firmada antes de mirar nada):** «una vez vendida, seguir analizando la acción
+  por si aguantar da más». Al ir a medirlo salió el límite de fondo: **todo el retrovisor termina en el
+  día 91** (ret28/56/91 y las 7 salidas, que al no disparar se rellenan con el horizonte). Que aguantar
+  182/364 días sea mejor **nunca se había mirado** — 91 era el TECHO de la medición, no un ganador.
+  Nuevo módulo puro `lib/trading/continuacion.ts`: `ret182`/`ret364`, techo/suelo (`mfe364`/`mae364`/
+  `diasMfe364`) y `tendenciaVivaAlSalir` (¿sobre la SMA50 el día que se vende?). El arrepentimiento se
+  DERIVA: `ret364 − salidaX`. Sin cifras aún (la rotación tarda días).
+- **Sigue abierto lo del PR #1836:** el stop de 2·ATR vivo en el paper contra H9 («no se ponen stops»).
+
+## 📉 (28/08/2026) «Ideas de compra» de /trading + H10 (reglas de salida) — PR #1836 ✅ MERGEADO
+
+- Alberto leyó la columna «Resultado» como los earnings de NVDA. No lo es: es el **walk-forward**,
+  `(precioDespues − precioRef) / precioRef` (`puntuarTesis`), **congelado** al vencer la ventana de 10 días.
+  NVDA salía «pendiente» por llevar 7 de 10 días, no por estar roto.
+- Su segunda pega era buena: los 8 símbolos de la tabla son **exactamente** los 8 más recientes de la
+  Cartera paper de arriba. Pero el número NO es el mismo (arriba, P&L vivo de hoy), y nada lo decía →
+  ORCL aparecía ✗ −6,3% (día 10) con la posición aún abierta a día 15.
+- Hecho: sección **plegada** con `DetallePerezoso`, columna → «Resultado a 10 días» con la fórmula en el
+  tooltip y el pie diciendo de qué precios sale. No se borra: es la única traza POR OPERACIÓN.
+- 🚨 **PENDIENTE, lo único que queda abierto (fuera del PR):** el paper abre cada posición con un stop a
+  `entrada − 2·ATR14` y `/puntuar` lo evalúa cada noche, **pese a que H9 concluyó literalmente «no se ponen
+  stops»**; y la salida por TIEMPO que promete el pie de «Cartera paper» NO está implementada (por eso MSFT
+  sigue abierta desde el 04/08 con horizonte 10). Daño hoy **cero**: 11 BUY y **0 SELL**, ningún stop ha
+  saltado — mina sin pisar. Se rige por **H9, ya resuelta**, no por H10. ⚠️ Al quitarlo, el stop es también
+  el **ancla del tamaño** (`dimensionar` reparte el 1% del NAV por la distancia al stop): conservar la
+  distancia 2·ATR como cálculo de tamaño aunque no se venda por ella.
+- **H10 firmada y midiendo (misma sesión).** Alberto: «salida no por tiempo, ir subiendo el stop o
+  pérdida de media… los datos deciden». Medido antes de proponer: sobre **183.093 obs** (8,6× la muestra
+  de H9) la salida por TIEMPO sigue ganando (+3,12% vs +0,45%/+2,75%/+1,22%), y **gana en los 5 quintiles
+  de momentum** → queda REFUTADO el caveat de H9 «los stops ayudan al momentum» (en Q5 es donde más cuesta,
+  −4,43 pp). Pero H9 probó UNA distancia de trailing y NINGUNA media: se firma **H10** (trail −25%, stop a
+  coste tras +10%, pérdida de SMA50/SMA200) antes de recolectar, + informe `docs/TRADING-SALIDAS-2026-08.md`
+  + cron semanal `trading-h10` que aplica el criterio firmado y avisa; **no cablea nada** (eso va por PR).
+- **Mergeado y verificado sobre `main` ya mergeado** (`05bfdf92`): `pnpm test` verde, typecheck de plataforma
+  limpio, **297/297** tests de `lib/trading`. Documentado en `apps/plataforma/CLAUDE.md`,
+  `docs/RUTINAS-PROGRAMADAS.md` (12-ter) y `docs/FUENTES-DE-VERDAD.md`.
+- Nota de entorno: el `main` LOCAL del contenedor venía del 23/08 con 20 commits ajenos al remoto y el
+  guardián de rama bloqueaba el PR. Verificado que su contenido sí está en `origin/main`; se apuntó `main`
+  a `origin/main` dejando el tip viejo en el tag `main-stale-23ago`. Sin tocar el remoto.
+
+## 🍼 (28/08/2026) El agente de huéspedes ya COBRA los extras y avisa a la limpieza — PR #1830
+- Alberto: el agente respondió bien «la cuna son 20€», pero ahí se acababa. Ciclo cerrado: catálogo en BD
+  (`sivra_extras_catalogo`, extensible) → enlace de Stripe → webhook → email a Sique Brilla.
+- **Hallazgo que lo condicionó:** la doc del agente describía una graduación por categorías con allowlist y
+  un «el dinero nunca se auto-envía» que **ya no existían en el código** (desde el 20/08 el criterio es
+  `apoyada_en_fuente`, y `sensibilidad.ts` no tiene NINGUNA regex de dinero). Los 20€ salían del texto libre
+  de la guía. El precio pasa al catálogo y hay guardrail: cifra que no cuadre → a Telegram.
+- **Decisiones de Alberto:** Stripe propio (payout **BBVA ****1175**, persona física — rectificado ese mismo
+  día; la spec decía Kutxa ****0855) · cuna+trona 20€/estancia
+  en los 4 pisos · email automático `hola@ialimp.es` → `limpiezascruzz@gmail.com` (= Sique Brilla) con
+  Reply-To a su Gmail · **enlace de pago automático** si él ya aprobó el precio en ese hilo (atado por código,
+  no por la IA) · **sin IVA y fuera de la renta, sin pasar por Asecon** (anotado en `perfil-fiscal`).
+- **Pendiente suyo:** dar de alta la cuenta Stripe y poner `STRIPE_SECRET_KEY_SIVRA` +
+  `STRIPE_WEBHOOK_SECRET_SIVRA`. Hasta entonces no cobra nada y todo sigue pasando por Telegram.
+
+## 🔑 (28/08/2026) Dos afirmaciones del doc de rutinas eran falsas, y una env vacía de verdad
+- **Corregido en `RUTINAS-PROGRAMADAS.md`, las dos verificadas por Alberto con Claude Chrome:**
+  (a) el «las tres rutinas llevan `ALERTA_TOKEN` con el placeholder» del 23/08 era **FALSO** —
+  las tres tienen el valor bueno (comparado por HASH contra `buscador-ia`/`agentes-entrenador`,
+  sin mostrar el valor); (b) la ficha de `mercado-booking` decía «sin esas dos envs no puede ni
+  pedir el plan ni escribir» y lleva **20 días escribiendo 240 filas/día con el token VACÍO**.
+- **Lo que SÍ está roto:** `SIVRA mercado booking` (`trig_01Sr5KXErpEhGCtT1F16hv4W`) tiene
+  `ALERTA_TOKEN` vacío. Probablemente solo afecta a su aviso de Telegram — **no verificado**.
+- **Objeción de Alberto, aceptada a medias:** el token va en TEXTO PLANO en el prompt de ≥6 rutinas.
+  Que se filtre ya estaba asumido (es de bajo privilegio: solo manda un Telegram). Lo que NO estaba
+  escrito es el coste de ROTARLO — N prompts a mano. Ahora hay tabla de rotación en el doc.
+  Se descarta «llamar sin secreto»: dejaría `/api/internal/alerta` sin autenticar.
+- 🚨 **Método:** dos veces seguidas mandé a Alberto a arreglar algo que no estaba roto, las dos
+  leyendo el doc en vez de mirar. **Una env de una rutina no se deduce del día del alta.**
+
+## ✅ (28/08/2026) Primera pasada del motor con el ancla nueva: limpia
+- **Observado, ya no simulado (parcialmente).** Deploy `e0116ab6` READY a las 18:56 UTC del 27/08;
+  la pasada de las **20:30 UTC** corrió con él: 154 noches en 4 pisos, latido `ok`. Invariantes en
+  esa pasada: **0 raíl a la baja roto · 0 alza sin evento · 0 bajo mínimo**. Testigo del ciclo que
+  motivó todo (`busto_reform`/30-ago): 78 → 98, dentro del raíl sobre `ref24`=97.
+- **El ancla ya no se mueve:** 1,03-1,07× a 7 días, y hoy vale lo MISMO que ayer en los cuatro pisos
+  (141 · 173 · 573 · 198) **pese a que hoy aún no ha entrado corpus** — que es exactamente la
+  resiliencia que se buscaba: un barrido que falta ya no mueve el precio.
+- 🚨 **Falsa alarma evitada, y deriva de doc corregida:** al ver a las 07:00 UTC que no había corpus
+  del día iba a reportarse «`mercado-booking` lleva 3,5 h de retraso». Falso: la rutina se **movió el
+  27/08 16:21 UTC de las 03:30 a las 08:30 UTC** y aún no le tocaba. `RUTINAS-PROGRAMADAS.md` seguía
+  diciendo 03:30. **El cron que manda es el del trigger, no el de la tabla.**
+- **Sigue sin poder afirmarse que dejó de oscilar:** hace falta ≥4 pasadas en días distintos para
+  contar 3 cambios de dirección y solo hay 1. Eso lo mide la rutina 20 el 03/09.
+
+## 🔎 (27/08/2026) Corrección de las cifras del serrucho + seguimiento abierto — PR #1811 ✅
+- **Tres números del PR #1811 estaban mal y se corrigen en `docs/SEGUIMIENTO-ancla-pricing.md`:**
+  (a) las volatilidades por piso iban cruzadas (busto_reform es 2,19× y duplex_center 1,96×, no al
+  revés) y el **8,34× citado no se reproduce en ningún piso**; (b) **House Sevillana NUNCA estuvo a
+  «0%»** de noches oscilantes —es **3,2%** a 7 días, medido— y ese 0% venía del enunciado inicial
+  sin haberse verificado nunca contra la BD; (c) los otros dos pisos, que se daban por no medidos,
+  **también oscilaban**: 20,5% y 27,2%. El problema era de los CUATRO pisos, no de uno.
+- **La conclusión del PR NO cambia** (ancla vieja ~1,94-2,52×, nueva ~1,03-1,09×), pero las cifras
+  por piso de aquel PR no se deben reutilizar: la tabla buena está en el doc de seguimiento.
+- **El arreglo está SIMULADO, no OBSERVADO.** Se calculó qué habría valido el ancla nueva, no se ha
+  visto al motor tarifar con ella. Seguimiento programado al **03/09/2026** con línea base, SQL ya
+  probado contra la BD y criterio de cierre en `docs/SEGUIMIENTO-ancla-pricing.md`.
+- Sigue sin explicar por qué House oscila ~10× menos teniendo el ancla MÁS volátil (2,52×).
+
+## 🪚 (27/08/2026) EL SERRUCHO, segunda mitad: el ancla global salía del barrido de UNA mañana
+- **Causa raíz medida.** `med_guest_global` era el percentil de la última pasada de Booking, y esa
+  pasada muestrea **6-7 fechas de entrada** de las ~110 del horizonte, distintas cada día. En
+  `prop_busto_reform` el ancla valió 153·145·118·135·130·110·180·**95**·**208**·114 en 10 días
+  (2,19×); el precio del 30-ago la persiguió saturando el raíl ±20% en direcciones alternas
+  (99→95→78→94→105→84→101→81→97→78). Dirección del precio = dirección del ancla en **8 de 9** días.
+- **Alcance:** el 35-47% de las noches tarifadas (550 de 1.360) cae a ese ancla — no hay bucket de
+  mes para el mes en curso ni para los meses con <3 fechas medidas.
+- **Cura:** corpus ACUMULADO de 30 días, una lectura por comparable×fecha (`pricing-ancla-global.ts`).
+  Volatilidad 1,96/2,19/2,27/**8,34**× → **1,03-1,07×**; fechas muestreadas 6-7 → 112-119. El 25/08
+  se arregló SOLO la rama de evento (`pricing-base-evento.ts`); esto cierra la otra mitad.
+- **Una definición del corpus, tres consumidores:** motor, panel `settings` y vigía `pilot-track`
+  leen el MISMO `sqlCorpusAncla()`; antes los tres medían contra el barrido. `sample_n` y
+  `market_age_days` siguen midiéndose sobre la última pasada útil: la frescura es otra pregunta.
+- Sin explicar todavía: por qué House Sevillana no oscilaba pese a tener el ancla más volátil.
+
+## 💰 (27/08/2026) Auditoría del PRICING: el motor está sano, pero oscila — y ya se vigila solo
+
+Alberto: «que todo esté al 100% en precios, y que la auditoría diaria y semanal revise bien esto,
+que nos jugamos mucho dinero». **Motor SANO**: 246 tests verdes, 4/4 pisos encendidos,
+`antelacion_k`=0, min_price en los 4, **0 roturas del raíl A LA BAJA en 10 días (~4.200 noches)**,
+0 por debajo del suelo, cadena de crons entera fresca. 🟠 **Lo que sí hay: OSCILACIÓN** — Dúplex
+32% de sus noches, Busto 21%, Luxury 24%, **House Sevillana 0%**, con amplitud media 1,5× en la
+misma noche dentro de una semana. Hipótesis (NO medida, no se tocó el motor): el techo de mercado
+empuja abajo y un suelo/premio vuelve a subir. Investigar la causa exige tocar `apply/route.ts` →
+**pendiente de autorización**. Se evitaron DOS falsas alarmas: el raíl se ancla en `ref24`, no en
+`old_price` (112 «violaciones» falsas), y al alza hay DOS vías legítimas (salto de evento **y**
+premio de mercado, el hueco por el que Karol G se vendió barata) → de 23 sospechosas quedan 4.
+**Construido:** `lib/sivra/pricing-salud.ts` + 13 tests (probado por sabotaje), bloque 2bis
+obligatorio en `/auditoria-diaria` y tramo caro en la semanal. La rutina temporal 8-ter ya no es
+necesaria. Informe: `docs/AUDITORIA-2026-08-27-pricing.md`.
+
+## 🔒 (27/08/2026) Auditoría completa: 39 RPC de `iarest` las puede llamar `anon` sin guarda
+
+Pasada completa (install, radiografía, typecheck **11/11 apps**, build REAL de plataforma, tests,
+audit, advisors). 🔴 **Hallazgo:** en el schema `iarest` hay **39 funciones `SECURITY DEFINER`
+que escriben, expuestas como RPC y con `EXECUTE` para `anon` sin ninguna comprobación de
+autorización** — entre ellas `activar_plan` (pone cualquier restaurante en plan activo con
+límites 999). La anon key es pública por diseño. Radio HOY ~nulo (2 restaurantes, 0 planes
+activos, 0 comandas) → es el momento de arreglarlo. **No se ha tocado** (gran radio): plan con
+rollback en `docs/AUDITORIA-2026-08-27.md`. Falta la sonda HTTP real (el sandbox bloqueó el curl).
+Arreglado de paso: `transpilePackages` de plataforma (era coherencia, **no rompía** — build verde
+antes y después), tsconfig de housesevillana (5 × TS5097), override de `nanoid` (5→4 vulns), y
+`MATRIZ.md`, que **no listaba `apps/housesevillana`** — la misma invisibilidad del «no había web».
+Ojo estructural: el job `Build` del CI **solo construye ia-rest**; typecheck ≠ build.
+
+## 📈 (27/08/2026) El traspaso a Interactive Brokers no es un gasto de la correduría — PR #1798 ✅
+
+- Alberto avisa: el cargo de BBVA de **-1.000,00€** del 24/08 («ORDENES PAGO EMITIDAS… // U9007431 /
+  Alberto Suarez Gutierrez», contraparte «Interactive broker») salía como **🛡️ Seguros (correduría)**.
+- Causa: es el **cajón por DESCARTE** de los cargos de BBVA en `lib/destino.ts` — `RE_TITULAR` solo mira
+  `contraparte`, y ahí BBVA pone el BROKER, no el titular. Se contaba como gasto deducible.
+- Fix: `RE_BROKER` (`INTERACTIVE BROKER` / `IBKR` / cuenta IBKR `U`+7-8 dígitos) → `traspaso_interno`
+  auto-confirmado, en los dos sentidos (también la retirada de vuelta). Verificado que ese patrón NO
+  casa ningún otro concepto del libro; 2 tests nuevos, uno de ellos anti-secuestro de «TRANSFERENCIA».
+- Backfill de la fila ya ingestada (`prisma/sql/2026-08-27_traspaso_interactive_brokers.sql`, aplicado):
+  `destino_confirmado=true` la saca de la re-clasificación automática. Los 2 traspasos de -15.000€ de
+  2025 a la misma cuenta ya estaban bien a mano.
+- **Mergeado y verificado sobre `main`:** 75/75 del guardián + 306/306 de plataforma, y réplica del
+  regex sobre los 2.110 movimientos del libro → casa 3 filas (las 3 de IBKR) y ninguna cambia de
+  destino. Agosto queda: seguros -505,54€ · traspaso_interno -3.643,23€.
+- ✅ **`FINANCIALDATASETS.AI` (-17,78€), cerrado (PR #1810):** el mismo cajón de descarte lo mandaba a
+  `seguros` + revisar cada mes. Alberto decide que es **herramienta profesional** → entra en
+  `RE_SOFTWARE` (como Vercel/Anthropic): sigue deducible pero con subcategoría `informatica` y
+  auto-confirmado, que es lo que lo saca de la bandeja. Backfill aplicado (1 fila).
+- 🧰 **Hallazgo transversal (PR #1807): los 12 requeridos se corren EN LOCAL.** Reproducidos enteros
+  sobre `main` — 3.149 tests + 107 vitest, 11 typechecks, QA, lint, build: todo verde. Los comandos,
+  en `CLAUDE.md`; ojo que QA y `Lint·TypeCheck·Build` van **desde `apps/ia-rest`**, no desde la raíz.
+
+## 👁️ (27/08/2026) Botón «ocultar saldo» en el inicio de plataforma (estilo banco) — PR #1783
+- Alberto enseña el panel a gente: `/banca` lleva ahora un botón 👁/🙈 junto al «Saldo total del grupo»
+  que lo **desenfoca** (no lo sustituye → el bloque no salta de ancho) y recuerda la elección.
+- Piezas: `app/(usuario)/banca/SaldoTotal.tsx` (cliente) · clase `.saldo-privado` en `globals.css`
+  (`html[data-saldo-oculto='1']`) · el script anti-parpadeo de `app/layout.tsx` aplica el estado
+  ANTES del primer pintado (si no, al recargar se ve un fotograma con la cifra y el botón no sirve).
+- **Alcance elegido por Alberto: SOLO el saldo total.** Los importes de los movimientos de abajo se
+  siguen viendo; extenderlo es añadir la clase, sin tocar lógica. Es ocultación VISUAL (sigue en el HTML).
+- Probado end-to-end con el build real (Playwright): alternar, persistir, 320px, localStorage bloqueado y
+  **cero parpadeo** (al entrar el nodo en el DOM ya venía `blur(10px)`). Skill al día: `plataforma-maestro/references/ui-inicio-dashboard.md`.
+
 ## ✅ (26/08/2026) Cierre del caso DIGI: PRs #1737 y #1740 mergeados, verde sobre `main`
 
 - Ambos mergeados en squash (`3e12616` y `6b9c541`). Verificado DESPUÉS del merge, sobre `main` real:

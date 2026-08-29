@@ -203,3 +203,61 @@ test('ABONO BBVA con código de agente (SALDO. M00171 / M1454 / 8/92361) → seg
   // El cobro de Booking del Dúplex ("LIQ. OP. Nº …") NO debe verse arrastrado a seguros por el código.
   assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TIT, 856.77), 'turistico_duplex')
 })
+
+test('traspaso a Interactive Brokers (cuenta IBKR "U…") → traspaso_interno, no gasto de la correduría', () => {
+  // 24/08/2026: BBVA rotula la salida hacia la cuenta de valores con el código IBKR del beneficiario.
+  // RE_TITULAR no lo caza (contraparte = el broker, no el titular) → caía al DESCARTE de BBVA y se
+  // contaba como gasto deducible de seguros. Es dinero que cambia de bolsillo, no un gasto.
+  assert.deepEqual(
+    clasificarDestinoDetalle(
+      'BBVA',
+      'ORDENES PAGO EMITIDAS EN MONEDA LOCAL // TRANSFERENCIA REALIZADA // U9007431 / Alberto Suarez Gutierrez',
+      'Interactive broker',
+      -1000,
+    ),
+    { destino: 'traspaso_interno', revisar: false, confirmado: true },
+  )
+  // Extractos Excel viejos: el concepto es solo el código IBKR + el nombre, sin contraparte.
+  assert.equal(clasificarDestino('BBVA', 'U9007431 / alberto suarez gutierrez', '', -15000), 'traspaso_interno')
+  // Retirada de vuelta del broker a BBVA: tampoco es ingreso del negocio.
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIA RECIBIDA // U9007431 / Alberto Suarez Gutierrez', TITULAR, 2500), 'traspaso_interno')
+})
+
+test('la regla del broker NO secuestra los conceptos normales de BBVA', () => {
+  // Guardia anti-"TRANSF": el discriminante es el código IBKR completo (U + 7-8 dígitos), no la
+  // palabra "transferencia". Las comisiones de la correduría deben seguir entrando como seguros.
+  assert.equal(clasificarDestino('BBVA', 'TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // LIQ.COMISIONES 202608', TITULAR, 302.06), 'seguros')
+  assert.equal(clasificarDestino('BBVA', 'ABONO POR TRANSFERENCIA A SU FAVOR RECIBIDA EN EUROS // TRANSFERENCIA RECIBIDA // LIQ. OP. Nº 000492803640001', TITULAR, 856.77), 'turistico_duplex')
+})
+
+test('FINANCIALDATASETS.AI en BBVA → seguros/informatica auto-confirmado (herramienta profesional)', () => {
+  // 27/08/2026, decisión de Alberto: la API de fundamentales del radar de trading es herramienta de la
+  // actividad, como Vercel/Anthropic. Antes caía al cajón por DESCARTE de BBVA → 'seguros' + revisar,
+  // así que volvía a la bandeja cada mes aunque ya se hubiera confirmado.
+  assert.deepEqual(
+    clasificarDestinoDetalle(
+      'BBVA',
+      'PAGO CON TARJETA DE SERVICIOS VARIOS // PAGO CON TARJETA // FINANCIALDATASETS.AI',
+      'FINANCIALDATASETS.AI',
+      -17.78,
+    ),
+    { destino: 'seguros', revisar: false, confirmado: true, subcategoria: 'informatica' },
+  )
+  // Fuera de BBVA sigue su camino normal: RE_SOFTWARE solo aplica en la cuenta de la correduría.
+  assert.equal(clasificarDestino('Kutxabank', 'COMPRA EN FINANCIALDATASETS.AI', '', -17.78), 'personal')
+})
+
+test('IONOS = infraestructura profesional, no proveedor de los pisos (29/08/2026)', () => {
+  // Estaba en RE_PISOS porque ahí vive el dominio housesevillana.es, así que TODOS los cargos de
+  // IONOS se contaban como gasto de los pisos turísticos. Es infra de desarrollo como Vercel
+  // (sirve también a ialimp y a la correduría) → RE_SOFTWARE.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'COMPRA EN PAYPAL *IONOS CLOUD', 'IONOS Cloud S.L.U.', -24.19),
+    { destino: 'seguros', revisar: false, confirmado: true, subcategoria: 'informatica' },
+  )
+  // Fuera de BBVA RE_SOFTWARE no aplica (invariante vigente): en la tarjeta de Kutxabank —que es por
+  // donde PayPal cobra IONOS— lo que lo lleva a la correduría es la regla aprendida
+  // `IONOS → seguros` de banca_destino_reglas, no esta función. Lo que sí queda fijado aquí es que
+  // YA NO cae en los pisos por casar RE_PISOS.
+  assert.notEqual(clasificarDestino('Kutxabank', 'COMPRA EN PAYPAL *IONOS CLOUD', '', -24.19), 'turistico_pisos')
+})

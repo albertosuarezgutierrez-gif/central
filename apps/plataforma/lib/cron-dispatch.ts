@@ -28,6 +28,10 @@ export const CRON_JOBS: CronJob[] = [
   // no da precios para ellas — es un «no hay», no un «falta por hacer», y el ciclo las reintenta igual.
   // Devuelto a 2 h: en régimen estacionario solo hay que refrescar rancidez y sobra de largo.
   { path: '/api/cron/trading-backtest', schedule: '10 */2 * * *' },
+  // 🔬 H10 — evalúa SEMANALMENTE las reglas de salida contra el criterio firmado en el pre-registro
+  // (lunes 08:40 UTC, con el corpus del retrovisor ya movido por las pasadas del fin de semana).
+  // No cablea nada: avisa cuando una variante cumple, o cuando todas fallan y H10 queda cerrada.
+  { path: '/api/cron/trading-h10', schedule: '40 8 * * 1' },
   // 07:15, treinta minutos ANTES de `agentes-latido`: así el vigía de las 07:45 lee siempre una
   // huella del mismo día en vez de la de ayer. Solo lectura (operación C de SES): no envía ningún
   // parte. La fecha que lo hace urgente es el 03/09/2026, cuando caduca la hoja del certificado
@@ -78,6 +82,9 @@ export const CRON_JOBS: CronJob[] = [
   // scheduler (o del webhook Smoobu) se auto-repare en la siguiente corrida — con el default
   // de 2 días, las reservas modificadas durante el apagón de julio-2026 se habrían perdido.
   { path: '/api/sivra/updates/sync?days=7', schedule: '0 5 * * *' },
+  // Extras cobrados al huésped: recordatorio a las 24 h y caducidad a 48 h de la entrada. A las
+  // 07:00, antes del vigía de latidos de las 07:45, para que su huella del día ya esté escrita.
+  { path: '/api/cron/sivra-extras-impago', schedule: '0 7 * * *' },
   { path: '/api/sivra/limpiadoras/auto-sessions', schedule: '0 5 * * *' },
   { path: '/api/sivra/limpiadoras/auto-assign', schedule: '30 5 * * *' },
   { path: '/api/sivra/limpiadoras/alerta-ventana', schedule: '0 8 * * *' },
@@ -93,6 +100,12 @@ export const CRON_JOBS: CronJob[] = [
   // cuando encuentran algo nuevo, así que repetirlos es barato: el de Ticketmaster no cuesta tokens y
   // el de búsqueda web va contra el presupuesto diario de la pasarela como cualquier otra llamada.
   { path: '/api/sivra/eventos/sync', schedule: '0 4 * * *' },
+  // Calendario fijo de Sevilla (27/08/2026): Semana Santa derivada de la Pascua + las fechas de
+  // tabla. Va DELANTE de los descubridores a propósito — lo que ya se sabe no hace falta buscarlo,
+  // y así el listado de «ya registrado» que se le pasa a la IA en /websearch incluye estas fechas y
+  // no gasta huecos redescubriéndolas. Siembra siempre: no hay más proveedor de precio que este
+  // motor, así que gatear su propio calendario tras una env solo lo dejaba fuera (Alberto, 27/08).
+  { path: '/api/sivra/eventos/calendario', schedule: '30 3 * * *' },
   { path: '/api/sivra/eventos/websearch', schedule: '0 5 * * *' },
   // Verificación automática de los PREVISTOS (12/08/2026): va DETRÁS de los dos descubridores
   // para juzgar en la misma mañana lo que acaban de encontrar. Antes esto lo hacía Alberto a mano

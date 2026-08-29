@@ -91,6 +91,22 @@ export type FactoresFecha = {
   salidaStop10?: number | null
   salidaStop20?: number | null
   salidaTrail15?: number | null
+  // H10 (28/08/2026): las variantes que H9 NO llegó a probar — trailing a otra distancia, stop a
+  // coste y pérdida de media. Se RECOLECTAN; ninguna decide nada hasta que H10 se resuelva.
+  salidaTrail25?: number | null
+  salidaCoste10?: number | null
+  salidaSma50?: number | null
+  salidaSma200?: number | null
+  // H12 (28/08/2026, idea de Alberto): qué hace la acción DESPUÉS de venderla. Todo lo de arriba se
+  // corta en el día 91 —incluidas las salidas, que cuando no disparan se rellenan con el retorno del
+  // horizonte—, así que «¿y si hubiera aguantado?» hoy no tiene dato. Se RECOLECTA; nada decide.
+  // El arrepentimiento de cualquier regla es `ret364 − salidaX` (todas miden desde la misma entrada).
+  ret182?: number | null
+  ret364?: number | null
+  mfe364?: number | null        // techo desde la entrada dentro de la ventana larga
+  mae364?: number | null        // suelo desde la entrada
+  diasMfe364?: number | null    // cuándo se tocó el techo (días naturales)
+  tendenciaVivaAlSalir?: boolean | null  // al cerrar el día 91, ¿el precio seguía sobre su SMA50?
 }
 
 // Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes,

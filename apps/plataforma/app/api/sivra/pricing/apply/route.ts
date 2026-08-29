@@ -6,15 +6,18 @@ import { eventFactor, seasonalFloorFactor, PRICING_HORIZON_DAYS, EVENTS } from "
 import { combinarEventosDeFecha, normalizarEstado, type EventoBruto } from "@/lib/sivra/eventos-estado"
 import { decidirEventoACiegas } from "@/lib/sivra/pricing-centinelas"
 import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
+import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
+import { descongelar, detalleDescongeladas } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
+import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
 import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
@@ -98,15 +101,24 @@ export async function POST(req: NextRequest) {
   const MAX_MARKET_AGE_DAYS = 7
 
   const recs = await prisma.$queryRaw<{
-    property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
+    property_id: string
+    // Ancla del BARRIDO de la última pasada útil (respaldo) y ancla ACUMULADA de 30 días
+    // (la buena, ver pricing-ancla-global.ts). Elige `elegirAnclaGlobal`, no el SQL.
+    med_pasada: number; flo_pasada: number; cei_pasada: number
+    med_anc: number | null; flo_anc: number | null; cei_anc: number | null
+    fechas_anc: number; corpus_fiable: boolean | null
     demand_factor: number; quality_factor: number
     occupancy_global: number; demand_baseline: number; demand_k: number
     channel_markup: number; cuota_fija: number; noches_ref: number
     max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
-    flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number
+    flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number; antelacion_k: number
   }[]>(Prisma.sql`
     WITH latest AS (${Prisma.raw(sqlUltimaPasadaUtil())}),
+    -- Ancla GLOBAL sobre el corpus ACUMULADO (una lectura por comparable x fecha en 30 dias).
+    -- El percentil del barrido de la manana muestreaba 6-7 fechas de las ~110 del horizonte y
+    -- cada dia otras: eso era el serrucho. Ver pricing-ancla-global.ts.
+    anc AS (${Prisma.raw(sqlAnclaGlobalAcumulada())}),
     -- Cada comparable se NORMALIZA al aforo del piso (pricing_factor_aforo) antes de entrar en el
     -- percentil. Sin esto, una casa de 12 plazas se tarificaba contra apartamentos de 4-8 y salia
     -- a mitad de precio (hallazgo 31/07/2026). Con comps del mismo aforo el factor es 1: no cambia nada.
@@ -135,10 +147,11 @@ export async function POST(req: NextRequest) {
     )
     SELECT
       mkt.scenario AS property_id,
-      ROUND(mkt.med
-        * GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)
-        * GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90))::int AS recommended_guest,
-      ROUND(mkt.med)::int AS med_guest_global,
+      -- 🚨 El ancla NO se elige aqui: el SQL devuelve las DOS (barrido y acumulada) y decide
+      -- elegirAnclaGlobal en TS, que es donde hay tests. El recomendado se compone alli con los
+      -- mismos dos factores que viajan abajo, para que no pueda divergir del precio real.
+      -- OJO: sin backticks ni $ { }, esto va dentro de un template literal de TS.
+      ROUND(mkt.med)::int AS med_pasada,
       -- Los dos factores del ajuste, POR SEPARADO: el de demanda se gatea por fecha segun la
       -- antelacion real del piso (ver pricing-demanda.ts) y el de calidad aplica siempre.
       GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)::float8 AS demand_factor,
@@ -149,7 +162,10 @@ export async function POST(req: NextRequest) {
       COALESCE(occ.occupancy, 0.5)::float8 AS occupancy_global,
       s.demand_baseline::float8 AS demand_baseline,
       s.demand_k::float8 AS demand_k,
-      ROUND(mkt.flo)::int AS floor_guest, ROUND(mkt.cei)::int AS ceil_guest,
+      ROUND(mkt.flo)::int AS flo_pasada, ROUND(mkt.cei)::int AS cei_pasada,
+      ROUND(anc.med)::int AS med_anc, ROUND(anc.flo)::int AS flo_anc, ROUND(anc.cei)::int AS cei_anc,
+      COALESCE(anc.fechas, 0) AS fechas_anc,
+      anc.corpus_fiable,
       COALESCE(s.channel_markup, 1.20)::float8 AS channel_markup,
       COALESCE(s.cuota_fija, 0)::float8 AS cuota_fija,
       GREATEST(COALESCE(s.noches_ref, 2), 1)::int AS noches_ref,
@@ -160,10 +176,12 @@ export async function POST(req: NextRequest) {
       COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct,
       COALESCE(s.flight_demand_k, 0)::float8 AS flight_demand_k,
       COALESCE(s.seasonal_floor_k, 0)::float8 AS seasonal_floor_k,
-      COALESCE(s.lastminute_k, 0)::float8 AS lastminute_k
+      COALESCE(s.lastminute_k, 0)::float8 AS lastminute_k,
+      COALESCE(s.antelacion_k, 0)::float8 AS antelacion_k
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
+    LEFT JOIN anc ON anc.scenario = mkt.scenario
     WHERE s.apply_enabled = true
       AND (${onlyProp}::text IS NULL OR mkt.scenario = ${onlyProp})
   `)
@@ -211,6 +229,13 @@ export async function POST(req: NextRequest) {
    * apuesta — congelarle la bajada sería tratar un rumor como un hecho (decisión Fable 13/08/2026).
    */
   const autoEvConfirmado = new Map<string, number>()
+  /**
+   * Fechas cuyo precio lo subió un evento que DESPUÉS se descartó y que hoy no tienen ningún evento
+   * vivo. Es la mitad que faltaba del ciclo del rumor (decisión de Alberto, 27/08/2026): sin esto la
+   * apuesta se deshace en `pricing_eventos_auto` pero NO en el precio, que se queda arriba y cae en
+   * la guarda de outlier. Ver `lib/sivra/pricing-descongelar.ts`.
+   */
+  const rumorCaido = new Set<string>()
   for (const [fecha, lista] of porFecha) {
     // Los previstos LEJANOS suben el precio ponderado por confianza (v2, decisión de Alberto
     // 09/08/2026); cerca de la fecha vuelven a solo-suelo. El contexto de distancia va aquí.
@@ -222,6 +247,11 @@ export async function POST(req: NextRequest) {
       .filter(e => normalizarEstado(e.estado) === 'confirmado')
       .map(e => Number(e.factor) || 1))
     if (confirmado > 1) autoEvConfirmado.set(fecha, confirmado)
+    // Hubo un descartado Y no queda premio vivo de ninguna otra fila de la misma fecha: la razón
+    // que justificaba el precio alto ya no existe. Si SIGUE habiendo evento vivo no se marca — ahí
+    // el objetivo sube por su cuenta y las guardas ni llegan a plantearse retener nada.
+    const hayDescartado = lista.some(e => normalizarEstado(e.estado) === 'descartado')
+    if (hayDescartado && ef.factorPrecio <= 1 && confirmado <= 1) rumorCaido.add(fecha)
   }
 
   // 🟠 Lecturas auxiliares que pueden caerse sin invalidar la pasada — pero que se DECLARAN
@@ -527,6 +557,8 @@ export async function POST(req: NextRequest) {
 
   /** congelaciones de TODOS los pisos, para el aviso agrupado (una pasada = un mensaje como mucho) */
   const congeladasGlobal: { property: string; fecha: string; precio: number; factor: number }[] = []
+  /** descongelaciones de TODOS los pisos, para el parte de la respuesta (ver pricing-descongelar.ts) */
+  const descongeladasGlobal: { property: string; fecha: string; motivo: string }[] = []
 
   // ⏱️ Raíl por DÍA de verdad (fix auditoría 18/07/2026): `max_change_pct` está documentado como
   // tope "±/día", pero anclado al precio de la PASADA anterior con 3 crons/día era ±73%/día real
@@ -558,6 +590,23 @@ export async function POST(req: NextRequest) {
     ORDER BY property_id, rate_date, applied_at ASC
   `).catch((e) => { anclaCaida.push({ nombre: 'anclaHoy', error: String(e).slice(0, 120) }); return [] })
   const anclaHoy = new Map(anclaHoyRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.p)]))
+
+  // 🔓 Días desde la ÚLTIMA escritura de cada fecha — la segunda llave de los congeladores
+  // (`lib/sivra/pricing-descongelar.ts`). Va con las auxiliares y NO con las anclas del raíl: si
+  // esta lectura revienta, el mapa queda vacío, ninguna fecha recibe la llave por antigüedad y el
+  // motor se comporta EXACTAMENTE como antes del 27/08/2026. Es la degradación conservadora — un
+  // fallo aquí no puede descongelar de más, solo de menos — pero se declara igual, porque un
+  // candado que deja de abrirse en silencio es lo que costó 279 noches.
+  const escrituraRows = await prisma.$queryRaw<{ pid: string; rate_date: string; dias: number }[]>(Prisma.sql`
+    SELECT property_id AS pid, rate_date::text AS rate_date,
+           (CURRENT_DATE - MAX(applied_at)::date)::int AS dias
+    FROM pricing_applied
+    WHERE dry_run = false AND rate_date >= CURRENT_DATE
+    GROUP BY property_id, rate_date
+  `).catch((e) => { lecturasCaidas.push({ nombre: 'ultima_escritura', error: String(e).slice(0, 120) }); return [] })
+  const diasSinEscribir = new Map(escrituraRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.dias)]))
+  /** true = la lectura respondió (aunque sea con 0 filas). Sin ella, «nunca escrita» no es afirmable. */
+  const hayHistorialEscrituras = !lecturasCaidas.some(l => l.nombre === 'ultima_escritura')
 
   // 🛑 Si CUALQUIERA de las dos lecturas reventó, esta pasada NO tarifica. Ver la cabecera de
   // `pricing-ancla-rail.ts`: un `[]` por excepción es indistinguible del `[]` legítimo (fecha sin
@@ -634,9 +683,29 @@ export async function POST(req: NextRequest) {
     const aBase = (guestNoche: number) => baseDesdeGuestConFijo(guestNoche, markup, fijoNoche)
     const demandFactor = Number(r.demand_factor) > 0 ? Number(r.demand_factor) : 1
     const qualityFactor = Number(r.quality_factor) > 0 ? Number(r.quality_factor) : 1
-    const baseTargetGlobal = aBase(r.recommended_guest)
-    const floorBaseGlobal = aBase(r.floor_guest)
-    const ceilBaseGlobal = aBase(r.ceil_guest)
+    // ─── ANCLA GLOBAL: corpus ACUMULADO, no el barrido de esta mañana ────────────────────
+    // Es la base de TODA fecha sin bucket de mes, y era la fuente del serrucho: el percentil de
+    // una sola pasada muestrea 6-7 fechas de entrada distintas cada día, así que el ancla saltaba
+    // 95↔208 y las fechas sin comps propios la perseguían saturando el raíl ±20% en direcciones
+    // alternas. Ver `lib/sivra/pricing-ancla-global.ts` para las mediciones.
+    //
+    // Como en el bucket del mes, el corpus FIABLE (medido por fecha) manda si por sí mismo pasa el
+    // umbral; si no, la mezcla; y si tampoco, el barrido — nunca se queda un piso sin ancla.
+    const ancla = elegirAnclaGlobal({
+      acumulada: {
+        valores: r.med_anc == null ? null : { med: r.med_anc, flo: r.flo_anc!, cei: r.cei_anc! },
+        fechas: Number(r.fechas_anc),
+      },
+      pasada: { med: r.med_pasada, flo: r.flo_pasada, cei: r.cei_pasada },
+    })
+    const anclaOrigen: 'acumulada_fiable' | 'acumulada_mixta' | 'pasada' =
+      ancla.origen !== 'acumulada' ? 'pasada' : r.corpus_fiable ? 'acumulada_fiable' : 'acumulada_mixta'
+    const medGuestGlobal = ancla.valores.med
+    // El "recomendado" se compone con los MISMOS dos factores que aplica cada fecha: si se
+    // calculara aparte (como hacía el SQL) podría contradecir al precio que el motor escribe.
+    const baseTargetGlobal = aBase(medGuestGlobal * demandFactor * qualityFactor)
+    const floorBaseGlobal = aBase(ancla.valores.flo)
+    const ceilBaseGlobal = aBase(ancla.valores.cei)
     const mesProp = mes.get(r.property_id)
     const fechaProp = fecha.get(r.property_id)
 
@@ -656,10 +725,23 @@ export async function POST(req: NextRequest) {
     const audit: {
       rate_date: string; old_price: number | null; new_price: number
       demanda_fuente: DemandaFechaResult["fuente"]; demanda_gateada: boolean
+      antelacion_factor: number | null
+      // De qué ancla salió ESTA noche. Sin esto, el seguimiento del serrucho solo puede medir el
+      // agregado y no puede atribuir la mejora a la rama que se tocó (ver la migración
+      // 2026-08-28_pricing_applied_ancla.sql).
+      base_fuente: 'mes' | 'global'
     }[] = []
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
     const congeladas: { fecha: string; precio: number; factor: number }[] = []
+    // Fechas que se llevaron premio por anticipación en esta pasada. En la respuesta a propósito:
+    // una palanca que sube precios en vivo tiene que poder auditarse sin abrir la BD, y un 0 aquí
+    // es la prueba de que no ha movido nada (distinto de «no se ha mirado» → `antelacion_k = 0`).
+    const premiadas: { fecha: string; factor: number }[] = []
+    // Fechas a las que la SEGUNDA llave (antigüedad o rumor caído) les ha quitado el veto de las
+    // guardas en esta pasada. En la respuesta a propósito: una descongelación en masa tiene que
+    // poder verse sin abrir la BD, y un 0 aquí es la prueba de que el candado no se ha tocado.
+    const descongeladas: { fecha: string; motivo: string }[] = []
     // Fechas donde el techo de mercado medido recortó el objetivo (pricing-techo-mercado.ts). En
     // la respuesta a propósito: un precio que baja por el techo debe poder distinguirse de uno que
     // baja porque el mercado del mes se hundió.
@@ -692,7 +774,7 @@ export async function POST(req: NextRequest) {
       demFuentes[dGate.fuente]++
       if (dGate.gateado) demGateadas++
       const dqDate = dGate.factor * qualityFactor
-      const baseGlobalD = aBase(r.med_guest_global * dqDate)
+      const baseGlobalD = aBase(medGuestGlobal * dqDate)
       // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
@@ -807,6 +889,26 @@ export async function POST(req: NextRequest) {
         const nextBooked = plRates[nextD] && !plRates[nextD].available
         if (prevBooked && nextBooked) target = Math.round(target * (1 - Number(r.gap_discount_pct)))
       }
+      // ⏳ ANTICIPACIÓN. El espejo de la urgencia, y va justo antes que ella a propósito: las dos
+      // son excluyentes por construcción (una actúa por debajo de la antelación mediana del mes y la
+      // otra por encima), así que el orden no compone nada — pero deja el par junto y legible. Solo
+      // propone SUBIR el objetivo, y todo lo que viene después —el raíl de ±%/día, los suelos, el
+      // techo del propietario y el techo de mercado MEDIDO— sigue mandando. Inerte con
+      // antelacion_k=0 y en las noches de evento (ver lib/sivra/pricing-antelacion.ts).
+      const antic = factorAntelacion(
+        {
+          diasVista: daysOut,
+          antelacionMediana: ant?.mediana ?? null,
+          muestra: ant?.muestra ?? 0,
+          factorEvento: evFactor,
+        },
+        { k: Number(r.antelacion_k) },
+      )
+      if (antic.factor > 1) {
+        target = Math.round(target * antic.factor)
+        premiadas.push({ fecha: date, factor: Number(antic.factor.toFixed(4)) })
+      }
+
       // ⏳ URGENCIA (last-minute). Va AQUÍ a propósito: solo propone bajar el objetivo, y todo lo
       // que viene después —el raíl de ±%/día, el suelo de coste, el estacional y el techo— sigue
       // mandando. Inerte con lastminute_k=0 y en las noches de evento. La referencia de "cuándo
@@ -891,6 +993,20 @@ export async function POST(req: NextRequest) {
       if (r.max_price != null) target = Math.min(target, r.max_price)
       if (acote.acotado) techoAcotadas.push({ fecha: date, techo: tMkt.techo, origen: tMkt.origen! })
       const liberaTecho = acote.liberaCongelacion
+      // 🔓 Segunda llave (27/08/2026). El techo solo abre donde hay mercado MEDIDO de la fecha, y
+      // eso es una cuarta parte del calendario: 249 de 279 noches congeladas no podían salir nunca.
+      // Ver la cabecera de `lib/sivra/pricing-descongelar.ts` para el caso completo.
+      const desc = liberaTecho
+        ? { libera: false, motivo: '' }   // el techo ya la abre: no hay nada que añadir
+        : descongelar({
+            // Sin la lectura de historial no se puede afirmar «nunca escrita»: se trata como
+            // reciente (0 días) para que un fallo de consulta NO descongele por la puerta de atrás.
+            diasSinEscribir: hayHistorialEscrituras
+              ? (diasSinEscribir.get(`${r.property_id}|${date}`) ?? null)
+              : 0,
+            rumorCaido: rumorCaido.has(date),
+          })
+      const liberaGuardas = liberaTecho || desc.libera
       // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
       // mes (fallback global), el precio NUNCA baja — el bucket global (dominado por temporada
       // media/baja) arrastraría la noche de evento hacia abajo (788→283 en jun-2027) y el factor
@@ -908,7 +1024,7 @@ export async function POST(req: NextRequest) {
       // automático — en cuanto la rutina de Booking mida la fecha, la condición deja de cumplirse
       // y el raíl deshace en 2-3 pasadas lo que estuviera inflado. Solo confirmados: los previstos
       // son apuestas y su premio ya va ponderado. `max_price` manda si obligara a bajar (hoy NULL).
-      if (r.events_enabled && old != null && target < old
+      if (r.events_enabled && old != null && target < old && !liberaGuardas
           && (r.max_price == null || old <= r.max_price)) {
         const evConfirmado = Math.max(eventFactor(date), autoEvConfirmado.get(date) ?? 1)
         const ciegas = decidirEventoACiegas({
@@ -928,8 +1044,12 @@ export async function POST(req: NextRequest) {
       // `liberaTecho` la desactiva: «esa noche es especial» deja de ser una hipótesis defendible
       // cuando el mercado MEDIDO de la fecha dice que estamos por encima de su techo.
       if (old != null && normalBase > 0 && old > normalBase * OUTLIER_RATIO
-          && target < old && daysOut > OUTLIER_HORIZON_DAYS && !liberaTecho
+          && target < old && daysOut > OUTLIER_HORIZON_DAYS && !liberaGuardas
           && (r.max_price == null || old <= r.max_price)) continue
+      // Se anota DESPUÉS de las dos guardas y solo si la fecha va a escribirse de verdad: contar
+      // aquí una llave que luego frena la banda muerta sería inflar el parte con trabajo que no se
+      // hizo — el mismo error que este PR viene a corregir, por la otra punta.
+      if (desc.libera && old != null && target < old) descongeladas.push({ fecha: date, motivo: desc.motivo })
       if (old != null && target === old) continue
       // 🔇 Banda muerta anti-churn (fix auditoría 18/07/2026): el motor escribía 3.400+ cambios
       // por semana para 2 pisos (media 4-6 reescrituras por fecha, 78% de fechas subiendo Y
@@ -952,6 +1072,12 @@ export async function POST(req: NextRequest) {
       audit.push({
         rate_date: date, old_price: old, new_price: target,
         demanda_fuente: dGate.fuente, demanda_gateada: dGate.gateado,
+        // NULL = la palanca no llegó a evaluarse (apagada, sin antelación medida o muestra corta).
+        // 1.00 = evaluada y sin premio. La diferencia es lo que separa «no tocaba» de «no se miró».
+        antelacion_factor: antic.evaluado ? Number(antic.factor.toFixed(4)) : null,
+        // MISMO `useMonth` que eligió `baseD` doce lineas mas arriba: no se re-deriva aqui para que
+        // no puedan divergir. 'global' es la rama que oscilaba antes del PR #1811.
+        base_fuente: useMonth ? 'mes' : 'global',
       })
     }
 
@@ -986,16 +1112,21 @@ export async function POST(req: NextRequest) {
     if (audit.length > 0 && anotable) {
       try {
         const auditRows = audit.map(a =>
-          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada})`)
+          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada}, ${a.antelacion_factor}::numeric, ${anclaOrigen}, ${a.base_fuente})`)
         await prisma.$executeRaw(Prisma.sql`
-          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada)
+          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada, antelacion_factor, ancla_origen, base_fuente)
           VALUES ${Prisma.join(auditRows)}`)
       } catch { /* no crítico */ }
     }
 
     results.push({
       property: r.property_id,
-      recommended_guest: r.recommended_guest, base_target: baseTargetGlobal,
+      recommended_guest: Math.round(medGuestGlobal * demandFactor * qualityFactor),
+      base_target: baseTargetGlobal,
+      // De dónde sale el ancla global. Un `pasada` es el ancla VIEJA (oscilante) y hay que
+      // poder verlo sin abrir la BD: significa que ese piso no reúne MIN_FECHAS_ANCLA fechas
+      // en el corpus acumulado de 30 días.
+      ancla_global: { origen: anclaOrigen, med: medGuestGlobal, fechas: Number(r.fechas_anc), min_fechas: MIN_FECHAS_ANCLA },
       meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET && v.fechas >= MIN_FECHAS_MES).map(([k]) => k) : [],
       // De QUÉ corpus sale el bucket de cada mes elegible. Un objetivo que no dice su procedencia es
       // indistinguible de uno medido: `mixto` avisa de que ahí todavía pesa el precio de anuncio.
@@ -1020,6 +1151,14 @@ export async function POST(req: NextRequest) {
           .map(a => [a.mes, { mediana: Number(a.mediana), muestra: Number(a.muestra) }]),
       ),
       lastminute_k: Number(r.lastminute_k),
+      // La palanca de anticipación, auditable en la propia respuesta: intensidad, cuántas fechas se
+      // llevaron premio y las 10 primeras con su factor. Con `antelacion_k = 0` esto es `{k:0, fechas:0}`,
+      // que dice «apagada», no «no hizo falta» — la distinción que pide el medidor de resultados.
+      antelacion: {
+        k: Number(r.antelacion_k),
+        fechas: premiadas.length,
+        muestra: premiadas.slice(0, 10),
+      },
       // La palanca de demanda, auditable: la ocupación ANUAL que veía el motor antes, la de cada mes
       // que ahora sí mira, cuántas fechas salieron de cada fuente y cuántas se libraron del descuento.
       demanda: {
@@ -1040,8 +1179,14 @@ export async function POST(req: NextRequest) {
       // Fechas de evento confirmado que NO se bajaron por falta de mercado fiable propio. Van en la
       // respuesta a propósito: un precio congelado que no se declara es indistinguible de uno olvidado.
       congeladas,
+      // 🔓 Lo contrario: fechas a las que la segunda llave les quitó el veto y por fin vuelven a
+      // moverse. `0` significa «el candado no ha tenido que abrirse», no «no hay candado».
+      descongeladas: descongeladas.length > 0
+        ? { fechas: descongeladas.length, sample: descongeladas.slice(0, 5) }
+        : undefined,
     })
     for (const c of congeladas) congeladasGlobal.push({ property: r.property_id, ...c })
+    for (const d of descongeladas) descongeladasGlobal.push({ property: r.property_id, ...d })
   }
 
   // 🧊 Aviso AGRUPADO de las fechas congeladas por «evento a ciegas», con dedupe de 7 días por
@@ -1168,6 +1313,10 @@ export async function POST(req: NextRequest) {
     // Pisos que esta pasada dejó sin tarificar. En la respuesta a propósito: sus precios se quedan
     // como estaban, y eso NO es «el mercado dice que están bien» — es «no se ha podido mirar».
     sin_tarifar: sinTarifar.length > 0 ? sinTarifar : undefined,
+    // 🔓 Parte de la segunda llave de los congeladores. Sale a nivel de pasada, no solo por piso,
+    // porque el día que se estrene va a mover cientos de noches a la vez y eso debe verse de un
+    // vistazo (ver `lib/sivra/pricing-descongelar.ts`).
+    descongeladas: detalleDescongeladas(descongeladasGlobal) ?? undefined,
     dryRun, paused, days, properties: recs.length, results,
   })
 }

@@ -2,6 +2,7 @@ import { BrainResult } from '@/types'
 import { createServerClient } from '@/lib/supabase'
 import { getMenuCache } from '@/lib/brain-cache'
 import { corregirTranscripcion, registrarCorreccionFuzzy } from '@/lib/fuzzy-comanda'
+import { callAI } from '@/lib/ai-client'
 
 // ── Contexto dinámico (recomendaciones, carta, zonas) ──────────────────────
 
@@ -353,41 +354,26 @@ function parseAndValidate(raw: string): BrainResult {
   return parsed
 }
 
-/** NVIDIA NIM — OpenAI-compatible, free tier */
-async function callNvidia(systemPrompt: string, userText: string): Promise<string> {
-  const apiKey = process.env.NVIDIA_API_KEY
-  if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada')
+/**
+ * Cerebro del POS de voz. Antes iba DIRECTO a NVIDIA NIM con `fetch` crudo, y NIM era su ÚNICO
+ * proveedor: cuando `meta/llama-3.1-70b-instruct` murió por EOL el 26/08/2026, cada comanda de voz
+ * pasó a devolver el `{tipo:'aviso'}` de más abajo. No se notó porque ia-rest aún no tiene tráfico
+ * real (0 comandas en los 7 días previos), pero estaba roto.
+ *
+ * Desde el 28/08/2026 («todo OpenRouter») usa la cadena de `callAI`: pasarela central → OpenRouter
+ * → Groq. Así el brain deja de depender de un id concreto de NIM y hereda los fallbacks del resto
+ * del monorepo.
+ *
+ * ⚠️ Presupuesto de LATENCIA: el race de 5 s que había aquí estaba calibrado para NIM (gratis y
+ * rápido, sin salto HTTP intermedio). Por la pasarela + OpenRouter ese listón cortaría casi todas
+ * las respuestas, así que sube a 12 s por defecto, ajustable con `BRAIN_TIMEOUT_MS` sin tocar
+ * código. Es un cambio REAL en la sensación del POS de voz: si a Alberto le parece lento, la
+ * palanca es esa env (o volver a enchufar NIM con `NVIDIA_TEXTO=1` + un id vivo).
+ */
+const BRAIN_TIMEOUT_MS = Number(process.env.BRAIN_TIMEOUT_MS) || 12_000
 
-  const model = process.env.NVIDIA_BRAIN_MODEL ?? 'meta/llama-3.1-70b-instruct'
-
-  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userText },
-      ],
-      max_tokens: 512,
-      temperature: 0.1,
-      top_p: 0.95,
-      stream: false,
-    }),
-  })
-
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`NVIDIA HTTP ${res.status}: ${err.substring(0, 150)}`)
-  }
-
-  const data = await res.json()
-  const text = data?.choices?.[0]?.message?.content
-  if (!text) throw new Error('NVIDIA: respuesta vacía')
-  return text
+async function callCerebro(systemPrompt: string, userText: string): Promise<string> {
+  return callAI(systemPrompt, userText, 512, BRAIN_TIMEOUT_MS)
 }
 
 // ── Función principal con cascada de proveedores ────────────────────────────
@@ -431,52 +417,36 @@ export async function parsearComanda(
   ])
 
   const systemPromptBase = BASE_PROMPT + zonasContext + personalContext + seccionesContext + (necesitaVinos ? vinosContext : '') + menuContext + recomContext
-  const hasNvidia = !!process.env.NVIDIA_API_KEY
 
   if (sesionContext) {
     console.log(`[BRAIN] memoria sesión disponible (${sesionContext.split('\n').filter(l => l.startsWith('  -')).length} ejemplos)`)
   }
 
-  // ── Intento 1: NVIDIA NIM (gratis, sin memoria de sesión para latencia óptima) ──
-  if (hasNvidia) {
-    try {
-      const raw = await Promise.race([
-        callNvidia(systemPromptBase, textoParaLLM),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('NVIDIA timeout 5s')), 5_000)
-        ),
-      ])
-      const result = parseAndValidate(raw)
-      const model = process.env.NVIDIA_BRAIN_MODEL ?? 'meta/llama-3.1-70b-instruct'
+  // ── Interpretación por la cadena IA (pasarela → OpenRouter → Groq) ──────────
+  // Ya no hay guarda `hasNvidia`: el brain no depende de un proveedor concreto, y `callAI` deja
+  // inactivo por sí solo cada eslabón que no tenga su key. `callCerebro` aplica el timeout
+  // (BRAIN_TIMEOUT_MS), así que aquí desaparecen los `Promise.race` de 5 s que lo duplicaban.
+  try {
+    const result = parseAndValidate(await callCerebro(systemPromptBase, textoParaLLM))
 
-      // Si confianza es baja y tenemos memoria de sesión, reintentar con contexto enriquecido
-      if ((result.confianza ?? 1) < 0.72 && sesionContext) {
-        console.warn(`[BRAIN] NVIDIA confianza baja (${result.confianza}), reintentando con memoria de sesión`)
-        try {
-          const rawRetry = await Promise.race([
-            callNvidia(systemPromptBase + sesionContext, textoParaLLM),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('NVIDIA retry timeout 5s')), 5_000)
-            ),
-          ])
-          const retryResult = parseAndValidate(rawRetry)
-          if ((retryResult.confianza ?? 0) > (result.confianza ?? 0)) {
-            console.log(`[BRAIN] ✓ nvidia+sesión mejoró: ${result.confianza?.toFixed(2)} → ${retryResult.confianza?.toFixed(2)}`)
-            return { ...retryResult, raw: texto }
-          }
-        } catch { /* si el retry falla, usar el resultado original */ }
-      }
-
-      console.log(`[BRAIN] ✓ nvidia/${model}:`, result.tipo, result.mesa, result.items.length, 'items')
-      return { ...result, raw: texto }
-    } catch (e) {
-      console.warn('[BRAIN] NVIDIA falló, fallback a Anthropic:', (e as Error).message)
+    // Si confianza es baja y tenemos memoria de sesión, reintentar con contexto enriquecido
+    if ((result.confianza ?? 1) < 0.72 && sesionContext) {
+      console.warn(`[BRAIN] confianza baja (${result.confianza}), reintentando con memoria de sesión`)
+      try {
+        const retryResult = parseAndValidate(await callCerebro(systemPromptBase + sesionContext, textoParaLLM))
+        if ((retryResult.confianza ?? 0) > (result.confianza ?? 0)) {
+          console.log(`[BRAIN] ✓ +sesión mejoró: ${result.confianza?.toFixed(2)} → ${retryResult.confianza?.toFixed(2)}`)
+          return { ...retryResult, raw: texto }
+        }
+      } catch { /* si el retry falla, usar el resultado original */ }
     }
-  }
 
-  // ── Sin fallback Anthropic (retirado: cuenta sin saldo) ───────────────────
-  // NVIDIA NIM es el único proveedor del brain. Si no está o falló, devolvemos un aviso
-  // (la IA del god-panel/agentes usa la pasarela central; el brain del POS va directo a NIM).
-  console.error('[BRAIN] NVIDIA no disponible o falló y no hay fallback (Anthropic retirado).')
-  return { mesa: 'T00', tipo: 'aviso', items: [], confianza: 0.1, raw: texto }
+    console.log('[BRAIN] ✓', result.tipo, result.mesa, result.items.length, 'items')
+    return { ...result, raw: texto }
+  } catch (e) {
+    // Aviso solo cuando falla la cadena ENTERA. Antes este camino se alcanzaba en cuanto fallaba
+    // NIM, que era el único proveedor: desde el 26/08/2026 (EOL del 70B) eso significaba SIEMPRE.
+    console.error('[BRAIN] la cadena IA completa falló:', (e as Error).message)
+    return { mesa: 'T00', tipo: 'aviso', items: [], confianza: 0.1, raw: texto }
+  }
 }

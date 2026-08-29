@@ -1,5 +1,54 @@
 # Auditoría diaria — agosto 2026
 
+# Actualización 2026-08-27 — auditoría diaria (ligera)
+
+Rango: 13 commits desde la pasada ligera del 26/08 05:29 UTC (`b9c4d30..2049774`) — cierre de la
+dirección de House Sevillana (#1731), repaso de CP de los cinco inmuebles + mapeo Booking cerrado
+(#1734), caso DIGI cerrado (#1737/#1740), esqueleto de `apps/asegura` (#1752), landmine PSD2 89
+días (#1757), plan de Booking confirma fechas caras (#1754), hipótesis «base perfecta» de trading
+medida y rechazada (#1760).
+
+## ✅ Integridad estructural — sin hallazgos
+`pnpm install --frozen-lockfile` OK. `pnpm auditar:check`: radiografía al día.
+
+## ✅ Heartbeat de crons y agentes — sin ⛔
+- **a) Latidos (`agente_latidos`):** todos `ok=true` salvo `ses_transporte` (pendiente de Alberto,
+  sin establecimiento en `/sivra/partes/establecimientos`, sin cambios) y una racha suelta de
+  `sivra_eventos` (timeout de OpenRouter en una pasada, verificado que su retry `sivra_eventos_verificar`
+  corrió bien 30 min después — no es un patrón).
+- **b) Tablas de dominio (12):** todas ✅, ninguna cerca de su umbral.
+- `agente_reparaciones`: sin intentos en los últimos 7 días.
+
+## 🟡 Backlog de PRs de rutinas — 2 draft de registro atascados, uno de ellos con contenido en riesgo
+`rutinas-automerge.yml` sigue sano (runs horarios, último `success` 26/08 23:46 UTC). Pero dos PRs
+de registro llevan atascados en conflicto pese a los reintentos del bot:
+- **PR #1735** (`docs(agentes): auto-informe facturas-correo 26/08`, abierto 26/08 06:14, `dirty`):
+  el bot ya intentó resolver el conflicto (merge de `main` en la rama, commit `c116f14`) pero el PR
+  sigue `dirty` y su diff ahora arrastra ficheros de `#1734` que NO son de registro (skills, SQL,
+  test) — probablemente por el propio merge de conflicto empujado a la rama, no por contenido nuevo
+  del PR. Efecto práctico: el bot lo salta cada hora en el paso "toca algo que no es registro" sin
+  avisar (ese camino no comenta). **Buena noticia:** su contenido real (hueco DIGI de junio
+  conciliado) ya está en `main` por otra vía — el caso DIGI se cerró completo con #1737/#1740 (ver
+  entrada `✅ (26/08/2026) Cierre del caso DIGI` en `CONTEXTO-SESIONES.md`). El PR es redundante:
+  recomendado cerrarlo sin más acción.
+- **PR #1639** (`docs(buscador-ia): pasada semanal 24/08`, abierto 24/08 05:07, `dirty`, 3 días):
+  el propio bot ya avisó el 24/08 (`mergeStateStatus=BLOCKED`, checks required nunca se dispararon
+  sin push humano — el límite estructural que documenta la sección "🤖 CI" de `CLAUDE.md`, ya
+  conocido y aceptado). A diferencia del #1735, **este contenido NO está rescatado en ningún
+  sitio**: ni `docs/BUSCADOR-IA.md` ni `docs/AGENTES-BITACORA.md` en `main` tienen la pasada del
+  24/08 (5 eslabones vivos, sin swaps). Si se cierra sin rescatar el texto, se pierde esa pasada.
+- Resto del backlog (#1602 agentes-entrenador, #1600 auditoría profunda 23/08): código/skill
+  esperando ojo humano por diseño, 4 días, por debajo del umbral de "olvidado" (7 días).
+- PR nuevo #1763 (palanca de anticipación de pricing): `clean`, recién abierto, en revisión normal.
+
+## ✅ Reconciliación memoria/skills — sin huecos de código
+Los 13 commits del rango ya traían su propia entrada en `CONTEXTO-SESIONES.md`/`AGENTES-BITACORA.md`
+(patrón autodocumentado). `docs/HUECOS-ABIERTOS.md`: H1/H3 siguen vivos correctamente, sin código
+nuevo en el rango que los cierre. `docs/SKILLS.md` vs `.claude/skills/`: sin cambios en el rango
+(36 skills, 3 comandos). Manuales de usuario: sin features visibles nuevas en el rango.
+
+<!-- verificado: 2026-08-27 -->
+
 # Actualización 2026-08-24 — auditoría diaria (ligera)
 
 Rango: 26 commits desde la pasada del 23/08 05:26 UTC (`4f25e64..ed12004`) — día muy activo: cierre de
@@ -52,6 +101,158 @@ pasada, `success`). Ninguno de solo-registro atascado.
 Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango.
 
 <!-- verificado: 2026-08-24 -->
+
+---
+
+# Actualización 2026-08-23 — auditoría PROFUNDA (semanal)
+
+Rango: 22 commits desde la última auditoría (2026-08-21 02:01 UTC, `a953b05..HEAD`). Incluye: trading
+(screener saneado + contraste de cifras + splits/divisa, PR #1579), coordinador patrimonial (`/patrimonio`
++ skills `radar-espana`/`patrimonio-cfo`, PR #1591), vigía de conectores MCP (PR #1581), swap del modelo
+NIM por defecto (PR #1583), dos fixes de `pricing-canal.ts` en sivra (PRs #1582/#1586), rescate de 22 Edge
+Functions huérfanas (PR #1517), SES.HOSPEDAJES (PR #1555), fix de ruido en psd2 (PR #1575), cierre/coherencia
+del agente-huésped (PR #1568).
+
+## 🔴 Heartbeat de crons y agentes — 3 hallazgos reales, causa probable común
+**a) `agente_latidos`:**
+- ⛔ `sivra_mercado_sweep` — 47,1h sin pasada buena (umbral 30h). Detalle: 70 fallos "Serper 400" en
+  la última pasada — degradación técnica del buscador, no falta de mercado.
+- ⛔ `sivra_mercado_booking` — `ok=true` pero 46,5h desde el último latido (umbral 30h; es rutina de
+  sesión Claude, no cron Vercel). Última pasada viernes 21/08 03:40 — no corrió el fin de semana.
+  **Consecuencia visible:** `sivra_canal` (18,4h, ok) reporta "4 pisos · 4 sin ventanas nuevas" — los
+  4 pisos frenados por falta de mercado fresco, correlación directa con lo anterior.
+- 🟡 `ses_transporte` — `ok=false`, nunca tuvo pasada buena. Detalle: "no hay ningún establecimiento
+  dado de alta en /sivra/partes/establecimientos" — coincide con el pendiente ya conocido de Alberto
+  (PR #1555: dar de alta los 4 pisos), no es una avería nueva.
+- 🟡 `trading_operaciones` — declarado en `AGENTES_VIGILADOS` (umbral 80h) pero **cero filas** en
+  `agente_latidos`: nunca ha latido. La tabla se creó el 19/08 con una carga manual única (455
+  operaciones); no hay indicio de que la rutina diaria la esté disparando todavía.
+
+**b) Tablas de dominio:**
+- ⛔ **`psd2-sync`** — `movimientos_bancarios` sin fila nueva desde hace **68,2h** (umbral 54h, ya
+  ampliado para cubrir fin de semana). Sin huella propia en `agente_latidos`; el guardián dedicado
+  `psd2-health-check` solo corre los miércoles, así que si el corte empezó el viernes nadie lo habría
+  cazado hasta la próxima pasada semanal.
+- ⛔ `AGENTE mercado-booking (diario)` — mismo hallazgo que en (a), 46,5h.
+
+**c) Auto-reparaciones (`agente_reparaciones`):** ✅ sin intentos en 7 días, nada que coordinar.
+
+**Cobertura:** 🟡 `radar-espana` (nuevo, PR #1591) está en `docs/RUTINAS-PROGRAMADAS.md` pero sin huella
+en `AGENTES_VIGILADOS` ni en la query de tablas de dominio; su próxima pasada natural es el 01/09, así
+que un fallo silencioso no lo cazaría nadie hasta entonces. `patrimonio-cfo` ya consta "pendiente de
+trigger" en su propio doc — no es hallazgo nuevo.
+
+**Causa probable común (a)+(b):** la rutina de sesión `mercado-booking` no corrió el fin de semana
+(21→23/08), lo que arrastra `sivra_canal` sin corregir y puede explicar también el corte de `psd2-sync`
+si comparten el mismo patrón de disparo de fin de semana en el trigger de Rutinas de claude.ai. **Acción
+recomendada:** Alberto revisa si el trigger de las rutinas de sesión (mercado-booking, psd2-health-check,
+y por extensión radar-espana/patrimonio-cfo cuando se creen) está configurado para disparar también en
+sábado/domingo.
+
+## 🟡 Backlog de PRs de rutinas — automerge sano, 2 PRs en revisión
+`rutinas-automerge.yml`: 🟢 corre cada hora, última ejecución 23/08 02:04 UTC exitosa. Sin PRs de
+solo-registro atascados >24h.
+
+| # | Título | Estado | Severidad |
+|---|---|---|---|
+| [#1594](https://github.com/albertosuarezgutierrez-gif/central/pull/1594) | fix(sivra): pasada de mercado sin comps deja piso sin tarifar | `mergeable_state: dirty` — conflicto de inserción pura en `docs/CONTEXTO-SESIONES.md` (único archivo en conflicto; el resto son ficheros nuevos sin solape) | 🟡 fácil de resolver |
+| [#1514](https://github.com/albertosuarezgutierrez-gif/central/pull/1514) | fix(plataforma): paper-tracker sin vigilante en agentes-latido | `mergeable_state: clean`, 3 días sin actividad (bajo el umbral de 7 días) | 🟢 esperando revisión |
+
+## 🟢 Auditoría técnica profunda — sin regresiones, 2 hallazgos menores
+- **Integridad/typecheck/tests:** `pnpm install --frozen-lockfile` limpio, radiografía al día,
+  typecheck 0 errores en las 9 apps, `pnpm test` 0 fallos (guardián raíz + vitest de ialimp/rrhh/packages).
+- **Seguridad multi-tenant:** sin hallazgos en el código tocado en las últimas 48h; guardián de
+  secretos de auth en verde; `ses_establecimientos` sin filtro de tenant es intencional y ya declarado
+  con fecha de caducidad en su propio SQL (no es hallazgo nuevo).
+- **Supabase advisors:** sin ninguna tabla con RLS deshabilitado; 0 errores de seguridad; volumen de
+  warnings preexistente y sistémico (no accionable como "nuevo").
+- 🟡 **`pdfjs-dist` desactualizado en `apps/ialimp`** — CVE de ejecución JS arbitraria al abrir un PDF
+  malicioso; la app procesa PDFs de nóminas/firmas (`lib/nomina-pdf.ts`, `lib/firma-limpiadora.ts`).
+  Sin explotación conocida en curso, pero vale la pena priorizar el bump a `>=6.2.108`.
+- 🟡 **Vercel `ia-rest`/`transporte`/`central-rrhh`:** 20/20 últimos deploys visibles en estado
+  `CANCELED` (0 `READY` en la ventana), probablemente por la cadencia alta de pushes a `main` (Vercel
+  cancela el build anterior al llegar uno nuevo antes de que termine) y no por un build roto —
+  `plataforma` en la misma ventana sí tiene varios `READY`. **Acción recomendada:** comprobación puntual
+  de que `iarest.es` y el dominio de `transporte` sirven el commit actual de `main`.
+- Nota de metodología (no accionable para Alberto): correr los typechecks Prisma de las 8 apps en
+  paralelo sin regenerar el cliente por-app da ~180 falsos positivos (pnpm hoistea `@prisma/client` a
+  una única carpeta compartida). No afecta a Vercel (build aislado por Root Directory).
+
+## ✅ Reconciliación de memoria/skills/docs (carril 1, aplicado)
+- `docs/CONTEXTO-SESIONES.md`: los 9 commits sustantivos del rango ya tenían entrada propia — sin huecos.
+  Sin contenido de un mes cerrado pendiente de rotar.
+- `docs/SKILLS.md`: `patrimonio-cfo`, `radar-espana` y `conectores-vigia` correctamente listadas.
+- **`plataforma-maestro` sin fila para el coordinador patrimonial** (PR #1591) — añadida fila en
+  `.claude/skills/plataforma-maestro/references/mapa-gate-infra.md` tras la de Subastas.
+- **`docs/HUECOS-ABIERTOS.md` desfasado:** H2 (screener de pago) seguía como hueco vivo pese a que
+  Alberto recargó el saldo el 21/08 y `screenerMercado.ts` (PR #1579) ya lo usa saneado — movido a
+  "huecos cerrados". Mismo desfase en `docs/VIGIA-CONECTORES.md` ("Datos financieros… SIN SALDO") —
+  actualizado a "conectado y con saldo".
+- Sin contradicciones en reglas fiscales/negocio dictadas (rango no las toca).
+- `apps/plataforma/lib/correo/rutas.ts`: ninguna skill nueva del rango produce correo — sin hallazgos.
+- Manuales de usuario ia-rest: el rango solo tocó el swap mecánico de modelo NIM (`ai-client.ts`,
+  `brain.ts`, 4 edge functions) — nada de `app/**` funcional ni `public/**`, sin hallazgos.
+
+## 🔧 Reparación (mismo día, a petición de Alberto — «repara»)
+Cada hallazgo se investigó a causa raíz antes de tocar nada:
+- **`sivra_mercado_sweep` (Serper 400) → CRÉDITO AGOTADO en serper.dev, no es código.** Evidencia
+  doble: el cron diario `mercado/cron` (payload distinto, sin cambios) cayó a la vez con el mismo
+  400, y la pasada del 22/08 03:00 escribió ~98 filas y EMPEZÓ a fallar a mitad — la misma key
+  funcionó y dejó de funcionar dentro de una invocación, o sea que la key es válida y lo que cambió
+  fue el saldo (Serper devuelve 400 «Not enough credits» sin créditos, 403 con key mala).
+  ⚠️ **Matiz corregido el mismo día:** la aritmética de «se agotó por el ritmo de gasto» NO cuadra
+  (~130 búsquedas/día × 3 semanas ≈ 2.700 créditos, no un paquete entero de 50k) — o quedaba muy
+  poco saldo de un paquete viejo, o los créditos **CADUCARON** (Serper los caduca a los 6 meses, y
+  una caducidad instantánea produce la misma firma de degradación a mitad de pasada). Verificar en
+  Billing cuál de las dos fue antes de recargar: si fue caducidad, comprar grande repite el
+  desperdicio. A ~4.000-5.000 búsquedas/mes el paquete racional es el pequeño (Starter 50 US$/50k),
+  aunque su tarifa unitaria sea peor — los paquetes grandes caducan sin usarse.
+  **Acción de Alberto: recargar créditos en serper.dev → Billing** — al recargar se recupera solo.
+  De paso (este PR): los dos `throw` de Serper incluyen ahora el body del error
+  (`sweep/route.ts` y `cron/route.ts`) para que el próximo agotamiento se autodiagnostique.
+- **`psd2-sync` → FALSA ALARMA.** El cron corrió hoy 23/08 a las 06:00 con 200; las dos conexiones
+  (`Kutxabank`, `BBVA`) sincronizaron con `ultimo_sync` de hoy y sin errores. El banco simplemente
+  no reporta operaciones desde el 20/08 (hueco de 3 días vie→dom, con precedente idéntico el
+  01→04/08). Semáforo de `/banca` en ámbar, coherente. ⚠️ **Aviso de calendario: el consent PSD2 de
+  BBVA caduca el 11/09** (~19 días) — renovar desde `/banca` → «➕ Añadir → Conectar banco».
+- **`sivra_mercado_booking` → SE RECUPERÓ SOLA.** La rutina corrió hoy (PR #1601, 238 comps, 24
+  ventanas + escaparate). El hueco fue el 22/08 y afectó a 3 rutinas de sesión a la vez.
+  - **CAUSA REAL del hueco (corregida el mismo día por Alberto, con el historial de claude.ai
+    delante — la hipótesis inicial «el trigger no dispara en finde» era FALSA):** las tres rutinas
+    **SÍ dispararon puntualmente** el sábado 22/08 (04:01, 05:34 y 08:04 CEST) y las bloqueó el
+    **límite semanal de uso de Claude** («You've hit your weekly limit · resets 7am UTC»). No es
+    puntual: mismo fallo los sábados 1, 8 y 22 de agosto — la cuota semanal se agota el viernes por
+    la noche y la madrugada del sábado (antes del reset de las 07:00 UTC / 09:00 CEST) es franja
+    muerta. El 1 y el 8 hubo reintento a las ~09:17 CEST (post-reset) y funcionó; el 22 no lo hubo.
+  - **Mitigación propuesta (de Alberto/Chrome, pendiente de aplicar en claude.ai → Rutinas):**
+    mover las rutinas de madrugada del sábado a ≥09:30 CEST. Ojo: el patrón afecta a CUALQUIER
+    rutina en esa franja (p. ej. `trading-analista` corre mar-sáb de madrugada), no solo a las 3
+    detectadas — y mover horarios sin bajar consumo solo desplaza el agotamiento al viernes. El
+    fallo por límite además no genera hoy ninguna alerta útil (se supo 2 días tarde, por el
+    heartbeat): hueco conocido, candidato a diseño aparte.
+- **PR #1594 → CONFLICTO RESUELTO.** Merge de `main` en su rama conservando ambas entradas de
+  memoria (inserción pura verificada con diff3), código del PR intacto byte a byte, 7/7 tests del
+  módulo en verde, push `7563289f`. El PR queda mergeable (draft, decide Alberto).
+- **`pdfjs-dist` → PARCHEADO en este PR.** El advisory real es GHSA-hq66-cqwq-w95j (vulnerable
+  ≥5.6.83 <6.2.108); el lockfile anclaba 6.0.227. Bump a ^6.2.108: tests ialimp 22/22, `tsc` 0,
+  `pnpm audit` ya no lo lista. `rrhh` (4.10.38) está fuera del rango vulnerable — no se toca.
+- **Vercel CANCELED → FALSA ALARMA, comportamiento de diseño.** Los CANCELED son el `ignoreCommand`
+  (`vercel-ignore-build.mjs`) saltando builds de commits que no tocan cada app — el ahorro de Build
+  Minutes del incidente de julio funcionando. Verificado positivo: `iarest.es` y
+  `central-rrhh.vercel.app` sirven en producción el build READY del commit `5e6bbed` (el swap NIM,
+  el último que tocó sus árboles de dependencias).
+
+## Acciones manuales de Alberto (lo que queda)
+1. **Serper**: verificar en Billing si el saldo se agotó o CADUCÓ, y recargar (a este volumen, el
+   paquete pequeño — los grandes caducan a los 6 meses sin usarse). Hasta entonces el sweep sigue
+   en rojo (el corpus por fecha lo sostiene `mercado-booking`, que ya corre).
+2. **Rutinas del sábado**: mover las de madrugada del sábado a ≥09:30 CEST en claude.ai → Rutinas
+   (causa real confirmada: límite semanal de Claude, reset sábado 07:00 UTC — ver arriba) y
+   plantearse recortar el consumo semanal para que el agotamiento no se corra al viernes.
+3. **Renovar el consent PSD2 de BBVA antes del 11/09** (desde `/banca`).
+4. Decidir sobre los PRs draft #1594 (ya mergeable) y #1514.
+
+<!-- verificado: 2026-08-23 -->
 
 ---
 
@@ -116,7 +317,9 @@ automerge.yml`: ejecuciones horarias sin huecos, última 02:04 UTC (17 min antes
   ningún archivo visible de `apps/ia-rest/src/app` ni `public/`, y las skills nuevas
   (`radar-espana`, `patrimonio-cfo`) ya se dieron de alta en el propio PR #1591.
 
+---
 
+# Actualización 2026-08-19 — auditoría diaria (ligera)
 
 Rango: 12 commits desde la última auditoría (2026-08-18, `04c3b62..128702c`). Casi todos
 autodocumentados PR-a-PR (curva de evolución de cartera trading #1476/#1477, compra VWCE
@@ -1314,3 +1517,54 @@ la cuenta de Claude, fuera de git — así que sigue por Telegram hasta que Albe
   `"streetAddress": "Calle Bustos Tavera 22"` — **el más caro**: si se publica, es la dirección
   que Google indexa para el negocio, y coincide con la de dos competidores propios.
 - Valor correcto en los 7 sitios: **Calle Socorro 24, 41003 Sevilla (barrio de San Julián)**.
+
+# Actualización 2026-08-29 — auditoría diaria (ligera)
+
+Rango: desde la pasada del 26/08 (`bfd8763`) hasta `1ec78dc` (29/08 09:10) — 50 commits. Día muy
+activo: instrumentación del ancla de pricing + baseline del serrucho medido (55,7%, PR #1826/#1827),
+apagado de NIM («todo OpenRouter», PR #1823), fix del botón «Actualizar» del VWCE (PR #1837), Tramo
+H9-H15 de trading, cartera paper en dólares, corrección de la card de gastos de sivra (bandeja vs
+reales, PR #1846) y el webhook de Stripe (PR #1845). El propio rango ya traía su entrada de memoria
+emparejada a cada PR (patrón `docs(memoria): ...`); esta pasada solo tuvo que verificar que no
+quedara nada suelto.
+
+## 🟡→✅ Integridad estructural — radiografía desfasada, regenerada
+`pnpm install --frozen-lockfile` OK (lockfile en sync). `pnpm auditar:check` falló (`estructura.generated.json`
+desfasado por la deriva de líneas de los ~50 commits del rango) → `pnpm run auditar` la regenera
+(este PR). Sin huecos nuevos de `transpilePackages` ni de `ignoreCommand` (11/11 apps).
+
+## ✅ Heartbeat de crons y agentes (22+12 huellas) — sin ⛔ nuevos
+- **a) Latidos `agente_latidos` (22):** todos `ok=true` salvo el ya conocido `ses_transporte`
+  (`ok=false`, «no hay ningún establecimiento dado de alta» — acción de Alberto, sin cambios).
+- **b) Tablas de dominio (12):** todas ✅, la más rezagada `trading-ranking (sem L)` a 74,2h de 192h.
+- `agente_reparaciones`: sin intentos de auto-reparación en los últimos 7 días.
+
+## 💰 Salud del precio — sin 🔴
+`horas_desde_ultima_pasada` = 11,5h (última escritura no vacía 28/08 20:31 UTC; la pasada de las
+08:30 UTC de hoy aún no había corrido al medir — 6 pasadas en 48h, cadencia intacta, no es un hueco
+real). `rail_baja_roto` = 0, `bajo_minimo` = 0, `rail_alza_sin_justificar` = 4 (coincide con el
+baseline ya documentado: eventos + premio de mercado, nada nuevo). `oscilantes` = 187 en 7 días —
+alto, pero **consistente con el serrucho ya diagnosticado y medido esta misma semana** (PR #1826/
+#1827: baseline del motor viejo 55,7% de transiciones cambian de dirección; el motor con ancla nueva
+del 28/08 aún no tiene serie suficiente para comparar). No es un hallazgo nuevo, es el mismo problema
+ya bajo seguimiento activo — el check-in de Alberto del 28/08 a las 14:47 UTC sigue siendo el sitio
+donde se mide si el arreglo funciona. Los 4 pisos: `enabled`/`apply_enabled` = true, `min_price`
+puesto, `antelacion_k` = 0 (apagada, correcto) — sin palancas apagadas en silencio.
+
+## ✅ Backlog de PRs de rutinas + salud del automerge — 2 PRs abiertos, ninguno de rutina
+Solo 2 PRs abiertos: **#1803** (correduría, docs-only, `dirty`, 27/08 16:06 — 1,7 días, bajo el
+umbral de 7 días de "olvidado"; conflicto sin resolver, a criterio de Alberto) y **#1847** (abierto
+minutos antes de esta pasada, sesión concurrente, sin tocar). Ninguno es un PR de rutina de
+registro puro esperando automerge. `rutinas-automerge.yml`: runs cada pocos minutos en la última
+hora (08:03, 07:10, 07:05 UTC) — vigilante vivo.
+
+## ✅ Reconciliación memoria/skills — sin huecos
+`docs/CONTEXTO-SESIONES.md` cubre el rango entrada por entrada. `docs/SKILLS.md` vs
+`.claude/skills/` (37 skills) y `.claude/commands/` (3 comandos): coinciden exactamente. Sin
+contradicciones en las reglas fiscales dictadas por Alberto (grep `amortiza|deducible|regla
+permanente` contra `perfil-fiscal` y la memoria: mismo criterio en todas partes). `docs/HUECOS-
+ABIERTOS.md`: H1 (EODHD) y H3 (IBKR en vivo) siguen vivos correctamente, sin cambios en el rango.
+
+## ✅ Manuales de usuario — nada que tocar
+Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (el único
+commit que tocaba una ruta de esas carpetas, #1792, es un guardián de rama sin diff real en ia-rest).

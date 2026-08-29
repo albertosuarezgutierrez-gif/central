@@ -189,5 +189,133 @@ del mensaje afirmaban cosas que su comparación no sostenía:
 aviso del comportamiento normal.** El ruido no es un aviso conservador: entrena a ignorar el mensaje
 entero, y el día que haya un cargo raro de verdad pasará desapercibido entre la paja.
 
+## 🚨 El cajón por DESCARTE de BBVA: `RE_TITULAR` solo mira `contraparte` (27/08/2026, PR #1798)
+En `lib/destino.ts`, **todo CARGO de BBVA que no case el Dúplex cae a `destino='seguros'` + `revisar`**.
+Eso convierte el cajón de sastre en una afirmación cara: se cuenta como **gasto deducible de la
+correduría** hasta que alguien lo revise. Y lo que salva a un traspaso entre cuentas propias de ese
+cajón es `RE_TITULAR`, que **solo se evalúa contra `contraparte`** — a propósito (en los ABONOS el banco
+rotula la contraparte con el TITULAR, así que mirar el concepto reventaría la detección de comisiones).
+
+Consecuencia contraintuitiva: **si el beneficiario real NO es una persona, el nombre del titular viaja
+en el CONCEPTO y nadie lo mira.** Caso fundacional: el traspaso de 1.000€ a la cuenta de valores de
+Interactive Brokers («ORDENES PAGO EMITIDAS EN MONEDA LOCAL // TRANSFERENCIA REALIZADA // U9007431 /
+Alberto Suarez Gutierrez», contraparte `Interactive broker`) salía como 🛡️ Seguros. Fix: `RE_BROKER`
+(`INTERACTIVE BROKER(S)` / `IBKR` / la cuenta IBKR `U`+7-8 dígitos, que es como lo rotulan los extractos
+Excel viejos), evaluado ANTES del reparto abono/cargo para cubrir también la retirada de vuelta.
+
+- **Antes de ampliar `destino.ts` con una clave nueva, cuéntala contra el libro entero** (no solo contra
+  BBVA ni contra fixtures): `WHERE concepto||' '||contraparte ~* '<patrón>'`. Aquí dio 3 filas, las 3
+  de IBKR — por eso la regla no podía secuestrar nada. Es el mismo control que faltó en el incidente
+  de la clave genérica `"TRANSF"`, y el test anti-secuestro (comisiones + `LIQ. OP. Nº`) lo fija.
+- **Backfill obligatorio de lo ya ingestado:** una fila con `destino_confirmado=true` NO se re-clasifica
+  sola nunca (mismo patrón que la cuota RETA de 2026-07-18). La regla arregla el futuro, el SQL el pasado.
+- **Suelto conocido en ese cajón:** `FINANCIALDATASETS.AI` (API del radar de trading) sigue cayendo a
+  `seguros` + revisar. Si se decide que es herramienta profesional, va a `RE_SOFTWARE`, no a mano.
+
+## 🚨 IONOS: un proveedor que llevaba 3 años sin contabilizarse (29/08/2026)
+Alberto, ante el aviso de la bandeja: *«ionos es proveedor de dominio web, deducible a correduría;
+tiene que haber bastantes cargos, a ver si están contabilizados bien»*. No lo estaban, y el fallo
+era de **tres capas a la vez**. Sirve como plantilla para auditar cualquier proveedor recurrente:
+
+1. **El negocio estaba cableado mal en `lib/destino.ts`.** IONOS vivía en `RE_PISOS` desde el
+   principio, seguramente porque ahí está alojado el dominio `housesevillana.es`. Pero IONOS es
+   infraestructura de desarrollo (dominios, DNS, correo, VPS+Plesk, SSL) que sirve además a ialimp
+   (`smtp.ionos.es`) y a la correduría → su sitio es `RE_SOFTWARE`, como Vercel/Anthropic. Los 12
+   cargos en BD salían repartidos entre `turistico_pisos` (9) y `seguros` (3 reclasificados a mano
+   en junio): **el mismo proveedor contado en dos negocios distintos**, y ninguna de las dos
+   reclasificaciones manuales creó regla.
+   - ⚠️ `RE_SOFTWARE` **solo aplica en BBVA** (invariante «correduría = siempre BBVA») y IONOS se
+     cobra **por PayPal contra la TARJETA de Kutxabank**, así que mover la clave de regex NO basta:
+     lo que lo lleva a la correduría fuera de BBVA es la regla aprendida `IONOS → seguros` de
+     `banca_destino_reglas`, exactamente el mismo camino que ya usaba `VERCEL` (que se paga desde
+     N26). **Antes de dar por arreglado un proveedor, mira POR QUÉ CUENTA se cobra**, no solo qué
+     regex casa.
+2. **La huella la partía un NIF mal leído.** En 2 de las 5 facturas que el agente sí leyó, el
+   extractor guardó como `nif_proveedor` el NIF del CLIENTE (el de Alberto) en vez del de IONOS —
+   variante del caso DIGI. `receptor.ts::nifProveedorEsNuestro` ya lo detecta desde el 26/08, pero
+   las filas viejas seguían partidas. Saneadas en `prisma/sql/2026-08-29_ionos_correduria.sql`.
+3. **Y lo más caro: el agente de correo no existía cuando llegaron casi todas las facturas.** En
+   Gmail hay **55 facturas de IONOS desde marzo de 2023** (1.111,70 €); en `gastos` había **6**, y
+   solo UNA imputada (la de abr-2026, metida a mano). El extracto de tarjeta solo cubre
+   dic-2025→jul-2026, así que el resto **no estaba ni en el banco ni en gastos**: no había ningún
+   hueco visible que delatara la falta. **«El agente no avisó» no es «no hay nada»: el agente solo
+   mira el correo NUEVO.** Para auditar un proveedor, la fuente completa es el buzón, no la bandeja.
+   Backfill completo en `prisma/sql/2026-08-29_ionos_backfill_historico.sql`.
+
+🚨 **Y la trampa de buscarlas: el ASUNTO del proveedor cambia con los años.** Hasta ago-2023 IONOS
+titulaba «**Su** factura N **del** DD/MM/AAAA de su contrato C» y desde sep-2023 «**Tu** factura N
+**con fecha de** DD/MM/AAAA». Un `subject:"Tu factura"` devuelve 46 y parece la lista completa —
+faltan 9, las más antiguas. **Al barrer el buzón de un proveedor, busca por REMITENTE y comprueba
+la fecha de la más antigua contra cuándo se dio de alta el servicio**; si el corpus empieza justo
+donde cambió una plantilla de correo, el corte es tuyo, no suyo.
+
+⚠️ **`base_imponible`/`iva` del backfill son DERIVADOS, no leídos.** El correo de IONOS solo
+publica el importe total; el desglose sale de `round(total/1,21)` y así queda marcado en
+`raw_extraction.iva_derivado`. Se validó contra las 5 facturas que sí pasaron por OCR (coinciden al
+céntimo), pero si algún día hace falta el IVA soportado exacto para un 303, el dato bueno está en
+los PDF adjuntos, no aquí.
+
+**La limitación estructural que esto destapó (resuelta, pero conviene entenderla):** IONOS factura
+por CONTRATO —cuatro vivos bajo el mismo cliente: Servidor Virtual Cloud M mensual, SSL Ilimitado
+anual, y dos Domain Pack— con importes de **1,82 € a 145,20 €**. `evaluar()` valida contra
+`[importe_min, importe_max]`, que por defecto es **±10 % del esperado**, así que por muchas veces
+que se confirme en la bandeja **volvería a caer en ella cada mes**: un proveedor multi-contrato no
+encaja en «una huella, un importe». La regla se sembró a mano con banda **1–200 €**;
+`reforzarRegla` solo ENSANCHA (LEAST/GREATEST), nunca estrecha. Al dar de alta un proveedor así,
+la banda es parte del alta.
+
+## 🚨 Un agregado que no filtra `revisado` convierte la BANDEJA en contabilidad (29/08/2026)
+`getResumenSivra(anio)` sumaba `SELECT SUM(total) FROM gastos WHERE año = X`, a secas. La bandeja
+existe para NO afirmar lo que aún no se ha revisado, y ese `SUM` lo afirmaba igual: en 2026 daba
+**3.372.460,28 €** de gasto de los pisos contra **13.755,66 €** reales. Dentro había 3.300.000 € +
+33.000 € de la reserva del edificio de C/ San Luis 9 (dos documentos del MISMO contrato leídos como
+dos facturas) y el Modelo 200 de 2025 TRIPLICADO — las tres sin revisar, dos de ellas sin proveedor
+ni concepto, que es justo por lo que `existeDuplicado` no las cazó: deduplica por nº de factura o
+por huella+importe, y no tenían ninguna de las dos.
+
+- **Segundo agujero en la misma consulta:** sin `propertyId` tampoco filtraba la propiedad, así que
+  metía la correduría (`propiedad` NULL: IONOS, Vercel, Anthropic…) y lo personal en un total cuyo
+  INGRESO sale de `incomes`, que es solo pisos. Numerador y denominador de universos distintos.
+- **Regla:** al sumar una tabla que tiene cola de revisión, el filtro de estado va en la consulta,
+  no en la cabeza de quien la lee. Y comprueba que numerador y denominador hablan del mismo negocio.
+- Filtro único en **`lib/sivra/gasto-de-pisos.ts`** (`esGastoDePisos`/`sqlGastoDePisos`, puro) con
+  **guardián que lee el FUENTE** de `financiero.ts` y exige el filtro en las DOS ramas — ni `tsc`
+  ni el build miran dentro de un `Prisma.sql`. `prop_multi_apartamentos` SÍ cuenta aquí (es gasto
+  compartido de los pisos); solo el P&L POR piso lo excluye, porque ahí hace falta saber de cuál es.
+- **Y el hermano documental:** la factura de Ariste venía a nombre de «SAN LUIS 9 CB»
+  (E26584144), que no es ninguno de los titulares. Hoy `procesar.ts` la marcaría `ajena` por
+  `evaluaReceptor` — la fila es residuo anterior al estreno de `receptor.ts` (31/07/2026), no un
+  fallo vivo. Antes de dar por rota una guarda, mira la fecha de la fila contra la del módulo.
+
+## 🚨 La bandeja de revisión NO tenía pantalla: un enlace a un 404 durante meses (29/08/2026)
+Alberto: *«¿dónde reviso gastos? ¿la IA no las clasifica con todo el contexto que tiene?»*. Las dos
+respuestas eran peores de lo que parecía.
+
+1. **La pantalla no existía.** `avisos.ts` enlaza `/expenses/pendientes` desde el día uno y esa ruta
+   **nunca se construyó**. Tampoco el endpoint `PATCH /api/expenses/pendientes/[id]` que esta misma
+   referencia daba por vivo (no había ni carpeta `app/api/expenses`) — **la documentación describía
+   una API inexistente**. Y `/api/sivra/expenses`, la única pantalla de gastos, las ESCONDE a
+   propósito (`NOT (revisado = false AND origen IS NOT NULL)`). Un enlace roto en una plantilla de
+   texto no lo caza `tsc` ni el build: hoy lo vigila `lib/agente-facturas/avisos-enlace.test.ts`,
+   que ata enlace + página + endpoints + entrada de sidebar (probado en rojo).
+2. **La IA no decide, y por eso «todo el contexto» no servía de nada.** La IA solo LEE el PDF; quien
+   decide auto-imputar o mandar a la bandeja es `evaluar()` — reglas puras: ¿hay regla para la huella?
+   ¿`vistas >= 2`? ¿el importe cae en la banda? Y **la regla solo nace al CONFIRMAR**. Sin pantalla no
+   se confirma → no nace la regla → todo sale «Proveedor nuevo, sin regla aprendida». **19 de 21**
+   pendientes con ese motivo exacto, **35.938,20 €** parados: Sique Brilla, la lavandería, Booking,
+   Allianz, Vercel, Anthropic, PriceLabs, Asecon… ninguno remotamente dudoso.
+
+**La regla que deja: un aviso que manda a una pantalla es una promesa, y hay que probar que la
+pantalla existe.** Aquí el bucle entero (leer → decidir → aprender) estaba construido menos el último
+eslabón, y sin él los otros tres no servían de nada.
+
+- La pantalla nueva precarga con **`sugerencia-pendiente.ts`** (PURO): propone piso/categoría desde el
+  histórico ya revisado del MISMO proveedor. 🚨 **Nunca inventa** — sin base deja el campo vacío, y un
+  EMPATE tampoco se desempata. Un desplegable preseleccionado a ojo se confirma sin mirar, y la regla
+  que nace de esa confirmación ya imputa SOLA a partir de la segunda vez: el error se propagaría.
+- Descartar **BORRA** la fila, no la marca revisada: revisada la contaría como gasto.
+- Pendiente ofrecido y no hecho: que la IA proponga con el contexto (histórico + movimiento bancario
+  que casa). Hoy la propuesta es determinista y gratis.
+
 ## Frontera multi-tenant
 Scope `cuenta_id` siempre. BD compartida con sivra/ialimp: cambios transversales de BD → `auditoria-central`.

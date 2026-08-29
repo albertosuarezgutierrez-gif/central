@@ -224,6 +224,24 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.sivra_eventos_verificar.',
   },
   {
+    id: 'sivra_eventos_calendario',
+    etiqueta: '📅 Calendario fijo de Sevilla (diario 03:30)',
+    maxHoras: 30,
+    nota:
+      'Nadie está sembrando las fechas de Sevilla que se CALCULAN en vez de buscarse (Semana Santa ' +
+      'derivada de la Pascua, y la Feria por tabla). Este cron no descubre nada: repone lo que ya se ' +
+      'sabe, y por eso su silencio es especialmente traicionero — las otras cuatro fuentes de ' +
+      '`pricing_eventos_auto` seguirán llenando la tabla y el hueco no se verá por ninguna parte. ' +
+      'EXISTE porque el mapa `EVENTS` de lib/pricing-calendar.ts está ESCRITO A MANO y CADUCA ' +
+      '(hoy, el 2027-05-02) mientras el horizonte de tarificación son 365 días: en cuanto el ' +
+      'horizonte cruza el final del mapa, la Semana Santa se tarifica como un abril cualquiera. Eso ' +
+      'ya costó dinero una vez — Busto Reform vendió la noche de la Madrugá a 141,00€ tres días ' +
+      'antes de que alguien escribiera 2027 en el mapa. EL DETALLE DICE QUÉ PASÓ: los «años sin ' +
+      'fechas de tabla» son un hueco DECLARADO (falta la Feria de ese año, hay que añadirla a mano ' +
+      'en FIJOS), no un fallo del cron. ' +
+      'Huella: agente_latidos.sivra_eventos_calendario.',
+  },
+  {
     id: 'sivra_canal',
     etiqueta: '📐 Calibrado del canal Booking (diario 07:45)',
     maxHoras: 30,
@@ -288,6 +306,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       '504 en los logs: son 365 días × 4 pisos contra Smoobu con maxDuration 300). ' +
       '⚠️ «0 noche(s) escritas en 4 piso(s)» NO es una avería: es que nada cruzó el umbral del 3%. ' +
       'La avería sería que no hubiera latido. Huella: agente_latidos.sivra_pricing_apply.',
+  },
+  {
+    id: 'sivra_extras_impago',
+    etiqueta: '🍼 Extras del huésped, cobros pendientes (diario 07:00)',
+    // Cron diario → 30 h, el umbral de los diarios: deja pasar una pasada saltada sin dar la lata.
+    maxHoras: 30,
+    nota:
+      'Nadie está vigilando los extras cobrados a medias. Lo que se pierde con este cron mudo NO es ' +
+      'el cobro (el enlace de Stripe sigue vivo y el webhook seguiría marcando el pago), sino las dos ' +
+      'cosas que dependen del tiempo: el recordatorio de las 24 h al huésped que no pagó, y el aviso a ' +
+      'Alberto cuando quedan 48 h para la entrada y el extra sigue sin cobrar. O sea, el riesgo es un ' +
+      'huésped que llega esperando una cuna que nadie va a montar porque nunca pagó y nadie se enteró. ' +
+      '⚠️ «0 pendiente(s)» NO es una avería: es que no hay ningún enlace esperando cobro, que es lo ' +
+      'normal. La avería sería que no hubiera latido. Huella: agente_latidos.sivra_extras_impago.',
   },
   {
     id: 'sivra_pricing_guard',

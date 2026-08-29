@@ -59,6 +59,13 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
   reenvíos ambiguos de Pilar → preguntar, no auto-clasificar.
 - **Toda query de banco SIEMPRE scoped por `cuenta_id`.** No escribas en
   `movimientos_bancarios` salvo conciliaciones/correcciones de `destino` seguras.
+- **Antes de copiar o sobrescribir, comprueba qué hay ya (17-18/08/2026, dos fallos propios en
+  la misma semana con la misma raíz).** Copiar un adjunto a Drive sin mirar antes si ya estaba
+  archivado (o en `_DUPLICADOS_BORRAR`), y hacer `UPDATE movimientos_bancarios SET
+  factura_ref=…` sobre una fila que YA tenía `conciliado=true`/`factura_ref` sin leer antes su
+  valor, son el mismo error: escribir sin comprobar el estado actual. Antes de cualquier
+  copia o `UPDATE` sobre algo que puede ya tener valor, consulta primero (`search_files` en la
+  carpeta destino, o `SELECT factura_ref, conciliado FROM movimientos_bancarios WHERE id=…`).
 - **Auto-informe OBLIGATORIO** en `docs/AGENTES-BITACORA.md` en TODA sesión que archive,
   concilie o etiquete algo — aunque sea ad-hoc o quede a medias.
 

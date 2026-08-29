@@ -52,10 +52,11 @@ export async function responderAsistente(
   try {
     const respuesta = await iaChat(recientes, {
       system: construirSystemPrompt(ctx),
-      model: 'meta/llama-3.1-70b-instruct',
       maxTokens: 700,
-      // El cliente debe esperar MÁS que el timeout de NIM en la pasarela (25 s) para no abortar
-      // justo cuando la pasarela aún está respondiendo (causaba "no disponible" con NIM lento).
+      // El cliente debe esperar MÁS que el timeout de la pasarela (25 s) para no abortar justo
+      // cuando aún está respondiendo. Ya NO se pinnea modelo: pinnear un id de NIM apartaba a
+      // OpenRouter de ser primario (ver `client.ts` de core-ai) y desde el 26/08/2026 ese id
+      // estaba muerto — el asistente caía a los fallbacks en cada mensaje.
       timeoutMs: 35_000,
     })
     return { respuesta: respuesta.trim() || 'No he podido generar una respuesta. Inténtalo de nuevo.' }

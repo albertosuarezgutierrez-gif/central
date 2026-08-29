@@ -235,6 +235,108 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
       vigilante está muerto → 🔴 + Telegram.
    Sin nada raro → una línea verde y sigue.
 
+2bis. **💰 SALUD DEL PRECIO — bloque OBLIGATORIO en TODAS las pasadas** (nuevo 27/08/2026,
+   petición expresa de Alberto: *«nos jugamos mucho dinero»*).
+
+   🚨 **Por qué es un bloque aparte y no una fila más del heartbeat.** El heartbeat responde
+   «¿el motor se movió?». Esa no es la pregunta cara. La cara es **«¿lo que escribió está
+   SANO?»**, y hasta hoy no la hacía nadie: el motor puede correr sus tres pasadas, escribir
+   500 noches, dejar `agente_latidos.ok = true` y aun así haber desplomado un piso o llevar
+   días con `apply_enabled = false`. Es la misma familia que el PR #1787 de `CLAUDE.md`:
+   **verde no dice que el diff sea el tuyo** — aquí, un latido verde no dice que el precio
+   sea el correcto.
+
+   Corre esta consulta (probada contra la BD el 27/08/2026) y pasa el resultado por
+   `saludPricing()` de `apps/plataforma/lib/sivra/pricing-salud.ts` — el veredicto y los
+   umbrales viven ahí, testeados; **no los redefinas aquí**.
+
+   ```sql
+   WITH a AS (
+     SELECT property_id, rate_date, new_price, applied_at,
+            (applied_at AT TIME ZONE 'UTC')::date AS dia
+     FROM pricing_applied WHERE dry_run = false AND applied_at > now() - interval '7 days'
+   ),
+   anc AS (  -- ancla = ref24 (último precio de un día ANTERIOR), NO el old_price de la fila
+     SELECT a.*, (SELECT p.new_price FROM a p WHERE p.property_id = a.property_id
+                  AND p.rate_date = a.rate_date AND p.dia < a.dia
+                  ORDER BY p.applied_at DESC LIMIT 1) AS ref24
+     FROM a
+   ),
+   mkt AS (  -- fechas con mercado medido suficiente: alimentan el premio de mercado (≥3 comps)
+     SELECT checkin_date FROM market_rates
+     WHERE fuente = 'booking_mcp' AND COALESCE(corpus_clonado, false) = false AND price_night > 0
+     GROUP BY checkin_date, scenario HAVING count(*) >= 3
+   ),
+   dir AS (
+     SELECT property_id, rate_date, applied_at, new_price,
+            sign(new_price - lag(new_price) OVER (PARTITION BY property_id, rate_date
+                                                  ORDER BY applied_at)) AS s
+     FROM a
+   ),
+   osc AS (
+     SELECT property_id, rate_date,
+            count(*) FILTER (WHERE s <> 0 AND s <> lag_s AND lag_s <> 0) AS cambios
+     FROM (SELECT *, lag(s) OVER (PARTITION BY property_id, rate_date
+                                  ORDER BY applied_at) AS lag_s FROM dir) q
+     GROUP BY 1, 2
+   ),
+   ult AS (SELECT max(applied_at) AS t FROM pricing_applied WHERE dry_run = false)
+   SELECT
+     (SELECT round(EXTRACT(EPOCH FROM (now() - t)) / 3600, 1) FROM ult) AS horas_desde_ultima_pasada,
+     (SELECT count(*) FROM pricing_applied WHERE dry_run = false
+        AND applied_at >= (SELECT t FROM ult) - interval '20 minutes')  AS noches_ultima_pasada,
+     (SELECT count(*) FROM anc
+        WHERE ref24 IS NOT NULL AND new_price < ref24 * 0.80 - 1)       AS rail_baja_roto,
+     (SELECT count(*) FROM anc
+        WHERE ref24 IS NOT NULL AND new_price > ref24 * 1.20 + 1
+          AND NOT EXISTS (SELECT 1 FROM pricing_eventos_auto e WHERE e.rate_date = anc.rate_date)
+          AND NOT EXISTS (SELECT 1 FROM mkt WHERE mkt.checkin_date = anc.rate_date))
+                                                                        AS rail_alza_sin_justificar,
+     (SELECT count(*) FROM a JOIN pricing_settings s USING (property_id)
+        WHERE s.min_price IS NOT NULL AND a.new_price < s.min_price)    AS bajo_minimo,
+     (SELECT count(*) FROM osc WHERE cambios >= 3)                      AS oscilantes;
+   ```
+
+   Y las palancas, que se apagan en silencio:
+
+   ```sql
+   SELECT property_id, enabled, apply_enabled, antelacion_k, min_price, max_price,
+          max_change_pct, updated_at
+   FROM pricing_settings ORDER BY property_id;
+   ```
+
+   **Cómo leer cada número (esto es lo que evita las falsas alarmas):**
+
+   | Señal | Umbral | Por qué |
+   |---|---|---|
+   | `rail_baja_roto` | **> 0 = 🔴 Telegram YA** | A la baja el raíl **no tiene ninguna salida legítima**. Es un desplome, y la noche vendida barata no se recupera. Medido sobre 10 días: 0 de ~4.200. |
+   | `bajo_minimo` | **> 0 = 🔴** | El suelo es lo último que se aplica; saltárselo es vender bajo coste. |
+   | `horas_desde_ultima_pasada` | **> 10 = 🔴** | Tres pasadas diarias (08:30/14:30/20:30 UTC): con 10 h ya se saltó una. |
+   | `enabled` / `apply_enabled` en `false` | **🔴** | El motor apagado NO rompe nada visible: crons y latido siguen verdes y los precios se quedan quietos. Solo se ve en la factura. |
+   | `min_price` NULL | **🔴** | Sin suelo no hay nada que impida malvender. |
+   | `antelacion_k` ≠ 0 | **🟠** | Se apagó el 27/08/2026. Reencenderla exige las **tres** condiciones de `docs/POSICION-MERCADO-lejano.md`. |
+   | `rail_alza_sin_justificar` | **> 0 = 🟠** | Ver la trampa de abajo. |
+   | `oscilantes` | **> 0 = 🟠** | Ciclo límite: el motor no converge y cada vuelta publica un precio distinto. |
+   | `noches_ultima_pasada` = 0 | **🟠** | Regla NULL≠0: indistinguible de una pasada abortada. Lee el `detalle` del latido. |
+
+   🚨 **LA TRAMPA DEL RAÍL — no la olvides o abrirás hallazgos falsos a diario.**
+   1. **El ancla NO es `old_price`.** Es `ref24`, el último precio que aplicó el motor **el día
+      anterior** (`lib/sivra/pricing-ancla-rail.ts`), para que tres pasadas no compongan ±20%
+      tres veces. Midiéndolo contra `old_price` salían **112 «fuera de raíl»** el 27/08 que eran
+      redondeos a euro y anclas distintas: cero de ellos era un fallo.
+   2. **Al alza hay DOS vías legítimas de saltarse el raíl**, y las dos son deliberadas:
+      el **salto de evento** (calendario `EVENTS` + tabla `pricing_eventos_auto`) y el **premio
+      de mercado por fecha** (`premioMercadoFecha`, cuando el mercado medido de ese día va
+      ≥1,5× su base). El segundo existe justo para lo contrario de lo que parece: es el hueco
+      por el que **Karol G y la Feria se vendieron BARATAS**. Descontando solo eventos quedaban
+      23 «sospechosas»; descontando también el premio, **4**. La consulta de arriba ya descuenta
+      las dos — si la simplificas, la alarma se vuelve ruido y se acaba ignorando.
+   3. **La asimetría es la señal.** Al alza puede romperse; a la baja **nunca**. Si algún día
+      ves `rail_baja_roto > 0`, no lo razones: avisa.
+
+   Cualquier 🔴 de este bloque → **Telegram inmediato** aunque no haya nada más que reportar,
+   y el detalle al PR del carril 2. Este bloque **no se salta en modo ligero**.
+
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por
    severidad (🔴/🟡/🟢), cada uno con `ruta:línea` + acción, y el checklist de acciones
    manuales de Alberto (Supabase/Vercel) con orden seguro y rollback. El informe va en el

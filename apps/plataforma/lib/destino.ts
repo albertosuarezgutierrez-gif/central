@@ -28,7 +28,7 @@ export const RE_SEGUROS = /\b(GENERALI|ALLIANZ|MAPFRE|CASER|AXA|ZURICH|REALE|MUT
 // Y Elect ..." / "ABONO TOTALENERGIES ELECTRICIDA". Sin estos marcadores, en BBVA caía al cajón
 // 'seguros' por descarte (mal: es suministro del Dúplex, no correduría). "TE ELECTRICIDAD" es lo
 // bastante específico para no chocar con otros conceptos (no basta un "TE" suelto).
-const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SMOOBU|PRICELABS|DYNAPRICE|HOMEEXCHANG|IONOS|IKEA|LEROY|BRICO|FERRETER|D CULTO|DCULTO|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI|TOTALENERGIES|TE ELECTRICIDAD|TOTAL GAS Y ELECT)\b/i
+const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SMOOBU|PRICELABS|DYNAPRICE|HOMEEXCHANG|IKEA|LEROY|BRICO|FERRETER|D CULTO|DCULTO|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI|TOTALENERGIES|TE ELECTRICIDAD|TOTAL GAS Y ELECT)\b/i
 // Gastos propios del Dúplex (en la cuenta BBVA): comunidad, luz, internet, agua, IBI/ayto + reservas + mobiliario.
 // El "Dúplex" (= Duplex Center) es el MISMO piso que Alberto llama "Villasís": Pasaje Villasís 1 /
 // Pasaje Francisco Molina 4 (dos accesos). Tributa en el IRPF personal de Alberto. Ver skill `perfil-fiscal`.
@@ -52,13 +52,34 @@ const RE_LIQUID_SEGUROS = /SALDO AGENTE|REMSALDO|SALDO CUENTA|PAGO SALDO CTA|\bP
 
 const RE_TGSS = /TGSS|TESORERÍA\s+GENERAL|TESORERIA\s+GENERAL|SEGURIDAD\s+SOCIAL|T\.?G\.?S\.?S/i
 
+// Traspaso a la cuenta de VALORES de Alberto en Interactive Brokers (IBKR): el dinero SALE de BBVA
+// pero sigue siendo suyo (cambia de bolsillo, no es gasto ni deducible). BBVA lo rotula con la
+// cuenta de destino IBKR, que es "U" + 7-8 dígitos: "ORDENES PAGO EMITIDAS EN MONEDA LOCAL //
+// TRANSFERENCIA REALIZADA // U9007431 / Alberto Suarez Gutierrez" (PSD2, contraparte "Interactive
+// broker") y, en los extractos Excel viejos, el escueto "U9007431 / alberto suarez gutierrez".
+// RE_TITULAR NO lo caza porque solo mira `contraparte` (que aquí es el broker, no el titular), así
+// que sin esta regla caía al cajón de DESCARTE de BBVA → 'seguros', o sea contado como gasto
+// deducible de la correduría (pasó con el traspaso de 1.000€ del 24/08/2026). Vale en los dos
+// sentidos: una retirada de IBKR a BBVA también es traspaso interno, no un ingreso del negocio.
+const RE_BROKER = /\bINTERACTIVE\s*BROKERS?\b|\bIBKR\b|\bU\d{7,8}\b/i
+
 // Software / infraestructura PROFESIONAL (hosting, IA, cloud, repos) que Alberto paga con la cuenta de
 // la correduría (BBVA): son herramientas de su actividad → gasto deducible del negocio. Se marcan con
 // subcategoría 'informatica' para distinguirlos de las pólizas/comisiones de seguros, y se auto-confirman
 // (no van a «por revisar» cada mes). NARROW a propósito: solo proveedores claramente profesionales; el
 // ocio (Netflix/Spotify/Disney…) NO entra aquí y sigue su camino normal a personal. OJO: NO incluir
 // STRIPE (es cobro de Booking de los pisos, ya en RE_PISOS) ni AMAZON a secas (compras = ocio).
-const RE_SOFTWARE = /\b(VERCEL|ANTHROPIC|OPENAI|OPENROUTER|GITHUB|CLOUDFLARE|SUPABASE|DIGITALOCEAN|NETLIFY|HETZNER|VULTR|LINODE|MONGODB|GOOGLE CLOUD|AMAZON WEB SERVICES|AWS)\b/i
+// FINANCIALDATASETS.AI = la API de fundamentales que alimenta el radar de trading. Decisión de
+// Alberto (27/08/2026): entra aquí como herramienta profesional, igual que Vercel o Anthropic.
+// Sin ella caía al cajón por DESCARTE de BBVA → 'seguros' + revisar cada mes (ver RE_BROKER).
+// IONOS (dominios, DNS, correo, VPS) estaba en RE_PISOS desde el principio: se le supuso un
+// proveedor de los pisos porque ahí vive el dominio housesevillana.es. Es infraestructura de
+// desarrollo como Vercel — sirve además a ialimp (smtp.ionos.es) y a la propia correduría — así que
+// su sitio es este, no RE_PISOS (29/08/2026). OJO: se cobra por PayPal contra la TARJETA de
+// Kutxabank, y RE_SOFTWARE solo aplica en BBVA, así que fuera de BBVA lo que lo lleva a la
+// correduría es la regla aprendida `IONOS → seguros` de banca_destino_reglas (mismo camino que
+// VERCEL, que también se paga desde N26). Si esa regla se borra, los cargos vuelven a 'personal'.
+const RE_SOFTWARE = /\b(VERCEL|IONOS|ANTHROPIC|OPENAI|OPENROUTER|GITHUB|CLOUDFLARE|SUPABASE|DIGITALOCEAN|NETLIFY|HETZNER|VULTR|LINODE|MONGODB|FINANCIALDATASETS|GOOGLE CLOUD|AMAZON WEB SERVICES|AWS)\b/i
 
 // Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
 // confirme (`revisar`). `confirmado` marca una clasificación TAN determinista que no necesita
@@ -87,6 +108,10 @@ export function clasificarDestinoDetalle(
   // propia tarjeta): es un movimiento entre cuenta y tarjeta, NO un gasto real → no duplicar,
   // porque el gasto real ya está en el detalle de la tarjeta.
   if (/TARJ\.?\s*CR[EÉ]?DTO|PAGO RECIBO 466|466203201|PAGO DE TARJETA|LIQUIDACION? (DE )?TARJETA/i.test(txt)) return { destino: 'traspaso_interno', revisar: false }
+
+  // Traspaso a/desde la cuenta de valores de IBKR (ver RE_BROKER): movimiento entre cuentas propias
+  // en cualquier banco y en cualquier sentido. Determinista → auto-confirmado, no va a «por revisar».
+  if (RE_BROKER.test(txt)) return { destino: 'traspaso_interno', revisar: false, confirmado: true }
 
   // Bizum (de Alberto) = SIEMPRE personal, entre o salga y sea cual sea el banco. Sin esto, un Bizum
   // ENVIADO desde BBVA caía a 'seguros' por descarte (los cargos de BBVA que no son del Dúplex). Va
