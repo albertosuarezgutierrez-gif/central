@@ -3604,6 +3604,18 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🔎 (29/08/2026) La guarda de comparables cortaba por abajo y no por arriba (PR #1854)
+
+En el corpus de House había un comp a **19.359,00€/noche (1.613€/plaza)**, medido dos veces: la guarda
+de plausibilidad (17/08) solo tenía SUELO. Añadido `MAX_EUR_PLAZA_COMP = 600`, medido del p99 de €/plaza
+sobre 6.479 comps (193–306): descarta 8 filas (0,12%).
+⚠️ **Efecto real 0,3–1,6%** en el techo del motor (House 1.170→1.166), **no el 18% que dije primero** —
+aquel 18% salía de cortar a 3× la mediana, un experimento distinto. Escrito en el PR para no heredarlo.
+Lo que de verdad valía: la regla vivía **copiada a mano en 13 sitios** → ahora `sqlCompPlausible()` y
+12 llamadas. Guardián `pricing-comps-techo.test.ts` (6 tests) probado en rojo con 3 mutaciones.
+Pendiente: 03/09 12:00 CEST, medición final del serrucho (evento de calendario + rutina 11:30).
+
+
 ## 🤖 (29/08/2026) La IA ya propone en la bandeja — y 3 fallos que destapó revisarla con Alberto (PR pendiente)
 - Alberto: «que la IA proponga». Nuevo `lib/agente-facturas/sugerencia-ia.ts` (PURO) + endpoint
   `POST /api/expenses/pendientes/[id]/sugerir-ia`: la IA ve proveedor, concepto, histórico del
