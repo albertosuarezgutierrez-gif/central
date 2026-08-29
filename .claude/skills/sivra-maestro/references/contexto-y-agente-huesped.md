@@ -207,6 +207,13 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   - **El precio de un extra sale del catálogo `sivra_extras_catalogo`, nunca de la IA.** Guardrail en
     `orquestador.ts` (`importeSospechoso` de `extras.ts`): un borrador con una cifra en euros que no
     esté en el catálogo del piso pasa a `needs_human` y va a Telegram.
+  - **Guardrail del PAGO (29/08/2026, dictado por Alberto — caso Raquel):** coordinar un cobro (cómo
+    pagar, método, datos bancarios) **NUNCA sale solo**, ni con el importe del catálogo ni apoyado en
+    fuente. `hablaDePago()` de `extras.ts` (5 idiomas: pagar/cobrar, Bizum, transferencia, IBAN,
+    efectivo…) se aplica en `orquestador.ts` a la PREGUNTA y al BORRADOR → `needs_human`. El agente
+    llegó a auto-enviar «transferencia bancaria o Bizum. Te envío los datos por mensaje privado» —
+    métodos y promesa inventados (el único cobro real es el enlace de Stripe). El único camino que
+    habla de pago sin Alberto sigue siendo `cobro-auto.ts` (paso 1-bis, corta antes del borrador).
   - **Enlace de pago automático, y ATADO POR CÓDIGO** (`lib/sivra/extras/cobro-auto.ts`, decisión de
     Alberto del 28/08/2026, que a sabiendas rompe la regla vieja). Exige las tres a la vez: fila
     `ofrecido` en `sivra_extras_reserva` —creada SOLO por el botón ✅ de Telegram sobre un borrador

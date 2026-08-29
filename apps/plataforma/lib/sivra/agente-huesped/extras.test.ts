@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { detectarExtra, esAceptacion, importeSospechoso, eurDeCents, mencionaImporte } from './extras.ts'
+import { detectarExtra, esAceptacion, importeSospechoso, eurDeCents, mencionaImporte, hablaDePago } from './extras.ts'
 
 test('detecta la cuna y la trona en los cinco idiomas del agente', () => {
   for (const t of [
@@ -60,6 +60,45 @@ test('el guardrail deja pasar el importe del catálogo y caza cualquier otro', (
 test('un borrador sin importes no es sospechoso — no dar precio no es un fallo', () => {
   assert.equal(importeSospechoso('Claro, te la montamos antes de tu llegada.', [2000]), null)
   assert.equal(importeSospechoso('', [2000]), null)
+})
+
+// El caso Raquel (29/08/2026): el agente auto-envió «el pago lo puedes realizar mediante
+// transferencia bancaria o Bizum. Te envío los datos por mensaje privado» — métodos y promesa
+// inventados. Coordinar un cobro se propone SIEMPRE a Alberto; solo el enlace de Stripe sale solo.
+test('hablaDePago caza la coordinación de un cobro en el borrador y en la pregunta', () => {
+  for (const t of [
+    // El borrador real que motivó el guardrail
+    'El pago de los 20€ por la cuna lo puedes realizar mediante transferencia bancaria o Bizum. Te envío los datos por mensaje privado.',
+    // La pregunta real de la huésped
+    'Si me parece bien. Dime cómo te lo pago y confirmamos. Gracias',
+    'te paso mi número de cuenta',
+    '¿puedo pagar en efectivo al llegar?',
+    'ya te lo pagué ayer',
+    'os cobramos la cuna a la llegada',
+    'can we pay by bank transfer?',
+    'I already paid the deposit',
+    'please send me your bank details',
+    'peut-on payer en espèces ?',
+    'je vous envoie le virement demain',
+    'können wir bar bezahlen?',
+    'ich habe die Überweisung gemacht',
+    'possiamo pagare in contanti?',
+    'ti mando il bonifico',
+  ]) assert.equal(hablaDePago(t), true, t)
+})
+
+test('hablaDePago no salta con las respuestas normales del agente', () => {
+  for (const t of [
+    'La entrada es a partir de las 15:00 y la salida a las 11:00.',
+    'Os recomiendo el Parking José Laguillo, está a 5 minutos andando.',
+    'Podéis quedaros hasta las 12:00 sin coste, y dejar el equipaje dentro hasta esa hora.',
+    'El early check-in es gratis si la noche anterior está libre.',
+    '¡Muchas gracias por vuestra estancia, ha sido un placer!',
+    'La cuna está disponible, ¿la queréis para toda la estancia?',
+    'The crib will be ready on arrival.',
+    'Wir freuen uns auf Ihre Ankunft!', // «zahlen» de verdad sí saltaría; una llegada normal no
+    '', '   ',
+  ]) assert.equal(hablaDePago(t), false, JSON.stringify(t))
 })
 
 // Regla global del CLAUDE.md raíz: el € va DETRÁS, decimales con coma y miles con punto.
