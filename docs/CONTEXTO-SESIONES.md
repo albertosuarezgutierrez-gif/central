@@ -3573,6 +3573,20 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🧾 (29/08/2026) La bandeja de facturas no tenía PANTALLA — 35.938,20€ atascados (PR #1847)
+- Alberto: «¿dónde reviso gastos? ¿la IA no las clasifica con todo el contexto que tiene?». Dos
+  respuestas incómodas: (1) el Telegram enlazaba a `/expenses/pendientes`, que **nunca se construyó**
+  (404), y `/sivra/expenses` las esconde a propósito; (2) **la IA no decide** — solo lee el PDF; quien
+  decide es `evaluar()` (reglas puras) y la regla SOLO nace al confirmar. Círculo cerrado: 19 de 21
+  pendientes con «Proveedor nuevo, sin regla aprendida».
+- Construida la pantalla (`app/(usuario)/expenses/pendientes`) + `GET/PATCH/DELETE /api/expenses/pendientes`
+  + entrada en el sidebar. Confirmar llama a `reforzarRegla` → a la 2ª confirmación se imputa sola.
+- Precarga determinista (`sugerencia-pendiente.ts`, puro): propone piso/categoría desde el histórico
+  del proveedor. **Nunca inventa**: sin base, campo vacío (un desplegable preseleccionado a ojo se
+  confirma sin mirar y la regla que nace hereda el error).
+- Guardián `avisos-enlace.test.ts`: ata enlace del Telegram + página + endpoints + sidebar. Probado en rojo.
+- **Pendiente:** revisar las 32 (35.938,20€). Y queda ofrecida la 2ª fase: que la IA proponga.
+
 ## 🧹 (29/08/2026) La card de gastos de SIVRA contaba la BANDEJA: 3,37 M€ → 13.755,66€ (PR #1844)
 - Salió al comprobar que el backfill de IONOS no duplicaba nada. NO duplicaba: el motor fiscal
   (`getResumenFinanciero`) lee solo `movimientos_bancarios`, así que la renta no se toca.
