@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { accesoLimpieza } from '@/lib/limpieza-acceso'
 import { PROPS_CALENDARIO_IDS } from '@/lib/sivra/constantes'
-import { paxDe } from '@/lib/sivra/limpieza-intranet'
+import { paxDe, mezclarNovedades, type Novedad } from '@/lib/sivra/limpieza-intranet'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     : new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 
   try {
-    const [reservasRaw, limpiezas, tareas] = await Promise.all([
+    const [reservasRaw, limpiezas, tareas, nuevasRaw, canceladasRaw] = await Promise.all([
       prisma.$queryRaw<Array<{
         propertyId: string; checkIn: Date | null; checkOut: Date | null
         adults: number | null; children: number | null
@@ -58,6 +58,33 @@ export async function GET(req: NextRequest) {
         WHERE fecha BETWEEN ${from}::date AND ${to}::date
         ORDER BY fecha ASC, creado_at ASC
       `),
+      // Novedades: reservas que ENTRARON en nuestro sistema en los últimos 14 días («detectada»
+      // = createdAt del sync, no cuándo la hizo el huésped en el portal) con estancia aún por venir.
+      prisma.$queryRaw<Array<{
+        propertyId: string; checkIn: Date | null; checkOut: Date | null
+        adults: number | null; children: number | null; detectada: Date
+      }>>(Prisma.sql`
+        SELECT "propertyId", "checkIn", "checkOut", adults::int, children::int, "createdAt" AS detectada
+        FROM incomes
+        WHERE "propertyId" = ANY(${PROPS_CALENDARIO_IDS}::text[])
+          AND "createdAt" >= now() - interval '14 days'
+          AND "checkOut" >= CURRENT_DATE
+        ORDER BY "createdAt" DESC
+        LIMIT 20
+      `),
+      // Cancelaciones vistas por el sync en los últimos 14 días. check_in/check_out pueden ser NULL
+      // (la fuente no publicó fechas): se muestran igual, sin inventar fechas.
+      prisma.$queryRaw<Array<{
+        property_id: string; check_in: Date | null; check_out: Date | null; detectada: Date
+      }>>(Prisma.sql`
+        SELECT property_id, check_in, check_out, cancelacion_vista_at AS detectada
+        FROM reservas_canceladas
+        WHERE property_id = ANY(${PROPS_CALENDARIO_IDS}::text[])
+          AND cancelacion_vista_at >= now() - interval '14 days'
+          AND (check_out IS NULL OR check_out >= CURRENT_DATE)
+        ORDER BY cancelacion_vista_at DESC
+        LIMIT 20
+      `),
     ])
 
     const iso = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : null)
@@ -86,6 +113,20 @@ export async function GET(req: NextRequest) {
       tareas: tareas.map(t => ({
         id: t.id, fecha: iso(t.fecha)!, propertyId: t.property_id, texto: t.texto, hecha: t.hecha,
       })),
+      novedades: mezclarNovedades(
+        nuevasRaw.map((n): Novedad => ({
+          tipo: 'nueva', propertyId: n.propertyId,
+          checkIn: iso(n.checkIn), checkOut: iso(n.checkOut),
+          pax: paxDe(n.adults, n.children),
+          detectada: new Date(n.detectada).toISOString(),
+        })),
+        canceladasRaw.map((c): Novedad => ({
+          tipo: 'cancelada', propertyId: c.property_id,
+          checkIn: iso(c.check_in), checkOut: iso(c.check_out),
+          pax: null,
+          detectada: new Date(c.detectada).toISOString(),
+        })),
+      ),
     })
   } catch (err) {
     console.error('[limpieza-intranet/datos]', err)
