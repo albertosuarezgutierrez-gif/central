@@ -44,6 +44,10 @@
   día») y zona «🔔 Novedades» (reservas nuevas por `incomes.createdAt` + `reservas_canceladas`, 14 días).
 - v3 (mismo día): la barra azul cubre la reserva ENTERA (media celda entrada → media celda salida;
   cambio de huésped = dos medias barras) y los avisos se limitan a los 6 últimos, siempre visibles.
+- v4 (revisión pre-entrega pedida por Alberto): el 🧽 se deriva de la RESERVA (toda salida = limpieza;
+  antes las salidas a >14d salían sin marcar porque el cron auto-sessions solo crea ficha a 14d), y
+  cron nuevo `updates/sync?days=800&ventana=45` (05:15) — pasada por ventana de LLEGADA que rellena
+  el aforo NULL (8 de 9 reservas del mes lo tenían) y caza cancelaciones a semanas vista.
   Los CAMBIOS de fechas de una reserva existente NO se registran (el sync sobrescribe) — hueco conocido.
 - Fase 2 EJECUTADA (29/08, pedida por Alberto): el login de dueña del tenant Sique Brilla en ialimp
   pasó de Vanessa a Alberto — `empresas` (id 05edacff…): email → el de Alberto, contraseña nueva

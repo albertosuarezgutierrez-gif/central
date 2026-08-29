@@ -26,8 +26,15 @@ export async function GET(req: NextRequest) {
     const u = new URL(req.url)
     const days = Number(u.searchParams.get('days')) || 2
     const maxPages = Number(u.searchParams.get('maxPages')) || 20
-    const arrFrom = u.searchParams.get('from') || undefined
-    const arrTo = u.searchParams.get('to') || undefined
+    // ?ventana=N = ventana de LLEGADA hoy..+N días calculada aquí (los paths del cron-dispatch son
+    // estáticos y no pueden llevar fechas). Con days alto (p.ej. 800) re-sincroniza TODAS las
+    // reservas que llegan en la ventana aunque no se hayan modificado — es lo que va rellenando
+    // adults/children (aforo) de las reservas antiguas y caza cancelaciones a semanas vista.
+    const ventana = Number(u.searchParams.get('ventana')) || 0
+    const hoy = new Date().toISOString().slice(0, 10)
+    const arrFrom = u.searchParams.get('from') || (ventana > 0 ? hoy : undefined)
+    const arrTo = u.searchParams.get('to')
+      || (ventana > 0 ? new Date(Date.now() + ventana * 86400000).toISOString().slice(0, 10) : undefined)
     return NextResponse.json(await runSync(days, maxPages, arrFrom, arrTo))
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })

@@ -68,7 +68,17 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   }
 
   const selDate = useMemo(() => new Date(sel + 'T12:00:00'), [sel])
-  const limpiezasDia = limpiezas.filter(l => l.fecha === sel)
+  // Limpiezas del día = las SALIDAS de reserva (toda salida se limpia) + fichas sueltas del cron
+  // sin reserva casada (p.ej. creadas a mano). La ficha, cuando existe, aporta hora/notas/hecha.
+  const limpiezasDia: Array<{ propertyId: string; limp: Limpieza | null }> = [
+    ...reservas.filter(r => r.checkOut === sel).map(r => ({
+      propertyId: r.propertyId,
+      limp: limpiezas.find(l => l.propertyId === r.propertyId && l.fecha === sel) ?? null,
+    })),
+    ...limpiezas
+      .filter(l => l.fecha === sel && !reservas.some(r => r.propertyId === l.propertyId && r.checkOut === sel))
+      .map(l => ({ propertyId: l.propertyId, limp: l })),
+  ]
   const tareasDia = tareas.filter(t => t.fecha === sel)
 
   function fmtSel() {
@@ -165,24 +175,24 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         <div style={{ padding: '4px 14px 12px' }}>
           <h3 style={tituloBloque}>Limpiezas del día</h3>
           {limpiezasDia.length === 0 && <div style={vacio}>No hay limpiezas este día. 🙌</div>}
-          {limpiezasDia.map(l => {
-            const p = propDe(l.propertyId)
-            const entra = entradaMismoDia(reservas, l.propertyId, l.fecha)
+          {limpiezasDia.map(({ propertyId, limp }, i) => {
+            const p = propDe(propertyId)
+            const entra = entradaMismoDia(reservas, propertyId, sel)
             return (
-              <div key={l.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px', marginBottom: 8 }}>
+              <div key={limp?.id ?? `${propertyId}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px', marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontWeight: 800, fontSize: 15, color: p?.color }}>{p?.label ?? l.propertyId}</span>
-                  {l.hecha && <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>✓ Hecha</span>}
+                  <span style={{ fontWeight: 800, fontSize: 15, color: p?.color }}>{p?.label ?? propertyId}</span>
+                  {limp?.hecha && <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>✓ Hecha</span>}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  <span style={{ ...chip, background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)' }}>Salida {l.salida ?? '11:00'}</span>
+                  <span style={{ ...chip, background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)' }}>Salida {limp?.salida ?? '11:00'}</span>
                   {entra
-                    ? <span style={{ ...chip, background: '#fef3c7', color: '#b45309' }}>⚠️ Entra{entra.pax != null ? `n ${entra.pax}` : ' huésped'} a las {l.entrada ?? '15:00'}</span>
+                    ? <span style={{ ...chip, background: '#fef3c7', color: '#b45309' }}>⚠️ Entra{entra.pax != null ? `n ${entra.pax}` : ' huésped'} a las {limp?.entrada ?? '15:00'}</span>
                     : <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>Sin entrada hoy — con calma</span>}
-                  {l.tipo && l.tipo !== 'estandar' && <span style={chip}>{l.tipo === 'profunda' ? '🫧 Profunda' : '⚠️ Gran suciedad'}</span>}
+                  {limp?.tipo && limp.tipo !== 'estandar' && <span style={chip}>{limp.tipo === 'profunda' ? '🫧 Profunda' : '⚠️ Gran suciedad'}</span>}
                 </div>
-                {l.nota && <div style={nota}>📌 <b>Alberto:</b> {l.nota}</div>}
-                {l.indicaciones && <div style={nota}>📝 {l.indicaciones}</div>}
+                {limp?.nota && <div style={nota}>📌 <b>Alberto:</b> {limp.nota}</div>}
+                {limp?.indicaciones && <div style={nota}>📝 {limp.indicaciones}</div>}
               </div>
             )
           })}
@@ -193,7 +203,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
             if (!entradas.length) return <div style={vacio}>Nadie entra este día{limpiezasDia.length ? ' — las limpiezas van con calma' : ''}.</div>
             return entradas.map((r, i) => {
               const p = propDe(r.propertyId)
-              const limp = limpiezasDia.find(l => l.propertyId === r.propertyId)
+              const limp = limpiezasDia.find(l => l.propertyId === r.propertyId)?.limp
               return (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px', marginBottom: 8, fontSize: 14 }}>
                   <span>🔑</span>
@@ -280,8 +290,11 @@ function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, onSel }: {
         const res = nocheOcupada(reservas, piso.id, k)
         const empieza = res?.checkIn === k
         const saliente = reservas.find(r => r.propertyId === piso.id && r.checkOut === k)
+        // El 🧽 sale de la RESERVA (toda salida = limpieza), no de cleaning_sessions: el cron solo
+        // crea la ficha a 14 días vista y sin esto las salidas lejanas parecían «sin limpieza».
         const limp = limpiezas.find(l => l.propertyId === piso.id && l.fecha === k)
-        const entra = limp ? entradaMismoDia(reservas, piso.id, k) : null
+        const hayLimpieza = Boolean(saliente) || Boolean(limp)
+        const entra = hayLimpieza ? entradaMismoDia(reservas, piso.id, k) : null
         const barra = (estilo: React.CSSProperties, contenido?: React.ReactNode) => (
           <div style={{ position: 'absolute', top: 8, bottom: 8, background: '#3E6AA8', zIndex: 1, ...estilo }}>{contenido}</div>
         )
@@ -302,7 +315,7 @@ function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, onSel }: {
                 </span>
               ) : undefined,
             )}
-            {limp && (
+            {hayLimpieza && (
               <span title="Limpieza" style={{ position: 'absolute', zIndex: 2, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 20, height: 20, borderRadius: '50%', background: entra ? '#d97706' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🧽</span>
             )}
           </div>

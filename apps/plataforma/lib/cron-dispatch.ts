@@ -82,6 +82,11 @@ export const CRON_JOBS: CronJob[] = [
   // scheduler (o del webhook Smoobu) se auto-repare en la siguiente corrida — con el default
   // de 2 días, las reservas modificadas durante el apagón de julio-2026 se habrían perdido.
   { path: '/api/sivra/updates/sync?days=7', schedule: '0 5 * * *' },
+  // Pasada por VENTANA DE LLEGADA (hoy..+45d, sin filtro real de modificación): refresca todas las
+  // reservas próximas aunque lleven meses sin tocarse — rellena el aforo (adults/children) de las
+  // antiguas (29/08/2026: 8 de 9 reservas del mes a NULL, la intranet de limpieza no podía enseñar
+  // nº de huéspedes) y detecta cancelaciones a semanas vista para la sección «Últimos avisos».
+  { path: '/api/sivra/updates/sync?days=800&ventana=45', schedule: '15 5 * * *' },
   // Extras cobrados al huésped: recordatorio a las 24 h y caducidad a 48 h de la entrada. A las
   // 07:00, antes del vigía de latidos de las 07:45, para que su huella del día ya esté escrita.
   { path: '/api/cron/sivra-extras-impago', schedule: '0 7 * * *' },
