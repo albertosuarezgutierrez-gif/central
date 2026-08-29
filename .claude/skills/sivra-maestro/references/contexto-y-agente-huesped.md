@@ -191,7 +191,11 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   poda**, porque reescribir la apertura recoloca el mensaje entero — eso lo hace Alberto.
 - **Idioma:** al huésped se le responde SIEMPRE en su idioma; a Alberto (Telegram) se le traduce al español
   con línea **🔁** (pregunta + borrador). Si Alberto **modifica**, escribe en español y se traduce al idioma
-  del huésped antes de enviar (`mensajes_pendientes_tg.idioma`).
+  del huésped antes de enviar (`mensajes_pendientes_tg.idioma`). **(29/08/2026, pedido por Alberto):** la 🔁
+  del mensaje del huésped se decide por el TEXTO (`necesitaTraduccionPregunta` en `reglas.ts`, no solo por
+  `ctx.lang`, que hereda el idioma de la reserva si el mensaje no da señal), aplica también a la copia
+  informativa de auto-envíos (`avisarAutoEnviado`), y un fallo de traducción con idioma ≠ es se DECLARA
+  («no he podido traducirlo al español») en vez de omitir la línea en silencio.
 - **Idempotencia:** `claveDedup` + `claimMensaje` (atómico) → no reprocesa/duplica entre sondeo y webhook.
 - **🚨 La «graduación por categorías» YA NO EXISTE (verificado en el código el 28/08/2026).** Este
   apartado decía que había una allowlist en `graduacion.ts` y que «quejas/dinero/cambios NUNCA se

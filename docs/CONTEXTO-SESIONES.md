@@ -32,6 +32,15 @@
 
 ---
 
+### 💬 (29/08/2026) Agente huéspedes: la línea 🔁 al español, garantizada en los avisos
+- Alberto, sobre la copia de un auto-envío (Armelle, House Sevillana): quiere leer SIEMPRE en español
+  el mensaje del huésped. El código ya traducía, pero solo si `ctx.lang !== 'es'` y callándose si la IA fallaba.
+- Helpers puros en `reglas.ts` (+6 tests): `necesitaTraduccionPregunta` decide por el TEXTO (un «Très bien 👍»
+  con reserva en español se colaba sin traducir), `traduccionUtil` evita repetir la línea si ya era español,
+  y `lineaTraduccion` DECLARA el fallo («no he podido traducirlo al español») en vez de omitir la 🔁.
+- Cableado en `telegram-msg.ts` (avisarAutoEnviado + proponerPorTelegram + reproponerBorrador, des-duplicando
+  los 3 traductores inline). tsc 0 · suite completa verde. Skill sivra-maestro actualizada.
+
 ### 🧽 (29/08/2026) Intranet de limpieza para VANESA en plataforma + pestaña Tareas
 - PRs #1856 (v1) → #1857 (v2) → #1858 (v3) → #1859 (v4) → #1860 (lavandería), todos mergeados el 29/08.
 - Vanesa (Sique Brilla) NO usa el panel de ialimp → pantalla propia por token: `/invitado/limpieza?token=…`
