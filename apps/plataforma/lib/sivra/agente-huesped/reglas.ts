@@ -71,6 +71,39 @@ export function detectLang(
   return es > en ? 'es' : 'en'
 }
 
+// ——— Línea 🔁 de los avisos de Telegram (lo pidió Alberto, 29/08/2026): el mensaje del huésped
+// tiene que poder leerse SIEMPRE en español en los avisos del agente (auto-envíos y propuestas).
+
+// ¿El texto da señal PROPIA de español? detectLang cae al fallback cuando el mensaje no puntúa
+// en ningún idioma (un emoji, «Très bien», «Tack»), así que aquí el fallback es 'en': solo
+// devuelve true si el español ganó de verdad, no por herencia del idioma de la reserva.
+export function pareceEspanol(txt: string): boolean {
+  return detectLang(txt, 'en') === 'es'
+}
+
+// ¿Hay que pedir traducción del mensaje del huésped? Se decide por el TEXTO, no solo por el
+// idioma de respuesta: `ctx.lang` hereda el idioma de la reserva cuando el mensaje no da señal,
+// y un «Très bien 👍» en una reserva en español se colaría sin traducir.
+export function necesitaTraduccionPregunta(pregunta: string, lang: string): boolean {
+  if (!(pregunta || '').trim()) return false
+  return lang !== 'es' || !pareceEspanol(pregunta)
+}
+
+// Una «traducción» que vuelve igual que el original es que ya estaba en español → sin línea 🔁.
+const normFrase = (s: string) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+export function traduccionUtil(original: string, traduccion: string): string {
+  if (!traduccion || normFrase(traduccion) === normFrase(original)) return ''
+  return traduccion
+}
+
+// La línea 🔁 del aviso. `imprescindible` = el texto está seguro en otro idioma (lang ≠ es):
+// si la traducción falló ahí, el hueco se DECLARA en vez de callarse — un aviso sin la línea se
+// lee como «ya estaba en español», que es afirmar algo que no se ha podido comprobar.
+export function lineaTraduccion(traduccion: string, imprescindible: boolean, esc: (s: string) => string): string {
+  if (traduccion) return `\n<i>🔁 ${esc(traduccion)}</i>`
+  return imprescindible ? '\n<i>🔁 (no he podido traducirlo al español)</i>' : ''
+}
+
 // ¿Es una petición de LATE CHECK-OUT (salir más tarde de la hora oficial)? Distinto de una pregunta
 // meramente informativa ("¿a qué hora es el check-out?"), que NO debe forzar el escalado a Alberto.
 // Dos frentes: (a) palabras clave típicas de "salir/quedarnos más tarde"; (b) comparación explícita de

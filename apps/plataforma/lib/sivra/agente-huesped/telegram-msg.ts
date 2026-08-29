@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import type { Decision } from './decidir'
 import type { Contexto } from './contexto'
+import { necesitaTraduccionPregunta, traduccionUtil, lineaTraduccion } from './reglas'
 
 const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
 
@@ -12,25 +13,30 @@ const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
 async function traducirEs(txt: string): Promise<string> {
   if (!txt) return ''
   try {
-    return (await aiComplete([{ role: 'user', content: txt }], { system: 'Traduce al español de España. Devuelve SOLO la traducción, sin comillas ni explicaciones.', maxTokens: 300 })).trim()
+    return (await aiComplete([{ role: 'user', content: txt }], { system: 'Traduce al español de España. Devuelve SOLO la traducción, sin comillas ni explicaciones. Si el texto ya está en español, devuélvelo tal cual.', maxTokens: 300 })).trim()
   } catch { return '' }
 }
 
 // Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada).
 // Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático.
-// Si el huésped escribe en otro idioma, se traduce pregunta + respuesta al español (línea 🔁).
+// El mensaje del huésped tiene que poder leerse SIEMPRE en español (línea 🔁, lo pidió Alberto
+// 29/08/2026): la traducción se decide por el TEXTO (no solo por ctx.lang, que hereda el idioma
+// de la reserva cuando el mensaje no da señal) y, si el mensaje está seguro en otro idioma y la
+// traducción falla, el hueco se declara en vez de callarse.
 export async function avisarAutoEnviado(ctx: Contexto, pregunta: string, dec: Decision): Promise<void> {
-  let preguntaEs = ''
-  let respuestaEs = ''
-  if (ctx.lang !== 'es') {
-    ;[preguntaEs, respuestaEs] = await Promise.all([traducirEs(pregunta), traducirEs(dec.reply || '')])
-  }
-  const idiomaNota = ctx.lang !== 'es' ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
+  const otroIdioma = ctx.lang !== 'es'
+  const [pregEsRaw, respEsRaw] = await Promise.all([
+    necesitaTraduccionPregunta(pregunta, ctx.lang) ? traducirEs(pregunta) : Promise.resolve(''),
+    otroIdioma ? traducirEs(dec.reply || '') : Promise.resolve(''),
+  ])
+  const preguntaEs = traduccionUtil(pregunta, pregEsRaw)
+  const respuestaEs = traduccionUtil(dec.reply || '', respEsRaw)
+  const idiomaNota = otroIdioma ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
   const cuerpo = `🤖 <b>Respuesta automática</b> · <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})` +
     `\n\n<b>Huésped:</b> ${escapeHtml(pregunta)}` +
-    (preguntaEs ? `\n<i>🔁 ${escapeHtml(preguntaEs)}</i>` : '') +
+    lineaTraduccion(preguntaEs, otroIdioma, escapeHtml) +
     `\n\n<b>Enviado${idiomaNota}:</b>\n${escapeHtml(dec.reply || '')}` +
-    (respuestaEs ? `\n<i>🔁 ${escapeHtml(respuestaEs)}</i>` : '') +
+    lineaTraduccion(respuestaEs, otroIdioma, escapeHtml) +
     `\n\n<i>ℹ️ Solo para tu información — enviado sin tu intervención (categoría «${escapeHtml(dec.categoria)}»).</i>`
   await tgSend(cuerpo).catch(() => {})
 }
@@ -54,28 +60,24 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
 
   // Si el huésped escribe en OTRO idioma, traducir al español TANTO la pregunta COMO el borrador,
   // para que Alberto entienda de un vistazo qué le dicen y qué se le va a responder (lo pidió él).
-  // Al huésped siempre se le responde en SU idioma (el borrador no se cambia).
-  const traducir = async (txt: string) => {
-    try {
-      return (await aiComplete([{ role: 'user', content: txt }], { system: 'Traduce al español de España. Devuelve SOLO la traducción, sin comillas ni explicaciones.', maxTokens: 300 })).trim()
-    } catch { return '' }
-  }
-  let preguntaEs = ''
-  let borradorEs = ''
-  if (ctx.lang !== 'es') {
-    // En paralelo: dos traducciones secuenciales se acercaban al límite de tiempo de la función.
-    ;[preguntaEs, borradorEs] = await Promise.all([
-      pregunta ? traducir(pregunta) : Promise.resolve(''),
-      dec.reply ? traducir(dec.reply) : Promise.resolve(''),
-    ])
-  }
+  // Al huésped siempre se le responde en SU idioma (el borrador no se cambia). La pregunta se
+  // traduce por lo que dice el TEXTO (necesitaTraduccionPregunta de reglas.ts), y un fallo de traducción con el
+  // idioma ≠ es se declara en el aviso en vez de omitir la línea 🔁 en silencio.
+  const otroIdioma = ctx.lang !== 'es'
+  // En paralelo: dos traducciones secuenciales se acercaban al límite de tiempo de la función.
+  const [pregEsRaw, borrEsRaw] = await Promise.all([
+    necesitaTraduccionPregunta(pregunta, ctx.lang) ? traducirEs(pregunta) : Promise.resolve(''),
+    otroIdioma && dec.reply ? traducirEs(dec.reply) : Promise.resolve(''),
+  ])
+  const preguntaEs = traduccionUtil(pregunta, pregEsRaw)
+  const borradorEs = traduccionUtil(dec.reply || '', borrEsRaw)
 
   const noRespuesta = dec.requiere_respuesta === false
-  const idiomaNota = ctx.lang !== 'es' ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
+  const idiomaNota = otroIdioma ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
   const cuerpo = `<b>Huésped:</b> ${escapeHtml(pregunta)}` +
-    (preguntaEs ? `\n<i>🔁 ${escapeHtml(preguntaEs)}</i>` : '') +
+    lineaTraduccion(preguntaEs, otroIdioma, escapeHtml) +
     `\n\n<b>Borrador${idiomaNota}:</b>\n${escapeHtml(dec.reply || '(sin borrador — escribe tú con Modificar)')}` +
-    (borradorEs ? `\n<i>🔁 ${escapeHtml(borradorEs)}</i>` : '') +
+    lineaTraduccion(borradorEs, otroIdioma && !!dec.reply, escapeHtml) +
     (noRespuesta ? `\n\nℹ️ <i>Parece un cierre de conversación — quizá no requiere respuesta.</i>` : '') +
     (dec.motivo ? `\n\n<i>${escapeHtml(dec.motivo)}</i>` : '') +
     // Si escalamos porque la pregunta NO queda cubierta por las fuentes, decirlo con nombre y
@@ -115,14 +117,10 @@ export async function reproponerBorrador(
 ): Promise<void> {
   const idioma = pend.idioma || 'es'
   let borradorEs = opts.borradorEs || ''
-  if (!borradorEs && idioma !== 'es' && borrador) {
-    try {
-      borradorEs = (await aiComplete([{ role: 'user', content: borrador }], { system: 'Traduce al español de España. Devuelve SOLO la traducción, sin comillas ni explicaciones.', maxTokens: 300 })).trim()
-    } catch { borradorEs = '' }
-  }
+  if (!borradorEs && idioma !== 'es' && borrador) borradorEs = await traducirEs(borrador)
   const idiomaNota = idioma !== 'es' ? ` <i>(en ${idioma.toUpperCase()})</i>` : ''
   const cuerpo = `✏️ <b>Borrador revisado${idiomaNota}</b> (reserva ${pend.booking_id}):\n${escapeHtml(borrador || '(vacío)')}` +
-    (borradorEs ? `\n<i>🔁 ${escapeHtml(borradorEs)}</i>` : '') +
+    lineaTraduccion(traduccionUtil(borrador, borradorEs), idioma !== 'es' && !!borrador, escapeHtml) +
     `\n\nRevísalo y dale a ✅ Enviar, o sigue ajustando.`
   const botones: Boton[][] = [
     [{ texto: '✅ Enviar', callback: `hsp_send:${pend.booking_id}` }, { texto: '✏️ Modificar', callback: `hsp_edit:${pend.booking_id}` }],
