@@ -2520,3 +2520,25 @@ una política.** Va con la pregunta del email.
 
 🚨 **Si se usa 1Password para el TOTP, los códigos de recuperación se guardan FUERA de 1Password.** Si
 se pierde el gestor y los códigos están dentro, se pierde el acceso al propio equipo.
+
+---
+
+# ✅ 29/08/2026 — VERIFICACIÓN COMPLETA CONTRA PROVEEDORES (pasada Fable 5)
+
+Revisión de todo el traspaso verificando cada afirmación contra el proveedor real, no contra la
+memoria del documento. Lo que no se pudo verificar queda dicho.
+
+| # | Afirmación | Verificado contra | Resultado |
+|---|---|---|---|
+| 1 | Schema `seguros` vacío | Postgres (`pg_namespace`) | ✅ **0 tablas.** Sigue sin volcar |
+| 2 | `prisma_seguros` inerte | Postgres (`pg_authid`) | ✅ `login` sí, `BYPASSRLS` sí, **sin contraseña** (`prisma_sivra` y `rrhh_app` sí la tienen) |
+| 3 | «Supabase: estoy dentro de la org de Manuel» | MCP `list_organizations` | ⚠️ **El conector solo ve la org propia** (`alberto.suarez…`). El acceso a la org de Manuel es por PANEL, no por este conector → **el dump no se puede lanzar desde una sesión: lo hace un humano** |
+| 4 | Fly pagado y Manuel enterado | Gmail | ✅ **Manuel reenvió él mismo el recibo** (#2580-9127, 6,68 US$, tarjeta …5332) el 28/08 desde `info@manuelsuarez.es`. El pendiente «decírselo» se cierra solo |
+| 5 | Email de Manuel | Gmail | 🆕 **Su email real es `info@manuelsuarez.es`** (firma + móvil +34 658 837 430). `manuelsuarezz@gmail.com` es solo el de facturación de Fly. Para la invitación de Vercel sigue habiendo que preguntarle cuál usa |
+| 6 | Estado del pull de CIMA | Gmail | 🆕 **Reale avisa a diario al Gmail de ALBERTO** (`eiac@reale.es`, «Ficheros Generados dd/mm») cuando publica ficheros EIAC. Es un **monitor gratis del suministro**: si esos correos llegan y `cima_ficheros` no crece, el pull está caído. Candidato a regla del triaje de correo |
+| 7 | PR #1803 | GitHub | ⚠️ Estaba en **conflicto con `main`** (la entrada de memoria del 27/08 se insertó rompiendo la cabecera del archivo — error de esta sesión, ya corregido). **Merge de `main` hecho y empujado**; los 12 checks siguen sin arrancar (limitación conocida del token de App) |
+| 8 | Fly (org, secrets, máquina) | — | ❌ **No verificable desde aquí**: `api.fly.io` bloqueado por la política de red. Sigue pendiente de `fly secrets list` / `fly status` desde el terminal de Alberto |
+| 9 | Miembros del team Vercel | — | ❌ El MCP de Vercel no expone miembros. Verificado el 27/08 vía navegador: solo Alberto, 2FA apagado |
+
+**Correcciones que esta pasada deja hechas:** el borrador de mensaje a Manuel ya no necesita el punto
+«te pagué la factura» (lo sabe); y el destinatario natural de los borradores es `info@manuelsuarez.es`.
