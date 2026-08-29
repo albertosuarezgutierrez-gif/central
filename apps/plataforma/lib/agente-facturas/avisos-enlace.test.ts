@@ -33,3 +33,25 @@ test('la bandeja tiene entrada en el panel, no solo el enlace del Telegram', () 
   const sidebar = readFileSync(new URL('../../app/(usuario)/UserSidebar.tsx', import.meta.url), 'utf8')
   assert.ok(sidebar.includes(RUTA), `UserSidebar.tsx debe tener una entrada a ${RUTA}`)
 })
+
+// 🚨 GUARDIÁN (29/08/2026, segunda tanda). La opción VACÍA del desplegable de piso se llamaba
+// «— correduría / sin piso —», así que una fila sin propuesta —que son casi todas, porque casi
+// todos los proveedores de la bandeja son nuevos— se leía como si el sistema propusiera
+// correduría. Lo cazó Alberto sobre la factura de Booking de 938,25 €, que es de los pisos.
+// El daño no era esa fila: al confirmar nace la REGLA que imputa sola las siguientes.
+// Ni `tsc` ni el build miran lo que dice una etiqueta.
+test('el valor vacío del selector de piso NO se presenta como «correduría»', () => {
+  const cli = readFileSync(new URL('../../app/(usuario)/expenses/pendientes/PendientesClient.tsx', import.meta.url), 'utf8')
+
+  const vacia = cli.match(/<option value=\{SIN_ELEGIR\}>([^<]*)</)
+  assert.ok(vacia, 'la opción vacía debe usar el centinela SIN_ELEGIR')
+  assert.doesNotMatch(vacia[1], /corredur/i, 'el «no lo has decidido» no puede llamarse correduría')
+
+  // Y la correduría tiene que seguir siendo elegible, con valor PROPIO distinto del vacío.
+  assert.match(cli, /<option value=\{CORREDURIA\}>/, 'la correduría necesita su propia opción')
+  assert.match(cli, /const CORREDURIA = '__correduria__'/, 'centinela de correduría')
+  assert.match(cli, /const SIN_ELEGIR = ''/, 'el vacío es «sin elegir»')
+
+  // Confirmar con el piso sin elegir queda bloqueado: elegir es una decisión, no un descuido.
+  assert.match(cli, /disabled=\{ocupado \|\| sinElegir\}/, 'confirmar exige haber elegido negocio')
+})

@@ -1,6 +1,6 @@
 // Procesa UNA factura ya extraída: huella → regla → decisión → dedup → imputa.
 // Compartido por el cron `scan` y el `backfill` (DRY).
-import { fingerprint } from './fingerprint'
+import { fingerprint, huellasDe } from './fingerprint'
 import { evaluar } from './reglas'
 import { conciliar, mapeaPropiedadAlquiler } from './conciliar'
 import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, log, type DatosGasto } from './imputar'
@@ -97,7 +97,17 @@ export async function procesarFactura(
     return { decision: 'duplicado', fingerprint: fp, total, proveedor }
   }
 
-  const regla = await getRegla(fp)
+  // Se busca la regla bajo TODAS las huellas del proveedor (NIF y nombre), no solo bajo la que
+  // esta factura genera: el mismo proveedor está registrado bajo una u otra según si el PDF traía
+  // el NIF. Ver `huellasDe`. Con override (Booking por establecimiento) manda el override.
+  const huellas = ctx.fingerprintOverride
+    ? [ctx.fingerprintOverride]
+    : [...new Set([fp, ...huellasDe({
+        nif_proveedor: nifEmisorFiable ? data.nif_proveedor : null,
+        proveedor,
+        concepto: data.concepto,
+      })])]
+  const regla = await getRegla(huellas)
   const veredicto = evaluar(data, regla)
 
   // Propiedad: regla > mapeo de alquiler por concepto > por defecto del origen

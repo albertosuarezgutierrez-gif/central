@@ -45,6 +45,15 @@
   `pricing_factor_aforo` fijado (verificada la función en caliente tras el cambio).
 - 🟡 vigilar: bloque Luxury jul-ago 2027 sube a tope de raíl persiguiendo el ancla (03/09 lo mide).
 
+### 📅 (29/08/2026) mercado-booking: julio y agosto 2027 ya tienen bucket elegible
+Pasada prioritaria pedida por Alberto (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 280 comps
+reales escritos en 25 ventanas (24 del plan + 1 extra en agosto ronda 3, porque la fecha del
+día 1 era "evento" y no cuenta como fecha normal del bucket). **Objetivo cumplido:** julio-2027
+y agosto-2027 ya tienen ≥10 comparables en 3 fechas distintas por piso — verificado con
+`meses_sin_bucket` del endpoint `/api/sivra/mercado/plan` antes/después. Pendiente: la línea
+"PRIORIDAD TEMPORAL" de este prompt vive en la configuración del disparo programado, fuera del
+repo — Alberto tiene que quitarla él, esta sesión no tiene acceso a esa config.
+
 ### 🔎 (29/08/2026) Auditoría diaria (ligera) — sin hallazgos, radiografía regenerada
 Rango 26→29/08 (50 commits, día muy activo: ancla+serrucho de pricing, apagado de NIM, fix VWCE,
 trading H9-H15, card de gastos de sivra). Heartbeat de 22+12 huellas sin `⛔` nuevos (solo el
@@ -3595,6 +3604,37 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🤖 (29/08/2026) La IA ya propone en la bandeja — y 3 fallos que destapó revisarla con Alberto (PR pendiente)
+- Alberto: «que la IA proponga». Nuevo `lib/agente-facturas/sugerencia-ia.ts` (PURO) + endpoint
+  `POST /api/expenses/pendientes/[id]/sugerir-ia`: la IA ve proveedor, concepto, histórico del
+  proveedor y el cargo bancario que casa. **Valida contra lista blanca**: un piso o categoría
+  inventados se DESCARTAN a null, nunca caen a un default (nacerían como regla). `ilegible`
+  (no se pudo leer) nunca se colapsa con `sin_criterio` (miró y no sabe).
+- 🚨 **Bug propio, cazado por Alberto sobre Booking (938,25€):** la opción VACÍA del desplegable de
+  piso se llamaba «— correduría / sin piso —», así que «no lo has decidido» se leía como propuesta
+  de correduría — y confirmar creaba la regla. Ahora `SIN_ELEGIR` ≠ `CORREDURIA` y confirmar exige
+  elegir. Guardián en `avisos-enlace.test.ts`, probado en rojo.
+- 🚨 **Documentos que NO son gastos:** el «Extracto de Cuenta Mediador» de Allianz (291,73€) y una
+  «Anulación de pólizas» (301,70€) son comisiones que le PAGAN. Confirmarlas metía 593,43€ de
+  ingreso como gasto deducible. Aviso en la ficha vía `no-es-gasto.ts` (puro); la ingesta sigue
+  dándolas de alta — pendiente arreglar el sentido del documento en el agente.
+- Cascada por proveedor (`confirmarProveedor`): «resuelto uno, los demás igual». Explícita, con el
+  número delante — una reparación es de UN piso, no de todos.
+- 🚨 **Y por qué «no aprendía»:** `fingerprint()` usa el NIF SI LO HAY y si no el nombre → la
+  identidad cambia de EJE y el mismo proveedor se parte («Anthropic Ireland» IE4276970QH vs
+  «Anthropic, PBC» sin NIF). Nuevo `huellasDe()`: se busca regla e histórico por AMBAS y
+  `reforzarRegla` escribe las dos. Además `MIN_VISTAS` 2→**1** y banda ±10%→**×5**
+  (`FACTOR_BANDA`), ambas por decisión de Alberto: con la pantalla, cada vista es un clic suyo, y
+  el ±10% dejaba la regla escrita pero inservible para servicios de importe variable.
+- 🚨 **47 filas revisadas SIN huella (13.267,14€)**, entre ellas las 5 de Giraldillo que Alberto ya
+  había aprobado: `confirmarPendiente` solo reforzaba `if (fingerprint)`, así que esas
+  confirmaciones no enseñaron nada. Ahora la calcula al confirmar. ⚠️ El backfill masivo NO se
+  hizo: 28 de las 47 tienen `proveedor='Importado'` (centinela) y normalizarlo habría fusionado
+  TotalEnergies+EMASESA+DIGI+PriceLabs+Petroprix+SiQueBrilla en una huella. `huella-rescate.ts`
+  (puro) saca el proveedor real del concepto y devuelve null cuando no puede. Aplicado solo a
+  Giraldillo (7 filas unidas, «SOCORRO» fusionada) y Si Que Brilla, con sus reglas sembradas.
+- 📉 **`incomes.amount` es DERIVADO**: las 372 reservas de Booking desde 2025 dan comisión implícita
+  19,7154–19,7247% (solo redondeo). No sirve para cuadrar la factura de comisiones de Booking.
 ## Cobro de extras del huésped: EN PRODUCCIÓN, y la prueba real destapó Managed Payments (29/08/2026)
 - Envs de Stripe puestas en Vercel (`plataforma`, solo Production). Webhook 500 → **400 «firma inválida»**
   a las 08:16:48 UTC. Cuenta `acct_1U9QrKKBmOvjQ2ll` con `charges_enabled`/`payouts_enabled` y payout BBVA ****1175.
