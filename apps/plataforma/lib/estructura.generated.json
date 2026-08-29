@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-27T16:19:03Z",
+  "generadoEn": "2026-08-29T08:19:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -544,7 +544,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "usado",
@@ -589,8 +589,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -774,7 +774,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 43
+        "evidencias": 48
       },
       "rrhh": {
         "estado": "usado",
@@ -1970,7 +1970,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 25
       },
       "rrhh": {
         "estado": "no",
@@ -4056,6 +4056,7 @@
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/ses-latido",
+      "/api/cron/sivra-extras-impago",
       "/api/cron/subastas-avisos",
       "/api/cron/subastas-cierre",
       "/api/cron/subastas-enriquecer",
@@ -4065,6 +4066,7 @@
       "/api/cron/trading-backtest",
       "/api/cron/trading-cohetes-rebalanceo",
       "/api/cron/trading-cohetes-track",
+      "/api/cron/trading-h10",
       "/api/cron/trading-premarket",
       "/api/cron/trading-ranking",
       "/api/cron/trading-universo",
@@ -4132,6 +4134,7 @@
       "/api/sivra/expenses/fijos",
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
+      "/api/sivra/extras/webhook",
       "/api/sivra/facturas-control",
       "/api/sivra/facturas-limpieza",
       "/api/sivra/fiscal",
@@ -4626,6 +4629,8 @@
       "secrets_audit",
       "sector_tendencias",
       "ses_establecimientos",
+      "sivra_extras_catalogo",
+      "sivra_extras_reserva",
       "subastas",
       "subastas_consultas",
       "subastas_correo_cursor",
@@ -4880,6 +4885,30 @@
   ],
   "novedades": [
     {
+      "titulo": "📦 Cartera paper ahora en dólares de verdad:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Importa por el pendiente de apagar Chekin:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Su aviso de alcance era falso por defecto:",
+      "fecha": ""
+    },
+    {
+      "titulo": "PR #1826",
+      "fecha": ""
+    },
+    {
+      "titulo": "NULL = «fila anterior a la columna»",
+      "fecha": ""
+    },
+    {
+      "titulo": "Baseline del serrucho, MEDIDA",
+      "fecha": ""
+    },
+    {
       "titulo": "Vía elegida (v5):",
       "fecha": ""
     },
@@ -4913,30 +4942,6 @@
     },
     {
       "titulo": "Backfill disparado en prod",
-      "fecha": ""
-    },
-    {
-      "titulo": "DECISIÓN de Alberto (25/08, chat):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Motor vs PriceLabs:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Salida de Chekin",
-      "fecha": ""
-    },
-    {
-      "titulo": "Booking directo",
-      "fecha": ""
-    },
-    {
-      "titulo": "Cuadro «Motor vs PL» construido (misma sesión):",
-      "fecha": ""
-    },
-    {
-      "titulo": "DECISIÓN de Alberto (mismo día, tras estudio de facturas en Gmail):",
       "fecha": ""
     }
   ],
@@ -5369,7 +5374,7 @@
     "packages": 38,
     "capacidades": 23,
     "skills": 37,
-    "apis": 1183,
+    "apis": 1186,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -32,6 +32,16 @@
 
 ---
 
+### 🔍 (29/08/2026) Auditoría COMPLETA con foco en pricing — motor validado contra producción
+- Informe: `docs/AUDITORIA-2026-08-29-completa.md`. Todo verde: 12 checks CI en local, 11 typechecks,
+  guardián 75/75, QA/lint 0 errores. **Pricing:** propagación al canal verificada al 100% (cierra el
+  fleco del 27/08), `base_fuente`/`ancla_origen` rellenándose en prod (cierra el check-in del 28/08),
+  0 roturas de raíl a la baja desde el 19/08, fórmula validada A MANO (Dúplex 16/09: 162€ calculado
+  vs 166€ vivo, dentro de banda muerta). Serrucho: 1,26 escrituras/noche vs 4,87 del motor viejo.
+- 2 fixes: `core-payments` en transpilePackages de plataforma + generados regenerados. NO se borró
+  nada: 3 packages huérfanos (agenda/encargo/revenue) esperan decisión de Alberto (🟡4 del informe).
+- 🟡 vigilar: bloque Luxury jul-ago 2027 sube a tope de raíl persiguiendo el ancla (03/09 lo mide).
+
 ### ⚡ (28/08/2026) El botón «Actualizar» de /trading no refrescaba el VWCE (el 98,6% de la cuenta)
 - Alberto: «VWCE en mi pantalla ¿cuándo se actualiza?». Diagnóstico: el precio vivo se pedía a Yahoo
   con el **ticker PELADO** (`VWCE`), y un UCITS europeo ahí no existe → **404** (comprobado vía pg_net:
