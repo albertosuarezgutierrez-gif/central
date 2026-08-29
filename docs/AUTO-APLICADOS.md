@@ -13,6 +13,11 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-29** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
+  `docs/mapa-funciones.generated.json` · regenerados (`pnpm run auditar`) · `pnpm auditar:check`
+  detectó la radiografía desfasada tras los ~50 commits del rango 26-29/08 · commit de esta auditoría
+  (pasada ligera, sin más hallazgos: heartbeat y salud del precio limpios)
+
 - **2026-08-26** · `docs/AUDITORIA-2026-08.md`, `docs/CONTEXTO-SESIONES.md`, este archivo ·
   pasada ligera diaria (rango 25/08 03:16 → 26/08 00:06, 62 commits): sin hallazgos de código,
   memoria/skills ya venían auto-documentados por las propias sesiones del rango, backlog de PRs

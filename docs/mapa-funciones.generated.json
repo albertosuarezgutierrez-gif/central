@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-28T09:02:25Z",
-  "sha": "8ae7614b6aabb4cba86bab5ea3644e70a4babacb",
+  "generadoEn": "2026-08-29T08:02:34Z",
+  "sha": "1ec78dc970c78a2babe91dee8548d7bf05ea6c3b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50629,7 +50629,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "pctN",
@@ -50637,7 +50637,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "pct0N",
@@ -50645,7 +50645,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "CurvaForward",
@@ -50653,7 +50653,7 @@
           "exportada": false,
           "params": "{ serie }: { serie: { m: number | null; b: number }[] }",
           "retorno": null,
-          "linea": 38,
+          "linea": 39,
           "resumen": "Mini-curva del forward (SVG puro, sin dependencias): línea de la cesta (MEDIANA) vs el SPY a lo largo de los snapshots persistidos. La mediana es la métrica de decisión (un outlier no la mueve)."
         },
         {
@@ -50662,7 +50662,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 55
+          "linea": 56
         },
         {
           "nombre": "CurvaCarteraReal",
@@ -50670,7 +50670,7 @@
           "exportada": false,
           "params": "{ filas, divisa }: { filas: FilaTrack[]; divisa: string }",
           "retorno": null,
-          "linea": 63,
+          "linea": 64,
           "resumen": "📈 Evolución de la cartera REAL (dinero de Alberto): línea del VALOR de mercado contra la línea discontinua de lo INVERTIDO (coste). El área entre ambas es la ganancia/pérdida no realizada. SVG puro s"
         },
         {
@@ -50679,7 +50679,7 @@
           "exportada": false,
           "params": "n: number, divisa: string",
           "retorno": "string",
-          "linea": 158,
+          "linea": 159,
           "resumen": "Importe en la divisa de la posición, formato español (regla global: nunca estilo dólar)."
         },
         {
@@ -50688,13 +50688,13 @@
           "exportada": true,
           "params": "{ carteraCohetes, carteraReal, trackCartera }: { carteraCohetes: CarteraCohetesData | null; carteraReal?: CarteraRealUI | null | 'error'; trackCartera?: FilaTrack[] | 'error' }",
           "retorno": null,
-          "linea": 167,
+          "linea": 168,
           "resumen": "`carteraReal` solo llega desde la página con SESIÓN (app/(usuario)/trading/page.tsx): es dinero REAL de Alberto y la vista de invitado (/invitado/trading) no debe verlo — ahí queda undefined y la secc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5b407be883e2"
+      "hash": "97602ed31e12"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/UserSidebar.tsx",
@@ -53413,7 +53413,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 140
+          "linea": 143
         }
       ],
       "tablas": [
@@ -53426,7 +53426,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "e565edba8b72"
+      "hash": "a16c3c0bc84c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54088,6 +54088,27 @@
       "hash": "20c772521cd1"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/sivra-extras-impago/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/cron/sivra-extras-impago — extras con enlace enviado que nadie ha pagado. Recordatorio suave a las 24 h; a 48 h de la entrada se caduca y se avisa a Alberto. Sin pago NO se avisa a la limpieza: la cuna no sale del trastero por un enlace abierto.",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/sivra-extras-impago",
+      "hash": "79c1d115698c"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/subastas-avisos/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "Aviso por Telegram de las subastas nuevas que han casado. UN solo mensaje agregado por pasada (patrón de `facturas-conciliar-gmail`), no uno por subasta: el ruido es justo lo que hace que Alberto no lea las 200 alertas del BOE que ya tiene sin abrir.",
@@ -54359,6 +54380,29 @@
       "tablas": [],
       "rutaApi": "/api/cron/trading-cohetes-track",
       "hash": "95f44ed7434b"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/trading-h10/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 26
+        }
+      ],
+      "tablas": [
+        "next",
+        "obs",
+        "trading_backtest",
+        "trading_estrategia_stats"
+      ],
+      "rutaApi": "/api/cron/trading-h10",
+      "hash": "1904c6b4c58a"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-premarket/route.ts",
@@ -56236,6 +56280,27 @@
       "hash": "613540435431"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/extras/webhook/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/sivra/extras/webhook — Stripe avisa de que el huésped ha pagado un extra. Este endpoint es el que convierte «le mandamos un enlace» en «está pagado», y es lo único que autoriza el aviso a la limpieza. Sin él tendríamos que entrar a Stripe a mirar, que es justo la razón por la que se descartó el",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/extras/webhook",
+      "hash": "651caeb4ab02"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/facturas-control/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -57578,7 +57643,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 31
+          "linea": 34
         },
         {
           "nombre": "getPendiente",
@@ -57586,7 +57651,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 58
+          "linea": 61
         },
         {
           "nombre": "POST",
@@ -57594,7 +57659,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 63
+          "linea": 66
         }
       ],
       "tablas": [
@@ -57619,7 +57684,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "fece8a710581"
+      "hash": "83c6f27a5b90"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -58138,7 +58203,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "4583c66d3eee"
+      "hash": "e3fe2e40cc21"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -59230,7 +59295,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 25
+          "linea": 30
         }
       ],
       "tablas": [
@@ -59240,7 +59305,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "fa5b868c8452"
+      "hash": "90cdf240498d"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -59522,15 +59587,16 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 28
+          "linea": 34
         }
       ],
       "tablas": [
         "next",
-        "trading_tesis"
+        "trading_tesis",
+        "trading_tesis_resultado"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "5bbad2c099c3"
+      "hash": "40a1ac9ebd0c"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/radar/route.ts",
@@ -64319,7 +64385,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 125,
+          "linea": 132,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -64328,7 +64394,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 155,
+          "linea": 162,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -64337,7 +64403,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 177
+          "linea": 184
         },
         {
           "nombre": "ventanaMinutos",
@@ -64345,7 +64411,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 185,
+          "linea": 192,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -64354,13 +64420,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 197,
+          "linea": 204,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee16c4d534e6"
+      "hash": "f395f9d2d46c"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -64467,7 +64533,7 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number, titular: 'titular' | 'conyuge' = 'titular',",
           "retorno": "DestinoDetalle",
-          "linea": 83
+          "linea": 90
         },
         {
           "nombre": "clasificarDestino",
@@ -64475,13 +64541,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null, importe: number",
           "retorno": "Destino",
-          "linea": 164,
+          "linea": 171,
           "resumen": "Variante simple (solo el negocio), para los call sites que no necesitan el flag de revisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c8917d46785d"
+      "hash": "108d64678ac3"
     },
     {
       "ruta": "apps/plataforma/lib/devoluciones-sepa.ts",
@@ -66207,7 +66273,7 @@
           "exportada": true,
           "params": "empresaId: string, anio: number",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 17
+          "linea": 19
         },
         {
           "nombre": "getResumenSivra",
@@ -66215,7 +66281,7 @@
           "exportada": true,
           "params": "anio: number, propertyId?: string | null",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 42
+          "linea": 44
         },
         {
           "nombre": "getResumenIaRest",
@@ -66223,7 +66289,7 @@
           "exportada": true,
           "params": "localId: string | null, anio: number",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 112,
+          "linea": 121,
           "resumen": "ia-rest vive en la BD compartida (schema `iarest`) desde el corte de junio 2026, pero el resumen se sigue leyendo por el puerto HTTP de ia-rest (`/api/operador/financiero`, Bearer `OPERADOR_SHARED_SEC"
         },
         {
@@ -66232,7 +66298,7 @@
           "exportada": true,
           "params": "app: string | null, refExt: string | null, anio: number,",
           "retorno": "Promise<ResumenFinanciero>",
-          "linea": 146
+          "linea": 155
         },
         {
           "nombre": "manualFinanciero",
@@ -66240,7 +66306,7 @@
           "exportada": true,
           "params": "ingresos: number | null | undefined, gastos: number | null | undefined,",
           "retorno": "ResumenFinanciero",
-          "linea": 158,
+          "linea": 167,
           "resumen": "Financiero introducido a mano para negocios sin app (columnas negocios.ingresos_manual/gastos_manual). Disponible solo si hay al menos un valor; el resto del dashboard lo trata como cualquier otro res"
         },
         {
@@ -66249,7 +66315,7 @@
           "exportada": true,
           "params": "n: number",
           "retorno": "string",
-          "linea": 168
+          "linea": 177
         }
       ],
       "tablas": [
@@ -66260,7 +66326,7 @@
         "v_contab_pyg"
       ],
       "rutaApi": null,
-      "hash": "c3ffc7372d7a"
+      "hash": "174af8b5c292"
     },
     {
       "ruta": "apps/plataforma/lib/finanzas.ts",
@@ -67432,7 +67498,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7cb7a14a5dc4"
+      "hash": "b02c9eafaae5"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -69160,6 +69226,76 @@
       "hash": "bef162acf752"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/extras.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/extras.ts — detección PURA de extras de pago y del «sí» del huésped. Este módulo no habla con la BD ni con Stripe a propósito: es la parte que decide, y las decisiones sobre dinero tienen que poder testearse sin levantar nada. 🚨 EL IMPORTE NO LO DICE NUNCA LA IA. Hasta el 2",
+      "exporta": [
+        "detectarExtra",
+        "esAceptacion",
+        "eurDeCents",
+        "importeSospechoso",
+        "mencionaImporte"
+      ],
+      "funciones": [
+        {
+          "nombre": "rodear",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "alternativas: string",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "detectarExtra",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "CodigoExtra | null",
+          "linea": 35,
+          "resumen": "¿El huésped está hablando de un extra del catálogo? Devuelve su código o null. Solo mira el texto: quién lo ofrece y a qué precio es cosa del catálogo."
+        },
+        {
+          "nombre": "esAceptacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 58,
+          "resumen": "¿El huésped está aceptando el extra que ya se le ofreció con un precio? Conservador a propósito: ante la duda devuelve `false` y el mensaje acaba en Telegram, que es donde debe acabar cualquier cosa q"
+        },
+        {
+          "nombre": "eurDeCents",
+          "kind": "function",
+          "exportada": true,
+          "params": "cents: number",
+          "retorno": "string",
+          "linea": 67,
+          "resumen": "Importe en euros formateado a la española (2.162,49€). Mismo criterio que `lib/dinero.ts`."
+        },
+        {
+          "nombre": "importeSospechoso",
+          "kind": "function",
+          "exportada": true,
+          "params": "borrador: string, permitidosCents: number[]",
+          "retorno": "number | null",
+          "linea": 81,
+          "resumen": "¿El borrador menciona algún importe que NO esté en el catálogo? Es el guardrail que impide que una cifra inventada por el modelo llegue al huésped. Devuelve el primer importe descuadrado (en céntimos)"
+        },
+        {
+          "nombre": "mencionaImporte",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, cents: number",
+          "retorno": "boolean",
+          "linea": 97,
+          "resumen": "¿El texto menciona EXACTAMENTE este importe? Es lo que distingue «Alberto aprobó un mensaje que cotiza la cuna a 20€» de «Alberto aprobó un mensaje que habla de la cuna». Solo lo primero es una oferta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c805d341d300"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/fases.ts — fase temporal de una reserva (pura y testeable). El DÍA DE LLEGADA es un caso propio y NO \"en-estancia\": el huésped puede no haber entrado aún (llega esa misma tarde), así que las preguntas de entrada anticipada / dónde dejar el equipaje siguen aplicando. Tratar e",
@@ -69654,7 +69790,7 @@
           "exportada": true,
           "params": "bookingId: string, opts: { pregunta?: string; msgId?: string } = {},",
           "retorno": "Promise<",
-          "linea": 19,
+          "linea": 22,
           "resumen": "Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner` y /api/reservations"
         }
       ],
@@ -69663,7 +69799,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "1245d80634fc"
+      "hash": "8c22d2f8a9f7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -70719,6 +70855,288 @@
       "hash": "61e1f1812ee2"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/extras/aviso-limpieza.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/extras/aviso-limpieza.ts — el email a la empresa de limpieza cuando el extra se paga. Destinatario: Sique Brilla (`limpiezascruzz@gmail.com`, confirmado por Alberto el 28/08/2026). Remitente `hola@ialimp.es` por el transporte que plataforma ya tiene montado, con Reply-To a su Gmail para qu",
+      "exporta": [
+        "componerAviso",
+        "avisarLimpieza"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmt",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": "string",
+          "linea": 18,
+          "resumen": "dd/mm/aaaa desde un ISO/date; deja igual lo que no reconozca."
+        },
+        {
+          "nombre": "componerAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAviso",
+          "retorno": "",
+          "linea": 35,
+          "resumen": "Asunto y cuerpo del aviso. Puro y testeable: es lo que lee una persona, no puede salir a medias."
+        },
+        {
+          "nombre": "avisarLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAviso",
+          "retorno": "Promise<",
+          "linea": 57,
+          "resumen": "Manda el aviso. Devuelve el desenlace — nunca lanza, pero tampoco lo esconde."
+        },
+        {
+          "nombre": "avisarFallo",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: DatosAviso, error: string",
+          "retorno": "Promise<void>",
+          "linea": 83,
+          "resumen": "El extra está cobrado y la limpieza NO se ha enterado: eso se dice, no se traga."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3385692d3801"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/extras/catalogo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/extras/catalogo.ts — el catálogo de extras es la ÚNICA fuente del precio. Añadir un extra nuevo es insertar una fila en `sivra_extras_catalogo`, no tocar código: el agente lo detecta por `extras.ts`, el cobro sale del precio de aquí y la limpieza recibe la `instruccion_limpieza` de aquí.",
+      "exporta": [
+        "nombreEnIdioma",
+        "extraDeCatalogo",
+        "preciosVigentes"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreEnIdioma",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: ExtraCatalogo, lang: string",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "Nombre del extra en el idioma del huésped, con caída al español."
+        },
+        {
+          "nombre": "extraDeCatalogo",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string, propertyId: string",
+          "retorno": "Promise<ExtraCatalogo | null>",
+          "linea": 41,
+          "resumen": "Lee un extra ACTIVO del catálogo para un piso concreto. Devuelve null si no existe, está desactivado o no aplica a ese piso. Un null aquí significa «este extra no se puede cobrar», y aguas arriba se t"
+        },
+        {
+          "nombre": "preciosVigentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string",
+          "retorno": "Promise<number[] | null>",
+          "linea": 69,
+          "resumen": "Precios vigentes de un piso, para el guardrail anti-importe-inventado. 🚨 Devuelve **`null` cuando NO se ha podido leer el catálogo** (migración sin aplicar, BD caída), que es distinto de `[]` = «leíd"
+        }
+      ],
+      "tablas": [
+        "sivra_extras_catalogo"
+      ],
+      "rutaApi": null,
+      "hash": "5a6f4a311a32"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/extras/cobro-auto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/extras/cobro-auto.ts — el huésped dice que sí y le llega el enlace de pago. 🚨 ESTO ENVÍA DINERO AL HUÉSPED SIN QUE ALBERTO TOQUE NADA, y contradice la regla escrita de que el dinero nunca se auto-envía. Es decisión suya (28/08/2026), así que va ATADO POR CÓDIGO y no por criterio del model",
+      "exporta": [
+        "intentarCobroAutomatico"
+      ],
+      "funciones": [
+        {
+          "nombre": "intentarCobroAutomatico",
+          "kind": "function",
+          "exportada": true,
+          "params": "ctx: Contexto, pregunta: string",
+          "retorno": "Promise<ResultadoCobro>",
+          "linea": 39,
+          "resumen": "Si procede, manda el enlace de pago y devuelve `enviado:true` — el llamador debe entonces cortar el flujo normal (ya se ha respondido al huésped). Cualquier duda devuelve `enviado:false` con el motivo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bc3a71113ff2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/extras/impago.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/extras/impago.ts — qué hacer con un extra cuyo enlace se mandó y nadie ha pagado. Decisión PURA y testeable. La regla la puso Alberto: un recordatorio suave a las 24 h y, si 48 h antes de la entrada sigue sin pagar, se caduca y se le avisa a él. Sin pago no se monta nada: la cuna no sale d",
+      "exporta": [
+        "decidirImpago",
+        "horasEntre"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirImpago",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { horasDesdeEnlace: number yaRecordado: boolean horasHastaEntrada: number | null }",
+          "retorno": "AccionImpago",
+          "linea": 17,
+          "resumen": "`horasHastaEntrada` a `null` significa «no se sabe cuándo entra» (no se pudo leer la reserva). En ese caso NUNCA se caduca: cancelar un cobro vivo porque no hemos podido mirar la fecha es exactamente "
+        },
+        {
+          "nombre": "horasEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: Date | null | undefined, hasta: Date | null | undefined",
+          "retorno": "number | null",
+          "linea": 28,
+          "resumen": "Horas entre dos instantes; null si alguna fecha no es legible."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "327fc8c15196"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/extras/reserva.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/extras/reserva.ts — estado del extra POR RESERVA (ofrecido → pagado → avisado). 🚨 TRES ESTADOS, NO DOS. `aviso_limpieza_at` a NULL significa «todavía no se ha avisado», jamás «no hacía falta avisar». Por eso `marcarAvisoLimpieza` guarda también el ERROR cuando el email falla: un extra pag",
+      "exporta": [
+        "registrarOferta",
+        "ofertaPendiente",
+        "marcarEnlaceEnviado",
+        "marcarPagado",
+        "marcarAvisoLimpieza",
+        "totalExtrasPagados",
+        "pendientesDeCobro",
+        "marcarRecordatorio",
+        "marcarCaducado"
+      ],
+      "funciones": [
+        {
+          "nombre": "registrarOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { bookingId: string; propertyId: string; codigo: string; precioCents: number }",
+          "retorno": "Promise<void>",
+          "linea": 34,
+          "resumen": "Registra que a esta reserva se le OFRECIÓ el extra a este precio. La llama el botón ✅ de Telegram, y solo él: «lo aprobó Alberto» pasa a ser un hecho de la BD y no una inferencia sobre el hilo. Idempo"
+        },
+        {
+          "nombre": "ofertaPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "bookingId: string",
+          "retorno": "Promise<ExtraReserva | null>",
+          "linea": 45,
+          "resumen": "El extra OFRECIDO y aún sin cobrar de esta reserva, si lo hay."
+        },
+        {
+          "nombre": "marcarEnlaceEnviado",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, paymentLinkId: string",
+          "retorno": "Promise<void>",
+          "linea": 56
+        },
+        {
+          "nombre": "marcarPagado",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { paymentLinkId?: string; bookingId?: string; codigo?: string; paymentIntentId: string }",
+          "retorno": "Promise<ExtraReserva | null>",
+          "linea": 71,
+          "resumen": "Marca el extra como pagado. IDEMPOTENTE por `payment_intent`: Stripe reintenta los webhooks y el mismo cobro no puede disparar dos avisos a la limpieza. Devuelve la fila SOLO si esta llamada fue la qu"
+        },
+        {
+          "nombre": "marcarAvisoLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, r: { ok: boolean; error?: string }",
+          "retorno": "Promise<void>",
+          "linea": 87,
+          "resumen": "Guarda el desenlace del aviso a la limpieza: la hora si salió, el motivo si no."
+        },
+        {
+          "nombre": "totalExtrasPagados",
+          "kind": "function",
+          "exportada": true,
+          "params": "anio: number, propertyId?: string | null",
+          "retorno": "Promise<number>",
+          "linea": 97,
+          "resumen": "Extras pagados de un piso y año — la cifra que «suma en contabilidad»."
+        },
+        {
+          "nombre": "pendientesDeCobro",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ExtraReserva[]>",
+          "linea": 110,
+          "resumen": "Enlaces enviados y sin pagar, para el cron de impago."
+        },
+        {
+          "nombre": "marcarRecordatorio",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<void>",
+          "linea": 119
+        },
+        {
+          "nombre": "marcarCaducado",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<void>",
+          "linea": 125
+        }
+      ],
+      "tablas": [
+        "pagado_at",
+        "sivra_extras_reserva"
+      ],
+      "rutaApi": null,
+      "hash": "21e9872957c4"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/extras/stripe.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/extras/stripe.ts — enlace de pago del extra. Por qué Stripe y no el enlace de Smoobu (decisión de Alberto, 28/08/2026): lo importante no es cobrar —Smoobu cobra igual de bien— sino SABER que ha pagado. Con webhook, «pagado» es un hecho que dispara el aviso a la limpieza solo; sin él sería ",
+      "exporta": [
+        "stripeDisponible",
+        "crearEnlacePago"
+      ],
+      "funciones": [
+        {
+          "nombre": "stripeDisponible",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 10,
+          "resumen": "Sin clave configurada NO se cobra: el flujo cae a la propuesta por Telegram de siempre."
+        },
+        {
+          "nombre": "crearEnlacePago",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { bookingId: string propertyId: string codigo: string precioCents: number nombre: string }",
+          "retorno": "Promise<EnlacePago | null>",
+          "linea": 23,
+          "resumen": "Crea un Payment Link de un solo uso para este extra. La `metadata` es lo que ata el cobro a la reserva: el webhook no adivina nada, lee de aquí. El precio llega en céntimos DESDE EL CATÁLOGO — esta fu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6492378be4a7"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/factura-limpieza-lectura.ts — leer la factura de Sique Brilla y guardarla si cuadra. El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación aritmética → BD. T",
@@ -70964,6 +71382,40 @@
       "hash": "82622cac0dca"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/gasto-de-pisos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Qué filas de `gastos` cuentan como GASTO DE LOS PISOS en el resumen del negocio SIVRA. 🚨 Caso fundacional (29/08/2026). `getResumenSivra(anio)` sumaba, sin propertyId, `SELECT SUM(total) FROM gastos WHERE año = X` — a secas. Dos agujeros en la misma consulta: 1. **No filtraba `revisado`**, así que ",
+      "exporta": [
+        "esGastoDePisos",
+        "sqlGastoDePisos"
+      ],
+      "funciones": [
+        {
+          "nombre": "esGastoDePisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaGasto",
+          "retorno": "boolean",
+          "linea": 45,
+          "resumen": "¿Esta fila cuenta como gasto de los pisos turísticos? Tres estados colapsados a uno a propósito: `revisado = false` («aún no lo he mirado») y `revisado = null` («no consta») valen los dos como NO cont"
+        },
+        {
+          "nombre": "sqlGastoDePisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "alias = ''",
+          "retorno": "string",
+          "linea": 58,
+          "resumen": "La MISMA condición, en SQL, para el `WHERE` de `getResumenSivra`. Se devuelve como texto (no como `Prisma.sql`) para que este módulo siga siendo puro; va a `Prisma.raw`, y puede: no interpola NADA de "
+        }
+      ],
+      "tablas": [
+        "gastos"
+      ],
+      "rutaApi": null,
+      "hash": "d9f260d37488"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/gastos-fijos.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -71045,6 +71497,7 @@
         "parsearParametrosPlan",
         "mesesSinBucket",
         "planDeVentanas",
+        "conReservas",
         "conReservaAltoValor",
         "ventanasQuePedir",
         "detalleIngesta",
@@ -71095,13 +71548,21 @@
           "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
         },
         {
+          "nombre": "conReservas",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedidas: VentanaPedida[], tope: number, reservas: { altoValor?: number; mesCorto?: number } = {},",
+          "retorno": "VentanaPedida[]",
+          "linea": 410,
+          "resumen": "Reparte el tope de la pasada entre la cola de urgencia y DOS reservas de suelo. Las dos existen por el mismo motivo —la cola de urgencia, siendo correcta, deja fuera para siempre a un grupo que import"
+        },
+        {
           "nombre": "conReservaAltoValor",
           "kind": "function",
           "exportada": true,
           "params": "pedidas: VentanaPedida[], tope: number, reserva = RESERVA_ALTO_VALOR,",
           "retorno": "VentanaPedida[]",
-          "linea": 376,
-          "resumen": "Reparte el tope de la pasada entre la cola de urgencia y una RESERVA para lo caro sin medir. 🚨 POR QUÉ (18/08/2026, Navidad de House). La cola ordena por urgencia y, dentro de las vírgenes, por CERCA"
+          "linea": 450
         },
         {
           "nombre": "ventanasQuePedir",
@@ -71109,7 +71570,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {}, bucket?: ContextoBucket,",
           "retorno": "VentanaPedida[]",
-          "linea": 404,
+          "linea": 478,
           "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
@@ -71118,7 +71579,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] /** * Anuncios NUESTROS que el portal devolvió y se descartaron (ver `mercado-propios.ts`). Se * declara aunque sea un descarte correcto: un compar",
           "retorno": "string",
-          "linea": 421,
+          "linea": 495,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -71127,13 +71588,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 454,
+          "linea": 528,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "741eac614ed5"
+      "hash": "03051db0658a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-propios.ts",
@@ -75026,6 +75487,45 @@
       "hash": "c3dadaab98d5"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/alfa.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "cierreEn",
+        "retornoBench"
+      ],
+      "funciones": [
+        {
+          "nombre": "cierreEn",
+          "kind": "function",
+          "exportada": true,
+          "params": "serie: PuntoContraste[], fecha: string",
+          "retorno": "PuntoContraste | null",
+          "linea": 20,
+          "resumen": "Último cierre publicado con fecha <= la pedida, junto CON SU FECHA (las fechas de tesis caen en festivos y fines de semana). Mismo criterio que `precioEn` del retrovisor, para que las dos medidas sean"
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 36
+        },
+        {
+          "nombre": "retornoBench",
+          "kind": "function",
+          "exportada": true,
+          "params": "serie: PuntoContraste[] | undefined, desde: string, hasta: string, toleranciaDias = TOLERANCIA_BENCH_DIAS,",
+          "retorno": "number | null",
+          "linea": 42,
+          "resumen": "`null` si falta cualquiera de los dos extremos, si el precio de partida no es positivo, o si el cierre disponible se aleja más de `TOLERANCIA_BENCH_DIAS` de la fecha pedida. Un alfa que no se ha podid"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9b83545fd1ba"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/analisis-simbolo.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -75155,7 +75655,7 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], hasta: string, periodo: 'sem' | 'mes'",
           "retorno": "number[]",
-          "linea": 98,
+          "linea": 114,
           "resumen": "Remuestrea una serie diaria al cierre de cada PERIODO ('sem' = semana ISO aprox por lunes, 'mes' = mes natural), hasta `hasta` inclusive. El cierre del periodo = último cierre diario en él."
         },
         {
@@ -75164,7 +75664,7 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "number | null",
-          "linea": 117,
+          "linea": 133,
           "resumen": "SMA del ÚLTIMO punto de la serie (media de los n últimos cierres). null si no hay n puntos."
         },
         {
@@ -75173,13 +75673,13 @@
           "exportada": true,
           "params": "cierres: number[], n: number",
           "retorno": "boolean | null",
-          "linea": 125,
+          "linea": 141,
           "resumen": "¿Último cierre por encima de su SMA n en ese marco temporal? null si la serie no da para la media."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55d431aa0165"
+      "hash": "c85453345898"
     },
     {
       "ruta": "apps/plataforma/lib/trading/backtest.ts",
@@ -75196,7 +75696,7 @@
           "exportada": false,
           "params": "ms: number",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "hoyIso",
@@ -75204,7 +75704,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "factoresEnFecha",
@@ -75212,7 +75712,7 @@
           "exportada": true,
           "params": "cf: CompanyFacts | null, puntos: PuntoVol[], fecha: string",
           "retorno": "FactoresFecha",
-          "linea": 21,
+          "linea": 22,
           "resumen": "Factores conocidos EN `fecha` + retornos forward. `cf` ya viene adelgazado a los conceptos usados. (Vive aquí y no en backtest-puro por sus imports locales de runtime; sus piezas sí están testeadas.)"
         },
         {
@@ -75221,7 +75721,7 @@
           "exportada": true,
           "params": "lote = 40, presupuestoMs = PRESUPUESTO_MS",
           "retorno": "Promise<",
-          "linea": 81,
+          "linea": 84,
           "resumen": "Recolecta el siguiente lote: siembra desde trading_universo (+SPY como benchmark) y rellena las filas más rancias. Mismo patrón/ritmo que refrescarLoteUniverso (~4 símbolos/s contra SEC)."
         },
         {
@@ -75230,13 +75730,13 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 143,
+          "linea": 146,
           "resumen": "La LUPA de gurús: convicciones ACTUALES de Dataroma cruzadas con los factores actuales de la caché del radar — la materia prima para responder \"¿por qué se posicionan en esas empresas?\". Se guarda en "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b64d528c0e7a"
+      "hash": "6bb55d0154b3"
     },
     {
       "ruta": "apps/plataforma/lib/trading/buscar-simbolo.ts",
@@ -75763,6 +76263,60 @@
       "hash": "a8750cba0201"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/continuacion.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "medirContinuacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "sumarDias",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "fecha: string, n: number",
+          "retorno": null,
+          "linea": 49,
+          "resumen": "Helpers inlineados a propósito, como en `salidas.ts`: los módulos puros de `lib/trading` no importan valores entre sí (así corren bajo `node --test` sin resolución de módulos). Replican EXACTAMENTE el"
+        },
+        {
+          "nombre": "precioEn",
+          "kind": "function",
+          "exportada": false,
+          "params": "puntos: PuntoPrecio[], fecha: string",
+          "retorno": "number | null",
+          "linea": 52
+        },
+        {
+          "nombre": "retornoForward",
+          "kind": "function",
+          "exportada": false,
+          "params": "puntos: PuntoPrecio[], fecha: string, dias: number",
+          "retorno": "number | null",
+          "linea": 61
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": null,
+          "linea": 71
+        },
+        {
+          "nombre": "medirContinuacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "puntos: PuntoPrecio[], fecha: string, o: { salida?: number; medio?: number; largo?: number } = {},",
+          "retorno": "Continuacion",
+          "linea": 77,
+          "resumen": "`salida` es el horizonte de la salida por TIEMPO (el mismo 91 que usan ret91 y simularSalidas), no un parámetro suelto: si se cambia allí, hay que cambiarlo aquí o `tendenciaVivaAlSalir` dejaría de de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ae1406872ba2"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/dataroma.ts",
       "ambito": "apps/plataforma",
       "resumen": "Ingesta de movimientos de grandes inversores desde Dataroma (agrega los 13F de gestores value). Dataroma ya trae en cada página de holdings una columna \"Recent activity\" (Buy/Add/Reduce/Sell) y resuelve el TICKER — nos ahorra diffear trimestres y el mapeo CUSIP→ticker de EDGAR. El parseo es PURO y t",
@@ -76279,6 +76833,125 @@
       "hash": "1810b43cbe6f"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/h10.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Evaluador de las reglas de SALIDA contra el criterio FIRMADO en el pre-registro (H9 · H10). Módulo PURO y testeado — sin `@/`, sin Prisma, sin red. La política vive aquí, en un solo sitio, para que el cron no pueda \"mover la portería\" por su cuenta al leer los resultados. Por qué existe: H9 se resol",
+      "exporta": [
+        "mediana",
+        "decidir",
+        "evaluarVariante",
+        "parteH10"
+      ],
+      "funciones": [
+        {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": true,
+          "params": "xs: number[]",
+          "retorno": "number",
+          "linea": 34
+        },
+        {
+          "nombre": "tasaBatacazos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": null,
+          "linea": 41
+        },
+        {
+          "nombre": "decidir",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AgregadoSalida",
+          "retorno": "VeredictoVariante",
+          "linea": 55,
+          "resumen": "El CRITERIO vive aquí y solo aquí. `evaluarVariante` (desde observaciones sueltas) y el cron (desde agregados de SQL) entran los dos por esta puerta, así que no puede haber dos umbrales."
+        },
+        {
+          "nombre": "evaluarVariante",
+          "kind": "function",
+          "exportada": true,
+          "params": "variante: string, obs: ObsSalida[]",
+          "retorno": "VeredictoVariante",
+          "linea": 98,
+          "resumen": "Desde observaciones sueltas: calcula los estadísticos y aplica EL MISMO criterio."
+        },
+        {
+          "nombre": "parteH10",
+          "kind": "function",
+          "exportada": true,
+          "params": "vs: VeredictoVariante[]",
+          "retorno": "string | null",
+          "linea": 111,
+          "resumen": "Parte para Telegram. `null` = nada que contar todavía (ninguna variante llegó a muestra)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c0592ed6bc14"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/hipotesis.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Vigía de las hipótesis ABIERTAS del pre-registro de trading. Módulo PURO y testeado. Por qué existe: firmar una hipótesis es barato y recolectar también; lo que cuesta disciplina es RESOLVERLAS. A 28/08/2026 hay seis abiertas (H10…H15) y cada una dice «se evalúa cuando la tabla llegue a X», pero ese",
+      "exporta": [
+        "evaluar",
+        "evaluarTodas",
+        "parteHipotesis",
+        "detalleHipotesis"
+      ],
+      "funciones": [
+        {
+          "nombre": "evaluar",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Hipotesis",
+          "retorno": "Veredicto",
+          "linea": 29
+        },
+        {
+          "nombre": "evaluarTodas",
+          "kind": "function",
+          "exportada": true,
+          "params": "hs: Hipotesis[]",
+          "retorno": "Veredicto[]",
+          "linea": 38,
+          "resumen": "Las que dependen de otra solo están listas si la otra lo está: se resuelven en la misma sesión."
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: Veredicto",
+          "retorno": null,
+          "linea": 54,
+          "resumen": "El objetivo se enseña SIEMPRE, también cuando no se pudo leer la muestra: «?/5000» dice a la vez que no se sabe y cuánto haría falta; un «?» a secas escondería lo segundo."
+        },
+        {
+          "nombre": "parteHipotesis",
+          "kind": "function",
+          "exportada": true,
+          "params": "vs: Veredicto[]",
+          "retorno": "string | null",
+          "linea": 61,
+          "resumen": "Parte para Telegram. Devuelve `null` cuando NO hay nada que hacer —ninguna lista y ninguna sin dato—, porque un aviso semanal que solo dice «sigo esperando» entrena a ignorar el mensaje entero (la lec"
+        },
+        {
+          "nombre": "detalleHipotesis",
+          "kind": "function",
+          "exportada": true,
+          "params": "vs: Veredicto[]",
+          "retorno": "string",
+          "linea": 79,
+          "resumen": "Línea del latido: el estado COMPLETO, incluidas las que siguen recolectando."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5c9a072feeb7"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/operaciones-io.ts",
       "ambito": "apps/plataforma",
       "resumen": "📒 Libro de operaciones del bróker — IO (Prisma). Lo escribe POST /api/trading/operaciones (pasada diaria del agente trading-analista, que es quien lee IBKR). La parte pura vive en operaciones.ts. El libro es INMUTABLE: una ejecución ya registrada no se actualiza nunca, porque el hecho no cambia. Po",
@@ -76469,10 +77142,65 @@
       "hash": "eb977da532da"
     },
     {
+      "ruta": "apps/plataforma/lib/trading/piscinas.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "enPiscina"
+      ],
+      "funciones": [
+        {
+          "nombre": "enPiscina",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion: Tesis['direccion'], piscina: Piscina",
+          "retorno": "boolean",
+          "linea": 23,
+          "resumen": "¿Entra esta dirección en la piscina? Las bajistas suman en `direccional` porque su retorno ya viene con el signo invertido de `puntuarTesis` (acertar una caída del 5% anota +5%)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ca0c489b8a6b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/trading/posiciones-paper.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "📦 CARTERA PAPER del agente — parte PURA (sin BD ni React): totales en DÓLARES de las posiciones simuladas abiertas. Petición de Alberto (28/08/2026): «quiero ver la cartera paper en dólares, cantidad invertida y dinero que vaya ganando o perdiendo» — hasta hoy la tabla solo daba el % por posición y",
+      "exporta": [
+        "resultadoPosicion",
+        "resumenPaper"
+      ],
+      "funciones": [
+        {
+          "nombre": "resultadoPosicion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PosicionPaper, precio: number | null | undefined,",
+          "retorno": "",
+          "linea": 22,
+          "resumen": "Resultado de UNA posición: valor de mercado y P&L no realizado en USD. `null` en las patas que dependen de un precio que no se conoce ahora mismo (nunca 0)."
+        },
+        {
+          "nombre": "resumenPaper",
+          "kind": "function",
+          "exportada": true,
+          "params": "posiciones: PosicionPaper[], precioDe: (simbolo: string) => number | null | undefined,",
+          "retorno": "ResumenPaper",
+          "linea": 54,
+          "resumen": "Totales de la cartera paper en USD. `precioDe` devuelve el precio de hoy de un símbolo, o null cuando no se ha podido leer (que es distinto de que valga 0)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "46b3fdfc803d"
+    },
+    {
       "ruta": "apps/plataforma/lib/trading/precio-vivo.ts",
       "ambito": "apps/plataforma",
       "resumen": "⚡ Precio EN VIVO (intradía, público) — para el botón «Actualizar» de /trading (23/08/2026). La pasada del agente es DIARIA, así que a mitad de sesión el panel enseñaba la película de ayer; este módulo lee el último precio negociado de la meta del chart de Yahoo (la misma fuente de respaldo que ya si",
       "exporta": [
+        "mercadoIbkr",
+        "simboloYahoo",
         "urlYahooVivo",
         "parseYahooVivo",
         "precioVivoFiable",
@@ -76482,12 +77210,39 @@
       ],
       "funciones": [
         {
+          "nombre": "sufijoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "simbolo: string",
+          "retorno": "string",
+          "linea": 50,
+          "resumen": "Sufijo de mercado que ya trae un símbolo (`VWCE.DE` → `.DE`), o `''` si no trae ninguno de los conocidos — un `.B` de clase (BRK.B) NO es un sufijo de mercado."
+        },
+        {
+          "nombre": "mercadoIbkr",
+          "kind": "function",
+          "exportada": true,
+          "params": "descripcion: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 56,
+          "resumen": "Mercado que IBKR incrusta en la descripción de la posición (`VWCE @IBIS2`). null = no lo dice (las acciones USA llegan con la descripción a secas, p. ej. `CVX`)."
+        },
+        {
+          "nombre": "simboloYahoo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { simbolo: string; descripcion?: string | null; divisa?: string | null }",
+          "retorno": "string",
+          "linea": 64,
+          "resumen": "Símbolo con el que preguntar a Yahoo por una posición real de IBKR. Solo añade sufijo cuando el mercado está en la tabla verificada Y la divisa de la posición coincide con la que cotiza ese mercado; a"
+        },
+        {
           "nombre": "urlYahooVivo",
           "kind": "function",
           "exportada": true,
           "params": "simbolo: string",
           "retorno": "string",
-          "linea": 26
+          "linea": 74
         },
         {
           "nombre": "parseYahooVivo",
@@ -76495,7 +77250,7 @@
           "exportada": true,
           "params": "json: unknown",
           "retorno": "PrecioVivo | null",
-          "linea": 33,
+          "linea": 85,
           "resumen": "Meta del chart de Yahoo → precio vivo. Defensivo: sin regularMarketPrice finito>0 o sin currency legible → null (nunca un 0 ni un precio de otra cosa)."
         },
         {
@@ -76504,7 +77259,7 @@
           "exportada": true,
           "params": "vivo: number, referencia: number | null | undefined",
           "retorno": "boolean",
-          "linea": 48,
+          "linea": 100,
           "resumen": "Banda ×2 contra una referencia conocida (misma guarda que precios-guardia, PR #1315): sin referencia NO se juzga — y por tanto no se usa el vivo, que es el estado conservador."
         },
         {
@@ -76513,7 +77268,7 @@
           "exportada": true,
           "params": "p: T, vivo: PrecioVivo | null | undefined",
           "retorno": "",
-          "linea": 58,
+          "linea": 110,
           "resumen": "Posición de la cartera real re-valorada con el precio vivo — SOLO si la divisa coincide y el precio pasa la banda ×2 contra el último precio que dio IBKR (sin referencia de IBKR no se toca nada: mejor"
         },
         {
@@ -76522,7 +77277,7 @@
           "exportada": true,
           "params": "simbolo: string, timeoutMs = 3000",
           "retorno": "Promise<PrecioVivo | null>",
-          "linea": 78,
+          "linea": 130,
           "resumen": "Último precio negociado de UN símbolo. Best-effort: cualquier fallo → null (el caller pinta el cierre/última lectura que ya tenía, nunca un hueco disfrazado de 0)."
         },
         {
@@ -76531,13 +77286,13 @@
           "exportada": true,
           "params": "simbolos: string[], timeoutMs = 3000",
           "retorno": "Promise<Map<string, PrecioVivo | null>>",
-          "linea": 93,
+          "linea": 145,
           "resumen": "Precios vivos de un lote de símbolos (dedupe interno). Un símbolo sin precio queda en el mapa con null — «no lo sé ahora mismo», que el caller debe declarar, no colapsar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ebf829d1368c"
+      "hash": "2fad37b526b4"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-contraste.ts",
@@ -77112,7 +77867,7 @@
           "exportada": false,
           "params": "fecha: string, n: number",
           "retorno": null,
-          "linea": 30
+          "linea": 39
         },
         {
           "nombre": "simularSalidas",
@@ -77120,13 +77875,13 @@
           "exportada": true,
           "params": "puntos: PuntoPrecio[], fecha: string, dias = 91",
           "retorno": "SalidasSimuladas",
-          "linea": 38,
+          "linea": 47,
           "resumen": "Simula las tres salidas para una entrada en `fecha` con horizonte de `dias`. La entrada es el último cierre ≤ fecha y el cierre del horizonte es el PRIMER cierre ≥ fecha+dias — los mismos criterios ex"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f929af40f4a"
+      "hash": "51d3c723da91"
     },
     {
       "ruta": "apps/plataforma/lib/trading/universo.ts",
@@ -77514,12 +78269,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 47
+          "linea": 55
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "570067d16579"
+      "hash": "768687136631"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -97624,7 +98379,7 @@
       "exporta": [
         "dimensionar",
         "abrir",
-        "aplicarStop",
+        "venceVentana",
         "cerrar",
         "pnlPosicion"
       ],
@@ -97635,25 +98390,26 @@
           "exportada": true,
           "params": "nav: number, entrada: number, stop: number, riesgoPct = 0.01",
           "retorno": "number",
-          "linea": 4,
-          "resumen": "Nº de acciones para arriesgar `riesgoPct` del NAV si salta el stop."
+          "linea": 6,
+          "resumen": "Nº de acciones para que una caída hasta `stop` cueste `riesgoPct` del NAV. Es lo ÚNICO para lo que se usa esa distancia: desde H9 el paper no vende por stop (ver `venceVentana` más abajo), pero sigue "
         },
         {
           "nombre": "abrir",
           "kind": "function",
           "exportada": true,
-          "params": "simbolo: string, cantidad: number, entrada: number, atr: number, fecha: string",
+          "params": "simbolo: string, cantidad: number, entrada: number, atr: number, fecha: string, horizonteDias?: number | null",
           "retorno": "PaperPosicion",
-          "linea": 11,
-          "resumen": "Abre una posición larga con stop a 2*ATR bajo la entrada."
+          "linea": 14,
+          "resumen": "Abre una posición larga. La distancia de 2·ATR se calcula y se guarda, pero NO es una orden de venta: es el ancla con la que `dimensionar` decide cuántas acciones caben (ver la nota en `PaperPosicion`"
         },
         {
-          "nombre": "aplicarStop",
+          "nombre": "venceVentana",
           "kind": "function",
           "exportada": true,
-          "params": "pos: PaperPosicion, precio: number",
+          "params": "pos: PaperPosicion, hoy: string",
           "retorno": "boolean",
-          "linea": 15
+          "linea": 28,
+          "resumen": "ÚNICA salida del paper: por TIEMPO, al vencer la ventana declarada de la tesis que abrió la posición. Es lo que H9 dejó firmado —«No se ponen stops»— y lo que el panel /trading lleva prometiendo desde"
         },
         {
           "nombre": "cerrar",
@@ -97661,7 +98417,7 @@
           "exportada": true,
           "params": "pos: PaperPosicion, precio: number, fecha: string, motivo: string",
           "retorno": "PaperOrden",
-          "linea": 19
+          "linea": 34
         },
         {
           "nombre": "pnlPosicion",
@@ -97669,12 +98425,12 @@
           "exportada": true,
           "params": "pos: PaperPosicion, precio: number",
           "retorno": "number",
-          "linea": 23
+          "linea": 38
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4d16fc37b54f"
+      "hash": "122ab403c66f"
     },
     {
       "ruta": "packages/module-trading/src/piotroski.ts",
@@ -97936,6 +98692,7 @@
       "ambito": "packages/module-trading",
       "exporta": [
         "puntuarTesis",
+        "resultadoDeFila",
         "ajustesDeStats",
         "agregarStats"
       ],
@@ -97944,19 +98701,26 @@
           "nombre": "puntuarTesis",
           "kind": "function",
           "exportada": true,
-          "params": "t: Tesis, precioDespues: number",
+          "params": "t: Tesis, precioDespues: number, retornoBench?: number | null",
           "retorno": "Resultado",
-          "linea": 12,
+          "linea": 28,
           "resumen": "Puntúa una tesis contra un precio POSTERIOR (walk-forward: precioDespues es de después de precioRef). `retorno` es el retorno de SEGUIR la tesis, no el movimiento bruto del precio: una bajista que aci"
+        },
+        {
+          "nombre": "resultadoDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaResultado",
+          "retorno": "Resultado",
+          "linea": 49
         },
         {
           "nombre": "ajustesDeStats",
           "kind": "function",
           "exportada": true,
-          "params": "stats: Record<string, StatsEstrategia>, minN = 20",
+          "params": "stats: Record<string, StatsDecision>, minN = 20",
           "retorno": "Record<string, number>",
-          "linea": 29,
-          "resumen": "Traduce el rendimiento histórico por estrategia en un DELTA de confianza (el bucle de aprendizaje). Guarda de muestra: por debajo de `minN` resultados NO ajusta (no aprender de ruido, como el Director"
+          "linea": 82
         },
         {
           "nombre": "agregarStats",
@@ -97964,12 +98728,12 @@
           "exportada": true,
           "params": "resultados: Resultado[]",
           "retorno": "Record<string, StatsEstrategia>",
-          "linea": 41
+          "linea": 94
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a409d59e57dd"
+      "hash": "8abfc11b3902"
     },
     {
       "ruta": "packages/module-trading/src/screener.ts",
@@ -98649,7 +99413,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2602,
-    "funciones": 7177
+    "archivos": 2619,
+    "funciones": 7235
   }
 }
