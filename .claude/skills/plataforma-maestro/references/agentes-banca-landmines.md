@@ -264,5 +264,28 @@ encaja en «una huella, un importe». La regla se sembró a mano con banda **1�
 `reforzarRegla` solo ENSANCHA (LEAST/GREATEST), nunca estrecha. Al dar de alta un proveedor así,
 la banda es parte del alta.
 
+## 🚨 Un agregado que no filtra `revisado` convierte la BANDEJA en contabilidad (29/08/2026)
+`getResumenSivra(anio)` sumaba `SELECT SUM(total) FROM gastos WHERE año = X`, a secas. La bandeja
+existe para NO afirmar lo que aún no se ha revisado, y ese `SUM` lo afirmaba igual: en 2026 daba
+**3.372.460,28 €** de gasto de los pisos contra **13.755,66 €** reales. Dentro había 3.300.000 € +
+33.000 € de la reserva del edificio de C/ San Luis 9 (dos documentos del MISMO contrato leídos como
+dos facturas) y el Modelo 200 de 2025 TRIPLICADO — las tres sin revisar, dos de ellas sin proveedor
+ni concepto, que es justo por lo que `existeDuplicado` no las cazó: deduplica por nº de factura o
+por huella+importe, y no tenían ninguna de las dos.
+
+- **Segundo agujero en la misma consulta:** sin `propertyId` tampoco filtraba la propiedad, así que
+  metía la correduría (`propiedad` NULL: IONOS, Vercel, Anthropic…) y lo personal en un total cuyo
+  INGRESO sale de `incomes`, que es solo pisos. Numerador y denominador de universos distintos.
+- **Regla:** al sumar una tabla que tiene cola de revisión, el filtro de estado va en la consulta,
+  no en la cabeza de quien la lee. Y comprueba que numerador y denominador hablan del mismo negocio.
+- Filtro único en **`lib/sivra/gasto-de-pisos.ts`** (`esGastoDePisos`/`sqlGastoDePisos`, puro) con
+  **guardián que lee el FUENTE** de `financiero.ts` y exige el filtro en las DOS ramas — ni `tsc`
+  ni el build miran dentro de un `Prisma.sql`. `prop_multi_apartamentos` SÍ cuenta aquí (es gasto
+  compartido de los pisos); solo el P&L POR piso lo excluye, porque ahí hace falta saber de cuál es.
+- **Y el hermano documental:** la factura de Ariste venía a nombre de «SAN LUIS 9 CB»
+  (E26584144), que no es ninguno de los titulares. Hoy `procesar.ts` la marcaría `ajena` por
+  `evaluaReceptor` — la fila es residuo anterior al estreno de `receptor.ts` (31/07/2026), no un
+  fallo vivo. Antes de dar por rota una guarda, mira la fecha de la fila contra la del módulo.
+
 ## Frontera multi-tenant
 Scope `cuenta_id` siempre. BD compartida con sivra/ialimp: cambios transversales de BD → `auditoria-central`.
