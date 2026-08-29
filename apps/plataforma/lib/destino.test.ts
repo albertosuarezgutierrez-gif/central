@@ -246,3 +246,18 @@ test('FINANCIALDATASETS.AI en BBVA → seguros/informatica auto-confirmado (herr
   // Fuera de BBVA sigue su camino normal: RE_SOFTWARE solo aplica en la cuenta de la correduría.
   assert.equal(clasificarDestino('Kutxabank', 'COMPRA EN FINANCIALDATASETS.AI', '', -17.78), 'personal')
 })
+
+test('IONOS = infraestructura profesional, no proveedor de los pisos (29/08/2026)', () => {
+  // Estaba en RE_PISOS porque ahí vive el dominio housesevillana.es, así que TODOS los cargos de
+  // IONOS se contaban como gasto de los pisos turísticos. Es infra de desarrollo como Vercel
+  // (sirve también a ialimp y a la correduría) → RE_SOFTWARE.
+  assert.deepEqual(
+    clasificarDestinoDetalle('BBVA', 'COMPRA EN PAYPAL *IONOS CLOUD', 'IONOS Cloud S.L.U.', -24.19),
+    { destino: 'seguros', revisar: false, confirmado: true, subcategoria: 'informatica' },
+  )
+  // Fuera de BBVA RE_SOFTWARE no aplica (invariante vigente): en la tarjeta de Kutxabank —que es por
+  // donde PayPal cobra IONOS— lo que lo lleva a la correduría es la regla aprendida
+  // `IONOS → seguros` de banca_destino_reglas, no esta función. Lo que sí queda fijado aquí es que
+  // YA NO cae en los pisos por casar RE_PISOS.
+  assert.notEqual(clasificarDestino('Kutxabank', 'COMPRA EN PAYPAL *IONOS CLOUD', '', -24.19), 'turistico_pisos')
+})

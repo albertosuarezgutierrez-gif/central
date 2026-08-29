@@ -28,7 +28,7 @@ export const RE_SEGUROS = /\b(GENERALI|ALLIANZ|MAPFRE|CASER|AXA|ZURICH|REALE|MUT
 // Y Elect ..." / "ABONO TOTALENERGIES ELECTRICIDA". Sin estos marcadores, en BBVA caía al cajón
 // 'seguros' por descarte (mal: es suministro del Dúplex, no correduría). "TE ELECTRICIDAD" es lo
 // bastante específico para no chocar con otros conceptos (no basta un "TE" suelto).
-const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SMOOBU|PRICELABS|DYNAPRICE|HOMEEXCHANG|IONOS|IKEA|LEROY|BRICO|FERRETER|D CULTO|DCULTO|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI|TOTALENERGIES|TE ELECTRICIDAD|TOTAL GAS Y ELECT)\b/i
+const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SMOOBU|PRICELABS|DYNAPRICE|HOMEEXCHANG|IKEA|LEROY|BRICO|FERRETER|D CULTO|DCULTO|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI|TOTALENERGIES|TE ELECTRICIDAD|TOTAL GAS Y ELECT)\b/i
 // Gastos propios del Dúplex (en la cuenta BBVA): comunidad, luz, internet, agua, IBI/ayto + reservas + mobiliario.
 // El "Dúplex" (= Duplex Center) es el MISMO piso que Alberto llama "Villasís": Pasaje Villasís 1 /
 // Pasaje Francisco Molina 4 (dos accesos). Tributa en el IRPF personal de Alberto. Ver skill `perfil-fiscal`.
@@ -72,7 +72,14 @@ const RE_BROKER = /\bINTERACTIVE\s*BROKERS?\b|\bIBKR\b|\bU\d{7,8}\b/i
 // FINANCIALDATASETS.AI = la API de fundamentales que alimenta el radar de trading. Decisión de
 // Alberto (27/08/2026): entra aquí como herramienta profesional, igual que Vercel o Anthropic.
 // Sin ella caía al cajón por DESCARTE de BBVA → 'seguros' + revisar cada mes (ver RE_BROKER).
-const RE_SOFTWARE = /\b(VERCEL|ANTHROPIC|OPENAI|OPENROUTER|GITHUB|CLOUDFLARE|SUPABASE|DIGITALOCEAN|NETLIFY|HETZNER|VULTR|LINODE|MONGODB|FINANCIALDATASETS|GOOGLE CLOUD|AMAZON WEB SERVICES|AWS)\b/i
+// IONOS (dominios, DNS, correo, VPS) estaba en RE_PISOS desde el principio: se le supuso un
+// proveedor de los pisos porque ahí vive el dominio housesevillana.es. Es infraestructura de
+// desarrollo como Vercel — sirve además a ialimp (smtp.ionos.es) y a la propia correduría — así que
+// su sitio es este, no RE_PISOS (29/08/2026). OJO: se cobra por PayPal contra la TARJETA de
+// Kutxabank, y RE_SOFTWARE solo aplica en BBVA, así que fuera de BBVA lo que lo lleva a la
+// correduría es la regla aprendida `IONOS → seguros` de banca_destino_reglas (mismo camino que
+// VERCEL, que también se paga desde N26). Si esa regla se borra, los cargos vuelven a 'personal'.
+const RE_SOFTWARE = /\b(VERCEL|IONOS|ANTHROPIC|OPENAI|OPENROUTER|GITHUB|CLOUDFLARE|SUPABASE|DIGITALOCEAN|NETLIFY|HETZNER|VULTR|LINODE|MONGODB|FINANCIALDATASETS|GOOGLE CLOUD|AMAZON WEB SERVICES|AWS)\b/i
 
 // Resultado detallado: el negocio + si el movimiento es AMBIGUO y conviene que el dueño lo
 // confirme (`revisar`). `confirmado` marca una clasificación TAN determinista que no necesita
