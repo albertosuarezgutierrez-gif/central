@@ -197,3 +197,32 @@ identificados uno a uno.
   `banca_destino_reglas` para «STRIPE»** sin comprobar antes `claveReglaValida`.
 - **Doc del agente desactualizada**: `contexto-y-agente-huesped.md` describe una graduación por
   categorías que ya no existe. Se corrige en este mismo trabajo.
+
+## Verificación en producción (29/08/2026)
+
+Envs `STRIPE_SECRET_KEY_SIVRA` y `STRIPE_WEBHOOK_SECRET_SIVRA` puestas en Vercel (`plataforma`,
+solo Production). El webhook pasó de **500** («falta el secreto») a **400 `{"error":"firma inválida"}`**
+a las 08:16:48 UTC. La cuenta quedó `charges_enabled: true` / `payouts_enabled: true`, payout a
+BBVA ****1175. Migración aplicada; catálogo con `cuna_trona` a 2000 cents, IVA 0.
+
+🚨 **Y la prueba real destapó un bug que ninguna lectura habría visto: Managed Payments.** Al hacer
+la llamada de verdad, `paymentLinks.create` devolvió *«the product tax code is missing … required for
+Managed Payments, which is enabled by default on your account»*. Viene ACTIVADO por defecto en las
+cuentas nuevas y solo admite productos **digitales**; la doc de Stripe dice literalmente que no cubre
+la venta de **servicios**, y Stripe clasifica el nuestro como `type: "service"`. Sin arreglarlo, el
+enlace NUNCA se habría creado: el `catch` devolvía `null` y aguas arriba eso es indistinguible de
+«Stripe sin configurar» — el huésped acepta el precio y no le llega nada, sin que nada se ponga rojo.
+
+El arreglo es **apagarlo**, no ponerle un `tax_code`: con Managed Payments el *merchant of record*
+pasa a ser Stripe, el huésped ve `LINK.COM*` en su extracto y el recibo le llega como «Sold through
+Link» — lo contrario de la decisión de cobrar Alberto como persona física y sin IVA. Se manda
+`managed_payments: { enabled: false }` en CADA enlace, no solo apagado en el panel: es un ajuste de
+cuenta que Stripe puede volver a poner por defecto y el fallo que produce es mudo.
+Guardián: `lib/sivra/extras/stripe-managed-payments.test.ts` (probado en rojo y en verde).
+
+De paso, el `catch` de `crearEnlacePago` ya no calla: manda Telegram con el motivo literal de Stripe.
+
+**Pendiente de Alberto (ninguno bloquea el cobro):** apagar Managed Payments también en el panel
+(`dashboard.stripe.com/acct_1U9QrKKBmOvjQ2ll/settings/managed-payments`); corregir la web del negocio
+(quedó `housesevilla.es`, falta el «na»); y el descriptor de extracto, que quedó en `CARGO` — el
+huésped verá «CARGO 20€» y no lo reconocerá. Falta la prueba con un cobro real de 20 €.

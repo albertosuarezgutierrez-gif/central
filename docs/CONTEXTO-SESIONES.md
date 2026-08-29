@@ -3573,6 +3573,18 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## Cobro de extras del huésped: EN PRODUCCIÓN, y la prueba real destapó Managed Payments (29/08/2026)
+- Envs de Stripe puestas en Vercel (`plataforma`, solo Production). Webhook 500 → **400 «firma inválida»**
+  a las 08:16:48 UTC. Cuenta `acct_1U9QrKKBmOvjQ2ll` con `charges_enabled`/`payouts_enabled` y payout BBVA ****1175.
+- 🚨 **Managed Payments viene ACTIVADO por defecto en cuentas nuevas y RECHAZA el Payment Link** (exige
+  `tax_code`, solo admite productos digitales; el nuestro es un servicio). El `catch` lo volvía `null` =
+  «Stripe sin configurar»: el huésped no habría recibido nada y nada se habría puesto rojo. Se apaga por
+  llamada (no `tax_code`: eso haría a Stripe merchant of record y el huésped vería `LINK.COM*`).
+- Solo se vio haciendo la llamada REAL contra la cuenta viva: ni tsc, ni build, ni un test con mocks.
+  Guardián `stripe-managed-payments.test.ts` (rojo→verde) y el `catch` ya avisa por Telegram. PR #1849.
+- Pendiente de Alberto: apagar Managed Payments en el panel, `housesevilla.es`→`housesevillana.es`,
+  descriptor de extracto (`CARGO`), y la prueba con un cobro real de 20 €.
+
 ## 🧾 (29/08/2026) La bandeja de facturas no tenía PANTALLA — 35.938,20€ atascados (PR #1847)
 - Alberto: «¿dónde reviso gastos? ¿la IA no las clasifica con todo el contexto que tiene?». Dos
   respuestas incómodas: (1) el Telegram enlazaba a `/expenses/pendientes`, que **nunca se construyó**
