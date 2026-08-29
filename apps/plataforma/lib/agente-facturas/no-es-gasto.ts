@@ -41,6 +41,10 @@ const SENALES_LIQUIDACION: Array<[RegExp, string]> = [
   [/\bsaldo\s+(de\s+)?agente\b/i, 'es un saldo de agente'],
   [/\bcuenta\s+corriente\s+(de\s+)?agente\b/i, 'es una cuenta corriente de agente'],
   [/\brecibo\s+de\s+comisiones\b/i, 'es un recibo de comisiones'],
+  // «Cartera No Vida del mes de Noviembre de 2026», 1.446,52 € — el listado de la cartera de
+  // pólizas del mediador y sus comisiones, no una factura. Apareció en la misma bandeja que las
+  // otras dos de Allianz, y encima fechado en un mes futuro: no es un gasto de agosto.
+  [/\bcartera\s+(no\s+)?vida\b/i, 'es un listado de cartera de mediador'],
 ]
 
 /**

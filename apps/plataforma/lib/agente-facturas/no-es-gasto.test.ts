@@ -56,3 +56,20 @@ test('la señal también se busca en el nombre del proveedor', () => {
   const s = pareceIngresoDeCorreduria({ proveedor: 'Extracto de cuenta mediador Occident', concepto: null })
   assert.equal(s.esSospechoso, true)
 })
+
+test('el tercer documento de Allianz: «Cartera No Vida» tampoco es un gasto', () => {
+  const s = pareceIngresoDeCorreduria({
+    proveedor: 'Allianz, Compañía de Seguros y Reaseguros, S.A.',
+    concepto: 'Cartera No Vida del mes de Noviembre de 2026',
+  })
+  assert.equal(s.esSospechoso, true)
+  assert.match(s.motivo ?? '', /cartera/i)
+})
+
+test('🚨 pero el SEGURO de un piso sigue siendo un gasto', () => {
+  // Simétrico del caso Booking: si «Allianz» bastara, se marcaría el recibo del seguro del piso,
+  // que es gasto deducible y llega del mismo emisor.
+  for (const c of ['Recibo seguro hogar Calle Socorro 24', 'Póliza multirriesgo Luxury Busto - anualidad']) {
+    assert.equal(pareceIngresoDeCorreduria({ proveedor: 'Allianz', concepto: c }).esSospechoso, false, c)
+  }
+})
