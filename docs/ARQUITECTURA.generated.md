@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-29T08:19:37Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-29T08:44:57Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 11 apps · 38 packages · 23 capacidades · 37 skills · 1186 rutas API.
+**Resumen:** 11 apps · 36 packages · 23 capacidades · 37 skills · 1186 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -99,7 +99,7 @@
   - Depende de: —
 - **module-alquiler** (module) → `@central/module-alquiler`
   - Lo usan: alquiler
-  - Depende de: module-encargo, module-intercompany, module-materiales
+  - Depende de: module-intercompany, module-materiales
 - **module-asn** (module) → `@central/module-asn`
   - Lo usan: ia-rest
   - Depende de: —
@@ -117,9 +117,6 @@
   - Depende de: —
 - **module-documental** (module) → `@central/module-documental`
   - Lo usan: ialimp, rrhh
-  - Depende de: —
-- **module-encargo** (module) → `@central/module-encargo`
-  - Lo usan: —
   - Depende de: —
 - **module-feedback** (module) → `@central/module-feedback`
   - Lo usan: ia-rest
@@ -157,9 +154,6 @@
 - **module-proveedores** (module) → `@central/module-proveedores`
   - Lo usan: ia-rest, ialimp, sivra
   - Depende de: —
-- **module-revenue** (module) → `@central/module-revenue`
-  - Lo usan: —
-  - Depende de: —
 - **module-rrhh** (module) → `@central/module-rrhh`
   - Lo usan: ialimp, rrhh
   - Depende de: core-firma, module-documental
@@ -174,7 +168,7 @@
   - Depende de: —
 - **module-transporte** (module) → `@central/module-transporte`
   - Lo usan: transporte
-  - Depende de: module-encargo, module-flota, module-intercompany
+  - Depende de: module-flota, module-intercompany
 - **module-trazabilidad** (module) → `@central/module-trazabilidad`
   - Lo usan: ia-rest
   - Depende de: —

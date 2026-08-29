@@ -105,13 +105,19 @@ realimentación objetivo↔precio propio.
 1. **[cerrado en este PR]** `transpilePackages` de plataforma (ver arriba).
 2. **[cerrado en este PR]** Generados desfasados (ver arriba).
 3. **Luxury jul-ago 2027** — ver el bloque de pricing.
-4. **3 packages sin ningún consumidor** (candidatos de limpieza; **NO borrados, decide
-   Alberto**): `module-agenda`, `module-encargo`, `module-revenue`. Cero imports en apps y
-   packages (las menciones en `module-transporte/src/types.ts:8` y `module-alquiler/src/types.ts:5`
-   son comentarios; el patrón es referencia por id, no import). Son piezas DECLARADAS del plan de
-   arquitectura (`MATRIZ.md`, `docs/ARQUITECTURA-casa-marcas.md`: el Encargo como «pieza central de
-   la modularización»), por eso borrarlas en una pasada de limpieza excede el criterio de bajo
-   riesgo. Si Alberto confirma, se borran en un PR aparte (recuperables de git).
+4. **3 packages sin ningún consumidor** — **RESUELTO el mismo día** (Alberto delegó: «no reviso
+   nada, usa tu conocimiento»). Decisión y ejecución:
+   - **`module-encargo` y `module-revenue` BORRADOS** (2º commit de este PR). Encargo: el agregado
+     central nunca se adoptó — `module-alquiler`/`module-transporte` shippearon replicando su
+     patrón por id (`encargoId`) en vez de componerse sobre él; el patrón sigue, el package no.
+     Revenue: su analítica quedó superada por el motor real de pricing/rentabilidad de plataforma.
+     **Recuperables de git** (último commit con ellos: `3dcd5491`). Actualizados `MATRIZ.md`,
+     `docs/ESTRUCTURA.md` (26→24 módulos), los comentarios de `module-transporte/src/types.ts` y
+     `module-alquiler/src/types.ts`, el lockfile y los generados. Validado: suite completa +
+     typecheck de transporte y alquiler en verde tras el borrado.
+   - **`module-agenda` SE CONSERVA a propósito**: el plan vivo de `apps/almacen` Fase 2
+     (`docs/ALMACEN-JJ-reunion-y-auditoria.md`, cliente Joaquín Jaén) lo asigna al calendario de
+     eventos + anti-doble-reserva. No es «lo que no sirve»: es pieza en espera con destino.
 5. **Vulns npm (4, ninguna accionable sin riesgo)**: `xlsx` 2×high en ialimp (ya documentada:
    solo ESCRIBE xlsx, no parsea → no explotable; no hay parche en npm); `deepmerge-ts` <8 high
    vía `plataforma>mailparser>html-to-text` (el merge es de OPCIONES de configuración, no del
@@ -140,16 +146,19 @@ realimentación objetivo↔precio propio.
    OpenRouter). Rollback: quitarlas — el briefing vuelve al modo crudo actual, nada se rompe.
 2. **Trigger `github-vigia`**: pegar el `ALERTA_TOKEN` real en el prompt del trigger
    `trig_017pe2NS4pzKXYhGPM6St7aZ`. Rollback: ninguno necesario (solo permite avisar).
-3. **Supabase, índices duplicados** (cuando quieras, por MCP; ahorro de escritura, riesgo ~0;
-   rollback = `CREATE INDEX` de nuevo con el mismo DDL):
-   `DROP INDEX kb_category_idx; DROP INDEX kb_property_idx; DROP INDEX market_rates_scenario;`
-   `DROP INDEX idx_session_completions_session; DROP INDEX ix_subastas_ref_catastral;`
-   `DROP INDEX subastas_tipo_bien_idx;` y del par de `rate_snapshots`, el NO-unique
-   (`rate_snapshots_property_id_rate_date_snapshot_dat…` — conservar el `_unique`).
-4. **Supabase**: `ALTER FUNCTION public.pricing_factor_aforo SET search_path = public;`
-   (cierra el WARN; rollback: `RESET search_path`).
-5. **Decidir** los 3 packages huérfanos (🟡4): borrar o mantener como contrato.
-6. **`ses_transporte`**: dar de alta el establecimiento o pedir que se saque del registro de vigilancia.
+3. ~~Supabase, índices duplicados~~ — **HECHO el 29/08** (delegado por Alberto; migración
+   `limpieza_indices_duplicados_y_search_path`). Antes de tocar se verificó contra `pg_index`:
+   los dos índices de `rate_snapshots` respaldaban CONSTRAINTS idénticas y ningún código las
+   nombra (grep), así que se retiró la constraint duplicada `rate_snapshots_property_date_unique`
+   (queda la `_key` original); del resto de pares se soltó uno (kb_category_idx, kb_property_idx,
+   market_rates_scenario, idx_session_completions_session, ix_subastas_ref_catastral,
+   subastas_tipo_bien_idx). Rollback: recrear con el DDL del par superviviente.
+4. ~~`search_path` de `pricing_factor_aforo`~~ — **HECHO el 29/08** (misma migración) y
+   verificado en caliente: la función devuelve lo mismo (2,5 / 1 / 1) y 758 filas del corpus de
+   ayer computan bien. Rollback: `ALTER FUNCTION public.pricing_factor_aforo RESET search_path`.
+5. ~~Decidir los 3 packages huérfanos~~ — **HECHO** (ver 🟡4).
+6. **`ses_transporte`**: dar de alta el establecimiento o pedir que se saque del registro de
+   vigilancia (esto sí es dato de negocio que solo tiene Alberto).
 7. Los 79 `SECURITY DEFINER` de `iarest`: NO tocar sin plan (riesgo POS); queda anotado para
    cuando haya una ventana de revisión de iarest.
 

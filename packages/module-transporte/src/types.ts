@@ -5,7 +5,8 @@
 // (docs/DISENO-modulos-materiales-flota.md §4); la otra es alquiler de materiales.
 //
 // Se COMPONE sobre:
-//  - el agregado genérico Encargo (`@central/module-encargo`, tipo 'porte') por id (`encargoId`),
+//  - el patrón de agregado Encargo por id (`encargoId`; el package `module-encargo` se retiró
+//    el 29/08/2026 sin consumidor),
 //  - y `@central/module-flota` (vehículos/portes), referenciando los portes por id (`porteIds`).
 //    La capa de servicio NO duplica la operativa de flota: el coste/rentabilidad de cada porte lo
 //    calcula module-flota; aquí se agrega al nivel de servicio (precio al cliente, estado, factura).
@@ -32,7 +33,7 @@ export interface ParentRef {
 
 export interface ServicioTransporte {
   id: string
-  encargoId?: string | null // Encargo del que cuelga (module-encargo, tipo 'porte')
+  encargoId?: string | null // Encargo del que cuelga (patrón de agregado por id, tipo 'porte')
   clienteNombre?: string | null
   // true = servicio a un cliente TERCERO (ingreso externo real);
   // false = INTERNO, mueve recursos del propio grupo (candidato a intercompany).

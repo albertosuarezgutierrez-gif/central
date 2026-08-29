@@ -1,9 +1,10 @@
 // Tipos del módulo ALQUILER de materiales (casa de marcas). Agnóstico de vertical y de BD.
 // Modela el alquiler de material/menaje (mesas, sillas, vajilla, carpas…) tanto INTERNO a un
 // evento del propio grupo como EXTERNO a un cliente tercero (ingreso real). Es una de las dos
-// verticales "nuevas" del diseño (docs/DISENO-modulos-materiales-flota.md): se COMPONE sobre el
-// agregado genérico Encargo (`@central/module-encargo`, tipo 'alquiler') y referencia los
-// materiales de `@central/module-materiales` por id — sin acoplar tipos entre módulos.
+// verticales "nuevas" del diseño (docs/DISENO-modulos-materiales-flota.md): usa el patrón de
+// agregado Encargo por id (`encargoId`; el package `module-encargo` se retiró el 29/08/2026 sin
+// consumidor) y referencia los materiales de `@central/module-materiales` por id — sin acoplar
+// tipos entre módulos.
 //
 // Costuras (seams) hacia otros módulos, solo por id / forma, nunca import de tipos:
 //  - `encargoId`  → el Encargo del que cuelga este alquiler (identidad común).
@@ -32,7 +33,7 @@ export interface LineaAlquiler {
 
 export interface Alquiler {
   id: string
-  encargoId?: string | null // Encargo del que cuelga (module-encargo)
+  encargoId?: string | null // Encargo del que cuelga (patrón de agregado por id)
   clienteNombre?: string | null
   // true = alquiler a un cliente TERCERO (ingreso externo real);
   // false = INTERNO, sirve a un evento del propio grupo (candidato a intercompany).
