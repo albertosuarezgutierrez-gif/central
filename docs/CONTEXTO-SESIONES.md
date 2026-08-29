@@ -3582,6 +3582,25 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🤖 (29/08/2026) La IA ya propone en la bandeja — y 3 fallos que destapó revisarla con Alberto (PR pendiente)
+- Alberto: «que la IA proponga». Nuevo `lib/agente-facturas/sugerencia-ia.ts` (PURO) + endpoint
+  `POST /api/expenses/pendientes/[id]/sugerir-ia`: la IA ve proveedor, concepto, histórico del
+  proveedor y el cargo bancario que casa. **Valida contra lista blanca**: un piso o categoría
+  inventados se DESCARTAN a null, nunca caen a un default (nacerían como regla). `ilegible`
+  (no se pudo leer) nunca se colapsa con `sin_criterio` (miró y no sabe).
+- 🚨 **Bug propio, cazado por Alberto sobre Booking (938,25€):** la opción VACÍA del desplegable de
+  piso se llamaba «— correduría / sin piso —», así que «no lo has decidido» se leía como propuesta
+  de correduría — y confirmar creaba la regla. Ahora `SIN_ELEGIR` ≠ `CORREDURIA` y confirmar exige
+  elegir. Guardián en `avisos-enlace.test.ts`, probado en rojo.
+- 🚨 **Documentos que NO son gastos:** el «Extracto de Cuenta Mediador» de Allianz (291,73€) y una
+  «Anulación de pólizas» (301,70€) son comisiones que le PAGAN. Confirmarlas metía 593,43€ de
+  ingreso como gasto deducible. Aviso en la ficha vía `no-es-gasto.ts` (puro); la ingesta sigue
+  dándolas de alta — pendiente arreglar el sentido del documento en el agente.
+- Cascada por proveedor (`confirmarProveedor`): «resuelto uno, los demás igual». Explícita, con el
+  número delante — una reparación es de UN piso, no de todos.
+- 📉 **`incomes.amount` es DERIVADO**: las 372 reservas de Booking desde 2025 dan comisión implícita
+  19,7154–19,7247% (solo redondeo). No sirve para cuadrar la factura de comisiones de Booking.
+
 ## 🧾 (29/08/2026) La bandeja de facturas no tenía PANTALLA — 35.938,20€ atascados (PR #1847)
 - Alberto: «¿dónde reviso gastos? ¿la IA no las clasifica con todo el contexto que tiene?». Dos
   respuestas incómodas: (1) el Telegram enlazaba a `/expenses/pendientes`, que **nunca se construyó**

@@ -35,6 +35,8 @@ export interface Pendiente {
   sugerencia: Sugerencia
   /** Nº de facturas ya revisadas de este mismo proveedor. 0 = de verdad es nuevo. */
   historico: number
+  /** Cuántas facturas PENDIENTES hay de este mismo proveedor, esta incluida (mínimo 1). */
+  pendientesProveedor: number
 }
 
 /**
@@ -77,6 +79,14 @@ export async function listarPendientes(limite = 200): Promise<Pendiente[]> {
     porHuella.set(h.fingerprint, arr)
   }
 
+  // Cuántas pendientes hay por proveedor: es lo que permite ofrecer «confirma las N de golpe».
+  // Se cuenta sobre las filas ya traídas (mismo criterio de pendiente, sin otra consulta).
+  const pendientesPorHuella = new Map<string, number>()
+  for (const f of filas) {
+    if (!f.fingerprint) continue
+    pendientesPorHuella.set(f.fingerprint, (pendientesPorHuella.get(f.fingerprint) ?? 0) + 1)
+  }
+
   return filas.map((f) => {
     const hist = porHuella.get(f.fingerprint) ?? []
     return {
@@ -87,6 +97,7 @@ export async function listarPendientes(limite = 200): Promise<Pendiente[]> {
       total: Number(f.total ?? 0),
       sugerencia: sugerirDesdeHistorico({ categoria: f.categoria }, hist),
       historico: hist.length,
+      pendientesProveedor: f.fingerprint ? (pendientesPorHuella.get(f.fingerprint) ?? 1) : 1,
     } as Pendiente
   })
 }
@@ -140,6 +151,51 @@ export async function confirmarPendiente(id: string, cambios: CambiosPendiente =
     }).catch(() => {})
   }
   return true
+}
+
+/**
+ * Confirma TODAS las pendientes del mismo proveedor con la misma clasificación.
+ *
+ * Petición de Alberto (29/08/2026): «cuando es el mismo proveedor, en el momento que resuelvo uno
+ * todo es igual». Es cierto para los proveedores recurrentes que llenan la bandeja —la limpieza
+ * mensual de Sique Brilla, la lavandería, el hosting—: doce facturas idénticas salvo el mes.
+ * Confirmarlas de una en una es el trabajo que esta pantalla existe para quitar.
+ *
+ * 🚨 Sigue siendo una acción EXPLÍCITA, con su propio botón y el número delante. No se aplica
+ * sola al confirmar una: hay proveedores cuyas facturas NO son equivalentes (una reparación es de
+ * UN piso concreto, no de todos), y una cascada silenciosa metería ese error en varias filas a la
+ * vez y encima lo dejaría dentro de la regla aprendida.
+ *
+ * Devuelve los ids confirmados. Si la factura de partida no existe o ya estaba revisada,
+ * devuelve `null` (nada que confirmar), igual que `confirmarPendiente`.
+ */
+export async function confirmarProveedor(id: string, cambios: CambiosPendiente = {}): Promise<string[] | null> {
+  const [origen] = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT id::text, fingerprint
+    FROM gastos
+    WHERE id = ${id}::uuid AND revisado = false AND origen IS NOT NULL
+    LIMIT 1
+  `)
+  if (!origen) return null
+
+  // Sin huella no hay «mismo proveedor» que valga: se confirma solo la de partida. Agrupar por
+  // nombre sería adivinar (el mismo proveedor se escribe de tres formas distintas en el corpus).
+  const hermanas: string[] = origen.fingerprint
+    ? (await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT id::text FROM gastos
+        WHERE revisado = false AND origen IS NOT NULL AND fingerprint = ${origen.fingerprint}
+        ORDER BY fecha ASC
+      `)).map((r) => r.id)
+    : [origen.id]
+
+  const hechas: string[] = []
+  for (const hid of hermanas) {
+    // Se reutiliza `confirmarPendiente` a propósito: es quien mantiene el invariante de refuerzo
+    // de la regla y el «no re-reforzar lo ya revisado». Duplicar ese UPDATE aquí sería la forma
+    // habitual de que las dos ramas se separen con el tiempo.
+    if (await confirmarPendiente(hid, cambios)) hechas.push(hid)
+  }
+  return hechas
 }
 
 /**
