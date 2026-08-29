@@ -86,7 +86,10 @@ export const CRON_JOBS: CronJob[] = [
   // reservas próximas aunque lleven meses sin tocarse — rellena el aforo (adults/children) de las
   // antiguas (29/08/2026: 8 de 9 reservas del mes a NULL, la intranet de limpieza no podía enseñar
   // nº de huéspedes) y detecta cancelaciones a semanas vista para la sección «Últimos avisos».
-  { path: '/api/sivra/updates/sync?days=800&ventana=45', schedule: '15 5 * * *' },
+  // `desde=2026-06-01` retro-rellena también el aforo de los meses YA facturados (el reparto de
+  // lavandería del P&L pasó a huéspedes reales el 29/08/2026 y junio-agosto estaban a NULL).
+  // Cuando el histórico esté relleno se puede quitar el `desde` y dejar solo la ventana.
+  { path: '/api/sivra/updates/sync?days=800&desde=2026-06-01&ventana=45', schedule: '15 5 * * *' },
   // Extras cobrados al huésped: recordatorio a las 24 h y caducidad a 48 h de la entrada. A las
   // 07:00, antes del vigía de latidos de las 07:45, para que su huella del día ya esté escrita.
   { path: '/api/cron/sivra-extras-impago', schedule: '0 7 * * *' },
