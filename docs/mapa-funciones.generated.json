@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-29T08:02:34Z",
-  "sha": "1ec78dc970c78a2babe91dee8548d7bf05ea6c3b",
+  "generadoEn": "2026-08-29T09:01:12Z",
+  "sha": "39537e0ed662bcce8a46c34bae06ef16265daa48",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47214,6 +47214,49 @@
       "hash": "e1a4a4e288c0"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/expenses/pendientes/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PendientesPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PendientesPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "/expenses/pendientes — la bandeja de revisión del agente de facturas. Esta ruta es la que el aviso de Telegram enlaza desde el día uno (`lib/agente-facturas/ avisos.ts`), y hasta el 29/08/2026 era un "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5fc37fae55e9"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/expenses/pendientes/PendientesClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PendientesClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "PendientesClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "bb37c0921271"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/CategoriasTab.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -50709,12 +50752,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 72
+          "linea": 76
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f9ff3cf3df7"
+      "hash": "881361bb699e"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -54695,6 +54738,58 @@
       "tablas": [],
       "rutaApi": "/api/empresas/sector-web",
       "hash": "5fc41b3db9d9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/expenses/pendientes/[id]/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PATCH",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "PATCH /api/expenses/pendientes/[id] — confirma (y APRENDE la regla del proveedor). Body: { categoria?, propiedad? }. Omitir un campo = dejarlo como está; '' = vaciarlo a propósito (los gastos de la co"
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 37,
+          "resumen": "DELETE /api/expenses/pendientes/[id] — descarta lo que no es un gasto nuestro."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/expenses/pendientes/[id]",
+      "hash": "2f8e7db376ba"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/expenses/pendientes/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/expenses/pendientes — la bandeja de revisión del agente de facturas. Ruta que el aviso de Telegram (`lib/agente-facturas/avisos.ts`) enlaza desde el día uno."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/expenses/pendientes",
+      "hash": "abc0a305dc5e"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/ayudas/[id]/descartar/route.ts",
@@ -60990,6 +61085,50 @@
       "hash": "e73783c7eda4"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/pendientes.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Bandeja de revisión de facturas: listar, confirmar y descartar. 🚨 Por qué existe este módulo (29/08/2026). El aviso de Telegram enlazaba a `/expenses/pendientes` desde el día uno y esa ruta NUNCA se construyó: era un 404. La única pantalla de gastos (`/sivra/expenses`) las esconde a propósito (`NOT",
+      "exporta": [
+        "listarPendientes",
+        "confirmarPendiente",
+        "descartarPendiente"
+      ],
+      "funciones": [
+        {
+          "nombre": "listarPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "limite = 200",
+          "retorno": "Promise<Pendiente[]>",
+          "linea": 47,
+          "resumen": "Las facturas que el agente dejó sin imputar, más caras primero. El criterio de «pendiente» es el MISMO que usan `/api/sivra/expenses`, el resumen mensual y las anomalías: `revisado = false AND origen "
+        },
+        {
+          "nombre": "confirmarPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, cambios: CambiosPendiente = {}",
+          "retorno": "Promise<boolean>",
+          "linea": 109,
+          "resumen": "Confirma una factura: la da por contabilizada y APRENDE la regla. El refuerzo de la regla es la mitad del trabajo: es lo que hace que la próxima factura del mismo proveedor se impute sola. `reforzarRe"
+        },
+        {
+          "nombre": "descartarPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<boolean>",
+          "linea": 149,
+          "resumen": "Descarta una factura que no es un gasto nuestro (ajena, duplicada, un contrato leído como factura…). Se BORRA en vez de marcarse revisada: dejarla revisada la contaría como gasto."
+        }
+      ],
+      "tablas": [
+        "gastos"
+      ],
+      "rutaApi": null,
+      "hash": "a7b4762907da"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
       "ambito": "apps/plataforma",
       "resumen": "Procesa UNA factura ya extraída: huella → regla → decisión → dedup → imputa. Compartido por el cron `scan` y el `backfill` (DRY).",
@@ -61165,6 +61304,37 @@
       ],
       "rutaApi": null,
       "hash": "71c22b9b3ba1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/sugerencia-pendiente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Qué proponer al revisar una factura de la bandeja, a partir de lo que YA se sabe. Contexto (29/08/2026). El agente lee la factura con IA pero quien decide si se imputa sola es `evaluar()` (reglas puras): sin regla confirmada ≥2 veces, a la bandeja. Y la regla solo nace cuando el dueño confirma. Como",
+      "exporta": [
+        "sugerirDesdeHistorico"
+      ],
+      "funciones": [
+        {
+          "nombre": "mayoritario",
+          "kind": "function",
+          "exportada": false,
+          "params": "valores: Array<string | null | undefined>",
+          "retorno": "string | null",
+          "linea": 41,
+          "resumen": "Valor mayoritario de una lista, o `null` si no hay ninguno claro. «Claro» = aparece al menos una vez y NO empata con otro distinto: un empate es exactamente el caso en que no se sabe, y desempatar por"
+        },
+        {
+          "nombre": "sugerirDesdeHistorico",
+          "kind": "function",
+          "exportada": true,
+          "params": "extraida: { categoria?: string | null }, historico: GastoHistorico[],",
+          "retorno": "Sugerencia",
+          "linea": 57,
+          "resumen": "Propone propiedad y categoría para un pendiente, mirando SOLO el histórico ya revisado del mismo proveedor. La categoría que trajo el extractor manda si no es un cajón de sastre."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "03624f55129f"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/titulares.ts",
@@ -71119,7 +71289,7 @@
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 10,
+          "linea": 11,
           "resumen": "Sin clave configurada NO se cobra: el flujo cae a la propuesta por Telegram de siempre."
         },
         {
@@ -71128,13 +71298,13 @@
           "exportada": true,
           "params": "p: { bookingId: string propertyId: string codigo: string precioCents: number nombre: string }",
           "retorno": "Promise<EnlacePago | null>",
-          "linea": 23,
+          "linea": 24,
           "resumen": "Crea un Payment Link de un solo uso para este extra. La `metadata` es lo que ata el cobro a la reserva: el webhook no adivina nada, lee de aquí. El precio llega en céntimos DESDE EL CATÁLOGO — esta fu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6492378be4a7"
+      "hash": "6b1b0870ada1"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
@@ -92252,113 +92422,6 @@
       "hash": "cd899c7bc072"
     },
     {
-      "ruta": "packages/module-encargo/src/encargo.ts",
-      "ambito": "packages/module-encargo",
-      "resumen": "Lógica del agregado Encargo: máquina de estados, composición y resumen. Funciones puras sobre los tipos genéricos (sin BD).",
-      "exporta": [
-        "esAbierto",
-        "esCerrado",
-        "puedeTransicionar",
-        "transicionar",
-        "componentesVinculados",
-        "estaCompleto",
-        "componentesFaltantes",
-        "round2",
-        "resumenEncargos"
-      ],
-      "funciones": [
-        {
-          "nombre": "esAbierto",
-          "kind": "function",
-          "exportada": true,
-          "params": "encargo: Encargo",
-          "retorno": "boolean",
-          "linea": 39
-        },
-        {
-          "nombre": "esCerrado",
-          "kind": "function",
-          "exportada": true,
-          "params": "encargo: Encargo",
-          "retorno": "boolean",
-          "linea": 43
-        },
-        {
-          "nombre": "puedeTransicionar",
-          "kind": "function",
-          "exportada": true,
-          "params": "de: EstadoEncargo, a: EstadoEncargo",
-          "retorno": "boolean",
-          "linea": 48,
-          "resumen": "¿Es válida la transición de estado `de` → `a`?"
-        },
-        {
-          "nombre": "transicionar",
-          "kind": "function",
-          "exportada": true,
-          "params": "encargo: Encargo, a: EstadoEncargo, updatedAt?: string,",
-          "retorno": "Encargo",
-          "linea": 56,
-          "resumen": "Devuelve una COPIA del encargo con el nuevo estado (y updatedAt si se pasa). Lanza si la transición no es válida."
-        },
-        {
-          "nombre": "componentesVinculados",
-          "kind": "function",
-          "exportada": true,
-          "params": "encargo: Encargo",
-          "retorno": "ComponenteEncargo[]",
-          "linea": 68,
-          "resumen": "Componentes (módulos) realmente vinculados a un encargo, en orden estable."
-        },
-        {
-          "nombre": "estaCompleto",
-          "kind": "function",
-          "exportada": true,
-          "params": "encargo: Encargo, requeridos: ComponenteEncargo[]",
-          "retorno": "boolean",
-          "linea": 83,
-          "resumen": "¿Están vinculados todos los componentes requeridos?"
-        },
-        {
-          "nombre": "componentesFaltantes",
-          "kind": "function",
-          "exportada": true,
-          "params": "encargo: Encargo, requeridos: ComponenteEncargo[],",
-          "retorno": "ComponenteEncargo[]",
-          "linea": 89,
-          "resumen": "Componentes requeridos que faltan por vincular."
-        },
-        {
-          "nombre": "round2",
-          "kind": "function",
-          "exportada": true,
-          "params": "n: number",
-          "retorno": "number",
-          "linea": 97
-        },
-        {
-          "nombre": "mismoMes",
-          "kind": "function",
-          "exportada": false,
-          "params": "iso: string | null | undefined, ref: Date",
-          "retorno": "boolean",
-          "linea": 101
-        },
-        {
-          "nombre": "resumenEncargos",
-          "kind": "function",
-          "exportada": true,
-          "params": "encargos: Encargo[], ref: Date = new Date()",
-          "retorno": "ResumenEncargos",
-          "linea": 108,
-          "resumen": "Resumen agregado para un panel de encargos."
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "240cbce454f8"
-    },
-    {
       "ruta": "packages/module-feedback/src/logic.ts",
       "ambito": "packages/module-feedback",
       "resumen": "Lógica de feedback: agregación de valoraciones y totales de propinas. Funciones puras.",
@@ -94063,197 +94126,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "74c3c5b60386"
-    },
-    {
-      "ruta": "packages/module-revenue/src/demand.ts",
-      "ambito": "packages/module-revenue",
-      "exporta": [
-        "leadTimeStats",
-        "pickupCurve",
-        "paceVsBaseline"
-      ],
-      "funciones": [
-        {
-          "nombre": "confirmed",
-          "kind": "function",
-          "exportada": false,
-          "params": "events: DemandEvent[]",
-          "retorno": "DemandEvent[]",
-          "linea": 6
-        },
-        {
-          "nombre": "leadTimeStats",
-          "kind": "function",
-          "exportada": true,
-          "params": "events: DemandEvent[]",
-          "retorno": "LeadTimeStats",
-          "linea": 11,
-          "resumen": "Estadísticos de antelación (días entre creación de la reserva y check-in)."
-        },
-        {
-          "nombre": "pickupCurve",
-          "kind": "function",
-          "exportada": true,
-          "params": "events: DemandEvent[], periodStart: Date, periodEnd: Date, maxDaysBefore = 120,",
-          "retorno": "PickupPoint[]",
-          "linea": 30,
-          "resumen": "Curva de pickup para las reservas cuyo check-in cae en [periodStart, periodEnd). Para cada `daysBefore` (de maxDaysBefore..0), cuántas reservas ya existían a esa antelación del check-in. Curva acumula"
-        },
-        {
-          "nombre": "paceVsBaseline",
-          "kind": "function",
-          "exportada": true,
-          "params": "events: DemandEvent[], period: { start: Date; end: Date; label?: string }, baseline: { start: Date; end: Date }, asOfDaysBeforeStart: number,",
-          "retorno": "PaceResult",
-          "linea": 51,
-          "resumen": "Ritmo de venta (pace) de un periodo vs un periodo base (p.ej. mismo mes el año anterior), medido al MISMO punto relativo: reservas con check-in dentro del periodo creadas hasta `asOfDaysBeforeStart` d"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "5be19e958ee2"
-    },
-    {
-      "ruta": "packages/module-revenue/src/occupancy.ts",
-      "ambito": "packages/module-revenue",
-      "exporta": [
-        "occupancyByDow",
-        "seasonalityByMonth"
-      ],
-      "funciones": [
-        {
-          "nombre": "occupancyByDow",
-          "kind": "function",
-          "exportada": true,
-          "params": "slots: CapacitySlot[], cfg?: AnalysisConfig",
-          "retorno": "DowOccupancy[]",
-          "linea": 10,
-          "resumen": "Ocupación media por día de la semana, ponderada por capacidad. 0=domingo … 6=sábado. `enough` indica si hay muestra suficiente para fiarse."
-        },
-        {
-          "nombre": "seasonalityByMonth",
-          "kind": "function",
-          "exportada": true,
-          "params": "slots: CapacitySlot[], cfg?: AnalysisConfig",
-          "retorno": "MonthSeasonality[]",
-          "linea": 38,
-          "resumen": "Índice de estacionalidad por mes (1..12), relativo a la media anual ponderada. `index` = ocupación del mes / ocupación media. 1.0 = en la media."
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "41acec15a589"
-    },
-    {
-      "ruta": "packages/module-revenue/src/revenue.ts",
-      "ambito": "packages/module-revenue",
-      "exporta": [
-        "channelMix",
-        "revenueKpis"
-      ],
-      "funciones": [
-        {
-          "nombre": "confirmed",
-          "kind": "function",
-          "exportada": false,
-          "params": "events: DemandEvent[]",
-          "retorno": "DemandEvent[]",
-          "linea": 4
-        },
-        {
-          "nombre": "channelMix",
-          "kind": "function",
-          "exportada": true,
-          "params": "events: DemandEvent[]",
-          "retorno": "ChannelShare[]",
-          "linea": 9,
-          "resumen": "Reparto de reservas por canal + ADR (ingreso medio por noche) de cada canal."
-        },
-        {
-          "nombre": "revenueKpis",
-          "kind": "function",
-          "exportada": true,
-          "params": "events: DemandEvent[], slots: CapacitySlot[]",
-          "retorno": "RevenueKpis",
-          "linea": 37,
-          "resumen": "KPIs del periodo. Ocupación/noches/capacidad salen de `slots` (verdad de disponibilidad); ingresos/ADR salen de `events`. RevPAR = ingresos / capacidad."
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "6a00a7525c40"
-    },
-    {
-      "ruta": "packages/module-revenue/src/util.ts",
-      "ambito": "packages/module-revenue",
-      "resumen": "Helpers puros de fecha y estadística. UTC en todo para ser determinista.",
-      "exporta": [
-        "dow",
-        "monthOf",
-        "daysBetween",
-        "nightsOf",
-        "mean",
-        "percentile"
-      ],
-      "funciones": [
-        {
-          "nombre": "dow",
-          "kind": "function",
-          "exportada": true,
-          "params": "d: Date",
-          "retorno": "number",
-          "linea": 6,
-          "resumen": "Día de la semana en UTC: 0=domingo … 6=sábado."
-        },
-        {
-          "nombre": "monthOf",
-          "kind": "function",
-          "exportada": true,
-          "params": "d: Date",
-          "retorno": "number",
-          "linea": 11,
-          "resumen": "Mes en UTC: 1..12."
-        },
-        {
-          "nombre": "daysBetween",
-          "kind": "function",
-          "exportada": true,
-          "params": "a: Date, b: Date",
-          "retorno": "number",
-          "linea": 16,
-          "resumen": "Días enteros entre `a` y `b` (b - a), redondeado."
-        },
-        {
-          "nombre": "nightsOf",
-          "kind": "function",
-          "exportada": true,
-          "params": "ev: { start: Date; end?: Date; quantity?: number }",
-          "retorno": "number",
-          "linea": 21,
-          "resumen": "Nº de unidades (noches/servicios) de un evento."
-        },
-        {
-          "nombre": "mean",
-          "kind": "function",
-          "exportada": true,
-          "params": "xs: number[]",
-          "retorno": "number",
-          "linea": 28,
-          "resumen": "Media aritmética; NaN si vacío."
-        },
-        {
-          "nombre": "percentile",
-          "kind": "function",
-          "exportada": true,
-          "params": "sortedAsc: number[], q: number",
-          "retorno": "number",
-          "linea": 33,
-          "resumen": "Percentil (interpolación lineal) sobre un array ascendente."
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "0fc6ba55b823"
     },
     {
       "ruta": "packages/module-rrhh/src/firma.ts",
@@ -99413,7 +99285,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2619,
-    "funciones": 7235
+    "archivos": 2620,
+    "funciones": 7220
   }
 }

@@ -32,6 +32,19 @@
 
 ---
 
+### 🔍 (29/08/2026) Auditoría COMPLETA con foco en pricing — motor validado contra producción
+- Informe: `docs/AUDITORIA-2026-08-29-completa.md`. Todo verde: 12 checks CI en local, 11 typechecks,
+  guardián 75/75, QA/lint 0 errores. **Pricing:** propagación al canal verificada al 100% (cierra el
+  fleco del 27/08), `base_fuente`/`ancla_origen` rellenándose en prod (cierra el check-in del 28/08),
+  0 roturas de raíl a la baja desde el 19/08, fórmula validada A MANO (Dúplex 16/09: 162€ calculado
+  vs 166€ vivo, dentro de banda muerta). Serrucho: 1,26 escrituras/noche vs 4,87 del motor viejo.
+- 2 fixes: `core-payments` en transpilePackages de plataforma + generados regenerados. Alberto
+  delegó la limpieza («no reviso nada»): **borrados `module-encargo` y `module-revenue`** (0
+  consumidores; recuperables de git, último commit con ellos `3dcd5491`) y `module-agenda` se
+  conserva (reservado para almacén Fase 2). BD: 7 índices duplicados fuera + `search_path` de
+  `pricing_factor_aforo` fijado (verificada la función en caliente tras el cambio).
+- 🟡 vigilar: bloque Luxury jul-ago 2027 sube a tope de raíl persiguiendo el ancla (03/09 lo mide).
+
 ### 📅 (29/08/2026) mercado-booking: julio y agosto 2027 ya tienen bucket elegible
 Pasada prioritaria pedida por Alberto (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 280 comps
 reales escritos en 25 ventanas (24 del plan + 1 extra en agosto ronda 3, porque la fecha del
