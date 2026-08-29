@@ -32,6 +32,17 @@
 
 ---
 
+### 🧽 (29/08/2026) Intranet de limpieza para VANESA en plataforma + pestaña Tareas
+- Vanesa (Sique Brilla) NO usa el panel de ialimp → pantalla propia por token: `/invitado/limpieza?token=…`
+  (patrón invitado empresas/trading; tabla `limpieza_acceso_token`, aplicada y sembrada por Supabase MCP).
+- Ve: calendario 30d × 4 pisos (`incomes`: ocupación+aforo, SIN nombres/importes) + resumen diario con
+  limpiezas (`cleaning_sessions` de los 4 slugs, notas 📌) y tareas (`limpieza_tareas`, solo marca hecha).
+- Panel Alberto: pestaña nueva «Tareas» en `/sivra/limpiadoras` (CRUD + copiar enlace de Vanesa).
+- Fix de fuga en el mismo PR: `/api/sivra/limpiadoras/historial` sin filtro veía sesiones de TODOS los
+  tenants de ialimp → acotado a los 4 slugs. Spec: `docs/superpowers/specs/2026-08-29-intranet-limpieza-vanesa-design.md`.
+- Fase 2 PENDIENTE (decidida por Alberto, tras validar pantalla real): quitar credenciales admin de
+  Vanessa en ialimp y tomar él el mando del tenant Sique Brilla.
+
 ### 🔍 (29/08/2026) Auditoría COMPLETA con foco en pricing — motor validado contra producción
 - Informe: `docs/AUDITORIA-2026-08-29-completa.md`. Todo verde: 12 checks CI en local, 11 typechecks,
   guardián 75/75, QA/lint 0 errores. **Pricing:** propagación al canal verificada al 100% (cierra el
