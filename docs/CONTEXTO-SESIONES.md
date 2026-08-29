@@ -32,6 +32,15 @@
 
 ---
 
+### 💳 (29/08/2026) Agente huéspedes: coordinar un PAGO nunca sale solo — guardrail `hablaDePago`
+Alberto, al ver auto-enviada la respuesta a Raquel («el pago… por transferencia bancaria o Bizum.
+Te envío los datos por mensaje privado» — métodos y promesa INVENTADOS; el cobro real es el enlace
+de Stripe): «a este nivel creo que debería yo autorizar». El importe (20€) era del catálogo y la
+respuesta `apoyada_en_fuente`, así que ningún guardrail saltaba. Nuevo `hablaDePago()` en
+`extras.ts` (puro, 5 idiomas: pagar/cobrar, Bizum, transferencia, IBAN, efectivo…) aplicado en
+`orquestador.ts` a pregunta Y borrador → `needs_human`. `cobro-auto.ts` (paso 1-bis) sigue siendo
+el único camino automático. Skill sivra-maestro actualizada.
+
 ### 💬 (29/08/2026) Agente huéspedes: la línea 🔁 al español, garantizada en los avisos
 - Alberto, sobre la copia de un auto-envío (Armelle, House Sevillana): quiere leer SIEMPRE en español
   el mensaje del huésped. El código ya traducía, pero solo si `ctx.lang !== 'es'` y callándose si la IA fallaba.
