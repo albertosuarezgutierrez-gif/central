@@ -29,3 +29,8 @@ export const PROPS_CALENDARIO = [
   { id: 'prop_duplex_center',   label: 'Duplex Center',   color: '#10b981', short: 'DC' },
   { id: 'prop_luxury_busto',    label: 'Luxury Busto',    color: '#ef4444', short: 'LB' },
 ] as const
+
+// Slugs de los 4 pisos de Alberto en cleaning_sessions/incomes. Sirve para acotar las consultas
+// de limpiezas a SUS pisos (cleaning_sessions es multi-tenant: ialimp escribe ahí las de otras
+// empresas con propiedad_id uuid; sin este filtro se ven sesiones ajenas).
+export const PROPS_CALENDARIO_IDS: string[] = PROPS_CALENDARIO.map(p => p.id)
