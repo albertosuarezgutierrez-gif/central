@@ -3573,7 +3573,7 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
-## ✅ (28/08/2026) El paper ya VENDE (H9 cableada) + vigía de hipótesis + relleno del alfa
+## ✅ (28/08/2026) El paper ya VENDE (H9 cableada) + vigía de hipótesis + relleno del alfa — PR #1840 ✅ MERGEADO
 
 - **H9 cableada.** `aplicarStop` fuera; `venceVentana` dentro. La posición guarda `horizonteDias` y esa
   es su única salida — lo que H9 firmó («no se ponen stops») y lo que el panel prometía. La distancia
@@ -3591,9 +3591,13 @@ completo `docs/AUDITORIA-2026-08.md`.
 - **Relleno del alfa hacia atrás** dentro de `/puntuar` (cola de 400/pasada, patrón `facturas-scan`), no
   en un endpoint que alguien deba recordar. Las 1.320 observaciones existentes tendrán alfa en 3-4
   noches. ⚠️ **No se pudo ejecutar desde la sesión**: el proxy del contenedor bloquea Stooq y Yahoo.
-- 330 tests de lib/trading, tsc limpio, `pnpm test` exit 0. PRs #1838 y #1840 (este último, en curso).
+- **Verificado sobre `main` ya fusionado** (c7cf8ab9): `pnpm test` **exit 0** — 75 guardianes de raíz,
+  200 del módulo de trading, 330 de `lib/trading`, vitest 53; `tsc --noEmit` de plataforma limpio.
+- 🔭 **Lo que hay que mirar mañana:** la 1ª pasada de `/puntuar` cierra de golpe **10 posiciones** vencidas
+  (con el precio de SU vencimiento) y empieza a rellenar alfa a 400/pasada. Si el latido dice
+  «vencida(s) sin precio fiable» o «sin alfa medible», es un hueco declarado, no un fallo mudo.
 
-## 📊 (28/08/2026) El track record del trading medía BETA y en BRUTO — H13/H14/H15
+## 📊 (28/08/2026) El track record del trading medía BETA y en BRUTO — H13/H14/H15 (PR #1840 ✅)
 
 - **H13 (alfa).** `puntuarTesis` daba el retorno ABSOLUTO y `acierto` de una alcista era «subió»: en un
   tramo alcista eso lo hace el MERCADO, y ese hit-rate es lo que `ajustesDeStats` convierte en delta de
@@ -3612,7 +3616,7 @@ completo `docs/AUDITORIA-2026-08.md`.
   lib/trading + 16 de scoring, tsc limpio, `pnpm test` exit 0.
 - Antes, en la misma sesión: **#1838 mergeado** (H11 + H12). Sigue abierto el stop de 2·ATR contra H9.
 
-## 🕰️ (28/08/2026) H11 (piscina del torneo) + H12: la cinta se cortaba en el día 91 — PR #1838
+## 🕰️ (28/08/2026) H11 (piscina del torneo) + H12: la cinta se cortaba en el día 91 — PR #1838 ✅ MERGEADO
 
 - **H11 (recolección en sombra).** `torneo()` NO aplica el ajuste de confianza a las neutrales, pero
   `trading_estrategia_stats` se calcula sobre una piscina **82% neutral** (retorno 0 por construcción):
