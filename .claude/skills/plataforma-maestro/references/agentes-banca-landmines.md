@@ -212,5 +212,41 @@ Excel viejos), evaluado ANTES del reparto abono/cargo para cubrir también la re
 - **Suelto conocido en ese cajón:** `FINANCIALDATASETS.AI` (API del radar de trading) sigue cayendo a
   `seguros` + revisar. Si se decide que es herramienta profesional, va a `RE_SOFTWARE`, no a mano.
 
+## 🚨 IONOS: un proveedor que llevaba 3 años sin contabilizarse (29/08/2026)
+Alberto, ante el aviso de la bandeja: *«ionos es proveedor de dominio web, deducible a correduría;
+tiene que haber bastantes cargos, a ver si están contabilizados bien»*. No lo estaban, y el fallo
+era de **tres capas a la vez**. Sirve como plantilla para auditar cualquier proveedor recurrente:
+
+1. **El negocio estaba cableado mal en `lib/destino.ts`.** IONOS vivía en `RE_PISOS` desde el
+   principio, seguramente porque ahí está alojado el dominio `housesevillana.es`. Pero IONOS es
+   infraestructura de desarrollo (dominios, DNS, correo, VPS+Plesk, SSL) que sirve además a ialimp
+   (`smtp.ionos.es`) y a la correduría → su sitio es `RE_SOFTWARE`, como Vercel/Anthropic. Los 12
+   cargos en BD salían repartidos entre `turistico_pisos` (9) y `seguros` (3 reclasificados a mano
+   en junio): **el mismo proveedor contado en dos negocios distintos**, y ninguna de las dos
+   reclasificaciones manuales creó regla.
+   - ⚠️ `RE_SOFTWARE` **solo aplica en BBVA** (invariante «correduría = siempre BBVA») y IONOS se
+     cobra **por PayPal contra la TARJETA de Kutxabank**, así que mover la clave de regex NO basta:
+     lo que lo lleva a la correduría fuera de BBVA es la regla aprendida `IONOS → seguros` de
+     `banca_destino_reglas`, exactamente el mismo camino que ya usaba `VERCEL` (que se paga desde
+     N26). **Antes de dar por arreglado un proveedor, mira POR QUÉ CUENTA se cobra**, no solo qué
+     regex casa.
+2. **La huella la partía un NIF mal leído.** En 2 de las 5 facturas que el agente sí leyó, el
+   extractor guardó como `nif_proveedor` el NIF del CLIENTE (el de Alberto) en vez del de IONOS —
+   variante del caso DIGI. `receptor.ts::nifProveedorEsNuestro` ya lo detecta desde el 26/08, pero
+   las filas viejas seguían partidas. Saneadas en `prisma/sql/2026-08-29_ionos_correduria.sql`.
+3. **Y lo más caro: el agente de correo no existía cuando llegaron casi todas las facturas.** En
+   Gmail hay **46 facturas de IONOS desde 09/2023**; en `gastos` hay **6**, y solo UNA imputada (la
+   de abr-2026, metida a mano). El extracto de tarjeta solo cubre dic-2025→jul-2026, así que el
+   resto **no está ni en el banco ni en gastos**: no hay ningún hueco visible que delate la falta.
+   **«El agente no avisó» no es «no hay nada»: el agente solo mira el correo NUEVO.** Para auditar
+   un proveedor, la fuente completa es el buzón, no la bandeja.
+
+**Limitación estructural que queda abierta:** IONOS factura por CONTRATO (Servidor Virtual Cloud M,
+SSL Ilimitado anual, Domain Pack, Correo Basic…) con importes de 1,82€ a 145,20€. La regla de
+`gastos_reglas` se valida contra una banda de **±10% del importe esperado**, así que aunque Alberto
+confirme dos veces en la bandeja, **IONOS seguirá cayendo en la bandeja cada mes** salvo que se le
+ensanche `importe_min`/`importe_max` a mano. Un proveedor multi-contrato no encaja en «una huella,
+un importe».
+
 ## Frontera multi-tenant
 Scope `cuenta_id` siempre. BD compartida con sivra/ialimp: cambios transversales de BD → `auditoria-central`.

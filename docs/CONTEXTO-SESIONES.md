@@ -3573,6 +3573,16 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🧾 (29/08/2026) IONOS llevaba 3 años sin contabilizarse — negocio mal cableado + huella partida
+- Alberto: «IONOS es dominio web, deducible a correduría; revisa que esté bien». **No lo estaba.**
+- `lib/destino.ts`: IONOS estaba en `RE_PISOS` (por `housesevillana.es`) → los 12 cargos en BD salían
+  repartidos entre pisos (9) y correduría (3 a mano). Movido a `RE_SOFTWARE` + regla aprendida
+  `IONOS → seguros` (RE_SOFTWARE solo aplica en BBVA y esto se cobra por PayPal/tarjeta Kutxa).
+- Backfill `prisma/sql/2026-08-29_ionos_correduria.sql`: 12 movimientos → seguros/informatica, y 2
+  filas de `gastos` con el NIF de Alberto como CIF de IONOS (variante del caso DIGI) saneadas.
+- **Pendiente de Alberto:** en Gmail hay **46 facturas desde 09/2023** y en `gastos` solo 6 (1 imputada).
+  Falta decidir si se importa el histórico. Las 5 de la bandeja siguen sin confirmar.
+
 ## ✅ (28/08/2026) El paper ya VENDE (H9 cableada) + vigía de hipótesis + relleno del alfa — PR #1840 ✅ MERGEADO
 
 - **H9 cableada.** `aplicarStop` fuera; `venceVentana` dentro. La posición guarda `horizonteDias` y esa
