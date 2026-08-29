@@ -16,7 +16,12 @@ const LISTAS: ListasBlancas = { categorias: CATEGORIAS_GASTO, propiedades: PROPS
 
 /** Cuántas facturas ya revisadas del mismo proveedor se le enseñan a la IA. */
 const HISTORICO_MAX = 10
-/** Ventana para casar la factura con su cargo bancario. Kutxabank va 1-3 días por detrás. */
+/** Ventana para casar la factura con su cargo bancario. Kutxabank va 1-3 días por detrás.
+ *
+ * 🚨 Los días van casteados a `::int` en la consulta. Un parámetro de Prisma sin castear llega a
+ * Postgres como `bigint` y `date - bigint` no existe: revienta con 42883 EN RUNTIME, que es
+ * exactamente lo que tumbó el cron `sivra_canal` el 19/08/2026. Ni `tsc` ni `next build` miran
+ * dentro de un `Prisma.sql`; lo caza el guardián de la raíz, que es quien lo detectó aquí. */
 const DIAS_ANTES = 5
 const DIAS_DESPUES = 15
 
@@ -71,7 +76,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
       WHERE cb.cuenta_id = ${session.id}::uuid
         AND mb.importe < 0
         AND abs(abs(mb.importe) - ${total}) < 0.02
-        AND mb.fecha_operacion BETWEEN (${f.fecha}::date - ${DIAS_ANTES}) AND (${f.fecha}::date + ${DIAS_DESPUES})
+        AND mb.fecha_operacion BETWEEN (${f.fecha}::date - ${DIAS_ANTES}::int) AND (${f.fecha}::date + ${DIAS_DESPUES}::int)
       ORDER BY mb.fecha_operacion ASC
       LIMIT 1
     `)
