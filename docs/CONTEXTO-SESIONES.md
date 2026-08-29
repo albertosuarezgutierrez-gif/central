@@ -40,6 +40,9 @@
 - Panel Alberto: pestaña nueva «Tareas» en `/sivra/limpiadoras` (CRUD + copiar enlace de Vanesa).
 - Fix de fuga en el mismo PR: `/api/sivra/limpiadoras/historial` sin filtro veía sesiones de TODOS los
   tenants de ialimp → acotado a los 4 slugs. Spec: `docs/superpowers/specs/2026-08-29-intranet-limpieza-vanesa-design.md`.
+- v2 (mismo día, feedback de Alberto): entradas marcadas en el calendario (→ + sección «Entradas del
+  día») y zona «🔔 Novedades» (reservas nuevas por `incomes.createdAt` + `reservas_canceladas`, 14 días).
+  Los CAMBIOS de fechas de una reserva existente NO se registran (el sync sobrescribe) — hueco conocido.
 - Fase 2 PENDIENTE (decidida por Alberto, tras validar pantalla real): quitar credenciales admin de
   Vanessa en ialimp y tomar él el mando del tenant Sique Brilla.
 

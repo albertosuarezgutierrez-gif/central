@@ -31,6 +31,25 @@ export function entradaMismoDia(
   return r ? { pax: r.pax } : null
 }
 
+export type Novedad = {
+  tipo: 'nueva' | 'cancelada'
+  propertyId: string
+  checkIn: string | null   // null = la fuente no publicó las fechas («no se sabe», no se inventa)
+  checkOut: string | null
+  pax: number | null
+  detectada: string        // ISO datetime: cuándo lo VIO nuestro sync (no cuándo ocurrió en el portal)
+}
+
+/**
+ * Mezcla reservas nuevas y cancelaciones en un solo hilo de novedades, de más reciente a más
+ * antigua por `detectada`, con tope. No filtra por fechas: eso es del caller (SQL).
+ */
+export function mezclarNovedades(nuevas: Novedad[], canceladas: Novedad[], limite = 20): Novedad[] {
+  return [...nuevas, ...canceladas]
+    .sort((a, b) => b.detectada.localeCompare(a.detectada))
+    .slice(0, limite)
+}
+
 /** ¿Está el piso ocupado la noche de `fecha`? (checkIn <= fecha < checkOut, fechas ISO comparables). */
 export function nocheOcupada(
   reservas: Pick<ReservaIntranet, 'propertyId' | 'checkIn' | 'checkOut'>[],

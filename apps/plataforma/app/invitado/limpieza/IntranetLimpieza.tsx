@@ -3,7 +3,7 @@
 // día con limpiezas, tareas y notas. Sin nombres de huéspedes ni importes (solo ocupación y aforo).
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { PROPS_CALENDARIO as PROPS } from '@/lib/sivra/constantes'
-import { entradaMismoDia, nocheOcupada, type ReservaIntranet } from '@/lib/sivra/limpieza-intranet'
+import { entradaMismoDia, nocheOcupada, type ReservaIntranet, type Novedad } from '@/lib/sivra/limpieza-intranet'
 
 const DIAS = 30
 const DOW = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
@@ -18,6 +18,11 @@ type Limpieza = {
 type Tarea = { id: string; fecha: string; propertyId: string | null; texto: string; hecha: boolean }
 
 function iso(d: Date) { return d.toISOString().slice(0, 10) }
+function fmtDM(isoFecha: string | null) {
+  if (!isoFecha) return null
+  const [, m, d] = isoFecha.split('-')
+  return `${d}/${m}`
+}
 function addDays(d: Date, n: number) { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 function hoyDate() { const d = new Date(); d.setHours(12, 0, 0, 0); return d }
 function propDe(id: string) { return PROPS.find(p => p.id === id) }
@@ -28,6 +33,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   const [reservas, setReservas] = useState<ReservaIntranet[]>([])
   const [limpiezas, setLimpiezas] = useState<Limpieza[]>([])
   const [tareas, setTareas] = useState<Tarea[]>([])
+  const [novedades, setNovedades] = useState<Novedad[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const [sel, setSel] = useState(iso(hoy))
@@ -40,6 +46,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
       setReservas(d.reservas ?? [])
       setLimpiezas(d.limpiezas ?? [])
       setTareas(d.tareas ?? [])
+      setNovedades(d.novedades ?? [])
       setError(false)
     } catch {
       setError(true)
@@ -139,7 +146,8 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
           </div>
         )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '4px 14px 12px', fontSize: 11, color: 'var(--muted)' }}>
-          <span><span style={{ display: 'inline-block', width: 18, height: 10, borderRadius: 4, background: '#3E6AA8', verticalAlign: 'middle', marginRight: 4 }} />ocupado (nº huéspedes)</span>
+          <span><span style={{ display: 'inline-block', width: 18, height: 10, borderRadius: 4, background: '#3E6AA8', verticalAlign: 'middle', marginRight: 4 }} />ocupado</span>
+          <span><b>→</b> entrada (nº huéspedes)</span>
           <span>🧽 limpieza</span>
           <span><span style={{ color: '#b45309' }}>🧽</span> entra huésped el mismo día</span>
         </div>
@@ -179,6 +187,27 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
             )
           })}
 
+          <h3 style={tituloBloque}>Entradas del día</h3>
+          {(() => {
+            const entradas = reservas.filter(r => r.checkIn === sel)
+            if (!entradas.length) return <div style={vacio}>Nadie entra este día{limpiezasDia.length ? ' — las limpiezas van con calma' : ''}.</div>
+            return entradas.map((r, i) => {
+              const p = propDe(r.propertyId)
+              const limp = limpiezasDia.find(l => l.propertyId === r.propertyId)
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px', marginBottom: 8, fontSize: 14 }}>
+                  <span>🔑</span>
+                  <span style={{ fontWeight: 800, color: p?.color }}>{p?.label ?? r.propertyId}</span>
+                  <span style={{ color: 'var(--muted)' }}>
+                    {r.pax != null ? `entran ${r.pax} huéspedes` : 'entra huésped'}
+                    {limp?.entrada ? ` · sobre las ${limp.entrada}` : ''}
+                    {` · hasta el ${fmtDM(r.checkOut)}`}
+                  </span>
+                </div>
+              )
+            })
+          })()}
+
           <h3 style={tituloBloque}>Tareas de Alberto</h3>
           {tareasDia.length === 0 && <div style={vacio}>Sin tareas apuntadas para este día.</div>}
           {tareasDia.map(t => {
@@ -195,6 +224,36 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
             )
           })}
         </div>
+      </section>
+
+      {/* Novedades: lo que ha cambiado respecto a lo que ya tenía planificado */}
+      <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginTop: 14 }}>
+        <h2 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700 }}>🔔 Novedades · últimos 14 días</h2>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+          Reservas nuevas y cancelaciones que han entrado después de lo que ya tenías visto.
+        </div>
+        {!cargando && novedades.length === 0 && <div style={vacio}>Sin novedades: todo sigue como estaba. 👍</div>}
+        {novedades.map((n, i) => {
+          const p = propDe(n.propertyId)
+          const rango = n.checkIn || n.checkOut
+            ? `${fmtDM(n.checkIn) ?? '¿?'} → ${fmtDM(n.checkOut) ?? '¿?'}`
+            : 'fechas no publicadas'
+          const det = new Date(n.detectada)
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, borderTop: i > 0 ? '1px solid var(--border)' : 'none', padding: '8px 0', fontSize: 13.5 }}>
+              <span>{n.tipo === 'nueva' ? '🆕' : '🚫'}</span>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontWeight: 700 }}>{n.tipo === 'nueva' ? 'Reserva nueva' : 'Cancelada'}</span>
+                {' · '}<span style={{ fontWeight: 700, color: p?.color }}>{p?.label ?? n.propertyId}</span>
+                {' · '}{rango}
+                {n.tipo === 'nueva' && n.pax != null && ` · ${n.pax} huéspedes`}
+                <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+                  detectada el {det.getDate()}/{String(det.getMonth() + 1).padStart(2, '0')} a las {String(det.getHours()).padStart(2, '0')}:{String(det.getMinutes()).padStart(2, '0')}
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </section>
 
       <footer style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '14px 20px 0', lineHeight: 1.6 }}>
@@ -232,8 +291,10 @@ function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, onSel }: {
                 borderTopLeftRadius: empieza ? 20 : 0, borderBottomLeftRadius: empieza ? 20 : 0,
                 borderTopRightRadius: acaba ? 20 : 0, borderBottomRightRadius: acaba ? 20 : 0,
               }}>
-                {empieza && res.pax != null && (
-                  <span style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#fff', fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap' }}>{res.pax}👤</span>
+                {empieza && (
+                  <span style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', color: '#fff', fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                    →{res.pax != null ? `${res.pax}👤` : ''}
+                  </span>
                 )}
               </div>
             )}
