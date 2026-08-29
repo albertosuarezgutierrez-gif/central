@@ -9,6 +9,8 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { sugerirDesdeHistorico, type Sugerencia } from './sugerencia-pendiente'
+import { fingerprint, huellasDe } from './fingerprint'
+import { proveedorParaHuella } from './huella-rescate'
 import { reforzarRegla } from './imputar'
 
 /** Cuántas facturas del histórico del proveedor se miran para proponer. */
@@ -59,7 +61,20 @@ export async function listarPendientes(limite = 200): Promise<Pendiente[]> {
   if (filas.length === 0) return []
 
   // Histórico YA REVISADO de los proveedores implicados, en UNA consulta (no N+1).
-  const huellas = [...new Set(filas.map((f) => f.fingerprint).filter(Boolean))] as string[]
+  //
+  // 🚨 Se pregunta por TODAS las huellas del proveedor, no solo por la que lleva escrita la fila.
+  // El mismo proveedor queda registrado bajo su NIF o bajo su nombre según lo que trajera cada
+  // PDF (ver `huellasDe`), así que mirar una sola hacía que la bandeja dijese «sin histórico»
+  // sobre proveedores con facturas ya aprobadas — el «Anthropic, PBC» de Alberto (29/08/2026).
+  const huellasFila = new Map<string, string[]>()
+  for (const f of filas) {
+    const hs = [...new Set([
+      ...(f.fingerprint ? [f.fingerprint as string] : []),
+      ...huellasDe({ nif_proveedor: f.nif_proveedor, proveedor: f.proveedor, concepto: f.concepto }),
+    ])]
+    huellasFila.set(f.id, hs)
+  }
+  const huellas = [...new Set([...huellasFila.values()].flat())]
   const historico = huellas.length
     ? await prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT fingerprint, propiedad, categoria
@@ -83,12 +98,14 @@ export async function listarPendientes(limite = 200): Promise<Pendiente[]> {
   // Se cuenta sobre las filas ya traídas (mismo criterio de pendiente, sin otra consulta).
   const pendientesPorHuella = new Map<string, number>()
   for (const f of filas) {
-    if (!f.fingerprint) continue
-    pendientesPorHuella.set(f.fingerprint, (pendientesPorHuella.get(f.fingerprint) ?? 0) + 1)
+    for (const h of huellasFila.get(f.id) ?? []) {
+      pendientesPorHuella.set(h, (pendientesPorHuella.get(h) ?? 0) + 1)
+    }
   }
 
   return filas.map((f) => {
-    const hist = porHuella.get(f.fingerprint) ?? []
+    // Se juntan los históricos de todas las huellas de ese proveedor.
+    const hist = (huellasFila.get(f.id) ?? []).flatMap((h) => porHuella.get(h) ?? [])
     return {
       ...f,
       base_imponible: f.base_imponible == null ? null : Number(f.base_imponible),
@@ -97,7 +114,9 @@ export async function listarPendientes(limite = 200): Promise<Pendiente[]> {
       total: Number(f.total ?? 0),
       sugerencia: sugerirDesdeHistorico({ categoria: f.categoria }, hist),
       historico: hist.length,
-      pendientesProveedor: f.fingerprint ? (pendientesPorHuella.get(f.fingerprint) ?? 1) : 1,
+      // Máximo entre sus huellas: dos filas del mismo proveedor pueden llevar huellas distintas
+      // y solo comparten una de ellas.
+      pendientesProveedor: Math.max(1, ...(huellasFila.get(f.id) ?? []).map((h) => pendientesPorHuella.get(h) ?? 0)),
     } as Pendiente
   })
 }
@@ -111,15 +130,15 @@ export interface CambiosPendiente {
  * Confirma una factura: la da por contabilizada y APRENDE la regla.
  *
  * El refuerzo de la regla es la mitad del trabajo: es lo que hace que la próxima factura del mismo
- * proveedor se impute sola. `reforzarRegla` sube `vistas` en cada confirmación y `evaluar()` exige
- * `vistas >= 2`, así que la segunda confirmación es la que abre la puerta.
+ * proveedor se impute sola. `reforzarRegla` sube `vistas` en cada confirmación y desde el
+ * 29/08/2026 `evaluar()` exige `vistas >= 1`, así que ESTA confirmación ya abre la puerta.
  *
  * Devuelve `false` si la fila no existía o ya estaba revisada (no se re-refuerza la regla: contar
  * dos veces la misma confirmación falsearía el historial que decide la auto-imputación).
  */
 export async function confirmarPendiente(id: string, cambios: CambiosPendiente = {}): Promise<boolean> {
   const [fila] = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT id::text, fecha::text, proveedor, nif_proveedor, categoria, propiedad,
+    SELECT id::text, fecha::text, proveedor, nif_proveedor, categoria, propiedad, concepto,
            iva_porcentaje, irpf_porcentaje, total, fingerprint
     FROM gastos
     WHERE id = ${id}::uuid AND revisado = false AND origen IS NOT NULL
@@ -137,7 +156,24 @@ export async function confirmarPendiente(id: string, cambios: CambiosPendiente =
     WHERE id = ${id}::uuid
   `)
 
-  if (fila.fingerprint) {
+  // 🚨 Si la fila no trae huella, se CALCULA aquí en vez de renunciar a aprender.
+  //
+  // Hasta el 29/08/2026 esto era `if (fila.fingerprint)` a secas, y en `gastos` había 47 filas ya
+  // revisadas sin huella (13.267,14 €) entre las que estaban las cinco facturas de Lavandería El
+  // Giraldillo que Alberto había aprobado: cinco confirmaciones suyas que no enseñaron nada, y una
+  // bandeja que seguía diciéndole «sin histórico». `proveedorParaHuella` devuelve `null` cuando el
+  // proveedor es un centinela ('Importado') y no hay forma fiable de sacarlo del concepto — ahí sí
+  // se renuncia, porque una huella inventada AGRUPA proveedores distintos y propaga su regla.
+  const proveedorHuella = proveedorParaHuella({ proveedor: fila.proveedor, concepto: fila.concepto })
+  const fp = fila.fingerprint || (proveedorHuella
+    ? fingerprint({ nif_proveedor: fila.nif_proveedor, proveedor: proveedorHuella, concepto: fila.concepto })
+    : null)
+
+  if (fp) {
+    if (!fila.fingerprint) {
+      // Se persiste para que la fila deje de ser invisible al histórico y al dedup.
+      await prisma.$executeRaw(Prisma.sql`UPDATE gastos SET fingerprint = ${fp} WHERE id = ${id}::uuid`)
+    }
     await reforzarRegla({
       fecha: fila.fecha,
       proveedor: fila.proveedor,
@@ -147,7 +183,7 @@ export async function confirmarPendiente(id: string, cambios: CambiosPendiente =
       iva_porcentaje: fila.iva_porcentaje == null ? null : Number(fila.iva_porcentaje),
       irpf_porcentaje: fila.irpf_porcentaje == null ? null : Number(fila.irpf_porcentaje),
       total: Number(fila.total ?? 0),
-      fingerprint: fila.fingerprint,
+      fingerprint: fp,
     }).catch(() => {})
   }
   return true

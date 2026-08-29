@@ -3598,6 +3598,19 @@ completo `docs/AUDITORIA-2026-08.md`.
   dándolas de alta — pendiente arreglar el sentido del documento en el agente.
 - Cascada por proveedor (`confirmarProveedor`): «resuelto uno, los demás igual». Explícita, con el
   número delante — una reparación es de UN piso, no de todos.
+- 🚨 **Y por qué «no aprendía»:** `fingerprint()` usa el NIF SI LO HAY y si no el nombre → la
+  identidad cambia de EJE y el mismo proveedor se parte («Anthropic Ireland» IE4276970QH vs
+  «Anthropic, PBC» sin NIF). Nuevo `huellasDe()`: se busca regla e histórico por AMBAS y
+  `reforzarRegla` escribe las dos. Además `MIN_VISTAS` 2→**1** y banda ±10%→**×5**
+  (`FACTOR_BANDA`), ambas por decisión de Alberto: con la pantalla, cada vista es un clic suyo, y
+  el ±10% dejaba la regla escrita pero inservible para servicios de importe variable.
+- 🚨 **47 filas revisadas SIN huella (13.267,14€)**, entre ellas las 5 de Giraldillo que Alberto ya
+  había aprobado: `confirmarPendiente` solo reforzaba `if (fingerprint)`, así que esas
+  confirmaciones no enseñaron nada. Ahora la calcula al confirmar. ⚠️ El backfill masivo NO se
+  hizo: 28 de las 47 tienen `proveedor='Importado'` (centinela) y normalizarlo habría fusionado
+  TotalEnergies+EMASESA+DIGI+PriceLabs+Petroprix+SiQueBrilla en una huella. `huella-rescate.ts`
+  (puro) saca el proveedor real del concepto y devuelve null cuando no puede. Aplicado solo a
+  Giraldillo (7 filas unidas, «SOCORRO» fusionada) y Si Que Brilla, con sus reglas sembradas.
 - 📉 **`incomes.amount` es DERIVADO**: las 372 reservas de Booking desde 2025 dan comisión implícita
   19,7154–19,7247% (solo redondeo). No sirve para cuadrar la factura de comisiones de Booking.
 

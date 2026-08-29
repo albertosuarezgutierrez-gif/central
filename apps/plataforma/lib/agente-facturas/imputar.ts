@@ -1,7 +1,8 @@
 // Acceso a BD del agente: reglas, dedup, inserción de gastos, refuerzo y log.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import type { Regla } from './reglas'
+import { FACTOR_BANDA, type Regla } from './reglas'
+import { huellasDe } from './fingerprint'
 
 export interface DatosGasto {
   fecha: string
@@ -26,12 +27,22 @@ export interface DatosGasto {
   raw_extraction?: unknown
 }
 
-export async function getRegla(fingerprint: string): Promise<Regla | null> {
-  if (!fingerprint) return null
+/**
+ * Busca la regla aprendida del proveedor. Acepta VARIAS huellas (ver `huellasDe`): el mismo
+ * proveedor queda registrado bajo su NIF o bajo su nombre según lo que trajera cada factura, y
+ * mirar solo una era la causa de «he dado ok a varios y sigue apareciendo» (Anthropic, 29/08/2026).
+ *
+ * Se respeta el ORDEN recibido: gana la primera que exista, y la primera es la del NIF.
+ */
+export async function getRegla(huella: string | string[]): Promise<Regla | null> {
+  const huellas = (Array.isArray(huella) ? huella : [huella]).filter(Boolean)
+  if (huellas.length === 0) return null
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT fingerprint, propiedad, categoria, iva_porcentaje, irpf_porcentaje,
-           importe_esperado, importe_min, importe_max, vistas, activa
-    FROM gastos_reglas WHERE fingerprint = ${fingerprint} LIMIT 1
+           importe_esperado, importe_min, importe_max, vistas, activa,
+           array_position(${huellas}::text[], fingerprint) AS orden
+    FROM gastos_reglas WHERE fingerprint = ANY(${huellas}::text[])
+    ORDER BY orden LIMIT 1
   `)
   if (rows.length === 0) return null
   const r = rows[0]
@@ -103,16 +114,33 @@ export async function insertarGasto(
 }
 
 // Crea o refuerza la regla aprendida tras una confirmación/imputación.
+//
+// La banda de importes usa `FACTOR_BANDA` (multiplicativo) y no el ±10 % de antes: los
+// proveedores de esta bandeja facturan suscripción + consumo, así que un margen fijo estrecho
+// dejaba la regla escrita pero inservible. Ver el porqué en `reglas.ts`. Sigue sin ESTRECHAR
+// nunca: `LEAST`/`GREATEST` solo ensanchan lo ya aprendido.
 export async function reforzarRegla(d: DatosGasto): Promise<void> {
   if (!d.fingerprint) return
+  // La regla se guarda bajo TODAS las huellas del proveedor (la del NIF y la del nombre), no solo
+  // bajo la que generó esta factura. Si no, lo aprendido de un PDF que traía el NIF no lo ve el
+  // del mes siguiente que no lo trae, y al revés: es el caso «Anthropic Ireland» vs «Anthropic,
+  // PBC» del 29/08/2026, dos huellas del mismo proveedor que no se hablaban. Escribir las dos es
+  // barato y hace que el aprendizaje sobreviva a cómo venga cada factura.
+  const huellas = [...new Set([d.fingerprint, ...huellasDe({
+    nif_proveedor: d.nif_proveedor, proveedor: d.proveedor, concepto: null,
+  })])]
+  for (const fp of huellas) await upsertRegla(fp, d)
+}
+
+async function upsertRegla(fingerprint: string, d: DatosGasto): Promise<void> {
   await prisma.$executeRaw(Prisma.sql`
     INSERT INTO gastos_reglas
       (fingerprint, proveedor, nif_proveedor, propiedad, categoria,
        iva_porcentaje, irpf_porcentaje, importe_esperado, importe_min, importe_max,
        periodicidad, vistas, ultima_fecha, activa)
     VALUES
-      (${d.fingerprint}, ${d.proveedor}, ${d.nif_proveedor}, ${d.propiedad}, ${d.categoria},
-       ${d.iva_porcentaje}, ${d.irpf_porcentaje}, ${d.total}, ${d.total * 0.9}, ${d.total * 1.1},
+      (${fingerprint}, ${d.proveedor}, ${d.nif_proveedor}, ${d.propiedad}, ${d.categoria},
+       ${d.iva_porcentaje}, ${d.irpf_porcentaje}, ${d.total}, ${d.total / FACTOR_BANDA}, ${d.total * FACTOR_BANDA},
        'mensual', 1, ${d.fecha}::date, true)
     ON CONFLICT (fingerprint) DO UPDATE SET
       vistas = gastos_reglas.vistas + 1,
@@ -121,8 +149,8 @@ export async function reforzarRegla(d: DatosGasto): Promise<void> {
       iva_porcentaje = EXCLUDED.iva_porcentaje,
       irpf_porcentaje = EXCLUDED.irpf_porcentaje,
       importe_esperado = EXCLUDED.importe_esperado,
-      importe_min = LEAST(gastos_reglas.importe_min, EXCLUDED.importe_esperado * 0.9),
-      importe_max = GREATEST(gastos_reglas.importe_max, EXCLUDED.importe_esperado * 1.1),
+      importe_min = LEAST(gastos_reglas.importe_min, EXCLUDED.importe_esperado / ${FACTOR_BANDA}),
+      importe_max = GREATEST(gastos_reglas.importe_max, EXCLUDED.importe_esperado * ${FACTOR_BANDA}),
       ultima_fecha = EXCLUDED.ultima_fecha,
       updated_at = now()
   `)
