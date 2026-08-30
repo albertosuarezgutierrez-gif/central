@@ -2513,6 +2513,10 @@ existe la opción de exigir 2FA a los miembros** (solo hay revocación de tokens
 secretos de producción separados, y ámbitos Git, que son de Enterprise). **Es una petición a Manuel, no
 una política.** Va con la pregunta del email.
 
+> ✅ **29/08/2026 — HECHO.** Alberto activó el 2FA de su cuenta de Vercel (confirmado por él tras
+> hacerlo con la pantalla delante; la cuenta tenía además una passkey ya registrada). El punto
+> pendiente de esta sección pasa a ser solo el 2FA de Manuel, que es petición, no política.
+
 ### Ruta para activar el 2FA de Alberto
 
 `vercel.com/account/authentication` → estado hoy **Inactivo**, con aviso rojo. Dos vías: *passkey*
