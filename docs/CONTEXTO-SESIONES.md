@@ -32,6 +32,14 @@
 
 ---
 
+### ✅ (30/08/2026) Pricing SIVRA recuperado: #1864 mergeado y la pasada de las 08:30 escribió
+El PR #1864 (fix `Prisma.raw()` en `sqlCompPlausible()`, ver entrada 🔴 de abajo) se sacó de draft
+y se mergeó a las ~06:10 UTC (`88cdda6`), antes del reparador de las 08:00 y de la pasada de las
+08:30. Verificado por SQL a las 08:51: `pricing_applied` con 287 noches escritas en 4 pisos a las
+08:30:40, y `agente_latidos.sivra_pricing_apply` en `ok=true`. Incidencia cerrada (~24h de precios
+congelados en total, ningún precio malo escrito). Nota: los 12 checks ya estaban verdes desde las
+02:25 (PR abierto por MCP con identidad de usuario — encaja con el matiz del PR #1777 en CLAUDE.md).
+
 ### 🔴 (30/08/2026) Auditoría profunda: el motor de pricing llevaba ~18h sin aplicar precios
 El refactor de plausibilidad de comparables (`sqlCompPlausible()`, PR #1854, 29/08) interpolaba esa
 función — un string JS — dentro de `Prisma.sql` sin `Prisma.raw()`: Prisma lo manda como parámetro
