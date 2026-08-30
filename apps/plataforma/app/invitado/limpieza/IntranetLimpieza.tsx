@@ -1,6 +1,7 @@
 'use client'
-// Pantalla de la limpieza (móvil primero, ≥320px): calendario 30 días × 4 pisos + resumen del
-// día con limpiezas, tareas y notas. Sin nombres de huéspedes ni importes (solo ocupación y aforo).
+// Pantalla de la limpieza (móvil primero, ≥320px): calendario mensual con las limpiezas de cada
+// piso por colores (vista «Mes», por defecto) o tira de 30 días × 4 pisos (vista «Lista»), más el
+// resumen del día con limpiezas, tareas y notas. Sin nombres de huéspedes ni importes.
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { PROPS_CALENDARIO as PROPS } from '@/lib/sivra/constantes'
 import { entradaMismoDia, nocheOcupada, type ReservaIntranet, type Novedad } from '@/lib/sivra/limpieza-intranet'
@@ -12,6 +13,8 @@ const DIAS = 30
 const VENTANA_ATRAS_DIAS = 90
 const VENTANA_ADELANTE_DIAS = 180
 const DOW = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
+// Semana del calendario mensual, lunes primero (convención española).
+const DOW_MES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const DOWL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
 type Limpieza = {
@@ -51,10 +54,33 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   const [sel, setSel] = useState(iso(hoy))
   // Filtro por piso (como los «Filtros» del calendario de Smoobu): null = los 4.
   const [filtro, setFiltro] = useState<string | null>(null)
+  // Vista «mes» (prueba pedida por Alberto, 30/08): calendario mensual clásico con las limpiezas
+  // como puntos del color de cada piso. La tira de 30 días sigue disponible en «Lista».
+  const [vista, setVista] = useState<'mes' | 'lista'>('mes')
+  const [mesAncla, setMesAncla] = useState(() => iso(hoyDate()).slice(0, 7)) // 'AAAA-MM'
+
+  // Rejilla del mes: semanas completas de lunes a domingo (los días de los meses vecinos se
+  // pintan atenuados, como en cualquier calendario de pared).
+  const mesGrid = useMemo(() => {
+    const primero = new Date(mesAncla + '-01T12:00:00')
+    const offset = (primero.getDay() + 6) % 7 // lunes = 0
+    const arranque = addDays(primero, -offset)
+    const diasMes = new Date(primero.getFullYear(), primero.getMonth() + 1, 0).getDate()
+    const semanas = Math.ceil((offset + diasMes) / 7)
+    return {
+      dias: Array.from({ length: semanas * 7 }, (_, i) => addDays(arranque, i)),
+      mes: primero.getMonth(),
+      titulo: primero.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+    }
+  }, [mesAncla])
+
+  // Rango de datos a pedir según la vista activa.
+  const rangoFrom = vista === 'mes' ? iso(mesGrid.dias[0]) : inicio
+  const rangoTo = vista === 'mes' ? iso(mesGrid.dias[mesGrid.dias.length - 1]) : finVentana
 
   const cargar = useCallback(async () => {
     try {
-      const r = await fetch(`/api/sivra/limpieza-intranet/datos?from=${inicio}&to=${iso(addDays(new Date(inicio + 'T12:00:00'), DIAS - 1))}`)
+      const r = await fetch(`/api/sivra/limpieza-intranet/datos?from=${rangoFrom}&to=${rangoTo}`)
       if (!r.ok) throw new Error(String(r.status))
       const d = await r.json()
       setReservas(d.reservas ?? [])
@@ -68,7 +94,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
     } finally {
       setCargando(false)
     }
-  }, [inicio])
+  }, [rangoFrom, rangoTo])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -106,7 +132,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   }
   function mover(n: number) {
     const d = addDays(selDate, n)
-    if (iso(d) < inicio || iso(d) > finVentana) return
+    if (iso(d) < rangoFrom || iso(d) > rangoTo) return
     setSel(iso(d))
   }
   // Mueve la ventana del calendario n días (±2 semanas por toque), acotada a
@@ -122,8 +148,21 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
     const nuevoFin = iso(addDays(new Date(nuevo + 'T12:00:00'), DIAS - 1))
     if (sel < nuevo || sel > nuevoFin) setSel(iso(hoy) >= nuevo && iso(hoy) <= nuevoFin ? iso(hoy) : nuevo)
   }
+  // Mueve el mes ±1, acotado a los meses que caen dentro de [hoy−90, hoy+180] (misma ventana
+  // de datos que la vista lista). Si el día seleccionado se sale del mes visible, va al día 1.
+  function moverMes(n: number) {
+    const [a, m] = mesAncla.split('-').map(Number)
+    const destino = new Date(a, m - 1 + n, 1, 12)
+    const clave = iso(destino).slice(0, 7)
+    const min = iso(addDays(hoy, -VENTANA_ATRAS_DIAS)).slice(0, 7)
+    const max = iso(addDays(hoy, VENTANA_ADELANTE_DIAS)).slice(0, 7)
+    if (clave < min || clave > max || clave === mesAncla) return
+    setMesAncla(clave)
+    if (sel.slice(0, 7) !== clave) setSel(iso(hoy).slice(0, 7) === clave ? iso(hoy) : clave + '-01')
+  }
   function volverAHoy() {
     setInicio(iso(hoy))
+    setMesAncla(iso(hoy).slice(0, 7))
     setSel(iso(hoy))
   }
   const rangoVentana = `${inicioDate.getDate()} ${inicioDate.toLocaleDateString('es-ES', { month: 'short' })} – ${new Date(finVentana + 'T12:00:00').getDate()} ${new Date(finVentana + 'T12:00:00').toLocaleDateString('es-ES', { month: 'short' })}`
@@ -139,6 +178,9 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         .li-dia .dow{display:block;font-weight:400;font-size:9px;text-transform:uppercase}
         .li-cell{border-top:1px solid var(--border);height:40px;position:relative;cursor:pointer}
         @media (max-width:380px){ .li-cal{grid-template-columns:74px repeat(${DIAS},32px)} }
+        .li-mes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;padding:0 10px 10px}
+        .li-mes-dow{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);text-align:center;padding:4px 0 2px}
+        .li-mes-dia{min-height:52px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px 1px 4px;color:var(--text)}
       `}</style>
 
       <header style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, padding: '16px 2px 12px' }}>
@@ -165,12 +207,29 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
 
       {/* Calendario */}
       <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 6px' }}>
-          <button onClick={() => moverVentana(-14)} aria-label="Dos semanas antes" style={btnNav}>‹</button>
-          <div style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{rangoVentana}</div>
-          <button onClick={() => moverVentana(14)} aria-label="Dos semanas después" style={btnNav}>›</button>
-          {inicio !== iso(hoy) && (
-            <button onClick={volverAHoy} style={{ ...btnNav, minWidth: 0, padding: '0 12px', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>Hoy</button>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, padding: '12px 14px 2px' }}>
+          <ChipFiltro activo={vista === 'mes'} onClick={() => setVista('mes')} label="Mes" />
+          <ChipFiltro activo={vista === 'lista'} onClick={() => setVista('lista')} label="Lista" />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px 6px' }}>
+          {vista === 'mes' ? (
+            <>
+              <button onClick={() => moverMes(-1)} aria-label="Mes anterior" style={btnNav}>‹</button>
+              <div style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 14, textTransform: 'capitalize' }}>{mesGrid.titulo}</div>
+              <button onClick={() => moverMes(1)} aria-label="Mes siguiente" style={btnNav}>›</button>
+              {mesAncla !== iso(hoy).slice(0, 7) && (
+                <button onClick={volverAHoy} style={{ ...btnNav, minWidth: 0, padding: '0 12px', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>Hoy</button>
+              )}
+            </>
+          ) : (
+            <>
+              <button onClick={() => moverVentana(-14)} aria-label="Dos semanas antes" style={btnNav}>‹</button>
+              <div style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{rangoVentana}</div>
+              <button onClick={() => moverVentana(14)} aria-label="Dos semanas después" style={btnNav}>›</button>
+              {inicio !== iso(hoy) && (
+                <button onClick={volverAHoy} style={{ ...btnNav, minWidth: 0, padding: '0 12px', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>Hoy</button>
+              )}
+            </>
           )}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '2px 14px 8px' }}>
@@ -182,6 +241,43 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         </div>
         {cargando ? (
           <div style={{ padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando…</div>
+        ) : vista === 'mes' ? (
+          <div className="li-mes">
+            {DOW_MES.map((d, i) => <div key={i} className="li-mes-dow">{d}</div>)}
+            {mesGrid.dias.map(d => {
+              const k = iso(d)
+              const fueraMes = d.getMonth() !== mesGrid.mes
+              const esHoy = k === iso(hoy)
+              const pendiente = pendientesSmoobu.some(pe => pe.checkIn === k && enFiltro(pe.propertyId))
+              return (
+                <button key={k} className="li-mes-dia" onClick={() => setSel(k)}
+                  style={{
+                    ...(k === sel ? { background: 'var(--primary-light, rgba(79,70,229,.1))', borderColor: 'var(--primary)' } : {}),
+                    ...(fueraMes ? { opacity: .35 } : k < iso(hoy) ? { opacity: .55 } : {}),
+                  }}>
+                  <span style={{ fontSize: 12, fontWeight: esHoy ? 800 : 600, color: esHoy ? 'var(--primary)' : undefined }}>
+                    {d.getDate()}{pendiente ? ' ⚠️' : ''}
+                  </span>
+                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', maxWidth: '100%' }}>
+                    {pisosVisibles.map(p => {
+                      // Mismo criterio que la vista lista: toda SALIDA de reserva es una limpieza,
+                      // y las fichas sueltas del cron también cuentan.
+                      const limpia = reservas.some(r => r.propertyId === p.id && r.checkOut === k)
+                        || limpiezas.some(l => l.propertyId === p.id && l.fecha === k)
+                      const entra = reservas.some(r => r.propertyId === p.id && r.checkIn === k)
+                      if (!limpia && !entra) return null
+                      return (
+                        <span key={p.id} style={{ display: 'contents' }}>
+                          {limpia && <span title={`Limpieza · ${p.label}`} style={{ width: 9, height: 9, borderRadius: '50%', background: p.color }} />}
+                          {entra && <span title={`Entrada · ${p.label}`} style={{ width: 9, height: 9, borderRadius: '50%', border: `2px solid ${p.color}`, boxSizing: 'border-box' }} />}
+                        </span>
+                      )
+                    })}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         ) : (
           <div className="li-cal-scroll">
             <div className="li-cal">
@@ -204,12 +300,21 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
             </div>
           </div>
         )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '4px 14px 12px', fontSize: 11, color: 'var(--muted)' }}>
-          <span><span style={{ display: 'inline-block', width: 18, height: 10, borderRadius: 4, background: '#3E6AA8', verticalAlign: 'middle', marginRight: 4 }} />ocupado</span>
-          <span><b>→</b> entrada (nº huéspedes)</span>
-          <span>🧽 limpieza</span>
-          <span><span style={{ color: '#b45309' }}>🧽</span> entra huésped el mismo día</span>
-        </div>
+        {vista === 'mes' ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '4px 14px 12px', fontSize: 11, color: 'var(--muted)' }}>
+            <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: 'var(--muted)', verticalAlign: 'middle', marginRight: 4 }} />limpieza (color del piso)</span>
+            <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', border: '2px solid var(--muted)', boxSizing: 'border-box', verticalAlign: 'middle', marginRight: 4 }} />entrada</span>
+            <span>⚠️ reserva pendiente</span>
+            <span>Toca un día para ver su detalle</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '4px 14px 12px', fontSize: 11, color: 'var(--muted)' }}>
+            <span><span style={{ display: 'inline-block', width: 18, height: 10, borderRadius: 4, background: '#3E6AA8', verticalAlign: 'middle', marginRight: 4 }} />ocupado</span>
+            <span><b>→</b> entrada (nº huéspedes)</span>
+            <span>🧽 limpieza</span>
+            <span><span style={{ color: '#b45309' }}>🧽</span> entra huésped el mismo día</span>
+          </div>
+        )}
       </section>
 
       {/* Resumen del día */}
