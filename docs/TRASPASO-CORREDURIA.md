@@ -2241,9 +2241,9 @@ cimientos, cartera, portal, Codeoscopic y CIMA— y a Manuel hay que preguntarle
 sacarlo en cada una es fricción, y **cada re-alta vuelve a generar un cargo prorrateado**: sale igual
 de caro y molesta más.
 
-**El email:** hay que preguntarle **con cuál entra en Vercel**. El único que consta es
-`manuelsuarezz@gmail.com`, que es el de **facturación de Fly** — puede no ser el mismo, y si no lo es
-la invitación no llega y parecerá que «no funciona».
+**El email:** ✅ **resuelto el 29/08/2026 — Alberto confirma que entra en Vercel con
+`manuelsuarezz@gmail.com`** (el mismo de la facturación de Fly). La invitación va a esa dirección.
+Su email de correspondencia sigue siendo `info@manuelsuarez.es`.
 
 **Herramienta:** el conector MCP de Vercel **no expone la gestión de miembros** (lee proyectos y
 despliega, nada más). La invitación la hace Alberto a mano en
