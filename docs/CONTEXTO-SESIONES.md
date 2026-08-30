@@ -32,6 +32,16 @@
 
 ---
 
+### 🔗 (30/08/2026) PENDIENTE: redirección ialimp.es/limpieza → intranet de Vanesa
+- Alberto quiere el enlace con marca: `ialimp.es/limpieza?token=…`. El cambio está listo (un
+  `vercel.json` con redirect 307 en `landing/ialimp-es/` del repo **ialimp**, rama local
+  `fix/redirect-limpieza`) pero la App de GitHub de Claude NO tiene acceso de escritura a ese
+  repo (403 en push y en MCP). Falta que Alberto habilite `ialimp` en la App
+  (github.com/apps/claude/installations/select_target); después: push + PR + merge → la landing
+  se despliega sola (workflow deploy-landing). Query del token viaja con la redirección.
+- También mergeado hoy: #1874 (👥 «Salen N huéspedes» en la tarjeta de limpieza + «Últimos
+  avisos» plegado por defecto con recuento y montaje perezoso).
+
 ### 👥 (30/08/2026) Intranet limpieza — la salida también dice cuántos huéspedes salen
 - Petición de Alberto: la tarjeta de limpieza (= la salida) muestra ahora «👥 Salen N huéspedes»
   (pax de la reserva que sale, como ya hacía la entrada). NULL = no se pinta nada (no se inventa 0);
