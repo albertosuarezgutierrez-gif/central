@@ -1,4 +1,4 @@
-// Intranet de limpieza (Vanesa): calendario de reservas de los 4 pisos de Alberto + resumen
+// Intranet de limpieza (Sique Brilla): calendario de reservas de los 4 pisos de Alberto + resumen
 // diario con limpiezas, tareas y notas. Fuera del grupo (usuario) → sin sidebar ni guard de
 // sesión. Acceso por token (tabla limpieza_acceso_token) vía cookie httpOnly, o sesión de
 // Alberto (preview). Mismo patrón que /invitado/empresas y /invitado/trading.

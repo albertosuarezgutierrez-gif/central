@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
 // GET /api/sivra/limpieza-intranet/datos?from=AAAA-MM-DD&to=AAAA-MM-DD
-// Datos de la pantalla de la limpieza (Vanesa) o del preview de Alberto:
+// Datos de la pantalla de la limpieza (Sique Brilla) o del preview de Alberto:
 //  - reservas: ocupación + nº huéspedes de los 4 pisos. SIN nombres de huéspedes ni importes.
 //  - limpiezas: cleaning_sessions de los 4 slugs (las del cron auto-sessions, donde el panel
 //    de Alberto escribe nota_propietario).
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
         LIMIT 20
       `),
       // Reservas de Booking que Smoobu NO tiene (vigía reservas_correo_booking, estado huérfana):
-      // se pintan ⚠️ para que Vanesa no se quede sin verlas mientras Smoobu se arregla. Solo las
+      // se pintan ⚠️ para que Sique Brilla no se quede sin verlas mientras Smoobu se arregla. Solo las
       // que tienen piso y fecha identificados — sin eso no hay dónde pintarlas (el Telegram a
       // Alberto sí las lleva todas).
       prisma.$queryRaw<Array<{ ref_booking: string | null; property_id: string; check_in: Date }>>(Prisma.sql`
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
         ORDER BY cancelacion_vista_at DESC
         LIMIT 20
       `),
-      // Partes de incidencia de la limpieza (nota y/o foto de Vanesa sobre una limpieza concreta).
+      // Partes de incidencia de la limpieza (nota y/o foto de Sique Brilla sobre una limpieza concreta).
       // La foto se sirve aparte por /partes/foto?id=N (autenticada); aquí solo va si existe.
       prisma.$queryRaw<Array<{
         id: bigint; property_id: string; fecha: Date; texto: string | null; tiene_foto: boolean
