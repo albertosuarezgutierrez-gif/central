@@ -40,8 +40,10 @@
   Guardián en `no-es-gasto.test.ts` (lee el fuente, probado en rojo) + test del concepto
   normalizado de Booking. Borradas de `gastos` las 7 filas decididas (4 Booking 1.371,94€ +
   3 Allianz 2.039,95€); nada estaba confirmado por error (`revisado=true`: 0 filas).
-- **Pendiente de Alberto:** confirmar en `/expenses/pendientes` las 3 reales que quedan
-  (Giraldillo abril 598,95€ + jul 72,60€, Anthropic Max 180€).
+- Giraldillo abril 598,95€ + jul 72,60€ confirmadas por dictado de Alberto («lavandería de los
+  pisos, no desglosa por piso») → `prop_multi_apartamentos`+LAVANDERIA, regla reforzada (vistas 7)
+  y unificado el histórico (3 filas LIMPIEZA→LAVANDERIA, las categorizó mezclado él mismo).
+- **Pendiente de Alberto:** la única fila que queda en `/expenses/pendientes`: Anthropic Max 180€.
 
 ### 🔗 (30/08/2026) HECHO: redirección ialimp.es/limpieza → intranet de Vanesa
 - Enlace con marca para Vanesa: `ialimp.es/limpieza?token=…` (307 a
