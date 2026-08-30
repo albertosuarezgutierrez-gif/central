@@ -32,6 +32,15 @@
 
 ---
 
+### 🎓 (30/08/2026) agentes-entrenador: pasada semanal — trading-analista sin rastro en la bitácora
+Rango 24/08→30/08 (24 entradas procesadas y podadas). Preflight Telegram OK, sin pendientes en
+`FEEDBACK-AGENTES.md`, backlog de PRs sano (2 abiertos, ninguno de 2+ semanas). Único hallazgo:
+`trading-analista` es la única skill de "Agentes programados" que nunca instruía dejar su
+auto-informe en `AGENTES-BITACORA.md` — 0 entradas suyas en TODO el histórico pese a llevar
+semanas con el trigger activo. No es fallo de rendimiento, es un hueco del prompt: **PR draft
+#1865** añade el paso 8 a `references/pasada-diaria.md`. Resto de agentes sin patrones de fallo
+nuevos (2+ repeticiones); detalle por agente en `docs/AGENTES-BITACORA.md`.
+
 ### 💳 (29/08/2026) Agente huéspedes: coordinar un PAGO nunca sale solo — guardrail `hablaDePago`
 Alberto, al ver auto-enviada la respuesta a Raquel («el pago… por transferencia bancaria o Bizum.
 Te envío los datos por mensaje privado» — métodos y promesa INVENTADOS; el cobro real es el enlace
