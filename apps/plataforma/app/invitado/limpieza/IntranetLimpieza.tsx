@@ -60,6 +60,8 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   // Vista «mes» (prueba pedida por Alberto, 30/08): calendario mensual clásico con las limpiezas
   // como puntos del color de cada piso. La tira de 30 días sigue disponible en «Lista».
   const [vista, setVista] = useState<'mes' | 'lista'>('mes')
+  // «🔔 Últimos avisos» plegado por defecto (no es información del día a día).
+  const [avisosAbiertos, setAvisosAbiertos] = useState(false)
   const [mesAncla, setMesAncla] = useState(() => iso(hoyDate()).slice(0, 7)) // 'AAAA-MM'
 
   // Rejilla del mes: semanas completas de lunes a domingo (los días de los meses vecinos se
@@ -420,10 +422,19 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         </div>
       </section>
 
-      {/* Novedades: lo que ha cambiado respecto a lo que ya tenía planificado */}
+      {/* Novedades: lo que ha cambiado respecto a lo que ya tenía planificado. PLEGADO por
+          defecto (petición de Alberto, 30/08) con montaje perezoso: la lista solo se crea al abrir. */}
       <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginTop: 14 }}>
-        <h2 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700 }}>🔔 Últimos avisos</h2>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+        <button onClick={() => setAvisosAbiertos(a => !a)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', color: 'var(--text)' }}>
+          <span style={{ fontSize: 15, fontWeight: 700 }}>
+            🔔 Últimos avisos{!cargando && novedadesVisibles.length > 0 ? ` (${novedadesVisibles.length})` : ''}
+          </span>
+          <span style={{ color: 'var(--muted)', fontSize: 13 }}>{avisosAbiertos ? '▲' : '▼'}</span>
+        </button>
+        {avisosAbiertos && (
+          <>
+        <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
           Las últimas reservas nuevas y cancelaciones, por si ya tenías el mes planificado.
         </div>
         {!cargando && novedadesVisibles.length === 0 && <div style={vacio}>Sin avisos nuevos: todo sigue como estaba. 👍</div>}
@@ -448,6 +459,8 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
             </div>
           )
         })}
+          </>
+        )}
       </section>
 
       <footer style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '14px 20px 0', lineHeight: 1.6 }}>
