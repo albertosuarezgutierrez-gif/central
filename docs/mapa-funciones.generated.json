@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-29T09:01:12Z",
-  "sha": "39537e0ed662bcce8a46c34bae06ef16265daa48",
+  "generadoEn": "2026-08-30T17:58:49Z",
+  "sha": "9e7584af6f130792f2bb834ffea7814e160fbf45",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -32661,7 +32661,7 @@
     {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/index.ts",
       "ambito": "apps/ia-rest",
-      "resumen": "supabase/functions/daily-briefing/index.ts v3 — Resumen diario IA → Telegram (pasarela Director de plataforma; NVIDIA NIM de fallback) Cron: 0 7 * * * (9:00h Madrid verano / UTC+2) 🚨 v3 (28/08/2026) — por qué se reescribió el camino de fallo. El 27 y el 28/08 el briefing llegó a Telegram como «⚠️ d",
+      "resumen": "supabase/functions/daily-briefing/index.ts v4 — Resumen diario IA → Telegram (pasarela Director de plataforma, SIN fallback NIM) Cron: 0 7 * * * (9:00h Madrid verano / UTC+2) v4 (30/08/2026) — se RETIRÓ el fallback de NVIDIA NIM directo (decisión de Alberto: «NIM no hace falta»; regla del monorepo d",
       "exporta": [],
       "funciones": [
         {
@@ -32670,7 +32670,7 @@
           "exportada": false,
           "params": "token: string, chatId: string, text: string",
           "retorno": null,
-          "linea": 39
+          "linea": 46
         },
         {
           "nombre": "motivo",
@@ -32678,7 +32678,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 62
+          "linea": 69
         },
         {
           "nombre": "generarNarrativa",
@@ -32686,8 +32686,8 @@
           "exportada": false,
           "params": "contexto: string",
           "retorno": "Promise<Narrativa>",
-          "linea": 74,
-          "resumen": "Genera la narrativa del briefing con doble red: 1) PRIMARIO — pasarela IA de plataforma (endpoint /api/ai/chat): el Agente Director elige modelo por petición y detrás tiene la cadena completa OpenRout"
+          "linea": 84,
+          "resumen": "Genera la narrativa del briefing contra la pasarela IA de plataforma (/api/ai/chat): el Agente Director elige modelo por petición y detrás tiene la cadena completa OpenRouter (con fallback nativo entr"
         },
         {
           "nombre": "getMetricas",
@@ -32695,14 +32695,14 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, restauranteId: string",
           "retorno": "Promise<Metricas>",
-          "linea": 151
+          "linea": 135
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "35782b28aac5"
+      "hash": "1b590f12d51e"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ear-transcribe/index.ts",
@@ -47242,19 +47242,28 @@
       ],
       "funciones": [
         {
+          "nombre": "propiedadParaApi",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 29,
+          "resumen": "Lo que se manda al PATCH: la correduría es la AUSENCIA de piso."
+        },
+        {
           "nombre": "PendientesClient",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 28
+          "linea": 43
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "bb37c0921271"
+      "hash": "5ec3edc75d36"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/CategoriasTab.tsx",
@@ -49639,12 +49648,21 @@
           "resumen": "─── TAB HOY ────────────────────────────────────────────────────"
         },
         {
+          "nombre": "TabTareas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 191,
+          "resumen": "─── TAB TAREAS ───────────────────────────────────────────────── Tareas sueltas para la limpieza (Sique Brilla) — aparte de las limpiezas por reserva. Las ven y las marcan hechas desde su intranet (/i"
+        },
+        {
           "nombre": "TabSemana",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 189,
+          "linea": 332,
           "resumen": "─── TAB SEMANA ──────────────────────────────────────────────────"
         },
         {
@@ -49653,7 +49671,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 308,
+          "linea": 451,
           "resumen": "─── TAB DISPONIBILIDAD ──────────────────────────────────────────"
         },
         {
@@ -49662,7 +49680,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 471,
+          "linea": 614,
           "resumen": "─── TAB PROVEEDORES ─────────────────────────────────────────────"
         },
         {
@@ -49671,7 +49689,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 635,
+          "linea": 778,
           "resumen": "─── TAB LENCERÍA ────────────────────────────────────────────────"
         },
         {
@@ -49680,7 +49698,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 779,
+          "linea": 922,
           "resumen": "─── TAB LIMPIADORAS (gestión) ───────────────────────────────────"
         },
         {
@@ -49689,7 +49707,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 874,
+          "linea": 1017,
           "resumen": "─── TAB STOCK ───────────────────────────────────────────────────"
         },
         {
@@ -49698,7 +49716,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 946,
+          "linea": 1089,
           "resumen": "─── MAIN CLIENT COMPONENT ───────────────────────────────────────"
         }
       ],
@@ -49706,7 +49724,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "003058739b2c"
+      "hash": "3dc49bf81870"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/limpiadoras/page.tsx",
@@ -53456,7 +53474,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 143
+          "linea": 146
         }
       ],
       "tablas": [
@@ -53469,7 +53487,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "a16c3c0bc84c"
+      "hash": "3d9130ff5ae9"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -53935,7 +53953,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "07441d9ccbf2"
+      "hash": "fb271bf3b835"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -54762,13 +54780,39 @@
           "exportada": true,
           "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 37,
+          "linea": 51,
           "resumen": "DELETE /api/expenses/pendientes/[id] — descarta lo que no es un gasto nuestro."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/expenses/pendientes/[id]",
-      "hash": "2f8e7db376ba"
+      "hash": "c92119e47b5e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/expenses/pendientes/[id]/sugerir-ia/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 36,
+          "resumen": "POST /api/expenses/pendientes/[id]/sugerir-ia La IA PROPONE piso y categoría para una factura de la bandeja. NO escribe nada: la propuesta rellena los desplegables y Alberto confirma. La escritura sig"
+        }
+      ],
+      "tablas": [
+        "cuentas_bancarias",
+        "gastos",
+        "next",
+        "v_movimientos_activos"
+      ],
+      "rutaApi": "/api/expenses/pendientes/[id]/sugerir-ia",
+      "hash": "d7b134807015"
     },
     {
       "ruta": "apps/plataforma/app/api/expenses/pendientes/route.ts",
@@ -57029,7 +57073,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "PATCH",
@@ -57037,7 +57081,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 42
+          "linea": 45
         }
       ],
       "tablas": [
@@ -57047,7 +57091,7 @@
         "session_completions"
       ],
       "rutaApi": "/api/sivra/limpiadoras/historial",
-      "hash": "66da97242b66"
+      "hash": "0478c8368b23"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpiadoras/informe/route.ts",
@@ -57279,6 +57323,56 @@
       "hash": "3474a8ddda74"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/limpiadoras/tareas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST",
+        "PATCH",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 50
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 72
+        }
+      ],
+      "tablas": [
+        "limpieza_tareas",
+        "next"
+      ],
+      "rutaApi": "/api/sivra/limpiadoras/tareas",
+      "hash": "290b11ed8d51"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/limpiadoras/tarifas/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -57369,6 +57463,149 @@
       ],
       "rutaApi": "/api/sivra/limpiadoras/usuarios",
       "hash": "e41cdb691fae"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/datos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "GET /api/sivra/limpieza-intranet/datos?from=AAAA-MM-DD&to=AAAA-MM-DD Datos de la pantalla de la limpieza (Sique Brilla) o del preview de Alberto: - reservas: ocupación + nº huéspedes de los 4 pisos. S"
+        }
+      ],
+      "tablas": [
+        "cleaning_sessions",
+        "incomes",
+        "limpieza_partes",
+        "limpieza_tareas",
+        "next",
+        "reservas_canceladas",
+        "reservas_correo_booking"
+      ],
+      "rutaApi": "/api/sivra/limpieza-intranet/datos",
+      "hash": "d8af25a1c012"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/enlace/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET — SOLO sesión (Alberto): devuelve el enlace de acceso de la limpieza con el token vivo, para copiarlo/compartirlo desde el panel. La limpieza nunca ve este endpoint."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/limpieza-intranet/enlace",
+      "hash": "c058a4c88a84"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/invitado/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "Entrada del enlace de la limpieza (Sique Brilla): valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Mismo patrón que /api/trading/invitado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/limpieza-intranet/invitado",
+      "hash": "59f5b2e19fd3"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/partes/foto/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "GET /api/sivra/limpieza-intranet/partes/foto?id=N — sirve la foto de un parte desde la BD. Autenticada como el resto de la intranet (sesión de Alberto o cookie de invitado de Sique Brilla): las fotos "
+        }
+      ],
+      "tablas": [
+        "limpieza_partes",
+        "next"
+      ],
+      "rutaApi": "/api/sivra/limpieza-intranet/partes/foto",
+      "hash": "754de36229a6"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/partes/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "POST /api/sivra/limpieza-intranet/partes — parte de incidencia de Sique Brilla sobre UNA limpieza (property_id + fecha): nota y/o foto. Se registra en la BD y se avisa a Alberto por Telegram (best-eff"
+        }
+      ],
+      "tablas": [
+        "limpieza_partes",
+        "next"
+      ],
+      "rutaApi": "/api/sivra/limpieza-intranet/partes",
+      "hash": "150267e1bbe9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/tareas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "PATCH — la limpieza (o Alberto en preview) marca una tarea como hecha/deshecha. Solo el flag `hecha`: crear/editar/borrar tareas es del panel de Alberto (/api/sivra/limpiadoras/tareas, sesión)."
+        }
+      ],
+      "tablas": [
+        "limpieza_tareas",
+        "next"
+      ],
+      "rutaApi": "/api/sivra/limpieza-intranet/tareas",
+      "hash": "588e55c3343d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/[bookingId]/route.ts",
@@ -58298,7 +58535,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "e3fe2e40cc21"
+      "hash": "4c99fa39d1ac"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -58525,7 +58762,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "093080636281"
+      "hash": "6d24665c6ef5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -58632,7 +58869,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/recommend",
-      "hash": "8dd8fe208552"
+      "hash": "43ecdf3baa17"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/rentabilidad/route.ts",
@@ -58669,7 +58906,7 @@
         "pricing_pl_referencia"
       ],
       "rutaApi": "/api/sivra/pricing/rentabilidad",
-      "hash": "c91460ce31aa"
+      "hash": "825ca61f786e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/restore/route.ts",
@@ -58811,6 +59048,27 @@
       ],
       "rutaApi": "/api/sivra/rates/snapshot",
       "hash": "411b1c87bc83"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/reservas-booking/verificar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "Cron (cada 15 min, ver lib/cron-dispatch.ts): contrasta contra Smoobu las reservas de Booking vistas por correo (avisos «no registrada» + mensajes de huésped sin resolver) y avisa por Telegram del agu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/reservas-booking/verificar",
+      "hash": "a1833959a87b"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/resumen-semanal/route.ts",
@@ -58999,7 +59257,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/updates/sync",
-      "hash": "7eae293e4fe8"
+      "hash": "f3bec2bc98b4"
     },
     {
       "ruta": "apps/plataforma/app/api/sociedades/[id]/route.ts",
@@ -59828,6 +60086,121 @@
       "hash": "6b6272ec0593"
     },
     {
+      "ruta": "apps/plataforma/app/invitado/limpieza/IntranetLimpieza.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "IntranetLimpieza"
+      ],
+      "funciones": [
+        {
+          "nombre": "iso",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 33
+        },
+        {
+          "nombre": "fmtDM",
+          "kind": "function",
+          "exportada": false,
+          "params": "isoFecha: string | null",
+          "retorno": null,
+          "linea": 34
+        },
+        {
+          "nombre": "addDays",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date, n: number",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "hoyDate",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 40
+        },
+        {
+          "nombre": "propDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: string",
+          "retorno": null,
+          "linea": 41
+        },
+        {
+          "nombre": "IntranetLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 43
+        },
+        {
+          "nombre": "comprimirFoto",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: File",
+          "retorno": "Promise<Blob>",
+          "linea": 469,
+          "resumen": "Reduce la foto a ≤1600px JPEG antes de subirla (las de móvil pasan de 4,5 MB, el límite de Vercel). Si el navegador no sabe decodificarla (HEIC en algunos Android), va el archivo tal cual."
+        },
+        {
+          "nombre": "FormParte",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ propertyId, fecha, onEnviado }: { propertyId: string; fecha: string; onEnviado: () => void }",
+          "retorno": null,
+          "linea": 487,
+          "resumen": "Aviso rápido de Sique Brilla sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la luz»). Se guarda en la limpieza y avisa a Alberto por Telegram. Sin campos que rellenar: un texto li"
+        },
+        {
+          "nombre": "ChipFiltro",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ activo, onClick, label, color }: { activo: boolean; onClick: () => void; label: string; color?: string }",
+          "retorno": null,
+          "linea": 549
+        },
+        {
+          "nombre": "FilaPiso",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ piso, dias, sel, hoy, reservas, limpiezas, pendientes, onSel }: { piso: (typeof PROPS)[number]; dias: Date[]; sel: string; hoy: string reservas: ReservaIntranet[]; limpiezas: Limpieza[]; pendientes: PendienteSmoobu[] onSel: (k: string) =>",
+          "retorno": null,
+          "linea": 563
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "026b437a3d76"
+    },
+    {
+      "ruta": "apps/plataforma/app/invitado/limpieza/page.tsx",
+      "ambito": "apps/plataforma",
+      "resumen": "Intranet de limpieza (Sique Brilla): calendario de reservas de los 4 pisos de Alberto + resumen diario con limpiezas, tareas y notas. Fuera del grupo (usuario) → sin sidebar ni guard de sesión. Acceso por token (tabla limpieza_acceso_token) vía cookie httpOnly, o sesión de Alberto (preview). Mismo p",
+      "exporta": [
+        "InvitadoLimpiezaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "InvitadoLimpiezaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams }: { searchParams: Promise<{ token?: string }> }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "04503294e28e"
+    },
+    {
       "ruta": "apps/plataforma/app/invitado/trading/page.tsx",
       "ambito": "apps/plataforma",
       "resumen": "Página de acceso INVITADO (amigos ven el «Laboratorio de inversión» sin cuenta, solo lectura). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (tabla trading_acceso_token), vía cookie httpOnly. Mismo patrón que /invitado/empresas.",
@@ -60321,7 +60694,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f02d3487968"
+      "hash": "41bcbf6bdf14"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/booking.ts",
@@ -60660,7 +61033,8 @@
         "normalizaTexto",
         "normalizaProveedor",
         "normalizaNif",
-        "fingerprint"
+        "fingerprint",
+        "huellasDe"
       ],
       "funciones": [
         {
@@ -60703,11 +61077,20 @@
           "params": "f: { nif_proveedor?: string | null proveedor?: string | null concepto?: string | null }",
           "retorno": "string",
           "linea": 35
+        },
+        {
+          "nombre": "huellasDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { nif_proveedor?: string | null proveedor?: string | null concepto?: string | null }",
+          "retorno": "string[]",
+          "linea": 62,
+          "resumen": "TODAS las huellas bajo las que puede estar registrado el mismo proveedor, la mejor primero. 🚨 Por qué hace falta (29/08/2026). `fingerprint()` usa el NIF **si lo hay** y si no el nombre, o sea la ide"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bf02b94cfef6"
+      "hash": "a82ddeda9f54"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/gastos-fijos.ts",
@@ -60865,6 +61248,47 @@
       "hash": "43ddec119184"
     },
     {
+      "ruta": "apps/plataforma/lib/agente-facturas/huella-rescate.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Rescatar la HUELLA de las facturas que se guardaron sin ella. Caso fundacional (29/08/2026). Alberto, sobre una factura que la bandeja presentaba como «SOCORRO · sin histórico»: «esto realmente es Giraldillo lavandería, que ya he dado ok a varias… tiene el agente que aprender». Y no aprendía, pero n",
+      "exporta": [
+        "esCentinela",
+        "proveedorDesdeConcepto",
+        "proveedorParaHuella"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCentinela",
+          "kind": "function",
+          "exportada": true,
+          "params": "proveedor?: string | null",
+          "retorno": "boolean",
+          "linea": 30
+        },
+        {
+          "nombre": "proveedorDesdeConcepto",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto?: string | null",
+          "retorno": "string | null",
+          "linea": 39,
+          "resumen": "Saca el nombre del proveedor del principio del concepto: el corpus importado lo escribe como «PROVEEDOR - descripción». Devuelve `null` si no encuentra esa forma — es mejor quedarse sin huella que inv"
+        },
+        {
+          "nombre": "proveedorParaHuella",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { proveedor?: string | null concepto?: string | null }",
+          "retorno": "string | null",
+          "linea": 62,
+          "resumen": "Qué proveedor usar para calcular la huella de una fila. Devuelve `null` cuando no hay ninguno fiable: esa fila se queda SIN huella a propósito, que es el estado honesto («no se sabe de quién es») y el"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "77792d424649"
+    },
+    {
       "ruta": "apps/plataforma/lib/agente-facturas/imputar.ts",
       "ambito": "apps/plataforma",
       "resumen": "Acceso a BD del agente: reglas, dedup, inserción de gastos, refuerzo y log.",
@@ -60880,9 +61304,10 @@
           "nombre": "getRegla",
           "kind": "function",
           "exportada": true,
-          "params": "fingerprint: string",
+          "params": "huella: string | string[]",
           "retorno": "Promise<Regla | null>",
-          "linea": 29
+          "linea": 37,
+          "resumen": "Busca la regla aprendida del proveedor. Acepta VARIAS huellas (ver `huellasDe`): el mismo proveedor queda registrado bajo su NIF o bajo su nombre según lo que trajera cada factura, y mirar solo una er"
         },
         {
           "nombre": "existeDuplicado",
@@ -60890,7 +61315,7 @@
           "exportada": true,
           "params": "d: { fingerprint: string numero_factura?: string | null fecha: string total: number }",
           "retorno": "Promise<boolean>",
-          "linea": 53,
+          "linea": 64,
           "resumen": "Dedup: misma huella+fecha+importe, o mismo número de factura."
         },
         {
@@ -60899,7 +61324,7 @@
           "exportada": true,
           "params": "d: DatosGasto, meta: { revisado: boolean; origen: string; confianza: number; motivo_revision?: string | null },",
           "retorno": "Promise<string>",
-          "linea": 73
+          "linea": 84
         },
         {
           "nombre": "reforzarRegla",
@@ -60907,8 +61332,16 @@
           "exportada": true,
           "params": "d: DatosGasto",
           "retorno": "Promise<void>",
-          "linea": 106,
-          "resumen": "Crea o refuerza la regla aprendida tras una confirmación/imputación."
+          "linea": 122,
+          "resumen": "Crea o refuerza la regla aprendida tras una confirmación/imputación. La banda de importes usa `FACTOR_BANDA` (multiplicativo) y no el ±10 % de antes: los proveedores de esta bandeja facturan suscripci"
+        },
+        {
+          "nombre": "upsertRegla",
+          "kind": "function",
+          "exportada": false,
+          "params": "fingerprint: string, d: DatosGasto",
+          "retorno": "Promise<void>",
+          "linea": 135
         },
         {
           "nombre": "log",
@@ -60916,7 +61349,7 @@
           "exportada": true,
           "params": "entry: { fuente: string fingerprint?: string | null gasto_id?: string | null decision: string confianza?: number | null motivo?: string | null payload?: unknown }",
           "retorno": "Promise<void>",
-          "linea": 131
+          "linea": 159
         },
         {
           "nombre": "num",
@@ -60924,7 +61357,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 148
+          "linea": 176
         }
       ],
       "tablas": [
@@ -60934,7 +61367,29 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "e63a097797fd"
+      "hash": "60e3674ecc5b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/no-es-gasto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Documentos que están en la bandeja de GASTOS pero no son un gasto. Caso fundacional (29/08/2026). Alberto, revisando la bandeja: «Allianz son comisiones cobradas, tiene que cuadrar con ingresos de mi correduría». Tenía en la bandeja dos documentos de Allianz —un «Extracto de Cuenta Mediador. Mes de ",
+      "exporta": [
+        "pareceIngresoDeCorreduria"
+      ],
+      "funciones": [
+        {
+          "nombre": "pareceIngresoDeCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { proveedor?: string | null concepto?: string | null }",
+          "retorno": "SospechaIngreso",
+          "linea": 96,
+          "resumen": "¿Este documento parece un ingreso de la correduría en vez de un gasto? Se mira el concepto y el nombre del proveedor, que es donde el extractor deja el título del documento. Devuelve SIEMPRE los dos e"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0609a1bc67c8"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/pagos.ts",
@@ -61091,6 +61546,7 @@
       "exporta": [
         "listarPendientes",
         "confirmarPendiente",
+        "confirmarProveedor",
         "descartarPendiente"
       ],
       "funciones": [
@@ -61100,7 +61556,7 @@
           "exportada": true,
           "params": "limite = 200",
           "retorno": "Promise<Pendiente[]>",
-          "linea": 47,
+          "linea": 51,
           "resumen": "Las facturas que el agente dejó sin imputar, más caras primero. El criterio de «pendiente» es el MISMO que usan `/api/sivra/expenses`, el resumen mensual y las anomalías: `revisado = false AND origen "
         },
         {
@@ -61109,8 +61565,17 @@
           "exportada": true,
           "params": "id: string, cambios: CambiosPendiente = {}",
           "retorno": "Promise<boolean>",
-          "linea": 109,
+          "linea": 139,
           "resumen": "Confirma una factura: la da por contabilizada y APRENDE la regla. El refuerzo de la regla es la mitad del trabajo: es lo que hace que la próxima factura del mismo proveedor se impute sola. `reforzarRe"
+        },
+        {
+          "nombre": "confirmarProveedor",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, cambios: CambiosPendiente = {}",
+          "retorno": "Promise<string[] | null>",
+          "linea": 208,
+          "resumen": "Confirma TODAS las pendientes del mismo proveedor con la misma clasificación. Petición de Alberto (29/08/2026): «cuando es el mismo proveedor, en el momento que resuelvo uno todo es igual». Es cierto "
         },
         {
           "nombre": "descartarPendiente",
@@ -61118,15 +61583,16 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<boolean>",
-          "linea": 149,
+          "linea": 241,
           "resumen": "Descarta una factura que no es un gasto nuestro (ajena, duplicada, un contrato leído como factura…). Se BORRA en vez de marcarse revisada: dejarla revisada la contaría como gasto."
         }
       ],
       "tablas": [
+        "aqu",
         "gastos"
       ],
       "rutaApi": null,
-      "hash": "a7b4762907da"
+      "hash": "7edac33101c1"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -61143,7 +61609,7 @@
           "exportada": true,
           "params": "data: FacturaExtraida, texto: string, etiqueta = ''",
           "retorno": "DocClasificado",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "procesarFactura",
@@ -61151,12 +61617,12 @@
           "exportada": true,
           "params": "data: FacturaExtraida, ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string; esBooking?: boolean; titulares?: Titular[] },",
           "retorno": "Promise<ProcesarResult>",
-          "linea": 52
+          "linea": 53
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e6879b669294"
+      "hash": "813917b23ffc"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/receptor.ts",
@@ -61222,12 +61688,12 @@
           "exportada": true,
           "params": "g: Extraido, regla: Regla | null",
           "retorno": "Veredicto",
-          "linea": 36
+          "linea": 57
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a77bd7ccd16c"
+      "hash": "86ea63183a43"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/resumen-escaneo.ts",
@@ -61304,6 +61770,64 @@
       ],
       "rutaApi": null,
       "hash": "71c22b9b3ba1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/agente-facturas/sugerencia-ia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Que la IA PROPONGA la clasificación de una factura pendiente, con el contexto que ya existe. Contexto (29/08/2026). Alberto, al estrenar la bandeja: «que la IA proponga». Hasta ahora la propuesta era determinista (`sugerencia-pendiente.ts`): el histórico del mismo proveedor y poco más. Eso deja fuer",
+      "exporta": [
+        "construirSystem",
+        "construirUser",
+        "interpretarRespuestaIA"
+      ],
+      "funciones": [
+        {
+          "nombre": "construirSystem",
+          "kind": "function",
+          "exportada": true,
+          "params": "listas: ListasBlancas",
+          "retorno": "string",
+          "linea": 64
+        },
+        {
+          "nombre": "construirUser",
+          "kind": "function",
+          "exportada": true,
+          "params": "ctx: ContextoFactura",
+          "retorno": "string",
+          "linea": 104
+        },
+        {
+          "nombre": "limpiar",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string",
+          "retorno": "string",
+          "linea": 132,
+          "resumen": "Quita el envoltorio markdown y los bloques `<think>` de los modelos de razonamiento."
+        },
+        {
+          "nombre": "esNulo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 140,
+          "resumen": "Normaliza lo que la IA pudo escribir como «nada»: null, \"null\", \"\", \"ninguno\"…"
+        },
+        {
+          "nombre": "interpretarRespuestaIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string, listas: ListasBlancas",
+          "retorno": "SugerenciaIA",
+          "linea": 154,
+          "resumen": "Interpreta la respuesta del modelo y la valida contra la lista blanca. Nada de lo que devuelve puede estar fuera de las listas: un id de piso o una categoría que la IA se invente se descarta a `null` "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1a58ec0f6d1e"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/sugerencia-pendiente.ts",
@@ -64173,7 +64697,7 @@
           "exportada": false,
           "params": "from: string",
           "retorno": "Promise<string | null>",
-          "linea": 28,
+          "linea": 29,
           "resumen": "Busca una regla que aplique al remitente: primero email exacto, luego su dominio."
         },
         {
@@ -64182,7 +64706,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Date | null",
-          "linea": 40
+          "linea": 41
         },
         {
           "nombre": "normalizarCategoria",
@@ -64190,7 +64714,7 @@
           "exportada": false,
           "params": "raw: unknown",
           "retorno": "string",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Normaliza la categoría que devuelve el modelo a una de CATEGORIAS_IA (o '' si no encaja). Tolera mayúsculas, puntuación y texto extra (\"Contabilidad\", \"contabilidad.\", \"contabilidad (factura)\")."
         },
         {
@@ -64199,7 +64723,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 55,
+          "linea": 56,
           "resumen": "Corta una llamada colgada a la IA para que no agote el tiempo de la función (dejaría el cursor sin avanzar)."
         },
         {
@@ -64208,7 +64732,7 @@
           "exportada": false,
           "params": "system: string, user: string",
           "retorno": "Promise<string>",
-          "linea": 65,
+          "linea": 66,
           "resumen": "Llama a la IA para clasificar. Groq PRIMERO (mismo Llama-70b pero en segundos, no ~25s como NIM, que agotaba el tiempo de la función y hacía caer todo a 'dudoso'); NIM como respaldo si no hay GROQ_API"
         },
         {
@@ -64217,7 +64741,7 @@
           "exportada": true,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<Clasificacion>",
-          "linea": 77
+          "linea": 78
         },
         {
           "nombre": "quizaAutoAprender",
@@ -64225,7 +64749,7 @@
           "exportada": true,
           "params": "from: string, categoria: string, confianza: number",
           "retorno": "Promise<void>",
-          "linea": 156,
+          "linea": 165,
           "resumen": "Auto-aprendizaje (mejora 4): si la IA ha clasificado este remitente igual ≥N veces con confianza ≥X (contando la actual), fija la regla en correo_reglas (creado_por='auto')."
         }
       ],
@@ -64234,7 +64758,7 @@
         "correo_triaje"
       ],
       "rutaApi": null,
-      "hash": "bdaf30c1ddfc"
+      "hash": "aebf9a7b782d"
     },
     {
       "ruta": "apps/plataforma/lib/correo/huespedes.ts",
@@ -64363,6 +64887,65 @@
       "hash": "acc64eacee8d"
     },
     {
+      "ruta": "apps/plataforma/lib/correo/reserva-booking.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/reserva-booking.ts — parser PURO de los avisos de reserva de Booking al propietario. Nace del caso James Ascott (Luxury, 27→29/08/2026): Smoobu se cayó, la reserva NUNCA llegó a `incomes` y la limpieza del 29 no salió en el calendario de Sique Brilla. Dos señales de correo: (a) «Booking.c",
+      "exporta": [
+        "pisoDesdeNombre",
+        "parsearAvisoBooking",
+        "veredictoAviso"
+      ],
+      "funciones": [
+        {
+          "nombre": "isoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: number, m: number, y: number",
+          "retorno": "string | null",
+          "linea": 34
+        },
+        {
+          "nombre": "pisoDesdeNombre",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string | null",
+          "linea": 44,
+          "resumen": "Mapea el nombre del anuncio de Booking al slug del piso. Por PALABRA CLAVE inequívoca — «Luxury Center» (nombre antiguo, ambiguo entre Luxury y Reform) devuelve null a propósito: mejor «piso sin ident"
+        },
+        {
+          "nombre": "parsearAvisoBooking",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: { from: string; subject: string; extracto: string }",
+          "retorno": "AvisoReservaBooking | null",
+          "linea": 68,
+          "resumen": "Reconoce y trocea un aviso de reserva de Booking al propietario. Devuelve null si el correo no es uno de estos avisos (un mensaje de huésped, una factura… siguen su camino normal). `from` debe ser de "
+        },
+        {
+          "nombre": "nombrePisoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "extracto: string",
+          "retorno": "string | null",
+          "linea": 101,
+          "resumen": "En el cuerpo real el nombre del anuncio va en «Hola, Luxury Busto Patio privado Centro:» y en la cabecera «Booking.com Luxury Busto Patio privado Centro»."
+        },
+        {
+          "nombre": "veredictoAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: 'nueva' | 'cancelacion', enSmoobu: boolean | null",
+          "retorno": "'ok' | 'problema' | 'sin_comprobar'",
+          "linea": 116,
+          "resumen": "Veredicto del vigía tras mirar Smoobu. `enSmoobu === null` significa «no se pudo comprobar» (Smoobu caído / error de red) y NUNCA decide nada — no lo sé ≠ no está. - nueva: el problema es que Smoobu N"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d04711d96561"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/rutas.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/rutas.ts — FUENTE ÚNICA de la tabla de rutas del triaje de correo. Cada categoría dice: qué etiqueta Gmail se le pone, si se archiva (sale de INBOX) y cómo se notifica. El prompt del clasificador se GENERA desde aquí (ver `descripcionParaPrompt`), así que añadir/editar una categoría es ca",
@@ -64377,7 +64960,7 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "RutaCorreo",
-          "linea": 113
+          "linea": 123
         },
         {
           "nombre": "descripcionParaPrompt",
@@ -64385,13 +64968,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 122,
+          "linea": 132,
           "resumen": "Genera el bloque de categorías para el prompt de clasificación (sin duplicar la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "515d6c3ac527"
+      "hash": "dcb3ea77dbcf"
     },
     {
       "ruta": "apps/plataforma/lib/correo/triaje.ts",
@@ -64409,7 +64992,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 17,
+          "linea": 19,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -64418,7 +65001,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 19
+          "linea": 21
         },
         {
           "nombre": "fmtFecha",
@@ -64426,7 +65009,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 25
+          "linea": 27
         },
         {
           "nombre": "mensajeAviso",
@@ -64434,7 +65017,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 31,
+          "linea": 33,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -64443,7 +65026,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 48
+          "linea": 50
         },
         {
           "nombre": "pasadaTriaje",
@@ -64451,7 +65034,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 58
+          "linea": 60
         },
         {
           "nombre": "digestTriaje",
@@ -64459,7 +65042,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 150,
+          "linea": 169,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -64468,7 +65051,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 190,
+          "linea": 209,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         }
       ],
@@ -64478,7 +65061,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "60cbb01c7abc"
+      "hash": "3b48863f1ad4"
     },
     {
       "ruta": "apps/plataforma/lib/cron-auth.ts",
@@ -64555,7 +65138,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 132,
+          "linea": 145,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -64564,7 +65147,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 162,
+          "linea": 175,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -64573,7 +65156,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 184
+          "linea": 197
         },
         {
           "nombre": "ventanaMinutos",
@@ -64581,7 +65164,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 192,
+          "linea": 205,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -64590,13 +65173,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 204,
+          "linea": 217,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f395f9d2d46c"
+      "hash": "e0c832ef7877"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -67549,6 +68132,51 @@
       "hash": "4dd1e22779f5"
     },
     {
+      "ruta": "apps/plataforma/lib/limpieza-acceso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Autorización de la intranet de limpieza: acepta la sesión normal de plataforma (Alberto, preview) O un TOKEN de invitado (Sique Brilla, la limpieza de los 4 pisos, sin cuenta). El token vive en la BD (tabla limpieza_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Corre en",
+      "exporta": [
+        "getTokenInvitado",
+        "tokenInvitadoValido",
+        "accesoLimpieza"
+      ],
+      "funciones": [
+        {
+          "nombre": "getTokenInvitado",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 14,
+          "resumen": "Token de invitado activo (o null si no hay)."
+        },
+        {
+          "nombre": "tokenInvitadoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string | undefined | null",
+          "retorno": "Promise<boolean>",
+          "linea": 25,
+          "resumen": "Valida un token contra el activo en BD."
+        },
+        {
+          "nombre": "accesoLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ModoAcceso>",
+          "linea": 32,
+          "resumen": "Modo de acceso: 'sesion' (Alberto), 'invitado' (token de Sique Brilla en cookie) o null."
+        }
+      ],
+      "tablas": [
+        "limpieza_acceso_token",
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "f2ce26913614"
+    },
+    {
       "ruta": "apps/plataforma/lib/mailer.ts",
       "ambito": "apps/plataforma",
       "resumen": "Shim de email para los crons de concursos (portados de ialimp). Reusa el transporte centralizado de @central/core-email (Resend / SMTP IONOS / Gmail según envs). Si no hay credenciales, getTransporter() devuelve null y los crons degradan sin romper. Las envs (SMTP_*/RESEND_API_KEY) deben existir en ",
@@ -67668,7 +68296,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b02c9eafaae5"
+      "hash": "4daba194f200"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -69402,6 +70030,7 @@
       "exporta": [
         "detectarExtra",
         "esAceptacion",
+        "hablaDePago",
         "eurDeCents",
         "importeSospechoso",
         "mencionaImporte"
@@ -69434,12 +70063,21 @@
           "resumen": "¿El huésped está aceptando el extra que ya se le ofreció con un precio? Conservador a propósito: ante la duda devuelve `false` y el mensaje acaba en Telegram, que es donde debe acabar cualquier cosa q"
         },
         {
+          "nombre": "hablaDePago",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 95,
+          "resumen": "¿El texto habla de un PAGO — cómo pagar, con qué método, a qué cuenta? Es el guardrail que impide que el agente coordine un cobro por su cuenta (29/08/2026, dictado por Alberto tras el caso Raquel: el"
+        },
+        {
           "nombre": "eurDeCents",
           "kind": "function",
           "exportada": true,
           "params": "cents: number",
           "retorno": "string",
-          "linea": 67,
+          "linea": 100,
           "resumen": "Importe en euros formateado a la española (2.162,49€). Mismo criterio que `lib/dinero.ts`."
         },
         {
@@ -69448,7 +70086,7 @@
           "exportada": true,
           "params": "borrador: string, permitidosCents: number[]",
           "retorno": "number | null",
-          "linea": 81,
+          "linea": 114,
           "resumen": "¿El borrador menciona algún importe que NO esté en el catálogo? Es el guardrail que impide que una cifra inventada por el modelo llegue al huésped. Devuelve el primer importe descuadrado (en céntimos)"
         },
         {
@@ -69457,13 +70095,13 @@
           "exportada": true,
           "params": "texto: string, cents: number",
           "retorno": "boolean",
-          "linea": 97,
+          "linea": 130,
           "resumen": "¿El texto menciona EXACTAMENTE este importe? Es lo que distingue «Alberto aprobó un mensaje que cotiza la cuna a 20€» de «Alberto aprobó un mensaje que habla de la cuna». Solo lo primero es una oferta"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c805d341d300"
+      "hash": "f939d4ef22a3"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",
@@ -69969,7 +70607,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "8c22d2f8a9f7"
+      "hash": "af35038944ba"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -70052,6 +70690,10 @@
         "extractEarlyTime",
         "detectCategory",
         "detectLang",
+        "pareceEspanol",
+        "necesitaTraduccionPregunta",
+        "traduccionUtil",
+        "lineaTraduccion",
         "esSolicitudLateCheckout",
         "esDespedida",
         "esHechoDelPiso",
@@ -70085,12 +70727,56 @@
           "resumen": "Detecta el idioma en que ESCRIBE el huésped (es lo que mandará la respuesta). El regex anterior solo miraba tildes/keywords → \"Nos iremos sobre las 10.30\" (español sin tildes) caía a inglés. Ahora pun"
         },
         {
+          "nombre": "pareceEspanol",
+          "kind": "function",
+          "exportada": true,
+          "params": "txt: string",
+          "retorno": "boolean",
+          "linea": 80,
+          "resumen": "¿El texto da señal PROPIA de español? detectLang cae al fallback cuando el mensaje no puntúa en ningún idioma (un emoji, «Très bien», «Tack»), así que aquí el fallback es 'en': solo devuelve true si e"
+        },
+        {
+          "nombre": "necesitaTraduccionPregunta",
+          "kind": "function",
+          "exportada": true,
+          "params": "pregunta: string, lang: string",
+          "retorno": "boolean",
+          "linea": 87,
+          "resumen": "¿Hay que pedir traducción del mensaje del huésped? Se decide por el TEXTO, no solo por el idioma de respuesta: `ctx.lang` hereda el idioma de la reserva cuando el mensaje no da señal, y un «Très bien "
+        },
+        {
+          "nombre": "normFrase",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 93,
+          "resumen": "Una «traducción» que vuelve igual que el original es que ya estaba en español → sin línea 🔁."
+        },
+        {
+          "nombre": "traduccionUtil",
+          "kind": "function",
+          "exportada": true,
+          "params": "original: string, traduccion: string",
+          "retorno": "string",
+          "linea": 94
+        },
+        {
+          "nombre": "lineaTraduccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "traduccion: string, imprescindible: boolean, esc: (s: string) => string",
+          "retorno": "string",
+          "linea": 102,
+          "resumen": "La línea 🔁 del aviso. `imprescindible` = el texto está seguro en otro idioma (lang ≠ es): si la traducción falló ahí, el hueco se DECLARA en vez de callarse — un aviso sin la línea se lee como «ya es"
+        },
+        {
           "nombre": "esSolicitudLateCheckout",
           "kind": "function",
           "exportada": true,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 81
+          "linea": 114
         },
         {
           "nombre": "esDespedida",
@@ -70098,7 +70784,7 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 127
+          "linea": 160
         },
         {
           "nombre": "esHechoDelPiso",
@@ -70106,7 +70792,7 @@
           "exportada": true,
           "params": "pregunta: string, respuesta: string",
           "retorno": "boolean",
-          "linea": 143
+          "linea": 176
         },
         {
           "nombre": "paresPregRespuesta",
@@ -70114,7 +70800,7 @@
           "exportada": true,
           "params": "msgs: MsgMin[]",
           "retorno": "ParQA[]",
-          "linea": 160,
+          "linea": 193,
           "resumen": "Empareja cada pregunta del huésped con la PRIMERA respuesta humana del anfitrión que viene después. Descarta los automáticos de Smoobu (confirmaciones, recordatorios: son plantillas, no conocimiento) "
         },
         {
@@ -70123,13 +70809,13 @@
           "exportada": true,
           "params": "subject: string, text: string",
           "retorno": "boolean",
-          "linea": 175,
+          "linea": 208,
           "resumen": "Los automáticos de Smoobu/Booking llevan ASUNTO; los mensajes escritos a mano, no."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "122ad867ab9a"
+      "hash": "f28ac09b27ff"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/retoque.ts",
@@ -70252,7 +70938,7 @@
           "exportada": false,
           "params": "urgente: boolean",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         },
         {
           "nombre": "traducirEs",
@@ -70260,7 +70946,7 @@
           "exportada": false,
           "params": "txt: string",
           "retorno": "Promise<string>",
-          "linea": 12,
+          "linea": 13,
           "resumen": "Traduce al español de España (para que Alberto entienda de un vistazo). Best-effort: si falla, ''."
         },
         {
@@ -70269,8 +70955,8 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 22,
-          "resumen": "Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada). Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático. Si el hu"
+          "linea": 26,
+          "resumen": "Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada). Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático. El mensa"
         },
         {
           "nombre": "huecoDeGuia",
@@ -70278,7 +70964,7 @@
           "exportada": false,
           "params": "dec: Decision",
           "retorno": "boolean",
-          "linea": 39,
+          "linea": 45,
           "resumen": "¿Escalamos por FALTA DE INFORMACIÓN (y no por política: queja, dinero, cambios…)? Solo entonces tiene sentido decirle a Alberto que es un hueco de la guía y que su respuesta se va a aprender."
         },
         {
@@ -70287,7 +70973,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": "string",
-          "linea": 44,
+          "linea": 50,
           "resumen": "Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato)."
         },
         {
@@ -70296,7 +70982,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 50,
+          "linea": 56,
           "resumen": "Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking)."
         },
         {
@@ -70305,7 +70991,7 @@
           "exportada": true,
           "params": "pend: { booking_id: string; idioma: string | null }, borrador: string, opts: { borradorEs?: string } = {},",
           "retorno": "Promise<void>",
-          "linea": 111,
+          "linea": 113,
           "resumen": "Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo para "
         },
         {
@@ -70314,7 +71000,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 140
+          "linea": 138
         },
         {
           "nombre": "confirmarDescartado",
@@ -70322,7 +71008,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 144
+          "linea": 142
         }
       ],
       "tablas": [
@@ -70330,7 +71016,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "dfd30e2112c5"
+      "hash": "d3ec6384d64b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/antelacion-resultado.ts",
@@ -71660,6 +72346,80 @@
       "hash": "06373f83d9d7"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/lavanderia-peso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Peso de un piso en el reparto de lavandería (Giraldillo + la incluida en el pago a Sique Brilla). Regla acordada con Alberto (29/08/2026): «nº de reservas y huéspedes» — cada reserva del mes aporta sus HUÉSPEDES REALES (incomes.adults+children); si una reserva aún no tiene el aforo informado (NULL =",
+      "exporta": [
+        "pesoLavanderia"
+      ],
+      "funciones": [
+        {
+          "nombre": "pesoLavanderia",
+          "kind": "function",
+          "exportada": true,
+          "params": "huespedesReales: number | null, // Σ (adults+children) de las reservas del mes CON aforo; null = ninguna lo tiene reservasSinAforo: number, // nº de reservas del mes con adults Y children a NULL maxGuests: number | null, // capacidad del pi",
+          "retorno": "number",
+          "linea": 7,
+          "resumen": "Peso de un piso en el reparto de lavandería (Giraldillo + la incluida en el pago a Sique Brilla). Regla acordada con Alberto (29/08/2026): «nº de reservas y huéspedes» — cada reserva del mes aporta su"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "df04744249ac"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/limpieza-intranet.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Helpers puros de la intranet de limpieza (pantalla de Sique Brilla). Sin dependencias de servidor.",
+      "exporta": [
+        "paxDe",
+        "entradaMismoDia",
+        "mezclarNovedades",
+        "nocheOcupada"
+      ],
+      "funciones": [
+        {
+          "nombre": "paxDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "adults: number | null | undefined, children: number | null | undefined",
+          "retorno": "number | null",
+          "linea": 15,
+          "resumen": "Nº de huéspedes de una reserva. Tres estados: si adults Y children son NULL, la fuente (Smoobu vía incomes) todavía no lo ha dicho → null («no se sabe»), nunca 0. Si solo falta uno de los dos, el que "
+        },
+        {
+          "nombre": "entradaMismoDia",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: Pick<ReservaIntranet, 'propertyId' | 'checkIn' | 'pax'>[], propertyId: string, fecha: string,",
+          "retorno": "",
+          "linea": 25,
+          "resumen": "¿Entra un huésped ese mismo día en ese piso? Se deriva de las reservas (checkIn === fecha), NO de cleaning_sessions.checkin_time: el cron auto-sessions rellena '15:00' por defecto aunque no entre nadi"
+        },
+        {
+          "nombre": "mezclarNovedades",
+          "kind": "function",
+          "exportada": true,
+          "params": "nuevas: Novedad[], canceladas: Novedad[], limite = 20",
+          "retorno": "Novedad[]",
+          "linea": 47,
+          "resumen": "Mezcla reservas nuevas y cancelaciones en un solo hilo de novedades, de más reciente a más antigua por `detectada`, con tope. No filtra por fechas: eso es del caller (SQL)."
+        },
+        {
+          "nombre": "nocheOcupada",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: Pick<ReservaIntranet, 'propertyId' | 'checkIn' | 'checkOut'>[], propertyId: string, fecha: string,",
+          "retorno": "ReservaIntranet | null",
+          "linea": 54,
+          "resumen": "¿Está el piso ocupado la noche de `fecha`? (checkIn <= fecha < checkOut, fechas ISO comparables)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d9ba451fff52"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/mercado-cobertura.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/mercado-cobertura.ts — QUÉ ventanas pide medir la rutina de Booking, y en qué orden. POR QUÉ (06/08/2026). El barrido por búsqueda web quedó mecánicamente perfecto (120/120 ventanas el 06/08) y aun así NO mide temporada: los precios que devuelven los snippets son de anuncio y vienen SIN fe",
@@ -72016,7 +72776,7 @@
           "exportada": false,
           "params": "",
           "retorno": "PLGastosPiso",
-          "linea": 74
+          "linea": 75
         },
         {
           "nombre": "catToField",
@@ -72024,7 +72784,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "CampoGasto",
-          "linea": 85
+          "linea": 86
         },
         {
           "nombre": "getPLMensual",
@@ -72032,7 +72792,7 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "Promise<PLMensual>",
-          "linea": 96
+          "linea": 97
         },
         {
           "nombre": "mesPorDefecto",
@@ -72040,7 +72800,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 377,
+          "linea": 390,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
@@ -72054,7 +72814,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "d3ff437bced7"
+      "hash": "bcb591ca619a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",
@@ -72167,7 +72927,7 @@
         "pricing_settings"
       ],
       "rutaApi": null,
-      "hash": "5af69e70cf38"
+      "hash": "4123567eaaf6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-ancla-rail.ts",
@@ -72504,9 +73264,10 @@
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-comps-plausibles.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Plausibilidad de un comparable de mercado por €/plaza. Un comp a 44-104€ \"para 12 personas\" no es un piso entero: es el precio de UNA habitación (o un anuncio sin fecha) que el buscador devuelve igualmente al pedir aforo 12. Detectado el 17/08/2026 en House (364 filas, 36 fechas, todas fuente='serpe",
+      "resumen": "Plausibilidad de un comparable de mercado por €/plaza. SUELO y TECHO. ── EL SUELO (17/08/2026) ──────────────────────────────────────────────────────────────────── Un comp a 44-104€ \"para 12 personas\" no es un piso entero: es el precio de UNA habitación (o un anuncio sin fecha) que el buscador devue",
       "exporta": [
-        "esCompPlausible"
+        "esCompPlausible",
+        "sqlCompPlausible"
       ],
       "funciones": [
         {
@@ -72515,12 +73276,21 @@
           "exportada": true,
           "params": "precioNoche: number, plazasComp: number | null | undefined",
           "retorno": "boolean",
-          "linea": 17
+          "linea": 33
+        },
+        {
+          "nombre": "sqlCompPlausible",
+          "kind": "function",
+          "exportada": true,
+          "params": "prefijo = ''",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "La MISMA regla, como condición SQL. Úsala siempre en vez de escribirla a mano. 🚨 POR QUÉ EXISTE (29/08/2026). Al añadir el techo aparecieron 13 sitios que replicaban la condición del suelo copiada li"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8bcea36a0776"
+      "hash": "061c62403428"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-corpus-utilizable.ts",
@@ -72554,7 +73324,7 @@
         "market_rates"
       ],
       "rutaApi": null,
-      "hash": "88750502028e"
+      "hash": "775acfdabfef"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-demanda.ts",
@@ -73069,7 +73839,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "esperadoLimpieza",
@@ -73077,7 +73847,7 @@
           "exportada": true,
           "params": "salidas: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
           "retorno": "number",
-          "linea": 34,
+          "linea": 35,
           "resumen": "Limpieza esperada CON IVA para unas salidas × tarifas dadas."
         },
         {
@@ -73086,13 +73856,97 @@
           "exportada": true,
           "params": "total: number, salidasServicio: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
           "retorno": "RepartoSiqueBrilla | null",
-          "linea": 71,
+          "linea": 72,
           "resumen": "Desglosa el total pagado a Sique Brilla en limpieza por piso + resto de lavandería. `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`). Devuelve null si no hay salidas con "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "09f7f0488028"
+      "hash": "56b0ff33059b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/reservas-booking-vigia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/reservas-booking-vigia.ts — vigía Booking↔Smoobu por correo. Caso fundacional (30/08/2026): Smoobu se cayó y la reserva de James Ascott (Luxury, 27→29/08/2026) NUNCA llegó a `incomes` — la limpieza del 29 no salió en el calendario de Sique Brilla y el ingreso no contó. Dos señales alimenta",
+      "exporta": [
+        "registrarAvisoBooking",
+        "registrarReservaHuesped",
+        "verificarReservasBooking"
+      ],
+      "funciones": [
+        {
+          "nombre": "registrarAvisoBooking",
+          "kind": "function",
+          "exportada": true,
+          "params": "gmailMessageId: string, asunto: string, aviso: AvisoReservaBooking",
+          "retorno": "Promise<void>",
+          "linea": 42,
+          "resumen": "Inserta el aviso parseado (lo llama el triaje). Idempotente por gmail_message_id."
+        },
+        {
+          "nombre": "registrarReservaHuesped",
+          "kind": "function",
+          "exportada": true,
+          "params": "gmailMessageId: string, asunto: string, ref: string",
+          "retorno": "Promise<void>",
+          "linea": 54,
+          "resumen": "Leg B: un mensaje de huésped trae nº de confirmación pero Smoobu no lo resolvió — puede ser una reserva que Smoobu perdió (o simplemente fuera de la ventana del resolutor). Se registra como pendiente "
+        },
+        {
+          "nombre": "iso",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 62
+        },
+        {
+          "nombre": "addDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: Date, n: number",
+          "retorno": "string",
+          "linea": 63
+        },
+        {
+          "nombre": "activaEnSmoobu",
+          "kind": "function",
+          "exportada": false,
+          "params": "ref: string, checkIn: Date | null",
+          "retorno": "Promise<boolean | null>",
+          "linea": 66,
+          "resumen": "¿Tiene Smoobu una reserva ACTIVA con esta ref? true/false, o null si no se pudo mirar."
+        },
+        {
+          "nombre": "labelPiso",
+          "kind": "function",
+          "exportada": false,
+          "params": "propertyId: string | null, nombre: string | null",
+          "retorno": "string",
+          "linea": 83
+        },
+        {
+          "nombre": "lineaReserva",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila",
+          "retorno": "string",
+          "linea": 88
+        },
+        {
+          "nombre": "verificarReservasBooking",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 93
+        }
+      ],
+      "tablas": [
+        "reservas_correo_booking"
+      ],
+      "rutaApi": null,
+      "hash": "fe53a53c365d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -78444,7 +79298,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "768687136631"
+      "hash": "294172a45eae"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -90874,6 +91728,7 @@
         "escapeHtml",
         "parseCallback",
         "tgSend",
+        "tgSendPhoto",
         "tgSendButtons",
         "tgAnswerCallback",
         "tgEditMessage",
@@ -90915,12 +91770,21 @@
           "linea": 22
         },
         {
+          "nombre": "tgSendPhoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "foto: { url: string } | { data: Uint8Array; nombre?: string }, caption: string, opts: { chatId?: string } = {},",
+          "retorno": "Promise<number | null>",
+          "linea": 38,
+          "resumen": "Foto por URL pública (Telegram la descarga él) o por bytes (multipart, para fotos que solo viven en nuestra BD y no tienen URL pública). Caption en HTML, máx 1024 chars (límite de Telegram)."
+        },
+        {
           "nombre": "tgSendButtons",
           "kind": "function",
           "exportada": true,
           "params": "text: string, botones: Boton[][], opts: { chatId?: string } = {}",
           "retorno": "Promise<number | null>",
-          "linea": 36
+          "linea": 66
         },
         {
           "nombre": "tgAnswerCallback",
@@ -90928,7 +91792,7 @@
           "exportada": true,
           "params": "callbackQueryId: string, text?: string",
           "retorno": "Promise<void>",
-          "linea": 53
+          "linea": 83
         },
         {
           "nombre": "tgEditMessage",
@@ -90936,7 +91800,7 @@
           "exportada": true,
           "params": "messageId: number, text: string, opts: { chatId?: string } = {}",
           "retorno": "Promise<void>",
-          "linea": 64
+          "linea": 94
         },
         {
           "nombre": "tgAskForReply",
@@ -90944,7 +91808,7 @@
           "exportada": true,
           "params": "text: string, opts: { chatId?: string } = {}",
           "retorno": "Promise<number | null>",
-          "linea": 77,
+          "linea": 107,
           "resumen": "Pide texto libre ligado a la respuesta (force_reply). El webhook lee message.reply_to_message."
         },
         {
@@ -90953,13 +91817,13 @@
           "exportada": true,
           "params": "headerValue: string | null",
           "retorno": "boolean",
-          "linea": 92,
+          "linea": 122,
           "resumen": "Verifica el header secreto que Telegram envía en cada webhook."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cbf89f605a2b"
+      "hash": "4b7ae46bb16e"
     },
     {
       "ruta": "packages/module-agenda/src/disponibilidad.ts",
@@ -99285,7 +100149,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2620,
-    "funciones": 7220
+    "archivos": 2639,
+    "funciones": 7286
   }
 }
