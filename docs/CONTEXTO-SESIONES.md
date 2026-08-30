@@ -32,6 +32,13 @@
 
 ---
 
+### 👥 (30/08/2026) Intranet limpieza — la salida también dice cuántos huéspedes salen
+- Petición de Alberto: la tarjeta de limpieza (= la salida) muestra ahora «👥 Salen N huéspedes»
+  (pax de la reserva que sale, como ya hacía la entrada). NULL = no se pinta nada (no se inventa 0);
+  fichas sueltas sin reserva casada tampoco lo llevan. Chip junto a «Salida 11:00».
+- Verificado en prod tras merge: partes probados end-to-end (Telegram ✅, fila de prueba borrada).
+  Ojo: quedó un parte real anterior «Prueba» (Luxury 29/08, id 1) — de Alberto, se deja.
+
 ### 🧾 (30/08/2026) Partes de incidencia de Vanesa — nota+foto en la limpieza + Telegram
 - Idea de Alberto: que Vanesa avise de desperfectos («se ha roto una mesa») desde su intranet,
   rápido y sin campos: botón en la tarjeta de limpieza → texto libre y/o foto → se registra en

@@ -116,14 +116,16 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   // Limpiezas del día = las SALIDAS de reserva (toda salida se limpia) + fichas sueltas del cron
   // sin reserva casada (p.ej. creadas a mano). La ficha, cuando existe, aporta hora/notas/hecha.
   const enFiltro = (propertyId: string | null) => !filtro || propertyId === filtro
-  const limpiezasDia: Array<{ propertyId: string; limp: Limpieza | null }> = [
+  // paxSalida = huéspedes de la reserva que SALE ese día (NULL = no publicado, no se pinta 0).
+  const limpiezasDia: Array<{ propertyId: string; limp: Limpieza | null; paxSalida: number | null }> = [
     ...reservas.filter(r => r.checkOut === sel).map(r => ({
       propertyId: r.propertyId,
       limp: limpiezas.find(l => l.propertyId === r.propertyId && l.fecha === sel) ?? null,
+      paxSalida: r.pax ?? null,
     })),
     ...limpiezas
       .filter(l => l.fecha === sel && !reservas.some(r => r.propertyId === l.propertyId && r.checkOut === sel))
-      .map(l => ({ propertyId: l.propertyId, limp: l })),
+      .map(l => ({ propertyId: l.propertyId, limp: l, paxSalida: null })),
   ].filter(x => enFiltro(x.propertyId))
   // Las tareas sin piso (property_id NULL) se enseñan SIEMPRE: son generales, no de un piso.
   const tareasDia = tareas.filter(t => t.fecha === sel && (t.propertyId == null || enFiltro(t.propertyId)))
@@ -333,7 +335,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         <div style={{ padding: '4px 14px 12px' }}>
           <h3 style={tituloBloque}>Limpiezas del día</h3>
           {limpiezasDia.length === 0 && <div style={vacio}>No hay limpiezas este día. 🙌</div>}
-          {limpiezasDia.map(({ propertyId, limp }, i) => {
+          {limpiezasDia.map(({ propertyId, limp, paxSalida }, i) => {
             const p = propDe(propertyId)
             const entra = entradaMismoDia(reservas, propertyId, sel)
             return (
@@ -344,6 +346,9 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ ...chip, background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)' }}>Salida {limp?.salida ?? '11:00'}</span>
+                  {paxSalida != null && (
+                    <span style={chip}>👥 Sale{paxSalida === 1 ? ' 1 huésped' : `n ${paxSalida} huéspedes`}</span>
+                  )}
                   {entra
                     ? <span style={{ ...chip, background: '#fef3c7', color: '#b45309' }}>⚠️ Entra{entra.pax != null ? `n ${entra.pax}` : ' huésped'} a las {limp?.entrada ?? '15:00'}</span>
                     : <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>Sin entrada hoy</span>}
