@@ -41,8 +41,10 @@
   ANTES de `correo_reglas`), parser puro con fixtures reales, tabla `reservas_correo_booking`
   (aplicada), cron cada 15 min contrasta contra Smoobu → sync forzado si está / Telegram 🚨 +
   ⚠️ en la intranet de Vanesa si no. Leg B: mensajes de huésped con nº que Smoobu no resuelve.
-  Latido `reservas_booking_vigia` (3 h, con sonda). Pendiente de Alberto: meter la de James
-  Ascott a mano en Smoobu (ingreso + limpieza del 29 sin contar).
+  Latido `reservas_booking_vigia` (3 h, con sonda). La de James Ascott quedó metida A MANO en
+  `incomes` (id `manual_booking_ascott_20260827`, bruto 194,46€ → el trigger dejó el neto en
+  156,11€, su 19,72% estándar; Smoobu avisado por Alberto). ⚠️ Si Smoobu la sincroniza al final,
+  BORRAR la fila manual (el sync insertaría la suya con otro reservationId y se duplicaría).
 
 ### 📌 (30/08/2026) Decisión: las consultas a Booking de mercado-booking se quedan COMO ESTÁN
 Alberto planteó si el conector de Booking «no llega» a tantos pisos/calendarios y si convenía pasar
