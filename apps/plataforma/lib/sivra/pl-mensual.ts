@@ -4,7 +4,7 @@ import { casarFacturaConPago } from './factura-limpieza'
 import { pesoLavanderia } from './lavanderia-peso'
 import { facturasParaImportes } from './factura-limpieza-lectura'
 
-// Pisos que comparten lavandería (Giraldillo y la incluida en la factura de Sique Brilla).
+// Pisos que comparten lavandería (Giraldillo y la incluida en la factura de Si que Brilla).
 // Confirmado por Alberto el 25/08/2026 que el Dúplex TAMBIÉN entra en el reparto — sustituye
 // a la lista anterior de solo pisos Kutxa (28/07/2026).
 const PISOS_LAVANDERIA = ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto', 'prop_duplex_center']
@@ -14,7 +14,7 @@ const PISOS_LAVANDERIA = ['prop_house_sevillana', 'prop_busto_reform', 'prop_lux
 // destino='turistico_pisos' evita pescar una tintorería personal.
 const LAVANDERIA_CONTRAPARTE_LIKE = '%LAVANDERIA%'
 const LIMPIEZA_CONTRAPARTE_PREFIJO = 'SI QUE BRILLA%'
-// Tarifa por sesión de limpieza que factura Sique Brilla (desglose real de sus facturas
+// Tarifa por sesión de limpieza que factura Si que Brilla (desglose real de sus facturas
 // mensuales: "Luxury (5x28€) + Bustos Reforma (3x20€) + Duplex (4x25€) + Casa Socorro…").
 export const LIMPIEZA_TARIFAS: Record<string, number> = {
   prop_busto_reform: 20,
@@ -28,7 +28,7 @@ export interface PLGastosPiso {
   /** De dónde sale la lavandería del piso. Suman `lavanderia`; se separan porque son dos
    *  proveedores distintos y verlas juntas impide cuadrar el mes contra una factura. */
   lavanderiaDetalle: { giraldillo: number; siqueBrilla: number }
-  limpieza: number    // Sique Brilla, repartida por salidas × tarifa por piso
+  limpieza: number    // Si que Brilla, repartida por salidas × tarifa por piso
   alquiler: number    // alquiler del local al propietario (Bustos Tavera)
   suministros: number // electricidad, internet
   comunidad: number
@@ -36,7 +36,7 @@ export interface PLGastosPiso {
   total: number
 }
 
-/** Cómo se ha desglosado cada pago a Sique Brilla del mes. */
+/** Cómo se ha desglosado cada pago a Si que Brilla del mes. */
 export interface PagoLimpiezaDesglosado {
   importe: number
   /** `factura` = leído de la factura real · `ajuste` = inferido por mejor ajuste al importe ·
@@ -98,7 +98,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   const [year, month] = mes.split('-').map(Number)
   const start = new Date(year, month - 1, 1)
   const end   = new Date(year, month, 1)
-  // Mes anterior: candidato a mes FACTURADO por Sique Brilla (cobra unas veces a primeros del
+  // Mes anterior: candidato a mes FACTURADO por Si que Brilla (cobra unas veces a primeros del
   // mes siguiente y otras a fin del mismo mes — elige `elegirMesFacturado` por mejor ajuste).
   const prevStart = new Date(year, month - 2, 1)
 
@@ -173,7 +173,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
         AND m.importe < 0
     `,
 
-    // Sique Brilla (limpieza mensual) en banco, aún no en movimiento_reparto
+    // Si que Brilla (limpieza mensual) en banco, aún no en movimiento_reparto
     prisma.$queryRaw<Array<{ id: string; importe: number; en_reparto: boolean }>>`
       SELECT m.id,
         ABS(m.importe)::float AS importe,
@@ -184,7 +184,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
         AND m.importe < 0
     `,
 
-    // Salidas del mes por piso (cada checkout = una limpieza de Sique Brilla)
+    // Salidas del mes por piso (cada checkout = una limpieza de Si que Brilla)
     prisma.$queryRaw<Array<{ pid: string; salidas: number }>>`
       SELECT "propertyId" AS pid, COUNT(*)::int AS salidas
       FROM incomes
@@ -192,7 +192,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       GROUP BY "propertyId"
     `,
 
-    // Salidas del mes ANTERIOR (el mes que factura Sique Brilla en el pago de este mes)
+    // Salidas del mes ANTERIOR (el mes que factura Si que Brilla en el pago de este mes)
     prisma.$queryRaw<Array<{ pid: string; salidas: number }>>`
       SELECT "propertyId" AS pid, COUNT(*)::int AS salidas
       FROM incomes
@@ -245,7 +245,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     mGastos.get(row.propiedad)!.lavanderia += Number(row.importe)
   }
 
-  // Reparto de lavandería (Giraldillo y la incluida en el pago a Sique Brilla): huéspedes
+  // Reparto de lavandería (Giraldillo y la incluida en el pago a Si que Brilla): huéspedes
   // reales de las reservas del mes de caja (fallback a capacidad si el aforo aún es NULL).
   // Sin reservas en el mes, a partes iguales entre los pisos que comparten lavandería —
   // nunca se evapora el gasto del P&L.
@@ -270,7 +270,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // Añadir El Giraldillo repartido por fórmula
   if (lavanderiaLibre > 0) repartirLavanderia(lavanderiaLibre, 'giraldillo')
 
-  // Añadir Sique Brilla. Su factura mensual trae DOS servicios (25/08/2026, factura 2025/333):
+  // Añadir Si que Brilla. Su factura mensual trae DOS servicios (25/08/2026, factura 2025/333):
   // limpieza (salidas × tarifa contratada) Y lavandería por peso. Y el mes facturado no siempre
   // es el de caja: unas veces cobra a primeros del mes siguiente y otras el último día del mismo
   // mes — `elegirMesFacturado` lo decide por mejor ajuste al importe. Repartir el total como

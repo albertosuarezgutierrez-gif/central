@@ -236,8 +236,8 @@ export default function ResultadoPisosPage() {
           </div>
 
           <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 16 }}>
-            Toda lavandería (El Giraldillo o la incluida en la factura de Sique Brilla) se reparte por
-            capacidad × reservas del mes; bajo cada importe se ve de cuál viene. Cada pago a Sique Brilla se
+            Toda lavandería (El Giraldillo o la incluida en la factura de Si que Brilla) se reparte por
+            capacidad × reservas del mes; bajo cada importe se ve de cuál viene. Cada pago a Si que Brilla se
             desglosa con SU FACTURA cuando está aportada (y solo si sus líneas cuadran con el total); si no,
             se estima con la estructura conocida de la factura: Limpieza = salidas del mes facturado × tarifa
             por piso (tarifas sin IVA: Busto 20€ · Dúplex 25€ · Luxury 28€ · House 90€; la tabla muestra los
@@ -259,7 +259,7 @@ function detalleLavanderia(g: PLGastosPiso): string {
   const { giraldillo, siqueBrilla } = g.lavanderiaDetalle
   const partes = []
   if (giraldillo > 0) partes.push(`El Giraldillo: ${eur(giraldillo)}`)
-  if (siqueBrilla > 0) partes.push(`Incluida en la factura de Sique Brilla: ${eur(siqueBrilla)}`)
+  if (siqueBrilla > 0) partes.push(`Incluida en la factura de Si que Brilla: ${eur(siqueBrilla)}`)
   // Lo imputado por factura directa al piso (tabla de gastos) no pasa por el reparto.
   const repartido = giraldillo + siqueBrilla
   if (g.lavanderia - repartido > 0.01) partes.push(`Facturas del piso: ${eur(g.lavanderia - repartido)}`)
@@ -267,7 +267,7 @@ function detalleLavanderia(g: PLGastosPiso): string {
 }
 
 /**
- * De dónde sale el desglose de cada pago a Sique Brilla, y qué hacer si no se ha podido hacer.
+ * De dónde sale el desglose de cada pago a Si que Brilla, y qué hacer si no se ha podido hacer.
  * Un pago repartido «a ojo» y uno leído de su factura NO pueden verse igual: la tabla enseña
  * números plausibles en los dos casos, y solo aquí se distingue lo medido de lo inferido.
  */
@@ -342,7 +342,7 @@ function DesgloseLimpieza({ desglose, onCambio }: { desglose?: PLMensual['desglo
           border: '1px solid var(--border)', borderRadius: 8, cursor: subiendo ? 'wait' : 'pointer',
           background: 'var(--surface-2, var(--surface))',
         }}>
-          {subiendo ? 'Leyendo la factura…' : '📄 Aportar factura de Sique Brilla'}
+          {subiendo ? 'Leyendo la factura…' : '📄 Aportar factura de Si que Brilla'}
           <input type="file" accept="application/pdf,image/*" onChange={subir} disabled={subiendo} style={{ display: 'none' }} />
         </label>
         {msg && (
