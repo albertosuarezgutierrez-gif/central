@@ -32,6 +32,15 @@
 
 ---
 
+### 🤖 (30/08/2026) daily-briefing v4: fuera el fallback NIM — solo pasarela/OpenRouter
+- Decisión de Alberto («Nvidia NIM no hace falta») + regla del 24/08 («todo por OpenRouter»).
+- `generarNarrativa` ya no lee `NVIDIA_API_KEY`/`NVIDIA_BRAIN_MODEL`: la pasarela es la única vía
+  (su cadena de suplentes vive dentro) + UN reintento solo ante fallo transitorio (red/timeout/5xx);
+  401/429 se declaran a la primera. Sin prosa → briefing en crudo con motivos (v3, intacto).
+- ⚠️ NO pinear `model` en el body como «segundo modelo»: `modelo` SALTA OpenRouter (landmine #1675).
+- Tras el merge: redesplegar la edge function `daily-briefing` (hecho por Supabase MCP en esta sesión).
+- Quedan 4 edge functions con NIM crudo (pendiente conocido, misma migración a futuro).
+
 ### 🧾 (30/08/2026) Los no-gastos ya no vuelven a la bandeja: la ingesta los omite
 - Alberto: «Booking eran abono de reservas, Allianz comisiones… y aún aparecen». Cierto: el PR
   #1852 dejó el AVISO en la ficha pero ni quitó las filas ni tocó la ingesta.

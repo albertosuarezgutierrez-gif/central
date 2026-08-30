@@ -1,6 +1,14 @@
 // supabase/functions/daily-briefing/index.ts
-// v3 — Resumen diario IA → Telegram (pasarela Director de plataforma; NVIDIA NIM de fallback)
+// v4 — Resumen diario IA → Telegram (pasarela Director de plataforma, SIN fallback NIM)
 // Cron: 0 7 * * * (9:00h Madrid verano / UTC+2)
+//
+// v4 (30/08/2026) — se RETIRÓ el fallback de NVIDIA NIM directo (decisión de Alberto: «NIM no
+// hace falta»; regla del monorepo desde el 24/08: todo lo que pueda ir por OpenRouter, va por
+// OpenRouter). Tres muertes de modelo NIM por EOL en 11 días demostraron que ese eslabón era
+// mantenimiento sin red real: la pasarela YA lleva su propia cadena de suplentes por dentro
+// (Director + OpenRouter con fallback nativo + cadena gratis). La red ante la pasarela caída no
+// es otro proveedor: es UN reintento (solo fallos transitorios) y, si tampoco, el briefing EN
+// CRUDO con el motivo de cada intento. `NVIDIA_API_KEY`/`NVIDIA_BRAIN_MODEL` ya no se leen aquí.
 //
 // 🚨 v3 (28/08/2026) — por qué se reescribió el camino de fallo. El 27 y el 28/08 el briefing
 // llegó a Telegram como «⚠️ daily-briefing error / NVIDIA 410» y NADA más: ni las comandas, ni
@@ -16,9 +24,8 @@
 //      deja su motivo y el motivo VIAJA en el mensaje.
 //   3) El modelo NIM iba CABLEADO. `meta/llama-3.1-70b-instruct` murió por EOL el 2026-08-26T09:00
 //      (410 Gone; último OK de la sonda: 26/08 07:03 UTC) — es la TERCERA muerte en 11 días
-//      (llama-4-maverick 17/08 · z-ai/glm-5.2 21/08 · esta). Un id cableado convierte cada muerte
-//      en un PR + redespliegue: ahora sale de `NVIDIA_BRAIN_MODEL` y, sin esa env, el eslabón se
-//      declara inactivo en vez de gastar una llamada a un modelo que sabemos muerto.
+//      (llama-4-maverick 17/08 · z-ai/glm-5.2 21/08 · esta). v3 lo movió a `NVIDIA_BRAIN_MODEL`;
+//      v4 retiró el eslabón entero (ver arriba).
 // Y dos consultas que llevaban tiempo mintiendo por omisión (misma regla de CLAUDE.md):
 //   4) Las alertas de stock leían `almacen`, tabla que NO EXISTE en el schema `iarest` → la
 //      consulta fallaba, `?? []` la convertía en «no hay alertas» y el briefing lo daba por bueno
@@ -61,29 +68,34 @@ interface Narrativa {
 
 const motivo = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 160)
 
-// Genera la narrativa del briefing con doble red:
-//   1) PRIMARIO — pasarela IA de plataforma (endpoint /api/ai/chat): el Agente Director elige
-//      modelo por petición y detrás tiene la cadena completa OpenRouter → NIM → Groq → Cerebras →
-//      Kimi + control de presupuesto + auditoría de coste. Una sola fuente de verdad para IA.
-//   2) FALLBACK — NVIDIA NIM directo (comportamiento histórico) por si la pasarela no está
-//      configurada o plataforma está caída: así el briefing no depende de un único servicio.
+// Genera la narrativa del briefing contra la pasarela IA de plataforma (/api/ai/chat): el Agente
+// Director elige modelo por petición y detrás tiene la cadena completa OpenRouter (con fallback
+// nativo entre modelos) → cadena gratis, más control de presupuesto y auditoría en `ai_usos`.
+// Una sola fuente de verdad para IA — la resiliencia entre modelos vive DENTRO de la pasarela.
+// Aquí solo se cubre lo que la pasarela no puede cubrirse a sí misma: un fallo TRANSITORIO del
+// viaje (red, timeout, 5xx) se reintenta UNA vez; un 401 (secreto malo) o un 429 (presupuesto
+// mensual) no cambian por reintentarse y se declaran a la primera.
+// ⚠️ NO añadir aquí un pin de modelo (`model` en el body): en la pasarela `modelo` SALTA el
+// Director/OpenRouter entero y va a la cadena clásica (landmine PR #1675).
 // Este edge function es Deno standalone en el proyecto Supabase de ia-rest y NO puede importar
 // `@central/core-ai` (paquete pnpm de las apps Next.js) — por eso habla con la pasarela por HTTP.
-// NUNCA lanza: si todo falla devuelve `texto: null` con el motivo de CADA eslabón, y el llamante
+// NUNCA lanza: si todo falla devuelve `texto: null` con el motivo de CADA intento, y el llamante
 // manda igualmente el briefing en crudo. Perder los datos por no tener prosa era el bug de v2.
 async function generarNarrativa(contexto: string): Promise<Narrativa> {
   const user = `Genera el briefing:\n${contexto}`
   const fallos: string[] = []
 
-  // 1) Pasarela de plataforma (Agente Director) → es la ÚNICA vía que pasa por OpenRouter.
   const pasarelaUrl = Deno.env.get('PLATAFORMA_URL')
   const gatewaySecret = Deno.env.get('AI_GATEWAY_SECRET')
   if (!pasarelaUrl || !gatewaySecret) {
-    // No es un detalle de log: sin esto el briefing NUNCA ve OpenRouter y depende de que NIM
-    // tenga un modelo vivo. Que se lea en el propio mensaje de Telegram.
+    // No es un detalle de log: sin esto el briefing no tiene NINGUNA vía de IA. Que se lea en el
+    // propio mensaje de Telegram.
     const faltan = [!pasarelaUrl && 'PLATAFORMA_URL', !gatewaySecret && 'AI_GATEWAY_SECRET'].filter(Boolean).join(' + ')
     fallos.push(`pasarela sin configurar (falta ${faltan})`)
-  } else {
+    return { texto: null, via: null, fallos }
+  }
+
+  for (const intento of [1, 2]) {
     try {
       const res = await fetch(`${pasarelaUrl.replace(/\/$/, '')}/api/ai/chat`, {
         method: 'POST',
@@ -99,50 +111,22 @@ async function generarNarrativa(contexto: string): Promise<Narrativa> {
       })
       if (res.ok) {
         const data = await res.json()
-        if (data?.text) return { texto: data.text, via: `Director${data?.modelo ? ` · ${data.modelo}` : ''}`, fallos }
-        fallos.push('pasarela 200 sin texto')
-      } else {
-        // 401 (secreto malo) / 429 (presupuesto mensual) / 502 (IA no disponible) son diagnósticos
-        // MUY distintos: el cuerpo los separa y v2 lo tiraba a la basura.
-        fallos.push(`pasarela HTTP ${res.status}: ${(await res.text().catch(() => '')).slice(0, 120)}`)
+        if (data?.text) {
+          return {
+            texto: data.text,
+            via: `Director${data?.modelo ? ` · ${data.modelo}` : ''}${intento > 1 ? ' · 2º intento' : ''}`,
+            fallos,
+          }
+        }
+        // 200 sin texto es un contrato roto, no un fallo transitorio: repetir no lo cambia.
+        fallos.push(`pasarela 200 sin texto (intento ${intento})`)
+        break
       }
-    } catch (e) { fallos.push(`pasarela inalcanzable: ${motivo(e)}`) }
-  }
-
-  // 2) Fallback: NVIDIA NIM directo (última red de seguridad).
-  // El modelo NO va cableado: los ids de NIM se mueren con EOL cada pocos días (3 muertes en 11
-  // días a 28/08/2026). Sin `NVIDIA_BRAIN_MODEL` el eslabón se declara inactivo en vez de quemar
-  // una llamada contra el default histórico, que sabemos muerto (410 desde el 26/08).
-  const nvidia = Deno.env.get('NVIDIA_API_KEY')
-  const modeloNim = Deno.env.get('NVIDIA_BRAIN_MODEL')
-  if (!nvidia) fallos.push('NVIDIA inactivo (falta NVIDIA_API_KEY)')
-  else if (!modeloNim) fallos.push('NVIDIA inactivo (falta NVIDIA_BRAIN_MODEL; el default histórico murió por EOL el 26/08/2026)')
-  else {
-    try {
-      const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${nvidia}` },
-        body: JSON.stringify({
-          model: modeloNim,
-          max_tokens: 600,
-          temperature: 0.4,
-          messages: [
-            { role: 'system', content: SYSTEM_BRIEFING },
-            { role: 'user', content: user },
-          ],
-        }),
-        signal: AbortSignal.timeout(35_000),
-      })
-      if (!res.ok) {
-        // El cuerpo del 410 de NIM trae la fecha exacta de EOL del modelo — es el dato que hace
-        // falta para el swap; `NVIDIA 410` a secas obligaba a ir a buscarlo a mano.
-        throw new Error(`HTTP ${res.status}: ${(await res.text().catch(() => '')).slice(0, 160)}`)
-      }
-      const data = await res.json()
-      const texto = data.choices?.[0]?.message?.content
-      if (!texto) throw new Error('respuesta vacía')
-      return { texto, via: `NVIDIA NIM directo · ${modeloNim}`, fallos }
-    } catch (e) { fallos.push(`NVIDIA (${modeloNim}) falló: ${motivo(e)}`) }
+      // 401 (secreto malo) / 429 (presupuesto mensual) / 502 (IA no disponible) son diagnósticos
+      // MUY distintos: el cuerpo los separa y v2 lo tiraba a la basura.
+      fallos.push(`pasarela HTTP ${res.status}: ${(await res.text().catch(() => '')).slice(0, 120)} (intento ${intento})`)
+      if (res.status < 500) break
+    } catch (e) { fallos.push(`pasarela inalcanzable: ${motivo(e)} (intento ${intento})`) }
   }
 
   return { texto: null, via: null, fallos }
