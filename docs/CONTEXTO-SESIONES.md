@@ -32,6 +32,15 @@
 
 ---
 
+### 📌 (30/08/2026) Decisión: las consultas a Booking de mercado-booking se quedan COMO ESTÁN
+Alberto planteó si el conector de Booking «no llega» a tantos pisos/calendarios y si convenía pasar
+a consultas solo puntuales (al analizar un evento). Feedback con datos de BD: la rutina entrega
+estable 24 ventanas/día, la cobertura se ACUMULA y sep-26→abr-27 tienen 9-26 fechas/mes por piso
+(el bucket pide ≥3); solo may-jun 27 están a 2 fechas y les faltan días. Los eventos YA son
+ventanas prioritarias (ronda 1). Decisión de Alberto: **dejarlo tal cual** — no pasar a solo-eventos
+(mataría la línea de temporada y el corpus caduca a los 7 días, lección del 22/08). Sin cambios de
+código; si el conector fallara algún día, la palanca es bajar rondas de profundidad, no la temporada.
+
 ### 🧽 (30/08/2026) Intranet limpieza v5: navegación de fechas + filtro por piso
 - Alberto pasó el pantallazo del calendario Smoobu de Vanessa → se adoptan sus dos cosas útiles:
   la ventana de 30 días ya NO es fija (◀/▶ ±2 semanas, tope hoy−90/+180, botón «Hoy»; la API
