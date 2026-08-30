@@ -360,6 +360,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.paper-tracker.',
   },
   {
+    id: 'sivra_prevision',
+    etiqueta: '🔮 Foto diaria de la previsión por piso (diario 05:50)',
+    // Diario → 30 h, el estándar de los diarios: tolera un día saltado.
+    maxHoras: 30,
+    nota:
+      'La previsión por piso no se está fotografiando, y sin foto diaria el seguimiento ' +
+      '«previsto vs real» de /sivra/resultado-pisos se queda con huecos — un mes sin snapshot ' +
+      'previo no se puede juzgar nunca (queda «sin registro», no «acertó/falló»). También decide ' +
+      'el aviso de previsión floja a ~30 días del mes, así que un mes flojo pasaría sin sonar. ' +
+      'Mira los logs de /api/cron/prevision-pisos; si el detalle trae una excepción de BD sobre ' +
+      '`pisos_previsiones`, revisa que la migración 2026-08-30 esté aplicada. ' +
+      'Huella: agente_latidos.sivra_prevision.',
+  },
+  {
     id: 'sivra_rates_snapshot',
     etiqueta: '📸 Snapshot de precios y disponibilidad de Smoobu (diario 07:00)',
     // Diario → 30 h, el estándar de los diarios: tolera un día saltado.

@@ -98,6 +98,11 @@ export const CRON_JOBS: CronJob[] = [
   // Extras cobrados al huésped: recordatorio a las 24 h y caducidad a 48 h de la entrada. A las
   // 07:00, antes del vigía de latidos de las 07:45, para que su huella del día ya esté escrita.
   { path: '/api/cron/sivra-extras-impago', schedule: '0 7 * * *' },
+  // 🔮 Foto diaria de la previsión por piso (mes en curso + 2) → `pisos_previsiones`, para poder
+  // juzgar después si las previsiones se cumplen (seguimiento en /sivra/resultado-pisos) + aviso
+  // «previsión floja» a ~30 días del mes. Tras el sync de Smoobu de las 05:00/05:15 a propósito:
+  // la foto se toma con el calendario ya fresco del día.
+  { path: '/api/cron/prevision-pisos', schedule: '50 5 * * *' },
   { path: '/api/sivra/limpiadoras/auto-sessions', schedule: '0 5 * * *' },
   { path: '/api/sivra/limpiadoras/auto-assign', schedule: '30 5 * * *' },
   { path: '/api/sivra/limpiadoras/alerta-ventana', schedule: '0 8 * * *' },

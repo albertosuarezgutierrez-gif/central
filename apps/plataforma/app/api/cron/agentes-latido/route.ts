@@ -132,6 +132,12 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_rates_snapshot: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_rates_snapshot'`,
+  // Foto diaria de la previsión por piso (30/08/2026). Va vigilada desde el mismo PR que la
+  // declara (regla del PR #1447): su tabla solo la escribe este cron, así que sin latido un cron
+  // muerto y «hoy no había nada nuevo» serían la misma señal.
+  sivra_prevision: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_prevision'`,
   sivra_resumen_diario: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_resumen_diario'`,
