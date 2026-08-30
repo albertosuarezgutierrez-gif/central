@@ -15,6 +15,20 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-30 · facturas-correo** · hizo: pasada diaria completa. Paso 0: Vía B sana
+  (`dias_caido=1`, última copia `_buzon_pdf` 29/08 IONOS); backlog: `PDF-pendiente` vacío,
+  `Revisar` 1 hilo (Fly.io/Manuel Suárez, sigue sin respuesta de Alberto — día 3), y
+  `Extraccion-fallida` 1 hilo (Mercadona/Pilar, 237,06€ entrega Monte Carmelo) → resuelto y
+  quitada la etiqueta: es personal, claro (no ambiguo pese a venir de Pilar). `agente_salud`
+  actualizado. Paso 1: 3 candidatos por keyword de "booking"/"smoobu" en el remitente, los 3
+  ruido (mensajería de huéspedes Booking + ticket de soporte Smoobu, no facturas) → etiquetados
+  `Procesada`. `_subir_aqui` vacío; raíz `FACTURAS Apartamentos/2026` sin subidas nuevas (los
+  PDFs sueltos que quedan son deuda histórica ya con aviso en `_DUPLICADOS_BORRAR` de pasadas
+  previas, no reverificado hoy). Paso 4.0: `v_facturas_sin_cargo` sin filas `sin_revisar` — las
+  8 pendientes (Pepephone ene-jun, Giraldillo mayo, CREATE-Socorro jun) siguen
+  `revisada_sin_cargo`, no reabiertas. Preflight Telegram 200 OK, sin aviso (nada urgente).
+  dudas: el Fly.io ($6,68) de Manuel Suárez lleva 3 días en `Facturas/Revisar` sin que Alberto
+  diga si es gasto suyo; fallos: —; PRs/commits: este commit.
 - **2026-08-30 · mercado-booking** · hizo: pasada PRIORITARIA jul-ago 2027 (2º día seguido,
   mismo prompt programado). Medidas las 24 ventanas del plan acotado (240 comps reales
   `booking_mcp`, 4 pisos × 6 fechas: 02/10/27-jul-27-jul-01-ago[evento Mundial Remo,
