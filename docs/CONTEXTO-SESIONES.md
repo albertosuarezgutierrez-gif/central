@@ -32,6 +32,14 @@
 
 ---
 
+### 🧽 (30/08/2026) Intranet limpieza v5: navegación de fechas + filtro por piso
+- Alberto pasó el pantallazo del calendario Smoobu de Vanessa → se adoptan sus dos cosas útiles:
+  la ventana de 30 días ya NO es fija (◀/▶ ±2 semanas, tope hoy−90/+180, botón «Hoy»; la API
+  `datos` ya aceptaba from/to) y chips de filtro por piso (afectan calendario, resumen del día,
+  entradas y avisos; las tareas SIN piso se ven siempre). Días pasados atenuados en la cabecera.
+- Verificado contra el pantallazo: la reserva de House 4→6 sep (8+3 pax, Booking) está en `incomes`.
+- Nombres de huésped siguen SIN mostrarse (decisión de diseño; Smoobu sí los enseña).
+
 ### ✅ (30/08/2026) Pricing SIVRA recuperado: #1864 mergeado y la pasada de las 08:30 escribió
 El PR #1864 (fix `Prisma.raw()` en `sqlCompPlausible()`, ver entrada 🔴 de abajo) se sacó de draft
 y se mergeó a las ~06:10 UTC (`88cdda6`), antes del reparador de las 08:00 y de la pasada de las

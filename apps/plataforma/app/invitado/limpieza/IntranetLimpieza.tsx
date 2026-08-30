@@ -6,6 +6,11 @@ import { PROPS_CALENDARIO as PROPS } from '@/lib/sivra/constantes'
 import { entradaMismoDia, nocheOcupada, type ReservaIntranet, type Novedad } from '@/lib/sivra/limpieza-intranet'
 
 const DIAS = 30
+// Navegación de la ventana (idea del calendario de Smoobu que usaba Vanesa): se puede mirar
+// hacia atrás (repasar limpiezas pasadas) y hacia delante (planificar), con tope para no
+// pasear por años vacíos.
+const VENTANA_ATRAS_DIAS = 90
+const VENTANA_ADELANTE_DIAS = 180
 const DOW = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
 const DOWL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
@@ -29,7 +34,10 @@ function propDe(id: string) { return PROPS.find(p => p.id === id) }
 
 export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado' }) {
   const hoy = useMemo(() => hoyDate(), [])
-  const dias = useMemo(() => Array.from({ length: DIAS }, (_, i) => addDays(hoy, i)), [hoy])
+  const [inicio, setInicio] = useState(() => iso(hoyDate()))
+  const inicioDate = useMemo(() => new Date(inicio + 'T12:00:00'), [inicio])
+  const dias = useMemo(() => Array.from({ length: DIAS }, (_, i) => addDays(inicioDate, i)), [inicioDate])
+  const finVentana = iso(addDays(inicioDate, DIAS - 1))
   const [reservas, setReservas] = useState<ReservaIntranet[]>([])
   const [limpiezas, setLimpiezas] = useState<Limpieza[]>([])
   const [tareas, setTareas] = useState<Tarea[]>([])
@@ -37,10 +45,12 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const [sel, setSel] = useState(iso(hoy))
+  // Filtro por piso (como los «Filtros» del calendario de Smoobu): null = los 4.
+  const [filtro, setFiltro] = useState<string | null>(null)
 
   const cargar = useCallback(async () => {
     try {
-      const r = await fetch(`/api/sivra/limpieza-intranet/datos?from=${iso(hoy)}&to=${iso(addDays(hoy, DIAS - 1))}`)
+      const r = await fetch(`/api/sivra/limpieza-intranet/datos?from=${inicio}&to=${iso(addDays(new Date(inicio + 'T12:00:00'), DIAS - 1))}`)
       if (!r.ok) throw new Error(String(r.status))
       const d = await r.json()
       setReservas(d.reservas ?? [])
@@ -53,7 +63,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
     } finally {
       setCargando(false)
     }
-  }, [hoy])
+  }, [inicio])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -70,6 +80,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   const selDate = useMemo(() => new Date(sel + 'T12:00:00'), [sel])
   // Limpiezas del día = las SALIDAS de reserva (toda salida se limpia) + fichas sueltas del cron
   // sin reserva casada (p.ej. creadas a mano). La ficha, cuando existe, aporta hora/notas/hecha.
+  const enFiltro = (propertyId: string | null) => !filtro || propertyId === filtro
   const limpiezasDia: Array<{ propertyId: string; limp: Limpieza | null }> = [
     ...reservas.filter(r => r.checkOut === sel).map(r => ({
       propertyId: r.propertyId,
@@ -78,8 +89,10 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
     ...limpiezas
       .filter(l => l.fecha === sel && !reservas.some(r => r.propertyId === l.propertyId && r.checkOut === sel))
       .map(l => ({ propertyId: l.propertyId, limp: l })),
-  ]
-  const tareasDia = tareas.filter(t => t.fecha === sel)
+  ].filter(x => enFiltro(x.propertyId))
+  // Las tareas sin piso (property_id NULL) se enseñan SIEMPRE: son generales, no de un piso.
+  const tareasDia = tareas.filter(t => t.fecha === sel && (t.propertyId == null || enFiltro(t.propertyId)))
+  const novedadesVisibles = novedades.filter(n => enFiltro(n.propertyId))
 
   function fmtSel() {
     if (sel === iso(hoy)) return `Hoy · ${DOWL[selDate.getDay()].toLowerCase()} ${selDate.getDate()}`
@@ -88,9 +101,28 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   }
   function mover(n: number) {
     const d = addDays(selDate, n)
-    if (d < hoy || d > addDays(hoy, DIAS - 1)) return
+    if (iso(d) < inicio || iso(d) > finVentana) return
     setSel(iso(d))
   }
+  // Mueve la ventana del calendario n días (±2 semanas por toque), acotada a
+  // [hoy−90, hoy+180]. Si el día seleccionado se queda fuera, se lleva al inicio visible.
+  function moverVentana(n: number) {
+    const min = iso(addDays(hoy, -VENTANA_ATRAS_DIAS))
+    const max = iso(addDays(hoy, VENTANA_ADELANTE_DIAS))
+    let nuevo = iso(addDays(inicioDate, n))
+    if (nuevo < min) nuevo = min
+    if (nuevo > max) nuevo = max
+    if (nuevo === inicio) return
+    setInicio(nuevo)
+    const nuevoFin = iso(addDays(new Date(nuevo + 'T12:00:00'), DIAS - 1))
+    if (sel < nuevo || sel > nuevoFin) setSel(iso(hoy) >= nuevo && iso(hoy) <= nuevoFin ? iso(hoy) : nuevo)
+  }
+  function volverAHoy() {
+    setInicio(iso(hoy))
+    setSel(iso(hoy))
+  }
+  const rangoVentana = `${inicioDate.getDate()} ${inicioDate.toLocaleDateString('es-ES', { month: 'short' })} – ${new Date(finVentana + 'T12:00:00').getDate()} ${new Date(finVentana + 'T12:00:00').toLocaleDateString('es-ES', { month: 'short' })}`
+  const pisosVisibles = filtro ? PROPS.filter(p => p.id === filtro) : PROPS
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 12px 40px', color: 'var(--text)' }}>
@@ -128,9 +160,20 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
 
       {/* Calendario */}
       <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px 6px' }}>
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Los 4 pisos · próximos {DIAS} días</h2>
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>desliza →</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 6px' }}>
+          <button onClick={() => moverVentana(-14)} aria-label="Dos semanas antes" style={btnNav}>‹</button>
+          <div style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{rangoVentana}</div>
+          <button onClick={() => moverVentana(14)} aria-label="Dos semanas después" style={btnNav}>›</button>
+          {inicio !== iso(hoy) && (
+            <button onClick={volverAHoy} style={{ ...btnNav, minWidth: 0, padding: '0 12px', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>Hoy</button>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '2px 14px 8px' }}>
+          <ChipFiltro activo={filtro === null} onClick={() => setFiltro(null)} label="Todos" />
+          {PROPS.map(p => (
+            <ChipFiltro key={p.id} activo={filtro === p.id} onClick={() => setFiltro(filtro === p.id ? null : p.id)}
+              label={p.label} color={p.color} />
+          ))}
         </div>
         {cargando ? (
           <div style={{ padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando…</div>
@@ -143,12 +186,13 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
                 return (
                   <button key={k} className="li-dia" onClick={() => setSel(k)}
                     style={k === sel ? { background: 'var(--primary-light, rgba(79,70,229,.1))', color: 'var(--primary)', borderRadius: '8px 8px 0 0' }
-                      : k === iso(hoy) ? { color: 'var(--primary)' } : undefined}>
+                      : k === iso(hoy) ? { color: 'var(--primary)' }
+                        : k < iso(hoy) ? { opacity: .55 } : undefined}>
                     <span className="dow">{DOW[d.getDay()]}</span>{d.getDate()}
                   </button>
                 )
               })}
-              {PROPS.map(p => (
+              {pisosVisibles.map(p => (
                 <FilaPiso key={p.id} piso={p} dias={dias} sel={sel} hoy={iso(hoy)}
                   reservas={reservas} limpiezas={limpiezas} onSel={setSel} />
               ))}
@@ -199,7 +243,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
 
           <h3 style={tituloBloque}>Entradas del día</h3>
           {(() => {
-            const entradas = reservas.filter(r => r.checkIn === sel)
+            const entradas = reservas.filter(r => r.checkIn === sel && enFiltro(r.propertyId))
             if (!entradas.length) return <div style={vacio}>Nadie entra este día{limpiezasDia.length ? ' — las limpiezas van con calma' : ''}.</div>
             return entradas.map((r, i) => {
               const p = propDe(r.propertyId)
@@ -242,8 +286,8 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
           Las últimas reservas nuevas y cancelaciones, por si ya tenías el mes planificado.
         </div>
-        {!cargando && novedades.length === 0 && <div style={vacio}>Sin avisos nuevos: todo sigue como estaba. 👍</div>}
-        {novedades.map((n, i) => {
+        {!cargando && novedadesVisibles.length === 0 && <div style={vacio}>Sin avisos nuevos: todo sigue como estaba. 👍</div>}
+        {novedadesVisibles.map((n, i) => {
           const p = propDe(n.propertyId)
           const rango = n.checkIn || n.checkOut
             ? `${fmtDM(n.checkIn) ?? '¿?'} → ${fmtDM(n.checkOut) ?? '¿?'}`
@@ -270,6 +314,20 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         Acceso con tu enlace personal — sin contraseña.<br />Cualquier duda, escribe a Alberto por WhatsApp.
       </footer>
     </div>
+  )
+}
+
+function ChipFiltro({ activo, onClick, label, color }: {
+  activo: boolean; onClick: () => void; label: string; color?: string
+}) {
+  return (
+    <button onClick={onClick} style={{
+      fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 20, cursor: 'pointer',
+      fontFamily: 'inherit', minHeight: 32,
+      border: `1px solid ${activo ? (color ?? 'var(--primary)') : 'var(--border)'}`,
+      background: activo ? (color ?? 'var(--primary)') : 'transparent',
+      color: activo ? '#fff' : (color ?? 'var(--muted)'),
+    }}>{label}</button>
   )
 }
 
