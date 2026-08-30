@@ -32,7 +32,13 @@
 
 ---
 
-### 🛎️ (30/08/2026) Vigía Booking↔Smoobu por correo + caso real James Ascott
+### 📅 (30/08/2026) Intranet limpieza v6 — vista «Mes» (prueba pedida por Alberto)
+- Calendario mensual clásico (semanas L→D) como vista POR DEFECTO en la intranet de Vanesa:
+  cada día con puntos del COLOR de cada piso (relleno = limpieza, aro = entrada, ⚠️ = pendiente
+  Smoobu); tocar un día abre su detalle abajo. Toggle «Mes/Lista» — la tira de 30 días sigue ahí.
+- Nav ◀ mes ▶ + Hoy, acotada a la misma ventana [hoy−90, hoy+180]; el fetch pide el rango de la
+  rejilla visible (`datos?from&to` ya aceptaba rangos arbitrarios). Responsive 320px: 7 col fluidas.
+- Es una PRUEBA: si a Alberto/Vanesa no les convence, basta revertir el default a `'lista'`.
 - Alberto: Smoobu se cayó y una reserva no llegó; quiere carpeta Gmail + verificación + Telegram.
   CONFIRMADO el agujero: James Ascott (Luxury 27→29/08, 2+3 pax) NO está en `incomes` ni canceladas
   — la limpieza del 29 no salió en la intranet. Y Booking NO mandó su correo «⚠️ no registrada»
