@@ -90,6 +90,11 @@ export const CRON_JOBS: CronJob[] = [
   // lavandería del P&L pasó a huéspedes reales el 29/08/2026 y junio-agosto estaban a NULL).
   // Cuando el histórico esté relleno se puede quitar el `desde` y dejar solo la ventana.
   { path: '/api/sivra/updates/sync?days=800&desde=2026-06-01&ventana=45', schedule: '15 5 * * *' },
+  // Vigía Booking↔Smoobu: contrasta contra Smoobu las reservas de Booking vistas por correo
+  // (avisos «⚠️ no registrada» + mensajes de huésped con nº que Smoobu no reconoce) y avisa por
+  // Telegram del agujero (caso James Ascott 27-29/08/2026: Smoobu caído, reserva nunca sincronizada).
+  // Cada 15 min: sale en segundos cuando no hay pendientes (SELECT y fuera).
+  { path: '/api/sivra/reservas-booking/verificar', schedule: '4,19,34,49 * * * *' },
   // Extras cobrados al huésped: recordatorio a las 24 h y caducidad a 48 h de la entrada. A las
   // 07:00, antes del vigía de latidos de las 07:45, para que su huella del día ya esté escrita.
   { path: '/api/cron/sivra-extras-impago', schedule: '0 7 * * *' },
