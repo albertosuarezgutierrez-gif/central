@@ -97,7 +97,7 @@ export async function verificarReservasBooking(): Promise<{
     SELECT id, tipo, origen, ref_booking, property_id, nombre_piso, check_in, estado, avisada_at
     FROM reservas_correo_booking
     WHERE estado IN ('pendiente', 'huerfana')
-      AND visto_at > now() - make_interval(days => ${REVISAR_DIAS})
+      AND visto_at > now() - make_interval(days => ${REVISAR_DIAS}::int)
       AND ref_booking IS NOT NULL
     ORDER BY visto_at ASC
     LIMIT 20

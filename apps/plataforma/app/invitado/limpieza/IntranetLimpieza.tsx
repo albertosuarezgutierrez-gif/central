@@ -237,7 +237,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
                   <span style={{ ...chip, background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)' }}>Salida {limp?.salida ?? '11:00'}</span>
                   {entra
                     ? <span style={{ ...chip, background: '#fef3c7', color: '#b45309' }}>⚠️ Entra{entra.pax != null ? `n ${entra.pax}` : ' huésped'} a las {limp?.entrada ?? '15:00'}</span>
-                    : <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>Sin entrada hoy — con calma</span>}
+                    : <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>Sin entrada hoy</span>}
                   {limp?.tipo && limp.tipo !== 'estandar' && <span style={chip}>{limp.tipo === 'profunda' ? '🫧 Profunda' : '⚠️ Gran suciedad'}</span>}
                 </div>
                 {limp?.nota && <div style={nota}>📌 <b>Alberto:</b> {limp.nota}</div>}
@@ -258,7 +258,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
           })}
           {(() => {
             const entradas = reservas.filter(r => r.checkIn === sel && enFiltro(r.propertyId))
-            if (!entradas.length) return <div style={vacio}>Nadie entra este día{limpiezasDia.length ? ' — las limpiezas van con calma' : ''}.</div>
+            if (!entradas.length) return <div style={vacio}>Nadie entra este día.</div>
             return entradas.map((r, i) => {
               const p = propDe(r.propertyId)
               const limp = limpiezasDia.find(l => l.propertyId === r.propertyId)?.limp
