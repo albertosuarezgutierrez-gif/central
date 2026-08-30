@@ -2691,3 +2691,45 @@ informe) sigue pendiente para cuando se transfiera el proyecto.
 **🔓 Y esto desbloquea trabajo nuestro:** por primera vez podemos LEER el código real — los ADRs
 (007/009/013/016/025), `src/db/schema.ts` (el esquema declarado, con la salvedad de que el real puede
 diferir), el cifrado y el cliente de CIMA. El análisis del repo ya no depende de nadie.
+
+## 📬 30/08/2026 (noche) — Segunda respuesta de Manuel: tres correcciones, un aviso, y los deberes resueltos a medias
+
+**Correcciones aceptadas (las tres son suyas y van a misa):**
+
+1. **`CRON_SECRET` es un secreto COMPARTIDO**, no solo de Actions: GitHub lo manda como Bearer y la
+   app de Vercel lo valida contra su propia env del mismo nombre. Generar uno nuevo y ponerlo solo en
+   Actions = 401 y la cartera deja de entrar **sin aviso**. O se reutiliza el valor actual (legible en
+   el panel de Vercel si la env no está marcada sensitive), o se cambia **en los dos sitios a la vez**
+   — y el lado Vercel necesita **redespliegue** para que surta efecto.
+2. **Fly va al revés (otra vez):** el `fly apps move` lo lanza Manuel, y para eso **Manuel tiene que
+   estar en la org de Alberto** (`alberto-suarez-83`), no Alberto en la suya. Pendiente: Alberto le
+   manda la invitación desde el panel de Fly.
+3. Manuel da por transferido el proyecto Vercel. **⚠️ VERIFICADO POR MCP y NO cuadra:** el proyecto
+   `asegura` (`prj_4jVSN6zMo9J8COcrCjgOKWSbNFl8`) **no aparece en el team de Alberto** — ni en la
+   lista ni por ID (404). Puede haber aterrizado en la CUENTA PERSONAL de Alberto (scope que el
+   conector no ve) — Alberto tiene que mirarlo en su panel. Hasta verlo, **no se confirma**.
+
+**⚠️ Y una contradicción a favor:** Manuel dice que lo de GitHub «todavía no lo he lanzado» — pero el
+transfer del repo de la app **ya está hecho y aceptado** (email de 20:21 UTC, repo clonado y
+verificado). Su mensaje es anterior a eso. El del **adaptador** sí sigue pendiente.
+
+**🚨 El aviso que cambia el orden del paso 0:** la org de Supabase de Manuel está en **plan gratuito**
+→ la base de producción con los datos de 32.600 personas **no tiene hoy backups restaurables ni PITR**.
+Al pasar a la org de Alberto (con tarjeta) eso mejora solo; **hasta entonces no hay red: el volcado
+del paso 0 es obligatorio ANTES de mover nada.**
+
+**Los deberes, que ya no son dos averías sino una y media:**
+
+- **Mapfre NO está rota:** los últimos ficheros persistieron 132/132; simplemente **no llega nada
+  nuevo desde el 23-jun**. Diagnóstico: lanzar `ficherosDisponibles` contra C0058 — si TIREA dice que
+  no hay pendientes, la llamada es a Mapfre/TIREA («¿seguís publicando para CS-F/0170?»); si dice que
+  sí hay, entonces es el adaptador.
+- **Los 39 de Occident en `review` no son de Occident:** 18 REC + 18 SIN + 3 POL, con error «0/2
+  recibos»/«0/2 siniestros». Y el dato que lo explica: **en toda la base, de las cuatro compañías,
+  jamás se ha persistido un REC, un SIN ni un CEF** (54+38+7 ficheros, todos a cero; solo persisten
+  POL). Apuesta de Manuel: los flags `CIMA_INGESTA_REC_ENABLED` / `_SIN_` / `_CEF_` están apagados —
+  **no es una avería, es una función nunca encendida**. Se confirma mirando esas tres envs en Vercel.
+  Residuo real de Occident: **4 pólizas** (detectó 24, guardó 20).
+
+**Consecuencia para la Fase 4:** «encender CIMA completo» incluye decidir si se activan REC/SIN/CEF —
+la correduría hoy solo ingiere pólizas. Los recibos y siniestros de las compañías NUNCA han entrado.
