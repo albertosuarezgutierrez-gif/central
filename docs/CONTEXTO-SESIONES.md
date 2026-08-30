@@ -38,7 +38,11 @@
   (su cadena de suplentes vive dentro) + UN reintento solo ante fallo transitorio (red/timeout/5xx);
   401/429 se declaran a la primera. Sin prosa → briefing en crudo con motivos (v3, intacto).
 - ⚠️ NO pinear `model` en el body como «segundo modelo»: `modelo` SALTA OpenRouter (landmine #1675).
-- Tras el merge: redesplegar la edge function `daily-briefing` (hecho por Supabase MCP en esta sesión).
+- Redesplegada (v28) y VERIFICADA en caliente vía pg_net: 200, `via: Director · anthropic/claude-sonnet-4.5`,
+  `degradado:false` — primeras filas `ia-rest-briefing` en `ai_usos` por `openrouter` (los secretos
+  `PLATAFORMA_URL`+`AI_GATEWAY_SECRET` ya estaban guardados; el 401-por-SSO que temía Chrome no existe).
+- 🚨 Landmine: `deploy_edge_function` (MCP) resetea `verify_jwt` a `true` por defecto — la v27 lo hizo y
+  habría matado el cron (llama SIN header). Pasar SIEMPRE `verify_jwt:false` al redesplegar esta función.
 - Quedan 4 edge functions con NIM crudo (pendiente conocido, misma migración a futuro).
 
 ### 🧾 (30/08/2026) Los no-gastos ya no vuelven a la bandeja: la ingesta los omite
