@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-30 · mercado-booking** · hizo: pasada PRIORITARIA jul-ago 2027 (2º día seguido,
+  mismo prompt programado). Medidas las 24 ventanas del plan acotado (240 comps reales
+  `booking_mcp`, 4 pisos × 6 fechas: 02/10/27-jul-27-jul-01-ago[evento Mundial Remo,
+  factor confirmado ~1.55x]-06-ago-14-ago) + escaparate 3/4 (House Sevillana sin
+  disponibilidad esas fechas → hueco, no fallo). 0 ventanas sin respuesta, 0 propios
+  descartados. **Objetivo ya estaba cumplido ANTES de esta pasada**: el plan devolvió
+  `meses_sin_bucket: [2027-04,05,06]` — julio y agosto 2027 no aparecen, o sea ya tenían
+  bucket mensual elegible (lo dejó hecho la pasada de ayer 29/08). Esta pasada solo refrescó
+  el corpus, no cambió el estado. dudas: la línea "PRIORIDAD TEMPORAL" sigue en el prompt
+  programado por 2º día — Alberto tiene que quitarla él (fuera del repo, sin acceso desde
+  aquí); fallos: 1 timeout SSL transitorio (ventana 07-10/12 duplex_center), reintentado con
+  éxito; PRs/commits: este commit.
 - **2026-08-29 · facturas-correo** · hizo: Vía B sana (`dias_caido=0`, copió 3 PDFs en 48h);
   backlog `PDF-pendiente`/`Extraccion-fallida` en 0 hilos (verificado por `search_threads`).
   Paso 1: 0 candidatos nuevos (único match, un ticket de soporte de Smoobu, no es factura).
