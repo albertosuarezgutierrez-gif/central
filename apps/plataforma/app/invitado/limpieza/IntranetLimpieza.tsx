@@ -60,6 +60,8 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   // Vista «mes» (prueba pedida por Alberto, 30/08): calendario mensual clásico con las limpiezas
   // como puntos del color de cada piso. La tira de 30 días sigue disponible en «Lista».
   const [vista, setVista] = useState<'mes' | 'lista'>('mes')
+  // «🔔 Últimos avisos» plegado por defecto (no es información del día a día).
+  const [avisosAbiertos, setAvisosAbiertos] = useState(false)
   const [mesAncla, setMesAncla] = useState(() => iso(hoyDate()).slice(0, 7)) // 'AAAA-MM'
 
   // Rejilla del mes: semanas completas de lunes a domingo (los días de los meses vecinos se
@@ -116,14 +118,16 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   // Limpiezas del día = las SALIDAS de reserva (toda salida se limpia) + fichas sueltas del cron
   // sin reserva casada (p.ej. creadas a mano). La ficha, cuando existe, aporta hora/notas/hecha.
   const enFiltro = (propertyId: string | null) => !filtro || propertyId === filtro
-  const limpiezasDia: Array<{ propertyId: string; limp: Limpieza | null }> = [
+  // paxSalida = huéspedes de la reserva que SALE ese día (NULL = no publicado, no se pinta 0).
+  const limpiezasDia: Array<{ propertyId: string; limp: Limpieza | null; paxSalida: number | null }> = [
     ...reservas.filter(r => r.checkOut === sel).map(r => ({
       propertyId: r.propertyId,
       limp: limpiezas.find(l => l.propertyId === r.propertyId && l.fecha === sel) ?? null,
+      paxSalida: r.pax ?? null,
     })),
     ...limpiezas
       .filter(l => l.fecha === sel && !reservas.some(r => r.propertyId === l.propertyId && r.checkOut === sel))
-      .map(l => ({ propertyId: l.propertyId, limp: l })),
+      .map(l => ({ propertyId: l.propertyId, limp: l, paxSalida: null })),
   ].filter(x => enFiltro(x.propertyId))
   // Las tareas sin piso (property_id NULL) se enseñan SIEMPRE: son generales, no de un piso.
   const tareasDia = tareas.filter(t => t.fecha === sel && (t.propertyId == null || enFiltro(t.propertyId)))
@@ -333,7 +337,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         <div style={{ padding: '4px 14px 12px' }}>
           <h3 style={tituloBloque}>Limpiezas del día</h3>
           {limpiezasDia.length === 0 && <div style={vacio}>No hay limpiezas este día. 🙌</div>}
-          {limpiezasDia.map(({ propertyId, limp }, i) => {
+          {limpiezasDia.map(({ propertyId, limp, paxSalida }, i) => {
             const p = propDe(propertyId)
             const entra = entradaMismoDia(reservas, propertyId, sel)
             return (
@@ -344,6 +348,9 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ ...chip, background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)' }}>Salida {limp?.salida ?? '11:00'}</span>
+                  {paxSalida != null && (
+                    <span style={chip}>👥 Sale{paxSalida === 1 ? ' 1 huésped' : `n ${paxSalida} huéspedes`}</span>
+                  )}
                   {entra
                     ? <span style={{ ...chip, background: '#fef3c7', color: '#b45309' }}>⚠️ Entra{entra.pax != null ? `n ${entra.pax}` : ' huésped'} a las {limp?.entrada ?? '15:00'}</span>
                     : <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>Sin entrada hoy</span>}
@@ -415,10 +422,19 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         </div>
       </section>
 
-      {/* Novedades: lo que ha cambiado respecto a lo que ya tenía planificado */}
+      {/* Novedades: lo que ha cambiado respecto a lo que ya tenía planificado. PLEGADO por
+          defecto (petición de Alberto, 30/08) con montaje perezoso: la lista solo se crea al abrir. */}
       <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginTop: 14 }}>
-        <h2 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700 }}>🔔 Últimos avisos</h2>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+        <button onClick={() => setAvisosAbiertos(a => !a)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', color: 'var(--text)' }}>
+          <span style={{ fontSize: 15, fontWeight: 700 }}>
+            🔔 Últimos avisos{!cargando && novedadesVisibles.length > 0 ? ` (${novedadesVisibles.length})` : ''}
+          </span>
+          <span style={{ color: 'var(--muted)', fontSize: 13 }}>{avisosAbiertos ? '▲' : '▼'}</span>
+        </button>
+        {avisosAbiertos && (
+          <>
+        <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
           Las últimas reservas nuevas y cancelaciones, por si ya tenías el mes planificado.
         </div>
         {!cargando && novedadesVisibles.length === 0 && <div style={vacio}>Sin avisos nuevos: todo sigue como estaba. 👍</div>}
@@ -443,6 +459,8 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
             </div>
           )
         })}
+          </>
+        )}
       </section>
 
       <footer style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '14px 20px 0', lineHeight: 1.6 }}>
