@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
 
     // (Check de "alertas acumuladas" RETIRADO 11/07/2026): contaba filas de la tabla `alertas`,
     // que es de IALIMP (operativa de limpiezas de Sique Brilla), sin filtrar por empresa → metía
-    // el backlog de Vanessa al Telegram de Alberto. Esas alertas son de Vanessa, no de plataforma:
+    // el backlog de Sique Brilla al Telegram de Alberto. Esas alertas son suyas, no de plataforma:
     // ialimp ya las gestiona (panel 🔔 + cron semanal de aviso por email a la empresa). Plataforma
     // no debe vigilar la tabla de otro tenant. No sustituir por otro conteo de `alertas` aquí.
 
