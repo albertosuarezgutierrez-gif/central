@@ -2546,3 +2546,86 @@ memoria del documento. Lo que no se pudo verificar queda dicho.
 
 **Correcciones que esta pasada deja hechas:** el borrador de mensaje a Manuel ya no necesita el punto
 «te pagué la factura» (lo sabe); y el destinatario natural de los borradores es `info@manuelsuarez.es`.
+
+---
+
+# 📥 30/08/2026 — INFORME DE MANUEL: responde casi todo y cambia UNA decisión de fondo
+
+Manuel entregó su informe de traspaso completo, con datos **medidos contra producción el 30/08**.
+Archivado verbatim en **`docs/TRASPASO-CORREDURIA-informe-manuel-2026-08-30.md`** — a partir de aquí,
+ese documento manda sobre las mediciones viejas de este. Lo que sigue es nuestro análisis.
+
+## ✅ Preguntas que el informe CIERRA
+
+| Pregunta | Respuesta |
+|---|---|
+| **M4 — ¿aislamiento en RLS o en código?** | **En código, ya hoy** (ADR-013): la app va con **Drizzle** contra `DATABASE_URL`, que **ya bypassea RLS**; la RLS es backstop del cliente de navegador. Literal: conectar con BYPASSRLS «no te pone en un sitio raro, te pone donde ya está la aplicación». Y hay **una sola correduría** (1 fila, cero nulos). Nuestro `lib/tenant-ambito.ts` queda validado |
+| **M5 — ¿qué está cifrado y cómo?** | AES-256-GCM con `node:crypto` (sin librería), formato `v1:iv:cipher:tag`, **no determinístico**. Índice ciego **HMAC-SHA256** (ADR-016) sobre email/teléfono/DNI con normalización por campo, **con índices ÚNICOS sobre los hashes**. Claves: `PII_ENCRYPTION_KEY` + `PII_LOOKUP_KEY`. Recuento columna a columna en el informe — **cero filas en claro** |
+| **M6 — ¿usuarios en Supabase Auth?** | Sí: 9 en `auth.users`, 17 en `public.usuarios`, 8 huérfanas (confirma lo medido). **Sin FK de `public` a `auth`**: el enlace es un uuid a pelo |
+| **M15 — crons** | 6 workflows de Actions + 2 crons de Vercel (`overdue-digest` 7:00 L-V, `vencimientos-detector` 6:00). Los de Vercel **sí viajan** con el proyecto |
+| **M16 — envs** | Los flags listados con nombre; `CIMA_INGESTA_ENABLED=true` deducido del comportamiento |
+| **M17 — ADRs** | En el repo, `docs/decisions/`. Clave: ADR-013 (RLS backstop), ADR-016 (índice ciego), ADR-007/009 (CIMA y Fly) |
+
+## 🔴 La decisión que el informe CAMBIA: transferir el proyecto de Supabase, no volcar
+
+Nuestro plan de Fase 0 era `pg_dump` → restaurar en el schema `seguros` de la BD compartida. El
+informe da una razón técnica fuerte en contra: **no hay FK de `public` a `auth`**, el enlace
+cuenta↔ficha es un uuid sin verificar, y recrear cuentas rompe `usuarios.auth_user_id` (17) y
+`clientes.usuario_id` (2) **en silencio** — Postgres no avisa. Además: índices únicos sobre hashes,
+triggers append-only y FORCE RLS que un dump puede reproducir mal si el DDL real difiere del declarado
+(que el propio informe avisa que puede pasar).
+
+**Análisis honesto de las dos vías:**
+
+| | Volcar a `seguros` (plan viejo) | **Transferir el proyecto** (propuesta de Manuel) |
+|---|---|---|
+| Riesgo de datos | Alto: DDL real ≠ declarado, triggers, índices únicos, uuid rotos en silencio | **Mínimo: nada se copia, todo sigue donde está** |
+| Auth | Recrear cuentas (9 vivas + 2 portal — pocas, pero enlace frágil) | Intacta |
+| CIMA | Hay que re-atar la cadena | Sigue corriendo sin tocarla |
+| Encaja con «BD compartida» | Sí | No: queda un segundo proyecto Supabase |
+| Trabajo | Semanas de validación | **Un paso administrativo** |
+
+➡️ **Recomendación: aceptar la transferencia del proyecto.** El coste real es «un segundo proyecto
+Supabase» (la org de Alberto tiene 1; el plan free admite 2), y la consolidación a la BD compartida
+puede hacerse **después, con calma, o nunca** — ya con todo bajo control propio. La transferencia es
+**propiedad, no integración**: no contradice el «CIMA al final» de Alberto, porque no se re-implementa
+nada; solo cambia el dueño. Las fases 1-4 siguen igual, sobre una base que ya es nuestra.
+**Consecuencia si se acepta:** el schema `seguros` + `prisma_seguros` de la BD compartida se quedan
+como estaban (inertes) hasta que algún día se decida consolidar; `apps/asegura` apuntaría al proyecto
+transferido. Decisión de Alberto.
+
+## 🗺️ Hallazgos operativos del informe (los que piden acción)
+
+1. **«activa» ≠ vigente.** El enum no tiene «vigente»: de 1.235 `activa`, solo **50** vencen en el
+   futuro; las 25.892 `vencida` son archivo histórico de 2018. **La Fase 1 define «vigente» por fecha,
+   nunca por la etiqueta** — si no, el dashboard mentiría desde el primer día.
+2. **Mapfre (C0058) parada desde el 23-jun** — dos meses sin descargar, causa sin investigar.
+3. **Occident (C0468): 39 ficheros atascados en `review` y creciendo** (36 el 26/08), 0 pólizas
+   persistidas de ellos.
+4. **La cartera viva es pequeña**: 2.742 clientes reales (29.858 leads), ~50-885 pólizas en vigor
+   según cómo se defina. El volumen grande es histórico.
+5. **Codeoscopic cuesta 0,50 € por operación facturable y NO hay DPA firmado.**
+6. **Drain de facturable de TIREA pendiente desde el 12-ago** (`reconcile=true` sin OK).
+7. La secuencia de corte de Manuel (§7 del informe) y sus tres gates de verificación **se adoptan tal
+   cual** — coinciden con lo que ya teníamos y añaden el orden bueno de los satélites (Blob, paneles
+   de Codeoscopic/Meta, DNS intocable).
+
+## ⚠️ Contradicciones con mediciones anteriores de ESTE documento
+
+- **«0 triggers» (medición del 26/08) era FALSO o quedó viejo:** el informe lista triggers
+  append-only en `consent_logs`, `lds_consent`, `mediator_audit_log`, `cliente_merge_log`,
+  `poliza_merge_log` y las `*_documentos`, más **FORCE RLS** en `clientes` y `polizas`. Resuelve de
+  paso el misterio de «¿cómo se disparan las guardas de inmutabilidad sin triggers?» — sí hay.
+- **Las «4 compañías vs 5 códigos»:** la tabla de ingesta del 30/08 muestra 4 con ficheros (Mapfre,
+  Allianz, Occident, Reale). **Generali (C0072) no aparece** — conectada sin ficheros o baja; sin
+  aclarar.
+- **El stack es Drizzle, no Prisma** — nuestro esqueleto usa Prisma. Si se transfiere el proyecto y
+  algún día se porta la app, esa conversión es parte del trabajo (o se adopta Drizzle en la vertical).
+
+## Lo que queda por pedir (poco)
+
+- El **`esquema.sql`** (`pg_dump --schema-only`) sigue valiendo aunque se transfiera el proyecto: el
+  propio Manuel avisa que el DDL real puede diferir del declarado del repo.
+- Los **valores** de `PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` → gestor de contraseñas (con la
+  transferencia de Vercel viajan las envs, pero se respaldan igual).
+- Confirmación de las **~723 fichas duplicadas por DNI** (el propio informe la marca sin verificar).

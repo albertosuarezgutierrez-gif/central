@@ -32,6 +32,18 @@
 
 ---
 
+### 📥 (30/08/2026) Correduría: informe COMPLETO de Manuel — cierra M4-M6/M15-M17 y propone TRANSFERIR Supabase
+
+Manuel entregó su informe de traspaso medido contra producción (archivado verbatim en
+`docs/TRASPASO-CORREDURIA-informe-manuel-2026-08-30.md`). Cierra casi toda la encuesta: aislamiento
+YA es de capa de aplicación (Drizzle bypassea RLS hoy, ADR-013), cifrado AES-256-GCM + índice ciego
+HMAC con índices ÚNICOS (`PII_ENCRYPTION_KEY`/`PII_LOOKUP_KEY`), 9 cuentas Auth / 8 huérfanas.
+🔴 **Cambia la Fase 0: propone TRANSFERIR el proyecto Supabase en vez de volcar** (sin FK a `auth`,
+enlace por uuid a pelo → recrear cuentas rompe en silencio). Recomendado aceptar — decisión de Alberto.
+⚠️ Trampas: «activa»≠vigente (solo 50 pólizas vencen en futuro); Mapfre parada desde 23-jun; Occident
+39 ficheros en `review` creciendo; stack es **Drizzle, no Prisma**. Vercel: Manuel invitado (member),
+2FA de Alberto activado. Detalle en `docs/TRASPASO-CORREDURIA.md`.
+
 ### 🔎 (29/08/2026) Auditoría diaria (ligera) — sin hallazgos, radiografía regenerada
 Rango 26→29/08 (50 commits, día muy activo: ancla+serrucho de pricing, apagado de NIM, fix VWCE,
 trading H9-H15, card de gastos de sivra). Heartbeat de 22+12 huellas sin `⛔` nuevos (solo el
