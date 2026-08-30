@@ -32,6 +32,19 @@
 
 ---
 
+### 🧾 (30/08/2026) Los no-gastos ya no vuelven a la bandeja: la ingesta los omite
+- Alberto: «Booking eran abono de reservas, Allianz comisiones… y aún aparecen». Cierto: el PR
+  #1852 dejó el AVISO en la ficha pero ni quitó las filas ni tocó la ingesta.
+- Cerrado el círculo: `procesarFactura` consulta `pareceIngresoDeCorreduria` ANTES de insertar →
+  `omitido` con rastro en log + recuento en el parte Telegram (etiqueta de `avisos.ts` actualizada).
+  Guardián en `no-es-gasto.test.ts` (lee el fuente, probado en rojo) + test del concepto
+  normalizado de Booking. Borradas de `gastos` las 7 filas decididas (4 Booking 1.371,94€ +
+  3 Allianz 2.039,95€); nada estaba confirmado por error (`revisado=true`: 0 filas).
+- Giraldillo abril 598,95€ + jul 72,60€ confirmadas por dictado de Alberto («lavandería de los
+  pisos, no desglosa por piso») → `prop_multi_apartamentos`+LAVANDERIA, regla reforzada (vistas 7)
+  y unificado el histórico (3 filas LIMPIEZA→LAVANDERIA, las categorizó mezclado él mismo).
+- **Pendiente de Alberto:** la única fila que queda en `/expenses/pendientes`: Anthropic Max 180€.
+
 ### 🔗 (30/08/2026) HECHO: redirección ialimp.es/limpieza → intranet de Vanesa
 - Enlace con marca para Vanesa: `ialimp.es/limpieza?token=…` (307 a
   `plataforma-ten-flame.vercel.app/invitado/limpieza`; el token viaja con la redirección). Es un
