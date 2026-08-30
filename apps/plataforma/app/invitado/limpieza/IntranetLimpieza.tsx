@@ -27,6 +27,8 @@ type Tarea = { id: string; fecha: string; propertyId: string | null; texto: stri
 // Reserva confirmada en Booking que Smoobu AÚN no tiene (la detectó el vigía de correo): se
 // pinta ⚠️ en su día de entrada para que Vanesa no se quede sin verla. Solo se sabe la entrada.
 type PendienteSmoobu = { propertyId: string; checkIn: string; ref: string | null }
+// Parte de incidencia que Vanesa deja en una limpieza (nota y/o foto); avisa a Alberto por Telegram.
+type Parte = { id: number; propertyId: string; fecha: string; texto: string | null; tieneFoto: boolean }
 
 function iso(d: Date) { return d.toISOString().slice(0, 10) }
 function fmtDM(isoFecha: string | null) {
@@ -49,6 +51,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   const [tareas, setTareas] = useState<Tarea[]>([])
   const [novedades, setNovedades] = useState<Novedad[]>([])
   const [pendientesSmoobu, setPendientesSmoobu] = useState<PendienteSmoobu[]>([])
+  const [partes, setPartes] = useState<Parte[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const [sel, setSel] = useState(iso(hoy))
@@ -88,6 +91,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
       setTareas(d.tareas ?? [])
       setNovedades(d.novedades ?? [])
       setPendientesSmoobu(d.pendientesSmoobu ?? [])
+      setPartes(d.partes ?? [])
       setError(false)
     } catch {
       setError(true)
@@ -347,6 +351,18 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
                 </div>
                 {limp?.nota && <div style={nota}>📌 <b>Alberto:</b> {limp.nota}</div>}
                 {limp?.indicaciones && <div style={nota}>📝 {limp.indicaciones}</div>}
+                {partes.filter(pa => pa.propertyId === propertyId && pa.fecha === sel).map(pa => (
+                  <div key={pa.id} style={{ ...nota, background: 'var(--primary-light, rgba(79,70,229,.06))', border: '1px solid var(--border)', color: 'var(--text)' }}>
+                    🧾 <b>Tu aviso:</b> {pa.texto ?? '(foto)'}
+                    {pa.tieneFoto && (
+                      <a href={`/api/sivra/limpieza-intranet/partes/foto?id=${pa.id}`} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 6 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`/api/sivra/limpieza-intranet/partes/foto?id=${pa.id}`} alt="Foto del aviso" style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 8 }} />
+                      </a>
+                    )}
+                  </div>
+                ))}
+                <FormParte propertyId={propertyId} fecha={sel} onEnviado={cargar} />
               </div>
             )
           })}
@@ -432,6 +448,88 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
       <footer style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '14px 20px 0', lineHeight: 1.6 }}>
         Acceso con tu enlace personal — sin contraseña.<br />Cualquier duda, escribe a Alberto por WhatsApp.
       </footer>
+    </div>
+  )
+}
+
+// Reduce la foto a ≤1600px JPEG antes de subirla (las de móvil pasan de 4,5 MB, el límite de
+// Vercel). Si el navegador no sabe decodificarla (HEIC en algunos Android), va el archivo tal cual.
+async function comprimirFoto(f: File): Promise<Blob> {
+  try {
+    const bmp = await createImageBitmap(f)
+    const escala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height))
+    const w = Math.round(bmp.width * escala), h = Math.round(bmp.height * escala)
+    const c = document.createElement('canvas')
+    c.width = w; c.height = h
+    c.getContext('2d')!.drawImage(bmp, 0, 0, w, h)
+    const blob = await new Promise<Blob | null>(res => c.toBlob(res, 'image/jpeg', 0.82))
+    return blob ?? f
+  } catch {
+    return f
+  }
+}
+
+// Aviso rápido de Vanesa sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la
+// luz»). Se guarda en la limpieza y avisa a Alberto por Telegram. Sin campos que rellenar: un
+// texto libre y una foto opcional.
+function FormParte({ propertyId, fecha, onEnviado }: {
+  propertyId: string; fecha: string; onEnviado: () => void
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const [texto, setTexto] = useState('')
+  const [foto, setFoto] = useState<File | null>(null)
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function enviar() {
+    if (!texto.trim() && !foto) { setError('Escribe algo o adjunta una foto.'); return }
+    setEnviando(true); setError(null)
+    try {
+      const form = new FormData()
+      form.set('propertyId', propertyId)
+      form.set('fecha', fecha)
+      form.set('texto', texto.trim())
+      if (foto) form.set('foto', await comprimirFoto(foto), 'foto.jpg')
+      const r = await fetch('/api/sivra/limpieza-intranet/partes', { method: 'POST', body: form })
+      if (!r.ok) throw new Error(String(r.status))
+      setAbierto(false); setTexto(''); setFoto(null)
+      onEnviado()
+    } catch {
+      setError('No se pudo enviar. Prueba otra vez.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <button onClick={() => setAbierto(true)}
+        style={{ marginTop: 8, minHeight: 44, width: '100%', border: '1px dashed var(--border)', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: 'var(--muted)', fontFamily: 'inherit', fontSize: 13, fontWeight: 600 }}>
+        📸 Avisar a Alberto de algo (nota o foto)
+      </button>
+    )
+  }
+  return (
+    <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+      <textarea value={texto} onChange={e => setTexto(e.target.value)} rows={2}
+        placeholder="p. ej. se ha roto una mesa, no sale la luz…"
+        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit', fontSize: 14, background: 'transparent', color: 'var(--text)', resize: 'vertical' }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <label style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 10, padding: '0 12px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>
+          📷 {foto ? 'Foto lista ✓' : 'Añadir foto'}
+          <input type="file" accept="image/*" hidden
+            onChange={e => setFoto(e.target.files?.[0] ?? null)} />
+        </label>
+        <button onClick={enviar} disabled={enviando}
+          style={{ minHeight: 44, flex: 1, border: 'none', borderRadius: 10, background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, opacity: enviando ? .6 : 1 }}>
+          {enviando ? 'Enviando…' : 'Enviar a Alberto'}
+        </button>
+        <button onClick={() => { setAbierto(false); setError(null) }} disabled={enviando}
+          style={{ minHeight: 44, border: '1px solid var(--border)', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: 'var(--muted)', fontFamily: 'inherit', fontSize: 13, padding: '0 12px' }}>
+          Cancelar
+        </button>
+      </div>
+      {error && <div style={{ color: '#b91c1c', fontSize: 12.5, marginTop: 6 }}>{error}</div>}
     </div>
   )
 }
