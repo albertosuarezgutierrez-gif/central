@@ -2654,3 +2654,40 @@ Consecuencias registradas:
   Los repos transferidos son la fuente desde la que se porta, no el destino.
 - Las fases 1-4 del plan siguen igual, ahora sobre infraestructura propia. «CIMA al final» se
   mantiene: la transferencia es propiedad, no integración.
+
+## 🔁 30/08/2026 (noche) — EL REPO `asegura` YA ES DE ALBERTO; el `CRON_SECRET` corre contra reloj
+
+Manuel inició la transferencia del repo de la app y **Alberto la aceptó por email a las 20:21 UTC**.
+Verificado: `albertosuarezgutierrez-gif/asegura` existe, clonado en esta sesión, con sus 13 workflows.
+**Esto adelanta el paso 6 de la secuencia de corte** (que iba al final, justo por el `CRON_SECRET`).
+
+**Estado medido:**
+
+| | |
+|---|---|
+| Repo de la app | ✅ Transferido y aceptado (20:21 UTC) |
+| **Repo del adaptador** (`asegura-app-cima-adapter`) | ❌ **NO transferido** — sigue en la cuenta de Manuel |
+| Último `cima-pull` verde | Hoy 11:34 UTC — **bajo la propiedad de Manuel**, no prueba nada del estado actual |
+| Próxima pasada programada | **Mañana 5:30 UTC (7:30 península)** |
+
+**La buena noticia, leída del workflow:** `cima-pull.yml` **falla en ROJO si falta `CRON_SECRET`**
+(step con `::error::` y `exit 1`) — no es el fallo silencioso que temíamos. Los matices: el aviso a
+Slack necesita OTRO secret (`SLACK_CIMA_ALERTS_WEBHOOK_URL`) que tampoco viaja, así que el rojo se ve
+**solo si alguien mira Actions**; y no se pierde nada aunque falle días (EIAC re-descarga, dedupe por
+`xml_hash`).
+
+**Lo que hay que hacer, idealmente antes de las 5:30 UTC (y si no, sin drama):**
+1. Manuel pasa el **valor** de `CRON_SECRET` (≥32 chars, el mismo que la env de Vercel prod) por el
+   gestor de contraseñas — o se genera uno nuevo y Manuel actualiza la env en su Vercel.
+2. Alberto lo pone en `github.com/albertosuarezgutierrez-gif/asegura` → Settings → Secrets and
+   variables → Actions → `CRON_SECRET`.
+3. Verificación del gate (b) de Manuel: la pasada de las 5:30 en verde **con filas nuevas**, o un
+   `workflow_dispatch` con `dry_run=true` (LOO-819 garantiza que no escribe ni confirma).
+
+**Efecto colateral a vigilar:** el proyecto Vercel de Manuel despliega desde este repo, que ahora ha
+cambiado de dueño. GitHub redirige la ruta vieja, pero la re-conexión del Git en Vercel (paso 6 del
+informe) sigue pendiente para cuando se transfiera el proyecto.
+
+**🔓 Y esto desbloquea trabajo nuestro:** por primera vez podemos LEER el código real — los ADRs
+(007/009/013/016/025), `src/db/schema.ts` (el esquema declarado, con la salvedad de que el real puede
+diferir), el cifrado y el cliente de CIMA. El análisis del repo ya no depende de nadie.
