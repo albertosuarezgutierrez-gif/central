@@ -24,5 +24,5 @@ export default async function InvitadoLimpiezaPage({ searchParams }: { searchPar
     )
   }
 
-  return <IntranetLimpieza modo={modo} />
+  return <IntranetLimpieza />
 }
