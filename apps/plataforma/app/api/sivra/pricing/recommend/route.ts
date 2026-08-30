@@ -36,7 +36,7 @@ export async function GET() {
     JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
     WHERE m.price_night > 0
       -- Plausibilidad €/plaza, igual que el motor (ver pricing-comps-plausibles.ts).
-      AND ${sqlCompPlausible("m.")}
+      AND ${Prisma.raw(sqlCompPlausible("m."))}
   `)
 
   // 2) Pisos + ajustes por piso (defaults si no hay fila en pricing_settings).

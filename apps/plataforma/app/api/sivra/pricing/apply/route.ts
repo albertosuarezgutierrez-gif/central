@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
       WHERE m.price_night > 0
         -- Plausibilidad €/plaza (17/08/2026): un comp muy por debajo del minimo por plaza es una
         -- HABITACION vestida de piso entero (ver pricing-comps-plausibles.ts) y no entra al percentil.
-        AND ${sqlCompPlausible("m.")}
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       GROUP BY m.scenario, s.target_pctl, s.floor_pctl, s.ceil_pctl
     ),
     occ AS (
@@ -420,7 +420,7 @@ export async function POST(req: NextRequest) {
         AND NOT m.corpus_clonado
         AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
-        AND ${sqlCompPlausible("m.")}
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
@@ -482,7 +482,7 @@ export async function POST(req: NextRequest) {
         AND m.search_date >= CURRENT_DATE - 120
         AND NOT m.corpus_clonado   -- mismo motivo que en el bucket del mes
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
-        AND ${sqlCompPlausible("m.")}
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,
