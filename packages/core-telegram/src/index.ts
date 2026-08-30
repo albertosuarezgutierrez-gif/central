@@ -33,6 +33,36 @@ export async function tgSend(text: string, opts: { chatId?: string; html?: boole
   } catch { return null }
 }
 
+// Foto por URL pública (Telegram la descarga él) o por bytes (multipart, para fotos que solo
+// viven en nuestra BD y no tienen URL pública). Caption en HTML, máx 1024 chars (límite de Telegram).
+export async function tgSendPhoto(
+  foto: { url: string } | { data: Uint8Array; nombre?: string },
+  caption: string,
+  opts: { chatId?: string } = {},
+): Promise<number | null> {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID
+  if (!token || !chat_id) return null
+  try {
+    let res: Response
+    if ('url' in foto) {
+      res = await fetch(API(token, 'sendPhoto'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id, photo: foto.url, caption: caption.slice(0, 1024), parse_mode: 'HTML' }),
+      })
+    } else {
+      const form = new FormData()
+      form.set('chat_id', chat_id)
+      form.set('caption', caption.slice(0, 1024))
+      form.set('parse_mode', 'HTML')
+      form.set('photo', new Blob([foto.data as BlobPart]), foto.nombre || 'foto.jpg')
+      res = await fetch(API(token, 'sendPhoto'), { method: 'POST', body: form })
+    }
+    const d = await res.json()
+    return d?.result?.message_id ?? null
+  } catch { return null }
+}
+
 export async function tgSendButtons(text: string, botones: Boton[][], opts: { chatId?: string } = {}): Promise<number | null> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID

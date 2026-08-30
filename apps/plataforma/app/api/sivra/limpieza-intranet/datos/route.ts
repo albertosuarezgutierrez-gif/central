@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     : new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 
   try {
-    const [reservasRaw, limpiezas, tareas, nuevasRaw, huerfanasRaw, canceladasRaw] = await Promise.all([
+    const [reservasRaw, limpiezas, tareas, nuevasRaw, huerfanasRaw, canceladasRaw, partesRaw] = await Promise.all([
       prisma.$queryRaw<Array<{
         propertyId: string; checkIn: Date | null; checkOut: Date | null
         adults: number | null; children: number | null
@@ -96,6 +96,16 @@ export async function GET(req: NextRequest) {
         ORDER BY cancelacion_vista_at DESC
         LIMIT 20
       `),
+      // Partes de incidencia de la limpieza (nota y/o foto de Vanesa sobre una limpieza concreta).
+      // La foto se sirve aparte por /partes/foto?id=N (autenticada); aquí solo va si existe.
+      prisma.$queryRaw<Array<{
+        id: bigint; property_id: string; fecha: Date; texto: string | null; tiene_foto: boolean
+      }>>(Prisma.sql`
+        SELECT id, property_id, fecha, texto, (foto IS NOT NULL) AS tiene_foto
+        FROM limpieza_partes
+        WHERE fecha BETWEEN ${from}::date AND ${to}::date
+        ORDER BY creado_at ASC
+      `),
     ])
 
     const iso = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : null)
@@ -125,6 +135,10 @@ export async function GET(req: NextRequest) {
         id: t.id, fecha: iso(t.fecha)!, propertyId: t.property_id, texto: t.texto, hecha: t.hecha,
       })),
       // ⚠️ reservas confirmadas en Booking que Smoobu aún no tiene (solo fecha de ENTRADA conocida).
+      partes: partesRaw.map(p => ({
+        id: Number(p.id), propertyId: p.property_id, fecha: iso(p.fecha)!,
+        texto: p.texto, tieneFoto: p.tiene_foto,
+      })),
       pendientesSmoobu: huerfanasRaw.map(h => ({
         propertyId: h.property_id, checkIn: iso(h.check_in)!, ref: h.ref_booking,
       })),

@@ -32,6 +32,15 @@
 
 ---
 
+### 🧾 (30/08/2026) Partes de incidencia de Vanesa — nota+foto en la limpieza + Telegram
+- Idea de Alberto: que Vanesa avise de desperfectos («se ha roto una mesa») desde su intranet,
+  rápido y sin campos: botón en la tarjeta de limpieza → texto libre y/o foto → se registra en
+  ESA limpieza (`limpieza_partes`, property_id+fecha, migración aplicada) y Telegram a Alberto.
+- La foto va en la BD (bytea, comprimida en cliente a ≤1600px JPEG) A PROPÓSITO: plataforma no
+  tiene envs de Supabase Storage y así no se mete ningún secreto nuevo. Se sirve por ruta
+  autenticada `/partes/foto?id=N`; a Telegram por multipart (`tgSendPhoto` NUEVO en core-telegram).
+- avisado_at NULL = Telegram no salió (best-effort); el parte queda guardado igual.
+
 ### 📅 (30/08/2026) Intranet limpieza v6 — vista «Mes» (prueba pedida por Alberto)
 - Calendario mensual clásico (semanas L→D) como vista POR DEFECTO en la intranet de Vanesa:
   cada día con puntos del COLOR de cada piso (relleno = limpieza, aro = entrada, ⚠️ = pendiente
