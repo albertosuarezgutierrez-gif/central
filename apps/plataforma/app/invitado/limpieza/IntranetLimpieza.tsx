@@ -40,7 +40,7 @@ function addDays(d: Date, n: number) { const x = new Date(d); x.setDate(x.getDat
 function hoyDate() { const d = new Date(); d.setHours(12, 0, 0, 0); return d }
 function propDe(id: string) { return PROPS.find(p => p.id === id) }
 
-export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado' }) {
+export default function IntranetLimpieza() {
   const hoy = useMemo(() => hoyDate(), [])
   const [inicio, setInicio] = useState(() => iso(hoyDate()))
   const inicioDate = useMemo(() => new Date(inicio + 'T12:00:00'), [inicio])
@@ -200,12 +200,6 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
           {DOWL[hoy.getDay()]}, {hoy.getDate()} {hoy.toLocaleDateString('es-ES', { month: 'short' })}
         </div>
       </header>
-
-      {modo === 'sesion' && (
-        <div style={{ background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)', fontSize: 12, fontWeight: 600, borderRadius: 8, padding: '6px 12px', marginBottom: 12, textAlign: 'center' }}>
-          Vista previa (tu sesión) — Vanesa ve exactamente esto con su enlace
-        </div>
-      )}
 
       {error && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 13, borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
