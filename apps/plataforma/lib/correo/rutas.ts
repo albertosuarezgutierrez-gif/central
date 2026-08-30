@@ -17,6 +17,7 @@ export interface RutaCorreo {
   aviso: Aviso
   cautela?: boolean         // el aviso va con tono de precaución (no actúa nunca)
   enrutarSivra?: boolean    // pasar al agente de huéspedes de SIVRA
+  vigilarReserva?: boolean  // registrar en reservas_correo_booking (vigía Booking↔Smoobu)
   descripcion: string       // para el prompt de clasificación
   ejemplos: string[]        // remitentes/tipos de ejemplo (para el prompt)
 }
@@ -74,6 +75,15 @@ export const RUTAS: RutaCorreo[] = [
     enrutarSivra: true,
     descripcion: 'Mensajes de huéspedes de los pisos turísticos (dudas, llaves, horarios). Suelen ser urgentes.',
     ejemplos: ['guest.booking.com', 'HomeExchange', 'mensaje de un cliente sobre una reserva'],
+  },
+  {
+    categoria: 'reservas-booking',
+    etiqueta: 'Triaje/Reservas-Booking',
+    archivar: true,
+    aviso: 'ninguno', // el aviso inteligente lo da el vigía tras comprobar Smoobu, no el triaje
+    vigilarReserva: true,
+    descripcion: 'Avisos de Booking.com AL PROPIETARIO sobre una reserva concreta: confirmación de nueva reserva, o «reserva/cancelación no registrada» por el channel manager. NO mensajes escritos por el huésped (huespedes) ni facturas (contabilidad).',
+    ejemplos: ['Nueva reserva no registrada (5569210843, 1/8/2026)', 'Cancelación no registrada', '¡Nueva reserva! Information about new reservation'],
   },
   {
     categoria: 'leads-negocio',

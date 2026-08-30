@@ -445,7 +445,18 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   ruido→`Triaje/Ruido`+archivar · contabilidad→`Triaje/Contabilidad` (buzón puente de `facturas-correo`,
   que ya incluye `OR label:Triaje/Contabilidad`) · correduria→digest · personal-importante/huespedes/
   leads-negocio→Telegram inmediato (con acción+fecha límite) · seguridad-sospechosa→marcar con cautela
-  (nunca actúa) · codigos-verificacion/dudoso→sin tocar. Tablas `correo_triaje`/`correo_cursor`/
+  (nunca actúa) · codigos-verificacion/dudoso→sin tocar · **reservas-booking→`Triaje/Reservas-Booking`+archivar
+  (30/08/2026): avisos de Booking AL PROPIETARIO sobre una reserva (⚠️ «reserva/cancelación no registrada» por
+  el channel manager, y las confirmaciones ordinarias si Booking las reactiva — dejaron de llegar en 2020).
+  Detección DETERMINISTA antes que `correo_reglas`** (el mismo `noreply@booking.com` manda facturas y podría
+  tener regla hacia contabilidad); parser puro `lib/correo/reserva-booking.ts` (fixtures de correos reales).
+  Alimenta el **vigía Booking↔Smoobu** (`reservas_correo_booking`, cron cada 15 min
+  `/api/sivra/reservas-booking/verificar`, lógica `lib/sivra/reservas-booking-vigia.ts`): contrasta contra
+  Smoobu (`listarReservasVentana`), sync forzado de la ventana si Smoobu la tiene, Telegram 🚨 si NO
+  (huérfana, pintada ⚠️ en la intranet de limpieza de Vanesa hasta que Smoobu se cure). **Leg B:** un mensaje
+  de huésped cuyo nº de confirmación Smoobu no resuelve también entra como pendiente — el caso fundacional
+  (James Ascott, Luxury 27→29/08/2026: Smoobu caído, reserva jamás sincronizada) NO generó ningún correo ⚠️
+  de Booking, así que el correo de aviso solo no basta. Latido `reservas_booking_vigia` (3 h). Tablas `correo_triaje`/`correo_cursor`/
   `correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql`, con semilla VIP; **tablas ya aplicadas en
   Supabase 03/07/2026**). **🟢 EN VIVO desde el 10/07/2026** (`TRIAJE_DRY_RUN=false` en Production: etiqueta/
   archiva en Gmail y avisa por Telegram). El **modo sombra** queda como salvaguarda (`TRIAJE_DRY_RUN` sin poner

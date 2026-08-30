@@ -21,6 +21,9 @@ type Limpieza = {
   tipo: string | null; hecha: boolean
 }
 type Tarea = { id: string; fecha: string; propertyId: string | null; texto: string; hecha: boolean }
+// Reserva confirmada en Booking que Smoobu AÚN no tiene (la detectó el vigía de correo): se
+// pinta ⚠️ en su día de entrada para que Vanesa no se quede sin verla. Solo se sabe la entrada.
+type PendienteSmoobu = { propertyId: string; checkIn: string; ref: string | null }
 
 function iso(d: Date) { return d.toISOString().slice(0, 10) }
 function fmtDM(isoFecha: string | null) {
@@ -42,6 +45,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   const [limpiezas, setLimpiezas] = useState<Limpieza[]>([])
   const [tareas, setTareas] = useState<Tarea[]>([])
   const [novedades, setNovedades] = useState<Novedad[]>([])
+  const [pendientesSmoobu, setPendientesSmoobu] = useState<PendienteSmoobu[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const [sel, setSel] = useState(iso(hoy))
@@ -57,6 +61,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
       setLimpiezas(d.limpiezas ?? [])
       setTareas(d.tareas ?? [])
       setNovedades(d.novedades ?? [])
+      setPendientesSmoobu(d.pendientesSmoobu ?? [])
       setError(false)
     } catch {
       setError(true)
@@ -194,7 +199,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
               })}
               {pisosVisibles.map(p => (
                 <FilaPiso key={p.id} piso={p} dias={dias} sel={sel} hoy={iso(hoy)}
-                  reservas={reservas} limpiezas={limpiezas} onSel={setSel} />
+                  reservas={reservas} limpiezas={limpiezas} pendientes={pendientesSmoobu} onSel={setSel} />
               ))}
             </div>
           </div>
@@ -242,6 +247,15 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
           })}
 
           <h3 style={tituloBloque}>Entradas del día</h3>
+          {pendientesSmoobu.filter(pe => pe.checkIn === sel && enFiltro(pe.propertyId)).map((pe, i) => {
+            const p = propDe(pe.propertyId)
+            return (
+              <div key={`pend-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #fde68a', background: '#fef9c3', borderRadius: 12, padding: '10px 12px', marginBottom: 8, fontSize: 14, color: '#92400e' }}>
+                <span>⚠️</span>
+                <span><b style={{ color: p?.color }}>{p?.label ?? pe.propertyId}</b> — entra un huésped de Booking que aún no aparece en el calendario oficial. Alberto lo está arreglando; cuenta con la limpieza.</span>
+              </div>
+            )
+          })}
           {(() => {
             const entradas = reservas.filter(r => r.checkIn === sel && enFiltro(r.propertyId))
             if (!entradas.length) return <div style={vacio}>Nadie entra este día{limpiezasDia.length ? ' — las limpiezas van con calma' : ''}.</div>
@@ -331,9 +345,10 @@ function ChipFiltro({ activo, onClick, label, color }: {
   )
 }
 
-function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, onSel }: {
+function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, pendientes, onSel }: {
   piso: (typeof PROPS)[number]; dias: Date[]; sel: string; hoy: string
-  reservas: ReservaIntranet[]; limpiezas: Limpieza[]; onSel: (k: string) => void
+  reservas: ReservaIntranet[]; limpiezas: Limpieza[]; pendientes: PendienteSmoobu[]
+  onSel: (k: string) => void
 }) {
   return (
     <>
@@ -375,6 +390,9 @@ function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, onSel }: {
             )}
             {hayLimpieza && (
               <span title="Limpieza" style={{ position: 'absolute', zIndex: 2, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 20, height: 20, borderRadius: '50%', background: entra ? '#d97706' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🧽</span>
+            )}
+            {pendientes.some(pe => pe.propertyId === piso.id && pe.checkIn === k) && (
+              <span title="Reserva de Booking pendiente de Smoobu" style={{ position: 'absolute', zIndex: 2, left: '50%', top: 2, transform: 'translateX(-50%)', fontSize: 11 }}>⚠️</span>
             )}
           </div>
         )

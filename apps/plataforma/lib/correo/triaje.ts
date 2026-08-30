@@ -8,7 +8,9 @@ import { prisma } from '@/lib/db'
 import { tgSend, escapeHtml } from '@central/core-telegram'
 import { abrirTriaje } from './imap'
 import { clasificar, quizaAutoAprender } from './clasificador'
-import { enrutarHuesped } from './huespedes'
+import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './huespedes'
+import { parsearAvisoBooking } from './reserva-booking'
+import { registrarAvisoBooking, registrarReservaHuesped } from '@/lib/sivra/reservas-booking-vigia'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
@@ -102,8 +104,25 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           if (ruta.etiqueta) { await sesion.etiquetar(correo.uid, ruta.etiqueta); stats.etiquetados++; accion = 'etiquetada' }
           if (ruta.archivar) { await sesion.archivar(correo.uid); stats.archivados++; accion = 'etiquetada_archivada' }
 
+          // Aviso de reserva de Booking → tabla del vigía (el cron reservas-booking/verificar
+          // comprueba contra Smoobu y avisa si hay agujero; el triaje solo lo registra).
+          if (ruta.vigilarReserva) {
+            const aviso = parsearAvisoBooking(correo)
+            if (aviso) await registrarAvisoBooking(correo.messageId, correo.subject, aviso).catch(() => {})
+          }
+
           // Huéspedes → agente de SIVRA (best-effort; si no resuelve, sigue el aviso normal).
-          if (ruta.enrutarSivra) await enrutarHuesped(correo).catch(() => ({ enrutado: false }))
+          if (ruta.enrutarSivra) {
+            await enrutarHuesped(correo).catch(() => ({ enrutado: false }))
+            // Leg B del vigía Booking↔Smoobu: el mensaje trae nº de confirmación pero Smoobu no
+            // lo reconoce → puede ser una reserva que Smoobu perdió (caso James Ascott: Booking
+            // no mandó ningún aviso; el único rastro fue este tipo de correo). Se registra como
+            // pendiente y el vigía decide con su ventana ancha — aquí NO se afirma nada.
+            const num = extraerNumConfirmacion(correo)
+            if (num && !(await resolverBookingId(num).catch(() => null))) {
+              await registrarReservaHuesped(correo.messageId, correo.subject, num).catch(() => {})
+            }
+          }
 
           // Aviso inmediato.
           if (ruta.aviso === 'inmediato') {

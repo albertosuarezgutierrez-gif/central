@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     : new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 
   try {
-    const [reservasRaw, limpiezas, tareas, nuevasRaw, canceladasRaw] = await Promise.all([
+    const [reservasRaw, limpiezas, tareas, nuevasRaw, huerfanasRaw, canceladasRaw] = await Promise.all([
       prisma.$queryRaw<Array<{
         propertyId: string; checkIn: Date | null; checkOut: Date | null
         adults: number | null; children: number | null
@@ -72,6 +72,17 @@ export async function GET(req: NextRequest) {
         ORDER BY "createdAt" DESC
         LIMIT 20
       `),
+      // Reservas de Booking que Smoobu NO tiene (vigía reservas_correo_booking, estado huérfana):
+      // se pintan ⚠️ para que Vanesa no se quede sin verlas mientras Smoobu se arregla. Solo las
+      // que tienen piso y fecha identificados — sin eso no hay dónde pintarlas (el Telegram a
+      // Alberto sí las lleva todas).
+      prisma.$queryRaw<Array<{ ref_booking: string | null; property_id: string; check_in: Date }>>(Prisma.sql`
+        SELECT ref_booking, property_id, check_in
+        FROM reservas_correo_booking
+        WHERE estado = 'huerfana' AND tipo = 'nueva'
+          AND property_id IS NOT NULL AND check_in IS NOT NULL
+          AND check_in BETWEEN ${from}::date AND ${to}::date
+      `),
       // Cancelaciones vistas por el sync en los últimos 14 días. check_in/check_out pueden ser NULL
       // (la fuente no publicó fechas): se muestran igual, sin inventar fechas.
       prisma.$queryRaw<Array<{
@@ -112,6 +123,10 @@ export async function GET(req: NextRequest) {
       })),
       tareas: tareas.map(t => ({
         id: t.id, fecha: iso(t.fecha)!, propertyId: t.property_id, texto: t.texto, hecha: t.hecha,
+      })),
+      // ⚠️ reservas confirmadas en Booking que Smoobu aún no tiene (solo fecha de ENTRADA conocida).
+      pendientesSmoobu: huerfanasRaw.map(h => ({
+        propertyId: h.property_id, checkIn: iso(h.check_in)!, ref: h.ref_booking,
       })),
       novedades: mezclarNovedades(
         nuevasRaw.map((n): Novedad => ({

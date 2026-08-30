@@ -11,6 +11,7 @@ import {
   AUTO_APRENDER_VECES, AUTO_APRENDER_CONFIANZA,
 } from './rutas'
 import { clasificarPorKeyword } from './keywords'
+import { parsearAvisoBooking } from './reserva-booking'
 import type { CorreoNuevo } from './imap'
 
 export interface Clasificacion {
@@ -75,6 +76,14 @@ async function llamarIA(system: string, user: string): Promise<string> {
 }
 
 export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
+  // (0) Aviso de reserva de Booking al propietario — determinista y ANTES que correo_reglas:
+  // los correos de noreply@booking.com pueden tener regla aprendida hacia 'contabilidad' (las
+  // facturas salen del mismo remitente) y se la llevaría por delante. El parser exige remitente
+  // booking.com + el asunto exacto, así que no puede secuestrar nada más.
+  if (parsearAvisoBooking(correo)) {
+    return { categoria: 'reservas-booking', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
+  }
+
   // (1) Regla explícita (semilla VIP o auto-aprendida).
   const regla = await reglaDe(correo.from)
   if (regla) {

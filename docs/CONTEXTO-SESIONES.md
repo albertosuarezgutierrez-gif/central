@@ -32,6 +32,18 @@
 
 ---
 
+### 🛎️ (30/08/2026) Vigía Booking↔Smoobu por correo + caso real James Ascott
+- Alberto: Smoobu se cayó y una reserva no llegó; quiere carpeta Gmail + verificación + Telegram.
+  CONFIRMADO el agujero: James Ascott (Luxury 27→29/08, 2+3 pax) NO está en `incomes` ni canceladas
+  — la limpieza del 29 no salió en la intranet. Y Booking NO mandó su correo «⚠️ no registrada»
+  (sí los mandó en feb/jun), así que el correo de aviso SOLO no basta.
+- Vigía nuevo: categoría de triaje `reservas-booking` (etiqueta+archivar, detección determinista
+  ANTES de `correo_reglas`), parser puro con fixtures reales, tabla `reservas_correo_booking`
+  (aplicada), cron cada 15 min contrasta contra Smoobu → sync forzado si está / Telegram 🚨 +
+  ⚠️ en la intranet de Vanesa si no. Leg B: mensajes de huésped con nº que Smoobu no resuelve.
+  Latido `reservas_booking_vigia` (3 h, con sonda). Pendiente de Alberto: meter la de James
+  Ascott a mano en Smoobu (ingreso + limpieza del 29 sin contar).
+
 ### 📌 (30/08/2026) Decisión: las consultas a Booking de mercado-booking se quedan COMO ESTÁN
 Alberto planteó si el conector de Booking «no llega» a tantos pisos/calendarios y si convenía pasar
 a consultas solo puntuales (al analizar un evento). Feedback con datos de BD: la rutina entrega

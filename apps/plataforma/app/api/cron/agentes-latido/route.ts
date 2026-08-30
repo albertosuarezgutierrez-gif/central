@@ -58,6 +58,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   facturas_gmail: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'facturas_gmail'`,
+  reservas_booking_vigia: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'reservas_booking_vigia'`,
   // Eventos: NO se puede vigilar `pricing_eventos_auto.updated_at` — esa tabla solo crece cuando
   // aparece un evento NUEVO, así que una semana sin conciertos anunciados sería indistinguible de
   // los dos crons muertos (que es como estuvieron junio y julio de 2026 sin que nadie lo viera).

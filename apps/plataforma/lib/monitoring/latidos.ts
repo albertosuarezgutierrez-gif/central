@@ -150,6 +150,18 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'si se desplegó en fin de semana). Huella: agente_latidos.trading_watchdog.',
   },
   {
+    id: 'reservas_booking_vigia',
+    etiqueta: '🛎️ Vigía Booking↔Smoobu (reservas vistas por correo, cron cada 15 min)',
+    // Cada 15 min → 3 h cazan un dispatcher tocado sin gritar por una pasada suelta perdida.
+    maxHoras: 3,
+    nota:
+      'El vigía que caza reservas de Booking que Smoobu perdió (caso James Ascott 27-29/08/2026) ' +
+      'no está corriendo o no termina. Mira el `detalle`: «sin poder comprobar (Smoobu no responde)» ' +
+      'es Smoobu caído — que es JUSTO cuando más reservas se pierden, así que no lo dejes correr. ' +
+      'Ruta: /api/sivra/reservas-booking/verificar · lógica en lib/sivra/reservas-booking-vigia.ts. ' +
+      'Huella: agente_latidos.reservas_booking_vigia.',
+  },
+  {
     id: 'correo_triaje',
     etiqueta: '📧 Triaje de correo (cron cada 10 min)',
     // El cursor avanza en cada pasada; 6 h de margen tolera noches tranquilas y caza un cron muerto.
