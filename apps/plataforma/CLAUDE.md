@@ -502,6 +502,24 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
   `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
 
+- [x] **📊 `/sivra/resultado-pisos` = RENDIMIENTO por rango + previsión con seguimiento (30/08/2026):**
+  la página pasó de «P&L de UN mes» a cuadro de rendimiento: selector de rango de MESES en la URL
+  (`?desde=YYYY-MM&hasta=&piso=`; el P&L es de caja mensual, un rango por días mentiría en gastos),
+  KPIs con Δ interanual, gráficas Recharts (evolución + por piso + gastos por categoría), canales con
+  **comisión REAL** (= `amount_gross − amount`; sin bruto → «no consta», no 0), cancelaciones
+  (declarando que el registro nace el 12/08/2026) y heatmap de estacionalidad 24 meses (perezoso,
+  `/api/sivra/pl-heatmap`). **Previsión** (mes en curso + 2, decisión de Alberto): CONFIRMADO y
+  ESTIMADO («si repites el año pasado») SIEMPRE por separado; sin base histórica → null, jamás 0.
+  **Pace** con `incomes.reserved_at` (ingreso sin fecha de reserva se declara, no se excluye en
+  silencio). **Seguimiento**: cron diario `prevision-pisos` (05:50, `CRON_JOBS`) fotografía la
+  previsión en `pisos_previsiones` (migración `2026-08-30`, aplicada) y la página contrasta la última
+  foto ANTES de empezar el mes contra el ingreso real — un mes sin foto previa queda «sin registro»,
+  nunca «acertó/falló». Aviso Telegram «previsión floja» a 28-32 días (confirmado <40% del mismo mes
+  del año anterior con base ≥500€; dedupe `pisos_previsiones_avisos`, una vez por mes+piso). Latido
+  `sivra_prevision` (registro + PROBES en el mismo PR). `PLPiso` ganó `noches`/`nochesSinDato`.
+  Lógica pura testeada: `lib/sivra/pl-rango-logica.ts` + `lib/sivra/prevision-logica.ts`; BD:
+  `pl-rango.ts` (caché por mes; `?fresco=1` tras subir factura) + `prevision-pisos.ts`.
+
 ## 🔀 Proveedores de IA — regla permanente (dictada por Alberto, 24/08/2026)
 **Todo lo que PUEDA ir por OpenRouter, va por OpenRouter.** Unificar proveedores: cada proveedor
 suelto (Serper, keys directas de Gemini, APIs de búsqueda de terceros…) es una cuenta más que se

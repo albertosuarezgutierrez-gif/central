@@ -32,6 +32,15 @@
 
 ---
 
+### 📊 (30/08/2026) /sivra/resultado-pisos → rendimiento por rango + previsión con seguimiento
+- Petición de Alberto («darle una vuelta»: rendimiento, previsiones, intervalos, gráficas). Aprobó:
+  previsión con CONFIRMADO y ESTIMADO por separado + seguimiento de si se cumplen (tesorería),
+  pace, canales+comisión real, cancelaciones, heatmap 24m, alerta Telegram de previsión floja.
+- Rango de MESES en URL, Δ interanual, Recharts (paleta validada dataviz), CSV. Detalle en el PR.
+- Cron nuevo `prevision-pisos` (05:50) → `pisos_previsiones` (migración 2026-08-30 APLICADA) +
+  latido `sivra_prevision` (registro+sonda). SQL probado contra la BD real antes de mergear.
+- Spec: `docs/superpowers/specs/2026-08-30-resultado-pisos-rediseno-design.md`.
+
 ### 🤖 (30/08/2026) daily-briefing v4: fuera el fallback NIM — solo pasarela/OpenRouter
 - Decisión de Alberto («Nvidia NIM no hace falta») + regla del 24/08 («todo por OpenRouter»).
 - `generarNarrativa` ya no lee `NVIDIA_API_KEY`/`NVIDIA_BRAIN_MODEL`: la pasarela es la única vía
