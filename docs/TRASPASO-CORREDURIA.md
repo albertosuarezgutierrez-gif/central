@@ -2629,3 +2629,28 @@ transferido. Decisión de Alberto.
 - Los **valores** de `PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` → gestor de contraseñas (con la
   transferencia de Vercel viajan las envs, pero se respaldan igual).
 - Confirmación de las **~723 fichas duplicadas por DNI** (el propio informe la marca sin verificar).
+
+## ✅ 30/08/2026 — DECISIÓN DE ALBERTO: se acepta la TRANSFERENCIA, en dos tiempos
+
+Alberto confirma la vía propuesta por Manuel, con la aclaración de arquitectura que preguntó él mismo
+(«¿pero la vertical sigue siendo central, no?»). El plan queda en **dos tiempos**:
+
+**Tiempo 1 — TRANSFERIR (ahora, con Manuel):** los cinco sistemas pasan a nombre de Alberto **tal
+cual están, funcionando** — proyecto Supabase a su org (al lado de `central`, como proyecto propio),
+proyecto Vercel `asegura` a su team, app de Fly a su org, los dos repos a su cuenta de GitHub, y
+`CRON_SECRET` repuesto. Nada se copia, CIMA no se entera. Se sigue la **secuencia de corte §7 del
+informe de Manuel con sus tres gates de verificación, adoptada tal cual**.
+
+**Tiempo 2 — CONSOLIDAR A CENTRAL (después, sin Manuel, sin fecha):** portar por fases a
+`apps/asegura` y, si algún día compensa, volcar los datos a la BD compartida. Se hace ya sin
+coordinación, pudiendo parar, y con el proyecto transferido de red de seguridad al lado.
+**El volcado no desaparece: se aplaza** — y puede no hacer falta nunca: si `apps/asegura` conectada
+al proyecto transferido funciona bien, la consolidación de datos es opcional.
+
+Consecuencias registradas:
+- El **schema `seguros` + rol `prisma_seguros`** de la BD compartida quedan **inertes** como estaban.
+  No se borran: son el destino de la consolidación si algún día se hace.
+- El destino final del CÓDIGO sigue siendo **`apps/asegura` en `central`** (carpeta de la vertical).
+  Los repos transferidos son la fuente desde la que se porta, no el destino.
+- Las fases 1-4 del plan siguen igual, ahora sobre infraestructura propia. «CIMA al final» se
+  mantiene: la transferencia es propiedad, no integración.
