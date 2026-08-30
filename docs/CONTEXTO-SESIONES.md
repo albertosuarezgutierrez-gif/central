@@ -32,6 +32,16 @@
 
 ---
 
+### 🔴 (30/08/2026) Auditoría profunda: el motor de pricing llevaba ~18h sin aplicar precios
+El refactor de plausibilidad de comparables (`sqlCompPlausible()`, PR #1854, 29/08) interpolaba esa
+función — un string JS — dentro de `Prisma.sql` sin `Prisma.raw()`: Prisma lo manda como parámetro
+de texto, no como SQL, y Postgres revienta con `42804 argument of AND must be type boolean`. La
+query `recs` de `pricing/apply` (sin `.catch()`) abortaba la ruta entera → `pricing_applied` sin
+escribir desde las 08:30 UTC del 29/08 (dos pasadas mudas, 14:30 y 20:30). 10 sitios afectados en
+5 rutas (`apply`/`guard`/`rentabilidad`/`recommend`), todos envueltos ahora en `Prisma.raw()` +
+guardián nuevo en `pricing-comps-techo.test.ts` que vigila el patrón. PR draft + Telegram urgente
+(mergear antes de las 08:30 UTC de hoy). Ver `docs/AUDITORIA-2026-08.md` (30/08).
+
 ### 💳 (29/08/2026) Agente huéspedes: coordinar un PAGO nunca sale solo — guardrail `hablaDePago`
 Alberto, al ver auto-enviada la respuesta a Raquel («el pago… por transferencia bancaria o Bizum.
 Te envío los datos por mensaje privado» — métodos y promesa INVENTADOS; el cobro real es el enlace

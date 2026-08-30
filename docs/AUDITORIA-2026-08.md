@@ -1,6 +1,76 @@
 # Auditoría diaria — agosto 2026
 
-# Actualización 2026-08-27 — auditoría diaria (ligera)
+# Actualización 2026-08-30 — auditoría PROFUNDA (semanal, `--profunda`)
+
+Rango: 26 commits desde la pasada ligera de esta misma madrugada (29/08 02:09 UTC, `82d0706`) hasta
+`c0319c0` — incluye la intranet de limpieza de Vanesa (#1856-#1860), los dos fixes del agente de
+huéspedes (traducción + guardrail de pago, #1862/#1863) y, crítico para este informe, el refactor
+de plausibilidad de comparables `sqlCompPlausible()`/`sqlUltimaPasadaUtil()` (#1854).
+
+## 🔴 CRÍTICO — el motor de precios llevaba ~18h SIN aplicar (avisado por Telegram)
+
+**Causa raíz encontrada y corregida en este PR.** El refactor de 13 sitios que centralizó la regla
+de plausibilidad €/plaza (`sqlCompPlausible()`, PR #1854, mismo día) interpola el resultado de esa
+función — un **string JS plano** — directamente dentro de un `` Prisma.sql` ` `` con
+`AND ${sqlCompPlausible("m.")}`, **sin envolverlo en `Prisma.raw()`**. Prisma trata cualquier
+interpolación dentro de `Prisma.sql` como un **parámetro ligado** (se manda como texto, escapado),
+no como SQL crudo — así que la condición llegaba a Postgres como `AND $N` con `$N` un TEXTO, y
+Postgres respondía `42804: argument of AND must be type boolean, not type text`.
+
+- **Efecto medido:** `sivra_pricing_apply` (latido) pasó a `ok:false` en la pasada de las 14:30 UTC
+  del 29/08 y se repitió en la de las 20:30 — la query `recs` de `pricing/apply` (la que trae
+  `pricing_settings`+ancla, sin `.catch()`) revienta y aborta la ruta ENTERA con excepción no
+  capturada. **`pricing_applied` no escribe una sola fila desde las 08:30 UTC del 29/08** (395 noches
+  esa pasada, 0 en las dos siguientes) — confirmado por SQL directo: `horas_desde_ultima_pasada`
+  17,8h en el momento de este informe. Los 4 apartamentos llevan casi un día con precio congelado.
+- **Por qué no lo cazó nada verde:** `tsc`/`next build` aceptan cualquier tipo interpolado dentro de
+  `Prisma.sql` (no hay chequeo de tipos de SQL crudo), y los tests unitarios de
+  `pricing-comps-techo.test.ts` prueban la función pura, no la ejecutan contra Postgres real.
+- **Alcance real — NO era solo `apply`:** el mismo patrón sin `Prisma.raw()` aparecía en **10 sitios**
+  de 5 rutas: `pricing/apply/route.ts` (×3, una sin `.catch()` = la que rompía todo),
+  `pricing/guard/route.ts` (×5), `pricing/rentabilidad/route.ts` (×1), `pricing/recommend/route.ts`
+  (×1). Las dos apariciones restantes (`pricing-ancla-global.ts`, `pricing-corpus-utilizable.ts`)
+  están DENTRO de funciones que devuelven texto plano y el LLAMADOR las envuelve una vez enteras en
+  `Prisma.raw()` — esas sí eran seguras por construcción, y así quedan documentadas en el guardián.
+- **Fix (este PR):** los 10 sitios pasan a `${Prisma.raw(sqlCompPlausible(...))}`. Nuevo GUARDIAN en
+  `pricing-comps-techo.test.ts` que falla si alguien vuelve a interpolar `sqlCompPlausible()` sin
+  `Prisma.raw()` dentro de un `Prisma.sql` — el checklist textual de "usa la función" no bastaba,
+  hacía falta vigilar CÓMO se usa. Verificado: `tsc` 0 errores, suite completa (`pnpm test`) 0
+  fallos, `rail_baja_roto`=0 y `bajo_minimo`=0 en los 7 días previos (el fallo no llegó a escribir
+  ningún precio malo, solo dejó de escribir).
+- **Urgente para Alberto:** sacar este PR de draft y mergear cuanto antes — la próxima pasada
+  (08:30 UTC) volverá a fallar con el código actual de `main`, y el reparador automático
+  (`latido-reparar.yml`, 08:00 UTC) podría intentar arreglarlo por su cuenta con un parche peor si
+  este PR no ha aterrizado antes.
+- Aviso Telegram enviado (canal nativo, ver nota de push más abajo).
+
+## ✅ Los 12 checks del CI, reproducidos en local (11 apps + tests + QA + lint)
+`pnpm test` (packages+guardián): 0 fallos. Typecheck de las 11 apps: verde (incluye `plataforma`
+tras el fix de arriba). QA (`qa-check.ts`) y lint (`apps/ia-rest`): sin hallazgos nuevos.
+
+## ✅ Heartbeat de crons y agentes — solo el hallazgo de pricing de arriba
+- **a) Latidos (`agente_latidos`):** único `ok=false` nuevo es `sivra_pricing_apply` (ya tratado
+  arriba). `ses_transporte` sigue en rojo por falta de alta de establecimiento (conocido, acción de
+  Alberto, sin cambios). El resto, verde.
+- **b) Tablas de dominio:** todas ✅, ninguna cerca de su umbral (la más rezagada, `trading-ranking`
+  semanal, a 92h de 192h).
+- `agente_reparaciones`: sin intentos en los últimos 7 días — el auto-reparador aún no ha tocado
+  `sivra_pricing_apply` (su próxima pasada es a las 08:00 UTC).
+
+## 💰 Salud del precio — el único 🔴 es el de arriba; el resto limpio
+`rail_baja_roto`=0, `bajo_minimo`=0 en los 7 días previos al corte. Los 4 pisos: `enabled`/
+`apply_enabled`=true, `min_price` puesto (65/85/300/72), `antelacion_k`=0 (apagada, correcto).
+
+## ✅ Backlog de PRs de rutinas + salud del automerge
+Un único PR abierto de rutinas: **#1803** (correduría, docs-only, `dirty`, abierto 27/08 — 3 días,
+bajo el umbral de 7 de "olvidado"), sin cambios respecto a la pasada anterior.
+
+## Reconciliación de memoria/skills
+Entrada añadida a `docs/CONTEXTO-SESIONES.md`. Sin contradicciones nuevas en reglas fiscales
+dictadas por Alberto, sin skills sincronizadas nuevas que reconciliar, sin huecos de
+`docs/HUECOS-ABIERTOS.md` que cerrar o abrir en este rango. Ninguna feature visible nueva de
+ia-rest en el rango (los commits tocan plataforma/sivra) → manuales sin cambios.
+
 
 Rango: 13 commits desde la pasada ligera del 26/08 05:29 UTC (`b9c4d30..2049774`) — cierre de la
 dirección de House Sevillana (#1731), repaso de CP de los cinco inmuebles + mapeo Booking cerrado
