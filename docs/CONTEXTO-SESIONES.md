@@ -32,13 +32,21 @@
 
 ---
 
-### 🔗 (30/08/2026) PENDIENTE: redirección ialimp.es/limpieza → intranet de Vanesa
-- Alberto quiere el enlace con marca: `ialimp.es/limpieza?token=…`. El cambio está listo (un
-  `vercel.json` con redirect 307 en `landing/ialimp-es/` del repo **ialimp**, rama local
-  `fix/redirect-limpieza`) pero la App de GitHub de Claude NO tiene acceso de escritura a ese
-  repo (403 en push y en MCP). Falta que Alberto habilite `ialimp` en la App
-  (github.com/apps/claude/installations/select_target); después: push + PR + merge → la landing
-  se despliega sola (workflow deploy-landing). Query del token viaja con la redirección.
+### 🔗 (30/08/2026) HECHO: redirección ialimp.es/limpieza → intranet de Vanesa
+- Enlace con marca para Vanesa: `ialimp.es/limpieza?token=…` (307 a
+  `plataforma-ten-flame.vercel.app/invitado/limpieza`; el token viaja con la redirección). Es un
+  `vercel.json` de 9 líneas en `landing/ialimp-es/` del repo **ialimp**, commit `19f19e56` en main;
+  el workflow `deploy-landing` desplegó a producción en 40 s.
+- 🚨 **Lección: un 403 de escritura en GitHub NO siempre es falta de permisos de la App.** Se
+  perdió media sesión (push, MCP, Vercel MCP, prompts para Claude Chrome) creyendo que faltaba
+  acceso, cuando el repo **ialimp estaba ARCHIVADO** (solo lectura para todos desde el 09/06/2026).
+  Lo delató el mensaje literal de la API `403 Repository was archived so is read-only` — el 403 de
+  `git push` en cambio decía «Claude doesn't have GitHub access», que despista. **Ante un 403 de
+  escritura, mira primero si el repo está archivado** (`get_file_contents` funciona igual, la
+  lectura no se bloquea). Alberto lo desarchivó desde Settings → Danger Zone.
+- ⚠️ Verificación en vivo NO hecha desde la sesión: el proxy de egreso bloquea `ialimp.es` (y
+  `*.vercel.app` de esa landing) tanto por curl como por WebFetch. Consta: archivo en main + deploy
+  a producción en `success`. Falta que Alberto abra el enlace una vez.
 - También mergeado hoy: #1874 (👥 «Salen N huéspedes» en la tarjeta de limpieza + «Últimos
   avisos» plegado por defecto con recuento y montaje perezoso).
 
