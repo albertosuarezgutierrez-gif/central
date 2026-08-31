@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-08-30T17:58:49Z",
-  "sha": "9e7584af6f130792f2bb834ffea7814e160fbf45",
+  "generadoEn": "2026-08-31T08:06:49Z",
+  "sha": "d717ec167098e4c555abfcf33438354e9f376444",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49997,6 +49997,140 @@
       "hash": "4e4da38532af"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/compartido.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Piezas compartidas de la página de rendimiento de pisos (cliente).",
+      "exporta": [
+        "colorPiso",
+        "colorMargen",
+        "etiquetaMes",
+        "nombreMesLargo"
+      ],
+      "funciones": [
+        {
+          "nombre": "colorPiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "idx: number",
+          "retorno": "string",
+          "linea": 9
+        },
+        {
+          "nombre": "colorMargen",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: number",
+          "retorno": "string",
+          "linea": 18
+        },
+        {
+          "nombre": "etiquetaMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 27,
+          "resumen": "'2026-07' → 'jul 26' (para ejes de gráficas y celdas del heatmap)."
+        },
+        {
+          "nombre": "nombreMesLargo",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 33,
+          "resumen": "'2026-07' → 'julio de 2026' (para titulares)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c382f7a58f4d"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/DesgloseLimpieza.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "DesgloseLimpieza"
+      ],
+      "funciones": [
+        {
+          "nombre": "DesgloseLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ desglose, onCambio }: { desglose?: PLMensual['desglose'] onCambio: () => void }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2475330d4efe"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/GraficasRango.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GraficasRango"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmtTooltip",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: number | string | Array<number | string>",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "fmtEje",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: number",
+          "retorno": null,
+          "linea": 22
+        },
+        {
+          "nombre": "GraficasRango",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ meses, mesesAnterior, agregado, pisoFiltrado }: { meses: PLMensual[] mesesAnterior: PLMensual[] | null agregado: PLPiso[] pisoFiltrado: boolean }",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "86f736721818"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/HeatmapEstacionalidad.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "HeatmapEstacionalidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "HeatmapEstacionalidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ piso }: { piso: string }",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "Celda",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ mes, celda }: { mes: string; celda: CeldaPiso | null }",
+          "retorno": null,
+          "linea": 83
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e3c0bbb989b6"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -50004,61 +50138,206 @@
       ],
       "funciones": [
         {
-          "nombre": "fmt",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number",
-          "retorno": null,
-          "linea": 36
-        },
-        {
-          "nombre": "fmtDec",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number",
-          "retorno": null,
-          "linea": 39
-        },
-        {
-          "nombre": "colorMargen",
-          "kind": "function",
-          "exportada": false,
-          "params": "m: number",
-          "retorno": null,
-          "linea": 43
-        },
-        {
           "nombre": "ResultadoPisosPage",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ searchParams }: { searchParams: Promise<{ desde?: string; hasta?: string; piso?: string }> }",
           "retorno": null,
-          "linea": 49
+          "linea": 7,
+          "resumen": "Rendimiento de los pisos: P&L por rango de meses + previsión y seguimiento. El estado del intervalo/piso vive en la URL; el servidor solo lo lee y se lo pasa al cliente."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "96818a488ed5"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/PrevisionPanel.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PrevisionPanel"
+      ],
+      "funciones": [
+        {
+          "nombre": "PrevisionPanel",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ piso }: { piso: string }",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "FilaPrevision",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ f }: { f: PrevisionMesPiso }",
+          "retorno": null,
+          "linea": 97
+        },
+        {
+          "nombre": "Ritmo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ f }: { f: PrevisionMesPiso }",
+          "retorno": null,
+          "linea": 132
+        },
+        {
+          "nombre": "Seguimiento",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ seguimiento, haySnapshots }: { seguimiento: PrevisionData['seguimiento']; haySnapshots: boolean }",
+          "retorno": null,
+          "linea": 154
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 208
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "09bb96172e04"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/ResultadoPisosClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ResultadoPisosClient",
+        "exportarCsv"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesStr",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 20
+        },
+        {
+          "nombre": "defectoRango",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "",
+          "linea": 24
+        },
+        {
+          "nombre": "ResultadoPisosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ desdeInicial, hastaInicial, pisoInicial }: { desdeInicial: string | null hastaInicial: string | null pisoInicial: string }",
+          "retorno": null,
+          "linea": 32
+        },
+        {
+          "nombre": "filtrarMeses",
+          "kind": "function",
+          "exportada": false,
+          "params": "meses: PLMensual[], piso: string",
+          "retorno": "PLMensual[]",
+          "linea": 171
+        },
+        {
+          "nombre": "totales",
+          "kind": "function",
+          "exportada": false,
+          "params": "agregado: PLPiso[]",
+          "retorno": null,
+          "linea": 176
+        },
+        {
+          "nombre": "adrTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "ingresos: number, noches: number, sinDato: number",
+          "retorno": "string",
+          "linea": 190
+        },
+        {
+          "nombre": "ocupacionTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "noches: number, disponibles: number",
+          "retorno": "string",
+          "linea": 196
+        },
+        {
+          "nombre": "Kpi",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor, color, delta, base, sub, deltaMaloSiSube }: { label: string; valor: string; color: string delta?: number | null; base?: number | null; sub?: string; deltaMaloSiSube?: boolean }",
+          "retorno": null,
+          "linea": 201
+        },
+        {
+          "nombre": "Selector",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ desde, hasta, piso, pisos, onRango, onPiso, onCsv }: { desde: string; hasta: string; piso: string pisos: Array<{ id: string; nombre: string }> onRango: (d: string, h: string) => void onPiso: (p: string) => void onCsv: () => void }",
+          "retorno": null,
+          "linea": 225
+        },
+        {
+          "nombre": "mesPasado",
+          "kind": "function",
+          "exportada": false,
+          "params": "hoy: Date",
+          "retorno": "",
+          "linea": 275
+        },
+        {
+          "nombre": "Canales",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ data, piso, totalNeto }: { data: PLRango; piso: string; totalNeto: number }",
+          "retorno": null,
+          "linea": 282
+        },
+        {
+          "nombre": "EtiquetaComision",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ fila }: { fila: { portal: string; comision: number; sinBruto: number; tarifaPct: number | null } }",
+          "retorno": null,
+          "linea": 336
+        },
+        {
+          "nombre": "Cancelaciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ data, piso }: { data: PLRango; piso: string }",
+          "retorno": null,
+          "linea": 352
+        },
+        {
+          "nombre": "TablaPisos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ agregado, unMes }: { agregado: PLPiso[]; unMes: boolean }",
+          "retorno": null,
+          "linea": 386
         },
         {
           "nombre": "detalleLavanderia",
           "kind": "function",
           "exportada": false,
-          "params": "g: PLGastosPiso",
-          "retorno": "string",
-          "linea": 257
+          "params": "p: PLPiso",
+          "retorno": "string | undefined",
+          "linea": 469
         },
         {
-          "nombre": "DesgloseLimpieza",
+          "nombre": "CeldaGasto",
           "kind": "function",
           "exportada": false,
-          "params": "{ desglose, onCambio }: { desglose?: PLMensual['desglose']; onCambio: () => void }",
+          "params": "{ v, detalle }: { v: number; detalle?: string }",
           "retorno": null,
-          "linea": 274,
-          "resumen": "De dónde sale el desglose de cada pago a Sique Brilla, y qué hacer si no se ha podido hacer. Un pago repartido «a ojo» y uno leído de su factura NO pueden verse igual: la tabla enseña números plausibl"
-        },
-        {
-          "nombre": "KpiCard",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ label, value, color }: { label: string; value: string; color: string }",
-          "retorno": null,
-          "linea": 364
+          "linea": 480
         },
         {
           "nombre": "Th",
@@ -50066,12 +50345,23 @@
           "exportada": false,
           "params": "{ children, left }: { children: React.ReactNode; left?: boolean }",
           "retorno": null,
-          "linea": 376
+          "linea": 488
+        },
+        {
+          "nombre": "exportarCsv",
+          "kind": "function",
+          "exportada": true,
+          "params": "meses: PLMensual[], nombre: string",
+          "retorno": null,
+          "linea": 500
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "react"
+      ],
       "rutaApi": null,
-      "hash": "15ddeafc3c22"
+      "hash": "ab918c516259"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/seo/page.tsx",
@@ -53474,7 +53764,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 146
+          "linea": 152
         }
       ],
       "tablas": [
@@ -53487,7 +53777,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "3d9130ff5ae9"
+      "hash": "09e064e128cc"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54067,6 +54357,25 @@
       ],
       "rutaApi": "/api/cron/pre-renta",
       "hash": "34e791e41fc4"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/prevision-pisos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "🔮 Foto diaria de la previsión por piso (mes en curso + 2) → `pisos_previsiones`. Es el registro que permite juzgar después si las previsiones se cumplen (seguimiento en /sivra/resultado-pisos). Ademá"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/prevision-pisos",
+      "hash": "dc6838361b2d"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/psd2-sync/route.ts",
@@ -58348,6 +58657,26 @@
       "hash": "d63e19d1b5fe"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/pl-heatmap/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/pl-heatmap",
+      "hash": "c075cba33930"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/pl-mensual/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -58366,6 +58695,48 @@
       "tablas": [],
       "rutaApi": "/api/sivra/pl-mensual",
       "hash": "152ff7ff2597"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/pl-rango/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "P&L de los pisos por RANGO de meses (+ canales y cancelaciones del rango). `?desde=YYYY-MM&hasta=YYYY-MM` — sin parámetros, el mes anterior (mismo default que pl-mensual). `?fresco=1` se salta la cach"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/pl-rango",
+      "hash": "16826c40e20a"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/sivra/prevision/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Previsión de rendimiento por piso (mes en curso + 2) + seguimiento previsto-vs-real."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sivra/prevision",
+      "hash": "ce57115d7b61"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/antelacion/route.ts",
@@ -65138,7 +65509,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 145,
+          "linea": 150,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -65147,7 +65518,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 175,
+          "linea": 180,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -65156,7 +65527,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 197
+          "linea": 202
         },
         {
           "nombre": "ventanaMinutos",
@@ -65164,7 +65535,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 205,
+          "linea": 210,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -65173,13 +65544,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 217,
+          "linea": 222,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e0c832ef7877"
+      "hash": "23769f2f75b8"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -68296,7 +68667,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4daba194f200"
+      "hash": "dd0e518df221"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -71117,6 +71488,37 @@
       "hash": "0547ea24d3f4"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/canales-logica.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/canales-logica.ts — qué se puede AFIRMAR de la comisión de un canal (puro, testeado). Caso fundacional (31/08/2026, revisión de datos de /sivra/resultado-pisos): Expedia, Airbnb y Agoda salían con «comisión 0,00€» — pero ese 0 no es un dato medido: en `portal_rates` su tarifa está a 0 con ",
+      "exporta": [
+        "estadoComision",
+        "hayTarifasPendientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoComision",
+          "kind": "function",
+          "exportada": true,
+          "params": "args: { portal: string comision: number sinBruto: number /** commission_pct de `portal_rates` para el portal; null = el portal no está en la tabla. */ tarifaPct: number | null }",
+          "retorno": "EstadoComision",
+          "linea": 25
+        },
+        {
+          "nombre": "hayTarifasPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "canales: Array<{ portal: string; comision: number; sinBruto: number; tarifaPct: number | null }>,",
+          "retorno": "string[]",
+          "linea": 43,
+          "resumen": "¿Hay algún canal del listado cuyo ingreso mostrado NO lleva la comisión descontada?"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ca305e65f13b"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/cancelaciones.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/cancelaciones.ts — qué se guarda cuando Smoobu dice que una reserva se canceló. PURO y testeado: no toca BD ni red. La escritura la hace `smoobu-sync.ts`. 🚨 POR QUÉ EXISTE ESTO (12/08/2026). El sync ya VEÍA las cancelaciones —pide `showCancellation=1` a propósito— y hacía lo correcto con ",
@@ -72776,7 +73178,7 @@
           "exportada": false,
           "params": "",
           "retorno": "PLGastosPiso",
-          "linea": 75
+          "linea": 79
         },
         {
           "nombre": "catToField",
@@ -72784,7 +73186,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "CampoGasto",
-          "linea": 86
+          "linea": 90
         },
         {
           "nombre": "getPLMensual",
@@ -72792,7 +73194,7 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "Promise<PLMensual>",
-          "linea": 97
+          "linea": 101
         },
         {
           "nombre": "mesPorDefecto",
@@ -72800,7 +73202,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 390,
+          "linea": 399,
           "resumen": "Mes anterior al actual en formato 'YYYY-MM'"
         }
       ],
@@ -72814,7 +73216,326 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "bcb591ca619a"
+      "hash": "d6d213fa7f7a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pl-rango-logica.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pl-rango-logica.ts — lógica PURA del P&L por RANGO de meses (sin BD). El P&L de los pisos es de CAJA DEL MES (`pl-mensual.ts`: lavandería repartida por mes, facturas de Sique Brilla por caja), así que el rango va de mes a mes — un rango por días partiría gastos mensuales y mentiría. Aquí v",
+      "exporta": [
+        "esMesValido",
+        "mesesDelRango",
+        "mesAniosAtras",
+        "diasDelMes",
+        "agregarPisos",
+        "variacionPct",
+        "adr",
+        "ocupacionPct"
+      ],
+      "funciones": [
+        {
+          "nombre": "esMesValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "boolean",
+          "linea": 14
+        },
+        {
+          "nombre": "mesesDelRango",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string, tope = MAX_MESES_RANGO",
+          "retorno": "string[] | null",
+          "linea": 22,
+          "resumen": "Lista de meses 'YYYY-MM' de `desde` a `hasta`, ambos incluidos. null si el formato es inválido, el rango está invertido o supera el tope."
+        },
+        {
+          "nombre": "mesAniosAtras",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, anios = 1",
+          "retorno": "string",
+          "linea": 38,
+          "resumen": "El mismo mes N años antes: '2026-07' → '2025-07'."
+        },
+        {
+          "nombre": "diasDelMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "number",
+          "linea": 44,
+          "resumen": "Días naturales de un mes 'YYYY-MM'."
+        },
+        {
+          "nombre": "gastosVacios",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "PLGastosPiso",
+          "linea": 49
+        },
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 57
+        },
+        {
+          "nombre": "agregarPisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "meses: PLMensual[]",
+          "retorno": "PLPiso[]",
+          "linea": 64,
+          "resumen": "Agrega los meses de un rango en un P&L por piso (mismas columnas que un mes suelto). El nombre/aforo del piso sale de su aparición más reciente; el margen se recalcula sobre el agregado (nunca se prom"
+        },
+        {
+          "nombre": "variacionPct",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: number, anterior: number | null | undefined",
+          "retorno": "number | null",
+          "linea": 99,
+          "resumen": "Variación % contra el periodo anterior. null cuando NO se puede afirmar nada: sin dato anterior o base ≤ 0 (una variación sobre base 0 es una invención)."
+        },
+        {
+          "nombre": "adr",
+          "kind": "function",
+          "exportada": true,
+          "params": "ingresos: number, noches: number",
+          "retorno": "number | null",
+          "linea": 108,
+          "resumen": "ADR (precio medio por noche): null si no hay noches con dato — jamás dividir entre 0 ni fingir precisión cuando parte de las noches no consta."
+        },
+        {
+          "nombre": "ocupacionPct",
+          "kind": "function",
+          "exportada": true,
+          "params": "nochesVendidas: number, diasDisponibles: number",
+          "retorno": "number | null",
+          "linea": 117,
+          "resumen": "Ocupación % del periodo: noches vendidas (atribuidas por mes de ENTRADA, mismo criterio que el ingreso) sobre las noches disponibles del rango. null sin noches disponibles."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "edf80054ab77"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pl-rango.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pl-rango.ts — P&L de los pisos por RANGO de meses + canales + cancelaciones (BD). Reutiliza `getPLMensual` mes a mes (es la ÚNICA fuente del P&L: caja del mes, reparto de lavandería, facturas de Sique Brilla) y agrega con `pl-rango-logica.ts`. No recalcula nada por otro camino — dos fórmul",
+      "exporta": [
+        "getPLMensualCached",
+        "getPLRango",
+        "getHeatmapMeses"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesCorriente",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 19
+        },
+        {
+          "nombre": "getPLMensualCached",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, opts?: { fresco?: boolean }",
+          "retorno": "Promise<PLMensual>",
+          "linea": 24
+        },
+        {
+          "nombre": "enLotes",
+          "kind": "function",
+          "exportada": false,
+          "params": "items: T[], n: number, fn: (t: T) => Promise<R>",
+          "retorno": "Promise<R[]>",
+          "linea": 33
+        },
+        {
+          "nombre": "limitesRango",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string, hasta: string",
+          "retorno": "",
+          "linea": 93
+        },
+        {
+          "nombre": "getPLRango",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string, hasta: string, opts?: { fresco?: boolean }",
+          "retorno": "Promise<PLRango | null>",
+          "linea": 99
+        },
+        {
+          "nombre": "getHeatmapMeses",
+          "kind": "function",
+          "exportada": true,
+          "params": "n = 24",
+          "retorno": "Promise<PLMensual[]>",
+          "linea": 173,
+          "resumen": "Heatmap de estacionalidad: P&L de los últimos `n` meses (para pintar margen piso × mes). Pesado a propósito de perezoso: solo lo pide su endpoint, que se monta al abrir la sección."
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "portal_rates",
+        "reservas_canceladas"
+      ],
+      "rutaApi": null,
+      "hash": "5fababb5b84b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/prevision-logica.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/prevision-logica.ts — lógica PURA de la previsión de rendimiento por piso (sin BD). Decisión de Alberto (30/08/2026): la previsión enseña SIEMPRE por separado lo CONFIRMADO (reservas reales ya en el calendario) y lo ESTIMADO (lo que aún podría venderse), y se guarda una foto diaria para po",
+      "exporta": [
+        "estimadoAdicional",
+        "mediaGastos",
+        "diasHastaMes",
+        "pace",
+        "desvioPrevision",
+        "decidirAlertaPace"
+      ],
+      "funciones": [
+        {
+          "nombre": "estimadoAdicional",
+          "kind": "function",
+          "exportada": true,
+          "params": "confirmado: number, baseAnterior: number | null",
+          "retorno": "number | null",
+          "linea": 16,
+          "resumen": "Estimado adicional del mes: lo que faltaría por vender para repetir el mismo mes del año anterior. null = sin base con la que estimar (jamás 0 por defecto)."
+        },
+        {
+          "nombre": "mediaGastos",
+          "kind": "function",
+          "exportada": true,
+          "params": "gastosMeses: number[]",
+          "retorno": "number | null",
+          "linea": 22,
+          "resumen": "Media simple de los gastos de los últimos meses CERRADOS. null si no hay ninguno."
+        },
+        {
+          "nombre": "diasHastaMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, hoy: Date",
+          "retorno": "number",
+          "linea": 29,
+          "resumen": "Días que faltan (naturales) desde `hoy` hasta el día 1 del mes 'YYYY-MM'. Negativo = ya empezó."
+        },
+        {
+          "nombre": "pace",
+          "kind": "function",
+          "exportada": true,
+          "params": "args: { confirmadoHoy: number anteriorMismaAltura: number totalAnterior: number sinFechaReserva: number }",
+          "retorno": "Pace",
+          "linea": 52,
+          "resumen": "Ritmo de reservas: confirmado HOY vs lo que había a la misma altura el año pasado. Si más del 25% del ingreso del mes equivalente no tiene `reserved_at`, la base no es fiable y el pace se declara como"
+        },
+        {
+          "nombre": "desvioPrevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "previsto: number | null, real: number",
+          "retorno": "number | null",
+          "linea": 71,
+          "resumen": "Desvío % de lo real contra lo previsto. null si el previsto no existía o era 0."
+        },
+        {
+          "nombre": "decidirAlertaPace",
+          "kind": "function",
+          "exportada": true,
+          "params": "args: { diasHastaInicio: number confirmado: number totalAnterior: number | null }",
+          "retorno": "AlertaPace",
+          "linea": 92,
+          "resumen": "Decide si toca avisar de previsión floja para un mes. Ventana 28-32 días antes de su inicio (el cron es diario: puede saltarse un día). El dedupe por (mes, piso) lo pone el caller en BD. Sin base del "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ac8b445d7570"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/prevision-pisos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/prevision-pisos.ts — previsión de rendimiento por piso (BD) + snapshot + seguimiento. Qué es cada número (decisión de Alberto, 30/08/2026 — SIEMPRE por separado): · confirmado = ingreso de reservas YA en el calendario para ese mes (medido, `incomes`). · estimado = lo que faltaría por vende",
+      "exporta": [
+        "computarPrevision",
+        "getPrevision",
+        "snapshotPrevision"
+      ],
+      "funciones": [
+        {
+          "nombre": "mesActualStr",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 58
+        },
+        {
+          "nombre": "inicioMes",
+          "kind": "function",
+          "exportada": false,
+          "params": "mes: string, offsetMeses = 0",
+          "retorno": "Date",
+          "linea": 63
+        },
+        {
+          "nombre": "sumaMes",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 68
+        },
+        {
+          "nombre": "computarPrevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "horizonte = 3",
+          "retorno": "Promise<PrevisionMesPiso[]>",
+          "linea": 73,
+          "resumen": "Núcleo: previsión de mes en curso + `horizonte-1` siguientes, por piso."
+        },
+        {
+          "nombre": "getPrevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<PrevisionData>",
+          "linea": 154,
+          "resumen": "Previsión completa para la página: filas + seguimiento (previsto vs real) + frescura."
+        },
+        {
+          "nombre": "snapshotPrevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy = new Date()",
+          "retorno": "Promise<ResultadoSnapshot>",
+          "linea": 221,
+          "resumen": "Pasada del cron: guarda la foto del día y decide los avisos de «previsión floja»."
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "pisos_previsiones",
+        "pisos_previsiones_avisos",
+        "properties",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "5a316d6dc8fa"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-aforo.ts",
@@ -100149,7 +100870,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2639,
-    "funciones": 7286
+    "archivos": 2654,
+    "funciones": 7346
   }
 }
