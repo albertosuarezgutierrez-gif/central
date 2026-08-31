@@ -3096,3 +3096,21 @@ al contrario de lo que se temía. El modelo de la Fase 1 se puede generar del re
 
 Con esto, N4 tiene los cimientos: modelo real + regla del titular testeada. Falta el cableado
 (DATABASE_URL del proyecto ASEGURA en la app) y las pantallas.
+
+## ✅ 31/08/2026 (cierre) — Mapa de conectores de Supabase, verificado en vivo
+
+| Conector | Org | Alcance | Permisos |
+|---|---|---|---|
+| `Supabase` | `alberto.suarez…@gmail.com` | `central` (wswbehlcuxqxyinousql) | Lectura y escritura |
+| `Supabase asegura` | LOOR (bloqueada por `project_ref`) | **solo** ASEGURA-prod-eu | **Solo lectura**, 13 herramientas — sin `apply_migration`, sin `list_projects`: no puede escribir ni asomarse al resto de la org de Manuel ni por error |
+| `Supabase solo lectura (trading)` | — | `central` | Sin cambios |
+
+Verificado con llamadas reales por ambos lados (cifras idénticas por los dos caminos). **Las rutinas
+de `central` vuelven a tener su conector.**
+
+💡 **Idea apuntada, sin ejecutar** (propuesta del agente de navegador, y es razonable): queda
+asimétrico que la base propia de producción tenga un conector con escritura y «permitir siempre»
+mientras la ajena está blindada. El mismo truco (`project_ref=wswbehlcuxqxyinousql&read_only=true`)
+daría un conector de solo lectura para el día a día de `central`, reservando el de escritura para
+cuando toque. **No se hace sobre la marcha**: las skills y rutinas nombran las herramientas del
+conector actual, así que es un cambio a planificar, no un clic. → candidata para `conectores-vigia`.
