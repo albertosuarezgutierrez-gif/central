@@ -32,6 +32,16 @@
 
 ---
 
+### 🛠️ (31/08/2026) central-asegura: primer deploy en Error — el buildCommand pisaba prisma:generate
+- PR #1803 mergeado (squash `4d4b142c6`) tras resolver conflicto+gitleaks (allowlist FAKE_KEY_B). El
+  primer deploy de `central-asegura` falló: el `buildCommand` de `vercel.json` («prisma generate &&
+  next build») PISA el script `prisma:generate` del package.json → el 2º cliente Prisma
+  (`lib/generated/asegura-client`) nunca se genera en Vercel. El CI no lo caza: tests.yml usa el
+  script bueno y ci.yml solo construye ia-rest — **esta app nunca había pasado un `next build`**.
+- Fix: ambos generate inline en el buildCommand; validado en local (repro del fallo + build OK).
+- Conector Vercel: el alcance por proyecto se edita en claude.ai → Conectores (no en Vercel).
+  Pendiente Alberto: añadir SOLO `central-asegura`; y `ASEGURA_SESSION_SECRET` quedó sin guardar.
+
 ### 🔌 (31/08/2026) Correduría: conexión a la cartera ENCENDIDA — rol propio + envs puestas por Alberto
 - Rol `central_asegura` creado en ASEGURA-prod-eu (login+BYPASSRLS, **solo SELECT**; verificado vivo).
   Alberto puso `ASEGURA_DATABASE_URL` y `ASEGURA_SESSION_SECRET` en el Vercel `central-asegura`
