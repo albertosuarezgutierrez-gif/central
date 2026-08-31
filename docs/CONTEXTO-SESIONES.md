@@ -32,6 +32,16 @@
 
 ---
 
+### 📈 (31/08/2026) Pasada de trading-analista + fix: posición vencida sin poder cerrarse desde hacía 17 días (PR #1914)
+Rutina nocturna de trading-analista: NAV/cartera empujados, `/analizar` con 3 compras paper (PLTR, NFLX,
+SQM), 0 vetados. Alberto pidió revisar el aviso de MSFT (posición abierta 04/08, vencida 14/08, atascada).
+**Causa raíz:** `/api/trading/puntuar` pedía a la 2ª fuente la ventana histórica para el ancla de
+`juzgarHuerfana` contando desde la fecha de VENCIMIENTO en vez de la de APERTURA — quedaba corta por
+`horizonteDias − margen` días SIEMPRE, así que el ancla nunca encontraba con qué comparar por mucho que
+se reintentara (no era transitorio). Extraído a helper puro testeado `ventanaHastaApertura`
+(`lib/trading/precios-guardia.ts`), reutilizado también en el bloque de tesis huérfanas. 64 tests OK,
+tsc 0, `pnpm test` en verde. PR #1914 draft — pendiente CI y confirmar en la próxima pasada que MSFT cierra.
+
 ### 🔑 (31/08/2026) House Sevillana YA ENVÍA · el PIN por reserva sustituye al maestro · salida flexible (PRs #1906, #1908)
 - **House Sevillana ACTIVADA** (`mensajes_prog_pisos.activo=true`, 21:45). Hoy no sale nada: los dos
   primeros hitos de la reserva viva ya estaban reclamados en sombra, así que el 1er envío real es el
