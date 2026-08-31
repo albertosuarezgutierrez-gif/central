@@ -15,6 +15,23 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-31 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos (obligatorio,
+  no solo los en vivo). Paso 1: 8/48 fechas muestreadas del ciclo 24/08 se vendieron
+  (House Feria a 1767€, pelotazo funcionando); House sept sigue al 43% ocupación a 30d
+  vista → NO se revierte target_pctl 0,60 (criterio de reversión del aprendizaje id 76
+  seguía sin cumplirse). Paso 2: 5 agentes en paralelo (Booking + fallback lastminute/
+  expedia en Semana Santa/Feria) — 12 ventanas/piso + 7 fechas de evento que el guardián
+  llevaba 3 días marcando "congelada" (Copa del Rey, San Isidoro, 3 LaLiga, JEID, Mundial
+  Remo), ahora con 4 comps/piso cada una. Paso 3 (verificación SQL, no autoinforme):
+  comps nuevos hoy en `market_rates` — house=153, busto=150, luxury=150, duplex=148,
+  ningún piso a 0. Paso 4: 48 propuestas (p55/p60/p60/p50 según piso) por los raíles en
+  dry-run forzado (`ALERTA_TOKEN`); circuit-breaker sano (avg 29,7%, no salta), 48 filas
+  en `pricing_decisiones`. Paso 5: aprendizaje escrito (`ciclo_31_08_2026`). Paso 6:
+  informe por Telegram con la línea "Comps escritos:" obligatoria (HTTP 200). dudas:
+  Luxury Busto 10-oct-2026 el mercado subió a p50=470€ (antes 123-169€ en barridos de
+  meses atrás) — esa noche ya vendida a 162€, irrelevante hoy, pero vigilar si se repite
+  en fechas cercanas (¿dinámica real de última disponibilidad o ruido de muestra?).
+  fallos: —. PRs/commits: (este commit, memoria + bitácora, sin cambios de código).
 - **2026-08-31 · buscador-ia** · hizo: pasada semanal completa. Preflight Telegram 200 OK. Watch de
   deprecación de los 4 eslabones activos (Groq/Cerebras/Gemini/Kimi, por WebSearch, sin keys en
   sesión) → todos vivos, sin swaps necesarios; NIM sigue apagado por decisión de Alberto (28/08) y
@@ -22,7 +39,6 @@
   listón calidad/precio (mercado de pago dominado por flagship caros; Qwen3.7 Flash anotado sin
   acción). Sin Telegram (nada urgente). dudas: —; fallos: —; PRs/commits: PR draft con el doc de
   estado (rama `claude/youthful-gates-4oor0p`).
-
 - **2026-08-30 · facturas-correo** · hizo: pasada diaria completa. Paso 0: Vía B sana
   (`dias_caido=1`, última copia `_buzon_pdf` 29/08 IONOS); backlog: `PDF-pendiente` vacío,
   `Revisar` 1 hilo (Fly.io/Manuel Suárez, sigue sin respuesta de Alberto — día 3), y
