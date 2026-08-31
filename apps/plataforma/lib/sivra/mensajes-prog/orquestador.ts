@@ -320,12 +320,17 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
           WHERE booking_id = ${bookingId} AND tipo = ${deb.tipo} AND fecha_objetivo = ${deb.fechaObjetivo}::date
         `)
         avisos.push(`🤖 Enviado «${deb.tipo}» a ${datos.guestName || '¿?'} (${ACCESO[propertyId].nombre}, reserva ${bookingId})${idioma !== 'es' ? ` en ${idioma.toUpperCase()}` : ''}${elegido?.origen === 'reserva' ? ' · con su PIN de reserva' : ''}.`)
-        // El PIN de la reserva ya está en manos del huésped: el panel de domótica lo daba por NO
-        // entregado porque su único repartidor era `entregar()` del programador (que con entrega
-        // 'aviso' solo escribe a Alberto). Best-effort: un fallo aquí no invalida el envío.
+        // 🚨 NO se toca `entregado`. Corrige lo que se escribió el 31/08/2026: se dijo que el panel
+        // daba por no entregado un PIN que el huésped ya tenía, y es FALSO — los dos PIN vivos ya
+        // lo tenían a `true` desde que el programador mandó su Telegram (22 y 28/08). Ese flag
+        // significa «el programador lo repartió por SU canal», que con entrega 'aviso' es Alberto,
+        // no el huésped. Pisarlo con true no añadía nada y borraba la distinción. La entrega AL
+        // HUÉSPED se anota aparte, con su fecha, que es el dato que antes no existía.
         if (elegido?.origen === 'reserva') {
           await prisma.$executeRaw(Prisma.sql`
-            UPDATE domotica_acceso_pin SET entregado = true, updated_at = now()
+            UPDATE domotica_acceso_pin
+            SET detalle = COALESCE(detalle, '{}'::jsonb) || jsonb_build_object('entregado_huesped_at', now()),
+                updated_at = now()
             WHERE reserva_ref = ${bookingId} AND estado = 'activo' AND pin = ${elegido.codigo}
           `).catch(() => 0)
         }

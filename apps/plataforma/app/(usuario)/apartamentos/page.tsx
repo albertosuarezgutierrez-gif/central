@@ -5,6 +5,7 @@ import { getPropiedades, getResumenAnual, PROP_TURISTICOS, PROP_BBVA } from '@/l
 import { fmtEur } from '@/lib/banca'
 import Filtro from './Filtro'
 import BarrasMensuales from './BarrasMensuales'
+import MensajesHuesped from './MensajesHuesped'
 
 export const dynamic = 'force-dynamic'
 
@@ -95,6 +96,9 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
         <KPI label="Resultado" value={fmtEur(kBbva.ingresos - kBbva.gastos)} color={kBbva.ingresos - kBbva.gastos >= 0 ? '#16a34a' : '#dc2626'} />
         <KPI label={`Ingresos ${year}`} value={fmtEur(kBbva.anio)} color="var(--text)" />
       </div>
+
+      {/* Qué se le manda al huésped y quién lo manda hoy (pedido de Alberto, 31/08/2026) */}
+      <MensajesHuesped />
 
       {/* Gráficos resumen anual (Ingresos vs Gastos por mes) — una unidad por gráfico */}
       <div style={{ display: 'grid', gap: '16px', marginBottom: '28px' }}>
