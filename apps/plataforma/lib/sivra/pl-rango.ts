@@ -53,6 +53,10 @@ export interface CanalResumen {
   comision: number
   /** Reservas sin `amount_gross`: su comisión NO está en `comision` (no consta ≠ 0€). */
   sinBruto: number
+  /** commission_pct de `portal_rates`; null = el portal no está en la tabla. Un 0 aquí es un
+   *  «pendiente de confirmar»: el neto = bruto y la comisión real NO está descontada — la UI
+   *  lo declara vía `canales-logica.ts`, nunca lo pinta como 0€. */
+  tarifaPct: number | null
 }
 
 export interface CancelacionesResumen {
@@ -98,7 +102,7 @@ export async function getPLRango(desde: string, hasta: string, opts?: { fresco?:
   const mesesAnt = meses.map(m => mesAniosAtras(m))
   const { start, end } = limitesRango(desde, hasta)
 
-  const [datosMeses, datosAnt, canalesRows, cancelRows] = await Promise.all([
+  const [datosMeses, datosAnt, canalesRows, cancelRows, tarifasRows] = await Promise.all([
     enLotes(meses, CONCURRENCIA, m => getPLMensualCached(m, opts)),
     // El año anterior solo se usa agregado: si un mes revienta, el Δ se queda en null pero el
     // rango principal no cae — la comparativa es contexto, no el dato.
@@ -125,7 +129,12 @@ export async function getPLRango(desde: string, hasta: string, opts?: { fresco?:
       WHERE check_in >= ${start} AND check_in < ${end}
       GROUP BY property_id
     `,
+    prisma.$queryRaw<Array<{ portal: string; pct: number }>>`
+      SELECT portal, commission_pct::float AS pct FROM portal_rates
+    `,
   ])
+
+  const tarifas = new Map(tarifasRows.map(r => [r.portal, Number(r.pct)]))
 
   return {
     desde,
@@ -142,6 +151,7 @@ export async function getPLRango(desde: string, hasta: string, opts?: { fresco?:
       neto: Number(r.neto),
       comision: Math.round(Number(r.comision) * 100) / 100,
       sinBruto: Number(r.sin_bruto),
+      tarifaPct: tarifas.get(r.portal ?? 'OTRO') ?? null,
     })),
     cancelaciones: {
       filas: cancelRows.map(r => ({

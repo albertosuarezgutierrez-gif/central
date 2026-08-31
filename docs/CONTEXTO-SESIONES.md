@@ -32,6 +32,14 @@
 
 ---
 
+### 🔎 (31/08/2026) Revisión de datos de resultado-pisos: julio cuadra al céntimo; comisión centinela corregida
+- Contraste contra BD real: julio 2026 = 4.424,45€ exacto vs pantalla vieja · nights ~100% ·
+  `reserved_at` ~100% (pace fiable) · Booking comisión = 19,72% clavado · 111 cancelaciones OK.
+- 🚨 Expedia/Airbnb/Agoda salían «comisión 0€»: es un CENTINELA (`portal_rates.commission_pct=0`
+  «pendiente de confirmar» → neto=bruto). Nuevo `lib/sivra/canales-logica.ts` (puro, testeado):
+  la UI dice «⚠️ comisión sin descontar (tarifa pendiente)», nunca 0€. Con factura real se fija
+  la tarifa en `portal_rates` y desaparece el aviso.
+
 ### 📊 (31/08/2026) Ciclo semanal de pricing SIVRA — 4 pisos, mercado fresco, sin huecos
 - 5 agentes en paralelo barrieron Booking (+fallback lastminute/expedia en Semana Santa/Feria) para
   los 4 pisos: 601 comps nuevos hoy en `market_rates` (house=153, busto=150, luxury=150, duplex=148,
