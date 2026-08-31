@@ -32,6 +32,14 @@
 
 ---
 
+### 🔎 (31/08/2026) Revisión de datos de resultado-pisos: julio cuadra al céntimo; comisión centinela corregida
+- Contraste contra BD real: julio 2026 = 4.424,45€ exacto vs pantalla vieja · nights ~100% ·
+  `reserved_at` ~100% (pace fiable) · Booking comisión = 19,72% clavado · 111 cancelaciones OK.
+- 🚨 Expedia/Airbnb/Agoda salían «comisión 0€»: es un CENTINELA (`portal_rates.commission_pct=0`
+  «pendiente de confirmar» → neto=bruto). Nuevo `lib/sivra/canales-logica.ts` (puro, testeado):
+  la UI dice «⚠️ comisión sin descontar (tarifa pendiente)», nunca 0€. Con factura real se fija
+  la tarifa en `portal_rates` y desaparece el aviso.
+
 ### 📊 (30/08/2026) /sivra/resultado-pisos → rendimiento por rango + previsión con seguimiento
 - Petición de Alberto («darle una vuelta»: rendimiento, previsiones, intervalos, gráficas). Aprobó:
   previsión con CONFIRMADO y ESTIMADO por separado + seguimiento de si se cumplen (tesorería),

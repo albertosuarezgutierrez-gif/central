@@ -10,6 +10,7 @@ import type { PLRango } from '@/lib/sivra/pl-rango'
 import type { PLMensual, PLPiso } from '@/lib/sivra/pl-mensual'
 import { agregarPisos, variacionPct, adr, ocupacionPct, diasDelMes } from '@/lib/sivra/pl-rango-logica'
 import { PORTAL_COLORS, PORTAL_LABELS } from '@/lib/portales'
+import { estadoComision, hayTarifasPendientes } from '@/lib/sivra/canales-logica'
 import { card, colorMargen, nombreMesLargo } from './compartido'
 import GraficasRango from './GraficasRango'
 import PrevisionPanel from './PrevisionPanel'
@@ -280,10 +281,10 @@ function mesPasado(hoy: Date): { d: string; h: string } {
 
 function Canales({ data, piso, totalNeto }: { data: PLRango; piso: string; totalNeto: number }) {
   const filas = useMemo(() => {
-    const porPortal = new Map<string, { neto: number; comision: number; reservas: number; sinBruto: number }>()
+    const porPortal = new Map<string, { neto: number; comision: number; reservas: number; sinBruto: number; tarifaPct: number | null }>()
     for (const c of data.canales) {
       if (piso && c.propertyId !== piso) continue
-      const a = porPortal.get(c.portal) ?? { neto: 0, comision: 0, reservas: 0, sinBruto: 0 }
+      const a = porPortal.get(c.portal) ?? { neto: 0, comision: 0, reservas: 0, sinBruto: 0, tarifaPct: c.tarifaPct }
       a.neto += c.neto; a.comision += c.comision; a.reservas += c.reservas; a.sinBruto += c.sinBruto
       porPortal.set(c.portal, a)
     }
@@ -294,6 +295,7 @@ function Canales({ data, piso, totalNeto }: { data: PLRango; piso: string; total
 
   if (filas.length === 0) return null
   const sinBrutoTotal = filas.reduce((s, f) => s + f.sinBruto, 0)
+  const pendientes = hayTarifasPendientes(filas)
 
   return (
     <section style={{ ...card, marginBottom: 16 }}>
@@ -311,9 +313,7 @@ function Canales({ data, piso, totalNeto }: { data: PLRango; piso: string; total
               <span style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
                 {eur(f.neto)} <span style={{ color: 'var(--muted)' }}>({pct}% · {f.reservas} res.)</span>
               </span>
-              <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
-                {f.comision > 0 ? `comisión ${eur(f.comision)}` : f.sinBruto > 0 ? 'comisión no consta' : 'sin comisión medida'}
-              </span>
+              <EtiquetaComision fila={f} />
             </div>
           )
         })}
@@ -322,7 +322,28 @@ function Canales({ data, piso, totalNeto }: { data: PLRango; piso: string; total
         La comisión es la REAL medida (bruto − neto de cada reserva).
         {sinBrutoTotal > 0 && ` En ${sinBrutoTotal} reserva(s) el bruto no consta: su comisión NO está en estas cifras.`}
       </p>
+      {pendientes.length > 0 && (
+        <p style={{ fontSize: 12, color: 'var(--warning, #ca8a04)', margin: '6px 0 0' }}>
+          ⚠️ {pendientes.map(p => PORTAL_LABELS[p] ?? p).join(', ')}: su tarifa está «pendiente de
+          confirmar» en portal_rates, así que el ingreso mostrado va SIN descontar su comisión real
+          (no es que salgan gratis). Con una factura suya delante se fija la tarifa y esto desaparece.
+        </p>
+      )}
     </section>
+  )
+}
+
+function EtiquetaComision({ fila }: { fila: { portal: string; comision: number; sinBruto: number; tarifaPct: number | null } }) {
+  const e = estadoComision(fila)
+  const texto =
+    e.tipo === 'medida' ? `comisión ${eur(e.importe)}`
+    : e.tipo === 'sin_bruto' ? `comisión no consta (${e.reservas} res.)`
+    : e.tipo === 'sin_comision' ? 'sin comisión'
+    : '⚠️ comisión sin descontar (tarifa pendiente)'
+  return (
+    <span style={{ fontSize: 12, whiteSpace: 'nowrap', color: e.tipo === 'tarifa_pendiente' ? 'var(--warning, #ca8a04)' : 'var(--muted)' }}>
+      {texto}
+    </span>
   )
 }
 
