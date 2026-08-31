@@ -50,6 +50,19 @@
   `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
   el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
 
+### ✅ (31/08/2026) Verificación 100% de la serie V4 Flash (#1898/#1900/#1901) — con evidencia
+- `main` (`744e88b`) verificado por grep: default `deepseek/deepseek-v4-flash` en openrouter.ts,
+  `MODELO_DEFAULT` del Director, sonda, PREFERIDOS (×2), Paso 1.5 y visión/embeddings en la skill,
+  SKILLS.md con los 3 «ACTIVA». Tests core-ai **45/45**, `tsc` plataforma limpio, los 3 PRs
+  mergearon con los 3 workflows verdes sobre su head exacto.
+- **Producción**: plataforma redesplegada (deploy READY target=production sobre el merge #1898 y
+  #1900; el de #1901, solo docs, saltado por el ignoreCommand — correcto).
+- **Cabo pendiente y armado**: `ai_usos` solo tiene tráfico PRE-deploy (último 10:01 UTC, servía
+  `deepseek-chat+web` = V3, coherente). El MCP de Vercel no deja leer si hay override
+  `OPENROUTER_MODEL` en la env → la prueba real es el tick horario del websearch (~16:01 UTC):
+  check-in programado para leer qué modelo sirvió. Si sigue saliendo V3, hay override en Vercel
+  y hay que quitarlo/cambiarlo A MANO (acción de Alberto).
+
 ### 🔍 (31/08/2026) Barrido anti-huecos en TODOS los agentes (orden de Alberto tras V4 Flash)
 - Se buscó la misma clase de hueco (traspaso sin dueño · lista estática sin curación · supuesto
   sin verificar) en los ~17 agentes. La auditoría diaria, conectores-vigia, github-vigia y el
