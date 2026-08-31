@@ -114,6 +114,9 @@ const PROBES: Record<string, Prisma.Sql> = {
     FROM agente_latidos WHERE agente = 'sivra_extras_impago'`,
   // Mensajes programados a huéspedes: deja marca de INTENTO al arrancar (mismo patrón que
   // pricing_apply) para distinguir «no se dispara» de «se dispara y no termina».
+  sivra_domotica_acceso: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_domotica_acceso'`,
   sivra_mensajes_prog: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_mensajes_prog'`,

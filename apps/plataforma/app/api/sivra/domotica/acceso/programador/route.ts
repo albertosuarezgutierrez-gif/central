@@ -13,6 +13,7 @@ import {
   type ReservaAcceso, type PinExistente,
 } from '@/lib/domotica/acceso-programador'
 import { tgAlert } from '@/lib/telegram'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -250,6 +251,25 @@ export async function GET(req: NextRequest) {
       resultados.push({ d: d.nombre, error: msg })
     }
   }
+
+  // ── Latido ──
+  // Este cron es MUDO por diseño: solo escribe en `domotica_acceso_pin` cuando hay un PIN que crear
+  // o borrar, así que una semana sin reservas nuevas y una semana MUERTO se ven exactamente igual en
+  // la BD (comprobado el 31/08/2026: el último `updated_at` era del 28/08 y no había forma de saber
+  // si había vuelto a correr). Desde que el mensaje de la víspera manda el PIN de la reserva, este
+  // cron está en el camino del huésped: si muere, el mensaje cae al código MAESTRO —que abre, así
+  // que nadie se queda en la puerta— pero el PIN por reserva desaparece EN SILENCIO.
+  const conError = resultados.filter(r => r.error).length
+  const creados = resultados.filter(r => r.creado).length
+  const borrados = resultados.filter(r => r.borrado).length
+  const desajustados = resultados.reduce((n, r) => n + ((r.desajustes as unknown[] | undefined)?.length ?? 0), 0)
+  await registrarLatido(
+    'sivra_domotica_acceso',
+    conError === 0,
+    `${accesos.length} cerradura(s) · ${creados} PIN creado(s) · ${borrados} borrado(s)` +
+      `${desajustados ? ` · ${desajustados} con la ventana desactualizada` : ''}` +
+      `${conError ? ` · ${conError} con ERROR` : ''}`,
+  ).catch(() => {})
 
   return NextResponse.json({ ok: true, desde, hasta, resultados })
 }
