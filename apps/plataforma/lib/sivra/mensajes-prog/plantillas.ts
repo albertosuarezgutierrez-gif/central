@@ -145,7 +145,7 @@ function estancia(d: DatosPlantilla): string {
   return [
     `¡Hola ${nombre(d)}! ¿Qué tal va todo en ${d.property}?`,
     '',
-    `¿Está el apartamento a vuestro gusto? Si falta algo o podemos mejorar cualquier cosa de la estancia, decídnoslo por aquí — ${HORARIO_ASISTENCIA.toLowerCase()}.`,
+    `¿Está el apartamento a vuestro gusto? Si falta algo o podemos mejorar cualquier cosa de la estancia, decídnoslo por aquí — respondemos de 9:00 a 21:00 (hora de España).`,
   ].join('\n')
 }
 
