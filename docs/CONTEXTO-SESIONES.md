@@ -32,16 +32,22 @@
 
 ---
 
-### 📬 (31/08/2026) Mensajes programados a huéspedes NUESTROS — sustituto de los automáticos de Smoobu, en sombra
+### 📬 (31/08/2026) Mensajes programados a huéspedes NUESTROS — sustituto de los automáticos de Smoobu (MERGEADO, en sombra)
 - Análisis sobre 8 hilos reales: Smoobu manda 7 automáticos solo-en-español, promete el parking
   fantasma de S. Juan de la Palma, duplica en última hora y esconde lo crítico tras un enlace.
-- Construido (rama `claude/smoobu-automated-messages-po1uvp`): `lib/sivra/acceso.ts` (fuente única
-  por piso; códigos en BD `sivra_codigos_acceso`, sembrados por MCP — NO en el repo) + 7 plantillas
-  deterministas + cron `mensajes/programados` (30 min, `CRON_JOBS`) con dedupe, sombra por piso
-  (`mensajes_prog_pisos`, fila ausente = sombra), chequeo «¿ya lo mandó Smoobu?» y latido+sonda.
+- **PR #1902 MERGEADO**: `lib/sivra/acceso.ts` (fuente única por piso; códigos en BD
+  `sivra_codigos_acceso`, sembrados por MCP — NO en el repo) + 7 plantillas deterministas + cron
+  `mensajes/programados` (30 min, `CRON_JOBS`) con dedupe, sombra por piso (`mensajes_prog_pisos`,
+  fila ausente = sombra), chequeo «¿ya lo mandó Smoobu?» y latido+sonda. **Vivo pero MUDO** hasta
+  que Alberto ponga `activo=true` piso a piso (y apague a la vez las plantillas de ese piso en Smoobu).
 - Decisiones de Alberto: sin landing (texto plano en el hilo del portal), códigos en DOS tiempos
   (proceso a 7 días, códigos en víspera), rotación tras cancelación expuesta → PENDIENTE (tarea a
   Vanesa), aviso a Sique Brilla de cuna/horas/late → PENDIENTE (email + intranet, PR siguiente).
+- **Las 5 fotos del Dúplex se MIRARON una a una** (CDN de Smoobu, vía pg_net + edge function temporal
+  ya retirada) y colgaban del paso equivocado: el llavero rotulado APARTMENT/BUILDING/LIFT estaba en
+  «entrada del edificio» y el Street View anotado no explicaba sus tres rótulos. Reasignadas con el
+  texto que dice qué enseña cada una. Regla: **una foto de instrucciones se coloca mirándola, no por
+  el nombre del fichero.**
 
 ### 🩺 (31/08/2026) El motivo era «asegura no puede leer su BD» — y la BD está SANA
 - El recuadro con motivo (PR #1903) habló a la primera: `asegura_error` — el secreto COINCIDE, asegura
