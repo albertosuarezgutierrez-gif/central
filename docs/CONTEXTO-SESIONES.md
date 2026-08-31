@@ -32,6 +32,17 @@
 
 ---
 
+### 📬 (31/08/2026) Mensajes programados a huéspedes NUESTROS — sustituto de los automáticos de Smoobu, en sombra
+- Análisis sobre 8 hilos reales: Smoobu manda 7 automáticos solo-en-español, promete el parking
+  fantasma de S. Juan de la Palma, duplica en última hora y esconde lo crítico tras un enlace.
+- Construido (rama `claude/smoobu-automated-messages-po1uvp`): `lib/sivra/acceso.ts` (fuente única
+  por piso; códigos en BD `sivra_codigos_acceso`, sembrados por MCP — NO en el repo) + 7 plantillas
+  deterministas + cron `mensajes/programados` (30 min, `CRON_JOBS`) con dedupe, sombra por piso
+  (`mensajes_prog_pisos`, fila ausente = sombra), chequeo «¿ya lo mandó Smoobu?» y latido+sonda.
+- Decisiones de Alberto: sin landing (texto plano en el hilo del portal), códigos en DOS tiempos
+  (proceso a 7 días, códigos en víspera), rotación tras cancelación expuesta → PENDIENTE (tarea a
+  Vanesa), aviso a Sique Brilla de cuna/horas/late → PENDIENTE (email + intranet, PR siguiente).
+
 ### 🧠 (31/08/2026) DeepSeek V4 Flash en OpenRouter — y nuestro default era el V3 viejo y más caro
 - Alberto pasó un post viral y preguntó si OpenRouter lo tiene y si el buscador está al tanto.
 - **Sí lo tiene** (`deepseek/deepseek-v4-flash`, $0,086/$0,17 por M, ctx 1M) — y el hallazgo real:

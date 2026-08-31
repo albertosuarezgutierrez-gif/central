@@ -237,3 +237,21 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   (`requiere_respuesta=false`) se PROPONÍA siempre; ahora entra por la vía de cortesía.
 - **maxDuration = 300** en `auto-reply` y `webhook` (decisión + 2 traducciones en `Promise.all`; con 60s daba 504).
 - Sin asunto fijo (`enviarAlHuesped` no manda "Re: tu estancia"). Detalle vivo en `docs/CONTEXTO-SESIONES.md`.
+
+## Mensajes PROGRAMADOS a huéspedes (31/08/2026 — sustituto de los automáticos de Smoobu)
+Ciclo de reserva NUESTRO (confirmación → acceso a 7 días → víspera con códigos → bienvenida →
+estancia → víspera de salida → post-salida), cron `/api/sivra/mensajes/programados` cada 30 min
+(`CRON_JOBS`). **Arranca en MODO SOMBRA**: `mensajes_prog_pisos` (fila ausente/`activo=false` =
+sombra → todo va a Telegram, nada al huésped); se activa piso a piso y entonces hay que APAGAR las
+plantillas de Smoobu (el chequeo `equivalentes-smoobu.ts` evita duplicados mientras tanto y avisa).
+- Fuente única de acceso: **`lib/sivra/acceso.ts`** (dirección, pasos, fotos, mapas; Dúplex: llaves
+  FUERA, en Javier Lasso de la Vega 7). **Los códigos NO están en el repo**: tabla
+  `sivra_codigos_acceso` (BD, rotable; NULL = se declara, no se inventa).
+- Plantillas deterministas (`lib/sivra/mensajes-prog/plantillas.ts`), texto plano primero (sirve
+  offline y lo puede leer el operador del portal); códigos en DOS tiempos (proceso a 7 días,
+  códigos en víspera); cada mensaje termina con la pregunta de su fase (la respuesta la absorbe el
+  agente normal). Traducción por IA con guarda `conservaDatos` (un código mutado → sale en español).
+- Dedupe: `mensajes_programados` UNIQUE (booking, tipo, fecha_objetivo); reintentos si Smoobu cae.
+  Latido `sivra_mensajes_prog`. Plan/diseño: `docs/superpowers/plans/2026-08-31-mensajes-programados-huespedes.md`.
+- PENDIENTE (decidido, PR siguiente): aviso a Sique Brilla (email+intranet) de cuna/horas/late
+  checkout; rotación de código tras cancelación expuesta → tarea a Vanesa; vigía SLA de pendientes.
