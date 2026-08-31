@@ -9,7 +9,33 @@
 > fallan— el criterio firmado. La tabla de abajo se re-anota en cada hito, **añadiendo** una entrada
 > fechada; no se reescriben las anteriores.
 
-## Estado actual: la salida por TIEMPO sigue ganando
+## Estado actual: la salida por TIEMPO sigue ganando — H10 RESUELTA (31/08/2026)
+
+### Medición del 31/08/2026 — ciclo de H10 completo, n = 183.093 · ✅ RESOLUCIÓN
+
+Las cuatro variantes de H10 completaron su ciclo (183.093 obs.; 180.628 en `salidaSma200`, que exige
+más historia para la media) y **ninguna de las siete cumple el criterio firmado**. Cifras del cron
+`trading-h10` del 31/08 (08:41 UTC), recomputadas a mano contra `trading_backtest` el mismo día:
+cuadran al dígito. Referencia (salida por tiempo): mediana **+3,12%** · batacazos **10,26%**.
+
+| regla | mediana a 91 d | batacazos ≤ −15% | Δ mediana | Δ batacazos |
+|---|---|---|---|---|
+| **salida por tiempo (91 días)** | **+3,12%** | 10,26% | — | — |
+| trailing −25% (`salidaTrail25`) | +2,74% | 12,91% | −0,38 pp | +2,65 pp |
+| stop a coste tras +10% (`salidaCoste10`) | +1,24% | 8,87% | −1,88 pp | −1,39 pp |
+| cierre < SMA50 (`salidaSma50`) | −0,71% | **0,77%** | −3,83 pp | −9,49 pp |
+| cierre < SMA200 (`salidaSma200`) | −0,22% | 3,34% | −3,35 pp | −6,79 pp |
+| stop fijo −10% (`salidaStop10`) | +0,45% | 2,90% | −2,67 pp | −7,36 pp |
+| stop fijo −20% (`salidaStop20`) | +2,75% | 14,86% | −0,37 pp | +4,60 pp |
+| trailing −15% (`salidaTrail15`) | +1,22% | 10,72% | −1,90 pp | +0,46 pp |
+
+El patrón es estructural: **toda regla que de verdad frena los batacazos (Sma50, Sma200, Stop10) paga
+más de 1 pp de mediana** — cortar la cola mala corta también la recuperación — y las que respetan la
+mediana no frenan nada. `salidaSma50` es el ejemplo extremo: deja los batacazos en 0,77% (el mayor
+freno medido nunca) a cambio de una mediana NEGATIVA. Por la cláusula de cierre firmada, **la salida
+por tiempo queda validada por segunda vez** y no se cablea nada nuevo (ya vende por tiempo desde el
+28/08, `venceVentana`). Detalle del veredicto por variante en el pre-registro
+(`TRADING-HIPOTESIS-PREREGISTRO.md`, «✅ RESOLUCIÓN de H10»).
 
 ### Medición del 28/08/2026 — n = 183.093 observaciones
 
@@ -46,7 +72,7 @@ La salida por tiempo gana la mediana **en los cinco quintiles**, y en Q5 el stop
 (−4,43 pp). En este universo el caveat no se cumple. ⚠️ Corte **post-hoc**: cierra el caveat, no
 autoriza a cablear nada por sí solo.
 
-## Lo que falta por medir (H10, firmada 28/08/2026)
+## Lo que medía H10 (firmada 28/08/2026 — ✅ RESUELTA el 31/08/2026, ver arriba)
 
 H9 probó **una** distancia de trailing y **ninguna** regla de medias. Cuatro variantes nuevas,
 recolectándose desde el 28/08/2026 por el mismo cron del retrovisor (`trading-backtest`, rota por

@@ -538,6 +538,42 @@ precios de entrada (cierre IBKR del 18/07) y la ventana:
 - **Evaluación:** por estado de la tabla — ciclo completo con los cuatro campos nuevos presentes en
   ≥5.000 observaciones (no por fecha de calendario; lección del cron muerto del 19/07).
 
+## ✅ RESOLUCIÓN de H10 — ciclo completo, 31/08/2026
+
+> Corpus: **183.093 observaciones** con `ret91` y las siete salidas presentes (180.628 en `salidaSma200`,
+> que exige más historia previa para calcular la media). Veredicto emitido por el evaluador semanal
+> `trading-h10` (31/08 08:41 UTC, latido en verde) y **recomputado a mano contra `trading_backtest`**
+> en la BD real el mismo día: las siete cifras cuadran al dígito. Criterio aplicado por la puerta única
+> de `lib/trading/h10.ts::decidir` — el firmado arriba, sin retoques.
+
+### NO se cablea ninguna de las siete — la salida por TIEMPO queda validada por SEGUNDA vez
+
+Referencia (salida por tiempo, 91 días): mediana **+3,12%** · batacazos ≤ −15% **10,26%**
+(en el subconjunto de `salidaSma200`: +3,13% · 10,13%).
+
+| regla | n | mediana | batacazos | Δ mediana | Δ batacazos | por qué se rechaza |
+|---|---|---|---|---|---|---|
+| `salidaTrail25` (trailing −25%) | 183.093 | +2,74% | 12,91% | −0,38 pp | +2,65 pp | ni frena ni mejora: peor por los dos lados |
+| `salidaCoste10` (stop a coste tras +10%) | 183.093 | +1,24% | 8,87% | −1,88 pp | −1,39 pp | recorta solo 1,39 pp (freno exige ≥5) y cede mediana |
+| `salidaSma50` (cierre < SMA50) | 183.093 | −0,71% | 0,77% | −3,83 pp | −9,49 pp | el mayor freno medido nunca… cediendo 3,83 pp (tope 1) |
+| `salidaSma200` (cierre < SMA200) | 180.628 | −0,22% | 3,34% | −3,35 pp | −6,79 pp | recorta ≥5 pp pero cede 3,35 pp de mediana |
+| `salidaStop10` (stop fijo −10%) | 183.093 | +0,45% | 2,90% | −2,67 pp | −7,36 pp | recorta ≥5 pp pero cede 2,67 pp de mediana |
+| `salidaStop20` (stop fijo −20%) | 183.093 | +2,75% | 14,86% | −0,37 pp | +4,60 pp | empeora mediana Y batacazos |
+| `salidaTrail15` (trailing −15%) | 183.093 | +1,22% | 10,72% | −1,90 pp | +0,46 pp | cede mediana y sube batacazos |
+
+- **El patrón es estructural, no de una regla concreta:** TODAS las que de verdad recortan la cola mala
+  (Sma50, Sma200, Stop10) pagan más de 1 pp de mediana — cortar el batacazo corta también la
+  recuperación que la salida por tiempo captura. Y las que respetan la mediana (Trail25, Stop20) no
+  frenan nada. Con siete distancias/familias distintas medidas sobre 183 k observaciones, no queda
+  hueco razonable de «probar otra distancia» sin datos nuevos.
+- **Qué se cablea: NADA nuevo.** La cláusula de cierre firmada dice «la salida por tiempo queda validada
+  por segunda vez y se cablea ella» — y **ya está cableada desde el 28/08/2026** (`venceVentana` en el
+  paper; el stop 2·ATR se retiró entonces por H9, conservando la distancia solo como ancla del tamaño).
+  Esta resolución no requiere cambio de código: cierra la hipótesis y el debate hasta que haya datos
+  nuevos (giro de régimen vía H6, o los horizontes largos de H12).
+- Las siete variantes se siguen RECOLECTANDO (cuestan cero en el retrovisor y son el contexto de H12);
+  el cron `trading-h10` sigue corriendo como vigía de muestra de H11…H15.
+
 ## H11 — ¿De qué piscina deben salir las stats que ajustan la confianza del torneo? · firmada 2026-08-28, ANTES de mirar el resultado de las piscinas alternativas
 
 - **Origen:** Alberto, «¿ya el agente va mejorando?». Al comprobarlo salió una incoherencia INTERNA del
