@@ -122,15 +122,12 @@ model SeoProposal {
   currentDescription String
   currentOgDescription String?
   token              String    @unique
-  status             SeoStatus @default(PENDING)
+  // ⚠️ La columna real es TEXT (valores: PENDING/APPLIED/REJECTED/REVERTED). NO volver a
+  // declararla como enum: el tipo "public"."SeoStatus" no existe en la BD compartida y el
+  // cast que emite Prisma rompe el INSERT (42704) — además el botón de plataforma inserta
+  // por SQL crudo contra text. Guardián: test/regression-seo-status-text.test.ts
+  status             String    @default("PENDING")
   createdAt          DateTime  @default(now())
   appliedAt          DateTime?
   @@map("seo_proposals")
-}
-
-enum SeoStatus {
-  PENDING
-  APPLIED
-  REJECTED
-  REVERTED
 }
