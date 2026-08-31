@@ -3138,3 +3138,43 @@ variable de entorno (los despliegues de `apps/asegura` cuando exista su proyecto
 entorno de las sesiones). El valor es la cadena de conexión del proyecto ASEGURA — está en las envs
 del Vercel de la app de Manuel (`DATABASE_URL`) o en Supabase → proyecto → Connect. **Va al gestor de
 contraseñas, nunca por chat.**
+
+## 🚨 31/08/2026 — Las env vars NO viajaron con el proyecto de Vercel (hallazgo de Chrome, contrastado con el código)
+
+Chrome, buscando `DATABASE_URL` para copiarla, encontró que el proyecto `asegura` transferido tiene
+**solo 4 env vars** (`BROKER_OPS_EMAIL` + 3 `NEXT_PUBLIC_*` de Supabase). Chrome concluyó «la app no
+usa URI de Postgres» — **falso**: `src/db/index.ts` hace `process.env.DATABASE_URL!` (Drizzle) y el
+código lee ~25 variables más (`PII_ENCRYPTION_KEY` ×92 usos, `PII_LOOKUP_KEY`, `RESEND_API_KEY`/
+`RESEND_FROM`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`, `INTERNAL_API_SECRET`, `SLACK_WEBHOOK_URL`,
+`CIMA_INGESTA_*`, `CODEOSCOPIC_*`, `EMAIL_OPT_OUT_HMAC_SECRET`, `LINEAR_WEBHOOK_SECRET`…).
+
+**Lectura correcta (probable, pendiente de re-verificar en el panel):** las variables eran *shared
+env vars* del team de Manuel — esas **no viajan** en una transferencia de proyecto (el token de Blob
+tampoco: el store se queda en el team origen). Producción sigue viva porque los deployments
+existentes llevan los valores horneados (el cron #182 salió verde post-transferencia).
+
+🚨 **Consecuencia operativa: NADIE redespliega el proyecto `asegura` hasta reponer las envs** — el
+próximo deploy saldría sin `DATABASE_URL` ni claves PII y tumbaría la app en silencio. Es EL bloqueo
+del objetivo «Alberto modifica el proyecto» — antes de tocar nada, envs repuestas.
+**Vía de reposición:** Manuel es Member del team → él mismo las pega en Settings → Environment
+Variables del proyecto (ningún valor pasa por chats ni por terceros). Las claves PII van ADEMÁS al
+gestor de contraseñas (eso ya estaba en su lista).
+
+⚠️ Esto **corrige la sección anterior**: el valor de `ASEGURA_DATABASE_URL` NO está en las envs del
+Vercel de Manuel (no hay `DATABASE_URL` ahí). Y mejor así: en vez de reutilizar su credencial,
+**se acuña un rol propio** en el proyecto ASEGURA — patrón de la casa «cada app, su rol»:
+`central_asegura`, `login` + `BYPASSRLS` (las 86 políticas RLS resuelven por `auth.uid()`, que en
+conexión directa es NULL → sin bypass se verían 0 filas), **solo SELECT de momento** (el dashboard
+solo lee; se amplía cuando se escriba). Lo ejecuta Alberto en el SQL Editor del proyecto (como
+`postgres`); la contraseña la teclea él y no pasa por ningún chat.
+
+## 🏗️ 31/08/2026 — Proyecto Vercel `central-asegura` creado (pendiente de verificar)
+
+El proyecto Vercel de `apps/asegura` (monorepo) **no existía** — el llamado `asegura` del team es el
+de Manuel (repo `albertosuarezgutierrez-gif/asegura`). Creado por el conector:
+**`central-asegura`** (id `prj_CbAXljUAH82YgCSOM4UZPqVAe4YU`), repo `central`, Root Directory
+`apps/asegura`, sin deploy inicial. ⚠️ El conector no está autorizado sobre el proyecto nuevo, así
+que la conexión Git quedó **sin verificar** — pendiente de comprobar en el panel (y de añadir
+`central-asegura` y `asegura` al Manage Access del conector). El `vercel.json` de la app ya lleva
+`ignoreCommand` con `--sin-previews`, así que colgarlo del repo no dispara builds de más.
+Envs a poner ahí: `ASEGURA_DATABASE_URL` (el rol nuevo), `ASEGURA_SESSION_SECRET`.
