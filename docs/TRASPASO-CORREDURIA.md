@@ -3016,3 +3016,23 @@ mover) · repo del adaptador · Blob · claves PII al gestor.
 | **N8** | **Fase 4 — CIMA**: apuntar `CIMA_ADAPTER_URL` al adaptador ya movido a nuestra org de Fly (no se toca el adaptador), decidir si se encienden REC/SIN/CEF (nunca encendidos), drenar la cola (128), investigar Mapfre (`ficherosDisponibles` C0058), y resolver el solape con `/correduria` de plataforma (banco=cifra, CIMA=contraste, ya decidido) | N4 + Fly movido |
 
 **El primer commit de trabajo real puede ser HOY: N1 y N2 no dependen de nadie.**
+
+## 🔎 31/08/2026 — Aclarado el falso «Supabase ya está dentro»: era el team de VERCEL
+
+Alberto dio por transferido el proyecto de Supabase («está en PISO y dentro ASEGURA»). Verificado con
+el navegador sobre la pantalla de autorización de Supabase: **no existe ninguna org «PISO» en
+Supabase** — las orgs disponibles son la personal de Alberto y **`LOOR` (la de Manuel)**, donde
+Alberto es miembro. «PISO» era el team de **Vercel** («Pisos turisticos' projects»), otra plataforma.
+➡️ **El proyecto ASEGURA de Supabase SIGUE en la org de Manuel, sin transferir** — coherente con que
+la transferencia pidiera permiso del Owner. El punto 1 de la lista de Manuel sigue abierto.
+
+**Camino puente decidido mientras Manuel no transfiera:** Alberto, como miembro de LOOR, puede crear
+un conector de Supabase autorizado contra **LOOR** — eso da a las sesiones acceso al proyecto ASEGURA
+YA, sin esperar a nadie. Matices verificados en la pantalla de autorización:
+- **No hay opción read-only**: los scopes son fijos (BD/funciones/entorno/proyectos en LECTURA-ESCRITURA).
+  → **Disciplina de uso obligatoria hasta que el proyecto sea de Alberto: SOLO consultas de lectura**
+  (SELECT / catálogos). Nada de DDL, migraciones ni escrituras contra la org de otro.
+- El conector verá la org de Manuel entera, no solo ASEGURA. Mismo marco de confianza ya decidido
+  por Alberto en Vercel/Fly.
+- Esto NO sustituye la transferencia (los backups siguen dependiendo del plan de la org de Manuel):
+  es un puente para trabajar N3 mientras tanto.
