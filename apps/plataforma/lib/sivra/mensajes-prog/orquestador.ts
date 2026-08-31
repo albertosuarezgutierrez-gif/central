@@ -32,6 +32,7 @@ import { renderPlantilla, renderAsunto, type TipoMensaje, type DatosPlantilla } 
 import { traducirMensaje } from './traducir'
 import { yaLoMandoSmoobu, type MsgHilo } from './equivalentes-smoobu'
 import { ACCESO, codigosQueFaltan, type CodigosAcceso } from '../acceso'
+import { pinsPorReserva, elegirCodigoPortal } from './codigo-portal'
 
 const AGENTE = 'sivra_mensajes_prog'
 const MAX_INTENTOS = 5
@@ -62,6 +63,25 @@ async function cargarCodigos(): Promise<Record<string, CodigosAcceso>> {
   const out: Record<string, CodigosAcceso> = {}
   for (const r of rows) out[r.property_id] = { portal: r.codigo_portal, caja: r.codigo_caja, wifiSsid: r.wifi_ssid, wifiPass: r.wifi_password }
   return out
+}
+
+// PIN por reserva de la cerradura Tuya (`domotica_acceso_pin`), SOLO los que están vivos AHORA.
+//
+// Tres filtros, los tres necesarios: `estado='activo'` (un PIN en error/borrado es un «no hay», nunca
+// un código a medias), `pin` no vacío (el modo offline puede dejar la fila creada antes de conocer el
+// código) y la ventana `valido_hasta > now()` (un PIN caducado abre tan poco como uno inventado).
+// Si la consulta REVIENTA no se devuelve un mapa vacío en silencio: eso se leería aguas abajo como
+// «esta reserva no tiene PIN» y mandaría el maestro. Se propaga y el llamador lo declara.
+async function cargarPinsReserva(bookingIds: string[]): Promise<Map<string, string>> {
+  if (!bookingIds.length) return new Map()
+  const rows = await prisma.$queryRaw<{ reserva_ref: string; pin: string | null }[]>(Prisma.sql`
+    SELECT reserva_ref, pin FROM domotica_acceso_pin
+    WHERE estado = 'activo'
+      AND pin IS NOT NULL AND btrim(pin) <> ''
+      AND valido_hasta > now()
+      AND reserva_ref IN (${Prisma.join(bookingIds)})
+  `)
+  return pinsPorReserva(rows.map(r => ({ reservaRef: String(r.reserva_ref), pin: r.pin })))
 }
 
 async function cargarPisosActivos(): Promise<Set<string>> {
@@ -161,10 +181,15 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
   })
   res.reservas = reservas.length
 
-  const [codigos, activos, yaHechosPorReserva] = await Promise.all([
+  const [codigos, activos, yaHechosPorReserva, pinsRes] = await Promise.all([
     cargarCodigos().catch(() => ({} as Record<string, CodigosAcceso>)),
     cargarPisosActivos(),
     cargarYaHechos(reservas.map(b => String(b.id))),
+    cargarPinsReserva(reservas.map(b => String(b.id))).catch((e: unknown) => {
+      // No se colapsa a «no hay PIN»: se dice, y el hito sigue con el maestro (que abre igual).
+      res.detalle.push(`no se pudo leer el PIN por reserva (${String((e as Error)?.message || e).slice(0, 80)}) — se usa el código maestro`)
+      return new Map<string, string>()
+    }),
   ])
 
   const avisosSombra: string[] = []
@@ -199,7 +224,7 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
     const horario = horarioPiso(propertyId, String(b?.['check-in'] || '').trim(), String(b?.['check-out'] || '').trim())
     const guestAppUrl = String(b?.['guest-app-url'] || '')
     const idiomaReserva = String(b?.language || '').trim().toLowerCase().slice(0, 2)
-    const cods = codigos[propertyId] || {}
+    const cods: CodigosAcceso = { ...(codigos[propertyId] || {}), pinReserva: pinsRes.get(bookingId) ?? null }
 
     for (const deb of debidos) {
       if (Date.now() > deadline) break
@@ -246,7 +271,11 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
         lateOfertaOk: late,
       }
       const cuerpoEs = renderPlantilla(deb.tipo, datos)
-      const faltan = (deb.tipo === 'acceso' || deb.tipo === 'vispera_llegada') ? codigosQueFaltan(propertyId, cods) : []
+      // Qué código lleva el mensaje. Se anota en el parte porque el maestro y el PIN de la reserva son
+      // indistinguibles leyendo el texto, y son cosas MUY distintas: uno caduca con la estancia y el otro no.
+      const llevaCodigo = deb.tipo === 'acceso' || deb.tipo === 'vispera_llegada'
+      const elegido = llevaCodigo ? elegirCodigoPortal({ pinReserva: cods.pinReserva, maestro: cods.portal }) : null
+      const faltan = llevaCodigo ? codigosQueFaltan(propertyId, cods) : []
       if (faltan.length) avisos.push(`🚨 ${ACCESO[propertyId].nombre}: falta en BD ${faltan.join(' y ')} (sivra_codigos_acceso) — el mensaje «${deb.tipo}» de la reserva ${bookingId} sale declarando el hueco.`)
 
       const { texto, idioma } = activo && idiomaReserva && idiomaReserva !== 'es'
@@ -266,6 +295,7 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
         avisosSombra.push(
           `🕶️ <b>SOMBRA</b> · <b>${escapeHtml(ACCESO[propertyId].nombre)}</b> · ${escapeHtml(datos.guestName || '¿?')} (reserva ${bookingId})` +
           `\nHito: <b>${deb.tipo}</b>${idiomaReserva && idiomaReserva !== 'es' ? ` · idioma de la reserva: ${idiomaReserva.toUpperCase()} (se traduciría al activar)` : ''}` +
+          (elegido ? `\nCódigo del portal: <b>${elegido.origen === 'reserva' ? 'PIN de ESTA reserva (Tuya)' : elegido.origen === 'maestro' ? 'código MAESTRO (esta reserva no tiene PIN propio)' : 'ninguno — el texto declara el hueco'}</b>` : '') +
           `\n\n${escapeHtml(texto.length > 2600 ? texto.slice(0, 2600) + '…' : texto)}`,
         )
         continue
@@ -279,7 +309,16 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
           UPDATE mensajes_programados SET estado = 'enviado', enviado_at = now(), intentos = intentos + 1
           WHERE booking_id = ${bookingId} AND tipo = ${deb.tipo} AND fecha_objetivo = ${deb.fechaObjetivo}::date
         `)
-        avisos.push(`🤖 Enviado «${deb.tipo}» a ${datos.guestName || '¿?'} (${ACCESO[propertyId].nombre}, reserva ${bookingId})${idioma !== 'es' ? ` en ${idioma.toUpperCase()}` : ''}.`)
+        avisos.push(`🤖 Enviado «${deb.tipo}» a ${datos.guestName || '¿?'} (${ACCESO[propertyId].nombre}, reserva ${bookingId})${idioma !== 'es' ? ` en ${idioma.toUpperCase()}` : ''}${elegido?.origen === 'reserva' ? ' · con su PIN de reserva' : ''}.`)
+        // El PIN de la reserva ya está en manos del huésped: el panel de domótica lo daba por NO
+        // entregado porque su único repartidor era `entregar()` del programador (que con entrega
+        // 'aviso' solo escribe a Alberto). Best-effort: un fallo aquí no invalida el envío.
+        if (elegido?.origen === 'reserva') {
+          await prisma.$executeRaw(Prisma.sql`
+            UPDATE domotica_acceso_pin SET entregado = true, updated_at = now()
+            WHERE reserva_ref = ${bookingId} AND estado = 'activo' AND pin = ${elegido.codigo}
+          `).catch(() => 0)
+        }
       } else {
         res.fallos++
         await prisma.$executeRaw(Prisma.sql`
