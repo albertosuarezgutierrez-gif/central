@@ -2733,3 +2733,38 @@ del paso 0 es obligatorio ANTES de mover nada.**
 
 **Consecuencia para la Fase 4:** «encender CIMA completo» incluye decidir si se activan REC/SIN/CEF —
 la correduría hoy solo ingiere pólizas. Los recibos y siniestros de las compañías NUNCA han entrado.
+
+## 🔎 31/08/2026 — Verificación en el panel: Vercel CONFIRMADO, y el `CRON_SECRET` ya estaba
+
+Sesión de navegador sobre el panel real (agente Chrome), con tres resultados que corrigen a este
+documento y uno que corrige a Manuel:
+
+**1. ✅ El proyecto Vercel `asegura` SÍ está en el team de Alberto** (`pisos-turisticos-projects`),
+con `app.grupoasegura.com` válido y respondiendo 200. La contradicción con el 404 del MCP queda
+explicada: **el conector MCP de Vercel está scoped a los 5 proyectos que existían al conectarlo** y no
+ve los añadidos después. ➡️ Tarea de higiene: ampliar el acceso del conector al proyecto `asegura`
+para que las sesiones puedan verlo. Último deploy de producción: 12-ago, por `manuelsuarez` — **no ha
+habido deploy desde la transferencia**.
+
+**2. 🔴 El `CRON_SECRET` de Actions NO faltaba: el secreto VIAJÓ con el repo.** Está en los
+Repository secrets, actualizado hace ~2 meses — **más reciente que la env de Vercel (1-may)**. Esto
+falsa empíricamente el aviso de Manuel («no viaja con el repo»): en una TRANSFERENCIA los secrets de
+Actions sí viajan (en un fork, no). Consecuencia: sobrescribirlo con el valor de Vercel podría
+DESincronizar en la dirección contraria. **Decisión: primero `dry_run=true` con el secreto que hay**
+— el 200/401 dice si coinciden y en qué dirección sincronizar si no. También viajaron:
+`FRANKFURT_DATABASE_URL`, `INTERNAL_API_SECRET`, `SLACK_CIMA_ALERTS_WEBHOOK_URL`, `SLACK_WEBHOOK_URL`,
+`VERCEL_PROTECTION_BYPASS_SECRET`, `VERCEL_TOKEN` (nombres; los valores no se han mirado).
+
+**3. Corrección al propio plan: `dry_run` NO es «sin efectos».** Leído el handler: escribe filas de
+auditoría en `operational_events` (`cima_pull_started`/`completed`, Art. 30) y emite a PostHog,
+también en dry_run. Lo que no hace es **persistir datos CIMA ni confirmar la descarga a TIREA**. La
+garantía vive en `runCimaPull` (servidor), no en el YAML — el workflow solo añade `?dryRun=1`.
+
+**4. 🔒 Hallazgo de seguridad:** la env `CRON_SECRET` de Vercel está guardada como tipo
+**«Config» (revelable en claro)**, no como «Sensitive» — y es el bearer que protege un endpoint de
+ingesta en producción. Pendiente: cambiarla a Sensitive **después** de confirmar la sincronía
+(cambiarla de tipo obliga a re-guardarla; no antes del verde).
+
+**5. ⚠️ Trampa operativa del navegador:** la traducción automática de Chrome renombraba visualmente
+`CRON_SECRET` → «CRON_SECRETO» en la lista de envs. Copiar nombres de esa lista con traducción activa
+crea secretos mal llamados. Desactivarla en `vercel.com` y `github.com`.
