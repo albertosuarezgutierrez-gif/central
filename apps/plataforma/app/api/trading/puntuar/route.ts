@@ -6,7 +6,7 @@ import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { PISCINAS, PISCINA_VIVA, enPiscina } from '@/lib/trading/piscinas'
 import { puntuarTesis, agregarStats, resultadoDeFila, venceVentana, cerrar, atribuirPorEvento, cruzaEvento, finDeVentana, resumenAtribucion } from '@central/module-trading'
 import type { Tesis, EstadoEarnings } from '@central/module-trading'
-import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, HUERFANA_GRACIA_DIAS, HUERFANA_MAX_DIAS, DIAS_REFERENCIA_MAX, type ParDiferido, type HuerfanaNoResuelta } from '@/lib/trading/precios-guardia'
+import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, ventanaHastaApertura, HUERFANA_GRACIA_DIAS, HUERFANA_MAX_DIAS, DIAS_REFERENCIA_MAX, type ParDiferido, type HuerfanaNoResuelta } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 import { retornoBench, SIMBOLO_BENCH } from '@/lib/trading/alfa'
 import { tgSend } from '@/lib/telegram'
@@ -205,8 +205,7 @@ export async function POST(req: NextRequest) {
   const huerfanasSinResolver: HuerfanaNoResuelta[] = []
   if (huerfanas.length > 0) {
     const simbolos = [...new Set(huerfanas.map(x => x.t.simbolo))]
-    const masVieja = huerfanas.map(x => x.fecha).sort()[0]
-    const ventanaDias = diasEntre(masVieja, hoy) + MARGEN_VENTANA_HUERFANAS
+    const ventanaDias = ventanaHastaApertura(huerfanas.map(x => x.fecha), hoy, MARGEN_VENTANA_HUERFANAS)
     const { series } = await cierresDeContraste(simbolos, hoy, { ventanaDias, presupuestoMs: PRESUPUESTO_HUERFANAS_MS })
     for (const { t, fecha, vence } of huerfanas) {
       const v = juzgarHuerfana({ simbolo: t.simbolo, fecha, vence, precioRef: t.precioRef }, series[t.simbolo] ?? [])
@@ -386,8 +385,11 @@ export async function POST(req: NextRequest) {
   let seriesCierre: Record<string, typeof contraste.series[string]> = {}
   const atrasadas = posVencidas.filter(x => x.vence! < hoy)
   if (atrasadas.length > 0) {
-    const masVieja = atrasadas.map(x => x.vence!).sort()[0]
-    const ventanaDias = diasEntre(masVieja, hoy) + MARGEN_VENTANA_HUERFANAS
+    // `ventanaHastaApertura` cuenta desde `abierta` (apertura de la posición), no desde `vence`: el
+    // ancla de `juzgarHuerfana` exige una sesión <= `abierta`, y contar desde `vence` (como se hacía
+    // antes) deja la ventana corta por `horizonteDias − MARGEN_VENTANA_HUERFANAS` días SIEMPRE, sin que
+    // reintentar lo arregle — caso real: MSFT, abierta 04/08, vencida 14/08, 17 días sin poder cerrarse.
+    const ventanaDias = ventanaHastaApertura(atrasadas.map(x => x.abierta), hoy, MARGEN_VENTANA_HUERFANAS)
     const r = await cierresDeContraste([...new Set(atrasadas.map(x => x.p.simbolo))], hoy, { ventanaDias, presupuestoMs: PRESUPUESTO_HUERFANAS_MS })
     seriesCierre = r.series
   }
