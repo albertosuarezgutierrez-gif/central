@@ -2870,3 +2870,66 @@ Primera parte del mapa, leída del código transferido (no de resúmenes). `src/
 - La rama financiera de CIMA (`cuenta_efectivo`) **no cuelga de póliza** y no lleva PII: son las
   comisiones por compañía y periodo — el dato que algún día se cruzará con `/correduria` de plataforma.
 - `NO hay relations()` de Drizzle: la Relational Query API no está en uso; las consultas son SQL/select explícito.
+
+# 🗂️ 31/08/2026 — EL MAPA (2/3): superficie, auth y el grafo para portar
+
+## Las cuatro zonas de la app
+
+| Zona | Qué es | Auth |
+|---|---|---|
+| Web pública + cotizador | Landing, legales, cotizador anónimo (TTL 7 días) | Ninguna / self-gating |
+| Portal de cliente `(portal)` | 8 páginas: pólizas, bienes, ofertas, mensajes, perfil, RGPD | `loadPortalSession()` — rol `usuario`, beta cerrada por `PORTAL_INVITE_ONLY` (default CERRADO) |
+| Intranet `(dashboard)` | Cuadro de mando, clientes, pólizas, cotizaciones, leads, oportunidades, gestiones, siniestros, finanzas, salud-CIMA | `requireRole("admin","corredor")` repetido EN CADA action (defensa en profundidad) + **gate MFA TOTP** |
+| APIs | **5 esquemas de auth distintos**: sesión Supabase · Bearer `CRON_SECRET` · header `x-internal-secret` (11 endpoints `/api/internal/*`) · firmas HMAC de terceros (Meta/Codeoscopic/Linear) · público con rate-limit | — |
+
+## La puerta de auth — y la estrategia barata para re-plataformarla
+
+Todo pasa por **`src/lib/auth.ts` (172 líneas, 6 funciones)**: `getAuthUser` → `getCurrentUser` →
+`requireUser` / `requireRole` / `getCorreduriaId` / `loadPortalSession`. `correduria_id` es un campo
+de la fila `usuarios`, **no un claim del JWT**, y cada query lo recibe como argumento explícito.
+
+**Números medidos:** 102 ficheros importan `@/lib/auth`, pero su cierre transitivo son solo **11
+ficheros** — está bien aislada. La reescritura real (middleware de Supabase, SDK, `/api/auth/*`,
+magic link, **MFA TOTP que no tiene equivalente directo**) son **~20-25 ficheros**; los otros ~100
+solo necesitan que las 6 firmas se mantengan.
+
+➡️ **Estrategia elegida para cuando toque: conservar la API de `lib/auth.ts` intacta y cambiarle las
+tripas** (nuestro `asegura_session` por dentro de `getAuthUser`). Los 102 call sites ni se tocan.
+
+## Feature flags — inventario completo (22)
+
+Canónicas con `parseBooleanFlag` (fail-closed): `AUTO_SUBMIT_ENABLED` · `AUTO_SUBMIT_GLOBAL_KILL_SWITCH`
+(⚠️ **default TRUE** = kill activo) · `OFERTAS_AUTOMATICAS_ENABLED` · `BROKER_SUBMIT_ENABLED` ·
+`BROKER_INITIATED_EMISSION_ENABLED` · `CODEOSCOPIC_OPENAPI_READY` · `CODEOSCOPIC_PRODUCT_OPTIONS_ENABLED`
+· `CODEOSCOPIC_VENDOR_REASON_CAPTURE` · `IBAN_TRANSMISSION_ENABLED`. Con parseo propio:
+`SELF_SIGNUP_ENABLED` · `PORTAL_INVITE_ONLY` (⚠️ default = cerrado) · `DESIGN_LAB_ENABLED` ·
+`CIMA_INGESTA_ENABLED` + `_SIN_` + `_REC_` + `_CEF_` · `WHATSAPP_AI_BOT_ENABLED` +
+`WHATSAPP_GUARDRAIL_REPLY_ENABLED` + `WHATSAPP_REQUIRE_SIGNATURE` · `NEXT_PUBLIC_BROKER_MULTIRAMO_ENABLED`
+(CSV de ramos) · `NON_AUTO_EMISSION_ENABLED` (CSV) · `RATE_LIMIT_BACKEND`.
+
+## El grafo para portar — medido, no estimado
+
+- **Cartera en lectura (nuestra Fase 1): el mínimo son 24 ficheros** (21 de `lib`): el schema, el
+  cifrado (`crypto/field-encryption` + `clientes/{pii,blind-index}`), y
+  `correduria/{clientes,polizas,pagination}` con `correduriaId` inyectado. La UI completa infla a 164
+  porque la ficha arrastra el mundo comercial — **las fichas se reescriben, no se portan** (los
+  agregadores de presentación tienen fan-out 21-23).
+- ⚠️ **Trampa concreta:** `poliza-ficha.ts` hace `Promise.all` de 8 fuentes y arrastra TODO
+  `lib/correduria`. Para lectura ligera, usar `getPolizaByIdForCorreduria` de `polizas.ts` directo.
+- **Clientes y pólizas no son separables** (`clientes.ts` importa `POLIZA_ESTADOS_VIGENTES` de
+  `polizas.ts`), y la intranet depende del portal (`cliente-ficha.ts` → `lib/portal/bienes`).
+- **Portal de cliente: 74 ficheros** (46 de `lib`); en solo-lectura, ~20-25. Las fugas: aceptar una
+  oferta dispara el motor de emisión y de emails — **cortar por `/portal/oferta/[id]` y
+  `aceptar-precio` deja el portal en lectura limpio**.
+- **God module real: `db/schema.ts`** (fan-in 142, un solo fichero con TODO). `lib/auth` NO lo es
+  (fan-in 102 pero cierre de 11). `lib/dashboard/*` (10 helpers puros sin BD) es copia-pega gratis.
+
+## Crons de Vercel — 2, y uno son tres disfrazados
+
+`overdue-digest` (L-V 7:00) es un bot Linear→Slack, **descartable para el port**.
+`vencimientos-detector` (6:00) apila TRES trabajos por el límite de 2 crons del plan Hobby: polling
+de Codeoscopic (siempre), limpieza de cotizaciones anónimas (siempre), y el workflow de vencimientos
+30/15/7 (gateado por `OFERTAS_AUTOMATICAS_ENABLED`, hoy OFF). **Al portarlo, separarlos en tres.**
+
+Drift documental detectado: `docs/roles-rutas-matrix.md` habla de un rol `cliente` que el código no
+tiene (`admin|corredor|usuario`).
