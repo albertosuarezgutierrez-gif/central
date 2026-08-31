@@ -642,8 +642,9 @@ Notas de deriva detectadas de paso:
 
 ## trading-analista (IBKR, paper) — trigger CREADO y corriendo de punta a punta (actualizado 20/07/2026)
 
-Agente de inversión asistida (Fase 1 técnica cerrada, Fase B por SELECCIÓN en marcha — SOLO paper
-trading, cero ejecución real). **Copiloto desde 15/08/2026 (PR #1435):** en sesión interactiva y solo a
+Agente de inversión asistida (Fase 1 técnica cerrada, Fase B por SELECCIÓN en marcha — **cero
+ejecución por parte del agente**, que NO es lo mismo que «solo paper»: el **Tramo 1 de la escalera,
+1.000€ REALES, está abierto en CVX desde el 25/08/2026**, confirmado a mano por Alberto). **Copiloto desde 15/08/2026 (PR #1435):** en sesión interactiva y solo a
 petición de Alberto puede preparar instrucciones de orden (borradores que él confirma en IBKR) y alertas;
 la Rutina nocturna sigue siendo 100% lectura y jamás crea instrucciones — ver
 `.claude/skills/trading-analista/references/copiloto-ordenes.md`. **📈 Desde el 18/08/2026 (PR #1476)** esa misma pasada alimenta la curva de evolución de la cartera real: cada `POST /api/trading/cartera` anota un punto por día y divisa en `trading_cartera_real_track` (única fuente del gráfico; un día sin pasada = hueco real, y `trackError` se canta en el resumen). Skill: `.claude/skills/trading-analista/SKILL.md`. Compone el paquete

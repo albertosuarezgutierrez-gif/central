@@ -32,6 +32,17 @@
 
 ---
 
+### 🚨 (31/08/2026) «El satélite está en paper» era FALSO desde el 25/08 — la skill de trading mentía sobre la cartera real
+Alberto preguntó por qué la pasada no compró NFLX/PLTR/SQM en su cartera real de 1.000€ y se le contestó
+que **el satélite real «no existe todavía»**. Es falso: el **Tramo 1 (1.000€) está abierto en CVX desde el
+25/08** (verificado en IBKR: 6 acc., medio 200,04$, hoy 206,29$, +37,52$ latente). Causa: `copiloto-ordenes.md`
+decía «satélite HOY EN PAPER» y `SKILL.md` «operativa 100% simulada en BD» — frases de antes del 24/08 que
+nadie actualizó al abrir el tramo. **Corregidas las 5 fuentes** (SKILL.md + descripción, copiloto-ordenes,
+infra-forward-radar «Puerta a Fase 2», SKILLS.md, RUTINAS-PROGRAMADAS.md) con la distinción que faltaba:
+**«el agente no ejecuta» ≠ «no hay dinero real»**, y las señales nuevas van a paper porque **el tramo está
+CONSUMIDO**, no porque el sistema sea solo-paper. **NO se metieron las 3 señales:** 15.136,10$ ≈ 13.031,46€
+(39,7% del NAV) contra 381,60€ de efectivo, techo de 6.000€ y Tramo 2 sin cumplir (~15/11). PR pendiente.
+
 ### 🔑 (31/08/2026) House Sevillana YA ENVÍA · el PIN por reserva sustituye al maestro · salida flexible (PRs #1906, #1908)
 - **House Sevillana ACTIVADA** (`mensajes_prog_pisos.activo=true`, 21:45). Hoy no sale nada: los dos
   primeros hitos de la reserva viva ya estaban reclamados en sombra, así que el 1er envío real es el
