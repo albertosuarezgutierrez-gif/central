@@ -16,6 +16,8 @@
 // Las fotos viven hoy en el CDN público de Smoobu (probado sin token: 200 image/jpeg). Si algún
 // día se deja Smoobu, hay que copiarlas antes a Supabase Storage — dependencia anotada en el plan.
 
+import { elegirCodigoPortal } from './mensajes-prog/codigo-portal.ts'
+
 export type AccesoPiso = {
   nombre: string
   /** Dirección postal del PISO, en texto plano. */
@@ -39,6 +41,7 @@ export type AccesoPiso = {
   /** Dónde tirar la basura (texto + enlace si lo hay). */
   basura: string
 }
+
 
 const SMOOBU_IMG = 'https://login.smoobu.com/upload/images'
 const VIDEO_CAJA = 'https://www.youtube.com/watch?v=kQl1TzYzqsY'
@@ -172,7 +175,13 @@ export const ACCESO: Record<string, AccesoPiso> = {
 }
 
 export type CodigosAcceso = {
+  /** Código MAESTRO del portal (fijo, no caduca). Respaldo cuando la reserva no tiene PIN propio. */
   portal?: string | null
+  /**
+   * PIN de ESTA reserva en la cerradura Tuya (`domotica_acceso_pin`), si lo hay y está vivo.
+   * Manda sobre `portal`: caduca solo al terminar la estancia. Ver `mensajes-prog/codigo-portal.ts`.
+   */
+  pinReserva?: string | null
   caja?: string | null
   wifiSsid?: string | null
   wifiPass?: string | null
@@ -185,7 +194,7 @@ export function codigosQueFaltan(propertyId: string, codigos: CodigosAcceso): st
   if (!piso) return []
   const texto = piso.pasos.join('\n')
   const faltan: string[] = []
-  if (texto.includes('{PORTAL}') && !codigos.portal) faltan.push('código del portal')
+  if (texto.includes('{PORTAL}') && !codigos.portal && !codigos.pinReserva) faltan.push('código del portal')
   if (texto.includes('{CAJA}') && !codigos.caja) faltan.push('código de la caja de llaves')
   return faltan
 }
@@ -204,9 +213,10 @@ export function bloqueAcceso(
   const piso = ACCESO[propertyId]
   if (!piso) return ''
   const hueco = opts.conCodigos ? '(te lo confirmamos hoy mismo)' : '(el código te llegará la víspera de tu llegada)'
+  const elegido = elegirCodigoPortal({ pinReserva: codigos.pinReserva, maestro: codigos.portal })
   const rellenar = (s: string) =>
     s
-      .replaceAll('{PORTAL}', opts.conCodigos && codigos.portal ? codigos.portal : hueco)
+      .replaceAll('{PORTAL}', opts.conCodigos && elegido.codigo ? elegido.codigo : hueco)
       .replaceAll('{CAJA}', opts.conCodigos && codigos.caja ? codigos.caja : hueco)
 
   const lineas: string[] = []
@@ -220,6 +230,9 @@ export function bloqueAcceso(
   lineas.push('')
   lineas.push('CÓMO ENTRAR:')
   piso.pasos.forEach((p, i) => lineas.push(`${i + 1}. ${rellenar(p)}`))
+  // El PIN por reserva se ANUNCIA como tal: que caduque es una ventaja para el huésped (nadie más
+  // tiene su código) y le explica por qué no le sirve el de una estancia anterior.
+  if (opts.conCodigos && elegido.nota) lineas.push(`🔐 ${elegido.nota}`)
   for (const a of piso.avisos) lineas.push(`⚠️ ${a}`)
   if (opts.conCodigos && codigos.wifiSsid) {
     lineas.push('')
