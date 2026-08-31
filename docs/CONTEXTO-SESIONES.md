@@ -32,6 +32,17 @@
 
 ---
 
+### 🗂️ (31/08/2026) Correduría: MAPA completo del repo heredado + primer paquete portado
+
+3 agentes leyeron el repo `asegura` entero (1.174 TS). El mapa (3 partes + síntesis N1-N8) en
+`docs/TRASPASO-CORREDURIA.md`. Claves: **el adaptador CIMA se hereda, no se reescribe** (WS-Security
+atípico, JAR recompilado, dual-JDK); cartera en lectura = **24 ficheros** (fichas se reescriben);
+auth se re-plataforma conservando las 6 firmas de `lib/auth.ts` (102 call sites intactos); cifrado
+portable a coste cero. ✅ **N1 HECHO**: `packages/module-seguros-pii` (field-encryption + blind-index,
+36/36 tests, contrato de sincronía con asegura@b620251). 🔴 Hallado: ADR-009:183 tiene una contraseña
+de homologación en claro → purga pendiente (N2). Guardianes 83/83. Gate (b) superado (cron CIMA verde
+bajo Alberto); Fly invitación enviada. Decisión: sin fecha de corte, se va haciendo.
+
 ### ✅ (31/08/2026) Correduría: Vercel transferido y CONFIRMADO; el cron de CIMA en verde bajo Alberto
 
 Semana de traspaso relámpago: repo `asegura` transferido y aceptado (30/08, 20:21); proyecto Vercel
