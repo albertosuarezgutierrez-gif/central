@@ -32,6 +32,30 @@
 
 ---
 
+### 🔑 (31/08/2026) House Sevillana YA ENVÍA · el PIN por reserva sustituye al maestro · salida flexible (PRs #1906, #1908)
+- **House Sevillana ACTIVADA** (`mensajes_prog_pisos.activo=true`, 21:45). Hoy no sale nada: los dos
+  primeros hitos de la reserva viva ya estaban reclamados en sombra, así que el 1er envío real es el
+  3/09 09:00 (víspera con códigos). Alberto apaga las plantillas de Smoobu de House; si se le olvida,
+  el chequeo de equivalencia evita el duplicado y le dice cuál apagar. Faltan los otros 3 pisos.
+- **PR #1906 — el mensaje manda el PIN de ESA reserva, no el maestro.** Los teclados de Socorro y
+  Bustos Tavera son cerraduras Tuya y `domotica_acceso_pin` ya guarda un PIN por reserva: repartir el
+  maestro teniendo uno temporal a medida era lo contrario de «al checkout se le quita el acceso».
+  `elegirCodigoPortal` (PIN > maestro > declarar el hueco) + `pinsPorReserva`; con DOS códigos vivos
+  distintos no se manda ninguno (el hueco `{PORTAL}` es UNO). La nota de caducidad **solo** sale con
+  el PIN: el maestro no caduca y prometerlo sería mentira. Al enviarse marca `entregado`.
+  Mismo PR: indicaciones corregidas contra las FOTOS de los 4 pisos — **Bustos Tavera tiene DOS cajas
+  GRIFEMA idénticas** (Luxury = ABAJO, Reform = ARRIBA; antes, 50% de abrir la del vecino), y en House
+  el código es solo para el 1er acceso: dentro hay pastilla + llave de la cancela.
+- **PR #1908 — entrada ESTRICTA / salida FLEXIBLE** (regla de Alberto): `margenSalidaMin` 0→120 min
+  (muere a las 13:00, con 2 h de colchón antes del check-in de las 15:00); entrada intacta, y una
+  entrada anticipada se concede a mano. Un PIN conserva PARA SIEMPRE su ventana, así que
+  `desajustesVentana` los DECLARA (dedupe diario) y el botón «🔄 ventana» los repone con el MISMO
+  código: no se reponen solos porque Tuya no sabe alargar un PIN —hay que borrar y recrear— y si la
+  recreación falla el huésped se queda con un código muerto (por eso queda en `estado='error'`, que
+  hace caer el mensaje al maestro, nunca en `'activo'`).
+- **Pendiente:** renovar IoT Core en Tuya (sin él Luxury/Reform no emiten PIN y siguen con el maestro);
+  reponer la ventana de los 2 PIN vivos de House; activar los otros 3 pisos.
+
 ### 📬 (31/08/2026) Mensajes programados a huéspedes NUESTROS — sustituto de los automáticos de Smoobu (MERGEADO, en sombra)
 - Análisis sobre 8 hilos reales: Smoobu manda 7 automáticos solo-en-español, promete el parking
   fantasma de S. Juan de la Palma, duplica en última hora y esconde lo crítico tras un enlace.
