@@ -37,6 +37,24 @@ por tiempo queda validada por segunda vez** y no se cablea nada nuevo (ya vende 
 28/08, `venceVentana`). Detalle del veredicto por variante en el pre-registro
 (`TRADING-HIPOTESIS-PREREGISTRO.md`, «✅ RESOLUCIÓN de H10»).
 
+### Medición del 31/08/2026 — H12 (horizontes largos): mediana mejor, cola peor → ✅ RESUELTA, no se cablea
+
+Primer (y resolutivo) corte de los horizontes largos, sobre las observaciones con ambos retornos:
+
+| horizonte | n | mediana | Δ mediana vs 91 d | p25 | p25 de ret91 (misma muestra) |
+|---|---|---|---|---|---|
+| **91 días (vigente)** | — | +3,12% | — | −5,79% / −5,85% | — |
+| 182 días | 179.409 | +5,71% | **+2,59 pp** | −6,88% | −5,85% |
+| 364 días | 172.116 | +10,86% | **+7,74 pp** | −7,47% | −5,79% |
+
+Los dos horizontes cumplen la mitad (a) del criterio firmado (mediana +2 pp) **y los dos suspenden la
+(b)**: el percentil 25 empeora — aguantar más gana mediana pagándolo con la cola mala, que es
+exactamente lo que la condición existía para no comprar. Y el condicional «aguantar solo si la
+tendencia sigue viva» tampoco paga: mediana de `ret364−ret91` = +8,80% con la SMA50 viva al salir
+(n=100.015) vs +7,54% sin ella (n=72.101) → separación **+1,26 pp**, contra los ≥5 pp exigidos.
+**La salida por tiempo a 91 días queda validada por tercera vez** (H9 → H10 → H12). Veredicto
+completo en el pre-registro («✅ RESOLUCIÓN de H11…H15»).
+
 ### Medición del 28/08/2026 — n = 183.093 observaciones
 
 Corpus `trading_backtest` (1.256 símbolos × ~178 fechas, punto-en-el-tiempo, sin look-ahead).
@@ -88,7 +106,7 @@ símbolo cada 2 h — el ciclo completo tarda días):
 Criterio de cableado (idéntico al de H9, sobre ≥5.000 observaciones): recortar batacazos ≥5 pp sin
 ceder más de 1 pp de mediana, **o** mejorar la mediana ≥2 pp sin subir los batacazos.
 
-## 🕰️ H12 (28/08/2026) — la cinta se corta en el día 91, y eso NO es «aguantar sale peor»
+## 🕰️ H12 (28/08/2026 — ✅ RESUELTA el 31/08/2026, ver la medición de arriba) — la cinta se corta en el día 91, y eso NO es «aguantar sale peor»
 
 Idea de Alberto: *«que una vez vendida siga analizando esa acción… por si vemos algo mejor de lo que
 tenemos»*. Al ir a mirarlo apareció un límite de la propia medición que conviene tener escrito:

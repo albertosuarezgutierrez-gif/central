@@ -781,6 +781,90 @@ Referencia (salida por tiempo, 91 días): mediana **+3,12%** · batacazos ≤ �
 - **Evaluación:** cuando H13 se resuelva (es la misma tabla y el mismo momento; hacerlo antes obligaría
   a repetirlo con la medida nueva).
 
+## ✅ RESOLUCIÓN de H11 · H12 · H13 · H14 · H15 — 31/08/2026
+
+> Las cinco tenían muestra (aviso del vigía `trading-h10` del 31/08). Cada criterio se aplica TAL CUAL
+> se firmó, sobre `trading_estrategia_stats` y `trading_backtest` leídos ese día. Una sola se cablea.
+
+### H11 — ✅ SE CABLEA: el torneo aprende de la piscina `direccional`
+
+Las tres condiciones firmadas, cumplidas:
+1. **Muestra:** momentum **129** · reversión **56** · valor **44** observaciones direccionales (≥20 en
+   3 de 4 ✓). Catalizador tiene 5 y queda sin ajuste en la piscina nueva — previsto y firmado.
+2. **Diferencia real:** el orden por hit rate cambia. `'todos'`: reversión 36,6% > valor 34,1% >
+   momentum 31,5%. `'direccional'`: reversión 60,7% > **momentum 41,1% > valor 34,1%** — momentum y
+   valor intercambian posición (y con catalizador incluido el orden también difiere).
+3. **Guarda de daño:** la primera de la piscina nueva no pierde dinero donde se ejecuta — reversión
+   (primera con muestra) gana +2,96% de media en su piscina alcista; catalizador (primera si se cuenta
+   su n=5) gana +8,61%. Positivo en las dos lecturas.
+
+**Cableado:** `PISCINA_VIVA = 'direccional'` (`apps/plataforma/lib/trading/piscinas.ts`) y `analizar`
+lee las stats por esa constante (guardián en `piscinas.test.ts`, que además vigila que la ruta no
+re-introduzca un literal). `ajustesDeStats` y `minN` intactos, como exigía H11. Deltas resultantes con
+las stats del 31/08: **momentum −9 · reversión +5 · valor −13 · catalizador sin ajuste** — la primera
+vez que una estrategia recibe ajuste POSITIVO (con `'todos'`, el 82% neutral hundía a las cuatro).
+
+### H12 — ❌ NO se cablea ninguna de las dos preguntas (y el porqué es la cola)
+
+1. **Alargar el horizonte para todos.** `ret364` (n=172.116): mediana **+10,86%** vs +3,12% de `ret91`
+   → **+7,74 pp**, cumple (a) de sobra… y el **p25 EMPEORA**: −7,47% vs −5,79%. `ret182` (n=179.409):
+   +5,71% (+2,59 pp ✓) con p25 −6,88% vs −5,85% — también empeora. Es exactamente el caso que la
+   condición firmada preveía: «si (a) se cumple y (b) no, se registra y NO se cablea». Aguantar más
+   gana mediana pagando la cola mala, y el criterio existe para no comprar eso.
+2. **Aguantar solo si la tendencia sigue viva.** Subgrupos con muestra de sobra (viva n=100.015 ·
+   no-viva n=72.101), pero la separación es **+1,26 pp** (mediana de `ret364−ret91`: +8,80% con la
+   tendencia viva vs +7,54% sin ella) y el criterio exigía **≥5 pp**. El indicador ordena, pero no
+   paga: no se cablea, tal y como la segunda mitad de la condición mandaba leerlo.
+
+La salida por tiempo a 91 días queda como está (tercera validación consecutiva: H9, H10, H12).
+`ret182/ret364/mfe364/tendenciaVivaAlSalir` se siguen recolectando — cuestan CPU, no dinero.
+
+### H13 — ❌ NO se cablea: la guarda de daño lo tumba
+
+1. **Muestra:** `nAlfa` en `'todos'` = 67-70 por estrategia (≥20 en 4 de 4 ✓).
+2. **Diferencia real:** el orden cambia por completo — por `hitRate`: reversión > catalizador > valor >
+   momentum; por `hitRateAlfa`: **momentum 11,8%** > reversión 11,6% > valor 2,9% > catalizador 1,5% ✓.
+3. **Guarda de daño:** la que pasa a primera (momentum) tiene `retornoAlfaMedio` **−0,23% → NEGATIVO**.
+   No se promociona una medida que pondría primera a una estrategia que pierde contra el índice.
+
+Nota honesta, sin retocar el criterio: el `hitRateAlfa` de `'todos'` está estructuralmente hundido
+(una neutral tiene alfa 0 → `aciertoAlfa=false`, y el 82% del denominador es neutral). El criterio se
+aplicó tal cual se firmó y falla igualmente por la guarda. Con H11 cableada, la piscina que decide es
+`'direccional'`, cuyas columnas de alfa apenas tienen muestra (nAlfa 18/13/5/1) y siguen
+recolectándose: **re-abrir H13 sobre esa piscina es una entrada nueva**, firmada antes de mirar.
+
+### H14 — ❌ NO se cablea: el cambio de signo es el supuesto hablando
+
+En `'todos'`, el peaje de 0,2% le cambia el signo a catalizador (+0,12% → −0,08%) y a reversión
+(+0,17% → −0,03%), y también con 0,3% — pero **con 0,1% no** (+0,02% y +0,07% siguen positivos). La
+condición firmada exigía que el cambio se mantuviera en los tres valores; no se mantiene → decide el
+supuesto, no el dato. Y en `'direccional'` —la piscina viva tras H11— **ningún** peaje del grid cambia
+ningún signo (reversión +1,09% aguanta hasta el 0,3%; momentum y valor ya eran negativos). El
+`retornoNeto` sigue derivándose (nunca persistido) por si el cuadro cambia.
+
+### H15 — ✅ comprobado: el orden es ESTABLE en las 9 combinaciones — `minN` y el clamp se quedan
+
+- **Hallazgo estructural:** en `'todos'`, `minN` es **INERTE por construcción** — cada pasada escribe
+  una tesis por estrategia, así que `n` es idéntico para las cuatro (352) y cualquier `minN ≤ 352` las
+  admite a todas: el umbral no puede discriminar en esa piscina. En `'direccional'` (129/56/44/5) sí
+  muerde, pero igual en todo el grid: {10, 20, 40} dejan siempre fuera a catalizador y siempre dentro
+  a las otras tres.
+- **Los 9 combos colapsan a 2 vectores de deltas por piscina** (clamp 40 ≡ clamp 20; `minN` inerte):
+  `'todos'` → {cat −7 · mom −10/−14 · rev −7 · val −10/−15}; `'direccional'` → {mom −9 · rev +5 ·
+  val −10/−13 · cat 0}.
+- **La ganadora del torneo no cambia.** Las confianzas crudas son CONSTANTES por regla (momentum 68/78
+  alcista · 60/70 bajista; reversión 70; valor 65 alcista · 45 bajista; catalizador 55) y el desempate
+  es estable (orden del array en `analizar`). Enumeradas TODAS las combinaciones realizables y
+  contrastadas contra las **91 pasadas reales** con ≥2 señales direccionales del periodo (45
+  momentum+valor · 38 momentum+reversión · 4 mom+rev+val · 3 catalizador+reversión · 1
+  reversión+valor): la ganadora es idéntica en los 9 combos, en las dos piscinas.
+- **Desenlace firmado que aplica:** «orden estable en las 9 combinaciones → los parámetros no mandan;
+  se dejan como están y queda escrito que se comprobó». `minN = 20` y clamp ±20 se quedan.
+- Caveats: (a) existe UNA combinación teórica con flip (catalizador alcista + valor alcista, sin
+  reversión ni momentum direccionales por encima, en `'direccional'`) que **no aparece ni una vez** en
+  el periodo; (b) la estabilidad se apoya en que las confianzas son constantes de regla — si algún
+  evaluador pasa a emitir confianza continua, esta sensibilidad hay que repetirla.
+
 ## ✅ H9 CABLEADA — el paper ya vende por TIEMPO, y el stop de 2·ATR ha dejado de evaluarse · 2026-08-28
 
 - **Esto no es una hipótesis nueva: es ejecutar una ya resuelta.** H9 se cerró el 08/08/2026 con la

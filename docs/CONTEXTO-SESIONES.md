@@ -40,6 +40,27 @@
   conserva su propia auth Bearer, cerrada por defecto) + guardián en
   `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
   el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
+### 🔬 (31/08/2026) H11–H15 RESUELTAS con el criterio firmado delante — solo H11 se cablea
+- Alberto: «ve resolviendo». Criterios aplicados tal cual contra `trading_estrategia_stats`/`trading_backtest`.
+- **H11 cableada**: `PISCINA_VIVA='direccional'` (3/3 condiciones; deltas hoy mom −9 · rev +5 · val −13).
+- H12 no: +7,74 pp de mediana a 364 d pero p25 peor; tendencia viva separa +1,26 pp (<5). 91 d validada 3ª vez.
+- H13 no (momentum a primera con alfa medio −0,23%) · H14 no (el signo no aguanta 0,1–0,3%) · H15: ganadora
+  idéntica en los 9 combos minN×clamp (minN INERTE en 'todos': n=352 igual por construcción) → se quedan.
+- Cron `trading-h10`: ya no re-avisa el cierre de H10; vigía con lista de hipótesis vacía (tubería montada).
+- Detalle en el pre-registro («✅ RESOLUCIÓN de H11…H15») y TRADING-SALIDAS-2026-08.md (H12).
+
+### 🔧 (31/08/2026) Agente SEO sivra: 42704 SeoStatus — el schema declaraba un enum que la BD no tiene
+- El cron `seo-refresh` de sivra murió en `prisma.seoProposal.create()`: `seo_proposals.status` es TEXT
+  en la BD y el schema lo declaraba `enum SeoStatus` → Prisma castea a `"public"."SeoStatus"` (42704).
+  Ese `create` no funcionó NUNCA (las 6 filas previas son del botón de plataforma, SQL crudo, ids UUID);
+  hasta hoy el cron moría antes (GITHUB_TOKEN…). Fix: `status String @default("PENDING")` — la BD NO se
+  toca (el enum rompería el INSERT crudo de plataforma). Guardián `test/regression-seo-status-text.test.ts`.
+- El cambio SEO de hoy SÍ se aplicó en la landing (c59d5da, PR #1891) antes de fallar el INSERT: fila
+  `seo_proposals` reconstruida del diff de git e insertada a mano (revert operativo; análisis IA perdido).
+- **PR #1895 MERGEADO** (12 checks verdes). Probado contra la BD real: el cast viejo reproduce el 42704 y
+  el INSERT con text (lo que emite el cliente nuevo) funciona (transacción revertida). E2E real = el cron
+  del lunes 07/09 10:00 UTC (check-in programado). OJO: el proyecto Vercel `sivra` NO está en el alcance
+  del conector — el deploy de main no se pudo mirar desde la sesión.
 
 ### 🏠 (31/08/2026) La cartera de la correduría, DENTRO de plataforma (puerto HTTP)
 - Alberto: «mete correduría dentro de mi plataforma». Bloque «📁 Cartera en vivo» en `/correduria`
