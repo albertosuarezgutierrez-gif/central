@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-30T17:58:49Z",
+  "generadoEn": "2026-08-31T08:06:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3946,6 +3946,7 @@
       "/api/cron/paper-tracker",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
+      "/api/cron/prevision-pisos",
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
@@ -4082,7 +4083,10 @@
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
+      "/api/sivra/pl-heatmap",
       "/api/sivra/pl-mensual",
+      "/api/sivra/pl-rango",
+      "/api/sivra/prevision",
       "/api/sivra/pricing/antelacion",
       "/api/sivra/pricing/aplicar-propuesta",
       "/api/sivra/pricing/apply",
@@ -4527,6 +4531,8 @@
       "patrimonio_recomendaciones",
       "patrimonio_valoraciones",
       "patrones_recurrentes_cache",
+      "pisos_previsiones",
+      "pisos_previsiones_avisos",
       "presupuesto_proveedores",
       "pricing_avisos",
       "pricing_escaparate",
@@ -5283,7 +5289,7 @@
     "packages": 36,
     "capacidades": 23,
     "skills": 37,
-    "apis": 1197,
+    "apis": 1201,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
