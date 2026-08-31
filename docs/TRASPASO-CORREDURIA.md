@@ -2794,3 +2794,26 @@ el agente la envía.
 
 Con esto, **la lista previa al corte del lunes queda en:** Supabase (transferencia de proyecto) ·
 Fly (invitación → mover app) · Blob (~4 ficheros) · repo del adaptador · gates (a) y (c).
+
+## 🎯 31/08/2026 — DECISIÓN DE ALBERTO: sin fecha de corte — se va haciendo, y a Manuel solo se le pide lo imprescindible
+
+Alberto fija el modo de trabajo: **no se programa ningún corte**. Él no está operando con asegura
+todavía, así que no hay ventana que proteger: **primero pasar todo a poder propio, luego empezar a
+trabajar nosotros**. Cada pieza se transfiere cuando se pueda, y a Manuel se le pide solo lo que
+requiera su mano.
+
+**La lista CERRADA de lo que necesita a Manuel** (todo lo demás lo hacemos nosotros):
+
+| # | Qué | Por qué solo él puede |
+|---|---|---|
+| 1 | **Transferir el proyecto de Supabase** a la org de Alberto | Es el dueño. ⚠️ Antes: volcado de respaldo (su plan free no tiene backups) |
+| 2 | **Aceptar la invitación de Fly y lanzar el movimiento de la app** a `alberto-suarez-83` | El move lo ejecuta el dueño de la app. **Sin redesplegar** (secrets irrecuperables) |
+| 3 | **Transferir el repo del adaptador** (`asegura-app-cima-adapter`) | Es suyo |
+| 4 | **Pasar los ~4 ficheros del Vercel Blob** (o el token del store) | El Blob va atado a su cuenta |
+| 5 | **Los valores de `PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` al gestor de contraseñas** como respaldo | Solo por seguridad: son irreversibles. (Viajan con las envs de Vercel, que ya son de Alberto — verificar que se leen antes de darlo por hecho) |
+
+Los gates (a) y (c) —descifrar un registro real, buscar por email/DNI, cotización punta a punta— los
+puede ejecutar Alberto (o una sesión) sin Manuel, en cuanto el punto 1 esté hecho.
+
+Ya NO necesitan a Manuel: el `CRON_SECRET` (resuelto), el repo de la app (transferido), Vercel
+(transferido y verificado), leer el código (clonado), ni ninguna fase de desarrollo.
