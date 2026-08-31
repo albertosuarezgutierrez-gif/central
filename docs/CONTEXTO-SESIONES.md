@@ -43,6 +43,25 @@
   (proceso a 7 días, códigos en víspera), rotación tras cancelación expuesta → PENDIENTE (tarea a
   Vanesa), aviso a Sique Brilla de cuna/horas/late → PENDIENTE (email + intranet, PR siguiente).
 
+### 🩺 (31/08/2026) El motivo era «asegura no puede leer su BD» — y la BD está SANA
+- El recuadro con motivo (PR #1903) habló a la primera: `asegura_error` — el secreto COINCIDE, asegura
+  llama a su BD y falla. Verificado por Supabase MCP contra ASEGURA-prod-eu: tablas/enums idénticos al
+  schema del código y datos vivos (1 correduría, 2.742 clientes, 28.843 pólizas) → el fallo es la
+  CONEXIÓN desde Vercel (valor de ASEGURA_DATABASE_URL).
+- Blindaje por código: `lib/asegura-url.ts::normalizarUrlPooler` (puro, 4 tests) añade
+  `pgbouncer=true&connection_limit=1` a URLs :6543 si faltan — Prisma lo exige en el pooler de
+  transacciones y es lo primero que se pierde al pegar a mano. Si tras esto sigue, es la contraseña
+  o el formato de usuario (`central_asegura.<ref>`): mirar logs de central-asegura en Vercel.
+
+### 🔍 (31/08/2026) La cartera en vivo dice ahora POR QUÉ falla (aún «sin respuesta» tras el fix del middleware)
+- Con #1899 desplegado, sondeo por pg_net desde Supabase: `/api/operador/resumen` de central-asegura
+  responde `401 {"error":"No autorizado"}` en JSON → el middleware ya no estorba y el dominio es bueno.
+- Alberto seguía viendo el recuadro rojo. El rojo (no el ámbar) prueba que plataforma tiene su secreto
+  y llamó — quedan DOS sospechosos indistinguibles en la UI: secretos que no coinciden (401) o asegura
+  sin poder leer su BD (`estado:'error'`). Fix: `interpretarCartera` gana `motivo`
+  (secreto_rechazado / asegura_error / respuesta_ilegible / red) y el recuadro imprime el remedio.
+- Pendiente: leer los logs de central-asegura (Chrome) para saber cuál de los dos es.
+
 ### 🔧 (31/08/2026) El puerto operador de asegura nacía BLOQUEADO por su propio middleware
 - Estreno de la cartera en vivo: envs bien puestas y aun así «sin respuesta». Causa: el middleware
   de apps/asegura protege todo salvo `/login` y `/api/auth`, así que la llamada servidor→servidor
@@ -51,6 +70,29 @@
   conserva su propia auth Bearer, cerrada por defecto) + guardián en
   `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
   el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
+
+### ✅ (31/08/2026) Verificación 100% de la serie V4 Flash (#1898/#1900/#1901) — con evidencia
+- `main` (`744e88b`) verificado por grep: default `deepseek/deepseek-v4-flash` en openrouter.ts,
+  `MODELO_DEFAULT` del Director, sonda, PREFERIDOS (×2), Paso 1.5 y visión/embeddings en la skill,
+  SKILLS.md con los 3 «ACTIVA». Tests core-ai **45/45**, `tsc` plataforma limpio, los 3 PRs
+  mergearon con los 3 workflows verdes sobre su head exacto.
+- **Producción**: plataforma redesplegada (deploy READY target=production sobre el merge #1898 y
+  #1900; el de #1901, solo docs, saltado por el ignoreCommand — correcto).
+- **Cabo pendiente y armado**: `ai_usos` solo tiene tráfico PRE-deploy (último 10:01 UTC, servía
+  `deepseek-chat+web` = V3, coherente). El MCP de Vercel no deja leer si hay override
+  `OPENROUTER_MODEL` en la env → la prueba real es el tick horario del websearch (~16:01 UTC):
+  check-in programado para leer qué modelo sirvió. Si sigue saliendo V3, hay override en Vercel
+  y hay que quitarlo/cambiarlo A MANO (acción de Alberto).
+
+### 🔍 (31/08/2026) Barrido anti-huecos en TODOS los agentes (orden de Alberto tras V4 Flash)
+- Se buscó la misma clase de hueco (traspaso sin dueño · lista estática sin curación · supuesto
+  sin verificar) en los ~17 agentes. La auditoría diaria, conectores-vigia, github-vigia y el
+  mapa de fuentes están sanos (tienen cláusulas de descubrimiento y «vigilar al vigilante»).
+- 🔴 Hueco real: la VISIÓN (`meta/llama-3.2-11b-vision-instruct`, en NIM — el proveedor de las
+  3 muertes por EOL en 11 días; la consume ialimp, cliente vivo) y los EMBEDDINGS
+  (`text-embedding-004`, un swap invalida vectores) no los vigilaba nadie → al Paso 1 del buscador.
+- 🟡 SKILLS.md: «PENDIENTE de trigger» de mercado-booking/radar-espana/patrimonio-cfo era falso
+  (los 3 triggers existen y corren — verificado con list_triggers). Corregido.
 
 ### 🩹 (31/08/2026) Post-mortem V4 Flash: el hueco era de diseño — buscador-ia gana el Paso 1.5
 - Alberto: «revisa por qué ha pasado y que no vuelva a pasar». Causa raíz: la delimitación del

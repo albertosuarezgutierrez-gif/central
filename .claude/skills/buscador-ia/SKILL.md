@@ -62,6 +62,17 @@ Los ids por defecto y sus envs de override:
   (`CONTABLE_MODEL`, un id de NIM) se ignoraba y el contable servía en silencio el default V3
   de OpenRouter, más caro y peor que el V4 Flash que su pin nombraba.
 
+- ⚠️ **VISIÓN y EMBEDDINGS — también son modelos cableados y también mueren (añadidos al watch
+  el 31/08/2026, barrido de huecos de Alberto):**
+  - **Visión** `meta/llama-3.2-11b-vision-instruct` (`DEFAULT_VISION_MODEL` de `nim.ts`) — sigue
+    en NIM aunque el TEXTO de NIM esté apagado, y NIM ha matado TRES ids de texto por EOL en 11
+    días. La consumen ialimp (cliente VIVO: escanear documentos, analizar fotos), sivra, ia-rest
+    y plataforma (`/api/ai/vision`). Si muere, la lectura de fotos cae en silencio.
+  - **Embeddings** `text-embedding-004` (`DEFAULT_EMBED_MODEL` de `embeddings.ts`, Google) —
+    Google retira modelos de embedding con calendario propio; consumido por `ia-cache` de
+    plataforma. Cambiar de modelo de embedding invalida los vectores ya guardados: un swap aquí
+    NUNCA es mecánico, va por Telegram con el plan de re-indexado.
+
 > **Regla:** lee estos ids del código en cada pasada (no de aquí). Si este listado contradice
 > a `client.ts`, manda el código: corrige esta skill en el mismo PR.
 
@@ -71,8 +82,9 @@ Los ids por defecto y sus envs de override:
 3. Lee la sección «Estado actual» de `docs/CONTEXTO-SESIONES.md` por si hay pendientes de IA vivos.
 
 ## Paso 1 — Watch de deprecación (lo más valioso)
-Para CADA modelo cableado, confirma que **sigue existiendo** en el catálogo de su proveedor
-(por WebFetch/WebSearch — la rutina no tiene por qué llevar las API keys):
+Para CADA modelo cableado — **texto, VISIÓN y EMBEDDINGS** (la lista de arriba; el 31/08/2026 se
+descubrió que visión y embeddings no los vigilaba nadie) — confirma que **sigue existiendo** en
+el catálogo de su proveedor (por WebFetch/WebSearch — la rutina no tiene por qué llevar las API keys):
 - **NVIDIA NIM** → catálogo `https://build.nvidia.com/models` (y `https://docs.api.nvidia.com/nim/`).
 - **Groq** → `https://console.groq.com/docs/models` (ojo a la lista de *deprecated/decommissioned models*).
 - **Google Gemini** → `https://ai.google.dev/gemini-api/docs/models` (fechas de retirada + tramos free tier).
