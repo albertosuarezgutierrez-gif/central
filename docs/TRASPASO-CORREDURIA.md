@@ -2933,3 +2933,86 @@ de Codeoscopic (siempre), limpieza de cotizaciones anónimas (siempre), y el wor
 
 Drift documental detectado: `docs/roles-rutas-matrix.md` habla de un rol `cliente` que el código no
 tiene (`admin|corredor|usuario`).
+
+# 🗂️ 31/08/2026 — EL MAPA (3/3): integraciones — y la síntesis del plan de trabajo
+
+## CIMA: la pregunta «¿podríamos hacerlo nosotros?» queda CERRADA — se hereda, no se reescribe
+
+Leído ADR-007/009/024, el runbook de Fly y las ~14.800 líneas del pipeline:
+
+- **La app no habla SOAP**: habla HTTP/JSON con el adaptador (`CIMA_ADAPTER_URL` + header
+  `x-internal-token`, sin reintentos a propósito porque las ops WSE no son idempotentes). De las 12
+  operaciones WSE cableadas, **producción usa 2**: `recibirFicherosPendientes` y `confirmarDescarga`.
+- **Por qué Java, con detalle:** el WSE de TIREA usa WS-Security **atípico** — el body SOAP va cifrado
+  AES-256-GCM con clave **derivada del password** (ni X.509 ni keystore). Ninguna librería
+  Node/Python lo soporta. Y el JAR oficial de TIREA **ni siquiera funciona tal cual**: hubo que
+  **recompilarlo** con `setValidateResponse(false)` (un Xerces del JDK revienta validando el XSD de
+  respuesta), y el runtime es **dual-JDK** (subprocess JDK 11 + Spring Boot JDK 17). Reescribirlo:
+  4-6 semanas sin poder validar hasta pegar contra el endpoint real. **La opción C (cliente TS propio)
+  muere aquí.**
+- **El parseo EIAC↔dominio SÍ es nuestro terreno**: 4 mappers puros (POL 1.030 líneas, SIN, REC, CEF)
+  sin BD/red/env, y una FSM con inyección de dependencias. Lo caro no son los mappers: son los
+  **invariantes aprendidos con incidentes reales** (la simetría de dedup respecto a `error` — su
+  ruptura perdió 7 pólizas de Occident el 23-jun —, el skip del re-ACK, el guard anti-degrade del
+  confirm, el fallback del conflicto de hash). Portar código sin portar esos comentarios es
+  reintroducir los incidentes.
+- **El `queueDepth ~78→128` explicado**: `recibirFicherosPendientes` NO consume; solo `confirmarDescarga`
+  dequeue-a, y **no lo hace de forma fiable** (LOO-700) — por eso esa cifra no se usa como alerta.
+- **Secrets del adaptador en Fly (nombres):** `INTERNAL_TOKEN` (≡ `CIMA_ADAPTER_INTERNAL_TOKEN` en
+  Vercel — rotación coordinada Vercel→Fly), `WSE_ENDPOINT`, `WSE_USER`, `WSE_PASSWORD`, `WSE_PLATAFORMA`.
+  `flyctl secrets set` es destructivo sin retorno — otra razón para transferir la app, no recrearla.
+
+## Codeoscopic: tres candados y una receta para probar la emisión
+
+- **El default de `CODEOSCOPIC_BASE_URL` ya es el sandbox** del vendor; producción exige setearla. Y el
+  kill-switch de contrato (`CODEOSCOPIC_OPENAPI_READY`) corta TODA llamada saliente.
+- **La idempotencia es nuestra, no del vendor** (no hay Idempotency-Key en su protocolo). Tres capas:
+  el **lock server-side** `submit_in_flight_at` (TTL 6 min, con UPDATE condicional — antes de existir,
+  un F5 durante el re-rate podía disparar **dos emisiones reales**), el pre-check de estado terminal, y
+  la clasificación «quizá emitido» (un 5xx/429 del POST de emisión NUNCA se reintenta).
+- **El re-rate es facturable** (~0,50 €, ~8 s) y hay guard de divergencia de precio (emitir a otro
+  precio rompe el consentimiento LDS).
+- **No existe dry-run de emisión** (a diferencia de CIMA). Receta de smoke sin riesgo, para cuando
+  toque la Fase 3: sandbox + `OPENAPI_READY=true` + `BROKER_SUBMIT_ENABLED=true` + kill-switch off +
+  allowlist de UN carrier + datos fake + verificar el lock con dos requests concurrentes. Si algún día
+  se quiere probar contra prod, hay que **construir** un corte pre-POST que hoy no existe.
+
+## Cifrado: lo único portable a coste CERO — y va a `packages/`
+
+`field-encryption.ts` (101 líneas) y `blind-index.ts` (194) dependen SOLO de `node:crypto` y de las
+dos envs. Copiables tal cual. **Decisión de diseño: paquete compartido, no copia** — si el normalize
+diverge entre apps, los lookups fallan EN SILENCIO (el fallo exacto del que avisan LOO-519/828).
+Matices que viajan con ellos: `decryptField` tolera plaintext legacy (ventana de backfill), el
+catálogo de qué-está-cifrado-dónde vive en 3 wrappers (`clientes/pii`, `polizas/datos-especificos-pii`,
+`bienes/datos-pii`) + ADR-025, y el gate `pii-key-gate.ts` valida ambas claves con regex
+independientemente de `NODE_ENV` (los helpers son fail-open en dev).
+
+## 🔴 Higiene de seguridad encontrada de paso (el repo ya es nuestro: nos toca)
+
+- **`ADR-009` línea 183 contiene una CONTRASEÑA de homologación de TIREA en texto plano**, y el
+  runbook de Fly lleva `WSE_USER`/`WSE_PLATAFORMA`/`WSE_ENDPOINT` de producción en claro. Purga
+  pendiente — primera contribución nuestra al repo heredado.
+- Ya apuntadas: env `CRON_SECRET` de Vercel a tipo Sensitive; ampliar el conector MCP de Vercel al
+  proyecto `asegura`.
+
+---
+
+# 🧭 SÍNTESIS — el plan de trabajo NUESTRO (sin fechas, se va haciendo)
+
+**De Manuel** (su lista cerrada, sin cambios): Supabase (volcado + transferencia) · Fly (aceptar y
+mover) · repo del adaptador · Blob · claves PII al gestor.
+
+**Nuestro, en orden — cada punto desbloquea el siguiente:**
+
+| # | Trabajo | Depende de |
+|---|---|---|
+| **N1** | **`packages/module-seguros-pii`**: portar `field-encryption` + `blind-index` como paquete `@central/*` con sus tests (TS puro, cero deps — encaja exacto en la filosofía de `packages/`) | Nada — se puede YA |
+| **N2** | **Purga de secretos de los docs heredados** (ADR-009:183 + identificadores del runbook) | Nada — se puede YA |
+| **N3** | **Diff BD real vs schema declarado** (la contradicción de las FKs, `pg_constraint`, triggers, funciones) + **gate (a)**: descifrar un registro real y buscar por email y DNI | Supabase transferido + claves PII |
+| **N4** | **Fase 1 — cartera en lectura en `apps/asegura`**: los 24 ficheros mínimos (`correduria/{clientes,polizas,pagination}` con `correduriaId` inyectado por nuestro `tenant-ambito`), fichas REESCRITAS no portadas, «vigente» = `POLIZA_ESTADOS_VIGENTES` + fecha (NULL = pendiente, no «no vence») | N1 + N3 |
+| **N5** | **Auth re-plataformada barata**: conservar las 6 firmas de `lib/auth.ts`, cambiar las tripas a `asegura_session`. MFA y magic link se rehacen al final | N4 |
+| **N6** | **Fase 2 — portal en solo-lectura** (~20-25 módulos, cortando por `oferta/[id]` y `aceptar-precio` para no arrastrar el motor de emisión) | N5 |
+| **N7** | **Fase 3 — Codeoscopic**: smoke de emisión en sandbox con la receta de arriba; construir el corte pre-POST si se quiere probar en prod | N6 + decisión de encender |
+| **N8** | **Fase 4 — CIMA**: apuntar `CIMA_ADAPTER_URL` al adaptador ya movido a nuestra org de Fly (no se toca el adaptador), decidir si se encienden REC/SIN/CEF (nunca encendidos), drenar la cola (128), investigar Mapfre (`ficherosDisponibles` C0058), y resolver el solape con `/correduria` de plataforma (banco=cifra, CIMA=contraste, ya decidido) | N4 + Fly movido |
+
+**El primer commit de trabajo real puede ser HOY: N1 y N2 no dependen de nadie.**
