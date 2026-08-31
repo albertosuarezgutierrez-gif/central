@@ -15,6 +15,10 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-31 · buscador-ia** (pasada dirigida, pregunta de Alberto) · hizo: confirmó DeepSeek V4
+  Flash en OpenRouter ($0,086/$0,17 por M) y detectó que nuestro default `deepseek/deepseek-chat`
+  es el V3 viejo 3-6× más caro; mini-eval A/B en vivo OK; PR draft con el swap (default + Director +
+  PREFERIDOS). Sin Telegram: Alberto estaba en la conversación. dudas: —; fallos: —; PRs: swap V4 Flash.
 - **2026-08-31 · facturas-correo** · hizo: pasada completa. Paso 0: Vía B sana (última copia a
   `_buzon_pdf` 29/08, dias_caido=2); Vía A (`gmail-adjuntos`) sigue sin provisionar (conocido).
   `Facturas/PDF-pendiente` vacía. `Facturas/Extraccion-fallida` tenía 1 hilo (Mercadona/Pilar,
