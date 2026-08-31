@@ -3036,3 +3036,47 @@ YA, sin esperar a nadie. Matices verificados en la pantalla de autorización:
   por Alberto en Vercel/Fly.
 - Esto NO sustituye la transferencia (los backups siguen dependiendo del plan de la org de Manuel):
   es un puente para trabajar N3 mientras tanto.
+
+---
+
+# ✅ 31/08/2026 — N3 (parte estructural) HECHO: la BD real, medida por fin de primera mano
+
+Conector **«Supabase asegura»** operativo: personalizado, **scoped al proyecto** (`project_ref`) y
+**read-only forzado en servidor** (verificado: solo expone 13 herramientas de lectura, sin
+`apply_migration` ni `deploy_edge_function`). Primera vez que una sesión mide ASEGURA directamente.
+
+## El diff real vs declarado: CASAN — y dos mediciones históricas eran falsas
+
+| Métrica | BD real (31/08) | Declarado/documentado | Veredicto |
+|---|---:|---|---|
+| Tablas `public` | **52** | 52 | ✅ |
+| Enums | **42** | 42 | ✅ |
+| Funciones | **132** | 132 | ✅ |
+| Políticas RLS | **86** | 86 («67+17=84» era el desglose el que no cuadraba) | ✅ |
+| Tablas con RLS | **52** | 52 | ✅ |
+| **Tablas con FORCE RLS** | **51 de 52** | el informe solo citaba `clientes`+`polizas` | 🆕 casi todas |
+| **FKs en `public`** | **131** | 🔴 «0 FKs» (26/08 + informe) **ERA FALSO** | corregido |
+| FKs hacia `auth` | **0** | «no hay FK a auth» (Manuel) | ✅ — su claim era este, y se sobre-generalizó |
+| **Triggers** | **26** (en 20 tablas) | 🔴 «0 triggers» (26/08) **ERA FALSO** | corregido |
+| `estado_poliza` | los **10 valores**, en el orden declarado | 10 | ✅ |
+
+**Consecuencia grande:** el esquema declarado (`schema.ts`) y la BD real **coinciden** — las
+`.references()` SÍ están aplicadas como FKs. La introspección (`db pull`) **traerá las relaciones**,
+al contrario de lo que se temía. El modelo de la Fase 1 se puede generar del real con confianza.
+
+## Datos operativos medidos
+
+- **Cartera viva por fecha: 50 pólizas** (estados vigentes + vencimiento futuro) — clava el dato de
+  Manuel. **1.194 pólizas con `fecha_vencimiento` NULL** → «vigente» trata NULL como *pendiente*.
+- Fusiones: 5 pólizas con lápida (`merged_into_poliza_id`), 0 clientes.
+- `cima_ficheros`: **128** (125 el 26/08 — viva); último fichero 30/08. ⚠️ **La cuarentena `review`
+  sigue creciendo: 42** (39 el 30/08, 36 el 26/08) — coherente con REC/SIN/CEF apagados.
+
+## Lo que queda de N3
+
+- **Gate (a) — descifrar un registro real**: imposible por SQL (el cifrado es de capa de aplicación).
+  Necesita las claves PII en un entorno de ejecución — pendiente de que los VALORES lleguen al gestor
+  de contraseñas (punto 5 de la lista de Manuel) o de probarlo contra la propia app desplegada.
+- **Paso 4 de conectores**: re-autorizar el conector «Supabase» principal de vuelta a la org
+  `alberto.suarez.gutierrez@gmail.com` (quedó apuntando a LOOR) — **si no, las rutinas de `central`
+  fallarán en cada sesión nueva**. En manos de Alberto/Chrome.

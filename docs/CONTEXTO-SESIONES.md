@@ -32,6 +32,18 @@
 
 ---
 
+### 🔬 (31/08/2026) Correduría: conector directo a ASEGURA y diff real — «0 FKs» y «0 triggers» eran FALSOS
+
+Conector nuevo «Supabase asegura» (custom, `project_ref` + `read_only=true` — 13 herramientas solo
+lectura). Primera medición directa de la BD real: **52 tablas / 42 enums / 132 funciones / 86 RLS
+casan con lo declarado**, y hay **131 FKs y 26 triggers** — las mediciones «0 FKs»/«0 triggers» del
+26/08 eran falsas (lo cierto era solo «0 FKs hacia `auth`»). FORCE RLS en 51/52 tablas. Cartera viva
+por fecha: **50 pólizas** (1.194 con vencimiento NULL → tratar como pendiente). `review` crece: 42.
+➡️ `db pull` traerá relaciones; el modelo de Fase 1 se genera del real. ⚠️ PENDIENTE CRÍTICO: el
+conector «Supabase» principal quedó re-autorizado hacia LOOR — hay que devolverlo a la org de Alberto
+o las rutinas de central fallan en sesiones nuevas. Supabase ASEGURA sigue SIN transferir (era Vercel
+lo transferido; «PISO» era el team de Vercel).
+
 ### 🗂️ (31/08/2026) Correduría: MAPA completo del repo heredado + primer paquete portado
 
 3 agentes leyeron el repo `asegura` entero (1.174 TS). El mapa (3 partes + síntesis N1-N8) en
