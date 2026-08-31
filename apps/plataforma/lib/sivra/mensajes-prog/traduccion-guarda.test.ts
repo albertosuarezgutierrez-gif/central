@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { conservaDatos } from './traducir.ts'
+import { conservaDatos } from './traduccion-guarda.ts'
 
 const ORIG = 'Caja de llaves: clave 7272. Portal 2022#. Mapa: https://maps.google.com/x?q=1 Entrada 15:00.'
 

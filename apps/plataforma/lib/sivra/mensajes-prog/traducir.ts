@@ -7,27 +7,14 @@
 // que el fallback nunca es peor que el statu quo).
 
 import { aiComplete } from '@central/core-ai'
+import { conservaDatos } from './traduccion-guarda.ts'
+
+export { conservaDatos }
 
 const NOMBRE_IDIOMA: Record<string, string> = {
   en: 'inglés', fr: 'francés', de: 'alemán', it: 'italiano', pt: 'portugués', nl: 'neerlandés',
   pl: 'polaco', tr: 'turco', ru: 'ruso', sv: 'sueco', da: 'danés', no: 'noruego', cs: 'checo',
   sl: 'esloveno', ro: 'rumano', hu: 'húngaro', el: 'griego', ca: 'catalán',
-}
-
-// PURA. ¿La traducción conserva todos los datos duros del original?
-//  - Toda secuencia de ≥2 dígitos (códigos, horas, teléfonos, números de portal).
-//  - Toda URL http(s).
-// Se compara por multiconjunto laxo: cada dato del original debe aparecer en la traducción al
-// menos tantas veces como en el original no hace falta — basta con que aparezca (un código repetido
-// dos veces que quede una sigue siendo utilizable; uno MUTADO no).
-export function conservaDatos(orig: string, trad: string): boolean {
-  if (!trad.trim()) return false
-  const datos = (s: string) => [
-    ...(s.match(/\d[\d#]{1,}/g) || []),
-    ...(s.match(/https?:\/\/[^\s)]+/g) || []),
-  ]
-  const enTrad = new Set(datos(trad))
-  return datos(orig).every(d => enTrad.has(d))
 }
 
 // Traduce `texto` al idioma dado. Devuelve el texto FINAL a enviar y el idioma real en que va.
