@@ -43,6 +43,25 @@
   (proceso a 7 días, códigos en víspera), rotación tras cancelación expuesta → PENDIENTE (tarea a
   Vanesa), aviso a Sique Brilla de cuna/horas/late → PENDIENTE (email + intranet, PR siguiente).
 
+### 🔧 (31/08/2026) El puerto operador de asegura nacía BLOQUEADO por su propio middleware
+- Estreno de la cartera en vivo: envs bien puestas y aun así «sin respuesta». Causa: el middleware
+  de apps/asegura protege todo salvo `/login` y `/api/auth`, así que la llamada servidor→servidor
+  de plataforma a `/api/operador/resumen` (Bearer, sin cookie) se REDIRIGÍA al login → plataforma
+  recibía HTML, no JSON. Ni tsc ni build lo cazan. Fix: `/api/operador` a la lista PUBLIC (la ruta
+  conserva su propia auth Bearer, cerrada por defecto) + guardián en
+  `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
+  el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
+
+### 🩹 (31/08/2026) Post-mortem V4 Flash: el hueco era de diseño — buscador-ia gana el Paso 1.5
+- Alberto: «revisa por qué ha pasado y que no vuelva a pasar». Causa raíz: la delimitación del
+  09/07 («OpenRouter fuera de scope, lo vigila SU cron») dejó el DESCUBRIMIENTO sin dueño — el
+  cron `ia-director-refresh` es determinista (solo elige de PREFERIDOS estáticas) y el buscador
+  tenía orden de no mirar. El V4 Flash entró en OpenRouter el 24/04: 4 meses invisible; la
+  pasada semanal de ayer dijo «sin candidatos» cumpliendo su skill.
+- Arreglo (skill buscador-ia): Paso 1.5 «Watch de OpenRouter» (verificar `name`+`pricing` reales
+  de cada id usado, descubrimiento dirigido, cambios a PREFERIDOS por PR), lección «el slug no
+  dice qué sirve», y regla de re-evaluar pines cuando un eslabón se apaga/enciende (caso contable).
+
 ### 🧠 (31/08/2026) DeepSeek V4 Flash en OpenRouter — y nuestro default era el V3 viejo y más caro
 - Alberto pasó un post viral y preguntó si OpenRouter lo tiene y si el buscador está al tanto.
 - **Sí lo tiene** (`deepseek/deepseek-v4-flash`, $0,086/$0,17 por M, ctx 1M) — y el hallazgo real:
