@@ -2817,3 +2817,56 @@ puede ejecutar Alberto (o una sesión) sin Manuel, en cuanto el punto 1 esté he
 
 Ya NO necesitan a Manuel: el `CRON_SECRET` (resuelto), el repo de la app (transferido), Vercel
 (transferido y verificado), leer el código (clonado), ni ninguna fase de desarrollo.
+
+---
+
+# 🗂️ 31/08/2026 — EL MAPA DEL REPO `asegura` (1/3): modelo de datos REAL
+
+Primera parte del mapa, leída del código transferido (no de resúmenes). `src/db/schema.ts` completo
+(3.262 líneas), migraciones, `rls-policies.sql` y ADR-017.
+
+## Lo confirmado
+
+- **52 tablas y 42 enums**, y las 52 del schema coinciden exactamente con los `CREATE TABLE` de las
+  migraciones. Dominios: tenant/usuarios · clientes (9 tablas) · pólizas (6) · siniestros (4) ·
+  CIMA/EIAC (4: `cima_ficheros` + la rama financiera `cuenta_efectivo`→`liquidaciones`→`movimientos`)
+  · Codeoscopic (7) · legal/auditoría (3 append-only) · WhatsApp/bot (8) · operativa comercial (10).
+- **`estado_poliza` tiene 10 valores**, no 4: a los legacy (`activa/vencida/cancelada/en_renovacion`)
+  se sumaron 6 (`en_vigor/fin_riesgo/recibo_devuelto/cambio_clave/anula_al_vencimiento/competencia`)
+  **sin reescribir filas** — el mapeo conceptual legacy→nuevo NUNCA se ejecutó como backfill. La
+  definición de «vigente» vive en `src/lib/polizas/estados.ts` (`POLIZA_ESTADOS_VIGENTES` = activa,
+  en_renovacion, en_vigor, recibo_devuelto, cambio_clave) cruzada con la migración 0086 por un test.
+  **Nuestra Fase 1 usa ESA lista + fecha de vencimiento, no la etiqueta.**
+- **Cifrado, inventario columna a columna:** 25 columnas cifradas en 12 tablas; hashes de búsqueda
+  solo en dni/email/teléfono/nif, con **índices ÚNICOS parciales** sobre `clientes.dni_lookup_hash`
+  (solo `tipo='cliente'`) y `email_lookup_hash`. También hay PII cifrada DENTRO de jsonb
+  (`cotizaciones_anonimas.datos_cotizacion`, `cotizaciones.lead_*`) — el alcance exacto es ADR-025.
+
+## 🔴 Las tres advertencias que condicionan todo port
+
+1. **`schema.ts` NO es el inventario completo.** Las RLS (1.211 líneas de `rls-policies.sql`), los
+   triggers append-only, el BLOCK-UPDATE de documentos, y **funciones de negocio como
+   `cliente_segmento_actual()`** (la frontera cliente/ex_cliente/prospecto, migración 0086 + trigger
+   de la 0060) viven **en la BD, no en Drizzle**. Portar solo el schema TS se lleva la estructura y
+   deja atrás la mitad del compliance.
+2. **El journal de migraciones está ROTO desde la 0010** (ADR-017): hay **96 ficheros SQL** y el
+   journal registra 11. Todo se aplica a mano en el SQL Editor. `db:migrate` está **prohibido
+   permanentemente**; un entorno nuevo se levanta con `db:push` desde `schema.ts` + aplicar a mano
+   RLS/triggers/funciones. Y no hay verificación mecánica de que BD real == schema declarado.
+3. **⚠️ CONTRADICCIÓN ABIERTA — las claves foráneas.** El schema TS declara `.references()` por todas
+   partes (el grafo completo cliente↔póliza↔recibo↔siniestro está en el informe del agente), y las
+   migraciones crean esas tablas… pero la medición del 26/08 y el informe de Manuel dicen **0 FKs en
+   la BD real**. O las migraciones aplicadas difieren del schema, o la medición estaba mal. **Antes
+   de la Fase 1 hay que hacer el diff real contra Frankfurt** (`drizzle-kit introspect` o consulta a
+   `pg_constraint` cuando el proyecto sea nuestro). De esto depende si `db pull` trae relaciones o no.
+
+## Perlas del modelo que la Fase 1 agradecerá
+
+- **Fusiones con lápida:** `clientes.merged_into_cliente_id` y `polizas.merged_into_poliza_id`
+  (self-FK) + logs forenses append-only. Toda lectura debe excluir filas fusionadas.
+- `polizas.fecha_inicio` y `fecha_vencimiento` son **nullable** (backfill legacy) — «vigente por
+  fecha» tiene que tratar el NULL como «pendiente», no como «no vence».
+- `gestiones` es un **inbox polimórfico** con 4 anclas nullable y CHECK de «al menos una».
+- La rama financiera de CIMA (`cuenta_efectivo`) **no cuelga de póliza** y no lleva PII: son las
+  comisiones por compañía y periodo — el dato que algún día se cruzará con `/correduria` de plataforma.
+- `NO hay relations()` de Drizzle: la Relational Query API no está en uso; las consultas son SQL/select explícito.
