@@ -3114,3 +3114,27 @@ mientras la ajena está blindada. El mismo truco (`project_ref=wswbehlcuxqxyinou
 daría un conector de solo lectura para el día a día de `central`, reservando el de escritura para
 cuando toque. **No se hace sobre la marcha**: las skills y rutinas nombran las herramientas del
 conector actual, así que es un cambio a planificar, no un clic. → candidata para `conectores-vigia`.
+
+## 🔌 31/08/2026 — N4 CABLEADO: `apps/asegura` ya sabe hablar con la cartera real
+
+La app queda con **dos bases**: la compartida de central (auth, como estaba) y la cartera real del
+proyecto ASEGURA vía **`ASEGURA_DATABASE_URL`** (segundo cliente Prisma, `prisma/asegura.prisma` →
+`lib/generated/asegura-client`, generado con `pnpm run prisma:generate`).
+
+- **`lib/cartera.ts`** — lecturas de Fase 1: `resumenCartera()` (clientes/leads, pólizas en vigor /
+  sin fecha / históricas por la regla de `@central/module-seguros`, siniestros abiertos; lápidas de
+  fusión excluidas SIEMPRE; `correduriaId` explícito en todo WHERE) y `correduriaUnica()` (lanza si
+  algún día hay más de una: el ámbito implícito caduca solo).
+- **El dashboard estrena la narrativa nueva de TRES estados**: `sin_configurar` («conexión pendiente
+  — esto NO significa que no haya cartera»), `error` (visible, nunca cartera vacía) y `ok` (los
+  números reales, con la leyenda de qué cuenta como «en vigor»). La narrativa vieja de «migrar al
+  schema seguros» sale del dashboard (el plan cambió a conectar; el schema queda para consolidación
+  futura).
+- **CI ajustado**: el paso de typecheck de `tests.yml` usa `pnpm run prisma:generate` cuando la app
+  lo define (solo asegura hoy) — nombres de job intactos. **Simulado desde cero en local: verde.**
+
+**Para encender el dashboard con datos reales falta UNA cosa:** poner `ASEGURA_DATABASE_URL` como
+variable de entorno (los despliegues de `apps/asegura` cuando exista su proyecto Vercel, y/o el
+entorno de las sesiones). El valor es la cadena de conexión del proyecto ASEGURA — está en las envs
+del Vercel de la app de Manuel (`DATABASE_URL`) o en Supabase → proyecto → Connect. **Va al gestor de
+contraseñas, nunca por chat.**

@@ -1,19 +1,20 @@
-// ─── MODELO DE LA CARTERA, GENERADO DE LA BASE REAL ──────────────────────────
-// Fuente: proyecto Supabase ASEGURA-prod-eu (uijsgeocgdaxkhvwtjqs), medido el
-// 31/08/2026 por el conector de solo lectura (columnas de information_schema,
-// FKs/únicos de pg_constraint). NO es el schema activo de la app: es la
-// referencia de la Fase 1, y pasa a schema.prisma cuando apps/asegura apunte
-// al proyecto ASEGURA (hoy sigue apuntando a la BD compartida de central).
-//
-// Decisiones que NO se pueden deducir del DDL:
-// - Los campos marcados «cifrado» guardan texto AES-256-GCM (`v1:iv:ct:tag`);
-//   se descifran con @central/module-seguros-pii, nunca se comparan en SQL.
-//   Buscar por email/teléfono/DNI = igualdad sobre su *_lookup_hash.
-// - Toda lectura excluye filas fusionadas (merged_into_* IS NULL) — son
-//   lápidas, no datos.
-// - «Vigente» NO es el enum: es @central/module-seguros (vigenciaPoliza).
-// - comercial_id / usuario_id / oportunidad_origen_id apuntan a tablas fuera
-//   de este subconjunto (usuarios, oportunidades); aquí quedan como uuid.
+// ─── SEGUNDA BASE DE DATOS DE LA APP: la cartera REAL (proyecto ASEGURA) ────
+// Cliente generado aparte del principal (schema.prisma sigue siendo la BD
+// compartida de central, donde vive la auth `public.cuentas`). Este apunta al
+// proyecto Supabase ASEGURA-prod-eu vía ASEGURA_DATABASE_URL.
+// Generar: `pnpm run prisma:generate` (los DOS clientes; CI usa ese script).
+// Sin ASEGURA_DATABASE_URL la app no arranca esta parte: el dashboard lo dice
+// como «conexión pendiente», nunca como «no hay cartera».
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/asegura-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ASEGURA_DATABASE_URL")
+}
 
 enum TipoSeguro {
   auto
@@ -213,7 +214,6 @@ model Correduria {
   siniestros     Siniestro[]
 
   @@map("corredurias")
-  @@schema("public")
 }
 
 model Cliente {
@@ -273,7 +273,6 @@ model Cliente {
   intervenciones PolizaInterviniente[]
 
   @@map("clientes")
-  @@schema("public")
 }
 
 model ClienteTelefono {
@@ -289,7 +288,6 @@ model ClienteTelefono {
   cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("cliente_telefonos")
-  @@schema("public")
 }
 
 model ClienteEmail {
@@ -305,7 +303,6 @@ model ClienteEmail {
   cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("cliente_emails")
-  @@schema("public")
 }
 
 model Poliza {
@@ -360,7 +357,6 @@ model Poliza {
   siniestros     Siniestro[]
 
   @@map("polizas")
-  @@schema("public")
 }
 
 model PolizaCobertura {
@@ -382,7 +378,6 @@ model PolizaCobertura {
   poliza Poliza @relation(fields: [polizaId], references: [id], onDelete: Cascade)
 
   @@map("poliza_coberturas")
-  @@schema("public")
 }
 
 model PolizaRecibo {
@@ -414,7 +409,6 @@ model PolizaRecibo {
   poliza Poliza @relation(fields: [polizaId], references: [id], onDelete: Cascade)
 
   @@map("poliza_recibos")
-  @@schema("public")
 }
 
 model PolizaInterviniente {
@@ -441,7 +435,6 @@ model PolizaInterviniente {
   cliente Cliente? @relation(fields: [clienteId], references: [id])
 
   @@map("poliza_intervinientes")
-  @@schema("public")
 }
 
 model Siniestro {
@@ -481,5 +474,4 @@ model Siniestro {
   poliza     Poliza     @relation(fields: [polizaId], references: [id])
 
   @@map("siniestros")
-  @@schema("public")
 }
