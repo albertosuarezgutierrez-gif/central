@@ -21,8 +21,10 @@ export type ReservaAcceso = {
 export type PinExistente = {
   reservaRef: string
   estado: string          // activo|caducado|borrado|error
+  validoDesdeEpoch: number // segundos — con qué ventana se creó DE VERDAD en la cerradura
   validoHastaEpoch: number // segundos
   tuyaPasswordId: string | null
+  entregado?: boolean
 }
 
 // Config mínima que necesita la lógica pura (subset de ConfigAcceso).
@@ -91,4 +93,74 @@ export function necesitaAvisoOffline(
   if (online || proximoCheckinEpoch == null) return false
   const faltanSeg = proximoCheckinEpoch - ahoraEpoch
   return faltanSeg > 0 && faltanSeg <= Math.max(1, leadHoras) * 3600
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Desajustes de ventana: PIN VIVOS cuya validez ya no es la que tocaría hoy.
+//
+// `reconciliar` solo mira SI hay PIN, no CUÁL es su ventana: una vez creado, el PIN conserva para
+// siempre la ventana con la que nació. Eso deja dos huecos silenciosos:
+//   · la reserva cambia de fechas en Smoobu (alarga la estancia) → el PIN muere el día viejo;
+//   · cambian los márgenes de la config → los PIN ya creados siguen con los márgenes antiguos.
+// En los dos casos el sistema NO está mal, está DESACTUALIZADO — y la diferencia importa: un PIN
+// que muere a las 11:00 en punto deja al huésped fuera cuando baja a por la maleta a las 11:15.
+//
+// Esto NO corrige nada por su cuenta a propósito. Tuya no sabe "alargar" un PIN: habría que
+// borrarlo y recrearlo, y si la recreación falla el huésped se queda con un código muerto en la
+// mano. Reponer una ventana es una decisión con consecuencias, así que se DECLARA y la ejecuta
+// una persona (PATCH de la ruta del PIN), que es justo la «autorización nuestra» que se pidió.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type Desajuste = {
+  reservaRef: string
+  propertyId: string
+  guestName?: string
+  /** Ventana con la que el PIN vive HOY en la cerradura. */
+  actual: { desdeEpoch: number; hastaEpoch: number }
+  /** Ventana que le tocaría con las fechas y los márgenes de hoy. */
+  debida: { desdeEpoch: number; hastaEpoch: number }
+  /** Minutos que la apertura DEBIDA va por detrás de la actual (>0 = el PIN abre antes de lo que toca). */
+  entradaMin: number
+  /** Minutos que el cierre DEBIDO va por delante del actual (>0 = el PIN muere antes de lo que toca). */
+  salidaMin: number
+  entregado: boolean
+}
+
+/**
+ * PIN vivos cuya ventana ya no cuadra con la reserva + la config de hoy.
+ *
+ * Solo mira PIN en estado `activo` que tengan reserva viva: un `manual:*` o el PIN de una reserva
+ * que ya salió del horizonte no son un desajuste, son otra cosa. Y se descartan los que ya no
+ * tienen arreglo posible (su ventana debida terminó): avisar de ellos es ruido, no información.
+ */
+export function desajustesVentana(
+  reservas: ReservaAcceso[],
+  cfg: CfgProgramador,
+  existentes: PinExistente[],
+  ahoraEpoch: number,
+  toleranciaMin = 5,
+): Desajuste[] {
+  const vivos = new Map(existentes.filter(p => p.estado === 'activo').map(p => [p.reservaRef, p]))
+  const tol = Math.max(0, toleranciaMin) * 60
+  const out: Desajuste[] = []
+  for (const r of reservas) {
+    const p = vivos.get(r.id)
+    if (!p) continue
+    const { desdeEpoch, hastaEpoch } = ventanaPin(r, cfg)
+    if (hastaEpoch < ahoraEpoch) continue // ya pasó: no hay ventana que reponer
+    const dDesde = desdeEpoch - p.validoDesdeEpoch
+    const dHasta = hastaEpoch - p.validoHastaEpoch
+    if (Math.abs(dDesde) <= tol && Math.abs(dHasta) <= tol) continue
+    out.push({
+      reservaRef: r.id,
+      propertyId: r.propertyId,
+      guestName: r.guestName,
+      actual: { desdeEpoch: p.validoDesdeEpoch, hastaEpoch: p.validoHastaEpoch },
+      debida: { desdeEpoch, hastaEpoch },
+      entradaMin: Math.round(dDesde / 60),
+      salidaMin: Math.round(dHasta / 60),
+      entregado: !!p.entregado,
+    })
+  }
+  return out
 }
