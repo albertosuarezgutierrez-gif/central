@@ -108,6 +108,10 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/limpiadoras/alerta-ventana', schedule: '0 8 * * *' },
   { path: '/api/sivra/rates/snapshot', schedule: '0 7 * * *' },
   { path: '/api/sivra/mensajes/auto-reply', schedule: '*/3 * * * *' },
+  // Mensajes PROGRAMADOS del ciclo de reserva (sustituto de las plantillas de Smoobu, 31/08/2026).
+  // Cada 30 min: las ventanas horarias las decide la lógica pura (decidir.ts) en hora Madrid; el
+  // dedupe por (booking, tipo, fecha_objetivo) hace inocua la frecuencia. Modo sombra por piso.
+  { path: '/api/sivra/mensajes/programados', schedule: '7,37 * * * *' },
   { path: '/api/sivra/mensajes/resumen-diario', schedule: '0 19 * * *' },
   { path: '/api/sivra/resumen-semanal', schedule: '0 9 * * 1' },
   { path: '/api/sivra/expenses/agent/scan', schedule: '0 6 * * *' },

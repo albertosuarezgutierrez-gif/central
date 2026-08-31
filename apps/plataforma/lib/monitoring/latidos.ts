@@ -320,6 +320,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'La avería sería que no hubiera latido. Huella: agente_latidos.sivra_pricing_apply.',
   },
   {
+    id: 'sivra_mensajes_prog',
+    etiqueta: '📬 Mensajes programados a huéspedes (cron cada 30 min)',
+    // Cada 30 min → 6 h: caza medio día caído sin saltar por un tropiezo puntual del dispatcher.
+    maxHoras: 6,
+    nota:
+      'El ciclo de mensajes automáticos a huéspedes (confirmación → acceso → víspera con códigos → ' +
+      'bienvenida → salida) no está corriendo. Mientras un piso esté en MODO SOMBRA no le llega nada ' +
+      'a ningún huésped (lo cubre Smoobu con sus plantillas de siempre); pero en un piso ACTIVADO en ' +
+      '`mensajes_prog_pisos` este silencio significa que un huésped puede plantarse en la puerta SIN ' +
+      'códigos. Lee el `detalle`: distingue «Smoobu no responde al listado» (esperar/reintentar) de ' +
+      'fallos de envío (mirar `mensajes_programados` estado=fallo). ' +
+      'Huella: agente_latidos.sivra_mensajes_prog.',
+  },
+  {
     id: 'sivra_extras_impago',
     etiqueta: '🍼 Extras del huésped, cobros pendientes (diario 07:00)',
     // Cron diario → 30 h, el umbral de los diarios: deja pasar una pasada saltada sin dar la lata.
