@@ -32,6 +32,16 @@
 
 ---
 
+### 🩺 (31/08/2026) El motivo era «asegura no puede leer su BD» — y la BD está SANA
+- El recuadro con motivo (PR #1903) habló a la primera: `asegura_error` — el secreto COINCIDE, asegura
+  llama a su BD y falla. Verificado por Supabase MCP contra ASEGURA-prod-eu: tablas/enums idénticos al
+  schema del código y datos vivos (1 correduría, 2.742 clientes, 28.843 pólizas) → el fallo es la
+  CONEXIÓN desde Vercel (valor de ASEGURA_DATABASE_URL).
+- Blindaje por código: `lib/asegura-url.ts::normalizarUrlPooler` (puro, 4 tests) añade
+  `pgbouncer=true&connection_limit=1` a URLs :6543 si faltan — Prisma lo exige en el pooler de
+  transacciones y es lo primero que se pierde al pegar a mano. Si tras esto sigue, es la contraseña
+  o el formato de usuario (`central_asegura.<ref>`): mirar logs de central-asegura en Vercel.
+
 ### 🔍 (31/08/2026) La cartera en vivo dice ahora POR QUÉ falla (aún «sin respuesta» tras el fix del middleware)
 - Con #1899 desplegado, sondeo por pg_net desde Supabase: `/api/operador/resumen` de central-asegura
   responde `401 {"error":"No autorizado"}` en JSON → el middleware ya no estorba y el dominio es bueno.
