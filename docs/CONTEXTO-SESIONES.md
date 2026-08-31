@@ -40,6 +40,16 @@
   conserva su propia auth Bearer, cerrada por defecto) + guardián en
   `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
   el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
+
+### 🧠 (31/08/2026) DeepSeek V4 Flash en OpenRouter — y nuestro default era el V3 viejo y más caro
+- Alberto pasó un post viral y preguntó si OpenRouter lo tiene y si el buscador está al tanto.
+- **Sí lo tiene** (`deepseek/deepseek-v4-flash`, $0,086/$0,17 por M, ctx 1M) — y el hallazgo real:
+  `deepseek/deepseek-chat` (nuestro default de pasarela) NO es alias rodante, sirve el **V3** a
+  $0,26/$1,03 (3-6× más caro). Ni PREFERIDOS ni el catálogo v12 del Director lo conocían.
+- Mini-eval en vivo por OpenRouter: A cálida en español · B `ESCALAR` exacto. PR draft con el swap
+  (default `openrouter.ts` + `MODELO_DEFAULT` Director + sonda + PREFERIDOS logica/codigo).
+- De paso: `CONTABLE_MODEL` (V4 Flash por NIM) caía al V3 con NIM apagado — el swap lo re-alinea.
+
 ### 🔬 (31/08/2026) H11–H15 RESUELTAS con el criterio firmado delante — solo H11 se cablea
 - Alberto: «ve resolviendo». Criterios aplicados tal cual contra `trading_estrategia_stats`/`trading_backtest`.
 - **H11 cableada**: `PISCINA_VIVA='direccional'` (3/3 condiciones; deltas hoy mom −9 · rev +5 · val −13).

@@ -16,7 +16,7 @@ function fakeFetch(respuesta: unknown, calls: Call[], ok = true, status = 200) {
 }
 
 const RESP = {
-  model: 'deepseek/deepseek-chat',
+  model: 'deepseek/deepseek-v4-flash',
   usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
   choices: [{ message: { content: 'hola' } }],
 }
@@ -29,7 +29,7 @@ test('openrouterChat manda system+mensajes al endpoint y devuelve el texto', asy
   assert.equal(out, 'hola')
   assert.equal(calls[0].url, 'https://openrouter.ai/api/v1/chat/completions')
   assert.equal(calls[0].headers.Authorization, 'Bearer k')
-  assert.equal(calls[0].body.model, 'deepseek/deepseek-chat')
+  assert.equal(calls[0].body.model, 'deepseek/deepseek-v4-flash')
   const msgs = calls[0].body.messages as Array<{ role: string; content: string }>
   assert.equal(msgs[0].role, 'system')
   assert.equal(msgs[1].content, 'hey')

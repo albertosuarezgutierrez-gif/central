@@ -65,7 +65,7 @@ function sondasConfiguradas(): Sonda[] {
 
   const orKey = process.env.OPENROUTER_API_KEY
   if (orKey) {
-    const modelo = process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat'
+    const modelo = process.env.OPENROUTER_MODEL || 'deepseek/deepseek-v4-flash'
     lista.push({ proveedor: 'openrouter', modelo, llamar: (signal) => openrouterChat({ apiKey: orKey, textModel: modelo }, PING, { ...opts, signal }) })
   }
 

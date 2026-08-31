@@ -20,7 +20,7 @@ export type DirectorEstado = {
 }
 
 // Defaults conservadores si la BD no responde o la tabla está vacía.
-const MODELO_DEFAULT = 'deepseek/deepseek-chat'
+const MODELO_DEFAULT = 'deepseek/deepseek-v4-flash'
 // Suplentes de OpenRouter cuando el primario falla. FIABLES (de pago, no `:free`):
 // los `:free` (p. ej. llama-3.3-70b:free) devuelven 429 al saturarse y el
 // `google/gemini-2.5-flash` da 404 ("no longer available") → dejaban a las
