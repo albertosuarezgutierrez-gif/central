@@ -32,6 +32,15 @@
 
 ---
 
+### 🔬 (31/08/2026) H11–H15 RESUELTAS con el criterio firmado delante — solo H11 se cablea
+- Alberto: «ve resolviendo». Criterios aplicados tal cual contra `trading_estrategia_stats`/`trading_backtest`.
+- **H11 cableada**: `PISCINA_VIVA='direccional'` (3/3 condiciones; deltas hoy mom −9 · rev +5 · val −13).
+- H12 no: +7,74 pp de mediana a 364 d pero p25 peor; tendencia viva separa +1,26 pp (<5). 91 d validada 3ª vez.
+- H13 no (momentum a primera con alfa medio −0,23%) · H14 no (el signo no aguanta 0,1–0,3%) · H15: ganadora
+  idéntica en los 9 combos minN×clamp (minN INERTE en 'todos': n=352 igual por construcción) → se quedan.
+- Cron `trading-h10`: ya no re-avisa el cierre de H10; vigía con lista de hipótesis vacía (tubería montada).
+- Detalle en el pre-registro («✅ RESOLUCIÓN de H11…H15») y TRADING-SALIDAS-2026-08.md (H12).
+
 ### 🔧 (31/08/2026) Agente SEO sivra: 42704 SeoStatus — el schema declaraba un enum que la BD no tiene
 - El cron `seo-refresh` de sivra murió en `prisma.seoProposal.create()`: `seo_proposals.status` es TEXT
   en la BD y el schema lo declaraba `enum SeoStatus` → Prisma castea a `"public"."SeoStatus"` (42704).

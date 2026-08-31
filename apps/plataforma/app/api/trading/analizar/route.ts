@@ -12,6 +12,7 @@ import {
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
+import { PISCINA_VIVA } from '@/lib/trading/piscinas'
 import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 
@@ -55,7 +56,10 @@ export async function POST(req: NextRequest) {
 
   // Bucle de aprendizaje: modula la confianza de cada estrategia por su rendimiento real acumulado.
   // Solo ajusta con muestra suficiente (ajustesDeStats guarda por minN); sin historial no toca nada.
-  const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: 'todos' } })
+  // La piscina de la que salen las stats es PISCINA_VIVA (H11, resuelta 31/08/2026): el torneo
+  // aprende de las señales direccionales — las únicas a las que aplica el ajuste — y no del 82%
+  // neutral que nunca toca. Cambiar la piscina es re-abrir H11 por PR, nunca tocar este literal.
+  const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: PISCINA_VIVA } })
   const ajustes = ajustesDeStats(Object.fromEntries(statsRows.map(r => [r.estrategia, { hitRate: r.hitRate, retornoMedio: r.retornoMedio, n: r.n }])))
 
   // 📅💼 Fundamentales de Yahoo para lo que el payload NO traiga: fecha de earnings (activa la
