@@ -1787,3 +1787,1394 @@ no vacías, y que el **dominio** sigue apuntando al proyecto. Se mira en el pane
 monorepo (`node ../../scripts/vercel-ignore-build.mjs apps/asegura`), o cada push al monorepo se
 pondrá a construirlo. Es la regla de `CLAUDE.md` y es la que costó ~600 US$ una vez.
 
+
+---
+
+# 🟢 26/08/2026 (noche) — GITHUB CERRADO Y FLY LISTO. Solo queda cuadrar el rato
+
+## Lo que respondió Manuel
+
+> «En el de la app ya estabas desde hace tiempo. En el del adaptador de CIMA te acabo de mandar la
+> invitación. Es `asegura-app-cima-adapter`, el sidecar Java que envuelve el JAR de TIREA; ese es el
+> que hay que mover a tu Fly para que siga entrando la cartera. Con esto los repos quedan resueltos.
+> Sigue pendiente que me metas en tu org de Fly y que fijemos día y hora del cutover.»
+
+## Estado verificado esta noche
+
+| Sistema | Estado | Cómo se comprobó |
+|---|---|---|
+| **GitHub — app** | ✅ Alberto ya era colaborador de antes | Manuel |
+| **GitHub — adaptador CIMA** | ✅ **invitación aceptada** | Repo **privado** renderizando contenido en su móvil |
+| **Supabase** | ⚠️ **DENTRO, no transferido** | Es miembro de la org (`PISO`). La propiedad del proyecto sigue siendo de Manuel |
+| **Fly — org de Manuel** | ✅ dentro | 26/08 |
+| **Fly — destino** | ✅ **ya existe: la org `Personal` de Alberto, slug `alberto-suarez-83`** (vacía, 0 apps, pago por uso, sin aviso de pago) | Panel, 27/08 |
+| **Vercel** | ❌ pendiente — Vía B (API) el día del corte | — |
+| **`CRON_SECRET`** | ❌ pendiente — **no viaja con la transferencia del repo** | — |
+
+🔴 **CORREGIDO el 27/08 — la suposición estaba INVERTIDA.** Este documento llegó a decir que
+Alberto «creó su organización de Fly e invitó a Manuel». **Es falso, y venía de darlo por bueno sin
+mirar el panel.** Lo que hay:
+
+- **`Personal`** (slug `alberto-suarez-83`): 1 miembro (solo Alberto), 0 apps. Nunca se invitó a nadie.
+- **`Manuel Suárez`** (slug `manuel-suarez-678`): 2 miembros — Manuel como **administrador** y Alberto
+  como **miembro normal**. Ninguno pendiente: los dos activos. **Ahí vive la app del adaptador**
+  (2 máquinas, región CDG).
+
+O sea: **la invitación fue en sentido contrario** — Manuel metió a Alberto en la suya. No hay
+invitación pendiente que mandar ni nombre de org que comunicarle: **el acceso mutuo ya está resuelto**.
+Y no hace falta crear ninguna organización: el destino de la transferencia puede ser `Personal`, que
+ya existe y está limpia.
+
+## 💳 Fly cuesta dinero, y por qué la tarjeta no era opcional
+
+Fly **eliminó los planes Hobby/Launch/Scale en octubre de 2024** y va a **pago por uso puro**: sin
+cuota fija, sin mínimo mensual, y **sin tier gratis útil** para cuentas nuevas. La tarjeta no la pide
+para crear la organización — la pide **para que corra una app**, y recibir el adaptador transferido
+es exactamente eso.
+
+Orden de magnitud: una `shared-cpu-1x` de 512 MB ronda **3,19 US$/mes**. ⚠️ Ese número sale de la
+documentación de Fly pero **puede ser de 2024-25**: su página de precios está bloqueada por el proxy
+de egress, así que **no está leído de primera mano**. El dato bueno no está en ninguna página de
+precios: **Manuel ya lo paga hoy**, y su factura dice la cifra real. Dos variables que solo él sabe:
+cuánta RAM tiene puesta (es JVM, 512 MB se le puede quedar corto) y si la máquina se apaga sola entre
+las pasadas de las 5:30 y 11:30 o está encendida 24 h.
+
+## 🆕 Hay ADRs que pedir, y no estaban en la lista
+
+La descripción del repo del adaptador cita **«Per ADR-007 + ADR-009»** y un ticket **`LOO-138`**.
+Manuel lleva registros de decisiones de arquitectura en algún sitio que **no es el repo**. Eso es
+documentación heredable y vale más que el código el día que haya que tocar la integración con TIREA:
+explica *por qué* está montado así. **Pedírsela.**
+
+(El prefijo `LOO-` probablemente explique el nombre «LOOR» de la organización de Supabase que costó
+una tarde entera — sería su nomenclatura de tickets, no nada de Alberto. **Inferencia, no
+comprobado.**)
+
+## ⚙️ Límite de sesión que hay que saber ANTES del corte
+
+Una sesión de Claude arrancada sobre `central` **no puede añadir el repo de Manuel**: devuelve
+`cross-tier adds are not supported in v1` porque ya tiene fuentes de otro propietario. Para leer,
+portar o revisar el adaptador hay que **abrir una sesión nueva con `manuelsuarez/asegura-app-cima-adapter`
+como fuente inicial**. Descubrirlo el día del corte cuesta la tarde.
+
+## 🗓️ Sobre «fijemos día y hora»
+
+No es contradicción con lo establecido esta mañana, es un matiz: **no hace falta ventana de
+mantenimiento** —el CRM no lo usa nadie y los ficheros EIAC se re-descargan— pero el movimiento de
+Fly y la transferencia de Supabase **sí piden que estén los dos a la vez** un par de horas. Quedar
+sí; reloj de mantenimiento no.
+
+---
+
+## 🔴 27/08/2026 — RIESGO VIVO: la facturación de la org de Fly de Manuel está VENCIDA
+
+Encontrado al verificar el punto anterior. En el panel de Fly, la organización **`manuel-suarez-678`**
+—la que aloja `asegura-app-cima-adaptador`— muestra:
+
+- Banner rojo: *«El pago de su organización está vencido. Visite la página de facturación de su
+  organización para obtener más detalles»*.
+- Etiqueta **«Vencido»** en el selector de organizaciones.
+
+**Por qué importa más que todo lo demás de este documento ahora mismo:** si Fly suspende las máquinas
+por impago, **el adaptador se cae y deja de entrar la cartera de las compañías** — y falla en
+silencio, que es el modo de fallo que este traspaso lleva semanas intentando evitar. No es un riesgo
+del corte: es un riesgo de **hoy**, con el sistema todavía en manos de Manuel.
+
+**No lo puede arreglar Alberto.** Es la organización de Manuel y él es solo miembro normal, no
+administrador: la factura se paga con la tarjeta de Manuel. Lo único que puede hacer Alberto es
+avisarle, y hacerlo pronto.
+
+⚠️ **Sin comprobar:** cuántos días lleva vencida y si la suspensión es inminente. Que la app siga con
+sus 2 máquinas desplegadas sugiere que aún no se ha suspendido, **pero es una inferencia, no un dato**:
+está en la página de facturación de esa organización, que no se ha abierto.
+
+### Lo que esto cambia en el plan
+
+1. **Sube al primer puesto:** avisar a Manuel de la factura vencida, por delante de cuadrar la fecha.
+2. **Refuerza el argumento de mover el adaptador pronto.** Mientras viva en una org con la
+   facturación vencida, la entrada de la cartera depende de que otro pague a tiempo.
+3. **Posible atajo a comprobar:** Alberto es miembro de las DOS organizaciones (`manuel-suarez-678` y
+   `alberto-suarez-83`), así que quizá pueda mover la app él mismo sin esperar a Manuel.
+   ⚠️ **No verificado:** mover una app entre orgs puede exigir rol de **administrador en la de origen**,
+   y en la de Manuel él es miembro normal. Se comprueba antes de prometerlo.
+
+### 💶 El coste real del adaptador, ya no estimado (factura de julio 2026)
+
+Factura **RTAKOYRK-0003** de Fly.io a `manuelsuarezz@gmail.com`, periodo 1–31 de julio de 2026:
+
+| Concepto | Importe |
+|---|---|
+| Pay-as-you-go Plan | 0,00 US$ |
+| Machines Shared CPU 1x (cdg) | 2,28 US$ |
+| **Machines Shared 1x: Additional RAM (cdg)** | **4,40 US$** |
+| Bandwidth egress (arn + cdg) | 0,00 US$ |
+| **TOTAL** | **6,68 US$** (5,96 €, a 1 USD = 0,8925 EUR) |
+
+Esto **sustituye la estimación de ~3,19 US$/mes** que este documento marcaba como no verificada. El dato
+bueno estaba donde se dijo que estaría: en la factura de Manuel.
+
+**Lo caro es la RAM, no la CPU** — coherente con que sea una JVM. Y responde dos de las tres preguntas
+que se le iban a hacer:
+
+- **La máquina NO se apaga entre pasadas.** La cantidad facturada de CPU son **2.678.393 s** y un mes de
+  31 días son 2.678.400 s: está encendida **24/7**, sin `auto_stop`.
+- **RAM:** ~0,75 GB de RAM adicional (2.008.794,75 GB·s / 2.678.400 s). Probablemente **1 GB en total**
+  contando la incluida. ⚠️ **Inferencia**, la factura no lo dice.
+
+**Consecuencia para el traspaso:** asumir el adaptador cuesta **unos 6 US$ al mes**. La decisión de
+moverlo no es económica.
+
+### ✅ 27/08/2026 — Alberto PAGÓ la factura de julio
+
+Liquidada la **RTAKOYRK-0003** (5,96 €) desde la página de pago pública, con tarjeta propia. Con eso
+**el adaptador deja de estar en riesgo de suspensión por el impago de julio** y la cartera sigue
+entrando mientras se organiza el traspaso.
+
+⚠️ **Lo que esto NO resuelve, y hay que decirlo aunque el banner rojo desaparezca:** el medio de pago
+de la organización `manuel-suarez-678` **sigue siendo el de Manuel**. La factura de agosto vencerá
+igual. Esto compra un mes, no cierra nada. Y a Manuel **se le dice** — le aparece en su cuenta un
+pago que él no hizo.
+
+⚠️ **Pagar esta factura NO arregla el problema de fondo.** La página de pago es pública (Google Pay o
+tarjeta, sin login), así que Alberto puede liquidarla — y con 5,96 € compra tiempo para hacer el
+traspaso con calma. Pero el medio de pago de la organización sigue siendo el de Manuel: al mes
+siguiente vuelve a vencer. Lo único que lo cierra es mover la app. Y si se paga, **se le dice**: le
+aparecerá en su cuenta un pago que él no hizo.
+
+---
+
+# 🗺️ 27/08/2026 — PLAN POR FASES (decisión de Alberto: CIMA al final)
+
+Alberto fija el orden: **CIMA se deja para lo último.** Su razón, en sus palabras: *«hay cosas más
+interesantes que hace CIMA»* y el adaptador es *«un desarrollo un poco más avanzado o diferenciado»*.
+Es una decisión correcta y además barata de sostener: el pull de CIMA sigue corriendo en el despliegue
+de Manuel mientras tanto, y los ficheros de EIAC se re-descargan cuando se quiera.
+
+El objetivo del troceado no es técnico, es de proceso: **que Manuel nos vaya pasando la información
+fase por fase**, en trozos pequeños que pueda contestar en un rato, en vez de un volcado único que se
+queda a medias.
+
+## El negocio, dicho por Alberto (27/08/2026)
+
+- **La correduría es suya.** No hay socio ni tercero. Clave de mediador **CS-F/0170**.
+- **Se opera prácticamente todo online.** Los clientes son online.
+- **La intranet que hizo Manuel tiene dos caras:** el **portal del cliente** (el asegurado ve lo suyo)
+  y la **gestión interna** (Alberto trabaja su cartera). Las dos se aprovechan; no se rehacen.
+- **La VENTA (cotizar y emitir) va por Codeoscopic**, el multitarificador.
+- **El BACK OFFICE con las compañías —siniestros, recibos, comisiones— va por CIMA.** Esto es lo que
+  se deja para el final.
+
+Esa frontera **venta = Codeoscopic / back office = CIMA** es la que ordena las fases. No son dos
+integraciones intercambiables: la primera es sincrónica y de cara al cliente, la segunda es un lote
+nocturno que rellena la base.
+
+## 🔴 Punto de partida, VERIFICADO hoy — la base de datos NO está volcada
+
+Alberto dio por hecho que *«la Supabase ya está creada, toda la base de datos volcada»*. **La primera
+mitad es cierta; la segunda no.** Consultado el Postgres compartido `wswbehlcuxqxyinousql` el
+27/08/2026:
+
+| Schema | Tablas |
+|---|---:|
+| `public` | 281 |
+| `iarest` | 252 |
+| `rrhh` | 17 |
+| **`seguros`** | **0** |
+
+El schema existe y el rol `prisma_seguros` está creado (e inerte, sin contraseña), pero **no hay ni una
+tabla dentro**. Los 32.600 clientes y las 28.843 pólizas siguen íntegramente en el Supabase de Manuel.
+Lo que está hecho son los cimientos vacíos de
+`apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`, nada más.
+
+Esto no es un matiz: **la Fase 0 entera consiste en cerrar ese hueco**, y planificar por encima de él
+daría un calendario falso.
+
+## Las cinco fases
+
+| Fase | Qué se consigue | Depende de Manuel | Se puede empezar |
+|---|---|---|---|
+| **0 · Cimientos** | El dump vive en el schema `seguros` y `apps/asegura` se conecta | 🔴 Sí, bloqueante | Ya |
+| **1 · Cartera en lectura** | Alberto ve sus clientes, pólizas y vencimientos en `central` | 🟡 Poco | Al cerrar la 0 |
+| **2 · Portal del cliente** | El asegurado entra y ve lo suyo | 🟡 Medio | Al cerrar la 1 |
+| **3 · Venta (Codeoscopic)** | Cotizar y emitir desde `central` | 🔴 Sí | Al cerrar la 1 |
+| **4 · Back office (CIMA)** | Siniestros, recibos y comisiones entrando solos | 🔴 Sí | **Al final** |
+
+### Fase 0 — Cimientos
+
+Cerrar el hueco de arriba. Tres cosas, en este orden:
+
+1. **El dump con datos** al schema `seguros`. El dump **no se commitea nunca** — son datos personales
+   reales de 32.600 personas. Vive en local durante la ventana y se borra.
+2. **Contraseña al rol `prisma_seguros`** y `apps/asegura` conectando por él. Nunca como `postgres`.
+3. **Las DOS claves** —la de cifrado y la del índice ciego— guardadas en el gestor de contraseñas.
+
+🚨 **El riesgo de fondo de esta fase, y es el mayor de todo el traspaso:** las **86 políticas RLS** del
+CRM de Manuel se resuelven por `auth.uid()` de Supabase Auth. Al conectar con un rol `BYPASSRLS`,
+**esas políticas dejan de aplicar y el aislamiento pasa a ser responsabilidad del código**. El fallo no
+sería un error: sería **ver datos que no tocan, sin que nada falle**. Antes de enseñar una sola
+pantalla hay que saber si el código de Manuel ya filtra por `correduria_id` o si delegaba todo en RLS.
+Es la pregunta M4 de la encuesta y es la más importante de la lista.
+
+### Fase 1 — La cartera en lectura
+
+Solo leer: clientes, pólizas, vencimientos. Es la fase que **da valor el primer día** (Alberto ve su
+cartera en `central`) y a la vez es la prueba de que la Fase 0 salió bien:
+
+- **Descifrar un registro real** y ver el dato correcto.
+- **Buscar por email y por DNI** un cliente conocido y que aparezca.
+
+Las dos, no solo la primera: descifrar bien pero con el índice ciego roto da un buscador que **miente
+en silencio** — devuelve «no encontrado» para clientes que sí están.
+
+### Fase 2 — El portal del cliente
+
+Login del asegurado y sus pólizas, recibos y documentos. Depende de cómo entren hoy los clientes
+(pregunta M9) y de los ~4 ficheros del Vercel Blob, que se mueven a mano.
+
+### Fase 3 — La venta: Codeoscopic
+
+Aquí está el matiz que ya medimos y que no hay que perder: **cotizar está demostrado** (1 proyecto, 15
+precios, 15 ofertas) y **emitir NO** (`codeoscopic_participants`, `product_forms` y `documents` a cero
+filas). Que el código exista no prueba que funcione. La Fase 3 se planifica asumiendo que **la emisión
+hay que verla funcionar antes de darla por buena**, no como una función heredada.
+
+Lo que salva esta fase aunque no llegara una línea de código de Manuel: guardan el **`raw_payload`
+crudo** de cada respuesta, y eso documenta la API real de Codeoscopic mejor que cualquier manual.
+
+### Fase 4 — El back office: CIMA
+
+Ya está inventariada en este documento. **No se toca hasta cerrar la 3.** Mientras tanto sigue
+corriendo en el despliegue de Manuel, y lo único que hay que vigilar es que la factura de Fly no
+venza otra vez.
+
+---
+
+## 📋 ENCUESTA — lo que hace falta saber
+
+Partida en tres: lo que **solo Manuel** puede contestar (ordenado por fase, para pedírselo a trozos),
+lo que **solo Alberto** puede decidir, y lo que **no se pregunta porque se mira**.
+
+### A · Para Manuel
+
+**Fase 0 — cimientos** *(esto es lo único que bloquea hoy)*
+
+| # | Pregunta | Por qué importa |
+|---|---|---|
+| **M1** | ¿Nos pasas tú el `pg_dump` con datos, o nos das una cadena de conexión de solo lectura y lo sacamos nosotros? | Define quién hace el trabajo y cuándo |
+| **M2** | ¿Qué tablas **no** hay que volcar? (logs, colas, caché, `operational_events`) | 3.518 filas de eventos operativos no aportan nada y ensucian |
+| **M3** | Las **dos claves**: la de cifrado y la del índice ciego. Nombres de variable aquí; **valores por gestor de contraseñas** | Sin ellas el dump es ruido cifrado |
+| **M4** | 🚨 **El aislamiento entre corredurías, ¿está solo en las políticas RLS, o el código también filtra por `correduria_id` en cada consulta?** | Con `BYPASSRLS` las RLS no aplican. Si el código confiaba en ellas, se ve todo **sin que falle nada** |
+| **M5** | ¿Qué columnas están cifradas, con qué librería, y sobre qué campos se calcula el índice ciego (¿email, DNI, teléfono?) | Para poder descifrar y para no romper el buscador |
+| **M6** | ¿Los usuarios están en **Supabase Auth** (`auth.users`)? | Si sí, **no viajan en un dump del schema `public`**: las cuentas hay que recrearlas. Agujero clásico |
+
+**Fase 1-2 — intranet y portal**
+
+| # | Pregunta |
+|---|---|
+| **M7** | El repo de la app Next.js: ¿nos lo transfieres, o acceso de lectura y copiamos lo que sirva? (Alberto ya está dentro) |
+| **M8** | ¿Hay más de una correduría en la base, o solo la de Alberto? ¿Qué representa exactamente `correduria_id`? |
+| **M9** | ¿Cómo entra hoy un asegurado al portal: contraseña, enlace mágico, DNI + nº de póliza? ¿Lo usa alguien ya? |
+| **M10** | Los ~4 ficheros del **Vercel Blob** — pásalos a mano; ¿hay algo más que no esté en la base? |
+| **M11** | Las columnas `wa_access_token` / `wa_phone_number_id` de `corredurias` están a NULL. ¿WhatsApp Business llegó a usarse? ¿A nombre de quién está la cuenta de Meta? |
+
+**Fase 3 — Codeoscopic**
+
+| # | Pregunta |
+|---|---|
+| **M12** | La carpeta del cliente de Codeoscopic: endpoints, autenticación y el mapeo de formularios por producto/compañía |
+| **M13** | **¿La emisión llegó a probarse alguna vez**, aunque fuera en sandbox? Los datos dicen que no |
+| **M14** | ¿Las credenciales apuntan a sandbox o a producción? |
+
+**Transversal — se pide ya, no depende de fase**
+
+| # | Pregunta |
+|---|---|
+| **M15** | **La lista de crons** de tu Vercel (ahí está el detector de vencimientos a 30/15/7 días) |
+| **M16** | **La lista de nombres** de variables de entorno (solo nombres) |
+| **M17** | ¿Dónde viven **ADR-007 y ADR-009**? Los cita la descripción del repo del adaptador |
+
+**Fase 4 — CIMA.** Ya inventariada. Solo queda lo de siempre: los **valores de los secrets de Fly**
+(credenciales TIREA) *si los tiene apuntados* — favor, no requisito: si no los tiene, se piden a TIREA.
+
+### B · Para Alberto (decisiones, no datos)
+
+| # | Pregunta | Por qué cambia el plan |
+|---|---|---|
+| **A1** | ¿Vas a usar la gestión interna **solo tú**, o entrará alguien más? | Decide si hace falta modelo de permisos en la Fase 1 o basta con una cuenta |
+| **A2** | ¿**Los clientes ya usan el portal hoy**, o está a estrenar? | Si no lo usa nadie, la Fase 2 no tiene migración de cuentas y se simplifica mucho |
+| **A3** | `app.grupoasegura.com`, ¿se queda como está o pasa a un dominio de `central`? | Afecta a cookies, sesiones y al corte de la Fase 2 |
+| **A4** | **¿Qué es lo primero que quieres VER funcionando?** | Es lo que ordena la Fase 1. Sin esto elijo yo, y probablemente mal |
+| **A5** | 🔶 **Las comisiones ya existen en `apps/plataforma /correduria`** (matriz compañía×mes desde los movimientos de BBVA). ¿Eso se queda ahí, o se mueve a `apps/asegura` cuando llegue CIMA? | **Hay solape real.** CIMA traerá comisiones por otra vía. Dos fuentes para el mismo número es cómo se acaba discutiendo con el dato |
+| **A6** | RGPD: 32.600 personas. ¿Hay registro de actividades de tratamiento? ¿Manuel figura como encargado del tratamiento? | El dump mueve datos personales de verdad. No es opcional |
+
+### C · Lo que NO se pregunta — se mira
+
+Para no gastar el tiempo de Manuel en cosas que salen solas:
+
+- **La estructura de tablas, tipos y relaciones** → sale del propio dump.
+- **Los 132 procedimientos de `public`** → viajan en el dump.
+- **Qué hay hoy en `apps/asegura`** → auth propia (`asegura_session` + `jose` contra `public.cuentas`),
+  layout, dashboard y los manifiestos. Nada de dominio.
+- **El coste y la forma del adaptador de Fly** → medido: 6,68 US$/mes, 24/7, sin `auto_stop`.
+
+---
+
+## Lo único que hay que hacer ahora
+
+**Mandarle a Manuel el bloque de Fase 0 (M1-M6) y nada más.** Seis preguntas que puede contestar en un
+rato. Todo lo demás espera: pedirle las diecisiete de golpe es la forma más segura de no recibir
+ninguna.
+
+---
+
+## 🔎 27/08/2026 — La propuesta del «team de Vercel con 14 días gratis», mirada de verdad
+
+Manuel propone **crear un team de Vercel aprovechando los 14 días gratis**, darle acceso, y desde ahí
+recoger toda la información. También dice que **Alberto ya tiene acceso a todo** (repos), y que **lo de
+Fly se deja para más adelante, junto con CIMA** — esto último encaja con el plan por fases y se acepta
+sin más.
+
+Lo del team **no**. Tres razones, y la segunda es de seguridad.
+
+### 1. La premisa es falsa: Alberto ya tiene Vercel Pro
+
+Consultado por MCP el 27/08/2026:
+
+| Team | Slug | Plan |
+|---|---|---|
+| `Pisos turisticos' projects` | `pisos-turisticos-projects` | **pro** |
+
+No hacen falta 14 días de prueba de nada: **el Pro ya está pagado**. La prueba gratuita solo tendría
+sentido si se partiera de cero, y no es el caso.
+
+### 2. 🚨 Lo que NO se puede hacer: meter a Manuel en el team que ya existe
+
+Ese team aloja **cinco proyectos**, todos colgando del mismo repo `central`:
+
+`ia-rest` · `ialimp` · `central-rrhh` · **`plataforma`** · `transporte`
+
+**`plataforma` es el cuadro de mando consolidado**: banca PSD2, movimientos bancarios, fiscal,
+patrimonio, trading. Un miembro del team puede leer las **variables de entorno** de los proyectos —
+que es justo donde viven las credenciales de Supabase, de la banca, del bot de Telegram y del resto.
+
+Invitar a Manuel a ese team para pasarse los datos de la correduría **le daría, de paso, la vida
+financiera entera de Alberto**. No es desconfianza hacia él: es que el permiso no se puede recortar a
+mano en el sitio donde hace falta. El control por proyecto de Vercel (*access groups*) es un
+**entitlement** aparte —la propia documentación del CLI dice literalmente «*Requires the access groups
+entitlement*»— y **está sin confirmar si el plan Pro lo incluye**. No se apuesta la banca a una
+suposición sobre un plan.
+
+➡️ **Si se usa un team, tiene que ser uno NUEVO y separado, con el proyecto de asegura y nada más.**
+Nunca el que ya existe.
+
+### 3. Los 14 días reintroducen la fecha límite que Alberto acababa de quitar
+
+Este es el argumento de fondo. El 26/08 se corrigió el error central del documento: **no hace falta
+ventana ni fecha acordada**, porque el CRM no lo usa nadie y los ficheros de EIAC se re-descargan. El
+traspaso va al ritmo de Manuel.
+
+Un trial de 14 días **fabrica exactamente el plazo que se acaba de eliminar** — y encima uno que no
+llega: las fases 0 a 3 no caben en dos semanas. Al día 15 el team decae y algo se rompe en silencio,
+que es el modo de fallo más caro de todo este proyecto.
+
+### ✅ Lo que sí resuelve el problema, gratis y sin reloj
+
+La intención de Manuel es buena —un sitio común donde soltar las cosas— pero el mecanismo sobra,
+porque **casi nada de lo que necesitamos vive solo en Vercel**:
+
+| Qué necesitamos | ¿Está en Vercel? | Cómo se consigue de verdad |
+|---|---|---|
+| El código | ❌ Está en **GitHub** | Alberto ya tiene acceso a los dos repos |
+| La lista de crons | ❌ Está en `vercel.json`, **en el repo** | Se lee, no se pide |
+| **Los VALORES de las variables de entorno** | ✅ **Solo aquí** | `vercel env pull` → un fichero, por gestor de contraseñas |
+| Los ~4 ficheros del Blob | ✅ | Se descargan a mano |
+| Los logs de ejecución | ✅ | Solo hacen falta si hay que depurar algo |
+
+**El único premio real del team son los valores de las variables de entorno.** Y eso se resuelve con
+un comando:
+
+```
+vercel env pull .env.produccion --environment=production
+```
+
+Manuel lo ejecuta, y el fichero se entrega **por el gestor de contraseñas** — nunca por WhatsApp ni
+por correo. Cero coste, cero plazo, cero acceso cruzado.
+
+### Cuándo SÍ hará falta un team
+
+Cuando se quiera **asumir el despliegue vivo**, no antes. Eso es Fase 4, junto con CIMA y con Fly — que
+es justo donde Manuel propone dejarlo. Para entonces se sabrá exactamente qué proyecto se mueve y a
+dónde, y se crea el team separado en ese momento, sin prisa y sin trial.
+
+### 🟡 Observación de paso, sin conclusión
+
+El team tiene **5 proyectos**, pero el monorepo tiene **11 apps con `vercel.json`** (`almacen`,
+`alquiler`, `asegura`, `housesevillana`, `ia-rest`, `ialimp`, `mariscos`, `plataforma`, `rrhh`,
+`sivra`, `transporte`). Faltan seis, **`sivra` entre ellas**, que sí está desplegada.
+
+⚠️ **Esto no prueba que no existan**: pueden estar en la cuenta personal de Alberto (otro *scope*, que
+esta consulta no ve) en vez de en el team. **No se ha mirado**, y no se afirma nada hasta mirarlo.
+Anotado para revisar, porque si de verdad hay proyectos repartidos entre dos scopes, eso afecta a
+dónde se crea el de la correduría.
+
+### Y una que hay que verificar, no dar por buena
+
+Manuel dice que **Alberto ya tiene acceso a todo**. La invitación al repo del adaptador está aceptada
+(comprobado el 26/08). **Del resto no hay confirmación**, y desde esta sesión no se pueden leer repos
+de la cuenta de Manuel. Antes de cerrar la Fase 0 hay que abrir cada repo y ver que carga.
+
+### ✅ DECISIÓN DE ALBERTO (27/08/2026) — Manuel entra en el team y SE QUEDA
+
+**Esta decisión manda sobre el análisis de arriba en todo lo que lo contradiga.** Quien lea esto más
+adelante: la sección anterior recomendaba no meter a Manuel en el team existente. **Alberto lo ha
+decidido dos veces, en sus palabras: «da igual q manuel lea todo».** No se re-abre.
+
+| | |
+|---|---|
+| **Qué se hace** | Manuel entra como **miembro del team `pisos-turisticos-projects`** (plan Pro) y **se queda**, no se le saca al acabar |
+| **Quién paga** | **Alberto.** Manuel está en Hobby, que no admite miembros — por eso la invitación solo puede ir en esta dirección |
+| **Coste** | Un **asiento Pro recurrente mensual** mientras esté dentro. ⚠️ **No es un pago único** (Alberto lo había entendido así). El precio por asiento **no se ha verificado**: Vercel lo muestra antes de confirmar la invitación |
+| **Descartado** | El trial de 14 días que proponía Manuel — innecesario (el Pro ya está pagado) y reintroducía una fecha límite |
+
+**Por qué dejarlo dentro es lo correcto:** el traspaso son cinco fases repartidas en semanas —
+cimientos, cartera, portal, Codeoscopic y CIMA— y a Manuel hay que preguntarle en todas. Meterlo y
+sacarlo en cada una es fricción, y **cada re-alta vuelve a generar un cargo prorrateado**: sale igual
+de caro y molesta más.
+
+**El email:** ✅ **resuelto el 29/08/2026 — Alberto confirma que entra en Vercel con
+`manuelsuarezz@gmail.com`** (el mismo de la facturación de Fly). La invitación va a esa dirección.
+Su email de correspondencia sigue siendo `info@manuelsuarez.es`.
+
+**Herramienta:** el conector MCP de Vercel **no expone la gestión de miembros** (lee proyectos y
+despliega, nada más). La invitación la hace Alberto a mano en
+`Settings → Members → Invite`, rol **Member**.
+
+### 📋 Checklist de la primera sesión con Manuel dentro
+
+1. **Envs del proyecto `asegura`: production Y preview.** Suelen diferir, y coger solo una es el fallo
+   clásico. Los **valores** al gestor de contraseñas; aquí solo nombres.
+2. **Los ~4 ficheros del Vercel Blob.**
+3. **Las seis de Fase 0** (M1-M6): el dump, qué tablas no volcar, las dos claves, si el aislamiento está
+   solo en RLS o el código filtra por `correduria_id`, qué columnas están cifradas y sobre qué campos va
+   el índice ciego, y si los usuarios están en Supabase Auth.
+4. **Dónde viven ADR-007 y ADR-009.**
+5. **La lista de crons de su Vercel** — ahí está el detector de vencimientos a 30/15/7 días.
+
+🚫 **Lo que NO se hace en esta sesión: transferir el proyecto.** Eso arrastra
+`app.grupoasegura.com/api/crons/cima-pull`, o sea adelanta CIMA a hoy, y CIMA es Fase 4 por decisión
+del propio Alberto. La transferencia va con Fly, al final.
+
+### 🛡️ 27/08/2026 — Fase 0 adelantada: el aislamiento por correduría, ANTES del dump
+
+Hecho sin depender de Manuel, porque es la pieza que hay que tener puesta **antes** de que llegue el
+dato, no después: cuando aterricen las 52 tablas, el código ya no puede filtrarlas mal por descuido.
+
+| Fichero | Qué es |
+|---|---|
+| `apps/asegura/lib/tenant-ambito.ts` | **Lógica pura, sin BD.** Tres estados (`pendiente` / `sin-asignar` / `ok`), tratamiento de valores centinela, y `exigirCorreduriaId()` que **lanza** en vez de devolver un valor de relleno |
+| `apps/asegura/lib/tenant.ts` | El envoltorio con Prisma. Hoy devuelve siempre `pendiente` — que es la verdad mientras el schema esté vacío |
+| `test/regression-asegura-aislamiento.test.ts` | Guardián en `pnpm test:guardia`: 8 pruebas |
+
+**Los tres estados, otra vez, porque aquí es donde importan:**
+
+- `pendiente` → el schema está vacío: **no se sabe** a qué correduría pertenece la cuenta, porque la
+  tabla que lo dice aún no existe. **No es** «no tiene ninguna».
+- `sin-asignar` → migrado, pero la cuenta no está vinculada. Esto **sí** es una ausencia comprobada.
+- `ok` → hay `correduriaId` y toda consulta filtra por él.
+
+Y `migrado: false` devuelve `pendiente` **aunque venga un `correduriaId`**: antes del volcado ese
+valor no es fiable, y aceptarlo sería exactamente el fallo que se quiere evitar.
+
+**Los valores centinela se tratan como ausencia** (`''`, `'otro'`, `'desconocido'`, `'N/A'`,
+`'sin asignar'`, `'null'`). Es la lección de `subastas.tipo_bien`: un `'otro'` es un «no lo he sabido
+leer» disfrazado de dato, y por eso se cuela por todas las guardas basadas en NULL.
+
+**El cepo está verificado, no supuesto.** Se creó a propósito un fichero que consulta
+`seguros.clientes` sin importar el ámbito y el guardián falló con el mensaje correcto; luego se borró.
+Un guardián que pasa en vacío no protege nada, así que se comprobó que muerde.
+
+Estado al cerrar: `tsc --noEmit` de `apps/asegura` **exit 0**, guardianes **69/69**.
+
+**Lo que NO se ha hecho, y es deliberado:** no se ha tocado el dashboard. Ya distingue bien los tres
+estados y pintar además el ámbito sería ruido hasta que haya datos. Eso es Fase 1.
+
+⚠️ **Esto no sustituye a la pregunta M4.** El código ya no puede consultar sin filtro, pero **sigue sin
+saberse si el CRM de origen filtraba por `correduria_id` o delegaba todo en RLS** — y de eso depende si
+el dump trae la columna con datos fiables. El cepo protege lo que escribamos nosotros; no adivina lo
+que hay en el dump.
+
+---
+
+## 🔴 27/08/2026 — HALLAZGO: CIMA **ya existe en `apps/plataforma`**, y está apagado
+
+Auditoría del solape de comisiones (pregunta A5). El resultado cambia una suposición de fondo de este
+documento: **creíamos que CIMA solo existía en el adaptador Java de Manuel.** No es cierto. Hay un
+**segundo cliente de CIMA, propio, dentro de `apps/plataforma`**, escrito y sin usar.
+
+| Pieza | Dónde | Estado |
+|---|---|---|
+| Cliente SOAP del WSE de TIREA | `apps/plataforma/lib/cima.ts` | Escrito. Endpoint `https://ws.cimaseg.es/wsEstandar/`, ops `recibirFicherosPendientes` / `confirmarFicherosRecibidos` |
+| Parser **EIAC 6.0 LIQ** (ancho fijo) | `lib/cima.ts:96-112` | Escrito. Cabecera tipo 0 → `codigoCompania`, `periodoRaw` (AAAAMM); pie tipo 9 → importes |
+| Tabla `cima_liquidaciones` | `prisma/sql/2026-06-24_cima_liquidaciones.sql` | Creada. `UNIQUE (cuenta_id, nombre_fichero)` |
+| Cron `cima-liq` | `lib/cron-dispatch.ts:101`, `'30 7 * * *'` | Registrado |
+| **El interruptor** | `app/api/cron/cima-liq/route.ts:26-28` | 🔴 **Sale sin hacer nada si `CIMA_WSE_ENABLED != true`.** El comentario dice que el endpoint WSE «devuelve 404» y que no está confirmado |
+
+**No es lo mismo que el adaptador de Manuel, pero se solapa.** El de plataforma baja **solo ficheros
+LIQ** (liquidaciones de comisiones); el de Manuel hace el pull completo de EIAC (CEF/POL/REC/SIN). Dos
+clientes, la misma cuenta de TIREA, la misma clave de mediador.
+
+### ✅ La pregunta A5 ya tiene respuesta escrita en el código
+
+El cron no duplica la cifra: **la contrasta**. `cima-liq/route.ts:71-89` suma los movimientos
+bancarios de esa compañía y periodo y los compara con lo que dice el fichero de TIREA, con
+`UMBRAL_DESCUADRE_EUR = 5` y `VENTANA_DIAS = 45`; si no cuadra, avisa por Telegram con un «Revisa en
+**/correduria**».
+
+➡️ **El diseño ya elegido es: el banco es la CIFRA, CIMA es el CONTRASTE.** Es una respuesta sensata
+—el dinero cobrado es el que entra en la cuenta— y **resuelve A5 sin mover nada**: `/correduria` se
+queda en `apps/plataforma`.
+
+### Y moverlo sería caro, no una mudanza de carpeta
+
+- `/correduria` lee `public.movimientos_bancarios` + `public.cuentas_bancarias` por `$queryRaw`, y
+  `apps/asegura` conecta con `prisma_seguros`, cuyo acceso a `public` se limita a `cuentas`.
+- **La ingesta bancaria (PSD2, Norma 43, categorización) se queda en plataforma**: quien escribe
+  `destino='seguros'` vive ahí. Sin eso la matriz no tiene entrada.
+- `lib/correduria.ts` **no es solo de esta pantalla**: exporta `claveReglaValida` / `claveReferencia` /
+  `claveComercio`, la guardia antitrampa de las reglas aprendidas de TODA la banca, y lo importan
+  **~24 ficheros** (banca, finanzas, contable, correo, el propio `cima-liq`). Está mal factorizado para
+  una mudanza: mezcla «detectar aseguradora» con «validar clave de regla bancaria».
+- El número alimenta el **IRPF** (`lib/finanzas.ts:733-742` → base imponible y trimestres) y tres
+  pantallas más.
+
+### 🟠 Deuda encontrada de paso (NO tocada — es de plataforma, no de este traspaso)
+
+Se anota para decidir aparte; ninguna se ha corregido en este PR.
+
+1. **Cuatro listas de compañías que no coinciden.** `detectarCompania` (18 `if`, strings legibles),
+   `COMPANIAS_CONOCIDAS` (17 entradas), una **cascada duplicada en `lib/finanzas.ts:684-711` con
+   etiquetas DISTINTAS** (`'Otras comisiones'` vs `'Otras'`, `'CSR/Caser'`, `'M1454 (por identificar)'`)
+   y `CODIGO_COMPANIA` de `lib/cima.ts:81-94` (12 códigos de 4 dígitos). **La misma comisión puede
+   salir con etiqueta distinta en `/correduria` y en `/finanzas`**, y la de `finanzas.ts` ni siquiera
+   lee `correduria_reglas`.
+2. **Los códigos de 4 dígitos de `cima.ts` (`'0131': 'Mapfre'`…) NO son los `C0058/C0109/C0072/C0468/C0613`**
+   que este documento cita como compañías conectadas. De dónde salen **no está en el código**.
+   Antes de encender nada hay que cuadrarlo.
+3. 🚨 **`pendiente = 0` se pinta como «✓ Todo revisado»** — pero `motivoSeguros` **no consulta
+   `RE_LIQUID_SEGUROS`**, así que los abonos clasificados por código de agente (`M00171`, `PD005`,
+   `8/92361`) se etiquetan «por descarte» y no entran en ese contador. Es un verde que no ha mirado
+   todo lo que dice haber mirado.
+4. **El estado vacío no distingue «no cobré» de «la clasificación está rota»** — que es exactamente
+   el incidente ya documentado (la regla `"TRANSF" → turistico_pisos` dejó la correduría a 0 € en
+   silencio). Hay mitigación fuera de la pantalla (health-check *Check 10* por Telegram), no dentro.
+5. `motivoSeguros` recibe un parámetro `banco` **que no usa**, y su comentario afirma un
+   comportamiento por banco que el cuerpo no implementa.
+6. `/correduria` lee `movimientos_bancarios` **directo** en vez de la vista canónica
+   `v_movimientos_activos`, y reproduce a mano el filtro de duplicados. El cron `cima-liq` sí usa la
+   vista. Dos criterios para lo mismo.
+
+### Consecuencia para el plan por fases
+
+La Fase 4 ya no es «traer CIMA»: es **«decidir qué CIMA»**. Hay dos clientes —el LIQ de plataforma,
+apagado, y el pull completo de Manuel, vivo— y hay que elegir si conviven (uno para comisiones, otro
+para cartera) o si uno absorbe al otro. **Eso no cambia el orden**: CIMA sigue al final. Cambia lo que
+hay que decidir cuando se llegue.
+
+---
+
+## 📐 27/08/2026 — El `schema.prisma` NO se puede escribir por adelantado (y qué pedir en su lugar)
+
+Se minó este documento entero buscando lo necesario para dejar el modelo de datos preparado antes del
+dump. **Conclusión: no se puede, y forzarlo produciría un modelo inventado.** Se deja escrito para que
+nadie lo vuelva a intentar.
+
+### Lo que sí se sabe
+
+El doc nombra **32 de las 52 tablas** del origen: `clientes` (32.600) · `polizas` (28.843) ·
+`cliente_telefonos` (4.794) · `cliente_emails` (4.017) · `oportunidades` (3.676) ·
+`operational_events` (3.518) · `cliente_carnets_conducir` (2.189) · `cliente_relaciones` (1.710) ·
+`bienes_asegurables` (1.614) · `poliza_coberturas` (1.425) · `gestiones` (694) ·
+`poliza_intervinientes` (504) · `poliza_recibos` (186) · `cima_ficheros` (125) · `siniestros` (69) ·
+`usuarios` (17) · `corredurias` (1), más `bien_documentos`, `poliza_documentos`,
+`solicitud_cambio_documentos`, `whatsapp_kb_chunks`, `channel_inbound_messages`,
+`cotizaciones_anonimas`, `ofertas_automaticas` y las 7 `codeoscopic_*`.
+
+### 🔴 Lo que falta, y por qué es bloqueante
+
+| Hueco | Consecuencia |
+|---|---|
+| **~19-20 nombres de tabla** de 52 | No hay inventario nominal completo en ninguna parte |
+| **Ni un solo tipo de columna** en todo el doc | Ni `numeric(p,s)` para los importes — en una correduría eso decide si los euros cuadran |
+| **Ninguna clave primaria** nombrada | Ni siquiera consta que se llamen `id` |
+| **CERO claves foráneas en el origen** | 🚨 No es un hueco documental, es real: **`prisma db pull` devolverá 52 modelos aislados, sin una sola relación**. Los nombres de columna de enlace (`poliza_id`, `cliente_id`…) son puro supuesto y **no se escriben** |
+| **Ningún índice**, empezando por el del **índice ciego** | No se dice sobre qué columna vive ni si es índice o columna materializada. Sin eso, el buscador por email/DNI no se reproduce |
+| **Ninguna nulabilidad, default ni CHECK** | Las 7 máquinas de estado no dicen si son `enum` nativo o `text` con `CHECK`. Prisma necesita saberlo |
+| **En qué tablas existe `correduria_id`** | Se sabe que 67 políticas lo usan; no sobre qué tablas |
+| **Dónde vive el IBAN** | Se cita una y otra vez; nunca se dice la tabla ni la columna |
+
+### ✅ Lo que hay que pedir en su lugar — **M1-bis**, y pasa a ser la petición nº 1
+
+En vez de veinte preguntas sobre el esquema, **una sola orden**:
+
+```
+pg_dump --schema-only --no-owner --no-privileges -n public > esquema.sql
+```
+
+**Sin `--data-only`, sin datos: solo la estructura.** Eso responde de golpe los ocho huecos de la tabla
+de arriba, **no contiene ni un dato personal** —así que se puede mandar por un canal normal, a
+diferencia del dump con datos— y ocupa unos pocos cientos de KB. Es la petición de mejor relación
+esfuerzo/valor de todo el traspaso, y no estaba en la lista.
+
+### 🎯 Dos cosas que este análisis YA responde, y que se pueden tachar
+
+- **M6 — ¿los usuarios están en Supabase Auth?** **Sí.** `auth.users` tiene **9 usuarios**, los 9 han
+  entrado alguna vez, último acceso el 12/08/2026. **Confirmado: no viajan en un `pg_dump` de `public`**
+  y hay que recrear las cuentas.
+- 🚨 **Y una trampa que el dato destapa: `usuarios` tiene 17 filas, las 17 con `activo = true`, pero
+  solo 9 tienen `auth_user_id` vivo.** Hay **8 fichas huérfanas** que apuntan a un usuario de Auth
+  borrado. Portar `activo` tal cual crearía **8 cuentas que parecen activas y no pueden entrar**.
+  Al migrar, `activo` se cruza con la existencia real de la credencial — no se copia.
+
+### ⚠️ Y un detalle que cambia la decisión sobre BYPASSRLS
+
+**45 de las 86 políticas RLS exigen el rol `corredor`… que no tiene NINGÚN usuario** (17 filas: 15
+`usuario`, 2 `admin`, 0 `corredor`). Es decir: si se optase por conservar las políticas con un rol sin
+`BYPASSRLS`, **casi la mitad no dejaría pasar a nadie**. Refuerza la vía elegida —aislamiento en el
+código, ver `lib/tenant-ambito.ts`— pero conviene saberlo antes de discutirlo.
+
+### 🟠 Cinco contradicciones internas de este documento, sin resolver
+
+Anotadas para que nadie se apoye en una cifra que no cuadra:
+
+1. **`siniestros`: 69 filas** (recuento) vs. **«67 de los 67»** metidos por CIMA.
+2. **Compañías CIMA: «4 conectadas»** vs. **5 códigos listados** (Mapfre, Allianz, Generali, Occident, Reale).
+3. **RLS: «86 políticas»** vs. el desglose **67 + 17 = 84**.
+4. **Tablas de `public` en `central`:** 280 vs. 281 vs. «~254» según el sitio (medidas en momentos distintos).
+5. **«132 funciones»** y **«132 procedimientos»** se usan como sinónimos.
+
+### La ruta real, entonces
+
+`pg_dump --schema-only` → leerlo → **luego** el dump con datos → restaurar en `seguros` →
+`prisma db pull`, **sabiendo de antemano que no generará relaciones** (0 FKs) y que habrá que
+declararlas a mano. Y **antes de todo eso, M4 y M5**: sin saber qué está cifrado ni si el código
+filtraba por `correduria_id`, el modelo resultante tendría columnas opacas y una columna de tenant de
+fiabilidad desconocida.
+
+### 💶 27/08/2026 — El asiento Pro: 20 US$/mes, y el 2FA está apagado
+
+Verificado en el panel (sesión de navegador de Alberto, 27/08):
+
+| Dato | Valor | Fiabilidad |
+|---|---|---|
+| Miembros del team hoy | **Solo Alberto**, rol Owner. Cero invitaciones pendientes | ✅ Leído en Settings → Members |
+| Precio por asiento | **20 US$/mes por usuario** | 🟡 **Probable.** Sale del texto de la propia página de Members («$20/mo per seat» para colaboradores añadidos como Developers), **no de la página de facturación**, que solo muestra método de pago, créditos y add-ons. El cargo exacto y si es prorrateado lo confirma Vercel en el diálogo de invitación |
+| **2FA de la cuenta Owner** | 🔴 **DESACTIVADO**, y Vercel lo está avisando en el dashboard | ✅ Leído |
+| Auto-añadir colaboradores de repos privados como Developers | ✅ **Apagado** — dejarlo así, o entran asientos de pago solos | ✅ Leído |
+
+🔴 **El 2FA es el hallazgo que importa aquí, y no tiene nada que ver con Manuel.** La cuenta que va a
+tener dentro los cinco proyectos —incluido `plataforma`, con la banca— es una cuenta Owner **sin
+segundo factor**. Eso se activa antes de meter a nadie, no después.
+
+**Sobre el rol: decisión de Alberto, ya tomada dos veces — `Member`, sin acotar.** El agente de
+navegador objetó que un Member de un team Pro ve las envs de los cinco proyectos. Es correcto y ya
+estaba analizado en este documento; Alberto lo ha resuelto («da igual q manuel lea todo»). **No se
+re-abre.** Queda anotado que existe la alternativa —rol restringido acotado por un *Access Group*— por
+si algún día se quiere, y que **sigue sin verificarse si el plan Pro incluye Access Groups**: se ve en
+`Settings → Access Groups`, y si esa sección no aparece, es que no.
+
+### 🔒 27/08/2026 — Access Groups es Enterprise: la decisión de Alberto era la ÚNICA opción real
+
+Verificado en el panel, no supuesto. Queda cerrada la duda que este documento arrastraba desde ayer.
+
+`Settings → Access Groups` **existe en el menú y carga**, pero lo único que muestra es *«Upgrade to
+Enterprise — Create access groups to more easily manage project roles»*, con el botón de crear
+**desactivado** y un «Contact Sales».
+
+➡️ **En el plan Pro NO se puede acotar a un miembro a un solo proyecto.** Las únicas opciones reales
+eran: **Member con acceso a los cinco proyectos, o no invitarlo.** La recomendación de «invitarlo
+acotado por Access Group» que aparecía como alternativa en este documento **no estaba disponible**, y
+se retira. La decisión de Alberto no era la menos segura de dos: era la única que existía sin subir a
+Enterprise.
+
+### 🔴 Corrección: el 2FA de Alberto NO es la mitigación de esa decisión
+
+Este documento (y la recomendación que se le dio a Alberto) planteaba activar su 2FA **antes** de
+invitar, como si eso cubriera el riesgo aceptado. **No lo cubre, y la distinción importa:**
+
+- **El 2FA de Alberto** protege la cuenta de Alberto. Vale la pena por sí mismo —es una cuenta Owner,
+  sin segundo factor, con las envs de `plataforma` dentro— pero es un problema que ya existía y que no
+  tiene nada que ver con Manuel.
+- **La exposición NUEVA que se acepta al invitar es la cuenta de Manuel.** Si esa cuenta se
+  compromete, el radio de daño son los cinco proyectos. **La mitigación real es que Manuel tenga 2FA
+  en su cuenta de Vercel.**
+
+⚠️ Y **no se le puede imponer desde el equipo**: en `Settings → Security & Privacy` del plan Pro **no
+existe la opción de exigir 2FA a los miembros** (solo hay revocación de tokens, commits verificados,
+secretos de producción separados, y ámbitos Git, que son de Enterprise). **Es una petición a Manuel, no
+una política.** Va con la pregunta del email.
+
+> ✅ **29/08/2026 — HECHO.** Alberto activó el 2FA de su cuenta de Vercel (confirmado por él tras
+> hacerlo con la pantalla delante; la cuenta tenía además una passkey ya registrada). El punto
+> pendiente de esta sección pasa a ser solo el 2FA de Manuel, que es petición, no política.
+
+### Ruta para activar el 2FA de Alberto
+
+`vercel.com/account/authentication` → estado hoy **Inactivo**, con aviso rojo. Dos vías: *passkey*
+(biométrico) o **TOTP** con 1Password / Google Authenticator / Microsoft Authenticator.
+
+🚨 **Si se usa 1Password para el TOTP, los códigos de recuperación se guardan FUERA de 1Password.** Si
+se pierde el gestor y los códigos están dentro, se pierde el acceso al propio equipo.
+
+---
+
+# ✅ 29/08/2026 — VERIFICACIÓN COMPLETA CONTRA PROVEEDORES (pasada Fable 5)
+
+Revisión de todo el traspaso verificando cada afirmación contra el proveedor real, no contra la
+memoria del documento. Lo que no se pudo verificar queda dicho.
+
+| # | Afirmación | Verificado contra | Resultado |
+|---|---|---|---|
+| 1 | Schema `seguros` vacío | Postgres (`pg_namespace`) | ✅ **0 tablas.** Sigue sin volcar |
+| 2 | `prisma_seguros` inerte | Postgres (`pg_authid`) | ✅ `login` sí, `BYPASSRLS` sí, **sin contraseña** (`prisma_sivra` y `rrhh_app` sí la tienen) |
+| 3 | «Supabase: estoy dentro de la org de Manuel» | MCP `list_organizations` | ⚠️ **El conector solo ve la org propia** (`alberto.suarez…`). El acceso a la org de Manuel es por PANEL, no por este conector → **el dump no se puede lanzar desde una sesión: lo hace un humano** |
+| 4 | Fly pagado y Manuel enterado | Gmail | ✅ **Manuel reenvió él mismo el recibo** (#2580-9127, 6,68 US$, tarjeta …5332) el 28/08 desde `info@manuelsuarez.es`. El pendiente «decírselo» se cierra solo |
+| 5 | Email de Manuel | Gmail | 🆕 **Su email real es `info@manuelsuarez.es`** (firma + móvil +34 658 837 430). `manuelsuarezz@gmail.com` es solo el de facturación de Fly. Para la invitación de Vercel sigue habiendo que preguntarle cuál usa |
+| 6 | Estado del pull de CIMA | Gmail | 🆕 **Reale avisa a diario al Gmail de ALBERTO** (`eiac@reale.es`, «Ficheros Generados dd/mm») cuando publica ficheros EIAC. Es un **monitor gratis del suministro**: si esos correos llegan y `cima_ficheros` no crece, el pull está caído. Candidato a regla del triaje de correo |
+| 7 | PR #1803 | GitHub | ⚠️ Estaba en **conflicto con `main`** (la entrada de memoria del 27/08 se insertó rompiendo la cabecera del archivo — error de esta sesión, ya corregido). **Merge de `main` hecho y empujado**; los 12 checks siguen sin arrancar (limitación conocida del token de App) |
+| 8 | Fly (org, secrets, máquina) | — | ❌ **No verificable desde aquí**: `api.fly.io` bloqueado por la política de red. Sigue pendiente de `fly secrets list` / `fly status` desde el terminal de Alberto |
+| 9 | Miembros del team Vercel | — | ❌ El MCP de Vercel no expone miembros. Verificado el 27/08 vía navegador: solo Alberto, 2FA apagado |
+
+**Correcciones que esta pasada deja hechas:** el borrador de mensaje a Manuel ya no necesita el punto
+«te pagué la factura» (lo sabe); y el destinatario natural de los borradores es `info@manuelsuarez.es`.
+
+---
+
+# 📥 30/08/2026 — INFORME DE MANUEL: responde casi todo y cambia UNA decisión de fondo
+
+Manuel entregó su informe de traspaso completo, con datos **medidos contra producción el 30/08**.
+Archivado verbatim en **`docs/TRASPASO-CORREDURIA-informe-manuel-2026-08-30.md`** — a partir de aquí,
+ese documento manda sobre las mediciones viejas de este. Lo que sigue es nuestro análisis.
+
+## ✅ Preguntas que el informe CIERRA
+
+| Pregunta | Respuesta |
+|---|---|
+| **M4 — ¿aislamiento en RLS o en código?** | **En código, ya hoy** (ADR-013): la app va con **Drizzle** contra `DATABASE_URL`, que **ya bypassea RLS**; la RLS es backstop del cliente de navegador. Literal: conectar con BYPASSRLS «no te pone en un sitio raro, te pone donde ya está la aplicación». Y hay **una sola correduría** (1 fila, cero nulos). Nuestro `lib/tenant-ambito.ts` queda validado |
+| **M5 — ¿qué está cifrado y cómo?** | AES-256-GCM con `node:crypto` (sin librería), formato `v1:iv:cipher:tag`, **no determinístico**. Índice ciego **HMAC-SHA256** (ADR-016) sobre email/teléfono/DNI con normalización por campo, **con índices ÚNICOS sobre los hashes**. Claves: `PII_ENCRYPTION_KEY` + `PII_LOOKUP_KEY`. Recuento columna a columna en el informe — **cero filas en claro** |
+| **M6 — ¿usuarios en Supabase Auth?** | Sí: 9 en `auth.users`, 17 en `public.usuarios`, 8 huérfanas (confirma lo medido). **Sin FK de `public` a `auth`**: el enlace es un uuid a pelo |
+| **M15 — crons** | 6 workflows de Actions + 2 crons de Vercel (`overdue-digest` 7:00 L-V, `vencimientos-detector` 6:00). Los de Vercel **sí viajan** con el proyecto |
+| **M16 — envs** | Los flags listados con nombre; `CIMA_INGESTA_ENABLED=true` deducido del comportamiento |
+| **M17 — ADRs** | En el repo, `docs/decisions/`. Clave: ADR-013 (RLS backstop), ADR-016 (índice ciego), ADR-007/009 (CIMA y Fly) |
+
+## 🔴 La decisión que el informe CAMBIA: transferir el proyecto de Supabase, no volcar
+
+Nuestro plan de Fase 0 era `pg_dump` → restaurar en el schema `seguros` de la BD compartida. El
+informe da una razón técnica fuerte en contra: **no hay FK de `public` a `auth`**, el enlace
+cuenta↔ficha es un uuid sin verificar, y recrear cuentas rompe `usuarios.auth_user_id` (17) y
+`clientes.usuario_id` (2) **en silencio** — Postgres no avisa. Además: índices únicos sobre hashes,
+triggers append-only y FORCE RLS que un dump puede reproducir mal si el DDL real difiere del declarado
+(que el propio informe avisa que puede pasar).
+
+**Análisis honesto de las dos vías:**
+
+| | Volcar a `seguros` (plan viejo) | **Transferir el proyecto** (propuesta de Manuel) |
+|---|---|---|
+| Riesgo de datos | Alto: DDL real ≠ declarado, triggers, índices únicos, uuid rotos en silencio | **Mínimo: nada se copia, todo sigue donde está** |
+| Auth | Recrear cuentas (9 vivas + 2 portal — pocas, pero enlace frágil) | Intacta |
+| CIMA | Hay que re-atar la cadena | Sigue corriendo sin tocarla |
+| Encaja con «BD compartida» | Sí | No: queda un segundo proyecto Supabase |
+| Trabajo | Semanas de validación | **Un paso administrativo** |
+
+➡️ **Recomendación: aceptar la transferencia del proyecto.** El coste real es «un segundo proyecto
+Supabase» (la org de Alberto tiene 1; el plan free admite 2), y la consolidación a la BD compartida
+puede hacerse **después, con calma, o nunca** — ya con todo bajo control propio. La transferencia es
+**propiedad, no integración**: no contradice el «CIMA al final» de Alberto, porque no se re-implementa
+nada; solo cambia el dueño. Las fases 1-4 siguen igual, sobre una base que ya es nuestra.
+**Consecuencia si se acepta:** el schema `seguros` + `prisma_seguros` de la BD compartida se quedan
+como estaban (inertes) hasta que algún día se decida consolidar; `apps/asegura` apuntaría al proyecto
+transferido. Decisión de Alberto.
+
+## 🗺️ Hallazgos operativos del informe (los que piden acción)
+
+1. **«activa» ≠ vigente.** El enum no tiene «vigente»: de 1.235 `activa`, solo **50** vencen en el
+   futuro; las 25.892 `vencida` son archivo histórico de 2018. **La Fase 1 define «vigente» por fecha,
+   nunca por la etiqueta** — si no, el dashboard mentiría desde el primer día.
+2. **Mapfre (C0058) parada desde el 23-jun** — dos meses sin descargar, causa sin investigar.
+3. **Occident (C0468): 39 ficheros atascados en `review` y creciendo** (36 el 26/08), 0 pólizas
+   persistidas de ellos.
+4. **La cartera viva es pequeña**: 2.742 clientes reales (29.858 leads), ~50-885 pólizas en vigor
+   según cómo se defina. El volumen grande es histórico.
+5. **Codeoscopic cuesta 0,50 € por operación facturable y NO hay DPA firmado.**
+6. **Drain de facturable de TIREA pendiente desde el 12-ago** (`reconcile=true` sin OK).
+7. La secuencia de corte de Manuel (§7 del informe) y sus tres gates de verificación **se adoptan tal
+   cual** — coinciden con lo que ya teníamos y añaden el orden bueno de los satélites (Blob, paneles
+   de Codeoscopic/Meta, DNS intocable).
+
+## ⚠️ Contradicciones con mediciones anteriores de ESTE documento
+
+- **«0 triggers» (medición del 26/08) era FALSO o quedó viejo:** el informe lista triggers
+  append-only en `consent_logs`, `lds_consent`, `mediator_audit_log`, `cliente_merge_log`,
+  `poliza_merge_log` y las `*_documentos`, más **FORCE RLS** en `clientes` y `polizas`. Resuelve de
+  paso el misterio de «¿cómo se disparan las guardas de inmutabilidad sin triggers?» — sí hay.
+- **Las «4 compañías vs 5 códigos»:** la tabla de ingesta del 30/08 muestra 4 con ficheros (Mapfre,
+  Allianz, Occident, Reale). **Generali (C0072) no aparece** — conectada sin ficheros o baja; sin
+  aclarar.
+- **El stack es Drizzle, no Prisma** — nuestro esqueleto usa Prisma. Si se transfiere el proyecto y
+  algún día se porta la app, esa conversión es parte del trabajo (o se adopta Drizzle en la vertical).
+
+## Lo que queda por pedir (poco)
+
+- El **`esquema.sql`** (`pg_dump --schema-only`) sigue valiendo aunque se transfiera el proyecto: el
+  propio Manuel avisa que el DDL real puede diferir del declarado del repo.
+- Los **valores** de `PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` → gestor de contraseñas (con la
+  transferencia de Vercel viajan las envs, pero se respaldan igual).
+- Confirmación de las **~723 fichas duplicadas por DNI** (el propio informe la marca sin verificar).
+
+## ✅ 30/08/2026 — DECISIÓN DE ALBERTO: se acepta la TRANSFERENCIA, en dos tiempos
+
+Alberto confirma la vía propuesta por Manuel, con la aclaración de arquitectura que preguntó él mismo
+(«¿pero la vertical sigue siendo central, no?»). El plan queda en **dos tiempos**:
+
+**Tiempo 1 — TRANSFERIR (ahora, con Manuel):** los cinco sistemas pasan a nombre de Alberto **tal
+cual están, funcionando** — proyecto Supabase a su org (al lado de `central`, como proyecto propio),
+proyecto Vercel `asegura` a su team, app de Fly a su org, los dos repos a su cuenta de GitHub, y
+`CRON_SECRET` repuesto. Nada se copia, CIMA no se entera. Se sigue la **secuencia de corte §7 del
+informe de Manuel con sus tres gates de verificación, adoptada tal cual**.
+
+**Tiempo 2 — CONSOLIDAR A CENTRAL (después, sin Manuel, sin fecha):** portar por fases a
+`apps/asegura` y, si algún día compensa, volcar los datos a la BD compartida. Se hace ya sin
+coordinación, pudiendo parar, y con el proyecto transferido de red de seguridad al lado.
+**El volcado no desaparece: se aplaza** — y puede no hacer falta nunca: si `apps/asegura` conectada
+al proyecto transferido funciona bien, la consolidación de datos es opcional.
+
+Consecuencias registradas:
+- El **schema `seguros` + rol `prisma_seguros`** de la BD compartida quedan **inertes** como estaban.
+  No se borran: son el destino de la consolidación si algún día se hace.
+- El destino final del CÓDIGO sigue siendo **`apps/asegura` en `central`** (carpeta de la vertical).
+  Los repos transferidos son la fuente desde la que se porta, no el destino.
+- Las fases 1-4 del plan siguen igual, ahora sobre infraestructura propia. «CIMA al final» se
+  mantiene: la transferencia es propiedad, no integración.
+
+## 🔁 30/08/2026 (noche) — EL REPO `asegura` YA ES DE ALBERTO; el `CRON_SECRET` corre contra reloj
+
+Manuel inició la transferencia del repo de la app y **Alberto la aceptó por email a las 20:21 UTC**.
+Verificado: `albertosuarezgutierrez-gif/asegura` existe, clonado en esta sesión, con sus 13 workflows.
+**Esto adelanta el paso 6 de la secuencia de corte** (que iba al final, justo por el `CRON_SECRET`).
+
+**Estado medido:**
+
+| | |
+|---|---|
+| Repo de la app | ✅ Transferido y aceptado (20:21 UTC) |
+| **Repo del adaptador** (`asegura-app-cima-adapter`) | ❌ **NO transferido** — sigue en la cuenta de Manuel |
+| Último `cima-pull` verde | Hoy 11:34 UTC — **bajo la propiedad de Manuel**, no prueba nada del estado actual |
+| Próxima pasada programada | **Mañana 5:30 UTC (7:30 península)** |
+
+**La buena noticia, leída del workflow:** `cima-pull.yml` **falla en ROJO si falta `CRON_SECRET`**
+(step con `::error::` y `exit 1`) — no es el fallo silencioso que temíamos. Los matices: el aviso a
+Slack necesita OTRO secret (`SLACK_CIMA_ALERTS_WEBHOOK_URL`) que tampoco viaja, así que el rojo se ve
+**solo si alguien mira Actions**; y no se pierde nada aunque falle días (EIAC re-descarga, dedupe por
+`xml_hash`).
+
+**Lo que hay que hacer, idealmente antes de las 5:30 UTC (y si no, sin drama):**
+1. Manuel pasa el **valor** de `CRON_SECRET` (≥32 chars, el mismo que la env de Vercel prod) por el
+   gestor de contraseñas — o se genera uno nuevo y Manuel actualiza la env en su Vercel.
+2. Alberto lo pone en `github.com/albertosuarezgutierrez-gif/asegura` → Settings → Secrets and
+   variables → Actions → `CRON_SECRET`.
+3. Verificación del gate (b) de Manuel: la pasada de las 5:30 en verde **con filas nuevas**, o un
+   `workflow_dispatch` con `dry_run=true` (LOO-819 garantiza que no escribe ni confirma).
+
+**Efecto colateral a vigilar:** el proyecto Vercel de Manuel despliega desde este repo, que ahora ha
+cambiado de dueño. GitHub redirige la ruta vieja, pero la re-conexión del Git en Vercel (paso 6 del
+informe) sigue pendiente para cuando se transfiera el proyecto.
+
+**🔓 Y esto desbloquea trabajo nuestro:** por primera vez podemos LEER el código real — los ADRs
+(007/009/013/016/025), `src/db/schema.ts` (el esquema declarado, con la salvedad de que el real puede
+diferir), el cifrado y el cliente de CIMA. El análisis del repo ya no depende de nadie.
+
+## 📬 30/08/2026 (noche) — Segunda respuesta de Manuel: tres correcciones, un aviso, y los deberes resueltos a medias
+
+**Correcciones aceptadas (las tres son suyas y van a misa):**
+
+1. **`CRON_SECRET` es un secreto COMPARTIDO**, no solo de Actions: GitHub lo manda como Bearer y la
+   app de Vercel lo valida contra su propia env del mismo nombre. Generar uno nuevo y ponerlo solo en
+   Actions = 401 y la cartera deja de entrar **sin aviso**. O se reutiliza el valor actual (legible en
+   el panel de Vercel si la env no está marcada sensitive), o se cambia **en los dos sitios a la vez**
+   — y el lado Vercel necesita **redespliegue** para que surta efecto.
+2. **Fly va al revés (otra vez):** el `fly apps move` lo lanza Manuel, y para eso **Manuel tiene que
+   estar en la org de Alberto** (`alberto-suarez-83`), no Alberto en la suya. Pendiente: Alberto le
+   manda la invitación desde el panel de Fly.
+3. Manuel da por transferido el proyecto Vercel. **⚠️ VERIFICADO POR MCP y NO cuadra:** el proyecto
+   `asegura` (`prj_4jVSN6zMo9J8COcrCjgOKWSbNFl8`) **no aparece en el team de Alberto** — ni en la
+   lista ni por ID (404). Puede haber aterrizado en la CUENTA PERSONAL de Alberto (scope que el
+   conector no ve) — Alberto tiene que mirarlo en su panel. Hasta verlo, **no se confirma**.
+
+**⚠️ Y una contradicción a favor:** Manuel dice que lo de GitHub «todavía no lo he lanzado» — pero el
+transfer del repo de la app **ya está hecho y aceptado** (email de 20:21 UTC, repo clonado y
+verificado). Su mensaje es anterior a eso. El del **adaptador** sí sigue pendiente.
+
+**🚨 El aviso que cambia el orden del paso 0:** la org de Supabase de Manuel está en **plan gratuito**
+→ la base de producción con los datos de 32.600 personas **no tiene hoy backups restaurables ni PITR**.
+Al pasar a la org de Alberto (con tarjeta) eso mejora solo; **hasta entonces no hay red: el volcado
+del paso 0 es obligatorio ANTES de mover nada.**
+
+**Los deberes, que ya no son dos averías sino una y media:**
+
+- **Mapfre NO está rota:** los últimos ficheros persistieron 132/132; simplemente **no llega nada
+  nuevo desde el 23-jun**. Diagnóstico: lanzar `ficherosDisponibles` contra C0058 — si TIREA dice que
+  no hay pendientes, la llamada es a Mapfre/TIREA («¿seguís publicando para CS-F/0170?»); si dice que
+  sí hay, entonces es el adaptador.
+- **Los 39 de Occident en `review` no son de Occident:** 18 REC + 18 SIN + 3 POL, con error «0/2
+  recibos»/«0/2 siniestros». Y el dato que lo explica: **en toda la base, de las cuatro compañías,
+  jamás se ha persistido un REC, un SIN ni un CEF** (54+38+7 ficheros, todos a cero; solo persisten
+  POL). Apuesta de Manuel: los flags `CIMA_INGESTA_REC_ENABLED` / `_SIN_` / `_CEF_` están apagados —
+  **no es una avería, es una función nunca encendida**. Se confirma mirando esas tres envs en Vercel.
+  Residuo real de Occident: **4 pólizas** (detectó 24, guardó 20).
+
+**Consecuencia para la Fase 4:** «encender CIMA completo» incluye decidir si se activan REC/SIN/CEF —
+la correduría hoy solo ingiere pólizas. Los recibos y siniestros de las compañías NUNCA han entrado.
+
+## 🔎 31/08/2026 — Verificación en el panel: Vercel CONFIRMADO, y el `CRON_SECRET` ya estaba
+
+Sesión de navegador sobre el panel real (agente Chrome), con tres resultados que corrigen a este
+documento y uno que corrige a Manuel:
+
+**1. ✅ El proyecto Vercel `asegura` SÍ está en el team de Alberto** (`pisos-turisticos-projects`),
+con `app.grupoasegura.com` válido y respondiendo 200. La contradicción con el 404 del MCP queda
+explicada: **el conector MCP de Vercel está scoped a los 5 proyectos que existían al conectarlo** y no
+ve los añadidos después. ➡️ Tarea de higiene: ampliar el acceso del conector al proyecto `asegura`
+para que las sesiones puedan verlo. Último deploy de producción: 12-ago, por `manuelsuarez` — **no ha
+habido deploy desde la transferencia**.
+
+**2. 🔴 El `CRON_SECRET` de Actions NO faltaba: el secreto VIAJÓ con el repo.** Está en los
+Repository secrets, actualizado hace ~2 meses — **más reciente que la env de Vercel (1-may)**. Esto
+falsa empíricamente el aviso de Manuel («no viaja con el repo»): en una TRANSFERENCIA los secrets de
+Actions sí viajan (en un fork, no). Consecuencia: sobrescribirlo con el valor de Vercel podría
+DESincronizar en la dirección contraria. **Decisión: primero `dry_run=true` con el secreto que hay**
+— el 200/401 dice si coinciden y en qué dirección sincronizar si no. También viajaron:
+`FRANKFURT_DATABASE_URL`, `INTERNAL_API_SECRET`, `SLACK_CIMA_ALERTS_WEBHOOK_URL`, `SLACK_WEBHOOK_URL`,
+`VERCEL_PROTECTION_BYPASS_SECRET`, `VERCEL_TOKEN` (nombres; los valores no se han mirado).
+
+**3. Corrección al propio plan: `dry_run` NO es «sin efectos».** Leído el handler: escribe filas de
+auditoría en `operational_events` (`cima_pull_started`/`completed`, Art. 30) y emite a PostHog,
+también en dry_run. Lo que no hace es **persistir datos CIMA ni confirmar la descarga a TIREA**. La
+garantía vive en `runCimaPull` (servidor), no en el YAML — el workflow solo añade `?dryRun=1`.
+
+**4. 🔒 Hallazgo de seguridad:** la env `CRON_SECRET` de Vercel está guardada como tipo
+**«Config» (revelable en claro)**, no como «Sensitive» — y es el bearer que protege un endpoint de
+ingesta en producción. Pendiente: cambiarla a Sensitive **después** de confirmar la sincronía
+(cambiarla de tipo obliga a re-guardarla; no antes del verde).
+
+**5. ⚠️ Trampa operativa del navegador:** la traducción automática de Chrome renombraba visualmente
+`CRON_SECRET` → «CRON_SECRETO» en la lista de envs. Copiar nombres de esa lista con traducción activa
+crea secretos mal llamados. Desactivarla en `vercel.com` y `github.com`.
+
+## ✅ 31/08/2026 — GATE (b) SUPERADO: el cron de CIMA corre en verde bajo la propiedad de Alberto
+
+Resultado de la verificación de panel (agente Chrome), y cierra el frente del `CRON_SECRET`:
+
+- **Los crons programados #179-#182 están en verde, incluido el de las 5:30 UTC de HOY** — ya con el
+  repo bajo la cuenta de Alberto. La ingesta no se enteró de la transferencia.
+- **`dry_run` manual (#183): verde en 39 s** — `{ok:true, mode:"dry_run"}`, 0 persistencias, 0
+  errores. Confirma que el secret de Actions y la env de Vercel **ya coincidían**: no se escribió ni
+  se modificó nada. El plan de «reponer» habría sido el único movimiento capaz de romperlo.
+- **Gates de Manuel:** (b) ✅ superado (cron real en su franja + dry_run). (a) y (c) quedan para el
+  corte (descifrado de un registro real; pull completo + cotización punta a punta).
+
+**🟡 Vigilancia nueva, conectada con un frente abierto:** el dry_run devuelve `totalResultados: 128`
+con `nuevosPendientes: 0`. El propio código documenta que esa cifra «queda ~78 fijo» por el re-envío
+de la cola TIREA de ficheros ya confirmados — **y va por 128, creciendo**. Encaja con el frente
+abierto del informe de Manuel: el **drain de facturable de TIREA pendiente desde el 12-ago** nunca se
+ejecutó (`reconcile=true` sin OK). No urge, pero si en un mes ronda 180, la cola de re-entrega está
+degradándose (ref. LOO-700). Se revisa junto al drain, en Fase 4.
+
+**Pendiente inmediato que quedó bloqueado:** la invitación de Fly a Manuel — el navegador no tenía
+sesión iniciada en fly.io y el agente (correctamente) no autentica por nadie. Alberto inicia sesión y
+el agente la envía.
+
+Con esto, **la lista previa al corte del lunes queda en:** Supabase (transferencia de proyecto) ·
+Fly (invitación → mover app) · Blob (~4 ficheros) · repo del adaptador · gates (a) y (c).
+
+## 🎯 31/08/2026 — DECISIÓN DE ALBERTO: sin fecha de corte — se va haciendo, y a Manuel solo se le pide lo imprescindible
+
+Alberto fija el modo de trabajo: **no se programa ningún corte**. Él no está operando con asegura
+todavía, así que no hay ventana que proteger: **primero pasar todo a poder propio, luego empezar a
+trabajar nosotros**. Cada pieza se transfiere cuando se pueda, y a Manuel se le pide solo lo que
+requiera su mano.
+
+**La lista CERRADA de lo que necesita a Manuel** (todo lo demás lo hacemos nosotros):
+
+| # | Qué | Por qué solo él puede |
+|---|---|---|
+| 1 | **Transferir el proyecto de Supabase** a la org de Alberto | Es el dueño. ⚠️ Antes: volcado de respaldo (su plan free no tiene backups) |
+| 2 | **Aceptar la invitación de Fly y lanzar el movimiento de la app** a `alberto-suarez-83` | ✅ **Invitación ENVIADA el 31/08** (verificada persistida). El move lo ejecuta el dueño de la app. **Sin redesplegar** (secrets irrecuperables). ⚠️ Fly no tiene roles en este tipo de org: Manuel entra con acceso completo (apps + facturación). Hoy la org está vacía → riesgo cero; tenerlo presente cuando haya más apps |
+| 3 | **Transferir el repo del adaptador** (`asegura-app-cima-adapter`) | Es suyo |
+| 4 | **Pasar los ~4 ficheros del Vercel Blob** (o el token del store) | El Blob va atado a su cuenta |
+| 5 | **Los valores de `PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` al gestor de contraseñas** como respaldo | Solo por seguridad: son irreversibles. (Viajan con las envs de Vercel, que ya son de Alberto — verificar que se leen antes de darlo por hecho) |
+
+Los gates (a) y (c) —descifrar un registro real, buscar por email/DNI, cotización punta a punta— los
+puede ejecutar Alberto (o una sesión) sin Manuel, en cuanto el punto 1 esté hecho.
+
+Ya NO necesitan a Manuel: el `CRON_SECRET` (resuelto), el repo de la app (transferido), Vercel
+(transferido y verificado), leer el código (clonado), ni ninguna fase de desarrollo.
+
+---
+
+# 🗂️ 31/08/2026 — EL MAPA DEL REPO `asegura` (1/3): modelo de datos REAL
+
+Primera parte del mapa, leída del código transferido (no de resúmenes). `src/db/schema.ts` completo
+(3.262 líneas), migraciones, `rls-policies.sql` y ADR-017.
+
+## Lo confirmado
+
+- **52 tablas y 42 enums**, y las 52 del schema coinciden exactamente con los `CREATE TABLE` de las
+  migraciones. Dominios: tenant/usuarios · clientes (9 tablas) · pólizas (6) · siniestros (4) ·
+  CIMA/EIAC (4: `cima_ficheros` + la rama financiera `cuenta_efectivo`→`liquidaciones`→`movimientos`)
+  · Codeoscopic (7) · legal/auditoría (3 append-only) · WhatsApp/bot (8) · operativa comercial (10).
+- **`estado_poliza` tiene 10 valores**, no 4: a los legacy (`activa/vencida/cancelada/en_renovacion`)
+  se sumaron 6 (`en_vigor/fin_riesgo/recibo_devuelto/cambio_clave/anula_al_vencimiento/competencia`)
+  **sin reescribir filas** — el mapeo conceptual legacy→nuevo NUNCA se ejecutó como backfill. La
+  definición de «vigente» vive en `src/lib/polizas/estados.ts` (`POLIZA_ESTADOS_VIGENTES` = activa,
+  en_renovacion, en_vigor, recibo_devuelto, cambio_clave) cruzada con la migración 0086 por un test.
+  **Nuestra Fase 1 usa ESA lista + fecha de vencimiento, no la etiqueta.**
+- **Cifrado, inventario columna a columna:** 25 columnas cifradas en 12 tablas; hashes de búsqueda
+  solo en dni/email/teléfono/nif, con **índices ÚNICOS parciales** sobre `clientes.dni_lookup_hash`
+  (solo `tipo='cliente'`) y `email_lookup_hash`. También hay PII cifrada DENTRO de jsonb
+  (`cotizaciones_anonimas.datos_cotizacion`, `cotizaciones.lead_*`) — el alcance exacto es ADR-025.
+
+## 🔴 Las tres advertencias que condicionan todo port
+
+1. **`schema.ts` NO es el inventario completo.** Las RLS (1.211 líneas de `rls-policies.sql`), los
+   triggers append-only, el BLOCK-UPDATE de documentos, y **funciones de negocio como
+   `cliente_segmento_actual()`** (la frontera cliente/ex_cliente/prospecto, migración 0086 + trigger
+   de la 0060) viven **en la BD, no en Drizzle**. Portar solo el schema TS se lleva la estructura y
+   deja atrás la mitad del compliance.
+2. **El journal de migraciones está ROTO desde la 0010** (ADR-017): hay **96 ficheros SQL** y el
+   journal registra 11. Todo se aplica a mano en el SQL Editor. `db:migrate` está **prohibido
+   permanentemente**; un entorno nuevo se levanta con `db:push` desde `schema.ts` + aplicar a mano
+   RLS/triggers/funciones. Y no hay verificación mecánica de que BD real == schema declarado.
+3. **⚠️ CONTRADICCIÓN ABIERTA — las claves foráneas.** El schema TS declara `.references()` por todas
+   partes (el grafo completo cliente↔póliza↔recibo↔siniestro está en el informe del agente), y las
+   migraciones crean esas tablas… pero la medición del 26/08 y el informe de Manuel dicen **0 FKs en
+   la BD real**. O las migraciones aplicadas difieren del schema, o la medición estaba mal. **Antes
+   de la Fase 1 hay que hacer el diff real contra Frankfurt** (`drizzle-kit introspect` o consulta a
+   `pg_constraint` cuando el proyecto sea nuestro). De esto depende si `db pull` trae relaciones o no.
+
+## Perlas del modelo que la Fase 1 agradecerá
+
+- **Fusiones con lápida:** `clientes.merged_into_cliente_id` y `polizas.merged_into_poliza_id`
+  (self-FK) + logs forenses append-only. Toda lectura debe excluir filas fusionadas.
+- `polizas.fecha_inicio` y `fecha_vencimiento` son **nullable** (backfill legacy) — «vigente por
+  fecha» tiene que tratar el NULL como «pendiente», no como «no vence».
+- `gestiones` es un **inbox polimórfico** con 4 anclas nullable y CHECK de «al menos una».
+- La rama financiera de CIMA (`cuenta_efectivo`) **no cuelga de póliza** y no lleva PII: son las
+  comisiones por compañía y periodo — el dato que algún día se cruzará con `/correduria` de plataforma.
+- `NO hay relations()` de Drizzle: la Relational Query API no está en uso; las consultas son SQL/select explícito.
+
+# 🗂️ 31/08/2026 — EL MAPA (2/3): superficie, auth y el grafo para portar
+
+## Las cuatro zonas de la app
+
+| Zona | Qué es | Auth |
+|---|---|---|
+| Web pública + cotizador | Landing, legales, cotizador anónimo (TTL 7 días) | Ninguna / self-gating |
+| Portal de cliente `(portal)` | 8 páginas: pólizas, bienes, ofertas, mensajes, perfil, RGPD | `loadPortalSession()` — rol `usuario`, beta cerrada por `PORTAL_INVITE_ONLY` (default CERRADO) |
+| Intranet `(dashboard)` | Cuadro de mando, clientes, pólizas, cotizaciones, leads, oportunidades, gestiones, siniestros, finanzas, salud-CIMA | `requireRole("admin","corredor")` repetido EN CADA action (defensa en profundidad) + **gate MFA TOTP** |
+| APIs | **5 esquemas de auth distintos**: sesión Supabase · Bearer `CRON_SECRET` · header `x-internal-secret` (11 endpoints `/api/internal/*`) · firmas HMAC de terceros (Meta/Codeoscopic/Linear) · público con rate-limit | — |
+
+## La puerta de auth — y la estrategia barata para re-plataformarla
+
+Todo pasa por **`src/lib/auth.ts` (172 líneas, 6 funciones)**: `getAuthUser` → `getCurrentUser` →
+`requireUser` / `requireRole` / `getCorreduriaId` / `loadPortalSession`. `correduria_id` es un campo
+de la fila `usuarios`, **no un claim del JWT**, y cada query lo recibe como argumento explícito.
+
+**Números medidos:** 102 ficheros importan `@/lib/auth`, pero su cierre transitivo son solo **11
+ficheros** — está bien aislada. La reescritura real (middleware de Supabase, SDK, `/api/auth/*`,
+magic link, **MFA TOTP que no tiene equivalente directo**) son **~20-25 ficheros**; los otros ~100
+solo necesitan que las 6 firmas se mantengan.
+
+➡️ **Estrategia elegida para cuando toque: conservar la API de `lib/auth.ts` intacta y cambiarle las
+tripas** (nuestro `asegura_session` por dentro de `getAuthUser`). Los 102 call sites ni se tocan.
+
+## Feature flags — inventario completo (22)
+
+Canónicas con `parseBooleanFlag` (fail-closed): `AUTO_SUBMIT_ENABLED` · `AUTO_SUBMIT_GLOBAL_KILL_SWITCH`
+(⚠️ **default TRUE** = kill activo) · `OFERTAS_AUTOMATICAS_ENABLED` · `BROKER_SUBMIT_ENABLED` ·
+`BROKER_INITIATED_EMISSION_ENABLED` · `CODEOSCOPIC_OPENAPI_READY` · `CODEOSCOPIC_PRODUCT_OPTIONS_ENABLED`
+· `CODEOSCOPIC_VENDOR_REASON_CAPTURE` · `IBAN_TRANSMISSION_ENABLED`. Con parseo propio:
+`SELF_SIGNUP_ENABLED` · `PORTAL_INVITE_ONLY` (⚠️ default = cerrado) · `DESIGN_LAB_ENABLED` ·
+`CIMA_INGESTA_ENABLED` + `_SIN_` + `_REC_` + `_CEF_` · `WHATSAPP_AI_BOT_ENABLED` +
+`WHATSAPP_GUARDRAIL_REPLY_ENABLED` + `WHATSAPP_REQUIRE_SIGNATURE` · `NEXT_PUBLIC_BROKER_MULTIRAMO_ENABLED`
+(CSV de ramos) · `NON_AUTO_EMISSION_ENABLED` (CSV) · `RATE_LIMIT_BACKEND`.
+
+## El grafo para portar — medido, no estimado
+
+- **Cartera en lectura (nuestra Fase 1): el mínimo son 24 ficheros** (21 de `lib`): el schema, el
+  cifrado (`crypto/field-encryption` + `clientes/{pii,blind-index}`), y
+  `correduria/{clientes,polizas,pagination}` con `correduriaId` inyectado. La UI completa infla a 164
+  porque la ficha arrastra el mundo comercial — **las fichas se reescriben, no se portan** (los
+  agregadores de presentación tienen fan-out 21-23).
+- ⚠️ **Trampa concreta:** `poliza-ficha.ts` hace `Promise.all` de 8 fuentes y arrastra TODO
+  `lib/correduria`. Para lectura ligera, usar `getPolizaByIdForCorreduria` de `polizas.ts` directo.
+- **Clientes y pólizas no son separables** (`clientes.ts` importa `POLIZA_ESTADOS_VIGENTES` de
+  `polizas.ts`), y la intranet depende del portal (`cliente-ficha.ts` → `lib/portal/bienes`).
+- **Portal de cliente: 74 ficheros** (46 de `lib`); en solo-lectura, ~20-25. Las fugas: aceptar una
+  oferta dispara el motor de emisión y de emails — **cortar por `/portal/oferta/[id]` y
+  `aceptar-precio` deja el portal en lectura limpio**.
+- **God module real: `db/schema.ts`** (fan-in 142, un solo fichero con TODO). `lib/auth` NO lo es
+  (fan-in 102 pero cierre de 11). `lib/dashboard/*` (10 helpers puros sin BD) es copia-pega gratis.
+
+## Crons de Vercel — 2, y uno son tres disfrazados
+
+`overdue-digest` (L-V 7:00) es un bot Linear→Slack, **descartable para el port**.
+`vencimientos-detector` (6:00) apila TRES trabajos por el límite de 2 crons del plan Hobby: polling
+de Codeoscopic (siempre), limpieza de cotizaciones anónimas (siempre), y el workflow de vencimientos
+30/15/7 (gateado por `OFERTAS_AUTOMATICAS_ENABLED`, hoy OFF). **Al portarlo, separarlos en tres.**
+
+Drift documental detectado: `docs/roles-rutas-matrix.md` habla de un rol `cliente` que el código no
+tiene (`admin|corredor|usuario`).
+
+# 🗂️ 31/08/2026 — EL MAPA (3/3): integraciones — y la síntesis del plan de trabajo
+
+## CIMA: la pregunta «¿podríamos hacerlo nosotros?» queda CERRADA — se hereda, no se reescribe
+
+Leído ADR-007/009/024, el runbook de Fly y las ~14.800 líneas del pipeline:
+
+- **La app no habla SOAP**: habla HTTP/JSON con el adaptador (`CIMA_ADAPTER_URL` + header
+  `x-internal-token`, sin reintentos a propósito porque las ops WSE no son idempotentes). De las 12
+  operaciones WSE cableadas, **producción usa 2**: `recibirFicherosPendientes` y `confirmarDescarga`.
+- **Por qué Java, con detalle:** el WSE de TIREA usa WS-Security **atípico** — el body SOAP va cifrado
+  AES-256-GCM con clave **derivada del password** (ni X.509 ni keystore). Ninguna librería
+  Node/Python lo soporta. Y el JAR oficial de TIREA **ni siquiera funciona tal cual**: hubo que
+  **recompilarlo** con `setValidateResponse(false)` (un Xerces del JDK revienta validando el XSD de
+  respuesta), y el runtime es **dual-JDK** (subprocess JDK 11 + Spring Boot JDK 17). Reescribirlo:
+  4-6 semanas sin poder validar hasta pegar contra el endpoint real. **La opción C (cliente TS propio)
+  muere aquí.**
+- **El parseo EIAC↔dominio SÍ es nuestro terreno**: 4 mappers puros (POL 1.030 líneas, SIN, REC, CEF)
+  sin BD/red/env, y una FSM con inyección de dependencias. Lo caro no son los mappers: son los
+  **invariantes aprendidos con incidentes reales** (la simetría de dedup respecto a `error` — su
+  ruptura perdió 7 pólizas de Occident el 23-jun —, el skip del re-ACK, el guard anti-degrade del
+  confirm, el fallback del conflicto de hash). Portar código sin portar esos comentarios es
+  reintroducir los incidentes.
+- **El `queueDepth ~78→128` explicado**: `recibirFicherosPendientes` NO consume; solo `confirmarDescarga`
+  dequeue-a, y **no lo hace de forma fiable** (LOO-700) — por eso esa cifra no se usa como alerta.
+- **Secrets del adaptador en Fly (nombres):** `INTERNAL_TOKEN` (≡ `CIMA_ADAPTER_INTERNAL_TOKEN` en
+  Vercel — rotación coordinada Vercel→Fly), `WSE_ENDPOINT`, `WSE_USER`, `WSE_PASSWORD`, `WSE_PLATAFORMA`.
+  `flyctl secrets set` es destructivo sin retorno — otra razón para transferir la app, no recrearla.
+
+## Codeoscopic: tres candados y una receta para probar la emisión
+
+- **El default de `CODEOSCOPIC_BASE_URL` ya es el sandbox** del vendor; producción exige setearla. Y el
+  kill-switch de contrato (`CODEOSCOPIC_OPENAPI_READY`) corta TODA llamada saliente.
+- **La idempotencia es nuestra, no del vendor** (no hay Idempotency-Key en su protocolo). Tres capas:
+  el **lock server-side** `submit_in_flight_at` (TTL 6 min, con UPDATE condicional — antes de existir,
+  un F5 durante el re-rate podía disparar **dos emisiones reales**), el pre-check de estado terminal, y
+  la clasificación «quizá emitido» (un 5xx/429 del POST de emisión NUNCA se reintenta).
+- **El re-rate es facturable** (~0,50 €, ~8 s) y hay guard de divergencia de precio (emitir a otro
+  precio rompe el consentimiento LDS).
+- **No existe dry-run de emisión** (a diferencia de CIMA). Receta de smoke sin riesgo, para cuando
+  toque la Fase 3: sandbox + `OPENAPI_READY=true` + `BROKER_SUBMIT_ENABLED=true` + kill-switch off +
+  allowlist de UN carrier + datos fake + verificar el lock con dos requests concurrentes. Si algún día
+  se quiere probar contra prod, hay que **construir** un corte pre-POST que hoy no existe.
+
+## Cifrado: lo único portable a coste CERO — y va a `packages/`
+
+`field-encryption.ts` (101 líneas) y `blind-index.ts` (194) dependen SOLO de `node:crypto` y de las
+dos envs. Copiables tal cual. **Decisión de diseño: paquete compartido, no copia** — si el normalize
+diverge entre apps, los lookups fallan EN SILENCIO (el fallo exacto del que avisan LOO-519/828).
+Matices que viajan con ellos: `decryptField` tolera plaintext legacy (ventana de backfill), el
+catálogo de qué-está-cifrado-dónde vive en 3 wrappers (`clientes/pii`, `polizas/datos-especificos-pii`,
+`bienes/datos-pii`) + ADR-025, y el gate `pii-key-gate.ts` valida ambas claves con regex
+independientemente de `NODE_ENV` (los helpers son fail-open en dev).
+
+## 🔴 Higiene de seguridad encontrada de paso (el repo ya es nuestro: nos toca)
+
+- **`ADR-009` línea 183 contiene una CONTRASEÑA de homologación de TIREA en texto plano**, y el
+  runbook de Fly lleva `WSE_USER`/`WSE_PLATAFORMA`/`WSE_ENDPOINT` de producción en claro. Purga
+  pendiente — primera contribución nuestra al repo heredado.
+- Ya apuntadas: env `CRON_SECRET` de Vercel a tipo Sensitive; ampliar el conector MCP de Vercel al
+  proyecto `asegura`.
+
+---
+
+# 🧭 SÍNTESIS — el plan de trabajo NUESTRO (sin fechas, se va haciendo)
+
+**De Manuel** (su lista cerrada, sin cambios): Supabase (volcado + transferencia) · Fly (aceptar y
+mover) · repo del adaptador · Blob · claves PII al gestor.
+
+**Nuestro, en orden — cada punto desbloquea el siguiente:**
+
+| # | Trabajo | Depende de |
+|---|---|---|
+| **N1** | ✅ **HECHO (31/08)** — `packages/module-seguros-pii`: `field-encryption` + `blind-index` portados con sus tests originales (**36/36 en verde**, `node:test`), contrato de sincronía documentado en `src/index.ts` (mismos hashes que asegura@`b620251` o los lookups fallan en silencio) | — |
+| **N2** | ✅ **HECHO (31/08)** — PR [asegura#814](https://github.com/albertosuarezgutierrez-gif/asegura/pull/814) **MERGEADO** (`49a3d9d0`, squash): la contraseña purgada del ADR-009 (única aparición en el árbol, verificado). ⚠️ **Sigue en el historial git → hay que ROTARLA en TIREA** (y reutilizaba un dato personal reconocible). Los identificadores del runbook se dejaron (no son contraseñas) | — |
+| **N3** | **Diff BD real vs schema declarado** (la contradicción de las FKs, `pg_constraint`, triggers, funciones) + **gate (a)**: descifrar un registro real y buscar por email y DNI | Supabase transferido + claves PII |
+| **N4** | **Fase 1 — cartera en lectura en `apps/asegura`**: los 24 ficheros mínimos (`correduria/{clientes,polizas,pagination}` con `correduriaId` inyectado por nuestro `tenant-ambito`), fichas REESCRITAS no portadas, «vigente» = `POLIZA_ESTADOS_VIGENTES` + fecha (NULL = pendiente, no «no vence») | N1 + N3 |
+| **N5** | **Auth re-plataformada barata**: conservar las 6 firmas de `lib/auth.ts`, cambiar las tripas a `asegura_session`. MFA y magic link se rehacen al final | N4 |
+| **N6** | **Fase 2 — portal en solo-lectura** (~20-25 módulos, cortando por `oferta/[id]` y `aceptar-precio` para no arrastrar el motor de emisión) | N5 |
+| **N7** | **Fase 3 — Codeoscopic**: smoke de emisión en sandbox con la receta de arriba; construir el corte pre-POST si se quiere probar en prod | N6 + decisión de encender |
+| **N8** | **Fase 4 — CIMA**: apuntar `CIMA_ADAPTER_URL` al adaptador ya movido a nuestra org de Fly (no se toca el adaptador), decidir si se encienden REC/SIN/CEF (nunca encendidos), drenar la cola (128), investigar Mapfre (`ficherosDisponibles` C0058), y resolver el solape con `/correduria` de plataforma (banco=cifra, CIMA=contraste, ya decidido) | N4 + Fly movido |
+
+**El primer commit de trabajo real puede ser HOY: N1 y N2 no dependen de nadie.**
+
+## 🔎 31/08/2026 — Aclarado el falso «Supabase ya está dentro»: era el team de VERCEL
+
+Alberto dio por transferido el proyecto de Supabase («está en PISO y dentro ASEGURA»). Verificado con
+el navegador sobre la pantalla de autorización de Supabase: **no existe ninguna org «PISO» en
+Supabase** — las orgs disponibles son la personal de Alberto y **`LOOR` (la de Manuel)**, donde
+Alberto es miembro. «PISO» era el team de **Vercel** («Pisos turisticos' projects»), otra plataforma.
+➡️ **El proyecto ASEGURA de Supabase SIGUE en la org de Manuel, sin transferir** — coherente con que
+la transferencia pidiera permiso del Owner. El punto 1 de la lista de Manuel sigue abierto.
+
+**Camino puente decidido mientras Manuel no transfiera:** Alberto, como miembro de LOOR, puede crear
+un conector de Supabase autorizado contra **LOOR** — eso da a las sesiones acceso al proyecto ASEGURA
+YA, sin esperar a nadie. Matices verificados en la pantalla de autorización:
+- **No hay opción read-only**: los scopes son fijos (BD/funciones/entorno/proyectos en LECTURA-ESCRITURA).
+  → **Disciplina de uso obligatoria hasta que el proyecto sea de Alberto: SOLO consultas de lectura**
+  (SELECT / catálogos). Nada de DDL, migraciones ni escrituras contra la org de otro.
+- El conector verá la org de Manuel entera, no solo ASEGURA. Mismo marco de confianza ya decidido
+  por Alberto en Vercel/Fly.
+- Esto NO sustituye la transferencia (los backups siguen dependiendo del plan de la org de Manuel):
+  es un puente para trabajar N3 mientras tanto.
+
+---
+
+# ✅ 31/08/2026 — N3 (parte estructural) HECHO: la BD real, medida por fin de primera mano
+
+Conector **«Supabase asegura»** operativo: personalizado, **scoped al proyecto** (`project_ref`) y
+**read-only forzado en servidor** (verificado: solo expone 13 herramientas de lectura, sin
+`apply_migration` ni `deploy_edge_function`). Primera vez que una sesión mide ASEGURA directamente.
+
+## El diff real vs declarado: CASAN — y dos mediciones históricas eran falsas
+
+| Métrica | BD real (31/08) | Declarado/documentado | Veredicto |
+|---|---:|---|---|
+| Tablas `public` | **52** | 52 | ✅ |
+| Enums | **42** | 42 | ✅ |
+| Funciones | **132** | 132 | ✅ |
+| Políticas RLS | **86** | 86 («67+17=84» era el desglose el que no cuadraba) | ✅ |
+| Tablas con RLS | **52** | 52 | ✅ |
+| **Tablas con FORCE RLS** | **51 de 52** | el informe solo citaba `clientes`+`polizas` | 🆕 casi todas |
+| **FKs en `public`** | **131** | 🔴 «0 FKs» (26/08 + informe) **ERA FALSO** | corregido |
+| FKs hacia `auth` | **0** | «no hay FK a auth» (Manuel) | ✅ — su claim era este, y se sobre-generalizó |
+| **Triggers** | **26** (en 20 tablas) | 🔴 «0 triggers» (26/08) **ERA FALSO** | corregido |
+| `estado_poliza` | los **10 valores**, en el orden declarado | 10 | ✅ |
+
+**Consecuencia grande:** el esquema declarado (`schema.ts`) y la BD real **coinciden** — las
+`.references()` SÍ están aplicadas como FKs. La introspección (`db pull`) **traerá las relaciones**,
+al contrario de lo que se temía. El modelo de la Fase 1 se puede generar del real con confianza.
+
+## Datos operativos medidos
+
+- **Cartera viva por fecha: 50 pólizas** (estados vigentes + vencimiento futuro) — clava el dato de
+  Manuel. **1.194 pólizas con `fecha_vencimiento` NULL** → «vigente» trata NULL como *pendiente*.
+- Fusiones: 5 pólizas con lápida (`merged_into_poliza_id`), 0 clientes.
+- `cima_ficheros`: **128** (125 el 26/08 — viva); último fichero 30/08. ⚠️ **La cuarentena `review`
+  sigue creciendo: 42** (39 el 30/08, 36 el 26/08) — coherente con REC/SIN/CEF apagados.
+
+## Lo que queda de N3
+
+- **Gate (a) — descifrar un registro real**: imposible por SQL (el cifrado es de capa de aplicación).
+  Necesita las claves PII en un entorno de ejecución — pendiente de que los VALORES lleguen al gestor
+  de contraseñas (punto 5 de la lista de Manuel) o de probarlo contra la propia app desplegada.
+- **Paso 4 de conectores**: re-autorizar el conector «Supabase» principal de vuelta a la org
+  `alberto.suarez.gutierrez@gmail.com` (quedó apuntando a LOOR) — **si no, las rutinas de `central`
+  fallarán en cada sesión nueva**. En manos de Alberto/Chrome.
+
+## 🏗️ 31/08/2026 — Fase 1 arrancada: modelo real + la regla de vigencia, portados
+
+- **`apps/asegura/prisma/cartera-real.prisma`** — el modelo del subconjunto de cartera (9 tablas, 18
+  enums), **generado de la base REAL** (columnas de `information_schema`, FKs de `pg_constraint`), con
+  las relaciones verdaderas: fusiones con lápida (self-FK), cadena de renovaciones, cascadas. Es la
+  referencia; pasa a `schema.prisma` cuando la app apunte al proyecto ASEGURA. Sorpresas del DDL real
+  anotadas dentro: los importes de `poliza_recibos` son **TEXT** (tal cual EIAC), y `clientes`/`polizas`
+  usan `timestamp` sin zona mientras el resto usa `timestamptz`.
+- **`@central/module-seguros`** — nace el módulo de dominio con `vigenciaPoliza()`: tres estados
+  (`vigente`/`no_vigente`/`pendiente`), la lista `POLIZA_ESTADOS_VIGENTES` idéntica a la del CRM de
+  origen, NULL de vencimiento → `pendiente` (nunca «no vence»), y la fecha manda sobre la etiqueta
+  (una `activa` vencida en 2019 NO es vigente). **8/8 tests.**
+
+Con esto, N4 tiene los cimientos: modelo real + regla del titular testeada. Falta el cableado
+(DATABASE_URL del proyecto ASEGURA en la app) y las pantallas.
+
+## ✅ 31/08/2026 (cierre) — Mapa de conectores de Supabase, verificado en vivo
+
+| Conector | Org | Alcance | Permisos |
+|---|---|---|---|
+| `Supabase` | `alberto.suarez…@gmail.com` | `central` (wswbehlcuxqxyinousql) | Lectura y escritura |
+| `Supabase asegura` | LOOR (bloqueada por `project_ref`) | **solo** ASEGURA-prod-eu | **Solo lectura**, 13 herramientas — sin `apply_migration`, sin `list_projects`: no puede escribir ni asomarse al resto de la org de Manuel ni por error |
+| `Supabase solo lectura (trading)` | — | `central` | Sin cambios |
+
+Verificado con llamadas reales por ambos lados (cifras idénticas por los dos caminos). **Las rutinas
+de `central` vuelven a tener su conector.**
+
+💡 **Idea apuntada, sin ejecutar** (propuesta del agente de navegador, y es razonable): queda
+asimétrico que la base propia de producción tenga un conector con escritura y «permitir siempre»
+mientras la ajena está blindada. El mismo truco (`project_ref=wswbehlcuxqxyinousql&read_only=true`)
+daría un conector de solo lectura para el día a día de `central`, reservando el de escritura para
+cuando toque. **No se hace sobre la marcha**: las skills y rutinas nombran las herramientas del
+conector actual, así que es un cambio a planificar, no un clic. → candidata para `conectores-vigia`.
+
+## 🔌 31/08/2026 — N4 CABLEADO: `apps/asegura` ya sabe hablar con la cartera real
+
+La app queda con **dos bases**: la compartida de central (auth, como estaba) y la cartera real del
+proyecto ASEGURA vía **`ASEGURA_DATABASE_URL`** (segundo cliente Prisma, `prisma/asegura.prisma` →
+`lib/generated/asegura-client`, generado con `pnpm run prisma:generate`).
+
+- **`lib/cartera.ts`** — lecturas de Fase 1: `resumenCartera()` (clientes/leads, pólizas en vigor /
+  sin fecha / históricas por la regla de `@central/module-seguros`, siniestros abiertos; lápidas de
+  fusión excluidas SIEMPRE; `correduriaId` explícito en todo WHERE) y `correduriaUnica()` (lanza si
+  algún día hay más de una: el ámbito implícito caduca solo).
+- **El dashboard estrena la narrativa nueva de TRES estados**: `sin_configurar` («conexión pendiente
+  — esto NO significa que no haya cartera»), `error` (visible, nunca cartera vacía) y `ok` (los
+  números reales, con la leyenda de qué cuenta como «en vigor»). La narrativa vieja de «migrar al
+  schema seguros» sale del dashboard (el plan cambió a conectar; el schema queda para consolidación
+  futura).
+- **CI ajustado**: el paso de typecheck de `tests.yml` usa `pnpm run prisma:generate` cuando la app
+  lo define (solo asegura hoy) — nombres de job intactos. **Simulado desde cero en local: verde.**
+
+**Para encender el dashboard con datos reales falta UNA cosa:** poner `ASEGURA_DATABASE_URL` como
+variable de entorno (los despliegues de `apps/asegura` cuando exista su proyecto Vercel, y/o el
+entorno de las sesiones). El valor es la cadena de conexión del proyecto ASEGURA — está en las envs
+del Vercel de la app de Manuel (`DATABASE_URL`) o en Supabase → proyecto → Connect. **Va al gestor de
+contraseñas, nunca por chat.**
+
+## 🚨 31/08/2026 — Las env vars NO viajaron con el proyecto de Vercel (hallazgo de Chrome, contrastado con el código)
+
+Chrome, buscando `DATABASE_URL` para copiarla, encontró que el proyecto `asegura` transferido tiene
+**solo 4 env vars** (`BROKER_OPS_EMAIL` + 3 `NEXT_PUBLIC_*` de Supabase). Chrome concluyó «la app no
+usa URI de Postgres» — **falso**: `src/db/index.ts` hace `process.env.DATABASE_URL!` (Drizzle) y el
+código lee ~25 variables más (`PII_ENCRYPTION_KEY` ×92 usos, `PII_LOOKUP_KEY`, `RESEND_API_KEY`/
+`RESEND_FROM`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN`, `INTERNAL_API_SECRET`, `SLACK_WEBHOOK_URL`,
+`CIMA_INGESTA_*`, `CODEOSCOPIC_*`, `EMAIL_OPT_OUT_HMAC_SECRET`, `LINEAR_WEBHOOK_SECRET`…).
+
+**Lectura correcta (probable, pendiente de re-verificar en el panel):** las variables eran *shared
+env vars* del team de Manuel — esas **no viajan** en una transferencia de proyecto (el token de Blob
+tampoco: el store se queda en el team origen). Producción sigue viva porque los deployments
+existentes llevan los valores horneados (el cron #182 salió verde post-transferencia).
+
+🚨 **Consecuencia operativa: NADIE redespliega el proyecto `asegura` hasta reponer las envs** — el
+próximo deploy saldría sin `DATABASE_URL` ni claves PII y tumbaría la app en silencio. Es EL bloqueo
+del objetivo «Alberto modifica el proyecto» — antes de tocar nada, envs repuestas.
+**Vía de reposición:** Manuel es Member del team → él mismo las pega en Settings → Environment
+Variables del proyecto (ningún valor pasa por chats ni por terceros). Las claves PII van ADEMÁS al
+gestor de contraseñas (eso ya estaba en su lista).
+
+⚠️ Esto **corrige la sección anterior**: el valor de `ASEGURA_DATABASE_URL` NO está en las envs del
+Vercel de Manuel (no hay `DATABASE_URL` ahí). Y mejor así: en vez de reutilizar su credencial,
+**se acuña un rol propio** en el proyecto ASEGURA — patrón de la casa «cada app, su rol»:
+`central_asegura`, `login` + `BYPASSRLS` (las 86 políticas RLS resuelven por `auth.uid()`, que en
+conexión directa es NULL → sin bypass se verían 0 filas), **solo SELECT de momento** (el dashboard
+solo lee; se amplía cuando se escriba). Lo ejecuta Alberto en el SQL Editor del proyecto (como
+`postgres`); la contraseña la teclea él y no pasa por ningún chat.
+
+## 🏗️ 31/08/2026 — Proyecto Vercel `central-asegura` creado (pendiente de verificar)
+
+El proyecto Vercel de `apps/asegura` (monorepo) **no existía** — el llamado `asegura` del team es el
+de Manuel (repo `albertosuarezgutierrez-gif/asegura`). Creado por el conector:
+**`central-asegura`** (id `prj_CbAXljUAH82YgCSOM4UZPqVAe4YU`), repo `central`, Root Directory
+`apps/asegura`, sin deploy inicial. ⚠️ El conector no está autorizado sobre el proyecto nuevo, así
+que la conexión Git quedó **sin verificar** — pendiente de comprobar en el panel (y de añadir
+`central-asegura` y `asegura` al Manage Access del conector). El `vercel.json` de la app ya lleva
+`ignoreCommand` con `--sin-previews`, así que colgarlo del repo no dispara builds de más.
+Envs a poner ahí: `ASEGURA_DATABASE_URL` (el rol nuevo), `ASEGURA_SESSION_SECRET`.

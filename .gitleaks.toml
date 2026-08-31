@@ -27,6 +27,10 @@ regexes = [
   # que vivió en tuya-cifrado.test.ts (commit del PR de domótica). El código actual la
   # construye por repetición; se allowlista el literal por el historial del PR.
   '''0123456789abcdef0123456789abcdef''',
+  # Fixture de test del índice ciego PII (packages/module-seguros-pii/src/blind-index.test.ts,
+  # portado verbatim del repo asegura): FAKE_KEY_B, 64 hex sintéticos por repetición del patrón
+  # inverso al de arriba. NO es un secreto real; se allowlista el literal por el historial.
+  '''fedcba9876543210fedcba9876543210''',
   # Anon key PÚBLICA del proyecto Supabase compartido (wswbehlcuxqxyinousql), hardcodeada
   # en el bridge de impresión (scripts/bridge-v6) igual que lo estaba la del proyecto viejo:
   # es una clave de cliente (viaja en todo bundle del navegador), la protección real es RLS.

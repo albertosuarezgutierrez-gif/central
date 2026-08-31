@@ -32,6 +32,28 @@ salidas (`error` / `no migrado` / `migrado`), nunca dos.
   “no se ve nada” sino “se ve todo sin que falle nada”**. El aislamiento pasa a ser
   responsabilidad del CÓDIGO de esta app: la regla a reproducir es **«un cliente solo ve lo
   suyo»** (hoy son 2 fichas de 32.600), no el andamiaje multi-tenant.
+- **🛡️ Ámbito de correduría (27/08/2026) — la puerta ÚNICA a los datos de `seguros`.**
+  `lib/tenant-ambito.ts` es lógica **pura, sin BD** (probable sin Prisma ni red) y `lib/tenant.ts`
+  el envoltorio. **Tres estados, nunca dos:**
+  - `pendiente` → el schema está vacío: **no se sabe** a qué correduría pertenece la cuenta,
+    porque la tabla que lo dice aún no existe. **No es** «no tiene ninguna».
+  - `sin-asignar` → migrado y sin vínculo. Esto **sí** es una ausencia comprobada.
+  - `ok` → hay `correduriaId` y **toda** consulta filtra por él.
+
+  `migrado: false` devuelve `pendiente` **aunque venga un `correduriaId`**: antes del volcado ese
+  valor no es fiable. Los valores de cajón (`''`, `'otro'`, `'desconocido'`, `'N/A'`,
+  `'sin asignar'`) se tratan como **ausencia** — la lección de `subastas.tipo_bien`.
+  `exigirCorreduriaId()` **lanza**; no existe rama «devuelve algo por si acaso», porque un id
+  inventado no da error: da los datos de otro.
+
+  🚨 **Al añadir modelos de `seguros`: toda consulta pasa por aquí.** Lo vigila
+  `test/regression-asegura-aislamiento.test.ts` (en `pnpm test:guardia`), que falla si un fichero
+  de esta app toca `seguros.*` sin importar `lib/tenant`. El cepo está **verificado**: se probó con
+  un fichero infractor y saltó.
+
+  ⚠️ Esto protege lo que escribamos nosotros; **no adivina lo que trae el dump**. Sigue abierta la
+  pregunta a Manuel de si el CRM de origen filtraba por `correduria_id` en el código o lo delegaba
+  todo en RLS — de eso depende que esa columna venga con datos fiables.
 - **Vercel:** proyecto propio, Root Directory `apps/asegura`. `vercel.json` lleva su
   **`ignoreCommand` obligatorio** con `--sin-previews`.
 - **Dinero:** `lib/dinero.ts` → `eur()`, formato español `2.162,49€`. `null` devuelve `—`,
