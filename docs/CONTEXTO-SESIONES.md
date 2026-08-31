@@ -59,6 +59,15 @@
   reserva viva de House tiene 16 mensajes; Smoobu ya mandó «Booking Confirmation» y «WHERE TO COLLECT
   THE KEYS» (por eso esos dos hitos quedaron en sombra), y **NO** hay «RECORDATORIO - MUY IMPORTANTE»,
   así que la víspera del 3/09 con el PIN NO está bloqueada. Alberto apagó ya las plantillas de House.
+- 🚨 **AGODA es de UNA SOLA DIRECCIÓN (medido sobre las 8 reservas del histórico):** Smoobu SÍ
+  entrega lo nuestro (los 7 automáticos salieron en todas), pero lo que el huésped contesta NO
+  vuelve — **0 mensajes entrantes en las 8**, con prueba independiente en `atul bhatt` (Agoda
+  reenvió su mensaje del 14/04 por correo y NO está en el hilo de Smoobu). Control: el hilo de
+  Booking de la reserva viva de House tiene 16 mensajes, 6 del huésped. Su respuesta vive SOLO en
+  el extranet YCS. Tapado con una categoría nueva del triaje (`agoda-huespedes`): el correo diario
+  «New messages from your guests» trae el TEXTO del mensaje, así que el Telegram lo manda entero y
+  enlaza a YCS. **NO se enruta al agente de huéspedes** — contestaría en un hilo que no llega.
+  Antes de activar Luxury (14 de las 15 reservas de Agoda son suyas) esto tenía que existir.
 - **AGODA sí tiene canal**: Smoobu guarda un alias de retransmisión `…@agoda-messaging.com`, mismo
   mecanismo que `…@guest.booking.com`. Lo que NO trae es el idioma: `language` viene **vacío** (en
   Booking viene `es`), así que a un huésped de Hong Kong con el portal en chino se le escribiría en
