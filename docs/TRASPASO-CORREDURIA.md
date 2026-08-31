@@ -2768,3 +2768,29 @@ ingesta en producción. Pendiente: cambiarla a Sensitive **después** de confirm
 **5. ⚠️ Trampa operativa del navegador:** la traducción automática de Chrome renombraba visualmente
 `CRON_SECRET` → «CRON_SECRETO» en la lista de envs. Copiar nombres de esa lista con traducción activa
 crea secretos mal llamados. Desactivarla en `vercel.com` y `github.com`.
+
+## ✅ 31/08/2026 — GATE (b) SUPERADO: el cron de CIMA corre en verde bajo la propiedad de Alberto
+
+Resultado de la verificación de panel (agente Chrome), y cierra el frente del `CRON_SECRET`:
+
+- **Los crons programados #179-#182 están en verde, incluido el de las 5:30 UTC de HOY** — ya con el
+  repo bajo la cuenta de Alberto. La ingesta no se enteró de la transferencia.
+- **`dry_run` manual (#183): verde en 39 s** — `{ok:true, mode:"dry_run"}`, 0 persistencias, 0
+  errores. Confirma que el secret de Actions y la env de Vercel **ya coincidían**: no se escribió ni
+  se modificó nada. El plan de «reponer» habría sido el único movimiento capaz de romperlo.
+- **Gates de Manuel:** (b) ✅ superado (cron real en su franja + dry_run). (a) y (c) quedan para el
+  corte (descifrado de un registro real; pull completo + cotización punta a punta).
+
+**🟡 Vigilancia nueva, conectada con un frente abierto:** el dry_run devuelve `totalResultados: 128`
+con `nuevosPendientes: 0`. El propio código documenta que esa cifra «queda ~78 fijo» por el re-envío
+de la cola TIREA de ficheros ya confirmados — **y va por 128, creciendo**. Encaja con el frente
+abierto del informe de Manuel: el **drain de facturable de TIREA pendiente desde el 12-ago** nunca se
+ejecutó (`reconcile=true` sin OK). No urge, pero si en un mes ronda 180, la cola de re-entrega está
+degradándose (ref. LOO-700). Se revisa junto al drain, en Fase 4.
+
+**Pendiente inmediato que quedó bloqueado:** la invitación de Fly a Manuel — el navegador no tenía
+sesión iniciada en fly.io y el agente (correctamente) no autentica por nadie. Alberto inicia sesión y
+el agente la envía.
+
+Con esto, **la lista previa al corte del lunes queda en:** Supabase (transferencia de proyecto) ·
+Fly (invitación → mover app) · Blob (~4 ficheros) · repo del adaptador · gates (a) y (c).

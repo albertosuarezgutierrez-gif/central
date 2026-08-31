@@ -32,6 +32,17 @@
 
 ---
 
+### ✅ (31/08/2026) Correduría: Vercel transferido y CONFIRMADO; el cron de CIMA en verde bajo Alberto
+
+Semana de traspaso relámpago: repo `asegura` transferido y aceptado (30/08, 20:21); proyecto Vercel
+en el team `pisos-turisticos-projects` con dominio OK (el 404 del MCP era el conector scoped a 5
+proyectos — ampliar acceso); **los secrets de Actions VIAJARON con el repo** (falsa el «no viaja» de
+Manuel: eso es de forks) y el `CRON_SECRET` ya coincidía → cron de las 5:30 en verde + dry_run OK,
+**gate (b) superado**. 2FA de Alberto activado. Vigilar: cola TIREA re-entrega 128 (doc dice ~78) →
+ligado al drain pendiente desde 12-ago. Falta: Supabase, Fly (invitar a Manuel DESDE la org de
+Alberto), Blob, repo adaptador. Corte propuesto: lunes 01/09 9:30. Informe de Manuel archivado en
+`docs/TRASPASO-CORREDURIA-informe-manuel-2026-08-30.md`.
+
 ### 📥 (30/08/2026) Correduría: informe COMPLETO de Manuel — cierra M4-M6/M15-M17 y propone TRANSFERIR Supabase
 
 Manuel entregó su informe de traspaso medido contra producción (archivado verbatim en
