@@ -86,6 +86,17 @@ export const RUTAS: RutaCorreo[] = [
     ejemplos: ['Nueva reserva no registrada (5569210843, 1/8/2026)', 'Cancelación no registrada', '¡Nueva reserva! Information about new reservation'],
   },
   {
+    categoria: 'agoda-huespedes',
+    etiqueta: 'Triaje/Agoda',
+    archivar: false,
+    aviso: 'inmediato',
+    // 🚨 enrutarSivra NO: el agente de huéspedes contesta en el hilo de Smoobu, y para Agoda ese
+    // hilo NO llega al huésped (medido 31/08/2026: 8 reservas, 0 mensajes entrantes). Contestar ahí
+    // dejaría constancia de una respuesta que nadie recibe. Se responde en YCS, y el aviso lo dice.
+    descripcion: 'Aviso de Agoda de que un huésped ha escrito por el buzón de la propiedad («New messages from your guests»). Agoda NO devuelve esas respuestas a Smoobu, así que este correo es la única señal. NO es un voucher de reserva (contabilidad) ni un OTP.',
+    ejemplos: ['New messages from your guests', 'Mensajes nuevos de sus huéspedes'],
+  },
+  {
     categoria: 'leads-negocio',
     etiqueta: 'Triaje/Leads',
     archivar: false,
