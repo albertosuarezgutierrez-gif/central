@@ -32,6 +32,13 @@
   meses atrás) — esa noche ya vendida a 162€, irrelevante hoy, pero vigilar si se repite
   en fechas cercanas (¿dinámica real de última disponibilidad o ruido de muestra?).
   fallos: —. PRs/commits: (este commit, memoria + bitácora, sin cambios de código).
+- **2026-08-31 · buscador-ia** · hizo: pasada semanal completa. Preflight Telegram 200 OK. Watch de
+  deprecación de los 4 eslabones activos (Groq/Cerebras/Gemini/Kimi, por WebSearch, sin keys en
+  sesión) → todos vivos, sin swaps necesarios; NIM sigue apagado por decisión de Alberto (28/08) y
+  fuera de vigilancia activa (sin id que verificar). Descubrimiento: ningún candidato cruza el
+  listón calidad/precio (mercado de pago dominado por flagship caros; Qwen3.7 Flash anotado sin
+  acción). Sin Telegram (nada urgente). dudas: —; fallos: —; PRs/commits: PR draft con el doc de
+  estado (rama `claude/youthful-gates-4oor0p`).
 - **2026-08-30 · facturas-correo** · hizo: pasada diaria completa. Paso 0: Vía B sana
   (`dias_caido=1`, última copia `_buzon_pdf` 29/08 IONOS); backlog: `PDF-pendiente` vacío,
   `Revisar` 1 hilo (Fly.io/Manuel Suárez, sigue sin respuesta de Alberto — día 3), y
