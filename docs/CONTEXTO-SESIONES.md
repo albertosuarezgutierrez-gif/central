@@ -32,6 +32,15 @@
 
 ---
 
+### 🎯 (31/08/2026) mercado-booking: objetivo jul/ago-2027 cumplido — quitar la línea de prioridad del cron
+- Pasada acotada `?desde=2027-07-01&hasta=2027-08-31&max=24`: 240 comps reales en 6 fechas × 4 pisos
+  (02/10/27-07, 06/14/24-08) → **≥3 fechas distintas por piso en julio-2027 y en agosto-2027**, el
+  bucket mensual del motor queda elegible en ambos meses. 3/4 ventanas de escaparate propio medidas.
+- **Acción pendiente:** el prompt programado de `mercado-booking` lleva desde el 31/08 una línea de
+  "PRIORIDAD TEMPORAL (agosto 2026)" pidiendo esta pasada acotada — ya cumplió su objetivo, **hay
+  que quitarla** del trigger/schedule (no es un archivo del repo; hay que editarlo donde vive el
+  cron/trigger de Claude Code) para que la rutina vuelva a su barrido normal por urgencia.
+
 ### 🔎 (31/08/2026) Revisión de datos de resultado-pisos: julio cuadra al céntimo; comisión centinela corregida
 - Contraste contra BD real: julio 2026 = 4.424,45€ exacto vs pantalla vieja · nights ~100% ·
   `reserved_at` ~100% (pace fiable) · Booking comisión = 19,72% clavado · 111 cancelaciones OK.
