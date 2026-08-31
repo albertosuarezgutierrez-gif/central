@@ -55,6 +55,14 @@
   hace caer el mensaje al maestro, nunca en `'activo'`).
 - **Pendiente:** renovar IoT Core en Tuya (sin él Luxury/Reform no emiten PIN y siguen con el maestro);
   reponer la ventana de los 2 PIN vivos de House; activar los otros 3 pisos.
+- **Verificado contra Smoobu (por `pg_net`, sin sacar la key de `pms_connections`):** el hilo de la
+  reserva viva de House tiene 16 mensajes; Smoobu ya mandó «Booking Confirmation» y «WHERE TO COLLECT
+  THE KEYS» (por eso esos dos hitos quedaron en sombra), y **NO** hay «RECORDATORIO - MUY IMPORTANTE»,
+  así que la víspera del 3/09 con el PIN NO está bloqueada. Alberto apagó ya las plantillas de House.
+- **AGODA sí tiene canal**: Smoobu guarda un alias de retransmisión `…@agoda-messaging.com`, mismo
+  mecanismo que `…@guest.booking.com`. Lo que NO trae es el idioma: `language` viene **vacío** (en
+  Booking viene `es`), así que a un huésped de Hong Kong con el portal en chino se le escribiría en
+  español. Ese es el riesgo de Agoda, no la entrega — y son 15 reservas de 2.045, 14 de ellas Luxury.
 
 ### 📬 (31/08/2026) Mensajes programados a huéspedes NUESTROS — sustituto de los automáticos de Smoobu (MERGEADO, en sombra)
 - Análisis sobre 8 hilos reales: Smoobu manda 7 automáticos solo-en-español, promete el parking
