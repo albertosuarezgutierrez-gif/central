@@ -120,6 +120,9 @@ export default function CorreduriaClient() {
         </div>
       </div>
 
+      {/* Cartera en vivo (puerto HTTP a central-asegura) */}
+      <CarteraViva />
+
       {/* KPIs */}
       {!loading && !error && totalAnual > 0 && (
         <div className="corr-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
@@ -391,6 +394,93 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
             )
           })}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Cartera en vivo ──────────────────────────────────────────────────────────
+// Lee /api/correduria/cartera (puerto HTTP a central-asegura). Tres estados:
+// «sin conectar» NUNCA se pinta como cartera vacía, y un fallo es visible.
+
+type Cartera =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error' }
+  | {
+      estado: 'ok'; nombre: string | null; clientes: number; leads: number
+      polizasVigentes: number; polizasPendientesFecha: number; polizasNoVigentes: number
+      siniestrosAbiertos: number
+    }
+
+const num = (n: number) => n.toLocaleString('es-ES')
+
+function CarteraViva() {
+  const [cartera, setCartera] = useState<Cartera | null>(null)
+
+  useEffect(() => {
+    fetch('/api/correduria/cartera')
+      .then(r => (r.ok ? r.json() : { estado: 'error' }))
+      .then(setCartera)
+      .catch(() => setCartera({ estado: 'error' }))
+  }, [])
+
+  const caja: React.CSSProperties = {
+    border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px',
+    background: 'var(--surface)', marginBottom: 28,
+  }
+
+  if (cartera === null) {
+    return <div style={{ ...caja, color: 'var(--muted)', fontSize: 13 }}>Cargando cartera…</div>
+  }
+
+  if (cartera.estado === 'sin_configurar') {
+    return (
+      <div style={{ ...caja, borderColor: '#f0c674' }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>📁 Cartera en vivo · pendiente de conectar</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+          Falta el puerto con central-asegura (env <code>ASEGURA_OPERADOR_SECRET</code> en los dos proyectos).
+          Esto NO significa que no haya cartera: los datos siguen en su base y se verán aquí al conectar.
+        </div>
+      </div>
+    )
+  }
+
+  if (cartera.estado === 'error') {
+    return (
+      <div style={{ ...caja, borderColor: '#d66' }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>📁 Cartera en vivo · sin respuesta</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+          El puerto con central-asegura no ha respondido. La cartera NO está vacía: es un fallo de
+          conexión — reintenta en un rato o revisa el secreto compartido.
+        </div>
+      </div>
+    )
+  }
+
+  const kpis = [
+    { label: 'Pólizas en vigor', value: num(cartera.polizasVigentes), color: 'var(--primary)' },
+    { label: 'Sin fecha (pendientes)', value: num(cartera.polizasPendientesFecha), color: 'var(--text)' },
+    { label: 'Históricas', value: num(cartera.polizasNoVigentes), color: 'var(--muted)' },
+    { label: 'Clientes', value: num(cartera.clientes), color: 'var(--text)' },
+    { label: 'Leads', value: num(cartera.leads), color: 'var(--muted)' },
+    { label: 'Siniestros abiertos', value: num(cartera.siniestrosAbiertos), color: cartera.siniestrosAbiertos > 0 ? '#d66' : 'var(--text)' },
+  ]
+
+  return (
+    <div style={{ ...caja, padding: '16px 16px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>📁 Cartera en vivo{cartera.nombre ? ` · ${cartera.nombre}` : ''}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          «En vigor» = estado vigente y vencimiento hoy o futuro; las pólizas sin fecha NO se cuentan como vigentes ni vencidas.
+        </div>
+      </div>
+      <div className="corr-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+        {kpis.map(k => (
+          <div key={k.label} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{k.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
+          </div>
+        ))}
       </div>
     </div>
   )
