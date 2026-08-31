@@ -41,6 +41,14 @@
 - Fix: ambos generate inline en el buildCommand; validado en local (repro del fallo + build OK).
 - Conector Vercel: el alcance por proyecto se edita en claude.ai → Conectores (no en Vercel).
   Pendiente Alberto: añadir SOLO `central-asegura`; y `ASEGURA_SESSION_SECRET` quedó sin guardar.
+### ✅ (31/08/2026) H10 RESUELTA — ninguna regla de salida bate al tiempo; cron y datos verificados
+- Alberto: «¿funciona todo bien?» tras el parte semanal de `trading-h10`. Sí: latido en verde (08:41 UTC)
+  y los 7 agregados recomputados a mano contra `trading_backtest` cuadran al dígito con el Telegram.
+- Resolución formal por PR (rama `claude/h10-reglas-salida-a3q4qd`): las 7 variantes rechazadas por el
+  criterio firmado — las que frenan batacazos (Sma50 −9,49 pp, Sma200, Stop10) ceden >1 pp de mediana.
+  Salida por TIEMPO validada por 2ª vez; ya cableada (`venceVentana`, 28/08) → sin cambio de código.
+- Anotado en TRADING-SALIDAS-2026-08.md + RESOLUCIÓN en el pre-registro + bullet de plataforma/CLAUDE.md.
+- Pendiente: H11–H15 ya tienen muestra (aviso del vigía) — cada una es su propio PR con criterio delante.
 
 ### 🔌 (31/08/2026) Correduría: conexión a la cartera ENCENDIDA — rol propio + envs puestas por Alberto
 - Rol `central_asegura` creado en ASEGURA-prod-eu (login+BYPASSRLS, **solo SELECT**; verificado vivo).

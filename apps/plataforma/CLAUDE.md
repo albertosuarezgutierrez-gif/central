@@ -1186,7 +1186,10 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
   `ventana_dias` = días reales y no el horizonte declarado, y el aviso de salto del NAV >15% en `/saldo`
   (no bloquea: puede ser un ingreso real, pero con el NAV se dimensiona cada compra).
 - **📉 Reglas de SALIDA del paper: H10 firmada y midiendo, y el stop que sigue vivo contra H9
-  (28/08/2026, PR #1836).** Alberto pidió salida **no** por tiempo («ir subiendo el stop, o pérdida de
+  (28/08/2026, PR #1836).** **✅ H10 RESUELTA el 31/08/2026** con el ciclo completo (183.093 obs.):
+  ninguna de las 7 variantes cumple el criterio firmado — todas las que frenan batacazos ceden >1 pp
+  de mediana — y la salida por TIEMPO queda validada por 2ª vez (ya cableada, `venceVentana`). Sin
+  cambio de código; cifras en `docs/TRADING-SALIDAS-2026-08.md` y veredicto en el pre-registro. Alberto pidió salida **no** por tiempo («ir subiendo el stop, o pérdida de
   media») y que decidieran los datos. Medido primero sobre **183.093 observaciones** del retrovisor
   (**8,6×** la muestra con la que se resolvió H9): la salida por TIEMPO sigue ganando (mediana **+3,12%**
   frente a +0,45% del stop −10%, +2,75% del −20% y +1,22% del trailing −15%) — y **gana en los CINCO
