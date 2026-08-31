@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-31 · mercado-booking (pasada acotada, PRIORIDAD jul-ago 2027)** · hizo: plan filtrado
+  `?desde=2027-07-01&hasta=2027-08-31&max=24` en vez del barrido normal, para cerrar el objetivo
+  de ≥3 comparables en ≥3 fechas distintas por piso en esos dos meses (los eventos confirmados sin
+  medir se comían el cupo si se priorizaba a ojo). 240 comps reales en las 24 ventanas del cupo (6
+  fechas × 4 pisos: 02/07, 10/07, 27/07, 06/08, 14/08, 24/08 de 2027 — 3 fechas por mes y por piso,
+  bucket mensual queda elegible en ambos meses). 3/4 ventanas de escaparate propio medidas (Dúplex
+  center, Luxury Busto, Busto Reform; House Sevillana 24-26/08/27 sin disponibilidad en Booking →
+  contado como escaparateSinRespuesta, no como "canal cuadra"). 0 ventanas sin respuesta, 0 anuncios
+  propios colados en el corpus de mercado, 0 fallos. Sin cupo restante para la pasada normal (24/24
+  gastadas en la prioridad) — no se corrió hoy. dudas: —; fallos: —; PRs/commits: — (solo BD +
+  bitácora, sin cambios de código).
 - **2026-08-31 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos (obligatorio,
   no solo los en vivo). Paso 1: 8/48 fechas muestreadas del ciclo 24/08 se vendieron
   (House Feria a 1767€, pelotazo funcionando); House sept sigue al 43% ocupación a 30d
