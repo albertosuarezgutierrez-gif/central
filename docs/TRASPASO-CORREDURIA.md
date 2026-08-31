@@ -3080,3 +3080,19 @@ al contrario de lo que se temía. El modelo de la Fase 1 se puede generar del re
 - **Paso 4 de conectores**: re-autorizar el conector «Supabase» principal de vuelta a la org
   `alberto.suarez.gutierrez@gmail.com` (quedó apuntando a LOOR) — **si no, las rutinas de `central`
   fallarán en cada sesión nueva**. En manos de Alberto/Chrome.
+
+## 🏗️ 31/08/2026 — Fase 1 arrancada: modelo real + la regla de vigencia, portados
+
+- **`apps/asegura/prisma/cartera-real.prisma`** — el modelo del subconjunto de cartera (9 tablas, 18
+  enums), **generado de la base REAL** (columnas de `information_schema`, FKs de `pg_constraint`), con
+  las relaciones verdaderas: fusiones con lápida (self-FK), cadena de renovaciones, cascadas. Es la
+  referencia; pasa a `schema.prisma` cuando la app apunte al proyecto ASEGURA. Sorpresas del DDL real
+  anotadas dentro: los importes de `poliza_recibos` son **TEXT** (tal cual EIAC), y `clientes`/`polizas`
+  usan `timestamp` sin zona mientras el resto usa `timestamptz`.
+- **`@central/module-seguros`** — nace el módulo de dominio con `vigenciaPoliza()`: tres estados
+  (`vigente`/`no_vigente`/`pendiente`), la lista `POLIZA_ESTADOS_VIGENTES` idéntica a la del CRM de
+  origen, NULL de vencimiento → `pendiente` (nunca «no vence»), y la fecha manda sobre la etiqueta
+  (una `activa` vencida en 2019 NO es vigente). **8/8 tests.**
+
+Con esto, N4 tiene los cimientos: modelo real + regla del titular testeada. Falta el cableado
+(DATABASE_URL del proyecto ASEGURA en la app) y las pantallas.
