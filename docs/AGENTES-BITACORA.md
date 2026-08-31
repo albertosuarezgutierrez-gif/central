@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-31 · facturas-correo** · hizo: pasada completa. Paso 0: Vía B sana (última copia a
+  `_buzon_pdf` 29/08, dias_caido=2); Vía A (`gmail-adjuntos`) sigue sin provisionar (conocido).
+  `Facturas/PDF-pendiente` vacía. `Facturas/Extraccion-fallida` tenía 1 hilo (Mercadona/Pilar,
+  ticket a Monte Carmelo 68, 237,06€) — se pudo leer entero esta vez → `personal` (auto, entrega
+  vivienda habitual), sin archivar, etiqueta quitada. Paso 4.0: barrido `v_facturas_sin_cargo`
+  2026 → las 8 filas ya estaban `revisada_sin_cargo` (7 Pepephone sin cargo localizado + 1
+  CREATE-Socorro duplicada), ninguna `sin_revisar` nueva. Paso 1/1-bis: sin candidatos nuevos en
+  Gmail (`newer_than:2d`) ni en `_subir_aqui`; la raíz de `FACTURAS Apartamentos/2026` solo tiene
+  sobrantes YA flagueados en `_DUPLICADOS_BORRAR` en pasadas anteriores (no reprocesados, no es
+  obligatorio cada pasada). dudas: hilo `Facturas/Revisar` de Manuel Suárez (recibo Fly.io
+  6,68$, reenviado 28/08) sigue sin resolver — no es gasto claro de Alberto, no se auto-clasifica;
+  lleva 3 días en cola. fallos: —. PRs/commits: (este commit).
 - **2026-08-31 · mercado-booking (pasada acotada, PRIORIDAD jul-ago 2027)** · hizo: plan filtrado
   `?desde=2027-07-01&hasta=2027-08-31&max=24` en vez del barrido normal, para cerrar el objetivo
   de ≥3 comparables en ≥3 fechas distintas por piso en esos dos meses (los eventos confirmados sin
