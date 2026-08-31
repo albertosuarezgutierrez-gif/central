@@ -403,9 +403,23 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
 // Lee /api/correduria/cartera (puerto HTTP a central-asegura). Tres estados:
 // «sin conectar» NUNCA se pinta como cartera vacía, y un fallo es visible.
 
+type MotivoError = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
+
+// Cada motivo se arregla en un sitio distinto — el recuadro lo dice para no
+// tener que adivinar entre secreto, BD de asegura o red (31/08/2026).
+const MOTIVOS: Record<MotivoError, string> = {
+  secreto_rechazado:
+    'central-asegura ha RECHAZADO el secreto (401): los dos valores de ASEGURA_OPERADOR_SECRET no coinciden. Vuelve a pegar el MISMO valor en los dos proyectos de Vercel y redespliega.',
+  asegura_error:
+    'central-asegura responde, pero no puede leer su base de datos (revisa ASEGURA_DATABASE_URL y el rol central_asegura en sus logs de Vercel).',
+  respuesta_ilegible:
+    'central-asegura ha devuelto una respuesta inesperada (ni cartera ni error conocido). Mira los logs del proyecto en Vercel.',
+  red: 'no se pudo contactar con central-asegura (timeout o red). Reintenta en un rato.',
+}
+
 type Cartera =
   | { estado: 'sin_configurar' }
-  | { estado: 'error' }
+  | { estado: 'error'; motivo?: MotivoError }
   | {
       estado: 'ok'; nombre: string | null; clientes: number; leads: number
       polizasVigentes: number; polizasPendientesFecha: number; polizasNoVigentes: number
@@ -450,8 +464,8 @@ function CarteraViva() {
       <div style={{ ...caja, borderColor: '#d66' }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>📁 Cartera en vivo · sin respuesta</div>
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-          El puerto con central-asegura no ha respondido. La cartera NO está vacía: es un fallo de
-          conexión — reintenta en un rato o revisa el secreto compartido.
+          La cartera NO está vacía — el puerto con central-asegura ha fallado:{' '}
+          {MOTIVOS[cartera.motivo ?? 'respuesta_ilegible']}
         </div>
       </div>
     )

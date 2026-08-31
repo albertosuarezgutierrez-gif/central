@@ -23,28 +23,29 @@ test('sin_configurar del puerto se conserva (no es cartera vacía)', () => {
   assert.deepEqual(interpretarCartera(200, { resumen: { estado: 'sin_configurar' } }), { estado: 'sin_configurar' })
 })
 
-test('401 (secreto malo) → error visible, nunca ceros', () => {
-  assert.deepEqual(interpretarCartera(401, { error: 'No autorizado' }), { estado: 'error' })
+test('401/403 (secreto malo) → error con motivo secreto_rechazado', () => {
+  assert.deepEqual(interpretarCartera(401, { error: 'No autorizado' }), { estado: 'error', motivo: 'secreto_rechazado' })
+  assert.deepEqual(interpretarCartera(403, null), { estado: 'error', motivo: 'secreto_rechazado' })
 })
 
-test('estado error del puerto → error', () => {
-  assert.deepEqual(interpretarCartera(200, { resumen: { estado: 'error' } }), { estado: 'error' })
+test('estado error del puerto → error con motivo asegura_error (su BD)', () => {
+  assert.deepEqual(interpretarCartera(200, { resumen: { estado: 'error' } }), { estado: 'error', motivo: 'asegura_error' })
 })
 
 test('un contador que falta o no es número degrada a error (no se inventa un 0)', () => {
   const sinCampo = structuredClone(RESUMEN_OK) as any
   delete sinCampo.resumen.siniestrosAbiertos
-  assert.deepEqual(interpretarCartera(200, sinCampo), { estado: 'error' })
+  assert.deepEqual(interpretarCartera(200, sinCampo), { estado: 'error', motivo: 'respuesta_ilegible' })
 
   const conNull = structuredClone(RESUMEN_OK) as any
   conNull.resumen.clientes = null
-  assert.deepEqual(interpretarCartera(200, conNull), { estado: 'error' })
+  assert.deepEqual(interpretarCartera(200, conNull), { estado: 'error', motivo: 'respuesta_ilegible' })
 })
 
 test('cuerpo malformado o vacío → error', () => {
-  assert.deepEqual(interpretarCartera(200, null), { estado: 'error' })
-  assert.deepEqual(interpretarCartera(200, 'html de un 502'), { estado: 'error' })
-  assert.deepEqual(interpretarCartera(200, {}), { estado: 'error' })
+  assert.deepEqual(interpretarCartera(200, null), { estado: 'error', motivo: 'respuesta_ilegible' })
+  assert.deepEqual(interpretarCartera(200, 'html de un 502'), { estado: 'error', motivo: 'respuesta_ilegible' })
+  assert.deepEqual(interpretarCartera(200, {}), { estado: 'error', motivo: 'respuesta_ilegible' })
 })
 
 test('nombre ausente no rompe: ok con nombre null', () => {

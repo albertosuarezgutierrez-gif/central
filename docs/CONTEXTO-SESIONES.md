@@ -32,6 +32,15 @@
 
 ---
 
+### 🔍 (31/08/2026) La cartera en vivo dice ahora POR QUÉ falla (aún «sin respuesta» tras el fix del middleware)
+- Con #1899 desplegado, sondeo por pg_net desde Supabase: `/api/operador/resumen` de central-asegura
+  responde `401 {"error":"No autorizado"}` en JSON → el middleware ya no estorba y el dominio es bueno.
+- Alberto seguía viendo el recuadro rojo. El rojo (no el ámbar) prueba que plataforma tiene su secreto
+  y llamó — quedan DOS sospechosos indistinguibles en la UI: secretos que no coinciden (401) o asegura
+  sin poder leer su BD (`estado:'error'`). Fix: `interpretarCartera` gana `motivo`
+  (secreto_rechazado / asegura_error / respuesta_ilegible / red) y el recuadro imprime el remedio.
+- Pendiente: leer los logs de central-asegura (Chrome) para saber cuál de los dos es.
+
 ### 🔧 (31/08/2026) El puerto operador de asegura nacía BLOQUEADO por su propio middleware
 - Estreno de la cartera en vivo: envs bien puestas y aun así «sin respuesta». Causa: el middleware
   de apps/asegura protege todo salvo `/login` y `/api/auth`, así que la llamada servidor→servidor
