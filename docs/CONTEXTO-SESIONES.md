@@ -40,6 +40,10 @@
   toca (el enum rompería el INSERT crudo de plataforma). Guardián `test/regression-seo-status-text.test.ts`.
 - El cambio SEO de hoy SÍ se aplicó en la landing (c59d5da, PR #1891) antes de fallar el INSERT: fila
   `seo_proposals` reconstruida del diff de git e insertada a mano (revert operativo; análisis IA perdido).
+- **PR #1895 MERGEADO** (12 checks verdes). Probado contra la BD real: el cast viejo reproduce el 42704 y
+  el INSERT con text (lo que emite el cliente nuevo) funciona (transacción revertida). E2E real = el cron
+  del lunes 07/09 10:00 UTC (check-in programado). OJO: el proyecto Vercel `sivra` NO está en el alcance
+  del conector — el deploy de main no se pudo mirar desde la sesión.
 
 ### 🏠 (31/08/2026) La cartera de la correduría, DENTRO de plataforma (puerto HTTP)
 - Alberto: «mete correduría dentro de mi plataforma». Bloque «📁 Cartera en vivo» en `/correduria`
