@@ -32,6 +32,15 @@
 
 ---
 
+### ✅ (31/08/2026) H10 RESUELTA — ninguna regla de salida bate al tiempo; cron y datos verificados
+- Alberto: «¿funciona todo bien?» tras el parte semanal de `trading-h10`. Sí: latido en verde (08:41 UTC)
+  y los 7 agregados recomputados a mano contra `trading_backtest` cuadran al dígito con el Telegram.
+- Resolución formal por PR (rama `claude/h10-reglas-salida-a3q4qd`): las 7 variantes rechazadas por el
+  criterio firmado — las que frenan batacazos (Sma50 −9,49 pp, Sma200, Stop10) ceden >1 pp de mediana.
+  Salida por TIEMPO validada por 2ª vez; ya cableada (`venceVentana`, 28/08) → sin cambio de código.
+- Anotado en TRADING-SALIDAS-2026-08.md + RESOLUCIÓN en el pre-registro + bullet de plataforma/CLAUDE.md.
+- Pendiente: H11–H15 ya tienen muestra (aviso del vigía) — cada una es su propio PR con criterio delante.
+
 ### 🎯 (31/08/2026) mercado-booking: objetivo jul/ago-2027 cumplido — quitar la línea de prioridad del cron
 - Pasada acotada `?desde=2027-07-01&hasta=2027-08-31&max=24`: 240 comps reales en 6 fechas × 4 pisos
   (02/10/27-07, 06/14/24-08) → **≥3 fechas distintas por piso en julio-2027 y en agosto-2027**, el
