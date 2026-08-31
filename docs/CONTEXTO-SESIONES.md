@@ -32,6 +32,15 @@
 
 ---
 
+### 🔧 (31/08/2026) El puerto operador de asegura nacía BLOQUEADO por su propio middleware
+- Estreno de la cartera en vivo: envs bien puestas y aun así «sin respuesta». Causa: el middleware
+  de apps/asegura protege todo salvo `/login` y `/api/auth`, así que la llamada servidor→servidor
+  de plataforma a `/api/operador/resumen` (Bearer, sin cookie) se REDIRIGÍA al login → plataforma
+  recibía HTML, no JSON. Ni tsc ni build lo cazan. Fix: `/api/operador` a la lista PUBLIC (la ruta
+  conserva su propia auth Bearer, cerrada por defecto) + guardián en
+  `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
+  el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
+
 ### 🧠 (31/08/2026) DeepSeek V4 Flash en OpenRouter — y nuestro default era el V3 viejo y más caro
 - Alberto pasó un post viral y preguntó si OpenRouter lo tiene y si el buscador está al tanto.
 - **Sí lo tiene** (`deepseek/deepseek-v4-flash`, $0,086/$0,17 por M, ctx 1M) — y el hallazgo real:
