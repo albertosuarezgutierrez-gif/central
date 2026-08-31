@@ -32,6 +32,15 @@
 
 ---
 
+### 🔧 (31/08/2026) El puerto operador de asegura nacía BLOQUEADO por su propio middleware
+- Estreno de la cartera en vivo: envs bien puestas y aun así «sin respuesta». Causa: el middleware
+  de apps/asegura protege todo salvo `/login` y `/api/auth`, así que la llamada servidor→servidor
+  de plataforma a `/api/operador/resumen` (Bearer, sin cookie) se REDIRIGÍA al login → plataforma
+  recibía HTML, no JSON. Ni tsc ni build lo cazan. Fix: `/api/operador` a la lista PUBLIC (la ruta
+  conserva su propia auth Bearer, cerrada por defecto) + guardián en
+  `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
+  el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
+
 ### 🏠 (31/08/2026) La cartera de la correduría, DENTRO de plataforma (puerto HTTP)
 - Alberto: «mete correduría dentro de mi plataforma». Bloque «📁 Cartera en vivo» en `/correduria`
   (KPIs: en vigor/sin fecha/históricas/clientes/leads/siniestros) leído de `central-asegura` por el
