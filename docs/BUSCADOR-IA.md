@@ -35,6 +35,13 @@
 | Gemini (fallback 3, APAGADO por defecto) | `gemini-flash-latest` | `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** / `GEMINI_BRAIN_MODEL` | gratis | ✅ vivo (24/08) — familia Flash/Flash-Lite mantiene tier gratis (confirmado a 15/08/2026); sin mención de retirada del alias rodante; sigue apagado por falta de cuota real |
 | Kimi/Moonshot (fallback 4, de pago) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | $0,95/$4,00 por M | ✅ **VIVO** (24/08) — confirmado de nuevo sin sunset propio; Moonshot empuja hacia K3 (flagship, $3/$15 por M) pero K2.6 sigue en catálogo activo |
 
+**Visión y embeddings (añadidos al watch el 31/08/2026 — antes no los vigilaba nadie):**
+
+| Modelo | id | Proveedor | Consumidores | Estado |
+|---|---|---|---|---|
+| Visión | `meta/llama-3.2-11b-vision-instruct` (`DEFAULT_VISION_MODEL`, `nim.ts`) | NVIDIA NIM (¡el proveedor de las 3 muertes por EOL en 11 días!) | ialimp (cliente VIVO: escaneo de documentos y fotos), sivra, ia-rest, plataforma `/api/ai/vision` | sin comprobar aún — primera pasada con él: la del próximo lunes |
+| Embeddings | `text-embedding-004` (`DEFAULT_EMBED_MODEL`, `embeddings.ts`) | Google | `ia-cache` de plataforma | sin comprobar aún; ⚠️ un swap invalida los vectores guardados — nunca mecánico |
+
 **Consumidores con modelo propio:**
 - `AGENTE_HUESPED_MODEL` — **vacío por defecto** (usa el modelo por defecto de la cadena, desde el
   17/08/2026 GLM-5.2). *(Antes `meta/llama-3.1-405b-instruct`, RETIRADO de NIM → causó "IA no disponible".)*
