@@ -3006,7 +3006,7 @@ mover) · repo del adaptador · Blob · claves PII al gestor.
 
 | # | Trabajo | Depende de |
 |---|---|---|
-| **N1** | **`packages/module-seguros-pii`**: portar `field-encryption` + `blind-index` como paquete `@central/*` con sus tests (TS puro, cero deps — encaja exacto en la filosofía de `packages/`) | Nada — se puede YA |
+| **N1** | ✅ **HECHO (31/08)** — `packages/module-seguros-pii`: `field-encryption` + `blind-index` portados con sus tests originales (**36/36 en verde**, `node:test`), contrato de sincronía documentado en `src/index.ts` (mismos hashes que asegura@`b620251` o los lookups fallan en silencio) | — |
 | **N2** | **Purga de secretos de los docs heredados** (ADR-009:183 + identificadores del runbook) | Nada — se puede YA |
 | **N3** | **Diff BD real vs schema declarado** (la contradicción de las FKs, `pg_constraint`, triggers, funciones) + **gate (a)**: descifrar un registro real y buscar por email y DNI | Supabase transferido + claves PII |
 | **N4** | **Fase 1 — cartera en lectura en `apps/asegura`**: los 24 ficheros mínimos (`correduria/{clientes,polizas,pagination}` con `correduriaId` inyectado por nuestro `tenant-ambito`), fichas REESCRITAS no portadas, «vigente» = `POLIZA_ESTADOS_VIGENTES` + fecha (NULL = pendiente, no «no vence») | N1 + N3 |
