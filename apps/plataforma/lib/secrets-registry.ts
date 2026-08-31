@@ -56,6 +56,7 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
   // ── Tokens inter-app (puertos HTTP entre verticales) ──────────────────────────
   { name: 'OPERADOR_SHARED_SECRET', tipo: 'token-inter-app', proposito: 'Puerto god-panel ↔ ia-rest (plataforma lee restaurantes/financiero).', verticales: ['plataforma', 'ia-rest'], dondeVive: 'vercel-equipo', obligatoria: true, nota: 'MISMO valor en ambos proyectos.' },
   { name: 'RRHH_OPERADOR_SECRET', tipo: 'token-inter-app', proposito: 'Puerto god-panel ↔ iarrhh (alta de empresa, lectura de personas).', verticales: ['plataforma', 'rrhh'], dondeVive: 'vercel-equipo', obligatoria: true, nota: 'PROPIO de iarrhh; distinto de OPERADOR_SHARED_SECRET — no reutilizar.' },
+  { name: 'ASEGURA_OPERADOR_SECRET', tipo: 'token-inter-app', proposito: 'Puerto /correduria ↔ central-asegura (cartera en vivo, read-only).', verticales: ['plataforma', 'asegura'], dondeVive: 'vercel-equipo', nota: 'MISMO valor en plataforma y central-asegura; PROPIO — no reutilizar otros. Sin él, la cartera sale como «pendiente de conectar».' },
   { name: 'AI_GATEWAY_SECRET', tipo: 'token-inter-app', proposito: 'Las verticales llaman a la pasarela de IA de plataforma.', verticales: ['plataforma', 'ia-rest', 'ialimp', 'sivra', 'rrhh'], dondeVive: 'vercel-equipo', nota: 'Sin él (+ AI_GATEWAY_URL) cae a NIM directo (NVIDIA_API_KEY).' },
 
   // ── Cron / acceso de operador ─────────────────────────────────────────────────
