@@ -1,6 +1,6 @@
 ---
 name: buscador-ia
-description: Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide "revisa las novedades de IA / si hay una IA mejor" o al disparo semanal. Sin secretos.
+description: Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (OpenRouter incluido: qué sirve DE VERDAD cada slug y a qué precio, más NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide "revisa las novedades de IA / si hay una IA mejor" o al disparo semanal. Sin secretos.
 ---
 
 # Vigía de LLMs — deprecación, descubrimiento y mini-eval
@@ -34,14 +34,17 @@ defecto desde el 02/08/2026 (PR #1220):** 544 llamadas/30d con 0 éxitos (429 de
 `GEMINI_TEXTO=1` además de la key (mismo gate en `lib/pasarela.ts` de plataforma; el websearch de
 ia-rest va tras `GEMINI_WEBSEARCH=1`). Si algún día hay key con cuota, se reactivan los gates.
 Los ids por defecto y sus envs de override:
-- **OpenRouter** `deepseek/deepseek-chat` — env `OPENROUTER_API_KEY` (primario de la PASARELA
+- **OpenRouter** `deepseek/deepseek-v4-flash` — env `OPENROUTER_API_KEY` (primario de la PASARELA
   con Agente Director; overrides `OPENROUTER_MODEL`/`OPENROUTER_FALLBACK_MODELS`).
-  ⚠️ **Delimitación (09/07/2026):** el catálogo/prompt del Director lo mantiene SOLO el cron
-  automático `/api/cron/ia-director-refresh` de plataforma (semanal, determinista, tabla
-  `ia_director_prompt`) — este agente NO lo edita. Este agente sigue vigilando las
-  deprecaciones de la cadena DIRECTA (NIM/Groq/Gemini/Kimi), que es la red de seguridad
-  cuando OpenRouter entero falla, y puede proponer por PR cambios a las listas de
-  preferencia del cron (`PREFERIDOS` en su route.ts) si descubre algo mejor.
+  ⚠️ **Delimitación REVISADA (31/08/2026, orden de Alberto tras el caso V4 Flash):** el cron
+  `/api/cron/ia-director-refresh` de plataforma sigue siendo el ÚNICO que escribe el
+  catálogo/prompt del Director (tabla `ia_director_prompt`) — este agente no lo edita. Pero el
+  cron es DETERMINISTA: solo elige el primer id VIVO de sus listas `PREFERIDOS` estáticas, así
+  que **no descubre nada** — si las listas envejecen, envejece todo lo que cuelga de ellas. La
+  redacción anterior («fuera de scope, lo vigila SU cron») dejó un hueco sin dueño: el
+  **DESCUBRIMIENTO y la curación de las listas es de ESTE agente**, cada pasada (ver Paso 1.5).
+  Coste real del hueco: `deepseek/deepseek-v4-flash` entró en OpenRouter el 24/04/2026 y estuvo
+  **4 meses** sin que nadie lo viera mientras el default servía el V3 a 3-6× su precio.
 - **NIM** `z-ai/glm-5.2` — env `NVIDIA_API_KEY` (primario de la cadena directa, gratis; swap
   17/08/2026 — el 3.3-70b deja de soportarse el 25/08/2026, y el primer sustituto elegido por
   ficha web, llama-4-maverick, daba 410 Gone en el API. ⚠️ Lección: la ficha de build.nvidia.com
@@ -53,6 +56,11 @@ Los ids por defecto y sus envs de override:
 - Consumidores con modelo propio: `AGENTE_HUESPED_MODEL` (vacío = usa el 70B por defecto),
   `CONTABLE_MODEL` (default `deepseek-ai/deepseek-v4-flash-0731` por NIM; el `deepseek-v3` fue
   retirado del API — verificado 17/08/2026).
+  ⚠️ **Regla nueva (31/08/2026):** cuando un eslabón se APAGA o ENCIENDE (Gemini 02/08, NIM
+  28/08…), los modelos pinneados que lo usaban caen a OTRO proveedor con OTRO default — hay que
+  re-evaluar A DÓNDE caen en la misma pasada. Caso real: con NIM apagado, el pin del contable
+  (`CONTABLE_MODEL`, un id de NIM) se ignoraba y el contable servía en silencio el default V3
+  de OpenRouter, más caro y peor que el V4 Flash que su pin nombraba.
 
 > **Regla:** lee estos ids del código en cada pasada (no de aquí). Si este listado contradice
 > a `client.ts`, manda el código: corrige esta skill en el mismo PR.
@@ -71,6 +79,28 @@ Para CADA modelo cableado, confirma que **sigue existiendo** en el catálogo de 
 - **Moonshot/Kimi** → `https://platform.moonshot.ai/docs` (o `.cn` si aplica).
 
 Para cada uno anota en `docs/BUSCADOR-IA.md`: **vivo / deprecado / desaparecido** + fecha de comprobación.
+
+⚠️ **Lección de los slugs (31/08/2026):** un slug de agregador **no dice qué modelo sirve ni a qué
+precio** — `deepseek/deepseek-chat` en OpenRouter NO era un alias rodante: servía el V3 viejo a
+$0,26/$1,03 mientras existía el V4 Flash a $0,086/$0,17. Es la misma lección que la ficha de NIM
+(«la ficha no prueba que el modelo viva»), en espejo: **el nombre no prueba qué hay detrás**.
+Verifica siempre `name` + `pricing` reales del catálogo, nunca deduzcas del slug.
+
+## Paso 1.5 — Watch de OpenRouter (el hueco que costó 4 meses de V3)
+OpenRouter es el PRIMARIO de la pasarela: lo que sirva su default es lo que paga y usa casi todo
+el monorepo. Cada pasada, contra el catálogo público `https://openrouter.ai/api/v1/models` (sin
+key; o las herramientas MCP `openrouter` si están en la sesión):
+1. **Qué sirven de verdad los ids que usamos:** para el default de `openrouter.ts`, los ids de
+   las listas `PREFERIDOS` del cron `ia-director-refresh` (route.ts) y `SUPLENTES_DEFAULT` de
+   `ia-director.ts`, anota `name` y `pricing` reales. Un id cuyo nombre real es de una generación
+   vieja, o más caro que un hermano más nuevo del mismo laboratorio → candidato a swap.
+2. **Descubrimiento dirigido:** busca en el catálogo los modelos nuevos de los laboratorios que
+   ya usamos (deepseek, qwen, meta-llama, anthropic…) y los top de los rankings de uso
+   (`list-daily-model-rankings` del MCP si está). Mismo listón del Paso 2: solo cuenta lo que
+   mejora calidad/precio de forma clara.
+3. **Salida:** los cambios a `PREFERIDOS`/defaults van por **PR** (el cron sigue siendo quien
+   escribe la tabla; tú curas sus listas). Mini-eval del Paso 3 antes de proponer — con las
+   herramientas MCP de openrouter la eval en vivo es gratis para la sesión.
 - **Si un modelo cableado está deprecado o desaparecido → HALLAZGO CRÍTICO**: Telegram + PR draft
   que cambie el id por el reemplazo vigente que recomiende el proveedor (ver Paso 4). Es exactamente
   el caso del 405B: no esperes a que rompa producción.

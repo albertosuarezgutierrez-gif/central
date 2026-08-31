@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-31 · agentes-entrenador** (pasada dirigida, orden de Alberto tras el caso V4 Flash) ·
+  hizo: post-mortem (el hueco era de DISEÑO: la delimitación del 09/07 dejó OpenRouter sin dueño
+  de descubrimiento — el cron solo elige de listas estáticas y el buscador tenía orden de no
+  mirar; el V4 Flash llevaba en catálogo desde el 24/04, 4 meses invisible, y la pasada semanal
+  de AYER dijo «sin candidatos» cumpliendo su skill al pie de la letra); arreglo: Paso 1.5 nuevo
+  en la skill buscador-ia (watch de OpenRouter: qué sirve DE VERDAD cada slug + descubrimiento),
+  lección de slugs, y regla de re-evaluar pines al apagar/encender eslabones. dudas: —; fallos: —;
+  PRs: el de esta rama.
 - **2026-08-31 · buscador-ia** (pasada dirigida, pregunta de Alberto) · hizo: confirmó DeepSeek V4
   Flash en OpenRouter ($0,086/$0,17 por M) y detectó que nuestro default `deepseek/deepseek-chat`
   es el V3 viejo 3-6× más caro; mini-eval A/B en vivo OK; PR draft con el swap (default + Director +
