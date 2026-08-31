@@ -58,20 +58,23 @@ export const ACCESO: Record<string, AccesoPiso> = {
     llavesFuera: true,
     llavesDireccion: 'Calle Javier Lasso de la Vega 7, Sevilla (a unos minutos andando del apartamento)',
     llavesMapa: maps('Calle Javier Lasso de la Vega 7, Sevilla'),
+    // Las fotos van DENTRO de cada paso (no amontonadas al final): en el Dúplex la recogida de
+    // llaves y el apartamento son dos sitios distintos, y una foto sin su paso confunde más que
+    // ayuda. Detalle dictado por Alberto (31/08/2026): la caja está sujeta con una cadena junto a
+    // la entrada del aparcamiento del nº 7 — es lo que la hace reconocible en la calle.
     pasos: [
-      'Ve PRIMERO a la calle Javier Lasso de la Vega 7 (NO al apartamento): allí está la caja de llaves. Ábrela con la clave {CAJA} y coge las llaves.',
+      'Ve PRIMERO a recoger las llaves a la calle Javier Lasso de la Vega 7 (NO al apartamento). La caja de llaves está sujeta con una cadena junto a la entrada del aparcamiento del nº 7 — la reconocerás por estas fotos:\n' +
+        `${SMOOBU_IMG}/summernote_image_103685_6132016390d8c.jpg\n` +
+        `${SMOOBU_IMG}/summernote_image_103685_61320280e95de.jpg`,
+      `Abre la caja con la clave {CAJA} y coge las llaves. Aquí tienes un vídeo de cómo se abre: ${VIDEO_CAJA}`,
       'Deja la caja CERRADA y mueve los números para que no quede puesta la clave; comprueba que ha quedado bloqueada.',
-      'Con las llaves, ve al apartamento: Pasaje Francisco Molina 4 (= Pasaje Villasís 1), primera planta, letra C.',
+      'Con las llaves, ve al apartamento: Pasaje Francisco Molina 4 (= Pasaje Villasís 1), primera planta, letra C. Así es la entrada del edificio:\n' +
+        `${SMOOBU_IMG}/summernote/1/f/5/b/7/5/a/c/summernote_image_103685_65a41aeb0d355.jpeg\n` +
+        `${SMOOBU_IMG}/summernote/e/c/f/0/e/8/d/3/summernote_image_103685_65b60ae3c6d72.jpeg\n` +
+        `${SMOOBU_IMG}/summernote_image_103685_61122cdc1c4c4.jpg`,
       'Al hacer el CHECK-OUT, deja las llaves DENTRO del apartamento, encima de la mesa alta de la cocina, y cierra la puerta al salir.',
     ],
-    fotos: [
-      `${SMOOBU_IMG}/summernote_image_103685_6132016390d8c.jpg`,
-      `${SMOOBU_IMG}/summernote_image_103685_61320280e95de.jpg`,
-      `${SMOOBU_IMG}/summernote/1/f/5/b/7/5/a/c/summernote_image_103685_65a41aeb0d355.jpeg`,
-      `${SMOOBU_IMG}/summernote/e/c/f/0/e/8/d/3/summernote_image_103685_65b60ae3c6d72.jpeg`,
-      `${SMOOBU_IMG}/summernote_image_103685_61122cdc1c4c4.jpg`,
-    ],
-    video: VIDEO_CAJA,
+    fotos: [],
     avisos: [
       'La zona es de tráfico restringido: no intentes llegar en coche hasta la puerta ni sigas el GPS del coche (a pie no hay problema).',
       'La azotea es de uso libre: las llaves de la azotea están señalizadas dentro del apartamento; se sube a la planta 8, saliendo a la izquierda por la puerta de emergencia y subiendo las escaleras. Déjalas siempre en su sitio.',
@@ -87,7 +90,7 @@ export const ACCESO: Record<string, AccesoPiso> = {
     llavesDireccion: 'En el propio portal de Calle Socorro 24',
     llavesMapa: 'https://goo.gl/maps/ytcvp3QkLHynXHCQ7',
     pasos: [
-      'En la puerta de Socorro 24 hay un teclado: introduce la clave {PORTAL} para abrir.',
+      'En la propia fachada de Socorro 24, en la puerta, hay un teclado — lo verás claramente. Introduce la clave {PORTAL} para abrir.',
       'En la entrada encontrarás DOS juegos de llaves: una ficha para la entrada principal y una llave para la cancela de hierro.',
       'La entrada de la casa es zona común (hay otros apartamentos y nuestra central de limpieza); vuestra zona de uso exclusivo empieza a partir de la cancela de hierro. En la zona común hay una cámara grabando.',
       'Al hacer el CHECK-OUT, deja los dos juegos de llaves en el mismo sitio donde los recogiste.',
