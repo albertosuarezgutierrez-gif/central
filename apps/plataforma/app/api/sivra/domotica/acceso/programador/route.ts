@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { smoobuFetch } from '@/lib/smoobu'
 import { tuyaGetStatus } from '@/lib/domotica/tuya'
 import { crearPinTemporal, borrarPin } from '@/lib/domotica/acceso'
@@ -8,7 +9,7 @@ import { normalizarConfigAcceso, tipoEfectivo, type ConfigAcceso } from '@/lib/d
 import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
 import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
 import {
-  reconciliar, ventanaPin, madridEpoch, necesitaAvisoOffline,
+  reconciliar, ventanaPin, madridEpoch, necesitaAvisoOffline, desajustesVentana,
   type ReservaAcceso, type PinExistente,
 } from '@/lib/domotica/acceso-programador'
 import { tgAlert } from '@/lib/telegram'
@@ -31,6 +32,16 @@ function fechaMadrid(offsetDias = 0): string {
   const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d)
   const g = (t: string) => p.find(x => x.type === t)?.value || ''
   return `${g('year')}-${g('month')}-${g('day')}`
+}
+
+// "135" → "2 h 15 min". Para que el aviso se lea sin hacer cuentas mentales.
+function minutosLegibles(min: number): string {
+  const m = Math.round(Math.abs(min))
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60), resto = m % 60
+  if (h < 24) return resto ? `${h} h ${resto} min` : `${h} h`
+  const dias = Math.floor(h / 24)
+  return `${dias} día${dias === 1 ? '' : 's'}${h % 24 ? ` ${h % 24} h` : ''}`
 }
 
 // Lee un campo de la reserva de Smoobu probando varias formas (el JSON no es 100% estable).
@@ -133,12 +144,14 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      const existentesRows = await prisma.$queryRaw<{ reserva_ref: string; estado: string; valido_hasta: Date; tuya_password_id: string | null }[]>`
-        SELECT reserva_ref, estado, valido_hasta, tuya_password_id FROM domotica_acceso_pin WHERE dispositivo_id = ${d.id}::uuid`
+      const existentesRows = await prisma.$queryRaw<{ reserva_ref: string; estado: string; valido_desde: Date; valido_hasta: Date; tuya_password_id: string | null; entregado: boolean }[]>`
+        SELECT reserva_ref, estado, valido_desde, valido_hasta, tuya_password_id, entregado
+        FROM domotica_acceso_pin WHERE dispositivo_id = ${d.id}::uuid`
       const existentes: PinExistente[] = existentesRows.map(p => ({
         reservaRef: p.reserva_ref, estado: p.estado,
+        validoDesdeEpoch: Math.floor(new Date(p.valido_desde).getTime() / 1000),
         validoHastaEpoch: Math.floor(new Date(p.valido_hasta).getTime() / 1000),
-        tuyaPasswordId: p.tuya_password_id,
+        tuyaPasswordId: p.tuya_password_id, entregado: p.entregado,
       }))
 
       const { crear, borrar } = reconciliar(reservas, cfg, existentes, ahoraEpoch)
@@ -175,6 +188,51 @@ export async function GET(req: NextRequest) {
           WHERE dispositivo_id = ${d.id}::uuid AND reserva_ref = ${p.reservaRef}`
         resultados.push({ d: d.nombre, reserva: p.reservaRef, borrado: true })
       }
+
+      // ── Ventanas desactualizadas (se DECLARAN, no se tocan) ──
+      // El PIN conserva la ventana con la que nació. Si la reserva cambió de fechas o cambiaron los
+      // márgenes, sigue vivo pero con la validez vieja. NO se repone solo: Tuya no sabe alargar un
+      // PIN (habría que borrarlo y recrearlo), y si la recreación fallara el huésped se quedaría con
+      // un código muerto en la mano. Se avisa y lo repone una persona desde el panel.
+      const desajustes = desajustesVentana(reservas, cfg, existentes, ahoraEpoch)
+      // Dedupe por día: el cron pasa 3 veces al día y esto se arregla A MANO, así que sin freno el
+      // mismo recado llegaría hasta 3 veces diarias hasta que alguien pulse el botón — y un aviso que
+      // se repite sin novedad se aprende a ignorar, que es la forma cara de perderlo. Una vez al día
+      // basta: sigue siendo visible y sigue insistiendo mientras el desajuste esté ahí.
+      const hoyMadrid = fechaMadrid(0)
+      const porAvisar = desajustes.length
+        ? await (async () => {
+            const refs = desajustes.map(x => x.reservaRef)
+            const ya = await prisma.$queryRaw<{ reserva_ref: string }[]>`
+              SELECT reserva_ref FROM domotica_acceso_pin
+              WHERE dispositivo_id = ${d.id}::uuid AND reserva_ref IN (${Prisma.join(refs)})
+                AND detalle->>'desajuste_avisado' = ${hoyMadrid}`
+            const vistos = new Set(ya.map(r => r.reserva_ref))
+            return desajustes.filter(x => !vistos.has(x.reservaRef))
+          })()
+        : []
+      if (porAvisar.length) {
+        const lineas = porAvisar.map(x => {
+          const partes: string[] = []
+          if (x.salidaMin > 0) partes.push(`caduca ${minutosLegibles(x.salidaMin)} ANTES de lo que ahora toca`)
+          else if (x.salidaMin < 0) partes.push(`caduca ${minutosLegibles(-x.salidaMin)} DESPUÉS de lo que toca`)
+          if (x.entradaMin > 0) partes.push(`abre ${minutosLegibles(x.entradaMin)} antes de la hora de entrada`)
+          else if (x.entradaMin < 0) partes.push(`abre ${minutosLegibles(-x.entradaMin)} más tarde de lo que toca`)
+          return `· reserva ${x.reservaRef} (${x.propertyId}${x.guestName ? `, ${x.guestName}` : ''}): ${partes.join(' y ')}${x.entregado ? ' — el huésped YA tiene ese código' : ''}`
+        })
+        await tgAlert(
+          `🕒 ${d.nombre}: ${porAvisar.length} PIN con la ventana desactualizada (fechas cambiadas o márgenes nuevos). No los toco solo — repónlos desde /sivra/domotica con «🔄 ventana».\n${lineas.join('\n')}`,
+          'aviso',
+        ).catch(() => {})
+        await prisma.$executeRaw`
+          UPDATE domotica_acceso_pin
+          SET detalle = COALESCE(detalle, '{}'::jsonb) || jsonb_build_object('desajuste_avisado', ${hoyMadrid}::text),
+              updated_at = now()
+          WHERE dispositivo_id = ${d.id}::uuid AND reserva_ref IN (${Prisma.join(porAvisar.map(x => x.reservaRef))})`
+      }
+      // La respuesta HTTP lista SIEMPRE los desajustes, avisados o no: el dedupe silencia el Telegram,
+      // no el hecho.
+      if (desajustes.length) resultados.push({ d: d.nombre, desajustes })
 
       // ── Aviso de cerradura offline antes de un check-in ──
       if (cfg.alertas.offlineAntesCheckin) {
