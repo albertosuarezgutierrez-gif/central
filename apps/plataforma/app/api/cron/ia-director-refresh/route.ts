@@ -24,6 +24,10 @@ type ModeloOR = {
 // Listas de PREFERENCIA por categoría (ordenadas): se elige el primero que EXISTA en el
 // catálogo vivo y respete el techo de precio. Si el favorito desaparece (retirada tipo
 // llama-3.1-405b en NIM), el siguiente entra solo y se avisa por Telegram.
+// ⚠️ Este cron NO descubre modelos: solo elige de estas listas. Su curación (detectar que un
+// id sirve un modelo viejo/caro, o que existe uno mejor) es del agente semanal `buscador-ia`
+// (Paso 1.5 de su skill), que propone cambios aquí por PR. Un slug no dice qué sirve: el caso
+// deepseek-chat (= V3, 3-6× más caro que el V4 Flash, 4 meses sin verse) motivó esta regla.
 const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
   logica: {
     tags: ['logica', 'datos', 'barato'],
