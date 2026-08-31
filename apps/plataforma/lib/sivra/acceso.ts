@@ -62,16 +62,25 @@ export const ACCESO: Record<string, AccesoPiso> = {
     // llaves y el apartamento son dos sitios distintos, y una foto sin su paso confunde más que
     // ayuda. Detalle dictado por Alberto (31/08/2026): la caja está sujeta con una cadena junto a
     // la entrada del aparcamiento del nº 7 — es lo que la hace reconocible en la calle.
+    // Contenido de cada foto VERIFICADO mirándolas (31/08/2026): 6132016… = entrada del
+    // aparcamiento con flecha; 61320280… = la caja negra encadenada a la valla; 61122cdc… = el
+    // llavero con cada llave rotulada (APARTMENT/BUILDING/LIFT) → va con el paso de coger las
+    // llaves, no con el del edificio; 65a41aeb… = Street View del pasaje anotado (flecha al
+    // pasaje + puerta «ENTRADA EN CASO DE ESTAR CERRADA» + marca «LLAVES»); 65b60ae3… = el
+    // portal de cristal con el «4». El texto de cada paso explica las anotaciones de su foto —
+    // una foto con rótulos sin explicar confunde más que ayuda.
     pasos: [
-      'Ve PRIMERO a recoger las llaves a la calle Javier Lasso de la Vega 7 (NO al apartamento). La caja de llaves está sujeta con una cadena junto a la entrada del aparcamiento del nº 7 — la reconocerás por estas fotos:\n' +
+      'Ve PRIMERO a recoger las llaves a la calle Javier Lasso de la Vega 7 (NO al apartamento). La caja de llaves es negra y está sujeta con una cadena a la valla, junto a la entrada del aparcamiento del nº 7 — la reconocerás por estas fotos:\n' +
         `${SMOOBU_IMG}/summernote_image_103685_6132016390d8c.jpg\n` +
         `${SMOOBU_IMG}/summernote_image_103685_61320280e95de.jpg`,
-      `Abre la caja con la clave {CAJA} y coge las llaves. Aquí tienes un vídeo de cómo se abre: ${VIDEO_CAJA}`,
+      'Abre la caja con la clave {CAJA} y coge el llavero. Lleva TRES llaves, y en esta foto están señaladas: la del APARTAMENTO, la del PORTAL del edificio y la del ASCENSOR:\n' +
+        `${SMOOBU_IMG}/summernote_image_103685_61122cdc1c4c4.jpg\n` +
+        `Aquí tienes un vídeo de cómo se abre la caja: ${VIDEO_CAJA}`,
       'Deja la caja CERRADA y mueve los números para que no quede puesta la clave; comprueba que ha quedado bloqueada.',
-      'Con las llaves, ve al apartamento: Pasaje Francisco Molina 4 (= Pasaje Villasís 1), primera planta, letra C. Así es la entrada del edificio:\n' +
-        `${SMOOBU_IMG}/summernote/1/f/5/b/7/5/a/c/summernote_image_103685_65a41aeb0d355.jpeg\n` +
-        `${SMOOBU_IMG}/summernote/e/c/f/0/e/8/d/3/summernote_image_103685_65b60ae3c6d72.jpeg\n` +
-        `${SMOOBU_IMG}/summernote_image_103685_61122cdc1c4c4.jpg`,
+      'Con las llaves, ve al apartamento: Pasaje Francisco Molina 4 (= Pasaje Villasís 1), primera planta, letra C. En esta foto, la flecha señala la entrada del pasaje; si el pasaje estuviera cerrado, usa la puerta marcada como «ENTRADA EN CASO DE ESTAR CERRADA» (la marca «LLAVES» es el punto donde las recogiste, para que te orientes):\n' +
+        `${SMOOBU_IMG}/summernote/1/f/5/b/7/5/a/c/summernote_image_103685_65a41aeb0d355.jpeg`,
+      'Dentro del pasaje, el portal es el de las puertas de cristal con el número 4 encima — se ve en esta foto:\n' +
+        `${SMOOBU_IMG}/summernote/e/c/f/0/e/8/d/3/summernote_image_103685_65b60ae3c6d72.jpeg`,
       'Al hacer el CHECK-OUT, deja las llaves DENTRO del apartamento, encima de la mesa alta de la cocina, y cierra la puerta al salir.',
     ],
     fotos: [],
