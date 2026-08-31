@@ -98,17 +98,22 @@ export const ACCESO: Record<string, AccesoPiso> = {
     llavesFuera: false,
     llavesDireccion: 'En el propio portal de Calle Socorro 24',
     llavesMapa: 'https://goo.gl/maps/ytcvp3QkLHynXHCQ7',
+    // Corregido el 31/08/2026 mirando las 3 fotos + dictado de Alberto. Lo que estaba mal: se
+    // presentaba el CÓDIGO como la forma de entrar. No lo es — el código es para el PRIMER acceso
+    // (o una urgencia); a partir de ahí el huésped usa su propia pastilla de proximidad. Y el
+    // teclado no está «en la puerta»: está en la PARED, a la izquierda.
     pasos: [
-      'En la propia fachada de Socorro 24, en la puerta, hay un teclado — lo verás claramente. Introduce la clave {PORTAL} para abrir.',
-      'En la entrada encontrarás DOS juegos de llaves: una ficha para la entrada principal y una llave para la cancela de hierro.',
+      'Llegas a Calle Socorro 24. La puerta es oscura, de dos hojas, con el número 24 encima:\n' +
+        `${SMOOBU_IMG}/summernote/a/d/b/7/1/2/1/1/summernote_image_103685_68c2dea24b179.jpeg`,
+      'Para entrar la PRIMERA vez, usa el teclado que hay en la pared, a la izquierda de la puerta (es plateado, con los números en azul). Marca la clave {PORTAL} — el # del final es la tecla de confirmar del propio teclado. Así se ve:\n' +
+        `${SMOOBU_IMG}/summernote/1/2/3/1/5/b/e/a/summernote_image_103685_68c2dead05a06.jpeg`,
+      'Ya dentro, sobre la mesita de madera que hay junto a la cancela de hierro (la de la planta) están vuestros DOS juegos: una PASTILLA de proximidad y una LLAVE. La pastilla es lo que usaréis de aquí en adelante para abrir la puerta de la calle —acercándola al lector, sin marcar ningún código— y la llave es la de la cancela de hierro. Están aquí:\n' +
+        `${SMOOBU_IMG}/summernote/4/8/4/c/9/f/c/f/summernote_image_103685_68c2e00ff0c7e.jpeg`,
+      'Guardad la clave del teclado por si acaso: sirve para entrar si os quedáis sin la pastilla a mano.',
       'La entrada de la casa es zona común (hay otros apartamentos y nuestra central de limpieza); vuestra zona de uso exclusivo empieza a partir de la cancela de hierro. En la zona común hay una cámara grabando.',
-      'Al hacer el CHECK-OUT, deja los dos juegos de llaves en el mismo sitio donde los recogiste.',
+      'Al hacer el CHECK-OUT, deja los dos juegos (pastilla y llave) en el mismo sitio donde los recogiste.',
     ],
-    fotos: [
-      `${SMOOBU_IMG}/summernote/a/d/b/7/1/2/1/1/summernote_image_103685_68c2dea24b179.jpeg`,
-      `${SMOOBU_IMG}/summernote/1/2/3/1/5/b/e/a/summernote_image_103685_68c2dead05a06.jpeg`,
-      `${SMOOBU_IMG}/summernote/4/8/4/c/9/f/c/f/summernote_image_103685_68c2e00ff0c7e.jpeg`,
-    ],
+    fotos: [],
     avisos: [],
     basura: BASURA_BUSTO,
   },
@@ -120,18 +125,22 @@ export const ACCESO: Record<string, AccesoPiso> = {
     llavesFuera: false,
     llavesDireccion: 'En el portal de Bustos Tavera 22',
     llavesMapa: 'https://goo.gl/maps/8SueLyvtefrBJBw67',
+    // 🚨 Corregido el 31/08/2026 mirando las fotos: junto a los buzones hay DOS cajas de llaves
+    // GRIFEMA IDÉNTICAS, una encima de otra — la de Luxury es la de ABAJO y la de Reform la de
+    // ARRIBA (lo señala el círculo rojo de la foto de cada piso). El texto anterior decía «la caja
+    // de llaves» a secas: ante dos cajas iguales, el huésped prueba en la que no es, no abre y
+    // llama por teléfono. Si algún día se mueven de sitio, esta frase hay que cambiarla.
     pasos: [
-      'Entra al edificio de Bustos Tavera 22: teclado con la clave {PORTAL}.',
-      'Coge las llaves de la caja de llaves: clave {CAJA}.',
+      'Entra al edificio de Bustos Tavera 22. El teclado está en la pared, a la izquierda del portero automático: marca la clave {PORTAL} (el # del final es la tecla de confirmar del teclado). Así se ve:\n' +
+        `${SMOOBU_IMG}/summernote/9/a/c/8/a/0/7/7/summernote_image_103685_68e03386dc3a5.jpeg`,
+      'Ya dentro, junto a los buzones hay DOS cajas de llaves grises iguales, una encima de otra. La vuestra es la de ABAJO (es la señalada en rojo en esta foto). Ábrela con la clave {CAJA}:\n' +
+        `${SMOOBU_IMG}/summernote/4/4/0/c/e/b/8/d/summernote_image_103685_68e035e115aa9.jpeg`,
       'IMPORTANTE: deja la caja cerrada y mueve los números para que no quede puesta la clave; comprueba que ha quedado bloqueada.',
-      'Entrando al edificio, el apartamento es la puerta de la DERECHA al final del pasillo.',
-      'Al hacer el CHECK-OUT, devuelve las llaves a la misma caja donde las recogiste.',
+      'El apartamento es la puerta del FONDO A LA DERECHA, pasando la escalera (la señalada en rojo), no la que tienes de frente al entrar:\n' +
+        `${SMOOBU_IMG}/summernote_image_103685_5e446accd05c1.jpg`,
+      'Al hacer el CHECK-OUT, devuelve las llaves a la MISMA caja donde las recogiste (la de abajo).',
     ],
-    fotos: [
-      `${SMOOBU_IMG}/summernote/9/a/c/8/a/0/7/7/summernote_image_103685_68e03386dc3a5.jpeg`,
-      `${SMOOBU_IMG}/summernote/4/4/0/c/e/b/8/d/summernote_image_103685_68e035e115aa9.jpeg`,
-      `${SMOOBU_IMG}/summernote_image_103685_5e446accd05c1.jpg`,
-    ],
+    fotos: [],
     video: VIDEO_CAJA,
     avisos: [],
     basura: BASURA_BUSTO,
@@ -144,17 +153,18 @@ export const ACCESO: Record<string, AccesoPiso> = {
     llavesFuera: false,
     llavesDireccion: 'En el portal de Bustos Tavera 22',
     llavesMapa: 'https://goo.gl/maps/8SueLyvtefrBJBw67',
+    // 🚨 Ver la nota de Luxury Busto: son las MISMAS dos cajas idénticas. La de Busto Reform es la
+    // de ARRIBA (la de Luxury, la de abajo). Verificado sobre las fotos el 31/08/2026.
     pasos: [
-      'Entra al edificio de Bustos Tavera 22: teclado con la clave {PORTAL}.',
-      'Coge las llaves de la caja de llaves: clave {CAJA}.',
+      'Entra al edificio de Bustos Tavera 22. El teclado está en la pared, a la izquierda del portero automático: marca la clave {PORTAL} (el # del final es la tecla de confirmar del teclado). Así se ve:\n' +
+        `${SMOOBU_IMG}/summernote/9/a/c/8/a/0/7/7/summernote_image_103685_68e03386dc3a5.jpeg`,
+      'Ya dentro, junto a los buzones hay DOS cajas de llaves grises iguales, una encima de otra. La vuestra es la de ARRIBA (es la señalada en rojo en esta foto). Ábrela con la clave {CAJA}:\n' +
+        `${SMOOBU_IMG}/summernote/7/b/d/2/c/3/c/7/summernote_image_103685_68e036f18a97c.jpeg`,
       'IMPORTANTE: deja la caja cerrada y mueve los números para que no quede puesta la clave; comprueba que ha quedado bloqueada.',
       'Entrando al edificio, el apartamento es la PRIMERA puerta a la IZQUIERDA.',
-      'Al hacer el CHECK-OUT, devuelve las llaves a la misma caja donde las recogiste.',
+      'Al hacer el CHECK-OUT, devuelve las llaves a la MISMA caja donde las recogiste (la de arriba).',
     ],
-    fotos: [
-      `${SMOOBU_IMG}/summernote/9/a/c/8/a/0/7/7/summernote_image_103685_68e03386dc3a5.jpeg`,
-      `${SMOOBU_IMG}/summernote/7/b/d/2/c/3/c/7/summernote_image_103685_68e036f18a97c.jpeg`,
-    ],
+    fotos: [],
     video: VIDEO_CAJA,
     avisos: [],
     basura: BASURA_BUSTO,
