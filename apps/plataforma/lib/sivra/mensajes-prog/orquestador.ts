@@ -33,6 +33,7 @@ import { traducirMensaje } from './traducir'
 import { yaLoMandoSmoobu, type MsgHilo } from './equivalentes-smoobu'
 import { ACCESO, codigosQueFaltan, type CodigosAcceso } from '../acceso'
 import { pinsPorReserva, elegirCodigoPortal } from './codigo-portal'
+import { decidirIdioma, notaIdioma } from './idioma-reserva'
 
 const AGENTE = 'sivra_mensajes_prog'
 const MAX_INTENTOS = 5
@@ -194,6 +195,7 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
 
   const avisosSombra: string[] = []
   const avisos: string[] = []
+  const idiomaAvisado = new Set<string>()
 
   for (const b of reservas) {
     if (Date.now() > deadline) { res.detalle.push('presupuesto de tiempo agotado — el resto, en la próxima pasada'); break }
@@ -223,7 +225,9 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
     // Datos comunes de la reserva para las plantillas.
     const horario = horarioPiso(propertyId, String(b?.['check-in'] || '').trim(), String(b?.['check-out'] || '').trim())
     const guestAppUrl = String(b?.['guest-app-url'] || '')
-    const idiomaReserva = String(b?.language || '').trim().toLowerCase().slice(0, 2)
+    // El canal no siempre publica el idioma (Agoda lo manda VACÍO): «sin idioma» ≠ «español».
+    const lang = decidirIdioma(b?.language)
+    const canal = String((b?.channel as { name?: string } | undefined)?.name || '').trim()
     const cods: CodigosAcceso = { ...(codigos[propertyId] || {}), pinReserva: pinsRes.get(bookingId) ?? null }
 
     for (const deb of debidos) {
@@ -271,6 +275,11 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
         lateOfertaOk: late,
       }
       const cuerpoEs = renderPlantilla(deb.tipo, datos)
+      // Un hueco de idioma se canta UNA vez por reserva (en el 1er hito que se le mande), no en cada uno.
+      if (activo && !lang.conocido && !idiomaAvisado.has(bookingId)) {
+        idiomaAvisado.add(bookingId)
+        avisos.push(`🈚 ${ACCESO[propertyId].nombre} · reserva ${bookingId}: ${notaIdioma(lang, canal)}`)
+      }
       // Qué código lleva el mensaje. Se anota en el parte porque el maestro y el PIN de la reserva son
       // indistinguibles leyendo el texto, y son cosas MUY distintas: uno caduca con la estancia y el otro no.
       const llevaCodigo = deb.tipo === 'acceso' || deb.tipo === 'vispera_llegada'
@@ -278,9 +287,9 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
       const faltan = llevaCodigo ? codigosQueFaltan(propertyId, cods) : []
       if (faltan.length) avisos.push(`🚨 ${ACCESO[propertyId].nombre}: falta en BD ${faltan.join(' y ')} (sivra_codigos_acceso) — el mensaje «${deb.tipo}» de la reserva ${bookingId} sale declarando el hueco.`)
 
-      const { texto, idioma } = activo && idiomaReserva && idiomaReserva !== 'es'
-        ? await traducirMensaje(cuerpoEs, idiomaReserva)
-        : { texto: cuerpoEs, idioma: 'es' }
+      const { texto, idioma } = activo && lang.traducir
+        ? await traducirMensaje(cuerpoEs, lang.idioma)
+        : { texto: cuerpoEs, idioma: lang.idioma }
 
       // Reclamo atómico ANTES de enviar: si otra pasada lo insertó, este hito ya no es nuestro.
       const claim = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
@@ -294,7 +303,8 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
         res.sombra++
         avisosSombra.push(
           `🕶️ <b>SOMBRA</b> · <b>${escapeHtml(ACCESO[propertyId].nombre)}</b> · ${escapeHtml(datos.guestName || '¿?')} (reserva ${bookingId})` +
-          `\nHito: <b>${deb.tipo}</b>${idiomaReserva && idiomaReserva !== 'es' ? ` · idioma de la reserva: ${idiomaReserva.toUpperCase()} (se traduciría al activar)` : ''}` +
+          `\nHito: <b>${deb.tipo}</b>${lang.traducir ? ` · idioma de la reserva: ${lang.idioma.toUpperCase()} (se traduciría al activar)` : ''}` +
+          (notaIdioma(lang, canal) ? `\n${escapeHtml(notaIdioma(lang, canal))}` : '') +
           (elegido ? `\nCódigo del portal: <b>${elegido.origen === 'reserva' ? 'PIN de ESTA reserva (Tuya)' : elegido.origen === 'maestro' ? 'código MAESTRO (esta reserva no tiene PIN propio)' : 'ninguno — el texto declara el hueco'}</b>` : '') +
           `\n\n${escapeHtml(texto.length > 2600 ? texto.slice(0, 2600) + '…' : texto)}`,
         )
