@@ -32,6 +32,16 @@
 
 ---
 
+### 📊 (31/08/2026) Ciclo semanal de pricing SIVRA — 4 pisos, mercado fresco, sin huecos
+- 5 agentes en paralelo barrieron Booking (+fallback lastminute/expedia en Semana Santa/Feria) para
+  los 4 pisos: 601 comps nuevos hoy en `market_rates` (house=153, busto=150, luxury=150, duplex=148,
+  ninguno a 0) + las 7 fechas de evento (Copa del Rey, San Isidoro, 3 LaLiga, JEID, Mundial Remo) que
+  el guardián llevaba 3 días marcando "congelada" por falta de comps.
+- 48 propuestas (dry-run forzado, `ALERTA_TOKEN`) por los raíles: circuit-breaker sano, sin cambios de
+  `apply_enabled`/suelos/`target_pctl`. House sept sigue al 43% ocupación → se mantiene target_pctl 0,60.
+- A vigilar: Luxury Busto 10-oct-2026 el mercado subió a p50=470€ (antes 123-169€); noche ya vendida a
+  162€, irrelevante hoy. Detalle completo en `pricing_aprendizaje` (`ciclo_31_08_2026`) y bitácora de agentes.
+
 ### 📊 (30/08/2026) /sivra/resultado-pisos → rendimiento por rango + previsión con seguimiento
 - Petición de Alberto («darle una vuelta»: rendimiento, previsiones, intervalos, gráficas). Aprobó:
   previsión con CONFIRMADO y ESTIMADO por separado + seguimiento de si se cumplen (tesorería),
