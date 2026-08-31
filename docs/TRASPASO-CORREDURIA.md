@@ -2807,7 +2807,7 @@ requiera su mano.
 | # | Qué | Por qué solo él puede |
 |---|---|---|
 | 1 | **Transferir el proyecto de Supabase** a la org de Alberto | Es el dueño. ⚠️ Antes: volcado de respaldo (su plan free no tiene backups) |
-| 2 | **Aceptar la invitación de Fly y lanzar el movimiento de la app** a `alberto-suarez-83` | El move lo ejecuta el dueño de la app. **Sin redesplegar** (secrets irrecuperables) |
+| 2 | **Aceptar la invitación de Fly y lanzar el movimiento de la app** a `alberto-suarez-83` | ✅ **Invitación ENVIADA el 31/08** (verificada persistida). El move lo ejecuta el dueño de la app. **Sin redesplegar** (secrets irrecuperables). ⚠️ Fly no tiene roles en este tipo de org: Manuel entra con acceso completo (apps + facturación). Hoy la org está vacía → riesgo cero; tenerlo presente cuando haya más apps |
 | 3 | **Transferir el repo del adaptador** (`asegura-app-cima-adapter`) | Es suyo |
 | 4 | **Pasar los ~4 ficheros del Vercel Blob** (o el token del store) | El Blob va atado a su cuenta |
 | 5 | **Los valores de `PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` al gestor de contraseñas** como respaldo | Solo por seguridad: son irreversibles. (Viajan con las envs de Vercel, que ya son de Alberto — verificar que se leen antes de darlo por hecho) |
