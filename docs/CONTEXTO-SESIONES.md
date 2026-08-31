@@ -32,6 +32,17 @@
 
 ---
 
+### 🏠 (31/08/2026) La cartera de la correduría, DENTRO de plataforma (puerto HTTP)
+- Alberto: «mete correduría dentro de mi plataforma». Bloque «📁 Cartera en vivo» en `/correduria`
+  (KPIs: en vigor/sin fecha/históricas/clientes/leads/siniestros) leído de `central-asegura` por el
+  patrón puerto operador (como rrhh): `GET /api/operador/resumen` (Bearer `ASEGURA_OPERADOR_SECRET`,
+  cerrado por defecto) → `lib/cartera-asegura.ts` en plataforma (intérprete puro testeado, 8 tests;
+  3 estados — «pendiente de conectar» ≠ cartera vacía, fallo visible). Registrado en secrets-registry.
+- Antes: deploy de central-asegura en verde (fix #1893) con las 4 envs; login de asegura = cuenta de
+  plataforma (verificado hash en `cuentas`). Pendiente Alberto: `ASEGURA_OPERADOR_SECRET` (mismo valor)
+  en los DOS proyectos Vercel + redeploy de ambos; aviso facturación Supabase Free = Fair Use (Database
+  Size 45%, el que vigilar; Pro antes del volcado Tiempo 2). Rotar `prisma_seguros` con calma.
+
 ### 🛠️ (31/08/2026) central-asegura: primer deploy en Error — el buildCommand pisaba prisma:generate
 - PR #1803 mergeado (squash `4d4b142c6`) tras resolver conflicto+gitleaks (allowlist FAKE_KEY_B). El
   primer deploy de `central-asegura` falló: el `buildCommand` de `vercel.json` («prisma generate &&
