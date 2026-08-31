@@ -41,6 +41,15 @@
 - Cron `trading-h10`: ya no re-avisa el cierre de H10; vigía con lista de hipótesis vacía (tubería montada).
 - Detalle en el pre-registro («✅ RESOLUCIÓN de H11…H15») y TRADING-SALIDAS-2026-08.md (H12).
 
+### 🔧 (31/08/2026) Agente SEO sivra: 42704 SeoStatus — el schema declaraba un enum que la BD no tiene
+- El cron `seo-refresh` de sivra murió en `prisma.seoProposal.create()`: `seo_proposals.status` es TEXT
+  en la BD y el schema lo declaraba `enum SeoStatus` → Prisma castea a `"public"."SeoStatus"` (42704).
+  Ese `create` no funcionó NUNCA (las 6 filas previas son del botón de plataforma, SQL crudo, ids UUID);
+  hasta hoy el cron moría antes (GITHUB_TOKEN…). Fix: `status String @default("PENDING")` — la BD NO se
+  toca (el enum rompería el INSERT crudo de plataforma). Guardián `test/regression-seo-status-text.test.ts`.
+- El cambio SEO de hoy SÍ se aplicó en la landing (c59d5da, PR #1891) antes de fallar el INSERT: fila
+  `seo_proposals` reconstruida del diff de git e insertada a mano (revert operativo; análisis IA perdido).
+
 ### 🏠 (31/08/2026) La cartera de la correduría, DENTRO de plataforma (puerto HTTP)
 - Alberto: «mete correduría dentro de mi plataforma». Bloque «📁 Cartera en vivo» en `/correduria`
   (KPIs: en vigor/sin fecha/históricas/clientes/leads/siniestros) leído de `central-asegura` por el
