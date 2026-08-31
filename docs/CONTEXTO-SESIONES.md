@@ -32,6 +32,15 @@
 
 ---
 
+### 🔌 (31/08/2026) Correduría: conexión a la cartera ENCENDIDA — rol propio + envs puestas por Alberto
+- Rol `central_asegura` creado en ASEGURA-prod-eu (login+BYPASSRLS, **solo SELECT**; verificado vivo).
+  Alberto puso `ASEGURA_DATABASE_URL` y `ASEGURA_SESSION_SECRET` en el Vercel `central-asegura`
+  (Production+Preview; Chrome cedió el teclado — ningún valor pasó por chat).
+- 🚨 Las env vars del proyecto `asegura` de Manuel NO viajaron con la transferencia (quedan 4 de ~25);
+  prod vive de valores horneados → **PROHIBIDO redesplegar** hasta que Manuel las reponga (borrador listo).
+- Proyecto Vercel `central-asegura` creado (Root Dir `apps/asegura`); Git y acceso del conector por verificar.
+- La org «PISO» de Supabase SÍ existe (Free, sin backups; ASEGURA-prod-eu dentro) — propiedad por confirmar.
+
 ### 🔬 (31/08/2026) Correduría: conector directo a ASEGURA y diff real — «0 FKs» y «0 triggers» eran FALSOS
 
 Conector nuevo «Supabase asegura» (custom, `project_ref` + `read_only=true` — 13 herramientas solo
@@ -39,9 +48,7 @@ lectura). Primera medición directa de la BD real: **52 tablas / 42 enums / 132 
 casan con lo declarado**, y hay **131 FKs y 26 triggers** — las mediciones «0 FKs»/«0 triggers» del
 26/08 eran falsas (lo cierto era solo «0 FKs hacia `auth`»). FORCE RLS en 51/52 tablas. Cartera viva
 por fecha: **50 pólizas** (1.194 con vencimiento NULL → tratar como pendiente). `review` crece: 42.
-➡️ `db pull` traerá relaciones; el modelo de Fase 1 se genera del real. ⚠️ PENDIENTE CRÍTICO: el
-conector «Supabase» principal quedó re-autorizado hacia LOOR — hay que devolverlo a la org de Alberto
-o las rutinas de central fallan en sesiones nuevas. Supabase ASEGURA sigue SIN transferir (era Vercel
+(el conector principal se devolvió a la org de Alberto ese mismo día — resuelto)
 lo transferido; «PISO» era el team de Vercel).
 
 ### 🗂️ (31/08/2026) Correduría: MAPA completo del repo heredado + primer paquete portado
@@ -66,6 +73,33 @@ ligado al drain pendiente desde 12-ago. Falta: Supabase, Fly (invitar a Manuel D
 Alberto), Blob, repo adaptador. Corte propuesto: lunes 01/09 9:30. Informe de Manuel archivado en
 `docs/TRASPASO-CORREDURIA-informe-manuel-2026-08-30.md`.
 
+### 🎯 (31/08/2026) mercado-booking: objetivo jul/ago-2027 cumplido — quitar la línea de prioridad del cron
+- Pasada acotada `?desde=2027-07-01&hasta=2027-08-31&max=24`: 240 comps reales en 6 fechas × 4 pisos
+  (02/10/27-07, 06/14/24-08) → **≥3 fechas distintas por piso en julio-2027 y en agosto-2027**, el
+  bucket mensual del motor queda elegible en ambos meses. 3/4 ventanas de escaparate propio medidas.
+- **Acción pendiente:** el prompt programado de `mercado-booking` lleva desde el 31/08 una línea de
+  "PRIORIDAD TEMPORAL (agosto 2026)" pidiendo esta pasada acotada — ya cumplió su objetivo, **hay
+  que quitarla** del trigger/schedule (no es un archivo del repo; hay que editarlo donde vive el
+  cron/trigger de Claude Code) para que la rutina vuelva a su barrido normal por urgencia.
+
+### 🔎 (31/08/2026) Revisión de datos de resultado-pisos: julio cuadra al céntimo; comisión centinela corregida
+- Contraste contra BD real: julio 2026 = 4.424,45€ exacto vs pantalla vieja · nights ~100% ·
+  `reserved_at` ~100% (pace fiable) · Booking comisión = 19,72% clavado · 111 cancelaciones OK.
+- 🚨 Expedia/Airbnb/Agoda salían «comisión 0€»: es un CENTINELA (`portal_rates.commission_pct=0`
+  «pendiente de confirmar» → neto=bruto). Nuevo `lib/sivra/canales-logica.ts` (puro, testeado):
+  la UI dice «⚠️ comisión sin descontar (tarifa pendiente)», nunca 0€. Con factura real se fija
+  la tarifa en `portal_rates` y desaparece el aviso.
+
+### 📊 (31/08/2026) Ciclo semanal de pricing SIVRA — 4 pisos, mercado fresco, sin huecos
+- 5 agentes en paralelo barrieron Booking (+fallback lastminute/expedia en Semana Santa/Feria) para
+  los 4 pisos: 601 comps nuevos hoy en `market_rates` (house=153, busto=150, luxury=150, duplex=148,
+  ninguno a 0) + las 7 fechas de evento (Copa del Rey, San Isidoro, 3 LaLiga, JEID, Mundial Remo) que
+  el guardián llevaba 3 días marcando "congelada" por falta de comps.
+- 48 propuestas (dry-run forzado, `ALERTA_TOKEN`) por los raíles: circuit-breaker sano, sin cambios de
+  `apply_enabled`/suelos/`target_pctl`. House sept sigue al 43% ocupación → se mantiene target_pctl 0,60.
+- A vigilar: Luxury Busto 10-oct-2026 el mercado subió a p50=470€ (antes 123-169€); noche ya vendida a
+  162€, irrelevante hoy. Detalle completo en `pricing_aprendizaje` (`ciclo_31_08_2026`) y bitácora de agentes.
+
 ### 📥 (30/08/2026) Correduría: informe COMPLETO de Manuel — cierra M4-M6/M15-M17 y propone TRANSFERIR Supabase
 
 Manuel entregó su informe de traspaso medido contra producción (archivado verbatim en
@@ -77,6 +111,202 @@ enlace por uuid a pelo → recrear cuentas rompe en silencio). Recomendado acept
 ⚠️ Trampas: «activa»≠vigente (solo 50 pólizas vencen en futuro); Mapfre parada desde 23-jun; Occident
 39 ficheros en `review` creciendo; stack es **Drizzle, no Prisma**. Vercel: Manuel invitado (member),
 2FA de Alberto activado. Detalle en `docs/TRASPASO-CORREDURIA.md`.
+### 📊 (30/08/2026) /sivra/resultado-pisos → rendimiento por rango + previsión con seguimiento
+- Petición de Alberto («darle una vuelta»: rendimiento, previsiones, intervalos, gráficas). Aprobó:
+  previsión con CONFIRMADO y ESTIMADO por separado + seguimiento de si se cumplen (tesorería),
+  pace, canales+comisión real, cancelaciones, heatmap 24m, alerta Telegram de previsión floja.
+- Rango de MESES en URL, Δ interanual, Recharts (paleta validada dataviz), CSV. Detalle en el PR.
+- Cron nuevo `prevision-pisos` (05:50) → `pisos_previsiones` (migración 2026-08-30 APLICADA) +
+  latido `sivra_prevision` (registro+sonda). SQL probado contra la BD real antes de mergear.
+- Spec: `docs/superpowers/specs/2026-08-30-resultado-pisos-rediseno-design.md`.
+
+### 🤖 (30/08/2026) daily-briefing v4: fuera el fallback NIM — solo pasarela/OpenRouter
+- Decisión de Alberto («Nvidia NIM no hace falta») + regla del 24/08 («todo por OpenRouter»).
+- `generarNarrativa` ya no lee `NVIDIA_API_KEY`/`NVIDIA_BRAIN_MODEL`: la pasarela es la única vía
+  (su cadena de suplentes vive dentro) + UN reintento solo ante fallo transitorio (red/timeout/5xx);
+  401/429 se declaran a la primera. Sin prosa → briefing en crudo con motivos (v3, intacto).
+- ⚠️ NO pinear `model` en el body como «segundo modelo»: `modelo` SALTA OpenRouter (landmine #1675).
+- Redesplegada (v28) y VERIFICADA en caliente vía pg_net: 200, `via: Director · anthropic/claude-sonnet-4.5`,
+  `degradado:false` — primeras filas `ia-rest-briefing` en `ai_usos` por `openrouter` (los secretos
+  `PLATAFORMA_URL`+`AI_GATEWAY_SECRET` ya estaban guardados; el 401-por-SSO que temía Chrome no existe).
+- 🚨 Landmine: `deploy_edge_function` (MCP) resetea `verify_jwt` a `true` por defecto — la v27 lo hizo y
+  habría matado el cron (llama SIN header). Pasar SIEMPRE `verify_jwt:false` al redesplegar esta función.
+- Quedan 4 edge functions con NIM crudo (pendiente conocido, misma migración a futuro).
+
+### 🧾 (30/08/2026) Los no-gastos ya no vuelven a la bandeja: la ingesta los omite
+- Alberto: «Booking eran abono de reservas, Allianz comisiones… y aún aparecen». Cierto: el PR
+  #1852 dejó el AVISO en la ficha pero ni quitó las filas ni tocó la ingesta.
+- Cerrado el círculo: `procesarFactura` consulta `pareceIngresoDeCorreduria` ANTES de insertar →
+  `omitido` con rastro en log + recuento en el parte Telegram (etiqueta de `avisos.ts` actualizada).
+  Guardián en `no-es-gasto.test.ts` (lee el fuente, probado en rojo) + test del concepto
+  normalizado de Booking. Borradas de `gastos` las 7 filas decididas (4 Booking 1.371,94€ +
+  3 Allianz 2.039,95€); nada estaba confirmado por error (`revisado=true`: 0 filas).
+- Giraldillo abril 598,95€ + jul 72,60€ confirmadas por dictado de Alberto («lavandería de los
+  pisos, no desglosa por piso») → `prop_multi_apartamentos`+LAVANDERIA, regla reforzada (vistas 7)
+  y unificado el histórico (3 filas LIMPIEZA→LAVANDERIA, las categorizó mezclado él mismo).
+- **Pendiente de Alberto:** la única fila que queda en `/expenses/pendientes`: Anthropic Max 180€.
+
+### 🔗 (30/08/2026) HECHO: redirección ialimp.es/limpieza → intranet de Vanesa
+- Enlace con marca para Vanesa: `ialimp.es/limpieza?token=…` (307 a
+  `plataforma-ten-flame.vercel.app/invitado/limpieza`; el token viaja con la redirección). Es un
+  `vercel.json` de 9 líneas en `landing/ialimp-es/` del repo **ialimp**, commit `19f19e56` en main;
+  el workflow `deploy-landing` desplegó a producción en 40 s.
+- 🚨 **Lección: un 403 de escritura en GitHub NO siempre es falta de permisos de la App.** Se
+  perdió media sesión (push, MCP, Vercel MCP, prompts para Claude Chrome) creyendo que faltaba
+  acceso, cuando el repo **ialimp estaba ARCHIVADO** (solo lectura para todos desde el 09/06/2026).
+  Lo delató el mensaje literal de la API `403 Repository was archived so is read-only` — el 403 de
+  `git push` en cambio decía «Claude doesn't have GitHub access», que despista. **Ante un 403 de
+  escritura, mira primero si el repo está archivado** (`get_file_contents` funciona igual, la
+  lectura no se bloquea). Alberto lo desarchivó desde Settings → Danger Zone.
+- ⚠️ Verificación en vivo NO hecha desde la sesión: el proxy de egreso bloquea `ialimp.es` (y
+  `*.vercel.app` de esa landing) tanto por curl como por WebFetch. Consta: archivo en main + deploy
+  a producción en `success`. Falta que Alberto abra el enlace una vez.
+- También mergeado hoy: #1874 (👥 «Salen N huéspedes» en la tarjeta de limpieza + «Últimos
+  avisos» plegado por defecto con recuento y montaje perezoso).
+
+### 👥 (30/08/2026) Intranet limpieza — la salida también dice cuántos huéspedes salen
+- Petición de Alberto: la tarjeta de limpieza (= la salida) muestra ahora «👥 Salen N huéspedes»
+  (pax de la reserva que sale, como ya hacía la entrada). NULL = no se pinta nada (no se inventa 0);
+  fichas sueltas sin reserva casada tampoco lo llevan. Chip junto a «Salida 11:00».
+- Verificado en prod tras merge: partes probados end-to-end (Telegram ✅, fila de prueba borrada).
+  Ojo: quedó un parte real anterior «Prueba» (Luxury 29/08, id 1) — de Alberto, se deja.
+
+### 🧾 (30/08/2026) Partes de incidencia de Vanesa — nota+foto en la limpieza + Telegram
+- Idea de Alberto: que Vanesa avise de desperfectos («se ha roto una mesa») desde su intranet,
+  rápido y sin campos: botón en la tarjeta de limpieza → texto libre y/o foto → se registra en
+  ESA limpieza (`limpieza_partes`, property_id+fecha, migración aplicada) y Telegram a Alberto.
+- La foto va en la BD (bytea, comprimida en cliente a ≤1600px JPEG) A PROPÓSITO: plataforma no
+  tiene envs de Supabase Storage y así no se mete ningún secreto nuevo. Se sirve por ruta
+  autenticada `/partes/foto?id=N`; a Telegram por multipart (`tgSendPhoto` NUEVO en core-telegram).
+- avisado_at NULL = Telegram no salió (best-effort); el parte queda guardado igual.
+
+### 📅 (30/08/2026) Intranet limpieza v6 — vista «Mes» (prueba pedida por Alberto)
+- Calendario mensual clásico (semanas L→D) como vista POR DEFECTO en la intranet de Vanesa:
+  cada día con puntos del COLOR de cada piso (relleno = limpieza, aro = entrada, ⚠️ = pendiente
+  Smoobu); tocar un día abre su detalle abajo. Toggle «Mes/Lista» — la tira de 30 días sigue ahí.
+- Nav ◀ mes ▶ + Hoy, acotada a la misma ventana [hoy−90, hoy+180]; el fetch pide el rango de la
+  rejilla visible (`datos?from&to` ya aceptaba rangos arbitrarios). Responsive 320px: 7 col fluidas.
+- Es una PRUEBA: si a Alberto/Vanesa no les convence, basta revertir el default a `'lista'`.
+- Alberto: Smoobu se cayó y una reserva no llegó; quiere carpeta Gmail + verificación + Telegram.
+  CONFIRMADO el agujero: James Ascott (Luxury 27→29/08, 2+3 pax) NO está en `incomes` ni canceladas
+  — la limpieza del 29 no salió en la intranet. Y Booking NO mandó su correo «⚠️ no registrada»
+  (sí los mandó en feb/jun), así que el correo de aviso SOLO no basta.
+- Vigía nuevo: categoría de triaje `reservas-booking` (etiqueta+archivar, detección determinista
+  ANTES de `correo_reglas`), parser puro con fixtures reales, tabla `reservas_correo_booking`
+  (aplicada), cron cada 15 min contrasta contra Smoobu → sync forzado si está / Telegram 🚨 +
+  ⚠️ en la intranet de Vanesa si no. Leg B: mensajes de huésped con nº que Smoobu no resuelve.
+  Latido `reservas_booking_vigia` (3 h, con sonda). La de James Ascott quedó metida A MANO en
+  `incomes` (id `manual_booking_ascott_20260827`, bruto 194,46€ → el trigger dejó el neto en
+  156,11€, su 19,72% estándar; Smoobu avisado por Alberto). ⚠️ Si Smoobu la sincroniza al final,
+  BORRAR la fila manual (el sync insertaría la suya con otro reservationId y se duplicaría).
+
+### 📌 (30/08/2026) Decisión: las consultas a Booking de mercado-booking se quedan COMO ESTÁN
+Alberto planteó si el conector de Booking «no llega» a tantos pisos/calendarios y si convenía pasar
+a consultas solo puntuales (al analizar un evento). Feedback con datos de BD: la rutina entrega
+estable 24 ventanas/día, la cobertura se ACUMULA y sep-26→abr-27 tienen 9-26 fechas/mes por piso
+(el bucket pide ≥3); solo may-jun 27 están a 2 fechas y les faltan días. Los eventos YA son
+ventanas prioritarias (ronda 1). Decisión de Alberto: **dejarlo tal cual** — no pasar a solo-eventos
+(mataría la línea de temporada y el corpus caduca a los 7 días, lección del 22/08). Sin cambios de
+código; si el conector fallara algún día, la palanca es bajar rondas de profundidad, no la temporada.
+
+### 🧽 (30/08/2026) Intranet limpieza v5: navegación de fechas + filtro por piso
+- Alberto pasó el pantallazo del calendario Smoobu de Vanessa → se adoptan sus dos cosas útiles:
+  la ventana de 30 días ya NO es fija (◀/▶ ±2 semanas, tope hoy−90/+180, botón «Hoy»; la API
+  `datos` ya aceptaba from/to) y chips de filtro por piso (afectan calendario, resumen del día,
+  entradas y avisos; las tareas SIN piso se ven siempre). Días pasados atenuados en la cabecera.
+- Verificado contra el pantallazo: la reserva de House 4→6 sep (8+3 pax, Booking) está en `incomes`.
+- Nombres de huésped siguen SIN mostrarse (decisión de diseño; Smoobu sí los enseña).
+
+### ✅ (30/08/2026) Pricing SIVRA recuperado: #1864 mergeado y la pasada de las 08:30 escribió
+El PR #1864 (fix `Prisma.raw()` en `sqlCompPlausible()`, ver entrada 🔴 de abajo) se sacó de draft
+y se mergeó a las ~06:10 UTC (`88cdda6`), antes del reparador de las 08:00 y de la pasada de las
+08:30. Verificado por SQL a las 08:51: `pricing_applied` con 287 noches escritas en 4 pisos a las
+08:30:40, y `agente_latidos.sivra_pricing_apply` en `ok=true`. Incidencia cerrada (~24h de precios
+congelados en total, ningún precio malo escrito). Nota: los 12 checks ya estaban verdes desde las
+02:25 (PR abierto por MCP con identidad de usuario — encaja con el matiz del PR #1777 en CLAUDE.md).
+
+### 🔴 (30/08/2026) Auditoría profunda: el motor de pricing llevaba ~18h sin aplicar precios
+El refactor de plausibilidad de comparables (`sqlCompPlausible()`, PR #1854, 29/08) interpolaba esa
+función — un string JS — dentro de `Prisma.sql` sin `Prisma.raw()`: Prisma lo manda como parámetro
+de texto, no como SQL, y Postgres revienta con `42804 argument of AND must be type boolean`. La
+query `recs` de `pricing/apply` (sin `.catch()`) abortaba la ruta entera → `pricing_applied` sin
+escribir desde las 08:30 UTC del 29/08 (dos pasadas mudas, 14:30 y 20:30). 10 sitios afectados en
+5 rutas (`apply`/`guard`/`rentabilidad`/`recommend`), todos envueltos ahora en `Prisma.raw()` +
+guardián nuevo en `pricing-comps-techo.test.ts` que vigila el patrón. PR draft + Telegram urgente
+(mergear antes de las 08:30 UTC de hoy). Ver `docs/AUDITORIA-2026-08.md` (30/08).
+
+### 💳 (29/08/2026) Agente huéspedes: coordinar un PAGO nunca sale solo — guardrail `hablaDePago`
+Alberto, al ver auto-enviada la respuesta a Raquel («el pago… por transferencia bancaria o Bizum.
+Te envío los datos por mensaje privado» — métodos y promesa INVENTADOS; el cobro real es el enlace
+de Stripe): «a este nivel creo que debería yo autorizar». El importe (20€) era del catálogo y la
+respuesta `apoyada_en_fuente`, así que ningún guardrail saltaba. Nuevo `hablaDePago()` en
+`extras.ts` (puro, 5 idiomas: pagar/cobrar, Bizum, transferencia, IBAN, efectivo…) aplicado en
+`orquestador.ts` a pregunta Y borrador → `needs_human`. `cobro-auto.ts` (paso 1-bis) sigue siendo
+el único camino automático. Skill sivra-maestro actualizada.
+
+### 💬 (29/08/2026) Agente huéspedes: la línea 🔁 al español, garantizada en los avisos
+- Alberto, sobre la copia de un auto-envío (Armelle, House Sevillana): quiere leer SIEMPRE en español
+  el mensaje del huésped. El código ya traducía, pero solo si `ctx.lang !== 'es'` y callándose si la IA fallaba.
+- Helpers puros en `reglas.ts` (+6 tests): `necesitaTraduccionPregunta` decide por el TEXTO (un «Très bien 👍»
+  con reserva en español se colaba sin traducir), `traduccionUtil` evita repetir la línea si ya era español,
+  y `lineaTraduccion` DECLARA el fallo («no he podido traducirlo al español») en vez de omitir la 🔁.
+- Cableado en `telegram-msg.ts` (avisarAutoEnviado + proponerPorTelegram + reproponerBorrador, des-duplicando
+  los 3 traductores inline). tsc 0 · suite completa verde. Skill sivra-maestro actualizada.
+
+### 🧽 (29/08/2026) Intranet de limpieza para VANESA en plataforma + pestaña Tareas
+- PRs #1856 (v1) → #1857 (v2) → #1858 (v3) → #1859 (v4) → #1860 (lavandería), todos mergeados el 29/08.
+- Vanesa (Sique Brilla) NO usa el panel de ialimp → pantalla propia por token: `/invitado/limpieza?token=…`
+  (patrón invitado empresas/trading; tabla `limpieza_acceso_token`, aplicada y sembrada por Supabase MCP).
+- Ve: calendario 30d × 4 pisos (`incomes`: ocupación+aforo, SIN nombres/importes) + resumen diario con
+  limpiezas (`cleaning_sessions` de los 4 slugs, notas 📌) y tareas (`limpieza_tareas`, solo marca hecha).
+- Panel Alberto: pestaña nueva «Tareas» en `/sivra/limpiadoras` (CRUD + copiar enlace de Vanesa).
+- Fix de fuga en el mismo PR: `/api/sivra/limpiadoras/historial` sin filtro veía sesiones de TODOS los
+  tenants de ialimp → acotado a los 4 slugs. Spec: `docs/superpowers/specs/2026-08-29-intranet-limpieza-vanesa-design.md`.
+- v2 (mismo día, feedback de Alberto): entradas marcadas en el calendario (→ + sección «Entradas del
+  día») y zona «🔔 Novedades» (reservas nuevas por `incomes.createdAt` + `reservas_canceladas`, 14 días).
+- v3 (mismo día): la barra azul cubre la reserva ENTERA (media celda entrada → media celda salida;
+  cambio de huésped = dos medias barras) y los avisos se limitan a los 6 últimos, siempre visibles.
+- v4 (revisión pre-entrega pedida por Alberto): el 🧽 se deriva de la RESERVA (toda salida = limpieza;
+  antes las salidas a >14d salían sin marcar porque el cron auto-sessions solo crea ficha a 14d), y
+  cron nuevo `updates/sync?days=800&ventana=45` (05:15) — pasada por ventana de LLEGADA que rellena
+  el aforo NULL (8 de 9 reservas del mes lo tenían) y caza cancelaciones a semanas vista.
+  Los CAMBIOS de fechas de una reserva existente NO se registran (el sync sobrescribe) — hueco conocido.
+- Reparto de LAVANDERÍA a huéspedes reales (regla confirmada por Alberto: «nº reservas y huéspedes»):
+  `pl-mensual` pesa ahora Σ(adults+children) por reserva del mes, con fallback a capacidad en las
+  reservas con aforo NULL (helper puro `lib/sivra/lavanderia-peso.ts` + test). El cron de las 05:15
+  lleva `desde=2026-06-01` para retro-rellenar el aforo de los meses ya facturados; quitar el
+  `desde` cuando el histórico esté relleno.
+- Factura REAL de Sique Brilla 2025/333 (julio, 780,10€) leída del PDF de Drive e INGERIDA en
+  `limpieza_facturas` (estaba VACÍA: el lector del PR #1699 nunca se usó) — validada con
+  `validarFactura`, cuadre al céntimo, 0 avisos. La limpieza SÍ viene por piso; la lavandería
+  viene por FECHA y KILOS (no por piso) → el reparto por huéspedes sigue siendo necesario.
+- Fase 2 EJECUTADA (29/08, pedida por Alberto): el login de dueña del tenant Sique Brilla en ialimp
+  pasó de Vanessa a Alberto — `empresas` (id 05edacff…): email → el de Alberto, contraseña nueva
+  (entregada en chat, cambiarla en la app), `session_jti` rotado y `sesion_activa=false`. Sin
+  `usuarios_empresa`; el acceso de las limpiadoras (token/PIN) NO se tocó. Los emails operativos
+  del tenant (impagos, alertas, reservas urgentes) ahora llegan a Alberto. Reversible por SQL.
+
+### 🔍 (29/08/2026) Auditoría COMPLETA con foco en pricing — motor validado contra producción
+- Informe: `docs/AUDITORIA-2026-08-29-completa.md`. Todo verde: 12 checks CI en local, 11 typechecks,
+  guardián 75/75, QA/lint 0 errores. **Pricing:** propagación al canal verificada al 100% (cierra el
+  fleco del 27/08), `base_fuente`/`ancla_origen` rellenándose en prod (cierra el check-in del 28/08),
+  0 roturas de raíl a la baja desde el 19/08, fórmula validada A MANO (Dúplex 16/09: 162€ calculado
+  vs 166€ vivo, dentro de banda muerta). Serrucho: 1,26 escrituras/noche vs 4,87 del motor viejo.
+- 2 fixes: `core-payments` en transpilePackages de plataforma + generados regenerados. Alberto
+  delegó la limpieza («no reviso nada»): **borrados `module-encargo` y `module-revenue`** (0
+  consumidores; recuperables de git, último commit con ellos `3dcd5491`) y `module-agenda` se
+  conserva (reservado para almacén Fase 2). BD: 7 índices duplicados fuera + `search_path` de
+  `pricing_factor_aforo` fijado (verificada la función en caliente tras el cambio).
+- 🟡 vigilar: bloque Luxury jul-ago 2027 sube a tope de raíl persiguiendo el ancla (03/09 lo mide).
+
+### 📅 (29/08/2026) mercado-booking: julio y agosto 2027 ya tienen bucket elegible
+Pasada prioritaria pedida por Alberto (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 280 comps
+reales escritos en 25 ventanas (24 del plan + 1 extra en agosto ronda 3, porque la fecha del
+día 1 era "evento" y no cuenta como fecha normal del bucket). **Objetivo cumplido:** julio-2027
+y agosto-2027 ya tienen ≥10 comparables en 3 fechas distintas por piso — verificado con
+`meses_sin_bucket` del endpoint `/api/sivra/mercado/plan` antes/después. Pendiente: la línea
+"PRIORIDAD TEMPORAL" de este prompt vive en la configuración del disparo programado, fuera del
+repo — Alberto tiene que quitarla él, esta sesión no tiene acceso a esa config.
 
 ### 🔎 (29/08/2026) Auditoría diaria (ligera) — sin hallazgos, radiografía regenerada
 Rango 26→29/08 (50 commits, día muy activo: ancla+serrucho de pricing, apagado de NIM, fix VWCE,
@@ -1534,7 +1764,6 @@ movimientos de la tarjeta ****0302 de julio (629,86€ liquidados 01/08) para po
   a ojo. Los 9 errores de `tsc` del árbol eran previos (deps sin instalar), verificado con `git stash`.
 - Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
 
-
 ### 🎭 (23/08/2026) El «~25 llamadas/día» de Alpha Vantage no existía: era el gate premium mal leído
 Alberto pidió verificar la cuota. Dos llamadas seguidas lo zanjan: `TIME_SERIES_DAILY_ADJUSTED` →
 `type:"rate_limit"` con `message` *«This is a premium endpoint»*, y acto seguido `GLOBAL_QUOTE` →
@@ -1647,7 +1876,6 @@ Anotado en la skill `trading-analista` (`seleccion-y-senales.md`) con el matiz d
 ese error significa «fuente sin saldo», **nunca «no hay datos de insiders»**. Queda pendiente de decidir
 si se recargan los 20 $ solo por el screener; hoy no hace falta para operar.
 
-
 ### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
 Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
 día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
@@ -1689,7 +1917,6 @@ volumen sobre ~33.400€: la rotación es el coste invisible. `riesgo-hueco` YA 
 (`stopViable` por idea) + paso 5-bis de la skill para que se cante. **Sigue pendiente:** `tipo_cambio` NULL
 en 568/569 filas y las acciones corporativas.
 
-
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
 Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
 (vertical `apps/seguros`, #1532) y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`, #1489). Ambos
@@ -1701,7 +1928,6 @@ schema y rol siguen siendo `seguros`/`prisma_seguros` (el dominio, y además ya 
 plan nuevo, grep del dominio en `docs/` — el coste de no hacerlo lo paga la sesión siguiente.
 Contrato de encargado (RGPD art. 28.3): responsable decidido = **Alberto persona física**, «Grupo ASegura»,
 fuero Sevilla. **NIF y domicilio a propósito en blanco** — un identificador legal no se escribe de memoria.
-
 
 ### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
 `pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
@@ -1723,7 +1949,6 @@ siempre es deriva REAL de firmas, nunca churn de cabecera.)
 **Hueco aparte que destapó el script y NO se toca**: faltan `almacen`, `housesevillana` y `mariscos`
 en el array `VERTICALES` de `apps/plataforma/lib/estructura.ts` — exige decidir `sector`/`desc` de
 cada una, es criterio de Alberto.
-
 
 ### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
 - Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
@@ -1772,7 +1997,6 @@ cada una, es criterio de Alberto.
 - **Rutina nueva** (día 1 de cada mes, `trig_01QLVxzPS1PXAJPuWhApcAFV`): mide el mes cerrado y aplica el
   criterio de la fase. Ficha en `docs/RUTINAS-PROGRAMADAS.md` §15. PR #1538.
 
-
 ### 🏠 (20/08/2026) Estudio fiscal de la venta del dúplex de Villasís por 320.000€
 - Alberto sube la escritura del dúplex (Pj Villasís 1, 1º C) y pregunta cuánto pagaría vendiéndolo por
   320.000€. **Es una DONACIÓN de su madre del 21/05/2024 por 174.650,90€** (= valor de referencia), con
@@ -1817,7 +2041,6 @@ cada una, es criterio de Alberto.
 - Las 9 fichas con muro se releen en la primera pasada con sesión (validado contra la BD). 503 tests módulo,
   1372 plataforma, tsc+build limpios. **Pendiente de Alberto:** poner las dos envs en Vercel y probar con
   `fase3-debug?accion=portal` (devuelve solo el veredicto, nunca la contraseña).
-
 
 ### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
 Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
@@ -3041,7 +3264,6 @@ inventario de la Fase 1, no antes.
   con ancla contra `precio_ref` (splits/ticker reciclado) y margen de ventana; lo que no se puede, se canta.
 - ⚠️ El ancla NO puede pedir la fecha exacta: las 16 son de un SÁBADO y sus refs son el cierre del viernes.
 
-
 ### 📱 (12/08/2026) La portada de House Sevillana suspendía el mínimo táctil de 44px (PR #1399)
 - Claude in Chrome **no puede medir 320px** (su gestor de ventanas fuerza ~1536px de ancho mínimo), así que
   lo medí con Playwright sobre la app en local: **18 elementos por debajo de 44px** en la portada (marca del
@@ -3660,6 +3882,48 @@ completo `docs/AUDITORIA-2026-08.md`.
   tipo + mediana provincial real). Score/coste siguen conservadores al 100% (decisión de Alberto).
 - Telegram avisos con línea de umbrales+deuda. Migración documental `2026-08-08_puja_minima_centinela.sql`.
 
+## 🔎 (29/08/2026) La guarda de comparables cortaba por abajo y no por arriba (PR #1854)
+
+En el corpus de House había un comp a **19.359,00€/noche (1.613€/plaza)**, medido dos veces: la guarda
+de plausibilidad (17/08) solo tenía SUELO. Añadido `MAX_EUR_PLAZA_COMP = 600`, medido del p99 de €/plaza
+sobre 6.479 comps (193–306): descarta 8 filas (0,12%).
+⚠️ **Efecto real 0,3–1,6%** en el techo del motor (House 1.170→1.166), **no el 18% que dije primero** —
+aquel 18% salía de cortar a 3× la mediana, un experimento distinto. Escrito en el PR para no heredarlo.
+Lo que de verdad valía: la regla vivía **copiada a mano en 13 sitios** → ahora `sqlCompPlausible()` y
+12 llamadas. Guardián `pricing-comps-techo.test.ts` (6 tests) probado en rojo con 3 mutaciones.
+Pendiente: 03/09 12:00 CEST, medición final del serrucho (evento de calendario + rutina 11:30).
+
+## 🤖 (29/08/2026) La IA ya propone en la bandeja — y 3 fallos que destapó revisarla con Alberto (PR pendiente)
+- Alberto: «que la IA proponga». Nuevo `lib/agente-facturas/sugerencia-ia.ts` (PURO) + endpoint
+  `POST /api/expenses/pendientes/[id]/sugerir-ia`: la IA ve proveedor, concepto, histórico del
+  proveedor y el cargo bancario que casa. **Valida contra lista blanca**: un piso o categoría
+  inventados se DESCARTAN a null, nunca caen a un default (nacerían como regla). `ilegible`
+  (no se pudo leer) nunca se colapsa con `sin_criterio` (miró y no sabe).
+- 🚨 **Bug propio, cazado por Alberto sobre Booking (938,25€):** la opción VACÍA del desplegable de
+  piso se llamaba «— correduría / sin piso —», así que «no lo has decidido» se leía como propuesta
+  de correduría — y confirmar creaba la regla. Ahora `SIN_ELEGIR` ≠ `CORREDURIA` y confirmar exige
+  elegir. Guardián en `avisos-enlace.test.ts`, probado en rojo.
+- 🚨 **Documentos que NO son gastos:** el «Extracto de Cuenta Mediador» de Allianz (291,73€) y una
+  «Anulación de pólizas» (301,70€) son comisiones que le PAGAN. Confirmarlas metía 593,43€ de
+  ingreso como gasto deducible. Aviso en la ficha vía `no-es-gasto.ts` (puro); la ingesta sigue
+  dándolas de alta — pendiente arreglar el sentido del documento en el agente.
+- Cascada por proveedor (`confirmarProveedor`): «resuelto uno, los demás igual». Explícita, con el
+  número delante — una reparación es de UN piso, no de todos.
+- 🚨 **Y por qué «no aprendía»:** `fingerprint()` usa el NIF SI LO HAY y si no el nombre → la
+  identidad cambia de EJE y el mismo proveedor se parte («Anthropic Ireland» IE4276970QH vs
+  «Anthropic, PBC» sin NIF). Nuevo `huellasDe()`: se busca regla e histórico por AMBAS y
+  `reforzarRegla` escribe las dos. Además `MIN_VISTAS` 2→**1** y banda ±10%→**×5**
+  (`FACTOR_BANDA`), ambas por decisión de Alberto: con la pantalla, cada vista es un clic suyo, y
+  el ±10% dejaba la regla escrita pero inservible para servicios de importe variable.
+- 🚨 **47 filas revisadas SIN huella (13.267,14€)**, entre ellas las 5 de Giraldillo que Alberto ya
+  había aprobado: `confirmarPendiente` solo reforzaba `if (fingerprint)`, así que esas
+  confirmaciones no enseñaron nada. Ahora la calcula al confirmar. ⚠️ El backfill masivo NO se
+  hizo: 28 de las 47 tienen `proveedor='Importado'` (centinela) y normalizarlo habría fusionado
+  TotalEnergies+EMASESA+DIGI+PriceLabs+Petroprix+SiQueBrilla en una huella. `huella-rescate.ts`
+  (puro) saca el proveedor real del concepto y devuelve null cuando no puede. Aplicado solo a
+  Giraldillo (7 filas unidas, «SOCORRO» fusionada) y Si Que Brilla, con sus reglas sembradas.
+- 📉 **`incomes.amount` es DERIVADO**: las 372 reservas de Booking desde 2025 dan comisión implícita
+  19,7154–19,7247% (solo redondeo). No sirve para cuadrar la factura de comisiones de Booking.
 ## Cobro de extras del huésped: EN PRODUCCIÓN, y la prueba real destapó Managed Payments (29/08/2026)
 - Envs de Stripe puestas en Vercel (`plataforma`, solo Production). Webhook 500 → **400 «firma inválida»**
   a las 08:16:48 UTC. Cuenta `acct_1U9QrKKBmOvjQ2ll` con `charges_enabled`/`payouts_enabled` y payout BBVA ****1175.
@@ -4048,7 +4312,6 @@ Las credenciales SIGUEN sin validar: el fallo es anterior a la autenticación. F
 y conservar el registro **3 años**. Spec §4.6 y §4.7. ⚠️ Lo legal está en fuentes secundarias: el proxy
 bloquea boe.es — falta contrastarlo con el BOE o la asesoría antes de implementar.
 
-
 ## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
 
 Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
@@ -4059,7 +4322,6 @@ Smoobu/Chekin), check-in web con OCR por IA **con confirmación humana**, y **so
 momento (el resto de ideas —venta a terceros, uso comercial de los datos, RH, vehículos— en §9 del spec).
 🚨 Desde el contenedor NO se alcanza `*.mir.es` (proxy): toda prueba contra SES es desde Vercel.
 Pendiente: que Alberto revise el spec → plan de implementación. Códigos/credenciales NUNCA al repo.
-
 
 ## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
 - #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
@@ -4080,7 +4342,6 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
 - Mismo patrón que la bandeja «Gastos por revisar» del mismo archivo.
 - Verificado 320/360px con Playwright (0px overflow). OJO: `next build` en el contenedor falla en
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
-
 
 - **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 26/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.

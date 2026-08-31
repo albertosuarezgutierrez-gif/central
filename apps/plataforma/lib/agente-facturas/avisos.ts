@@ -110,7 +110,9 @@ export interface ResumenStats {
 }
 
 export async function resumen(s: ResumenStats): Promise<void> {
-  const omit = s.omitidos ? ` · ${s.omitidos} presupuestos omitidos` : ''
+  // Desde el 30/08/2026 «omitido» ya no es solo presupuesto: también los documentos que no son
+  // un gasto (liquidación de mediador, comisión de plataforma ya descontada del ingreso neto).
+  const omit = s.omitidos ? ` · ${s.omitidos} omitidas (presupuesto o no es gasto)` : ''
   const ajen = s.ajenas ? ` · ${s.ajenas} de terceros` : ''
   const extra = s.alquileres != null ? ` · alquileres ${s.alquileres}` : ''
   await tgAlert(

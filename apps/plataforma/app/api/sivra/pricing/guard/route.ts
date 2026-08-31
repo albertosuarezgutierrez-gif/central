@@ -9,7 +9,7 @@ import {
   decidirCompsDeOtroAforo,
 } from "@/lib/sivra/pricing-centinelas"
 import { eventFactor } from "@/lib/pricing-calendar"
-import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
+import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import {
   clasificarNoche, reservaDesdeSmoobu, agruparRangos, ventanaConsulta,
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
           -- Plausibilidad €/plaza, igual que el motor (17/08/2026): una habitación vestida de piso
           -- entero no es mercado (ver pricing-comps-plausibles.ts). El guardián filtra LO MISMO que
           -- el apply o su silencio no vale nada (lección del 01/08 con la normalización por aforo).
-          AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+          AND ${Prisma.raw(sqlCompPlausible("m."))}
         GROUP BY m.checkin_date
         HAVING COUNT(*) >= 8
       ),
@@ -191,7 +191,7 @@ export async function GET(req: NextRequest) {
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.search_date >= CURRENT_DATE - INTERVAL '21 days'
         AND m.price_night > 0 AND m.scenario LIKE 'prop_%'
-        AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       GROUP BY m.scenario
     ),
     mkt_date AS (
@@ -202,7 +202,7 @@ export async function GET(req: NextRequest) {
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.search_date >= CURRENT_DATE - INTERVAL '21 days'
         AND m.price_night > 0 AND m.scenario LIKE 'prop_%'
-        AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       GROUP BY m.scenario, m.checkin_date
       HAVING COUNT(*) >= 8
     )
@@ -285,7 +285,7 @@ export async function GET(req: NextRequest) {
     WHERE m.price_night > 0
       -- Sin este filtro, una habitación etiquetada guests=12 contaría como "comp del aforo propio"
       -- y taparía justo la extrapolación que este centinela vigila.
-      AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+      AND ${Prisma.raw(sqlCompPlausible("m."))}
     GROUP BY m.scenario, z.max_guests, m.guests
   `).catch(() => [])
 
@@ -436,7 +436,7 @@ export async function GET(req: NextRequest) {
       FROM market_rates
       WHERE search_date >= CURRENT_DATE - INTERVAL '30 days'
         AND price_night > 0 AND scenario LIKE 'prop_%' AND checkin_date >= CURRENT_DATE
-        AND (guests IS NULL OR guests <= 0 OR price_night >= ${MIN_EUR_PLAZA_COMP} * guests)
+        AND ${Prisma.raw(sqlCompPlausible())}
     ),
     por_fecha AS (
       SELECT scenario, checkin_date,

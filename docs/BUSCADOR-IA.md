@@ -64,6 +64,25 @@
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
+- **2026-08-31 · pasada semanal — los 4 eslabones activos (Groq, Cerebras, Gemini, Kimi) VIVOS,
+  sin candidatos que crucen el listón, sin hallazgos críticos.** NIM sigue APAGADO por decisión de
+  Alberto (28/08) y sin default de modelo → fuera de vigilancia activa de catálogo esta pasada (no
+  hay id que verificar). Por WebSearch dirigido (sin keys de proveedor en esta sesión):
+  **Groq** `openai/gpt-oss-120b` sin aviso de retirada — sigue siendo el destino de migración que
+  Groq recomienda para sus deprecados (junto a `qwen/qwen3.6-27b`, ya en seguimiento). **Cerebras**
+  `gpt-oss-120b` vivo, free tier 1M tok/día confirmado (RPM sigue discrepando entre fuentes, sin key
+  para zanjarlo — sigue INACTIVO sin key). **Gemini** `gemini-flash-latest` vivo; Flash/Flash-Lite
+  mantienen tier gratis (Pro salió del free tier en abril/2026, no nos afecta); `gemini-2.5-flash`
+  tiene deprecación anunciada para 16/10/2026 pero NO es el id que usamos (usamos el alias rodante).
+  **Kimi** K2.6 confirmado NO deprecado — lo que sí cumple sunset HOY (31/08/2026) es
+  `kimi-k2.5`+`moonshot-v1`, que ya no usamos desde el swap del 11/07. Descubrimiento (Paso 2): nada
+  cruza el listón — el mercado de pago 2026 lo dominan modelos flagship caros (GPT-5.2, Gemini 3.1
+  Pro, Opus 5) irrelevantes para esta cadena de respaldo; `Qwen3.7 Flash` ($0,03/$0,13 por M) es
+  barato pero no gratis y no hay evidencia de que rinda mejor que los eslabones gratis vivos — no se
+  añade como candidato de acción, solo anotado aquí por si se retoma. Sin `NVIDIA_API_KEY`/
+  `GROQ_API_KEY`/`GEMINI_API_KEY`/`MOONSHOT_API_KEY`/`CEREBRAS_API_KEY` en esta sesión → verificación
+  por WebSearch, no por llamada real. Preflight Telegram 200 OK, sin aviso (nada urgente).
+
 - **2026-08-28 (2ª parte) · ⚫ DECISIÓN DE ALBERTO: NIM fuera de la cadena de texto, todo OpenRouter.**
   Respuesta a la muerte del 70B (entrada de abajo). No se busca reemplazo: se apaga el eslabón. El
   argumento no es el 410 de esta semana sino el coste de mantenerlo — tres swaps en 11 días, cada

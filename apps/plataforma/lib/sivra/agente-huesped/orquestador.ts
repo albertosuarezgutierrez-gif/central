@@ -8,7 +8,7 @@ import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
 import { logMensaje, registrarGap } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
 import { esEcoPropio } from './atribucion'
-import { importeSospechoso } from './extras'
+import { importeSospechoso, hablaDePago } from './extras'
 import { intentarCobroAutomatico } from '@/lib/sivra/extras/cobro-auto'
 import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
 import { prisma } from '@/lib/db'
@@ -146,6 +146,18 @@ export async function procesarMensajeHuesped(
           ? 'Menciona un importe y NO he podido leer el catálogo de extras para comprobarlo.'
           : 'Menciona un importe que no está en el catálogo de extras — revísalo antes de enviarlo.')
       }
+    }
+
+    // 2-ter) 🚨 GUARDRAIL DEL PAGO (29/08/2026, dictado por Alberto tras el caso Raquel): coordinar
+    // un cobro —cómo pagar, con qué método, a qué cuenta— NUNCA sale solo, ni aunque el importe sea
+    // el del catálogo y la respuesta esté apoyada en fuente. El único cobro automático es el enlace
+    // de `intentarCobroAutomatico` (paso 1-bis), atado por código; aquí el agente llegó a auto-enviar
+    // «transferencia bancaria o Bizum. Te envío los datos por mensaje privado» — un canal inventado
+    // y una promesa que nada iba a cumplir. Se mira también la PREGUNTA: si el huésped pregunta cómo
+    // pagar y el cobro automático no aplicó, la respuesta la decide Alberto.
+    if (hablaDePago(pregunta) || (dec.reply && hablaDePago(dec.reply))) {
+      dec.needs_human = true
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Habla de un pago (método/datos de cobro) — eso lo autorizas tú; el único cobro automático es el enlace de Stripe.`
     }
 
     // 3) ¿Auto-envío o propuesta por Telegram?

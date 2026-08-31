@@ -63,6 +63,39 @@ export function esAceptacion(texto: string): boolean {
   return RE_ACEPTACION.test(t)
 }
 
+// Hablar de CÓMO se paga: verbos de pagar/cobrar en los cinco idiomas + métodos y datos de pago.
+// «Tarjeta» a secas NO está a propósito (en un alojamiento suele ser la llave); «pagar con
+// tarjeta» ya cae por el verbo. «Coste»/«gratis» tampoco: decir que algo cuesta o es gratis no
+// es coordinar un cobro, y las respuestas auto-enviables de salida/early check-in usan esas
+// palabras con la política dictada.
+const RE_PAGO = rodear(
+  // ES pagar/cobrar (formas habituales) + sustantivos
+  'pag(?:o|os|ó|a|as|amos|an|ar|ar[mlts]e|arl[oa]s?|ando|ado|ada|u[eé]|ues)|cobr(?:o|os|ó|a|as|amos|an|ar|arte|arlo|ando|ado)|' +
+  // Métodos y datos de pago
+  'bizum|transferencias?|iban|efectivo|met[áa]lico|datos\\s+bancarios|cuenta\\s+bancaria|n[úu]mero\\s+de\\s+cuenta|' +
+  // EN
+  'pay|pays|paid|paying|payments?|bank\\s+transfer|wire\\s+transfer|bank\\s+details|bank\\s+account|cash|' +
+  // FR
+  'payer|paie(?:ment)?s?|virements?|esp[èe]ces|rib|' +
+  // DE
+  'zahlen|bezahl\\p{L}*|zahlungs?\\p{L}*|[üu]berweis\\p{L}*|bargeld|' +
+  // IT
+  'pagare|pagament[oi]|bonific[oi]|contanti',
+)
+
+/**
+ * ¿El texto habla de un PAGO — cómo pagar, con qué método, a qué cuenta?
+ *
+ * Es el guardrail que impide que el agente coordine un cobro por su cuenta (29/08/2026, dictado
+ * por Alberto tras el caso Raquel: el agente auto-envió «el pago lo puedes realizar mediante
+ * transferencia bancaria o Bizum. Te envío los datos por mensaje privado» — métodos y promesa
+ * INVENTADOS; el único cobro real es el enlace de Stripe). El único camino que habla de pago sin
+ * pasar por Alberto es `intentarCobroAutomatico`, atado por código; todo lo demás se propone.
+ */
+export function hablaDePago(texto: string): boolean {
+  return RE_PAGO.test(texto || '')
+}
+
 /** Importe en euros formateado a la española (2.162,49€). Mismo criterio que `lib/dinero.ts`. */
 export function eurDeCents(cents: number): string {
   return `${(cents / 100).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`

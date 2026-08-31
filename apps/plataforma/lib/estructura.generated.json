@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-29T08:02:34Z",
+  "generadoEn": "2026-08-31T08:06:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -106,11 +106,6 @@
       "npm": "@central/module-documental"
     },
     {
-      "id": "module-encargo",
-      "tipo": "module",
-      "npm": "@central/module-encargo"
-    },
-    {
       "id": "module-feedback",
       "tipo": "module",
       "npm": "@central/module-feedback"
@@ -169,11 +164,6 @@
       "id": "module-proveedores",
       "tipo": "module",
       "npm": "@central/module-proveedores"
-    },
-    {
-      "id": "module-revenue",
-      "tipo": "module",
-      "npm": "@central/module-revenue"
     },
     {
       "id": "module-rrhh",
@@ -590,7 +580,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "estado": "no",
@@ -774,7 +764,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 48
+        "evidencias": 51
       },
       "rrhh": {
         "estado": "usado",
@@ -1147,52 +1137,6 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 4
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "transporte": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-encargo": {
-      "almacen": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "alquiler": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "asegura": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "housesevillana": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "mariscos": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -1749,52 +1693,6 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
-      },
-      "transporte": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
-    "module-revenue": {
-      "almacen": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "alquiler": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "asegura": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "housesevillana": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "mariscos": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "rrhh": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
       },
       "transporte": {
         "estado": "no",
@@ -2386,7 +2284,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 20
+        "evidencias": 21
       },
       "rrhh": {
         "presente": false,
@@ -3151,7 +3049,6 @@
     "core-telegram": [],
     "module-agenda": [],
     "module-alquiler": [
-      "module-encargo",
       "module-intercompany",
       "module-materiales"
     ],
@@ -3161,7 +3058,6 @@
     "module-contabilidad": [],
     "module-crm": [],
     "module-documental": [],
-    "module-encargo": [],
     "module-feedback": [],
     "module-flota": [],
     "module-geo": [],
@@ -3177,7 +3073,6 @@
     "module-pesca": [],
     "module-presupuestos": [],
     "module-proveedores": [],
-    "module-revenue": [],
     "module-rrhh": [
       "core-firma",
       "module-documental"
@@ -3188,7 +3083,6 @@
     ],
     "module-trading": [],
     "module-transporte": [
-      "module-encargo",
       "module-flota",
       "module-intercompany"
     ],
@@ -4052,6 +3946,7 @@
       "/api/cron/paper-tracker",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
+      "/api/cron/prevision-pisos",
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
@@ -4080,6 +3975,9 @@
       "/api/empresas/investigar",
       "/api/empresas/invitado",
       "/api/empresas/sector-web",
+      "/api/expenses/pendientes",
+      "/api/expenses/pendientes/[id]",
+      "/api/expenses/pendientes/[id]/sugerir-ia",
       "/api/finanzas",
       "/api/finanzas/ayudas/[id]/descartar",
       "/api/finanzas/categorias",
@@ -4158,8 +4056,15 @@
       "/api/sivra/limpiadoras/lenceria",
       "/api/sivra/limpiadoras/productos",
       "/api/sivra/limpiadoras/proveedores",
+      "/api/sivra/limpiadoras/tareas",
       "/api/sivra/limpiadoras/tarifas",
       "/api/sivra/limpiadoras/usuarios",
+      "/api/sivra/limpieza-intranet/datos",
+      "/api/sivra/limpieza-intranet/enlace",
+      "/api/sivra/limpieza-intranet/invitado",
+      "/api/sivra/limpieza-intranet/partes",
+      "/api/sivra/limpieza-intranet/partes/foto",
+      "/api/sivra/limpieza-intranet/tareas",
       "/api/sivra/mensajes",
       "/api/sivra/mensajes/[bookingId]",
       "/api/sivra/mensajes/auto-reply",
@@ -4178,7 +4083,10 @@
       "/api/sivra/mercado/search",
       "/api/sivra/mercado/stats",
       "/api/sivra/mercado/sweep",
+      "/api/sivra/pl-heatmap",
       "/api/sivra/pl-mensual",
+      "/api/sivra/pl-rango",
+      "/api/sivra/prevision",
       "/api/sivra/pricing/antelacion",
       "/api/sivra/pricing/aplicar-propuesta",
       "/api/sivra/pricing/apply",
@@ -4198,6 +4106,7 @@
       "/api/sivra/pricing/resumen-diario",
       "/api/sivra/pricing/settings",
       "/api/sivra/rates/snapshot",
+      "/api/sivra/reservas-booking/verificar",
       "/api/sivra/resumen-semanal",
       "/api/sivra/seo-proposals",
       "/api/sivra/seo-refresh",
@@ -4596,7 +4505,10 @@
       "ia_limite_mensual",
       "ia_presupuestos",
       "idealista_api_usos",
+      "limpieza_acceso_token",
       "limpieza_facturas",
+      "limpieza_partes",
+      "limpieza_tareas",
       "mapa_arquitectura",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
@@ -4619,12 +4531,15 @@
       "patrimonio_recomendaciones",
       "patrimonio_valoraciones",
       "patrones_recurrentes_cache",
+      "pisos_previsiones",
+      "pisos_previsiones_avisos",
       "presupuesto_proveedores",
       "pricing_avisos",
       "pricing_escaparate",
       "pricing_flight_demand",
       "pricing_pl_referencia",
       "reservas_canceladas",
+      "reservas_correo_booking",
       "rutina_tokens",
       "secrets_audit",
       "sector_tendencias",
@@ -4885,6 +4800,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Pendiente de Alberto:",
+      "fecha": ""
+    },
+    {
       "titulo": "📦 Cartera paper ahora en dólares de verdad:",
       "fecha": ""
     },
@@ -4938,10 +4857,6 @@
     },
     {
       "titulo": "PR #1702 mergeado a main",
-      "fecha": ""
-    },
-    {
-      "titulo": "Backfill disparado en prod",
       "fecha": ""
     }
   ],
@@ -5371,10 +5286,10 @@
   },
   "resumen": {
     "verticales": 11,
-    "packages": 38,
+    "packages": 36,
     "capacidades": 23,
     "skills": 37,
-    "apis": 1186,
+    "apis": 1201,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

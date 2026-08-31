@@ -9,8 +9,9 @@
 //
 // Estos helpers separan cada pago en dos partes con la estructura conocida de la factura:
 //   limpieza_i  = salidas del mes facturado × tarifa contratada del piso × (1+IVA)
-//   lavandería  = el resto del pago (se reparte aguas arriba por capacidad × reservas,
-//                 la misma regla acordada para El Giraldillo)
+//   lavandería  = el resto del pago (se reparte aguas arriba por huéspedes reales de las
+//                 reservas del mes —fallback a capacidad si el aforo es NULL—, la misma
+//                 regla acordada para El Giraldillo; ver lavanderia-peso.ts)
 //
 // ¿Y cuál es el mes facturado? No siempre el anterior: contra los pagos reales de 2026, Sique
 // Brilla cobra unas veces a primeros del mes siguiente (03/04 marzo · 02/06 mayo · 03/08 julio)

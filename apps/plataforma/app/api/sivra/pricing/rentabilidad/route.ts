@@ -3,7 +3,7 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { resumirBacktest, resumirMercado, diasRestantesReferencia, GO_LIVE, PL_REFERENCIA_CADUCA, type FilaBacktest, type FilaMercado } from "@/lib/sivra/pricing-rentabilidad"
-import { MIN_EUR_PLAZA_COMP } from "@/lib/sivra/pricing-comps-plausibles"
+import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
 import { compararAnual, cortePrevio, totalizar, type FilaMesPiso } from "@/lib/sivra/rentabilidad-anual"
 
 export const dynamic = "force-dynamic"
@@ -101,7 +101,7 @@ export async function GET() {
             AND m.checkin_date = c.noche
             AND m.fuente IN ('booking_mcp', 'manual')
             AND m.price_night > 0
-            AND (m.guests IS NULL OR m.guests <= 0 OR m.price_night >= ${MIN_EUR_PLAZA_COMP} * m.guests)
+            AND ${Prisma.raw(sqlCompPlausible("m."))}
             AND m.search_date BETWEEN c.reserved_at::date - 10 AND c.reserved_at::date + 10
         ) mk ON true
       )

@@ -95,6 +95,7 @@ de borrar, `smoobu-sync.ts` deja constancia (helper puro y testeado `lib/sivra/c
 | `EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR` | Tope de gasto mensual € del enriquecimiento de empresas (default `50`; `0` = sin límite). Se compara contra la suma del ledger `empresas_enriquecimiento_coste` del mes. `EMPRESAS_ENRIQUECER_COSTE_EUR` = coste estimado por empresa (default `12`, ~precio del informe financiero en pack). |
 | _(Acceso invitado «Empresas»)_ | **NO es una env.** El token de acceso invitado (Pablo prueba el módulo sin cuenta) vive en la **tabla BD `empresas_acceso_token`** (fila única `id=1`, `token`/`activo`), para poder **rotarlo/revocarlo sin redeploy** (el conector de Vercel no deja escribir envs desde las sesiones de Claude). Enlace: `…/invitado/empresas?token=<valor>` → la página lo canjea en `/api/empresas/invitado` (fija cookie httpOnly `empresas_invitado`) → `lib/empresas-acceso.ts::accesoEmpresas` valida la cookie contra la BD (runtime Node; el middleware edge solo enruta por presencia de cookie). Acepta sesión O token en `/api/empresas/*` **salvo enriquecimiento (POST) e ingesta-manual, que son SOLO sesión**. El invitado no ve «Enriquecer» ni «Actualizar BORME». **Revocar/rotar:** `UPDATE empresas_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
 | _(Acceso invitado «Laboratorio de inversión» — 20/07/2026)_ | **NO es una env**, mismo patrón que el de Empresas. Token en la tabla BD **`trading_acceso_token`** (fila única `id=1`, `prisma/sql/2026-07-20_trading_acceso_token.sql`). Enlace: `…/invitado/trading?token=<valor>` → lo canjea `/api/trading/invitado` (fija cookie httpOnly `trading_invitado`, 30 días) → `lib/trading-acceso.ts::accesoTrading` valida contra la BD. `/trading` es 100% LECTURA (sin ninguna acción que escriba), así que la vista de invitado reutiliza tal cual `app/(usuario)/trading/TradingDashboard.tsx` (extraído de `page.tsx` para no duplicar) — el invitado ve exactamente lo mismo que Alberto, sin acceso al resto de la plataforma (banca, fiscal, etc. — fuera del grupo `(usuario)`, sin sidebar). `/invitado/*` y `/api/trading/*` ya estaban exentos del gate de sesión en `middleware.ts` (no requirió tocarlo). **Revocar/rotar:** `UPDATE trading_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
+| _(Acceso invitado «Intranet de limpieza» — 29/08/2026)_ | **NO es una env**, mismo patrón que Empresas/Trading. Token en la tabla BD **`limpieza_acceso_token`** (fila única `id=1`, `prisma/sql/2026-08-29_limpieza_intranet.sql`, aplicada + token sembrado). Es la pantalla de **Vanesa** (la limpieza de los 4 pisos): `…/invitado/limpieza?token=<valor>` → lo canjea `/api/sivra/limpieza-intranet/invitado` (cookie httpOnly `limpieza_invitado`, 180 días) → `lib/limpieza-acceso.ts::accesoLimpieza` valida contra BD (acepta también sesión = preview de Alberto). Ve calendario de reservas de los 4 slugs (`incomes`: ocupación + aforo `adults+children`, **NULL = «no se sabe», no 0**; SIN nombres ni importes), limpiezas (`cleaning_sessions` de los 4 slugs, con `nota_propietario` 📌) y **tareas sueltas** (`limpieza_tareas`; solo puede marcar `hecha`). El CRUD de tareas y el enlace con token viven en la pestaña **«Tareas»** de `/sivra/limpiadoras` (sesión). **Revocar/rotar:** `UPDATE limpieza_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
 
 > **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
 > El schema `iarest` de la BD compartida ES la producción de ia-rest (runtime POS, Edge Functions
@@ -444,7 +445,18 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   ruido→`Triaje/Ruido`+archivar · contabilidad→`Triaje/Contabilidad` (buzón puente de `facturas-correo`,
   que ya incluye `OR label:Triaje/Contabilidad`) · correduria→digest · personal-importante/huespedes/
   leads-negocio→Telegram inmediato (con acción+fecha límite) · seguridad-sospechosa→marcar con cautela
-  (nunca actúa) · codigos-verificacion/dudoso→sin tocar. Tablas `correo_triaje`/`correo_cursor`/
+  (nunca actúa) · codigos-verificacion/dudoso→sin tocar · **reservas-booking→`Triaje/Reservas-Booking`+archivar
+  (30/08/2026): avisos de Booking AL PROPIETARIO sobre una reserva (⚠️ «reserva/cancelación no registrada» por
+  el channel manager, y las confirmaciones ordinarias si Booking las reactiva — dejaron de llegar en 2020).
+  Detección DETERMINISTA antes que `correo_reglas`** (el mismo `noreply@booking.com` manda facturas y podría
+  tener regla hacia contabilidad); parser puro `lib/correo/reserva-booking.ts` (fixtures de correos reales).
+  Alimenta el **vigía Booking↔Smoobu** (`reservas_correo_booking`, cron cada 15 min
+  `/api/sivra/reservas-booking/verificar`, lógica `lib/sivra/reservas-booking-vigia.ts`): contrasta contra
+  Smoobu (`listarReservasVentana`), sync forzado de la ventana si Smoobu la tiene, Telegram 🚨 si NO
+  (huérfana, pintada ⚠️ en la intranet de limpieza de Vanesa hasta que Smoobu se cure). **Leg B:** un mensaje
+  de huésped cuyo nº de confirmación Smoobu no resuelve también entra como pendiente — el caso fundacional
+  (James Ascott, Luxury 27→29/08/2026: Smoobu caído, reserva jamás sincronizada) NO generó ningún correo ⚠️
+  de Booking, así que el correo de aviso solo no basta. Latido `reservas_booking_vigia` (3 h). Tablas `correo_triaje`/`correo_cursor`/
   `correo_reglas` (`prisma/sql/2026-07-03_correo_triaje.sql`, con semilla VIP; **tablas ya aplicadas en
   Supabase 03/07/2026**). **🟢 EN VIVO desde el 10/07/2026** (`TRIAJE_DRY_RUN=false` en Production: etiqueta/
   archiva en Gmail y avisa por Telegram). El **modo sombra** queda como salvaguarda (`TRIAJE_DRY_RUN` sin poner
@@ -489,6 +501,24 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   (propuestas sobre un `#ref`), parseado por regex puro en `parse.ts`. Módulos puros
   (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
   `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
+
+- [x] **📊 `/sivra/resultado-pisos` = RENDIMIENTO por rango + previsión con seguimiento (30/08/2026):**
+  la página pasó de «P&L de UN mes» a cuadro de rendimiento: selector de rango de MESES en la URL
+  (`?desde=YYYY-MM&hasta=&piso=`; el P&L es de caja mensual, un rango por días mentiría en gastos),
+  KPIs con Δ interanual, gráficas Recharts (evolución + por piso + gastos por categoría), canales con
+  **comisión REAL** (= `amount_gross − amount`; sin bruto → «no consta», no 0), cancelaciones
+  (declarando que el registro nace el 12/08/2026) y heatmap de estacionalidad 24 meses (perezoso,
+  `/api/sivra/pl-heatmap`). **Previsión** (mes en curso + 2, decisión de Alberto): CONFIRMADO y
+  ESTIMADO («si repites el año pasado») SIEMPRE por separado; sin base histórica → null, jamás 0.
+  **Pace** con `incomes.reserved_at` (ingreso sin fecha de reserva se declara, no se excluye en
+  silencio). **Seguimiento**: cron diario `prevision-pisos` (05:50, `CRON_JOBS`) fotografía la
+  previsión en `pisos_previsiones` (migración `2026-08-30`, aplicada) y la página contrasta la última
+  foto ANTES de empezar el mes contra el ingreso real — un mes sin foto previa queda «sin registro»,
+  nunca «acertó/falló». Aviso Telegram «previsión floja» a 28-32 días (confirmado <40% del mismo mes
+  del año anterior con base ≥500€; dedupe `pisos_previsiones_avisos`, una vez por mes+piso). Latido
+  `sivra_prevision` (registro + PROBES en el mismo PR). `PLPiso` ganó `noches`/`nochesSinDato`.
+  Lógica pura testeada: `lib/sivra/pl-rango-logica.ts` + `lib/sivra/prevision-logica.ts`; BD:
+  `pl-rango.ts` (caché por mes; `?fresco=1` tras subir factura) + `prevision-pisos.ts`.
 
 ## 🔀 Proveedores de IA — regla permanente (dictada por Alberto, 24/08/2026)
 **Todo lo que PUEDA ir por OpenRouter, va por OpenRouter.** Unificar proveedores: cada proveedor

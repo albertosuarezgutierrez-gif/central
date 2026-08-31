@@ -150,6 +150,18 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'si se desplegó en fin de semana). Huella: agente_latidos.trading_watchdog.',
   },
   {
+    id: 'reservas_booking_vigia',
+    etiqueta: '🛎️ Vigía Booking↔Smoobu (reservas vistas por correo, cron cada 15 min)',
+    // Cada 15 min → 3 h cazan un dispatcher tocado sin gritar por una pasada suelta perdida.
+    maxHoras: 3,
+    nota:
+      'El vigía que caza reservas de Booking que Smoobu perdió (caso James Ascott 27-29/08/2026) ' +
+      'no está corriendo o no termina. Mira el `detalle`: «sin poder comprobar (Smoobu no responde)» ' +
+      'es Smoobu caído — que es JUSTO cuando más reservas se pierden, así que no lo dejes correr. ' +
+      'Ruta: /api/sivra/reservas-booking/verificar · lógica en lib/sivra/reservas-booking-vigia.ts. ' +
+      'Huella: agente_latidos.reservas_booking_vigia.',
+  },
+  {
     id: 'correo_triaje',
     etiqueta: '📧 Triaje de correo (cron cada 10 min)',
     // El cursor avanza en cada pasada; 6 h de margen tolera noches tranquilas y caza un cron muerto.
@@ -346,6 +358,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'El paper-tracker (evolución de las cohortes de paper trading) no ha corrido esta semana. ' +
       'Revisa el cron `/api/cron/paper-tracker` (`0 10 * * 1`) en Vercel. ' +
       'Huella: agente_latidos.paper-tracker.',
+  },
+  {
+    id: 'sivra_prevision',
+    etiqueta: '🔮 Foto diaria de la previsión por piso (diario 05:50)',
+    // Diario → 30 h, el estándar de los diarios: tolera un día saltado.
+    maxHoras: 30,
+    nota:
+      'La previsión por piso no se está fotografiando, y sin foto diaria el seguimiento ' +
+      '«previsto vs real» de /sivra/resultado-pisos se queda con huecos — un mes sin snapshot ' +
+      'previo no se puede juzgar nunca (queda «sin registro», no «acertó/falló»). También decide ' +
+      'el aviso de previsión floja a ~30 días del mes, así que un mes flojo pasaría sin sonar. ' +
+      'Mira los logs de /api/cron/prevision-pisos; si el detalle trae una excepción de BD sobre ' +
+      '`pisos_previsiones`, revisa que la migración 2026-08-30 esté aplicada. ' +
+      'Huella: agente_latidos.sivra_prevision.',
   },
   {
     id: 'sivra_rates_snapshot',

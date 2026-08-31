@@ -1026,8 +1026,6 @@ importers:
 
   packages/module-documental: {}
 
-  packages/module-encargo: {}
-
   packages/module-feedback: {}
 
   packages/module-flota: {}
@@ -1058,8 +1056,6 @@ importers:
   packages/module-presupuestos: {}
 
   packages/module-proveedores: {}
-
-  packages/module-revenue: {}
 
   packages/module-rrhh:
     dependencies:

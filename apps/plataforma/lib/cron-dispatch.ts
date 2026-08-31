@@ -82,9 +82,27 @@ export const CRON_JOBS: CronJob[] = [
   // scheduler (o del webhook Smoobu) se auto-repare en la siguiente corrida — con el default
   // de 2 días, las reservas modificadas durante el apagón de julio-2026 se habrían perdido.
   { path: '/api/sivra/updates/sync?days=7', schedule: '0 5 * * *' },
+  // Pasada por VENTANA DE LLEGADA (hoy..+45d, sin filtro real de modificación): refresca todas las
+  // reservas próximas aunque lleven meses sin tocarse — rellena el aforo (adults/children) de las
+  // antiguas (29/08/2026: 8 de 9 reservas del mes a NULL, la intranet de limpieza no podía enseñar
+  // nº de huéspedes) y detecta cancelaciones a semanas vista para la sección «Últimos avisos».
+  // `desde=2026-06-01` retro-rellena también el aforo de los meses YA facturados (el reparto de
+  // lavandería del P&L pasó a huéspedes reales el 29/08/2026 y junio-agosto estaban a NULL).
+  // Cuando el histórico esté relleno se puede quitar el `desde` y dejar solo la ventana.
+  { path: '/api/sivra/updates/sync?days=800&desde=2026-06-01&ventana=45', schedule: '15 5 * * *' },
+  // Vigía Booking↔Smoobu: contrasta contra Smoobu las reservas de Booking vistas por correo
+  // (avisos «⚠️ no registrada» + mensajes de huésped con nº que Smoobu no reconoce) y avisa por
+  // Telegram del agujero (caso James Ascott 27-29/08/2026: Smoobu caído, reserva nunca sincronizada).
+  // Cada 15 min: sale en segundos cuando no hay pendientes (SELECT y fuera).
+  { path: '/api/sivra/reservas-booking/verificar', schedule: '4,19,34,49 * * * *' },
   // Extras cobrados al huésped: recordatorio a las 24 h y caducidad a 48 h de la entrada. A las
   // 07:00, antes del vigía de latidos de las 07:45, para que su huella del día ya esté escrita.
   { path: '/api/cron/sivra-extras-impago', schedule: '0 7 * * *' },
+  // 🔮 Foto diaria de la previsión por piso (mes en curso + 2) → `pisos_previsiones`, para poder
+  // juzgar después si las previsiones se cumplen (seguimiento en /sivra/resultado-pisos) + aviso
+  // «previsión floja» a ~30 días del mes. Tras el sync de Smoobu de las 05:00/05:15 a propósito:
+  // la foto se toma con el calendario ya fresco del día.
+  { path: '/api/cron/prevision-pisos', schedule: '50 5 * * *' },
   { path: '/api/sivra/limpiadoras/auto-sessions', schedule: '0 5 * * *' },
   { path: '/api/sivra/limpiadoras/auto-assign', schedule: '30 5 * * *' },
   { path: '/api/sivra/limpiadoras/alerta-ventana', schedule: '0 8 * * *' },

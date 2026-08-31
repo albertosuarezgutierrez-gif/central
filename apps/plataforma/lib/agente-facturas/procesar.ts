@@ -1,11 +1,12 @@
 // Procesa UNA factura ya extraída: huella → regla → decisión → dedup → imputa.
 // Compartido por el cron `scan` y el `backfill` (DRY).
-import { fingerprint } from './fingerprint'
+import { fingerprint, huellasDe } from './fingerprint'
 import { evaluar } from './reglas'
 import { conciliar, mapeaPropiedadAlquiler } from './conciliar'
 import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, log, type DatosGasto } from './imputar'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
 import { esPresupuesto } from './clasificar'
+import { pareceIngresoDeCorreduria } from './no-es-gasto'
 import { evaluaReceptor, nifProveedorEsNuestro, type Titular } from './receptor'
 import type { FacturaExtraida } from './extraer'
 
@@ -75,6 +76,17 @@ export async function procesarFactura(
     return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: 'Presupuesto/cotización' }
   }
 
+  // Documento que NO es un gasto (dictado por Alberto, 29-30/08/2026): la liquidación de un
+  // mediador de seguros es un INGRESO de la correduría, y la comisión de Booking/Airbnb ya está
+  // descontada del ingreso NETO de `incomes` — darla de alta y confirmarla la restaría dos veces.
+  // Se omite ANTES de imputar (el PDF se archiva igual en Drive aguas arriba); queda rastro en el
+  // log y en el recuento `omitidos` del parte de Telegram, nunca desaparece en silencio.
+  const sospecha = pareceIngresoDeCorreduria({ proveedor, concepto: data.concepto })
+  if (sospecha.esSospechoso) {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: `No es un gasto: ${sospecha.motivo}`, payload: { total } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: sospecha.motivo ?? undefined }
+  }
+
   // Factura de un TERCERO (llega al Gmail de Alberto por un reenvío, pero está a nombre de otro):
   // ni se imputa ni ensucia la bandeja. Se registra en el log y el scan lo canta por Telegram —
   // decisión de Alberto (31/07/2026): "ignorar, pero avisar". Solo descarta con identificación
@@ -97,7 +109,17 @@ export async function procesarFactura(
     return { decision: 'duplicado', fingerprint: fp, total, proveedor }
   }
 
-  const regla = await getRegla(fp)
+  // Se busca la regla bajo TODAS las huellas del proveedor (NIF y nombre), no solo bajo la que
+  // esta factura genera: el mismo proveedor está registrado bajo una u otra según si el PDF traía
+  // el NIF. Ver `huellasDe`. Con override (Booking por establecimiento) manda el override.
+  const huellas = ctx.fingerprintOverride
+    ? [ctx.fingerprintOverride]
+    : [...new Set([fp, ...huellasDe({
+        nif_proveedor: nifEmisorFiable ? data.nif_proveedor : null,
+        proveedor,
+        concepto: data.concepto,
+      })])]
+  const regla = await getRegla(huellas)
   const veredicto = evaluar(data, regla)
 
   // Propiedad: regla > mapeo de alquiler por concepto > por defecto del origen

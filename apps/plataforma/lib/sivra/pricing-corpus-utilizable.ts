@@ -23,7 +23,7 @@
 //
 // El tope de frescura NO se toca aquí: `MAX_MARKET_AGE_DAYS` sigue vigilando que la pasada elegida
 // no sea vieja. Retroceder un día está bien; retroceder un mes lo sigue frenando el guardián de edad.
-import { MIN_EUR_PLAZA_COMP } from './pricing-comps-plausibles.ts'
+import { sqlCompPlausible } from './pricing-comps-plausibles.ts'
 
 /** Mínimo de comparables plausibles para que una pasada sirva. Igual al MIN_SAMPLE del apply. */
 export const MIN_COMPS_PASADA = 5
@@ -44,7 +44,7 @@ export function sqlUltimaPasadaUtil(): string {
         WHERE scenario LIKE 'prop_%' AND price_night > 0
           -- Misma plausibilidad por €/plaza que aplica el percentil aguas abajo: si aquí no se
           -- filtrara, una pasada de puro ruido volvería a ganar el MAX y a dejar el piso sin precio.
-          AND (guests IS NULL OR guests <= 0 OR price_night >= ${MIN_EUR_PLAZA_COMP} * guests)
+          AND ${sqlCompPlausible()}
         GROUP BY scenario, search_date
         HAVING COUNT(*) >= ${MIN_COMPS_PASADA}
       ) util

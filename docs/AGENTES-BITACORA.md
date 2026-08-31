@@ -15,6 +15,101 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-31 · facturas-correo** · hizo: pasada completa. Paso 0: Vía B sana (última copia a
+  `_buzon_pdf` 29/08, dias_caido=2); Vía A (`gmail-adjuntos`) sigue sin provisionar (conocido).
+  `Facturas/PDF-pendiente` vacía. `Facturas/Extraccion-fallida` tenía 1 hilo (Mercadona/Pilar,
+  ticket a Monte Carmelo 68, 237,06€) — se pudo leer entero esta vez → `personal` (auto, entrega
+  vivienda habitual), sin archivar, etiqueta quitada. Paso 4.0: barrido `v_facturas_sin_cargo`
+  2026 → las 8 filas ya estaban `revisada_sin_cargo` (7 Pepephone sin cargo localizado + 1
+  CREATE-Socorro duplicada), ninguna `sin_revisar` nueva. Paso 1/1-bis: sin candidatos nuevos en
+  Gmail (`newer_than:2d`) ni en `_subir_aqui`; la raíz de `FACTURAS Apartamentos/2026` solo tiene
+  sobrantes YA flagueados en `_DUPLICADOS_BORRAR` en pasadas anteriores (no reprocesados, no es
+  obligatorio cada pasada). dudas: hilo `Facturas/Revisar` de Manuel Suárez (recibo Fly.io
+  6,68$, reenviado 28/08) sigue sin resolver — no es gasto claro de Alberto, no se auto-clasifica;
+  lleva 3 días en cola. fallos: —. PRs/commits: (este commit).
+- **2026-08-31 · mercado-booking (pasada acotada, PRIORIDAD jul-ago 2027)** · hizo: plan filtrado
+  `?desde=2027-07-01&hasta=2027-08-31&max=24` en vez del barrido normal, para cerrar el objetivo
+  de ≥3 comparables en ≥3 fechas distintas por piso en esos dos meses (los eventos confirmados sin
+  medir se comían el cupo si se priorizaba a ojo). 240 comps reales en las 24 ventanas del cupo (6
+  fechas × 4 pisos: 02/07, 10/07, 27/07, 06/08, 14/08, 24/08 de 2027 — 3 fechas por mes y por piso,
+  bucket mensual queda elegible en ambos meses). 3/4 ventanas de escaparate propio medidas (Dúplex
+  center, Luxury Busto, Busto Reform; House Sevillana 24-26/08/27 sin disponibilidad en Booking →
+  contado como escaparateSinRespuesta, no como "canal cuadra"). 0 ventanas sin respuesta, 0 anuncios
+  propios colados en el corpus de mercado, 0 fallos. Sin cupo restante para la pasada normal (24/24
+  gastadas en la prioridad) — no se corrió hoy. dudas: —; fallos: —; PRs/commits: — (solo BD +
+  bitácora, sin cambios de código).
+- **2026-08-31 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos (obligatorio,
+  no solo los en vivo). Paso 1: 8/48 fechas muestreadas del ciclo 24/08 se vendieron
+  (House Feria a 1767€, pelotazo funcionando); House sept sigue al 43% ocupación a 30d
+  vista → NO se revierte target_pctl 0,60 (criterio de reversión del aprendizaje id 76
+  seguía sin cumplirse). Paso 2: 5 agentes en paralelo (Booking + fallback lastminute/
+  expedia en Semana Santa/Feria) — 12 ventanas/piso + 7 fechas de evento que el guardián
+  llevaba 3 días marcando "congelada" (Copa del Rey, San Isidoro, 3 LaLiga, JEID, Mundial
+  Remo), ahora con 4 comps/piso cada una. Paso 3 (verificación SQL, no autoinforme):
+  comps nuevos hoy en `market_rates` — house=153, busto=150, luxury=150, duplex=148,
+  ningún piso a 0. Paso 4: 48 propuestas (p55/p60/p60/p50 según piso) por los raíles en
+  dry-run forzado (`ALERTA_TOKEN`); circuit-breaker sano (avg 29,7%, no salta), 48 filas
+  en `pricing_decisiones`. Paso 5: aprendizaje escrito (`ciclo_31_08_2026`). Paso 6:
+  informe por Telegram con la línea "Comps escritos:" obligatoria (HTTP 200). dudas:
+  Luxury Busto 10-oct-2026 el mercado subió a p50=470€ (antes 123-169€ en barridos de
+  meses atrás) — esa noche ya vendida a 162€, irrelevante hoy, pero vigilar si se repite
+  en fechas cercanas (¿dinámica real de última disponibilidad o ruido de muestra?).
+  fallos: —. PRs/commits: (este commit, memoria + bitácora, sin cambios de código).
+- **2026-08-31 · buscador-ia** · hizo: pasada semanal completa. Preflight Telegram 200 OK. Watch de
+  deprecación de los 4 eslabones activos (Groq/Cerebras/Gemini/Kimi, por WebSearch, sin keys en
+  sesión) → todos vivos, sin swaps necesarios; NIM sigue apagado por decisión de Alberto (28/08) y
+  fuera de vigilancia activa (sin id que verificar). Descubrimiento: ningún candidato cruza el
+  listón calidad/precio (mercado de pago dominado por flagship caros; Qwen3.7 Flash anotado sin
+  acción). Sin Telegram (nada urgente). dudas: —; fallos: —; PRs/commits: PR draft con el doc de
+  estado (rama `claude/youthful-gates-4oor0p`).
+- **2026-08-30 · facturas-correo** · hizo: pasada diaria completa. Paso 0: Vía B sana
+  (`dias_caido=1`, última copia `_buzon_pdf` 29/08 IONOS); backlog: `PDF-pendiente` vacío,
+  `Revisar` 1 hilo (Fly.io/Manuel Suárez, sigue sin respuesta de Alberto — día 3), y
+  `Extraccion-fallida` 1 hilo (Mercadona/Pilar, 237,06€ entrega Monte Carmelo) → resuelto y
+  quitada la etiqueta: es personal, claro (no ambiguo pese a venir de Pilar). `agente_salud`
+  actualizado. Paso 1: 3 candidatos por keyword de "booking"/"smoobu" en el remitente, los 3
+  ruido (mensajería de huéspedes Booking + ticket de soporte Smoobu, no facturas) → etiquetados
+  `Procesada`. `_subir_aqui` vacío; raíz `FACTURAS Apartamentos/2026` sin subidas nuevas (los
+  PDFs sueltos que quedan son deuda histórica ya con aviso en `_DUPLICADOS_BORRAR` de pasadas
+  previas, no reverificado hoy). Paso 4.0: `v_facturas_sin_cargo` sin filas `sin_revisar` — las
+  8 pendientes (Pepephone ene-jun, Giraldillo mayo, CREATE-Socorro jun) siguen
+  `revisada_sin_cargo`, no reabiertas. Preflight Telegram 200 OK, sin aviso (nada urgente).
+  dudas: el Fly.io ($6,68) de Manuel Suárez lleva 3 días en `Facturas/Revisar` sin que Alberto
+  diga si es gasto suyo; fallos: —; PRs/commits: este commit.
+- **2026-08-30 · mercado-booking** · hizo: pasada PRIORITARIA jul-ago 2027 (2º día seguido,
+  mismo prompt programado). Medidas las 24 ventanas del plan acotado (240 comps reales
+  `booking_mcp`, 4 pisos × 6 fechas: 02/10/27-jul-27-jul-01-ago[evento Mundial Remo,
+  factor confirmado ~1.55x]-06-ago-14-ago) + escaparate 3/4 (House Sevillana sin
+  disponibilidad esas fechas → hueco, no fallo). 0 ventanas sin respuesta, 0 propios
+  descartados. **Objetivo ya estaba cumplido ANTES de esta pasada**: el plan devolvió
+  `meses_sin_bucket: [2027-04,05,06]` — julio y agosto 2027 no aparecen, o sea ya tenían
+  bucket mensual elegible (lo dejó hecho la pasada de ayer 29/08). Esta pasada solo refrescó
+  el corpus, no cambió el estado. dudas: la línea "PRIORIDAD TEMPORAL" sigue en el prompt
+  programado por 2º día — Alberto tiene que quitarla él (fuera del repo, sin acceso desde
+  aquí); fallos: 1 timeout SSL transitorio (ventana 07-10/12 duplex_center), reintentado con
+  éxito; PRs/commits: este commit.
+- **2026-08-29 · facturas-correo** · hizo: Vía B sana (`dias_caido=0`, copió 3 PDFs en 48h);
+  backlog `PDF-pendiente`/`Extraccion-fallida` en 0 hilos (verificado por `search_threads`).
+  Paso 1: 0 candidatos nuevos (único match, un ticket de soporte de Smoobu, no es factura).
+  `_subir_aqui` vacío. Paso 4.0: `v_facturas_sin_cargo` sin filas `sin_revisar` — las 8
+  pendientes (Pepephone ene-jun, Giraldillo mayo, CREATE-Socorro jun) siguen
+  `revisada_sin_cargo`, no reabiertas. Preflight Telegram 200 OK, sin aviso (nada urgente).
+  Pasada en blanco: todo lo de hoy ya lo había cerrado la pasada de ayer (28/08). dudas: el
+  Fly.io ($6,68) de Manuel Suárez sigue en `Facturas/Revisar` sin que Alberto haya dicho si es
+  gasto suyo; fallos: —; PRs/commits: este commit.
+- **2026-08-29 · mercado-booking** · hizo: pasada PRIORITARIA pedida por Alberto para
+  julio/agosto-2027 (`?desde=2027-07-01&hasta=2027-08-31&max=24`). Medidas las 24 ventanas
+  del plan acotado (280 comps reales `booking_mcp`: 24×10 + 1 ventana extra en agosto ronda 3
+  que hizo falta añadir a mano porque el día 1-ago era "evento", no cuenta como fecha normal
+  del bucket). **Objetivo cumplido: julio-2027 y agosto-2027 ya tienen ≥10 comparables en 3
+  fechas distintas por piso** (bucket mensual elegible en ambos; verificado con
+  `meses_sin_bucket` antes/después del plan). Escaparate 3/4 (House Sevillana sin
+  disponibilidad esas fechas → hueco, no fallo). Sin cupo para pasada normal del resto del
+  plan (572 ventanas totales). dudas: la línea "PRIORIDAD TEMPORAL" vive en el prompt
+  programado fuera del repo (no en `docs/RUTINAS-PROGRAMADAS.md`, que solo documenta el
+  prompt base) — Alberto tiene que quitarla él, esta sesión no tiene acceso a esa config;
+  fallos: —; PRs/commits: este commit.
+
 - **2026-08-28 · ialimp-client-health** · hizo: pasada semanal Sique Brilla (empresa_id
   `05edacff-ea49-42fe-8997-f9369613a845`). PMS sync activo (Smoobu, sin `sync_error`, último
   28/08 15:01, 32 sesiones/24h, 33/7d); 0 programaciones sin cubrir; 0 impagos activos. Todo
