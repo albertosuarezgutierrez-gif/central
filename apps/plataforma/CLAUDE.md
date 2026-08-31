@@ -1261,6 +1261,17 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
     es un alfa de 0, y contarla acercaría la media a cero sola; (c) las dos puntas del bench salen de la
     MISMA fuente y con `TOLERANCIA_BENCH_DIAS` (4): restar dos ventanas distintas da un número plausible
     que no significa nada. Y `minN`/clamp de `ajustesDeStats` **nunca se han validado** (H15).
+  - **✅ H11–H15 RESUELTAS (31/08/2026), una sola se cablea: H11.** `PISCINA_VIVA = 'direccional'`
+    (`lib/trading/piscinas.ts`, guardián en su test): el torneo aprende de las señales que SÍ ajusta
+    (deltas hoy: momentum −9 · reversión +5 · valor −13 · catalizador sin ajuste por minN). H12: los
+    horizontes largos ganan mediana (+7,74 pp a 364 d) pero EMPEORAN el p25, y la tendencia viva solo
+    separa +1,26 pp (≥5 exigidos) → la salida por tiempo a 91 d validada por 3ª vez. H13: el orden por
+    alfa cambia pero la que pasaría a primera (momentum) tiene alfa medio NEGATIVO → guarda de daño.
+    H14: el cambio de signo del peaje no aguanta 0,1%–0,3% (y en `direccional` ni aparece). H15:
+    ganadora idéntica en los 9 combos minN×clamp (minN es INERTE en `'todos'`: n=352 idéntico por
+    construcción) → se quedan. El cron `trading-h10` ya no re-avisa el cierre de H10 (solo si una
+    variante pasara a cumplir) y su vigía queda con la lista de hipótesis VACÍA (tubería montada).
+    Detalle: «✅ RESOLUCIÓN de H11…H15» en `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
   - Informe vivo con las cifras y su muestra: **`docs/TRADING-SALIDAS-2026-08.md`** (se AÑADE una entrada
     fechada por hito, no se reescriben las anteriores). Hipótesis y criterios: `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
 - **🚨 LANDMINE — SESGO DE SUPERVIVENCIA: la tesis cuyo símbolo se cae del universo no se puntuaba NUNCA

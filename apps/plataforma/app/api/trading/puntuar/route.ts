@@ -234,11 +234,10 @@ export async function POST(req: NextRequest) {
   // registro pero NO cuentan: son «esto no lo sabemos», no un dato del track record.
   const resultados = await prisma.tradingTesisResultado.findMany({ where: { anulado: false, tesis: { anulado: false } }, include: { tesis: true } })
 
-  // H11 (firmada 28/08/2026): las stats se recolectan por TRES piscinas, pero solo `'todos'` decide.
-  // `torneo()` NO aplica el ajuste a las señales neutrales, y sin embargo `'todos'` es 82% neutral —
-  // se aprende de lo que nunca se toca. Las otras dos piscinas se escriben EN SOMBRA para poder
-  // resolver H11 con datos; `analizar` sigue leyendo `regimen: 'todos'`, así que el comportamiento no
-  // cambia ni un punto hasta que H11 se cablee por PR con su condición cumplida.
+  // H11 (RESUELTA 31/08/2026): las stats se recolectan por TRES piscinas y decide la PISCINA_VIVA
+  // (`'direccional'` desde la resolución — `analizar` lee por esa constante). `torneo()` NO aplica el
+  // ajuste a las señales neutrales, así que el aprendizaje sale de las señales que sí toca; las otras
+  // dos piscinas siguen escribiéndose para poder mirarlas (y re-abrir H11 con datos si hiciera falta).
   // Las estrategias que se reportan aguas abajo (latido y respuesta) son las de la piscina VIVA: es
   // la que decide, y contar las de sombra inflaría el parte con trabajo que no cambia nada.
   let estrategiasVivas = 0
