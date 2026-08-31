@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-08-31 · agentes-entrenador** (2ª pasada dirigida: «revisa que ningún agente tenga huecos
+  así») · hizo: barrido de la clase de hueco del caso V4 Flash (traspasos sin dueño, listas
+  estáticas sin curación, supuestos sin verificar) sobre los ~17 agentes. Sanos: auditoría
+  (reconciliación de cobertura + vigila al vigilante), conectores-vigia, github-vigia,
+  fuentes-de-verdad, radar→fiscal. Hallazgos: (1) 🔴 VISIÓN (`llama-3.2-11b-vision` en NIM,
+  cliente vivo ialimp) y EMBEDDINGS (`text-embedding-004`) sin vigilante → añadidos al Paso 1
+  del buscador-ia; (2) 🟡 SKILLS.md decía «PENDIENTE de trigger» de mercado-booking/radar/CFO
+  cuando los 3 existen y corren (verificado list_triggers). dudas: —; fallos: —; PRs: el de esta rama.
 - **2026-08-31 · agentes-entrenador** (pasada dirigida, orden de Alberto tras el caso V4 Flash) ·
   hizo: post-mortem (el hueco era de DISEÑO: la delimitación del 09/07 dejó OpenRouter sin dueño
   de descubrimiento — el cron solo elige de listas estáticas y el buscador tenía orden de no

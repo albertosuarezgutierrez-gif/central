@@ -41,6 +41,16 @@
   `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
   el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
 
+### 🔍 (31/08/2026) Barrido anti-huecos en TODOS los agentes (orden de Alberto tras V4 Flash)
+- Se buscó la misma clase de hueco (traspaso sin dueño · lista estática sin curación · supuesto
+  sin verificar) en los ~17 agentes. La auditoría diaria, conectores-vigia, github-vigia y el
+  mapa de fuentes están sanos (tienen cláusulas de descubrimiento y «vigilar al vigilante»).
+- 🔴 Hueco real: la VISIÓN (`meta/llama-3.2-11b-vision-instruct`, en NIM — el proveedor de las
+  3 muertes por EOL en 11 días; la consume ialimp, cliente vivo) y los EMBEDDINGS
+  (`text-embedding-004`, un swap invalida vectores) no los vigilaba nadie → al Paso 1 del buscador.
+- 🟡 SKILLS.md: «PENDIENTE de trigger» de mercado-booking/radar-espana/patrimonio-cfo era falso
+  (los 3 triggers existen y corren — verificado con list_triggers). Corregido.
+
 ### 🩹 (31/08/2026) Post-mortem V4 Flash: el hueco era de diseño — buscador-ia gana el Paso 1.5
 - Alberto: «revisa por qué ha pasado y que no vuelva a pasar». Causa raíz: la delimitación del
   09/07 («OpenRouter fuera de scope, lo vigila SU cron») dejó el DESCUBRIMIENTO sin dueño — el
