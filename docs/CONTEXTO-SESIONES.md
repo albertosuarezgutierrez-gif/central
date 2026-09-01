@@ -43,6 +43,21 @@
 
 ---
 
+### 🔬 (01/09/2026) Codeoscopic: forense de la única cotización real — dos docs corregidos
+- No hay conexión desde el contenedor: el proxy deniega por política `codeoscopic.io`,
+  `central-asegura.vercel.app` y `app.grupoasegura.com` (403 en el CONNECT). La verificación
+  tiene que salir del despliegue de Vercel, no de la sesión.
+- 🚨 **El `project_not_found` del webhook NO era un fallo de correlación:** los 2 eventos son smoke
+  tests con ids inventados (`999999`/`smoke-test-s168`, `smoke-fix-webhook`). **Codeoscopic no ha
+  mandado nunca un webhook real** — solo los dispara al emitir, y no se ha emitido. Corregido en
+  `sector.md` §4 y en la cabecera de `CODEOSCOPIC-TRASPASO-MANUEL.md`.
+- **Los 15 precios reales del 29/07 son TODOS `estimado`** (el fixture del sandbox, 0 de 18). Dos de
+  dos: el precio con reservas es el caso general. Parrilla real: Mapfre, Allianz, Occident
+  (278,59€–609,64€), no Reale/Fidelidade. `expires_at` NULL en los 15 → un precio pagado NO se puede
+  reutilizar. `referenceFromVendor` es por compañía (Mapfre no lo manda).
+- Cartera viva por ramo: 81 auto/moto · 19 hogar · 9 RC. Hogar NO tiene cotización en el repo de
+  Manuel, pero la API es multi-ramo (`insuranceLine`) y `insurance-lines` se puede consultar GRATIS.
+
 ### 🚨 (01/09/2026) Vigía de reservas: los 3 avisos que mandó eran FALSOS (y no solo hay Booking)
 - El 🚨 «reserva 153896946 que Smoobu NO tiene» era falso: está en Smoobu y en `incomes` (Expedia,
   Busto Reform, 03→07/09, Karl Brunelliere). El nº salía del **enlace del propio correo de Smoobu**
