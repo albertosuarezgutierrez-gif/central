@@ -13,7 +13,7 @@ import { paramsDnploc, provinciaCanonica, type CoordenadasCatastro } from '@cent
 import { archivarPasadas, procesarDocumentos } from '@/lib/subastas/documentos'
 import { clasificarSubastas } from '@/lib/subastas/clasificar'
 import { reextraerDatosDeTexto } from '@/lib/subastas/reextraer'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { sesionPortal, titularSesionPortal } from '@/lib/subastas/portal-sesion'
 
 export const dynamic = 'force-dynamic'
@@ -269,7 +269,7 @@ export async function GET(req: NextRequest) {
     // verde porque no ha podido mirar es el fallo más caro que hay.
     const portal = await sesionPortal()
     if (portal.estado === 'rechazada' || portal.estado === 'captcha') {
-      await tgSend(titularSesionPortal(portal)).catch(() => {})
+      await tgAviso('subastas.sesion-portal', titularSesionPortal(portal)).catch(() => {})
     }
 
     // Datos que ya estaban en el TEXTO y no se habían sabido leer. Va ANTES de

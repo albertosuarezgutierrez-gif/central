@@ -95,6 +95,20 @@ export type AgenteVigilado = {
 //   - trading (tiene su propio watchdog dedicado con lógica de días).
 export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
+    id: 'correduria_renovaciones',
+    etiqueta: '🛡️ Renovaciones de la correduría (cron diario 06:30)',
+    // Diario → 30 h: un tropiezo aislado pasa, dos días caídos saltan.
+    maxHoras: 30,
+    nota:
+      'Nadie está mirando qué pólizas vencen. La ventana de renovación la marca la LCS art. 22 ' +
+      '(el tomador solo puede oponerse hasta UN MES antes), así que cada día caído es cartera que ' +
+      'se prorroga sola sin haberla retarificado. Lee el `detalle`, que separa las dos averías: ' +
+      '«puerto sin configurar» es que falta ASEGURA_OPERADOR_SECRET en plataforma o en ' +
+      'central-asegura (los dos valores deben ser el MISMO); «no se pudo leer la cartera» con un ' +
+      'motivo es el puerto o la BD de asegura. Un «0 avisos» con ok NO es un fallo: es que hoy ' +
+      'ninguna póliza cruzó un hito. Huella: agente_latidos.correduria_renovaciones.',
+  },
+  {
     id: 'ses_transporte',
     etiqueta: '🛂 Transporte con SES.HOSPEDAJES (parte de viajeros, cron diario 07:15)',
     // Diario a las 07:15 → 30 h dejan pasar un tropiezo aislado y cazan dos días caídos.

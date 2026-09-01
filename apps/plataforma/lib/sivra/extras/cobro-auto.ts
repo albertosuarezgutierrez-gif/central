@@ -14,7 +14,7 @@ import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { ofertaPendiente, marcarEnlaceEnviado } from './reserva'
 import { extraDeCatalogo, nombreEnIdioma } from './catalogo'
 import { crearEnlacePago, stripeDisponible } from './stripe'
-import { tgSend, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 import type { Contexto } from '@/lib/sivra/agente-huesped/contexto'
 
@@ -48,7 +48,7 @@ export async function intentarCobroAutomatico(ctx: Contexto, pregunta: string): 
   // El precio que se cobra es el que se PROMETIÓ al ofertar. Si el catálogo ha cambiado desde
   // entonces, manda lo prometido y se avisa: cobrar otra cosa sería cambiar el trato a mitad.
   if (catalogo.precio_cents !== oferta.precio_cents) {
-    await tgSend(
+    await tgAviso('pisos.extras-cobro-auto', 
       `⚠️ <b>El catálogo cambió después de ofertar</b>\n` +
       `${escapeHtml(ctx.property)} · reserva ${escapeHtml(ctx.bookingId)}: se ofertó ` +
       `${eur(oferta.precio_cents / 100)} y el catálogo dice ${eur(catalogo.precio_cents / 100)}. ` +
@@ -75,7 +75,7 @@ export async function intentarCobroAutomatico(ctx: Contexto, pregunta: string): 
 
   await marcarEnlaceEnviado(oferta.id, enlace.paymentLinkId)
   // Copia informativa: sale dinero sin que Alberto pulse nada, así que ve exactamente qué salió.
-  await tgSend(
+  await tgAviso('pisos.extras-cobro-auto', 
     `💳 <b>Enlace de pago enviado</b> · ${escapeHtml(ctx.property)}\n` +
     `${escapeHtml(nombre)} — ${eur(oferta.precio_cents / 100)} (reserva ${escapeHtml(ctx.bookingId)})\n` +
     `<i>El huésped aceptó el precio que tú aprobaste en este hilo.</i>`,

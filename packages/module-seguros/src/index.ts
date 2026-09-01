@@ -5,7 +5,7 @@ export {
   explicarVigenciaPendiente,
   type Vigencia,
   type EstadoPolizaVigente,
-} from './vigencia'
+} from './vigencia.ts'
 
 export {
   DIAS_PREAVISO_TOMADOR,
@@ -20,4 +20,12 @@ export {
   primaReferencia,
   primaEnRiesgo,
   type UrgenciaRenovacion,
-} from './vencimientos'
+} from './vencimientos.ts'
+
+export {
+  objetoAsegurado,
+  pareceMatricula,
+  type ObjetoAsegurado,
+  type EstadoObjeto,
+  type EntradaObjeto,
+} from './objeto.ts'

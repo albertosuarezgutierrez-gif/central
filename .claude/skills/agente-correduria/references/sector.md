@@ -44,18 +44,59 @@
 ## 4. Codeoscopic / Avant2 — LA fuente de tarificación y emisión
 - Contrato **Workspace + API REST** firmado el **20/05/2026 a nombre de Alberto** (Grupo
   ASegura). Manuel (hermano) fue solo el integrador; sin relación contractual con
-  Codeoscopic (dicho por su DPD, 22/05/2026). DPA art. 28 RGPD remitido el 25/05.
+  Codeoscopic (dicho por su DPD, 22/05/2026).
 - Panel Avant2 operativo a nombre de Alberto (alta abril/2026; recuperación de contraseña
-  → su Gmail). Compañías VIVAS en el panel: **Reale** (autos, motos, hogar, comercios,
-  comunidades, decesos, vida) y **Fidelidade**. Claves entregadas a soporte: **Mapfre,
-  Allianz, Catalana Occidente** (pendiente confirmar activación).
-- **Integración API: EN SANDBOX desde jun/2026, sin cerrar.** Flujo Quote → preemisión →
-  Submit → webhook (Basic Auth). Falta: batería completa en sandbox + idempotencia del
-  `attempt_id` → entonces se enciende el flag de emisión. Contacto PM API: Juan Manuel
-  Fernández. ⚠️ Decisión de Alberto (01/09/2026): las credenciales se piden a MANUEL
-  (env vars de su Vercel), no a Codeoscopic.
-- Higiene pendiente sin prisa: claves de portales de compañías viajaron por email en
-  mayo/2026 (Mapfre, Catalana) → rotarlas cuando el traspaso lo permita.
+  → su Gmail).
+- **Compañías VIVAS en PRODUCCIÓN** (resumen de soporte del 09/06/2026 + alta posterior):
+  **Allianz** (autos, motos, hogar, vida-riesgo) · **Mapfre** (autos, motos, hogar) ·
+  **Reale** (autos, motos, hogar, comercios, comunidades, decesos, vida-riesgo) ·
+  **Occident/Catalana** (auto, moto, hogar, comunidades, comercios) · **Fidelidade** (hogar,
+  desde 14/07/2026). Pendiente: **Reale VIDA-RIESGO** devuelve «mediador no está activo» — hay
+  que pedir a Reale que habilite al mediador para Avant2.
+- 🔑 **Las claves de las compañías NO se generan en el panel**: el corredor se las pide a cada
+  compañía y las manda a `soporte@codeoscopic.com`, que las configura. Por eso viajaron en claro
+  por email (mayo-junio/2026, tickets 267334) — **pendientes de rotar**.
+- **Entornos:** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
+  `https://albertosuarezgutierrez.avant2.es`. ⚠️ **El host base de la API REST no consta en
+  ningún correo de Alberto**: hay que sacarlo de la documentación, que la tiene Manuel.
+- **Coste: 0,50€ — pero NO está claro por QUÉ se cobra, y no es un detalle menor.** El correo del
+  CEO Ángel Blesa (09/04/2026) dice literal «se cobra **por cotización**», con ejemplo: recotizar
+  el mismo coche añadiendo un conductor son «2 cotizaciones independientes». **Alberto lo recuerda
+  como por EMISIÓN** (01/09/2026), y puede tener razón: ese correo es anterior al presupuesto del
+  14/05 y al contrato C00 firmado el 20/05, que es el que manda. Los dos documentos que lo
+  resolverían son PDF adjuntos y no se han podido leer. **Antes de construir cualquier automatismo
+  que tarifique, confirmarlo en el contrato**: por cotización, una pasada sobre la cartera entera
+  cuesta dinero y necesita tope; por emisión, tarificar es gratis. No lo des por sabido.
+
+### 🚦 Dónde se paró EXACTAMENTE la API (03/06/2026) y qué falta
+Reconstruido el 01/09/2026 desde el Gmail de Alberto y la BD. La plataforma web funciona; lo
+congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de la API) que
+**nunca tuvo respuesta**. Tres puntos, ninguno resuelto:
+1. **Credenciales de sandbox CADUCADAS** — usuario `albertocsf0170ws`, enviadas el 30/04/2026 por
+   Bitwarden Send con TTL de 7 días. Se pidió regenerarlas el 03/06 y no llegaron.
+2. **Basic Auth del webhook SIN DEFINIR** — pregunta abierta desde el 30/04: ¿las genera ASegura
+   o las define Codeoscopic en su panel? Es literalmente «el último ítem para cerrar el receptor
+   de webhooks de cara a producción».
+3. **Smoke end-to-end sin correr** (Quote → preemisión → Submit → webhook).
+
+- **Pero el flujo llegó a funcionar de verdad.** Medido en la BD: el **29/07/2026** una cotización
+  de auto devolvió **15 precios reales de Mapfre, Allianz y Occident** (278,59€ a 609,64€), con el
+  formato de la API (`id, premium, product, estimate, termMonths, downPayment, paymentMethod,
+  referenceFromVendor`). Y el **21/05** hubo una **emisión real en sandbox** (nº 360447, avisada por
+  correo). O sea: tarificar SÍ; emitir, nunca se cerró.
+- **El webhook recibe y no correlaciona:** 2 eventos en `codeoscopic_webhook_events`
+  (26/05 `emision_ok`, 24/06 `otro`), **los dos con `processing_error='project_not_found'`**. El
+  canal de vuelta está abierto; lo que falta es casar el `project_id` de Codeoscopic con la fila.
+- **Máquina de estados ya modelada por Manuel:** `cotizacion → preemision → emitida | rechazada |
+  riesgo_condicionado | vencida | error`, con `submit_attempt_id` (idempotencia) y polling.
+  Tablas `codeoscopic_projects/offers/prices/documents/participants/product_forms/webhook_events`.
+- **DPA art. 28 RGPD: decisión abierta.** El DPD de Codeoscopic se niega a firmarlo con el
+  integrador (no hay relación contractual con él) y solo remite su política de privacidad. Manuel
+  lo consideraba requisito previo a producción.
+- ⚠️ **La documentación de la API NO está en el Gmail de Alberto** (se mandó a Manuel). Sin ella no
+  hay host base ni contratos de endpoints: es lo primero que hay que conseguir.
+- Manuales de la PLATAFORMA (no de la API) sí están: ticket 267332 del 25/05/2026, más
+  `academy.codeoscopic.com` y el KB `codeoscopicavant2.zohodesk.com`.
 
 ## 5. El negocio real de ASegura (estado 01/09/2026)
 - Cartera en el Supabase de ASEGURA (leída en vivo por plataforma): **50 pólizas en
@@ -94,6 +135,32 @@
   Helper puro `@central/module-seguros/vencimientos` (`urgenciaRenovacion`, `fechaLimiteOposicion`,
   `primaEnRiesgo`), consumido por el puerto `/api/operador/vencimientos` de asegura y pintado en
   plataforma `/correduria`.
+- **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
+  431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
+  vive en **`polizas.datos_especificos`** (JSON libre que escribe la ingesta EIAC, distinto por
+  ramo) y, para lo que no tiene bien, en **`poliza_coberturas.descripcion`**. Medido sobre la
+  cartera entera:
+  - **auto/moto** → `matricula` (4.506 filas, **EN CLARO**), `marca`/`modelo` (~1.420 cada uno),
+    `version`, `anio`, `combustible`, `tipoVehiculo`. ⚠️ **La clave `vehiculo` (2.781 filas) NO es
+    una descripción: contiene la MATRÍCULA.** Pintarla como modelo es inventarse el dato.
+  - **hogar** → `localidad` (181) y `cp` (330) en claro, `metrosCuadrados`, `anioConstruccion`,
+    `continente`/`contenido`. La **`direccion` (172) viene CIFRADA** (`v1:iv:cipher:tag`,
+    AES-256-GCM, clave `PII_ENCRYPTION_KEY` que hoy vive en el Vercel de Manuel). Sin esa env se
+    dice **«cifrado»**, que NO es «sin dato»: el dato existe y aparecerá solo el día que la clave
+    llegue con el traspaso (`descifrarDireccion` en `apps/asegura/lib/cartera.ts` ya lo intenta).
+  - **RC (81) y comercio (110)** → `datos_especificos` NO trae nada útil; lo que identifica una RC
+    son sus **modalidades** (`poliza_coberturas`: «Básica», «Locativa», «Accidentes de trabajo»).
+    Solo 9 de las 81 RC tienen coberturas cargadas. Comercio sí trae `actividad` (28).
+  - **vida / salud / decesos / accidentes** → no hay bien: son seguros de PERSONAS. Ausencia
+    **definitiva**, no «pendiente» — prometer una pasada futura que traiga el dato sería mentir.
+  - `_estado_legacy_pre_loo695` es ruido de una migración del CRM, no un dato.
+  Helper puro **`@central/module-seguros/objeto`** (`objetoAsegurado`) con **cuatro** salidas
+  (`conocido` · `no_informado` · `cifrado` · `sin_objeto`); lo consumen el puerto
+  `/api/operador/vencimientos` de asegura, la columna **«Qué asegura»** de plataforma `/correduria`
+  y el aviso de renovaciones por Telegram. **Al informar a Alberto de una renovación, di SIEMPRE
+  qué asegura** — sin eso el aviso no sirve para llamar. Y sigue vigente la regla de PII: en
+  informes y chats, agregados; la matrícula solo si Alberto pregunta por un caso concreto.
+
 ## 6. Novedades 2026 y argumentario de renovación (investigado 01/09/2026)
 > ⚠️ Verificado contra fuentes secundarias del sector (INESE, UNESPA, ICEA, DGSFP): el proxy de la
 > sesión bloquea `boe.es` y `dgsfp.mineco.gob.es`, así que **antes de citarle una norma a un cliente

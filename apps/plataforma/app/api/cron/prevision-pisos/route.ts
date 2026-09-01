@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { snapshotPrevision } from '@/lib/sivra/prevision-pisos'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { tgAlert } from '@/lib/telegram'
-
+import { tgAvisoAlerta } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
@@ -21,7 +20,7 @@ async function handler(req: NextRequest) {
   try {
     const r = await snapshotPrevision()
     for (const aviso of r.avisos) {
-      await tgAlert(`🔮 Previsión floja — ${aviso}\nMira /sivra/resultado-pisos (sección Previsión).`, 'aviso')
+      await tgAvisoAlerta('pisos.prevision', `🔮 Previsión floja — ${aviso}\nMira /sivra/resultado-pisos (sección Previsión).`, 'aviso')
     }
     await registrarLatido('sivra_prevision', true,
       `${r.snapshots} previsiones guardadas · ${r.avisos.length} aviso(s) de pace flojo`)

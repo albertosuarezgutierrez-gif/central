@@ -37,6 +37,10 @@ export const CRON_JOBS: CronJob[] = [
   // parte. La fecha que lo hace urgente es el 03/09/2026, cuando caduca la hoja del certificado
   // de `*.ses.mir.es` y hay que saber si la cadena sigue cerrando.
   { path: '/api/cron/ses-latido', schedule: '15 7 * * *' },
+  // Renovaciones de la correduría: 06:30, antes del vigía de las 07:45 para que
+  // el parte del día lea siempre una huella fresca. Lee la cartera por el puerto
+  // de central-asegura; si no puede leerla, lo dice — no se calla.
+  { path: '/api/cron/correduria-renovaciones', schedule: '30 6 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },

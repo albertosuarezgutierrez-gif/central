@@ -9,7 +9,7 @@ import { Prisma } from '@prisma/client'
 import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, quitarEtiqueta, type ListadoCandidatos } from './gmail'
 import { ordenarAdjuntosFactura } from './elegir-adjuntos'
 import { aiExtractInvoiceDetallado, type FalloExtraccion } from '@/lib/ai-client'
-import { tgSend, tgSendButtons, tgEditMessage } from '@central/core-telegram'
+import { tgAviso, tgAvisoBotones, tgEditMessage } from '@/lib/telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
 import type { EstadoPagoEB } from '@/lib/enablebanking'
 import { baseUrl } from '@/lib/base-url'
@@ -283,7 +283,7 @@ async function notificarFactura(
     ],
   ]
   try {
-    const msgId = await tgSendButtons(texto, botones)
+    const msgId = await tgAvisoBotones('facturas.pago-aprobar', texto, botones)
     if (msgId) {
       await prisma.$executeRaw(Prisma.sql`
         UPDATE facturas_proveedor SET telegram_msg_id = ${msgId}, estado = 'pendiente_revision'
@@ -490,7 +490,7 @@ export async function resumenSemanal(cuentaId: string): Promise<boolean> {
   if (facturas.length > 5) lineas.push(`  <i>... y ${facturas.length - 5} más</i>`)
 
   const texto = `📋 <b>${facturas.length} facturas pendientes esta semana:</b>\n${lineas.join('\n')}\n<b>Total: ${eur(total)}</b>`
-  await tgSendButtons(texto, [[
+  await tgAvisoBotones('facturas.pagos-resumen-semanal', texto, [[
     { texto: '✅ Pagar todo', callback: `pago_pagartodo:${cuentaId}` },
     { texto: '📋 Revisar una a una', callback: `pago_revisarunauna:${cuentaId}` },
   ]])
@@ -523,7 +523,7 @@ export async function alertarFacturasAusentes(cuentaId: string): Promise<number>
         AND estado != 'rechazada'
     `)
     if (Number(hayEste[0]?.n ?? 0) === 0) {
-      await tgSend(`⚠️ Sin factura de <b>${p.proveedor}</b> este mes (lleva ${Number(p.meses)} meses seguidos)`).catch(() => {})
+      await tgAviso('facturas.proveedor-ausente', `⚠️ Sin factura de <b>${p.proveedor}</b> este mes (lleva ${Number(p.meses)} meses seguidos)`).catch(() => {})
       alertas++
     }
   }
@@ -555,7 +555,7 @@ async function proponerVinculoReserva(
   const r = reservas[0]
   const reservaRef = `${r.propertyId}:${r.checkOut}`
   const texto = `🔗 <b>${proveedor}</b> — ¿asociar con estancia de <i>${r.guestName}</i> en <i>${r.propertyName}</i> (salida ${r.checkOut})?`
-  await tgSendButtons(texto, [[
+  await tgAvisoBotones('facturas.pagos-resumen-semanal', texto, [[
     { texto: '✅ Sí, vincular', callback: `pago_vincular:${facturaId}:${reservaRef}` },
     { texto: '❌ No', callback: `pago_novinc:${facturaId}` },
   ]])

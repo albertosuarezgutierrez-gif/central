@@ -5,8 +5,7 @@
 // que dispara el aviso a la limpieza solo; sin él sería un NULL que alguien tiene que ir a mirar, y
 // un extra pendiente que nadie mira acaba siendo una cuna sin montar.
 import { createStripe } from '@central/core-payments'
-import { tgSend, escapeHtml } from '@central/core-telegram'
-
+import { escapeHtml, tgAviso } from '@/lib/telegram'
 /** Sin clave configurada NO se cobra: el flujo cae a la propuesta por Telegram de siempre. */
 export function stripeDisponible(): boolean {
   return !!process.env.STRIPE_SECRET_KEY_SIVRA
@@ -78,7 +77,7 @@ export async function crearEnlacePago(p: {
     // el diagnóstico es leer código en vez de leer el mensaje.
     const motivo = (e as Error)?.message ?? 'sin detalle'
     console.error('[extras/stripe] no se pudo crear el enlace:', motivo)
-    await tgSend(
+    await tgAviso('pisos.extras-pagado', 
       `🛑 <b>Stripe ha rechazado el enlace de pago</b>\n` +
       `${escapeHtml(p.nombre)} · reserva ${escapeHtml(p.bookingId)} (${escapeHtml(p.propertyId)})\n` +
       `<code>${escapeHtml(motivo)}</code>\n` +

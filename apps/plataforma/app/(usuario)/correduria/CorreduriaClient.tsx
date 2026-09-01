@@ -534,10 +534,55 @@ const TIPOS: Record<string, string> = {
   comunidad: '🏢 Comunidad', accidentes: '🩹 Accidentes',
 }
 
+type ObjetoAsegurado = {
+  estado: 'conocido' | 'no_informado' | 'cifrado' | 'sin_objeto'
+  titulo: string | null; detalle: string | null; nota: string | null
+}
+
 type Vencimiento = {
   id: string; cliente: string; tipo: string; aseguradora: string
   numeroPoliza: string | null; fechaVencimiento: string; dias: number
   urgencia: string; prima: number | null; fraccionamiento: string | null
+  objeto: ObjetoAsegurado | null
+}
+
+/**
+ * Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de
+ * los tres coches del cliente es, y la llamada empieza preguntando.
+ *
+ * Cinco casos, y ninguno se pinta como los demás — un hueco vacío diría «no hay
+ * nada que asegurar», que es justo lo contrario de lo que se sabe:
+ *   objeto null → el puerto (central-asegura) aún no manda el campo.
+ *   no_informado → la compañía no lo ha mandado: está pendiente de reclamar.
+ *   cifrado      → el dato existe pero llega cifrado y aquí no hay clave.
+ *   sin_objeto   → seguro de personas: no hay bien. Ausencia definitiva.
+ */
+function CeldaObjeto({ objeto }: { objeto: ObjetoAsegurado | null }) {
+  if (objeto === null) {
+    return (
+      <span
+        style={{ color: 'var(--muted)' }}
+        title="La versión desplegada de central-asegura todavía no informa qué asegura cada póliza. No es que no se sepa: es que aún no llega por el puerto."
+      >—</span>
+    )
+  }
+  if (objeto.estado === 'no_informado' || (objeto.titulo === null && objeto.detalle === null)) {
+    return (
+      <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={objeto.nota ?? undefined}>
+        {objeto.estado === 'cifrado' ? '🔒 dato cifrado' : 'sin informar'}
+      </span>
+    )
+  }
+  return (
+    <span title={objeto.nota ?? undefined}>
+      <span style={{ color: objeto.estado === 'sin_objeto' ? 'var(--muted)' : 'var(--text)' }}>
+        {objeto.titulo}
+      </span>
+      {objeto.detalle && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>{objeto.detalle}</div>
+      )}
+    </span>
+  )
 }
 
 type RespVencimientos =
@@ -585,12 +630,13 @@ function Vencimientos() {
 
       {datos.polizas.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 }}>
             <thead>
               <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
                 <th style={{ padding: '6px 8px', fontWeight: 600 }}>Vence</th>
                 <th style={{ padding: '6px 8px', fontWeight: 600 }}>Cliente</th>
                 <th style={{ padding: '6px 8px', fontWeight: 600 }}>Ramo</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600 }}>Qué asegura</th>
                 <th style={{ padding: '6px 8px', fontWeight: 600 }}>Compañía</th>
                 <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'right' }}>Prima</th>
                 <th style={{ padding: '6px 8px', fontWeight: 600 }}>Estado</th>
@@ -614,6 +660,7 @@ function Vencimientos() {
                       )}
                     </td>
                     <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{TIPOS[p.tipo] ?? p.tipo}</td>
+                    <td style={{ padding: '8px', minWidth: 150 }}><CeldaObjeto objeto={p.objeto} /></td>
                     <td style={{ padding: '8px' }}>{p.aseguradora}</td>
                     <td style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {p.prima === null

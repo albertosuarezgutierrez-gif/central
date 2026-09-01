@@ -1,4 +1,4 @@
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { prisma } from '@/lib/db'
 import { puntosDiarios } from './precios-stooq'
 import { evaluarCestaVsBenchAlineada, metricasRiesgoAlineadas, type EvalCestaAlineada, type MetricasRiesgo } from '@central/module-trading'
@@ -251,7 +251,7 @@ export async function enviarPaperTracker(): Promise<{ enviado: boolean; medidas:
     lineas.push('', `🧊 <i>Toca congelar una cohorte nueva (la última tiene ${edadUltima} días): corre /api/trading/seleccion y añádela a COHORTES_PAPER (con su simbolosBase para la atribución).</i>`)
   }
 
-  await tgSend(lineas.join('\n')).catch(() => {})
+  await tgAviso('trading.paper-tracker', lineas.join('\n')).catch(() => {})
   return { enviado: true, medidas, persistidos }
 }
 
