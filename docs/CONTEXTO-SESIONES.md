@@ -60,9 +60,16 @@
   parecían obvias eran las TRES falsas (`aiComplete` devuelve `string`; `openrouterVision` toma 5 args e
   `ImageInput` es `{data,mediaType}`; `createMailTransporter()` **no recibe credenciales**, las lee del
   entorno y devuelve `Transporter | null`). Comprobarlas contra `packages/*` antes de escribirlas.
-- 🐛 **Bug destapado en `scripts/rotar-memoria.mjs`** (no tocado en este PR): la heurística «la fecha real
-  es la ÚLTIMA de la cabecera» archiva en agosto la entrada `### 🔴 (01/09/2026) GH_PAT_TRIGGER … desde el
-  31/08`. En las cabeceras `### `, la fecha entre paréntesis manda sobre la del texto.
+- 🐛 **Bug del rotador de memoria, ARREGLADO en la misma sesión (#1952).** `rotar-memoria.mjs` archivaba
+  por la ÚLTIMA fecha de la cabecera: mandaba a agosto la entrada `### 🔴 (01/09/2026) GH_PAT_TRIGGER …
+  desde el 31/08` y, peor, a **octubre-2025** la de `### 💶 (15/08/2026) Reserva Luxury 22-25/10 …` (un
+  rango de noches leído como fecha). Ahora manda la fecha ENTRE PARÉNTESIS. Guardián nuevo
+  `test/regression-rotar-memoria.test.ts`, verificado que falla sin el fix. ⚠️ El flag es `--dry-run`:
+  `--check` NO existe y ejecuta la rotación de verdad.
+- **Cola de PRs vaciada a petición de Alberto:** 10 mergeados (#1946, #1914, #1928, #1913, #1921, #1865,
+  #1879, #1947, #1952, #1927), revisando el diff de cada uno. La rotación mensual de la auditoría (#1927)
+  se **rehízo** sobre `main` actual con el rotador ya corregido — 540 entradas a agosto, 23 vivas — y se
+  retiró el `docs/memoria/2025-10.md` que había creado el bug.
 
 - **Pendiente de Alberto:** elegir modo de ejecución del plan, y la infra (proyecto Vercel `asegura-portal`,
   rol `prisma_asegura_portal` SIN BYPASSRLS con contraseña, envs, WABA).
