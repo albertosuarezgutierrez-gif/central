@@ -43,6 +43,20 @@
 
 ---
 
+### 💶 (01/09/2026) asegura: cliente de tarificación Codeoscopic con contador y TOPE
+- `apps/asegura/lib/codeoscopic/` — config · contador (puro) · libro en BD · token+transporte ·
+  parser (puro) · orquestador. **43 tests verdes**; typecheck y QA limpios.
+- **Apagado por defecto** (`CODEOSCOPIC_TARIFICACION_ACTIVA`); sonda GRATIS
+  `/api/operador/codeoscopic/sonda` (solo token) que corre con el interruptor apagado y separa
+  fallo de HOST de fallo de CREDENCIALES.
+- 🚨 **Tope persistente en `seguros.codeoscopic_consumo`** (en memoria sería mentira en serverless):
+  tres estados y solo `descartado` con evidencia libera cupo — **un timeout NO es evidencia**.
+  Sin libro legible NO se cotiza. Topes 20/día · 200/mes, techo duro 250/1000.
+- **Hallazgo:** en el fixture real **0 de 18 precios eran firmes** (2 estimados, 16 condicionados) →
+  el parser devuelve `firmeza` + avisos. Envs de Codeoscopic ya puestas en Vercel por Alberto.
+- ⚠️ Detectado de paso: el schema `seguros` **ya tiene sus 52 tablas** (todas a 0 filas), así que
+  `estadoMigracion()` (cuenta TABLAS) dirá «migrado» sobre una cartera vacía. Sin tocar: avisado.
+
 ### 🔑 (01/09/2026) Codeoscopic: credenciales de PRODUCCIÓN activas + host prod — ya se puede cotizar
 - Mensaje de Manuel: el Bitwarden Send trae el set `CODEOSCOPIC_*` de **PRODUCCIÓN, ACTIVO** (lo
   caducado era solo el usuario sandbox `albertocsf0170ws` → regeneración EN PAUSA; si 401, escribe

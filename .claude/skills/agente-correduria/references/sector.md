@@ -154,6 +154,41 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
 - Manuales de la PLATAFORMA (no de la API) sí están: ticket 267332 del 25/05/2026, más
   `academy.codeoscopic.com` y el KB `codeoscopicavant2.zohodesk.com`.
 
+### 🔌 Cliente de tarificación en `central` — construido el 01/09/2026
+
+Vive en **`apps/asegura/lib/codeoscopic/`** y es la ÚNICA puerta por la que se gasta dinero en
+Codeoscopic. Piezas: `config.ts` (resolución de entorno), `contador.ts` (tope, **puro**),
+`consumo.ts` (libro en BD), `cliente.ts` (token + transporte), `respuesta.ts` (parser, **puro**),
+`cotizar.ts` (orquestador). 43 tests en verde.
+
+**Lo que hay que saber para no romperlo:**
+- **Apagado por defecto.** Sin `CODEOSCOPIC_TARIFICACION_ACTIVA=true` (literal exacto) no sale ni
+  una petición facturable. Es «el smoke solo con el OK de Alberto» puesto en código.
+- **Sonda GRATIS antes de encender:** `GET /api/operador/codeoscopic/sonda` (Bearer
+  `ASEGURA_OPERADOR_SECRET`) pide solo el token OAuth2 —que no se factura— y funciona con el
+  interruptor apagado. Distingue «no conecta» (sospecha del HOST) de «conecta y rechaza»
+  (sospecha de las CREDENCIALES), que es el diagnóstico que siempre se confunde.
+- **El tope vive en BD, no en memoria** (`seguros.codeoscopic_consumo`, SQL en
+  `apps/asegura/prisma/sql/2026-09-01_codeoscopic_consumo.sql`). En serverless un contador en
+  memoria se reinicia en cada cold start: sería un tope que parece existir y no existe.
+- 🚨 **Una cotización EN VUELO cuenta como gastada.** El libro tiene tres estados y solo
+  `descartado` —con evidencia— libera cupo. Un **timeout NO es evidencia**: la cotización tarda
+  hasta 150 s y el proyecto puede haberse creado igual. Tampoco lo es un 5xx ni un corte de red a
+  media petición (solo los fallos ANTERIORES al envío, tipo `ENOTFOUND`/`ECONNREFUSED`, prueban
+  que no hubo cargo). Es la regla «dato que NO hay ≠ dato que NO se ha mirado» aplicada al dinero.
+- **Si no se puede leer el libro, NO se cotiza** (fail closed). Un tope que no se puede comprobar
+  no es un tope.
+- Topes por defecto **20/día y 200/mes** (10,00€ y 100,00€), techo duro de 250/1000 contra el dedo
+  gordo. Se suben con `CODEOSCOPIC_TOPE_DIARIO` / `CODEOSCOPIC_TOPE_MENSUAL`.
+
+🚨 **Hallazgo del parser, medido sobre el fixture real: de los 18 precios que devolvió aquella
+cotización, NINGUNO era firme** — 2 venían con `estimate: true` y 16 con avisos del tipo «Riesgo
+condicionado» u «observaciones de la compañía». Por eso cada precio sale del parser con su
+**firmeza** (`firme` / `condicionado` / `estimado`) y sus avisos: enseñar «251,77€» a pelo es
+prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ausente **no** se asume
+`false`.
+
+
 ## 5. El negocio real de ASegura (estado 01/09/2026)
 - Cartera en el Supabase de ASEGURA (leída en vivo por plataforma): **50 pólizas en
   vigor · 995 sin fecha · 27.793 históricas · 2.742 clientes · 29.858 leads · 7
