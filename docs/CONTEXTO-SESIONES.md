@@ -52,7 +52,7 @@
   (parser `lib/correo/smoobu-notificacion.ts`, 8 tests con el correo real); el vigía compara también
   contra `b.id` y mira `incomes` antes de preguntar; y el aviso dice el **canal REAL** (Expedia,
   Agoda…) o ninguno — ya no manda a la extranet de Booking a por una reserva de Expedia.
-- Fila 10 (cancelación de JUAN PONCE) corregida a mano en BD: era `nueva`/`huerfana`. PR pendiente.
+- Fila 10 (cancelación de JUAN PONCE) corregida a mano en BD: era `nueva`/`huerfana`. PR #1978, mergeado.
 
 ### 💶 (01/09/2026) asegura: cliente de tarificación Codeoscopic con contador y TOPE
 - `apps/asegura/lib/codeoscopic/` — config · contador (puro) · libro en BD · token+transporte ·
