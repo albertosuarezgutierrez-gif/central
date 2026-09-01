@@ -32,6 +32,19 @@
 
 ---
 
+### 🧾 (01/09/2026) asegura: prompt para el Claude de Manuel (Codeoscopic/Avant2, tarificación)
+- Manuel pidió un prompt para su Claude → escrito en **`docs/CODEOSCOPIC-PROMPT-MANUEL.md`** (lo envía
+  Alberto). Pide: doc de la API + host base (no consta en ningún correo de Alberto), esquema de auth,
+  endpoints del flujo de cotización con payloads anonimizados, webhook (Basic Auth pendiente +
+  `project_not_found`), tablas/estados, NOMBRES de envs (valores por gestor) y si el 0,50€ es por
+  cotización o emisión. Solo tarificar; la emisión sigue tras su flag, apagada.
+- Contexto medido: las tablas `codeoscopic_*` del volcado traen solo el rastro de pruebas (1 proyecto,
+  15 precios, 2 webhooks fallidos) — lo necesario para conectar vive en el repo de Manuel.
+- ✅ **Resuelto en el Gmail el 0,50€: es POR COTIZACIÓN**, facturado a mes vencido (correo del CEO
+  09/04 + presupuesto de Cristina 14/05 en texto). Actualizado en `sector.md` §4 — todo automatismo
+  que cotice lleva contador y tope (~109 pólizas vivas ≈ 54,50€/pasada).
+- Al contestar Manuel: volcar a `references/sector.md` §4 y pedir regeneración de credenciales sandbox.
+
 ### 💶 (01/09/2026) Comisiones de la correduría: spec del control devengo → liquidación → cobro → renta
 - Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuenta», y que el borrador
   del IRPF cuadre. Medido: **hoy el borrador no se cuadra, se COPIA** (hilo Asecon IRPF 2025: «ingresos
