@@ -43,6 +43,17 @@
 
 ---
 
+### 🚨 (01/09/2026) Vigía de reservas: los 3 avisos que mandó eran FALSOS (y no solo hay Booking)
+- El 🚨 «reserva 153896946 que Smoobu NO tiene» era falso: está en Smoobu y en `incomes` (Expedia,
+  Busto Reform, 03→07/09, Karl Brunelliere). El nº salía del **enlace del propio correo de Smoobu**
+  (`login.smoobu.com/es/booking/detail/153896946` = `incomes.reservationId`), y el vigía solo
+  comparaba contra las referencias de la OTA. Las 3 alertas emitidas hasta hoy, falsas.
+- Arreglado: la notificación de `service@smoobu.com` ya no entra al vigía ni al agente de huéspedes
+  (parser `lib/correo/smoobu-notificacion.ts`, 8 tests con el correo real); el vigía compara también
+  contra `b.id` y mira `incomes` antes de preguntar; y el aviso dice el **canal REAL** (Expedia,
+  Agoda…) o ninguno — ya no manda a la extranet de Booking a por una reserva de Expedia.
+- Fila 10 (cancelación de JUAN PONCE) corregida a mano en BD: era `nueva`/`huerfana`. PR pendiente.
+
 ### 💶 (01/09/2026) asegura: cliente de tarificación Codeoscopic con contador y TOPE
 - `apps/asegura/lib/codeoscopic/` — config · contador (puro) · libro en BD · token+transporte ·
   parser (puro) · orquestador. **43 tests verdes**; typecheck y QA limpios.

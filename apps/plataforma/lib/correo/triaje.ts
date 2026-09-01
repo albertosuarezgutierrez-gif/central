@@ -13,6 +13,7 @@ import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './hue
 import { parsearAvisoBooking } from './reserva-booking'
 import { registrarAvisoBooking, registrarReservaHuesped } from '@/lib/sivra/reservas-booking-vigia'
 import { parsearAvisoMensajesAgoda, textoAvisoAgoda } from './agoda-mensajes'
+import { parsearNotificacionSmoobu } from './smoobu-notificacion'
 import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 
@@ -115,7 +116,14 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           }
 
           // Huéspedes → agente de SIVRA (best-effort; si no resuelve, sigue el aviso normal).
-          if (ruta.enrutarSivra) {
+          // 🚨 SALVO que sea la notificación de reserva del PROPIO Smoobu (service@smoobu.com,
+          // «Nueva reserva para <piso>: … (<canal>)»). Ese correo no es un mensaje de huésped —su
+          // «Mensaje del huésped» es el campo de peticiones de la OTA— y sobre todo es la FUENTE
+          // diciendo que ya tiene la reserva: meterlo en el vigía es usar el aviso de Smoobu como
+          // prueba de que a Smoobu le falta algo. Pasó tres veces de tres (01/09/2026): el nº que
+          // se extraía salía del enlace `login.smoobu.com/es/booking/detail/<id>` del propio correo.
+          const notifSmoobu = parsearNotificacionSmoobu({ from: correo.from, subject: correo.subject })
+          if (ruta.enrutarSivra && !notifSmoobu) {
             await enrutarHuesped(correo).catch(() => ({ enrutado: false }))
             // Leg B del vigía Booking↔Smoobu: el mensaje trae nº de confirmación pero Smoobu no
             // lo reconoce → puede ser una reserva que Smoobu perdió (caso James Ascott: Booking

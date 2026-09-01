@@ -72,7 +72,8 @@ export async function GET(req: NextRequest) {
         ORDER BY "createdAt" DESC
         LIMIT 20
       `),
-      // Reservas de Booking que Smoobu NO tiene (vigía reservas_correo_booking, estado huérfana):
+      // Reservas de una OTA (Booking, Expedia, Agoda…) que Smoobu NO tiene (vigía
+      // reservas_correo_booking, estado huérfana):
       // se pintan ⚠️ para que Si que Brilla no se quede sin verlas mientras Smoobu se arregla. Solo las
       // que tienen piso y fecha identificados — sin eso no hay dónde pintarlas (el Telegram a
       // Alberto sí las lleva todas).
