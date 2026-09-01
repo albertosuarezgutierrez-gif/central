@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T20:30:19Z",
+  "generadoEn": "2026-09-01T21:06:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1896,7 +1896,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1946,7 +1946,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura-portal": {
         "estado": "no",
@@ -3526,6 +3526,8 @@
     "asegura": [
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/cartera/catalogos",
+      "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/comisiones",
       "/api/operador/ingesta",
@@ -5300,6 +5302,14 @@
   ],
   "novedades": [
     {
+      "titulo": "BD de matrículas gratis: no la hay útil.",
+      "fecha": ""
+    },
+    {
+      "titulo": "Siguiente ramo: HOGAR",
+      "fecha": ""
+    },
+    {
       "titulo": "`deductible` la traen 10 de 18 precios",
       "fecha": ""
     },
@@ -5349,14 +5359,6 @@
     },
     {
       "titulo": "Cloud API directa de Meta, no 360dialog",
-      "fecha": ""
-    },
-    {
-      "titulo": "PENDIENTE que no depende de nadie y es el único camino crítico: dar de alta la WABA",
-      "fecha": ""
-    },
-    {
-      "titulo": "PENDIENTE (nuevo):",
       "fecha": ""
     }
   ],
@@ -5812,7 +5814,7 @@
     "packages": 39,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1217,
+    "apis": 1219,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
