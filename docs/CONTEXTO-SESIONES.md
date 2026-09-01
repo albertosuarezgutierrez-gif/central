@@ -32,6 +32,20 @@
 
 ---
 
+### 🔑 (01/09/2026) La cartera en vivo: era la CONTRASEÑA — y un valor del chat acabó de contraseña
+- Logs del pooler (MCP Supabase_asegura, nuevo conector): `password authentication failed for user
+  "central_asegura"` → el fallo era la contraseña del `ASEGURA_DATABASE_URL` pegado en Vercel
+  (host/usuario correctos; el blindaje pgbouncer de #1905 quedó descartado como causa).
+- 🚨 Incidente: al guiar el arreglo por Claude Chrome, la HUELLA de verificación (md5 del verificador
+  SCRAM) publicada en el chat se usó como contraseña del rol. Lección: **jamás publicar un valor con
+  pinta de credencial sin marcarlo como NO-USAR**; los secretos los genera el gestor de Alberto y no
+  pasan por ningún chat. Exposición revisada en logs: solo fallos de auth, ninguna huella de acceso
+  (matiz: log_connections apagado). Rotación en curso con marcador `<<CLAVE>>` que rellena Alberto.
+- Aparte: algo con `postgres.js` desde `63.180.181.94` intenta entrar como `postgres` cada 5 min y
+  falla — no es nuestro (nosotros: Prisma + central_asegura). Preguntar a Manuel en el traspaso.
+- Además: 🛡️ Correduría entra por fin en el menú de plataforma (PR #1907, guardián incluido) —
+  «no me sale correduría»: /correduria nunca estuvo en NAV_NEGOCIO.
+
 ### 🔑 (31/08/2026) House Sevillana YA ENVÍA · el PIN por reserva sustituye al maestro · salida flexible (PRs #1906, #1908)
 - **House Sevillana ACTIVADA** (`mensajes_prog_pisos.activo=true`, 21:45). Hoy no sale nada: los dos
   primeros hitos de la reserva viva ya estaban reclamados en sombra, así que el 1er envío real es el
