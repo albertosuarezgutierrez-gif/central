@@ -80,7 +80,19 @@
   `polizas`/`clientes` sin altas desde el **24/08**; `oportunidades` desde jun/2026. No
   confundir «no hay altas» con «la ingesta está rota»: son cosas distintas y hay que mirar
   cuál de las dos es antes de afirmar nada.
-- **Vencimientos hoy: 6 pólizas en 30 días, 8 en 60 días.** Es la primera pieza accionable
-  del negocio y ya se puede consultar (`polizas.fecha_vencimiento`).
+- **Vencimientos (01/09/2026, con la regla de vigencia de `@central/module-seguros`): 5 en 30 días,
+  7 en 60, 13 en 90**, con **3.899,05€** de prima conocida a 90 días y **4 pólizas sin prima
+  informada** (Allianz no la manda por EIAC). ⚠️ Un primer conteo dio «6 y 8» porque contaba por
+  `fecha_vencimiento` a secas, sin filtrar el estado: colaba pólizas **canceladas (`situacion='AN'`)**
+  con vencimiento futuro. La fecha sola no dice que una póliza esté viva.
+- **La cartera VIVA son las 59 pólizas con `situacion='EV'`** (37 auto · 13 hogar · 8 RC · 1 moto;
+  Mapfre y Allianz). Las 25.892 `vencida` (2013→2018) y las 830 `en_renovacion` (2023-24) son
+  histórico heredado. Ramos DGS observados en la cartera: **241** en auto/moto, **2151** en hogar,
+  **282** en RC — el campo semántico fiable es `polizas.tipo`, no `ramo_dgs`.
+- **Ventana comercial (LCS art. 22), ya implementada:** a más de un mes del vencimiento el tomador
+  puede oponerse a la prórroga y la póliza se puede mover; a menos de un mes se prorroga sí o sí.
+  Helper puro `@central/module-seguros/vencimientos` (`urgenciaRenovacion`, `fechaLimiteOposicion`,
+  `primaEnRiesgo`), consumido por el puerto `/api/operador/vencimientos` de asegura y pintado en
+  plataforma `/correduria`.
 - Los **29.858 leads** son el activo comercial dormido: nadie los trabaja hoy. RGPD manda:
   verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
