@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarCartera, interpretarVencimientos } from './cartera-asegura.ts'
+import { interpretarCartera, interpretarObjeto, interpretarVencimientos } from './cartera-asegura.ts'
 
 const RESUMEN_OK = {
   correduria: { nombre: 'Grupo Asegura' },
@@ -112,4 +112,38 @@ test('resumen: con contadores presentes se propagan tal cual', () => {
     assert.equal(r.vence30, 6)
     assert.equal(r.vence60, 8)
   }
+})
+
+// ── Objeto asegurado ────────────────────────────────────────────────────────
+
+test('objeto: una versión antigua del puerto (sin el campo) da null, no una fila rota', () => {
+  const r = interpretarVencimientos(200, VENC_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].objeto, null)
+})
+
+test('objeto: se propaga tal cual cuando el puerto lo manda bien', () => {
+  const con = {
+    ...VENC_OK,
+    polizas: [{ ...FILA_OK, objeto: { estado: 'conocido', titulo: 'SEAT IBIZA', detalle: '1234ABC', nota: null } }],
+  }
+  const r = interpretarVencimientos(200, con)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') {
+    assert.equal(r.polizas[0].objeto?.titulo, 'SEAT IBIZA')
+    assert.equal(r.polizas[0].objeto?.detalle, '1234ABC')
+  }
+})
+
+test('objeto: «cifrado» y «no informado» NO se colapsan entre sí', () => {
+  assert.equal(interpretarObjeto({ estado: 'cifrado', titulo: null, detalle: null, nota: 'x' })?.estado, 'cifrado')
+  assert.equal(interpretarObjeto({ estado: 'no_informado', titulo: null, detalle: null, nota: 'x' })?.estado, 'no_informado')
+})
+
+test('objeto: una forma rara degrada a null y NO tumba la fila entera', () => {
+  assert.equal(interpretarObjeto({ estado: 'inventado' }), null)
+  assert.equal(interpretarObjeto('SEAT IBIZA'), null)
+  assert.equal(interpretarObjeto(null), null)
+  const r = interpretarVencimientos(200, { ...VENC_OK, polizas: [{ ...FILA_OK, objeto: 42 }] })
+  assert.equal(r.estado, 'ok')
 })

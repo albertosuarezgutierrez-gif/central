@@ -135,6 +135,32 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
   Helper puro `@central/module-seguros/vencimientos` (`urgenciaRenovacion`, `fechaLimiteOposicion`,
   `primaEnRiesgo`), consumido por el puerto `/api/operador/vencimientos` de asegura y pintado en
   plataforma `/correduria`.
+- **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
+  431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
+  vive en **`polizas.datos_especificos`** (JSON libre que escribe la ingesta EIAC, distinto por
+  ramo) y, para lo que no tiene bien, en **`poliza_coberturas.descripcion`**. Medido sobre la
+  cartera entera:
+  - **auto/moto** → `matricula` (4.506 filas, **EN CLARO**), `marca`/`modelo` (~1.420 cada uno),
+    `version`, `anio`, `combustible`, `tipoVehiculo`. ⚠️ **La clave `vehiculo` (2.781 filas) NO es
+    una descripción: contiene la MATRÍCULA.** Pintarla como modelo es inventarse el dato.
+  - **hogar** → `localidad` (181) y `cp` (330) en claro, `metrosCuadrados`, `anioConstruccion`,
+    `continente`/`contenido`. La **`direccion` (172) viene CIFRADA** (`v1:iv:cipher:tag`,
+    AES-256-GCM, clave `PII_ENCRYPTION_KEY` que hoy vive en el Vercel de Manuel). Sin esa env se
+    dice **«cifrado»**, que NO es «sin dato»: el dato existe y aparecerá solo el día que la clave
+    llegue con el traspaso (`descifrarDireccion` en `apps/asegura/lib/cartera.ts` ya lo intenta).
+  - **RC (81) y comercio (110)** → `datos_especificos` NO trae nada útil; lo que identifica una RC
+    son sus **modalidades** (`poliza_coberturas`: «Básica», «Locativa», «Accidentes de trabajo»).
+    Solo 9 de las 81 RC tienen coberturas cargadas. Comercio sí trae `actividad` (28).
+  - **vida / salud / decesos / accidentes** → no hay bien: son seguros de PERSONAS. Ausencia
+    **definitiva**, no «pendiente» — prometer una pasada futura que traiga el dato sería mentir.
+  - `_estado_legacy_pre_loo695` es ruido de una migración del CRM, no un dato.
+  Helper puro **`@central/module-seguros/objeto`** (`objetoAsegurado`) con **cuatro** salidas
+  (`conocido` · `no_informado` · `cifrado` · `sin_objeto`); lo consumen el puerto
+  `/api/operador/vencimientos` de asegura, la columna **«Qué asegura»** de plataforma `/correduria`
+  y el aviso de renovaciones por Telegram. **Al informar a Alberto de una renovación, di SIEMPRE
+  qué asegura** — sin eso el aviso no sirve para llamar. Y sigue vigente la regla de PII: en
+  informes y chats, agregados; la matrícula solo si Alberto pregunta por un caso concreto.
+
 ## 6. Novedades 2026 y argumentario de renovación (investigado 01/09/2026)
 > ⚠️ Verificado contra fuentes secundarias del sector (INESE, UNESPA, ICEA, DGSFP): el proxy de la
 > sesión bloquea `boe.es` y `dgsfp.mineco.gob.es`, así que **antes de citarle una norma a un cliente

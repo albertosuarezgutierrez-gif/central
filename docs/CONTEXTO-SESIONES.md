@@ -32,6 +32,21 @@
 
 ---
 
+### 🚗 (01/09/2026) Renovaciones: columna «Qué asegura» (matrícula, dirección, tipo de RC)
+- Alberto, sobre la tabla de renovaciones de `/correduria`: «necesito otra columna con datos — auto
+  matrícula marca modelo, hogar dirección, RC de qué tipo… y siempre informa al agente».
+- Helper puro nuevo **`@central/module-seguros/objeto`** (`objetoAsegurado`, 17 tests) con **cuatro**
+  salidas: `conocido` · `no_informado` (la compañía no lo manda) · `cifrado` (la dirección de hogar
+  viene `v1:…`, AES-256-GCM; la clave sigue en el Vercel de Manuel) · `sin_objeto` (vida/salud/decesos
+  son seguros de PERSONAS: ausencia definitiva, no «pendiente»). Ninguno se pinta como hueco vacío.
+- Medido en la cartera real: `matricula`/`marca`/`modelo` en claro; **`datos_especificos.vehiculo` NO
+  es una descripción, contiene la matrícula**; una RC se identifica por sus modalidades
+  (`poliza_coberturas`), no por `datos_especificos`. Las 16 pólizas de la ventana salen `conocido`.
+- Cableado de punta a punta: `apps/asegura/lib/cartera.ts` (+ intento de descifrado) → puerto
+  `/api/operador/vencimientos` → `interpretarObjeto` en plataforma (campo opcional: una versión vieja
+  del puerto da `null` = «aún no llega», distinto de «no informado») → columna en `/correduria` y línea
+  del Telegram de renovaciones. Skill `agente-correduria` actualizada (SKILL §2 + sector §5).
+
 ### 🔔 (01/09/2026) Panel «Avisos Telegram» (`/telegram`): catálogo + interruptor por aviso
 - Alberto: «las notificaciones de Telegram son muchas… un panel que las resuma y que pueda activarlas
   o desactivarlas». Hecho en `apps/plataforma`: **76 avisos PROACTIVOS catalogados** (`lib/telegram/catalogo.ts`),
