@@ -71,8 +71,17 @@ Además del cotizador hay superficie de CRM completa, que no estaba en el radar:
 - **Organización:** `/organizations`, `/offices`, `/sales-agents`, `/collaborators`.
 - **Direcciones normalizadas:** `/provinces/{id}/municipalities/{id}/roads/{id}/properties`.
 
-Merece una decisión aparte: parte de lo que estamos migrando de la BD de Manuel quizá se pueda leer
-directamente de aquí.
+🚫 **NO usar esto como fuente de la cartera. Dictado por Alberto (01/09/2026), y tiene razón:**
+esa función **ya la tenemos por CIMA, y conectada** — que es **la conexión directa con las
+compañías**. Mapfre, Allianz, Occident y Reale mandan sus pólizas, recibos, liquidaciones y
+siniestros por EIAC/TIREA todos los días, y de ahí sale el control de comisiones.
+
+Leer `/policies` o `/receipts` de Codeoscopic sería leer **el espejo de Avant2**: solo lo que haya
+pasado por su plataforma (hoy, un proyecto), de segunda mano, y añadiendo dependencia de un
+proveedor para un dato que ya llega de la fuente. **Peor en cobertura, en frescura y en riesgo.**
+
+Estos endpoints se documentan aquí para saber que existen, no porque haya que usarlos. Si algún día
+sirven para algo será para lo contrario: **empujar** a Avant2 lo que emitamos, no leer de él.
 
 ## Piezas del flujo de cotización
 

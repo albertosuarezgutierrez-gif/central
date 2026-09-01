@@ -197,9 +197,13 @@ el traspaso de Manuel describe lo que él implementó, no lo que la API ofrece. 
   que exige créditos de pago** (`comercial@codeoscopic.com`). Antes de diseñar nada encima, pedir precio.
 
 También: `POST /insurance-drafts` crea un borrador con **todos los campos opcionales salvo el ramo**,
-para que lo remate una persona en Avant2 — la vía barata para un lead sin pagar cotización. Y la API
-expone pólizas, recibos, siniestros y clientes: parte de lo que estamos migrando de la BD de Manuel
-quizá se lea directamente de ahí.
+para que lo remate una persona en Avant2 — la vía barata para un lead sin pagar cotización.
+
+🚫 **La API expone pólizas, recibos, siniestros y clientes, pero NO son nuestra fuente** (dictado de
+Alberto, 01/09/2026): eso **ya lo tenemos por CIMA y conectado**, que es la conexión DIRECTA con las
+compañías. Codeoscopic solo sería el espejo de lo que haya pasado por Avant2 —hoy un proyecto—, de
+segunda mano y con dependencia añadida. Si alguna vez sirven, será para **empujar** lo emitido, no
+para leer la cartera.
 
 Confirmado además: el host de la API **no lleva `portal.`** (el propio portal muestra el Token URL
 `https://api-int.codeoscopic.io/oauth2/token`), y `identification`/`identificationType` están
