@@ -48,6 +48,11 @@
   Ingesta CIMA = cron diario ~11:40 UTC **fuera de nuestro alcance**: en ese Supabase NO hay pg_cron ni
   Edge Functions, así que todo lo alimenta el Vercel de Manuel — y ese Vercel **no se ve desde aquí**
   (el conector solo alcanza el team «Pisos turisticos», donde ni `asegura` ni `central-asegura` están).
+- 💡 **Idea de Alberto guardada: «Agente IA Defensa cartera»** (`references/defensa-cartera.md`
+  + su diagrama). Recibo de PRECARTERA → agente nocturno → retarificar → comparar nueva producción
+  vs cartera → pantalla de desviación de recibos → respuesta al cliente. NO implementado; depende
+  de (a) saber qué estado de `poliza_recibos` es la precartera, (b) la API de Avant2 —y **cada
+  cotización cuesta 0,50€**, así que necesita presupuesto—, y (c) Fase 3 para lo del cliente.
 - 🚨 **Método — cómo NO verificar un deploy de Vercel (01/09/2026, me costó 3 falsos negativos):** se
   dio por hecho que plataforma «no había desplegado» porque el identificador `dpl_…` incrustado en el
   HTML de `/login` no cambiaba. **`/login` es una página PRERENDERIZADA (ISR)**: su HTML lo sirve el CDN
