@@ -57,10 +57,20 @@
   compañía y las manda a `soporte@codeoscopic.com`, que las configura. Por eso viajaron en claro
   por email (mayo-junio/2026, tickets 267334) — **pendientes de rotar**.
 - **Entornos (web):** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
-  `https://albertosuarezgutierrez.avant2.es`. ✅ **Host base de la API REST (resuelto 01/09/2026,
-  del repo de Manuel): sandbox `https://api-int.codeoscopic.io`** (OJO: **sin** el prefijo
-  `portal.` que menciona una doc vieja). El host de producción NO consta ni en su repo (se inyecta
-  por env `CODEOSCOPIC_BASE_URL`): pedirlo a Codeoscopic.
+  `https://albertosuarezgutierrez.avant2.es`. ✅ **Hosts de la API REST (cerrados 01/09/2026):
+  producción `https://api.codeoscopic.io` · sandbox `https://api-int.codeoscopic.io`** (OJO: sin el
+  prefijo `portal.` que menciona una doc vieja). El de producción lo confirmó Manuel por mensaje
+  (iba en su Bitwarden Send junto a las credenciales).
+- 🚨 **Credenciales (mensaje de Manuel, 01/09/2026): las del Send son de PRODUCCIÓN y están
+  ACTIVAS.** Lo que caducó en junio era solo el **usuario de sandbox** (`albertocsf0170ws`) — la
+  regeneración queda EN PAUSA: se prueba a cotizar en prod directamente y, si diera 401, escribe
+  Manuel a JM (tiene el hilo). **Consecuencia: NO hay sandbox utilizable → toda cotización es real
+  y facturable (0,50€)**; el contador+tope no es para «cuando se automatice»: va en el PRIMER
+  smoke, y ese smoke (1 cotización, 0,50€) se lanza solo con OK explícito de Alberto.
+- **OpenAPI: Manuel NO lo tiene** (su `SPEC_REF` era un enlace de trazabilidad a Linear, no el
+  spec). Referencia de trabajo = el traspaso + el fixture; el contrato formal, si hace falta, se
+  pide a JM. El **fixture** `2026-06-10-sandbox-quote-response.json` lo envió Manuel (sanitizado);
+  pendiente de incorporarlo al repo cuando Alberto lo pase.
 - **Coste: 0,50€ POR COTIZACIÓN — resuelto el 01/09/2026 leyendo el Gmail.** Dos fuentes escritas y
   coherentes: el correo del CEO Ángel Blesa (09/04/2026, «se cobra por cotización… 50 céntimos por
   cotización», tarifa de amigo; recotizar el mismo coche añadiendo un conductor son «2 cotizaciones
