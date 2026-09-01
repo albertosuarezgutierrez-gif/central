@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T11:49:59Z",
-  "sha": "b1826abc70abb9063f188159979aae91016e68a2",
+  "generadoEn": "2026-09-01T13:36:24Z",
+  "sha": "82d202f4511f410a3c5382318bbaedbc7d59d549",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49987,7 +49987,7 @@
           "params": "",
           "retorno": null,
           "linea": 191,
-          "resumen": "─── TAB TAREAS ───────────────────────────────────────────────── Tareas sueltas para la limpieza (Sique Brilla) — aparte de las limpiezas por reserva. Las ven y las marcan hechas desde su intranet (/i"
+          "resumen": "─── TAB TAREAS ───────────────────────────────────────────────── Tareas sueltas para la limpieza (Si que Brilla) — aparte de las limpiezas por reserva. Las ven y las marcan hechas desde su intranet (/"
         },
         {
           "nombre": "TabSemana",
@@ -50057,7 +50057,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3dc49bf81870"
+      "hash": "8576456bd5c7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/limpiadoras/page.tsx",
@@ -54700,7 +54700,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "85f5c7feaef0"
+      "hash": "c9102de92b9d"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -57259,7 +57259,7 @@
     {
       "ruta": "apps/plataforma/app/api/sivra/facturas-limpieza/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Facturas de limpieza (Sique Brilla) con su desglose REAL por piso. El P&L por piso infiere el desglose de cada pago por mejor ajuste al importe; la factura lo dice. Aquí se aporta: un PDF (lo lee la IA) o el desglose a mano. En ambos casos pasa por la MISMA validación aritmética (`validarFactura`): ",
+      "resumen": "Facturas de limpieza (Si que Brilla) con su desglose REAL por piso. El P&L por piso infiere el desglose de cada pago por mejor ajuste al importe; la factura lo dice. Aquí se aporta: un PDF (lo lee la IA) o el desglose a mano. En ambos casos pasa por la MISMA validación aritmética (`validarFactura`):",
       "exporta": [
         "GET",
         "POST"
@@ -57295,7 +57295,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/facturas-limpieza",
-      "hash": "543a7abc49e3"
+      "hash": "d03729aa3b8f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/fiscal/route.ts",
@@ -58262,7 +58262,7 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 18,
-          "resumen": "GET /api/sivra/limpieza-intranet/datos?from=AAAA-MM-DD&to=AAAA-MM-DD Datos de la pantalla de la limpieza (Sique Brilla) o del preview de Alberto: - reservas: ocupación + nº huéspedes de los 4 pisos. S"
+          "resumen": "GET /api/sivra/limpieza-intranet/datos?from=AAAA-MM-DD&to=AAAA-MM-DD Datos de la pantalla de la limpieza (Si que Brilla) o del preview de Alberto: - reservas: ocupación + nº huéspedes de los 4 pisos. "
         }
       ],
       "tablas": [
@@ -58275,7 +58275,7 @@
         "reservas_correo_booking"
       ],
       "rutaApi": "/api/sivra/limpieza-intranet/datos",
-      "hash": "d8af25a1c012"
+      "hash": "52f327d79773"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/enlace/route.ts",
@@ -58312,12 +58312,12 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 8,
-          "resumen": "Entrada del enlace de la limpieza (Sique Brilla): valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Mismo patrón que /api/trading/invitado."
+          "resumen": "Entrada del enlace de la limpieza (Si que Brilla): valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Mismo patrón que /api/trading/invitado."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/limpieza-intranet/invitado",
-      "hash": "59f5b2e19fd3"
+      "hash": "afebaf8e579d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/partes/foto/route.ts",
@@ -58333,7 +58333,7 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 10,
-          "resumen": "GET /api/sivra/limpieza-intranet/partes/foto?id=N — sirve la foto de un parte desde la BD. Autenticada como el resto de la intranet (sesión de Alberto o cookie de invitado de Sique Brilla): las fotos "
+          "resumen": "GET /api/sivra/limpieza-intranet/partes/foto?id=N — sirve la foto de un parte desde la BD. Autenticada como el resto de la intranet (sesión de Alberto o cookie de invitado de Si que Brilla): las fotos"
         }
       ],
       "tablas": [
@@ -58341,7 +58341,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/limpieza-intranet/partes/foto",
-      "hash": "754de36229a6"
+      "hash": "35b57ef6b2f3"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/partes/route.ts",
@@ -58357,7 +58357,7 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 17,
-          "resumen": "POST /api/sivra/limpieza-intranet/partes — parte de incidencia de Sique Brilla sobre UNA limpieza (property_id + fecha): nota y/o foto. Se registra en la BD y se avisa a Alberto por Telegram (best-eff"
+          "resumen": "POST /api/sivra/limpieza-intranet/partes — parte de incidencia de Si que Brilla sobre UNA limpieza (property_id + fecha): nota y/o foto. Se registra en la BD y se avisa a Alberto por Telegram (best-ef"
         }
       ],
       "tablas": [
@@ -58365,7 +58365,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/limpieza-intranet/partes",
-      "hash": "331310b32989"
+      "hash": "5e9d43a94ed8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/tareas/route.ts",
@@ -60849,7 +60849,7 @@
         "trading_tesis_resultado"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "4f18311e720d"
+      "hash": "2b332f94dfb4"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/radar/route.ts",
@@ -61056,7 +61056,7 @@
           "params": "{ propertyId, fecha, onEnviado }: { propertyId: string; fecha: string; onEnviado: () => void }",
           "retorno": null,
           "linea": 487,
-          "resumen": "Aviso rápido de Sique Brilla sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la luz»). Se guarda en la limpieza y avisa a Alberto por Telegram. Sin campos que rellenar: un texto li"
+          "resumen": "Aviso rápido de Si que Brilla sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la luz»). Se guarda en la limpieza y avisa a Alberto por Telegram. Sin campos que rellenar: un texto l"
         },
         {
           "nombre": "ChipFiltro",
@@ -61077,12 +61077,12 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "026b437a3d76"
+      "hash": "469b36bb161f"
     },
     {
       "ruta": "apps/plataforma/app/invitado/limpieza/page.tsx",
       "ambito": "apps/plataforma",
-      "resumen": "Intranet de limpieza (Sique Brilla): calendario de reservas de los 4 pisos de Alberto + resumen diario con limpiezas, tareas y notas. Fuera del grupo (usuario) → sin sidebar ni guard de sesión. Acceso por token (tabla limpieza_acceso_token) vía cookie httpOnly, o sesión de Alberto (preview). Mismo p",
+      "resumen": "Intranet de limpieza (Si que Brilla): calendario de reservas de los 4 pisos de Alberto + resumen diario con limpiezas, tareas y notas. Fuera del grupo (usuario) → sin sidebar ni guard de sesión. Acceso por token (tabla limpieza_acceso_token) vía cookie httpOnly, o sesión de Alberto (preview). Mismo ",
       "exporta": [
         "InvitadoLimpiezaPage"
       ],
@@ -61098,7 +61098,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "04503294e28e"
+      "hash": "9d04789d6e7b"
     },
     {
       "ruta": "apps/plataforma/app/invitado/trading/page.tsx",
@@ -62492,7 +62492,7 @@
         "gastos"
       ],
       "rutaApi": null,
-      "hash": "7edac33101c1"
+      "hash": "a17eb946022e"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -65978,7 +65978,7 @@
     {
       "ruta": "apps/plataforma/lib/correo/reserva-booking.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/correo/reserva-booking.ts — parser PURO de los avisos de reserva de Booking al propietario. Nace del caso James Ascott (Luxury, 27→29/08/2026): Smoobu se cayó, la reserva NUNCA llegó a `incomes` y la limpieza del 29 no salió en el calendario de Sique Brilla. Dos señales de correo: (a) «Booking.c",
+      "resumen": "lib/correo/reserva-booking.ts — parser PURO de los avisos de reserva de Booking al propietario. Nace del caso James Ascott (Luxury, 27→29/08/2026): Smoobu se cayó, la reserva NUNCA llegó a `incomes` y la limpieza del 29 no salió en el calendario de Si que Brilla. Dos señales de correo: (a) «Booking.",
       "exporta": [
         "pisoDesdeNombre",
         "parsearAvisoBooking",
@@ -66032,7 +66032,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d04711d96561"
+      "hash": "70dd1e5dfbc7"
     },
     {
       "ruta": "apps/plataforma/lib/correo/rutas.ts",
@@ -67780,7 +67780,7 @@
           "exportada": true,
           "params": "app: string",
           "retorno": "",
-          "linea": 157,
+          "linea": 161,
           "resumen": "Enlaces profundos por nodo: dónde vive cada cosa (código / Vercel / Supabase)."
         },
         {
@@ -67789,7 +67789,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 166
+          "linea": 170
         },
         {
           "nombre": "enlacesSkill",
@@ -67797,12 +67797,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 169
+          "linea": 173
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "836e62028010"
+      "hash": "a1c602459ae3"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-csv.ts",
@@ -69233,7 +69233,7 @@
     {
       "ruta": "apps/plataforma/lib/limpieza-acceso.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Autorización de la intranet de limpieza: acepta la sesión normal de plataforma (Alberto, preview) O un TOKEN de invitado (Sique Brilla, la limpieza de los 4 pisos, sin cuenta). El token vive en la BD (tabla limpieza_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Corre en",
+      "resumen": "Autorización de la intranet de limpieza: acepta la sesión normal de plataforma (Alberto, preview) O un TOKEN de invitado (Si que Brilla, la limpieza de los 4 pisos, sin cuenta). El token vive en la BD (tabla limpieza_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Corre e",
       "exporta": [
         "getTokenInvitado",
         "tokenInvitadoValido",
@@ -69265,7 +69265,7 @@
           "params": "",
           "retorno": "Promise<ModoAcceso>",
           "linea": 32,
-          "resumen": "Modo de acceso: 'sesion' (Alberto), 'invitado' (token de Sique Brilla en cookie) o null."
+          "resumen": "Modo de acceso: 'sesion' (Alberto), 'invitado' (token de Si que Brilla en cookie) o null."
         }
       ],
       "tablas": [
@@ -69273,7 +69273,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "f2ce26913614"
+      "hash": "133d267b83e1"
     },
     {
       "ruta": "apps/plataforma/lib/mailer.ts",
@@ -69395,7 +69395,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cab278d479a3"
+      "hash": "04729ec8465e"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -72883,7 +72883,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/extras/aviso-limpieza.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/extras/aviso-limpieza.ts — el email a la empresa de limpieza cuando el extra se paga. Destinatario: Sique Brilla (`limpiezascruzz@gmail.com`, confirmado por Alberto el 28/08/2026). Remitente `hola@ialimp.es` por el transporte que plataforma ya tiene montado, con Reply-To a su Gmail para qu",
+      "resumen": "lib/sivra/extras/aviso-limpieza.ts — el email a la empresa de limpieza cuando el extra se paga. Destinatario: Si que Brilla (`limpiezascruzz@gmail.com`, confirmado por Alberto el 28/08/2026). Remitente `hola@ialimp.es` por el transporte que plataforma ya tiene montado, con Reply-To a su Gmail para q",
       "exporta": [
         "componerAviso",
         "avisarLimpieza"
@@ -72928,7 +72928,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "02f7996e312a"
+      "hash": "3f3d862ce24d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/catalogo.ts",
@@ -73165,7 +73165,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/factura-limpieza-lectura.ts — leer la factura de Sique Brilla y guardarla si cuadra. El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación aritmética → BD. T",
+      "resumen": "lib/sivra/factura-limpieza-lectura.ts — leer la factura de Si que Brilla y guardarla si cuadra. El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación aritmética → BD. ",
       "exporta": [
         "guardarFactura",
         "procesarFacturaLimpieza",
@@ -73222,12 +73222,12 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "add3d962e31f"
+      "hash": "fb6fb7d27fe0"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/factura-limpieza.ts — la factura REAL de Sique Brilla, validada (puro, testeable). Contexto (25/08/2026). El P&L desglosa cada pago a Sique Brilla INFIRIENDO el mes facturado por mejor ajuste al importe (`reparto-siquebrilla.ts`). Funciona porque las tarifas cuadran al céntimo con `incomes",
+      "resumen": "lib/sivra/factura-limpieza.ts — la factura REAL de Si que Brilla, validada (puro, testeable). Contexto (25/08/2026). El P&L desglosa cada pago a Si que Brilla INFIRIENDO el mes facturado por mejor ajuste al importe (`reparto-siquebrilla.ts`). Funciona porque las tarifas cuadran al céntimo con `incom",
       "exporta": [
         "pisoDeConcepto",
         "validarFactura",
@@ -73285,12 +73285,12 @@
           "params": "importe: number, facturas: F[], yaUsadas: ReadonlySet<F>,",
           "retorno": "F | null",
           "linea": 209,
-          "resumen": "Elige la factura que paga un movimiento. Casa por TOTAL (las facturas de Sique Brilla se pagan enteras), y una factura ya casada con otro apunte no vuelve a usarse: dos pagos idénticos el mismo mes so"
+          "resumen": "Elige la factura que paga un movimiento. Casa por TOTAL (las facturas de Si que Brilla se pagan enteras), y una factura ya casada con otro apunte no vuelve a usarse: dos pagos idénticos el mismo mes s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "de7f93b42d77"
+      "hash": "1a7a0b923bfe"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas-control.ts",
@@ -73540,7 +73540,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/limpieza-intranet.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Helpers puros de la intranet de limpieza (pantalla de Sique Brilla). Sin dependencias de servidor.",
+      "resumen": "Helpers puros de la intranet de limpieza (pantalla de Si que Brilla). Sin dependencias de servidor.",
       "exporta": [
         "paxDe",
         "entradaMismoDia",
@@ -73587,7 +73587,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d9ba451fff52"
+      "hash": "888f692255ab"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/codigo-portal.ts",
@@ -74404,7 +74404,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "d6d213fa7f7a"
+      "hash": "f5ac5e14a941"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pl-rango-logica.ts",
@@ -75736,7 +75736,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/reparto-siquebrilla.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Sique Brilla (puro, testeable). Contexto (25/08/2026): la factura de Sique Brilla ya NO es solo limpieza — desde junio incluye líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex + 3×90€ Casa Socorro = 4",
+      "resumen": "lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Si que Brilla (puro, testeable). Contexto (25/08/2026): la factura de Si que Brilla ya NO es solo limpieza — desde junio incluye líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex + 3×90€ Casa Socorro =",
       "exporta": [
         "esperadoLimpieza",
         "repartirPagoSiqueBrilla"
@@ -75766,17 +75766,17 @@
           "params": "total: number, salidasServicio: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
           "retorno": "RepartoSiqueBrilla | null",
           "linea": 72,
-          "resumen": "Desglosa el total pagado a Sique Brilla en limpieza por piso + resto de lavandería. `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`). Devuelve null si no hay salidas con "
+          "resumen": "Desglosa el total pagado a Si que Brilla en limpieza por piso + resto de lavandería. `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`). Devuelve null si no hay salidas con"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56b0ff33059b"
+      "hash": "6638f16852cf"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/reservas-booking-vigia.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/reservas-booking-vigia.ts — vigía Booking↔Smoobu por correo. Caso fundacional (30/08/2026): Smoobu se cayó y la reserva de James Ascott (Luxury, 27→29/08/2026) NUNCA llegó a `incomes` — la limpieza del 29 no salió en el calendario de Sique Brilla y el ingreso no contó. Dos señales alimenta",
+      "resumen": "lib/sivra/reservas-booking-vigia.ts — vigía Booking↔Smoobu por correo. Caso fundacional (30/08/2026): Smoobu se cayó y la reserva de James Ascott (Luxury, 27→29/08/2026) NUNCA llegó a `incomes` — la limpieza del 29 no salió en el calendario de Si que Brilla y el ingreso no contó. Dos señales aliment",
       "exporta": [
         "registrarAvisoBooking",
         "registrarReservaHuesped",
@@ -75855,7 +75855,7 @@
         "reservas_correo_booking"
       ],
       "rutaApi": null,
-      "hash": "73329515c506"
+      "hash": "27d34d6e6678"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -76207,7 +76207,7 @@
         "pms_connections"
       ],
       "rutaApi": null,
-      "hash": "bdce294d9b9b"
+      "hash": "bdb5320b2141"
     },
     {
       "ruta": "apps/plataforma/lib/subastas-ingesta.ts",
@@ -80470,6 +80470,7 @@
         "resumenDiferido",
         "fechaMas",
         "diasEntre",
+        "ventanaHastaApertura",
         "juzgarHuerfana",
         "resumenHuerfanas",
         "detectarSuplantaciones",
@@ -80572,12 +80573,21 @@
           "linea": 451
         },
         {
+          "nombre": "ventanaHastaApertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechasApertura: string[], hoy: string, margenDias: number",
+          "retorno": "number",
+          "linea": 464,
+          "resumen": "Ventana (en días) que hay que pedir a la 2ª fuente para que la serie alcance el ANCLA de `juzgarHuerfana`: la sesión <= `h.fecha`. `h.fecha` es la fecha de APERTURA (tesis o posición), NUNCA la de ven"
+        },
+        {
           "nombre": "juzgarHuerfana",
           "kind": "function",
           "exportada": true,
           "params": "h: Huerfana, serie: PuntoContraste[], maxDesvio = DIVERGENCIA_MAX, margenDias = HUERFANA_MARGEN_DIAS,",
           "retorno": "VeredictoHuerfana",
-          "linea": 460,
+          "linea": 471,
           "resumen": "`serie` = cierres publicados por la 2ª fuente en orden ascendente (lo que devuelven tanto el CSV de Stooq como el chart de Yahoo, y lo que ya asume `juzgarPuntos`)."
         },
         {
@@ -80586,7 +80596,7 @@
           "exportada": true,
           "params": "puntuadas: number, sinResolver: HuerfanaNoResuelta[], fueraDePlazo: number,",
           "retorno": "string",
-          "linea": 498,
+          "linea": 509,
           "resumen": "Parte de una línea. Vacío solo si no hubo NINGUNA huérfana: en cuanto hay una, se dice — aunque no se haya podido hacer nada con ella, que es justo el caso que se pasó cuatro semanas callado."
         },
         {
@@ -80595,7 +80605,7 @@
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 588
+          "linea": 599
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -80603,7 +80613,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 594,
+          "linea": 605,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -80612,7 +80622,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 643,
+          "linea": 654,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -80621,13 +80631,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 669,
+          "linea": 680,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad6b10d26632"
+      "hash": "1de6647ac33a"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -81415,7 +81425,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "294172a45eae"
+      "hash": "789ab976ba10"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -102694,6 +102704,6 @@
   ],
   "resumen": {
     "archivos": 2692,
-    "funciones": 7493
+    "funciones": 7494
   }
 }
