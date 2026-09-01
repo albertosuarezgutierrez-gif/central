@@ -361,10 +361,11 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | **Resultado** | PR con el documento cerrado + entrada de memoria. **Si la muestra es corta o el resultado es ambiguo, NO cierra: re-arma el seguimiento** unos días más. Un «parece que va mejor» sobre pocos días es justo lo que este repo trata como fallo. |
 | **Verificar** | La tabla «Veredicto» de `docs/SEGUIMIENTO-ancla-pricing.md` rellenada con fecha y cifras. |
 
-### 21. Agente de la correduría (Grupo ASegura) — *activa desde el 01/09/2026*
+### 21. Agente de la correduría (Grupo ASegura) — *PAUSADA (creada 01/09/2026)*
 
 | | |
 |---|---|
+| **Estado** | 🔴 **Deshabilitada a petición de Alberto** («no quiero aviso hasta que esté todo configurado 100%»): sin `ALERTA_TOKEN` y con Fase 0 a medio armar, no debe correr. Reactivar en la UI de Rutinas (o `update_trigger enabled:true`, id `trig_01Jfo9Z7sApyxbEmoR6Dsuke`) cuando el setup esté completo. |
 | **Cuándo** | Semanal, **martes 05:30 UTC** (`30 5 * * 2`). |
 | **Por qué existe** | Decisión de Alberto (01/09/2026): un agente que llegue a llevar la correduría «casi al 100%». Fase 0 = aprender el sector e informar; responder a clientes es fase futura con OK explícito. |
 | **Prompt** | Invoca la skill **`agente-correduria`** y sigue su ciclo semanal (cartera en vivo → vencimientos → novedades sector → aprendizaje acumulativo en `references/sector.md` → informe → bitácora). |
