@@ -1877,10 +1877,11 @@ Esperado: ningún `FALLA`.
 - [ ] **Step 3: Anotar la memoria**
 
 Añadir esta entrada **arriba del todo** en `docs/CONTEXTO-SESIONES.md` (máx ~8 líneas, fecha en la
-primera; el detalle vive en el PR, no aquí):
+primera). ⚠️ La cabecera va con `### ` o `- **`: son los ÚNICOS formatos que `scripts/rotar-memoria.mjs`
+reconoce como entrada — una cabecera `## ` se funde con la anterior y se archiva mal.
 
 ```markdown
-## Portal de Grupo Asegura — Fase 1 en pie (01/09/2026)
+### 🧭 (01/09/2026) Portal de Grupo Asegura — Fase 1 en pie
 - App nueva `apps/asegura-portal` (Next.js, rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`
   (puro: niveles de acceso, procedencia en tres estados, código de un solo uso).
 - 6 tablas `portal_*` en el schema `seguros`. Las otras 5 del spec llegan con sus fases.

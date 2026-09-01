@@ -32,6 +32,21 @@
 
 ---
 
+### 🧭 (01/09/2026) asegura-portal: plan TDD de la Fase 1 (entrar + aportar póliza)
+- **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia
+  en TRES estados, código de un solo uso), 6 tablas `portal_*`, sesión propia y bóveda con subida de póliza.
+- **El canal de OTP es un PUERTO, no una llamada a WhatsApp**: la WABA de Grupo Asegura no existe todavía;
+  en Fase 1 se enchufan email y consola y WhatsApp entra añadiendo un fichero.
+- 🚨 **Lección de método:** las firmas de `aiComplete`, `openrouterVision` y `createMailTransporter` que
+  parecían obvias eran las TRES falsas (`aiComplete` devuelve `string`; `openrouterVision` toma 5 args e
+  `ImageInput` es `{data,mediaType}`; `createMailTransporter()` **no recibe credenciales**, las lee del
+  entorno y devuelve `Transporter | null`). Comprobarlas contra `packages/*` antes de escribirlas.
+- 🐛 **Bug destapado en `scripts/rotar-memoria.mjs`** (no tocado en este PR): la heurística «la fecha real
+  es la ÚLTIMA de la cabecera» archiva en agosto la entrada `### 🔴 (01/09/2026) GH_PAT_TRIGGER … desde el
+  31/08`. En las cabeceras `### `, la fecha entre paréntesis manda sobre la del texto.
+- **Pendiente de Alberto:** elegir modo de ejecución del plan, y la infra (proyecto Vercel `asegura-portal`,
+  rol `prisma_asegura_portal` SIN BYPASSRLS con contraseña, envs, WABA).
+
 ### 🗄️ (01/09/2026) asegura: estructura del volcado CREADA en `seguros` + el runbook mentía con las FKs
 - Alberto: «la copia de la BD, mejor tener todo nosotros». Hecho el 50%: **estructura aplicada y
   verificada en central** (`seguros`): 42 enums, 52 tablas, 721 columnas, 265 índices, 67 constraints
