@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-01 · fiscal-novedades** · hizo: pasada mensual completa. Paso 1-4 (deducciones): contrastadas
+  todas las cifras vigiladas (mínimos, maternidad, FN estatal/andaluza + límites de renta 25k/30k) contra
+  BOE/BOJA/AEAT — sin cambios, PGE 2027 aún en preparación (no publicado); sin PR. Paso 5 (ayudas): 1ª
+  detección de la ayuda Junta Andalucía 600€/hijo<3 tras 3er hijo — descartada por límite de renta (base
+  ~46k€ >> tope 6× IPREM); 1ª pasada por cliente (`ayudas_perfiles`): Joaquín Jaén con 1 aviso (plan de
+  choque hostelería RD 638/2026, hasta 11.000€, plazo 30/09/2026, CNAE sin confirmar) por Telegram +
+  INSERT en `fiscal_ayudas`; Sique Brilla sin novedad; Kit Digital sigue sin reabrir. dudas: si el CNAE de
+  alta de Joaquín Jaén es 56.21 (catering) o no — decide Alberto/consulta directa; fallos: —;
+  PRs/commits: commit directo a `main` (solo docs).
 - **2026-08-31 · agentes-entrenador** (2ª pasada dirigida: «revisa que ningún agente tenga huecos
   así») · hizo: barrido de la clase de hueco del caso V4 Flash (traspasos sin dueño, listas
   estáticas sin curación, supuestos sin verificar) sobre los ~17 agentes. Sanos: auditoría
