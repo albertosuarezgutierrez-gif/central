@@ -129,6 +129,33 @@ GitHub Actions (cron 5:30 y 11:30)
   respuesta perdida puede crear un duplicado en su lado. Antes de activarlo hay que probarlo en serio:
   **mandar el mismo `attempt_id` dos veces y ver si ellos deduplican.**
 
+## 💶 Tarificación Codeoscopic — el cliente y su tope (01/09/2026)
+
+`lib/codeoscopic/` es la ÚNICA puerta por la que esta app gasta dinero: **cada `POST /insurances`
+cuesta 0,50€ reales** y las credenciales que hay puestas son de **PRODUCCIÓN** (no hay sandbox
+utilizable). Reglas que no se negocian al tocar esto:
+
+- **Arranca APAGADO.** Sin `CODEOSCOPIC_TARIFICACION_ACTIVA=true` no sale ni una petición facturable.
+- **Estrena por la sonda, no por una cotización:** `GET /api/operador/codeoscopic/sonda` pide solo el
+  token OAuth2 (gratis) y corre con el interruptor apagado. Un fallo de conexión apunta al HOST
+  (`CODEOSCOPIC_BASE_URL` = `https://api.codeoscopic.io`); un rechazo, a las credenciales.
+- 🚨 **El contador es persistente (`seguros.codeoscopic_consumo`), nunca en memoria.** En Vercel un
+  contador en memoria se reinicia en cada cold start: sería un tope de mentira.
+- 🚨 **Una cotización sin desenlace CUENTA como gastada.** Solo `descartado` libera cupo, y exige
+  evidencia (auth, validación, o fallo de red *anterior al envío*). Un **timeout no es evidencia** —
+  la llamada tarda hasta 150 s y el proyecto puede haberse creado. Es la regla NULL≠0 aplicada al
+  dinero, y la BD lo fuerza con un CHECK (`descarte_con_evidencia`).
+- **Sin libro no se cotiza.** Si la lectura del contador falla, se aborta: un tope que no se puede
+  comprobar no es un tope.
+- **Un solo intento.** `POST /insurances` no es idempotente: reintentar crea otro proyecto y otro
+  cargo. La única repetición permitida es re-pedir el token tras un 401 (el vendor no tarificó).
+- **Los precios se pintan con su FIRMEZA.** En el fixture real ninguno de los 18 era firme. Enseñar
+  la prima sin el «Riesgo condicionado» es prometer un precio que la compañía no ha cerrado.
+
+Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): ejecutar el SQL
+`prisma/sql/2026-09-01_codeoscopic_consumo.sql`, poner contraseña al rol `prisma_seguros` y
+encender el interruptor.
+
 ## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)
 
 Rediseño completo en `docs/superpowers/specs/2026-09-01-asegura-ficha-cliente-design.md` (maqueta
