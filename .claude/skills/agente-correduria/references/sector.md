@@ -69,8 +69,16 @@
   smoke, y ese smoke (1 cotización, 0,50€) se lanza solo con OK explícito de Alberto.
 - **OpenAPI: Manuel NO lo tiene** (su `SPEC_REF` era un enlace de trazabilidad a Linear, no el
   spec). Referencia de trabajo = el traspaso + el fixture; el contrato formal, si hace falta, se
-  pide a JM. El **fixture** `2026-06-10-sandbox-quote-response.json` lo envió Manuel (sanitizado);
-  pendiente de incorporarlo al repo cuando Alberto lo pase.
+  pide a JM. ✅ **Fixture ya en el repo:** `apps/asegura/fixtures/codeoscopic/` (respuesta real de
+  18 precios + 3 errores; sanitizado **verificado aquí**, no solo dicho). Su `README.md` recoge lo
+  que el traspaso NO decía y que cambia el parser: `offers[]` referencia a `mainQuotes[]` por
+  `$ref` JSON-Pointer (pero trae el `id` al lado, mejor casar por ahí), el `id` de raíz es NÚMERO
+  y los de precio STRING (`"Q…"`), y sobre todo 🚨 **`estimate` + `messages[]` deciden si un precio
+  va EN FIRME**: los hay marcados «Riesgo condicionado» o con condiciones de la compañía, así que
+  pintar la prima sola es la regla «dato que se lee mal» de `CLAUDE.md`. Los `errors[]` son POR
+  compañía, no abortan, y su texto es accionable («la matrícula ya está asegurada»): se le enseñan
+  a Alberto. ⚠️ Las compañías del fixture son del **sandbox** (Zurich, Pelayo, Mutua…, con configs
+  `*_Test`): la parrilla real es la de arriba.
 - **Coste: 0,50€ POR COTIZACIÓN — resuelto el 01/09/2026 leyendo el Gmail.** Dos fuentes escritas y
   coherentes: el correo del CEO Ángel Blesa (09/04/2026, «se cobra por cotización… 50 céntimos por
   cotización», tarifa de amigo; recotizar el mismo coche añadiendo un conductor son «2 cotizaciones

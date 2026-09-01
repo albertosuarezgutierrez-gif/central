@@ -50,8 +50,12 @@
 - 🚨 Consecuencia: **sin sandbox utilizable, toda cotización es real (0,50€)** → contador+tope desde
   el PRIMER smoke, y el smoke (1 cotización) solo con OK explícito de Alberto. Anotado en `sector.md` §4.
 - Alberto está metiendo las 6 envs de cotizar en Vercel `central-asegura` con Claude Chrome (valores
-  solo por Bitwarden; a Vercel únicamente las 6 — webhook/legacy/flags NO). `BASE_URL` corregida al
-  host de prod. Falta que pase el fixture para incorporarlo al repo.
+  solo por Bitwarden; a Vercel únicamente las 6 — webhook/legacy/flags NO). `BASE_URL` = host de prod.
+- ✅ **Fixture incorporado**: `apps/asegura/fixtures/codeoscopic/` (18 precios + 3 errores reales;
+  sanitizado verificado, no solo dicho). Su README anota lo que el traspaso NO decía: `$ref`
+  JSON-Pointer en `offers[]`, `id` raíz numérico vs `"Q…"` string, y 🚨 **`estimate`+`messages[]`
+  deciden si un precio va en firme** («Riesgo condicionado»). Compañías del fixture = sandbox, no la
+  parrilla real. **PR #1972.**
 - **Siguiente paso al confirmar envs:** cliente de tarificación en `apps/asegura` + smoke.
 
 ### 💶 (01/09/2026) Comisiones de la correduría: IMPLEMENTADO devengo → liquidación → cobro → renta

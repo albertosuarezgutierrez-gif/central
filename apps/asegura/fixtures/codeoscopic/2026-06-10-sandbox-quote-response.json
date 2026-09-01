@@ -1,0 +1,1890 @@
+{
+  "id": 364732,
+  "creationDateTime": "2026-06-10T11:40:22+02:00",
+  "effectiveDate": "2026-07-15",
+  "insuranceLine": {
+    "id": "Car",
+    "path": "car",
+    "name": "Autos 1ª categoría (Turismos)"
+  },
+  "mainQuotes": [
+    {
+      "id": "Q7601460",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Terceros",
+          "description": "Reale Terceros",
+          "category": {
+            "name": "Terceros"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Terceros"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 251.77,
+      "premium": 251.77,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601469",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 178,
+        "name": "Occident GCO Autos 3.0",
+        "addon": false,
+        "vendor": {
+          "id": 29,
+          "name": "Occident"
+        },
+        "modality": {
+          "name": "Terceros",
+          "description": "Terceros",
+          "category": {
+            "name": "Terceros"
+          },
+          "rating": 0
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/29/logo.svg",
+        "config": {
+          "id": 7903,
+          "name": "OccidentAutosTEST",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "107.Emisión SUPEDITADA. Compañía no sinco sin certificado de antecedentes siniestrales."
+        },
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/178/policy.pdf"
+        }
+      ],
+      "downPayment": 271.65,
+      "premium": 271.65,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "153967137",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601462",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Dos (Solo Lunas)",
+          "description": "Reale Dos (Solo Lunas). Con lunas",
+          "category": {
+            "name": "Terceros"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Dos (Solo Lunas)"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 308.47,
+      "premium": 308.47,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601459",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 193,
+        "name": "Mutua Madrileña Autos",
+        "addon": false,
+        "vendor": {
+          "id": 14,
+          "name": "Mutua Madrileña"
+        },
+        "modality": {
+          "name": "Mutua Madrileña Terceros con lunas",
+          "description": "Mutua Madrileña Terceros con lunas",
+          "category": {
+            "name": "Terceros Ampliado"
+          },
+          "rating": 3
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/14/logo.svg",
+        "config": {
+          "id": 7476,
+          "name": "MutuaMad",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "Descuentos de siniestralidad"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/193/modality/2407TCB CG TERCEROS BASICO.pdf"
+        }
+      ],
+      "downPayment": 256.46,
+      "premium": 256.46,
+      "termMonths": 12,
+      "estimate": true,
+      "referenceFromVendor": "20260610000375",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601470",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 178,
+        "name": "Occident GCO Autos 3.0",
+        "addon": false,
+        "vendor": {
+          "id": 29,
+          "name": "Occident"
+        },
+        "modality": {
+          "name": "Terceros completo",
+          "description": "Terceros completo",
+          "category": {
+            "name": "Terceros Ampliado"
+          },
+          "rating": 0
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/29/logo.svg",
+        "config": {
+          "id": 7903,
+          "name": "OccidentAutosTEST",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "107.Emisión SUPEDITADA. Compañía no sinco sin certificado de antecedentes siniestrales."
+        },
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/178/policy.pdf"
+        }
+      ],
+      "downPayment": 302.12,
+      "premium": 302.12,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "153967137",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601461",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Terceros Ampliado",
+          "description": "Reale Terceros Ampliado. Con lunas, robo e incendio",
+          "category": {
+            "name": "Terceros Ampliado"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Terceros Ampliado"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 324.53,
+      "premium": 324.53,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601472",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 178,
+        "name": "Occident GCO Autos 3.0",
+        "addon": false,
+        "vendor": {
+          "id": 29,
+          "name": "Occident"
+        },
+        "modality": {
+          "name": "Todo Riesgo con franquicia 1500",
+          "description": "Todo Riesgo con franquicia 1500",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Alta"
+          },
+          "rating": 0
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/29/logo.svg",
+        "config": {
+          "id": 7903,
+          "name": "OccidentAutosTEST",
+          "favorite": false
+        }
+      },
+      "deductible": 1500,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "107.Emisión SUPEDITADA. Compañía no sinco sin certificado de antecedentes siniestrales.\n3009.PRIMA NO CONFIRMADA. Debido a la antigüedad del vehículo es necesario realizar una inspección del vehículo."
+        },
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/178/policy.pdf"
+        }
+      ],
+      "downPayment": 427.79,
+      "premium": 427.79,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "153967137",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601473",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 178,
+        "name": "Occident GCO Autos 3.0",
+        "addon": false,
+        "vendor": {
+          "id": 29,
+          "name": "Occident"
+        },
+        "modality": {
+          "name": "Todo Riesgo con franquicia 1000",
+          "description": "Todo Riesgo con franquicia 1000",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Alta"
+          },
+          "rating": 0
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/29/logo.svg",
+        "config": {
+          "id": 7903,
+          "name": "OccidentAutosTEST",
+          "favorite": false
+        }
+      },
+      "deductible": 1000,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "107.Emisión SUPEDITADA. Compañía no sinco sin certificado de antecedentes siniestrales.\n3009.PRIMA NO CONFIRMADA. Debido a la antigüedad del vehículo es necesario realizar una inspección del vehículo."
+        },
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/178/policy.pdf"
+        }
+      ],
+      "downPayment": 439.85,
+      "premium": 439.85,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "153967137",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601468",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Todo Riesgo Franquicia 1200 Euros",
+          "description": "Reale Todo Riesgo Franquicia 1200 Euros",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Alta"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Todo Riesgo Franquicia 1200 Euros"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "deductible": 1200,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 588.19,
+      "premium": 588.19,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601467",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Todo Riesgo Franquicia 600 Euros",
+          "description": "Reale Todo Riesgo Franquicia 600 Euros",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Alta"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Todo Riesgo Franquicia 600 Euros"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "deductible": 600,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 620.83,
+      "premium": 620.83,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601474",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 178,
+        "name": "Occident GCO Autos 3.0",
+        "addon": false,
+        "vendor": {
+          "id": 29,
+          "name": "Occident"
+        },
+        "modality": {
+          "name": "Todo Riesgo con franquicia 600",
+          "description": "Todo Riesgo con franquicia 600",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Media"
+          },
+          "rating": 0
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/29/logo.svg",
+        "config": {
+          "id": 7903,
+          "name": "OccidentAutosTEST",
+          "favorite": false
+        }
+      },
+      "deductible": 600,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "107.Emisión SUPEDITADA. Compañía no sinco sin certificado de antecedentes siniestrales.\n3009.PRIMA NO CONFIRMADA. Debido a la antigüedad del vehículo es necesario realizar una inspección del vehículo."
+        },
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/178/policy.pdf"
+        }
+      ],
+      "downPayment": 470.83,
+      "premium": 470.83,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "153967137",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601466",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Todo Riesgo Franquicia 450 Euros",
+          "description": "Reale Todo Riesgo Franquicia 450 Euros",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Media"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Todo Riesgo Franquicia 450 Euros"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "deductible": 450,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 647.78,
+      "premium": 647.78,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601465",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Todo Riesgo Franquicia 300 Euros",
+          "description": "Reale Todo Riesgo Franquicia 300 Euros",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Media"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Todo Riesgo Franquicia 300 Euros"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "deductible": 300,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 676.82,
+      "premium": 676.82,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601475",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 178,
+        "name": "Occident GCO Autos 3.0",
+        "addon": false,
+        "vendor": {
+          "id": 29,
+          "name": "Occident"
+        },
+        "modality": {
+          "name": "Todo Riesgo con franquicia 300",
+          "description": "Todo Riesgo con franquicia 300",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Baja"
+          },
+          "rating": 0
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/29/logo.svg",
+        "config": {
+          "id": 7903,
+          "name": "OccidentAutosTEST",
+          "favorite": false
+        }
+      },
+      "deductible": 300,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "107.Emisión SUPEDITADA. Compañía no sinco sin certificado de antecedentes siniestrales.\n3009.PRIMA NO CONFIRMADA. Debido a la antigüedad del vehículo es necesario realizar una inspección del vehículo."
+        },
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/178/policy.pdf"
+        }
+      ],
+      "downPayment": 502.92,
+      "premium": 502.92,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "153967137",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601471",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 178,
+        "name": "Occident GCO Autos 3.0",
+        "addon": false,
+        "vendor": {
+          "id": 29,
+          "name": "Occident"
+        },
+        "modality": {
+          "name": "Todo Riesgo con franquicia 200",
+          "description": "Todo Riesgo con franquicia 200",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Baja"
+          },
+          "rating": 0
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/29/logo.svg",
+        "config": {
+          "id": 7903,
+          "name": "OccidentAutosTEST",
+          "favorite": false
+        }
+      },
+      "deductible": 200,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "107.Emisión SUPEDITADA. Compañía no sinco sin certificado de antecedentes siniestrales.\n3009.PRIMA NO CONFIRMADA. Debido a la antigüedad del vehículo es necesario realizar una inspección del vehículo."
+        },
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/178/policy.pdf"
+        }
+      ],
+      "downPayment": 537.93,
+      "premium": 537.93,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "153967137",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601464",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Todo Riesgo Franquicia 180 Euros",
+          "description": "Reale Todo Riesgo Franquicia 180 Euros",
+          "category": {
+            "name": "Todo Riesgo Con Franquicia Baja"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Todo Riesgo Franquicia 180 Euros"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "deductible": 180,
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 807.87,
+      "premium": 807.87,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601458",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 193,
+        "name": "Mutua Madrileña Autos",
+        "addon": false,
+        "vendor": {
+          "id": 14,
+          "name": "Mutua Madrileña"
+        },
+        "modality": {
+          "name": "Mutua Madrileña Todo Riesgo",
+          "description": "Mutua Madrileña Todo Riesgo",
+          "category": {
+            "name": "Todo Riesgo Sin Franquicia"
+          },
+          "rating": 8
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/14/logo.svg",
+        "config": {
+          "id": 7476,
+          "name": "MutuaMad",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "Descuentos de siniestralidad"
+        },
+        {
+          "type": "warning",
+          "text": "El vehículo necesita verificación"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/193/modality/2407TRB CG TODO RIESGO.pdf"
+        }
+      ],
+      "downPayment": 696.28,
+      "premium": 696.28,
+      "termMonths": 12,
+      "estimate": true,
+      "referenceFromVendor": "20260610000375",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    },
+    {
+      "id": "Q7601463",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "modality": {
+          "name": "Reale Todo Riesgo",
+          "description": "Reale Todo Riesgo",
+          "category": {
+            "name": "Todo Riesgo Sin Franquicia"
+          },
+          "rating": 3,
+          "ratingDescription": "Reale Todo Riesgo"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7470,
+          "name": "83474 (ASM y API)",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "messages": [
+        {
+          "type": "warning",
+          "text": "Riesgo condicionado"
+        },
+        {
+          "type": "info",
+          "text": "Observaciones de la compañía",
+          "description": "CT-N5: NECESARIO DOCUMENTO ORIGINAL ACREDITATIVO BONIFICACION.INCLUIR DOCUMENTACIÓN!!!\n"
+        }
+      ],
+      "downPayment": 1604.34,
+      "premium": 1604.34,
+      "termMonths": 12,
+      "estimate": false,
+      "referenceFromVendor": "1243991216",
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "compatibleAddonQuotes": [
+        {
+          "$ref": "#/addonQuotes/0",
+          "id": "Q7601457"
+        },
+        {
+          "$ref": "#/addonQuotes/1",
+          "id": "Q7601456"
+        }
+      ]
+    }
+  ],
+  "addonQuotes": [
+    {
+      "id": "Q7601457",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 93,
+        "name": "RACE-UNACSA Autos Complementario",
+        "addon": true,
+        "vendor": {
+          "id": 50,
+          "name": "RACE-UNACSA"
+        },
+        "modality": {
+          "name": "RACE Unacsa Complementarios Auto",
+          "description": "RACE Unacsa Complementarios Auto",
+          "rating": 3,
+          "ratingDescription": "Reale Terceros"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/50/logo.svg",
+        "config": {
+          "id": 7473,
+          "name": "Pruebas RACE",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "coverageDescription": "Incluye asistencia en carretera proporcionada por Race Unacsa. Modalidad ASISTENCIA COMPLETA",
+      "downPayment": 54.99,
+      "premium": 54.99,
+      "termMonths": 12,
+      "estimate": false,
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "includeInOffers": false,
+      "requireInOffers": false
+    },
+    {
+      "id": "Q7601456",
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "effectiveDate": "2026-07-15",
+      "product": {
+        "id": 93,
+        "name": "RACE-UNACSA Autos Complementario",
+        "addon": true,
+        "vendor": {
+          "id": 50,
+          "name": "RACE-UNACSA"
+        },
+        "modality": {
+          "name": "RACE Unacsa Complementarios Auto",
+          "description": "RACE Unacsa Complementarios Auto",
+          "rating": 3,
+          "ratingDescription": "Reale Terceros"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/50/logo.svg",
+        "config": {
+          "id": 7474,
+          "name": "61608773",
+          "favorite": false
+        }
+      },
+      "paymentMethod": {
+        "id": "Company",
+        "name": "Compañía",
+        "description": "Bancario por la compañía de seguros",
+        "default": false
+      },
+      "paymentFrequency": {
+        "id": "Annual",
+        "name": "Anual",
+        "description": "Una vez al año",
+        "installments": 1
+      },
+      "coverageDescription": "Incluye asistencia en carretera proporcionada por Race Unacsa. Modalidad SOCIO - UNLIMITED",
+      "downPayment": 199.00,
+      "premium": 199.00,
+      "termMonths": 12,
+      "estimate": false,
+      "actions": [
+        {
+          "id": "ReRate",
+          "required": true,
+          "addressNormalizationRequired": false
+        }
+      ],
+      "includeInOffers": false,
+      "requireInOffers": false
+    }
+  ],
+  "offers": [
+    {
+      "id": 7075687,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/0",
+        "id": "Q7601460"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 251.77,
+      "totalPremium": 251.77,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601460"
+        }
+      ]
+    },
+    {
+      "id": 7075686,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/3",
+        "id": "Q7601459"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 256.46,
+      "totalPremium": 256.46,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601459"
+        }
+      ]
+    },
+    {
+      "id": 7075696,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/1",
+        "id": "Q7601469"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 271.65,
+      "totalPremium": 271.65,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601469"
+        }
+      ]
+    },
+    {
+      "id": 7075697,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/4",
+        "id": "Q7601470"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 302.12,
+      "totalPremium": 302.12,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601470"
+        }
+      ]
+    },
+    {
+      "id": 7075689,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/2",
+        "id": "Q7601462"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 308.47,
+      "totalPremium": 308.47,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601462"
+        }
+      ]
+    },
+    {
+      "id": 7075688,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/5",
+        "id": "Q7601461"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 324.53,
+      "totalPremium": 324.53,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601461"
+        }
+      ]
+    },
+    {
+      "id": 7075699,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/6",
+        "id": "Q7601472"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 427.79,
+      "totalPremium": 427.79,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601472"
+        }
+      ]
+    },
+    {
+      "id": 7075700,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/7",
+        "id": "Q7601473"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 439.85,
+      "totalPremium": 439.85,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601473"
+        }
+      ]
+    },
+    {
+      "id": 7075701,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/10",
+        "id": "Q7601474"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 470.83,
+      "totalPremium": 470.83,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601474"
+        }
+      ]
+    },
+    {
+      "id": 7075702,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/13",
+        "id": "Q7601475"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 502.92,
+      "totalPremium": 502.92,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601475"
+        }
+      ]
+    },
+    {
+      "id": 7075698,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/14",
+        "id": "Q7601471"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 537.93,
+      "totalPremium": 537.93,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601471"
+        }
+      ]
+    },
+    {
+      "id": 7075695,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/8",
+        "id": "Q7601468"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 588.19,
+      "totalPremium": 588.19,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601468"
+        }
+      ]
+    },
+    {
+      "id": 7075694,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/9",
+        "id": "Q7601467"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 620.83,
+      "totalPremium": 620.83,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601467"
+        }
+      ]
+    },
+    {
+      "id": 7075693,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/11",
+        "id": "Q7601466"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 647.78,
+      "totalPremium": 647.78,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601466"
+        }
+      ]
+    },
+    {
+      "id": 7075692,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/12",
+        "id": "Q7601465"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 676.82,
+      "totalPremium": 676.82,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601465"
+        }
+      ]
+    },
+    {
+      "id": 7075685,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/16",
+        "id": "Q7601458"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 696.28,
+      "totalPremium": 696.28,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601458"
+        }
+      ]
+    },
+    {
+      "id": 7075691,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/15",
+        "id": "Q7601464"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 807.87,
+      "totalPremium": 807.87,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601464"
+        }
+      ]
+    },
+    {
+      "id": 7075690,
+      "mainQuote": {
+        "$ref": "#/mainQuotes/17",
+        "id": "Q7601463"
+      },
+      "addonQuotes": [],
+      "totalDownPayment": 1604.34,
+      "totalPremium": 1604.34,
+      "appUrls": [
+        {
+          "rel": "NewPreissuance",
+          "url": "https://app-int.avant2.es/production/364732/auto/preissuance/new?priceIds=7601463"
+        }
+      ]
+    }
+  ],
+  "appUrls": [
+    {
+      "rel": "Self",
+      "url": "https://app-int.avant2.es/production/364732"
+    },
+    {
+      "rel": "Quotes",
+      "url": "https://app-int.avant2.es/production/364732/auto/quotes"
+    }
+  ],
+  "errors": [
+    {
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "product": {
+        "id": 4,
+        "name": "Pelayo Autos",
+        "addon": false,
+        "vendor": {
+          "id": 3,
+          "name": "Pelayo"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/3/logo.svg",
+        "config": {
+          "id": 8732,
+          "name": "PelayoAutos_Test",
+          "favorite": false
+        }
+      },
+      "messages": [
+        {
+          "type": "error",
+          "text": "Error",
+          "description": "Hay otra matricula igual en ACTIVO (n1)"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/4/policy.pdf"
+        }
+      ]
+    },
+    {
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "product": {
+        "id": 10,
+        "name": "Reale Autos",
+        "addon": false,
+        "vendor": {
+          "id": 5,
+          "name": "Reale"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/5/logo.svg",
+        "config": {
+          "id": 7469,
+          "name": "37786__",
+          "favorite": false
+        }
+      },
+      "messages": [
+        {
+          "type": "error",
+          "text": "Error",
+          "description": "Se ha producido un error en el envío (Código 2115). Por favor contacte con el departamento de soporte de Avant2."
+        }
+      ]
+    },
+    {
+      "creationDateTime": "2026-06-10T11:40:22+02:00",
+      "product": {
+        "id": 127,
+        "name": "Zurich Autos 00721",
+        "addon": false,
+        "vendor": {
+          "id": 30,
+          "name": "Zurich"
+        },
+        "imageUrl": "https://app-int.avant2.es/assets/company/30/logo.svg",
+        "config": {
+          "id": 7475,
+          "name": "ZurichTest",
+          "favorite": false
+        }
+      },
+      "messages": [
+        {
+          "type": "error",
+          "text": "Error",
+          "description": "La matrícula introducida ya está asegurada en la compañía"
+        }
+      ],
+      "links": [
+        {
+          "name": "Condicionado general",
+          "url": "https://app-int.avant2.es/assets/productcompany/127/policy.pdf"
+        }
+      ]
+    }
+  ]
+}
