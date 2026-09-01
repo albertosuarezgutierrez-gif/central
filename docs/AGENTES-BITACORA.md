@@ -15,6 +15,20 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-01 · mercado-booking (pasada acotada, PRIORIDAD jul-ago 2027)** · hizo: mismo plan
+  filtrado `?desde=2027-07-01&hasta=2027-08-31&max=24` que ayer (31/08). 238 comps reales en las
+  24 ventanas del cupo (6 fechas × 4 pisos: 02/07, 10/07, 27/07 — las 3 mismas de ayer, reescritas
+  por ser idempotente — y 01/08 [evento Campeonato Mundial de Remo, factor 1,55], 06/08, 14/08 —
+  agosto cambia de fecha frente a ayer, que tenía 24/08 en vez de 01/08). 4/4 ventanas de
+  escaparate propio medidas (ayer House Sevillana había dado `escaparateSinRespuesta`; hoy sí
+  contestó: 1.198,88€ total/2 noches). 0 ventanas sin respuesta, 0 anuncios propios colados en el
+  corpus de mercado, 0 fallos. **Objetivo cumplido — YA lo estaba desde ayer (31/08): ambos meses
+  llegan a ≥3 fechas distintas con ≥3 comparables por piso** (hoy con 10 comps/fecha/piso).
+  🚩 **Acción pendiente para Alberto/entrenador: quitar el párrafo "PRIORIDAD TEMPORAL (agosto
+  2026)" del prompt de la rutina programada** — esta sesión no tiene acceso al store del trigger
+  para editarlo ella misma, y al no haberse quitado ayer la pasada de hoy se ha repetido sin
+  necesidad (gasto de cupo redundante en julio). Sin cupo restante para la pasada normal (24/24 +
+  4/4 escaparate agotados). dudas: —; fallos: —; PRs/commits: — (solo BD + bitácora).
 - **2026-09-01 · rrhh-compliance-calendar** · hizo: pasada mensual. Leído `docs/ROADMAP-rrhh.md`;
   9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal
   denuncias, informe ITSS, modelo 145, caducidad NIE, borrado RGPD automatizado — PRL ya hecho,
