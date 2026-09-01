@@ -76,7 +76,13 @@ Salvaguardas para no perder información:
 - **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto). **Esqueleto
   desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
   manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
-  🚨 **La cartera NO está migrada:** los 32.600 clientes / 28.843 pólizas siguen en el Supabase de **Manuel
+  🚨 **Y OJO CON LA CIFRA (medido 01/09/2026): 32.600 fichas ≠ 32.600 clientes.** La **cartera VIVA son
+  ~80 clientes / 109 pólizas** — las que entran por CIMA, identificables por `polizas.import_ref IS NULL`.
+  Las otras 28.729 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
+  jun/2026, vencimientos 2013-2018) y **ninguna** tiene vencimiento en los últimos 18 meses. Regla de Alberto:
+  **lo que entra por CIMA es cliente actual; el resto son leads** (32.520). Detalle en
+  `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
+  🚨 **La cartera NO está migrada:** las 32.600 fichas / 28.843 pólizas siguen en el Supabase de **Manuel
   Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
   CIMA/EIAC**. ⚠️ **Eso NO la convierte en una migración en caliente** (se creyó así hasta el 26/08/2026):
   el CRM **todavía no está operativo** —no hay nadie usándolo— y **los ficheros de EIAC se pueden
