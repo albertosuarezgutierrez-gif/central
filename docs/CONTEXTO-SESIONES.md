@@ -32,6 +32,20 @@
 
 ---
 
+### 🛡️ (01/09/2026) asegura: spec del portal de clientes/leads/empresas + la cartera NO es lo que decíamos
+- Brainstorming con Alberto → `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
+- 🚨 **Medido: la cartera viva son ~80 clientes / 109 pólizas, no 32.600/28.843.** El resto es volcado
+  histórico (`import_ref` `intranet:` 26.117 con vto. 2013-2018 y `asegura_app:` 2.612, CERO con vto.
+  futuro). Regla de Alberto: **lo que entra por CIMA (`import_ref IS NULL`) es cliente; el resto, lead**.
+  **Pendiente: corregir la cifra en `CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`.**
+- Decidido: app nueva `apps/asegura-portal` (rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`;
+  BD compartida schema `seguros`; WhatsApp con **WABA nueva** (`wa_opt_in`=0 en las 32.600, nada que perder).
+- Eje del producto: **«aporta tus seguros»** (sirve a leads y a clientes a la vez), no «mira tus pólizas».
+  El móvil identifica un HOGAR: 740 números compartidos, 630 con el mismo apellido → familias, no basura.
+- Regla que evita un desastre: **las pólizas del volcado histórico NO generan recordatorios** (serían
+  28.729 avisos de «se te venció» sobre pólizas de 2013-2018). `recordatorios` del CRM origen no sirve:
+  su `poliza_id` es NOT NULL.
+
 ### 📅 (01/09/2026) mercado-booking: objetivo jul/ago-2027 cumplido — falta quitar la prioridad del prompt
 - Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`) de la skill `mercado-booking`: 238 comps
   reales en 24 ventanas (3 fechas × 4 pisos por mes) + 4/4 escaparate propio. **El objetivo (≥3
