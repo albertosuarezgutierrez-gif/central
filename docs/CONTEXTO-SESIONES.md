@@ -32,6 +32,20 @@
 
 ---
 
+### 📸 (01/09/2026) asegura: alta por fotos, SINCO y el siguiente ramo — investigado y anotado
+- 🚨 **La ficha técnica SÍ trae la versión (campo `D.2`)**, más `K` de homologación. Se creía que
+  solo la marca. Pero `D.2` es homologación EUROPEA, no Base7: sigue habiendo emparejamiento, que se
+  cierra filtrando por cilindrada + potencia + combustible + año. **Con 2+ candidatos decide una persona.**
+- **BD de matrículas gratis: no la hay útil.** DGT open data va anonimizada (sin matrícula); el resto
+  de pago; y todas darían TEXTO, no el código Base7. La foto de la ficha técnica es mejor fuente.
+- 🎯 **SINCO = fichero SIHSA de TIREA**: siniestralidad de los **últimos 5 años** (la ventana exacta de
+  `lastFiveYearsAccidents`), consultable al tarificar. ⚠️ Se ofrece a «Entidades Aseguradoras» y una
+  correduría NO lo es → **preguntar a TIREA** (`accesos.cima@tirea.es`). El asegurado sí puede pedir el
+  suyo gratis. Y la compañía lo consulta igual al emitir: la siniestralidad presumida se corrige sola.
+- **Siguiente ramo: HOGAR** (dictado de Alberto). Más fácil porque no hay vehículo que identificar.
+  Primer paso gratis: `GET /insurance-lines` dice si tarifica para nosotros.
+- Diseño: `docs/superpowers/specs/2026-09-01-asegura-alta-por-fotos-y-bonificadores.md`.
+
 ### 🔘 (01/09/2026) asegura: el botón «Retarificar» sobre la cartera REAL, de punta a punta
 - `/cartera` → buscar cliente → ficha → **Retarificar** en una póliza de auto. Plan de Alberto:
   primero a mano sobre clientes de verdad, automatizar después.

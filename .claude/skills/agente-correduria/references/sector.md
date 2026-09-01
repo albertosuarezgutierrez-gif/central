@@ -216,6 +216,56 @@ Confirmado además: el host de la API **no lleva `portal.`** (el propio portal m
 `https://api-int.codeoscopic.io/oauth2/token`), y `identification`/`identificationType` están
 **deprecados** desde 2024-03-07 en favor de `identificationDocument`.
 
+### 📸 Alta por fotos, ficha técnica y SINCO (investigado 01/09/2026)
+
+**La ficha técnica (tarjeta ITV) SÍ trae la versión del vehículo**, en el **campo `D.2`** (tipo
+homologado + código de variante + código de versión); `K`/`K.1`/`K.2` son los de homologación. Es
+una corrección a la creencia de partida de que solo traía la marca.
+
+⚠️ Pero `D.2` son códigos de **homologación europea**, NO códigos **Base7** (que es con lo que
+tarifica Codeoscopic), y no hay equivalencia publicada. El emparejamiento se cierra filtrando el
+catálogo por lo que la propia ficha da exacto:
+`D.1` marca → `D.3` denominación comercial → `P.1` cilindrada + `P.2` potencia (kW) + `P.3`
+combustible + `B` fecha de matriculación. **Si quedan 2 o más candidatos, NO se elige uno**: se
+enseñan y decide una persona (misma regla que `emparejar()` en `catalogos.ts`).
+
+**No hay BD de matrículas gratis que sirva:** los datos abiertos de la DGT publican matriculaciones
+**anonimizadas, sin matrícula**; el resto (Ganvam, GT Motive, revendedores) son de pago; EUCARIS es
+solo para administraciones. Y aunque la hubiera, daría **texto**, no el código Base7.
+
+**Qué aporta cada foto:** DNI → todos los datos personales que el mapeador se niega a suponer ·
+carnet → `fechaCarnet` (la del permiso B, en el reverso por categorías) · ficha técnica → vehículo y
+fecha exacta · póliza actual → compañía DGS, número y antigüedad (los bonificadores).
+
+🎯 **SINCO = fichero SIHSA de TIREA.** Historial de siniestralidad de los **últimos CINCO años**,
+consultable **en el momento de tarificar** — exactamente la ventana del campo
+`lastFiveYearsAccidents` que exige Codeoscopic. Es el bonificador de verdad.
+
+- ⚠️ **Se ofrece a «Entidades Aseguradoras del ramo de Automóvil», y una correduría NO lo es.** NO
+  está confirmado que Grupo Asegura pueda consultarlo. Hay que **preguntar a TIREA** si se añade al
+  acuerdo que ya existe por CIMA (`accesos.cima@tirea.es`).
+- ✅ Lo que sí está claro: **el propio asegurado puede pedir su historial gratis** con DNI y número
+  de póliza. Vía inmediata y sin contrato: pedírselo al cliente.
+- 🚨 **La compañía lo consulta igual al emitir.** O sea que una precalificación con siniestralidad
+  presumida limpia **se corrige sola** si el cliente tuvo partes. Por eso el aviso «puede abaratar
+  el precio» no es cosmético: es la diferencia entre orientar y prometer.
+- 🔒 Es dato personal: consultarlo exige consentimiento y entra en el registro de tratamientos.
+- ⚠️ **No verificado contra `tirea.es`**: el proxy de la sesión bloquea ese dominio por política de
+  la organización. Lo anterior sale de fuentes del sector (Mapfre, Allianz, Reale, AMV,
+  comparadores) y del glosario de TIREA vía buscador. **Confirmar antes de diseñar encima.**
+
+### 🏠 Siguiente ramo: HOGAR (dictado de Alberto, 01/09/2026)
+
+Segundo más vendido y **más fácil que auto**, por dos motivos concretos: no hay vehículo que
+identificar (desaparecen el código Base7, el emparejamiento y los créditos de `/vehicles`), y la API
+ya lo sirve con **11 catálogos `/home/*`** que encajan con lo que `bienes_asegurables` ya guarda
+(`m2`, `tipoVivienda`, `yearConstruccion`, `rejas`, `puertaBlindada`, `alarmaConectada`).
+
+Primer paso, **gratis y sin preguntar a nadie**: `GET /insurance-lines` devuelve por ramo
+`supports.rating` y `supports.policyApplication` para nuestra organización.
+
+Diseño completo: `docs/superpowers/specs/2026-09-01-asegura-alta-por-fotos-y-bonificadores.md`.
+
 ### 🔌 Cliente de tarificación en `central` — construido el 01/09/2026
 
 Vive en **`apps/asegura/lib/codeoscopic/`** y es la ÚNICA puerta por la que se gasta dinero en

@@ -219,6 +219,33 @@ Alberto quiere estrenar esto: **primero a mano, sobre clientes de verdad**, y au
 Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): poner contraseña al
 rol `prisma_seguros`, encender `CODEOSCOPIC_TARIFICACION_ACTIVA=true` y redesplegar.
 
+### 📸 Lo siguiente: alta por fotos, bonificadores y el ramo de HOGAR
+
+Diseño completo en `docs/superpowers/specs/2026-09-01-asegura-alta-por-fotos-y-bonificadores.md`.
+Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
+
+- 🚨 **La ficha técnica SÍ trae la versión: campo `D.2`** (tipo homologado + código de variante +
+  código de versión), más `K` (homologación). Se creía que solo traía la marca — **falso**. Pero
+  `D.2` son códigos de homologación EUROPEA, **no Base7**, así que sigue habiendo emparejamiento:
+  se filtra el catálogo por `D.1` marca → `D.3` denominación comercial → `P.1` cilindrada +
+  `P.2` potencia + `P.3` combustible + `B` año. **Con 2 o más candidatos NO se elige: decide una
+  persona.** Es la misma regla que ya aplica `emparejar()`.
+- **Una BD de matrículas gratis no existe y tampoco resolvería esto:** los datos abiertos de la DGT
+  van anonimizados (sin matrícula), el resto es de pago, y cualquiera devolvería TEXTO, no el código
+  Base7. **La foto de la ficha técnica es mejor fuente**: trae cilindrada y potencia exactas.
+- 🎯 **SINCO (= fichero SIHSA de TIREA)** es el bonificador de verdad: historial de siniestralidad de
+  los **últimos 5 años** —justo la ventana de `lastFiveYearsAccidents`— consultable **al tarificar**.
+  ⚠️ Se ofrece a **«Entidades Aseguradoras»**, y una correduría NO lo es: **no está confirmado** que
+  Grupo Asegura pueda consultarlo (preguntar a TIREA, `accesos.cima@tirea.es`, que ya hay relación
+  por CIMA). Lo que SÍ está claro es que **el asegurado puede pedir el suyo gratis**. Y asúmelo: la
+  compañía lo consulta igual al emitir, así que la siniestralidad presumida **se corrige sola** — por
+  eso el aviso «puede abaratar el precio» no es cosmético.
+  ⚠️ No verificado contra `tirea.es`: el proxy lo bloquea por política de la organización.
+- **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
+  desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
+  `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
+  a nadie por email.
+
 ## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)
 
 Rediseño completo en `docs/superpowers/specs/2026-09-01-asegura-ficha-cliente-design.md` (maqueta
