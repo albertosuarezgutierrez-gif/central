@@ -6,7 +6,7 @@
 // convertirse en «silencio» — sería exactamente el modo de fallo que describe CLAUDE.md (un
 // canal que se calla sin que nadie lo note). Solo se silencia lo que Alberto ha silenciado.
 import { prisma } from '@/lib/db'
-import { esCritico } from './catalogo'
+import { resolverActivo } from './regla'
 
 type Cache = { valores: Map<string, boolean>; expira: number }
 
@@ -42,10 +42,7 @@ async function preferencias(): Promise<Map<string, boolean> | null> {
  * panel tampoco los ofrece).
  */
 export async function avisoActivo(id: string): Promise<boolean> {
-  if (esCritico(id)) return true
-  const prefs = await preferencias()
-  if (!prefs) return true // fail-open
-  return prefs.get(id) ?? true
+  return resolverActivo(id, await preferencias())
 }
 
 export async function guardarPreferencia(id: string, activo: boolean): Promise<void> {

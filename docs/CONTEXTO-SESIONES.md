@@ -46,6 +46,12 @@
   `correo.huespedes` a petición suya (📬 Huésped de Smoobu «Nueva reserva»); los borradores del agente siguen.
 - La bitácora nace vacía: el panel dice «aún no se ha medido», nunca «0 avisos». Migración
   `2026-09-01_telegram_avisos.sql` **aplicada**. Purga a 90 días desde el cron `agentes-latido`.
+- **#1924 MERGEADO** (`ff136ac0`, 12 requeridos verdes). El CI cazó un `make_interval(days => ${n})`
+  sin `::int` (Prisma manda int8 → 42883 SOLO en runtime): guardián `regression-sql-fecha-parametro`.
+  ⚠️ Ese guardián enumera con `git ls-files`, así que **no ve ficheros sin `git add`** — la suite
+  local daba verde con el bug delante. Haz `git add` antes de dar por buena una suite con archivos nuevos.
+- Documentado en `apps/plataforma/CLAUDE.md` (§Panel Avisos Telegram), skills `plataforma-maestro`
+  (punto 12) y `correo-triaje`, y `docs/FUENTES-DE-VERDAD.md`.
 ### ✅ (01/09/2026) V4 Flash CONFIRMADO en producción con tráfico real — serie cerrada al 100%
 - Sonda diaria 07:00:48 UTC: `plataforma·sonda·openrouter·deepseek/deepseek-v4-flash·ok` →
   no hay override `OPENROUTER_MODEL` en Vercel; el default nuevo sirve en producción.

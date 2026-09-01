@@ -18,6 +18,7 @@
 | `MATRIZ.md` | `packages/*/package.json`, `apps/*/package.json`, `apps/*/vercel.json`, `apps/ia-rest/src/lib/supabase.ts` (schema flip) |
 | `docs/PLAN-consolidacion-BD-holding.md` (+ `docs/RUNBOOK-migracion-bd-iarest.md`, `docs/DISEÑO-fusion-bd.md`, `docs/INFORME-unificacion-central.md`) | `apps/ia-rest/src/lib/supabase.ts` (`SB_SCHEMA`), `apps/ia-rest/supabase/**`, envs Supabase de ia-rest en Vercel; migración silo→compartida CERRADA el 19/08/2026 (proyecto viejo borrado; todo vive en `wswbehlcuxqxyinousql`, schema `iarest`) |
 | `docs/SKILLS.md` | `.claude/skills/**`, `.claude/commands/**` |
+| `apps/plataforma/CLAUDE.md` §«Panel Avisos Telegram» + skill `plataforma-maestro` (punto 12) | `apps/plataforma/lib/telegram/**`, `apps/plataforma/lib/telegram.ts`, `apps/plataforma/app/(usuario)/telegram/**`, `apps/plataforma/app/api/telegram/**` — **el nº de avisos del doc envejece solo**: contrastarlo contra `AVISOS.length` de `catalogo.ts`, nunca contra el doc que lo escribió |
 | `docs/VIGIA-CONECTORES.md` | `.claude/skills/conectores-vigia/**`, `.claude/skills/*/SKILL.md` (el mapa rutina→endpoint envejece cuando una skill cambia de conector) |
 | `docs/HUECOS-ABIERTOS.md` | `docs/TRADING-FUENTES-PAGO.md`, `packages/module-trading/**`, `apps/plataforma/app/api/trading/**`, `apps/plataforma/lib/trading/**` — **comprobar contra el CÓDIGO que cada hueco sigue abierto, no contra el doc que lo declaró** (caso 21/08/2026) |
 | skill `conectores-vigia` | `docs/VIGIA-CONECTORES.md`, `docs/HUECOS-ABIERTOS.md`, `.github/workflows/rutinas-automerge.yml` |
