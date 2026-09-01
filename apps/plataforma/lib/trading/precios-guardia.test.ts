@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, saltoDeSaldo, detectarSuplantaciones, resumenSuplantaciones, juzgarPuntos, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, SALTO_PRECIO_DIA_MAX } from './precios-guardia.ts'
+import { filtrarPreciosAnomalos, resumenDescartes, contrastarFuentes, resumenDivergencias, saltoDeSaldo, detectarSuplantaciones, resumenSuplantaciones, juzgarPuntos, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, ventanaHastaApertura, SALTO_PRECIO_DIA_MAX } from './precios-guardia.ts'
 
 test('el caso real del 03/08/2026: CVX a 590,17 con referencia 192,31 se descarta', () => {
   const { limpios, descartados } = filtrarPreciosAnomalos({ CVX: 590.17 }, { CVX: 192.31 })
@@ -600,6 +600,27 @@ test('vencimiento en viernes con el cierre en lunes: dentro del margen, se punt�
 test('sin serie (la fuente no respondió) no se puntúa: es un «no lo sé», no un cero', () => {
   const v = juzgarHuerfana({ simbolo: 'CEG', fecha: '2026-07-18', vence: '2026-07-28', precioRef: 252.39 }, [])
   assert.equal(v.estado, 'sin-ancla')
+})
+
+test('ventanaHastaApertura cuenta desde la fecha de APERTURA, no desde una posterior', () => {
+  assert.equal(ventanaHastaApertura(['2026-07-18'], '2026-08-15', 7), diasEntre('2026-07-18', '2026-08-15') + 7)
+  // varias fechas: se queda con la MÁS ANTIGUA (el ancla más exigente)
+  assert.equal(ventanaHastaApertura(['2026-08-01', '2026-07-18', '2026-07-25'], '2026-08-15', 7), diasEntre('2026-07-18', '2026-08-15') + 7)
+})
+
+test('el caso real de MSFT del 31/08/2026: pedir la ventana desde el VENCIMIENTO deja el ancla fuera de rango', () => {
+  const abierta = '2026-08-04'
+  const vence = '2026-08-14'   // horizonte 10 días
+  const hoy = '2026-08-31'
+  const margen = 7
+  // Antes del fix se pedía la ventana desde `vence` — 3 días corta para llegar a `abierta`.
+  const ventanaBuggy = diasEntre(vence, hoy) + margen
+  const inicioBuggy = fechaMas(hoy, -ventanaBuggy)
+  assert.ok(inicioBuggy > abierta, 'la ventana buggy debía quedar corta (documenta el bug, no lo reproduce)')
+  // Con el fix, la ventana se pide desde `abierta` y SÍ alcanza esa fecha.
+  const ventanaFija = ventanaHastaApertura([abierta], hoy, margen)
+  const inicioFijo = fechaMas(hoy, -ventanaFija)
+  assert.ok(inicioFijo <= abierta, 'la ventana corregida debe alcanzar la fecha de apertura')
 })
 
 test('resumenHuerfanas: vacío solo si no hubo ninguna; en cuanto hay una, se dice', () => {

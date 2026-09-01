@@ -1,7 +1,7 @@
 // lib/correo/reserva-booking.ts — parser PURO de los avisos de reserva de Booking al propietario.
 //
 // Nace del caso James Ascott (Luxury, 27→29/08/2026): Smoobu se cayó, la reserva NUNCA llegó a
-// `incomes` y la limpieza del 29 no salió en el calendario de Sique Brilla. Dos señales de correo:
+// `incomes` y la limpieza del 29 no salió en el calendario de Si que Brilla. Dos señales de correo:
 //
 //  (a) «Booking.com - ⚠️ Nueva reserva no registrada (5569210843, 1/8/2026)» — Booking avisa
 //      cuando el channel manager (Smoobu) NO registró la reserva. Igual con «Cancelación no

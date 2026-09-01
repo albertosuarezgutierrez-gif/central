@@ -364,6 +364,12 @@ No lo es: con `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (≈20 s, el
 |---|---|---|
 | `Tests (packages + guardián)` | `pnpm test` | raíz |
 | `Typecheck · <app>` (×11) | `pnpm exec prisma generate` (si hay `prisma/schema.prisma`) + `pnpm exec tsc --noEmit -p tsconfig.json` | `apps/<app>` |
+
+⚠️ **`apps/asegura` tiene DOS schemas de Prisma** (`prisma/schema.prisma` y `prisma/asegura.prisma`, este
+último con `output = ../lib/generated/asegura-client`). Generar solo el primero deja su typecheck en rojo
+con `TS2307: Cannot find module './generated/asegura-client'` **en local mientras el CI está verde** — el
+workflow usa el script de la app, que genera los dos. El comando completo es el de su `package.json`:
+`prisma generate && prisma generate --schema prisma/asegura.prisma`. (Medido 01/09/2026.)
 | `Análisis estático · Patrones conocidos` | `pnpm exec tsx scripts/qa-check.ts` | **`apps/ia-rest`** (el workflow lleva `working-directory`) |
 | `Lint · TypeCheck · Build` | `pnpm run lint` · `pnpm exec tsc --noEmit` · `pnpm run build` | **`apps/ia-rest`** (idem) |
 

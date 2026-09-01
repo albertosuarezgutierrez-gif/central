@@ -67,7 +67,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.next()
     }
   }
-  // Intranet de limpieza (Sique Brilla, sin cuenta): mismo patrón que /api/empresas. La entrada del
+  // Intranet de limpieza (Si que Brilla, sin cuenta): mismo patrón que /api/empresas. La entrada del
   // token siempre alcanzable (fija la cookie); el resto solo pasa si la cookie está presente y
   // cada handler la revalida contra la BD (accesoLimpieza). Sin cookie ni sesión → gate normal.
   if (pathname.startsWith('/api/sivra/limpieza-intranet')) {

@@ -195,8 +195,12 @@
   SOLO paper.
 
 ## Puerta a Fase 2
-No proponer ejecución real hasta que `trading_estrategia_stats` muestre rentabilidad sostenida y FUERA
-DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec. Hasta entonces: solo paper.
+No proponer ejecución real **a escala** hasta que `trading_estrategia_stats` muestre rentabilidad
+sostenida y FUERA DE MUESTRA (walk-forward). Esa decisión es de Alberto y tendrá su propio spec.
+⚠️ **«Solo paper» ya NO describe el estado:** la escalera de aquí abajo es precisamente el permiso
+para meter dinero real ANTES de esa puerta, y **su Tramo 1 (1.000€) está abierto desde el 25/08/2026
+en CVX**. Lo que la puerta de Fase 2 sigue bloqueando es pasar del techo de 6.000€, no que haya
+capital real desplegado.
 - **🪜 Escalera de tramos FIRMADA** (05/08/2026, `docs/TRADING-HIPOTESIS-PREREGISTRO.md` §«Plan de
   despliegue de capital REAL» + enmienda de operacionalización): 1.000€ → +2.000€ → +3.000€, techo
   6.000€ hasta validar. **SIN fecha objetivo: la suben las señales, no el calendario** (Alberto). El

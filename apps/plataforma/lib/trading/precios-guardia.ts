@@ -455,6 +455,17 @@ export function diasEntre(desde: string, hasta: string): number {
   return Math.round((b - a) / 86_400_000)
 }
 
+// Ventana (en días) que hay que pedir a la 2ª fuente para que la serie alcance el ANCLA de
+// `juzgarHuerfana`: la sesión <= `h.fecha`. `h.fecha` es la fecha de APERTURA (tesis o posición), NUNCA
+// la de vencimiento — pasar el vencimiento deja la ventana corta por `horizonteDias` días y el ancla no
+// encuentra nunca con qué comparar, así que la puntuación queda "sin-ancla" para siempre por mucho que
+// se reintente. Bug real (31/08/2026): una posición de MSFT abierta el 04/08 (horizonte 10, vencida el
+// 14/08) pedía la ventana desde el 14/08 en vez de desde el 04/08 y llevaba 17 días sin poder cerrarse.
+export function ventanaHastaApertura(fechasApertura: string[], hoy: string, margenDias: number): number {
+  const masVieja = [...fechasApertura].sort()[0]
+  return diasEntre(masVieja, hoy) + margenDias
+}
+
 // `serie` = cierres publicados por la 2ª fuente en orden ascendente (lo que devuelven tanto el CSV de
 // Stooq como el chart de Yahoo, y lo que ya asume `juzgarPuntos`).
 export function juzgarHuerfana(
