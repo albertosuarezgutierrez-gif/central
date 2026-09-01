@@ -2,6 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   DIAS_PREAVISO_TOMADOR,
+  DIAS_PREAVISO_ASEGURADOR,
+  comunicacionEnPlazo,
+  fechaLimiteComunicacionAseguradora,
   diasHastaVencimiento,
   etiquetaUrgencia,
   fechaLimiteOposicion,
@@ -64,4 +67,22 @@ test('primaEnRiesgo separa lo que se sabe de lo que no — el total nunca absorb
 
 test('sin pólizas el total es 0 y NO hay primas desconocidas: 0 aquí sí significa cero', () => {
   assert.deepEqual(primaEnRiesgo([]), { total: 0, conocidas: 0, sinPrima: 0 })
+})
+
+test('el asegurador tiene DOS meses para comunicar una subida (LCS art. 22)', () => {
+  assert.equal(DIAS_PREAVISO_ASEGURADOR, 60)
+  assert.equal(
+    fechaLimiteComunicacionAseguradora(new Date('2026-10-01')).toISOString().slice(0, 10),
+    '2026-08-02',
+  )
+})
+
+test('una comunicación en el límite exacto está en plazo', () => {
+  assert.equal(comunicacionEnPlazo(new Date('2026-10-01'), new Date('2026-08-02')), true)
+  assert.equal(comunicacionEnPlazo(new Date('2026-10-01'), new Date('2026-08-03')), false)
+})
+
+test('sin fecha de comunicación NO se afirma que llegó tarde: es null', () => {
+  assert.equal(comunicacionEnPlazo(new Date('2026-10-01'), null), null)
+  assert.equal(comunicacionEnPlazo(new Date('2026-10-01'), undefined), null)
 })

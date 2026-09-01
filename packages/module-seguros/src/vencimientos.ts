@@ -19,6 +19,17 @@
 /** Preaviso mínimo del tomador para oponerse a la prórroga (LCS art. 22). */
 export const DIAS_PREAVISO_TOMADOR = 30
 
+/**
+ * Preaviso del ASEGURADOR (LCS art. 22): dos meses, tanto para oponerse a la
+ * prórroga como para comunicar **cualquier modificación del contrato**.
+ *
+ * Lo segundo es la palanca que más se usa en una renovación: **una subida de
+ * prima ES una modificación**, no una prórroga a secas (criterio publicado de
+ * la DGSFP). Si la compañía no la comunicó con dos meses, no puede imponerla:
+ * el contrato se prorroga en los términos anteriores.
+ */
+export const DIAS_PREAVISO_ASEGURADOR = 60
+
 /** Horizonte por defecto al pedir «los próximos vencimientos». */
 export const DIAS_HORIZONTE_RENOVACION = 90
 
@@ -45,6 +56,30 @@ export function fechaLimiteOposicion(vencimiento: Date): Date {
   const d = new Date(Date.UTC(vencimiento.getUTCFullYear(), vencimiento.getUTCMonth(), vencimiento.getUTCDate()))
   d.setUTCDate(d.getUTCDate() - DIAS_PREAVISO_TOMADOR)
   return d
+}
+
+/** Último día en que el asegurador puede comunicar una subida de prima o
+ *  cualquier otra modificación para esta renovación (LCS art. 22). */
+export function fechaLimiteComunicacionAseguradora(vencimiento: Date): Date {
+  const d = new Date(Date.UTC(vencimiento.getUTCFullYear(), vencimiento.getUTCMonth(), vencimiento.getUTCDate()))
+  d.setUTCDate(d.getUTCDate() - DIAS_PREAVISO_ASEGURADOR)
+  return d
+}
+
+/**
+ * ¿La compañía comunicó la modificación a tiempo?
+ *
+ * `null` cuando NO consta la fecha de comunicación, que es distinto de «llegó
+ * tarde»: significa que no se ha mirado. Afirmar que una subida es inoponible
+ * sin tener la fecha es exactamente el error que hay que evitar — el cliente
+ * llamaría a la compañía con un argumento falso.
+ */
+export function comunicacionEnPlazo(
+  vencimiento: Date,
+  comunicadaEl: Date | null | undefined,
+): boolean | null {
+  if (!comunicadaEl) return null
+  return comunicadaEl.getTime() <= fechaLimiteComunicacionAseguradora(vencimiento).getTime()
 }
 
 export function urgenciaRenovacion(dias: number): UrgenciaRenovacion {

@@ -9,9 +9,12 @@ export {
 
 export {
   DIAS_PREAVISO_TOMADOR,
+  DIAS_PREAVISO_ASEGURADOR,
   DIAS_HORIZONTE_RENOVACION,
   diasHastaVencimiento,
   fechaLimiteOposicion,
+  fechaLimiteComunicacionAseguradora,
+  comunicacionEnPlazo,
   urgenciaRenovacion,
   etiquetaUrgencia,
   primaReferencia,

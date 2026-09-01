@@ -94,5 +94,50 @@
   Helper puro `@central/module-seguros/vencimientos` (`urgenciaRenovacion`, `fechaLimiteOposicion`,
   `primaEnRiesgo`), consumido por el puerto `/api/operador/vencimientos` de asegura y pintado en
   plataforma `/correduria`.
+## 6. Novedades 2026 y argumentario de renovación (investigado 01/09/2026)
+> ⚠️ Verificado contra fuentes secundarias del sector (INESE, UNESPA, ICEA, DGSFP): el proxy de la
+> sesión bloquea `boe.es` y `dgsfp.mineco.gob.es`, así que **antes de citarle una norma a un cliente
+> o a una compañía, hay que leer el texto oficial**. Lo marcado «no confirmado» NO se afirma.
+
+- **⚡ Oportunidad comercial directa: seguro obligatorio de RC para VMP/patinetes** (RD 52/2026, BOE
+  30/01/2026) + registro en la DGT con etiqueta. Encaja con una cartera de auto/hogar y es venta
+  cruzada sobre clientes que ya están. ⚠️ Las fuentes discrepan en la fecha efectiva (02/01 por la
+  Ley 5/2025 vs 30/01 por el RD): comprobar antes de usarlo en una campaña.
+- **Ley 10/2025 de servicios de atención a la clientela** — adaptación hasta el **28/12/2026**.
+  Atención gratuita, 95% de llamadas en <3 min y **derecho a hablar con una persona: el servicio no
+  puede basarse solo en bots**. 🚨 **Esto condiciona la Fase 3 de este agente**: un bot que atienda
+  clientes necesita escape a persona por diseño, no como añadido. ⚠️ No confirmado si el ámbito
+  subjetivo alcanza a una correduría pequeña — leer el artículo de ámbito antes de dar nada por hecho.
+- **Baremo de autos**: reforma con efectos 01/01/2026 (Ley 5/2025, amplía «hecho de la circulación»)
+  y actualización **+2,9%** para 2026. Sube la siniestralidad de autos y RC.
+- **Prioridades de supervisión DGSFP 2026-2028**, por primera vez con apartado propio de mediación:
+  diseño de producto, **relación coste/valor**, calidad del asesoramiento. Endurece el enfoque de conducta.
+- **Revisión de la IDD (paquete RIS)**: aplicación estimada ~julio 2029. Estructural para el modelo de
+  correduría (prohibiría retener comisiones a quien asesore de forma independiente). Radar, no acción.
+
+**Argumentario de renovación (con datos, no impresiones):**
+- La subida no la decide la compañía, la decide el coste del siniestro: **recambio +9%**, coste de
+  reparación **+3,3%** (contra IPC 2,2%), baremo **+2,9%**. Traducir la subida a causa verificable.
+- **Cartera vs nueva producción, canal corredor 2T 2026** (Asegurómetro): auto cartera 470€ (+4,7%)
+  frente a nueva producción 441€ (**−2,2%**). Existe precio de captación → **re-tarificar en otra
+  compañía antes que perder al cliente**. Hogar: mercado ~319€ (+6%), canal corredor 329€ (+3,9%).
+- **Hogar: el argumento no es el precio, es el INFRASEGURO.** Con la inflación de construcción, un
+  capital desactualizado activa la regla proporcional en el siniestro.
+- **🔑 La palanca legal más útil (LCS art. 22.3 + criterio DGSFP): una subida de prima es una
+  MODIFICACIÓN del contrato, no una prórroga**, así que el asegurador debe comunicarla con **2 meses**
+  de antelación. Sin ese preaviso no puede imponerla: el contrato se prorroga en los términos
+  anteriores. Implementado en `comunicacionEnPlazo` — y devuelve `null` cuando no consta la fecha de
+  comunicación, porque afirmar que una subida es inoponible sin tenerla mandaría al cliente a discutir
+  con la compañía con un argumento falso.
+- **STS 141/2020**: si el ASEGURADOR se opuso a la prórroga por el art. 22, NO aplica el mes de gracia
+  del art. 15.2 — no hay cobertura adicional tras el vencimiento.
+- ⚠️ Titular de prensa de 24/02/2026 («prohíben subir la póliza del coche sin avisar con dos meses»):
+  **no es una ley nueva**, es el art. 22.3 de siempre. No citarlo como cambio normativo.
+
+**No confirmado (pendiente de fuente primaria):** la tabla de códigos de ramo EIAC la custodia TIREA y
+no está publicada, así que **241 / 2151 / 282 no están verificados** — y muchas compañías usan códigos
+propios además del estándar. Por eso el campo semántico que se usa es `polizas.tipo`, no `ramo_dgs`.
+
+## 7. El activo dormido
 - Los **29.858 leads** son el activo comercial dormido: nadie los trabaja hoy. RGPD manda:
   verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
