@@ -39,13 +39,30 @@ const DIR_MEMORIA = join(raiz, 'docs', 'memoria');
 export const RE_FECHA = /([0-3]?\d)\/([01]\d)(?:\/(20\d\d))?/;
 const RE_FECHA_G = new RegExp(RE_FECHA.source, 'g');
 
-// La fecha real de una cabecera es la ÚLTIMA que aparece (la convención de Alberto la pone
-// justo antes del cierre `**`/fin de línea); una fecha citada ANTES en el propio título
-// ("... desde el 30/07 (06/08/2026)") es contexto, no la fecha de la entrada — coger la
-// primera coincidencia (como hacía `.match()`) la archivaba en el mes equivocado.
+// Qué fecha de la cabecera es LA de la entrada. Hay dos convenciones y ninguna regla simple
+// vale para las dos:
+//
+//   `- **… (06/08/2026).**`            → la fecha va al final de la negrita.
+//   `### 🔴 (01/09/2026) título…`      → la fecha va ENTRE PARÉNTESIS, al principio.
+//
+// Por eso manda **la fecha entre paréntesis** cuando la hay, y solo si no hay ninguna se cae a
+// la última. Las dos convenciones ponen la fecha de la entrada entre paréntesis; lo que queda
+// fuera de ellos es contexto que el título cita.
+//
+// 🐛 Fallo que arregla (medido 01/09/2026): con «siempre la última», la entrada
+// `### 🔴 (01/09/2026) GH_PAT_TRIGGER caducado: … lleva desde el 31/08 sin actualizarse`
+// se archivaba en `docs/memoria/2026-08.md`, porque `31/08` aparece después. Y con «siempre la
+// primera» —lo que hacía `.match()` antes— se rompía el caso inverso
+// (`… desde el 30/07 (06/08/2026)`). Los paréntesis distinguen los dos sin ambigüedad.
+const entreParentesis = (texto, m) =>
+  texto[m.index - 1] === '(' && texto[m.index + m[0].length] === ')';
+
 const ultimaFecha = (texto) => {
   const coincidencias = [...texto.matchAll(RE_FECHA_G)];
-  return coincidencias.length ? coincidencias[coincidencias.length - 1] : null;
+  if (coincidencias.length === 0) return null;
+  const conParentesis = coincidencias.filter((m) => entreParentesis(texto, m));
+  if (conParentesis.length > 0) return conParentesis[conParentesis.length - 1];
+  return coincidencias[coincidencias.length - 1];
 };
 
 export const esInicioEntrada = (linea) => linea.startsWith('- **') || linea.startsWith('### ');
