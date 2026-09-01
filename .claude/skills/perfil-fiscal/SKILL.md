@@ -32,6 +32,14 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
   Lo que SÍ se conserva pase lo que pase: cada extra queda **identificado uno a uno** en `incomes`
   (etiqueta de extra) y el tipo de IVA vive en `sivra_extras_catalogo.iva_pct` — nada cableado, nada
   borrado, así que revertir el criterio es editar una fila y los importes ya están todos ahí.
+- **🚨 Comisiones de la correduría — hoy el borrador se COPIA, no se cuadra (medido 01/09/2026).** Son
+  **rendimiento de actividad económica** de Alberto en estimación directa, con **retención del 15 %** que
+  las compañías declaran en el **modelo 190** → por eso salen en los datos fiscales de la AEAT. En la
+  renta 2025 la asesoría pidió el **libro registro de ingresos y gastos**, no lo había, y Alberto
+  contestó «ingresos los que aparece en el borrador». **No existe libro registro propio**: mientras no
+  lo haya, NO afirmes que la cifra de comisiones está verificada — está aceptada. El control que lo
+  arregla está diseñado en
+  `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md` (alcance: 2026 en adelante).
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
 - **⚠️ LANDMINE — NUNCA crear una `regla` global para `AYTO SEVILLA`/`RECIBO AYTO. SEVILLA`:** el mismo concepto vale para un piso turístico (deducible) y para la vivienda habitual (personal) → una regla por concepto clasificaría mal. Casar **caso a caso** por importe/fecha/cuenta.
 - **Bizum** → SIEMPRE **personal** (regla pura en `lib/destino.ts`, auto-confirmado → no pide revisión).
