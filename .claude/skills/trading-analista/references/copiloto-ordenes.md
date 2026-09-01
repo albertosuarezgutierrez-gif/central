@@ -9,14 +9,39 @@ Esa limitación técnica es la salvaguarda: el agente prepara, Alberto confirma.
 ## Doctrina núcleo-satélite (lo que respaldan los datos)
 - **Núcleo:** ETF global amplio con el grueso del capital (80-100% del NAV). **No se toca.**
   Es el suelo a batir (`docs/INVERSION-VEREDICTO-2026-08.md` §8.1).
-- **Satélite:** máx. 10-20% del NAV para propuestas del sistema — **HOY EN PAPER**. Pasa a
-  dinero real SOLO si el Tramo 2 del forward (120 días; cohortes vivas 2026-07-18/20) valida
-  y Alberto abre la puerta explícitamente. Esa decisión se anota en
-  `docs/TRADING-HIPOTESIS-PREREGISTRO.md` y en la memoria; hasta entonces no existe.
+- **Satélite:** máx. 10-20% del NAV para propuestas del sistema. **Se despliega por la escalera
+  de tramos firmada el 05/08/2026** (`docs/TRADING-HIPOTESIS-PREREGISTRO.md`), no de golpe.
+  🚨 **El Tramo 1 (1.000€ REALES) ya está ABIERTO y GASTADO** — Alberto delegó el criterio el
+  24/08/2026 y el 25/08 se abrió **CVX** (6 títulos, precio medio 200,04$; confirmada por él a
+  mano desde IBKR). O sea: **decir «el satélite está en paper» es FALSO desde el 25/08/2026** —
+  lo estuvo hasta esa fecha y la frase se quedó aquí sin actualizar, lo que ya hizo contestar mal
+  a una sesión (31/08/2026: se le dijo a Alberto que su cartera real no compraba «porque todo es
+  paper», con CVX en cartera).
+- **Lo que sigue siendo cierto:** el capital real autorizado HOY es **el Tramo 1 y nada más**.
+  Las señales nuevas de la pasada (NFLX, PLTR, SQM… ) van a paper **porque el tramo ya está
+  consumido**, no porque no exista dinero real. El **Tramo 2 (+2.000€)** exige la cesta paper más
+  vieja a ≥120 días (cohortes 2026-07-18/20 → **~15/11/2026**) con alpha por mediana > 0 **Y**
+  fricción del Tramo 1 sin anomalías (round-trip ≤2%). Es una decisión SEPARADA de Alberto.
+- **Y el Tramo 2 tampoco es financiable hoy sin dinero nuevo:** la cuenta está casi entera en el
+  núcleo (31/08/2026: NAV 32.854,54€, efectivo 381,60€). Meter el Tramo 2 sin ingreso nuevo sería
+  vender núcleo para comprar agente — la rotación PROHIBIDA de la línea siguiente.
 - **⛔ Rotación núcleo→satélite PROHIBIDA:** «sacar del ETF porque hay una oportunidad» es el
-  patrón de timing que dio −33,9% y reactiva la regla fiscal de los 2 meses (art. 33.5 f
-  LIRPF). El agente NUNCA propone vender el núcleo para financiar una señal. El satélite se
-  financia con liquidez nueva o con su propio tamaño, jamás vaciando el núcleo.
+  patrón de timing que dio −33,9%. El agente NUNCA propone vender el núcleo para financiar una
+  señal. El satélite se financia con liquidez nueva o con su propio tamaño, jamás vaciando el
+  núcleo.
+  🚨 **Precisión fiscal (31/08/2026) — no la cuentes mal:** la regla de los 2 meses (art. 33.5 f
+  LIRPF) exige **valores HOMOGÉNEOS**, así que vender VWCE en pérdida y comprar NFLX **NO la
+  dispara** — la dispara **volver a entrar en el ETF** (o en otro homogéneo) dentro de los 2 meses
+  anteriores o posteriores, y aun entonces la pérdida no se pierde: queda **diferida** hasta vender
+  las nuevas participaciones. Decir «vender núcleo activa la regla de los 2 meses» a secas es falso
+  y asusta con el argumento equivocado; **el motivo para no vaciar el núcleo es de cartera, no
+  fiscal**. La versión corta de este bullet lo decía mal desde el 15/08/2026.
+  ↔️ **Distinción que sí importa:** una **rotación oportunista** (vender índice porque hoy hay
+  señal) está prohibida y el agente no la propone. Una **reasignación consciente** de Alberto
+  («quiero un X% del patrimonio en la estrategia del agente») es decisión suya y legítima — pero
+  entonces se firma en `docs/TRADING-HIPOTESIS-PREREGISTRO.md` **antes** y con un tamaño fijado,
+  no se decide la noche que aparece una señal. Si Alberto la plantea, canta el coste con números
+  (participaciones a vender, % del núcleo que se va, pérdida que se realiza) y déjale decidir.
 
 ## Instrucciones de orden (`create_order_instruction`)
 - **Cuándo SÍ:** solo cuando Alberto lo pide explícitamente en conversación («prepárame la
