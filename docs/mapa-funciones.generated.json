@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T13:36:24Z",
-  "sha": "82d202f4511f410a3c5382318bbaedbc7d59d549",
+  "generadoEn": "2026-09-01T14:33:20Z",
+  "sha": "3f8f7e3438beb60264b7f06ba16b00e1ad4e4ee9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2952,6 +2952,27 @@
       "hash": "940406db64c5"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/ingesta/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "GET /api/operador/ingesta — salud de la ingesta de CIMA (read-only). Tres estados, como el resto del puerto: `sin_configurar` (no hay conexión con la BD de origen) ≠ `error` (hay conexión y no se pudo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/ingesta",
+      "hash": "4f4c1daff309"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/resumen/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3270,6 +3291,31 @@
       ],
       "rutaApi": null,
       "hash": "2973fdc30c86"
+    },
+    {
+      "ruta": "apps/asegura/lib/ingesta.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Estado de la INGESTA de CIMA, leído de la BD del CRM de origen. Por qué existe (medido el 01/09/2026): entre el 24/06 y el 30/08 se quedaron 42 ficheros en cuarentena — 23 recibos por 7.721,71€ de prima y 20 siniestros de Occident— y nadie se enteró. El vigía de origen corría a diario con `cuarenten",
+      "exporta": [
+        "leerIngesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<EstadoIngestaPuerto>",
+          "linea": 41
+        }
+      ],
+      "tablas": [
+        "cima_ficheros",
+        "operational_events",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "6ecbb69fd893"
     },
     {
       "ruta": "apps/asegura/lib/operador.ts",
@@ -54197,7 +54243,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 167
+          "linea": 173
         }
       ],
       "tablas": [
@@ -54210,7 +54256,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "d315b980b8d2"
+      "hash": "3f3d93e03895"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54454,6 +54500,39 @@
       ],
       "rutaApi": "/api/cron/contable-proactivo",
       "hash": "000ade6ee05e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/correduria-ingesta/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Vigía de la INGESTA de CIMA (Grupo ASegura). 🚨 Existe por una avería real: del 24/06 al 30/08/2026 se quedaron 42 ficheros de CIMA sin procesar —23 recibos por 7.721,71€ de prima y 20 siniestros, casi todos de Occident— y ",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "firma",
+          "kind": "function",
+          "exportada": false,
+          "params": "estado: string, recientes: number, huerfanas: number | null",
+          "retorno": "string",
+          "linea": 38,
+          "resumen": "Firma de lo que se ha visto hoy. Sirve para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta: el estado vive en el latido y en la pantalla; el Telegram suena cuando algo CAMBIA ("
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 42
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "next"
+      ],
+      "rutaApi": "/api/cron/correduria-ingesta",
+      "hash": "9a0dd26d2f88"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-renovaciones/route.ts",
@@ -65652,6 +65731,63 @@
       "hash": "18617fc354aa"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/ingesta-cima.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Salud de la ingesta de CIMA, leída por el puerto HTTP de central-asegura. La avería que justifica este vigía (medida el 01/09/2026): 42 ficheros de CIMA se quedaron sin procesar entre el 24/06 y el 30/08 —23 recibos por 7.721,71€ de prima y 20 siniestros, casi todos de Occident— y el health-check de",
+      "exporta": [
+        "interpretarIngesta",
+        "saludDesdeRespuesta",
+        "leerIngestaCima"
+      ],
+      "funciones": [
+        {
+          "nombre": "esFichero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is FicheroEnCuarentena",
+          "linea": 19
+        },
+        {
+          "nombre": "interpretarIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaIngesta",
+          "linea": 37,
+          "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Una forma inesperada NO se degrada a «no hay nada atascado»: se degrada a `sin_datos`. Es la diferencia entre «he mirado y está limp"
+        },
+        {
+          "nombre": "saludDesdeRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RespuestaIngesta",
+          "retorno": "SaludIngesta",
+          "linea": 68,
+          "resumen": "La salud tal cual la ve el vigía: un fallo de red ya llega como `sin_datos`."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 72
+        },
+        {
+          "nombre": "leerIngestaCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<RespuestaIngesta>",
+          "linea": 76
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c85b8c33348f"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/renovaciones-aviso.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Aviso de RENOVACIONES de la correduría. La tabla de /correduria solo sirve si Alberto entra a mirarla. Lo que mueve una cartera es que el aviso llegue solo, y a tiempo: la ventana no la marca el calendario, la marca la LCS ",
@@ -66227,7 +66363,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 158,
+          "linea": 159,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -66236,7 +66372,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 188,
+          "linea": 189,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -66245,7 +66381,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 210
+          "linea": 211
         },
         {
           "nombre": "ventanaMinutos",
@@ -66253,7 +66389,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 218,
+          "linea": 219,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -66262,13 +66398,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 230,
+          "linea": 231,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d89daafc944b"
+      "hash": "028b20a44920"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -69395,7 +69531,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "04729ec8465e"
+      "hash": "89bec6523ca0"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -78231,7 +78367,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 528
+          "linea": 534
         },
         {
           "nombre": "avisosDe",
@@ -78239,7 +78375,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 533,
+          "linea": 539,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -78248,13 +78384,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 543,
+          "linea": 549,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b186319bb125"
+      "hash": "5a0afd1b943a"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -97360,6 +97496,63 @@
       "hash": "54dd111be75d"
     },
     {
+      "ruta": "packages/module-seguros/src/ingesta.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Salud de la INGESTA de CIMA — el vigía de que los datos de las compañías llegan de verdad. Contexto que justifica este módulo (medido el 01/09/2026): durante más de dos meses se perdieron 23 recibos (7.721,71€ de prima) y 20 siniestros de Occident, y el health-check de origen estuvo TODO ese tiempo ",
+      "exporta": [
+        "saludIngesta",
+        "detalleSalud"
+      ],
+      "funciones": [
+        {
+          "nombre": "claveDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroEnCuarentena",
+          "retorno": "string | null",
+          "linea": 103,
+          "resumen": "Un valor de cajón (vacío, guiones, «desconocido») es ausencia, no dato."
+        },
+        {
+          "nombre": "repartoClave",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuarentena: FicheroEnCuarentena[],",
+          "retorno": "Array<",
+          "linea": 109
+        },
+        {
+          "nombre": "reparto",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuarentena: FicheroEnCuarentena[]",
+          "retorno": "Array<",
+          "linea": 125
+        },
+        {
+          "nombre": "saludIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSalud, diasRecientes: number = DIAS_CUARENTENA_RECIENTE,",
+          "retorno": "SaludIngesta",
+          "linea": 142,
+          "resumen": "Veredicto sobre la ingesta. `degradada` exige una señal MEDIDA de pérdida: un fichero atascado en la ventana reciente, o pólizas huérfanas. El backlog viejo por sí solo no alarma (se informa, pero no "
+        },
+        {
+          "nombre": "detalleSalud",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SaludIngesta",
+          "retorno": "string",
+          "linea": 222,
+          "resumen": "Una línea para el latido/Telegram. Nunca dice «todo bien» sin haberlo mirado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c66b5547c62d"
+    },
+    {
       "ruta": "packages/module-seguros/src/objeto.ts",
       "ambito": "packages/module-seguros",
       "resumen": "QUÉ asegura cada póliza — el «objeto asegurado». Una lista de renovaciones con cliente, ramo y prima no basta para llamar a nadie: el mismo tomador puede tener tres pólizas de auto, y «Auto · Mapfre · 431,85€» no dice CUÁL. Lo que identifica la póliza en la conversación es el bien: la matrícula y el",
@@ -102703,7 +102896,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2692,
-    "funciones": 7494
+    "archivos": 2697,
+    "funciones": 7508
   }
 }

@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T13:47:56Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T14:33:20Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 11 apps · 38 packages · 23 capacidades · 38 skills · 1208 rutas API.
+**Resumen:** 11 apps · 38 packages · 23 capacidades · 38 skills · 1210 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-identity, module-seguros, module-seguros-pii
 - **Capacidades:** —
 - **Tablas (53):** seguros._volcado_control, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas, seguros.cuenta_efectivo, seguros.gestiones, seguros.historial_interno, seguros.lds_consent…
-- **Rutas API:** 4
+- **Rutas API:** 5
 ### housesevillana
 - **Módulos que usa:** —
 - **Capacidades:** —
@@ -46,7 +46,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (127):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor…
-- **Rutas API:** 322
+- **Rutas API:** 323
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -245,13 +245,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Quedan 3 peticiones fuera del repo:
+- Son DOS averías:
+- Pendiente:
+- Causa raíz:
+- Por qué duró dos meses:
+- Hecho (nuestro lado):
+- De Manuel (su repo, no el nuestro):
+- De Alberto:
+- Corregida deriva documental:
 - #1946
-- El canal de OTP es un PUERTO, no una llamada a WhatsApp
-- Cola de PRs vaciada a petición de Alberto:
-- Pendiente de Alberto:
-- #1938 MERGEADO
-- Pendiente para Alberto:
-- #1924 MERGEADO
-- Vencimientos ya funcionando
-- Migrar la cartera al schema `seguros`: NO todavía
 
