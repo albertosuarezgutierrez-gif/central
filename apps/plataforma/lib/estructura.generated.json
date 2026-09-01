@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T20:00:01Z",
+  "generadoEn": "2026-09-01T20:30:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5316,6 +5316,10 @@
       "fecha": ""
     },
     {
+      "titulo": "Corrección de hecho:",
+      "fecha": ""
+    },
+    {
       "titulo": "Apagado por defecto",
       "fecha": ""
     },
@@ -5353,10 +5357,6 @@
     },
     {
       "titulo": "PENDIENTE (nuevo):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Quedan 3 peticiones fuera del repo:",
       "fecha": ""
     }
   ],

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T20:00:01Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T20:30:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -257,10 +257,10 @@
 - `modality.category`
 - El canal es un PUERTO
 - Los 15 precios reales del 29/07 son TODOS `estimado`
+- Corrección de hecho:
 - Apagado por defecto
 - Hallazgo:
 - Siguiente paso al confirmar envs:
 - SMS con enlace `wa.me` para que escriba el cliente primero y salga gratis: descartado.
 - Campaña a los 32.520 leads: descartada.
-- Sí al inbound de cualquiera
 

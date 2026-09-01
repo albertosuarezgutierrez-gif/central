@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T20:00:01Z",
-  "sha": "1530127c85833a2e2f65d7a3182069a5d7b902b2",
+  "generadoEn": "2026-09-01T20:30:19Z",
+  "sha": "f0ffe876ce0a3ed43da64bc5ca59d7ed550795f9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51030,7 +51030,7 @@
           "exportada": false,
           "params": "ts: string",
           "retorno": null,
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "fmtFull",
@@ -51038,7 +51038,7 @@
           "exportada": false,
           "params": "ts: string",
           "retorno": null,
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "useResizable",
@@ -51046,7 +51046,7 @@
           "exportada": false,
           "params": "defaultWidth: number, min: number, max: number",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         },
         {
           "nombre": "useResizableV",
@@ -51054,7 +51054,7 @@
           "exportada": false,
           "params": "defaultHeight: number, min: number, max: number",
           "retorno": null,
-          "linea": 100
+          "linea": 101
         },
         {
           "nombre": "Spinner",
@@ -51062,7 +51062,7 @@
           "exportada": false,
           "params": "{ size = 20 }: { size?: number }",
           "retorno": null,
-          "linea": 134
+          "linea": 135
         },
         {
           "nombre": "MensajesPage",
@@ -51070,12 +51070,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 144
+          "linea": 145
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "982f8ef7b437"
+      "hash": "c2d9c74b2cb5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/mercado/page.tsx",
@@ -59438,7 +59438,7 @@
           "exportada": true,
           "params": "req: NextRequest, context: { params: Promise<{ bookingId: string }> }",
           "retorno": null,
-          "linea": 71
+          "linea": 73
         }
       ],
       "tablas": [
@@ -59447,7 +59447,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mensajes/[bookingId]",
-      "hash": "5610b0f2f8f8"
+      "hash": "89243d7fff3c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/auto-reply/route.ts",
@@ -74290,24 +74290,42 @@
           "exportada": true,
           "params": "d: DatosOrden & { bookingId: string; propertyId: string; codigo?: string | null },",
           "retorno": "Promise<ResultadoOrden>",
-          "linea": 28,
+          "linea": 41,
           "resumen": "Manda la orden y la deja registrada. Nunca lanza; tampoco esconde el fallo."
+        },
+        {
+          "nombre": "crearTareaIntranet",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: DatosOrden & { propertyId: string },",
+          "retorno": "Promise<string | null>",
+          "linea": 78,
+          "resumen": "Crea la tarea que ve la limpieza en `/invitado/limpieza`. Devuelve su id, o `null` si no se pudo (BD caída, fecha ilegible). `null` NO se traga: quien llama lo declara. La fecha es la de ENTRADA del h"
         },
         {
           "nombre": "registrarYAvisar",
           "kind": "function",
           "exportada": false,
-          "params": "d: DatosOrden & { bookingId: string; propertyId: string; codigo?: string | null }, error: string,",
+          "params": "d: DatosOrden & { bookingId: string; propertyId: string; codigo?: string | null }, tareaId: string | null, error: string,",
           "retorno": "Promise<ResultadoOrden>",
-          "linea": 52
+          "linea": 93
+        },
+        {
+          "nombre": "avisarSinIntranet",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: DatosOrden, prefijo: string",
+          "retorno": "Promise<void>",
+          "linea": 113,
+          "resumen": "El email salió pero la tarea no se creó: la limpieza NO lo tiene en su pantalla."
         },
         {
           "nombre": "registrarOrden",
           "kind": "function",
           "exportada": false,
-          "params": "p: { bookingId: string; propertyId: string; codigo?: string | null instruccion: string; enviado: boolean; error: string | null }",
+          "params": "p: { bookingId: string; propertyId: string; codigo?: string | null instruccion: string; enviado: boolean; error: string | null; tareaId: string | null }",
           "retorno": "Promise<void>",
-          "linea": 66
+          "linea": 122
         },
         {
           "nombre": "listarOrdenes",
@@ -74315,7 +74333,7 @@
           "exportada": true,
           "params": "bookingId: string",
           "retorno": "Promise<OrdenLimpieza[] | null>",
-          "linea": 91,
+          "linea": 148,
           "resumen": "Órdenes de esta reserva, la más reciente primero. 🚨 Devuelve **`null` si NO se ha podido leer** (migración sin aplicar, BD caída) — distinto de `[]` = «leído, no hay ninguna». Quien lo consuma no pue"
         },
         {
@@ -74324,15 +74342,16 @@
           "exportada": true,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<boolean | null>",
-          "linea": 105,
+          "linea": 162,
           "resumen": "¿Ya se ENVIÓ una orden de este extra para esta reserva? `null` = no se ha podido comprobar. Una orden que quedó en error NO cuenta como enviada: justo entonces hay que poder repetirla."
         }
       ],
       "tablas": [
+        "limpieza_tareas",
         "sivra_ordenes_limpieza"
       ],
       "rutaApi": null,
-      "hash": "30e75c85d005"
+      "hash": "d0384a248b81"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/orden-texto.ts",
@@ -74368,13 +74387,13 @@
           "exportada": true,
           "params": "ordenes: OrdenVista[] | null | undefined",
           "retorno": "ResumenOrdenes | null",
-          "linea": 60,
-          "resumen": "Titular de las órdenes de limpieza de una reserva, para pintarlo en la ficha. 🚨 Cuatro desenlaces, no dos (regla «dato que NO hay ≠ dato que NO se ha mirado»): `undefined` → todavía no se ha cargado:"
+          "linea": 73,
+          "resumen": "Titular de las órdenes de limpieza de una reserva, para pintarlo en la ficha. 🚨 LA PREGUNTA NO ES «¿salió el email?», ES «¿LO VE QUIEN TIENE QUE HACERLO?» (01/09/2026). Sique Brilla (Vanesa) ya no en"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "857b18d19074"
+      "hash": "e1b69139b6dc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/reserva.ts",
@@ -104293,6 +104312,6 @@
   ],
   "resumen": {
     "archivos": 2731,
-    "funciones": 7612
+    "funciones": 7614
   }
 }
