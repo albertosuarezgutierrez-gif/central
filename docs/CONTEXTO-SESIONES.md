@@ -47,6 +47,15 @@
   del puerto da `null` = «aún no llega», distinto de «no informado») → columna en `/correduria` y línea
   del Telegram de renovaciones. Skill `agente-correduria` actualizada (SKILL §2 + sector §5).
 
+### 📅 (01/09/2026) mercado-booking: objetivo jul/ago-2027 cumplido — falta quitar la prioridad del prompt
+- Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`) de la skill `mercado-booking`: 238 comps
+  reales en 24 ventanas (3 fechas × 4 pisos por mes) + 4/4 escaparate propio. **El objetivo (≥3
+  comparables en ≥3 fechas/piso en jul y ago 2027) ya estaba cumplido desde ayer (31/08)** — esta
+  pasada repitió trabajo porque el párrafo "PRIORIDAD TEMPORAL" seguía en el prompt de la rutina.
+- **Pendiente para Alberto:** borrar ese párrafo del prompt programado de `mercado-booking` (esta
+  sesión no tiene acceso al store del trigger para editarlo ella misma). Detalle en
+  `docs/AGENTES-BITACORA.md` (entrada 01/09/2026).
+
 ### 🔔 (01/09/2026) Panel «Avisos Telegram» (`/telegram`): catálogo + interruptor por aviso
 - Alberto: «las notificaciones de Telegram son muchas… un panel que las resuma y que pueda activarlas
   o desactivarlas». Hecho en `apps/plataforma`: **76 avisos PROACTIVOS catalogados** (`lib/telegram/catalogo.ts`),
