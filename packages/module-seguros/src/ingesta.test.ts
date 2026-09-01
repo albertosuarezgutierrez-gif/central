@@ -81,3 +81,51 @@ test('el reparto por entidad ordena por volumen: dice a quién preguntar', () =>
   })
   assert.deepEqual(s.porEntidad, [{ entidad: 'C0468', n: 3 }, { entidad: 'C0109', n: 1 }])
 })
+
+test('🔑 el reparto va por CLAVE DE MEDIADOR: una compañía manda por varias', () => {
+  // Caso real (01/09/2026): Occident manda por `8-92361`, `M00171` y `306333`.
+  // La primera tenía sus 10 SIN en cuarentena mientras la segunda iba bien.
+  // Decir solo «C0468» manda a revisar una cartera que no tiene el problema.
+  const s = saludIngesta({
+    cuarentena: [
+      { tipo: 'SIN', entidad: 'C0468', clave: '8-92361', dias: 1 },
+      { tipo: 'REC', entidad: 'C0468', clave: '8-92361', dias: 2 },
+      { tipo: 'SIN', entidad: 'C0468', clave: 'M00171', dias: 3 },
+    ],
+  })
+  assert.deepEqual(s.porEntidad, [{ entidad: 'C0468', n: 3 }])
+  assert.deepEqual(s.porClave, [
+    { entidad: 'C0468', clave: '8-92361', n: 2 },
+    { entidad: 'C0468', clave: 'M00171', n: 1 },
+  ])
+  assert.match(s.motivos[0], /clave 8-92361/)
+})
+
+test('🚨 una clave ausente o de cajón NO se inventa: se agrupa como «no consta»', () => {
+  const s = saludIngesta({
+    cuarentena: [
+      { tipo: 'REC', entidad: 'C0058', dias: 1 },
+      { tipo: 'REC', entidad: 'C0058', clave: '  ', dias: 1 },
+      { tipo: 'REC', entidad: 'C0058', clave: 'DESCONOCIDO', dias: 1 },
+    ],
+  })
+  assert.deepEqual(s.porClave, [{ entidad: 'C0058', clave: null, n: 3 }])
+  assert.match(s.motivos[0], /clave no legible/)
+})
+
+test('🩹 las huérfanas que YA están en cartera se cuentan aparte de las que no', () => {
+  // Se arreglan en casa (reprocesar) frente a pedir la carga inicial de esa
+  // clave. Contarlas juntas manda a preguntar a la compañía por algo que ya
+  // está en la BD.
+  const s = saludIngesta({ cuarentena: [], huerfanas: 20, huerfanasResolubles: 3 })
+  assert.equal(s.estado, 'degradada')
+  assert.equal(s.huerfanasResolubles, 3)
+  assert.match(s.motivos.join(' · '), /3 de ellas YA están en la cartera/)
+  assert.match(s.motivos.join(' · '), /17 no están en la cartera/)
+})
+
+test('🚨 sin saber cuántas son resolubles NO se afirma ninguna de las dos cosas', () => {
+  const s = saludIngesta({ cuarentena: [], huerfanas: 20 })
+  assert.equal(s.huerfanasResolubles, null)
+  assert.doesNotMatch(s.motivos.join(' · '), /YA están en la cartera|no están en la cartera/)
+})

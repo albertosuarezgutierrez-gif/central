@@ -65,3 +65,37 @@ test('los campos opcionales ausentes son null, no cero', () => {
   assert.equal(r.salud.huerfanas, null)
   assert.equal(r.salud.primaPerdida, null)
 })
+
+test('un puerto ANTERIOR a la clave de mediador sigue siendo legible', () => {
+  // Rechazar la respuesta por un campo que la versión desplegada no manda
+  // convertiría «versión vieja» en «no se ha podido mirar».
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [{ tipo: 'REC', entidad: 'C0468', dias: 2 }],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.salud.porClave, [{ entidad: 'C0468', clave: null, n: 1 }])
+  assert.equal(r.salud.huerfanasResolubles, null)
+})
+
+test('la clave de mediador viaja hasta el veredicto', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [{ tipo: 'SIN', entidad: 'C0468', clave: '8-92361', dias: 1 }],
+    huerfanas: 20,
+    huerfanasResolubles: 3,
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.salud.porClave, [{ entidad: 'C0468', clave: '8-92361', n: 1 }])
+  assert.equal(r.salud.huerfanasResolubles, 3)
+})
+
+test('🚨 una clave con tipo raro no se cuela como dato', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [{ tipo: 'SIN', entidad: 'C0468', clave: 42, dias: 1 }],
+  })
+  assert.equal(r.estado, 'error')
+})

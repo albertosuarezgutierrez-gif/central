@@ -76,8 +76,13 @@ export async function GET(req: NextRequest) {
     const prima = salud.primaPerdida !== null && salud.primaPerdida > 0
       ? `\n💶 Prima en los recibos sin guardar: <b>${eur(salud.primaPerdida)}</b>`
       : ''
-    const entidades = salud.porEntidad.length
-      ? `\nPor compañía: ${salud.porEntidad.map(e => `${e.entidad} (${e.n})`).join(' · ')}`
+    // Se reparte por CLAVE DE MEDIADOR, no solo por compañía: Occident manda
+    // por tres claves distintas y el atasco puede estar en una sola de ellas.
+    // Decir «Occident» mandaría a revisar una cartera entera que va bien.
+    const entidades = salud.porClave.length
+      ? `\nPor clave de mediador: ${salud.porClave
+          .map(e => `${e.entidad}/${e.clave ?? 'sin clave legible'} (${e.n})`)
+          .join(' · ')}`
       : ''
     await tgAviso('correduria.ingesta',
       '🛡️ <b>Se están perdiendo datos de CIMA</b>\n' +

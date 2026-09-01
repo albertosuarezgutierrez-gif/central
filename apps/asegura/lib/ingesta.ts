@@ -24,6 +24,7 @@ export type EstadoIngestaPuerto =
       estado: 'ok'
       cuarentena: FicheroEnCuarentena[]
       huerfanas: number
+      huerfanasResolubles: number
       primaPerdida: number | null
       diasSinPersistir: Record<string, number | null>
     }
@@ -45,11 +46,18 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
     // 1. Lo que se quedó por el camino. `estado <> 'confirmed'` es la definición
     //    de «no se procesó»: cubre review, error y deferred sin depender de que
     //    el enum no cambie de valores.
+    //    La CLAVE DE MEDIADOR sale del 2º campo del nombre EIAC
+    //    (`C0468_8-92361_REC_…`). Cada compañía asigna la suya y una misma
+    //    compañía manda por varias —Occident usa `8-92361`, `M00171` y
+    //    `306333`—, así que sin ella el reparto por entidad no dice de QUÉ
+    //    cartera se están perdiendo los datos. `NULLIF` para que un nombre con
+    //    otro formato llegue como «no consta» y no como cadena vacía.
     const cuarentenaRaw = await db.$queryRawUnsafe<
-      Array<{ tipo: string | null; entidad: string | null; dias: number | null }>
+      Array<{ tipo: string | null; entidad: string | null; dias: number | null; clave: string | null }>
     >(`
       SELECT tipo_objeto AS tipo,
              codigo_entidad AS entidad,
+             NULLIF(split_part(nombre_fichero, '_', 2), '') AS clave,
              EXTRACT(EPOCH FROM (now() - descargado_at)) / 86400 AS dias
       FROM cima_ficheros
       WHERE estado::text <> 'confirmed'
@@ -89,15 +97,34 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       diasSinPersistir[tipo] = d === undefined || d === null ? null : Math.floor(Number(d))
     }
 
+    // 2-bis. De esas huérfanas, cuántas tienen YA su póliza en la cartera. Son
+    //        dos averías distintas y llevan a sitios distintos: éstas llegaron
+    //        antes que su póliza y se arreglan REPROCESANDO en casa; las otras
+    //        son cartera que la compañía nunca mandó (CIMA solo envía POL en
+    //        altas y modificaciones) y exigen la carga inicial de esa clave.
+    //        Contarlas juntas manda a preguntar a la compañía por algo que ya
+    //        está en la BD.
+    const resolublesRaw = await db.$queryRawUnsafe<Array<{ polizas: bigint | null }>>(`
+      SELECT COUNT(DISTINCT e.payload->>'idPolizaEntidad') AS polizas
+      FROM operational_events e
+      WHERE e.event_name IN ('cima_siniestro_sin_poliza_review', 'cima_recibo_sin_poliza_review')
+        AND EXISTS (
+          SELECT 1 FROM polizas p
+          WHERE p.id_poliza_entidad = e.payload->>'idPolizaEntidad'
+        )
+    `)
+
     const fila = huerfanasRaw[0]
     return {
       estado: 'ok',
       cuarentena: cuarentenaRaw.map(f => ({
         tipo: f.tipo ?? 'desconocido',
         entidad: f.entidad ?? 'desconocida',
+        clave: f.clave,
         dias: Math.floor(Number(f.dias ?? 0)),
       })),
       huerfanas: Number(fila?.polizas ?? 0),
+      huerfanasResolubles: Number(resolublesRaw[0]?.polizas ?? 0),
       primaPerdida: fila?.prima === null || fila?.prima === undefined ? null : Number(fila.prima),
       diasSinPersistir,
     }

@@ -19,8 +19,12 @@ export type RespuestaIngesta =
 function esFichero(v: unknown): v is FicheroEnCuarentena {
   if (typeof v !== 'object' || v === null) return false
   const f = v as Record<string, unknown>
+  // `clave` NO se exige: el puerto desplegado puede ser anterior a que
+  // existiera el campo, y rechazar la respuesta entera por eso convertiría una
+  // versión vieja en «no se ha podido mirar». Ausente = no consta.
+  const claveOk = f.clave === undefined || f.clave === null || typeof f.clave === 'string'
   return typeof f.tipo === 'string' && typeof f.entidad === 'string'
-    && typeof f.dias === 'number' && Number.isFinite(f.dias)
+    && typeof f.dias === 'number' && Number.isFinite(f.dias) && claveOk
 }
 
 /**
@@ -53,6 +57,7 @@ export function interpretarIngesta(status: number, json: unknown): RespuestaInge
     salud: saludIngesta({
       cuarentena: r.cuarentena,
       huerfanas: num(r.huerfanas),
+      huerfanasResolubles: num(r.huerfanasResolubles),
       primaPerdida: num(r.primaPerdida),
       diasSinPersistir: dias,
     }),

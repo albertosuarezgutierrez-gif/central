@@ -38,6 +38,15 @@ export type FicheroEnCuarentena = {
   entidad: string
   /** Días transcurridos desde que se descargó. */
   dias: number
+  /**
+   * Clave de MEDIADOR bajo la que la compañía manda el fichero (2º campo del
+   * nombre EIAC: `C0468_8-92361_REC_…`). Cada compañía asigna la suya y una
+   * misma compañía puede mandar por VARIAS —Occident usa `8-92361`, `M00171` y
+   * `306333`—, así que sin ella el reparto por entidad esconde de qué cartera
+   * se está perdiendo el dato. `null`/ausente = no consta en el nombre, que NO
+   * es lo mismo que «no tiene clave».
+   */
+  clave?: string | null
 }
 
 /**
@@ -56,6 +65,15 @@ export type EntradaSalud = {
   primaPerdida?: number | null
   /** Días desde la última vez que se persistió algo, por tipo de objeto. */
   diasSinPersistir?: Record<string, number | null> | null
+  /**
+   * De las huérfanas, cuántas tienen YA su póliza en la cartera: llegaron antes
+   * que ella y nadie las volvió a mirar. Se arreglan REPROCESANDO, sin
+   * preguntar a nadie. Las demás son cartera que la compañía nunca mandó (CIMA
+   * solo envía POL en altas y modificaciones) y exigen una carga inicial por
+   * clave de mediador. Son dos averías distintas y no se pueden contar juntas.
+   * `null` = no se ha podido distinguir.
+   */
+  huerfanasResolubles?: number | null
 }
 
 export type SaludIngesta = {
@@ -66,10 +84,42 @@ export type SaludIngesta = {
   recientes: number
   /** Reparto por entidad, de más a menos. Señala a QUIÉN preguntar. */
   porEntidad: Array<{ entidad: string; n: number }>
+  /**
+   * Reparto por entidad + clave de mediador. Es el que dice QUÉ CARTERA se
+   * está perdiendo: dos claves de la misma compañía pueden ir una perfecta y
+   * la otra entera en cuarentena. Los ficheros sin clave legible no se
+   * inventan una: se agrupan como `null` y se declaran.
+   */
+  porClave: Array<{ entidad: string; clave: string | null; n: number }>
   huerfanas: number | null
+  /** Huérfanas cuya póliza YA está en la cartera (se arreglan reprocesando). */
+  huerfanasResolubles: number | null
   primaPerdida: number | null
   /** Frases listas para el aviso. Vacío cuando no hay nada que decir. */
   motivos: string[]
+}
+
+/** Un valor de cajón (vacío, guiones, «desconocido») es ausencia, no dato. */
+function claveDe(f: FicheroEnCuarentena): string | null {
+  const v = (f.clave ?? '').trim()
+  if (!v || v === '-' || /^(n\/a|desconocid[ao]|sin clave)$/i.test(v)) return null
+  return v
+}
+
+function repartoClave(
+  cuarentena: FicheroEnCuarentena[],
+): Array<{ entidad: string; clave: string | null; n: number }> {
+  const cuenta = new Map<string, { entidad: string; clave: string | null; n: number }>()
+  for (const f of cuarentena) {
+    const clave = claveDe(f)
+    const k = `${f.entidad}\u0000${clave ?? ''}`
+    const previo = cuenta.get(k)
+    if (previo) previo.n += 1
+    else cuenta.set(k, { entidad: f.entidad, clave, n: 1 })
+  }
+  return [...cuenta.values()].sort(
+    (a, b) => b.n - a.n || a.entidad.localeCompare(b.entidad) || (a.clave ?? '').localeCompare(b.clave ?? ''),
+  )
 }
 
 function reparto(cuarentena: FicheroEnCuarentena[]): Array<{ entidad: string; n: number }> {
@@ -99,7 +149,9 @@ export function saludIngesta(
       total: 0,
       recientes: 0,
       porEntidad: [],
+      porClave: [],
       huerfanas: null,
+      huerfanasResolubles: null,
       primaPerdida: null,
       motivos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
     }
@@ -110,17 +162,37 @@ export function saludIngesta(
   const huerfanas = typeof e.huerfanas === 'number' ? e.huerfanas : null
   const primaPerdida = typeof e.primaPerdida === 'number' ? e.primaPerdida : null
   const porEntidad = reparto(e.cuarentena)
+  const porClave = repartoClave(e.cuarentena)
+  const huerfanasResolubles =
+    typeof e.huerfanasResolubles === 'number' ? e.huerfanasResolubles : null
 
   const motivos: string[] = []
   if (recientes > 0) {
-    const culpable = reparto(e.cuarentena.filter(f => f.dias <= diasRecientes))[0]
+    // Se señala la CLAVE, no solo la entidad: «Occident» no dice nada cuando
+    // Occident manda por tres claves y solo una está atascada.
+    const culpable = repartoClave(e.cuarentena.filter(f => f.dias <= diasRecientes))[0]
+    const quien = culpable
+      ? `${culpable.entidad}${culpable.clave ? ` / clave ${culpable.clave}` : ' (clave no legible en el nombre)'}: ${culpable.n}`
+      : null
     motivos.push(
       `${recientes} fichero(s) sin procesar en los últimos ${diasRecientes} días` +
-      (culpable ? ` (sobre todo ${culpable.entidad}: ${culpable.n})` : ''),
+      (quien ? ` (sobre todo ${quien})` : ''),
     )
   }
   if (huerfanas !== null && huerfanas > 0) {
     motivos.push(`${huerfanas} póliza(s) con recibos o siniestros que no encuentran su póliza en la cartera`)
+    // Las dos averías se cuentan por separado o el aviso manda al sitio
+    // equivocado: una se arregla en casa, la otra pidiendo la cartera.
+    if (huerfanasResolubles !== null && huerfanasResolubles > 0) {
+      motivos.push(
+        `${huerfanasResolubles} de ellas YA están en la cartera (llegaron antes que su póliza): se arreglan reprocesando`,
+      )
+    }
+    if (huerfanasResolubles !== null && huerfanas > huerfanasResolubles) {
+      motivos.push(
+        `${huerfanas - huerfanasResolubles} no están en la cartera: falta la carga inicial de esa clave de mediador`,
+      )
+    }
   }
   if (total > recientes) {
     motivos.push(`${total - recientes} más arrastrados de antes (backlog ya conocido)`)
@@ -138,7 +210,9 @@ export function saludIngesta(
     total,
     recientes,
     porEntidad,
+    porClave,
     huerfanas,
+    huerfanasResolubles,
     primaPerdida,
     motivos,
   }
