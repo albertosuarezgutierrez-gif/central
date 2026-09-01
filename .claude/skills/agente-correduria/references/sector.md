@@ -56,9 +56,11 @@
 - 🔑 **Las claves de las compañías NO se generan en el panel**: el corredor se las pide a cada
   compañía y las manda a `soporte@codeoscopic.com`, que las configura. Por eso viajaron en claro
   por email (mayo-junio/2026, tickets 267334) — **pendientes de rotar**.
-- **Entornos:** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
-  `https://albertosuarezgutierrez.avant2.es`. ⚠️ **El host base de la API REST no consta en
-  ningún correo de Alberto**: hay que sacarlo de la documentación, que la tiene Manuel.
+- **Entornos (web):** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
+  `https://albertosuarezgutierrez.avant2.es`. ✅ **Host base de la API REST (resuelto 01/09/2026,
+  del repo de Manuel): sandbox `https://api-int.codeoscopic.io`** (OJO: **sin** el prefijo
+  `portal.` que menciona una doc vieja). El host de producción NO consta ni en su repo (se inyecta
+  por env `CODEOSCOPIC_BASE_URL`): pedirlo a Codeoscopic.
 - **Coste: 0,50€ POR COTIZACIÓN — resuelto el 01/09/2026 leyendo el Gmail.** Dos fuentes escritas y
   coherentes: el correo del CEO Ángel Blesa (09/04/2026, «se cobra por cotización… 50 céntimos por
   cotización», tarifa de amigo; recotizar el mismo coche añadiendo un conductor son «2 cotizaciones
@@ -71,16 +73,48 @@
   cotización = una parrilla con todas las compañías; retarificar la cartera viva (~109 pólizas)
   ronda los 54,50€ por pasada. Cualquier automatismo que cotice lleva **contador y tope** de serie.
 
+### 📜 Contrato técnico de la API — recibido del repo de Manuel (01/09/2026)
+Su Claude contestó al prompt con un traspaso completo, transcrito en
+**`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`** (leer ahí el detalle; esto es el resumen que no puede
+faltar al construir el cliente en `central`):
+- **Auth:** OAuth2 `client_credentials` (`POST {BASE_URL}/oauth2/token`) + en CADA request las
+  cabeceras **`X-Client-App`** y **`X-User-Email`** (obligatorias) y media type
+  **`application/vnd.codeoscopic.v1+json`** en `Accept`/`Content-Type` (la versión va ahí, no en el path).
+- **Cotizar = `POST /insurances`**, SÍNCRONO (los precios vienen en la respuesta; timeout 150 s) y
+  🚨 **facturable y NO idempotente: UN solo intento, jamás retry** — un reintento duplica proyecto y
+  cargo de 0,50€. Respuesta: `id` (= **project_id**, hay que persistirlo SIEMPRE — su ausencia en BD
+  es la causa exacta del `project_not_found` del webhook), `mainQuotes[]` (los precios),
+  `offers[]`, `errors[]` (fallos POR compañía, no abortan).
+- **Preemisión = `POST /insurances/{id}/offers`** (re-rate de la oferta elegida, también noRetry) ·
+  estado = `GET /insurances/{id}` · emisión = `POST /insurances/{id}/policy-applications`
+  (multipart, tras el flag **`BROKER_SUBMIT_ENABLED`**, que sigue OFF y así se queda).
+- **Catálogos** por GET (mismo auth): `towns?postalCode=` (CP→town.id, requerido en el payload),
+  `car/brands`, `car/brands/{id}/models`, `…/vehicles` (código Base7), `car/garage-types`,
+  `car/insurance-companies`, `marital-statuses`.
+- **Solo AUTO está cableado como cotización real**; hogar/vida/salud no tienen schema de cotización.
+  El payload proyecta la MISMA persona en `holder`/`owner`/`primaryDriver` (el vendor lo exige).
+- **Webhook** (`https://app.grupoasegura.com/api/webhooks/codeoscopic`): solo dispara en EMISIÓN OK
+  (+ heartbeats ~1/h sin project_id) — **para tarificar no hace falta**. El Basic Auth quedó resuelto
+  de diseño: **lo genera ASegura** y Codeoscopic lo carga en su panel; falta ejecutarlo (drift del
+  secret desde 12/06).
+- **Sin contador/tope de coste en su repo** — confirmado: hay rate-limit por IP (40/15min) y circuit
+  breaker, pero nada que limite la facturación. El contador+tope se pone en `central` (regla ya
+  anotada arriba).
+- **OpenAPI: no está en su repo** (lo entrega Codeoscopic al dar de alta el acceso). Contacto: Juan
+  Manuel Fernández, PM de la API. **Pendiente de pedir a Manuel:** el fixture sanitizado
+  `__fixtures__/2026-06-10-sandbox-quote-response.json` (la mejor referencia del formato de respuesta).
+
 ### 🚦 Dónde se paró EXACTAMENTE la API (03/06/2026) y qué falta
 Reconstruido el 01/09/2026 desde el Gmail de Alberto y la BD. La plataforma web funciona; lo
 congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de la API) que
-**nunca tuvo respuesta**. Tres puntos, ninguno resuelto:
+**nunca tuvo respuesta**. Tres puntos (estado tras el traspaso del 01/09):
 1. **Credenciales de sandbox CADUCADAS** — usuario `albertocsf0170ws`, enviadas el 30/04/2026 por
-   Bitwarden Send con TTL de 7 días. Se pidió regenerarlas el 03/06 y no llegaron.
-2. **Basic Auth del webhook SIN DEFINIR** — pregunta abierta desde el 30/04: ¿las genera ASegura
-   o las define Codeoscopic en su panel? Es literalmente «el último ítem para cerrar el receptor
-   de webhooks de cara a producción».
-3. **Smoke end-to-end sin correr** (Quote → preemisión → Submit → webhook).
+   Bitwarden Send con TTL de 7 días. Se pidió regenerarlas el 03/06 y no llegaron. **Sigue abierto:**
+   son el OAuth2 `client_id`/`client_secret`; los regenera Codeoscopic (JM Fernández, ref LOO-162).
+2. ~~**Basic Auth del webhook SIN DEFINIR**~~ → **DEFINIDO** (traspaso 01/09): las genera ASegura
+   (script en el repo de Manuel) y Codeoscopic las configura en su panel. Queda **ejecutarlo**
+   (generar, subir a envs, pasarlas a JM). No bloquea la tarificación.
+3. **Smoke end-to-end sin correr** (Quote → preemisión → Submit → webhook). Sigue pendiente.
 
 - **Pero el flujo llegó a funcionar de verdad.** Medido en la BD: el **29/07/2026** una cotización
   de auto devolvió **15 precios reales de Mapfre, Allianz y Occident** (278,59€ a 609,64€), con el
@@ -96,8 +130,9 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
 - **DPA art. 28 RGPD: decisión abierta.** El DPD de Codeoscopic se niega a firmarlo con el
   integrador (no hay relación contractual con él) y solo remite su política de privacidad. Manuel
   lo consideraba requisito previo a producción.
-- ⚠️ **La documentación de la API NO está en el Gmail de Alberto** (se mandó a Manuel). Sin ella no
-  hay host base ni contratos de endpoints: es lo primero que hay que conseguir.
+- ✅ **La documentación de la API ya está conseguida** (01/09/2026): el traspaso del repo de Manuel
+  (`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`) trae host base, auth y contratos de endpoints. Lo único
+  documental que falta es el **OpenAPI oficial** (no está en su repo; lo entrega Codeoscopic).
 - Manuales de la PLATAFORMA (no de la API) sí están: ticket 267332 del 25/05/2026, más
   `academy.codeoscopic.com` y el KB `codeoscopicavant2.zohodesk.com`.
 
@@ -112,7 +147,7 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
 - **Inventario de la BD (01/09/2026, `public` del Supabase de ASEGURA).** Núcleo: `clientes`
   32.600 · `polizas` 28.843 · `cliente_telefonos` 4.794 · `cliente_emails` 4.017 ·
   `oportunidades` 3.676 · `bienes_asegurables` 1.614 · `poliza_coberturas` 1.425 ·
-  `gestiones` 694 · `poliza_recibos` 186 · `cima_ficheros` 128 · `siniestros` 69 ·
+  `gestiones` 694 · `poliza_recibos` 184 · `cima_ficheros` 128 · `siniestros` 67 ·
   `liquidaciones` 9. Codeoscopic dejó tablas propias (`codeoscopic_offers`/`prices` 15,
   `projects` 1, `webhook_events` 2; `documents`/`product_forms`/`participants` vacías) →
   la integración llegó a funcionar en pruebas, no en producción.
@@ -138,6 +173,89 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
   Helper puro `@central/module-seguros/vencimientos` (`urgenciaRenovacion`, `fechaLimiteOposicion`,
   `primaEnRiesgo`), consumido por el puerto `/api/operador/vencimientos` de asegura y pintado en
   plataforma `/correduria`.
+- **📡 CIMA es SOLO DESCENDENTE, y el canal pierde datos (medido 01/09/2026).** Dos cosas que hay
+  que saber antes de opinar de siniestros o de recibos:
+  - **No se puede aperturar un siniestro desde nuestro CRM.** El canal baja ficheros y devuelve un
+    ACK; nunca ha salido de aquí un siniestro. `cima_ficheros` **no tiene ni columna de sentido** y
+    el cron se llama `cima-pull`. El **estándar EIAC sí es bidireccional** e incluye «solicitar
+    nuevas aperturas de siniestro», y la Fase IV de CIMA lo metió en el modelo — pero lo VIVO en
+    producción hoy son los **recibos** (Occident, Reale, Allianz y Mapfre con ebroker). De
+    siniestros **no consta ninguna compañía**: eso es «no consta», no «no existe». El endpoint para
+    subir sería el mismo que ya se usa para bajar (`ws.cimaseg.es/wsEstandar/`) y **la cuenta de
+    mediador ya es de Alberto** (CS-F/0170), así que la pregunta a TIREA es barata. ⚠️ **Avant2 NO
+    hace siniestros** (es tarificación y emisión); la tramitación de Codeoscopic es otro producto.
+    **Consecuencia de diseño:** no se construye un módulo de siniestros. Los 67 siniestros bajan y
+    **se congelan** —solo 1 se ha actualizado nunca, y 0 traen tramitador, perito, reserva o
+    indemnización—, así que una pantalla de «siniestros abiertos» mentiría. Van dentro de la ficha
+    del cliente, como historial y con la fecha de la última noticia a la vista.
+  - **Se están perdiendo recibos y siniestros por el emparejamiento con la póliza.** Del 24/06 al
+    30/08/2026: 42 ficheros en cuarentena, **23 recibos (7.721,71€ de prima) y 20 siniestros** sin
+    guardar, 39 de ellos de **Occident (C0468)**. Causa: se empareja por `id_poliza_entidad` y
+    **Occident, Catalana Occidente y Plus Ultra son el MISMO grupo bajo C0468** — 9 de las 19
+    pólizas afectadas sí están en la cartera, con otro nombre de compañía y sin código de entidad.
+    🚨 **Regla que deja:** al contar cartera o comisiones por compañía, **normaliza el grupo antes
+    de agrupar**; el nombre de `polizas.aseguradora` es texto libre y la misma compañía aparece con
+    tres nombres. Y el vigía que lo caza es el cron `correduria-ingesta` de plataforma (latido
+    `correduria_ingesta`) — el health-check de origen tenía el número delante (`cuarentenaTotal: 41`
+    y subiendo) y estuvo en verde dos meses porque sus señales miraban otras dos columnas.
+  - **🔑 Y la pieza que faltaba, apuntada por Alberto: la CLAVE DE MEDIADOR.** «Cada compañía asigna
+    una clave» — y es el **2º campo del nombre EIAC**: `C0468_8-92361_REC_261_1_20260801_….zip`.
+    Medidas **nueve claves en cinco compañías**: Mapfre `5239640` · Allianz `209-A-0018638-0000`,
+    `209-C-…`, `209-E-…` (¡y variantes sin ceros, `209-A-18638-0000`!) · Occident **`8-92361`,
+    `M00171` y `306333`** · Reale `38605`. 🚨 **Una compañía NO es una cartera**: bajo `8-92361`
+    están en cuarentena los 10 ficheros de siniestros y 6 de 9 de recibos, mientras `306333` va
+    limpia. Agrupar por `codigo_entidad` esconde de QUÉ cartera se pierde el dato y manda a revisar
+    la que va bien. (`8-92361` es además el código que aparece en los conceptos del banco, ver
+    `RE_LIQUID_SEGUROS` en plataforma; `M00171` también.)
+  - **🗂️ EL CORREO DE ALBERTO ES LA TERCERA BASE DE DATOS (01/09/2026, idea suya).** Las compañías
+    le escriben a `alberto.suarez.gutierrez@gmail.com` y ahí hay cosas que NO están ni en el CRM ni
+    en CIMA. Emisores útiles, medidos:
+    · **`mediadores@occidentinforma.com`** — un correo por cada movimiento de póliza de Occident, con
+      **número de póliza, nombre del cliente y contrato (`M00171`)** en el asunto: emisión,
+      modificación, rechazo de suplemento, aviso de regularización, recordatorio de firma de mandato.
+      Es un registro de altas paralelo al EIAC.
+    · **`mediador@allianz.es`** — «Cartera No Vida del mes de …», «Cuenta Agente», «Relación anulación
+      pólizas por impago» con **fichero adjunto**. Cartera y saldo por correo.
+    · **`carlos.salas@occident.com`** (Director Corredores Sevilla-Huelva) — visitas comerciales con
+      producción y objetivos; `concepcion.porras@occident.com`, operativa de prestaciones/vida.
+    · **`accesos.cima@tirea.es`** — credenciales de CIMA. `conectividad@reale.es` — adhesión a EIAC.
+      `cstsoportecorredores@mapfre.com` — soporte, exige la clave en cada petición.
+    · **`digitaliza@comunicacionesoccident.com`** — documentación de siniestros.
+    🚨 **Regla:** antes de decir que un dato «no está», mira también el correo. Y al revés: el correo
+    NO es la fuente de la cartera (no es estructurado ni completo) — es la fuente de lo que la
+    compañía **dijo**, con fecha, que es justo lo que falta cuando el canal EIAC no lo trajo.
+  - **📇 MAPA DE CLAVES DE MEDIADOR (correo + ficheros EIAC, 01/09/2026).** DGSFP: **CS-F/0170**.
+    DNI 28823484E.
+
+    | Compañía | Cód. entidad | Clave(s) que llegan por EIAC | Lo que dice el correo |
+    |---|---|---|---|
+    | Mapfre | C0058 | `5239640` | clave de mediador 5239640 (usada en todas sus peticiones) |
+    | Allianz | C0109 | `209-A-0018638-0000`, `209-C-…`, `209-E-…` (y `209-A-18638-0000` sin ceros) | **Código 18638 / Clave PA342520**, sucursal **209**. Es UNA clave con prefijo de sucursal y una letra que varía |
+    | Occident | C0468 | `8-92361`, `M00171`, `306333` | contrato **`M00171`** en todos sus avisos; usuario `M823484E` |
+    | Reale | C0613 | `38605` | «código de mediador 38605» (adhesión a EIAC pedida el 13/04/2026) |
+    | Fidelidade | — | (aún ninguna) | credenciales de CIMA entregadas el **31/08/2026** |
+
+    ⚠️ **Occident/Catalana/Plus Ultra: Alberto avisa de que la absorción le dejó varias claves y que
+    Catalana le tenía DOS «que no saben por qué».** Cuadra con las tres que se ven en los ficheros.
+    **NO se da por cerrado el mapa**: `306333` y `8-92361` no aparecen aún en ningún correo leído, así
+    que su origen (¿Plus Ultra? ¿Catalana?) es **desconocido**, no «Occident a secas».
+  - **Y hay DOS averías, no una.** De las 20 pólizas huérfanas, **3 YA están en la cartera**,
+    activas y con el mismo `id_poliza_entidad`: su recibo o siniestro llegó **antes** que la póliza
+    (una esperó del 24/06 al 26/07) y nadie volvió a mirarlas — se arreglan **reprocesando**, sin
+    preguntar a nadie, y es justo lo que hacía el reconciliador parado desde el 25/06. Las otras 17
+    son **cartera que la compañía nunca mandó**: CIMA solo envía POL en **altas y modificaciones**,
+    así que la cartera preexistente de una clave no entra nunca por ese canal — hace falta una
+    **carga inicial por clave de mediador**. Contarlas juntas manda a pedir a la compañía algo que
+    ya está en la BD.
+    ✅ **Y una de las diez está IDENTIFICADA por el correo, sin intranet: la 549147797** es una **RC
+    profesional del «Instituto Técnico Superior de Informática Studium», emitida el 27/06/2025** bajo
+    el contrato `M00171` (correo de `mediadores@occidentinforma.com`, con recordatorio de firma del
+    mandato de cobro). O sea: **NO está anulada** — es una póliza real, viva, **de un año ANTES de
+    que arrancara la ingesta**. Eso confirma el diagnóstico y descarta la hipótesis de las anuladas.
+    📌 **Y el camino para arreglarlo ya lo ha andado Alberto:** el 11/04/2026 pidió a Reale
+    «carga inicial de cartera en formato EIAC» para la clave 38605. Lo mismo hay que pedirle a
+    **Occident para `8-92361`** (y confirmar `306333`). Es la petición que cierra las 17.
+
 - **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
   431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
   vive en **`polizas.datos_especificos`** (JSON libre que escribe la ingesta EIAC, distinto por

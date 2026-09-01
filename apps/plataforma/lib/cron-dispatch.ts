@@ -138,6 +138,7 @@ export const CRON_JOBS: CronJob[] = [
   // desde un Telegram — y lo que no decidía nadie se quedaba moviendo el precio para siempre.
   { path: '/api/sivra/eventos/verificar', schedule: '30 5 * * *' },
   { path: '/api/cron/cima-liq', schedule: '30 7 * * *' },
+  { path: '/api/cron/correduria-ingesta', schedule: '45 6 * * *' },
   { path: '/api/cron/facturas-scan', schedule: '15 6 * * *' },
   { path: '/api/cron/facturas-resumen-semanal', schedule: '15 9 * * 1' },
   { path: '/api/cron/categorizar-movimientos', schedule: '0 7 * * *' },

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T13:36:24Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T13:47:56Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -247,6 +247,7 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - #1946
 - El canal de OTP es un PUERTO, no una llamada a WhatsApp
+- Cola de PRs vaciada a petición de Alberto:
 - Pendiente de Alberto:
 - #1938 MERGEADO
 - Pendiente para Alberto:

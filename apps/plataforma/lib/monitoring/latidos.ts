@@ -109,6 +109,24 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'ninguna póliza cruzó un hito. Huella: agente_latidos.correduria_renovaciones.',
   },
   {
+    id: 'correduria_ingesta',
+    etiqueta: '🛡️ Ingesta de CIMA — que los datos de las compañías entren (cron diario 06:45)',
+    // Diario → 30 h, igual que el resto de los diarios: un tropiezo pasa, dos días saltan.
+    maxHoras: 30,
+    nota:
+      '🚨 Este vigía nació de una avería que duró DOS MESES sin que nadie la viera: del 24/06 al ' +
+      '30/08/2026 se quedaron 42 ficheros de CIMA sin procesar (23 recibos por 7.721,71€ de prima ' +
+      'y 20 siniestros, casi todos de Occident C0468) mientras el health-check del CRM de origen ' +
+      'estaba en verde — su parte traía `cuarentenaTotal: 41` y creciendo, pero sus señales de ' +
+      'alarma miraban `ficherosError` y `ficherosDeferred`, que valían cero. Medía lo que no era. ' +
+      'Aquí la señal es lo que se PIERDE. Lee el `detalle`: «no se ha podido comprobar» es que no ' +
+      'hubo lectura (puerto, secreto o BD de asegura) y NO quiere decir que la ingesta vaya bien; ' +
+      '«DEGRADADA» dice cuántos ficheros y de qué compañía. La causa más frecuente medida es que ' +
+      'el recibo llega de una póliza que en la cartera está con OTRO nombre de compañía (Occident, ' +
+      'Catalana Occidente y Plus Ultra son el mismo grupo bajo C0468). ' +
+      'Huella: agente_latidos.correduria_ingesta.',
+  },
+  {
     id: 'ses_transporte',
     etiqueta: '🛂 Transporte con SES.HOSPEDAJES (parte de viajeros, cron diario 07:15)',
     // Diario a las 07:15 → 30 h dejan pasar un tropiezo aislado y cazan dos días caídos.
