@@ -1,0 +1,3 @@
+:root { --fondo: #ffffff; --texto: #111827; --borde: #e5e7eb; --brand: #0f766e; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--fondo); color: var(--texto); }

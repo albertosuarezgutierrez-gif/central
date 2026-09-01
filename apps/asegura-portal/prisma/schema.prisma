@@ -1,0 +1,104 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["seguros"]
+}
+
+model PortalIdentidad {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre         String?
+  creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+
+  canales  PortalCanal[]
+  bienes   PortalBien[]
+  polizas  PortalPolizaDeclarada[]
+
+  @@map("portal_identidad")
+  @@schema("seguros")
+}
+
+model PortalCanal {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String    @map("identidad_id") @db.Uuid
+  tipo         String
+  valorHash    String    @map("valor_hash")
+  verificadoEn DateTime? @map("verificado_en") @db.Timestamptz(6)
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@unique([tipo, valorHash])
+  @@map("portal_canal")
+  @@schema("seguros")
+}
+
+model PortalCodigo {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo      String
+  valorHash String    @map("valor_hash")
+  codigo    String
+  intentos  Int       @default(0)
+  creadoEn  DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  usadoEn   DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@map("portal_codigo")
+  @@schema("seguros")
+}
+
+model PortalBien {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String   @map("identidad_id") @db.Uuid
+  tipo        String
+  nombre      String
+  datos       Json     @default("{}")
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad         @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  polizas   PortalPolizaDeclarada[]
+
+  @@map("portal_bien")
+  @@schema("seguros")
+}
+
+model PortalPolizaDeclarada {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId          String    @map("identidad_id") @db.Uuid
+  bienId               String?   @map("bien_id") @db.Uuid
+  compania             String?
+  numeroPoliza         String?   @map("numero_poliza")
+  ramo                 String?
+  primaAnual           Decimal?  @map("prima_anual") @db.Decimal(10, 2)
+  fechaVencimiento     DateTime? @map("fecha_vencimiento") @db.Date
+  procedencia          String    @default("declarado")
+  confirmadaPorUsuario Boolean   @default(false) @map("confirmada_por_usuario")
+  documentoNombre      String?   @map("documento_nombre")
+  extraccionBruta      Json?     @map("extraccion_bruta")
+  creadaEn             DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  actualizadaEn        DateTime  @default(now()) @map("actualizada_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  bien      PortalBien?     @relation(fields: [bienId], references: [id])
+
+  @@map("portal_poliza_declarada")
+  @@schema("seguros")
+}
+
+model PortalConsentimiento {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String   @map("identidad_id") @db.Uuid
+  tipo         String
+  otorgado     Boolean
+  versionTexto String   @map("version_texto")
+  ip           String?  @db.Inet
+  userAgent    String?  @map("user_agent")
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_consentimiento")
+  @@schema("seguros")
+}
