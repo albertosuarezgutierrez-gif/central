@@ -15,6 +15,23 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-01 · facturas-correo** · hizo: pasada diaria (primera desde el 23/08, hueco de 9 días).
+  Preflight `/api/internal/alerta` 200. Paso 0: Vía B sana (última copia `_buzon_pdf` hoy mismo,
+  `dias_caido=0`); `agente_salud` actualizado. Backlog barrido: `PDF-pendiente` vacío;
+  `Extraccion-fallida` tenía 1 hilo (ticket Mercadona reenviado por Pilar, 237,06€ a domicilio) →
+  resuelto por cuerpo del correo (personal, entrega en Monte Carmelo), etiqueta quitada; `Revisar`
+  tiene 1 hilo sin resolver (recibo Fly.io $6,68 que Manuel Suárez reenvía desde su propio correo —
+  no está claro por qué ni si es gasto de Alberto → sigue "Para tu decisión"). Paso 4.0
+  (`v_facturas_sin_cargo`): las 8 filas siguen en `revisada_sin_cargo` de pasadas anteriores, 0 en
+  `sin_revisar` — nada que reabrir. Paso 1: 0 candidatos nuevos en Gmail (`newer_than:2d`) — el único
+  ruido eran mensajes de huéspedes de Booking y la circular del colegio; los 2 correos con factura de
+  hoy (IONOS, limpiezascruzz agosto) ya venían con `Facturas/Procesada` puesta por el cron
+  `facturas-scan` de plataforma antes de que arrancara esta sesión (`gastos`/`facturas_drive` sin
+  filas nuevas en 48h → no verificado si archivó bien; issue conocida y fuera de mi alcance, ver
+  bitácora 23/08). `_subir_aqui` y raíz de `FACTURAS Apartamentos/2026` sin PDFs nuevos desde 05/08.
+  `_DUPLICADOS_BORRAR`: 21 avisos pendientes, ninguno nuevo desde 17/08 (zombis sin re-verificar hoy,
+  igual que la pasada anterior). dudas: Fly.io de Manuel Suárez (Revisar) — ¿por qué te lo reenvía y
+  es gasto tuyo?; fallos: —; PRs/commits: — (solo bitácora + `agente_salud` + etiqueta Gmail).
 - **2026-09-01 · rrhh-compliance-calendar** · hizo: pasada mensual. Leído `docs/ROADMAP-rrhh.md`;
   9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal
   denuncias, informe ITSS, modelo 145, caducidad NIE, borrado RGPD automatizado — PRL ya hecho,
