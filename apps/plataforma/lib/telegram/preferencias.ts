@@ -93,7 +93,7 @@ export async function resumenAvisos(dias = 30): Promise<ResumenAvisos | null> {
     const filas = await prisma.$queryRaw<{ aviso_id: string; estado: string; n: bigint; ultimo: Date }[]>`
       SELECT aviso_id, estado, count(*) AS n, max(enviado_at) AS ultimo
       FROM telegram_avisos_log
-      WHERE enviado_at > now() - make_interval(days => ${dias})
+      WHERE enviado_at > now() - make_interval(days => ${dias}::int)
       GROUP BY aviso_id, estado
     `
     const conteos = new Map<string, ConteoAviso>()
@@ -120,7 +120,7 @@ export async function resumenAvisos(dias = 30): Promise<ResumenAvisos | null> {
 export async function purgarBitacora(dias = 90): Promise<number> {
   try {
     return await prisma.$executeRaw`
-      DELETE FROM telegram_avisos_log WHERE enviado_at < now() - make_interval(days => ${dias})
+      DELETE FROM telegram_avisos_log WHERE enviado_at < now() - make_interval(days => ${dias}::int)
     `
   } catch { return 0 }
 }
