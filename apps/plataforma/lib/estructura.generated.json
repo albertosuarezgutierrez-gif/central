@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T08:42:04Z",
+  "generadoEn": "2026-09-01T11:49:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1786,7 +1786,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "estado": "no",
@@ -1812,7 +1812,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -4922,6 +4922,14 @@
   ],
   "novedades": [
     {
+      "titulo": "#1938 MERGEADO",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente para Alberto:",
+      "fecha": ""
+    },
+    {
       "titulo": "#1924 MERGEADO",
       "fecha": ""
     },
@@ -4971,14 +4979,6 @@
     },
     {
       "titulo": "Cabo pendiente y armado",
-      "fecha": ""
-    },
-    {
-      "titulo": "Sí lo tiene",
-      "fecha": ""
-    },
-    {
-      "titulo": "H11 cableada",
       "fecha": ""
     }
   ],
