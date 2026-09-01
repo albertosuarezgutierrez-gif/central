@@ -61,6 +61,9 @@ export default async function CarteraPage({
           <button type="submit" className="primary">
             Buscar
           </button>
+          <Link href="/cartera/subir" style={{ marginLeft: 'auto' }}>
+            Subir una póliza →
+          </Link>
         </form>
       </div>
 

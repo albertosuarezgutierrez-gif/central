@@ -106,6 +106,14 @@ function urlAsegura(): string {
 
 export type PolizaVencimiento = {
   id: string
+  /**
+   * El id del TOMADOR: lo que convierte su nombre en un enlace a su ficha.
+   *
+   * `null` NO es «no tiene cliente» (imposible: toda póliza tiene tomador). Es
+   * que la versión desplegada de asegura todavía no manda el campo, y entonces
+   * el nombre se pinta como texto y se dice por qué — nunca como un enlace roto.
+   */
+  clienteId: string | null
   cliente: string
   tipo: string
   aseguradora: string
@@ -169,6 +177,7 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
     }
     polizas.push({
       id: f.id as string,
+      clienteId: typeof f.clienteId === 'string' && f.clienteId !== '' ? f.clienteId : null,
       cliente: f.cliente as string,
       tipo: f.tipo as string,
       aseguradora: f.aseguradora as string,

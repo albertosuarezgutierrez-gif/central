@@ -13,8 +13,8 @@
 // exactamente lo que convierte un tope en un adorno.
 
 import { randomUUID } from 'node:crypto'
-import { resolverConfig, explicarConfig, COSTE_COTIZACION_CENTS } from './config.ts'
-import { puedeCotizar, eurCents, type Veredicto } from './contador.ts'
+import { resolverConfig, explicarConfig, COSTE_COTIZACION_CENTS, type Topes } from './config.ts'
+import { puedeCotizar, eurCents, type Veredicto, type Consumo } from './contador.ts'
 import { consumoActual, reservar, cerrarFacturable, cerrarDescartado } from './consumo.ts'
 import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
@@ -70,13 +70,25 @@ export async function probarConexion(
 export async function estadoConsumo(
   correduriaId: string,
   env: Record<string, string | undefined> = process.env,
-): Promise<{ veredicto: Veredicto; gastadoMes: string } | { error: string }> {
+): Promise<
+  | { veredicto: Veredicto; gastadoMes: string; consumo: Consumo; topes: Topes }
+  | { error: string }
+> {
   const r = resolverConfig(env)
   if (r.estado !== 'lista') return { error: explicarConfig(r) }
   try {
     const consumo = await consumoActual(correduriaId)
     const gastado = (consumo.mesFacturables + consumo.mesEnVuelo) * COSTE_COTIZACION_CENTS
-    return { veredicto: puedeCotizar(consumo, r.config.topes), gastadoMes: eurCents(gastado) }
+    // El consumo CRUDO viaja también: quien quiera calcular una tanda lo
+    // necesita, y reconstruirlo a ojo desde el veredicto lleva a partir de cero
+    // —que hace parecer el tope más vacío de lo que está y diría que caben más
+    // de las que caben—.
+    return {
+      veredicto: puedeCotizar(consumo, r.config.topes),
+      gastadoMes: eurCents(gastado),
+      consumo,
+      topes: r.config.topes,
+    }
   } catch (e) {
     // No devolvemos «0 gastado» ante un fallo de lectura: diríamos que no se ha
     // gastado nada cuando lo cierto es que no lo sabemos.

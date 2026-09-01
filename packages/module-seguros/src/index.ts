@@ -39,3 +39,43 @@ export {
   type EntradaSalud,
   type FicheroEnCuarentena,
 } from './ingesta.ts'
+export {
+  MARCADORES_SIN_DATO,
+  CAMPOS_PERSONALES,
+  autoLeidoVacio,
+  normalizarAutoLeido,
+  seLeyoAlgo as seLeyoAlgoAuto,
+  camposLeidos,
+} from './documento-auto.ts'
+export type { AutoLeido } from './documento-auto.ts'
+
+export { importeEiac, sumarImportesEiac } from './importe-eiac.ts'
+export {
+  resumirRecibos,
+  estadoCobro,
+  explicarCobro,
+  type ReciboCrudo,
+  type ReciboResumen,
+  type RecibosPoliza,
+  type EstadoCobro,
+} from './recibos.ts'
+export {
+  MINIMO_TEXTO,
+  planBusqueda,
+  avisoDireccion,
+  explicarVacio,
+  type Criterio,
+  type TipoCriterio,
+  type PlanBusqueda,
+  type Aviso,
+  type Cobertura,
+} from './busqueda.ts'
+export {
+  DIAS_SUSPENSION,
+  DIAS_EXTINCION,
+  retencion,
+  resumirRetencion,
+  type EstadoRetencion,
+  type Retencion,
+  type ResumenRetencion,
+} from './retencion.ts'

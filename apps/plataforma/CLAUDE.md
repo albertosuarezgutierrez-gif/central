@@ -1377,6 +1377,72 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   REALES ya están en `comisiones_devengo`: falta sustituir la estimación por el dato real. Hasta
   entonces, al hablar de esa cifra di «estimada», no «verificada».
 
+## 🗂️ La correduría se trabaja DESDE AQUÍ — ficha del cliente y accesos directos (01/09/2026)
+
+> Alberto: *«asegura hay que meterlo en correduría, yo solo uso UNA página»* · *«pincho en Jose Suárez
+> Salas y directamente me lleva a su ficha, donde tengo todos sus datos, pólizas, recibos, siniestros.
+> Rápido y limpio»*.
+
+**`/correduria` es LA pantalla de la correduría.** `apps/asegura` es la trastienda: tiene la BD de la
+cartera y es la única que gasta dinero al retarificar, pero **Alberto no entra ahí**. Toda pantalla
+nueva de la correduría se monta aquí y su dato llega por el puerto `/api/operador/*` de asegura.
+
+- **`/correduria/cliente/[id]`** — la ficha entera en una pantalla: titulares (pólizas vivas · recibos
+  devueltos · pendientes · siniestros abiertos), contacto (📞 y ✉️ clicables), pólizas vivas con su
+  objeto/prima/estado de cobro, siniestros, y el volcado histórico plegado con montaje perezoso.
+  Server component; datos por `lib/ficha-asegura.ts` (interpretación PURA + tests en
+  `test/regression-ficha-asegura.test.ts`).
+- **Accesos directos:** el nombre del cliente en la tabla de Renovaciones es un enlace a su ficha.
+- **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
+  email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
+  encaje (`41003` es CP y nº de póliza plausibles a la vez).
+  🚨 **Vive FUERA de `CarteraViva`, nunca dentro.** Estaba anidado ahí y ese bloque hace `return`
+  temprano cuando el puerto falla → el buscador desaparecía justo el día que asegura no responde.
+  🚨 **DNI, teléfono y email van por índice ciego y solo alcanzan al 12-16% de las fichas**; la
+  dirección va cifrada y **no se puede buscar**. Cada bloque enseña su cobertura y el vacío se explica
+  (`explicarVacio()`), porque un «no aparece» ahí NO es «no está en la cartera».
+- **📞 Cola de retención (`Retencion.tsx`)**: los recibos devueltos y los vencidos sin cobrar,
+  ordenados por el **reloj** (art. 15 LCS) y no por el importe. 🔴 «sin cobertura» = el cliente circula
+  sin seguro y no lo sabe; si paga vuelve a estar cubierto en 24 h. Botón `tel:` de 44px y, en auto con
+  matrícula, «Precio en otra compañía ↗» (que salta a asegura porque cuesta 0,50€).
+  🚨 Que la cola esté vacía **no es «está todo cobrado»**: debajo se declaran las pólizas vivas sin
+  ningún recibo informado (18 de 109) y los pendientes que aún no han vencido.
+- **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
+  pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
+
+🧹 **Reorganización de la pantalla (agente de diseño, 01/09/2026).** Alberto: *«hay duplicidad y ahí
+solo tiene que salir datos importantes»*. Se pasó de 12 KPIs a **4** y el orden es ahora
+**buscar → cartera → a quién llamar → cuadre → detalle del banco (plegado)**. Lo retirado y por qué:
+«Total cobrado», «Compañías activas» y «Mejor mes» **se leen de la propia tabla que tienen debajo**;
+«Vencen en 60 días» no dispara ninguna acción distinta de los 30 (la ventana que manda es la del
+preaviso, LCS art. 22); «Históricas» y «Leads» son el MISMO volcado de 2013-2018 contado en dos
+unidades y bajan a una línea de pie; «Sin fecha» no era un KPI sino una advertencia de calidad del
+dato, y baja a subtítulo de «Cartera viva». La matriz compañía×mes **NO se borra** (es el único
+camino para reclasificar un movimiento y que aprendan `correduria_reglas`/`banca_destino_reglas`):
+se pliega en un `<details>` que se auto-abre si hay algo pendiente.
+🚨 **«Pendiente de confirmar» salió del gate `totalAnual > 0`**, que lo escondía un año sin ingreso
+bancario — justo cuando más importa que haya movimientos dudosos sin revisar.
+El selector de año **bajó al bloque del banco**: en la cabecera parecía gobernar la cartera viva, y
+retroceder a 2025 dejaba los vencimientos de hoy intactos sin que se entendiera por qué.
+
+🚨 **Cuatro «no lo sé» que esta pantalla NO colapsa** (regla NULL≠0 del CLAUDE.md raíz):
+1. **`recibos.total === 0` NO es «al corriente de pago»**: es que la compañía no ha mandado ningún
+   recibo de esa póliza — medido el 01/09/2026, **18 de las 109 pólizas vivas** están así. Se pinta
+   «sin informar». La lógica vive en `@central/module-seguros` (`estadoCobro`/`explicarCobro`, puro).
+2. **`recibos === null` es otra cosa distinta**: la versión desplegada de asegura todavía no manda el
+   bloque. Un bloque con forma rara degrada a `null`, **nunca a un resumen a ceros** — eso pintaría
+   «al corriente» sobre una póliza de la que no se sabe nada. Hay test que lo fija.
+3. **`clienteId === null`** = asegura no manda el id: el nombre se pinta sin enlace y se dice por qué,
+   en vez de un enlace roto.
+4. **`no_encontrado` ≠ `error`**: «se ha mirado y no está» frente a «no se ha podido mirar». Colapsarlos
+   diría que un cliente no existe cuando lo que pasa es que el puerto no responde.
+
+🚨 **Los importes de los recibos llegan como TEXTO del EIAC y `Number()` NO vale.** `importeEiac()`
+(`@central/module-seguros`) acepta SOLO la forma medida —`NNN.NN`, punto decimal, 2 decimales, la de
+los 184 recibos reales— y devuelve `null` para cualquier otra. `Number('1.234')` daría 1,234 sobre un
+texto que quería decir 1.234 en español: la cifra sale plausible y **no hay hueco que delate el fallo**
+(lección de ORCL, 31/07/2026). `sumarImportesEiac` cuenta aparte los ilegibles en vez de sumarlos como 0.
+
 ## 🔔 Panel «Avisos Telegram» (`/telegram`) — el interruptor de lo que manda el bot (01/09/2026, PR #1924)
 Alberto: «las notificaciones de Telegram son muchas». El bot emitía desde **~57 ficheros** sin
 inventario ni forma de callar uno solo: para bajar ruido había que buscar el `tgSend` y borrarlo.

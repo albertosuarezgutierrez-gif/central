@@ -32,6 +32,62 @@
 
 ---
 
+### 🔎 (01/09/2026) Correduría: buscador de TODO, cola de retención y limpieza de la pantalla
+- 🗑️ **Borrada** `/cartera/renovaciones` de asegura (duplicaba la de plataforma) y su menú.
+- 🔎 **Buscador universal**: nombre · matrícula · nº póliza · DNI · teléfono · email · ciudad · CP.
+  Un término se busca por TODOS los criterios que encaje. 🚨 **DNI/teléfono/email solo alcanzan al
+  12-16%** de las fichas (índice ciego) y **la dirección va CIFRADA: no se puede buscar** — cada
+  bloque enseña su cobertura, porque ahí un vacío no es una ausencia.
+- 📞 **Cola de retención** (art. 15 LCS): manda el RELOJ, no el importe. Al mes la cobertura queda
+  **suspendida** y el cliente no lo sabe; pagar la devuelve en **24 h**; a los 6 meses se extingue y
+  retener = póliza nueva. Botón `tel:` y salto a retarificar. Vacía ≠ «todo cobrado»: se declaran las
+  18 pólizas vivas sin ningún recibo.
+- 🧹 **Pantalla reorganizada por el agente de diseño**: 12 KPIs → 4; el buscador sale del bloque que
+  hacía `return` al fallar (desaparecía con el puerto caído); «pendiente de confirmar» sale del gate
+  `totalAnual>0` que lo escondía; la matriz del banco se pliega (no se borra: es donde se aprende).
+- 32 tests nuevos (`busqueda`, `retencion`, `correduria-puerto`). CI verde. PR #1999.
+
+### 🗂️ (01/09/2026) La correduría se trabaja desde plataforma: ficha del cliente y accesos directos
+- 📌 **Dictado de Alberto:** *«asegura hay que meterlo en correduría, yo solo uso UNA página»*. Su
+  pantalla es `plataforma → /correduria`; **asegura es la trastienda** (BD + el botón que gasta 0,50€).
+  Escrito en los tres CLAUDE.md: pantalla nueva de la correduría → se monta en plataforma.
+- 🔎 Se destapó una **duplicación**: la lista de renovaciones que se hizo ayer en asegura era paralela
+  a la que plataforma ya tenía. Se conserva (enseña el coste de la tanda) pero no crece.
+- ✅ **`/correduria/cliente/[id]`**: pólizas, recibos, siniestros y contacto en UNA pantalla. El nombre
+  de Renovaciones es enlace directo + buscador. Único salto a asegura: «Retarificar ↗».
+- 🚨 **Cuatro «no lo sé» que no se colapsan**: `recibos.total 0` ≠ al corriente (**18 de 109 vivas** no
+  tienen recibo), `recibos null` = asegura sin desplegar, `clienteId null` = sin enlace, y
+  `no_encontrado` ≠ `error`. Y `importeEiac()`: `Number('1.234')` daría 1,23€ donde pone 1.234€.
+- Puerto nuevo `/api/operador/{cliente,clientes}` (DNI/IBAN NO cruzan). 15 tests nuevos, CI verde.
+
+### 🔁 (01/09/2026) asegura: renovaciones + dos bugs vivos encontrados al repasar
+- **`/cartera/renovaciones`**: qué vence en 90 días por urgencia REAL, con el objeto asegurado
+  (distingue tres pólizas del mismo cliente) y el coste de retarificar la tanda. `cabenEnTanda()`
+  **estaba construido y sin usar**: la cartera viva entera son ~40€.
+- **NO hay botón de «retarificar todas»** y es honesto: las 80 vivas traen solo matrícula, así que
+  cada una necesita elegir versión. Se podrá con el PDF subido o con créditos de `/vehicles`.
+- 📜 La ley ya estaba modelada y vale dinero: **una subida de prima es una MODIFICACIÓN** (LCS 22),
+  exige 2 meses de preaviso; sin él, la compañía **no puede imponerla**. Eso es «última llamada».
+- 🐛 **Bug 1:** `estadoMigracion()` contaba TABLAS → 53 tablas vacías hacían `migrado:true` y la
+  pantalla decía «tu cuenta no está vinculada» (ausencia COMPROBADA) sobre 32.600 fichas. Ahora
+  cuenta **corredurías** (no clientes: no toca PII) y la decisión es pura en `migracion-decision.ts`.
+- 🐛 **Bug 2:** el guardián de aislamiento marcaba infractor un fichero PURO por nombrar
+  `seguros.clientes` **en un comentario**. Ahora ignora comentarios; verificado que sigue mordiendo
+  SQL real.
+
+### 📄 (01/09/2026) asegura: subir una póliza y que el agente la lea — primera pasada
+- `/cartera/subir`: PDF (texto) o foto (visión). **No gasta cotizaciones** — leer es gratis.
+- Reutiliza el pipeline ya probado de `apps/asegura-portal`; lo nuevo es QUÉ se busca (17 campos
+  para cotizar, no los 5 de la bóveda) y la validación dura: **letra del DNI** y **formato de
+  matrícula** se comprueban, porque un DNI mal leído es otra persona y una matrícula, otro coche.
+- Procedencia nueva **`documento`** (entre `compania` y `calculado`) + `debeSustituir()`: lo leído
+  **nunca pisa lo que mandó la compañía**. Guardián `test/regression-marcadores-sin-dato.test.ts`
+  fija que los DOS extractores traten igual los «no lo sé». Cepo verificado rompiéndolo.
+- 🐛 Fallo cazado por su test: limpiar «muchos» dejaba '' y `Number('')` = **0** → «muchos
+  siniestros» se guardaba como «ninguno», y en la dirección que abarata la prima. Con regresión.
+- ⚠️ **NO escribe en la cartera** (rol SELECT-only) ni **guarda el fichero** (falta decidir dónde y
+  cuánto tiempo se conserva PII, y `cliente_documentos` no existe). Devuelve el hash, no el papel.
+
 ### 🧭 (01/09/2026) asegura — EL PRINCIPIO de Alberto: presupuesto rápido, verificación al emitir
 - *«Todas las opciones posibles; presupuesto = lo más fácil y rápido; y ya en caso de cuadrar al
   cliente, nos centramos en que todos los datos estén bien.»* **Dos fases con exigencias OPUESTAS.**

@@ -1,6 +1,6 @@
 export { NIVELES, camposVisibles } from './acceso.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
-export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar } from './procedencia.ts'
+export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
 export type { Procedencia } from './procedencia.ts'
 export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, estadoCodigo } from './codigo.ts'
 export type { EstadoCodigo, CodigoGuardado } from './codigo.ts'

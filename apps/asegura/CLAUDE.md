@@ -26,6 +26,32 @@ tiene que evitar por diseño: el dashboard **no pinta KPIs a 0** mientras no hay
 mientras tanto. El estado sale de `lib/estado-migracion.ts`, un helper puro con **tres**
 salidas (`error` / `no migrado` / `migrado`), nunca dos.
 
+## 🖥️ ESTA APP NO ES UNA PANTALLA — la pantalla de Alberto es `plataforma` (01/09/2026)
+
+> Dictado por Alberto: *«asegura hay que meterlo en correduría, yo solo uso UNA página; es un proyecto
+> vertical y yo tengo mi pantalla con todos mis negocios».*
+
+**`apps/plataforma` → `/correduria` es la ÚNICA pantalla que Alberto abre.** La correduría es un
+negocio más de su casa de marcas, al lado de los pisos, el trading y la banca. `apps/asegura` es la
+**trastienda**: tiene la conexión a la cartera (`ASEGURA_DATABASE_URL`, rol `central_asegura`) y es la
+única que gasta dinero (`POST /insurances`, 0,50€), pero **no se entra a ella a trabajar**.
+
+| | `apps/plataforma` (la pantalla) | `apps/asegura` (la trastienda) |
+|---|---|---|
+| Quién entra | Alberto, todos los días | nadie de forma habitual |
+| Qué hace | ver: cartera, renovaciones, ficha del cliente, comisiones | leer la BD, servirla por el puerto, retarificar |
+| Cómo lee | puerto HTTP `/api/operador/*` (Bearer) | Prisma contra ASEGURA-prod-eu |
+
+🚨 **Consecuencia para el código: una pantalla nueva de la correduría se monta en `plataforma` y su
+dato se sirve por un endpoint de `/api/operador/*`.** El 01/09/2026 se construyó una lista de
+renovaciones en ESTA app (`/cartera/renovaciones`) sin darse cuenta de que `plataforma` ya tenía la
+suya —la que Alberto mira— desde el 31/08. **Se BORRÓ el mismo día**, y con ella su entrada del menú.
+
+Lo que SÍ vive aquí y no puede vivir allí, que es lo ÚNICO que queda: **retarificar** (gasta 0,50€
+reales, y por eso está tras su propia sesión y su propia pantalla de confirmación) y **subir una
+póliza** para que el agente la lea. Desde `plataforma` se salta aquí con un enlace ↗ solo para eso.
+El resto de `/cartera` (buscar, ficha) sigue vivo como respaldo del corredor, pero **no crece**.
+
 ## Arquitectura
 
 - **BD:** compartida `wswbehlcuxqxyinousql`, schema **propio `seguros`** (patrón iarest/rrhh,
@@ -296,6 +322,76 @@ sistema (las cuatro tablas a 0, `polizas.documento_url` 0%, `storage.objects` va
 
 Y falta el estado **«pedido pero no recibido»**: sin él, «0 documentos» no distingue no habérselo
 pedido de que el cliente no lo mande. Es la regla de `CLAUDE.md` aplicada al archivo.
+
+## 🔌 El puerto que sirve la pantalla de plataforma (01/09/2026)
+
+Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
+
+- **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene
+  menos de 3 letras: eso NO es «no hay nadie».
+- **`GET /cliente?id=`** — la ficha entera de una vez (pólizas + recibos + siniestros + contacto),
+  para que `plataforma` no encadene tres llamadas. Cuatro estados: `sin_configurar` · `error` ·
+  **`no_encontrado`** (se miró y no está) · `ok`. Los dos primeros NO se colapsan con el tercero.
+- **`GET /buscar?q=`** — el buscador de TODO (ver abajo).
+- **`GET /impagados`** — la cola de retención (ver abajo).
+
+### 🔎 Qué se puede buscar de verdad, y qué NO (medido 01/09/2026)
+
+`lib/cartera-busqueda.ts` + `planBusqueda()` de `@central/module-seguros` (puro, 11 tests).
+
+| Campo | Cómo | Cobertura REAL |
+|---|---|---|
+| nombre / apellidos | LIKE, texto en claro | **32.600 / 32.600** |
+| **matrícula** | LIKE sobre `datos_especificos->>'matricula'`, **en claro** | 4.504 pólizas |
+| nº de póliza | LIKE, en claro | 6.895 pólizas |
+| código postal | igualdad, en claro | 16.398 fichas |
+| ciudad | LIKE, en claro | 4.482 fichas |
+| **DNI** | **índice ciego, EXACTO** | **3.904 = 12%** |
+| teléfono | índice ciego, exacto | 5.377 = 16% |
+| email | índice ciego, exacto | 4.308 = 13% |
+| **dirección** | 🚫 **CIFRADA (1.954 de 1.954)** | **0 — imposible** |
+
+🚨 **Las tres búsquedas por índice ciego son la trampa de esta pantalla.** Un «no aparece» por DNI es
+casi siempre «esa ficha no tiene hash calculado», no «ese DNI no está en la cartera» — y si la clave
+del índice se desincronizara, **la búsqueda no daría error: devolvería vacío** (el modo de fallo
+silencioso que ya avisa este documento). Por eso cada bloque de resultados viaja con su **cobertura**
+y la UI dice sobre cuántas fichas ha podido mirar. `explicarVacio()` redacta esa frase.
+
+🚫 **La dirección no se puede buscar de ninguna forma** y se declara con `avisoDireccion()`, ofreciendo
+ciudad/CP. Devolver «ningún resultado» sería afirmar que ese cliente no vive en esa calle.
+
+Un término se busca por **todos** los criterios que encaje: `41003` es a la vez código postal y número
+de póliza plausibles, y no hay forma de saber cuál se quería.
+
+### 📞 La cola de retención — recibos devueltos (`lib/cartera-impagados.ts`)
+
+Lo que decide el orden **no es el importe, es el reloj** (art. 15 LCS, modelado en
+`@central/module-seguros/retencion.ts`, puro y con 10 tests):
+
+| Desde que venció el recibo | Estado | Qué se puede hacer |
+|---|---|---|
+| < 1 mes | `en_plazo` | Se paga y no llega a pasar nada |
+| **1-6 meses** | 🔴 `suspendida` | **El cliente circula sin cobertura y no lo sabe.** Si paga, vuelve a estar cubierto en **24 h** |
+| > 6 meses | ⚫ `extinguida` | Ya no se rescata: retenerlo es **póliza nueva** → retarificar |
+| sin fecha | ❔ `sin_fecha` | No se sabe desde cuándo; va casi el primero por si es el más viejo |
+
+- **El enum de la base solo tiene `devuelto`** (no existe `impagado`). Los `pendiente` entran en la
+  cola **solo si ya vencieron**; los que no, se cuentan en `pendientesSinJuzgar` en vez de tirarse.
+- 🚨 **`sinRecibosInformados`**: las pólizas vivas sin NINGÚN recibo (18 de 109). No salen en la cola
+  y **eso no es «están pagadas»** — la UI lo declara debajo de la lista.
+- Varios devueltos de la misma póliza → se queda **el más antiguo**: es el que manda el reloj, y
+  duplicar la fila duplicaría la llamada.
+- El puerto lleva el **teléfono descifrado** a propósito: el propósito de la lista es descolgar.
+
+🔒 **Lo que NO cruza el puerto, a propósito: DNI, IBAN y dirección.** Para trabajar una renovación no
+hacen falta, y son los datos con los que se suplanta a una persona. Se ven aquí, en la pantalla de
+retarificar, que es donde de verdad se usan. Teléfono y email SÍ viajan: sin ellos no se puede llamar
+a nadie, que es el propósito entero de la ficha.
+
+🚨 **`fechaVencimiento` de un vencimiento ya viaja con `clienteId`** — el id del TOMADOR, no el de la
+póliza. Sin él el nombre de la lista de renovaciones es texto muerto y hay que volver a buscar al
+cliente a mano. En `plataforma` es opcional (`string | null`) porque una versión desplegada más vieja
+de esta app no lo manda: entonces el nombre no se enlaza y se dice por qué.
 
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se

@@ -46,8 +46,12 @@
   CONSERVA el lote, etiqueta por canal (con/sin lote). Compone `@central/module-pesca`. BD compartida (auth
   propio, cookie `mariscos_session`). Ver `apps/mariscos/CLAUDE.md`. **Pendiente para darla por viva:** proyecto
   Vercel, ejecutar su SQL en Supabase (preview→prod), sembrar cuenta real de Mariscos González.
-- **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto). **Esqueleto
-  desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
+- **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto).
+  🖥️ **NO es una pantalla: es la trastienda.** Alberto trabaja la correduría desde
+  `apps/plataforma` → `/correduria` (su única pantalla, con todos sus negocios); asegura tiene la BD de
+  la cartera, la sirve por el puerto `/api/operador/*` y es la única que gasta dinero al retarificar.
+  Una pantalla nueva de la correduría se monta en `plataforma`, no aquí (dictado 01/09/2026).
+  **Esqueleto desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
   manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
   🚨 **Y OJO CON LA CIFRA (medido 01/09/2026): 32.600 fichas ≠ 32.600 clientes.** La **cartera VIVA son
   ~80 clientes / 109 pólizas** — las que entran por CIMA, identificables por `polizas.import_ref IS NULL`.
