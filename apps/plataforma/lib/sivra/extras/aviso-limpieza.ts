@@ -10,15 +10,10 @@
 import { getTransporter, MAIL_FROM } from '@/lib/mailer'
 import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
+import { fmtFecha } from './orden-texto'
 
 export const DESTINO_LIMPIEZA = process.env.SIVRA_EXTRAS_EMAIL_LIMPIEZA || 'limpiezascruzz@gmail.com'
 export const COPIA_ALBERTO = process.env.SIVRA_EXTRAS_EMAIL_COPIA || 'alberto.suarez.gutierrez@gmail.com'
-
-/** dd/mm/aaaa desde un ISO/date; deja igual lo que no reconozca. */
-function fmt(f: string): string {
-  const m = (f || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : (f || '?')
-}
 
 export interface DatosAviso {
   piso: string
@@ -33,15 +28,15 @@ export interface DatosAviso {
 
 /** Asunto y cuerpo del aviso. Puro y testeable: es lo que lee una persona, no puede salir a medias. */
 export function componerAviso(d: DatosAviso): { asunto: string; texto: string } {
-  const asunto = `${d.piso} · ${fmt(d.checkIn)} · ${d.extra.toLowerCase()}`
+  const asunto = `${d.piso} · ${fmtFecha(d.checkIn)} · ${d.extra.toLowerCase()}`
   const texto = [
     `Hola:`,
     ``,
     `Un huésped ha contratado y PAGADO un extra para esta estancia:`,
     ``,
     `  Piso:     ${d.piso}${d.direccion ? ` (${d.direccion})` : ''}`,
-    `  Entrada:  ${fmt(d.checkIn)}`,
-    `  Salida:   ${fmt(d.checkOut)}`,
+    `  Entrada:  ${fmtFecha(d.checkIn)}`,
+    `  Salida:   ${fmtFecha(d.checkOut)}`,
     d.huesped ? `  Huésped:  ${d.huesped}` : '',
     `  Extra:    ${d.extra} (${eur(d.precioCents / 100)}, ya cobrado)`,
     ``,
@@ -83,7 +78,7 @@ export async function avisarLimpieza(d: DatosAviso): Promise<{ ok: boolean; erro
 async function avisarFallo(d: DatosAviso, error: string): Promise<void> {
   await tgAviso('pisos.extras-limpieza', 
     `🛑 <b>Extra pagado y la limpieza SIN avisar</b>\n` +
-    `${escapeHtml(d.piso)} · entrada ${fmt(d.checkIn)} · ${escapeHtml(d.extra)}\n\n` +
+    `${escapeHtml(d.piso)} · entrada ${fmtFecha(d.checkIn)} · ${escapeHtml(d.extra)}\n\n` +
     `El email a ${escapeHtml(DESTINO_LIMPIEZA)} no salió: <i>${escapeHtml(error)}</i>\n` +
     `Avísales tú y luego lo miramos.`,
   ).catch(() => {})

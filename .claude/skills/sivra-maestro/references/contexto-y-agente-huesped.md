@@ -226,6 +226,29 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
     cobrado con la cuna sin montar y nadie enterado es el fallo caro de este repo.
   - **Impago:** cron `sivra-extras-impago` (07:00 UTC) — recordatorio a las 24 h, caducidad a 48 h de
     la entrada. Sin fecha de entrada legible NO se caduca nunca (`decidirImpago`, testeado).
+  - **🧹 ORDEN A LA LIMPIEZA, SIN COBRO DE POR MEDIO (01/09/2026, PR #1991).** Todo lo de arriba
+    cuelga de Stripe, así que **un extra pagado FUERA de ese raíl no avisa a nadie**: el 01/09 Raquel
+    (reserva 152490601) pagó la cuna por **Bizum**, la fila se quedó congelada en `ofrecido` —el cron
+    de impago solo mira `enlace_enviado`, así que ni se recuerda ni se caduca ni suena— y Sique
+    Brilla no se enteró. Dictado de Alberto ese día: **la orden NO lleva estado de cobro** («no quede
+    fija, pagado ni confirmar ni nada, sino simplemente como una orden, colocar cuna, y ya está»).
+    - Botón **🧹 Mandar orden** en Telegram (`hsp_clean:<booking>:<codigo>` / `hsp_noclean`), ofrecido
+      tras el ✅ Enviar de un mensaje que hable de un extra del catálogo con `avisa_limpieza`.
+      🚨 Se resuelve **ANTES de buscar el borrador pendiente** en el webhook: para cuando se ofrece,
+      el ✅ ya ha borrado esa fila. No se repite si la orden ya salió (`ordenYaEnviada`).
+    - `lib/sivra/extras/orden-texto.ts` (PURO, testeado) compone el email: **sin importe y sin la
+      palabra «pagado»** — hay un test que lo fija. El hermano `aviso-limpieza.ts` sí lo dice porque
+      lo dispara el webhook, que HA visto el cobro; esta ruta no ha visto ninguno.
+      `orden-limpieza.ts` envía (mismo destino/copia) y registra en **`sivra_ordenes_limpieza`**.
+    - **Tres estados:** sin fila / `[]` = no se ha pedido nada · `null` = **no se ha podido leer** ·
+      `enviado_at` NULL + `error` = se intentó y NO salió (manda sobre las enviadas en el titular, y
+      salta Telegram). Si `construirContexto` falla al pulsar el botón NO se manda una orden a
+      medias: se dice y la manda Alberto a mano.
+    - Las órdenes ENVIADAS viajan al `Contexto` (`ordenesLimpieza`) y al prompt de `decidir.ts`, y se
+      pintan como chip en la ficha de `/sivra/mensajes`. Antes de esto el agente no sabía que había
+      una cuna encargada y volvía a escalar «¿está confirmado lo de la cuna?» como si fuera nuevo.
+    - **Lo que NO existe (decisión suya, no un olvido):** un raíl para que el cobro por Bizum conste
+      en algún sitio. Esos 20€ no dejan rastro en `sivra_extras_reserva` ni en ningún ingreso.
 - **Auto-envío de CORTESÍA de fin de estancia (26/07/2026, rama `claude/automatic-guest-message-q6wzol`):**
   las **despedidas / agradecimientos / cierres puros** ("ya hemos dejado el Dúplex", "gracias por todo",
   "everything was perfect"…) se auto-envían **sin depender del contador de graduación por categoría** — son
@@ -259,5 +282,7 @@ plantillas de Smoobu (el chequeo `equivalentes-smoobu.ts` evita duplicados mient
   agente normal). Traducción por IA con guarda `conservaDatos` (un código mutado → sale en español).
 - Dedupe: `mensajes_programados` UNIQUE (booking, tipo, fecha_objetivo); reintentos si Smoobu cae.
   Latido `sivra_mensajes_prog`. Plan/diseño: `docs/superpowers/plans/2026-08-31-mensajes-programados-huespedes.md`.
-- PENDIENTE (decidido, PR siguiente): aviso a Sique Brilla (email+intranet) de cuna/horas/late
-  checkout; rotación de código tras cancelación expuesta → tarea a Vanesa; vigía SLA de pendientes.
+- PENDIENTE: **la parte de CUNA de «avisar a Sique Brilla» está HECHA** (PR #1991, ver el bloque
+  🧹 de arriba: botón en Telegram + `sivra_ordenes_limpieza`); siguen sin cubrir **horas/late
+  checkout** y el aviso por la **intranet** de Vanesa (hoy solo email). Rotación de código tras
+  cancelación expuesta → tarea a Vanesa; vigía SLA de pendientes.

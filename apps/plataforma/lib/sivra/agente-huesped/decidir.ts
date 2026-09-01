@@ -129,7 +129,15 @@ BORRADOR: ${reply}`
 
 export async function decidir(ctx: Contexto, pregunta: string, categoria: string): Promise<Decision> {
   const hechosTxt = (ctx.hechos || []).map(h => `- ${h}`).join('\n')
-  const fuentes = [ctx.ficha || '', ctx.guia || '', hechosTxt, ctx.historial.map(h => h.text).join(' ')].join('\n')
+  // 🧹 Lo que YA se le ha pedido a la limpieza para esta reserva. Sin esto, un huésped que pregunta
+  // «¿está confirmado lo de la cuna?» vuelve a escalar a Telegram como si fuera la primera vez.
+  // `null` = no se ha podido leer: entonces NO se dice nada (ni que hay preparativos ni que no los
+  // hay), que es la única lectura honesta de un hueco.
+  const ordenesTxt = (ctx.ordenesLimpieza || []).map(o => `- ${o}`).join('\n')
+  const ordenesBlock = ordenesTxt
+    ? `\nYA PEDIDO A LA LIMPIEZA PARA ESTA ESTANCIA (está encargado y confirmado — puedes darlo por hecho si el huésped pregunta):\n${ordenesTxt}`
+    : ''
+  const fuentes = [ctx.ficha || '', ctx.guia || '', hechosTxt, ordenesTxt, ctx.historial.map(h => h.text).join(' ')].join('\n')
   const aprend = ctx.aprendizajes.map(a => `P: ${a.pregunta_norm}\nR: ${a.respuesta_final}`).join('\n\n')
 
   const horario = (ctx.horaCheckIn || ctx.horaCheckOut)
@@ -228,7 +236,7 @@ Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario b
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
 ${ctx.ficha || '(sin ficha)'}
-${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}${hechosTxt ? `\nHECHOS DE ESTE PISO (te los ha enseñado el anfitrión — son ciertos y valen tanto como la guía):\n${hechosTxt}` : ''}${accesoBlock}
+${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}${hechosTxt ? `\nHECHOS DE ESTE PISO (te los ha enseñado el anfitrión — son ciertos y valen tanto como la guía):\n${hechosTxt}` : ''}${ordenesBlock}${accesoBlock}
 
 ${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}

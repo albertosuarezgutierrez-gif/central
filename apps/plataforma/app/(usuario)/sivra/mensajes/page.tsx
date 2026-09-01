@@ -1,7 +1,11 @@
 'use client'
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { resumenOrdenes } from '@/lib/sivra/extras/orden-texto'
 
 type Msg    = { id: string; from: 'guest'|'host'; text: string; ts: string }
+// 🧹 Orden a la limpieza de esta reserva. `enviadoAt` null = se intentó y NO salió (el motivo está
+// en `error`); la lista entera a `null` = no se pudo leer. Tres estados, no dos.
+type Orden  = { instruccion: string; enviadoAt: string|null; error: string|null }
 type Thread = {
   id: string; guestName: string; property: string; propertyId?: string
   checkIn: string; checkOut: string; portal: string
@@ -9,6 +13,7 @@ type Thread = {
   messages: Msg[]
   lang?: string; smoobuReservationId?: string
   classification?: 'trivial'|'info'|'importante'
+  ordenes?: Orden[]|null    // undefined = todavía no se ha cargado el hilo
 }
 
 const STATUS_CONFIG = {
@@ -20,6 +25,15 @@ const PORTAL_COLOR: Record<string,string> = {
   BOOKING:'#003580', AIRBNB:'#FF5A5F', VRBO:'#3B5998',
   DIRECTO:'#10B981', EXPEDIA:'#FFC72C', AGODA:'#E84142', OTRO:'#5A9A12',
 }
+// Tonos del chip de órdenes a la limpieza. El de «no se ha podido consultar» es ÁMBAR a propósito:
+// en verde se leería como «comprobado y todo en orden», que es justo lo que no se sabe.
+const ORDEN_TONO: Record<string, { bg:string; color:string }> = {
+  ok:     { bg:'#dcfce7', color:'#166534' },
+  aviso:  { bg:'#fef3c7', color:'#92400e' },
+  error:  { bg:'#fee2e2', color:'#991b1b' },
+  neutro: { bg:'#f4f4f5', color:'#52525b' },
+}
+
 const CLASS_CONFIG = {
   trivial:    { icon:'✅', label:'Trivial',    color:'#22c55e', bg:'#dcfce7' },
   info:       { icon:'💬', label:'Info',       color:'#3b82f6', bg:'#dbeafe' },
@@ -200,7 +214,7 @@ export default function MensajesPage() {
         .then(r => r.json())
         .then(d => {
           if (d.messages) {
-            setThreads(cur => cur.map(x => x.id === active ? { ...x, messages: d.messages } : x))
+            setThreads(cur => cur.map(x => x.id === active ? { ...x, messages: d.messages, ordenes: d.ordenes ?? null } : x))
           }
         })
         .finally(() => setLoadingMsgs(false))
@@ -536,6 +550,17 @@ export default function MensajesPage() {
                     {thread.checkIn ? ` · Entrada ${thread.checkIn}` : ''}
                     {thread.checkOut ? ` · Salida ${thread.checkOut}` : ''}
                   </div>
+                  {(() => {
+                    const r = resumenOrdenes(thread.ordenes)
+                    if (!r) return null
+                    return (
+                      <div style={{
+                        marginTop:4, fontSize:12, fontWeight:500, padding:'3px 8px', borderRadius:6,
+                        background:ORDEN_TONO[r.tono].bg, color:ORDEN_TONO[r.tono].color,
+                        display:'inline-block', maxWidth:'100%', overflowWrap:'anywhere',
+                      }}>{r.texto}</div>
+                    )
+                  })()}
                 </div>
                 <div style={{ display:'flex', gap:8, flexShrink:0, flexWrap:'wrap', justifyContent:'flex-end' }}>
                   {hasNonSpanish&&(

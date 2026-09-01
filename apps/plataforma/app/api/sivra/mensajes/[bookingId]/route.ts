@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getSmoobuKey } from '@/lib/smoobu'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
+import { listarOrdenes } from '@/lib/sivra/extras/orden-limpieza'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,8 +46,19 @@ export async function GET(
       { headers: { 'Api-Key': API_KEY }, cache: 'no-store' }
     ).then(r => r.json()).catch(() => ({}))
 
+    // 🧹 Órdenes a la limpieza de ESTA reserva (colocar cuna…). `null` viaja tal cual hasta la UI:
+    // «no se ha podido leer» tiene que poder distinguirse de «no se ha pedido nada» — pintar lo
+    // primero como lo segundo es afirmar una ausencia que nadie ha comprobado.
+    const filas = await listarOrdenes(bookingId)
+    const ordenes = filas === null ? null : filas.map(o => ({
+      instruccion: o.instruccion,
+      enviadoAt: o.enviado_at ? new Date(o.enviado_at).toISOString() : null,
+      error: o.error,
+    }))
+
     return NextResponse.json({
       messages,
+      ordenes,
       email: guest?.guest?.email || guest?.email || '',
       guestName: guest?.guest_name || guest?.guestName || '',
       reference: String(bookingId),
