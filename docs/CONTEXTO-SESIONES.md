@@ -32,6 +32,19 @@
 
 ---
 
+### ✅ (01/09/2026) CARTERA EN VIVO FUNCIONANDO — rotación hecha; cron `postgres` de Manuel roto desde el reset
+- Números reales en plataforma→Correduría: 50 en vigor · 995 sin fecha · 27.793 históricas · 2.742
+  clientes · 29.858 leads · 7 siniestros (el 1.194 de la víspera era lectura vieja: la BD ingesta a diario).
+- Contraseña de `central_asegura` ROTADA (04:39, del gestor de Alberto); snippet con clave en claro
+  borrado; env recreada en Vercel; pooler registra `Connection authenticated`. Exposición de la clave
+  débil (20:51→04:39): cero autenticaciones del rol en lo auditable — matiz: `log_connections` OFF,
+  solo audita el pooler.
+- 🚨 Un job con `postgres.js` (IPs Vercel fra1) falla como `postgres` cada ~5 min desde 31/08 ~08:00
+  (antes autenticaba): es del CRM de Manuel — nada nuestro usa esa BD salvo apps/asegura (verificado
+  por código). Probable daño colateral del reset de la database password durante el montaje. NO tocar
+  su Vercel; avisar a Manuel (borrador, regla de comunicaciones).
+- `central-asegura` servía desde us-east-1 contra BD eu-central-1 → `regions: ["fra1"]` en su vercel.json.
+
 ### 🔑 (01/09/2026) La cartera en vivo: era la CONTRASEÑA — y un valor del chat acabó de contraseña
 - Logs del pooler (MCP Supabase_asegura, nuevo conector): `password authentication failed for user
   "central_asegura"` → el fallo era la contraseña del `ASEGURA_DATABASE_URL` pegado en Vercel
