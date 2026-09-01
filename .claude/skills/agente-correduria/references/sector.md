@@ -65,5 +65,22 @@
   y la web son de Alberto**. El CRM aún no está operativo (nadie lo usa a diario) → el
   traspaso a `apps/asegura` va sin ventana, paso a paso (`docs/TRASPASO-CORREDURIA.md`).
 - Ingesta diaria EIAC de las compañías → entra en ese Supabase (cron de Manuel).
+- **Inventario de la BD (01/09/2026, `public` del Supabase de ASEGURA).** Núcleo: `clientes`
+  32.600 · `polizas` 28.843 · `cliente_telefonos` 4.794 · `cliente_emails` 4.017 ·
+  `oportunidades` 3.676 · `bienes_asegurables` 1.614 · `poliza_coberturas` 1.425 ·
+  `gestiones` 694 · `poliza_recibos` 186 · `cima_ficheros` 128 · `siniestros` 69 ·
+  `liquidaciones` 9. Codeoscopic dejó tablas propias (`codeoscopic_offers`/`prices` 15,
+  `projects` 1, `webhook_events` 2; `documents`/`product_forms`/`participants` vacías) →
+  la integración llegó a funcionar en pruebas, no en producción.
+- 🤖 **Manuel dejó montado el andamiaje de un BOT conversacional, TODO a 0 filas:**
+  `whatsapp_kb_chunks`, `whatsapp_outbound_messages`, `channel_inbound_messages`,
+  `bot_turn_traces`, `bot_eval_runs`, `bot_eval_scores`. Es exactamente la Fase 3 de este
+  agente: cuando llegue, **mirar primero ese esquema** en vez de inventar uno.
+- **Frescura (01/09/2026):** `cima_ficheros` último 30/08 → la ingesta CIMA sigue viva.
+  `polizas`/`clientes` sin altas desde el **24/08**; `oportunidades` desde jun/2026. No
+  confundir «no hay altas» con «la ingesta está rota»: son cosas distintas y hay que mirar
+  cuál de las dos es antes de afirmar nada.
+- **Vencimientos hoy: 6 pólizas en 30 días, 8 en 60 días.** Es la primera pieza accionable
+  del negocio y ya se puede consultar (`polizas.fecha_vencimiento`).
 - Los **29.858 leads** son el activo comercial dormido: nadie los trabaja hoy. RGPD manda:
   verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
