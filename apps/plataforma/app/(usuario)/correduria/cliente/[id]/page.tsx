@@ -1,0 +1,410 @@
+import Link from 'next/link'
+import { fichaAsegura, urlRetarificar, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
+import { eur } from '@/lib/dinero'
+
+export const dynamic = 'force-dynamic'
+
+/**
+ * La ficha del cliente de la correduría, DENTRO del cuadro de mando.
+ *
+ * Alberto usa una sola pantalla —esta— para todos sus negocios: la correduría
+ * es uno más. `apps/asegura` es el back (tiene la BD de la cartera y el botón
+ * que gasta 0,50€ al retarificar); aquí se ve todo y desde aquí se salta allí
+ * solo para lo que cuesta dinero.
+ *
+ * El principio de la pantalla es el que pidió: se pincha un nombre y está todo.
+ * Sin pestañas, sin volver a buscar, sin «ver detalle» que abre otra pantalla
+ * que hay que cerrar.
+ */
+export default async function FichaCorreduriaPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const r = await fichaAsegura(id)
+
+  if (r.estado !== 'ok') return <NoSePudo estado={r} />
+
+  const { ficha } = r
+  const vivas = ficha.polizas.filter(p => p.viva)
+  const historicas = ficha.polizas.filter(p => !p.viva)
+  const abiertos = ficha.siniestros.filter(s => s.abierto)
+
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <div>
+        <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
+        <h1 style={{ margin: '6px 0 2px', fontSize: 24 }}>{ficha.nombre}</h1>
+        <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <span>{ficha.tipo === 'cliente' ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
+          <Contacto c={ficha.contacto} />
+        </div>
+      </div>
+
+      <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos.length} />
+
+      <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza entra hoy por CIMA." />
+
+      <Siniestros lista={ficha.siniestros} />
+
+      {historicas.length > 0 && (
+        <Polizas
+          titulo={`Volcado histórico (${historicas.length})`}
+          nota="Del volcado de junio de 2026, con vencimientos antiguos. Sirven para saber qué tuvo contratado, no para renovar."
+          polizas={historicas}
+          vacio=""
+          plegado
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Titulares ───────────────────────────────────────────────────────────────
+// Lo que hay que saber ANTES de descolgar el teléfono. Cada número lleva su
+// estado: un contador que no distingue «cero» de «no informado» es justo el que
+// hace decir «está todo al día» sobre lo que no se ha mirado.
+
+function Titulares({ polizas, vivas, abiertos }: { polizas: PolizaFicha[]; vivas: number; abiertos: number }) {
+  const conRecibos = polizas.filter(p => p.recibos !== null)
+  const sinInformar = polizas.length - conRecibos.length
+  const devueltos = conRecibos.reduce((s, p) => s + (p.recibos?.devueltos ?? 0), 0)
+  const pendientes = conRecibos.reduce((s, p) => s + (p.recibos?.pendientes ?? 0), 0)
+  const sinRecibo = conRecibos.filter(p => (p.recibos?.total ?? 0) === 0).length
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+      <Kpi label="Pólizas vivas" valor={String(vivas)} sub={`${polizas.length} en total`} />
+      <Kpi
+        label="Recibos devueltos"
+        valor={sinInformar === polizas.length ? '—' : String(devueltos)}
+        color={devueltos > 0 ? '#d66' : undefined}
+        sub={
+          sinInformar === polizas.length
+            ? 'asegura aún no manda recibos'
+            : devueltos > 0 ? 'hay que reclamar el cobro' : 'ninguno devuelto'
+        }
+      />
+      <Kpi
+        label="Recibos pendientes"
+        valor={sinInformar === polizas.length ? '—' : String(pendientes)}
+        color={pendientes > 0 ? '#c96' : undefined}
+        sub={sinRecibo > 0 ? `${sinRecibo} póliza(s) sin recibos informados` : 'sobre los recibos informados'}
+      />
+      <Kpi
+        label="Siniestros abiertos"
+        valor={String(abiertos)}
+        color={abiertos > 0 ? '#c96' : undefined}
+        sub={abiertos > 0 ? 'en tramitación' : 'ninguno abierto'}
+      />
+    </div>
+  )
+}
+
+function Kpi({ label, valor, sub, color }: { label: string; valor: string; sub?: string; color?: string }) {
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: color ?? 'var(--text)' }}>{valor}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{sub}</div>}
+    </div>
+  )
+}
+
+// ── Contacto ────────────────────────────────────────────────────────────────
+
+function Contacto({ c }: { c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null } }) {
+  const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
+  return (
+    <>
+      {c.telefono ? (
+        <a href={`tel:${c.telefono.replace(/\s/g, '')}`}>📞 {c.telefono}</a>
+      ) : (
+        // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
+        // en sitios distintos (la clave PII vs. pedírselo al cliente).
+        <span title={c.telefonoIlegible ? 'Está guardado pero cifrado con otra clave: no se puede leer desde aquí' : 'No consta teléfono en su ficha'}>
+          📞 {c.telefonoIlegible ? 'cifrado' : 'sin teléfono'}
+        </span>
+      )}
+      {c.email ? (
+        <a href={`mailto:${c.email}`}>✉️ {c.email}</a>
+      ) : (
+        <span title={c.emailIlegible ? 'Cifrado con otra clave: no se puede leer desde aquí' : 'No consta email'}>
+          ✉️ {c.emailIlegible ? 'cifrado' : 'sin email'}
+        </span>
+      )}
+      {sitio && <span>📍 {sitio}</span>}
+    </>
+  )
+}
+
+// ── Pólizas ─────────────────────────────────────────────────────────────────
+
+const TIPOS: Record<string, string> = {
+  auto: '🚗 Auto', moto: '🏍️ Moto', hogar: '🏠 Hogar', vida: '🧬 Vida', salud: '🩺 Salud',
+  decesos: '⚱️ Decesos', responsabilidad_civil: '⚖️ R. Civil', comercio: '🏪 Comercio',
+  comunidades: '🏢 Comunidad', otros: '📄 Otros',
+}
+
+function Polizas({ titulo, nota, polizas, vacio, plegado }: {
+  titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean
+}) {
+  if (polizas.length === 0) {
+    if (!vacio) return null
+    return (
+      <Tarjeta titulo={titulo}>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>{vacio}</p>
+      </Tarjeta>
+    )
+  }
+  const tabla = (
+    <>
+      {nota && <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>{nota}</p>}
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
+          <thead>
+            <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+              <th style={th}>Ramo</th>
+              <th style={th}>Qué asegura</th>
+              <th style={th}>Compañía</th>
+              <th style={th}>Vence</th>
+              <th style={{ ...th, textAlign: 'right' }}>Prima</th>
+              <th style={th}>Recibos</th>
+              <th style={th} />
+            </tr>
+          </thead>
+          <tbody>
+            {polizas.map(p => (
+              <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={td}>{TIPOS[p.tipo] ?? p.tipo}</td>
+                <td style={{ ...td, minWidth: 140 }}>
+                  <ObjetoCelda p={p} />
+                </td>
+                <td style={td}>
+                  {p.aseguradora}
+                  {p.numeroPoliza && <div style={sub}>nº {p.numeroPoliza}</div>}
+                </td>
+                <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                  {p.fechaVencimiento ? (
+                    fmt(p.fechaVencimiento)
+                  ) : (
+                    // NULL = no se sabe cuándo vence, no «no vence».
+                    <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado el vencimiento">sin fecha</span>
+                  )}
+                  <div style={sub}>{p.estado.replace(/_/g, ' ')}</div>
+                </td>
+                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {p.prima === null
+                    ? <span style={{ color: 'var(--muted)' }} title="La compañía no informa la prima">sin dato</span>
+                    : eur(p.prima)}
+                </td>
+                <td style={td}><CeldaRecibos r={p.recibos} /></td>
+                <td style={td}>
+                  {p.retarificable ? (
+                    // El único salto a asegura: es donde se gasta el dinero, y
+                    // se gasta detrás de su propia pantalla de confirmación.
+                    <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ whiteSpace: 'nowrap' }}>
+                      Retarificar ↗
+                    </a>
+                  ) : (
+                    <span style={{ color: 'var(--muted)' }} title={motivoNoRetarificable(p)}>—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )
+  if (!plegado) return <Tarjeta titulo={titulo}>{tabla}</Tarjeta>
+  return (
+    <div style={tarjeta}>
+      {/* Cerrado por defecto y con montaje perezoso: el volcado histórico son
+          cientos de filas en algunas fichas y no se miran casi nunca. */}
+      <details>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>{titulo}</summary>
+        <div style={{ marginTop: 10 }}>{tabla}</div>
+      </details>
+    </div>
+  )
+}
+
+function ObjetoCelda({ p }: { p: PolizaFicha }) {
+  if (p.objeto === null) {
+    return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura no informa este campo">—</span>
+  }
+  if (p.objeto.estado === 'cifrado') {
+    return <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={p.objeto.nota ?? undefined}>🔒 cifrado</span>
+  }
+  if (p.objeto.titulo === null && p.objeto.detalle === null) {
+    return (
+      <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={p.objeto.nota ?? undefined}>
+        {p.objeto.estado === 'sin_objeto' ? 'seguro de personas' : 'sin informar'}
+      </span>
+    )
+  }
+  return (
+    <span title={p.objeto.nota ?? undefined}>
+      {p.objeto.titulo}
+      {p.objeto.detalle && <div style={sub}>{p.objeto.detalle}</div>}
+    </span>
+  )
+}
+
+/**
+ * El estado de cobro de UNA póliza. Cuatro cosas distintas, cuatro pintados:
+ *   null     → asegura no manda el bloque (desplegar).
+ *   total 0  → la compañía no ha mandado recibos (18 de 109 vivas, medido).
+ *   devuelto → hay dinero que reclamar YA.
+ *   al día   → cobrado, y con cuánto.
+ * Las dos primeras NUNCA se pintan como «al día».
+ */
+function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
+  if (r === null) {
+    return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura todavía no informa los recibos">—</span>
+  }
+  if (r.total === 0) {
+    return (
+      <span style={{ color: 'var(--muted)' }} title="La compañía no ha mandado ningún recibo de esta póliza. No significa que esté pagada: significa que no se sabe.">
+        sin informar
+      </span>
+    )
+  }
+  if (r.devueltos > 0) return <span style={{ color: '#d66' }}>🔴 {r.devueltos} devuelto(s)</span>
+  if (r.pendientes > 0) return <span style={{ color: '#c96' }}>🟡 {r.pendientes} pendiente(s)</span>
+  return (
+    <span style={{ color: 'var(--muted)' }}>
+      🟢 {r.cobrados} cobrado(s)
+      {r.cobradoEur !== null && <div style={sub}>{eur(r.cobradoEur)}</div>}
+      {r.ilegibles > 0 && <div style={{ ...sub, color: '#c96' }}>{r.ilegibles} importe(s) sin poder leer</div>}
+    </span>
+  )
+}
+
+function motivoNoRetarificable(p: PolizaFicha): string {
+  if (p.tipo !== 'auto') return `Hoy solo se retarifica auto (esta es de ${p.tipo}).`
+  return 'La compañía no ha informado la matrícula, y sin ella no se puede identificar el vehículo.'
+}
+
+// ── Siniestros ──────────────────────────────────────────────────────────────
+
+function Siniestros({ lista }: { lista: { id: string; estado: string; tipo: string | null; referencia: string | null; fecha: string | null; reserva: number | null; indemnizacion: number | null; tramitador: string | null; abierto: boolean }[] }) {
+  if (lista.length === 0) {
+    return (
+      <Tarjeta titulo="Siniestros">
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
+          Ninguno registrado. Ojo: solo constan los que han llegado por CIMA o se han dado de alta
+          aquí — un parte que el cliente diera directamente a la compañía puede no aparecer.
+        </p>
+      </Tarjeta>
+    )
+  }
+  return (
+    <Tarjeta titulo={`Siniestros (${lista.length})`}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 620 }}>
+          <thead>
+            <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+              <th style={th}>Fecha</th>
+              <th style={th}>Estado</th>
+              <th style={th}>Tipo</th>
+              <th style={th}>Referencia</th>
+              <th style={th}>Tramitador</th>
+              <th style={{ ...th, textAlign: 'right' }}>Reserva</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map(s => (
+              <tr key={s.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                  {s.fecha ? fmt(s.fecha) : <span style={{ color: 'var(--muted)' }}>sin fecha</span>}
+                </td>
+                <td style={{ ...td, color: s.abierto ? '#c96' : 'var(--muted)', whiteSpace: 'nowrap' }}>
+                  {s.abierto ? '🟠' : '⚪'} {s.estado.replace(/_/g, ' ')}
+                </td>
+                <td style={td}>{s.tipo ?? <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                <td style={td}>{s.referencia ?? <span style={{ color: 'var(--muted)' }}>—</span>}</td>
+                <td style={td}>
+                  {s.tramitador ?? (
+                    <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado quién lo lleva">sin asignar en CIMA</span>
+                  )}
+                </td>
+                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {/* Reserva e indemnización están hoy al 0% de cobertura: NULL
+                      es «la compañía no lo informa», no «cero euros de daño». */}
+                  {s.reserva === null
+                    ? <span style={{ color: 'var(--muted)' }} title="La compañía no informa la reserva">sin dato</span>
+                    : eur(s.reserva)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Tarjeta>
+  )
+}
+
+// ── Fallos ──────────────────────────────────────────────────────────────────
+
+const MOTIVOS: Record<string, string> = {
+  secreto_rechazado: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos).',
+  asegura_error: 'asegura respondió, pero no pudo leer su base de datos.',
+  respuesta_ilegible: 'la respuesta no tenía la forma esperada.',
+  red: 'no se pudo llegar a asegura (timeout, DNS o TLS).',
+}
+
+function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }) {
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
+      <div style={tarjeta}>
+        {estado.estado === 'no_encontrado' ? (
+          <>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>Esa ficha no está en la cartera</h2>
+            <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+              Se ha consultado y no existe (o está fusionada con otra). Esto sí es una ausencia
+              comprobada, no un fallo de conexión.
+            </p>
+          </>
+        ) : estado.estado === 'sin_configurar' ? (
+          <>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>⏳ El puerto con asegura no está conectado</h2>
+            <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+              Falta <code>ASEGURA_OPERADOR_SECRET</code> en este proyecto. No significa que el
+              cliente no exista: significa que desde aquí no se puede mirar.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>⚠️ No se ha podido leer la ficha</h2>
+            <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+              {MOTIVOS[estado.motivo] ?? 'motivo desconocido.'} No lo leas como «este cliente no
+              tiene nada».
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Cosillas ────────────────────────────────────────────────────────────────
+
+const tarjeta: React.CSSProperties = { border: '1px solid var(--border)', borderRadius: 12, padding: 14 }
+const th: React.CSSProperties = { padding: '6px 8px', fontWeight: 600 }
+const td: React.CSSProperties = { padding: '8px' }
+const sub: React.CSSProperties = { fontSize: 11, color: 'var(--muted)' }
+
+function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div style={tarjeta}>
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{titulo}</div>
+      {children}
+    </div>
+  )
+}
+
+/** Fecha siempre en español: "2026-06-03" → "03/06/2026". */
+function fmt(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return d && m && y ? `${d}/${m}/${y}` : iso
+}

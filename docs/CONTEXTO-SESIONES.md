@@ -32,6 +32,19 @@
 
 ---
 
+### 🗂️ (01/09/2026) La correduría se trabaja desde plataforma: ficha del cliente y accesos directos
+- 📌 **Dictado de Alberto:** *«asegura hay que meterlo en correduría, yo solo uso UNA página»*. Su
+  pantalla es `plataforma → /correduria`; **asegura es la trastienda** (BD + el botón que gasta 0,50€).
+  Escrito en los tres CLAUDE.md: pantalla nueva de la correduría → se monta en plataforma.
+- 🔎 Se destapó una **duplicación**: la lista de renovaciones que se hizo ayer en asegura era paralela
+  a la que plataforma ya tenía. Se conserva (enseña el coste de la tanda) pero no crece.
+- ✅ **`/correduria/cliente/[id]`**: pólizas, recibos, siniestros y contacto en UNA pantalla. El nombre
+  de Renovaciones es enlace directo + buscador. Único salto a asegura: «Retarificar ↗».
+- 🚨 **Cuatro «no lo sé» que no se colapsan**: `recibos.total 0` ≠ al corriente (**18 de 109 vivas** no
+  tienen recibo), `recibos null` = asegura sin desplegar, `clienteId null` = sin enlace, y
+  `no_encontrado` ≠ `error`. Y `importeEiac()`: `Number('1.234')` daría 1,23€ donde pone 1.234€.
+- Puerto nuevo `/api/operador/{cliente,clientes}` (DNI/IBAN NO cruzan). 15 tests nuevos, CI verde.
+
 ### 🔁 (01/09/2026) asegura: renovaciones + dos bugs vivos encontrados al repasar
 - **`/cartera/renovaciones`**: qué vence en 90 días por urgencia REAL, con el objeto asegurado
   (distingue tres pólizas del mismo cliente) y el coste de retarificar la tanda. `cabenEnTanda()`

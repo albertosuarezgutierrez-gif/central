@@ -55,6 +55,10 @@ export type ResumenCartera = {
  */
 export type PolizaVencimiento = {
   id: string
+  /** El id del TOMADOR, no el de la póliza. Es lo que convierte el nombre de la
+   *  lista en un enlace a su ficha: sin esto, «Jose Suárez» es texto muerto y
+   *  hay que volver a buscarlo a mano. */
+  clienteId: string
   cliente: string
   tipo: string
   aseguradora: string
@@ -167,7 +171,7 @@ export async function vencimientosProximos(
     select: {
       id: true, tipo: true, aseguradora: true, numeroPoliza: true, fechaVencimiento: true,
       primaAnual: true, primaBruta: true, fraccionamiento: true, datosEspecificos: true,
-      cliente: { select: { nombre: true, apellidos: true } },
+      cliente: { select: { id: true, nombre: true, apellidos: true } },
     },
   })
 
@@ -195,6 +199,7 @@ export async function vencimientosProximos(
     const diasRestantes = diasHastaVencimiento(vencimiento, hoyRef)
     return {
       id: f.id,
+      clienteId: f.cliente.id,
       cliente: `${f.cliente.nombre} ${f.cliente.apellidos}`.trim(),
       tipo: String(f.tipo),
       aseguradora: f.aseguradora,

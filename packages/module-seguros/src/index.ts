@@ -48,3 +48,14 @@ export {
   camposLeidos,
 } from './documento-auto.ts'
 export type { AutoLeido } from './documento-auto.ts'
+
+export { importeEiac, sumarImportesEiac } from './importe-eiac.ts'
+export {
+  resumirRecibos,
+  estadoCobro,
+  explicarCobro,
+  type ReciboCrudo,
+  type ReciboResumen,
+  type RecibosPoliza,
+  type EstadoCobro,
+} from './recibos.ts'

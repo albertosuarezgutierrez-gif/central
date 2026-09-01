@@ -13,6 +13,13 @@
 // - Un fallo de descifrado NO se convierte en «ese cliente no tiene DNI»: se
 //   devuelve `null` y quien pinta lo llama «no disponible», que es distinto.
 
+import {
+  objetoAsegurado,
+  primaReferencia,
+  resumirRecibos,
+  type ObjetoAsegurado,
+  type RecibosPoliza,
+} from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
@@ -111,21 +118,70 @@ export type PolizaFicha = {
   tipo: string
   aseguradora: string
   numeroPoliza: string | null
+  estado: string
+  fechaInicio: string | null
   fechaVencimiento: string | null
+  /** `null` = la compañía no informó la prima. NUNCA 0. */
+  prima: number | null
+  fraccionamiento: string | null
+  /** Qué asegura, con su propio estado (conocido / no informado / cifrado / sin objeto). */
+  objeto: ObjetoAsegurado
   matricula: string | null
   /** `true` cuando entra por CIMA (`import_ref` a null) = cartera viva. */
   viva: boolean
   /** Solo las de auto con matrícula se pueden retarificar hoy. */
   retarificable: boolean
+  /** Lo que se sabe de los recibos de ESTA póliza. Ver `RecibosPoliza`. */
+  recibos: RecibosPoliza
+}
+
+export type SiniestroFicha = {
+  id: string
+  polizaId: string
+  estado: string
+  tipo: string | null
+  referencia: string | null
+  fecha: string | null
+  /** Reserva e indemnización: `null` = la compañía no las informa (0% hoy). */
+  reserva: number | null
+  indemnizacion: number | null
+  /** Quién lo lleva en la compañía. Sin esto la llamada empieza a ciegas. */
+  tramitador: string | null
+  abierto: boolean
+}
+
+/** Lo que hace falta para LLAMAR al cliente. El DNI y el IBAN no salen de aquí. */
+export type ContactoFicha = {
+  telefono: string | null
+  email: string | null
+  /** `true` cuando el valor venía cifrado y la clave no lo abrió. Eso NO es
+   *  «no tiene teléfono»: es que aquí no se puede leer, y se dice. */
+  telefonoIlegible: boolean
+  emailIlegible: boolean
+  ciudad: string | null
+  provincia: string | null
+  codigoPostal: string | null
 }
 
 export type FichaCliente = {
   id: string
   nombre: string
   tipo: string
+  segmento: string | null
+  contacto: ContactoFicha
   polizas: PolizaFicha[]
+  siniestros: SiniestroFicha[]
 }
 
+/**
+ * La ficha entera de un cliente en UNA consulta: quién es, cómo se le llama,
+ * qué tiene contratado, cómo va de recibos y qué siniestros arrastra.
+ *
+ * Es el corazón del «pincho en el nombre y lo tengo todo». Por eso trae de
+ * golpe lo que antes obligaba a tres pantallas — pero cada bloque conserva su
+ * propio «no se sabe»: un cliente sin recibos y uno cuyos recibos no han
+ * llegado se pintan distinto, porque son cosas distintas.
+ */
 export async function fichaCliente(
   correduriaId: string,
   clienteId: string,
@@ -139,6 +195,12 @@ export async function fichaCliente(
       nombre: true,
       apellidos: true,
       tipo: true,
+      segmento: true,
+      telefono: true,
+      email: true,
+      ciudad: true,
+      provincia: true,
+      codigoPostal: true,
       polizas: {
         where: { mergedIntoPolizaId: null },
         select: {
@@ -146,7 +208,12 @@ export async function fichaCliente(
           tipo: true,
           aseguradora: true,
           numeroPoliza: true,
+          estado: true,
+          fechaInicio: true,
           fechaVencimiento: true,
+          primaAnual: true,
+          primaBruta: true,
+          fraccionamiento: true,
           datosEspecificos: true,
           importRef: true,
         },
@@ -156,10 +223,63 @@ export async function fichaCliente(
   })
   if (!c) return null
 
+  const idsPolizas = c.polizas.map((p) => p.id)
+  // Recibos y siniestros de TODAS sus pólizas de una vez. Sin esto la ficha
+  // haría una consulta por póliza y con 8 pólizas ya se nota.
+  const [recibos, siniestros] = await Promise.all([
+    idsPolizas.length === 0
+      ? Promise.resolve([])
+      : db.polizaRecibo.findMany({
+          where: { correduriaId, polizaId: { in: idsPolizas } },
+          select: {
+            id: true,
+            polizaId: true,
+            situacion: true,
+            primaTotal: true,
+            fechaEmision: true,
+            fechaVencimiento: true,
+            formaPago: true,
+          },
+          orderBy: { fechaEmision: 'desc' },
+        }),
+    db.siniestro.findMany({
+      where: { correduriaId, clienteId },
+      select: {
+        id: true,
+        polizaId: true,
+        estado: true,
+        tipo: true,
+        referencia: true,
+        fechaHora: true,
+        reservaImporte: true,
+        indemnizacionImporte: true,
+        tramitadorNombre: true,
+      },
+      orderBy: { fechaHora: 'desc' },
+    }),
+  ])
+
+  const recibosPorPoliza = new Map<string, typeof recibos>()
+  for (const r of recibos) {
+    const lista = recibosPorPoliza.get(r.polizaId) ?? []
+    lista.push(r)
+    recibosPorPoliza.set(r.polizaId, lista)
+  }
+
   return {
     id: c.id,
     nombre: `${c.nombre} ${c.apellidos}`.trim(),
     tipo: String(c.tipo),
+    segmento: c.segmento === null ? null : String(c.segmento),
+    contacto: {
+      telefono: descifrar(c.telefono),
+      email: descifrar(c.email),
+      telefonoIlegible: ilegible(c.telefono),
+      emailIlegible: ilegible(c.email),
+      ciudad: c.ciudad ?? null,
+      provincia: c.provincia ?? null,
+      codigoPostal: c.codigoPostal ?? null,
+    },
     polizas: c.polizas.map((p) => {
       const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
       const matricula = datos ? texto(datos.matricula) : null
@@ -168,13 +288,53 @@ export async function fichaCliente(
         tipo: String(p.tipo),
         aseguradora: p.aseguradora,
         numeroPoliza: p.numeroPoliza ?? null,
+        estado: String(p.estado),
+        fechaInicio: fechaIso(p.fechaInicio),
         fechaVencimiento: fechaIso(p.fechaVencimiento),
+        prima: primaReferencia({
+          primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
+          primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
+        }),
+        fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+        objeto: objetoAsegurado({ tipo: String(p.tipo), datos, coberturas: null }),
         matricula,
         viva: p.importRef === null,
         retarificable: String(p.tipo) === 'auto' && matricula !== null,
+        recibos: resumirRecibos(
+          (recibosPorPoliza.get(p.id) ?? []).map((r) => ({
+            id: r.id,
+            situacion: r.situacion === null ? null : String(r.situacion),
+            primaTotal: r.primaTotal,
+            fechaEmision: fechaIso(r.fechaEmision),
+            fechaVencimiento: fechaIso(r.fechaVencimiento),
+            formaPago: r.formaPago,
+          })),
+        ),
       }
     }),
+    siniestros: siniestros.map((s) => ({
+      id: s.id,
+      polizaId: s.polizaId,
+      estado: String(s.estado),
+      tipo: s.tipo ?? null,
+      referencia: s.referencia ?? null,
+      fecha: fechaIso(s.fechaHora),
+      // Decimal de Prisma: `null` se queda en null, jamás en 0 (hoy están al 0%
+      // de cobertura, así que TODOS caen aquí y la pantalla lo dice).
+      reserva: s.reservaImporte === null ? null : Number(s.reservaImporte),
+      indemnizacion: s.indemnizacionImporte === null ? null : Number(s.indemnizacionImporte),
+      tramitador: s.tramitadorNombre ?? null,
+      abierto: ESTADOS_SINIESTRO_ABIERTO.has(String(s.estado)),
+    })),
   }
+}
+
+/** Los estados que significan «esto sigue vivo» (mismo criterio que el resumen). */
+const ESTADOS_SINIESTRO_ABIERTO = new Set(['abierto', 'en_tramitacion'])
+
+/** `true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío. */
+function ilegible(v: string | null | undefined): boolean {
+  return typeof v === 'string' && v.startsWith('v1:') && descifrar(v) === null
 }
 
 /**

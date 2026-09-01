@@ -26,6 +26,33 @@ tiene que evitar por diseño: el dashboard **no pinta KPIs a 0** mientras no hay
 mientras tanto. El estado sale de `lib/estado-migracion.ts`, un helper puro con **tres**
 salidas (`error` / `no migrado` / `migrado`), nunca dos.
 
+## 🖥️ ESTA APP NO ES UNA PANTALLA — la pantalla de Alberto es `plataforma` (01/09/2026)
+
+> Dictado por Alberto: *«asegura hay que meterlo en correduría, yo solo uso UNA página; es un proyecto
+> vertical y yo tengo mi pantalla con todos mis negocios».*
+
+**`apps/plataforma` → `/correduria` es la ÚNICA pantalla que Alberto abre.** La correduría es un
+negocio más de su casa de marcas, al lado de los pisos, el trading y la banca. `apps/asegura` es la
+**trastienda**: tiene la conexión a la cartera (`ASEGURA_DATABASE_URL`, rol `central_asegura`) y es la
+única que gasta dinero (`POST /insurances`, 0,50€), pero **no se entra a ella a trabajar**.
+
+| | `apps/plataforma` (la pantalla) | `apps/asegura` (la trastienda) |
+|---|---|---|
+| Quién entra | Alberto, todos los días | nadie de forma habitual |
+| Qué hace | ver: cartera, renovaciones, ficha del cliente, comisiones | leer la BD, servirla por el puerto, retarificar |
+| Cómo lee | puerto HTTP `/api/operador/*` (Bearer) | Prisma contra ASEGURA-prod-eu |
+
+🚨 **Consecuencia para el código: una pantalla nueva de la correduría se monta en `plataforma` y su
+dato se sirve por un endpoint de `/api/operador/*`.** El 01/09/2026 se construyó una lista de
+renovaciones en ESTA app (`/cartera/renovaciones`) sin darse cuenta de que `plataforma` ya tenía la
+suya —la que Alberto mira— desde el 31/08. Dos pantallas del mismo dato, y la que se usa era la otra.
+La de aquí se conserva porque enseña algo que el puerto no sirve todavía (el coste de pedir precio de
+toda la tanda, que depende del contador de consumo), pero **no se le añaden funciones**.
+
+Lo que SÍ vive aquí y no puede vivir allí: **retarificar** (gasta 0,50€ reales, y por eso está tras su
+propia sesión y su propia pantalla de confirmación) y **subir una póliza** para que el agente la lea.
+Desde la ficha de `plataforma` se salta aquí con un enlace ↗ solo para eso.
+
 ## Arquitectura
 
 - **BD:** compartida `wswbehlcuxqxyinousql`, schema **propio `seguros`** (patrón iarest/rrhh,
@@ -296,6 +323,26 @@ sistema (las cuatro tablas a 0, `polizas.documento_url` 0%, `storage.objects` va
 
 Y falta el estado **«pedido pero no recibido»**: sin él, «0 documentos» no distingue no habérselo
 pedido de que el cliente no lo mande. Es la regla de `CLAUDE.md` aplicada al archivo.
+
+## 🔌 El puerto de la ficha (01/09/2026)
+
+Dos endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
+
+- **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene
+  menos de 3 letras: eso NO es «no hay nadie».
+- **`GET /cliente?id=`** — la ficha entera de una vez (pólizas + recibos + siniestros + contacto),
+  para que `plataforma` no encadene tres llamadas. Cuatro estados: `sin_configurar` · `error` ·
+  **`no_encontrado`** (se miró y no está) · `ok`. Los dos primeros NO se colapsan con el tercero.
+
+🔒 **Lo que NO cruza el puerto, a propósito: DNI, IBAN y dirección.** Para trabajar una renovación no
+hacen falta, y son los datos con los que se suplanta a una persona. Se ven aquí, en la pantalla de
+retarificar, que es donde de verdad se usan. Teléfono y email SÍ viajan: sin ellos no se puede llamar
+a nadie, que es el propósito entero de la ficha.
+
+🚨 **`fechaVencimiento` de un vencimiento ya viaja con `clienteId`** — el id del TOMADOR, no el de la
+póliza. Sin él el nombre de la lista de renovaciones es texto muerto y hay que volver a buscar al
+cliente a mano. En `plataforma` es opcional (`string | null`) porque una versión desplegada más vieja
+de esta app no lo manda: entonces el nombre no se enlaza y se dice por qué.
 
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se

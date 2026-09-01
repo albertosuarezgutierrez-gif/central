@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
+import BuscadorClientes from './BuscadorClientes'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -516,6 +517,9 @@ function CarteraViva() {
           «—» significa que no se sabe, no que no venza nada.
         </div>
       )}
+      <div style={{ marginTop: 16 }}>
+        <BuscadorClientes />
+      </div>
       <Vencimientos />
     </div>
   )
@@ -546,7 +550,11 @@ type ObjetoAsegurado = {
 }
 
 type Vencimiento = {
-  id: string; cliente: string; tipo: string; aseguradora: string
+  id: string
+  /** `null` = la versión desplegada de asegura aún no manda el id del tomador.
+   *  Entonces el nombre NO es un enlace y se dice por qué, en vez de romper. */
+  clienteId: string | null
+  cliente: string; tipo: string; aseguradora: string
   numeroPoliza: string | null; fechaVencimiento: string; dias: number
   urgencia: string; prima: number | null; fraccionamiento: string | null
   objeto: ObjetoAsegurado | null
@@ -660,7 +668,18 @@ function Vencimientos() {
                       </div>
                     </td>
                     <td style={{ padding: '8px' }}>
-                      {p.cliente}
+                      {/* El acceso directo: un clic y está la ficha entera del
+                          cliente (pólizas, recibos, siniestros). Sin volver a
+                          buscarlo por su nombre, que es lo que había antes. */}
+                      {p.clienteId ? (
+                        <Link href={`/correduria/cliente/${p.clienteId}`} style={{ fontWeight: 600 }}>
+                          {p.cliente}
+                        </Link>
+                      ) : (
+                        <span title="La versión desplegada de asegura todavía no manda el id del cliente, así que no se puede enlazar su ficha">
+                          {p.cliente}
+                        </span>
+                      )}
                       {p.numeroPoliza && (
                         <div style={{ fontSize: 11, color: 'var(--muted)' }}>nº {p.numeroPoliza}</div>
                       )}

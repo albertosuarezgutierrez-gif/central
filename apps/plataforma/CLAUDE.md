@@ -1377,6 +1377,46 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   REALES ya están en `comisiones_devengo`: falta sustituir la estimación por el dato real. Hasta
   entonces, al hablar de esa cifra di «estimada», no «verificada».
 
+## 🗂️ La correduría se trabaja DESDE AQUÍ — ficha del cliente y accesos directos (01/09/2026)
+
+> Alberto: *«asegura hay que meterlo en correduría, yo solo uso UNA página»* · *«pincho en Jose Suárez
+> Salas y directamente me lleva a su ficha, donde tengo todos sus datos, pólizas, recibos, siniestros.
+> Rápido y limpio»*.
+
+**`/correduria` es LA pantalla de la correduría.** `apps/asegura` es la trastienda: tiene la BD de la
+cartera y es la única que gasta dinero al retarificar, pero **Alberto no entra ahí**. Toda pantalla
+nueva de la correduría se monta aquí y su dato llega por el puerto `/api/operador/*` de asegura.
+
+- **`/correduria/cliente/[id]`** — la ficha entera en una pantalla: titulares (pólizas vivas · recibos
+  devueltos · pendientes · siniestros abiertos), contacto (📞 y ✉️ clicables), pólizas vivas con su
+  objeto/prima/estado de cobro, siniestros, y el volcado histórico plegado con montaje perezoso.
+  Server component; datos por `lib/ficha-asegura.ts` (interpretación PURA + tests en
+  `test/regression-ficha-asegura.test.ts`).
+- **Accesos directos:** el nombre del cliente en la tabla de Renovaciones es un enlace a su ficha, y
+  hay un **buscador** (`BuscadorClientes.tsx`) para llegar a cualquiera aunque no venza nada. Busca por
+  nombre y apellidos, **no por DNI**: el DNI va por índice ciego y, si esa clave se desincroniza, la
+  búsqueda no falla — devuelve vacío, o sea dice «no existe» sobre alguien que está.
+- **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
+  pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
+
+🚨 **Cuatro «no lo sé» que esta pantalla NO colapsa** (regla NULL≠0 del CLAUDE.md raíz):
+1. **`recibos.total === 0` NO es «al corriente de pago»**: es que la compañía no ha mandado ningún
+   recibo de esa póliza — medido el 01/09/2026, **18 de las 109 pólizas vivas** están así. Se pinta
+   «sin informar». La lógica vive en `@central/module-seguros` (`estadoCobro`/`explicarCobro`, puro).
+2. **`recibos === null` es otra cosa distinta**: la versión desplegada de asegura todavía no manda el
+   bloque. Un bloque con forma rara degrada a `null`, **nunca a un resumen a ceros** — eso pintaría
+   «al corriente» sobre una póliza de la que no se sabe nada. Hay test que lo fija.
+3. **`clienteId === null`** = asegura no manda el id: el nombre se pinta sin enlace y se dice por qué,
+   en vez de un enlace roto.
+4. **`no_encontrado` ≠ `error`**: «se ha mirado y no está» frente a «no se ha podido mirar». Colapsarlos
+   diría que un cliente no existe cuando lo que pasa es que el puerto no responde.
+
+🚨 **Los importes de los recibos llegan como TEXTO del EIAC y `Number()` NO vale.** `importeEiac()`
+(`@central/module-seguros`) acepta SOLO la forma medida —`NNN.NN`, punto decimal, 2 decimales, la de
+los 184 recibos reales— y devuelve `null` para cualquier otra. `Number('1.234')` daría 1,234 sobre un
+texto que quería decir 1.234 en español: la cifra sale plausible y **no hay hueco que delate el fallo**
+(lección de ORCL, 31/07/2026). `sumarImportesEiac` cuenta aparte los ilegibles en vez de sumarlos como 0.
+
 ## 🔔 Panel «Avisos Telegram» (`/telegram`) — el interruptor de lo que manda el bot (01/09/2026, PR #1924)
 Alberto: «las notificaciones de Telegram son muchas». El bot emitía desde **~57 ficheros** sin
 inventario ni forma de callar uno solo: para bajar ruido había que buscar el `tgSend` y borrarlo.
