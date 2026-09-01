@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
+import CuadreComisiones from './CuadreComisiones'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -122,6 +123,11 @@ export default function CorreduriaClient() {
 
       {/* Cartera en vivo (puerto HTTP a central-asegura) */}
       <CarteraViva />
+
+      {/* Cuadre de comisiones: devengado → liquidado → cobrado. Va ANTES de la
+          matriz de banco porque la matriz solo ve el ingreso (la remesa), y la
+          cifra que va a la renta es el bruto. */}
+      <CuadreComisiones año={año} />
 
       {/* KPIs */}
       {!loading && !error && totalAnual > 0 && (

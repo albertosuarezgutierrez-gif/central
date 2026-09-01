@@ -475,3 +475,45 @@ model Siniestro {
 
   @@map("siniestros")
 }
+
+/// Cuenta de efectivo EIAC: el extracto de liquidación de una compañía para un
+/// periodo. Importes en TEXT (tal cual llegan del EIAC), como en PolizaRecibo:
+/// parsear al leer y NUNCA colapsar un ilegible a 0.
+model CuentaEfectivo {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId        String    @map("correduria_id") @db.Uuid
+  codigoEntidadDgs    String?   @map("codigo_entidad_dgs")
+  periodoInicio       DateTime? @map("periodo_inicio") @db.Timestamptz(6)
+  periodoFin          DateTime? @map("periodo_fin") @db.Timestamptz(6)
+  saldoInicial        String?   @map("saldo_inicial")
+  saldoFinal          String?   @map("saldo_final")
+  recibosCobrados     String?   @map("recibos_cobrados")
+  comisionesRecibos   String?   @map("comisiones_recibos")
+  retencionComisiones String?   @map("retencion_comisiones")
+  siniestrosPagados   String?   @map("siniestros_pagados")
+  otrosConceptos      String?   @map("otros_conceptos")
+  retencionOtros      String?   @map("retencion_otros")
+  remesas             String?
+  eiacXmlHash         String?   @map("eiac_xml_hash")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([correduriaId, periodoInicio])
+  @@map("cuenta_efectivo")
+}
+
+/// Remesa concreta de una compañía. `fechaPago` NULL = deuda reconocida y NO
+/// ingresada, que es distinto de «no hay liquidación».
+model Liquidacion {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId         String    @map("correduria_id") @db.Uuid
+  cuentaEfectivoId     String?   @map("cuenta_efectivo_id") @db.Uuid
+  idLiquidacionEntidad String?   @map("id_liquidacion_entidad")
+  codigoEntidadDgs     String?   @map("codigo_entidad_dgs")
+  fechaLiquidacion     DateTime? @map("fecha_liquidacion") @db.Timestamptz(6)
+  fechaPago            DateTime? @map("fecha_pago") @db.Timestamptz(6)
+  importeRemesa        String?   @map("importe_remesa")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([correduriaId, fechaLiquidacion])
+  @@map("liquidaciones")
+}

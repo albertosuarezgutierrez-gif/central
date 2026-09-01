@@ -1,9 +1,17 @@
 # Control de comisiones de la correduría: devengo → liquidación → cobro → renta
 
 **Fecha:** 01/09/2026
-**Vertical:** `apps/plataforma` (`/correduria`), leyendo de la BD de la correduría (schema `public` del
-Supabase de Manuel Suárez) por `ASEGURA_DATABASE_URL`.
-**Estado:** diseño aprobado por Alberto. Pendiente de plan de implementación.
+**Vertical:** `apps/plataforma` (`/correduria`), leyendo la BD de la correduría **por el puerto HTTP de
+`apps/asegura`** (`/api/operador/comisiones`, Bearer `ASEGURA_OPERADOR_SECRET`).
+**Estado:** implementado (01/09/2026).
+
+> 🚨 **Corrección al diseño original.** Este documento decía que plataforma leería la BD de la correduría
+> directamente por `ASEGURA_DATABASE_URL`. **Es falso: esa env solo existe en `apps/asegura`** (comprobado
+> por `grep` en los manifiestos de Vercel de las dos apps), y darle a plataforma la conexión de otra app
+> rompería el aislamiento entre apps del monorepo, que es el mismo patrón por el que ia-rest y iarrhh se
+> leen por HTTP y no por Prisma. Lo implementado es el **puerto operador**, como `lib/cartera-asegura.ts`.
+> Las menciones a `ASEGURA_DATABASE_URL` que quedan abajo se leen como «la fuente de datos que sirve el
+> puerto»; la env sigue viviendo solo en `apps/asegura`.
 
 ---
 
@@ -250,7 +258,8 @@ Por (compañía, periodo), **nunca dos estados, siempre estos nueve**:
 ### 4.3 Flujo
 
 1. **Ingesta CIMA (recibos + liquidaciones).** El cron `/api/cron/cima-liq` deja de hablar SOAP y lee
-   por `ASEGURA_DATABASE_URL` (rol `central_asegura`, SELECT-only):
+   por el **puerto HTTP de `apps/asegura`** (`GET /api/operador/comisiones?desde=`, Bearer
+   `ASEGURA_OPERADOR_SECRET`), que sirve desde su propia BD (`ASEGURA_DATABASE_URL`, que NO sale de esa app):
    - `poliza_recibos` con `situacion = 'cobrado'` y `fecha_situacion` dentro del periodo → `esperado_bruto`.
    - `cuenta_efectivo` + `liquidaciones` → `liq_bruto` / `liq_retencion` / `liq_remesa`, con
      `eiac_xml_hash` como clave de idempotencia.
