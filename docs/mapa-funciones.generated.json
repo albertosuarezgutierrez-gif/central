@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T16:15:03Z",
-  "sha": "569f5e8408e55e82d8d121795dc6cebeb2d4f4cc",
+  "generadoEn": "2026-09-01T18:26:34Z",
+  "sha": "1c93c71707a4fc2b3c38afaf122bf5a1dc359721",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2840,6 +2840,330 @@
       "hash": "290889117deb"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Boveda"
+      ],
+      "funciones": [
+        {
+          "nombre": "Boveda",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8098d2830004"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "SubirPoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "SubirPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b65df7c122c8"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/acceso/solicitar/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/acceso/solicitar",
+      "hash": "9853d18f7758"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/acceso/verificar/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13
+        }
+      ],
+      "tablas": [
+        "next",
+        "zod"
+      ],
+      "rutaApi": "/api/acceso/verificar",
+      "hash": "8e651f866e4e"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/polizas/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/polizas",
+      "hash": "9652d8450a4f"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/layout.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "RootLayout"
+      ],
+      "funciones": [
+        {
+          "nombre": "RootLayout",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: ReactNode }",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "04d5fc160ddc"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Entrada"
+      ],
+      "funciones": [
+        {
+          "nombre": "Entrada",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 4
+        },
+        {
+          "nombre": "textoError",
+          "kind": "function",
+          "exportada": false,
+          "params": "codigo: string",
+          "retorno": "string",
+          "linea": 70
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0e84321589f8"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/auth.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "hashCanal",
+        "crearSesion",
+        "verificarSesion"
+      ],
+      "funciones": [
+        {
+          "nombre": "SECRET",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "Secreto PROPIO del portal, distinto del panel del corredor: una sesión del portal no debe valer jamás en la app interna. `requireSecret` lanza en producción si falta y solo cae al literal en desarroll"
+        },
+        {
+          "nombre": "hashCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "string",
+          "linea": 28,
+          "resumen": "Hash del canal para poder buscarlo sin guardar el email o el móvil en claro. Va con pimienta de entorno: sin ella, una tabla de hashes de emails es trivial de revertir con un diccionario."
+        },
+        {
+          "nombre": "crearSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<string>",
+          "linea": 33
+        },
+        {
+          "nombre": "verificarSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string",
+          "retorno": "Promise<",
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c1a36232d813"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/canal.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Puerto de canal: por dónde sale el código de acceso. WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo Asegura NO existe todavía. Cablearlo directamente habría dejado esta fase entera bloqueada esperando a Meta. Con el puerto, el día que haya número se añade `canal-whatsapp.ts` y se ",
+      "exporta": [
+        "registrarCanal",
+        "obtenerCanal"
+      ],
+      "funciones": [
+        {
+          "nombre": "registrarCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "canal: Canal",
+          "retorno": "void",
+          "linea": 19
+        },
+        {
+          "nombre": "obtenerCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoCanal",
+          "retorno": "Canal | null",
+          "linea": 28,
+          "resumen": "`null` cuando el canal no está registrado. Es DISTINTO de «el envío falló», y quien llama tiene que distinguirlo: decirle al usuario «no te hemos podido enviar el código» cuando en realidad WhatsApp n"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d709c8305acc"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/dinero.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Formato de dinero ESPAÑOL, regla global del monorepo: `2.162,49€` (miles con punto, decimales con coma, € DETRÁS). Nunca `€2162.49`. Espejo exacto de apps/asegura/lib/dinero.ts.",
+      "exporta": [
+        "eur"
+      ],
+      "funciones": [
+        {
+          "nombre": "eur",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 4,
+          "resumen": "Formato de dinero ESPAÑOL, regla global del monorepo: `2.162,49€` (miles con punto, decimales con coma, € DETRÁS). Nunca `€2162.49`. Espejo exacto de apps/asegura/lib/dinero.ts."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "18da6173ecea"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/extraer-poliza.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Lee una póliza que aporta el usuario: PDF → texto → IA, o foto → visión. Replica el pipeline ya probado de apps/sivra/lib/agente-facturas/extraer.ts. ⚠️ Lo que sale de aquí es SIEMPRE un dato leído por una máquina, nunca un dato de contrato: quien lo guarde lo marca `declarado` (ver `procedencia.ts`",
+      "exporta": [
+        "extraerPoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "nadaLeido",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "ResultadoExtraccion",
+          "linea": 29,
+          "resumen": "Nada leído: los cinco campos a `null` y `fuente: 'none'`."
+        },
+        {
+          "nombre": "extraerPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "buffer: Buffer, mimeType: string, fileName = '',",
+          "retorno": "Promise<ResultadoExtraccion>",
+          "linea": 33
+        },
+        {
+          "nombre": "parsear",
+          "kind": "function",
+          "exportada": false,
+          "params": "salida: string",
+          "retorno": "PolizaExtraida",
+          "linea": 88,
+          "resumen": "Un JSON que no parsea devuelve los cinco campos a `null`, NUNCA campos a medias ni cadenas de cajón. Media extracción pintada como póliza es peor que ninguna: el usuario se cree que está guardada."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "946609c7b573"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/session.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "getIdentidad",
+        "requireIdentidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "getIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5
+        },
+        {
+          "nombre": "requireIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "d482d4992a8f"
+    },
+    {
       "ruta": "apps/asegura/app/(usuario)/dashboard/page.tsx",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3564,6 +3888,72 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "212f69990918"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/peticion-auto.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Constructor del cuerpo de una cotización de AUTO para Codeoscopic / Avant2. PURO: entran los datos de la ficha, sale el JSON que viaja. Sin red, sin BD. ─── Por qué esto es una pieza aparte y probada ───────────────────────────── `POST /insurances` cuesta 0,50€ y NO es idempotente: si el cuerpo va m",
+      "exporta": [
+        "revisarDatosAuto",
+        "construirPeticionAuto",
+        "exigeDetalleDeSiniestros"
+      ],
+      "funciones": [
+        {
+          "nombre": "revisarDatosAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Partial<DatosAuto>",
+          "retorno": "Reparo[]",
+          "linea": 66,
+          "resumen": "Comprueba los datos ANTES de gastar los 0,50€. Devuelve la lista de reparos: vacía significa que se puede cotizar. No lanza, porque la UI tiene que poder pintar TODOS los problemas a la vez y no uno a"
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 133
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 136
+        },
+        {
+          "nombre": "construirPeticionAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAuto",
+          "retorno": "Record<string, unknown>",
+          "linea": 146,
+          "resumen": "Construye el cuerpo `CreateInsuranceRequest_V1`. Lanza si los datos no pasan `revisarDatosAuto`: preferimos fallar aquí, gratis, a mandar una petición que el vendor rechazará después de facturarla."
+        },
+        {
+          "nombre": "exigeDetalleDeSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Partial<DatosAuto>",
+          "retorno": "boolean",
+          "linea": 206,
+          "resumen": "¿El vendor exige el detalle de siniestros de los últimos 5 años?"
+        },
+        {
+          "nombre": "construirPersona",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: DatosAuto",
+          "retorno": "Record<string, unknown>",
+          "linea": 212
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9e471d4fc97b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/respuesta.ts",
@@ -58902,7 +59292,7 @@
         "reservas_correo_booking"
       ],
       "rutaApi": "/api/sivra/limpieza-intranet/datos",
-      "hash": "52f327d79773"
+      "hash": "77fc0e7f0370"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/enlace/route.ts",
@@ -66834,6 +67224,85 @@
       "hash": "e36a9037ea04"
     },
     {
+      "ruta": "apps/plataforma/lib/correo/smoobu-notificacion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/smoobu-notificacion.ts — el correo con el que SMOOBU avisa de una reserva. POR QUÉ EXISTE (01/09/2026). El vigía Booking↔Smoobu mandó tres 🚨 «reserva que Smoobu NO tiene» y las TRES eran falsas. La reserva 153896946 (Karl Brunelliere, Busto Reform, 03→07/09/2026) estaba en Smoobu Y en `i",
+      "exporta": [
+        "esRemitenteSmoobu",
+        "normalizarCanal",
+        "canalDeAsunto",
+        "propertyIdDePiso",
+        "parsearNotificacionSmoobu"
+      ],
+      "funciones": [
+        {
+          "nombre": "esRemitenteSmoobu",
+          "kind": "function",
+          "exportada": true,
+          "params": "from: string",
+          "retorno": "boolean",
+          "linea": 44,
+          "resumen": "Remitente de las notificaciones de Smoobu (cubre subdominios)."
+        },
+        {
+          "nombre": "normalizarCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 62,
+          "resumen": "Normaliza el nombre de un canal. Devuelve null solo si no hay nada que normalizar."
+        },
+        {
+          "nombre": "canalDeAsunto",
+          "kind": "function",
+          "exportada": true,
+          "params": "asunto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 72,
+          "resumen": "Canal publicado entre paréntesis al final del asunto de Smoobu. null = el asunto no lo dice (y entonces no se nombra ningún canal: «no lo sé» no es «Booking»)."
+        },
+        {
+          "nombre": "propertyIdDePiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "piso: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 78,
+          "resumen": "Nombre de piso → slug de PROPS_CALENDARIO (sin acentos, sin may/min). null si no casa."
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "dmy: string",
+          "retorno": "string | null",
+          "linea": 87,
+          "resumen": "«03.09.26» → '2026-09-03'. Devuelve null ante cualquier cosa que no sea una fecha real: una fecha mal leída es peor que una fecha ausente (sale un dato plausible y falso)."
+        },
+        {
+          "nombre": "tipoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "palabra: string",
+          "retorno": "TipoNotifSmoobu",
+          "linea": 103
+        },
+        {
+          "nombre": "parsearNotificacionSmoobu",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: { from: string; subject: string; body?: string }",
+          "retorno": "NotificacionSmoobu | null",
+          "linea": 115,
+          "resumen": "¿Es este correo la notificación de Smoobu de una reserva? Devuelve lo que el correo publica, o null si no lo es (los reenvíos de mensajes de huésped —«Hemos recibido este mensaje de…»— NO casan a prop"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "df50ec7204fe"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/triaje.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/triaje.ts — Orquestador del triaje de correo. pasadaTriaje(): cursor → lee lo nuevo por IMAP → dedupe en BD → clasifica → actúa (etiqueta / archiva / avisa / enruta huéspedes) → auto-aprende → actualiza cursor. Respeta TRIAJE_DRY_RUN (modo sombra: clasifica y anota pero NO toca Gmail ni a",
@@ -66849,7 +67318,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 22,
+          "linea": 23,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -66858,7 +67327,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "fmtFecha",
@@ -66866,7 +67335,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "mensajeAviso",
@@ -66874,7 +67343,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 36,
+          "linea": 37,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -66883,7 +67352,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "pasadaTriaje",
@@ -66891,7 +67360,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "digestTriaje",
@@ -66899,7 +67368,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 189,
+          "linea": 197,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -66908,7 +67377,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 229,
+          "linea": 237,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         }
       ],
@@ -66918,7 +67387,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "267a00826b2e"
+      "hash": "10cd6c2e6cf8"
     },
     {
       "ruta": "apps/plataforma/lib/cron-auth.ts",
@@ -76557,7 +77026,7 @@
           "exportada": true,
           "params": "gmailMessageId: string, asunto: string, aviso: AvisoReservaBooking",
           "retorno": "Promise<void>",
-          "linea": 42,
+          "linea": 57,
           "resumen": "Inserta el aviso parseado (lo llama el triaje). Idempotente por gmail_message_id."
         },
         {
@@ -76566,7 +77035,7 @@
           "exportada": true,
           "params": "gmailMessageId: string, asunto: string, ref: string",
           "retorno": "Promise<void>",
-          "linea": 54,
+          "linea": 69,
           "resumen": "Leg B: un mensaje de huésped trae nº de confirmación pero Smoobu no lo resolvió — puede ser una reserva que Smoobu perdió (o simplemente fuera de la ventana del resolutor). Se registra como pendiente "
         },
         {
@@ -76575,7 +77044,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 62
+          "linea": 77
         },
         {
           "nombre": "addDias",
@@ -76583,7 +77052,7 @@
           "exportada": false,
           "params": "base: Date, n: number",
           "retorno": "string",
-          "linea": 63
+          "linea": 78
         },
         {
           "nombre": "activaEnSmoobu",
@@ -76591,8 +77060,17 @@
           "exportada": false,
           "params": "ref: string, checkIn: Date | null",
           "retorno": "Promise<boolean | null>",
-          "linea": 66,
+          "linea": 81,
           "resumen": "¿Tiene Smoobu una reserva ACTIVA con esta ref? true/false, o null si no se pudo mirar."
+        },
+        {
+          "nombre": "yaSincronizada",
+          "kind": "function",
+          "exportada": false,
+          "params": "ref: string",
+          "retorno": "Promise<boolean>",
+          "linea": 108,
+          "resumen": "Prueba POSITIVA barata: si el sync ya trajo esta reserva a `incomes`, Smoobu la tiene y no hay nada que comprobar contra su API. Vale en UN SOLO sentido: no estar en `incomes` NO prueba que Smoobu no "
         },
         {
           "nombre": "labelPiso",
@@ -76600,7 +77078,16 @@
           "exportada": false,
           "params": "propertyId: string | null, nombre: string | null",
           "retorno": "string",
-          "linea": 83
+          "linea": 115
+        },
+        {
+          "nombre": "canalDeFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila",
+          "retorno": "string | null",
+          "linea": 126,
+          "resumen": "Canal REAL de la reserva. `aviso_booking` viene por definición de un correo de booking.com; el resto lo publica el asunto entre paréntesis. null = el correo no lo dijo, y entonces el aviso NO nombra n"
         },
         {
           "nombre": "lineaReserva",
@@ -76608,7 +77095,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "string",
-          "linea": 88
+          "linea": 131
         },
         {
           "nombre": "verificarReservasBooking",
@@ -76616,14 +77103,15 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 93
+          "linea": 138
         }
       ],
       "tablas": [
+        "incomes",
         "reservas_correo_booking"
       ],
       "rutaApi": null,
-      "hash": "27d34d6e6678"
+      "hash": "120a43b73cbd"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -98128,6 +98616,171 @@
       "hash": "54dd111be75d"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/acceso.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Qué ve cada papel en una póliza. La línea que sostiene la seguridad del portal: **dato de la COSA ≠ dato de la PERSONA**. El conductor de la furgoneta necesita compañía, nº de póliza y el teléfono de siniestros para resolver un golpe; no necesita —y no debe ver— la prima que paga el dueño, su IBAN n",
+      "exporta": [
+        "camposVisibles"
+      ],
+      "funciones": [
+        {
+          "nombre": "camposVisibles",
+          "kind": "function",
+          "exportada": true,
+          "params": "nivel: Nivel",
+          "retorno": "CamposVisibles",
+          "linea": 65
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d5451bf4f7bf"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/codigo.ts",
+      "ambito": "packages/module-seguros-portal",
+      "exporta": [
+        "generarCodigo",
+        "estadoCodigo"
+      ],
+      "funciones": [
+        {
+          "nombre": "generarCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 19,
+          "resumen": "6 dígitos con aleatoriedad criptográfica: `Math.random` aquí sería un fallo de seguridad."
+        },
+        {
+          "nombre": "estadoCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "guardado: CodigoGuardado, entrada: string, ahora: Date,",
+          "retorno": "EstadoCodigo",
+          "linea": 28,
+          "resumen": "El orden de las comprobaciones importa y es deliberado: primero «ya usado» y «bloqueado», DESPUÉS la caducidad, y el acierto al final. Comprobar el acierto antes del bloqueo convertiría el contador de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "18038793f932"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/poliza-leida.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Normalización de lo que una IA dice haber leído en una póliza. Puro: sin BD, sin red. Vive aquí y no en la app porque es LA regla que decide si un dato existe o no, y esa decisión no puede depender de qué proveedor de IA respondió. La regla de la casa, entera: - `null` = «no se sabe». Es el estado p",
+      "exporta": [
+        "polizaLeidaVacia",
+        "normalizarPolizaLeida",
+        "seLeyoAlgo"
+      ],
+      "funciones": [
+        {
+          "nombre": "polizaLeidaVacia",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "PolizaLeida",
+          "linea": 41,
+          "resumen": "Los cinco campos a «no se sabe». Es el resultado de no haber podido leer nada."
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 86
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 93
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 107
+        },
+        {
+          "nombre": "ramo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "RamoPoliza | null",
+          "linea": 119
+        },
+        {
+          "nombre": "normalizarPolizaLeida",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: unknown",
+          "retorno": "PolizaLeida",
+          "linea": 130,
+          "resumen": "Convierte lo que sea que haya devuelto el modelo en los cinco campos, cada uno con dato o con `null`. Nunca lanza: si la entrada no es un objeto, todo es `null`."
+        },
+        {
+          "nombre": "seLeyoAlgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaLeida",
+          "retorno": "boolean",
+          "linea": 143,
+          "resumen": "¿Se ha leído ALGO? `false` no dice «la póliza no tiene datos», dice «no los hemos leído»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "527a01519447"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/procedencia.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "De dónde sale un dato del portal. Son TRES, nunca dos, y se pintan distinto. - `compania` — vino por CIMA/EIAC. El único fiable sin que nadie lo confirme. - `calculado` — lo dedujo el sistema de una norma (ITV según matriculación, caducidad del DNI...). PROPONE; hasta que el usuario lo confirma no s",
+      "exporta": [
+        "fiabilidad",
+        "etiquetaProcedencia",
+        "sePuedeAfirmar"
+      ],
+      "funciones": [
+        {
+          "nombre": "fiabilidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Procedencia",
+          "retorno": "number",
+          "linea": 23
+        },
+        {
+          "nombre": "etiquetaProcedencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Procedencia",
+          "retorno": "string",
+          "linea": 33
+        },
+        {
+          "nombre": "sePuedeAfirmar",
+          "kind": "function",
+          "exportada": true,
+          "params": "dato: { procedencia: Procedencia confirmadoPorUsuario: boolean }",
+          "retorno": "boolean",
+          "linea": 37
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "71e37d4f17b9"
+    },
+    {
       "ruta": "packages/module-seguros/src/ingesta.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Salud de la INGESTA de CIMA — el vigía de que los datos de las compañías llegan de verdad. Contexto que justifica este módulo (medido el 01/09/2026): durante más de dos meses se perdieron 23 recibos (7.721,71€ de prima) y 20 siniestros de Occident, y el health-check de origen estuvo TODO ese tiempo ",
@@ -103528,7 +104181,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2711,
-    "funciones": 7555
+    "archivos": 2729,
+    "funciones": 7603
   }
 }
