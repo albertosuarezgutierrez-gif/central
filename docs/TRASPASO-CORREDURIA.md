@@ -2804,6 +2804,29 @@ del paso 0 es obligatorio ANTES de mover nada.**
 **Consecuencia para la Fase 4:** «encender CIMA completo» ya no incluye activar REC/SIN/CEF —
 están activos y entrando. Lo que queda es el emparejamiento por grupo de entidad.
 
+  **Cronología de la avería (medida el 01/09/2026, re-verificando lo de arriba).** El apartado dice
+  «del 24/06 al 30/08», que es el rango de la cuarentena; pero hay una fecha de corte más útil,
+  porque marca cuándo dejó de entrar NADA:
+
+  | Último… | Fecha |
+  |---|---|
+  | siniestro persistido en `siniestros` | **02/07/2026** |
+  | fichero `SIN` en estado `confirmed` | **08/07/2026** |
+  | fichero `SIN` recibido (todos a `review` desde entonces) | 30/08/2026 |
+
+  Desde el 19/07 han entrado **7 ficheros de siniestros seguidos y los 7 se han quedado en
+  `review`**: ni uno solo ha pasado desde el 8 de julio. Encaja con el reconciliador parado el
+  25/06 — mientras quedó inercia, algo entraba; desde julio, cero. En total 21 de los 38 ficheros
+  `SIN` (55%) están en cuarentena, contra 18 de 54 en los de recibos, que sí siguen entrando a
+  ratos (último `REC` confirmado, 24/08).
+
+  **Y un matiz sobre la cifra de cartera viva.** Las ~109 pólizas de CIMA no están todas en vigor:
+  **68 constan en estado `activa`** y de ellas **solo 50 tienen vencimiento futuro** (las otras 18,
+  vencimiento nulo). Las 50 son un subconjunto de las 68: **ninguna póliza del volcado histórico
+  tiene vencimiento futuro**, lo que confirma por otra vía que la cartera viva es exactamente lo que
+  ha traído CIMA. Ojo al leer `estado='activa'` como «en vigor»: de las 1.235 pólizas así marcadas
+  en toda la BD, 846 no tienen fecha de vencimiento y 339 la tienen ya pasada.
+
 ## 🔎 31/08/2026 — Verificación en el panel: Vercel CONFIRMADO, y el `CRON_SECRET` ya estaba
 
 Sesión de navegador sobre el panel real (agente Chrome), con tres resultados que corrigen a este
