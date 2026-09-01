@@ -32,6 +32,23 @@
 
 ---
 
+### 🗂️ (01/09/2026) Rediseño de la ficha de cliente: es un índice, no un expediente
+- Alberto: «el CRM no me convence… en una visual tengo que ver quién es, con quién está relacionado
+  y qué tiene». Diseño + maqueta →
+  `docs/superpowers/specs/2026-09-01-asegura-ficha-cliente-design.md` · artifact `22b57a16`.
+- Inventariado qué hay detrás de cada pantalla (skill `agente-correduria`, `sector.md` §8). Con
+  contenido: recibos (182 en 89 pólizas), **coberturas 1.418 en las 109** (la puerta más rica y hoy
+  invisible), siniestros 67, comisión por póliza vía `comision_bruta`. Vacías: notas, WhatsApp,
+  gestiones (23 de cartera viva, no 694).
+- 🚨 Tres cifras que engañan: **902 de las 1.710 relaciones son roles de póliza**, no familia; los
+  **3.676 «presupuestos» son pólizas de la competencia** del volcado; y las cotizaciones reales (24)
+  tienen prima y compañía **al 0%**.
+- 🚨 **Documentos: hacen falta en cliente/póliza/siniestro y solo la póliza tiene tabla.** Faltan
+  `cliente_documentos` y `siniestro_documentos`; `bienes_asegurables` sin `poliza_id`. **0 ficheros
+  en todo el sistema.** Falta el estado «pedido pero no recibido».
+- ✅ PR #1949 (vigía de CIMA) **mergeado**: los 12 checks arrancaron al mergear `main` en la rama —
+  quinta confirmación del orden documentado en `CLAUDE.md`.
+
 ### 🧾 (01/09/2026) asegura: prompt para el Claude de Manuel (Codeoscopic/Avant2, tarificación)
 - Manuel pidió un prompt para su Claude → escrito en **`docs/CODEOSCOPIC-PROMPT-MANUEL.md`** (lo envía
   Alberto). Pide: doc de la API + host base (no consta en ningún correo de Alberto), esquema de auth,

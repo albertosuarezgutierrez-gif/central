@@ -294,3 +294,77 @@ propios además del estándar. Por eso el campo semántico que se usa es `poliza
 ## 7. El activo dormido
 - Los **29.858 leads** son el activo comercial dormido: nadie los trabaja hoy. RGPD manda:
   verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
+
+## 8. Qué hay DE VERDAD detrás de una ficha de cliente (medido 01/09/2026)
+
+Inventario hecho para rediseñar la ficha (diseño completo en
+`docs/superpowers/specs/2026-09-01-asegura-ficha-cliente-design.md`; maqueta en
+https://claude.ai/code/artifact/22b57a16-739c-4e45-bd9d-9e494275aeda). Todo restringido a la
+**cartera VIVA** (`polizas.import_ref IS NULL`) = **109 pólizas / 80 clientes**.
+
+🚨 **La regla de esta sección: una pantalla que se abre a cero no dice «no hay», dice «pendiente».**
+Casi todas estas tablas están vacías porque nadie las ha usado todavía, no porque el cliente no
+tenga nada.
+
+**Con contenido real (se puede construir encima ya):**
+- `poliza_recibos` — 182 en **89 de las 109** pólizas (20 sin ninguno; media 2,04; máx 10).
+  `situacion`: cobrado 103 · anulado 54 · pendiente 24 · devuelto 1 → **21 pólizas con algún
+  pendiente**. `prima_total`/`prima_neta`/`comision_bruta`/`fecha_vencimiento` al 100%;
+  `comision_liquida` solo 15,9%. **`clase_recibo` `SU` en 62 de 182: son los suplementos** — no hay
+  tabla de movimientos de póliza, así que el historial de una póliza SON sus recibos.
+- `poliza_coberturas` — 1.418 filas y **las 109 pólizas tienen las suyas** (media 13, máx 59).
+  `descripcion` 100%, `capital_asegurado` 73,2%, **`franquicia` 0%**. Es el dato más rico de la
+  cartera y hoy no se ve en ninguna pantalla.
+- `siniestros` — 67, **todos de cartera viva** (30 clientes, 37 pólizas), 60 cerrados / 7 abiertos,
+  `origen`=`cima` al 100%. `tipo`/`fecha_hora`/`referencia` 100%, `comentario` 95,5%. **Al 0%:
+  `gravedad`, `reserva_importe`, `indemnizacion_importe`, tramitador y perito.**
+- **Comisión POR PÓLIZA: sí se puede**, vía `poliza_recibos.comision_bruta` (100%) + su `poliza_id`.
+  La vía contable no vale para una ficha: `liquidacion_movimientos` (33 filas) solo tiene
+  `poliza_id` en 11 y `recibo_id` en 8; `cuenta_efectivo` es agregado por periodo/entidad **sin FK
+  a póliza ni cliente**.
+- `poliza_intervinientes` — 95 en 81 pólizas. **Van dentro de la póliza, no en las relaciones.**
+
+**Vacío hoy (decir «pendiente», nunca «no hay»):** `historial_interno` **0** y `clientes.notas`
+0/80 (⚠️ **no hay dónde apuntar una llamada**) · conversaciones/mensajes de WhatsApp 0 de cartera
+viva y `wa_opt_in` false en los 80 · `recordatorios`, `whatsapp_outbound_messages`,
+`channel_inbound_messages`, `ofertas_automaticas` vacías.
+
+**Trampas medidas, que se repiten y hay que conocer:**
+- **`cliente_relaciones` 1.710 ≠ 1.710 relaciones.** **902 son roles de póliza**: Ocasional–Tomador
+  491, Propietario–Tomador 208, Tomador–Contacto 203. Lo humano es cónyuge 168, padre/madre 111,
+  hijo/a 111, empresa 108, amigo/a 91, hermano/a 58… Y **de cartera viva solo hay 65, en 17 de los
+  80 clientes**.
+- **`oportunidades` 3.676 NO son presupuestos de Alberto**: los 3.676 están en estado
+  `competencia`, sin excepción, y **ninguno cuelga de un cliente vivo** — son pólizas de la
+  competencia del volcado histórico. Los presupuestos reales son las **24 `cotizaciones`**… y ahí
+  **`mejor_oferta`, la prima y la compañía están al 0%**: se sabe qué se pidió y cuándo, no por
+  cuánto. Estados: `pendiente` 22 · `rechazada` 2.
+- **`gestiones` 694 son casi todas de leads**: de cartera viva hay **23, en 22 clientes** (22
+  llamadas, 1 tarea), ninguna ligada a siniestro y ninguna con `fecha_aviso`.
+- **Contacto: la columna plana gana a la tabla multivalor.** `clientes.telefono` 55/80 y
+  `clientes.email` 40/80, contra `cliente_telefonos` 16 y `cliente_emails` 15 — y **0 clientes con
+  más de uno**. `cliente_direcciones` **no existe** (`clientes.direccion` 62/80).
+- **26 pólizas de auto vivas no traen prima** (`prima_anual` 76,1%). Nunca pintarlas como 0,00€ ni
+  sumarlas como cero.
+- **El objeto asegurado está en dos sitios y sin FK a la póliza.** La matrícula sí está en
+  `polizas.datos_especificos` (81/81 de auto+moto), pero **la dirección del hogar solo en 2 de 19**;
+  `bienes_asegurables` (51 de cartera viva) **no tiene `poliza_id`**, solo `cliente_id`.
+- Reparto de la cartera viva: auto 80 · hogar 19 · RC 9 · moto 1, con **solo 3 aseguradoras**.
+
+### 📎 Documentos: hacen falta en TRES sitios y solo uno tiene tabla
+Alberto lo pidió explícitamente (01/09/2026): *«hay que subir documentos tanto del cliente como de
+la póliza, inclusive siniestro»*.
+
+| Nivel | Tabla | Estado |
+|---|---|---|
+| Cliente (DNI, carnet, IBAN) | — | 🔴 **`cliente_documentos` NO EXISTE**. Y `poliza_documentos.poliza_id` es `NOT NULL`: un DNI habría que colgarlo de una póliza, y a un **lead sin póliza** no se le puede adjuntar nada |
+| Póliza | `poliza_documentos` | ✅ existe y bien: blob, MIME, tamaño, quién lo subió y **`visible_por_cliente`** (interruptor del portal). **0 filas** |
+| Siniestro | — | 🔴 **`siniestro_documentos` NO EXISTE**. Es donde más papel hay (parte, fotos, factura, peritaje) y con tramitador/reserva al 0%, **las fotos serían lo único** |
+| Objeto | `bien_documentos` | ✅ la mejor pensada: tipo cerrado `ficha_tecnica`/`permiso_circulacion`/`titulo_propiedad`/`planos`/`foto`/`seguro_anterior`/`factura_compra`/`otro`. **El permiso es del coche, no de la póliza** — pero `bienes_asegurables` sin `poliza_id` hace que no se vea desde ella |
+
+**Cero ficheros en TODO el sistema:** las cuatro tablas a 0, `polizas.documento_url` al 0% y
+`storage.objects` vacío. No hay ni una póliza en PDF. Lo único parecido son los 128 XML de
+`cima_ficheros` (24 de póliza viva), que valen como «ver el origen», no como documentación.
+
+Y el estado que falta en todas: **«pedido pero no recibido»**. Sin él, «0 documentos» no distingue
+no habérselo pedido de que el cliente no lo mande — la regla de la casa, aplicada al archivo.
