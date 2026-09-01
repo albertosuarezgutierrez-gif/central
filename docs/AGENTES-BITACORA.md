@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-01 · trading-analista** · hizo: pasada diaria completa (disparo normal 20:15 UTC, sin
+  huella de pasada previa hoy). Preflight 200. NAV 32.704,72€ empujado sin salto anómalo; cartera
+  real (CVX+VWCE) y libro de operaciones (5 nuevas, 2 duplicadas) empujados; latido OK. Watchlist
+  24 símbolos: velas 6M por IBKR una a una tras detectar TRES suplantaciones en los lotes paralelos
+  de 12 (META llevaba los datos de SPY, RBLX/NVO cruzados) — corregido re-pidiendo y verificando
+  por huella de cierre antes de dar nada por bueno; protocolo del landmine de `pasada-diaria.md`
+  confirmado necesario, no teórico. `/analizar` y `/puntuar` sin vetados/descartados/suplantados/
+  divergentes con los datos ya limpios. Top 5 ideas, ninguna operada (2 topadas por concentración
+  20%, 1 ya abierta, 2 sin histórico para stop). 1 cierre por ventana (MSFT). Resumen por Telegram
+  (messageId 3912) con aviso de contraste desfasado (23/24, normal a esta hora) y sin-contrastar
+  (LLY, NFLX). Radar semanal: no aplica (martes). dudas: si las suplantaciones en lotes de 12 son
+  un patrón del conector o cosa de esta sesión — vigilar en próximas pasadas; fallos: ninguno que
+  llegara a BD (se detectaron y corrigieron antes de escribir); PRs/commits: — (solo memoria+bitácora).
 - **2026-09-01 · facturas-correo** · hizo: pasada diaria (primera desde el 23/08, hueco de 9 días).
   Preflight `/api/internal/alerta` 200. Paso 0: Vía B sana (última copia `_buzon_pdf` hoy mismo,
   `dias_caido=0`); `agente_salud` actualizado. Backlog barrido: `PDF-pendiente` vacío;

@@ -87,6 +87,20 @@
 - 🧭 Regla de reparto, palabras de Alberto: **«Avant2 vender, CIMA backoffice.»** De esta API interesa
   lo que ayude a VENDER (cotizar, borradores, catálogos, matrícula); lo que huela a backoffice, no.
 
+### 📈 (01/09/2026) Trading-analista: pasada diaria completa, y tres suplantaciones cazadas antes de tocar BD
+- Pasada normal de las 20:15 UTC. NAV/cartera real/libro de operaciones empujados sin incidencias;
+  `/analizar` y `/puntuar` corrieron limpios (0 vetados/descartados/suplantados) sobre los 24 símbolos.
+- 🚨 **Al pedir el histórico de 6 meses en lotes de 12 símbolos en paralelo, tres pares salieron
+  duplicados** (META con los datos de SPY; NVO y RBLX cruzados) — el landmine de suplantación de
+  `pasada-diaria.md` (04-08/08/2026) resultó real, no solo teórico. Se detectó re-verificando cada
+  símbolo por huella de cierre antes de construir el payload, y se corrigió pidiendo esos símbolos
+  de nuevo, uno a uno. Ninguna vela mala llegó a BD.
+- Ninguna idea se operó hoy (2 topadas por concentración 20%, 1 ya abierta, 2 sin histórico de stop).
+  1 cierre por ventana (MSFT). Resumen y detalle en `docs/AGENTES-BITACORA.md`.
+- Pendiente: vigilar si el cruce de datos en lotes de 12 se repite en próximas pasadas (¿lotes
+  grandes del conector IBKR, o cosa puntual de esta sesión?) — si vuelve, bajar el tamaño de lote
+  a demanda en la propia skill.
+
 ### 🔍 (01/09/2026) El fixture de Codeoscopic, releído entero: 3 fallos del parser corregidos
 - 🚨 **`errors[]` es por CONFIGURACIÓN de producto, no por compañía.** Reale falla con la config
   `37786__` **y da 8 precios** con `83474 (ASM y API)`. El resumen decía «Reale sin precio»: falso
