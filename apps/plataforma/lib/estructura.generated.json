@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T16:15:03Z",
+  "generadoEn": "2026-09-01T17:59:53Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4985,6 +4985,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Los 15 precios reales del 29/07 son TODOS `estimado`",
+      "fecha": ""
+    },
+    {
       "titulo": "Apagado por defecto",
       "fecha": ""
     },
@@ -5038,10 +5042,6 @@
     },
     {
       "titulo": "Causa raíz:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Por qué duró dos meses:",
       "fecha": ""
     }
   ],

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T16:15:03Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T17:59:53Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -245,6 +245,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Los 15 precios reales del 29/07 son TODOS `estimado`
 - Apagado por defecto
 - Hallazgo:
 - Siguiente paso al confirmar envs:
@@ -254,5 +255,4 @@
 - Decisión de orden: WhatsApp entra como CANAL (OTP + avisos), NO como agente conversacional.
 - Cloud API directa de Meta, no 360dialog
 - PENDIENTE que no depende de nadie y es el único camino crítico: dar de alta la WABA
-- PENDIENTE (nuevo):
 

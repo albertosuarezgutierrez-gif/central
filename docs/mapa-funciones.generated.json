@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T16:15:03Z",
-  "sha": "569f5e8408e55e82d8d121795dc6cebeb2d4f4cc",
+  "generadoEn": "2026-09-01T17:59:53Z",
+  "sha": "13a16ff1cb92a5b5e84805ad6264e62aeabc1511",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -58902,7 +58902,7 @@
         "reservas_correo_booking"
       ],
       "rutaApi": "/api/sivra/limpieza-intranet/datos",
-      "hash": "52f327d79773"
+      "hash": "77fc0e7f0370"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/enlace/route.ts",
@@ -66834,6 +66834,85 @@
       "hash": "e36a9037ea04"
     },
     {
+      "ruta": "apps/plataforma/lib/correo/smoobu-notificacion.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/smoobu-notificacion.ts — el correo con el que SMOOBU avisa de una reserva. POR QUÉ EXISTE (01/09/2026). El vigía Booking↔Smoobu mandó tres 🚨 «reserva que Smoobu NO tiene» y las TRES eran falsas. La reserva 153896946 (Karl Brunelliere, Busto Reform, 03→07/09/2026) estaba en Smoobu Y en `i",
+      "exporta": [
+        "esRemitenteSmoobu",
+        "normalizarCanal",
+        "canalDeAsunto",
+        "propertyIdDePiso",
+        "parsearNotificacionSmoobu"
+      ],
+      "funciones": [
+        {
+          "nombre": "esRemitenteSmoobu",
+          "kind": "function",
+          "exportada": true,
+          "params": "from: string",
+          "retorno": "boolean",
+          "linea": 44,
+          "resumen": "Remitente de las notificaciones de Smoobu (cubre subdominios)."
+        },
+        {
+          "nombre": "normalizarCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 62,
+          "resumen": "Normaliza el nombre de un canal. Devuelve null solo si no hay nada que normalizar."
+        },
+        {
+          "nombre": "canalDeAsunto",
+          "kind": "function",
+          "exportada": true,
+          "params": "asunto: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 72,
+          "resumen": "Canal publicado entre paréntesis al final del asunto de Smoobu. null = el asunto no lo dice (y entonces no se nombra ningún canal: «no lo sé» no es «Booking»)."
+        },
+        {
+          "nombre": "propertyIdDePiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "piso: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 78,
+          "resumen": "Nombre de piso → slug de PROPS_CALENDARIO (sin acentos, sin may/min). null si no casa."
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "dmy: string",
+          "retorno": "string | null",
+          "linea": 87,
+          "resumen": "«03.09.26» → '2026-09-03'. Devuelve null ante cualquier cosa que no sea una fecha real: una fecha mal leída es peor que una fecha ausente (sale un dato plausible y falso)."
+        },
+        {
+          "nombre": "tipoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "palabra: string",
+          "retorno": "TipoNotifSmoobu",
+          "linea": 103
+        },
+        {
+          "nombre": "parsearNotificacionSmoobu",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: { from: string; subject: string; body?: string }",
+          "retorno": "NotificacionSmoobu | null",
+          "linea": 115,
+          "resumen": "¿Es este correo la notificación de Smoobu de una reserva? Devuelve lo que el correo publica, o null si no lo es (los reenvíos de mensajes de huésped —«Hemos recibido este mensaje de…»— NO casan a prop"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "df50ec7204fe"
+    },
+    {
       "ruta": "apps/plataforma/lib/correo/triaje.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/triaje.ts — Orquestador del triaje de correo. pasadaTriaje(): cursor → lee lo nuevo por IMAP → dedupe en BD → clasifica → actúa (etiqueta / archiva / avisa / enruta huéspedes) → auto-aprende → actualiza cursor. Respeta TRIAJE_DRY_RUN (modo sombra: clasifica y anota pero NO toca Gmail ni a",
@@ -66849,7 +66928,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 22,
+          "linea": 23,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -66858,7 +66937,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "fmtFecha",
@@ -66866,7 +66945,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "mensajeAviso",
@@ -66874,7 +66953,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 36,
+          "linea": 37,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -66883,7 +66962,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "pasadaTriaje",
@@ -66891,7 +66970,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "digestTriaje",
@@ -66899,7 +66978,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 189,
+          "linea": 197,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -66908,7 +66987,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 229,
+          "linea": 237,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         }
       ],
@@ -66918,7 +66997,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "267a00826b2e"
+      "hash": "10cd6c2e6cf8"
     },
     {
       "ruta": "apps/plataforma/lib/cron-auth.ts",
@@ -76557,7 +76636,7 @@
           "exportada": true,
           "params": "gmailMessageId: string, asunto: string, aviso: AvisoReservaBooking",
           "retorno": "Promise<void>",
-          "linea": 42,
+          "linea": 57,
           "resumen": "Inserta el aviso parseado (lo llama el triaje). Idempotente por gmail_message_id."
         },
         {
@@ -76566,7 +76645,7 @@
           "exportada": true,
           "params": "gmailMessageId: string, asunto: string, ref: string",
           "retorno": "Promise<void>",
-          "linea": 54,
+          "linea": 69,
           "resumen": "Leg B: un mensaje de huésped trae nº de confirmación pero Smoobu no lo resolvió — puede ser una reserva que Smoobu perdió (o simplemente fuera de la ventana del resolutor). Se registra como pendiente "
         },
         {
@@ -76575,7 +76654,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 62
+          "linea": 77
         },
         {
           "nombre": "addDias",
@@ -76583,7 +76662,7 @@
           "exportada": false,
           "params": "base: Date, n: number",
           "retorno": "string",
-          "linea": 63
+          "linea": 78
         },
         {
           "nombre": "activaEnSmoobu",
@@ -76591,8 +76670,17 @@
           "exportada": false,
           "params": "ref: string, checkIn: Date | null",
           "retorno": "Promise<boolean | null>",
-          "linea": 66,
+          "linea": 81,
           "resumen": "¿Tiene Smoobu una reserva ACTIVA con esta ref? true/false, o null si no se pudo mirar."
+        },
+        {
+          "nombre": "yaSincronizada",
+          "kind": "function",
+          "exportada": false,
+          "params": "ref: string",
+          "retorno": "Promise<boolean>",
+          "linea": 108,
+          "resumen": "Prueba POSITIVA barata: si el sync ya trajo esta reserva a `incomes`, Smoobu la tiene y no hay nada que comprobar contra su API. Vale en UN SOLO sentido: no estar en `incomes` NO prueba que Smoobu no "
         },
         {
           "nombre": "labelPiso",
@@ -76600,7 +76688,16 @@
           "exportada": false,
           "params": "propertyId: string | null, nombre: string | null",
           "retorno": "string",
-          "linea": 83
+          "linea": 115
+        },
+        {
+          "nombre": "canalDeFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila",
+          "retorno": "string | null",
+          "linea": 126,
+          "resumen": "Canal REAL de la reserva. `aviso_booking` viene por definición de un correo de booking.com; el resto lo publica el asunto entre paréntesis. null = el correo no lo dijo, y entonces el aviso NO nombra n"
         },
         {
           "nombre": "lineaReserva",
@@ -76608,7 +76705,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "string",
-          "linea": 88
+          "linea": 131
         },
         {
           "nombre": "verificarReservasBooking",
@@ -76616,14 +76713,15 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 93
+          "linea": 138
         }
       ],
       "tablas": [
+        "incomes",
         "reservas_correo_booking"
       ],
       "rutaApi": null,
-      "hash": "27d34d6e6678"
+      "hash": "120a43b73cbd"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -103528,7 +103626,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2711,
-    "funciones": 7555
+    "archivos": 2712,
+    "funciones": 7564
   }
 }
