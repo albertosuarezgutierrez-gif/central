@@ -4,3 +4,10 @@ export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar } from '.
 export type { Procedencia } from './procedencia.ts'
 export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, estadoCodigo } from './codigo.ts'
 export type { EstadoCodigo, CodigoGuardado } from './codigo.ts'
+export {
+  RAMOS_POLIZA,
+  polizaLeidaVacia,
+  normalizarPolizaLeida,
+  seLeyoAlgo,
+} from './poliza-leida.ts'
+export type { RamoPoliza, PolizaLeida } from './poliza-leida.ts'
