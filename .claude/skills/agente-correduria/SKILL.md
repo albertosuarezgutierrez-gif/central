@@ -52,7 +52,12 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
    endpoint operador). Compara con el último informe de la bitácora: altas, bajas, delta.
 2. **Vencimientos:** pólizas vigentes que vencen en 30/60 días (cuando el dato esté
    expuesto; si aún no, dilo como «pendiente», no como 0). Son LA oportunidad comercial
-   de una correduría: renovación = ingreso recurrente.
+   de una correduría: renovación = ingreso recurrente. **Di SIEMPRE QUÉ asegura cada una**
+   (coche y matrícula, localidad del piso, modalidades de la RC): sin eso, tres pólizas de
+   auto del mismo cliente son la misma línea y el aviso no sirve para llamar. El dato ya
+   viene resuelto en `objeto` (`@central/module-seguros/objeto`, cuatro estados) — ver
+   `references/sector.md` §5; si llega `cifrado` o `no_informado`, dilo como tal, nunca en
+   blanco.
 3. **Sector:** 2-3 novedades reales de la semana (WebSearch: DGSFP, INESE/ADN del Seguro,
    BOE) que afecten a un corredor: regulación, ramos, compañías vivas de la casa.
 4. **Aprende:** si descubriste algo estructural (del sector o del negocio), añádelo a

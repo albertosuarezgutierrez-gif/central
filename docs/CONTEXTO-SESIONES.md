@@ -32,19 +32,43 @@
 
 ---
 
-### 🛡️ (01/09/2026) asegura: spec del portal de clientes/leads/empresas + la cartera NO es lo que decíamos
-- Brainstorming con Alberto → `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
+### 🛡️ (01/09/2026) asegura: dos specs (portal + agente de venta) y la cartera NO era lo que decíamos
+- Brainstorming con Alberto → specs `2026-09-01-asegura-portal-clientes-empresas-design.md` y
+  `2026-09-01-asegura-agente-venta-design.md`. PR #1941.
 - 🚨 **Medido: la cartera viva son ~80 clientes / 109 pólizas, no 32.600/28.843.** El resto es volcado
   histórico (`import_ref` `intranet:` 26.117 con vto. 2013-2018 y `asegura_app:` 2.612, CERO con vto.
-  futuro). Regla de Alberto: **lo que entra por CIMA (`import_ref IS NULL`) es cliente; el resto, lead**.
-  **Pendiente: corregir la cifra en `CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`.**
-- Decidido: app nueva `apps/asegura-portal` (rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`;
-  BD compartida schema `seguros`; WhatsApp con **WABA nueva** (`wa_opt_in`=0 en las 32.600, nada que perder).
-- Eje del producto: **«aporta tus seguros»** (sirve a leads y a clientes a la vez), no «mira tus pólizas».
-  El móvil identifica un HOGAR: 740 números compartidos, 630 con el mismo apellido → familias, no basura.
+  futuro). Regla de Alberto: **CIMA (`import_ref IS NULL`) = cliente; el resto, lead** (32.520).
+  **Cifra ya corregida** en `CLAUDE.md`, `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`.
+- Portal: app nueva `apps/asegura-portal` (rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`;
+  schema `seguros`; WhatsApp con **WABA nueva** (`wa_opt_in`=0 en las 32.600). Eje: **«aporta tus seguros»**,
+  que sirve a leads y clientes a la vez. El móvil identifica un **HOGAR** (740 números compartidos, 630 con
+  el mismo apellido → familias): nunca se resuelve solo. El papel en la póliza PROPONE acceso, no lo concede.
+- Agente: de **VENTA**, prepara fichas en frío sin contactar a nadie. Dos corpus con autoridad distinta —
+  el contrato dice qué cubre, la **LCS/LDS** qué derechos hay (del texto consolidado del BOE, nunca de
+  memoria del modelo). Sin fine-tuning. Techo real: solo **5.613** fichas son contactables.
 - Regla que evita un desastre: **las pólizas del volcado histórico NO generan recordatorios** (serían
   28.729 avisos de «se te venció» sobre pólizas de 2013-2018). `recordatorios` del CRM origen no sirve:
   su `poliza_id` es NOT NULL.
+
+### 🚗 (01/09/2026) Renovaciones: columna «Qué asegura» (matrícula, dirección, tipo de RC)
+- Alberto, sobre la tabla de renovaciones de `/correduria`: «necesito otra columna con datos — auto
+  matrícula marca modelo, hogar dirección, RC de qué tipo… y siempre informa al agente».
+- Helper puro nuevo **`@central/module-seguros/objeto`** (`objetoAsegurado`, 17 tests) con **cuatro**
+  salidas: `conocido` · `no_informado` (la compañía no lo manda) · `cifrado` (la dirección de hogar
+  viene `v1:…`, AES-256-GCM; la clave sigue en el Vercel de Manuel) · `sin_objeto` (vida/salud/decesos
+  son seguros de PERSONAS: ausencia definitiva, no «pendiente»). Ninguno se pinta como hueco vacío.
+- Medido en la cartera real: `matricula`/`marca`/`modelo` en claro; **`datos_especificos.vehiculo` NO
+  es una descripción, contiene la matrícula**; una RC se identifica por sus modalidades
+  (`poliza_coberturas`), no por `datos_especificos`. Las 16 pólizas de la ventana salen `conocido`.
+- Cableado de punta a punta: `apps/asegura/lib/cartera.ts` (+ intento de descifrado) → puerto
+  `/api/operador/vencimientos` → `interpretarObjeto` en plataforma (campo opcional: una versión vieja
+  del puerto da `null` = «aún no llega», distinto de «no informado») → columna en `/correduria` y línea
+  del Telegram de renovaciones. Skill `agente-correduria` actualizada (SKILL §2 + sector §5).
+- **#1938 MERGEADO** (`1ba3c254`, 12 requeridos verdes). El CI volvió a no arrancar en draft: ni abrir
+  el PR ni des-draftearlo dispararon nada; lo desatascó **mergear `main` en la rama** (paso 2 del orden
+  de `CLAUDE.md`), 5ª medición de esa sección — anotada ahí con la secuencia completa. 🔀 Y el PR de
+  seguimiento #1940, abierto IGUAL (MCP, draft, misma identidad), **sí disparó al instante**: el draft
+  no es la causa. Sigue sin explicación; lo accionable es el orden, no el diagnóstico.
 
 ### 📅 (01/09/2026) mercado-booking: objetivo jul/ago-2027 cumplido — falta quitar la prioridad del prompt
 - Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`) de la skill `mercado-booking`: 238 comps
