@@ -105,3 +105,9 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   respuesta al cliente), con el diagrama original. Es el destino de las fases 1-3: léelo antes de
   proponer nada sobre renovaciones, recibos o avisos al cliente.
 - Contexto de infra/traspaso: `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md`.
+- 🚧 **Dos apps, no una.** `apps/asegura` es el panel del **CORREDOR**; `apps/asegura-portal` es el
+  portal que ve el **ASEGURADO** (Fase 1 mergeada el 01/09/2026, PR #1965). El portal usa rol propio
+  `prisma_asegura_portal` **SIN BYPASSRLS** y su propio secreto de sesión: ahí el aislamiento **lo da
+  el código**, no RLS, y lo vigila `test/regression-portal-aislamiento.test.ts`. No mezcles sus tablas
+  (`portal_*` en el schema `seguros`) con las de la cartera. Diseño en
+  `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
