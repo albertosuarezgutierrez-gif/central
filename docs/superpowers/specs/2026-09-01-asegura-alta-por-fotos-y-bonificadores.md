@@ -144,6 +144,42 @@ sitio.
 
 ---
 
+## 4-bis. 📄 Subir la póliza y que el agente la lea — el caso que lo engloba todo
+
+Dictado de Alberto (01/09/2026): *«poder subir las pólizas de los clientes; al subirlas, que el
+agente la lea y rellene los datos que necesite.»*
+
+Esto es **más amplio que la foto en el momento de cotizar**, y conviene no confundirlos:
+
+| | Foto al cotizar | Subir la póliza |
+|---|---|---|
+| Cuándo | El cliente pide precio | Cuando sea: también en frío, sobre cartera ya existente |
+| Qué produce | Los campos de UNA cotización | **Rellena la ficha**: cliente, bien asegurado, coberturas, primas |
+| Quién lo dispara | El cliente | El corredor, en lote |
+
+**Por qué esto vale más que el otro:** hoy las 80 pólizas de auto vivas traen matrícula y nada más
+(§1). Un PDF de póliza trae **el vehículo completo, las coberturas, la prima y la franquicia**. O
+sea, subir las pólizas **rellena de golpe justo los huecos que obligan a preguntar**, y lo hace una
+vez por cliente en vez de una vez por cotización.
+
+### Lo que hay que respetar al implementarlo
+
+- 🚨 **Lo extraído de un PDF es un dato con PROCEDENCIA, no un dato sin más.** Debe quedar marcado
+  como «leído de la póliza tal» y no pisar lo que venga de CIMA, que es la fuente de la compañía.
+  Es la lección de `subastas.tipo_bien`: un extractor que escribe encima de una fuente mejor
+  degrada el dato sin que nadie se entere.
+- **Un OCR dudoso es un SUPUESTO, no un dato.** Entra por el mismo carril que los supuestos del
+  mapeador y se enseña igual. Nunca se escribe un valor de cajón («otro», «desconocido»): se deja
+  NULL, que sí se ve.
+- **La confianza por campo importa más que la confianza global.** Una póliza puede tener la
+  matrícula clarísima y la fecha de efecto borrosa; guardar «85% de confianza» del documento entero
+  no sirve para nada.
+- 🔒 **Documentos: sigue sin haber dónde ponerlos.** `cliente_documentos` NO existe y
+  `poliza_documentos.poliza_id` es NOT NULL. Para subir la póliza de un cliente **nuevo** (que
+  todavía no tiene póliza en nuestro sistema) hace falta resolver eso primero.
+- **Reconciliar, no duplicar:** si la póliza subida ya existe en la cartera (por número + compañía),
+  se enriquece la que hay; no se crea otra. El CRM ya tiene `poliza_merge_log` para las fusiones.
+
 ## 5. Siguiente ramo: HOGAR
 
 Dictado de Alberto: *«cerramos que funcione auto y apunta para ir viendo otros ramos, hogar es el
