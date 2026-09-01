@@ -178,6 +178,44 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
 - Manuales de la PLATAFORMA (no de la API) sí están: ticket 267332 del 25/05/2026, más
   `academy.codeoscopic.com` y el KB `codeoscopicavant2.zohodesk.com`.
 
+### 📚 La documentación OFICIAL de la API — conseguida el 01/09/2026
+
+Alberto exportó el portal (`portal.api-int.codeoscopic.io`) y de ahí sale el índice completo de
+operaciones: **`docs/CODEOSCOPIC-API-PORTAL.md`**. Es la primera fuente del FABRICANTE que tenemos;
+el traspaso de Manuel describe lo que él implementó, no lo que la API ofrece. Y corrige cuatro cosas:
+
+- 🚨 **Hogar SÍ está en la API**, con 11 catálogos propios (`/home/property-types`,
+  `build-materials`, `alarm-types`, `door-types`, `occupancy-types`…) y `POST /home/recommend-limits`.
+  Lo que no existe es en el repo de Manuel. Y hay **seis ramos**: auto, moto, hogar, vida temporal,
+  salud y decesos.
+- 🚨 **`GET /insurance-lines` dice, ramo por ramo, si se puede tarificar** (`supports.rating`) y
+  emitir, para TU organización. Es un catálogo: **gratis**. Nunca supongas qué ramos hay — pregúntalo.
+- 🚨 **La fecha de matriculación sale de la matrícula:** `GET /car/registration-date?plate=` (y su
+  gemela de moto). Es **aproximada** y puede venir `null` = «no encontrada», no «no tiene».
+- 🚨 **`GET /vehicles?registrationPlate=` resuelve la matrícula al VEHÍCULO** —el código de versión,
+  que era el cuello de botella de «matrícula → precio»—, pero es **la única operación de toda la API
+  que exige créditos de pago** (`comercial@codeoscopic.com`). Antes de diseñar nada encima, pedir precio.
+
+También: `POST /insurance-drafts` crea un borrador con **todos los campos opcionales salvo el ramo**,
+para que lo remate una persona en Avant2 — la vía barata para un lead sin pagar cotización.
+
+🧭 **El reparto, en cuatro palabras de Alberto (01/09/2026): «Avant2 vender, CIMA backoffice.»**
+Avant2/Codeoscopic es el canal de **venta** (comparar, tarificar, cerrar nueva producción: nosotros
+empujamos un riesgo y nos devuelve precios). CIMA/EIAC es el **backoffice** (cartera viva, recibos,
+siniestros, comisiones: las compañías nos mandan lo suyo a diario, y cubre TODA la cartera, no solo
+lo que pase por Avant2). Úsalo como regla de decisión: de esta API interesa lo que ayude a vender;
+lo que huela a backoffice, no.
+
+🚫 **La API expone pólizas, recibos, siniestros y clientes, pero NO son nuestra fuente** (dictado de
+Alberto, 01/09/2026): eso **ya lo tenemos por CIMA y conectado**, que es la conexión DIRECTA con las
+compañías. Codeoscopic solo sería el espejo de lo que haya pasado por Avant2 —hoy un proyecto—, de
+segunda mano y con dependencia añadida. Si alguna vez sirven, será para **empujar** lo emitido, no
+para leer la cartera.
+
+Confirmado además: el host de la API **no lleva `portal.`** (el propio portal muestra el Token URL
+`https://api-int.codeoscopic.io/oauth2/token`), y `identification`/`identificationType` están
+**deprecados** desde 2024-03-07 en favor de `identificationDocument`.
+
 ### 🔌 Cliente de tarificación en `central` — construido el 01/09/2026
 
 Vive en **`apps/asegura/lib/codeoscopic/`** y es la ÚNICA puerta por la que se gasta dinero en

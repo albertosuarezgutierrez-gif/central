@@ -32,6 +32,23 @@
 
 ---
 
+### 📚 (01/09/2026) Conseguida la documentación OFICIAL de la API de Codeoscopic
+- Alberto exportó el portal (`portal.api-int…`, MHTML) y de ahí sale el índice completo de
+  operaciones → **`docs/CODEOSCOPIC-API-PORTAL.md`**. Primera fuente del FABRICANTE (el traspaso de
+  Manuel describe lo que él implementó, no lo que la API ofrece).
+- 🚨 **Hogar SÍ está en la API** (11 catálogos `/home/*` + `recommend-limits`), y hay SEIS ramos:
+  auto, moto, hogar, vida temporal, salud, decesos. Corrige lo dicho esta misma tarde.
+- 🚨 **`GET /insurance-lines` dice si cada ramo tarifica** (`supports.rating`) para tu organización,
+  y es GRATIS: no hay que preguntárselo a JM.
+- 🚨 **`GET /car/registration-date?plate=`** da la fecha (aproximada, `null` si no la halla), y
+  **`GET /vehicles?registrationPlate=`** resuelve el VEHÍCULO — pero es la ÚNICA operación de la API
+  que exige **créditos de pago** (comercial@codeoscopic.com). Era el cuello de botella de «matrícula→precio».
+- `portal.` NO es el host de la API: el propio portal muestra `api-int.codeoscopic.io/oauth2/token`.
+- 🚫 La API expone pólizas/recibos/siniestros, pero **NO se usan**: eso ya lo da **CIMA, conectado y
+  directo con las compañías** (dictado de Alberto). Codeoscopic sería el espejo parcial de Avant2.
+- 🧭 Regla de reparto, palabras de Alberto: **«Avant2 vender, CIMA backoffice.»** De esta API interesa
+  lo que ayude a VENDER (cotizar, borradores, catálogos, matrícula); lo que huela a backoffice, no.
+
 ### 🔍 (01/09/2026) El fixture de Codeoscopic, releído entero: 3 fallos del parser corregidos
 - 🚨 **`errors[]` es por CONFIGURACIÓN de producto, no por compañía.** Reale falla con la config
   `37786__` **y da 8 precios** con `83474 (ASM y API)`. El resumen decía «Reale sin precio»: falso
