@@ -32,6 +32,16 @@
 
 ---
 
+### 🧾 (01/09/2026) asegura: prompt para el Claude de Manuel (Codeoscopic/Avant2, tarificación)
+- Manuel pidió un prompt para su Claude → escrito en **`docs/CODEOSCOPIC-PROMPT-MANUEL.md`** (lo envía
+  Alberto). Pide: doc de la API + host base (no consta en ningún correo de Alberto), esquema de auth,
+  endpoints del flujo de cotización con payloads anonimizados, webhook (Basic Auth pendiente +
+  `project_not_found`), tablas/estados, NOMBRES de envs (valores por gestor) y si el 0,50€ es por
+  cotización o emisión. Solo tarificar; la emisión sigue tras su flag, apagada.
+- Contexto medido: las tablas `codeoscopic_*` del volcado traen solo el rastro de pruebas (1 proyecto,
+  15 precios, 2 webhooks fallidos) — lo necesario para conectar vive en el repo de Manuel.
+- Al contestar: volcar a `references/sector.md` §4 y pedir regeneración de credenciales sandbox.
+
 ### 🧭 (01/09/2026) asegura-portal: plan TDD de la Fase 1 (entrar + aportar póliza)
 - **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia
   en TRES estados, código de un solo uso), 6 tablas `portal_*`, sesión propia y bóveda con subida de póliza.
