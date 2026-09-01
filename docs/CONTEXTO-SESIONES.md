@@ -32,6 +32,77 @@
 
 ---
 
+### 🛡️ (01/09/2026) Nace el agente de la correduría (`agente-correduria`) — decisión de Alberto
+- Alberto quiere un agente que lleve Grupo ASegura «casi al 100%» y responda a clientes. Se montó por
+  fases: **Fase 0** (aprender sector + informar, activa ya) → emisión Avant2 → cliente-facing (esta
+  última SOLO con diseño de canal + OK explícito). Skill `agente-correduria` (router + `references/sector.md`
+  acumulativo) + rutina semanal martes 05:30 UTC (§21 de `RUTINAS-PROGRAMADAS.md`).
+- 🔴 Pendiente de Alberto: añadir `ALERTA_TOKEN` al prompt de la rutina en la UI (sin él, informe solo en bitácora).
+- Decisión previa de la sesión: credenciales Codeoscopic se piden a **Manuel** (env vars de su Vercel),
+  NO a Codeoscopic; el borrador de Gmail a Juan Fernández queda muerto sin enviar. #1918 mergeado.
+- **Vencimientos ya funcionando** (mismo PR #1919): `@central/module-seguros/vencimientos` (puro, LCS
+  art. 22: <1 mes = se prorroga sí o sí) + puerto `/api/operador/vencimientos` en asegura + tabla en
+  plataforma `/correduria`. Real: **5 vencen en 30 días, 7 en 60, 13 en 90** (3.899,05€ de prima
+  conocida, 4 sin informar). ⚠️ Contar por fecha SIN filtrar estado colaba canceladas (daba 6/8).
+- Cartera viva = **59 pólizas `situacion='EV'`** (37 auto/13 hogar/8 RC/1 moto); el resto es histórico.
+  Ingesta CIMA = cron diario ~11:40 UTC **fuera de nuestro alcance**: en ese Supabase NO hay pg_cron ni
+  Edge Functions, así que todo lo alimenta el Vercel de Manuel — y ese Vercel **no se ve desde aquí**
+  (el conector solo alcanza el team «Pisos turisticos», donde ni `asegura` ni `central-asegura` están).
+- 🚨 **Método — cómo NO verificar un deploy de Vercel (01/09/2026, me costó 3 falsos negativos):** se
+  dio por hecho que plataforma «no había desplegado» porque el identificador `dpl_…` incrustado en el
+  HTML de `/login` no cambiaba. **`/login` es una página PRERENDERIZADA (ISR)**: su HTML lo sirve el CDN
+  y ese `dpl_` puede seguir siendo el del build anterior con el deployment nuevo ya en producción (el
+  panel mostraba los dos commits en **Production · Ready**). La comprobación que SÍ vale desde aquí:
+  pedir una **ruta de API nueva** y ver si responde **401/200 en vez de 404** — eso prueba que el código
+  está sirviendo (`/api/cron/correduria-renovaciones` → 401). Y el conector de Vercel **no puede leer
+  deployments (403) ni env vars (no existe la herramienta)**: para eso hace falta el panel.
+- **Migrar la cartera al schema `seguros`: NO todavía** — copiar 32.600 filas es trivial, pero sin mover
+  la ingesta EIAC/CIMA la copia envejece al día siguiente y quedan dos carteras. Orden: vencimientos ya
+  (hecho) → pedir a Manuel cómo se alimenta → migrar + repuntar ingesta. Al mover, ojo: las 86 RLS por
+  `auth.uid()` no viajan (nuestros roles llevan BYPASSRLS) → el aislamiento pasa a ser del código.
+
+### 🧾 (01/09/2026) Codeoscopic = LA fuente de tarificación y EMISIÓN de pólizas nuevas (dictado por Alberto)
+- La web «ASegura» es de ALBERTO (Manuel la desarrolló); EIAC no le preocupa. Codeoscopic es el motor
+  de venta: sin él la plataforma no tarifica ni emite.
+- Del Gmail de Alberto (verificado): cuenta **Avant2 Sales Manager** propia y operativa desde 09/06
+  (alta «SOLO ASM», formación hecha); compañías vivas: Reale (26/05, multirramo) y Fidelidade (hogar,
+  14/07); claves entregadas de Mapfre/Allianz(PA342521)/Occident(M00171). Contrato Workspace 20/05 y
+  DPA art. 28 remitido el 25/05 (el «contrato de encargado» de la lista ya existe con Codeoscopic).
+- La integración API de la web quedó EN SANDBOX (03/06: Quote→preemisión→Submit→webhook Basic Auth sin
+  cerrar; correo de manuel@loor.es a juan.fernandez@codeoscopic.com) → por eso el flag de emisión sigue
+  apagado. **Borrador creado en Gmail** (no enviado) a Juan Fernández: renovar sandbox + pendientes +
+  prueba de idempotencia del attempt_id. Pendiente: quién es manuel@loor.es; inventario BD cuando
+  reconecte el conector Supabase_asegura.
+- ⚠️ Higiene: en mayo viajaron por email claves de portales de compañías en texto plano (Mapfre,
+  Occident) — rotarlas con calma.
+
+### ✅ (01/09/2026) CARTERA EN VIVO FUNCIONANDO — rotación hecha; cron `postgres` de Manuel roto desde el reset
+- Números reales en plataforma→Correduría: 50 en vigor · 995 sin fecha · 27.793 históricas · 2.742
+  clientes · 29.858 leads · 7 siniestros (el 1.194 de la víspera era lectura vieja: la BD ingesta a diario).
+- Contraseña de `central_asegura` ROTADA (04:39, del gestor de Alberto); snippet con clave en claro
+  borrado; env recreada en Vercel; pooler registra `Connection authenticated`. Exposición de la clave
+  débil (20:51→04:39): cero autenticaciones del rol en lo auditable — matiz: `log_connections` OFF,
+  solo audita el pooler.
+- 🚨 Un job con `postgres.js` (IPs Vercel fra1) falla como `postgres` cada ~5 min desde 31/08 ~08:00
+  (antes autenticaba): es del CRM de Manuel — nada nuestro usa esa BD salvo apps/asegura (verificado
+  por código). Probable daño colateral del reset de la database password durante el montaje. NO tocar
+  su Vercel; avisar a Manuel (borrador, regla de comunicaciones).
+- `central-asegura` servía desde us-east-1 contra BD eu-central-1 → `regions: ["fra1"]` en su vercel.json.
+
+### 🔑 (01/09/2026) La cartera en vivo: era la CONTRASEÑA — y un valor del chat acabó de contraseña
+- Logs del pooler (MCP Supabase_asegura, nuevo conector): `password authentication failed for user
+  "central_asegura"` → el fallo era la contraseña del `ASEGURA_DATABASE_URL` pegado en Vercel
+  (host/usuario correctos; el blindaje pgbouncer de #1905 quedó descartado como causa).
+- 🚨 Incidente: al guiar el arreglo por Claude Chrome, la HUELLA de verificación (md5 del verificador
+  SCRAM) publicada en el chat se usó como contraseña del rol. Lección: **jamás publicar un valor con
+  pinta de credencial sin marcarlo como NO-USAR**; los secretos los genera el gestor de Alberto y no
+  pasan por ningún chat. Exposición revisada en logs: solo fallos de auth, ninguna huella de acceso
+  (matiz: log_connections apagado). Rotación en curso con marcador `<<CLAVE>>` que rellena Alberto.
+- Aparte: algo con `postgres.js` desde `63.180.181.94` intenta entrar como `postgres` cada 5 min y
+  falla — no es nuestro (nosotros: Prisma + central_asegura). Preguntar a Manuel en el traspaso.
+- Además: 🛡️ Correduría entra por fin en el menú de plataforma (PR #1907, guardián incluido) —
+  «no me sale correduría»: /correduria nunca estuvo en NAV_NEGOCIO.
+
 ### 🚨 (31/08/2026) «El satélite está en paper» era FALSO desde el 25/08 — la skill de trading mentía sobre la cartera real
 Alberto preguntó por qué la pasada no compró NFLX/PLTR/SQM en su cartera real de 1.000€ y se le contestó
 que **el satélite real «no existe todavía»**. Es falso: el **Tramo 1 (1.000€) está abierto en CVX desde el
@@ -41,7 +112,7 @@ nadie actualizó al abrir el tramo. **Corregidas las 5 fuentes** (SKILL.md + des
 infra-forward-radar «Puerta a Fase 2», SKILLS.md, RUTINAS-PROGRAMADAS.md) con la distinción que faltaba:
 **«el agente no ejecuta» ≠ «no hay dinero real»**, y las señales nuevas van a paper porque **el tramo está
 CONSUMIDO**, no porque el sistema sea solo-paper. **NO se metieron las 3 señales:** 15.136,10$ ≈ 13.031,46€
-(39,7% del NAV) contra 381,60€ de efectivo, techo de 6.000€ y Tramo 2 sin cumplir (~15/11). PR pendiente.
+(39,7% del NAV) contra 381,60€ de efectivo, techo de 6.000€ y Tramo 2 sin cumplir (~15/11). PR #1913.
 
 ### 🔑 (31/08/2026) House Sevillana YA ENVÍA · el PIN por reserva sustituye al maestro · salida flexible (PRs #1906, #1908)
 - **House Sevillana ACTIVADA** (`mensajes_prog_pisos.activo=true`, 21:45). Hoy no sale nada: los dos

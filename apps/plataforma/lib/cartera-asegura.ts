@@ -28,6 +28,10 @@ export type CarteraAsegura =
       polizasPendientesFecha: number
       polizasNoVigentes: number
       siniestrosAbiertos: number
+      /** `null` = el puerto todavía no informa vencimientos (asegura sin desplegar
+       *  con esta versión). NO es «no vence nada»: la UI lo dice como pendiente. */
+      vence30: number | null
+      vence60: number | null
     }
 
 const CAMPOS_NUM = [
@@ -52,8 +56,15 @@ export function interpretarCartera(status: number, json: unknown): CarteraAsegur
       return { estado: 'error', motivo: 'respuesta_ilegible' }
     }
   }
+  // Campos NUEVOS: opcionales a propósito. Si la versión desplegada de asegura
+  // todavía no los manda, se propagan como null («no informado») en vez de
+  // tumbar la cartera entera a «respuesta ilegible» durante el despliegue.
+  const opcional = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null
   const correduria = (json as Record<string, unknown>).correduria as Record<string, unknown> | undefined
   return {
+    vence30: opcional(resumen.vence30),
+    vence60: opcional(resumen.vence60),
     estado: 'ok',
     nombre: typeof correduria?.nombre === 'string' ? correduria.nombre : null,
     clientes: resumen.clientes as number,
@@ -70,14 +81,94 @@ export function interpretarCartera(status: number, json: unknown): CarteraAsegur
 export async function carteraAsegura(): Promise<CarteraAsegura> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { estado: 'sin_configurar' }
-  const url = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
   try {
-    const res = await fetch(`${url}/api/operador/resumen`, {
+    const res = await fetch(`${urlAsegura()}/api/operador/resumen`, {
       headers: { Authorization: `Bearer ${secret}` },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)
     return interpretarCartera(res.status, json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+function urlAsegura(): string {
+  return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
+}
+
+// ── Vencimientos ────────────────────────────────────────────────────────────
+// Misma disciplina de tres estados que la cartera: una lista vacía con estado
+// 'ok' significa «no hay pólizas que venzan en la ventana»; cualquier otra cosa
+// es «no se ha podido mirar» y se dice como tal.
+
+export type PolizaVencimiento = {
+  id: string
+  cliente: string
+  tipo: string
+  aseguradora: string
+  numeroPoliza: string | null
+  fechaVencimiento: string
+  dias: number
+  urgencia: string
+  prima: number | null
+  fraccionamiento: string | null
+}
+
+export type VencimientosAsegura =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoErrorCartera }
+  | { estado: 'ok'; dias: number; polizas: PolizaVencimiento[] }
+
+/** Interpretación PURA de la respuesta del puerto de vencimientos.
+ *  Una fila con forma inesperada invalida la lista entera: media lista de
+ *  renovaciones es peor que ninguna, porque nadie sabría cuál falta. */
+export function interpretarVencimientos(status: number, json: unknown): VencimientosAsegura {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const r = json as Record<string, unknown>
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (r.estado !== 'ok' || !Array.isArray(r.polizas)) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  const polizas: PolizaVencimiento[] = []
+  for (const fila of r.polizas) {
+    if (typeof fila !== 'object' || fila === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const f = fila as Record<string, unknown>
+    const textos = ['id', 'cliente', 'tipo', 'aseguradora', 'fechaVencimiento', 'urgencia'] as const
+    if (textos.some(k => typeof f[k] !== 'string')) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    if (typeof f.dias !== 'number' || !Number.isFinite(f.dias)) {
+      return { estado: 'error', motivo: 'respuesta_ilegible' }
+    }
+    polizas.push({
+      id: f.id as string,
+      cliente: f.cliente as string,
+      tipo: f.tipo as string,
+      aseguradora: f.aseguradora as string,
+      numeroPoliza: typeof f.numeroPoliza === 'string' ? f.numeroPoliza : null,
+      fechaVencimiento: f.fechaVencimiento as string,
+      dias: f.dias,
+      urgencia: f.urgencia as string,
+      // La prima ausente es null («la compañía no la informa»), nunca 0.
+      prima: typeof f.prima === 'number' && Number.isFinite(f.prima) ? f.prima : null,
+      fraccionamiento: typeof f.fraccionamiento === 'string' ? f.fraccionamiento : null,
+    })
+  }
+  const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 90
+  return { estado: 'ok', dias, polizas }
+}
+
+export async function vencimientosAsegura(dias = 90): Promise<VencimientosAsegura> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/vencimientos?dias=${dias}`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      cache: 'no-store', signal: AbortSignal.timeout(8000),
+    })
+    const json = await res.json().catch(() => null)
+    return interpretarVencimientos(res.status, json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }

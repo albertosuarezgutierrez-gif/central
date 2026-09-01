@@ -95,6 +95,20 @@ export type AgenteVigilado = {
 //   - trading (tiene su propio watchdog dedicado con lógica de días).
 export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
+    id: 'correduria_renovaciones',
+    etiqueta: '🛡️ Renovaciones de la correduría (cron diario 06:30)',
+    // Diario → 30 h: un tropiezo aislado pasa, dos días caídos saltan.
+    maxHoras: 30,
+    nota:
+      'Nadie está mirando qué pólizas vencen. La ventana de renovación la marca la LCS art. 22 ' +
+      '(el tomador solo puede oponerse hasta UN MES antes), así que cada día caído es cartera que ' +
+      'se prorroga sola sin haberla retarificado. Lee el `detalle`, que separa las dos averías: ' +
+      '«puerto sin configurar» es que falta ASEGURA_OPERADOR_SECRET en plataforma o en ' +
+      'central-asegura (los dos valores deben ser el MISMO); «no se pudo leer la cartera» con un ' +
+      'motivo es el puerto o la BD de asegura. Un «0 avisos» con ok NO es un fallo: es que hoy ' +
+      'ninguna póliza cruzó un hito. Huella: agente_latidos.correduria_renovaciones.',
+  },
+  {
     id: 'ses_transporte',
     etiqueta: '🛂 Transporte con SES.HOSPEDAJES (parte de viajeros, cron diario 07:15)',
     // Diario a las 07:15 → 30 h dejan pasar un tropiezo aislado y cazan dos días caídos.
@@ -318,6 +332,21 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       '504 en los logs: son 365 días × 4 pisos contra Smoobu con maxDuration 300). ' +
       '⚠️ «0 noche(s) escritas en 4 piso(s)» NO es una avería: es que nada cruzó el umbral del 3%. ' +
       'La avería sería que no hubiera latido. Huella: agente_latidos.sivra_pricing_apply.',
+  },
+  {
+    id: 'sivra_domotica_acceso',
+    etiqueta: '🔐 PIN por reserva de la cerradura (04:40 · 12:40 · 20:40)',
+    // 3 pasadas/día → el hueco legítimo más largo es 20:40→04:40 = 8 h; el vigía mira a las 07:45.
+    // 30 h salta al perder un día entero y se calla si solo falló una pasada.
+    maxHoras: 30,
+    nota:
+      'El cron que crea y retira los PIN temporales de Tuya no está corriendo. Desde el 31/08/2026 ' +
+      'el mensaje de la víspera manda el PIN de ESA reserva, así que este cron está en el camino del ' +
+      'huésped. 🚦 Lo que NO pasa: nadie se queda en la puerta — sin PIN vivo el mensaje cae al ' +
+      'código MAESTRO, que abre igual. Lo que SÍ pasa: se reparte una llave permanente en vez de una ' +
+      'que caduca con la estancia, y en silencio. Mira el `detalle`: «con ERROR» en Bustos Tavera es ' +
+      'el trial de IoT Core caducado (conocido, se renueva en platform.tuya.com), no un fallo nuevo. ' +
+      'Huella: agente_latidos.sivra_domotica_acceso.',
   },
   {
     id: 'sivra_mensajes_prog',
