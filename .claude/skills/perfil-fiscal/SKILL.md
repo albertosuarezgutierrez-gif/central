@@ -37,9 +37,25 @@ description: Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física
   las compañías declaran en el **modelo 190** → por eso salen en los datos fiscales de la AEAT. En la
   renta 2025 la asesoría pidió el **libro registro de ingresos y gastos**, no lo había, y Alberto
   contestó «ingresos los que aparece en el borrador». **No existe libro registro propio**: mientras no
-  lo haya, NO afirmes que la cifra de comisiones está verificada — está aceptada. El control que lo
-  arregla está diseñado en
-  `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md` (alcance: 2026 en adelante).
+  lo haya, NO afirmes que la cifra de comisiones está verificada — está aceptada. El libro que lo
+  arregla está **implementado desde el 01/09/2026** (`comisiones_devengo`, pestaña «Cuadre» de
+  `/correduria`; alcance 2026 en adelante), pero **todavía NO alimenta el cálculo de IRPF** — ver el
+  bullet siguiente.
+- **🚨 La retención la practica y la ingresa LA COMPAÑÍA. Alberto cobra ya el neto** (dictado por él,
+  01/09/2026: «ojo con las retenciones de comisiones, la compañía las hace ellos… yo solo recibo ya lo
+  mío»). El retenedor es el pagador (art. 76 RIRPF), así que Alberto **no retiene ni ingresa nada** por
+  esas comisiones. Tres consecuencias que se confunden con facilidad:
+  - En la renta el **ingreso computable es el BRUTO**, no lo que entró en el banco.
+  - La **retención es un PAGO A CUENTA**: se resta de la **CUOTA**, nunca del ingreso ni como gasto.
+    Restarla dos veces (una porque el banco ya trae el neto, otra como gasto) es el error clásico.
+  - Todo lo que hay en `movimientos_bancarios` con `destino='seguros'` es **NETO**.
+    `lib/finanzas.ts:594` lo eleva al bruto con `neto × (0,15 / 0,85)` y trata el resultado como
+    retenciones soportadas. Es correcto **como estimación a tanto alzado**, y ese es su límite: da por
+    hecho que TODO abono de seguros es una comisión neta al 15 %. Un periodo **deudor** de Occident
+    (comisión negativa, remesa 0) o un abono que no sea comisión rompen el supuesto. El bruto y la
+    retención **reales** ya viven en `comisiones_devengo` (los trae el extracto de la compañía);
+    **sustituir ahí la estimación por el dato real está PENDIENTE** — hasta entonces la cifra fiscal de
+    comisiones es una estimación, dilo así.
 - **Trading** (FTMO / retos de bróker, operativa **Interactive Brokers**) → **personal, NO deducible**.
 - **⚠️ LANDMINE — NUNCA crear una `regla` global para `AYTO SEVILLA`/`RECIBO AYTO. SEVILLA`:** el mismo concepto vale para un piso turístico (deducible) y para la vivienda habitual (personal) → una regla por concepto clasificaría mal. Casar **caso a caso** por importe/fecha/cuenta.
 - **Bizum** → SIEMPRE **personal** (regla pura en `lib/destino.ts`, auto-confirmado → no pide revisión).
