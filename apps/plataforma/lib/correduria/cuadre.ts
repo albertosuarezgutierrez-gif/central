@@ -11,6 +11,12 @@
 // el borrador de la AEAT—, así que al banco llega la REMESA = bruto − retención
 // (Allianz feb/2026: 95,03 − 14,26 = 80,77 exacto). Comparar el bruto contra el
 // banco descuadra SIEMPRE por ese 15 %.
+//
+// 🚨 Y quien retiene es la COMPAÑÍA, no Alberto: él cobra ya el neto. Para él la
+// retención no es un gasto ni algo que pagar, es un pago a cuenta hecho a su
+// nombre que se resta de la CUOTA del IRPF. De ahí la asimetría de este módulo:
+// a la renta va el BRUTO y contra el banco se compara la REMESA. Restar el 15 %
+// otra vez en cualquier punto sería contarlo dos veces.
 
 export type EstadoCuadre =
   | 'no-comprobado'          // falló la lectura de una fuente. NO es «no hay»

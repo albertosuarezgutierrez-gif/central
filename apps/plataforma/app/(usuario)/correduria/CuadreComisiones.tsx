@@ -127,9 +127,11 @@ export default function CuadreComisiones({ año }: { año: number }) {
         </div>
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-        La compañía retiene el <b>15 % de IRPF</b> y lo declara en el modelo 190: al banco llega la
-        <b> remesa</b> (bruto − retención), y el <b>bruto</b> es lo que va a tu renta. Comparar el bruto
-        contra el banco descuadra siempre por ese 15 %.
+        <b>La retención la hace y la ingresa la compañía</b>, no tú: cobras ya el neto. Ese 15 % lo
+        declaran en el modelo 190 a tu nombre, así que en tu renta cuenta como <b>pago a cuenta</b> (se
+        resta de la cuota), nunca como un gasto. De ahí que <b>a tu renta vaya el bruto</b> y al banco
+        llegue la <b>remesa</b> (bruto − retención): comparar el bruto contra el banco descuadra
+        siempre por ese 15 %.
       </div>
 
       {/* ── Total del año ─────────────────────────────────────────────────── */}

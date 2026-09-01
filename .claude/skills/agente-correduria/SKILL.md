@@ -44,11 +44,19 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   (extracto de la compañía) → **cobrado** (BBVA). Cada salto tiene su propio fallo: *devengado sin
   liquidar* = la compañía no te liquida; *liquidado sin cobrar* = te lo reconoce y no te lo ingresa;
   *cobrado sin liquidar* = entra dinero que ninguna fuente explica. No los llames a todos «descuadre».
-  Diseño en `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md`.
+  **Implementado el 01/09/2026:** libro `comisiones_devengo` + `comisiones_cobertura`, veredicto en el
+  helper puro `apps/plataforma/lib/correduria/cuadre.ts` (9 estados) y pestaña «Cuadre» en
+  `/correduria`. Diseño en `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md`.
 - **Y bruto ≠ lo que llega al banco.** Las compañías retienen el **15 % de IRPF** y lo declaran en el
   **modelo 190** (lo que alimenta el borrador de la AEAT); al BBVA llega la **remesa** = bruto − retención.
   Medido: Allianz feb/2026, 95,03€ − 14,26€ = 80,77€. Comparar el bruto contra el banco descuadra
   SIEMPRE por ese 15 %.
+  🚨 **La retención la practica y la ingresa LA COMPAÑÍA; Alberto cobra ya el neto** (dictado por él,
+  01/09/2026). El retenedor es el pagador, así que **Alberto no retiene ni ingresa nada**: para él la
+  retención NO es un gasto ni algo que tenga que pagar, es un **pago a cuenta ya hecho a su nombre**
+  que se resta de la cuota del IRPF. De ahí la asimetría: **el bruto es lo que va a su renta y la
+  remesa es lo que se contrasta contra el banco** — mezclarlos es contar el 15 % dos veces. Y por eso
+  «la compañía te debe» se mide contra el BRUTO devengado, no contra lo ingresado.
 - **Los datos de comisiones ya existen parseados, no los re-parsees.** `cuenta_efectivo`,
   `liquidaciones` y `poliza_recibos` (con `prima_neta`, `comision_bruta`, `comision_liquida`,
   `situacion`) los rellena el **JAR oficial de TIREA** en la BD de la correduría; se leen por
