@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T20:30:19Z",
-  "sha": "f0ffe876ce0a3ed43da64bc5ca59d7ed550795f9",
+  "generadoEn": "2026-09-01T21:06:01Z",
+  "sha": "4eda145925feaee8128cf43c52843af5042ac739",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3164,6 +3164,133 @@
       "hash": "d482d4992a8f"
     },
     {
+      "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "FichaClientePage"
+      ],
+      "funciones": [
+        {
+          "nombre": "FichaClientePage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params, }: { params: Promise<{ clienteId: string }> }",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Ficha del cliente: sus pólizas, y en cada una de auto el botón de retarificar. El botón NO cotiza: lleva a la pantalla donde se ve qué se va a mandar, qué se ha supuesto y qué falta. Gastar 0,50€ desd"
+        },
+        {
+          "nombre": "TablaPolizas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, nota, polizas, }: { titulo: string nota?: string polizas: { id: string tipo: string aseguradora: string numeroPoliza: string | null fechaVencimiento: string | null matricula: string | null retarificable: boolean }[] }",
+          "retorno": null,
+          "linea": 76
+        },
+        {
+          "nombre": "motivoNoRetarificable",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: { tipo: string; matricula: string | null }",
+          "retorno": "string",
+          "linea": 152,
+          "resumen": "Por qué no sale el botón. Decirlo evita que parezca que la pantalla falla."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6faa584d08dd"
+    },
+    {
+      "ruta": "apps/asegura/app/(usuario)/cartera/page.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "CarteraPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "CarteraPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ searchParams, }: { searchParams: Promise<{ q?: string }> }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "Buscador de clientes de la cartera. Es la puerta de la retarificación: se busca a la persona, se abre su ficha y desde una póliza suya se pide precio. Busca por nombre y apellidos, que van EN CLARO en"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "36676c3b33aa"
+    },
+    {
+      "ruta": "apps/asegura/app/(usuario)/cartera/poliza/[polizaId]/page.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "RetarificarPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "RetarificarPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params, }: { params: Promise<{ polizaId: string }> }",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "Pantalla de retarificación de UNA póliza. Todo lo que se hace aquí, en el servidor, es GRATIS: leer la ficha, resolver los catálogos y preguntar la fecha de matriculación por la matrícula. Lo que cues"
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, valor, nota, }: { etiqueta: string valor: string | null nota?: string | null }",
+          "retorno": null,
+          "linea": 186
+        },
+        {
+          "nombre": "errar",
+          "kind": "function",
+          "exportada": false,
+          "params": "_e: unknown",
+          "retorno": "Opcion[]",
+          "linea": 214
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 220
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c26d11532631"
+    },
+    {
+      "ruta": "apps/asegura/app/(usuario)/cartera/poliza/[polizaId]/retarificador.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "Retarificador"
+      ],
+      "funciones": [
+        {
+          "nombre": "Retarificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, estadoCivilAuto, fechaMatriculacion, consumo, deshabilitado, }: { polizaId: string faltanInicial: Reparo[] garajes: Opcion[] civiles: Opcion[] municipios: Opcion[] estadoCivilAuto: Op",
+          "retorno": null,
+          "linea": 46,
+          "resumen": "El único sitio de la app donde un clic cuesta 0,50€. Tres cosas son deliberadas: - El botón dice el precio EN el botón, no en una nota al pie. - Se deshabilita mientras cotiza: `POST /insurances` no e"
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "71eb93721449"
+    },
+    {
       "ruta": "apps/asegura/app/(usuario)/dashboard/page.tsx",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3210,7 +3337,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ceee79a9d4e"
+      "hash": "5dc27c55f039"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/logout-button.tsx",
@@ -3274,6 +3401,81 @@
       "tablas": [],
       "rutaApi": "/api/auth/logout",
       "hash": "940406db64c5"
+    },
+    {
+      "ruta": "apps/asegura/app/api/cartera/catalogos/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "Catálogos de Codeoscopic para los desplegables de la pantalla. 🚨 **Nada de aquí cuesta dinero.** Son `GET` de consulta; la cotización es otra ruta. Por eso este puerto se resuelve con el interruptor "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cartera/catalogos",
+      "hash": "45411f604f9e"
+    },
+    {
+      "ruta": "apps/asegura/app/api/cartera/polizas/[polizaId]/retarificar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ polizaId: string }> }",
+          "retorno": null,
+          "linea": 35,
+          "resumen": "- deja que `cotizar()` haga de portero (interruptor, libro y tope), en vez de repetir aquí esas decisiones. En el cuerpo llegan los huecos que la ficha no tiene (versión del vehículo, municipio, garaj"
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 126
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 130
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 135
+        },
+        {
+          "nombre": "limpiarCorrecciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Partial<DatosAuto> | undefined",
+          "retorno": "Partial<DatosAuto>",
+          "linea": 140,
+          "resumen": "Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cartera/polizas/[polizaId]/retarificar",
+      "hash": "eb8fa365045a"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/sonda/route.ts",
@@ -3549,6 +3751,90 @@
       "hash": "d7c30bf0803d"
     },
     {
+      "ruta": "apps/asegura/lib/cartera-ficha.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lecturas de la cartera para la pantalla de retarificación: buscar un cliente y sacar de UNA póliza lo que hace falta para pedir precio de calle. Vive aparte de `lib/cartera.ts` (que es la lista de vencimientos) porque lo que se lee aquí es distinto y más sensible: para cotizar hacen falta DNI, fecha",
+      "exporta": [
+        "buscarClientes",
+        "fichaCliente",
+        "origenRetarificacion",
+        "normalizarFecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "descifrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 37,
+          "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa. Los valores cifrados llevan el prefijo `v1:`. Si no lo llevan, es que están en claro (así llegaron algunos del volcado) y se devuelven tal c"
+        },
+        {
+          "nombre": "esObjetoPlano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 48,
+          "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null."
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 52
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date | null | undefined",
+          "retorno": "string | null",
+          "linea": 56
+        },
+        {
+          "nombre": "buscarClientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, termino: string, limite = 20,",
+          "retorno": "Promise<ClienteEncontrado[]>",
+          "linea": 66,
+          "resumen": "Busca clientes por nombre o apellidos. Nombre y apellidos van EN CLARO en la base, así que esta búsqueda no depende del índice ciego — que es justo lo que la hace fiable: si fallara la clave de lookup"
+        },
+        {
+          "nombre": "fichaCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string,",
+          "retorno": "Promise<FichaCliente | null>",
+          "linea": 129
+        },
+        {
+          "nombre": "origenRetarificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string,",
+          "retorno": "Promise<OrigenRetarificacion | null>",
+          "linea": 194
+        },
+        {
+          "nombre": "normalizarFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null",
+          "retorno": "string | null",
+          "linea": 279,
+          "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a80fb7c83248"
+    },
+    {
       "ruta": "apps/asegura/lib/cartera.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3613,6 +3899,158 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "552d09e52d35"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/catalogos.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Catálogos de Codeoscopic. Todo lo de aquí es GRATIS: son `GET` de consulta, no cotizaciones. Ninguna función de este fichero gasta los 0,50€. ─── Por qué importa que esto sea gratis ──────────────────────────────────── La cotización necesita IDS del vendor, no texto: el municipio es un número, el es",
+      "exporta": [
+        "olvidarCatalogos",
+        "normalizarOpciones",
+        "municipiosPorCp",
+        "estadosCiviles",
+        "tiposDeGaraje",
+        "marcas",
+        "modelos",
+        "versiones",
+        "normalizarMatricula",
+        "fechaMatriculacionDeMatricula",
+        "leerFecha",
+        "normalizarTexto",
+        "emparejar"
+      ],
+      "funciones": [
+        {
+          "nombre": "olvidarCatalogos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "void",
+          "linea": 34,
+          "resumen": "Vacía la caché. Existe para los tests y para un botón de recarga."
+        },
+        {
+          "nombre": "catalogo",
+          "kind": "function",
+          "exportada": false,
+          "params": "config: ConfigCodeoscopic, path: string",
+          "retorno": "Promise<T>",
+          "linea": 38
+        },
+        {
+          "nombre": "normalizarOpciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "Opcion[]",
+          "linea": 59,
+          "resumen": "El vendor devuelve las listas con formas distintas según el catálogo (`[{id,name}]`, `{items:[…]}`, `{data:[…]}`). Se normaliza aquí, una vez, en lugar de que cada llamante adivine. Lo que NO se hace "
+        },
+        {
+          "nombre": "extraerLista",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "unknown[]",
+          "linea": 73
+        },
+        {
+          "nombre": "municipiosPorCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, cp: string",
+          "retorno": "Promise<Opcion[]>",
+          "linea": 91,
+          "resumen": "Municipios de un código postal. El vendor quiere `town.id` (un número), nunca el nombre. Un CP puede dar varios municipios: se devuelven todos y decide la pantalla — elegir el primero a ciegas es cómo"
+        },
+        {
+          "nombre": "estadosCiviles",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic",
+          "retorno": "Promise<Opcion[]>",
+          "linea": 97
+        },
+        {
+          "nombre": "tiposDeGaraje",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic",
+          "retorno": "Promise<Opcion[]>",
+          "linea": 101
+        },
+        {
+          "nombre": "marcas",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic",
+          "retorno": "Promise<Opcion[]>",
+          "linea": 105
+        },
+        {
+          "nombre": "modelos",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, marcaId: string",
+          "retorno": "Promise<Opcion[]>",
+          "linea": 109
+        },
+        {
+          "nombre": "versiones",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, marcaId: string, modeloId: string,",
+          "retorno": "Promise<Opcion[]>",
+          "linea": 116,
+          "resumen": "Las VERSIONES de un modelo. El `id` de cada una es el código Base7."
+        },
+        {
+          "nombre": "normalizarMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: string",
+          "retorno": "string",
+          "linea": 146
+        },
+        {
+          "nombre": "fechaMatriculacionDeMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, matricula: string,",
+          "retorno": "Promise<FechaMatriculacion>",
+          "linea": 150
+        },
+        {
+          "nombre": "leerFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string | null",
+          "linea": 172,
+          "resumen": "`{\"date\":\"2021-10-01\"}` → `'2021-10-01'`. Cualquier otra cosa → `null`."
+        },
+        {
+          "nombre": "normalizarTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 183,
+          "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO»."
+        },
+        {
+          "nombre": "emparejar",
+          "kind": "function",
+          "exportada": true,
+          "params": "catalogo: Opcion[], texto: string | null",
+          "retorno": "Opcion | null",
+          "linea": 200,
+          "resumen": "Busca en un catálogo la opción cuyo nombre coincide con un texto del CRM. 🚫 Solo empareja EXACTO (ya normalizado). Ante la duda devuelve `null`, y el llamante lo trata como «hay que elegirlo a mano»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6bf2a59227d8"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/cliente.ts",
@@ -3888,6 +4326,103 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "212f69990918"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/desde-cartera.ts",
+      "ambito": "apps/asegura",
+      "resumen": "De una póliza de la CARTERA a una precalificación de auto lista para cotizar. PURO: entran los datos ya leídos y descifrados, sale qué se va a mandar, qué se ha SUPUESTO y qué falta. Sin red, sin BD, sin Prisma. ─── Por qué existe, y por qué separa «supuesto» de «dato» ────────────────── El objetivo",
+      "exporta": [
+        "partirApellidos",
+        "sexoDeSaludo",
+        "aniosEntre",
+        "precalificarAuto",
+        "sePuedeCotizar",
+        "supuestosOptimistas"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 121
+        },
+        {
+          "nombre": "nombreUtil",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "string | null",
+          "linea": 127
+        },
+        {
+          "nombre": "partirApellidos",
+          "kind": "function",
+          "exportada": true,
+          "params": "apellidos: string | null",
+          "retorno": "",
+          "linea": 134,
+          "resumen": "«Pérez García» → ['Pérez', 'García']. El vendor quiere los dos por separado."
+        },
+        {
+          "nombre": "sexoDeSaludo",
+          "kind": "function",
+          "exportada": true,
+          "params": "saludo: string | null",
+          "retorno": "'hombre' | 'mujer' | null",
+          "linea": 150,
+          "resumen": "Sexo a partir del tratamiento del CRM. Medido el 01/09/2026 sobre las 32.600 fichas: con `saludo='1'` los nombres de pila más frecuentes son Jose, Juan, Antonio, Francisco y Manuel; con `'2'`, María. "
+        },
+        {
+          "nombre": "aniosEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string | null, hasta: string",
+          "retorno": "number | null",
+          "linea": 162,
+          "resumen": "Años completos entre dos fechas aaaa-mm-dd. `null` si alguna no es fecha."
+        },
+        {
+          "nombre": "diaSiguiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": "string",
+          "linea": 171,
+          "resumen": "El día siguiente a una fecha aaaa-mm-dd."
+        },
+        {
+          "nombre": "precalificarAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "cliente: ClienteCartera, poliza: PolizaCartera, resueltos: Resueltos, hoy: string,",
+          "retorno": "Precalificacion",
+          "linea": 183,
+          "resumen": "Construye la precalificación. `hoy` entra por parámetro para que la función sea pura y los tests no dependan del calendario."
+        },
+        {
+          "nombre": "sePuedeCotizar",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Precalificacion",
+          "retorno": "boolean",
+          "linea": 305,
+          "resumen": "¿Se puede cotizar ya? Azúcar para la pantalla y para el puerto, que tienen que decidir lo mismo y no deben hacerlo cada uno a su manera."
+        },
+        {
+          "nombre": "supuestosOptimistas",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Precalificacion",
+          "retorno": "Supuesto[]",
+          "linea": 314,
+          "resumen": "Los supuestos que cambian el precio a mejor. La pantalla los enseña aparte porque son los que pueden decepcionar luego: si el cliente sí tuvo siniestros, la prima real sube respecto a lo que se le ha "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "26609ec5f5ba"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-auto.ts",
@@ -104311,7 +104846,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2731,
-    "funciones": 7614
+    "archivos": 2740,
+    "funciones": 7661
   }
 }
