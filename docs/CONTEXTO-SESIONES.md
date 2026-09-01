@@ -23,7 +23,16 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🎯 (01/09/2026) CI: el push «mudo» es LAG de GitHub — causa medida, no otra hipótesis
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
+> funde con la entrada anterior y se archiva mal.
+>
+> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
+> registro de qué se hizo y qué queda.
+
+---
+
+### 🎯 (01/09/2026) CI: el push «mudo» es LAG de GitHub — causa medida, no otra hipótesis
 - Dos pushes sobre el PR #1962 (ya fuera de draft) no dispararon ningún requerido. Al mirar el **objeto
   PR** en vez de los runs: `git ls-remote` daba `5a732a51` y el PR seguía en `d0d23c65`, con 2 commits de
   5 y `mergeable_state:"dirty"`. GitHub no había procesado el `synchronize`.
@@ -34,14 +43,18 @@
   del PR ANTES de tocar nada; si no coinciden, espera 2-3 min.** Cada palanca crea un head nuevo y
   reinicia la espera.
 
-### … (dd/mm/aaaa)` —
-> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
-> funde con la entrada anterior y se archiva mal.
->
-> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
-> registro de qué se hizo y qué queda.
-
----
+### 🧾 (01/09/2026) asegura: constructor de la petición de cotización de auto (validación gratis)
+- `lib/codeoscopic/peticion-auto.ts` — puro: de los datos de la ficha al `CreateInsuranceRequest_V1`.
+  **23 tests.** `revisarDatosAuto()` devuelve todos los reparos a la vez; `construirPeticionAuto()`
+  lanza si queda alguno. Motivo: un cuerpo mal formado da un 400 **ya facturado**.
+- Reglas del vendor encerradas en test: la MISMA persona idéntica en los tres papeles (holder/owner/
+  primaryDriver, el vendor cruza por DNI), la dirección solo con sus dos mitades, y
+  `lastFiveYearsAccidents` obligatorio si años sin siniestros < 5 y ≠ años asegurado (con `0` como
+  respuesta válida, no hueco). Y los 5 campos que NO viajan (email, calle, ocupación…).
+- Convenciones de UI mapeadas para la pantalla: **no hay Server Actions en el repo** (route handler
+  + form cliente), asegura usa tokens de `globals.css` (no Tailwind) y zod solo en el route.
+  Molde: `apps/mariscos/app/(usuario)/_forms.tsx` + `app/api/partidas/route.ts`.
+- Sigue bloqueado en lo mismo: redeploy de `central-asegura` + sonda. Sin eso, nada verificado.
 
 ### 🧭 (01/09/2026) Portal de Grupo Asegura — Fase 1 en pie (PR #1965)
 - App nueva `apps/asegura-portal` (Next.js, rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`
