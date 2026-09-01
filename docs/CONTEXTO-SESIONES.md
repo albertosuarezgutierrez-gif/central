@@ -54,6 +54,13 @@
 - Guardián `test/regression-portal-aislamiento.test.ts` (importar `lib/session` **y** nombrar
   `identidadId`), verificado con un infractor real en sus dos variantes.
 - Falta de Alberto: proyecto Vercel, rol `prisma_asegura_portal` con contraseña, envs, WABA.
+- 🚧 **Volcado de la cartera: LANZADO Y BLOQUEADO (01/09/2026).** DDL ya aplicado (52 tablas,
+  42 enums, `dblink`+`vector` OK), pero el secreto `asegura_origen_url` del Vault **mide 10
+  caracteres: no es una cadena de conexión**, así que `dblink` falla con «password or GSSAPI
+  delegated credentials required» en la primera tabla. **Nada escrito** (la transacción revierte:
+  bitácora 0, clientes 0, pólizas 0, FKs 0). Al corregirlo: pegar el `ASEGURA_DATABASE_URL` del
+  proyecto Vercel `central-asegura` **sin `pgbouncer=true`** (no es un parámetro de libpq) y mejor
+  por el **puerto 5432**, no el pooler.
 
 ### 💶 (01/09/2026) Comisiones de la correduría: IMPLEMENTADO devengo → liquidación → cobro → renta
 
