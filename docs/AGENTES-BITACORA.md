@@ -29,6 +29,13 @@
   para editarlo ella misma, y al no haberse quitado ayer la pasada de hoy se ha repetido sin
   necesidad (gasto de cupo redundante en julio). Sin cupo restante para la pasada normal (24/24 +
   4/4 escaparate agotados). dudas: —; fallos: —; PRs/commits: — (solo BD + bitácora).
+- **2026-09-01 · rrhh-compliance-calendar** · hizo: pasada mensual. Leído `docs/ROADMAP-rrhh.md`;
+  9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal
+  denuncias, informe ITSS, modelo 145, caducidad NIE, borrado RGPD automatizado — PRL ya hecho,
+  excluido); 6 ítems 🟠 de monetización pendientes. Nota de urgencia añadida: septiembre =
+  inspecciones de trabajo → prioriza fichaje + informe ITSS. Preflight `/api/internal/alerta` 200;
+  aviso Telegram enviado (messageId 3888). dudas: —; fallos: —; PRs/commits: commit directo a `main`
+  (solo docs).
 - **2026-09-01 · fiscal-novedades** · hizo: pasada mensual completa. Paso 1-4 (deducciones): contrastadas
   todas las cifras vigiladas (mínimos, maternidad, FN estatal/andaluza + límites de renta 25k/30k) contra
   BOE/BOJA/AEAT — sin cambios, PGE 2027 aún en preparación (no publicado); sin PR. Paso 5 (ayudas): 1ª
