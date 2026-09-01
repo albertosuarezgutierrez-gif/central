@@ -149,8 +149,16 @@ utilizable). Reglas que no se negocian al tocar esto:
   comprobar no es un tope.
 - **Un solo intento.** `POST /insurances` no es idempotente: reintentar crea otro proyecto y otro
   cargo. La única repetición permitida es re-pedir el token tras un 401 (el vendor no tarificó).
-- **Los precios se pintan con su FIRMEZA.** En el fixture real ninguno de los 18 era firme. Enseñar
-  la prima sin el «Riesgo condicionado» es prometer un precio que la compañía no ha cerrado.
+- **Los precios se pintan con su FIRMEZA.** En el fixture del sandbox ninguno de los 18 era firme, y
+  en la cotización REAL del 29/07/2026 **los 15 precios son `estimado`, ni uno en firme** (medido en
+  `codeoscopic_prices` el 01/09). Dos muestras de dos: el precio con reservas es el caso general, no
+  el borde. Enseñar la prima sola promete algo que la compañía no ha cerrado.
+- ⚠️ **`expires_at` llegó a NULL en los 15 precios reales: no sabemos cuánto vale una cotización.**
+  Mientras siga así, **un precio ya pagado NO se puede reutilizar** para ahorrarse los 0,50€ — no hay
+  forma de saber si sigue vigente. Capturar la caducidad es requisito de cualquier plan de caché.
+- 🔬 **El webhook está SIN ESTRENAR, no roto.** Los dos eventos con `project_not_found` de la BD de
+  Manuel son smoke tests con ids inventados (`999999`, `smoke-fix-webhook`); Codeoscopic no ha
+  enviado nunca uno real, porque solo los dispara al emitir. No se pierda tiempo «arreglando» eso.
 
 Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): ejecutar el SQL
 `prisma/sql/2026-09-01_codeoscopic_consumo.sql`, poner contraseña al rol `prisma_seguros` y

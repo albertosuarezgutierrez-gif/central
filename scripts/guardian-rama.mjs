@@ -85,13 +85,33 @@ export function segmentar(comando) {
  * ¿Qué ramas empuja este comando? `null` = no se puede saber (fail-open).
  * Devuelve [] si el push no nombra ninguna rama (empuja la actual, que siempre es correcto).
  */
+// Opciones GLOBALES de git que pueden ir ANTES del subcomando. Las dos primeras
+// consumen el token siguiente (`git -C dir push`, `git -c k=v push`).
+const GLOBALES_CON_VALOR = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--exec-path'])
+
+/** Índice de `push` SOLO si es el subcomando de git. -1 si no lo es. */
+function indiceDelSubcomandoPush(t) {
+  for (let k = 1; k < t.length; k++) {
+    const a = t[k]
+    if (GLOBALES_CON_VALOR.has(a)) { k++; continue }       // `-C <dir>`, `-c <k=v>`…
+    if (a.startsWith('-')) continue                        // `--no-pager`, `--git-dir=…`, `-p`…
+    return a === 'push' ? k : -1                           // primer no-flag = subcomando
+  }
+  return -1
+}
+
 export function ramasQueEmpuja(segmento) {
   // Sustitución de comandos: no se puede resolver estáticamente.
   if (/\$\(|`/.test(segmento)) return null
 
   const t = segmento.split(/\s+/).filter(Boolean)
   if (t[0] !== 'git') return []
-  const i = t.indexOf('push')
+
+  // `push` tiene que ser el SUBCOMANDO, no una palabra cualquiera del comando.
+  // Sin esto, `git stash push -m "algo rama"` se leía como un push a la rama «rama»
+  // (falso positivo real, 01/09/2026): `indexOf('push')` lo encontraba dentro de
+  // `git stash push`. Un cepo que salta donde no debe enseña a rodearlo.
+  const i = indiceDelSubcomandoPush(t)
   if (i === -1) return []
 
   const args = t.slice(i + 1)

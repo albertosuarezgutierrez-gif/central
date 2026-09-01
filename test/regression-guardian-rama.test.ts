@@ -137,3 +137,26 @@ test('la auditoría diaria (carril 1: push directo a main desde main) NO se bloq
 test('pero empujar main desde una rama de trabajo sí se bloquea', () => {
   assert.equal(decidirPush({ comando: 'git push origin main', ramaActual: RAMA }).bloquear, true)
 })
+
+// ─── `push` tiene que ser el SUBCOMANDO ──────────────────────────────────────
+// Falso positivo real del 01/09/2026: `git stash push -m "forense codeoscopic"`
+// se bloqueó como si empujara una rama llamada «codeoscopic», porque el guardián
+// buscaba la palabra `push` en cualquier posición. Un cepo que salta donde no
+// debe entrena a la gente para rodearlo, así que cuenta como fallo.
+test('los subcomandos que contienen «push» no son un push de rama', () => {
+  for (const cmd of [
+    'git stash push -q -m "forense codeoscopic"',
+    'git stash push -m "arreglo rama x"',
+    'git worktree push algo',
+    'git config alias.push "push -u"',
+  ]) {
+    assert.deepEqual(ramasQueEmpuja(cmd), [], `no debería ver un push de rama en: ${cmd}`)
+  }
+})
+
+test('y un push de verdad se sigue detectando, con opciones globales delante', () => {
+  assert.deepEqual(ramasQueEmpuja('git push origin claude/x'), ['claude/x'])
+  assert.deepEqual(ramasQueEmpuja('git -C /repo push origin claude/x'), ['claude/x'])
+  assert.deepEqual(ramasQueEmpuja('git -c user.name=x push origin claude/x'), ['claude/x'])
+  assert.deepEqual(ramasQueEmpuja('git --no-pager push origin claude/x'), ['claude/x'])
+})

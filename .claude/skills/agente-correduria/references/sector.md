@@ -100,8 +100,8 @@ faltar al construir el cliente en `central`):
   **`application/vnd.codeoscopic.v1+json`** en `Accept`/`Content-Type` (la versión va ahí, no en el path).
 - **Cotizar = `POST /insurances`**, SÍNCRONO (los precios vienen en la respuesta; timeout 150 s) y
   🚨 **facturable y NO idempotente: UN solo intento, jamás retry** — un reintento duplica proyecto y
-  cargo de 0,50€. Respuesta: `id` (= **project_id**, hay que persistirlo SIEMPRE — su ausencia en BD
-  es la causa exacta del `project_not_found` del webhook), `mainQuotes[]` (los precios),
+  cargo de 0,50€. Respuesta: `id` (= **project_id**, hay que persistirlo SIEMPRE: es la clave con la
+  que el webhook nos encontrará el día que llegue uno real), `mainQuotes[]` (los precios),
   `offers[]`, `errors[]` (fallos POR compañía, no abortan).
 - **Preemisión = `POST /insurances/{id}/offers`** (re-rate de la oferta elegida, también noRetry) ·
   estado = `GET /insurances/{id}` · emisión = `POST /insurances/{id}/policy-applications`
@@ -139,9 +139,33 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
   formato de la API (`id, premium, product, estimate, termMonths, downPayment, paymentMethod,
   referenceFromVendor`). Y el **21/05** hubo una **emisión real en sandbox** (nº 360447, avisada por
   correo). O sea: tarificar SÍ; emitir, nunca se cerró.
-- **El webhook recibe y no correlaciona:** 2 eventos en `codeoscopic_webhook_events`
-  (26/05 `emision_ok`, 24/06 `otro`), **los dos con `processing_error='project_not_found'`**. El
-  canal de vuelta está abierto; lo que falta es casar el `project_id` de Codeoscopic con la fila.
+- 🔬 **Forense de esos 15 precios (leídos de `codeoscopic_prices` el 01/09/2026), y cambia el
+  diseño de la pantalla:**
+  - **Los 15 son `estimado`. Ni uno en firme.** En el fixture del sandbox pasaba igual (0 de 18).
+    Dos muestras de dos: en esta API **lo normal es que el precio venga con reservas**, así que
+    enseñar la prima sin su firmeza no es un descuido de borde, es el caso general.
+  - **La parrilla real que respondió fue Mapfre, Allianz y Occident** — NO Reale ni Fidelidade,
+    que son las que la ficha llama «vivas». Modalidades exactas: `Mapfre Autos`,
+    `Allianz Autos 2025`, `Occident GCO Autos 3.0`.
+  - **`expires_at` está a NULL en los 15**: no sabemos cuánto vale un precio. Mientras siga así,
+    **un precio ya pagado no se puede reutilizar con seguridad** (afecta a cualquier plan de
+    cachear cotizaciones para no pagar dos veces). Capturar la caducidad es trabajo pendiente.
+  - **`referenceFromVendor` es por COMPAÑÍA:** Allianz y Occident lo mandan, Mapfre no. Tratarlo
+    como opcional siempre.
+  - El `project_id` de PRODUCCIÓN es de 8 dígitos (`40058158`); el del sandbox, de 6 (`364732`).
+  - El `submit_attempt_id` se acuña **al crear el proyecto**, no al emitir (el proyecto real ya lo
+    tiene con `submit_in_flight_at` a NULL y estado `cotizacion`).
+- 🚨 **CORREGIDO el 01/09/2026 — el `project_not_found` del webhook NO era un fallo de
+  correlación. Los dos eventos son SMOKE TESTS hechos a mano**, leídos de su `raw_payload`: el del
+  26/05 lleva `project_id: "999999"` y `externalId: "smoke-test-s168"` con `policyApplication.id:
+  "PA-SMOKE"`; el del 24/06, `project_id: "smoke-fix-webhook"`. Los identificadores son inventados,
+  así que por supuesto no hay fila local que casar. **Nunca ha llegado un evento real de
+  Codeoscopic**, y es coherente: el vendor solo dispara el webhook al EMITIR (confirmado por JM) y
+  no se ha emitido nunca — el único proyecto real sigue en estado `cotizacion`.
+  Lo que sí queda en pie es el mecanismo: persistir el `id` de la cotización en
+  `codeoscopic_projects.project_id_codeoscopic` es lo que permitirá casarlo el día que llegue uno
+  de verdad. Lo que NO se puede decir es que «el canal de vuelta está abierto»: **está sin
+  estrenar**, y los smoke tests solo prueban nuestro receptor, no el envío de Codeoscopic.
 - **Máquina de estados ya modelada por Manuel:** `cotizacion → preemision → emitida | rechazada |
   riesgo_condicionado | vencida | error`, con `submit_attempt_id` (idempotencia) y polling.
   Tablas `codeoscopic_projects/offers/prices/documents/participants/product_forms/webhook_events`.

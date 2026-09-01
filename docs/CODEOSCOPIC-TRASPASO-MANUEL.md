@@ -14,6 +14,17 @@
 >   contrato formal, se pide a JM.
 > · El **fixture** `2026-06-10-sandbox-quote-response.json` fue enviado por Manuel (sanitizado);
 >   pendiente de incorporarlo al repo cuando Alberto lo pase.
+>
+> 🔬 **Corrección medida sobre la BD de la correduría (01/09/2026), que desmiente la §5 de abajo.**
+> El documento explica el `processing_error='project_not_found'` como un problema de correlación.
+> El mecanismo que describe es correcto, pero **la premisa no**: los dos eventos de
+> `codeoscopic_webhook_events` son **smoke tests hechos a mano**, no eventos del vendor —
+> `project_id: "999999"` con `externalId: "smoke-test-s168"` uno, y `project_id:
+> "smoke-fix-webhook"` el otro. Con identificadores inventados no hay fila que casar, así que el
+> error es el resultado esperado, no un fallo. **Codeoscopic no ha enviado nunca un webhook real**,
+> lo cual es coherente con que solo los dispare al emitir y con que no se haya emitido jamás.
+> Detalle y el resto de hallazgos forenses (los 15 precios reales, todos `estimado`; `expires_at`
+> a NULL; `referenceFromVendor` por compañía) en `agente-correduria/references/sector.md` §4.
 
 ---
 
