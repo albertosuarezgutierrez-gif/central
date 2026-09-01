@@ -32,6 +32,17 @@
 
 ---
 
+### 🔍 (01/09/2026) El fixture de Codeoscopic, releído entero: 3 fallos del parser corregidos
+- 🚨 **`errors[]` es por CONFIGURACIÓN de producto, no por compañía.** Reale falla con la config
+  `37786__` **y da 8 precios** con `83474 (ASM y API)`. El resumen decía «Reale sin precio»: falso
+  sobre la que más dio. Ahora `tambienDioPrecio` y solo se nombran las mudas (Pelayo, Zurich).
+- **`deductible` la traen 10 de 18 precios** y se tiraba: enseñar 427,79€ de todo riesgo callando
+  1.500€ de franquicia es «dato que SÍ está pero se lee mal». Ausente = `null`, nunca `0`.
+- **`modality.category`** da los 6 niveles (Terceros → Todo Riesgo Sin Franquicia): la agrupación
+  de la comparativa. Sin usar aún: `addonQuotes` (RACE asistencia 54,99€/199,00€) y `links[]`.
+- Lección de método: el fixture llevaba en el repo desde por la mañana y estos tres solo salieron
+  al leerlo ENTERO, no por muestreo. 73 tests en asegura, todo verde.
+
 ### 🎯 (01/09/2026) CI: el push «mudo» es LAG de GitHub — causa medida, no otra hipótesis
 - Dos pushes sobre el PR #1962 (ya fuera de draft) no dispararon ningún requerido. Al mirar el **objeto
   PR** en vez de los runs: `git ls-remote` daba `5a732a51` y el PR seguía en `d0d23c65`, con 2 commits de
