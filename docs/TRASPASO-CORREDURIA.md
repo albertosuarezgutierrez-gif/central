@@ -2737,15 +2737,41 @@ del paso 0 es obligatorio ANTES de mover nada.**
   nuevo desde el 23-jun**. Diagnóstico: lanzar `ficherosDisponibles` contra C0058 — si TIREA dice que
   no hay pendientes, la llamada es a Mapfre/TIREA («¿seguís publicando para CS-F/0170?»); si dice que
   sí hay, entonces es el adaptador.
-- **Los 39 de Occident en `review` no son de Occident:** 18 REC + 18 SIN + 3 POL, con error «0/2
-  recibos»/«0/2 siniestros». Y el dato que lo explica: **en toda la base, de las cuatro compañías,
-  jamás se ha persistido un REC, un SIN ni un CEF** (54+38+7 ficheros, todos a cero; solo persisten
-  POL). Apuesta de Manuel: los flags `CIMA_INGESTA_REC_ENABLED` / `_SIN_` / `_CEF_` están apagados —
-  **no es una avería, es una función nunca encendida**. Se confirma mirando esas tres envs en Vercel.
-  Residuo real de Occident: **4 pólizas** (detectó 24, guardó 20).
+- 🚨 **CORREGIDO el 01/09/2026 — lo de arriba era FALSO y llevaba a la conclusión opuesta.** Lo que
+  decía este apartado: «jamás se ha persistido un REC, un SIN ni un CEF… no es una avería, es una
+  función nunca encendida». **Medido contra la BD:** hay **184 recibos, 67 siniestros y 7 CEF
+  persistidos**. Los flags SÍ están encendidos y la ingesta de recibos y siniestros funciona.
+  **Sí es una avería**, y esta es:
 
-**Consecuencia para la Fase 4:** «encender CIMA completo» incluye decidir si se activan REC/SIN/CEF —
-la correduría hoy solo ingiere pólizas. Los recibos y siniestros de las compañías NUNCA han entrado.
+  **Recibos y siniestros de pólizas que no están en la cartera.** Eventos
+  `cima_recibo_sin_poliza_review` (23) y `cima_siniestro_sin_poliza_review` (24), del 24/06 al
+  30/08/2026, con `reason = sin_poliza_en_cartera`. Afectan a **19 pólizas** y se han quedado sin
+  guardar **23 recibos por 7.721,71€ de prima** y **20 siniestros**. 42 ficheros en cuarentena, 39
+  de ellos de **Occident (C0468)**.
+
+  **Causa raíz, medida:** el emparejamiento se hace por `id_poliza_entidad`, y **9 de las 19 pólizas
+  SÍ están en la cartera** — con otro nombre de compañía y sin código de entidad: **Occident,
+  Catalana Occidente y Plus Ultra son el mismo grupo y CIMA las manda todas bajo C0468**. Lo
+  confirma la cartera viva, donde las 19 pólizas de C0468 mezclan cuatro formatos de numeración
+  (`BID…`, `8-x.xxx.xxx-L`, nueve dígitos, `GPA…`) mientras Mapfre y Allianz tienen uno cada una.
+  De las 10 restantes, solo **una** muestra recibos anulados/devueltos; el resto tienen recibos
+  cobrados, cuatro con recibos **pendientes** y dos con **siniestros abiertos** — difícil de
+  explicar con una anulación, pero el estado real de la póliza solo lo dice la intranet de Occident.
+
+  **Y el segundo fallo, el que hizo que durara dos meses:** el health-check de origen corría a
+  diario con `cuarentenaTotal: 41` en su propio parte —subiendo 39 → 40 → 41 en seis días— pero sus
+  señales de alarma eran `ficherosError` y `ficherosDeferred`, que valían **cero**. Estuvo en verde
+  todo el tiempo porque **medía lo que no era**.
+
+  **Arreglo (lado de Manuel, el código no está en este monorepo):** (1) emparejar también por
+  `numero_poliza` normalizado y por grupo de entidad, no solo por `id_poliza_entidad`; (2)
+  reactivar el reconciliador — `cima_reconcile_resumen` recuperaba ficheros de `review` y **dejó de
+  ejecutarse el 25/06/2026**; (3) añadir `cuarentenaTotal` a las señales del health-check.
+  **Lado nuestro, ya hecho:** el cron `correduria-ingesta` de plataforma vigila la cuarentena y
+  avisa por Telegram (`@central/module-seguros/ingesta`, latido `correduria_ingesta`).
+
+**Consecuencia para la Fase 4:** «encender CIMA completo» ya no incluye activar REC/SIN/CEF —
+están activos y entrando. Lo que queda es el emparejamiento por grupo de entidad.
 
 ## 🔎 31/08/2026 — Verificación en el panel: Vercel CONFIRMADO, y el `CRON_SECRET` ya estaba
 

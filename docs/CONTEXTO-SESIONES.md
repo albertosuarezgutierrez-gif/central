@@ -32,6 +32,33 @@
 
 ---
 
+### 🛡️ (01/09/2026) CIMA perdía recibos y siniestros hace 2 meses — vigía nuevo + causa raíz
+- Analizando qué CRM necesita la correduría salió una avería VIVA: del 24/06 al 30/08 se quedaron
+  **42 ficheros de CIMA en cuarentena — 23 recibos (7.721,71€ de prima) y 20 siniestros**, 39 de
+  Occident. Eventos `cima_{recibo,siniestro}_sin_poliza_review`, `reason=sin_poliza_en_cartera`.
+- **Causa raíz:** se empareja por `id_poliza_entidad` y **Occident / Catalana Occidente / Plus Ultra
+  son el MISMO grupo bajo C0468** — 9 de las 19 pólizas afectadas SÍ están en cartera, con otro
+  nombre de compañía y sin código de entidad. Al agrupar por compañía, normalizar el grupo primero.
+- **Por qué duró dos meses:** el health-check de origen traía `cuarentenaTotal: 41` (39→40→41 en seis
+  días) en su propio parte y sus señales de alarma eran `ficherosError`/`ficherosDeferred` = 0.
+  Verde todo el tiempo **midiendo lo que no era**. El reconciliador (`cima_reconcile_resumen`) lleva
+  parado desde el 25/06.
+- **Hecho (nuestro lado):** helper puro `@central/module-seguros/ingesta` (`saludIngesta`, 11 tests,
+  `sin_datos` ≠ `ok`), puerto `/api/operador/ingesta` en asegura, cron `correduria-ingesta` (06:45)
+  + aviso `correduria.ingesta` + latido `correduria_ingesta` con su sonda.
+- **De Manuel (su repo, no el nuestro):** emparejar por `numero_poliza` normalizado y por grupo de
+  entidad; reactivar el reconciliador; meter `cuarentenaTotal` en las señales.
+- **De Alberto:** verificar en la intranet de Occident las 10 pólizas que no aparecen (solo 1 da
+  señales de anulación; el resto tienen recibos cobrados/pendientes y siniestros abiertos).
+- **Corregida deriva documental:** `TRASPASO-CORREDURIA.md` afirmaba que «jamás se ha persistido un
+  REC, un SIN ni un CEF» y que no era avería sino función sin encender. Falso: hay 184 recibos, 67
+  siniestros y 7 CEF. También 69→67 siniestros en la skill.
+- 🧭 **Decisión de producto:** el CRM ESCRIBE donde manda Alberto (leads, notas, tareas,
+  renovaciones) y CONSULTA donde manda la compañía (pólizas, recibos, siniestros). Sin módulo de
+  siniestros: no se puede aperturar por CIMA y los 67 están congelados (1 actualizado, 0 con
+  tramitador). Cartera real: **80 clientes / 109 pólizas**; de los 32.520 leads, **26.964 no tienen
+  ni teléfono ni email** y solo **1 ficha** tiene consentimiento registrado.
+
 ### 🛡️ (01/09/2026) asegura: dos specs (portal + agente de venta) y la cartera NO era lo que decíamos
 - Brainstorming con Alberto → specs `2026-09-01-asegura-portal-clientes-empresas-design.md` y
   `2026-09-01-asegura-agente-venta-design.md`. PR #1941.

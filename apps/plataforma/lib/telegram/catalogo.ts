@@ -515,6 +515,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:30',
   },
   {
+    id: 'correduria.ingesta', categoria: 'correduria',
+    titulo: 'Se pierden datos de CIMA',
+    que: 'Recibos, siniestros o pólizas que las compañías mandan y no llegan a guardarse.',
+    cuando: 'Todos los días a las 08:45, y solo cuando algo cambia',
+  },
+  {
     id: 'correduria.cima-liq', categoria: 'correduria',
     titulo: 'Liquidaciones de comisiones (CIMA)',
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',

@@ -23,6 +23,12 @@ const PROBES: Record<string, Prisma.Sql> = {
   correduria_renovaciones: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_renovaciones'`,
+  // Ingesta de CIMA. La huella NO puede ser `cima_ficheros` ni ninguna tabla de datos: si la
+  // ingesta se atasca, esas tablas dejan de crecer y el silencio se lee igual que un día sin
+  // ficheros. Es la pasada del vigía lo que se vigila.
+  correduria_ingesta: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_ingesta'`,
   // Pricing: manda el piso MÁS VIEJO, no el max global. Con max(), un solo piso fresco
   // (p.ej. luxury) tapaba que el Dúplex y House Sevillana llevaban 23 días sin estudiar
   // (555 h) → el monitor se callaba. La sonda por-piso (min de los max) delata al rezagado.

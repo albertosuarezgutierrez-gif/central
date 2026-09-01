@@ -29,3 +29,13 @@ export {
   type EstadoObjeto,
   type EntradaObjeto,
 } from './objeto.ts'
+
+export {
+  saludIngesta,
+  detalleSalud,
+  DIAS_CUARENTENA_RECIENTE,
+  type EstadoIngesta,
+  type SaludIngesta,
+  type EntradaSalud,
+  type FicheroEnCuarentena,
+} from './ingesta.ts'

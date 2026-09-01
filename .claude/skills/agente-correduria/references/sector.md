@@ -109,7 +109,7 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
 - **Inventario de la BD (01/09/2026, `public` del Supabase de ASEGURA).** Núcleo: `clientes`
   32.600 · `polizas` 28.843 · `cliente_telefonos` 4.794 · `cliente_emails` 4.017 ·
   `oportunidades` 3.676 · `bienes_asegurables` 1.614 · `poliza_coberturas` 1.425 ·
-  `gestiones` 694 · `poliza_recibos` 186 · `cima_ficheros` 128 · `siniestros` 69 ·
+  `gestiones` 694 · `poliza_recibos` 184 · `cima_ficheros` 128 · `siniestros` 67 ·
   `liquidaciones` 9. Codeoscopic dejó tablas propias (`codeoscopic_offers`/`prices` 15,
   `projects` 1, `webhook_events` 2; `documents`/`product_forms`/`participants` vacías) →
   la integración llegó a funcionar en pruebas, no en producción.
@@ -135,6 +135,32 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
   Helper puro `@central/module-seguros/vencimientos` (`urgenciaRenovacion`, `fechaLimiteOposicion`,
   `primaEnRiesgo`), consumido por el puerto `/api/operador/vencimientos` de asegura y pintado en
   plataforma `/correduria`.
+- **📡 CIMA es SOLO DESCENDENTE, y el canal pierde datos (medido 01/09/2026).** Dos cosas que hay
+  que saber antes de opinar de siniestros o de recibos:
+  - **No se puede aperturar un siniestro desde nuestro CRM.** El canal baja ficheros y devuelve un
+    ACK; nunca ha salido de aquí un siniestro. `cima_ficheros` **no tiene ni columna de sentido** y
+    el cron se llama `cima-pull`. El **estándar EIAC sí es bidireccional** e incluye «solicitar
+    nuevas aperturas de siniestro», y la Fase IV de CIMA lo metió en el modelo — pero lo VIVO en
+    producción hoy son los **recibos** (Occident, Reale, Allianz y Mapfre con ebroker). De
+    siniestros **no consta ninguna compañía**: eso es «no consta», no «no existe». El endpoint para
+    subir sería el mismo que ya se usa para bajar (`ws.cimaseg.es/wsEstandar/`) y **la cuenta de
+    mediador ya es de Alberto** (CS-F/0170), así que la pregunta a TIREA es barata. ⚠️ **Avant2 NO
+    hace siniestros** (es tarificación y emisión); la tramitación de Codeoscopic es otro producto.
+    **Consecuencia de diseño:** no se construye un módulo de siniestros. Los 67 siniestros bajan y
+    **se congelan** —solo 1 se ha actualizado nunca, y 0 traen tramitador, perito, reserva o
+    indemnización—, así que una pantalla de «siniestros abiertos» mentiría. Van dentro de la ficha
+    del cliente, como historial y con la fecha de la última noticia a la vista.
+  - **Se están perdiendo recibos y siniestros por el emparejamiento con la póliza.** Del 24/06 al
+    30/08/2026: 42 ficheros en cuarentena, **23 recibos (7.721,71€ de prima) y 20 siniestros** sin
+    guardar, 39 de ellos de **Occident (C0468)**. Causa: se empareja por `id_poliza_entidad` y
+    **Occident, Catalana Occidente y Plus Ultra son el MISMO grupo bajo C0468** — 9 de las 19
+    pólizas afectadas sí están en la cartera, con otro nombre de compañía y sin código de entidad.
+    🚨 **Regla que deja:** al contar cartera o comisiones por compañía, **normaliza el grupo antes
+    de agrupar**; el nombre de `polizas.aseguradora` es texto libre y la misma compañía aparece con
+    tres nombres. Y el vigía que lo caza es el cron `correduria-ingesta` de plataforma (latido
+    `correduria_ingesta`) — el health-check de origen tenía el número delante (`cuarentenaTotal: 41`
+    y subiendo) y estuvo en verde dos meses porque sus señales miraban otras dos columnas.
+
 - **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
   431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
   vive en **`polizas.datos_especificos`** (JSON libre que escribe la ingesta EIAC, distinto por
