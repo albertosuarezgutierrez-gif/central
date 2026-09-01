@@ -32,6 +32,20 @@
 
 ---
 
+### 🔘 (01/09/2026) asegura: el botón «Retarificar» sobre la cartera REAL, de punta a punta
+- `/cartera` → buscar cliente → ficha → **Retarificar** en una póliza de auto. Plan de Alberto:
+  primero a mano sobre clientes de verdad, automatizar después.
+- ✅ **`seguros.codeoscopic_consumo` YA CREADA en la BD** (con sus dos CHECK). Era el bloqueo real.
+- 🚨 **Medido: las 80 pólizas de auto vivas (CIMA) traen SOLO matrícula** — ni marca ni modelo ni
+  año. Pero el código de versión sale **gratis** navegando `car/brands→models→vehicles`; lo que
+  cuesta créditos es buscar **por matrícula**. Se cotiza HOY sin comprar nada.
+- `desde-cartera.ts` devuelve **tres** cosas: lo que se manda, lo **supuesto** y lo que falta. Los
+  supuestos tiran a la baja salvo la siniestralidad (decisión de Alberto, marcada `optimista`).
+  **Nunca se supone un dato personal.** Centinela nuevo: 20.860 fichas se llaman «Lead».
+- Guardián `test/regression-asegura-gasto-codeoscopic.test.ts`: un solo puerto gasta y es POST
+  (un `GET` que cotice lo dispararía un prefetch). **Cepo verificado rompiéndolo.**
+- Falta de Alberto: contraseña al rol, `CODEOSCOPIC_TARIFICACION_ACTIVA=true` y redeploy.
+
 ### 📚 (01/09/2026) Conseguida la documentación OFICIAL de la API de Codeoscopic
 - Alberto exportó el portal (`portal.api-int…`, MHTML) y de ahí sale el índice completo de
   operaciones → **`docs/CODEOSCOPIC-API-PORTAL.md`**. Primera fuente del FABRICANTE (el traspaso de

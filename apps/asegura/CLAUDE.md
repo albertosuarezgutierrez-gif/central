@@ -180,9 +180,44 @@ Las tres reglas que más cotizaciones tumban, todas con test:
 Y lo que NO se manda, a propósito: email, calle, ocupación, situación laboral y país de nacimiento.
 No hacen falta para el precio.
 
-Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): ejecutar el SQL
-`prisma/sql/2026-09-01_codeoscopic_consumo.sql`, poner contraseña al rol `prisma_seguros` y
-encender el interruptor.
+### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
+
+`/cartera` → buscar cliente → su ficha → **Retarificar** en una póliza de auto. Es la forma en que
+Alberto quiere estrenar esto: **primero a mano, sobre clientes de verdad**, y automatizar después.
+
+- **Solo un clic gasta**, y lo dice: `POST /api/cartera/polizas/{id}/retarificar`. Todo lo demás de
+  `/api/cartera/*` es gratis. Lo vigila `test/regression-asegura-gasto-codeoscopic.test.ts`, que
+  además prohíbe exponer un `GET` que cotice (un prefetch del navegador dispararía el cargo) y
+  hacer un `POST` al vendor sin pasar por `cotizar()`. **Cepo verificado**: se le añadió un `GET`
+  a la ruta y saltó.
+- 🚨 **`lib/codeoscopic/desde-cartera.ts` devuelve TRES cosas, no una**: lo que se manda, lo que se
+  ha **supuesto** y lo que **falta**. Un valor por defecto es indistinguible de un dato real en
+  cuanto se escribe en el formulario, así que la pantalla enseña los supuestos ANTES del botón y
+  otra vez AL LADO del precio. Los supuestos tiran **a la baja** (menos años asegurado ⇒ más caro)
+  para que la precalificación no prometa una prima que luego suba.
+  - **Excepción, y es decisión de negocio de Alberto:** se presume que **no ha habido siniestros**.
+    Va marcado como `optimista` porque cero filas en `siniestros` no prueba que no los haya. De
+    regalo, al igualar `aniosSinSiniestros` con `aniosAsegurado` se esquiva el 400 (ya pagado) que
+    exige el detalle de siniestralidad.
+  - **NUNCA se supone un dato personal** (DNI, nombre, nacimiento, teléfono, carnet, sexo): eso
+    serían datos falsos de una persona real. Los teclea el corredor. Hay test que lo fija.
+- **Lo que la ficha SÍ da y ahorra teclear:** la póliza actual pasa a ser la «anterior» de la
+  cotización — número, **código DGS de la compañía** y antigüedad salen de ella, que es de donde
+  viene el bonus.
+- **El vehículo hay que elegirlo**, y no es un fallo: medido el 01/09/2026, las **80 pólizas de auto
+  vivas (CIMA) traen matrícula y NADA más** — ni marca, ni modelo, ni año. Se elige del catálogo de
+  Codeoscopic (marca→modelo→versión), que es **gratis**; buscar por matrícula es lo que cuesta
+  créditos. La fecha de matriculación sí sale sola de la matrícula, gratis, y es **aproximada**.
+- **Centinelas del CRM:** 20.860 fichas se llaman literalmente «Lead». `desde-cartera.ts` los trata
+  como ausencia — mandar «Lead» como nombre de pila sería basura con forma de dato.
+- **El sexo sale del campo `saludo`** (`'1'` = hombre, `'2'` = mujer; validado contra los nombres de
+  pila más frecuentes de las 32.600 fichas). El `'3'` **no se traduce**: se pregunta.
+
+✅ **Hecho el 01/09/2026:** la tabla `seguros.codeoscopic_consumo` ya está **creada en la BD**
+(con sus dos CHECK: `descarte_con_evidencia` y `cierre_coherente`).
+
+Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): poner contraseña al
+rol `prisma_seguros`, encender `CODEOSCOPIC_TARIFICACION_ACTIVA=true` y redesplegar.
 
 ## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)
 

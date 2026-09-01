@@ -59,6 +59,23 @@ como siempre.
 tengamos en ficha**, y es la única de toda la API que se paga aparte. Antes de diseñar nada que
 dependa de ella hay que preguntar el precio a `comercial@codeoscopic.com` (lo pregunta Alberto).
 
+✅ **PERO el código de versión NO está detrás de ese muro (01/09/2026).** Lo que se paga es
+buscar el vehículo **por matrícula**; el mismo código sale gratis **navegando el catálogo**:
+
+```
+GET /car/brands  →  GET /car/brands/{id}/models  →  GET /car/brands/{id}/models/{id}/vehicles
+```
+
+Esa última lista da el código Base7 de cada versión, y es un catálogo como los de municipios o
+garajes (traspaso de Manuel §4, `car-catalogs.ts:271`). Consecuencia práctica: **la pantalla del
+corredor cotiza HOY, sin comprar créditos** — se eligen marca, modelo y versión en tres clics. Los
+créditos solo hacen falta el día que el CLIENTE teclee una matrícula y no haya nadie eligiendo.
+
+🚫 **Y una BD externa gratis no sustituye a esto.** Cualquier fuente de terceros (DGT open data va
+anonimizada y no lleva matrícula; el resto son de pago) devolvería **texto** («Seat León 1.6 TDI»),
+y la cotización no se hace con texto sino con el código Base7 de ELLOS. Casar texto→código es
+justo la parte que falla, y cada fallo cuesta 0,50€.
+
 ## La API es mucho más que tarificar
 
 Además del cotizador hay superficie de CRM completa, que no estaba en el radar:
