@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { isRoutineAuthorized } from "@/lib/cron-auth"
-import { tgSend } from "@central/core-telegram"
+import { tgAviso } from '@/lib/telegram'
 import { evaluarLatido, AGENTES_VIGILADOS } from "@/lib/monitoring/latidos"
 import { decidirReparacion, type IntentoPrevio } from "@/lib/monitoring/reparable"
 
@@ -122,7 +122,7 @@ async function avisarRendidos(rendidos: { agente: string; firma: string | null }
     if (pendientes === 0) continue // ya avisado: no se repite
     const etiqueta = AGENTES_VIGILADOS.find(a => a.id === r.agente)?.etiqueta ?? r.agente
     try {
-      await tgSend(
+      await tgAviso('sistema.reparacion-reclamo', 
         `🔧🙅 <b>Me rindo con ${etiqueta}</b>\n\n` +
           `He intentado repararlo automáticamente y no he sabido. No voy a seguir abriendo PRs ` +
           `sobre esto: necesita tu ojo.\n\n` +

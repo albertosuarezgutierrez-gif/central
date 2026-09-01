@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  claveAviso, emisionesDeHoy, mensajeRenovaciones, type PolizaAviso,
+  claveAviso, emisionesDeHoy, mensajeRenovaciones, objetoEnLinea, type PolizaAviso,
 } from './renovaciones-aviso.ts'
 
 const base: PolizaAviso = {
@@ -78,4 +78,24 @@ test('dentro de un hito, primero lo que antes vence', () => {
     vacio,
   ))!
   assert.ok(msg.indexOf('Pronto') < msg.indexOf('Tarde'))
+})
+
+// ── Objeto asegurado en la línea ────────────────────────────────────────────
+
+test('la línea dice QUÉ asegura: sin eso, tres autos del mismo cliente son idénticas', () => {
+  const base: PolizaAviso = {
+    id: 'p1', cliente: 'Jose Suarez', tipo: 'auto', aseguradora: 'Mapfre',
+    numeroPoliza: '1', fechaVencimiento: '2026-09-24', dias: 5, prima: 431.85,
+    objeto: { estado: 'conocido', titulo: 'TOYOTA COROLLA', detalle: '1234ABC' },
+  }
+  const msg = mensajeRenovaciones(emisionesDeHoy([base], new Set())) ?? ''
+  assert.match(msg, /TOYOTA COROLLA \(1234ABC\)/)
+})
+
+test('objetoEnLinea calla cuando no hay nada que decir (ruido, no información)', () => {
+  assert.equal(objetoEnLinea(null), null)
+  assert.equal(objetoEnLinea(undefined), null)
+  assert.equal(objetoEnLinea({ estado: 'no_informado', titulo: null, detalle: null }), null)
+  assert.equal(objetoEnLinea({ estado: 'sin_objeto', titulo: 'El propio asegurado', detalle: null }), null)
+  assert.equal(objetoEnLinea({ estado: 'conocido', titulo: 'SEVILLA · CP 41003', detalle: null }), 'SEVILLA · CP 41003')
 })

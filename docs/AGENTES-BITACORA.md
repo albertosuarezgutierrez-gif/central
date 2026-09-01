@@ -15,6 +15,44 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-01 · facturas-correo** · hizo: pasada diaria (primera desde el 23/08, hueco de 9 días).
+  Preflight `/api/internal/alerta` 200. Paso 0: Vía B sana (última copia `_buzon_pdf` hoy mismo,
+  `dias_caido=0`); `agente_salud` actualizado. Backlog barrido: `PDF-pendiente` vacío;
+  `Extraccion-fallida` tenía 1 hilo (ticket Mercadona reenviado por Pilar, 237,06€ a domicilio) →
+  resuelto por cuerpo del correo (personal, entrega en Monte Carmelo), etiqueta quitada; `Revisar`
+  tiene 1 hilo sin resolver (recibo Fly.io $6,68 que Manuel Suárez reenvía desde su propio correo —
+  no está claro por qué ni si es gasto de Alberto → sigue "Para tu decisión"). Paso 4.0
+  (`v_facturas_sin_cargo`): las 8 filas siguen en `revisada_sin_cargo` de pasadas anteriores, 0 en
+  `sin_revisar` — nada que reabrir. Paso 1: 0 candidatos nuevos en Gmail (`newer_than:2d`) — el único
+  ruido eran mensajes de huéspedes de Booking y la circular del colegio; los 2 correos con factura de
+  hoy (IONOS, limpiezascruzz agosto) ya venían con `Facturas/Procesada` puesta por el cron
+  `facturas-scan` de plataforma antes de que arrancara esta sesión (`gastos`/`facturas_drive` sin
+  filas nuevas en 48h → no verificado si archivó bien; issue conocida y fuera de mi alcance, ver
+  bitácora 23/08). `_subir_aqui` y raíz de `FACTURAS Apartamentos/2026` sin PDFs nuevos desde 05/08.
+  `_DUPLICADOS_BORRAR`: 21 avisos pendientes, ninguno nuevo desde 17/08 (zombis sin re-verificar hoy,
+  igual que la pasada anterior). dudas: Fly.io de Manuel Suárez (Revisar) — ¿por qué te lo reenvía y
+  es gasto tuyo?; fallos: —; PRs/commits: — (solo bitácora + `agente_salud` + etiqueta Gmail).
+- **2026-09-01 · mercado-booking (pasada acotada, PRIORIDAD jul-ago 2027)** · hizo: mismo plan
+  filtrado `?desde=2027-07-01&hasta=2027-08-31&max=24` que ayer (31/08). 238 comps reales en las
+  24 ventanas del cupo (6 fechas × 4 pisos: 02/07, 10/07, 27/07 — las 3 mismas de ayer, reescritas
+  por ser idempotente — y 01/08 [evento Campeonato Mundial de Remo, factor 1,55], 06/08, 14/08 —
+  agosto cambia de fecha frente a ayer, que tenía 24/08 en vez de 01/08). 4/4 ventanas de
+  escaparate propio medidas (ayer House Sevillana había dado `escaparateSinRespuesta`; hoy sí
+  contestó: 1.198,88€ total/2 noches). 0 ventanas sin respuesta, 0 anuncios propios colados en el
+  corpus de mercado, 0 fallos. **Objetivo cumplido — YA lo estaba desde ayer (31/08): ambos meses
+  llegan a ≥3 fechas distintas con ≥3 comparables por piso** (hoy con 10 comps/fecha/piso).
+  🚩 **Acción pendiente para Alberto/entrenador: quitar el párrafo "PRIORIDAD TEMPORAL (agosto
+  2026)" del prompt de la rutina programada** — esta sesión no tiene acceso al store del trigger
+  para editarlo ella misma, y al no haberse quitado ayer la pasada de hoy se ha repetido sin
+  necesidad (gasto de cupo redundante en julio). Sin cupo restante para la pasada normal (24/24 +
+  4/4 escaparate agotados). dudas: —; fallos: —; PRs/commits: — (solo BD + bitácora).
+- **2026-09-01 · rrhh-compliance-calendar** · hizo: pasada mensual. Leído `docs/ROADMAP-rrhh.md`;
+  9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal
+  denuncias, informe ITSS, modelo 145, caducidad NIE, borrado RGPD automatizado — PRL ya hecho,
+  excluido); 6 ítems 🟠 de monetización pendientes. Nota de urgencia añadida: septiembre =
+  inspecciones de trabajo → prioriza fichaje + informe ITSS. Preflight `/api/internal/alerta` 200;
+  aviso Telegram enviado (messageId 3888). dudas: —; fallos: —; PRs/commits: commit directo a `main`
+  (solo docs).
 - **2026-09-01 · fiscal-novedades** · hizo: pasada mensual completa. Paso 1-4 (deducciones): contrastadas
   todas las cifras vigiladas (mínimos, maternidad, FN estatal/andaluza + límites de renta 25k/30k) contra
   BOE/BOJA/AEAT — sin cambios, PGE 2027 aún en preparación (no publicado); sin PR. Paso 5 (ayudas): 1ª

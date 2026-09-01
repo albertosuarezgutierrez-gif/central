@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { tgSend } from "@central/core-telegram"
+import { tgAviso } from '@/lib/telegram'
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { eur } from "@/lib/dinero"
 import {
@@ -447,7 +447,7 @@ export async function GET(req: NextRequest) {
     }
     if (bloques.length > 0) {
       try {
-        await tgSend(bloques.join("\n\n") +
+        await tgAviso('pisos.pricing-canal', bloques.join("\n\n") +
           `\n\n_Para congelar el calibrado de un piso: \`canal_auto=false\` en pricing\\_settings._`)
       } catch { /* el aviso no puede tumbar la aplicación */ }
     }

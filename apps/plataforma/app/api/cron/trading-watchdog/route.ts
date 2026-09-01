@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 import { evaluarWatchdog, seEsperaRefresco, diagnosticarPasada } from '@/lib/trading/watchdog'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
@@ -105,7 +105,7 @@ async function handler(req: NextRequest) {
     const msg =
       `🐕⚠️ <b>Pasada nocturna de trading incompleta</b>\n\n` +
       `${fallos.join('\n')}\n${detalle}\n\n${cierre}`
-    await tgSend(msg, { html: true })
+    await tgAviso('trading.watchdog', msg, { html: true })
   }
 
   // 🐕 ¿Y quién vigila al vigilante? (08/08/2026). Este handler era el ÚNICO que comprobaba los tres

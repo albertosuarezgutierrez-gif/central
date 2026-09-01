@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { decidir, parteH10, BATACAZO, type VeredictoVariante } from '@/lib/trading/h10'
 import { evaluarTodas, parteHipotesis, detalleHipotesis, type Hipotesis } from '@/lib/trading/hipotesis'
@@ -78,7 +78,7 @@ async function handler(req: NextRequest) {
     // ninguna cumplía) y re-avisar ese cierre cada lunes sería ruido — la lección del aviso ℹ️ de
     // Kutxabank. Las variantes se siguen midiendo (el corpus crece): si con datos nuevos alguna
     // cruzara el umbral firmado, ESO sí es noticia (re-abre el debate) y se canta.
-    if (parte && cableables.length) await tgSend(parte).catch(() => {})
+    if (parte && cableables.length) await tgAviso('trading.h10', parte).catch(() => {})
 
     // ── VIGÍA DE LAS HIPÓTESIS ABIERTAS (28/08/2026).
     //
@@ -94,7 +94,7 @@ async function handler(req: NextRequest) {
     const hipotesis: Hipotesis[] = []
     const vs = evaluarTodas(hipotesis)
     const parteHip = parteHipotesis(vs)
-    if (parteHip) await tgSend(parteHip).catch(() => {})
+    if (parteHip) await tgAviso('trading.h10', parteHip).catch(() => {})
 
     const detalleHip = detalleHipotesis(vs)
     const detalle = veredictos
@@ -105,7 +105,7 @@ async function handler(req: NextRequest) {
     // Un evaluador que revienta en silencio deja la hipótesis colgada para siempre: se canta.
     const msg = e instanceof Error ? e.message : 'error'
     await registrarLatido('trading_h10', false, msg.slice(0, 200)).catch(() => {})
-    await tgSend(`🔬 H10 (salidas): el evaluador falló — ${msg.slice(0, 200)}`).catch(() => {})
+    await tgAviso('trading.h10', `🔬 H10 (salidas): el evaluador falló — ${msg.slice(0, 200)}`).catch(() => {})
     return NextResponse.json({ ok: false, error: msg }, { status: 500 })
   }
 }

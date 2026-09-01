@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { aiComplete } from '@/lib/ai-client'
-import { tgAlert, escapeHtml } from '@/lib/telegram'
+import { escapeHtml, tgAvisoAlerta } from '@/lib/telegram'
 import {
   fetchLanding, pushToGitHub, extractSeoParams, applySeoReplacements,
 } from '@/lib/sivra/seo-landing'
@@ -99,7 +99,7 @@ export async function GET(req: Request) {
   } catch (err) {
     console.error('[sivra/seo-refresh]', err)
     // Visibilidad: el cron automático ya no falla en silencio — avisa por el bot del monorepo.
-    await tgAlert(
+    await tgAvisoAlerta('sistema.seo-landing', 
       `❌ Agente SEO (housesevillana) falló ${cronOk ? '[cron automático]' : '[manual]'}:\n<code>${escapeHtml(String(err))}</code>`,
       'critico',
     )

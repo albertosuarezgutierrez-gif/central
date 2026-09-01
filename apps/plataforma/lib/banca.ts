@@ -9,7 +9,7 @@ import { fmtEur } from './financiero'
 import { agruparDuplicados, DUP_UMBRAL_BANNER, type DupGrupo, type DupPar } from './duplicados'
 import { getEstadoCobrosOTA } from './sivra/cobros-ota-db'
 import { type Pendiente } from './sivra/cobros-ota'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { getMovimientosDudosos, sugerirDestinoConContexto, enviarMensajeDudoso } from './agente-movimientos'
 
 export type { DupGrupo, DupMovimiento } from './duplicados'
@@ -313,7 +313,7 @@ export async function enviarResumenTarjeta(
     lineasDest || '  (sin datos)',
   ].join('\n')
 
-  await tgSend(texto).catch(() => {})
+  await tgAviso('finanzas.tarjeta-importada', texto).catch(() => {})
 
   // Enviar un mensaje por cada movimiento dudoso con sugerencia IA
   if (dudosos.length > 0) {

@@ -4,8 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { calcularResumen, construirMensaje } from '@/lib/agente-facturas/resumen-mensual'
-import { tgAlert } from '@/lib/telegram'
-
+import { tgAvisoAlerta } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
@@ -25,6 +24,6 @@ export async function GET(req: NextRequest) {
 
   const resumen = await calcularResumen(year, month)
   const mensaje = construirMensaje(resumen)
-  await tgAlert(mensaje, 'info')
+  await tgAvisoAlerta('pisos.gastos-resumen-mensual', mensaje, 'info')
   return NextResponse.json({ ok: true, resumen })
 }

@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { resolverCuentaBuzon } from '@/lib/agente-facturas/cuenta-buzon'
 import { upsertBrokerSaldo } from '@/lib/broker'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { saltoDeSaldo } from '@/lib/trading/precios-guardia'
 import { eur } from '@/lib/dinero'
 
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
   if (avisa && variacion != null) {
     const signo = variacion > 0 ? '+' : ''
-    await tgSend(
+    await tgAviso('trading.saldo', 
       `⚠️ <b>Trading:</b> el patrimonio del bróker ha saltado <b>${signo}${(variacion * 100).toFixed(1)}%</b> ` +
       `(${eur(Number(anterior!.saldo))} → ${eur(saldo)}).\n\n¿Has ingresado o retirado dinero? Si no, la lectura ` +
       `del NAV viene mal y con ella se dimensionan TODAS las compras: revísalo antes de la próxima pasada.`,

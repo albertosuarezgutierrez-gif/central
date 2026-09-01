@@ -6,7 +6,7 @@
 // Telegram (enviarResumenTarjeta / mov_*). Reutiliza todo el motor de banca; no duplica lógica.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { tgSend, tgSendButtons, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso, tgAvisoBotones } from '@/lib/telegram'
 import { importarExtracto, enviarResumenTarjeta } from '@/lib/banca'
 import { analizarMovimientos } from '@/lib/categorizar'
 import { comercioDe } from '@/lib/comercio'
@@ -101,7 +101,7 @@ async function emparejarDevoluciones(
       // Las devoluciones son abonos (importe > 0) y getMovimientosDudosos solo mira cargos, así que
       // las sacamos aquí con sus propios botones (asignar destino la anula contra su compra futura).
       const comercio = comercioDe(d.contraparte, d.concepto).slice(0, 40).toUpperCase() || 'DEVOLUCIÓN'
-      await tgSendButtons(
+      await tgAvisoBotones('finanzas.tarjeta-dudosos', 
         `↩️ <b>Devolución</b> · ${escapeHtml(comercio)} · ${d.fecha.slice(0, 10)} · +${eur(d.importe)}\n¿De qué negocio era la compra devuelta?`,
         [[
           { texto: '✅ Pisos', callback: `mov_pisos:${d.id}` },
@@ -233,7 +233,7 @@ async function vigilantesTarjeta(
   if (subidas.length) bloques.push(`📈 <b>Subidas de precio</b> (cargos recurrentes de importe fijo):\n${subidas.map(s => `  · ${escapeHtml(s.comercio)}: ${eur(s.base)} → ${eur(s.importe)}`).join('\n')}`)
   if (justN > 0) bloques.push(`🧾 <b>Justificantes pendientes</b>: ${justN} compra(s) deducible(s) por ${eur(justTotal)} sin factura. Consíguelas para Hacienda (/finanzas?tab=gastos).`)
 
-  if (bloques.length) await tgSend(`🔎 <b>Revisión de la tarjeta</b>\n\n${bloques.join('\n\n')}`).catch(() => {})
+  if (bloques.length) await tgAviso('finanzas.tarjeta-revision', `🔎 <b>Revisión de la tarjeta</b>\n\n${bloques.join('\n\n')}`).catch(() => {})
 }
 
 // Procesa un extracto de tarjeta subido al chat/Telegram. Los movimientos llegan YA parseados: del
@@ -316,7 +316,7 @@ export async function procesarExtractoTarjeta(
     justificantes = c.enganchadas.length
     if (justificantes) {
       const imp = c.enganchadas.reduce((s, e) => s + e.importe, 0)
-      await tgSend(`📎 <b>Justificantes enganchados</b>\n${justificantes} compra(s) de la tarjeta casada(s) con su factura del correo — ${eur(imp)}.`).catch(() => {})
+      await tgAviso('finanzas.tarjeta-revision', `📎 <b>Justificantes enganchados</b>\n${justificantes} compra(s) de la tarjeta casada(s) con su factura del correo — ${eur(imp)}.`).catch(() => {})
     }
   } catch { /* best-effort: el cron diario lo reintenta */ }
 
@@ -330,7 +330,7 @@ export async function procesarExtractoTarjeta(
         : `⚠️ OJO: el desglose NO cuadra con la liquidación (faltan ${eur(diferencia)}). ¿Faltan páginas o es otro mes?`
   // Descuadre = probablemente faltan páginas / mes equivocado: avisa también al móvil (Telegram).
   if (verificable && !cuadraTodo) {
-    await tgSend(`💳 <b>Extracto ${escapeHtml(mascara)}: el desglose NO cuadra</b>\nFaltan ${eur(diferencia)} respecto a la liquidación. Revisa si el PDF está completo o es el mes correcto.`).catch(() => {})
+    await tgAviso('finanzas.tarjeta-descuadre', `💳 <b>Extracto ${escapeHtml(mascara)}: el desglose NO cuadra</b>\nFaltan ${eur(diferencia)} respecto a la liquidación. Revisa si el PDF está completo o es el mes correcto.`).catch(() => {})
   }
   const devLinea = dev.casadas || dev.sinCasar
     ? `↩️ Devoluciones: ${dev.casadas} emparejadas${dev.sinCasar ? `, ${dev.sinCasar} por confirmar en Telegram` : ''}.`
