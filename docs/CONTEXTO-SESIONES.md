@@ -52,7 +52,7 @@
 - Botón 🧹 en el Telegram del borrador (callback `hsp_clean`, va ANTES del lookup del pendiente porque
   se ofrece justo después del ✅ Enviar, que ya lo borró); órdenes visibles en `/sivra/mensajes` y
   dentro del prompt del agente (deja de re-escalar «¿está confirmada la cuna?»).
-- `[]` = nada pedido · `null` = no se pudo leer · `enviado_at` NULL = se intentó y no salió.
+- `[]` = nada pedido · `null` = no se pudo leer · `enviado_at` NULL = se intentó y no salió. **PR #1991.**
 
 ### 💶 (01/09/2026) asegura: cliente de tarificación Codeoscopic con contador y TOPE
 - `apps/asegura/lib/codeoscopic/` — config · contador (puro) · libro en BD · token+transporte ·
