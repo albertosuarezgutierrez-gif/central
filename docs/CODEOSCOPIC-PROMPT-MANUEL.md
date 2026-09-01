@@ -1,5 +1,9 @@
 # 🧾 Prompt para el Claude de Manuel — traspaso de la integración Codeoscopic/Avant2 (tarificación)
 
+> ✅ **CONTESTADO (01/09/2026).** La respuesta completa está transcrita en
+> **`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`** y resumida en la skill `agente-correduria`
+> (`references/sector.md` §4). Este archivo queda como histórico del prompt enviado.
+
 > **Contexto (01/09/2026):** Manuel pidió un prompt para pasárselo a SU Claude (el que tiene acceso a su
 > repo del CRM) y que le saque todo lo necesario para que `central` pueda conectarse a la API de
 > Codeoscopic (Avant2) y tarificar. Lo que ya sabemos de nuestro lado está en la skill
