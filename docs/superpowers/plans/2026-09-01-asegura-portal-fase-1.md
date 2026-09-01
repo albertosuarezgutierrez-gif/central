@@ -58,7 +58,7 @@
 - Create: `packages/module-seguros-portal/src/index.ts`
 - Test: `packages/module-seguros-portal/src/acceso.test.ts`
 
-- [ ] **Step 1: Crear el `package.json` del módulo**
+- [x] **Step 1: Crear el `package.json` del módulo**
 
 ```json
 {
@@ -76,7 +76,7 @@
 }
 ```
 
-- [ ] **Step 2: Escribir el test que falla**
+- [x] **Step 2: Escribir el test que falla**
 
 Crear `packages/module-seguros-portal/src/acceso.test.ts`:
 
@@ -128,7 +128,7 @@ test('NIVELES enumera exactamente los cuatro, en orden creciente', () => {
 })
 ```
 
-- [ ] **Step 3: Ejecutar el test y verificar que falla**
+- [x] **Step 3: Ejecutar el test y verificar que falla**
 
 ```bash
 cd /home/user/central && npx --yes pnpm@10.33.0 install --no-frozen-lockfile
@@ -137,7 +137,7 @@ cd packages/module-seguros-portal && node --test src/acceso.test.ts
 
 Esperado: FALLA con `Cannot find module './acceso.ts'`.
 
-- [ ] **Step 4: Implementar el mínimo**
+- [x] **Step 4: Implementar el mínimo**
 
 Crear `packages/module-seguros-portal/src/acceso.ts`:
 
@@ -218,7 +218,7 @@ export { NIVELES, camposVisibles } from './acceso.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
 ```
 
-- [ ] **Step 5: Ejecutar el test y verificar que pasa**
+- [x] **Step 5: Ejecutar el test y verificar que pasa**
 
 ```bash
 cd /home/user/central/packages/module-seguros-portal && node --test src/acceso.test.ts
@@ -226,7 +226,7 @@ cd /home/user/central/packages/module-seguros-portal && node --test src/acceso.t
 
 Esperado: `# pass 6`, `# fail 0`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /home/user/central
@@ -243,7 +243,7 @@ git commit -m "feat(seguros-portal): niveles de acceso, dato de la cosa vs dato 
 - Modify: `packages/module-seguros-portal/src/index.ts`
 - Test: `packages/module-seguros-portal/src/procedencia.test.ts`
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `packages/module-seguros-portal/src/procedencia.test.ts`:
 
@@ -281,7 +281,7 @@ test('cada procedencia tiene una etiqueta que el usuario entiende', () => {
 })
 ```
 
-- [ ] **Step 2: Ejecutar el test y verificar que falla**
+- [x] **Step 2: Ejecutar el test y verificar que falla**
 
 ```bash
 cd /home/user/central/packages/module-seguros-portal && node --test src/procedencia.test.ts
@@ -289,7 +289,7 @@ cd /home/user/central/packages/module-seguros-portal && node --test src/proceden
 
 Esperado: FALLA con `Cannot find module './procedencia.ts'`.
 
-- [ ] **Step 3: Implementar el mínimo**
+- [x] **Step 3: Implementar el mínimo**
 
 Crear `packages/module-seguros-portal/src/procedencia.ts`:
 
@@ -340,7 +340,7 @@ export function sePuedeAfirmar(dato: {
 }
 ```
 
-- [ ] **Step 4: Añadir al índice del módulo**
+- [x] **Step 4: Añadir al índice del módulo**
 
 Reemplazar el contenido de `packages/module-seguros-portal/src/index.ts`:
 
@@ -351,7 +351,7 @@ export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar } from '.
 export type { Procedencia } from './procedencia.ts'
 ```
 
-- [ ] **Step 5: Ejecutar los tests y verificar que pasan**
+- [x] **Step 5: Ejecutar los tests y verificar que pasan**
 
 ```bash
 cd /home/user/central/packages/module-seguros-portal && node --test src/*.test.ts
@@ -359,7 +359,7 @@ cd /home/user/central/packages/module-seguros-portal && node --test src/*.test.t
 
 Esperado: `# pass 12`, `# fail 0`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /home/user/central
@@ -376,7 +376,7 @@ git commit -m "feat(seguros-portal): procedencia del dato en tres estados, nunca
 - Modify: `packages/module-seguros-portal/src/index.ts`
 - Test: `packages/module-seguros-portal/src/codigo.test.ts`
 
-- [ ] **Step 1: Escribir el test que falla**
+- [x] **Step 1: Escribir el test que falla**
 
 Crear `packages/module-seguros-portal/src/codigo.test.ts`:
 
@@ -443,7 +443,7 @@ test('se comprueba PRIMERO el bloqueo y luego el acierto', () => {
 })
 ```
 
-- [ ] **Step 2: Ejecutar el test y verificar que falla**
+- [x] **Step 2: Ejecutar el test y verificar que falla**
 
 ```bash
 cd /home/user/central/packages/module-seguros-portal && node --test src/codigo.test.ts
@@ -451,7 +451,7 @@ cd /home/user/central/packages/module-seguros-portal && node --test src/codigo.t
 
 Esperado: FALLA con `Cannot find module './codigo.ts'`.
 
-- [ ] **Step 3: Implementar el mínimo**
+- [x] **Step 3: Implementar el mínimo**
 
 Crear `packages/module-seguros-portal/src/codigo.ts`:
 
@@ -496,7 +496,7 @@ export function estadoCodigo(
 }
 ```
 
-- [ ] **Step 4: Añadir al índice del módulo**
+- [x] **Step 4: Añadir al índice del módulo**
 
 Reemplazar el contenido de `packages/module-seguros-portal/src/index.ts`:
 
@@ -509,7 +509,7 @@ export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, estadoCodigo } from './co
 export type { EstadoCodigo, CodigoGuardado } from './codigo.ts'
 ```
 
-- [ ] **Step 5: Ejecutar todos los tests del módulo**
+- [x] **Step 5: Ejecutar todos los tests del módulo**
 
 ```bash
 cd /home/user/central/packages/module-seguros-portal && node --test src/*.test.ts
@@ -517,7 +517,7 @@ cd /home/user/central/packages/module-seguros-portal && node --test src/*.test.t
 
 Esperado: `# pass 20`, `# fail 0`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /home/user/central
@@ -534,7 +534,7 @@ git commit -m "feat(seguros-portal): codigo de un solo uso con caducidad y tope 
 
 Solo las seis tablas que la Fase 1 usa. Las otras cinco del spec (`portal_autorizacion`, `portal_obligacion`, `portal_aviso`, `portal_vinculo`, `portal_revision`) llegan en sus fases: crear tablas que nadie escribe es deuda, no preparación.
 
-- [ ] **Step 1: Escribir el SQL**
+- [x] **Step 1: Escribir el SQL**
 
 Crear `apps/asegura-portal/prisma/sql/2026-09-01_portal_fase1.sql`:
 
@@ -627,13 +627,13 @@ CREATE TABLE seguros.portal_consentimiento (
 CREATE INDEX idx_portal_consentimiento_identidad ON seguros.portal_consentimiento (identidad_id, tipo, creado_en DESC);
 ```
 
-- [ ] **Step 2: Aplicar la migración**
+- [x] **Step 2: Aplicar la migración**
 
 Con la herramienta `mcp__Supabase__apply_migration` sobre el proyecto **`wswbehlcuxqxyinousql`** (la BD compartida de la casa, NO la de Manuel), `name: "portal_fase1"` y el contenido íntegro del fichero de arriba como `query`.
 
 ⚠️ Es idempotente **solo una vez**: `CREATE TYPE` no admite `IF NOT EXISTS`. Si hay que re-aplicarlo, borrar antes las seis tablas y los tres tipos.
 
-- [ ] **Step 3: Verificar que las seis tablas existen**
+- [x] **Step 3: Verificar que las seis tablas existen**
 
 ```sql
 SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -642,7 +642,7 @@ WHERE n.nspname = 'seguros' AND c.relkind = 'r' AND c.relname LIKE 'portal\_%';
 
 Esperado: `6`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd /home/user/central
@@ -664,7 +664,7 @@ git commit -m "feat(asegura-portal): tablas de la fase 1 en el schema seguros"
 - Create: `apps/asegura-portal/app/globals.css`
 - Modify: `.github/workflows/tests.yml`
 
-- [ ] **Step 1: Crear el `package.json`**
+- [x] **Step 1: Crear el `package.json`**
 
 ```json
 {
@@ -704,7 +704,7 @@ git commit -m "feat(asegura-portal): tablas de la fase 1 en el schema seguros"
 }
 ```
 
-- [ ] **Step 2: Crear el `vercel.json` con el `ignoreCommand` OBLIGATORIO**
+- [x] **Step 2: Crear el `vercel.json` con el `ignoreCommand` OBLIGATORIO**
 
 Sin esta clave, cada push reconstruye TODOS los proyectos del monorepo. Es la causa del incidente de ~600 US$ de julio.
 
@@ -718,7 +718,7 @@ Sin esta clave, cada push reconstruye TODOS los proyectos del monorepo. Es la ca
 }
 ```
 
-- [ ] **Step 3: Crear `tsconfig.json`, `next.config.ts` y el layout**
+- [x] **Step 3: Crear `tsconfig.json`, `next.config.ts` y el layout**
 
 `apps/asegura-portal/tsconfig.json`:
 
@@ -783,7 +783,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 }
 ```
 
-- [ ] **Step 4: Crear el `schema.prisma`**
+- [x] **Step 4: Crear el `schema.prisma`**
 
 `apps/asegura-portal/prisma/schema.prisma`:
 
@@ -894,7 +894,7 @@ model PortalConsentimiento {
 }
 ```
 
-- [ ] **Step 5: Añadir la app a la matriz de CI**
+- [x] **Step 5: Añadir la app a la matriz de CI**
 
 En `.github/workflows/tests.yml`, línea 62, sustituir:
 
@@ -910,7 +910,7 @@ por:
 
 Una app fuera de la matriz no la typechequea nadie: es lo que dejó 5 errores `TS5097` de `housesevillana` vivos 15 días.
 
-- [ ] **Step 6: Verificar que instala y typechequea**
+- [x] **Step 6: Verificar que instala y typechequea**
 
 ```bash
 cd /home/user/central && npx --yes pnpm@10.33.0 install --no-frozen-lockfile
@@ -919,7 +919,7 @@ cd apps/asegura-portal && npx --yes pnpm@10.33.0 exec prisma generate && npx --y
 
 Esperado: `prisma generate` termina OK y `tsc` no imprime errores.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd /home/user/central
@@ -936,7 +936,7 @@ git commit -m "feat(asegura-portal): esqueleto de la app, prisma y entrada en la
 - Create: `apps/asegura-portal/lib/canal-consola.ts`
 - Create: `apps/asegura-portal/lib/canal-email.ts`
 
-- [ ] **Step 1: Crear el puerto**
+- [x] **Step 1: Crear el puerto**
 
 `apps/asegura-portal/lib/canal.ts`:
 
@@ -973,7 +973,7 @@ export function obtenerCanal(tipo: TipoCanal): Canal | null {
 }
 ```
 
-- [ ] **Step 2: Crear el adaptador de consola**
+- [x] **Step 2: Crear el adaptador de consola**
 
 `apps/asegura-portal/lib/canal-consola.ts`:
 
@@ -995,7 +995,7 @@ export const canalConsola: Canal = {
 }
 ```
 
-- [ ] **Step 3: Crear el adaptador de email**
+- [x] **Step 3: Crear el adaptador de email**
 
 `apps/asegura-portal/lib/canal-email.ts`:
 
@@ -1038,7 +1038,7 @@ export const canalEmail: Canal = {
 }
 ```
 
-- [ ] **Step 4: Verificar que typechequea**
+- [x] **Step 4: Verificar que typechequea**
 
 ```bash
 cd /home/user/central/apps/asegura-portal && npx --yes pnpm@10.33.0 exec tsc --noEmit -p tsconfig.json
@@ -1046,7 +1046,7 @@ cd /home/user/central/apps/asegura-portal && npx --yes pnpm@10.33.0 exec tsc --n
 
 Esperado: sin errores.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /home/user/central
@@ -1063,7 +1063,7 @@ git commit -m "feat(asegura-portal): puerto de canal con adaptadores de email y 
 - Create: `apps/asegura-portal/lib/session.ts`
 - Create: `apps/asegura-portal/lib/db.ts`
 
-- [ ] **Step 1: Crear `lib/db.ts`**
+- [x] **Step 1: Crear `lib/db.ts`**
 
 ```ts
 import { PrismaClient } from '@prisma/client'
@@ -1075,7 +1075,7 @@ export const prisma = globalForPrisma.prismaPortal ?? new PrismaClient()
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prismaPortal = prisma
 ```
 
-- [ ] **Step 2: Crear `lib/auth.ts`**
+- [x] **Step 2: Crear `lib/auth.ts`**
 
 ```ts
 import {
@@ -1122,7 +1122,7 @@ export async function verificarSesion(token: string): Promise<{ identidadId: str
 }
 ```
 
-- [ ] **Step 3: Crear `lib/session.ts`**
+- [x] **Step 3: Crear `lib/session.ts`**
 
 ```ts
 import { cookies } from 'next/headers'
@@ -1148,7 +1148,7 @@ export async function requireIdentidad() {
 }
 ```
 
-- [ ] **Step 4: Verificar typecheck y el guardián de secretos**
+- [x] **Step 4: Verificar typecheck y el guardián de secretos**
 
 ```bash
 cd /home/user/central/apps/asegura-portal && npx --yes pnpm@10.33.0 exec tsc --noEmit -p tsconfig.json
@@ -1157,7 +1157,7 @@ cd /home/user/central && npx --yes pnpm@10.33.0 run test:guardia
 
 Esperado: `tsc` sin errores; el guardián en verde (`# fail 0`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /home/user/central
@@ -1174,7 +1174,7 @@ git commit -m "feat(asegura-portal): sesion propia del portal con secreto separa
 - Create: `apps/asegura-portal/app/api/acceso/verificar/route.ts`
 - Create: `apps/asegura-portal/app/page.tsx`
 
-- [ ] **Step 1: Crear la ruta que pide el código**
+- [x] **Step 1: Crear la ruta que pide el código**
 
 `apps/asegura-portal/app/api/acceso/solicitar/route.ts`:
 
@@ -1218,7 +1218,7 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 2: Crear la ruta que canjea el código**
+- [x] **Step 2: Crear la ruta que canjea el código**
 
 `apps/asegura-portal/app/api/acceso/verificar/route.ts`:
 
@@ -1286,7 +1286,7 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 3: Crear la página de entrada**
+- [x] **Step 3: Crear la página de entrada**
 
 `apps/asegura-portal/app/page.tsx`:
 
@@ -1374,7 +1374,7 @@ function textoError(codigo: string): string {
 }
 ```
 
-- [ ] **Step 4: Verificar typecheck**
+- [x] **Step 4: Verificar typecheck**
 
 ```bash
 cd /home/user/central/apps/asegura-portal && npx --yes pnpm@10.33.0 exec tsc --noEmit -p tsconfig.json
@@ -1382,7 +1382,7 @@ cd /home/user/central/apps/asegura-portal && npx --yes pnpm@10.33.0 exec tsc --n
 
 Esperado: sin errores.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /home/user/central
@@ -1399,7 +1399,7 @@ git commit -m "feat(asegura-portal): entrada por codigo de un solo uso"
 
 Replica el pipeline ya probado de `apps/sivra/lib/agente-facturas/extraer.ts`: PDF → texto con `pdf-parse` → IA; imagen → base64 → visión.
 
-- [ ] **Step 1: Crear el extractor**
+- [x] **Step 1: Crear el extractor**
 
 `apps/asegura-portal/lib/extraer-poliza.ts`:
 
@@ -1489,7 +1489,7 @@ function parsear(salida: string): PolizaExtraida {
 }
 ```
 
-- [ ] **Step 2: Verificar typecheck**
+- [x] **Step 2: Verificar typecheck**
 
 ```bash
 cd /home/user/central/apps/asegura-portal && npx --yes pnpm@10.33.0 exec tsc --noEmit -p tsconfig.json
@@ -1499,7 +1499,7 @@ Esperado: sin errores. Las firmas de `aiComplete` y `openrouterVision` están co
 código real (ver el aviso del Step 1); si `tsc` protesta, es que el paquete cambió — mirar
 `packages/core-ai/src/index.ts`, nunca inventar la llamada.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd /home/user/central
@@ -1517,7 +1517,7 @@ git commit -m "feat(asegura-portal): extraccion de poliza desde PDF o foto"
 - Create: `apps/asegura-portal/app/(portal)/boveda/page.tsx`
 - Create: `apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx`
 
-- [ ] **Step 1: Crear `lib/dinero.ts`**
+- [x] **Step 1: Crear `lib/dinero.ts`**
 
 Regla global de la casa: `2.162,49€` — miles con punto, decimales con coma, € DETRÁS. Espejo exacto
 de `apps/asegura/lib/dinero.ts`.
@@ -1539,7 +1539,7 @@ export function eur(n: number | null | undefined): string {
 }
 ```
 
-- [ ] **Step 2: Crear la ruta de alta**
+- [x] **Step 2: Crear la ruta de alta**
 
 `apps/asegura-portal/app/api/polizas/route.ts`:
 
@@ -1589,7 +1589,7 @@ export async function POST(req: Request) {
 }
 ```
 
-- [ ] **Step 3: Crear el componente de subida**
+- [x] **Step 3: Crear el componente de subida**
 
 `apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx`:
 
@@ -1675,7 +1675,7 @@ export function SubirPoliza() {
 const NO_LEIDO = <span style={{ color: '#6b7280' }}>No lo hemos encontrado en el documento</span>
 ```
 
-- [ ] **Step 4: Crear la página de la bóveda**
+- [x] **Step 4: Crear la página de la bóveda**
 
 `apps/asegura-portal/app/(portal)/boveda/page.tsx`:
 
@@ -1732,7 +1732,7 @@ export default async function Boveda() {
 }
 ```
 
-- [ ] **Step 5: Verificar typecheck y lint**
+- [x] **Step 5: Verificar typecheck y lint**
 
 ```bash
 cd /home/user/central/apps/asegura-portal
@@ -1742,7 +1742,7 @@ npx --yes pnpm@10.33.0 run lint
 
 Esperado: `tsc` sin errores; lint sin errores (los *warnings* no bloquean).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /home/user/central
@@ -1766,7 +1766,7 @@ hay que resolver es *de quién es esta sesión*. Por eso la puerta se llama `lib
 vigila eso. Cuando entre la Fase 4 (vinculación con CIMA), `lib/acceso.ts` nace encima y **el
 guardián pasa a exigirlo a él**: es un renombrado del cepo, no un cepo nuevo.
 
-- [ ] **Step 1: Escribir el guardián**
+- [x] **Step 1: Escribir el guardián**
 
 ```ts
 import test from 'node:test'
@@ -1808,7 +1808,7 @@ test('ningun fichero del portal consulta datos de identidad sin pasar por lib/se
 })
 ```
 
-- [ ] **Step 2: Comprobar que el cepo salta de verdad**
+- [x] **Step 2: Comprobar que el cepo salta de verdad**
 
 Un guardián que nunca se probó fallando no es un guardián. Crear un infractor temporal:
 
@@ -1827,7 +1827,7 @@ node --test test/regression-portal-aislamiento.test.ts
 
 Esperado: **FALLA**, nombrando `apps/asegura-portal/app/api/_infractor/route.ts`.
 
-- [ ] **Step 3: Retirar el infractor y comprobar que vuelve a pasar**
+- [x] **Step 3: Retirar el infractor y comprobar que vuelve a pasar**
 
 ```bash
 cd /home/user/central
@@ -1838,7 +1838,7 @@ node --test test/regression-portal-aislamiento.test.ts
 
 Esperado: `# pass 1`, `# fail 0`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd /home/user/central
@@ -1850,7 +1850,7 @@ git commit -m "test(asegura-portal): guardian de aislamiento por identidad, veri
 
 ## Task 12: Suite completa y PR
 
-- [ ] **Step 1: Ejecutar los 12 checks requeridos en local**
+- [x] **Step 1: Ejecutar los 12 checks requeridos en local**
 
 ```bash
 cd /home/user/central
@@ -1861,7 +1861,7 @@ cd apps/ia-rest && npx --yes pnpm@10.33.0 exec tsx scripts/qa-check.ts && npx --
 
 Esperado: `pnpm test` con `# fail 0`; QA «sin problemas»; lint con 0 errores.
 
-- [ ] **Step 2: Typecheck de las 12 apps**
+- [x] **Step 2: Typecheck de las 12 apps**
 
 ```bash
 cd /home/user/central
@@ -1874,7 +1874,7 @@ done
 
 Esperado: ningún `FALLA`.
 
-- [ ] **Step 3: Anotar la memoria**
+- [x] **Step 3: Anotar la memoria**
 
 Añadir esta entrada **arriba del todo** en `docs/CONTEXTO-SESIONES.md` (máx ~8 líneas, fecha en la
 primera). ⚠️ La cabecera va con `### ` o `- **`: son los ÚNICOS formatos que `scripts/rotar-memoria.mjs`
@@ -1891,7 +1891,7 @@ reconoce como entrada — una cabecera `## ` se funde con la anterior y se archi
 - Falta infraestructura de Alberto: proyecto Vercel, rol `prisma_asegura_portal` con contraseña, envs.
 ```
 
-- [ ] **Step 4: Empujar y abrir el PR**
+- [x] **Step 4: Empujar y abrir el PR**
 
 ```bash
 cd /home/user/central

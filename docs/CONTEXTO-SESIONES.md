@@ -32,6 +32,18 @@
 
 ---
 
+### 🧭 (01/09/2026) Portal de Grupo Asegura — Fase 1 en pie (PR #1965)
+- App nueva `apps/asegura-portal` (Next.js, rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`
+  (puro: niveles de acceso, procedencia en tres estados, código de un solo uso). 6 tablas `portal_*`
+  en el schema `seguros` — **el SQL NO está aplicado todavía**; las otras 5 del spec llegan con sus fases.
+- **El canal es un PUERTO**: la WABA no existe aún, así que en Fase 1 se enchufan email y consola;
+  WhatsApp entra añadiendo un fichero. `canal_no_disponible` (503) ≠ `envio_fallido` (502).
+- 🚨 Los 3 ENUM del DDL estaban tipados `String` en Prisma: typecheckea y **revienta en el primer
+  INSERT** (42804). Arreglado declarándolos con `@@map` — no hay migración, la BD ya era así.
+- Guardián `test/regression-portal-aislamiento.test.ts` (importar `lib/session` **y** nombrar
+  `identidadId`), verificado con un infractor real en sus dos variantes.
+- Falta de Alberto: proyecto Vercel, rol `prisma_asegura_portal` con contraseña, envs, WABA.
+
 ### 📜 (01/09/2026) Codeoscopic: el Claude de Manuel CONTESTÓ — contrato de la API completo
 - Respuesta transcrita en **`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`**; resumen operativo en
   `agente-correduria/references/sector.md` §4. Resuelve el host base (**sandbox

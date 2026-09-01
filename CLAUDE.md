@@ -46,6 +46,33 @@
   CONSERVA el lote, etiqueta por canal (con/sin lote). Compone `@central/module-pesca`. BD compartida (auth
   propio, cookie `mariscos_session`). Ver `apps/mariscos/CLAUDE.md`. **Pendiente para darla por viva:** proyecto
   Vercel, ejecutar su SQL en Supabase (preview→prod), sembrar cuenta real de Mariscos González.
+- **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto). **Esqueleto
+  desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
+  manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
+  🚨 **Y OJO CON LA CIFRA (medido 01/09/2026): 32.600 fichas ≠ 32.600 clientes.** La **cartera VIVA son
+  ~80 clientes / 109 pólizas** — las que entran por CIMA, identificables por `polizas.import_ref IS NULL`.
+  Las otras 28.729 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
+  jun/2026, vencimientos 2013-2018) y **ninguna** tiene vencimiento en los últimos 18 meses. Regla de Alberto:
+  **lo que entra por CIMA es cliente actual; el resto son leads** (32.520). Detalle en
+  `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
+  🚨 **La cartera NO está migrada:** las 32.600 fichas / 28.843 pólizas siguen en el Supabase de **Manuel
+  Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
+  CIMA/EIAC**. ⚠️ **Eso NO la convierte en una migración en caliente** (se creyó así hasta el 26/08/2026):
+  el CRM **todavía no está operativo** —no hay nadie usándolo— y **los ficheros de EIAC se pueden
+  consultar y descargar cuando se quiera**, así que una pausa del cron no deja sin servicio a nadie ni
+  pierde datos: se re-lanza el pull y entra lo pendiente. El traspaso **no necesita ventana ni fecha
+  acordada**; va paso a paso, al ritmo de Manuel. `schema seguros` vacío ≠ la
+  correduría no tiene datos: el dashboard lo dice y no pinta KPIs a 0. ⚠️ Las **86 políticas RLS** de ese CRM
+  se resuelven TODAS por `auth.uid()` de Supabase Auth, así que al re-plataformar la auth el aislamiento pasa
+  a ser cosa del código (con BYPASSRLS el fallo sería «se ve todo sin fallar»). Plan, mensaje a Manuel y pasos
+  del traspaso en **`docs/TRASPASO-CORREDURIA.md`**. Ver `apps/asegura/CLAUDE.md`.
+- **`apps/asegura-portal`** — **portal del CLIENTE** de Grupo Asegura (Fase 1, 01/09/2026). App aparte
+  de `apps/asegura` a propósito: aquella es el panel del CORREDOR, esta la ve el asegurado, y por eso
+  usa **rol propio `prisma_asegura_portal` SIN BYPASSRLS** y su propio secreto de sesión
+  (`ASEGURA_PORTAL_SESSION_SECRET`). Compone `@central/module-seguros-portal`. Identidad por código
+  de un solo uso sobre un **puerto de canal** (email y consola hoy; WhatsApp cuando exista la WABA):
+  `canal_no_disponible` (503) NO es «el envío falló» (502). Tablas `portal_*` en el schema `seguros`.
+  El aislamiento **no lo da RLS sino el código**, y lo vigila `test/regression-portal-aislamiento.test.ts`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
@@ -73,26 +100,6 @@ corriente; los meses cerrados se rotan a `docs/memoria/AAAA-MM.md` (`scripts/rot
 lo dispara la auditoría a primeros de mes). Historia antigua → leer `docs/memoria/`.
 
 Salvaguardas para no perder información:
-- **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto). **Esqueleto
-  desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
-  manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
-  🚨 **Y OJO CON LA CIFRA (medido 01/09/2026): 32.600 fichas ≠ 32.600 clientes.** La **cartera VIVA son
-  ~80 clientes / 109 pólizas** — las que entran por CIMA, identificables por `polizas.import_ref IS NULL`.
-  Las otras 28.729 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
-  jun/2026, vencimientos 2013-2018) y **ninguna** tiene vencimiento en los últimos 18 meses. Regla de Alberto:
-  **lo que entra por CIMA es cliente actual; el resto son leads** (32.520). Detalle en
-  `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
-  🚨 **La cartera NO está migrada:** las 32.600 fichas / 28.843 pólizas siguen en el Supabase de **Manuel
-  Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
-  CIMA/EIAC**. ⚠️ **Eso NO la convierte en una migración en caliente** (se creyó así hasta el 26/08/2026):
-  el CRM **todavía no está operativo** —no hay nadie usándolo— y **los ficheros de EIAC se pueden
-  consultar y descargar cuando se quiera**, así que una pausa del cron no deja sin servicio a nadie ni
-  pierde datos: se re-lanza el pull y entra lo pendiente. El traspaso **no necesita ventana ni fecha
-  acordada**; va paso a paso, al ritmo de Manuel. `schema seguros` vacío ≠ la
-  correduría no tiene datos: el dashboard lo dice y no pinta KPIs a 0. ⚠️ Las **86 políticas RLS** de ese CRM
-  se resuelven TODAS por `auth.uid()` de Supabase Auth, así que al re-plataformar la auth el aislamiento pasa
-  a ser cosa del código (con BYPASSRLS el fallo sería «se ve todo sin fallar»). Plan, mensaje a Manuel y pasos
-  del traspaso en **`docs/TRASPASO-CORREDURIA.md`**. Ver `apps/asegura/CLAUDE.md`.
 - **Guardián de cierre** (`persist-memoria.sh`): si la sesión hizo commits que tocan algo
   distinto de la memoria pero NO anotó `CONTEXTO-SESIONES.md`, el hook `Stop` bloquea UNA
   vez y pide anotarlo antes de cerrar. (Se apoya en el SHA base que graba
