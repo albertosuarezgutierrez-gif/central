@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-08-31T08:06:49Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T08:42:04Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 11 apps · 36 packages · 23 capacidades · 37 skills · 1201 rutas API.
+**Resumen:** 11 apps · 38 packages · 23 capacidades · 38 skills · 1208 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -18,10 +18,10 @@
 - **Tablas (3):** alquiler_alquileres, alquiler_lineas, alquiler_materiales
 - **Rutas API:** 4
 ### asegura
-- **Módulos que usa:** core-identity
+- **Módulos que usa:** core-identity, module-seguros, module-seguros-pii
 - **Capacidades:** —
 - **Tablas (0):** —
-- **Rutas API:** 2
+- **Rutas API:** 4
 ### housesevillana
 - **Módulos que usa:** —
 - **Capacidades:** —
@@ -43,10 +43,10 @@
 - **Tablas (2):** mariscos_envasados, mariscos_partidas
 - **Rutas API:** 4
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-ses, module-subastas, module-trading
+- **Módulos que usa:** core-ai, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (121):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor, cuentas_bancarias…
-- **Rutas API:** 317
+- **Tablas (127):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor, correo_reglas, correo_triaje, cron_dispatch_cursor…
+- **Rutas API:** 322
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -157,6 +157,12 @@
 - **module-rrhh** (module) → `@central/module-rrhh`
   - Lo usan: ialimp, rrhh
   - Depende de: core-firma, module-documental
+- **module-seguros** (module) → `@central/module-seguros`
+  - Lo usan: asegura, plataforma
+  - Depende de: —
+- **module-seguros-pii** (module) → `@central/module-seguros-pii`
+  - Lo usan: asegura
+  - Depende de: —
 - **module-ses** (module) → `@central/module-ses`
   - Lo usan: plataforma
   - Depende de: —
@@ -175,11 +181,12 @@
 
 ## Skills del proyecto
 - **adobe-diseno** — >
+- **agente-correduria** — >
 - **agentes-entrenador** — Agente PROGRAMADO semanal (domingo) que mejora los prompts de los agentes por RENDIMIENTO y calidad transversal. NO vigila frescura factual (eso es /auditoria-diaria). Cambios de comportamiento SIEMPRE por PR draft + Telegram; nunca se auto-modifica. Úsala si Alberto pide "revisa/mejora los prompts de los agentes" o al disparo semanal. Sin secretos.
 - **alquiler-maestro** — >
 - **auditoria-central** — Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte "¿se ha roto algo?", "haz una auditoría", "revisa que todo está bien" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP).
 - **brainstorming** — "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
-- **buscador-ia** — Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide "revisa las novedades de IA / si hay una IA mejor" o al disparo semanal. Sin secretos.
+- **buscador-ia** — Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (OpenRouter incluido: qué sirve DE VERDAD cada slug y a qué precio, más NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide "revisa las novedades de IA / si hay una IA mejor" o al disparo semanal. Sin secretos.
 - **central-maestro** — >
 - **code-map** — Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico.
 - **conectores-vigia** — Agente PROGRAMADO mensual (día 5) que vigila los conectores MCP — cruza el registro contra docs/HUECOS-ABIERTOS.md, hace de canario sobre los conectores de los que dependen las rutinas vivas, y audita la higiene de los ya conectados. Estado en docs/VIGIA-CONECTORES.md; Telegram + PR draft. Úsala si Alberto pide "revisa si hay conectores nuevos que encajen" o al disparo mensual. Sin secretos.
@@ -238,14 +245,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- Pendiente de Alberto:
-- 📦 Cartera paper ahora en dólares de verdad:
-- Importa por el pendiente de apagar Chekin:
-- Su aviso de alcance era falso por defecto:
-- PR #1826
-- NULL = «fila anterior a la columna»
-- Baseline del serrucho, MEDIDA
-- Vía elegida (v5):
-- Mensaje enviado a Manuel
-- Adelanto sin él — RLS y auth eran UNA decisión:
+- #1924 MERGEADO
+- Vencimientos ya funcionando
+- Migrar la cartera al schema `seguros`: NO todavía
+- House Sevillana ACTIVADA
+- PR #1906 — el mensaje manda el PIN de ESA reserva, no el maestro.
+- PR #1908 — entrada ESTRICTA / salida FLEXIBLE
+- Pendiente:
+- Verificado contra Smoobu (por `pg_net`, sin sacar la key de `pms_connections`):
+- AGODA sí tiene canal
+- PR #1902 MERGEADO
 
