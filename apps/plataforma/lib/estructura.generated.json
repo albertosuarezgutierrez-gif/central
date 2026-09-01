@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T14:50:20Z",
+  "generadoEn": "2026-09-01T15:24:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4983,6 +4983,30 @@
   ],
   "novedades": [
     {
+      "titulo": "SMS con enlace `wa.me` para que escriba el cliente primero y salga gratis: descartado.",
+      "fecha": ""
+    },
+    {
+      "titulo": "Campaña a los 32.520 leads: descartada.",
+      "fecha": ""
+    },
+    {
+      "titulo": "Sí al inbound de cualquiera",
+      "fecha": ""
+    },
+    {
+      "titulo": "Decisión de orden: WhatsApp entra como CANAL (OTP + avisos), NO como agente conversacional.",
+      "fecha": ""
+    },
+    {
+      "titulo": "Cloud API directa de Meta, no 360dialog",
+      "fecha": ""
+    },
+    {
+      "titulo": "PENDIENTE que no depende de nadie y es el único camino crítico: dar de alta la WABA",
+      "fecha": ""
+    },
+    {
       "titulo": "PENDIENTE (nuevo):",
       "fecha": ""
     },
@@ -5016,30 +5040,6 @@
     },
     {
       "titulo": "De Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Corregida deriva documental:",
-      "fecha": ""
-    },
-    {
-      "titulo": "#1946",
-      "fecha": ""
-    },
-    {
-      "titulo": "El canal de OTP es un PUERTO, no una llamada a WhatsApp",
-      "fecha": ""
-    },
-    {
-      "titulo": "Cola de PRs vaciada a petición de Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente de Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "#1938 MERGEADO",
       "fecha": ""
     }
   ],

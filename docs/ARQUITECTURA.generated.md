@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T14:50:20Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T15:24:06Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -245,14 +245,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- SMS con enlace `wa.me` para que escriba el cliente primero y salga gratis: descartado.
+- Campaña a los 32.520 leads: descartada.
+- Sí al inbound de cualquiera
+- Decisión de orden: WhatsApp entra como CANAL (OTP + avisos), NO como agente conversacional.
+- Cloud API directa de Meta, no 360dialog
+- PENDIENTE que no depende de nadie y es el único camino crítico: dar de alta la WABA
 - PENDIENTE (nuevo):
 - Quedan 3 peticiones fuera del repo:
 - Son DOS averías:
 - Pendiente:
-- Causa raíz:
-- Por qué duró dos meses:
-- Hecho (nuestro lado):
-- De Manuel (su repo, no el nuestro):
-- De Alberto:
-- Corregida deriva documental:
 
