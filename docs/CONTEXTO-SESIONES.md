@@ -46,6 +46,9 @@
   `/api/operador/vencimientos` → `interpretarObjeto` en plataforma (campo opcional: una versión vieja
   del puerto da `null` = «aún no llega», distinto de «no informado») → columna en `/correduria` y línea
   del Telegram de renovaciones. Skill `agente-correduria` actualizada (SKILL §2 + sector §5).
+- **#1938 MERGEADO** (`1ba3c254`, 12 requeridos verdes). El CI volvió a no arrancar en draft: ni abrir
+  el PR ni des-draftearlo dispararon nada; lo desatascó **mergear `main` en la rama** (paso 2 del orden
+  de `CLAUDE.md`), 5ª medición de esa sección — anotada ahí con la secuencia completa.
 
 ### 📅 (01/09/2026) mercado-booking: objetivo jul/ago-2027 cumplido — falta quitar la prioridad del prompt
 - Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`) de la skill `mercado-booking`: 238 comps
