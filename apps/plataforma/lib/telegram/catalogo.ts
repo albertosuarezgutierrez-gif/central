@@ -351,6 +351,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al contratarse',
   },
   {
+    id: 'pisos.orden-limpieza', categoria: 'pisos',
+    titulo: 'Orden a la limpieza',
+    que: 'Botón para mandar una orden (colocar cuna…) y aviso si el email no sale.',
+    cuando: 'Al aprobar un mensaje que habla de un extra',
+  },
+  {
     id: 'pisos.limpieza-parte', categoria: 'pisos',
     titulo: 'Parte de limpieza',
     que: 'El parte que deja la limpiadora, con su foto si la ha subido.',

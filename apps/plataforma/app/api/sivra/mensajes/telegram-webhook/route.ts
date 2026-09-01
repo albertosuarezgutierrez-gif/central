@@ -4,8 +4,11 @@ import { Prisma } from '@prisma/client'
 import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { detectarExtra, mencionaImporte } from '@/lib/sivra/agente-huesped/extras'
-import { extraDeCatalogo } from '@/lib/sivra/extras/catalogo'
+import { extraDeCatalogo, nombreEnIdioma } from '@/lib/sivra/extras/catalogo'
 import { registrarOferta } from '@/lib/sivra/extras/reserva'
+import { enviarOrdenLimpieza, ordenYaEnviada } from '@/lib/sivra/extras/orden-limpieza'
+import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
+import { tgAvisoBotones } from '@/lib/telegram'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
 import { resolverHecho } from '@/lib/sivra/agente-huesped/hechos'
@@ -29,6 +32,57 @@ const PROP_NOMBRES: Record<string, string> = {
   prop_busto_reform: 'Busto Reform',
   prop_luxury_busto: 'Luxury Busto',
   prop_duplex_center: 'Dúplex Center',
+}
+
+
+// ── 🧹 ORDEN A LA LIMPIEZA ────────────────────────────────────────────────────
+// Un extra pagado FUERA del raíl de Stripe (Bizum, efectivo) no dispara nada: el email a la limpieza
+// solo lo manda el webhook de cobro. Este botón cierra ese hueco SIN inventarse un cobro — manda la
+// orden y punto, que es como lo pidió Alberto el 01/09/2026 («no quede fija, pagado ni confirmar ni
+// nada, sino simplemente como una orden»).
+
+/** Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta. */
+async function ofrecerOrdenLimpieza(bookingId: string, codigo: string, nombre: string): Promise<void> {
+  // `null` = no se ha podido comprobar si ya se pidió. Se ofrece IGUAL y se dice: callarse por un
+  // fallo de lectura dejaría la cuna sin montar, que es el desenlace caro de los dos.
+  const ya = await ordenYaEnviada(bookingId, codigo)
+  if (ya === true) return
+  const aviso = ya === null ? '\n\n<i>⚠️ No he podido comprobar si ya se pidió — míralo antes de darle.</i>' : ''
+  await tgAvisoBotones('pisos.orden-limpieza',
+    `🧹 <b>¿Mando la orden a la limpieza?</b>\n` +
+    `${escapeHtml(nombre)} — reserva ${escapeHtml(bookingId)}${aviso}`,
+    [[
+      { texto: '🧹 Mandar orden', callback: `hsp_clean:${bookingId}:${codigo}` },
+      { texto: '🚫 No hace falta', callback: `hsp_noclean:${bookingId}` },
+    ]],
+  ).catch(() => {})
+}
+
+/** Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón. */
+async function mandarOrdenLimpieza(bookingId: string, codigo: string): Promise<{ ok: boolean; texto: string }> {
+  const ctx = await construirContexto(bookingId, 'es').catch(() => null)
+  // Sin contexto no sabemos ni el piso ni el día de entrada. Mandar un email a medias a una persona
+  // que va a actuar sobre un piso es peor que no mandarlo: se dice y lo manda Alberto a mano.
+  if (!ctx) {
+    return { ok: false, texto: '🛑 <b>No he podido leer la reserva</b> (Smoobu no responde), así que no mando una orden a medias. Escríbeles tú y lo miramos.' }
+  }
+  const cat = await extraDeCatalogo(codigo, ctx.propertyId)
+  const nombre = cat ? nombreEnIdioma(cat, 'es') : codigo
+  const instruccion = cat?.instruccion_limpieza || `Preparar «${nombre}» para esta estancia.`
+  const r = await enviarOrdenLimpieza({
+    bookingId,
+    propertyId: ctx.propertyId,
+    codigo,
+    piso: ctx.property,
+    direccion: ctx.direccion,
+    checkIn: ctx.checkIn,
+    titulo: nombre,
+    instruccion,
+    huesped: ctx.guestName,
+  })
+  return r.ok
+    ? { ok: true, texto: `🧹 <b>Orden enviada a la limpieza</b>\n${escapeHtml(ctx.property)} · entrada ${escapeHtml(ctx.checkIn)}\n${escapeHtml(instruccion)}` }
+    : { ok: false, texto: `🛑 <b>La orden NO ha salido</b>: ${escapeHtml(r.error || 'error desconocido')}\nAvísales tú y luego lo miramos.` }
 }
 
 async function cargarCtxRedaccion(bookingId: string, pend: Pendiente): Promise<ContextoRedaccion> {
@@ -729,6 +783,23 @@ export async function POST(req: NextRequest) {
     }
 
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)
+
+    // 🧹 La orden a la limpieza NO depende del borrador pendiente: se ofrece JUSTO DESPUÉS de darle a
+    // ✅ Enviar, que es cuando el pendiente ya se ha borrado. Por eso va antes de buscarlo.
+    if (action === 'clean' || action === 'noclean') {
+      const midOrden = cb.message?.message_id
+      if (action === 'noclean') {
+        await tgAnswerCallback(cb.id, 'Sin orden')
+        if (midOrden) await tgEditMessage(midOrden, '🚫 <i>No se ha pedido nada a la limpieza.</i>').catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, 'Mandando la orden…')
+      const res = await mandarOrdenLimpieza(args[0] || '', args[1] || '')
+      if (midOrden) await tgEditMessage(midOrden, res.texto).catch(() => {})
+      else await tgSend(res.texto).catch(() => {})
+      return NextResponse.json({ ok: res.ok })
+    }
+
     const bookingId = args[0]
     const pend = bookingId ? await getPendiente(bookingId) : null
     if (!pend) {
@@ -776,6 +847,12 @@ export async function POST(req: NextRequest) {
             codigo: codigoExtra,
             precioCents: cat.precio_cents,
           })
+        }
+        // 🧹 Y aparte del cobro, la ORDEN. El extra puede pagarse por Bizum o regalarse: el email a la
+        // limpieza no puede depender de que Stripe vea el dinero. Solo se OFRECE el botón (un mensaje
+        // que hable de la cuna no significa que haya que montarla), y no se repite si ya se mandó.
+        if (cat?.avisa_limpieza) {
+          await ofrecerOrdenLimpieza(bookingId, codigoExtra, nombreEnIdioma(cat, 'es'))
         }
       }
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})

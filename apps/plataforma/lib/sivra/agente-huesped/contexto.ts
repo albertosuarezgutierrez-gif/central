@@ -6,6 +6,7 @@ import { getGuiaPiso } from './guia'
 import { htmlATexto, seccionesVigentes, seccionesATexto } from './guest-app'
 import { dedupHilo } from './hilo'
 import { listarHechos } from './hechos'
+import { listarOrdenes } from '../extras/orden-limpieza'
 import { avisarConflictoGuia } from './conflictos'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, restarDias, entradaMismoDiaLibre, sumarDias } from './disponibilidad'
@@ -43,6 +44,10 @@ export type Contexto = {
   guiaCargada: boolean    // false = NO SE PUDO LEER. NO significa "no hay guía" (CLAUDE.md, tres estados)
   guiaAccesoOculto: boolean  // hay secciones de llaves/códigos pero aún no toca (faltan >7 días)
   hechos: string[]        // hechos permanentes del piso que enseñó Alberto (van SIEMPRE al prompt)
+  // Órdenes YA dadas a la limpieza para ESTA reserva (colocar cuna…). `null` = NO SE PUDO LEER, que
+  // no es lo mismo que `[]` = leído y no hay ninguna: sin esta distinción el agente diría «no consta
+  // ninguna preparación» con la orden mandada, que es afirmar una ausencia sin haberla comprobado.
+  ordenesLimpieza: string[] | null
   historial: MensajeHist[]
   enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
@@ -126,6 +131,13 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   }
 
   const hechos = (await listarHechos(propertyId)).map(h => h.hecho)
+
+  // Solo las ENVIADAS: una orden que quedó en error no está en manos de nadie, y contársela al
+  // huésped como hecha sería prometerle una cuna que no va a encontrar.
+  const ordenesFilas = await listarOrdenes(bookingId)
+  const ordenesLimpieza = ordenesFilas === null
+    ? null
+    : ordenesFilas.filter(o => o.enviado_at !== null).map(o => o.instruccion)
 
   const aprendizajes = await prisma.$queryRaw<Aprendizaje[]>(Prisma.sql`
     SELECT categoria, pregunta_norm, respuesta_final FROM mensajes_aprendizaje
@@ -216,6 +228,6 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     lat: apt?.location?.latitude ?? null, lng: apt?.location?.longitude ?? null,
     zona: [apt?.location?.city, apt?.location?.country].filter(Boolean).join(', ') || 'Sevilla, España',
     direccion, ficha, guia, guiaCargada: guiaPiso.cargada, guiaAccesoOculto: vigentes.accesoOculto,
-    hechos, historial, enviados, aprendizajes,
+    hechos, ordenesLimpieza, historial, enviados, aprendizajes,
   }
 }
