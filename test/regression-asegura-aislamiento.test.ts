@@ -75,7 +75,17 @@ function ficherosDeAsegura(): string[] {
     .filter(Boolean)
     .filter((f) => /\.(ts|tsx)$/.test(f))
     .filter((f) => !f.endsWith('tenant.ts') && !f.endsWith('tenant-ambito.ts'))
-    // `estado-migracion.ts` consulta `information_schema`, no datos de nadie.
+    // 🚨 `estado-migracion.ts` está exento, y el porqué CAMBIÓ el 01/09/2026:
+    // la exención se escribió cuando solo consultaba `information_schema`, pero
+    // desde entonces cuenta también `seguros.corredurias` — y el guardián lo
+    // cazó en CI (head 063f6596a) mientras el comentario seguía diciendo que
+    // «no toca datos de nadie». La razón REAL por la que sigue exento es otra:
+    // esa consulta existe justamente para AVERIGUAR si hay corredurías, así que
+    // no puede filtrar por una que todavía no se sabe si existe. Es un conteo
+    // global, sin PII y sin filas — el único punto del código donde el ámbito
+    // no aplica porque el ámbito es lo que se está resolviendo.
+    // Si algún día este fichero lee otra tabla de `seguros`, esta exención deja
+    // de valer: quítala y hazlo pasar por `lib/tenant`.
     .filter((f) => !f.endsWith('estado-migracion.ts'))
 }
 
