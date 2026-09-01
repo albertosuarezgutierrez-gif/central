@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T18:43:53Z",
-  "sha": "59774ac2988beb8952fed9ff395b1ebf54964f24",
+  "generadoEn": "2026-09-01T20:00:01Z",
+  "sha": "1530127c85833a2e2f65d7a3182069a5d7b902b2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -51030,7 +51030,7 @@
           "exportada": false,
           "params": "ts: string",
           "retorno": null,
-          "linea": 42
+          "linea": 56
         },
         {
           "nombre": "fmtFull",
@@ -51038,7 +51038,7 @@
           "exportada": false,
           "params": "ts: string",
           "retorno": null,
-          "linea": 49
+          "linea": 63
         },
         {
           "nombre": "useResizable",
@@ -51046,7 +51046,7 @@
           "exportada": false,
           "params": "defaultWidth: number, min: number, max: number",
           "retorno": null,
-          "linea": 53
+          "linea": 67
         },
         {
           "nombre": "useResizableV",
@@ -51054,7 +51054,7 @@
           "exportada": false,
           "params": "defaultHeight: number, min: number, max: number",
           "retorno": null,
-          "linea": 86
+          "linea": 100
         },
         {
           "nombre": "Spinner",
@@ -51062,7 +51062,7 @@
           "exportada": false,
           "params": "{ size = 20 }: { size?: number }",
           "retorno": null,
-          "linea": 120
+          "linea": 134
         },
         {
           "nombre": "MensajesPage",
@@ -51070,12 +51070,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 130
+          "linea": 144
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "959ba60ad9c0"
+      "hash": "982f8ef7b437"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/mercado/page.tsx",
@@ -59422,7 +59422,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "GET",
@@ -59430,7 +59430,7 @@
           "exportada": true,
           "params": "_req: NextRequest, context: { params: Promise<{ bookingId: string }> }",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "PATCH",
@@ -59438,7 +59438,7 @@
           "exportada": true,
           "params": "req: NextRequest, context: { params: Promise<{ bookingId: string }> }",
           "retorno": null,
-          "linea": 59
+          "linea": 71
         }
       ],
       "tablas": [
@@ -59447,7 +59447,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mensajes/[bookingId]",
-      "hash": "8b1fff1d7062"
+      "hash": "5610b0f2f8f8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/auto-reply/route.ts",
@@ -59792,12 +59792,30 @@
       ],
       "funciones": [
         {
+          "nombre": "ofrecerOrdenLimpieza",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string, codigo: string, nombre: string",
+          "retorno": "Promise<void>",
+          "linea": 45,
+          "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
+        },
+        {
+          "nombre": "mandarOrdenLimpieza",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string, codigo: string",
+          "retorno": "Promise<",
+          "linea": 62,
+          "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
+        },
+        {
           "nombre": "cargarCtxRedaccion",
           "kind": "function",
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 34
+          "linea": 88
         },
         {
           "nombre": "getPendiente",
@@ -59805,7 +59823,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 61
+          "linea": 115
         },
         {
           "nombre": "POST",
@@ -59813,7 +59831,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 66
+          "linea": 120
         }
       ],
       "tablas": [
@@ -59838,7 +59856,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "83c6f27a5b90"
+      "hash": "0794948af493"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -72203,7 +72221,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 51
+          "linea": 56
         },
         {
           "nombre": "toPropertyId",
@@ -72211,7 +72229,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 56,
+          "linea": 61,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -72220,7 +72238,7 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 65
+          "linea": 70
         }
       ],
       "tablas": [
@@ -72228,7 +72246,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "7f5e9814d2bf"
+      "hash": "3297603aec32"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
@@ -72282,7 +72300,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55e40072a4be"
+      "hash": "48b2f4e4ce7f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/disponibilidad.ts",
@@ -74127,21 +74145,12 @@
       ],
       "funciones": [
         {
-          "nombre": "fmt",
-          "kind": "function",
-          "exportada": false,
-          "params": "f: string",
-          "retorno": "string",
-          "linea": 18,
-          "resumen": "dd/mm/aaaa desde un ISO/date; deja igual lo que no reconozca."
-        },
-        {
           "nombre": "componerAviso",
           "kind": "function",
           "exportada": true,
           "params": "d: DatosAviso",
           "retorno": "",
-          "linea": 35,
+          "linea": 30,
           "resumen": "Asunto y cuerpo del aviso. Puro y testeable: es lo que lee una persona, no puede salir a medias."
         },
         {
@@ -74150,7 +74159,7 @@
           "exportada": true,
           "params": "d: DatosAviso",
           "retorno": "Promise<",
-          "linea": 57,
+          "linea": 52,
           "resumen": "Manda el aviso. Devuelve el desenlace — nunca lanza, pero tampoco lo esconde."
         },
         {
@@ -74159,13 +74168,13 @@
           "exportada": false,
           "params": "d: DatosAviso, error: string",
           "retorno": "Promise<void>",
-          "linea": 83,
+          "linea": 78,
           "resumen": "El extra está cobrado y la limpieza NO se ha enterado: eso se dice, no se traga."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3f3d862ce24d"
+      "hash": "ddf891f482d4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/catalogo.ts",
@@ -74264,6 +74273,108 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "327fc8c15196"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/extras/orden-limpieza.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/extras/orden-limpieza.ts — una ORDEN suelta a la empresa de limpieza. Hermana de `aviso-limpieza.ts`, y distinta a propósito. Aquélla es la consecuencia de un COBRO (la dispara el webhook de Stripe y dice «ya cobrado»); ésta no sabe nada de dinero: es Alberto pulsando un botón para que alg",
+      "exporta": [
+        "enviarOrdenLimpieza",
+        "listarOrdenes",
+        "ordenYaEnviada"
+      ],
+      "funciones": [
+        {
+          "nombre": "enviarOrdenLimpieza",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosOrden & { bookingId: string; propertyId: string; codigo?: string | null },",
+          "retorno": "Promise<ResultadoOrden>",
+          "linea": 28,
+          "resumen": "Manda la orden y la deja registrada. Nunca lanza; tampoco esconde el fallo."
+        },
+        {
+          "nombre": "registrarYAvisar",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: DatosOrden & { bookingId: string; propertyId: string; codigo?: string | null }, error: string,",
+          "retorno": "Promise<ResultadoOrden>",
+          "linea": 52
+        },
+        {
+          "nombre": "registrarOrden",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: { bookingId: string; propertyId: string; codigo?: string | null instruccion: string; enviado: boolean; error: string | null }",
+          "retorno": "Promise<void>",
+          "linea": 66
+        },
+        {
+          "nombre": "listarOrdenes",
+          "kind": "function",
+          "exportada": true,
+          "params": "bookingId: string",
+          "retorno": "Promise<OrdenLimpieza[] | null>",
+          "linea": 91,
+          "resumen": "Órdenes de esta reserva, la más reciente primero. 🚨 Devuelve **`null` si NO se ha podido leer** (migración sin aplicar, BD caída) — distinto de `[]` = «leído, no hay ninguna». Quien lo consuma no pue"
+        },
+        {
+          "nombre": "ordenYaEnviada",
+          "kind": "function",
+          "exportada": true,
+          "params": "bookingId: string, codigo: string",
+          "retorno": "Promise<boolean | null>",
+          "linea": 105,
+          "resumen": "¿Ya se ENVIÓ una orden de este extra para esta reserva? `null` = no se ha podido comprobar. Una orden que quedó en error NO cuenta como enviada: justo entonces hay que poder repetirla."
+        }
+      ],
+      "tablas": [
+        "sivra_ordenes_limpieza"
+      ],
+      "rutaApi": null,
+      "hash": "30e75c85d005"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/extras/orden-texto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/extras/orden-texto.ts — el TEXTO que lee la empresa de limpieza. Módulo PURO a propósito (sin BD, sin mailer, sin `@/`): lo que se le manda a una persona que va a actuar sobre un piso tiene que poder probarse sin levantar nada. `orden-limpieza.ts` pone el envío y el registro; aquí solo se ",
+      "exporta": [
+        "fmtFecha",
+        "componerOrden",
+        "resumenOrdenes"
+      ],
+      "funciones": [
+        {
+          "nombre": "fmtFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: string",
+          "retorno": "string",
+          "linea": 8,
+          "resumen": "dd/mm/aaaa desde un ISO/date; deja igual lo que no reconozca."
+        },
+        {
+          "nombre": "componerOrden",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosOrden",
+          "retorno": "",
+          "linea": 32,
+          "resumen": "Asunto y cuerpo de una orden a la limpieza. 🚨 Deliberadamente SIN importe y sin la palabra «pagado». El email hermano (`aviso-limpieza.ts`) sí lo dice porque lo dispara el webhook de Stripe, que ha v"
+        },
+        {
+          "nombre": "resumenOrdenes",
+          "kind": "function",
+          "exportada": true,
+          "params": "ordenes: OrdenVista[] | null | undefined",
+          "retorno": "ResumenOrdenes | null",
+          "linea": 60,
+          "resumen": "Titular de las órdenes de limpieza de una reserva, para pintarlo en la ficha. 🚨 Cuatro desenlaces, no dos (regla «dato que NO hay ≠ dato que NO se ha mirado»): `undefined` → todavía no se ha cargado:"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "857b18d19074"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/reserva.ts",
@@ -79487,7 +79598,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 534
+          "linea": 540
         },
         {
           "nombre": "avisosDe",
@@ -79495,7 +79606,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 539,
+          "linea": 545,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -79504,13 +79615,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 549,
+          "linea": 555,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5a0afd1b943a"
+      "hash": "58586b3a4f45"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -104181,7 +104292,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2729,
-    "funciones": 7603
+    "archivos": 2731,
+    "funciones": 7612
   }
 }

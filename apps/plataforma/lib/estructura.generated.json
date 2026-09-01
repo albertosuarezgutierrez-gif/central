@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T18:43:53Z",
+  "generadoEn": "2026-09-01T20:00:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5038,6 +5038,7 @@
       "sivra_codigos_acceso",
       "sivra_extras_catalogo",
       "sivra_extras_reserva",
+      "sivra_ordenes_limpieza",
       "subastas",
       "subastas_consultas",
       "subastas_correo_cursor",
