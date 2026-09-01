@@ -130,6 +130,22 @@
   plan de implementación, y 5 gestiones con compañías (Allianz cuenta, Generali/Reale/Mapfre CIMA,
   Occident saldos) que **no se envían sin autorización**.
 
+### 📖 (01/09/2026) EIAC: lo que llega NO es toda la cartera — leído de la norma, no inferido
+- Alberto aportó el estándar oficial (TIREA `209_IAC_ESP_DOC` V07.1 v05, 03/06/2026 + XSD). El 4º
+  campo del nombre de fichero es el **código de proceso**: los ordinarios (`131/132/133/151`,
+  `211-261`, `311/361`) no traen histórico — **`132` «cartera» es solo lo que renueva en el periodo**.
+- **La carga masiva es otra cosa y hay una por objeto: `199` pólizas · `299` recibos · `269`
+  movimientos · `399` siniestros.** Medido: Mapfre mandó 199+299, Allianz 199 (26 → 26 en cartera,
+  cuadra), **Occident y Reale ninguna**, y el **399 no lo ha mandado nadie** (de ahí los 67
+  siniestros congelados).
+- 🚨 **«Carga inicial» / «primera carga» NO existen en EIAC** — por eso las compañías le decían a
+  Alberto que no se hace. El nombre correcto es **carga masiva, proceso 199/299/399**, y **se pide
+  fuera del canal**: no hay proceso EIAC para solicitarla (el único `SO` es el `841`, solicitud de
+  alta de siniestro — que además demuestra que declarar siniestros desde el CRM **sí** está previsto).
+- Escrito en la skill `agente-correduria` (`references/sector.md`) y en `TRASPASO-CORREDURIA.md`.
+  Mergeado también el **#1949** (vigía de la ingesta: 42 ficheros en cuarentena, 23 recibos por
+  7.721,71€ de prima y 24 siniestros perdidos desde junio por el grupo Occident bajo un solo código).
+
 ### 🧭 (01/09/2026) asegura-portal: plan TDD de la Fase 1 (entrar + aportar póliza)
 
 - **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia
