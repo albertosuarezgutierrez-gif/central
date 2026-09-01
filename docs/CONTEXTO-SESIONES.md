@@ -32,6 +32,21 @@
 
 ---
 
+### 🔁 (01/09/2026) asegura: renovaciones + dos bugs vivos encontrados al repasar
+- **`/cartera/renovaciones`**: qué vence en 90 días por urgencia REAL, con el objeto asegurado
+  (distingue tres pólizas del mismo cliente) y el coste de retarificar la tanda. `cabenEnTanda()`
+  **estaba construido y sin usar**: la cartera viva entera son ~40€.
+- **NO hay botón de «retarificar todas»** y es honesto: las 80 vivas traen solo matrícula, así que
+  cada una necesita elegir versión. Se podrá con el PDF subido o con créditos de `/vehicles`.
+- 📜 La ley ya estaba modelada y vale dinero: **una subida de prima es una MODIFICACIÓN** (LCS 22),
+  exige 2 meses de preaviso; sin él, la compañía **no puede imponerla**. Eso es «última llamada».
+- 🐛 **Bug 1:** `estadoMigracion()` contaba TABLAS → 53 tablas vacías hacían `migrado:true` y la
+  pantalla decía «tu cuenta no está vinculada» (ausencia COMPROBADA) sobre 32.600 fichas. Ahora
+  cuenta **corredurías** (no clientes: no toca PII) y la decisión es pura en `migracion-decision.ts`.
+- 🐛 **Bug 2:** el guardián de aislamiento marcaba infractor un fichero PURO por nombrar
+  `seguros.clientes` **en un comentario**. Ahora ignora comentarios; verificado que sigue mordiendo
+  SQL real.
+
 ### 📄 (01/09/2026) asegura: subir una póliza y que el agente la lea — primera pasada
 - `/cartera/subir`: PDF (texto) o foto (visión). **No gasta cotizaciones** — leer es gratis.
 - Reutiliza el pipeline ya probado de `apps/asegura-portal`; lo nuevo es QUÉ se busca (17 campos

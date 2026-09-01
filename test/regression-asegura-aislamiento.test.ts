@@ -82,12 +82,30 @@ function ficherosDeAsegura(): string[] {
 // SQL crudo que nombra el schema `seguros` (`from seguros.x`, `join seguros.y`…).
 const SQL_SEGUROS = /\bseguros\s*\.\s*[a-z_]/i
 
+/**
+ * Quita los COMENTARIOS antes de buscar SQL. Un comentario no consulta nada, y
+ * documentar por qué no se cuentan clientes citando `seguros.clientes` marcaba
+ * como infractor a un fichero PURO que no toca la base (pasó el 01/09/2026 con
+ * `migracion-decision.ts`).
+ *
+ * Se quitan solo los bloques `/* *\/` y las líneas que EMPIEZAN por `//` o `*`:
+ * cortar por un `//` a mitad de línea podría comerse SQL real escrito detrás de
+ * una URL, y un cepo que deja pasar es peor que uno que molesta.
+ */
+function sinComentarios(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((l) => !/^\s*(\/\/|\*)/.test(l))
+    .join('\n')
+}
+
 test('ningún fichero consulta el schema «seguros» sin pasar por el ámbito de correduría', () => {
   const infractores: string[] = []
 
   for (const f of ficherosDeAsegura()) {
     const src = readFileSync(join(ROOT, f), 'utf8')
-    if (!SQL_SEGUROS.test(src)) continue
+    if (!SQL_SEGUROS.test(sinComentarios(src))) continue
     // Si toca `seguros.*`, tiene que importar la puerta única.
     // Se acepta con y sin extensión: `allowImportingTsExtensions` está en la
     // tsconfig base y media casa importa como `./x.ts` (ver apps/plataforma).
@@ -122,6 +140,27 @@ test('el resolvedor de ámbito no tiene una correduría por defecto', () => {
 // import de la puerta única en las dos formas que usa la casa (con y sin `.ts`).
 
 const IMPORTA_TENANT = /from ['"](\.\.?\/)*(lib\/)?tenant(\.ts)?['"]|@\/lib\/tenant/
+
+test('un comentario que NOMBRA el schema no convierte en infractor a un fichero puro', () => {
+  const puro = [
+    '/**',
+    ' * Se cuentan corredurías y no clientes: contar `seguros.clientes` sin filtro',
+    ' * sería contar los de TODAS las corredurías.',
+    ' */',
+    '// también en línea: seguros.polizas',
+    'export function decidir(n: number): boolean { return n > 0 }',
+  ].join('\n')
+  assert.ok(SQL_SEGUROS.test(puro), 'el comentario SÍ menciona el schema')
+  assert.ok(!SQL_SEGUROS.test(sinComentarios(puro)), 'pero sin comentarios no queda SQL')
+})
+
+test('y el SQL de verdad sigue detectándose aunque haya comentarios alrededor', () => {
+  const infractor = [
+    '// Este fichero sí consulta la base.',
+    "const q = await prisma.$queryRaw`select count(*) from seguros.clientes`",
+  ].join('\n')
+  assert.ok(SQL_SEGUROS.test(sinComentarios(infractor)), 'el SQL real no se puede escapar')
+})
 
 test('el detector de SQL reconoce las formas reales de nombrar el schema', () => {
   for (const src of [
