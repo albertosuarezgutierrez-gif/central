@@ -47,9 +47,20 @@ perderse. Eso es exactamente lo que hace este flujo.
    esos estados es la precartera** contra un fichero EIAC real antes de construir nada encima:
    equivocarse aquí es avisar de recibos que ya están cobrados.
 2. **Tarificar riesgo** → depende de la API de Avant2 (Codeoscopic), hoy bloqueada por el host
-   base y las credenciales de sandbox. 🚨 **Cada cotización cuesta 0,50 €** (tarifa de Ángel
-   Blesa, 09/04/2026): un agente nocturno que retarifique la cartera entera tiene coste real y
-   necesita presupuesto y tope, como la pasarela de IA. No se tarifica en bucle «por si acaso».
+   base y las credenciales de sandbox.
+   🚨 **CUÁNDO SE COBRA: sin resolver, y cambia el diseño entero.** Dos versiones en conflicto:
+   - El correo de **Ángel Blesa (CEO), 09/04/2026**, dice literal «se cobra **por cotización**
+     […] si cotizas un coche y luego añades un conductor ocasional y vuelves a cotizar,
+     significan 2 cotizaciones independientes», con tarifa de amigo de **0,50 €/cotización**.
+   - **Alberto (01/09/2026) recuerda que se cobra por EMISIÓN.** Es posible: ese correo es de
+     abril, anterior al presupuesto de Cristina Ferreiro (14/05) y al **contrato C00 Workspace
+     firmado el 20/05**, que es el que manda.
+   **Dónde se resuelve:** en el PDF del contrato C00 y en el dossier de precios adjunto al correo
+   del 09/04. Ninguno de los dos se ha podido leer (son adjuntos; el conector de adjuntos de
+   Gmail estaba caído). **Hasta confirmarlo no se diseña el bucle de tarificación**: si se cobra
+   por cotización, la pasada nocturna sobre toda la cartera tiene coste real y necesita tope como
+   la pasarela de IA; si se cobra por emisión, tarificar es gratis y el agente puede repasar la
+   cartera entera sin mirar el gasto. Son dos productos distintos.
 3. **Pantalla de desviación de recibos**: prima nueva vs prima anterior vs mediana de mercado.
    El helper del titular va PURO y testeado, como el resto.
 4. **Generar respuesta al cliente** → es **Fase 3** y no se activa sin diseño de canal + OK
