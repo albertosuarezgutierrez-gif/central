@@ -191,7 +191,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Si el PMS no sincroniza, `cleaning_sessions` deja de recibir reservas y TODO lo que cuelga de ' +
       'ella miente en la misma dirección: la app de la limpiadora dice «Sin limpiezas este día», el ' +
       'briefing dice «sin sesiones programadas» y el panel se queda tan ancho. Es una vertical con ' +
-      'cliente EN PRODUCCIÓN (Sique Brilla): un piso sin limpiar sale caro. Revisa el cron /api/pms/sync ' +
+      'cliente EN PRODUCCIÓN (Si que Brilla): un piso sin limpiar sale caro. Revisa el cron /api/pms/sync ' +
       'de ialimp y la clave de Smoobu en pms_connections.',
   },
   {

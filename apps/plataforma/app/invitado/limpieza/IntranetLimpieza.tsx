@@ -7,7 +7,7 @@ import { PROPS_CALENDARIO as PROPS } from '@/lib/sivra/constantes'
 import { entradaMismoDia, nocheOcupada, type ReservaIntranet, type Novedad } from '@/lib/sivra/limpieza-intranet'
 
 const DIAS = 30
-// Navegación de la ventana (idea del calendario de Smoobu que usaba Sique Brilla): se puede mirar
+// Navegación de la ventana (idea del calendario de Smoobu que usaba Si que Brilla): se puede mirar
 // hacia atrás (repasar limpiezas pasadas) y hacia delante (planificar), con tope para no
 // pasear por años vacíos.
 const VENTANA_ATRAS_DIAS = 90
@@ -25,9 +25,9 @@ type Limpieza = {
 }
 type Tarea = { id: string; fecha: string; propertyId: string | null; texto: string; hecha: boolean }
 // Reserva confirmada en Booking que Smoobu AÚN no tiene (la detectó el vigía de correo): se
-// pinta ⚠️ en su día de entrada para que Sique Brilla no se quede sin verla. Solo se sabe la entrada.
+// pinta ⚠️ en su día de entrada para que Si que Brilla no se quede sin verla. Solo se sabe la entrada.
 type PendienteSmoobu = { propertyId: string; checkIn: string; ref: string | null }
-// Parte de incidencia que Sique Brilla deja en una limpieza (nota y/o foto); avisa a Alberto por Telegram.
+// Parte de incidencia que Si que Brilla deja en una limpieza (nota y/o foto); avisa a Alberto por Telegram.
 type Parte = { id: number; propertyId: string; fecha: string; texto: string | null; tieneFoto: boolean }
 
 function iso(d: Date) { return d.toISOString().slice(0, 10) }
@@ -194,7 +194,7 @@ export default function IntranetLimpieza() {
       <header style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, padding: '16px 2px 12px' }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>Limpiezas · pisos de Alberto</div>
-          <h1 style={{ margin: '2px 0 0', fontSize: 24, fontWeight: 800 }}>Hola, Sique Brilla 👋</h1>
+          <h1 style={{ margin: '2px 0 0', fontSize: 24, fontWeight: 800 }}>Hola, Si que Brilla 👋</h1>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', paddingBottom: 4 }}>
           {DOWL[hoy.getDay()]}, {hoy.getDate()} {hoy.toLocaleDateString('es-ES', { month: 'short' })}
@@ -481,7 +481,7 @@ async function comprimirFoto(f: File): Promise<Blob> {
   }
 }
 
-// Aviso rápido de Sique Brilla sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la
+// Aviso rápido de Si que Brilla sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la
 // luz»). Se guarda en la limpieza y avisa a Alberto por Telegram. Sin campos que rellenar: un
 // texto libre y una foto opcional.
 function FormParte({ propertyId, fecha, onEnviado }: {

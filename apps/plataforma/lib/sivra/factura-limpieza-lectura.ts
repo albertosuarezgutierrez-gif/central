@@ -1,4 +1,4 @@
-// lib/sivra/factura-limpieza-lectura.ts — leer la factura de Sique Brilla y guardarla si cuadra.
+// lib/sivra/factura-limpieza-lectura.ts — leer la factura de Si que Brilla y guardarla si cuadra.
 //
 // El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de
 // `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación
@@ -213,7 +213,7 @@ export interface FacturaGuardada {
  * en JS. Nada de `total = ANY(${importes}::numeric[])`: pasar un array de Prisma por el pooler es
  * el patrón que ya falló en `ia-director-codigo.ts` (landmine 17/07/2026, `ILIKE ANY(array)`), y
  * aquí fallaría DEVOLVIENDO CERO FILAS — es decir, el P&L volvería a inferir en silencio con la
- * factura guardada en la BD. Sique Brilla emite una factura al mes: el rango no trae volumen.
+ * factura guardada en la BD. Si que Brilla emite una factura al mes: el rango no trae volumen.
  */
 export async function facturasParaImportes(importes: number[]): Promise<FacturaGuardada[]> {
   if (!importes.length) return []

@@ -186,7 +186,7 @@ function TabHoy() {
 }
 
 // ─── TAB TAREAS ─────────────────────────────────────────────────
-// Tareas sueltas para la limpieza (Sique Brilla) — aparte de las limpiezas por reserva. Las ven y
+// Tareas sueltas para la limpieza (Si que Brilla) — aparte de las limpiezas por reserva. Las ven y
 // las marcan hechas desde su intranet (/invitado/limpieza); aquí se crean, editan y borran.
 function TabTareas() {
   const [tareas, setTareas] = useState<any[]>([])
@@ -250,10 +250,10 @@ function TabTareas() {
   if (loading) return <Spinner />
   return (
     <div>
-      {/* Acceso de Sique Brilla */}
+      {/* Acceso de Si que Brilla */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 14, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>🧽 Intranet de Sique Brilla</div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>🧽 Intranet de Si que Brilla</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>
             {enlace ? 'Calendario + resumen diario con estas tareas y las notas 📌.' : 'Sin token activo (limpieza_acceso_token) — genera uno para poder compartir el enlace.'}
           </div>
@@ -291,7 +291,7 @@ function TabTareas() {
       {/* Lista */}
       {tareas.length === 0 && (
         <div style={{ textAlign: 'center', padding: 32, color: 'var(--muted)', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)' }}>
-          Sin tareas apuntadas. Las que añadas le aparecen a Sique Brilla en su resumen del día.
+          Sin tareas apuntadas. Las que añadas le aparecen a Si que Brilla en su resumen del día.
         </div>
       )}
       {Object.entries(porFecha).map(([fecha, ts]) => (

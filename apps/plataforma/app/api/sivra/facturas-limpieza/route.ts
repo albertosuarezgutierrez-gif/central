@@ -1,4 +1,4 @@
-// Facturas de limpieza (Sique Brilla) con su desglose REAL por piso.
+// Facturas de limpieza (Si que Brilla) con su desglose REAL por piso.
 //
 // El P&L por piso infiere el desglose de cada pago por mejor ajuste al importe; la factura lo
 // dice. Aquí se aporta: un PDF (lo lee la IA) o el desglose a mano. En ambos casos pasa por la

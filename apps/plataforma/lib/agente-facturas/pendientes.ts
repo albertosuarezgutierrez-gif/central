@@ -194,7 +194,7 @@ export async function confirmarPendiente(id: string, cambios: CambiosPendiente =
  *
  * Petición de Alberto (29/08/2026): «cuando es el mismo proveedor, en el momento que resuelvo uno
  * todo es igual». Es cierto para los proveedores recurrentes que llenan la bandeja —la limpieza
- * mensual de Sique Brilla, la lavandería, el hosting—: doce facturas idénticas salvo el mes.
+ * mensual de Si que Brilla, la lavandería, el hosting—: doce facturas idénticas salvo el mes.
  * Confirmarlas de una en una es el trabajo que esta pantalla existe para quitar.
  *
  * 🚨 Sigue siendo una acción EXPLÍCITA, con su propio botón y el número delante. No se aplica

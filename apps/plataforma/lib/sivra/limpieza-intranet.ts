@@ -1,4 +1,4 @@
-// Helpers puros de la intranet de limpieza (pantalla de Sique Brilla). Sin dependencias de servidor.
+// Helpers puros de la intranet de limpieza (pantalla de Si que Brilla). Sin dependencias de servidor.
 
 export type ReservaIntranet = {
   propertyId: string

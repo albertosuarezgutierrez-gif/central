@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 // Fuente ÚNICA de credenciales de Smoobu para plataforma.
 //
 // La key vive en la BD compartida, en `pms_connections` (tabla propiedad de ialimp): la MISMA
-// conexión que usan las limpiezas (ialimp/Sique Brilla) y sivra. Se rota en un solo sitio (la UI
+// conexión que usan las limpiezas (ialimp/Si que Brilla) y sivra. Se rota en un solo sitio (la UI
 // de ialimp) y todos los proyectos la recogen sin tocar envs ni redeploys.
 //
 // 🔑 AUTENTICACIÓN: header `Api-Key` (esquema legacy de Smoobu, VIGENTE para esta cuenta).
