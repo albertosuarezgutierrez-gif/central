@@ -38,9 +38,28 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 - **Datos = PII sensible de verdad** (salud en decesos/vida, DNI, matrículas). Nada de
   volcar registros de clientes a chats, commits o informes: agregados y conteos, sí;
   filas con nombres, solo si Alberto pide un caso concreto.
-- **Comisiones cobradas ≠ cartera.** La matriz de comisiones (CIMA/TIREA sobre
-  `movimientos_bancarios`) vive en plataforma `/correduria` y es dinero YA cobrado; la
-  cartera es pólizas/clientes. No mezcles las dos en un informe sin decir cuál es cuál.
+- **Comisiones ≠ cartera, y una comisión tiene TRES estados, no uno (01/09/2026).** La pantalla
+  `/correduria` de plataforma solo sabía de dinero YA cobrado; el control real son tres ejes por
+  (compañía, periodo): **devengado** (comisión de los recibos que pasaron a `cobrado`) → **liquidado**
+  (extracto de la compañía) → **cobrado** (BBVA). Cada salto tiene su propio fallo: *devengado sin
+  liquidar* = la compañía no te liquida; *liquidado sin cobrar* = te lo reconoce y no te lo ingresa;
+  *cobrado sin liquidar* = entra dinero que ninguna fuente explica. No los llames a todos «descuadre».
+  Diseño en `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md`.
+- **Y bruto ≠ lo que llega al banco.** Las compañías retienen el **15 % de IRPF** y lo declaran en el
+  **modelo 190** (lo que alimenta el borrador de la AEAT); al BBVA llega la **remesa** = bruto − retención.
+  Medido: Allianz feb/2026, 95,03€ − 14,26€ = 80,77€. Comparar el bruto contra el banco descuadra
+  SIEMPRE por ese 15 %.
+- **Los datos de comisiones ya existen parseados, no los re-parsees.** `cuenta_efectivo`,
+  `liquidaciones` y `poliza_recibos` (con `prima_neta`, `comision_bruta`, `comision_liquida`,
+  `situacion`) los rellena el **JAR oficial de TIREA** en la BD de la correduría; se leen por
+  `ASEGURA_DATABASE_URL` (SELECT-only). `apps/plataforma/lib/cima.ts` habla SOAP contra un endpoint
+  nunca validado, con parser adivinado y códigos de compañía equivocados (los reales son `C0058`
+  Mapfre, `C0109` Allianz, `C0468` Occident, `C0613` Reale): **no te apoyes en él**.
+- **Cobertura DESIGUAL por compañía — no supongas que CIMA lo trae todo (medido 01/09/2026).** Mapfre
+  manda recibos pero **ninguna liquidación**; Allianz manda las dos y además un PDF «Cuenta Agente» por
+  correo (texto en **EBCDIC**, se decodifica con `cp500`); Occident va por CIMA y lleva meses en **saldo
+  deudor** (comisión negativa, remesa 0,00€ — eso NO es un impago); Reale acaba de adherirse; Generali
+  no tiene acceso CIMA. Un total de comisiones sin decir qué compañías faltan es una cifra falsa.
 - Dinero SIEMPRE en formato español (`2.162,49€`); regla NULL≠0 de `CLAUDE.md` aplica
   entera (una póliza sin fecha de vencimiento es «sin fecha», no «no vence»).
 - Cambios de comportamiento de esta skill → PR (nunca auto-aplicar desde la rutina);

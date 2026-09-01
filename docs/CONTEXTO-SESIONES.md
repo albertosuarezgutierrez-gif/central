@@ -43,7 +43,9 @@
 - El PDF «Cuenta Agente» de Allianz es legible (**EBCDIC dentro del PDF, `cp500`**) y cuadra al céntimo
   con CIMA. Revela **558,88€ parados** por no haber dado la cuenta bancaria. Mapfre devenga 3.614,65€ en
   recibos cobrados y **cero liquidaciones**. Del banco, el **85% de 2026 sin identificar compañía**.
-- Spec en `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md` (PR draft). Pendiente:
+- Spec en `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md` (**PR #1947**), con
+  `agente-correduria`, `perfil-fiscal` y `apps/asegura/CLAUDE.md` actualizados: comisión tiene TRES
+  estados (devengado→liquidado→cobrado) y la cobertura de CIMA es DESIGUAL por compañía. Pendiente:
   plan de implementación, y 5 gestiones con compañías (Allianz cuenta, Generali/Reale/Mapfre CIMA,
   Occident saldos) que **no se envían sin autorización**.
 
