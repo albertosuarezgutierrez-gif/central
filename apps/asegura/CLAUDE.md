@@ -7,9 +7,18 @@
 ## Estado (26/08/2026): esqueleto vivo, cartera SIN migrar
 
 Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build— para que el
-día del corte solo haya que verter el modelo y las pantallas. **La cartera real (32.600
-clientes, 28.843 pólizas) sigue en el Supabase de Manuel Suárez** (`uijsgeocgdaxkhvwtjqs`),
-alimentándose a diario por CIMA/EIAC.
+día del corte solo haya que verter el modelo y las pantallas. **Las 32.600 fichas y 28.843
+pólizas siguen en el Supabase de Manuel Suárez** (`uijsgeocgdaxkhvwtjqs`), alimentándose a
+diario por CIMA/EIAC.
+
+🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son ~80 clientes /
+109 pólizas**: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las
+otras 28.729 son volcado histórico cargado en jun/2026 (`intranet:` 26.117 con vencimientos
+2013-2018 y `asegura_app:` 2.612) y **ninguna** vence en los últimos 18 meses. Regla de Alberto:
+**CIMA = cliente actual; el resto = lead** (32.520). Consecuencia para el código: **las pólizas con
+`import_ref` NO generan recordatorios** — serían 28.729 avisos de «se te venció» sobre pólizas de
+hace ocho años. Diseño completo en
+`docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
 
 🚨 **Schema `seguros` vacío ≠ la correduría no tiene datos.** Es la trampa que esta app
 tiene que evitar por diseño: el dashboard **no pinta KPIs a 0** mientras no haya migración
@@ -61,6 +70,11 @@ salidas (`error` / `no migrado` / `migrado`), nunca dos.
 
 ## Envs
 `DATABASE_URL`, `DIRECT_URL` (rol `prisma_seguros`), `ASEGURA_SESSION_SECRET`.
+**De la cartera en vivo (01/09/2026, FUNCIONANDO):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
+(SELECT-only + BYPASSRLS) contra ASEGURA-prod-eu por el pooler :6543 de eu-central-1; la URL la
+normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
+puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
+desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
 proyecto de Vercel de Manuel — **no se piden por mensaje**.
 
@@ -95,8 +109,12 @@ GitHub Actions (cron 5:30 y 11:30)
   mientras dura ese recálculo las búsquedas mienten.
 - **Ficheros en Vercel Blob** (privado, URLs firmadas; hoy ~4). Los EIAC de CIMA **no se guardan como
   fichero**: se parsean a tablas.
-- **Codeoscopic:** el código de emisión existe pero está **tras un flag que nunca se activó** — por eso
-  sus tablas están vacías. No es un bug; es una función sin estrenar.
+- **Codeoscopic — LA fuente de tarificación y EMISIÓN de pólizas nuevas (01/09/2026):** Avant2 Sales
+  Manager operativo a nombre de ALBERTO (no de Manuel) desde 09/06; compañías vivas Reale y Fidelidade,
+  claves entregadas de Mapfre/Allianz/Occident; DPA art. 28 firmado. La integración API de la web quedó
+  EN SANDBOX (jun/2026, contacto juan.fernandez@codeoscopic.com) sin cerrar la batería
+  Quote→preemisión→Submit→webhook — por eso el código de emisión sigue **tras un flag que nunca se
+  activó** y sus tablas están vacías. No es un bug; es una validación sin terminar.
   ⚠️ **Condición para encender ese flag algún día:** el envío es idempotente por dentro
   (`submit_in_flight_at` es un candado, `submit_attempt_id` una UUID para reconciliar) pero **NO de
   punta a punta**: Codeoscopic no deduplica por nuestro `attempt_id`, así que un reintento tras una

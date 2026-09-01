@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createStripe } from '@central/core-payments'
 import { requireSecret } from '@central/core-identity'
-import { tgSend, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { marcarPagado, marcarAvisoLimpieza } from '@/lib/sivra/extras/reserva'
 import { extraDeCatalogo, nombreEnIdioma } from '@/lib/sivra/extras/catalogo'
 import { avisarLimpieza } from '@/lib/sivra/extras/aviso-limpieza'
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   await marcarAvisoLimpieza(fila.id, aviso)
 
   // Copia informativa a Alberto: el dinero entra sin que él toque nada, así que se entera igual.
-  await tgSend(
+  await tgAviso('pisos.extras-pagado', 
     `💰 <b>Extra cobrado</b> · ${escapeHtml(ctx?.property || fila.property_id)}\n` +
     `${escapeHtml(nombre)} — ${eur(fila.precio_cents / 100)} (reserva ${escapeHtml(fila.booking_id)})\n` +
     (aviso.ok ? `📧 Limpieza avisada.` : `🛑 <b>La limpieza NO ha podido ser avisada.</b>`),

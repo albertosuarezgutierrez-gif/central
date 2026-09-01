@@ -22,7 +22,7 @@ import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, dedupeRelistados, detectarCho
 import { leerAlertasDesde } from '@/lib/subastas/gmail-boe'
 import { guardarCursor, leerCursor } from '@/lib/subastas/correo-cursor'
 import { COSTE_PETICION_PORTAL_MS, motivoCorte, quedaTiempo } from '@/lib/subastas/presupuesto-mercado'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 
 export const REMITENTE_IDEALISTA = 'idealista.com'
@@ -692,7 +692,7 @@ export async function avisarChollos(): Promise<{ chollos: number; avisados: numb
   }
   if (nuevos.length > 6) lineas.push('', `…y ${nuevos.length - 6} más en /subastas`)
 
-  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+  await tgAviso('subastas.mercado', lineas.join('\n'), { html: true }).catch(() => {})
 
   // Los preferentes 🌊 comparten el marcador `chollo_avisado_at`: es el mismo
   // «ya te lo enseñé una vez» y evita que el mismo anuncio vuelva por la otra vía.
@@ -860,7 +860,7 @@ export async function avisarBajadas(): Promise<{ bajadas: number; avisados: numb
   }
   if (casas.length > 8) lineas.push('', `…y ${casas.length - 8} más en /subastas`)
 
-  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+  await tgAviso('subastas.mercado', lineas.join('\n'), { html: true }).catch(() => {})
 
   // Solo se marca lo AVISADO: un piso que bajó de precio sigue pendiente en la
   // tabla (no se le ha enseñado nada). Marcarlo sería escribir un «ya te lo

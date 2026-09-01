@@ -8,7 +8,7 @@
 // pagando por una cuna que nadie va a montar, y a nadie enterado. El fallo se guarda en la fila y
 // salta un aviso por Telegram.
 import { getTransporter, MAIL_FROM } from '@/lib/mailer'
-import { tgSend, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 
 export const DESTINO_LIMPIEZA = process.env.SIVRA_EXTRAS_EMAIL_LIMPIEZA || 'limpiezascruzz@gmail.com'
@@ -81,7 +81,7 @@ export async function avisarLimpieza(d: DatosAviso): Promise<{ ok: boolean; erro
 
 /** El extra está cobrado y la limpieza NO se ha enterado: eso se dice, no se traga. */
 async function avisarFallo(d: DatosAviso, error: string): Promise<void> {
-  await tgSend(
+  await tgAviso('pisos.extras-limpieza', 
     `🛑 <b>Extra pagado y la limpieza SIN avisar</b>\n` +
     `${escapeHtml(d.piso)} · entrada ${fmt(d.checkIn)} · ${escapeHtml(d.extra)}\n\n` +
     `El email a ${escapeHtml(DESTINO_LIMPIEZA)} no salió: <i>${escapeHtml(error)}</i>\n` +

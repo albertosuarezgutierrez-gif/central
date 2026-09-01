@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { tgSend } from '@central/core-telegram'
-
+import { tgAviso } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 
 // Cron diario: resumen de actividad del agente por Telegram + huecos de la guía.
@@ -21,6 +20,6 @@ export async function GET(req: NextRequest) {
   `)
   const s = stats[0] || { total: 0, auto: 0, pendientes: 0 }
   const lineaGaps = gaps.length ? `\n📈 Guía floja en: ${gaps.map(g => `${g.pregunta} (x${g.veces})`).join(' · ')}` : ''
-  await tgSend(`📊 <b>Huéspedes (24h)</b>\n${s.total} mensajes · ${s.auto} auto · ${s.pendientes} te esperan${lineaGaps}`)
+  await tgAviso('huespedes.resumen-diario', `📊 <b>Huéspedes (24h)</b>\n${s.total} mensajes · ${s.auto} auto · ${s.pendientes} te esperan${lineaGaps}`)
   return NextResponse.json({ ok: true, ...s })
 }

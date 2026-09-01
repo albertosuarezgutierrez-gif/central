@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { isRoutineAuthorized } from "@/lib/cron-auth"
-import { tgSend } from "@central/core-telegram"
+import { tgAviso } from '@/lib/telegram'
 import { AGENTES_VIGILADOS } from "@/lib/monitoring/latidos"
 
 export const dynamic = "force-dynamic"
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   if (estado !== "mergeada") {
     const enlace = prNumero ? `\n\nPR draft: #${prNumero}` : runUrl ? `\n\nRun: ${runUrl}` : ""
     try {
-      await tgSend(
+      await tgAviso('sistema.reparacion-resultado', 
         `🔧⚠️ <b>No he sabido reparar ${etiqueta}</b>\n\n` +
           (estado === "pr_abierto"
             ? "El orquestador escribió un parche pero <b>no pasó el gate de prueba</b> (o tocaba " +

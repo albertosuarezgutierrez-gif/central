@@ -1,5 +1,5 @@
 import { prisma } from './db'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { EMOJI } from './categorias-personales'
 import { clasificarPorKeywords } from './subcategoria-keywords'
 import { eur } from './dinero'
@@ -38,7 +38,7 @@ export async function comprobarAlertas(cuentaId: string, subcategoria: string): 
       const emoji = EMOJI[subcategoria] ?? '💸'
       const exceso = totalMes - alerta.limite_mensual
       const cat = subcategoria.replace(/_/g, ' ')
-      await tgSend(
+      await tgAviso('finanzas.presupuesto-categoria', 
         `${emoji} *Alerta gasto: ${cat}*\nLlevas ${eur(totalMes)} de ${eur(alerta.limite_mensual)} este mes\nExceso: ${eur(exceso)}`
       )
       await prisma.$executeRaw`

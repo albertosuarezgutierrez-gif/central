@@ -4,7 +4,7 @@
 // rutina (contable_memoria). Se dispara desde un cron ligero; reutiliza el bot único de Telegram.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { getMemoria } from './memoria'
 import { avisosHipoteca, type CuotaMov, type FichaHipoteca } from './hipoteca-vigia'
 
@@ -86,6 +86,6 @@ export async function construirResumenProactivo(cuentaId: string): Promise<strin
 export async function resumenProactivo(cuentaId: string): Promise<boolean> {
   const texto = await construirResumenProactivo(cuentaId)
   if (!texto) return false
-  await tgSend(texto).catch(() => {})
+  await tgAviso('finanzas.contable-proactivo', texto).catch(() => {})
   return true
 }

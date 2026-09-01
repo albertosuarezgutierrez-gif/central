@@ -1337,6 +1337,41 @@ en caso de no resolverse». Diseño: `docs/superpowers/specs/2026-08-20-latido-a
 - **El agente no se declara curado a sí mismo:** a las 24 h del merge, `agentes-latido` compara
   `ultimo_ok_at` contra `merged_at`. Verde → cierra en silencio. Rojo → Telegram. **Éxito = silencio.**
 
+## 🔔 Panel «Avisos Telegram» (`/telegram`) — el interruptor de lo que manda el bot (01/09/2026, PR #1924)
+Alberto: «las notificaciones de Telegram son muchas». El bot emitía desde **~57 ficheros** sin
+inventario ni forma de callar uno solo: para bajar ruido había que buscar el `tgSend` y borrarlo.
+
+- **Catálogo = `lib/telegram/catalogo.ts`**, fuente única de los **76 avisos PROACTIVOS** (id,
+  título, qué avisa, cadencia real, categoría). 9 categorías; pantalla en `app/(usuario)/telegram/`
+  + API `app/api/telegram/avisos/` (GET catálogo+estado · POST encender/apagar aviso o categoría).
+- 🚨 **Un aviso proactivo NUEVO se emite con `tgAviso`/`tgAvisoBotones`/`tgAvisoAlerta`
+  (`lib/telegram/avisos.ts`) y SE AÑADE AL CATÁLOGO en el mismo PR.** Lo obliga el guardián
+  `lib/telegram/catalogo.test.ts`, que falla si un id emitido no está catalogado (aviso que llega y
+  no se puede callar, y que además no sale en la pantalla) o si uno catalogado no lo emite nadie
+  (interruptor que Alberto apaga, sigue recibiendo el aviso y deja de creerse el panel entero).
+  El id es un `string`: ni `tsc` ni el build cazan ninguno de los dos, por eso lee el FUENTE.
+- 🚨 **Fail-open a propósito:** si la BD no responde, el aviso **SALE**. Un fallo de red no puede
+  convertirse en silencio — es el modo de fallo que el CLAUDE.md raíz marca como el más caro. Solo
+  se silencia lo que hay escrito en `telegram_avisos_pref` (ausencia de fila = activo).
+- **Lo que NO entra en el catálogo, a propósito:** las RESPUESTAS del bot a un mensaje o botón de
+  Alberto (agente contable, borradores del agente de huéspedes, clasificar un movimiento…). Esas
+  siguen con `tgSend` directo: silenciarlas no quitaría ruido, rompería la conversación.
+- **`sistema.canal-mudo` es el ÚNICO `critico`** (no silenciable ni por API): es el aviso de que los
+  demás están mudos (el 401 auto-anulante de `/api/internal/alerta`). Apagarlo dejaría el sistema
+  sin voz sin que nada lo delate. Hay test que fija que es el único.
+- **Triaje de correo: un interruptor POR CATEGORÍA** (`avisoDeCategoriaCorreo` en el catálogo), no
+  uno global — «avísame de los leads pero no de cada correo de huéspedes» es la distinción real.
+  Una categoría sin id mapeado avisa siempre (nunca al revés).
+- **Bitácora `telegram_avisos_log`** (`enviado`|`omitido`) → el panel dice cuántos llegan DE VERDAD
+  en 30 días, no la cadencia teórica del cron. **Nace vacía**, así que la pantalla distingue «no ha
+  llegado ninguno en este periodo» de «todavía no se ha medido» y no pinta ceros que se leerían
+  como una afirmación (regla del NULL). Purga a 90 días: `purgarBitacora()` desde `agentes-latido`.
+- 🚨 **`make_interval(days => ${n})` NECESITA `::int`**: Prisma manda el número como `int8` y
+  `make_interval(days => bigint)` no existe (42883) — revienta SOLO en runtime. Lo cazó el guardián
+  `test/regression-sql-fecha-parametro.test.ts` en el CI de este mismo PR.
+- Migración `prisma/sql/2026-09-01_telegram_avisos.sql` **aplicada** (incluye el `GRANT USAGE` de
+  `telegram_avisos_log_id_seq` a `prisma_plataforma`: sin él el `bigserial` no deja insertar).
+
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.
 - Sin credenciales en repo.

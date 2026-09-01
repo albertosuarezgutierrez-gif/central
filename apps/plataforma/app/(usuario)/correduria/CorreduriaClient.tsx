@@ -424,6 +424,8 @@ type Cartera =
       estado: 'ok'; nombre: string | null; clientes: number; leads: number
       polizasVigentes: number; polizasPendientesFecha: number; polizasNoVigentes: number
       siniestrosAbiertos: number
+      // null = el puerto no informa vencimientos todavía. «—», nunca 0.
+      vence30?: number | null; vence60?: number | null
     }
 
 const num = (n: number) => n.toLocaleString('es-ES')
@@ -471,7 +473,13 @@ function CarteraViva() {
     )
   }
 
+  // Vencimientos: `null` significa «el puerto todavía no lo informa» y se pinta
+  // «—» con su nota. Un 0 aquí diría «no vence nada», que es otra cosa.
+  const vence = (n: number | null | undefined) => (typeof n === 'number' ? num(n) : '—')
+
   const kpis = [
+    { label: 'Vencen en 30 días', value: vence(cartera.vence30), color: (cartera.vence30 ?? 0) > 0 ? '#c96' : 'var(--muted)' },
+    { label: 'Vencen en 60 días', value: vence(cartera.vence60), color: 'var(--text)' },
     { label: 'Pólizas en vigor', value: num(cartera.polizasVigentes), color: 'var(--primary)' },
     { label: 'Sin fecha (pendientes)', value: num(cartera.polizasPendientesFecha), color: 'var(--text)' },
     { label: 'Históricas', value: num(cartera.polizasNoVigentes), color: 'var(--muted)' },
@@ -495,6 +503,184 @@ function CarteraViva() {
             <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
           </div>
         ))}
+      </div>
+      {cartera.vence30 === null && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
+          Los vencimientos aún no llegan por el puerto (central-asegura pendiente de desplegar con esta versión).
+          «—» significa que no se sabe, no que no venza nada.
+        </div>
+      )}
+      <Vencimientos />
+    </div>
+  )
+}
+
+// ── Renovaciones ────────────────────────────────────────────────────────────
+// Las pólizas que vencen son la máquina comercial de una correduría. El orden
+// lo marca la LCS art. 22: dentro del mes de preaviso el tomador ya no puede
+// oponerse a la prórroga, así que «quedan 9 días» y «quedan 70» son trabajos
+// distintos y la lista lo dice.
+
+const URGENCIAS: Record<string, { label: string; color: string; icono: string }> = {
+  vencida: { label: 'Vencida', color: '#d66', icono: '🔴' },
+  prorroga_inevitable: { label: 'Se prorroga (fuera de plazo)', color: '#c96', icono: '🟠' },
+  ultima_llamada: { label: 'Última llamada', color: '#c96', icono: '🟡' },
+  a_tiempo: { label: 'A tiempo', color: 'var(--muted)', icono: '🟢' },
+}
+
+const TIPOS: Record<string, string> = {
+  auto: '🚗 Auto', moto: '🏍️ Moto', hogar: '🏠 Hogar', vida: '🧬 Vida', salud: '🩺 Salud',
+  decesos: '⚱️ Decesos', responsabilidad_civil: '⚖️ R. Civil', comercio: '🏪 Comercio',
+  comunidad: '🏢 Comunidad', accidentes: '🩹 Accidentes',
+}
+
+type ObjetoAsegurado = {
+  estado: 'conocido' | 'no_informado' | 'cifrado' | 'sin_objeto'
+  titulo: string | null; detalle: string | null; nota: string | null
+}
+
+type Vencimiento = {
+  id: string; cliente: string; tipo: string; aseguradora: string
+  numeroPoliza: string | null; fechaVencimiento: string; dias: number
+  urgencia: string; prima: number | null; fraccionamiento: string | null
+  objeto: ObjetoAsegurado | null
+}
+
+/**
+ * Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de
+ * los tres coches del cliente es, y la llamada empieza preguntando.
+ *
+ * Cinco casos, y ninguno se pinta como los demás — un hueco vacío diría «no hay
+ * nada que asegurar», que es justo lo contrario de lo que se sabe:
+ *   objeto null → el puerto (central-asegura) aún no manda el campo.
+ *   no_informado → la compañía no lo ha mandado: está pendiente de reclamar.
+ *   cifrado      → el dato existe pero llega cifrado y aquí no hay clave.
+ *   sin_objeto   → seguro de personas: no hay bien. Ausencia definitiva.
+ */
+function CeldaObjeto({ objeto }: { objeto: ObjetoAsegurado | null }) {
+  if (objeto === null) {
+    return (
+      <span
+        style={{ color: 'var(--muted)' }}
+        title="La versión desplegada de central-asegura todavía no informa qué asegura cada póliza. No es que no se sepa: es que aún no llega por el puerto."
+      >—</span>
+    )
+  }
+  if (objeto.estado === 'no_informado' || (objeto.titulo === null && objeto.detalle === null)) {
+    return (
+      <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={objeto.nota ?? undefined}>
+        {objeto.estado === 'cifrado' ? '🔒 dato cifrado' : 'sin informar'}
+      </span>
+    )
+  }
+  return (
+    <span title={objeto.nota ?? undefined}>
+      <span style={{ color: objeto.estado === 'sin_objeto' ? 'var(--muted)' : 'var(--text)' }}>
+        {objeto.titulo}
+      </span>
+      {objeto.detalle && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>{objeto.detalle}</div>
+      )}
+    </span>
+  )
+}
+
+type RespVencimientos =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo?: MotivoError }
+  | { estado: 'ok'; dias: number; polizas: Vencimiento[] }
+
+function Vencimientos() {
+  const [datos, setDatos] = useState<RespVencimientos | null>(null)
+
+  useEffect(() => {
+    fetch('/api/correduria/vencimientos?dias=90')
+      .then(r => (r.ok ? r.json() : { estado: 'error' }))
+      .then(setDatos)
+      .catch(() => setDatos({ estado: 'error' }))
+  }, [])
+
+  if (datos === null || datos.estado === 'sin_configurar') return null
+
+  if (datos.estado === 'error') {
+    return (
+      <div style={{ marginTop: 16, fontSize: 13, color: 'var(--muted)' }}>
+        📅 <strong>Renovaciones:</strong> no se han podido leer —{' '}
+        {MOTIVOS[datos.motivo ?? 'respuesta_ilegible']} No hay que entenderlo como «no vence nada».
+      </div>
+    )
+  }
+
+  // Primas conocidas y desconocidas, separadas: la compañía no siempre informa
+  // la prima (medido con Allianz por EIAC) y un total a secas la daría por 0.
+  const conPrima = datos.polizas.filter(p => p.prima !== null)
+  const total = conPrima.reduce((s, p) => s + (p.prima ?? 0), 0)
+  const sinPrima = datos.polizas.length - conPrima.length
+
+  return (
+    <div style={{ marginTop: 18, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>📅 Renovaciones · próximos {datos.dias} días</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          {datos.polizas.length === 0
+            ? 'Ninguna póliza vigente vence en la ventana.'
+            : <>Cartera en juego: {eur(total)}{sinPrima > 0 && ` · ${sinPrima} sin prima informada`}</>}
+        </div>
+      </div>
+
+      {datos.polizas.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 }}>
+            <thead>
+              <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+                <th style={{ padding: '6px 8px', fontWeight: 600 }}>Vence</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600 }}>Cliente</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600 }}>Ramo</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600 }}>Qué asegura</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600 }}>Compañía</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'right' }}>Prima</th>
+                <th style={{ padding: '6px 8px', fontWeight: 600 }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {datos.polizas.map(p => {
+                const u = URGENCIAS[p.urgencia] ?? URGENCIAS.a_tiempo
+                return (
+                  <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
+                      {fmtFecha(p.fechaVencimiento)}
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                        {p.dias === 0 ? 'hoy' : `en ${p.dias} días`}
+                      </div>
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      {p.cliente}
+                      {p.numeroPoliza && (
+                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>nº {p.numeroPoliza}</div>
+                      )}
+                    </td>
+                    <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{TIPOS[p.tipo] ?? p.tipo}</td>
+                    <td style={{ padding: '8px', minWidth: 150 }}><CeldaObjeto objeto={p.objeto} /></td>
+                    <td style={{ padding: '8px' }}>{p.aseguradora}</td>
+                    <td style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {p.prima === null
+                        ? <span style={{ color: 'var(--muted)' }} title="La compañía no informa la prima">sin dato</span>
+                        : eur(p.prima)}
+                    </td>
+                    <td style={{ padding: '8px', color: u.color, whiteSpace: 'nowrap' }}>
+                      {u.icono} {u.label}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
+        El tomador puede oponerse a la prórroga hasta un mes antes del vencimiento (LCS art. 22): pasada esa
+        fecha la póliza se renueva sola. Las pólizas sin fecha de vencimiento no salen aquí — no es que no
+        venzan, es que la compañía no ha informado la fecha.
       </div>
     </div>
   )

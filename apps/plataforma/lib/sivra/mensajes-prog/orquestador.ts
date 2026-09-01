@@ -20,7 +20,7 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { smoobuFetch } from '@/lib/smoobu'
-import { tgSend, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
 import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
@@ -372,8 +372,8 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
   }
 
   // 3) Telegram: cada sombra con su texto (es la validación de Alberto) + los avisos operativos.
-  for (const a of avisosSombra) await tgSend(a).catch(() => {})
-  if (avisos.length) await tgSend(`📬 <b>Mensajes programados</b>\n${avisos.map(a => escapeHtml(a)).join('\n')}`).catch(() => {})
+  for (const a of avisosSombra) await tgAviso('pisos.mensajes-programados', a).catch(() => {})
+  if (avisos.length) await tgAviso('pisos.mensajes-programados', `📬 <b>Mensajes programados</b>\n${avisos.map(a => escapeHtml(a)).join('\n')}`).catch(() => {})
 
   const detalle = `${res.reservas} reservas · ${res.debidos} debidos · ${res.sombra} sombra · ${res.enviados} enviados · ${res.fallos} fallos · ${res.saltadosSmoobu} ya-de-Smoobu${res.detalle.length ? ' · ' + res.detalle.join(' · ') : ''}`
   res.ok = res.fallos === 0

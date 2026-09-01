@@ -23,6 +23,9 @@ const NAV_NEGOCIO = [
   // que si no pasabas por Inicio la sección era invisible.
   { href: '/correduria', icon: '🛡️', label: 'Correduría' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
+  // 🔔 Qué te manda el bot por su cuenta, y el interruptor de cada aviso (01/09/2026:
+  // «revisa las notificaciones de Telegram, son muchas»).
+  { href: '/telegram', icon: '🔔', label: 'Avisos Telegram' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },
   { href: '/subastas', icon: '⚖️', label: 'Subastas y chollos' },
   { href: '/inversion', icon: '🏘️', label: 'Analizar compra' },
@@ -35,6 +38,11 @@ const NAV_NEGOCIO = [
 const NAV_SOLO_EMPRESAS = [{ href: '/empresas', icon: '🏢', label: 'Empresas' }]
 
 const NAV_PISOS = [
+  // 🏨 Apartamentos vivía en «Mi negocio» y se quedó sin entrada al fusionar Resumen+Banca
+  // (16/07/2026): la página nunca se borró, pero solo se llegaba por el Cmd+K o por un
+  // «Detalle →» suelto, así que en la práctica era invisible. Restaurada aquí, que es donde
+  // Alberto busca los pisos, y es la que lleva el resumen del ciclo de mensajes al huésped.
+  { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
   { href: '/sivra/resultado-pisos', icon: '📈', label: 'Resultado pisos' },
   { href: '/sivra/calendario', icon: '📅', label: 'Calendario' },
   { href: '/sivra/income', icon: '💰', label: 'Ingresos' },

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import type { OpenRouterUsage } from '@central/core-ai'
 import { limiteMensualEfectivo } from '@/lib/ia-limite-mensual'
 
@@ -113,7 +113,7 @@ async function avisarBloqueo(motivo: string): Promise<void> {
       SELECT count(*) AS n FROM ai_usos
       WHERE creada_at >= date_trunc('day', now()) AND ok = false AND error = ${motivo}`
     if (Number(rows[0]?.n ?? 0) === 0) {
-      await tgSend(`🔴 <b>IA — presupuesto diario</b>\n${motivo}. Las llamadas DE PAGO quedan bloqueadas hasta mañana; la cadena gratis sigue sirviendo. Ajusta el límite en env/ia_presupuestos si es esperado.`)
+      await tgAviso('sistema.ia-presupuesto', `🔴 <b>IA — presupuesto diario</b>\n${motivo}. Las llamadas DE PAGO quedan bloqueadas hasta mañana; la cadena gratis sigue sirviendo. Ajusta el límite en env/ia_presupuestos si es esperado.`)
     }
   } catch { /* el aviso nunca rompe la pasarela */ }
 }

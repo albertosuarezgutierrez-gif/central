@@ -77,9 +77,22 @@ compute NANO · plan free · `ACTIVE_HEALTHY` · creado el 20/04/2026 · organiz
 | `cliente_relaciones` | 1.710 | `usuarios` | 17 |
 
 **52 tablas en `public`.** Y con eso, el punto 6 del mensaje a Manuel deja de ser papeleo: hay
-**32.600 clientes reales** con teléfonos, correos, **carnets de conducir** y relaciones familiares.
+**32.600 personas reales** con teléfonos, correos, **carnets de conducir** y relaciones familiares.
 El **contrato de encargado de tratamiento (`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`) pasa a ser
 lo más urgente del traspaso**, por delante de cualquier decisión técnica.
+
+> 🚨 **CORRECCIÓN (01/09/2026): «32.600 clientes» era falso, y el error nació en esta tabla.** Los
+> recuentos de filas de arriba son correctos, pero **una fila no es un cliente**. Medido: la cartera
+> **VIVA son ~80 clientes / 109 pólizas** —las que entran por CIMA, `polizas.import_ref IS NULL`—.
+> Las otras 28.729 pólizas son volcado histórico cargado en jun/2026 (`intranet:` 26.117 con
+> vencimientos **2013-2018**, `asegura_app:` 2.612) y **ninguna** vence en los últimos 18 meses;
+> 25.892 están en estado `vencida`. Regla de Alberto: **CIMA = cliente actual; el resto = lead**
+> (32.520 fichas).
+>
+> **Lo que NO cambia:** el volumen de datos personales a proteger sigue siendo de 32.600 personas, así
+> que todo lo que este runbook dice sobre RGPD, backups, cifrado y el contrato de encargado de
+> tratamiento **sigue igual de vigente**. Lo que cambia es el tamaño del NEGOCIO, no el del riesgo.
+> Diseño que salió de esta medición: `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
 
 ### Veredicto free vs. Pro: **FREE**, y ahora medido
 
@@ -120,10 +133,19 @@ que **hay que asegurarse de que `vector` está disponible en `central` antes de 
    `apps/mariscos`) sale más barato que migrar `auth.users`. ⚠️ Ojo al descuadre: `public.usuarios`
    tiene **17** filas frente a 9 en `auth.users` — hay 8 usuarios lógicos sin cuenta de acceso, o
    bajas. Mirarlo antes de dar la lista por buena.
-3. **Cero claves foráneas en 52 tablas.** La integridad referencial está en el código, no en la BD.
-   Para el volcado es buena noticia (no hay orden de carga que respetar); como herencia, es deuda que
-   conviene conocer antes de construir encima. **132 funciones en `public`** sí viajan en el dump, pero
-   hay que revisarlas: si alguna usa `auth.uid()`, depende del Supabase Auth que estamos quitando.
+3. ~~**Cero claves foráneas en 52 tablas.**~~ 🚨 **FALSO, corregido el 01/09/2026: hay 131 claves
+   foráneas** (`select count(*) from pg_constraint where contype='f'` sobre el origen). El error se
+   descubrió al generar el DDL del volcado y comparar constraints origen (198) contra destino (67):
+   los 131 que faltaban eran precisamente las FKs.
+   **Consecuencia práctica, que es lo que importa:** la frase «para el volcado es buena noticia, no
+   hay orden de carga que respetar» era exactamente al revés. Sí hay integridad referencial en la BD
+   y sí importa el orden — y además **no existe un orden topológico válido**, porque hay
+   autorreferencias (`polizas.poliza_padre_id`, `clientes.merged_into_cliente_id`). La solución está
+   implementada en `apps/asegura/prisma/sql/2026-09-01_seguros_volcado_fks.sql`: **las FKs se crean
+   DESPUÉS de cargar los datos**, lo que además convierte su creación en la verificación más dura del
+   volcado (si una falla, es que falta una fila).
+   **132 funciones en `public`** sí viajan en el dump, pero hay que revisarlas: si alguna usa
+   `auth.uid()`, depende del Supabase Auth que estamos quitando.
 
 ### Lo que sigue sin saberse
 
