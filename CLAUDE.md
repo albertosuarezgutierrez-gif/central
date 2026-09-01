@@ -331,6 +331,40 @@ está aislado si lo que desatasca es el des-draft, el merge de la base o los dos
 cambiaron dos cosas antes del push que funcionó. Lo que sí queda medido cinco veces es que **el orden
 de abajo resuelve**, así que síguelo sin gastar tiempo en diagnosticar la causa.
 
+🎯 **SEXTA medición (01/09/2026, PR #1962) — y ESTA SÍ trae una CAUSA MEDIDA, no otra hipótesis: el
+objeto PR de GitHub se queda ATRASADO respecto a la rama.** Dos pushes seguidos con contenido real
+(código y docs) sobre un PR **ya fuera de draft** salieron **mudos**: cero runs de los requeridos, solo
+`rutinas-automerge` (que es `pull_request_target`). Idéntico a #1789. Pero esta vez se miró **el objeto
+PR**, no solo los runs, y ahí estaba:
+
+```
+git ls-remote origin <rama>   →  5a732a51   ← la rama SÍ tenía el push
+PR #1962: head.sha            →  d0d23c65   ← GitHub seguía en el head viejo
+PR #1962: commits             →  2          ← de 5
+PR #1962: mergeable_state     →  "dirty"    ← contra una base que ya no era la de main
+```
+
+O sea: **GitHub no había procesado el `synchronize`.** No hay `event` que mirar porque el evento no
+existió. Y no era un fallo permanente — **a los ~2 minutos GitHub se puso al día solo** (head correcto,
+5 commits, `mergeable_state: "blocked"`) y **los 12 requeridos arrancaron en ese mismo instante**
+(`14:38:58`), sin tocar nada: sin des-draftear, sin mergear `main`, sin push nuevo. Verdes y mergeado.
+
+🚨 **Lo que esto CORRIGE de todo lo de arriba:** en #1789 se probaron tres palancas (abrir PR,
+des-draftear, push nuevo) y se declaró «causa desconocida»; en #1938 lo que «desatascó» fue un merge de
+`main`… **que es un push más, y por tanto también un par de minutos más de espera**. La explicación
+simple que encaja con las seis mediciones es el **lag**, no el draft ni la identidad: cada vez que algo
+«funcionó» había pasado tiempo, y cada vez que «no funcionó» se miró demasiado pronto.
+
+✅ **Procedimiento nuevo, y ahorra la tarde entera:** si tras un push los requeridos no arrancan,
+**compara `git ls-remote origin <rama>` con el `head.sha` del PR ANTES de tocar nada.** Si no coinciden,
+GitHub va con retraso: **espera 2-3 minutos y vuelve a mirar.** No des-draftees, no mergees `main`, no
+empujes otro commit — cada palanca añade un head nuevo, reinicia la espera y confunde el diagnóstico
+(fue exactamente lo que pasó aquí: el segundo push «mudo» no lo era, solo llegó mientras el primero
+seguía sin procesarse).
+
+⚠️ El orden de abajo sigue valiendo como respaldo si tras esperar el `head.sha` YA coincide y aun así no
+hay runs — pero prueba primero lo barato, que es no hacer nada.
+
 **Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
 de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
 cortos.
