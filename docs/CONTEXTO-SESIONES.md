@@ -46,16 +46,63 @@
 - Además: 🛡️ Correduría entra por fin en el menú de plataforma (PR #1907, guardián incluido) —
   «no me sale correduría»: /correduria nunca estuvo en NAV_NEGOCIO.
 
-### 📬 (31/08/2026) Mensajes programados a huéspedes NUESTROS — sustituto de los automáticos de Smoobu, en sombra
+### 🔑 (31/08/2026) House Sevillana YA ENVÍA · el PIN por reserva sustituye al maestro · salida flexible (PRs #1906, #1908)
+- **House Sevillana ACTIVADA** (`mensajes_prog_pisos.activo=true`, 21:45). Hoy no sale nada: los dos
+  primeros hitos de la reserva viva ya estaban reclamados en sombra, así que el 1er envío real es el
+  3/09 09:00 (víspera con códigos). Alberto apaga las plantillas de Smoobu de House; si se le olvida,
+  el chequeo de equivalencia evita el duplicado y le dice cuál apagar. Faltan los otros 3 pisos.
+- **PR #1906 — el mensaje manda el PIN de ESA reserva, no el maestro.** Los teclados de Socorro y
+  Bustos Tavera son cerraduras Tuya y `domotica_acceso_pin` ya guarda un PIN por reserva: repartir el
+  maestro teniendo uno temporal a medida era lo contrario de «al checkout se le quita el acceso».
+  `elegirCodigoPortal` (PIN > maestro > declarar el hueco) + `pinsPorReserva`; con DOS códigos vivos
+  distintos no se manda ninguno (el hueco `{PORTAL}` es UNO). La nota de caducidad **solo** sale con
+  el PIN: el maestro no caduca y prometerlo sería mentira. Al enviarse marca `entregado`.
+  Mismo PR: indicaciones corregidas contra las FOTOS de los 4 pisos — **Bustos Tavera tiene DOS cajas
+  GRIFEMA idénticas** (Luxury = ABAJO, Reform = ARRIBA; antes, 50% de abrir la del vecino), y en House
+  el código es solo para el 1er acceso: dentro hay pastilla + llave de la cancela.
+- **PR #1908 — entrada ESTRICTA / salida FLEXIBLE** (regla de Alberto): `margenSalidaMin` 0→120 min
+  (muere a las 13:00, con 2 h de colchón antes del check-in de las 15:00); entrada intacta, y una
+  entrada anticipada se concede a mano. Un PIN conserva PARA SIEMPRE su ventana, así que
+  `desajustesVentana` los DECLARA (dedupe diario) y el botón «🔄 ventana» los repone con el MISMO
+  código: no se reponen solos porque Tuya no sabe alargar un PIN —hay que borrar y recrear— y si la
+  recreación falla el huésped se queda con un código muerto (por eso queda en `estado='error'`, que
+  hace caer el mensaje al maestro, nunca en `'activo'`).
+- **Pendiente:** renovar IoT Core en Tuya (sin él Luxury/Reform no emiten PIN y siguen con el maestro);
+  reponer la ventana de los 2 PIN vivos de House; activar los otros 3 pisos.
+- **Verificado contra Smoobu (por `pg_net`, sin sacar la key de `pms_connections`):** el hilo de la
+  reserva viva de House tiene 16 mensajes; Smoobu ya mandó «Booking Confirmation» y «WHERE TO COLLECT
+  THE KEYS» (por eso esos dos hitos quedaron en sombra), y **NO** hay «RECORDATORIO - MUY IMPORTANTE»,
+  así que la víspera del 3/09 con el PIN NO está bloqueada. Alberto apagó ya las plantillas de House.
+- 🚨 **AGODA es de UNA SOLA DIRECCIÓN (medido sobre las 8 reservas del histórico):** Smoobu SÍ
+  entrega lo nuestro (los 7 automáticos salieron en todas), pero lo que el huésped contesta NO
+  vuelve — **0 mensajes entrantes en las 8**, con prueba independiente en `atul bhatt` (Agoda
+  reenvió su mensaje del 14/04 por correo y NO está en el hilo de Smoobu). Control: el hilo de
+  Booking de la reserva viva de House tiene 16 mensajes, 6 del huésped. Su respuesta vive SOLO en
+  el extranet YCS. Tapado con una categoría nueva del triaje (`agoda-huespedes`): el correo diario
+  «New messages from your guests» trae el TEXTO del mensaje, así que el Telegram lo manda entero y
+  enlaza a YCS. **NO se enruta al agente de huéspedes** — contestaría en un hilo que no llega.
+  Antes de activar Luxury (14 de las 15 reservas de Agoda son suyas) esto tenía que existir.
+- **AGODA sí tiene canal**: Smoobu guarda un alias de retransmisión `…@agoda-messaging.com`, mismo
+  mecanismo que `…@guest.booking.com`. Lo que NO trae es el idioma: `language` viene **vacío** (en
+  Booking viene `es`), así que a un huésped de Hong Kong con el portal en chino se le escribiría en
+  español. Ese es el riesgo de Agoda, no la entrega — y son 15 reservas de 2.045, 14 de ellas Luxury.
+
+### 📬 (31/08/2026) Mensajes programados a huéspedes NUESTROS — sustituto de los automáticos de Smoobu (MERGEADO, en sombra)
 - Análisis sobre 8 hilos reales: Smoobu manda 7 automáticos solo-en-español, promete el parking
   fantasma de S. Juan de la Palma, duplica en última hora y esconde lo crítico tras un enlace.
-- Construido (rama `claude/smoobu-automated-messages-po1uvp`): `lib/sivra/acceso.ts` (fuente única
-  por piso; códigos en BD `sivra_codigos_acceso`, sembrados por MCP — NO en el repo) + 7 plantillas
-  deterministas + cron `mensajes/programados` (30 min, `CRON_JOBS`) con dedupe, sombra por piso
-  (`mensajes_prog_pisos`, fila ausente = sombra), chequeo «¿ya lo mandó Smoobu?» y latido+sonda.
+- **PR #1902 MERGEADO**: `lib/sivra/acceso.ts` (fuente única por piso; códigos en BD
+  `sivra_codigos_acceso`, sembrados por MCP — NO en el repo) + 7 plantillas deterministas + cron
+  `mensajes/programados` (30 min, `CRON_JOBS`) con dedupe, sombra por piso (`mensajes_prog_pisos`,
+  fila ausente = sombra), chequeo «¿ya lo mandó Smoobu?» y latido+sonda. **Vivo pero MUDO** hasta
+  que Alberto ponga `activo=true` piso a piso (y apague a la vez las plantillas de ese piso en Smoobu).
 - Decisiones de Alberto: sin landing (texto plano en el hilo del portal), códigos en DOS tiempos
   (proceso a 7 días, códigos en víspera), rotación tras cancelación expuesta → PENDIENTE (tarea a
   Vanesa), aviso a Sique Brilla de cuna/horas/late → PENDIENTE (email + intranet, PR siguiente).
+- **Las 5 fotos del Dúplex se MIRARON una a una** (CDN de Smoobu, vía pg_net + edge function temporal
+  ya retirada) y colgaban del paso equivocado: el llavero rotulado APARTMENT/BUILDING/LIFT estaba en
+  «entrada del edificio» y el Street View anotado no explicaba sus tres rótulos. Reasignadas con el
+  texto que dice qué enseña cada una. Regla: **una foto de instrucciones se coloca mirándola, no por
+  el nombre del fichero.**
 
 ### 🩺 (31/08/2026) El motivo era «asegura no puede leer su BD» — y la BD está SANA
 - El recuadro con motivo (PR #1903) habló a la primera: `asegura_error` — el secreto COINCIDE, asegura

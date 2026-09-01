@@ -11,6 +11,8 @@ import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './huespedes'
 import { parsearAvisoBooking } from './reserva-booking'
 import { registrarAvisoBooking, registrarReservaHuesped } from '@/lib/sivra/reservas-booking-vigia'
+import { parsearAvisoMensajesAgoda, textoAvisoAgoda } from './agoda-mensajes'
+import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
@@ -124,8 +126,20 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             }
           }
 
-          // Aviso inmediato.
-          if (ruta.aviso === 'inmediato') {
+          // Aviso inmediato. El de Agoda lleva texto PROPIO: el correo trae el mensaje del huésped
+          // dentro, así que se manda tal cual en vez del resumen genérico — y sobre todo dice que
+          // NO se contesta desde Smoobu (para Agoda el hilo no llega al huésped) y da el enlace de YCS.
+          const avisoAgoda = ruta.aviso === 'inmediato' && c.categoria === 'agoda-huespedes'
+            // `extracto` es asunto+cuerpo truncado a 1500 chars: el nombre y el texto del mensaje van
+            // al PRINCIPIO y siempre sobreviven; el enlace de YCS va al final y puede caerse. El parser
+            // devuelve null en lo que no ve y el aviso lo declara — nunca se inventa el piso.
+            ? parsearAvisoMensajesAgoda({ from: correo.from, subject: correo.subject, body: correo.extracto })
+            : null
+          if (avisoAgoda) {
+            const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
+            await tgSend(textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
+            stats.avisados++
+          } else if (ruta.aviso === 'inmediato') {
             await tgSend(mensajeAviso({
               categoria: c.categoria, remitente: correo.fromRaw, asunto: correo.subject,
               resumen: c.resumen, accion: c.accionSugerida, fechaLimite: c.fechaLimite, cautela: !!ruta.cautela,

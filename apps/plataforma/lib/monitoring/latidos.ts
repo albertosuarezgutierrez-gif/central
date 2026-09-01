@@ -320,6 +320,21 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'La avería sería que no hubiera latido. Huella: agente_latidos.sivra_pricing_apply.',
   },
   {
+    id: 'sivra_domotica_acceso',
+    etiqueta: '🔐 PIN por reserva de la cerradura (04:40 · 12:40 · 20:40)',
+    // 3 pasadas/día → el hueco legítimo más largo es 20:40→04:40 = 8 h; el vigía mira a las 07:45.
+    // 30 h salta al perder un día entero y se calla si solo falló una pasada.
+    maxHoras: 30,
+    nota:
+      'El cron que crea y retira los PIN temporales de Tuya no está corriendo. Desde el 31/08/2026 ' +
+      'el mensaje de la víspera manda el PIN de ESA reserva, así que este cron está en el camino del ' +
+      'huésped. 🚦 Lo que NO pasa: nadie se queda en la puerta — sin PIN vivo el mensaje cae al ' +
+      'código MAESTRO, que abre igual. Lo que SÍ pasa: se reparte una llave permanente en vez de una ' +
+      'que caduca con la estancia, y en silencio. Mira el `detalle`: «con ERROR» en Bustos Tavera es ' +
+      'el trial de IoT Core caducado (conocido, se renueva en platform.tuya.com), no un fallo nuevo. ' +
+      'Huella: agente_latidos.sivra_domotica_acceso.',
+  },
+  {
     id: 'sivra_mensajes_prog',
     etiqueta: '📬 Mensajes programados a huéspedes (cron cada 30 min)',
     // Cada 30 min → 6 h: caza medio día caído sin saltar por un tropiezo puntual del dispatcher.

@@ -247,6 +247,12 @@ plantillas de Smoobu (el chequeo `equivalentes-smoobu.ts` evita duplicados mient
 - Fuente única de acceso: **`lib/sivra/acceso.ts`** (dirección, pasos, fotos, mapas; Dúplex: llaves
   FUERA, en Javier Lasso de la Vega 7). **Los códigos NO están en el repo**: tabla
   `sivra_codigos_acceso` (BD, rotable; NULL = se declara, no se inventa).
+  🚨 **En el Dúplex las fotos van DENTRO del paso que ilustran, no amontonadas al final** (recogida
+  de llaves y apartamento son DOS sitios distintos, y una foto suelta confunde más que ayuda), y el
+  texto explica lo que enseña cada una — incluidos los rótulos pintados sobre el Street View
+  («ENTRADA EN CASO DE ESTAR CERRADA», «LLAVES»). Las 5 se verificaron mirándolas el 31/08/2026 y dos
+  estaban en el paso equivocado. **Al tocar una foto de instrucciones, ábrela**: el nombre del
+  fichero del CDN de Smoobu no dice qué hay dentro.
 - Plantillas deterministas (`lib/sivra/mensajes-prog/plantillas.ts`), texto plano primero (sirve
   offline y lo puede leer el operador del portal); códigos en DOS tiempos (proceso a 7 días,
   códigos en víspera); cada mensaje termina con la pregunta de su fase (la respuesta la absorbe el
