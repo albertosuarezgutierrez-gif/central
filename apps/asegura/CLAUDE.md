@@ -129,6 +129,30 @@ GitHub Actions (cron 5:30 y 11:30)
   respuesta perdida puede crear un duplicado en su lado. Antes de activarlo hay que probarlo en serio:
   **mandar el mismo `attempt_id` dos veces y ver si ellos deduplican.**
 
+## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)
+
+Rediseño completo en `docs/superpowers/specs/2026-09-01-asegura-ficha-cliente-design.md` (maqueta
+visual: https://claude.ai/code/artifact/22b57a16-739c-4e45-bd9d-9e494275aeda). Inventario de qué
+hay detrás de cada pantalla, en `.claude/skills/agente-correduria/references/sector.md` §8.
+
+La ficha es **un índice, no un expediente**: tres profundidades (ficha → lista → dato), contadores
+**con estado** (no se entra si el contador está en calma) y maestro-detalle en escritorio, donde
+no se navega sino que se expande.
+
+🚨 **Documentos: hacen falta en tres sitios y solo uno tiene tabla.** Cero ficheros en TODO el
+sistema (las cuatro tablas a 0, `polizas.documento_url` 0%, `storage.objects` vacío):
+- **`cliente_documentos` NO EXISTE** y `poliza_documentos.poliza_id` es `NOT NULL` → un DNI habría
+  que colgarlo de una póliza cualquiera, y a un **lead sin póliza** no se le puede adjuntar nada.
+- **`siniestro_documentos` NO EXISTE** — y es donde más papel se mueve; con tramitador y reserva al
+  0%, las fotos serían lo único que habría de un siniestro.
+- `poliza_documentos` sí está, con **`visible_por_cliente`** ya previsto (el interruptor del portal).
+- `bien_documentos` es la mejor pensada (tipo cerrado: ficha técnica, permiso de circulación,
+  título de propiedad…) porque **el permiso es del coche, no de la póliza**. Pero
+  `bienes_asegurables` **no tiene `poliza_id`**: esos papeles no se ven desde la póliza de ese coche.
+
+Y falta el estado **«pedido pero no recibido»**: sin él, «0 documentos» no distingue no habérselo
+pedido de que el cliente no lo mande. Es la regla de `CLAUDE.md` aplicada al archivo.
+
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se
   descargan los ficheros de las compañías, si usa Vercel Blob y qué dominios tiene.
