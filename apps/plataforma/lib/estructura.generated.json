@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T15:29:53Z",
+  "generadoEn": "2026-09-01T16:15:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3225,6 +3225,7 @@
     "asegura": [
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/operador/codeoscopic/sonda",
       "/api/operador/comisiones",
       "/api/operador/ingesta",
       "/api/operador/resumen",
@@ -4463,6 +4464,7 @@
       "seguros.cliente_relaciones",
       "seguros.cliente_telefonos",
       "seguros.clientes",
+      "seguros.codeoscopic_consumo",
       "seguros.codeoscopic_documents",
       "seguros.codeoscopic_offers",
       "seguros.codeoscopic_participants",
@@ -4983,6 +4985,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Apagado por defecto",
+      "fecha": ""
+    },
+    {
+      "titulo": "Hallazgo:",
+      "fecha": ""
+    },
+    {
       "titulo": "Siguiente paso al confirmar envs:",
       "fecha": ""
     },
@@ -5032,14 +5042,6 @@
     },
     {
       "titulo": "Por qué duró dos meses:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Hecho (nuestro lado):",
-      "fecha": ""
-    },
-    {
-      "titulo": "De Manuel (su repo, no el nuestro):",
       "fecha": ""
     }
   ],
@@ -5472,7 +5474,7 @@
     "packages": 38,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1213,
+    "apis": 1214,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
