@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T13:36:24Z",
-  "sha": "82d202f4511f410a3c5382318bbaedbc7d59d549",
+  "generadoEn": "2026-09-01T14:50:20Z",
+  "sha": "21756689a25fdcd1a9a5aedc2e4351f2f590248f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2952,6 +2952,48 @@
       "hash": "940406db64c5"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/comisiones/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "GET ?desde=YYYY-MM-DD — comisiones de la cartera para el cuadre de plataforma (read-only). La respuesta conserva los TRES estados de ComisionesCartera: quien consume no puede confundir «puerto sin con"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/comisiones",
+      "hash": "d357e19f5ae0"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/ingesta/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "GET /api/operador/ingesta — salud de la ingesta de CIMA (read-only). Tres estados, como el resto del puerto: `sin_configurar` (no hay conexión con la BD de origen) ≠ `error` (hay conexión y no se pudo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/ingesta",
+      "hash": "4f4c1daff309"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/resumen/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3228,6 +3270,46 @@
       "hash": "552d09e52d35"
     },
     {
+      "ruta": "apps/asegura/lib/comisiones.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Comisiones de la correduría leídas de la cartera real (BD de Manuel, vía `ASEGURA_DATABASE_URL`). Esta app es la ÚNICA que toca esa BD; plataforma las consume por el puerto `/api/operador/comisiones`. 🚨 Tres estados, nunca dos: sin la env es `sin_configurar` — que NO es «no hay comisiones» —, y un ",
+      "exporta": [
+        "importeEiac",
+        "comisionesCartera"
+      ],
+      "funciones": [
+        {
+          "nombre": "importeEiac",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 17,
+          "resumen": "Importe EIAC (guardado en TEXT) → número. `null` si no se puede leer. 🚨 Nunca 0: un importe ilegible y un importe de cero euros son cosas distintas, y aguas abajo el 0 pasaría por «comprobado y no ha"
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null",
+          "retorno": "string | null",
+          "linea": 66
+        },
+        {
+          "nombre": "comisionesCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, desde: Date",
+          "retorno": "Promise<ComisionesCartera>",
+          "linea": 78,
+          "resumen": "Comisiones de la cartera desde `desde` (inclusive). El DEVENGADO se cuenta por `fechaSituacion` del recibo **cobrado**: es la fecha en que la compañía se quedó el dinero del cliente, que es lo que dis"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bbc2afc574a1"
+    },
+    {
       "ruta": "apps/asegura/lib/dinero.ts",
       "ambito": "apps/asegura",
       "resumen": "Formato de dinero ESPAÑOL, regla global del monorepo: `2.162,49€` (miles con punto, decimales con coma, € DETRÁS). Nunca `€2162.49`. Espejo de apps/plataforma/lib/dinero.ts — las primas y recibos de la correduría se pintan con esto, en pantalla, en Telegram y en emails.",
@@ -3270,6 +3352,31 @@
       ],
       "rutaApi": null,
       "hash": "2973fdc30c86"
+    },
+    {
+      "ruta": "apps/asegura/lib/ingesta.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Estado de la INGESTA de CIMA, leído de la BD del CRM de origen. Por qué existe (medido el 01/09/2026): entre el 24/06 y el 30/08 se quedaron 42 ficheros en cuarentena — 23 recibos por 7.721,71€ de prima y 20 siniestros de Occident— y nadie se enteró. El vigía de origen corría a diario con `cuarenten",
+      "exporta": [
+        "leerIngesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<EstadoIngestaPuerto>",
+          "linea": 41
+        }
+      ],
+      "tablas": [
+        "cima_ficheros",
+        "operational_events",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "6ecbb69fd893"
     },
     {
       "ruta": "apps/asegura/lib/operador.ts",
@@ -47164,7 +47271,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         },
         {
           "nombre": "fmtFecha",
@@ -47172,7 +47279,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 14,
+          "linea": 15,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -47181,7 +47288,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "DesgloseModal",
@@ -47189,7 +47296,7 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 249
+          "linea": 255
         },
         {
           "nombre": "num",
@@ -47197,7 +47304,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 431
+          "linea": 437
         },
         {
           "nombre": "CarteraViva",
@@ -47205,7 +47312,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 433
+          "linea": 439
         },
         {
           "nombre": "CeldaObjeto",
@@ -47213,7 +47320,7 @@
           "exportada": false,
           "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
           "retorno": null,
-          "linea": 560,
+          "linea": 566,
           "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
         },
         {
@@ -47222,12 +47329,58 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 593
+          "linea": 599
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a22e170abb55"
+      "hash": "b832f2b502e1"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CuadreComisiones"
+      ],
+      "funciones": [
+        {
+          "nombre": "imp",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": null,
+          "linea": 70,
+          "resumen": "`—` y no «0,00€»: null significa que el importe no ha llegado."
+        },
+        {
+          "nombre": "fmt",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 72
+        },
+        {
+          "nombre": "CuadreComisiones",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ año }: { año: number }",
+          "retorno": null,
+          "linea": 77
+        },
+        {
+          "nombre": "ModalConfirmar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ periodo, onCerrar, onGuardado }: { periodo: Periodo onCerrar: () => void onGuardado: () => void }",
+          "retorno": null,
+          "linea": 249,
+          "resumen": "── Confirmación manual ───────────────────────────────────────────────────── El camino de Mapfre: manda la liquidación en un PDF cifrado tras un enlace que caduca, así que el agente avisa y Alberto te"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f894a6487de2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/page.tsx",
@@ -54115,6 +54268,57 @@
       "hash": "cd6ddb5fc208"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/comisiones/confirmar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "POST — confirmación MANUAL del importe liquidado de un periodo. Es el camino de Mapfre: manda la liquidación en un PDF cifrado tras un enlace que caduca a los 90 días, así que el agente avisa y Albert"
+        }
+      ],
+      "tablas": [
+        "comisiones_devengo",
+        "next",
+        "set"
+      ],
+      "rutaApi": "/api/correduria/comisiones/confirmar",
+      "hash": "c6ede48864b5"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/comisiones/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "GET ?año=YYYY — el libro de comisiones del año: los tres ejes por periodo, la cobertura por compañía y el total anual que va a la asesoría."
+        }
+      ],
+      "tablas": [
+        "comisiones_cobertura",
+        "comisiones_devengo",
+        "next",
+        "periodo_inicio"
+      ],
+      "rutaApi": "/api/correduria/comisiones",
+      "hash": "ff20b329d895"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/detalle/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -54197,7 +54401,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 167
+          "linea": 173
         }
       ],
       "tablas": [
@@ -54210,7 +54414,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "d315b980b8d2"
+      "hash": "3f3d93e03895"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54299,7 +54503,7 @@
     {
       "ruta": "apps/plataforma/app/api/cron/cima-liq/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "/api/cron/cima-liq — Descarga LIQ de CIMA, las guarda en BD y cruza con BBVA. Si hay descuadre entre lo que dice CIMA y lo ingresado en BBVA, avisa por Telegram. Auth: Bearer CRON_SECRET (o ?secret= para disparo manual).",
+      "resumen": "/api/cron/cima-liq — libro de comisiones de la correduría. Tres ejes por (compañía, periodo): DEVENGADO (recibos cobrados) → LIQUIDADO (extracto de la compañía) → COBRADO (BBVA). Cada salto tiene su propio fallo, y llamarlos a todos «descuadre» impedía saber a quién reclamar. 🚨 Antes esto hablaba S",
       "exporta": [
         "GET"
       ],
@@ -54310,25 +54514,20 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
-        },
-        {
-          "nombre": "fmt",
-          "kind": "function",
-          "exportada": false,
-          "params": "n: number",
-          "retorno": "string",
-          "linea": 109
+          "linea": 26
         }
       ],
       "tablas": [
-        "cima_liquidaciones",
+        "comisiones_cobertura",
+        "comisiones_devengo",
         "cuentas",
+        "cuentas_bancarias",
+        "movimientos_bancarios",
         "next",
-        "v_movimientos_activos"
+        "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "b8d3af1a1ee3"
+      "hash": "81593419d683"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-avisos/route.ts",
@@ -54454,6 +54653,39 @@
       ],
       "rutaApi": "/api/cron/contable-proactivo",
       "hash": "000ade6ee05e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/correduria-ingesta/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Vigía de la INGESTA de CIMA (Grupo ASegura). 🚨 Existe por una avería real: del 24/06 al 30/08/2026 se quedaron 42 ficheros de CIMA sin procesar —23 recibos por 7.721,71€ de prima y 20 siniestros, casi todos de Occident— y ",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "firma",
+          "kind": "function",
+          "exportada": false,
+          "params": "estado: string, recientes: number, huerfanas: number | null",
+          "retorno": "string",
+          "linea": 38,
+          "resumen": "Firma de lo que se ha visto hoy. Sirve para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta: el estado vive en el latido y en la pantalla; el Telegram suena cuando algo CAMBIA ("
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 42
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "next"
+      ],
+      "rutaApi": "/api/cron/correduria-ingesta",
+      "hash": "9a0dd26d2f88"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-renovaciones/route.ts",
@@ -63975,93 +64207,6 @@
       "hash": "75dbd19921a9"
     },
     {
-      "ruta": "apps/plataforma/lib/cima.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "Cliente CIMA WSE Estándar (TIREA). Descarga ficheros LIQ (liquidaciones de comisiones) vía SOAP y los parsea. Credenciales: CIMA_WSE_USER, CIMA_WSE_PASSWORD, CIMA_WSE_PLATAFORMA (Vercel env).",
-      "exporta": [
-        "descargarLiquidaciones"
-      ],
-      "funciones": [
-        {
-          "nombre": "buildSoapEnvelope",
-          "kind": "function",
-          "exportada": false,
-          "params": "tipoFichero: string",
-          "retorno": "string",
-          "linea": 22
-        },
-        {
-          "nombre": "buildConfirmarEnvelope",
-          "kind": "function",
-          "exportada": false,
-          "params": "nombreFichero: string",
-          "retorno": "string",
-          "linea": 39
-        },
-        {
-          "nombre": "escapeXml",
-          "kind": "function",
-          "exportada": false,
-          "params": "s: string",
-          "retorno": "string",
-          "linea": 56
-        },
-        {
-          "nombre": "extractTag",
-          "kind": "function",
-          "exportada": false,
-          "params": "xml: string, tag: string",
-          "retorno": "string",
-          "linea": 61,
-          "resumen": "Extrae el texto de un tag XML simple del response SOAP."
-        },
-        {
-          "nombre": "extractAll",
-          "kind": "function",
-          "exportada": false,
-          "params": "xml: string, tag: string",
-          "retorno": "string[]",
-          "linea": 67,
-          "resumen": "Extrae todos los bloques de un tag repetido."
-        },
-        {
-          "nombre": "parseLiq",
-          "kind": "function",
-          "exportada": false,
-          "params": "contenido: string, nombreFichero: string",
-          "retorno": "Omit<LiqFichero, 'compania' | 'periodo'> &",
-          "linea": 96
-        },
-        {
-          "nombre": "periodoToISO",
-          "kind": "function",
-          "exportada": false,
-          "params": "periodoRaw: string",
-          "retorno": "string",
-          "linea": 114
-        },
-        {
-          "nombre": "descargarLiquidaciones",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": "Promise<LiqFichero[]>",
-          "linea": 122
-        },
-        {
-          "nombre": "confirmarFichero",
-          "kind": "function",
-          "exportada": false,
-          "params": "nombreFichero: string",
-          "retorno": "Promise<void>",
-          "linea": 187
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "37644e162e1b"
-    },
-    {
       "ruta": "apps/plataforma/lib/comercio-canonico.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/comercio-canonico.ts IDENTIDAD canónica de un comercio, para comparar el gasto de HOY contra el histórico. `lib/comercio.ts::comercioDe` da la ETIQUETA que se PINTA (\"DIA SEVILLA 2260\"): fiel al banco, buena para leer. Este módulo da la IDENTIDAD (\"DIA\"): la clave con la que se d",
@@ -64134,6 +64279,64 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "87950c7b1a70"
+    },
+    {
+      "ruta": "apps/plataforma/lib/comisiones-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Comisiones de la correduría en vivo, por el puerto HTTP de central-asegura (patrón puerto operador, igual que `lib/cartera-asegura.ts`). Read-only. 🚨 Plataforma NO tiene `ASEGURA_DATABASE_URL`: esa env vive solo en `apps/asegura`. Todo el dato de la cartera entra por aquí. Tres estados, nunca dos: ",
+      "exporta": [
+        "interpretarComisiones",
+        "comisionesAsegura",
+        "nombreCompania"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 54
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 55
+        },
+        {
+          "nombre": "interpretarComisiones",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "ComisionesAsegura",
+          "linea": 64,
+          "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Cualquier forma inesperada degrada a `error`, NUNCA a unas comisiones inventadas ni a listas vacías: una lista vacía con estado `ok`"
+        },
+        {
+          "nombre": "comisionesAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: string",
+          "retorno": "Promise<ComisionesAsegura>",
+          "linea": 115,
+          "resumen": "Lee las comisiones por el puerto de central-asegura. La URL no es un secreto y cae al dominio del proyecto; el secreto NUNCA tiene fallback."
+        },
+        {
+          "nombre": "nombreCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string",
+          "retorno": "string",
+          "linea": 150,
+          "resumen": "Nombre legible, o el propio código si no está en el mapa. Devolver el código crudo es correcto: inventar un nombre sería peor que no saberlo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "48607185a90a"
     },
     {
       "ruta": "apps/plataforma/lib/comparativa-declaracion.ts",
@@ -65652,6 +65855,176 @@
       "hash": "18617fc354aa"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/cuadre.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cuadre de comisiones de la correduría. PURO: sin BD ni red, testeable con `node --test`. La UI no decide nada; solo pinta lo que devuelve esto. Patrón de referencia: `lib/subastas/resumen-docs.ts`. 🚨 `null` = no ha llegado. `0` = comprobado y es cero. No se colapsan nunca: es la diferencia entre «M",
+      "exporta": [
+        "estadoCuadre",
+        "totalEsCerrado",
+        "cuantosPendientes",
+        "mesEnPeriodo",
+        "finDeMes"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoCuadre",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCuadre",
+          "retorno": "EstadoCuadre",
+          "linea": 52
+        },
+        {
+          "nombre": "totalEsCerrado",
+          "kind": "function",
+          "exportada": true,
+          "params": "estados: readonly EstadoCuadre[]",
+          "retorno": "boolean",
+          "linea": 90,
+          "resumen": "¿El total anual se puede presentar como CERRADO? Solo si ningún periodo está pendiente de dato o de comprobación. 🚨 Un total con huecos pintado como definitivo es justo la mentira que este módulo evi"
+        },
+        {
+          "nombre": "cuantosPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "estados: readonly EstadoCuadre[]",
+          "retorno": "number",
+          "linea": 95,
+          "resumen": "Cuántos periodos están pendientes, para poder decirlo en la UI."
+        },
+        {
+          "nombre": "mesEnPeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string, inicio: string, fin: string",
+          "retorno": "boolean",
+          "linea": 107,
+          "resumen": "¿El mes `YYYY-MM` cae dentro del periodo `inicio`..`fin` (fechas `YYYY-MM-DD`)? Hace falta porque el devengo se agrupa por MES natural (cuándo se cobró el recibo) y la liquidación viene con el periodo"
+        },
+        {
+          "nombre": "finDeMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "mes: string",
+          "retorno": "string",
+          "linea": 116,
+          "resumen": "Último día del mes `YYYY-MM`, como `YYYY-MM-DD`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "69a7dc8257ee"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/ingesta-cima.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Salud de la ingesta de CIMA, leída por el puerto HTTP de central-asegura. La avería que justifica este vigía (medida el 01/09/2026): 42 ficheros de CIMA se quedaron sin procesar entre el 24/06 y el 30/08 —23 recibos por 7.721,71€ de prima y 20 siniestros, casi todos de Occident— y el health-check de",
+      "exporta": [
+        "interpretarIngesta",
+        "saludDesdeRespuesta",
+        "leerIngestaCima"
+      ],
+      "funciones": [
+        {
+          "nombre": "esFichero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is FicheroEnCuarentena",
+          "linea": 19
+        },
+        {
+          "nombre": "interpretarIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaIngesta",
+          "linea": 37,
+          "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Una forma inesperada NO se degrada a «no hay nada atascado»: se degrada a `sin_datos`. Es la diferencia entre «he mirado y está limp"
+        },
+        {
+          "nombre": "saludDesdeRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RespuestaIngesta",
+          "retorno": "SaludIngesta",
+          "linea": 68,
+          "resumen": "La salud tal cual la ve el vigía: un fallo de red ya llega como `sin_datos`."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 72
+        },
+        {
+          "nombre": "leerIngestaCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<RespuestaIngesta>",
+          "linea": 76
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c85b8c33348f"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/pdf-allianz.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Parser del extracto «Cuenta Agente» que Allianz manda por correo (mediador@allianz.es, PDF adjunto `ADYP_<AAMMDD>_A<mediador>_*.pdf`). 🚨 El texto del PDF NO es Latin-1: va en EBCDIC dentro de los content streams. Sin decodificar, `COBROS DEL MES` se lee como `ÃÖÂÙÖâ@ÄÅÓ@ÔÅâ` y el parser devolvería ",
+      "exporta": [
+        "decodificarEbcdic",
+        "importeEs",
+        "periodoDeExtracto",
+        "leerExtracto"
+      ],
+      "funciones": [
+        {
+          "nombre": "decodificarEbcdic",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 38,
+          "resumen": "EBCDIC → texto. La entrada son los bytes tal cual salen del content stream del PDF (leídos como latin1). Un byte no mapeado se descarta."
+        },
+        {
+          "nombre": "importeEs",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "number | null",
+          "linea": 50,
+          "resumen": "Importe en formato español → número. `null` si no se puede leer. 🚨 Nunca 0: un importe que no se sabe leer y un importe de cero euros son afirmaciones distintas, y aguas abajo el 0 pasaría por «compr"
+        },
+        {
+          "nombre": "periodoDeExtracto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "",
+          "linea": 62,
+          "resumen": "Periodo del extracto: «Conceptos del periodo DD-MM-YYYY al DD-MM-YYYY». `null` si el texto no lo trae — y entonces el periodo NO se inventa del asunto del correo."
+        },
+        {
+          "nombre": "leerExtracto",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: string[]",
+          "retorno": "ExtractoAllianz",
+          "linea": 91,
+          "resumen": "Lee el extracto a partir del texto YA decodificado (una línea por entrada de la relación de recibos, como sale del content stream). Formato medido: `<Ramo>` en una línea y `comisión`, `IRPF`, `T.Recib"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "359ab01677e5"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/renovaciones-aviso.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Aviso de RENOVACIONES de la correduría. La tabla de /correduria solo sirve si Alberto entra a mirarla. Lo que mueve una cartera es que el aviso llegue solo, y a tiempo: la ventana no la marca el calendario, la marca la LCS ",
@@ -66227,7 +66600,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 158,
+          "linea": 159,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -66236,7 +66609,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 188,
+          "linea": 189,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -66245,7 +66618,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 210
+          "linea": 211
         },
         {
           "nombre": "ventanaMinutos",
@@ -66253,7 +66626,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 218,
+          "linea": 219,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -66262,13 +66635,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 230,
+          "linea": 231,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d89daafc944b"
+      "hash": "028b20a44920"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -69395,7 +69768,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "04729ec8465e"
+      "hash": "89bec6523ca0"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -78231,7 +78604,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 528
+          "linea": 534
         },
         {
           "nombre": "avisosDe",
@@ -78239,7 +78612,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 533,
+          "linea": 539,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -78248,13 +78621,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 543,
+          "linea": 549,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b186319bb125"
+      "hash": "5a0afd1b943a"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -97360,6 +97733,63 @@
       "hash": "54dd111be75d"
     },
     {
+      "ruta": "packages/module-seguros/src/ingesta.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Salud de la INGESTA de CIMA — el vigía de que los datos de las compañías llegan de verdad. Contexto que justifica este módulo (medido el 01/09/2026): durante más de dos meses se perdieron 23 recibos (7.721,71€ de prima) y 20 siniestros de Occident, y el health-check de origen estuvo TODO ese tiempo ",
+      "exporta": [
+        "saludIngesta",
+        "detalleSalud"
+      ],
+      "funciones": [
+        {
+          "nombre": "claveDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FicheroEnCuarentena",
+          "retorno": "string | null",
+          "linea": 103,
+          "resumen": "Un valor de cajón (vacío, guiones, «desconocido») es ausencia, no dato."
+        },
+        {
+          "nombre": "repartoClave",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuarentena: FicheroEnCuarentena[],",
+          "retorno": "Array<",
+          "linea": 109
+        },
+        {
+          "nombre": "reparto",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuarentena: FicheroEnCuarentena[]",
+          "retorno": "Array<",
+          "linea": 125
+        },
+        {
+          "nombre": "saludIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaSalud, diasRecientes: number = DIAS_CUARENTENA_RECIENTE,",
+          "retorno": "SaludIngesta",
+          "linea": 142,
+          "resumen": "Veredicto sobre la ingesta. `degradada` exige una señal MEDIDA de pérdida: un fichero atascado en la ventana reciente, o pólizas huérfanas. El backlog viejo por sí solo no alarma (se informa, pero no "
+        },
+        {
+          "nombre": "detalleSalud",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SaludIngesta",
+          "retorno": "string",
+          "linea": 222,
+          "resumen": "Una línea para el latido/Telegram. Nunca dice «todo bien» sin haberlo mirado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c66b5547c62d"
+    },
+    {
       "ruta": "packages/module-seguros/src/objeto.ts",
       "ambito": "packages/module-seguros",
       "resumen": "QUÉ asegura cada póliza — el «objeto asegurado». Una lista de renovaciones con cliente, ramo y prima no basta para llamar a nadie: el mismo tomador puede tener tres pólizas de auto, y «Auto · Mapfre · 431,85€» no dice CUÁL. Lo que identifica la póliza en la conversación es el bien: la matrícula y el",
@@ -102703,7 +103133,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2692,
-    "funciones": 7494
+    "archivos": 2704,
+    "funciones": 7522
   }
 }
