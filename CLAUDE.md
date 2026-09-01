@@ -312,6 +312,12 @@ ejecutó el paso 2 y arrancaron los 12 requeridos a los pocos segundos:
 | 3 | des-draftear (`draft:false` por la API) | **0** (ídem) |
 | 4 | **merge de `main` en la rama + push** | ✅ **12/12**, `event: pull_request`, `actor: albertosuarezgutierrez-gif`, verdes en ~2,5 min |
 
+🔀 **Y el PR de seguimiento del mismo día (#1940) volvió a romper el patrón: abierto IGUAL —MCP, en
+draft, misma identidad— y disparó los 12 al instante** (`event: pull_request`, sin des-draftear ni
+tocar nada). Dos PRs consecutivos, mismo método, resultados opuestos. Así que **el draft NO es la
+causa**, o no es la única: sigue sin explicación, exactamente como quedó tras #1789. Lo único
+accionable sigue siendo el orden de abajo.
+
 Encaja con la hipótesis del draft del 27/08 **con un matiz que conviene recordar**: sacar de draft
 por sí solo no disparó nada (como en #1789), pero dejó la rama armada para que **el push siguiente
 sí** lo hiciera — el push inicial, con el PR aún en draft, había sido mudo con el mismo token. ⚠️ No
