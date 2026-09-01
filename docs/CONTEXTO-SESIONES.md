@@ -48,6 +48,14 @@
   Ingesta CIMA = cron diario ~11:40 UTC **fuera de nuestro alcance**: en ese Supabase NO hay pg_cron ni
   Edge Functions, así que todo lo alimenta el Vercel de Manuel — y ese Vercel **no se ve desde aquí**
   (el conector solo alcanza el team «Pisos turisticos», donde ni `asegura` ni `central-asegura` están).
+- 🚨 **Método — cómo NO verificar un deploy de Vercel (01/09/2026, me costó 3 falsos negativos):** se
+  dio por hecho que plataforma «no había desplegado» porque el identificador `dpl_…` incrustado en el
+  HTML de `/login` no cambiaba. **`/login` es una página PRERENDERIZADA (ISR)**: su HTML lo sirve el CDN
+  y ese `dpl_` puede seguir siendo el del build anterior con el deployment nuevo ya en producción (el
+  panel mostraba los dos commits en **Production · Ready**). La comprobación que SÍ vale desde aquí:
+  pedir una **ruta de API nueva** y ver si responde **401/200 en vez de 404** — eso prueba que el código
+  está sirviendo (`/api/cron/correduria-renovaciones` → 401). Y el conector de Vercel **no puede leer
+  deployments (403) ni env vars (no existe la herramienta)**: para eso hace falta el panel.
 - **Migrar la cartera al schema `seguros`: NO todavía** — copiar 32.600 filas es trivial, pero sin mover
   la ingesta EIAC/CIMA la copia envejece al día siguiente y quedan dos carteras. Orden: vencimientos ya
   (hecho) → pedir a Manuel cómo se alimenta → migrar + repuntar ingesta. Al mover, ojo: las 86 RLS por
