@@ -9,8 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
-import { tgSend } from '@central/core-telegram'
-
+import { tgAviso } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
@@ -211,7 +210,7 @@ export async function GET(req: NextRequest) {
       VALUES (${version}, ${prompt}, ${JSON.stringify(catalogo)}::jsonb, 'cron')`
     const cambioModelos = prevSlugs !== slugs.slice().sort().join(',')
     if (cambioModelos || penalizados.length) {
-      await tgSend(
+      await tgAviso('sistema.ia-director', 
         `🧠 <b>IA — Director actualizado (v${version})</b>\nModelos por categoría:\n` +
         Object.entries(porCategoria).map(([c, id]) => `· ${c}: ${id}`).join('\n') +
         (caidos.length ? `\n⚠️ Preferidos caídos del catálogo:\n${caidos.map(c => `· ${c}`).join('\n')}` : '') +
@@ -247,7 +246,7 @@ export async function GET(req: NextRequest) {
         creditos = { total, usado, restante: +(total - usado).toFixed(2) }
         const umbral = Number(process.env.AI_CREDITOS_UMBRAL ?? 5)
         if (creditos.restante < umbral) {
-          await tgSend(`🔴 <b>IA — créditos OpenRouter bajos</b>\nQuedan $${creditos.restante} (umbral $${umbral}). Recarga en openrouter.ai o la pasarela caerá a la cadena gratis.`).catch(() => {})
+          await tgAviso('sistema.ia-creditos', `🔴 <b>IA — créditos OpenRouter bajos</b>\nQuedan $${creditos.restante} (umbral $${umbral}). Recarga en openrouter.ai o la pasarela caerá a la cadena gratis.`).catch(() => {})
         }
       }
     } catch { /* la vigilancia de créditos nunca tumba el refresh */ }

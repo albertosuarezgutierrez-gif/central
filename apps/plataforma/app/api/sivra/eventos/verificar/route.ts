@@ -5,7 +5,7 @@ import { isCronAuthorized } from "@/lib/cron-auth"
 import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { buscarWeb, busquedaConfigurada } from "@/lib/websearch"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
-import { tgSend } from "@central/core-telegram"
+import { tgAviso } from '@/lib/telegram'
 import {
   decidirVerificacion, nombresParecidos, senalMercado,
   detalleVerificacion, verificacionFiable, DIAS_CADUCIDAD,
@@ -183,7 +183,7 @@ export async function GET(req: NextRequest) {
   // Telegram SOLO para el pelotazo auto-confirmado (decisión de Alberto: silencio salvo
   // problema). Lo demás vive en la BD y en el latido; no hay nada que él tenga que hacer.
   if (pelotazos.length) {
-    await tgSend(
+    await tgAviso('pisos.eventos-verificar', 
       `🎯 *Evento confirmado solo* (ya tarifica al factor pleno)\n\n${pelotazos.join('\n\n')}\n\n` +
       `_No tienes que hacer nada: lo ha verificado el sistema contra fuentes independientes._`,
     ).catch(() => {})

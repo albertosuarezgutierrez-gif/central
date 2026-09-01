@@ -5,7 +5,8 @@
 // (modo sombra: clasifica y anota pero NO toca Gmail ni avisa). digestTriaje() y resumenSemanal()
 // mandan los resúmenes por Telegram. Todo best-effort: un fallo por correo no aborta la pasada.
 import { prisma } from '@/lib/db'
-import { tgSend, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso, tgSend } from '@/lib/telegram'
+import { avisoDeCategoriaCorreo } from '@/lib/telegram/catalogo'
 import { abrirTriaje } from './imap'
 import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './huespedes'
@@ -137,14 +138,19 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             : null
           if (avisoAgoda) {
             const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
-            await tgSend(textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
+            await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
             stats.avisados++
           } else if (ruta.aviso === 'inmediato') {
-            await tgSend(mensajeAviso({
+            // Un interruptor POR CATEGORÍA (panel /telegram): «avísame de los leads pero no de cada
+            // correo de huéspedes» es la distinción real. Una categoría sin id catalogado avisa
+            // siempre — nunca al revés: un aviso nuevo llega hasta que se decida callarlo.
+            const avisoId = avisoDeCategoriaCorreo(c.categoria)
+            const texto = mensajeAviso({
               categoria: c.categoria, remitente: correo.fromRaw, asunto: correo.subject,
               resumen: c.resumen, accion: c.accionSugerida, fechaLimite: c.fechaLimite, cautela: !!ruta.cautela,
-            }))
-            stats.avisados++
+            })
+            const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
+            if (enviado !== null) stats.avisados++
           }
 
           // Auto-aprendizaje de reglas.
@@ -210,7 +216,7 @@ export async function digestTriaje(): Promise<{ total: number }> {
     aRevisar ? `\n<b>Para tu ojo:</b>\n${aRevisar}` : '',
     modo,
   ].filter(Boolean).join('\n')
-  await tgSend(msg)
+  await tgAviso('correo.digest', msg)
 
   await prisma.$executeRaw`
     UPDATE correo_triaje SET digest_at = now()
@@ -238,6 +244,6 @@ export async function resumenSemanal(): Promise<{ total: number }> {
     `• Avisos que te mandé: ${Number(r?.avisos ?? 0)}`,
     `• Dudosos (los dejé en bandeja): ${Number(r?.dudosos ?? 0)}`,
   ].join('\n')
-  await tgSend(msg)
+  await tgAviso('correo.resumen-semanal', msg)
   return { total: triados }
 }

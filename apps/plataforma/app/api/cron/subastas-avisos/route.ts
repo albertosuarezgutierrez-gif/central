@@ -5,7 +5,7 @@
 // alertas del BOE que ya tiene sin abrir.
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
-import { tgSend, tgSendButtons } from '@central/core-telegram'
+import { tgAviso, tgAvisoBotones } from '@/lib/telegram'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
@@ -47,7 +47,7 @@ async function avisarAntesalaConcursal(): Promise<number> {
     lineas.push(`• <b>${escapar(e.empresa)}</b> (${escapar(e.provincia ?? '—')})`)
   }
   lineas.push('', '<i>Sus inmuebles pueden acabar en subasta o liquidación en los próximos meses.</i>')
-  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+  await tgAviso('subastas.avisos', lineas.join('\n'), { html: true }).catch(() => {})
   return inmobiliarias.length
 }
 
@@ -234,7 +234,7 @@ export async function GET(req: NextRequest) {
       // Tercer botón: el «siguiente paso» que pidió Alberto (30/07/2026). En vez
       // de tener que abrir el portal y buscar a quién preguntar, el agente redacta
       // la consulta al juzgado con las dudas concretas de ESTA subasta.
-      await tgSendButtons(lineas.join('\n'), [
+      await tgAvisoBotones('subastas.avisos', lineas.join('\n'), [
         [
           { texto: '👀 Seguir', callback: `subr:seguir:${p.id}` },
           { texto: '🚫 Descartar', callback: `subr:desc:${p.id}` },
@@ -243,14 +243,14 @@ export async function GET(req: NextRequest) {
       ]).catch(() => {})
     }
     if (aAvisar.length > MAX_EN_MENSAJE) {
-      await tgSend(`⚖️ …y ${aAvisar.length - MAX_EN_MENSAJE} subastas limpias más en /subastas`, { html: true }).catch(() => {})
+      await tgAviso('subastas.avisos', `⚖️ …y ${aAvisar.length - MAX_EN_MENSAJE} subastas limpias más en /subastas`, { html: true }).catch(() => {})
     }
     // Las descartadas NO se enumeran una a una (sería el ruido que se quiere
     // evitar), pero se dice cuántas y por qué en una línea: si el filtro se pasa
     // de estricto, se nota enseguida.
     if (silenciadas.length) {
       const motivos = [...new Set(silenciadas.map((x) => x.d.motivo))].slice(0, 3)
-      await tgSend(
+      await tgAviso('subastas.avisos', 
         `🔇 ${silenciadas.length} ${silenciadas.length === 1 ? 'subasta' : 'subastas'} no ${silenciadas.length === 1 ? 'pasa' : 'pasan'} el filtro de «rentable y limpia» (${motivos.join('; ')}). Están en /subastas.`,
         { html: true },
       ).catch(() => {})

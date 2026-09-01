@@ -7,8 +7,7 @@
 // Aquí se avisa UNA vez por piso+sección, para que la contradicción salga a la luz.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { tgSend, escapeHtml } from '@central/core-telegram'
-
+import { escapeHtml, tgAviso } from '@/lib/telegram'
 export async function avisarConflictoGuia(
   propertyId: string,
   property: string,
@@ -23,7 +22,7 @@ export async function avisarConflictoGuia(
       ON CONFLICT (property_id, seccion) DO NOTHING
     `).catch(() => 0)
     if (!n) continue
-    await tgSend(
+    await tgAviso('huespedes.conflicto', 
       `⚠️ <b>La guía de Smoobu contradice una regla nuestra</b>` +
       `\n\nPiso: <b>${escapeHtml(property || propertyId)}</b>` +
       `\nSección de la guía: <b>${escapeHtml(seccion)}</b>` +

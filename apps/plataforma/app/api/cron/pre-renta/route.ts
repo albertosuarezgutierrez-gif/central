@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { aiComplete } from '@/lib/ai-client'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
         consejo ? `💡 <b>Consejo fiscal:</b>\n${consejo.trim()}` : '',
       ].filter(Boolean).join('\n')
 
-      await tgSend(mensaje.slice(0, 4096)).catch(() => {})
+      await tgAviso('finanzas.pre-renta', mensaje.slice(0, 4096)).catch(() => {})
       procesadas++
     } catch (e) {
       console.error('[pre-renta] Error cuenta', cuenta.cuenta_id, e instanceof Error ? e.message : String(e))

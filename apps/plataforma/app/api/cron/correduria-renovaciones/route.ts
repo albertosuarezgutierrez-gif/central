@@ -12,7 +12,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       : `no se pudo leer la cartera: ${cartera.motivo}`
     await registrarLatido(AGENTE, false, motivo)
     if (cartera.estado === 'error') {
-      await tgSend(
+      await tgAviso('correduria.renovaciones', 
         `🛡️ *Renovaciones · Grupo ASegura*\nNo he podido leer la cartera (${cartera.motivo}). ` +
         `Esto NO significa que no venza nada: hoy no se ha podido mirar.`,
       ).catch(() => {})
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
   let enviado = false
   if (mensaje) {
     try {
-      await tgSend(mensaje)
+      await tgAviso('correduria.renovaciones', mensaje)
       enviado = true
     } catch (e) {
       await registrarLatido(AGENTE, false, `Telegram falló: ${String(e).slice(0, 120)}`)

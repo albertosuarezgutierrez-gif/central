@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { tgSend, tgSendButtons } from '@central/core-telegram'
+import { tgAviso, tgAvisoBotones } from '@/lib/telegram'
 import { aiComplete } from '@/lib/ai-client'
 import { detectarDeduccionCuotaTipo } from '@/lib/categorizar'
 import { claveReglaValida } from '@/lib/correduria'
@@ -134,7 +134,7 @@ export async function enviarMensajeDudoso(mov: MovDudoso, sugerencia: Sugerencia
 
   if (sugerencia.confianza >= 0.8) {
     const destLabel = DEST_LABEL[sugerencia.destino] ?? sugerencia.destino
-    await tgSendButtons(
+    await tgAvisoBotones('finanzas.movimiento-clasificar', 
       `❓ <b>${concepto}</b> · ${fecha} · -${eur(importe)}\n\n🤖 ${sugerencia.explicacion}`,
       [[
         { texto: `✅ Sí, ${destLabel}`, callback: `mov_confirmar_ia:${mov.id}:${sugerencia.destino}` },
@@ -143,7 +143,7 @@ export async function enviarMensajeDudoso(mov: MovDudoso, sugerencia: Sugerencia
       ]],
     )
   } else {
-    await tgSendButtons(
+    await tgAvisoBotones('finanzas.movimiento-clasificar', 
       `❓ <b>${concepto}</b> · ${fecha} · -${eur(importe)}`,
       [[
         { texto: '✅ Pisos — deducible',       callback: `mov_pisos:${mov.id}` },
@@ -224,7 +224,7 @@ export async function enviarMensajeCuotaDeduccion(mov: MovPersonal): Promise<voi
 
   if (tipo) {
     const tipoLabel = CUOTA_LABEL[tipo] ?? tipo
-    await tgSendButtons(
+    await tgAvisoBotones('finanzas.movimiento-clasificar', 
       `💡 <b>${concepto}</b> · ${fecha} · -${eur(importe)}\n\n¿Es una deducción de cuota IRPF?\n🤖 Parece: <b>${tipoLabel}</b>`,
       [[
         { texto: `✅ ${tipoLabel}`, callback: `deduccion_${tipo}:${mov.id}` },
@@ -233,7 +233,7 @@ export async function enviarMensajeCuotaDeduccion(mov: MovPersonal): Promise<voi
       ]],
     ).catch(() => {})
   } else {
-    await tgSendButtons(
+    await tgAvisoBotones('finanzas.movimiento-clasificar', 
       `💡 <b>${concepto}</b> · ${fecha} · -${eur(importe)}\n\n¿Tiene deducción de cuota IRPF?`,
       [[
         { texto: '🏛️ Mecenazgo', callback: `deduccion_mecenazgo:${mov.id}` },
@@ -274,7 +274,7 @@ export async function enviarResumenCuotaDeducciones(cuentaId: string, year: numb
     return `• ${label}: ${eur(total)} gastado → <b>−${eur(cuota)} en cuota</b> (${count} mov.)`
   })
 
-  await tgSend(`📊 <b>Deducciones de cuota IRPF ${year}</b>\n\n${lineas.join('\n')}`).catch(() => {})
+  await tgAviso('finanzas.deducciones-irpf', `📊 <b>Deducciones de cuota IRPF ${year}</b>\n\n${lineas.join('\n')}`).catch(() => {})
 }
 
 // Recupera la cuenta_id y concepto de un movimiento (para los callbacks del webhook).

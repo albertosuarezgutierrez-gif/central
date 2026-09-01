@@ -9,8 +9,7 @@ import type { Tesis, EstadoEarnings } from '@central/module-trading'
 import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, juzgarDiferido, resumenDiferido, juzgarHuerfana, resumenHuerfanas, fechaMas, diasEntre, HUERFANA_GRACIA_DIAS, HUERFANA_MAX_DIAS, DIAS_REFERENCIA_MAX, type ParDiferido, type HuerfanaNoResuelta } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 import { retornoBench, SIMBOLO_BENCH } from '@/lib/trading/alfa'
-import { tgSend } from '@/lib/telegram'
-
+import { tgAviso } from '@/lib/telegram'
 // El contraste con la 2ª fuente sale a internet una vez por símbolo, así que la ruta necesita techo y
 // presupuesto propios (lección de `facturas-scan`: el techo evita el 504, el presupuesto es lo que
 // garantiza que la pasada VUELVE).
@@ -100,7 +99,7 @@ export async function POST(req: NextRequest) {
     console.warn('[trading/puntuar]', parteDiferido)
     // Se canta SIEMPRE, también cuando no se ha anulado nada: «la fuente discrepa en medio universo y
     // por eso me he quedado quieto» es justo la clase de silencio que dejó pasar el 03/08.
-    await tgSend(`⚠️ <b>Trading ${hoy} — contraste diferido:</b>\n${parteDiferido}` +
+    await tgAviso('trading.puntuacion', `⚠️ <b>Trading ${hoy} — contraste diferido:</b>\n${parteDiferido}` +
       (tesisAnuladas > 0 ? `\n→ ${tesisAnuladas} tesis anulada(s); el walk-forward se recalcula sin ellas.` : '')).catch(() => {})
   }
 
@@ -458,7 +457,7 @@ export async function POST(req: NextRequest) {
   // un aviso que se repite deja de leerse — esas viven en el latido y en la respuesta, que es donde se
   // consultan. No avisar ≠ no contarlas.
   if (huerfanasPuntuadas > 0 || huerfanasFueraDePlazo > 0) {
-    await tgSend(`📒 <b>Trading ${hoy} — tesis huérfanas:</b>\n${parteHuerfanas}`).catch(() => {})
+    await tgAviso('trading.puntuacion', `📒 <b>Trading ${hoy} — tesis huérfanas:</b>\n${parteHuerfanas}`).catch(() => {})
   }
 
   // `descartados` viaja en la respuesta para que la sesión lo cante en su resumen de Telegram: un precio
