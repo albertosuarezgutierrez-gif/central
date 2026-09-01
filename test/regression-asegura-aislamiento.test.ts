@@ -89,7 +89,11 @@ test('ningún fichero consulta el schema «seguros» sin pasar por el ámbito de
     const src = readFileSync(join(ROOT, f), 'utf8')
     if (!SQL_SEGUROS.test(src)) continue
     // Si toca `seguros.*`, tiene que importar la puerta única.
-    if (!/from ['"](\.\.?\/)*(lib\/)?tenant['"]|@\/lib\/tenant/.test(src)) {
+    // Se acepta con y sin extensión: `allowImportingTsExtensions` está en la
+    // tsconfig base y media casa importa como `./x.ts` (ver apps/plataforma).
+    // Sin esto, un fichero que SÍ cumple salía marcado como infractor, y el
+    // arreglo natural es rodear el guardián — justo lo que no queremos.
+    if (!/from ['"](\.\.?\/)*(lib\/)?tenant(\.ts)?['"]|@\/lib\/tenant/.test(src)) {
       infractores.push(f)
     }
   }
@@ -110,4 +114,40 @@ test('el resolvedor de ámbito no tiene una correduría por defecto', () => {
     'tenant-ambito.ts no debe tener un fallback literal para correduriaId: ' +
       'un id inventado no da error, da los datos de otro.',
   )
+})
+
+// ─── El cepo se prueba a sí mismo ────────────────────────────────────────────
+// Un guardián que nunca ha visto un infractor no se sabe si aprieta. Estos dos
+// casos fijan las dos mitades: que detecta el SQL de `seguros` y que reconoce el
+// import de la puerta única en las dos formas que usa la casa (con y sin `.ts`).
+
+const IMPORTA_TENANT = /from ['"](\.\.?\/)*(lib\/)?tenant(\.ts)?['"]|@\/lib\/tenant/
+
+test('el detector de SQL reconoce las formas reales de nombrar el schema', () => {
+  for (const src of [
+    'from seguros.polizas where 1=1',
+    'join seguros.codeoscopic_consumo c on ...',
+    'insert into seguros.clientes (a) values (1)',
+    'update  seguros . polizas set x = 1',
+  ]) {
+    assert.ok(SQL_SEGUROS.test(src), `debería detectar: ${src}`)
+  }
+})
+
+test('reconoce el import del ámbito con y sin extensión .ts, y solo ese', () => {
+  for (const bueno of [
+    "import { prisma } from './tenant'",
+    "import { prisma } from '../tenant.ts'",
+    "import { prisma } from '@/lib/tenant'",
+    "import { x } from '../../lib/tenant.ts'",
+  ]) {
+    assert.ok(IMPORTA_TENANT.test(bueno), `debería valer: ${bueno}`)
+  }
+  for (const malo of [
+    "import { prisma } from './db'",
+    "import { x } from './tenant-ambito.ts'", // NO es la puerta: no resuelve la sesión
+    "import { x } from './mi-tenant-falso'",
+  ]) {
+    assert.ok(!IMPORTA_TENANT.test(malo), `no debería valer: ${malo}`)
+  }
 })
