@@ -243,18 +243,84 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
     activas y con el mismo `id_poliza_entidad`: su recibo o siniestro llegó **antes** que la póliza
     (una esperó del 24/06 al 26/07) y nadie volvió a mirarlas — se arreglan **reprocesando**, sin
     preguntar a nadie, y es justo lo que hacía el reconciliador parado desde el 25/06. Las otras 17
-    son **cartera que la compañía nunca mandó**: CIMA solo envía POL en **altas y modificaciones**,
-    así que la cartera preexistente de una clave no entra nunca por ese canal — hace falta una
-    **carga inicial por clave de mediador**. Contarlas juntas manda a pedir a la compañía algo que
+    son **cartera que la compañía nunca mandó**: los procesos ordinarios de EIAC no envían nunca
+    la cartera preexistente de una clave — hace falta una **CARGA MASIVA** (ver el apartado
+    siguiente, con los códigos del estándar). Contarlas juntas manda a pedir a la compañía algo que
     ya está en la BD.
     ✅ **Y una de las diez está IDENTIFICADA por el correo, sin intranet: la 549147797** es una **RC
     profesional del «Instituto Técnico Superior de Informática Studium», emitida el 27/06/2025** bajo
     el contrato `M00171` (correo de `mediadores@occidentinforma.com`, con recordatorio de firma del
     mandato de cobro). O sea: **NO está anulada** — es una póliza real, viva, **de un año ANTES de
     que arrancara la ingesta**. Eso confirma el diagnóstico y descarta la hipótesis de las anuladas.
-    📌 **Y el camino para arreglarlo ya lo ha andado Alberto:** el 11/04/2026 pidió a Reale
-    «carga inicial de cartera en formato EIAC» para la clave 38605. Lo mismo hay que pedirle a
-    **Occident para `8-92361`** (y confirmar `306333`). Es la petición que cierra las 17.
+    📌 **Y el camino para arreglarlo ya lo ha andado Alberto:** el 11/04/2026 pidió a Reale una
+    carga de cartera en formato EIAC para la clave 38605. Lo mismo hay que pedirle a **Occident
+    para `8-92361` y `M00171`** (y confirmar `306333`) — pero **pidiéndolo por su nombre del
+    estándar**, ver abajo: «carga inicial» no existe en EIAC y por eso las compañías contestan que
+    no se hace.
+
+- **📖 LOS PROCESOS DE EIAC, LEÍDOS DE LA NORMA (01/09/2026).** Fuente: **TIREA, «Documentos
+  Estándar V07.1», código `209_IAC_ESP_DOC`, versión 05, 03/06/2026** + los XSD
+  `ProcesosEIAC-V07-1_V05` / `TiposEIAC-V07-1_V05` (los aportó Alberto; antes de esto lo que había
+  aquí era una inferencia a partir de los nombres de fichero).
+
+  El **4º campo del nombre** del fichero EIAC es el **código de proceso**, y es lo que dice si
+  viene un movimiento del día o la cartera entera:
+
+  | Cód. | Objeto | Denominación | Clase | Transacción |
+  |---|---|---|---|---|
+  | 131 | Póliza | Información de Pólizas de Nueva Producción | NP | OR |
+  | 132 | Póliza | Información de Pólizas de Cartera | CA | OR |
+  | 133 | Póliza | Información de Suplementos de Póliza | SU | OR |
+  | 134 | Póliza | Precartera de pólizas colectivas | PC | OR |
+  | 151 | Póliza | Información de Anulaciones de Póliza | AN | OR |
+  | **199** | Póliza | **Carga Masiva de Pólizas, Suplementos y Anulaciones** | NP, CA, SU, AN | **CM** |
+  | 211-214 · 251 · 261 | Recibo | Emisión (NP/CA/SU), precartera, extornos, movimientos | — | OR |
+  | **269 / 299** | Recibo | **Carga Masiva de Movimientos de Recibo / de Recibos** | — | **CM** |
+  | 311 · 361 | Siniestro | Declaración de nuevos siniestros · Movimientos y pagos | — | OR |
+  | **399** | Siniestro | **Carga masiva de siniestros** | CA | **CM** |
+  | 502 | Cuenta efectivo | Emisión de cuenta de efectivo | CE | OR |
+
+  `claves_transaccion`: **OR** = Ordinaria · **CM** = Carga Masiva · RE = Rechazo · **SO** = Solicitud.
+
+  🚨 **«Cartera» (132) NO es «toda mi cartera».** Es, literal, *«pólizas que han renovado o van a
+  renovar durante un periodo»*. Una póliza cuya renovación no cae en ninguna ventana desde que
+  arrancó la ingesta **no llega jamás** por los procesos ordinarios. Lo único que manda el histórico
+  completo es la **carga masiva**, y hay una por objeto: **199 pólizas · 299 recibos · 269
+  movimientos de recibo · 399 siniestros**.
+
+  🚨 **Y no hay ningún proceso EIAC para PEDIR una carga masiva.** El único Mediador→Entidad con
+  transacción SO es el **841, Solicitud alta nuevos siniestros**. Así que el 199/299/399 se pide
+  **fuera del canal**, a la compañía. Por eso «no hay botón» y por eso una petición mal nombrada se
+  contesta con un «eso no se hace»: **el término correcto es «carga masiva», proceso 199/299/399**,
+  no «carga inicial» ni «primera carga», que no existen en la norma.
+
+  La cabecera del proceso lleva `Transaccion`, `Periodo` (DI/SE/ME/BI/TR/CU/SM/AN/SP) y
+  `FechaDesde`/`FechaHasta`, así que **una carga masiva se puede acotar por fechas** — argumento
+  útil si la compañía objeta el volumen.
+
+- **📊 QUÉ CARGA MASIVA HA LLEGADO DE VERDAD (medido 01/09/2026 sobre `cima_ficheros`).**
+
+  | Compañía | POL 199 | REC 299 | SIN 399 | Pólizas suyas en cartera |
+  |---|---|---|---|---:|
+  | Mapfre `C0058` | ✅ 6 ficheros (132 pólizas, abr/2026) | ✅ 6 ficheros | ❌ | 64 |
+  | Allianz `C0109` | ✅ 1 fichero (26 pólizas, 11/04/2026) | ❌ | ❌ | 26 |
+  | Occident `C0468` | ❌ | ❌ | ❌ | 19 |
+  | Reale `C0613` | ❌ | ❌ | ❌ | 1 |
+
+  Allianz **cuadra al registro**: 26 pólizas en su 199 → 26 en cartera. Esa es la prueba de que el
+  199 es lo que trae la cartera y de que funciona. Occident solo manda ordinarias (131/132/151,
+  212/261, 311/361) y por eso de él solo hay lo movido desde abril.
+  📌 **El 399 no lo ha mandado NADIE** — de ahí que los 67 siniestros bajen y se congelen. No es
+  que las compañías no actualicen: es que la actualización histórica va por un proceso que nadie
+  tiene activado.
+  📌 **Petición que corresponde a cada una:** Occident → 199 + 299 + 399 · Reale → 199 + 299 ·
+  Allianz → 299 + 399 · Mapfre → 399.
+
+  ✅ **Y esto corrige el apartado de arriba sobre siniestros:** el proceso **841 «Solicitud alta
+  nuevos siniestros» (Mediador → Entidad, transacción SO) EXISTE en el estándar** — o sea, declarar
+  un siniestro desde nuestro CRM **sí está previsto**. Lo que no consta es que ninguna compañía lo
+  tenga activado para Alberto, que es una afirmación distinta y mucho más barata de resolver:
+  se pregunta.
 
 - **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
   431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
@@ -329,3 +395,77 @@ propios además del estándar. Por eso el campo semántico que se usa es `poliza
 ## 7. El activo dormido
 - Los **29.858 leads** son el activo comercial dormido: nadie los trabaja hoy. RGPD manda:
   verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
+
+## 8. Qué hay DE VERDAD detrás de una ficha de cliente (medido 01/09/2026)
+
+Inventario hecho para rediseñar la ficha (diseño completo en
+`docs/superpowers/specs/2026-09-01-asegura-ficha-cliente-design.md`; maqueta en
+https://claude.ai/code/artifact/22b57a16-739c-4e45-bd9d-9e494275aeda). Todo restringido a la
+**cartera VIVA** (`polizas.import_ref IS NULL`) = **109 pólizas / 80 clientes**.
+
+🚨 **La regla de esta sección: una pantalla que se abre a cero no dice «no hay», dice «pendiente».**
+Casi todas estas tablas están vacías porque nadie las ha usado todavía, no porque el cliente no
+tenga nada.
+
+**Con contenido real (se puede construir encima ya):**
+- `poliza_recibos` — 182 en **89 de las 109** pólizas (20 sin ninguno; media 2,04; máx 10).
+  `situacion`: cobrado 103 · anulado 54 · pendiente 24 · devuelto 1 → **21 pólizas con algún
+  pendiente**. `prima_total`/`prima_neta`/`comision_bruta`/`fecha_vencimiento` al 100%;
+  `comision_liquida` solo 15,9%. **`clase_recibo` `SU` en 62 de 182: son los suplementos** — no hay
+  tabla de movimientos de póliza, así que el historial de una póliza SON sus recibos.
+- `poliza_coberturas` — 1.418 filas y **las 109 pólizas tienen las suyas** (media 13, máx 59).
+  `descripcion` 100%, `capital_asegurado` 73,2%, **`franquicia` 0%**. Es el dato más rico de la
+  cartera y hoy no se ve en ninguna pantalla.
+- `siniestros` — 67, **todos de cartera viva** (30 clientes, 37 pólizas), 60 cerrados / 7 abiertos,
+  `origen`=`cima` al 100%. `tipo`/`fecha_hora`/`referencia` 100%, `comentario` 95,5%. **Al 0%:
+  `gravedad`, `reserva_importe`, `indemnizacion_importe`, tramitador y perito.**
+- **Comisión POR PÓLIZA: sí se puede**, vía `poliza_recibos.comision_bruta` (100%) + su `poliza_id`.
+  La vía contable no vale para una ficha: `liquidacion_movimientos` (33 filas) solo tiene
+  `poliza_id` en 11 y `recibo_id` en 8; `cuenta_efectivo` es agregado por periodo/entidad **sin FK
+  a póliza ni cliente**.
+- `poliza_intervinientes` — 95 en 81 pólizas. **Van dentro de la póliza, no en las relaciones.**
+
+**Vacío hoy (decir «pendiente», nunca «no hay»):** `historial_interno` **0** y `clientes.notas`
+0/80 (⚠️ **no hay dónde apuntar una llamada**) · conversaciones/mensajes de WhatsApp 0 de cartera
+viva y `wa_opt_in` false en los 80 · `recordatorios`, `whatsapp_outbound_messages`,
+`channel_inbound_messages`, `ofertas_automaticas` vacías.
+
+**Trampas medidas, que se repiten y hay que conocer:**
+- **`cliente_relaciones` 1.710 ≠ 1.710 relaciones.** **902 son roles de póliza**: Ocasional–Tomador
+  491, Propietario–Tomador 208, Tomador–Contacto 203. Lo humano es cónyuge 168, padre/madre 111,
+  hijo/a 111, empresa 108, amigo/a 91, hermano/a 58… Y **de cartera viva solo hay 65, en 17 de los
+  80 clientes**.
+- **`oportunidades` 3.676 NO son presupuestos de Alberto**: los 3.676 están en estado
+  `competencia`, sin excepción, y **ninguno cuelga de un cliente vivo** — son pólizas de la
+  competencia del volcado histórico. Los presupuestos reales son las **24 `cotizaciones`**… y ahí
+  **`mejor_oferta`, la prima y la compañía están al 0%**: se sabe qué se pidió y cuándo, no por
+  cuánto. Estados: `pendiente` 22 · `rechazada` 2.
+- **`gestiones` 694 son casi todas de leads**: de cartera viva hay **23, en 22 clientes** (22
+  llamadas, 1 tarea), ninguna ligada a siniestro y ninguna con `fecha_aviso`.
+- **Contacto: la columna plana gana a la tabla multivalor.** `clientes.telefono` 55/80 y
+  `clientes.email` 40/80, contra `cliente_telefonos` 16 y `cliente_emails` 15 — y **0 clientes con
+  más de uno**. `cliente_direcciones` **no existe** (`clientes.direccion` 62/80).
+- **26 pólizas de auto vivas no traen prima** (`prima_anual` 76,1%). Nunca pintarlas como 0,00€ ni
+  sumarlas como cero.
+- **El objeto asegurado está en dos sitios y sin FK a la póliza.** La matrícula sí está en
+  `polizas.datos_especificos` (81/81 de auto+moto), pero **la dirección del hogar solo en 2 de 19**;
+  `bienes_asegurables` (51 de cartera viva) **no tiene `poliza_id`**, solo `cliente_id`.
+- Reparto de la cartera viva: auto 80 · hogar 19 · RC 9 · moto 1, con **solo 3 aseguradoras**.
+
+### 📎 Documentos: hacen falta en TRES sitios y solo uno tiene tabla
+Alberto lo pidió explícitamente (01/09/2026): *«hay que subir documentos tanto del cliente como de
+la póliza, inclusive siniestro»*.
+
+| Nivel | Tabla | Estado |
+|---|---|---|
+| Cliente (DNI, carnet, IBAN) | — | 🔴 **`cliente_documentos` NO EXISTE**. Y `poliza_documentos.poliza_id` es `NOT NULL`: un DNI habría que colgarlo de una póliza, y a un **lead sin póliza** no se le puede adjuntar nada |
+| Póliza | `poliza_documentos` | ✅ existe y bien: blob, MIME, tamaño, quién lo subió y **`visible_por_cliente`** (interruptor del portal). **0 filas** |
+| Siniestro | — | 🔴 **`siniestro_documentos` NO EXISTE**. Es donde más papel hay (parte, fotos, factura, peritaje) y con tramitador/reserva al 0%, **las fotos serían lo único** |
+| Objeto | `bien_documentos` | ✅ la mejor pensada: tipo cerrado `ficha_tecnica`/`permiso_circulacion`/`titulo_propiedad`/`planos`/`foto`/`seguro_anterior`/`factura_compra`/`otro`. **El permiso es del coche, no de la póliza** — pero `bienes_asegurables` sin `poliza_id` hace que no se vea desde ella |
+
+**Cero ficheros en TODO el sistema:** las cuatro tablas a 0, `polizas.documento_url` al 0% y
+`storage.objects` vacío. No hay ni una póliza en PDF. Lo único parecido son los 128 XML de
+`cima_ficheros` (24 de póliza viva), que valen como «ver el origen», no como documentación.
+
+Y el estado que falta en todas: **«pedido pero no recibido»**. Sin él, «0 documentos» no distingue
+no habérselo pedido de que el cliente no lo mande — la regla de la casa, aplicada al archivo.
