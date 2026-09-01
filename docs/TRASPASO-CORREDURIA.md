@@ -77,9 +77,22 @@ compute NANO · plan free · `ACTIVE_HEALTHY` · creado el 20/04/2026 · organiz
 | `cliente_relaciones` | 1.710 | `usuarios` | 17 |
 
 **52 tablas en `public`.** Y con eso, el punto 6 del mensaje a Manuel deja de ser papeleo: hay
-**32.600 clientes reales** con teléfonos, correos, **carnets de conducir** y relaciones familiares.
+**32.600 personas reales** con teléfonos, correos, **carnets de conducir** y relaciones familiares.
 El **contrato de encargado de tratamiento (`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`) pasa a ser
 lo más urgente del traspaso**, por delante de cualquier decisión técnica.
+
+> 🚨 **CORRECCIÓN (01/09/2026): «32.600 clientes» era falso, y el error nació en esta tabla.** Los
+> recuentos de filas de arriba son correctos, pero **una fila no es un cliente**. Medido: la cartera
+> **VIVA son ~80 clientes / 109 pólizas** —las que entran por CIMA, `polizas.import_ref IS NULL`—.
+> Las otras 28.729 pólizas son volcado histórico cargado en jun/2026 (`intranet:` 26.117 con
+> vencimientos **2013-2018**, `asegura_app:` 2.612) y **ninguna** vence en los últimos 18 meses;
+> 25.892 están en estado `vencida`. Regla de Alberto: **CIMA = cliente actual; el resto = lead**
+> (32.520 fichas).
+>
+> **Lo que NO cambia:** el volumen de datos personales a proteger sigue siendo de 32.600 personas, así
+> que todo lo que este runbook dice sobre RGPD, backups, cifrado y el contrato de encargado de
+> tratamiento **sigue igual de vigente**. Lo que cambia es el tamaño del NEGOCIO, no el del riesgo.
+> Diseño que salió de esta medición: `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
 
 ### Veredicto free vs. Pro: **FREE**, y ahora medido
 

@@ -32,6 +32,24 @@
 
 ---
 
+### 🛡️ (01/09/2026) asegura: dos specs (portal + agente de venta) y la cartera NO era lo que decíamos
+- Brainstorming con Alberto → specs `2026-09-01-asegura-portal-clientes-empresas-design.md` y
+  `2026-09-01-asegura-agente-venta-design.md`. PR #1941.
+- 🚨 **Medido: la cartera viva son ~80 clientes / 109 pólizas, no 32.600/28.843.** El resto es volcado
+  histórico (`import_ref` `intranet:` 26.117 con vto. 2013-2018 y `asegura_app:` 2.612, CERO con vto.
+  futuro). Regla de Alberto: **CIMA (`import_ref IS NULL`) = cliente; el resto, lead** (32.520).
+  **Cifra ya corregida** en `CLAUDE.md`, `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`.
+- Portal: app nueva `apps/asegura-portal` (rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`;
+  schema `seguros`; WhatsApp con **WABA nueva** (`wa_opt_in`=0 en las 32.600). Eje: **«aporta tus seguros»**,
+  que sirve a leads y clientes a la vez. El móvil identifica un **HOGAR** (740 números compartidos, 630 con
+  el mismo apellido → familias): nunca se resuelve solo. El papel en la póliza PROPONE acceso, no lo concede.
+- Agente: de **VENTA**, prepara fichas en frío sin contactar a nadie. Dos corpus con autoridad distinta —
+  el contrato dice qué cubre, la **LCS/LDS** qué derechos hay (del texto consolidado del BOE, nunca de
+  memoria del modelo). Sin fine-tuning. Techo real: solo **5.613** fichas son contactables.
+- Regla que evita un desastre: **las pólizas del volcado histórico NO generan recordatorios** (serían
+  28.729 avisos de «se te venció» sobre pólizas de 2013-2018). `recordatorios` del CRM origen no sirve:
+  su `poliza_id` es NOT NULL.
+
 ### 🚗 (01/09/2026) Renovaciones: columna «Qué asegura» (matrícula, dirección, tipo de RC)
 - Alberto, sobre la tabla de renovaciones de `/correduria`: «necesito otra columna con datos — auto
   matrícula marca modelo, hogar dirección, RC de qué tipo… y siempre informa al agente».
