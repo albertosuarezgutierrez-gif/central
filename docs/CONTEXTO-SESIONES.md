@@ -34,7 +34,7 @@
 
 ### 🔔 (01/09/2026) Panel «Avisos Telegram» (`/telegram`): catálogo + interruptor por aviso
 - Alberto: «las notificaciones de Telegram son muchas… un panel que las resuma y que pueda activarlas
-  o desactivarlas». Hecho en `apps/plataforma`: **63 avisos PROACTIVOS catalogados** (`lib/telegram/catalogo.ts`),
+  o desactivarlas». Hecho en `apps/plataforma`: **76 avisos PROACTIVOS catalogados** (`lib/telegram/catalogo.ts`),
   interruptor por aviso y por categoría, y contadores REALES de lo que llega (bitácora, 30 días).
 - Los ~57 emisores pasan ahora por `tgAviso`/`tgAvisoBotones`/`tgAvisoAlerta` (`lib/telegram/avisos.ts`).
   **Fail-open**: si la BD no responde, el aviso SALE — un fallo de red no puede volverse silencio.
@@ -46,6 +46,13 @@
   `correo.huespedes` a petición suya (📬 Huésped de Smoobu «Nueva reserva»); los borradores del agente siguen.
 - La bitácora nace vacía: el panel dice «aún no se ha medido», nunca «0 avisos». Migración
   `2026-09-01_telegram_avisos.sql` **aplicada**. Purga a 90 días desde el cron `agentes-latido`.
+### 💶 (01/09/2026) Pasada mensual `fiscal-novedades`: sin cambios en deducciones, 1 aviso a cliente
+- Deducciones IRPF (mínimos, maternidad, FN estatal/andaluza) contrastadas contra BOE/BOJA/AEAT: **sin
+  cambios**, PGE 2027 aún sin publicar. Radar de ayudas: ayuda Junta Andalucía 600€/hijo<3 tras 3er hijo
+  detectada y descartada (renta de Alberto muy por encima del tope 6× IPREM). 1ª pasada por cliente:
+  Joaquín Jaén avisado por Telegram del plan de choque hostelería (RD 638/2026, hasta 11.000€, plazo
+  30/09/2026, **CNAE sin confirmar** — pendiente de que Alberto/Joaquín lo verifiquen); Sique Brilla sin
+  novedad. Detalle en `docs/FISCAL-AYUDAS.md` y `docs/AGENTES-BITACORA.md`.
 
 ### 🛡️ (01/09/2026) Nace el agente de la correduría (`agente-correduria`) — decisión de Alberto
 - Alberto quiere un agente que lleve Grupo ASegura «casi al 100%» y responda a clientes. Se montó por
@@ -63,6 +70,14 @@
   Ingesta CIMA = cron diario ~11:40 UTC **fuera de nuestro alcance**: en ese Supabase NO hay pg_cron ni
   Edge Functions, así que todo lo alimenta el Vercel de Manuel — y ese Vercel **no se ve desde aquí**
   (el conector solo alcanza el team «Pisos turisticos», donde ni `asegura` ni `central-asegura` están).
+- 🚨 **Método — cómo NO verificar un deploy de Vercel (01/09/2026, me costó 3 falsos negativos):** se
+  dio por hecho que plataforma «no había desplegado» porque el identificador `dpl_…` incrustado en el
+  HTML de `/login` no cambiaba. **`/login` es una página PRERENDERIZADA (ISR)**: su HTML lo sirve el CDN
+  y ese `dpl_` puede seguir siendo el del build anterior con el deployment nuevo ya en producción (el
+  panel mostraba los dos commits en **Production · Ready**). La comprobación que SÍ vale desde aquí:
+  pedir una **ruta de API nueva** y ver si responde **401/200 en vez de 404** — eso prueba que el código
+  está sirviendo (`/api/cron/correduria-renovaciones` → 401). Y el conector de Vercel **no puede leer
+  deployments (403) ni env vars (no existe la herramienta)**: para eso hace falta el panel.
 - **Migrar la cartera al schema `seguros`: NO todavía** — copiar 32.600 filas es trivial, pero sin mover
   la ingesta EIAC/CIMA la copia envejece al día siguiente y quedan dos carteras. Orden: vencimientos ya
   (hecho) → pedir a Manuel cómo se alimenta → migrar + repuntar ingesta. Al mover, ojo: las 86 RLS por
