@@ -112,7 +112,7 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
 - **Inventario de la BD (01/09/2026, `public` del Supabase de ASEGURA).** Núcleo: `clientes`
   32.600 · `polizas` 28.843 · `cliente_telefonos` 4.794 · `cliente_emails` 4.017 ·
   `oportunidades` 3.676 · `bienes_asegurables` 1.614 · `poliza_coberturas` 1.425 ·
-  `gestiones` 694 · `poliza_recibos` 186 · `cima_ficheros` 128 · `siniestros` 69 ·
+  `gestiones` 694 · `poliza_recibos` 184 · `cima_ficheros` 128 · `siniestros` 67 ·
   `liquidaciones` 9. Codeoscopic dejó tablas propias (`codeoscopic_offers`/`prices` 15,
   `projects` 1, `webhook_events` 2; `documents`/`product_forms`/`participants` vacías) →
   la integración llegó a funcionar en pruebas, no en producción.
@@ -138,6 +138,89 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
   Helper puro `@central/module-seguros/vencimientos` (`urgenciaRenovacion`, `fechaLimiteOposicion`,
   `primaEnRiesgo`), consumido por el puerto `/api/operador/vencimientos` de asegura y pintado en
   plataforma `/correduria`.
+- **📡 CIMA es SOLO DESCENDENTE, y el canal pierde datos (medido 01/09/2026).** Dos cosas que hay
+  que saber antes de opinar de siniestros o de recibos:
+  - **No se puede aperturar un siniestro desde nuestro CRM.** El canal baja ficheros y devuelve un
+    ACK; nunca ha salido de aquí un siniestro. `cima_ficheros` **no tiene ni columna de sentido** y
+    el cron se llama `cima-pull`. El **estándar EIAC sí es bidireccional** e incluye «solicitar
+    nuevas aperturas de siniestro», y la Fase IV de CIMA lo metió en el modelo — pero lo VIVO en
+    producción hoy son los **recibos** (Occident, Reale, Allianz y Mapfre con ebroker). De
+    siniestros **no consta ninguna compañía**: eso es «no consta», no «no existe». El endpoint para
+    subir sería el mismo que ya se usa para bajar (`ws.cimaseg.es/wsEstandar/`) y **la cuenta de
+    mediador ya es de Alberto** (CS-F/0170), así que la pregunta a TIREA es barata. ⚠️ **Avant2 NO
+    hace siniestros** (es tarificación y emisión); la tramitación de Codeoscopic es otro producto.
+    **Consecuencia de diseño:** no se construye un módulo de siniestros. Los 67 siniestros bajan y
+    **se congelan** —solo 1 se ha actualizado nunca, y 0 traen tramitador, perito, reserva o
+    indemnización—, así que una pantalla de «siniestros abiertos» mentiría. Van dentro de la ficha
+    del cliente, como historial y con la fecha de la última noticia a la vista.
+  - **Se están perdiendo recibos y siniestros por el emparejamiento con la póliza.** Del 24/06 al
+    30/08/2026: 42 ficheros en cuarentena, **23 recibos (7.721,71€ de prima) y 20 siniestros** sin
+    guardar, 39 de ellos de **Occident (C0468)**. Causa: se empareja por `id_poliza_entidad` y
+    **Occident, Catalana Occidente y Plus Ultra son el MISMO grupo bajo C0468** — 9 de las 19
+    pólizas afectadas sí están en la cartera, con otro nombre de compañía y sin código de entidad.
+    🚨 **Regla que deja:** al contar cartera o comisiones por compañía, **normaliza el grupo antes
+    de agrupar**; el nombre de `polizas.aseguradora` es texto libre y la misma compañía aparece con
+    tres nombres. Y el vigía que lo caza es el cron `correduria-ingesta` de plataforma (latido
+    `correduria_ingesta`) — el health-check de origen tenía el número delante (`cuarentenaTotal: 41`
+    y subiendo) y estuvo en verde dos meses porque sus señales miraban otras dos columnas.
+  - **🔑 Y la pieza que faltaba, apuntada por Alberto: la CLAVE DE MEDIADOR.** «Cada compañía asigna
+    una clave» — y es el **2º campo del nombre EIAC**: `C0468_8-92361_REC_261_1_20260801_….zip`.
+    Medidas **nueve claves en cinco compañías**: Mapfre `5239640` · Allianz `209-A-0018638-0000`,
+    `209-C-…`, `209-E-…` (¡y variantes sin ceros, `209-A-18638-0000`!) · Occident **`8-92361`,
+    `M00171` y `306333`** · Reale `38605`. 🚨 **Una compañía NO es una cartera**: bajo `8-92361`
+    están en cuarentena los 10 ficheros de siniestros y 6 de 9 de recibos, mientras `306333` va
+    limpia. Agrupar por `codigo_entidad` esconde de QUÉ cartera se pierde el dato y manda a revisar
+    la que va bien. (`8-92361` es además el código que aparece en los conceptos del banco, ver
+    `RE_LIQUID_SEGUROS` en plataforma; `M00171` también.)
+  - **🗂️ EL CORREO DE ALBERTO ES LA TERCERA BASE DE DATOS (01/09/2026, idea suya).** Las compañías
+    le escriben a `alberto.suarez.gutierrez@gmail.com` y ahí hay cosas que NO están ni en el CRM ni
+    en CIMA. Emisores útiles, medidos:
+    · **`mediadores@occidentinforma.com`** — un correo por cada movimiento de póliza de Occident, con
+      **número de póliza, nombre del cliente y contrato (`M00171`)** en el asunto: emisión,
+      modificación, rechazo de suplemento, aviso de regularización, recordatorio de firma de mandato.
+      Es un registro de altas paralelo al EIAC.
+    · **`mediador@allianz.es`** — «Cartera No Vida del mes de …», «Cuenta Agente», «Relación anulación
+      pólizas por impago» con **fichero adjunto**. Cartera y saldo por correo.
+    · **`carlos.salas@occident.com`** (Director Corredores Sevilla-Huelva) — visitas comerciales con
+      producción y objetivos; `concepcion.porras@occident.com`, operativa de prestaciones/vida.
+    · **`accesos.cima@tirea.es`** — credenciales de CIMA. `conectividad@reale.es` — adhesión a EIAC.
+      `cstsoportecorredores@mapfre.com` — soporte, exige la clave en cada petición.
+    · **`digitaliza@comunicacionesoccident.com`** — documentación de siniestros.
+    🚨 **Regla:** antes de decir que un dato «no está», mira también el correo. Y al revés: el correo
+    NO es la fuente de la cartera (no es estructurado ni completo) — es la fuente de lo que la
+    compañía **dijo**, con fecha, que es justo lo que falta cuando el canal EIAC no lo trajo.
+  - **📇 MAPA DE CLAVES DE MEDIADOR (correo + ficheros EIAC, 01/09/2026).** DGSFP: **CS-F/0170**.
+    DNI 28823484E.
+
+    | Compañía | Cód. entidad | Clave(s) que llegan por EIAC | Lo que dice el correo |
+    |---|---|---|---|
+    | Mapfre | C0058 | `5239640` | clave de mediador 5239640 (usada en todas sus peticiones) |
+    | Allianz | C0109 | `209-A-0018638-0000`, `209-C-…`, `209-E-…` (y `209-A-18638-0000` sin ceros) | **Código 18638 / Clave PA342520**, sucursal **209**. Es UNA clave con prefijo de sucursal y una letra que varía |
+    | Occident | C0468 | `8-92361`, `M00171`, `306333` | contrato **`M00171`** en todos sus avisos; usuario `M823484E` |
+    | Reale | C0613 | `38605` | «código de mediador 38605» (adhesión a EIAC pedida el 13/04/2026) |
+    | Fidelidade | — | (aún ninguna) | credenciales de CIMA entregadas el **31/08/2026** |
+
+    ⚠️ **Occident/Catalana/Plus Ultra: Alberto avisa de que la absorción le dejó varias claves y que
+    Catalana le tenía DOS «que no saben por qué».** Cuadra con las tres que se ven en los ficheros.
+    **NO se da por cerrado el mapa**: `306333` y `8-92361` no aparecen aún en ningún correo leído, así
+    que su origen (¿Plus Ultra? ¿Catalana?) es **desconocido**, no «Occident a secas».
+  - **Y hay DOS averías, no una.** De las 20 pólizas huérfanas, **3 YA están en la cartera**,
+    activas y con el mismo `id_poliza_entidad`: su recibo o siniestro llegó **antes** que la póliza
+    (una esperó del 24/06 al 26/07) y nadie volvió a mirarlas — se arreglan **reprocesando**, sin
+    preguntar a nadie, y es justo lo que hacía el reconciliador parado desde el 25/06. Las otras 17
+    son **cartera que la compañía nunca mandó**: CIMA solo envía POL en **altas y modificaciones**,
+    así que la cartera preexistente de una clave no entra nunca por ese canal — hace falta una
+    **carga inicial por clave de mediador**. Contarlas juntas manda a pedir a la compañía algo que
+    ya está en la BD.
+    ✅ **Y una de las diez está IDENTIFICADA por el correo, sin intranet: la 549147797** es una **RC
+    profesional del «Instituto Técnico Superior de Informática Studium», emitida el 27/06/2025** bajo
+    el contrato `M00171` (correo de `mediadores@occidentinforma.com`, con recordatorio de firma del
+    mandato de cobro). O sea: **NO está anulada** — es una póliza real, viva, **de un año ANTES de
+    que arrancara la ingesta**. Eso confirma el diagnóstico y descarta la hipótesis de las anuladas.
+    📌 **Y el camino para arreglarlo ya lo ha andado Alberto:** el 11/04/2026 pidió a Reale
+    «carga inicial de cartera en formato EIAC» para la clave 38605. Lo mismo hay que pedirle a
+    **Occident para `8-92361`** (y confirmar `306333`). Es la petición que cierra las 17.
+
 - **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
   431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
   vive en **`polizas.datos_especificos`** (JSON libre que escribe la ingesta EIAC, distinto por

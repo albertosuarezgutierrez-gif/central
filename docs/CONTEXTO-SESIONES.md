@@ -44,6 +44,62 @@
   09/04 + presupuesto de Cristina 14/05 en texto). Actualizado en `sector.md` §4 — todo automatismo
   que cotice lleva contador y tope (~109 pólizas vivas ≈ 54,50€/pasada).
 - Al contestar Manuel: volcar a `references/sector.md` §4 y pedir regeneración de credenciales sandbox.
+### 📬 (01/09/2026) El correo de Alberto es la TERCERA base de datos — y resuelve una de las diez
+- Idea suya: «las compañías me escriben y dan información». Cierto y medible. `mediadores@occidentinforma.com`
+  manda **un correo por movimiento de póliza** con nº de póliza, cliente y contrato `M00171`;
+  `mediador@allianz.es` manda cartera No Vida, Cuenta Agente y anulaciones por impago **con adjunto**.
+- ✅ **La 549147797 NO está anulada**: es una RC profesional del «Instituto Técnico Superior de
+  Informática Studium» **emitida el 27/06/2025**, un año antes del arranque de la ingesta. Confirma que
+  las huérfanas son cartera pre-CIMA, no bajas.
+- 📇 **Mapa de claves** (en la skill): Mapfre `5239640` · Allianz **código 18638 / clave PA342520**,
+  sucursal 209 (las cinco variantes `209-x-…` son la misma) · Occident `8-92361`, `M00171`, `306333` ·
+  Reale `38605` · Fidelidade con credenciales CIMA desde el 31/08. **`306333` y `8-92361` no aparecen
+  en ningún correo**: su origen (Catalana / Plus Ultra tras la absorción) sigue sin confirmar.
+- 📌 **Acción que lo cierra:** pedir a Occident la **carga inicial de cartera en EIAC de `8-92361`** —
+  Alberto ya hizo esa petición exacta a Reale el 11/04/2026. **No se manda nada sin su OK.**
+
+### 🔑 (01/09/2026) La CLAVE DE MEDIADOR: por qué CIMA perdía datos de una cartera y no de otra
+- Idea de Alberto («cada compañía asigna una clave»), medida y confirmada: el 2º campo del nombre
+  EIAC es la clave de mediador. **Nueve claves en cinco compañías**; Occident manda por TRES
+  (`8-92361`, `M00171`, `306333`) y el atasco NO está repartido — bajo `8-92361` están en cuarentena
+  sus 10 SIN y 6 de 9 REC, `306333` va limpia. Agrupar por `codigo_entidad` manda a revisar la
+  cartera que va bien.
+- **Son DOS averías:** 3 de las 20 huérfanas YA están en cartera (el movimiento llegó antes que la
+  póliza; una esperó del 24/06 al 26/07) → se arreglan **reprocesando**. Las otras 17 son cartera
+  que la compañía nunca mandó: **CIMA solo envía POL en altas y modificaciones**, así que falta una
+  **carga inicial por clave**. Contarlas juntas manda a pedir algo que ya está en la BD.
+- PR #1949: el vigía reparte por clave (`porClave`) y separa `huerfanasResolubles`; el puerto extrae
+  la clave del nombre; `clave` NO es obligatoria en la validación (un puerto viejo sigue siendo
+  legible). 7 tests nuevos. Skill `agente-correduria` actualizada.
+- **Pendiente:** el CI del PR no arranca los 12 requeridos ni con merge de main, ni con push real,
+  ni des-drafteando (mismo patrón que #1789).
+
+### 🛡️ (01/09/2026) CIMA perdía recibos y siniestros hace 2 meses — vigía nuevo + causa raíz
+- Analizando qué CRM necesita la correduría salió una avería VIVA: del 24/06 al 30/08 se quedaron
+  **42 ficheros de CIMA en cuarentena — 23 recibos (7.721,71€ de prima) y 20 siniestros**, 39 de
+  Occident. Eventos `cima_{recibo,siniestro}_sin_poliza_review`, `reason=sin_poliza_en_cartera`.
+- **Causa raíz:** se empareja por `id_poliza_entidad` y **Occident / Catalana Occidente / Plus Ultra
+  son el MISMO grupo bajo C0468** — 9 de las 19 pólizas afectadas SÍ están en cartera, con otro
+  nombre de compañía y sin código de entidad. Al agrupar por compañía, normalizar el grupo primero.
+- **Por qué duró dos meses:** el health-check de origen traía `cuarentenaTotal: 41` (39→40→41 en seis
+  días) en su propio parte y sus señales de alarma eran `ficherosError`/`ficherosDeferred` = 0.
+  Verde todo el tiempo **midiendo lo que no era**. El reconciliador (`cima_reconcile_resumen`) lleva
+  parado desde el 25/06.
+- **Hecho (nuestro lado):** helper puro `@central/module-seguros/ingesta` (`saludIngesta`, 11 tests,
+  `sin_datos` ≠ `ok`), puerto `/api/operador/ingesta` en asegura, cron `correduria-ingesta` (06:45)
+  + aviso `correduria.ingesta` + latido `correduria_ingesta` con su sonda.
+- **De Manuel (su repo, no el nuestro):** emparejar por `numero_poliza` normalizado y por grupo de
+  entidad; reactivar el reconciliador; meter `cuarentenaTotal` en las señales.
+- **De Alberto:** verificar en la intranet de Occident las 10 pólizas que no aparecen (solo 1 da
+  señales de anulación; el resto tienen recibos cobrados/pendientes y siniestros abiertos).
+- **Corregida deriva documental:** `TRASPASO-CORREDURIA.md` afirmaba que «jamás se ha persistido un
+  REC, un SIN ni un CEF» y que no era avería sino función sin encender. Falso: hay 184 recibos, 67
+  siniestros y 7 CEF. También 69→67 siniestros en la skill.
+- 🧭 **Decisión de producto:** el CRM ESCRIBE donde manda Alberto (leads, notas, tareas,
+  renovaciones) y CONSULTA donde manda la compañía (pólizas, recibos, siniestros). Sin módulo de
+  siniestros: no se puede aperturar por CIMA y los 67 están congelados (1 actualizado, 0 con
+  tramitador). Cartera real: **80 clientes / 109 pólizas**; de los 32.520 leads, **26.964 no tienen
+  ni teléfono ni email** y solo **1 ficha** tiene consentimiento registrado.
 
 ### 💶 (01/09/2026) Comisiones de la correduría: spec del control devengo → liquidación → cobro → renta
 - Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuenta», y que el borrador
