@@ -208,18 +208,84 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
     activas y con el mismo `id_poliza_entidad`: su recibo o siniestro llegó **antes** que la póliza
     (una esperó del 24/06 al 26/07) y nadie volvió a mirarlas — se arreglan **reprocesando**, sin
     preguntar a nadie, y es justo lo que hacía el reconciliador parado desde el 25/06. Las otras 17
-    son **cartera que la compañía nunca mandó**: CIMA solo envía POL en **altas y modificaciones**,
-    así que la cartera preexistente de una clave no entra nunca por ese canal — hace falta una
-    **carga inicial por clave de mediador**. Contarlas juntas manda a pedir a la compañía algo que
+    son **cartera que la compañía nunca mandó**: los procesos ordinarios de EIAC no envían nunca
+    la cartera preexistente de una clave — hace falta una **CARGA MASIVA** (ver el apartado
+    siguiente, con los códigos del estándar). Contarlas juntas manda a pedir a la compañía algo que
     ya está en la BD.
     ✅ **Y una de las diez está IDENTIFICADA por el correo, sin intranet: la 549147797** es una **RC
     profesional del «Instituto Técnico Superior de Informática Studium», emitida el 27/06/2025** bajo
     el contrato `M00171` (correo de `mediadores@occidentinforma.com`, con recordatorio de firma del
     mandato de cobro). O sea: **NO está anulada** — es una póliza real, viva, **de un año ANTES de
     que arrancara la ingesta**. Eso confirma el diagnóstico y descarta la hipótesis de las anuladas.
-    📌 **Y el camino para arreglarlo ya lo ha andado Alberto:** el 11/04/2026 pidió a Reale
-    «carga inicial de cartera en formato EIAC» para la clave 38605. Lo mismo hay que pedirle a
-    **Occident para `8-92361`** (y confirmar `306333`). Es la petición que cierra las 17.
+    📌 **Y el camino para arreglarlo ya lo ha andado Alberto:** el 11/04/2026 pidió a Reale una
+    carga de cartera en formato EIAC para la clave 38605. Lo mismo hay que pedirle a **Occident
+    para `8-92361` y `M00171`** (y confirmar `306333`) — pero **pidiéndolo por su nombre del
+    estándar**, ver abajo: «carga inicial» no existe en EIAC y por eso las compañías contestan que
+    no se hace.
+
+- **📖 LOS PROCESOS DE EIAC, LEÍDOS DE LA NORMA (01/09/2026).** Fuente: **TIREA, «Documentos
+  Estándar V07.1», código `209_IAC_ESP_DOC`, versión 05, 03/06/2026** + los XSD
+  `ProcesosEIAC-V07-1_V05` / `TiposEIAC-V07-1_V05` (los aportó Alberto; antes de esto lo que había
+  aquí era una inferencia a partir de los nombres de fichero).
+
+  El **4º campo del nombre** del fichero EIAC es el **código de proceso**, y es lo que dice si
+  viene un movimiento del día o la cartera entera:
+
+  | Cód. | Objeto | Denominación | Clase | Transacción |
+  |---|---|---|---|---|
+  | 131 | Póliza | Información de Pólizas de Nueva Producción | NP | OR |
+  | 132 | Póliza | Información de Pólizas de Cartera | CA | OR |
+  | 133 | Póliza | Información de Suplementos de Póliza | SU | OR |
+  | 134 | Póliza | Precartera de pólizas colectivas | PC | OR |
+  | 151 | Póliza | Información de Anulaciones de Póliza | AN | OR |
+  | **199** | Póliza | **Carga Masiva de Pólizas, Suplementos y Anulaciones** | NP, CA, SU, AN | **CM** |
+  | 211-214 · 251 · 261 | Recibo | Emisión (NP/CA/SU), precartera, extornos, movimientos | — | OR |
+  | **269 / 299** | Recibo | **Carga Masiva de Movimientos de Recibo / de Recibos** | — | **CM** |
+  | 311 · 361 | Siniestro | Declaración de nuevos siniestros · Movimientos y pagos | — | OR |
+  | **399** | Siniestro | **Carga masiva de siniestros** | CA | **CM** |
+  | 502 | Cuenta efectivo | Emisión de cuenta de efectivo | CE | OR |
+
+  `claves_transaccion`: **OR** = Ordinaria · **CM** = Carga Masiva · RE = Rechazo · **SO** = Solicitud.
+
+  🚨 **«Cartera» (132) NO es «toda mi cartera».** Es, literal, *«pólizas que han renovado o van a
+  renovar durante un periodo»*. Una póliza cuya renovación no cae en ninguna ventana desde que
+  arrancó la ingesta **no llega jamás** por los procesos ordinarios. Lo único que manda el histórico
+  completo es la **carga masiva**, y hay una por objeto: **199 pólizas · 299 recibos · 269
+  movimientos de recibo · 399 siniestros**.
+
+  🚨 **Y no hay ningún proceso EIAC para PEDIR una carga masiva.** El único Mediador→Entidad con
+  transacción SO es el **841, Solicitud alta nuevos siniestros**. Así que el 199/299/399 se pide
+  **fuera del canal**, a la compañía. Por eso «no hay botón» y por eso una petición mal nombrada se
+  contesta con un «eso no se hace»: **el término correcto es «carga masiva», proceso 199/299/399**,
+  no «carga inicial» ni «primera carga», que no existen en la norma.
+
+  La cabecera del proceso lleva `Transaccion`, `Periodo` (DI/SE/ME/BI/TR/CU/SM/AN/SP) y
+  `FechaDesde`/`FechaHasta`, así que **una carga masiva se puede acotar por fechas** — argumento
+  útil si la compañía objeta el volumen.
+
+- **📊 QUÉ CARGA MASIVA HA LLEGADO DE VERDAD (medido 01/09/2026 sobre `cima_ficheros`).**
+
+  | Compañía | POL 199 | REC 299 | SIN 399 | Pólizas suyas en cartera |
+  |---|---|---|---|---:|
+  | Mapfre `C0058` | ✅ 6 ficheros (132 pólizas, abr/2026) | ✅ 6 ficheros | ❌ | 64 |
+  | Allianz `C0109` | ✅ 1 fichero (26 pólizas, 11/04/2026) | ❌ | ❌ | 26 |
+  | Occident `C0468` | ❌ | ❌ | ❌ | 19 |
+  | Reale `C0613` | ❌ | ❌ | ❌ | 1 |
+
+  Allianz **cuadra al registro**: 26 pólizas en su 199 → 26 en cartera. Esa es la prueba de que el
+  199 es lo que trae la cartera y de que funciona. Occident solo manda ordinarias (131/132/151,
+  212/261, 311/361) y por eso de él solo hay lo movido desde abril.
+  📌 **El 399 no lo ha mandado NADIE** — de ahí que los 67 siniestros bajen y se congelen. No es
+  que las compañías no actualicen: es que la actualización histórica va por un proceso que nadie
+  tiene activado.
+  📌 **Petición que corresponde a cada una:** Occident → 199 + 299 + 399 · Reale → 199 + 299 ·
+  Allianz → 299 + 399 · Mapfre → 399.
+
+  ✅ **Y esto corrige el apartado de arriba sobre siniestros:** el proceso **841 «Solicitud alta
+  nuevos siniestros» (Mediador → Entidad, transacción SO) EXISTE en el estándar** — o sea, declarar
+  un siniestro desde nuestro CRM **sí está previsto**. Lo que no consta es que ninguna compañía lo
+  tenga activado para Alberto, que es una afirmación distinta y mucho más barata de resolver:
+  se pregunta.
 
 - **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
   431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
