@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T21:06:01Z",
-  "sha": "4eda145925feaee8128cf43c52843af5042ac739",
+  "generadoEn": "2026-09-01T22:15:51Z",
+  "sha": "1a85db13b68e0d33814dee7909370459e9dc7732",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3220,7 +3220,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "36676c3b33aa"
+      "hash": "a3582fbadb8c"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/poliza/[polizaId]/page.tsx",
@@ -3291,6 +3291,47 @@
       "hash": "71eb93721449"
     },
     {
+      "ruta": "apps/asegura/app/(usuario)/cartera/subir/page.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "SubirPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "SubirPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "Subir una póliza para que el agente la lea. Es la vía rápida de la fase 1 (presupuesto): un PDF de póliza trae el vehículo completo, las coberturas y la prima — justo los huecos que hoy obligan a preg"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7b6a5e4d1b7a"
+    },
+    {
+      "ruta": "apps/asegura/app/(usuario)/cartera/subir/subir-poliza.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "SubirPoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "SubirPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 36
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ae39dabc091c"
+    },
+    {
       "ruta": "apps/asegura/app/(usuario)/dashboard/page.tsx",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3337,7 +3378,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5dc27c55f039"
+      "hash": "e0bb8d5f0c29"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/logout-button.tsx",
@@ -3424,6 +3465,30 @@
       "hash": "45411f604f9e"
     },
     {
+      "ruta": "apps/asegura/app/api/cartera/documentos/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 31,
+          "resumen": "Sube una póliza y devuelve lo que el agente ha leído. 🚨 **Esta ruta NO gasta cotizaciones.** Lee un documento; el precio se pide aparte y con su propio botón. Se separan a propósito: leer es barato y"
+        }
+      ],
+      "tablas": [
+        "next",
+        "node"
+      ],
+      "rutaApi": "/api/cartera/documentos",
+      "hash": "c0ea8f55cd10"
+    },
+    {
       "ruta": "apps/asegura/app/api/cartera/polizas/[polizaId]/retarificar/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3478,6 +3543,69 @@
       "hash": "eb8fa365045a"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/buscar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "GET /api/operador/buscar?q=… — el buscador de TODO (read-only, gratis). Nombre, matrícula, nº de póliza, DNI, teléfono, email, ciudad o CP: lo que se pueda buscar de cada término lo decide `planBusque"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/buscar",
+      "hash": "80724fbda8e4"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/cliente/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "GET /api/operador/cliente?id=<uuid> — la ficha completa de un cliente. Es lo que hay detrás del «pincho en el nombre y lo tengo todo»: pólizas, recibos y siniestros de una vez, para que la pantalla de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/cliente",
+      "hash": "4df04b2fb2be"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/clientes/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "GET /api/operador/clientes?q=suarez — buscador de la cartera (read-only). Existe para que Alberto NO tenga que entrar en asegura: su pantalla es plataforma, y este puerto es lo que la surte. Busca por"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/clientes",
+      "hash": "322af34a7b69"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/sonda/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3518,6 +3646,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/comisiones",
       "hash": "d357e19f5ae0"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/impagados/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "GET /api/operador/impagados — la cola de retención: recibos devueltos, con cuánto queda para rescatar cada póliza (art. 15 LCS). Read-only. Lleva el TELÉFONO a propósito: el propósito entero de la lis"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/impagados",
+      "hash": "039b23fb27c5"
     },
     {
       "ruta": "apps/asegura/app/api/operador/ingesta/route.ts",
@@ -3751,6 +3900,155 @@
       "hash": "d7c30bf0803d"
     },
     {
+      "ruta": "apps/asegura/lib/cartera-busqueda.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El buscador de TODO: nombre, matrícula, nº de póliza, DNI, teléfono, email, ciudad o código postal. Un solo cuadro; aquí se ejecuta lo que `planBusqueda()` haya decidido que se puede mirar. ─── Lo que se puede buscar y lo que NO (medido el 01/09/2026) ───────────── nombre/apellidos EN CLARO 32.600 /",
+      "exporta": [
+        "buscarEnCartera"
+      ],
+      "funciones": [
+        {
+          "nombre": "hashSeguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "fn: () => string | null",
+          "retorno": "string | null",
+          "linea": 71,
+          "resumen": "Las claves cifradas pueden faltar en desarrollo: eso NO es «no hay nadie»."
+        },
+        {
+          "nombre": "buscarEnCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, termino: string,",
+          "retorno": "Promise<Resultados>",
+          "linea": 79
+        },
+        {
+          "nombre": "pareceDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "boolean",
+          "linea": 113,
+          "resumen": "Un término con sigla de vía o número de portal es casi seguro una dirección. No se usa para BUSCAR (no se puede), sino para explicar el vacío bien."
+        },
+        {
+          "nombre": "ejecutar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio",
+          "retorno": "Promise<BloqueResultados | null>",
+          "linea": 117
+        },
+        {
+          "nombre": "cobertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, where: Record<string, unknown>,",
+          "retorno": "Promise<",
+          "linea": 141,
+          "resumen": "Cuenta cuántas fichas pueden salir por un campo, para no mentir con el vacío."
+        },
+        {
+          "nombre": "aHallazgo",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaCliente, porque: string",
+          "retorno": "Hallazgo",
+          "linea": 176
+        },
+        {
+          "nombre": "bloque",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Criterio, hallazgos: Hallazgo[], cob: { alcanzables: number; total: number } | null,",
+          "retorno": "BloqueResultados",
+          "linea": 186
+        },
+        {
+          "nombre": "porNombre",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio",
+          "retorno": "Promise<BloqueResultados>",
+          "linea": 200
+        },
+        {
+          "nombre": "porCiudad",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio",
+          "retorno": "Promise<BloqueResultados>",
+          "linea": 229
+        },
+        {
+          "nombre": "porCodigoPostal",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio",
+          "retorno": "Promise<BloqueResultados>",
+          "linea": 248
+        },
+        {
+          "nombre": "porMatricula",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio",
+          "retorno": "Promise<BloqueResultados>",
+          "linea": 267,
+          "resumen": "La matrícula vive EN CLARO dentro de `datos_especificos`, así que se busca con SQL crudo sobre el JSON — Prisma no filtra por `->>` con `contains`."
+        },
+        {
+          "nombre": "porNumeroPoliza",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio",
+          "retorno": "Promise<BloqueResultados>",
+          "linea": 295
+        },
+        {
+          "nombre": "porHash",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio, campo: 'dniLookupHash' | 'telefonoLookupHash' | 'emailLookupHash', hash: string | null,",
+          "retorno": "Promise<BloqueResultados | null>",
+          "linea": 322,
+          "resumen": "Búsqueda por índice ciego. `hash === null` significa que la clave no está configurada: NO se consulta y NO se devuelve una lista vacía, porque eso se leería como «ese DNI no está en la cartera»."
+        },
+        {
+          "nombre": "polizasDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "ids: string[]",
+          "retorno": "Promise<Map<string, number>>",
+          "linea": 344
+        },
+        {
+          "nombre": "coberturaMatricula",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string,",
+          "retorno": "Promise<",
+          "linea": 355
+        },
+        {
+          "nombre": "coberturaPolizas",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, where: Record<string, unknown>,",
+          "retorno": "Promise<",
+          "linea": 374
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "53a6798749c0"
+    },
+    {
       "ruta": "apps/asegura/lib/cartera-ficha.ts",
       "ambito": "apps/asegura",
       "resumen": "Lecturas de la cartera para la pantalla de retarificación: buscar un cliente y sacar de UNA póliza lo que hace falta para pedir precio de calle. Vive aparte de `lib/cartera.ts` (que es la lista de vencimientos) porque lo que se lee aquí es distinto y más sensible: para cotizar hacen falta DNI, fecha",
@@ -3767,7 +4065,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 37,
+          "linea": 44,
           "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa. Los valores cifrados llevan el prefijo `v1:`. Si no lo llevan, es que están en claro (así llegaron algunos del volcado) y se devuelven tal c"
         },
         {
@@ -3776,7 +4074,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 48,
+          "linea": 55,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null."
         },
         {
@@ -3785,7 +4083,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 52
+          "linea": 59
         },
         {
           "nombre": "fechaIso",
@@ -3793,7 +4091,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 56
+          "linea": 63
         },
         {
           "nombre": "buscarClientes",
@@ -3801,7 +4099,7 @@
           "exportada": true,
           "params": "correduriaId: string, termino: string, limite = 20,",
           "retorno": "Promise<ClienteEncontrado[]>",
-          "linea": 66,
+          "linea": 73,
           "resumen": "Busca clientes por nombre o apellidos. Nombre y apellidos van EN CLARO en la base, así que esta búsqueda no depende del índice ciego — que es justo lo que la hace fiable: si fallara la clave de lookup"
         },
         {
@@ -3810,7 +4108,17 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<FichaCliente | null>",
-          "linea": 129
+          "linea": 185,
+          "resumen": "La ficha entera de un cliente en UNA consulta: quién es, cómo se le llama, qué tiene contratado, cómo va de recibos y qué siniestros arrastra. Es el corazón del «pincho en el nombre y lo tengo todo». "
+        },
+        {
+          "nombre": "ilegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 336,
+          "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
         },
         {
           "nombre": "origenRetarificacion",
@@ -3818,7 +4126,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 194
+          "linea": 354
         },
         {
           "nombre": "normalizarFecha",
@@ -3826,13 +4134,80 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 279,
+          "linea": 439,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a80fb7c83248"
+      "hash": "b2ee4514e9ac"
+    },
+    {
+      "ruta": "apps/asegura/lib/cartera-impagados.ts",
+      "ambito": "apps/asegura",
+      "resumen": "La cola de retención: los recibos devueltos o impagados de la cartera, con cuánto tiempo queda para rescatar cada póliza. ─── Por qué esto es lo primero que hay que mirar cada mañana ─────────────── Un recibo devuelto no avisa a nadie. La compañía lo anota, la póliza deja de cubrir al mes (art. 15 L",
+      "exporta": [
+        "colaRetencion"
+      ],
+      "funciones": [
+        {
+          "nombre": "esObjetoPlano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 79
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date | null | undefined",
+          "retorno": "string | null",
+          "linea": 83
+        },
+        {
+          "nombre": "descifrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 88,
+          "resumen": "Descifra sin convertir un fallo en «no tiene teléfono»."
+        },
+        {
+          "nombre": "importeRecibo",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string | null",
+          "retorno": "number | null",
+          "linea": 99,
+          "resumen": "Importe del EIAC: solo la forma medida (`NNN.NN`). Cualquier otra → null."
+        },
+        {
+          "nombre": "colaRetencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, hoy: Date = new Date(),",
+          "retorno": "Promise<ColaRetencion>",
+          "linea": 107
+        },
+        {
+          "nombre": "polizasSinRecibo",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<number>",
+          "linea": 235,
+          "resumen": "Pólizas VIVAS (las que entran por CIMA) de las que la compañía no ha mandado ni un recibo. Es el hueco que la pantalla tiene que declarar: sin este número, una cola de impagados vacía se leería como «"
+        }
+      ],
+      "tablas": [
+        "poliza_recibos",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "59513025d93e"
     },
     {
       "ruta": "apps/asegura/lib/cartera.ts",
@@ -3849,7 +4224,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 80
+          "linea": 84
         },
         {
           "nombre": "resumenCartera",
@@ -3857,7 +4232,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResumenCartera>",
-          "linea": 85
+          "linea": 89
         },
         {
           "nombre": "vencimientosProximos",
@@ -3865,7 +4240,7 @@
           "exportada": true,
           "params": "correduriaId: string, dias: number = DIAS_HORIZONTE_RENOVACION, hoyRef: Date = hoyUtc(),",
           "retorno": "Promise<PolizaVencimiento[]>",
-          "linea": 150,
+          "linea": 154,
           "resumen": "Pólizas vigentes que vencen dentro del horizonte, ordenadas por urgencia real (la fecha, no la etiqueta del estado). Es la lista de llamadas de la semana. Las que tienen `fechaVencimiento` NULL NO sal"
         },
         {
@@ -3874,7 +4249,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 220,
+          "linea": 225,
           "resumen": "La única correduría de la base (medido: 1 fila). Lanza si hubiera más de una."
         },
         {
@@ -3883,7 +4258,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 229,
+          "linea": 234,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null. Solo se mira si de verdad es un objeto."
         },
         {
@@ -3892,13 +4267,13 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 244,
+          "linea": 249,
           "resumen": "- sin clave, o con una clave que no abre ese registro → `objetoAsegurado` verá el `v1:` intacto y lo dirá como **«cifrado»**, que NO es «sin dato». Lo que no puede pasar nunca es que un fallo de desci"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "552d09e52d35"
+      "hash": "1609f4ca432d"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/catalogos.ts",
@@ -4310,7 +4685,7 @@
           "kind": "function",
           "exportada": true,
           "params": "correduriaId: string, env: Record<string, string | undefined> = process.env,",
-          "retorno": "Promise<",
+          "retorno": null,
           "linea": 70,
           "resumen": "Lo consumido y lo que queda. Para pintarlo antes de que nadie pulse nada."
         },
@@ -4320,12 +4695,12 @@
           "exportada": true,
           "params": "p: PeticionCotizacion, env: Record<string, string | undefined> = process.env,",
           "retorno": "Promise<ResultadoCotizacion>",
-          "linea": 87
+          "linea": 99
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "212f69990918"
+      "hash": "3a6de21d07d8"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera.ts",
@@ -4652,6 +5027,74 @@
       "hash": "96d636df29e6"
     },
     {
+      "ruta": "apps/asegura/lib/documentos/extraer-auto.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lee una PÓLIZA DE AUTO que sube el corredor: PDF → texto → IA, o foto → visión. Sigue el mismo pipeline que `apps/asegura-portal/lib/extraer-poliza.ts`, que ya está probado contra documentos reales. La diferencia es QUÉ se busca: allí los cinco campos que el asegurado ve en su bóveda, aquí lo que ha",
+      "exporta": [
+        "leerPolizaAuto"
+      ],
+      "funciones": [
+        {
+          "nombre": "nadaLeido",
+          "kind": "function",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "ResultadoLectura",
+          "linea": 62
+        },
+        {
+          "nombre": "leerPolizaAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "buffer: Buffer, mimeType: string, fileName = '',",
+          "retorno": "Promise<ResultadoLectura>",
+          "linea": 66
+        },
+        {
+          "nombre": "parsear",
+          "kind": "function",
+          "exportada": false,
+          "params": "salida: string",
+          "retorno": "AutoLeido",
+          "linea": 129,
+          "resumen": "Un JSON que no parsea devuelve TODOS los campos a `null`, nunca campos a medias. Media extracción pintada como póliza es peor que ninguna: quien la mira se cree que eso es lo que pone el documento."
+        },
+        {
+          "nombre": "mensaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "string",
+          "linea": 137
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "962e9b75dc70"
+    },
+    {
+      "ruta": "apps/asegura/lib/documentos/fichero.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Qué ficheros aceptamos y por qué se rechaza uno. PURO: sin red, sin IA. Vive aparte de `extraer-auto.ts` a propósito: aquel importa `@central/core-ai` —que usa imports sin extensión y por tanto no se puede cargar desde `node --test`— y esta decisión sí hay que poder probarla. Separar lo puro de la c",
+      "exporta": [
+        "revisarFichero"
+      ],
+      "funciones": [
+        {
+          "nombre": "revisarFichero",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { type: string; size: number; name?: string }",
+          "retorno": "string | null",
+          "linea": 28,
+          "resumen": "Comprueba el fichero ANTES de gastar nada. Devuelve el motivo o `null`. El motivo es un texto para leer en pantalla, no un código: quien sube una póliza necesita saber qué hacer a continuación, y «tip"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "39159c0a6ded"
+    },
+    {
       "ruta": "apps/asegura/lib/estado-migracion.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -4664,14 +5107,16 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<EstadoMigracion>",
-          "linea": 17
+          "linea": 17,
+          "resumen": "¿Se ha restaurado ya la cartera en el schema `seguros`? Este fichero solo CONSULTA. La regla de qué cuenta como «migrado» —y por qué contar tablas no vale— vive en `migracion-decision.ts`, que es puro"
         }
       ],
       "tablas": [
-        "information_schema"
+        "information_schema",
+        "seguros"
       ],
       "rutaApi": null,
-      "hash": "2973fdc30c86"
+      "hash": "40058dd7976e"
     },
     {
       "ruta": "apps/asegura/lib/ingesta.ts",
@@ -4697,6 +5142,37 @@
       ],
       "rutaApi": null,
       "hash": "6ecbb69fd893"
+    },
+    {
+      "ruta": "apps/asegura/lib/migracion-decision.ts",
+      "ambito": "apps/asegura",
+      "resumen": "¿Cuándo se considera que la cartera «ya está aquí»? — LÓGICA PURA, sin BD. Vive aparte de `estado-migracion.ts` por el mismo motivo que `tenant-ambito.ts` vive aparte de `tenant.ts`: la regla se puede probar sin Prisma ni red, y lo que se equivocó fue la REGLA, no la consulta. ─── El fallo que origi",
+      "exporta": [
+        "decidirMigracion",
+        "explicarMigracion"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirMigracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { tablas: number corredurias: number error: boolean }",
+          "retorno": "EstadoMigracion",
+          "linea": 36
+        },
+        {
+          "nombre": "explicarMigracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EstadoMigracion",
+          "retorno": "string",
+          "linea": 48,
+          "resumen": "Qué decir en pantalla. Nunca afirma una ausencia que no se ha comprobado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "35d1ed4b28ea"
     },
     {
       "ruta": "apps/asegura/lib/operador.ts",
@@ -48579,6 +49055,161 @@
       "hash": "4e95bea4beb1"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/BuscadorCartera.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "BuscadorCartera"
+      ],
+      "funciones": [
+        {
+          "nombre": "BuscadorCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "Resultado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ estado, termino }: { estado: Estado; termino: string }",
+          "retorno": null,
+          "linea": 88
+        },
+        {
+          "nombre": "Bloque",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ b }: { b: BloqueResultados }",
+          "retorno": null,
+          "linea": 175
+        },
+        {
+          "nombre": "Nota",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ color, children }: { color: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 210
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "df62e592b562"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "FichaCorreduriaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "FichaCorreduriaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "La ficha del cliente de la correduría, DENTRO del cuadro de mando. Alberto usa una sola pantalla —esta— para todos sus negocios: la correduría es uno más. `apps/asegura` es el back (tiene la BD de la "
+        },
+        {
+          "nombre": "Titulares",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ polizas, vivas, abiertos }: { polizas: PolizaFicha[]; vivas: number; abiertos: number }",
+          "retorno": null,
+          "linea": 65
+        },
+        {
+          "nombre": "Kpi",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor, sub, color }: { label: string; valor: string; sub?: string; color?: string }",
+          "retorno": null,
+          "linea": 101
+        },
+        {
+          "nombre": "Contacto",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c }: { c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null } }",
+          "retorno": null,
+          "linea": 113
+        },
+        {
+          "nombre": "Polizas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, nota, polizas, vacio, plegado }: { titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean }",
+          "retorno": null,
+          "linea": 146
+        },
+        {
+          "nombre": "ObjetoCelda",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ p }: { p: PolizaFicha }",
+          "retorno": null,
+          "linea": 230
+        },
+        {
+          "nombre": "CeldaRecibos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r }: { r: RecibosPoliza | null }",
+          "retorno": null,
+          "linea": 260,
+          "resumen": "El estado de cobro de UNA póliza. Cuatro cosas distintas, cuatro pintados: null → asegura no manda el bloque (desplegar). total 0 → la compañía no ha mandado recibos (18 de 109 vivas, medido). devuelt"
+        },
+        {
+          "nombre": "motivoNoRetarificable",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PolizaFicha",
+          "retorno": "string",
+          "linea": 282
+        },
+        {
+          "nombre": "Siniestros",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ lista }: { lista: { id: string; estado: string; tipo: string | null; referencia: string | null; fecha: string | null; reserva: number | null; indemnizacion: number | null; tramitador: string | null; abierto: boolean }[] }",
+          "retorno": null,
+          "linea": 289
+        },
+        {
+          "nombre": "NoSePudo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
+          "retorno": null,
+          "linea": 355
+        },
+        {
+          "nombre": "Tarjeta",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 397
+        },
+        {
+          "nombre": "fmt",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 407,
+          "resumen": "Fecha siempre en español: \"2026-06-03\" → \"03/06/2026\"."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "64b7064fe038"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CorreduriaClient.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -48591,7 +49222,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 10
+          "linea": 12
         },
         {
           "nombre": "fmtFecha",
@@ -48599,16 +49230,16 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 15,
+          "linea": 17,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
           "nombre": "CorreduriaClient",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ urlAsegura }: { urlAsegura: string }",
           "retorno": null,
-          "linea": 54
+          "linea": 56
         },
         {
           "nombre": "DesgloseModal",
@@ -48616,7 +49247,7 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 255
+          "linea": 283
         },
         {
           "nombre": "num",
@@ -48624,7 +49255,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 437
+          "linea": 465
         },
         {
           "nombre": "CarteraViva",
@@ -48632,7 +49263,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 439
+          "linea": 467
         },
         {
           "nombre": "CeldaObjeto",
@@ -48640,7 +49271,7 @@
           "exportada": false,
           "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
           "retorno": null,
-          "linea": 566,
+          "linea": 630,
           "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
         },
         {
@@ -48649,12 +49280,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 599
+          "linea": 663
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b832f2b502e1"
+      "hash": "0125525d2648"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -48715,12 +49346,58 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 3
+          "linea": 13,
+          "resumen": "La pantalla de la correduría. Alberto usa UNA página —este cuadro de mando— y la correduría es un negocio más dentro de ella; `apps/asegura` es la trastienda que sirve los datos por su puerto HTTP. La"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d60dea772a0a"
+      "hash": "9bfc230508b9"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/Retencion.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Retencion"
+      ],
+      "funciones": [
+        {
+          "nombre": "Retencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ urlAsegura }: { urlAsegura: string }",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ f, urlAsegura }: { f: EnRiesgo; urlAsegura: string }",
+          "retorno": null,
+          "linea": 144
+        },
+        {
+          "nombre": "Huecos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ datos }: { datos: Extract<Impagados, { estado: 'ok' }> }",
+          "retorno": null,
+          "linea": 230,
+          "resumen": "Los dos huecos que hacen que esta lista NO sea la foto completa de lo que está sin cobrar. Sin decirlos, una cola vacía se lee como «todo al día»."
+        },
+        {
+          "nombre": "Marco",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, extra, children, }: { titulo?: string extra?: React.ReactNode children: React.ReactNode }",
+          "retorno": null,
+          "linea": 257
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2ac5988528b5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/dashboard/GestionSociedad.tsx",
@@ -55567,6 +56244,27 @@
       "hash": "29333ccf75c2"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/buscar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "GET /api/correduria/buscar?q=… — el buscador de TODO. Read-only."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/buscar",
+      "hash": "b84658e4b67c"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/cartera/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -55586,6 +56284,48 @@
       "tablas": [],
       "rutaApi": "/api/correduria/cartera",
       "hash": "cd6ddb5fc208"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/cliente/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/correduria/cliente?id=<uuid> — ficha completa (puerto a asegura). Read-only: aquí no se gasta ni un céntimo. Retarificar vive en asegura."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/cliente",
+      "hash": "09f000da891a"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/clientes/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "GET /api/correduria/clientes?q=suarez — buscador de la cartera."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/clientes",
+      "hash": "4877406b2bdf"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/comisiones/confirmar/route.ts",
@@ -55663,6 +56403,27 @@
       ],
       "rutaApi": "/api/correduria/detalle",
       "hash": "473f784cc3b4"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/impagados/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "GET /api/correduria/impagados — la cola de retención. Read-only."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/impagados",
+      "hash": "4e472275c6d0"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/route.ts",
@@ -65325,7 +66086,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ObjetoAsegurado | null",
-          "linea": 131,
+          "linea": 139,
           "resumen": "Lectura defensiva del objeto asegurado. Una forma rara NO tumba la fila entera: degrada a `null` («el puerto no lo informa»), que la UI ya sabe decir."
         },
         {
@@ -65334,7 +66095,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "VencimientosAsegura",
-          "linea": 152,
+          "linea": 160,
           "resumen": "Interpretación PURA de la respuesta del puerto de vencimientos. Una fila con forma inesperada invalida la lista entera: media lista de renovaciones es peor que ninguna, porque nadie sabría cuál falta."
         },
         {
@@ -65343,12 +66104,12 @@
           "exportada": true,
           "params": "dias = 90",
           "retorno": "Promise<VencimientosAsegura>",
-          "linea": 189
+          "linea": 198
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3c4be20a67a5"
+      "hash": "95a1a9d239d4"
     },
     {
       "ruta": "apps/plataforma/lib/categoria-reglas.ts",
@@ -67120,6 +67881,94 @@
       ],
       "rutaApi": null,
       "hash": "8f807fe1f7cf"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria-puerto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Los dos lectores nuevos del puerto de asegura: el buscador de TODO y la cola de retención (recibos devueltos). Interpretación PURA + la llamada. El diccionario de motivos vive AQUÍ y no en cada componente: estaba copiado en dos sitios y, cuando asegura no responde, la pantalla apilaba tres recuadros",
+      "exporta": [
+        "interpretarBusqueda",
+        "interpretarImpagados",
+        "buscarAsegura",
+        "impagadosAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 18
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 22
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 26
+        },
+        {
+          "nombre": "interpretarBusqueda",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "Busqueda",
+          "linea": 62
+        },
+        {
+          "nombre": "interpretarImpagados",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "Impagados",
+          "linea": 175
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 242
+        },
+        {
+          "nombre": "pedir",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string",
+          "retorno": "Promise<",
+          "linea": 246
+        },
+        {
+          "nombre": "buscarAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: string",
+          "retorno": "Promise<Busqueda>",
+          "linea": 257
+        },
+        {
+          "nombre": "impagadosAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Impagados>",
+          "linea": 267
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a145b971cd6b"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -69896,6 +70745,124 @@
       ],
       "rutaApi": null,
       "hash": "790c49c4e8bb"
+    },
+    {
+      "ruta": "apps/plataforma/lib/ficha-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "La ficha de un cliente de la correduría, leída por el puerto de central-asegura. ─── Por qué esto vive en plataforma y no en asegura ──────────────────────── Alberto usa UNA pantalla: este cuadro de mando, con todos sus negocios. La correduría es un negocio más, y `apps/asegura` es su BACK (tiene la",
+      "exporta": [
+        "leerRecibos",
+        "interpretarFicha",
+        "interpretarBusqueda",
+        "fichaAsegura",
+        "buscarEnAsegura",
+        "urlRetarificar"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 104
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 110,
+          "resumen": "Número o `null`. Un `null` que llega del puerto se QUEDA en null: es «la compañía no lo informa», y convertirlo en 0 es la mentira de siempre."
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 114
+        },
+        {
+          "nombre": "leerObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "ObjetoFicha | null",
+          "linea": 118
+        },
+        {
+          "nombre": "leerRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "RecibosPoliza | null",
+          "linea": 137,
+          "resumen": "Los recibos, o `null` si el bloque no llega o llega con forma rara. Una forma rara NO se degrada a un resumen a ceros: eso pintaría «al corriente» sobre una póliza de la que no se sabe nada. Degrada a"
+        },
+        {
+          "nombre": "interpretarFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaFicha",
+          "linea": 175,
+          "resumen": "Interpretación PURA de la respuesta del puerto de ficha. Una póliza con forma inesperada invalida la ficha entera, igual que en la lista de vencimientos: media ficha es peor que ninguna, porque nadie "
+        },
+        {
+          "nombre": "interpretarBusqueda",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaBusqueda",
+          "linea": 273
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 308
+        },
+        {
+          "nombre": "pedir",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string",
+          "retorno": "Promise<",
+          "linea": 312
+        },
+        {
+          "nombre": "fichaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<RespuestaFicha>",
+          "linea": 323
+        },
+        {
+          "nombre": "buscarEnAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: string",
+          "retorno": "Promise<RespuestaBusqueda>",
+          "linea": 333
+        },
+        {
+          "nombre": "urlRetarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaId: string",
+          "retorno": "string",
+          "linea": 345,
+          "resumen": "La URL de asegura para los saltos que SÍ tienen que ir allí (retarificar, que gasta dinero y vive detrás de su propia sesión). Pública, no es secreto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "904da1a9309c"
     },
     {
       "ruta": "apps/plataforma/lib/financiero.ts",
@@ -99409,11 +100376,12 @@
     {
       "ruta": "packages/module-seguros-portal/src/procedencia.ts",
       "ambito": "packages/module-seguros-portal",
-      "resumen": "De dónde sale un dato del portal. Son TRES, nunca dos, y se pintan distinto. - `compania` — vino por CIMA/EIAC. El único fiable sin que nadie lo confirme. - `calculado` — lo dedujo el sistema de una norma (ITV según matriculación, caducidad del DNI...). PROPONE; hasta que el usuario lo confirma no s",
+      "resumen": "De dónde sale un dato. Son CUATRO, nunca dos, y se pintan distinto. - `compania` — vino por CIMA/EIAC. El único fiable sin que nadie lo confirme. - `documento` — lo leyó una máquina de un documento que aportó el cliente (su póliza, la ficha técnica, el DNI). Detrás hay un papel real, así que vale má",
       "exporta": [
         "fiabilidad",
         "etiquetaProcedencia",
-        "sePuedeAfirmar"
+        "sePuedeAfirmar",
+        "debeSustituir"
       ],
       "funciones": [
         {
@@ -99422,7 +100390,7 @@
           "exportada": true,
           "params": "p: Procedencia",
           "retorno": "number",
-          "linea": 23
+          "linea": 33
         },
         {
           "nombre": "etiquetaProcedencia",
@@ -99430,7 +100398,7 @@
           "exportada": true,
           "params": "p: Procedencia",
           "retorno": "string",
-          "linea": 33
+          "linea": 44
         },
         {
           "nombre": "sePuedeAfirmar",
@@ -99438,12 +100406,224 @@
           "exportada": true,
           "params": "dato: { procedencia: Procedencia confirmadoPorUsuario: boolean }",
           "retorno": "boolean",
-          "linea": 37
+          "linea": 48
+        },
+        {
+          "nombre": "debeSustituir",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: Procedencia | null, nueva: Procedencia",
+          "retorno": "boolean",
+          "linea": 69,
+          "resumen": "¿Debe `nueva` sustituir a `actual` para el MISMO campo? Solo si es estrictamente más fiable. Empate = se queda lo que había, porque reescribir sin ganar nada solo sirve para perder la fecha del dato b"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "71e37d4f17b9"
+      "hash": "073c4ad492bf"
+    },
+    {
+      "ruta": "packages/module-seguros/src/busqueda.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Un solo cuadro de búsqueda para toda la cartera: se teclea lo que se tenga a mano —una matrícula que dicta el cliente por teléfono, su DNI, el número de póliza de un recibo, un apellido— y esto decide DÓNDE hay que mirar. ─── Por qué la clasificación es pura y vive aquí ─────────────────────────── P",
+      "exporta": [
+        "planBusqueda",
+        "avisoDireccion",
+        "explicarVacio"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 85
+        },
+        {
+          "nombre": "compacto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 90,
+          "resumen": "Quita todo lo que no sea letra o dígito y sube a mayúsculas."
+        },
+        {
+          "nombre": "planBusqueda",
+          "kind": "function",
+          "exportada": true,
+          "params": "termino: string",
+          "retorno": "PlanBusqueda",
+          "linea": 99,
+          "resumen": "Decide dónde buscar un término. Puede devolver varios criterios: `41003` es a la vez un código postal plausible y un número de póliza plausible, y no hay forma de saber cuál quería quien lo teclea — a"
+        },
+        {
+          "nombre": "avisoDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Aviso",
+          "linea": 155,
+          "resumen": "Lo que hay que decir cuando alguien busca una DIRECCIÓN. No es un mensaje de error ni una lista vacía: es que ese campo va cifrado en la base y una consulta SQL no puede mirarlo. Devolver «ningún resu"
+        },
+        {
+          "nombre": "explicarVacio",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoCriterio, cob: Cobertura | null",
+          "retorno": "string",
+          "linea": 175
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "282393d3dc29"
+    },
+    {
+      "ruta": "packages/module-seguros/src/documento-auto.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Normalización de lo que una máquina dice haber leído en una PÓLIZA DE AUTO. Puro: sin BD, sin red, sin proveedor de IA. Vive aquí y no en la app porque es LA regla que decide si un campo existe, y esa decisión no puede depender de qué modelo respondió. ─── Por qué es distinto del de `@central/module",
+      "exporta": [
+        "autoLeidoVacio",
+        "seLeyoAlgo",
+        "normalizarAutoLeido",
+        "camposLeidos"
+      ],
+      "funciones": [
+        {
+          "nombre": "autoLeidoVacio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "AutoLeido",
+          "linea": 97
+        },
+        {
+          "nombre": "seLeyoAlgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: AutoLeido",
+          "retorno": "boolean",
+          "linea": 120,
+          "resumen": "¿Se ha leído ALGO? `false` = el documento no se pudo leer, no que esté vacío."
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 126
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 138,
+          "resumen": "Entero >= 0. El `0` SÍ es un dato (cero siniestros es una respuesta), así que aquí no se puede usar el truco de «<= 0 es que no lo he leído» que sí vale para una prima."
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 156,
+          "resumen": "Importe en euros. Una prima de 0€ no existe: es un «no lo he leído»."
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 174,
+          "resumen": "`aaaa-mm-dd` estricto: rechaza los días que `Date` «arregla» solo."
+        },
+        {
+          "nombre": "matricula",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 189,
+          "resumen": "Matrícula española, en cualquiera de sus dos formatos vivos: - actual (desde 2000): `1234ABC` - provincial anterior: `SE1234AB`, `M1234AB`… Lo que no encaje se anula: una matrícula inventada identific"
+        },
+        {
+          "nombre": "documentoIdentidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 199,
+          "resumen": "DNI/NIE. Se comprueba la LETRA: un DNI mal leído es de otra persona."
+        },
+        {
+          "nombre": "codigoDgs",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 212,
+          "resumen": "Código DGS de entidad: `C` + 4 dígitos (C0058 Mapfre, C0109 Allianz…)."
+        },
+        {
+          "nombre": "normalizarAutoLeido",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "AutoLeido",
+          "linea": 226,
+          "resumen": "Convierte lo que devuelva el modelo en `AutoLeido`. Nunca lanza: una respuesta ilegible produce TODO a `null`, que es la verdad («no se ha leído nada»), no un objeto a medias que la pantalla pintaría "
+        },
+        {
+          "nombre": "camposLeidos",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: AutoLeido",
+          "retorno": "(keyof AutoLeido)[]",
+          "linea": 251,
+          "resumen": "Los campos que SÍ se han leído. Es lo que la pantalla enseña para revisar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b7720f35cc21"
+    },
+    {
+      "ruta": "packages/module-seguros/src/importe-eiac.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Los importes de los EIAC llegan como TEXTO, no como numeric: así los guarda `poliza_recibos` (prima_total, prima_neta, comision_bruta, comision_liquida) y así los guarda `cuenta_efectivo`. Alguien tiene que convertirlos, y ese alguien es el sitio donde más barato sale mentir. ─── Por qué no vale `Nu",
+      "exporta": [
+        "importeEiac",
+        "sumarImportesEiac"
+      ],
+      "funciones": [
+        {
+          "nombre": "importeEiac",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "number | null",
+          "linea": 24,
+          "resumen": "El importe, o `null` si el texto no tiene la forma medida. Nunca 0."
+        },
+        {
+          "nombre": "sumarImportesEiac",
+          "kind": "function",
+          "exportada": true,
+          "params": "textos: readonly (string | null | undefined)[],",
+          "retorno": "",
+          "linea": 43,
+          "resumen": "Suma una lista de importes en texto SIN colapsar los ilegibles a cero. Devuelve el total de los que se han podido leer y **cuántos no**. Un total a secas sobre una lista con tres textos rotos sería un"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b1748e1e2a66"
     },
     {
       "ruta": "packages/module-seguros/src/ingesta.ts",
@@ -99617,6 +100797,86 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "77ade921171e"
+    },
+    {
+      "ruta": "packages/module-seguros/src/recibos.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "El estado de cobro de una póliza, que es la pregunta que Alberto hace antes de llamar a nadie: ¿este cliente está al corriente? 🚨 Esa pregunta tiene TRES respuestas, no dos, y la tercera es la que más se pierde: «no lo sé». Medido el 01/09/2026, 18 de las 109 pólizas vivas no tienen NI UN recibo en",
+      "exporta": [
+        "estadoCobro",
+        "explicarCobro",
+        "resumirRecibos"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoCobro",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RecibosPoliza",
+          "retorno": "EstadoCobro",
+          "linea": 56
+        },
+        {
+          "nombre": "explicarCobro",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RecibosPoliza",
+          "retorno": "string",
+          "linea": 64,
+          "resumen": "La frase que acompaña al estado. Dice qué hacer, no solo qué pasa."
+        },
+        {
+          "nombre": "resumirRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly ReciboCrudo[]",
+          "retorno": "RecibosPoliza",
+          "linea": 85,
+          "resumen": "Resume los recibos de UNA póliza. Recibe la lista YA ordenada por emisión descendente (el primero es el último recibo). `anulado` no entra en pendientes ni en cobrados: no es deuda ni ingreso, y meter"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4242a8566126"
+    },
+    {
+      "ruta": "packages/module-seguros/src/retencion.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Un recibo devuelto es un cliente que se está yendo, y casi siempre sin saberlo. Este módulo dice CUÁNTO tiempo queda y QUÉ se puede hacer todavía. ─── La ley pone el reloj, y son tres tramos (art. 15 LCS) ────────────────── Para una prima SUCESIVA impagada (la renovación de siempre, que es el 99% de",
+      "exporta": [
+        "retencion",
+        "resumirRetencion"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasDesde",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string | null, hoy: Date",
+          "retorno": "number | null",
+          "linea": 60
+        },
+        {
+          "nombre": "retencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimiento: string | null, hoy: Date = new Date()",
+          "retorno": "Retencion",
+          "linea": 72,
+          "resumen": "Qué se puede hacer todavía con un recibo devuelto. `vencimiento` es la fecha del RECIBO (ISO `aaaa-mm-dd`), no la de la póliza."
+        },
+        {
+          "nombre": "resumirRetencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly { estado: EstadoRetencion; prima: number | null }[],",
+          "retorno": "ResumenRetencion",
+          "linea": 144
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5fa0d7682cbd"
     },
     {
       "ruta": "packages/module-seguros/src/vencimientos.ts",
@@ -104846,7 +106106,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2740,
-    "funciones": 7661
+    "archivos": 2766,
+    "funciones": 7768
   }
 }
