@@ -51,22 +51,45 @@ test('fmtFecha no inventa fechas', () => {
   assert.equal(fmtFecha(''), '?')
 })
 
-test('resumenOrdenes distingue los cuatro desenlaces', () => {
-  assert.equal(resumenOrdenes(undefined), null)                       // aún no cargado: no se afirma nada
-  assert.equal(resumenOrdenes(null)?.tono, 'aviso')                   // no se pudo leer
-  assert.equal(resumenOrdenes([])?.tono, 'neutro')                    // leído: no hay nada pedido
-  assert.equal(resumenOrdenes([{ instruccion: 'Colocar cuna', enviadoAt: '2026-09-01T10:00:00Z', error: null }])?.tono, 'ok')
+const VISIBLE = { instruccion: 'Colocar cuna', enviadoAt: '2026-09-01T10:00:00Z', error: null, tareaId: 't-1' }
+
+test('resumenOrdenes distingue los desenlaces de carga', () => {
+  assert.equal(resumenOrdenes(undefined), null)          // aún no cargado: no se afirma nada
+  assert.equal(resumenOrdenes(null)?.tono, 'aviso')      // no se pudo leer
+  assert.equal(resumenOrdenes([])?.tono, 'neutro')       // leído: no hay nada pedido
+  assert.equal(resumenOrdenes([VISIBLE])?.tono, 'ok')    // está en su pantalla
 })
 
-// 🚨 El caso caro: la orden que NO salió no puede quedar tapada por otra que sí.
-test('una orden fallida manda sobre las enviadas', () => {
-  const r = resumenOrdenes([
-    { instruccion: 'Colocar cuna', enviadoAt: null, error: 'SMTP caído' },
-    { instruccion: 'Poner trona', enviadoAt: '2026-09-01T10:00:00Z', error: null },
-  ])
+// 🚨 El caso que costó el fallo del 01/09: el email salió y Alberto lo dio por avisado, pero la
+// limpieza solo mira /invitado/limpieza y allí no había nada.
+test('email enviado SIN tarea no se pinta como avisado', () => {
+  const r = resumenOrdenes([{ ...VISIBLE, tareaId: null }])
+  assert.equal(r?.tono, 'aviso')
+  assert.match(r!.texto, /NO está en la pantalla de la limpieza/)
+  assert.doesNotMatch(r!.texto, /^🧹 Pedido/)
+})
+
+// Sin tarea Y sin email no se ha enterado nadie: es el estado más grave.
+test('ni tarea ni email → nadie se ha enterado', () => {
+  const r = resumenOrdenes([{ instruccion: 'Colocar cuna', enviadoAt: null, error: 'SMTP caído', tareaId: null }])
   assert.equal(r?.tono, 'error')
-  assert.match(r!.texto, /NO enviada/)
+  assert.match(r!.texto, /NO se ha enterado/)
+})
+
+// El canal que importa es su pantalla: con la tarea creada, un email fallido no bloquea el trabajo.
+test('con tarea, el email fallido NO degrada el titular', () => {
+  const r = resumenOrdenes([{ instruccion: 'Colocar cuna', enviadoAt: null, error: 'SMTP caído', tareaId: 't-9' }])
+  assert.equal(r?.tono, 'ok')
+})
+
+test('una orden invisible manda sobre las que sí se ven', () => {
+  const r = resumenOrdenes([
+    { instruccion: 'Colocar cuna', enviadoAt: '2026-09-01T10:00:00Z', error: null, tareaId: null },
+    { ...VISIBLE, instruccion: 'Poner trona' },
+  ])
+  assert.equal(r?.tono, 'aviso')
   assert.match(r!.texto, /Colocar cuna/)
+  assert.doesNotMatch(r!.texto, /Poner trona/)
 })
 
 test('«no se ha podido consultar» NUNCA se lee como «no hay nada pedido»', () => {

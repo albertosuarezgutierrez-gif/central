@@ -44,26 +44,44 @@ export function componerOrden(d: DatosOrden): { asunto: string; texto: string } 
   return { asunto, texto: lineas.join('\n') }
 }
 
-export type OrdenVista = { instruccion: string; enviadoAt: string | null; error: string | null }
+export type OrdenVista = {
+  instruccion: string
+  enviadoAt: string | null
+  error: string | null
+  /** Id de la tarea en `/invitado/limpieza`. `null` = la limpieza NO la ve en su pantalla. */
+  tareaId: string | null
+}
 export type ResumenOrdenes = { tono: 'ok' | 'aviso' | 'error' | 'neutro'; texto: string }
 
 /**
  * Titular de las órdenes de limpieza de una reserva, para pintarlo en la ficha.
  *
- * 🚨 Cuatro desenlaces, no dos (regla «dato que NO hay ≠ dato que NO se ha mirado»):
+ * 🚨 LA PREGUNTA NO ES «¿salió el email?», ES «¿LO VE QUIEN TIENE QUE HACERLO?» (01/09/2026).
+ * Sique Brilla (Vanesa) ya no entra en ialimp: su único acceso es `/invitado/limpieza`, que lee
+ * `limpieza_tareas`. Una orden con el email enviado pero SIN tarea está pedida en un canal que
+ * ellos no abren — y pintarla en verde sería decir «avisada» de algo invisible. Por eso el orden
+ * de gravedad va por `tareaId`, no por `enviadoAt`.
+ *
+ * Desenlaces (el estado es lo que decide qué hacer, por eso no se colapsan):
  *   `undefined` → todavía no se ha cargado: NO se dice nada (null).
  *   `null`      → no se ha podido consultar: se DECLARA el hueco, jamás «no hay nada pedido».
  *   `[]`        → consultado: no se ha pedido nada.
- *   con filas   → lo pedido; una orden que quedó en error MANDA sobre las enviadas, porque es la
- *                 única que exige actuar (el huésped espera algo que nadie ha recibido).
+ *   sin tarea NI email → 🛑 nadie se ha enterado.
+ *   sin tarea, con email → ⚠️ salió el correo, pero no está en su pantalla.
+ *   con tarea → 🧹 la limpieza lo ve (aunque el email fallara: el canal que importa está cubierto).
  */
 export function resumenOrdenes(ordenes: OrdenVista[] | null | undefined): ResumenOrdenes | null {
   if (ordenes === undefined) return null
   if (ordenes === null) return { tono: 'aviso', texto: '🧹 Órdenes a limpieza: no se han podido consultar' }
   if (ordenes.length === 0) return { tono: 'neutro', texto: '🧹 Sin órdenes a la limpieza' }
-  const fallidas = ordenes.filter(o => !o.enviadoAt)
-  if (fallidas.length) {
-    return { tono: 'error', texto: `🛑 Orden NO enviada a la limpieza: ${fallidas.map(o => o.instruccion).join(' · ')}` }
+
+  const invisibles = ordenes.filter(o => !o.tareaId)
+  if (invisibles.length) {
+    const mudas = invisibles.filter(o => !o.enviadoAt)
+    const lista = invisibles.map(o => o.instruccion).join(' · ')
+    return mudas.length
+      ? { tono: 'error', texto: `🛑 La limpieza NO se ha enterado: ${lista}` }
+      : { tono: 'aviso', texto: `⚠️ Enviado por email, pero NO está en la pantalla de la limpieza: ${lista}` }
   }
   return { tono: 'ok', texto: `🧹 Pedido a la limpieza: ${ordenes.map(o => o.instruccion).join(' · ')}` }
 }

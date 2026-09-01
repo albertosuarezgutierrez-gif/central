@@ -30,7 +30,15 @@ compartida `wswbehlcuxqxyinousql` (con ialimp+plataforma).
 6. 🚨 **INGRESO por piso = tabla `incomes` (INGLÉS)**; enlace `negocios.ref_ext` (`prop_*`) =
    `incomes.propertyId`; reutiliza `getResumenSivra` (plataforma `lib/financiero.ts`). El banco
    agrega todos los pisos en `turistico_pisos` → NO sirve para "ingreso del piso X".
-7. **Limpiadoras reales = ialimp (Sique Brilla).** `app/limpiadoras/` de sivra no tiene usuarias reales.
+7. 🚨 **VANESA = SIQUE BRILLA, y su ÚNICA pantalla es `/invitado/limpieza` (corregido 01/09/2026).**
+   Vanessa Cruz (Sique Brilla SL) es la limpieza de los 4 pisos Y era la clienta piloto de ialimp:
+   **son la misma persona**, y los docs las trataban como cosas distintas. **Ya NO entra en ialimp**
+   (se le retiró el acceso): ialimp sigue vivo como PRODUCTO que Alberto quiere vender, no como su
+   herramienta. Lo operativo va por el enlace con token de la intranet de plataforma
+   (`/invitado/limpieza`, tabla `limpieza_tareas`). **Toda instrucción para ella tiene que APARECER
+   AHÍ**: un email a `limpiezascruzz@gmail.com` o un chip en `/sivra/mensajes` son canales que ella no
+   abre. Caso fundacional: la cuna de la reserva 152490601 estaba pedida por email y no salía en su
+   pantalla. `app/limpiadoras/` de sivra no tiene usuarias reales.
 8. **Bucket `cleaning-photos` sigue público**: cerrarlo requiere portar antes el proxy de
    signed URLs a ialimp.
 9. **`vercel.json` de sivra solo tiene 1 cron** (`/api/seo-refresh` semanal): los crons de

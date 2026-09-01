@@ -54,6 +54,8 @@ export async function GET(
       instruccion: o.instruccion,
       enviadoAt: o.enviado_at ? new Date(o.enviado_at).toISOString() : null,
       error: o.error,
+      // `tarea_id` NULL = la limpieza NO lo ve en /invitado/limpieza, que es su única pantalla.
+      tareaId: o.tarea_id,
     }))
 
     return NextResponse.json({

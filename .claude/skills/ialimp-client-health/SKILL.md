@@ -5,6 +5,15 @@ description: Monitorización semanal de la salud de la cuenta de Sique Brilla (�
 
 # ialimp client health — Sique Brilla
 
+> 🚨 **LEE ESTO ANTES DE INTERPRETAR NADA (01/09/2026): Sique Brilla YA NO USA ialimp.** Se le retiró
+> el acceso; su operativa vive en `/invitado/limpieza` de plataforma. Así que **«0 accesos», «0
+> programaciones», «sin actividad» NO son señales de avería: son la consecuencia esperada** de que no
+> haya nadie dentro. Un rojo de esta skill hoy dice «el cliente no entra», que ya se sabe, no «el SaaS
+> está roto». Antes de avisar a Alberto de un silencio, comprueba si lo que mides depende de que
+> alguien use la app. Lo que SÍ sigue siendo señal real: errores del PMS sync (infraestructura, corre
+> sola) e impagos. **Alberto no ha pedido retirar esta skill** — ialimp se queda como producto a
+> vender; lo que cambia es quién hay dentro.
+
 Pasada semanal sobre la cuenta del único cliente EN VIVO de ialimp. Sesión efímera,
 idempotente. Pensada para correr los viernes ~17:00 CEST por un trigger programado.
 
