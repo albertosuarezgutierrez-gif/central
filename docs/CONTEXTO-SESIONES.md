@@ -40,7 +40,10 @@
   cotización o emisión. Solo tarificar; la emisión sigue tras su flag, apagada.
 - Contexto medido: las tablas `codeoscopic_*` del volcado traen solo el rastro de pruebas (1 proyecto,
   15 precios, 2 webhooks fallidos) — lo necesario para conectar vive en el repo de Manuel.
-- Al contestar: volcar a `references/sector.md` §4 y pedir regeneración de credenciales sandbox.
+- ✅ **Resuelto en el Gmail el 0,50€: es POR COTIZACIÓN**, facturado a mes vencido (correo del CEO
+  09/04 + presupuesto de Cristina 14/05 en texto). Actualizado en `sector.md` §4 — todo automatismo
+  que cotice lleva contador y tope (~109 pólizas vivas ≈ 54,50€/pasada).
+- Al contestar Manuel: volcar a `references/sector.md` §4 y pedir regeneración de credenciales sandbox.
 
 ### 🧭 (01/09/2026) asegura-portal: plan TDD de la Fase 1 (entrar + aportar póliza)
 - **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia

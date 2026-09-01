@@ -88,9 +88,10 @@ traspaso con exactamente estas secciones:
      TODOs o docs del repo (nos constan tres: regenerar credenciales de sandbox,
      definir el Basic Auth del webhook, y el smoke end-to-end Quote → preemisión →
      Submit → webhook).
-   - Si en el repo o en la documentación consta si los 0,50€ se cobran POR COTIZACIÓN
-     o POR EMISIÓN. Es importante: si es por cotización, tarificar en masa cuesta
-     dinero y necesitamos saberlo antes de automatizar nada. Si no consta, dilo.
+   - El coste ya lo tenemos confirmado (0,50€ POR COTIZACIÓN, facturación a mes
+     vencido). Lo que necesito saber del código: si lleva algún CONTADOR o TOPE de
+     cotizaciones (para no tarificar en masa sin control) y dónde vive. Si no hay
+     nada, dilo — lo pondremos nosotros.
 
 Reglas del documento:
 - Todo leído del repo real, con rutas de fichero citadas. Si algo no está en el repo,
