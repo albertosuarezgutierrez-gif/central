@@ -860,6 +860,28 @@ conexiones. Esto es lo que se puede afirmar mirando su base de datos.
 | Lo que ha metido en la BD | **188 pólizas**, 184 recibos, 96 intervinientes, y **67 de los 67 siniestros** |
 | **Último fichero descargado** | **25/08/2026 — ayer.** La última póliza creada es del 24/08 |
 
+🚨 **LO QUE LLEGA POR EIAC NO ES «TODO LO QUE TENGO CON ESA COMPAÑÍA» (01/09/2026).** Leído del
+estándar oficial —TIREA, «Documentos Estándar V07.1», `209_IAC_ESP_DOC` v05 del 03/06/2026, más sus
+XSD—, el **4º campo del nombre del fichero es el código de proceso**, y separa dos mundos:
+
+- **Ordinarios (transacción `OR`)**: `131` nueva producción · `132` **cartera, que es solo lo que
+  renueva en el periodo** · `133` suplementos · `151` anulaciones · `211-214/251/261` recibos ·
+  `311/361` siniestros. Ninguno manda el histórico.
+- **Carga masiva (transacción `CM`)**: **`199` pólizas · `299` recibos · `269` movimientos de
+  recibo · `399` siniestros**. Esto sí manda todo, y **se pide fuera del canal**: no existe ningún
+  proceso EIAC para solicitarla (el único `SO` es el `841`, solicitud de alta de siniestro).
+
+Medido en `cima_ficheros`: **Mapfre** mandó `199` (132 pólizas) y `299`; **Allianz** mandó `199`
+(26 pólizas → 26 en cartera, cuadra exacto); **Occident y Reale, ninguna carga masiva**; y el
+**`399` no lo ha mandado nadie**, que es por lo que los 67 siniestros bajan y se congelan.
+
+⚠️ **Consecuencia para el traspaso:** lo que hay hoy en la BD **no es la cartera completa** de
+Occident ni de Reale, y no lo será por mucho que el cron siga corriendo. Falta pedir la carga
+masiva por clave de mediador. Y ojo con el nombre: **«carga inicial» o «primera carga» no existen
+en EIAC** — pedirlo así se contesta con un «eso no se hace», que es lo que ya ha pasado. El detalle
+completo, con la tabla de procesos y qué pedir a cada compañía, en
+`.claude/skills/agente-correduria/references/sector.md`.
+
 ~~🚨 **Esto no es una migración de un sistema parado: es una migración EN CALIENTE.**~~
 🔴 **CORREGIDO el 26/08/2026 por Alberto, y era el error de fondo de este documento.** Sí hay un
 proceso corriendo en el Vercel de Manuel que descarga ficheros de las aseguradoras **todos los días** y

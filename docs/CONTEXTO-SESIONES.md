@@ -48,6 +48,17 @@
   en todo el sistema.** Falta el estado «pedido pero no recibido».
 - ✅ PR #1949 (vigía de CIMA) **mergeado**: los 12 checks arrancaron al mergear `main` en la rama —
   quinta confirmación del orden documentado en `CLAUDE.md`.
+### 📜 (01/09/2026) Codeoscopic: el Claude de Manuel CONTESTÓ — contrato de la API completo
+- Respuesta transcrita en **`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`**; resumen operativo en
+  `agente-correduria/references/sector.md` §4. Resuelve el host base (**sandbox
+  `api-int.codeoscopic.io`**, sin `portal.`; producción no consta → pedir), auth (OAuth2
+  client_credentials + `X-Client-App`/`X-User-Email` + media type `vnd.codeoscopic.v1+json`) y el
+  flujo: **`POST /insurances` SÍNCRONO, facturable y NO idempotente (jamás retry)** → `id` =
+  project_id (persistirlo SIEMPRE: su ausencia era el `project_not_found` del webhook).
+- Basic Auth del webhook: DEFINIDO (lo genera ASegura, lo carga Codeoscopic); solo falta ejecutarlo.
+  Sin contador/tope de coste en su repo → se pondrá en central. Solo AUTO cableado.
+- **Quedan 3 peticiones fuera del repo:** credenciales OAuth2 sandbox nuevas (JM Fernández, PM API),
+  el OpenAPI oficial, y que Manuel adjunte el fixture `2026-06-10-sandbox-quote-response.json`.
 
 ### 🧾 (01/09/2026) asegura: prompt para el Claude de Manuel (Codeoscopic/Avant2, tarificación)
 - Manuel pidió un prompt para su Claude → escrito en **`docs/CODEOSCOPIC-PROMPT-MANUEL.md`** (lo envía
@@ -134,6 +145,22 @@
   estados (devengado→liquidado→cobrado) y la cobertura de CIMA es DESIGUAL por compañía. Pendiente:
   plan de implementación, y 5 gestiones con compañías (Allianz cuenta, Generali/Reale/Mapfre CIMA,
   Occident saldos) que **no se envían sin autorización**.
+
+### 📖 (01/09/2026) EIAC: lo que llega NO es toda la cartera — leído de la norma, no inferido
+- Alberto aportó el estándar oficial (TIREA `209_IAC_ESP_DOC` V07.1 v05, 03/06/2026 + XSD). El 4º
+  campo del nombre de fichero es el **código de proceso**: los ordinarios (`131/132/133/151`,
+  `211-261`, `311/361`) no traen histórico — **`132` «cartera» es solo lo que renueva en el periodo**.
+- **La carga masiva es otra cosa y hay una por objeto: `199` pólizas · `299` recibos · `269`
+  movimientos · `399` siniestros.** Medido: Mapfre mandó 199+299, Allianz 199 (26 → 26 en cartera,
+  cuadra), **Occident y Reale ninguna**, y el **399 no lo ha mandado nadie** (de ahí los 67
+  siniestros congelados).
+- 🚨 **«Carga inicial» / «primera carga» NO existen en EIAC** — por eso las compañías le decían a
+  Alberto que no se hace. El nombre correcto es **carga masiva, proceso 199/299/399**, y **se pide
+  fuera del canal**: no hay proceso EIAC para solicitarla (el único `SO` es el `841`, solicitud de
+  alta de siniestro — que además demuestra que declarar siniestros desde el CRM **sí** está previsto).
+- Escrito en la skill `agente-correduria` (`references/sector.md`) y en `TRASPASO-CORREDURIA.md`.
+  Mergeado también el **#1949** (vigía de la ingesta: 42 ficheros en cuarentena, 23 recibos por
+  7.721,71€ de prima y 24 siniestros perdidos desde junio por el grupo Occident bajo un solo código).
 
 ### 🧭 (01/09/2026) asegura-portal: plan TDD de la Fase 1 (entrar + aportar póliza)
 
