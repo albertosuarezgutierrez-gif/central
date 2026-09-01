@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { getPLMensual, mesPorDefecto } from '@/lib/sivra/pl-mensual'
 import { getResumenFinanciero } from '@/lib/finanzas'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
 
     // (Check de "alertas acumuladas" RETIRADO 11/07/2026): contaba filas de la tabla `alertas`,
     // que es de IALIMP (operativa de limpiezas de Sique Brilla), sin filtrar por empresa → metía
-    // el backlog de Vanessa al Telegram de Alberto. Esas alertas son de Vanessa, no de plataforma:
+    // el backlog de Sique Brilla al Telegram de Alberto. Esas alertas son suyas, no de plataforma:
     // ialimp ya las gestiona (panel 🔔 + cron semanal de aviso por email a la empresa). Plataforma
     // no debe vigilar la tabla de otro tenant. No sustituir por otro conteo de `alertas` aquí.
 
@@ -419,7 +419,7 @@ export async function GET(req: NextRequest) {
       '',
       `✅ ${ok.length} checks OK`,
     ].join('\n')
-    await tgSend(msg, { html: true })
+    await tgAviso('sistema.health-check', msg, { html: true })
   }
 
   return NextResponse.json({ ok, fallos, timestamp: new Date().toISOString() })

@@ -4,7 +4,7 @@ import path from 'path'
 const monorepoRoot = path.join(__dirname, '..', '..')
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@central/core-identity'],
+  transpilePackages: ['@central/core-identity', '@central/module-seguros', '@central/module-seguros-pii'],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
   // Deliberado (igual que el resto de verticales): el build de Vercel no bloquea por tipos.

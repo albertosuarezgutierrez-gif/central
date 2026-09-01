@@ -17,6 +17,7 @@ export interface RutaCorreo {
   aviso: Aviso
   cautela?: boolean         // el aviso va con tono de precaución (no actúa nunca)
   enrutarSivra?: boolean    // pasar al agente de huéspedes de SIVRA
+  vigilarReserva?: boolean  // registrar en reservas_correo_booking (vigía Booking↔Smoobu)
   descripcion: string       // para el prompt de clasificación
   ejemplos: string[]        // remitentes/tipos de ejemplo (para el prompt)
 }
@@ -74,6 +75,26 @@ export const RUTAS: RutaCorreo[] = [
     enrutarSivra: true,
     descripcion: 'Mensajes de huéspedes de los pisos turísticos (dudas, llaves, horarios). Suelen ser urgentes.',
     ejemplos: ['guest.booking.com', 'HomeExchange', 'mensaje de un cliente sobre una reserva'],
+  },
+  {
+    categoria: 'reservas-booking',
+    etiqueta: 'Triaje/Reservas-Booking',
+    archivar: true,
+    aviso: 'ninguno', // el aviso inteligente lo da el vigía tras comprobar Smoobu, no el triaje
+    vigilarReserva: true,
+    descripcion: 'Avisos de Booking.com AL PROPIETARIO sobre una reserva concreta: confirmación de nueva reserva, o «reserva/cancelación no registrada» por el channel manager. NO mensajes escritos por el huésped (huespedes) ni facturas (contabilidad).',
+    ejemplos: ['Nueva reserva no registrada (5569210843, 1/8/2026)', 'Cancelación no registrada', '¡Nueva reserva! Information about new reservation'],
+  },
+  {
+    categoria: 'agoda-huespedes',
+    etiqueta: 'Triaje/Agoda',
+    archivar: false,
+    aviso: 'inmediato',
+    // 🚨 enrutarSivra NO: el agente de huéspedes contesta en el hilo de Smoobu, y para Agoda ese
+    // hilo NO llega al huésped (medido 31/08/2026: 8 reservas, 0 mensajes entrantes). Contestar ahí
+    // dejaría constancia de una respuesta que nadie recibe. Se responde en YCS, y el aviso lo dice.
+    descripcion: 'Aviso de Agoda de que un huésped ha escrito por el buzón de la propiedad («New messages from your guests»). Agoda NO devuelve esas respuestas a Smoobu, así que este correo es la única señal. NO es un voucher de reserva (contabilidad) ni un OTP.',
+    ejemplos: ['New messages from your guests', 'Mensajes nuevos de sus huéspedes'],
   },
   {
     categoria: 'leads-negocio',

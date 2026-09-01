@@ -267,6 +267,18 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
     await cargar(); setOcupado(false)
   }
 
+  // Repone la ventana de un PIN cuando la reserva cambió de fechas o cambiaron los márgenes.
+  // El código NO cambia (se recrea con el mismo), así que lo que el huésped ya tenga sigue valiendo.
+  async function ajustarVentana(ref: string) {
+    if (!confirm('¿Reponer la ventana de este PIN con las fechas y los márgenes de hoy?\n\nEl código NO cambia. Se retira de la cerradura y se vuelve a crear igual, así que hay unos segundos en los que no abre.')) return
+    setError('')
+    const r = await fetch(`/api/sivra/domotica/acceso/${d.id}/pin/${encodeURIComponent(ref)}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    }).then(x => x.json()).catch(() => null)
+    if (!r || r.error) setError(r?.error || 'Error ajustando la ventana')
+    else if (r.sinCambio) setError('La ventana ya era la correcta: no se ha tocado nada.')
+  }
+
   async function borrarPinRow(ref: string) {
     if (!confirm('¿Borrar este PIN? Dejará de funcionar en la cerradura.')) return
     setOcupado(true); setError(null)
@@ -326,7 +338,14 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
                 <br />{fmtDT(p.valido_desde)} → {fmtDT(p.valido_hasta)}
               </div>
             </div>
-            <button onClick={() => borrarPinRow(p.reserva_ref)} disabled={ocupado} style={{ ...btn, padding: '0 10px', minHeight: 36 }}>🗑️</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {p.estado === 'activo' && !String(p.reserva_ref).startsWith('manual:') && (
+                <button onClick={() => ajustarVentana(p.reserva_ref)} disabled={ocupado}
+                  title="Reponer la ventana con las fechas y los márgenes de hoy (el código no cambia)"
+                  style={{ ...btn, padding: '0 10px', minHeight: 36 }}>🔄 ventana</button>
+              )}
+              <button onClick={() => borrarPinRow(p.reserva_ref)} disabled={ocupado} style={{ ...btn, padding: '0 10px', minHeight: 36 }}>🗑️</button>
+            </div>
           </div>
         ))}
         <details>

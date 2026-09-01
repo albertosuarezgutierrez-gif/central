@@ -6,6 +6,7 @@ import { conciliar, mapeaPropiedadAlquiler } from './conciliar'
 import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, log, type DatosGasto } from './imputar'
 import { esBooking, parseBooking, bookingFingerprint } from './booking'
 import { esPresupuesto } from './clasificar'
+import { pareceIngresoDeCorreduria } from './no-es-gasto'
 import { evaluaReceptor, nifProveedorEsNuestro, type Titular } from './receptor'
 import type { FacturaExtraida } from './extraer'
 
@@ -73,6 +74,17 @@ export async function procesarFactura(
   if (ctx.esPresupuesto) {
     await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: 'Presupuesto/cotización, no factura', payload: { total } })
     return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: 'Presupuesto/cotización' }
+  }
+
+  // Documento que NO es un gasto (dictado por Alberto, 29-30/08/2026): la liquidación de un
+  // mediador de seguros es un INGRESO de la correduría, y la comisión de Booking/Airbnb ya está
+  // descontada del ingreso NETO de `incomes` — darla de alta y confirmarla la restaría dos veces.
+  // Se omite ANTES de imputar (el PDF se archiva igual en Drive aguas arriba); queda rastro en el
+  // log y en el recuento `omitidos` del parte de Telegram, nunca desaparece en silencio.
+  const sospecha = pareceIngresoDeCorreduria({ proveedor, concepto: data.concepto })
+  if (sospecha.esSospechoso) {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: `No es un gasto: ${sospecha.motivo}`, payload: { total } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: sospecha.motivo ?? undefined }
   }
 
   // Factura de un TERCERO (llega al Gmail de Alberto por un reenvío, pero está a nombre de otro):

@@ -14,7 +14,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { detectarReapariciones, textoReaparicion, type Convocatoria } from '@central/module-subastas'
-import { tgSendButtons } from '@central/core-telegram'
+import { tgAvisoBotones } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 
 function escapar(s: string): string {
@@ -80,7 +80,7 @@ export async function avisarReapariciones(): Promise<{ detectadas: number; avisa
         : '✅ Sin cargas subsistentes (ya leída su certificación)')
     }
 
-    await tgSendButtons(lineas.join('\n'), [[
+    await tgAvisoBotones('subastas.reaparicion', lineas.join('\n'), [[
       { texto: '👀 Seguir', callback: `subv:seguir:${r.actual.dedupeKey}` },
       { texto: '🚫 No me interesa', callback: `subv:no:${r.actual.dedupeKey}` },
     ]]).catch(() => {})

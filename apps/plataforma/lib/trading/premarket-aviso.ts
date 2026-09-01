@@ -1,4 +1,4 @@
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { prisma } from '@/lib/db'
 import { gapPremarket, mensajePremarket, UMBRAL_GAP, type MovPremarket } from './premarket'
 import type { EntryRadar, Cohete } from './radar'
@@ -24,6 +24,6 @@ export async function avisoPremarket(): Promise<{ ok: boolean; motivo?: string; 
     if (g && Math.abs(g.gap) >= UMBRAL_GAP) movs.push({ simbolo: s, gap: g.gap, etiquetas: eventosPor.get(s) ?? [] })
   }
   const msg = mensajePremarket(movs)
-  if (msg) await tgSend(msg).catch(() => {})
+  if (msg) await tgAviso('trading.premarket', msg).catch(() => {})
   return { ok: true, revisados: simbolos.length, movimientos: movs.length }
 }

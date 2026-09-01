@@ -61,6 +61,10 @@ export interface PLPiso {
   maxHuespedes: number
   ingresos: number
   reservas: number
+  /** Noches vendidas del mes (suma de `nights` de las reservas con check-in en el mes). */
+  noches: number
+  /** Reservas del mes cuyo `nights` es NULL: sus noches NO están en `noches` (≠ 0 noches). */
+  nochesSinDato: number
   gastos: PLGastosPiso
   resultado: number
   margen: number   // porcentaje sobre ingresos
@@ -113,10 +117,12 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
     // Ingresos por piso (checkIn en el mes). huespedes/reservas_sin_aforo alimentan el reparto
     // de lavandería: huéspedes REALES de las reservas con aforo informado, y cuántas reservas
     // siguen sin aforo (adults y children a NULL = «no se sabe») para su fallback a capacidad.
-    prisma.$queryRaw<Array<{ pid: string; ingresos: number; reservas: number; huespedes: number | null; reservas_sin_aforo: number }>>`
+    prisma.$queryRaw<Array<{ pid: string; ingresos: number; reservas: number; noches: number; noches_sin_dato: number; huespedes: number | null; reservas_sin_aforo: number }>>`
       SELECT "propertyId" AS pid,
         COALESCE(SUM(amount), 0)::float  AS ingresos,
         COUNT(*)::int                    AS reservas,
+        COALESCE(SUM(nights), 0)::int    AS noches,
+        COUNT(*) FILTER (WHERE nights IS NULL)::int AS noches_sin_dato,
         SUM(COALESCE(adults, 0) + COALESCE(children, 0))
           FILTER (WHERE adults IS NOT NULL OR children IS NOT NULL)::int AS huespedes,
         COUNT(*) FILTER (WHERE adults IS NULL AND children IS NULL)::int AS reservas_sin_aforo
@@ -210,6 +216,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
   // Ingresos y reservas por piso
   const mIncome = new Map(incomes.map(r => [r.pid, {
     ingresos: Number(r.ingresos), reservas: Number(r.reservas),
+    noches: Number(r.noches), nochesSinDato: Number(r.noches_sin_dato),
     huespedes: r.huespedes == null ? null : Number(r.huespedes),
     reservasSinAforo: Number(r.reservas_sin_aforo),
   }]))
@@ -359,7 +366,7 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
 
   // Ensamblar resultado final
   const pisos: PLPiso[] = props.map(p => {
-    const inc = mIncome.get(p.id) ?? { ingresos: 0, reservas: 0 }
+    const inc = mIncome.get(p.id) ?? { ingresos: 0, reservas: 0, noches: 0, nochesSinDato: 0 }
     const g   = mGastos.get(p.id) ?? emptyGastos()
     g.total   = Math.round((g.lavanderia + g.limpieza + g.alquiler + g.suministros + g.comunidad + g.otros) * 100) / 100
     const resultado = Math.round((inc.ingresos - g.total) * 100) / 100
@@ -369,6 +376,8 @@ export async function getPLMensual(mes: string): Promise<PLMensual> {
       maxHuespedes: p.maxGuests ?? 0,
       ingresos:    Number(inc.ingresos),
       reservas:    Number(inc.reservas),
+      noches:      Number(inc.noches ?? 0),
+      nochesSinDato: Number(inc.nochesSinDato ?? 0),
       gastos:      g,
       resultado,
       margen:      inc.ingresos > 0 ? Math.round((resultado / inc.ingresos) * 100) : 0,

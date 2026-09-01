@@ -139,6 +139,12 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/module-seguros':
+        specifier: workspace:*
+        version: link:../../packages/module-seguros
+      '@central/module-seguros-pii':
+        specifier: workspace:*
+        version: link:../../packages/module-seguros-pii
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -573,6 +579,9 @@ importers:
       '@central/module-pagos':
         specifier: workspace:*
         version: link:../../packages/module-pagos
+      '@central/module-seguros':
+        specifier: workspace:*
+        version: link:../../packages/module-seguros
       '@central/module-ses':
         specifier: workspace:*
         version: link:../../packages/module-ses
@@ -1059,6 +1068,10 @@ importers:
       '@central/module-documental':
         specifier: workspace:*
         version: link:../module-documental
+
+  packages/module-seguros: {}
+
+  packages/module-seguros-pii: {}
 
   packages/module-ses: {}
 

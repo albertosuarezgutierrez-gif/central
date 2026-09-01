@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { pareceIngresoDeCorreduria } from './no-es-gasto.ts'
 
 test('los dos documentos REALES de Allianz que aparecieron en la bandeja (29/08/2026)', () => {
@@ -94,6 +96,29 @@ test('los dos motivos NO se confunden: uno es un ingreso, el otro un gasto ya co
   const booking = pareceIngresoDeCorreduria({ proveedor: 'Booking.com', concepto: 'comisión por reservas' })
   assert.equal(allianz.tipo, 'ingreso_correduria')
   assert.equal(booking.tipo, 'ya_descontado')
+})
+
+test('el concepto NORMALIZADO de la ingesta de Booking también se reconoce', () => {
+  // `parseBooking` reescribe el concepto a «Comisión Booking.com <periodo>» antes de imputar,
+  // así que la señal tiene que casar con ESE texto, no solo con el título del PDF original.
+  const s = pareceIngresoDeCorreduria({
+    proveedor: 'Booking.com',
+    concepto: 'Comisión Booking.com 01/06/2026 – 30/06/2026',
+  })
+  assert.equal(s.esSospechoso, true)
+  assert.equal(s.tipo, 'ya_descontado')
+})
+
+test('🚨 guardián: la ingesta (`procesar.ts`) consulta la señal ANTES de dar de alta el gasto', () => {
+  // Estas facturas llenaban la bandeja cada mes («veo que aún aparecen», Alberto 30/08/2026):
+  // el aviso en pantalla existía pero la ingesta seguía dándolas de alta. Si alguien retira la
+  // llamada, este test lo canta — tsc no lo haría (quitar código válido sigue compilando).
+  const fuente = readFileSync(join(import.meta.dirname, 'procesar.ts'), 'utf8')
+  const llamada = fuente.indexOf('pareceIngresoDeCorreduria(')
+  const alta = fuente.indexOf('insertarGasto(datos')
+  assert.ok(llamada > 0, 'procesar.ts ya no llama a pareceIngresoDeCorreduria')
+  assert.ok(alta > 0, 'no se encuentra insertarGasto en procesar.ts (¿renombrado? actualiza el guardián)')
+  assert.ok(llamada < alta, 'la señal debe evaluarse ANTES de insertar el gasto')
 })
 
 test('🚨 exige LAS DOS señales: otro servicio de la plataforma sí se paga aparte', () => {

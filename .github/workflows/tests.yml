@@ -75,7 +75,11 @@ jobs:
       - name: Prisma generate + TypeScript check
         working-directory: apps/${{ matrix.app }}
         run: |
-          if [ -f "prisma/schema.prisma" ]; then
+          # Si la app define `prisma:generate` (varios schemas, p.ej. asegura con
+          # su segunda BD), manda ese script; si no, el generate clásico.
+          if grep -q '"prisma:generate"' package.json; then
+            pnpm run prisma:generate
+          elif [ -f "prisma/schema.prisma" ]; then
             pnpm exec prisma generate
           fi
           pnpm exec tsc --noEmit -p tsconfig.json

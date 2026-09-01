@@ -21,7 +21,7 @@ import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/
 import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { getSmoobuKey } from "@/lib/smoobu"
-import { tgSend } from "@central/core-telegram"
+import { tgAviso } from '@/lib/telegram'
 import { eur } from "@/lib/dinero"
 import { anclaRail, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
 import { resumenLecturasCaidas, avisoLecturasCaidas, type LecturaCaida } from "@/lib/sivra/pricing-lecturas"
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
       WHERE m.price_night > 0
         -- Plausibilidad €/plaza (17/08/2026): un comp muy por debajo del minimo por plaza es una
         -- HABITACION vestida de piso entero (ver pricing-comps-plausibles.ts) y no entra al percentil.
-        AND ${sqlCompPlausible("m.")}
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       GROUP BY m.scenario, s.target_pctl, s.floor_pctl, s.ceil_pctl
     ),
     occ AS (
@@ -420,7 +420,7 @@ export async function POST(req: NextRequest) {
         AND NOT m.corpus_clonado
         AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
-        AND ${sqlCompPlausible("m.")}
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
@@ -482,7 +482,7 @@ export async function POST(req: NextRequest) {
         AND m.search_date >= CURRENT_DATE - 120
         AND NOT m.corpus_clonado   -- mismo motivo que en el bucket del mes
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
-        AND ${sqlCompPlausible("m.")}
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,
@@ -618,7 +618,7 @@ export async function POST(req: NextRequest) {
   if (anclaCaida.length > 0) {
     const maxPct = recs.reduce((m, r) => Math.max(m, Number(r.max_change_pct) || 0), 0)
     const aviso = avisoRailCiego(anclaCaida, { maxChangePct: maxPct, pasadasPorDia: PASADAS_POR_DIA_APPLY })
-    if (aviso) { try { await tgSend(aviso) } catch { /* el flag de la respuesta manda */ } }
+    if (aviso) { try { await tgAviso('pisos.pricing-aplicado', aviso) } catch { /* el flag de la respuesta manda */ } }
     return NextResponse.json({
       ok: false,
       rail_ciego: `ancla ilegible (${anclaCaida.map(f => f.nombre).join(', ')}): pasada abortada para no tarifar con el raíl ensanchado`,
@@ -1213,7 +1213,7 @@ export async function POST(req: NextRequest) {
           .filter(c => nuevasSet.has(`congelada:${c.property}:${c.fecha}`))
           .slice(0, 10)
           .map(c => `• ${c.property.replace("prop_", "")} ${c.fecha}: ${eur(c.precio)} (evento x${c.factor})`)
-        await tgSend(
+        await tgAviso('pisos.pricing-aplicado', 
           `🧊 *Pricing: ${nuevas.length} noche(s) de evento congeladas (sin mercado fiable)*\n\n` +
           lineas.join("\n") +
           (nuevas.length > 10 ? `\n… y ${nuevas.length - 10} más` : "") +
@@ -1236,7 +1236,7 @@ export async function POST(req: NextRequest) {
       const nuevas = await prisma.$queryRaw<{ clave: string }[]>(Prisma.sql`
         INSERT INTO pricing_avisos (clave, enviado_at) VALUES ${Prisma.join(claves)}
         ON CONFLICT (clave) DO NOTHING RETURNING clave`)
-      if (nuevas.length > 0) await tgSend(avisoSinTarifar)
+      if (nuevas.length > 0) await tgAviso('pisos.pricing-aplicado', avisoSinTarifar)
     } catch { /* best-effort: el hueco ya va declarado en la respuesta */ }
   }
 
@@ -1247,7 +1247,7 @@ export async function POST(req: NextRequest) {
   const avisoRechazo = avisoSmoobuRechaza(fallosSmoobu)
   if (avisoRechazo) {
     try {
-      await tgSend(avisoRechazo)
+      await tgAviso('pisos.pricing-aplicado', avisoRechazo)
     } catch { /* best-effort: el fallo ya va en la respuesta y en el latido de apply-auto */ }
   }
 
@@ -1257,7 +1257,7 @@ export async function POST(req: NextRequest) {
   // degradada Y avisa, porque es de las averías más caras que puede tener el motor.
   if (eventosIlegibles) {
     try {
-      await tgSend(
+      await tgAviso('pisos.pricing-aplicado', 
         "🚨 *Pricing: la tabla de eventos no se pudo leer*\n\n" +
         "La pasada ha tarificado SIN eventos: si hay Feria, Semana Santa o un concierto grande en la " +
         "ventana, esas noches se han calculado como días normales. Los precios aplicados en esta " +
@@ -1274,7 +1274,7 @@ export async function POST(req: NextRequest) {
   // que invalida la pasada; un vigía que grita por lo que no toca acaba ignorándose.
   if (ocupacionMesIlegible) {
     try {
-      await tgSend(
+      await tgAviso('pisos.pricing-aplicado', 
         "⚠️ *Pricing: la ocupación POR MES no se pudo leer*\n\n" +
         "La pasada ha tarificado con la ocupación ANUAL del piso, como antes del arreglo del 09/08: " +
         "los meses que ya se están llenando no han recibido su subida. Los precios no son erróneos, " +
@@ -1290,7 +1290,7 @@ export async function POST(req: NextRequest) {
   const avisoLecturas = avisoLecturasCaidas(lecturasCaidas)
   if (avisoLecturas) {
     try {
-      await tgSend(avisoLecturas)
+      await tgAviso('pisos.pricing-aplicado', avisoLecturas)
     } catch { /* best-effort: el campo de la respuesta y el latido de apply-auto mandan */ }
   }
 

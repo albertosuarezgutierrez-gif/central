@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { tgAlert } from "@/lib/telegram"
+import { tgAvisoAlerta } from '@/lib/telegram'
 import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
 import {
   decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza, decidirRitmoDestacado,
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
           -- Plausibilidad €/plaza, igual que el motor (17/08/2026): una habitación vestida de piso
           -- entero no es mercado (ver pricing-comps-plausibles.ts). El guardián filtra LO MISMO que
           -- el apply o su silencio no vale nada (lección del 01/08 con la normalización por aforo).
-          AND ${sqlCompPlausible("m.")}
+          AND ${Prisma.raw(sqlCompPlausible("m."))}
         GROUP BY m.checkin_date
         HAVING COUNT(*) >= 8
       ),
@@ -191,7 +191,7 @@ export async function GET(req: NextRequest) {
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.search_date >= CURRENT_DATE - INTERVAL '21 days'
         AND m.price_night > 0 AND m.scenario LIKE 'prop_%'
-        AND ${sqlCompPlausible("m.")}
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       GROUP BY m.scenario
     ),
     mkt_date AS (
@@ -202,7 +202,7 @@ export async function GET(req: NextRequest) {
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       WHERE m.search_date >= CURRENT_DATE - INTERVAL '21 days'
         AND m.price_night > 0 AND m.scenario LIKE 'prop_%'
-        AND ${sqlCompPlausible("m.")}
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
       GROUP BY m.scenario, m.checkin_date
       HAVING COUNT(*) >= 8
     )
@@ -285,7 +285,7 @@ export async function GET(req: NextRequest) {
     WHERE m.price_night > 0
       -- Sin este filtro, una habitación etiquetada guests=12 contaría como "comp del aforo propio"
       -- y taparía justo la extrapolación que este centinela vigila.
-      AND ${sqlCompPlausible("m.")}
+      AND ${Prisma.raw(sqlCompPlausible("m."))}
     GROUP BY m.scenario, z.max_guests, m.guests
   `).catch(() => [])
 
@@ -436,7 +436,7 @@ export async function GET(req: NextRequest) {
       FROM market_rates
       WHERE search_date >= CURRENT_DATE - INTERVAL '30 days'
         AND price_night > 0 AND scenario LIKE 'prop_%' AND checkin_date >= CURRENT_DATE
-        AND ${sqlCompPlausible()}
+        AND ${Prisma.raw(sqlCompPlausible())}
     ),
     por_fecha AS (
       SELECT scenario, checkin_date,
@@ -691,7 +691,7 @@ export async function GET(req: NextRequest) {
     if (pend.length > 0) {
       const hayAlta = pend.some(p => p.prioridad === "alta")
       const lineas = pend.map(p => `• ${p.titulo}`).join("\n")
-      await tgAlert(
+      await tgAvisoAlerta('pisos.pricing-guard', 
         `🏷️ <b>Guardián de precios</b> — ${pend.length} aviso(s) sin ver:\n${lineas}\n\nDetalle y resolver: /sivra/pricing-auto`,
         hayAlta ? "critico" : "aviso",
       )

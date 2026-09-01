@@ -69,8 +69,16 @@ export const CONFIG_ACCESO_DEFAULT: ConfigAcceso = {
   entrega: 'aviso', // por defecto SOLO avisa a Alberto (Telegram); 'huesped'/'ambos' se activan a mano por cerradura
   pinLongitud: 6,
   usarHorarioPiso: true,
+  // ENTRADA ESTRICTA / SALIDA FLEXIBLE (decisión de Alberto, 31/08/2026). No son simétricas porque
+  // el riesgo no lo es: abrir antes de tiempo es meter a alguien en un piso que puede estar todavía
+  // ocupado o sin limpiar, y por eso una entrada distinta de la oficial se concede a mano (PATCH del
+  // PIN). Cerrar en punto, en cambio, solo castiga al huésped que baja a por la maleta a las 11:15 o
+  // vuelve a dejar las llaves: no hay nada que proteger a las 11:00 que no siga protegido a las 13:00.
   margenEntradaMin: 0,
-  margenSalidaMin: 0,
+  // 120 min NO es un número redondo al azar: el check-out es a las 11:00 y el check-in siguiente a
+  // las 15:00, así que la ventana muere a las 13:00 y deja 2 h limpias antes de que llegue nadie.
+  // Subirlo por encima de 240 haría que el PIN del que se va siguiera vivo cuando entra el siguiente.
+  margenSalidaMin: 120,
   autoBorrarTrasCheckout: true,
   botonAbrir: true,
   codigosFijos: [],

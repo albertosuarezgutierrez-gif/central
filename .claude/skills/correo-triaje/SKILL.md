@@ -13,6 +13,17 @@ mapa para entenderlo y tocarlo con seguridad.
 ## Dónde vive todo (apps/plataforma)
 - **Tabla de rutas (FUENTE ÚNICA):** `lib/correo/rutas.ts` — `RUTAS[]` con `categoria → etiqueta
   Gmail + archivar + aviso`. El prompt del clasificador se GENERA de aquí (`descripcionParaPrompt`).
+- 🔔 **El aviso «inmediato» tiene INTERRUPTOR POR CATEGORÍA** (panel `/telegram`, 01/09/2026):
+  `avisoDeCategoriaCorreo()` de `lib/telegram/catalogo.ts` mapea la categoría a su id
+  (`correo.personal-importante` · `correo.huespedes` · `correo.agoda` · `correo.leads` ·
+  `correo.seguridad`) y `triaje.ts` emite con `tgAviso`. **Categoría sin id mapeado → avisa
+  siempre**, nunca al revés. Al añadir una categoría con `aviso:'inmediato'`, añade su id al mapa Y
+  al catálogo en el mismo PR (lo exige el guardián `lib/telegram/catalogo.test.ts`).
+  ⚠️ **`correo.huespedes` está SILENCIADO** desde el 01/09/2026 por decisión de Alberto («esto
+  tampoco necesito, ni los avisos de mail de mensaje de booking»): un `stats.avisados` bajo en esa
+  categoría es lo esperado, no un fallo del triaje. Los borradores del agente de huéspedes siguen.
+  El digest diario y el resumen semanal tienen sus propios interruptores (`correo.digest`,
+  `correo.resumen-semanal`).
 - **Lector IMAP:** `lib/correo/imap.ts` — incremental por UID, 1 conexión/pasada; etiqueta (X-GM-LABELS
   vía `messageCopy`) y archiva (`messageDelete` de INBOX = quitar de INBOX, NO Papelera).
 - **Clasificador:** `lib/correo/clasificador.ts` — orden `correo_reglas` → regex OTP → **keyword

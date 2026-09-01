@@ -1,12 +1,20 @@
 'use client'
-// Pantalla de la limpieza (móvil primero, ≥320px): calendario 30 días × 4 pisos + resumen del
-// día con limpiezas, tareas y notas. Sin nombres de huéspedes ni importes (solo ocupación y aforo).
+// Pantalla de la limpieza (móvil primero, ≥320px): calendario mensual con las limpiezas de cada
+// piso por colores (vista «Mes», por defecto) o tira de 30 días × 4 pisos (vista «Lista»), más el
+// resumen del día con limpiezas, tareas y notas. Sin nombres de huéspedes ni importes.
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { PROPS_CALENDARIO as PROPS } from '@/lib/sivra/constantes'
 import { entradaMismoDia, nocheOcupada, type ReservaIntranet, type Novedad } from '@/lib/sivra/limpieza-intranet'
 
 const DIAS = 30
+// Navegación de la ventana (idea del calendario de Smoobu que usaba Sique Brilla): se puede mirar
+// hacia atrás (repasar limpiezas pasadas) y hacia delante (planificar), con tope para no
+// pasear por años vacíos.
+const VENTANA_ATRAS_DIAS = 90
+const VENTANA_ADELANTE_DIAS = 180
 const DOW = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
+// Semana del calendario mensual, lunes primero (convención española).
+const DOW_MES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const DOWL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
 type Limpieza = {
@@ -16,6 +24,11 @@ type Limpieza = {
   tipo: string | null; hecha: boolean
 }
 type Tarea = { id: string; fecha: string; propertyId: string | null; texto: string; hecha: boolean }
+// Reserva confirmada en Booking que Smoobu AÚN no tiene (la detectó el vigía de correo): se
+// pinta ⚠️ en su día de entrada para que Sique Brilla no se quede sin verla. Solo se sabe la entrada.
+type PendienteSmoobu = { propertyId: string; checkIn: string; ref: string | null }
+// Parte de incidencia que Sique Brilla deja en una limpieza (nota y/o foto); avisa a Alberto por Telegram.
+type Parte = { id: number; propertyId: string; fecha: string; texto: string | null; tieneFoto: boolean }
 
 function iso(d: Date) { return d.toISOString().slice(0, 10) }
 function fmtDM(isoFecha: string | null) {
@@ -27,33 +40,67 @@ function addDays(d: Date, n: number) { const x = new Date(d); x.setDate(x.getDat
 function hoyDate() { const d = new Date(); d.setHours(12, 0, 0, 0); return d }
 function propDe(id: string) { return PROPS.find(p => p.id === id) }
 
-export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado' }) {
+export default function IntranetLimpieza() {
   const hoy = useMemo(() => hoyDate(), [])
-  const dias = useMemo(() => Array.from({ length: DIAS }, (_, i) => addDays(hoy, i)), [hoy])
+  const [inicio, setInicio] = useState(() => iso(hoyDate()))
+  const inicioDate = useMemo(() => new Date(inicio + 'T12:00:00'), [inicio])
+  const dias = useMemo(() => Array.from({ length: DIAS }, (_, i) => addDays(inicioDate, i)), [inicioDate])
+  const finVentana = iso(addDays(inicioDate, DIAS - 1))
   const [reservas, setReservas] = useState<ReservaIntranet[]>([])
   const [limpiezas, setLimpiezas] = useState<Limpieza[]>([])
   const [tareas, setTareas] = useState<Tarea[]>([])
   const [novedades, setNovedades] = useState<Novedad[]>([])
+  const [pendientesSmoobu, setPendientesSmoobu] = useState<PendienteSmoobu[]>([])
+  const [partes, setPartes] = useState<Parte[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(false)
   const [sel, setSel] = useState(iso(hoy))
+  // Filtro por piso (como los «Filtros» del calendario de Smoobu): null = los 4.
+  const [filtro, setFiltro] = useState<string | null>(null)
+  // Vista «mes» (prueba pedida por Alberto, 30/08): calendario mensual clásico con las limpiezas
+  // como puntos del color de cada piso. La tira de 30 días sigue disponible en «Lista».
+  const [vista, setVista] = useState<'mes' | 'lista'>('mes')
+  // «🔔 Últimos avisos» plegado por defecto (no es información del día a día).
+  const [avisosAbiertos, setAvisosAbiertos] = useState(false)
+  const [mesAncla, setMesAncla] = useState(() => iso(hoyDate()).slice(0, 7)) // 'AAAA-MM'
+
+  // Rejilla del mes: semanas completas de lunes a domingo (los días de los meses vecinos se
+  // pintan atenuados, como en cualquier calendario de pared).
+  const mesGrid = useMemo(() => {
+    const primero = new Date(mesAncla + '-01T12:00:00')
+    const offset = (primero.getDay() + 6) % 7 // lunes = 0
+    const arranque = addDays(primero, -offset)
+    const diasMes = new Date(primero.getFullYear(), primero.getMonth() + 1, 0).getDate()
+    const semanas = Math.ceil((offset + diasMes) / 7)
+    return {
+      dias: Array.from({ length: semanas * 7 }, (_, i) => addDays(arranque, i)),
+      mes: primero.getMonth(),
+      titulo: primero.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+    }
+  }, [mesAncla])
+
+  // Rango de datos a pedir según la vista activa.
+  const rangoFrom = vista === 'mes' ? iso(mesGrid.dias[0]) : inicio
+  const rangoTo = vista === 'mes' ? iso(mesGrid.dias[mesGrid.dias.length - 1]) : finVentana
 
   const cargar = useCallback(async () => {
     try {
-      const r = await fetch(`/api/sivra/limpieza-intranet/datos?from=${iso(hoy)}&to=${iso(addDays(hoy, DIAS - 1))}`)
+      const r = await fetch(`/api/sivra/limpieza-intranet/datos?from=${rangoFrom}&to=${rangoTo}`)
       if (!r.ok) throw new Error(String(r.status))
       const d = await r.json()
       setReservas(d.reservas ?? [])
       setLimpiezas(d.limpiezas ?? [])
       setTareas(d.tareas ?? [])
       setNovedades(d.novedades ?? [])
+      setPendientesSmoobu(d.pendientesSmoobu ?? [])
+      setPartes(d.partes ?? [])
       setError(false)
     } catch {
       setError(true)
     } finally {
       setCargando(false)
     }
-  }, [hoy])
+  }, [rangoFrom, rangoTo])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -70,16 +117,21 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   const selDate = useMemo(() => new Date(sel + 'T12:00:00'), [sel])
   // Limpiezas del día = las SALIDAS de reserva (toda salida se limpia) + fichas sueltas del cron
   // sin reserva casada (p.ej. creadas a mano). La ficha, cuando existe, aporta hora/notas/hecha.
-  const limpiezasDia: Array<{ propertyId: string; limp: Limpieza | null }> = [
+  const enFiltro = (propertyId: string | null) => !filtro || propertyId === filtro
+  // paxSalida = huéspedes de la reserva que SALE ese día (NULL = no publicado, no se pinta 0).
+  const limpiezasDia: Array<{ propertyId: string; limp: Limpieza | null; paxSalida: number | null }> = [
     ...reservas.filter(r => r.checkOut === sel).map(r => ({
       propertyId: r.propertyId,
       limp: limpiezas.find(l => l.propertyId === r.propertyId && l.fecha === sel) ?? null,
+      paxSalida: r.pax ?? null,
     })),
     ...limpiezas
       .filter(l => l.fecha === sel && !reservas.some(r => r.propertyId === l.propertyId && r.checkOut === sel))
-      .map(l => ({ propertyId: l.propertyId, limp: l })),
-  ]
-  const tareasDia = tareas.filter(t => t.fecha === sel)
+      .map(l => ({ propertyId: l.propertyId, limp: l, paxSalida: null })),
+  ].filter(x => enFiltro(x.propertyId))
+  // Las tareas sin piso (property_id NULL) se enseñan SIEMPRE: son generales, no de un piso.
+  const tareasDia = tareas.filter(t => t.fecha === sel && (t.propertyId == null || enFiltro(t.propertyId)))
+  const novedadesVisibles = novedades.filter(n => enFiltro(n.propertyId))
 
   function fmtSel() {
     if (sel === iso(hoy)) return `Hoy · ${DOWL[selDate.getDay()].toLowerCase()} ${selDate.getDate()}`
@@ -88,9 +140,41 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   }
   function mover(n: number) {
     const d = addDays(selDate, n)
-    if (d < hoy || d > addDays(hoy, DIAS - 1)) return
+    if (iso(d) < rangoFrom || iso(d) > rangoTo) return
     setSel(iso(d))
   }
+  // Mueve la ventana del calendario n días (±2 semanas por toque), acotada a
+  // [hoy−90, hoy+180]. Si el día seleccionado se queda fuera, se lleva al inicio visible.
+  function moverVentana(n: number) {
+    const min = iso(addDays(hoy, -VENTANA_ATRAS_DIAS))
+    const max = iso(addDays(hoy, VENTANA_ADELANTE_DIAS))
+    let nuevo = iso(addDays(inicioDate, n))
+    if (nuevo < min) nuevo = min
+    if (nuevo > max) nuevo = max
+    if (nuevo === inicio) return
+    setInicio(nuevo)
+    const nuevoFin = iso(addDays(new Date(nuevo + 'T12:00:00'), DIAS - 1))
+    if (sel < nuevo || sel > nuevoFin) setSel(iso(hoy) >= nuevo && iso(hoy) <= nuevoFin ? iso(hoy) : nuevo)
+  }
+  // Mueve el mes ±1, acotado a los meses que caen dentro de [hoy−90, hoy+180] (misma ventana
+  // de datos que la vista lista). Si el día seleccionado se sale del mes visible, va al día 1.
+  function moverMes(n: number) {
+    const [a, m] = mesAncla.split('-').map(Number)
+    const destino = new Date(a, m - 1 + n, 1, 12)
+    const clave = iso(destino).slice(0, 7)
+    const min = iso(addDays(hoy, -VENTANA_ATRAS_DIAS)).slice(0, 7)
+    const max = iso(addDays(hoy, VENTANA_ADELANTE_DIAS)).slice(0, 7)
+    if (clave < min || clave > max || clave === mesAncla) return
+    setMesAncla(clave)
+    if (sel.slice(0, 7) !== clave) setSel(iso(hoy).slice(0, 7) === clave ? iso(hoy) : clave + '-01')
+  }
+  function volverAHoy() {
+    setInicio(iso(hoy))
+    setMesAncla(iso(hoy).slice(0, 7))
+    setSel(iso(hoy))
+  }
+  const rangoVentana = `${inicioDate.getDate()} ${inicioDate.toLocaleDateString('es-ES', { month: 'short' })} – ${new Date(finVentana + 'T12:00:00').getDate()} ${new Date(finVentana + 'T12:00:00').toLocaleDateString('es-ES', { month: 'short' })}`
+  const pisosVisibles = filtro ? PROPS.filter(p => p.id === filtro) : PROPS
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 12px 40px', color: 'var(--text)' }}>
@@ -102,23 +186,20 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         .li-dia .dow{display:block;font-weight:400;font-size:9px;text-transform:uppercase}
         .li-cell{border-top:1px solid var(--border);height:40px;position:relative;cursor:pointer}
         @media (max-width:380px){ .li-cal{grid-template-columns:74px repeat(${DIAS},32px)} }
+        .li-mes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;padding:0 10px 10px}
+        .li-mes-dow{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);text-align:center;padding:4px 0 2px}
+        .li-mes-dia{min-height:52px;border:1px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px 1px 4px;color:var(--text)}
       `}</style>
 
       <header style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, padding: '16px 2px 12px' }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>Limpiezas · pisos de Alberto</div>
-          <h1 style={{ margin: '2px 0 0', fontSize: 24, fontWeight: 800 }}>Hola, Vanesa 👋</h1>
+          <h1 style={{ margin: '2px 0 0', fontSize: 24, fontWeight: 800 }}>Hola, Sique Brilla 👋</h1>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', paddingBottom: 4 }}>
           {DOWL[hoy.getDay()]}, {hoy.getDate()} {hoy.toLocaleDateString('es-ES', { month: 'short' })}
         </div>
       </header>
-
-      {modo === 'sesion' && (
-        <div style={{ background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)', fontSize: 12, fontWeight: 600, borderRadius: 8, padding: '6px 12px', marginBottom: 12, textAlign: 'center' }}>
-          Vista previa (tu sesión) — Vanesa ve exactamente esto con su enlace
-        </div>
-      )}
 
       {error && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 13, borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
@@ -128,12 +209,77 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
 
       {/* Calendario */}
       <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px 6px' }}>
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Los 4 pisos · próximos {DIAS} días</h2>
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>desliza →</span>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, padding: '12px 14px 2px' }}>
+          <ChipFiltro activo={vista === 'mes'} onClick={() => setVista('mes')} label="Mes" />
+          <ChipFiltro activo={vista === 'lista'} onClick={() => setVista('lista')} label="Lista" />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px 6px' }}>
+          {vista === 'mes' ? (
+            <>
+              <button onClick={() => moverMes(-1)} aria-label="Mes anterior" style={btnNav}>‹</button>
+              <div style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 14, textTransform: 'capitalize' }}>{mesGrid.titulo}</div>
+              <button onClick={() => moverMes(1)} aria-label="Mes siguiente" style={btnNav}>›</button>
+              {mesAncla !== iso(hoy).slice(0, 7) && (
+                <button onClick={volverAHoy} style={{ ...btnNav, minWidth: 0, padding: '0 12px', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>Hoy</button>
+              )}
+            </>
+          ) : (
+            <>
+              <button onClick={() => moverVentana(-14)} aria-label="Dos semanas antes" style={btnNav}>‹</button>
+              <div style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{rangoVentana}</div>
+              <button onClick={() => moverVentana(14)} aria-label="Dos semanas después" style={btnNav}>›</button>
+              {inicio !== iso(hoy) && (
+                <button onClick={volverAHoy} style={{ ...btnNav, minWidth: 0, padding: '0 12px', fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>Hoy</button>
+              )}
+            </>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '2px 14px 8px' }}>
+          <ChipFiltro activo={filtro === null} onClick={() => setFiltro(null)} label="Todos" />
+          {PROPS.map(p => (
+            <ChipFiltro key={p.id} activo={filtro === p.id} onClick={() => setFiltro(filtro === p.id ? null : p.id)}
+              label={p.label} color={p.color} />
+          ))}
         </div>
         {cargando ? (
           <div style={{ padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando…</div>
+        ) : vista === 'mes' ? (
+          <div className="li-mes">
+            {DOW_MES.map((d, i) => <div key={i} className="li-mes-dow">{d}</div>)}
+            {mesGrid.dias.map(d => {
+              const k = iso(d)
+              const fueraMes = d.getMonth() !== mesGrid.mes
+              const esHoy = k === iso(hoy)
+              const pendiente = pendientesSmoobu.some(pe => pe.checkIn === k && enFiltro(pe.propertyId))
+              return (
+                <button key={k} className="li-mes-dia" onClick={() => setSel(k)}
+                  style={{
+                    ...(k === sel ? { background: 'var(--primary-light, rgba(79,70,229,.1))', borderColor: 'var(--primary)' } : {}),
+                    ...(fueraMes ? { opacity: .35 } : k < iso(hoy) ? { opacity: .55 } : {}),
+                  }}>
+                  <span style={{ fontSize: 12, fontWeight: esHoy ? 800 : 600, color: esHoy ? 'var(--primary)' : undefined }}>
+                    {d.getDate()}{pendiente ? ' ⚠️' : ''}
+                  </span>
+                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', maxWidth: '100%' }}>
+                    {pisosVisibles.map(p => {
+                      // Mismo criterio que la vista lista: toda SALIDA de reserva es una limpieza,
+                      // y las fichas sueltas del cron también cuentan.
+                      const limpia = reservas.some(r => r.propertyId === p.id && r.checkOut === k)
+                        || limpiezas.some(l => l.propertyId === p.id && l.fecha === k)
+                      const entra = reservas.some(r => r.propertyId === p.id && r.checkIn === k)
+                      if (!limpia && !entra) return null
+                      return (
+                        <span key={p.id} style={{ display: 'contents' }}>
+                          {limpia && <span title={`Limpieza · ${p.label}`} style={{ width: 9, height: 9, borderRadius: '50%', background: p.color }} />}
+                          {entra && <span title={`Entrada · ${p.label}`} style={{ width: 9, height: 9, borderRadius: '50%', border: `2px solid ${p.color}`, boxSizing: 'border-box' }} />}
+                        </span>
+                      )
+                    })}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         ) : (
           <div className="li-cal-scroll">
             <div className="li-cal">
@@ -143,24 +289,34 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
                 return (
                   <button key={k} className="li-dia" onClick={() => setSel(k)}
                     style={k === sel ? { background: 'var(--primary-light, rgba(79,70,229,.1))', color: 'var(--primary)', borderRadius: '8px 8px 0 0' }
-                      : k === iso(hoy) ? { color: 'var(--primary)' } : undefined}>
+                      : k === iso(hoy) ? { color: 'var(--primary)' }
+                        : k < iso(hoy) ? { opacity: .55 } : undefined}>
                     <span className="dow">{DOW[d.getDay()]}</span>{d.getDate()}
                   </button>
                 )
               })}
-              {PROPS.map(p => (
+              {pisosVisibles.map(p => (
                 <FilaPiso key={p.id} piso={p} dias={dias} sel={sel} hoy={iso(hoy)}
-                  reservas={reservas} limpiezas={limpiezas} onSel={setSel} />
+                  reservas={reservas} limpiezas={limpiezas} pendientes={pendientesSmoobu} onSel={setSel} />
               ))}
             </div>
           </div>
         )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '4px 14px 12px', fontSize: 11, color: 'var(--muted)' }}>
-          <span><span style={{ display: 'inline-block', width: 18, height: 10, borderRadius: 4, background: '#3E6AA8', verticalAlign: 'middle', marginRight: 4 }} />ocupado</span>
-          <span><b>→</b> entrada (nº huéspedes)</span>
-          <span>🧽 limpieza</span>
-          <span><span style={{ color: '#b45309' }}>🧽</span> entra huésped el mismo día</span>
-        </div>
+        {vista === 'mes' ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '4px 14px 12px', fontSize: 11, color: 'var(--muted)' }}>
+            <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: 'var(--muted)', verticalAlign: 'middle', marginRight: 4 }} />limpieza (color del piso)</span>
+            <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', border: '2px solid var(--muted)', boxSizing: 'border-box', verticalAlign: 'middle', marginRight: 4 }} />entrada</span>
+            <span>⚠️ reserva pendiente</span>
+            <span>Toca un día para ver su detalle</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '4px 14px 12px', fontSize: 11, color: 'var(--muted)' }}>
+            <span><span style={{ display: 'inline-block', width: 18, height: 10, borderRadius: 4, background: '#3E6AA8', verticalAlign: 'middle', marginRight: 4 }} />ocupado</span>
+            <span><b>→</b> entrada (nº huéspedes)</span>
+            <span>🧽 limpieza</span>
+            <span><span style={{ color: '#b45309' }}>🧽</span> entra huésped el mismo día</span>
+          </div>
+        )}
       </section>
 
       {/* Resumen del día */}
@@ -175,7 +331,7 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         <div style={{ padding: '4px 14px 12px' }}>
           <h3 style={tituloBloque}>Limpiezas del día</h3>
           {limpiezasDia.length === 0 && <div style={vacio}>No hay limpiezas este día. 🙌</div>}
-          {limpiezasDia.map(({ propertyId, limp }, i) => {
+          {limpiezasDia.map(({ propertyId, limp, paxSalida }, i) => {
             const p = propDe(propertyId)
             const entra = entradaMismoDia(reservas, propertyId, sel)
             return (
@@ -186,21 +342,45 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ ...chip, background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)' }}>Salida {limp?.salida ?? '11:00'}</span>
+                  {paxSalida != null && (
+                    <span style={chip}>👥 Sale{paxSalida === 1 ? ' 1 huésped' : `n ${paxSalida} huéspedes`}</span>
+                  )}
                   {entra
                     ? <span style={{ ...chip, background: '#fef3c7', color: '#b45309' }}>⚠️ Entra{entra.pax != null ? `n ${entra.pax}` : ' huésped'} a las {limp?.entrada ?? '15:00'}</span>
-                    : <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>Sin entrada hoy — con calma</span>}
+                    : <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>Sin entrada hoy</span>}
                   {limp?.tipo && limp.tipo !== 'estandar' && <span style={chip}>{limp.tipo === 'profunda' ? '🫧 Profunda' : '⚠️ Gran suciedad'}</span>}
                 </div>
                 {limp?.nota && <div style={nota}>📌 <b>Alberto:</b> {limp.nota}</div>}
                 {limp?.indicaciones && <div style={nota}>📝 {limp.indicaciones}</div>}
+                {partes.filter(pa => pa.propertyId === propertyId && pa.fecha === sel).map(pa => (
+                  <div key={pa.id} style={{ ...nota, background: 'var(--primary-light, rgba(79,70,229,.06))', border: '1px solid var(--border)', color: 'var(--text)' }}>
+                    🧾 <b>Tu aviso:</b> {pa.texto ?? '(foto)'}
+                    {pa.tieneFoto && (
+                      <a href={`/api/sivra/limpieza-intranet/partes/foto?id=${pa.id}`} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 6 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`/api/sivra/limpieza-intranet/partes/foto?id=${pa.id}`} alt="Foto del aviso" style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 8 }} />
+                      </a>
+                    )}
+                  </div>
+                ))}
+                <FormParte propertyId={propertyId} fecha={sel} onEnviado={cargar} />
               </div>
             )
           })}
 
           <h3 style={tituloBloque}>Entradas del día</h3>
+          {pendientesSmoobu.filter(pe => pe.checkIn === sel && enFiltro(pe.propertyId)).map((pe, i) => {
+            const p = propDe(pe.propertyId)
+            return (
+              <div key={`pend-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #fde68a', background: '#fef9c3', borderRadius: 12, padding: '10px 12px', marginBottom: 8, fontSize: 14, color: '#92400e' }}>
+                <span>⚠️</span>
+                <span><b style={{ color: p?.color }}>{p?.label ?? pe.propertyId}</b> — entra un huésped de Booking que aún no aparece en el calendario oficial. Alberto lo está arreglando; cuenta con la limpieza.</span>
+              </div>
+            )
+          })}
           {(() => {
-            const entradas = reservas.filter(r => r.checkIn === sel)
-            if (!entradas.length) return <div style={vacio}>Nadie entra este día{limpiezasDia.length ? ' — las limpiezas van con calma' : ''}.</div>
+            const entradas = reservas.filter(r => r.checkIn === sel && enFiltro(r.propertyId))
+            if (!entradas.length) return <div style={vacio}>Nadie entra este día.</div>
             return entradas.map((r, i) => {
               const p = propDe(r.propertyId)
               const limp = limpiezasDia.find(l => l.propertyId === r.propertyId)?.limp
@@ -236,14 +416,23 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
         </div>
       </section>
 
-      {/* Novedades: lo que ha cambiado respecto a lo que ya tenía planificado */}
+      {/* Novedades: lo que ha cambiado respecto a lo que ya tenía planificado. PLEGADO por
+          defecto (petición de Alberto, 30/08) con montaje perezoso: la lista solo se crea al abrir. */}
       <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginTop: 14 }}>
-        <h2 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700 }}>🔔 Últimos avisos</h2>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+        <button onClick={() => setAvisosAbiertos(a => !a)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 44, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', color: 'var(--text)' }}>
+          <span style={{ fontSize: 15, fontWeight: 700 }}>
+            🔔 Últimos avisos{!cargando && novedadesVisibles.length > 0 ? ` (${novedadesVisibles.length})` : ''}
+          </span>
+          <span style={{ color: 'var(--muted)', fontSize: 13 }}>{avisosAbiertos ? '▲' : '▼'}</span>
+        </button>
+        {avisosAbiertos && (
+          <>
+        <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
           Las últimas reservas nuevas y cancelaciones, por si ya tenías el mes planificado.
         </div>
-        {!cargando && novedades.length === 0 && <div style={vacio}>Sin avisos nuevos: todo sigue como estaba. 👍</div>}
-        {novedades.map((n, i) => {
+        {!cargando && novedadesVisibles.length === 0 && <div style={vacio}>Sin avisos nuevos: todo sigue como estaba. 👍</div>}
+        {novedadesVisibles.map((n, i) => {
           const p = propDe(n.propertyId)
           const rango = n.checkIn || n.checkOut
             ? `${fmtDM(n.checkIn) ?? '¿?'} → ${fmtDM(n.checkOut) ?? '¿?'}`
@@ -264,6 +453,8 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
             </div>
           )
         })}
+          </>
+        )}
       </section>
 
       <footer style={{ color: 'var(--muted)', fontSize: 12, textAlign: 'center', padding: '14px 20px 0', lineHeight: 1.6 }}>
@@ -273,9 +464,106 @@ export default function IntranetLimpieza({ modo }: { modo: 'sesion' | 'invitado'
   )
 }
 
-function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, onSel }: {
+// Reduce la foto a ≤1600px JPEG antes de subirla (las de móvil pasan de 4,5 MB, el límite de
+// Vercel). Si el navegador no sabe decodificarla (HEIC en algunos Android), va el archivo tal cual.
+async function comprimirFoto(f: File): Promise<Blob> {
+  try {
+    const bmp = await createImageBitmap(f)
+    const escala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height))
+    const w = Math.round(bmp.width * escala), h = Math.round(bmp.height * escala)
+    const c = document.createElement('canvas')
+    c.width = w; c.height = h
+    c.getContext('2d')!.drawImage(bmp, 0, 0, w, h)
+    const blob = await new Promise<Blob | null>(res => c.toBlob(res, 'image/jpeg', 0.82))
+    return blob ?? f
+  } catch {
+    return f
+  }
+}
+
+// Aviso rápido de Sique Brilla sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la
+// luz»). Se guarda en la limpieza y avisa a Alberto por Telegram. Sin campos que rellenar: un
+// texto libre y una foto opcional.
+function FormParte({ propertyId, fecha, onEnviado }: {
+  propertyId: string; fecha: string; onEnviado: () => void
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const [texto, setTexto] = useState('')
+  const [foto, setFoto] = useState<File | null>(null)
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function enviar() {
+    if (!texto.trim() && !foto) { setError('Escribe algo o adjunta una foto.'); return }
+    setEnviando(true); setError(null)
+    try {
+      const form = new FormData()
+      form.set('propertyId', propertyId)
+      form.set('fecha', fecha)
+      form.set('texto', texto.trim())
+      if (foto) form.set('foto', await comprimirFoto(foto), 'foto.jpg')
+      const r = await fetch('/api/sivra/limpieza-intranet/partes', { method: 'POST', body: form })
+      if (!r.ok) throw new Error(String(r.status))
+      setAbierto(false); setTexto(''); setFoto(null)
+      onEnviado()
+    } catch {
+      setError('No se pudo enviar. Prueba otra vez.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <button onClick={() => setAbierto(true)}
+        style={{ marginTop: 8, minHeight: 44, width: '100%', border: '1px dashed var(--border)', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: 'var(--muted)', fontFamily: 'inherit', fontSize: 13, fontWeight: 600 }}>
+        📸 Avisar a Alberto de algo (nota o foto)
+      </button>
+    )
+  }
+  return (
+    <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+      <textarea value={texto} onChange={e => setTexto(e.target.value)} rows={2}
+        placeholder="p. ej. se ha roto una mesa, no sale la luz…"
+        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', fontFamily: 'inherit', fontSize: 14, background: 'transparent', color: 'var(--text)', resize: 'vertical' }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <label style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 10, padding: '0 12px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>
+          📷 {foto ? 'Foto lista ✓' : 'Añadir foto'}
+          <input type="file" accept="image/*" hidden
+            onChange={e => setFoto(e.target.files?.[0] ?? null)} />
+        </label>
+        <button onClick={enviar} disabled={enviando}
+          style={{ minHeight: 44, flex: 1, border: 'none', borderRadius: 10, background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, opacity: enviando ? .6 : 1 }}>
+          {enviando ? 'Enviando…' : 'Enviar a Alberto'}
+        </button>
+        <button onClick={() => { setAbierto(false); setError(null) }} disabled={enviando}
+          style={{ minHeight: 44, border: '1px solid var(--border)', borderRadius: 10, background: 'transparent', cursor: 'pointer', color: 'var(--muted)', fontFamily: 'inherit', fontSize: 13, padding: '0 12px' }}>
+          Cancelar
+        </button>
+      </div>
+      {error && <div style={{ color: '#b91c1c', fontSize: 12.5, marginTop: 6 }}>{error}</div>}
+    </div>
+  )
+}
+
+function ChipFiltro({ activo, onClick, label, color }: {
+  activo: boolean; onClick: () => void; label: string; color?: string
+}) {
+  return (
+    <button onClick={onClick} style={{
+      fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 20, cursor: 'pointer',
+      fontFamily: 'inherit', minHeight: 32,
+      border: `1px solid ${activo ? (color ?? 'var(--primary)') : 'var(--border)'}`,
+      background: activo ? (color ?? 'var(--primary)') : 'transparent',
+      color: activo ? '#fff' : (color ?? 'var(--muted)'),
+    }}>{label}</button>
+  )
+}
+
+function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, pendientes, onSel }: {
   piso: (typeof PROPS)[number]; dias: Date[]; sel: string; hoy: string
-  reservas: ReservaIntranet[]; limpiezas: Limpieza[]; onSel: (k: string) => void
+  reservas: ReservaIntranet[]; limpiezas: Limpieza[]; pendientes: PendienteSmoobu[]
+  onSel: (k: string) => void
 }) {
   return (
     <>
@@ -317,6 +605,9 @@ function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, onSel }: {
             )}
             {hayLimpieza && (
               <span title="Limpieza" style={{ position: 'absolute', zIndex: 2, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 20, height: 20, borderRadius: '50%', background: entra ? '#d97706' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🧽</span>
+            )}
+            {pendientes.some(pe => pe.propertyId === piso.id && pe.checkIn === k) && (
+              <span title="Reserva de Booking pendiente de Smoobu" style={{ position: 'absolute', zIndex: 2, left: '50%', top: 2, transform: 'translateX(-50%)', fontSize: 11 }}>⚠️</span>
             )}
           </div>
         )

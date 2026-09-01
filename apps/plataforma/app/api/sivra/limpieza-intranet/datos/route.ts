@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
 // GET /api/sivra/limpieza-intranet/datos?from=AAAA-MM-DD&to=AAAA-MM-DD
-// Datos de la pantalla de la limpieza (Vanesa) o del preview de Alberto:
+// Datos de la pantalla de la limpieza (Sique Brilla) o del preview de Alberto:
 //  - reservas: ocupación + nº huéspedes de los 4 pisos. SIN nombres de huéspedes ni importes.
 //  - limpiezas: cleaning_sessions de los 4 slugs (las del cron auto-sessions, donde el panel
 //    de Alberto escribe nota_propietario).
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     : new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 
   try {
-    const [reservasRaw, limpiezas, tareas, nuevasRaw, canceladasRaw] = await Promise.all([
+    const [reservasRaw, limpiezas, tareas, nuevasRaw, huerfanasRaw, canceladasRaw, partesRaw] = await Promise.all([
       prisma.$queryRaw<Array<{
         propertyId: string; checkIn: Date | null; checkOut: Date | null
         adults: number | null; children: number | null
@@ -72,6 +72,17 @@ export async function GET(req: NextRequest) {
         ORDER BY "createdAt" DESC
         LIMIT 20
       `),
+      // Reservas de Booking que Smoobu NO tiene (vigía reservas_correo_booking, estado huérfana):
+      // se pintan ⚠️ para que Sique Brilla no se quede sin verlas mientras Smoobu se arregla. Solo las
+      // que tienen piso y fecha identificados — sin eso no hay dónde pintarlas (el Telegram a
+      // Alberto sí las lleva todas).
+      prisma.$queryRaw<Array<{ ref_booking: string | null; property_id: string; check_in: Date }>>(Prisma.sql`
+        SELECT ref_booking, property_id, check_in
+        FROM reservas_correo_booking
+        WHERE estado = 'huerfana' AND tipo = 'nueva'
+          AND property_id IS NOT NULL AND check_in IS NOT NULL
+          AND check_in BETWEEN ${from}::date AND ${to}::date
+      `),
       // Cancelaciones vistas por el sync en los últimos 14 días. check_in/check_out pueden ser NULL
       // (la fuente no publicó fechas): se muestran igual, sin inventar fechas.
       prisma.$queryRaw<Array<{
@@ -84,6 +95,16 @@ export async function GET(req: NextRequest) {
           AND (check_out IS NULL OR check_out >= CURRENT_DATE)
         ORDER BY cancelacion_vista_at DESC
         LIMIT 20
+      `),
+      // Partes de incidencia de la limpieza (nota y/o foto de Sique Brilla sobre una limpieza concreta).
+      // La foto se sirve aparte por /partes/foto?id=N (autenticada); aquí solo va si existe.
+      prisma.$queryRaw<Array<{
+        id: bigint; property_id: string; fecha: Date; texto: string | null; tiene_foto: boolean
+      }>>(Prisma.sql`
+        SELECT id, property_id, fecha, texto, (foto IS NOT NULL) AS tiene_foto
+        FROM limpieza_partes
+        WHERE fecha BETWEEN ${from}::date AND ${to}::date
+        ORDER BY creado_at ASC
       `),
     ])
 
@@ -112,6 +133,14 @@ export async function GET(req: NextRequest) {
       })),
       tareas: tareas.map(t => ({
         id: t.id, fecha: iso(t.fecha)!, propertyId: t.property_id, texto: t.texto, hecha: t.hecha,
+      })),
+      // ⚠️ reservas confirmadas en Booking que Smoobu aún no tiene (solo fecha de ENTRADA conocida).
+      partes: partesRaw.map(p => ({
+        id: Number(p.id), propertyId: p.property_id, fecha: iso(p.fecha)!,
+        texto: p.texto, tieneFoto: p.tiene_foto,
+      })),
+      pendientesSmoobu: huerfanasRaw.map(h => ({
+        propertyId: h.property_id, checkIn: iso(h.check_in)!, ref: h.ref_booking,
       })),
       novedades: mezclarNovedades(
         nuevasRaw.map((n): Novedad => ({

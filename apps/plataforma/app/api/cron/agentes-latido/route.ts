@@ -3,8 +3,9 @@ import type { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { evaluarLatido, AGENTES_VIGILADOS } from '@/lib/monitoring/latidos'
+import { purgarBitacora } from '@/lib/telegram/preferencias'
 
 // 💓 Latidos de agentes (cron diario 07:45 UTC ≈ 09:45 CEST). Comprueba que cada agente vigilado
 // sigue dejando su huella en BD y avisa por Telegram los que llevan demasiado sin latir. Es el mismo
@@ -16,6 +17,12 @@ export const maxDuration = 30
 // SQL de la huella por agente (parametrizado con Prisma.sql, nunca interpolación de strings).
 // Cada probe devuelve una fila { ultimo: timestamp | null } = el último latido del agente.
 const PROBES: Record<string, Prisma.Sql> = {
+  // Renovaciones de la correduría. La huella es la de la PASADA, no la tabla de avisos:
+  // `correduria_avisos_renovacion` solo crece cuando alguna póliza cruza un hito, así que un día
+  // tranquilo y un cron muerto darían exactamente la misma señal.
+  correduria_renovaciones: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_renovaciones'`,
   // Pricing: manda el piso MÁS VIEJO, no el max global. Con max(), un solo piso fresco
   // (p.ej. luxury) tapaba que el Dúplex y House Sevillana llevaban 23 días sin estudiar
   // (555 h) → el monitor se callaba. La sonda por-piso (min de los max) delata al rezagado.
@@ -58,6 +65,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   facturas_gmail: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'facturas_gmail'`,
+  reservas_booking_vigia: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'reservas_booking_vigia'`,
   // Eventos: NO se puede vigilar `pricing_eventos_auto.updated_at` — esa tabla solo crece cuando
   // aparece un evento NUEVO, así que una semana sin conciertos anunciados sería indistinguible de
   // los dos crons muertos (que es como estuvieron junio y julio de 2026 sin que nadie lo viera).
@@ -109,6 +119,14 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_extras_impago: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_extras_impago'`,
+  // Mensajes programados a huéspedes: deja marca de INTENTO al arrancar (mismo patrón que
+  // pricing_apply) para distinguir «no se dispara» de «se dispara y no termina».
+  sivra_domotica_acceso: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_domotica_acceso'`,
+  sivra_mensajes_prog: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_mensajes_prog'`,
   sivra_pricing_guard: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_pricing_guard'`,
@@ -129,6 +147,12 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_rates_snapshot: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_rates_snapshot'`,
+  // Foto diaria de la previsión por piso (30/08/2026). Va vigilada desde el mismo PR que la
+  // declara (regla del PR #1447): su tabla solo la escribe este cron, así que sin latido un cron
+  // muerto y «hoy no había nada nuevo» serían la misma señal.
+  sivra_prevision: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_prevision'`,
   sivra_resumen_diario: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_resumen_diario'`,
@@ -242,10 +266,13 @@ async function handler(req: NextRequest) {
     if (sondasRotas.length > 0) {
       bloques.push(`<b>Sin poder comprobar (${sondasRotas.length})</b> — esto NO es «todo bien»:\n${sondasRotas.join('\n')}`)
     }
-    await tgSend(`💓⚠️ <b>Latidos de agentes</b>\n\n${bloques.join('\n\n')}`, { html: true })
+    await tgAviso('sistema.agentes-latido', `💓⚠️ <b>Latidos de agentes</b>\n\n${bloques.join('\n\n')}`, { html: true })
   }
 
-  return NextResponse.json({ ok: true, alertas: alertas.length, sondasRotas: sondasRotas.length, resultados })
+  // Mantenimiento de la bitácora del panel /telegram (mira 30 días; se guardan 90). Best-effort.
+  const purgadas = await purgarBitacora()
+
+  return NextResponse.json({ ok: true, alertas: alertas.length, sondasRotas: sondasRotas.length, purgadas, resultados })
 }
 
 export { handler as GET, handler as POST }

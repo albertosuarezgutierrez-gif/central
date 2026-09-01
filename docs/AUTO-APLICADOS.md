@@ -13,6 +13,13 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-08-31** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
+  `docs/mapa-funciones.generated.json` · regenerados (`node scripts/auditar-estructura.mjs`) · la
+  radiografía estaba desfasada por la deriva de los 37 commits desde la pasada del 29/08 (mismo
+  patrón que el 26/08 y el 29/08) · pasada ligera de esta auditoría, entregado por PR (carril 1
+  bajo el harness de tareas de GitHub, que no permite push directo a `main` — ver "Dos carriles de
+  entrega" de la skill `auditoria-diaria`; el PR es solo-registro y se auto-mergea).
+
 - **2026-08-29** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json` · regenerados (`pnpm run auditar`) · `pnpm auditar:check`
   detectó la radiografía desfasada tras los ~50 commits del rango 26-29/08 · commit de esta auditoría

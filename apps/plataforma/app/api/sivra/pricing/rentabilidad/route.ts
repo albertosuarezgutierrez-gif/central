@@ -101,7 +101,7 @@ export async function GET() {
             AND m.checkin_date = c.noche
             AND m.fuente IN ('booking_mcp', 'manual')
             AND m.price_night > 0
-            AND ${sqlCompPlausible("m.")}
+            AND ${Prisma.raw(sqlCompPlausible("m."))}
             AND m.search_date BETWEEN c.reserved_at::date - 10 AND c.reserved_at::date + 10
         ) mk ON true
       )

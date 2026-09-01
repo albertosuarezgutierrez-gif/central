@@ -1,6 +1,76 @@
 # Auditoría diaria — agosto 2026
 
-# Actualización 2026-08-27 — auditoría diaria (ligera)
+# Actualización 2026-08-30 — auditoría PROFUNDA (semanal, `--profunda`)
+
+Rango: 26 commits desde la pasada ligera de esta misma madrugada (29/08 02:09 UTC, `82d0706`) hasta
+`c0319c0` — incluye la intranet de limpieza de Vanesa (#1856-#1860), los dos fixes del agente de
+huéspedes (traducción + guardrail de pago, #1862/#1863) y, crítico para este informe, el refactor
+de plausibilidad de comparables `sqlCompPlausible()`/`sqlUltimaPasadaUtil()` (#1854).
+
+## 🔴 CRÍTICO — el motor de precios llevaba ~18h SIN aplicar (avisado por Telegram)
+
+**Causa raíz encontrada y corregida en este PR.** El refactor de 13 sitios que centralizó la regla
+de plausibilidad €/plaza (`sqlCompPlausible()`, PR #1854, mismo día) interpola el resultado de esa
+función — un **string JS plano** — directamente dentro de un `` Prisma.sql` ` `` con
+`AND ${sqlCompPlausible("m.")}`, **sin envolverlo en `Prisma.raw()`**. Prisma trata cualquier
+interpolación dentro de `Prisma.sql` como un **parámetro ligado** (se manda como texto, escapado),
+no como SQL crudo — así que la condición llegaba a Postgres como `AND $N` con `$N` un TEXTO, y
+Postgres respondía `42804: argument of AND must be type boolean, not type text`.
+
+- **Efecto medido:** `sivra_pricing_apply` (latido) pasó a `ok:false` en la pasada de las 14:30 UTC
+  del 29/08 y se repitió en la de las 20:30 — la query `recs` de `pricing/apply` (la que trae
+  `pricing_settings`+ancla, sin `.catch()`) revienta y aborta la ruta ENTERA con excepción no
+  capturada. **`pricing_applied` no escribe una sola fila desde las 08:30 UTC del 29/08** (395 noches
+  esa pasada, 0 en las dos siguientes) — confirmado por SQL directo: `horas_desde_ultima_pasada`
+  17,8h en el momento de este informe. Los 4 apartamentos llevan casi un día con precio congelado.
+- **Por qué no lo cazó nada verde:** `tsc`/`next build` aceptan cualquier tipo interpolado dentro de
+  `Prisma.sql` (no hay chequeo de tipos de SQL crudo), y los tests unitarios de
+  `pricing-comps-techo.test.ts` prueban la función pura, no la ejecutan contra Postgres real.
+- **Alcance real — NO era solo `apply`:** el mismo patrón sin `Prisma.raw()` aparecía en **10 sitios**
+  de 5 rutas: `pricing/apply/route.ts` (×3, una sin `.catch()` = la que rompía todo),
+  `pricing/guard/route.ts` (×5), `pricing/rentabilidad/route.ts` (×1), `pricing/recommend/route.ts`
+  (×1). Las dos apariciones restantes (`pricing-ancla-global.ts`, `pricing-corpus-utilizable.ts`)
+  están DENTRO de funciones que devuelven texto plano y el LLAMADOR las envuelve una vez enteras en
+  `Prisma.raw()` — esas sí eran seguras por construcción, y así quedan documentadas en el guardián.
+- **Fix (este PR):** los 10 sitios pasan a `${Prisma.raw(sqlCompPlausible(...))}`. Nuevo GUARDIAN en
+  `pricing-comps-techo.test.ts` que falla si alguien vuelve a interpolar `sqlCompPlausible()` sin
+  `Prisma.raw()` dentro de un `Prisma.sql` — el checklist textual de "usa la función" no bastaba,
+  hacía falta vigilar CÓMO se usa. Verificado: `tsc` 0 errores, suite completa (`pnpm test`) 0
+  fallos, `rail_baja_roto`=0 y `bajo_minimo`=0 en los 7 días previos (el fallo no llegó a escribir
+  ningún precio malo, solo dejó de escribir).
+- **Urgente para Alberto:** sacar este PR de draft y mergear cuanto antes — la próxima pasada
+  (08:30 UTC) volverá a fallar con el código actual de `main`, y el reparador automático
+  (`latido-reparar.yml`, 08:00 UTC) podría intentar arreglarlo por su cuenta con un parche peor si
+  este PR no ha aterrizado antes.
+- Aviso Telegram enviado (canal nativo, ver nota de push más abajo).
+
+## ✅ Los 12 checks del CI, reproducidos en local (11 apps + tests + QA + lint)
+`pnpm test` (packages+guardián): 0 fallos. Typecheck de las 11 apps: verde (incluye `plataforma`
+tras el fix de arriba). QA (`qa-check.ts`) y lint (`apps/ia-rest`): sin hallazgos nuevos.
+
+## ✅ Heartbeat de crons y agentes — solo el hallazgo de pricing de arriba
+- **a) Latidos (`agente_latidos`):** único `ok=false` nuevo es `sivra_pricing_apply` (ya tratado
+  arriba). `ses_transporte` sigue en rojo por falta de alta de establecimiento (conocido, acción de
+  Alberto, sin cambios). El resto, verde.
+- **b) Tablas de dominio:** todas ✅, ninguna cerca de su umbral (la más rezagada, `trading-ranking`
+  semanal, a 92h de 192h).
+- `agente_reparaciones`: sin intentos en los últimos 7 días — el auto-reparador aún no ha tocado
+  `sivra_pricing_apply` (su próxima pasada es a las 08:00 UTC).
+
+## 💰 Salud del precio — el único 🔴 es el de arriba; el resto limpio
+`rail_baja_roto`=0, `bajo_minimo`=0 en los 7 días previos al corte. Los 4 pisos: `enabled`/
+`apply_enabled`=true, `min_price` puesto (65/85/300/72), `antelacion_k`=0 (apagada, correcto).
+
+## ✅ Backlog de PRs de rutinas + salud del automerge
+Un único PR abierto de rutinas: **#1803** (correduría, docs-only, `dirty`, abierto 27/08 — 3 días,
+bajo el umbral de 7 de "olvidado"), sin cambios respecto a la pasada anterior.
+
+## Reconciliación de memoria/skills
+Entrada añadida a `docs/CONTEXTO-SESIONES.md`. Sin contradicciones nuevas en reglas fiscales
+dictadas por Alberto, sin skills sincronizadas nuevas que reconciliar, sin huecos de
+`docs/HUECOS-ABIERTOS.md` que cerrar o abrir en este rango. Ninguna feature visible nueva de
+ia-rest en el rango (los commits tocan plataforma/sivra) → manuales sin cambios.
+
 
 Rango: 13 commits desde la pasada ligera del 26/08 05:29 UTC (`b9c4d30..2049774`) — cierre de la
 dirección de House Sevillana (#1731), repaso de CP de los cinco inmuebles + mapeo Booking cerrado
@@ -1568,3 +1638,66 @@ ABIERTOS.md`: H1 (EODHD) y H3 (IBKR en vivo) siguen vivos correctamente, sin cam
 ## ✅ Manuales de usuario — nada que tocar
 Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (el único
 commit que tocaba una ruta de esas carpetas, #1792, es un guardián de rama sin diff real en ia-rest).
+
+# Actualización 2026-08-31 — auditoría diaria (ligera)
+
+Rango: desde la pasada del 29/08 08:32 UTC (PR #1848) hasta `d717ec1` (31/08 07:58 UTC) — 37
+commits. Día de pricing (ciclo semanal, corrección del centinela de comisión 0€ en canales),
+intranet de limpieza de Vanesa (v2→v6, partes de incidencia), agente huéspedes (guardrail de pago,
+mensajes siempre en español), retirada del fallback NIM del daily-briefing, y el vigía
+Booking↔Smoobu. El propio rango ya traía su entrada de memoria emparejada a cada PR; esta pasada
+solo tuvo que verificar que no quedara nada suelto — y no quedaba.
+
+## Preflight del canal de aviso
+`GET /api/internal/alerta` → `200 {"ok":true}`. Canal vivo.
+
+## 🟡→✅ Integridad estructural — radiografía desfasada, regenerada
+`pnpm auditar:check` falló (`estructura.generated.json` desfasado por la deriva de los 37 commits
+del rango, mismo patrón que el 26/08 y el 29/08) → `node scripts/auditar-estructura.mjs` la
+regenera (este PR; entrada en `docs/AUTO-APLICADOS.md`). Sin lockfile desfasado (los dos
+`package.json` tocados en el rango — `module-encargo`/`module-revenue` — son del propio commit de
+la auditoría del 29/08, ya fuera del rango real; esos módulos no existen en el árbol actual).
+
+## ✅ Heartbeat de crons y agentes — sin ⛔ nuevos
+- **a) Latidos `agente_latidos` (24 filas):** todos `ok=true` salvo el ya conocido `ses_transporte`
+  (`ok=false`, «no hay ningún establecimiento dado de alta» — pendiente de acción de Alberto, sin
+  cambios desde pasadas anteriores). El resto, todos frescos (≤24h); el más rezagado dentro de
+  cadencia es `paper-tracker` (semanal, 166h de 192h).
+- `agente_reparaciones`: sin intentos de auto-reparación en los últimos 7 días (tabla vacía).
+
+## 💰 Salud del precio — sin 🔴 nuevo (mismo patrón de medición que el 29/08)
+`horas_desde_ultima_pasada` = 17,5h — por encima del umbral nominal de 10h de
+`pricing-salud.ts::HORAS_MAX_SIN_PASADA`, pero **explicado, no un hueco real**: la pasada de las
+20:30 UTC del 30/08 escribió 0 noches (`sivra_pricing_apply` latido, `ok=true`, detalle «0 noche(s)
+escritas en 4 piso(s)» — nada cruzó el 3%, no una pasada abortada) y la de las 08:30 UTC de hoy aún
+no había corrido al medir (~08:00 UTC). Mismo patrón exacto que el 29/08 (11,5h, también sin
+pasada de las 08:30 corrida todavía) — la métrica mide horas desde la última ESCRITURA, no desde
+la última pasada, así que 1-2 pasadas seguidas sin cambios ≥3% la alargan sin que sea una avería.
+`rail_baja_roto` = 0 · `bajo_minimo` = 0 · `rail_alza_sin_justificar` = 2 (baja de los 4 del 29/08,
+dentro del baseline conocido de eventos+premio de mercado) · `oscilantes` = 161 (baja de los 187
+del 29/08 — sigue el mismo serrucho ya diagnosticado el 28/08, PR #1826/#1827, en mejora, no un
+hallazgo nuevo). Los 4 pisos: `enabled`/`apply_enabled`=true, `min_price` puesto, `antelacion_k`=0
+(apagada, correcto) — sin palancas apagadas en silencio.
+
+## ✅ Backlog de PRs de rutinas + salud del automerge — 3 abiertos, ninguno de rutina bloqueado
+- **#1803** (correduría, docs-only, `dirty`) — 4 días, bajo el umbral de 7 de "olvidado"; conflicto
+  sin resolver, sigue "a criterio de Alberto" (sin cambios desde el 29/08).
+- **#1865** (`agentes-entrenador`, draft) — sin actividad desde su apertura (~26h), bajo umbral.
+- **#1879** (código, no-draft, `dirty` — rename "Sique Brilla"→"Si que Brilla" en `apps/plataforma`)
+  — nuevo desde la pasada del 29/08, en conflicto con `main`; no es un PR de rutina de registro
+  (30 archivos de código/tests/comentarios), así que el automerge no lo toca a propósito — le
+  corresponde a Alberto o a la sesión que lo abrió resolver el conflicto y mergearlo.
+`rutinas-automerge.yml`: run más reciente hoy 07:39 UTC (evento `check_suite`, sobre el commit que
+acaba de mergearse) — vigilante vivo.
+
+## ✅ Reconciliación memoria/skills — sin huecos
+`docs/CONTEXTO-SESIONES.md` cubre el rango entrada por entrada (cada PR trajo su propia entrada de
+memoria). `docs/SKILLS.md`/`docs/FUENTES-DE-VERDAD.md`/`docs/HUECOS-ABIERTOS.md`: sin cambios en su
+ámbito de código desde su último sello — nada que reconciliar. Ningún commit del rango toca
+`.claude/skills/` salvo dos entradas ya reflejadas en `sivra-maestro/references/contexto-y-agente-
+huesped.md` por sus propios PRs (#1862/#1863, guardrail de pago + mensaje siempre en español).
+
+## ✅ Manuales de usuario — nada que tocar
+Un único commit del rango toca `apps/ia-rest/**` (#1881, retirada del fallback NIM del
+daily-briefing) y es un cambio interno de cron sin superficie de usuario — nada que documentar en
+`help-prompts.ts`/`manual.html`.
