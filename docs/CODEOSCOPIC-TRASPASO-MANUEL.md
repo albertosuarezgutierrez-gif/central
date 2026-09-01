@@ -5,9 +5,15 @@
 > externo transcrito tal cual** (sin secretos ni PII; las rutas de fichero citadas son del repo de
 > Manuel, no de `central`). El resumen operativo vive en la skill `agente-correduria`
 > (`references/sector.md` §4); este archivo es la fuente de detalle.
-> **Aún pendiente de recibir de Manuel:** el fixture sanitizado
-> `src/lib/integrations/codeoscopic/__fixtures__/2026-06-10-sandbox-quote-response.json`
-> (la mejor referencia del formato de respuesta).
+> **Actualización (mensaje de Manuel, 01/09/2026), que corrige/completa lo de abajo:**
+> · Las credenciales entregadas por Bitwarden Send son de **PRODUCCIÓN y están ACTIVAS** — lo que
+>   caducó en junio era solo el usuario de sandbox `albertocsf0170ws`. Regeneración EN PAUSA:
+>   si un 401 lo desmiente, Manuel escribe a JM.
+> · **Host de producción de la API: `https://api.codeoscopic.io`** (el `-int` es el sandbox).
+> · El OpenAPI **no lo tiene Manuel** (`SPEC_REF` era un enlace a Linear); si hace falta el
+>   contrato formal, se pide a JM.
+> · El **fixture** `2026-06-10-sandbox-quote-response.json` fue enviado por Manuel (sanitizado);
+>   pendiente de incorporarlo al repo cuando Alberto lo pase.
 
 ---
 
