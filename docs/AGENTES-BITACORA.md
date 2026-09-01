@@ -357,6 +357,35 @@
   Revisión transversal: sin contradicciones ni redundancias nuevas entre skills. dudas: —;
   fallos: —; PRs/commits: rama `claude/upbeat-shannon-52n3zw` (`SKILL.md` de `facturas-correo` +
   mantenimiento de esta bitácora/memoria).
+- **2026-08-30 · agentes-entrenador** · hizo: pasada semanal (rango 24/08→30/08, desde la poda
+  del 23/08; 24 entradas procesadas y podadas: mercado-booking ×9, facturas-correo ×5,
+  pricing-agente ×2, psd2-health-check, github-vigia, ialimp-client-health, patrimonio-cfo,
+  buscador-ia, y el auto-informe del entrenador del 23/08). Preflight Telegram 200 OK. Sin
+  pendientes en `FEEDBACK-AGENTES.md`. Backlog de PRs abiertos: **2** (#1803 del 27/08,
+  #1864 del 30/08 — ambos sanos, ninguno de 2+ semanas). **Hallazgo (carril 2, PR draft
+  #1865):** `trading-analista` es la única skill de "Agentes programados" que nunca instruye
+  escribir su auto-informe en `AGENTES-BITACORA.md` — 0 entradas suyas en TODO el histórico
+  de este archivo pese a llevar semanas con el trigger corriendo (confirmado por
+  `docs/SKILLS.md`) y a un volumen alto de PRs de trading esta semana (H9-H15, VWCE #1837,
+  cartera paper #1831/#1833); a diferencia de `mercado-booking`, que sí lo instruye en su
+  `SKILL.md`. No es fallo de rendimiento del agente, es un hueco del prompt: añadido paso 8
+  a `references/pasada-diaria.md`. Diagnóstico del resto (sin acción, sin patrón nuevo de
+  2+ repeticiones): **facturas-correo** — sano las 5 pasadas del rango; la única duda
+  repetida (recibo Fly.io de Manuel Suárez sin clasificar, 24/28/29-08) es una decisión
+  pendiente de Alberto, no un error del agente. **mercado-booking** — sano; el recorte por
+  tope de plan sigue siendo capacidad, no bug (ya diagnosticado el 23/08). **pricing-agente**
+  — el pendiente de Busto Feria 17-abr se cerró el mismo día (24/08) con el check #10 del
+  guardián. **buscador-ia** — WebFetch a los 5 catálogos bloqueado por el proxy toda la
+  semana, degradó a WebSearch sin inventar datos; sugiere key de solo-lectura o abrir el
+  proxy (decisión de infra de Alberto, no de prompt). **github-vigia** — 1ª pasada del
+  trigger nuevo, sin Telegram por falta de envs en su entorno (ya conocido: "nace mudo",
+  `docs/CONTEXTO-SESIONES.md` 28/08). **agente-huésped (código, no skill)** — 2 incidentes
+  de feedback en vivo (pago auto-enviado, traducción) resueltos el mismo día por la sesión
+  que los detectó (PRs #1863/#1862); sin acción del entrenador. Resto sin evidencia en el
+  rango: ialimp-client-health, psd2-health-check y patrimonio-cfo (verde, sin dudas/fallos);
+  rrhh-compliance-calendar, radar-espana, fiscal-novedades, conectores-vigia (rutinas sin
+  disparo en el rango). Revisión transversal: sin contradicciones/redundancias nuevas entre
+  skills. dudas: —; fallos: —; PRs/commits: PR #1865 (rama `claude/upbeat-shannon-q2rv5j`).
 
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
@@ -399,6 +428,14 @@
 -->
 
 ## Última poda
+
+2026-08-30 · pasada semanal (rango 24/08→30/08) · 24 entradas procesadas y podadas
+(mercado-booking ×9, facturas-correo ×5, pricing-agente ×2, psd2-health-check, github-vigia,
+ialimp-client-health, patrimonio-cfo, buscador-ia, y el auto-informe del entrenador del 23/08).
+Backlog de PRs abiertos: **2** (#1803 del 27/08, #1864 del 30/08 — sano, ninguno de 2+ semanas).
+Único fix aplicado: paso de auto-informe en `trading-analista/references/pasada-diaria.md` (PR
+draft #1865) — la skill nunca instruía dejar rastro en esta bitácora, y llevaba semanas activa
+sin ninguna entrada propia (ver entrada de esta pasada arriba).
 
 2026-08-23 · pasada semanal (rango 16/08→23/08) · 20 entradas procesadas y podadas
 (mercado-booking ×7, facturas-correo ×6, psd2-health-check ×2, pricing-agente ×2, buscador-ia ×2,

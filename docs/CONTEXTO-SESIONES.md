@@ -658,6 +658,14 @@ escribir desde las 08:30 UTC del 29/08 (dos pasadas mudas, 14:30 y 20:30). 10 si
 5 rutas (`apply`/`guard`/`rentabilidad`/`recommend`), todos envueltos ahora en `Prisma.raw()` +
 guardián nuevo en `pricing-comps-techo.test.ts` que vigila el patrón. PR draft + Telegram urgente
 (mergear antes de las 08:30 UTC de hoy). Ver `docs/AUDITORIA-2026-08.md` (30/08).
+### 🎓 (30/08/2026) agentes-entrenador: pasada semanal — trading-analista sin rastro en la bitácora
+Rango 24/08→30/08 (24 entradas procesadas y podadas). Preflight Telegram OK, sin pendientes en
+`FEEDBACK-AGENTES.md`, backlog de PRs sano (2 abiertos, ninguno de 2+ semanas). Único hallazgo:
+`trading-analista` es la única skill de "Agentes programados" que nunca instruía dejar su
+auto-informe en `AGENTES-BITACORA.md` — 0 entradas suyas en TODO el histórico pese a llevar
+semanas con el trigger activo. No es fallo de rendimiento, es un hueco del prompt: **PR draft
+#1865** añade el paso 8 a `references/pasada-diaria.md`. Resto de agentes sin patrones de fallo
+nuevos (2+ repeticiones); detalle por agente en `docs/AGENTES-BITACORA.md`.
 
 ### 💳 (29/08/2026) Agente huéspedes: coordinar un PAGO nunca sale solo — guardrail `hablaDePago`
 Alberto, al ver auto-enviada la respuesta a Raquel («el pago… por transferencia bancaria o Bizum.

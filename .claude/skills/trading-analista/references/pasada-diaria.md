@@ -225,3 +225,9 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    tarjeta «Analiza una acción» (que a esos mismos los marcaba calidad débil / técnico «en espera»). La
    columna `operada` la pone `/api/trading/analizar` en la señal ganadora que abre posición en paper; el
    panel filtra `alcista AND operada`. NO volver a listar señales sin operar como «ideas de compra».
+
+8. **📝 Auto-informe en `docs/AGENTES-BITACORA.md` (obligatorio, aunque sea «todo bien»).** Añade una
+   entrada arriba del todo: `- **YYYY-MM-DD · trading-analista** · hizo: …; dudas: …; fallos: …;
+   PRs/commits: …` (formato completo en la cabecera de ese archivo). Es la ÚNICA fuente que usa
+   `agentes-entrenador` para evaluar esta rutina — sin ella, una pasada que corrió y escribió en BD
+   es invisible para su pasada semanal, y una que falló también lo sería.
