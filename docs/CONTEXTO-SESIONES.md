@@ -23,7 +23,18 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### 🎯 (01/09/2026) CI: el push «mudo» es LAG de GitHub — causa medida, no otra hipótesis
+- Dos pushes sobre el PR #1962 (ya fuera de draft) no dispararon ningún requerido. Al mirar el **objeto
+  PR** en vez de los runs: `git ls-remote` daba `5a732a51` y el PR seguía en `d0d23c65`, con 2 commits de
+  5 y `mergeable_state:"dirty"`. GitHub no había procesado el `synchronize`.
+- A los ~2 min se puso al día SOLO y los 12 arrancaron en ese instante, sin des-draftear, sin mergear
+  `main` y sin push nuevo. Verdes y mergeado (`3804b42e`).
+- Corrige tres días de teoría del `CLAUDE.md` (draft, identidad, «merge de main»): cada palanca que
+  «funcionó» llevaba minutos de espera detrás. **Procedimiento: compara `ls-remote` con el `head.sha`
+  del PR ANTES de tocar nada; si no coinciden, espera 2-3 min.** Cada palanca crea un head nuevo y
+  reinicia la espera.
+
+### … (dd/mm/aaaa)` —
 > son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
 > funde con la entrada anterior y se archiva mal.
 >
