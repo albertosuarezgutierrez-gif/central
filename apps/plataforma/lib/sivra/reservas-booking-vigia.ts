@@ -16,12 +16,26 @@
 //   cancelación + sigue ACTIVA   → huerfana + Telegram 🚨 (el calendario bloquea noches muertas).
 //   Smoobu incontactable         → NO se decide nada (no lo sé ≠ no está); se reintenta.
 // Las huérfanas se re-comprueban cada pasada: cuando Smoobu se cura, ✅ Telegram de cierre.
+//
+// 🚨 CORRECCIÓN 01/09/2026 — los tres primeros 🚨 que mandó este vigía fueron FALSOS, y las tres
+// reservas estaban en Smoobu y en `incomes`. Dos causas, las dos arregladas aquí:
+//   1. El nº que llega de leg B puede ser el **id interno de Smoobu** (los correos de Smoobu
+//      enlazan `login.smoobu.com/es/booking/detail/<id>`, que es lo que guarda
+//      `incomes.reservationId`), y solo se comparaba contra los campos de REFERENCIA de la OTA.
+//      Ahora se compara también contra `b.id`, y antes de preguntar a Smoobu se mira `incomes`.
+//   2. Ese correo lo manda el propio Smoobu diciendo «he sincronizado esta reserva»: es prueba de
+//      lo contrario de lo que se afirmaba. Ya no entra al vigía (puerta en lib/correo/triaje.ts,
+//      parser en lib/correo/smoobu-notificacion.ts).
+// Y el canal deja de estar cableado a Booking: entran reservas de Expedia, Agoda y Airbnb, y el
+// aviso decía «revisa en Booking» para una reserva de Expedia. Ahora dice el canal REAL, o
+// ninguno si el correo no lo publica.
 import { prisma } from '@/lib/db'
 import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { listarReservasVentana, runSync } from '@/lib/sivra/smoobu-sync'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { veredictoAviso, type AvisoReservaBooking } from '@/lib/correo/reserva-booking'
 import { PROPS_CALENDARIO } from '@/lib/sivra/constantes'
+import { canalDeAsunto } from '@/lib/correo/smoobu-notificacion'
 
 const REVISAR_DIAS = 30      // una fila con >30 días se deja de re-comprobar (queda su estado)
 const VENTANA_SIN_FECHA = 180 // sin check-in conocido, se busca en hoy−30..hoy+180
@@ -35,6 +49,7 @@ interface Fila {
   nombre_piso: string | null
   check_in: Date | null
   estado: string
+  asunto: string | null
   avisada_at: Date | null
 }
 
@@ -69,7 +84,12 @@ async function activaEnSmoobu(ref: string, checkIn: Date | null): Promise<boolea
   const arrTo = checkIn ? addDias(checkIn, 3) : addDias(hoy, VENTANA_SIN_FECHA)
   try {
     const bookings = await listarReservasVentana(arrFrom, arrTo, 800, 10)
+    // 🚨 El nº que traemos puede ser la referencia de la OTA **o el id INTERNO de Smoobu**: los
+    // correos de Smoobu enlazan la ficha (`login.smoobu.com/es/booking/detail/153896946`) y ese id
+    // es justo el que guarda `incomes.reservationId`. Mirar solo los campos de referencia hacía
+    // que una reserva presente saliera «desaparecida» (01/09/2026, Expedia 153896946).
     const conRef = bookings.filter(b =>
+      String(b.id) === ref ||
       [b['reference-id'], b.apiReference, b.referenceId, b.bookingReference]
         .some(v => v != null && String(v).includes(ref)),
     )
@@ -80,21 +100,46 @@ async function activaEnSmoobu(ref: string, checkIn: Date | null): Promise<boolea
   }
 }
 
+// Prueba POSITIVA barata: si el sync ya trajo esta reserva a `incomes`, Smoobu la tiene y no hay
+// nada que comprobar contra su API. Vale en UN SOLO sentido: no estar en `incomes` NO prueba que
+// Smoobu no la tenga (el sync puede ir por detrás), así que ahí sigue mandando Smoobu. Y solo se
+// usa para 'nueva': para una cancelación, una fila vieja de `incomes` diría «sigue activa» sin
+// haber mirado nada.
+async function yaSincronizada(ref: string): Promise<boolean> {
+  const r = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT count(*)::int AS n FROM incomes WHERE "reservationId" = ${ref}
+  `
+  return Number(r[0]?.n ?? 0) > 0
+}
+
 function labelPiso(propertyId: string | null, nombre: string | null): string {
   const p = propertyId ? PROPS_CALENDARIO.find(x => x.id === propertyId) : null
   return p?.label ?? nombre ?? 'piso sin identificar'
 }
 
+/**
+ * Canal REAL de la reserva. `aviso_booking` viene por definición de un correo de booking.com; el
+ * resto lo publica el asunto entre paréntesis. null = el correo no lo dijo, y entonces el aviso
+ * NO nombra ningún portal: mandar a Alberto a la extranet de Booking a buscar una reserva de
+ * Expedia es afirmar algo que no se ha mirado (01/09/2026).
+ */
+function canalDeFila(f: Fila): string | null {
+  if (f.origen === 'aviso_booking') return 'Booking.com'
+  return canalDeAsunto(f.asunto)
+}
+
 function lineaReserva(f: Fila): string {
   const fecha = f.check_in ? ` · check-in ${iso(new Date(f.check_in))}` : ''
-  return `<b>${escapeHtml(labelPiso(f.property_id, f.nombre_piso))}</b> · reserva ${escapeHtml(f.ref_booking ?? '¿?')}${fecha}`
+  const canal = canalDeFila(f)
+  return `<b>${escapeHtml(labelPiso(f.property_id, f.nombre_piso))}</b> · reserva ${escapeHtml(f.ref_booking ?? '¿?')}${fecha}` +
+    (canal ? ` · canal ${escapeHtml(canal)}` : ' · canal no identificado en el correo')
 }
 
 export async function verificarReservasBooking(): Promise<{
   ok: boolean; comprobadas: number; confirmadas: number; huerfanasNuevas: number; sinComprobar: number
 }> {
   const filas = await prisma.$queryRaw<Fila[]>`
-    SELECT id, tipo, origen, ref_booking, property_id, nombre_piso, check_in, estado, avisada_at
+    SELECT id, tipo, origen, ref_booking, property_id, nombre_piso, check_in, estado, asunto, avisada_at
     FROM reservas_correo_booking
     WHERE estado IN ('pendiente', 'huerfana')
       AND visto_at > now() - make_interval(days => ${REVISAR_DIAS}::int)
@@ -106,7 +151,9 @@ export async function verificarReservasBooking(): Promise<{
 
   for (const f of filas) {
     const tipo = f.tipo === 'cancelacion' ? 'cancelacion' as const : 'nueva' as const
-    const activa = await activaEnSmoobu(f.ref_booking!, f.check_in)
+    const activa = (tipo === 'nueva' && await yaSincronizada(f.ref_booking!).catch(() => false))
+      ? true
+      : await activaEnSmoobu(f.ref_booking!, f.check_in)
     const veredicto = veredictoAviso(tipo, activa)
     stats.comprobadas++
     await prisma.$executeRaw`UPDATE reservas_correo_booking SET ultima_comprobacion_at = now() WHERE id = ${f.id}`
@@ -127,7 +174,8 @@ export async function verificarReservasBooking(): Promise<{
       }
       // Si Alberto ya había sido avisado del agujero, se le cuenta el cierre (una vez).
       if (f.avisada_at) {
-        await tgAviso('pisos.reserva-vigia', `✅ <b>Reserva de Booking ya en Smoobu</b>\n${lineaReserva(f)}\nSe resolvió sola o la arreglaste — el calendario ya la tiene.`).catch(() => {})
+        const canalOk = canalDeFila(f)
+        await tgAviso('pisos.reserva-vigia', `✅ <b>Reserva${canalOk ? ` de ${escapeHtml(canalOk)}` : ''} ya en Smoobu</b>\n${lineaReserva(f)}\nSe resolvió sola o la arreglaste — el calendario ya la tiene.`).catch(() => {})
         await prisma.$executeRaw`UPDATE reservas_correo_booking SET resuelta_avisada_at = now() WHERE id = ${f.id}`
       }
       continue
@@ -137,18 +185,23 @@ export async function verificarReservasBooking(): Promise<{
     await prisma.$executeRaw`UPDATE reservas_correo_booking SET estado = 'huerfana' WHERE id = ${f.id}`
     if (!f.avisada_at) {
       stats.huerfanasNuevas++
+      const canal = canalDeFila(f)
+      const deCanal = canal ? ` de ${escapeHtml(canal)}` : ''
+      const extranet = canal ? `la extranet de ${escapeHtml(canal)}` : 'la extranet del portal por el que entró'
       const msg = tipo === 'nueva'
         ? [
-            '🚨 <b>Reserva de Booking que Smoobu NO tiene</b>',
+            `🚨 <b>Reserva${deCanal} que Smoobu NO tiene</b>`,
             lineaReserva(f),
             f.origen === 'mensaje_huesped'
               ? 'Un huésped ha escrito sobre esta reserva y Smoobu no la reconoce.'
-              : 'Booking avisó por correo y lo he comprobado contra Smoobu: no está.',
-            'Métela a mano en Smoobu (o desde la extranet de Booking) para que cuente en calendario, limpiezas e ingresos.',
-            f.property_id ? 'La he marcado ⚠️ en la intranet de Si que Brilla hasta que Smoobu la tenga.' : '⚠️ No he podido identificar el piso por el nombre del anuncio — revisa en Booking cuál es.',
+              : `El portal avisó por correo y lo he comprobado contra Smoobu: no está.`,
+            `Métela a mano en Smoobu (o desde ${extranet}) para que cuente en calendario, limpiezas e ingresos.`,
+            f.property_id
+              ? 'La he marcado ⚠️ en la intranet de Si que Brilla hasta que Smoobu la tenga.'
+              : `⚠️ No he podido identificar el piso por el nombre del anuncio — revisa en ${canal ? escapeHtml(canal) : 'el portal'} cuál es.`,
           ].join('\n')
         : [
-            '🚨 <b>Cancelación de Booking que Smoobu NO ha aplicado</b>',
+            `🚨 <b>Cancelación${deCanal} que Smoobu NO ha aplicado</b>`,
             lineaReserva(f),
             'La reserva sigue ACTIVA en Smoobu: esas noches están bloqueadas sin huésped. Cancélala en Smoobu.',
           ].join('\n')

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T14:50:20Z",
-  "sha": "21756689a25fdcd1a9a5aedc2e4351f2f590248f",
+  "generadoEn": "2026-09-01T16:15:03Z",
+  "sha": "569f5e8408e55e82d8d121795dc6cebeb2d4f4cc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2952,6 +2952,27 @@
       "hash": "940406db64c5"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/sonda/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 23,
+          "resumen": "Sonda de Codeoscopic. **No gasta ninguna cotización**: solo pide el token OAuth2, que es gratis. Es la forma de estrenar la integración sin pagar: como no hay sandbox utilizable, la primera cotización"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/sonda",
+      "hash": "e59bc76498f0"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/comisiones/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3268,6 +3289,380 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "552d09e52d35"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/cliente.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Transporte HTTP contra Codeoscopic / Avant2: token OAuth2 + petición firmada. Dos decisiones que no son de estilo: 1. **La cotización va con UN SOLO intento.** `POST /insurances` es facturable y no idempotente: un reintento no arregla nada, crea otro proyecto y otro cargo de 0,50€. Aquí no hay retri",
+      "exporta": [
+        "olvidarToken",
+        "obtenerToken",
+        "clasificarFalloDeRed",
+        "peticion"
+      ],
+      "funciones": [
+        {
+          "nombre": "olvidarToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "config?: ConfigCodeoscopic",
+          "retorno": "void",
+          "linea": 56,
+          "resumen": "Vacía la cache. Se usa al auto-curar un 401 y en los tests."
+        },
+        {
+          "nombre": "obtenerToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic",
+          "retorno": "Promise<string>",
+          "linea": 65,
+          "resumen": "Pide (o reutiliza) el access token. **Es gratis**: por eso es la sonda con la que se comprueba host y credenciales sin gastar una cotización."
+        },
+        {
+          "nombre": "clasificarFalloDeRed",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "'conexion' | 'red-indeterminada'",
+          "linea": 137,
+          "resumen": "¿Este fallo de red demuestra que la petición NUNCA se envió? Importa de verdad: si decimos «conexion» estamos liberando cupo y afirmando que Codeoscopic no nos ha cobrado. Un `ECONNRESET` o un «other "
+        },
+        {
+          "nombre": "fetchConTimeout",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, init: RequestInit, timeoutMs: number,",
+          "retorno": "Promise<Response>",
+          "linea": 144
+        },
+        {
+          "nombre": "peticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, opciones: { metodo: 'GET' | 'POST' path: string cuerpo?: unknown timeoutMs: number },",
+          "retorno": "Promise<unknown>",
+          "linea": 175,
+          "resumen": "Llama al vendor con las cabeceras que Avant2 exige. Un solo intento. La única repetición es el auto-curado de un 401, y es segura incluso en la llamada facturable porque un 401 significa que el vendor"
+        },
+        {
+          "nombre": "recortar",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 229,
+          "resumen": "Recorta el cuerpo de error: puede traer eco de datos del tomador (PII)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6f5527eebb63"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/config.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Configuración del cliente de Codeoscopic / Avant2 (tarificación). ─── Por qué esto es un helper PURO y con TRES estados ─────────────────────── Aquí no hay sandbox utilizable (las credenciales que entregó Manuel el 01/09/2026 son de PRODUCCIÓN), así que **cada cotización cuesta 0,50€ de verdad**. Es",
+      "exporta": [
+        "resolverTopes",
+        "resolverConfig",
+        "explicarConfig"
+      ],
+      "funciones": [
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined, defecto: number, maximo: number",
+          "retorno": "number",
+          "linea": 68
+        },
+        {
+          "nombre": "resolverTopes",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "Topes",
+          "linea": 76
+        },
+        {
+          "nombre": "resolverConfig",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>, opciones: { ignorarInterruptor?: boolean } = {},",
+          "retorno": "ResolucionConfig",
+          "linea": 87,
+          "resumen": "Resuelve la config desde un objeto de entorno. Puro: no lee `process.env` directamente para poder probarlo."
+        },
+        {
+          "nombre": "explicarConfig",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResolucionConfig",
+          "retorno": "string",
+          "linea": 133,
+          "resumen": "Explica en una frase por qué no se puede tarificar. Para la UI y los logs."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3762cbdc4b44"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/consumo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Persistencia del libro de consumo de Codeoscopic. Impuro (BD). La lógica de si SE PUEDE cotizar vive en `contador.ts` (pura y probada); aquí solo se lee y se escribe el libro. La separación es a propósito: la decisión que cuesta dinero tiene que poder probarse sin BD. 🔒 Aislamiento: toda consulta p",
+      "exporta": [
+        "consumoActual",
+        "reservar",
+        "cerrarFacturable",
+        "cerrarDescartado"
+      ],
+      "funciones": [
+        {
+          "nombre": "consumoActual",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<Consumo>",
+          "linea": 27,
+          "resumen": "Cuenta lo consumido hoy y este mes por esta correduría. 🚨 NO atrapa errores. Es deliberado y es el corazón del diseño: si no podemos leer el libro, no sabemos cuánto llevamos gastado, y un tope que n"
+        },
+        {
+          "nombre": "reservar",
+          "kind": "function",
+          "exportada": true,
+          "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string }",
+          "retorno": "Promise<Reserva>",
+          "linea": 68,
+          "resumen": "Abre la reserva ANTES de llamar al vendor. El orden importa: si se escribiera después, una caída entre la llamada y el INSERT dejaría un cargo real sin rastro en el libro — y el tope contaría de menos"
+        },
+        {
+          "nombre": "cerrarFacturable",
+          "kind": "function",
+          "exportada": true,
+          "params": "intentoId: string, projectId: string",
+          "retorno": "Promise<void>",
+          "linea": 85,
+          "resumen": "El vendor respondió: hay proyecto y, por tanto, cargo."
+        },
+        {
+          "nombre": "cerrarDescartado",
+          "kind": "function",
+          "exportada": true,
+          "params": "intentoId: string, evidencia: string, errorCodigo: string,",
+          "retorno": "Promise<void>",
+          "linea": 107,
+          "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
+        }
+      ],
+      "tablas": [
+        "seguros",
+        "ventana"
+      ],
+      "rutaApi": null,
+      "hash": "f46bc5c97584"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Contador y tope de cotizaciones de Codeoscopic. Lógica PURA (sin BD, sin red). ─── El problema que resuelve, y por qué no es un simple `count(*)` ────────── Cada `POST /insurances` cuesta 0,50€ y **no es idempotente**: si repites la llamada, Codeoscopic crea otro proyecto y te cobra otra vez. Además",
+      "exporta": [
+        "consumidasHoy",
+        "consumidasMes",
+        "puedeCotizar",
+        "cabenEnTanda",
+        "eurCents"
+      ],
+      "funciones": [
+        {
+          "nombre": "consumidasHoy",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Consumo",
+          "retorno": "number",
+          "linea": 50,
+          "resumen": "Lo consumido de verdad en el día: lo cerrado MÁS lo que quedó en el aire."
+        },
+        {
+          "nombre": "consumidasMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Consumo",
+          "retorno": "number",
+          "linea": 54
+        },
+        {
+          "nombre": "puedeCotizar",
+          "kind": "function",
+          "exportada": true,
+          "params": "consumo: Consumo, topes: Topes",
+          "retorno": "Veredicto",
+          "linea": 64,
+          "resumen": "¿Se puede lanzar UNA cotización más? Se evalúa ANTES de llamar al vendor y sobre el libro ya persistido. El tope diario se mira primero por ser el más estrecho."
+        },
+        {
+          "nombre": "cabenEnTanda",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number, consumo: Consumo, topes: Topes",
+          "retorno": "",
+          "linea": 104,
+          "resumen": "¿Cabe una TANDA de `n` cotizaciones? Para lo que de verdad quema cupo: una pasada de defensa de cartera retarifica una póliza por cliente. Devuelve cuántas caben, que puede ser menos de las pedidas. E"
+        },
+        {
+          "nombre": "eurCents",
+          "kind": "function",
+          "exportada": true,
+          "params": "cents: number",
+          "retorno": "string",
+          "linea": 118,
+          "resumen": "Coste en formato español (`54,50€`), como manda la regla global de la casa."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3af7cd77eb0c"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/cotizar.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Orquestador de la cotización: la única puerta por la que se gasta dinero. El orden de los pasos ES el diseño: 1. Config → si está apagada o incompleta, no hay llamada. 2. Ámbito → sin correduría no hay libro contra el que contar. 3. Libro → si no se puede leer, NO se cotiza (fail closed). 4. Tope → ",
+      "exporta": [
+        "probarConexion",
+        "estadoConsumo",
+        "cotizar"
+      ],
+      "funciones": [
+        {
+          "nombre": "probarConexion",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env,",
+          "retorno": "Promise<",
+          "linea": 43,
+          "resumen": "Sonda GRATIS: pide solo el token OAuth2. Sirve para verificar host y credenciales sin gastar una cotización — que es como hay que estrenar la integración, porque no hay sandbox utilizable. Un fallo de"
+        },
+        {
+          "nombre": "estadoConsumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, env: Record<string, string | undefined> = process.env,",
+          "retorno": "Promise<",
+          "linea": 70,
+          "resumen": "Lo consumido y lo que queda. Para pintarlo antes de que nadie pulse nada."
+        },
+        {
+          "nombre": "cotizar",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PeticionCotizacion, env: Record<string, string | undefined> = process.env,",
+          "retorno": "Promise<ResultadoCotizacion>",
+          "linea": 87
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "212f69990918"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/respuesta.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lectura de la respuesta de `POST /insurances`. PURO: entra JSON, sale modelo. ─── Por qué esto no es «coger premium y pintarlo» ────────────────────────── El fixture real que entregó Manuel (fixtures/codeoscopic/, cotización del 10/06/2026) enseña lo que el documento de traspaso no decía: de los 18 ",
+      "exporta": [
+        "firmezaDe",
+        "leerCotizacion",
+        "resumirCotizacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Json",
+          "linea": 60
+        },
+        {
+          "nombre": "arr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 61
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 62
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 64
+        },
+        {
+          "nombre": "firmezaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "estimate: unknown, mensajes: unknown",
+          "retorno": "Firmeza",
+          "linea": 72,
+          "resumen": "Decide la firmeza de un precio. Orden deliberado: `estimate` manda sobre todo lo demás, porque si el propio vendor dice que la cifra es una estimación, ningún aviso la vuelve firme."
+        },
+        {
+          "nombre": "textoMensaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: unknown",
+          "retorno": "string | null",
+          "linea": 85,
+          "resumen": "Junta `text` y `description` de un mensaje en una línea legible."
+        },
+        {
+          "nombre": "leerPrecio",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "Precio | null",
+          "linea": 92
+        },
+        {
+          "nombre": "leerFallo",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "FalloCompania | null",
+          "linea": 119
+        },
+        {
+          "nombre": "leerCotizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "Cotizacion",
+          "linea": 140,
+          "resumen": "Convierte la respuesta cruda del vendor en el modelo de la casa. Lanza si falta el `id` de raíz: sin él no podemos correlacionar el webhook ni demostrar por qué nos han facturado esa cotización, así q"
+        },
+        {
+          "nombre": "resumirCotizacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Cotizacion",
+          "retorno": "string",
+          "linea": 162,
+          "resumen": "Resumen honrado para la UI y para Telegram: dice lo que NO se pudo cotizar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "95cdfc3b4d0f"
     },
     {
       "ruta": "apps/asegura/lib/comisiones.ts",
@@ -103133,7 +103528,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2704,
-    "funciones": 7522
+    "archivos": 2711,
+    "funciones": 7555
   }
 }

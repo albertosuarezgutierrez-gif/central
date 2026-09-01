@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T15:29:53Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T16:15:03Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 11 apps · 38 packages · 23 capacidades · 38 skills · 1213 rutas API.
+**Resumen:** 11 apps · 38 packages · 23 capacidades · 38 skills · 1214 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -20,8 +20,8 @@
 ### asegura
 - **Módulos que usa:** core-identity, module-seguros, module-seguros-pii
 - **Capacidades:** —
-- **Tablas (53):** seguros._volcado_control, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas, seguros.cuenta_efectivo, seguros.gestiones, seguros.historial_interno, seguros.lds_consent…
-- **Rutas API:** 6
+- **Tablas (54):** seguros._volcado_control, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas, seguros.cuenta_efectivo, seguros.gestiones, seguros.historial_interno…
+- **Rutas API:** 7
 ### housesevillana
 - **Módulos que usa:** —
 - **Capacidades:** —
@@ -245,6 +245,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Apagado por defecto
+- Hallazgo:
 - Siguiente paso al confirmar envs:
 - SMS con enlace `wa.me` para que escriba el cliente primero y salga gratis: descartado.
 - Campaña a los 32.520 leads: descartada.
@@ -253,6 +255,4 @@
 - Cloud API directa de Meta, no 360dialog
 - PENDIENTE que no depende de nadie y es el único camino crítico: dar de alta la WABA
 - PENDIENTE (nuevo):
-- Quedan 3 peticiones fuera del repo:
-- Son DOS averías:
 
