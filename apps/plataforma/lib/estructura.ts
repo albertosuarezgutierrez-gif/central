@@ -52,6 +52,10 @@ export const VERTICALES: VerticalInfo[] = [
   { app: 'rrhh', nombre: 'iarrhh', sector: 'RR.HH.', desc: 'Portal del Empleado multi-tenant. Alta de empresas desde el god-panel de plataforma.', url: 'central-rrhh.vercel.app' },
   { app: 'transporte', nombre: 'Transporte', sector: 'Logística', desc: 'Gestión de flota, vehículos, conductores, portes y rutas (intercompany flota → catering).' },
   { app: 'alquiler', nombre: 'Alquiler', sector: 'Materiales/menaje', desc: 'Alquiler de materiales y menaje (mesas, sillas, vajilla, carpas). Catálogo, tarifas/día, fianzas, disponibilidad.' },
+  { app: 'almacen', nombre: 'Almacén', sector: 'Eventos/catering', desc: 'Gestión de almacén de eventos/catering para el cliente Joaquín Jaén (maestro por familias/materiales).' },
+  { app: 'asegura', nombre: 'Grupo Asegura', sector: 'Seguros', url: 'grupoasegura.com', desc: 'Correduría de seguros de Alberto. Esqueleto vivo (auth/layout); la cartera real sigue en el Supabase de Manuel Suárez, en traspaso.' },
+  { app: 'housesevillana', nombre: 'House Sevillana', sector: 'Inmobiliario', url: 'housesevillana.es', desc: 'Landing pública del apartamento turístico (Calle Socorro 24, San Julián, Sevilla). Canal directo: motor de reservas, WhatsApp, teléfono.' },
+  { app: 'mariscos', nombre: 'Mariscos González', sector: 'Pesca/mayorista', desc: 'Trazabilidad pesquera + etiquetado por peso (mayorista/pescadería de marisco). Recepción de partidas, envasado, etiqueta por canal.' },
 ]
 
 /** Módulos compartidos (packages/*): núcleos (core-*) + módulos de dominio (module-*). */
