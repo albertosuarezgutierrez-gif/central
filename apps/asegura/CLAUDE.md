@@ -61,6 +61,11 @@ salidas (`error` / `no migrado` / `migrado`), nunca dos.
 
 ## Envs
 `DATABASE_URL`, `DIRECT_URL` (rol `prisma_seguros`), `ASEGURA_SESSION_SECRET`.
+**De la cartera en vivo (01/09/2026, FUNCIONANDO):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
+(SELECT-only + BYPASSRLS) contra ASEGURA-prod-eu por el pooler :6543 de eu-central-1; la URL la
+normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
+puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
+desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
 proyecto de Vercel de Manuel — **no se piden por mensaje**.
 
