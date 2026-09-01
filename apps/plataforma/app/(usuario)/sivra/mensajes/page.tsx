@@ -3,9 +3,10 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { resumenOrdenes } from '@/lib/sivra/extras/orden-texto'
 
 type Msg    = { id: string; from: 'guest'|'host'; text: string; ts: string }
-// 🧹 Orden a la limpieza de esta reserva. `enviadoAt` null = se intentó y NO salió (el motivo está
-// en `error`); la lista entera a `null` = no se pudo leer. Tres estados, no dos.
-type Orden  = { instruccion: string; enviadoAt: string|null; error: string|null }
+// 🧹 Orden a la limpieza de esta reserva. `enviadoAt` null = el email se intentó y NO salió (motivo
+// en `error`); `tareaId` null = NO está en /invitado/limpieza, la única pantalla que mira Sique
+// Brilla; la lista entera a `null` = no se pudo leer.
+type Orden  = { instruccion: string; enviadoAt: string|null; error: string|null; tareaId: string|null }
 type Thread = {
   id: string; guestName: string; property: string; propertyId?: string
   checkIn: string; checkOut: string; portal: string

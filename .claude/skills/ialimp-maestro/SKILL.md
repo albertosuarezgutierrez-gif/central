@@ -14,7 +14,12 @@ description: >
 > al código o a `CLAUDE.md`, manda el código: corrige este router en el mismo commit.
 
 ## ⚠️ Cliente EN VIVO
-Producción = `app.ialimp.es` = rama `main`. **Vanessa (Sique Brilla) lo usa en directo**:
+🚨 **DESDE EL 01/09/2026 SIQUE BRILLA YA NO USA IALIMP** (se le retiró el acceso; su operativa va por
+`/invitado/limpieza` de plataforma). ialimp sigue vivo como **producto que Alberto quiere vender**, no
+como la herramienta de nadie hoy. Consecuencia práctica: **ya no hay usuaria en directo a la que
+romperle el día**, así que la cautela de abajo protege a un cliente que no está entrando — no la
+cambies por tu cuenta, pero no la cites como si hubiera alguien dentro.
+Producción = `app.ialimp.es` = rama `main`. Texto anterior: **Vanessa (Sique Brilla) lo usa en directo**:
 cualquier merge a `main` se ve al instante. No mergear sin preview verde validada.
 
 ## Antes de tocar nada (gate obligatorio)

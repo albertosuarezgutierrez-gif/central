@@ -114,6 +114,18 @@
   Agoda…) o ninguno — ya no manda a la extranet de Booking a por una reserva de Expedia.
 - Fila 10 (cancelación de JUAN PONCE) corregida a mano en BD: era `nueva`/`huerfana`. PR #1978, mergeado.
 
+### 🧹 (01/09/2026) Vanesa = Sique Brilla, y su ÚNICA pantalla es /invitado/limpieza
+- Tras el PR #1991, Alberto miró el viernes 04/09 en la intranet y **la cuna no estaba**: la orden
+  salió por email y se pintó en `/sivra/mensajes`, dos canales que ella no abre.
+- **Corrección de hecho:** Vanessa Cruz = Sique Brilla SL (los docs las trataban como dos actores) y
+  **ya no usa ialimp** — se le retiró el acceso. ialimp **se queda tal cual** como producto a vender.
+- `enviarOrdenLimpieza` crea ahora la fila en `limpieza_tareas` ANTES del email; columna
+  `sivra_ordenes_limpieza.tarea_id` (aplicada): NULL = **la limpieza NO lo ve**, y se canta.
+- Corregidos los docs que afirmaban lo contrario: landmine #7 de `sivra-maestro`, `ialimp-maestro`,
+  `ialimp-client-health` (sus «0 accesos» ya no son avería) y `apps/plataforma/CLAUDE.md`.
+- Regla global nueva en el `CLAUDE.md` raíz: antes de dar por avisado a alguien, mira EN QUÉ PANTALLA
+  trabaja. **PR #1994.**
+
 ### 🧹 (01/09/2026) SIVRA: la orden a la limpieza deja de depender de que Stripe vea el dinero
 - Raquel (reserva 152490601) pagó la cuna **por Bizum**: `sivra_extras_reserva` congelada en
   `ofrecido` y Sique Brilla sin enterarse — el email lo dispara SOLO el webhook de Stripe. Orden

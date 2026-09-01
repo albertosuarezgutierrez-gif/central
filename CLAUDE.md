@@ -121,6 +121,27 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
+## 🧹 Quién mira qué pantalla — regla global permanente
+**Antes de dar por avisada a una persona, comprueba en qué pantalla trabaja.** Un aviso que sale por
+un canal que esa persona no abre es un aviso que no existe, y desde el código se ve idéntico a uno
+entregado.
+
+- **Vanesa = Vanessa Cruz = Sique Brilla SL.** Es la limpieza de los 4 pisos y era la clienta piloto
+  de ialimp: **una sola persona**, aunque medio repo las nombrara como dos actores distintos.
+- **Desde el 01/09/2026 su ÚNICO acceso es `/invitado/limpieza`** (intranet de plataforma, enlace con
+  token, tabla `limpieza_tareas`). Se le retiró el de ialimp, que **se queda tal cual** como producto
+  que Alberto quiere vender — no como la herramienta de nadie hoy.
+- Por tanto: **lo que ella tiene que hacer aparece ahí o no se ha pedido.** El email a
+  `limpiezascruzz@gmail.com` sirve de refuerzo; la ficha de `/sivra/mensajes` es la pantalla de
+  Alberto, no la suya.
+- Caso fundacional (01/09/2026): la cuna de la reserva 152490601 se pidió por email, se registró en
+  `sivra_ordenes_limpieza` y se pintó en `/sivra/mensajes` — y **no salía en la única pantalla que
+  ella abre**. Lo cierra `sivra_ordenes_limpieza.tarea_id`: con uuid la orden se ve en su intranet;
+  **NULL significa que NO la ve**, y eso se declara en la UI y por Telegram en vez de suponerse.
+
+Al construir cualquier aviso a un tercero (limpieza, gestoría, huésped, conductor), la pregunta no es
+«¿lo he mandado?» sino **«¿en qué pantalla lo va a ver, y tengo cómo saber que está ahí?»**.
+
 ## Estilo de respuesta — regla global permanente
 **Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
 
