@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T09:06:32Z",
-  "sha": "41b6116628c3522b4a7de9884e125a5bf3a0b051",
+  "generadoEn": "2026-09-01T11:16:07Z",
+  "sha": "1ba3c2541e9f466e6f5e698436db20ebda8e802e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3176,7 +3176,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 53
+          "linea": 80
         },
         {
           "nombre": "resumenCartera",
@@ -3184,7 +3184,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResumenCartera>",
-          "linea": 58
+          "linea": 85
         },
         {
           "nombre": "vencimientosProximos",
@@ -3192,7 +3192,7 @@
           "exportada": true,
           "params": "correduriaId: string, dias: number = DIAS_HORIZONTE_RENOVACION, hoyRef: Date = hoyUtc(),",
           "retorno": "Promise<PolizaVencimiento[]>",
-          "linea": 123,
+          "linea": 150,
           "resumen": "Pólizas vigentes que vencen dentro del horizonte, ordenadas por urgencia real (la fecha, no la etiqueta del estado). Es la lista de llamadas de la semana. Las que tienen `fechaVencimiento` NULL NO sal"
         },
         {
@@ -3201,13 +3201,31 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 168,
+          "linea": 220,
           "resumen": "La única correduría de la base (medido: 1 fila). Lanza si hubiera más de una."
+        },
+        {
+          "nombre": "esObjetoPlano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 229,
+          "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null. Solo se mira si de verdad es un objeto."
+        },
+        {
+          "nombre": "descifrarDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 244,
+          "resumen": "- sin clave, o con una clave que no abre ese registro → `objetoAsegurado` verá el `v1:` intacto y lo dirá como **«cifrado»**, que NO es «sin dato». Lo que no puede pasar nunca es que un fallo de desci"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fabe4c1a741d"
+      "hash": "552d09e52d35"
     },
     {
       "ruta": "apps/asegura/lib/dinero.ts",
@@ -47190,17 +47208,26 @@
           "linea": 433
         },
         {
+          "nombre": "CeldaObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
+          "retorno": null,
+          "linea": 560,
+          "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
+        },
+        {
           "nombre": "Vencimientos",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 548
+          "linea": 593
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9e079985c124"
+      "hash": "a22e170abb55"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/page.tsx",
@@ -54450,7 +54477,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/correduria-renovaciones",
-      "hash": "d24bf49e296b"
+      "hash": "c9e58021c74c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correo-digest/route.ts",
@@ -63691,6 +63718,7 @@
       "exporta": [
         "interpretarCartera",
         "carteraAsegura",
+        "interpretarObjeto",
         "interpretarVencimientos",
         "vencimientosAsegura"
       ],
@@ -63701,7 +63729,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CarteraAsegura",
-          "linea": 43,
+          "linea": 45,
           "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Cualquier forma inesperada degrada a `error`, nunca a un resumen inventado."
         },
         {
@@ -63710,7 +63738,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CarteraAsegura>",
-          "linea": 81,
+          "linea": 83,
           "resumen": "Lee la cartera por el puerto de central-asegura. La URL no es un secreto y cae al dominio del proyecto; el secreto NUNCA tiene fallback."
         },
         {
@@ -63719,7 +63747,16 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 96
+          "linea": 98
+        },
+        {
+          "nombre": "interpretarObjeto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "ObjetoAsegurado | null",
+          "linea": 131,
+          "resumen": "Lectura defensiva del objeto asegurado. Una forma rara NO tumba la fila entera: degrada a `null` («el puerto no lo informa»), que la UI ya sabe decir."
         },
         {
           "nombre": "interpretarVencimientos",
@@ -63727,7 +63764,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "VencimientosAsegura",
-          "linea": 126,
+          "linea": 152,
           "resumen": "Interpretación PURA de la respuesta del puerto de vencimientos. Una fila con forma inesperada invalida la lista entera: media lista de renovaciones es peor que ninguna, porque nadie sabría cuál falta."
         },
         {
@@ -63736,12 +63773,12 @@
           "exportada": true,
           "params": "dias = 90",
           "retorno": "Promise<VencimientosAsegura>",
-          "linea": 162
+          "linea": 189
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e37a23615478"
+      "hash": "3c4be20a67a5"
     },
     {
       "ruta": "apps/plataforma/lib/categoria-reglas.ts",
@@ -65619,6 +65656,7 @@
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Aviso de RENOVACIONES de la correduría. La tabla de /correduria solo sirve si Alberto entra a mirarla. Lo que mueve una cartera es que el aviso llegue solo, y a tiempo: la ventana no la marca el calendario, la marca la LCS ",
       "exporta": [
+        "objetoEnLinea",
         "claveAviso",
         "emisionesDeHoy",
         "mensajeRenovaciones",
@@ -65626,12 +65664,21 @@
       ],
       "funciones": [
         {
+          "nombre": "objetoEnLinea",
+          "kind": "function",
+          "exportada": true,
+          "params": "objeto: PolizaAviso['objeto']",
+          "retorno": "string | null",
+          "linea": 38,
+          "resumen": "Cómo se nombra el objeto en una línea de Telegram. Devuelve `null` cuando no hay nada que decir — un «sin dato» en cada línea es ruido, y la ausencia ya se ve en la pantalla de /correduria, que es don"
+        },
+        {
           "nombre": "claveAviso",
           "kind": "function",
           "exportada": true,
           "params": "p: { id: string; fechaVencimiento: string }, hito: HitoId",
           "retorno": "string",
-          "linea": 59,
+          "linea": 77,
           "resumen": "Clave de dedupe: una póliza avisa una vez por hito Y por vencimiento. Si la póliza se renueva, el vencimiento cambia y el ciclo vuelve a empezar solo."
         },
         {
@@ -65640,7 +65687,7 @@
           "exportada": true,
           "params": "polizas: PolizaAviso[], yaAvisados: Set<string>",
           "retorno": "Emision[]",
-          "linea": 73,
+          "linea": 91,
           "resumen": "Qué avisar hoy. `yaAvisados` son las claves que ya constan en la BD. Devuelve, por póliza, UN hito a comunicar y la lista de hitos que hay que marcar como consumidos — que incluye los más laxos: si un"
         },
         {
@@ -65649,7 +65696,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 97
+          "linea": 115
         },
         {
           "nombre": "linea",
@@ -65657,7 +65704,7 @@
           "exportada": false,
           "params": "p: PolizaAviso",
           "retorno": "string",
-          "linea": 102
+          "linea": 120
         },
         {
           "nombre": "mensajeRenovaciones",
@@ -65665,7 +65712,7 @@
           "exportada": true,
           "params": "emisiones: Emision[]",
           "retorno": "string | null",
-          "linea": 117,
+          "linea": 138,
           "resumen": "El mensaje de Telegram, agrupado por hito. `null` cuando no hay nada que decir — el silencio de «hoy no toca ninguna» es correcto; lo que nunca puede pasar es que un fallo de lectura se convierta en e"
         },
         {
@@ -65674,13 +65721,13 @@
           "exportada": true,
           "params": "leidas: number, emitidas: number, ventanaDias: number,",
           "retorno": "string",
-          "linea": 130,
+          "linea": 151,
           "resumen": "Detalle del latido: cuenta lo hecho sin adornos, para el parte del vigía."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b03fba442a97"
+      "hash": "6d2126f7bda7"
     },
     {
       "ruta": "apps/plataforma/lib/correo/agoda-mensajes.ts",
@@ -97303,6 +97350,122 @@
       "hash": "54dd111be75d"
     },
     {
+      "ruta": "packages/module-seguros/src/objeto.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "QUÉ asegura cada póliza — el «objeto asegurado». Una lista de renovaciones con cliente, ramo y prima no basta para llamar a nadie: el mismo tomador puede tener tres pólizas de auto, y «Auto · Mapfre · 431,85€» no dice CUÁL. Lo que identifica la póliza en la conversación es el bien: la matrícula y el",
+      "exporta": [
+        "pareceMatricula",
+        "objetoAsegurado"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null | 'cifrado'",
+          "linea": 58,
+          "resumen": "Texto útil de un campo, o `null`. Distingue el cifrado de la ausencia."
+        },
+        {
+          "nombre": "claro",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 68,
+          "resumen": "Como `texto`, pero el cifrado cuenta como ausencia (para campos que solo se pintan)."
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 73
+        },
+        {
+          "nombre": "pareceMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "boolean",
+          "linea": 79,
+          "resumen": "¿Parece una matrícula española (o de las viejas con provincia)?"
+        },
+        {
+          "nombre": "unir",
+          "kind": "function",
+          "exportada": false,
+          "params": "partes: Array<string | null>, sep = ' · '",
+          "retorno": "string | null",
+          "linea": 84
+        },
+        {
+          "nombre": "objetoAsegurado",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: EntradaObjeto",
+          "retorno": "ObjetoAsegurado",
+          "linea": 104
+        },
+        {
+          "nombre": "objetoVehiculo",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>",
+          "retorno": "ObjetoAsegurado",
+          "linea": 123
+        },
+        {
+          "nombre": "objetoInmueble",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>, tipo: string",
+          "retorno": "ObjetoAsegurado",
+          "linea": 155
+        },
+        {
+          "nombre": "objetoComercio",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>, coberturas: EntradaObjeto['coberturas'],",
+          "retorno": "ObjetoAsegurado",
+          "linea": 196
+        },
+        {
+          "nombre": "objetoResponsabilidadCivil",
+          "kind": "function",
+          "exportada": false,
+          "params": "coberturas: EntradaObjeto['coberturas']",
+          "retorno": "ObjetoAsegurado",
+          "linea": 219,
+          "resumen": "Una RC no tiene bien: tiene MODALIDAD. Lo que la describe («de qué es») son las coberturas contratadas — locativa, patronal/accidentes de trabajo, explotación… y eso vive en `poliza_coberturas`, no en"
+        },
+        {
+          "nombre": "porCoberturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "coberturas: EntradaObjeto['coberturas'], nota: string | null",
+          "retorno": "ObjetoAsegurado",
+          "linea": 228,
+          "resumen": "Describe una póliza por las coberturas contratadas, que es lo único que hay cuando no existe ficha del bien."
+        },
+        {
+          "nombre": "objetoGenerico",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>, coberturas: EntradaObjeto['coberturas'],",
+          "retorno": "ObjetoAsegurado",
+          "linea": 247,
+          "resumen": "Ramos sin plantilla propia: se aprovecha lo que haya, sin inventar etiquetas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "77ade921171e"
+    },
+    {
       "ruta": "packages/module-seguros/src/vencimientos.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Ventana de renovación de una póliza — la máquina comercial de una correduría. La regla no es «faltan X días» a ojo: la marca la **LCS 50/1980 art. 22**. El TOMADOR debe oponerse a la prórroga con UN MES de antelación al vencimiento (el asegurador necesita dos). Consecuencia práctica, y es la que dec",
@@ -102530,7 +102693,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2691,
-    "funciones": 7476
+    "archivos": 2692,
+    "funciones": 7493
   }
 }

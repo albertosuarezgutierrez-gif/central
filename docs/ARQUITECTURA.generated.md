@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T08:42:04Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T11:16:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -245,6 +245,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Pendiente para Alberto:
 - #1924 MERGEADO
 - Vencimientos ya funcionando
 - Migrar la cartera al schema `seguros`: NO todavía
@@ -254,5 +255,4 @@
 - Pendiente:
 - Verificado contra Smoobu (por `pg_net`, sin sacar la key de `pms_connections`):
 - AGODA sí tiene canal
-- PR #1902 MERGEADO
 
