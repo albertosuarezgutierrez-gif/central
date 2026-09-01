@@ -39,3 +39,12 @@ export {
   type EntradaSalud,
   type FicheroEnCuarentena,
 } from './ingesta.ts'
+export {
+  MARCADORES_SIN_DATO,
+  CAMPOS_PERSONALES,
+  autoLeidoVacio,
+  normalizarAutoLeido,
+  seLeyoAlgo as seLeyoAlgoAuto,
+  camposLeidos,
+} from './documento-auto.ts'
+export type { AutoLeido } from './documento-auto.ts'
