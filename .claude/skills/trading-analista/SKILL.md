@@ -1,9 +1,9 @@
 ---
 name: trading-analista
-description: Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales.
+description: Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1: paper + Tramo 1 de 1.000€ REALES ya desplegado en CVX; el agente nunca ejecuta, Alberto confirma). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales.
 ---
 
-# Trading-analista (Fase 1 · paper) — router
+# Trading-analista (Fase 1 · paper + Tramo 1 real) — router
 
 ## Qué hace la pasada diaria
 Lee el NAV de IBKR (`get_account_summary`) y lo empuja a `/api/trading/saldo`; lee las
@@ -18,8 +18,14 @@ Detalle paso a paso en `references/pasada-diaria.md`.
 ## 🚨 No romper / crítico
 - **Regla de oro: NO ejecutar NINGUNA orden real en IBKR.** Solo lectura (`get_account_*`,
   `get_price_history`, `get_price_snapshot`, `get_watchlist`) y endpoints de plataforma.
-  Operativa 100% simulada en BD. Si dudas, no operas. Aplica también a la cartera de
-  estudio (30.000€ SIMULADOS) y a la cartera cohetes: cero órdenes reales, siempre.
+  Si dudas, no operas. Aplica también a la cartera de estudio (30.000€ SIMULADOS) y a la
+  cartera cohetes: cero órdenes reales, siempre.
+  🚨 **«El agente no ejecuta» ≠ «no hay dinero real».** Desde el 25/08/2026 hay **capital real
+  desplegado por recomendación del agente**: el **Tramo 1 de la escalera (1.000€) está abierto en
+  CVX**, confirmado a mano por Alberto. Lo que sigue simulado es TODO lo demás, y es así porque
+  **el tramo está consumido**, no porque el sistema sea solo-paper. No le digas a Alberto que su
+  cartera real «no compra porque todo es paper» (pasó el 31/08/2026, con CVX en cartera).
+  Escalera y estado de cada tramo: `references/copiloto-ordenes.md`.
   **Matiz copiloto (15/08/2026, decidido por Alberto):** `create_order_instruction` NO crea
   una orden viva — crea un borrador que Alberto revisa y envía él mismo en IBKR. Está
   permitido SOLO cuando Alberto pide esa instrucción concreta en conversación; la Rutina

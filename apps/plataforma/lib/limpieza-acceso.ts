@@ -1,5 +1,5 @@
 // Autorización de la intranet de limpieza: acepta la sesión normal de plataforma (Alberto, preview)
-// O un TOKEN de invitado (Sique Brilla, la limpieza de los 4 pisos, sin cuenta). El token vive en la BD
+// O un TOKEN de invitado (Si que Brilla, la limpieza de los 4 pisos, sin cuenta). El token vive en la BD
 // (tabla limpieza_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy.
 // Corre en runtime Node (route handlers y server components), nunca en el middleware edge.
 // Mismo patrón que lib/empresas-acceso.ts / lib/trading-acceso.ts.
@@ -28,7 +28,7 @@ export async function tokenInvitadoValido(token: string | undefined | null): Pro
   return Boolean(activo && token === activo)
 }
 
-/** Modo de acceso: 'sesion' (Alberto), 'invitado' (token de Sique Brilla en cookie) o null. */
+/** Modo de acceso: 'sesion' (Alberto), 'invitado' (token de Si que Brilla en cookie) o null. */
 export async function accesoLimpieza(): Promise<ModoAcceso> {
   const s = await getSession()
   if (s) return 'sesion'

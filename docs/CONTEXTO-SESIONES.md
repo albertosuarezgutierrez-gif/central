@@ -45,6 +45,23 @@
   que cotice lleva contador y tope (~109 pólizas vivas ≈ 54,50€/pasada).
 - Al contestar Manuel: volcar a `references/sector.md` §4 y pedir regeneración de credenciales sandbox.
 
+### 💶 (01/09/2026) Comisiones de la correduría: spec del control devengo → liquidación → cobro → renta
+- Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuenta», y que el borrador
+  del IRPF cuadre. Medido: **hoy el borrador no se cuadra, se COPIA** (hilo Asecon IRPF 2025: «ingresos
+  los que aparece en el borrador»). Retención implícita 14,75% → **15% de IRPF, modelo 190**.
+- 🚨 **`apps/plataforma/lib/cima.ts` sobra:** SOAP nunca validado (404), parser adivinado y mapa de
+  compañías con códigos numéricos cuando los reales son `C0109`/`C0468`/`C0058`/`C0613`. La BD de Manuel
+  YA trae `cuenta_efectivo`/`liquidaciones`/`poliza_recibos` parseadas por el JAR de TIREA, con
+  **comisión, retención y remesa separadas** (Allianz feb/26: 95,03 − 14,26 = 80,77 exacto).
+- El PDF «Cuenta Agente» de Allianz es legible (**EBCDIC dentro del PDF, `cp500`**) y cuadra al céntimo
+  con CIMA. Revela **558,88€ parados** por no haber dado la cuenta bancaria. Mapfre devenga 3.614,65€ en
+  recibos cobrados y **cero liquidaciones**. Del banco, el **85% de 2026 sin identificar compañía**.
+- Spec en `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md` (**PR #1947**), con
+  `agente-correduria`, `perfil-fiscal` y `apps/asegura/CLAUDE.md` actualizados: comisión tiene TRES
+  estados (devengado→liquidado→cobrado) y la cobertura de CIMA es DESIGUAL por compañía. Pendiente:
+  plan de implementación, y 5 gestiones con compañías (Allianz cuenta, Generali/Reale/Mapfre CIMA,
+  Occident saldos) que **no se envían sin autorización**.
+
 ### 🧭 (01/09/2026) asegura-portal: plan TDD de la Fase 1 (entrar + aportar póliza)
 - **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia
   en TRES estados, código de un solo uso), 6 tablas `portal_*`, sesión propia y bóveda con subida de póliza.
@@ -252,6 +269,26 @@
   falla — no es nuestro (nosotros: Prisma + central_asegura). Preguntar a Manuel en el traspaso.
 - Además: 🛡️ Correduría entra por fin en el menú de plataforma (PR #1907, guardián incluido) —
   «no me sale correduría»: /correduria nunca estuvo en NAV_NEGOCIO.
+### 📈 (31/08/2026) Pasada de trading-analista + fix: posición vencida sin poder cerrarse desde hacía 17 días (PR #1914)
+Rutina nocturna de trading-analista: NAV/cartera empujados, `/analizar` con 3 compras paper (PLTR, NFLX,
+SQM), 0 vetados. Alberto pidió revisar el aviso de MSFT (posición abierta 04/08, vencida 14/08, atascada).
+**Causa raíz:** `/api/trading/puntuar` pedía a la 2ª fuente la ventana histórica para el ancla de
+`juzgarHuerfana` contando desde la fecha de VENCIMIENTO en vez de la de APERTURA — quedaba corta por
+`horizonteDias − margen` días SIEMPRE, así que el ancla nunca encontraba con qué comparar por mucho que
+se reintentara (no era transitorio). Extraído a helper puro testeado `ventanaHastaApertura`
+(`lib/trading/precios-guardia.ts`), reutilizado también en el bloque de tesis huérfanas. 64 tests OK,
+tsc 0, `pnpm test` en verde. PR #1914 draft — pendiente CI y confirmar en la próxima pasada que MSFT cierra.
+
+### 🚨 (31/08/2026) «El satélite está en paper» era FALSO desde el 25/08 — la skill de trading mentía sobre la cartera real
+Alberto preguntó por qué la pasada no compró NFLX/PLTR/SQM en su cartera real de 1.000€ y se le contestó
+que **el satélite real «no existe todavía»**. Es falso: el **Tramo 1 (1.000€) está abierto en CVX desde el
+25/08** (verificado en IBKR: 6 acc., medio 200,04$, hoy 206,29$, +37,52$ latente). Causa: `copiloto-ordenes.md`
+decía «satélite HOY EN PAPER» y `SKILL.md` «operativa 100% simulada en BD» — frases de antes del 24/08 que
+nadie actualizó al abrir el tramo. **Corregidas las 5 fuentes** (SKILL.md + descripción, copiloto-ordenes,
+infra-forward-radar «Puerta a Fase 2», SKILLS.md, RUTINAS-PROGRAMADAS.md) con la distinción que faltaba:
+**«el agente no ejecuta» ≠ «no hay dinero real»**, y las señales nuevas van a paper porque **el tramo está
+CONSUMIDO**, no porque el sistema sea solo-paper. **NO se metieron las 3 señales:** 15.136,10$ ≈ 13.031,46€
+(39,7% del NAV) contra 381,60€ de efectivo, techo de 6.000€ y Tramo 2 sin cumplir (~15/11). PR #1913.
 
 ### 🔑 (31/08/2026) House Sevillana YA ENVÍA · el PIN por reserva sustituye al maestro · salida flexible (PRs #1906, #1908)
 - **House Sevillana ACTIVADA** (`mensajes_prog_pisos.activo=true`, 21:45). Hoy no sale nada: los dos
@@ -634,6 +671,14 @@ escribir desde las 08:30 UTC del 29/08 (dos pasadas mudas, 14:30 y 20:30). 10 si
 5 rutas (`apply`/`guard`/`rentabilidad`/`recommend`), todos envueltos ahora en `Prisma.raw()` +
 guardián nuevo en `pricing-comps-techo.test.ts` que vigila el patrón. PR draft + Telegram urgente
 (mergear antes de las 08:30 UTC de hoy). Ver `docs/AUDITORIA-2026-08.md` (30/08).
+### 🎓 (30/08/2026) agentes-entrenador: pasada semanal — trading-analista sin rastro en la bitácora
+Rango 24/08→30/08 (24 entradas procesadas y podadas). Preflight Telegram OK, sin pendientes en
+`FEEDBACK-AGENTES.md`, backlog de PRs sano (2 abiertos, ninguno de 2+ semanas). Único hallazgo:
+`trading-analista` es la única skill de "Agentes programados" que nunca instruía dejar su
+auto-informe en `AGENTES-BITACORA.md` — 0 entradas suyas en TODO el histórico pese a llevar
+semanas con el trigger activo. No es fallo de rendimiento, es un hueco del prompt: **PR draft
+#1865** añade el paso 8 a `references/pasada-diaria.md`. Resto de agentes sin patrones de fallo
+nuevos (2+ repeticiones); detalle por agente en `docs/AGENTES-BITACORA.md`.
 
 ### 💳 (29/08/2026) Agente huéspedes: coordinar un PAGO nunca sale solo — guardrail `hablaDePago`
 Alberto, al ver auto-enviada la respuesta a Raquel («el pago… por transferencia bancaria o Bizum.

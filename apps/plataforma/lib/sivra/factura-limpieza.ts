@@ -1,6 +1,6 @@
-// lib/sivra/factura-limpieza.ts — la factura REAL de Sique Brilla, validada (puro, testeable).
+// lib/sivra/factura-limpieza.ts — la factura REAL de Si que Brilla, validada (puro, testeable).
 //
-// Contexto (25/08/2026). El P&L desglosa cada pago a Sique Brilla INFIRIENDO el mes facturado
+// Contexto (25/08/2026). El P&L desglosa cada pago a Si que Brilla INFIRIENDO el mes facturado
 // por mejor ajuste al importe (`reparto-siquebrilla.ts`). Funciona porque las tarifas cuadran al
 // céntimo con `incomes`, pero es una deducción: un movimiento que pagara dos facturas juntas, o
 // una subida de tarifas, la rompen en silencio. La factura EXISTE (llega por correo y se archiva
@@ -96,7 +96,7 @@ export function pisoDeConcepto(concepto: string): string | null {
  * Valida una lectura contra su propio total. Devuelve la factura SOLO si cuadra.
  *
  * `tarifas` son las contratadas: no se usan para calcular (manda lo que dice la factura), sino
- * para AVISAR de una divergencia — una tarifa distinta es justo la señal de que Sique Brilla ha
+ * para AVISAR de una divergencia — una tarifa distinta es justo la señal de que Si que Brilla ha
  * subido precios, y el P&L inferido dejaría de cuadrar sin que nadie se entere.
  */
 export function validarFactura(cruda: FacturaCruda, tarifas: Record<string, number>): FacturaValidada {
@@ -202,7 +202,7 @@ export function desgloseDeFactura(factura: FacturaLimpieza): DesgloseFactura {
 }
 
 /**
- * Elige la factura que paga un movimiento. Casa por TOTAL (las facturas de Sique Brilla se pagan
+ * Elige la factura que paga un movimiento. Casa por TOTAL (las facturas de Si que Brilla se pagan
  * enteras), y una factura ya casada con otro apunte no vuelve a usarse: dos pagos idénticos el
  * mismo mes son dos facturas distintas, no la misma contada dos veces.
  */
