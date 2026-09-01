@@ -120,8 +120,8 @@ export async function GET(req: NextRequest) {
     else ok.push('✅ Sin incomes con amount NULL')
 
     // (Check de "alertas acumuladas" RETIRADO 11/07/2026): contaba filas de la tabla `alertas`,
-    // que es de IALIMP (operativa de limpiezas de Sique Brilla), sin filtrar por empresa → metía
-    // el backlog de Sique Brilla al Telegram de Alberto. Esas alertas son suyas, no de plataforma:
+    // que es de IALIMP (operativa de limpiezas de Si que Brilla), sin filtrar por empresa → metía
+    // el backlog de Si que Brilla al Telegram de Alberto. Esas alertas son suyas, no de plataforma:
     // ialimp ya las gestiona (panel 🔔 + cron semanal de aviso por email a la empresa). Plataforma
     // no debe vigilar la tabla de otro tenant. No sustituir por otro conteo de `alertas` aquí.
 
@@ -237,7 +237,7 @@ export async function GET(req: NextRequest) {
     // puede cambiar de proveedor) — cualquier proveedor/contraparte "lavandería" cuenta.
     const PROVEEDORES_MENSUALES = [
       { nombre: 'Lavandería (Giraldillo u otra)', gastosLike: '%lavander%', bancoLike: '%LAVANDERIA%' },
-      { nombre: 'Sique Brilla (limpieza)', gastosLike: '%brilla%', bancoLike: 'SI QUE BRILLA%' },
+      { nombre: 'Si que Brilla (limpieza)', gastosLike: '%brilla%', bancoLike: 'SI QUE BRILLA%' },
     ]
     const estadoProveedores = []
     for (const p of PROVEEDORES_MENSUALES) {
@@ -256,7 +256,7 @@ export async function GET(req: NextRequest) {
     } else ok.push('✅ Facturas mensuales (lavandería/limpieza) al día')
 
     // Check 11-bis: el desglose de la limpieza DEGRADÓ (25/08/2026). El P&L por piso reparte cada
-    // pago a Sique Brilla con su factura si está aportada y, si no, la INFIERE por mejor ajuste al
+    // pago a Si que Brilla con su factura si está aportada y, si no, la INFIERE por mejor ajuste al
     // importe. Esa inferencia se rompe sola el día que suban las tarifas o que un movimiento pague
     // dos facturas: el pago cae al reparto proporcional y la pantalla SIGUE enseñando números
     // plausibles. Sin este aviso, la degradación es invisible — que es justo lo que la regla «un

@@ -2,7 +2,7 @@
 //
 // Caso fundacional (30/08/2026): Smoobu se cayó y la reserva de James Ascott (Luxury,
 // 27→29/08/2026) NUNCA llegó a `incomes` — la limpieza del 29 no salió en el calendario de
-// Sique Brilla y el ingreso no contó. Dos señales alimentan la tabla `reservas_correo_booking`
+// Si que Brilla y el ingreso no contó. Dos señales alimentan la tabla `reservas_correo_booking`
 // (las inserta el triaje de correo):
 //   - los avisos de Booking al propietario («⚠️ reserva/cancelación no registrada», y las
 //     confirmaciones ordinarias si Booking las reactiva) — parser en lib/correo/reserva-booking.ts;
@@ -145,7 +145,7 @@ export async function verificarReservasBooking(): Promise<{
               ? 'Un huésped ha escrito sobre esta reserva y Smoobu no la reconoce.'
               : 'Booking avisó por correo y lo he comprobado contra Smoobu: no está.',
             'Métela a mano en Smoobu (o desde la extranet de Booking) para que cuente en calendario, limpiezas e ingresos.',
-            f.property_id ? 'La he marcado ⚠️ en la intranet de Sique Brilla hasta que Smoobu la tenga.' : '⚠️ No he podido identificar el piso por el nombre del anuncio — revisa en Booking cuál es.',
+            f.property_id ? 'La he marcado ⚠️ en la intranet de Si que Brilla hasta que Smoobu la tenga.' : '⚠️ No he podido identificar el piso por el nombre del anuncio — revisa en Booking cuál es.',
           ].join('\n')
         : [
             '🚨 <b>Cancelación de Booking que Smoobu NO ha aplicado</b>',

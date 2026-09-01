@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T08:06:20Z",
+  "generadoEn": "2026-09-01T13:36:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -774,7 +774,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 53
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "usado",
@@ -1786,7 +1786,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "estado": "no",
@@ -1812,7 +1812,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -4235,6 +4235,7 @@
       "/api/subastas/oferta",
       "/api/subastas/radar",
       "/api/subastas/seguidas",
+      "/api/telegram/avisos",
       "/api/trading/analisis-simbolo",
       "/api/trading/analizar",
       "/api/trading/cartera",
@@ -4442,7 +4443,61 @@
       "alquiler_lineas",
       "alquiler_materiales"
     ],
-    "asegura": [],
+    "asegura": [
+      "seguros._volcado_control",
+      "seguros.bien_documentos",
+      "seguros.bienes_asegurables",
+      "seguros.bot_eval_runs",
+      "seguros.bot_eval_scores",
+      "seguros.bot_turn_traces",
+      "seguros.channel_inbound_messages",
+      "seguros.cima_ficheros",
+      "seguros.cliente_carnets_conducir",
+      "seguros.cliente_emails",
+      "seguros.cliente_merge_log",
+      "seguros.cliente_relaciones",
+      "seguros.cliente_telefonos",
+      "seguros.clientes",
+      "seguros.codeoscopic_documents",
+      "seguros.codeoscopic_offers",
+      "seguros.codeoscopic_participants",
+      "seguros.codeoscopic_prices",
+      "seguros.codeoscopic_product_forms",
+      "seguros.codeoscopic_projects",
+      "seguros.codeoscopic_webhook_events",
+      "seguros.consent_logs",
+      "seguros.conversaciones",
+      "seguros.corredurias",
+      "seguros.cotizaciones",
+      "seguros.cotizaciones_anonimas",
+      "seguros.cuenta_efectivo",
+      "seguros.gestiones",
+      "seguros.historial_interno",
+      "seguros.lds_consent",
+      "seguros.liquidacion_movimientos",
+      "seguros.liquidaciones",
+      "seguros.mediator_audit_log",
+      "seguros.mensajes",
+      "seguros.ofertas_automaticas",
+      "seguros.operational_events",
+      "seguros.oportunidades",
+      "seguros.peticiones",
+      "seguros.poliza_coberturas",
+      "seguros.poliza_documentos",
+      "seguros.poliza_intervinientes",
+      "seguros.poliza_merge_log",
+      "seguros.poliza_recibos",
+      "seguros.polizas",
+      "seguros.recordatorios",
+      "seguros.siniestro_contrarios",
+      "seguros.siniestro_lesionados",
+      "seguros.siniestro_testigos",
+      "seguros.siniestros",
+      "seguros.solicitud_cambio_documentos",
+      "seguros.usuarios",
+      "seguros.whatsapp_kb_chunks",
+      "seguros.whatsapp_outbound_messages"
+    ],
     "housesevillana": [],
     "ia-rest": [
       "arqueos_caja_empleado",
@@ -4672,6 +4727,8 @@
       "subastas_radar",
       "subastas_reapariciones",
       "subastas_seguidas",
+      "telegram_avisos_log",
+      "telegram_avisos_pref",
       "tickets_compra",
       "tickets_lineas",
       "trading_acceso_token",
@@ -4894,7 +4951,7 @@
     {
       "id": "trading-analista",
       "name": "trading-analista",
-      "description": "Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1, SOLO paper). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales."
+      "description": "Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1: paper + Tramo 1 de 1.000€ REALES ya desplegado en CVX; el agente nunca ejecuta, Alberto confirma). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales."
     },
     {
       "id": "transporte-maestro",
@@ -4918,6 +4975,30 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "#1946",
+      "fecha": ""
+    },
+    {
+      "titulo": "El canal de OTP es un PUERTO, no una llamada a WhatsApp",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente de Alberto:",
+      "fecha": ""
+    },
+    {
+      "titulo": "#1938 MERGEADO",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente para Alberto:",
+      "fecha": ""
+    },
+    {
+      "titulo": "#1924 MERGEADO",
+      "fecha": ""
+    },
     {
       "titulo": "Vencimientos ya funcionando",
       "fecha": ""
@@ -5356,7 +5437,7 @@
     "packages": 38,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1207,
+    "apis": 1208,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

@@ -15,7 +15,7 @@ const TARIFAS: Record<string, number> = {
   prop_house_sevillana: 90,
 }
 
-// Cifras REALES de la factura 2025/333 de Sique Brilla (julio 2026, pagada el 03/08/2026):
+// Cifras REALES de la factura 2025/333 de Si que Brilla (julio 2026, pagada el 03/08/2026):
 // LUXURY 4×28 + BUSTOS REFORMA 2×20 + DUPLEX 2×25 + CASA SOCORRO 3×90 = 472€ de limpieza,
 // lavandería 86,18 + 86,53 = 172,71€, base 644,71€, IVA 135,39€, total 780,10€.
 // Los IMPORTES son del documento; la forma del objeto es la que devuelve el lector, no el layout

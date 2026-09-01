@@ -32,6 +32,105 @@
 
 ---
 
+### 💶 (01/09/2026) Comisiones de la correduría: spec del control devengo → liquidación → cobro → renta
+- Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuenta», y que el borrador
+  del IRPF cuadre. Medido: **hoy el borrador no se cuadra, se COPIA** (hilo Asecon IRPF 2025: «ingresos
+  los que aparece en el borrador»). Retención implícita 14,75% → **15% de IRPF, modelo 190**.
+- 🚨 **`apps/plataforma/lib/cima.ts` sobra:** SOAP nunca validado (404), parser adivinado y mapa de
+  compañías con códigos numéricos cuando los reales son `C0109`/`C0468`/`C0058`/`C0613`. La BD de Manuel
+  YA trae `cuenta_efectivo`/`liquidaciones`/`poliza_recibos` parseadas por el JAR de TIREA, con
+  **comisión, retención y remesa separadas** (Allianz feb/26: 95,03 − 14,26 = 80,77 exacto).
+- El PDF «Cuenta Agente» de Allianz es legible (**EBCDIC dentro del PDF, `cp500`**) y cuadra al céntimo
+  con CIMA. Revela **558,88€ parados** por no haber dado la cuenta bancaria. Mapfre devenga 3.614,65€ en
+  recibos cobrados y **cero liquidaciones**. Del banco, el **85% de 2026 sin identificar compañía**.
+- Spec en `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md` (**PR #1947**), con
+  `agente-correduria`, `perfil-fiscal` y `apps/asegura/CLAUDE.md` actualizados: comisión tiene TRES
+  estados (devengado→liquidado→cobrado) y la cobertura de CIMA es DESIGUAL por compañía. Pendiente:
+  plan de implementación, y 5 gestiones con compañías (Allianz cuenta, Generali/Reale/Mapfre CIMA,
+  Occident saldos) que **no se envían sin autorización**.
+
+### 🧭 (01/09/2026) asegura-portal: plan TDD de la Fase 1 (entrar + aportar póliza)
+
+- **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia
+  en TRES estados, código de un solo uso), 6 tablas `portal_*`, sesión propia y bóveda con subida de póliza.
+
+- **El canal de OTP es un PUERTO, no una llamada a WhatsApp**: la WABA de Grupo Asegura no existe todavía;
+  en Fase 1 se enchufan email y consola y WhatsApp entra añadiendo un fichero.
+- 🚨 **Lección de método:** las firmas de `aiComplete`, `openrouterVision` y `createMailTransporter` que
+  parecían obvias eran las TRES falsas (`aiComplete` devuelve `string`; `openrouterVision` toma 5 args e
+  `ImageInput` es `{data,mediaType}`; `createMailTransporter()` **no recibe credenciales**, las lee del
+  entorno y devuelve `Transporter | null`). Comprobarlas contra `packages/*` antes de escribirlas.
+- 🐛 **Bug destapado en `scripts/rotar-memoria.mjs`** (no tocado en este PR): la heurística «la fecha real
+  es la ÚLTIMA de la cabecera» archiva en agosto la entrada `### 🔴 (01/09/2026) GH_PAT_TRIGGER … desde el
+  31/08`. En las cabeceras `### `, la fecha entre paréntesis manda sobre la del texto.
+
+- **Pendiente de Alberto:** elegir modo de ejecución del plan, y la infra (proyecto Vercel `asegura-portal`,
+  rol `prisma_asegura_portal` SIN BYPASSRLS con contraseña, envs, WABA).
+
+### 🗄️ (01/09/2026) asegura: estructura del volcado CREADA en `seguros` + el runbook mentía con las FKs
+- Alberto: «la copia de la BD, mejor tener todo nosotros». Hecho el 50%: **estructura aplicada y
+  verificada en central** (`seguros`): 42 enums, 52 tablas, 721 columnas, 265 índices, 67 constraints
+  y 353 NOT NULL — **coincidencia EXACTA con el origen** en los cinco recuentos.
+- 🚨 **`docs/TRASPASO-CORREDURIA.md` decía «cero claves foráneas». Hay 131.** Se destapó comparando
+  constraints origen (198) vs destino (67). Y la conclusión que sacaba («no hay orden de carga que
+  respetar») era al revés. Corregido en el doc. Las FKs van en fichero aparte y **se crean DESPUÉS de
+  los datos**: no hay orden topológico posible (hay autorreferencias) y así sirven de verificación.
+- DDL **generado desde los catálogos del origen**, no escrito a mano. Tres ficheros en
+  `apps/asegura/prisma/sql/2026-09-01_seguros_volcado_{ddl,datos,fks}.sql`.
+- Copia de datos: por **`dblink`** (ya instalado en central), server-side. `pg_dump` local es 16.13 y
+  el origen 17.6 → se niega. **Bloqueado a falta de UNA cosa:** secreto `asegura_origen_url` en el
+  Vault de Supabase de central (lo pone Alberto; nunca por chat). El script lo lee dentro del bloque.
+- ⚠️ Sigue vigente: Manuel NO borra hasta verificar **descifrar Y buscar** sobre nuestra copia.
+
+### 🛡️ (01/09/2026) asegura: dos specs (portal + agente de venta) y la cartera NO era lo que decíamos
+- Brainstorming con Alberto → specs `2026-09-01-asegura-portal-clientes-empresas-design.md` y
+  `2026-09-01-asegura-agente-venta-design.md`. PR #1941.
+- 🚨 **Medido: la cartera viva son ~80 clientes / 109 pólizas, no 32.600/28.843.** El resto es volcado
+  histórico (`import_ref` `intranet:` 26.117 con vto. 2013-2018 y `asegura_app:` 2.612, CERO con vto.
+  futuro). Regla de Alberto: **CIMA (`import_ref IS NULL`) = cliente; el resto, lead** (32.520).
+  **Cifra ya corregida** en `CLAUDE.md`, `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`.
+- Portal: app nueva `apps/asegura-portal` (rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`;
+  schema `seguros`; WhatsApp con **WABA nueva** (`wa_opt_in`=0 en las 32.600). Eje: **«aporta tus seguros»**,
+  que sirve a leads y clientes a la vez. El móvil identifica un **HOGAR** (740 números compartidos, 630 con
+  el mismo apellido → familias): nunca se resuelve solo. El papel en la póliza PROPONE acceso, no lo concede.
+- Agente: de **VENTA**, prepara fichas en frío sin contactar a nadie. Dos corpus con autoridad distinta —
+  el contrato dice qué cubre, la **LCS/LDS** qué derechos hay (del texto consolidado del BOE, nunca de
+  memoria del modelo). Sin fine-tuning. Techo real: solo **5.613** fichas son contactables.
+- Regla que evita un desastre: **las pólizas del volcado histórico NO generan recordatorios** (serían
+  28.729 avisos de «se te venció» sobre pólizas de 2013-2018). `recordatorios` del CRM origen no sirve:
+  su `poliza_id` es NOT NULL.
+
+### 🚗 (01/09/2026) Renovaciones: columna «Qué asegura» (matrícula, dirección, tipo de RC)
+- Alberto, sobre la tabla de renovaciones de `/correduria`: «necesito otra columna con datos — auto
+  matrícula marca modelo, hogar dirección, RC de qué tipo… y siempre informa al agente».
+- Helper puro nuevo **`@central/module-seguros/objeto`** (`objetoAsegurado`, 17 tests) con **cuatro**
+  salidas: `conocido` · `no_informado` (la compañía no lo manda) · `cifrado` (la dirección de hogar
+  viene `v1:…`, AES-256-GCM; la clave sigue en el Vercel de Manuel) · `sin_objeto` (vida/salud/decesos
+  son seguros de PERSONAS: ausencia definitiva, no «pendiente»). Ninguno se pinta como hueco vacío.
+- Medido en la cartera real: `matricula`/`marca`/`modelo` en claro; **`datos_especificos.vehiculo` NO
+  es una descripción, contiene la matrícula**; una RC se identifica por sus modalidades
+  (`poliza_coberturas`), no por `datos_especificos`. Las 16 pólizas de la ventana salen `conocido`.
+- Cableado de punta a punta: `apps/asegura/lib/cartera.ts` (+ intento de descifrado) → puerto
+  `/api/operador/vencimientos` → `interpretarObjeto` en plataforma (campo opcional: una versión vieja
+  del puerto da `null` = «aún no llega», distinto de «no informado») → columna en `/correduria` y línea
+  del Telegram de renovaciones. Skill `agente-correduria` actualizada (SKILL §2 + sector §5).
+
+- **#1938 MERGEADO** (`1ba3c254`, 12 requeridos verdes). El CI volvió a no arrancar en draft: ni abrir
+  el PR ni des-draftearlo dispararon nada; lo desatascó **mergear `main` en la rama** (paso 2 del orden
+  de `CLAUDE.md`), 5ª medición de esa sección — anotada ahí con la secuencia completa. 🔀 Y el PR de
+  seguimiento #1940, abierto IGUAL (MCP, draft, misma identidad), **sí disparó al instante**: el draft
+  no es la causa. Sigue sin explicación; lo accionable es el orden, no el diagnóstico.
+
+### 📅 (01/09/2026) mercado-booking: objetivo jul/ago-2027 cumplido — falta quitar la prioridad del prompt
+- Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`) de la skill `mercado-booking`: 238 comps
+  reales en 24 ventanas (3 fechas × 4 pisos por mes) + 4/4 escaparate propio. **El objetivo (≥3
+  comparables en ≥3 fechas/piso en jul y ago 2027) ya estaba cumplido desde ayer (31/08)** — esta
+  pasada repitió trabajo porque el párrafo "PRIORIDAD TEMPORAL" seguía en el prompt de la rutina.
+
+- **Pendiente para Alberto:** borrar ese párrafo del prompt programado de `mercado-booking` (esta
+  sesión no tiene acceso al store del trigger para editarlo ella misma). Detalle en
+  `docs/AGENTES-BITACORA.md` (entrada 01/09/2026).
+
 ### 🔔 (01/09/2026) Panel «Avisos Telegram» (`/telegram`): catálogo + interruptor por aviso
 - Alberto: «las notificaciones de Telegram son muchas… un panel que las resuma y que pueda activarlas
   o desactivarlas». Hecho en `apps/plataforma`: **76 avisos PROACTIVOS catalogados** (`lib/telegram/catalogo.ts`),
@@ -46,6 +145,7 @@
   `correo.huespedes` a petición suya (📬 Huésped de Smoobu «Nueva reserva»); los borradores del agente siguen.
 - La bitácora nace vacía: el panel dice «aún no se ha medido», nunca «0 avisos». Migración
   `2026-09-01_telegram_avisos.sql` **aplicada**. Purga a 90 días desde el cron `agentes-latido`.
+
 - **#1924 MERGEADO** (`ff136ac0`, 12 requeridos verdes). El CI cazó un `make_interval(days => ${n})`
   sin `::int` (Prisma manda int8 → 42883 SOLO en runtime): guardián `regression-sql-fecha-parametro`.
   ⚠️ Ese guardián enumera con `git ls-files`, así que **no ve ficheros sin `git add`** — la suite
@@ -53,14 +153,25 @@
 - Documentado en `apps/plataforma/CLAUDE.md` (§Panel Avisos Telegram), skills `plataforma-maestro`
   (punto 12) y `correo-triaje`, y `docs/FUENTES-DE-VERDAD.md`.
 
-### 🔍 (01/09/2026) Auditoría diaria (ligera): sin 🔴, radiografía regenerada, rotación mensual hecha
-- Rango 40 commits desde el 31/08. Heartbeat (27 agentes + 12 huellas) y salud del precio SIVRA sin
-  hallazgos nuevos; único `⛔` es `ses_transporte`, ya conocido y pendiente de Alberto. Backlog de PRs
-  de rutinas sano, automerge vivo. Memoria del rango ya auto-documentada por las propias sesiones.
-- `estructura.generated.json` desfasado → regenerado. Hallazgo 🟡 (código, carril 2): 4 verticales
-  (`almacen`/`asegura`/`housesevillana`/`mariscos`) sin fila en `VERTICALES` de `estructura.ts`.
-- Rotación mensual: 535 entradas de agosto → `docs/memoria/2026-08.md`, 2 de oct-2025 →
-  `docs/memoria/2025-10.md`. Detalle en `docs/AUDITORIA-2026-09.md`.
+### 🔴 (01/09/2026) `GH_PAT_TRIGGER` caducado: la radiografía del repo lleva desde el 31/08 sin actualizarse
+- El workflow «Auditoría de estructura» falla en TODOS los pushes a `main` desde el 31/08 ~13:25 UTC:
+  `gh` responde `HTTP 401: Bad credentials`. El `git push` sí cuela —`actions/checkout` deja un
+  `http.extraheader` con el GITHUB_TOKEN que pisa el PAT de la URL—, así que **la rama se sube y el PR
+  nunca se abre**: el fallo es mudo salvo por el correo de Actions.
+- Efectos medidos: `estructura.generated.json` congelado en `6a4d53c4d` (#1887, 31/08 08:43) y **123 ramas
+  `claude/auditoria-radiografia-*` huérfanas** en el remoto (el `gh pr close --delete-branch` tampoco corre).
+- 🔴 **Para Alberto: renovar el secret `GH_PAT_TRIGGER`** — un agente no puede. Mientras tanto la radiografía
+  se regenera a mano (va en este PR) y las ramas huérfanas siguen ahí, pendientes de barrido.
+
+### 🔌 (01/09/2026) Fly.io: el adapter CIMA se transfirió… y Manuel lo devolvió a su organización
+- 08:16 UTC `fly apps move asegura-app-cima-adapter --org grupo-asegura` → OK (48 s). 08:32 UTC Manuel lo
+  devolvió a `manuel-suarez-678` (119 s): aceptar la invitación de miembro le bastó para sacarlo. `grupo-asegura`
+  quedó vacía. **No es un problema técnico, es una conversación con Manuel** — no se vuelve a mover sin su OK.
+- La app no se cayó (`/health` 200 tras ambos moves) y **los ficheros no se pierden en `/tmp`**: los logs de Fly
+  cuadran al minuto con `cima_ficheros` (27/08 08:15, 28/08 15:32, 30/08 11:34).
+- ❌ Corrección: el fichero CIMA **no** entra «a diario entre 11:35 y 11:42 UTC» (se afirmó y era falso). El horario
+  es irregular y el 01/09 (00:00–08:35 UTC) no entró ninguna tanda. Pendiente real: traer el disparador a
+  `CRON_JOBS` de plataforma —hoy lo llama infra de Manuel—, que quita la dependencia sin mover infraestructura.
 
 ### ✅ (01/09/2026) V4 Flash CONFIRMADO en producción con tráfico real — serie cerrada al 100%
 - Sonda diaria 07:00:48 UTC: `plataforma·sonda·openrouter·deepseek/deepseek-v4-flash·ok` →

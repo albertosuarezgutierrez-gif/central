@@ -11,7 +11,7 @@ const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 // El cliente comprime a ~1600px JPEG; esto es solo el tope duro (Vercel corta en 4,5 MB igualmente).
 const MAX_FOTO_BYTES = 4 * 1024 * 1024
 
-// POST /api/sivra/limpieza-intranet/partes — parte de incidencia de Sique Brilla sobre UNA limpieza
+// POST /api/sivra/limpieza-intranet/partes — parte de incidencia de Si que Brilla sobre UNA limpieza
 // (property_id + fecha): nota y/o foto. Se registra en la BD y se avisa a Alberto por Telegram
 // (best-effort: si Telegram falla, el parte queda guardado igual con avisado_at NULL).
 export async function POST(req: NextRequest) {

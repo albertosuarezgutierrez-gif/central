@@ -7,9 +7,18 @@
 ## Estado (26/08/2026): esqueleto vivo, cartera SIN migrar
 
 Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build— para que el
-día del corte solo haya que verter el modelo y las pantallas. **La cartera real (32.600
-clientes, 28.843 pólizas) sigue en el Supabase de Manuel Suárez** (`uijsgeocgdaxkhvwtjqs`),
-alimentándose a diario por CIMA/EIAC.
+día del corte solo haya que verter el modelo y las pantallas. **Las 32.600 fichas y 28.843
+pólizas siguen en el Supabase de Manuel Suárez** (`uijsgeocgdaxkhvwtjqs`), alimentándose a
+diario por CIMA/EIAC.
+
+🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son ~80 clientes /
+109 pólizas**: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las
+otras 28.729 son volcado histórico cargado en jun/2026 (`intranet:` 26.117 con vencimientos
+2013-2018 y `asegura_app:` 2.612) y **ninguna** vence en los últimos 18 meses. Regla de Alberto:
+**CIMA = cliente actual; el resto = lead** (32.520). Consecuencia para el código: **las pólizas con
+`import_ref` NO generan recordatorios** — serían 28.729 avisos de «se te venció» sobre pólizas de
+hace ocho años. Diseño completo en
+`docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
 
 🚨 **Schema `seguros` vacío ≠ la correduría no tiene datos.** Es la trampa que esta app
 tiene que evitar por diseño: el dashboard **no pinta KPIs a 0** mientras no haya migración
@@ -98,6 +107,14 @@ GitHub Actions (cron 5:30 y 11:30)
   Por eso la verificación son **dos** pruebas, no una: **descifrar** un registro real **y buscar** un
   cliente conocido por email y por DNI. Rotar el índice ciego obliga a **recalcular los 32.600**, y
   mientras dura ese recálculo las búsquedas mienten.
+- 💶 **Lo que CIMA ya deja parseado (medido 01/09/2026):** `cuenta_efectivo` (comisiones, retención,
+  remesa por periodo), `liquidaciones` y `poliza_recibos` (`prima_neta`, `comision_bruta`,
+  `comision_liquida`, `situacion`). Con eso se calcula la comisión **esperada** y hasta el **% por
+  compañía y ramo**. ⚠️ **La cobertura es desigual:** Mapfre `C0058` manda recibos pero **ninguna
+  liquidación**; Allianz `C0109` manda las dos; Occident `C0468` lleva meses en **saldo deudor**;
+  Reale `C0613` se adhirió el 01/09/2026; Generali sigue sin acceso. Un total de comisiones que no
+  diga qué compañías faltan es una cifra falsa. Diseño del control en
+  `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md`.
 - **Ficheros en Vercel Blob** (privado, URLs firmadas; hoy ~4). Los EIAC de CIMA **no se guardan como
   fichero**: se parsean a tablas.
 - **Codeoscopic — LA fuente de tarificación y EMISIÓN de pólizas nuevas (01/09/2026):** Avant2 Sales

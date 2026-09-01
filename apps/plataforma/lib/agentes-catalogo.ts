@@ -54,7 +54,7 @@ export const RUTINAS_CLAUDE: AgenteInfo[] = [
     cadencia: 'Miércoles 09:00', disparo: 'Trigger Claude', entrega: 'lectura', telegram: true,
     archivo: '.claude/skills/psd2-health-check', vertical: 'Plataforma (banca)', estado: 'activo' },
   { id: 'ialimp-client-health', nombre: 'ialimp client health', tipo: 'rutina-claude',
-    funcion: 'Pulso semanal de Sique Brilla: PMS sync, programaciones sin asignar, impagos',
+    funcion: 'Pulso semanal de Si que Brilla: PMS sync, programaciones sin asignar, impagos',
     cadencia: 'Viernes 17:00', disparo: 'Trigger Claude', entrega: 'lectura', telegram: true,
     archivo: '.claude/skills/ialimp-client-health', vertical: 'IALIMP', estado: 'activo' },
   { id: 'rrhh-compliance-calendar', nombre: 'RRHH compliance calendar', tipo: 'rutina-claude',

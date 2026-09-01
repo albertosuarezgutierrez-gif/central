@@ -1,6 +1,6 @@
 // lib/sivra/extras/aviso-limpieza.ts — el email a la empresa de limpieza cuando el extra se paga.
 //
-// Destinatario: Sique Brilla (`limpiezascruzz@gmail.com`, confirmado por Alberto el 28/08/2026).
+// Destinatario: Si que Brilla (`limpiezascruzz@gmail.com`, confirmado por Alberto el 28/08/2026).
 // Remitente `hola@ialimp.es` por el transporte que plataforma ya tiene montado, con Reply-To a su
 // Gmail para que la respuesta de la limpieza le llegue a él y no a un buzón que nadie mira.
 //

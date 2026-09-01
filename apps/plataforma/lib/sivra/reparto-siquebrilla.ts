@@ -1,6 +1,6 @@
-// lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Sique Brilla (puro, testeable).
+// lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Si que Brilla (puro, testeable).
 //
-// Contexto (25/08/2026): la factura de Sique Brilla ya NO es solo limpieza — desde junio incluye
+// Contexto (25/08/2026): la factura de Si que Brilla ya NO es solo limpieza — desde junio incluye
 // líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex +
 // 3×90€ Casa Socorro = 472€ de limpieza, + 172,71€ de lavandería, + IVA = 780,10€). Repartir el
 // pago entero como "limpieza por salidas" mezclaba los dos servicios y encima usaba las salidas
@@ -64,7 +64,7 @@ export function elegirMesFacturado<C extends { salidas: ReadonlyMap<string, numb
 }
 
 /**
- * Desglosa el total pagado a Sique Brilla en limpieza por piso + resto de lavandería.
+ * Desglosa el total pagado a Si que Brilla en limpieza por piso + resto de lavandería.
  * `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`).
  * Devuelve null si no hay salidas con tarifa con las que desglosar: el caller decide el
  * fallback — null significa «no se ha podido desglosar», nunca «lavandería 0».

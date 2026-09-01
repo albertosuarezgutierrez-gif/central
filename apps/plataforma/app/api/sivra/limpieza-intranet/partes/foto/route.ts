@@ -5,7 +5,7 @@ import { accesoLimpieza } from '@/lib/limpieza-acceso'
 export const dynamic = 'force-dynamic'
 
 // GET /api/sivra/limpieza-intranet/partes/foto?id=N — sirve la foto de un parte desde la BD.
-// Autenticada como el resto de la intranet (sesión de Alberto o cookie de invitado de Sique Brilla):
+// Autenticada como el resto de la intranet (sesión de Alberto o cookie de invitado de Si que Brilla):
 // las fotos no tienen URL pública a propósito.
 export async function GET(req: NextRequest) {
   const modo = await accesoLimpieza()

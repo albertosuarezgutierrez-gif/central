@@ -3,10 +3,13 @@ import {
   DIAS_PREAVISO_TOMADOR,
   POLIZA_ESTADOS_VIGENTES,
   diasHastaVencimiento,
+  objetoAsegurado,
   primaReferencia,
   urgenciaRenovacion,
+  type ObjetoAsegurado,
   type UrgenciaRenovacion,
 } from '@central/module-seguros'
+import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 /**
@@ -33,9 +36,23 @@ export type ResumenCartera = {
   vence60?: number
 }
 
-/** Una póliza a renovar. SIN datos sensibles: el nombre del tomador sí (está en
- *  claro en la BD y sin él no se puede llamar a nadie), pero NUNCA DNI,
- *  teléfono, dirección ni matrícula — esos van cifrados y aquí no pintan. */
+/**
+ * Una póliza a renovar. El criterio de qué sale de aquí es «lo que hace falta
+ * para llamar al cliente y saber de qué póliza le hablas», no «todo lo que hay
+ * en la fila»:
+ *
+ * - Sale el nombre del tomador (en claro en la BD; sin él no se llama a nadie)
+ *   y el **objeto asegurado** ya derivado — vehículo y matrícula, localidad del
+ *   inmueble, modalidades de la RC. Sin eso, un tomador con tres pólizas de
+ *   auto es indistinguible.
+ * - NO sale NUNCA `datos_especificos` en bruto: ahí conviven campos cifrados
+ *   (la dirección del riesgo, `v1:iv:cipher:tag`) y ruido de la ingesta. Solo
+ *   viaja el resumen que produce `objetoAsegurado`.
+ * - NO salen DNI, teléfono, email ni IBAN — van cifrados y aquí no pintan.
+ *
+ * La matrícula SÍ es dato personal: este puerto está detrás de Bearer y solo lo
+ * consume el cuadro de mando de Alberto. No se vuelca a informes ni a chats.
+ */
 export type PolizaVencimiento = {
   id: string
   cliente: string
@@ -48,7 +65,17 @@ export type PolizaVencimiento = {
   /** `null` = la compañía no ha informado la prima (pasa con Allianz por EIAC). */
   prima: number | null
   fraccionamiento: string | null
+  /** Qué asegura la póliza, ya derivado y con su propio estado (conocido /
+   *  no informado / cifrado / sin objeto). Nunca es una cadena vacía. */
+  objeto: ObjetoAsegurado
 }
+
+/**
+ * Ramos cuyo objeto NO vive en `datos_especificos`: una RC o un comercio se
+ * describen por las coberturas contratadas. Se consultan solo para esos, que
+ * son pocos — un auto trae 25 coberturas que no dicen nada del vehículo.
+ */
+const RAMOS_DESCRITOS_POR_COBERTURAS = ['responsabilidad_civil', 'comercio', 'otros'] as const
 
 function hoyUtc(): Date {
   const d = new Date()
@@ -139,10 +166,30 @@ export async function vencimientosProximos(
     orderBy: { fechaVencimiento: 'asc' },
     select: {
       id: true, tipo: true, aseguradora: true, numeroPoliza: true, fechaVencimiento: true,
-      primaAnual: true, primaBruta: true, fraccionamiento: true,
+      primaAnual: true, primaBruta: true, fraccionamiento: true, datosEspecificos: true,
       cliente: { select: { nombre: true, apellidos: true } },
     },
   })
+
+  // Coberturas SOLO de los ramos que las necesitan para identificarse.
+  const idsPorCoberturas = filas
+    .filter(f => (RAMOS_DESCRITOS_POR_COBERTURAS as readonly string[]).includes(String(f.tipo)))
+    .map(f => f.id)
+  const coberturasPorPoliza = new Map<string, string[]>()
+  if (idsPorCoberturas.length > 0) {
+    const cobs = await db.polizaCobertura.findMany({
+      where: { correduriaId, polizaId: { in: idsPorCoberturas } },
+      select: { polizaId: true, descripcion: true },
+      orderBy: { numeroOrden: 'asc' },
+    })
+    for (const c of cobs) {
+      if (!c.descripcion) continue
+      const lista = coberturasPorPoliza.get(c.polizaId) ?? []
+      lista.push(c.descripcion)
+      coberturasPorPoliza.set(c.polizaId, lista)
+    }
+  }
+
   return filas.map(f => {
     const vencimiento = f.fechaVencimiento as Date
     const diasRestantes = diasHastaVencimiento(vencimiento, hoyRef)
@@ -160,6 +207,11 @@ export async function vencimientosProximos(
         primaBruta: f.primaBruta === null ? null : Number(f.primaBruta),
       }),
       fraccionamiento: f.fraccionamiento === null ? null : String(f.fraccionamiento),
+      objeto: objetoAsegurado({
+        tipo: String(f.tipo),
+        datos: descifrarDireccion(f.datosEspecificos),
+        coberturas: coberturasPorPoliza.get(f.id) ?? null,
+      }),
     }
   })
 }
@@ -170,4 +222,32 @@ export async function correduriaUnica(): Promise<{ id: string; nombre: string } 
   const filas = await prismaAsegura().correduria.findMany({ select: { id: true, nombre: true }, take: 2 })
   if (filas.length > 1) throw new Error('Más de una correduría en la base: el ámbito ya no puede ser implícito')
   return filas[0] ?? null
+}
+
+/** `datos_especificos` es JSON libre: puede llegar como array, número o null.
+ *  Solo se mira si de verdad es un objeto. */
+function esObjetoPlano(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+/**
+ * La dirección del riesgo (hogar) viaja CIFRADA en `datos_especificos`
+ * (`v1:iv:cipher:tag`). Se intenta descifrar con la clave del propio proyecto:
+ *
+ * - con `PII_ENCRYPTION_KEY` puesta → sale la calle en claro;
+ * - sin clave, o con una clave que no abre ese registro → `objetoAsegurado`
+ *   verá el `v1:` intacto y lo dirá como **«cifrado»**, que NO es «sin dato».
+ *
+ * Lo que no puede pasar nunca es que un fallo de descifrado se convierta en un
+ * hueco silencioso: por eso el `catch` deja el valor tal cual en vez de borrarlo.
+ */
+function descifrarDireccion(datos: unknown): Record<string, unknown> | null {
+  if (!esObjetoPlano(datos)) return null
+  const direccion = datos.direccion
+  if (typeof direccion !== 'string' || !direccion.startsWith('v1:')) return datos
+  try {
+    return { ...datos, direccion: decryptField(direccion) }
+  } catch {
+    return datos
+  }
 }

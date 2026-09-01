@@ -10,6 +10,8 @@
 // arreglan en sitios distintos — un recuadro que solo dice «sin respuesta»
 // obliga a adivinar cuál de los tres es (pasó el 31/08/2026).
 
+import type { ObjetoAsegurado } from '@central/module-seguros'
+
 export type MotivoErrorCartera =
   | 'secreto_rechazado'   // asegura devolvió 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
   | 'asegura_error'       // asegura respondió pero no pudo leer su BD (estado:'error')
@@ -113,6 +115,30 @@ export type PolizaVencimiento = {
   urgencia: string
   prima: number | null
   fraccionamiento: string | null
+  /**
+   * Qué asegura la póliza. `null` NO es «no asegura nada» ni «no se sabe»: es
+   * «esta versión desplegada de asegura todavía no manda el campo». Se separa
+   * a propósito del `estado: 'no_informado'` que sí viene del puerto, porque se
+   * arreglan en sitios distintos (desplegar vs. reclamar el dato a la compañía).
+   */
+  objeto: ObjetoAsegurado | null
+}
+
+const ESTADOS_OBJETO = new Set(['conocido', 'no_informado', 'cifrado', 'sin_objeto'])
+
+/** Lectura defensiva del objeto asegurado. Una forma rara NO tumba la fila
+ *  entera: degrada a `null` («el puerto no lo informa»), que la UI ya sabe decir. */
+export function interpretarObjeto(v: unknown): ObjetoAsegurado | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.estado !== 'string' || !ESTADOS_OBJETO.has(o.estado)) return null
+  const cadena = (x: unknown): string | null => (typeof x === 'string' && x.trim() !== '' ? x : null)
+  return {
+    estado: o.estado as ObjetoAsegurado['estado'],
+    titulo: cadena(o.titulo),
+    detalle: cadena(o.detalle),
+    nota: cadena(o.nota),
+  }
 }
 
 export type VencimientosAsegura =
@@ -153,6 +179,7 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
       // La prima ausente es null («la compañía no la informa»), nunca 0.
       prima: typeof f.prima === 'number' && Number.isFinite(f.prima) ? f.prima : null,
       fraccionamiento: typeof f.fraccionamiento === 'string' ? f.fraccionamiento : null,
+      objeto: interpretarObjeto(f.objeto),
     })
   }
   const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 90

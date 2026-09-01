@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { facturasMensualesFaltantes } from './facturas-mensuales.ts'
 
 const GIRALDILLO = 'Lavandería El Giraldillo'
-const SB = 'Sique Brilla (limpieza)'
+const SB = 'Si que Brilla (limpieza)'
 
 test('caso real AFV-11625: mayo sin factura ni pago → avisa a partir del día 5 de junio', () => {
   const estado = [

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { agregarBriefing, formatBriefingTexto, type NegocioResumen } from './briefing.ts'
 
 const items: NegocioResumen[] = [
-  { nombre: 'Sique Brilla', sector: 'limpieza', ingresosYtd: 1000, gastosYtd: 400, resultadoYtd: 600, disponible: true },
+  { nombre: 'Si que Brilla', sector: 'limpieza', ingresosYtd: 1000, gastosYtd: 400, resultadoYtd: 600, disponible: true },
   { nombre: 'Busto Reform', sector: 'turístico', ingresosYtd: 2000, gastosYtd: 500, resultadoYtd: 1500, disponible: true },
   { nombre: 'Bar Pepe', sector: 'hostelería', ingresosYtd: 0, gastosYtd: 0, resultadoYtd: 0, disponible: false, nota: 'sin local vinculado' },
 ]
@@ -28,7 +28,7 @@ test('formatBriefingTexto: asunto con nombre y año, cuerpo con líneas y total'
   const { asunto, cuerpo } = formatBriefingTexto('Alberto', items, agregarBriefing(items), 2026)
   assert.match(asunto, /Alberto/)
   assert.match(asunto, /2026/)
-  assert.match(cuerpo, /Sique Brilla/)
+  assert.match(cuerpo, /Si que Brilla/)
   assert.match(cuerpo, /Busto Reform/)
   // negocio no disponible aparece con su nota, no con cifras
   assert.match(cuerpo, /Bar Pepe.*sin local vinculado/)

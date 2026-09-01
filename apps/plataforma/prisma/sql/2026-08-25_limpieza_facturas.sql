@@ -1,4 +1,4 @@
--- Desglose REAL de las facturas de limpieza (Sique Brilla) — 25/08/2026.
+-- Desglose REAL de las facturas de limpieza (Si que Brilla) — 25/08/2026.
 --
 -- Hasta ahora el P&L por piso INFERÍA el desglose de cada pago por mejor ajuste al importe
 -- (`lib/sivra/reparto-siquebrilla.ts`). La factura trae el desglose de verdad; esta tabla lo

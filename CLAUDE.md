@@ -76,7 +76,13 @@ Salvaguardas para no perder información:
 - **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto). **Esqueleto
   desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
   manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
-  🚨 **La cartera NO está migrada:** los 32.600 clientes / 28.843 pólizas siguen en el Supabase de **Manuel
+  🚨 **Y OJO CON LA CIFRA (medido 01/09/2026): 32.600 fichas ≠ 32.600 clientes.** La **cartera VIVA son
+  ~80 clientes / 109 pólizas** — las que entran por CIMA, identificables por `polizas.import_ref IS NULL`.
+  Las otras 28.729 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
+  jun/2026, vencimientos 2013-2018) y **ninguna** tiene vencimiento en los últimos 18 meses. Regla de Alberto:
+  **lo que entra por CIMA es cliente actual; el resto son leads** (32.520). Detalle en
+  `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
+  🚨 **La cartera NO está migrada:** las 32.600 fichas / 28.843 pólizas siguen en el Supabase de **Manuel
   Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
   CIMA/EIAC**. ⚠️ **Eso NO la convierte en una migración en caliente** (se creyó así hasta el 26/08/2026):
   el CRM **todavía no está operativo** —no hay nadie usándolo— y **los ficheros de EIAC se pueden
@@ -301,6 +307,30 @@ máquina, o cerrar y reabrir el PR desde la web, o abrir el PR de nuevo desde un
 nombre. **El agente no crea ramas nuevas por su cuenta** (solo empuja a la rama designada) y el
 commit vacío sigue prohibido.
 
+✅ **QUINTA medición (01/09/2026, PR #1938): el orden de arriba FUNCIONÓ tal cual está escrito, y
+la secuencia completa se midió paso a paso.** Sin conflicto con `main` (paso 1 no aplicaba), se
+ejecutó el paso 2 y arrancaron los 12 requeridos a los pocos segundos:
+
+| paso | qué se hizo | runs de los requeridos |
+|---|---|---|
+| 1 | push de la rama (token de App) | **0** |
+| 2 | PR abierto **en draft** por la herramienta MCP | **0** (solo `rutinas-automerge`, que es `pull_request_target`) |
+| 3 | des-draftear (`draft:false` por la API) | **0** (ídem) |
+| 4 | **merge de `main` en la rama + push** | ✅ **12/12**, `event: pull_request`, `actor: albertosuarezgutierrez-gif`, verdes en ~2,5 min |
+
+🔀 **Y el PR de seguimiento del mismo día (#1940) volvió a romper el patrón: abierto IGUAL —MCP, en
+draft, misma identidad— y disparó los 12 al instante** (`event: pull_request`, sin des-draftear ni
+tocar nada). Dos PRs consecutivos, mismo método, resultados opuestos. Así que **el draft NO es la
+causa**, o no es la única: sigue sin explicación, exactamente como quedó tras #1789. Lo único
+accionable sigue siendo el orden de abajo.
+
+Encaja con la hipótesis del draft del 27/08 **con un matiz que conviene recordar**: sacar de draft
+por sí solo no disparó nada (como en #1789), pero dejó la rama armada para que **el push siguiente
+sí** lo hiciera — el push inicial, con el PR aún en draft, había sido mudo con el mismo token. ⚠️ No
+está aislado si lo que desatasca es el des-draft, el merge de la base o los dos juntos: aquí también
+cambiaron dos cosas antes del push que funcionó. Lo que sí queda medido cinco veces es que **el orden
+de abajo resuelve**, así que síguelo sin gastar tiempo en diagnosticar la causa.
+
 **Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
 de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
 cortos.
@@ -334,6 +364,12 @@ No lo es: con `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (≈20 s, el
 |---|---|---|
 | `Tests (packages + guardián)` | `pnpm test` | raíz |
 | `Typecheck · <app>` (×11) | `pnpm exec prisma generate` (si hay `prisma/schema.prisma`) + `pnpm exec tsc --noEmit -p tsconfig.json` | `apps/<app>` |
+
+⚠️ **`apps/asegura` tiene DOS schemas de Prisma** (`prisma/schema.prisma` y `prisma/asegura.prisma`, este
+último con `output = ../lib/generated/asegura-client`). Generar solo el primero deja su typecheck en rojo
+con `TS2307: Cannot find module './generated/asegura-client'` **en local mientras el CI está verde** — el
+workflow usa el script de la app, que genera los dos. El comando completo es el de su `package.json`:
+`prisma generate && prisma generate --schema prisma/asegura.prisma`. (Medido 01/09/2026.)
 | `Análisis estático · Patrones conocidos` | `pnpm exec tsx scripts/qa-check.ts` | **`apps/ia-rest`** (el workflow lleva `working-directory`) |
 | `Lint · TypeCheck · Build` | `pnpm run lint` · `pnpm exec tsc --noEmit` · `pnpm run build` | **`apps/ia-rest`** (idem) |
 

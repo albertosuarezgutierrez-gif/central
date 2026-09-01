@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T08:08:54Z",
-  "sha": "e771dadff17b91167eae3287fc7d205b3e55e961",
+  "generadoEn": "2026-09-01T13:36:24Z",
+  "sha": "82d202f4511f410a3c5382318bbaedbc7d59d549",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3176,7 +3176,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 53
+          "linea": 80
         },
         {
           "nombre": "resumenCartera",
@@ -3184,7 +3184,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResumenCartera>",
-          "linea": 58
+          "linea": 85
         },
         {
           "nombre": "vencimientosProximos",
@@ -3192,7 +3192,7 @@
           "exportada": true,
           "params": "correduriaId: string, dias: number = DIAS_HORIZONTE_RENOVACION, hoyRef: Date = hoyUtc(),",
           "retorno": "Promise<PolizaVencimiento[]>",
-          "linea": 123,
+          "linea": 150,
           "resumen": "Pólizas vigentes que vencen dentro del horizonte, ordenadas por urgencia real (la fecha, no la etiqueta del estado). Es la lista de llamadas de la semana. Las que tienen `fechaVencimiento` NULL NO sal"
         },
         {
@@ -3201,13 +3201,31 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 168,
+          "linea": 220,
           "resumen": "La única correduría de la base (medido: 1 fila). Lanza si hubiera más de una."
+        },
+        {
+          "nombre": "esObjetoPlano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 229,
+          "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null. Solo se mira si de verdad es un objeto."
+        },
+        {
+          "nombre": "descifrarDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 244,
+          "resumen": "- sin clave, o con una clave que no abre ese registro → `objetoAsegurado` verá el `v1:` intacto y lo dirá como **«cifrado»**, que NO es «sin dato». Lo que no puede pasar nunca es que un fallo de desci"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fabe4c1a741d"
+      "hash": "552d09e52d35"
     },
     {
       "ruta": "apps/asegura/lib/dinero.ts",
@@ -46878,12 +46896,12 @@
           "exportada": true,
           "params": "{ isOperator }: { isOperator: boolean }",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1b1319dc46af"
+      "hash": "d5b178213265"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/comunicacion/ComunicacionClient.tsx",
@@ -47190,17 +47208,26 @@
           "linea": 433
         },
         {
+          "nombre": "CeldaObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
+          "retorno": null,
+          "linea": 560,
+          "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
+        },
+        {
           "nombre": "Vencimientos",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 548
+          "linea": 593
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9e079985c124"
+      "hash": "a22e170abb55"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/page.tsx",
@@ -49960,7 +49987,7 @@
           "params": "",
           "retorno": null,
           "linea": 191,
-          "resumen": "─── TAB TAREAS ───────────────────────────────────────────────── Tareas sueltas para la limpieza (Sique Brilla) — aparte de las limpiezas por reserva. Las ven y las marcan hechas desde su intranet (/i"
+          "resumen": "─── TAB TAREAS ───────────────────────────────────────────────── Tareas sueltas para la limpieza (Si que Brilla) — aparte de las limpiezas por reserva. Las ven y las marcan hechas desde su intranet (/"
         },
         {
           "nombre": "TabSemana",
@@ -50030,7 +50057,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3dc49bf81870"
+      "hash": "8576456bd5c7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/limpiadoras/page.tsx",
@@ -50990,6 +51017,64 @@
       "hash": "db085301ccba"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/telegram/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TelegramPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "TelegramPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "🔔 Panel de avisos de Telegram: qué te manda el bot, cada cuánto, y el interruptor de cada uno. Todo el estado se carga por `/api/telegram/avisos` (la pantalla es un cliente de esa ruta)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "31aecb784cf3"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/telegram/TelegramClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TelegramClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": "string",
+          "linea": 31
+        },
+        {
+          "nombre": "Interruptor",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ activo, onClick, disabled }: { activo: boolean; onClick: () => void; disabled?: boolean }",
+          "retorno": null,
+          "linea": 38,
+          "resumen": "Interruptor táctil (≥44 px de alto de zona activa, se usa desde el móvil)."
+        },
+        {
+          "nombre": "TelegramClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 62
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "14c6e27dc2e1"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/ThemeToggle.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -51366,12 +51451,12 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 85
+          "linea": 88
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "59ec8e1ed2d1"
+      "hash": "02bc8cef3c75"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -54112,7 +54197,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 166
+          "linea": 167
         }
       ],
       "tablas": [
@@ -54125,7 +54210,7 @@
         "pricing_decisiones"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "8d13d1440f94"
+      "hash": "d315b980b8d2"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -54225,7 +54310,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 15
         },
         {
           "nombre": "fmt",
@@ -54233,7 +54318,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 110
+          "linea": 109
         }
       ],
       "tablas": [
@@ -54243,7 +54328,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "36a29390c0f7"
+      "hash": "b8d3af1a1ee3"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-avisos/route.ts",
@@ -54392,7 +54477,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/correduria-renovaciones",
-      "hash": "dd14f0718723"
+      "hash": "c9e58021c74c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correo-digest/route.ts",
@@ -54520,7 +54605,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/facturas-conciliar-gmail",
-      "hash": "c136b6665148"
+      "hash": "54298346452c"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/facturas-resumen-semanal/route.ts",
@@ -54615,7 +54700,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": "/api/cron/health-check",
-      "hash": "fb271bf3b835"
+      "hash": "c9102de92b9d"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ia-director-refresh/route.ts",
@@ -54631,7 +54716,7 @@
           "exportada": false,
           "params": "v?: string",
           "retorno": null,
-          "linea": 95,
+          "linea": 94,
           "resumen": "USD por millón de tokens desde el pricing de OpenRouter (viene en USD por token, string)."
         },
         {
@@ -54640,7 +54725,7 @@
           "exportada": false,
           "params": "porCategoria: Record<string, string>, slugs: string[]",
           "retorno": "string",
-          "linea": 97
+          "linea": 96
         },
         {
           "nombre": "GET",
@@ -54648,7 +54733,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 109
+          "linea": 108
         }
       ],
       "tablas": [
@@ -54659,7 +54744,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/ia-director-refresh",
-      "hash": "7379929d5ea0"
+      "hash": "cb368e12341f"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/paper-tracker/route.ts",
@@ -54728,7 +54813,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/pre-renta",
-      "hash": "34e791e41fc4"
+      "hash": "3173aedc57dd"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/prevision-pisos/route.ts",
@@ -54741,13 +54826,13 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14,
+          "linea": 13,
           "resumen": "🔮 Foto diaria de la previsión por piso (mes en curso + 2) → `pisos_previsiones`. Es el registro que permite juzgar después si las previsiones se cumplen (seguimiento en /sivra/resultado-pisos). Ademá"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/prevision-pisos",
-      "hash": "dc6838361b2d"
+      "hash": "644d250d1533"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/psd2-sync/route.ts",
@@ -54763,12 +54848,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 15
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/psd2-sync",
-      "hash": "551a97c204ab"
+      "hash": "25c8f8557021"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/resumen-mensual/route.ts",
@@ -54848,7 +54933,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/sivra-extras-impago",
-      "hash": "79c1d115698c"
+      "hash": "14391abb7ea2"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-avisos/route.ts",
@@ -54891,7 +54976,7 @@
         "subastas_radar"
       ],
       "rutaApi": "/api/cron/subastas-avisos",
-      "hash": "49d5bd3bd363"
+      "hash": "fa9669ea9765"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-cierre/route.ts",
@@ -54980,7 +55065,7 @@
         "subastas_seguidas"
       ],
       "rutaApi": "/api/cron/subastas-cierre",
-      "hash": "e83d16cc870e"
+      "hash": "65bceafaf0ac"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-enriquecer/route.ts",
@@ -55004,7 +55089,7 @@
         "subastas"
       ],
       "rutaApi": "/api/cron/subastas-enriquecer",
-      "hash": "0a250f59dd59"
+      "hash": "de3e468707a0"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/subastas-ingesta/route.ts",
@@ -55143,7 +55228,7 @@
         "trading_backtest"
       ],
       "rutaApi": "/api/cron/trading-h10",
-      "hash": "e34bba43cca9"
+      "hash": "e1714bdc39a6"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/trading-premarket/route.ts",
@@ -55219,7 +55304,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/cron/trading-watchdog",
-      "hash": "3464d9c22fcc"
+      "hash": "c1b0fd98a3d9"
     },
     {
       "ruta": "apps/plataforma/app/api/empresas/agente/route.ts",
@@ -55769,7 +55854,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/finanzas/gastos/conciliar-gmail",
-      "hash": "1c65d3af01ce"
+      "hash": "f42648b0e167"
     },
     {
       "ruta": "apps/plataforma/app/api/finanzas/gastos/desglose/route.ts",
@@ -56105,7 +56190,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": "Promise<Diagnostico>",
-          "linea": 43,
+          "linea": 42,
           "resumen": "Autoriza y, si no, dice EN CUÁL de las formas ha fallado (sin revelar ningún valor)."
         },
         {
@@ -56114,7 +56199,7 @@
           "exportada": false,
           "params": "req: NextRequest, causa: string",
           "retorno": null,
-          "linea": 89
+          "linea": 88
         },
         {
           "nombre": "GET",
@@ -56122,7 +56207,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 106,
+          "linea": 105,
           "resumen": "Preflight: la rutina valida su token al arrancar, no cuando ya tiene algo que contar."
         },
         {
@@ -56131,12 +56216,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 116
+          "linea": 115
         }
       ],
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
-      "hash": "8f96b9ce86ab"
+      "hash": "cded09e0f8ec"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/latido/route.ts",
@@ -56215,7 +56300,7 @@
         "next"
       ],
       "rutaApi": "/api/internal/reclamar-reparacion",
-      "hash": "662aa7bb90d7"
+      "hash": "d66033cc1595"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/reparacion-resultado/route.ts",
@@ -56238,7 +56323,7 @@
         "next"
       ],
       "rutaApi": "/api/internal/reparacion-resultado",
-      "hash": "3f3a2cff45be"
+      "hash": "04ace2ee8d8d"
     },
     {
       "ruta": "apps/plataforma/app/api/inversion/underwrite/route.ts",
@@ -56486,7 +56571,7 @@
           "exportada": true,
           "params": "_req: Request, ctx: { params: Promise<{ id: string; ref: string }> }",
           "retorno": null,
-          "linea": 17,
+          "linea": 16,
           "resumen": "Borra un PIN (por su reserva_ref). Sesión de usuario. Intenta borrarlo en la cerradura y lo marca 'borrado' en la BD. `ref` viene URL-encoded (puede contener ':' del prefijo manual)."
         },
         {
@@ -56495,7 +56580,7 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string; ref: string }> }",
           "retorno": null,
-          "linea": 53,
+          "linea": 52,
           "resumen": "· si el borrado sale bien y la creación falla, el huésped se queda con un código muerto. Ese caso se marca `estado='error'` y se canta: NO se deja como 'activo', porque el mensaje de la víspera lee ju"
         }
       ],
@@ -56505,7 +56590,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/[id]/pin/[ref]",
-      "hash": "ffd591253a97"
+      "hash": "17cb055fd03a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/acceso/[id]/pin/route.ts",
@@ -56633,7 +56718,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/programador",
-      "hash": "963358377f67"
+      "hash": "3458e9f72c66"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/comando/route.ts",
@@ -56745,7 +56830,7 @@
           "exportada": false,
           "params": "dispId: string, accion: string, reservaRef: string | null, detalle: unknown",
           "retorno": null,
-          "linea": 20
+          "linea": 19
         },
         {
           "nombre": "GET",
@@ -56753,7 +56838,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 28
+          "linea": 27
         }
       ],
       "tablas": [
@@ -56762,7 +56847,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/domotica/programador",
-      "hash": "b4f057d2b7a6"
+      "hash": "cbfca74b8749"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/eventos/calendario/route.ts",
@@ -56892,7 +56977,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/verificar",
-      "hash": "6be1d6de31f7"
+      "hash": "bc39caa7b688"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/eventos/websearch/route.ts",
@@ -56941,12 +57026,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 12
+          "linea": 11
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/expenses/agent/resumen-mensual",
-      "hash": "51087e60060e"
+      "hash": "21542cb173fc"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/scan/route.ts",
@@ -57136,7 +57221,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/extras/webhook",
-      "hash": "651caeb4ab02"
+      "hash": "ad421ef3bf0b"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/facturas-control/route.ts",
@@ -57174,7 +57259,7 @@
     {
       "ruta": "apps/plataforma/app/api/sivra/facturas-limpieza/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Facturas de limpieza (Sique Brilla) con su desglose REAL por piso. El P&L por piso infiere el desglose de cada pago por mejor ajuste al importe; la factura lo dice. Aquí se aporta: un PDF (lo lee la IA) o el desglose a mano. En ambos casos pasa por la MISMA validación aritmética (`validarFactura`): ",
+      "resumen": "Facturas de limpieza (Si que Brilla) con su desglose REAL por piso. El P&L por piso infiere el desglose de cada pago por mejor ajuste al importe; la factura lo dice. Aquí se aporta: un PDF (lo lee la IA) o el desglose a mano. En ambos casos pasa por la MISMA validación aritmética (`validarFactura`):",
       "exporta": [
         "GET",
         "POST"
@@ -57210,7 +57295,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/facturas-limpieza",
-      "hash": "543a7abc49e3"
+      "hash": "d03729aa3b8f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/fiscal/route.ts",
@@ -58177,7 +58262,7 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 18,
-          "resumen": "GET /api/sivra/limpieza-intranet/datos?from=AAAA-MM-DD&to=AAAA-MM-DD Datos de la pantalla de la limpieza (Sique Brilla) o del preview de Alberto: - reservas: ocupación + nº huéspedes de los 4 pisos. S"
+          "resumen": "GET /api/sivra/limpieza-intranet/datos?from=AAAA-MM-DD&to=AAAA-MM-DD Datos de la pantalla de la limpieza (Si que Brilla) o del preview de Alberto: - reservas: ocupación + nº huéspedes de los 4 pisos. "
         }
       ],
       "tablas": [
@@ -58190,7 +58275,7 @@
         "reservas_correo_booking"
       ],
       "rutaApi": "/api/sivra/limpieza-intranet/datos",
-      "hash": "d8af25a1c012"
+      "hash": "52f327d79773"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/enlace/route.ts",
@@ -58227,12 +58312,12 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 8,
-          "resumen": "Entrada del enlace de la limpieza (Sique Brilla): valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Mismo patrón que /api/trading/invitado."
+          "resumen": "Entrada del enlace de la limpieza (Si que Brilla): valida ?token= contra la BD y, si es válido, fija la cookie httpOnly y redirige a la pantalla. Mismo patrón que /api/trading/invitado."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/limpieza-intranet/invitado",
-      "hash": "59f5b2e19fd3"
+      "hash": "afebaf8e579d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/partes/foto/route.ts",
@@ -58248,7 +58333,7 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 10,
-          "resumen": "GET /api/sivra/limpieza-intranet/partes/foto?id=N — sirve la foto de un parte desde la BD. Autenticada como el resto de la intranet (sesión de Alberto o cookie de invitado de Sique Brilla): las fotos "
+          "resumen": "GET /api/sivra/limpieza-intranet/partes/foto?id=N — sirve la foto de un parte desde la BD. Autenticada como el resto de la intranet (sesión de Alberto o cookie de invitado de Si que Brilla): las fotos"
         }
       ],
       "tablas": [
@@ -58256,7 +58341,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/limpieza-intranet/partes/foto",
-      "hash": "754de36229a6"
+      "hash": "35b57ef6b2f3"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/partes/route.ts",
@@ -58272,7 +58357,7 @@
           "params": "req: NextRequest",
           "retorno": null,
           "linea": 17,
-          "resumen": "POST /api/sivra/limpieza-intranet/partes — parte de incidencia de Sique Brilla sobre UNA limpieza (property_id + fecha): nota y/o foto. Se registra en la BD y se avisa a Alberto por Telegram (best-eff"
+          "resumen": "POST /api/sivra/limpieza-intranet/partes — parte de incidencia de Si que Brilla sobre UNA limpieza (property_id + fecha): nota y/o foto. Se registra en la BD y se avisa a Alberto por Telegram (best-ef"
         }
       ],
       "tablas": [
@@ -58280,7 +58365,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/limpieza-intranet/partes",
-      "hash": "150267e1bbe9"
+      "hash": "5e9d43a94ed8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpieza-intranet/tareas/route.ts",
@@ -58582,7 +58667,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10,
+          "linea": 9,
           "resumen": "Cron diario: resumen de actividad del agente por Telegram + huecos de la guía."
         }
       ],
@@ -58592,7 +58677,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/mensajes/resumen-diario",
-      "hash": "0eb8fd1c74e3"
+      "hash": "454a0ab306d6"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/route.ts",
@@ -59317,7 +59402,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "4c99fa39d1ac"
+      "hash": "5b2a529fdac0"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -59397,7 +59482,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/pricing/canal",
-      "hash": "69ad9f3db2b6"
+      "hash": "5644d5c9be8c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/config/route.ts",
@@ -59544,7 +59629,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "6d24665c6ef5"
+      "hash": "0438389d7341"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -59624,7 +59709,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/pricing/pilot-track",
-      "hash": "a720adbbac8e"
+      "hash": "e95ceeedd11a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/recommend/route.ts",
@@ -59937,7 +60022,7 @@
         "seo_proposals"
       ],
       "rutaApi": "/api/sivra/seo-refresh",
-      "hash": "d171dfbdedaa"
+      "hash": "793d3f825ed9"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/seo-token-check/route.ts",
@@ -60398,6 +60483,39 @@
       "hash": "e456e5ad5ee7"
     },
     {
+      "ruta": "apps/plataforma/app/api/telegram/avisos/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/telegram/avisos — el panel 🔔 Avisos Telegram. GET = catálogo + interruptor de cada aviso + cuántas veces ha llegado de verdad (bitácora). POST = enciende/apaga UN aviso o una CATEGORÍA entera. El bot es uno solo y su chat es el de Alberto (`TELEGRAM_CHAT_ID`), así que las preferencias NO van s",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 18
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 59
+        }
+      ],
+      "tablas": [
+        "next",
+        "telegram_avisos_pref"
+      ],
+      "rutaApi": "/api/telegram/avisos",
+      "hash": "bed3fc8de114"
+    },
+    {
       "ruta": "apps/plataforma/app/api/trading/analisis-simbolo/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -60440,7 +60558,7 @@
         "trading_tesis"
       ],
       "rutaApi": "/api/trading/analizar",
-      "hash": "99309b88ee94"
+      "hash": "f4ec5064fd08"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/cartera-estudio/route.ts",
@@ -60722,7 +60840,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 34
+          "linea": 33
         }
       ],
       "tablas": [
@@ -60731,7 +60849,7 @@
         "trading_tesis_resultado"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "57fa6eea2329"
+      "hash": "2b332f94dfb4"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/radar/route.ts",
@@ -60775,7 +60893,7 @@
         "next"
       ],
       "rutaApi": "/api/trading/saldo",
-      "hash": "980a9b0f2500"
+      "hash": "f71da474c202"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/screener/route.ts",
@@ -60938,7 +61056,7 @@
           "params": "{ propertyId, fecha, onEnviado }: { propertyId: string; fecha: string; onEnviado: () => void }",
           "retorno": null,
           "linea": 487,
-          "resumen": "Aviso rápido de Sique Brilla sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la luz»). Se guarda en la limpieza y avisa a Alberto por Telegram. Sin campos que rellenar: un texto li"
+          "resumen": "Aviso rápido de Si que Brilla sobre ESTA limpieza: nota y/o foto («se ha roto una mesa», «no sale la luz»). Se guarda en la limpieza y avisa a Alberto por Telegram. Sin campos que rellenar: un texto l"
         },
         {
           "nombre": "ChipFiltro",
@@ -60959,12 +61077,12 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "026b437a3d76"
+      "hash": "469b36bb161f"
     },
     {
       "ruta": "apps/plataforma/app/invitado/limpieza/page.tsx",
       "ambito": "apps/plataforma",
-      "resumen": "Intranet de limpieza (Sique Brilla): calendario de reservas de los 4 pisos de Alberto + resumen diario con limpiezas, tareas y notas. Fuera del grupo (usuario) → sin sidebar ni guard de sesión. Acceso por token (tabla limpieza_acceso_token) vía cookie httpOnly, o sesión de Alberto (preview). Mismo p",
+      "resumen": "Intranet de limpieza (Si que Brilla): calendario de reservas de los 4 pisos de Alberto + resumen diario con limpiezas, tareas y notas. Fuera del grupo (usuario) → sin sidebar ni guard de sesión. Acceso por token (tabla limpieza_acceso_token) vía cookie httpOnly, o sesión de Alberto (preview). Mismo ",
       "exporta": [
         "InvitadoLimpiezaPage"
       ],
@@ -60980,7 +61098,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "04503294e28e"
+      "hash": "9d04789d6e7b"
     },
     {
       "ruta": "apps/plataforma/app/invitado/trading/page.tsx",
@@ -61435,7 +61553,7 @@
           "exportada": true,
           "params": "items: { nombre: string; from?: string }[]",
           "retorno": "Promise<void>",
-          "linea": 46,
+          "linea": 47,
           "resumen": "Aviso: llegó un adjunto que parece factura pero NO se pudo leer (PDF escaneado/imagen, o la IA no extrajo nada tras Groq+NIM). Antes se perdía como un 'error' mudo; ahora se reclama."
         },
         {
@@ -61444,7 +61562,7 @@
           "exportada": true,
           "params": "items: { proveedor: string | null; total: number; receptor?: string | null }[]",
           "retorno": "Promise<void>",
-          "linea": 58,
+          "linea": 60,
           "resumen": "Aviso: facturas a nombre de un TERCERO (llegan por reenvíos de hilos ajenos). No se imputan ni van a la bandeja, pero se cantan: si el agente se equivoca leyendo el destinatario, Alberto tiene que pod"
         },
         {
@@ -61453,7 +61571,7 @@
           "exportada": true,
           "params": "faltan: ReglaFaltante[]",
           "retorno": "Promise<void>",
-          "linea": 68,
+          "linea": 71,
           "resumen": "Aviso: facturas recurrentes que no han llegado este mes."
         },
         {
@@ -61462,7 +61580,7 @@
           "exportada": true,
           "params": "avisos: { proveedor: string | null; total: number; fecha_vencimiento: string }[], sinCobertura = 0,",
           "retorno": "Promise<void>",
-          "linea": 78,
+          "linea": 81,
           "resumen": "Aviso: facturas domiciliadas cuyo cargo venció y NO aparece en cuenta. 🚨 Solo entran aquí las `sin_cargo` (ver `domiciliados.ts`). Lo que no se ha podido comprobar porque el extracto no llega NUNCA s"
         },
         {
@@ -61471,12 +61589,12 @@
           "exportada": true,
           "params": "s: ResumenStats",
           "retorno": "Promise<void>",
-          "linea": 112
+          "linea": 117
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "41bcbf6bdf14"
+      "hash": "5fa4864c0dee"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/booking.ts",
@@ -62297,7 +62415,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "14544178c424"
+      "hash": "0d58258a6cad"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/parsear-json-ia.ts",
@@ -62374,7 +62492,7 @@
         "gastos"
       ],
       "rutaApi": null,
-      "hash": "7edac33101c1"
+      "hash": "a17eb946022e"
     },
     {
       "ruta": "apps/plataforma/lib/agente-facturas/procesar.ts",
@@ -62769,7 +62887,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "27e4b2985c42"
+      "hash": "fb79c062a5fe"
     },
     {
       "ruta": "apps/plataforma/lib/agentes-salud.ts",
@@ -63041,7 +63159,7 @@
         "ia_presupuestos"
       ],
       "rutaApi": null,
-      "hash": "ff9a1db59fa4"
+      "hash": "f7d6fd9e52fd"
     },
     {
       "ruta": "apps/plataforma/lib/alerta-botones.ts",
@@ -63099,7 +63217,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "70b6ab7911b0"
+      "hash": "f434948f9288"
     },
     {
       "ruta": "apps/plataforma/lib/auth.ts",
@@ -63382,7 +63500,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "a46b03baa247"
+      "hash": "7f59f7281f08"
     },
     {
       "ruta": "apps/plataforma/lib/base-url.ts",
@@ -63600,6 +63718,7 @@
       "exporta": [
         "interpretarCartera",
         "carteraAsegura",
+        "interpretarObjeto",
         "interpretarVencimientos",
         "vencimientosAsegura"
       ],
@@ -63610,7 +63729,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CarteraAsegura",
-          "linea": 43,
+          "linea": 45,
           "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Cualquier forma inesperada degrada a `error`, nunca a un resumen inventado."
         },
         {
@@ -63619,7 +63738,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CarteraAsegura>",
-          "linea": 81,
+          "linea": 83,
           "resumen": "Lee la cartera por el puerto de central-asegura. La URL no es un secreto y cae al dominio del proyecto; el secreto NUNCA tiene fallback."
         },
         {
@@ -63628,7 +63747,16 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 96
+          "linea": 98
+        },
+        {
+          "nombre": "interpretarObjeto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "ObjetoAsegurado | null",
+          "linea": 131,
+          "resumen": "Lectura defensiva del objeto asegurado. Una forma rara NO tumba la fila entera: degrada a `null` («el puerto no lo informa»), que la UI ya sabe decir."
         },
         {
           "nombre": "interpretarVencimientos",
@@ -63636,7 +63764,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "VencimientosAsegura",
-          "linea": 126,
+          "linea": 152,
           "resumen": "Interpretación PURA de la respuesta del puerto de vencimientos. Una fila con forma inesperada invalida la lista entera: media lista de renovaciones es peor que ninguna, porque nadie sabría cuál falta."
         },
         {
@@ -63645,12 +63773,12 @@
           "exportada": true,
           "params": "dias = 90",
           "retorno": "Promise<VencimientosAsegura>",
-          "linea": 162
+          "linea": 189
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e37a23615478"
+      "hash": "3c4be20a67a5"
     },
     {
       "ruta": "apps/plataforma/lib/categoria-reglas.ts",
@@ -64826,7 +64954,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "0b51ca0e3e6f"
+      "hash": "dd546279c8e6"
     },
     {
       "ruta": "apps/plataforma/lib/contable/formato.ts",
@@ -65272,7 +65400,7 @@
         "patrimonio_activos"
       ],
       "rutaApi": null,
-      "hash": "6a673baa2cea"
+      "hash": "786781a3ed9a"
     },
     {
       "ruta": "apps/plataforma/lib/contable/respuestas-directas.ts",
@@ -65528,6 +65656,7 @@
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Aviso de RENOVACIONES de la correduría. La tabla de /correduria solo sirve si Alberto entra a mirarla. Lo que mueve una cartera es que el aviso llegue solo, y a tiempo: la ventana no la marca el calendario, la marca la LCS ",
       "exporta": [
+        "objetoEnLinea",
         "claveAviso",
         "emisionesDeHoy",
         "mensajeRenovaciones",
@@ -65535,12 +65664,21 @@
       ],
       "funciones": [
         {
+          "nombre": "objetoEnLinea",
+          "kind": "function",
+          "exportada": true,
+          "params": "objeto: PolizaAviso['objeto']",
+          "retorno": "string | null",
+          "linea": 38,
+          "resumen": "Cómo se nombra el objeto en una línea de Telegram. Devuelve `null` cuando no hay nada que decir — un «sin dato» en cada línea es ruido, y la ausencia ya se ve en la pantalla de /correduria, que es don"
+        },
+        {
           "nombre": "claveAviso",
           "kind": "function",
           "exportada": true,
           "params": "p: { id: string; fechaVencimiento: string }, hito: HitoId",
           "retorno": "string",
-          "linea": 59,
+          "linea": 77,
           "resumen": "Clave de dedupe: una póliza avisa una vez por hito Y por vencimiento. Si la póliza se renueva, el vencimiento cambia y el ciclo vuelve a empezar solo."
         },
         {
@@ -65549,7 +65687,7 @@
           "exportada": true,
           "params": "polizas: PolizaAviso[], yaAvisados: Set<string>",
           "retorno": "Emision[]",
-          "linea": 73,
+          "linea": 91,
           "resumen": "Qué avisar hoy. `yaAvisados` son las claves que ya constan en la BD. Devuelve, por póliza, UN hito a comunicar y la lista de hitos que hay que marcar como consumidos — que incluye los más laxos: si un"
         },
         {
@@ -65558,7 +65696,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 97
+          "linea": 115
         },
         {
           "nombre": "linea",
@@ -65566,7 +65704,7 @@
           "exportada": false,
           "params": "p: PolizaAviso",
           "retorno": "string",
-          "linea": 102
+          "linea": 120
         },
         {
           "nombre": "mensajeRenovaciones",
@@ -65574,7 +65712,7 @@
           "exportada": true,
           "params": "emisiones: Emision[]",
           "retorno": "string | null",
-          "linea": 117,
+          "linea": 138,
           "resumen": "El mensaje de Telegram, agrupado por hito. `null` cuando no hay nada que decir — el silencio de «hoy no toca ninguna» es correcto; lo que nunca puede pasar es que un fallo de lectura se convierta en e"
         },
         {
@@ -65583,13 +65721,13 @@
           "exportada": true,
           "params": "leidas: number, emitidas: number, ventanaDias: number,",
           "retorno": "string",
-          "linea": 130,
+          "linea": 151,
           "resumen": "Detalle del latido: cuenta lo hecho sin adornos, para el parte del vigía."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b03fba442a97"
+      "hash": "6d2126f7bda7"
     },
     {
       "ruta": "apps/plataforma/lib/correo/agoda-mensajes.ts",
@@ -65840,7 +65978,7 @@
     {
       "ruta": "apps/plataforma/lib/correo/reserva-booking.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/correo/reserva-booking.ts — parser PURO de los avisos de reserva de Booking al propietario. Nace del caso James Ascott (Luxury, 27→29/08/2026): Smoobu se cayó, la reserva NUNCA llegó a `incomes` y la limpieza del 29 no salió en el calendario de Sique Brilla. Dos señales de correo: (a) «Booking.c",
+      "resumen": "lib/correo/reserva-booking.ts — parser PURO de los avisos de reserva de Booking al propietario. Nace del caso James Ascott (Luxury, 27→29/08/2026): Smoobu se cayó, la reserva NUNCA llegó a `incomes` y la limpieza del 29 no salió en el calendario de Si que Brilla. Dos señales de correo: (a) «Booking.",
       "exporta": [
         "pisoDesdeNombre",
         "parsearAvisoBooking",
@@ -65894,7 +66032,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d04711d96561"
+      "hash": "70dd1e5dfbc7"
     },
     {
       "ruta": "apps/plataforma/lib/correo/rutas.ts",
@@ -65943,7 +66081,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 21,
+          "linea": 22,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -65952,7 +66090,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "fmtFecha",
@@ -65960,7 +66098,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "mensajeAviso",
@@ -65968,7 +66106,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -65977,7 +66115,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 52
+          "linea": 53
         },
         {
           "nombre": "pasadaTriaje",
@@ -65985,7 +66123,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "digestTriaje",
@@ -65993,7 +66131,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 183,
+          "linea": 189,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -66002,7 +66140,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 223,
+          "linea": 229,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         }
       ],
@@ -66012,7 +66150,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "61c3810c65d4"
+      "hash": "267a00826b2e"
     },
     {
       "ruta": "apps/plataforma/lib/cron-auth.ts",
@@ -69095,7 +69233,7 @@
     {
       "ruta": "apps/plataforma/lib/limpieza-acceso.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Autorización de la intranet de limpieza: acepta la sesión normal de plataforma (Alberto, preview) O un TOKEN de invitado (Sique Brilla, la limpieza de los 4 pisos, sin cuenta). El token vive en la BD (tabla limpieza_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Corre en",
+      "resumen": "Autorización de la intranet de limpieza: acepta la sesión normal de plataforma (Alberto, preview) O un TOKEN de invitado (Si que Brilla, la limpieza de los 4 pisos, sin cuenta). El token vive en la BD (tabla limpieza_acceso_token, fila única activa) para poder rotarlo/revocarlo sin redeploy. Corre e",
       "exporta": [
         "getTokenInvitado",
         "tokenInvitadoValido",
@@ -69127,7 +69265,7 @@
           "params": "",
           "retorno": "Promise<ModoAcceso>",
           "linea": 32,
-          "resumen": "Modo de acceso: 'sesion' (Alberto), 'invitado' (token de Sique Brilla en cookie) o null."
+          "resumen": "Modo de acceso: 'sesion' (Alberto), 'invitado' (token de Si que Brilla en cookie) o null."
         }
       ],
       "tablas": [
@@ -69135,7 +69273,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "f2ce26913614"
+      "hash": "133d267b83e1"
     },
     {
       "ruta": "apps/plataforma/lib/mailer.ts",
@@ -69257,7 +69395,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cab278d479a3"
+      "hash": "04729ec8465e"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -70213,7 +70351,7 @@
         "cuentas"
       ],
       "rutaApi": null,
-      "hash": "f3c0b7327c39"
+      "hash": "79afb59fe2e8"
     },
     {
       "ruta": "apps/plataforma/lib/resumen-semanal-gastos.ts",
@@ -70243,7 +70381,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "a726231de553"
+      "hash": "8164a0e87720"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -70804,14 +70942,14 @@
           "exportada": true,
           "params": "propertyId: string, property: string, secciones: string[],",
           "retorno": "Promise<void>",
-          "linea": 12
+          "linea": 11
         }
       ],
       "tablas": [
         "mensajes_conflictos_guia"
       ],
       "rutaApi": null,
-      "hash": "3eed5fe528f9"
+      "hash": "73166a66e382"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/contexto.ts",
@@ -71457,7 +71595,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "80bebe0d1b95"
+      "hash": "cb39f3ac90af"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/horarios.ts",
@@ -72017,7 +72155,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "d3ec6384d64b"
+      "hash": "83b4c37747ff"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/antelacion-resultado.ts",
@@ -72745,7 +72883,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/extras/aviso-limpieza.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/extras/aviso-limpieza.ts — el email a la empresa de limpieza cuando el extra se paga. Destinatario: Sique Brilla (`limpiezascruzz@gmail.com`, confirmado por Alberto el 28/08/2026). Remitente `hola@ialimp.es` por el transporte que plataforma ya tiene montado, con Reply-To a su Gmail para qu",
+      "resumen": "lib/sivra/extras/aviso-limpieza.ts — el email a la empresa de limpieza cuando el extra se paga. Destinatario: Si que Brilla (`limpiezascruzz@gmail.com`, confirmado por Alberto el 28/08/2026). Remitente `hola@ialimp.es` por el transporte que plataforma ya tiene montado, con Reply-To a su Gmail para q",
       "exporta": [
         "componerAviso",
         "avisarLimpieza"
@@ -72790,7 +72928,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3385692d3801"
+      "hash": "3f3d862ce24d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/catalogo.ts",
@@ -72856,7 +72994,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bc3a71113ff2"
+      "hash": "370f0b3dc652"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/extras/impago.ts",
@@ -73007,7 +73145,7 @@
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 11,
+          "linea": 10,
           "resumen": "Sin clave configurada NO se cobra: el flujo cae a la propuesta por Telegram de siempre."
         },
         {
@@ -73016,18 +73154,18 @@
           "exportada": true,
           "params": "p: { bookingId: string propertyId: string codigo: string precioCents: number nombre: string }",
           "retorno": "Promise<EnlacePago | null>",
-          "linea": 24,
+          "linea": 23,
           "resumen": "Crea un Payment Link de un solo uso para este extra. La `metadata` es lo que ata el cobro a la reserva: el webhook no adivina nada, lee de aquí. El precio llega en céntimos DESDE EL CATÁLOGO — esta fu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6b1b0870ada1"
+      "hash": "04f2b383123d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza-lectura.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/factura-limpieza-lectura.ts — leer la factura de Sique Brilla y guardarla si cuadra. El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación aritmética → BD. T",
+      "resumen": "lib/sivra/factura-limpieza-lectura.ts — leer la factura de Si que Brilla y guardarla si cuadra. El LAYOUT lo lee la IA, nunca una expresión regular escrita de memoria (ver la cabecera de `factura-limpieza.ts`). Este módulo es el borde sucio: PDF → texto o visión → JSON → validación aritmética → BD. ",
       "exporta": [
         "guardarFactura",
         "procesarFacturaLimpieza",
@@ -73084,12 +73222,12 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "add3d962e31f"
+      "hash": "fb6fb7d27fe0"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/factura-limpieza.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/factura-limpieza.ts — la factura REAL de Sique Brilla, validada (puro, testeable). Contexto (25/08/2026). El P&L desglosa cada pago a Sique Brilla INFIRIENDO el mes facturado por mejor ajuste al importe (`reparto-siquebrilla.ts`). Funciona porque las tarifas cuadran al céntimo con `incomes",
+      "resumen": "lib/sivra/factura-limpieza.ts — la factura REAL de Si que Brilla, validada (puro, testeable). Contexto (25/08/2026). El P&L desglosa cada pago a Si que Brilla INFIRIENDO el mes facturado por mejor ajuste al importe (`reparto-siquebrilla.ts`). Funciona porque las tarifas cuadran al céntimo con `incom",
       "exporta": [
         "pisoDeConcepto",
         "validarFactura",
@@ -73147,12 +73285,12 @@
           "params": "importe: number, facturas: F[], yaUsadas: ReadonlySet<F>,",
           "retorno": "F | null",
           "linea": 209,
-          "resumen": "Elige la factura que paga un movimiento. Casa por TOTAL (las facturas de Sique Brilla se pagan enteras), y una factura ya casada con otro apunte no vuelve a usarse: dos pagos idénticos el mismo mes so"
+          "resumen": "Elige la factura que paga un movimiento. Casa por TOTAL (las facturas de Si que Brilla se pagan enteras), y una factura ya casada con otro apunte no vuelve a usarse: dos pagos idénticos el mismo mes s"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "de7f93b42d77"
+      "hash": "1a7a0b923bfe"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/facturas-control.ts",
@@ -73402,7 +73540,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/limpieza-intranet.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Helpers puros de la intranet de limpieza (pantalla de Sique Brilla). Sin dependencias de servidor.",
+      "resumen": "Helpers puros de la intranet de limpieza (pantalla de Si que Brilla). Sin dependencias de servidor.",
       "exporta": [
         "paxDe",
         "entradaMismoDia",
@@ -73449,7 +73587,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d9ba451fff52"
+      "hash": "888f692255ab"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/codigo-portal.ts",
@@ -73706,7 +73844,7 @@
         "sivra_codigos_acceso"
       ],
       "rutaApi": null,
-      "hash": "e200e635cfd1"
+      "hash": "2553dde2f400"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/plantillas.ts",
@@ -74266,7 +74404,7 @@
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "d6d213fa7f7a"
+      "hash": "f5ac5e14a941"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pl-rango-logica.ts",
@@ -75598,7 +75736,7 @@
     {
       "ruta": "apps/plataforma/lib/sivra/reparto-siquebrilla.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Sique Brilla (puro, testeable). Contexto (25/08/2026): la factura de Sique Brilla ya NO es solo limpieza — desde junio incluye líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex + 3×90€ Casa Socorro = 4",
+      "resumen": "lib/sivra/reparto-siquebrilla.ts — desglose del pago mensual a Si que Brilla (puro, testeable). Contexto (25/08/2026): la factura de Si que Brilla ya NO es solo limpieza — desde junio incluye líneas de LAVANDERÍA por peso (la de julio: 4×28€ Luxury + 2×20€ Busto + 2×25€ Dúplex + 3×90€ Casa Socorro =",
       "exporta": [
         "esperadoLimpieza",
         "repartirPagoSiqueBrilla"
@@ -75628,17 +75766,17 @@
           "params": "total: number, salidasServicio: ReadonlyMap<string, number>, tarifas: Record<string, number>,",
           "retorno": "RepartoSiqueBrilla | null",
           "linea": 72,
-          "resumen": "Desglosa el total pagado a Sique Brilla en limpieza por piso + resto de lavandería. `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`). Devuelve null si no hay salidas con "
+          "resumen": "Desglosa el total pagado a Si que Brilla en limpieza por piso + resto de lavandería. `salidasServicio` son las salidas del MES FACTURADO (ver `elegirMesFacturado`). Devuelve null si no hay salidas con"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56b0ff33059b"
+      "hash": "6638f16852cf"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/reservas-booking-vigia.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/sivra/reservas-booking-vigia.ts — vigía Booking↔Smoobu por correo. Caso fundacional (30/08/2026): Smoobu se cayó y la reserva de James Ascott (Luxury, 27→29/08/2026) NUNCA llegó a `incomes` — la limpieza del 29 no salió en el calendario de Sique Brilla y el ingreso no contó. Dos señales alimenta",
+      "resumen": "lib/sivra/reservas-booking-vigia.ts — vigía Booking↔Smoobu por correo. Caso fundacional (30/08/2026): Smoobu se cayó y la reserva de James Ascott (Luxury, 27→29/08/2026) NUNCA llegó a `incomes` — la limpieza del 29 no salió en el calendario de Si que Brilla y el ingreso no contó. Dos señales aliment",
       "exporta": [
         "registrarAvisoBooking",
         "registrarReservaHuesped",
@@ -75717,7 +75855,7 @@
         "reservas_correo_booking"
       ],
       "rutaApi": null,
-      "hash": "fe53a53c365d"
+      "hash": "27d34d6e6678"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/resumen-sweep.ts",
@@ -76069,7 +76207,7 @@
         "pms_connections"
       ],
       "rutaApi": null,
-      "hash": "bdce294d9b9b"
+      "hash": "bdb5320b2141"
     },
     {
       "ruta": "apps/plataforma/lib/subastas-ingesta.ts",
@@ -77279,7 +77417,7 @@
         "subastas"
       ],
       "rutaApi": null,
-      "hash": "f8f0c74c22a8"
+      "hash": "00ec36fae2a2"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/nota-simple.ts",
@@ -77626,7 +77764,7 @@
         "subastas_reapariciones"
       ],
       "rutaApi": null,
-      "hash": "858df753d3a5"
+      "hash": "27114eed8775"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/reextraer.ts",
@@ -77980,10 +78118,11 @@
     {
       "ruta": "apps/plataforma/lib/telegram.ts",
       "ambito": "apps/plataforma",
-      "resumen": "lib/telegram.ts — re-export del módulo compartido (un solo bot). Conserva las firmas legacy (tgAlert/tgAlertButtons) para no romper el código existente.",
+      "resumen": "lib/telegram.ts — re-export del módulo compartido (un solo bot). Conserva las firmas legacy (tgAlert/tgAlertButtons) para no romper el código existente. 🔔 Para un aviso PROACTIVO (cron, vigía, resumen) usa `tgAviso`/`tgAvisoAlerta` en vez de `tgSend`/`tgAlert`: pasan por el interruptor del panel /t",
       "exporta": [
         "tgAlert",
-        "tgAlertButtons"
+        "tgAlertButtons",
+        "tgAvisoAlerta"
       ],
       "funciones": [
         {
@@ -77992,7 +78131,7 @@
           "exportada": false,
           "params": "mensaje: string, nivel: keyof typeof EMOJI",
           "retorno": "string",
-          "linea": 8
+          "linea": 15
         },
         {
           "nombre": "tgAlert",
@@ -78000,7 +78139,7 @@
           "exportada": true,
           "params": "mensaje: string, nivel: keyof typeof EMOJI = 'info'",
           "retorno": "Promise<void>",
-          "linea": 13
+          "linea": 20
         },
         {
           "nombre": "tgAlertButtons",
@@ -78008,12 +78147,219 @@
           "exportada": true,
           "params": "mensaje: string, nivel: keyof typeof EMOJI, botones: Boton[][]",
           "retorno": "Promise<number | null>",
-          "linea": 17
+          "linea": 24
+        },
+        {
+          "nombre": "tgAvisoAlerta",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, mensaje: string, nivel: keyof typeof EMOJI = 'info'",
+          "retorno": "Promise<void>",
+          "linea": 29,
+          "resumen": "`tgAlert` con el interruptor del panel /telegram. `id` debe estar en `lib/telegram/catalogo.ts`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa2c8d93e635"
+      "hash": "9380b1bb8ae0"
+    },
+    {
+      "ruta": "apps/plataforma/lib/telegram/avisos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/telegram/avisos.ts — la única puerta por la que sale un aviso PROACTIVO de Telegram. `tgAviso(id, texto)` = `tgSend(texto)` + interruptor + bitácora. El `id` tiene que estar en `catalogo.ts` (lo verifica el guardián `test/regression-telegram-avisos.test.ts`), porque el panel /telegram promete qu",
+      "exporta": [
+        "tgAviso",
+        "tgAvisoBotones",
+        "avisoPermitido",
+        "avisoEnviado"
+      ],
+      "funciones": [
+        {
+          "nombre": "tgAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, texto: string, opts: { chatId?: string; html?: boolean } = {},",
+          "retorno": "Promise<number | null>",
+          "linea": 15,
+          "resumen": "Manda un aviso proactivo, salvo que esté silenciado. Devuelve `null` si no se envió."
+        },
+        {
+          "nombre": "tgAvisoBotones",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, texto: string, botones: Boton[][], opts: { chatId?: string } = {},",
+          "retorno": "Promise<number | null>",
+          "linea": 30,
+          "resumen": "Igual que `tgAviso`, con teclado de botones."
+        },
+        {
+          "nombre": "avisoPermitido",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<boolean>",
+          "linea": 49,
+          "resumen": "Envoltura para código que ya compone su mensaje con `tgAlert` (emoji + cabecera SIVRA + hora). Mismo interruptor; el formato lo pone el llamante."
+        },
+        {
+          "nombre": "avisoEnviado",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<void>",
+          "linea": 56,
+          "resumen": "Marca en la bitácora un aviso que ya se ha enviado por otra vía (p. ej. `tgAlert`)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4d7aa3e4f857"
+    },
+    {
+      "ruta": "apps/plataforma/lib/telegram/catalogo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/telegram/catalogo.ts — FUENTE ÚNICA de los avisos PROACTIVOS de Telegram. «Proactivo» = el bot escribe sin que Alberto haya preguntado nada (crons, vigías, resúmenes). Las RESPUESTAS del bot a un mensaje o a un botón suyo (agente contable, patrimonio, borradores del agente de huéspedes, confirma",
+      "exporta": [
+        "esCritico",
+        "avisosDe",
+        "avisoDeCategoriaCorreo"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCritico",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "boolean",
+          "linea": 528
+        },
+        {
+          "nombre": "avisosDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "categoria: CategoriaAviso",
+          "retorno": "AvisoTelegram[]",
+          "linea": 533,
+          "resumen": "Avisos de una categoría, en el orden del catálogo."
+        },
+        {
+          "nombre": "avisoDeCategoriaCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "categoria: string",
+          "retorno": "string | null",
+          "linea": 543,
+          "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b186319bb125"
+    },
+    {
+      "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/telegram/preferencias.ts — el interruptor de cada aviso (tabla `telegram_avisos_pref`) y la bitácora de lo que se manda/omite (`telegram_avisos_log`), que es lo que permite al panel decir CUÁNTOS avisos llegan de verdad en vez de la cadencia teórica del cron. 🚨 Fail-open a propósito: si la BD n",
+      "exporta": [
+        "olvidarCache",
+        "avisoActivo",
+        "guardarPreferencia",
+        "registrarEnvio",
+        "resumenAvisos",
+        "purgarBitacora"
+      ],
+      "funciones": [
+        {
+          "nombre": "olvidarCache",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "void",
+          "linea": 19,
+          "resumen": "Invalida la caché de esta instancia (tras guardar una preferencia)."
+        },
+        {
+          "nombre": "preferencias",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<Map<string, boolean> | null>",
+          "linea": 23
+        },
+        {
+          "nombre": "avisoActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<boolean>",
+          "linea": 44,
+          "resumen": "¿Sale este aviso? `true` en todos los casos salvo que exista una fila que diga lo contrario. Los avisos críticos no se pueden silenciar ni aunque haya fila (defensa en profundidad: el panel tampoco lo"
+        },
+        {
+          "nombre": "guardarPreferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, activo: boolean",
+          "retorno": "Promise<void>",
+          "linea": 48
+        },
+        {
+          "nombre": "registrarEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, estado: 'enviado' | 'omitido'",
+          "retorno": "Promise<void>",
+          "linea": 58,
+          "resumen": "Bitácora. Best-effort: no puede impedir que el aviso salga."
+        },
+        {
+          "nombre": "resumenAvisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias = 30",
+          "retorno": "Promise<ResumenAvisos | null>",
+          "linea": 85,
+          "resumen": "Cuántas veces ha salido (y se ha omitido) cada aviso en los últimos `dias` días."
+        },
+        {
+          "nombre": "purgarBitacora",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias = 90",
+          "retorno": "Promise<number>",
+          "linea": 117,
+          "resumen": "Purga la bitácora a `dias` (90 por defecto). La llama el cron diario `agentes-latido`: el panel mira 30 días, así que guardar más no aporta y la tabla crece ~50 filas/día. Best-effort."
+        }
+      ],
+      "tablas": [
+        "set",
+        "telegram_avisos_log",
+        "telegram_avisos_pref"
+      ],
+      "rutaApi": null,
+      "hash": "2087f99b2bfa"
+    },
+    {
+      "ruta": "apps/plataforma/lib/telegram/regla.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/telegram/regla.ts — la REGLA del interruptor del panel /telegram, PURA. Vive aparte de `preferencias.ts` a propósito: ese módulo importa `@/lib/db` (Prisma) y el alias `@/` no lo resuelve `node --test`, así que la regla no se podría probar desde ahí. Mismo patrón que el resto del repo: la decisi",
+      "exporta": [
+        "resolverActivo"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, prefs: ReadonlyMap<string, boolean> | null",
+          "retorno": "boolean",
+          "linea": 16,
+          "resumen": "¿Sale este aviso? - `prefs === null` = no se pudieron leer las preferencias ⇒ **fail-open**: el aviso SALE. Un fallo de red o una migración sin aplicar no puede convertirse en silencio. - Sin fila par"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f8a4771322bf"
     },
     {
       "ruta": "apps/plataforma/lib/tenant.ts",
@@ -79934,7 +80280,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb977da532da"
+      "hash": "7807b103ef4f"
     },
     {
       "ruta": "apps/plataforma/lib/trading/piscinas.ts",
@@ -80124,6 +80470,7 @@
         "resumenDiferido",
         "fechaMas",
         "diasEntre",
+        "ventanaHastaApertura",
         "juzgarHuerfana",
         "resumenHuerfanas",
         "detectarSuplantaciones",
@@ -80226,12 +80573,21 @@
           "linea": 451
         },
         {
+          "nombre": "ventanaHastaApertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechasApertura: string[], hoy: string, margenDias: number",
+          "retorno": "number",
+          "linea": 464,
+          "resumen": "Ventana (en días) que hay que pedir a la 2ª fuente para que la serie alcance el ANCLA de `juzgarHuerfana`: la sesión <= `h.fecha`. `h.fecha` es la fecha de APERTURA (tesis o posición), NUNCA la de ven"
+        },
+        {
           "nombre": "juzgarHuerfana",
           "kind": "function",
           "exportada": true,
           "params": "h: Huerfana, serie: PuntoContraste[], maxDesvio = DIVERGENCIA_MAX, margenDias = HUERFANA_MARGEN_DIAS,",
           "retorno": "VeredictoHuerfana",
-          "linea": 460,
+          "linea": 471,
           "resumen": "`serie` = cierres publicados por la 2ª fuente en orden ascendente (lo que devuelven tanto el CSV de Stooq como el chart de Yahoo, y lo que ya asume `juzgarPuntos`)."
         },
         {
@@ -80240,7 +80596,7 @@
           "exportada": true,
           "params": "puntuadas: number, sinResolver: HuerfanaNoResuelta[], fueraDePlazo: number,",
           "retorno": "string",
-          "linea": 498,
+          "linea": 509,
           "resumen": "Parte de una línea. Vacío solo si no hubo NINGUNA huérfana: en cuanto hay una, se dice — aunque no se haya podido hacer nada con ella, que es justo el caso que se pasó cuatro semanas callado."
         },
         {
@@ -80249,7 +80605,7 @@
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 588
+          "linea": 599
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -80257,7 +80613,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 594,
+          "linea": 605,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -80266,7 +80622,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 643,
+          "linea": 654,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -80275,13 +80631,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 669,
+          "linea": 680,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad6b10d26632"
+      "hash": "1de6647ac33a"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -80471,7 +80827,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5082d4995826"
+      "hash": "ce890b8031ee"
     },
     {
       "ruta": "apps/plataforma/lib/trading/premarket.ts",
@@ -80647,7 +81003,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1da80051e77a"
+      "hash": "c3b0675910de"
     },
     {
       "ruta": "apps/plataforma/lib/trading/salidas.ts",
@@ -81069,7 +81425,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "294172a45eae"
+      "hash": "789ab976ba10"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -97004,6 +97360,122 @@
       "hash": "54dd111be75d"
     },
     {
+      "ruta": "packages/module-seguros/src/objeto.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "QUÉ asegura cada póliza — el «objeto asegurado». Una lista de renovaciones con cliente, ramo y prima no basta para llamar a nadie: el mismo tomador puede tener tres pólizas de auto, y «Auto · Mapfre · 431,85€» no dice CUÁL. Lo que identifica la póliza en la conversación es el bien: la matrícula y el",
+      "exporta": [
+        "pareceMatricula",
+        "objetoAsegurado"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null | 'cifrado'",
+          "linea": 58,
+          "resumen": "Texto útil de un campo, o `null`. Distingue el cifrado de la ausencia."
+        },
+        {
+          "nombre": "claro",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 68,
+          "resumen": "Como `texto`, pero el cifrado cuenta como ausencia (para campos que solo se pintan)."
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 73
+        },
+        {
+          "nombre": "pareceMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "boolean",
+          "linea": 79,
+          "resumen": "¿Parece una matrícula española (o de las viejas con provincia)?"
+        },
+        {
+          "nombre": "unir",
+          "kind": "function",
+          "exportada": false,
+          "params": "partes: Array<string | null>, sep = ' · '",
+          "retorno": "string | null",
+          "linea": 84
+        },
+        {
+          "nombre": "objetoAsegurado",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: EntradaObjeto",
+          "retorno": "ObjetoAsegurado",
+          "linea": 104
+        },
+        {
+          "nombre": "objetoVehiculo",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>",
+          "retorno": "ObjetoAsegurado",
+          "linea": 123
+        },
+        {
+          "nombre": "objetoInmueble",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>, tipo: string",
+          "retorno": "ObjetoAsegurado",
+          "linea": 155
+        },
+        {
+          "nombre": "objetoComercio",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>, coberturas: EntradaObjeto['coberturas'],",
+          "retorno": "ObjetoAsegurado",
+          "linea": 196
+        },
+        {
+          "nombre": "objetoResponsabilidadCivil",
+          "kind": "function",
+          "exportada": false,
+          "params": "coberturas: EntradaObjeto['coberturas']",
+          "retorno": "ObjetoAsegurado",
+          "linea": 219,
+          "resumen": "Una RC no tiene bien: tiene MODALIDAD. Lo que la describe («de qué es») son las coberturas contratadas — locativa, patronal/accidentes de trabajo, explotación… y eso vive en `poliza_coberturas`, no en"
+        },
+        {
+          "nombre": "porCoberturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "coberturas: EntradaObjeto['coberturas'], nota: string | null",
+          "retorno": "ObjetoAsegurado",
+          "linea": 228,
+          "resumen": "Describe una póliza por las coberturas contratadas, que es lo único que hay cuando no existe ficha del bien."
+        },
+        {
+          "nombre": "objetoGenerico",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>, coberturas: EntradaObjeto['coberturas'],",
+          "retorno": "ObjetoAsegurado",
+          "linea": 247,
+          "resumen": "Ramos sin plantilla propia: se aprovecha lo que haya, sin inventar etiquetas."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "77ade921171e"
+    },
+    {
       "ruta": "packages/module-seguros/src/vencimientos.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Ventana de renovación de una póliza — la máquina comercial de una correduría. La regla no es «faltan X días» a ojo: la marca la **LCS 50/1980 art. 22**. El TOMADOR debe oponerse a la prórroga con UN MES de antelación al vencimiento (el asegurador necesita dos). Consecuencia práctica, y es la que dec",
@@ -102231,7 +102703,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2684,
-    "funciones": 7454
+    "archivos": 2692,
+    "funciones": 7494
   }
 }
