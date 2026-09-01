@@ -10,6 +10,57 @@ Estado: **diseño, sin implementar.** Lo que hay construido hoy es el botón man
 
 ---
 
+## 0. 🧭 EL PRINCIPIO QUE ORDENA TODO LO DEMÁS
+
+> Dictado de Alberto (01/09/2026): *«Tenemos que tener todas las opciones posibles, pensando que
+> presupuesto = lo más fácil y rápido; y ya en caso de cuadrar al cliente, nos centramos en que
+> todos los datos estén bien.»*
+
+Son **dos fases con exigencias OPUESTAS**, y confundirlas es el error que hay que evitar:
+
+| | **Fase 1 — PRESUPUESTO** | **Fase 2 — EMISIÓN** |
+|---|---|---|
+| Objetivo | Un precio, ya | Que todo sea cierto |
+| Fricción admisible | **La mínima** | La que haga falta |
+| Ante un dato que falta | Se supone y **se marca** | Se pide y se verifica |
+| Ante 2 caminos posibles | El más rápido | El más fiable |
+| Cuándo | Siempre | **Solo si el precio le cuadra al cliente** |
+
+**Por qué esto es negocio y no una preferencia técnica:** la mayoría de los presupuestos no acaban
+en póliza. Pedir DNI, carnet y ficha técnica a alguien que solo quería saber un precio es perder al
+cliente antes de tener la oportunidad. Y al revés: emitir con datos supuestos es un siniestro mal
+cubierto.
+
+### Consecuencia 1: «todas las opciones posibles» es un requisito, no un adorno
+
+Ningún dato puede tener **un solo camino**, porque ese camino se cae y con él el presupuesto. Para
+la pieza más difícil —la versión del vehículo— los caminos son, de más rápido a menos:
+
+| # | Camino | Coste | Estado |
+|---|---|---|---|
+| 1 | **La ficha ya lo trae** (`marca`/`modelo`/`version` en texto: 1.422/1.416/1.325 pólizas, medido 01/09) | Gratis, instantáneo | ⬜ por hacer |
+| 2 | **Foto de la ficha técnica** → filtrar por cilindrada + potencia + combustible | Gratis | ⬜ diseñado (§1) |
+| 3 | **Catálogo a mano** marca→modelo→versión | Gratis, 3 clics | ✅ **hecho** (PR #1996) |
+| 4 | **Matrícula** → `GET /vehicles` | Créditos de pago | ⬜ sin contratar |
+
+⚠️ Ojo con el 1: las **80 pólizas de auto VIVAS (CIMA) no lo traen** (solo matrícula). Ese camino
+sirve para el volcado histórico, no para la cartera viva — que es justo la que Alberto quiere
+probar. Por eso el camino 3 es el que había que construir primero.
+
+### Consecuencia 2: la fase 1 nunca se bloquea por un dato
+
+Si falta algo que se puede suponer, **se supone y se enseña**. Solo se para en lo que no se puede
+inventar sin mentir: los datos personales (DNI, nacimiento, carnet, sexo) y el vehículo. Es
+exactamente lo que hace `precalificarAuto()` hoy.
+
+### Consecuencia 3: al pasar a fase 2, los supuestos son la LISTA DE TAREAS
+
+Cuando el cliente dice «me cuadra», los `supuestos` que devolvió la precalificación **son
+literalmente lo que hay que verificar**, uno por uno, y en cabeza los marcados `optimista` (hoy,
+la siniestralidad). No hay que inventar un checklist: ya está calculado.
+
+---
+
 ## 1. 🚨 La ficha técnica SÍ trae la versión — corrige la suposición de partida
 
 Alberto daba por hecho que la ficha técnica «no trae la versión, solo la marca». **No es así**, y

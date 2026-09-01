@@ -219,6 +219,33 @@ Alberto quiere estrenar esto: **primero a mano, sobre clientes de verdad**, y au
 Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): poner contraseña al
 rol `prisma_seguros`, encender `CODEOSCOPIC_TARIFICACION_ACTIVA=true` y redesplegar.
 
+### 🧭 EL PRINCIPIO: presupuesto rápido, verificación al emitir (Alberto, 01/09/2026)
+
+> *«Tenemos que tener todas las opciones posibles, pensando que presupuesto = lo más fácil y
+> rápido; y ya en caso de cuadrar al cliente, nos centramos en que todos los datos estén bien.»*
+
+**Dos fases con exigencias OPUESTAS**, y confundirlas es el error a evitar:
+
+| | Fase 1 — PRESUPUESTO | Fase 2 — EMISIÓN |
+|---|---|---|
+| Ante un dato que falta | Se **supone y se marca** | Se pide y se verifica |
+| Ante dos caminos | El más rápido | El más fiable |
+| Cuándo | Siempre | **Solo si el precio le cuadra al cliente** |
+
+Es negocio, no preferencia técnica: la mayoría de presupuestos no acaban en póliza, y pedir DNI y
+ficha técnica a quien solo quería un precio pierde al cliente antes de tener la oportunidad.
+
+Tres consecuencias que SÍ afectan al código:
+1. **Ningún dato puede tener un solo camino.** Para la versión del vehículo hay cuatro, de más
+   rápido a menos: (1) lo que ya traiga la ficha en texto — 1.325 pólizas, **pero NINGUNA de las 80
+   vivas**; (2) foto de la ficha técnica; (3) **catálogo a mano, que es lo construido**; (4)
+   matrícula por créditos. Por eso el 3 era el primero que había que hacer.
+2. **La fase 1 no se bloquea por un dato**: solo para en lo que no se puede inventar sin mentir
+   (datos personales y vehículo).
+3. 🎯 **Al pasar a fase 2, los `supuestos` que devolvió la precalificación SON la lista de tareas**
+   de verificación, con los `optimista` en cabeza. No hay que inventar un checklist: ya está
+   calculado.
+
 ### 📸 Lo siguiente: alta por fotos, bonificadores y el ramo de HOGAR
 
 Diseño completo en `docs/superpowers/specs/2026-09-01-asegura-alta-por-fotos-y-bonificadores.md`.

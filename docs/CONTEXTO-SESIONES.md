@@ -32,6 +32,16 @@
 
 ---
 
+### 🧭 (01/09/2026) asegura — EL PRINCIPIO de Alberto: presupuesto rápido, verificación al emitir
+- *«Todas las opciones posibles; presupuesto = lo más fácil y rápido; y ya en caso de cuadrar al
+  cliente, nos centramos en que todos los datos estén bien.»* **Dos fases con exigencias OPUESTAS.**
+- Consecuencias en el código: (1) **ningún dato con un solo camino** — la versión del vehículo tiene
+  cuatro (ficha en texto · foto ficha técnica · catálogo a mano ✅ · matrícula de pago); (2) la fase 1
+  no se bloquea salvo por lo que no se puede inventar sin mentir; (3) 🎯 **los `supuestos` de la
+  precalificación SON la lista de verificación de la fase 2**, con los `optimista` en cabeza.
+- ⚠️ Matiz medido: las **80 pólizas vivas (CIMA) NO traen marca/modelo en texto** (solo matrícula);
+  ese camino sirve para el volcado histórico. Por eso el catálogo a mano era lo primero a construir.
+
 ### 📸 (01/09/2026) asegura: alta por fotos, SINCO y el siguiente ramo — investigado y anotado
 - 🚨 **La ficha técnica SÍ trae la versión (campo `D.2`)**, más `K` de homologación. Se creía que
   solo la marca. Pero `D.2` es homologación EUROPEA, no Base7: sigue habiendo emparejamiento, que se
