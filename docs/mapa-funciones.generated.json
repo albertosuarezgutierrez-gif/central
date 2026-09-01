@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T08:42:04Z",
-  "sha": "b16a7877182e750cc7db920459e0b294db5ae3c1",
+  "generadoEn": "2026-09-01T08:56:33Z",
+  "sha": "844ee0b419d30199f768e065d0ec89c110473a0c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3252,70 +3252,6 @@
       ],
       "rutaApi": null,
       "hash": "2973fdc30c86"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/edge-esm.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "service",
-        "unpkg",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "2f84e2744daf"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/edge.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "service",
-        "unpkg",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "df32d9d49f7b"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/library.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "engine",
-        "service",
-        "unpkg",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "28e72b0fd8cb"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/react-native.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "engine",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "85ef0058816a"
-    },
-    {
-      "ruta": "apps/asegura/lib/generated/asegura-client/runtime/wasm.js",
-      "ambito": "apps/asegura",
-      "exporta": [],
-      "funciones": [],
-      "tablas": [
-        "engine",
-        "user"
-      ],
-      "rutaApi": null,
-      "hash": "b6f3bca67b87"
     },
     {
       "ruta": "apps/asegura/lib/operador.ts",
@@ -102594,7 +102530,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2696,
+    "archivos": 2691,
     "funciones": 7476
   }
 }
