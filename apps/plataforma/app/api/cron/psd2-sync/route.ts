@@ -7,8 +7,7 @@ import { disponible } from '@/lib/enablebanking'
 import { sincronizarTodas } from '@/lib/psd2'
 import { partirAvisos } from '@/lib/psd2-semaforo'
 import { categorizarPendientesTodas } from '@/lib/categorizar'
-import { tgAlert, escapeHtml } from '@/lib/telegram'
-
+import { escapeHtml, tgAvisoAlerta } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
@@ -34,7 +33,7 @@ export async function GET(req: NextRequest) {
     // Telegram/día (el cron es diario); el 200 se mantiene para no confundir al dispatcher.
     // Las notas viajan como contexto, no como motivo.
     const cuerpo = [...criticos, ...notas].map(a => `• ${escapeHtml(a)}`).join('\n')
-    await tgAlert(`⚠️ <b>PSD2 sync</b> — el banco no está entregando movimientos:\n${cuerpo}`, 'aviso').catch(() => {})
+    await tgAvisoAlerta('sistema.psd2-sync', `⚠️ <b>PSD2 sync</b> — el banco no está entregando movimientos:\n${cuerpo}`, 'aviso').catch(() => {})
   }
   // Una nota ℹ️ SOLA no manda Telegram, ni siquiera la primera vez: describe una limitación
   // permanente del banco («Kutxabank solo sirve 30 días de ventana») sobre la que no hay nada

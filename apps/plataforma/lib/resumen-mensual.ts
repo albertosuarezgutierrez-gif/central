@@ -1,5 +1,5 @@
 import { prisma } from './db'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { getResumenFinanciero } from './finanzas'
 import { getPLMensual } from './sivra/pl-mensual'
 import { eur } from './dinero'
@@ -79,7 +79,7 @@ export async function enviarResumenMensual(): Promise<{ cuentas: number; enviado
   let enviados = 0
   for (const c of cuentas) {
     const msg = await resumenDeCuenta(c.id, per).catch(() => null)
-    if (msg) { await tgSend(msg).catch(() => {}); enviados++ }
+    if (msg) { await tgAviso('finanzas.resumen-mensual', msg).catch(() => {}); enviados++ }
   }
   return { cuentas: cuentas.length, enviados }
 }

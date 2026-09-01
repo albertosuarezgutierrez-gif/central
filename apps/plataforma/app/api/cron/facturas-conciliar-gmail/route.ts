@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { conciliarFacturasDesdeGmail } from '@/lib/agente-facturas/conciliar-gmail'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   // Un solo aviso por pasada, y solo si enganchó algo (sin ruido cuando el buzón está al día).
   if (enganchadasTotal > 0) {
     const lineas = resumen.map(r => `• ${r.cuenta}: ${r.enganchadas} justificante(s) — ${eur(r.importe)}`)
-    await tgSend(
+    await tgAviso('facturas.conciliar-gmail', 
       `📎 <b>Facturas enganchadas desde Gmail</b>\n` +
       `${enganchadasTotal} cargo(s) del banco casados con su factura.\n\n${lineas.join('\n')}`,
     ).catch(() => {})

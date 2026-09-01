@@ -1,5 +1,5 @@
 import { prisma } from './db'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { eur } from './dinero'
 
 const EMOJI: Record<string, string> = {
@@ -68,5 +68,5 @@ export async function enviarResumenSemanal(): Promise<void> {
     `💰 Total ingresos: ${eur(totalIngresos)}`,
   ].join('\n')
 
-  await tgSend(msg)
+  await tgAviso('finanzas.resumen-semanal-gastos', msg)
 }

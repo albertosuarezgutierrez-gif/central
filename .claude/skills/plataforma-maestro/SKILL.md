@@ -37,6 +37,11 @@ Antes de tocar nada: lee `apps/plataforma/CLAUDE.md` y el archivo de references/
     vs `facturas_proveedor` (agente Gmail→pago). No confundirlas ni cruzar escrituras.
 11. **Cron nuevo = fila en `lib/cron-dispatch.ts::CRON_JOBS`, NUNCA en `vercel.json`** (dispatcher
     único `/api/cron/dispatch` cada minuto; Vercel Pro tope 40 crons y hay ~60 jobs, 30/07/2026).
+12. **Aviso Telegram PROACTIVO nuevo → `tgAviso`/`tgAvisoBotones`/`tgAvisoAlerta` + fila en
+    `lib/telegram/catalogo.ts`, en el MISMO PR** (panel `/telegram`, 01/09/2026). Lo obliga el
+    guardián `lib/telegram/catalogo.test.ts`. Las RESPUESTAS del bot a un mensaje/botón de Alberto
+    NO se catalogan (silenciarlas rompe la conversación). El gate es **fail-open**: si la BD falla,
+    el aviso SALE. Y `make_interval(days => ${n})` siempre con **`::int`** (Prisma manda int8 → 42883).
 
 ## ÍNDICE de references/
 **Lee SOLO el archivo de references/ que necesite la tarea; no los cargues todos.**

@@ -21,3 +21,11 @@ export {
   primaEnRiesgo,
   type UrgenciaRenovacion,
 } from './vencimientos.ts'
+
+export {
+  objetoAsegurado,
+  pareceMatricula,
+  type ObjetoAsegurado,
+  type EstadoObjeto,
+  type EntradaObjeto,
+} from './objeto.ts'

@@ -5,8 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { descargarLiquidaciones } from '@/lib/cima'
 import { eur } from '@/lib/dinero'
-import { tgSend } from '@central/core-telegram'
-
+import { tgAviso } from '@/lib/telegram'
 export const dynamic    = 'force-dynamic'
 export const maxDuration = 60
 
@@ -39,7 +38,7 @@ export async function GET(req: NextRequest) {
     ficheros = await descargarLiquidaciones()
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    await tgSend(`🔴 <b>CIMA LIQ</b>\nError al conectar con CIMA:\n<code>${msg.slice(0, 300)}</code>`)
+    await tgAviso('correduria.cima-liq', `🔴 <b>CIMA LIQ</b>\nError al conectar con CIMA:\n<code>${msg.slice(0, 300)}</code>`)
     return NextResponse.json({ ok: false, error: msg }, { status: 502 })
   }
 
@@ -93,13 +92,13 @@ export async function GET(req: NextRequest) {
   const resumen = ficheros.map(f => `• ${f.compania} ${f.periodo}: ${fmt(f.importeNeto)}`).join('\n')
 
   if (descuadres.length) {
-    await tgSend(
+    await tgAviso('correduria.cima-liq', 
       `🟡 <b>CIMA · Descuadre comisiones</b>\n\n` +
       `${descuadres.join('\n\n')}\n\n` +
       `Revisa en <b>/correduria</b>.`
     )
   } else {
-    await tgSend(
+    await tgAviso('correduria.cima-liq', 
       `✅ <b>CIMA LIQ</b> — ${ficheros.length} fichero(s) cuadran con BBVA\n${resumen}`
     )
   }

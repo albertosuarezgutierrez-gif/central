@@ -59,8 +59,14 @@
 - **Entornos:** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
   `https://albertosuarezgutierrez.avant2.es`. ⚠️ **El host base de la API REST no consta en
   ningún correo de Alberto**: hay que sacarlo de la documentación, que la tiene Manuel.
-- **Coste: 0,50€ por cotización** (tarifa más baja, ofrecida por el CEO Ángel Blesa el
-  09/04/2026). Es coste variable por uso: cada tarificación del agente cuesta dinero.
+- **Coste: 0,50€ — pero NO está claro por QUÉ se cobra, y no es un detalle menor.** El correo del
+  CEO Ángel Blesa (09/04/2026) dice literal «se cobra **por cotización**», con ejemplo: recotizar
+  el mismo coche añadiendo un conductor son «2 cotizaciones independientes». **Alberto lo recuerda
+  como por EMISIÓN** (01/09/2026), y puede tener razón: ese correo es anterior al presupuesto del
+  14/05 y al contrato C00 firmado el 20/05, que es el que manda. Los dos documentos que lo
+  resolverían son PDF adjuntos y no se han podido leer. **Antes de construir cualquier automatismo
+  que tarifique, confirmarlo en el contrato**: por cotización, una pasada sobre la cartera entera
+  cuesta dinero y necesita tope; por emisión, tarificar es gratis. No lo des por sabido.
 
 ### 🚦 Dónde se paró EXACTAMENTE la API (03/06/2026) y qué falta
 Reconstruido el 01/09/2026 desde el Gmail de Alberto y la BD. La plataforma web funciona; lo
@@ -129,6 +135,32 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
   Helper puro `@central/module-seguros/vencimientos` (`urgenciaRenovacion`, `fechaLimiteOposicion`,
   `primaEnRiesgo`), consumido por el puerto `/api/operador/vencimientos` de asegura y pintado en
   plataforma `/correduria`.
+- **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
+  431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
+  vive en **`polizas.datos_especificos`** (JSON libre que escribe la ingesta EIAC, distinto por
+  ramo) y, para lo que no tiene bien, en **`poliza_coberturas.descripcion`**. Medido sobre la
+  cartera entera:
+  - **auto/moto** → `matricula` (4.506 filas, **EN CLARO**), `marca`/`modelo` (~1.420 cada uno),
+    `version`, `anio`, `combustible`, `tipoVehiculo`. ⚠️ **La clave `vehiculo` (2.781 filas) NO es
+    una descripción: contiene la MATRÍCULA.** Pintarla como modelo es inventarse el dato.
+  - **hogar** → `localidad` (181) y `cp` (330) en claro, `metrosCuadrados`, `anioConstruccion`,
+    `continente`/`contenido`. La **`direccion` (172) viene CIFRADA** (`v1:iv:cipher:tag`,
+    AES-256-GCM, clave `PII_ENCRYPTION_KEY` que hoy vive en el Vercel de Manuel). Sin esa env se
+    dice **«cifrado»**, que NO es «sin dato»: el dato existe y aparecerá solo el día que la clave
+    llegue con el traspaso (`descifrarDireccion` en `apps/asegura/lib/cartera.ts` ya lo intenta).
+  - **RC (81) y comercio (110)** → `datos_especificos` NO trae nada útil; lo que identifica una RC
+    son sus **modalidades** (`poliza_coberturas`: «Básica», «Locativa», «Accidentes de trabajo»).
+    Solo 9 de las 81 RC tienen coberturas cargadas. Comercio sí trae `actividad` (28).
+  - **vida / salud / decesos / accidentes** → no hay bien: son seguros de PERSONAS. Ausencia
+    **definitiva**, no «pendiente» — prometer una pasada futura que traiga el dato sería mentir.
+  - `_estado_legacy_pre_loo695` es ruido de una migración del CRM, no un dato.
+  Helper puro **`@central/module-seguros/objeto`** (`objetoAsegurado`) con **cuatro** salidas
+  (`conocido` · `no_informado` · `cifrado` · `sin_objeto`); lo consumen el puerto
+  `/api/operador/vencimientos` de asegura, la columna **«Qué asegura»** de plataforma `/correduria`
+  y el aviso de renovaciones por Telegram. **Al informar a Alberto de una renovación, di SIEMPRE
+  qué asegura** — sin eso el aviso no sirve para llamar. Y sigue vigente la regla de PII: en
+  informes y chats, agregados; la matrícula solo si Alberto pregunta por un caso concreto.
+
 ## 6. Novedades 2026 y argumentario de renovación (investigado 01/09/2026)
 > ⚠️ Verificado contra fuentes secundarias del sector (INESE, UNESPA, ICEA, DGSFP): el proxy de la
 > sesión bloquea `boe.es` y `dgsfp.mineco.gob.es`, así que **antes de citarle una norma a un cliente
