@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T13:47:56Z",
+  "generadoEn": "2026-09-01T14:50:20Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1766,7 +1766,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "housesevillana": {
         "estado": "no",
@@ -1786,7 +1786,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "no",
@@ -3225,6 +3225,8 @@
     "asegura": [
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/operador/comisiones",
+      "/api/operador/ingesta",
       "/api/operador/resumen",
       "/api/operador/vencimientos"
     ],
@@ -4029,6 +4031,8 @@
       "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/cartera",
+      "/api/correduria/comisiones",
+      "/api/correduria/comisiones/confirmar",
       "/api/correduria/detalle",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
@@ -4042,6 +4046,7 @@
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
       "/api/cron/contable-proactivo",
+      "/api/cron/correduria-ingesta",
       "/api/cron/correduria-renovaciones",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
@@ -4636,6 +4641,8 @@
       "categoria_alertas",
       "categoria_alertas_log",
       "cima_liquidaciones",
+      "comisiones_cobertura",
+      "comisiones_devengo",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -4976,6 +4983,46 @@
   ],
   "novedades": [
     {
+      "titulo": "PENDIENTE (nuevo):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Quedan 3 peticiones fuera del repo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Son DOS averías:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Causa raíz:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Por qué duró dos meses:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Hecho (nuestro lado):",
+      "fecha": ""
+    },
+    {
+      "titulo": "De Manuel (su repo, no el nuestro):",
+      "fecha": ""
+    },
+    {
+      "titulo": "De Alberto:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Corregida deriva documental:",
+      "fecha": ""
+    },
+    {
       "titulo": "#1946",
       "fecha": ""
     },
@@ -4993,22 +5040,6 @@
     },
     {
       "titulo": "#1938 MERGEADO",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente para Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "#1924 MERGEADO",
-      "fecha": ""
-    },
-    {
-      "titulo": "Vencimientos ya funcionando",
-      "fecha": ""
-    },
-    {
-      "titulo": "Migrar la cartera al schema `seguros`: NO todavía",
       "fecha": ""
     }
   ],
@@ -5441,7 +5472,7 @@
     "packages": 38,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1208,
+    "apis": 1213,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1

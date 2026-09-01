@@ -1337,6 +1337,42 @@ en caso de no resolverse». Diseño: `docs/superpowers/specs/2026-08-20-latido-a
 - **El agente no se declara curado a sí mismo:** a las 24 h del merge, `agentes-latido` compara
   `ultimo_ok_at` contra `merged_at`. Verde → cierra en silencio. Rojo → Telegram. **Éxito = silencio.**
 
+## 🧾 Libro de comisiones de la correduría — devengo → liquidación → cobro → renta (01/09/2026, PR #1962)
+Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuenta». La matriz de
+`/correduria` solo veía el INGRESO del banco, y el ingreso no es lo que va a la renta.
+
+- **Tabla `comisiones_devengo`** (PK `cuenta_id, compania_codigo, periodo_inicio, periodo_fin`;
+  `prisma/sql/2026-09-01_comisiones_devengo.sql`, **aplicada**) con tres ejes por periodo: `esperado_*`
+  (recibos cobrados en CIMA) → `liq_*` (extracto de la compañía) → `banco_total` (BBVA). Más
+  **`comisiones_cobertura`**, que dice de qué compañías se está CIEGO — sin ella el total anual parece
+  completo estándolo a medias. Se retiró `cima_liquidaciones` (0 filas) y `lib/cima.ts`.
+- **El cron `/api/cron/cima-liq` NO habla SOAP.** Aquello (`ws.cimaseg.es`) nunca funcionó —404, parser
+  adivinado, códigos de compañía numéricos cuando los reales son `C0058`/`C0109`/`C0468`/`C0613`— y
+  vivía apagado. Lee el **puerto HTTP de `apps/asegura`** (`/api/operador/comisiones`, Bearer
+  `ASEGURA_OPERADOR_SECRET`), como `lib/cartera-asegura.ts`. 🚨 **`ASEGURA_DATABASE_URL` NO existe en
+  este proyecto** y no debe pedirse: el aislamiento entre apps es el mismo patrón que ia-rest/iarrhh.
+- 🚨 **Los tres números NO son el mismo, y quien retiene es la COMPAÑÍA.** Retiene el 15 % de IRPF y lo
+  declara en el modelo 190 **a nombre de Alberto**, que cobra ya el NETO. Para él la retención no es un
+  gasto: es un **pago a cuenta** que resta de la CUOTA. Por eso **a la renta va el BRUTO y contra el
+  banco se compara la REMESA** (bruto − retención; Allianz feb/2026: 95,03 − 14,26 = 80,77 exacto).
+  Restar el 15 % otra vez en cualquier punto lo cuenta dos veces.
+- **Veredicto en el helper PURO `lib/correduria/cuadre.ts`** (testeado), con **9 estados** porque cada
+  uno manda a hacer algo distinto: `deudor` (Occident, comisión negativa y remesa 0) **no es un
+  impago**; `sin-cobertura` (Generali, sin ninguna fuente) **no es** `sin-datos` (Mapfre, que devenga y
+  no manda extracto); y `no-comprobado` manda sobre todo — un fallo de lectura no puede acabar pintado
+  como «la compañía no te ha pagado». El total anual con cualquier hueco se presenta como
+  **PROVISIONAL**: es la cifra que va a la asesoría.
+- **Mapfre se teclea** (`liq_origen='manual'`, PDF cifrado tras enlace que caduca); el `coalesce` del
+  upsert impide que un NULL de CIMA lo pise en la pasada siguiente. **Allianz se lee**: su PDF «Cuenta
+  Agente» lleva el texto en **EBCDIC (cp500)** dentro de los content streams y Node no trae esa
+  codificación → tabla explícita en `lib/correduria/pdf-allianz.ts`.
+- UI: pestaña «Cuadre» en `/correduria`. Los importes que no han llegado se pintan **«—», nunca 0,00€**.
+- 🚨 **PENDIENTE — la cifra fiscal de comisiones sigue siendo una ESTIMACIÓN.** `lib/finanzas.ts:594`
+  eleva el neto del banco al bruto con `× (0,15/0,85)` y da por hecho que TODO abono de seguros es una
+  comisión neta al 15 %; un periodo deudor de Occident rompe el supuesto. El bruto y la retención
+  REALES ya están en `comisiones_devengo`: falta sustituir la estimación por el dato real. Hasta
+  entonces, al hablar de esa cifra di «estimada», no «verificada».
+
 ## 🔔 Panel «Avisos Telegram» (`/telegram`) — el interruptor de lo que manda el bot (01/09/2026, PR #1924)
 Alberto: «las notificaciones de Telegram son muchas». El bot emitía desde **~57 ficheros** sin
 inventario ni forma de callar uno solo: para bajar ruido había que buscar el `tgSend` y borrarlo.
