@@ -192,6 +192,64 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/asegura-portal:
+    dependencies:
+      '@central/core-ai':
+        specifier: workspace:*
+        version: link:../../packages/core-ai
+      '@central/core-email':
+        specifier: workspace:*
+        version: link:../../packages/core-email
+      '@central/core-identity':
+        specifier: workspace:*
+        version: link:../../packages/core-identity
+      '@central/module-seguros-portal':
+        specifier: workspace:*
+        version: link:../../packages/module-seguros-portal
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
+      jose:
+        specifier: ^5.9.3
+        version: 5.10.0
+      next:
+        specifier: ^15.5.18
+        version: 15.5.22(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      pdf-parse:
+        specifier: ^1.1.1
+        version: 1.1.4
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.42
+      '@types/react':
+        specifier: ^19
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.17)
+      eslint:
+        specifier: ^9
+        version: 9.39.4(jiti@2.7.0)
+      eslint-config-next:
+        specifier: ^16.2.6
+        version: 16.2.7(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   apps/housesevillana:
     dependencies:
       next:
@@ -1072,6 +1130,8 @@ importers:
   packages/module-seguros: {}
 
   packages/module-seguros-pii: {}
+
+  packages/module-seguros-portal: {}
 
   packages/module-ses: {}
 

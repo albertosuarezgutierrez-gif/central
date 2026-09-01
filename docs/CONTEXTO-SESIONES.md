@@ -43,6 +43,25 @@
 
 ---
 
+### 🧭 (01/09/2026) Portal de Grupo Asegura — Fase 1 en pie (PR #1965)
+- App nueva `apps/asegura-portal` (Next.js, rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`
+  (puro: niveles de acceso, procedencia en tres estados, código de un solo uso). 6 tablas `portal_*`
+  en el schema `seguros` — **el SQL NO está aplicado todavía**; las otras 5 del spec llegan con sus fases.
+- **El canal es un PUERTO**: la WABA no existe aún, así que en Fase 1 se enchufan email y consola;
+  WhatsApp entra añadiendo un fichero. `canal_no_disponible` (503) ≠ `envio_fallido` (502).
+- 🚨 Los 3 ENUM del DDL estaban tipados `String` en Prisma: typecheckea y **revienta en el primer
+  INSERT** (42804). Arreglado declarándolos con `@@map` — no hay migración, la BD ya era así.
+- Guardián `test/regression-portal-aislamiento.test.ts` (importar `lib/session` **y** nombrar
+  `identidadId`), verificado con un infractor real en sus dos variantes.
+- Falta de Alberto: proyecto Vercel, rol `prisma_asegura_portal` con contraseña, envs, WABA.
+- 🚧 **Volcado de la cartera: LANZADO Y BLOQUEADO (01/09/2026).** DDL ya aplicado (52 tablas,
+  42 enums, `dblink`+`vector` OK), pero el secreto `asegura_origen_url` del Vault **mide 10
+  caracteres: no es una cadena de conexión**, así que `dblink` falla con «password or GSSAPI
+  delegated credentials required» en la primera tabla. **Nada escrito** (la transacción revierte:
+  bitácora 0, clientes 0, pólizas 0, FKs 0). Al corregirlo: pegar el `ASEGURA_DATABASE_URL` del
+  proyecto Vercel `central-asegura` **sin `pgbouncer=true`** (no es un parámetro de libpq) y mejor
+  por el **puerto 5432**, no el pooler.
+
 ### 🔬 (01/09/2026) Codeoscopic: forense de la única cotización real — dos docs corregidos
 - No hay conexión desde el contenedor: el proxy deniega por política `codeoscopic.io`,
   `central-asegura.vercel.app` y `app.grupoasegura.com` (403 en el CONNECT). La verificación

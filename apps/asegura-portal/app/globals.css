@@ -1,0 +1,25 @@
+:root { --fondo: #ffffff; --texto: #111827; --borde: #e5e7eb; --brand: #0f766e; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--fondo); color: var(--texto); }
+
+/* Ficha de lo que la IA ha leído. Apilada por defecto (a 320 px una rejilla de
+   dos columnas deja el valor en un canal de ~120 px); en cuanto hay sitio pasa
+   a etiqueta + valor. */
+.datos-leidos { display: grid; grid-template-columns: 1fr; gap: 2px 12px; font-size: 14px; margin: 0; }
+.datos-leidos dt { color: #6b7280; font-size: 12px; }
+.datos-leidos dd { margin: 0 0 8px; }
+@media (min-width: 420px) {
+  .datos-leidos { grid-template-columns: minmax(8rem, 38%) 1fr; gap: 6px 12px; }
+  .datos-leidos dt { font-size: 14px; }
+  .datos-leidos dd { margin: 0; }
+}
+
+/* Botón de subir: el input de fichero nativo no llega a los 44 px táctiles. */
+.boton-subir {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 44px; padding: 12px 16px;
+  border: 1px solid var(--brand); border-radius: 8px;
+  background: var(--brand); color: #fff; font-size: 16px; cursor: pointer;
+}
+.boton-subir input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.boton-subir[aria-disabled='true'] { opacity: 0.6; cursor: progress; }
