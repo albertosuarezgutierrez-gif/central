@@ -32,6 +32,18 @@
 
 ---
 
+### 📜 (01/09/2026) Codeoscopic: el Claude de Manuel CONTESTÓ — contrato de la API completo
+- Respuesta transcrita en **`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`**; resumen operativo en
+  `agente-correduria/references/sector.md` §4. Resuelve el host base (**sandbox
+  `api-int.codeoscopic.io`**, sin `portal.`; producción no consta → pedir), auth (OAuth2
+  client_credentials + `X-Client-App`/`X-User-Email` + media type `vnd.codeoscopic.v1+json`) y el
+  flujo: **`POST /insurances` SÍNCRONO, facturable y NO idempotente (jamás retry)** → `id` =
+  project_id (persistirlo SIEMPRE: su ausencia era el `project_not_found` del webhook).
+- Basic Auth del webhook: DEFINIDO (lo genera ASegura, lo carga Codeoscopic); solo falta ejecutarlo.
+  Sin contador/tope de coste en su repo → se pondrá en central. Solo AUTO cableado.
+- **Quedan 3 peticiones fuera del repo:** credenciales OAuth2 sandbox nuevas (JM Fernández, PM API),
+  el OpenAPI oficial, y que Manuel adjunte el fixture `2026-06-10-sandbox-quote-response.json`.
+
 ### 🧾 (01/09/2026) asegura: prompt para el Claude de Manuel (Codeoscopic/Avant2, tarificación)
 - Manuel pidió un prompt para su Claude → escrito en **`docs/CODEOSCOPIC-PROMPT-MANUEL.md`** (lo envía
   Alberto). Pide: doc de la API + host base (no consta en ningún correo de Alberto), esquema de auth,
