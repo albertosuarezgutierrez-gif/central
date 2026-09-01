@@ -56,9 +56,11 @@
 - 🔑 **Las claves de las compañías NO se generan en el panel**: el corredor se las pide a cada
   compañía y las manda a `soporte@codeoscopic.com`, que las configura. Por eso viajaron en claro
   por email (mayo-junio/2026, tickets 267334) — **pendientes de rotar**.
-- **Entornos:** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
-  `https://albertosuarezgutierrez.avant2.es`. ⚠️ **El host base de la API REST no consta en
-  ningún correo de Alberto**: hay que sacarlo de la documentación, que la tiene Manuel.
+- **Entornos (web):** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
+  `https://albertosuarezgutierrez.avant2.es`. ✅ **Host base de la API REST (resuelto 01/09/2026,
+  del repo de Manuel): sandbox `https://api-int.codeoscopic.io`** (OJO: **sin** el prefijo
+  `portal.` que menciona una doc vieja). El host de producción NO consta ni en su repo (se inyecta
+  por env `CODEOSCOPIC_BASE_URL`): pedirlo a Codeoscopic.
 - **Coste: 0,50€ POR COTIZACIÓN — resuelto el 01/09/2026 leyendo el Gmail.** Dos fuentes escritas y
   coherentes: el correo del CEO Ángel Blesa (09/04/2026, «se cobra por cotización… 50 céntimos por
   cotización», tarifa de amigo; recotizar el mismo coche añadiendo un conductor son «2 cotizaciones
@@ -71,16 +73,48 @@
   cotización = una parrilla con todas las compañías; retarificar la cartera viva (~109 pólizas)
   ronda los 54,50€ por pasada. Cualquier automatismo que cotice lleva **contador y tope** de serie.
 
+### 📜 Contrato técnico de la API — recibido del repo de Manuel (01/09/2026)
+Su Claude contestó al prompt con un traspaso completo, transcrito en
+**`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`** (leer ahí el detalle; esto es el resumen que no puede
+faltar al construir el cliente en `central`):
+- **Auth:** OAuth2 `client_credentials` (`POST {BASE_URL}/oauth2/token`) + en CADA request las
+  cabeceras **`X-Client-App`** y **`X-User-Email`** (obligatorias) y media type
+  **`application/vnd.codeoscopic.v1+json`** en `Accept`/`Content-Type` (la versión va ahí, no en el path).
+- **Cotizar = `POST /insurances`**, SÍNCRONO (los precios vienen en la respuesta; timeout 150 s) y
+  🚨 **facturable y NO idempotente: UN solo intento, jamás retry** — un reintento duplica proyecto y
+  cargo de 0,50€. Respuesta: `id` (= **project_id**, hay que persistirlo SIEMPRE — su ausencia en BD
+  es la causa exacta del `project_not_found` del webhook), `mainQuotes[]` (los precios),
+  `offers[]`, `errors[]` (fallos POR compañía, no abortan).
+- **Preemisión = `POST /insurances/{id}/offers`** (re-rate de la oferta elegida, también noRetry) ·
+  estado = `GET /insurances/{id}` · emisión = `POST /insurances/{id}/policy-applications`
+  (multipart, tras el flag **`BROKER_SUBMIT_ENABLED`**, que sigue OFF y así se queda).
+- **Catálogos** por GET (mismo auth): `towns?postalCode=` (CP→town.id, requerido en el payload),
+  `car/brands`, `car/brands/{id}/models`, `…/vehicles` (código Base7), `car/garage-types`,
+  `car/insurance-companies`, `marital-statuses`.
+- **Solo AUTO está cableado como cotización real**; hogar/vida/salud no tienen schema de cotización.
+  El payload proyecta la MISMA persona en `holder`/`owner`/`primaryDriver` (el vendor lo exige).
+- **Webhook** (`https://app.grupoasegura.com/api/webhooks/codeoscopic`): solo dispara en EMISIÓN OK
+  (+ heartbeats ~1/h sin project_id) — **para tarificar no hace falta**. El Basic Auth quedó resuelto
+  de diseño: **lo genera ASegura** y Codeoscopic lo carga en su panel; falta ejecutarlo (drift del
+  secret desde 12/06).
+- **Sin contador/tope de coste en su repo** — confirmado: hay rate-limit por IP (40/15min) y circuit
+  breaker, pero nada que limite la facturación. El contador+tope se pone en `central` (regla ya
+  anotada arriba).
+- **OpenAPI: no está en su repo** (lo entrega Codeoscopic al dar de alta el acceso). Contacto: Juan
+  Manuel Fernández, PM de la API. **Pendiente de pedir a Manuel:** el fixture sanitizado
+  `__fixtures__/2026-06-10-sandbox-quote-response.json` (la mejor referencia del formato de respuesta).
+
 ### 🚦 Dónde se paró EXACTAMENTE la API (03/06/2026) y qué falta
 Reconstruido el 01/09/2026 desde el Gmail de Alberto y la BD. La plataforma web funciona; lo
 congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de la API) que
-**nunca tuvo respuesta**. Tres puntos, ninguno resuelto:
+**nunca tuvo respuesta**. Tres puntos (estado tras el traspaso del 01/09):
 1. **Credenciales de sandbox CADUCADAS** — usuario `albertocsf0170ws`, enviadas el 30/04/2026 por
-   Bitwarden Send con TTL de 7 días. Se pidió regenerarlas el 03/06 y no llegaron.
-2. **Basic Auth del webhook SIN DEFINIR** — pregunta abierta desde el 30/04: ¿las genera ASegura
-   o las define Codeoscopic en su panel? Es literalmente «el último ítem para cerrar el receptor
-   de webhooks de cara a producción».
-3. **Smoke end-to-end sin correr** (Quote → preemisión → Submit → webhook).
+   Bitwarden Send con TTL de 7 días. Se pidió regenerarlas el 03/06 y no llegaron. **Sigue abierto:**
+   son el OAuth2 `client_id`/`client_secret`; los regenera Codeoscopic (JM Fernández, ref LOO-162).
+2. ~~**Basic Auth del webhook SIN DEFINIR**~~ → **DEFINIDO** (traspaso 01/09): las genera ASegura
+   (script en el repo de Manuel) y Codeoscopic las configura en su panel. Queda **ejecutarlo**
+   (generar, subir a envs, pasarlas a JM). No bloquea la tarificación.
+3. **Smoke end-to-end sin correr** (Quote → preemisión → Submit → webhook). Sigue pendiente.
 
 - **Pero el flujo llegó a funcionar de verdad.** Medido en la BD: el **29/07/2026** una cotización
   de auto devolvió **15 precios reales de Mapfre, Allianz y Occident** (278,59€ a 609,64€), con el
@@ -96,8 +130,9 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
 - **DPA art. 28 RGPD: decisión abierta.** El DPD de Codeoscopic se niega a firmarlo con el
   integrador (no hay relación contractual con él) y solo remite su política de privacidad. Manuel
   lo consideraba requisito previo a producción.
-- ⚠️ **La documentación de la API NO está en el Gmail de Alberto** (se mandó a Manuel). Sin ella no
-  hay host base ni contratos de endpoints: es lo primero que hay que conseguir.
+- ✅ **La documentación de la API ya está conseguida** (01/09/2026): el traspaso del repo de Manuel
+  (`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`) trae host base, auth y contratos de endpoints. Lo único
+  documental que falta es el **OpenAPI oficial** (no está en su repo; lo entrega Codeoscopic).
 - Manuales de la PLATAFORMA (no de la API) sí están: ticket 267332 del 25/05/2026, más
   `academy.codeoscopic.com` y el KB `codeoscopicavant2.zohodesk.com`.
 
