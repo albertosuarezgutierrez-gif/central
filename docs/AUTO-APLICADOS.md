@@ -13,6 +13,15 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
+  `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
+  `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40
+  commits de deriva desde la pasada del 31/08); rotación mensual ejecutada (535 entradas de agosto +
+  2 de octubre-2025 archivadas, quedan 8 vivas de septiembre); informe de la pasada ligera · pasada
+  ligera de esta auditoría, entregado por PR (carril 1 bajo el harness de tareas de GitHub, que no
+  permite push directo a `main`; el PR es solo-registro y se auto-mergea). Único hallazgo de código
+  (4 verticales sin entrada curada en `estructura.ts`) va al PR de carril 2, no aquí.
+
 - **2026-08-31** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json` · regenerados (`node scripts/auditar-estructura.mjs`) · la
   radiografía estaba desfasada por la deriva de los 37 commits desde la pasada del 29/08 (mismo

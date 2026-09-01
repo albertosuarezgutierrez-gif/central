@@ -59,14 +59,17 @@
 - **Entornos:** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
   `https://albertosuarezgutierrez.avant2.es`. ⚠️ **El host base de la API REST no consta en
   ningún correo de Alberto**: hay que sacarlo de la documentación, que la tiene Manuel.
-- **Coste: 0,50€ — pero NO está claro por QUÉ se cobra, y no es un detalle menor.** El correo del
-  CEO Ángel Blesa (09/04/2026) dice literal «se cobra **por cotización**», con ejemplo: recotizar
-  el mismo coche añadiendo un conductor son «2 cotizaciones independientes». **Alberto lo recuerda
-  como por EMISIÓN** (01/09/2026), y puede tener razón: ese correo es anterior al presupuesto del
-  14/05 y al contrato C00 firmado el 20/05, que es el que manda. Los dos documentos que lo
-  resolverían son PDF adjuntos y no se han podido leer. **Antes de construir cualquier automatismo
-  que tarifique, confirmarlo en el contrato**: por cotización, una pasada sobre la cartera entera
-  cuesta dinero y necesita tope; por emisión, tarificar es gratis. No lo des por sabido.
+- **Coste: 0,50€ POR COTIZACIÓN — resuelto el 01/09/2026 leyendo el Gmail.** Dos fuentes escritas y
+  coherentes: el correo del CEO Ángel Blesa (09/04/2026, «se cobra por cotización… 50 céntimos por
+  cotización», tarifa de amigo; recotizar el mismo coche añadiendo un conductor son «2 cotizaciones
+  independientes») y el **presupuesto de Cristina Ferreiro (14/05/2026), en TEXTO del correo, no en
+  el PDF**: «las cotizaciones API, tal y como te ha indicado Ángel, serán a **0.50€ la cotización**,
+  normalmente éstas se facturan a mes vencido». El usuario de Avant2 va bonificado al 100%; la
+  puesta en marcha fueron 636€+IVA (769,56€ pagados). El recuerdo de Alberto («por emisión») queda
+  descartado por ambas fuentes; el contrato C00 (PDF, sin leer) sería la única palabra final, pero
+  el presupuesto es su base. **Consecuencia operativa: tarificar en masa cuesta dinero** — una
+  cotización = una parrilla con todas las compañías; retarificar la cartera viva (~109 pólizas)
+  ronda los 54,50€ por pasada. Cualquier automatismo que cotice lleva **contador y tope** de serie.
 
 ### 🚦 Dónde se paró EXACTAMENTE la API (03/06/2026) y qué falta
 Reconstruido el 01/09/2026 desde el Gmail de Alberto y la BD. La plataforma web funciona; lo
