@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T11:49:59Z",
-  "sha": "b1826abc70abb9063f188159979aae91016e68a2",
+  "generadoEn": "2026-09-01T13:35:43Z",
+  "sha": "8e2ac13e5c647ae3073c4bad5d81005a08ca758a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -60849,7 +60849,7 @@
         "trading_tesis_resultado"
       ],
       "rutaApi": "/api/trading/puntuar",
-      "hash": "4f18311e720d"
+      "hash": "2b332f94dfb4"
     },
     {
       "ruta": "apps/plataforma/app/api/trading/radar/route.ts",
@@ -67780,7 +67780,7 @@
           "exportada": true,
           "params": "app: string",
           "retorno": "",
-          "linea": 157,
+          "linea": 161,
           "resumen": "Enlaces profundos por nodo: dónde vive cada cosa (código / Vercel / Supabase)."
         },
         {
@@ -67789,7 +67789,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 166
+          "linea": 170
         },
         {
           "nombre": "enlacesSkill",
@@ -67797,12 +67797,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 169
+          "linea": 173
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "836e62028010"
+      "hash": "a1c602459ae3"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-csv.ts",
@@ -80470,6 +80470,7 @@
         "resumenDiferido",
         "fechaMas",
         "diasEntre",
+        "ventanaHastaApertura",
         "juzgarHuerfana",
         "resumenHuerfanas",
         "detectarSuplantaciones",
@@ -80572,12 +80573,21 @@
           "linea": 451
         },
         {
+          "nombre": "ventanaHastaApertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechasApertura: string[], hoy: string, margenDias: number",
+          "retorno": "number",
+          "linea": 464,
+          "resumen": "Ventana (en días) que hay que pedir a la 2ª fuente para que la serie alcance el ANCLA de `juzgarHuerfana`: la sesión <= `h.fecha`. `h.fecha` es la fecha de APERTURA (tesis o posición), NUNCA la de ven"
+        },
+        {
           "nombre": "juzgarHuerfana",
           "kind": "function",
           "exportada": true,
           "params": "h: Huerfana, serie: PuntoContraste[], maxDesvio = DIVERGENCIA_MAX, margenDias = HUERFANA_MARGEN_DIAS,",
           "retorno": "VeredictoHuerfana",
-          "linea": 460,
+          "linea": 471,
           "resumen": "`serie` = cierres publicados por la 2ª fuente en orden ascendente (lo que devuelven tanto el CSV de Stooq como el chart de Yahoo, y lo que ya asume `juzgarPuntos`)."
         },
         {
@@ -80586,7 +80596,7 @@
           "exportada": true,
           "params": "puntuadas: number, sinResolver: HuerfanaNoResuelta[], fueraDePlazo: number,",
           "retorno": "string",
-          "linea": 498,
+          "linea": 509,
           "resumen": "Parte de una línea. Vacío solo si no hubo NINGUNA huérfana: en cuanto hay una, se dice — aunque no se haya podido hacer nada con ella, que es justo el caso que se pasó cuatro semanas callado."
         },
         {
@@ -80595,7 +80605,7 @@
           "exportada": false,
           "params": "a: number, b: number, tol: number",
           "retorno": "boolean",
-          "linea": 588
+          "linea": 599
         },
         {
           "nombre": "detectarSuplantaciones",
@@ -80603,7 +80613,7 @@
           "exportada": true,
           "params": "precios: Record<string, number>, referencias: Record<string, number>, tol = CRUCE_TOLERANCIA,",
           "retorno": "Suplantaciones",
-          "linea": 594,
+          "linea": 605,
           "resumen": "Detecta precios que pertenecen a otro símbolo. `referencias` = mismo mapa que `filtrarPreciosAnomalos` (último `precio_ref` conocido ANTERIOR a la pasada, por símbolo)."
         },
         {
@@ -80612,7 +80622,7 @@
           "exportada": true,
           "params": "suplantados: Suplantacion[]",
           "retorno": "string",
-          "linea": 643,
+          "linea": 654,
           "resumen": "Resumen de una línea. Cadena vacía si no hay nada — el consumidor no tiene que comprobarlo."
         },
         {
@@ -80621,13 +80631,13 @@
           "exportada": true,
           "params": "nuevo: number, anterior: number | null, umbral = SALTO_NAV_AVISO",
           "retorno": "SaltoSaldo",
-          "linea": 669,
+          "linea": 680,
           "resumen": "`variacion` = (nuevo − anterior) / anterior. Sin anterior no hay nada que comparar (primer saldo): no se avisa, que es distinto de «no ha cambiado»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad6b10d26632"
+      "hash": "1de6647ac33a"
     },
     {
       "ruta": "apps/plataforma/lib/trading/precios-stooq.ts",
@@ -102694,6 +102704,6 @@
   ],
   "resumen": {
     "archivos": 2692,
-    "funciones": 7493
+    "funciones": 7494
   }
 }
