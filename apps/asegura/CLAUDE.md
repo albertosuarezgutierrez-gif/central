@@ -100,8 +100,12 @@ GitHub Actions (cron 5:30 y 11:30)
   mientras dura ese recálculo las búsquedas mienten.
 - **Ficheros en Vercel Blob** (privado, URLs firmadas; hoy ~4). Los EIAC de CIMA **no se guardan como
   fichero**: se parsean a tablas.
-- **Codeoscopic:** el código de emisión existe pero está **tras un flag que nunca se activó** — por eso
-  sus tablas están vacías. No es un bug; es una función sin estrenar.
+- **Codeoscopic — LA fuente de tarificación y EMISIÓN de pólizas nuevas (01/09/2026):** Avant2 Sales
+  Manager operativo a nombre de ALBERTO (no de Manuel) desde 09/06; compañías vivas Reale y Fidelidade,
+  claves entregadas de Mapfre/Allianz/Occident; DPA art. 28 firmado. La integración API de la web quedó
+  EN SANDBOX (jun/2026, contacto juan.fernandez@codeoscopic.com) sin cerrar la batería
+  Quote→preemisión→Submit→webhook — por eso el código de emisión sigue **tras un flag que nunca se
+  activó** y sus tablas están vacías. No es un bug; es una validación sin terminar.
   ⚠️ **Condición para encender ese flag algún día:** el envío es idempotente por dentro
   (`submit_in_flight_at` es un candado, `submit_attempt_id` una UUID para reconciliar) pero **NO de
   punta a punta**: Codeoscopic no deduplica por nuestro `attempt_id`, así que un reintento tras una
