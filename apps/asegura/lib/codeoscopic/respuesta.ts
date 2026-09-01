@@ -22,6 +22,13 @@ export type Precio = {
   compania: string
   producto: string
   modalidad: string | null
+  /** Nivel de cobertura: «Terceros», «Todo Riesgo Con Franquicia Alta»… Es la
+   *  agrupación natural de una comparativa: sin ella se comparan peras y manzanas. */
+  categoria: string | null
+  /** Franquicia en euros. 🚨 `null` = el producto no la declara, NO «sin franquicia»:
+   *  enseñar un todo riesgo de 427,79€ callando que lleva 1.500€ de franquicia es
+   *  la regla «dato que SÍ está pero se lee mal» en su forma más cara. */
+  franquiciaEur: number | null
   /** Prima total del periodo, en euros. */
   primaEur: number
   /** Primer pago, en euros. Puede diferir de la prima si se fracciona. */
@@ -37,13 +44,28 @@ export type Precio = {
   requiereReRate: boolean
 }
 
-/** Una compañía que NO dio precio. No es ruido: es información comercial. */
-export type FalloCompania = {
+/**
+ * Un producto que no devolvió precio. No es ruido: es información comercial.
+ *
+ * 🚨 OJO: cada entrada es una CONFIGURACIÓN de producto, no una compañía. En la
+ * cotización real del 10/06/2026, Reale sale aquí con la config «37786__» Y
+ * ADEMÁS devolvió 8 precios con la config «83474 (ASM y API)». Decir «Reale no
+ * dio precio» habría sido falso justo sobre la compañía que más dio — por eso
+ * existe `tambienDioPrecio`.
+ */
+export type FalloProducto = {
   compania: string
   producto: string | null
+  /** Nombre de la configuración que falló, cuando el vendor lo dice. */
+  configuracion: string | null
   /** Motivo legible («La matrícula ya está asegurada en la compañía»). */
   motivo: string
+  /** `true` si esta MISMA compañía sí dio precio por otra configuración. */
+  tambienDioPrecio: boolean
 }
+
+/** @deprecated Nombre viejo; se mantiene para no romper importaciones. */
+export type FalloCompania = FalloProducto
 
 export type Cotizacion = {
   /** `id` de raíz: NÚMERO en el JSON. Es el `project_id` de Codeoscopic y la
@@ -52,7 +74,7 @@ export type Cotizacion = {
   projectId: string
   fechaEfecto: string | null
   precios: Precio[]
-  fallos: FalloCompania[]
+  fallos: FalloProducto[]
 }
 
 // ─── Acceso defensivo: la respuesta es de un tercero ─────────────────────────
@@ -104,6 +126,8 @@ function leerPrecio(raw: unknown): Precio | null {
     compania: str(obj(producto.vendor).name) ?? 'compañía sin identificar',
     producto: str(producto.name) ?? 'producto sin nombre',
     modalidad: str(obj(producto.modality).name),
+    categoria: str(obj(obj(producto.modality).category).name),
+    franquiciaEur: num(q.deductible),
     primaEur: prima,
     entradaEur: num(q.downPayment),
     meses: num(q.termMonths),
@@ -116,17 +140,20 @@ function leerPrecio(raw: unknown): Precio | null {
   }
 }
 
-function leerFallo(raw: unknown): FalloCompania | null {
+function leerFallo(raw: unknown, companiasConPrecio: Set<string>): FalloProducto | null {
   const e = obj(raw)
   const producto = obj(e.product)
   const motivos = arr(e.messages)
     .map(textoMensaje)
     .filter((t): t is string => t !== null)
+  const compania = str(obj(producto.vendor).name) ?? 'compañía sin identificar'
   return {
-    compania: str(obj(producto.vendor).name) ?? 'compañía sin identificar',
+    compania,
     producto: str(producto.name),
+    configuracion: str(obj(producto.config).name),
     // Sin texto decimos que no lo dijo, no que no pasara nada.
     motivo: motivos.join(' · ') || 'la compañía no explicó el motivo',
+    tambienDioPrecio: companiasConPrecio.has(compania),
   }
 }
 
@@ -146,15 +173,18 @@ export function leerCotizacion(raw: unknown): Cotizacion {
     throw new Error('codeoscopic_respuesta_sin_project_id')
   }
 
+  const precios = arr(r.mainQuotes)
+    .map(leerPrecio)
+    .filter((p): p is Precio => p !== null)
+  const companiasConPrecio = new Set(precios.map((p) => p.compania))
+
   return {
     projectId: String(idRaiz),
     fechaEfecto: str(r.effectiveDate),
-    precios: arr(r.mainQuotes)
-      .map(leerPrecio)
-      .filter((p): p is Precio => p !== null),
+    precios,
     fallos: arr(r.errors)
-      .map(leerFallo)
-      .filter((f): f is FalloCompania => f !== null),
+      .map((e) => leerFallo(e, companiasConPrecio))
+      .filter((f): f is FalloProducto => f !== null),
   }
 }
 
@@ -164,8 +194,9 @@ export function resumirCotizacion(c: Cotizacion): string {
   const noFirmes = c.precios.length - firmes
   const partes = [`${c.precios.length} precios (${firmes} en firme`]
   partes.push(noFirmes > 0 ? `, ${noFirmes} con reparos)` : ')')
-  if (c.fallos.length > 0) {
-    partes.push(` · ${c.fallos.length} compañías sin precio: ${c.fallos.map((f) => f.compania).join(', ')}`)
-  }
+  // Solo se nombran las que NO dieron NINGÚN precio: una compañía que falló en
+  // una configuración pero coticé en otra no está «sin precio».
+  const mudas = [...new Set(c.fallos.filter((f) => !f.tambienDioPrecio).map((f) => f.compania))]
+  if (mudas.length > 0) partes.push(` · sin precio: ${mudas.join(', ')}`)
   return partes.join('')
 }

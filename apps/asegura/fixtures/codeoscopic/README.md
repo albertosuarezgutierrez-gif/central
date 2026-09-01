@@ -42,6 +42,27 @@ traspaso**:
   matrícula introducida ya está asegurada en la compañía»): hay que enseñárselos a Alberto, no
   tragárselos — que una compañía no dé precio es información comercial, no ruido.
 
+### 🚨 Tres cosas que solo se ven leyendo el fichero ENTERO (01/09/2026)
+
+Una segunda lectura completa destapó tres fallos del parser, ya corregidos:
+
+- **`errors[]` es por CONFIGURACIÓN de producto, NO por compañía.** Reale aparece en los errores
+  con la config `37786__` **y a la vez devuelve 8 precios** con la config `83474 (ASM y API)`.
+  Resumirlo como «Reale no dio precio» era falso justo sobre la compañía que más dio. De ahí
+  `tambienDioPrecio` en `FalloProducto`, y que el resumen solo nombre a las que no dieron NADA
+  (aquí, Pelayo y Zurich).
+- **`deductible` (la franquicia) la traen 10 de los 18 precios** y el parser la tiraba. Enseñar un
+  todo riesgo de 427,79€ callando que lleva **1.500€ de franquicia** es la regla «dato que SÍ está
+  pero se lee mal» en su forma más cara. Ojo: ausente es `null` («no lo declara»), nunca `0`, que
+  significaría «sin franquicia».
+- **`modality.category.name` da los seis niveles de cobertura** — Terceros · Terceros Ampliado ·
+  Todo Riesgo Con Franquicia Alta/Media/Baja · Todo Riesgo Sin Franquicia. Es la agrupación
+  natural de la comparativa: sin ella se comparan peras con manzanas.
+
+Además, sin usar todavía: `addonQuotes` (RACE-UNACSA, asistencia en carretera a 54,99€ y 199,00€)
+con `compatibleAddonQuotes` por precio y `includeInOffers: false` — las 18 ofertas vienen sin
+complementos. Y `links[]` con el PDF del condicionado general por producto.
+
 ### ⚠️ Las compañías de este fixture NO son la parrilla de producción
 
 Salen Mutua Madrileña, Pelayo, RACE-UNACSA, Zurich… con `config.name` de prueba

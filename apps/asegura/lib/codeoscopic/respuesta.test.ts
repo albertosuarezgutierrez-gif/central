@@ -92,10 +92,57 @@ test('un precio sin prima se descarta en vez de colarse como 0€', () => {
   assert.equal(c.precios[0].id, 'Q2')
 })
 
-test('el resumen nombra a las compañías que NO dieron precio', () => {
+// ─── Franquicia y categoría: sin ellas la comparativa engaña ────────────────
+test('la franquicia viaja: 10 de los 18 precios la declaran', () => {
+  const c = leerCotizacion(CRUDO)
+  assert.equal(c.precios.filter((p) => p.franquiciaEur !== null).length, 10)
+  const conFranquicia = c.precios.find((p) => p.id === 'Q7601472')
+  assert.ok(conFranquicia)
+  assert.equal(conFranquicia.franquiciaEur, 1500)
+  assert.equal(conFranquicia.primaEur, 427.79)
+})
+
+test('sin franquicia declarada es null, NO cero (que sería «sin franquicia»)', () => {
+  const p = leerCotizacion(CRUDO).precios.find((x) => x.id === 'Q7601460')
+  assert.ok(p)
+  assert.equal(p.franquiciaEur, null)
+})
+
+test('la categoría permite agrupar la comparativa', () => {
+  const cats = new Set(leerCotizacion(CRUDO).precios.map((p) => p.categoria))
+  assert.ok(cats.has('Terceros'))
+  assert.ok(cats.has('Todo Riesgo Sin Franquicia'))
+  assert.ok(cats.has('Todo Riesgo Con Franquicia Alta'))
+  assert.equal(cats.size, 6)
+})
+
+// ─── El fallo que decía una mentira ─────────────────────────────────────────
+test('un fallo NO se cuenta como «compañía sin precio» si esa compañía sí coticé', () => {
+  // Reale falla con la config «37786__» y a la vez devuelve 8 precios con otra.
+  // `errors[]` es por CONFIGURACIÓN de producto, no por compañía.
+  const c = leerCotizacion(CRUDO)
+  const reale = c.fallos.find((f) => f.compania === 'Reale')
+  assert.ok(reale, 'Reale sí aparece en errors')
+  assert.equal(reale.tambienDioPrecio, true)
+  assert.equal(reale.configuracion, '37786__')
+  assert.ok(c.precios.some((p) => p.compania === 'Reale'), 'y también dio precios')
+})
+
+test('las que no dieron NADA sí se marcan como tales', () => {
+  const c = leerCotizacion(CRUDO)
+  for (const nombre of ['Pelayo', 'Zurich']) {
+    const f = c.fallos.find((x) => x.compania === nombre)
+    assert.ok(f)
+    assert.equal(f.tambienDioPrecio, false)
+  }
+})
+
+test('el resumen NO nombra a Reale como «sin precio»: sería falso', () => {
   const r = resumirCotizacion(leerCotizacion(CRUDO))
   assert.match(r, /18 precios/)
   assert.match(r, /0 en firme/)
-  assert.match(r, /3 compañías sin precio/)
+  assert.match(r, /sin precio: /)
   assert.match(r, /Pelayo/)
+  assert.match(r, /Zurich/)
+  assert.ok(!/sin precio:[^·]*Reale/.test(r), 'Reale dio 8 precios: no puede figurar como sin precio')
 })
