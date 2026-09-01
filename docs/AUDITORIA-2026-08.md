@@ -1638,3 +1638,66 @@ ABIERTOS.md`: H1 (EODHD) y H3 (IBKR en vivo) siguen vivos correctamente, sin cam
 ## ✅ Manuales de usuario — nada que tocar
 Ningún archivo de `apps/ia-rest/src/app/**` ni `apps/ia-rest/public/**` cambió en el rango (el único
 commit que tocaba una ruta de esas carpetas, #1792, es un guardián de rama sin diff real en ia-rest).
+
+# Actualización 2026-08-31 — auditoría diaria (ligera)
+
+Rango: desde la pasada del 29/08 08:32 UTC (PR #1848) hasta `d717ec1` (31/08 07:58 UTC) — 37
+commits. Día de pricing (ciclo semanal, corrección del centinela de comisión 0€ en canales),
+intranet de limpieza de Vanesa (v2→v6, partes de incidencia), agente huéspedes (guardrail de pago,
+mensajes siempre en español), retirada del fallback NIM del daily-briefing, y el vigía
+Booking↔Smoobu. El propio rango ya traía su entrada de memoria emparejada a cada PR; esta pasada
+solo tuvo que verificar que no quedara nada suelto — y no quedaba.
+
+## Preflight del canal de aviso
+`GET /api/internal/alerta` → `200 {"ok":true}`. Canal vivo.
+
+## 🟡→✅ Integridad estructural — radiografía desfasada, regenerada
+`pnpm auditar:check` falló (`estructura.generated.json` desfasado por la deriva de los 37 commits
+del rango, mismo patrón que el 26/08 y el 29/08) → `node scripts/auditar-estructura.mjs` la
+regenera (este PR; entrada en `docs/AUTO-APLICADOS.md`). Sin lockfile desfasado (los dos
+`package.json` tocados en el rango — `module-encargo`/`module-revenue` — son del propio commit de
+la auditoría del 29/08, ya fuera del rango real; esos módulos no existen en el árbol actual).
+
+## ✅ Heartbeat de crons y agentes — sin ⛔ nuevos
+- **a) Latidos `agente_latidos` (24 filas):** todos `ok=true` salvo el ya conocido `ses_transporte`
+  (`ok=false`, «no hay ningún establecimiento dado de alta» — pendiente de acción de Alberto, sin
+  cambios desde pasadas anteriores). El resto, todos frescos (≤24h); el más rezagado dentro de
+  cadencia es `paper-tracker` (semanal, 166h de 192h).
+- `agente_reparaciones`: sin intentos de auto-reparación en los últimos 7 días (tabla vacía).
+
+## 💰 Salud del precio — sin 🔴 nuevo (mismo patrón de medición que el 29/08)
+`horas_desde_ultima_pasada` = 17,5h — por encima del umbral nominal de 10h de
+`pricing-salud.ts::HORAS_MAX_SIN_PASADA`, pero **explicado, no un hueco real**: la pasada de las
+20:30 UTC del 30/08 escribió 0 noches (`sivra_pricing_apply` latido, `ok=true`, detalle «0 noche(s)
+escritas en 4 piso(s)» — nada cruzó el 3%, no una pasada abortada) y la de las 08:30 UTC de hoy aún
+no había corrido al medir (~08:00 UTC). Mismo patrón exacto que el 29/08 (11,5h, también sin
+pasada de las 08:30 corrida todavía) — la métrica mide horas desde la última ESCRITURA, no desde
+la última pasada, así que 1-2 pasadas seguidas sin cambios ≥3% la alargan sin que sea una avería.
+`rail_baja_roto` = 0 · `bajo_minimo` = 0 · `rail_alza_sin_justificar` = 2 (baja de los 4 del 29/08,
+dentro del baseline conocido de eventos+premio de mercado) · `oscilantes` = 161 (baja de los 187
+del 29/08 — sigue el mismo serrucho ya diagnosticado el 28/08, PR #1826/#1827, en mejora, no un
+hallazgo nuevo). Los 4 pisos: `enabled`/`apply_enabled`=true, `min_price` puesto, `antelacion_k`=0
+(apagada, correcto) — sin palancas apagadas en silencio.
+
+## ✅ Backlog de PRs de rutinas + salud del automerge — 3 abiertos, ninguno de rutina bloqueado
+- **#1803** (correduría, docs-only, `dirty`) — 4 días, bajo el umbral de 7 de "olvidado"; conflicto
+  sin resolver, sigue "a criterio de Alberto" (sin cambios desde el 29/08).
+- **#1865** (`agentes-entrenador`, draft) — sin actividad desde su apertura (~26h), bajo umbral.
+- **#1879** (código, no-draft, `dirty` — rename "Sique Brilla"→"Si que Brilla" en `apps/plataforma`)
+  — nuevo desde la pasada del 29/08, en conflicto con `main`; no es un PR de rutina de registro
+  (30 archivos de código/tests/comentarios), así que el automerge no lo toca a propósito — le
+  corresponde a Alberto o a la sesión que lo abrió resolver el conflicto y mergearlo.
+`rutinas-automerge.yml`: run más reciente hoy 07:39 UTC (evento `check_suite`, sobre el commit que
+acaba de mergearse) — vigilante vivo.
+
+## ✅ Reconciliación memoria/skills — sin huecos
+`docs/CONTEXTO-SESIONES.md` cubre el rango entrada por entrada (cada PR trajo su propia entrada de
+memoria). `docs/SKILLS.md`/`docs/FUENTES-DE-VERDAD.md`/`docs/HUECOS-ABIERTOS.md`: sin cambios en su
+ámbito de código desde su último sello — nada que reconciliar. Ningún commit del rango toca
+`.claude/skills/` salvo dos entradas ya reflejadas en `sivra-maestro/references/contexto-y-agente-
+huesped.md` por sus propios PRs (#1862/#1863, guardrail de pago + mensaje siempre en español).
+
+## ✅ Manuales de usuario — nada que tocar
+Un único commit del rango toca `apps/ia-rest/**` (#1881, retirada del fallback NIM del
+daily-briefing) y es un cambio interno de cron sin superficie de usuario — nada que documentar en
+`help-prompts.ts`/`manual.html`.

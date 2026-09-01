@@ -5,12 +5,15 @@
 // (modo sombra: clasifica y anota pero NO toca Gmail ni avisa). digestTriaje() y resumenSemanal()
 // mandan los resúmenes por Telegram. Todo best-effort: un fallo por correo no aborta la pasada.
 import { prisma } from '@/lib/db'
-import { tgSend, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso, tgSend } from '@/lib/telegram'
+import { avisoDeCategoriaCorreo } from '@/lib/telegram/catalogo'
 import { abrirTriaje } from './imap'
 import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './huespedes'
 import { parsearAvisoBooking } from './reserva-booking'
 import { registrarAvisoBooking, registrarReservaHuesped } from '@/lib/sivra/reservas-booking-vigia'
+import { parsearAvisoMensajesAgoda, textoAvisoAgoda } from './agoda-mensajes'
+import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
@@ -124,13 +127,30 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             }
           }
 
-          // Aviso inmediato.
-          if (ruta.aviso === 'inmediato') {
-            await tgSend(mensajeAviso({
+          // Aviso inmediato. El de Agoda lleva texto PROPIO: el correo trae el mensaje del huésped
+          // dentro, así que se manda tal cual en vez del resumen genérico — y sobre todo dice que
+          // NO se contesta desde Smoobu (para Agoda el hilo no llega al huésped) y da el enlace de YCS.
+          const avisoAgoda = ruta.aviso === 'inmediato' && c.categoria === 'agoda-huespedes'
+            // `extracto` es asunto+cuerpo truncado a 1500 chars: el nombre y el texto del mensaje van
+            // al PRINCIPIO y siempre sobreviven; el enlace de YCS va al final y puede caerse. El parser
+            // devuelve null en lo que no ve y el aviso lo declara — nunca se inventa el piso.
+            ? parsearAvisoMensajesAgoda({ from: correo.from, subject: correo.subject, body: correo.extracto })
+            : null
+          if (avisoAgoda) {
+            const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
+            await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
+            stats.avisados++
+          } else if (ruta.aviso === 'inmediato') {
+            // Un interruptor POR CATEGORÍA (panel /telegram): «avísame de los leads pero no de cada
+            // correo de huéspedes» es la distinción real. Una categoría sin id catalogado avisa
+            // siempre — nunca al revés: un aviso nuevo llega hasta que se decida callarlo.
+            const avisoId = avisoDeCategoriaCorreo(c.categoria)
+            const texto = mensajeAviso({
               categoria: c.categoria, remitente: correo.fromRaw, asunto: correo.subject,
               resumen: c.resumen, accion: c.accionSugerida, fechaLimite: c.fechaLimite, cautela: !!ruta.cautela,
-            }))
-            stats.avisados++
+            })
+            const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
+            if (enviado !== null) stats.avisados++
           }
 
           // Auto-aprendizaje de reglas.
@@ -196,7 +216,7 @@ export async function digestTriaje(): Promise<{ total: number }> {
     aRevisar ? `\n<b>Para tu ojo:</b>\n${aRevisar}` : '',
     modo,
   ].filter(Boolean).join('\n')
-  await tgSend(msg)
+  await tgAviso('correo.digest', msg)
 
   await prisma.$executeRaw`
     UPDATE correo_triaje SET digest_at = now()
@@ -224,6 +244,6 @@ export async function resumenSemanal(): Promise<{ total: number }> {
     `• Avisos que te mandé: ${Number(r?.avisos ?? 0)}`,
     `• Dudosos (los dejé en bandeja): ${Number(r?.dudosos ?? 0)}`,
   ].join('\n')
-  await tgSend(msg)
+  await tgAviso('correo.resumen-semanal', msg)
   return { total: triados }
 }

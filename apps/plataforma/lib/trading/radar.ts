@@ -1,4 +1,4 @@
-import { tgSend, tgSendButtons } from '@central/core-telegram'
+import { tgAviso, tgAvisoBotones } from '@/lib/telegram'
 import { prisma } from '@/lib/db'
 import {
   rankearUniverso, diffRanking, snapshotsParaEvaluar, resumenTrackRecord,
@@ -62,7 +62,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
   const limiteFresco = new Date(Date.now() - FRESCURA_DIAS * 86_400_000)
   const frescas = filas.filter(f => f.piotroski != null && f.roic != null && f.actualizadoEn > limiteFresco)
   if (filas.length === 0 || frescas.length < filas.length * COBERTURA_MIN) {
-    await tgSend(`🌎 <b>Radar del mercado</b>: datos insuficientes (${frescas.length}/${filas.length} frescos) — no ranqueo con datos flojos. El refresco sigue su curso; reintento el próximo lunes.`).catch(() => {})
+    await tgAviso('trading.radar', `🌎 <b>Radar del mercado</b>: datos insuficientes (${frescas.length}/${filas.length} frescos) — no ranqueo con datos flojos. El refresco sigue su curso; reintento el próximo lunes.`).catch(() => {})
     return { ok: false, motivo: 'cobertura', enviado: true }
   }
 
@@ -309,7 +309,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
     '',
     '<i>La selección elige el QUÉ (calidad+gurús); 📈 solo confirma el CUÁNDO. 📊↑/↓ = picos de volumen comprando/vendiendo (huella de fondos entrando/saliendo; info, no filtra). SOLO paper.</i>',
   ]
-  await tgSend(lineas.join('\n')).catch(() => {})
+  await tgAviso('trading.radar', lineas.join('\n')).catch(() => {})
 
   // 7-bis) 🌱 Cantera capa C: los valores SOSTENIDOS ≥2 lunes seguidos en el top-10 se proponen por
   // Telegram con botones (el alta la decide Alberto — callback `wlc_` en el webhook). Es descubrimiento,
@@ -332,7 +332,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
         update: { semanasSeguidas: c.semanas },
       })
       const e = entries.find(x => x.simbolo === c.simbolo)
-      await tgSendButtons(
+      await tgAvisoBotones('trading.radar', 
         `🌱 <b>Cantera</b>: <b>${c.simbolo}</b>${e?.nombre ? ` — ${e.nombre}` : ''} lleva <b>${c.semanas} lunes seguidos</b> en el top-10 del radar (${e ? ETIQ[e.etiqueta] : '—'}${e?.tecnico === 'si' ? ' · 📈 técnico ok' : ''}).\n¿Alta en la watchlist (capa C) para el análisis nocturno? SOLO paper.`,
         [[
           { texto: '✅ Alta en capa C', callback: `wlc_alta:${c.simbolo}` },
@@ -366,7 +366,7 @@ export async function generarRadarSemanal(): Promise<{ ok: boolean; motivo?: str
         create: { simbolo: b.simbolo, bajaPropuestaAt: new Date() },
         update: { bajaPropuestaAt: new Date(), bajaDecision: null, bajaDecididaAt: null },
       })
-      await tgSendButtons(
+      await tgAvisoBotones('trading.radar', 
         `🍂 <b>Cantera</b>: <b>${b.simbolo}</b> lleva <b>${b.semanas} lunes seguidos</b> fuera del top-20 del radar.\n¿La quito de la watchlist (capa C)? Dejará de analizarse cada noche.`,
         [[
           { texto: '🗑️ Quitar de capa C', callback: `wlc_baja:${b.simbolo}` },

@@ -1,5 +1,5 @@
 // Avisos del agente: Telegram (con enlace a la bandeja) + email de respaldo.
-import { tgAlert } from '@/lib/telegram'
+import { tgAvisoAlerta } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 import type { ReglaFaltante } from './anomalias'
 
@@ -19,14 +19,14 @@ export async function avisaBandeja(items: PendienteAviso[]): Promise<void> {
   const url = `${baseUrl()}/expenses/pendientes`
   const lineas = items.slice(0, 8).map((i) => `• ${i.proveedor || 'desconocido'} · ${eur(i.total)}${i.motivo ? ` (${i.motivo})` : ''}`)
   const msg = `🧾 <b>${items.length}</b> factura(s) en la bandeja de revisión\n${lineas.join('\n')}\n\n👉 <a href="${url}">Revisar</a>`
-  await tgAlert(msg, 'aviso')
+  await tgAvisoAlerta('facturas.bandeja', msg, 'aviso')
 }
 
 // Aviso: correo que parece un gasto pero no trae factura adjunta.
 export async function avisaSinAdjunto(correos: { from: string; subject: string }[]): Promise<void> {
   if (correos.length === 0) return
   const lineas = correos.slice(0, 8).map((c) => `• ${c.subject} — ${c.from}`)
-  await tgAlert(`📭 ${correos.length} correo(s) parecen gasto pero SIN factura adjunta (reclámala):\n${lineas.join('\n')}`, 'aviso')
+  await tgAvisoAlerta('facturas.sin-adjunto', `📭 ${correos.length} correo(s) parecen gasto pero SIN factura adjunta (reclámala):\n${lineas.join('\n')}`, 'aviso')
 }
 
 // Aviso: la factura se imputó pero su PDF NO llegó a Drive (falló la subida tras reintentos).
@@ -35,7 +35,8 @@ export async function avisaSinAdjunto(correos: { from: string; subject: string }
 export async function avisaSinDrive(items: { nombre: string; from?: string; esBooking?: boolean }[]): Promise<void> {
   if (items.length === 0) return
   const lineas = items.slice(0, 8).map((i) => `• ${i.esBooking ? '🏨 ' : ''}${i.nombre}${i.from ? ` — ${i.from}` : ''}`)
-  await tgAlert(
+  await tgAvisoAlerta(
+    'facturas.sin-drive',
     `⚠️ ${items.length} factura(s) imputadas pero SIN copia en Drive (falló la subida):\n${lineas.join('\n')}\n\nEl gasto está registrado; sube el PDF a mano o re-lanza el scan.`,
     'aviso',
   )
@@ -46,7 +47,8 @@ export async function avisaSinDrive(items: { nombre: string; from?: string; esBo
 export async function avisaNoLegibles(items: { nombre: string; from?: string }[]): Promise<void> {
   if (items.length === 0) return
   const lineas = items.slice(0, 8).map((i) => `• ${i.nombre}${i.from ? ` — ${i.from}` : ''}`)
-  await tgAlert(
+  await tgAvisoAlerta(
+    'facturas.no-legibles',
     `🔍 ${items.length} adjunto(s) parecen factura pero NO pude leer el importe (¿PDF escaneado?):\n${lineas.join('\n')}\n\nSúbela a mano o reenvíala en mejor calidad.`,
     'aviso',
   )
@@ -58,7 +60,8 @@ export async function avisaNoLegibles(items: { nombre: string; from?: string }[]
 export async function avisaAjenas(items: { proveedor: string | null; total: number; receptor?: string | null }[]): Promise<void> {
   if (items.length === 0) return
   const lineas = items.slice(0, 8).map((i) => `• ${i.proveedor || 'desconocido'} · ${eur(i.total)} → ${i.receptor || 'otro titular'}`)
-  await tgAlert(
+  await tgAvisoAlerta(
+    'facturas.ajenas',
     `🙅 ${items.length} factura(s) de terceros ignoradas (no están a tu nombre):\n${lineas.join('\n')}\n\nSi alguna SÍ es tuya, dímelo y la recupero.`,
     'aviso',
   )
@@ -68,7 +71,7 @@ export async function avisaAjenas(items: { proveedor: string | null; total: numb
 export async function avisaRecurrentesQueFaltan(faltan: ReglaFaltante[]): Promise<void> {
   if (faltan.length === 0) return
   const lineas = faltan.slice(0, 8).map((f) => `• ${f.proveedor || f.fingerprint}${f.importe_esperado ? ` (~${eur(f.importe_esperado)})` : ''}`)
-  await tgAlert(`⏳ ${faltan.length} gasto(s) recurrente(s) aún sin llegar este mes:\n${lineas.join('\n')}`, 'aviso')
+  await tgAvisoAlerta('facturas.recurrentes-faltan', `⏳ ${faltan.length} gasto(s) recurrente(s) aún sin llegar este mes:\n${lineas.join('\n')}`, 'aviso')
 }
 
 // Aviso: facturas domiciliadas cuyo cargo venció y NO aparece en cuenta.
@@ -81,7 +84,8 @@ export async function avisaDomiciliadosSinCargo(
 ): Promise<void> {
   if (avisos.length === 0) {
     if (sinCobertura > 0) {
-      await tgAlert(
+      await tgAvisoAlerta(
+        'facturas.domiciliados-sin-cargo',
         `🔍 ${sinCobertura} factura(s) domiciliada(s) no se han podido comprobar: el extracto del banco no llega a su fecha de cargo.`,
         'aviso',
       )
@@ -92,7 +96,8 @@ export async function avisaDomiciliadosSinCargo(
     .slice(0, 8)
     .map((a) => `• ${a.proveedor || 'desconocido'} · ${eur(a.total)} · se domiciliaba el ${a.fecha_vencimiento}`)
   const cola = sinCobertura > 0 ? `\n\n(${sinCobertura} más sin poder comprobar: el extracto no llega a su fecha.)` : ''
-  await tgAlert(
+  await tgAvisoAlerta(
+    'facturas.domiciliados-sin-cargo',
     `🏦 <b>${avisos.length}</b> factura(s) domiciliada(s) SIN cargo en cuenta:\n${lineas.join('\n')}${cola}`,
     'aviso',
   )
@@ -110,10 +115,13 @@ export interface ResumenStats {
 }
 
 export async function resumen(s: ResumenStats): Promise<void> {
-  const omit = s.omitidos ? ` · ${s.omitidos} presupuestos omitidos` : ''
+  // Desde el 30/08/2026 «omitido» ya no es solo presupuesto: también los documentos que no son
+  // un gasto (liquidación de mediador, comisión de plataforma ya descontada del ingreso neto).
+  const omit = s.omitidos ? ` · ${s.omitidos} omitidas (presupuesto o no es gasto)` : ''
   const ajen = s.ajenas ? ` · ${s.ajenas} de terceros` : ''
   const extra = s.alquileres != null ? ` · alquileres ${s.alquileres}` : ''
-  await tgAlert(
+  await tgAvisoAlerta(
+    'facturas.resumen-agente',
     `✅ Agente (${s.fuente}): ${s.auto} imputadas · ${s.bandeja} a bandeja · ${s.duplicados} duplicadas${omit}${ajen} · ${s.errores} errores${extra}`,
     'resuelto',
   )

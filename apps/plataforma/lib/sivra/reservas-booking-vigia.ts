@@ -17,7 +17,7 @@
 //   Smoobu incontactable         → NO se decide nada (no lo sé ≠ no está); se reintenta.
 // Las huérfanas se re-comprueban cada pasada: cuando Smoobu se cura, ✅ Telegram de cierre.
 import { prisma } from '@/lib/db'
-import { tgSend, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { listarReservasVentana, runSync } from '@/lib/sivra/smoobu-sync'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { veredictoAviso, type AvisoReservaBooking } from '@/lib/correo/reserva-booking'
@@ -127,7 +127,7 @@ export async function verificarReservasBooking(): Promise<{
       }
       // Si Alberto ya había sido avisado del agujero, se le cuenta el cierre (una vez).
       if (f.avisada_at) {
-        await tgSend(`✅ <b>Reserva de Booking ya en Smoobu</b>\n${lineaReserva(f)}\nSe resolvió sola o la arreglaste — el calendario ya la tiene.`).catch(() => {})
+        await tgAviso('pisos.reserva-vigia', `✅ <b>Reserva de Booking ya en Smoobu</b>\n${lineaReserva(f)}\nSe resolvió sola o la arreglaste — el calendario ya la tiene.`).catch(() => {})
         await prisma.$executeRaw`UPDATE reservas_correo_booking SET resuelta_avisada_at = now() WHERE id = ${f.id}`
       }
       continue
@@ -152,7 +152,7 @@ export async function verificarReservasBooking(): Promise<{
             lineaReserva(f),
             'La reserva sigue ACTIVA en Smoobu: esas noches están bloqueadas sin huésped. Cancélala en Smoobu.',
           ].join('\n')
-      await tgSend(msg).catch(() => {})
+      await tgAviso('pisos.reserva-vigia', msg).catch(() => {})
       await prisma.$executeRaw`UPDATE reservas_correo_booking SET avisada_at = now() WHERE id = ${f.id}`
     }
   }

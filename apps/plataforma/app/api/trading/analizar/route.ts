@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isRoutineAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
-import { tgSend } from '@/lib/telegram'
+import { tgAviso } from '@/lib/telegram'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { mensajeCompraPaper } from '@/lib/trading-notify'
 import {
@@ -12,6 +12,7 @@ import {
 } from '@central/module-trading'
 import type { Vela, Fundamentales } from '@central/module-trading'
 import { datosYahoo, lineaEarningsProximos, type FechaEarnings } from '@/lib/trading/earnings-yahoo'
+import { PISCINA_VIVA } from '@/lib/trading/piscinas'
 import { filtrarPreciosAnomalos, resumenDescartes, detectarSuplantaciones, resumenSuplantaciones, contrastarFuentes, resumenDivergencias, resumenDesfase, DIAS_REFERENCIA_MAX } from '@/lib/trading/precios-guardia'
 import { cierresDeContraste } from '@/lib/trading/precios-contraste'
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       ON CONFLICT (fecha) DO UPDATE SET analizar = trading_pasadas.analizar + 1
       RETURNING analizar`
     if (p?.analizar === 2) {
-      await tgSend(`⚠️ <b>Trading:</b> la pasada de ${fecha} ha corrido 2 veces (reintento de la rutina). Los únicos evitan duplicados, pero conviene mirar por qué se repite.`).catch(() => {})
+      await tgAviso('trading.analisis-diario', `⚠️ <b>Trading:</b> la pasada de ${fecha} ha corrido 2 veces (reintento de la rutina). Los únicos evitan duplicados, pero conviene mirar por qué se repite.`).catch(() => {})
     }
   } catch (e) { console.warn('[trading/analizar] contador de pasadas falló (no bloquea):', e) }
 
@@ -55,7 +56,10 @@ export async function POST(req: NextRequest) {
 
   // Bucle de aprendizaje: modula la confianza de cada estrategia por su rendimiento real acumulado.
   // Solo ajusta con muestra suficiente (ajustesDeStats guarda por minN); sin historial no toca nada.
-  const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: 'todos' } })
+  // La piscina de la que salen las stats es PISCINA_VIVA (H11, resuelta 31/08/2026): el torneo
+  // aprende de las señales direccionales — las únicas a las que aplica el ajuste — y no del 82%
+  // neutral que nunca toca. Cambiar la piscina es re-abrir H11 por PR, nunca tocar este literal.
+  const statsRows = await prisma.tradingEstrategiaStats.findMany({ where: { regimen: PISCINA_VIVA } })
   const ajustes = ajustesDeStats(Object.fromEntries(statsRows.map(r => [r.estrategia, { hitRate: r.hitRate, retornoMedio: r.retornoMedio, n: r.n }])))
 
   // 📅💼 Fundamentales de Yahoo para lo que el payload NO traiga: fecha de earnings (activa la
@@ -145,7 +149,7 @@ export async function POST(req: NextRequest) {
     console.warn('[trading/analizar]', aviso)
     // Se avisa SIEMPRE: un símbolo que desaparece del análisis en silencio es indistinguible de un
     // símbolo que hoy no dio señal, y eso es justo lo que dejó pasar el 03/08 sin que nadie mirara.
-    await tgSend(`⚠️ <b>Trading ${fecha}:</b> precio no fiable, esos símbolos NO se analizan hoy.\n${aviso}`).catch(() => {})
+    await tgAviso('trading.analisis-diario', `⚠️ <b>Trading ${fecha}:</b> precio no fiable, esos símbolos NO se analizan hoy.\n${aviso}`).catch(() => {})
   }
 
   type StopViable = {
@@ -261,7 +265,7 @@ export async function POST(req: NextRequest) {
         update: {},   // no promediar: si ya existe, no se toca
       })
       // Aviso inmediato por Telegram (aquí la posición es siempre nueva: `yaAbierta` es barrera arriba). Best-effort.
-      await tgSend(mensajeCompraPaper(fecha, { simbolo: s.simbolo, cantidad, precio: precioRef, estrategia: ganadora.estrategia, confianza: ganadora.confianza, stop: pos.stop, pctNav: valorPos / nav })).catch(() => {})
+      await tgAviso('trading.analisis-diario', mensajeCompraPaper(fecha, { simbolo: s.simbolo, cantidad, precio: precioRef, estrategia: ganadora.estrategia, confianza: ganadora.confianza, stop: pos.stop, pctNav: valorPos / nav })).catch(() => {})
     }
     ideas.push({ simbolo: s.simbolo, estrategia: ganadora.estrategia, direccion: ganadora.direccion, confianza: ganadora.confianza, operada: !motivo, motivo, rvol: volumenRel, volConfirma: confirmaVolumen(ganadora.direccion, volumenRel), factorScore: s.factorScore, stopViable })
   }
@@ -269,7 +273,7 @@ export async function POST(req: NextRequest) {
   // 📅 Aviso diario de resultados inminentes en la watchlist (el digest del radar es semanal y los
   // earnings caen entre semana). Contexto para Alberto — el veto ya lo aplicó la barrera de arriba.
   const lineaEarnings = lineaEarningsProximos(fechasEarnings, fecha)
-  if (lineaEarnings) await tgSend(lineaEarnings).catch(() => {})
+  if (lineaEarnings) await tgAviso('trading.analisis-diario', lineaEarnings).catch(() => {})
 
   // 💓 Huella de que el ANÁLISIS corrió. No puede ser `max(trading_tesis.created_at)`: con el único
   // (simbolo,fecha,estrategia) + skipDuplicates de arriba, una segunda pasada del MISMO día no inserta

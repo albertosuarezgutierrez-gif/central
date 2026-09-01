@@ -15,6 +15,120 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-01 · facturas-correo** · hizo: pasada diaria (primera desde el 23/08, hueco de 9 días).
+  Preflight `/api/internal/alerta` 200. Paso 0: Vía B sana (última copia `_buzon_pdf` hoy mismo,
+  `dias_caido=0`); `agente_salud` actualizado. Backlog barrido: `PDF-pendiente` vacío;
+  `Extraccion-fallida` tenía 1 hilo (ticket Mercadona reenviado por Pilar, 237,06€ a domicilio) →
+  resuelto por cuerpo del correo (personal, entrega en Monte Carmelo), etiqueta quitada; `Revisar`
+  tiene 1 hilo sin resolver (recibo Fly.io $6,68 que Manuel Suárez reenvía desde su propio correo —
+  no está claro por qué ni si es gasto de Alberto → sigue "Para tu decisión"). Paso 4.0
+  (`v_facturas_sin_cargo`): las 8 filas siguen en `revisada_sin_cargo` de pasadas anteriores, 0 en
+  `sin_revisar` — nada que reabrir. Paso 1: 0 candidatos nuevos en Gmail (`newer_than:2d`) — el único
+  ruido eran mensajes de huéspedes de Booking y la circular del colegio; los 2 correos con factura de
+  hoy (IONOS, limpiezascruzz agosto) ya venían con `Facturas/Procesada` puesta por el cron
+  `facturas-scan` de plataforma antes de que arrancara esta sesión (`gastos`/`facturas_drive` sin
+  filas nuevas en 48h → no verificado si archivó bien; issue conocida y fuera de mi alcance, ver
+  bitácora 23/08). `_subir_aqui` y raíz de `FACTURAS Apartamentos/2026` sin PDFs nuevos desde 05/08.
+  `_DUPLICADOS_BORRAR`: 21 avisos pendientes, ninguno nuevo desde 17/08 (zombis sin re-verificar hoy,
+  igual que la pasada anterior). dudas: Fly.io de Manuel Suárez (Revisar) — ¿por qué te lo reenvía y
+  es gasto tuyo?; fallos: —; PRs/commits: — (solo bitácora + `agente_salud` + etiqueta Gmail).
+- **2026-09-01 · mercado-booking (pasada acotada, PRIORIDAD jul-ago 2027)** · hizo: mismo plan
+  filtrado `?desde=2027-07-01&hasta=2027-08-31&max=24` que ayer (31/08). 238 comps reales en las
+  24 ventanas del cupo (6 fechas × 4 pisos: 02/07, 10/07, 27/07 — las 3 mismas de ayer, reescritas
+  por ser idempotente — y 01/08 [evento Campeonato Mundial de Remo, factor 1,55], 06/08, 14/08 —
+  agosto cambia de fecha frente a ayer, que tenía 24/08 en vez de 01/08). 4/4 ventanas de
+  escaparate propio medidas (ayer House Sevillana había dado `escaparateSinRespuesta`; hoy sí
+  contestó: 1.198,88€ total/2 noches). 0 ventanas sin respuesta, 0 anuncios propios colados en el
+  corpus de mercado, 0 fallos. **Objetivo cumplido — YA lo estaba desde ayer (31/08): ambos meses
+  llegan a ≥3 fechas distintas con ≥3 comparables por piso** (hoy con 10 comps/fecha/piso).
+  🚩 **Acción pendiente para Alberto/entrenador: quitar el párrafo "PRIORIDAD TEMPORAL (agosto
+  2026)" del prompt de la rutina programada** — esta sesión no tiene acceso al store del trigger
+  para editarlo ella misma, y al no haberse quitado ayer la pasada de hoy se ha repetido sin
+  necesidad (gasto de cupo redundante en julio). Sin cupo restante para la pasada normal (24/24 +
+  4/4 escaparate agotados). dudas: —; fallos: —; PRs/commits: — (solo BD + bitácora).
+- **2026-09-01 · rrhh-compliance-calendar** · hizo: pasada mensual. Leído `docs/ROADMAP-rrhh.md`;
+  9 ítems 🔴 obligatorios pendientes (fichaje RD 8/2019, geolocalización, TSA, art.28 RGPD, canal
+  denuncias, informe ITSS, modelo 145, caducidad NIE, borrado RGPD automatizado — PRL ya hecho,
+  excluido); 6 ítems 🟠 de monetización pendientes. Nota de urgencia añadida: septiembre =
+  inspecciones de trabajo → prioriza fichaje + informe ITSS. Preflight `/api/internal/alerta` 200;
+  aviso Telegram enviado (messageId 3888). dudas: —; fallos: —; PRs/commits: commit directo a `main`
+  (solo docs).
+- **2026-09-01 · fiscal-novedades** · hizo: pasada mensual completa. Paso 1-4 (deducciones): contrastadas
+  todas las cifras vigiladas (mínimos, maternidad, FN estatal/andaluza + límites de renta 25k/30k) contra
+  BOE/BOJA/AEAT — sin cambios, PGE 2027 aún en preparación (no publicado); sin PR. Paso 5 (ayudas): 1ª
+  detección de la ayuda Junta Andalucía 600€/hijo<3 tras 3er hijo — descartada por límite de renta (base
+  ~46k€ >> tope 6× IPREM); 1ª pasada por cliente (`ayudas_perfiles`): Joaquín Jaén con 1 aviso (plan de
+  choque hostelería RD 638/2026, hasta 11.000€, plazo 30/09/2026, CNAE sin confirmar) por Telegram +
+  INSERT en `fiscal_ayudas`; Sique Brilla sin novedad; Kit Digital sigue sin reabrir. dudas: si el CNAE de
+  alta de Joaquín Jaén es 56.21 (catering) o no — decide Alberto/consulta directa; fallos: —;
+  PRs/commits: commit directo a `main` (solo docs).
+- **2026-08-31 · agentes-entrenador** (2ª pasada dirigida: «revisa que ningún agente tenga huecos
+  así») · hizo: barrido de la clase de hueco del caso V4 Flash (traspasos sin dueño, listas
+  estáticas sin curación, supuestos sin verificar) sobre los ~17 agentes. Sanos: auditoría
+  (reconciliación de cobertura + vigila al vigilante), conectores-vigia, github-vigia,
+  fuentes-de-verdad, radar→fiscal. Hallazgos: (1) 🔴 VISIÓN (`llama-3.2-11b-vision` en NIM,
+  cliente vivo ialimp) y EMBEDDINGS (`text-embedding-004`) sin vigilante → añadidos al Paso 1
+  del buscador-ia; (2) 🟡 SKILLS.md decía «PENDIENTE de trigger» de mercado-booking/radar/CFO
+  cuando los 3 existen y corren (verificado list_triggers). dudas: —; fallos: —; PRs: el de esta rama.
+- **2026-08-31 · agentes-entrenador** (pasada dirigida, orden de Alberto tras el caso V4 Flash) ·
+  hizo: post-mortem (el hueco era de DISEÑO: la delimitación del 09/07 dejó OpenRouter sin dueño
+  de descubrimiento — el cron solo elige de listas estáticas y el buscador tenía orden de no
+  mirar; el V4 Flash llevaba en catálogo desde el 24/04, 4 meses invisible, y la pasada semanal
+  de AYER dijo «sin candidatos» cumpliendo su skill al pie de la letra); arreglo: Paso 1.5 nuevo
+  en la skill buscador-ia (watch de OpenRouter: qué sirve DE VERDAD cada slug + descubrimiento),
+  lección de slugs, y regla de re-evaluar pines al apagar/encender eslabones. dudas: —; fallos: —;
+  PRs: el de esta rama.
+- **2026-08-31 · buscador-ia** (pasada dirigida, pregunta de Alberto) · hizo: confirmó DeepSeek V4
+  Flash en OpenRouter ($0,086/$0,17 por M) y detectó que nuestro default `deepseek/deepseek-chat`
+  es el V3 viejo 3-6× más caro; mini-eval A/B en vivo OK; PR draft con el swap (default + Director +
+  PREFERIDOS). Sin Telegram: Alberto estaba en la conversación. dudas: —; fallos: —; PRs: swap V4 Flash.
+- **2026-08-31 · facturas-correo** · hizo: pasada completa. Paso 0: Vía B sana (última copia a
+  `_buzon_pdf` 29/08, dias_caido=2); Vía A (`gmail-adjuntos`) sigue sin provisionar (conocido).
+  `Facturas/PDF-pendiente` vacía. `Facturas/Extraccion-fallida` tenía 1 hilo (Mercadona/Pilar,
+  ticket a Monte Carmelo 68, 237,06€) — se pudo leer entero esta vez → `personal` (auto, entrega
+  vivienda habitual), sin archivar, etiqueta quitada. Paso 4.0: barrido `v_facturas_sin_cargo`
+  2026 → las 8 filas ya estaban `revisada_sin_cargo` (7 Pepephone sin cargo localizado + 1
+  CREATE-Socorro duplicada), ninguna `sin_revisar` nueva. Paso 1/1-bis: sin candidatos nuevos en
+  Gmail (`newer_than:2d`) ni en `_subir_aqui`; la raíz de `FACTURAS Apartamentos/2026` solo tiene
+  sobrantes YA flagueados en `_DUPLICADOS_BORRAR` en pasadas anteriores (no reprocesados, no es
+  obligatorio cada pasada). dudas: hilo `Facturas/Revisar` de Manuel Suárez (recibo Fly.io
+  6,68$, reenviado 28/08) sigue sin resolver — no es gasto claro de Alberto, no se auto-clasifica;
+  lleva 3 días en cola. fallos: —. PRs/commits: (este commit).
+- **2026-08-31 · mercado-booking (pasada acotada, PRIORIDAD jul-ago 2027)** · hizo: plan filtrado
+  `?desde=2027-07-01&hasta=2027-08-31&max=24` en vez del barrido normal, para cerrar el objetivo
+  de ≥3 comparables en ≥3 fechas distintas por piso en esos dos meses (los eventos confirmados sin
+  medir se comían el cupo si se priorizaba a ojo). 240 comps reales en las 24 ventanas del cupo (6
+  fechas × 4 pisos: 02/07, 10/07, 27/07, 06/08, 14/08, 24/08 de 2027 — 3 fechas por mes y por piso,
+  bucket mensual queda elegible en ambos meses). 3/4 ventanas de escaparate propio medidas (Dúplex
+  center, Luxury Busto, Busto Reform; House Sevillana 24-26/08/27 sin disponibilidad en Booking →
+  contado como escaparateSinRespuesta, no como "canal cuadra"). 0 ventanas sin respuesta, 0 anuncios
+  propios colados en el corpus de mercado, 0 fallos. Sin cupo restante para la pasada normal (24/24
+  gastadas en la prioridad) — no se corrió hoy. dudas: —; fallos: —; PRs/commits: — (solo BD +
+  bitácora, sin cambios de código).
+- **2026-08-31 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos (obligatorio,
+  no solo los en vivo). Paso 1: 8/48 fechas muestreadas del ciclo 24/08 se vendieron
+  (House Feria a 1767€, pelotazo funcionando); House sept sigue al 43% ocupación a 30d
+  vista → NO se revierte target_pctl 0,60 (criterio de reversión del aprendizaje id 76
+  seguía sin cumplirse). Paso 2: 5 agentes en paralelo (Booking + fallback lastminute/
+  expedia en Semana Santa/Feria) — 12 ventanas/piso + 7 fechas de evento que el guardián
+  llevaba 3 días marcando "congelada" (Copa del Rey, San Isidoro, 3 LaLiga, JEID, Mundial
+  Remo), ahora con 4 comps/piso cada una. Paso 3 (verificación SQL, no autoinforme):
+  comps nuevos hoy en `market_rates` — house=153, busto=150, luxury=150, duplex=148,
+  ningún piso a 0. Paso 4: 48 propuestas (p55/p60/p60/p50 según piso) por los raíles en
+  dry-run forzado (`ALERTA_TOKEN`); circuit-breaker sano (avg 29,7%, no salta), 48 filas
+  en `pricing_decisiones`. Paso 5: aprendizaje escrito (`ciclo_31_08_2026`). Paso 6:
+  informe por Telegram con la línea "Comps escritos:" obligatoria (HTTP 200). dudas:
+  Luxury Busto 10-oct-2026 el mercado subió a p50=470€ (antes 123-169€ en barridos de
+  meses atrás) — esa noche ya vendida a 162€, irrelevante hoy, pero vigilar si se repite
+  en fechas cercanas (¿dinámica real de última disponibilidad o ruido de muestra?).
+  fallos: —. PRs/commits: (este commit, memoria + bitácora, sin cambios de código).
+- **2026-08-31 · buscador-ia** · hizo: pasada semanal completa. Preflight Telegram 200 OK. Watch de
+  deprecación de los 4 eslabones activos (Groq/Cerebras/Gemini/Kimi, por WebSearch, sin keys en
+  sesión) → todos vivos, sin swaps necesarios; NIM sigue apagado por decisión de Alberto (28/08) y
+  fuera de vigilancia activa (sin id que verificar). Descubrimiento: ningún candidato cruza el
+  listón calidad/precio (mercado de pago dominado por flagship caros; Qwen3.7 Flash anotado sin
+  acción). Sin Telegram (nada urgente). dudas: —; fallos: —; PRs/commits: PR draft con el doc de
+  estado (rama `claude/youthful-gates-4oor0p`).
 - **2026-08-30 · facturas-correo** · hizo: pasada diaria completa. Paso 0: Vía B sana
   (`dias_caido=1`, última copia `_buzon_pdf` 29/08 IONOS); backlog: `PDF-pendiente` vacío,
   `Revisar` 1 hilo (Fly.io/Manuel Suárez, sigue sin respuesta de Alberto — día 3), y

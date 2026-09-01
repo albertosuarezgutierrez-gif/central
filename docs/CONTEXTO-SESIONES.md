@@ -32,6 +32,507 @@
 
 ---
 
+### 🧭 (01/09/2026) asegura-portal: plan TDD de la Fase 1 (entrar + aportar póliza)
+- **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia
+  en TRES estados, código de un solo uso), 6 tablas `portal_*`, sesión propia y bóveda con subida de póliza.
+- **El canal de OTP es un PUERTO, no una llamada a WhatsApp**: la WABA de Grupo Asegura no existe todavía;
+  en Fase 1 se enchufan email y consola y WhatsApp entra añadiendo un fichero.
+- 🚨 **Lección de método:** las firmas de `aiComplete`, `openrouterVision` y `createMailTransporter` que
+  parecían obvias eran las TRES falsas (`aiComplete` devuelve `string`; `openrouterVision` toma 5 args e
+  `ImageInput` es `{data,mediaType}`; `createMailTransporter()` **no recibe credenciales**, las lee del
+  entorno y devuelve `Transporter | null`). Comprobarlas contra `packages/*` antes de escribirlas.
+- 🐛 **Bug destapado en `scripts/rotar-memoria.mjs`** (no tocado en este PR): la heurística «la fecha real
+  es la ÚLTIMA de la cabecera» archiva en agosto la entrada `### 🔴 (01/09/2026) GH_PAT_TRIGGER … desde el
+  31/08`. En las cabeceras `### `, la fecha entre paréntesis manda sobre la del texto.
+- **Pendiente de Alberto:** elegir modo de ejecución del plan, y la infra (proyecto Vercel `asegura-portal`,
+  rol `prisma_asegura_portal` SIN BYPASSRLS con contraseña, envs, WABA).
+
+### 🗄️ (01/09/2026) asegura: estructura del volcado CREADA en `seguros` + el runbook mentía con las FKs
+- Alberto: «la copia de la BD, mejor tener todo nosotros». Hecho el 50%: **estructura aplicada y
+  verificada en central** (`seguros`): 42 enums, 52 tablas, 721 columnas, 265 índices, 67 constraints
+  y 353 NOT NULL — **coincidencia EXACTA con el origen** en los cinco recuentos.
+- 🚨 **`docs/TRASPASO-CORREDURIA.md` decía «cero claves foráneas». Hay 131.** Se destapó comparando
+  constraints origen (198) vs destino (67). Y la conclusión que sacaba («no hay orden de carga que
+  respetar») era al revés. Corregido en el doc. Las FKs van en fichero aparte y **se crean DESPUÉS de
+  los datos**: no hay orden topológico posible (hay autorreferencias) y así sirven de verificación.
+- DDL **generado desde los catálogos del origen**, no escrito a mano. Tres ficheros en
+  `apps/asegura/prisma/sql/2026-09-01_seguros_volcado_{ddl,datos,fks}.sql`.
+- Copia de datos: por **`dblink`** (ya instalado en central), server-side. `pg_dump` local es 16.13 y
+  el origen 17.6 → se niega. **Bloqueado a falta de UNA cosa:** secreto `asegura_origen_url` en el
+  Vault de Supabase de central (lo pone Alberto; nunca por chat). El script lo lee dentro del bloque.
+- ⚠️ Sigue vigente: Manuel NO borra hasta verificar **descifrar Y buscar** sobre nuestra copia.
+
+### 🛡️ (01/09/2026) asegura: dos specs (portal + agente de venta) y la cartera NO era lo que decíamos
+- Brainstorming con Alberto → specs `2026-09-01-asegura-portal-clientes-empresas-design.md` y
+  `2026-09-01-asegura-agente-venta-design.md`. PR #1941.
+- 🚨 **Medido: la cartera viva son ~80 clientes / 109 pólizas, no 32.600/28.843.** El resto es volcado
+  histórico (`import_ref` `intranet:` 26.117 con vto. 2013-2018 y `asegura_app:` 2.612, CERO con vto.
+  futuro). Regla de Alberto: **CIMA (`import_ref IS NULL`) = cliente; el resto, lead** (32.520).
+  **Cifra ya corregida** en `CLAUDE.md`, `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`.
+- Portal: app nueva `apps/asegura-portal` (rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`;
+  schema `seguros`; WhatsApp con **WABA nueva** (`wa_opt_in`=0 en las 32.600). Eje: **«aporta tus seguros»**,
+  que sirve a leads y clientes a la vez. El móvil identifica un **HOGAR** (740 números compartidos, 630 con
+  el mismo apellido → familias): nunca se resuelve solo. El papel en la póliza PROPONE acceso, no lo concede.
+- Agente: de **VENTA**, prepara fichas en frío sin contactar a nadie. Dos corpus con autoridad distinta —
+  el contrato dice qué cubre, la **LCS/LDS** qué derechos hay (del texto consolidado del BOE, nunca de
+  memoria del modelo). Sin fine-tuning. Techo real: solo **5.613** fichas son contactables.
+- Regla que evita un desastre: **las pólizas del volcado histórico NO generan recordatorios** (serían
+  28.729 avisos de «se te venció» sobre pólizas de 2013-2018). `recordatorios` del CRM origen no sirve:
+  su `poliza_id` es NOT NULL.
+
+### 🚗 (01/09/2026) Renovaciones: columna «Qué asegura» (matrícula, dirección, tipo de RC)
+- Alberto, sobre la tabla de renovaciones de `/correduria`: «necesito otra columna con datos — auto
+  matrícula marca modelo, hogar dirección, RC de qué tipo… y siempre informa al agente».
+- Helper puro nuevo **`@central/module-seguros/objeto`** (`objetoAsegurado`, 17 tests) con **cuatro**
+  salidas: `conocido` · `no_informado` (la compañía no lo manda) · `cifrado` (la dirección de hogar
+  viene `v1:…`, AES-256-GCM; la clave sigue en el Vercel de Manuel) · `sin_objeto` (vida/salud/decesos
+  son seguros de PERSONAS: ausencia definitiva, no «pendiente»). Ninguno se pinta como hueco vacío.
+- Medido en la cartera real: `matricula`/`marca`/`modelo` en claro; **`datos_especificos.vehiculo` NO
+  es una descripción, contiene la matrícula**; una RC se identifica por sus modalidades
+  (`poliza_coberturas`), no por `datos_especificos`. Las 16 pólizas de la ventana salen `conocido`.
+- Cableado de punta a punta: `apps/asegura/lib/cartera.ts` (+ intento de descifrado) → puerto
+  `/api/operador/vencimientos` → `interpretarObjeto` en plataforma (campo opcional: una versión vieja
+  del puerto da `null` = «aún no llega», distinto de «no informado») → columna en `/correduria` y línea
+  del Telegram de renovaciones. Skill `agente-correduria` actualizada (SKILL §2 + sector §5).
+- **#1938 MERGEADO** (`1ba3c254`, 12 requeridos verdes). El CI volvió a no arrancar en draft: ni abrir
+  el PR ni des-draftearlo dispararon nada; lo desatascó **mergear `main` en la rama** (paso 2 del orden
+  de `CLAUDE.md`), 5ª medición de esa sección — anotada ahí con la secuencia completa. 🔀 Y el PR de
+  seguimiento #1940, abierto IGUAL (MCP, draft, misma identidad), **sí disparó al instante**: el draft
+  no es la causa. Sigue sin explicación; lo accionable es el orden, no el diagnóstico.
+
+### 📅 (01/09/2026) mercado-booking: objetivo jul/ago-2027 cumplido — falta quitar la prioridad del prompt
+- Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`) de la skill `mercado-booking`: 238 comps
+  reales en 24 ventanas (3 fechas × 4 pisos por mes) + 4/4 escaparate propio. **El objetivo (≥3
+  comparables en ≥3 fechas/piso en jul y ago 2027) ya estaba cumplido desde ayer (31/08)** — esta
+  pasada repitió trabajo porque el párrafo "PRIORIDAD TEMPORAL" seguía en el prompt de la rutina.
+- **Pendiente para Alberto:** borrar ese párrafo del prompt programado de `mercado-booking` (esta
+  sesión no tiene acceso al store del trigger para editarlo ella misma). Detalle en
+  `docs/AGENTES-BITACORA.md` (entrada 01/09/2026).
+
+### 🔔 (01/09/2026) Panel «Avisos Telegram» (`/telegram`): catálogo + interruptor por aviso
+- Alberto: «las notificaciones de Telegram son muchas… un panel que las resuma y que pueda activarlas
+  o desactivarlas». Hecho en `apps/plataforma`: **76 avisos PROACTIVOS catalogados** (`lib/telegram/catalogo.ts`),
+  interruptor por aviso y por categoría, y contadores REALES de lo que llega (bitácora, 30 días).
+- Los ~57 emisores pasan ahora por `tgAviso`/`tgAvisoBotones`/`tgAvisoAlerta` (`lib/telegram/avisos.ts`).
+  **Fail-open**: si la BD no responde, el aviso SALE — un fallo de red no puede volverse silencio.
+- Guardián `lib/telegram/catalogo.test.ts`: falla si un id emitido no está catalogado (aviso que no se
+  puede callar) o si uno catalogado no lo emite nadie (interruptor que no hace nada). Ni tsc ni build lo cazan.
+- Fuera del catálogo a propósito: las RESPUESTAS del bot a un mensaje/botón de Alberto (contable,
+  borradores de huéspedes, clasificar movimiento). Silenciarlas rompería la conversación, no quitaría ruido.
+- El triaje de correo tiene un interruptor **por categoría** (`avisoDeCategoriaCorreo`). Ya silenciado
+  `correo.huespedes` a petición suya (📬 Huésped de Smoobu «Nueva reserva»); los borradores del agente siguen.
+- La bitácora nace vacía: el panel dice «aún no se ha medido», nunca «0 avisos». Migración
+  `2026-09-01_telegram_avisos.sql` **aplicada**. Purga a 90 días desde el cron `agentes-latido`.
+- **#1924 MERGEADO** (`ff136ac0`, 12 requeridos verdes). El CI cazó un `make_interval(days => ${n})`
+  sin `::int` (Prisma manda int8 → 42883 SOLO en runtime): guardián `regression-sql-fecha-parametro`.
+  ⚠️ Ese guardián enumera con `git ls-files`, así que **no ve ficheros sin `git add`** — la suite
+  local daba verde con el bug delante. Haz `git add` antes de dar por buena una suite con archivos nuevos.
+- Documentado en `apps/plataforma/CLAUDE.md` (§Panel Avisos Telegram), skills `plataforma-maestro`
+  (punto 12) y `correo-triaje`, y `docs/FUENTES-DE-VERDAD.md`.
+### 🔴 (01/09/2026) `GH_PAT_TRIGGER` caducado: la radiografía del repo lleva desde el 31/08 sin actualizarse
+- El workflow «Auditoría de estructura» falla en TODOS los pushes a `main` desde el 31/08 ~13:25 UTC:
+  `gh` responde `HTTP 401: Bad credentials`. El `git push` sí cuela —`actions/checkout` deja un
+  `http.extraheader` con el GITHUB_TOKEN que pisa el PAT de la URL—, así que **la rama se sube y el PR
+  nunca se abre**: el fallo es mudo salvo por el correo de Actions.
+- Efectos medidos: `estructura.generated.json` congelado en `6a4d53c4d` (#1887, 31/08 08:43) y **123 ramas
+  `claude/auditoria-radiografia-*` huérfanas** en el remoto (el `gh pr close --delete-branch` tampoco corre).
+- 🔴 **Para Alberto: renovar el secret `GH_PAT_TRIGGER`** — un agente no puede. Mientras tanto la radiografía
+  se regenera a mano (va en este PR) y las ramas huérfanas siguen ahí, pendientes de barrido.
+
+### 🔌 (01/09/2026) Fly.io: el adapter CIMA se transfirió… y Manuel lo devolvió a su organización
+- 08:16 UTC `fly apps move asegura-app-cima-adapter --org grupo-asegura` → OK (48 s). 08:32 UTC Manuel lo
+  devolvió a `manuel-suarez-678` (119 s): aceptar la invitación de miembro le bastó para sacarlo. `grupo-asegura`
+  quedó vacía. **No es un problema técnico, es una conversación con Manuel** — no se vuelve a mover sin su OK.
+- La app no se cayó (`/health` 200 tras ambos moves) y **los ficheros no se pierden en `/tmp`**: los logs de Fly
+  cuadran al minuto con `cima_ficheros` (27/08 08:15, 28/08 15:32, 30/08 11:34).
+- ❌ Corrección: el fichero CIMA **no** entra «a diario entre 11:35 y 11:42 UTC» (se afirmó y era falso). El horario
+  es irregular y el 01/09 (00:00–08:35 UTC) no entró ninguna tanda. Pendiente real: traer el disparador a
+  `CRON_JOBS` de plataforma —hoy lo llama infra de Manuel—, que quita la dependencia sin mover infraestructura.
+
+### ✅ (01/09/2026) V4 Flash CONFIRMADO en producción con tráfico real — serie cerrada al 100%
+- Sonda diaria 07:00:48 UTC: `plataforma·sonda·openrouter·deepseek/deepseek-v4-flash·ok` →
+  no hay override `OPENROUTER_MODEL` en Vercel; el default nuevo sirve en producción.
+- Además tráfico de negocio real: `extraer-factura` procesó facturas con el V4 Flash a las
+  06:34-06:35, y el Director escala por tarea con normalidad (gemini-flash / gpt-5.6-luna /
+  sonnet-4.5). Cabo único de la verificación del 31/08: CERRADO. Nada pendiente de la serie.
+
+### 💶 (01/09/2026) Pasada mensual `fiscal-novedades`: sin cambios en deducciones, 1 aviso a cliente
+- Deducciones IRPF (mínimos, maternidad, FN estatal/andaluza) contrastadas contra BOE/BOJA/AEAT: **sin
+  cambios**, PGE 2027 aún sin publicar. Radar de ayudas: ayuda Junta Andalucía 600€/hijo<3 tras 3er hijo
+  detectada y descartada (renta de Alberto muy por encima del tope 6× IPREM). 1ª pasada por cliente:
+  Joaquín Jaén avisado por Telegram del plan de choque hostelería (RD 638/2026, hasta 11.000€, plazo
+  30/09/2026, **CNAE sin confirmar** — pendiente de que Alberto/Joaquín lo verifiquen); Sique Brilla sin
+  novedad. Detalle en `docs/FISCAL-AYUDAS.md` y `docs/AGENTES-BITACORA.md`.
+
+### 🛡️ (01/09/2026) Nace el agente de la correduría (`agente-correduria`) — decisión de Alberto
+- Alberto quiere un agente que lleve Grupo ASegura «casi al 100%» y responda a clientes. Se montó por
+  fases: **Fase 0** (aprender sector + informar, activa ya) → emisión Avant2 → cliente-facing (esta
+  última SOLO con diseño de canal + OK explícito). Skill `agente-correduria` (router + `references/sector.md`
+  acumulativo) + rutina semanal martes 05:30 UTC (§21 de `RUTINAS-PROGRAMADAS.md`).
+- 🔴 Pendiente de Alberto: añadir `ALERTA_TOKEN` al prompt de la rutina en la UI (sin él, informe solo en bitácora).
+- Decisión previa de la sesión: credenciales Codeoscopic se piden a **Manuel** (env vars de su Vercel),
+  NO a Codeoscopic; el borrador de Gmail a Juan Fernández queda muerto sin enviar. #1918 mergeado.
+- **Vencimientos ya funcionando** (mismo PR #1919): `@central/module-seguros/vencimientos` (puro, LCS
+  art. 22: <1 mes = se prorroga sí o sí) + puerto `/api/operador/vencimientos` en asegura + tabla en
+  plataforma `/correduria`. Real: **5 vencen en 30 días, 7 en 60, 13 en 90** (3.899,05€ de prima
+  conocida, 4 sin informar). ⚠️ Contar por fecha SIN filtrar estado colaba canceladas (daba 6/8).
+- Cartera viva = **59 pólizas `situacion='EV'`** (37 auto/13 hogar/8 RC/1 moto); el resto es histórico.
+  Ingesta CIMA = cron diario ~11:40 UTC **fuera de nuestro alcance**: en ese Supabase NO hay pg_cron ni
+  Edge Functions, así que todo lo alimenta el Vercel de Manuel — y ese Vercel **no se ve desde aquí**
+  (el conector solo alcanza el team «Pisos turisticos», donde ni `asegura` ni `central-asegura` están).
+- 💡 **Idea de Alberto guardada: «Agente IA Defensa cartera»** (`references/defensa-cartera.md`
+  + su diagrama). Recibo de PRECARTERA → agente nocturno → retarificar → comparar nueva producción
+  vs cartera → pantalla de desviación de recibos → respuesta al cliente. NO implementado; depende
+  de (a) saber qué estado de `poliza_recibos` es la precartera, (b) la API de Avant2 —y **cada
+  cotización cuesta 0,50€**, así que necesita presupuesto—, y (c) Fase 3 para lo del cliente.
+- 🚨 **Método — cómo NO verificar un deploy de Vercel (01/09/2026, me costó 3 falsos negativos):** se
+  dio por hecho que plataforma «no había desplegado» porque el identificador `dpl_…` incrustado en el
+  HTML de `/login` no cambiaba. **`/login` es una página PRERENDERIZADA (ISR)**: su HTML lo sirve el CDN
+  y ese `dpl_` puede seguir siendo el del build anterior con el deployment nuevo ya en producción (el
+  panel mostraba los dos commits en **Production · Ready**). La comprobación que SÍ vale desde aquí:
+  pedir una **ruta de API nueva** y ver si responde **401/200 en vez de 404** — eso prueba que el código
+  está sirviendo (`/api/cron/correduria-renovaciones` → 401). Y el conector de Vercel **no puede leer
+  deployments (403) ni env vars (no existe la herramienta)**: para eso hace falta el panel.
+- **Migrar la cartera al schema `seguros`: NO todavía** — copiar 32.600 filas es trivial, pero sin mover
+  la ingesta EIAC/CIMA la copia envejece al día siguiente y quedan dos carteras. Orden: vencimientos ya
+  (hecho) → pedir a Manuel cómo se alimenta → migrar + repuntar ingesta. Al mover, ojo: las 86 RLS por
+  `auth.uid()` no viajan (nuestros roles llevan BYPASSRLS) → el aislamiento pasa a ser del código.
+
+### 🧾 (01/09/2026) Codeoscopic = LA fuente de tarificación y EMISIÓN de pólizas nuevas (dictado por Alberto)
+- La web «ASegura» es de ALBERTO (Manuel la desarrolló); EIAC no le preocupa. Codeoscopic es el motor
+  de venta: sin él la plataforma no tarifica ni emite.
+- Del Gmail de Alberto (verificado): cuenta **Avant2 Sales Manager** propia y operativa desde 09/06
+  (alta «SOLO ASM», formación hecha); compañías vivas: Reale (26/05, multirramo) y Fidelidade (hogar,
+  14/07); claves entregadas de Mapfre/Allianz(PA342521)/Occident(M00171). Contrato Workspace 20/05 y
+  DPA art. 28 remitido el 25/05 (el «contrato de encargado» de la lista ya existe con Codeoscopic).
+- La integración API de la web quedó EN SANDBOX (03/06: Quote→preemisión→Submit→webhook Basic Auth sin
+  cerrar; correo de manuel@loor.es a juan.fernandez@codeoscopic.com) → por eso el flag de emisión sigue
+  apagado. **Borrador creado en Gmail** (no enviado) a Juan Fernández: renovar sandbox + pendientes +
+  prueba de idempotencia del attempt_id. Pendiente: quién es manuel@loor.es; inventario BD cuando
+  reconecte el conector Supabase_asegura.
+- ⚠️ Higiene: en mayo viajaron por email claves de portales de compañías en texto plano (Mapfre,
+  Occident) — rotarlas con calma.
+
+### ✅ (01/09/2026) CARTERA EN VIVO FUNCIONANDO — rotación hecha; cron `postgres` de Manuel roto desde el reset
+- Números reales en plataforma→Correduría: 50 en vigor · 995 sin fecha · 27.793 históricas · 2.742
+  clientes · 29.858 leads · 7 siniestros (el 1.194 de la víspera era lectura vieja: la BD ingesta a diario).
+- Contraseña de `central_asegura` ROTADA (04:39, del gestor de Alberto); snippet con clave en claro
+  borrado; env recreada en Vercel; pooler registra `Connection authenticated`. Exposición de la clave
+  débil (20:51→04:39): cero autenticaciones del rol en lo auditable — matiz: `log_connections` OFF,
+  solo audita el pooler.
+- 🚨 Un job con `postgres.js` (IPs Vercel fra1) falla como `postgres` cada ~5 min desde 31/08 ~08:00
+  (antes autenticaba): es del CRM de Manuel — nada nuestro usa esa BD salvo apps/asegura (verificado
+  por código). Probable daño colateral del reset de la database password durante el montaje. NO tocar
+  su Vercel; avisar a Manuel (borrador, regla de comunicaciones).
+- `central-asegura` servía desde us-east-1 contra BD eu-central-1 → `regions: ["fra1"]` en su vercel.json.
+
+### 🔑 (01/09/2026) La cartera en vivo: era la CONTRASEÑA — y un valor del chat acabó de contraseña
+- Logs del pooler (MCP Supabase_asegura, nuevo conector): `password authentication failed for user
+  "central_asegura"` → el fallo era la contraseña del `ASEGURA_DATABASE_URL` pegado en Vercel
+  (host/usuario correctos; el blindaje pgbouncer de #1905 quedó descartado como causa).
+- 🚨 Incidente: al guiar el arreglo por Claude Chrome, la HUELLA de verificación (md5 del verificador
+  SCRAM) publicada en el chat se usó como contraseña del rol. Lección: **jamás publicar un valor con
+  pinta de credencial sin marcarlo como NO-USAR**; los secretos los genera el gestor de Alberto y no
+  pasan por ningún chat. Exposición revisada en logs: solo fallos de auth, ninguna huella de acceso
+  (matiz: log_connections apagado). Rotación en curso con marcador `<<CLAVE>>` que rellena Alberto.
+- Aparte: algo con `postgres.js` desde `63.180.181.94` intenta entrar como `postgres` cada 5 min y
+  falla — no es nuestro (nosotros: Prisma + central_asegura). Preguntar a Manuel en el traspaso.
+- Además: 🛡️ Correduría entra por fin en el menú de plataforma (PR #1907, guardián incluido) —
+  «no me sale correduría»: /correduria nunca estuvo en NAV_NEGOCIO.
+
+### 🔑 (31/08/2026) House Sevillana YA ENVÍA · el PIN por reserva sustituye al maestro · salida flexible (PRs #1906, #1908)
+- **House Sevillana ACTIVADA** (`mensajes_prog_pisos.activo=true`, 21:45). Hoy no sale nada: los dos
+  primeros hitos de la reserva viva ya estaban reclamados en sombra, así que el 1er envío real es el
+  3/09 09:00 (víspera con códigos). Alberto apaga las plantillas de Smoobu de House; si se le olvida,
+  el chequeo de equivalencia evita el duplicado y le dice cuál apagar. Faltan los otros 3 pisos.
+- **PR #1906 — el mensaje manda el PIN de ESA reserva, no el maestro.** Los teclados de Socorro y
+  Bustos Tavera son cerraduras Tuya y `domotica_acceso_pin` ya guarda un PIN por reserva: repartir el
+  maestro teniendo uno temporal a medida era lo contrario de «al checkout se le quita el acceso».
+  `elegirCodigoPortal` (PIN > maestro > declarar el hueco) + `pinsPorReserva`; con DOS códigos vivos
+  distintos no se manda ninguno (el hueco `{PORTAL}` es UNO). La nota de caducidad **solo** sale con
+  el PIN: el maestro no caduca y prometerlo sería mentira. Al enviarse marca `entregado`.
+  Mismo PR: indicaciones corregidas contra las FOTOS de los 4 pisos — **Bustos Tavera tiene DOS cajas
+  GRIFEMA idénticas** (Luxury = ABAJO, Reform = ARRIBA; antes, 50% de abrir la del vecino), y en House
+  el código es solo para el 1er acceso: dentro hay pastilla + llave de la cancela.
+- **PR #1908 — entrada ESTRICTA / salida FLEXIBLE** (regla de Alberto): `margenSalidaMin` 0→120 min
+  (muere a las 13:00, con 2 h de colchón antes del check-in de las 15:00); entrada intacta, y una
+  entrada anticipada se concede a mano. Un PIN conserva PARA SIEMPRE su ventana, así que
+  `desajustesVentana` los DECLARA (dedupe diario) y el botón «🔄 ventana» los repone con el MISMO
+  código: no se reponen solos porque Tuya no sabe alargar un PIN —hay que borrar y recrear— y si la
+  recreación falla el huésped se queda con un código muerto (por eso queda en `estado='error'`, que
+  hace caer el mensaje al maestro, nunca en `'activo'`).
+- **Pendiente:** renovar IoT Core en Tuya (sin él Luxury/Reform no emiten PIN y siguen con el maestro);
+  reponer la ventana de los 2 PIN vivos de House; activar los otros 3 pisos.
+- **Verificado contra Smoobu (por `pg_net`, sin sacar la key de `pms_connections`):** el hilo de la
+  reserva viva de House tiene 16 mensajes; Smoobu ya mandó «Booking Confirmation» y «WHERE TO COLLECT
+  THE KEYS» (por eso esos dos hitos quedaron en sombra), y **NO** hay «RECORDATORIO - MUY IMPORTANTE»,
+  así que la víspera del 3/09 con el PIN NO está bloqueada. Alberto apagó ya las plantillas de House.
+- 🚨 **AGODA es de UNA SOLA DIRECCIÓN (medido sobre las 8 reservas del histórico):** Smoobu SÍ
+  entrega lo nuestro (los 7 automáticos salieron en todas), pero lo que el huésped contesta NO
+  vuelve — **0 mensajes entrantes en las 8**, con prueba independiente en `atul bhatt` (Agoda
+  reenvió su mensaje del 14/04 por correo y NO está en el hilo de Smoobu). Control: el hilo de
+  Booking de la reserva viva de House tiene 16 mensajes, 6 del huésped. Su respuesta vive SOLO en
+  el extranet YCS. Tapado con una categoría nueva del triaje (`agoda-huespedes`): el correo diario
+  «New messages from your guests» trae el TEXTO del mensaje, así que el Telegram lo manda entero y
+  enlaza a YCS. **NO se enruta al agente de huéspedes** — contestaría en un hilo que no llega.
+  Antes de activar Luxury (14 de las 15 reservas de Agoda son suyas) esto tenía que existir.
+- **AGODA sí tiene canal**: Smoobu guarda un alias de retransmisión `…@agoda-messaging.com`, mismo
+  mecanismo que `…@guest.booking.com`. Lo que NO trae es el idioma: `language` viene **vacío** (en
+  Booking viene `es`), así que a un huésped de Hong Kong con el portal en chino se le escribiría en
+  español. Ese es el riesgo de Agoda, no la entrega — y son 15 reservas de 2.045, 14 de ellas Luxury.
+
+### 📬 (31/08/2026) Mensajes programados a huéspedes NUESTROS — sustituto de los automáticos de Smoobu (MERGEADO, en sombra)
+- Análisis sobre 8 hilos reales: Smoobu manda 7 automáticos solo-en-español, promete el parking
+  fantasma de S. Juan de la Palma, duplica en última hora y esconde lo crítico tras un enlace.
+- **PR #1902 MERGEADO**: `lib/sivra/acceso.ts` (fuente única por piso; códigos en BD
+  `sivra_codigos_acceso`, sembrados por MCP — NO en el repo) + 7 plantillas deterministas + cron
+  `mensajes/programados` (30 min, `CRON_JOBS`) con dedupe, sombra por piso (`mensajes_prog_pisos`,
+  fila ausente = sombra), chequeo «¿ya lo mandó Smoobu?» y latido+sonda. **Vivo pero MUDO** hasta
+  que Alberto ponga `activo=true` piso a piso (y apague a la vez las plantillas de ese piso en Smoobu).
+- Decisiones de Alberto: sin landing (texto plano en el hilo del portal), códigos en DOS tiempos
+  (proceso a 7 días, códigos en víspera), rotación tras cancelación expuesta → PENDIENTE (tarea a
+  Vanesa), aviso a Sique Brilla de cuna/horas/late → PENDIENTE (email + intranet, PR siguiente).
+- **Las 5 fotos del Dúplex se MIRARON una a una** (CDN de Smoobu, vía pg_net + edge function temporal
+  ya retirada) y colgaban del paso equivocado: el llavero rotulado APARTMENT/BUILDING/LIFT estaba en
+  «entrada del edificio» y el Street View anotado no explicaba sus tres rótulos. Reasignadas con el
+  texto que dice qué enseña cada una. Regla: **una foto de instrucciones se coloca mirándola, no por
+  el nombre del fichero.**
+
+### 🩺 (31/08/2026) El motivo era «asegura no puede leer su BD» — y la BD está SANA
+- El recuadro con motivo (PR #1903) habló a la primera: `asegura_error` — el secreto COINCIDE, asegura
+  llama a su BD y falla. Verificado por Supabase MCP contra ASEGURA-prod-eu: tablas/enums idénticos al
+  schema del código y datos vivos (1 correduría, 2.742 clientes, 28.843 pólizas) → el fallo es la
+  CONEXIÓN desde Vercel (valor de ASEGURA_DATABASE_URL).
+- Blindaje por código: `lib/asegura-url.ts::normalizarUrlPooler` (puro, 4 tests) añade
+  `pgbouncer=true&connection_limit=1` a URLs :6543 si faltan — Prisma lo exige en el pooler de
+  transacciones y es lo primero que se pierde al pegar a mano. Si tras esto sigue, es la contraseña
+  o el formato de usuario (`central_asegura.<ref>`): mirar logs de central-asegura en Vercel.
+
+### 🔍 (31/08/2026) La cartera en vivo dice ahora POR QUÉ falla (aún «sin respuesta» tras el fix del middleware)
+- Con #1899 desplegado, sondeo por pg_net desde Supabase: `/api/operador/resumen` de central-asegura
+  responde `401 {"error":"No autorizado"}` en JSON → el middleware ya no estorba y el dominio es bueno.
+- Alberto seguía viendo el recuadro rojo. El rojo (no el ámbar) prueba que plataforma tiene su secreto
+  y llamó — quedan DOS sospechosos indistinguibles en la UI: secretos que no coinciden (401) o asegura
+  sin poder leer su BD (`estado:'error'`). Fix: `interpretarCartera` gana `motivo`
+  (secreto_rechazado / asegura_error / respuesta_ilegible / red) y el recuadro imprime el remedio.
+- Pendiente: leer los logs de central-asegura (Chrome) para saber cuál de los dos es.
+
+### 🔧 (31/08/2026) El puerto operador de asegura nacía BLOQUEADO por su propio middleware
+- Estreno de la cartera en vivo: envs bien puestas y aun así «sin respuesta». Causa: el middleware
+  de apps/asegura protege todo salvo `/login` y `/api/auth`, así que la llamada servidor→servidor
+  de plataforma a `/api/operador/resumen` (Bearer, sin cookie) se REDIRIGÍA al login → plataforma
+  recibía HTML, no JSON. Ni tsc ni build lo cazan. Fix: `/api/operador` a la lista PUBLIC (la ruta
+  conserva su propia auth Bearer, cerrada por defecto) + guardián en
+  `test/regression-asegura-operador-publico.test.ts` (vigila el PUBLIC y que la ruta siga exigiendo
+  el Bearer). Lección: al estrenar un puerto inter-app, probar la RUTA con el middleware delante.
+
+### ✅ (31/08/2026) Verificación 100% de la serie V4 Flash (#1898/#1900/#1901) — con evidencia
+- `main` (`744e88b`) verificado por grep: default `deepseek/deepseek-v4-flash` en openrouter.ts,
+  `MODELO_DEFAULT` del Director, sonda, PREFERIDOS (×2), Paso 1.5 y visión/embeddings en la skill,
+  SKILLS.md con los 3 «ACTIVA». Tests core-ai **45/45**, `tsc` plataforma limpio, los 3 PRs
+  mergearon con los 3 workflows verdes sobre su head exacto.
+- **Producción**: plataforma redesplegada (deploy READY target=production sobre el merge #1898 y
+  #1900; el de #1901, solo docs, saltado por el ignoreCommand — correcto).
+- **Cabo pendiente y armado**: `ai_usos` solo tiene tráfico PRE-deploy (último 10:01 UTC, servía
+  `deepseek-chat+web` = V3, coherente). El MCP de Vercel no deja leer si hay override
+  `OPENROUTER_MODEL` en la env → la prueba real es el tick horario del websearch (~16:01 UTC):
+  check-in programado para leer qué modelo sirvió. Si sigue saliendo V3, hay override en Vercel
+  y hay que quitarlo/cambiarlo A MANO (acción de Alberto).
+
+### 🔍 (31/08/2026) Barrido anti-huecos en TODOS los agentes (orden de Alberto tras V4 Flash)
+- Se buscó la misma clase de hueco (traspaso sin dueño · lista estática sin curación · supuesto
+  sin verificar) en los ~17 agentes. La auditoría diaria, conectores-vigia, github-vigia y el
+  mapa de fuentes están sanos (tienen cláusulas de descubrimiento y «vigilar al vigilante»).
+- 🔴 Hueco real: la VISIÓN (`meta/llama-3.2-11b-vision-instruct`, en NIM — el proveedor de las
+  3 muertes por EOL en 11 días; la consume ialimp, cliente vivo) y los EMBEDDINGS
+  (`text-embedding-004`, un swap invalida vectores) no los vigilaba nadie → al Paso 1 del buscador.
+- 🟡 SKILLS.md: «PENDIENTE de trigger» de mercado-booking/radar-espana/patrimonio-cfo era falso
+  (los 3 triggers existen y corren — verificado con list_triggers). Corregido.
+
+### 🩹 (31/08/2026) Post-mortem V4 Flash: el hueco era de diseño — buscador-ia gana el Paso 1.5
+- Alberto: «revisa por qué ha pasado y que no vuelva a pasar». Causa raíz: la delimitación del
+  09/07 («OpenRouter fuera de scope, lo vigila SU cron») dejó el DESCUBRIMIENTO sin dueño — el
+  cron `ia-director-refresh` es determinista (solo elige de PREFERIDOS estáticas) y el buscador
+  tenía orden de no mirar. El V4 Flash entró en OpenRouter el 24/04: 4 meses invisible; la
+  pasada semanal de ayer dijo «sin candidatos» cumpliendo su skill.
+- Arreglo (skill buscador-ia): Paso 1.5 «Watch de OpenRouter» (verificar `name`+`pricing` reales
+  de cada id usado, descubrimiento dirigido, cambios a PREFERIDOS por PR), lección «el slug no
+  dice qué sirve», y regla de re-evaluar pines cuando un eslabón se apaga/enciende (caso contable).
+
+### 🧠 (31/08/2026) DeepSeek V4 Flash en OpenRouter — y nuestro default era el V3 viejo y más caro
+- Alberto pasó un post viral y preguntó si OpenRouter lo tiene y si el buscador está al tanto.
+- **Sí lo tiene** (`deepseek/deepseek-v4-flash`, $0,086/$0,17 por M, ctx 1M) — y el hallazgo real:
+  `deepseek/deepseek-chat` (nuestro default de pasarela) NO es alias rodante, sirve el **V3** a
+  $0,26/$1,03 (3-6× más caro). Ni PREFERIDOS ni el catálogo v12 del Director lo conocían.
+- Mini-eval en vivo por OpenRouter: A cálida en español · B `ESCALAR` exacto. PR draft con el swap
+  (default `openrouter.ts` + `MODELO_DEFAULT` Director + sonda + PREFERIDOS logica/codigo).
+- De paso: `CONTABLE_MODEL` (V4 Flash por NIM) caía al V3 con NIM apagado — el swap lo re-alinea.
+
+### 🔬 (31/08/2026) H11–H15 RESUELTAS con el criterio firmado delante — solo H11 se cablea
+- Alberto: «ve resolviendo». Criterios aplicados tal cual contra `trading_estrategia_stats`/`trading_backtest`.
+- **H11 cableada**: `PISCINA_VIVA='direccional'` (3/3 condiciones; deltas hoy mom −9 · rev +5 · val −13).
+- H12 no: +7,74 pp de mediana a 364 d pero p25 peor; tendencia viva separa +1,26 pp (<5). 91 d validada 3ª vez.
+- H13 no (momentum a primera con alfa medio −0,23%) · H14 no (el signo no aguanta 0,1–0,3%) · H15: ganadora
+  idéntica en los 9 combos minN×clamp (minN INERTE en 'todos': n=352 igual por construcción) → se quedan.
+- Cron `trading-h10`: ya no re-avisa el cierre de H10; vigía con lista de hipótesis vacía (tubería montada).
+- Detalle en el pre-registro («✅ RESOLUCIÓN de H11…H15») y TRADING-SALIDAS-2026-08.md (H12).
+
+### 🔧 (31/08/2026) Agente SEO sivra: 42704 SeoStatus — el schema declaraba un enum que la BD no tiene
+- El cron `seo-refresh` de sivra murió en `prisma.seoProposal.create()`: `seo_proposals.status` es TEXT
+  en la BD y el schema lo declaraba `enum SeoStatus` → Prisma castea a `"public"."SeoStatus"` (42704).
+  Ese `create` no funcionó NUNCA (las 6 filas previas son del botón de plataforma, SQL crudo, ids UUID);
+  hasta hoy el cron moría antes (GITHUB_TOKEN…). Fix: `status String @default("PENDING")` — la BD NO se
+  toca (el enum rompería el INSERT crudo de plataforma). Guardián `test/regression-seo-status-text.test.ts`.
+- El cambio SEO de hoy SÍ se aplicó en la landing (c59d5da, PR #1891) antes de fallar el INSERT: fila
+  `seo_proposals` reconstruida del diff de git e insertada a mano (revert operativo; análisis IA perdido).
+- **PR #1895 MERGEADO** (12 checks verdes). Probado contra la BD real: el cast viejo reproduce el 42704 y
+  el INSERT con text (lo que emite el cliente nuevo) funciona (transacción revertida). E2E real = el cron
+  del lunes 07/09 10:00 UTC (check-in programado). OJO: el proyecto Vercel `sivra` NO está en el alcance
+  del conector — el deploy de main no se pudo mirar desde la sesión.
+
+### 🏠 (31/08/2026) La cartera de la correduría, DENTRO de plataforma (puerto HTTP)
+- Alberto: «mete correduría dentro de mi plataforma». Bloque «📁 Cartera en vivo» en `/correduria`
+  (KPIs: en vigor/sin fecha/históricas/clientes/leads/siniestros) leído de `central-asegura` por el
+  patrón puerto operador (como rrhh): `GET /api/operador/resumen` (Bearer `ASEGURA_OPERADOR_SECRET`,
+  cerrado por defecto) → `lib/cartera-asegura.ts` en plataforma (intérprete puro testeado, 8 tests;
+  3 estados — «pendiente de conectar» ≠ cartera vacía, fallo visible). Registrado en secrets-registry.
+- Antes: deploy de central-asegura en verde (fix #1893) con las 4 envs; login de asegura = cuenta de
+  plataforma (verificado hash en `cuentas`). Pendiente Alberto: `ASEGURA_OPERADOR_SECRET` (mismo valor)
+  en los DOS proyectos Vercel + redeploy de ambos; aviso facturación Supabase Free = Fair Use (Database
+  Size 45%, el que vigilar; Pro antes del volcado Tiempo 2). Rotar `prisma_seguros` con calma.
+
+### 🛠️ (31/08/2026) central-asegura: primer deploy en Error — el buildCommand pisaba prisma:generate
+- PR #1803 mergeado (squash `4d4b142c6`) tras resolver conflicto+gitleaks (allowlist FAKE_KEY_B). El
+  primer deploy de `central-asegura` falló: el `buildCommand` de `vercel.json` («prisma generate &&
+  next build») PISA el script `prisma:generate` del package.json → el 2º cliente Prisma
+  (`lib/generated/asegura-client`) nunca se genera en Vercel. El CI no lo caza: tests.yml usa el
+  script bueno y ci.yml solo construye ia-rest — **esta app nunca había pasado un `next build`**.
+- Fix: ambos generate inline en el buildCommand; validado en local (repro del fallo + build OK).
+- Conector Vercel: el alcance por proyecto se edita en claude.ai → Conectores (no en Vercel).
+  Pendiente Alberto: añadir SOLO `central-asegura`; y `ASEGURA_SESSION_SECRET` quedó sin guardar.
+### ✅ (31/08/2026) H10 RESUELTA — ninguna regla de salida bate al tiempo; cron y datos verificados
+- Alberto: «¿funciona todo bien?» tras el parte semanal de `trading-h10`. Sí: latido en verde (08:41 UTC)
+  y los 7 agregados recomputados a mano contra `trading_backtest` cuadran al dígito con el Telegram.
+- Resolución formal por PR (rama `claude/h10-reglas-salida-a3q4qd`): las 7 variantes rechazadas por el
+  criterio firmado — las que frenan batacazos (Sma50 −9,49 pp, Sma200, Stop10) ceden >1 pp de mediana.
+  Salida por TIEMPO validada por 2ª vez; ya cableada (`venceVentana`, 28/08) → sin cambio de código.
+- Anotado en TRADING-SALIDAS-2026-08.md + RESOLUCIÓN en el pre-registro + bullet de plataforma/CLAUDE.md.
+- Pendiente: H11–H15 ya tienen muestra (aviso del vigía) — cada una es su propio PR con criterio delante.
+
+### 🔌 (31/08/2026) Correduría: conexión a la cartera ENCENDIDA — rol propio + envs puestas por Alberto
+- Rol `central_asegura` creado en ASEGURA-prod-eu (login+BYPASSRLS, **solo SELECT**; verificado vivo).
+  Alberto puso `ASEGURA_DATABASE_URL` y `ASEGURA_SESSION_SECRET` en el Vercel `central-asegura`
+  (Production+Preview; Chrome cedió el teclado — ningún valor pasó por chat).
+- 🚨 Las env vars del proyecto `asegura` de Manuel NO viajaron con la transferencia (quedan 4 de ~25);
+  prod vive de valores horneados → **PROHIBIDO redesplegar** hasta que Manuel las reponga (borrador listo).
+- Proyecto Vercel `central-asegura` creado (Root Dir `apps/asegura`); Git y acceso del conector por verificar.
+- La org «PISO» de Supabase SÍ existe (Free, sin backups; ASEGURA-prod-eu dentro) — propiedad por confirmar.
+
+### 🔬 (31/08/2026) Correduría: conector directo a ASEGURA y diff real — «0 FKs» y «0 triggers» eran FALSOS
+
+Conector nuevo «Supabase asegura» (custom, `project_ref` + `read_only=true` — 13 herramientas solo
+lectura). Primera medición directa de la BD real: **52 tablas / 42 enums / 132 funciones / 86 RLS
+casan con lo declarado**, y hay **131 FKs y 26 triggers** — las mediciones «0 FKs»/«0 triggers» del
+26/08 eran falsas (lo cierto era solo «0 FKs hacia `auth`»). FORCE RLS en 51/52 tablas. Cartera viva
+por fecha: **50 pólizas** (1.194 con vencimiento NULL → tratar como pendiente). `review` crece: 42.
+(el conector principal se devolvió a la org de Alberto ese mismo día — resuelto)
+lo transferido; «PISO» era el team de Vercel).
+
+### 🗂️ (31/08/2026) Correduría: MAPA completo del repo heredado + primer paquete portado
+
+3 agentes leyeron el repo `asegura` entero (1.174 TS). El mapa (3 partes + síntesis N1-N8) en
+`docs/TRASPASO-CORREDURIA.md`. Claves: **el adaptador CIMA se hereda, no se reescribe** (WS-Security
+atípico, JAR recompilado, dual-JDK); cartera en lectura = **24 ficheros** (fichas se reescriben);
+auth se re-plataforma conservando las 6 firmas de `lib/auth.ts` (102 call sites intactos); cifrado
+portable a coste cero. ✅ **N1 HECHO**: `packages/module-seguros-pii` (field-encryption + blind-index,
+36/36 tests, contrato de sincronía con asegura@b620251). 🔴 Hallado: ADR-009:183 tiene una contraseña
+de homologación en claro → purga pendiente (N2). Guardianes 83/83. Gate (b) superado (cron CIMA verde
+bajo Alberto); Fly invitación enviada. Decisión: sin fecha de corte, se va haciendo.
+
+### ✅ (31/08/2026) Correduría: Vercel transferido y CONFIRMADO; el cron de CIMA en verde bajo Alberto
+
+Semana de traspaso relámpago: repo `asegura` transferido y aceptado (30/08, 20:21); proyecto Vercel
+en el team `pisos-turisticos-projects` con dominio OK (el 404 del MCP era el conector scoped a 5
+proyectos — ampliar acceso); **los secrets de Actions VIAJARON con el repo** (falsa el «no viaja» de
+Manuel: eso es de forks) y el `CRON_SECRET` ya coincidía → cron de las 5:30 en verde + dry_run OK,
+**gate (b) superado**. 2FA de Alberto activado. Vigilar: cola TIREA re-entrega 128 (doc dice ~78) →
+ligado al drain pendiente desde 12-ago. Falta: Supabase, Fly (invitar a Manuel DESDE la org de
+Alberto), Blob, repo adaptador. Corte propuesto: lunes 01/09 9:30. Informe de Manuel archivado en
+`docs/TRASPASO-CORREDURIA-informe-manuel-2026-08-30.md`.
+
+### 🎯 (31/08/2026) mercado-booking: objetivo jul/ago-2027 cumplido — quitar la línea de prioridad del cron
+- Pasada acotada `?desde=2027-07-01&hasta=2027-08-31&max=24`: 240 comps reales en 6 fechas × 4 pisos
+  (02/10/27-07, 06/14/24-08) → **≥3 fechas distintas por piso en julio-2027 y en agosto-2027**, el
+  bucket mensual del motor queda elegible en ambos meses. 3/4 ventanas de escaparate propio medidas.
+- **Acción pendiente:** el prompt programado de `mercado-booking` lleva desde el 31/08 una línea de
+  "PRIORIDAD TEMPORAL (agosto 2026)" pidiendo esta pasada acotada — ya cumplió su objetivo, **hay
+  que quitarla** del trigger/schedule (no es un archivo del repo; hay que editarlo donde vive el
+  cron/trigger de Claude Code) para que la rutina vuelva a su barrido normal por urgencia.
+
+### 🔎 (31/08/2026) Revisión de datos de resultado-pisos: julio cuadra al céntimo; comisión centinela corregida
+- Contraste contra BD real: julio 2026 = 4.424,45€ exacto vs pantalla vieja · nights ~100% ·
+  `reserved_at` ~100% (pace fiable) · Booking comisión = 19,72% clavado · 111 cancelaciones OK.
+- 🚨 Expedia/Airbnb/Agoda salían «comisión 0€»: es un CENTINELA (`portal_rates.commission_pct=0`
+  «pendiente de confirmar» → neto=bruto). Nuevo `lib/sivra/canales-logica.ts` (puro, testeado):
+  la UI dice «⚠️ comisión sin descontar (tarifa pendiente)», nunca 0€. Con factura real se fija
+  la tarifa en `portal_rates` y desaparece el aviso.
+
+### 📊 (31/08/2026) Ciclo semanal de pricing SIVRA — 4 pisos, mercado fresco, sin huecos
+- 5 agentes en paralelo barrieron Booking (+fallback lastminute/expedia en Semana Santa/Feria) para
+  los 4 pisos: 601 comps nuevos hoy en `market_rates` (house=153, busto=150, luxury=150, duplex=148,
+  ninguno a 0) + las 7 fechas de evento (Copa del Rey, San Isidoro, 3 LaLiga, JEID, Mundial Remo) que
+  el guardián llevaba 3 días marcando "congelada" por falta de comps.
+- 48 propuestas (dry-run forzado, `ALERTA_TOKEN`) por los raíles: circuit-breaker sano, sin cambios de
+  `apply_enabled`/suelos/`target_pctl`. House sept sigue al 43% ocupación → se mantiene target_pctl 0,60.
+- A vigilar: Luxury Busto 10-oct-2026 el mercado subió a p50=470€ (antes 123-169€); noche ya vendida a
+  162€, irrelevante hoy. Detalle completo en `pricing_aprendizaje` (`ciclo_31_08_2026`) y bitácora de agentes.
+
+### 📥 (30/08/2026) Correduría: informe COMPLETO de Manuel — cierra M4-M6/M15-M17 y propone TRANSFERIR Supabase
+
+Manuel entregó su informe de traspaso medido contra producción (archivado verbatim en
+`docs/TRASPASO-CORREDURIA-informe-manuel-2026-08-30.md`). Cierra casi toda la encuesta: aislamiento
+YA es de capa de aplicación (Drizzle bypassea RLS hoy, ADR-013), cifrado AES-256-GCM + índice ciego
+HMAC con índices ÚNICOS (`PII_ENCRYPTION_KEY`/`PII_LOOKUP_KEY`), 9 cuentas Auth / 8 huérfanas.
+🔴 **Cambia la Fase 0: propone TRANSFERIR el proyecto Supabase en vez de volcar** (sin FK a `auth`,
+enlace por uuid a pelo → recrear cuentas rompe en silencio). Recomendado aceptar — decisión de Alberto.
+⚠️ Trampas: «activa»≠vigente (solo 50 pólizas vencen en futuro); Mapfre parada desde 23-jun; Occident
+39 ficheros en `review` creciendo; stack es **Drizzle, no Prisma**. Vercel: Manuel invitado (member),
+2FA de Alberto activado. Detalle en `docs/TRASPASO-CORREDURIA.md`.
+### 📊 (30/08/2026) /sivra/resultado-pisos → rendimiento por rango + previsión con seguimiento
+- Petición de Alberto («darle una vuelta»: rendimiento, previsiones, intervalos, gráficas). Aprobó:
+  previsión con CONFIRMADO y ESTIMADO por separado + seguimiento de si se cumplen (tesorería),
+  pace, canales+comisión real, cancelaciones, heatmap 24m, alerta Telegram de previsión floja.
+- Rango de MESES en URL, Δ interanual, Recharts (paleta validada dataviz), CSV. Detalle en el PR.
+- Cron nuevo `prevision-pisos` (05:50) → `pisos_previsiones` (migración 2026-08-30 APLICADA) +
+  latido `sivra_prevision` (registro+sonda). SQL probado contra la BD real antes de mergear.
+- Spec: `docs/superpowers/specs/2026-08-30-resultado-pisos-rediseno-design.md`.
+
+### 🤖 (30/08/2026) daily-briefing v4: fuera el fallback NIM — solo pasarela/OpenRouter
+- Decisión de Alberto («Nvidia NIM no hace falta») + regla del 24/08 («todo por OpenRouter»).
+- `generarNarrativa` ya no lee `NVIDIA_API_KEY`/`NVIDIA_BRAIN_MODEL`: la pasarela es la única vía
+  (su cadena de suplentes vive dentro) + UN reintento solo ante fallo transitorio (red/timeout/5xx);
+  401/429 se declaran a la primera. Sin prosa → briefing en crudo con motivos (v3, intacto).
+- ⚠️ NO pinear `model` en el body como «segundo modelo»: `modelo` SALTA OpenRouter (landmine #1675).
+- Redesplegada (v28) y VERIFICADA en caliente vía pg_net: 200, `via: Director · anthropic/claude-sonnet-4.5`,
+  `degradado:false` — primeras filas `ia-rest-briefing` en `ai_usos` por `openrouter` (los secretos
+  `PLATAFORMA_URL`+`AI_GATEWAY_SECRET` ya estaban guardados; el 401-por-SSO que temía Chrome no existe).
+- 🚨 Landmine: `deploy_edge_function` (MCP) resetea `verify_jwt` a `true` por defecto — la v27 lo hizo y
+  habría matado el cron (llama SIN header). Pasar SIEMPRE `verify_jwt:false` al redesplegar esta función.
+- Quedan 4 edge functions con NIM crudo (pendiente conocido, misma migración a futuro).
+
+### 🧾 (30/08/2026) Los no-gastos ya no vuelven a la bandeja: la ingesta los omite
+- Alberto: «Booking eran abono de reservas, Allianz comisiones… y aún aparecen». Cierto: el PR
+  #1852 dejó el AVISO en la ficha pero ni quitó las filas ni tocó la ingesta.
+- Cerrado el círculo: `procesarFactura` consulta `pareceIngresoDeCorreduria` ANTES de insertar →
+  `omitido` con rastro en log + recuento en el parte Telegram (etiqueta de `avisos.ts` actualizada).
+  Guardián en `no-es-gasto.test.ts` (lee el fuente, probado en rojo) + test del concepto
+  normalizado de Booking. Borradas de `gastos` las 7 filas decididas (4 Booking 1.371,94€ +
+  3 Allianz 2.039,95€); nada estaba confirmado por error (`revisado=true`: 0 filas).
+- Giraldillo abril 598,95€ + jul 72,60€ confirmadas por dictado de Alberto («lavandería de los
+  pisos, no desglosa por piso») → `prop_multi_apartamentos`+LAVANDERIA, regla reforzada (vistas 7)
+  y unificado el histórico (3 filas LIMPIEZA→LAVANDERIA, las categorizó mezclado él mismo).
+- **Pendiente de Alberto:** la única fila que queda en `/expenses/pendientes`: Anthropic Max 180€.
+
 ### 🔗 (30/08/2026) HECHO: redirección ialimp.es/limpieza → intranet de Vanesa
 - Enlace con marca para Vanesa: `ialimp.es/limpieza?token=…` (307 a
   `plataforma-ten-flame.vercel.app/invitado/limpieza`; el token viaja con la redirección). Es un
@@ -300,6 +801,25 @@ diagnóstico y añade el dato que faltaba: **faltan LAS DOS envs** (`PLATAFORMA_
 `NVIDIA_API_KEY` sí está. **Pendiente de Alberto:** poner esas dos envs (mete el briefing en OpenRouter) y
 decidir swap de NIM vs. gatearlo como Gemini (OpenRouter sirve ya el 100% del tráfico).
 
+### 🗺️ (27/08/2026) Correduría: plan POR FASES, CIMA al final + encuesta para Manuel
+
+Alberto ordena el traspaso: **CIMA se deja para lo último** (venta = Codeoscopic, back office = CIMA).
+Cinco fases en `docs/TRASPASO-CORREDURIA.md`: 0 cimientos · 1 cartera en lectura · 2 portal cliente ·
+3 Codeoscopic · 4 CIMA. Con **encuesta partida en tres** (Manuel por fase / decisiones de Alberto /
+lo que se mira sin preguntar), pensada para pedirle a Manuel **solo M1-M6 ahora**.
+🔴 **Verificado y corregido:** la BD **no está volcada** — schema `seguros` existe con **0 tablas**
+(public 281, iarest 252, rrhh 17). La cartera sigue entera en el Supabase de Manuel.
+🚨 Riesgo mayor identificado: las 86 RLS van por `auth.uid()`; con `BYPASSRLS` el aislamiento pasa al
+código y el fallo sería «ver todo sin que nada falle» (pregunta M4).
+Fly: pagada la factura de julio (5,96 €); compra un mes, el medio de pago sigue siendo el de Manuel.
+🚨 **Descartado el «team de Vercel con 14 días gratis» de Manuel:** Alberto YA tiene Pro, y ese team
+aloja `plataforma` (banca PSD2/fiscal) — meterlo ahí le daría las envs de todo. Además el trial
+reintroduce la fecha límite que se quitó el 26/08. Lo único que Vercel tiene en exclusiva son los
+VALORES de las envs. ✅ **Alberto decide (2ª vez): Manuel ENTRA en el team y se queda** — «da igual
+que lea todo». Manuel está en Hobby (sin miembros), así que la invitación solo puede ir en esa
+dirección y paga Alberto: asiento Pro **recurrente**, no pago único. NO se transfiere el proyecto
+todavía (arrastraría CIMA, que es Fase 4).
+
 ### 🎢 (27/08/2026) La segunda llave funciona — y Luxury no sube a ciegas: OSCILA
 Primera pasada con la segunda llave (14:30, deploy READY 09:29 → las 494 noches de las 08:30 son de
 código viejo). Escribió **243 noches, TODAS a la baja**, ratios **0,798–0,929**, cero fuera del raíl
@@ -487,6 +1007,19 @@ de 2-4 días topaban el día 8). Eso no es premio por anticipación, es una subi
 `saturacionMinDias = 60` (3 tests más; House no se entera, su 4×28 = 112 ya lo supera). `antelacion_k = 1`
 en los **cuatro**. **El merge NO lo puede hacer el agente**: el ruleset exige 12 checks que un push con
 token de App nunca dispara — hace falta que Alberto toque la rama desde su cuenta. PR #1763.
+
+### 🔑 (26/08/2026) Correduría: GitHub CERRADO, Fly listo — solo queda cuadrar el rato con Manuel
+Manuel respondió: en el repo de la app Alberto ya era colaborador; mandó la del adaptador CIMA
+(`asegura-app-cima-adapter`, sidecar Java del JAR de TIREA) y **está aceptada**. Alberto creó su org
+de Fly, invitó a Manuel y **añadió tarjeta** — Fly va a pago por uso desde oct-2024, sin tier gratis,
+y la pide para que corra una app, no para crear la org (~3,19 US$/mes orientativo, **no leído de
+primera mano**: fly.io bloqueado por el proxy). ⚠️ Sin confirmar a qué org exacta se invitó (el panel
+mostraba `Personal`, no `grupo-asegura`). Supabase sigue **dentro ≠ transferido**. Nuevo: el repo cita
+ADR-007/ADR-009 — documentación que pedir. Y una sesión sobre `central` NO puede añadir el repo de
+Manuel (`cross-tier adds`): hay que abrirla con ese repo como fuente. Pendiente: Vercel (Vía B),
+`CRON_SECRET` y fecha. Detalle en `docs/TRASPASO-CORREDURIA.md`.
+
+---
 
 ### ⏳ (26/08/2026) Pricing: el motor sabía bajar por urgencia pero no SUBIR por anticipación
 
@@ -1618,7 +2151,6 @@ movimientos de la tarjeta ****0302 de julio (629,86€ liquidados 01/08) para po
   a ojo. Los 9 errores de `tsc` del árbol eran previos (deps sin instalar), verificado con `git stash`.
 - Verificado: 1.465 tests + 33 del guardián · tsc 0 · build OK. PR #1582.
 
-
 ### 🎭 (23/08/2026) El «~25 llamadas/día» de Alpha Vantage no existía: era el gate premium mal leído
 Alberto pidió verificar la cuota. Dos llamadas seguidas lo zanjan: `TIME_SERIES_DAILY_ADJUSTED` →
 `type:"rate_limit"` con `message` *«This is a premium endpoint»*, y acto seguido `GLOBAL_QUOTE` →
@@ -1731,7 +2263,6 @@ Anotado en la skill `trading-analista` (`seleccion-y-senales.md`) con el matiz d
 ese error significa «fuente sin saldo», **nunca «no hay datos de insiders»**. Queda pendiente de decidir
 si se recargan los 20 $ solo por el screener; hoy no hace falta para operar.
 
-
 ### 🔧 (21/08/2026) Auditoría ligera: PR #1514 desatascado, heartbeat 12+13/25 ✅
 Pasada rutinaria sin hallazgos de memoria/skills (`docs/SKILLS.md` y `FUENTES-DE-VERDAD.md` al
 día). Único hallazgo: **PR #1514** (carril 2 del 20/08, monitor de `paper_tracker`) llevaba ~24h en
@@ -1773,7 +2304,6 @@ volumen sobre ~33.400€: la rotación es el coste invisible. `riesgo-hueco` YA 
 (`stopViable` por idea) + paso 5-bis de la skill para que se cante. **Sigue pendiente:** `tipo_cambio` NULL
 en 568/569 filas y las acciones corporativas.
 
-
 ### 🛡️ (20/08/2026) Correduría: había DOS planes para lo mismo con dos nombres — fundidos en uno
 Dos sesiones del mismo día planificaron el traspaso del CRM de Manuel sin verse: `docs/TRASPASO-CORREDURIA.md`
 (vertical `apps/seguros`, #1532) y `docs/ASEGURA-MIGRACION.md` (vertical `apps/asegura`, #1489). Ambos
@@ -1785,7 +2315,6 @@ schema y rol siguen siendo `seguros`/`prisma_seguros` (el dominio, y además ya 
 plan nuevo, grep del dominio en `docs/` — el coste de no hacerlo lo paga la sesión siguiente.
 Contrato de encargado (RGPD art. 28.3): responsable decidido = **Alberto persona física**, «Grupo ASegura»,
 fuero Sevilla. **NIF y domicilio a propósito en blanco** — un identificador legal no se escribe de memoria.
-
 
 ### 🧭 (20/08/2026) El índice que usa `code-map` llevaba horas desfasado en `main` — y eso no se ve
 `pnpm auditar:check` estaba en ROJO sobre `main`: #1536/#1550/#1551 son posteriores a la última
@@ -1807,7 +2336,6 @@ siempre es deriva REAL de firmas, nunca churn de cabecera.)
 **Hueco aparte que destapó el script y NO se toca**: faltan `almacen`, `housesevillana` y `mariscos`
 en el array `VERTICALES` de `apps/plataforma/lib/estructura.ts` — exige decidir `sector`/`desc` de
 cada una, es criterio de Alberto.
-
 
 ### 🗝️ (20/08/2026) El agente de huéspedes NO tenía ni un dato del piso: la guest app de Smoobu SÍ se puede leer
 - Alberto, del hilo del Dúplex con Samy: «¿tiene acceso a todos los mensajes? ¿puede entrar en la url?».
@@ -1856,7 +2384,6 @@ cada una, es criterio de Alberto.
 - **Rutina nueva** (día 1 de cada mes, `trig_01QLVxzPS1PXAJPuWhApcAFV`): mide el mes cerrado y aplica el
   criterio de la fase. Ficha en `docs/RUTINAS-PROGRAMADAS.md` §15. PR #1538.
 
-
 ### 🏠 (20/08/2026) Estudio fiscal de la venta del dúplex de Villasís por 320.000€
 - Alberto sube la escritura del dúplex (Pj Villasís 1, 1º C) y pregunta cuánto pagaría vendiéndolo por
   320.000€. **Es una DONACIÓN de su madre del 21/05/2024 por 174.650,90€** (= valor de referencia), con
@@ -1901,7 +2428,6 @@ cada una, es criterio de Alberto.
 - Las 9 fichas con muro se releen en la primera pasada con sesión (validado contra la BD). 503 tests módulo,
   1372 plataforma, tsc+build limpios. **Pendiente de Alberto:** poner las dos envs en Vercel y probar con
   `fase3-debug?accion=portal` (devuelve solo el veredicto, nunca la contraseña).
-
 
 ### 🛡️ (20/08/2026) Traspaso del CRM de correduría de Manuel Suárez — runbook, BLOQUEADO en Fase 0
 Manuel desarrolló el CRM en SU Supabase y SU Vercel; el negocio es de Alberto y hay que traérselo.
@@ -3125,7 +3651,6 @@ inventario de la Fase 1, no antes.
   con ancla contra `precio_ref` (splits/ticker reciclado) y margen de ventana; lo que no se puede, se canta.
 - ⚠️ El ancla NO puede pedir la fecha exacta: las 16 son de un SÁBADO y sus refs son el cierre del viernes.
 
-
 ### 📱 (12/08/2026) La portada de House Sevillana suspendía el mínimo táctil de 44px (PR #1399)
 - Claude in Chrome **no puede medir 320px** (su gestor de ventanas fuerza ~1536px de ancho mínimo), así que
   lo medí con Playwright sobre la app en local: **18 elementos por debajo de 44px** en la portada (marca del
@@ -3755,7 +4280,6 @@ Lo que de verdad valía: la regla vivía **copiada a mano en 13 sitios** → aho
 12 llamadas. Guardián `pricing-comps-techo.test.ts` (6 tests) probado en rojo con 3 mutaciones.
 Pendiente: 03/09 12:00 CEST, medición final del serrucho (evento de calendario + rutina 11:30).
 
-
 ## 🤖 (29/08/2026) La IA ya propone en la bandeja — y 3 fallos que destapó revisarla con Alberto (PR pendiente)
 - Alberto: «que la IA proponga». Nuevo `lib/agente-facturas/sugerencia-ia.ts` (PURO) + endpoint
   `POST /api/expenses/pendientes/[id]/sugerir-ia`: la IA ve proveedor, concepto, histórico del
@@ -4175,7 +4699,6 @@ Las credenciales SIGUEN sin validar: el fallo es anterior a la autenticación. F
 y conservar el registro **3 años**. Spec §4.6 y §4.7. ⚠️ Lo legal está en fuentes secundarias: el proxy
 bloquea boe.es — falta contrastarlo con el BOE o la asesoría antes de implementar.
 
-
 ## 🛂 (20/08/2026) SES.HOSPEDAJES: diseño de la conectividad (parte de viajeros) — PR #1550 (draft)
 
 Fase de arranque del RD 933/2021 (comunicar viajeros al Ministerio en <24h; multas 100 €–30.000 €).
@@ -4186,7 +4709,6 @@ Smoobu/Chekin), check-in web con OCR por IA **con confirmación humana**, y **so
 momento (el resto de ideas —venta a terceros, uso comercial de los datos, RH, vehículos— en §9 del spec).
 🚨 Desde el contenedor NO se alcanza `*.mir.es` (proxy): toda prueba contra SES es desde Vercel.
 Pendiente: que Alberto revise el spec → plan de implementación. Códigos/credenciales NUNCA al repo.
-
 
 ## 💹 (09/08/2026) La palanca de DEMANDA ya mira el MES, no el año — PR #1323 (draft, rehecho sobre #1337)
 - #1337 (mergeado el 09/08) quitó el castigo a las fechas sin abrir, pero el `occ` de `pricing/apply`
@@ -4207,7 +4729,6 @@ Pendiente: que Alberto revise el spec → plan de implementación. Códigos/cred
 - Mismo patrón que la bandeja «Gastos por revisar» del mismo archivo.
 - Verificado 320/360px con Playwright (0px overflow). OJO: `next build` en el contenedor falla en
   page data de `/api/admin/clientes/[vertical]/[id]` YA en main (envs ausentes), no es del cambio.
-
 
 - **📌 Estado vivo — pendientes y decisiones abiertas (actualizado 26/08/2026).** Detalle en
   `docs/memoria/2026-08.md` y en los PRs citados.

@@ -9,8 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
-import { tgSend } from '@central/core-telegram'
-
+import { tgAviso } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
@@ -24,17 +23,21 @@ type ModeloOR = {
 // Listas de PREFERENCIA por categoría (ordenadas): se elige el primero que EXISTA en el
 // catálogo vivo y respete el techo de precio. Si el favorito desaparece (retirada tipo
 // llama-3.1-405b en NIM), el siguiente entra solo y se avisa por Telegram.
+// ⚠️ Este cron NO descubre modelos: solo elige de estas listas. Su curación (detectar que un
+// id sirve un modelo viejo/caro, o que existe uno mejor) es del agente semanal `buscador-ia`
+// (Paso 1.5 de su skill), que propone cambios aquí por PR. Un slug no dice qué sirve: el caso
+// deepseek-chat (= V3, 3-6× más caro que el V4 Flash, 4 meses sin verse) motivó esta regla.
 const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
   logica: {
     tags: ['logica', 'datos', 'barato'],
-    lista: ['deepseek/deepseek-chat', 'deepseek/deepseek-chat-v3-0324', 'qwen/qwen-2.5-72b-instruct'],
+    lista: ['deepseek/deepseek-v4-flash', 'deepseek/deepseek-chat', 'deepseek/deepseek-chat-v3-0324', 'qwen/qwen-2.5-72b-instruct'],
   },
   codigo: {
     // Programación (leer/editar código, bugs, refactors). Del más barato+capaz al premium; el
     // Director sube de nivel por complejidad/presupuesto (modelosPermitidos). Para habilitar Opus
     // en tareas duras, subir DIRECTOR_MAX_PRECIO_OUT (su salida supera el techo por defecto de 20).
     tags: ['codigo', 'logica'],
-    lista: ['qwen/qwen-2.5-coder-32b-instruct', 'deepseek/deepseek-chat', 'anthropic/claude-sonnet-4.5'],
+    lista: ['deepseek/deepseek-v4-flash', 'qwen/qwen-2.5-coder-32b-instruct', 'deepseek/deepseek-chat', 'anthropic/claude-sonnet-4.5'],
   },
   plan: {
     // PLANIFICADOR caro del "caro planifica / barato ejecuta": Claude alto ORGANIZA la tarea de
@@ -207,7 +210,7 @@ export async function GET(req: NextRequest) {
       VALUES (${version}, ${prompt}, ${JSON.stringify(catalogo)}::jsonb, 'cron')`
     const cambioModelos = prevSlugs !== slugs.slice().sort().join(',')
     if (cambioModelos || penalizados.length) {
-      await tgSend(
+      await tgAviso('sistema.ia-director', 
         `🧠 <b>IA — Director actualizado (v${version})</b>\nModelos por categoría:\n` +
         Object.entries(porCategoria).map(([c, id]) => `· ${c}: ${id}`).join('\n') +
         (caidos.length ? `\n⚠️ Preferidos caídos del catálogo:\n${caidos.map(c => `· ${c}`).join('\n')}` : '') +
@@ -243,7 +246,7 @@ export async function GET(req: NextRequest) {
         creditos = { total, usado, restante: +(total - usado).toFixed(2) }
         const umbral = Number(process.env.AI_CREDITOS_UMBRAL ?? 5)
         if (creditos.restante < umbral) {
-          await tgSend(`🔴 <b>IA — créditos OpenRouter bajos</b>\nQuedan $${creditos.restante} (umbral $${umbral}). Recarga en openrouter.ai o la pasarela caerá a la cadena gratis.`).catch(() => {})
+          await tgAviso('sistema.ia-creditos', `🔴 <b>IA — créditos OpenRouter bajos</b>\nQuedan $${creditos.restante} (umbral $${umbral}). Recarga en openrouter.ai o la pasarela caerá a la cadena gratis.`).catch(() => {})
         }
       }
     } catch { /* la vigilancia de créditos nunca tumba el refresh */ }

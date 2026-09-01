@@ -502,6 +502,24 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   (`intencion`/`parse`/`formato`/`acciones-tipos`/`documentos-tipos`) testeables con `node --test` (sin
   `@/` ni Prisma). Cadena de fallback IA global: **NIM → Groq → Gemini → Kimi** (`@central/core-ai`).
 
+- [x] **📊 `/sivra/resultado-pisos` = RENDIMIENTO por rango + previsión con seguimiento (30/08/2026):**
+  la página pasó de «P&L de UN mes» a cuadro de rendimiento: selector de rango de MESES en la URL
+  (`?desde=YYYY-MM&hasta=&piso=`; el P&L es de caja mensual, un rango por días mentiría en gastos),
+  KPIs con Δ interanual, gráficas Recharts (evolución + por piso + gastos por categoría), canales con
+  **comisión REAL** (= `amount_gross − amount`; sin bruto → «no consta», no 0), cancelaciones
+  (declarando que el registro nace el 12/08/2026) y heatmap de estacionalidad 24 meses (perezoso,
+  `/api/sivra/pl-heatmap`). **Previsión** (mes en curso + 2, decisión de Alberto): CONFIRMADO y
+  ESTIMADO («si repites el año pasado») SIEMPRE por separado; sin base histórica → null, jamás 0.
+  **Pace** con `incomes.reserved_at` (ingreso sin fecha de reserva se declara, no se excluye en
+  silencio). **Seguimiento**: cron diario `prevision-pisos` (05:50, `CRON_JOBS`) fotografía la
+  previsión en `pisos_previsiones` (migración `2026-08-30`, aplicada) y la página contrasta la última
+  foto ANTES de empezar el mes contra el ingreso real — un mes sin foto previa queda «sin registro»,
+  nunca «acertó/falló». Aviso Telegram «previsión floja» a 28-32 días (confirmado <40% del mismo mes
+  del año anterior con base ≥500€; dedupe `pisos_previsiones_avisos`, una vez por mes+piso). Latido
+  `sivra_prevision` (registro + PROBES en el mismo PR). `PLPiso` ganó `noches`/`nochesSinDato`.
+  Lógica pura testeada: `lib/sivra/pl-rango-logica.ts` + `lib/sivra/prevision-logica.ts`; BD:
+  `pl-rango.ts` (caché por mes; `?fresco=1` tras subir factura) + `prevision-pisos.ts`.
+
 ## 🔀 Proveedores de IA — regla permanente (dictada por Alberto, 24/08/2026)
 **Todo lo que PUEDA ir por OpenRouter, va por OpenRouter.** Unificar proveedores: cada proveedor
 suelto (Serper, keys directas de Gemini, APIs de búsqueda de terceros…) es una cuenta más que se
@@ -1168,7 +1186,10 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
   `ventana_dias` = días reales y no el horizonte declarado, y el aviso de salto del NAV >15% en `/saldo`
   (no bloquea: puede ser un ingreso real, pero con el NAV se dimensiona cada compra).
 - **📉 Reglas de SALIDA del paper: H10 firmada y midiendo, y el stop que sigue vivo contra H9
-  (28/08/2026, PR #1836).** Alberto pidió salida **no** por tiempo («ir subiendo el stop, o pérdida de
+  (28/08/2026, PR #1836).** **✅ H10 RESUELTA el 31/08/2026** con el ciclo completo (183.093 obs.):
+  ninguna de las 7 variantes cumple el criterio firmado — todas las que frenan batacazos ceden >1 pp
+  de mediana — y la salida por TIEMPO queda validada por 2ª vez (ya cableada, `venceVentana`). Sin
+  cambio de código; cifras en `docs/TRADING-SALIDAS-2026-08.md` y veredicto en el pre-registro. Alberto pidió salida **no** por tiempo («ir subiendo el stop, o pérdida de
   media») y que decidieran los datos. Medido primero sobre **183.093 observaciones** del retrovisor
   (**8,6×** la muestra con la que se resolvió H9): la salida por TIEMPO sigue ganando (mediana **+3,12%**
   frente a +0,45% del stop −10%, +2,75% del −20% y +1,22% del trailing −15%) — y **gana en los CINCO
@@ -1240,6 +1261,17 @@ Hallazgos 4-6 de `docs/AUDITORIA-2026-08-pricing-mudo.md` (los 🔴 se cerraron 
     es un alfa de 0, y contarla acercaría la media a cero sola; (c) las dos puntas del bench salen de la
     MISMA fuente y con `TOLERANCIA_BENCH_DIAS` (4): restar dos ventanas distintas da un número plausible
     que no significa nada. Y `minN`/clamp de `ajustesDeStats` **nunca se han validado** (H15).
+  - **✅ H11–H15 RESUELTAS (31/08/2026), una sola se cablea: H11.** `PISCINA_VIVA = 'direccional'`
+    (`lib/trading/piscinas.ts`, guardián en su test): el torneo aprende de las señales que SÍ ajusta
+    (deltas hoy: momentum −9 · reversión +5 · valor −13 · catalizador sin ajuste por minN). H12: los
+    horizontes largos ganan mediana (+7,74 pp a 364 d) pero EMPEORAN el p25, y la tendencia viva solo
+    separa +1,26 pp (≥5 exigidos) → la salida por tiempo a 91 d validada por 3ª vez. H13: el orden por
+    alfa cambia pero la que pasaría a primera (momentum) tiene alfa medio NEGATIVO → guarda de daño.
+    H14: el cambio de signo del peaje no aguanta 0,1%–0,3% (y en `direccional` ni aparece). H15:
+    ganadora idéntica en los 9 combos minN×clamp (minN es INERTE en `'todos'`: n=352 idéntico por
+    construcción) → se quedan. El cron `trading-h10` ya no re-avisa el cierre de H10 (solo si una
+    variante pasara a cumplir) y su vigía queda con la lista de hipótesis VACÍA (tubería montada).
+    Detalle: «✅ RESOLUCIÓN de H11…H15» en `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
   - Informe vivo con las cifras y su muestra: **`docs/TRADING-SALIDAS-2026-08.md`** (se AÑADE una entrada
     fechada por hito, no se reescriben las anteriores). Hipótesis y criterios: `docs/TRADING-HIPOTESIS-PREREGISTRO.md`.
 - **🚨 LANDMINE — SESGO DE SUPERVIVENCIA: la tesis cuyo símbolo se cae del universo no se puntuaba NUNCA
@@ -1304,6 +1336,41 @@ en caso de no resolverse». Diseño: `docs/superpowers/specs/2026-08-20-latido-a
   toca `.claude/**`, `CLAUDE.md`, `.github/workflows/**` ni `.sql`.
 - **El agente no se declara curado a sí mismo:** a las 24 h del merge, `agentes-latido` compara
   `ultimo_ok_at` contra `merged_at`. Verde → cierra en silencio. Rojo → Telegram. **Éxito = silencio.**
+
+## 🔔 Panel «Avisos Telegram» (`/telegram`) — el interruptor de lo que manda el bot (01/09/2026, PR #1924)
+Alberto: «las notificaciones de Telegram son muchas». El bot emitía desde **~57 ficheros** sin
+inventario ni forma de callar uno solo: para bajar ruido había que buscar el `tgSend` y borrarlo.
+
+- **Catálogo = `lib/telegram/catalogo.ts`**, fuente única de los **76 avisos PROACTIVOS** (id,
+  título, qué avisa, cadencia real, categoría). 9 categorías; pantalla en `app/(usuario)/telegram/`
+  + API `app/api/telegram/avisos/` (GET catálogo+estado · POST encender/apagar aviso o categoría).
+- 🚨 **Un aviso proactivo NUEVO se emite con `tgAviso`/`tgAvisoBotones`/`tgAvisoAlerta`
+  (`lib/telegram/avisos.ts`) y SE AÑADE AL CATÁLOGO en el mismo PR.** Lo obliga el guardián
+  `lib/telegram/catalogo.test.ts`, que falla si un id emitido no está catalogado (aviso que llega y
+  no se puede callar, y que además no sale en la pantalla) o si uno catalogado no lo emite nadie
+  (interruptor que Alberto apaga, sigue recibiendo el aviso y deja de creerse el panel entero).
+  El id es un `string`: ni `tsc` ni el build cazan ninguno de los dos, por eso lee el FUENTE.
+- 🚨 **Fail-open a propósito:** si la BD no responde, el aviso **SALE**. Un fallo de red no puede
+  convertirse en silencio — es el modo de fallo que el CLAUDE.md raíz marca como el más caro. Solo
+  se silencia lo que hay escrito en `telegram_avisos_pref` (ausencia de fila = activo).
+- **Lo que NO entra en el catálogo, a propósito:** las RESPUESTAS del bot a un mensaje o botón de
+  Alberto (agente contable, borradores del agente de huéspedes, clasificar un movimiento…). Esas
+  siguen con `tgSend` directo: silenciarlas no quitaría ruido, rompería la conversación.
+- **`sistema.canal-mudo` es el ÚNICO `critico`** (no silenciable ni por API): es el aviso de que los
+  demás están mudos (el 401 auto-anulante de `/api/internal/alerta`). Apagarlo dejaría el sistema
+  sin voz sin que nada lo delate. Hay test que fija que es el único.
+- **Triaje de correo: un interruptor POR CATEGORÍA** (`avisoDeCategoriaCorreo` en el catálogo), no
+  uno global — «avísame de los leads pero no de cada correo de huéspedes» es la distinción real.
+  Una categoría sin id mapeado avisa siempre (nunca al revés).
+- **Bitácora `telegram_avisos_log`** (`enviado`|`omitido`) → el panel dice cuántos llegan DE VERDAD
+  en 30 días, no la cadencia teórica del cron. **Nace vacía**, así que la pantalla distingue «no ha
+  llegado ninguno en este periodo» de «todavía no se ha medido» y no pinta ceros que se leerían
+  como una afirmación (regla del NULL). Purga a 90 días: `purgarBitacora()` desde `agentes-latido`.
+- 🚨 **`make_interval(days => ${n})` NECESITA `::int`**: Prisma manda el número como `int8` y
+  `make_interval(days => bigint)` no existe (42883) — revienta SOLO en runtime. Lo cazó el guardián
+  `test/regression-sql-fecha-parametro.test.ts` en el CI de este mismo PR.
+- Migración `prisma/sql/2026-09-01_telegram_avisos.sql` **aplicada** (incluye el `GRANT USAGE` de
+  `telegram_avisos_log_id_seq` a `prisma_plataforma`: sin él el `bigserial` no deja insertar).
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

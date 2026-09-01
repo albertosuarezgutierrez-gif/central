@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { accesoLimpieza } from '@/lib/limpieza-acceso'
-import { tgSend, tgSendPhoto, escapeHtml } from '@central/core-telegram'
+import { avisoEnviado, avisoPermitido, escapeHtml, tgSend, tgSendPhoto } from '@/lib/telegram'
 import { PROPS_CALENDARIO } from '@/lib/sivra/constantes'
 
 export const dynamic = 'force-dynamic'
@@ -58,9 +58,14 @@ export async function POST(req: NextRequest) {
       `🧹 <b>Parte de la limpieza</b> — <b>${escapeHtml(piso.label)}</b> · limpieza del ${d}/${m}`,
       texto ? `«${escapeHtml(texto)}»` : '(solo foto, sin nota)',
     ].join('\n')
-    const msgId = fotoBuf
-      ? await tgSendPhoto({ data: fotoBuf, nombre: `parte_${fecha}.jpg` }, caption)
-      : await tgSend(caption)
+    // Va por el interruptor del panel /telegram (foto incluida, que `tgAviso` no cubre).
+    // Silenciado ⇒ `msgId` null ⇒ el parte NO se marca como avisado: es la verdad, no se envió.
+    const msgId = !(await avisoPermitido('pisos.limpieza-parte'))
+      ? null
+      : fotoBuf
+        ? await tgSendPhoto({ data: fotoBuf, nombre: `parte_${fecha}.jpg` }, caption)
+        : await tgSend(caption)
+    if (msgId != null) await avisoEnviado('pisos.limpieza-parte')
     if (msgId != null) {
       await prisma.$executeRaw`UPDATE limpieza_partes SET avisado_at = now() WHERE id = ${fila.id}`
     }

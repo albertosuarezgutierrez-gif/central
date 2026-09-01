@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { tgAlert } from "@/lib/telegram"
+import { tgAvisoAlerta } from '@/lib/telegram'
 import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
 import {
   decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza, decidirRitmoDestacado,
@@ -691,7 +691,7 @@ export async function GET(req: NextRequest) {
     if (pend.length > 0) {
       const hayAlta = pend.some(p => p.prioridad === "alta")
       const lineas = pend.map(p => `• ${p.titulo}`).join("\n")
-      await tgAlert(
+      await tgAvisoAlerta('pisos.pricing-guard', 
         `🏷️ <b>Guardián de precios</b> — ${pend.length} aviso(s) sin ver:\n${lineas}\n\nDetalle y resolver: /sivra/pricing-auto`,
         hayAlta ? "critico" : "aviso",
       )
