@@ -59,8 +59,14 @@
 - **Entornos:** sandbox/integración `https://app-int.avant2.es` · producción, tenant propio
   `https://albertosuarezgutierrez.avant2.es`. ⚠️ **El host base de la API REST no consta en
   ningún correo de Alberto**: hay que sacarlo de la documentación, que la tiene Manuel.
-- **Coste: 0,50€ por cotización** (tarifa más baja, ofrecida por el CEO Ángel Blesa el
-  09/04/2026). Es coste variable por uso: cada tarificación del agente cuesta dinero.
+- **Coste: 0,50€ — pero NO está claro por QUÉ se cobra, y no es un detalle menor.** El correo del
+  CEO Ángel Blesa (09/04/2026) dice literal «se cobra **por cotización**», con ejemplo: recotizar
+  el mismo coche añadiendo un conductor son «2 cotizaciones independientes». **Alberto lo recuerda
+  como por EMISIÓN** (01/09/2026), y puede tener razón: ese correo es anterior al presupuesto del
+  14/05 y al contrato C00 firmado el 20/05, que es el que manda. Los dos documentos que lo
+  resolverían son PDF adjuntos y no se han podido leer. **Antes de construir cualquier automatismo
+  que tarifique, confirmarlo en el contrato**: por cotización, una pasada sobre la cartera entera
+  cuesta dinero y necesita tope; por emisión, tarificar es gratis. No lo des por sabido.
 
 ### 🚦 Dónde se paró EXACTAMENTE la API (03/06/2026) y qué falta
 Reconstruido el 01/09/2026 desde el Gmail de Alberto y la BD. La plataforma web funciona; lo

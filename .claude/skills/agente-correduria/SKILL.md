@@ -68,4 +68,8 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   renovaciones), EIAC/CIMA/TIREA, Codeoscopic/Avant2, y el estado real del negocio de
   Alberto (compañías, números, qué falta). **Léelo SIEMPRE antes de opinar del sector.**
   Es acumulativo: el agente lo amplía cada ciclo.
+- **`references/defensa-cartera.md`** — el flujo de DEFENSA DE CARTERA que quiere Alberto
+  (recibo de precartera → retarificar → comparar nueva producción vs cartera → desviación →
+  respuesta al cliente), con el diagrama original. Es el destino de las fases 1-3: léelo antes de
+  proponer nada sobre renovaciones, recibos o avisos al cliente.
 - Contexto de infra/traspaso: `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md`.
