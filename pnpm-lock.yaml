@@ -215,9 +215,6 @@ importers:
       next:
         specifier: ^15.5.18
         version: 15.5.22(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      nodemailer:
-        specifier: ^6.9.15
-        version: 6.10.1
       pdf-parse:
         specifier: ^1.1.1
         version: 1.1.4
@@ -4838,10 +4835,6 @@ packages:
   node-releases@2.0.47:
     resolution: {integrity: sha512-Uzmd6LXpouKo8EUK68IjH4+E01w/hXyV3R3g/geCJo+rXLNfh1xucB+LOzYEOQPSiUK3h/xZf0cQGcSsmyL2Og==}
     engines: {node: '>=18'}
-
-  nodemailer@6.10.1:
-    resolution: {integrity: sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==}
-    engines: {node: '>=6.0.0'}
 
   nodemailer@9.0.2:
     resolution: {integrity: sha512-Rnve6ToHDjq8GKDB+AYAXgGTSL9XLn3UBCLpJ0eV19an4LZLQdUp+i9SD8wenURjarIBNG11b/biucIgkxEeAg==}
@@ -9833,8 +9826,6 @@ snapshots:
       - supports-color
 
   node-releases@2.0.47: {}
-
-  nodemailer@6.10.1: {}
 
   nodemailer@9.0.2: {}
 

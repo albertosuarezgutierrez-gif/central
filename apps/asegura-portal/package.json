@@ -17,7 +17,6 @@
     "@prisma/client": "^5.22.0",
     "jose": "^5.9.3",
     "next": "^15.5.18",
-    "nodemailer": "^6.9.15",
     "pdf-parse": "^1.1.1",
     "prisma": "^5.22.0",
     "react": "^19.0.0",
