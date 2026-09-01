@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
   const polizas: PolizaAviso[] = cartera.polizas.map(p => ({
     id: p.id, cliente: p.cliente, tipo: p.tipo, aseguradora: p.aseguradora,
     numeroPoliza: p.numeroPoliza, fechaVencimiento: p.fechaVencimiento,
-    dias: p.dias, prima: p.prima,
+    dias: p.dias, prima: p.prima, objeto: p.objeto,
   }))
 
   // Qué avisos constan ya. Se consulta SOLO por las pólizas de la ventana: la

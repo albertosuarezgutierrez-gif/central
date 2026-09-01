@@ -21,6 +21,24 @@ export type PolizaAviso = {
   fechaVencimiento: string
   dias: number
   prima: number | null
+  /**
+   * Qué asegura la póliza (vehículo y matrícula, localidad del inmueble,
+   * modalidades de la RC). `null` = el puerto no lo informa todavía.
+   *
+   * Va en el aviso porque un tomador con tres pólizas de auto recibe tres
+   * líneas idénticas si no está: el aviso sirve para llamar, y para llamar hay
+   * que saber de cuál se habla.
+   */
+  objeto?: { estado: string; titulo: string | null; detalle: string | null } | null
+}
+
+/** Cómo se nombra el objeto en una línea de Telegram. Devuelve `null` cuando no
+ *  hay nada que decir — un «sin dato» en cada línea es ruido, y la ausencia ya
+ *  se ve en la pantalla de /correduria, que es donde se trabaja. */
+export function objetoEnLinea(objeto: PolizaAviso['objeto']): string | null {
+  if (!objeto || objeto.estado === 'sin_objeto') return null
+  if (objeto.titulo === null) return null
+  return objeto.detalle === null ? objeto.titulo : `${objeto.titulo} (${objeto.detalle})`
 }
 
 /**
@@ -105,7 +123,10 @@ function linea(p: PolizaAviso): string {
   const prima = p.prima === null ? 'prima sin informar' : eur(p.prima)
   const ramo = TIPOS[p.tipo] ?? p.tipo
   const dias = p.dias === 0 ? 'vence hoy' : `${p.dias} días`
-  return `• ${p.cliente} · ${ramo} · ${p.aseguradora} · ${prima} · ${fechaEs(p.fechaVencimiento)} (${dias})`
+  const objeto = objetoEnLinea(p.objeto)
+  const partes = [p.cliente, ramo, ...(objeto ? [objeto] : []), p.aseguradora, prima,
+    `${fechaEs(p.fechaVencimiento)} (${dias})`]
+  return `• ${partes.join(' · ')}`
 }
 
 /**

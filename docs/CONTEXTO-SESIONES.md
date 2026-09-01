@@ -32,6 +32,21 @@
 
 ---
 
+### 🚗 (01/09/2026) Renovaciones: columna «Qué asegura» (matrícula, dirección, tipo de RC)
+- Alberto, sobre la tabla de renovaciones de `/correduria`: «necesito otra columna con datos — auto
+  matrícula marca modelo, hogar dirección, RC de qué tipo… y siempre informa al agente».
+- Helper puro nuevo **`@central/module-seguros/objeto`** (`objetoAsegurado`, 17 tests) con **cuatro**
+  salidas: `conocido` · `no_informado` (la compañía no lo manda) · `cifrado` (la dirección de hogar
+  viene `v1:…`, AES-256-GCM; la clave sigue en el Vercel de Manuel) · `sin_objeto` (vida/salud/decesos
+  son seguros de PERSONAS: ausencia definitiva, no «pendiente»). Ninguno se pinta como hueco vacío.
+- Medido en la cartera real: `matricula`/`marca`/`modelo` en claro; **`datos_especificos.vehiculo` NO
+  es una descripción, contiene la matrícula**; una RC se identifica por sus modalidades
+  (`poliza_coberturas`), no por `datos_especificos`. Las 16 pólizas de la ventana salen `conocido`.
+- Cableado de punta a punta: `apps/asegura/lib/cartera.ts` (+ intento de descifrado) → puerto
+  `/api/operador/vencimientos` → `interpretarObjeto` en plataforma (campo opcional: una versión vieja
+  del puerto da `null` = «aún no llega», distinto de «no informado») → columna en `/correduria` y línea
+  del Telegram de renovaciones. Skill `agente-correduria` actualizada (SKILL §2 + sector §5).
+
 ### 📅 (01/09/2026) mercado-booking: objetivo jul/ago-2027 cumplido — falta quitar la prioridad del prompt
 - Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`) de la skill `mercado-booking`: 238 comps
   reales en 24 ventanas (3 fechas × 4 pisos por mes) + 4/4 escaparate propio. **El objetivo (≥3
