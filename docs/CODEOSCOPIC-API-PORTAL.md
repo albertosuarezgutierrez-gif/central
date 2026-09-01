@@ -71,6 +71,23 @@ Además del cotizador hay superficie de CRM completa, que no estaba en el radar:
 - **Organización:** `/organizations`, `/offices`, `/sales-agents`, `/collaborators`.
 - **Direcciones normalizadas:** `/provinces/{id}/municipalities/{id}/roads/{id}/properties`.
 
+## 🧭 El reparto, en cuatro palabras de Alberto (01/09/2026)
+
+> **«Avant2 vender, CIMA backoffice.»**
+
+Esa frase es la regla de decisión para todo lo que venga después, y resuelve sola la pregunta de qué
+endpoint de esta API vale la pena:
+
+| | **Avant2 / Codeoscopic** | **CIMA / EIAC** |
+|---|---|---|
+| Para qué | **Vender**: comparar, tarificar, cerrar nueva producción | **Backoffice**: cartera viva, recibos, siniestros, comisiones |
+| Sentido del dato | Nosotros **empujamos** un riesgo y nos devuelve precios | Las compañías **nos mandan** lo suyo, a diario |
+| Cobertura | Solo lo que pase por su plataforma | **Toda** la cartera, compañía a compañía |
+| Estado | Por conectar (este trabajo) | **Ya conectado** |
+
+O sea: de esta API interesa lo que ayude a **vender** (`/insurances`, `/insurance-drafts`,
+los catálogos, las dos operaciones de matrícula). Lo que huela a backoffice, no.
+
 🚫 **NO usar esto como fuente de la cartera. Dictado por Alberto (01/09/2026), y tiene razón:**
 esa función **ya la tenemos por CIMA, y conectada** — que es **la conexión directa con las
 compañías**. Mapfre, Allianz, Occident y Reale mandan sus pólizas, recibos, liquidaciones y

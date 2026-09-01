@@ -199,6 +199,13 @@ el traspaso de Manuel describe lo que él implementó, no lo que la API ofrece. 
 También: `POST /insurance-drafts` crea un borrador con **todos los campos opcionales salvo el ramo**,
 para que lo remate una persona en Avant2 — la vía barata para un lead sin pagar cotización.
 
+🧭 **El reparto, en cuatro palabras de Alberto (01/09/2026): «Avant2 vender, CIMA backoffice.»**
+Avant2/Codeoscopic es el canal de **venta** (comparar, tarificar, cerrar nueva producción: nosotros
+empujamos un riesgo y nos devuelve precios). CIMA/EIAC es el **backoffice** (cartera viva, recibos,
+siniestros, comisiones: las compañías nos mandan lo suyo a diario, y cubre TODA la cartera, no solo
+lo que pase por Avant2). Úsalo como regla de decisión: de esta API interesa lo que ayude a vender;
+lo que huela a backoffice, no.
+
 🚫 **La API expone pólizas, recibos, siniestros y clientes, pero NO son nuestra fuente** (dictado de
 Alberto, 01/09/2026): eso **ya lo tenemos por CIMA y conectado**, que es la conexión DIRECTA con las
 compañías. Codeoscopic solo sería el espejo de lo que haya pasado por Avant2 —hoy un proyecto—, de
