@@ -133,10 +133,19 @@ que **hay que asegurarse de que `vector` está disponible en `central` antes de 
    `apps/mariscos`) sale más barato que migrar `auth.users`. ⚠️ Ojo al descuadre: `public.usuarios`
    tiene **17** filas frente a 9 en `auth.users` — hay 8 usuarios lógicos sin cuenta de acceso, o
    bajas. Mirarlo antes de dar la lista por buena.
-3. **Cero claves foráneas en 52 tablas.** La integridad referencial está en el código, no en la BD.
-   Para el volcado es buena noticia (no hay orden de carga que respetar); como herencia, es deuda que
-   conviene conocer antes de construir encima. **132 funciones en `public`** sí viajan en el dump, pero
-   hay que revisarlas: si alguna usa `auth.uid()`, depende del Supabase Auth que estamos quitando.
+3. ~~**Cero claves foráneas en 52 tablas.**~~ 🚨 **FALSO, corregido el 01/09/2026: hay 131 claves
+   foráneas** (`select count(*) from pg_constraint where contype='f'` sobre el origen). El error se
+   descubrió al generar el DDL del volcado y comparar constraints origen (198) contra destino (67):
+   los 131 que faltaban eran precisamente las FKs.
+   **Consecuencia práctica, que es lo que importa:** la frase «para el volcado es buena noticia, no
+   hay orden de carga que respetar» era exactamente al revés. Sí hay integridad referencial en la BD
+   y sí importa el orden — y además **no existe un orden topológico válido**, porque hay
+   autorreferencias (`polizas.poliza_padre_id`, `clientes.merged_into_cliente_id`). La solución está
+   implementada en `apps/asegura/prisma/sql/2026-09-01_seguros_volcado_fks.sql`: **las FKs se crean
+   DESPUÉS de cargar los datos**, lo que además convierte su creación en la verificación más dura del
+   volcado (si una falla, es que falta una fila).
+   **132 funciones en `public`** sí viajan en el dump, pero hay que revisarlas: si alguna usa
+   `auth.uid()`, depende del Supabase Auth que estamos quitando.
 
 ### Lo que sigue sin saberse
 
