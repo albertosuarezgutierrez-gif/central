@@ -160,6 +160,26 @@ utilizable). Reglas que no se negocian al tocar esto:
   Manuel son smoke tests con ids inventados (`999999`, `smoke-fix-webhook`); Codeoscopic no ha
   enviado nunca uno real, porque solo los dispara al emitir. No se pierda tiempo «arreglando» eso.
 
+### El cuerpo de la petición se valida GRATIS antes de gastar
+
+`lib/codeoscopic/peticion-auto.ts` construye el `CreateInsuranceRequest_V1` de auto y, sobre todo,
+lo **revisa antes de llamar**: un cuerpo mal formado devuelve un 400 que ya se ha pagado, así que
+cada regla conocida del vendor se comprueba aquí. `revisarDatosAuto()` devuelve TODOS los reparos a
+la vez (para que la UI los pinte juntos) y `construirPeticionAuto()` lanza si queda alguno.
+
+Las tres reglas que más cotizaciones tumban, todas con test:
+- **La misma persona va en `holder`, `risk.owner` y `risk.primaryDriver`, e IDÉNTICA.** El vendor
+  cruza por DNI y rechaza si un campo difiere; tampoco deja omitir ninguno. Por eso se construye
+  una vez y se reutiliza el mismo objeto.
+- **La dirección viaja solo con sus DOS mitades** (CP + id de municipio). El municipio es un ID del
+  catálogo, nunca un nombre.
+- **`lastFiveYearsAccidents` es obligatorio si los años sin siniestros son < 5 y no coinciden con
+  los años asegurado.** Es la condición anidada que se incumple sin enterarse. Ojo: `0` siniestros
+  es una respuesta válida, no un hueco (regla NULL≠0).
+
+Y lo que NO se manda, a propósito: email, calle, ocupación, situación laboral y país de nacimiento.
+No hacen falta para el precio.
+
 Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): ejecutar el SQL
 `prisma/sql/2026-09-01_codeoscopic_consumo.sql`, poner contraseña al rol `prisma_seguros` y
 encender el interruptor.
