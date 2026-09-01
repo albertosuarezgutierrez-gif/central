@@ -32,6 +32,20 @@
 
 ---
 
+### 📬 (01/09/2026) El correo de Alberto es la TERCERA base de datos — y resuelve una de las diez
+- Idea suya: «las compañías me escriben y dan información». Cierto y medible. `mediadores@occidentinforma.com`
+  manda **un correo por movimiento de póliza** con nº de póliza, cliente y contrato `M00171`;
+  `mediador@allianz.es` manda cartera No Vida, Cuenta Agente y anulaciones por impago **con adjunto**.
+- ✅ **La 549147797 NO está anulada**: es una RC profesional del «Instituto Técnico Superior de
+  Informática Studium» **emitida el 27/06/2025**, un año antes del arranque de la ingesta. Confirma que
+  las huérfanas son cartera pre-CIMA, no bajas.
+- 📇 **Mapa de claves** (en la skill): Mapfre `5239640` · Allianz **código 18638 / clave PA342520**,
+  sucursal 209 (las cinco variantes `209-x-…` son la misma) · Occident `8-92361`, `M00171`, `306333` ·
+  Reale `38605` · Fidelidade con credenciales CIMA desde el 31/08. **`306333` y `8-92361` no aparecen
+  en ningún correo**: su origen (Catalana / Plus Ultra tras la absorción) sigue sin confirmar.
+- 📌 **Acción que lo cierra:** pedir a Occident la **carga inicial de cartera en EIAC de `8-92361`** —
+  Alberto ya hizo esa petición exacta a Reale el 11/04/2026. **No se manda nada sin su OK.**
+
 ### 🔑 (01/09/2026) La CLAVE DE MEDIADOR: por qué CIMA perdía datos de una cartera y no de otra
 - Idea de Alberto («cada compañía asigna una clave»), medida y confirmada: el 2º campo del nombre
   EIAC es la clave de mediador. **Nueve claves en cinco compañías**; Occident manda por TRES
