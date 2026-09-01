@@ -32,6 +32,22 @@
 
 ---
 
+### 🔑 (01/09/2026) La CLAVE DE MEDIADOR: por qué CIMA perdía datos de una cartera y no de otra
+- Idea de Alberto («cada compañía asigna una clave»), medida y confirmada: el 2º campo del nombre
+  EIAC es la clave de mediador. **Nueve claves en cinco compañías**; Occident manda por TRES
+  (`8-92361`, `M00171`, `306333`) y el atasco NO está repartido — bajo `8-92361` están en cuarentena
+  sus 10 SIN y 6 de 9 REC, `306333` va limpia. Agrupar por `codigo_entidad` manda a revisar la
+  cartera que va bien.
+- **Son DOS averías:** 3 de las 20 huérfanas YA están en cartera (el movimiento llegó antes que la
+  póliza; una esperó del 24/06 al 26/07) → se arreglan **reprocesando**. Las otras 17 son cartera
+  que la compañía nunca mandó: **CIMA solo envía POL en altas y modificaciones**, así que falta una
+  **carga inicial por clave**. Contarlas juntas manda a pedir algo que ya está en la BD.
+- PR #1949: el vigía reparte por clave (`porClave`) y separa `huerfanasResolubles`; el puerto extrae
+  la clave del nombre; `clave` NO es obligatoria en la validación (un puerto viejo sigue siendo
+  legible). 7 tests nuevos. Skill `agente-correduria` actualizada.
+- **Pendiente:** el CI del PR no arranca los 12 requeridos ni con merge de main, ni con push real,
+  ni des-drafteando (mismo patrón que #1789).
+
 ### 🛡️ (01/09/2026) CIMA perdía recibos y siniestros hace 2 meses — vigía nuevo + causa raíz
 - Analizando qué CRM necesita la correduría salió una avería VIVA: del 24/06 al 30/08 se quedaron
   **42 ficheros de CIMA en cuarentena — 23 recibos (7.721,71€ de prima) y 20 siniestros**, 39 de

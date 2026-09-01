@@ -160,6 +160,23 @@ congelado es la API REST, en un correo de Manuel a Juan Manuel Fernández (PM de
     tres nombres. Y el vigía que lo caza es el cron `correduria-ingesta` de plataforma (latido
     `correduria_ingesta`) — el health-check de origen tenía el número delante (`cuarentenaTotal: 41`
     y subiendo) y estuvo en verde dos meses porque sus señales miraban otras dos columnas.
+  - **🔑 Y la pieza que faltaba, apuntada por Alberto: la CLAVE DE MEDIADOR.** «Cada compañía asigna
+    una clave» — y es el **2º campo del nombre EIAC**: `C0468_8-92361_REC_261_1_20260801_….zip`.
+    Medidas **nueve claves en cinco compañías**: Mapfre `5239640` · Allianz `209-A-0018638-0000`,
+    `209-C-…`, `209-E-…` (¡y variantes sin ceros, `209-A-18638-0000`!) · Occident **`8-92361`,
+    `M00171` y `306333`** · Reale `38605`. 🚨 **Una compañía NO es una cartera**: bajo `8-92361`
+    están en cuarentena los 10 ficheros de siniestros y 6 de 9 de recibos, mientras `306333` va
+    limpia. Agrupar por `codigo_entidad` esconde de QUÉ cartera se pierde el dato y manda a revisar
+    la que va bien. (`8-92361` es además el código que aparece en los conceptos del banco, ver
+    `RE_LIQUID_SEGUROS` en plataforma; `M00171` también.)
+  - **Y hay DOS averías, no una.** De las 20 pólizas huérfanas, **3 YA están en la cartera**,
+    activas y con el mismo `id_poliza_entidad`: su recibo o siniestro llegó **antes** que la póliza
+    (una esperó del 24/06 al 26/07) y nadie volvió a mirarlas — se arreglan **reprocesando**, sin
+    preguntar a nadie, y es justo lo que hacía el reconciliador parado desde el 25/06. Las otras 17
+    son **cartera que la compañía nunca mandó**: CIMA solo envía POL en **altas y modificaciones**,
+    así que la cartera preexistente de una clave no entra nunca por ese canal — hace falta una
+    **carga inicial por clave de mediador**. Contarlas juntas manda a pedir a la compañía algo que
+    ya está en la BD.
 
 - **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
   431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
