@@ -62,6 +62,16 @@
   INSERT en `fiscal_ayudas`; Sique Brilla sin novedad; Kit Digital sigue sin reabrir. dudas: si el CNAE de
   alta de Joaquín Jaén es 56.21 (catering) o no — decide Alberto/consulta directa; fallos: —;
   PRs/commits: commit directo a `main` (solo docs).
+- **2026-09-01 · radar-espana** (primera pasada real vía trigger) · hizo: termómetro con datos
+  reales citados (Sevilla capital municipal +8,9% m/m propio + prensa; Asturias +15,4%/Cantabria
+  +18,2% interanual; Huelva/Cádiz/Sevilla provincia sin datos declarado); refrescó las 3
+  valoraciones `vivienda` con el snapshot nuevo de `mercado_zonas` (29/08); halló que San Julián
+  (barrio de Socorro 24) tiene su cupo VUT (7 licencias) agotado — escasez confirmada de la
+  licencia viva; BCE con probable subida de tipos el 10/09. dudas: —; fallos: intentó capitalizar
+  el enfoque `vut` de Socorro/Dúplex y lo abortó a medio camino — el reparto de limpieza/lavandería
+  entre los 4 pisos (`pl-mensual.ts`) no es reconstruible con SQL suelto sin riesgo de fabricar el
+  NOI; queda como hueco explícito con la vía correcta apuntada (endpoint que exponga
+  `getPLMensual()`). PRs/commits: el de esta rama.
 - **2026-08-31 · agentes-entrenador** (2ª pasada dirigida: «revisa que ningún agente tenga huecos
   así») · hizo: barrido de la clase de hueco del caso V4 Flash (traspasos sin dueño, listas
   estáticas sin curación, supuestos sin verificar) sobre los ~17 agentes. Sanos: auditoría
