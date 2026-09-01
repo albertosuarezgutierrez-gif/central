@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
-import BuscadorClientes from './BuscadorClientes'
+import BuscadorCartera from './BuscadorCartera'
+import Retencion from './Retencion'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -52,7 +53,7 @@ interface ModalInfo {
   mes?: string
 }
 
-export default function CorreduriaClient() {
+export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string }) {
   const añoActual = new Date().getFullYear()
   const [año, setAño] = useState(añoActual)
   const [filas, setFilas] = useState<Fila[]>([])
@@ -103,56 +104,81 @@ export default function CorreduriaClient() {
       {/* Header */}
       <div className="corr-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>🛡️ Correduría de seguros</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-            Liquidaciones de comisiones por compañía aseguradora · Auto-actualizado desde banca
-          </p>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>🛡️ Correduría</h1>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      </div>
+
+      {/* ── 1. BUSCAR ──────────────────────────────────────────────────────
+          Lo primero, y HERMANO de la cartera, nunca hijo: `CarteraViva` hace
+          `return` temprano cuando el puerto falla, así que anidado aquí dentro
+          el buscador desaparecía justo el día que asegura no responde. */}
+      <div style={{ marginBottom: 20 }}>
+        <BuscadorCartera />
+      </div>
+
+      {/* ── 2. LA CARTERA DE UN VISTAZO ─────────────────────────────────── */}
+      <CarteraViva />
+
+      {/* ── 3. A QUIÉN LLAMAR HOY ───────────────────────────────────────────
+          Recibos devueltos y vencidos sin cobrar, por urgencia REAL. Es la
+          pantalla comercial: lo único de aquí que se hace con el teléfono en
+          la mano. Va antes que el dinero ya cobrado a propósito. */}
+      <div style={{ marginBottom: 20 }}>
+        <Retencion urlAsegura={urlAsegura} />
+      </div>
+
+      {/* ── 4. ¿ME PAGAN LO QUE ME DEBEN? ──────────────────────────────────
+          Cuadre devengado → liquidado → cobrado. Va ANTES de la matriz de
+          banco porque la matriz solo ve el ingreso (la remesa) y la cifra que
+          va a la renta es el bruto. */}
+      <CuadreComisiones año={año} />
+
+      {/* ⚠️ Pendiente de confirmar: banda, no tarjeta, y FUERA del gate
+          `totalAnual > 0` que la escondía un año sin ingreso bancario — que es
+          justo cuando más importa que haya movimientos dudosos sin revisar. */}
+      {!loading && !error && pendiente > 0 && (
+        <button
+          onClick={() => setModal({ titulo: 'Pendiente de confirmar', compania: '__PENDIENTE__' })}
+          style={{ width: '100%', textAlign: 'left', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 12, padding: '12px 16px', cursor: 'pointer', marginBottom: 20, minHeight: 44 }}
+        >
+          <span style={{ fontSize: 13, color: '#9a3412' }}>
+            ⚠️ <strong>{eur(pendiente)}</strong> en movimientos de seguros sin confirmar a qué
+            compañía son → revisar
+          </span>
+        </button>
+      )}
+
+      {/* ── 5. EL DETALLE DEL BANCO ────────────────────────────────────────
+          Cerrado por defecto y con montaje perezoso: es auditoría fina, no la
+          foto que se mira cada día. Se abre solo si hay algo sin confirmar.
+          🚨 No se borra: el modal de desglose es el ÚNICO camino para
+          reclasificar un movimiento y para que aprendan `correduria_reglas` y
+          `banca_destino_reglas`. */}
+      <details open={pendiente > 0} style={{ marginBottom: 20 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, padding: '10px 0', minHeight: 44, display: 'flex', alignItems: 'center', gap: 8 }}>
+          📊 Detalle del banco · {año}
+          <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>
+            {loading ? 'cargando…' : `${eur(totalAnual)} cobrado · ${compañiasActivas} compañía(s)`}
+          </span>
+        </summary>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '10px 0 14px' }}>
           <button
             onClick={() => setAño(a => a - 1)}
-            style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontSize: 16 }}
+            aria-label="Año anterior"
+            style={{ minHeight: 44, minWidth: 44, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontSize: 16 }}
           >←</button>
           <span style={{ fontWeight: 700, fontSize: 16, minWidth: 50, textAlign: 'center', color: 'var(--text)' }}>{año}</span>
           <button
             onClick={() => setAño(a => a + 1)}
             disabled={año >= añoActual}
-            style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontSize: 16, opacity: año >= añoActual ? 0.35 : 1 }}
+            aria-label="Año siguiente"
+            style={{ minHeight: 44, minWidth: 44, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontSize: 16, opacity: año >= añoActual ? 0.35 : 1 }}
           >→</button>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+            El año gobierna solo este bloque y el cuadre — no la cartera viva.
+          </span>
         </div>
-      </div>
-
-      {/* Cartera en vivo (puerto HTTP a central-asegura) */}
-      <CarteraViva />
-
-      {/* Cuadre de comisiones: devengado → liquidado → cobrado. Va ANTES de la
-          matriz de banco porque la matriz solo ve el ingreso (la remesa), y la
-          cifra que va a la renta es el bruto. */}
-      <CuadreComisiones año={año} />
-
-      {/* KPIs */}
-      {!loading && !error && totalAnual > 0 && (
-        <div className="corr-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
-          {[
-            { label: 'Total cobrado', value: eur(totalAnual), color: 'var(--primary)' },
-            { label: 'Compañías activas', value: String(compañiasActivas), color: 'var(--text)' },
-            { label: 'Mejor mes', value: `${MESES[mejorMesIdx]} (${eur(totalesMes[mejorMesIdx])})`, color: 'var(--text)' },
-          ].map(k => (
-            <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{k.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
-            </div>
-          ))}
-          {/* KPI: pendiente de confirmar (clicable → desglose solo de lo dudoso) */}
-          <button
-            onClick={() => pendiente > 0 && setModal({ titulo: 'Pendiente de confirmar', compania: '__PENDIENTE__' })}
-            style={{ textAlign: 'left', background: pendiente > 0 ? '#fff7ed' : 'var(--surface)', border: `1px solid ${pendiente > 0 ? '#fdba74' : 'var(--border)'}`, borderRadius: 12, padding: '18px 20px', cursor: pendiente > 0 ? 'pointer' : 'default' }}
-          >
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Pendiente de confirmar {pendiente > 0 ? '→' : ''}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: pendiente > 0 ? '#ea580c' : 'var(--muted)' }}>{pendiente > 0 ? eur(pendiente) : '✓ Todo revisado'}</div>
-          </button>
-        </div>
-      )}
 
       {/* Loading */}
       {loading && (
@@ -236,10 +262,11 @@ export default function CorreduriaClient() {
         </div>
       )}
 
-      <div style={{ marginTop: 16, fontSize: 12, color: 'var(--muted)', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <span>Datos calculados de los movimientos bancarios con destino «correduría de seguros». Pincha cualquier importe para ver y confirmar su desglose.</span>
-        <Link href="/finanzas/fiscal" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Ver resumen financiero →</Link>
+      <div style={{ marginTop: 16, fontSize: 12, color: 'var(--muted)' }}>
+        Salen de los movimientos bancarios con destino «correduría de seguros». Pincha cualquier
+        importe para ver y confirmar su desglose.
       </div>
+      </details>
 
       {modal && (
         <DesgloseModal
@@ -484,15 +511,38 @@ function CarteraViva() {
   // «—» con su nota. Un 0 aquí diría «no vence nada», que es otra cosa.
   const vence = (n: number | null | undefined) => (typeof n === 'number' ? num(n) : '—')
 
+  // 🚨 De ocho KPIs a TRES. Los que se van no eran datos de menos: eran
+  // aritmética mental. «Vencen en 60» no dispara ninguna acción distinta de
+  // «vencen en 30» (la ventana que manda es la del preaviso, LCS art. 22);
+  // «Históricas» y «Leads» son el MISMO volcado de 2013-2018 contado en dos
+  // unidades y nunca cambian; y «Sin fecha» no es un KPI sino una advertencia
+  // sobre la calidad del dato, así que baja a subtítulo del que sí lo es.
   const kpis = [
-    { label: 'Vencen en 30 días', value: vence(cartera.vence30), color: (cartera.vence30 ?? 0) > 0 ? '#c96' : 'var(--muted)' },
-    { label: 'Vencen en 60 días', value: vence(cartera.vence60), color: 'var(--text)' },
-    { label: 'Pólizas en vigor', value: num(cartera.polizasVigentes), color: 'var(--primary)' },
-    { label: 'Sin fecha (pendientes)', value: num(cartera.polizasPendientesFecha), color: 'var(--text)' },
-    { label: 'Históricas', value: num(cartera.polizasNoVigentes), color: 'var(--muted)' },
-    { label: 'Clientes', value: num(cartera.clientes), color: 'var(--text)' },
-    { label: 'Leads', value: num(cartera.leads), color: 'var(--muted)' },
-    { label: 'Siniestros abiertos', value: num(cartera.siniestrosAbiertos), color: cartera.siniestrosAbiertos > 0 ? '#d66' : 'var(--text)' },
+    {
+      label: 'Vencen en 30 días',
+      value: vence(cartera.vence30),
+      sub: 'la ventana de la LCS art. 22',
+      color: (cartera.vence30 ?? 0) > 0 ? '#c96' : 'var(--muted)',
+    },
+    {
+      label: 'Cartera viva',
+      value: `${num(cartera.polizasVigentes)} pólizas`,
+      // El «sin fecha» va AQUÍ y no como tarjeta propia: es el tercer estado
+      // de este mismo número («vigente pero no se sabe cuándo vence»), no una
+      // magnitud aparte.
+      sub:
+        `${num(cartera.clientes)} clientes` +
+        (cartera.polizasPendientesFecha > 0
+          ? ` · ${num(cartera.polizasPendientesFecha)} sin fecha de vencimiento informada`
+          : ''),
+      color: 'var(--primary)',
+    },
+    {
+      label: 'Siniestros abiertos',
+      value: num(cartera.siniestrosAbiertos),
+      sub: cartera.siniestrosAbiertos > 0 ? 'en tramitación' : 'ninguno abierto',
+      color: cartera.siniestrosAbiertos > 0 ? '#d66' : 'var(--text)',
+    },
   ]
 
   return (
@@ -508,8 +558,17 @@ function CarteraViva() {
           <div key={k.label} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{k.label}</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
+            {k.sub && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{k.sub}</div>}
           </div>
         ))}
+      </div>
+      {/* El volcado histórico: una línea, no dos tarjetas. Son 28.729 pólizas
+          de 2013-2018 que no cambian nunca y competían con los 109 números que
+          sí deciden algo. */}
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10 }}>
+        Además hay {num(cartera.polizasNoVigentes)} póliza(s) del volcado histórico y{' '}
+        {num(cartera.leads)} lead(s): vencimientos de 2013-2018, sin actividad. Se buscan igual,
+        pero no generan avisos.
       </div>
       {cartera.vence30 === null && (
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
@@ -517,9 +576,6 @@ function CarteraViva() {
           «—» significa que no se sabe, no que no venza nada.
         </div>
       )}
-      <div style={{ marginTop: 16 }}>
-        <BuscadorClientes />
-      </div>
       <Vencimientos />
     </div>
   )

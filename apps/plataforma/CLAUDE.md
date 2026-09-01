@@ -1392,12 +1392,38 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   objeto/prima/estado de cobro, siniestros, y el volcado histórico plegado con montaje perezoso.
   Server component; datos por `lib/ficha-asegura.ts` (interpretación PURA + tests en
   `test/regression-ficha-asegura.test.ts`).
-- **Accesos directos:** el nombre del cliente en la tabla de Renovaciones es un enlace a su ficha, y
-  hay un **buscador** (`BuscadorClientes.tsx`) para llegar a cualquiera aunque no venza nada. Busca por
-  nombre y apellidos, **no por DNI**: el DNI va por índice ciego y, si esa clave se desincroniza, la
-  búsqueda no falla — devuelve vacío, o sea dice «no existe» sobre alguien que está.
+- **Accesos directos:** el nombre del cliente en la tabla de Renovaciones es un enlace a su ficha.
+- **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
+  email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
+  encaje (`41003` es CP y nº de póliza plausibles a la vez).
+  🚨 **Vive FUERA de `CarteraViva`, nunca dentro.** Estaba anidado ahí y ese bloque hace `return`
+  temprano cuando el puerto falla → el buscador desaparecía justo el día que asegura no responde.
+  🚨 **DNI, teléfono y email van por índice ciego y solo alcanzan al 12-16% de las fichas**; la
+  dirección va cifrada y **no se puede buscar**. Cada bloque enseña su cobertura y el vacío se explica
+  (`explicarVacio()`), porque un «no aparece» ahí NO es «no está en la cartera».
+- **📞 Cola de retención (`Retencion.tsx`)**: los recibos devueltos y los vencidos sin cobrar,
+  ordenados por el **reloj** (art. 15 LCS) y no por el importe. 🔴 «sin cobertura» = el cliente circula
+  sin seguro y no lo sabe; si paga vuelve a estar cubierto en 24 h. Botón `tel:` de 44px y, en auto con
+  matrícula, «Precio en otra compañía ↗» (que salta a asegura porque cuesta 0,50€).
+  🚨 Que la cola esté vacía **no es «está todo cobrado»**: debajo se declaran las pólizas vivas sin
+  ningún recibo informado (18 de 109) y los pendientes que aún no han vencido.
 - **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
   pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
+
+🧹 **Reorganización de la pantalla (agente de diseño, 01/09/2026).** Alberto: *«hay duplicidad y ahí
+solo tiene que salir datos importantes»*. Se pasó de 12 KPIs a **4** y el orden es ahora
+**buscar → cartera → a quién llamar → cuadre → detalle del banco (plegado)**. Lo retirado y por qué:
+«Total cobrado», «Compañías activas» y «Mejor mes» **se leen de la propia tabla que tienen debajo**;
+«Vencen en 60 días» no dispara ninguna acción distinta de los 30 (la ventana que manda es la del
+preaviso, LCS art. 22); «Históricas» y «Leads» son el MISMO volcado de 2013-2018 contado en dos
+unidades y bajan a una línea de pie; «Sin fecha» no era un KPI sino una advertencia de calidad del
+dato, y baja a subtítulo de «Cartera viva». La matriz compañía×mes **NO se borra** (es el único
+camino para reclasificar un movimiento y que aprendan `correduria_reglas`/`banca_destino_reglas`):
+se pliega en un `<details>` que se auto-abre si hay algo pendiente.
+🚨 **«Pendiente de confirmar» salió del gate `totalAnual > 0`**, que lo escondía un año sin ingreso
+bancario — justo cuando más importa que haya movimientos dudosos sin revisar.
+El selector de año **bajó al bloque del banco**: en la cabecera parecía gobernar la cartera viva, y
+retroceder a 2025 dejaba los vencimientos de hoy intactos sin que se entendiera por qué.
 
 🚨 **Cuatro «no lo sé» que esta pantalla NO colapsa** (regla NULL≠0 del CLAUDE.md raíz):
 1. **`recibos.total === 0` NO es «al corriente de pago»**: es que la compañía no ha mandado ningún

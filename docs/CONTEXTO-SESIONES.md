@@ -32,6 +32,21 @@
 
 ---
 
+### 🔎 (01/09/2026) Correduría: buscador de TODO, cola de retención y limpieza de la pantalla
+- 🗑️ **Borrada** `/cartera/renovaciones` de asegura (duplicaba la de plataforma) y su menú.
+- 🔎 **Buscador universal**: nombre · matrícula · nº póliza · DNI · teléfono · email · ciudad · CP.
+  Un término se busca por TODOS los criterios que encaje. 🚨 **DNI/teléfono/email solo alcanzan al
+  12-16%** de las fichas (índice ciego) y **la dirección va CIFRADA: no se puede buscar** — cada
+  bloque enseña su cobertura, porque ahí un vacío no es una ausencia.
+- 📞 **Cola de retención** (art. 15 LCS): manda el RELOJ, no el importe. Al mes la cobertura queda
+  **suspendida** y el cliente no lo sabe; pagar la devuelve en **24 h**; a los 6 meses se extingue y
+  retener = póliza nueva. Botón `tel:` y salto a retarificar. Vacía ≠ «todo cobrado»: se declaran las
+  18 pólizas vivas sin ningún recibo.
+- 🧹 **Pantalla reorganizada por el agente de diseño**: 12 KPIs → 4; el buscador sale del bloque que
+  hacía `return` al fallar (desaparecía con el puerto caído); «pendiente de confirmar» sale del gate
+  `totalAnual>0` que lo escondía; la matriz del banco se pliega (no se borra: es donde se aprende).
+- 32 tests nuevos (`busqueda`, `retencion`, `correduria-puerto`). CI verde. PR #1999.
+
 ### 🗂️ (01/09/2026) La correduría se trabaja desde plataforma: ficha del cliente y accesos directos
 - 📌 **Dictado de Alberto:** *«asegura hay que meterlo en correduría, yo solo uso UNA página»*. Su
   pantalla es `plataforma → /correduria`; **asegura es la trastienda** (BD + el botón que gasta 0,50€).

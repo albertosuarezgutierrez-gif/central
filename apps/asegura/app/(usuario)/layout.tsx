@@ -10,10 +10,13 @@ export default async function UsuarioLayout({ children }: { children: React.Reac
   return (
     <>
       <nav className="nav">
-        <span className="brand">Grupo Asegura</span>
+        {/* Esta app es la TRASTIENDA: la pantalla de trabajo es plataforma →
+            Correduría. Aquí solo vive lo que no puede vivir allí (retarificar,
+            que gasta 0,50€, y subir una póliza). No se añaden pantallas de
+            consulta: se duplicarían las de plataforma. */}
+        <span className="brand">Grupo Asegura · trastienda</span>
         <Link href="/dashboard">Resumen</Link>
         <Link href="/cartera">Cartera</Link>
-        <Link href="/cartera/renovaciones">Renovaciones</Link>
         <span className="muted" style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.85)' }}>
           {session.nombre}
         </span>

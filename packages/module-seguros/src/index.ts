@@ -59,3 +59,23 @@ export {
   type RecibosPoliza,
   type EstadoCobro,
 } from './recibos.ts'
+export {
+  MINIMO_TEXTO,
+  planBusqueda,
+  avisoDireccion,
+  explicarVacio,
+  type Criterio,
+  type TipoCriterio,
+  type PlanBusqueda,
+  type Aviso,
+  type Cobertura,
+} from './busqueda.ts'
+export {
+  DIAS_SUSPENSION,
+  DIAS_EXTINCION,
+  retencion,
+  resumirRetencion,
+  type EstadoRetencion,
+  type Retencion,
+  type ResumenRetencion,
+} from './retencion.ts'
