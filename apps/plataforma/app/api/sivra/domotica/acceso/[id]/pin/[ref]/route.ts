@@ -7,8 +7,7 @@ import { ventanaPin } from '@/lib/domotica/acceso-programador'
 import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
 import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
 import { smoobuFetch } from '@/lib/smoobu'
-import { tgAlert } from '@/lib/telegram'
-
+import { tgAvisoAlerta } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
@@ -121,7 +120,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string; r
       UPDATE domotica_acceso_pin SET estado = 'error', tuya_password_id = NULL,
         detalle = jsonb_build_object('error', ${String(res.error)}, 'ventanaRota', true), updated_at = now()
       WHERE dispositivo_id = ${id}::uuid AND reserva_ref = ${reservaRef}`
-    await tgAlert(
+    await tgAvisoAlerta('pisos.domotica-acceso', 
       `🚨 Acceso: al reponer la ventana de la reserva ${reservaRef} se retiró el PIN viejo y NO se pudo crear el nuevo (${res.error}). El huésped tiene un código que ya no abre — dale el código maestro y reintenta desde /sivra/domotica.`,
       'critico',
     ).catch(() => {})

@@ -7,8 +7,7 @@ import { temperaturaSevilla } from '@/lib/domotica/meteo'
 import {
   ahoraMadrid, decidirAcciones, CONFIG_DEFAULT, type ConfigAuto, type ReservaVentana,
 } from '@/lib/domotica/programador'
-import { tgAlert } from '@/lib/telegram'
-
+import { tgAvisoAlerta } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
@@ -71,7 +70,7 @@ export async function GET(req: NextRequest) {
         if (temp === null) {
           // reserva_ref null → NO idempotente: la siguiente pasada (aún en ventana) reintenta.
           await log(d.id, 'skip_meteo_error', null, { reserva: r.id, hora })
-          await tgAlert(`Domótica ${d.nombre}: Open-Meteo no responde; no enciendo (reserva ${r.id})`, 'aviso')
+          await tgAvisoAlerta('pisos.domotica-clima', `Domótica ${d.nombre}: Open-Meteo no responde; no enciendo (reserva ${r.id})`, 'aviso')
           continue
         }
         if (temp <= cfg.umbralC) {
@@ -89,7 +88,7 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       await log(d.id, 'error', null, { msg, hora }).catch(() => {})
-      await tgAlert(`Domótica ${d.nombre}: fallo del programador — ${msg}`, 'critico').catch(() => {})
+      await tgAvisoAlerta('pisos.domotica-clima', `Domótica ${d.nombre}: fallo del programador — ${msg}`, 'critico').catch(() => {})
       resultados.push({ d: d.nombre, error: msg })
     }
   }

@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client"
 import { sqlCompsAncla } from "@/lib/sivra/pricing-ancla-global"
 import { evaluatePilot, avisoPilotTrack, type PilotVerdict } from "@/lib/sivra/pilot-track"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
-import { tgSend } from "@central/core-telegram"
+import { tgAviso } from '@/lib/telegram'
 import { computeRecommendation, recommendedBaseFromEngine, percentile } from "@/lib/sivra/pricing-engine"
 import { EVENTS_LAST_DATE } from "@/lib/pricing-calendar"
 
@@ -255,7 +255,7 @@ export async function GET(req: NextRequest) {
   )
   if (!dryRun && aviso) {
     console.warn(`[sivra/pricing/pilot-track] ${watchdog.length} watchdog · ${rojos.length} rojos`)
-    try { await tgSend(aviso) } catch { /* best-effort: watchdog y rojos van en la respuesta */ }
+    try { await tgAviso('pisos.pricing-piloto', aviso) } catch { /* best-effort: watchdog y rojos van en la respuesta */ }
   }
 
   // 💓 Latido (hallazgo 🟡 6): sin él, este agente muerto era invisible — y es justo el que

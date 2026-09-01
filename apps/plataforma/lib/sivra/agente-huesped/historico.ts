@@ -12,7 +12,7 @@ import { smoobuFetch } from '@/lib/smoobu'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { aiComplete } from '@central/core-ai'
-import { tgSendButtons, escapeHtml, type Boton } from '@central/core-telegram'
+import { escapeHtml, tgAvisoBotones, type Boton } from '@/lib/telegram'
 import { atribuirEmisor, setEnviados, normalizarTexto } from './atribucion'
 import { toPropertyId } from './contexto'
 import { htmlATexto } from './guest-app'
@@ -114,7 +114,7 @@ export async function proponerHechos(hechos: { id: number; propertyId: string; h
       { texto: '✅ Es correcto', callback: `hch_ok:${h.id}` },
       { texto: '❌ No', callback: `hch_no:${h.id}` },
     ]]
-    await tgSendButtons(
+    await tgAvisoBotones('huespedes.historico', 
       `🧠 <b>Aprendido de una conversación tuya</b> · ${escapeHtml(h.propertyId)}` +
       `\n\n«${escapeHtml(h.hecho)}»` +
       `\n\n<i>Si lo confirmas, el agente lo usará como dato de este piso con todos los huéspedes.</i>`,

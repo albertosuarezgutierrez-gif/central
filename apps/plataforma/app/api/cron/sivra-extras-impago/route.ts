@@ -4,7 +4,7 @@
 // se avisa a la limpieza: la cuna no sale del trastero por un enlace abierto.
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { tgSend, escapeHtml } from '@central/core-telegram'
+import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { pendientesDeCobro, marcarRecordatorio, marcarCaducado } from '@/lib/sivra/extras/reserva'
 import { decidirImpago, horasEntre } from '@/lib/sivra/extras/impago'
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
 
     await marcarCaducado(p.id)
     caducados++
-    await tgSend(
+    await tgAviso('pisos.extras-impago', 
       `⏳ <b>Extra sin pagar y la entrada es ya</b>\n` +
       `${escapeHtml(ctx?.property || p.property_id)} · ${escapeHtml(nombre)} — ${eur(p.precio_cents / 100)}\n` +
       `Reserva ${escapeHtml(p.booking_id)}. He dejado de esperar el cobro; si quieres ponerla igualmente, dilo tú.`,

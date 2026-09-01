@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { conciliarFacturasDesdeGmail } from '@/lib/agente-facturas/conciliar-gmail'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         .map(e => `• ${e.proveedor} — ${eur(e.importe)} (${e.fecha})`)
         .join('\n')
       const mas = res.enganchadas.length > 10 ? `\n…y ${res.enganchadas.length - 10} más` : ''
-      await tgSend(
+      await tgAviso('facturas.conciliar-gmail', 
         `📎 <b>Facturas enganchadas desde Gmail</b>\n` +
         `${res.enganchadas.length} justificante(s) casado(s) por ${eur(total)} ` +
         `(de ${res.revisados} adjunto(s) en ${res.correos} correo(s)).\n\n${detalle}${mas}`,

@@ -1,5 +1,5 @@
 // lib/sivra/agente-huesped/telegram-msg.ts — propuesta por Telegram + estado pendiente.
-import { tgSend, tgSendButtons, tgEditMessage, escapeHtml, type Boton } from '@central/core-telegram'
+import { escapeHtml, tgAviso, tgAvisoBotones, tgEditMessage, type Boton } from '@/lib/telegram'
 import { aiComplete } from '@central/core-ai'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
@@ -38,7 +38,7 @@ export async function avisarAutoEnviado(ctx: Contexto, pregunta: string, dec: De
     `\n\n<b>Enviado${idiomaNota}:</b>\n${escapeHtml(dec.reply || '')}` +
     lineaTraduccion(respuestaEs, otroIdioma, escapeHtml) +
     `\n\n<i>ℹ️ Solo para tu información — enviado sin tu intervención (categoría «${escapeHtml(dec.categoria)}»).</i>`
-  await tgSend(cuerpo).catch(() => {})
+  await tgAviso('huespedes.borrador', cuerpo).catch(() => {})
 }
 // ¿Escalamos por FALTA DE INFORMACIÓN (y no por política: queja, dinero, cambios…)? Solo entonces
 // tiene sentido decirle a Alberto que es un hueco de la guía y que su respuesta se va a aprender.
@@ -97,7 +97,7 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   if (dec.categoria === 'late_checkout' || dec.categoria === 'early_checkin') {
     botones.push([{ texto: '🕒 Conceder', callback: `hsp_grant:${ctx.bookingId}` }])
   }
-  const mid = await tgSendButtons(`${cabecera}\n\n${cuerpo}`, botones)
+  const mid = await tgAvisoBotones('huespedes.borrador', `${cabecera}\n\n${cuerpo}`, botones)
   // Guardamos el idioma del huésped para que, si Alberto modifica en español, se traduzca a SU idioma.
   await prisma.$executeRaw(Prisma.sql`
     INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta)
@@ -126,7 +126,7 @@ export async function reproponerBorrador(
     [{ texto: '✅ Enviar', callback: `hsp_send:${pend.booking_id}` }, { texto: '✏️ Modificar', callback: `hsp_edit:${pend.booking_id}` }],
     [{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${pend.booking_id}` }],
   ]
-  const mid = await tgSendButtons(cuerpo, botones)
+  const mid = await tgAvisoBotones('huespedes.borrador', cuerpo, botones)
   // Guarda el nuevo borrador como pendiente (el ✅ Enviar mandará ESTE texto) y resetea los modos.
   await prisma.$executeRaw(Prisma.sql`
     UPDATE mensajes_pendientes_tg

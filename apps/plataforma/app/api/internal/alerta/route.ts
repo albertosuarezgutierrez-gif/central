@@ -33,8 +33,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAlertaTokenAuthorized, isCronAuthorized } from '@/lib/cron-auth'
 import { rutinaDeToken } from '@/lib/rutina-tokens'
 import { validarBotones } from '@/lib/alerta-botones'
-import { tgSend, tgSendButtons } from '@central/core-telegram'
-
+import { tgAviso, tgSend, tgSendButtons } from '@/lib/telegram'
 export const dynamic = 'force-dynamic'
 
 type Diagnostico = { ok: boolean; causa?: string; remedio?: string; rutina?: string }
@@ -92,7 +91,7 @@ async function chivarse(req: NextRequest, causa: string) {
   const ahora = Date.now()
   if (ahora - ultimoChivatazo < CHIVATAZO_MS) return
   ultimoChivatazo = ahora
-  await tgSend(
+  await tgAviso('sistema.canal-mudo', 
     '🔇⚠️ <b>Un agente no ha podido avisarte</b>\n\n' +
       `Una rutina llamó a <code>/api/internal/alerta</code> y fue rechazada: ${causa}.\n\n` +
       'Mientras siga así, los avisos Telegram de TODOS los agentes están mudos. Resincroniza ' +

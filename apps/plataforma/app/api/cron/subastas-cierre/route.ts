@@ -23,7 +23,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
-import { tgSend } from '@central/core-telegram'
+import { tgAviso } from '@/lib/telegram'
 import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { eur } from '@/lib/dinero'
@@ -240,7 +240,7 @@ async function avisarRadar(ventana: 'deposito' | 'cierre'): Promise<number> {
     }
   }
 
-  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+  await tgAviso('subastas.cierre', lineas.join('\n'), { html: true }).catch(() => {})
   await prisma.$executeRaw(
     esDeposito
       ? Prisma.sql`UPDATE subastas_radar SET aviso_deposito_at = now() WHERE id = ANY(${avisadas}::uuid[])`
@@ -284,7 +284,7 @@ async function avisarSeguidas(): Promise<number> {
     lineas.push(...(await bloqueTesoreria(cuentaId).catch(() => [])))
   }
 
-  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+  await tgAviso('subastas.cierre', lineas.join('\n'), { html: true }).catch(() => {})
   await prisma.$executeRaw(Prisma.sql`
     UPDATE subastas_seguidas SET recordatorio_cierre_at = now()
     WHERE id = ANY(${proximas.map((p) => p.id)}::uuid[])
@@ -429,7 +429,7 @@ async function avisarDesenlaces(): Promise<number> {
     lineas.push(`⏳ ${nPendientes} cerrada${nPendientes === 1 ? '' : 's'} sin desenlace publicado todavía (no es «desierta»: el Portal aún no lo dice).`)
   }
 
-  await tgSend(lineas.join('\n'), { html: true }).catch(() => {})
+  await tgAviso('subastas.cierre', lineas.join('\n'), { html: true }).catch(() => {})
   await prisma.$executeRaw(Prisma.sql`
     UPDATE subastas SET resultado_avisado_at = now()
     WHERE dedupe_key = ANY(${filas.map((f) => String(f.dedupe_key))}::text[])

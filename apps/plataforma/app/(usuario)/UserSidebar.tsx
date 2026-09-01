@@ -23,6 +23,9 @@ const NAV_NEGOCIO = [
   // que si no pasabas por Inicio la sección era invisible.
   { href: '/correduria', icon: '🛡️', label: 'Correduría' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
+  // 🔔 Qué te manda el bot por su cuenta, y el interruptor de cada aviso (01/09/2026:
+  // «revisa las notificaciones de Telegram, son muchas»).
+  { href: '/telegram', icon: '🔔', label: 'Avisos Telegram' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },
   { href: '/subastas', icon: '⚖️', label: 'Subastas y chollos' },
   { href: '/inversion', icon: '🏘️', label: 'Analizar compra' },

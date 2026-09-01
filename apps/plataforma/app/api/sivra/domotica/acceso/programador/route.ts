@@ -12,7 +12,7 @@ import {
   reconciliar, ventanaPin, madridEpoch, necesitaAvisoOffline, desajustesVentana,
   type ReservaAcceso, type PinExistente,
 } from '@/lib/domotica/acceso-programador'
-import { tgAlert } from '@/lib/telegram'
+import { tgAvisoAlerta } from '@/lib/telegram'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
@@ -81,7 +81,7 @@ function mensajeHuesped(pin: string, nombreDisp: string): string {
 async function entregar(cfg: ConfigAcceso, r: ReservaAcceso, pin: string, nombreDisp: string): Promise<boolean> {
   let ok = false
   if (cfg.entrega === 'aviso' || cfg.entrega === 'ambos') {
-    await tgAlert(`🔑 PIN ${nombreDisp} · reserva ${r.id} (${r.propertyId})${r.guestName ? ` · ${r.guestName}` : ''}: ${pin}`, 'aviso').catch(() => {})
+    await tgAvisoAlerta('pisos.domotica-acceso', `🔑 PIN ${nombreDisp} · reserva ${r.id} (${r.propertyId})${r.guestName ? ` · ${r.guestName}` : ''}: ${pin}`, 'aviso').catch(() => {})
     ok = true
   }
   if (cfg.entrega === 'huesped' || cfg.entrega === 'ambos') {
@@ -165,7 +165,7 @@ export async function GET(req: NextRequest) {
         })
         if (!res.ok) {
           await upsertPin(d.id, r, desdeEpoch, hastaEpoch, { estado: 'error', detalle: { error: res.error } })
-          await tgAlert(`Domótica ${d.nombre}: no pude crear el PIN de la reserva ${r.id} (${r.propertyId}) — ${res.error}`, 'aviso').catch(() => {})
+          await tgAvisoAlerta('pisos.domotica-acceso', `Domótica ${d.nombre}: no pude crear el PIN de la reserva ${r.id} (${r.propertyId}) — ${res.error}`, 'aviso').catch(() => {})
           resultados.push({ d: d.nombre, reserva: r.id, error: res.error })
           continue
         }
@@ -221,7 +221,7 @@ export async function GET(req: NextRequest) {
           else if (x.entradaMin < 0) partes.push(`abre ${minutosLegibles(-x.entradaMin)} más tarde de lo que toca`)
           return `· reserva ${x.reservaRef} (${x.propertyId}${x.guestName ? `, ${x.guestName}` : ''}): ${partes.join(' y ')}${x.entregado ? ' — el huésped YA tiene ese código' : ''}`
         })
-        await tgAlert(
+        await tgAvisoAlerta('pisos.domotica-acceso', 
           `🕒 ${d.nombre}: ${porAvisar.length} PIN con la ventana desactualizada (fechas cambiadas o márgenes nuevos). No los toco solo — repónlos desde /sivra/domotica con «🔄 ventana».\n${lineas.join('\n')}`,
           'aviso',
         ).catch(() => {})
@@ -241,13 +241,13 @@ export async function GET(req: NextRequest) {
         try { await tuyaGetStatus(d.tuya_device_id) } catch { online = false }
         const proximos = reservas.map(r => madridEpoch(r.arrival, r.checkIn)).filter(e => e > ahoraEpoch).sort((a, b) => a - b)
         if (necesitaAvisoOffline(online, proximos[0] ?? null, ahoraEpoch, cfg.alertas.offlineLeadHoras)) {
-          await tgAlert(`Domótica ${d.nombre}: cerradura OFFLINE y hay check-in en menos de ${cfg.alertas.offlineLeadHoras} h. Revísala antes de que llegue el huésped.`, 'critico').catch(() => {})
+          await tgAvisoAlerta('pisos.domotica-cerradura', `Domótica ${d.nombre}: cerradura OFFLINE y hay check-in en menos de ${cfg.alertas.offlineLeadHoras} h. Revísala antes de que llegue el huésped.`, 'critico').catch(() => {})
           resultados.push({ d: d.nombre, avisoOffline: true })
         }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      await tgAlert(`Domótica ${d.nombre}: fallo del programador de accesos — ${msg}`, 'critico').catch(() => {})
+      await tgAvisoAlerta('pisos.domotica-acceso', `Domótica ${d.nombre}: fallo del programador de accesos — ${msg}`, 'critico').catch(() => {})
       resultados.push({ d: d.nombre, error: msg })
     }
   }
