@@ -32,6 +32,19 @@
 
 ---
 
+### 📄 (01/09/2026) asegura: subir una póliza y que el agente la lea — primera pasada
+- `/cartera/subir`: PDF (texto) o foto (visión). **No gasta cotizaciones** — leer es gratis.
+- Reutiliza el pipeline ya probado de `apps/asegura-portal`; lo nuevo es QUÉ se busca (17 campos
+  para cotizar, no los 5 de la bóveda) y la validación dura: **letra del DNI** y **formato de
+  matrícula** se comprueban, porque un DNI mal leído es otra persona y una matrícula, otro coche.
+- Procedencia nueva **`documento`** (entre `compania` y `calculado`) + `debeSustituir()`: lo leído
+  **nunca pisa lo que mandó la compañía**. Guardián `test/regression-marcadores-sin-dato.test.ts`
+  fija que los DOS extractores traten igual los «no lo sé». Cepo verificado rompiéndolo.
+- 🐛 Fallo cazado por su test: limpiar «muchos» dejaba '' y `Number('')` = **0** → «muchos
+  siniestros» se guardaba como «ninguno», y en la dirección que abarata la prima. Con regresión.
+- ⚠️ **NO escribe en la cartera** (rol SELECT-only) ni **guarda el fichero** (falta decidir dónde y
+  cuánto tiempo se conserva PII, y `cliente_documentos` no existe). Devuelve el hash, no el papel.
+
 ### 🧭 (01/09/2026) asegura — EL PRINCIPIO de Alberto: presupuesto rápido, verificación al emitir
 - *«Todas las opciones posibles; presupuesto = lo más fácil y rápido; y ya en caso de cuadrar al
   cliente, nos centramos en que todos los datos estén bien.»* **Dos fases con exigencias OPUESTAS.**
