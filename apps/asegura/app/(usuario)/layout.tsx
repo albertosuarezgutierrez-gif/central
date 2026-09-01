@@ -12,6 +12,7 @@ export default async function UsuarioLayout({ children }: { children: React.Reac
       <nav className="nav">
         <span className="brand">Grupo Asegura</span>
         <Link href="/dashboard">Resumen</Link>
+        <Link href="/cartera">Cartera</Link>
         <span className="muted" style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.85)' }}>
           {session.nombre}
         </span>

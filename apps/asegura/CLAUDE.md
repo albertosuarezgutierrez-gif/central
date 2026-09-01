@@ -180,9 +180,98 @@ Las tres reglas que más cotizaciones tumban, todas con test:
 Y lo que NO se manda, a propósito: email, calle, ocupación, situación laboral y país de nacimiento.
 No hacen falta para el precio.
 
-Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): ejecutar el SQL
-`prisma/sql/2026-09-01_codeoscopic_consumo.sql`, poner contraseña al rol `prisma_seguros` y
-encender el interruptor.
+### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
+
+`/cartera` → buscar cliente → su ficha → **Retarificar** en una póliza de auto. Es la forma en que
+Alberto quiere estrenar esto: **primero a mano, sobre clientes de verdad**, y automatizar después.
+
+- **Solo un clic gasta**, y lo dice: `POST /api/cartera/polizas/{id}/retarificar`. Todo lo demás de
+  `/api/cartera/*` es gratis. Lo vigila `test/regression-asegura-gasto-codeoscopic.test.ts`, que
+  además prohíbe exponer un `GET` que cotice (un prefetch del navegador dispararía el cargo) y
+  hacer un `POST` al vendor sin pasar por `cotizar()`. **Cepo verificado**: se le añadió un `GET`
+  a la ruta y saltó.
+- 🚨 **`lib/codeoscopic/desde-cartera.ts` devuelve TRES cosas, no una**: lo que se manda, lo que se
+  ha **supuesto** y lo que **falta**. Un valor por defecto es indistinguible de un dato real en
+  cuanto se escribe en el formulario, así que la pantalla enseña los supuestos ANTES del botón y
+  otra vez AL LADO del precio. Los supuestos tiran **a la baja** (menos años asegurado ⇒ más caro)
+  para que la precalificación no prometa una prima que luego suba.
+  - **Excepción, y es decisión de negocio de Alberto:** se presume que **no ha habido siniestros**.
+    Va marcado como `optimista` porque cero filas en `siniestros` no prueba que no los haya. De
+    regalo, al igualar `aniosSinSiniestros` con `aniosAsegurado` se esquiva el 400 (ya pagado) que
+    exige el detalle de siniestralidad.
+  - **NUNCA se supone un dato personal** (DNI, nombre, nacimiento, teléfono, carnet, sexo): eso
+    serían datos falsos de una persona real. Los teclea el corredor. Hay test que lo fija.
+- **Lo que la ficha SÍ da y ahorra teclear:** la póliza actual pasa a ser la «anterior» de la
+  cotización — número, **código DGS de la compañía** y antigüedad salen de ella, que es de donde
+  viene el bonus.
+- **El vehículo hay que elegirlo**, y no es un fallo: medido el 01/09/2026, las **80 pólizas de auto
+  vivas (CIMA) traen matrícula y NADA más** — ni marca, ni modelo, ni año. Se elige del catálogo de
+  Codeoscopic (marca→modelo→versión), que es **gratis**; buscar por matrícula es lo que cuesta
+  créditos. La fecha de matriculación sí sale sola de la matrícula, gratis, y es **aproximada**.
+- **Centinelas del CRM:** 20.860 fichas se llaman literalmente «Lead». `desde-cartera.ts` los trata
+  como ausencia — mandar «Lead» como nombre de pila sería basura con forma de dato.
+- **El sexo sale del campo `saludo`** (`'1'` = hombre, `'2'` = mujer; validado contra los nombres de
+  pila más frecuentes de las 32.600 fichas). El `'3'` **no se traduce**: se pregunta.
+
+✅ **Hecho el 01/09/2026:** la tabla `seguros.codeoscopic_consumo` ya está **creada en la BD**
+(con sus dos CHECK: `descarte_con_evidencia` y `cierre_coherente`).
+
+Pendiente para el primer smoke real (0,50€, solo con OK explícito de Alberto): poner contraseña al
+rol `prisma_seguros`, encender `CODEOSCOPIC_TARIFICACION_ACTIVA=true` y redesplegar.
+
+### 🧭 EL PRINCIPIO: presupuesto rápido, verificación al emitir (Alberto, 01/09/2026)
+
+> *«Tenemos que tener todas las opciones posibles, pensando que presupuesto = lo más fácil y
+> rápido; y ya en caso de cuadrar al cliente, nos centramos en que todos los datos estén bien.»*
+
+**Dos fases con exigencias OPUESTAS**, y confundirlas es el error a evitar:
+
+| | Fase 1 — PRESUPUESTO | Fase 2 — EMISIÓN |
+|---|---|---|
+| Ante un dato que falta | Se **supone y se marca** | Se pide y se verifica |
+| Ante dos caminos | El más rápido | El más fiable |
+| Cuándo | Siempre | **Solo si el precio le cuadra al cliente** |
+
+Es negocio, no preferencia técnica: la mayoría de presupuestos no acaban en póliza, y pedir DNI y
+ficha técnica a quien solo quería un precio pierde al cliente antes de tener la oportunidad.
+
+Tres consecuencias que SÍ afectan al código:
+1. **Ningún dato puede tener un solo camino.** Para la versión del vehículo hay cuatro, de más
+   rápido a menos: (1) lo que ya traiga la ficha en texto — 1.325 pólizas, **pero NINGUNA de las 80
+   vivas**; (2) foto de la ficha técnica; (3) **catálogo a mano, que es lo construido**; (4)
+   matrícula por créditos. Por eso el 3 era el primero que había que hacer.
+2. **La fase 1 no se bloquea por un dato**: solo para en lo que no se puede inventar sin mentir
+   (datos personales y vehículo).
+3. 🎯 **Al pasar a fase 2, los `supuestos` que devolvió la precalificación SON la lista de tareas**
+   de verificación, con los `optimista` en cabeza. No hay que inventar un checklist: ya está
+   calculado.
+
+### 📸 Lo siguiente: alta por fotos, bonificadores y el ramo de HOGAR
+
+Diseño completo en `docs/superpowers/specs/2026-09-01-asegura-alta-por-fotos-y-bonificadores.md`.
+Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
+
+- 🚨 **La ficha técnica SÍ trae la versión: campo `D.2`** (tipo homologado + código de variante +
+  código de versión), más `K` (homologación). Se creía que solo traía la marca — **falso**. Pero
+  `D.2` son códigos de homologación EUROPEA, **no Base7**, así que sigue habiendo emparejamiento:
+  se filtra el catálogo por `D.1` marca → `D.3` denominación comercial → `P.1` cilindrada +
+  `P.2` potencia + `P.3` combustible + `B` año. **Con 2 o más candidatos NO se elige: decide una
+  persona.** Es la misma regla que ya aplica `emparejar()`.
+- **Una BD de matrículas gratis no existe y tampoco resolvería esto:** los datos abiertos de la DGT
+  van anonimizados (sin matrícula), el resto es de pago, y cualquiera devolvería TEXTO, no el código
+  Base7. **La foto de la ficha técnica es mejor fuente**: trae cilindrada y potencia exactas.
+- 🎯 **SINCO (= fichero SIHSA de TIREA)** es el bonificador de verdad: historial de siniestralidad de
+  los **últimos 5 años** —justo la ventana de `lastFiveYearsAccidents`— consultable **al tarificar**.
+  ⚠️ Se ofrece a **«Entidades Aseguradoras»**, y una correduría NO lo es: **no está confirmado** que
+  Grupo Asegura pueda consultarlo (preguntar a TIREA, `accesos.cima@tirea.es`, que ya hay relación
+  por CIMA). Lo que SÍ está claro es que **el asegurado puede pedir el suyo gratis**. Y asúmelo: la
+  compañía lo consulta igual al emitir, así que la siniestralidad presumida **se corrige sola** — por
+  eso el aviso «puede abaratar el precio» no es cosmético.
+  ⚠️ No verificado contra `tirea.es`: el proxy lo bloquea por política de la organización.
+- **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
+  desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
+  `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
+  a nadie por email.
 
 ## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)
 
