@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-08-31T08:06:49Z",
+  "generadoEn": "2026-09-01T08:06:20Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -169,6 +169,16 @@
       "id": "module-rrhh",
       "tipo": "module",
       "npm": "@central/module-rrhh"
+    },
+    {
+      "id": "module-seguros",
+      "tipo": "module",
+      "npm": "@central/module-seguros"
+    },
+    {
+      "id": "module-seguros-pii",
+      "tipo": "module",
+      "npm": "@central/module-seguros-pii"
     },
     {
       "id": "module-ses",
@@ -350,7 +360,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 31
+        "evidencias": 33
       },
       "rrhh": {
         "estado": "usado",
@@ -764,7 +774,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 51
+        "evidencias": 53
       },
       "rrhh": {
         "estado": "usado",
@@ -1735,6 +1745,98 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-seguros": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-seguros-pii": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -3077,6 +3179,8 @@
       "core-firma",
       "module-documental"
     ],
+    "module-seguros": [],
+    "module-seguros-pii": [],
     "module-ses": [],
     "module-subastas": [
       "module-concursos"
@@ -3120,7 +3224,9 @@
     ],
     "asegura": [
       "/api/auth/login",
-      "/api/auth/logout"
+      "/api/auth/logout",
+      "/api/operador/resumen",
+      "/api/operador/vencimientos"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -3922,7 +4028,9 @@
       "/api/contable/chat",
       "/api/contable/feedback",
       "/api/correduria",
+      "/api/correduria/cartera",
       "/api/correduria/detalle",
+      "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
       "/api/cron/borme-ingesta",
@@ -3934,6 +4042,7 @@
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
       "/api/cron/contable-proactivo",
+      "/api/cron/correduria-renovaciones",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -4071,6 +4180,7 @@
       "/api/sivra/mensajes/diagnostico-guia",
       "/api/sivra/mensajes/knowledge",
       "/api/sivra/mensajes/minar-historico",
+      "/api/sivra/mensajes/programados",
       "/api/sivra/mensajes/reply",
       "/api/sivra/mensajes/resumen-diario",
       "/api/sivra/mensajes/seed-aprendizaje",
@@ -4484,6 +4594,7 @@
       "contable_feedback",
       "contable_log",
       "contable_memoria",
+      "correduria_avisos_renovacion",
       "correduria_reglas",
       "correo_cursor",
       "correo_reglas",
@@ -4519,6 +4630,8 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
+      "mensajes_prog_pisos",
+      "mensajes_programados",
       "mercado_comparables",
       "mercado_indices",
       "mercado_zonas",
@@ -4544,6 +4657,7 @@
       "secrets_audit",
       "sector_tendencias",
       "ses_establecimientos",
+      "sivra_codigos_acceso",
       "sivra_extras_catalogo",
       "sivra_extras_reserva",
       "subastas",
@@ -4618,6 +4732,11 @@
       "description": ">"
     },
     {
+      "id": "agente-correduria",
+      "name": "agente-correduria",
+      "description": ">"
+    },
+    {
       "id": "agentes-entrenador",
       "name": "agentes-entrenador",
       "description": "Agente PROGRAMADO semanal (domingo) que mejora los prompts de los agentes por RENDIMIENTO y calidad transversal. NO vigila frescura factual (eso es /auditoria-diaria). Cambios de comportamiento SIEMPRE por PR draft + Telegram; nunca se auto-modifica. Úsala si Alberto pide \"revisa/mejora los prompts de los agentes\" o al disparo semanal. Sin secretos."
@@ -4640,7 +4759,7 @@
     {
       "id": "buscador-ia",
       "name": "buscador-ia",
-      "description": "Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide \"revisa las novedades de IA / si hay una IA mejor\" o al disparo semanal. Sin secretos."
+      "description": "Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (OpenRouter incluido: qué sirve DE VERDAD cada slug y a qué precio, más NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide \"revisa las novedades de IA / si hay una IA mejor\" o al disparo semanal. Sin secretos."
     },
     {
       "id": "central-maestro",
@@ -4800,63 +4919,11 @@
   ],
   "novedades": [
     {
-      "titulo": "Pendiente de Alberto:",
+      "titulo": "Vencimientos ya funcionando",
       "fecha": ""
     },
     {
-      "titulo": "📦 Cartera paper ahora en dólares de verdad:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Importa por el pendiente de apagar Chekin:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Su aviso de alcance era falso por defecto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "PR #1826",
-      "fecha": ""
-    },
-    {
-      "titulo": "NULL = «fila anterior a la columna»",
-      "fecha": ""
-    },
-    {
-      "titulo": "Baseline del serrucho, MEDIDA",
-      "fecha": ""
-    },
-    {
-      "titulo": "Vía elegida (v5):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Mensaje enviado a Manuel",
-      "fecha": ""
-    },
-    {
-      "titulo": "Adelanto sin él — RLS y auth eran UNA decisión:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Bloque 1-bis en `/sivra/pricing-rentabilidad` (PR #1712, mergeado):",
-      "fecha": ""
-    },
-    {
-      "titulo": "`target_pctl` de House Sevillana 0,50→0,60 APLICADO en prod",
-      "fecha": ""
-    },
-    {
-      "titulo": "Centinela #11 `ritmo_venta_destacado`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Encargo permanente a `patrimonio-cfo`",
-      "fecha": ""
-    },
-    {
-      "titulo": "PR #1702 mergeado a main",
+      "titulo": "Migrar la cartera al schema `seguros`: NO todavía",
       "fecha": ""
     }
   ],
@@ -5286,10 +5353,10 @@
   },
   "resumen": {
     "verticales": 11,
-    "packages": 36,
+    "packages": 38,
     "capacidades": 23,
-    "skills": 37,
-    "apis": 1201,
+    "skills": 38,
+    "apis": 1207,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
