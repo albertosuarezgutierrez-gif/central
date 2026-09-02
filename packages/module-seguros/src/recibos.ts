@@ -51,12 +51,15 @@ export type RecibosPoliza = {
 }
 
 /** Qué decir de un vistazo. `sin_datos` NUNCA se pinta como «al corriente». */
-export type EstadoCobro = 'sin_datos' | 'devuelto' | 'pendiente' | 'al_corriente'
+export type EstadoCobro = 'sin_datos' | 'devuelto' | 'pendiente' | 'al_corriente' | 'anulados'
 
 export function estadoCobro(r: RecibosPoliza): EstadoCobro {
   if (r.total === 0) return 'sin_datos'
   if (r.devueltos > 0) return 'devuelto'
   if (r.pendientes > 0) return 'pendiente'
+  // 🚨 Todos anulados (20 de 109 vivas, 02/09/2026: pólizas canceladas o
+  // sustituidas) se pintaba «🟢 0 cobrado(s)». Cero cobros no es estar al día.
+  if (r.cobrados === 0 && r.anulados > 0) return 'anulados'
   return 'al_corriente'
 }
 
@@ -71,6 +74,8 @@ export function explicarCobro(r: RecibosPoliza): string {
       return `${r.pendientes} recibo(s) pendiente(s) de cobro.`
     case 'al_corriente':
       return `${r.cobrados} recibo(s) cobrado(s), ninguno pendiente ni devuelto.`
+    case 'anulados':
+      return `Los ${r.anulados} recibo(s) están anulados: la póliza se canceló o se sustituyó. No hay cobro.`
   }
 }
 

@@ -106,6 +106,9 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>🛡️ Correduría</h1>
         </div>
+        <Link href="/correduria/hogar" style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, minHeight: 44, display: 'inline-flex', alignItems: 'center', fontWeight: 600, fontSize: 13 }}>
+          🏠 Presupuesto de hogar
+        </Link>
       </div>
 
       {/* ── 1. BUSCAR ──────────────────────────────────────────────────────
