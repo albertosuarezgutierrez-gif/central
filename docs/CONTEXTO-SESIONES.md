@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📅 Intranet del cliente CONSTRUIDA: calendario, aviso y enlace de un clic (02/09/2026, noche V).**
+  Implementado el spec entero en el PR #2144 con subagentes. **El agujero que apareció al hacerlo:**
+  `import_ref IS NULL` NO significa «viva y actual» — de las 109 pólizas de CIMA, **42 están canceladas**
+  (5 con vencimiento futuro) y **18 activas con el vencimiento pasado** (la más vieja, de **enero de 2013**).
+  El calendario habría dicho «tienes hasta el 13/02/2015 para renovar» y las canceladas habrían mandado
+  correo real; el cepo es `vigenciaPoliza()` compuesta en `obligacionDerivable()`. **El aviso NO puede salir
+  del portal** (solo guarda hashes; su rol no lee el email): se mudó a `apps/asegura`, apagado por defecto
+  (`ASEGURA_AVISOS_ACTIVOS`, `CRON_SECRET` sin paso franco en dev). Añadidos el enlace de un clic del correo
+  (**no canjea**: lo consumirían los escáneres antivirus) y la lista de los **26 clientes sin ningún canal**
+  en `/correduria`. 315/315 guardianes. **Falta solo Alberto:** las envs de `asegura-portal` y `CRON_SECRET`.
+
 - **🗓️ Intranet de clientes de la correduría: spec del calendario de vencimientos (02/09/2026, noche IV).**
   Alberto quiere la intranet de clientes; se le devolvió lo incómodo: **ya está diseñada y a medio construir**
   (spec del 01/09, Fase 1+4 en `main`, DDL aplicado) y **muerta por cuatro envs de Vercel que dependen de él**
