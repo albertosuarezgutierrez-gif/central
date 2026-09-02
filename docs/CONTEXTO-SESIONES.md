@@ -32,6 +32,24 @@
 
 ---
 
+### 🎨 (02/09/2026) plataforma: sistema de diseño vivo, color por tokens y SEIS tokens fantasma (PR #2011)
+- Salió de «mírate Argon Dashboard». No se importó nada de él: es un kit Bootstrap estático y el problema
+  no era la piel. **`dashboard/ui.tsx`, que el CLAUDE.md documentaba como sistema de diseño, NO lo importaba
+  nadie** — existía como documento, no como código, con ~4.900 `style={{}}` a mano alrededor.
+- Movido a **`components/ui.tsx`** + `Pagina` (ancho por contenido, contra el `maxWidth:'960px'` de 14
+  páginas), `PageHeader`, `KpiCard`, `Badge`, `btnStyle`, `TablaScroll`, y **`Dato`/`Pendiente`** con
+  `lib/dato.ts`: la regla del NULL deja de depender de la vigilancia. `/banca` es la referencia; el resto,
+  por goteo. Sidebar con iconos lucide y secciones plegables (eran 52 entradas planas).
+- 🚨 **~734 hex → tokens en 77 archivos, y SEIS tokens que NO EXISTEN** usados como `var(--danger, #dc2626)`
+  en ~37 sitios: `--danger`, `--success`, `--card`, `--background`, `--warn`, `--warn-bg`. El CSS es válido,
+  nadie se queja, y siempre se aplica el respaldo. El peor, en **transferencias**: `var(--card, #fff)` junto
+  a `var(--text)` = texto claro sobre blanco. Los dos últimos venían de main (PR #2001) y los cazó el
+  guardián nuevo en su primera pasada de CI. Guardianes: `regression-tokens-color` (3 tests: hex, media
+  pareja y tokens fantasma) y `regression-dato-tres-estados` (fija que el **0 es un valor**, no un hueco).
+- 45 bloques `<style>` sacados de 43 `.tsx` a `globals.css` (179→618 líneas), sin colisiones de clase.
+- Regla nueva en el CLAUDE.md raíz: **todo lo mecánico va a un subagente**, repartido POR ARCHIVOS.
+- **Pendiente:** migrar los ~4.900 inline styles restantes (semanas, por goteo). CI 19/19 verde.
+
 ### 🔍 (02/09/2026) Rutinas de auditoría: cobertura exhaustiva tras la correduría
 - Alberto pidió revisar la diaria y la semanal («hemos metido más cosas como correduría»). Medido: las dos decían
   **«8 apps»** desde junio (y `AGENTES-MAPA` «4») con **12** en `apps/`; ni una línea sobre la correduría; el
