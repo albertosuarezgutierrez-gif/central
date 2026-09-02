@@ -12,6 +12,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
     "@central/core-ai": "workspace:*",
+    "@central/core-catastro": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-identity": "workspace:*",
     "@central/core-payments": "workspace:*",
@@ -20,8 +21,8 @@
     "@central/module-contabilidad": "workspace:*",
     "@central/module-intercompany": "workspace:*",
     "@central/module-pagos": "workspace:*",
-    "@central/module-ses": "workspace:*",
     "@central/module-seguros": "workspace:*",
+    "@central/module-ses": "workspace:*",
     "@central/module-subastas": "workspace:*",
     "@central/module-trading": "workspace:*",
     "@hyzyla/pdfium": "^2.1.13",

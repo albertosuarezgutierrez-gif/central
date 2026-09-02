@@ -14,10 +14,15 @@
 //   devuelve `null` y quien pinta lo llama «no disponible», que es distinto.
 
 import {
+  etiquetaFormaPago,
+  importeEiac,
   objetoAsegurado,
   primaReferencia,
+  recargoFraccionamiento,
   resumirRecibos,
+  type IntervinienteFicha,
   type ObjetoAsegurado,
+  type RecargoFraccionamiento,
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
@@ -133,6 +138,18 @@ export type PolizaFicha = {
   retarificable: boolean
   /** Lo que se sabe de los recibos de ESTA póliza. Ver `RecibosPoliza`. */
   recibos: RecibosPoliza
+  /**
+   * Forma de pago (Alberto, 02/09/2026): el contrato es ANUAL y solo se anula
+   * al vencimiento; fraccionar es que la compañía financia y cobra por ello.
+   * `fraccionamiento` lo trae CIMA (108 de 109 vivas); el recargo NO — se
+   * deriva de los recibos del ciclo y por eso tiene tres estados.
+   */
+  pago: {
+    fraccionamiento: string | null
+    /** Forma de cobro del último recibo (domiciliado / oficina / tarjeta). */
+    formaCobro: string | null
+    recargo: RecargoFraccionamiento
+  }
 }
 
 export type SiniestroFicha = {
@@ -171,6 +188,14 @@ export type FichaCliente = {
   contacto: ContactoFicha
   polizas: PolizaFicha[]
   siniestros: SiniestroFicha[]
+  /**
+   * Quién más hay en sus pólizas (propietario, conductor habitual, persona de
+   * contacto…). Es lo que convierte «sin teléfono» en un teléfono cuando el
+   * tomador es una empresa: el de Esquiansa lo tiene su conductor habitual.
+   *
+   * `null` = no se ha podido consultar (la tabla falló). NO es «no hay nadie».
+   */
+  intervinientes: IntervinienteFicha[] | null
 }
 
 /**
@@ -226,7 +251,7 @@ export async function fichaCliente(
   const idsPolizas = c.polizas.map((p) => p.id)
   // Recibos y siniestros de TODAS sus pólizas de una vez. Sin esto la ficha
   // haría una consulta por póliza y con 8 pólizas ya se nota.
-  const [recibos, siniestros] = await Promise.all([
+  const [recibos, siniestros, intervinientes] = await Promise.all([
     idsPolizas.length === 0
       ? Promise.resolve([])
       : db.polizaRecibo.findMany({
@@ -257,7 +282,24 @@ export async function fichaCliente(
       },
       orderBy: { fechaHora: 'desc' },
     }),
+    leerIntervinientes(db, correduriaId, clienteId, idsPolizas),
   ])
+
+  // 🧬 La copia GEMELA del volcado: 16 de las 109 vivas existen dos veces y en
+  // 10 la copia de junio trae la dirección del riesgo (localidad/CP/m²/año)
+  // que CIMA no manda. Se lee de una vez para todas las pólizas de CIMA sin
+  // objeto. Si la consulta falla, no pasa nada: el objeto queda «sin informar»,
+  // que es lo que ya decía — nunca se inventa.
+  const numerosCima = c.polizas.filter((p) => p.importRef === null && p.numeroPoliza).map((p) => p.numeroPoliza as string)
+  const gemelas = numerosCima.length === 0
+    ? new Map<string, unknown>()
+    : await db.poliza
+        .findMany({
+          where: { correduriaId, mergedIntoPolizaId: null, importRef: { not: null }, numeroPoliza: { in: numerosCima } },
+          select: { numeroPoliza: true, datosEspecificos: true },
+        })
+        .then((filas) => new Map(filas.map((f) => [f.numeroPoliza as string, f.datosEspecificos])))
+        .catch(() => new Map<string, unknown>())
 
   const recibosPorPoliza = new Map<string, typeof recibos>()
   for (const r of recibos) {
@@ -280,6 +322,7 @@ export async function fichaCliente(
       provincia: c.provincia ?? null,
       codigoPostal: c.codigoPostal ?? null,
     },
+    intervinientes,
     polizas: c.polizas.map((p) => {
       const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
       const matricula = datos ? texto(datos.matricula) : null
@@ -296,7 +339,7 @@ export async function fichaCliente(
           primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
         }),
         fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
-        objeto: objetoAsegurado({ tipo: String(p.tipo), datos, coberturas: null }),
+        objeto: objetoConGemela(String(p.tipo), datos, p.importRef === null && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined),
         matricula,
         viva: p.importRef === null,
         retarificable: String(p.tipo) === 'auto' && matricula !== null,
@@ -310,6 +353,20 @@ export async function fichaCliente(
             formaPago: r.formaPago,
           })),
         ),
+        pago: {
+          fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+          formaCobro: etiquetaFormaPago(recibosPorPoliza.get(p.id)?.[0]?.formaPago ?? null),
+          recargo: recargoFraccionamiento({
+            fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+            primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
+            vencimiento: fechaIso(p.fechaVencimiento),
+            recibos: (recibosPorPoliza.get(p.id) ?? []).map((r) => ({
+              importe: importeEiac(r.primaTotal),
+              fechaEmision: fechaIso(r.fechaEmision),
+              situacion: r.situacion === null ? null : String(r.situacion),
+            })),
+          }),
+        },
       }
     }),
     siniestros: siniestros.map((s) => ({
@@ -329,8 +386,77 @@ export async function fichaCliente(
   }
 }
 
+/**
+ * El objeto de la póliza; si CIMA no lo informa y la gemela del volcado sí,
+ * el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre
+ * «no informado» (la dirección existe, solo que no se puede leer aquí).
+ */
+function objetoConGemela(tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown): ObjetoAsegurado {
+  const propio = objetoAsegurado({ tipo, datos, coberturas: null })
+  if (propio.estado !== 'no_informado' || datosGemela === undefined) return propio
+  const dg = esObjetoPlano(datosGemela) ? datosGemela : null
+  if (dg === null) return propio
+  const dir = dg.direccion
+  const conDir = typeof dir === 'string' && dir.startsWith('v1:') ? { ...dg, direccion: descifrar(dir) ?? dir } : dg
+  const deGemela = objetoAsegurado({ tipo, datos: conDir, coberturas: null })
+  if (deGemela.estado === 'no_informado') return propio
+  return { ...deGemela, nota: `${deGemela.nota ? deGemela.nota + ' ' : ''}(Sale de la copia de esta póliza en el volcado de junio: CIMA no manda la dirección del riesgo.)` }
+}
+
 /** Los estados que significan «esto sigue vivo» (mismo criterio que el resumen). */
 const ESTADOS_SINIESTRO_ABIERTO = new Set(['abierto', 'en_tramitacion'])
+
+/**
+ * Los intervinientes de las pólizas del cliente, ya descifrados.
+ *
+ * Nombre, teléfono y email del interviniente van cifrados (95 de 95 en las
+ * pólizas vivas). Cuando CIMA lo enlaza a su PROPIA ficha (`clienteId`), esa
+ * ficha tiene el nombre en claro y a menudo el teléfono que el interviniente
+ * no trae: se lee de allí lo que falte. Así «Juan Manuel, conductor habitual»
+ * sale con nombre y teléfono aunque su fila de interviniente solo traiga el NIF.
+ *
+ * `null` = la consulta falló. Devolver `[]` diría «no hay nadie más a quien
+ * llamar», que es justo lo que no se sabe.
+ */
+async function leerIntervinientes(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  tomadorId: string,
+  idsPolizas: string[],
+): Promise<IntervinienteFicha[] | null> {
+  if (idsPolizas.length === 0) return []
+  try {
+    const filas = await db.polizaInterviniente.findMany({
+      where: { correduriaId, polizaId: { in: idsPolizas } },
+      select: {
+        polizaId: true, rol: true, clienteId: true, origen: true,
+        nombre: true, apellidos: true, telefono: true, email: true,
+        cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
+      },
+    })
+    return filas.map((f) => {
+      const propio = [descifrar(f.nombre), descifrar(f.apellidos)].filter(Boolean).join(' ').trim() || null
+      const deFicha = f.cliente ? `${f.cliente.nombre} ${f.cliente.apellidos}`.trim() || null : null
+      const telefono = descifrar(f.telefono) ?? descifrar(f.cliente?.telefono)
+      const email = descifrar(f.email) ?? descifrar(f.cliente?.email)
+      return {
+        polizaId: f.polizaId,
+        rol: String(f.rol),
+        nombre: propio ?? deFicha,
+        nombreIlegible: propio === null && deFicha === null && (ilegible(f.nombre) || ilegible(f.apellidos)),
+        telefono,
+        email,
+        telefonoIlegible: telefono === null && (ilegible(f.telefono) || ilegible(f.cliente?.telefono)),
+        emailIlegible: email === null && (ilegible(f.email) || ilegible(f.cliente?.email)),
+        fichaId: f.clienteId ?? null,
+        esTomador: f.clienteId === tomadorId,
+        origen: String(f.origen),
+      }
+    })
+  } catch {
+    return null
+  }
+}
 
 /** `true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío. */
 function ilegible(v: string | null | undefined): boolean {

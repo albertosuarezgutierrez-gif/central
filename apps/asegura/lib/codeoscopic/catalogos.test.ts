@@ -6,8 +6,34 @@ import {
   normalizarTexto,
   leerFecha,
   emparejar,
+  hogarDisponible,
   type Opcion,
 } from './catalogos.ts'
+
+// ─── ¿Tarifica hogar? Tres estados ──────────────────────────────────────────
+
+test('hogar disponible: devuelve el id EXACTO del vendor, no uno inventado', () => {
+  const r = hogarDisponible([
+    { id: 'Car', nombre: 'Auto' },
+    { id: 'Home', nombre: 'Hogar' },
+  ])
+  assert.deepEqual(r, { estado: 'disponible', id: 'Home', nombre: 'Hogar' })
+})
+
+test('hogar se reconoce por el nombre en castellano aunque el id sea otro', () => {
+  const r = hogarDisponible([{ id: 'HH', nombre: 'Hogar' }])
+  assert.equal(r.estado, 'disponible')
+  if (r.estado === 'disponible') assert.equal(r.id, 'HH')
+})
+
+test('🚨 lista vacía NO es «hogar no disponible»: es desconocido', () => {
+  assert.deepEqual(hogarDisponible([]), { estado: 'desconocido' })
+})
+
+test('lista con ramos pero sin hogar: ausente, y se dice qué hay', () => {
+  const r = hogarDisponible([{ id: 'Car', nombre: 'Auto' }])
+  assert.deepEqual(r, { estado: 'ausente', ramos: ['Auto'] })
+})
 
 // ─── La respuesta del vendor viene con tres formas distintas ────────────────
 

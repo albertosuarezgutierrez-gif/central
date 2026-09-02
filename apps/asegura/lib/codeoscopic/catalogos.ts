@@ -126,6 +126,44 @@ export async function versiones(
   )
 }
 
+// ─── Ramos que tarifican para NUESTRA organización (gratis) ──────────────────
+
+/**
+ * `GET /insurance-lines`: los ramos que Codeoscopic tiene habilitados para esta
+ * organización. Es la respuesta a «¿se puede cotizar HOGAR?» sin preguntárselo
+ * a nadie por email y sin gastar: es un GET de catálogo, no una cotización.
+ * Se cachea como el resto (24 h): los ramos contratados no cambian a diario.
+ */
+export async function lineasDeSeguro(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/insurance-lines'))
+}
+
+/** Ids con los que el vendor nombra el ramo de hogar (`insuranceLine.id`). */
+const IDS_HOGAR = new Set(['home', 'hogar', 'household', 'homeowner'])
+
+/**
+ * ¿Está hogar entre los ramos disponibles? TRES estados, porque «no está en la
+ * lista» y «no se ha podido mirar la lista» no son lo mismo:
+ *   `disponible`  → hay un ramo cuyo id o nombre es el de hogar.
+ *   `ausente`     → la lista llegó y hogar NO está: hay que pedírselo a Codeoscopic.
+ *   `desconocido` → la lista está vacía (o no llegó). No se afirma nada.
+ * Devuelve además el id EXACTO con el que hay que mandarlo en `insuranceLine`,
+ * porque `'Car'` va con mayúscula y adivinar la de hogar sería un 400 pagado.
+ */
+export type DisponibilidadHogar =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export function hogarDisponible(lineas: Opcion[]): DisponibilidadHogar {
+  if (lineas.length === 0) return { estado: 'desconocido' }
+  const hogar = lineas.find(
+    (l) => IDS_HOGAR.has(l.id.toLowerCase()) || IDS_HOGAR.has(normalizarTexto(l.nombre)),
+  )
+  if (hogar) return { estado: 'disponible', id: hogar.id, nombre: hogar.nombre }
+  return { estado: 'ausente', ramos: lineas.map((l) => l.nombre) }
+}
+
 // ─── Matrícula → fecha de matriculación (gratis) ─────────────────────────────
 
 /**

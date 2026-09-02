@@ -1393,6 +1393,51 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   Server component; datos por `lib/ficha-asegura.ts` (interpretación PURA + tests en
   `test/regression-ficha-asegura.test.ts`).
 - **Accesos directos:** el nombre del cliente en la tabla de Renovaciones es un enlace a su ficha.
+- **📑 `/correduria/poliza/[id]` — la ficha de UNA póliza (Alberto, 02/09/2026: «pincho en la póliza y ahí
+  especifica más: datos, documentación, siniestros, recibos»).** Objeto asegurado (con la **copia gemela**
+  del volcado cuando CIMA no manda la dirección del riesgo), efecto inicial/anualidad/vencimiento con la
+  ventana de anulación, prima neta/bruta, forma de pago y recargo, **coberturas** (1.418 filas en las 109
+  vivas; el capital es TEXTO del EIAC —«ILIMITADO», «VALOR VENAL»— y no se numera), todos los recibos,
+  siniestros, intervinientes y documentación (`0` en toda la base = «todavía no se guarda ninguno», y se
+  dice). Lector `lib/poliza-asegura.ts` (`gemelaInformada` distingue «no hay gemela» de «asegura no la
+  busca»; `documentos: null` ≠ 0), tests en `test/regression-poliza-asegura.test.ts`. En la ficha del
+  cliente, la compañía y «ver póliza →» enlazan aquí.
+  🚨 **42 de las 109 pólizas CIMA están `cancelada`** (medido 02/09/2026): la ficha las saca de «Pólizas
+  vivas» a un bloque plegado «Canceladas en CIMA» y no ofrece «Retarificar» sobre ellas. **Recibos todos
+  anulados** (20 vivas) se pintaba «🟢 0 cobrado(s)»: ahora es «⚪ N anulado(s)» (`estadoCobro` ganó el
+  estado `anulados`). Y **prima 0 no es una prima** (24 vivas): `primaReferencia` devuelve `null` → «sin dato».
+- **📞 El teléfono de la ficha sale de `contactoEfectivo()` (02/09/2026), no solo del tomador.** Una
+  empresa (Esquiansa) decía «sin teléfono» teniendo a su conductor habitual con teléfono en la ficha
+  enlazada por CIMA. Ahora el número lleva entre paréntesis DE QUIÉN es (con enlace a su ficha), y cada
+  póliza lista sus intervinientes debajo de «Qué asegura». `intervinientes === null` = asegura no los
+  informa → «sin teléfono · intervinientes sin comprobar», nunca «nadie tiene teléfono».
+- **🏠 `/correduria/hogar` — presupuesto de hogar desde el Catastro (02/09/2026).** Con la dirección
+  («Calle San Vicente 40, 2º 14» + municipio + provincia) o la referencia catastral de 20, el Catastro da
+  m², año de construcción, uso y CP — gratis, sin preguntar al cliente. Verificado sobre el caso real de
+  Alberto: 76 m² · 1994 · Residencial · 41002, idéntico a lo tecleado en la póliza. Lógica en
+  `lib/correduria-hogar.ts` (6 estados: `ok` · `elegir` —varios pisos: elige una persona— · `ambigua` ·
+  `no_encontrado` · `direccion_ilegible` · `error`), API `POST /api/correduria/catastro` (sesión).
+  Usa `@central/core-catastro` (extraído de subastas; `lib/subastas/enriquecer.ts` lo re-exporta).
+  🚨 La referencia de 14 es el EDIFICIO y no trae m² ni año: se pide la de 20 (`precalificarHogar`
+  lo declara). Pedir precio de hogar a Codeoscopic sigue SIN conectar (solo auto), pero la página ya
+  dice si **hogar tarifica** para nuestra organización: `lineasCodeoscopic()` → puerto
+  `GET /api/operador/codeoscopic/lineas` (= `GET /insurance-lines` del vendor, **gratis**, corre con
+  el interruptor apagado). Tres estados: `disponible` (con el id EXACTO del ramo, que es lo que va en
+  `insuranceLine`) · `ausente` (hay que pedírselo a Codeoscopic) · `desconocido` (no se pudo mirar).
+- **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
+  del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
+  —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no
+  tiene la clave, el aviso dice cuántas direcciones no ha podido leer; un bloque vacío ahí no es «nadie».
+- **💳 Forma de pago en la ficha (Alberto, 02/09/2026):** columna «Pago» por póliza —periodicidad
+  (`fraccionamiento`, CIMA lo trae en 108/109 vivas), forma de cobro del último recibo (CC/OF/TA →
+  domiciliado/oficina/tarjeta) y el **recargo por fraccionar**, que CIMA NO da y se deriva de los
+  recibos del ciclo con TRES estados (`recargoFraccionamiento()` en module-seguros, 8 tests): solo se
+  afirma con el ciclo completo — con 2 de 4 recibos la resta sale negativa y parecería que fraccionar
+  ahorra. Bajo «Vence», `ventanaAnulacion()` recuerda que el contrato es anual y solo se deja al
+  vencimiento avisando 30 días antes (se pinta cuando faltan ≤60 días).
+- **📄 «Subir póliza o documento ↗»** (botón en la ficha) salta a `asegura/cartera/subir`: el agente lee
+  el PDF/foto y enseña lo leído. Es gratis. **Hoy solo lee pólizas de AUTO y NO guarda el fichero**
+  (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
 - **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
   email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
   encaje (`41003` es CP y nº de póliza plausibles a la vez).
