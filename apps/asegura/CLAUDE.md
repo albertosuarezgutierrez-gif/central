@@ -19,6 +19,20 @@ helper puro y probado `urlFuenteCartera` (`lib/asegura-url.ts`). `ASEGURA_FUENTE
 Supabase de Manuel (`ASEGURA_DATABASE_URL`). La fuente elegida sin conexión es «pendiente», nunca
 cae a la otra en silencio.
 
+🚨 **El `?schema=seguros` se FUERZA, pisando el que traiga `DATABASE_URL` (02/09/2026, PR #2029).** Esa
+cadena es la MISMA que usa la auth (`lib/db.ts`), donde el schema correcto es `public`; si llega de Vercel
+con `?schema=public` y se respetara, el cliente de la CARTERA apuntaría ahí — y en `public` **no existe
+`corredurias`** (falla toda la cartera) mientras que **`clientes` SÍ existe y es OTRA tabla**: leerías los
+clientes de central creyendo que son los de la correduría. El schema de la cartera no es negociable.
+
+🚨 **Y un fallo de lectura NUNCA sale pelado: `{estado:'error', motivo, detalle}`.** `motivo` distingue
+`bd` de `sin_correduria` (se arreglan en sitios distintos) y `detalle` es una pista CORTA y sin secretos
+(`lib/comisiones-motivo.ts`, puro y testeado): fuente + nombre del error + código de Prisma + tabla.
+**Jamás el `message` crudo** — el de `PrismaClientInitializationError` lleva usuario y contraseña dentro,
+y esto viaja a plataforma y de ahí a un Telegram. Además se `console.error` el error entero: hasta este PR
+los dos `catch {}` de la ruta y de `lib/comisiones.ts` no dejaban rastro **ni en los logs de la función**,
+y por eso «no se ha podido leer la cartera» fue un callejón sin salida durante días.
+
 🚨 **El origen NO está vivo: está CONGELADO desde el 31/08 06:15 UTC, y no por decisión.** Medido en
 los logs de Vercel: el CRM de Manuel (repo `albertosuarezgutierrez-gif/asegura` + proyecto Vercel
 `asegura`, ambos YA en el equipo de Alberto, sirviendo `app.grupoasegura.com`) falla toda consulta
