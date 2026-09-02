@@ -32,6 +32,16 @@
 
 ---
 
+### 🔑 (02/09/2026) `GH_PAT_TRIGGER`: renovado el 01/09, alcance y caducidad sin verificar
+- La entrada 🔴 del 01/09 («renovar el PAT») **ya está resuelta**: el 401 duró del 31/08 13:25 al 01/09 ~08:50 UTC;
+  desde el PR #1933 (08:53) la radiografía vuelve a abrirse y a mergearla el bot (38 PRs hasta hoy, #2008 incluido).
+  Las 123 ramas huérfanas quedaron barridas (1 viva). Nadie anotó la renovación: se dedujo de los PRs.
+- **Lo que un agente NO puede ver:** tipo de token (clásico con `repo` = TODOS los repos de Alberto; fine-grained =
+  solo `central`), permisos y fecha de caducidad. Lo usa en 4 workflows (`auditoria.yml`, `rutinas-automerge.yml`,
+  `ai-programar.yml`, `latido-reparar.yml`) y necesita solo **Contents + Pull requests: write** sobre `central`.
+- Pendiente de Alberto: mirar el token en Settings → Developer settings → Tokens y **anotar aquí la caducidad**;
+  si es clásico, sustituirlo por uno fine-grained. Cuando caduque, el fallo vuelve a ser MUDO (solo email de Actions).
+
 ### 🔍 (02/09/2026) Rutinas de auditoría: cobertura exhaustiva tras la correduría
 - Alberto pidió revisar la diaria y la semanal («hemos metido más cosas como correduría»). Medido: las dos decían
   **«8 apps»** desde junio (y `AGENTES-MAPA` «4») con **12** en `apps/`; ni una línea sobre la correduría; el
