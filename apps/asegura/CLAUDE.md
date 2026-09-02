@@ -677,7 +677,17 @@ buscador rotula ahora por **`vitalidad`** (`@central/module-seguros/vitalidad.ts
 `viva` = entra por CIMA o vence dentro de 18 meses · `historica` · `sin_fecha` · `desconocida`. Las
 dos últimas NO entierran a nadie: `polizasCima === null` es «no se contó», jamás 0.
 
-Cifras sobre las 32.600 fichas (cero fusionadas nunca, `merged_into_*` sin estrenar):
+✅ **Y desde el 02/09/2026 SÍ se fusiona: 50 fichas** (`merged_into_cliente_id` + `cliente_merge_log`,
+que es **append-only** por trigger). Tres lotes, cada uno con su criterio de identidad escrito en el
+propio SQL (`apps/asegura/prisma/sql/2026-09-02_fusion_*.sql`): `fusion-cima` (34, nombre o teléfono
+**+** póliza común o DNI), `fusion-dni` (8, mismo hash de DNI) y `fusion-nombre-telefono` (8, nombre +
+apellidos + teléfono con OK expreso de Alberto porque **no** comparten póliza). Nada se borra: la
+lápida guarda `snapshot_before`. Tras los tres: **0 grupos con DNI repetido**, **0 grupos
+nombre+teléfono que toquen la cartera viva** y **0 pólizas colgando de una lápida**.
+🚫 **Lo que sigue sin fusionarse a propósito:** los ~545 grupos que solo comparten nombre+teléfono y
+NO tocan la cartera viva (leads del volcado, donde el fijo compartido suele ser una familia).
+
+Cifras sobre las 32.600 fichas (medidas ANTES de esas 50 fusiones):
 - **740 grupos comparten teléfono** (1.599 fichas). **203 de ellos con nombres distintos**: familias
   y empresas, NO duplicados. Por eso no se fusiona nada automáticamente ni se dice «duplicado» a secas.
 - De los **80 clientes vivos, 48 tienen otra ficha** (36 por teléfono, 38 por nombre exacto, 1 por DNI).
