@@ -592,6 +592,14 @@ que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míra
     (factura 14 jul–13 ago: 32.708 min ≈ 92,51 US$ de 117 US$) y no los mira nadie: los agentes verifican
     con tsc/tests y mergean en minutos. Con el flag solo construye `main` (producción). Para forzar una
     preview concreta (verificar UI en Vercel antes de mergear), pon **`[preview]` en el ASUNTO del commit**.
+    🚨 **Y tiene que ser el ÚLTIMO commit del push, no uno cualquiera.** El script lee
+    `VERCEL_GIT_COMMIT_MESSAGE` (`scripts/vercel-ignore-build.mjs:42`), que es el asunto del commit del
+    deployment — o sea, el HEAD que se empuja. Fallo real del 02/09/2026 (PR #2054): se puso `[preview]`
+    en el commit de la migración de 43 cabeceras, y después se hicieron dos commits más (memoria y un
+    merge de `main` para resolver un conflicto). El deployment tomó el asunto del merge, que no lo
+    llevaba, y `Vercel – plataforma` salió `Canceled by Ignored Build Step`: **43 pantallas con el aspecto
+    cambiado se iban a producción sin haberse visto nunca**, que era justo lo que se quería evitar. Si tras
+    marcarlo añades commits, el marcador se pierde: repítelo en el asunto del último.
     ialimp NO lo lleva a propósito: cliente vivo (Sique Brilla) → ahí sigue la regla «preview verde antes de main».
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
