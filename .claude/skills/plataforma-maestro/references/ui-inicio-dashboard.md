@@ -177,8 +177,14 @@ donde el fallo sería peor: `MAX(fecha_operacion)` ignora los NULL y declararía
 está entregando.
 
 ⏸️ **LO QUE SIGUE PENDIENTE DE DECISIÓN DE ALBERTO — no lo resuelvas por tu cuenta:**
-- **43 cabeceras más** por migrar a `PageHeader` (+7 `BtnLink`, +9 `ThinBar`). Es mecánico y va por
-  tandas de agentes con lista explícita de ficheros; no se hizo de golpe a propósito.
+- ~~43 cabeceras más~~ **HECHO el 02/09/2026 (PR #2054): la app está entera sobre `PageHeader`.** Fueron
+  4 tandas de agentes con lista EXPLÍCITA de ficheros por tanda. Al adoptarlas aparecieron **dos huecos que
+  no se ven leyendo la primitiva, solo intentando usarla**: `BtnLink` no soportaba `target`/`rel` (tres
+  botones reales abren pestaña nueva y se quedaban fuera) y `ThinBar` no llevaba transición. Lección: una
+  primitiva no está terminada hasta que la usa la tercera pantalla. Quedan FUERA a propósito
+  `banca/transferencia` (sus 3 `<h1>` son estados de un formulario) e `invitado/limpieza` (única pantalla de
+  Vanesa, intranet de invitado). Y **`--sin-previews` hace que un cambio de aspecto masivo se vea por primera
+  vez en producción**: se fuerza la preview con `[preview]` en el asunto del commit.
 - **Cuál de los dos hubs financieros sobrevive** (`/finanzas` vs `/banca`), cuáles de las 6 pantallas de
   dinero de pisos caben como pestañas y si sobran 3 de las 4 de pricing. El código ya está compartido:
   lo que queda son URLs, y elegir cuál desaparece cambia la rutina diaria de Alberto.
