@@ -38,8 +38,9 @@
   (`module-seguros/emision.ts`) + `registrarPolizaEmitida` + puerto cerrado tras `CODEOSCOPIC_EMISION_ACTIVA`;
   **el envío al vendor NO se construye** (no hay sandbox para el gate de idempotencia). Portal Fase 4 (vínculo
   por email, lectura por columnas) y canal web (`/seguros` en plataforma → alta `fuente=web` → Telegram
-  `correduria.lead-nuevo`) construidos por agentes; PR de la tarde. Pendiente de Alberto: contraseña del rol
-  + `DATABASE_URL` + `PII_LOOKUP_KEY` en el proyecto Vercel del portal (¿existe?), y entorno de pruebas de Codeoscopic.
+  `correduria.lead-nuevo`) construidos por agentes. **PR #2118 mergeado** (`f0dc7cbb`); probado en prod:
+  `/seguros` 200, lead vacío 422, honeypot 200 sin efectos. Pendiente de Alberto: contraseña del rol +
+  `DATABASE_URL` + `PII_LOOKUP_KEY` en el proyecto Vercel del portal (¿existe?), y entorno de pruebas de Codeoscopic.
 - **«Repara»: el menú mentía en dos sitios (02/09/2026).** Sin objetivo dicho, así que se buscó qué estaba roto de
   verdad. (1) El lateral encendía DOS entradas a la vez: «Inicio» + el segmento en `/banca?tab=*` (lo introdujo
   #2106 — «Inicio» ES `/banca` y los cinco segmentos comparten esa ruta), y «Pricing Lab» + «Pricing auto» /
