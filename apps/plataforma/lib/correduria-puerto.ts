@@ -7,10 +7,26 @@
 
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
 
+/** Causa que declara asegura cuando su BD falla (`causa` en la respuesta del puerto).
+ *  Cada una se arregla en un sitio distinto; una causa desconocida se muestra tal cual. */
+export const CAUSAS_ASEGURA: Record<string, string> = {
+  credenciales: 'la base de datos rechaza la contraseña de DATABASE_URL (rol prisma_seguros): la URL pegada en Vercel no lleva la contraseña actual del rol',
+  permisos: 'el rol de DATABASE_URL no tiene permiso sobre el schema seguros',
+  conexion: 'no se llega a la base de datos (host, puerto o pooler)',
+  esquema: 'falta una tabla o columna en el schema seguros',
+  sin_correduria: 'la base responde pero no hay ninguna fila en corredurias',
+  otro: 'error no clasificado; mira los logs de central-asegura en Vercel',
+}
+
+export function describirCausaAsegura(causa: string | undefined): string | null {
+  if (!causa) return null
+  return CAUSAS_ASEGURA[causa] ?? causa
+}
+
 export const MOTIVOS_PUERTO: Record<MotivoPuerto, string> = {
   secreto_rechazado:
     'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos).',
-  asegura_error: 'asegura respondió, pero no pudo leer su base de datos.',
+  asegura_error: 'asegura respondió, pero no pudo leer la cartera en central (DATABASE_URL del proyecto Vercel central-asegura, rol prisma_seguros).',
   respuesta_ilegible: 'la respuesta no tenía la forma esperada.',
   red: 'no se pudo llegar a asegura (timeout, DNS o TLS).',
 }

@@ -20,7 +20,7 @@ export type MotivoErrorCartera =
 
 export type CarteraAsegura =
   | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo: MotivoErrorCartera }
+  | { estado: 'error'; motivo: MotivoErrorCartera; causa?: string }
   | {
       estado: 'ok'
       nombre: string | null
@@ -35,6 +35,14 @@ export type CarteraAsegura =
       vence30: number | null
       vence60: number | null
     }
+
+/** Añade la causa que declara asegura solo si viene: los tests y la UI no ven una clave vacía. */
+function conCausa(
+  r: { estado: 'error'; motivo: MotivoErrorCartera },
+  causa: unknown,
+): { estado: 'error'; motivo: MotivoErrorCartera; causa?: string } {
+  return typeof causa === 'string' && causa ? { ...r, causa } : r
+}
 
 const CAMPOS_NUM = [
   'clientes', 'leads', 'polizasVigentes', 'polizasPendientesFecha', 'polizasNoVigentes', 'siniestrosAbiertos',
@@ -51,7 +59,7 @@ export function interpretarCartera(status: number, json: unknown): CarteraAsegur
   if (typeof r !== 'object' || r === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
   const resumen = r as Record<string, unknown>
   if (resumen.estado === 'sin_configurar') return { estado: 'sin_configurar' }
-  if (resumen.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (resumen.estado === 'error') return conCausa({ estado: 'error', motivo: 'asegura_error' }, resumen.causa)
   if (resumen.estado !== 'ok') return { estado: 'error', motivo: 'respuesta_ilegible' }
   for (const k of CAMPOS_NUM) {
     if (typeof resumen[k] !== 'number' || !Number.isFinite(resumen[k] as number)) {
@@ -151,7 +159,7 @@ export function interpretarObjeto(v: unknown): ObjetoAsegurado | null {
 
 export type VencimientosAsegura =
   | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo: MotivoErrorCartera }
+  | { estado: 'error'; motivo: MotivoErrorCartera; causa?: string }
   | { estado: 'ok'; dias: number; polizas: PolizaVencimiento[] }
 
 /** Interpretación PURA de la respuesta del puerto de vencimientos.
@@ -164,7 +172,7 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
   }
   const r = json as Record<string, unknown>
   if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
-  if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (r.estado === 'error') return conCausa({ estado: 'error', motivo: 'asegura_error' }, r.causa)
   if (r.estado !== 'ok' || !Array.isArray(r.polizas)) return { estado: 'error', motivo: 'respuesta_ilegible' }
   const polizas: PolizaVencimiento[] = []
   for (const fila of r.polizas) {

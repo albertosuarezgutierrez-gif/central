@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
+import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica, resumenCartera } from '@/lib/cartera'
 
@@ -15,10 +16,10 @@ export async function GET(req: Request) {
     const correduria = await correduriaUnica()
     // BD configurada pero sin fila de correduría: raro de verdad → error visible,
     // nunca un resumen a ceros.
-    if (!correduria) return NextResponse.json({ resumen: { estado: 'error' } })
+    if (!correduria) return NextResponse.json({ resumen: { estado: 'error', causa: 'sin_correduria' } })
     const resumen = await resumenCartera(correduria.id)
     return NextResponse.json({ correduria: { nombre: correduria.nombre }, resumen })
-  } catch {
-    return NextResponse.json({ resumen: { estado: 'error' } })
+  } catch (e) {
+    return NextResponse.json({ resumen: { estado: 'error', causa: registrarErrorCartera('operador/resumen', e) } })
   }
 }
