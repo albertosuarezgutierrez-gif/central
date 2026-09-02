@@ -654,3 +654,19 @@ html[data-saldo-oculto='1'] .saldo-privado {
 @media (max-width: 380px) {
   .bk-kpis { grid-template-columns: 1fr !important; }
 }
+
+/* ── Negocios del holding (/banca?tab=negocios · NegociosResumen.tsx) ──────────────────────────
+   Rejilla de las tarjetas de negocio, repetida en dos sitios del componente. Vivía como estilo
+   EN LÍNEA + un `<style>` incrustado con `!important` para el móvil: el `!important` solo hacía
+   falta porque la media query tenía que ganarle al estilo en línea. Con la regla entera aquí, el
+   estilo en línea desaparece y el `!important` sobra.
+   El mínimo son 300 px (no 260): la cifra de `Stat` se pinta a 24 px y por debajo de eso los tres
+   stats de una tarjeta se apilaban en tres filas. */
+.neg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+@media (max-width: 768px) {
+  .neg-grid { grid-template-columns: 1fr; }
+}
