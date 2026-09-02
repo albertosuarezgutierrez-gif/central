@@ -329,9 +329,19 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
 
 - **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene
   menos de 3 letras: eso NO es «no hay nadie».
-- **`GET /cliente?id=`** — la ficha entera de una vez (pólizas + recibos + siniestros + contacto),
-  para que `plataforma` no encadene tres llamadas. Cuatro estados: `sin_configurar` · `error` ·
-  **`no_encontrado`** (se miró y no está) · `ok`. Los dos primeros NO se colapsan con el tercero.
+- **`GET /cliente?id=`** — la ficha entera de una vez (pólizas + recibos + siniestros + contacto +
+  **intervinientes**), para que `plataforma` no encadene tres llamadas. Cuatro estados: `sin_configurar` ·
+  `error` · **`no_encontrado`** (se miró y no está) · `ok`. Los dos primeros NO se colapsan con el tercero.
+  🚨 **`intervinientes` (02/09/2026): «sin teléfono» en el tomador NO es «no hay a quién llamar».**
+  Esquiansa (empresa) no tiene teléfono; su `conductor_habitual` —dueño del coche— sí, en su propia
+  ficha enlazada por CIMA. Medido sobre las 109 vivas: **81 traen intervinientes** (95 filas: 67
+  propietario, 21 conductor habitual, 5 asegurado, 1 contacto, 1 ocasional), **14 enlazados a OTRA
+  ficha** distinta del tomador, y de los 25 tomadores vivos sin teléfono **6 lo tienen en un
+  interviniente**. Nombre/teléfono/email del interviniente van cifrados (95/95); si su fila no trae
+  teléfono se lee el de la ficha enlazada. `leerIntervinientes` devuelve **`null` si la consulta falla**
+  (no `[]`: eso diría «no hay nadie más»). Quién se llama lo decide `contactoEfectivo()` de
+  `@central/module-seguros` (puro, 7 tests): tomador primero; si no, el primer interviniente por
+  prioridad de rol (contacto > conductor habitual > propietario…), y la pantalla dice DE QUIÉN es.
 - **`GET /buscar?q=`** — el buscador de TODO (ver abajo).
 - **`GET /impagados`** — la cola de retención (ver abajo).
 

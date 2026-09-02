@@ -1393,6 +1393,14 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   Server component; datos por `lib/ficha-asegura.ts` (interpretación PURA + tests en
   `test/regression-ficha-asegura.test.ts`).
 - **Accesos directos:** el nombre del cliente en la tabla de Renovaciones es un enlace a su ficha.
+- **📞 El teléfono de la ficha sale de `contactoEfectivo()` (02/09/2026), no solo del tomador.** Una
+  empresa (Esquiansa) decía «sin teléfono» teniendo a su conductor habitual con teléfono en la ficha
+  enlazada por CIMA. Ahora el número lleva entre paréntesis DE QUIÉN es (con enlace a su ficha), y cada
+  póliza lista sus intervinientes debajo de «Qué asegura». `intervinientes === null` = asegura no los
+  informa → «sin teléfono · intervinientes sin comprobar», nunca «nadie tiene teléfono».
+- **📄 «Subir póliza o documento ↗»** (botón en la ficha) salta a `asegura/cartera/subir`: el agente lee
+  el PDF/foto y enseña lo leído. Es gratis. **Hoy solo lee pólizas de AUTO y NO guarda el fichero**
+  (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
 - **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
   email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
   encaje (`41003` es CP y nº de póliza plausibles a la vez).

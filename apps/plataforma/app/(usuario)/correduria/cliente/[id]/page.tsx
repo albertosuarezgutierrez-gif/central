@@ -1,5 +1,9 @@
 import Link from 'next/link'
-import { fichaAsegura, urlRetarificar, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
+import { contactoEfectivo, etiquetaRol } from '@central/module-seguros'
+import {
+  fichaAsegura, urlRetarificar, urlSubirPoliza,
+  type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
+} from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
@@ -34,13 +38,15 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
         <h1 style={{ margin: '6px 0 2px', fontSize: 24 }}>{ficha.nombre}</h1>
         <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <span>{ficha.tipo === 'cliente' ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
-          <Contacto c={ficha.contacto} />
+          <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} />
         </div>
       </div>
 
+      <Acciones />
+
       <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos.length} />
 
-      <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza entra hoy por CIMA." />
+      <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza entra hoy por CIMA." intervinientes={ficha.intervinientes} />
 
       <Siniestros lista={ficha.siniestros} />
 
@@ -51,6 +57,7 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
           polizas={historicas}
           vacio=""
           plegado
+          intervinientes={ficha.intervinientes}
         />
       )}
     </div>
@@ -108,23 +115,71 @@ function Kpi({ label, valor, sub, color }: { label: string; valor: string; sub?:
   )
 }
 
-// ── Contacto ────────────────────────────────────────────────────────────────
+// ── Acciones ────────────────────────────────────────────────────────────────
+// Lo que se puede HACER desde la ficha, además de mirar. Subir un documento es
+// gratis (el agente lo lee; el precio se pide aparte) y vive en asegura porque
+// comparte pantalla con la cotización que sale de lo leído.
 
-function Contacto({ c }: { c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null } }) {
+function Acciones() {
+  return (
+    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 }}>
+      <a
+        href={urlSubirPoliza()}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, minHeight: 44, display: 'inline-flex', alignItems: 'center', fontWeight: 600 }}
+      >
+        📄 Subir póliza o documento ↗
+      </a>
+      <span style={{ color: 'var(--muted)' }} title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. El fichero NO se guarda todavía: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
+        el agente la lee y enseña lo que ha encontrado · hoy solo auto · el fichero no se guarda aún
+      </span>
+    </div>
+  )
+}
+
+// ── Contacto ────────────────────────────────────────────────────────────────
+// 🚨 «Sin teléfono» en la ficha del TOMADOR no es «no hay a quién llamar».
+// Esquiansa (empresa) no tiene teléfono; su conductor habitual —dueño del
+// coche— sí, en su propia ficha enlazada por CIMA. `contactoEfectivo` mira
+// primero al tomador y luego a los intervinientes, y dice DE QUIÉN es el número.
+
+function Contacto({ c, intervinientes }: {
+  c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
+  intervinientes: IntervinienteFicha[] | null
+}) {
   const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
+  const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
+  const quien = ef.quien
+    ? `${ef.quien.nombre ?? 'sin nombre legible'}, ${etiquetaRol(ef.quien.rol)}`
+    : null
+  const deOtro = (via: 'tomador' | 'interviniente' | null) =>
+    via === 'interviniente' && quien ? (
+      <span style={{ fontSize: 11 }}>
+        {' '}({ef.quien?.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{quien}</Link> : quien})
+      </span>
+    ) : null
+  // Sin intervinientes que mirar, «sin teléfono» solo habla del tomador.
+  const coletilla = ef.intervinientesSinMirar ? ' · intervinientes sin comprobar' : ''
   return (
     <>
-      {c.telefono ? (
-        <a href={`tel:${c.telefono.replace(/\s/g, '')}`}>📞 {c.telefono}</a>
+      {ef.telefono ? (
+        <span>
+          <a href={`tel:${ef.telefono.replace(/\s/g, '')}`}>📞 {ef.telefono}</a>
+          {deOtro(ef.viaTelefono)}
+        </span>
       ) : (
         // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
         // en sitios distintos (la clave PII vs. pedírselo al cliente).
-        <span title={c.telefonoIlegible ? 'Está guardado pero cifrado con otra clave: no se puede leer desde aquí' : 'No consta teléfono en su ficha'}>
-          📞 {c.telefonoIlegible ? 'cifrado' : 'sin teléfono'}
+        <span title={c.telefonoIlegible ? 'Está guardado pero cifrado con otra clave: no se puede leer desde aquí' : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
+          📞 {c.telefonoIlegible ? 'cifrado' : `sin teléfono${coletilla}`}
         </span>
       )}
-      {c.email ? (
-        <a href={`mailto:${c.email}`}>✉️ {c.email}</a>
+      {ef.email ? (
+        <span>
+          <a href={`mailto:${ef.email}`}>✉️ {ef.email}</a>
+          {deOtro(ef.viaEmail)}
+        </span>
       ) : (
         <span title={c.emailIlegible ? 'Cifrado con otra clave: no se puede leer desde aquí' : 'No consta email'}>
           ✉️ {c.emailIlegible ? 'cifrado' : 'sin email'}
@@ -143,8 +198,9 @@ const TIPOS: Record<string, string> = {
   comunidades: '🏢 Comunidad', otros: '📄 Otros',
 }
 
-function Polizas({ titulo, nota, polizas, vacio, plegado }: {
+function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
   titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean
+  intervinientes: IntervinienteFicha[] | null
 }) {
   if (polizas.length === 0) {
     if (!vacio) return null
@@ -176,6 +232,7 @@ function Polizas({ titulo, nota, polizas, vacio, plegado }: {
                 <td style={td}>{TIPOS[p.tipo] ?? p.tipo}</td>
                 <td style={{ ...td, minWidth: 140 }}>
                   <ObjetoCelda p={p} />
+                  <Intervinientes lista={intervinientes} polizaId={p.id} />
                 </td>
                 <td style={td}>
                   {p.aseguradora}
@@ -223,6 +280,32 @@ function Polizas({ titulo, nota, polizas, vacio, plegado }: {
         <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>{titulo}</summary>
         <div style={{ marginTop: 10 }}>{tabla}</div>
       </details>
+    </div>
+  )
+}
+
+/**
+ * Quién más figura en la póliza (propietario, conductor habitual, contacto…),
+ * debajo de qué asegura. Se omite al tomador: ya es el título de la ficha.
+ * `null` = asegura no los informa; se calla en vez de afirmar que no hay.
+ */
+function Intervinientes({ lista, polizaId }: { lista: IntervinienteFicha[] | null; polizaId: string }) {
+  if (lista === null) return null
+  const otros = lista.filter(i => i.polizaId === polizaId && !i.esTomador)
+  if (otros.length === 0) return null
+  return (
+    <div style={{ ...sub, marginTop: 4 }}>
+      {otros.map((i, n) => (
+        <div key={`${i.rol}-${n}`}>
+          <span style={{ textTransform: 'capitalize' }}>{etiquetaRol(i.rol)}</span>:{' '}
+          {i.fichaId ? (
+            <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
+          ) : (
+            i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
+          )}
+          {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`}>📞</a></>}
+        </div>
+      ))}
     </div>
   )
 }

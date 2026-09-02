@@ -90,3 +90,9 @@ export {
   type Hermana,
   type AvisoHermanas,
 } from './vitalidad.ts'
+export {
+  etiquetaRol,
+  contactoEfectivo,
+  type IntervinienteFicha,
+  type ContactoEfectivo,
+} from './intervinientes.ts'

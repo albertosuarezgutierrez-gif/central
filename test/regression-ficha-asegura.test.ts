@@ -103,3 +103,37 @@ test('la búsqueda propaga el motivo del fallo, no un vacío', () => {
   assert.deepEqual(interpretarBusqueda(200, { estado: 'error' }), { estado: 'error', motivo: 'asegura_error' })
   assert.deepEqual(interpretarBusqueda(200, { estado: 'ok' }), { estado: 'error', motivo: 'respuesta_ilegible' })
 })
+
+// ── Intervinientes (02/09/2026) ─────────────────────────────────────────────
+// Esquiansa (empresa) «sin teléfono»: el número está en su conductor habitual.
+
+test('los intervinientes se leen y una fila rara se salta sin tumbar la ficha', () => {
+  const r = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: {
+      ...FICHA_OK.ficha,
+      intervinientes: [
+        { polizaId: 'p1', rol: 'conductor_habitual', nombre: 'Juan Manuel Lopez Benjumea', telefono: '600', fichaId: 'f2', esTomador: false, origen: 'cima' },
+        { rol: 'propietario' }, // sin polizaId: se salta
+        'basura',
+      ],
+    },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.intervinientes?.length, 1)
+  assert.equal(r.ficha.intervinientes?.[0].telefono, '600')
+  assert.equal(r.ficha.intervinientes?.[0].fichaId, 'f2')
+})
+
+test('🚨 sin bloque de intervinientes → null, NO lista vacía', () => {
+  // `[]` diría «no hay nadie más a quien llamar»; `null` dice «asegura no lo informa».
+  const r = interpretarFicha(200, FICHA_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.intervinientes, null)
+  const vacio = interpretarFicha(200, { ...FICHA_OK, ficha: { ...FICHA_OK.ficha, intervinientes: [] } })
+  assert.equal(vacio.estado, 'ok')
+  if (vacio.estado !== 'ok') return
+  assert.deepEqual(vacio.ficha.intervinientes, [])
+})

@@ -81,6 +81,21 @@ export type ContactoFicha = {
   codigoPostal: string | null
 }
 
+/** Quién más hay en una póliza. Misma forma que en `@central/module-seguros`. */
+export type IntervinienteFicha = {
+  polizaId: string
+  rol: string
+  nombre: string | null
+  nombreIlegible: boolean
+  telefono: string | null
+  email: string | null
+  telefonoIlegible: boolean
+  emailIlegible: boolean
+  fichaId: string | null
+  esTomador: boolean
+  origen: string
+}
+
 export type Ficha = {
   id: string
   nombre: string
@@ -89,6 +104,12 @@ export type Ficha = {
   contacto: ContactoFicha
   polizas: PolizaFicha[]
   siniestros: SiniestroFicha[]
+  /**
+   * `null` = asegura no informa intervinientes (versión desplegada más vieja, o
+   * su consulta falló). Entonces «sin teléfono» solo significa «el tomador no
+   * lo tiene» — y la pantalla lo dice así, no como «nadie lo tiene».
+   */
+  intervinientes: IntervinienteFicha[] | null
 }
 
 export type RespuestaFicha =
@@ -163,6 +184,36 @@ export function leerRecibos(v: unknown): RecibosPoliza | null {
           }
         : null,
   }
+}
+
+/**
+ * Los intervinientes, o `null` si el bloque no llega. Una fila con forma rara
+ * se salta (no invalida la ficha: son un extra para llamar, no el contrato).
+ */
+export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: IntervinienteFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const i = fila as Record<string, unknown>
+    const polizaId = cadena(i.polizaId)
+    const rol = cadena(i.rol)
+    if (polizaId === null || rol === null) continue
+    out.push({
+      polizaId,
+      rol,
+      nombre: cadena(i.nombre),
+      nombreIlegible: i.nombreIlegible === true,
+      telefono: cadena(i.telefono),
+      email: cadena(i.email),
+      telefonoIlegible: i.telefonoIlegible === true,
+      emailIlegible: i.emailIlegible === true,
+      fichaId: cadena(i.fichaId),
+      esTomador: i.esTomador === true,
+      origen: cadena(i.origen) ?? 'sin_informar',
+    })
+  }
+  return out
 }
 
 /**
@@ -256,6 +307,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       },
       polizas,
       siniestros,
+      intervinientes: leerIntervinientes(f.intervinientes),
     },
   }
 }
@@ -344,4 +396,10 @@ export async function buscarEnAsegura(q: string): Promise<RespuestaBusqueda> {
  *  que gasta dinero y vive detrás de su propia sesión). Pública, no es secreto. */
 export function urlRetarificar(polizaId: string): string {
   return `${urlAsegura()}/cartera/poliza/${polizaId}`
+}
+
+/** Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura
+ *  porque comparte pantalla con la cotización que sale de lo leído. Gratis. */
+export function urlSubirPoliza(): string {
+  return `${urlAsegura()}/cartera/subir`
 }
