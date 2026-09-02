@@ -82,6 +82,16 @@ del producto (ver Destino declarado).
    histórico, con vencimientos de 2013-2018. Sin este filtro, la primera pasada del cron manda
    miles de avisos de «se te venció el seguro» sobre pólizas muertas hace ocho años. Solo generan
    obligación las de CIMA (`import_ref IS NULL`) y las declaradas por el usuario.
+
+   🚨 **CORRECCIÓN del 02/09/2026, medida al implementarlo: este filtro NO basta, y creerlo era el
+   agujero.** `import_ref IS NULL` significa «vino por CIMA», no «viva y actual». De las 109 pólizas
+   de CIMA, **42 están `cancelada`** (5 con vencimiento futuro) y **18 están `activa` con el
+   vencimiento ya pasado** — la más vieja, de **enero de 2013**. Con la regla tal como estaba
+   escrita, el calendario diría «tienes hasta el 13/02/2015 para renovar» y las 5 canceladas con
+   fecha futura llegarían a mandar un correo real sobre un seguro que ya no existe. El segundo cepo
+   es `vigenciaPoliza()` de `@central/module-seguros` (tres estados), compuesto en
+   `obligacionDerivable()`: solo `vigente` deriva. Y el `pendiente` (en vigor sin fecha informada)
+   **no se calla**: la pantalla dice cuántas pólizas se han quedado fuera por eso.
 2. **La `fecha_accionable` es la del aviso, no la del evento.** El tomador tiene un plazo de
    preaviso para oponerse a la prórroga (art. 22 LCS). El aviso dice *«tienes hasta el 13 de
    febrero para no renovarlo»*, no *«vence el 15 de marzo»*. El plazo vive como constante
