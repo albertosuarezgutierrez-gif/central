@@ -39,8 +39,19 @@
 - **Lo que un agente NO puede ver:** tipo de token (clásico con `repo` = TODOS los repos de Alberto; fine-grained =
   solo `central`), permisos y fecha de caducidad. Lo usa en 4 workflows (`auditoria.yml`, `rutinas-automerge.yml`,
   `ai-programar.yml`, `latido-reparar.yml`) y necesita solo **Contents + Pull requests: write** sobre `central`.
-- Pendiente de Alberto: mirar el token en Settings → Developer settings → Tokens y **anotar aquí la caducidad**;
-  si es clásico, sustituirlo por uno fine-grained. Cuando caduque, el fallo vuelve a ser MUDO (solo email de Actions).
+- **Medido por Chrome (02/09, solo lectura):** es fine-grained, solo `central`, pero **SIN caducidad** y con
+  **Workflows: read/write** además de Contents + Pull requests. El secret se actualizó el 01/09 10:52 CEST. Ese
+  permiso extra es el que convierte una fuga en «leo todos los secrets»: con él se puede empujar a una rama un
+  workflow que vuelque `${{ secrets.* }}` y abrir el PR (mismo repo = con secrets). Lo que lo justificaría es el
+  camino 6b de `rutinas-automerge.yml` (merge de `main` en la rama del PR: si `main` tocó un workflow desde que
+  nació la rama, el push lo necesita) — no hay ningún rechazo por ese motivo en la memoria.
+- **Segundo token vivo** `central-ai-programar-trigger-2` (29/07, sin caducidad, Contents + PRs, usado esta
+  semana): NO es el del secret. [Probable] es el `GITHUB_TOKEN` de Vercel (sivra/plataforma, agente SEO de los
+  lunes, `seo-landing.ts`) o el `GH_PAT` de ia-rest (`blog-seo`, `agente-arquitecto`): los tres escriben en
+  `central` por Contents API con justo esos permisos. **No borrar sin comprobar en Vercel** qué env lo lleva.
+- Un clásico «Claude Full Access Token» (21 scopes, sin caducidad, «Never used») está para borrar.
+- Decisión pendiente de Alberto: rotar A sin `Workflows` y con caducidad 90 días (+ guardián Telegram del 401 en
+  `auditoria.yml`, porque el fallo es mudo), inventariar B en Vercel y rotarlo igual, borrar el clásico.
 
 ### 🔍 (02/09/2026) Rutinas de auditoría: cobertura exhaustiva tras la correduría
 - Alberto pidió revisar la diaria y la semanal («hemos metido más cosas como correduría»). Medido: las dos decían
