@@ -9,7 +9,9 @@ const BASE_ITEMS: Item[] = [
   { label: 'Negocios (holding)', icon: '🏢', href: '/banca?tab=negocios', group: 'Mi negocio' },
   { label: 'Finanzas', icon: '💶', href: '/finanzas', group: 'Mi negocio' },
   { label: 'Contable', icon: '🧮', href: '/contable', group: 'Mi negocio' },
-  { label: 'Gastos', icon: '🧾', href: '/finanzas?tab=gastos', group: 'Mi negocio' },
+  // El tab ?tab=gastos se desmanteló: FinanzasClient lo único que hace con él es un
+  // router.replace('/finanzas/gastos'). Apuntar al destino directo ahorra el salto.
+  { label: 'Gastos', icon: '🧾', href: '/finanzas/gastos', group: 'Mi negocio' },
   { label: 'Apartamentos', icon: '🏨', href: '/apartamentos', group: 'Mi negocio' },
   { label: 'Limpiezas', icon: '🧹', href: '/limpiezas', group: 'Mi negocio' },
   { label: 'Comunicación', icon: '💬', href: '/comunicacion', group: 'Mi negocio' },
