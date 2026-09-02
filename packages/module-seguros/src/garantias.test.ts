@@ -118,7 +118,7 @@ test('un capital ilimitado o con texto raro no corrobora nada ni rompe el recuen
     g('Daños vivienda', '457453'),
     g('Robo vivienda', '457453'),
     g('Incendio y ot.daños vivienda', '457453'),
-    g('Responsabilidad civil del inmueble', 'ILIMITADO'),
+    g('Daños al edificio por caída de árbol', 'ILIMITADO'),
     g('Otra vivienda', 'según condicionado'),
   ]
   const c = capitalAsegurado(mezcla, 'vivienda')
@@ -140,4 +140,49 @@ test('una póliza sin coberturas no revienta: dice que no hay garantías', () =>
   const { continente, contenido } = capitalesHogar([])
   assert.equal(continente.estado, 'sin_garantias')
   assert.equal(contenido.estado, 'sin_garantias')
+})
+
+// ─── El caso Occident, medido el 02/09/2026 sobre dos pólizas vivas ──────────
+// Aquí la respuesta correcta NO es un número: es «la compañía no lo informa».
+// Sus garantías de continente y contenido vienen con capital NULL y todo lo que
+// trae importe es sublímite o responsabilidad civil.
+const OCCIDENT_REAL: CoberturaLeible[] = [
+  g('Robo del continente', null),
+  g('Desperfectos al continente por robo', null),
+  g('Robo y atraco del contenido', null),
+  g('Hurto de contenido', null),
+  g('Robo de bienes en trasteros y anexos', '5894.43'),
+  g('Responsabilidad civil del inmueble', '353665.88'),
+  g('Responsabilidad civil. Sublímite por víctima', '353665.88'),
+  g('Responsabilidad civil medioambiental', '300000.00'),
+  g('Restitución estética ampliada', '2500.00'),
+  g('Honorarios de peritos', '5000.00'),
+]
+
+test('🚨 la RESPONSABILIDAD CIVIL del INMUEBLE no es capital de la vivienda', () => {
+  // En EIAC (§13.3.72) `RC` es un `claves_bien` distinto de `CONTINENTE`. Su
+  // garantía se llama «responsabilidad civil del inmueble» y la palabra
+  // «inmueble» la metía en el lado de la vivienda: la ficha enseñaba entonces
+  // 353.665,88€ como sublímite del continente, que es un número plausible y
+  // falso — el modo de fallo más caro de este repo.
+  assert.equal(ladoDeGarantia('Responsabilidad civil del inmueble'), null)
+  assert.equal(ladoDeGarantia('Responsabilidad civil derivada del agua'), null)
+  assert.equal(ladoDeGarantia('Responsabilidad civil medioambiental'), null)
+  // Y no se lleva por delante al continente de verdad:
+  assert.equal(ladoDeGarantia('Robo del continente'), 'vivienda')
+  assert.equal(ladoDeGarantia('Daños al inmueble por incendio'), 'vivienda')
+})
+
+test('Occident: sin capital en las garantías, la respuesta es «no lo informa», no un sublímite ascendido', () => {
+  const { continente, contenido } = capitalesHogar(OCCIDENT_REAL)
+  assert.equal(continente.estado, 'sin_capital')
+  assert.equal(contenido.estado, 'sin_capital')
+})
+
+test('sin la exclusión de RC, el continente de Occident mentiría — cepo del sesgo', () => {
+  // Si alguien quita la guarda de «responsabilidad civil», este importe vuelve
+  // a colarse. El cepo comprueba que HOY no aparece por ninguna vía.
+  const c = capitalAsegurado(OCCIDENT_REAL, 'vivienda')
+  const texto = JSON.stringify(c)
+  assert.ok(!texto.includes('353665'), 'el límite de RC no puede salir del lado de la vivienda')
 })

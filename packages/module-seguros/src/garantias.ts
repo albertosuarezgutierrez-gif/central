@@ -34,6 +34,13 @@
 //   compañía B (10 pólizas): «robo del continente» · «hurto de contenido» …
 //                             (peligros con la palabra dentro, y sin capital)
 //
+// 🚨 Y en la compañía B la respuesta correcta es «no lo informa». Medido sobre
+// las dos vivas de un cliente real: de sus 40-55 garantías, las CUATRO que
+// nombran continente o contenido vienen con capital NULL, y todo lo que trae
+// importe es sublímite (300€, 1.000€, 5.894,43€…) o RESPONSABILIDAD CIVIL
+// (353.665,88€). O sea: aquí no hay capital que reconstruir, y decirlo es la
+// respuesta buena — el capital viaja en el `Bien` del EIAC que la ingesta tira.
+//
 // 🚨 Por eso la regla obvia —«lo que ponga vivienda es el continente»— es una
 // TRAMPA: `roturas vivienda` también dice vivienda y vale 1.500€. Cogerlo como
 // continente daría un capital plausible y falso, que es el modo de fallo más
@@ -96,7 +103,14 @@ export type CapitalAsegurado =
 export function ladoDeGarantia(descripcion: string | null | undefined): LadoRiesgo | null {
   if (typeof descripcion !== 'string') return null
   const d = descripcion.toLowerCase()
-  // El continente primero: «desperfectos al CONTINENTE por robo» lleva las dos
+  // 🚨 La RESPONSABILIDAD CIVIL sale antes que nada, y no es un detalle: en EIAC
+  // (§13.3.72 `claves_bien`) `RC` es un bien DISTINTO de `CONTINENTE`, y sin
+  // embargo su garantía suele llamarse «responsabilidad civil del INMUEBLE».
+  // Medido el 02/09/2026 sobre las dos de Occident vivas: colaba 353.665,88€
+  // en el lado de la vivienda y la ficha los presentaba como un sublímite del
+  // continente. Un límite de RC no es capital de nada del continente.
+  if (d.includes('responsabilidad civil')) return null
+  // Luego el continente: «desperfectos al CONTINENTE por robo» lleva las dos
   // palabras y lo que asegura es el continente.
   if (d.includes('vivienda') || d.includes('continente') || d.includes('inmueble') || d.includes('edificio')) {
     return 'vivienda'
@@ -138,7 +152,12 @@ export function capitalAsegurado(
           estado: 'todo_cero',
           motivo: `Las ${ceros} garantías de ${lado} vienen a 0: la compañía no les pone capital propio.`,
         }
-      : { estado: 'sin_capital', motivo: `Ninguna garantía de ${lado} trae capital.` }
+      : {
+          estado: 'sin_capital',
+          motivo:
+            `Ninguna garantía de ${lado} trae capital: esta compañía las manda sin importe propio. ` +
+            `La suma asegurada viaja en el campo «Bien» del fichero EIAC, que la ingesta todavía no guarda.`,
+        }
   }
 
   // Cuántas garantías repiten cada importe. Los céntimos entran en la clave: dos
