@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T11:22:53Z",
+  "generadoEn": "2026-09-02T11:55:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5380,6 +5380,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Es un cambio de ASPECTO, no solo de código:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Sin migrar a propósito:",
+      "fecha": ""
+    },
+    {
       "titulo": "La reimplementación era real, no un falso positivo:",
       "fecha": ""
     },
@@ -5416,7 +5424,7 @@
       "fecha": ""
     },
     {
-      "titulo": "Endurecido el camino más probable:",
+      "titulo": "Deuda propia, saldada en #2047:",
       "fecha": ""
     },
     {
@@ -5429,14 +5437,6 @@
     },
     {
       "titulo": "#2013",
-      "fecha": ""
-    },
-    {
-      "titulo": "#2018",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente:",
       "fecha": ""
     }
   ],
