@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function Entrada() {
   const [destino, setDestino] = useState('')
@@ -7,6 +7,28 @@ export default function Entrada() {
   const [fase, setFase] = useState<'pedir' | 'verificar'>('pedir')
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [desdeEnlace, setDesdeEnlace] = useState(false)
+
+  // El enlace del correo trae el email y el código ya puestos, pero NO entra
+  // solo: el canje sigue siendo un POST que dispara la persona. Un enlace que
+  // canjeara con el GET lo consumirían los escáneres antivirus del correo antes
+  // de que el usuario lo tocase, y el código le saldría `ya_usado`.
+  //
+  // Se lee de `window.location` en un efecto y no con `useSearchParams` para no
+  // arrastrar la página entera a render dinámico por leer dos parámetros.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const d = q.get('d')
+    const c = q.get('c')
+    if (!d || !c) return
+
+    setDestino(d)
+    setCodigo(c)
+    setFase('verificar')
+    setDesdeEnlace(true)
+    // El código no se queda en la barra ni en el historial más de lo necesario.
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   async function pedir() {
     setError(null)
@@ -60,6 +82,11 @@ export default function Entrada() {
         </>
       ) : (
         <>
+          <p className="suave" style={{ marginTop: 0 }}>
+            {desdeEnlace
+              ? `Tu código ya está puesto. Pulsa «Entrar» para acceder como ${destino}.`
+              : `Te hemos enviado un código a ${destino}. Caduca en 10 minutos.`}
+          </p>
           <input
             inputMode="numeric"
             value={codigo}

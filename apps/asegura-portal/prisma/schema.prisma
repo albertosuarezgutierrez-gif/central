@@ -44,16 +44,33 @@ enum PortalBienTipo {
   @@schema("seguros")
 }
 
+/// Qué vence. v1 solo emite `poliza`; el enum nace con sitio para el resto
+/// porque una obligación cuelga del BIEN y el motor es el mismo para la ITV de
+/// un coche que para el vencimiento de su seguro.
+enum PortalObligacionTipo {
+  poliza
+  itv
+  carnet
+  recibo
+  mantenimiento
+  revision_gas
+  libre
+
+  @@map("portal_obligacion_tipo")
+  @@schema("seguros")
+}
+
 model PortalIdentidad {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre         String?
   creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
 
-  canales  PortalCanal[]
-  bienes   PortalBien[]
-  polizas  PortalPolizaDeclarada[]
-  vinculos PortalVinculo[]
+  canales      PortalCanal[]
+  bienes       PortalBien[]
+  polizas      PortalPolizaDeclarada[]
+  vinculos     PortalVinculo[]
+  obligaciones PortalObligacion[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -95,8 +112,9 @@ model PortalBien {
   datos       Json           @default("{}")
   creadoEn    DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
 
-  identidad PortalIdentidad         @relation(fields: [identidadId], references: [id], onDelete: Cascade)
-  polizas   PortalPolizaDeclarada[]
+  identidad    PortalIdentidad         @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  polizas      PortalPolizaDeclarada[]
+  obligaciones PortalObligacion[]
 
   @@map("portal_bien")
   @@schema("seguros")
@@ -122,6 +140,36 @@ model PortalPolizaDeclarada {
   bien      PortalBien?     @relation(fields: [bienId], references: [id])
 
   @@map("portal_poliza_declarada")
+  @@schema("seguros")
+}
+
+model PortalObligacion {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId       String               @map("identidad_id") @db.Uuid
+  bienId            String?              @map("bien_id") @db.Uuid
+  /// La póliza de la CARTERA. Sin relación de Prisma: el rol del portal no
+  /// escribe en `polizas` y una FK ataría su borrado.
+  polizaId          String?              @map("poliza_id") @db.Uuid
+  polizaDeclaradaId String?              @map("poliza_declarada_id") @db.Uuid
+  tipo              PortalObligacionTipo
+  titulo            String
+  /// La fecha del hecho. NOT NULL a propósito: sin fecha no hay obligación.
+  fechaEvento       DateTime             @map("fecha_evento") @db.Date
+  /// `fechaEvento` − DIAS_PREAVISO_TOMADOR. Es la que se le enseña al cliente.
+  fechaAccionable   DateTime             @map("fecha_accionable") @db.Date
+  procedencia       PortalProcedencia
+  confirmadaAt      DateTime?            @map("confirmada_at") @db.Timestamptz(6)
+  /// Sello del envío. Que exista es lo que impide avisar dos veces.
+  avisadaAt         DateTime?            @map("avisada_at") @db.Timestamptz(6)
+  creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
+  actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  bien      PortalBien?     @relation(fields: [bienId], references: [id])
+
+  @@unique([identidadId, polizaId])
+  @@index([identidadId])
+  @@map("portal_obligacion")
   @@schema("seguros")
 }
 

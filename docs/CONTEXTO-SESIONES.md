@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📅 Intranet del cliente CONSTRUIDA: calendario, aviso y enlace de un clic (02/09/2026, noche V).**
+  Implementado el spec entero en el PR #2144 con subagentes. **El agujero que apareció al hacerlo:**
+  `import_ref IS NULL` NO significa «viva y actual» — de las 109 pólizas de CIMA, **42 están canceladas**
+  (5 con vencimiento futuro) y **18 activas con el vencimiento pasado** (la más vieja, de **enero de 2013**).
+  El calendario habría dicho «tienes hasta el 13/02/2015 para renovar» y las canceladas habrían mandado
+  correo real; el cepo es `vigenciaPoliza()` compuesta en `obligacionDerivable()`. **El aviso NO puede salir
+  del portal** (solo guarda hashes; su rol no lee el email): se mudó a `apps/asegura`, apagado por defecto
+  (`ASEGURA_AVISOS_ACTIVOS`, `CRON_SECRET` sin paso franco en dev). Añadidos el enlace de un clic del correo
+  (**no canjea**: lo consumirían los escáneres antivirus) y la lista de los **26 clientes sin ningún canal**
+  en `/correduria`. 315/315 guardianes. **Falta solo Alberto:** las envs de `asegura-portal` y `CRON_SECRET`.
+
 - **🚨 «Ojo con duplicar»: agrupar personas por NIF, no por nombre (02/09/2026, noche).** Aviso de Alberto
   sobre GLOBAL 2. `personasDePolizas` agrupaba por ficha y, a falta de ficha, por NOMBRE — y el peligro
   va en las dos direcciones: **partir** a una persona en dos filas (enlazada a su ficha en una póliza y
@@ -63,6 +74,20 @@
   qué matrícula sale. Y a una sociedad se le pedía «DNI, apellidos y fecha de nacimiento»:
   `etiquetasIdentidad` rotula CIF/razón social/constitución. El CIF de GLOBAL 2 es suyo, no el DNI de
   nadie (comprobado por hash, sin leer el valor). Mergeado #2139.
+
+- **🗓️ Intranet de clientes de la correduría: spec del calendario de vencimientos (02/09/2026, noche IV).**
+  Alberto quiere la intranet de clientes; se le devolvió lo incómodo: **ya está diseñada y a medio construir**
+  (spec del 01/09, Fase 1+4 en `main`, DDL aplicado) y **muerta por cuatro envs de Vercel que dependen de él**
+  — con `PII_LOOKUP_KEY` distinta a la de `central-asegura` entra todo el mundo y **nadie ve su cartera, sin error**.
+  Decidido cortar por la **v1 de sus ~80 clientes**: pólizas de CIMA + calendario + la bóveda ya construida,
+  **cero Avant2** (0,50€ por consulta y NO idempotente → un botón público o una vigilancia periódica son 4 cifras/mes).
+  Única pieza nueva: `portal_obligacion`, colgada del **bien** con `poliza_id` opcional (sirve luego a ITV/gas).
+  De Alberto salió lo mejor: el **cambio de mediador** convierte un lead en cliente sin tarificar y su póliza
+  **empieza a entrar por CIMA** → el dato declarado pasa a verificado solo, y su firma **ya existe**
+  (`@central/core-firma`, eIDAS art. 26, método `otp_email` = como entra el portal; molde `apps/rrhh`).
+  Todas las ideas guardadas en **`docs/CORREDURIA-INTRANET-IDEAS.md`** con coste y bloqueo de cada una.
+  Spec + banco de ideas + **plan de implementación**
+  (`docs/superpowers/plans/2026-09-02-asegura-portal-calendario-v1.md`, 9 tareas TDD) en PR draft **#2144**.
 
 - **🏠🏍️ «Haz todo» + el catálogo de Avant2 (02/09/2026, noche).** Mergeado #2130 (horquilla enchufada
   + capital de hogar por corroboración). Alberto pasó el catálogo de Integra: cruzado con las 109 vivas

@@ -593,3 +593,63 @@ model Documento {
   @@index([correduriaId, polizaId])
   @@map("documentos")
 }
+
+// ─── El calendario del PORTAL, visto desde el panel del corredor ────────────
+// Espejo PARCIAL de `seguros.portal_obligacion` (DDL y comentario largo en
+// `apps/asegura-portal/prisma/sql/2026-09-03_portal_obligacion.sql`).
+//
+// 🚨 Aquí es SOLO LECTURA + el sello `avisada_at`: los grants de `prisma_seguros`
+// sobre esa tabla son exactamente `SELECT, UPDATE`. No hay INSERT ni DELETE, y
+// declararlos en el cliente no los concedería: fallaría en la BD, que es donde
+// tiene que fallar. Quien crea obligaciones es el portal, con su propio rol.
+//
+// Se declara sin relaciones a `portal_identidad` / `portal_bien` a propósito:
+// esos modelos no existen en este schema (el corredor no los necesita) y una
+// relación a un modelo ausente no compila. Los ids quedan como escalares.
+enum PortalObligacionTipo {
+  poliza
+  itv
+  carnet
+  recibo
+  mantenimiento
+  revision_gas
+  libre
+
+  @@map("portal_obligacion_tipo")
+}
+
+enum PortalProcedencia {
+  compania
+  calculado
+  declarado
+  documento
+
+  @@map("portal_procedencia")
+}
+
+model PortalObligacion {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId       String               @map("identidad_id") @db.Uuid
+  bienId            String?              @map("bien_id") @db.Uuid
+  /// La póliza de la CARTERA que originó la obligación. Es el ÚNICO camino que
+  /// el corredor tiene hasta el destinatario: póliza → cliente → cliente_emails.
+  /// NULL (una póliza declarada por el usuario) = no hay a quién escribir desde
+  /// aquí; eso se cuenta como «sin canal», nunca como «no hace falta avisar».
+  polizaId          String?              @map("poliza_id") @db.Uuid
+  polizaDeclaradaId String?              @map("poliza_declarada_id") @db.Uuid
+  tipo              PortalObligacionTipo
+  titulo            String
+  fechaEvento       DateTime             @map("fecha_evento") @db.Date
+  /// `fechaEvento` − DIAS_PREAVISO_TOMADOR. Es la fecha que se le dice al cliente.
+  fechaAccionable   DateTime             @map("fecha_accionable") @db.Date
+  procedencia       PortalProcedencia
+  confirmadaAt      DateTime?            @map("confirmada_at") @db.Timestamptz(6)
+  /// Sello del envío. Que exista es lo único que impide avisar dos veces.
+  avisadaAt         DateTime?            @map("avisada_at") @db.Timestamptz(6)
+  creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
+  actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
+
+  @@unique([identidadId, polizaId])
+  @@index([identidadId])
+  @@map("portal_obligacion")
+}
