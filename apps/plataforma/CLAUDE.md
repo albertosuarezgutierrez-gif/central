@@ -1424,6 +1424,13 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `GET /api/operador/codeoscopic/lineas` (= `GET /insurance-lines` del vendor, **gratis**, corre con
   el interruptor apagado). Tres estados: `disponible` (con el id EXACTO del ramo, que es lo que va en
   `insuranceLine`) · `ausente` (hay que pedírselo a Codeoscopic) · `desconocido` (no se pudo mirar).
+- **📎 Documentos en la ficha del cliente y de la póliza (02/09/2026, tarde):** `Documentos.tsx` (client) sobre
+  `/api/correduria/documentos` (POST multipart = subir · POST json `{pedir:true}` = anotar pedido) y
+  `/api/correduria/documentos/[id]` (GET = el fichero en streaming · PATCH revisar · DELETE), que reenvían al puerto
+  de asegura con el secreto; sesión de plataforma obligatoria. Lector puro `lib/documentos-asegura.ts`
+  (`test/regression-documentos-asegura.test.ts`, 4): `null` = no se pudo consultar ≠ `[]` = no hay. La lista trae
+  el estado **pedido / recibido / revisado** y ofrece primero los tipos que faltan para emitir auto
+  (`NECESARIOS_EMISION_AUTO`). Los ficheros viven en `seguros.documentos` (bytea, ≤10 MB); aquí no se guarda nada.
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no

@@ -26,6 +26,8 @@ import {
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
+import type { DocumentoResumen } from '@central/module-seguros'
+import { contarDocumentosPoliza, listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { SiniestroFicha } from './cartera-ficha'
 
@@ -76,6 +78,8 @@ export type FichaPoliza = {
   intervinientes: IntervinienteFicha[] | null
   /** `null` = no se pudo contar. `0` = la tabla existe y no hay ninguno (hoy: 0 en TODA la base). */
   documentos: number | null
+  /** La lista (con estado pedido/recibido/revisado). `null` = no se pudo consultar. */
+  listaDocumentos: DocumentoResumen[] | null
   pago: { fraccionamiento: string | null; formaCobro: string | null; recargo: RecargoFraccionamiento }
   retarificable: boolean
 }
@@ -145,7 +149,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
   })
   if (!p) return null
 
-  const [intervinientes, gemela, documentos] = await Promise.all([
+  const [intervinientes, gemela, documentos, listaDocumentos] = await Promise.all([
     db.polizaInterviniente
       .findMany({
         where: { correduriaId, polizaId: p.id },
@@ -184,9 +188,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
             select: { id: true, clienteId: true, importRef: true, datosEspecificos: true, tipo: true, fechaVencimiento: true },
           })
           .catch(() => null),
-    db.$queryRaw<{ n: bigint }[]>`select count(*)::bigint as n from poliza_documentos where poliza_id = ${p.id}::uuid`
-      .then((r) => Number(r[0]?.n ?? 0))
-      .catch((): number | null => null),
+    contarDocumentosPoliza(correduriaId, p.id),
+    listarDocumentos(correduriaId, { polizaId: p.id }),
   ])
 
   const datos = datosConDireccion(p.datosEspecificos)
@@ -246,6 +249,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     })),
     intervinientes,
     documentos,
+    listaDocumentos,
     pago: {
       fraccionamiento,
       formaCobro: etiquetaFormaPago(p.recibos[0]?.formaPago ?? null),

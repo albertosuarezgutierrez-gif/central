@@ -26,6 +26,8 @@ import {
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
+import type { DocumentoResumen } from '@central/module-seguros'
+import { listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
 
@@ -196,6 +198,11 @@ export type FichaCliente = {
    * `null` = no se ha podido consultar (la tabla falló). NO es «no hay nadie».
    */
   intervinientes: IntervinienteFicha[] | null
+  /**
+   * Los documentos del cliente (propios y de sus pólizas/siniestros), con su
+   * estado pedido/recibido/revisado. `null` = no se ha podido consultar.
+   */
+  documentos: DocumentoResumen[] | null
 }
 
 /**
@@ -308,6 +315,9 @@ export async function fichaCliente(
     recibosPorPoliza.set(r.polizaId, lista)
   }
 
+  // Todos los suyos: los del cliente y los colgados de sus pólizas/siniestros.
+  const documentos = await listarDocumentos(correduriaId, { clienteId: c.id })
+
   return {
     id: c.id,
     nombre: `${c.nombre} ${c.apellidos}`.trim(),
@@ -323,6 +333,7 @@ export async function fichaCliente(
       codigoPostal: c.codigoPostal ?? null,
     },
     intervinientes,
+    documentos,
     polizas: c.polizas.map((p) => {
       const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
       const matricula = datos ? texto(datos.matricula) : null

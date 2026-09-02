@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
+import Documentos from '../../Documentos'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
@@ -101,17 +102,13 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
       </Tarjeta>
 
       {/* ── Documentación ───────────────────────────────────────────────── */}
-      <Tarjeta titulo="Documentación">
-        {p.documentos === null ? (
-          <p style={muted}>No se ha podido contar los documentos de esta póliza.</p>
-        ) : p.documentos === 0 ? (
+      <Tarjeta titulo="📎 Documentación">
+        <Documentos polizaId={p.id} clienteId={p.cliente.id} inicial={p.listaDocumentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+        {p.documentos !== null && p.listaDocumentos !== null && p.documentos > p.listaDocumentos.filter((d) => d.estado !== 'pedido').length && (
           <p style={muted}>
-            Ningún documento adjunto. La tabla existe y está a cero en TODA la base (medido 02/09/2026): no es que
-            esta póliza no tenga papeles, es que todavía no se guarda ninguno. Subir una póliza hoy la LEE pero no la
-            conserva — falta decidir dónde y cuánto tiempo.
+            Además hay {p.documentos - p.listaDocumentos.filter((d) => d.estado !== 'pedido').length} en la tabla antigua del CRM
+            (poliza_documentos), sin fichero accesible desde aquí.
           </p>
-        ) : (
-          <p style={{ margin: 0, fontSize: 13 }}>{p.documentos} documento(s) adjuntos.</p>
         )}
       </Tarjeta>
 

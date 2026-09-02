@@ -107,3 +107,20 @@ export {
   type ReciboCiclo,
   type RecargoFraccionamiento,
 } from './pago.ts'
+export {
+  TIPOS_DOCUMENTO,
+  MIMES_DOCUMENTO,
+  MAX_BYTES_DOCUMENTO,
+  NECESARIOS_EMISION_AUTO,
+  etiquetaTipoDocumento,
+  etiquetaEstadoDocumento,
+  tipoDocumento,
+  estadoDocumento,
+  revisarDocumento,
+  resumenDocumentos,
+  documentosQueFaltan,
+  type TipoDocumento,
+  type EstadoDocumento,
+  type DocumentoResumen,
+  type ResumenDocumentos,
+} from './documentos.ts'

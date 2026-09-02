@@ -1,3 +1,5 @@
+import type { DocumentoResumen } from '@central/module-seguros'
+import { leerDocumentos } from './documentos-asegura.ts'
 // La ficha de un cliente de la correduría, leída por el puerto de central-asegura.
 //
 // ─── Por qué esto vive en plataforma y no en asegura ────────────────────────
@@ -124,6 +126,8 @@ export type Ficha = {
    * lo tiene» — y la pantalla lo dice así, no como «nadie lo tiene».
    */
   intervinientes: IntervinienteFicha[] | null
+  /** Documentos del cliente con estado pedido/recibido/revisado. `null` = no informado / no se pudo. */
+  documentos: DocumentoResumen[] | null
 }
 
 export type RespuestaFicha =
@@ -346,6 +350,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       polizas,
       siniestros,
       intervinientes: leerIntervinientes(f.intervinientes),
+      documentos: leerDocumentos(f.documentos),
     },
   }
 }

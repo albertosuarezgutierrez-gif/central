@@ -517,3 +517,34 @@ model Liquidacion {
   @@index([correduriaId, fechaLiquidacion])
   @@map("liquidaciones")
 }
+
+// ─── Documentos de la correduría (tabla PROPIA, 02/09/2026) ──────────────────
+// Una tabla para cliente | póliza | siniestro, con estado «pedido» (sin fichero)
+// / «recibido» / «revisado». El fichero va en `contenido` (bytea ≤ 10 MB). SQL en
+// prisma/sql/2026-09-02_seguros_documentos.sql. Sin relaciones a propósito: se
+// consulta siempre con `correduriaId` explícito y se valida el destino antes de
+// escribir (lib/cartera-documentos.ts).
+model Documento {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId      String    @map("correduria_id") @db.Uuid
+  clienteId         String?   @map("cliente_id") @db.Uuid
+  polizaId          String?   @map("poliza_id") @db.Uuid
+  siniestroId       String?   @map("siniestro_id") @db.Uuid
+  tipo              String    @default("otro")
+  estado            String    @default("recibido")
+  nombreFichero     String?   @map("nombre_fichero")
+  mimeType          String?   @map("mime_type")
+  sizeBytes         Int?      @map("size_bytes")
+  sha256            String?
+  contenido         Bytes?
+  notas             String?
+  subidoPor         String    @default("corredor") @map("subido_por")
+  visiblePorCliente Boolean   @default(false) @map("visible_por_cliente")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revisadoAt        DateTime? @map("revisado_at") @db.Timestamptz(6)
+  revisadoPor       String?   @map("revisado_por")
+
+  @@index([correduriaId, clienteId])
+  @@index([correduriaId, polizaId])
+  @@map("documentos")
+}

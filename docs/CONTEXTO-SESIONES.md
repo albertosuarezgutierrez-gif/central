@@ -32,6 +32,19 @@
 
 ---
 
+### 📎 (02/09/2026, tarde) Correduría: documentos de verdad sobre la BD de casa (PR pendiente)
+- Alberto: «ya está nuestra bbdd, prueba y sigue». Probado: `seguros` en central tiene los mismos recuentos que se
+  midieron en el origen (32.600 fichas, 28.843 pólizas, 109 CIMA/67 activas, 172 calles cifradas, 181 localidades,
+  330 CP, 4.506 matrículas, `unaccent` instalada) → el buscador por riesgo/calle de #2001 funciona sobre la copia.
+- Lo único que estaba bloqueado por el traspaso eran los **documentos**: tabla propia `seguros.documentos`
+  (cliente | póliza | siniestro, estado pedido/recibido/revisado, fichero en `bytea` ≤10 MB, sin claves de Storage),
+  migración aplicada y sus 4 CHECK probados en la BD real con rollback (0 filas dejadas). Puerto en asegura
+  (`/api/operador/documentos[/id]`), lógica pura en module-seguros (5 tests), pantalla en la ficha de cliente y de
+  póliza de plataforma (subir · anotar pedido · ver · revisado · borrar). `NECESARIOS_EMISION_AUTO` = DNI, permiso,
+  ficha técnica: un «pedido» sigue faltando.
+- No probado de punta a punta con la app (el contenedor no tiene `DATABASE_URL`): la primera subida real la hace
+  Alberto desde `/correduria/cliente/[id]`. Sigue pendiente (y cuesta dinero): la petición de hogar a Codeoscopic.
+
 ### 🔐 (02/09/2026, ~09:00 UTC) Correduría: la AUTH del CRM también está en central — quedan 3 variables de Alberto
 - Alberto: «el punto 2 no se hace… quiero tener todo en nuestra bbdd» → **NO se rota `crm_seguros`** (anotado en
   `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`) y se copió `auth.*` de Manuel a central por dblink con
