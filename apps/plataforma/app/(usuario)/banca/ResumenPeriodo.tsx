@@ -166,9 +166,14 @@ export default function ResumenPeriodo({ resumen, evolucion, periodoLabel }: {
           <Fila icono={<Users size={15} strokeWidth={1.75} />} label="Kutxabank" nota="familiar">
             <strong>{eur(resumen.personal.kutxa.gastos)}</strong>
           </Fila>
+          {/* Estas dos salidas apuntaban a /finanzas?tab=categorias, que monta EXACTAMENTE el mismo
+              componente (finanzas/CategoriasTab.tsx) que el segmento Personal de esta misma página:
+              te sacaban de /banca para enseñarte la pantalla que ya estabas mirando, y desde allí el
+              camino de vuelta era /banca — un círculo. `CategoriasTab` lee ?banco= de la URL por su
+              cuenta, así que el filtro viaja igual sin cambiar de hub. */}
           <div style={{ display: 'flex', gap: 14, marginTop: 12 }}>
-            <Salida href="/finanzas?tab=categorias&banco=bbva">BBVA</Salida>
-            <Salida href="/finanzas?tab=categorias&banco=familiar">Kutxabank</Salida>
+            <Salida href="/banca?tab=personal&banco=bbva">BBVA</Salida>
+            <Salida href="/banca?tab=personal&banco=familiar">Kutxabank</Salida>
           </div>
         </div>
       </div>
