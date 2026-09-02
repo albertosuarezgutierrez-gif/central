@@ -39,7 +39,11 @@
   furgoneta; en toda la cartera hoy 0 personas se partían (409 de 504 filas no traen NIF y siguen
   cayendo al nombre). 5 cepos nuevos, tres mordidos. **Queda como regla global** en el CLAUDE.md de
   la raíz («agrupar por IDENTIDAD, nunca por la etiqueta») y como reglas 12-13 de la skill
-  `correduria-crm` (con la del tomador, que tampoco es un interviniente). PR #2145.
+  `correduria-crm` (con la del tomador, que tampoco es un interviniente). **Mergeado (#2145) y
+  probado contra la BD**: la tarjeta de GLOBAL 2 pinta 3 filas, una por conductor con su matrícula,
+  y la persona que sale en dos pólizas (la activa y la cancelada del 6930FBP) colapsa en UNA. En la
+  cartera hay 260 fichas con intervinientes y solo 2 con varias personas identificadas por NIF: el
+  arreglo es barato hoy y protege el día que CIMA mande NIF en más filas (hoy 407 de 426 no lo traen).
 
 - **👤 «Personas en sus pólizas», arriba en la ficha (02/09/2026, noche).** Alberto: «en empresas y
   particulares se puede poner arriba las personas de contacto o relaciones». La tarjeta «Relaciones»
