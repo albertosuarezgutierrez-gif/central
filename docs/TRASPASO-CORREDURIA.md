@@ -1,5 +1,50 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
+> ## 🎯 CIERRE DEL TRASPASO (02/09/2026) — qué queda y quién lo hace
+>
+> **Medido, no supuesto, el 02/09/2026.** Este documento iba por detrás de la realidad: el repo
+> `asegura` (el CRM de Manuel: ingestor CIMA, claves PII, Drizzle) **ya está en la cuenta de Alberto**
+> y **su proyecto de Vercel (`asegura`, `app.grupoasegura.com`) ya está en el equipo de Alberto** —
+> los despliegues desde el 31/08 06:11 UTC los firma su cuenta. Los secrets de Actions (`CRON_SECRET`,
+> Slack) viajaron: el cron se dispara y llega al endpoint. Y la BD está copiada en `seguros`.
+>
+> 🚨 **Pero el CRM está CAÍDO desde el 31/08 06:15 UTC.** Logs de Vercel: `password authentication
+> failed for user "postgres"` en toda consulta (386 fallos en `/api/health`, y el `cima-pull` devuelve
+> 500 desde entonces: 3 corridas fallidas). El `DATABASE_URL` del proyecto apunta al Supabase de
+> Manuel con una contraseña que ya no vale. Nadie lo vio: el aviso Slack del cron no está configurado.
+> Efecto colateral bueno: **el origen lleva congelado desde ese momento**, así que la copia del 02/09
+> está completa y no hay nada que re-sincronizar.
+>
+> **Lo que ya está hecho por dentro (02/09):** funciones y 26 triggers del CRM portados a `seguros`;
+> `prisma_seguros` con `search_path = seguros` (el CRM nombra las tablas sin esquema → resuelve en la
+> copia sin tocar su código) y EXECUTE sobre las funciones; `apps/asegura` (y por su puerto
+> `plataforma` → `/correduria`) lee ya de la copia por defecto (`urlFuenteCartera`).
+>
+> **Lo que SOLO puede hacer Alberto (el conector de Vercel no edita variables) — 4 pasos, ~10 min:**
+>
+> 1. Vercel → proyecto **`asegura`** → Settings → Environment Variables → **`DATABASE_URL`**
+>    (Production): sustituir por el valor de **`DATABASE_URL` del proyecto `central-asegura`**
+>    (rol `prisma_seguros`, pooler `aws-0-eu-west-1…:6543`). Ningún secreto nuevo: se reutiliza el que ya
+>    existe. Guardar también una copia del valor viejo por si hubiera que volver.
+> 2. Deployments → **Redeploy** del último de producción (`49a3d9d0`).
+> 3. Comprobar: `https://app.grupoasegura.com/api/health` debe decir `db: ok`; entrar con tu cuenta
+>    (la auth sigue en el Supabase de Manuel —ver «lo que queda»— y funciona igual); abrir un cliente.
+> 4. GitHub → repo `asegura` → Actions → `cima-pull` → **Run workflow con `dry_run = true`** → debe
+>    devolver `ok: true`. Luego sin dry_run: los ficheros que TIREA guardó estos días entran solos
+>    (el ingestor deduplica por hash).
+>
+> **Lo que queda después, por orden, y no es urgente:**
+> - **Auth**: `NEXT_PUBLIC_SUPABASE_URL` / `ANON_KEY` / `SERVICE_ROLE_KEY` siguen apuntando al proyecto
+>   de Manuel (9 usuarios en `auth.users`, 2 reales). Migrarlos a central exige recrearlos en nuestro
+>   Supabase Auth y tocar `usuarios.auth_user_id`; hasta entonces el login depende de su proyecto.
+> - `src/lib/mediator-audit/record-evidence.ts` escribe `mediator_audit_log` **por PostgREST** (única
+>   escritura fuera de Drizzle) → iría al proyecto de Manuel. Cambiarla a Drizzle en el repo `asegura`.
+> - El trigger `handle_new_user` (sobre `auth.users`) se queda en el proyecto de Manuel: un alta nueva
+>   de usuario no crea fila en `seguros.usuarios` hasta migrar la auth.
+> - **NO arreglar la contraseña del origen.** Congelado es la copia de seguridad del traspaso.
+> - Manuel: transferir la app de Fly (adaptador TIREA) y cancelar su Pro. Sin prisa: el adaptador
+>   responde igual desde su org.
+>
 > **✅ 02/09/2026 — FASE 2 (copia de la BD) HECHA.** Las 52 tablas / 86.628 filas del `public` de
 > Manuel están en el schema `seguros` de central, con las 131 FKs y verificación por recuento y
 > checksum. Cómo se salvó el bloqueo del 01/09: `pg_dump` local no valía (16 vs 17) y el secreto del

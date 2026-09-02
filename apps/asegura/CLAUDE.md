@@ -4,22 +4,35 @@
 > Lee antes `docs/TRASPASO-CORREDURIA.md`: esta app es el DESTINO de un traspaso en curso,
 > no un desarrollo desde cero.
 
-## Estado (02/09/2026): cartera COPIADA en `seguros` (foto fija) — la app AÚN lee del origen
+## Estado (02/09/2026): la cartera está EN CASA y esta app YA LEE DE CASA
 
 **El 02/09/2026 se volcó la cartera entera al schema `seguros` de central** (52 tablas, 86.628
 filas, 131 FKs; verificado tabla a tabla por recuento y por checksum de contenido en clientes,
 pólizas, recibos y siniestros). Bitácora en `seguros._volcado_control`. Detalle del método en
-`prisma/sql/2026-09-01_seguros_volcado_datos.sql` (copia server-side por `dblink`).
+`prisma/sql/2026-09-01_seguros_volcado_datos.sql` (copia server-side por `dblink`). En la misma
+sesión se portaron las **12 funciones y 26 triggers** del CRM (`updated_at`, tablas append-only,
+recálculo de `clientes.segmento`) — migración `seguros_triggers_y_search_path_crm` en Supabase.
 
-🚨 **Es una FOTO del 02/09, no un espejo.** El origen (Supabase de Manuel, `uijsgeocgdaxkhvwtjqs`)
-**sigue recibiendo CIMA/EIAC a diario** y **todo el código sigue leyendo de allí**:
-`ASEGURA_DATABASE_URL` + `prisma/asegura.prisma` (`lib/asegura-db.ts`), y por tanto también
-`plataforma` → `/correduria` a través del puerto `/api/operador/*`. Cambiar la lectura al schema
-`seguros` es un paso aparte (repuntar `asegura.prisma` a `seguros.*` con `prisma_seguros`) y solo
-tiene sentido junto con mover la ingesta, o quedan dos carteras que divergen. Para re-sincronizar
-antes del corte: repetir el procedimiento del script (rol temporal en el origen + secreto en el
-Vault + bloque `DO`, que es idempotente por tabla y salta las ya copiadas — para una re-copia
-completa hay que vaciar antes `seguros._volcado_control` y las tablas).
+**Lectura (esta app y, por el puerto, `plataforma` → `/correduria`): `lib/asegura-db.ts` lee por
+defecto de central**: `DATABASE_URL` (rol `prisma_seguros`) + `?schema=seguros`, decidido por el
+helper puro y probado `urlFuenteCartera` (`lib/asegura-url.ts`). `ASEGURA_FUENTE=origen` vuelve al
+Supabase de Manuel (`ASEGURA_DATABASE_URL`). La fuente elegida sin conexión es «pendiente», nunca
+cae a la otra en silencio.
+
+🚨 **El origen NO está vivo: está CONGELADO desde el 31/08 06:15 UTC, y no por decisión.** Medido en
+los logs de Vercel: el CRM de Manuel (repo `albertosuarezgutierrez-gif/asegura` + proyecto Vercel
+`asegura`, ambos YA en el equipo de Alberto, sirviendo `app.grupoasegura.com`) falla toda consulta
+con `password authentication failed for user "postgres"` desde su primer despliegue en nuestro
+equipo (386 veces en `/api/health`). Por eso el cron `cima-pull` recibe 500 tres veces seguidas
+(31/08 11:34, 01/09 10:19 y 15:30). Consecuencia útil: **nada ha escrito en el origen desde
+entonces, así que la copia del 02/09 está completa** y no hace falta re-sincronizar.
+
+✅ **Lo que cierra el traspaso — y solo puede hacerlo Alberto desde el panel de Vercel** (el conector
+no edita variables): en el proyecto Vercel `asegura`, poner en `DATABASE_URL` (Production) el valor de
+`DATABASE_URL` del proyecto `central-asegura` y redesplegar. El rol `prisma_seguros` ya tiene
+`search_path = seguros`, así que el CRM (Drizzle, tablas sin cualificar) resuelve en nuestra copia
+sin tocar su código. Runbook paso a paso en `docs/TRASPASO-CORREDURIA.md` («CIERRE DEL TRASPASO»).
+**No arreglar la contraseña del origen**: el origen congelado es la copia de seguridad.
 
 Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build— más la cartera en
 `seguros`. El resto de este apartado describe el estado ANTERIOR al volcado y sigue valiendo para

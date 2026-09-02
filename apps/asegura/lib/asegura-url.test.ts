@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizarUrlPooler } from './asegura-url.ts'
+import { normalizarUrlPooler, urlFuenteCartera } from './asegura-url.ts'
 
 const POOLER = 'postgresql://central_asegura.ref:pass@aws-1-eu-central-1.pooler.supabase.com:6543/postgres'
 
@@ -23,4 +23,38 @@ test('una URL que no va al 6543 se devuelve intacta (session pooler, directa)', 
 
 test('una URL imposible de parsear se devuelve tal cual (que falle Prisma con su error real)', () => {
   assert.equal(normalizarUrlPooler('esto-no-es-una-url'), 'esto-no-es-una-url')
+})
+
+// ── urlFuenteCartera: de dónde se lee la cartera ──────────────────────────────
+
+const CENTRAL =
+  'postgresql://prisma_seguros.wswbehlcuxqxyinousql:pass@aws-0-eu-west-1.pooler.supabase.com:6543/postgres'
+
+test('por defecto la cartera se lee de CASA: DATABASE_URL + schema=seguros (+ pgbouncer por ser 6543)', () => {
+  const r = urlFuenteCartera({ DATABASE_URL: CENTRAL, ASEGURA_DATABASE_URL: POOLER })
+  assert.equal(r.fuente, 'central')
+  assert.match(r.url!, /aws-0-eu-west-1/)
+  assert.match(r.url!, /schema=seguros/)
+  assert.match(r.url!, /pgbouncer=true/)
+})
+
+test('no duplica schema si DATABASE_URL ya lo trae', () => {
+  const r = urlFuenteCartera({ DATABASE_URL: `${CENTRAL}?schema=seguros` })
+  assert.equal((r.url!.match(/schema=/g) ?? []).length, 1)
+})
+
+test('ASEGURA_FUENTE=origen vuelve al Supabase de Manuel, sin schema (allí la cartera vive en public)', () => {
+  const r = urlFuenteCartera({ ASEGURA_FUENTE: 'origen', DATABASE_URL: CENTRAL, ASEGURA_DATABASE_URL: POOLER })
+  assert.equal(r.fuente, 'origen')
+  assert.match(r.url!, /aws-1-eu-central-1/)
+  assert.doesNotMatch(r.url!, /schema=/)
+})
+
+test('la fuente elegida sin conexión es «pendiente» (null), NUNCA cae a la otra fuente', () => {
+  assert.equal(urlFuenteCartera({ ASEGURA_FUENTE: 'origen', DATABASE_URL: CENTRAL }).url, null)
+  assert.equal(urlFuenteCartera({ ASEGURA_DATABASE_URL: POOLER }).url, null)
+})
+
+test('cualquier valor que no sea «origen» significa central (no hay tercer modo)', () => {
+  assert.equal(urlFuenteCartera({ ASEGURA_FUENTE: 'manuel', DATABASE_URL: CENTRAL }).fuente, 'central')
 })

@@ -1,32 +1,52 @@
 import { PrismaClient as AseguraPrismaClient } from './generated/asegura-client'
-import { normalizarUrlPooler } from './asegura-url'
+import { urlFuenteCartera, type FuenteCartera } from './asegura-url'
 
 /**
- * Cliente de la SEGUNDA base de la app: la cartera real (proyecto Supabase
- * ASEGURA-prod-eu), vía `ASEGURA_DATABASE_URL`. El cliente principal
- * (`lib/db.ts`) sigue siendo la BD compartida de central, donde vive la auth.
+ * Cliente de la CARTERA (las 52 tablas del CRM de Grupo Asegura). El cliente
+ * principal (`lib/db.ts`) sigue siendo el de la BD compartida de central, donde
+ * vive la auth.
  *
- * La construcción es perezosa a propósito: sin la env, Prisma lanzaría al
+ * Desde el 02/09/2026 la cartera está copiada en el schema `seguros` de esa MISMA
+ * BD compartida, y por defecto se lee de ahí (`DATABASE_URL` + `schema=seguros`);
+ * `ASEGURA_FUENTE=origen` vuelve al Supabase de Manuel (`ASEGURA_DATABASE_URL`).
+ * La decisión es pura y está probada: `urlFuenteCartera` en lib/asegura-url.ts.
+ *
+ * La construcción es perezosa a propósito: sin conexión, Prisma lanzaría al
  * instanciar, y eso convertiría «conexión sin configurar» en un 500. La UI
  * debe poder decir «pendiente de configurar» — tres estados, no dos.
  */
-export function aseguraConfigurada(): boolean {
-  return Boolean(process.env.ASEGURA_DATABASE_URL)
+function resolver() {
+  return urlFuenteCartera({
+    ASEGURA_FUENTE: process.env.ASEGURA_FUENTE,
+    DATABASE_URL: process.env.DATABASE_URL,
+    ASEGURA_DATABASE_URL: process.env.ASEGURA_DATABASE_URL,
+  })
 }
 
-const globalForAsegura = globalThis as unknown as { prismaAsegura?: AseguraPrismaClient }
+export function aseguraConfigurada(): boolean {
+  return resolver().url !== null
+}
+
+/** De dónde se está leyendo la cartera ahora mismo (para pantallas y partes). */
+export function fuenteCartera(): FuenteCartera {
+  return resolver().fuente
+}
+
+const globalForAsegura = globalThis as unknown as {
+  prismaAsegura?: AseguraPrismaClient
+  prismaAseguraUrl?: string
+}
 
 export function prismaAsegura(): AseguraPrismaClient {
-  if (!aseguraConfigurada()) {
-    throw new Error('ASEGURA_DATABASE_URL no configurada — comprueba aseguraConfigurada() antes')
+  const { fuente, url } = resolver()
+  if (!url) {
+    throw new Error(`Cartera sin conexión para la fuente «${fuente}» — comprueba aseguraConfigurada() antes`)
   }
-  if (!globalForAsegura.prismaAsegura) {
-    // La URL pasa por normalizarUrlPooler: al pooler 6543 le falta a menudo el
-    // `pgbouncer=true` que Prisma necesita, y ese olvido de pegado no debe
-    // tumbar la cartera (ver lib/asegura-url.ts).
-    globalForAsegura.prismaAsegura = new AseguraPrismaClient({
-      datasources: { db: { url: normalizarUrlPooler(process.env.ASEGURA_DATABASE_URL!) } },
-    })
+  // Si la fuente cambia entre invocaciones (env distinta), el cliente cacheado
+  // apuntaría a la BD equivocada: se reconstruye.
+  if (!globalForAsegura.prismaAsegura || globalForAsegura.prismaAseguraUrl !== url) {
+    globalForAsegura.prismaAsegura = new AseguraPrismaClient({ datasources: { db: { url } } })
+    globalForAsegura.prismaAseguraUrl = url
   }
   return globalForAsegura.prismaAsegura
 }

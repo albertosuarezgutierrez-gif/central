@@ -44,6 +44,20 @@
 - **Alberto repuso los dos PIN desde el panel** (BD: ambos → 13:00, mismo código, `tuya_password_id` nuevo) pero
   la pantalla seguía en «11:00»: `ajustarVentana` no recargaba la lista tras el PATCH. Corregido en el mismo PR. Doc: `docs/DOMOTICA-TUYA.md` (Fase 2).
 
+### 🏠 (02/09/2026) Correduría «todo nosotros»: el CRM ya es nuestro, está CAÍDO desde el 31/08, y falta UNA variable
+- Alberto: «haz lo necesario para tener todo nosotros». Hallazgo: el repo `asegura` (CRM de Manuel) y su
+  proyecto Vercel `asegura` (`app.grupoasegura.com`) **ya están en la cuenta/equipo de Alberto** — el doc
+  del traspaso iba por detrás. Secrets de Actions viajaron.
+- 🚨 **El CRM lleva caído desde el 31/08 06:15 UTC** (primer despliegue en nuestro equipo): `password
+  authentication failed for user "postgres"` en TODA consulta (386× en `/api/health`); `cima-pull` → 500
+  (3 corridas). Nadie lo vio (sin Slack). Origen congelado ⇒ la copia del 02/09 es completa.
+- Hecho: 12 funciones + 26 triggers portados a `seguros`; `prisma_seguros` con `search_path=seguros`;
+  `apps/asegura` lee de central por defecto (`urlFuenteCartera`, probado; `ASEGURA_FUENTE=origen` vuelve).
+- **Pendiente de Alberto (panel Vercel, 4 pasos en `docs/TRASPASO-CORREDURIA.md` «CIERRE»):** poner en el
+  proyecto `asegura` el `DATABASE_URL` de `central-asegura`, redesplegar, `/api/health`, `cima-pull` dry run.
+- Queda para después: auth (9 usuarios en el Supabase de Manuel), `record-evidence.ts` por PostgREST, Fly.
+- PR #2002 (lateral plegable + copia) **mergeado** por orden de Alberto.
+
 ### 🗄️ (02/09/2026) Correduría: la cartera YA ESTÁ COPIADA en `seguros` (foto fija, origen sigue vivo)
 - Alberto: «vamos con la copia de BBDD, es prioritario». **Hecho:** 52 tablas, 86.628 filas, 131 FKs,
   verificación por recuento (52/52) y checksum de contenido (clientes, pólizas, recibos, siniestros).
