@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T05:23:01Z",
+  "generadoEn": "2026-09-02T05:46:23Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5375,6 +5375,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Hecho por Claude Chrome (02/09):",
+      "fecha": ""
+    },
+    {
       "titulo": "Duplicado «Jose Suarez Salas»",
       "fecha": ""
     },
@@ -5428,10 +5432,6 @@
     },
     {
       "titulo": "`deductible` la traen 10 de 18 precios",
-      "fecha": ""
-    },
-    {
-      "titulo": "`modality.category`",
       "fecha": ""
     }
   ],
