@@ -13,6 +13,7 @@ import {
   catalogoHogar,
   esCatalogoHogar,
   CATALOGOS_HOGAR,
+  tiposDeVia,
 } from '@/lib/codeoscopic/catalogos'
 
 export const runtime = 'nodejs'
@@ -77,6 +78,9 @@ export async function GET(req: Request) {
         }
         return NextResponse.json({ opciones: await catalogoHogar(config, nombre) })
       }
+      // Los tipos de vía (`Calle`, `Avenida`…): van en `risk.address.roadType.id` de hogar.
+      case 'vias':
+        return NextResponse.json({ opciones: await tiposDeVia(config) })
       // Los ramos habilitados para esta organización y, resuelto aquí mismo,
       // si hogar está entre ellos (con su id EXACTO). Tres estados, no dos.
       case 'lineas': {

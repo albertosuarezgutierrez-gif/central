@@ -4,7 +4,11 @@ import { requireSession } from '@/lib/session'
 import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion, type OrigenRetarificacion } from '@/lib/cartera-ficha'
 import { precalificarAuto, type Resueltos } from '@/lib/codeoscopic/desde-cartera'
-import { precalificarHogarCartera, type ResueltosHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
+import {
+  precalificarHogarCartera,
+  partirDireccion,
+  type ResueltosHogar,
+} from '@/lib/codeoscopic/desde-cartera-hogar'
 import { resolverConfig } from '@/lib/codeoscopic/config'
 import {
   estadosCiviles,
@@ -15,6 +19,11 @@ import {
   lineasDeSeguro,
   hogarDisponible,
   catalogoHogar,
+  tiposDeVia,
+  elegirDefecto,
+  pareceOpcionPropietario,
+  DEFECTOS_HOGAR,
+  DEFECTO_TIPO_VIA,
   type CatalogoHogar,
   type DisponibilidadHogar,
   type Opcion,
@@ -23,8 +32,9 @@ import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
 import { eur } from '@/lib/dinero'
 import Retarificador from './retarificador'
 import RetarificadorHogar, {
-  CATALOGOS_OBLIGATORIOS,
-  CATALOGOS_OPCIONALES,
+  CATALOGOS_PANTALLA,
+  CAMPO_DE_CATALOGO,
+  type DefectosHogar,
   type PrefijadosHogar,
 } from './retarificador-hogar'
 
@@ -225,35 +235,38 @@ async function PantallaHogar({
   polizaId: string
   correduriaId: string
 }) {
-  // ── Todo gratis: catálogos, municipios y los ramos habilitados ────────────
+  // ── Todo gratis: catálogos, tipos de vía, municipios y los ramos habilitados ──
   const r = resolverConfig(process.env, { ignorarInterruptor: true })
   let civiles: Opcion[] = []
   let municipios: Opcion[] = []
+  let vias: Opcion[] = []
   const catalogos: Partial<Record<CatalogoHogar, Opcion[]>> = {}
   const fallosCatalogo: string[] = []
   let ramo: DisponibilidadHogar = { estado: 'desconocido' }
   let fallaConfig: string | null = null
 
   const cpRiesgo = origen.hogar?.cp ?? origen.cliente.codigoPostal
-  const nombres = [...CATALOGOS_OBLIGATORIOS, ...CATALOGOS_OPCIONALES]
 
   if (r.estado === 'lista') {
     const cfg = r.config
-    const [c, m, l, ...cats] = await Promise.all([
+    const [c, m, l, v, ...cats] = await Promise.all([
       estadosCiviles(cfg).catch((e: unknown) => errar(e)),
       cpRiesgo ? municipiosPorCp(cfg, cpRiesgo).catch((e: unknown) => errar(e)) : Promise.resolve([]),
       lineasDeSeguro(cfg).catch((e: unknown) => errar(e)),
-      ...nombres.map((n) =>
+      tiposDeVia(cfg).catch((): Opcion[] | null => null),
+      ...CATALOGOS_PANTALLA.map((n) =>
         catalogoHogar(cfg, n).catch((): Opcion[] | null => null),
       ),
     ])
     civiles = c
     municipios = m
     ramo = hogarDisponible(l)
-    nombres.forEach((n, i) => {
+    // `null` = no se pudo leer; `[]` = llegó vacío. Los nueve son obligatorios
+    // para el vendor, y el tipo de vía también: cualquiera bloquea el botón.
+    if (v === null || v.length === 0) fallosCatalogo.push('road-types')
+    else vias = v
+    CATALOGOS_PANTALLA.forEach((n, i) => {
       const lista = cats[i]
-      // `null` = no se pudo leer; `[]` = llegó vacío. Los dos bloquean si es
-      // obligatorio, pero se dicen distinto.
       if (lista === null || lista.length === 0) fallosCatalogo.push(n)
       else catalogos[n] = lista
     })
@@ -264,17 +277,35 @@ async function PantallaHogar({
   }
 
   const estadoCivilAuto = emparejar(civiles, origen.cliente.estadoCivil)
-  const primero = (n: CatalogoHogar) => catalogos[n]?.[0]?.id ?? null
 
-  // La precalificación inicial: con los defectos de la pantalla (primera
-  // opción de cada obligatorio) marcados como supuestos, para que se vean.
+  // ── Los defectos: el id del ejemplo del portal si el catálogo lo trae; si no,
+  // la primera opción. Los nueve van como SUPUESTO para que se vean. El tipo de
+  // vía se empareja con la dirección de la ficha y solo es supuesto si no casa.
+  const defectos = {} as DefectosHogar
+  for (const n of CATALOGOS_PANTALLA) defectos[n] = elegirDefecto(catalogos[n] ?? [], DEFECTOS_HOGAR[n])?.id ?? null
+  const viaDeLaFicha = emparejar(vias, partirDireccion(origen.hogar?.direccion ?? null).tipoVia)
+  const viaDefecto = viaDeLaFicha ?? elegirDefecto(vias, DEFECTO_TIPO_VIA)
+  defectos['road-types'] = viaDefecto?.id ?? null
+  const propietarioEsTomador = pareceOpcionPropietario(elegirDefecto(catalogos.uses ?? [], DEFECTOS_HOGAR.uses))
+
   const resueltos: ResueltosHogar = {
     municipioId: municipios.length === 1 ? Number(municipios[0].id) : null,
     estadoCivilId: estadoCivilAuto?.id ?? null,
-    tipoVivienda: primero('property-types'),
-    uso: primero('uses'),
-    ocupacion: primero('occupancy-types'),
-    supuestos: { tipoVivienda: true, uso: true, ocupacion: true },
+    tipoViaId: defectos['road-types'],
+    tipoVivienda: defectos['property-types'],
+    uso: defectos.uses,
+    ocupacion: defectos['occupancy-types'],
+    ubicacion: defectos.locations,
+    material: defectos['build-materials'],
+    calidad: defectos['build-qualities'],
+    alarma: defectos['alarm-types'],
+    puertasSecundarias: defectos['door-types'],
+    asentamiento: defectos['settlement-types'],
+    propietarioEsTomador,
+    supuestos: {
+      tipoVia: viaDeLaFicha === null && viaDefecto !== null,
+      ...Object.fromEntries(CATALOGOS_PANTALLA.map((n) => [CAMPO_DE_CATALOGO[n], true])),
+    },
   }
   const pre = precalificarHogarCartera(
     origen.cliente,
@@ -285,13 +316,22 @@ async function PantallaHogar({
   const consumo = await estadoConsumo(correduriaId)
 
   const h = origen.hogar
+  const d = pre.datos
   const prefijados: PrefijadosHogar = {
-    cp: typeof pre.datos.cp === 'string' ? pre.datos.cp : null,
+    cp: typeof d.cp === 'string' ? d.cp : null,
+    tipoViaId: typeof d.tipoViaId === 'string' ? d.tipoViaId : null,
+    nombreVia: d.nombreVia ?? null,
+    numeroVia: d.numeroVia ?? null,
+    planta: d.planta ?? null,
+    puertaVivienda: d.puertaVivienda ?? null,
+    direccionEntera: h?.direccion ?? null,
     metrosCuadrados: h?.metrosCuadrados ?? null,
     anioConstruccion: h?.anioConstruccion ?? null,
+    habitaciones: d.habitaciones ?? null,
     capitalContinente: h?.capitalContinente ?? null,
     capitalContenido: h?.capitalContenido ?? null,
-    fechaEfecto: typeof pre.datos.fechaEfecto === 'string' ? pre.datos.fechaEfecto : null,
+    propietarioEsTomador,
+    fechaEfecto: typeof d.fechaEfecto === 'string' ? d.fechaEfecto : null,
   }
 
   const estadoRamo =
@@ -336,7 +376,11 @@ async function PantallaHogar({
               <Fila etiqueta="Compañía actual (código DGS)" valor={origen.poliza.codigoEntidadDgs} />
               <Fila etiqueta="Póliza anterior" valor={origen.poliza.numeroPoliza} />
               <Fila etiqueta="Vencimiento actual" valor={origen.poliza.fechaVencimiento} />
-              <Fila etiqueta="Dirección del riesgo" valor={h?.direccion ?? null} nota="No viaja al vendor: solo para reconocer la casa." />
+              <Fila
+                etiqueta="Dirección del riesgo"
+                valor={h?.direccion ?? null}
+                nota="El vendor la exige troceada (tipo de vía, nombre, número, planta, puerta): abajo se puede comprobar el troceo."
+              />
               <Fila etiqueta="Localidad" valor={h?.localidad ?? null} />
               <Fila
                 etiqueta="Código postal del riesgo"
@@ -354,9 +398,10 @@ async function PantallaHogar({
 
       <div className="card">
         <p style={{ margin: 0 }}>
-          🚨 <strong>El formato del riesgo de hogar del vendor NO está verificado.</strong> Si lo rechaza por validación
-          (400) <strong>NO se cobra</strong> y el mensaje dirá qué campo sobra o falta; si lo acepta, es una cotización real
-          (0,50€).
+          ✅ <strong>El formato del riesgo está verificado contra el portal del vendor (02/09/2026).</strong> El vendor exige
+          más de lo que la ficha guarda (calle y número, habitaciones, protecciones, joyas, perros): todo eso se rellena
+          con supuestos declarados que puedes corregir antes de pagar. Un 400 de validación <strong>NO se cobra</strong>;
+          un cuerpo aceptado es una cotización real (0,50€).
         </p>
       </div>
 
@@ -367,8 +412,10 @@ async function PantallaHogar({
         faltanInicial={pre.faltan}
         civiles={civiles}
         municipios={municipios}
+        vias={vias}
         estadoCivilAuto={estadoCivilAuto}
         catalogos={catalogos}
+        defectos={defectos}
         fallosCatalogo={fallosCatalogo}
         ramo={ramo}
         prefijados={prefijados}

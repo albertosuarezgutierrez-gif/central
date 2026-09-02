@@ -5,6 +5,7 @@ import { origenRetarificacion, type OrigenRetarificacion } from '@/lib/cartera-f
 import { precalificarAuto, type Resueltos } from '@/lib/codeoscopic/desde-cartera'
 import {
   precalificarHogarCartera,
+  type CatalogoResuelto,
   type CatastroHogar,
   type ResueltosHogar,
   type SupuestoHogar,
@@ -17,6 +18,7 @@ import {
 import {
   construirPeticionHogar,
   revisarDatosHogar,
+  CATALOGOS_HOGAR_OBLIGATORIOS,
   type DatosHogar,
 } from '@/lib/codeoscopic/peticion-hogar'
 import type { Supuesto } from '@/lib/codeoscopic/desde-cartera'
@@ -178,28 +180,67 @@ function prepararAuto(origen: OrigenRetarificacion, cuerpo: CuerpoPeticion, poli
 
 // ─── HOGAR ───────────────────────────────────────────────────────────────────
 
+/** Los ids de catálogo que la pantalla puede haber puesto por defecto (y que así lo declara). */
+const CLAVES_SUPUESTOS: readonly CatalogoResuelto[] = [...CATALOGOS_HOGAR_OBLIGATORIOS, 'tipoVia']
+
+/** Correcciones que llegan como TEXTO del formulario y viajan como número. */
+const CORRECCIONES_NUMERICAS = [
+  'metrosCuadrados',
+  'anioConstruccion',
+  'capitalContinente',
+  'capitalContenido',
+  'municipioId',
+  'habitaciones',
+  'anioUltimaReforma',
+  'joyasEnCajaFuerte',
+  'joyasFueraDeCaja',
+  'objetosDeValor',
+  'perrosPeligrosos',
+] as const
+
+/** Correcciones sí/no. `false` es una respuesta, no un hueco: se conserva. */
+const CORRECCIONES_BOOLEANAS = [
+  'puertaPrincipalBlindada',
+  'ventanasSeguras',
+  'vigilante',
+  'urbanizacionCerrada',
+  'propietarioEsTomador',
+] as const
+
 /**
- * 🚨 El contrato del `risk` de hogar del vendor NO está verificado (ver
- * `peticion-hogar.ts`). Un 400 de validación no se cobra y su mensaje dirá qué
- * campo sobra o falta; por eso el 502 devuelve el mensaje ENTERO del vendor.
+ * ✅ El contrato del `risk` de hogar está verificado contra el portal del
+ * fabricante (02/09/2026; ver la cabecera de `peticion-hogar.ts`). Aun así el
+ * 502 devuelve el mensaje ENTERO del vendor: si el contrato cambia algún día,
+ * ese mensaje es lo que dice qué campo sobra o falta, y un 400 de validación
+ * no se cobra.
  */
 async function prepararHogar(
   origen: OrigenRetarificacion,
   cuerpo: CuerpoPeticion,
   polizaId: string,
 ): Promise<Preparado> {
-  const s = esObjetoPlano(cuerpo.resueltos?.supuestos) ? cuerpo.resueltos.supuestos : {}
+  const rs: Record<string, unknown> = esObjetoPlano(cuerpo.resueltos) ? cuerpo.resueltos : {}
+  const s = esObjetoPlano(rs.supuestos) ? rs.supuestos : {}
+  // Solo `true` cuenta como «es un defecto de la pantalla»; lo demás es «elegido».
+  const supuestos: Partial<Record<CatalogoResuelto, boolean>> = {}
+  for (const k of CLAVES_SUPUESTOS) if (s[k] === true) supuestos[k] = true
+
   const resueltos: ResueltosHogar = {
-    municipioId: numero(cuerpo.resueltos?.municipioId),
-    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
-    tipoVivienda: cadena(cuerpo.resueltos?.tipoVivienda),
-    uso: cadena(cuerpo.resueltos?.uso),
-    ocupacion: cadena(cuerpo.resueltos?.ocupacion),
-    supuestos: {
-      tipoVivienda: s.tipoVivienda === true,
-      uso: s.uso === true,
-      ocupacion: s.ocupacion === true,
-    },
+    municipioId: numero(rs.municipioId),
+    estadoCivilId: cadena(rs.estadoCivilId),
+    tipoViaId: cadena(rs.tipoViaId),
+    tipoVivienda: cadena(rs.tipoVivienda),
+    uso: cadena(rs.uso),
+    ocupacion: cadena(rs.ocupacion),
+    ubicacion: cadena(rs.ubicacion),
+    material: cadena(rs.material),
+    calidad: cadena(rs.calidad),
+    alarma: cadena(rs.alarma),
+    puertasSecundarias: cadena(rs.puertasSecundarias),
+    asentamiento: cadena(rs.asentamiento),
+    // `null` = la pantalla no lo ha decidido; el mapeador lo supone y lo declara.
+    propietarioEsTomador: booleano(rs.propietarioEsTomador),
+    supuestos,
   }
   const catastro: CatastroHogar | null = esObjetoPlano(cuerpo.catastro)
     ? {
@@ -224,12 +265,22 @@ async function prepararHogar(
 
   // Los números del formulario llegan como TEXTO («76», «61000»); se convierten
   // aquí y lo que no es número se descarta (queda lo precalificado), nunca a 0.
+  // Los sí/no aceptan boolean o 'true'/'false'; cualquier otra cosa se descarta.
+  // Los textos (tipo de vía, calle, número, planta, puerta, referencia
+  // catastral, CP) ya llegan recortados de `limpiarCorrecciones`.
   const correcciones = limpiarCorrecciones<DatosHogar>(cuerpo.correcciones) as Record<string, unknown>
-  for (const k of ['metrosCuadrados', 'anioConstruccion', 'capitalContinente', 'capitalContenido', 'municipioId']) {
+  for (const k of CORRECCIONES_NUMERICAS) {
     if (k in correcciones) {
       const n = numero(correcciones[k])
       if (n === null) delete correcciones[k]
       else correcciones[k] = n
+    }
+  }
+  for (const k of CORRECCIONES_BOOLEANAS) {
+    if (k in correcciones) {
+      const b = booleano(correcciones[k])
+      if (b === null) delete correcciones[k]
+      else correcciones[k] = b
     }
   }
   const datos: Partial<DatosHogar> = { ...pre.datos, ...(correcciones as Partial<DatosHogar>) }
@@ -279,6 +330,14 @@ function numero(v: unknown): number | null {
   if (typeof v === 'string' && v.trim() === '') return null
   const n = typeof v === 'string' ? Number(v) : v
   return typeof n === 'number' && Number.isFinite(n) ? n : null
+}
+
+/** `true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta). */
+function booleano(v: unknown): boolean | null {
+  if (typeof v === 'boolean') return v
+  if (v === 'true') return true
+  if (v === 'false') return false
+  return null
 }
 
 function esObjetoPlano(v: unknown): v is Record<string, unknown> {
