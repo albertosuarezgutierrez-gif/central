@@ -4,6 +4,7 @@ import Documentos from '../../Documentos'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,17 +30,19 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
           <span>·</span>
           <Link href={`/correduria/cliente/${p.cliente.id}`}>{p.cliente.nombre}</Link>
         </div>
-        <h1 style={{ margin: '6px 0 2px', fontSize: 22 }}>
-          {TIPOS[p.tipo] ?? p.tipo} · {p.aseguradora}
-          {p.numeroPoliza && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · nº {p.numeroPoliza}</span>}
-        </h1>
-        <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <span>{p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
-          {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
-          {p.retarificable && (
-            <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>Retarificar ↗</a>
-          )}
-        </div>
+        <PageHeader
+          titulo={<>
+            {TIPOS[p.tipo] ?? p.tipo} · {p.aseguradora}
+            {p.numeroPoliza && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · nº {p.numeroPoliza}</span>}
+          </>}
+          sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <span>{p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
+            {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
+            {p.retarificable && (
+              <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>Retarificar ↗</a>
+            )}
+          </span>}
+        />
       </div>
 
       {/* ── Qué asegura ─────────────────────────────────────────────────── */}

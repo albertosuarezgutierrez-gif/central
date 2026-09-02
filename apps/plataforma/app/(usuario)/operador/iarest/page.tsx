@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getAdmin } from '@/lib/superadmin'
 import Link from 'next/link'
-import { Pagina } from '@/components/ui'
+import { Pagina, PageHeader } from '@/components/ui'
+import { UtensilsCrossed } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,17 +63,20 @@ export default async function OperadorIaRestPage() {
 
   return (
     <Pagina ancho="lectura">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🍽️ ia-rest</h1>
-        <a
-          href={`${process.env.IAREST_URL || 'https://iarest.es'}/super`}
-          target="_blank"
-          rel="noreferrer"
-          style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}
-        >
-          Panel legacy ↗
-        </a>
-      </div>
+      <PageHeader
+        titulo="ia-rest"
+        icono={<UtensilsCrossed size={20} strokeWidth={1.75} />}
+        acciones={
+          <a
+            href={`${process.env.IAREST_URL || 'https://iarest.es'}/super`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}
+          >
+            Panel legacy ↗
+          </a>
+        }
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
         {sections.map(s => (

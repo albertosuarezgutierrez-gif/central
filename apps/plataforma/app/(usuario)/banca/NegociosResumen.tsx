@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db'
 import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
 import { getAlertas, type Alertas } from '@/lib/banca'
-import { Badge, CardHeader, Pendiente, Stat, TablaScroll, cardStyle, colorImporte } from '@/components/ui'
+import { Badge, CardHeader, PageHeader, Pendiente, Stat, TablaScroll, cardStyle, colorImporte } from '@/components/ui'
 import { getResumenPilar, getResumenFinanciero, type TrimPilar } from '@/lib/finanzas'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from '../dashboard/GestionSociedad'
 
@@ -141,10 +141,7 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
       {/* Alertas accionables */}
       <AlertasBanner alertas={alertas} gastosSinClasificar={gastosSinClasificar} />
 
-      <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700 }}>Hola, {nombre}</h1>
-        <NuevaSociedadBtn />
-      </div>
+      <PageHeader titulo={`Hola, ${nombre}`} acciones={<NuevaSociedadBtn />} />
 
       {sociedades.length === 0 && (
         <div style={{

@@ -32,7 +32,7 @@
 
 ---
 
-### 📄 (02/09/2026) El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR pendiente)
+### 📄 (02/09/2026) El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)
 - Alberto subió «movimientos (2).pdf» al chat 📎 y recibió «prueba con una foto más nítida o un PDF que tenga texto».
 - **Descartado que sea pdf-parse:** el cron `subastas-enriquecer` leyó decenas de PDF en prod esa misma mañana
   (`documentos.legible=true`, 06:15-09:31 UTC) y la lib va bien en local. **El PDF no traía capa de texto.**
@@ -40,10 +40,31 @@
   pese a que `rasterizarPdf` (PDFium) + visión ya existían y los usan `factura-limpieza-lectura` y el lector registral.
 - Ahora: `MotivoSinLectura` (pdf_ilegible · pdf_sin_texto{no_intentado|sin_paginas|error|sin_datos} · formato) →
   mensaje que dice si se ha MIRADO o no y enruta a `/banca → Importar`; y `opts.ocr` (solo el chat, no los barridos).
-- **Sin cerrar:** no se ha visto el PDF de Alberto, así que si con visión tampoco sale importe/fecha, el mensaje lo dirá
-  pero seguirá sin leerse. `require('pdf-parse')` de `app/api/sivra/expenses/parse-invoice/route.ts` sigue en la raíz.
+- **Probado sobre un PDF sin capa de texto fabricado a propósito:** pdf-parse abre 1 página y saca 0 caracteres;
+  JPEG embebidos y PDFium devuelven la página, y la imagen sale legible. Guardián `rasterizar-pdf.test.ts` —sin él
+  la regresión es INVISIBLE: saldría `ocr:'sin_paginas'`, un desenlace legítimo, con la suite en verde.
+- **Sin cerrar:** la lectura por VISIÓN no se ha probado end-to-end (el contenedor no tiene claves de IA) y no se ha
+  visto el PDF de Alberto. `require('pdf-parse')` de `app/api/sivra/expenses/parse-invoice/route.ts` sigue en la raíz;
+  el barrido de Gmail (`expenses/agent/scan`) sigue sin OCR, así que una factura escaneada por correo se pierde.
 
 ---
+
+---
+
+### 🧱 (02/09/2026, noche) Las 43 cabeceras restantes, al componente compartido (PR #2054)
+- Con #2045, `apps/plataforma` queda **entera** sobre `PageHeader`: 43 cabeceras + 3 `BtnLink` + 9 `ThinBar`, en
+  **4 tandas de agentes** con lista EXPLÍCITA de ficheros por tanda (y de los prohibidos) para no pisarse.
+- 🔧 **Dos huecos de las primitivas que solo se ven al adoptarlas de verdad**, los dos destapados por botones reales
+  que se quedaban fuera: `BtnLink` **no soportaba `target`/`rel`** (firma SCA del banco, subir póliza, comparar
+  precio: los tres abren pestaña nueva) → prop `nuevaPestana` con `rel="noopener noreferrer"` implícito y NO
+  opcional; y `ThinBar` **no llevaba transición**, así que dos barras perdían su animación al migrar.
+- **Es un cambio de ASPECTO, no solo de código:** títulos a 20px/700 (venían de 18-24 y peso 700-900), margen bajo
+  la cabecera unificado en 24px, y el emoji que iba dentro del `<h1>` pasa a la cápsula de 38×38 `--primary-light`.
+  `pricing-auto`/`pricing-rentabilidad` dejan su paleta hex fija: su título ya responde al tema.
+- El commit lleva **`[preview]`** a propósito: con `--sin-previews`, 43 pantallas cambiando de aspecto se verían por
+  primera vez EN PRODUCCIÓN. Un build es más barato que eso.
+- **Sin migrar a propósito:** `banca/transferencia` (sus 3 `<h1>` son estados de un formulario) e
+  `invitado/limpieza` (única pantalla de Vanesa, intranet de invitado, no el panel `(usuario)`).
 
 ### 🩺 (02/09/2026) Salud de la arquitectura a cero avisos (/admin → 🗺️ Estructura)
 - **La reimplementación era real, no un falso positivo:** `apps/alquiler` llevaba su propio catálogo y calculaba
@@ -105,9 +126,16 @@
   sin `console.error`, colapsaban conexión/schema/permisos/fila-que-falta en un `{estado:'error'}` pelado. Ahora
   llevan `motivo` (`bd`/`sin_correduria`) + pista corta SIN secretos (`central/…/P2021/public.corredurias`, módulo
   puro `comisiones-motivo.ts`), plataforma la propaga y el Telegram la enseña. La próxima pasada se nombra sola.
-- **Endurecido el camino más probable:** `urlFuenteCartera` **fuerza** `schema=seguros` en vez de respetar el que
-  traiga `DATABASE_URL` — es la MISMA cadena que la auth (`public`), donde no hay `corredurias` y `clientes` es otra
-  tabla (leerías los clientes de central creyendo que son los de la correduría). Hipótesis, no causa medida.
+- ⚠️ **Y la hipótesis que escribí era FALSA — corregido en el PR #2047.** Dije «probablemente el schema»:
+  `urlFuenteCartera` fuerza `schema=seguros` en vez de respetar el que traiga `DATABASE_URL`. Se conserva como
+  blindaje (esa cadena es la MISMA que la auth, donde el schema bueno es `public`, y ahí `clientes` es OTRA tabla),
+  pero **no era la causa**. La midió el PR #2034: `credenciales` — la contraseña de `prisma_seguros` se rotó TRES
+  veces ese día (05:51, 05:52 y 10:17, en `postgres_logs`) y el `DATABASE_URL` de Vercel `central-asegura` se quedó
+  con la vieja. El repo ya se había avisado a sí mismo en el SQL de `crm_seguros` («rotarla tumbaría
+  central-asegura») y se rotó igual. Regla nueva en el CLAUDE.md raíz: **rotación y env, en el mismo paso.**
+- **Deuda propia, saldada en #2047:** #2029 y #2034 crearon dos clasificadores del mismo error con horas de
+  diferencia. Gana `lib/error-cartera.ts` (seis causas accionables y borra la URL del log); `comisiones-motivo.ts`
+  retirado y la ruta de comisiones al compartido → las NUEVE rutas del puerto hablan igual.
 - Verificado: 2.568 tests `node --test` + 53 vitest en verde, typecheck de asegura y plataforma OK.
 - **De regalo, la 7ª medición del CI mudo (anotada en `CLAUDE.md`), y la más limpia:** el MISMO acto —merge
   de `main` con contenido real + push— salió **mudo en draft** y **disparó los 19 runs ya sin draft**. O sea:

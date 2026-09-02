@@ -111,6 +111,24 @@ el email a `limpiezascruzz@gmail.com` y la ficha de `/sivra/mensajes` no los abr
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 
+### 👁 Ver una preview de ESTA app antes de mergear (02/09/2026)
+El `ignoreCommand` de esta app lleva `--sin-previews`, así que **una rama de PR NO construye nada**: el CI
+dice que compila, no cómo queda. Para un cambio que altera el ASPECTO —y aquí eso pasa a menudo: la
+migración de las 43 cabeceras a `PageHeader` cambió el tamaño del título en toda la app— hay que forzarla,
+o esas pantallas se ven por primera vez en producción.
+
+Se fuerza con `[preview]` en el asunto del commit, pero **el marcador solo no basta: hacen falta DOS cosas
+a la vez** (fallaron las dos, una detrás de otra, en el PR #2054):
+1. Va en el asunto del **ÚLTIMO** commit del push (el script lee `VERCEL_GIT_COMMIT_MESSAGE`, que es el HEAD
+   empujado). Si después añades commits, el marcador se pierde.
+2. **Ese mismo commit tiene que tocar `apps/plataforma/`** (o un `packages/*` que esta app declare, o un
+   manifiesto raíz). `[preview]` levanta el veto de `--sin-previews`, pero el filtro por rutas del script
+   salta el build igual. Un commit que solo toca un `.md` de la raíz NO construye, lleve marcador o no.
+
+Y **compruébalo**: el fallo se ve idéntico a un build legítimamente ignorado
+(`Vercel – plataforma: Canceled by Ignored Build Step` en los statuses del PR). Detalle completo en el
+`CLAUDE.md` de la raíz, sección del `ignoreCommand`.
+
 ## ⏰ Crons — dispatcher único (30/07/2026)
 **Vercel Pro admite 40 crons/proyecto y este llegó a 60 → el scheduler omitía disparos en silencio**
 (29/07/2026: `psd2-sync` de las 06:00 sin log alguno; auditoría PR #1162). Desde entonces `vercel.json`
