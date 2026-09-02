@@ -32,6 +32,17 @@
 
 ---
 
+### 📐 (02/09/2026) Plataforma: botón « para plegar el lateral
+- `UserSidebar.tsx` (escritorio): botón «/» en el cabecero → tira de iconos de 56px (tooltips por `title`),
+  pie con solo ⏻. Estado en `localStorage('nav-plegado')` aplicado por el **script anti-parpadeo de
+  `layout.tsx`** (`html[data-nav-plegado]`, CSS en `globals.css`), igual que tema y saldo oculto: sin salto
+  al recargar. Móvil (drawer) intacto.
+- 🔎 Hallazgo de paso, SIN tocar: en la ficha de Jose Suarez Salas sale «📍 34143, Tarragona» porque en la BD
+  de **Manuel** (sigue siendo la fuente, `ASEGURA_DATABASE_URL`; NO hay copia) la ficha `intranet:cli:17`
+  tiene `ciudad='34143'` / `provincia='Tarragona'` (CP correcto 41003). **504 fichas** del volcado
+  `intranet:` tienen `ciudad` numérica y 488 `provincia='Tarragona'`: columnas corridas en ESA importación.
+  Hay duplicado sin fusionar (`asegura_app:cli2:17`, SEVILLA/41003) con las 14 pólizas históricas.
+
 ### 🔎 (01/09/2026) Correduría: buscador de TODO, cola de retención y limpieza de la pantalla
 - 🗑️ **Borrada** `/cartera/renovaciones` de asegura (duplicaba la de plataforma) y su menú.
 - 🔎 **Buscador universal**: nombre · matrícula · nº póliza · DNI · teléfono · email · ciudad · CP.
