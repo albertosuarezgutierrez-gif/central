@@ -32,6 +32,18 @@
 
 ---
 
+### 🔐 (02/09/2026, ~09:00 UTC) Correduría: la AUTH del CRM también está en central — quedan 3 variables de Alberto
+- Alberto: «el punto 2 no se hace… quiero tener todo en nuestra bbdd» → **NO se rota `crm_seguros`** (anotado en
+  `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`) y se copió `auth.*` de Manuel a central por dblink con
+  los mismos UUID: 9 users (2 reales con bcrypt + TOTP), 11 identities, 2 mfa_factors; 9/9 enlazados con
+  `seguros.usuarios`. Trigger `on_auth_user_created` → `seguros.handle_new_user()` creado. Rol temporal de origen borrado.
+- Tres trampas medidas: `auth.*` de origen con RLS y 0 políticas → **0 filas sin error** para un rol sin BYPASSRLS
+  (un count=0 ahí no es «no hay»); en PG16 INHERIT va por GRANT (un rol NOINHERIT no hereda tras `ALTER … INHERIT`);
+  `postgres` no puede hacer GRANT sobre `auth.*` (aviso mudo) → `pg_read_all_data`. Todo en `prisma/sql/2026-09-02_seguros_auth_traspaso.sql`.
+- Inventario del CRM: Supabase = solo Auth; el único PostgREST (`record-evidence.ts`) no tiene llamadores → **sin cambios de código**.
+- **Pendiente de Alberto (dashboards):** Site URL/Redirect + Google provider + TOTP en el Supabase central, y pegar
+  `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY/SERVICE_ROLE_KEY` en Vercel `asegura` (pasos en TRASPASO-CORREDURIA.md). PR #2007 sigue abierto.
+
 ### 🔑 (02/09/2026) Domótica: el aviso «PIN con la ventana desactualizada» lleva botón para reponerla desde Telegram (PR #2003)
 - Disparador: aviso 🕒 de Socorro con 2 PIN (reservas 152490601 y 150885616) caducando 2 h antes de lo debido,
   y su única salida era abrir `/sivra/domotica` en el portátil. Desde el contenedor no hay Tuya/Smoobu, así que

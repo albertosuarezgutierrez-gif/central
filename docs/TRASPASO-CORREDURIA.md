@@ -14,8 +14,45 @@
 > 40 minutos fue **pegar la plantilla con el hueco `TU_CONTRASEÑA_AQUI` sin sustituir**; el driver lo
 > decía en los logs de Vercel (`password authentication failed for user "crm_seguros"`), el `/api/health`
 > lo tapa con un `Failed query: SELECT 1` genérico. Siempre mirar `get_runtime_errors`, no el health.
-> ⚠️ La contraseña de `crm_seguros` pasó por el chat (captura de pantalla): **rotarla** cuando el
-> traspaso se dé por asentado (`ALTER ROLE crm_seguros WITH PASSWORD …` + la variable en Vercel).
+> La contraseña de `crm_seguros` pasó por el chat (captura de pantalla). **Alberto decidió el 02/09/2026
+> que NO se rota** («el punto 2 no se hace»): queda anotado y no se toca sin que lo pida.
+>
+> ## 🔐 AUTH TAMBIÉN EN CASA (02/09/2026, ~09:00 UTC) — lo que queda es pegar tres variables
+>
+> **Copiado por dblink al `auth.*` de central, con los MISMOS UUID:** 9 `auth.users` (Alberto y Manuel
+> con su hash bcrypt y su TOTP verificado; 7 de pruebas), 11 `auth.identities` (email + google de los dos
+> admins) y 2 `auth.mfa_factors`. 9/9 enlazados con `seguros.usuarios.auth_user_id`, así que las 86
+> políticas RLS del CRM y cualquier `usuario_id` de la cartera siguen apuntando a la persona correcta. El
+> trigger `on_auth_user_created` → `seguros.handle_new_user()` está creado en central (portado de
+> `public.handle_new_user`). Referencia: `apps/asegura/prisma/sql/2026-09-02_seguros_auth_traspaso.sql`.
+> El rol temporal de lectura en el proyecto de Manuel se borró el mismo día.
+>
+> **Inventario medido del CRM:** su dependencia de Supabase es SOLO Auth (`signInWithPassword`, OTP del
+> portal, MFA TOTP, `auth.admin.createUser/generateLink/deleteUser/listUsers`). Ni storage, ni realtime,
+> ni RPC. El único `.from()` por PostgREST (`record-evidence.ts`, `mediator_audit_log`) **no tiene
+> llamadores** en producción — el flujo Auto-Submit ya lo hace por Drizzle en la misma transacción.
+> No hay código que cambiar en el repo `asegura`.
+>
+> **Lo que SOLO puede hacer Alberto (dashboards), y hasta entonces el login sigue contra el proyecto de
+> Manuel, que funciona:**
+> 1. Supabase **central** (`wswbehlcuxqxyinousql`) → Authentication → URL Configuration: Site URL
+>    `https://app.grupoasegura.com`; Redirect URLs `https://app.grupoasegura.com/auth/callback` y
+>    `https://app.grupoasegura.com/**`.
+> 2. Authentication → Providers → Google: el mismo Client ID/Secret que usa el proyecto de Manuel
+>    (runbook `docs/runbooks/google-oauth-setup.md` del repo `asegura`), y en Google Cloud Console
+>    añadir `https://wswbehlcuxqxyinousql.supabase.co/auth/v1/callback` a los redirect URIs. Sin esto
+>    el botón «Google» falla; el login con contraseña + TOTP no lo necesita.
+> 3. Authentication → Multi-factor: TOTP activado (los factores copiados son TOTP).
+> 4. Vercel → proyecto `asegura` → Environment Variables (Production): `NEXT_PUBLIC_SUPABASE_URL` =
+>    `https://wswbehlcuxqxyinousql.supabase.co`; `NEXT_PUBLIC_SUPABASE_ANON_KEY` = la anon key legacy
+>    de central (Settings → API); `SUPABASE_SERVICE_ROLE_KEY` = la service_role de central (mismo
+>    sitio, es secreta: no pasa por chats). Redeploy.
+> 5. Comprobar: entrar en `app.grupoasegura.com` con contraseña + código de la app de autenticación.
+>    Las sesiones abiertas caducan (las firmó el otro proyecto): hay que volver a entrar una vez.
+>
+> ⚠️ Emails de Auth (OTP del portal, recuperación): el SMTP por defecto de Supabase solo entrega a los
+> miembros del equipo y con límite por hora. Para el portal de clientes hará falta SMTP propio
+> (Resend) en central, como tuviera Manuel. No bloquea el login del corredor.
 >
 > ## 🎯 CIERRE DEL TRASPASO (02/09/2026) — qué quedaba y quién lo hizo (histórico de la mañana)
 >

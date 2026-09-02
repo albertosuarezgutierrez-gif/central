@@ -33,9 +33,23 @@ seguros`, cero visibilidad de `public`), por el pooler `aws-0-eu-west-1:6543`. P
 en `db: ok` y el `cima-pull` en dry run (run #187) escribió `cima_pull_started/completed` en
 `seguros.operational_events` de central. El cron de CIMA (05:30 y 11:30 UTC, GitHub Actions del repo
 `asegura`) escribe desde entonces aquí. **No arreglar la contraseña del origen**: el origen congelado es
-la copia de seguridad. ⚠️ La contraseña de `crm_seguros` pasó por un chat: rotarla cuando esto asiente.
+la copia de seguridad. La contraseña de `crm_seguros` pasó por un chat; **Alberto decidió NO rotarla**
+(02/09/2026): no se toca sin que lo pida él.
 Detalle y lecciones (variable Sensitive, plantilla sin sustituir, mirar `get_runtime_errors` y no el
 health) en `docs/TRASPASO-CORREDURIA.md` («TRASPASO CERRADO»).
+
+🔐 **Auth también en casa (02/09/2026, por dblink):** los 9 `auth.users` del proyecto de Manuel (2 reales:
+Alberto y Manuel, con contraseña bcrypt y su TOTP), 11 identidades y 2 factores MFA están copiados **con los
+mismos UUID** en `auth.*` de central (9/9 enlazados con `seguros.usuarios.auth_user_id`), y el trigger
+`on_auth_user_created` → `seguros.handle_new_user()` ya crea la fila de `seguros.usuarios` en cada alta.
+Referencia y trampas (RLS sin políticas en `auth.*` de origen = 0 filas sin error; INHERIT por GRANT en
+PG16) en `prisma/sql/2026-09-02_seguros_auth_traspaso.sql`. **Lo que falta es de dashboard, no de BD**:
+en Vercel `asegura` las tres variables `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` /
+`SUPABASE_SERVICE_ROLE_KEY` siguen apuntando a `uijsgeocgdaxkhvwtjqs` hasta que Alberto las pegue, y en
+el Supabase de central hay que poner Site URL / Redirect URL de `app.grupoasegura.com`, el proveedor
+Google (client ID/secret + redirect `…wswbehlcuxqxyinousql.supabase.co/auth/v1/callback` en Google Cloud)
+y comprobar que TOTP está activo. Hasta ese cambio el login sigue funcionando contra el proyecto de Manuel.
+El CRM no usa PostgREST en producción: `record-evidence.ts` (PostgREST) **no tiene llamadores**, solo su test.
 
 Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build— más la cartera en
 `seguros`. El resto de este apartado describe el estado ANTERIOR al volcado y sigue valiendo para
