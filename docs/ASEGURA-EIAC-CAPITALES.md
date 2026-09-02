@@ -76,3 +76,64 @@ prueba que CIMA no lo mande** — y aquí el estándar demuestra que lo manda.
   `13xx`: *Colisión - Vehículos - Dos*, *Daños Propios - Robo*, *Colisión - Daños
   por colisión vehículo con continente*…). Sin usar por ahora, pero es donde
   habrá que mirar cuando se pinten los siniestros por causa.
+
+
+---
+
+# 🚨 No es solo el capital: la ingesta se queda con un PUÑADO de campos
+
+Medido el 02/09/2026 después de leer el estándar, y es lo más caro de todo este
+documento. **Las 81 pólizas de auto de CIMA tienen exactamente TRES claves en
+`datos_especificos`: `marca`, `matricula`, `modelo`.** Ni una más.
+
+## Lo que el estándar manda para un vehículo (§13.47 `tipo_vehiculo`)
+
+| campo | card. | ¿lo tenemos? |
+|---|---|---|
+| `Matricula` | **1..1** | ✅ 81/81 |
+| `Marca` | **1..1** | ✅ 81/81 |
+| `Modelo` | **1..1** | ✅ 81/81 |
+| **`ClaseVehiculo`** | **1..1** | ❌ **0/81 — y es OBLIGATORIO** |
+| `Version` | 0..1 | ❌ 0/81 |
+| **`BaseSIETe`** | 0..1 | ❌ 0/81 |
+| `Cilindrada` · `Potencia` · `Combustible` · `Bastidor` · `FechaMatriculacion` · `Valor` · `Plazas` · `Color` · `PMA` | 0..1 | ❌ ninguno |
+
+**`ClaseVehiculo` es el discriminante.** Si guardáramos todo lo que llega y las
+compañías mandasen solo lo obligatorio, ese campo estaría. No está. Así que o el
+fichero incumple el estándar o **lo tiramos nosotros** — y lo segundo es mucho más
+probable, porque el patrón se repite con `Bien` (§13.99) y con la dirección de
+hogar. En los tres casos falta un campo **obligatorio**.
+
+⚠️ Consecuencia de método, y es la lección de esta sesión: **de «el campo no está
+en la BD» NO se sigue «CIMA no lo manda»**. Durante horas se dio por hecho que la
+versión del vehículo no venía. Lo único medido es que no la guardamos.
+
+## Por qué esto vale dinero
+
+- **`BaseSIETe` es la referencia del catálogo del vehículo.** `apps/asegura/CLAUDE.md`
+  dedica párrafos a que hay que llegar al código Base7 por catálogo, por foto de la
+  ficha técnica o pagando créditos por matrícula — y a que «una BD de matrículas
+  gratis no existe». Si alguna compañía rellena este campo, **la respuesta ya está
+  llegando y se está descartando**. Antes de construir más rodeos, hay que mirarlo.
+- `Cilindrada`, `Potencia` y `Combustible` son justo los tres campos con los que la
+  spec de alta por fotos propone emparejar contra el catálogo. También llegan (o
+  pueden llegar) y también se tiran.
+- En hogar, `SituacionRiesgo` es **1..1** y solo 2 de 19 pólizas traen dirección;
+  `Antiguedad` y `SuperficieConstruida` son opcionales, así que ahí sí cabe que la
+  compañía no las mande — pero la dirección no.
+
+## Qué hacer, y en qué orden
+
+1. **Mirar un fichero EIAC crudo.** Es lo único que separa «la compañía no lo manda»
+   de «lo tiramos». Hoy es imposible desde central: `cima_ficheros` guarda el
+   `xml_hash`, **no el XML**. Guardar el crudo (o un volcado de un fichero) es el
+   primer paso de todo lo demás.
+2. **Ampliar el mapeo de la ingesta** a los campos que ya vienen. Es cambiar un
+   parser, no negociar con nadie: no cuesta créditos, no cuesta 0,50€ y no depende
+   de TIREA.
+3. Solo entonces seguir construyendo rodeos (catálogo a mano, Catastro, corroboración
+   de capitales). Cada uno de ellos existe para suplir un campo que quizá ya llega.
+
+Los XSD del estándar (`XML-V07-1_V05.zip`) y el `DICCIONARIO_DATOS_V06.pdf` están en
+el Drive de Alberto, carpeta `CIMA`: son la referencia exacta de nombres y códigos
+para quien toque el parser.
