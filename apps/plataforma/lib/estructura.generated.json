@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T09:41:53Z",
+  "generadoEn": "2026-09-02T11:18:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5380,6 +5380,42 @@
   ],
   "novedades": [
     {
+      "titulo": "Cablear un valor es lo que deja una primitiva sin adoptar:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Medido antes de tocar, y corrige lo que yo mismo había apuntado:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Límite estructural anotado, no arreglable ahí:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Podado (1.204 líneas):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Menú reagrupado por trabajo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente de decisión de Alberto:",
+      "fecha": ""
+    },
+    {
+      "titulo": "No se pudo diagnosticar porque nadie lo contaba:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Endurecido el camino más probable:",
+      "fecha": ""
+    },
+    {
+      "titulo": "De regalo, la 7ª medición del CI mudo (anotada en `CLAUDE.md`), y la más limpia:",
+      "fecha": ""
+    },
+    {
       "titulo": "Pendiente de decisión de Alberto:",
       "fecha": ""
     },
@@ -5401,42 +5437,6 @@
     },
     {
       "titulo": "Lo que un agente NO puede ver:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Medido por Chrome (02/09, solo lectura):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Segundo token vivo",
-      "fecha": ""
-    },
-    {
-      "titulo": "Rotado por Alberto (Chrome, 02/09 09:03 CEST):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Hecho por Claude Chrome (02/09):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Duplicado «Jose Suarez Salas»",
-      "fecha": ""
-    },
-    {
-      "titulo": "Auditoría de duplicidades",
-      "fecha": ""
-    },
-    {
-      "titulo": "Corrección",
-      "fecha": ""
-    },
-    {
-      "titulo": "Contacto/intervinientes",
-      "fecha": ""
-    },
-    {
-      "titulo": "Catastro para hogar HECHO",
       "fecha": ""
     }
   ],
