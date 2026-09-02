@@ -431,6 +431,41 @@ seguía sin procesarse).
 ⚠️ El orden de abajo sigue valiendo como respaldo si tras esperar el `head.sha` YA coincide y aun así no
 hay runs — pero prueba primero lo barato, que es no hacer nada.
 
+🥇 **SÉPTIMA medición (02/09/2026, PR #2029) — la más LIMPIA hasta ahora, y REHABILITA la hipótesis
+del draft: no basta con salir de draft, hace falta un push DESPUÉS.** Cinco pasos, medidos en orden,
+sin nada más de por medio:
+
+| paso | qué se hizo | ¿draft? | runs de los requeridos |
+|---|---|---|---|
+| 1 | push de la rama (token de App) | — | **0** |
+| 2 | PR abierto por la herramienta MCP | **sí** | **0** (solo `rutinas-automerge`, `pull_request_target`) |
+| 3 | merge de `main` + push (contenido real, 2 PRs) | **sí** | **0** |
+| 4 | des-draftear (`draft:false` por la API) | pasa a no | **0** |
+| 5 | 2º merge de `main` + push (contenido real) | **no** | ✅ **19 runs**, todos verdes en ~4 min → mergeado |
+
+Lo que esto AÍSLA mejor que ninguna medición anterior: el paso 3 y el paso 5 son **el mismo acto**
+(merge de `main` con contenido real + push) y dan resultados **opuestos**. Lo único que cambia entre
+ellos es el estado de draft. Y el paso 4 por sí solo no rescata nada: el des-draft **no reprocesa** los
+pushes que llegaron en draft, solo **arma** la rama para que el siguiente sí dispare. Es exactamente el
+matiz que quedó escrito —y no aislado— en la QUINTA medición.
+
+⚠️ **Lo que NO demuestra:** que el draft sea la causa SIEMPRE. El PR #1940 se abrió en draft por MCP y
+disparó al instante, y #1777/#1779 también. Así que el draft **silencia a veces**, no siempre; lo que sí
+está medido siete veces es que **un push con contenido real sobre un PR que NO es draft dispara**.
+
+✅ **Esto CORRIGE el «no des-draftees, no mergees `main`» del procedimiento del #1962** (que se escribió
+para no confundir el diagnóstico con el lag): aquí el `head.sha` del PR **coincidía** con
+`git ls-remote` en los pasos 3 y 4 —o sea, no había lag que esperar— y aun así no arrancaba nada. Con
+el lag descartado, la palanca correcta es la de abajo.
+
+🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
+1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
+2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
+   (el merge de `main` sirve, y encima es trabajo obligatorio si hay conflicto). Des-draftear a secas no basta.
+3. **¿Coinciden, ya no es draft y sigue mudo?** → mergea `main` igualmente (es un push con contenido real).
+4. Solo si eso tampoco, hace falta mano de Alberto. **Sigue prohibido**: commit vacío, cerrar y reabrir,
+   rama nueva por iniciativa del agente, y tocar el ruleset.
+
 **Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
 de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
 cortos.
