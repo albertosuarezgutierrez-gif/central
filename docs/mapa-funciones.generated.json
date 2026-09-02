@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T21:40:51Z",
-  "sha": "07ee64f02bec36815c7365262fdd5b2b9159d870",
+  "generadoEn": "2026-09-02T22:09:18Z",
+  "sha": "79a00bb34472d2dff53653dc55c2aa704cdc977c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2881,6 +2881,35 @@
       "hash": "290889117deb"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/Calendario.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Calendario"
+      ],
+      "funciones": [
+        {
+          "nombre": "Calendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ obligaciones, sinFecha, }: { obligaciones: ObligacionVista[] /** Pólizas en vigor cuya fecha de vencimiento la compañía no ha informado. */ sinFecha: number }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "Pinta la fecha ACCIONABLE además de la del evento. Decirle a alguien «vence el 15 de marzo» le deja creer que tiene hasta el 15; el plazo para oponerse a la prórroga (art. 22 LCS) se le pasó el 13 de "
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ o }: { o: ObligacionVista }",
+          "retorno": null,
+          "linea": 58
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a71b19c979eb"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -2893,7 +2922,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 41
+          "linea": 47
         },
         {
           "nombre": "Titular",
@@ -2901,7 +2930,7 @@
           "exportada": false,
           "params": "{ titular, propia }: { titular: TitularPortal; propia: boolean }",
           "retorno": null,
-          "linea": 126
+          "linea": 140
         },
         {
           "nombre": "Card",
@@ -2909,7 +2938,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 149
+          "linea": 163
         },
         {
           "nombre": "Recibos",
@@ -2917,12 +2946,12 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 192
+          "linea": 206
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8e056c9465c"
+      "hash": "f71f0ea16c24"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx",
@@ -3050,7 +3079,7 @@
           "exportada": false,
           "params": "codigo: string",
           "retorno": "string",
-          "linea": 82
+          "linea": 109
         },
         {
           "nombre": "textoVinculo",
@@ -3058,13 +3087,13 @@
           "exportada": false,
           "params": "estado: string | undefined",
           "retorno": "string | null",
-          "linea": 96,
+          "linea": 123,
           "resumen": "Solo los estados del vínculo que la persona tiene que saber; el resto no dice nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae1d45c28a9c"
+      "hash": "887c78faa53f"
     },
     {
       "ruta": "apps/asegura-portal/lib/auth.ts",
@@ -3113,6 +3142,25 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c1a36232d813"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/canal-email.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "esc",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 6,
+          "resumen": "Escapa lo que va dentro del HTML del correo. El destino lo escribe el usuario."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3b16942e0b94"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal.ts",
@@ -3216,6 +3264,28 @@
       "hash": "18da6173ecea"
     },
     {
+      "ruta": "apps/asegura-portal/lib/enlace-acceso.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El enlace de un clic que acompaña al código en el correo. 🚨 El enlace **NO canjea el código**: solo lo lleva pre-rellenado a la pantalla de entrada, y la persona pulsa «Entrar». Es deliberado. Un enlace que canjea con un GET lo consumen los escáneres antivirus y los prefetch de los clientes de corr",
+      "exporta": [
+        "enlaceDeAcceso"
+      ],
+      "funciones": [
+        {
+          "nombre": "enlaceDeAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string, codigo: string",
+          "retorno": "string | null",
+          "linea": 15,
+          "resumen": "El enlace de un clic que acompaña al código en el correo. 🚨 El enlace **NO canjea el código**: solo lo lleva pre-rellenado a la pantalla de entrada, y la persona pulsa «Entrar». Es deliberado. Un enl"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f2923ca45f76"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/extraer-poliza.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "Lee una póliza que aporta el usuario: PDF → texto → IA, o foto → visión. Replica el pipeline ya probado de apps/sivra/lib/agente-facturas/extraer.ts. ⚠️ Lo que sale de aquí es SIEMPRE un dato leído por una máquina, nunca un dato de contrato: quien lo guarde lo marca `declarado` (ver `procedencia.ts`",
@@ -3275,6 +3345,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c0ad6331452e"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/obligaciones.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Deriva las OBLIGACIONES de una identidad (qué le vence y hasta cuándo puede hacer algo) a partir de sus pólizas vivas de la cartera, y las devuelve ya ordenadas para pintar. 🔒 Aislamiento por CÓDIGO: no hay RLS que rescate un olvido. TODA consulta a `prisma.portalObligacion` filtra por `identidadId",
+      "exporta": [
+        "sincronizarObligacionesDeIdentidad",
+        "sincronizarObligacionesDeSesion",
+        "obligacionesDeIdentidad",
+        "obligacionesDeSesion",
+        "polizasSinFechaDeVencimiento"
+      ],
+      "funciones": [
+        {
+          "nombre": "sincronizarObligacionesDeIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, cartera?: CarteraPortal,",
+          "retorno": "Promise<void>",
+          "linea": 41,
+          "resumen": "Idempotente: `upsert` sobre `(identidad_id, poliza_id)`. Se puede llamar en cada carga de la bóveda sin duplicar nada. `cartera` es opcional para no leer la cartera dos veces en el mismo render: la pá"
+        },
+        {
+          "nombre": "sincronizarObligacionesDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 116,
+          "resumen": "Envoltura que resuelve la identidad por la puerta única."
+        },
+        {
+          "nombre": "obligacionesDeIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<ObligacionVista[]>",
+          "linea": 122
+        },
+        {
+          "nombre": "obligacionesDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ObligacionVista[]>",
+          "linea": 139,
+          "resumen": "Envoltura que resuelve la identidad por la puerta única."
+        },
+        {
+          "nombre": "polizasSinFechaDeVencimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "cartera: CarteraPortal",
+          "retorno": "number",
+          "linea": 156,
+          "resumen": "Cuántas pólizas vivas de la cartera NO han podido entrar al calendario porque la compañía no ha informado su fecha de vencimiento. No se descartan en silencio: cero obligaciones y «no tienes vencimien"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6bc2202c19cd"
     },
     {
       "ruta": "apps/asegura-portal/lib/session.ts",
@@ -3862,6 +3993,27 @@
       "hash": "8f8bb62b5892"
     },
     {
+      "ruta": "apps/asegura/app/api/cron/avisos-vencimiento/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "GET /api/cron/avisos-vencimiento — un aviso por obligación a punto de dejar de ser accionable. Diario a las 08:00 UTC (`vercel.json`). Auth: `CRON_SECRET` por cabecera `Authorization: Bearer`. Sin esa"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/avisos-vencimiento",
+      "hash": "3686319ff9f2"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/buscar/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -4402,6 +4554,27 @@
       "hash": "487e8c5c8e65"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/sin-canal/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "GET /api/operador/sin-canal — clientes de la cartera VIVA (los que entran por CIMA) a los que no se les puede escribir ni llamar. Read-only: esta ruta no envía nada a nadie, solo dice a quién no se pu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/sin-canal",
+      "hash": "2263c6480f86"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/siniestro/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -4680,6 +4853,111 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d7c30bf0803d"
+    },
+    {
+      "ruta": "apps/asegura/lib/avisos-vencimiento.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Aviso de vencimiento del calendario del portal — el ENVÍO, que vive aquí y no en `apps/asegura-portal`. 🚨 Por qué aquí: el portal guarda **solo hashes**. `portal_canal.valor_hash` es un SHA-256 con pimienta y el `ClienteEmail` de su schema solo declara `email_lookup_hash`; su rol (`prisma_asegura_p",
+      "exporta": [
+        "avisosActivos",
+        "esSoloContar",
+        "destinatarioDeCliente",
+        "textoAviso",
+        "ejecutarAvisosVencimiento"
+      ],
+      "funciones": [
+        {
+          "nombre": "avisosActivos",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: string | undefined = process.env.ASEGURA_AVISOS_ACTIVOS",
+          "retorno": "boolean",
+          "linea": 58,
+          "resumen": "El interruptor, puro y aparte para poder razonarlo de un vistazo: cualquier valor que no sea exactamente `'1'` (incluido `undefined`, `'true'` o `'0'`) deja el cron en modo cuenta. La ambigüedad se re"
+        },
+        {
+          "nombre": "esSoloContar",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { activos: boolean; forzarContar: boolean }",
+          "retorno": "boolean",
+          "linea": 63,
+          "resumen": "`?contar=1` fuerza el ensayo aunque los avisos estén activos."
+        },
+        {
+          "nombre": "diaUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "Date",
+          "linea": 68,
+          "resumen": "Medianoche UTC: las columnas `date` de Postgres llegan así."
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 72
+        },
+        {
+          "nombre": "descifrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 81,
+          "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa «no se ha podido leer», y quien llama lo cuenta como «sin canal» en vez de como «este cliente no tiene email». Mismo criter"
+        },
+        {
+          "nombre": "pareceEmail",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "v is string",
+          "linea": 93,
+          "resumen": "Una dirección que no tiene forma de dirección no es un canal: es basura con forma de dato."
+        },
+        {
+          "nombre": "destinatarioDeCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ClienteConEmails",
+          "retorno": "string | null",
+          "linea": 107,
+          "resumen": "El email al que escribir: principal → el más antiguo de `cliente_emails` → la columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja)."
+        },
+        {
+          "nombre": "esc",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 122
+        },
+        {
+          "nombre": "textoAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosCorreo",
+          "retorno": "",
+          "linea": 140,
+          "resumen": "La fecha que se le dice al cliente es la ACCIONABLE, no la del vencimiento (art. 22 LCS). Decirle «vence el 15 de marzo» le deja creer que tiene hasta el 15, cuando el plazo para oponerse se le pasó 3"
+        },
+        {
+          "nombre": "ejecutarAvisosVencimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { hoy?: Date forzarContar?: boolean } = {}",
+          "retorno": "Promise<ResumenAvisos>",
+          "linea": 176,
+          "resumen": "Una pasada del cron. Lanza (no devuelve un resumen tranquilizador) cuando el proceso NO puede hacer su trabajo —sin cartera, sin proveedor de correo, sin remitente—, para que el endpoint responda 503 "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "787f51fa2442"
     },
     {
       "ruta": "apps/asegura/lib/cartera-busqueda.ts",
@@ -5772,6 +6050,52 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6f8e4231da53"
+    },
+    {
+      "ruta": "apps/asegura/lib/clientes-sin-canal.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Clientes de la cartera VIVA con los que NO hay forma de hablar. ─── Por qué esta lista existe ────────────────────────────────────────────── Medido el 02/09/2026 contra la base: de los ~79 clientes que entran por CIMA, 26 no tienen NI email NI teléfono. A esos no les llega el aviso de vencimiento, n",
+      "exporta": [
+        "estadoCanal",
+        "ordenarPorUrgencia",
+        "clientesSinCanal"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "tieneEmail: boolean, tieneTelefono: boolean",
+          "retorno": "EstadoCanal",
+          "linea": 91,
+          "resumen": "Puro: el estado se deriva de los dos canales, no se guarda en ninguna parte."
+        },
+        {
+          "nombre": "ordenarPorUrgencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: ClienteCanal[]",
+          "retorno": "ClienteCanal[]",
+          "linea": 106
+        },
+        {
+          "nombre": "clientesSinCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<ClientesSinCanal>",
+          "linea": 118
+        }
+      ],
+      "tablas": [
+        "cliente_emails",
+        "cliente_telefonos",
+        "clientes",
+        "lateral",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "03468cf25b59"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/casos.ts",
@@ -7264,6 +7588,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b61d25065cbb"
+    },
+    {
+      "ruta": "apps/asegura/lib/cron-auth.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "autorizaCron",
+        "isCronAuthorized"
+      ],
+      "funciones": [
+        {
+          "nombre": "autorizaCron",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { secret?: string | null; bearer?: string | null }",
+          "retorno": "boolean",
+          "linea": 16,
+          "resumen": "Autorización de los endpoints de cron de `apps/asegura`. 🚨 SIN `CRON_SECRET` NO SE AUTORIZA A NADIE — tampoco en desarrollo. Aquí la regla es más dura que la de `apps/plataforma` (que conserva el pas"
+        },
+        {
+          "nombre": "isCronAuthorized",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest | Request",
+          "retorno": "boolean",
+          "linea": 21
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3af11a4ed743"
     },
     {
       "ruta": "apps/asegura/lib/db.ts",
@@ -51789,7 +52143,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "fmtFecha",
@@ -51797,7 +52151,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 21,
+          "linea": 22,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -51806,7 +52160,7 @@
           "exportada": true,
           "params": "{ urlAsegura }: { urlAsegura: string }",
           "retorno": null,
-          "linea": 60
+          "linea": 61
         },
         {
           "nombre": "DesgloseModal",
@@ -51814,7 +52168,7 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 286
+          "linea": 297
         },
         {
           "nombre": "num",
@@ -51822,7 +52176,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 468
+          "linea": 479
         },
         {
           "nombre": "CarteraViva",
@@ -51830,7 +52184,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 470
+          "linea": 481
         },
         {
           "nombre": "CeldaObjeto",
@@ -51838,7 +52192,7 @@
           "exportada": false,
           "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
           "retorno": null,
-          "linea": 636,
+          "linea": 647,
           "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
         },
         {
@@ -51847,12 +52201,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 669
+          "linea": 680
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1a1657eda5d4"
+      "hash": "3a5f23b3df81"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -52576,6 +52930,69 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4a54374dbe9d"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/SinCanal.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SinCanal"
+      ],
+      "funciones": [
+        {
+          "nombre": "SinCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 59
+        },
+        {
+          "nombre": "Recuento",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ resumen }: { resumen: Extract<SinCanal, { estado: 'ok' }>['resumen'] }",
+          "retorno": null,
+          "linea": 178,
+          "resumen": "Los cuatro recuentos. Cada uno puede ser «no comprobado» por separado: un hueco se dice, no se rellena con un cero que parecería una medición."
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ f }: { f: ClienteCanal }",
+          "retorno": null,
+          "linea": 210
+        },
+        {
+          "nombre": "Canal",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ tiene, si, no }: { tiene: boolean | null; si: string; no: string }",
+          "retorno": null,
+          "linea": 253,
+          "resumen": "Tres estados en un renglón: sí, no, y «no se ha podido comprobar»."
+        },
+        {
+          "nombre": "fmtFecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 265,
+          "resumen": "Fecha siempre en formato español: \"2026-11-03\" → \"03/11/2026\"."
+        },
+        {
+          "nombre": "Marco",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, extra, children }: { titulo?: string; extra?: React.ReactNode; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 272
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ad5b1db1a3b0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Siniestros.tsx",
@@ -59785,6 +60202,27 @@
       ],
       "rutaApi": "/api/correduria",
       "hash": "6df8e6509760"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/sin-canal/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/correduria/sin-canal — clientes de la cartera viva a los que no se puede avisar. Read-only: no envía nada, solo dice a quién no se llega."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/sin-canal",
+      "hash": "23a8f32943b3"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/siniestro/route.ts",
@@ -71872,7 +72310,10 @@
         "buscarAsegura",
         "interpretarLineas",
         "lineasCodeoscopic",
-        "impagadosAsegura"
+        "impagadosAsegura",
+        "derivarEstadoCanal",
+        "interpretarSinCanal",
+        "sinCanalAsegura"
       ],
       "funciones": [
         {
@@ -71996,11 +72437,45 @@
           "params": "",
           "retorno": "Promise<Impagados>",
           "linea": 403
+        },
+        {
+          "nombre": "booleano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean | null",
+          "linea": 468,
+          "resumen": "Tri-estado de verdad: un campo ausente es `null` («no se informó»), no `false`. Con `=== true` a secas, un puerto que no manda el campo diría que TODOS están sin email."
+        },
+        {
+          "nombre": "derivarEstadoCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "email: boolean | null, telefono: boolean | null",
+          "retorno": "EstadoCanal",
+          "linea": 474,
+          "resumen": "El estado se DERIVA de los dos canales; no se cree el que venga en el JSON. Si falta cualquiera de los dos, el resultado es `no_comprobado`."
+        },
+        {
+          "nombre": "interpretarSinCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "SinCanal",
+          "linea": 482
+        },
+        {
+          "nombre": "sinCanalAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<SinCanal>",
+          "linea": 536
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0a2f28418b2e"
+      "hash": "42d077ae1623"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -105724,6 +106199,64 @@
       "hash": "18038793f932"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/obligacion.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "La fecha que se le dice al usuario NO es la del vencimiento: es la última en la que todavía puede oponerse a la prórroga (art. 22 LCS). Decirle «vence el 15 de marzo» le deja creer que tiene hasta el 15; el plazo se le pasó el 13 de febrero. Se resta en DÍAS, no en meses: `setUTCMonth(m - 1)` sobre ",
+      "exporta": [
+        "fechaAccionable",
+        "entraEnVentana",
+        "polizaGeneraObligacion",
+        "obligacionDerivable"
+      ],
+      "funciones": [
+        {
+          "nombre": "diaUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "Date",
+          "linea": 15,
+          "resumen": "Medianoche UTC del día de `d`. Las columnas `date` ya llegan así; esto lo garantiza."
+        },
+        {
+          "nombre": "fechaAccionable",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaEvento: Date",
+          "retorno": "Date",
+          "linea": 19
+        },
+        {
+          "nombre": "entraEnVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { fechaAccionable: Date; hoy: Date }",
+          "retorno": "boolean",
+          "linea": 31
+        },
+        {
+          "nombre": "polizaGeneraObligacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { importRef: string | null fechaVencimiento: Date | null }",
+          "retorno": "boolean",
+          "linea": 45,
+          "resumen": "🚨 La regla que evita el desastre. Solo generan obligación las pólizas que entran por CIMA (`import_ref IS NULL`). Las del volcado histórico se consultan y nada más. `importRef: ''` cuenta como volcad"
+        },
+        {
+          "nombre": "obligacionDerivable",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { importRef: string | null fechaVencimiento: Date | null vigencia: VigenciaObligacion }",
+          "retorno": "boolean",
+          "linea": 73
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8590bd351f22"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/poliza-leida.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "Normalización de lo que una IA dice haber leído en una póliza. Puro: sin BD, sin red. Vive aquí y no en la app porque es LA regla que decide si un dato existe o no, y esa decisión no puede depender de qué proveedor de IA respondió. La regla de la casa, entera: - `null` = «no se sabe». Es el estado p",
@@ -112425,7 +112958,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2859,
-    "funciones": 8338
+    "archivos": 2871,
+    "funciones": 8380
   }
 }
