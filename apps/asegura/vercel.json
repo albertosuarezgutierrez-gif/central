@@ -8,5 +8,11 @@
   "framework": "nextjs",
   "regions": [
     "fra1"
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/avisos-vencimiento",
+      "schedule": "0 8 * * *"
+    }
   ]
 }
