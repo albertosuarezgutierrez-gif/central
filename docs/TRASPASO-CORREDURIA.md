@@ -28,6 +28,40 @@
 > de Fly en la cuenta de Manuel; se sustituye el día que haya ingesta propia. La copia de `auth.*`
 > queda en central como respaldo, sin uso.
 >
+> ## 🚚 INGESTA DE CIMA EN CASA (decidido 02/09/2026, «hacemos todo como dices») — dos pasos
+>
+> **Objetivo:** que las pólizas de CIMA sigan entrando sin depender del CRM de Manuel ni de su Fly.
+> El adaptador Java (SOAP WSE con el JAR oficial de TIREA) **no se reescribe**: es la pieza que
+> funciona y la que TIREA homologa. Se mueve de dueño y se porta la lógica TS que ya es nuestra.
+>
+> 1. **Adaptador Fly → cuenta de Alberto.** Alberto no tiene cuenta en Fly (paso A1 del guion):
+>    crear cuenta + organización, invitar a Manuel, y Manuel mueve `asegura-app-cima-adapter` a esa
+>    org. Los secrets (credenciales TIREA de PRODUCCIÓN, de Alberto) viajan con la app; el nombre
+>    `asegura-app-cima-adapter.fly.dev` no cambia. Pedirle también el **repo del adaptador**
+>    (transferir o fork), para poder redesplegar el día que haga falta.
+> 2. **`cima-pull` + parsers EIAC → `apps/asegura`** como cron propio que escribe en `seguros` de
+>    central. Es mover código del repo `asegura` (ya de Alberto) al monorepo, no inventarlo.
+>    Inventario del grafo a portar en curso (02/09). Cuando esté en verde con un pull real, se apaga
+>    el CRM de Vercel y su workflow de Actions.
+>
+> ### 📝 Mensaje a Manuel — v8 (02/09/2026) — BORRADOR, **no se envía sin OK de Alberto**
+>
+> > Manuel, dos cosas del adaptador de CIMA y con eso cerramos lo que queda:
+> >
+> > **1. Fly.** Me he hecho cuenta y organización en Fly.io (`<nombre-org>`). Te he invitado con tu
+> > email; cuando la aceptes, mueve `asegura-app-cima-adapter` a mi org desde tu panel (Settings →
+> > Transfer). Con eso los secrets de TIREA viajan con la app y el nombre no cambia, así que el cron
+> > sigue funcionando igual. Antes de moverla, apunta los valores de los secrets en tu gestor de
+> > contraseñas por si el traslado los perdiera; `fly secrets list` solo enseña nombres.
+> >
+> > **2. El repo del adaptador.** Pásame el repositorio del adaptador Java (transfiérelo a mi GitHub
+> > o hazme un fork) para poder redesplegarlo yo si algún día hace falta. Sin prisa ninguna.
+> >
+> > Lo demás ya está: la base, el repo del CRM y Vercel están en mi cuenta y funcionando. Gracias
+> > por todo, de verdad.
+>
+> ⚠️ Antes de mandarlo, Alberto crea la cuenta/org en Fly y sustituye `<nombre-org>`.
+>
 > **Copiado por dblink al `auth.*` de central, con los MISMOS UUID:** 9 `auth.users` (Alberto y Manuel
 > con su hash bcrypt y su TOTP verificado; 7 de pruebas), 11 `auth.identities` (email + google de los dos
 > admins) y 2 `auth.mfa_factors`. 9/9 enlazados con `seguros.usuarios.auth_user_id`, así que las 86
