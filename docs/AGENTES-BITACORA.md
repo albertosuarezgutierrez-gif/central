@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-02 · trading-analista** · hizo: PASO 0 sin huella de hoy (último saldo 01/09 20:16,
+  sin fila `trading_pasadas` de hoy) → pasada completa a las 20:15 UTC (disparo normal, no
+  repesca). Preflight `/api/internal/alerta` 200. NAV IBKR 32.862,88€ empujado a `/saldo` (sin
+  salto >15%). Cartera real (CVX 6 uds, VWCE 188 uds) empujada a `/cartera`, 0 descartadas, track
+  OK. `get_account_trades(DAYS_7)` sin operaciones nuevas → `/operaciones` con array vacío +
+  latido `trading_operaciones` ok. Velas de los 24 símbolos de la watchlist bajadas por 3
+  subagentes en paralelo (protocolo anti-barajado, uno a uno cada uno) para no cargar el contexto
+  principal con OHLCV — mecánico, por la regla de delegación. `/analizar`: 24 analizados, 0
+  vetados/descartados/suplantados/divergentes, top-5 cantado con `stopViable`; ninguna idea pasó
+  las barreras (concentración, posición ya abierta, tendencia bajista) → 0 compras paper nuevas.
+  `/puntuar`: 88 puntuadas, 0 cerradas (nadie venció hoy), 0 anuladas, 0 huérfanas. Resumen por
+  Telegram enviado (messageId 3951). Hoy es miércoles, sin bloque de radar/satélite (solo lunes).
+  dudas: —; fallos: —; PRs/commits: — (solo bitácora y BD vía endpoints, sin tocar código).
 - **2026-09-02 · psd2-health-check** · hizo: preflight `/api/internal/alerta` 200 (canal vivo);
   consulta de frescura sobre `movimientos_bancarios WHERE origen='psd2'`: último movimiento
   2026-09-01 (hace 1 día, <48h OK), mov_30d=50 vs mov_30d_prev=68 (no hay caída >50%) → estado
