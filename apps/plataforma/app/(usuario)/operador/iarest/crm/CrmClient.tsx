@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@/components/ui'
+import { Target } from 'lucide-react'
 
 type Contacto = {
   id: string
@@ -114,11 +116,14 @@ export default function CrmClient() {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🎯 CRM · ia-rest</h1>
-        <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
-          style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>Panel legacy ↗</a>
-      </div>
+      <PageHeader
+        titulo="CRM · ia-rest"
+        icono={<Target size={20} strokeWidth={1.75} />}
+        acciones={
+          <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
+            style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>Panel legacy ↗</a>
+        }
+      />
 
       {/* KPIs por estado */}
       <div className="crm-filters" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>

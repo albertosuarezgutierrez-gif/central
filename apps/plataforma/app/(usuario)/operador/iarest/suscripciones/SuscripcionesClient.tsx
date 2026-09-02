@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { eur } from '@/lib/dinero'
-import { Pagina } from '@/components/ui'
+import { Pagina, PageHeader } from '@/components/ui'
+import { CreditCard } from 'lucide-react'
 
 type Cuenta = {
   id: string
@@ -61,17 +62,20 @@ export default function SuscripcionesClient() {
 
   return (
     <Pagina ancho="tabla">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>💳 Suscripciones · ia-rest</h1>
-        <a
-          href="https://iarest.es/super"
-          target="_blank"
-          rel="noreferrer"
-          style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}
-        >
-          Gestionar en legacy ↗
-        </a>
-      </div>
+      <PageHeader
+        titulo="Suscripciones · ia-rest"
+        icono={<CreditCard size={20} strokeWidth={1.75} />}
+        acciones={
+          <a
+            href="https://iarest.es/super"
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}
+          >
+            Gestionar en legacy ↗
+          </a>
+        }
+      />
 
       {totales && (
         <div className="suscrip-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px', marginBottom: '32px' }}>
