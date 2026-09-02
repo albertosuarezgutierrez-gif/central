@@ -96,3 +96,12 @@ export {
   type IntervinienteFicha,
   type ContactoEfectivo,
 } from './intervinientes.ts'
+export {
+  FRACCIONES,
+  etiquetaFraccionamiento,
+  etiquetaFormaPago,
+  recargoFraccionamiento,
+  ventanaAnulacion,
+  type ReciboCiclo,
+  type RecargoFraccionamiento,
+} from './pago.ts'

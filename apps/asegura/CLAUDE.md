@@ -294,6 +294,10 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   compañía lo consulta igual al emitir, así que la siniestralidad presumida **se corrige sola** — por
   eso el aviso «puede abaratar el precio» no es cosmético.
   ⚠️ No verificado contra `tirea.es`: el proxy lo bloquea por política de la organización.
+- ✅ **Catastro para HOGAR, HECHO el 02/09/2026 (en plataforma, `/correduria/hogar`):** con la dirección
+  o la referencia catastral salen m², año, uso y CP del Catastro (`@central/core-catastro`, paquete
+  extraído de subastas). Verificado con el 2º-14 de San Vicente 40: 76 m²/1994, lo mismo que la póliza
+  del CRM. Lo que sigue pendiente aquí es **cotizar hogar en Codeoscopic**: `GET /insurance-lines` (gratis).
 - **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
@@ -330,7 +334,7 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
 - **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene
   menos de 3 letras: eso NO es «no hay nadie».
 - **`GET /cliente?id=`** — la ficha entera de una vez (pólizas + recibos + siniestros + contacto +
-  **intervinientes**), para que `plataforma` no encadene tres llamadas. Cuatro estados: `sin_configurar` ·
+  **intervinientes** + **pago**: periodicidad, forma de cobro y recargo por fraccionar con 3 estados), para que `plataforma` no encadene tres llamadas. Cuatro estados: `sin_configurar` ·
   `error` · **`no_encontrado`** (se miró y no está) · `ok`. Los dos primeros NO se colapsan con el tercero.
   🚨 **`intervinientes` (02/09/2026): «sin teléfono» en el tomador NO es «no hay a quién llamar».**
   Esquiansa (empresa) no tiene teléfono; su `conductor_habitual` —dueño del coche— sí, en su propia

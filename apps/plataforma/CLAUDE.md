@@ -1398,6 +1398,22 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   enlazada por CIMA. Ahora el número lleva entre paréntesis DE QUIÉN es (con enlace a su ficha), y cada
   póliza lista sus intervinientes debajo de «Qué asegura». `intervinientes === null` = asegura no los
   informa → «sin teléfono · intervinientes sin comprobar», nunca «nadie tiene teléfono».
+- **🏠 `/correduria/hogar` — presupuesto de hogar desde el Catastro (02/09/2026).** Con la dirección
+  («Calle San Vicente 40, 2º 14» + municipio + provincia) o la referencia catastral de 20, el Catastro da
+  m², año de construcción, uso y CP — gratis, sin preguntar al cliente. Verificado sobre el caso real de
+  Alberto: 76 m² · 1994 · Residencial · 41002, idéntico a lo tecleado en la póliza. Lógica en
+  `lib/correduria-hogar.ts` (6 estados: `ok` · `elegir` —varios pisos: elige una persona— · `ambigua` ·
+  `no_encontrado` · `direccion_ilegible` · `error`), API `POST /api/correduria/catastro` (sesión).
+  Usa `@central/core-catastro` (extraído de subastas; `lib/subastas/enriquecer.ts` lo re-exporta).
+  🚨 La referencia de 14 es el EDIFICIO y no trae m² ni año: se pide la de 20 (`precalificarHogar`
+  lo declara). Pedir precio de hogar a Codeoscopic sigue SIN conectar (solo auto).
+- **💳 Forma de pago en la ficha (Alberto, 02/09/2026):** columna «Pago» por póliza —periodicidad
+  (`fraccionamiento`, CIMA lo trae en 108/109 vivas), forma de cobro del último recibo (CC/OF/TA →
+  domiciliado/oficina/tarjeta) y el **recargo por fraccionar**, que CIMA NO da y se deriva de los
+  recibos del ciclo con TRES estados (`recargoFraccionamiento()` en module-seguros, 8 tests): solo se
+  afirma con el ciclo completo — con 2 de 4 recibos la resta sale negativa y parecería que fraccionar
+  ahorra. Bajo «Vence», `ventanaAnulacion()` recuerda que el contrato es anual y solo se deja al
+  vencimiento avisando 30 días antes (se pinta cuando faltan ≤60 días).
 - **📄 «Subir póliza o documento ↗»** (botón en la ficha) salta a `asegura/cartera/subir`: el agente lee
   el PDF/foto y enseña lo leído. Es gratis. **Hoy solo lee pólizas de AUTO y NO guarda el fichero**
   (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.

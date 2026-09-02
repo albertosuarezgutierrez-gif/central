@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaRol } from '@central/module-seguros'
+import { contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
@@ -214,7 +214,7 @@ function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
     <>
       {nota && <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>{nota}</p>}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 880 }}>
           <thead>
             <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
               <th style={th}>Ramo</th>
@@ -222,6 +222,7 @@ function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
               <th style={th}>Compañía</th>
               <th style={th}>Vence</th>
               <th style={{ ...th, textAlign: 'right' }}>Prima</th>
+              <th style={th}>Pago</th>
               <th style={th}>Recibos</th>
               <th style={th} />
             </tr>
@@ -246,12 +247,14 @@ function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
                     <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado el vencimiento">sin fecha</span>
                   )}
                   <div style={sub}>{p.estado.replace(/_/g, ' ')}</div>
+                  <Anulacion vencimiento={p.fechaVencimiento} viva={p.viva} />
                 </td>
                 <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {p.prima === null
                     ? <span style={{ color: 'var(--muted)' }} title="La compañía no informa la prima">sin dato</span>
                     : eur(p.prima)}
                 </td>
+                <td style={td}><CeldaPago p={p} /></td>
                 <td style={td}><CeldaRecibos r={p.recibos} /></td>
                 <td style={td}>
                   {p.retarificable ? (
@@ -329,6 +332,50 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
       {p.objeto.titulo}
       {p.objeto.detalle && <div style={sub}>{p.objeto.detalle}</div>}
     </span>
+  )
+}
+
+/**
+ * Forma de pago (Alberto, 02/09/2026): son contratos anuales que la compañía
+ * FINANCIA al fraccionar, cobrando por ello. Lo que CIMA da es la periodicidad
+ * y la forma de cobro; el recargo se deriva de los recibos del ciclo, y solo
+ * se afirma con el ciclo completo — con la mitad de los recibos la resta sale
+ * negativa y parecería que fraccionar ahorra.
+ */
+function CeldaPago({ p }: { p: PolizaFicha }) {
+  if (p.pago === null) {
+    return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura no informa la forma de pago">—</span>
+  }
+  const { fraccionamiento, formaCobro, recargo } = p.pago
+  return (
+    <span style={{ whiteSpace: 'nowrap' }}>
+      {etiquetaFraccionamiento(fraccionamiento)}
+      {formaCobro && <div style={sub}>{formaCobro}</div>}
+      {recargo.estado === 'calculado' && (
+        <div style={{ ...sub, color: '#c96' }} title={`${eur(recargo.sumaRecibos)} en ${recargo.recibos} recibos frente a ${eur(recargo.primaAnual)} de prima anual`}>
+          +{eur(recargo.recargoEur)} ({recargo.recargoPct.toLocaleString('es-ES')}%) por fraccionar
+        </div>
+      )}
+      {recargo.estado === 'sin_datos' && fraccionamiento !== null && fraccionamiento !== 'anual' && (
+        <div style={sub} title={recargo.motivo}>recargo sin calcular</div>
+      )}
+    </span>
+  )
+}
+
+/**
+ * La única salida de una póliza es su vencimiento, avisando 30 días antes
+ * (LCS art. 22). Se pinta solo en las vivas y solo mientras merece la pena
+ * saberlo: cuando el plazo de aviso está cerca o ya ha pasado.
+ */
+function Anulacion({ vencimiento, viva }: { vencimiento: string | null; viva: boolean }) {
+  if (!viva) return null
+  const v = ventanaAnulacion(vencimiento)
+  if (v === null || v.diasParaAvisar > 60) return null
+  return (
+    <div style={{ ...sub, color: v.enPlazo ? '#c96' : 'var(--muted)' }} title="Contrato anual: solo se anula al vencimiento, con 30 días de preaviso">
+      {v.enPlazo ? `avisar antes del ${fmt(v.limiteAviso)} para no renovar` : 'plazo de aviso pasado: renueva otro año'}
+    </div>
   )
 }
 

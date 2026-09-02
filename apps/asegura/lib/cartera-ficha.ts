@@ -14,11 +14,15 @@
 //   devuelve `null` y quien pinta lo llama «no disponible», que es distinto.
 
 import {
+  etiquetaFormaPago,
+  importeEiac,
   objetoAsegurado,
   primaReferencia,
+  recargoFraccionamiento,
   resumirRecibos,
   type IntervinienteFicha,
   type ObjetoAsegurado,
+  type RecargoFraccionamiento,
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
@@ -134,6 +138,18 @@ export type PolizaFicha = {
   retarificable: boolean
   /** Lo que se sabe de los recibos de ESTA póliza. Ver `RecibosPoliza`. */
   recibos: RecibosPoliza
+  /**
+   * Forma de pago (Alberto, 02/09/2026): el contrato es ANUAL y solo se anula
+   * al vencimiento; fraccionar es que la compañía financia y cobra por ello.
+   * `fraccionamiento` lo trae CIMA (108 de 109 vivas); el recargo NO — se
+   * deriva de los recibos del ciclo y por eso tiene tres estados.
+   */
+  pago: {
+    fraccionamiento: string | null
+    /** Forma de cobro del último recibo (domiciliado / oficina / tarjeta). */
+    formaCobro: string | null
+    recargo: RecargoFraccionamiento
+  }
 }
 
 export type SiniestroFicha = {
@@ -321,6 +337,20 @@ export async function fichaCliente(
             formaPago: r.formaPago,
           })),
         ),
+        pago: {
+          fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+          formaCobro: etiquetaFormaPago(recibosPorPoliza.get(p.id)?.[0]?.formaPago ?? null),
+          recargo: recargoFraccionamiento({
+            fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+            primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
+            vencimiento: fechaIso(p.fechaVencimiento),
+            recibos: (recibosPorPoliza.get(p.id) ?? []).map((r) => ({
+              importe: importeEiac(r.primaTotal),
+              fechaEmision: fechaIso(r.fechaEmision),
+              situacion: r.situacion === null ? null : String(r.situacion),
+            })),
+          }),
+        },
       }
     }),
     siniestros: siniestros.map((s) => ({

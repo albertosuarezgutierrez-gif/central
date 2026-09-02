@@ -38,7 +38,9 @@
 - **Corrección**: «dirección imposible» era rotundo de más — la calle va cifrada pero `localidad`/`cp` del riesgo van en claro y asegura tiene la clave. No hecho aún.
 - `github.silent: true` en los 12 `vercel.json` → adiós a ~50 ediciones de comentario por PR.
 - **Contacto/intervinientes** (Alberto, caso Esquiansa): 81/109 vivas traen intervinientes por CIMA, 14 enlazados a OTRA ficha; 6 de 25 tomadores «sin teléfono» lo tienen en un interviniente. `contactoEfectivo()` (module-seguros) decide a quién llamar y la ficha dice de quién es el número. Botón «Subir póliza ↗» en la ficha (asegura ya lo tenía; solo auto, no guarda fichero).
-- Pendiente que pide Alberto: **Catastro para hogar** (ref. catastral → m², año, uso). Ya hay cliente en `apps/plataforma/lib/subastas/enriquecer.ts` (con cerrojo anti-corte y la trampa RC14 vs RC20): extraerlo a paquete y reutilizar.
+- **Catastro para hogar HECHO**: paquete `@central/core-catastro` (parser+http extraídos de subastas, que lo re-exporta; 548 tests de subastas siguen verdes) + `precalificarHogar()` + `/correduria/hogar` en plataforma. Probado en vivo: San Vicente 40 2º-14 → 76 m²/1994/Residencial/41002 = la póliza. Falta `GET /insurance-lines` y cotizar hogar en Codeoscopic.
+- **Forma de pago** (Alberto): columna «Pago» en la ficha; CIMA da `fraccionamiento` (108/109) y `forma_pago` de recibos, NO el recargo → `recargoFraccionamiento()` con 3 estados (solo con ciclo completo). `ventanaAnulacion()`: contrato anual, aviso 30 días.
+- Pendiente (Alberto, con captura de Jose Suarez Salas): **pantalla de PÓLIZA** (`/correduria/poliza/[id]`: datos, coberturas, documentación, siniestros, recibos); separar canceladas de «vivas»; recibos todos anulados no es «🟢 0 cobrados»; leer la copia gemela del volcado para la dirección del riesgo; 📞 «cifrado» = falta `PII_ENCRYPTION_KEY` en el Vercel de asegura.
 
 ### 🔎 (01/09/2026) Correduría: buscador de TODO, cola de retención y limpieza de la pantalla
 - 🗑️ **Borrada** `/cartera/renovaciones` de asegura (duplicaba la de plataforma) y su menú.
