@@ -29,14 +29,13 @@ import {
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
 import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
-import { eur } from '@/lib/dinero'
+// La ficha de hogar (filas, grupos y procedencias) la arma una pieza PURA que
+// comparten las tres puertas del expediente. Vive en `lib/`, no en la pantalla:
+// duplicar aquí la tabla de catálogos era la forma de que las dos copias
+// divergieran sin que nada fallase.
+import { resumen as armarResumenHogar, CATALOGOS_PANTALLA, CAMPO_DE_CATALOGO } from '@/lib/codeoscopic/resumen-hogar'
 import Retarificador from './retarificador'
-import RetarificadorHogar, {
-  CATALOGOS_PANTALLA,
-  CAMPO_DE_CATALOGO,
-  type DefectosHogar,
-  type PrefijadosHogar,
-} from './retarificador-hogar'
+import RetarificadorHogar, { type DefectosHogar } from './retarificador-hogar'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,7 +73,28 @@ export default async function RetarificarPage({
     )
   }
 
-  const origen = await origenRetarificacion(correduria.id, polizaId)
+  // Un fallo de BD al leer la ficha NO puede quedarse en una pantalla en blanco:
+  // «no se ha podido leer» y «esta póliza no existe» son cosas distintas y se
+  // arreglan en sitios distintos, así que se dicen distinto. El mensaje va
+  // ENTERO porque es lo único que apunta a la causa (credenciales, permisos,
+  // conexión…) sin ir a los logs del pooler.
+  let origen: OrigenRetarificacion | null
+  try {
+    origen = await origenRetarificacion(correduria.id, polizaId)
+  } catch (e) {
+    return (
+      <div className="card err">
+        <h2>⚠️ No se ha podido leer la ficha de esta póliza</h2>
+        <p>
+          Esto NO significa que la póliza no exista: significa que la consulta a la cartera ha fallado. No se cotiza
+          sobre una ficha que no se ha podido leer.
+        </p>
+        <p style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {e instanceof Error ? e.message : String(e)}
+        </p>
+      </div>
+    )
+  }
   if (!origen) notFound()
 
   if (origen.tipo === 'auto') return <PantallaAuto origen={origen} polizaId={polizaId} correduriaId={correduria.id} />
@@ -221,11 +241,6 @@ async function PantallaAuto({
 
 // ─── HOGAR ───────────────────────────────────────────────────────────────────
 
-const FUENTE_RIESGO: Record<string, string> = {
-  poliza: 'de la póliza',
-  gemela: 'de la copia del volcado de junio/2026 (misma póliza, tecleada a mano en el CRM)',
-}
-
 async function PantallaHogar({
   origen,
   polizaId,
@@ -315,24 +330,16 @@ async function PantallaHogar({
   )
   const consumo = await estadoConsumo(correduriaId)
 
+  // La ficha se arma AQUÍ, en el servidor: es gratis y así el primer pintado ya
+  // sale completo. El cliente solo la rehace cuando alguien corrige una fila.
+  const fichaHogar = armarResumenHogar(pre, {
+    catalogos,
+    estadosCiviles: civiles,
+    municipios,
+    nivel: 'corredor',
+  })
+
   const h = origen.hogar
-  const d = pre.datos
-  const prefijados: PrefijadosHogar = {
-    cp: typeof d.cp === 'string' ? d.cp : null,
-    tipoViaId: typeof d.tipoViaId === 'string' ? d.tipoViaId : null,
-    nombreVia: d.nombreVia ?? null,
-    numeroVia: d.numeroVia ?? null,
-    planta: d.planta ?? null,
-    puertaVivienda: d.puertaVivienda ?? null,
-    direccionEntera: h?.direccion ?? null,
-    metrosCuadrados: h?.metrosCuadrados ?? null,
-    anioConstruccion: h?.anioConstruccion ?? null,
-    habitaciones: d.habitaciones ?? null,
-    capitalContinente: h?.capitalContinente ?? null,
-    capitalContenido: h?.capitalContenido ?? null,
-    propietarioEsTomador,
-    fechaEfecto: typeof d.fechaEfecto === 'string' ? d.fechaEfecto : null,
-  }
 
   const estadoRamo =
     ramo.estado === 'disponible' ? (
@@ -356,70 +363,19 @@ async function PantallaHogar({
       {fallaConfig && <div className="card err">{fallaConfig}</div>}
       {!fallaConfig && estadoRamo}
 
-      <div className="card">
-        <h2>Lo que se manda desde la ficha</h2>
-        <p className="muted">
-          {h === null ? (
-            <>
-              Ni la póliza ni su copia del volcado traen el riesgo: <strong>tecléalo</strong> abajo o consúltalo en el
-              Catastro (plataforma → correduría → hogar).
-            </>
-          ) : (
-            <>
-              El riesgo sale <strong>{FUENTE_RIESGO[h.fuente ?? ''] ?? 'de origen desconocido'}</strong>.
-            </>
-          )}
-        </p>
-        <div className="table-wrap">
-          <table>
-            <tbody>
-              <Fila etiqueta="Compañía actual (código DGS)" valor={origen.poliza.codigoEntidadDgs} />
-              <Fila etiqueta="Póliza anterior" valor={origen.poliza.numeroPoliza} />
-              <Fila etiqueta="Vencimiento actual" valor={origen.poliza.fechaVencimiento} />
-              <Fila
-                etiqueta="Dirección del riesgo"
-                valor={h?.direccion ?? null}
-                nota="El vendor la exige troceada (tipo de vía, nombre, número, planta, puerta): abajo se puede comprobar el troceo."
-              />
-              <Fila etiqueta="Localidad" valor={h?.localidad ?? null} />
-              <Fila
-                etiqueta="Código postal del riesgo"
-                valor={h?.cp ?? null}
-                nota={h?.cp ? null : origen.cliente.codigoPostal ? `Se supone el del tomador (${origen.cliente.codigoPostal}).` : null}
-              />
-              <Fila etiqueta="Superficie" valor={h?.metrosCuadrados !== null && h?.metrosCuadrados !== undefined ? `${h.metrosCuadrados} m²` : null} />
-              <Fila etiqueta="Año de construcción" valor={h?.anioConstruccion?.toString() ?? null} />
-              <Fila etiqueta="Capital continente" valor={h?.capitalContinente != null ? eur(h.capitalContinente) : null} />
-              <Fila etiqueta="Capital contenido" valor={h?.capitalContenido != null ? eur(h.capitalContenido) : null} />
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="card">
-        <p style={{ margin: 0 }}>
-          ✅ <strong>El formato del riesgo está verificado contra el portal del vendor (02/09/2026).</strong> El vendor exige
-          más de lo que la ficha guarda (calle y número, habitaciones, protecciones, joyas, perros): todo eso se rellena
-          con supuestos declarados que puedes corregir antes de pagar. Un 400 de validación <strong>NO se cobra</strong>;
-          un cuerpo aceptado es una cotización real (0,50€).
-        </p>
-      </div>
-
-      <Supuestos supuestos={pre.supuestos} />
-
       <RetarificadorHogar
         polizaId={polizaId}
-        faltanInicial={pre.faltan}
-        civiles={civiles}
-        municipios={municipios}
-        vias={vias}
-        estadoCivilAuto={estadoCivilAuto}
-        catalogos={catalogos}
+        resumen={fichaHogar}
+        pre={pre}
         defectos={defectos}
+        vias={vias}
+        catalogos={catalogos}
+        estadosCiviles={civiles}
+        municipios={municipios}
         fallosCatalogo={fallosCatalogo}
         ramo={ramo}
-        prefijados={prefijados}
         consumo={'error' in consumo ? { error: consumo.error } : consumo}
+        primaActual={origen.primaAnual}
         deshabilitado={fallaConfig !== null}
       />
     </div>
