@@ -257,9 +257,11 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    no desmiente: (1) la ingesta de CIMA estuvo **dos meses** (24/06→30/08/2026) sin procesar 42
    ficheros —23 recibos por 7.721,71€ de prima— con el health-check del CRM de origen en verde
    (medía `ficherosError`, que valía cero; lo perdido estaba en `cuarentenaTotal`); (2) desde el
-   02/09/2026 la cartera vive en DOS sitios —el origen de Manuel (`uijsgeocgdaxkhvwtjqs`, que sigue
-   recibiendo CIMA) y la FOTO en `seguros.*` de central— y **divergen cada día**; (3) `apps/asegura`
-   es la única app del monorepo que gasta dinero real (0,50€ por tarificación en Codeoscopic).
+   02/09/2026 (PR #2007) la cartera VIVE en `seguros.*` de central y la escribe la ingesta de CIMA
+   del CRM (rol `crm_seguros`) **cuyo adaptador Java corre en el Fly de Manuel**: si él lo apaga,
+   CIMA deja de entrar SIN ningún error — el origen de Manuel (`uijsgeocgdaxkhvwtjqs`) es una foto
+   congelada al 31/08 y ya no sirve de contraste; (3) `apps/asegura` es la única app del monorepo
+   que gasta dinero real (0,50€ por tarificación en Codeoscopic).
 
    **a) Latidos (consulta a) del 2-bis).** `correduria_renovaciones` (06:30) y `correduria_ingesta`
    (06:45) están en `AGENTES_VIGILADOS` (30 h). **Sin fila = nunca corrió**, no «ok» (el vigía de
@@ -277,28 +279,26 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    `updates/sync` en temporada baja: **no la marques ⛔ por vieja.** La señal de salud es la del
    vigía (ficheros en cuarentena / pólizas huérfanas), no la fecha.
 
-   **c) Foto vs origen** (MCP `Supabase_asegura` para el origen, `Supabase` para central; en la
-   ligera solo recuentos, en la profunda también los checksums del método de
-   `apps/asegura/prisma/sql/2026-09-01_seguros_volcado_datos.sql`):
+   **c) ¿Sigue entrando CIMA en central?** (MCP `Supabase`, schema `seguros`; sustituye desde el
+   02/09/2026 al «foto vs origen»: el origen de Manuel está congelado y ya no hay nada que
+   reconciliar). El CRM deja un evento por cada pull en `seguros.operational_events`
+   (dos crons al día, 05:30 y 11:30 UTC):
 
    ```sql
-   -- ORIGEN (Supabase_asegura)
-   SELECT count(*) FILTER (WHERE import_ref IS NULL) AS vivas, count(*) AS total,
-          max(created_at) AS ultima FROM polizas;
-   SELECT count(*) AS recibos, max(created_at) AS ultimo FROM poliza_recibos;
-   -- CENTRAL (schema seguros)
-   SELECT count(*) AS total, max(created_at) AS ultima FROM seguros.polizas;
-   SELECT count(*) AS recibos, max(created_at) AS ultimo FROM seguros.poliza_recibos;
-   SELECT count(*) AS tablas, max(copiado_at) AS ultima_copia FROM seguros._volcado_control;
+   SELECT event_name, occurred_at, payload->>'mode' AS modo, payload->>'processed' AS procesados,
+          payload->>'queueDepth' AS en_cola, payload->>'errorsCount' AS errores
+   FROM seguros.operational_events
+   WHERE event_name LIKE 'cima_pull_%' ORDER BY occurred_at DESC LIMIT 6;
+   SELECT count(*) AS ficheros, max(created_at) AS ultimo FROM seguros.cima_ficheros;
    ```
 
-   Que difieran es **lo esperado** (la foto es del 02/09/2026): lo que se reporta es CUÁNTO
-   (filas que el origen tiene y la foto no) y desde cuándo. Mientras el código lea del origen
-   (`ASEGURA_DATABASE_URL`, `apps/asegura/lib/asegura-db.ts`, `prisma/asegura.prisma`) la
-   divergencia no rompe nada. El día que un PR apunte `asegura.prisma` a `seguros.*` **sin
-   re-copia previa**, la pantalla de Alberto (`/correduria` en plataforma) pasa a mentir con datos
-   de semanas → ese PR es hallazgo 🔴 aunque compile. Regla NULL≠0: si la consulta al origen
-   falla (conector no adjunto, permiso), es «no he podido mirar», nunca «coinciden».
+   **Sin evento en las últimas 30 h = CIMA parada** (Fly de Manuel apagado, Vercel `asegura`
+   caído o `CRON_SECRET` rotado), nunca «no había ficheros»: un pull vacío TAMBIÉN deja evento.
+   `queueDepth` alto con `processed = 0` varias pasadas seguidas (y `modo` no `dry_run`) es la cuarentena del punto (1)
+   otra vez. Que `apps/asegura` lea de central y no del origen se comprueba en el código
+   (`lib/asegura-url.ts` + `regression-asegura-*`), no en la BD. Regla NULL≠0: si la consulta
+   falla, es «no he podido mirar», nunca «entra». El conector `Supabase_asegura` ya no hace falta
+   para este bloque (queda por si hay que mirar la foto congelada).
 
    **d) Dinero** (schema `seguros` de central):
 
@@ -471,8 +471,9 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      nadie lo anota en ningún sitio): corrige cualquier afirmación que el código contradiga
      (rutas, envs, tablas, reglas, estado). Si una skill y el código discrepan, **manda el código**.
      ⚠️ En `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md` el dato que más envejece es
-     **de dónde LEE el código** (origen de Manuel vs `seguros.*`): compáralo contra
-     `apps/asegura/lib/asegura-db.ts` y `prisma/asegura.prisma`, no contra el doc.
+     **de dónde LEE el código** (`seguros.*` de central por defecto desde el 02/09/2026; el origen
+     de Manuel solo con `ASEGURA_FUENTE=origen`): compáralo contra `apps/asegura/lib/asegura-url.ts`
+     y `lib/asegura-db.ts`, no contra el doc.
    - **TODAS las skills de agentes, no solo las maestro** (la lista es `docs/SKILLS.md`
      §«Agentes programados» cruzada con `ls .claude/skills`): por cada una, sus **datos duros**
      (tablas, rutas de API, envs por nombre, umbrales, cadencia, estado del trigger) contra el

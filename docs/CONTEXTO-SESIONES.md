@@ -32,7 +32,7 @@
 
 ---
 
-### 🔐 (02/09/2026, ~09:00 UTC) Correduría: la AUTH del CRM también está en central — quedan 3 variables de Alberto
+### 🔐 (02/09/2026, ~09:00 UTC) Correduría: TRASPASO CERRADO salvo Fly — auth copiada, CRM solo como motor de CIMA (PR #2007 mergeado)
 - Alberto: «el punto 2 no se hace… quiero tener todo en nuestra bbdd» → **NO se rota `crm_seguros`** (anotado en
   `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`) y se copió `auth.*` de Manuel a central por dblink con
   los mismos UUID: 9 users (2 reales con bcrypt + TOTP), 11 identities, 2 mfa_factors; 9/9 enlazados con
@@ -44,10 +44,13 @@
 - 🛑 **Decisión de Alberto acto seguido: «yo eso no lo quiero… no es necesario el acceso, eso ya desarrollaremos».** La web
   del CRM de Manuel NO se usa ni se migra su login (nada de variables Supabase en Vercel `asegura`, ni Google/TOTP/SMTP);
   las pantallas van en `plataforma` → `/correduria`. El CRM queda desplegado SOLO como motor de ingesta de CIMA (escribe en
-  `seguros` con `crm_seguros`); dependencia viva: adaptador Fly de Manuel, hasta tener ingesta propia. PR #2007 sigue abierto.
+  `seguros` con `crm_seguros`); dependencia viva: adaptador Fly de Manuel, hasta tener ingesta propia. PR #2007 mergeado (`7ba37122`).
 - ⏸️ **Cierre del día (Alberto): «fly es barato y ya está hecho, hay otras prioridades».** Statu quo: cron → CRM (motor) → Fly →
   `seguros`. Único pendiente: transferir la app de Fly a cuenta de Alberto cuando Manuel pueda (borrador v8 en TRASPASO). El port
   de `cima-pull` a `apps/asegura` queda APARCADO; el inventario del grafo se guarda de referencia. Vigila la auditoría diaria.
+- Tras el merge se barrieron las afirmaciones «cartera NO migrada / foto vs origen» que quedaban en `CLAUDE.md`, skills
+  `central-maestro`/`auditoria-central`/`agente-correduria`, bloque 2-quater de `/auditoria-diaria`, `RUTINAS` y `FUENTES-DE-VERDAD`:
+  el origen de Manuel es foto congelada; la señal de salud pasa a ser el heartbeat `cima_pull_*` en `seguros.operational_events`.
 
 ### 🎨 (02/09/2026) plataforma: sistema de diseño vivo, color por tokens y SEIS tokens fantasma (PR #2011)
 - Salió de «mírate Argon Dashboard». No se importó nada de él: es un kit Bootstrap estático y el problema

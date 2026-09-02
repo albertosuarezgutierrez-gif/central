@@ -59,17 +59,22 @@
   jun/2026, vencimientos 2013-2018) y **ninguna** tiene vencimiento en los últimos 18 meses. Regla de Alberto:
   **lo que entra por CIMA es cliente actual; el resto son leads** (32.520). Detalle en
   `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
-  🚨 **La cartera NO está migrada:** las 32.600 fichas / 28.843 pólizas siguen en el Supabase de **Manuel
-  Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
-  CIMA/EIAC**. ⚠️ **Eso NO la convierte en una migración en caliente** (se creyó así hasta el 26/08/2026):
-  el CRM **todavía no está operativo** —no hay nadie usándolo— y **los ficheros de EIAC se pueden
-  consultar y descargar cuando se quiera**, así que una pausa del cron no deja sin servicio a nadie ni
-  pierde datos: se re-lanza el pull y entra lo pendiente. El traspaso **no necesita ventana ni fecha
-  acordada**; va paso a paso, al ritmo de Manuel. `schema seguros` vacío ≠ la
-  correduría no tiene datos: el dashboard lo dice y no pinta KPIs a 0. ⚠️ Las **86 políticas RLS** de ese CRM
-  se resuelven TODAS por `auth.uid()` de Supabase Auth, así que al re-plataformar la auth el aislamiento pasa
-  a ser cosa del código (con BYPASSRLS el fallo sería «se ve todo sin fallar»). Plan, mensaje a Manuel y pasos
-  del traspaso en **`docs/TRASPASO-CORREDURIA.md`**. Ver `apps/asegura/CLAUDE.md`.
+  ✅ **La cartera YA ESTÁ EN CASA (traspaso cerrado el 02/09/2026, PRs #2002 → #2007):** las 32.600
+  fichas / 28.843 pólizas / 54 tablas viven en el schema `seguros` de la Supabase compartida, y
+  `apps/asegura` las lee de ahí por defecto (`ASEGURA_FUENTE=origen` es el único camino de vuelta al
+  Supabase de Manuel, `uijsgeocgdaxkhvwtjqs`, que queda como foto congelada). El CRM de Manuel (repo
+  `asegura` + Vercel `asegura`, ya en la cuenta de Alberto) **apunta también a central** con el rol
+  `crm_seguros` y queda **solo como motor de ingesta de CIMA** (cron Actions 05:30/11:30 UTC → CRM → adaptador
+  Java en Fly → TIREA → `seguros`). **Su web NO se usa ni se migra su login** (decisión de Alberto 02/09):
+  las pantallas de la correduría se montan en `plataforma` → `/correduria`. La Auth de Supabase (9 usuarios,
+  MFA) está copiada a central por si acaso, pero sin uso. ⏸️ **Único cabo suelto: el adaptador Java corre en
+  la cuenta de Fly de Manuel** (`asegura-app-cima-adapter`); si él lo apaga, CIMA deja de entrar SIN error y
+  solo se nota por los heartbeats `cima_pull_*` que vigila la auditoría. Traspaso de esa app a una cuenta
+  de Alberto pendiente (borrador de mensaje v8 en `docs/TRASPASO-CORREDURIA.md`, no se envía sin su OK);
+  el port de `cima-pull` a `apps/asegura` está APARCADO a propósito (inventario en
+  `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). ⚠️ Las **86 políticas RLS** del CRM se resolvían por
+  `auth.uid()`; en central el aislamiento es cosa del código (con BYPASSRLS el fallo sería «se ve todo sin
+  fallar»). Ver `apps/asegura/CLAUDE.md`.
 - **`apps/asegura-portal`** — **portal del CLIENTE** de Grupo Asegura (Fase 1, 01/09/2026). App aparte
   de `apps/asegura` a propósito: aquella es el panel del CORREDOR, esta la ve el asegurado, y por eso
   usa **rol propio `prisma_asegura_portal` SIN BYPASSRLS** y su propio secreto de sesión

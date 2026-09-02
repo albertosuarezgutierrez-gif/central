@@ -29,12 +29,13 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 - **NUNCA envíes nada a un cliente, lead, compañía o a Codeoscopic.** Regla global de
   comunicaciones salientes de `CLAUDE.md`: borrador siempre, envía Alberto. Vale también
   para "solo preguntar una duda a soporte".
-- **La cartera viva (32.600 clientes / 28.843 pólizas) está en el Supabase de ASEGURA**
-  (`uijsgeocgdaxkhvwtjqs`), NO en el schema `seguros` de la BD compartida (vacío ≠ sin
-  datos). Lectura: rol `central_asegura` (SELECT-only) → central-asegura
+- **La cartera viva (32.600 fichas / 28.843 pólizas; VIVA de verdad ~80 clientes / 109
+  pólizas, `polizas.import_ref IS NULL`) está en el schema `seguros` de la BD compartida
+  de central desde el 02/09/2026.** El Supabase de Manuel (`uijsgeocgdaxkhvwtjqs`) es una foto
+  congelada: no lo uses como fuente. Lectura: `apps/asegura` (rol `prisma_seguros`) →
   `/api/operador/resumen` (Bearer `ASEGURA_OPERADOR_SECRET`) → plataforma
-  `/api/correduria/cartera`. La infra de Manuel (su Vercel, su cron) NO se toca ni se
-  redespliega.
+  `/api/correduria/cartera`. La ingesta de CIMA la escribe el CRM (repo `asegura`, ya de
+  Alberto) con el rol `crm_seguros`; su adaptador Java vive en el Fly de Manuel y NO se toca.
 - **Datos = PII sensible de verdad** (salud en decesos/vida, DNI, matrículas). Nada de
   volcar registros de clientes a chats, commits o informes: agregados y conteos, sí;
   filas con nombres, solo si Alberto pide un caso concreto.
