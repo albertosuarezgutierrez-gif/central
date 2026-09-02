@@ -7,7 +7,7 @@ import {
   ChartColumn, ChartLine, ChartPie, ChevronDown, ClipboardList, Coins, Cog, Cpu,
   CreditCard, Euro, Eye, Fan, FileText, FlaskConical, Gavel, House, KeyRound,
   Landmark, Lightbulb, MessageCircle, MessageSquare, Network, Receipt, Satellite,
-  Scale, Search, SearchCheck, Send, Shield, Sparkles, Store, Target, Ticket,
+  Scale, Search, SearchCheck, Shield, Sparkles, Store, Target, Ticket,
   TrendingUp, User, UserCheck, Users, UtensilsCrossed, Wrench,
   type LucideIcon, BookUser } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
@@ -23,7 +23,6 @@ const NAV_NEGOCIO = [
   // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
   // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
   { href: '/banca', icon: House, label: 'Inicio' },
-  { href: '/banca/transferencia', icon: Send, label: 'Transferencia' },
   // Bandeja del agente de facturas. Es el destino del aviso de Telegram, que hasta el 29/08/2026
   // enlazaba a una página inexistente; sin esta entrada, lo acumulado solo se ve al llegar una
   // factura nueva (el aviso cuenta las de ESA pasada, no la bandeja entera).
