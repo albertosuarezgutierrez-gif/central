@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T09:41:53Z",
-  "sha": "d4b8c74a152062608432316d12d3e263bbdb06d6",
+  "generadoEn": "2026-09-02T10:20:05Z",
+  "sha": "7759bfcb0ebba6e9de1a50a07bcded2b48a6f04c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3660,13 +3660,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 12,
+          "linea": 18,
           "resumen": "GET ?desde=YYYY-MM-DD — comisiones de la cartera para el cuadre de plataforma (read-only). La respuesta conserva los TRES estados de ComisionesCartera: quien consume no puede confundir «puerto sin con"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/comisiones",
-      "hash": "d357e19f5ae0"
+      "hash": "4a2e3fb00f10"
     },
     {
       "ruta": "apps/asegura/app/api/operador/documentos/[id]/route.ts",
@@ -3992,21 +3992,21 @@
           "exportada": true,
           "params": "env: { ASEGURA_FUENTE?: string DATABASE_URL?: string ASEGURA_DATABASE_URL?: string }",
           "retorno": "",
-          "linea": 43
+          "linea": 44
         },
         {
-          "nombre": "conSchema",
+          "nombre": "forzarSchema",
           "kind": "function",
           "exportada": false,
           "params": "url: string, schema: string",
           "retorno": "string",
-          "linea": 60,
-          "resumen": "Añade `?schema=<schema>` si la URL no lo trae ya. Una URL imposible de parsear se devuelve tal cual."
+          "linea": 72,
+          "resumen": "Fija `schema=<schema>` en la URL **PISANDO el que ya traiga**. Una URL imposible de parsear se devuelve tal cual. 🚨 Aquí no se respeta lo que venga puesto, y es a propósito: `DATABASE_URL` es la MISM"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6b5bb6c4ddaf"
+      "hash": "23309a86331c"
     },
     {
       "ruta": "apps/asegura/lib/auth.ts",
@@ -5402,9 +5402,31 @@
       "hash": "86690c96e136"
     },
     {
+      "ruta": "apps/asegura/lib/comisiones-motivo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Por qué NO se ha podido leer la cartera — módulo PURO (sin Prisma ni red), para que se pueda probar sin generar el cliente ni tocar la BD. 🚨 Existe porque un `estado: 'error'` pelado es un callejón sin salida: dice que falló, no dónde. Un fallo de conexión, un schema equivocado, un permiso que falt",
+      "exporta": [
+        "detalleError"
+      ],
+      "funciones": [
+        {
+          "nombre": "detalleError",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown, fuente: string",
+          "retorno": "string",
+          "linea": 22,
+          "resumen": "Pista CORTA y sin secretos sobre el fallo real: fuente + nombre del error + código de Prisma + la tabla/columna que Prisma no encontró. Con un `central/PrismaClientKnownRequestError/P2021/public.corre"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fce8f26afcae"
+    },
+    {
       "ruta": "apps/asegura/lib/comisiones.ts",
       "ambito": "apps/asegura",
-      "resumen": "Comisiones de la correduría leídas de la cartera real (BD de Manuel, vía `ASEGURA_DATABASE_URL`). Esta app es la ÚNICA que toca esa BD; plataforma las consume por el puerto `/api/operador/comisiones`. 🚨 Tres estados, nunca dos: sin la env es `sin_configurar` — que NO es «no hay comisiones» —, y un ",
+      "resumen": "Comisiones de la correduría leídas de la cartera real (schema `seguros` de la BD compartida; `ASEGURA_FUENTE=origen` vuelve al Supabase de Manuel). Esta app es la ÚNICA que toca esas tablas; plataforma las consume por el puerto `/api/operador/comisiones`. 🚨 Tres estados, nunca dos: sin la env es `s",
       "exporta": [
         "importeEiac",
         "comisionesCartera"
@@ -5416,7 +5438,7 @@
           "exportada": true,
           "params": "v: string | null | undefined",
           "retorno": "number | null",
-          "linea": 17,
+          "linea": 25,
           "resumen": "Importe EIAC (guardado en TEXT) → número. `null` si no se puede leer. 🚨 Nunca 0: un importe ilegible y un importe de cero euros son cosas distintas, y aguas abajo el 0 pasaría por «comprobado y no ha"
         },
         {
@@ -5425,7 +5447,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 66
+          "linea": 74
         },
         {
           "nombre": "comisionesCartera",
@@ -5433,13 +5455,13 @@
           "exportada": true,
           "params": "correduriaId: string, desde: Date",
           "retorno": "Promise<ComisionesCartera>",
-          "linea": 78,
+          "linea": 86,
           "resumen": "Comisiones de la cartera desde `desde` (inclusive). El DEVENGADO se cuenta por `fechaSituacion` del recibo **cobrado**: es la fecha en que la compañía se quedó el dinero del cliente, que es lo que dis"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bbc2afc574a1"
+      "hash": "5db72857589d"
     },
     {
       "ruta": "apps/asegura/lib/dinero.ts",
@@ -57343,7 +57365,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "81593419d683"
+      "hash": "ea90099b3ad3"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-avisos/route.ts",
@@ -67292,7 +67314,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 54
+          "linea": 61
         },
         {
           "nombre": "str",
@@ -67300,7 +67322,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 55
+          "linea": 62
         },
         {
           "nombre": "interpretarComisiones",
@@ -67308,7 +67330,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "ComisionesAsegura",
-          "linea": 64,
+          "linea": 71,
           "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Cualquier forma inesperada degrada a `error`, NUNCA a unas comisiones inventadas ni a listas vacías: una lista vacía con estado `ok`"
         },
         {
@@ -67317,7 +67339,7 @@
           "exportada": true,
           "params": "desde: string",
           "retorno": "Promise<ComisionesAsegura>",
-          "linea": 115,
+          "linea": 129,
           "resumen": "Lee las comisiones por el puerto de central-asegura. La URL no es un secreto y cae al dominio del proyecto; el secreto NUNCA tiene fallback."
         },
         {
@@ -67326,13 +67348,13 @@
           "exportada": true,
           "params": "codigo: string",
           "retorno": "string",
-          "linea": 150,
+          "linea": 164,
           "resumen": "Nombre legible, o el propio código si no está en el mapa. Devolver el código crudo es correcto: inventar un nombre sería peor que no saberlo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "48607185a90a"
+      "hash": "2ab80b6721a5"
     },
     {
       "ruta": "apps/plataforma/lib/comparativa-declaracion.ts",
@@ -107780,7 +107802,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2792,
-    "funciones": 7916
+    "archivos": 2793,
+    "funciones": 7917
   }
 }
