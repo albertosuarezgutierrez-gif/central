@@ -96,7 +96,7 @@ export default function PilarClient({ initialData, year, quarter }: Props) {
     <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px 16px' }}>
       {/* Controles */}
       <div style={{ marginBottom: '10px' }}>
-        <a href="/finanzas" style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>← Finanzas</a>
+        <a href="/banca?tab=ingresos" style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>← Ingresos</a>
       </div>
       <PageHeader
         titulo="Actividad de Pilar"

@@ -29,6 +29,7 @@ import SaldoTotal from './SaldoTotal'
 import NegociosResumen from './NegociosResumen'
 import FiscalResumen from './FiscalResumen'
 import CategoriasTab from '../finanzas/CategoriasTab'
+import FinanzasClient from '../finanzas/FinanzasClient'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, MovimientosBtn, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
@@ -65,10 +66,11 @@ export default async function BancaPage({ searchParams }: {
   if (!session) redirect('/login')
 
   const params = await searchParams
-  const tab: 'dinero' | 'negocios' | 'fiscal' | 'personal' =
+  const tab: 'dinero' | 'ingresos' | 'negocios' | 'fiscal' | 'personal' =
     params.tab === 'negocios' ? 'negocios'
       : params.tab === 'fiscal' ? 'fiscal'
       : params.tab === 'personal' ? 'personal'
+      : params.tab === 'ingresos' ? 'ingresos'
       : 'dinero'
 
   // 🏢 Segmento NEGOCIOS (holding) — carga PEREZOSA: solo se computa cuando la pestaña está activa,
@@ -105,6 +107,28 @@ export default async function BancaPage({ searchParams }: {
   // `CategoriasTab` (la pestaña "En qué gasto" de /finanzas): dona + tabla por subcategoría + drill-down
   // por comercio/movimiento + alertas de presupuesto. El componente gestiona su propio filtro de fechas
   // (mes actual por defecto), así que aquí solo hace falta pasarle el año en curso.
+  // 💰 Segmento INGRESOS — era el hub `/finanzas`, que hasta el 02/09/2026 coexistía con este.
+  // No era «lo mismo» (traía sus banners de salud de extracción, ayudas y novedad fiscal, y sus
+  // KPIs), pero sí compartía pantalla: su pestaña «Categorías» montaba EL MISMO componente que el
+  // segmento Personal de aquí. Se trae entero como un segmento más y `/finanzas` redirige.
+  if (tab === 'ingresos') {
+    const anio = parseInt(params.year || '') || new Date().getFullYear()
+    const trimestre = parseInt(params.quarter || '0') || 0
+    let datosFin = null
+    try {
+      datosFin = await getResumenFinanciero(session.id, anio, trimestre)
+    } catch (e) {
+      console.error('[banca/ingresos]', e)
+    }
+    return (
+      <Pagina ancho="lectura">
+        <MiniChatContable periodoLabel={`${anio}`} />
+        <div style={{ margin: '4px 0 22px' }}><SegTabs active="ingresos" /></div>
+        <FinanzasClient initialData={datosFin} year={anio} quarter={trimestre} embebido />
+      </Pagina>
+    )
+  }
+
   if (tab === 'personal') {
     return (
       <Pagina ancho="tabla">
