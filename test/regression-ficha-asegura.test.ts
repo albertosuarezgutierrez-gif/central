@@ -208,3 +208,40 @@ test('🚨 un veredicto con basura degrada a null, nunca a un objeto a medias', 
   if (r.estado !== 'ok') return
   assert.equal(r.ficha.polizas[0].retarificacion, null)
 })
+
+// ── Edición del cliente (02/09/2026): contactos, identidad, dirección ───────
+
+test('🚨 sin bloques `contactos`/`identidad` (asegura viejo) → null, NO listas vacías', () => {
+  const r = interpretarFicha(200, FICHA_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.contactos, null, '«no se han podido leer» ≠ «no tiene teléfonos»')
+  assert.equal(r.ficha.identidad, null)
+  assert.equal(r.ficha.contacto.direccion, null)
+  assert.equal(r.ficha.contacto.direccionIlegible, false)
+})
+
+test('los bloques nuevos se leen enteros, con el cifrado como fila ilegible', () => {
+  const r = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: {
+      ...FICHA_OK.ficha,
+      contacto: { ...FICHA_OK.ficha.contacto, direccion: null, direccionIlegible: true },
+      contactos: {
+        telefonos: [
+          { id: 't1', tipo: 'telefono', valor: '600000000', ilegible: false, etiqueta: 'móvil', principal: true, creado: '2026-09-02' },
+          { id: 't2', tipo: 'telefono', valor: null, ilegible: true, etiqueta: null, principal: false, creado: '2026-09-02' },
+        ],
+        emails: [],
+      },
+      identidad: { nombre: 'Jose', apellidos: 'Suarez Salas', dniEnmascarado: '*****678Z', dniIlegible: false, fechaNacimiento: '1970-05-06', fechaNacimientoIlegible: false, tipoPersona: 'fisica' },
+    },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.contactos?.telefonos.length, 2)
+  assert.equal(r.ficha.contactos?.telefonos[1].ilegible, true)
+  assert.deepEqual(r.ficha.contactos?.emails, [], 'lista vacía con bloque presente SÍ es «no tiene email»')
+  assert.equal(r.ficha.identidad?.dniEnmascarado, '*****678Z')
+  assert.equal(r.ficha.contacto.direccionIlegible, true)
+})

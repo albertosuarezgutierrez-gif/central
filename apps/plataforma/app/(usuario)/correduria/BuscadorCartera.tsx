@@ -137,7 +137,12 @@ function Resultado({ estado, termino }: { estado: Estado; termino: string }) {
       <div style={{ fontSize: 13, marginBottom: 8 }}>
         {r.distintos === 0 ? (
           <span style={{ color: 'var(--muted)' }}>
-            Nadie coincide con <strong>{termino}</strong>.
+            Nadie coincide con <strong>{termino}</strong>.{' '}
+            {/* Ojo: por DNI/teléfono/email el vacío solo alcanza al 12-16% de las fichas
+                (se explica abajo). El alta comprueba duplicados otra vez antes de crear. */}
+            <Link href={`/correduria/cliente/nuevo?q=${encodeURIComponent(termino)}`} style={{ fontWeight: 600 }}>
+              ¿No está? ➕ Darlo de alta
+            </Link>
           </span>
         ) : (
           <>

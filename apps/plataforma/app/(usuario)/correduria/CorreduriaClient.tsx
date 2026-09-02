@@ -107,6 +107,10 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
           el buscador desaparecía justo el día que asegura no responde. */}
       <div style={{ marginBottom: 20 }}>
         <BuscadorCartera />
+        {/* Alta manual: quien no está en la cartera (el buscador también lo ofrece al no encontrar). */}
+        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+          <BtnLink href="/correduria/cliente/nuevo" variante="secundario">➕ Nuevo cliente</BtnLink>
+        </div>
       </div>
 
       {/* ── 2. LA CARTERA DE UN VISTAZO ─────────────────────────────────── */}

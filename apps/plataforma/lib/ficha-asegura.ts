@@ -1,5 +1,6 @@
 import type { DocumentoResumen, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
+import { leerContactos, leerIdentidad, type ContactosCliente, type IdentidadFicha } from './cliente-edicion-asegura.ts'
 // La ficha de un cliente de la correduría, leída por el puerto de central-asegura.
 //
 // ─── Por qué esto vive en plataforma y no en asegura ────────────────────────
@@ -99,6 +100,9 @@ export type ContactoFicha = {
   ciudad: string | null
   provincia: string | null
   codigoPostal: string | null
+  /** La calle va cifrada: `null` + `direccionIlegible` = está pero no abre. */
+  direccion: string | null
+  direccionIlegible: boolean
 }
 
 /** Quién más hay en una póliza. Misma forma que en `@central/module-seguros`. */
@@ -138,6 +142,13 @@ export type Ficha = {
   intervinientes: IntervinienteFicha[] | null
   /** Documentos del cliente con estado pedido/recibido/revisado. `null` = no informado / no se pudo. */
   documentos: DocumentoResumen[] | null
+  /**
+   * TODOS los teléfonos y emails (el principal es el que sale en `contacto`).
+   * `null` = asegura no manda el bloque o no pudo consultarlo: NO es «no tiene».
+   */
+  contactos: ContactosCliente | null
+  /** Nombre/apellidos/DNI enmascarado/fecha de nacimiento. `null` = versión de asegura anterior. */
+  identidad: IdentidadFicha | null
 }
 
 export type RespuestaFicha =
@@ -383,11 +394,15 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
         ciudad: cadena(c.ciudad),
         provincia: cadena(c.provincia),
         codigoPostal: cadena(c.codigoPostal),
+        direccion: cadena(c.direccion),
+        direccionIlegible: c.direccionIlegible === true,
       },
       polizas,
       siniestros,
       intervinientes: leerIntervinientes(f.intervinientes),
       documentos: leerDocumentos(f.documentos),
+      contactos: leerContactos(f.contactos),
+      identidad: leerIdentidad(f.identidad),
       piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }
