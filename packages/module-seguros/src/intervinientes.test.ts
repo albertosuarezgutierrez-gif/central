@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { contactoEfectivo, etiquetaRol, filasIntervinientes, type IntervinienteFicha } from './intervinientes.ts'
+import { contactoEfectivo, etiquetaRol, filasIntervinientes, personasDePolizas, type IntervinienteFicha } from './intervinientes.ts'
 
 const base = (x: Partial<IntervinienteFicha>): IntervinienteFicha => ({
   polizaId: 'p1', rol: 'propietario', nombre: null, nombreIlegible: false,
@@ -118,4 +118,74 @@ test('GLOBAL 2: con tres conductores distintos, se dice de QUÉ póliza sale el 
   assert.equal(c.telefono, '615')
   assert.equal(c.quien?.nombre, 'B')
   assert.equal(c.quien?.polizaId, 'pB')
+})
+
+// ── Las personas de las pólizas, agrupadas por persona ───────────────────────
+
+const POLIZAS = [
+  { id: 'pA', etiqueta: '6930FBP' },
+  { id: 'pB', etiqueta: '8148DGP' },
+  { id: 'pC', etiqueta: '2922BNJ' },
+]
+
+test('GLOBAL 2: tres furgonetas, tres conductores, cada uno con su matrícula', () => {
+  const r = personasDePolizas([
+    base({ polizaId: 'pA', rol: 'conductor_habitual', nombre: 'A', fichaId: 'f1', telefono: '600' }),
+    base({ polizaId: 'pB', rol: 'conductor_habitual', nombre: 'B' }),
+    base({ polizaId: 'pC', rol: 'conductor_habitual', nombre: 'C', telefono: '615', email: 'c@x' }),
+  ], POLIZAS, [])
+  assert.equal(r?.length, 3)
+  assert.deepEqual(r?.map(p => p.nombre), ['A', 'B', 'C'])
+  assert.deepEqual(r?.[0].papeles, [{ rol: 'conductor_habitual', polizas: ['6930FBP'] }])
+  assert.equal(r?.[2].email, 'c@x')
+})
+
+test('la misma persona en dos pólizas es UNA fila con las dos matrículas', () => {
+  const r = personasDePolizas([
+    base({ polizaId: 'pA', rol: 'conductor_habitual', nombre: 'A', fichaId: 'f1' }),
+    base({ polizaId: 'pB', rol: 'conductor_habitual', nombre: 'A', fichaId: 'f1', telefono: '600' }),
+  ], POLIZAS, [])
+  assert.equal(r?.length, 1)
+  assert.deepEqual(r?.[0].papeles, [{ rol: 'conductor_habitual', polizas: ['6930FBP', '8148DGP'] }])
+  // El teléfono aparece en la segunda fila y no se pierde.
+  assert.equal(r?.[0].telefono, '600')
+})
+
+test('sin ficha enlazada se agrupa por nombre, que es lo único que hay', () => {
+  const r = personasDePolizas([
+    base({ polizaId: 'pA', rol: 'propietario', nombre: 'Juan Perez' }),
+    base({ polizaId: 'pB', rol: 'conductor_habitual', nombre: '  juan perez ' }),
+  ], POLIZAS, [])
+  assert.equal(r?.length, 1)
+  // Primero el papel de mayor prioridad de contacto.
+  assert.deepEqual(r?.[0].papeles.map(x => x.rol), ['conductor_habitual', 'propietario'])
+})
+
+test('el TOMADOR no sale: es la ficha que se está mirando', () => {
+  const r = personasDePolizas([
+    base({ polizaId: 'pA', rol: 'propietario', nombre: 'La empresa', esTomador: true }),
+    base({ polizaId: 'pA', rol: 'conductor_habitual', nombre: 'A' }),
+  ], POLIZAS, [])
+  assert.deepEqual(r?.map(p => p.nombre), ['A'])
+})
+
+test('si tiene relación declarada se dice cuál; si no, null (no «no tiene familia»)', () => {
+  const r = personasDePolizas(
+    [base({ polizaId: 'pA', rol: 'conductor_habitual', nombre: 'A', fichaId: 'f1' }),
+     base({ polizaId: 'pB', rol: 'conductor_habitual', nombre: 'B', fichaId: 'f2' })],
+    POLIZAS,
+    [{ relacionadoId: 'f1', tipo: 'Cónyuge/Pareja de Hecho' }],
+  )
+  assert.equal(r?.find(p => p.nombre === 'A')?.relacionDeclarada, 'Cónyuge/Pareja de Hecho')
+  assert.equal(r?.find(p => p.nombre === 'B')?.relacionDeclarada, null)
+})
+
+test('cepo: «no se pudo leer» se propaga, nunca se convierte en lista vacía', () => {
+  assert.equal(personasDePolizas(null, POLIZAS, []), null)
+  assert.deepEqual(personasDePolizas([], POLIZAS, []), [])
+})
+
+test('una póliza que no está en la lista no inventa etiqueta', () => {
+  const r = personasDePolizas([base({ polizaId: 'pZ', rol: 'contacto', nombre: 'A' })], POLIZAS, [])
+  assert.deepEqual(r?.[0].papeles, [{ rol: 'contacto', polizas: [] }])
 })

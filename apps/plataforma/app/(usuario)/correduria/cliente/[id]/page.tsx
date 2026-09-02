@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type EstadoClienteDerivado } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, personasDePolizas, ventanaAnulacion, type EstadoClienteDerivado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
@@ -8,7 +8,7 @@ import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
-  type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
+  type Ficha, type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
 } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
@@ -83,6 +83,13 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
       <Acciones />
 
       <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos} />
+
+      {/* Arriba a propósito (Alberto, 02/09/2026): con quién se habla de verdad.
+          «Relaciones» solo enseña lo declarado a mano y casi nadie lo tiene; esto
+          es quién sale en SUS pólizas, que es lo que CIMA sí nos dice. */}
+      <Tarjeta titulo="👤 Personas en sus pólizas">
+        <PersonasPolizas ficha={ficha} />
+      </Tarjeta>
 
       {/* Editar: contactos (libres), dirección (libre) e identidad (solo con DNI recibido). */}
       <Tarjeta titulo="✏️ Datos del cliente">
@@ -610,6 +617,60 @@ const tarjeta: React.CSSProperties = { border: '1px solid var(--border)', border
 const th: React.CSSProperties = { padding: '6px 8px', fontWeight: 600 }
 const td: React.CSSProperties = { padding: '8px' }
 const sub: React.CSSProperties = { fontSize: 11, color: 'var(--muted)' }
+
+// Con quién se puede hablar de esta ficha, agrupado por PERSONA y no por
+// póliza: GLOBAL 2 tiene tres furgonetas con tres conductores distintos y esa
+// gente estaba enterrada póliza por póliza. Quién sale y cómo se agrupa lo
+// decide `personasDePolizas`, testeado aparte.
+function PersonasPolizas({ ficha }: { ficha: Ficha }) {
+  const personas = personasDePolizas(
+    ficha.intervinientes,
+    ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) })),
+    ficha.relaciones,
+  )
+  // Tres estados, no dos: no es lo mismo «no se ha podido mirar» que «no hay nadie».
+  if (personas === null) return <p style={{ fontSize: 13, color: 'var(--muted)' }}>asegura no ha podido leer quién interviene en sus pólizas.</p>
+  if (personas.length === 0) {
+    return (
+      <p style={{ fontSize: 13, color: 'var(--muted)' }}>
+        {ficha.polizas.length === 0
+          ? 'Todavía no tiene pólizas en la cartera.'
+          : 'En sus pólizas no aparece nadie más que la propia ficha: la compañía no manda más intervinientes.'}
+      </p>
+    )
+  }
+  return (
+    <div style={{ display: 'grid', gap: 8, fontSize: 13 }}>
+      {personas.map(p => (
+        <div key={p.clave}>
+          <span style={{ fontWeight: 600 }}>
+            {p.fichaId
+              ? <Link href={`/correduria/cliente/${p.fichaId}`}>{p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
+              : (p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre'))}
+          </span>
+          <span style={{ color: 'var(--muted)' }}>
+            {' · '}
+            {p.papeles.map(x => `${etiquetaRol(x.rol)}${x.polizas.length ? ` del ${x.polizas.join(' y del ')}` : ''}`).join(' · ')}
+          </span>
+          {p.telefono && <> · <a href={`tel:${p.telefono.replace(/\s/g, '')}`}>📞 {p.telefono}</a></>}
+          {p.email && <> · <a href={`mailto:${p.email}`}>✉️</a></>}
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+            {p.relacionDeclarada
+              ? `👪 ${p.relacionDeclarada}`
+              : p.fichaId
+                ? 'sin vínculo declarado — se anota en 👪 Relaciones y autorizaciones'
+                : 'CIMA no la ha enlazado a una ficha propia: no se le puede declarar un vínculo todavía'}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Cómo se nombra una póliza en una frase: la matrícula si la hay. */
+function etiquetaPoliza(p: PolizaFicha): string {
+  return p.matricula ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : `${p.tipo} de ${p.aseguradora}`)
+}
 
 function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (

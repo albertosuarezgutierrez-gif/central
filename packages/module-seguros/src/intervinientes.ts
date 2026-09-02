@@ -164,3 +164,93 @@ export function filasIntervinientes(
     aviso: lista === null ? 'sin_mirar' : lista.length === 0 ? 'solo_tomador' : null,
   }
 }
+
+/**
+ * Las PERSONAS que aparecen en las pólizas de una ficha, agrupadas por persona
+ * en vez de por póliza.
+ *
+ * 🚨 Alberto, 02/09/2026: «en empresas y particulares se puede poner arriba las
+ * personas de contacto o relaciones — en el caso de GLOBAL las personas de las
+ * que tenemos datos e intervienen en alguna póliza». La tarjeta «Relaciones y
+ * autorizaciones» solo enseña lo DECLARADO a mano (`cliente_relaciones`), y en
+ * la cartera casi nadie lo tiene; mientras tanto, CIMA ya nos dice quién
+ * conduce cada coche y con qué teléfono. Esa gente existe, se puede llamar, y
+ * estaba enterrada póliza por póliza.
+ *
+ * Se agrupa por persona porque la misma conduce varias: GLOBAL 2 tiene tres
+ * furgonetas con TRES conductores distintos, y otra ficha puede tener el mismo
+ * conductor en dos coches. Clave de agrupación: su ficha si CIMA la enlazó y,
+ * si no, el nombre — es lo único que hay, así que dos homónimos se funden; por
+ * eso se muestra de qué póliza sale cada papel y no se afirma nunca que sean
+ * «la misma persona» más allá de eso.
+ *
+ * El TOMADOR se excluye: es la ficha que se está mirando.
+ * `null` (no se pudo leer la tabla) se propaga: no es «no hay nadie».
+ */
+export type PersonaDePolizas = {
+  clave: string
+  nombre: string | null
+  /** Está pero cifrado y no se pudo descifrar (≠ no tiene nombre). */
+  nombreIlegible: boolean
+  fichaId: string | null
+  telefono: string | null
+  email: string | null
+  /** Qué es en cada póliza: `conductor habitual del 2922BNJ`. */
+  papeles: { rol: string; polizas: string[] }[]
+  /** Su vínculo declarado en «Relaciones», si lo tiene. `null` = no hay ninguno
+   *  anotado, que es el caso normal: CIMA no declara parentescos. */
+  relacionDeclarada: string | null
+}
+
+export function personasDePolizas(
+  intervinientes: IntervinienteFicha[] | null,
+  polizas: readonly { id: string; etiqueta: string }[],
+  relaciones: readonly { relacionadoId: string; tipo: string }[] | null,
+): PersonaDePolizas[] | null {
+  if (intervinientes === null) return null
+  const etiqueta = new Map(polizas.map((p) => [p.id, p.etiqueta]))
+  const rel = new Map((relaciones ?? []).map((r) => [r.relacionadoId, r.tipo]))
+  const por = new Map<string, PersonaDePolizas>()
+
+  for (const i of intervinientes) {
+    if (i.esTomador) continue
+    const nombreClave = i.nombre?.trim().toLowerCase()
+    const clave = i.fichaId ?? (nombreClave ? `n:${nombreClave}` : `x:${i.polizaId}:${i.rol}`)
+    let p = por.get(clave)
+    if (!p) {
+      p = {
+        clave,
+        nombre: i.nombre,
+        nombreIlegible: i.nombreIlegible,
+        fichaId: i.fichaId,
+        telefono: null,
+        email: null,
+        papeles: [],
+        relacionDeclarada: i.fichaId ? rel.get(i.fichaId) ?? null : null,
+      }
+      por.set(clave, p)
+    }
+    // El primer dato que aparezca manda; los siguientes no lo pisan.
+    p.nombre ??= i.nombre
+    p.fichaId ??= i.fichaId
+    p.telefono ??= i.telefono
+    p.email ??= i.email
+    p.relacionDeclarada ??= p.fichaId ? rel.get(p.fichaId) ?? null : null
+    if (p.nombre !== null) p.nombreIlegible = false
+
+    const et = etiqueta.get(i.polizaId) ?? null
+    let papel = p.papeles.find((x) => x.rol === i.rol)
+    if (!papel) {
+      papel = { rol: i.rol, polizas: [] }
+      p.papeles.push(papel)
+    }
+    if (et !== null && !papel.polizas.includes(et)) papel.polizas.push(et)
+  }
+
+  const lista = [...por.values()]
+  for (const p of lista) p.papeles.sort((a, b) => prioridad(a.rol) - prioridad(b.rol))
+  return lista.sort((a, b) => {
+    const d = prioridad(a.papeles[0]?.rol ?? '') - prioridad(b.papeles[0]?.rol ?? '')
+    return d !== 0 ? d : (a.nombre ?? '').localeCompare(b.nombre ?? '', 'es')
+  })
+}

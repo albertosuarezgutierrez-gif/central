@@ -105,9 +105,11 @@ export {
   etiquetaRol,
   contactoEfectivo,
   filasIntervinientes,
+  personasDePolizas,
   type IntervinienteFicha,
   type ContactoEfectivo,
   type FilasIntervinientes,
+  type PersonaDePolizas,
 } from './intervinientes.ts'
 export {
   FRACCIONES,

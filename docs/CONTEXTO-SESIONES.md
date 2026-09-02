@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **👤 «Personas en sus pólizas», arriba en la ficha (02/09/2026, noche).** Alberto: «en empresas y
+  particulares se puede poner arriba las personas de contacto o relaciones». La tarjeta «Relaciones»
+  solo enseña lo DECLARADO a mano (`cliente_relaciones`) y casi nadie lo tiene; mientras, CIMA ya dice
+  quién conduce cada coche y con qué teléfono, pero enterrado póliza por póliza. Nueva tarjeta que
+  agrupa **por persona** (no por póliza): nombre, qué es en cada una con su matrícula, teléfono/email
+  pinchables, enlace a su ficha si CIMA la enlazó, y si tiene o no vínculo declarado. `personasDePolizas`
+  con 7 cepos, dos mordidos. En GLOBAL 2 salen sus tres conductores de un vistazo.
+
 - **🏢 GLOBAL 2: el titular no salía en su propia póliza (02/09/2026, noche).** Alberto, revisando la
   6930FBP: «¿no aparece propietario la empresa?». Cierto — el **tomador NO es un interviniente** (es el
   `cliente_id` de la póliza), así que la tarjeta, que solo pintaba `poliza_intervinientes`, dejaba fuera
