@@ -1,4 +1,4 @@
-import type { DocumentoResumen, Retarificabilidad } from '@central/module-seguros'
+import type { DocumentoResumen, EstadoClienteDerivado, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import { leerContactos, leerIdentidad, type ContactosCliente, type IdentidadFicha } from './cliente-edicion-asegura.ts'
 import { leerRelaciones, type RelacionCartera } from './relaciones-asegura.ts'
@@ -68,6 +68,13 @@ export type PolizaFicha = {
   objeto: ObjetoFicha | null
   matricula: string | null
   viva: boolean
+  /**
+   * `import_ref IS NULL` **y** `id_poliza_entidad` informado: CIMA la ha traído.
+   * `viva && !confirmadaCima` = emitida por nosotros y aún sin confirmar por
+   * CIMA — NO cuenta como viva ni genera avisos. Si asegura no manda el campo
+   * (versión anterior), vale `viva` (el comportamiento de siempre).
+   */
+  confirmadaCima: boolean
   retarificable: boolean
   /** Por qué ramo se retarifica (auto/hogar), por qué NO, y de dónde salen los
    *  datos del riesgo. `null` = la versión desplegada de asegura aún no lo manda:
@@ -155,7 +162,22 @@ export type Ficha = {
    * `null` = asegura no manda el bloque o no pudo consultarlo: NO es «no tiene familia».
    */
   relaciones: RelacionCartera[] | null
+  /**
+   * Estado DERIVADO por asegura (cliente · con_presupuesto · lead · ex_cliente),
+   * con su etiqueta y el motivo. `null` = versión de asegura que aún no lo
+   * manda: la pantalla cae a la regla anterior (`tipo==='cliente' || vivas>0`).
+   */
+  estado: EstadoClienteDerivado | null
+  /**
+   * Últimas 50 anotaciones, la más reciente primero. `null` = no se pudo leer
+   * (o asegura no lo manda); `[]` = se miró y no hay ninguna todavía.
+   */
+  historial: AnotacionHistorial[] | null
+  /** Presupuestos recientes sin póliza. `null` = no se pudo contar, NO es 0. */
+  cotizacionesVivas: number | null
 }
+
+export type AnotacionHistorial = { id: string; tipo: string; texto: string; fecha: string }
 
 export type RespuestaFicha =
   | { estado: 'sin_configurar' }
@@ -310,6 +332,55 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
   return out
 }
 
+const ESTADOS_CLIENTE = new Set(['cliente', 'con_presupuesto', 'lead', 'ex_cliente'])
+
+/**
+ * El estado derivado, o `null` si no llega o llega con forma rara. Nunca se
+ * inventa un `lead`: eso pintaría «no es cliente» sobre alguien de quien solo
+ * se sabe que asegura no ha dicho nada.
+ */
+export function leerEstadoCliente(v: unknown): EstadoClienteDerivado | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.estado !== 'string' || !ESTADOS_CLIENTE.has(o.estado)) return null
+  const etiqueta = cadena(o.etiqueta)
+  const motivo = cadena(o.motivo)
+  if (etiqueta === null || motivo === null) return null
+  return { estado: o.estado as EstadoClienteDerivado['estado'], etiqueta, motivo }
+}
+
+export const MAX_HISTORIAL = 50
+
+/**
+ * El historial, o `null` si no llega o no es lista. Una fila rara se salta
+ * (no tumba el bloque); una LISTA que no es lista degrada a `null` entero —
+ * jamás a `[]`, que diría «sin anotaciones».
+ */
+export function leerHistorial(v: unknown): AnotacionHistorial[] | null {
+  if (!Array.isArray(v)) return null
+  const out: AnotacionHistorial[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const h = fila as Record<string, unknown>
+    const id = cadena(h.id)
+    const tipo = cadena(h.tipo)
+    const fecha = cadena(h.fecha)
+    if (id === null || tipo === null || fecha === null || typeof h.texto !== 'string') continue
+    out.push({ id, tipo, texto: h.texto, fecha })
+    if (out.length >= MAX_HISTORIAL) break
+  }
+  return out
+}
+
+/** «2026-09-02T14:30:00Z» → «02/09/2026 16:30» (hora de Madrid). Una fecha ilegible se deja tal cual. */
+export function fechaHoraEs(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d
+    .toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+    .replace(',', '')
+}
+
 /**
  * Interpretación PURA de la respuesta del puerto de ficha.
  *
@@ -358,6 +429,8 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       objeto: leerObjeto(p.objeto),
       matricula: cadena(p.matricula),
       viva: p.viva === true,
+      // Sin el campo (asegura viejo) vale `viva`: es lo que se pintaba antes.
+      confirmadaCima: typeof p.confirmadaCima === 'boolean' ? p.confirmadaCima : p.viva === true,
       retarificable: p.retarificable === true,
       retarificacion: leerRetarificacion(p.retarificacion),
       recibos: leerRecibos(p.recibos),
@@ -410,6 +483,9 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       contactos: leerContactos(f.contactos),
       identidad: leerIdentidad(f.identidad),
       relaciones: leerRelaciones(f.relaciones),
+      estado: leerEstadoCliente(f.estado),
+      historial: leerHistorial(f.historial),
+      cotizacionesVivas: entero(f.cotizacionesVivas),
       piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }

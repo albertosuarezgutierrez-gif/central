@@ -1,8 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  fechaHoraEs,
   interpretarBusqueda,
   interpretarFicha,
+  leerEstadoCliente,
+  leerHistorial,
   leerRecibos,
   leerRetarificacion,
 } from '../apps/plataforma/lib/ficha-asegura.ts'
@@ -272,4 +275,74 @@ test('🚨 el bloque `relaciones` se lee entero; [] es «sin relaciones anotadas
 
   const roto = interpretarFicha(200, { ...FICHA_OK, ficha: { ...FICHA_OK.ficha, relaciones: 'no' } })
   if (roto.estado === 'ok') assert.equal(roto.ficha.relaciones, null, 'una lista que no es lista → null, no []')
+})
+
+// ── Estado derivado, CIMA y historial (02/09/2026) ──────────────────────────
+// «Cliente» es quien tiene una póliza CONFIRMADA por CIMA. Una emitida por
+// nosotros que CIMA aún no ha traído es «pendiente», no viva.
+
+test('🚨 asegura viejo sin `confirmadaCima`/`estado`/`historial` → viva de siempre, null y null', () => {
+  const r = interpretarFicha(200, FICHA_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.polizas[0].confirmadaCima, r.ficha.polizas[0].viva, 'sin el campo, confirmadaCima === viva')
+  assert.equal(r.ficha.estado, null, 'sin estado derivado se cae a la regla anterior, no a «lead»')
+  assert.equal(r.ficha.historial, null, '«no se pudo leer» ≠ «sin anotaciones»')
+  assert.equal(r.ficha.cotizacionesVivas, null, 'sin contar ≠ 0 presupuestos')
+})
+
+test('confirmadaCima se lee tal cual: una viva sin confirmar es «pendiente de CIMA»', () => {
+  const r = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: { ...FICHA_OK.ficha, polizas: [{ ...FICHA_OK.ficha.polizas[0], viva: true, confirmadaCima: false }] },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.polizas[0].viva, true)
+  assert.equal(r.ficha.polizas[0].confirmadaCima, false)
+  // Un `'true'` de texto no es un booleano: se cae a `viva`, no a «confirmada».
+  const raro = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: { ...FICHA_OK.ficha, polizas: [{ ...FICHA_OK.ficha.polizas[0], viva: false, confirmadaCima: 'true' }] },
+  })
+  if (raro.estado === 'ok') assert.equal(raro.ficha.polizas[0].confirmadaCima, false)
+})
+
+test('el estado derivado se lee entero y uno con basura degrada a null, nunca a «lead»', () => {
+  const r = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: { ...FICHA_OK.ficha, estado: { estado: 'ex_cliente', etiqueta: '⚫ Ex-cliente', motivo: '2 cancelada(s) en CIMA' }, cotizacionesVivas: 0 },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.ficha.estado, { estado: 'ex_cliente', etiqueta: '⚫ Ex-cliente', motivo: '2 cancelada(s) en CIMA' })
+  assert.equal(r.ficha.cotizacionesVivas, 0, 'cero contado SÍ es un dato')
+  assert.equal(leerEstadoCliente({ estado: 'vip', etiqueta: 'x', motivo: 'y' }), null)
+  assert.equal(leerEstadoCliente({ estado: 'lead', etiqueta: '', motivo: 'y' }), null)
+  assert.equal(leerEstadoCliente({ estado: 'lead' }), null)
+  assert.equal(leerEstadoCliente('cliente'), null)
+})
+
+test('🚨 historial: [] es «sin anotaciones», null «no se pudo leer»; una fila rara se salta; 50 máx', () => {
+  assert.equal(leerHistorial(undefined), null)
+  assert.equal(leerHistorial('no'), null, 'una lista que no es lista → null, no []')
+  assert.deepEqual(leerHistorial([]), [])
+  const l = leerHistorial([
+    { id: 'h1', tipo: 'edicion', texto: 'Cambió el teléfono principal', fecha: '2026-09-02T10:00:00Z' },
+    { id: 'h2', tipo: 'nota', texto: '', fecha: '2026-09-01T10:00:00Z' }, // texto vacío es válido
+    { id: 'h3', texto: 'sin tipo', fecha: '2026-09-01T10:00:00Z' },
+    'basura',
+    null,
+  ])
+  assert.ok(l)
+  assert.equal(l.length, 2)
+  assert.equal(l[0].tipo, 'edicion')
+  const muchas = leerHistorial(Array.from({ length: 80 }, (_, i) => ({ id: `h${i}`, tipo: 'nota', texto: 'x', fecha: '2026-09-02' })))
+  assert.equal(muchas?.length, 50)
+})
+
+test('la fecha del historial sale dd/mm/aaaa hh:mm en hora de Madrid; una ilegible se deja tal cual', () => {
+  assert.equal(fechaHoraEs('2026-09-02T14:30:00Z'), '02/09/2026 16:30')
+  assert.equal(fechaHoraEs('2026-01-15T23:05:00Z'), '16/01/2026 00:05')
+  assert.equal(fechaHoraEs('ayer'), 'ayer')
 })

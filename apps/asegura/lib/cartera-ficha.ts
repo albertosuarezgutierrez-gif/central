@@ -26,9 +26,10 @@ import {
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
-import { enmascararDni, retarificabilidad, type ContactoCliente, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
+import { DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
+import { cotizacionesVivas, historialCliente, type HistorialFila } from './cartera-historial'
 import { listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
@@ -140,6 +141,12 @@ export type PolizaFicha = {
   matricula: string | null
   /** `true` cuando entra por CIMA (`import_ref` a null) = cartera viva. */
   viva: boolean
+  /**
+   * `true` cuando CIMA la ha traído (`id_poliza_entidad` informado). Una `viva`
+   * sin confirmar es una emitida por nosotros que CIMA aún no ha casado:
+   * no cuenta como cliente ni genera avisos (visión del CRM §5).
+   */
+  confirmadaCima: boolean
   /** Solo las de auto con matrícula se pueden retarificar hoy. */
   retarificable: boolean
   /** Por qué ramo se puede (o por qué no). Misma frase en todas las pantallas. */
@@ -218,6 +225,12 @@ export type FichaCliente = {
    * seguros de quién. `null` = no se ha podido consultar. NO es «no tiene familia».
    */
   relaciones: RelacionCartera[] | null
+  /** Estado DERIVADO de los hechos (cliente / con presupuesto / lead / ex-cliente), con su motivo. */
+  estado: EstadoClienteDerivado
+  /** Últimas 50 anotaciones de `historial_interno`. `null` = no se pudo leer. */
+  historial: HistorialFila[] | null
+  /** Presupuestos recientes sin póliza. `null` = no se pudo contar. */
+  cotizacionesVivas: number | null
   polizas: PolizaFicha[]
   siniestros: SiniestroFicha[]
   /**
@@ -282,6 +295,7 @@ export async function fichaCliente(
           fraccionamiento: true,
           datosEspecificos: true,
           importRef: true,
+          idPolizaEntidad: true,
         },
         orderBy: { fechaVencimiento: 'desc' },
       },
@@ -353,6 +367,15 @@ export async function fichaCliente(
   const documentos = await listarDocumentos(correduriaId, { clienteId: c.id })
   const contactos = await listarContactos(correduriaId, c.id)
   const relaciones = await listarRelaciones(correduriaId, c.id)
+  const historial = await historialCliente(correduriaId, c.id)
+  const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
+  const estado = estadoCliente({
+    polizasConfirmadasActivas: c.polizas.filter((p) => p.importRef === null && p.idPolizaEntidad !== null && String(p.estado) !== 'cancelada').length,
+    polizasConfirmadasCanceladas: c.polizas.filter((p) => p.importRef === null && p.idPolizaEntidad !== null && String(p.estado) === 'cancelada').length,
+    polizasHistoricas: c.polizas.filter((p) => p.importRef !== null).length,
+    polizasPendientesCima: c.polizas.filter((p) => p.importRef === null && p.idPolizaEntidad === null).length,
+    cotizacionesVivas: presupuestos,
+  })
 
   return {
     id: c.id,
@@ -378,6 +401,9 @@ export async function fichaCliente(
     documentos,
     contactos,
     relaciones,
+    estado,
+    historial,
+    cotizacionesVivas: presupuestos,
     identidad: {
       nombre: c.nombre,
       apellidos: c.apellidos,
@@ -413,6 +439,7 @@ export async function fichaCliente(
         objeto: objetoConGemela(String(p.tipo), datos, p.importRef === null && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined),
         matricula,
         viva: p.importRef === null,
+        confirmadaCima: p.importRef === null && p.idPolizaEntidad !== null,
         retarificable: retarificacion.retarificable,
         retarificacion,
         recibos: resumirRecibos(

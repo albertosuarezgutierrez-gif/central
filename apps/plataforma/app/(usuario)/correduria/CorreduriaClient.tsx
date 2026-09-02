@@ -9,6 +9,7 @@ import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
 import BuscadorCartera from './BuscadorCartera'
 import Retencion from './Retencion'
+import Duplicadas from './Duplicadas'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -115,6 +116,11 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
 
       {/* ── 2. LA CARTERA DE UN VISTAZO ─────────────────────────────────── */}
       <CarteraViva />
+
+      {/* Pólizas duplicadas en la cartera viva (guardián Codeoscopic↔CIMA, §5).
+          FUERA de `CarteraViva`, por la misma regla que el buscador: ese bloque
+          hace `return` temprano cuando el puerto falla y se llevaría el aviso. */}
+      <Duplicadas />
 
       {/* ── 3. A QUIÉN LLAMAR HOY ───────────────────────────────────────────
           Recibos devueltos y vencidos sin cobrar, por urgencia REAL. Es la

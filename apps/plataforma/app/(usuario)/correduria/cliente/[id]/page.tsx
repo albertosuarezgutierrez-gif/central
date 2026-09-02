@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type EstadoClienteDerivado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
+import Historial from '../../Historial'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
@@ -36,8 +37,12 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
   // 🚨 «Viva» = entra por CIMA; pero 42 de las 109 CIMA están CANCELADAS
   // (medido 02/09/2026). Mezclarlas con las activas infla «pólizas vivas» y
   // pone un «Retarificar» en un seguro que ya no existe.
-  const vivas = ficha.polizas.filter(p => p.viva && p.estado !== 'cancelada')
-  const canceladas = ficha.polizas.filter(p => p.viva && p.estado === 'cancelada')
+  // Y «viva» exige además que CIMA la haya CONFIRMADO: una emitida por nosotros
+  // que CIMA aún no ha traído es «pendiente de confirmación», no cuenta como
+  // viva ni genera avisos (docs/CORREDURIA-CRM-VISION.md §5).
+  const vivas = ficha.polizas.filter(p => p.viva && p.confirmadaCima && p.estado !== 'cancelada')
+  const pendientesCima = ficha.polizas.filter(p => p.viva && !p.confirmadaCima)
+  const canceladas = ficha.polizas.filter(p => p.viva && p.confirmadaCima && p.estado === 'cancelada')
   const historicas = ficha.polizas.filter(p => !p.viva)
   const abiertos = ficha.siniestros.filter(s => s.abierto)
   // Solo el cónyuge sube a la cabecera; el resto de vínculos vive en la tarjeta 👪.
@@ -56,9 +61,12 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
         <PageHeader
           titulo={ficha.nombre}
           sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {/* CIMA engancha pólizas por DNI a una ficha que puede seguir `lead`:
-                con pólizas vivas ES cliente, diga lo que diga el enum. */}
-            <span>{ficha.tipo === 'cliente' || vivas.length > 0 ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
+            {/* El estado lo DERIVA asegura de los hechos (cliente · con presupuesto ·
+                lead · ex-cliente) y lo trae con su motivo. Sin él (asegura viejo),
+                la regla de siempre: CIMA engancha pólizas por DNI a una ficha que
+                puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
+                diga el enum. */}
+            <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={ficha.tipo === 'cliente' || vivas.length > 0} />
             <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} />
             {conyuge && (
               <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
@@ -91,6 +99,16 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
 
       <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={ficha.intervinientes} />
 
+      {pendientesCima.length > 0 && (
+        <Polizas
+          titulo={`📝 Emitidas, pendientes de confirmación por CIMA (${pendientesCima.length})`}
+          nota="CIMA aún no la ha traído: no cuenta como viva ni genera avisos. Cuando la compañía la mande por CIMA se casará con esta y pasará a «Pólizas vivas»."
+          polizas={pendientesCima}
+          vacio=""
+          intervinientes={ficha.intervinientes}
+        />
+      )}
+
       {canceladas.length > 0 && (
         <Polizas
           titulo={`Canceladas en CIMA (${canceladas.length})`}
@@ -119,7 +137,33 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
           intervinientes={ficha.intervinientes}
         />
       )}
+
+      {/* Al final y plegado: se abre cuando hace falta saber quién tocó qué. `null` ≠ «sin anotaciones». */}
+      <Historial historial={ficha.historial} />
     </div>
+  )
+}
+
+// ── Estado de la cabecera ───────────────────────────────────────────────────
+// El rótulo no es un acto de fe: el motivo va en el `title`. Y si hay
+// presupuestos vivos sin ser cliente, se dice cuántos.
+
+function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
+  estado: EstadoClienteDerivado | null
+  cotizacionesVivas: number | null
+  /** La regla anterior, para una versión de asegura que no manda `estado`. */
+  cliente: boolean
+}) {
+  const etiqueta = estado ? estado.etiqueta : cliente ? '✅ Cliente (CIMA)' : '🕐 Lead'
+  const esCliente = estado ? estado.estado === 'cliente' : cliente
+  const title = estado ? estado.motivo : cliente ? 'tiene póliza viva por CIMA o su ficha es de tipo cliente' : 'sin póliza viva por CIMA'
+  return (
+    <span title={title}>
+      {etiqueta}
+      {!esCliente && cotizacionesVivas !== null && cotizacionesVivas > 0 && (
+        <span style={{ color: 'var(--muted)' }}> ({cotizacionesVivas} presupuesto{cotizacionesVivas === 1 ? '' : 's'})</span>
+      )}
+    </span>
   )
 }
 
