@@ -32,6 +32,19 @@
 
 ---
 
+### 🔍 (02/09/2026) Rutinas de auditoría: cobertura exhaustiva tras la correduría
+- Alberto pidió revisar la diaria y la semanal («hemos metido más cosas como correduría»). Medido: las dos decían
+  **«8 apps»** desde junio (y `AGENTES-MAPA` «4») con **12** en `apps/`; ni una línea sobre la correduría; el
+  conector `Supabase_asegura` no figuraba. `auditoria-central` contaba 7 apps con Prisma (son 10; asegura tiene DOS
+  schemas) y solo conocía el schema `iarest` (faltaban `rrhh` y `seguros`, los dos con BYPASSRLS).
+- Nuevo bloque **2-quater «🛡️ Salud de la correduría»** (obligatorio, también en ligera): latidos `correduria_*`
+  (sin fila = nunca corrió), foto `seguros.*` vs origen de Manuel, gasto Codeoscopic, cepos de aislamiento, §21
+  pausada a propósito. Regla nueva: la frescura del ORIGEN es actividad, no salud (CIMA trae 0-3 filas/semana).
+- Semanal: tramo correduría (typecheck asegura con dos schemas, tests `module-seguros*`, checksums foto vs origen,
+  TRASPASO §pendientes). Toda cifra de apps se cruza contra `ls apps` + matriz de `tests.yml`, nunca contra otro doc.
+- **Pendiente de Alberto:** adjuntar `Supabase_asegura` a las rutinas 1 y 2 en la UI; sin él el bloque c) queda en
+  «no he podido mirar». Visto al pasar (no de esta sesión): `sivra_domotica_acceso` en rojo (1 cerradura con ERROR).
+
 ### 🗄️ (02/09/2026) Correduría: la cartera YA ESTÁ COPIADA en `seguros` (foto fija, origen sigue vivo)
 - Alberto: «vamos con la copia de BBDD, es prioritario». **Hecho:** 52 tablas, 86.628 filas, 131 FKs,
   verificación por recuento (52/52) y checksum de contenido (clientes, pólizas, recibos, siniestros).
