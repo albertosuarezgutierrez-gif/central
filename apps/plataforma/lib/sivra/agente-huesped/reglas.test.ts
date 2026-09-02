@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { detectLang, detectCategory, extractEarlyTime, PARKING_SPOTS, esSolicitudLateCheckout, esDespedida, esHechoDelPiso } from './reglas.ts'
+import { detectLang, detectCategory, extractEarlyTime, PARKING_SPOTS, esSolicitudLateCheckout, esDespedida, esHechoDelPiso, tipoHueco, contieneDatoPersonal, interpretarDestilado } from './reglas.ts'
 
 test('detectLang detecta español', () => assert.equal(detectLang('Hola, ¿a qué hora es el check-in?'), 'es'))
 test('detectLang cae a inglés', () => assert.equal(detectLang('What is the wifi password?'), 'en'))
@@ -80,4 +80,54 @@ test('esHechoDelPiso: cortesías y acuses NO son hechos', () => {
 
 test('esHechoDelPiso: una afirmación del huésped sin pregunta no enseña nada', () => {
   assert.equal(esHechoDelPiso('Llegamos sobre las seis de la tarde', 'Perfecto, tomo nota de vuestra llegada sobre las 18:00.'), false)
+})
+
+// ── tipoHueco: hueco de guía vs control de calidad caído ───────────────────
+test('tipoHueco: "no cubre" es hueco de guía', () => {
+  assert.equal(tipoHueco({
+    needs_human: true, apoyada_en_fuente: false, categoria: 'general', sentimiento: 'neutro',
+    motivo: 'la respuesta no cubre bien la pregunta — quizá falta en la guía del piso',
+  }), 'guia')
+})
+
+test('tipoHueco: el control caído NO es un hueco de guía (caso Claudio, 02/09/2026)', () => {
+  assert.equal(tipoHueco({
+    needs_human: true, apoyada_en_fuente: false, categoria: 'general', sentimiento: 'neutro',
+    motivo: 'no se pudo verificar el borrador (control de calidad caído) — lo reviso yo',
+  }), 'control_caido')
+})
+
+test('tipoHueco: si el motivo mezcla los dos, gana el que NO se pudo mirar', () => {
+  assert.equal(tipoHueco({
+    needs_human: true, apoyada_en_fuente: false, motivo: 'la respuesta no cubre bien la pregunta · no se pudo verificar el borrador',
+  }), 'control_caido')
+})
+
+test('tipoHueco: lo sensible y las recomendaciones no son ignorancia', () => {
+  assert.equal(tipoHueco({ needs_human: true, apoyada_en_fuente: false, sentimiento: 'negativo', motivo: 'no cubre' }), 'ninguno')
+  assert.equal(tipoHueco({ needs_human: true, apoyada_en_fuente: false, categoria: 'recomendacion', motivo: 'no cubre' }), 'ninguno')
+  assert.equal(tipoHueco({ needs_human: true, apoyada_en_fuente: true, motivo: 'no cubre' }), 'ninguno')
+  assert.equal(tipoHueco(null), 'ninguno')
+})
+
+// ── contieneDatoPersonal / interpretarDestilado ────────────────────────────
+test('contieneDatoPersonal caza el móvil de Bizum que se guardó como hecho (id=3)', () => {
+  assert.equal(contieneDatoPersonal('Mi movil es +34637349990'), true)
+  assert.equal(contieneDatoPersonal('Escríbenos a hola@ejemplo.com'), true)
+  assert.equal(contieneDatoPersonal('El apartamento tiene una plaza de parking privada.'), false)
+})
+
+test('interpretarDestilado: NADA, cartas y datos personales no se guardan', () => {
+  assert.equal(interpretarDestilado('NADA'), '')
+  assert.equal(interpretarDestilado('  '), '')
+  assert.equal(interpretarDestilado('ok'), '')
+  assert.equal(interpretarDestilado('Llama al +34637349990 para el Bizum.'), '')
+  assert.equal(interpretarDestilado('¡Hola, Claudio!\nGracias por escribirnos.\nUn saludo.'), '')
+})
+
+test('interpretarDestilado: una frase limpia sí se guarda, sin comillas', () => {
+  assert.equal(
+    interpretarDestilado('"Solo se contacta a los huéspedes por los mensajes de Booking, nunca por WhatsApp."'),
+    'Solo se contacta a los huéspedes por los mensajes de Booking, nunca por WhatsApp.',
+  )
 })
