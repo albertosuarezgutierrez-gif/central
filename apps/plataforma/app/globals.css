@@ -287,13 +287,18 @@ html[data-saldo-oculto='1'] .saldo-privado {
 .cuadre-btn { min-height: 44px; min-width: 44px; }
 
 /* === Finanzas: hub (`finanzas/FinanzasClient.tsx`) y selector de intervalo (`IntervaloSelector.tsx`) ===
-   El selector de intervalo lo comparten varias pantallas de dinero: en móvil sus pastillas
-   envuelven en vez de comprimirse, porque un rango de fechas ilegible se toca mal y se lee peor. */
+   El selector de intervalo lo comparten varias pantallas de dinero. El modo (mes/trimestre/rango)
+   es un SEGMENTADO —un solo borde alrededor de los tres— y los meses son chips sin borde: quince
+   pastillas idénticas pesaban tanto como las tarjetas de datos que filtran, y un control de
+   navegación no puede competir con su contenido. */
 @media (max-width: 768px) {
   .finanzas-kpi-grid { grid-template-columns: 1fr 1fr !important; }
   .finanzas-bloques { grid-template-columns: 1fr !important; }
   .iv-filtros { flex-direction: column !important; align-items: stretch !important; }
-  .iv-pills { flex-wrap: wrap !important; }
+  /* El segmentado pasa a ocupar el ancho y reparte los tres modos a partes iguales: envolver
+     dentro de su caja dejaba un botón solo en la segunda línea, que se lee como otro control. */
+  .iv-pills { display: flex !important; width: 100% !important; }
+  .iv-pills > button { flex: 1 1 0; text-align: center; }
 }
 @media (max-width: 480px) {
   .finanzas-kpi-grid { grid-template-columns: 1fr !important; }
@@ -631,4 +636,21 @@ html[data-saldo-oculto='1'] .saldo-privado {
    Importe» sobre una lista apilada señalaría a sitios que ya no están. */
 @media (max-width: 768px) {
   .banca-movs-head { display: none !important; }
+}
+
+/* ── Resumen del periodo (/banca · ResumenPeriodo.tsx) ─────────────────────────────────────────
+   Rejillas del bloque que abre el Inicio: 4 KPIs, las dos tarjetas Negocios/Personal y las dos
+   gráficas. Vivían en un `<style>` incrustado en el propio componente porque un estilo EN LÍNEA
+   no admite media queries — que es justo el motivo por el que este archivo existe. En móvil los
+   KPIs pasan a 2×2 (a 1 columna quedaban cuatro tarjetas altísimas y el gráfico caía fuera de la
+   primera pantalla) y todo lo demás se apila. */
+@media (max-width: 768px) {
+  .bk-kpis { grid-template-columns: 1fr 1fr !important; }
+  .bk-neg  { grid-template-columns: 1fr !important; }
+  .bk-graf { grid-template-columns: 1fr !important; }
+}
+
+/* Bajo ~380 px un KPI a media pantalla ya no cabe: el importe se parte en dos líneas. */
+@media (max-width: 380px) {
+  .bk-kpis { grid-template-columns: 1fr !important; }
 }
