@@ -38,7 +38,10 @@
   **cero Avant2** (0,50€ por consulta y NO idempotente → un botón público o una vigilancia periódica son 4 cifras/mes).
   Única pieza nueva: `portal_obligacion`, colgada del **bien** con `poliza_id` opcional (sirve luego a ITV/gas).
   De Alberto salió lo mejor: el **cambio de mediador** convierte un lead en cliente sin tarificar y su póliza
-  **empieza a entrar por CIMA** → el dato declarado pasa a verificado solo. Spec + PR draft **#2144**.
+  **empieza a entrar por CIMA** → el dato declarado pasa a verificado solo, y su firma **ya existe**
+  (`@central/core-firma`, eIDAS art. 26, método `otp_email` = como entra el portal; molde `apps/rrhh`).
+  Todas las ideas guardadas en **`docs/CORREDURIA-INTRANET-IDEAS.md`** con coste y bloqueo de cada una.
+  Spec + banco de ideas en PR draft **#2144**.
 
 - **🏠🏍️ «Haz todo» + el catálogo de Avant2 (02/09/2026, noche).** Mergeado #2130 (horquilla enchufada
   + capital de hogar por corroboración). Alberto pasó el catálogo de Integra: cruzado con las 109 vivas
