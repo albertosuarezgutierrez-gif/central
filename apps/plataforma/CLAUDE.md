@@ -1512,6 +1512,16 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   CIMA» y no cuentan como vivas. Tarjeta «🕘 Historial» al final, plegada y con montaje perezoso (`null` = no se
   pudo leer ≠ `[]`). `Duplicadas.tsx` bajo la cartera viva avisa de pólizas vivas con el mismo número y compañía
   (proxy `/api/correduria/duplicados`); si no se pudo comprobar, lo dice, nunca calla.
+- **🚨 Siniestros desde la ficha (02/09/2026, tarde).** `Siniestros.tsx` (ficha de cliente y de póliza; sustituye
+  a las dos tablas de solo lectura): lista con estado, tipo (`etiquetaTipoSiniestro`: los de CIMA son códigos EIAC
+  y se pintan «código CIMA 1107»), referencia, tramitador y reserva (`null` → «sin dato», nunca 0); fila expandida
+  con descripción, lugar, perito, **seguimiento** (tramitador/perito/gravedad/reserva/indemnización/nota; en los
+  nuestros también la referencia de la compañía, que es la llave para que CIMA case), **estado** por transiciones
+  solo en los nuestros (en los de CIMA «lo fija la compañía») y **documentos del parte** (`Documentos` con
+  `siniestroId`). Formulario «➕ Abrir siniestro» solo sobre pólizas `viva && confirmadaCima`; aviso del art. 16
+  LCS (7 días) si se abre tarde, no bloquea. Proxy `/api/correduria/siniestro` (GET · POST · PATCH) → puerto
+  `/api/operador/siniestro`; lector puro `lib/siniestros-asegura.ts` con defaults conservadores para una asegura
+  vieja (`origen` ausente → CIMA). `lista === null` = no se pudo leer, nunca «sin siniestros».
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no

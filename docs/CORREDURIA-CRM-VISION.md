@@ -101,7 +101,7 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 | Estado «con presupuesto» / «ex-cliente» | ✅ derivado (`estadoCliente`, module-seguros) | `estado-cliente.ts` |
 | Portal del cliente leyendo la cartera | ❌ hoy solo bóveda de pólizas que el usuario declara; sin FK a `clientes` | `apps/asegura-portal` |
 | Autorizados en el portal | ❌ regla escrita (`clientesVisiblesPara`), sin grant ni UI | `module-seguros/relaciones.ts` |
-| Apertura/seguimiento de siniestro desde la ficha | ❌ solo lectura de lo que trae CIMA | — |
+| Apertura/seguimiento de siniestro desde la ficha | ✅ abrir (origen `gestionado_correduria`), seguimiento (tramitador, perito, gravedad, reserva, indemnización, notas fechadas), estado por transiciones, documentos del parte; en uno de CIMA el estado lo fija la compañía. La referencia de la compañía se guarda también en `id_siniestro_entidad` para que el pull de CIMA case en vez de duplicar | `module-seguros/siniestros.ts` · `asegura/lib/cartera-siniestros.ts` · `/api/operador/siniestro` · `plataforma/…/Siniestros.tsx` |
 | «Por qué ha subido la prima» | ❌ | — |
 
 ## 5. La pieza crítica: conciliar Codeoscopic ↔ CIMA
@@ -181,7 +181,7 @@ Seguro (LCS 50/1980), RGPD. Alberto: DGSFP CS-F/0170. Funciones y su reflejo en 
 | Gestión durante la vigencia: modificaciones, agravación del riesgo, cambios de tomador/vehículo | LCS arts. 11-13 | Editar contacto ✅ · cambios de riesgo por compañía ❌ |
 | **Cobro y seguimiento de recibos**; impago → suspensión al mes, extinción a los 6 meses | LCS art. 15 | Cola de retención ✅ · aviso al cliente ❌ |
 | **Renovación y vencimiento**: preaviso del tomador 1 mes, del asegurador 2 meses | LCS art. 22 | Vencimientos y ventana de anulación ✅ · campaña de renovación ❌ |
-| **Siniestros**: comunicar en 7 días, asistir, seguir la tramitación e indemnización | LCS art. 16 | Ver siniestros de CIMA ✅ · abrir/seguir desde la ficha ❌ |
+| **Siniestros**: comunicar en 7 días, asistir, seguir la tramitación e indemnización | LCS art. 16 | Ver siniestros de CIMA ✅ · abrir/seguir desde la ficha ✅ (aviso de los 7 días, no bloquea) · comunicar a la compañía desde aquí ❌ (se llama o se hace por su portal; la referencia se anota) |
 | Conservación de la cartera: retención, mejora de precio, cross-selling (hogar del cliente de auto) | — | Hogar desde Catastro ✅ · propuesta proactiva ❌ |
 | Libro registro de la actividad, cuentas separadas de primas, RC profesional, formación continua | RDL 3/2020 | Historial ✅ (sin pintar) · libro de comisiones ✅ (`comisiones_devengo`) |
 | Protección de datos: consentimientos, acceso de terceros (familia) documentado, minimización | RGPD | Autorización direccional con rastro ✅ · consentimiento firmado adjunto ❌ · encargado de tratamiento (Codeoscopic/CIMA) pendiente |
@@ -199,7 +199,12 @@ tiene vetadas hasta decidirlo (nada sale sin su OK; emisión en sandbox).
 4. **Leads por canal**: primero el formulario web de la correduría (existe la landing de plataforma),
    después agente/WhatsApp cuando haya WABA. Todos por `POST /api/operador/cliente`.
 5. **Portal lee la cartera + autorizados (§7).**
-6. **Siniestros desde la ficha** (apertura, seguimiento, documentos del parte).
+6. ✅ **Siniestros desde la ficha** (apertura, seguimiento, documentos del parte) — hecho 02/09/2026.
+   Lo que NO hace: comunicar el siniestro a la compañía (no hay canal; hoy se llama o se usa su portal).
+   Medido antes de construirlo: los 67 siniestros son de CIMA; su `tipo` es un **código EIAC** («1107»)
+   sin tabla oficial aquí, así que se pinta como código y no se le inventa nombre. CIMA reescribe en
+   cada pull `estado`, `tipo`, `fecha_hora` y `lugar_*`, y NUNCA tramitador/perito/gravedad/reserva/
+   indemnización/comentario (son «manual del corredor»): por eso eso es justo lo que se anota.
 7. **«Por qué ha subido»**: comparar la prima de dos anualidades con los siniestros del ciclo y el
    recargo por fraccionar; helper puro con tres estados (sube por siniestros / sube sin siniestro →
    retarificar / no se puede saber porque CIMA no manda la anualidad anterior).

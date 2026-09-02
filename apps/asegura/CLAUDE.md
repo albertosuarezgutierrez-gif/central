@@ -557,6 +557,22 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   mismo número normalizado + código DGS (`polizasDuplicadas`, puro) — el guardián de la conciliación
   Codeoscopic↔CIMA; `emitidaYCima` marca el grupo que hay que casar. Diseño de la emisión en central y la
   conciliación: `docs/superpowers/specs/2026-09-02-emision-conciliacion-cima-design.md` (pendiente de OK).
+- **🚨 SINIESTROS desde la ficha (02/09/2026, tarde).** `/siniestro` (GET · POST abre · PATCH estado o
+  seguimiento); reglas puras en `@central/module-seguros` (`siniestros.ts`, 7 tests), BD en
+  `lib/cartera-siniestros.ts`; `SiniestroFicha` creció (origen, comentario, perito, lugar, `confirmadoCima`…)
+  y lo comparten la ficha y la póliza (`SELECT_SINIESTRO` + `mapSiniestro`). Medido antes: los **67**
+  siniestros son de CIMA (7 abiertos), `tipo` es un **código EIAC** («1107», «17») sin tabla aquí → se
+  pinta «código CIMA 1107», no se inventa nombre. El legacy (`persist-siniestro.ts`) casa por el índice
+  único parcial `(correduria_id, id_siniestro_entidad, codigo_entidad_dgs)` y en el UPDATE reescribe
+  **solo** `estado`, `tipo`, `fecha_hora`, `lugar_*`; tramitador/perito/gravedad/reserva/indemnización/
+  `comentario` NUNCA (son «manual del corredor»). Dos consecuencias cableadas: (1) en uno de CIMA el
+  estado **no se cambia a mano** (422) y se anota lo demás; (2) en uno nuestro (`origen =
+  gestionado_correduria`), la `referencia` que dé la compañía se escribe TAMBIÉN en
+  `id_siniestro_entidad` (+ el código DGS de la póliza al abrir) → el próximo pull cae sobre nuestra fila
+  y la actualiza en vez de duplicarla — misma jugada que D2 de la spec de emisión. Solo se abre sobre
+  pólizas vivas de CIMA (una del volcado → 422). Aviso del art. 16 LCS (7 días) al abrir tarde: no
+  bloquea. Dirección exacta del hecho cifrada; CP/ciudad/provincia en claro como CIMA. Historial tipo
+  `siniestro` en cada escritura, sin la descripción del hecho. Insert probado en la BD real con rollback.
 
 ### 🔎 Qué se puede buscar de verdad, y qué NO (medido 01/09/2026)
 

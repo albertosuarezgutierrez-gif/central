@@ -29,6 +29,7 @@ import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from
 import { contarDocumentosPoliza, listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { SiniestroFicha } from './cartera-ficha'
+import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 
 export type CoberturaFicha = {
   orden: number | null
@@ -126,7 +127,6 @@ export function datosConDireccion(datos: unknown): Record<string, unknown> | nul
   return claro === null ? datos : { ...datos, direccion: claro }
 }
 
-const ESTADOS_SINIESTRO_ABIERTO = new Set(['abierto', 'en_tramitacion'])
 
 export async function fichaPoliza(correduriaId: string, polizaId: string): Promise<FichaPoliza | null> {
   if (!aseguraConfigurada()) return null
@@ -147,10 +147,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         select: { id: true, situacion: true, primaTotal: true, fechaEmision: true, fechaVencimiento: true, formaPago: true },
         orderBy: { fechaEmision: 'desc' },
       },
-      siniestros: {
-        select: { id: true, polizaId: true, estado: true, tipo: true, referencia: true, fechaHora: true, reservaImporte: true, indemnizacionImporte: true, tramitadorNombre: true },
-        orderBy: { fechaHora: 'desc' },
-      },
+      siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
     },
   })
   if (!p) return null
@@ -250,11 +247,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       id: r.id, situacion: (r.situacion ?? '').trim() || 'sin_informar', importe: importeEiac(r.primaTotal),
       fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, formaPago: etiquetaFormaPago(r.formaPago),
     })),
-    siniestros: p.siniestros.map((s) => ({
-      id: s.id, polizaId: s.polizaId, estado: String(s.estado), tipo: s.tipo ?? null, referencia: s.referencia ?? null,
-      fecha: fechaIso(s.fechaHora), reserva: num(s.reservaImporte), indemnizacion: num(s.indemnizacionImporte),
-      tramitador: s.tramitadorNombre ?? null, abierto: ESTADOS_SINIESTRO_ABIERTO.has(String(s.estado)),
-    })),
+    siniestros: p.siniestros.map(mapSiniestro),
     intervinientes,
     documentos,
     listaDocumentos,

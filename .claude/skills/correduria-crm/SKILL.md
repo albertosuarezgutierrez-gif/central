@@ -36,6 +36,11 @@ real medido, orden de trabajo). Después, según lo que toques:
 ## Estado en una línea (02/09/2026)
 
 Lectura y cuidado de la cartera: hecho (buscador, ficha cliente/póliza, edición, relaciones,
-documentos, retención, retarificar). Falta: emisión en central + conciliación CIMA, historial
-visible, estado «con presupuesto», leads por canal, portal leyendo la cartera, siniestros desde la
-ficha, «por qué sube la prima». Tabla completa en el documento (§4) y orden en §9.
+documentos, retención, retarificar, historial visible, estado derivado, guardián de duplicadas,
+siniestros desde la ficha). Falta: emisión en central + conciliación CIMA (spec hecha, pendiente
+de OK), leads por canal, portal leyendo la cartera (sus tablas no existen en la BD), «por qué sube
+la prima». Tabla completa en el documento (§4) y orden en §9.
+
+9. **Siniestros: dos orígenes, dos reglas.** En uno de CIMA el estado lo fija la compañía (CIMA lo
+   reescribe en cada pull) y se anota lo que CIMA no manda; en uno nuestro, la referencia de la
+   compañía va TAMBIÉN a `id_siniestro_entidad` para que el pull case y no duplique.

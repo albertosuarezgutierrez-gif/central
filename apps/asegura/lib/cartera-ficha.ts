@@ -31,6 +31,7 @@ import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
 import { cotizacionesVivas, historialCliente, type HistorialFila } from './cartera-historial'
 import { listarDocumentos } from './cartera-documentos'
+import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
 import { elegirRiesgo, hogarDeDatos, type HogarCartera } from './codeoscopic/desde-cartera-hogar.ts'
@@ -169,17 +170,35 @@ export type PolizaFicha = {
 
 export type SiniestroFicha = {
   id: string
+  clienteId: string
   polizaId: string
   estado: string
+  /** Código EIAC si lo trajo CIMA («1107»), clave del catálogo si lo abrimos nosotros («lunas»). */
   tipo: string | null
   referencia: string | null
   fecha: string | null
-  /** Reserva e indemnización: `null` = la compañía no las informa (0% hoy). */
+  fechaHora: string | null
+  /** Reserva e indemnización: `null` = no informada (las pone el corredor; CIMA no las manda). */
   reserva: number | null
   indemnizacion: number | null
   /** Quién lo lleva en la compañía. Sin esto la llamada empieza a ciegas. */
   tramitador: string | null
+  tramitadorTelefono: string | null
+  tramitadorEmail: string | null
+  perito: string | null
+  peritoTelefono: string | null
+  peritoEmail: string | null
+  gravedad: string | null
+  /** Descripción del hecho + notas de seguimiento fechadas. Operativo, no cifrado a propósito. */
+  comentario: string | null
+  /** «Ciudad (CP)» o provincia; la dirección exacta va cifrada y no sale de aquí. */
+  lugar: string | null
+  /** `cima` = lo trajo la ingesta (su estado lo fija la compañía); `gestionado_correduria` = lo abrimos desde la ficha. */
+  origen: 'cima' | 'gestionado_correduria'
+  /** Tiene `id_siniestro_entidad`: CIMA lo conoce (o ya le pusimos la referencia de la compañía). */
+  confirmadoCima: boolean
   abierto: boolean
+  actualizado: string
 }
 
 /** Lo que hace falta para LLAMAR al cliente. El DNI y el IBAN no salen de aquí. */
@@ -324,17 +343,7 @@ export async function fichaCliente(
         }),
     db.siniestro.findMany({
       where: { correduriaId, clienteId },
-      select: {
-        id: true,
-        polizaId: true,
-        estado: true,
-        tipo: true,
-        referencia: true,
-        fechaHora: true,
-        reservaImporte: true,
-        indemnizacionImporte: true,
-        tramitadorNombre: true,
-      },
+      select: SELECT_SINIESTRO,
       orderBy: { fechaHora: 'desc' },
     }),
     leerIntervinientes(db, correduriaId, clienteId, idsPolizas),
@@ -468,20 +477,7 @@ export async function fichaCliente(
         },
       }
     }),
-    siniestros: siniestros.map((s) => ({
-      id: s.id,
-      polizaId: s.polizaId,
-      estado: String(s.estado),
-      tipo: s.tipo ?? null,
-      referencia: s.referencia ?? null,
-      fecha: fechaIso(s.fechaHora),
-      // Decimal de Prisma: `null` se queda en null, jamás en 0 (hoy están al 0%
-      // de cobertura, así que TODOS caen aquí y la pantalla lo dice).
-      reserva: s.reservaImporte === null ? null : Number(s.reservaImporte),
-      indemnizacion: s.indemnizacionImporte === null ? null : Number(s.indemnizacionImporte),
-      tramitador: s.tramitadorNombre ?? null,
-      abierto: ESTADOS_SINIESTRO_ABIERTO.has(String(s.estado)),
-    })),
+    siniestros: siniestros.map(mapSiniestro),
   }
 }
 
@@ -503,7 +499,6 @@ function objetoConGemela(tipo: string, datos: Record<string, unknown> | null, da
 }
 
 /** Los estados que significan «esto sigue vivo» (mismo criterio que el resumen). */
-const ESTADOS_SINIESTRO_ABIERTO = new Set(['abierto', 'en_tramitacion'])
 
 /**
  * Los intervinientes de las pólizas del cliente, ya descifrados.
