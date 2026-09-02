@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import type { Decision } from './decidir'
 import type { Contexto } from './contexto'
-import { necesitaTraduccionPregunta, traduccionUtil, lineaTraduccion } from './reglas'
+import { necesitaTraduccionPregunta, traduccionUtil, lineaTraduccion, tipoHueco } from './reglas'
 
 const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
 
@@ -42,9 +42,7 @@ export async function avisarAutoEnviado(ctx: Contexto, pregunta: string, dec: De
 }
 // ¿Escalamos por FALTA DE INFORMACIÓN (y no por política: queja, dinero, cambios…)? Solo entonces
 // tiene sentido decirle a Alberto que es un hueco de la guía y que su respuesta se va a aprender.
-function huecoDeGuia(dec: Decision): boolean {
-  return dec.needs_human && !dec.apoyada_en_fuente && /no cubre|no se pudo verificar/.test(dec.motivo || '')
-}
+
 
 // Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato).
 function fmtFecha(f: string): string {
@@ -72,6 +70,7 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   const preguntaEs = traduccionUtil(pregunta, pregEsRaw)
   const borradorEs = traduccionUtil(dec.reply || '', borrEsRaw)
 
+  const hueco = tipoHueco(dec)
   const noRespuesta = dec.requiere_respuesta === false
   const idiomaNota = otroIdioma ? ` <i>(en ${ctx.lang.toUpperCase()})</i>` : ''
   const cuerpo = `<b>Huésped:</b> ${escapeHtml(pregunta)}` +
@@ -82,7 +81,15 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
     (dec.motivo ? `\n\n<i>${escapeHtml(dec.motivo)}</i>` : '') +
     // Si escalamos porque la pregunta NO queda cubierta por las fuentes, decirlo con nombre y
     // apellidos: es un hueco de conocimiento del piso, y lo que Alberto conteste se aprende.
-    (huecoDeGuia(dec) ? `\n\n❓ <b>Esto no lo encuentro en la guía de ${escapeHtml(ctx.property)}.</b> Lo que le respondas se guarda como hecho de este piso y lo usaré la próxima vez.` : '')
+    // Hueco de guía y control de calidad caído NO son lo mismo, aunque los dos escalen: el primero es
+    // conocimiento que falta (y lo que Alberto conteste se aprende como hecho), el segundo es que el
+    // clasificador no respondió. Decir «no lo encuentro en la guía» con el control caído es afirmar un
+    // hueco que nadie ha mirado — y hace parecer que el agente no aprende cuando el asunto SÍ está.
+    (hueco === 'guia'
+      ? `\n\n❓ <b>Esto no lo encuentro en la guía de ${escapeHtml(ctx.property)}.</b> Lo que le respondas se guarda como hecho de este piso y lo usaré la próxima vez.`
+      : hueco === 'control_caido'
+        ? `\n\n⚠️ <b>No he podido verificar el borrador</b> (el control de calidad no respondió). No significa que falte en la guía de ${escapeHtml(ctx.property)} — solo que esta vez no lo he podido comprobar.`
+        : '')
 
   const botones: Boton[][] = [[
     { texto: '✅ Enviar', callback: `hsp_send:${ctx.bookingId}` },
@@ -100,9 +107,9 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   const mid = await tgAvisoBotones('huespedes.borrador', `${cabecera}\n\n${cuerpo}`, botones)
   // Guardamos el idioma del huésped para que, si Alberto modifica en español, se traduzca a SU idioma.
   await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta)
-    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${dec.reply || ''}, ${dec.categoria}, ${mid}, false, false, ${ctx.lang}, ${pregunta || ''})
-    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${dec.reply || ''}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, idioma = ${ctx.lang}, pregunta = ${pregunta || ''}, created_at = now()
+    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta, hueco_guia)
+    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${dec.reply || ''}, ${dec.categoria}, ${mid}, false, false, ${ctx.lang}, ${pregunta || ''}, ${hueco === 'guia'})
+    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${dec.reply || ''}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, idioma = ${ctx.lang}, pregunta = ${pregunta || ''}, hueco_guia = ${hueco === 'guia'}, created_at = now()
   `).catch(() => {})
 }
 

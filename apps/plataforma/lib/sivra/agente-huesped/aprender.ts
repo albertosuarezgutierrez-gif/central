@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { esHechoDelPiso } from './reglas'
 import { guardarHecho } from './hechos'
+import { destilarHecho } from './destilar'
+import { tgSend } from '@/lib/telegram'
 
 export async function logMensaje(p: {
   bookingId: string; propertyId: string; categoria: string; pregunta: string; respuesta: string
@@ -20,10 +22,28 @@ export async function logMensaje(p: {
 //   · Ejemplo de ESTILO (`mensajes_aprendizaje`) en cualquier otro caso (cortesías, despedidas) →
 //     solo alimenta el tono y caduca con los 8 últimos.
 // Antes iba todo al mismo montón y el conocimiento se perdía debajo de los «gracias a ti».
-export async function aprenderCorreccion(p: { propertyId: string; categoria: string; pregunta: string; respuestaFinal: string }): Promise<void> {
-  if (esHechoDelPiso(p.pregunta, p.respuestaFinal)) {
-    await guardarHecho({ propertyId: p.propertyId, pregunta: p.pregunta, hecho: p.respuestaFinal, origen: 'alberto', estado: 'confirmado' })
-    return
+//
+// `huecoGuia` = el aviso de Telegram DECLARÓ que esto no estaba en la guía y prometió aprenderlo.
+// Sin él manda `esHechoDelPiso`, que exige que el HUÉSPED haya preguntado algo — y hay huecos reales
+// que llegan como afirmación («me han escrito por WhatsApp pidiendo datos»): esos caían en el montón
+// de estilo y caducaban con los 8 últimos, que es exactamente «el agente no aprende» (medido el
+// 02/09/2026: el aviso de phishing de Mirjam, 31/08, acabó en `mensajes_aprendizaje`).
+//
+// Y lo que se guarda es el hecho DESTILADO, no la carta: ver `destilar.ts`. Si no se puede destilar
+// NO se guarda un hecho —un hecho falso se le cuenta a todos los huéspedes futuros— y, cuando se
+// había prometido aprenderlo, se DICE en vez de dejar creer que quedó aprendido.
+export async function aprenderCorreccion(p: {
+  propertyId: string; categoria: string; pregunta: string; respuestaFinal: string; huecoGuia?: boolean
+}): Promise<void> {
+  if (p.huecoGuia === true || esHechoDelPiso(p.pregunta, p.respuestaFinal)) {
+    const hecho = await destilarHecho({ pregunta: p.pregunta, respuesta: p.respuestaFinal })
+    if (hecho) {
+      await guardarHecho({ propertyId: p.propertyId, pregunta: p.pregunta, hecho, origen: 'alberto', estado: 'confirmado' })
+      return
+    }
+    if (p.huecoGuia === true) {
+      await tgSend('⚠️ No he podido resumir esa respuesta como hecho del piso, así que NO la he aprendido. Si quieres que la recuerde, dímela en una frase (p. ej. «solo escribimos por los mensajes de Booking, nunca por WhatsApp»).').catch(() => {})
+    }
   }
   const norm = (p.pregunta || '').toLowerCase().slice(0, 300)
   await prisma.$executeRaw(Prisma.sql`
