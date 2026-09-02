@@ -50,6 +50,9 @@ test('la prima bruta manda sobre la neta, y sin ninguna de las dos es null (no 0
   assert.equal(primaReferencia({ primaAnual: 365.32, primaBruta: 395.09 }), 395.09)
   assert.equal(primaReferencia({ primaAnual: 365.32, primaBruta: null }), 365.32)
   assert.equal(primaReferencia({ primaAnual: null, primaBruta: null }), null)
+  // 🚨 0 no es una prima: es «no informada» (24 de 109 vivas, 02/09/2026).
+  assert.equal(primaReferencia({ primaAnual: 0, primaBruta: 0 }), null)
+  assert.equal(primaReferencia({ primaAnual: 365.32, primaBruta: 0 }), 365.32)
 })
 
 test('primaEnRiesgo separa lo que se sabe de lo que no — el total nunca absorbe los NULL', () => {

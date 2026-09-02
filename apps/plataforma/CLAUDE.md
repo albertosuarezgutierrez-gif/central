@@ -1393,6 +1393,19 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   Server component; datos por `lib/ficha-asegura.ts` (interpretación PURA + tests en
   `test/regression-ficha-asegura.test.ts`).
 - **Accesos directos:** el nombre del cliente en la tabla de Renovaciones es un enlace a su ficha.
+- **📑 `/correduria/poliza/[id]` — la ficha de UNA póliza (Alberto, 02/09/2026: «pincho en la póliza y ahí
+  especifica más: datos, documentación, siniestros, recibos»).** Objeto asegurado (con la **copia gemela**
+  del volcado cuando CIMA no manda la dirección del riesgo), efecto inicial/anualidad/vencimiento con la
+  ventana de anulación, prima neta/bruta, forma de pago y recargo, **coberturas** (1.418 filas en las 109
+  vivas; el capital es TEXTO del EIAC —«ILIMITADO», «VALOR VENAL»— y no se numera), todos los recibos,
+  siniestros, intervinientes y documentación (`0` en toda la base = «todavía no se guarda ninguno», y se
+  dice). Lector `lib/poliza-asegura.ts` (`gemelaInformada` distingue «no hay gemela» de «asegura no la
+  busca»; `documentos: null` ≠ 0), tests en `test/regression-poliza-asegura.test.ts`. En la ficha del
+  cliente, la compañía y «ver póliza →» enlazan aquí.
+  🚨 **42 de las 109 pólizas CIMA están `cancelada`** (medido 02/09/2026): la ficha las saca de «Pólizas
+  vivas» a un bloque plegado «Canceladas en CIMA» y no ofrece «Retarificar» sobre ellas. **Recibos todos
+  anulados** (20 vivas) se pintaba «🟢 0 cobrado(s)»: ahora es «⚪ N anulado(s)» (`estadoCobro` ganó el
+  estado `anulados`). Y **prima 0 no es una prima** (24 vivas): `primaReferencia` devuelve `null` → «sin dato».
 - **📞 El teléfono de la ficha sale de `contactoEfectivo()` (02/09/2026), no solo del tomador.** Una
   empresa (Esquiansa) decía «sin teléfono» teniendo a su conductor habitual con teléfono en la ficha
   enlazada por CIMA. Ahora el número lleva entre paréntesis DE QUIÉN es (con enlace a su ficha), y cada

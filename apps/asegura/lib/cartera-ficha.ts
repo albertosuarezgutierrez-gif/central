@@ -285,6 +285,22 @@ export async function fichaCliente(
     leerIntervinientes(db, correduriaId, clienteId, idsPolizas),
   ])
 
+  // 🧬 La copia GEMELA del volcado: 16 de las 109 vivas existen dos veces y en
+  // 10 la copia de junio trae la dirección del riesgo (localidad/CP/m²/año)
+  // que CIMA no manda. Se lee de una vez para todas las pólizas de CIMA sin
+  // objeto. Si la consulta falla, no pasa nada: el objeto queda «sin informar»,
+  // que es lo que ya decía — nunca se inventa.
+  const numerosCima = c.polizas.filter((p) => p.importRef === null && p.numeroPoliza).map((p) => p.numeroPoliza as string)
+  const gemelas = numerosCima.length === 0
+    ? new Map<string, unknown>()
+    : await db.poliza
+        .findMany({
+          where: { correduriaId, mergedIntoPolizaId: null, importRef: { not: null }, numeroPoliza: { in: numerosCima } },
+          select: { numeroPoliza: true, datosEspecificos: true },
+        })
+        .then((filas) => new Map(filas.map((f) => [f.numeroPoliza as string, f.datosEspecificos])))
+        .catch(() => new Map<string, unknown>())
+
   const recibosPorPoliza = new Map<string, typeof recibos>()
   for (const r of recibos) {
     const lista = recibosPorPoliza.get(r.polizaId) ?? []
@@ -323,7 +339,7 @@ export async function fichaCliente(
           primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
         }),
         fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
-        objeto: objetoAsegurado({ tipo: String(p.tipo), datos, coberturas: null }),
+        objeto: objetoConGemela(String(p.tipo), datos, p.importRef === null && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined),
         matricula,
         viva: p.importRef === null,
         retarificable: String(p.tipo) === 'auto' && matricula !== null,
@@ -368,6 +384,23 @@ export async function fichaCliente(
       abierto: ESTADOS_SINIESTRO_ABIERTO.has(String(s.estado)),
     })),
   }
+}
+
+/**
+ * El objeto de la póliza; si CIMA no lo informa y la gemela del volcado sí,
+ * el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre
+ * «no informado» (la dirección existe, solo que no se puede leer aquí).
+ */
+function objetoConGemela(tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown): ObjetoAsegurado {
+  const propio = objetoAsegurado({ tipo, datos, coberturas: null })
+  if (propio.estado !== 'no_informado' || datosGemela === undefined) return propio
+  const dg = esObjetoPlano(datosGemela) ? datosGemela : null
+  if (dg === null) return propio
+  const dir = dg.direccion
+  const conDir = typeof dir === 'string' && dir.startsWith('v1:') ? { ...dg, direccion: descifrar(dir) ?? dir } : dg
+  const deGemela = objetoAsegurado({ tipo, datos: conDir, coberturas: null })
+  if (deGemela.estado === 'no_informado') return propio
+  return { ...deGemela, nota: `${deGemela.nota ? deGemela.nota + ' ' : ''}(Sale de la copia de esta póliza en el volcado de junio: CIMA no manda la dirección del riesgo.)` }
 }
 
 /** Los estados que significan «esto sigue vivo» (mismo criterio que el resumen). */

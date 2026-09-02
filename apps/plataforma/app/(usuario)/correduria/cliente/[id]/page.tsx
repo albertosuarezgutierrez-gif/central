@@ -27,7 +27,11 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
   if (r.estado !== 'ok') return <NoSePudo estado={r} />
 
   const { ficha } = r
-  const vivas = ficha.polizas.filter(p => p.viva)
+  // 🚨 «Viva» = entra por CIMA; pero 42 de las 109 CIMA están CANCELADAS
+  // (medido 02/09/2026). Mezclarlas con las activas infla «pólizas vivas» y
+  // pone un «Retarificar» en un seguro que ya no existe.
+  const vivas = ficha.polizas.filter(p => p.viva && p.estado !== 'cancelada')
+  const canceladas = ficha.polizas.filter(p => p.viva && p.estado === 'cancelada')
   const historicas = ficha.polizas.filter(p => !p.viva)
   const abiertos = ficha.siniestros.filter(s => s.abierto)
 
@@ -46,7 +50,18 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
 
       <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos.length} />
 
-      <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza entra hoy por CIMA." intervinientes={ficha.intervinientes} />
+      <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={ficha.intervinientes} />
+
+      {canceladas.length > 0 && (
+        <Polizas
+          titulo={`Canceladas en CIMA (${canceladas.length})`}
+          nota="La compañía las manda por CIMA con estado «cancelada»: ya no aseguran nada. Sirven para saber qué tuvo y cuánto pagaba."
+          polizas={canceladas}
+          vacio=""
+          plegado
+          intervinientes={ficha.intervinientes}
+        />
+      )}
 
       <Siniestros lista={ficha.siniestros} />
 
@@ -236,8 +251,8 @@ function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
                   <Intervinientes lista={intervinientes} polizaId={p.id} />
                 </td>
                 <td style={td}>
-                  {p.aseguradora}
-                  {p.numeroPoliza && <div style={sub}>nº {p.numeroPoliza}</div>}
+                  <Link href={`/correduria/poliza/${p.id}`} style={{ fontWeight: 600 }}>{p.aseguradora}</Link>
+                  <div style={sub}>{p.numeroPoliza ? `nº ${p.numeroPoliza}` : 'sin número'} · <Link href={`/correduria/poliza/${p.id}`}>ver póliza →</Link></div>
                 </td>
                 <td style={{ ...td, whiteSpace: 'nowrap' }}>
                   {p.fechaVencimiento ? (
@@ -257,7 +272,7 @@ function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
                 <td style={td}><CeldaPago p={p} /></td>
                 <td style={td}><CeldaRecibos r={p.recibos} /></td>
                 <td style={td}>
-                  {p.retarificable ? (
+                  {p.retarificable && p.estado !== 'cancelada' ? (
                     // El único salto a asegura: es donde se gasta el dinero, y
                     // se gasta detrás de su propia pantalla de confirmación.
                     <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ whiteSpace: 'nowrap' }}>
@@ -400,6 +415,11 @@ function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
   }
   if (r.devueltos > 0) return <span style={{ color: '#d66' }}>🔴 {r.devueltos} devuelto(s)</span>
   if (r.pendientes > 0) return <span style={{ color: '#c96' }}>🟡 {r.pendientes} pendiente(s)</span>
+  // 🚨 Todos anulados (20 de 109 vivas) se pintaba «🟢 0 cobrado(s)»: cero
+  // cobros no es estar al día — es una póliza cancelada o sustituida.
+  if (r.cobrados === 0 && r.anulados > 0) {
+    return <span style={{ color: 'var(--muted)' }} title="Todos los recibos están anulados: la póliza se canceló o se sustituyó. No hay cobro.">⚪ {r.anulados} anulado(s)</span>
+  }
   return (
     <span style={{ color: 'var(--muted)' }}>
       🟢 {r.cobrados} cobrado(s)

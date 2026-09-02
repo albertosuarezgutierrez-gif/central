@@ -66,3 +66,12 @@ test('impagado cuenta como devuelto (es la misma realidad con otro nombre)', () 
   assert.equal(estadoCobro(resumirRecibos([recibo('impagado')])), 'devuelto')
   assert.equal(estadoCobro(resumirRecibos([recibo('emitido')])), 'pendiente')
 })
+
+test('🚨 todos los recibos anulados NO es «al corriente»', () => {
+  const r = resumirRecibos([
+    { id: 'a', situacion: 'anulado', primaTotal: '100.00', fechaEmision: '2026-01-01', fechaVencimiento: null, formaPago: null },
+    { id: 'b', situacion: 'anulado', primaTotal: '100.00', fechaEmision: '2025-07-01', fechaVencimiento: null, formaPago: null },
+  ])
+  assert.equal(estadoCobro(r), 'anulados')
+  assert.match(explicarCobro(r), /anulados/)
+})

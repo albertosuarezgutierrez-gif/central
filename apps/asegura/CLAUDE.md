@@ -12,7 +12,8 @@ pólizas siguen en el Supabase de Manuel Suárez** (`uijsgeocgdaxkhvwtjqs`), ali
 diario por CIMA/EIAC.
 
 🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son ~80 clientes /
-109 pólizas**: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las
+109 pólizas** — ⚠️ y de esas 109, **42 están `cancelada`** (medido 02/09/2026): **67 activas**; CIMA manda
+también las canceladas y `import_ref IS NULL` no las distingue —: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las
 otras 28.729 son volcado histórico cargado en jun/2026 (`intranet:` 26.117 con vencimientos
 2013-2018 y `asegura_app:` 2.612) y **ninguna** vence en los últimos 18 meses. Regla de Alberto:
 **CIMA = cliente actual; el resto = lead** (32.520). Consecuencia para el código: **las pólizas con
@@ -346,6 +347,11 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   (no `[]`: eso diría «no hay nadie más»). Quién se llama lo decide `contactoEfectivo()` de
   `@central/module-seguros` (puro, 7 tests): tomador primero; si no, el primer interviniente por
   prioridad de rol (contacto > conductor habitual > propietario…), y la pantalla dice DE QUIÉN es.
+- **`GET /poliza?id=`** (02/09/2026) — la ficha de UNA póliza: coberturas, todos los recibos, siniestros,
+  intervinientes, nº de documentos (`null` si no se pudo contar) y la **copia gemela** (mismo `numero_poliza`
+  en la otra cara: la de CIMA trae vencimiento y recibos, la del volcado la dirección del riesgo). La
+  dirección del RIESGO sí cruza el puerto (sin ella un hogar no se identifica); la del tomador, no.
+  `lib/cartera-poliza.ts`. El `/cliente` usa la gemela para rellenar el objeto cuando CIMA no lo manda.
 - **`GET /buscar?q=`** — el buscador de TODO (ver abajo).
 - **`GET /impagados`** — la cola de retención (ver abajo).
 

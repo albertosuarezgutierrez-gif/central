@@ -150,7 +150,7 @@ function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
 }
 
-function leerObjeto(v: unknown): ObjetoFicha | null {
+export function leerObjeto(v: unknown): ObjetoFicha | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
   if (typeof o.estado !== 'string' || !ESTADOS_OBJETO.has(o.estado)) return null
