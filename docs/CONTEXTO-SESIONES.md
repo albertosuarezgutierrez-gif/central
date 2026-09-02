@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗓️ Intranet de clientes de la correduría: spec del calendario de vencimientos (02/09/2026, noche IV).**
+  Alberto quiere la intranet de clientes; se le devolvió lo incómodo: **ya está diseñada y a medio construir**
+  (spec del 01/09, Fase 1+4 en `main`, DDL aplicado) y **muerta por cuatro envs de Vercel que dependen de él**
+  — con `PII_LOOKUP_KEY` distinta a la de `central-asegura` entra todo el mundo y **nadie ve su cartera, sin error**.
+  Decidido cortar por la **v1 de sus ~80 clientes**: pólizas de CIMA + calendario + la bóveda ya construida,
+  **cero Avant2** (0,50€ por consulta y NO idempotente → un botón público o una vigilancia periódica son 4 cifras/mes).
+  Única pieza nueva: `portal_obligacion`, colgada del **bien** con `poliza_id` opcional (sirve luego a ITV/gas).
+  De Alberto salió lo mejor: el **cambio de mediador** convierte un lead en cliente sin tarificar y su póliza
+  **empieza a entrar por CIMA** → el dato declarado pasa a verificado solo. Spec + PR draft **#2144**.
+
 - **🏠🏍️ «Haz todo» + el catálogo de Avant2 (02/09/2026, noche).** Mergeado #2130 (horquilla enchufada
   + capital de hogar por corroboración). Alberto pasó el catálogo de Integra: cruzado con las 109 vivas
   (tres compañías) sale que **RC no es un ramo de Codeoscopic** —8 activas sin camino automático— y que
