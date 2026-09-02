@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T13:03:19Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T13:35:47Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -255,14 +255,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/09/2026) 🏠 Codeoscopic: retarificar HOGAR, cableado de punta a punta (PR #2071 mergeado)
 - (02/09/2026) 🧹 Cerrado lo que quedaba del auditor: novedades fuera del generado + la ambigüedad, vigilada
 - (02/09/2026) 🗞️ Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba
 - (02/09/2026) 📄 El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)
+- (02/09/2026) 🫀 El vigía de agentes tiraba su trabajo, y el panel se descuadraba en móvil (PR #2066 mergeado)
 - (02/09/2026) 🧱 Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)
 - (02/09/2026) 🩺 Salud de la arquitectura a cero avisos (/admin → 🗺️ Estructura)
 - (02/09/2026) 🧩 Las 5 primitivas huérfanas: se MIDIÓ antes de decidir (PR #2045 mergeado)
 - (02/09/2026) 🕳️ El feed PSD2 tenía dos estados donde hay tres (PR #2042 mergeado)
 - (02/09/2026) 🗺️ plataforma: podar lo inalcanzable y agrupar el menú por TRABAJO (PR #2038 mergeado)
-- (02/09/2026) ⚪ Comisiones: el «no se ha podido leer la cartera» no decía DÓNDE mirar (PR #2029 mergeado)
-- (02/09/2026) 🪞 La skill de UI llevaba DOS MESES contradiciendo al CLAUDE.md de su app
 
