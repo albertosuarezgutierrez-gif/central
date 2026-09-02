@@ -30,6 +30,7 @@
  */
 import { createMailTransporter } from '@central/core-email'
 import { decryptField } from '@central/module-seguros-pii'
+import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
 import { DIAS_VENTANA_AVISO, entraEnVentana } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { eur } from './dinero'
@@ -197,10 +198,22 @@ export async function ejecutarAvisosVencimiento(opts: {
   // Las pólizas de las obligaciones, EN VIVO y solo las de CIMA (`import_ref IS
   // NULL`). Una obligación cuya póliza es del volcado —o ya no está— no es
   // candidata: no se avisa de un vencimiento de 2015.
+  //
+  // 🚨 Y el estado, que NO es redundante con el derivador del portal: aquel
+  // poda cuando el cliente entra en su bóveda, y un cliente puede no entrar
+  // nunca. Medido el 02/09/2026: 42 de las 109 pólizas de CIMA están
+  // canceladas y 5 tienen vencimiento futuro. Sin este filtro, una póliza
+  // cancelada DESPUÉS de derivarse su obligación mandaría un correo diciéndole
+  // a alguien que decida sobre un seguro que ya no tiene.
   const polizaIds = [...new Set(enVentana.map((f) => f.polizaId).filter((id): id is string => id !== null))]
   const polizas = polizaIds.length
     ? await db.poliza.findMany({
-        where: { id: { in: polizaIds }, importRef: null, mergedIntoPolizaId: null },
+        where: {
+          id: { in: polizaIds },
+          importRef: null,
+          mergedIntoPolizaId: null,
+          estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
+        },
         select: {
           id: true,
           aseguradora: true,
