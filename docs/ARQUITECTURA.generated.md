@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T11:41:53Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T12:38:46Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 12 apps · 40 packages · 23 capacidades · 38 skills · 1235 rutas API.
+**Resumen:** 12 apps · 40 packages · 23 capacidades · 38 skills · 1234 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -51,7 +51,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (130):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor, correo_reglas…
-- **Rutas API:** 332
+- **Rutas API:** 331
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -255,14 +255,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Descartado que fuera pdf-parse, con datos:
+- Probado sobre un PDF sin capa de texto fabricado a propósito
+- Sin cerrar:
+- Es un cambio de ASPECTO, no solo de código:
+- Sin migrar a propósito:
 - La reimplementación era real, no un falso positivo:
 - `CLAUDE.md` propios
 - Cablear un valor es lo que deja una primitiva sin adoptar:
 - Medido antes de tocar, y corrige lo que yo mismo había apuntado:
 - Límite estructural anotado, no arreglable ahí:
-- Podado (1.204 líneas):
-- Menú reagrupado por trabajo:
-- Pendiente de decisión de Alberto:
-- No se pudo diagnosticar porque nadie lo contaba:
-- Deuda propia, saldada en #2047:
 

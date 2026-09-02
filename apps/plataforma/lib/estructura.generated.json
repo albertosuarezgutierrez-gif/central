@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T11:41:53Z",
+  "generadoEn": "2026-09-02T12:38:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -375,7 +375,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "usado",
@@ -1725,7 +1725,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -4380,7 +4380,6 @@
       "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/banca/ticket",
-      "/api/banca/transferencia",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -5380,6 +5379,26 @@
   ],
   "novedades": [
     {
+      "titulo": "Descartado que fuera pdf-parse, con datos:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Probado sobre un PDF sin capa de texto fabricado a propósito",
+      "fecha": ""
+    },
+    {
+      "titulo": "Sin cerrar:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Es un cambio de ASPECTO, no solo de código:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Sin migrar a propósito:",
+      "fecha": ""
+    },
+    {
       "titulo": "La reimplementación era real, no un falso positivo:",
       "fecha": ""
     },
@@ -5417,26 +5436,6 @@
     },
     {
       "titulo": "Deuda propia, saldada en #2047:",
-      "fecha": ""
-    },
-    {
-      "titulo": "De regalo, la 7ª medición del CI mudo (anotada en `CLAUDE.md`), y la más limpia:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente de decisión de Alberto:",
-      "fecha": ""
-    },
-    {
-      "titulo": "#2013",
-      "fecha": ""
-    },
-    {
-      "titulo": "#2018",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente:",
       "fecha": ""
     }
   ],
@@ -5874,7 +5873,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1235,
+    "apis": 1234,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
