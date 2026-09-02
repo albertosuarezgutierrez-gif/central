@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T20:56:49Z",
-  "sha": "6c410de905754625c055825cf9ca666ad241e92b",
+  "generadoEn": "2026-09-02T21:35:25Z",
+  "sha": "d728ebf89842c5bf899df9867b44a54d50f139ae",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5267,7 +5267,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 585,
+          "linea": 594,
           "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
         },
         {
@@ -5276,7 +5276,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 618
+          "linea": 627
         },
         {
           "nombre": "normalizarFecha",
@@ -5284,13 +5284,13 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 737,
+          "linea": 746,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7220805c40cb"
+      "hash": "ef215f60fdf3"
     },
     {
       "ruta": "apps/asegura/lib/cartera-historial.ts",
@@ -5508,7 +5508,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f5c6824023c"
+      "hash": "6e08d2c103c2"
     },
     {
       "ruta": "apps/asegura/lib/cartera-relaciones.ts",
@@ -51613,7 +51613,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 160
+          "linea": 167
         },
         {
           "nombre": "Titulares",
@@ -51621,7 +51621,7 @@
           "exportada": false,
           "params": "{ polizas, vivas, abiertos }: { polizas: PolizaFicha[]; vivas: number; abiertos: number | null }",
           "retorno": null,
-          "linea": 184
+          "linea": 191
         },
         {
           "nombre": "Kpi",
@@ -51629,7 +51629,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color }: { label: string; valor: string; sub?: string; color?: string }",
           "retorno": null,
-          "linea": 220
+          "linea": 227
         },
         {
           "nombre": "Acciones",
@@ -51637,7 +51637,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 235
+          "linea": 242
         },
         {
           "nombre": "Contacto",
@@ -51645,7 +51645,7 @@
           "exportada": false,
           "params": "{ c, intervinientes, piiClave, contactos, polizas }: { c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null } intervinientes: IntervinienteFic",
           "retorno": null,
-          "linea": 264
+          "linea": 271
         },
         {
           "nombre": "Polizas",
@@ -51653,7 +51653,7 @@
           "exportada": false,
           "params": "{ titulo, nota, polizas, vacio, plegado, intervinientes }: { titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean intervinientes: IntervinienteFicha[] | null }",
           "retorno": null,
-          "linea": 335
+          "linea": 342
         },
         {
           "nombre": "Intervinientes",
@@ -51661,7 +51661,7 @@
           "exportada": false,
           "params": "{ lista, polizaId }: { lista: IntervinienteFicha[] | null; polizaId: string }",
           "retorno": null,
-          "linea": 433,
+          "linea": 440,
           "resumen": "Quién más figura en la póliza (propietario, conductor habitual, contacto…), debajo de qué asegura. Se omite al tomador: ya es el título de la ficha. `null` = asegura no los informa; se calla en vez de"
         },
         {
@@ -51670,7 +51670,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 454
+          "linea": 461
         },
         {
           "nombre": "CeldaPago",
@@ -51678,7 +51678,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 483,
+          "linea": 490,
           "resumen": "Forma de pago (Alberto, 02/09/2026): son contratos anuales que la compañía FINANCIA al fraccionar, cobrando por ello. Lo que CIMA da es la periodicidad y la forma de cobro; el recargo se deriva de los"
         },
         {
@@ -51687,7 +51687,7 @@
           "exportada": false,
           "params": "{ vencimiento, viva }: { vencimiento: string | null; viva: boolean }",
           "retorno": null,
-          "linea": 509,
+          "linea": 516,
           "resumen": "La única salida de una póliza es su vencimiento, avisando 30 días antes (LCS art. 22). Se pinta solo en las vivas y solo mientras merece la pena saberlo: cuando el plazo de aviso está cerca o ya ha pa"
         },
         {
@@ -51696,7 +51696,7 @@
           "exportada": false,
           "params": "{ r }: { r: RecibosPoliza | null }",
           "retorno": null,
-          "linea": 528,
+          "linea": 535,
           "resumen": "El estado de cobro de UNA póliza. Cuatro cosas distintas, cuatro pintados: null → asegura no manda el bloque (desplegar). total 0 → la compañía no ha mandado recibos (18 de 109 vivas, medido). devuelt"
         },
         {
@@ -51705,7 +51705,7 @@
           "exportada": false,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 555
+          "linea": 562
         },
         {
           "nombre": "NoSePudo",
@@ -51713,7 +51713,25 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 572
+          "linea": 579
+        },
+        {
+          "nombre": "PersonasPolizas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ ficha }: { ficha: Ficha }",
+          "retorno": null,
+          "linea": 625,
+          "resumen": "Con quién se puede hablar de esta ficha, agrupado por PERSONA y no por póliza: GLOBAL 2 tiene tres furgonetas con tres conductores distintos y esa gente estaba enterrada póliza por póliza. Quién sale "
+        },
+        {
+          "nombre": "etiquetaPoliza",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PolizaFicha",
+          "retorno": "string",
+          "linea": 671,
+          "resumen": "Cómo se nombra una póliza en una frase: la matrícula si la hay."
         },
         {
           "nombre": "Tarjeta",
@@ -51721,7 +51739,7 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 614
+          "linea": 675
         },
         {
           "nombre": "fmt",
@@ -51729,13 +51747,13 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 624,
+          "linea": 685,
           "resumen": "Fecha siempre en español: \"2026-06-03\" → \"03/06/2026\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c07538f831c0"
+      "hash": "acdecb6c6233"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/nuevo/page.tsx",
@@ -75140,7 +75158,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 201
+          "linea": 205
         },
         {
           "nombre": "numero",
@@ -75148,7 +75166,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 207,
+          "linea": 211,
           "resumen": "Número o `null`. Un `null` que llega del puerto se QUEDA en null: es «la compañía no lo informa», y convertirlo en 0 es la mentira de siempre."
         },
         {
@@ -75157,7 +75175,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 211
+          "linea": 215
         },
         {
           "nombre": "leerObjeto",
@@ -75165,7 +75183,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ObjetoFicha | null",
-          "linea": 215
+          "linea": 219
         },
         {
           "nombre": "leerRecibos",
@@ -75173,7 +75191,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "RecibosPoliza | null",
-          "linea": 234,
+          "linea": 238,
           "resumen": "Los recibos, o `null` si el bloque no llega o llega con forma rara. Una forma rara NO se degrada a un resumen a ceros: eso pintaría «al corriente» sobre una póliza de la que no se sabe nada. Degrada a"
         },
         {
@@ -75182,7 +75200,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Retarificabilidad | null",
-          "linea": 275,
+          "linea": 279,
           "resumen": "El veredicto de retarificación, o `null` si no llega o llega con forma rara. Nunca se inventa un `{retarificable:false}`: eso pintaría «no se puede» sobre una póliza de la que solo se sabe que asegura"
         },
         {
@@ -75191,7 +75209,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null | undefined",
-          "linea": 294,
+          "linea": 298,
           "resumen": "`null` o número finito se devuelven tal cual; cualquier otra cosa es basura → `undefined`."
         },
         {
@@ -75200,7 +75218,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EvolucionPrimaCompacta | null",
-          "linea": 306,
+          "linea": 310,
           "resumen": "El veredicto compacto de la prima, o `null` si no llega o llega con forma rara. Nunca se inventa un `sin_datos`: ese estado significa «asegura miró y CIMA no manda la anualidad anterior», y aquí solo "
         },
         {
@@ -75209,7 +75227,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Anualidad | null",
-          "linea": 316
+          "linea": 320
         },
         {
           "nombre": "leerEvolucionPrima",
@@ -75217,7 +75235,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EvolucionPrima | null",
-          "linea": 341,
+          "linea": 345,
           "resumen": "La evolución entera (con anualidades), o `null` si no llega o llega rara. Una anualidad ilegible tumba el bloque entero: media lista compararía mal y pintaría un porcentaje sobre ciclos que no están."
         },
         {
@@ -75226,7 +75244,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PagoFicha | null",
-          "linea": 359,
+          "linea": 363,
           "resumen": "El bloque de pago, o `null` si no llega. Un recargo con estado raro se degrada a `sin_datos`: nunca a «calculado» con un número que nadie calculó."
         },
         {
@@ -75235,7 +75253,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "IntervinienteFicha[] | null",
-          "linea": 384,
+          "linea": 388,
           "resumen": "Los intervinientes, o `null` si el bloque no llega. Una fila con forma rara se salta (no invalida la ficha: son un extra para llamar, no el contrato)."
         },
         {
@@ -75244,7 +75262,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EstadoClienteDerivado | null",
-          "linea": 417,
+          "linea": 422,
           "resumen": "El estado derivado, o `null` si no llega o llega con forma rara. Nunca se inventa un `lead`: eso pintaría «no es cliente» sobre alguien de quien solo se sabe que asegura no ha dicho nada."
         },
         {
@@ -75253,7 +75271,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "AnotacionHistorial[] | null",
-          "linea": 434,
+          "linea": 439,
           "resumen": "El historial, o `null` si no llega o no es lista. Una fila rara se salta (no tumba el bloque); una LISTA que no es lista degrada a `null` entero — jamás a `[]`, que diría «sin anotaciones»."
         },
         {
@@ -75262,7 +75280,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 451,
+          "linea": 456,
           "resumen": "«2026-06-03» (o un ISO con hora) → «03/06/2026». Una fecha ilegible se deja tal cual."
         },
         {
@@ -75271,7 +75289,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 457,
+          "linea": 462,
           "resumen": "«2026-09-02T14:30:00Z» → «02/09/2026 16:30» (hora de Madrid). Una fecha ilegible se deja tal cual."
         },
         {
@@ -75280,7 +75298,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaFicha",
-          "linea": 472,
+          "linea": 477,
           "resumen": "Interpretación PURA de la respuesta del puerto de ficha. Una póliza con forma inesperada invalida la ficha entera, igual que en la lista de vencimientos: media ficha es peor que ninguna, porque nadie "
         },
         {
@@ -75289,7 +75307,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaBusqueda",
-          "linea": 571
+          "linea": 576
         },
         {
           "nombre": "urlAsegura",
@@ -75297,7 +75315,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 606
+          "linea": 611
         },
         {
           "nombre": "pedir",
@@ -75305,7 +75323,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "Promise<",
-          "linea": 610
+          "linea": 615
         },
         {
           "nombre": "fichaAsegura",
@@ -75313,7 +75331,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<RespuestaFicha>",
-          "linea": 621
+          "linea": 626
         },
         {
           "nombre": "buscarEnAsegura",
@@ -75321,7 +75339,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<RespuestaBusqueda>",
-          "linea": 631
+          "linea": 636
         },
         {
           "nombre": "urlRetarificar",
@@ -75329,7 +75347,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "string",
-          "linea": 643,
+          "linea": 648,
           "resumen": "La URL de asegura para los saltos que SÍ tienen que ir allí (retarificar, que gasta dinero y vive detrás de su propia sesión). Pública, no es secreto."
         },
         {
@@ -75338,13 +75356,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 649,
+          "linea": 654,
           "resumen": "Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura porque comparte pantalla con la cotización que sale de lo leído. Gratis."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "36b02a51cfd1"
+      "hash": "b710b7eb5d5f"
     },
     {
       "ruta": "apps/plataforma/lib/financiero.ts",
@@ -106655,7 +106673,8 @@
       "exporta": [
         "etiquetaRol",
         "contactoEfectivo",
-        "filasIntervinientes"
+        "filasIntervinientes",
+        "personasDePolizas"
       ],
       "funciones": [
         {
@@ -106664,7 +106683,7 @@
           "exportada": true,
           "params": "rol: string",
           "retorno": "string",
-          "linea": 49
+          "linea": 57
         },
         {
           "nombre": "contactoEfectivo",
@@ -106672,7 +106691,7 @@
           "exportada": true,
           "params": "tomador: { telefono: string | null; email: string | null }, intervinientes: IntervinienteFicha[] | null,",
           "retorno": "ContactoEfectivo",
-          "linea": 77,
+          "linea": 85,
           "resumen": "A quién se llama. El tomador manda; si no tiene, el primer interviniente (por prioridad de rol) que sí tenga. `intervinientes === null` = no se ha podido mirar, y se dice — nunca se colapsa con «no ha"
         },
         {
@@ -106681,7 +106700,7 @@
           "exportada": false,
           "params": "rol: string",
           "retorno": "number",
-          "linea": 114
+          "linea": 122
         },
         {
           "nombre": "filasIntervinientes",
@@ -106689,12 +106708,20 @@
           "exportada": true,
           "params": "tomador: { polizaId: string; fichaId: string | null; nombre: string | null }, lista: IntervinienteFicha[] | null,",
           "retorno": "FilasIntervinientes",
-          "linea": 142
+          "linea": 150
+        },
+        {
+          "nombre": "personasDePolizas",
+          "kind": "function",
+          "exportada": true,
+          "params": "intervinientes: IntervinienteFicha[] | null, polizas: readonly { id: string; etiqueta: string }[], relaciones: readonly { relacionadoId: string; tipo: string }[] | null,",
+          "retorno": "PersonaDePolizas[] | null",
+          "linea": 228
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50cff97c4b4a"
+      "hash": "59ef611ba003"
     },
     {
       "ruta": "packages/module-seguros/src/objeto.ts",
@@ -112399,6 +112426,6 @@
   ],
   "resumen": {
     "archivos": 2859,
-    "funciones": 8335
+    "funciones": 8338
   }
 }
