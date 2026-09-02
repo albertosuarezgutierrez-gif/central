@@ -11,6 +11,7 @@ import {
   TrendingUp, User, UserCheck, Users, UtensilsCrossed, Wrench,
   type LucideIcon, BookUser } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+import { activoPorRuta, activoEnLista } from '@/lib/nav-activo'
 
 // Iconos de lucide, NO emojis: cada sistema operativo pinta el emoji a su manera (color,
 // grosor y hasta dibujo distintos), así que el mismo lateral se veía de una forma en el móvil
@@ -146,7 +147,7 @@ const LS_SECCION: Record<ClaveSeccion, string> = {
 }
 
 function enLista(lista: { href: string }[], path: string): boolean {
-  return lista.some(n => path === n.href || path.startsWith(n.href + '/'))
+  return lista.some(n => activoPorRuta(n.href, path))
 }
 
 // Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el
@@ -289,17 +290,17 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   }
 
   function NavLinks() {
+    const listaNegocio = soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO
     return (
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
         <CabeceraSeccion clave="negocio" titulo="Mi negocio" primera />
         <div id="nav-grupo-negocio" className="nav-grupo" data-colapsado={abiertas.negocio ? undefined : '1'}>
-          {(soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO).map(({ href, icon, label, tab }) => {
+          {listaNegocio.map(({ href, icon, label, tab }) => {
             // Las sub-entradas de /banca comparten `path`, así que el activo lo decide el ?tab=.
-            // `tab: ''` es el segmento por defecto (Dinero), que responde a /banca sin query.
+            // Y «Inicio» ES la ruta pelada de esos segmentos: sin `activoEnLista` se encendía a la
+            // vez que el segmento (medido 02/09/2026 en /banca?tab=ingresos). Ver lib/nav-activo.ts.
             const esSegmento = tab !== undefined
-            const active = esSegmento
-              ? path === '/banca' && (tabActual || '') === tab
-              : path === href || path.startsWith(href + '/')
+            const active = activoEnLista({ href, tab }, listaNegocio, path, tabActual)
             return (
               <Link key={href + label} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
@@ -320,7 +321,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
         {!soloEmpresas && (
           <div id="nav-grupo-oportunidades" className="nav-grupo" data-colapsado={abiertas.oportunidades ? undefined : '1'}>
             {NAV_OPORTUNIDADES.map(({ href, icon, label }) => {
-              const active = path === href || path.startsWith(href + '/')
+              const active = activoPorRuta(href, path)
               return (
                 <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
@@ -341,7 +342,9 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
         {!soloEmpresas && (
           <div id="nav-grupo-pisos" className="nav-grupo" data-colapsado={abiertas.pisos ? undefined : '1'}>
             {NAV_PISOS.map(({ href, icon, label }) => {
-              const active = path.startsWith(href)
+              // `path.startsWith(href)` a secas encendía «Pricing Lab» estando en «Pricing auto»
+              // y en «Motor vs PL»: una ruta es prefijo de la otra. Ver lib/nav-activo.ts.
+              const active = activoPorRuta(href, path)
               return (
                 <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',

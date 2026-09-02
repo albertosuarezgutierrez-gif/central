@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **«Repara»: el menú mentía en dos sitios (02/09/2026).** Sin objetivo dicho, así que se buscó qué estaba roto de
+  verdad. (1) El lateral encendía DOS entradas a la vez: «Inicio» + el segmento en `/banca?tab=*` (lo introdujo
+  #2106 — «Inicio» ES `/banca` y los cinco segmentos comparten esa ruta), y «Pricing Lab» + «Pricing auto» /
+  «Motor vs PL» (el activo de Pisos era `startsWith(href)` SIN la barra, y una ruta es prefijo del hermano
+  homónimo). El criterio estaba inline en tres sitios del TSX, de tres formas y dos mal → `lib/nav-activo.ts`,
+  puro y con 13 tests (con la implementación vieja fallan 7). (2) `/finanzas/tarjeta-credito` no la enlazaba
+  NADIE (pre-existente, no de #2083): enlace desde `/finanzas/gastos` + paleta. Tercer caso en dos días
+  (`sivra/partes/establecimientos`, `/apartamentos`), así que `test/regression-panel-alcanzable.test.ts` recorre
+  las 69 pantallas del panel y exige un enlace de entrada a cada una; excepciones vacías a posta. PR #2115.
+- **💶 «¿Por qué ha subido la prima?» (02/09/2026).** Punto 7 de la visión, tras el «cuando vayan terminando
+  mergea prueba y actualiza» de Alberto (#2111 mergeado). `evolucionPrima()` en module-seguros: prima por
+  anualidad derivada de recibos `CA`/`NP` agrupados POR ANIVERSARIO (no año natural), ciclo solo si completo,
+  siniestros del ciclo anterior → seis veredictos; `sin_datos` es lo normal (29 vivas con dos anualidades /
+  25 con una / 13 sin recibos). Asegura lo manda en `/poliza` (entero) y `/cliente` (compacto); plataforma
+  chip + tarjeta (`EvolucionPrima.tsx`). Con esto el orden §9 queda: 1 (emisión/conciliación) pendiente de
+  OK, 4 (leads) sin canal, 5 (portal) sin DDL; todo lo demás hecho.
 - **🚨 Siniestros desde la ficha (02/09/2026).** Punto 6 del orden de la visión del CRM, tras el «todo ok» de
   Alberto al #2104. Reglas puras `module-seguros/siniestros.ts` (catálogo de tipos, transiciones, plazo art. 16
   LCS, apertura/seguimiento revisados, 7 tests); `asegura/lib/cartera-siniestros.ts` + puerto `/api/operador/

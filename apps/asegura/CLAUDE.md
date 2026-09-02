@@ -573,6 +573,19 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   pólizas vivas de CIMA (una del volcado → 422). Aviso del art. 16 LCS (7 días) al abrir tarde: no
   bloquea. Dirección exacta del hecho cifrada; CP/ciudad/provincia en claro como CIMA. Historial tipo
   `siniestro` en cada escritura, sin la descripción del hecho. Insert probado en la BD real con rollback.
+- **💶 «¿Por qué ha subido la prima?» (02/09/2026, noche).** `/poliza` manda `evolucionPrima` (entero:
+  anualidades + veredicto + explicación) y cada póliza de `/cliente` la versión compacta (`veredicto`,
+  `variacionPct`, `explicacion`). Regla pura `evolucionPrima()` en module-seguros (`prima-evolucion.ts`, 6
+  tests). Lo medido que la condiciona: (1) **la prima de cada anualidad NO es un dato**: se suma de los
+  recibos `clase_recibo` `CA` (renovación) y `NP` (nueva producción); los `SU` (suplementos) se cuentan
+  aparte; los anulados fuera. (2) **Una anualidad va de aniversario a aniversario**, no por año natural:
+  la semestral del 1/10 tiene 10/2024+04/2025 en un ciclo y 10/2025+04/2026 en el siguiente (103,95+103,95
+  → 118,48+118,48 = +14 %); `inicioCiclo()` lo resuelve con 15 días de margen porque la compañía emite
+  antes del aniversario. (3) Un ciclo se compara **solo si está completo** (`recibos === FRACCIONES[fracc]`);
+  medio ciclo contra uno entero daría una «bajada» falsa. (4) Cobertura real: 29 vivas con dos anualidades,
+  25 con una, 13 sin recibos → `sin_datos` es lo normal y se dice como tal. (5) Un siniestro explica la subida
+  solo si cae en el ciclo ANTERIOR a la renovación (caso real: siniestro del 08/02/2026 tras la renovación del
+  17/01 no explica el +2,3 % de 2026); uno sin fecha → `no_atribuible`, nunca «sin siniestro».
 
 ### 🔎 Qué se puede buscar de verdad, y qué NO (medido 01/09/2026)
 

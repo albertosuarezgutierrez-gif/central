@@ -37,10 +37,13 @@ real medido, orden de trabajo). Después, según lo que toques:
 
 Lectura y cuidado de la cartera: hecho (buscador, ficha cliente/póliza, edición, relaciones,
 documentos, retención, retarificar, historial visible, estado derivado, guardián de duplicadas,
-siniestros desde la ficha). Falta: emisión en central + conciliación CIMA (spec hecha, pendiente
-de OK), leads por canal, portal leyendo la cartera (sus tablas no existen en la BD), «por qué sube
-la prima». Tabla completa en el documento (§4) y orden en §9.
+siniestros desde la ficha, «por qué ha subido la prima»). Falta: emisión en central + conciliación
+CIMA (spec hecha, pendiente de OK), leads por canal, portal leyendo la cartera (sus tablas no
+existen en la BD). Tabla completa en el documento (§4) y orden en §9.
 
 9. **Siniestros: dos orígenes, dos reglas.** En uno de CIMA el estado lo fija la compañía (CIMA lo
    reescribe en cada pull) y se anota lo que CIMA no manda; en uno nuestro, la referencia de la
    compañía va TAMBIÉN a `id_siniestro_entidad` para que el pull case y no duplique.
+10. **La prima por anualidad se DERIVA de los recibos por aniversario, no por año natural**, y
+    `sin_datos` (CIMA no manda la anualidad anterior, o el ciclo está incompleto) es la respuesta
+    para la mayoría de las vivas: nunca se pinta como «no ha subido».

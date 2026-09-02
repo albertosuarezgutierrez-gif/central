@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import Siniestros from '../../Siniestros'
+import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
@@ -80,6 +81,16 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
 
       {/* ── Recibos ─────────────────────────────────────────────────────── */}
       <Recibos p={p} />
+
+      {/* ── ¿Por qué ha subido la prima? ────────────────────────────────── */}
+      {/* Va justo debajo de los recibos porque de ellos sale: la prima de cada
+          anualidad se DERIVA de los CA/NP de aniversario a aniversario. El salto
+          a retarificar es el MISMO de la cabecera (asegura, donde se gasta). */}
+      <EvolucionPrima
+        modo="tarjeta"
+        evolucion={p.evolucionPrima}
+        retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : { motivo: p.retarificacion?.motivo ?? null }}
+      />
 
       {/* ── Siniestros ──────────────────────────────────────────────────── */}
       {/* «Confirmada por CIMA» = viva (import_ref NULL) con id_poliza_entidad: la misma regla que la ficha. */}
