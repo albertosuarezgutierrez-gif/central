@@ -48,13 +48,21 @@ const ficherosDe = (sha: string) =>
 const tienePadre = (sha: string) =>
   spawnSync('git', ['rev-parse', `${sha}^`], { stdio: 'pipe' }).status === 0
 
+// 🚨 Un commit de FUSIÓN no sirve de candidato: `git show --name-only` le lista solo los
+// ficheros del conflicto (diff combinado), mientras el script mide `sha^..sha`, que en una
+// fusión es TODO lo que trajo la otra rama (p. ej. `pnpm-lock.yaml`). Medido el 02/09/2026
+// en el PR #2071: el candidato elegido fue el merge de `main` y el test cayó sin que el
+// script se equivocara.
+const esFusion = (sha: string) =>
+  git(['rev-list', '--parents', '-n', '1', sha]).trim().split(/\s+/).length > 2
+
 // Busca en el historial reciente un commit cuyos ficheros cumplan `cumple`.
 // Solo devuelve commits CON PADRE: sin padre el script no puede sacar el diff y se va
 // por el fail-open, que es otro caso distinto (y tiene su propio test).
 function buscarCommit(cumple: (f: string[]) => boolean): string | null {
   if (!HAY_HISTORIA) return null
   for (const sha of git(['log', '-200', '--format=%H']).split('\n').filter(Boolean)) {
-    if (!tienePadre(sha)) continue
+    if (!tienePadre(sha) || esFusion(sha)) continue
     const files = ficherosDe(sha)
     if (files.length && cumple(files)) return sha
   }
@@ -105,7 +113,7 @@ function commitsDeUnPaquete(): CommitPaquete[] {
   if (!HAY_HISTORIA) return []
   const out: CommitPaquete[] = []
   for (const sha of git(['log', '-200', '--format=%H']).split('\n').filter(Boolean)) {
-    if (!tienePadre(sha)) continue
+    if (!tienePadre(sha) || esFusion(sha)) continue
     const f = ficherosDe(sha)
     if (!f.length || f.some((x) => MANIFIESTOS_RAIZ.includes(x))) continue
     const dirs = [...new Set(f.filter((x) => x.startsWith('packages/')).map((x) => x.split('/')[1]))]
