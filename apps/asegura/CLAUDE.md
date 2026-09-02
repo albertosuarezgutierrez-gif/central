@@ -509,6 +509,29 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
 - **`GET /buscar?q=`** — el buscador de TODO (ver abajo).
 - **`/documentos`** (02/09/2026) — ver «Documentos» más arriba: lista, subir, pedir, revisar, borrar, bytes.
 - **`GET /impagados`** — la cola de retención (ver abajo).
+- **✏️ EDITAR y ➕ DAR DE ALTA clientes desde plataforma (02/09/2026)** — primeras ESCRITURAS del puerto
+  sobre `clientes`. `lib/cartera-edicion.ts`; reglas puras en `@central/module-seguros` (`cliente-edicion.ts`,
+  10 tests): teléfono/email/DNI/fecha normalizados y validados (letra del DNI/NIE, fecha real y pasada).
+  - **`/cliente/contactos`** (GET · POST · PATCH · DELETE): varios teléfonos y emails por ficha, con etiqueta
+    cerrada (`móvil/fijo/trabajo/whatsapp/otro` · `personal/trabajo/otro`) y **uno principal**, que se ESPEJA
+    en `clientes.telefono/email` (+ hash) porque es lo que leen ficha, buscador y avisos. Las tablas hijas
+    (`cliente_telefonos` 4.794 / `cliente_emails` 4.393 filas, hasta hoy sin lector en central) son la fuente;
+    si están vacías, la columna se presenta como único con id `col:telefono`/`col:email`, y al añadir otro se
+    baja primero a la hija. El buscador por índice ciego ya mira también las hijas.
+  - **`PATCH /cliente`** (edición): lo LIBRE (dirección cifrada, CP, ciudad, provincia, notas) entra tal cual;
+    la IDENTIDAD (DNI, nombre, apellidos, fecha de nacimiento) **solo con `documentoId` de un documento tipo
+    `dni` RECIBIDO de ese mismo cliente** (dictado de Alberto: «tendrá que solicitarlo documentado») → 422
+    `documento_requerido` / `documento_no_acredita` si no. El DNI cruza el puerto ENMASCARADO (`*****678Z`);
+    el entero sigue sin salir de aquí.
+  - **`POST /cliente`** (alta): busca ANTES por hash de DNI/teléfono/email (columna e hijas) y devuelve 409
+    `conflicto` con las fichas que ya lo tienen. **DNI repetido nunca se fuerza** (misma persona); teléfono/
+    email sí con `forzar:true` (matrimonio), y entonces ese valor va a la hija y NO a la columna única. Nace
+    `lead`/`prospecto`: **«cliente» lo pone CIMA** al enganchar una póliza por el hash del DNI — y OJO, CIMA
+    NO cambia `tipo` de una ficha existente (`pull-persist.ts` solo enriquece `dniLookupHash`/`tipoPersona`),
+    así que la ficha de plataforma pinta «Cliente (CIMA)» por pólizas vivas, no solo por `tipo`.
+  - Todo cambio deja fila en **`historial_interno`** (`gestion`/`contacto`/`nota`, best-effort) SIN valores
+    de identidad ni dirección. Cifra con las mismas primitivas que el CRM (`module-seguros-pii`): sin
+    `PII_ENCRYPTION_KEY` en producción la escritura FALLA con 500, nunca guarda en claro.
 
 ### 🔎 Qué se puede buscar de verdad, y qué NO (medido 01/09/2026)
 

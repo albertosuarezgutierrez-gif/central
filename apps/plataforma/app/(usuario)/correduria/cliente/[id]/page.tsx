@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
 import Documentos from '../../Documentos'
+import EditarCliente from '../../EditarCliente'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
 } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
+import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { PageHeader, BtnLink } from '@/components/ui'
 
@@ -51,8 +53,10 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
         <PageHeader
           titulo={ficha.nombre}
           sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <span>{ficha.tipo === 'cliente' ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
-            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} />
+            {/* CIMA engancha pólizas por DNI a una ficha que puede seguir `lead`:
+                con pólizas vivas ES cliente, diga lo que diga el enum. */}
+            <span>{ficha.tipo === 'cliente' || vivas.length > 0 ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
+            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} />
           </span>}
         />
       </div>
@@ -60,6 +64,17 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
       <Acciones />
 
       <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos.length} />
+
+      {/* Editar: contactos (libres), dirección (libre) e identidad (solo con DNI recibido). */}
+      <Tarjeta titulo="✏️ Datos del cliente">
+        <EditarCliente
+          clienteId={ficha.id}
+          contactos={ficha.contactos}
+          identidad={ficha.identidad}
+          contacto={ficha.contacto}
+          documentos={ficha.documentos}
+        />
+      </Tarjeta>
 
       <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={ficha.intervinientes} />
 
@@ -180,11 +195,17 @@ const CAUSA_PII: Record<string, string> = {
   sin_muestra: 'no hay ningún dato cifrado con el que probar la clave',
 }
 
-function Contacto({ c, intervinientes, piiClave }: {
+function Contacto({ c, intervinientes, piiClave, contactos }: {
   c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
   intervinientes: IntervinienteFicha[] | null
   piiClave: string | null
+  /** Todos los teléfonos/emails; `null` = asegura no manda el bloque (no se afirma «solo uno»). */
+  contactos: ContactosCliente | null
 }) {
+  // «(+N)» = hay más aparte del principal; se ven y editan en ✏️ Datos del cliente.
+  const masTel = contactos && contactos.telefonos.length > 1 ? contactos.telefonos.length - 1 : 0
+  const masEmail = contactos && contactos.emails.length > 1 ? contactos.emails.length - 1 : 0
+  const mas = (n: number) => n > 0 ? <span style={{ fontSize: 11, color: 'var(--muted)' }} title={`${n} más en la ficha (✏️ Datos del cliente)`}> (+{n})</span> : null
   const causaPii = piiClave === null ? 'la clave no abre este dato (asegura no dice por qué: versión anterior)' : CAUSA_PII[piiClave] ?? `estado de clave desconocido: ${piiClave}`
   const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
   const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
@@ -205,6 +226,7 @@ function Contacto({ c, intervinientes, piiClave }: {
         <span>
           <a href={`tel:${ef.telefono.replace(/\s/g, '')}`}>📞 {ef.telefono}</a>
           {deOtro(ef.viaTelefono)}
+          {mas(masTel)}
         </span>
       ) : (
         // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
@@ -217,6 +239,7 @@ function Contacto({ c, intervinientes, piiClave }: {
         <span>
           <a href={`mailto:${ef.email}`}>✉️ {ef.email}</a>
           {deOtro(ef.viaEmail)}
+          {mas(masEmail)}
         </span>
       ) : (
         <span title={c.emailIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : 'No consta email'}>

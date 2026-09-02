@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✏️ Editar y ➕ dar de alta clientes desde `/correduria` (02/09/2026).** Alberto: «no puedo editar», «cliente
+  puede tener varios tlf y mails», «DNI, nombre, fecha de nacimiento… tendrá que solicitarlo documentado».
+  Primeras ESCRITURAS del puerto de asegura: `/api/operador/cliente/contactos` (varios teléfonos/emails con
+  etiqueta y ⭐ principal espejado en `clientes.telefono/email`), `PATCH /cliente` (libre: dirección/CP/ciudad/
+  provincia/notas; identidad SOLO con `documentoId` de un DNI recibido → 422 `documento_requerido`) y `POST
+  /cliente` (alta `lead`, 409 con las fichas que ya tienen ese DNI/tel/email; DNI nunca se fuerza). Reglas
+  puras en `module-seguros/cliente-edicion.ts` (10 tests); pantalla `EditarCliente.tsx` + `/cliente/nuevo`.
+  Historial en `historial_interno` sin PII. ⚠️ Sin probar contra producción (aquí no hay clave PII): la
+  primera edición real la hace Alberto tras el deploy. CIMA NO cambia `tipo` de una ficha `lead` al engancharle
+  póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
+
 ---
 
 ### 🏠 (02/09/2026, noche II) Codeoscopic: el contrato `HomeRisk` de hogar, VERIFICADO y cableado (PR #2088)
