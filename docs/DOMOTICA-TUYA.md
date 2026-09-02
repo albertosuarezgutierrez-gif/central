@@ -95,6 +95,16 @@ N pisos: BustoTavera = Busto Reform + Luxury Busto) y **sincroniza un PIN por re
   `autoBorrarTrasCheckout`); además de caducar solo.
 - **Alertas**: cerradura offline antes de un check-in (leadtime configurable) → Telegram. (primera entrada /
   fuera de ventana / sabotaje / timbre quedan como flags, se dispararán cuando la sonda confirme esos DPs.)
+- **Ventana desactualizada (02/09/2026, PR #2003)**: el PIN conserva la ventana con la que nació; si la
+  reserva cambia de fechas o cambian los márgenes, el cron lo DECLARA (`desajustesVentana`, un Telegram al
+  día por PIN) pero **no lo repone solo** — Tuya no sabe alargar un PIN, hay que borrarlo y recrearlo, y si
+  la recreación falla el huésped se queda con un código muerto. El aviso lleva **un botón «🔄 ventana» por
+  PIN** (`callback_data` `dom_ventana:<dispositivo>:<reserva>`, manejado en el webhook de Telegram) que
+  hace exactamente lo mismo que el botón del panel: los dos llaman a
+  `lib/domotica/reponer-ventana.ts::reponerVentanaPin` (mismo código vía `pinPreferido`; si la cerradura
+  cae a offline y genera OTRO código, el resultado lo canta — `pinCambio` — para mandárselo al huésped;
+  si el borrado sale bien y la creación falla → `estado='error'` + Telegram crítico, nunca `activo`).
+  Parte pura (botones, límite de 64 bytes de Telegram, texto del resultado) en `reponer-ventana-puro.ts`.
 
 **Todo editable por cerradura** en el panel (bloque ⚙️ Configuración): `autoPin`, `entrega`, `pinLongitud`,
 `usarHorarioPiso`, `margenEntradaMin/SalidaMin`, `autoBorrarTrasCheckout`, `botonAbrir`, los pisos vinculados
