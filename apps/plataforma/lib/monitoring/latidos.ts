@@ -91,7 +91,9 @@ export type AgenteVigilado = {
 // Registro extensible. Añadir un agente = una fila aquí + su probe SQL en el route.
 // Sembrado (21/07/2026) con las huellas FIABLES y de más valor. Deliberadamente NO se vigilan:
 //   - facturas (facturas_proveedor solo escribe si hay factura → falsa alarma),
-//   - psd2/banca (ya cubierto por la skill psd2-health-check; y sin movimientos no escribe),
+//   - psd2/banca como TABLA (sin movimientos no escribe). Desde el 02/09/2026 se vigila la PASADA de
+//     la skill psd2-health-check por su latido (`psd2_health_check`, abajo): antes «lo cubría la
+//     skill» era una cobertura nominal — esa skill no tenía canal de aviso ni dejaba huella.
 //   - trading (tiene su propio watchdog dedicado con lógica de días).
 export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
@@ -496,5 +498,63 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'operaciones»). Revisa en claude.ai → Rutinas que la pasada corre con el conector de IBKR ' +
       'adjunto y que su env lleva PLATAFORMA_URL + ALERTA_TOKEN. ' +
       'Huella: agente_latidos.trading_operaciones.',
+  },
+  // ── Rutinas de Claude Code (sesiones efímeras) que hasta el 02/09/2026 NO dejaban huella ──────
+  // Las cinco de abajo eran vigías sin canal: 8 rutinas sin ALERTA_TOKEN, así que su Telegram no
+  // salía, y además no escribían latido, así que tampoco se veían en ninguna pantalla. Un vigía
+  // mudo y un vigía sin nada que reportar se ven igual: silencio. Ahora dejan latido por
+  // /api/internal/latido (allowlist en esa ruta) y el veredicto se persiste en `agente_salud`.
+  //
+  // ⚠️ Hasta que sus prompts lleven el token, saldrán en ROJO con «sin ninguna señal registrada».
+  // Es la verdad, no ruido: hoy están igual de mudas, solo que invisibles. Umbrales generosos a
+  // propósito (cadencia real × ~1,2): mejor detectar tarde que dar falsas alarmas.
+  {
+    id: 'psd2_health_check',
+    etiqueta: '🏦 Guardián del sync bancario PSD2 (rutina semanal, miércoles 09:00)',
+    // Semanal → 8 días: una semana perdida salta.
+    maxHoras: 192,
+    nota:
+      'Nadie está comprobando que el banco siga entregando movimientos. Este era el vigía que ' +
+      '«cubría» psd2/banca en este registro — y no tenía canal ni huella, así que la cobertura era ' +
+      'nominal. Si el detalle dice «feed seco», el sync está roto de verdad; si dice «apuntes sin ' +
+      'fecha», el banco entrega pero MAX(fecha_operacion) no lo ve (NO es un feed seco). Sin latido: ' +
+      'o la rutina no se dispara, o su prompt no lleva ALERTA_TOKEN. Huella: agente_latidos.psd2_health_check.',
+  },
+  {
+    id: 'facturas_correo',
+    etiqueta: '🧾 Facturas por correo (rutina diaria 11:00, la de Claude — NO el cron facturas_gmail)',
+    maxHoras: 30,
+    nota:
+      'La rutina que clasifica facturas del Gmail (personal vs deducible) y las lleva a Drive no ' +
+      'ha dejado huella. OJO: el cron `facturas_gmail` de las 06:15 es OTRO proceso sobre el mismo ' +
+      'buzón y tiene su propio latido — que ese esté verde NO dice nada de este. Huella: ' +
+      'agente_latidos.facturas_correo.',
+  },
+  {
+    id: 'fiscal_novedades',
+    etiqueta: '⚖️ Radar fiscal IRPF + ayudas (rutina mensual, día 1)',
+    // Mensual → 35 días.
+    maxHoras: 840,
+    nota:
+      'El radar que compara las deducciones IRPF con IMPORTES_POR_ANIO y busca convocatorias de ' +
+      'ayudas no ha pasado este mes. Una deducción que cambia y no se recoge es renta mal calculada; ' +
+      'una ayuda con plazo que no se ve es dinero que caduca. Huella: agente_latidos.fiscal_novedades.',
+  },
+  {
+    id: 'rrhh_compliance',
+    etiqueta: '📋 Calendario de obligaciones RRHH (rutina mensual, día 1)',
+    maxHoras: 840,
+    nota:
+      'El informe mensual de obligaciones legales 🔴 pendientes de la vertical RRHH no ha salido. ' +
+      'Huella: agente_latidos.rrhh_compliance.',
+  },
+  {
+    id: 'github_vigia',
+    etiqueta: '🐙 Vigía GitHub/OSS: releases, npm outdated y CVE (rutina mensual, día 15)',
+    maxHoras: 840,
+    nota:
+      'El vigía de releases y CVE de las dependencias no ha pasado este mes. Una CVE en una dep ' +
+      'que nadie mira es la clase de aviso que solo se echa en falta después. Huella: ' +
+      'agente_latidos.github_vigia.',
   },
 ]

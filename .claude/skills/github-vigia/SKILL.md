@@ -104,6 +104,24 @@ puede servir» a medias:
 - **Sin novedades relevantes → sin ruido**: solo el doc de estado actualizado y un
   resumen en el chat ("sin novedades relevantes; revisado a fecha X").
 
+## Paso 5 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
+
+```
+POST {PLATAFORMA_URL}/api/internal/latido
+Authorization: Bearer {ALERTA_TOKEN}
+{ "agente":"github_vigia", "ok":<true|false>, "detalle":"<parte>" }
+```
+`ok = true` **si recorriste las tres patas (releases vigilados, descubrimiento, npm outdated/audit) y
+actualizaste `docs/VIGIA-OSS.md`** — «sin novedades relevantes» es `ok:true`. `ok = false` si alguna pata
+no se pudo ejecutar (proxy, `pnpm outdated` roto, sesión cortada) o el doc de estado no quedó escrito.
+El `detalle` es el parte corto: repos revisados / versiones nuevas · candidatos que pasaron la criba ·
+CVEs en producción · PR draft de bump si lo hubo · Telegram enviado u omitido (y por qué).
+Si algo revienta a mitad, **manda el latido con `ok:false` antes de rendirte**: un agente sin huella
+se lee como «no se dispara» y manda a mirar al sitio equivocado.
+
+⚠️ Sin `ALERTA_TOKEN` en el prompt de la rutina este POST devuelve 401 y el agente sale en rojo en
+`/operador/agentes` con «sin ninguna señal registrada». Eso es correcto: está mudo. No lo tapes.
+
 ## Reglas
 - No inventes versiones ni changelogs: sin URL de fuente, no se anota.
 - No apliques majors ni refactors por tu cuenta: eso es decisión de Alberto (Telegram + bitácora).

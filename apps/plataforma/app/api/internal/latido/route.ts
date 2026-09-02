@@ -18,7 +18,18 @@ export const dynamic = "force-dynamic"
 // endpoint (`ALERTA_TOKEN`) viaja en prompts de rutinas, así que si se filtrara, lo peor que
 // permite es marcar el latido de UNO de estos agentes — nunca inventar un agente nuevo ni tocar
 // la huella de un cron del servidor (esos la escriben ellos mismos, dentro del trabajo que hacen).
-const AGENTES_DE_RUTINA = ["sivra_mercado_booking", "trading_operaciones"]
+const AGENTES_DE_RUTINA = [
+  "sivra_mercado_booking",
+  "trading_operaciones",
+  // 02/09/2026: las cinco rutinas que eran vigías sin canal ni huella. Siguen siendo agentes
+  // DECLARADOS (fila en AGENTES_VIGILADOS + sonda en el cron vigía), no inventados: la allowlist
+  // sigue acotando lo peor que puede hacer un token filtrado.
+  "psd2_health_check",
+  "facturas_correo",
+  "fiscal_novedades",
+  "rrhh_compliance",
+  "github_vigia",
+]
 
 export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) {

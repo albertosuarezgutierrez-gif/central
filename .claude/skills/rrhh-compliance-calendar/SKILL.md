@@ -59,6 +59,24 @@ Si hay ítems 🔴 sin fechas de implementación planificadas y el mes actual su
 (ej. abril = campaña IRPF → Modelo 145; septiembre = inspecciones de trabajo), añade
 una nota explícita en el informe sugiriendo priorizarlos en el sprint del mes.
 
+## Paso 5 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
+
+```
+POST {PLATAFORMA_URL}/api/internal/latido
+Authorization: Bearer {ALERTA_TOKEN}
+{ "agente":"rrhh_compliance", "ok":<true|false>, "detalle":"<parte>" }
+```
+`ok = true` **si leíste el roadmap y produjiste el informe con la lista de ítems 🔴 pendientes** — que
+haya obligaciones sin implementar NO es un fallo del vigía, es su resultado. `ok = false` si no
+encontraste el roadmap o no llegaste a generar el informe.
+El `detalle` es el parte corto: nº de 🔴 pendientes · nº de 🟠 · recomendación del mes · si hubo aviso
+Telegram por urgencia (Paso 4).
+Si algo revienta a mitad, **manda el latido con `ok:false` antes de rendirte**: un agente sin huella
+se lee como «no se dispara» y manda a mirar al sitio equivocado.
+
+⚠️ Sin `ALERTA_TOKEN` en el prompt de la rutina este POST devuelve 401 y el agente sale en rojo en
+`/operador/agentes` con «sin ninguna señal registrada». Eso es correcto: está mudo. No lo tapes.
+
 ## Herramientas
 
 - **Read** (filesystem): leer `docs/ROADMAP-rrhh.md`
