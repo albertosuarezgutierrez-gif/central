@@ -4,12 +4,26 @@
 > Lee antes `docs/TRASPASO-CORREDURIA.md`: esta app es el DESTINO de un traspaso en curso,
 > no un desarrollo desde cero.
 
-## Estado (26/08/2026): esqueleto vivo, cartera SIN migrar
+## Estado (02/09/2026): cartera COPIADA en `seguros` (foto fija) — la app AÚN lee del origen
 
-Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build— para que el
-día del corte solo haya que verter el modelo y las pantallas. **Las 32.600 fichas y 28.843
-pólizas siguen en el Supabase de Manuel Suárez** (`uijsgeocgdaxkhvwtjqs`), alimentándose a
-diario por CIMA/EIAC.
+**El 02/09/2026 se volcó la cartera entera al schema `seguros` de central** (52 tablas, 86.628
+filas, 131 FKs; verificado tabla a tabla por recuento y por checksum de contenido en clientes,
+pólizas, recibos y siniestros). Bitácora en `seguros._volcado_control`. Detalle del método en
+`prisma/sql/2026-09-01_seguros_volcado_datos.sql` (copia server-side por `dblink`).
+
+🚨 **Es una FOTO del 02/09, no un espejo.** El origen (Supabase de Manuel, `uijsgeocgdaxkhvwtjqs`)
+**sigue recibiendo CIMA/EIAC a diario** y **todo el código sigue leyendo de allí**:
+`ASEGURA_DATABASE_URL` + `prisma/asegura.prisma` (`lib/asegura-db.ts`), y por tanto también
+`plataforma` → `/correduria` a través del puerto `/api/operador/*`. Cambiar la lectura al schema
+`seguros` es un paso aparte (repuntar `asegura.prisma` a `seguros.*` con `prisma_seguros`) y solo
+tiene sentido junto con mover la ingesta, o quedan dos carteras que divergen. Para re-sincronizar
+antes del corte: repetir el procedimiento del script (rol temporal en el origen + secreto en el
+Vault + bloque `DO`, que es idempotente por tabla y salta las ya copiadas — para una re-copia
+completa hay que vaciar antes `seguros._volcado_control` y las tablas).
+
+Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build— más la cartera en
+`seguros`. El resto de este apartado describe el estado ANTERIOR al volcado y sigue valiendo para
+entender la arquitectura.
 
 🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son ~80 clientes /
 109 pólizas**: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las

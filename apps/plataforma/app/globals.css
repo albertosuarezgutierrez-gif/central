@@ -88,6 +88,24 @@ input, select, textarea { font: inherit; }
 .nav-link { transition: background .12s ease, color .12s ease; }
 .nav-link:hover { background: var(--primary-light); }
 
+/* === Sidebar plegable (escritorio) ===
+   Botón « del cabecero de `UserSidebar.tsx`: deja el lateral como una tira de iconos (56px) para
+   que las tablas anchas (correduría, banca…) respiren. El atributo `html[data-nav-plegado]` lo pone
+   el script anti-parpadeo de layout.tsx ANTES del primer pintado (igual que el tema): así al recargar
+   con el lateral plegado no hay un fotograma con el lateral abierto que desplace toda la pantalla.
+   El estado vive en localStorage('nav-plegado'); el componente solo alterna el atributo. */
+.sidebar-desktop { width: 220px; transition: width .18s ease; }
+html[data-nav-plegado='1'] .sidebar-desktop { width: 56px; }
+html[data-nav-plegado='1'] .sidebar-desktop .nav-solo-abierto { display: none !important; }
+html[data-nav-plegado='1'] .sidebar-desktop .nav-link { justify-content: center; padding-left: 0 !important; padding-right: 0 !important; }
+html[data-nav-plegado='1'] .sidebar-desktop .nav-cabecera { padding: 14px 8px !important; flex-direction: column; gap: 8px; }
+html[data-nav-plegado='1'] .sidebar-desktop .nav-pie { padding: 12px 8px !important; }
+.nav-plegar-btn { transition: background .12s ease, color .12s ease; }
+.nav-plegar-btn:hover { background: var(--primary-light); color: var(--primary); }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-desktop { transition: none; }
+}
+
 /* Recharts hereda los tokens (los atributos SVG tienen menor prioridad que el CSS,
    así que esto adapta rejilla y ejes también en modo oscuro). */
 .recharts-cartesian-grid line { stroke: var(--border); }

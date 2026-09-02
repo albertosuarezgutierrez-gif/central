@@ -8,13 +8,15 @@ export type { AmbitoCorreduria } from './tenant-ambito'
 /**
  * Resuelve a qué correduría pertenece la cuenta de la sesión.
  *
- * Hoy devuelve SIEMPRE `pendiente`, porque la tabla que vincula cuenta ↔
- * correduría vive en el schema `seguros` y todavía no existe. Eso es correcto y
- * es el punto: hasta que llegue el dump, el ámbito es «no se sabe», y ninguna
- * pantalla debe pintar cifras.
+ * Desde el volcado del 02/09/2026 el vínculo existe: `seguros.usuarios` trae
+ * los 17 usuarios del CRM de origen con su `correduria_id`, y la cuenta de la
+ * casa (`public.cuentas`) se casa con ellos POR EMAIL, que es el único dato
+ * común (el `auth_user_id` de origen es de Supabase Auth y aquí no significa
+ * nada). Solo cuentan los usuarios `activo`.
  *
- * Cuando el schema esté migrado hay que sustituir el `null` de abajo por la
- * consulta real. La forma de la respuesta no cambia.
+ * Mientras el schema no tenga datos (`migrado: false`) sigue siendo `pendiente`:
+ * «no se sabe», no «no tiene». Con datos y sin correspondencia por email es
+ * `sin-asignar`, que ahora SÍ es una ausencia comprobada.
  */
 export async function ambitoActual(cuentaId: string): Promise<AmbitoCorreduria> {
   const migracion = await estadoMigracion()
@@ -23,9 +25,22 @@ export async function ambitoActual(cuentaId: string): Promise<AmbitoCorreduria> 
   // estado, el ámbito es «pendiente» y la UI lo dice. Nunca se sigue adelante.
   if (migracion.error || !migracion.migrado) return { estado: 'pendiente' }
 
-  // TODO(fase-1): leer el vínculo real cuando exista la tabla en `seguros`.
-  // Mientras no exista, `null` significa «no vinculada», que es la verdad.
-  const correduriaId: string | null = null
+  // Un fallo de lectura aquí tampoco se degrada a «sin-asignar»: sin saber el
+  // vínculo, el ámbito es «pendiente». Un id inventado daría los datos de otro.
+  let correduriaId: string | null
+  try {
+    const filas = await prisma.$queryRaw<{ correduria_id: string | null }[]>`
+      select u.correduria_id::text as correduria_id
+      from seguros.usuarios u
+      join public.cuentas c on lower(c.email) = lower(u.email)
+      where c.id = ${cuentaId}::uuid and u.activo
+      order by u.rol = 'admin' desc, u.created_at asc
+      limit 1
+    `
+    correduriaId = filas[0]?.correduria_id ?? null
+  } catch {
+    return { estado: 'pendiente' }
+  }
 
   return resolverAmbito({ cuentaId, migrado: true, correduriaId })
 }

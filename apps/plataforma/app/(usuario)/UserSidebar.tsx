@@ -91,6 +91,11 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   const soloEmpresas = rol === 'empresas'
   const [isMobile, setIsMobile] = useState(false)
   const [open, setOpen] = useState(false)
+  // Lateral plegado (solo escritorio). Arranca en false para que servidor y cliente pinten lo
+  // mismo; lo VISUAL no depende de este estado sino de `html[data-nav-plegado]`, que pone el
+  // script anti-parpadeo de layout.tsx antes del primer pintado (ver globals.css). Aquí solo se
+  // lee para el rótulo/aria del botón y se alterna el atributo + localStorage.
+  const [plegado, setPlegado] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)')
@@ -100,6 +105,22 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
     return () => mq.removeEventListener('change', handler)
   }, [])
 
+  useEffect(() => {
+    try {
+      setPlegado(localStorage.getItem('nav-plegado') === '1')
+    } catch { /* localStorage bloqueado: abierto */ }
+  }, [])
+
+  function alternarPlegado() {
+    const sig = !plegado
+    setPlegado(sig)
+    if (sig) document.documentElement.dataset.navPlegado = '1'
+    else delete document.documentElement.dataset.navPlegado
+    try {
+      localStorage.setItem('nav-plegado', sig ? '1' : '0')
+    } catch { /* sin persistencia */ }
+  }
+
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
@@ -108,11 +129,11 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   function NavLinks() {
     return (
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
+        <div className="nav-solo-abierto" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
         {(soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO).map(({ href, icon, label }) => {
           const active = path === href || path.startsWith(href + '/')
           return (
-            <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
+            <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
               display: 'flex', alignItems: 'center', gap: '10px',
               padding: '9px 12px',
               borderRadius: '10px', marginBottom: '2px',
@@ -121,16 +142,16 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
               color: active ? 'var(--primary)' : 'var(--text)',
               fontSize: '14px', textDecoration: 'none',
             }}>
-              <span>{icon}</span><span>{label}</span>
+              <span>{icon}</span><span className="nav-solo-abierto">{label}</span>
             </Link>
           )
         })}
 
-        {!soloEmpresas && <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Pisos · detalle</div>}
+        {!soloEmpresas && <div className="nav-solo-abierto" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Pisos · detalle</div>}
         {!soloEmpresas && NAV_PISOS.map(({ href, icon, label }) => {
           const active = path.startsWith(href)
           return (
-            <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
+            <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
               display: 'flex', alignItems: 'center', gap: '10px',
               padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
               fontWeight: active ? 600 : 400,
@@ -138,20 +159,20 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
               color: active ? 'var(--primary)' : 'var(--text)',
               fontSize: '14px', textDecoration: 'none',
             }}>
-              <span>{icon}</span><span>{label}</span>
+              <span>{icon}</span><span className="nav-solo-abierto">{label}</span>
             </Link>
           )
         })}
 
         {!soloEmpresas && isOperator && (
           <>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
+            <div className="nav-solo-abierto" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
             {NAV_OPERADOR.filter(n => operadorRol !== 'operador' || NAV_OPERADOR_RESTRINGIDO.has(n.href)).map(({ href, icon, label, sub }) => {
               const exactActive = sub
                 ? path === href || path.startsWith(href + '/')
                 : path === href || (path.startsWith(href + '/') && !NAV_OPERADOR.some(n => n.sub && (path === n.href || path.startsWith(n.href + '/'))))
               return (
-                <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" style={{
+                <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
                   padding: sub ? '6px 12px 6px 28px' : '9px 12px',
                   borderRadius: '10px', marginBottom: '2px',
@@ -160,7 +181,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                   color: exactActive ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
                   fontSize: sub ? '13px' : '14px', textDecoration: 'none',
                 }}>
-                  <span>{icon}</span><span>{label}</span>
+                  <span>{icon}</span><span className="nav-solo-abierto">{label}</span>
                 </Link>
               )
             })}
@@ -172,15 +193,16 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
 
   function Footer() {
     return (
-      <div style={{ padding: '16px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, marginBottom: '2px' }}>{nombre}</div>
-        <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
-        <ThemeToggle />
-        <button onClick={logout} style={{
+      <div className="nav-pie" style={{ padding: '16px', borderTop: '1px solid var(--border)' }}>
+        <div className="nav-solo-abierto" style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, marginBottom: '2px' }}>{nombre}</div>
+        <div className="nav-solo-abierto" style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
+        <div className="nav-solo-abierto"><ThemeToggle /></div>
+        {/* Plegado: queda solo el icono ⏻ (title = tooltip); nombre, email y tema vuelven al desplegar. */}
+        <button onClick={logout} title="Salir" aria-label="Salir" style={{
           width: '100%', padding: '7px', fontSize: '13px',
           border: '1px solid var(--border)', borderRadius: '6px',
           color: 'var(--muted)', background: 'transparent', cursor: 'pointer',
-        }}>Salir</button>
+        }}>{plegado ? '⏻' : 'Salir'}</button>
       </div>
     )
   }
@@ -243,18 +265,34 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
     )
   }
 
+  // Escritorio. El ancho (220 ↔ 56px) lo decide `html[data-nav-plegado]` desde globals.css, no
+  // un estilo inline: así el HTML servido es el mismo plegado o no, y el script anti-parpadeo
+  // del layout raíz ya lo deja bien antes del primer pintado.
   return (
-    <nav style={{
-      width: 220, flexShrink: 0,
+    <nav className="sidebar-desktop" style={{
+      flexShrink: 0,
       background: 'var(--surface)', borderRight: '1px solid var(--border)',
       display: 'flex', flexDirection: 'column',
-      position: 'sticky', top: 0, height: '100vh', overflowY: 'auto',
+      position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', overflowX: 'hidden',
     }}>
-      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px' }}>
+      <div className="nav-cabecera" style={{ padding: '20px 12px 16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px', minWidth: 0 }}>
           <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '8px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
-          <span>plataforma</span>
+          <span className="nav-solo-abierto">plataforma</span>
         </div>
+        <button
+          onClick={alternarPlegado}
+          className="nav-plegar-btn"
+          title={plegado ? 'Desplegar menú' : 'Plegar menú'}
+          aria-label={plegado ? 'Desplegar menú' : 'Plegar menú'}
+          aria-expanded={!plegado}
+          style={{
+            flexShrink: 0, width: 28, height: 28, borderRadius: '8px',
+            border: '1px solid var(--border)', background: 'transparent',
+            color: 'var(--muted)', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >{plegado ? '»' : '«'}</button>
       </div>
       <NavLinks />
       <Footer />
