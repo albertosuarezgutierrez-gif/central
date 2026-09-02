@@ -47,6 +47,16 @@
 - **Sin migrar a propósito:** `banca/transferencia` (sus 3 `<h1>` son estados de un formulario) e
   `invitado/limpieza` (única pantalla de Vanesa, intranet de invitado, no el panel `(usuario)`).
 
+### 🩺 (02/09/2026) Salud de la arquitectura a cero avisos (/admin → 🗺️ Estructura)
+- **La reimplementación era real, no un falso positivo:** `apps/alquiler` llevaba su propio catálogo y calculaba
+  el disponible a mano teniendo `@central/module-materiales` al lado. Puente en `lib/materiales-compartidos.ts`
+  (NO se migra la tabla). Su límite es lo caro: `alquiler_materiales` no tiene columnas económicas, así que
+  `resumenStockUnidades()` **recorta `valorTotal` del tipo** para que no compile pintar «0 €» de inventario.
+- **`CLAUDE.md` propios** para `apps/almacen` y `apps/asegura-portal` (los escribieron dos agentes leyendo el código;
+  lo no verificable va marcado «pendiente de confirmar», no inventado). `docs/FUENTES-DE-VERDAD.md` y el raíz, al día.
+- `asegura-portal` no tenía ficha curada en `estructura.ts` (el auditor lo avisaba); añadida y radiografía regenerada:
+  **0 reimplementaciones · 0 apps sin CLAUDE.md**. Guardián 168/168, suite completa en verde. **PR #2044** (19/19 checks).
+
 ### 🧩 (02/09/2026, noche) Las 5 primitivas huérfanas: se MIDIÓ antes de decidir (PR #2045 mergeado)
 - Llevaban desde su creación a cero consumidores. La pregunta «¿la uso o la borro?» se contestó contando sitios
   reales en toda la app, no a ojo: `PageHeader` **53** · `BtnLink` 11 · `ThinBar` 11 · `BarListRow` **0** ·
@@ -97,9 +107,16 @@
   sin `console.error`, colapsaban conexión/schema/permisos/fila-que-falta en un `{estado:'error'}` pelado. Ahora
   llevan `motivo` (`bd`/`sin_correduria`) + pista corta SIN secretos (`central/…/P2021/public.corredurias`, módulo
   puro `comisiones-motivo.ts`), plataforma la propaga y el Telegram la enseña. La próxima pasada se nombra sola.
-- **Endurecido el camino más probable:** `urlFuenteCartera` **fuerza** `schema=seguros` en vez de respetar el que
-  traiga `DATABASE_URL` — es la MISMA cadena que la auth (`public`), donde no hay `corredurias` y `clientes` es otra
-  tabla (leerías los clientes de central creyendo que son los de la correduría). Hipótesis, no causa medida.
+- ⚠️ **Y la hipótesis que escribí era FALSA — corregido en el PR #2047.** Dije «probablemente el schema»:
+  `urlFuenteCartera` fuerza `schema=seguros` en vez de respetar el que traiga `DATABASE_URL`. Se conserva como
+  blindaje (esa cadena es la MISMA que la auth, donde el schema bueno es `public`, y ahí `clientes` es OTRA tabla),
+  pero **no era la causa**. La midió el PR #2034: `credenciales` — la contraseña de `prisma_seguros` se rotó TRES
+  veces ese día (05:51, 05:52 y 10:17, en `postgres_logs`) y el `DATABASE_URL` de Vercel `central-asegura` se quedó
+  con la vieja. El repo ya se había avisado a sí mismo en el SQL de `crm_seguros` («rotarla tumbaría
+  central-asegura») y se rotó igual. Regla nueva en el CLAUDE.md raíz: **rotación y env, en el mismo paso.**
+- **Deuda propia, saldada en #2047:** #2029 y #2034 crearon dos clasificadores del mismo error con horas de
+  diferencia. Gana `lib/error-cartera.ts` (seis causas accionables y borra la URL del log); `comisiones-motivo.ts`
+  retirado y la ruta de comisiones al compartido → las NUEVE rutas del puerto hablan igual.
 - Verificado: 2.568 tests `node --test` + 53 vitest en verde, typecheck de asegura y plataforma OK.
 - **De regalo, la 7ª medición del CI mudo (anotada en `CLAUDE.md`), y la más limpia:** el MISMO acto —merge
   de `main` con contenido real + push— salió **mudo en draft** y **disparó los 19 runs ya sin draft**. O sea:

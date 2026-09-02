@@ -8,13 +8,13 @@
 // vacías convertiría una caída en «la compañía no te ha pagado», que es
 // exactamente la afirmación falsa que este módulo existe para evitar.
 //
-// Y el `error` va SIEMPRE con motivo y con una pista sin secretos: un `error`
-// pelado deja el aviso en «no se ha podido leer» sin decir dónde mirar, que es
-// justo donde se quedó atascado el libro de comisiones el 02/09/2026.
-import { aseguraConfigurada, fuenteCartera, prismaAsegura } from './asegura-db'
-import { detalleError, type MotivoErrorCartera } from './comisiones-motivo'
-
-export { detalleError, type MotivoErrorCartera }
+// Y el `error` va SIEMPRE con su CAUSA (`lib/error-cartera.ts`, el mismo
+// clasificador que el resto del puerto): un `error` pelado deja el aviso en «no
+// se ha podido leer» sin decir dónde mirar, que es justo donde se quedó atascado
+// el libro de comisiones el 02/09/2026 — la causa real resultó ser
+// `credenciales` y solo se veía en los logs del pooler.
+import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { registrarErrorCartera, type CausaErrorCartera } from './error-cartera'
 
 /**
  * Importe EIAC (guardado en TEXT) → número. `null` si no se puede leer.
@@ -63,7 +63,7 @@ export type CoberturaCompania = {
 
 export type ComisionesCartera =
   | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo: MotivoErrorCartera; detalle?: string }
+  | { estado: 'error'; causa: CausaErrorCartera }
   | {
       estado: 'ok'
       periodos: PeriodoComisiones[]
@@ -173,10 +173,9 @@ export async function comisionesCartera(correduriaId: string, desde: Date): Prom
 
     return { estado: 'ok', periodos, devengos, cobertura }
   } catch (e) {
-    // El log es la mitad de la reparación: sin él, «no se ha podido leer la
-    // cartera» no dice DÓNDE mirar. Va a los logs de la función, no a la
-    // respuesta, así que puede ser más explícito que `detalleError`.
-    console.error('[comisiones] la cartera no se ha podido leer', e)
-    return { estado: 'error', motivo: 'bd', detalle: detalleError(e, fuenteCartera()) }
+    // Mismo clasificador que las otras ocho rutas del puerto: la causa viaja en
+    // la respuesta y el detalle (sin la URL, que llevaría la contraseña) va al
+    // log de la función. Un `error` pelado obligaba a adivinar cuál de las cinco.
+    return { estado: 'error', causa: registrarErrorCartera('operador/comisiones', e) }
   }
 }
