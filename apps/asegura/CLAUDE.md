@@ -453,6 +453,16 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
   a nadie por email.
+- 🚨 **RC NO tiene ramo en Codeoscopic (02/09/2026, catálogo oficial de Integra que pasó Alberto).**
+  La matriz del fabricante tiene siete columnas —autos, hogar, motos, decesos, vida, salud y
+  complementarios— y **responsabilidad civil no está en ninguna**, igual que el portal solo publica
+  catálogos `/car`, `/motorcycle`, `/home`, `/term-life`, `/health` y `/burial`. Son **9 pólizas
+  vivas (8 activas)** para las que `retarificabilidad()` dice «hoy solo se retarifica auto y hogar»:
+  ese «hoy» **no es un todavía**, no hay endpoint que cablear. Se llama a la compañía.
+  **Moto sí existe** (12 de las 18 compañías) y no la tarificamos — 1 póliza, así que no corre prisa.
+  Cruce entero con la cartera y la matriz completa en `docs/CODEOSCOPIC-API-PORTAL.md`. ⚠️ Ese
+  catálogo es comercial y **no dice qué tiene abierto Grupo Asegura**: eso sigue siendo
+  `GET /insurance-lines`, y se nota en que **Fidelidade —viva para nosotros— ni sale en él**.
 
 ## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)
 

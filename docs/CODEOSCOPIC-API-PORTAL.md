@@ -297,3 +297,79 @@ nosotros ya lo mandamos dentro del `risk`.
 Trampas que él pagó y conviene heredar: el formulario tarda como una tarificación (timeout de 150 s,
 no el de 5 s), el re-rate y la emisión **no se reintentan nunca** por ser facturables, y antes de
 gastar se comprueba que no falte ningún obligatorio para no pagar por un rechazo seguro.
+
+---
+
+## 🏢 Qué compañías y ramos alcanza Integra — y cuánto de NUESTRA cartera cubre (02/09/2026)
+
+Alberto pasó `avant2.pdf` («Codeoscopic Integra — Compañías Disponibles», generado desde
+`codeoscopic.com/es/workspace/integra/integra-companias-disponibles/`). Es **catálogo comercial**, no
+configuración: dice lo que Integra soporta, **no lo que nuestra organización tiene abierto**.
+
+🚨 **Y se demuestra a sí mismo incompleto:** nuestras notas dicen que las compañías vivas para Grupo
+Asegura son **Reale y Fidelidade**, y **Fidelidade no aparece en el catálogo**. Así que esta tabla es
+un mapa de lo posible, no una fuente de verdad. La fuente de verdad sigue siendo `GET /insurance-lines`
+(gratis, ya cableado en `lib/codeoscopic/catalogos.ts`). **No sustituir la llamada por esta tabla.**
+
+### La matriz, tal cual la publica el fabricante
+
+18 aseguradoras × 7 columnas: AUTOS · HOGAR · MOTOS · DECESOS · VIDA · SALUD · COMPLEMENTARIOS.
+
+| Aseguradora | Autos | Hogar | Motos | Decesos | Vida | Salud | Compl. |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Allianz | ✓ | ✓ | ✓ | – | ✓ | – | ✓ |
+| AXA Seguros | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Mapfre | ✓ | ✓ | ✓ | – | ✓ | ✓ | ✓ |
+| Generali | ✓ | ✓ | ✓ | – | ✓ | – | ✓ |
+| Reale Seguros | ✓ | ✓ | ✓ | – | ✓ | – | ✓ |
+| Pelayo | ✓ | ✓ | ✓ | – | – | – | – |
+| Santamaría / Helvetia | ✓ | ✓ | ✓ | ✓ | ✓ | – | ✓ |
+| Liberty Seguros | ✓ | ✓ | ✓ | – | – | – | ✓ |
+| Zurich | ✓ | ✓ | – | – | ✓ | – | ✓ |
+| AIG / Aegon | – | – | – | – | ✓ | ✓ | – |
+| Sanitas | – | – | – | – | – | ✓ | – |
+| DKV | – | – | – | – | – | ✓ | – |
+| FIATC Seguros | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Adeslas / SegurCaixa | ✓ | ✓ | – | ✓ | – | ✓ | ✓ |
+| Qualitas Auto / Admiral | ✓ | – | ✓ | – | – | – | – |
+| Asisa | – | – | – | ✓ | ✓ | ✓ | – |
+| Preventiva Seguros | – | – | – | ✓ | – | – | – |
+| Arais / Patria Hispana | ✓ | ✓ | – | – | – | – | ✓ |
+
+Funcionalidades por conexión: **cotizar** · **pre-emitir** · **emitir** · **complementarios**
+(suplementos y anexos). El resto del ecosistema del fabricante —Avant2 Sales Manager, Versus Data
+Analytics, bCover, Tesis ERP— es producto suyo, no API.
+
+### El cruce con la cartera viva (`import_ref IS NULL`, medido el 02/09/2026)
+
+**Las 109 pólizas de CIMA son de TRES compañías**, y ninguna otra:
+
+| Compañía | DGS | Ramo | Vivas | Activas | ¿Está en el catálogo? |
+|---|---|---|--:|--:|---|
+| Mapfre | C0058 | auto | 53 | 24 | ✅ |
+| Allianz | C0109 | auto | 26 | 20 | ✅ |
+| Occident | C0468 | hogar | 10 | 9 | ❌ **la compañía no está** |
+| Mapfre | C0058 | hogar | 9 | 4 | ✅ |
+| Occident | C0468 | responsabilidad civil | 7 | 6 | ❌ compañía **y** ramo |
+| Mapfre | C0058 | responsabilidad civil | 2 | 2 | ❌ **el ramo no existe** |
+| Occident | C0468 | auto | 1 | 1 | ❌ la compañía no está |
+| Occident | C0468 | moto | 1 | 1 | ❌ la compañía no está |
+
+### Las cuatro consecuencias, y una que NO lo es
+
+1. 🚨 **RC no es un ramo de Integra.** No hay columna en la matriz ni catálogo en el portal
+   (`/car`, `/motorcycle`, `/home`, `/term-life`, `/health`, `/burial` — y ya está). Son **9 pólizas,
+   8 activas**, sin camino automático de precio. `retarificabilidad()` ya las rechaza («hoy solo se
+   retarifica auto y hogar»), pero la frase se escribió como un *todavía*: para RC **no hay endpoint
+   que cablear**, hay que llamar a la compañía.
+2. **Moto SÍ existe** (12 de las 18 compañías, catálogos `/motorcycle/*`) y nosotros no la
+   tarificamos. Es 1 póliza, así que no corre prisa; cuando toque es el ramo más barato de añadir
+   porque repite el patrón de auto.
+3. **Que Occident no esté NO bloquea retarificar.** Retarificar es pedir precio a OTRAS compañías: la
+   actual solo aporta el bonus de la póliza anterior. Lo que sí dice el hueco es que a esos 17
+   contratos activos **no se les puede renovar con la suya por API**.
+4. **Decesos, vida y salud están en Integra y nosotros tenemos CERO pólizas.** Es mercado que la
+   correduría no toca hoy, no una carencia técnica.
+
+⚠️ Lo que este documento **no** autoriza a decir: cuántas de esas compañías puede cotizar Grupo
+Asegura de verdad. Eso son `GET /insurance-lines` y los acuerdos firmados, no un PDF de marketing.
