@@ -1,6 +1,23 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> ## 🎯 CIERRE DEL TRASPASO (02/09/2026) — qué queda y quién lo hace
+> ## ✅ TRASPASO CERRADO (02/09/2026, 06:36 UTC) — el CRM corre sobre NUESTRA base
+>
+> **Medido, no supuesto:** tras poner en el proyecto Vercel `asegura` un `DATABASE_URL` contra la BD
+> `central` con el rol **`crm_seguros`** (creado ese día: LOGIN, BYPASSRLS, DML sobre `seguros`,
+> `search_path = seguros`, sin ver `public`), `/api/health` pasó a `db: ok` y el `cima-pull` en
+> `dry_run` (run #187) dejó `cima_pull_started`/`cima_pull_completed` en **`seguros.operational_events`
+> de central** con `queueDepth: 128` (los 128 ficheros del ledger copiado). Código, Vercel, Actions y
+> datos: todo en la cuenta de Alberto. El cron sigue a las 05:30 y 11:30 UTC y escribe aquí.
+>
+> Lo que costó la mañana, para no repetirlo: (1) `DATABASE_URL` de `central-asegura` es **Sensitive**
+> en Vercel y no se puede copiar → rol propio en vez de rotar `prisma_seguros`; (2) el bloqueo real de
+> 40 minutos fue **pegar la plantilla con el hueco `TU_CONTRASEÑA_AQUI` sin sustituir**; el driver lo
+> decía en los logs de Vercel (`password authentication failed for user "crm_seguros"`), el `/api/health`
+> lo tapa con un `Failed query: SELECT 1` genérico. Siempre mirar `get_runtime_errors`, no el health.
+> ⚠️ La contraseña de `crm_seguros` pasó por el chat (captura de pantalla): **rotarla** cuando el
+> traspaso se dé por asentado (`ALTER ROLE crm_seguros WITH PASSWORD …` + la variable en Vercel).
+>
+> ## 🎯 CIERRE DEL TRASPASO (02/09/2026) — qué quedaba y quién lo hizo (histórico de la mañana)
 >
 > **Medido, no supuesto, el 02/09/2026.** Este documento iba por detrás de la realidad: el repo
 > `asegura` (el CRM de Manuel: ingestor CIMA, claves PII, Drizzle) **ya está en la cuenta de Alberto**

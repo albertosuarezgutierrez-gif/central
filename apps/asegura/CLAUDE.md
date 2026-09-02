@@ -27,12 +27,15 @@ equipo (386 veces en `/api/health`). Por eso el cron `cima-pull` recibe 500 tres
 (31/08 11:34, 01/09 10:19 y 15:30). Consecuencia útil: **nada ha escrito en el origen desde
 entonces, así que la copia del 02/09 está completa** y no hace falta re-sincronizar.
 
-✅ **Lo que cierra el traspaso — y solo puede hacerlo Alberto desde el panel de Vercel** (el conector
-no edita variables): en el proyecto Vercel `asegura`, poner en `DATABASE_URL` (Production) el valor de
-`DATABASE_URL` del proyecto `central-asegura` y redesplegar. El rol `prisma_seguros` ya tiene
-`search_path = seguros`, así que el CRM (Drizzle, tablas sin cualificar) resuelve en nuestra copia
-sin tocar su código. Runbook paso a paso en `docs/TRASPASO-CORREDURIA.md` («CIERRE DEL TRASPASO»).
-**No arreglar la contraseña del origen**: el origen congelado es la copia de seguridad.
+✅ **CERRADO el 02/09/2026 a las 06:36 UTC.** El proyecto Vercel `asegura` (el CRM, Drizzle) conecta a
+la BD `central` con el rol **`crm_seguros`** (LOGIN, BYPASSRLS, DML sobre `seguros`, `search_path =
+seguros`, cero visibilidad de `public`), por el pooler `aws-0-eu-west-1:6543`. Prueba: `/api/health`
+en `db: ok` y el `cima-pull` en dry run (run #187) escribió `cima_pull_started/completed` en
+`seguros.operational_events` de central. El cron de CIMA (05:30 y 11:30 UTC, GitHub Actions del repo
+`asegura`) escribe desde entonces aquí. **No arreglar la contraseña del origen**: el origen congelado es
+la copia de seguridad. ⚠️ La contraseña de `crm_seguros` pasó por un chat: rotarla cuando esto asiente.
+Detalle y lecciones (variable Sensitive, plantilla sin sustituir, mirar `get_runtime_errors` y no el
+health) en `docs/TRASPASO-CORREDURIA.md` («TRASPASO CERRADO»).
 
 Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build— más la cartera en
 `seguros`. El resto de este apartado describe el estado ANTERIOR al volcado y sigue valiendo para

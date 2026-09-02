@@ -44,6 +44,17 @@
 - **Alberto repuso los dos PIN desde el panel** (BD: ambos → 13:00, mismo código, `tuya_password_id` nuevo) pero
   la pantalla seguía en «11:00»: `ajustarVentana` no recargaba la lista tras el PATCH. Corregido en el mismo PR. Doc: `docs/DOMOTICA-TUYA.md` (Fase 2).
 
+### ✅ (02/09/2026, 06:36 UTC) Correduría: TRASPASO CERRADO — el CRM corre sobre la BD de central
+- Rol nuevo `crm_seguros` en central (LOGIN, BYPASSRLS, DML en `seguros`, `search_path=seguros`, sin `public`)
+  porque `DATABASE_URL` de `central-asegura` es Sensitive en Vercel y no se puede copiar. Alberto pegó la URL
+  en el proyecto Vercel `asegura` (con el agente de Chrome haciendo redeploy/health/dry run).
+- Prueba real: `/api/health` → `db: ok`; `cima-pull` dry run #187 → `cima_pull_started/completed` en
+  `seguros.operational_events` DE CENTRAL, `queueDepth: 128`. El cron (05:30/11:30 UTC) escribe ya aquí.
+- 40 min perdidos por pegar la plantilla `TU_CONTRASEÑA_AQUI` sin sustituir: el health lo tapa; la causa
+  estaba en `get_runtime_errors` de Vercel. ⚠️ La contraseña de `crm_seguros` pasó por el chat: **rotar**.
+- Queda: auth del CRM sigue en el Supabase de Manuel (9 usuarios); `record-evidence.ts` por PostgREST; Fly;
+  y el banner rojo de Supabase «Grace period is over» en la org de Alberto (cuota) — revisar billing.
+
 ### 🏠 (02/09/2026) Correduría «todo nosotros»: el CRM ya es nuestro, está CAÍDO desde el 31/08, y falta UNA variable
 - Alberto: «haz lo necesario para tener todo nosotros». Hallazgo: el repo `asegura` (CRM de Manuel) y su
   proyecto Vercel `asegura` (`app.grupoasegura.com`) **ya están en la cuenta/equipo de Alberto** — el doc
