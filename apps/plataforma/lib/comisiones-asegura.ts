@@ -44,13 +44,15 @@ export type CoberturaCompania = {
 export type ComisionesAsegura =
   | { estado: 'sin_configurar' }
   /**
-   * `detalle` es la pista CORTA que manda asegura sobre su propio fallo
-   * (`central/PrismaClientKnownRequestError/P2021/public.corredurias`). Sin ella,
-   * `asegura_error` es un callejón sin salida: dice que falló, no dónde. Es
-   * opcional a propósito — una versión desplegada más vieja de asegura no la
-   * manda, y entonces se dice que no se sabe, no se inventa.
+   * `causa` es la categoría que manda asegura sobre su propio fallo
+   * (`credenciales` · `permisos` · `conexion` · `esquema` · `sin_correduria` ·
+   * `otro`, del mismo clasificador que el resto del puerto). Sin ella,
+   * `asegura_error` es un callejón sin salida: dice que falló, no dónde — y la
+   * causa REAL del 02/09/2026 fue `credenciales`, que solo se veía en los logs
+   * del pooler. Es opcional a propósito: una versión desplegada más vieja de
+   * asegura no la manda, y entonces se dice que no se sabe, no se inventa.
    */
-  | { estado: 'error'; motivo: MotivoErrorComisiones; detalle?: string }
+  | { estado: 'error'; motivo: MotivoErrorComisiones; causa?: string }
   | {
       estado: 'ok'
       periodos: PeriodoComisiones[]
@@ -78,12 +80,11 @@ export function interpretarComisiones(status: number, json: unknown): Comisiones
   const com = c as Record<string, unknown>
   if (com.estado === 'sin_configurar') return { estado: 'sin_configurar' }
   if (com.estado === 'error') {
-    // El motivo que manda asegura viaja DENTRO del detalle: aquí `asegura_error`
-    // sigue significando «respondió y no pudo leer su BD», y el detalle dice cuál
-    // de sus fallos fue. Solo se copia si es texto y corto: es contenido de otra
-    // app y acaba en un Telegram.
-    const pista = [com.motivo, com.detalle].filter(v => typeof v === 'string' && v).join(' · ')
-    return { estado: 'error', motivo: 'asegura_error', ...(pista ? { detalle: pista.slice(0, 200) } : {}) }
+    // `asegura_error` sigue significando «respondió y no pudo leer su BD»; la
+    // `causa` dice cuál de sus fallos fue. Solo se copia si es texto: es
+    // contenido de otra app y acaba en un Telegram.
+    const causa = typeof com.causa === 'string' && com.causa ? com.causa.slice(0, 40) : null
+    return { estado: 'error', motivo: 'asegura_error', ...(causa ? { causa } : {}) }
   }
   if (com.estado !== 'ok') return { estado: 'error', motivo: 'respuesta_ilegible' }
   if (!Array.isArray(com.periodos) || !Array.isArray(com.devengos) || !Array.isArray(com.cobertura)) {

@@ -9,6 +9,12 @@ import {
   type LineaAlquiler,
   type EstadoAlquiler,
 } from '@central/module-alquiler'
+import {
+  aMaterialCompartido,
+  disponibleTrasComprometido,
+  resumenStockUnidades,
+  type ResumenStockUnidades,
+} from './materiales-compartidos'
 import { prisma } from './db'
 
 type Dec = { toString(): string } | number | null | undefined
@@ -84,6 +90,8 @@ export async function listAlquileres(cuentaId: string): Promise<Alquiler[]> {
 
 export interface DashboardData {
   materiales: Array<MaterialView & { comprometidoHoy: number; disponibleHoy: number }>
+  /** Resumen del catálogo en UNIDADES (@central/module-materiales). Sin valor en €: ver `materiales-compartidos.ts`. */
+  stock: ResumenStockUnidades
   alquileres: Alquiler[]
   resumen: ReturnType<typeof resumenAlquileres>
   intercompany: number
@@ -97,13 +105,17 @@ export async function getDashboard(cuentaId: string): Promise<DashboardData> {
   ])
   const hoy = new Date().toISOString().slice(0, 10)
 
+  // La aritmética de stock la pone el módulo compartido, no esta app.
   const materiales = materialesRaw.map((m) => {
     const comprometidoHoy = comprometidoEnVentana(alquileres, m.id, hoy, hoy)
-    return { ...m, comprometidoHoy, disponibleHoy: Math.max(0, m.stockTotal - comprometidoHoy) }
+    return { ...m, comprometidoHoy, disponibleHoy: disponibleTrasComprometido(m.stockTotal, comprometidoHoy) }
   })
 
   return {
     materiales,
+    stock: resumenStockUnidades(
+      materiales.map((m) => aMaterialCompartido(m, cuentaId, m.comprometidoHoy)),
+    ),
     alquileres,
     resumen: resumenAlquileres(alquileres),
     intercompany: totalIntercompany(alquileres),
