@@ -484,6 +484,9 @@ cuatro CHECK probados en la BD real en un bloque con rollback). `poliza_document
 
 ## 🔌 El puerto que sirve la pantalla de plataforma (01/09/2026)
 
+> 📘 **Visión y orden de trabajo del CRM de la correduría: `docs/CORREDURIA-CRM-VISION.md`** (dictado de
+> Alberto, 02/09/2026; skill router `correduria-crm`). Léelo antes de añadir pantallas o escrituras.
+
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
 - **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene
