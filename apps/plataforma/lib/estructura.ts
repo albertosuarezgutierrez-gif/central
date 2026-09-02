@@ -6,6 +6,9 @@
 //    en la raíz (scripts/auditar-estructura.mjs). NO editar el JSON a mano.
 
 import radiografiaJson from './estructura.generated.json'
+// Las novedades viven en su propio generado: se derivan de docs/CONTEXTO-SESIONES.md (memoria),
+// no del código, y mezclarlas con la radiografía acoplaba el gate del auditor a cada sesión.
+import novedadesJson from './novedades.generated.json'
 
 export type EstadoModulo = 'usado' | 'declarado' | 'no'
 export interface CeldaModulo { estado: EstadoModulo; evidencias: number }
@@ -37,7 +40,10 @@ export interface Radiografia {
 }
 
 /** Radiografía del repo (auditoría automática). Generada por `npm run auditar`. */
-export const RADIOGRAFIA = radiografiaJson as Radiografia
+export const RADIOGRAFIA = {
+  ...(radiografiaJson as Omit<Radiografia, 'novedades'>),
+  novedades: (novedadesJson as { novedades: NovedadRadiografia[] }).novedades,
+} as Radiografia
 
 export interface VerticalInfo { app: string; nombre: string; sector: string; desc: string; url?: string }
 export interface ModuloInfo { id: string; tipo: 'core' | 'module'; desc: string; deps?: boolean }

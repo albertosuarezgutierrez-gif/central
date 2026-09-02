@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T12:43:35Z",
-  "sha": "8563ce31b00b7a1911b1d0bbba7854800a2b756c",
+  "generadoEn": "2026-09-02T13:03:19Z",
+  "sha": "f77e4aae7c1eaef50d354de2a769918d9306947a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -71546,7 +71546,7 @@
           "exportada": true,
           "params": "app: string",
           "retorno": "",
-          "linea": 162,
+          "linea": 168,
           "resumen": "Enlaces profundos por nodo: dónde vive cada cosa (código / Vercel / Supabase)."
         },
         {
@@ -71555,7 +71555,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 171
+          "linea": 177
         },
         {
           "nombre": "enlacesSkill",
@@ -71563,12 +71563,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "",
-          "linea": 174
+          "linea": 180
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "111f321af34a"
+      "hash": "82370da44f1d"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-csv.ts",

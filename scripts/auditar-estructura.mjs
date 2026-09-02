@@ -27,6 +27,10 @@ const SKILLS_DIR = join(ROOT, '.claude', 'skills')
 const CTX_FILE = join(ROOT, 'docs', 'CONTEXTO-SESIONES.md')
 const OUT = join(ROOT, 'apps', 'plataforma', 'lib', 'estructura.generated.json')
 // Archivo-resumen legible: el mapa que una sesión NUEVA de Claude lee del repo sin abrir la app.
+// Las novedades salen a su PROPIO fichero: se derivan de la memoria, no del código, así que
+// mezclarlas con la radiografía hacía que cada PR que anotara memoria reescribiera el JSON
+// grande (y, hasta el #2053, rompiera el gate). Ver `auditar-comparacion.mjs`.
+const NOV_OUT = join(ROOT, 'apps', 'plataforma', 'lib', 'novedades.generated.json')
 const MD_OUT = join(ROOT, 'docs', 'ARQUITECTURA.generated.md')
 // Índice de arquitectura a nivel de FUNCIÓN (firmas + resúmenes) para el Director de código.
 // Coste 0 tokens: se extrae con regex Node-puro. Se inyecta en Supabase `mapa_arquitectura`
@@ -410,7 +414,6 @@ const out = {
   apisPorVertical,
   tablasPorVertical,
   skills,
-  novedades,
   saludRepo,
   gaps: { modulosInfrautilizados, oportunidadesPortar, reimplementaciones },
   resumen: {
@@ -481,9 +484,9 @@ function buildMd(o) {
     for (const g of o.gaps.oportunidadesPortar) L.push(`- ⚠️ **${g.label}**: en ${g.tiene.join(', ')}; falta en ${g.falta.join(', ')}.`)
     L.push('')
   }
-  if (o.novedades.length) {
+  if (novedades.length) {
     L.push('## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)')
-    for (const n of o.novedades.slice(0, 10)) L.push(`- ${n.fecha ? `(${n.fecha}) ` : ''}${n.titulo}`)
+    for (const n of novedades.slice(0, 10)) L.push(`- ${n.fecha ? `(${n.fecha}) ` : ''}${n.titulo}`)
     L.push('')
   }
   return L.join('\n') + '\n'
@@ -514,6 +517,13 @@ if (process.argv.includes('--check')) {
   const json = JSON.stringify(out, null, 2) + '\n'
   if (json === prevRaw) console.log('✓ JSON ya al día.')
   else { writeFileSync(OUT, json); console.log(`✓ JSON escrito en ${relative(ROOT, OUT)}`) }
+
+  // Novedades: fichero propio. NO entra en `--check` — se deriva de la memoria, que cambia en
+  // cada sesión, así que exigirlo al día en cada PR es el falso positivo que ya costó el #2053.
+  const nov = JSON.stringify({ novedades }, null, 2) + '\n'
+  const prevNov = existsSync(NOV_OUT) ? readFileSync(NOV_OUT, 'utf8') : ''
+  if (nov === prevNov) console.log('✓ Novedades ya al día.')
+  else { writeFileSync(NOV_OUT, nov); console.log(`✓ Novedades escritas en ${relative(ROOT, NOV_OUT)}`) }
 
   const md = buildMd(out)
   const prevMd = existsSync(MD_OUT) ? readFileSync(MD_OUT, 'utf8') : ''
