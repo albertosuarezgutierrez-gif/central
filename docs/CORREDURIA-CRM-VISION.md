@@ -95,12 +95,12 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 | Historial de cambios | ✅ se escribe y se pinta (tarjeta plegada, 50 filas) | `cartera-historial.ts` |
 | Cola de retención (recibos devueltos, art. 15 LCS) | ✅ | `Retencion.tsx`, `cartera-impagados.ts` |
 | Retarificar auto/hogar (Codeoscopic, 0,50 €) | ✅ solo tarifica | `lib/codeoscopic/*` |
-| **Emitir por Codeoscopic** | ❌ vive en el repo legacy, tras un flag nunca encendido, sandbox | `/home/user/asegura/.../mint-poliza-on-emit.ts` |
-| **Conciliación emitida ↔ CIMA** | 🟡 diseño hecho (`docs/superpowers/specs/2026-09-02-emision-conciliacion-cima-design.md`), pendiente de OK; la ficha ya distingue «pendiente de CIMA» y hay guardián de duplicadas | — |
-| Alta automática de leads (web, WhatsApp, agente) | ❌ solo alta manual; tablas `conversaciones`/`mensajes`/`oportunidades` vacías y sin escritor | — |
+| **Emitir por Codeoscopic** | 🟡 OK de Alberto 02/09. Acuñar la póliza emitida (D2) está: `registrarPolizaEmitida` + puerto `POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA`. **El envío al vendor NO está**: su gate (idempotencia del `attempt_id`) no se puede probar sin sandbox, y no lo hay | `asegura/lib/emision.ts` · spec §3 |
+| **Conciliación emitida ↔ CIMA** | 🟡 reglas puras hechas y testeadas (`emparejarConCima` D4, `conciliarConCima` D3) + `companias_dgs` (DGS → nombre exacto de CIMA) + enum `emitida_codeoscopic`. Falta el port de la ingesta CIMA que las use (aparcado); mientras, el legacy casa por nombre y D2 lo hace compatible | `module-seguros/emision.ts` · `seguros.companias_dgs` |
+| Alta automática de leads (web, WhatsApp, agente) | 🟡 **Web ✅** (02/09): landing pública `/seguros` en plataforma → `POST /api/publico/correduria/lead` (rate limit, honeypot, RGPD) → alta con `fuente = web` e historial `contacto`; si el teléfono/email ya está en una ficha NO se duplica: se anota el contacto en esa ficha. Telegram `correduria.lead-nuevo` siempre, con enlace a la ficha. WhatsApp ❌ (sin WABA) · agente ❌ | `plataforma/app/seguros` · `lib/leads-web.ts` · `asegura /cliente/historial` |
 | Estado «con presupuesto» / «ex-cliente» | ✅ derivado (`estadoCliente`, module-seguros) | `estado-cliente.ts` |
-| Portal del cliente leyendo la cartera | ❌ hoy solo bóveda de pólizas que el usuario declara; sin FK a `clientes` | `apps/asegura-portal` |
-| Autorizados en el portal | ❌ regla escrita (`clientesVisiblesPara`), sin grant ni UI | `module-seguros/relaciones.ts` |
+| Portal del cliente leyendo la cartera | ✅ Fase 4 (02/09): al canjear el código, `vincularIdentidad` casa el email por índice ciego (`PII_LOOKUP_KEY`) con UNA ficha → `portal_vinculo`; varias fichas → `ambiguo` (no se adivina). La bóveda enseña las pólizas vivas de CIMA con `camposVisibles(nivel)`. **Sin desplegar**: falta contraseña del rol + `DATABASE_URL` + `PII_LOOKUP_KEY` en el proyecto Vercel del portal (sin confirmar que exista) | `asegura-portal/lib/vinculo.ts` · `lib/cartera-lectura.ts` |
+| Autorizados en el portal | ✅ grant a `prisma_asegura_portal` sobre `cliente_relaciones` y sección «Seguros que te han autorizado a ver» (`clientesVisiblesPara`, nivel `completo` porque la relación es un booleano) | `module-seguros/relaciones.ts` |
 | Apertura/seguimiento de siniestro desde la ficha | ✅ abrir (origen `gestionado_correduria`), seguimiento (tramitador, perito, gravedad, reserva, indemnización, notas fechadas), estado por transiciones, documentos del parte; en uno de CIMA el estado lo fija la compañía. La referencia de la compañía se guarda también en `id_siniestro_entidad` para que el pull de CIMA case en vez de duplicar | `module-seguros/siniestros.ts` · `asegura/lib/cartera-siniestros.ts` · `/api/operador/siniestro` · `plataforma/…/Siniestros.tsx` |
 | «Por qué ha subido la prima» | ✅ `evolucionPrima()`: prima por ANUALIDAD (aniversario a aniversario, recibos `CA`/`NP`; los `SU` aparte) + siniestros del ciclo anterior → `sube_por_siniestros` · `sube_sin_siniestro` (candidata a retarificar; ≤5 % parece tarifa general) · `no_atribuible` (siniestros sin fecha) · `igual` · `baja` · `sin_datos`. Cobertura medida: 29 vivas con dos anualidades, 25 con una, 13 sin recibos → para la mayoría la respuesta honesta es «CIMA no manda la anualidad anterior» | `module-seguros/prima-evolucion.ts` · `cartera-poliza.ts` / `cartera-ficha.ts` (`evolucionPrima`) · plataforma `EvolucionPrima.tsx` |
 
@@ -155,10 +155,13 @@ Lo que pasará sin cambiar nada, en orden de probabilidad:
 ## 7. El portal del cliente (lo que «verá el cliente final»)
 
 Hoy: identidad por código de un solo uso sobre email/consola, y una **bóveda de pólizas declaradas**
-por el propio usuario. **No lee la cartera.** 🚨 Medido el 02/09/2026: **sus tablas `portal_*` NO existen en
-la BD** (la DDL `apps/asegura-portal/prisma/sql/2026-09-01_portal_fase1.sql` no está aplicada; las únicas
-`portal_*` de la base son `public.portal_rates/portal_overrides`, de SIVRA). El portal es hoy código sin
-base: antes de leer la cartera hay que aplicarla. Para que enseñe «sus seguros»:
+por el propio usuario. ✅ **DDL aplicada el 02/09/2026 (tarde, «aplica» de Alberto):** Fase 1 (6 tablas +
+3 enums), `portal_vinculo` (identidad ↔ ficha, nivel, origen) y el rol **`prisma_asegura_portal`**
+(LOGIN, **sin BYPASSRLS**, sin contraseña todavía) con DML sobre `portal_*` y **SELECT por COLUMNAS**
+sobre la cartera: el rol no puede leer DNI, IBAN, teléfono, email, direcciones ni comentarios internos
+ni queriendo (`apps/asegura-portal/prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`). Pendiente
+de Alberto: `ALTER ROLE … PASSWORD` + `DATABASE_URL` del proyecto Vercel del portal en el mismo paso, y
+`PII_LOOKUP_KEY` (idéntica a la de `central-asegura`) en ese proyecto. Para que enseñe «sus seguros»:
 
 1. Enlazar `portal_identidad` ↔ `clientes` por el índice ciego del email/teléfono (misma HMAC,
    `PII_LOOKUP_KEY`), y cuando el DNI se verifique, por el hash del DNI.
@@ -192,13 +195,18 @@ tiene vetadas hasta decidirlo (nada sale sin su OK; emisión en sandbox).
 
 ## 9. Orden de trabajo (por dependencia, no por apetencia)
 
-1. **Emisión en central + conciliación CIMA (§5).** Sin esto, el primer cliente vendido duplica su
-   póliza. Diseño primero (spec en `docs/superpowers/specs/`), OK de Alberto, luego código.
-2. **Historial visible en la ficha** (ya se escribe): plegado, montaje perezoso, 50 filas.
-3. **Estado derivado «con presupuesto» / «ex-cliente»** en la ficha y en el buscador.
-4. **Leads por canal**: primero el formulario web de la correduría (existe la landing de plataforma),
-   después agente/WhatsApp cuando haya WABA. Todos por `POST /api/operador/cliente`.
-5. **Portal lee la cartera + autorizados (§7).**
+1. 🟡 **Emisión en central + conciliación CIMA (§5).** OK de Alberto el 02/09 («haz todo ok»). Hecho:
+   enum `emitida_codeoscopic`, `companias_dgs`, reglas puras D2/D3/D4 y `registrarPolizaEmitida` tras
+   `CODEOSCOPIC_EMISION_ACTIVA`. **NO hecho a propósito: el envío al vendor**, porque su gate (mismo
+   `attempt_id` dos veces) exige un sandbox que no existe; pedirlo a Codeoscopic es el paso siguiente.
+   El port de la ingesta CIMA sigue aparcado. Detalle en la spec, §3.
+2. ✅ **Historial visible en la ficha** — hecho 02/09.
+3. ✅ **Estado derivado «con presupuesto» / «ex-cliente»** — hecho 02/09.
+4. 🟡 **Leads por canal** — ✅ web hecho 02/09 (`/seguros` en plataforma; **la landing NO existía**, la
+   frase «existe la landing de plataforma» era falsa y se construyó desde cero). Agente/WhatsApp cuando
+   haya WABA. Todos por `POST /api/operador/cliente` con `fuente` del canal.
+5. ✅ **Portal lee la cartera + autorizados (§7)** — código hecho 02/09; despliegue pendiente de Alberto
+   (contraseña del rol, `DATABASE_URL`, `PII_LOOKUP_KEY`, proyecto Vercel).
 6. ✅ **Siniestros desde la ficha** (apertura, seguimiento, documentos del parte) — hecho 02/09/2026.
    Lo que NO hace: comunicar el siniestro a la compañía (no hay canal; hoy se llama o se usa su portal).
    Medido antes de construirlo: los 67 siniestros son de CIMA; su `tipo` es un **código EIAC** («1107»)

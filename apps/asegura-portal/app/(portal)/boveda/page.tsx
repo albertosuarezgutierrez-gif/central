@@ -2,66 +2,210 @@ import { redirect } from 'next/navigation'
 
 import { etiquetaProcedencia } from '@central/module-seguros-portal'
 
+import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
+import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
 
 import { SubirPoliza } from './SubirPoliza'
 
 export const dynamic = 'force-dynamic'
 
+const RAMO: Record<string, string> = {
+  auto: 'Auto',
+  moto: 'Moto',
+  hogar: 'Hogar',
+  vida: 'Vida',
+  salud: 'Salud',
+  decesos: 'Decesos',
+  responsabilidad_civil: 'Responsabilidad civil',
+  comercio: 'Comercio',
+  comunidades: 'Comunidades',
+  otros: 'Otros',
+}
+
+const ESTADO: Record<string, string> = {
+  activa: 'En vigor',
+  en_vigor: 'En vigor',
+  en_renovacion: 'En renovación',
+  recibo_devuelto: 'Recibo devuelto',
+  cambio_clave: 'En vigor',
+  vencida: 'Vencida',
+  cancelada: 'Cancelada',
+  fin_riesgo: 'Fin de riesgo',
+  anula_al_vencimiento: 'Se anula al vencimiento',
+  competencia: 'En otra correduría',
+}
+
 export default async function Boveda() {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
-  // El filtro por `identidadId` NO es opcional: la sesión es lo único que
-  // decide de quién es esta bóveda.
-  const polizas = await prisma.portalPolizaDeclarada.findMany({
-    where: { identidadId: identidad.id },
-    orderBy: { creadaEn: 'desc' },
-    take: 50,
-  })
+  // Las dos lecturas parten de la misma sesión: la cartera por `portal_vinculo`
+  // de esta identidad, y la bóveda de declaradas por `identidadId`. Ninguna
+  // acepta un id que venga de fuera.
+  const [cartera, declaradas] = await Promise.all([
+    carteraDeIdentidad(identidad.id),
+    prisma.portalPolizaDeclarada.findMany({
+      where: { identidadId: identidad.id },
+      orderBy: { creadaEn: 'desc' },
+      take: 50,
+    }),
+  ])
+
+  const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
+  const correduria = cartera.correduria ?? 'Grupo Asegura'
 
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mis seguros</h1>
 
-      {polizas.length === 0 ? (
-        // «Todavía no has añadido ninguna» — no «no tienes seguros»: de la
-        // cartera de la correduría aquí todavía no se lee nada.
-        <p style={{ color: '#4b5563' }}>Todavía no has añadido ninguna póliza.</p>
-      ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {polizas.map((p) => (
-            <li
-              key={p.id}
-              style={{
-                border: '1px solid var(--borde)',
-                borderRadius: 8,
-                padding: 12,
-                marginBottom: 8,
-              }}
-            >
-              <strong>{p.compania ?? 'Compañía sin identificar'}</strong>
-              {p.ramo && <span> · {p.ramo}</span>}
-              <div style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>
-                {p.fechaVencimiento
-                  ? `Vence el ${p.fechaVencimiento.toLocaleDateString('es-ES')}`
-                  : 'No sabemos cuándo vence'}
-                {' · '}
-                {/* `Decimal` de Prisma: se convierte a número ANTES de formatear.
-                    `null` sale como «—», jamás como «0,00€». */}
-                {p.primaAnual == null ? 'Prima —' : `Prima ${eur(Number(p.primaAnual))}`}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                {etiquetaProcedencia(p.procedencia)}
-              </div>
-            </li>
+      <section className="seccion" aria-labelledby="cartera-titulo">
+        <h2 id="cartera-titulo">Tus seguros en {correduria}</h2>
+        {!cartera.vinculada ? (
+          // Sin vínculo ≠ sin pólizas: no hay ficha con este email. No se
+          // inventan teléfonos ni emails de la correduría: solo `nombre` es legible.
+          <p className="suave" style={{ margin: 0 }}>
+            No hemos encontrado ninguna póliza a nombre de este email. Si eres cliente con otro email,
+            escríbenos por tu canal habitual con {correduria} y lo vinculamos.
+          </p>
+        ) : propiasVacia ? (
+          <p className="suave" style={{ margin: 0 }}>
+            Tu ficha está en {correduria}, pero no tiene pólizas vivas ahora mismo.
+          </p>
+        ) : (
+          cartera.propias.map((t) => <Titular key={t.clienteId} titular={t} propia />)
+        )}
+      </section>
+
+      {cartera.autorizadas.length > 0 && (
+        <section className="seccion" aria-labelledby="autorizadas-titulo">
+          <h2 id="autorizadas-titulo">Seguros que te han autorizado a ver</h2>
+          {cartera.autorizadas.map((t) => (
+            <Titular key={t.clienteId} titular={t} propia={false} />
           ))}
-        </ul>
+        </section>
       )}
+
+      <section className="seccion" aria-labelledby="boveda-titulo">
+        <h2 id="boveda-titulo">Pólizas que has añadido tú</h2>
+        {declaradas.length === 0 ? (
+          // «Todavía no has añadido ninguna» — no «no tienes seguros»: los de
+          // la correduría van arriba, esto es lo que aporta la persona.
+          <p className="suave" style={{ margin: 0 }}>Todavía no has añadido ninguna póliza.</p>
+        ) : (
+          <ul className="cartera">
+            {declaradas.map((p) => (
+              <li key={p.id} className="cartera-card">
+                <h3>
+                  {p.compania ?? 'Compañía sin identificar'}
+                  {p.ramo && <span className="tenue"> · {p.ramo}</span>}
+                </h3>
+                <div className="linea">
+                  {p.fechaVencimiento ? `Vence el ${fechaEs(p.fechaVencimiento)}` : 'No sabemos cuándo vence'}
+                  {' · '}
+                  {/* `Decimal` de Prisma: se convierte a número ANTES de formatear.
+                      `null` sale como «—», jamás como «0,00€». */}
+                  {p.primaAnual == null ? 'Prima —' : `Prima ${eur(Number(p.primaAnual))}`}
+                </div>
+                <div className="nivel" style={{ marginTop: 4 }}>
+                  {etiquetaProcedencia(p.procedencia)}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <SubirPoliza />
     </main>
+  )
+}
+
+function Titular({ titular, propia }: { titular: TitularPortal; propia: boolean }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {!propia && (
+        <p className="suave" style={{ margin: '0 0 6px', fontSize: 14 }}>
+          Titular: <strong>{titular.nombre}</strong>
+        </p>
+      )}
+      {titular.polizas.length === 0 ? (
+        <p className="tenue" style={{ margin: 0, fontSize: 14 }}>
+          {propia ? `${titular.nombre}: sin pólizas vivas.` : 'Sin pólizas vivas.'}
+        </p>
+      ) : (
+        <ul className="cartera">
+          {titular.polizas.map((p) => (
+            <Card key={p.id} p={p} />
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function Card({ p }: { p: PolizaPortal }) {
+  const vence = fechaEs(p.fechaVencimiento)
+  return (
+    <li className="cartera-card">
+      <h3>
+        {p.compania} <span className="tenue">· {RAMO[p.ramo] ?? p.ramo}</span>
+      </h3>
+      <div className="linea">
+        {p.numeroPoliza === null ? 'Nº de póliza no visible en tu nivel' : `Póliza ${p.numeroPoliza}`}
+        {' · '}
+        {vence ? `Vence el ${vence}` : 'Sin fecha de vencimiento informada'}
+      </div>
+      <div className="linea">
+        {/* `prima: null` = el nivel no la enseña; `anual: null` = la compañía no la ha informado. Nunca 0. */}
+        {p.prima === null
+          ? 'Prima no visible en tu nivel'
+          : p.prima.anual === null
+            ? 'Prima anual —'
+            : `Prima anual ${eur(p.prima.anual)}${p.prima.fraccionamiento ? ` (${p.prima.fraccionamiento})` : ''}`}
+      </div>
+      <Recibos p={p} />
+      {p.coberturas !== null && p.coberturas.total > 0 && (
+        <div className="linea">
+          {p.coberturas.lista.join(' · ')}
+          {p.coberturas.total > p.coberturas.lista.length && ` y ${p.coberturas.total - p.coberturas.lista.length} más`}
+        </div>
+      )}
+      <div className="chips">
+        <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>{ESTADO[p.estado] ?? p.estado}</span>
+        {p.vigencia === 'pendiente' && <span className="chip aviso">vigencia sin confirmar: falta el vencimiento</span>}
+        {!p.confirmadaCima && <span className="chip aviso">pendiente de confirmación por la compañía</span>}
+        {p.siniestrosAbiertos.map((s) => (
+          <span key={s.id} className="chip aviso">
+            siniestro {s.estado === 'en_tramitacion' ? 'en tramitación' : 'abierto'}
+            {s.referencia ? ` ${s.referencia}` : ''}
+            {s.tramitadorTelefono ? ` · tramitador ${s.tramitadorTelefono}` : ''}
+          </span>
+        ))}
+      </div>
+    </li>
+  )
+}
+
+function Recibos({ p }: { p: PolizaPortal }) {
+  if (p.recibos === null) return <div className="nivel">Recibos no visibles en tu nivel</div>
+  const r = p.recibos
+  // `total: 0` es «la compañía no ha mandado recibos», NO «al corriente».
+  if (r.total === 0) return <div className="nivel">Sin recibos informados por la compañía</div>
+  return (
+    <div className="linea">
+      {r.devueltos > 0 && <span style={{ color: 'var(--peligro)' }}>{r.devueltos} recibo(s) devuelto(s) · </span>}
+      {r.proximoAlCobro
+        ? `Próximo recibo ${r.proximoAlCobro.importe === null ? '—' : eur(r.proximoAlCobro.importe)}${
+            r.proximoAlCobro.fechaVencimiento ? ` el ${fechaEs(r.proximoAlCobro.fechaVencimiento)}` : ''
+          }`
+        : 'Ningún recibo al cobro'}
+      {r.ultimoCobrado &&
+        ` · Último cobrado ${r.ultimoCobrado.importe === null ? '—' : eur(r.ultimoCobrado.importe)}${
+          r.ultimoCobrado.fechaEmision ? ` (${fechaEs(r.ultimoCobrado.fechaEmision)})` : ''
+        }`}
+    </div>
   )
 }

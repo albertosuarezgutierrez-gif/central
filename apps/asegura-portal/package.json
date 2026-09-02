@@ -13,6 +13,8 @@
     "@central/core-ai": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-identity": "workspace:*",
+    "@central/module-seguros": "workspace:*",
+    "@central/module-seguros-pii": "workspace:*",
     "@central/module-seguros-portal": "workspace:*",
     "@prisma/client": "^5.22.0",
     "jose": "^5.9.3",

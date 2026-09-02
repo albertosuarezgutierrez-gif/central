@@ -65,14 +65,36 @@ match → insert, como hoy. Ambigüedad → `review`, como hoy.
 además Telegram tras cada pull si aparece un grupo `emitidaYCima`.
 
 ## 3. Plan por PRs (cada uno con test y sin encender nada facturable)
-1. **Migración**: valor `emitida_codeoscopic` en `poliza_origen`; tabla `companias_dgs` (código ↔
-   nombre CIMA ↔ id Codeoscopic) sembrada desde las vivas. PR pequeño, reversible.
-2. **`lib/emision.ts` en asegura** (puro + BD): `prepararPolizaEmitida(proyecto, catálogo)` devuelve
-   la fila a insertar según D2; tests con los 5 códigos vivos (C0058, C0109, C0072, C0468, C0613).
-3. **Flujo Codeoscopic Submit** en central, tras `CODEOSCOPIC_EMISION_ACTIVA` (apagado), con la prueba
-   de idempotencia del sandbox como gate documentado.
-4. **Ingesta CIMA propia** (port de `cima-pull` a central) con D3/D4 y `poliza_merge_log`. Es el PR
-   grande; hasta entonces el legacy sigue casando por nombre y D2 lo hace compatible.
+
+> **OK de Alberto el 02/09/2026 («haz todo ok»). Estado tras esa tarde:**
+
+1. ✅ **Migración** (aplicada en la BD el 02/09/2026): valor `emitida_codeoscopic` en `poliza_origen`
+   (`seguros_enums_fuente_web_y_origen_emitida`; ⚠️ un valor de enum NO es reversible en Postgres,
+   la tabla sí) y tabla **`companias_dgs`** sembrada con 15 códigos: 3 con `nombre_cima` medido en
+   la cartera (Mapfre/Allianz/Occident), 2 adheridas a CIMA sin vivas (Generali, Reale) y 10
+   verificados contra el catálogo del vendor por el legacy. **No hay «id Codeoscopic»**: el catálogo
+   `/car/insurance-companies` del vendor ya devuelve el código DGS, así que la única traducción que
+   hace falta es DGS → nombre CIMA. SQL en `apps/asegura/prisma/sql/2026-09-02_seguros_companias_dgs.sql`.
+2. ✅ **Reglas puras en `@central/module-seguros` (`emision.ts`, 5 tests)**: `prepararPolizaEmitida`
+   (D2, con avisos cuando no hay nombre CIMA, la compañía no está en CIMA o el vendor no dio número),
+   `emparejarConCima` (D4) y `conciliarConCima` (D3). **BD en `apps/asegura/lib/emision.ts`**:
+   `registrarPolizaEmitida` acuña la fila + enlaza `codeoscopic_projects.poliza_id` + historial en
+   una transacción; exige DNI en la ficha del tomador (sin él CIMA resolvería otro cliente).
+   Puerto `POST /api/operador/poliza/emitida`, **cerrado tras `CODEOSCOPIC_EMISION_ACTIVA=true`**
+   (503 `emision_desactivada`): sin envío real, acuñar una «emitida» sería inventar una póliza.
+3. ⏸️ **Flujo Codeoscopic Submit** (`POST /insurances/{id}/policy-applications`, multipart) — **NO
+   construido, a propósito**. El gate que esta spec fija (mandar el mismo `attempt_id` dos veces y
+   ver si deduplican) **no se puede correr**: `apps/asegura/CLAUDE.md` mide que «no hay sandbox
+   utilizable» y las credenciales son de producción. Código de envío que no se puede probar contra
+   el vendor es código que se estrena en producción con dinero y con un contrato del cliente.
+   Cuando Codeoscopic dé entorno de pruebas (juan.fernandez@codeoscopic.com): transporte multipart
+   nuevo (`peticion()` solo hace JSON), candado `submit_in_flight_at`, y ampliar la excepción del
+   guardián `test/regression-asegura-gasto-codeoscopic.test.ts` (hoy tumba cualquier `metodo: 'POST'`
+   fuera de `cotizar.ts`). Al recibir el `emision_ok`, llamar a `registrarPolizaEmitida`.
+4. ⏸️ **Ingesta CIMA propia** (port de `cima-pull`) con D3/D4 y `poliza_merge_log`: las reglas puras
+   ya están (`emparejarConCima`, `conciliarConCima`); falta el port del pull, que sigue APARCADO
+   (`docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). Hasta entonces el legacy casa por nombre y D2 lo
+   hace compatible.
 
 ## 4. Lo que NO se hace
 - No se toca el legacy (`/home/user/asegura`) salvo emergencia: es el motor que trae CIMA hoy.

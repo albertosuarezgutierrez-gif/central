@@ -1,4 +1,10 @@
-:root { --fondo: #ffffff; --texto: #111827; --borde: #e5e7eb; --brand: #0f766e; }
+:root {
+  --fondo: #ffffff; --texto: #111827; --borde: #e5e7eb; --brand: #0f766e;
+  --texto-suave: #4b5563; --texto-tenue: #6b7280; --peligro: #b91c1c;
+  --aviso-fondo: #fffbeb; --aviso-texto: #92400e; --aviso-borde: #fcd34d;
+  --chip-fondo: #f3f4f6; --chip-texto: #374151;
+  --ok-fondo: #ecfdf5; --ok-texto: #065f46;
+}
 * { box-sizing: border-box; }
 body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--fondo); color: var(--texto); }
 
@@ -6,7 +12,7 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
    dos columnas deja el valor en un canal de ~120 px); en cuanto hay sitio pasa
    a etiqueta + valor. */
 .datos-leidos { display: grid; grid-template-columns: 1fr; gap: 2px 12px; font-size: 14px; margin: 0; }
-.datos-leidos dt { color: #6b7280; font-size: 12px; }
+.datos-leidos dt { color: var(--texto-tenue); font-size: 12px; }
 .datos-leidos dd { margin: 0 0 8px; }
 @media (min-width: 420px) {
   .datos-leidos { grid-template-columns: minmax(8rem, 38%) 1fr; gap: 6px 12px; }
@@ -23,3 +29,19 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
 }
 .boton-subir input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .boton-subir[aria-disabled='true'] { opacity: 0.6; cursor: progress; }
+
+/* Cards de la cartera (Fase 4). Una columna siempre: a 320 px no cabe otra cosa. */
+.cartera { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.cartera-card { border: 1px solid var(--borde); border-radius: 8px; padding: 12px; min-width: 0; }
+.cartera-card h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.cartera-card .linea { font-size: 13px; color: var(--texto-suave); margin-top: 4px; overflow-wrap: anywhere; }
+.cartera-card .nivel { font-size: 12px; color: var(--texto-tenue); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { display: inline-block; font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--chip-fondo); color: var(--chip-texto); }
+.chip.aviso { background: var(--aviso-fondo); color: var(--aviso-texto); }
+.chip.ok { background: var(--ok-fondo); color: var(--ok-texto); }
+.aviso-linea { background: var(--aviso-fondo); color: var(--aviso-texto); border: 1px solid var(--aviso-borde); border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-top: 12px; }
+.suave { color: var(--texto-suave); }
+.tenue { color: var(--texto-tenue); }
+.seccion { margin-bottom: 24px; }
+.seccion h2 { font-size: 1.1rem; margin: 0 0 8px; }
