@@ -466,3 +466,44 @@ export type Coincidencia = { id: string; nombre: string; por: 'dni' | 'telefono'
 export function coincidenciaBloquea(cs: readonly Coincidencia[]): boolean {
   return cs.some((c) => c.por === 'dni')
 }
+
+/**
+ * Cómo se llaman los campos de identidad según sea persona física o jurídica.
+ *
+ * 🚨 Alberto, 02/09/2026, mirando GLOBAL 2 INSTALACIONES TÉCNICAS: «¿DNI una
+ * empresa?». El dato es el mismo campo (`clientes.dni`) y la ficha ya sabe que
+ * es `tipo_persona = juridica`, pero el formulario le pedía DNI, apellidos y
+ * fecha de NACIMIENTO a una sociedad. Un rótulo que no encaja con lo que se
+ * mira hace dudar del dato, aunque el dato esté bien.
+ *
+ * `null` (la inmensa mayoría de la cartera: 32.520 fichas del volcado sin
+ * clasificar) NO es «física»: se queda con el rótulo neutro de siempre.
+ */
+export type EtiquetasIdentidad = {
+  documento: string
+  nombre: string
+  apellidos: string
+  fecha: string
+  /** Para el aviso «hace falta el X en la ficha» y el botón «Pedir X». */
+  pedir: string
+}
+
+export function etiquetasIdentidad(tipoPersona: TipoPersona | null | undefined): EtiquetasIdentidad {
+  if (tipoPersona === 'juridica') {
+    return {
+      documento: 'CIF',
+      nombre: 'Razón social',
+      apellidos: 'Razón social (continuación)',
+      // Mismo campo que la fecha de nacimiento de una persona.
+      fecha: 'Fecha de constitución',
+      pedir: 'CIF',
+    }
+  }
+  return {
+    documento: 'DNI / NIE / CIF',
+    nombre: 'Nombre',
+    apellidos: 'Apellidos',
+    fecha: 'Fecha de nacimiento',
+    pedir: 'DNI',
+  }
+}

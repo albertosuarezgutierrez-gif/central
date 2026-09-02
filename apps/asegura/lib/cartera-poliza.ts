@@ -283,6 +283,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     db.polizaInterviniente
       .findMany({
         where: { correduriaId, polizaId: p.id },
+        // Determinista a propósito: ver la nota de `cartera-ficha`.
+        orderBy: [{ rol: 'asc' }, { id: 'asc' }],
         select: {
           polizaId: true, rol: true, clienteId: true, origen: true, nombre: true, apellidos: true, telefono: true, email: true,
           cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
