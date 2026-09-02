@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T11:41:53Z",
+  "generadoEn": "2026-09-02T12:11:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -375,7 +375,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "usado",
@@ -5380,6 +5380,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Es un cambio de ASPECTO, no solo de código:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Sin migrar a propósito:",
+      "fecha": ""
+    },
+    {
       "titulo": "La reimplementación era real, no un falso positivo:",
       "fecha": ""
     },
@@ -5429,14 +5437,6 @@
     },
     {
       "titulo": "#2013",
-      "fecha": ""
-    },
-    {
-      "titulo": "#2018",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente:",
       "fecha": ""
     }
   ],
