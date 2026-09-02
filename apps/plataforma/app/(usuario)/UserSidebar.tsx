@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   Banknote, BedDouble, Bell, Bot, Briefcase, Building2, Calculator, CalendarDays,
   ChartColumn, ChartLine, ChartPie, ChevronDown, ClipboardList, Coins, Cog, Cpu,
@@ -17,12 +17,30 @@ import ThemeToggle from './ThemeToggle'
 // de Alberto y de otra en el escritorio. Se guarda el COMPONENTE del icono (no un string) y
 // se pinta con `color: 'currentColor'` para que herede el color del enlace (activo/inactivo).
 
-const NAV_NEGOCIO = [
+/** Una entrada del menú. `tab` solo lo llevan los segmentos de /banca, que comparten ruta. */
+type NavItem = { href: string; icon: LucideIcon; label: string; tab?: string }
+
+const NAV_NEGOCIO: NavItem[] = [
   // 🏠 Inicio = Resumen + Banca FUSIONADOS (Fase 2). Una sola entrada: /banca con control
   // 💶 Dinero (saldos+movimientos+IA) | 🏢 Negocios (holding, antiguo Resumen). Absorbe también la
   // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
   // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
   { href: '/banca', icon: House, label: 'Inicio' },
+  // Los CINCO segmentos de /banca (Dinero · Ingresos · Negocios · Fiscal · Personal) vivían solo en
+  // la fila de pestañas de la propia página: desde el menú eran invisibles. Alberto fue a buscar
+  // «Ingresos» al menú —que es donde uno lo busca— y no estaba (02/09/2026). Se sacan aquí como
+  // sub-entradas de Inicio, igual que «Pisos · detalle» tiene las suyas.
+  //
+  // `tab` es la marca de cuál está activo: `usePathname()` devuelve `/banca` para todos, así que
+  // sin esto se pintarían todos a la vez.
+  //
+  // El segmento «Dinero» NO tiene entrada propia a posta: es el que responde a /banca sin query,
+  // o sea exactamente lo que ya hace «Inicio». Ponerlo sería una segunda entrada a la misma URL —
+  // la duplicidad que este mismo panel lleva todo el día quitándose de encima.
+  { href: '/banca?tab=ingresos', icon: Banknote, label: 'Ingresos', tab: 'ingresos' },
+  { href: '/banca?tab=negocios', icon: Building2, label: 'Negocios', tab: 'negocios' },
+  { href: '/banca?tab=fiscal', icon: Receipt, label: 'Fiscal', tab: 'fiscal' },
+  { href: '/banca?tab=personal', icon: House, label: 'Personal', tab: 'personal' },
   // Bandeja del agente de facturas. Es el destino del aviso de Telegram, que hasta el 29/08/2026
   // enlazaba a una página inexistente; sin esta entrada, lo acumulado solo se ve al llegar una
   // factura nueva (el aviso cuenta las de ESA pasada, no la bandeja entera).
@@ -62,7 +80,7 @@ const NAV_OPORTUNIDADES = [
 // 🚨 Se pinta en el hueco de «Mi negocio» aunque `/empresas` viva ahora en Oportunidades: esa
 // sección NO se renderiza para estas cuentas, así que su única entrada tiene que estar donde sí
 // se pinta. Por eso `seccionDeRuta` no puede decidir sola aquí — ver `seccionActiva()`.
-const NAV_SOLO_EMPRESAS = [{ href: '/empresas', icon: Building2, label: 'Empresas' }]
+const NAV_SOLO_EMPRESAS: NavItem[] = [{ href: '/empresas', icon: Building2, label: 'Empresas' }]
 
 const NAV_PISOS = [
   // 🏨 Apartamentos vivía en «Mi negocio» y se quedó sin entrada al fusionar Resumen+Banca
@@ -160,6 +178,7 @@ function seccionActiva(path: string, soloEmpresas: boolean): ClaveSeccion | null
 // atributo lo pone el script anti-parpadeo del layout antes de que hidrate nada.
 export default function UserSidebar({ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }) {
   const path = usePathname()
+  const tabActual = useSearchParams().get('tab')
   const router = useRouter()
   const soloEmpresas = rol === 'empresas'
   const [isMobile, setIsMobile] = useState(false)
@@ -274,17 +293,22 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
         <CabeceraSeccion clave="negocio" titulo="Mi negocio" primera />
         <div id="nav-grupo-negocio" className="nav-grupo" data-colapsado={abiertas.negocio ? undefined : '1'}>
-          {(soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO).map(({ href, icon, label }) => {
-            const active = path === href || path.startsWith(href + '/')
+          {(soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO).map(({ href, icon, label, tab }) => {
+            // Las sub-entradas de /banca comparten `path`, así que el activo lo decide el ?tab=.
+            // `tab: ''` es el segmento por defecto (Dinero), que responde a /banca sin query.
+            const esSegmento = tab !== undefined
+            const active = esSegmento
+              ? path === '/banca' && (tabActual || '') === tab
+              : path === href || path.startsWith(href + '/')
             return (
-              <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
+              <Link key={href + label} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '9px 12px',
+                padding: esSegmento ? '7px 12px 7px 26px' : '9px 12px',
                 borderRadius: '10px', marginBottom: '2px',
                 fontWeight: active ? 600 : 400,
                 background: active ? 'var(--primary-light)' : 'transparent',
                 color: active ? 'var(--primary)' : 'var(--text)',
-                fontSize: '14px', textDecoration: 'none',
+                fontSize: esSegmento ? '13px' : '14px', textDecoration: 'none',
               }}>
                 <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
               </Link>

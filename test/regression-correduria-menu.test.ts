@@ -13,7 +13,10 @@ const SIDEBAR = join(import.meta.dirname, '..', 'apps/plataforma/app/(usuario)/U
 
 test('el menú «Mi negocio» enlaza a /correduria', () => {
   const fuente = readFileSync(SIDEBAR, 'utf8')
-  const navNegocio = fuente.match(/const NAV_NEGOCIO = \[([\s\S]*?)\n\]/)
+  // Tolerante a la anotación de tipo (`const NAV_NEGOCIO: NavItem[] = [`), que se añadió el
+  // 02/09/2026 al sacar los segmentos de /banca al menú. El regex literal daba un falso rojo:
+  // la Correduría seguía en el menú, solo había cambiado la línea de la declaración.
+  const navNegocio = fuente.match(/const NAV_NEGOCIO[^=]*= \[([\s\S]*?)\n\]/)
   assert.ok(navNegocio, 'no se encontró NAV_NEGOCIO en UserSidebar.tsx')
   assert.match(navNegocio![1], /href: ['"]\/correduria['"]/,
     'la Correduría no está en NAV_NEGOCIO: la sección queda sin acceso desde el menú')
