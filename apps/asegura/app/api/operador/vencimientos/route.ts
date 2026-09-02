@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { DIAS_HORIZONTE_RENOVACION } from '@central/module-seguros'
 import { operadorAutorizado } from '@/lib/operador'
+import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica, vencimientosProximos } from '@/lib/cartera'
 
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error' })
     return NextResponse.json({ estado: 'ok', dias, polizas: await vencimientosProximos(correduria.id, dias) })
-  } catch {
-    return NextResponse.json({ estado: 'error' })
+  } catch (e) {
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/vencimientos', e) })
   }
 }

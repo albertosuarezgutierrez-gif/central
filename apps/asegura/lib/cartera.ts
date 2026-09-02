@@ -11,6 +11,7 @@ import {
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { registrarErrorCartera, type CausaErrorCartera } from './error-cartera'
 
 /**
  * Lecturas de la Fase 1 sobre la cartera real. Reglas que no se negocian:
@@ -23,6 +24,8 @@ import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 export type ResumenCartera = {
   estado: 'sin_configurar' | 'error' | 'ok'
+  /** Solo con `estado: 'error'`: por qué no se pudo leer (cada causa se arregla en un sitio). */
+  causa?: CausaErrorCartera
   clientes?: number
   leads?: number
   polizasVigentes?: number
@@ -137,9 +140,10 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
       vence30,
       vence60,
     }
-  } catch {
-    // Un fallo de red/credencial NO se pinta como cartera vacía (regla global).
-    return { estado: 'error' }
+  } catch (e) {
+    // Un fallo de red/credencial NO se pinta como cartera vacía (regla global),
+    // y su causa se registra y viaja: sin esto la pantalla solo sabía decir «no pudo leer».
+    return { estado: 'error', causa: registrarErrorCartera('resumenCartera', e) }
   }
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { tipoDocumento } from '@central/module-seguros'
 import { operadorAutorizado } from '@/lib/operador'
+import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { guardarDocumento, listarDocumentos, pedirDocumento } from '@/lib/cartera-documentos'
@@ -37,8 +38,8 @@ export async function GET(req: Request) {
     const documentos = await listarDocumentos(correduria.id, destino)
     if (documentos === null) return NextResponse.json({ estado: 'error', motivo: 'no se pudo leer la tabla' })
     return NextResponse.json({ estado: 'ok', documentos })
-  } catch {
-    return NextResponse.json({ estado: 'error' })
+  } catch (e) {
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/documentos', e) })
   }
 }
 
