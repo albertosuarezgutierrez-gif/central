@@ -21,6 +21,11 @@
 // - Un alta desde aquí es un `lead`: «cliente» lo pone CIMA cuando entra una
 //   póliza. La búsqueda previa por DNI/teléfono/email es lo que evita el
 //   duplicado que luego hay que fusionar a mano.
+// - `clientes.fuente` dice por dónde entró la ficha (`web`, `portal`,
+//   `whatsapp` son los canales de lead; el resto, lo que teclea Alberto). Sin
+//   fuente se deja NULL: «no se sabe», nunca «otros». Un alta que llega por un
+//   CANAL deja historial tipo `contacto` (§6 de la visión del CRM); una
+//   tecleada, `nota`.
 
 import {
   coincidenciaBloquea,
@@ -30,13 +35,17 @@ import {
   normalizarContacto,
   revisarAlta,
   revisarEdicion,
+  textoHistorialAlta,
   textoHistorialEdicion,
   tipoDocumento,
+  tipoHistorial,
+  tipoHistorialAlta,
   type AltaCliente,
   type Coincidencia,
   type ContactoCliente,
   type EdicionCliente,
   type TipoContacto,
+  type TipoHistorial,
 } from '@central/module-seguros'
 import {
   computeDniLookupHash,
@@ -530,6 +539,7 @@ export async function altaCliente(
           ciudad: a.ciudad,
           provincia: a.provincia,
           notas: a.notas,
+          fuente: a.fuente,
         },
         select: { id: true },
       })
@@ -543,10 +553,11 @@ export async function altaCliente(
           data: { clienteId: creado.id, correduriaId, email: mail.cifrado, emailLookupHash: mail.hash, etiqueta: 'personal', esPrincipal: true },
         })
       }
+      const tipoHist: TipoHistorial = tipoHistorialAlta(a.fuente)
       await tx.$executeRaw`
         insert into historial_interno (correduria_id, cliente_id, tipo, texto)
-        values (${correduriaId}::uuid, ${creado.id}::uuid, cast('nota' as tipo_historial_interno),
-                ${`Alta manual desde plataforma por ${actor}${telEnOtra || mailEnOtra ? ' (comparte teléfono/email con otra ficha, a sabiendas)' : ''}`})`
+        values (${correduriaId}::uuid, ${creado.id}::uuid, cast(${tipoHist} as tipo_historial_interno),
+                ${textoHistorialAlta(a, { actor, compartido: telEnOtra || mailEnOtra })})`
       return creado.id
     })
     return { ok: true, id }
@@ -566,12 +577,46 @@ export async function altaCliente(
  * Best-effort a propósito: el cambio ya está hecho, y un historial caído no
  * puede deshacerlo ni presentarlo como fallido.
  */
-async function anotarHistorial(correduriaId: string, clienteId: string, tipo: 'nota' | 'gestion' | 'contacto', texto: string): Promise<void> {
+async function anotarHistorial(correduriaId: string, clienteId: string, tipo: TipoHistorial, texto: string): Promise<void> {
   try {
     await prismaAsegura().$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${tipo} as tipo_historial_interno), ${texto})`
   } catch (e) {
     console.error('[cartera-edicion] historial_interno no se pudo anotar:', e instanceof Error ? e.message : e)
+  }
+}
+
+
+export type ResultadoHistorial = { ok: true } | Fallo
+
+/**
+ * Anotar una fila de historial COMO OPERACIÓN (puerto `POST /api/operador/cliente/historial`):
+ * un contacto que llega por un canal —formulario web sobre una ficha que ya
+ * existía, p. ej.— y cuyo único rastro es esta fila. Por eso aquí NO es
+ * best-effort como `anotarHistorial`: si no se escribe, se dice (500), porque
+ * el llamante tiene que saber que ese contacto no ha quedado en ningún sitio.
+ * El cliente se comprueba de la correduría antes (404 si no).
+ */
+export async function anotarHistorialCliente(
+  correduriaId: string,
+  clienteId: string,
+  tipo: unknown,
+  texto: unknown,
+): Promise<ResultadoHistorial> {
+  const t = tipoHistorial(tipo)
+  if (!t) return invalido('Tipo de historial no válido: nota, gestion o contacto.', 'tipo')
+  const txt = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : ''
+  if (txt === '') return invalido('Falta el texto.', 'texto')
+  if (txt.length > 2000) return invalido('El texto es demasiado largo (máx. 2000).', 'texto')
+  if (clienteId.trim() === '') return invalido('Falta el cliente.', 'clienteId')
+  try {
+    if (!(await clienteDe(correduriaId, clienteId))) return noEncontrado()
+    await prismaAsegura().$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${t} as tipo_historial_interno), ${txt})`
+    return { ok: true }
+  } catch (e) {
+    return fallo(e)
   }
 }

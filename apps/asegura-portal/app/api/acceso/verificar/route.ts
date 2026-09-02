@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { estadoCodigo } from '@central/module-seguros-portal'
 import { prisma } from '@/lib/db'
 import { COOKIE_NAME, COOKIE_OPTS, crearSesion, hashCanal } from '@/lib/auth'
+import { vincularIdentidad } from '@/lib/vinculo'
 
 const Entrada = z.object({
   tipo: z.enum(['whatsapp', 'email']),
@@ -54,8 +55,14 @@ export async function POST(req: Request) {
     prisma.portalIdentidad.update({ where: { id: identidadId }, data: { ultimoAccesoEn: new Date() } }),
   ])
 
+  // Fase 4: ¿esta identidad es una ficha de la cartera? Es el ÚNICO momento en
+  // que se tiene el email en claro (el portal solo guarda su hash con pimienta
+  // propia). El resultado NO bloquea el login: se devuelve para que la pantalla
+  // pueda decirlo («hay varias fichas», «no se ha podido comprobar»).
+  const vinculo = await vincularIdentidad(identidadId, destino, tipo)
+
   const token = await crearSesion(identidadId)
-  const res = NextResponse.json({ ok: true })
+  const res = NextResponse.json({ ok: true, vinculo: vinculo.estado })
   res.cookies.set(COOKIE_NAME, token, COOKIE_OPTS)
   return res
 }

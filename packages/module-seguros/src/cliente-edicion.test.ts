@@ -15,6 +15,13 @@ import {
   revisarAlta,
   revisarEdicion,
   textoHistorialEdicion,
+  FUENTES_ORIGEN,
+  FUENTES_CANAL,
+  esFuenteCanal,
+  fuenteOrigen,
+  tipoHistorial,
+  tipoHistorialAlta,
+  textoHistorialAlta,
 } from './cliente-edicion.ts'
 import type { DocumentoResumen } from './documentos.ts'
 
@@ -132,4 +139,40 @@ test('alta: nombre + algo por lo que encontrarla; provincia sale del CP; DNI rep
   if (!mal.ok) assert.equal(mal.campo, 'dni')
   assert.equal(coincidenciaBloquea([{ id: '1', nombre: 'x', por: 'telefono', tipo: 'lead' }]), false)
   assert.equal(coincidenciaBloquea([{ id: '1', nombre: 'x', por: 'dni', tipo: 'cliente' }]), true)
+})
+
+test('fuente del alta: vacía = null (no se inventa «otros»), desconocida se rechaza, canal = contacto', () => {
+  assert.deepEqual(fuenteOrigen(undefined), { ok: true, valor: null })
+  assert.deepEqual(fuenteOrigen('  '), { ok: true, valor: null })
+  assert.deepEqual(fuenteOrigen(' WEB '), { ok: true, valor: 'web' })
+  assert.equal(fuenteOrigen('facebook').ok, false)
+  assert.equal(fuenteOrigen(3).ok, false)
+  for (const f of FUENTES_CANAL) assert.ok(FUENTES_ORIGEN.includes(f), `${f} no está en FUENTES_ORIGEN`)
+  assert.equal(esFuenteCanal('web'), true)
+  assert.equal(esFuenteCanal('recomendacion'), false)
+  assert.equal(esFuenteCanal(null), false)
+
+  const sinFuente = revisarAlta({ nombre: 'Ana', telefono: '600123456' })
+  assert.equal(sinFuente.ok && sinFuente.alta.fuente, null)
+  const web = revisarAlta({ nombre: 'Ana', telefono: '600123456', fuente: 'web' })
+  assert.equal(web.ok && web.alta.fuente, 'web')
+  const mala = revisarAlta({ nombre: 'Ana', telefono: '600123456', fuente: 'tiktok' })
+  assert.equal(mala.ok, false)
+  if (!mala.ok) assert.equal(mala.campo, 'fuente')
+
+  assert.equal(tipoHistorialAlta('web'), 'contacto')
+  assert.equal(tipoHistorialAlta('portal'), 'contacto')
+  assert.equal(tipoHistorialAlta('recomendacion'), 'nota')
+  assert.equal(tipoHistorialAlta(null), 'nota')
+  assert.equal(tipoHistorial('contacto'), 'contacto')
+  assert.equal(tipoHistorial('borrado'), null)
+})
+
+test('el historial del alta dice por dónde entró el lead, sin datos de identidad', () => {
+  const web = textoHistorialAlta({ fuente: 'web', notas: 'Quiere: auto. Tiene un Golf.' }, { actor: 'web' })
+  assert.equal(web, 'Lead recibido por formulario web: Quiere: auto. Tiene un Golf.')
+  const manual = textoHistorialAlta({ fuente: null, notas: 'lo que sea' }, { actor: 'alberto@x.es', compartido: true })
+  assert.equal(manual, 'Alta manual desde plataforma por alberto@x.es (comparte teléfono/email con otra ficha, a sabiendas)')
+  const reco = textoHistorialAlta({ fuente: 'recomendacion', notas: null }, { actor: 'alberto@x.es' })
+  assert.equal(reco, 'Alta manual desde plataforma por alberto@x.es (fuente: recomendación)')
 })

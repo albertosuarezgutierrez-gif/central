@@ -292,6 +292,47 @@ export function textoHistorialEdicion(
 
 // ─── Alta ────────────────────────────────────────────────────────────────────
 
+/**
+ * De dónde sale una ficha (`clientes.fuente`, enum `fuente_origen` de la BD).
+ * Los seis primeros son los del CRM de Manuel (nadie los escribía); los tres
+ * últimos son los CANALES de lead (02/09/2026): formulario web, portal del
+ * cliente y WhatsApp. Mismo orden y mismos literales que el enum de Prisma.
+ */
+export const FUENTES_ORIGEN = [
+  'venta_directa', 'tarifas_blancas', 'ahorro_seguro', 'recomendacion', 'renovacion', 'otros',
+  'web', 'portal', 'whatsapp',
+] as const
+export type FuenteOrigen = (typeof FUENTES_ORIGEN)[number]
+
+/** Los canales por los que ENTRA un lead sin que nadie lo teclee (§6 de la visión del CRM). */
+export const FUENTES_CANAL: readonly FuenteOrigen[] = ['web', 'portal', 'whatsapp']
+
+export function esFuenteCanal(f: FuenteOrigen | null | undefined): boolean {
+  return f != null && FUENTES_CANAL.includes(f)
+}
+
+/** Texto → fuente válida. Vacío/ausente → `null` (no se sabe); desconocida → rechazo con motivo. */
+export function fuenteOrigen(v: unknown): Revisado<FuenteOrigen | null> {
+  if (v === null || v === undefined) return { ok: true, valor: null }
+  if (typeof v !== 'string') return { ok: false, motivo: 'Fuente no válida.' }
+  const s = v.trim().toLowerCase()
+  if (s === '') return { ok: true, valor: null }
+  if ((FUENTES_ORIGEN as readonly string[]).includes(s)) return { ok: true, valor: s as FuenteOrigen }
+  return { ok: false, motivo: `Fuente desconocida: «${s}».` }
+}
+
+export const ETIQUETA_FUENTE: Record<FuenteOrigen, string> = {
+  venta_directa: 'venta directa',
+  tarifas_blancas: 'tarifas blancas',
+  ahorro_seguro: 'ahorro seguro',
+  recomendacion: 'recomendación',
+  renovacion: 'renovación',
+  otros: 'otros',
+  web: 'formulario web',
+  portal: 'portal del cliente',
+  whatsapp: 'WhatsApp',
+}
+
 export type AltaCliente = {
   nombre: string
   apellidos: string
@@ -305,6 +346,37 @@ export type AltaCliente = {
   ciudad: string | null
   provincia: string | null
   notas: string | null
+  /** `null` = no se ha dicho (alta manual antigua); NUNCA se inventa «otros». */
+  fuente: FuenteOrigen | null
+}
+
+export type TipoHistorial = 'nota' | 'gestion' | 'contacto'
+export const TIPOS_HISTORIAL: readonly TipoHistorial[] = ['nota', 'gestion', 'contacto']
+
+export function tipoHistorial(v: unknown): TipoHistorial | null {
+  return typeof v === 'string' && (TIPOS_HISTORIAL as readonly string[]).includes(v) ? (v as TipoHistorial) : null
+}
+
+/**
+ * Qué fila deja un alta en `historial_interno`. Un lead que entra por un CANAL
+ * (web, portal, WhatsApp) es un CONTACTO del cliente con la correduría —§6:
+ * «cada contacto deja historial tipo contacto»—; un alta tecleada es una nota.
+ */
+export function tipoHistorialAlta(fuente: FuenteOrigen | null): TipoHistorial {
+  return esFuenteCanal(fuente) ? 'contacto' : 'nota'
+}
+
+export function textoHistorialAlta(
+  a: Pick<AltaCliente, 'fuente' | 'notas'>,
+  ctx: { actor: string; compartido?: boolean },
+): string {
+  const coletilla = ctx.compartido ? ' (comparte teléfono/email con otra ficha, a sabiendas)' : ''
+  if (esFuenteCanal(a.fuente)) {
+    const via = ETIQUETA_FUENTE[a.fuente as FuenteOrigen]
+    return `Lead recibido por ${via}${a.notas ? `: ${a.notas}` : ''}${coletilla}`
+  }
+  const origen = a.fuente ? ` (fuente: ${ETIQUETA_FUENTE[a.fuente]})` : ''
+  return `Alta manual desde plataforma por ${ctx.actor}${origen}${coletilla}`
 }
 
 export type AltaRevisada = { ok: true; alta: AltaCliente } | { ok: false; motivo: string; campo?: string }
@@ -358,6 +430,8 @@ export function revisarAlta(e: Record<string, unknown>): AltaRevisada {
     if (!r.ok) return { ok: false, motivo: r.motivo, campo: 'codigoPostal' }
     codigoPostal = r.valor
   }
+  const fuente = fuenteOrigen(e.fuente)
+  if (!fuente.ok) return { ok: false, motivo: fuente.motivo, campo: 'fuente' }
   const libre = (k: string): string | null =>
     typeof e[k] === 'string' && (e[k] as string).trim() !== '' ? (e[k] as string).replace(/\s+/g, ' ').trim() : null
   const provincia = libre('provincia') ?? provinciaPorCp(codigoPostal)
@@ -376,6 +450,7 @@ export function revisarAlta(e: Record<string, unknown>): AltaRevisada {
       ciudad: libre('ciudad'),
       provincia,
       notas: libre('notas'),
+      fuente: fuente.valor,
     },
   }
 }

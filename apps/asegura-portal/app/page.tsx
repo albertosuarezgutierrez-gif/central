@@ -6,6 +6,7 @@ export default function Entrada() {
   const [codigo, setCodigo] = useState('')
   const [fase, setFase] = useState<'pedir' | 'verificar'>('pedir')
   const [error, setError] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
 
   async function pedir() {
     setError(null)
@@ -25,14 +26,24 @@ export default function Entrada() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ tipo: 'email', destino, codigo }),
     })
-    if (r.ok) window.location.href = '/boveda'
-    else setError((await r.json()).error ?? 'error')
+    const cuerpo = (await r.json().catch(() => ({}))) as { error?: string; vinculo?: string }
+    if (!r.ok) return setError(cuerpo.error ?? 'error')
+    // El vínculo con la cartera no bloquea la entrada, pero si no se ha podido
+    // resolver se dice antes de irse: un «no tienes pólizas» sin esta línea
+    // sería una afirmación sobre algo que no se ha mirado.
+    const texto = textoVinculo(cuerpo.vinculo)
+    if (texto) {
+      setAviso(texto)
+      setTimeout(() => (window.location.href = '/boveda'), 2500)
+    } else {
+      window.location.href = '/boveda'
+    }
   }
 
   return (
     <main style={{ maxWidth: 420, margin: '0 auto', padding: '3rem 1rem' }}>
       <h1 style={{ fontSize: '1.5rem' }}>Mis seguros</h1>
-      <p style={{ color: '#4b5563' }}>Todos tus seguros en un sitio. Gratis, seas cliente o no.</p>
+      <p className="suave">Todos tus seguros en un sitio. Gratis, seas cliente o no.</p>
 
       {fase === 'pedir' ? (
         <>
@@ -62,7 +73,8 @@ export default function Entrada() {
         </>
       )}
 
-      {error && <p style={{ color: '#b91c1c', marginTop: 12 }}>{textoError(error)}</p>}
+      {error && <p style={{ color: 'var(--peligro)', marginTop: 12 }}>{textoError(error)}</p>}
+      {aviso && <p className="aviso-linea" role="status">{aviso}</p>}
     </main>
   )
 }
@@ -78,4 +90,17 @@ function textoError(codigo: string): string {
     sin_codigo: 'Pide un código primero.',
   }
   return mapa[codigo] ?? 'Ha ocurrido un error.'
+}
+
+/** Solo los estados del vínculo que la persona tiene que saber; el resto no dice nada. */
+function textoVinculo(estado: string | undefined): string | null {
+  switch (estado) {
+    case 'ambiguo':
+      return 'Hay varias fichas con este email: el corredor las revisará antes de enseñarte tus pólizas.'
+    case 'sin_clave':
+    case 'error':
+      return 'No se ha podido comprobar la cartera ahora. Entras igual; lo reintentamos la próxima vez.'
+    default:
+      return null
+  }
 }

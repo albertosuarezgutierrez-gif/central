@@ -215,6 +215,12 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/module-seguros':
+        specifier: workspace:*
+        version: link:../../packages/module-seguros
+      '@central/module-seguros-pii':
+        specifier: workspace:*
+        version: link:../../packages/module-seguros-pii
       '@central/module-seguros-portal':
         specifier: workspace:*
         version: link:../../packages/module-seguros-portal

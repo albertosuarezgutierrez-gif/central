@@ -586,6 +586,25 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   25 con una, 13 sin recibos → `sin_datos` es lo normal y se dice como tal. (5) Un siniestro explica la subida
   solo si cae en el ciclo ANTERIOR a la renovación (caso real: siniestro del 08/02/2026 tras la renovación del
   17/01 no explica el +2,3 % de 2026); uno sin fecha → `no_atribuible`, nunca «sin siniestro».
+- **🧾 EMISIÓN por Codeoscopic — lo que hay y lo que NO (02/09/2026, «haz todo ok» de Alberto).** En la BD:
+  enum `poliza_origen` con **`emitida_codeoscopic`** (⚠️ un valor de enum no se puede quitar), tabla
+  **`seguros.companias_dgs`** (15 códigos; `nombre_cima` = texto EXACTO que CIMA escribe en
+  `polizas.aseguradora`, medido solo para Mapfre/Allianz/Occident; NULL en el resto, no se inventa) y
+  modelo `CompaniaDgs`. Reglas puras en module-seguros (`emision.ts`): `prepararPolizaEmitida` (D2),
+  `emparejarConCima` (D4), `conciliarConCima` (D3). `lib/emision.ts` → `registrarPolizaEmitida` acuña la
+  fila + `codeoscopic_projects.poliza_id` + historial en UNA transacción y exige DNI en la ficha del tomador.
+  Puerto **`POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA=true`** (503
+  `emision_desactivada`). 🚫 **El envío al vendor (`POST /insurances/{id}/policy-applications`, multipart)
+  NO está construido a propósito**: el gate de la spec (mismo `attempt_id` dos veces contra un sandbox) no se
+  puede correr porque no hay sandbox; escribirlo a ciegas es estrenarlo en producción con dinero y con el
+  contrato de un cliente. Cuando exista entorno de pruebas: transporte multipart nuevo, candado
+  `submit_in_flight_at`, y ampliar la excepción del guardián de gasto (hoy tumba cualquier `metodo: 'POST'`
+  fuera de `cotizar.ts`).
+- **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
+  **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
+  DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
+  `apps/asegura-portal/prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`. La contraseña y la
+  `DATABASE_URL` del proyecto Vercel del portal se ponen en el MISMO paso (lección de `prisma_seguros`).
 
 ### 🔎 Qué se puede buscar de verdad, y qué NO (medido 01/09/2026)
 

@@ -50,7 +50,13 @@ const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/ap
   // que el motor de reservas de Smoobu ya le enseña a cualquiera que entre en él. No sale ni un
   // huésped, ni un importe, ni un id de reserva. Un slug fuera de la lista da 400, así que
   // tampoco sirve de índice de las propiedades del grupo.
-  '/api/publico']
+  // Desde el 02/09/2026 el prefijo cubre también `/api/publico/correduria/lead` (formulario de
+  // la correduría): POST sin sesión, con honeypot + rate limit por IP en el handler; solo crea
+  // un lead por el puerto de asegura y avisa a Alberto. No lee nada de la cartera.
+  '/api/publico',
+  // Landing pública de Grupo Asegura (correduría): la ÚNICA pantalla pública de la correduría.
+  // Server component sin sesión ni sidebar (vive fuera de `(usuario)`); no toca la BD.
+  '/seguros']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

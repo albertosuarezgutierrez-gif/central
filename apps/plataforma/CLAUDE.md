@@ -1528,6 +1528,17 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ciclo, variación). TRES cosas distintas en pantalla: `null` (asegura vieja no lo manda) ≠ `sin_datos` (se
   miró: CIMA no da la anualidad anterior) ≠ `igual`. «Sube sin siniestro» por encima del 5 % enlaza a
   retarificar. Lectores puros en `lib/poliza-asegura.ts` / `lib/ficha-asegura.ts`.
+- **🧲 Canal de leads web (02/09/2026, noche).** `app/seguros/page.tsx` es la **landing pública de Grupo
+  Asegura** (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Fuera de
+  `(usuario)`, en `PUBLIC` del middleware. Su formulario postea a `POST /api/publico/correduria/lead`
+  (sin sesión): rate limit 6/h por IP (`lib/rate-limit.ts`, en memoria, best-effort), honeypot `web` que
+  responde 200 sin hacer nada, consentimiento RGPD obligatorio. Con datos válidos SIEMPRE pasan dos cosas:
+  alta por el puerto de asegura con `fuente: 'web'` / `actor: 'web'` (historial tipo `contacto`) y Telegram
+  `correduria.lead-nuevo` (catálogo) con enlace a la ficha. **Nunca fuerza un duplicado**: si el teléfono/
+  email ya está en una ficha (409 forzable), anota el contacto en ESA ficha (`historialClienteAsegura` →
+  `POST /api/operador/cliente/historial`). Tres estados internos (nueva · existente · no registrado); al
+  usuario `{ok:true}` en los dos primeros y 502 en el tercero — y en el tercero el Telegram lleva los datos
+  del formulario porque es el único rastro. Reglas puras y tests en `lib/leads-web.ts`.
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no
