@@ -2,6 +2,8 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
+import { CreditCard } from 'lucide-react'
+import { PageHeader, BtnLink } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 
 const DESTINO_LABEL: Record<string, string> = {
@@ -176,14 +178,15 @@ export default function TarjetaCreditoClient({
   return (
     <div style={{ padding: '24px', maxWidth: '860px', margin: '0 auto' }}>
 
-      <div className="tarj-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>💳 Tarjeta de crédito</h1>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <PageHeader
+        titulo="Tarjeta de crédito"
+        icono={<CreditCard size={20} strokeWidth={1.75} />}
+        acciones={<>
           <button onClick={() => navMes(prevMes(mes))} style={navBtn}>◀</button>
           <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '160px', textAlign: 'center' }}>{mesLabel(mes)}</span>
           <button onClick={() => navMes(nextMes(mes))} style={navBtn}>▶</button>
-        </div>
-      </div>
+        </>}
+      />
 
       {!hasTarjetas && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '32px', textAlign: 'center' }}>
@@ -193,9 +196,7 @@ export default function TarjetaCreditoClient({
             Descarga el extracto mensual desde Kutxabank (banca online → Tarjetas → Exportar Excel)<br />
             y súbelo en <strong>Banca → Importar extracto → Tarjeta de crédito</strong>.
           </p>
-          <Link href="/banca" style={{ background: 'var(--primary)', color: '#fff', borderRadius: '8px', padding: '10px 20px', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}>
-            Ir a Banca → Importar
-          </Link>
+          <BtnLink href="/banca" variante="primario">Ir a Banca → Importar</BtnLink>
         </div>
       )}
 

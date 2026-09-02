@@ -91,7 +91,9 @@ acabaran con un bloque `<style>{`…`}</style>` incrustado (201 `!important` ent
 
 ### Lo que ya había (sigue vigente)
 Primitivas Tremor-look compartidas y **server-safe** (sin hooks): `cardStyle`, `CardHeader`, `Stat`
-(con `DeltaBadge` ▲/▼), `ThinBar`, `BarListRow`, `LegendDot`, `EMERALD`/`ROSE`. Patrón a copiar
+(con `DeltaBadge` ▲/▼), `ThinBar`, `EMERALD`/`ROSE`. ⚠️ **`BarListRow` y `LegendDot` YA NO EXISTEN**:
+se borraron el 02/09/2026 (PR #2045) tras medir que tenían 0 y 1 sitios reales en toda la app — si
+las ves citadas en algún sitio, esa cita es vieja. Patrón a copiar
 al tocar cualquier otra página de plataforma. Va con una pasada transversal de identidad visual:
 **Inter** vía `next/font` (`var(--font-inter)`), **tokens semánticos** (`--positive/--negative/--warning/--info`
 + variantes `-bg`, cero hex inline), **modo oscuro SOLO A MANO** (ver 🚨 justo debajo). Recharts adaptado por CSS
@@ -142,14 +144,44 @@ oscuro. Sobrevivió al barrido de ~734 hex precisamente porque su justificación
 Convertidas a `var(--positive)`/`var(--negative)` y exención retirada; la dona sí sigue en paleta
 CATEGÓRICA (ahí el motivo se sostiene: teñir una categoría de rojo diría que ese gasto está mal).
 
-⏸️ **PENDIENTE DE DECISIÓN DE ALBERTO — no lo resuelvas por tu cuenta:**
-1. **`PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot` siguen a CERO consumidores.** NO se
-   enchufaron a la fuerza: hacerlo sería repetir el defecto que este lote arregla. En `/banca` el hueco de
-   `PageHeader` ya lo ocupan las migas + el saldo con su botón 👁, y forzarlo empeoraría la pantalla.
-   O se usan donde encajen de verdad, o se borran.
-2. **`banca/page.tsx:221` pinta «último mov. ninguno» sobre un `ultimoMov` NULL** (`lib/psd2-estado.ts`):
-   un «no se ha podido leer» servido como afirmación, contra la regla del NULL. Sin tocar porque cambia un
-   texto que Alberto lee a diario.
+✅ **Las dos pendientes de arriba se CERRARON el 02/09/2026 (PRs #2042 y #2045).** Se dejan escritas
+porque la forma de cerrarlas es el método a repetir, no porque queden abiertas:
+
+**1. Las 5 primitivas a cero consumidores → se MIDIÓ dónde encajaba cada una antes de decidir.** La
+pregunta «¿la uso o la borro?» no se contesta a ojo: se contesta contando sitios reales en toda la app.
+
+| primitiva | sitios | qué se hizo |
+|---|---|---|
+| `PageHeader` | **53** (10 repetían ADEMÁS su propia media query) | adoptada; los 10 en #2045, quedan 43 |
+| `BtnLink` | 11 (4 pares copiados byte a byte) | adoptada; 4 en #2045 |
+| `ThinBar` | 11, pero solo 3 con el alto 6px que tenía cableado | adoptada tras pasar `alto` y `track` a props |
+| `BarListRow` | **0 — ese patrón no existe en la app** | **borrada** |
+| `LegendDot` | **1**, y las 4 gráficas de recharts usan su `<Legend>` | **borrada** |
+
+Dos lecciones: **cablear un valor es lo que deja una primitiva sin adoptar** (`ThinBar` fallaba en 8 de
+11 sitios solo por el alto), y **una primitiva con un consumidor no es sistema de diseño, es un
+componente local**. Adoptar los 10 borró **15 reglas `!important`** de `globals.css`.
+
+🚨 **Y una que parecía muerta y NO lo estaba: `.seo-header`.** Sus dos reglas de `≤480px` ponen los
+botones a ancho completo, y `.page-header` NO hace eso (solo estira el contenedor de acciones, y a
+768px). La cabecera de `/sivra/seo` es ya un `<PageHeader>` **envuelto** en ese div, que sobrevive solo
+como ancestro de esos selectores. Antes de borrar una clase «redundante», compara regla por regla:
+`flex-direction: column` sí lo cubre `.page-header`; `button { width: 100% }` no.
+
+**2. El «último mov. ninguno» sobre un NULL → arreglado en #2042**, con el helper puro
+`lineaCuentasFeed()` y sus tests. Lo que MÁS importa de ese PR es el método: **se miró el dato real
+antes de afirmar la gravedad**. Resultó ser una violación **latente**, no activa (0 filas psd2 sin
+fecha en las 2.123 de la tabla) — o sea, la urgencia que se le había atribuido en esta misma ficha era
+falsa. Mide antes de vender un incendio. El mismo agujero se anotó en la skill `psd2-health-check`,
+donde el fallo sería peor: `MAX(fecha_operacion)` ignora los NULL y declararía **roto** un feed que
+está entregando.
+
+⏸️ **LO QUE SIGUE PENDIENTE DE DECISIÓN DE ALBERTO — no lo resuelvas por tu cuenta:**
+- **43 cabeceras más** por migrar a `PageHeader` (+7 `BtnLink`, +9 `ThinBar`). Es mecánico y va por
+  tandas de agentes con lista explícita de ficheros; no se hizo de golpe a propósito.
+- **Cuál de los dos hubs financieros sobrevive** (`/finanzas` vs `/banca`), cuáles de las 6 pantallas de
+  dinero de pisos caben como pestañas y si sobran 3 de las 4 de pricing. El código ya está compartido:
+  lo que queda son URLs, y elegir cuál desaparece cambia la rutina diaria de Alberto.
 
 ⚠️ **Ninguna de estas pantallas se ha visto renderizada** (las apps llevan `--sin-previews` y la sesión no
 tiene navegador): alineaciones y espaciados están razonados sobre el código, no medidos.
