@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T14:20:43Z",
+  "generadoEn": "2026-09-02T15:23:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1951,7 +1951,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 17
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1975,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 19
       },
       "rrhh": {
         "estado": "no",
@@ -2001,7 +2001,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-portal": {
         "estado": "no",
@@ -3592,6 +3592,8 @@
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/operador/buscar",
       "/api/operador/cliente",
+      "/api/operador/cliente/contactos",
+      "/api/operador/cliente/relaciones",
       "/api/operador/clientes",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/sonda",
@@ -4412,6 +4414,8 @@
       "/api/correduria/cartera",
       "/api/correduria/catastro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente/contactos",
+      "/api/correduria/cliente/relaciones",
       "/api/correduria/clientes",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
@@ -5237,6 +5241,11 @@
       "description": "Agente PROGRAMADO mensual (día 5) que vigila los conectores MCP — cruza el registro contra docs/HUECOS-ABIERTOS.md, hace de canario sobre los conectores de los que dependen las rutinas vivas, y audita la higiene de los ya conectados. Estado en docs/VIGIA-CONECTORES.md; Telegram + PR draft. Úsala si Alberto pide \"revisa si hay conectores nuevos que encajen\" o al disparo mensual. Sin secretos."
     },
     {
+      "id": "correduria-crm",
+      "name": "correduria-crm",
+      "description": ">"
+    },
+    {
       "id": "correo-triaje",
       "name": "correo-triaje",
       "description": "Router de contexto del agente de TRIAJE DE CORREO — cron de Vercel en apps/plataforma cada ~10 min (NO sesión Claude) que lee Gmail por IMAP, clasifica y actúa (etiquetas, archivado, aviso Telegram). Úsala si Alberto pide \"revisa/ajusta el triaje de correo\", añadir categoría/remitente, o cuando /auditoria-diaria reconcilie la tabla de rutas. Sin secretos."
@@ -5810,8 +5819,8 @@
     "verticales": 12,
     "packages": 40,
     "capacidades": 23,
-    "skills": 38,
-    "apis": 1234,
+    "skills": 39,
+    "apis": 1238,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
