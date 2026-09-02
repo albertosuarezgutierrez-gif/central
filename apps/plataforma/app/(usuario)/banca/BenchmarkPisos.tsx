@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { ThinBar } from '@/components/ui'
 
 // 📈 Benchmark entre pisos: compara la rentabilidad de los pisos turísticos del mes sobre el P&L que
 // ya calcula la página (getPLMensual). Todo se pinta en cliente con los datos que llegan por props
@@ -91,9 +92,7 @@ export default function BenchmarkPisos({ pisos, mes, periodoLabel }: {
                     {' '}<strong style={{ color: 'var(--text)' }}>{Number.isFinite(p.margen) ? p.margen.toFixed(0) : '0'}%</strong>
                   </span>
                 </div>
-                <div style={{ height: '8px', background: 'var(--primary-light)', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: `${ancho}%`, height: '100%', background: color, borderRadius: '4px', transition: 'width .2s' }} />
-                </div>
+                <ThinBar pct={ancho} color={color} alto={8} track="var(--primary-light)" />
               </div>
             )
           })}

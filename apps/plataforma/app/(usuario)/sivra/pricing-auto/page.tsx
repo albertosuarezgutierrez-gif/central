@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, type CSSProperties } from "react"
+import { PageHeader } from "@/components/ui"
 
 // Panel del PROPIETARIO — Pricing Auto
 // Alberto ve sus 4 pisos y configura A MANO todos los parámetros del motor de
@@ -232,13 +233,13 @@ export default function PricingAutoPage() {
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1100, margin: "0 auto" }}>
-      <div style={{ marginBottom: 14 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: C.ink, margin: 0 }}>Pricing Auto · Panel del propietario</h1>
-        <p style={{ fontSize: 13, color: C.soft, margin: "6px 0 0" }}>
+      <PageHeader
+        titulo="Pricing Auto · Panel del propietario"
+        sub={<>
           Configura a mano cómo se posiciona cada piso. El motor recomienda anclado al mercado real y,
           sólo si activas <b>Aplicar</b>, escribe el precio base en Smoobu. Tus topes de precio mandan siempre.
-        </p>
-      </div>
+        </>}
+      />
 
       {/* Barra superior: resultados + pausa + push */}
       <div className="pricingauto-top-bar" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>

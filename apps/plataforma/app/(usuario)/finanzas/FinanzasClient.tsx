@@ -3,7 +3,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import type { ResumenFinanciero, MovResumen } from '@/lib/finanzas'
 import CategoriasTab from './CategoriasTab'
+import { Banknote } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 // Gastos y Fiscal viven en sus páginas propias (/finanzas/gastos y /finanzas/fiscal,
 // PR #646/#686); aquí solo queda lo que no existe en otro sitio. Los links viejos
@@ -218,8 +220,10 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
 
       {/* ── Controles ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, flex: 1 }}>💶 Finanzas personales</h1>
+      <PageHeader
+        titulo="Finanzas personales"
+        icono={<Banknote size={20} strokeWidth={1.75} />}
+        acciones={<>
         <select
           value={year}
           onChange={e => navigate(parseInt(e.target.value), quarter)}
@@ -243,7 +247,8 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
           ))}
         </div>
         {isPending && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Cargando…</span>}
-      </div>
+        </>}
+      />
 
       {!d ? (
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Sin datos para este periodo.</div>

@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { normalizarConfigAcceso, type ConfigAcceso } from '@/lib/domotica/tipo'
+import { PageHeader } from '@/components/ui'
 
 type DP = { code: string; value: unknown }
 type LogRow = { accion: string; reserva_ref: string | null; detalle: Record<string, unknown> | null; created_at: string }
@@ -68,15 +69,11 @@ export default function DomoticaClient() {
 
   return (
     <div style={{ padding: '16px 24px', maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>Domótica</h1>
-          <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, marginBottom: 0 }}>
-            Ventiladores y dispositivos Tuya de los pisos
-          </p>
-        </div>
-        <button onClick={descubrir} disabled={ocupado} style={btn}>🔍 Buscar dispositivos</button>
-      </div>
+      <PageHeader
+        titulo="Domótica"
+        sub="Ventiladores y dispositivos Tuya de los pisos"
+        acciones={<button onClick={descubrir} disabled={ocupado} style={btn}>🔍 Buscar dispositivos</button>}
+      />
 
       {error && (
         <div style={{

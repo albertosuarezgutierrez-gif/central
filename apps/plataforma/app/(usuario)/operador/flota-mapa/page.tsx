@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation'
+import { Satellite } from 'lucide-react'
+import { PageHeader } from '@/components/ui'
 import { getAdmin } from '@/lib/superadmin'
 import { listFlotaHolding } from '@/lib/flota-holding'
 import MapaHolding from './MapaHolding'
@@ -18,12 +20,11 @@ export default async function FlotaMapaPage() {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
-      <div style={{ marginBottom: '16px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '2px' }}>🛰️ Flota del holding</h1>
-        <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
-          Posición en vivo de los vehículos de todas las sociedades del grupo
-        </div>
-      </div>
+      <PageHeader
+        titulo="Flota del holding"
+        sub="Posición en vivo de los vehículos de todas las sociedades del grupo"
+        icono={<Satellite size={20} strokeWidth={1.75} />}
+      />
       <MapaHolding posicionesIniciales={posiciones} />
     </main>
   )

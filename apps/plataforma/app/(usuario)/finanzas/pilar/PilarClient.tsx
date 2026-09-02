@@ -3,6 +3,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useTransition } from 'react'
 import type { ResumenPilar, ClientePilar, TrimPilar } from '@/lib/finanzas'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
+import { CircleUser } from 'lucide-react'
 
 type Props = {
   initialData: ResumenPilar | null
@@ -93,29 +95,34 @@ export default function PilarClient({ initialData, year, quarter }: Props) {
   return (
     <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px 16px' }}>
       {/* Controles */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div style={{ marginBottom: '10px' }}>
         <a href="/finanzas" style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>← Finanzas</a>
-        <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, flex: 1 }}>🟣 Actividad de Pilar</h1>
-        <select
-          value={year}
-          onChange={e => navigate(parseInt(e.target.value), quarter)}
-          style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '13px' }}
-        >
-          {(d?.yearsDisponibles ?? [year]).map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          {(['Año', 'Q1', 'Q2', 'Q3', 'Q4'] as const).map((label, i) => (
-            <button key={i} onClick={() => navigate(year, i)} style={{
-              padding: '5px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-              border: '1px solid var(--border)',
-              background: quarter === i ? '#9f7aea' : 'var(--surface)',
-              color: quarter === i ? '#fff' : 'var(--text)',
-              fontWeight: quarter === i ? 700 : 400,
-            }}>{label}</button>
-          ))}
-        </div>
-        {isPending && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Cargando…</span>}
       </div>
+      <PageHeader
+        titulo="Actividad de Pilar"
+        icono={<CircleUser size={20} strokeWidth={1.75} />}
+        acciones={<>
+          <select
+            value={year}
+            onChange={e => navigate(parseInt(e.target.value), quarter)}
+            style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '13px' }}
+          >
+            {(d?.yearsDisponibles ?? [year]).map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {(['Año', 'Q1', 'Q2', 'Q3', 'Q4'] as const).map((label, i) => (
+              <button key={i} onClick={() => navigate(year, i)} style={{
+                padding: '5px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+                border: '1px solid var(--border)',
+                background: quarter === i ? '#9f7aea' : 'var(--surface)',
+                color: quarter === i ? '#fff' : 'var(--text)',
+                fontWeight: quarter === i ? 700 : 400,
+              }}>{label}</button>
+            ))}
+          </div>
+          {isPending && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Cargando…</span>}
+        </>}
+      />
 
       {!d || !d.tieneExtracto ? (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '40px', textAlign: 'center' }}>
