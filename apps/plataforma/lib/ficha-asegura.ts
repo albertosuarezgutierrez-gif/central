@@ -2,6 +2,7 @@ import type { DocumentoResumen, EstadoClienteDerivado, Retarificabilidad } from 
 import { leerDocumentos } from './documentos-asegura.ts'
 import { leerContactos, leerIdentidad, type ContactosCliente, type IdentidadFicha } from './cliente-edicion-asegura.ts'
 import { leerRelaciones, type RelacionCartera } from './relaciones-asegura.ts'
+import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 // La ficha de un cliente de la correduría, leída por el puerto de central-asegura.
 //
 // ─── Por qué esto vive en plataforma y no en asegura ────────────────────────
@@ -87,18 +88,13 @@ export type PolizaFicha = {
   pago: PagoFicha | null
 }
 
-export type SiniestroFicha = {
-  id: string
-  polizaId: string
-  estado: string
-  tipo: string | null
-  referencia: string | null
-  fecha: string | null
-  reserva: number | null
-  indemnizacion: number | null
-  tramitador: string | null
-  abierto: boolean
-}
+/**
+ * Un siniestro de la ficha. La forma la fija `siniestros-asegura.ts`
+ * (`leerSiniestro`, con los defaults conservadores para una asegura vieja);
+ * aquí se re-exporta con el nombre de siempre para quien ya lo importaba.
+ */
+export type SiniestroFicha = SiniestroCartera
+export type { SiniestroCartera }
 
 export type ContactoFicha = {
   telefono: string | null
@@ -141,7 +137,11 @@ export type Ficha = {
    */
   piiClave: string | null
   polizas: PolizaFicha[]
-  siniestros: SiniestroFicha[]
+  /**
+   * `null` = asegura no manda la lista o no llega con forma de lista: NO es
+   * «sin siniestros» (eso es `[]`). Una fila rara se salta, no tumba la ficha.
+   */
+  siniestros: SiniestroCartera[] | null
   /**
    * `null` = asegura no informa intervinientes (versión desplegada más vieja, o
    * su consulta falló). Entonces «sin teléfono» solo significa «el tomador no
@@ -372,6 +372,12 @@ export function leerHistorial(v: unknown): AnotacionHistorial[] | null {
   return out
 }
 
+/** «2026-06-03» (o un ISO con hora) → «03/06/2026». Una fecha ilegible se deja tal cual. */
+export function fechaEs(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return d && m && y && /^\d{4}$/.test(y) ? `${d}/${m}/${y}` : iso
+}
+
 /** «2026-09-02T14:30:00Z» → «02/09/2026 16:30» (hora de Madrid). Una fecha ilegible se deja tal cual. */
 export function fechaHoraEs(iso: string): string {
   const d = new Date(iso)
@@ -405,7 +411,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
   if (typeof f.id !== 'string' || typeof f.nombre !== 'string') {
     return { estado: 'error', motivo: 'respuesta_ilegible' }
   }
-  if (!Array.isArray(f.polizas) || !Array.isArray(f.siniestros)) {
+  if (!Array.isArray(f.polizas)) {
     return { estado: 'error', motivo: 'respuesta_ilegible' }
   }
 
@@ -438,24 +444,9 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
     })
   }
 
-  const siniestros: SiniestroFicha[] = []
-  for (const fila of f.siniestros) {
-    if (typeof fila !== 'object' || fila === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
-    const s = fila as Record<string, unknown>
-    if (typeof s.id !== 'string') return { estado: 'error', motivo: 'respuesta_ilegible' }
-    siniestros.push({
-      id: s.id,
-      polizaId: cadena(s.polizaId) ?? '',
-      estado: cadena(s.estado) ?? 'sin_informar',
-      tipo: cadena(s.tipo),
-      referencia: cadena(s.referencia),
-      fecha: cadena(s.fecha),
-      reserva: numero(s.reserva),
-      indemnizacion: numero(s.indemnizacion),
-      tramitador: cadena(s.tramitador),
-      abierto: s.abierto === true,
-    })
-  }
+  // Los siniestros no invalidan la ficha: una fila rara se salta y una lista
+  // que no es lista queda en `null` («no se pudo leer»), que la pantalla dice.
+  const siniestros = leerSiniestros(f.siniestros)
 
   const c = (typeof f.contacto === 'object' && f.contacto !== null ? f.contacto : {}) as Record<string, unknown>
   return {

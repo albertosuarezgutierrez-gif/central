@@ -4,6 +4,7 @@ import Documentos from '../../Documentos'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
 import Historial from '../../Historial'
+import Siniestros from '../../Siniestros'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
@@ -44,7 +45,8 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
   const pendientesCima = ficha.polizas.filter(p => p.viva && !p.confirmadaCima)
   const canceladas = ficha.polizas.filter(p => p.viva && p.confirmadaCima && p.estado === 'cancelada')
   const historicas = ficha.polizas.filter(p => !p.viva)
-  const abiertos = ficha.siniestros.filter(s => s.abierto)
+  // `null` = no se han podido leer los siniestros: el titular lo dice, no pone 0.
+  const abiertos = ficha.siniestros === null ? null : ficha.siniestros.filter(s => s.abierto).length
   // Solo el cónyuge sube a la cabecera; el resto de vínculos vive en la tarjeta 👪.
   const conyuge = ficha.relaciones?.find(r => r.tipo === 'Cónyuge/Pareja de Hecho') ?? null
 
@@ -79,7 +81,7 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
 
       <Acciones />
 
-      <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos.length} />
+      <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos} />
 
       {/* Editar: contactos (libres), dirección (libre) e identidad (solo con DNI recibido). */}
       <Tarjeta titulo="✏️ Datos del cliente">
@@ -120,7 +122,13 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
         />
       )}
 
-      <Siniestros lista={ficha.siniestros} />
+      {/* Siniestros: ver, abrir sobre una póliza viva de CIMA, seguimiento, estado y parte.
+          `null` = no se han podido leer, y se dice; los documentos del parte salen de los de la ficha. */}
+      <Siniestros
+        lista={ficha.siniestros}
+        polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
+        documentos={ficha.documentos}
+      />
 
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       <Tarjeta titulo="📎 Documentos">
@@ -172,7 +180,7 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 // estado: un contador que no distingue «cero» de «no informado» es justo el que
 // hace decir «está todo al día» sobre lo que no se ha mirado.
 
-function Titulares({ polizas, vivas, abiertos }: { polizas: PolizaFicha[]; vivas: number; abiertos: number }) {
+function Titulares({ polizas, vivas, abiertos }: { polizas: PolizaFicha[]; vivas: number; abiertos: number | null }) {
   const conRecibos = polizas.filter(p => p.recibos !== null)
   const sinInformar = polizas.length - conRecibos.length
   const devueltos = conRecibos.reduce((s, p) => s + (p.recibos?.devueltos ?? 0), 0)
@@ -200,9 +208,9 @@ function Titulares({ polizas, vivas, abiertos }: { polizas: PolizaFicha[]; vivas
       />
       <Kpi
         label="Siniestros abiertos"
-        valor={String(abiertos)}
-        color={abiertos > 0 ? '#c96' : undefined}
-        sub={abiertos > 0 ? 'en tramitación' : 'ninguno abierto'}
+        valor={abiertos === null ? '—' : String(abiertos)}
+        color={abiertos !== null && abiertos > 0 ? '#c96' : undefined}
+        sub={abiertos === null ? 'no se han podido leer' : abiertos > 0 ? 'en tramitación' : 'ninguno abierto'}
       />
     </div>
   )
@@ -538,65 +546,6 @@ function motivoNoRetarificable(p: PolizaFicha): string {
   if (p.retarificacion?.motivo) return p.retarificacion.motivo
   if (p.tipo !== 'auto') return `Hoy solo se retarifica auto (esta es de ${p.tipo}).`
   return 'La compañía no ha informado la matrícula, y sin ella no se puede identificar el vehículo.'
-}
-
-// ── Siniestros ──────────────────────────────────────────────────────────────
-
-function Siniestros({ lista }: { lista: { id: string; estado: string; tipo: string | null; referencia: string | null; fecha: string | null; reserva: number | null; indemnizacion: number | null; tramitador: string | null; abierto: boolean }[] }) {
-  if (lista.length === 0) {
-    return (
-      <Tarjeta titulo="Siniestros">
-        <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
-          Ninguno registrado. Ojo: solo constan los que han llegado por CIMA o se han dado de alta
-          aquí — un parte que el cliente diera directamente a la compañía puede no aparecer.
-        </p>
-      </Tarjeta>
-    )
-  }
-  return (
-    <Tarjeta titulo={`Siniestros (${lista.length})`}>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 620 }}>
-          <thead>
-            <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
-              <th style={th}>Fecha</th>
-              <th style={th}>Estado</th>
-              <th style={th}>Tipo</th>
-              <th style={th}>Referencia</th>
-              <th style={th}>Tramitador</th>
-              <th style={{ ...th, textAlign: 'right' }}>Reserva</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lista.map(s => (
-              <tr key={s.id} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ ...td, whiteSpace: 'nowrap' }}>
-                  {s.fecha ? fmt(s.fecha) : <span style={{ color: 'var(--muted)' }}>sin fecha</span>}
-                </td>
-                <td style={{ ...td, color: s.abierto ? '#c96' : 'var(--muted)', whiteSpace: 'nowrap' }}>
-                  {s.abierto ? '🟠' : '⚪'} {s.estado.replace(/_/g, ' ')}
-                </td>
-                <td style={td}>{s.tipo ?? <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                <td style={td}>{s.referencia ?? <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                <td style={td}>
-                  {s.tramitador ?? (
-                    <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado quién lo lleva">sin asignar en CIMA</span>
-                  )}
-                </td>
-                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  {/* Reserva e indemnización están hoy al 0% de cobertura: NULL
-                      es «la compañía no lo informa», no «cero euros de daño». */}
-                  {s.reserva === null
-                    ? <span style={{ color: 'var(--muted)' }} title="La compañía no informa la reserva">sin dato</span>
-                    : eur(s.reserva)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Tarjeta>
-  )
 }
 
 // ── Fallos ──────────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import Documentos from '../../Documentos'
+import Siniestros from '../../Siniestros'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
@@ -81,29 +82,12 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
       <Recibos p={p} />
 
       {/* ── Siniestros ──────────────────────────────────────────────────── */}
-      <Tarjeta titulo={`Siniestros${p.siniestros.length ? ` (${p.siniestros.length})` : ''}`}>
-        {p.siniestros.length === 0 ? (
-          <p style={muted}>Ninguno registrado en esta póliza. Solo constan los que han llegado por CIMA o se han dado de alta aquí.</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tabla}>
-              <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Fecha</th><th style={th}>Estado</th><th style={th}>Tipo</th><th style={th}>Referencia</th><th style={th}>Tramitador</th><th style={{ ...th, textAlign: 'right' }}>Reserva</th></tr></thead>
-              <tbody>
-                {p.siniestros.map(s => (
-                  <tr key={s.id} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={td}>{s.fecha ? fmt(s.fecha) : <span style={muted}>sin fecha</span>}</td>
-                    <td style={{ ...td, color: s.abierto ? '#c96' : 'var(--muted)' }}>{s.abierto ? '🟠' : '⚪'} {s.estado.replace(/_/g, ' ')}</td>
-                    <td style={td}>{s.tipo ?? '—'}</td>
-                    <td style={td}>{s.referencia ?? '—'}</td>
-                    <td style={td}>{s.tramitador ?? <span style={muted}>sin asignar en CIMA</span>}</td>
-                    <td style={{ ...td, textAlign: 'right' }}>{s.reserva === null ? <span style={muted}>sin dato</span> : eur(s.reserva)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Tarjeta>
+      {/* «Confirmada por CIMA» = viva (import_ref NULL) con id_poliza_entidad: la misma regla que la ficha. */}
+      <Siniestros
+        lista={p.siniestros}
+        polizas={[{ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.viva && p.idPolizaEntidad !== null }]}
+        documentos={p.listaDocumentos}
+      />
 
       {/* ── Intervinientes ──────────────────────────────────────────────── */}
       <Tarjeta titulo="Intervinientes">
