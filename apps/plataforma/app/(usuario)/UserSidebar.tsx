@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
-  Banknote, BedDouble, Bell, Bot, Briefcase, Building2, Calculator, CalendarDays,
+  Banknote, BedDouble, Bell, Bot, Briefcase, Building2, CalendarDays,
   ChartColumn, ChartLine, ChartPie, ChevronDown, ClipboardList, Coins, Cog, Cpu,
   CreditCard, Euro, Eye, Fan, FileText, FlaskConical, Gavel, House, KeyRound,
   Landmark, Lightbulb, MessageCircle, MessageSquare, Network, Receipt, Satellite,
@@ -46,8 +46,9 @@ const NAV_NEGOCIO: NavItem[] = [
   // enlazaba a una página inexistente; sin esta entrada, lo acumulado solo se ve al llegar una
   // factura nueva (el aviso cuenta las de ESA pasada, no la bandeja entera).
   { href: '/expenses/pendientes', icon: Receipt, label: 'Facturas por revisar' },
-  { href: '/agente', icon: Bot, label: 'Agente precios' },
-  { href: '/contable', icon: Calculator, label: 'Contable' },
+  // 🤖 Los dos chats (contable y precios) viven juntos en /asistentes desde el 02/09/2026;
+  // /contable y /agente siguen respondiendo como redirect. Una entrada, no dos.
+  { href: '/asistentes', icon: Bot, label: 'Asistentes' },
   { href: '/limpiezas', icon: Sparkles, label: 'Limpiezas' },
   // 🛡️ Correduría: la matriz de comisiones + la cartera en vivo de central-asegura. Vivía
   // SOLO como enlace desde las tarjetas de /banca (31/08/2026: «no me sale correduría»), así

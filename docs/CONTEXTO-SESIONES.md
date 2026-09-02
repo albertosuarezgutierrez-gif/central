@@ -73,7 +73,9 @@
   pantallas (`/operador/agentes`, `/operador/ia`, facturas, partes) → se pintaban sin fondo NI borde,
   porque CSS invalida la declaración entera y no da error; por eso la página de agentes «no parecía una
   página». Guardián `test/regression-tokens-css.test.ts`. Y consulta por agente en `/operador/agentes`
-  (expediente: ficha + semáforo + latidos + vigía). PR #2131.
+  (expediente: ficha + semáforo + latidos + vigía). Y `/asistentes`: los dos chats con los que SE
+  PUEDE hablar (contable y precios) juntos, movidos con `git mv` sin reescribirlos —/contable y
+  /agente quedan como redirect, y el menú pasa de dos entradas a una. PR #2131.
 - **«Repara»: el menú mentía en dos sitios (02/09/2026).** Sin objetivo dicho, así que se buscó qué estaba roto de
   verdad. (1) El lateral encendía DOS entradas a la vez: «Inicio» + el segmento en `/banca?tab=*` (lo introdujo
   #2106 — «Inicio» ES `/banca` y los cinco segmentos comparten esa ruta), y «Pricing Lab» + «Pricing auto» /
