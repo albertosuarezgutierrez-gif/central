@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T21:06:01Z",
+  "generadoEn": "2026-09-01T22:15:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -345,8 +345,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1896,7 +1896,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 9
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1946,7 +1946,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "no",
@@ -1995,8 +1995,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3479,7 +3479,9 @@
       "core-firma",
       "module-documental"
     ],
-    "module-seguros": [],
+    "module-seguros": [
+      "module-seguros-portal"
+    ],
     "module-seguros-pii": [],
     "module-seguros-portal": [],
     "module-ses": [],
@@ -3527,9 +3529,14 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/cartera/catalogos",
+      "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
+      "/api/operador/buscar",
+      "/api/operador/cliente",
+      "/api/operador/clientes",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/comisiones",
+      "/api/operador/impagados",
       "/api/operador/ingesta",
       "/api/operador/resumen",
       "/api/operador/vencimientos"
@@ -4339,10 +4346,14 @@
       "/api/contable/chat",
       "/api/contable/feedback",
       "/api/correduria",
+      "/api/correduria/buscar",
       "/api/correduria/cartera",
+      "/api/correduria/cliente",
+      "/api/correduria/clientes",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/detalle",
+      "/api/correduria/impagados",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -5302,6 +5313,14 @@
   ],
   "novedades": [
     {
+      "titulo": "`/cartera/renovaciones`",
+      "fecha": ""
+    },
+    {
+      "titulo": "NO hay botón de «retarificar todas»",
+      "fecha": ""
+    },
+    {
       "titulo": "BD de matrículas gratis: no la hay útil.",
       "fecha": ""
     },
@@ -5351,14 +5370,6 @@
     },
     {
       "titulo": "Sí al inbound de cualquiera",
-      "fecha": ""
-    },
-    {
-      "titulo": "Decisión de orden: WhatsApp entra como CANAL (OTP + avisos), NO como agente conversacional.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Cloud API directa de Meta, no 360dialog",
       "fecha": ""
     }
   ],
@@ -5814,7 +5825,7 @@
     "packages": 39,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1219,
+    "apis": 1228,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
