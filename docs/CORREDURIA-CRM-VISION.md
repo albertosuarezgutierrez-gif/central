@@ -92,13 +92,13 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 | Editar contacto (varios tlf/mail, principal), dirección; identidad con documento; alta sin duplicar | ✅ PR #2093 | `EditarCliente.tsx`, `cartera-edicion.ts` |
 | Relaciones y autorización direccional | ✅ PR #2098 | `Relaciones.tsx`, `cartera-relaciones.ts` |
 | Documentos (pedido/recibido/revisado), pedir DNI | ✅ | `Documentos.tsx`, `cartera-documentos.ts` |
-| Historial de cambios | 🟡 se escribe (`historial_interno`), **no se pinta** en la ficha | — |
+| Historial de cambios | ✅ se escribe y se pinta (tarjeta plegada, 50 filas) | `cartera-historial.ts` |
 | Cola de retención (recibos devueltos, art. 15 LCS) | ✅ | `Retencion.tsx`, `cartera-impagados.ts` |
 | Retarificar auto/hogar (Codeoscopic, 0,50 €) | ✅ solo tarifica | `lib/codeoscopic/*` |
 | **Emitir por Codeoscopic** | ❌ vive en el repo legacy, tras un flag nunca encendido, sandbox | `/home/user/asegura/.../mint-poliza-on-emit.ts` |
-| **Conciliación emitida ↔ CIMA** | ❌ no existe (ver §5) | — |
+| **Conciliación emitida ↔ CIMA** | 🟡 diseño hecho (`docs/superpowers/specs/2026-09-02-emision-conciliacion-cima-design.md`), pendiente de OK; la ficha ya distingue «pendiente de CIMA» y hay guardián de duplicadas | — |
 | Alta automática de leads (web, WhatsApp, agente) | ❌ solo alta manual; tablas `conversaciones`/`mensajes`/`oportunidades` vacías y sin escritor | — |
-| Estado «con presupuesto» / «ex-cliente» | ❌ | — |
+| Estado «con presupuesto» / «ex-cliente» | ✅ derivado (`estadoCliente`, module-seguros) | `estado-cliente.ts` |
 | Portal del cliente leyendo la cartera | ❌ hoy solo bóveda de pólizas que el usuario declara; sin FK a `clientes` | `apps/asegura-portal` |
 | Autorizados en el portal | ❌ regla escrita (`clientesVisiblesPara`), sin grant ni UI | `module-seguros/relaciones.ts` |
 | Apertura/seguimiento de siniestro desde la ficha | ❌ solo lectura de lo que trae CIMA | — |
@@ -155,7 +155,10 @@ Lo que pasará sin cambiar nada, en orden de probabilidad:
 ## 7. El portal del cliente (lo que «verá el cliente final»)
 
 Hoy: identidad por código de un solo uso sobre email/consola, y una **bóveda de pólizas declaradas**
-por el propio usuario. **No lee la cartera.** Para que enseñe «sus seguros»:
+por el propio usuario. **No lee la cartera.** 🚨 Medido el 02/09/2026: **sus tablas `portal_*` NO existen en
+la BD** (la DDL `apps/asegura-portal/prisma/sql/2026-09-01_portal_fase1.sql` no está aplicada; las únicas
+`portal_*` de la base son `public.portal_rates/portal_overrides`, de SIVRA). El portal es hoy código sin
+base: antes de leer la cartera hay que aplicarla. Para que enseñe «sus seguros»:
 
 1. Enlazar `portal_identidad` ↔ `clientes` por el índice ciego del email/teléfono (misma HMAC,
    `PII_LOOKUP_KEY`), y cuando el DNI se verifique, por el hash del DNI.
