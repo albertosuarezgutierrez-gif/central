@@ -283,13 +283,21 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     db.polizaInterviniente
       .findMany({
         where: { correduriaId, polizaId: p.id },
+        // Determinista a propósito: ver la nota de `cartera-ficha`.
+        orderBy: [{ rol: 'asc' }, { id: 'asc' }],
         select: {
           polizaId: true, rol: true, clienteId: true, origen: true, nombre: true, apellidos: true, telefono: true, email: true,
+          nifLookupHash: true,
           cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
         },
       })
-      .then((filas): IntervinienteFicha[] =>
-        filas.map((f) => {
+      .then((filas): IntervinienteFicha[] => {
+        // Etiqueta opaca por NIF; ver la nota de `cartera-ficha`.
+        const claves = new Map<string, string>()
+        for (const f of filas) {
+          if (f.nifLookupHash && !claves.has(f.nifLookupHash)) claves.set(f.nifLookupHash, `p${claves.size + 1}`)
+        }
+        return filas.map((f) => {
           const propio = [descifrar(f.nombre), descifrar(f.apellidos)].filter(Boolean).join(' ').trim() || null
           const deFicha = f.cliente ? `${f.cliente.nombre} ${f.cliente.apellidos}`.trim() || null : null
           const telefono = descifrar(f.telefono) ?? descifrar(f.cliente?.telefono)
@@ -301,9 +309,10 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
             telefonoIlegible: telefono === null && (ilegible(f.telefono) || ilegible(f.cliente?.telefono)),
             emailIlegible: email === null && (ilegible(f.email) || ilegible(f.cliente?.email)),
             fichaId: f.clienteId ?? null, esTomador: f.clienteId === p.cliente.id, origen: String(f.origen),
+            personaClave: f.nifLookupHash ? claves.get(f.nifLookupHash) ?? null : null,
           }
-        }),
-      )
+        })
+      })
       .catch((): IntervinienteFicha[] | null => null),
     // La gemela: mismo número, la OTRA cara. Solo tiene sentido si esta es de
     // CIMA (la del volcado ya es la que tiene la dirección).

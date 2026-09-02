@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import Siniestros from '../../Siniestros'
@@ -329,23 +329,35 @@ const ICONO: Record<string, string> = { cobrado: '🟢', pendiente: '🟡', emit
 // deuda (02/09/2026). Devuelto e impagado son los estados que sí piden llamar.
 const ROTULO: Record<string, string> = { pendiente: 'al cobro (emitido, sin cargar aún)', emitido: 'al cobro (emitido, sin cargar aún)' }
 
+// El TOMADOR va SIEMPRE, y el primero: no es un interviniente sino el titular de
+// la póliza, así que no está en `poliza_intervinientes` y antes no salía. Alberto
+// lo vio el 02/09/2026 en la 6930FBP, donde CIMA solo manda al conductor
+// habitual y la empresa titular no aparecía por ningún lado. Quién sale y qué se
+// advierte lo decide `filasIntervinientes`, que está testeado aparte.
 function Intervinientes({ p }: { p: Poliza }) {
-  if (p.intervinientes === null) return <p style={muted}>asegura no informa intervinientes de esta póliza.</p>
-  if (p.intervinientes.length === 0) return <p style={muted}>La compañía no ha enviado intervinientes (tomador, propietario, conductor…) por CIMA.</p>
+  const { filas, aviso } = filasIntervinientes(
+    { polizaId: p.id, fichaId: p.cliente.id, nombre: p.cliente.nombre },
+    p.intervinientes,
+  )
   const ef = contactoEfectivo({ telefono: null, email: null }, p.intervinientes)
   return (
     <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
-      {p.intervinientes.map((i, n) => (
+      {filas.map((i, n) => (
         <div key={n}>
           <span style={{ textTransform: 'capitalize', color: 'var(--muted)' }}>{etiquetaRol(i.rol)}</span>:{' '}
           {i.fichaId ? <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link> : (i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre'))}
-          {i.esTomador && <span style={muted}> (el tomador)</span>}
+          {/* La fila sintetizada YA se llama «tomador»: repetirlo sobra. */}
+          {i.esTomador && i.rol !== 'tomador' && <span style={muted}> (el tomador)</span>}
           {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`}>📞 {i.telefono}</a></>}
           {i.email && <> · <a href={`mailto:${i.email}`}>✉️</a></>}
-          <span style={sub}> · {i.origen}</span>
+          {/* `poliza` no es una procedencia que decir: es la póliza que se está mirando. */}
+          {i.origen !== 'poliza' && <span style={sub}> · {i.origen}</span>}
         </div>
       ))}
       {ef.telefono && ef.quien && <div style={muted}>Si el tomador no contesta: {ef.quien.nombre} ({etiquetaRol(ef.quien.rol)}) 📞 {ef.telefono}</div>}
+      {/* Tres estados, no dos: «no se pudo mirar» ≠ «no hay nadie más». */}
+      {aviso === 'sin_mirar' && <div style={muted}>Del resto de figuras (propietario, conductor…) no se sabe: asegura no ha podido informarlas.</div>}
+      {aviso === 'solo_tomador' && <div style={muted}>La compañía no ha enviado más figuras (propietario, conductor…) por CIMA.</div>}
     </div>
   )
 }

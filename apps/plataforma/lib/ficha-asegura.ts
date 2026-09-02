@@ -129,6 +129,10 @@ export type IntervinienteFicha = {
   telefonoIlegible: boolean
   emailIlegible: boolean
   fichaId: string | null
+  /** Etiqueta opaca de QUIÉN es (`p1`, `p2`…), que asegura deriva del NIF.
+   *  `null` = la fila no trae NIF, o asegura es de una versión que aún no la
+   *  manda: entonces se agrupa como antes, por ficha o por nombre. */
+  personaClave: string | null
   esTomador: boolean
   origen: string
 }
@@ -400,6 +404,7 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
       telefonoIlegible: i.telefonoIlegible === true,
       emailIlegible: i.emailIlegible === true,
       fichaId: cadena(i.fichaId),
+      personaClave: cadena(i.personaClave),
       esTomador: i.esTomador === true,
       origen: cadena(i.origen) ?? 'sin_informar',
     })

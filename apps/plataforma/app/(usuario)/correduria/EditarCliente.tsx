@@ -9,6 +9,7 @@ import {
   documentosAcreditativos,
   etiquetaEstadoDocumento,
   etiquetaTipoDocumento,
+  etiquetasIdentidad,
   normalizarEmail,
   normalizarTelefono,
   provinciaPorCp,
@@ -490,8 +491,11 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
     }
   }
 
+  // Los rótulos cambian si es una sociedad: el campo es el mismo, pero pedirle
+  // «DNI, apellidos y fecha de nacimiento» a una empresa hace dudar del dato.
+  const rot = etiquetasIdentidad(identidad.tipoPersona === 'juridica' || identidad.tipoPersona === 'fisica' ? identidad.tipoPersona : null)
   const placeholderDni = identidad.dniEnmascarado
-    ?? (identidad.dniIlegible ? 'cifrado: no se puede leer' : 'sin DNI en la ficha')
+    ?? (identidad.dniIlegible ? 'cifrado: no se puede leer' : `sin ${rot.documento} en la ficha`)
 
   return (
     <section style={{ display: 'grid', gap: 10 }}>
@@ -513,11 +517,12 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
       ) : (
         <div style={{ ...pendienteBox, display: 'grid', gap: 8 }}>
           <div>
-            Para cambiar DNI, nombre, apellidos o fecha de nacimiento hace falta el DNI en la ficha
-            (regla: se pide documentado). Ahora mismo no hay ningún DNI recibido en 📎 Documentos.
+            Para cambiar {rot.documento}, {rot.nombre.toLowerCase()} o {rot.fecha.toLowerCase()} hace falta
+            el {rot.pedir} en la ficha (regla: se pide documentado). Ahora mismo no hay ningún {rot.pedir} recibido
+            en 📎 Documentos.
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button type="button" disabled={ocupado} onClick={() => void pedirDni()} style={btnStyle('secundario')}>Pedir DNI</button>
+            <button type="button" disabled={ocupado} onClick={() => void pedirDni()} style={btnStyle('secundario')}>Pedir {rot.pedir}</button>
             {pedido && <span style={{ fontSize: 12 }}>{pedido}</span>}
           </div>
         </div>
@@ -526,18 +531,18 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
       <form onSubmit={guardar} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
         <fieldset disabled={!habilitado || ocupado} style={{ border: 0, margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, opacity: habilitado ? 1 : 0.6 }}>
           <div className="edicion-fila" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-            <Campo label="Nombre" mal={campoMal === 'nombre'}>
+            <Campo label={rot.nombre} mal={campoMal === 'nombre'}>
               <input value={f.nombre} onChange={(e) => setF((p) => ({ ...p, nombre: e.target.value }))} style={campo} />
             </Campo>
-            <Campo label="Apellidos" mal={campoMal === 'apellidos'}>
+            <Campo label={rot.apellidos} mal={campoMal === 'apellidos'}>
               <input value={f.apellidos} onChange={(e) => setF((p) => ({ ...p, apellidos: e.target.value }))} style={campo} />
             </Campo>
           </div>
           <div className="edicion-fila" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-            <Campo label="DNI / NIE / CIF" mal={campoMal === 'dni'} ayuda={identidad.dniEnmascarado ? 'El actual se muestra enmascarado; escribe el nuevo entero para cambiarlo.' : undefined}>
+            <Campo label={rot.documento} mal={campoMal === 'dni'} ayuda={identidad.dniEnmascarado ? 'El actual se muestra enmascarado; escribe el nuevo entero para cambiarlo.' : undefined}>
               <input value={f.dni} onChange={(e) => setF((p) => ({ ...p, dni: e.target.value }))} placeholder={placeholderDni} style={campo} autoComplete="off" />
             </Campo>
-            <Campo label="Fecha de nacimiento" mal={campoMal === 'fechaNacimiento'} ayuda={identidad.fechaNacimientoIlegible ? 'La actual está cifrada y no se puede leer.' : undefined}>
+            <Campo label={rot.fecha} mal={campoMal === 'fechaNacimiento'} ayuda={identidad.fechaNacimientoIlegible ? 'La actual está cifrada y no se puede leer.' : undefined}>
               <input type="date" value={f.fechaNacimiento} onChange={(e) => setF((p) => ({ ...p, fechaNacimiento: e.target.value }))} style={campo} />
             </Campo>
           </div>

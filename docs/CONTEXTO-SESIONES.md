@@ -41,6 +41,40 @@
   (**no canjea**: lo consumirían los escáneres antivirus) y la lista de los **26 clientes sin ningún canal**
   en `/correduria`. 315/315 guardianes. **Falta solo Alberto:** las envs de `asegura-portal` y `CRON_SECRET`.
 
+- **🚨 «Ojo con duplicar»: agrupar personas por NIF, no por nombre (02/09/2026, noche).** Aviso de Alberto
+  sobre GLOBAL 2. `personasDePolizas` agrupaba por ficha y, a falta de ficha, por NOMBRE — y el peligro
+  va en las dos direcciones: **partir** a una persona en dos filas (enlazada a su ficha en una póliza y
+  suelta en otra) y, peor, **fundir a dos parientes homónimos** en una sola con los teléfonos mezclados.
+  Ahora la clave es el NIF: asegura emite una etiqueta OPACA (`p1`, `p2`…) —el NIF no sale del backend—
+  y dos NIF distintos no se funden jamás. Medido: GLOBAL 2 tiene **tres** NIF distintos, uno por
+  furgoneta; en toda la cartera hoy 0 personas se partían (409 de 504 filas no traen NIF y siguen
+  cayendo al nombre). 5 cepos nuevos, tres mordidos. **Queda como regla global** en el CLAUDE.md de
+  la raíz («agrupar por IDENTIDAD, nunca por la etiqueta») y como reglas 12-13 de la skill
+  `correduria-crm` (con la del tomador, que tampoco es un interviniente). **Mergeado (#2145) y
+  probado contra la BD**: la tarjeta de GLOBAL 2 pinta 3 filas, una por conductor con su matrícula,
+  y la persona que sale en dos pólizas (la activa y la cancelada del 6930FBP) colapsa en UNA. En la
+  cartera hay 260 fichas con intervinientes y solo 2 con varias personas identificadas por NIF: el
+  arreglo es barato hoy y protege el día que CIMA mande NIF en más filas (hoy 407 de 426 no lo traen).
+
+- **👤 «Personas en sus pólizas», arriba en la ficha (02/09/2026, noche).** Alberto: «en empresas y
+  particulares se puede poner arriba las personas de contacto o relaciones». La tarjeta «Relaciones»
+  solo enseña lo DECLARADO a mano (`cliente_relaciones`) y casi nadie lo tiene; mientras, CIMA ya dice
+  quién conduce cada coche y con qué teléfono, pero enterrado póliza por póliza. Nueva tarjeta que
+  agrupa **por persona** (no por póliza): nombre, qué es en cada una con su matrícula, teléfono/email
+  pinchables, enlace a su ficha si CIMA la enlazó, y si tiene o no vínculo declarado. `personasDePolizas`
+  con 7 cepos, dos mordidos. En GLOBAL 2 salen sus tres conductores de un vistazo.
+
+- **🏢 GLOBAL 2: el titular no salía en su propia póliza (02/09/2026, noche).** Alberto, revisando la
+  6930FBP: «¿no aparece propietario la empresa?». Cierto — el **tomador NO es un interviniente** (es el
+  `cliente_id` de la póliza), así que la tarjeta, que solo pintaba `poliza_intervinientes`, dejaba fuera
+  a la empresa titular en las 4 pólizas vivas de GLOBAL 2. Ahora va delante y con su rótulo
+  (`filasIntervinientes`, con cepo). Dos hallazgos más de la misma ficha: la consulta de intervinientes
+  **no tenía `orderBy`**, y con tres furgonetas y tres conductores habituales distintos el teléfono
+  «de la empresa» que se pintaba podía cambiar de una recarga a otra — ahora es determinista y dice de
+  qué matrícula sale. Y a una sociedad se le pedía «DNI, apellidos y fecha de nacimiento»:
+  `etiquetasIdentidad` rotula CIF/razón social/constitución. El CIF de GLOBAL 2 es suyo, no el DNI de
+  nadie (comprobado por hash, sin leer el valor). Mergeado #2139.
+
 - **🗓️ Intranet de clientes de la correduría: spec del calendario de vencimientos (02/09/2026, noche IV).**
   Alberto quiere la intranet de clientes; se le devolvió lo incómodo: **ya está diseñada y a medio construir**
   (spec del 01/09, Fase 1+4 en `main`, DDL aplicado) y **muerta por cuatro envs de Vercel que dependen de él**
@@ -225,6 +259,17 @@
   póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
 
 ---
+
+### 🧾 (02/09/2026, noche IV) Cuadre de comisiones: por qué está a cero y hasta dónde puede cuadrar (solo lectura)
+- Alberto preguntó si ya se cuadra al céntimo con BBVA + CIMA. **Medido en BD, sin tocar nada:** el libro
+  (`comisiones_devengo`/`comisiones_cobertura`) está a **0 filas** porque el cron `cima-liq` (07:30 UTC) corrió a las
+  07:31 con la contraseña vieja de `prisma_seguros` (aviso ⚪ en `telegram_avisos_log`); la env se arregló a las 11:10.
+  **La pasada del 03/09 es la primera prueba real.**
+- **CIMA NO trae liquidaciones de todas:** extractos solo de Allianz (3, remesa 118,12€) y Occident (4, saldo deudor,
+  remesa 0); Mapfre 153 recibos y ningún extracto; Generali/Asisa/Caser/MBI… nada. Cuadre al céntimo posible en 2 de 11.
+- Ruido en el «8.111,89€ · 11 compañías» del banco: una pensión (905,52€, 31/03) y un abono Vercel (0,29€) con
+  `destino='seguros'`. Contradicción abierta: Occident deudor ~−1.470€ en `cuenta_efectivo` vs >1.270€ cobrados (M00171).
+- Rutina one-shot 03/09 08:15 UTC en esta sesión: analizar todo tras el cron y avisar por Telegram (`/api/internal/alerta`).
 
 ### 🛡️ (02/09/2026, noche III) Auditoría de garantías por compañía + diseño del expediente de tarificación
 - Alberto pregunta si hace falta una pantalla para preconfigurar las garantías y capitales de cada

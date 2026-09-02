@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type EstadoClienteDerivado } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, personasDePolizas, ventanaAnulacion, type EstadoClienteDerivado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
@@ -8,7 +8,7 @@ import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
-  type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
+  type Ficha, type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
 } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
@@ -70,7 +70,7 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
                 puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
                 diga el enum. */}
             <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={ficha.tipo === 'cliente' || vivas.length > 0} />
-            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} />
+            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
             {conyuge && (
               <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                 💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -83,6 +83,13 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
       <Acciones />
 
       <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos} />
+
+      {/* Arriba a propósito (Alberto, 02/09/2026): con quién se habla de verdad.
+          «Relaciones» solo enseña lo declarado a mano y casi nadie lo tiene; esto
+          es quién sale en SUS pólizas, que es lo que CIMA sí nos dice. */}
+      <Tarjeta titulo="👤 Personas en sus pólizas">
+        <PersonasPolizas ficha={ficha} />
+      </Tarjeta>
 
       {/* Editar: contactos (libres), dirección (libre) e identidad (solo con DNI recibido). */}
       <Tarjeta titulo="✏️ Datos del cliente">
@@ -261,12 +268,14 @@ const CAUSA_PII: Record<string, string> = {
   sin_muestra: 'no hay ningún dato cifrado con el que probar la clave',
 }
 
-function Contacto({ c, intervinientes, piiClave, contactos }: {
+function Contacto({ c, intervinientes, piiClave, contactos, polizas }: {
   c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
   intervinientes: IntervinienteFicha[] | null
   piiClave: string | null
   /** Todos los teléfonos/emails; `null` = asegura no manda el bloque (no se afirma «solo uno»). */
   contactos: ContactosCliente | null
+  /** Para decir de QUÉ póliza sale el número prestado (la matrícula, si es auto). */
+  polizas: { id: string; matricula: string | null; numeroPoliza: string | null }[]
 }) {
   // «(+N)» = hay más aparte del principal; se ven y editan en ✏️ Datos del cliente.
   const masTel = contactos && contactos.telefonos.length > 1 ? contactos.telefonos.length - 1 : 0
@@ -275,8 +284,13 @@ function Contacto({ c, intervinientes, piiClave, contactos }: {
   const causaPii = piiClave === null ? 'la clave no abre este dato (asegura no dice por qué: versión anterior)' : CAUSA_PII[piiClave] ?? `estado de clave desconocido: ${piiClave}`
   const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
   const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
+  // 🚨 De QUÉ póliza sale. GLOBAL 2 tiene tres furgonetas con TRES conductores
+  // habituales distintos: sin esto la ficha pinta el número de uno de ellos como
+  // si fuera «el teléfono de la empresa» (Alberto, 02/09/2026).
+  const suya = ef.quien ? polizas.find(x => x.id === ef.quien!.polizaId) ?? null : null
+  const deQue = suya?.matricula ? ` del ${suya.matricula}` : suya?.numeroPoliza ? ` de la nº ${suya.numeroPoliza}` : ''
   const quien = ef.quien
-    ? `${ef.quien.nombre ?? 'sin nombre legible'}, ${etiquetaRol(ef.quien.rol)}`
+    ? `${ef.quien.nombre ?? 'sin nombre legible'}, ${etiquetaRol(ef.quien.rol)}${deQue}`
     : null
   const deOtro = (via: 'tomador' | 'interviniente' | null) =>
     via === 'interviniente' && quien ? (
@@ -603,6 +617,60 @@ const tarjeta: React.CSSProperties = { border: '1px solid var(--border)', border
 const th: React.CSSProperties = { padding: '6px 8px', fontWeight: 600 }
 const td: React.CSSProperties = { padding: '8px' }
 const sub: React.CSSProperties = { fontSize: 11, color: 'var(--muted)' }
+
+// Con quién se puede hablar de esta ficha, agrupado por PERSONA y no por
+// póliza: GLOBAL 2 tiene tres furgonetas con tres conductores distintos y esa
+// gente estaba enterrada póliza por póliza. Quién sale y cómo se agrupa lo
+// decide `personasDePolizas`, testeado aparte.
+function PersonasPolizas({ ficha }: { ficha: Ficha }) {
+  const personas = personasDePolizas(
+    ficha.intervinientes,
+    ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) })),
+    ficha.relaciones,
+  )
+  // Tres estados, no dos: no es lo mismo «no se ha podido mirar» que «no hay nadie».
+  if (personas === null) return <p style={{ fontSize: 13, color: 'var(--muted)' }}>asegura no ha podido leer quién interviene en sus pólizas.</p>
+  if (personas.length === 0) {
+    return (
+      <p style={{ fontSize: 13, color: 'var(--muted)' }}>
+        {ficha.polizas.length === 0
+          ? 'Todavía no tiene pólizas en la cartera.'
+          : 'En sus pólizas no aparece nadie más que la propia ficha: la compañía no manda más intervinientes.'}
+      </p>
+    )
+  }
+  return (
+    <div style={{ display: 'grid', gap: 8, fontSize: 13 }}>
+      {personas.map(p => (
+        <div key={p.clave}>
+          <span style={{ fontWeight: 600 }}>
+            {p.fichaId
+              ? <Link href={`/correduria/cliente/${p.fichaId}`}>{p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
+              : (p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre'))}
+          </span>
+          <span style={{ color: 'var(--muted)' }}>
+            {' · '}
+            {p.papeles.map(x => `${etiquetaRol(x.rol)}${x.polizas.length ? ` del ${x.polizas.join(' y del ')}` : ''}`).join(' · ')}
+          </span>
+          {p.telefono && <> · <a href={`tel:${p.telefono.replace(/\s/g, '')}`}>📞 {p.telefono}</a></>}
+          {p.email && <> · <a href={`mailto:${p.email}`}>✉️</a></>}
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+            {p.relacionDeclarada
+              ? `👪 ${p.relacionDeclarada}`
+              : p.fichaId
+                ? 'sin vínculo declarado — se anota en 👪 Relaciones y autorizaciones'
+                : 'CIMA no la ha enlazado a una ficha propia: no se le puede declarar un vínculo todavía'}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Cómo se nombra una póliza en una frase: la matrícula si la hay. */
+function etiquetaPoliza(p: PolizaFicha): string {
+  return p.matricula ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : `${p.tipo} de ${p.aseguradora}`)
+}
 
 function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
