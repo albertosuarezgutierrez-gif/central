@@ -32,6 +32,18 @@
 
 ---
 
+### 🏠 (02/09/2026, noche II) Codeoscopic: el contrato `HomeRisk` de hogar, VERIFICADO y cableado (PR #2088)
+- Alberto: «usa la IA e internet para nombres, no? tienes ya el contexto de todo como yo». Internet no sirvió
+  (codeoscopic.com, el portal y archive.org están bloqueados por el proxy) pero el **snapshot MHTML del portal
+  que subió el 01/09 seguía en los uploads de la sesión**: decodificado entero, traía el esquema `HomeRisk`
+  completo, `recommend-limits` y los roles de hogar. La sección «no se extrajo» de `CODEOSCOPIC-API-PORTAL.md`
+  era falsa por no haberlo buscado.
+- Hecho: `peticion-hogar.ts` reescrito con los nombres reales (+6 tests), `desde-cartera-hogar.ts` con
+  `partirDireccion` + supuestos para todo lo que el vendor exige y la ficha no tiene (+9), `tiposDeVia` /
+  `DEFECTOS_HOGAR` / `elegirDefecto` en `catalogos.ts` (+3), ruta + página + pantalla de hogar por agente,
+  docs (§ Hogar del portal reescrita, CLAUDE.md de asegura). ⚠️ `use` = régimen y `occupancy` = uso.
+- Queda: `POST /home/recommend-limits` por cablear; envs de `central-asegura`; primera prueba real de J.S.S.
+
 ### 🏠 (02/09/2026, noche) Codeoscopic: retarificar HOGAR, cableado de punta a punta (PR #2071 mergeado)
 - Alberto: «revisa todo lo de Codeoscopic para probar tarificar con un seguro de hogar… con algún hogar de
   José Suárez Salas». Auditado con agente: TODA la infraestructura (interruptor, libro, tope, `cotizar()`,

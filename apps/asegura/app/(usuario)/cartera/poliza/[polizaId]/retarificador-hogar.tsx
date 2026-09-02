@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { CatalogoHogar, DisponibilidadHogar, Opcion } from '@/lib/codeoscopic/catalogos'
-import type { ReparoHogar } from '@/lib/codeoscopic/peticion-hogar'
-import type { SupuestoHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
+import type { CatalogoHogar, DisponibilidadHogar } from '@/lib/codeoscopic/catalogos'
+import { pareceOpcionPropietario, type Opcion } from '@/lib/codeoscopic/opciones'
+import { TOPE_JOYAS, type ReparoHogar } from '@/lib/codeoscopic/peticion-hogar'
+import type { CatalogoResuelto, SupuestoHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
 import type { Veredicto } from '@/lib/codeoscopic/contador'
 import { eur } from '@/lib/dinero'
 
@@ -34,66 +35,118 @@ type Resultado =
   | { estado: 'faltan'; faltan: ReparoHogar[] }
   | { estado: 'error'; mensaje: string; clase: 'tope' | 'ramo' | 'vendor' | 'otro' }
 
-/** Lo que la ficha ya trae y el corredor puede corregir. `null` = no consta. */
+/**
+ * Lo que la ficha (o la precalificación) ya trae y el corredor puede corregir.
+ * `null` = no consta. Lo que sea un supuesto ya viene declarado en la lista de
+ * supuestos de la página: aquí solo se prefija el formulario.
+ */
 export type PrefijadosHogar = {
+  // ── Dónde ──
   cp: string | null
+  tipoViaId: string | null
+  nombreVia: string | null
+  numeroVia: string | null
+  planta: string | null
+  puertaVivienda: string | null
+  /** La dirección ENTERA tal como está en la ficha, para comprobar el troceo. */
+  direccionEntera: string | null
+  // ── Cómo es ──
   metrosCuadrados: number | null
   anioConstruccion: number | null
+  habitaciones: number | null
+  // ── Cuánto ──
   capitalContinente: number | null
   capitalContenido: number | null
+  // ── Quién / cuándo ──
+  propietarioEsTomador: boolean
   fechaEfecto: string | null
 }
 
-/** Los tres catálogos sin los que no hay cuerpo, y los seis que viajan solo si se eligen. */
-export const CATALOGOS_OBLIGATORIOS = ['property-types', 'uses', 'occupancy-types'] as const
-export const CATALOGOS_OPCIONALES = [
+/**
+ * Los NUEVE catálogos de hogar que el vendor exige (verificado contra el
+ * portal el 02/09/2026). Ya no hay «opcionales»: sin uno de estos no hay cuerpo.
+ */
+export const CATALOGOS_PANTALLA = [
+  'property-types',
+  'uses',
+  'occupancy-types',
   'locations',
   'settlement-types',
   'build-materials',
   'build-qualities',
   'door-types',
   'alarm-types',
-] as const
-export type CatalogoPantalla = (typeof CATALOGOS_OBLIGATORIOS)[number] | (typeof CATALOGOS_OPCIONALES)[number]
+] as const satisfies readonly CatalogoHogar[]
+export type CatalogoPantalla = (typeof CATALOGOS_PANTALLA)[number]
 
-const ETIQUETAS: Record<CatalogoPantalla, string> = {
-  'property-types': 'Tipo de vivienda',
-  uses: 'Uso',
-  'occupancy-types': 'Ocupación',
-  locations: 'Ubicación',
-  'settlement-types': 'Tipo de núcleo',
-  'build-materials': 'Material de construcción',
-  'build-qualities': 'Calidad de construcción',
-  'door-types': 'Puerta',
-  'alarm-types': 'Alarma',
-}
-
-/** Del nombre del catálogo al campo de `DatosHogar` que rellena. */
-const CAMPO_OPCIONAL: Record<(typeof CATALOGOS_OPCIONALES)[number], string> = {
+/** Del nombre del catálogo al campo de `DatosHogar` / `ResueltosHogar` que rellena. */
+export const CAMPO_DE_CATALOGO: Record<CatalogoPantalla, Exclude<CatalogoResuelto, 'tipoVia'>> = {
+  'property-types': 'tipoVivienda',
+  uses: 'uso',
+  'occupancy-types': 'ocupacion',
   locations: 'ubicacion',
   'settlement-types': 'asentamiento',
   'build-materials': 'material',
   'build-qualities': 'calidad',
-  'door-types': 'puerta',
+  'door-types': 'puertasSecundarias',
   'alarm-types': 'alarma',
 }
+
+/** El id por defecto de cada desplegable (o `null` si el catálogo no da nada que suponer). */
+export type DefectosHogar = Record<CatalogoPantalla | 'road-types', string | null>
+
+/**
+ * Etiquetas que dicen lo que significan DE VERDAD. Dos nombres del vendor
+ * engañan: `uses` es el régimen (propietario/inquilino) y `occupancy-types` el
+ * uso (habitual/segunda residencia).
+ */
+const ETIQUETAS: Record<CatalogoPantalla, string> = {
+  'property-types': 'Tipo de vivienda',
+  uses: 'Régimen (propietario / inquilino)',
+  'occupancy-types': 'Uso (habitual / segunda residencia)',
+  locations: 'Ubicación',
+  'settlement-types': 'Liquidación del siniestro',
+  'build-materials': 'Material de construcción',
+  'build-qualities': 'Calidad de construcción',
+  'door-types': 'Puertas secundarias',
+  'alarm-types': 'Alarma',
+}
+
+const TEXTOS = ['nombreVia', 'numeroVia', 'planta', 'puertaVivienda'] as const
+const NUMEROS = ['metrosCuadrados', 'anioConstruccion', 'habitaciones', 'capitalContinente', 'capitalContenido'] as const
+const LIMITES = ['joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos'] as const
+const PROTECCIONES = ['puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada'] as const
+
+const ETIQUETA_PROTECCION: Record<(typeof PROTECCIONES)[number], string> = {
+  puertaPrincipalBlindada: 'Puerta principal blindada',
+  ventanasSeguras: 'Ventanas con rejas o cristales de seguridad',
+  urbanizacionCerrada: 'Urbanización cerrada',
+}
+
+type Eleccion = { valor: string; supuesto: boolean }
 
 /**
  * El botón de hogar: el segundo sitio de la app donde un clic cuesta 0,50€.
  *
  * Mismas tres decisiones que el de auto (precio EN el botón, deshabilitado
- * mientras cotiza, sin reintento automático) y una cuarta propia de hogar:
- * el 502 del vendor se enseña ENTERO, porque el formato del `risk` de hogar no
- * está verificado y ese mensaje es lo que dirá qué campo del contrato sobra o
- * falta. Un 400 de validación NO se cobra.
+ * mientras cotiza, sin reintento automático). El contrato del `risk` de hogar
+ * está verificado contra el portal (02/09/2026); aun así el 502 del vendor se
+ * enseña ENTERO, porque si el contrato cambia ese mensaje es lo que dirá qué
+ * campo sobra o falta. Un 400 de validación NO se cobra.
+ *
+ * Lo que el vendor exige y la ficha no guarda (calle troceada, habitaciones,
+ * protecciones, joyas, perros) arranca con un supuesto declarado y se puede
+ * corregir aquí antes de pagar.
  */
 export default function RetarificadorHogar({
   polizaId,
   faltanInicial,
   civiles,
   municipios,
+  vias,
   estadoCivilAuto,
   catalogos,
+  defectos,
   fallosCatalogo,
   ramo,
   prefijados,
@@ -104,61 +157,116 @@ export default function RetarificadorHogar({
   faltanInicial: ReparoHogar[]
   civiles: Opcion[]
   municipios: Opcion[]
+  /** `/road-types`. Vacío = no se pudo leer, y el tipo de vía es obligatorio. */
+  vias: Opcion[]
   estadoCivilAuto: Opcion | null
   catalogos: Partial<Record<CatalogoHogar, Opcion[]>>
-  /** Catálogos que no se han podido leer (por nombre). Uno obligatorio bloquea el botón. */
+  defectos: DefectosHogar
+  /** Catálogos que no se han podido leer (por nombre). Todos son obligatorios: uno bloquea el botón. */
   fallosCatalogo: string[]
   ramo: DisponibilidadHogar
   prefijados: PrefijadosHogar
   consumo: Consumo
   deshabilitado: boolean
 }) {
-  const primero = (n: CatalogoPantalla) => catalogos[n]?.[0]?.id ?? ''
-
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
   const [municipioId, setMunicipioId] = useState(municipios.length === 1 ? municipios[0].id : '')
-  // Los tres obligatorios arrancan en la PRIMERA opción y se marcan como
-  // supuesto hasta que el corredor los toque: el precio sale con ellos.
-  const [obligatorios, setObligatorios] = useState<Record<string, { valor: string; supuesto: boolean }>>({
-    'property-types': { valor: primero('property-types'), supuesto: true },
-    uses: { valor: primero('uses'), supuesto: true },
-    'occupancy-types': { valor: primero('occupancy-types'), supuesto: true },
+  // Los nueve arrancan en el defecto de la pantalla (el ejemplo del portal si
+  // el catálogo lo trae; si no, la primera opción) y se marcan como supuesto
+  // hasta que el corredor los toque: el precio sale con ellos.
+  const [desplegables, setDesplegables] = useState<Record<CatalogoPantalla, Eleccion>>(() => {
+    const o = {} as Record<CatalogoPantalla, Eleccion>
+    for (const n of CATALOGOS_PANTALLA) o[n] = { valor: defectos[n] ?? '', supuesto: true }
+    return o
   })
-  // Los opcionales arrancan VACÍOS: vacío = no viaja, y el vendor pone el suyo.
-  const [opcionales, setOpcionales] = useState<Record<string, string>>({})
-  const [numeros, setNumeros] = useState<Record<string, string>>({
+  const [tipoVia, setTipoVia] = useState<Eleccion>({ valor: defectos['road-types'] ?? '', supuesto: true })
+  const [textos, setTextos] = useState<Record<(typeof TEXTOS)[number], string>>({
+    nombreVia: prefijados.nombreVia ?? '',
+    numeroVia: prefijados.numeroVia ?? '',
+    planta: prefijados.planta ?? '',
+    puertaVivienda: prefijados.puertaVivienda ?? '',
+  })
+  const [referenciaCatastral, setReferenciaCatastral] = useState('')
+  const [numeros, setNumeros] = useState<Record<(typeof NUMEROS)[number] | 'anioUltimaReforma', string>>({
     metrosCuadrados: prefijados.metrosCuadrados?.toString() ?? '',
     anioConstruccion: prefijados.anioConstruccion?.toString() ?? '',
+    habitaciones: prefijados.habitaciones?.toString() ?? '',
+    anioUltimaReforma: '',
     capitalContinente: prefijados.capitalContinente?.toString() ?? '',
     capitalContenido: prefijados.capitalContenido?.toString() ?? '',
   })
+  // Las protecciones arrancan a «no» como supuesto (lo conservador: marcarlas abarata).
+  const [protecciones, setProtecciones] = useState<Record<(typeof PROTECCIONES)[number], boolean>>({
+    puertaPrincipalBlindada: false,
+    ventanasSeguras: false,
+    urbanizacionCerrada: false,
+  })
+  // Tres estados: no se sabe (no viaja) / sí / no.
+  const [vigilante, setVigilante] = useState<'' | 'si' | 'no'>('')
+  // Los cuatro límites son 0 POR DISEÑO (el vendor los exige y la ficha no los tiene).
+  const [limites, setLimites] = useState<Record<(typeof LIMITES)[number], string>>({
+    joyasEnCajaFuerte: '0',
+    joyasFueraDeCaja: '0',
+    objetosDeValor: '0',
+    perrosPeligrosos: '0',
+  })
+  const [propietario, setPropietario] = useState(prefijados.propietarioEsTomador)
+  const [propietarioTocado, setPropietarioTocado] = useState(false)
   const [fechaEfecto, setFechaEfecto] = useState(prefijados.fechaEfecto ?? '')
   const [cp, setCp] = useState(prefijados.cp ?? '')
   const [correccionesPersona, setCorreccionesPersona] = useState<Record<string, string>>({})
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
-  /** Solo viaja como corrección lo que el corredor ha CAMBIADO respecto a la ficha. */
+  function elegir(n: CatalogoPantalla, valor: string) {
+    setDesplegables((d) => ({ ...d, [n]: { valor, supuesto: false } }))
+    // Si cambia el régimen, se re-preselecciona «el tomador es el dueño» — SOLO
+    // si el corredor no ha tocado ese checkbox a mano.
+    if (n === 'uses' && !propietarioTocado) {
+      setPropietario(pareceOpcionPropietario(catalogos.uses?.find((o) => o.id === valor) ?? null))
+    }
+  }
+
+  /**
+   * Solo viaja como corrección lo que el corredor ha CAMBIADO respecto a lo
+   * prefijado (textos y números). Los sí/no viajan SIEMPRE (un «no» es una
+   * respuesta, no un hueco) y los cuatro límites también (son 0 por diseño).
+   */
   function correcciones(): Record<string, unknown> {
     const c: Record<string, unknown> = { ...correccionesPersona }
-    for (const k of ['metrosCuadrados', 'anioConstruccion', 'capitalContinente', 'capitalContenido'] as const) {
+    for (const k of TEXTOS) {
+      const v = textos[k].trim()
+      if (v === '' || v === (prefijados[k] ?? '')) continue
+      c[k] = v
+    }
+    if (referenciaCatastral.trim()) c.referenciaCatastral = referenciaCatastral.trim()
+    for (const k of NUMEROS) {
       const v = numeros[k].trim()
       const original = prefijados[k]
-      if (v === '' ) continue
+      if (v === '') continue
       if (original !== null && Number(v) === original) continue
       c[k] = Number(v)
     }
+    if (numeros.anioUltimaReforma.trim()) c.anioUltimaReforma = Number(numeros.anioUltimaReforma)
+    for (const k of PROTECCIONES) c[k] = protecciones[k]
+    if (vigilante !== '') c.vigilante = vigilante === 'si'
+    for (const k of LIMITES) {
+      const v = limites[k].trim()
+      c[k] = v === '' ? 0 : Number(v)
+    }
     if (fechaEfecto && fechaEfecto !== prefijados.fechaEfecto) c.fechaEfecto = fechaEfecto
     if (cp.trim() && cp.trim() !== prefijados.cp) c.cp = cp.trim()
-    for (const n of CATALOGOS_OPCIONALES) {
-      const v = opcionales[n]
-      if (v) c[CAMPO_OPCIONAL[n]] = v
-    }
     return c
   }
 
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
     try {
+      const ids: Record<string, string | null> = {}
+      const supuestos: Record<string, boolean> = { tipoVia: tipoVia.supuesto }
+      for (const n of CATALOGOS_PANTALLA) {
+        ids[CAMPO_DE_CATALOGO[n]] = desplegables[n].valor || null
+        supuestos[CAMPO_DE_CATALOGO[n]] = desplegables[n].supuesto
+      }
       const res = await fetch(`/api/cartera/polizas/${polizaId}/retarificar`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -166,14 +274,10 @@ export default function RetarificadorHogar({
           resueltos: {
             municipioId: municipioId ? Number(municipioId) : null,
             estadoCivilId,
-            tipoVivienda: obligatorios['property-types'].valor,
-            uso: obligatorios.uses.valor,
-            ocupacion: obligatorios['occupancy-types'].valor,
-            supuestos: {
-              tipoVivienda: obligatorios['property-types'].supuesto,
-              uso: obligatorios.uses.supuesto,
-              ocupacion: obligatorios['occupancy-types'].supuesto,
-            },
+            tipoViaId: tipoVia.valor || null,
+            ...ids,
+            propietarioEsTomador: propietario,
+            supuestos,
           },
           correcciones: correcciones(),
         }),
@@ -213,15 +317,22 @@ export default function RetarificadorHogar({
     }
   }
 
-  const fallaObligatorio = CATALOGOS_OBLIGATORIOS.some((n) => fallosCatalogo.includes(n) || !(catalogos[n]?.length))
+  // Un catálogo obligatorio sin leer (o vacío) bloquea: sin ids válidos no hay cuerpo.
+  const fallaObligatorio =
+    CATALOGOS_PANTALLA.some((n) => fallosCatalogo.includes(n) || !(catalogos[n]?.length)) ||
+    fallosCatalogo.includes('road-types') ||
+    vias.length === 0
+
   const faltanCampos = [
     !municipioId && 'el municipio',
     !estadoCivilId && 'el estado civil',
-    !obligatorios['property-types'].valor && 'el tipo de vivienda',
-    !obligatorios.uses.valor && 'el uso',
-    !obligatorios['occupancy-types'].valor && 'la ocupación',
+    !tipoVia.valor && 'el tipo de vía',
+    !textos.nombreVia.trim() && 'el nombre de la vía',
+    !textos.numeroVia.trim() && 'el número',
+    ...CATALOGOS_PANTALLA.map((n) => !desplegables[n].valor && ETIQUETAS[n].toLowerCase()),
     !numeros.metrosCuadrados.trim() && 'los m²',
     !numeros.anioConstruccion.trim() && 'el año de construcción',
+    !numeros.habitaciones.trim() && 'las habitaciones',
     !numeros.capitalContinente.trim() && !numeros.capitalContenido.trim() && 'un capital (continente o contenido)',
     !fechaEfecto && 'la fecha de efecto',
   ].filter(Boolean) as string[]
@@ -235,23 +346,28 @@ export default function RetarificadorHogar({
     faltanCampos.length === 0 &&
     !('error' in consumo ? true : !consumo.veredicto.permitido)
 
+  const estiloCheck = { display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, color: 'inherit', fontSize: 14, margin: 0 } as const
+  const estiloCaja = { width: 20, height: 20, padding: 0, margin: 0, flex: '0 0 auto' } as const
+
   return (
     <>
       <div className="card">
         <h2>La vivienda</h2>
         <p className="muted">
-          Estos desplegables son los catálogos de hogar de Codeoscopic y <strong>no cuestan nada</strong>.
-          Los tres primeros son obligatorios y arrancan en la primera opción <em>como supuesto</em>: si no
-          los tocas, el precio sale con ellos y así se dirá. Los demás solo viajan si eliges algo.
+          Los desplegables son los catálogos de hogar de Codeoscopic y <strong>no cuestan nada</strong>. El vendor
+          exige los nueve (contrato verificado contra su portal el 02/09/2026): arrancan en el valor por defecto{' '}
+          <em>como supuesto</em> y, si no los tocas, el precio sale con ellos y así se dirá. Lo que la ficha no
+          guarda (calle troceada, habitaciones, protecciones, joyas, perros) también arranca con un supuesto que
+          puedes corregir antes de pagar.
         </p>
         {fallosCatalogo.length > 0 && (
           <p className="err">
-            No se han podido leer estos catálogos: {fallosCatalogo.join(', ')}.
-            {fallaObligatorio
-              ? ' Alguno es obligatorio, así que no se puede cotizar todavía. No es un problema de la ficha.'
-              : ' Son opcionales: se puede cotizar sin ellos.'}
+            No se han podido leer estos catálogos: {fallosCatalogo.join(', ')}. Todos son obligatorios, así que no
+            se puede cotizar todavía. No es un problema de la ficha.
           </p>
         )}
+
+        <h3 style={{ marginTop: 12 }}>Dónde está</h3>
         <div className="form-grid">
           <div>
             <label htmlFor="cp">Código postal del riesgo</label>
@@ -275,29 +391,57 @@ export default function RetarificadorHogar({
               </span>
             )}
           </div>
-          {CATALOGOS_OBLIGATORIOS.map((n) => (
-            <div key={n}>
-              <label htmlFor={`cat-${n}`}>{ETIQUETAS[n]}</label>
-              <select
-                id={`cat-${n}`}
-                value={obligatorios[n].valor}
-                onChange={(e) => setObligatorios((o) => ({ ...o, [n]: { valor: e.target.value, supuesto: false } }))}
-                disabled={!(catalogos[n]?.length)}
-              >
-                <option value="">{catalogos[n]?.length ? 'Elige' : 'Catálogo no disponible'}</option>
-                {(catalogos[n] ?? []).map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.nombre}
-                  </option>
-                ))}
-              </select>
-              {obligatorios[n].supuesto && obligatorios[n].valor && (
-                <span className="badge warn" style={{ fontSize: 12 }}>
-                  supuesto: primera opción
-                </span>
-              )}
-            </div>
-          ))}
+          <div>
+            <label htmlFor="via">Tipo de vía</label>
+            <select
+              id="via"
+              value={tipoVia.valor}
+              onChange={(e) => setTipoVia({ valor: e.target.value, supuesto: false })}
+              disabled={vias.length === 0}
+            >
+              <option value="">{vias.length ? 'Elige' : 'Catálogo no disponible'}</option>
+              {vias.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.nombre}
+                </option>
+              ))}
+            </select>
+            {tipoVia.supuesto && tipoVia.valor && (
+              <span className="badge warn" style={{ fontSize: 12 }}>
+                supuesto: valor por defecto
+              </span>
+            )}
+          </div>
+          <div>
+            <label htmlFor="nombreVia">Nombre de la vía</label>
+            <input id="nombreVia" value={textos.nombreVia} onChange={(e) => setTextos((t) => ({ ...t, nombreVia: e.target.value }))} />
+          </div>
+          <div>
+            <label htmlFor="numeroVia">Número</label>
+            <input id="numeroVia" value={textos.numeroVia} onChange={(e) => setTextos((t) => ({ ...t, numeroVia: e.target.value }))} />
+          </div>
+          <div>
+            <label htmlFor="planta">Planta</label>
+            <input id="planta" value={textos.planta} onChange={(e) => setTextos((t) => ({ ...t, planta: e.target.value }))} />
+          </div>
+          <div>
+            <label htmlFor="puerta">Puerta</label>
+            <input id="puerta" value={textos.puertaVivienda} onChange={(e) => setTextos((t) => ({ ...t, puertaVivienda: e.target.value }))} />
+          </div>
+          <div>
+            <label htmlFor="refcat">Referencia catastral (opcional)</label>
+            <input id="refcat" value={referenciaCatastral} onChange={(e) => setReferenciaCatastral(e.target.value)} />
+          </div>
+        </div>
+        {prefijados.direccionEntera && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Dirección en la ficha: «{prefijados.direccionEntera}» — comprueba que el troceo en tipo de vía, nombre,
+            número, planta y puerta es correcto.
+          </p>
+        )}
+
+        <h3 style={{ marginTop: 16 }}>Cómo es</h3>
+        <div className="form-grid">
           <div>
             <label htmlFor="m2">Superficie (m²)</label>
             <input
@@ -320,6 +464,87 @@ export default function RetarificadorHogar({
               onChange={(e) => setNumeros((x) => ({ ...x, anioConstruccion: e.target.value }))}
             />
           </div>
+          <div>
+            <label htmlFor="habitaciones">Habitaciones (sin salón, cocina ni baños)</label>
+            <input
+              id="habitaciones"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={numeros.habitaciones}
+              onChange={(e) => setNumeros((x) => ({ ...x, habitaciones: e.target.value }))}
+            />
+            {prefijados.habitaciones !== null && Number(numeros.habitaciones) === prefijados.habitaciones && (
+              <span className="badge warn" style={{ fontSize: 12 }}>
+                supuesto: estimadas por los m²
+              </span>
+            )}
+          </div>
+          <div>
+            <label htmlFor="reforma">Año de última reforma (opcional)</label>
+            <input
+              id="reforma"
+              type="number"
+              min={1500}
+              inputMode="numeric"
+              value={numeros.anioUltimaReforma}
+              onChange={(e) => setNumeros((x) => ({ ...x, anioUltimaReforma: e.target.value }))}
+            />
+          </div>
+          {CATALOGOS_PANTALLA.map((n) => (
+            <div key={n}>
+              <label htmlFor={`cat-${n}`}>{ETIQUETAS[n]}</label>
+              <select
+                id={`cat-${n}`}
+                value={desplegables[n].valor}
+                onChange={(e) => elegir(n, e.target.value)}
+                disabled={!(catalogos[n]?.length)}
+              >
+                <option value="">{catalogos[n]?.length ? 'Elige' : 'Catálogo no disponible'}</option>
+                {(catalogos[n] ?? []).map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.nombre}
+                  </option>
+                ))}
+              </select>
+              {desplegables[n].supuesto && desplegables[n].valor && (
+                <span className="badge warn" style={{ fontSize: 12 }}>
+                  supuesto: valor por defecto
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <h3 style={{ marginTop: 16 }}>Protecciones</h3>
+        <p className="muted" style={{ fontSize: 12 }}>
+          Arrancan a «no» como supuesto, que es lo conservador: si marcas alguna, el precio baja.
+        </p>
+        <div className="form-grid">
+          {PROTECCIONES.map((k) => (
+            <label key={k} htmlFor={`prot-${k}`} style={estiloCheck}>
+              <input
+                id={`prot-${k}`}
+                type="checkbox"
+                style={estiloCaja}
+                checked={protecciones[k]}
+                onChange={(e) => setProtecciones((p) => ({ ...p, [k]: e.target.checked }))}
+              />
+              {ETIQUETA_PROTECCION[k]}
+            </label>
+          ))}
+          <div>
+            <label htmlFor="vigilante">Vigilante</label>
+            <select id="vigilante" value={vigilante} onChange={(e) => setVigilante(e.target.value as '' | 'si' | 'no')}>
+              <option value="">No se sabe (no viaja)</option>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+        </div>
+
+        <h3 style={{ marginTop: 16 }}>Cuánto se asegura y desde cuándo</h3>
+        <div className="form-grid">
           <div>
             <label htmlFor="continente">Capital continente (€)</label>
             <input
@@ -353,27 +578,58 @@ export default function RetarificadorHogar({
         </p>
 
         <details style={{ marginTop: 12 }}>
-          <summary>Detalles opcionales (solo viajan si eliges algo)</summary>
+          <summary>Joyas, objetos de valor y perros (arrancan a 0: el vendor los exige y la ficha no los tiene)</summary>
           <div className="form-grid" style={{ marginTop: 8 }}>
-            {CATALOGOS_OPCIONALES.map((n) => (
-              <div key={n}>
-                <label htmlFor={`cat-${n}`}>{ETIQUETAS[n]}</label>
-                <select
-                  id={`cat-${n}`}
-                  value={opcionales[n] ?? ''}
-                  onChange={(e) => setOpcionales((o) => ({ ...o, [n]: e.target.value }))}
-                  disabled={!(catalogos[n]?.length)}
-                >
-                  <option value="">{catalogos[n]?.length ? 'Sin especificar' : 'Catálogo no disponible'}</option>
-                  {(catalogos[n] ?? []).map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
+            <div>
+              <label htmlFor="joyasCaja">Joyas en caja fuerte (€, hasta {eur(TOPE_JOYAS)})</label>
+              <input
+                id="joyasCaja"
+                type="number"
+                min={0}
+                max={TOPE_JOYAS}
+                inputMode="numeric"
+                value={limites.joyasEnCajaFuerte}
+                onChange={(e) => setLimites((l) => ({ ...l, joyasEnCajaFuerte: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label htmlFor="joyasFuera">Joyas fuera de caja fuerte (€, hasta {eur(TOPE_JOYAS)})</label>
+              <input
+                id="joyasFuera"
+                type="number"
+                min={0}
+                max={TOPE_JOYAS}
+                inputMode="numeric"
+                value={limites.joyasFueraDeCaja}
+                onChange={(e) => setLimites((l) => ({ ...l, joyasFueraDeCaja: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label htmlFor="objetos">Objetos de valor (€)</label>
+              <input
+                id="objetos"
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={limites.objetosDeValor}
+                onChange={(e) => setLimites((l) => ({ ...l, objetosDeValor: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label htmlFor="perros">Perros potencialmente peligrosos</label>
+              <input
+                id="perros"
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={limites.perrosPeligrosos}
+                onChange={(e) => setLimites((l) => ({ ...l, perrosPeligrosos: e.target.value }))}
+              />
+            </div>
           </div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Si hay joyas, objetos de valor o perros y se dejan a 0, el precio real sube.
+          </p>
         </details>
       </div>
 
@@ -396,7 +652,24 @@ export default function RetarificadorHogar({
               </span>
             )}
           </div>
+          <label htmlFor="propietario" style={estiloCheck}>
+            <input
+              id="propietario"
+              type="checkbox"
+              style={estiloCaja}
+              checked={propietario}
+              onChange={(e) => {
+                setPropietario(e.target.checked)
+                setPropietarioTocado(true)
+              }}
+            />
+            El tomador es el propietario de la vivienda
+          </label>
         </div>
+        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          Si lo es, viaja también como propietario en la petición (la misma persona). Se preselecciona según el
+          régimen elegido arriba hasta que lo toques.
+        </p>
 
         {faltanInicial.some((f) => CAMPOS_A_MANO[f.campo] || f.campo === 'sexo') && (
           <>

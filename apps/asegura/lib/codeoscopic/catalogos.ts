@@ -18,7 +18,9 @@ import { peticion } from './cliente.ts'
 import type { ConfigCodeoscopic } from './config.ts'
 
 /** Una entrada de catálogo: lo que se pinta en un desplegable. */
-export type Opcion = { id: string; nombre: string }
+export type { Opcion } from './opciones.ts'
+export { normalizarTexto, emparejar, elegirDefecto, pareceOpcionPropietario } from './opciones.ts'
+import { normalizarTexto, type Opcion } from './opciones.ts'
 
 /**
  * Caché en memoria con TTL. Los catálogos del vendor cambian de año en año, no
@@ -253,28 +255,30 @@ export function leerFecha(raw: unknown): string | null {
 
 // ─── Emparejar texto del CRM con el catálogo del vendor ──────────────────────
 
-/** Quita tildes y mayúsculas para comparar «Casado» con «CASADO». */
-export function normalizarTexto(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
+// ─── Hogar: tipo de vía y valores por defecto (gratis) ───────────────────────
+
+/** `GET /road-types`: los tipos de vía (`Calle`, `Avenida`…). Van en `risk.address.roadType.id`. */
+export async function tiposDeVia(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/road-types'))
 }
 
 /**
- * Busca en un catálogo la opción cuyo nombre coincide con un texto del CRM.
- *
- * 🚫 Solo empareja EXACTO (ya normalizado). Ante la duda devuelve `null`, y el
- * llamante lo trata como «hay que elegirlo a mano». Un emparejamiento por
- * parecido convertiría «Separado» en «Soltero» sin que nadie se entere, y eso
- * cambia el precio. Mismo criterio que `vehicle-catalog-match.ts` del CRM:
- * ante duda, no preselecciona.
+ * Los ids que usa el EJEMPLO del portal para cada catálogo de hogar
+ * (`docs/CODEOSCOPIC-API-PORTAL.md`, § Hogar). No se mandan a ciegas: solo se
+ * preseleccionan si el catálogo vivo los trae (`elegirDefecto`), y siempre
+ * como SUPUESTO que la pantalla enseña. Son el «piso normal, sin alarma, sin
+ * puerta blindada» — lo conservador, que no abarata el precio.
  */
-export function emparejar(catalogo: Opcion[], texto: string | null): Opcion | null {
-  if (texto === null) return null
-  const buscado = normalizarTexto(texto)
-  if (buscado === '') return null
-  const coincidencias = catalogo.filter((o) => normalizarTexto(o.nombre) === buscado)
-  return coincidencias.length === 1 ? coincidencias[0] : null
+export const DEFECTOS_HOGAR: Partial<Record<CatalogoHogar, string>> = {
+  'property-types': 'MiddleFloor',
+  uses: 'Owner',
+  'occupancy-types': 'MainResidence',
+  locations: 'CityCentre',
+  'build-materials': 'NonCombustible',
+  'build-qualities': 'Normal',
+  'alarm-types': 'NoAlarm',
+  'door-types': 'NonReinforcedOtherDoor',
+  'settlement-types': 'ReplacementValue',
 }
+export const DEFECTO_TIPO_VIA = 'Calle'
+

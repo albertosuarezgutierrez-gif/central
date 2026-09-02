@@ -397,11 +397,20 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   sin carnet) y los 10 catálogos `/home/*` (`catalogoHogar()`, gratis). Quién puede retarificar y por qué
   ramo lo decide **un solo helper**, `retarificabilidad()` de `@central/module-seguros` (antes la misma
   expresión estaba copiada en tres sitios): hogar exige m² + año + CP en la póliza O en su gemela.
-  🚨 **El contrato del `risk` de hogar del vendor NO está verificado** — los nombres de campo viven en
-  `CAMPOS_VENDOR` por analogía con auto y con los catálogos. Un 400 de validación **no se cobra** y su
-  mensaje dice qué está mal; la pantalla lo enseña entero. Lo que hay que exportar del portal está en
-  `docs/CODEOSCOPIC-API-PORTAL.md` (§ Hogar). Caso de prueba: las dos de Occident vivas de J.S.S. (el
-  riesgo está solo en la gemela; la de Sevilla es la verificada con el Catastro: 76 m² / 1994 / 41002).
+  ✅ **El contrato del `risk` de hogar (`HomeRisk`) está VERIFICADO desde el 02/09/2026 (noche):** salió del
+  snapshot MHTML del portal que Alberto subió el 01/09 (se decodificó entero; la tabla completa está en
+  `docs/CODEOSCOPIC-API-PORTAL.md` § Hogar). El vendor exige **mucho más de lo que guarda la ficha**:
+  calle con tipo de vía/nombre/número (`/road-types`), habitaciones, nueve catálogos (no tres), puerta
+  blindada / ventanas / urbanización cerrada, límites de joyas y objetos de valor y perros peligrosos. Todo
+  lo que la ficha no tiene se **supone conservador y se declara uno por uno** (`desde-cartera-hogar.ts`:
+  habitaciones por m², protecciones a `false`, joyas/perros a 0 marcados `optimista`; la dirección se trocea
+  con `partirDireccion`), y los desplegables se preseleccionan con los ids del ejemplo del portal
+  **solo si el catálogo vivo los trae** (`DEFECTOS_HOGAR` + `elegirDefecto`). ⚠️ Dos nombres engañan: `use`
+  es el RÉGIMEN (propietario/inquilino, `/home/uses`) y `occupancy` el USO (habitual/segunda,
+  `/home/occupancy-types`); nuestro `uso` va a `use` y `ocupacion` a `occupancy` porque cada uno bebe de su
+  catálogo. Un 400 de validación **no se cobra**; la pantalla enseña el mensaje entero. Caso de prueba: las
+  dos de Occident vivas de J.S.S. (el riesgo está solo en la gemela; la de Sevilla es la verificada con el
+  Catastro: 76 m² / 1994 / 41002). Por cablear: `POST /home/recommend-limits` para no teclear capitales a ojo.
 - **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
