@@ -62,6 +62,58 @@ export type CruceDoc =
 const NO_LEIDO = 'No he podido leer el documento. Prueba con una foto más nítida o un PDF que tenga texto (no solo imagen escaneada).'
 const SIN_DATOS = 'He abierto el documento pero no distingo el importe o la fecha con seguridad, así que no me lo invento. Dímelos tú o sube una copia más clara.'
 
+/**
+ * POR QUÉ no se ha podido leer un documento. Lo produce `extraerDesdeBuffer` y lo consume
+ * `interpretarExtraccion`; vive AQUÍ (y no en `lib/agente-facturas/extraer.ts`) porque este módulo
+ * es el puro y testeable —no puede importar del alias '@/'— y el de allí sí puede importar el tipo.
+ *
+ * 02/09/2026 — el hueco que cierra: hasta hoy los tres casos de abajo salían por la MISMA frase
+ * («prueba con una foto más nítida o un PDF que tenga texto»), que a un PDF le pide una foto y no
+ * dice si el documento se ha llegado a mirar. Alberto subió «movimientos (2).pdf» y recibió eso:
+ * ni él sabía qué arreglar ni nosotros qué había fallado. Regla del CLAUDE.md: un fallo del que no
+ * se sabe la causa se DECLARA, no se disfraza de consejo.
+ */
+export type MotivoSinLectura =
+  /** Ni se pudo abrir (archivo dañado, cifrado, no es un PDF de verdad). `detalle` = error real. */
+  | { clase: 'pdf_ilegible'; detalle: string }
+  /** Se abrió bien pero no tiene capa de texto (escaneado). `ocr` = qué pasó al leerlo por visión. */
+  | { clase: 'pdf_sin_texto'; paginas: number; ocr: 'no_intentado' | 'sin_paginas' | 'sin_datos' | 'error' }
+  /** No es ni PDF ni imagen: no hay lector para eso. */
+  | { clase: 'formato_no_soportado'; mimeType: string }
+
+// La salida honesta cuando el documento no era una factura suelta: el banco entra por su propia
+// puerta, y esa SÍ acepta el listado entero. No prometemos que el PDF escaneado sirva ahí.
+const RUTA_BANCA = 'Si era un extracto del banco o de la tarjeta, descárgalo del banco en Excel/CSV y súbelo en /banca → Importar (ahí eliges la cuenta).'
+
+/**
+ * Texto para Alberto cuando NO se ha podido leer el documento. Determinista y sin red.
+ * Sin `motivo` (llamadas antiguas) se conserva la frase histórica.
+ */
+export function motivoNoLeido(m?: MotivoSinLectura | null): string {
+  if (!m) return NO_LEIDO
+
+  if (m.clase === 'formato_no_soportado') {
+    return `Ese archivo no es un PDF ni una imagen (${m.mimeType || 'tipo desconocido'}), así que no tengo con qué abrirlo. Mándamelo en PDF, JPG o PNG. ${RUTA_BANCA}`
+  }
+
+  if (m.clase === 'pdf_ilegible') {
+    return `No he podido ni ABRIR el PDF${m.detalle ? ` (${m.detalle})` : ''}, así que no lo he mirado: no es que no ponga nada. Suele pasar con un archivo dañado a medias o protegido con contraseña — vuelve a descargarlo del origen y súbelo otra vez.`
+  }
+
+  const pag = m.paginas > 0 ? ` (${m.paginas} ${m.paginas === 1 ? 'página' : 'páginas'})` : ''
+  const cab = `He abierto el PDF${pag} y NO trae capa de texto: es una imagen escaneada.`
+  switch (m.ocr) {
+    case 'no_intentado':
+      return `${cab} Aquí no lo leo por visión, así que no lo he mirado. ${RUTA_BANCA}`
+    case 'sin_paginas':
+      return `${cab} Tampoco he conseguido convertir sus páginas en imagen para leerlas por visión, así que NO lo he llegado a mirar. Mándame una foto de la factura, o el PDF original con texto. ${RUTA_BANCA}`
+    case 'error':
+      return `${cab} He intentado leerlo por visión y la IA ha fallado, así que sigue SIN mirar (no es que no ponga nada). Reinténtalo en un minuto. ${RUTA_BANCA}`
+    case 'sin_datos':
+      return `${cab} Lo he leído por visión y aun así no distingo el importe ni la fecha, así que no me los invento. Dímelos tú, o mándame una foto más nítida. ${RUTA_BANCA}`
+  }
+}
+
 // 'YYYY-MM-DD' → 'DD/MM/YYYY' (lo que Alberto lee en su banco). Deja pasar lo que no reconozca.
 export function fechaEs(iso: string | null | undefined): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '')
@@ -78,8 +130,12 @@ function textoCobertura(cobertura: CoberturaBanco[]): string {
 }
 
 // Decide si la extracción es utilizable y normaliza la factura. Determinista, sin red.
-export function interpretarExtraccion(data: ExtraccionCruda, source: 'text' | 'vision' | 'none'): Interpretacion {
-  if (source === 'none') return { ok: false, motivo: NO_LEIDO }
+export function interpretarExtraccion(
+  data: ExtraccionCruda,
+  source: 'text' | 'vision' | 'none',
+  motivo?: MotivoSinLectura | null,
+): Interpretacion {
+  if (source === 'none') return { ok: false, motivo: motivoNoLeido(motivo) }
 
   const total = Number(data.total)
   const fecha = (data.fecha || '').toString().slice(0, 10)
