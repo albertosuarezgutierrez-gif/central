@@ -290,7 +290,7 @@ function Recibos({ p }: { p: Poliza }) {
     r === null ? 'asegura no informa recibos'
     : r.total === 0 ? 'la compañía no ha mandado ningún recibo: no se sabe si está pagada'
     : r.devueltos > 0 ? `🔴 ${r.devueltos} devuelto(s)`
-    : r.pendientes > 0 ? `🟡 ${r.pendientes} pendiente(s)`
+    : r.pendientes > 0 ? `🟡 ${r.pendientes} al cobro (emitido, aún sin cargar)`
     : r.cobrados === 0 && r.anulados > 0 ? `⚪ todos anulados (${r.anulados})`
     : `🟢 ${r.cobrados} cobrado(s)${r.cobradoEur !== null ? ` · ${eur(r.cobradoEur)}` : ''}`
   return (
@@ -305,7 +305,7 @@ function Recibos({ p }: { p: Poliza }) {
                 <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
                   <td style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
                   <td style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
-                  <td style={td}>{ICONO[x.situacion] ?? '❔'} {x.situacion.replace(/_/g, ' ')}</td>
+                  <td style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
                   <td style={td}>{x.formaPago ?? <span style={muted}>—</span>}</td>
                   <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>
                 </tr>
@@ -319,6 +319,9 @@ function Recibos({ p }: { p: Poliza }) {
 }
 
 const ICONO: Record<string, string> = { cobrado: '🟢', pendiente: '🟡', emitido: '🟡', devuelto: '🔴', impagado: '🔴', anulado: '⚪' }
+// «pendiente» del EIAC = emitido y aún sin cargar en cuenta; Alberto lo leyó como
+// deuda (02/09/2026). Devuelto e impagado son los estados que sí piden llamar.
+const ROTULO: Record<string, string> = { pendiente: 'al cobro (emitido, sin cargar aún)', emitido: 'al cobro (emitido, sin cargar aún)' }
 
 function Intervinientes({ p }: { p: Poliza }) {
   if (p.intervinientes === null) return <p style={muted}>asegura no informa intervinientes de esta póliza.</p>
