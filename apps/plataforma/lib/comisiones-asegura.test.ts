@@ -21,6 +21,33 @@ test('un error de la BD de asegura llega con su motivo', () => {
   )
 })
 
+// 🚨 02/09/2026: `asegura_error` a secas era un callejón sin salida — decía que
+// falló, no dónde. La pista que manda asegura tiene que llegar hasta el aviso.
+test('la pista de asegura viaja hasta el motivo (schema, permisos, tabla…)', () => {
+  const r = interpretarComisiones(200, {
+    comisiones: { estado: 'error', motivo: 'bd', detalle: 'central/PrismaClientKnownRequestError/P2021/public.corredurias' },
+  })
+  assert.equal(r.estado, 'error')
+  assert.equal(r.estado === 'error' ? r.motivo : null, 'asegura_error')
+  assert.match(r.estado === 'error' ? (r.detalle ?? '') : '', /P2021/)
+  assert.match(r.estado === 'error' ? (r.detalle ?? '') : '', /^bd · /)
+})
+
+test('sin pista NO se inventa una: el detalle sencillamente no está', () => {
+  const r = interpretarComisiones(200, { comisiones: { estado: 'error' } })
+  assert.deepEqual(r, { estado: 'error', motivo: 'asegura_error' })
+})
+
+test('una pista kilométrica se recorta: acaba en un Telegram', () => {
+  const r = interpretarComisiones(200, { comisiones: { estado: 'error', motivo: 'bd', detalle: 'x'.repeat(5000) } })
+  assert.ok((r.estado === 'error' ? (r.detalle ?? '') : '').length <= 200)
+})
+
+test('una pista que no es texto se ignora, no se pega tal cual', () => {
+  const r = interpretarComisiones(200, { comisiones: { estado: 'error', motivo: 'bd', detalle: { url: 'postgres://u:p@h' } } })
+  assert.deepEqual(r, { estado: 'error', motivo: 'asegura_error', detalle: 'bd' })
+})
+
 test('una respuesta rara NO se convierte en cero comisiones', () => {
   // Es el fallo caro: un HTML de error o un JSON de otra forma acabando pintado
   // como «este mes no has cobrado nada».

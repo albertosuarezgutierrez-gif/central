@@ -53,10 +53,14 @@ export async function GET(req: NextRequest) {
     await tgAviso(
       'correduria.cima-liq',
       `⚪ <b>Comisiones</b> — no se ha podido leer la cartera (<code>${com.motivo}</code>).\n` +
+        // El detalle es la mitad útil del aviso: `asegura_error` sin él no dice
+        // si hay que tocar el schema, los permisos o la BD. Si asegura no lo
+        // manda se DICE que no se sabe, no se deja el hueco en blanco.
+        `Pista: <code>${com.detalle ?? 'sin detalle — asegura no lo manda'}</code>\n` +
         `El libro queda marcado como <b>no comprobado</b>, no a cero.`,
       { html: true },
     )
-    return NextResponse.json({ ok: false, motivo: com.motivo }, { status: 502 })
+    return NextResponse.json({ ok: false, motivo: com.motivo, detalle: com.detalle ?? null }, { status: 502 })
   }
 
   // ── Cobertura por compañía ────────────────────────────────────────────────
