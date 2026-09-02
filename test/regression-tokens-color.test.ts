@@ -111,13 +111,6 @@ const EXCEPCIONES: Excepcion[] = [
       'Paleta CATEGÓRICA de 6 tonos para las porciones de la dona «reparto del gasto». Son ' +
       'categorías de gasto, no estados: teñir una de --negative diría que ese gasto está mal.',
   },
-  {
-    archivo: 'app/(usuario)/banca/ResumenPeriodo.tsx',
-    contiene: '<Bar dataKey=',
-    motivo:
-      'Series del ComposedChart de recharts (ingresos / gastos / resultado), mismo caso que ' +
-      'GraficasRango: distinguen series, no aciertos y errores.',
-  },
 ]
 
 function exento(rel: string, linea: string): boolean {
