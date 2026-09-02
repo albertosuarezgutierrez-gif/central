@@ -625,3 +625,10 @@ html[data-saldo-oculto='1'] .saldo-privado {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px; letter-spacing: .03em; color: var(--muted); margin-bottom: 3px;
 }
+
+/* La cabecera de columnas del libro de movimientos solo existe mientras hay COLUMNAS: en móvil la
+   fila se apila (`.banca-movs-row` de arriba), así que rotular «Fecha · Concepto · Negocio ·
+   Importe» sobre una lista apilada señalaría a sitios que ya no están. */
+@media (max-width: 768px) {
+  .banca-movs-head { display: none !important; }
+}
