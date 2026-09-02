@@ -22,6 +22,7 @@ import MiniChatContable from './MiniChatContable'
 import TicketsSuper from './TicketsSuper'
 import SegTabs from './SegTabs'
 import { Pagina, colorImporte, Dato } from '@/components/ui'
+import { Landmark, TrendingUp } from 'lucide-react'
 import SaldoTotal from './SaldoTotal'
 import NegociosResumen from './NegociosResumen'
 import FiscalResumen from './FiscalResumen'
@@ -59,7 +60,7 @@ export default async function BancaPage({ searchParams }: {
     return (
       <Pagina ancho="lectura">
         <MiniChatContable periodoLabel={`${new Date().getFullYear()}`} />
-        <div style={{ margin: '8px 0 20px' }}><SegTabs active="negocios" /></div>
+        <div style={{ margin: '4px 0 22px' }}><SegTabs active="negocios" /></div>
         <NegociosResumen cuentaId={session.id} nombre={session.nombre} />
       </Pagina>
     )
@@ -77,7 +78,7 @@ export default async function BancaPage({ searchParams }: {
     return (
       <Pagina ancho="lectura">
         <MiniChatContable periodoLabel={`${anioFiscal}`} />
-        <div style={{ margin: '8px 0 20px' }}><SegTabs active="fiscal" /></div>
+        <div style={{ margin: '4px 0 22px' }}><SegTabs active="fiscal" /></div>
         <FiscalResumen fiscal={resumenAnual?.fiscal ?? null} declaracion={declaracion} year={anioFiscal} />
       </Pagina>
     )
@@ -91,7 +92,7 @@ export default async function BancaPage({ searchParams }: {
     return (
       <Pagina ancho="tabla">
         <MiniChatContable periodoLabel={`${new Date().getFullYear()}`} />
-        <div style={{ margin: '8px 0 20px' }}><SegTabs active="personal" /></div>
+        <div style={{ margin: '4px 0 22px' }}><SegTabs active="personal" /></div>
         <CategoriasTab year={new Date().getFullYear()} month={0} />
       </Pagina>
     )
@@ -168,12 +169,15 @@ export default async function BancaPage({ searchParams }: {
         <MiniChatContable periodoLabel={etiquetaPeriodo} />
 
         {/* Inicio unificado: 💶 Dinero (saldos + movimientos + IA) | 🏢 Negocios (holding). */}
-        <div style={{ margin: '8px 0 20px' }}><SegTabs active="dinero" /></div>
+        <div style={{ margin: '4px 0 22px' }}><SegTabs active="dinero" /></div>
 
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           {/* El saldo se pinta con su botón 👁 (SaldoTotal.tsx): desenfoca la cifra para poder
               enseñar el panel sin que se lea, y recuerda la elección entre visitas. */}
-          <SaldoTotal texto={fmtEur(totalGrupo)} positivo={totalGrupo >= 0} />
+          <div style={{ minWidth: 0 }}>
+            <div className="migas">Inicio · Dinero · {etiquetaPeriodo}</div>
+            <SaldoTotal texto={fmtEur(totalGrupo)} positivo={totalGrupo >= 0} />
+          </div>
           <div className="banca-acciones" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {saldo.cuentas.length > 0 && <MovimientosBtn />}
             <AccionesBanca
@@ -240,6 +244,9 @@ export default async function BancaPage({ searchParams }: {
                   <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
                     <OcultarCuentaBtn id={c.id} oculta={false} />
                   </div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9, background: 'var(--primary-light)', color: 'var(--primary)', marginBottom: 10 }}>
+                    <Landmark size={16} strokeWidth={1.75} aria-hidden />
+                  </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{c.sociedadNombre}</div>
                   <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>
                     {c.banco || 'Banco'} {c.ibanMascara || ''}
@@ -257,7 +264,10 @@ export default async function BancaPage({ searchParams }: {
                   agente `trading-analista` a diario (la app no habla con IBKR). */}
               {brokerSaldos.map(b => (
                 <div key={`broker-${b.broker}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)', position: 'relative' }}>
-                  <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>📈 Inversión</div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9, background: 'var(--primary-light)', color: 'var(--primary)', marginBottom: 10 }}>
+                    <TrendingUp size={16} strokeWidth={1.75} aria-hidden />
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>Inversión</div>
                   <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{b.broker}</div>
                   <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: colorImporte(b.saldo) }}>
                     {fmtEur(b.saldo)}
