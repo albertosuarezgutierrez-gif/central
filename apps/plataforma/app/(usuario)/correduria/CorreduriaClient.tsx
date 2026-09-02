@@ -10,6 +10,7 @@ import CuadreComisiones from './CuadreComisiones'
 import BuscadorCartera from './BuscadorCartera'
 import Retencion from './Retencion'
 import Duplicadas from './Duplicadas'
+import SinCanal from './SinCanal'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -128,6 +129,16 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
           la mano. Va antes que el dinero ya cobrado a propósito. */}
       <div style={{ marginBottom: 20 }}>
         <Retencion urlAsegura={urlAsegura} />
+      </div>
+
+      {/* ── 3 bis. A QUIÉN NO SE PUEDE LLAMAR ───────────────────────────────
+          El reverso de la lista de arriba: los clientes de la cartera viva sin
+          email ni teléfono. No hay nada que enviarles —el aviso de vencimiento
+          se pierde y no pueden entrar al portal—, así que el trabajo es pedir
+          el correo la próxima vez que se hable con ellos. Va aquí, pegado a la
+          pantalla del teléfono en la mano, porque ese es el momento. */}
+      <div style={{ marginBottom: 20 }}>
+        <SinCanal />
       </div>
 
       {/* ── 4. ¿ME PAGAN LO QUE ME DEBEN? ──────────────────────────────────

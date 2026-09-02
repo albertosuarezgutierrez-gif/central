@@ -409,3 +409,136 @@ export async function impagadosAsegura(): Promise<Impagados> {
     return { estado: 'error', motivo: 'red' }
   }
 }
+
+// ── Clientes sin canal de contacto ──────────────────────────────────────────
+//
+// Quién de la cartera VIVA no tiene ni email ni teléfono. Medido el 02/09/2026:
+// 26 de ~79. A esos el aviso de vencimiento no les llega, no pueden entrar al
+// portal (identifica por email) y —lo que hace que nadie se entere— desde el
+// código se ven igual que un cliente al que sí se avisó.
+//
+// 🚨 Los tres estados aquí NO son de adorno:
+//   · `false` → se miró la columna y NO hay nada: no se le puede escribir.
+//   · `true`  → hay algo guardado. Ojo: mide PRESENCIA, no validez.
+//   · `null`  → asegura no lo informa (versión vieja del puerto, o lista
+//               truncada). Es «no comprobado», y NO se pinta como «no tiene»:
+//               esa confusión es justo la que convierte un hueco en una
+//               afirmación tranquilizadora y falsa.
+
+export type EstadoCanal = 'sin_ninguno' | 'solo_telefono' | 'solo_email' | 'con_ambos' | 'no_comprobado'
+
+export type ClienteCanal = {
+  clienteId: string
+  nombre: string
+  /** `null` = asegura no informó el campo. NO es «no tiene email». */
+  tieneEmail: boolean | null
+  tieneTelefono: boolean | null
+  estado: EstadoCanal
+  /** `null` = no se contó. NO es «no tiene pólizas» (estaría fuera de la lista). */
+  polizasCima: number | null
+  /** Renovación más cercana. `null` = no la hay a futuro o no se sabe; los dos
+   *  contadores de al lado dicen cuál de las dos cosas es. */
+  proximoVencimiento: string | null
+  polizasSinFecha: number | null
+  /** `null` = ninguna póliza suya informa prima. NUNCA 0,00€. */
+  prima: number | null
+  polizasSinPrima: number | null
+}
+
+export type SinCanal =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | {
+      estado: 'ok'
+      filas: ClienteCanal[]
+      resumen: {
+        /** Todos `null` = no comprobado (lista truncada o puerto viejo). */
+        vivos: number | null
+        conEmail: number | null
+        conTelefono: number | null
+        conAlguno: number | null
+        sinNinguno: number | null
+      }
+      truncado: boolean
+    }
+
+/** Tri-estado de verdad: un campo ausente es `null` («no se informó»), no
+ *  `false`. Con `=== true` a secas, un puerto que no manda el campo diría que
+ *  TODOS están sin email. */
+function booleano(v: unknown): boolean | null {
+  return typeof v === 'boolean' ? v : null
+}
+
+/** El estado se DERIVA de los dos canales; no se cree el que venga en el JSON.
+ *  Si falta cualquiera de los dos, el resultado es `no_comprobado`. */
+export function derivarEstadoCanal(email: boolean | null, telefono: boolean | null): EstadoCanal {
+  if (email === null || telefono === null) return 'no_comprobado'
+  if (email && telefono) return 'con_ambos'
+  if (email) return 'solo_email'
+  if (telefono) return 'solo_telefono'
+  return 'sin_ninguno'
+}
+
+export function interpretarSinCanal(status: number, json: unknown): SinCanal {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const r = json as Record<string, unknown>
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (r.estado !== 'ok' || !Array.isArray(r.filas)) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+
+  const filas: ClienteCanal[] = []
+  for (const f of r.filas) {
+    if (typeof f !== 'object' || f === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const o = f as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    const nombre = cadena(o.nombre)
+    // Sin id no hay ficha a la que ir y sin nombre no se sabe a quién llamar:
+    // una fila así no es «un cliente sin canal», es una respuesta rota.
+    if (id === null || nombre === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const tieneEmail = booleano(o.tieneEmail)
+    const tieneTelefono = booleano(o.tieneTelefono)
+    filas.push({
+      clienteId: id,
+      nombre,
+      tieneEmail,
+      tieneTelefono,
+      estado: derivarEstadoCanal(tieneEmail, tieneTelefono),
+      polizasCima: entero(o.polizasCima),
+      proximoVencimiento: cadena(o.proximoVencimiento),
+      polizasSinFecha: entero(o.polizasSinFecha),
+      prima: numero(o.prima),
+      polizasSinPrima: entero(o.polizasSinPrima),
+    })
+  }
+
+  const res = (typeof r.resumen === 'object' && r.resumen !== null ? r.resumen : {}) as Record<string, unknown>
+  return {
+    estado: 'ok',
+    filas,
+    // `entero()` ya devuelve null cuando falta: aquí NO se colapsa a 0, porque
+    // «0 clientes ilocalizables» es la frase tranquilizadora que no se ha medido.
+    resumen: {
+      vivos: entero(res.vivos),
+      conEmail: entero(res.conEmail),
+      conTelefono: entero(res.conTelefono),
+      conAlguno: entero(res.conAlguno),
+      sinNinguno: entero(res.sinNinguno),
+    },
+    truncado: r.truncado === true,
+  }
+}
+
+export async function sinCanalAsegura(): Promise<SinCanal> {
+  try {
+    const r = await pedir('/api/operador/sin-canal')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarSinCanal(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
