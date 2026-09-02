@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T22:15:51Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T05:04:10Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -253,6 +253,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Alberto repuso los dos PIN desde el panel
 - `/cartera/renovaciones`
 - NO hay botón de «retarificar todas»
 - BD de matrículas gratis: no la hay útil.
@@ -262,5 +263,4 @@
 - El canal es un PUERTO
 - Los 15 precios reales del 29/07 son TODOS `estimado`
 - Corrección de hecho:
-- Apagado por defecto
 

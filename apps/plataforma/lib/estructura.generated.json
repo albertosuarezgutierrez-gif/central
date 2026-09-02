@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T22:15:51Z",
+  "generadoEn": "2026-09-02T05:04:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -820,7 +820,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 8
       },
       "rrhh": {
         "estado": "usado",
@@ -5313,6 +5313,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Alberto repuso los dos PIN desde el panel",
+      "fecha": ""
+    },
+    {
       "titulo": "`/cartera/renovaciones`",
       "fecha": ""
     },
@@ -5366,10 +5370,6 @@
     },
     {
       "titulo": "Campaña a los 32.520 leads: descartada.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Sí al inbound de cualquiera",
       "fecha": ""
     }
   ],

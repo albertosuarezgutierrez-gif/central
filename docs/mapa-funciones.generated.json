@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T22:15:51Z",
-  "sha": "1a85db13b68e0d33814dee7909370459e9dc7732",
+  "generadoEn": "2026-09-02T05:04:10Z",
+  "sha": "326b9b295efd65e73f5739185c538b74493a49ec",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5291,8 +5291,8 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<AmbitoCorreduria>",
-          "linea": 19,
-          "resumen": "Resuelve a qué correduría pertenece la cuenta de la sesión. Hoy devuelve SIEMPRE `pendiente`, porque la tabla que vincula cuenta ↔ correduría vive en el schema `seguros` y todavía no existe. Eso es co"
+          "linea": 21,
+          "resumen": "Resuelve a qué correduría pertenece la cuenta de la sesión. Desde el volcado del 02/09/2026 el vínculo existe: `seguros.usuarios` trae los 17 usuarios del CRM de origen con su `correduria_id`, y la cu"
         },
         {
           "nombre": "correduriaIdActual",
@@ -5300,13 +5300,16 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<string>",
-          "linea": 34,
+          "linea": 49,
           "resumen": "Azúcar: el `correduriaId` de la sesión, o lanza. Ver `exigirCorreduriaId`."
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "public",
+        "seguros"
+      ],
       "rutaApi": null,
-      "hash": "d7b0b72e7d54"
+      "hash": "ee0d56ab0ab9"
     },
     {
       "ruta": "apps/asegura/middleware.ts",
@@ -51652,7 +51655,7 @@
           "exportada": false,
           "params": "{ tipo, onChange, disabled }: { tipo: string; onChange: (v: string) => void; disabled?: boolean }",
           "retorno": null,
-          "linea": 441,
+          "linea": 447,
           "resumen": "Override manual del tipo de aparato: la categoría Tuya del NIVIAN puede no reconocerse y entonces la cerradura se pinta como ventilador. Aquí se fuerza «Cerradura» para que salga su tarjeta de acceso."
         },
         {
@@ -51661,14 +51664,14 @@
           "exportada": false,
           "params": "{ titulo, b }: { titulo: string; b: BloqueSonda }",
           "retorno": null,
-          "linea": 453
+          "linea": 459
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "1c91466785a4"
+      "hash": "261e6e4f158d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/domotica/page.tsx",
@@ -53606,7 +53609,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "02bc8cef3c75"
+      "hash": "a3914ed56633"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -58884,7 +58887,7 @@
           "exportada": true,
           "params": "_req: Request, ctx: { params: Promise<{ id: string; ref: string }> }",
           "retorno": null,
-          "linea": 16,
+          "linea": 11,
           "resumen": "Borra un PIN (por su reserva_ref). Sesión de usuario. Intenta borrarlo en la cerradura y lo marca 'borrado' en la BD. `ref` viene URL-encoded (puede contener ':' del prefijo manual)."
         },
         {
@@ -58893,8 +58896,8 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string; ref: string }> }",
           "retorno": null,
-          "linea": 52,
-          "resumen": "· si el borrado sale bien y la creación falla, el huésped se queda con un código muerto. Ese caso se marca `estado='error'` y se canta: NO se deja como 'activo', porque el mensaje de la víspera lee ju"
+          "linea": 41,
+          "resumen": "Repone la ventana de validez de un PIN VIVO. Sesión de usuario: esto ES la «autorización nuestra». Body: { desde?, hasta? } (ISO/datetime-local). Sin body, se recalcula desde la reserva de Smoobu con "
         }
       ],
       "tablas": [
@@ -58903,7 +58906,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/[id]/pin/[ref]",
-      "hash": "17cb055fd03a"
+      "hash": "af8bdb982b9a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/acceso/[id]/pin/route.ts",
@@ -58967,7 +58970,7 @@
           "exportada": false,
           "params": "offsetDias = 0",
           "retorno": "string",
-          "linea": 31,
+          "linea": 32,
           "resumen": "Fecha 'YYYY-MM-DD' en Europe/Madrid, hoy + offsetDias."
         },
         {
@@ -58976,7 +58979,7 @@
           "exportada": false,
           "params": "min: number",
           "retorno": "string",
-          "linea": 39,
+          "linea": 40,
           "resumen": "\"135\" → \"2 h 15 min\". Para que el aviso se lea sin hacer cuentas mentales."
         },
         {
@@ -58985,7 +58988,7 @@
           "exportada": false,
           "params": "b: SmoobuBooking, ...keys: string[]",
           "retorno": "string",
-          "linea": 49,
+          "linea": 50,
           "resumen": "Lee un campo de la reserva de Smoobu probando varias formas (el JSON no es 100% estable)."
         },
         {
@@ -58994,7 +58997,7 @@
           "exportada": false,
           "params": "dispId: string, r: ReservaAcceso, desdeEpoch: number, hastaEpoch: number, campos: { estado: string; pin?: string; tuya_password_id?: string; modo?: string; detalle?: unknown },",
           "retorno": null,
-          "linea": 55,
+          "linea": 56,
           "resumen": "Guarda/actualiza la fila del PIN de una reserva (idempotente por el índice único)."
         },
         {
@@ -59003,7 +59006,7 @@
           "exportada": false,
           "params": "pin: string, nombreDisp: string",
           "retorno": "string",
-          "linea": 76,
+          "linea": 77,
           "resumen": "Mensaje al huésped con el PIN (canal 'huesped'/'ambos'). Texto sobrio, sin datos de más."
         },
         {
@@ -59012,7 +59015,7 @@
           "exportada": false,
           "params": "cfg: ConfigAcceso, r: ReservaAcceso, pin: string, nombreDisp: string",
           "retorno": "Promise<boolean>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Entrega el PIN según el canal configurado. Devuelve true si se entregó por algún canal."
         },
         {
@@ -59021,7 +59024,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 99
+          "linea": 100
         }
       ],
       "tablas": [
@@ -59031,7 +59034,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/programador",
-      "hash": "3458e9f72c66"
+      "hash": "4cd0bc7498f5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/comando/route.ts",
@@ -61093,7 +61096,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -61102,7 +61105,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 62,
+          "linea": 64,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -61111,7 +61114,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 88
+          "linea": 90
         },
         {
           "nombre": "getPendiente",
@@ -61119,7 +61122,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 115
+          "linea": 117
         },
         {
           "nombre": "POST",
@@ -61127,7 +61130,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 120
+          "linea": 122
         }
       ],
       "tablas": [
@@ -61152,7 +61155,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "0794948af493"
+      "hash": "b8b730cda298"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -63470,7 +63473,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cef70c8bdce1"
+      "hash": "b0da7fb6ba27"
     },
     {
       "ruta": "apps/plataforma/app/login/page.tsx",
@@ -69491,6 +69494,83 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ed80fbf1f6d0"
+    },
+    {
+      "ruta": "apps/plataforma/lib/domotica/reponer-ventana-puro.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/domotica/reponer-ventana-puro.ts — parte PURA (sin BD, sin Tuya, sin Telegram) de la reposición de la ventana de un PIN desde Telegram. Separada para poder testearla con `node --test`. El aviso «🕒 N PIN con la ventana desactualizada» se lee en el móvil, y hasta el 02/09/2026 su única salida era",
+      "exporta": [
+        "callbackReponerVentana",
+        "botonesReponerVentana",
+        "horaMadridCorta",
+        "textoResultadoReponer"
+      ],
+      "funciones": [
+        {
+          "nombre": "callbackReponerVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "dispositivoId: string, reservaRef: string",
+          "retorno": "string",
+          "linea": 21,
+          "resumen": "`callback_data` del botón «🔄 ventana» de un PIN: `dom_ventana:<dispositivoId>:<reservaRef>`."
+        },
+        {
+          "nombre": "botonesReponerVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "dispositivoId: string, desajustes: Desajuste[]",
+          "retorno": "Boton[][]",
+          "linea": 32,
+          "resumen": "Un botón por desajuste, en filas de uno (el texto lleva el nombre del huésped y no cabe de dos en dos en el móvil). Los que no quepan en los 64 bytes de Telegram se quedan SIN botón —el texto del avis"
+        },
+        {
+          "nombre": "horaMadridCorta",
+          "kind": "function",
+          "exportada": true,
+          "params": "ms: number",
+          "retorno": "string",
+          "linea": 46,
+          "resumen": "\"2026-09-04T09:00:00.000Z\" → \"04/09 11:00\" en hora de Madrid, para que el resultado se lea sin cuentas. Se monta a mano desde `formatToParts`: el ICU del runtime no siempre respeta `2-digit` en es-ES."
+        },
+        {
+          "nombre": "textoResultadoReponer",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservaRef: string, r: ResultadoReponer",
+          "retorno": "string",
+          "linea": 63,
+          "resumen": "Texto que el bot responde tras pulsar el botón. Dice lo que pasó de verdad: si el código cambió (Tuya cayó a modo offline y generó otro), lo canta en mayúsculas, porque el huésped tiene el viejo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6c5830dc2733"
+    },
+    {
+      "ruta": "apps/plataforma/lib/domotica/reponer-ventana.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/domotica/reponer-ventana.ts — repone la ventana de validez de un PIN VIVO. Un solo camino para las dos puertas que lo piden: el botón «🔄 ventana» de /sivra/domotica (PATCH /api/sivra/domotica/acceso/[id]/pin/[ref], con sesión) y el botón del aviso de Telegram (webhook, chat de Alberto). Quien l",
+      "exporta": [
+        "reponerVentanaPin"
+      ],
+      "funciones": [
+        {
+          "nombre": "reponerVentanaPin",
+          "kind": "function",
+          "exportada": true,
+          "params": "dispositivoId: string, reservaRef: string, body: { desde?: string; hasta?: string } = {},",
+          "retorno": "Promise<ResultadoReponer>",
+          "linea": 32,
+          "resumen": "`desde`/`hasta` (ISO/datetime-local) opcionales. Sin ellos, se recalcula desde la reserva de Smoobu con los márgenes de hoy — el caso «he subido el margen de salida y quiero aplicarlo a este». Con `de"
+        }
+      ],
+      "tablas": [
+        "domotica_acceso_pin",
+        "domotica_dispositivos"
+      ],
+      "rutaApi": null,
+      "hash": "1163e92cc1ea"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/tipo.ts",
@@ -81010,7 +81090,8 @@
       "exporta": [
         "tgAlert",
         "tgAlertButtons",
-        "tgAvisoAlerta"
+        "tgAvisoAlerta",
+        "tgAvisoAlertaBotones"
       ],
       "funciones": [
         {
@@ -81045,11 +81126,20 @@
           "retorno": "Promise<void>",
           "linea": 29,
           "resumen": "`tgAlert` con el interruptor del panel /telegram. `id` debe estar en `lib/telegram/catalogo.ts`."
+        },
+        {
+          "nombre": "tgAvisoAlertaBotones",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, mensaje: string, nivel: keyof typeof EMOJI, botones: Boton[][]",
+          "retorno": "Promise<number | null>",
+          "linea": 36,
+          "resumen": "`tgAlertButtons` con el interruptor del panel /telegram (misma envoltura SIVRA que `tgAvisoAlerta`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9380b1bb8ae0"
+      "hash": "6ed95e274dd2"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/avisos.ts",
@@ -106106,7 +106196,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2766,
-    "funciones": 7768
+    "archivos": 2768,
+    "funciones": 7774
   }
 }
