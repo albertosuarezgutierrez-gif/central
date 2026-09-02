@@ -553,10 +553,18 @@ async function leerIntervinientes(
       orderBy: [{ polizaId: 'asc' }, { rol: 'asc' }, { id: 'asc' }],
       select: {
         polizaId: true, rol: true, clienteId: true, origen: true,
-        nombre: true, apellidos: true, telefono: true, email: true,
+        nombre: true, apellidos: true, telefono: true, email: true, nifLookupHash: true,
         cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
       },
     })
+    // QUIÉN es cada fila, como etiqueta opaca por respuesta. El NIF es la única
+    // identidad fiable (el nombre se repite entre parientes), pero es un dato
+    // personal: no sale de aquí. Fuera solo viaja `p1`, `p2`… que sirve para
+    // agrupar y para nada más.
+    const claves = new Map<string, string>()
+    for (const f of filas) {
+      if (f.nifLookupHash && !claves.has(f.nifLookupHash)) claves.set(f.nifLookupHash, `p${claves.size + 1}`)
+    }
     return filas.map((f) => {
       const propio = [descifrar(f.nombre), descifrar(f.apellidos)].filter(Boolean).join(' ').trim() || null
       const deFicha = f.cliente ? `${f.cliente.nombre} ${f.cliente.apellidos}`.trim() || null : null
@@ -572,6 +580,7 @@ async function leerIntervinientes(
         telefonoIlegible: telefono === null && (ilegible(f.telefono) || ilegible(f.cliente?.telefono)),
         emailIlegible: email === null && (ilegible(f.email) || ilegible(f.cliente?.email)),
         fichaId: f.clienteId ?? null,
+        personaClave: f.nifLookupHash ? claves.get(f.nifLookupHash) ?? null : null,
         esTomador: f.clienteId === tomadorId,
         origen: String(f.origen),
       }

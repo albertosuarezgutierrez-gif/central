@@ -30,6 +30,25 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 «Ojo con duplicar»: agrupar personas por NIF, no por nombre (02/09/2026, noche).** Aviso de Alberto
+  sobre GLOBAL 2. `personasDePolizas` agrupaba por ficha y, a falta de ficha, por NOMBRE — y el peligro
+  va en las dos direcciones: **partir** a una persona en dos filas (enlazada a su ficha en una póliza y
+  suelta en otra) y, peor, **fundir a dos parientes homónimos** en una sola con los teléfonos mezclados.
+  Ahora la clave es el NIF: asegura emite una etiqueta OPACA (`p1`, `p2`…) —el NIF no sale del backend—
+  y dos NIF distintos no se funden jamás. Medido: GLOBAL 2 tiene **tres** NIF distintos, uno por
+  furgoneta; en toda la cartera hoy 0 personas se partían (409 de 504 filas no traen NIF y siguen
+  cayendo al nombre). 5 cepos nuevos, tres mordidos. **Queda como regla global** en el CLAUDE.md de
+  la raíz («agrupar por IDENTIDAD, nunca por la etiqueta») y como reglas 12-13 de la skill
+  `correduria-crm` (con la del tomador, que tampoco es un interviniente). PR #2145.
+
+- **👤 «Personas en sus pólizas», arriba en la ficha (02/09/2026, noche).** Alberto: «en empresas y
+  particulares se puede poner arriba las personas de contacto o relaciones». La tarjeta «Relaciones»
+  solo enseña lo DECLARADO a mano (`cliente_relaciones`) y casi nadie lo tiene; mientras, CIMA ya dice
+  quién conduce cada coche y con qué teléfono, pero enterrado póliza por póliza. Nueva tarjeta que
+  agrupa **por persona** (no por póliza): nombre, qué es en cada una con su matrícula, teléfono/email
+  pinchables, enlace a su ficha si CIMA la enlazó, y si tiene o no vínculo declarado. `personasDePolizas`
+  con 7 cepos, dos mordidos. En GLOBAL 2 salen sus tres conductores de un vistazo.
+
 - **🏢 GLOBAL 2: el titular no salía en su propia póliza (02/09/2026, noche).** Alberto, revisando la
   6930FBP: «¿no aparece propietario la empresa?». Cierto — el **tomador NO es un interviniente** (es el
   `cliente_id` de la póliza), así que la tarjeta, que solo pintaba `poliza_intervinientes`, dejaba fuera

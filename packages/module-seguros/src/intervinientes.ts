@@ -28,6 +28,14 @@ export type IntervinienteFicha = {
   emailIlegible: boolean
   /** Su propia ficha en la cartera, si CIMA la enlazó. Es un enlace, no un dato. */
   fichaId: string | null
+  /**
+   * QUIÉN es, como etiqueta opaca (`p1`, `p2`…) que asegura calcula por
+   * respuesta a partir del NIF. Es la ÚNICA identidad fiable que hay: el
+   * nombre se repite entre parientes y el enlace a ficha falta en la mayoría.
+   * `null` = la fila no trae NIF (409 de las 504, casi todas del volcado).
+   * No sale a pantalla: solo sirve para agrupar.
+   */
+  personaClave: string | null
   /** La misma persona que el tomador: no aporta un contacto nuevo. */
   esTomador: boolean
   /** `cima` o `manual`. */
@@ -154,6 +162,7 @@ export function filasIntervinientes(
     telefonoIlegible: false,
     emailIlegible: false,
     fichaId: tomador.fichaId,
+    personaClave: null,
     esTomador: true,
     // Ni `cima` ni `manual`: sale de la póliza misma.
     origen: 'poliza',
@@ -163,4 +172,125 @@ export function filasIntervinientes(
     filas,
     aviso: lista === null ? 'sin_mirar' : lista.length === 0 ? 'solo_tomador' : null,
   }
+}
+
+/**
+ * Las PERSONAS que aparecen en las pólizas de una ficha, agrupadas por persona
+ * en vez de por póliza.
+ *
+ * 🚨 Alberto, 02/09/2026: «en empresas y particulares se puede poner arriba las
+ * personas de contacto o relaciones — en el caso de GLOBAL las personas de las
+ * que tenemos datos e intervienen en alguna póliza». La tarjeta «Relaciones y
+ * autorizaciones» solo enseña lo DECLARADO a mano (`cliente_relaciones`), y en
+ * la cartera casi nadie lo tiene; mientras tanto, CIMA ya nos dice quién
+ * conduce cada coche y con qué teléfono. Esa gente existe, se puede llamar, y
+ * estaba enterrada póliza por póliza.
+ *
+ * Se agrupa por persona porque la misma conduce varias: GLOBAL 2 tiene tres
+ * furgonetas con TRES conductores distintos, y otra ficha puede tener el mismo
+ * conductor en dos coches.
+ *
+ * 🚨 «Ojo con duplicar» (Alberto, 02/09/2026), y el peligro va en las DOS
+ * direcciones, que es lo que obliga a agrupar por NIF y no por nombre:
+ *
+ *   · **Partir a una persona en dos filas**: la misma sale enlazada a su ficha
+ *     en una póliza y suelta en otra, y con claves distintas aparecería dos
+ *     veces. Por eso, tras agrupar, se funden los grupos que comparten ficha.
+ *   · **Fundir a dos personas en una**: dos parientes homónimos —un padre y un
+ *     hijo con el mismo nombre son el caso clásico en una póliza de coche—
+ *     colapsarían en una sola fila con los teléfonos mezclados, que es la
+ *     mentira más cara de las dos. Por eso **dos NIF distintos NO se funden
+ *     jamás**, coincida lo que coincida.
+ *
+ * Orden de la clave: NIF (`personaClave`) → ficha → nombre → nada, y solo se
+ * cae al nombre cuando no hay ninguna de las dos primeras (409 de las 504
+ * filas de hoy no traen NIF: son del volcado). Cuando la identidad es el
+ * nombre se dice de qué póliza sale cada papel y no se afirma nada más.
+ *
+ * El TOMADOR se excluye: es la ficha que se está mirando.
+ * `null` (no se pudo leer la tabla) se propaga: no es «no hay nadie».
+ */
+export type PersonaDePolizas = {
+  clave: string
+  nombre: string | null
+  /** Está pero cifrado y no se pudo descifrar (≠ no tiene nombre). */
+  nombreIlegible: boolean
+  fichaId: string | null
+  telefono: string | null
+  email: string | null
+  /** Qué es en cada póliza: `conductor habitual del 2922BNJ`. */
+  papeles: { rol: string; polizas: string[] }[]
+  /** Su vínculo declarado en «Relaciones», si lo tiene. `null` = no hay ninguno
+   *  anotado, que es el caso normal: CIMA no declara parentescos. */
+  relacionDeclarada: string | null
+}
+
+export function personasDePolizas(
+  intervinientes: IntervinienteFicha[] | null,
+  polizas: readonly { id: string; etiqueta: string }[],
+  relaciones: readonly { relacionadoId: string; tipo: string }[] | null,
+): PersonaDePolizas[] | null {
+  if (intervinientes === null) return null
+  const etiqueta = new Map(polizas.map((p) => [p.id, p.etiqueta]))
+  const rel = new Map((relaciones ?? []).map((r) => [r.relacionadoId, r.tipo]))
+  const por = new Map<string, PersonaDePolizas>()
+
+  // Una persona con NIF y ficha enseña que esa ficha ES ese NIF: sirve para
+  // recoger sus otras filas, las que vienen sin NIF pero con la misma ficha.
+  const fichaDe = new Map<string, string>()
+  for (const i of intervinientes) {
+    if (i.esTomador || i.personaClave === null || i.fichaId === null) continue
+    const previo = fichaDe.get(i.fichaId)
+    // Dos NIF sobre la misma ficha: dato contradictorio. No se elige uno.
+    if (previo !== undefined && previo !== i.personaClave) fichaDe.set(i.fichaId, '')
+    else if (previo === undefined) fichaDe.set(i.fichaId, i.personaClave)
+  }
+
+  for (const i of intervinientes) {
+    if (i.esTomador) continue
+    const nombreClave = i.nombre?.trim().toLowerCase()
+    const porFicha = i.fichaId ? fichaDe.get(i.fichaId) : undefined
+    const clave =
+      i.personaClave !== null ? `nif:${i.personaClave}`
+      : porFicha ? `nif:${porFicha}`
+      : i.fichaId ? `f:${i.fichaId}`
+      : nombreClave ? `n:${nombreClave}`
+      : `x:${i.polizaId}:${i.rol}`
+    let p = por.get(clave)
+    if (!p) {
+      p = {
+        clave,
+        nombre: i.nombre,
+        nombreIlegible: i.nombreIlegible,
+        fichaId: i.fichaId,
+        telefono: null,
+        email: null,
+        papeles: [],
+        relacionDeclarada: i.fichaId ? rel.get(i.fichaId) ?? null : null,
+      }
+      por.set(clave, p)
+    }
+    // El primer dato que aparezca manda; los siguientes no lo pisan.
+    p.nombre ??= i.nombre
+    p.fichaId ??= i.fichaId
+    p.telefono ??= i.telefono
+    p.email ??= i.email
+    p.relacionDeclarada ??= p.fichaId ? rel.get(p.fichaId) ?? null : null
+    if (p.nombre !== null) p.nombreIlegible = false
+
+    const et = etiqueta.get(i.polizaId) ?? null
+    let papel = p.papeles.find((x) => x.rol === i.rol)
+    if (!papel) {
+      papel = { rol: i.rol, polizas: [] }
+      p.papeles.push(papel)
+    }
+    if (et !== null && !papel.polizas.includes(et)) papel.polizas.push(et)
+  }
+
+  const lista = [...por.values()]
+  for (const p of lista) p.papeles.sort((a, b) => prioridad(a.rol) - prioridad(b.rol))
+  return lista.sort((a, b) => {
+    const d = prioridad(a.papeles[0]?.rol ?? '') - prioridad(b.papeles[0]?.rol ?? '')
+    return d !== 0 ? d : (a.nombre ?? '').localeCompare(b.nombre ?? '', 'es')
+  })
 }

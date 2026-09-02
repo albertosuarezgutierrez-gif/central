@@ -256,6 +256,25 @@ campo intermedio (`s.datos` de la ingesta) que aguas abajo ya no existía.
 Al añadir una columna de enriquecimiento nueva, esto es parte del PR, no un apaño posterior. Si un
 cambio toca una pantalla que ya viola la regla, corrígela en el mismo PR.
 
+## 👥 Agrupar personas: por IDENTIDAD, nunca por la etiqueta — regla global permanente
+**Cuando juntes filas que hablan de «la misma persona», agrupa por su identificador, no por su
+nombre.** El nombre es la etiqueta, no la identidad, y falla en las DOS direcciones:
+
+- **Partir a una en dos**: la misma persona escrita distinto («JUAN PEREZ LOPEZ» / «Juan Perez»), o
+  enlazada a su ficha en un sitio y suelta en otro, sale duplicada. Se ve, y molesta.
+- **Fundir a dos en una**: dos homónimos —un padre y un hijo en la póliza del mismo coche, dos
+  huéspedes con el mismo nombre, dos empleados— colapsan en una fila **con los teléfonos, correos y
+  papeles mezclados**. Esta es la cara CARA: duplicar se nota, mezclar no, y encima el resultado es
+  plausible. Es el mismo fallo que el «dato leído mal» de la regla anterior.
+
+Qué hacer: orden **identificador (DNI/NIF/CIF, id externo) → enlace a su ficha → nombre**, cayendo al
+nombre SOLO cuando no hay ninguno de los dos primeros, y **dos identificadores distintos no se funden
+jamás**, coincida lo que coincida el resto. Si el identificador es un dato personal, no lo saques del
+backend para agrupar: emite una etiqueta opaca por respuesta (`p1`, `p2`…). Cuando la identidad acabe
+siendo el nombre, dilo en la pantalla —de qué póliza/reserva sale cada cosa— y no afirmes nada más.
+Caso fundacional (02/09/2026, PR #2145): «ojo con duplicar», de Alberto, sobre las personas de las
+pólizas de GLOBAL 2 — tres furgonetas, tres conductores distintos.
+
 ## Responsive — regla global permanente
 **Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.
 
