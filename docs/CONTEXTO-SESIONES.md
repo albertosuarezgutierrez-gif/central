@@ -32,26 +32,7 @@
 
 ---
 
-### 📄 (02/09/2026) El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)
-- Alberto subió «movimientos (2).pdf» al chat 📎 y recibió «prueba con una foto más nítida o un PDF que tenga texto».
-- **Descartado que sea pdf-parse:** el cron `subastas-enriquecer` leyó decenas de PDF en prod esa misma mañana
-  (`documentos.legible=true`, 06:15-09:31 UTC) y la lib va bien en local. **El PDF no traía capa de texto.**
-- **Causa real:** `extraerDesdeBuffer` cerraba el paso ahí — sin OCR y sin decir cuál de los tres desenlaces era,
-  pese a que `rasterizarPdf` (PDFium) + visión ya existían y los usan `factura-limpieza-lectura` y el lector registral.
-- Ahora: `MotivoSinLectura` (pdf_ilegible · pdf_sin_texto{no_intentado|sin_paginas|error|sin_datos} · formato) →
-  mensaje que dice si se ha MIRADO o no y enruta a `/banca → Importar`; y `opts.ocr` (solo el chat, no los barridos).
-- **Probado sobre un PDF sin capa de texto fabricado a propósito:** pdf-parse abre 1 página y saca 0 caracteres;
-  JPEG embebidos y PDFium devuelven la página, y la imagen sale legible. Guardián `rasterizar-pdf.test.ts` —sin él
-  la regresión es INVISIBLE: saldría `ocr:'sin_paginas'`, un desenlace legítimo, con la suite en verde.
-- **Sin cerrar:** la lectura por VISIÓN no se ha probado end-to-end (el contenedor no tiene claves de IA) y no se ha
-  visto el PDF de Alberto. `require('pdf-parse')` de `app/api/sivra/expenses/parse-invoice/route.ts` sigue en la raíz;
-  el barrido de Gmail (`expenses/agent/scan`) sigue sin OCR, así que una factura escaneada por correo se pierde.
-
----
-
----
-
-### 🧱 (02/09/2026, noche) Las 43 cabeceras restantes, al componente compartido (PR #2054)
+### 🧱 (02/09/2026, noche) Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)
 - Con #2045, `apps/plataforma` queda **entera** sobre `PageHeader`: 43 cabeceras + 3 `BtnLink` + 9 `ThinBar`, en
   **4 tandas de agentes** con lista EXPLÍCITA de ficheros por tanda (y de los prohibidos) para no pisarse.
 - 🔧 **Dos huecos de las primitivas que solo se ven al adoptarlas de verdad**, los dos destapados por botones reales
@@ -63,6 +44,12 @@
   `pricing-auto`/`pricing-rentabilidad` dejan su paleta hex fija: su título ya responde al tema.
 - El commit lleva **`[preview]`** a propósito: con `--sin-previews`, 43 pantallas cambiando de aspecto se verían por
   primera vez EN PRODUCCIÓN. Un build es más barato que eso.
+- 🚨 **Y el `[preview]` falló DOS veces seguidas antes de funcionar** (lo caro: el síntoma es idéntico a un
+  build legítimamente ignorado, así que no falla nada). Necesita **DOS condiciones a la vez**: ir en el asunto
+  del **ÚLTIMO** commit del push (el script lee `VERCEL_GIT_COMMIT_MESSAGE`, el HEAD empujado) **Y** que ese
+  commit **toque la app** — `[preview]` levanta el veto de `--sin-previews` (paso 1b de
+  `scripts/vercel-ignore-build.mjs`) pero el paso 3 salta igual por rutas. Un commit que solo toca un `.md` de
+  la raíz NO construye, lleve marcador o no. Documentado en el `CLAUDE.md` raíz y en el de plataforma.
 - **Sin migrar a propósito:** `banca/transferencia` (sus 3 `<h1>` son estados de un formulario) e
   `invitado/limpieza` (única pantalla de Vanesa, intranet de invitado, no el panel `(usuario)`).
 
@@ -74,7 +61,12 @@
 - **`CLAUDE.md` propios** para `apps/almacen` y `apps/asegura-portal` (los escribieron dos agentes leyendo el código;
   lo no verificable va marcado «pendiente de confirmar», no inventado). `docs/FUENTES-DE-VERDAD.md` y el raíz, al día.
 - `asegura-portal` no tenía ficha curada en `estructura.ts` (el auditor lo avisaba); añadida y radiografía regenerada:
-  **0 reimplementaciones · 0 apps sin CLAUDE.md**. Guardián 168/168, suite completa en verde. **PR #2044** (19/19 checks).
+  **0 reimplementaciones · 0 apps sin CLAUDE.md**. Guardián 168/168, suite completa en verde. **PR #2044 mergeado**.
+- 🏁 **Y una CARRERA que deja el generado mintiendo, medida aquí:** `main` avanzó con el PR #2047 entre mi
+  `git merge main` y el squash, y ese PR borraba `apps/asegura/lib/comisiones-motivo.ts`. GitHub aplica el squash
+  sobre el main NUEVO, pero `mapa-funciones.generated.json` se generó con el VIEJO → entró en `main` con una entrada
+  a un archivo que ya no existe. **Regenerar el índice antes de empujar no basta si la base se mueve**; el
+  `auditar --check` (que ya fallaba en la base 2cb05af6, comprobado en worktree) es quien lo caza. Regenerado en PR aparte.
 
 ### 🧩 (02/09/2026, noche) Las 5 primitivas huérfanas: se MIDIÓ antes de decidir (PR #2045 mergeado)
 - Llevaban desde su creación a cero consumidores. La pregunta «¿la uso o la borro?» se contestó contando sitios
