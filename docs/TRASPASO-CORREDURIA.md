@@ -17,7 +17,16 @@
 > La contraseña de `crm_seguros` pasó por el chat (captura de pantalla). **Alberto decidió el 02/09/2026
 > que NO se rota** («el punto 2 no se hace»): queda anotado y no se toca sin que lo pida.
 >
-> ## 🔐 AUTH TAMBIÉN EN CASA (02/09/2026, ~09:00 UTC) — lo que queda es pegar tres variables
+> ## 🔐 AUTH TAMBIÉN EN CASA (02/09/2026, ~09:00 UTC) — copiada, pero NO se va a usar
+>
+> 🛑 **Decisión de Alberto, minutos después de copiarla:** «yo eso no lo quiero… no es necesario el
+> acceso, eso ya desarrollaremos». La web del CRM de Manuel no es una pantalla que Alberto vaya a abrir:
+> las pantallas de la correduría se hacen en `plataforma` → `/correduria`. Por tanto **los pasos 1-5 de
+> abajo NO se ejecutan** (login, Google, TOTP, SMTP del CRM). El CRM sigue desplegado únicamente como
+> **motor de ingesta de CIMA** (cron → `app.grupoasegura.com` → Fly → TIREA), que escribe en `seguros`
+> de central con `crm_seguros` sin necesitar login. Dependencia que queda viva por eso: el adaptador
+> de Fly en la cuenta de Manuel; se sustituye el día que haya ingesta propia. La copia de `auth.*`
+> queda en central como respaldo, sin uso.
 >
 > **Copiado por dblink al `auth.*` de central, con los MISMOS UUID:** 9 `auth.users` (Alberto y Manuel
 > con su hash bcrypt y su TOTP verificado; 7 de pruebas), 11 `auth.identities` (email + google de los dos

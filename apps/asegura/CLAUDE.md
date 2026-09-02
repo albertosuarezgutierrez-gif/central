@@ -43,13 +43,17 @@ Alberto y Manuel, con contraseña bcrypt y su TOTP), 11 identidades y 2 factores
 mismos UUID** en `auth.*` de central (9/9 enlazados con `seguros.usuarios.auth_user_id`), y el trigger
 `on_auth_user_created` → `seguros.handle_new_user()` ya crea la fila de `seguros.usuarios` en cada alta.
 Referencia y trampas (RLS sin políticas en `auth.*` de origen = 0 filas sin error; INHERIT por GRANT en
-PG16) en `prisma/sql/2026-09-02_seguros_auth_traspaso.sql`. **Lo que falta es de dashboard, no de BD**:
-en Vercel `asegura` las tres variables `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` /
-`SUPABASE_SERVICE_ROLE_KEY` siguen apuntando a `uijsgeocgdaxkhvwtjqs` hasta que Alberto las pegue, y en
-el Supabase de central hay que poner Site URL / Redirect URL de `app.grupoasegura.com`, el proveedor
-Google (client ID/secret + redirect `…wswbehlcuxqxyinousql.supabase.co/auth/v1/callback` en Google Cloud)
-y comprobar que TOTP está activo. Hasta ese cambio el login sigue funcionando contra el proyecto de Manuel.
-El CRM no usa PostgREST en producción: `record-evidence.ts` (PostgREST) **no tiene llamadores**, solo su test.
+PG16) en `prisma/sql/2026-09-02_seguros_auth_traspaso.sql`.
+
+🛑 **Decisión de Alberto (02/09/2026): la web del CRM de Manuel NO se quiere.** «Eso no lo quiero… no es
+necesario el acceso, eso ya desarrollaremos.» Consecuencias: **no se migra su login** (las variables
+`NEXT_PUBLIC_SUPABASE_*` / `SUPABASE_SERVICE_ROLE_KEY` de Vercel `asegura` se quedan apuntando al proyecto
+de Manuel y nadie tiene que entrar ahí), no se configura Google/TOTP/SMTP en central para el CRM, y las
+pantallas de la correduría se construyen en `plataforma` → `/correduria` sobre `seguros`. **El CRM se
+mantiene desplegado SOLO como motor de ingesta de CIMA** (cron de GitHub Actions → `app.grupoasegura.com`
+→ adaptador Fly → TIREA) porque escribe en `seguros` de central con `crm_seguros` y trae las pólizas
+nuevas gratis; el día que tengamos ingesta propia de CIMA, se apaga. La copia de `auth.*` en central queda
+como respaldo, sin uso. El CRM no usa PostgREST en producción: `record-evidence.ts` **no tiene llamadores**.
 
 Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build— más la cartera en
 `seguros`. El resto de este apartado describe el estado ANTERIOR al volcado y sigue valiendo para
