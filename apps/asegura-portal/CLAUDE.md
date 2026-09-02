@@ -15,20 +15,29 @@ su ficha de la cartera y enseñarle SUS pólizas vivas) se construyó el 02/09/2
 - **Aplicado en la BD el 02/09/2026 (por la sesión principal, contra la Supabase compartida):** el DDL
   de Fase 1 (`prisma/sql/2026-09-01_portal_fase1.sql`, 3 ENUM + 6 tablas) **y**
   `prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`: valor `documento` en `portal_procedencia`,
-  tabla **`portal_vinculo`**, rol **`prisma_asegura_portal`** (LOGIN, NOBYPASSRLS, **sin contraseña**
-  todavía) con DML sobre `portal_*` y **`SELECT` por COLUMNAS** sobre la cartera.
-- **Falta, y de quién depende (Alberto, infraestructura):**
-  1. **Contraseña del rol** (`ALTER ROLE prisma_asegura_portal PASSWORD …`) **y en el MISMO paso** la
-     `DATABASE_URL` del proyecto Vercel del portal. Rotar/poner una sin la otra deja la app muerta en
-     silencio con `password authentication failed` que solo se ve en los logs del pooler (lección de
-     `prisma_seguros`, 02/09/2026).
+  tabla **`portal_vinculo`**, rol **`prisma_asegura_portal`** (LOGIN, NOBYPASSRLS) con DML sobre
+  `portal_*` y **`SELECT` por COLUMNAS** sobre la cartera.
+- **Contraseña del rol: PUESTA el 02/09/2026 y guardada en el Vault de Supabase** (secreto
+  `prisma_asegura_portal_password`; `prisma/sql/2026-09-02_portal_rol_password_vault.sql`). Se generó
+  dentro de Postgres y **no ha pasado por ningún chat ni repo**. Verificado con `dblink` desde la BD:
+  entra por el pooler y por el host directo, lee la cartera y `clientes.dni` le da `42501`.
+- **Proyecto Vercel `asegura-portal` CREADO el 02/09/2026** por la API (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`,
+  Root Directory `apps/asegura-portal`, sin build). El token del MCP no puede releerlo (solo ve 5
+  proyectos del equipo), pero el **enlace Git está verificado por otro camino**: en el siguiente push
+  el bot de Vercel listó `asegura-portal` con ese Root Directory y el deployment salió «Ignored» por
+  `--sin-previews` (PR #2123, 17:41 UTC). Construirá solo con pushes a `main` que toquen la app.
+- **Falta, y de quién depende (Alberto, panel de Vercel — la API no escribe envs):**
+  1. **`DATABASE_URL`** = `postgresql://prisma_asegura_portal.wswbehlcuxqxyinousql:<VAULT>@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true`,
+     con `<VAULT>` leído del secreto de arriba. **Rotar** = repetir el bloque SQL **y** cambiar esta env
+     en el mismo paso: una sin la otra deja la app muerta en silencio con `password authentication
+     failed`, que solo se ve en los logs del pooler (lección de `prisma_seguros`, 02/09/2026).
   2. **`PII_LOOKUP_KEY` en ese proyecto, IDÉNTICA a la de `central-asegura`.** Es la clave del índice
      ciego (`clientes.email_lookup_hash`): con otra clave el hash no casa y **nadie se vincula nunca**
      (`sin_clave`/`sin_ficha` para todo el mundo, sin error). Sin ella en producción el módulo lanza y
      el portal lo degrada a `sin_clave`: se entra, pero sin cartera.
-  3. **Proyecto Vercel `asegura-portal`: pendiente de confirmar** que exista (el `vercel.json` está; que
-     el proyecto esté creado no consta en el repo).
-  4. Resto de envs (tabla de abajo) y la WABA de WhatsApp (no existe; por eso el canal es un puerto).
+  3. `ASEGURA_PORTAL_SESSION_SECRET` y `ASEGURA_PORTAL_CANAL_PEPPER` (sin ellas la app no arranca /
+     el hash del canal es reversible), resto de envs (tabla de abajo) y la WABA de WhatsApp (no existe;
+     por eso el canal es un puerto).
 
 ## Qué es, y por qué es una app APARTE de `apps/asegura`
 
@@ -302,9 +311,9 @@ precisamente lo que vigila el guardián.
 
 ## Lo que falta, y de quién depende
 
-**De Alberto (infraestructura; nada de esto bloquea escribir o probar código):** ver la lista numerada
-de «Estado» arriba — contraseña del rol + `DATABASE_URL` en el mismo paso, `PII_LOOKUP_KEY` idéntica a
-la de `central-asegura`, confirmar el proyecto Vercel, resto de envs, WABA.
+**De Alberto (panel de Vercel; nada de esto bloquea escribir o probar código):** ver la lista numerada
+de «Estado» arriba — `DATABASE_URL` con la contraseña del Vault, `PII_LOOKUP_KEY` idéntica a la de
+`central-asegura`, secretos de sesión/canal, confirmar el enlace Git del proyecto, resto de envs, WABA.
 
 **Fases siguientes (spec):** Fase 3 motor de obligaciones y recordatorios · Fase 4 **hecha en código**
 (vínculo por email + lectura); queda el móvil-como-hogar y el vínculo por DNI verificado · Fase 5
