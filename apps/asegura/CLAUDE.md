@@ -19,6 +19,33 @@ helper puro y probado `urlFuenteCartera` (`lib/asegura-url.ts`). `ASEGURA_FUENTE
 Supabase de Manuel (`ASEGURA_DATABASE_URL`). La fuente elegida sin conexión es «pendiente», nunca
 cae a la otra en silencio.
 
+✅ **CAUSA MEDIDA del «no se puede leer la cartera» (02/09/2026): `credenciales`.**
+La contraseña de **`prisma_seguros` se rotó tres veces ese día** (05:51, 05:52 y 10:17, visto en
+`postgres_logs`) y el `DATABASE_URL` de Vercel `central-asegura` se quedó con la vieja → toda consulta
+a la cartera moría en `password authentication failed for user "prisma_seguros"`, y ese texto **solo
+existía en los logs del pooler de Supabase**. El propio repo ya lo avisaba por escrito en el SQL de
+`crm_seguros`: «la `DATABASE_URL` de central-asegura es Sensitive en Vercel y no se puede copiar; en vez
+de rotar la contraseña de prisma_seguros (**tumbaría central-asegura**), el CRM entra con su rol». Se
+rotó igual. 🚨 **Al rotar la contraseña de un rol, el mismo PR/paso actualiza el `DATABASE_URL` (y
+`DIRECT_URL`) del proyecto Vercel que lo usa** — si no, la app queda muerta sin que nada más falle.
+
+⚠️ **El `?schema=seguros` FORZADO (PR #2029) NO era la causa** — se escribió aquí como hipótesis
+probable y resultó falsa; corregido el 02/09/2026. Se conserva como blindaje y por lo que dice de
+diseño: `DATABASE_URL` es la MISMA cadena que usa la auth (`lib/db.ts`), donde el schema correcto es
+`public`, y respetar el que traiga apuntaría el cliente de la CARTERA a `public` — donde **no existe
+`corredurias`** (falla todo) pero **sí `clientes`**, que es OTRA tabla: leerías los clientes de central
+creyendo que son los de la correduría. Nunca ha llegado a pasar; que no pueda pasar es el punto.
+
+🚨 **Y un fallo de lectura NUNCA sale pelado: `{estado:'error', causa}`.** Las NUEVE rutas de
+`/api/operador/*` usan el MISMO clasificador, **`lib/error-cartera.ts`** (puro y testeado):
+`credenciales` · `permisos` · `conexion` · `esquema` · `sin_correduria` · `otro` — seis causas que se
+arreglan en seis sitios distintos. `registrarErrorCartera()` la registra en el log del servidor y la
+devuelve para la respuesta; `describirErrorCartera()` **borra la URL de conexión** del mensaje antes de
+loguearlo, porque lleva usuario y contraseña dentro y esto viaja a plataforma y de ahí a un Telegram.
+⚠️ **Un clasificador y solo uno**: el PR #2029 creó `lib/comisiones-motivo.ts` para lo mismo unas horas
+antes que el #2034, y dos módulos que clasifican el mismo error divergen — se retiró el 02/09/2026 y la
+ruta de comisiones pasó al compartido. Al añadir una ruta al puerto, usa `registrarErrorCartera`.
+
 🚨 **El origen NO está vivo: está CONGELADO desde el 31/08 06:15 UTC, y no por decisión.** Medido en
 los logs de Vercel: el CRM de Manuel (repo `albertosuarezgutierrez-gif/asegura` + proyecto Vercel
 `asegura`, ambos YA en el equipo de Alberto, sirviendo `app.grupoasegura.com`) falla toda consulta
@@ -30,9 +57,11 @@ entonces, así que la copia del 02/09 está completa** y no hace falta re-sincro
 ✅ **CERRADO el 02/09/2026 a las 06:36 UTC.** El proyecto Vercel `asegura` (el CRM, Drizzle) conecta a
 la BD `central` con el rol **`crm_seguros`** (LOGIN, BYPASSRLS, DML sobre `seguros`, `search_path =
 seguros`, cero visibilidad de `public`), por el pooler `aws-0-eu-west-1:6543`. Prueba: `/api/health`
-en `db: ok` y el `cima-pull` en dry run (run #187) escribió `cima_pull_started/completed` en
+en `db: ok`; el `cima-pull` en dry run (run #187) y **el pull REAL (run #188, 09:25 UTC, `mode: real`,
+0 errores, 6 páginas de TIREA leídas)** escribieron `cima_pull_started/completed` en
 `seguros.operational_events` de central. El cron de CIMA (05:30 y 11:30 UTC, GitHub Actions del repo
-`asegura`) escribe desde entonces aquí. **No arreglar la contraseña del origen**: el origen congelado es
+`asegura`) escribe desde entonces aquí. `processed: 0` en ese pull no es fallo: los 128 ficheros de la
+cola TIREA ya están en `cima_ficheros` (86 `confirmed` + 42 `review`); lo nuevo se verá cuando llegue. **No arreglar la contraseña del origen**: el origen congelado es
 la copia de seguridad. La contraseña de `crm_seguros` pasó por un chat; **Alberto decidió NO rotarla**
 (02/09/2026): no se toca sin que lo pida él.
 Detalle y lecciones (variable Sensitive, plantilla sin sustituir, mirar `get_runtime_errors` y no el
@@ -144,9 +173,18 @@ El resto de `/cartera` (buscar, ficha) sigue vivo como respaldo del corredor, pe
   nunca `0,00€`.
 
 ## Envs
-`DATABASE_URL`, `DIRECT_URL` (rol `prisma_seguros`), `ASEGURA_SESSION_SECRET`.
-**De la cartera en vivo (01/09/2026, FUNCIONANDO):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
-(SELECT-only + BYPASSRLS) contra ASEGURA-prod-eu por el pooler :6543 de eu-central-1; la URL la
+`DATABASE_URL`, `DIRECT_URL` (rol `prisma_seguros`; **desde el 02/09/2026 también es la conexión de la
+CARTERA**, con `?schema=seguros` que añade `lib/asegura-url.ts`), `ASEGURA_SESSION_SECRET`.
+⚠️ **Contraseña de `prisma_seguros` ROTADA el 02/09/2026 a las 10:17 UTC** (`ALTER ROLE`, verificador
+SCRAM): la que llevaba `DATABASE_URL` en Vercel la rechazaba el pooler (8 `password authentication failed`
+en `supavisor_logs` entre 07:31 y 10:06, y `/correduria` en plataforma pintaba «no puede leer su BD»). Dos
+lecciones medidas: (1) el pooler **cachea las credenciales unos minutos**: justo tras un `ALTER ROLE …
+PASSWORD` sigue rechazando la nueva aunque el host directo `db.<ref>.supabase.co:5432` ya la acepte — espera
+2-3 min antes de diagnosticar; (2) el puerto `/api/operador/*` devuelve ahora `causa`
+(`credenciales|permisos|conexion|esquema|sin_correduria|otro`, `lib/error-cartera.ts`) y la registra en
+el log SIN la URL, así que la pantalla de plataforma dice la causa sin ir a los logs del pooler.
+**Camino de vuelta al origen (solo con `ASEGURA_FUENTE=origen`):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
+(SELECT-only + BYPASSRLS) contra el Supabase congelado de Manuel por el pooler :6543 de eu-central-1; la URL la
 normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
 puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
 desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.

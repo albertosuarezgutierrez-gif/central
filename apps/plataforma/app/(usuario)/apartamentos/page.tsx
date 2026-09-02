@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Hotel } from 'lucide-react'
+import { PageHeader, ThinBar } from '@/components/ui'
 import { getSession } from '@/lib/session'
 import { getPropiedades, getResumenAnual, PROP_TURISTICOS, PROP_BBVA } from '@/lib/propiedades'
 import { fmtEur } from '@/lib/banca'
@@ -48,11 +50,12 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
 
   return (
     <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px' }}>
-      <div className="aptos-header" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700 }}>🏨 Mis apartamentos</h1>
-        <Filtro year={year} month={month} />
-      </div>
-      <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '24px' }}>{periodoLabel}</p>
+      <PageHeader
+        titulo="Mis apartamentos"
+        sub={periodoLabel}
+        icono={<Hotel size={20} strokeWidth={1.75} />}
+        acciones={<Filtro year={year} month={month} />}
+      />
 
       {/* KPI — Explotación turística (cuenta Kutxa, sin gastos personales) */}
       <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
@@ -122,14 +125,12 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
                   <span>Ocupación {p.ocupacion}% · {p.noches} noches</span>
                   {p.adr > 0 && <span>ADR {fmtEur(p.adr)}/noche</span>}
                 </div>
-                <div style={{ height: '6px', borderRadius: '3px', background: 'var(--bg)', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: '3px',
-                    width: `${Math.min(p.ocupacion, 100)}%`,
-                    background: p.ocupacion >= 70 ? 'var(--positive)' : p.ocupacion >= 40 ? 'var(--warning)' : 'var(--negative)',
-                    transition: 'width .3s',
-                  }} />
-                </div>
+                <ThinBar
+                  pct={p.ocupacion}
+                  alto={6}
+                  track="var(--bg)"
+                  color={p.ocupacion >= 70 ? 'var(--positive)' : p.ocupacion >= 40 ? 'var(--warning)' : 'var(--negative)'}
+                />
               </div>
 
               {/* Portal top */}

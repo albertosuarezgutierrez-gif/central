@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 // Estudio «Motor vs PriceLabs» — la pregunta de Alberto (25/08/2026): ¿el motor propio
 // renta frente a lo que hacía PriceLabs? Tres piezas honestas, cada una con su estado:
@@ -99,7 +100,7 @@ export default function PricingRentabilidadPage() {
 
   return (
     <div style={{ padding: '16px', maxWidth: 1000, margin: '0 auto', background: C.bg, minHeight: '100vh' }}>
-      <h1 style={{ fontSize: 20, fontWeight: 800, color: C.ink, margin: '0 0 4px' }}>Motor vs PriceLabs</h1>
+      <PageHeader titulo="Motor vs PriceLabs" />
       <p style={{ ...sub, marginBottom: 16 }}>
         Veredicto prerregistrado: <b>RevPAR neto por piso al cierre de sept-nov 2026</b>. Hasta entonces, esto
         mide lo medible sin engañarse. {data.nota}

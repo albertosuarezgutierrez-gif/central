@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T07:50:32Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T13:03:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 12 apps · 40 packages · 23 capacidades · 38 skills · 1235 rutas API.
+**Resumen:** 12 apps · 40 packages · 23 capacidades · 38 skills · 1234 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -13,7 +13,7 @@
 - **Tablas (12):** almacen_comentarios, almacen_empleados, almacen_espacios, almacen_evento_lineas, almacen_eventos, almacen_familias, almacen_inventario_lineas, almacen_inventarios, almacen_materiales, almacen_movimientos, almacen_stock, almacen_transferencias
 - **Rutas API:** 21
 ### alquiler
-- **Módulos que usa:** core-identity, module-alquiler
+- **Módulos que usa:** core-identity, module-alquiler, module-materiales
 - **Capacidades:** Almacén / stock / ASN
 - **Tablas (3):** alquiler_alquileres, alquiler_lineas, alquiler_materiales
 - **Rutas API:** 4
@@ -51,7 +51,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (130):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor, correo_reglas…
-- **Rutas API:** 332
+- **Rutas API:** 331
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -142,7 +142,7 @@
   - Lo usan: plataforma
   - Depende de: module-flota, module-materiales
 - **module-materiales** (module) → `@central/module-materiales`
-  - Lo usan: almacen, ia-rest, ialimp, sivra
+  - Lo usan: almacen, alquiler, ia-rest, ialimp, sivra
   - Depende de: —
 - **module-nominas** (module) → `@central/module-nominas`
   - Lo usan: rrhh
@@ -231,7 +231,6 @@
 - **writing-plans** — Use when you have a spec or requirements for a multi-step task, before touching code
 
 ## Avisos de arquitectura
-- 🔴 **Almacén / stock / ASN**: duplicada en alquiler (debería usar `module-materiales`).
 - ⚠️ **TPV / comanda**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
 - ⚠️ **KDS (cocina)**: en ia-rest; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, ialimp, mariscos, rrhh, sivra, transporte.
 - ⚠️ **Eventos / catering / BEO**: en almacen, ia-rest, sivra; falta en alquiler, asegura, asegura-portal, housesevillana, ialimp, mariscos, rrhh, transporte.
@@ -256,14 +255,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- #2013
-- #2018
-- Pendiente:
-- Pendiente:
-- Lo que un agente NO puede ver:
-- Medido por Chrome (02/09, solo lectura):
-- Segundo token vivo
-- Rotado por Alberto (Chrome, 02/09 09:03 CEST):
-- Hecho por Claude Chrome (02/09):
-- Duplicado «Jose Suarez Salas»
+- (02/09/2026) 🧹 Cerrado lo que quedaba del auditor: novedades fuera del generado + la ambigüedad, vigilada
+- (02/09/2026) 🗞️ Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba
+- (02/09/2026) 📄 El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)
+- (02/09/2026) 🧱 Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)
+- (02/09/2026) 🩺 Salud de la arquitectura a cero avisos (/admin → 🗺️ Estructura)
+- (02/09/2026) 🧩 Las 5 primitivas huérfanas: se MIDIÓ antes de decidir (PR #2045 mergeado)
+- (02/09/2026) 🕳️ El feed PSD2 tenía dos estados donde hay tres (PR #2042 mergeado)
+- (02/09/2026) 🗺️ plataforma: podar lo inalcanzable y agrupar el menú por TRABAJO (PR #2038 mergeado)
+- (02/09/2026) ⚪ Comisiones: el «no se ha podido leer la cartera» no decía DÓNDE mirar (PR #2029 mergeado)
+- (02/09/2026) 🪞 La skill de UI llevaba DOS MESES contradiciendo al CLAUDE.md de su app
 

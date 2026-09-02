@@ -1,6 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { CalendarRange } from 'lucide-react'
 import { periodoLabel, MESES, type Periodo } from './periodo'
 
 // Selector de intervalo COMPARTIDO de la sección finanzas: Mes / Trimestre / Año / Rango libre.
@@ -54,10 +55,22 @@ export default function IntervaloSelector({ basePath, periodo }: { basePath: str
     nav(year, 0, desde, hasta)
   }
 
-  const pillStyle = (activo: boolean) => ({
-    padding: '5px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
-    border: '1px solid var(--border)',
-    background: activo ? 'var(--primary)' : 'var(--surface)',
+  // ─── Por qué DOS estilos y no uno (02/09/2026) ─────────────────────────────────────────────
+  // Antes cada botón era una pastilla con su propio borde: 3 modos + 12 meses = quince cajas
+  // idénticas apiladas al abrir el panel, con el mismo peso visual que las TARJETAS de datos que
+  // vienen justo debajo. Un control de navegación no puede pesar como el contenido que filtra.
+  // Ahora el modo es un SEGMENTADO (un solo borde alrededor de los tres, sin bordes dentro) y los
+  // meses/trimestres son CHIPS sin borde que solo se rellenan al estar activos.
+  const segStyle = (activo: boolean) => ({
+    padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+    border: 'none', background: activo ? 'var(--primary)' : 'transparent',
+    color: activo ? '#fff' : 'var(--muted)',
+    fontWeight: activo ? 700 : 500, whiteSpace: 'nowrap' as const,
+  })
+  const chipStyle = (activo: boolean) => ({
+    padding: '5px 11px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+    border: '1px solid transparent',
+    background: activo ? 'var(--primary)' : 'var(--bg)',
     color: activo ? '#fff' : 'var(--text)',
     fontWeight: activo ? 700 : 400,
   })
@@ -65,13 +78,20 @@ export default function IntervaloSelector({ basePath, periodo }: { basePath: str
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 16px' }}>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
-        <div className="iv-pills" style={{ display: 'flex', gap: '6px', flex: 1 }}>
+        <div
+          className="iv-pills"
+          style={{
+            display: 'inline-flex', gap: 2, padding: 3, borderRadius: 8,
+            border: '1px solid var(--border)', background: 'var(--bg)',
+          }}
+        >
           {(['mes', 'trimestre', 'rango'] as PeriodoMode[]).map(m => (
-            <button key={m} onClick={() => setModo(m)} style={pillStyle(modo === m)}>
+            <button key={m} onClick={() => setModo(m)} style={segStyle(modo === m)}>
               {m === 'trimestre' ? 'Trimestre / Año' : m === 'mes' ? 'Por mes' : 'Rango libre'}
             </button>
           ))}
         </div>
+        <div style={{ flex: 1 }} />
         <select
           value={year}
           onChange={e => { const y = parseInt(e.target.value); if (modo === 'trimestre') navTrimestre(y, quarter); else if (modo === 'mes') navMes(y, mes); else setYear(y) }}
@@ -85,14 +105,14 @@ export default function IntervaloSelector({ basePath, periodo }: { basePath: str
       {modo === 'trimestre' && (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {(['Año', 'Q1', 'Q2', 'Q3', 'Q4'] as const).map((label, i) => (
-            <button key={i} onClick={() => navTrimestre(year, i)} style={pillStyle(quarter === i && !desde)}>{label}</button>
+            <button key={i} onClick={() => navTrimestre(year, i)} style={chipStyle(quarter === i && !desde)}>{label}</button>
           ))}
         </div>
       )}
       {modo === 'mes' && (
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
           {MESES.map((m, i) => (
-            <button key={i} onClick={() => navMes(year, i + 1)} style={pillStyle(mes === i + 1 && !!desde)}>{m}</button>
+            <button key={i} onClick={() => navMes(year, i + 1)} style={chipStyle(mes === i + 1 && !!desde)}>{m}</button>
           ))}
         </div>
       )}
@@ -110,7 +130,11 @@ export default function IntervaloSelector({ basePath, periodo }: { basePath: str
         </div>
       )}
 
-      <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--muted)' }}>
+      <div style={{
+        marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)',
+        fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6,
+      }}>
+        <CalendarRange size={13} strokeWidth={1.75} aria-hidden />
         Periodo: <strong style={{ color: 'var(--text)' }}>{periodoLabel(periodo)}</strong>
       </div>
     </div>

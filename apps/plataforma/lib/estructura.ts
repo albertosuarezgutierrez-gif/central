@@ -6,6 +6,9 @@
 //    en la raíz (scripts/auditar-estructura.mjs). NO editar el JSON a mano.
 
 import radiografiaJson from './estructura.generated.json'
+// Las novedades viven en su propio generado: se derivan de docs/CONTEXTO-SESIONES.md (memoria),
+// no del código, y mezclarlas con la radiografía acoplaba el gate del auditor a cada sesión.
+import novedadesJson from './novedades.generated.json'
 
 export type EstadoModulo = 'usado' | 'declarado' | 'no'
 export interface CeldaModulo { estado: EstadoModulo; evidencias: number }
@@ -37,7 +40,10 @@ export interface Radiografia {
 }
 
 /** Radiografía del repo (auditoría automática). Generada por `npm run auditar`. */
-export const RADIOGRAFIA = radiografiaJson as Radiografia
+export const RADIOGRAFIA = {
+  ...(radiografiaJson as Omit<Radiografia, 'novedades'>),
+  novedades: (novedadesJson as { novedades: NovedadRadiografia[] }).novedades,
+} as Radiografia
 
 export interface VerticalInfo { app: string; nombre: string; sector: string; desc: string; url?: string }
 export interface ModuloInfo { id: string; tipo: 'core' | 'module'; desc: string; deps?: boolean }
@@ -54,6 +60,7 @@ export const VERTICALES: VerticalInfo[] = [
   { app: 'alquiler', nombre: 'Alquiler', sector: 'Materiales/menaje', desc: 'Alquiler de materiales y menaje (mesas, sillas, vajilla, carpas). Catálogo, tarifas/día, fianzas, disponibilidad.' },
   { app: 'almacen', nombre: 'Almacén', sector: 'Eventos/catering', desc: 'Gestión de almacén de eventos/catering para el cliente Joaquín Jaén (maestro por familias/materiales).' },
   { app: 'asegura', nombre: 'Grupo Asegura', sector: 'Seguros', url: 'grupoasegura.com', desc: 'Correduría de seguros de Alberto. Esqueleto vivo (auth/layout); la cartera real sigue en el Supabase de Manuel Suárez, en traspaso.' },
+  { app: 'asegura-portal', nombre: 'Portal del cliente (Asegura)', sector: 'Seguros', desc: 'Portal del ASEGURADO de Grupo Asegura (app aparte del panel del corredor). Identidad por código de un solo uso; el aislamiento entre clientes lo da el código, no RLS.' },
   { app: 'housesevillana', nombre: 'House Sevillana', sector: 'Inmobiliario', url: 'housesevillana.es', desc: 'Landing pública del apartamento turístico (Calle Socorro 24, San Julián, Sevilla). Canal directo: motor de reservas, WhatsApp, teléfono.' },
   { app: 'mariscos', nombre: 'Mariscos González', sector: 'Pesca/mayorista', desc: 'Trazabilidad pesquera + etiquetado por peso (mayorista/pescadería de marisco). Recepción de partidas, envasado, etiqueta por canal.' },
 ]

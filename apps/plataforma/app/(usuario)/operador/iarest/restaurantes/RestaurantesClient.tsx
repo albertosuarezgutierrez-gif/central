@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { PageHeader } from '@/components/ui'
+import { UtensilsCrossed } from 'lucide-react'
 
 type Restaurante = {
   id: string
@@ -63,17 +65,20 @@ export default function RestaurantesClient() {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🍽️ Restaurantes · ia-rest</h1>
-        <a
-          href="https://iarest.es/super"
-          target="_blank"
-          rel="noreferrer"
-          style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}
-        >
-          Panel legacy ↗
-        </a>
-      </div>
+      <PageHeader
+        titulo="Restaurantes · ia-rest"
+        icono={<UtensilsCrossed size={20} strokeWidth={1.75} />}
+        acciones={
+          <a
+            href="https://iarest.es/super"
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}
+          >
+            Panel legacy ↗
+          </a>
+        }
+      />
 
       {/* KPIs */}
       <div className="rest-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>

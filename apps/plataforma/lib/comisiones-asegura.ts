@@ -43,7 +43,16 @@ export type CoberturaCompania = {
 
 export type ComisionesAsegura =
   | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo: MotivoErrorComisiones }
+  /**
+   * `causa` es la categoría que manda asegura sobre su propio fallo
+   * (`credenciales` · `permisos` · `conexion` · `esquema` · `sin_correduria` ·
+   * `otro`, del mismo clasificador que el resto del puerto). Sin ella,
+   * `asegura_error` es un callejón sin salida: dice que falló, no dónde — y la
+   * causa REAL del 02/09/2026 fue `credenciales`, que solo se veía en los logs
+   * del pooler. Es opcional a propósito: una versión desplegada más vieja de
+   * asegura no la manda, y entonces se dice que no se sabe, no se inventa.
+   */
+  | { estado: 'error'; motivo: MotivoErrorComisiones; causa?: string }
   | {
       estado: 'ok'
       periodos: PeriodoComisiones[]
@@ -70,7 +79,13 @@ export function interpretarComisiones(status: number, json: unknown): Comisiones
   if (typeof c !== 'object' || c === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
   const com = c as Record<string, unknown>
   if (com.estado === 'sin_configurar') return { estado: 'sin_configurar' }
-  if (com.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (com.estado === 'error') {
+    // `asegura_error` sigue significando «respondió y no pudo leer su BD»; la
+    // `causa` dice cuál de sus fallos fue. Solo se copia si es texto: es
+    // contenido de otra app y acaba en un Telegram.
+    const causa = typeof com.causa === 'string' && com.causa ? com.causa.slice(0, 40) : null
+    return { estado: 'error', motivo: 'asegura_error', ...(causa ? { causa } : {}) }
+  }
   if (com.estado !== 'ok') return { estado: 'error', motivo: 'respuesta_ilegible' }
   if (!Array.isArray(com.periodos) || !Array.isArray(com.devengos) || !Array.isArray(com.cobertura)) {
     return { estado: 'error', motivo: 'respuesta_ilegible' }

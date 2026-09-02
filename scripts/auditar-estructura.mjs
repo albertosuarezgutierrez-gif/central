@@ -13,6 +13,12 @@ import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import {
+  estableJson as stable,
+  estableMd as stableMd,
+  estableMapa as stableMapa,
+} from './auditar-comparacion.mjs'
+import { extraerNovedades } from './auditar-novedades.mjs'
 
 const ROOT = join(fileURLToPath(import.meta.url), '..', '..')
 const APPS_DIR = join(ROOT, 'apps')
@@ -21,6 +27,10 @@ const SKILLS_DIR = join(ROOT, '.claude', 'skills')
 const CTX_FILE = join(ROOT, 'docs', 'CONTEXTO-SESIONES.md')
 const OUT = join(ROOT, 'apps', 'plataforma', 'lib', 'estructura.generated.json')
 // Archivo-resumen legible: el mapa que una sesión NUEVA de Claude lee del repo sin abrir la app.
+// Las novedades salen a su PROPIO fichero: se derivan de la memoria, no del código, así que
+// mezclarlas con la radiografía hacía que cada PR que anotara memoria reescribiera el JSON
+// grande (y, hasta el #2053, rompiera el gate). Ver `auditar-comparacion.mjs`.
+const NOV_OUT = join(ROOT, 'apps', 'plataforma', 'lib', 'novedades.generated.json')
 const MD_OUT = join(ROOT, 'docs', 'ARQUITECTURA.generated.md')
 // Índice de arquitectura a nivel de FUNCIÓN (firmas + resúmenes) para el Director de código.
 // Coste 0 tokens: se extrae con regex Node-puro. Se inyecta en Supabase `mapa_arquitectura`
@@ -379,17 +389,11 @@ const skills = dirs(SKILLS_DIR)
   .sort((a, b) => a.id.localeCompare(b.id))
 
 // Novedades: cabeceras de entrada de docs/CONTEXTO-SESIONES.md (timeline, lo más reciente arriba).
-const novedades = []
-if (existsSync(CTX_FILE)) {
-  const txt = readFileSync(CTX_FILE, 'utf8')
-  for (const m of txt.matchAll(/^[-*] \*\*(.+?)\*\*/gm)) {
-    const raw = m[1].trim()
-    const dm = raw.match(/(\d{2}\/\d{2}\/\d{4})/)
-    const titulo = raw.replace(/\s*—\s*\d{2}\/\d{2}\/\d{4}\s*$/, '').trim()
-    novedades.push({ titulo, fecha: dm ? dm[1] : '' })
-    if (novedades.length >= 15) break
-  }
-}
+// Titulares de las últimas sesiones. El criterio de qué es una entrada vive en
+// `auditar-novedades.mjs` (que lo toma de `rotar-memoria.mjs`): el regex que había aquí
+// casaba con cualquier bullet en negrita, así que pintaba sub-bullets del cuerpo —sin
+// fecha— y no veía NINGUNA entrada del formato `### `.
+const novedades = existsSync(CTX_FILE) ? extraerNovedades(readFileSync(CTX_FILE, 'utf8')) : []
 
 // Salud derivable del repo (señales baratas; lo runtime se lee en vivo en el panel).
 const saludRepo = {
@@ -410,7 +414,6 @@ const out = {
   apisPorVertical,
   tablasPorVertical,
   skills,
-  novedades,
   saludRepo,
   gaps: { modulosInfrautilizados, oportunidadesPortar, reimplementaciones },
   resumen: {
@@ -438,9 +441,7 @@ const mapaFunciones = {
     funciones: mfArchivos.reduce((n, a) => n + a.funciones.length, 0),
   },
 }
-// El `sha` (y el timestamp) se ignoran al comparar: un commit sin cambio de firmas
-// NO debe marcar el índice como desfasado (evita churn / auto-commits en bucle).
-const stableMapa = o => JSON.stringify({ ...o, generadoEn: '', sha: '' }, null, 2)
+// El criterio de comparación (qué cuenta como "desfasado") vive en `auditar-comparacion.mjs`.
 
 // ── Archivo-resumen legible (docs/ARQUITECTURA.generated.md) ───────────────────
 // Mapa completo en markdown para que una sesión NUEVA de Claude lea la arquitectura
@@ -483,19 +484,15 @@ function buildMd(o) {
     for (const g of o.gaps.oportunidadesPortar) L.push(`- ⚠️ **${g.label}**: en ${g.tiene.join(', ')}; falta en ${g.falta.join(', ')}.`)
     L.push('')
   }
-  if (o.novedades.length) {
+  if (novedades.length) {
     L.push('## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)')
-    for (const n of o.novedades.slice(0, 10)) L.push(`- ${n.fecha ? `(${n.fecha}) ` : ''}${n.titulo}`)
+    for (const n of novedades.slice(0, 10)) L.push(`- ${n.fecha ? `(${n.fecha}) ` : ''}${n.titulo}`)
     L.push('')
   }
   return L.join('\n') + '\n'
 }
 
-// `generadoEn` se ignora al comparar (cambia en cada corrida). Así el fichero solo
-// cambia cuando cambia la estructura real → sin churn ni auto-commits en bucle.
-const stable = o => JSON.stringify({ ...o, generadoEn: '' }, null, 2)
-// Para el markdown: ignora la línea del timestamp al comparar.
-const stableMd = s => s.replace(/\(20\d\d-[^)]*Z\)/g, '(TS)')
+
 
 if (process.argv.includes('--check')) {
   const prevJson = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
@@ -521,9 +518,18 @@ if (process.argv.includes('--check')) {
   if (json === prevRaw) console.log('✓ JSON ya al día.')
   else { writeFileSync(OUT, json); console.log(`✓ JSON escrito en ${relative(ROOT, OUT)}`) }
 
+  // Novedades: fichero propio. NO entra en `--check` — se deriva de la memoria, que cambia en
+  // cada sesión, así que exigirlo al día en cada PR es el falso positivo que ya costó el #2053.
+  const nov = JSON.stringify({ novedades }, null, 2) + '\n'
+  const prevNov = existsSync(NOV_OUT) ? readFileSync(NOV_OUT, 'utf8') : ''
+  if (nov === prevNov) console.log('✓ Novedades ya al día.')
+  else { writeFileSync(NOV_OUT, nov); console.log(`✓ Novedades escritas en ${relative(ROOT, NOV_OUT)}`) }
+
   const md = buildMd(out)
   const prevMd = existsSync(MD_OUT) ? readFileSync(MD_OUT, 'utf8') : ''
-  if (stableMd(md) === stableMd(prevMd)) console.log('✓ Markdown ya al día.')
+  // Byte a byte (no `stableMd`): al comparar se ignoran las novedades, pero al ESCRIBIR se
+  // refrescan. Sin churn: si nada estructural cambió, `out.generadoEn` conserva el anterior.
+  if (md === prevMd) console.log('✓ Markdown ya al día.')
   else { writeFileSync(MD_OUT, md); console.log(`✓ Markdown escrito en ${relative(ROOT, MD_OUT)}`) }
 
   // Índice de funciones: conserva timestamp/sha anteriores si las firmas no cambiaron → sin churn.

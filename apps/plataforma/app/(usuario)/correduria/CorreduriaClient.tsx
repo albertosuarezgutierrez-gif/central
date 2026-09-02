@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import Link from 'next/link'
+import { Shield } from 'lucide-react'
+import { PageHeader, BtnLink } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
@@ -92,14 +95,11 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
     <div style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto' }}>
 
       {/* Header */}
-      <div className="corr-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>🛡️ Correduría</h1>
-        </div>
-        <Link href="/correduria/hogar" style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, minHeight: 44, display: 'inline-flex', alignItems: 'center', fontWeight: 600, fontSize: 13 }}>
-          🏠 Presupuesto de hogar
-        </Link>
-      </div>
+      <PageHeader
+        titulo="Correduría"
+        icono={<Shield size={20} strokeWidth={1.75} />}
+        acciones={<BtnLink href="/correduria/hogar" variante="secundario">🏠 Presupuesto de hogar</BtnLink>}
+      />
 
       {/* ── 1. BUSCAR ──────────────────────────────────────────────────────
           Lo primero, y HERMANO de la cartera, nunca hijo: `CarteraViva` hace
@@ -438,7 +438,7 @@ const MOTIVOS: Record<MotivoError, string> = {
   secreto_rechazado:
     'central-asegura ha RECHAZADO el secreto (401): los dos valores de ASEGURA_OPERADOR_SECRET no coinciden. Vuelve a pegar el MISMO valor en los dos proyectos de Vercel y redespliega.',
   asegura_error:
-    'central-asegura responde, pero no puede leer su base de datos (revisa ASEGURA_DATABASE_URL y el rol central_asegura en sus logs de Vercel).',
+    'central-asegura responde, pero no puede leer la cartera en central: revisa DATABASE_URL del proyecto Vercel central-asegura (rol prisma_seguros) y su último despliegue.',
   respuesta_ilegible:
     'central-asegura ha devuelto una respuesta inesperada (ni cartera ni error conocido). Mira los logs del proyecto en Vercel.',
   red: 'no se pudo contactar con central-asegura (timeout o red). Reintenta en un rato.',
@@ -446,7 +446,7 @@ const MOTIVOS: Record<MotivoError, string> = {
 
 type Cartera =
   | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo?: MotivoError }
+  | { estado: 'error'; motivo?: MotivoError; causa?: string }
   | {
       estado: 'ok'; nombre: string | null; clientes: number; leads: number
       polizasVigentes: number; polizasPendientesFecha: number; polizasNoVigentes: number
@@ -495,6 +495,9 @@ function CarteraViva() {
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>
           La cartera NO está vacía — el puerto con central-asegura ha fallado:{' '}
           {MOTIVOS[cartera.motivo ?? 'respuesta_ilegible']}
+          {describirCausaAsegura(cartera.causa) && (
+            <> <strong>Causa que declara asegura:</strong> {describirCausaAsegura(cartera.causa)}.</>
+          )}
         </div>
       </div>
     )
@@ -650,7 +653,7 @@ function CeldaObjeto({ objeto }: { objeto: ObjetoAsegurado | null }) {
 
 type RespVencimientos =
   | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo?: MotivoError }
+  | { estado: 'error'; motivo?: MotivoError; causa?: string }
   | { estado: 'ok'; dias: number; polizas: Vencimiento[] }
 
 function Vencimientos() {
@@ -669,7 +672,8 @@ function Vencimientos() {
     return (
       <div style={{ marginTop: 16, fontSize: 13, color: 'var(--muted)' }}>
         📅 <strong>Renovaciones:</strong> no se han podido leer —{' '}
-        {MOTIVOS[datos.motivo ?? 'respuesta_ilegible']} No hay que entenderlo como «no vence nada».
+        {MOTIVOS[datos.motivo ?? 'respuesta_ilegible']}
+        {describirCausaAsegura(datos.causa) ? ` Causa que declara asegura: ${describirCausaAsegura(datos.causa)}.` : ''} No hay que entenderlo como «no vence nada».
       </div>
     )
   }

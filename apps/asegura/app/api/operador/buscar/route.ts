@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
+import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { buscarEnCartera } from '@/lib/cartera-busqueda'
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error' })
     return NextResponse.json({ estado: 'ok', ...(await buscarEnCartera(correduria.id, q)) })
-  } catch {
-    return NextResponse.json({ estado: 'error' })
+  } catch (e) {
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/buscar', e) })
   }
 }

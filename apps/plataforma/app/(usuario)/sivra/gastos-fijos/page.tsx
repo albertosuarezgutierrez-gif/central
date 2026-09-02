@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CATEGORIAS_GASTO as CATEGORIAS, PROPS_GASTO as PROPS, PROP_NAMES_GASTO as PROP_NAMES } from '@/lib/sivra/constantes'
 import { eur } from '@/lib/dinero'
+import { PageHeader, BtnLink } from '@/components/ui'
 const fmtEUR = (n: number) => eur(n)
 
 type Fijo = {
@@ -106,15 +107,17 @@ export default function GastosFijosPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
-      <div className="fijos-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Gastos fijos</h1>
-        <div className="fijos-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <a href="/sivra/expenses" style={{ padding: '8px 14px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, color: 'var(--muted)', textDecoration: 'none', background: 'var(--surface)' }}>← Gastos</a>
-          <button onClick={generarAhora} style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Generar mes actual ahora
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Gastos fijos"
+        acciones={
+          <>
+            <BtnLink href="/sivra/expenses" variante="secundario" tam="sm">← Gastos</BtnLink>
+            <button onClick={generarAhora} style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              Generar mes actual ahora
+            </button>
+          </>
+        }
+      />
       <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--muted)' }}>
         Gastos recurrentes de importe conocido (alquileres, comunidades, seguros…). Se imputan automáticamente el día 1 de cada mes.
         Total mensual activo: <strong>{fmtEUR(totalMensual)}</strong>

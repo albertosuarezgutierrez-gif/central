@@ -8,6 +8,7 @@ import {
 } from './ficha-asegura.ts'
 import type { DocumentoResumen, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
+import type { DetalleCobertura } from '@central/module-seguros'
 
 export type CoberturaFicha = {
   orden: number | null
@@ -18,6 +19,33 @@ export type CoberturaFicha = {
   franquicia: string | null
   desde: string | null
   hasta: string | null
+  /** Solo si el puerto los manda (asegura desplegado con esta versión): la UI los trata como opcionales. */
+  modalidad?: string | null
+  detalle?: DetalleCobertura | null
+}
+
+function num(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
+}
+
+/** Copia defensiva del detalle que manda el puerto: cualquier forma rara degrada a null, nunca a un límite inventado. */
+function leerDetalleCobertura(v: unknown): DetalleCobertura | null {
+  if (typeof v !== 'object' || v === null) return null
+  const d = v as Record<string, unknown>
+  const limites = Array.isArray(d.limites)
+    ? d.limites.filter((x): x is Record<string, unknown> => typeof x === 'object' && x !== null).map((l) => ({
+        clase: cadena(l.clase), descripcion: cadena(l.descripcion), minimo: num(l.minimo), maximo: num(l.maximo),
+      }))
+    : []
+  const franquicias = Array.isArray(d.franquicias)
+    ? d.franquicias.filter((x): x is Record<string, unknown> => typeof x === 'object' && x !== null).map((f) => ({
+        clase: cadena(f.clase), porcentaje: num(f.porcentaje), minimo: num(f.minimo), maximo: num(f.maximo),
+      }))
+    : []
+  const p = typeof d.prima === 'object' && d.prima !== null ? (d.prima as Record<string, unknown>) : null
+  const prima = p ? { neta: num(p.neta), total: num(p.total) } : null
+  if (limites.length === 0 && franquicias.length === 0 && !prima) return null
+  return { limites, franquicias, prima }
 }
 
 export type ReciboFicha = {
@@ -104,11 +132,14 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
     for (const fila of p.coberturas) {
       if (typeof fila !== 'object' || fila === null) continue
       const o = fila as Record<string, unknown>
-      coberturas.push({
+      const cob: CoberturaFicha = {
         orden: entero(o.orden), codigo: cadena(o.codigo), descripcion: cadena(o.descripcion),
         capital: cadena(o.capital), descripcionCapital: cadena(o.descripcionCapital), franquicia: cadena(o.franquicia),
         desde: cadena(o.desde), hasta: cadena(o.hasta),
-      })
+      }
+      if ('modalidad' in o) cob.modalidad = cadena(o.modalidad)
+      if ('detalle' in o) cob.detalle = leerDetalleCobertura(o.detalle)
+      coberturas.push(cob)
     }
   }
   const listaRecibos: ReciboFicha[] = []

@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getAdmin } from '@/lib/superadmin'
 import MapaArquitectura from '@/app/admin/MapaArquitectura'
-import { Pagina } from '@/components/ui'
+import { Map as MapIcon } from 'lucide-react'
+import { Pagina, PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,10 +16,11 @@ export default async function OperadorEstructuraPage() {
 
   return (
     <Pagina ancho="tabla">
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '2px' }}>🗺️ Estructura del repo</h1>
-        <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Radiografía viva del monorepo · auto-generada en cada push</div>
-      </div>
+      <PageHeader
+        titulo="Estructura del repo"
+        sub="Radiografía viva del monorepo · auto-generada en cada push"
+        icono={<MapIcon size={20} strokeWidth={1.75} />}
+      />
       <MapaArquitectura theme="light" />
     </Pagina>
   )

@@ -111,6 +111,24 @@ el email a `limpiezascruzz@gmail.com` y la ficha de `/sivra/mensajes` no los abr
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 
+### 👁 Ver una preview de ESTA app antes de mergear (02/09/2026)
+El `ignoreCommand` de esta app lleva `--sin-previews`, así que **una rama de PR NO construye nada**: el CI
+dice que compila, no cómo queda. Para un cambio que altera el ASPECTO —y aquí eso pasa a menudo: la
+migración de las 43 cabeceras a `PageHeader` cambió el tamaño del título en toda la app— hay que forzarla,
+o esas pantallas se ven por primera vez en producción.
+
+Se fuerza con `[preview]` en el asunto del commit, pero **el marcador solo no basta: hacen falta DOS cosas
+a la vez** (fallaron las dos, una detrás de otra, en el PR #2054):
+1. Va en el asunto del **ÚLTIMO** commit del push (el script lee `VERCEL_GIT_COMMIT_MESSAGE`, que es el HEAD
+   empujado). Si después añades commits, el marcador se pierde.
+2. **Ese mismo commit tiene que tocar `apps/plataforma/`** (o un `packages/*` que esta app declare, o un
+   manifiesto raíz). `[preview]` levanta el veto de `--sin-previews`, pero el filtro por rutas del script
+   salta el build igual. Un commit que solo toca un `.md` de la raíz NO construye, lleve marcador o no.
+
+Y **compruébalo**: el fallo se ve idéntico a un build legítimamente ignorado
+(`Vercel – plataforma: Canceled by Ignored Build Step` en los statuses del PR). Detalle completo en el
+`CLAUDE.md` de la raíz, sección del `ignoreCommand`.
+
 ## ⏰ Crons — dispatcher único (30/07/2026)
 **Vercel Pro admite 40 crons/proyecto y este llegó a 60 → el scheduler omitía disparos en silencio**
 (29/07/2026: `psd2-sync` de las 06:00 sin log alguno; auditoría PR #1162). Desde entonces `vercel.json`
@@ -1371,6 +1389,17 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   Agente» lleva el texto en **EBCDIC (cp500)** dentro de los content streams y Node no trae esa
   codificación → tabla explícita en `lib/correduria/pdf-allianz.ts`.
 - UI: pestaña «Cuadre» en `/correduria`. Los importes que no han llegado se pintan **«—», nunca 0,00€**.
+- 🚨 **Un `estado:'error'` del puerto lleva SIEMPRE su CAUSA (02/09/2026, PRs #2029 y #2034).** El aviso
+  decía «no se ha podido leer la cartera (`asegura_error`)» y ahí se acababa: los `catch {}` de asegura
+  colapsaban credenciales, permisos, conexión, schema y fila-que-no-está en el mismo error pelado, sin un
+  `console.error` que lo dejara ni en los logs de la función. Ahora `ComisionesAsegura` trae `causa?` del
+  clasificador único `apps/asegura/lib/error-cartera.ts` y `describirCausaAsegura()` (en
+  `lib/correduria-puerto.ts`) la traduce a la frase que dice dónde tocar; el Telegram la enseña — o dice
+  que asegura no la manda, que es otra cosa.
+  ✅ **La causa REAL resultó ser `credenciales`:** la contraseña de `prisma_seguros` se rotó tres veces ese
+  día y el `DATABASE_URL` del proyecto Vercel `central-asegura` se quedó con la vieja. **No era el schema**
+  — esa hipótesis se escribió aquí como probable y era falsa.
+  ⚠️ Al escribir el aviso de un fallo, la pregunta no es «¿he dicho que falló?» sino **«¿dice dónde mirar?»**.
 - 🚨 **PENDIENTE — la cifra fiscal de comisiones sigue siendo una ESTIMACIÓN.** `lib/finanzas.ts:594`
   eleva el neto del banco al bruto con `× (0,15/0,85)` y da por hecho que TODO abono de seguros es una
   comisión neta al 15 %; un periodo deudor de Occident rompe el supuesto. El bruto y la retención
@@ -1551,6 +1580,36 @@ Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pas
   handler obligaría a `'use client'` en cada pantalla que lo importe.
 - **CSS responsive en `globals.css`, no en la página.** Un estilo inline no admite media queries, y ese
   era el motivo de que 47 páginas llevaran un bloque `<style>` incrustado (201 `!important` entre todas).
+
+### El CUERPO del Inicio, migrado (02/09/2026, PR #2024)
+El primer lote (#2011→#2018) tocó el **chrome** de `/banca` —pestañas, migas, ancho, cabecera del libro— y
+Alberto respondió **«no está terminado, ¿no?»**: tenía razón, porque **el cuerpo de la página no lo tocó
+nadie**, y el cuerpo es lo que se ve al abrir. Medido entonces: **7 primitivas con CERO consumidores**, y
+`banca/ResumenPeriodo.tsx` con su propia `card`, su propio `Kpi` y su propio `<style>` — copias de lo que
+`components/ui.tsx` ya ofrecía. **Copiar el estilo en vez de importarlo es por qué arreglar el oscuro o el
+móvil hay que hacerlo N veces y se olvida una.**
+- Ya usan el sistema: `ResumenPeriodo`, `NegociosResumen` y `banca/page.tsx` (`KpiCard`, `CardHeader`,
+  `cardStyle`, `Stat`, `Badge`, `TablaScroll`, `Pendiente`). `IntervaloSelector` —compartido con
+  `/finanzas`— pasa de quince pastillas con borde a segmentado + chips: un control de navegación no puede
+  pesar como las tarjetas de datos que filtra.
+- **`DeltaBadge` colorea por SIGNIFICADO, no por signo** (`bueno`): gastar menos que el año pasado es verde
+  aunque el número sea negativo. Al revés, la pastilla premiaba subir el gasto.
+
+🚨 **Una exención del guardián de tokens puede llevar un motivo FALSO y sobrevivir por eso.** Las barras del
+gráfico de `ResumenPeriodo` estaban exentas de `regression-tokens-color` con el motivo escrito «son series,
+no estados» — y no: ingreso y gasto SON el par semántico, y el hex no cambiaba en modo oscuro. Sobrevivió al
+barrido de ~734 hex precisamente porque su justificación tenía buena pinta. Convertidas a token y exención
+retirada; la dona sí sigue en paleta categórica (ahí el motivo se sostiene). **Regla: una exención razonada
+sigue siendo una exención que hay que releer, no una decisión cerrada.**
+
+⏸️ **Dos cosas PENDIENTES DE DECISIÓN DE ALBERTO, no deuda técnica anónima:**
+1. **`PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot` siguen con CERO consumidores.** NO se
+   enchufaron a la fuerza en ningún sitio: hacerlo sería repetir el defecto que este lote arregla. En
+   `/banca` el hueco de `PageHeader` ya lo ocupan las migas + el saldo con su botón 👁. O se usan donde
+   encajen de verdad, o se borran — un catálogo que nadie importa no es un sistema, es documentación.
+2. **`banca/page.tsx:221` dice «último mov. ninguno» cuando `ultimoMov` es NULL** (`lib/psd2-estado.ts`),
+   que es un «no se ha podido leer» servido como afirmación — la regla del NULL incumplida en la pantalla
+   del banco. Sin tocar porque cambia un texto que Alberto lee a diario.
 
 ### 🚨 `Dato` — los tres estados, por construcción
 La regla raíz «dato que NO hay ≠ dato que NO se ha mirado» se cumplía por VIGILANCIA: cada pantalla nueva

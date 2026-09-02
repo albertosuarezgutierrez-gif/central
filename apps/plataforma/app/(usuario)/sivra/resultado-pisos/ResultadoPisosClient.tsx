@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { eur } from '@/lib/dinero'
+import { PageHeader, ThinBar } from '@/components/ui'
 import type { PLRango } from '@/lib/sivra/pl-rango'
 import type { PLMensual, PLPiso } from '@/lib/sivra/pl-mensual'
 import { agregarPisos, variacionPct, adr, ocupacionPct, diasDelMes } from '@/lib/sivra/pl-rango-logica'
@@ -99,10 +100,10 @@ export default function ResultadoPisosClient({ desdeInicial, hastaInicial, pisoI
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Rendimiento por piso</h1>
-        <span style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'capitalize' }}>{tituloRango}</span>
-      </div>
+      <PageHeader
+        titulo="Rendimiento por piso"
+        sub={<span style={{ textTransform: 'capitalize' }}>{tituloRango}</span>}
+      />
 
       <Selector
         desde={desde} hasta={hasta} piso={piso} pisos={pisosSelector}
@@ -306,8 +307,13 @@ function Canales({ data, piso, totalNeto }: { data: PLRango; piso: string; total
             <div key={f.portal} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: PORTAL_COLORS[f.portal] ?? PORTAL_COLORS.OTRO, flex: '0 0 auto' }} />
               <span style={{ fontWeight: 600, minWidth: 90 }}>{PORTAL_LABELS[f.portal] ?? f.portal}</span>
-              <div style={{ flex: '1 1 120px', height: 8, background: 'var(--surface-2, var(--border))', borderRadius: 4, overflow: 'hidden', minWidth: 80 }}>
-                <div style={{ width: `${pct}%`, height: '100%', background: PORTAL_COLORS[f.portal] ?? PORTAL_COLORS.OTRO }} />
+              <div style={{ flex: '1 1 120px', minWidth: 80 }}>
+                <ThinBar
+                  pct={pct}
+                  color={PORTAL_COLORS[f.portal] ?? PORTAL_COLORS.OTRO}
+                  alto={8}
+                  track="var(--surface-2, var(--border))"
+                />
               </div>
               <span style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
                 {eur(f.neto)} <span style={{ color: 'var(--muted)' }}>({pct}% · {f.reservas} res.)</span>

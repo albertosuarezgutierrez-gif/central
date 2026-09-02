@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { Pagina } from '@/components/ui'
+import { Building2 } from 'lucide-react'
+import { Pagina, PageHeader } from '@/components/ui'
 
 type Metrica = { label: string; valor: string }
 type Cliente = { vertical: 'ialimp' | 'sivra' | 'iarest' | 'rrhh'; id: string; nombre: string; email?: string | null; activo: boolean; puedeBloquear: boolean; metricas: Metrica[] }
@@ -98,19 +99,19 @@ export default function ClientesClient({ operador }: { operador: string }) {
 
   return (
     <Pagina ancho="lectura">
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '2px' }}>🏢 Clientes</h1>
-          <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{operador}</div>
-        </div>
-        <button
-          onClick={() => { setNuevoErr(''); setNuevoOk(''); setShowNuevo(true) }}
-          style={{ background: 'var(--primary)', border: 'none', color: '#fff', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
-        >
-          ➕ Nuevo cliente
-        </button>
-      </div>
+      <PageHeader
+        titulo="Clientes"
+        sub={operador}
+        icono={<Building2 size={20} strokeWidth={1.75} />}
+        acciones={
+          <button
+            onClick={() => { setNuevoErr(''); setNuevoOk(''); setShowNuevo(true) }}
+            style={{ background: 'var(--primary)', border: 'none', color: '#fff', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
+          >
+            ➕ Nuevo cliente
+          </button>
+        }
+      />
 
       {/* KPIs */}
       <div className="clientes-kpis" style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>

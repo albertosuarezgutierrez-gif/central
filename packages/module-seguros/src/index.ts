@@ -51,6 +51,15 @@ export type { AutoLeido } from './documento-auto.ts'
 
 export { importeEiac, sumarImportesEiac } from './importe-eiac.ts'
 export {
+  interpretarCapital,
+  extraerDetalleCobertura,
+  type CapitalCobertura,
+  type DetalleCobertura,
+  type LimiteCobertura,
+  type FranquiciaCobertura,
+  type PrimaCobertura,
+} from './cobertura-detalle.ts'
+export {
   resumirRecibos,
   estadoCobro,
   explicarCobro,

@@ -7,10 +7,9 @@ import {
   ChartColumn, ChartLine, ChartPie, ChevronDown, ClipboardList, Coins, Cog, Cpu,
   CreditCard, Euro, Eye, Fan, FileText, FlaskConical, Gavel, House, KeyRound,
   Landmark, Lightbulb, MessageCircle, MessageSquare, Network, Receipt, Satellite,
-  Scale, Search, SearchCheck, Send, Shield, Sparkles, Store, Target, Ticket,
+  Scale, Search, SearchCheck, Shield, Sparkles, Store, Target, Ticket,
   TrendingUp, User, UserCheck, Users, UtensilsCrossed, Wrench,
-  type LucideIcon,
-} from 'lucide-react'
+  type LucideIcon, BookUser } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 
 // Iconos de lucide, NO emojis: cada sistema operativo pinta el emoji a su manera (color,
@@ -24,7 +23,6 @@ const NAV_NEGOCIO = [
   // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
   // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
   { href: '/banca', icon: House, label: 'Inicio' },
-  { href: '/banca/transferencia', icon: Send, label: 'Transferencia' },
   // Bandeja del agente de facturas. Es el destino del aviso de Telegram, que hasta el 29/08/2026
   // enlazaba a una página inexistente; sin esta entrada, lo acumulado solo se ve al llegar una
   // factura nueva (el aviso cuenta las de ESA pasada, no la bandeja entera).
@@ -40,6 +38,18 @@ const NAV_NEGOCIO = [
   // 🔔 Qué te manda el bot por su cuenta, y el interruptor de cada aviso (01/09/2026:
   // «revisa las notificaciones de Telegram, son muchas»).
   { href: '/telegram', icon: Bell, label: 'Avisos Telegram' },
+]
+
+// ─── 🔭 Oportunidades — separadas de «Mi negocio» el 02/09/2026 ───────────────────────────────
+// Alberto, sobre el panel entero: «creo q tb están mal organizado». El inventario dio la forma
+// del problema: 76 páginas y 51 entradas de menú para UNA persona. Y dentro de «Mi negocio»
+// convivían dos modos mentales distintos: GESTIONAR lo que ya tienes (banca, facturas por
+// revisar, correduría, limpiezas) y BUSCAR algo nuevo (concursos, subastas, analizar una compra,
+// empresas en dificultad, bolsa, patrimonio). Mezclados, «Facturas por revisar» —que es trabajo
+// pendiente de HOY— pesaba lo mismo que «Subastas», que se mira cuando se tiene un rato.
+// Separarlas no quita ninguna página: cambia cuál te encuentras al abrir el panel a resolver
+// algo. Es reversible en un PR (mover las 6 entradas de vuelta y borrar la sección).
+const NAV_OPORTUNIDADES = [
   { href: '/concursos', icon: Landmark, label: 'Concursos' },
   { href: '/subastas', icon: Gavel, label: 'Subastas y chollos' },
   { href: '/inversion', icon: SearchCheck, label: 'Analizar compra' },
@@ -49,6 +59,9 @@ const NAV_NEGOCIO = [
 ]
 
 // Entrada única para una cuenta acotada a la sección Empresas (rol='empresas').
+// 🚨 Se pinta en el hueco de «Mi negocio» aunque `/empresas` viva ahora en Oportunidades: esa
+// sección NO se renderiza para estas cuentas, así que su única entrada tiene que estar donde sí
+// se pinta. Por eso `seccionDeRuta` no puede decidir sola aquí — ver `seccionActiva()`.
 const NAV_SOLO_EMPRESAS = [{ href: '/empresas', icon: Building2, label: 'Empresas' }]
 
 const NAV_PISOS = [
@@ -72,6 +85,11 @@ const NAV_PISOS = [
   { href: '/sivra/seo', icon: Search, label: 'SEO' },
   { href: '/sivra/limpiadoras', icon: Wrench, label: 'Admin limpiezas' },
   { href: '/sivra/domotica', icon: Fan, label: 'Domótica' },
+  // 🚨 Estaba INALCANZABLE pulsando (02/09/2026): ningún enlace del repo llevaba aquí y, sin
+  // embargo, el cron `ses-latido` avisa por Telegram de que «no hay ningún establecimiento dado
+  // de alta en /sivra/partes/establecimientos». Un aviso que señala una pantalla que no se puede
+  // abrir es un aviso que no se puede atender — la regla de «¿en qué pantalla lo va a ver?».
+  { href: '/sivra/partes/establecimientos', icon: BookUser, label: 'Partes de viajeros' },
 ]
 
 const NAV_OPERADOR = [
@@ -101,9 +119,10 @@ const NAV_OPERADOR_RESTRINGIDO = new Set(['/operador/clientes', '/operador/rrhh'
 
 // Secciones PLEGABLES (01/09/2026). El lateral tenía 52 entradas planas y no lo navegaba
 // nadie: al entrar se ve un menú corto (la sección donde estás) y el resto a un clic.
-type ClaveSeccion = 'negocio' | 'pisos' | 'operador'
+type ClaveSeccion = 'negocio' | 'oportunidades' | 'pisos' | 'operador'
 const LS_SECCION: Record<ClaveSeccion, string> = {
   negocio: 'nav-seccion-negocio',
+  oportunidades: 'nav-seccion-oportunidades',
   pisos: 'nav-seccion-pisos',
   operador: 'nav-seccion-operador',
 }
@@ -117,8 +136,18 @@ function enLista(lista: { href: string }[], path: string): boolean {
 function seccionDeRuta(path: string): ClaveSeccion | null {
   if (enLista(NAV_PISOS, path)) return 'pisos'
   if (enLista(NAV_OPERADOR, path)) return 'operador'
+  if (enLista(NAV_OPORTUNIDADES, path)) return 'oportunidades'
   if (enLista(NAV_NEGOCIO, path)) return 'negocio'
   return null
+}
+
+// 🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Mi negocio».
+// Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta
+// NO se le renderiza— y «Mi negocio» se quedaría plegado con su única entrada dentro: el menú
+// entero vacío, sin error y sin nada que pulsar.
+function seccionActiva(path: string, soloEmpresas: boolean): ClaveSeccion | null {
+  if (soloEmpresas) return 'negocio'
+  return seccionDeRuta(path)
 }
 
 // 🚨 El lateral tiene DOS plegados distintos y no pueden pisarse:
@@ -143,8 +172,13 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   // Secciones abiertas. El valor inicial NO lee localStorage (rompería la hidratación): sale de
   // la ruta activa, que el servidor también conoce. Lo guardado se aplica en el efecto de abajo.
   const [abiertas, setAbiertas] = useState<Record<ClaveSeccion, boolean>>(() => {
-    const activa = seccionDeRuta(path)
-    return { negocio: activa === null || activa === 'negocio', pisos: activa === 'pisos', operador: activa === 'operador' }
+    const activa = seccionActiva(path, soloEmpresas)
+    return {
+      negocio: activa === null || activa === 'negocio',
+      oportunidades: activa === 'oportunidades',
+      pisos: activa === 'pisos',
+      operador: activa === 'operador',
+    }
   })
 
   useEffect(() => {
@@ -178,10 +212,10 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   // La sección que contiene la ruta activa se abre SIEMPRE. Si no, un plegado guardado dejaría
   // escondida justo la entrada en la que estás (y el enlace activo sin pintar en ningún sitio).
   useEffect(() => {
-    const activa = seccionDeRuta(path)
+    const activa = seccionActiva(path, soloEmpresas)
     if (!activa) return
     setAbiertas(prev => (prev[activa] ? prev : { ...prev, [activa]: true }))
-  }, [path])
+  }, [path, soloEmpresas])
 
   const alternarSeccion = useCallback((clave: ClaveSeccion) => {
     setAbiertas(prev => {
@@ -257,6 +291,27 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
             )
           })}
         </div>
+
+        {!soloEmpresas && <CabeceraSeccion clave="oportunidades" titulo="Oportunidades" />}
+        {!soloEmpresas && (
+          <div id="nav-grupo-oportunidades" className="nav-grupo" data-colapsado={abiertas.oportunidades ? undefined : '1'}>
+            {NAV_OPORTUNIDADES.map(({ href, icon, label }) => {
+              const active = path === href || path.startsWith(href + '/')
+              return (
+                <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
+                  fontWeight: active ? 600 : 400,
+                  background: active ? 'var(--primary-light)' : 'transparent',
+                  color: active ? 'var(--primary)' : 'var(--text)',
+                  fontSize: '14px', textDecoration: 'none',
+                }}>
+                  <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
 
         {!soloEmpresas && <CabeceraSeccion clave="pisos" titulo="Pisos · detalle" />}
         {!soloEmpresas && (

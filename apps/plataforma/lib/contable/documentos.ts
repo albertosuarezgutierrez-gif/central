@@ -153,7 +153,9 @@ export async function procesarDocumento(
 
   let extraido
   try {
-    extraido = await extraerDesdeBuffer(buffer, mimeType, fileName)
+    // `ocr: true` — aquí hay alguien esperando delante de la pantalla: si el PDF no trae capa de
+    // texto se rasteriza y se lee por visión, en vez de contestar «prueba con una foto más nítida».
+    extraido = await extraerDesdeBuffer(buffer, mimeType, fileName, { ocr: true })
   } catch {
     return { ok: false, motivo: 'No pude procesar el documento. ¿Es un PDF o una imagen (JPG/PNG)?' }
   }
@@ -164,7 +166,7 @@ export async function procesarDocumento(
     return await procesarExtractoTarjeta(cuentaId, buffer, mimeType, fileName, parseTarjetaPdfTexto(extraido.texto))
   }
 
-  const interp = interpretarExtraccion(extraido.data, extraido.source)
+  const interp = interpretarExtraccion(extraido.data, extraido.source, extraido.motivo)
   if (!interp.ok) {
     // El documento SÍ se lee: lo que pasa es que no es una factura suelta, sino un listado de
     // movimientos (el «movimientos (1).pdf» que Alberto subió tres veces el 07/08/2026). Pedirle

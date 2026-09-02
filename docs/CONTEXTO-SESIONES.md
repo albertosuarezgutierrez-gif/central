@@ -44,6 +44,203 @@
   `CAMPOS_VENDOR` es provisional; un 400 de validación no se cobra. Alberto exporta el ejemplo del portal
   (`docs/CODEOSCOPIC-API-PORTAL.md` § Hogar). Caso de prueba: Occident GPDFS3000276 (Sevilla, 76 m²/1994).
 
+### 🧹 (02/09/2026) Cerrado lo que quedaba del auditor: novedades fuera del generado + la ambigüedad, vigilada
+- **Opción 2 hecha:** `novedades` sale a `apps/plataforma/lib/novedades.generated.json`. Se derivan de la
+  MEMORIA, no del código, así que mezclarlas con la radiografía hacía que cada PR que anotara memoria
+  reescribiera el JSON grande. Comprobado: añadir una entrada ya no toca `estructura.generated.json`.
+- 🪤 **La ambigüedad del troceo era un bug ACTIVO, no teórico:** `- **Hecho por Claude Chrome (02/09):**`
+  —cuerpo de una entrada— se leía como cabecera y salía como novedad con fecha vacía; solo se salvaba por
+  caer en la posición 16 de 15. Medido, no supuesto.
+- **El arreglo NO fue endurecer el parser.** Se probó exigir la fecha al final de la negrita y los datos lo
+  tumbaron: 14 de 137 cabeceras reales de la historia la llevan en medio (`**título (30/06) — texto.**`).
+  Endurecer las habría convertido en cuerpo. Se arregló el DATO (fecha fuera de los paréntesis) y se puso
+  un guardián que caza la recaída con el mensaje de cómo escribirlo.
+- Guardián probado en los dos sentidos: falla con la línea mala, pasa con la buena. 180/180 en la raíz,
+  17/17 rotar-memoria, `--check` ✓, typecheck de plataforma OK.
+- ⚠️ Y una trampa de método: un `git checkout -- docs/CONTEXTO-SESIONES.md` para limpiar una prueba se
+  llevó por delante el arreglo de esa misma línea. Verificar después de restaurar, no antes.
+
+### 🗞️ (02/09/2026) Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba
+- El extractor usaba un regex que casa con CUALQUIER bullet en negrita, y el cuerpo de cada entrada está
+  lleno de sub-bullets SIN indentar. El panel pintaba trozos de argumentación a media frase («Cablear un
+  valor es lo que deja una primitiva sin adoptar:»), **0 de 15 con fecha**, y las entradas `###` —el
+  formato de casi todas las sesiones— no salían NUNCA. Ahora, 15 de 15 fechadas.
+- 🔍 **Lo gordo estaba debajo:** `rotar-memoria` tenía el mismo agujero, porque un sub-bullet y una cabecera
+  antigua son la MISMA sintaxis. Contaba **138 «entradas» donde hay 65**: al rotar el mes, 73 sub-bullets se
+  habrían archivado como sesiones sueltas. No había saltado porque aún no tocaba rotar.
+- La separación no es sintáctica sino de ESTADO: con una entrada nueva abierta, un bullet en negrita es
+  cuerpo suyo — salvo que lleve fecha, que es lo que tiene una cabecera de verdad. La primera versión sin
+  esa excepción rompió un test de `rotar-memoria`; el fixture tenía razón y la regla estaba mal.
+- Un solo criterio: `auditar-novedades.mjs` importa el troceo de `rotar-memoria`, no lo reimplementa.
+  Guardián `regression-novedades-memoria.test.ts` (5 tests), uno contra la memoria REAL. PR #2064.
+- 🪤 **Y al anotar ESTA entrada me la pegué con lo mismo:** insertarla buscando la subcadena `###` la metió
+  dentro del PREÁMBULO, que cita el formato como ejemplo. Se vio porque la novedad 1 salió sin fecha. Para
+  localizar la primera entrada hay que mirar LÍNEAS en columna 0, no subcadenas.
+- Antes, en la misma sesión: **PR #2044** (panel de Salud a cero avisos: la reimplementación de alquiler al
+  módulo compartido + CLAUDE.md de almacen y asegura-portal) y **PR #2053** (el `--check` deja de romperse
+  porque una sesión anote memoria; criterio de comparación a `auditar-comparacion.mjs`, testeado).
+- ⚠️ **Carrera confirmada dos veces:** si `main` avanza entre tu merge y el squash, el generado entra
+  mintiendo (el #2044 dejó el mapa apuntando a un archivo que #2047 había borrado). Lo absorbe
+  `auditoria.yml`, que YA existe y regenera post-merge por PR — comprobado corriendo tras el merge.
+
+### 📄 (02/09/2026) El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)
+- Alberto subió «movimientos (2).pdf» al chat 📎 y recibió «prueba con una foto más nítida o un PDF que tenga texto».
+- **Descartado que fuera pdf-parse, con datos:** el cron `subastas-enriquecer` leyó decenas de PDF en prod esa misma
+  mañana (06:15-09:31 UTC) y la lib va bien en local con la misma versión del lockfile desde el 16/07. **El PDF no
+  traía capa de texto**, y el chat contable era el ÚNICO camino de PDF del repo sin OCR.
+- Ahora: `MotivoSinLectura` (pdf_ilegible · pdf_sin_texto{no_intentado|sin_paginas|error|sin_datos} · formato) →
+  el mensaje dice si el documento se ha MIRADO o no; y `opts.ocr` (JPEG embebidos → PDFium → visión), solo en el chat.
+- **Probado sobre un PDF sin capa de texto fabricado a propósito** (y repetido sobre `main` ya mergeado): pdf-parse
+  abre 1 página y saca 0 caracteres, los dos rasterizadores devuelven la página y la imagen sale legible. Guardián
+  `rasterizar-pdf.test.ts` — sin él la regresión es INVISIBLE: saldría `ocr:'sin_paginas'`, un desenlace legítimo.
+- 🚨 **Lección de proceso:** el PR chocó TRES veces por `CONTEXTO-SESIONES.md` (main recibe automerges cada pocos
+  minutos). Se resolvió sacando la memoria del PR: **un PR de código no debe tocar el fichero de memoria**.
+- **Sin cerrar:** la visión no se ha probado end-to-end (el contenedor no tiene claves de IA) ni se ha visto el PDF de
+  Alberto; `expenses/agent/scan` (Gmail) sigue sin OCR y `parse-invoice` sigue con `require('pdf-parse')` en la raíz.
+
+---
+
+### 🧱 (02/09/2026, noche) Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)
+- Con #2045, `apps/plataforma` queda **entera** sobre `PageHeader`: 43 cabeceras + 3 `BtnLink` + 9 `ThinBar`, en
+  **4 tandas de agentes** con lista EXPLÍCITA de ficheros por tanda (y de los prohibidos) para no pisarse.
+- 🔧 **Dos huecos de las primitivas que solo se ven al adoptarlas de verdad**, los dos destapados por botones reales
+  que se quedaban fuera: `BtnLink` **no soportaba `target`/`rel`** (firma SCA del banco, subir póliza, comparar
+  precio: los tres abren pestaña nueva) → prop `nuevaPestana` con `rel="noopener noreferrer"` implícito y NO
+  opcional; y `ThinBar` **no llevaba transición**, así que dos barras perdían su animación al migrar.
+- **Es un cambio de ASPECTO, no solo de código:** títulos a 20px/700 (venían de 18-24 y peso 700-900), margen bajo
+  la cabecera unificado en 24px, y el emoji que iba dentro del `<h1>` pasa a la cápsula de 38×38 `--primary-light`.
+  `pricing-auto`/`pricing-rentabilidad` dejan su paleta hex fija: su título ya responde al tema.
+- El commit lleva **`[preview]`** a propósito: con `--sin-previews`, 43 pantallas cambiando de aspecto se verían por
+  primera vez EN PRODUCCIÓN. Un build es más barato que eso.
+- 🚨 **Y el `[preview]` falló DOS veces seguidas antes de funcionar** (lo caro: el síntoma es idéntico a un
+  build legítimamente ignorado, así que no falla nada). Necesita **DOS condiciones a la vez**: ir en el asunto
+  del **ÚLTIMO** commit del push (el script lee `VERCEL_GIT_COMMIT_MESSAGE`, el HEAD empujado) **Y** que ese
+  commit **toque la app** — `[preview]` levanta el veto de `--sin-previews` (paso 1b de
+  `scripts/vercel-ignore-build.mjs`) pero el paso 3 salta igual por rutas. Un commit que solo toca un `.md` de
+  la raíz NO construye, lleve marcador o no. Documentado en el `CLAUDE.md` raíz y en el de plataforma.
+- **Sin migrar a propósito:** `banca/transferencia` (sus 3 `<h1>` son estados de un formulario) e
+  `invitado/limpieza` (única pantalla de Vanesa, intranet de invitado, no el panel `(usuario)`).
+
+### 🩺 (02/09/2026) Salud de la arquitectura a cero avisos (/admin → 🗺️ Estructura)
+- **La reimplementación era real, no un falso positivo:** `apps/alquiler` llevaba su propio catálogo y calculaba
+  el disponible a mano teniendo `@central/module-materiales` al lado. Puente en `lib/materiales-compartidos.ts`
+  (NO se migra la tabla). Su límite es lo caro: `alquiler_materiales` no tiene columnas económicas, así que
+  `resumenStockUnidades()` **recorta `valorTotal` del tipo** para que no compile pintar «0 €» de inventario.
+- **`CLAUDE.md` propios** para `apps/almacen` y `apps/asegura-portal` (los escribieron dos agentes leyendo el código;
+  lo no verificable va marcado «pendiente de confirmar», no inventado). `docs/FUENTES-DE-VERDAD.md` y el raíz, al día.
+- `asegura-portal` no tenía ficha curada en `estructura.ts` (el auditor lo avisaba); añadida y radiografía regenerada:
+  **0 reimplementaciones · 0 apps sin CLAUDE.md**. Guardián 168/168, suite completa en verde. **PR #2044 mergeado**.
+- 🏁 **Y una CARRERA que deja el generado mintiendo, medida aquí:** `main` avanzó con el PR #2047 entre mi
+  `git merge main` y el squash, y ese PR borraba `apps/asegura/lib/comisiones-motivo.ts`. GitHub aplica el squash
+  sobre el main NUEVO, pero `mapa-funciones.generated.json` se generó con el VIEJO → entró en `main` con una entrada
+  a un archivo que ya no existe. **Regenerar el índice antes de empujar no basta si la base se mueve**; el
+  `auditar --check` (que ya fallaba en la base 2cb05af6, comprobado en worktree) es quien lo caza. Regenerado en PR aparte.
+
+### 🧩 (02/09/2026, noche) Las 5 primitivas huérfanas: se MIDIÓ antes de decidir (PR #2045 mergeado)
+- Llevaban desde su creación a cero consumidores. La pregunta «¿la uso o la borro?» se contestó contando sitios
+  reales en toda la app, no a ojo: `PageHeader` **53** · `BtnLink` 11 · `ThinBar` 11 · `BarListRow` **0** ·
+  `LegendDot` **1**. Las dos últimas, **borradas**; las tres primeras, adoptadas.
+- **Cablear un valor es lo que deja una primitiva sin adoptar:** `ThinBar` fallaba en 8 de 11 sitios solo por
+  llevar el alto fijo a 6px. `alto` y `track` pasan a props. Y una primitiva con UN consumidor no es sistema
+  de diseño, es un componente local.
+- Migradas las 10 cabeceras que además repetían su propia media query → **15 reglas `!important` fuera** de
+  `globals.css`. Quedan 43 cabeceras, 7 `BtnLink` y 9 `ThinBar` para tandas siguientes.
+- 🚨 **`.seo-header` parecía redundante y NO lo era:** sus reglas de ≤480px ponen los botones a ancho completo
+  y `.page-header` no hace eso. Antes de borrar una clase «duplicada», compara regla por regla.
+- Verificado por la sesión, no por el informe de los agentes: tsc 0 · 165/165 en la raíz · tokens 10/10.
+
+### 🕳️ (02/09/2026, noche) El feed PSD2 tenía dos estados donde hay tres (PR #2042 mergeado)
+- `/banca` pintaba «último mov. **ninguno**» sobre un NULL. `ultimoMov` es `MAX(fecha_operacion)` y esa columna es
+  **nullable**: NULL = «trajo apuntes, pero no sé de cuándo son», que es lo contrario de lo que decía el texto.
+- **Medido antes de tocar, y corrige lo que yo mismo había apuntado:** 0 filas sin fecha en las **2.123** de la tabla
+  (los seis orígenes). Es una violación **latente**, no una mentira activa — pero el esquema la permite.
+- Se saca del JSX a `lineaCuentasFeed()` (helper puro + 5 tests). De paso: la lista vacía dejaba la línea en blanco
+  (una conexión vinculada que aún no trae nada) y la fecha salía en ISO crudo en un panel que usa dd/mm.
+- ⚠️ **Mismo agujero en la skill `psd2-health-check`**, y ahí el fallo es peor: `MAX()` y los `COUNT(... FILTER)`
+  ignoran los NULL, así que un feed que entregue apuntes sin fecha se declararía **roto**. Anotado con su consulta
+  de descarte.
+- 🔁 **El bloque Personal de `/banca` daba vueltas en círculo**: sus salidas iban a `/finanzas?tab=categorias`, que
+  monta EL MISMO componente que ya estabas viendo. Ahora apuntan a `/banca?tab=personal` (el filtro `?banco=` viaja igual).
+- **Límite estructural anotado, no arreglable ahí:** `cuentas_bancarias` no tiene columna que la ligue a
+  `conexiones_banco` — una cuenta psd2 recién vinculada y a cero es indistinguible de una manual o de Excel.
+
+### 🗺️ (02/09/2026, noche) plataforma: podar lo inalcanzable y agrupar el menú por TRABAJO (PR #2038 mergeado)
+- Inventario medido de la app entera: **76 páginas · 51 entradas de menú · 25 fuera del menú · 7 inalcanzables · 0 enlaces rotos**.
+  Mapa completo en `docs/PLATAFORMA-MAPA-PAGINAS.md` (incluye qué NO se comprobó).
+- **Podado (1.204 líneas):** `/sivra/inversion` (616 líneas, la 3.ª página más grande, **sin un solo enlace** desde PR #1117),
+  `RadiografiaClient.tsx` y `ProyeccionClient.tsx` (cuerpos muertos desde la unificación en `/banca`). Las RUTAS quedan como
+  redirect: borrar el cuerpo no rompe marcadores, y el historial de git es el «por si acaso».
+- **Menú reagrupado por trabajo:** nace `NAV_OPORTUNIDADES` (concursos · subastas · analizar compra · empresas · trading ·
+  patrimonio), antes repartidas entre secciones que no las explicaban. Trampa evitada: `seccionActiva()` con `rol='empresas'`
+  vaciaba el menú de esa cuenta en silencio.
+- Cableado `/sivra/partes/establecimientos`: el cron `ses-latido` apuntaba a una pantalla que **no se podía abrir**.
+- **Pendiente de decisión de Alberto:** fundir duplicadas de verdad (2 hubs financieros, 6 pantallas de dinero de pisos,
+  4 de pricing) — semanas, por goteo · `PageHeader`/`BtnLink`/`BarListRow`/`ThinBar`/`LegendDot` siguen con 0 consumidores ·
+  `banca/page.tsx:221` pinta «último mov. ninguno» sobre un NULL (viola la regla NULL≠0) · Operador = 20 de 51 entradas.
+
+### ⚪ (02/09/2026, noche) Comisiones: el «no se ha podido leer la cartera» no decía DÓNDE mirar (PR #2029 mergeado)
+- El cron `cima-liq` avisaba `asegura_error` y `comisiones_devengo`/`comisiones_cobertura` siguen a **0 filas**: nunca
+  ha leído. Comprobado contra la BD: `seguros` está SANA (1 correduría · 7 `cuenta_efectivo` · 9 liquidaciones ·
+  184 recibos, 104 cobrados · grants y enums de `prisma_seguros` correctos). El fallo es de la app, no del dato.
+- **No se pudo diagnosticar porque nadie lo contaba:** dos `catch {}` mudos en asegura (ruta + `lib/comisiones.ts`),
+  sin `console.error`, colapsaban conexión/schema/permisos/fila-que-falta en un `{estado:'error'}` pelado. Ahora
+  llevan `motivo` (`bd`/`sin_correduria`) + pista corta SIN secretos (`central/…/P2021/public.corredurias`, módulo
+  puro `comisiones-motivo.ts`), plataforma la propaga y el Telegram la enseña. La próxima pasada se nombra sola.
+- ⚠️ **Y la hipótesis que escribí era FALSA — corregido en el PR #2047.** Dije «probablemente el schema»:
+  `urlFuenteCartera` fuerza `schema=seguros` en vez de respetar el que traiga `DATABASE_URL`. Se conserva como
+  blindaje (esa cadena es la MISMA que la auth, donde el schema bueno es `public`, y ahí `clientes` es OTRA tabla),
+  pero **no era la causa**. La midió el PR #2034: `credenciales` — la contraseña de `prisma_seguros` se rotó TRES
+  veces ese día (05:51, 05:52 y 10:17, en `postgres_logs`) y el `DATABASE_URL` de Vercel `central-asegura` se quedó
+  con la vieja. El repo ya se había avisado a sí mismo en el SQL de `crm_seguros` («rotarla tumbaría
+  central-asegura») y se rotó igual. Regla nueva en el CLAUDE.md raíz: **rotación y env, en el mismo paso.**
+- **Deuda propia, saldada en #2047:** #2029 y #2034 crearon dos clasificadores del mismo error con horas de
+  diferencia. Gana `lib/error-cartera.ts` (seis causas accionables y borra la URL del log); `comisiones-motivo.ts`
+  retirado y la ruta de comisiones al compartido → las NUEVE rutas del puerto hablan igual.
+- Verificado: 2.568 tests `node --test` + 53 vitest en verde, typecheck de asegura y plataforma OK.
+- **De regalo, la 7ª medición del CI mudo (anotada en `CLAUDE.md`), y la más limpia:** el MISMO acto —merge
+  de `main` con contenido real + push— salió **mudo en draft** y **disparó los 19 runs ya sin draft**. O sea:
+  des-draftear no reprocesa lo empujado antes, solo arma la rama para el push SIGUIENTE. Corrige el «no
+  des-draftees, no mergees main» del #1962, que solo vale mientras haya lag (aquí el `head.sha` coincidía).
+
+---
+
+### 🪞 (02/09/2026, tarde) La skill de UI llevaba DOS MESES contradiciendo al CLAUDE.md de su app
+- Al actualizar la documentación tras el PR #2024, `plataforma-maestro/references/ui-inicio-dashboard.md`
+  decía «**modo oscuro automático (`prefers-color-scheme: dark`)**» y un toggle de TRES estados
+  «🌗 Auto → ☀️ Claro → 🌙 Oscuro». Las dos cosas son falsas desde el **PR #707 (03/07/2026)** — y lo que
+  describía **es exactamente la causa del bug** que Alberto reportó con captura: el ahorro de batería del
+  móvil ponía el sistema en oscuro y el panel se oscurecía solo.
+- Medido contra el código, no supuesto: `prefers-color-scheme` **no aparece** en `globals.css`; `:root`
+  lleva `color-scheme: only light`; `ThemeToggle.tsx` es `type Tema = 'light' | 'dark'`, sin «Auto».
+- 🚨 **Lección de método:** una skill puede contradecir al `CLAUDE.md` de su propia app durante dos meses
+  sin que nada falle — ni `tsc` ni los tests leen prosa, y la auditoría diaria no lo cazó. Antes de dar por
+  buena una afirmación de una skill sobre COMPORTAMIENTO, cotéjala con el código (un `grep` basta).
+  Hermana de la exención con motivo falso del PR #2024: en los dos casos lo que protegía al error era que
+  su justificación tenía buena pinta.
+- Corregido en la skill (con el porqué y el veto a reintroducirlo) y ampliado el `CLAUDE.md` de la app con
+  el estado del sistema de diseño y los dos pendientes que decide Alberto. Prueba sobre `main` ya fusionado:
+  165 tests · tsc 0 · build OK.
+
+### 🧱 (02/09/2026, tarde) plataforma: el CUERPO del Inicio, al sistema de diseño (PR #2024 mergeado)
+- Alberto sobre `/banca` en producción: **«no está terminado, ¿no?»**. Correcto. Los tres PRs anteriores
+  tocaron el CHROME (pestañas, migas, ancho, cabecera del libro); **el cuerpo de la página no lo tocó
+  nadie**, y el cuerpo es lo que se ve al abrir. Su captura además iba desplazada: el sidebar es fijo.
+- Medido antes de tocar: **7 primitivas con CERO consumidores**. `ResumenPeriodo.tsx` tenía su propia
+  `card`, su propio `Kpi` y su propio `<style>` — copias de lo que `components/ui.tsx` ya daba. Copiar el
+  estilo en vez de importarlo es por qué arreglar el oscuro o el móvil hay que hacerlo N veces.
+- Enchufado: `KpiCard`/`CardHeader`/`cardStyle`/`Stat`/`Badge`/`TablaScroll`/`Pendiente` en
+  `ResumenPeriodo`, `NegociosResumen` y `banca/page.tsx`; `DeltaBadge` colorea **por significado** (gastar
+  menos = verde). Rejillas de los `<style>` a `globals.css` (sin el `!important`, que solo existía para
+  ganarle al estilo en línea). El `IntervaloSelector` —compartido con `/finanzas`— deja de ser 15
+  pastillas con borde: segmentado + chips.
+- 🚨 **Las barras del gráfico estaban exentas del guardián con un motivo FALSO**: «son series, no estados».
+  Ingreso y gasto SON el par semántico, y el hex no cambiaba en oscuro. Convertidas a token, exención
+  retirada; la dona sí sigue categórica (ahí el motivo se sostiene).
+- **Pendiente de decisión de Alberto:** `PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot`
+  siguen a cero consumidores — NO se enchufaron a la fuerza (sería repetir el defecto): o se usan donde
+  encajen o se borran. Y `page.tsx:221` dice «último mov. ninguno» sobre un NULL (regla del NULL), sin
+  tocar por ser cambio de texto que Alberto lee a diario.
+
 ### 📎 (02/09/2026, tarde) Correduría: documentos de verdad sobre la BD de casa (PR #2022 mergeado)
 - Alberto: «ya está nuestra bbdd, prueba y sigue». Probado: `seguros` en central tiene los mismos recuentos que se
   midieron en el origen (32.600 fichas, 28.843 pólizas, 109 CIMA/67 activas, 172 calles cifradas, 181 localidades,
@@ -77,6 +274,34 @@
 - Tras el merge se barrieron las afirmaciones «cartera NO migrada / foto vs origen» que quedaban en `CLAUDE.md`, skills
   `central-maestro`/`auditoria-central`/`agente-correduria`, bloque 2-quater de `/auditoria-diaria`, `RUTINAS` y `FUENTES-DE-VERDAD`:
   el origen de Manuel es foto congelada; la señal de salud pasa a ser el heartbeat `cima_pull_*` en `seguros.operational_events`.
+- ✅ **Prueba punta a punta (09:25 UTC, run #188, `mode: real`):** Actions → CRM (Vercel) → Fly → TIREA (6 páginas, 128
+  resultados) → `seguros` de central, 0 errores. `processed: 0` = los 128 ya estaban en `cima_ficheros` (86 confirmed + 42
+  review), no un fallo. Con esto el traspaso queda CERRADO salvo el adaptador de Fly. PRs #2007 y #2020 mergeados.
+- 🔴 **`/correduria` en plataforma sin cartera (captura de Alberto 12:06):** causa medida en `supavisor_logs`, no supuesta:
+  `password authentication failed for user "prisma_seguros"` (la URL de Vercel `central-asegura` llevaba otra contraseña).
+  Contraseña ROTADA 10:17 UTC y verificada por dblink en pooler 6543/5432 (el pooler tardó ~3 min en aceptarla: caché).
+  Alberto pega la URL nueva en `DATABASE_URL`/`DIRECT_URL` de `central-asegura` y redespliega. PR #2034: el puerto devuelve
+  `causa` (`lib/error-cartera.ts`) y plataforma la pinta; el texto viejo («ASEGURA_DATABASE_URL / central_asegura») fuera.
+  ✅ Pegado y redesplegado 11:10 UTC (Claude Chrome); sesión `prisma_seguros` aceptada 11:15; `/correduria` en plataforma
+  pinta la cartera desde central (captura 14:45 local, buscador con 4 fichas).
+- 🔒 **Control de la BD sin cortar a Manuel (decisión 02/09):** las 8 cuentas suyas copiadas a `auth.users` de central quedan
+  `banned_until = infinity` (solo vive la de Alberto). **PENDIENTE de Alberto, sin prisa:** (1) Vercel `asegura` →
+  `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY` a central (+ `SUPABASE_SERVICE_ROLE_KEY` de central) y redeploy, para que el login del
+  CRM se valide contra central; (2) GitHub `asegura` → ruleset: `main` exige PR con su aprobación (Manuel tiene write);
+  (3) Vercel → Team → Members: comprobar si Manuel está y sacarlo del proyecto `asegura`. Detalle en el chat de esta sesión.
+- 🔁 **Duplicidad medida en `seguros.clientes` (32.601 filas, 0 fusionadas):** 587 grupos con MISMO nombre+teléfono (610 fichas
+  de más), 556 de ellos `asegura_app`+`intranet` (la misma persona cargada de dos volcados); 121 grupos tienen pólizas en varias
+  fichas y 46 pólizas VIVAS de CIMA cuelgan de una ficha duplicada (siempre la de `intranet`). DNI casi no sirve para deduplicar
+  (28.697 fichas sin DNI). El CRM trae la infra de fusión (`merged_into_cliente_id`, `cliente_merge_log`, mig 0093) pero
+  NUNCA se usó (0 fusiones); plataforma detecta el gemelo y avisa «sin fusionar». Fusión pendiente de decisión de Alberto.
+  Caso medido (cliente real por CIMA): las 14 pólizas de la ficha gemela son las mismas 6 de CIMA con datos viejos (números sin
+  ceros, Plus Ultra por Occident, dos «activa» que CIMA da por canceladas); la ficha viva trae ciudad «34143»/Tarragona con CP
+  41003 (basura del volcado `intranet`); y ⚠️ **los recibos CIMA guardan el NIF del tomador EN CLARO en `datos_extra`**
+  (`DOCUMENTO TOMADOR`, `NIF_PAGADOR`) aunque la ficha lo cifra. Pendiente: cifrar/borrar ese campo.
+- 📋 **Coberturas CIMA inventariadas** (`docs/ASEGURA-CIMA-COBERTURAS.md`): 1.425 en 110 pólizas, 182 códigos y son de cada
+  compañía. `capital_asegurado` es texto: «0» (618) = sin capital propio, «INF» = ilimitado. La ficha de póliza en plataforma
+  ya lo distingue (`interpretarCapital`) y añade límites, franquicias, prima por cobertura y modalidad leídos de `datos_extra`
+  (`extraerDetalleCobertura`, `@central/module-seguros`; el puerto los manda como `modalidad`/`detalle`).
 
 ### 🖼️ (02/09/2026) plataforma: el rediseño LLEGA a la pantalla (PRs #2013 y #2018)
 - Alberto tras mergear #2011: «yo lo veo igual». **No era caché.** Ese PR mandó a producción cuatro
@@ -163,7 +388,7 @@
   (sesión sin memoria, sin PR y sin bitácora = pendiente perdido) y reconciliar TODAS las skills de agentes contra código y
   `list_triggers`, no solo las maestro. PR #2006. Ojo: `guardian-rama.mjs` da falso positivo en clon **shallow** (el `main`
   local no está en la historia truncada de `origin/main`); un `git fetch origin` lo calla.
-- **Hecho por Claude Chrome (02/09):** las rutinas 1 y 2 quedan con **Supabase + Supabase asegura + Vercel** (llevaban los 16
+- **Hecho por Claude Chrome el 02/09:** las rutinas 1 y 2 quedan con **Supabase + Supabase asegura + Vercel** (llevaban los 16
   conectores heredados, Gmail/Stripe/HubSpot incluidos). Verificado contra la skill: no usa ninguno de los quitados. Chrome
   destapó además que la diaria corre a **10:00 CEST** desde el 27/08 (Alberto la movió por el reset de cuota, memoria
   del 27/08) y el doc decía 04:00; corregido en `RUTINAS-PROGRAMADAS.md` §1/§3/cadencias. `ALERTA_TOKEN` de las rutinas

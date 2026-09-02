@@ -38,9 +38,9 @@
 - **`apps/almacen`** — gestión de almacén de eventos/catering para el cliente **Joaquín Jaén** (Fase 1: maestro
   por familias/materiales; orquestación de evento completa en curso). Compone `@central/module-materiales`
   (dep `workspace:*`, no `file:`). BD compartida (rol propio pendiente de confirmar). Desplegada 15/07/2026
-  (Vercel `almacen`, tenant DEMO poblado; tenant real de Joaquín aún sin sembrar). **Aún sin `apps/almacen/CLAUDE.md`
-  propio** — ver `docs/CONTEXTO-SESIONES.md` (entrada 15/07/2026) y `docs/ALMACEN-JJ-reunion-y-auditoria.md`
-  mientras tanto.
+  (Vercel `almacen`, tenant DEMO poblado; tenant real de Joaquín aún sin sembrar). **Tiene `CLAUDE.md`
+  propio desde el 02/09/2026** — manda él; el contexto de la reunión y la auditoría siguen en
+  `docs/ALMACEN-JJ-reunion-y-auditoria.md`.
 - **`apps/mariscos`** — **Mariscos González**: trazabilidad pesquera + etiquetado por peso (mayorista/pescadería
   de marisco; Fase 1, PR #1055, 11/08/2026). Recepción de partidas (albarán, lote de origen), envasado que
   CONSERVA el lote, etiqueta por canal (con/sin lote). Compone `@central/module-pesca`. BD compartida (auth
@@ -72,7 +72,12 @@
   solo se nota por los heartbeats `cima_pull_*` que vigila la auditoría. Traspaso de esa app a una cuenta
   de Alberto pendiente (borrador de mensaje v8 en `docs/TRASPASO-CORREDURIA.md`, no se envía sin su OK);
   el port de `cima-pull` a `apps/asegura` está APARCADO a propósito (inventario en
-  `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). ⚠️ Las **86 políticas RLS** del CRM se resolvían por
+  `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). 🔑 **Rotar la contraseña de un rol de BD SIN actualizar el `DATABASE_URL` de su proyecto Vercel deja la
+  app muerta en silencio (02/09/2026).** `prisma_seguros` se rotó tres veces ese día y `central-asegura` se
+  quedó con la vieja: toda la cartera —y con ella el libro de comisiones— moría en `password authentication
+  failed`, y ese texto **solo existía en los logs del pooler de Supabase**. Lo cazó el clasificador de causas
+  del puerto (`apps/asegura/lib/error-cartera.ts`). **La rotación y el env se hacen en el mismo paso.**
+  ⚠️ Las **86 políticas RLS** del CRM se resolvían por
   `auth.uid()`; en central el aislamiento es cosa del código (con BYPASSRLS el fallo sería «se ve todo sin
   fallar»). Ver `apps/asegura/CLAUDE.md`.
 - **`apps/asegura-portal`** — **portal del CLIENTE** de Grupo Asegura (Fase 1, 01/09/2026). App aparte
@@ -82,6 +87,7 @@
   de un solo uso sobre un **puerto de canal** (email y consola hoy; WhatsApp cuando exista la WABA):
   `canal_no_disponible` (503) NO es «el envío falló» (502). Tablas `portal_*` en el schema `seguros`.
   El aislamiento **no lo da RLS sino el código**, y lo vigila `test/regression-portal-aislamiento.test.ts`.
+  Tiene `CLAUDE.md` propio desde el 02/09/2026 — ver `apps/asegura-portal/CLAUDE.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
@@ -431,6 +437,41 @@ seguía sin procesarse).
 ⚠️ El orden de abajo sigue valiendo como respaldo si tras esperar el `head.sha` YA coincide y aun así no
 hay runs — pero prueba primero lo barato, que es no hacer nada.
 
+🥇 **SÉPTIMA medición (02/09/2026, PR #2029) — la más LIMPIA hasta ahora, y REHABILITA la hipótesis
+del draft: no basta con salir de draft, hace falta un push DESPUÉS.** Cinco pasos, medidos en orden,
+sin nada más de por medio:
+
+| paso | qué se hizo | ¿draft? | runs de los requeridos |
+|---|---|---|---|
+| 1 | push de la rama (token de App) | — | **0** |
+| 2 | PR abierto por la herramienta MCP | **sí** | **0** (solo `rutinas-automerge`, `pull_request_target`) |
+| 3 | merge de `main` + push (contenido real, 2 PRs) | **sí** | **0** |
+| 4 | des-draftear (`draft:false` por la API) | pasa a no | **0** |
+| 5 | 2º merge de `main` + push (contenido real) | **no** | ✅ **19 runs**, todos verdes en ~4 min → mergeado |
+
+Lo que esto AÍSLA mejor que ninguna medición anterior: el paso 3 y el paso 5 son **el mismo acto**
+(merge de `main` con contenido real + push) y dan resultados **opuestos**. Lo único que cambia entre
+ellos es el estado de draft. Y el paso 4 por sí solo no rescata nada: el des-draft **no reprocesa** los
+pushes que llegaron en draft, solo **arma** la rama para que el siguiente sí dispare. Es exactamente el
+matiz que quedó escrito —y no aislado— en la QUINTA medición.
+
+⚠️ **Lo que NO demuestra:** que el draft sea la causa SIEMPRE. El PR #1940 se abrió en draft por MCP y
+disparó al instante, y #1777/#1779 también. Así que el draft **silencia a veces**, no siempre; lo que sí
+está medido siete veces es que **un push con contenido real sobre un PR que NO es draft dispara**.
+
+✅ **Esto CORRIGE el «no des-draftees, no mergees `main`» del procedimiento del #1962** (que se escribió
+para no confundir el diagnóstico con el lag): aquí el `head.sha` del PR **coincidía** con
+`git ls-remote` en los pasos 3 y 4 —o sea, no había lag que esperar— y aun así no arrancaba nada. Con
+el lag descartado, la palanca correcta es la de abajo.
+
+🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
+1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
+2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
+   (el merge de `main` sirve, y encima es trabajo obligatorio si hay conflicto). Des-draftear a secas no basta.
+3. **¿Coinciden, ya no es draft y sigue mudo?** → mergea `main` igualmente (es un push con contenido real).
+4. Solo si eso tampoco, hace falta mano de Alberto. **Sigue prohibido**: commit vacío, cerrar y reabrir,
+   rama nueva por iniciativa del agente, y tocar el ruleset.
+
 **Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
 de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
 cortos.
@@ -551,6 +592,22 @@ que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míra
     (factura 14 jul–13 ago: 32.708 min ≈ 92,51 US$ de 117 US$) y no los mira nadie: los agentes verifican
     con tsc/tests y mergean en minutos. Con el flag solo construye `main` (producción). Para forzar una
     preview concreta (verificar UI en Vercel antes de mergear), pon **`[preview]` en el ASUNTO del commit**.
+    🚨 **Pero el marcador NO basta por sí solo: hacen falta DOS condiciones a la vez**, y saltarse
+    cualquiera deja el build saltado sin que nada falle. Medido el 02/09/2026 fallando las dos, una detrás
+    de otra (PR #2054):
+    1. **Tiene que ir en el asunto del ÚLTIMO commit del push.** El script lee `VERCEL_GIT_COMMIT_MESSAGE`
+       (`scripts/vercel-ignore-build.mjs:42`), que es el asunto del commit del deployment, o sea el HEAD
+       empujado. *Primer fallo:* se marcó el commit de la migración y después se hicieron dos commits más
+       (memoria y un merge de `main`); el deployment tomó el asunto del merge, que no lo llevaba.
+    2. **Ese mismo commit tiene que TOCAR la app**, o un `packages/*` que ella declare, o un manifiesto
+       raíz (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`). `[preview]` solo levanta el veto de
+       `--sin-previews` (paso 1b del script); **el paso 3 salta igual si el commit no afecta a esa app**.
+       *Segundo fallo:* se repitió el marcador en un commit que solo tocaba este `CLAUDE.md` de la raíz —que
+       NO está entre los manifiestos— y `Vercel – plataforma` volvió a salir `Canceled by Ignored Build Step`.
+    En los dos casos la consecuencia era la misma: **43 pantallas con el aspecto cambiado camino de
+    producción sin haberse visto nunca**, que es justo lo que el `[preview]` pretendía evitar. Y en los dos
+    el síntoma es idéntico a un build legítimamente ignorado, así que **compruébalo en el status de Vercel
+    del PR en vez de darlo por hecho**.
     ialimp NO lo lleva a propósito: cliente vivo (Sique Brilla) → ahí sigue la regla «preview verde antes de main».
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).

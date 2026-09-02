@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from "react"
+import { PageHeader, ThinBar } from "@/components/ui"
 
 type Apartment = {
   name: string; price_night: number; price_total: number
@@ -166,28 +167,26 @@ export default function MercadoPage() {
     <div style={{ padding: '16px 24px', maxWidth: 960, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>Mercado · Comp-set</h1>
-          <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, marginBottom: 0 }}>
-            Benchmarking multi-portal en Sevilla centro · {livePortals.length > 0 ? livePortals.join(" + ") : "Booking · Tripadvisor · Expedia"}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', borderRadius: 4, padding: 4 }}>
-          {([ ["normal","📅 Fin de semana"], ["corpus","✝️ Corpus Christi"] ] as const).map(([v,lbl]) => (
-            <button key={v} onClick={() => setScenario(v)}
-              style={{
-                padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                border: 'none', cursor: 'pointer',
-                background: scenario === v ? 'white' : 'transparent',
-                color: scenario === v ? '#09090b' : 'var(--muted)',
-                boxShadow: scenario === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              }}>
-              {lbl}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        titulo="Mercado · Comp-set"
+        sub={`Benchmarking multi-portal en Sevilla centro · ${livePortals.length > 0 ? livePortals.join(" + ") : "Booking · Tripadvisor · Expedia"}`}
+        acciones={
+          <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', borderRadius: 4, padding: 4 }}>
+            {([ ["normal","📅 Fin de semana"], ["corpus","✝️ Corpus Christi"] ] as const).map(([v,lbl]) => (
+              <button key={v} onClick={() => setScenario(v)}
+                style={{
+                  padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+                  border: 'none', cursor: 'pointer',
+                  background: scenario === v ? 'white' : 'transparent',
+                  color: scenario === v ? '#09090b' : 'var(--muted)',
+                  boxShadow: scenario === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {/* Comparativa multi-portal */}
       <div className="mercado-portal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
@@ -319,8 +318,8 @@ export default function MercadoPage() {
                       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</span>
                     </div>
                     <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: p.color }}>{fmtEUR(price)}</div>
-                    <div style={{ position: 'relative', height: 6, background: 'var(--border)', borderRadius: 999, marginBottom: 4 }}>
-                      <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', borderRadius: 999, width: `${Math.max(4, pct)}%`, background: p.color }}/>
+                    <div style={{ marginBottom: 4 }}>
+                      <ThinBar pct={Math.max(4, pct)} color={p.color} alto={6} track="var(--border)" />
                     </div>
                     <div style={{ fontSize: 10, fontWeight: 600, color: pos.color }}>{pos.label}</div>
                     <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>Mercado p50: {fmtEUR(stats.p50)}</div>
@@ -338,9 +337,11 @@ export default function MercadoPage() {
                 <div className="mercado-apt-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {[...live.apartments].sort((a,b) => a.price_night - b.price_night).map((apt,i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--surface)', borderRadius: 4, border: '1px solid var(--border)' }}>
-                      <div style={{ position: 'relative', width: 80, height: 6, background: 'var(--border)', borderRadius: 999, flexShrink: 0 }}>
-                        <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', borderRadius: 999, background: PORTAL_COLORS[portal] ?? "#6B7F96", width: `${((apt.price_night-stats.min)/(stats.max-stats.min))*100}%` }}/>
-                      </div>
+                      <ThinBar
+                        pct={((apt.price_night-stats.min)/(stats.max-stats.min))*100}
+                        color={PORTAL_COLORS[portal] ?? "#6B7F96"}
+                        width={80} alto={6} track="var(--border)"
+                      />
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', width: 56, flexShrink: 0 }}>{fmtEUR(apt.price_night)}</span>
                       {apt.score && <span style={{ fontSize: 10, color: 'var(--warning)' }}>★{apt.score}</span>}
                       <span style={{ fontSize: 10, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{apt.name}</span>
@@ -424,9 +425,11 @@ export default function MercadoPage() {
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}><span style={{ color: 'var(--warning)', fontWeight: 600 }}>★ {c.score}</span></td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                          <div style={{ width: 64, height: 6, background: 'var(--surface)', borderRadius: 999, overflow: 'hidden' }}>
-                            <div style={{ height: '100%', borderRadius: 999, width: `${bar}%`, background: isAbove ? 'var(--negative)' : 'var(--positive)' }}/>
-                          </div>
+                          <ThinBar
+                            pct={bar}
+                            color={isAbove ? 'var(--negative)' : 'var(--positive)'}
+                            width={64} alto={6} track="var(--surface)"
+                          />
                           <span style={{ fontWeight: 700, width: 56, textAlign: 'right', color: isAbove ? 'var(--negative)' : 'var(--positive)' }}>{fmtEUR(c.price)}</span>
                         </div>
                       </td>

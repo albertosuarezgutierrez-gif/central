@@ -43,6 +43,24 @@ test('no duplica schema si DATABASE_URL ya lo trae', () => {
   assert.equal((r.url!.match(/schema=/g) ?? []).length, 1)
 })
 
+// 🚨 El caso que dejó el libro de comisiones en «no se ha podido leer la cartera»
+// (02/09/2026): `DATABASE_URL` es la misma cadena que la auth, y en Vercel llega
+// con `schema=public`. Respetarlo mandaba el cliente de la CARTERA a `public`,
+// donde no hay `corredurias` —falla todo— y donde `clientes` es OTRA tabla.
+test('un schema distinto en DATABASE_URL NO manda: la cartera se lee de seguros', () => {
+  const r = urlFuenteCartera({ DATABASE_URL: `${CENTRAL}?schema=public` })
+  assert.match(r.url!, /schema=seguros/)
+  assert.doesNotMatch(r.url!, /schema=public/)
+  assert.equal((r.url!.match(/schema=/g) ?? []).length, 1)
+})
+
+test('forzar el schema no se lleva por delante el resto de parámetros', () => {
+  const r = urlFuenteCartera({ DATABASE_URL: `${CENTRAL}?schema=public&connection_limit=5` })
+  assert.match(r.url!, /schema=seguros/)
+  assert.match(r.url!, /connection_limit=5/)
+  assert.match(r.url!, /pgbouncer=true/)
+})
+
 test('ASEGURA_FUENTE=origen vuelve al Supabase de Manuel, sin schema (allí la cartera vive en public)', () => {
   const r = urlFuenteCartera({ ASEGURA_FUENTE: 'origen', DATABASE_URL: CENTRAL, ASEGURA_DATABASE_URL: POOLER })
   assert.equal(r.fuente, 'origen')

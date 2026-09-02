@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T07:50:32Z",
+  "generadoEn": "2026-09-02T13:03:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -375,7 +375,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "usado",
@@ -1546,8 +1546,8 @@
         "evidencias": 5
       },
       "alquiler": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "asegura": {
         "estado": "no",
@@ -1725,7 +1725,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -4380,7 +4380,6 @@
       "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/banca/ticket",
-      "/api/banca/transferencia",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -5378,74 +5377,9 @@
       "description": "Use when you have a spec or requirements for a multi-step task, before touching code"
     }
   ],
-  "novedades": [
-    {
-      "titulo": "#2013",
-      "fecha": ""
-    },
-    {
-      "titulo": "#2018",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Lo que un agente NO puede ver:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Medido por Chrome (02/09, solo lectura):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Segundo token vivo",
-      "fecha": ""
-    },
-    {
-      "titulo": "Rotado por Alberto (Chrome, 02/09 09:03 CEST):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Hecho por Claude Chrome (02/09):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Duplicado «Jose Suarez Salas»",
-      "fecha": ""
-    },
-    {
-      "titulo": "Auditoría de duplicidades",
-      "fecha": ""
-    },
-    {
-      "titulo": "Corrección",
-      "fecha": ""
-    },
-    {
-      "titulo": "Contacto/intervinientes",
-      "fecha": ""
-    },
-    {
-      "titulo": "Catastro para hogar HECHO",
-      "fecha": ""
-    },
-    {
-      "titulo": "Forma de pago",
-      "fecha": ""
-    }
-  ],
   "saludRepo": {
     "packagesSinDescripcion": [],
-    "appsSinClaudeMd": [
-      "almacen",
-      "asegura-portal"
-    ],
+    "appsSinClaudeMd": [],
     "appsSinVercelJson": []
   },
   "gaps": {
@@ -5870,31 +5804,16 @@
         ]
       }
     ],
-    "reimplementaciones": [
-      {
-        "capacidad": "almacen-stock",
-        "label": "Almacén / stock / ASN",
-        "modulo": "module-materiales",
-        "conModulo": [
-          "almacen",
-          "ia-rest",
-          "ialimp",
-          "sivra"
-        ],
-        "duplicada": [
-          "alquiler"
-        ]
-      }
-    ]
+    "reimplementaciones": []
   },
   "resumen": {
     "verticales": 12,
     "packages": 40,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1235,
+    "apis": 1234,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
-    "reimplementaciones": 1
+    "reimplementaciones": 0
   }
 }

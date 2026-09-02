@@ -27,8 +27,9 @@ export function normalizarUrlPooler(url: string): string {
  * Desde el 02/09/2026 la cartera vive en el schema `seguros` de la BD compartida de
  * central (52 tablas, copia verificada), así que por defecto se lee DE CASA con la
  * misma conexión que ya usa la auth de esta app (`DATABASE_URL`, rol `prisma_seguros`)
- * más `?schema=seguros`: Prisma cualifica cada tabla con ese schema, con lo que no
- * depende del `search_path` del rol ni del pooler.
+ * más `?schema=seguros` **forzado** (pisa el que traiga la cadena): Prisma cualifica
+ * cada tabla con ese schema, con lo que no depende del `search_path` del rol, del
+ * pooler, ni de con qué sufijo se pegó `DATABASE_URL` en Vercel.
  *
  * `ASEGURA_FUENTE=origen` es la vía de vuelta al Supabase de Manuel
  * (`ASEGURA_DATABASE_URL`, solo lectura) mientras se cierra el traspaso. Sin esa
@@ -53,14 +54,25 @@ export function urlFuenteCartera(env: {
   }
   const base = env.DATABASE_URL?.trim()
   if (!base) return { fuente, url: null }
-  return { fuente, url: normalizarUrlPooler(conSchema(base, 'seguros')) }
+  return { fuente, url: normalizarUrlPooler(forzarSchema(base, 'seguros')) }
 }
 
-/** Añade `?schema=<schema>` si la URL no lo trae ya. Una URL imposible de parsear se devuelve tal cual. */
-function conSchema(url: string, schema: string): string {
+/**
+ * Fija `schema=<schema>` en la URL **PISANDO el que ya traiga**. Una URL imposible
+ * de parsear se devuelve tal cual.
+ *
+ * 🚨 Aquí no se respeta lo que venga puesto, y es a propósito: `DATABASE_URL` es la
+ * MISMA cadena que usa la auth de esta app (`lib/db.ts`), donde el schema correcto
+ * es `public`. Si esa cadena llega de Vercel con `?schema=public` —lo normal—, un
+ * «no lo pises si ya está» apuntaría el cliente de la CARTERA a `public`, y ahí no
+ * existe `corredurias` (falla toda la cartera) mientras que `clientes` SÍ existe y
+ * es OTRA tabla: leerías los clientes de central creyendo que son los de la
+ * correduría. El schema de la cartera no es negociable.
+ */
+function forzarSchema(url: string, schema: string): string {
   try {
     const u = new URL(url)
-    if (!u.searchParams.has('schema')) u.searchParams.set('schema', schema)
+    u.searchParams.set('schema', schema)
     return u.toString()
   } catch {
     return url

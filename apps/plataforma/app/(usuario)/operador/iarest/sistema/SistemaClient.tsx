@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Pagina } from '@/components/ui'
+import { Pagina, PageHeader } from '@/components/ui'
+import { Microscope } from 'lucide-react'
 
 type QARun = {
   id: string
@@ -62,11 +63,14 @@ export default function SistemaClient() {
 
   return (
     <Pagina ancho="tabla">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🔬 Sistema · ia-rest</h1>
-        <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
-          style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>Panel legacy ↗</a>
-      </div>
+      <PageHeader
+        titulo="Sistema · ia-rest"
+        icono={<Microscope size={20} strokeWidth={1.75} />}
+        acciones={
+          <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
+            style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>Panel legacy ↗</a>
+        }
+      />
 
       {/* QA */}
       <div style={{ marginBottom: '32px' }}>
