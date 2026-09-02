@@ -530,6 +530,18 @@ No lo es: con `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (≈20 s, el
 con `TS2307: Cannot find module './generated/asegura-client'` **en local mientras el CI está verde** — el
 workflow usa el script de la app, que genera los dos. El comando completo es el de su `package.json`:
 `prisma generate && prisma generate --schema prisma/asegura.prisma`. (Medido 01/09/2026.)
+
+🚨 **Y OJO CON GENERAR DOS APPS A LA VEZ: el cliente por defecto de Prisma es UNO
+SOLO para todo el monorepo** (`node_modules/.pnpm/@prisma+client@…/@prisma/client`).
+Cada `prisma generate` de una app lo **sobrescribe**, así que generar plataforma
+deja el typecheck de asegura en rojo con errores que parecen de código —
+`Property 'companiaDgs' does not exist on type 'PrismaClient'`, enums a los que
+«les faltan» valores— en ficheros que nadie ha tocado. Medido el 02/09/2026 con
+dos agentes trabajando en paralelo: **`main` estaba sana y el rojo era local.**
+En CI no pasa porque cada `Typecheck · <app>` corre en su propio job. Antes de
+diagnosticar un typecheck rojo en local, **regenera el cliente de ESA app y
+repite** — y si estás corriendo trabajos en paralelo sobre dos apps, no te fíes
+del typecheck de la que no generaste la última.
 | `Análisis estático · Patrones conocidos` | `pnpm exec tsx scripts/qa-check.ts` | **`apps/ia-rest`** (el workflow lleva `working-directory`) |
 | `Lint · TypeCheck · Build` | `pnpm run lint` · `pnpm exec tsc --noEmit` · `pnpm run build` | **`apps/ia-rest`** (idem) |
 

@@ -28,8 +28,12 @@ import {
   type RecibosPoliza, extraerDetalleCobertura, type DetalleCobertura } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
+import { capitalesHogar, eurDeCapital, type CapitalAsegurado } from '@central/module-seguros'
 import { contarDocumentosPoliza, listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { casosDeRamo, type EjecutorLectura } from './codeoscopic/casos'
+import { estimar, mereceLaPena, type RiesgoAEstimar } from './codeoscopic/horquilla'
+import { elegirRiesgo, hogarDeDatos } from './codeoscopic/desde-cartera-hogar'
 import type { SiniestroFicha } from './cartera-ficha'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 
@@ -47,6 +51,37 @@ export type CoberturaFicha = {
   modalidad: string | null
   /** Límites, franquicias y prima de la propia cobertura, leídos de `datos_extra` (null si no trae nada). */
   detalle: DetalleCobertura | null
+}
+
+/**
+ * La estimación PROPIA de prima, aplanada para la pantalla.
+ *
+ * Es `Estimacion` (de `codeoscopic/horquilla.ts`) más el veredicto de
+ * `mereceLaPena` y de dónde salieron los casos. 🚨 NO es un precio y el tipo
+ * está hecho para que no pueda confundirse: `orientativa` es un literal `true`
+ * y `etiqueta` viene siempre. Enseñar esto como si fuera la oferta de una
+ * compañía es la forma más cara de perder un cliente.
+ */
+export type EstimacionFicha = {
+  horquilla: { minEur: number; medianaEur: number; maxEur: number } | null
+  /** Por qué NO hay horquilla, cuando no la hay. Nunca se calla. */
+  sinBase: string | null
+  casos: number
+  desde: string | null
+  hasta: string | null
+  antiguedadMedianaMeses: number | null
+  base: 'parecidos' | 'toda-la-cartera' | null
+  etiqueta: string
+  orientativa: true
+  /** ¿Merece la pena gastar los 0,50€ de una cotización real? `no-se` es una respuesta. */
+  veredicto: 'merece' | 'no-merece' | 'no-se'
+  porque: string
+  /**
+   * Con qué se ha construido. `cotizacionesDisponibles: false` significa que la
+   * tabla de cotizaciones no se ha podido leer — que NO es lo mismo que
+   * `cotizaciones: 0`, que es «se ha mirado y no hay ninguna».
+   */
+  fuente: { cartera: number; cotizaciones: number; cotizacionesDisponibles: boolean }
 }
 
 export type FichaPoliza = {
@@ -97,6 +132,90 @@ export type FichaPoliza = {
   retarificable: boolean
   /** Por qué ramo se puede pedir precio (auto/hogar), o por qué no, mirando también la gemela. */
   retarificacion: Retarificabilidad
+  /**
+   * Qué se puede esperar que cueste esto hoy, con los casos que ya conocemos
+   * (cartera viva + cotizaciones reales guardadas). `null` = ni se ha intentado,
+   * porque la póliza no es retarificable. Si hay estimación pero sin horquilla,
+   * viene igual: su `sinBase` y su `etiqueta` dicen por qué.
+   */
+  estimacion: EstimacionFicha | null
+  /**
+   * Los dos capitales de hogar reconstruidos por corroboración entre garantías,
+   * cada uno con su porqué (`consenso` / `solo_sublimites` / …). `null` cuando
+   * la póliza no es de hogar.
+   */
+  capitalesHogar: { continente: CapitalAsegurado; contenido: CapitalAsegurado } | null
+}
+
+/** Hoy en Madrid, `YYYY-MM-DD`: la horquilla pesa la antigüedad de cada caso. */
+function hoyEnMadrid(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
+}
+
+/**
+ * Qué se enseña cuando NO se han podido leer los casos.
+ *
+ * Los ceros de `fuente` aquí no dicen «no hay»: dicen «no se ha podido contar»,
+ * y por eso van SIEMPRE acompañados de la etiqueta, que es lo que la pantalla
+ * pinta. Se degrada en vez de tumbar la ficha entera —la estimación es un
+ * añadido, no la póliza— pero no se calla, que es lo que `CLAUDE.md` prohíbe.
+ */
+function estimacionIlegible(motivo: string): EstimacionFicha {
+  const texto = `No se han podido leer los casos con los que comparar: ${motivo}`
+  return {
+    horquilla: null,
+    sinBase: texto,
+    casos: 0,
+    desde: null,
+    hasta: null,
+    antiguedadMedianaMeses: null,
+    base: null,
+    etiqueta: texto,
+    orientativa: true,
+    veredicto: 'no-se',
+    porque: texto,
+    fuente: { cartera: 0, cotizaciones: 0, cotizacionesDisponibles: false },
+  }
+}
+
+/**
+ * La estimación de una póliza: reúne los casos, construye la horquilla y dice
+ * si merece la pena gastar los 0,50€ de una cotización de verdad.
+ *
+ * 🚨 Solo LEE la base de datos. No llama a Codeoscopic ni de lejos.
+ */
+async function estimacionPoliza(input: {
+  correduriaId: string
+  ramo: string
+  /** La que se estima: queda fuera de sus propios casos, no se compara consigo misma. */
+  polizaId: string
+  primaActual: number | null
+  riesgo: RiesgoAEstimar
+  tx: EjecutorLectura
+}): Promise<EstimacionFicha> {
+  let reunidos
+  try {
+    reunidos = await casosDeRamo({
+      correduriaId: input.correduriaId,
+      ramo: input.ramo,
+      tx: input.tx,
+      excluirPolizaId: input.polizaId,
+    })
+  } catch (e) {
+    return estimacionIlegible(e instanceof Error ? e.message : String(e))
+  }
+  const estimacion = estimar(reunidos.casos, input.riesgo, hoyEnMadrid())
+  const { veredicto, porque } = mereceLaPena(input.primaActual, estimacion)
+  return {
+    ...estimacion,
+    veredicto,
+    porque,
+    fuente: {
+      cartera: reunidos.cartera,
+      cotizaciones: reunidos.cotizaciones,
+      cotizacionesDisponibles: reunidos.cotizacionesDisponibles,
+    },
+  }
 }
 
 function descifrar(v: string | null | undefined): string | null {
@@ -207,6 +326,43 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
   const datosGemela = esObjetoPlano(gemela?.datosEspecificos) ? gemela.datosEspecificos : null
   const retarificacion = retarificabilidad({ tipo: String(p.tipo), estado: String(p.estado), datos, datosGemela })
   const coberturasTexto = p.coberturasRel.map((c) => c.descripcion).filter((d): d is string => !!d)
+
+  // El capital asegurado de hogar se RECONSTRUYE por corroboración entre
+  // garantías: ninguna compañía manda una fila que diga «este es el
+  // continente», y coger el importe más alto daría un número plausible y falso
+  // (ver `garantias.ts` en `@central/module-seguros`).
+  const capitales =
+    String(p.tipo) === 'hogar'
+      ? capitalesHogar(p.coberturasRel.map((c) => ({ descripcion: c.descripcion, capital: c.capitalAsegurado })))
+      : null
+  // El riesgo puede venir de la póliza o de su copia gemela: CIMA no manda el
+  // objeto de hogar y la del volcado sí. Lo que no traiga ninguna sigue a
+  // `null` — un 0 aquí torcería la horquilla.
+  const riesgoHogar = elegirRiesgo(hogarDeDatos(datos, 'poliza'), hogarDeDatos(datosGemela, 'gemela'))
+  const prima = primaReferencia({ primaAnual: num(p.primaAnual), primaBruta: num(p.primaBruta) })
+  // Solo se estima lo RETARIFICABLE: la pregunta que responde esto es «¿gasto
+  // los 0,50€ de una cotización?», y no se puede gastar en algo que no se puede
+  // pedir (un ramo que Codeoscopic no sirve, o una póliza cancelada). Cuando no,
+  // `null` — la pantalla ya tiene el motivo en `retarificacion.motivo`.
+  const estimacion = retarificacion.retarificable
+    ? await estimacionPoliza({
+        correduriaId,
+        ramo: String(p.tipo),
+        polizaId: p.id,
+        primaActual: prima,
+        // Se lee con la MISMA conexión que la ficha (schema `seguros`): así la
+        // horquilla y la póliza salen de la misma cartera, no de dos copias.
+        tx: db,
+        riesgo: {
+          metrosCuadrados: riesgoHogar?.metrosCuadrados ?? null,
+          anioConstruccion: riesgoHogar?.anioConstruccion ?? null,
+          // El capital corroborado manda sobre el tecleado en la ficha; si
+          // ninguno lo sabe, sigue siendo «no lo sé».
+          capitalContinente:
+            (capitales ? eurDeCapital(capitales.continente) : null) ?? riesgoHogar?.capitalContinente ?? null,
+        },
+      })
+    : null
   const recibosCrudos = p.recibos.map((r) => ({
     id: r.id, situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal,
     fechaEmision: fechaIso(r.fechaEmision), fechaVencimiento: fechaIso(r.fechaVencimiento), formaPago: r.formaPago,
@@ -229,7 +385,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     fechaEfectoInicial: fechaIso(p.fechaEfectoInicial),
     fechaInicio: fechaIso(p.fechaInicio),
     fechaVencimiento: fechaIso(p.fechaVencimiento),
-    prima: primaReferencia({ primaAnual: num(p.primaAnual), primaBruta: num(p.primaBruta) }),
+    prima,
     primaAnual: num(p.primaAnual),
     primaBruta: num(p.primaBruta),
     primaMensual: num(p.primaMensual),
@@ -278,5 +434,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     },
     retarificable: retarificacion.retarificable,
     retarificacion,
+    estimacion,
+    capitalesHogar: capitales,
   }
 }

@@ -273,3 +273,14 @@ export {
   type CimaPoliza,
   type Conciliacion,
 } from './emision.ts'
+export {
+  ladoDeGarantia,
+  capitalAsegurado,
+  capitalesHogar,
+  eurDeCapital,
+  GARANTIAS_MINIMAS_CONSENSO,
+  type LadoRiesgo,
+  type CoberturaLeible,
+  type CapitalAsegurado,
+  type CapitalesHogar,
+} from './garantias.ts'
