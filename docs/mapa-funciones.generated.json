@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T13:03:19Z",
-  "sha": "f77e4aae7c1eaef50d354de2a769918d9306947a",
+  "generadoEn": "2026-09-02T13:11:51Z",
+  "sha": "c243ee5d728d55ec50f1f838f9f479fe91f90c3e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4604,7 +4604,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 87
+          "linea": 90
         },
         {
           "nombre": "ilegible",
@@ -4612,7 +4612,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 96
+          "linea": 99
         },
         {
           "nombre": "esObjetoPlano",
@@ -4620,7 +4620,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 99
+          "linea": 102
         },
         {
           "nombre": "texto",
@@ -4628,7 +4628,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 102
+          "linea": 105
         },
         {
           "nombre": "fechaIso",
@@ -4636,7 +4636,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 105
+          "linea": 108
         },
         {
           "nombre": "num",
@@ -4644,7 +4644,7 @@
           "exportada": false,
           "params": "d: unknown",
           "retorno": "number | null",
-          "linea": 108
+          "linea": 111
         },
         {
           "nombre": "datosConDireccion",
@@ -4652,7 +4652,7 @@
           "exportada": true,
           "params": "datos: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 115,
+          "linea": 118,
           "resumen": "La dirección del riesgo va cifrada en `datos_especificos`; se descifra si se puede."
         },
         {
@@ -4661,12 +4661,12 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string",
           "retorno": "Promise<FichaPoliza | null>",
-          "linea": 125
+          "linea": 128
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f7a6a894e5e9"
+      "hash": "b85eb932e6ee"
     },
     {
       "ruta": "apps/asegura/lib/cartera.ts",
@@ -50071,12 +50071,44 @@
           "linea": 174
         },
         {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": "string",
+          "linea": 230
+        },
+        {
+          "nombre": "CapitalCobertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ capital, descripcion }: { capital: string | null; descripcion: string | null }",
+          "retorno": null,
+          "linea": 236
+        },
+        {
+          "nombre": "Limites",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ detalle }: { detalle: Poliza['coberturas'][number]['detalle'] | null }",
+          "retorno": null,
+          "linea": 248
+        },
+        {
+          "nombre": "Franquicia",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ texto, detalle }: { texto: string | null; detalle: Poliza['coberturas'][number]['detalle'] | null }",
+          "retorno": null,
+          "linea": 263
+        },
+        {
           "nombre": "Recibos",
           "kind": "function",
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 203
+          "linea": 281
         },
         {
           "nombre": "Intervinientes",
@@ -50084,7 +50116,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 239
+          "linea": 317
         },
         {
           "nombre": "Dato",
@@ -50092,7 +50124,7 @@
           "exportada": false,
           "params": "{ label, valor, nota, color }: { label: string; valor: string | null; nota?: string; color?: string }",
           "retorno": null,
-          "linea": 260
+          "linea": 338
         },
         {
           "nombre": "NoSePudo",
@@ -50100,7 +50132,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 277
+          "linea": 355
         },
         {
           "nombre": "Tarjeta",
@@ -50108,7 +50140,7 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 301
+          "linea": 379
         },
         {
           "nombre": "fmt",
@@ -50116,12 +50148,12 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 304
+          "linea": 382
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8ccb80d6b169"
+      "hash": "1c5e8701f64a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Retencion.tsx",
@@ -73876,12 +73908,29 @@
       ],
       "funciones": [
         {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 27
+        },
+        {
+          "nombre": "leerDetalleCobertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "DetalleCobertura | null",
+          "linea": 32,
+          "resumen": "Copia defensiva del detalle que manda el puerto: cualquier forma rara degrada a null, nunca a un límite inventado."
+        },
+        {
           "nombre": "cadena",
           "kind": "function",
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 75
+          "linea": 103
         },
         {
           "nombre": "numero",
@@ -73889,7 +73938,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 78
+          "linea": 106
         },
         {
           "nombre": "entero",
@@ -73897,7 +73946,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 81
+          "linea": 109
         },
         {
           "nombre": "interpretarPoliza",
@@ -73905,7 +73954,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaPoliza",
-          "linea": 85
+          "linea": 113
         },
         {
           "nombre": "urlAsegura",
@@ -73913,7 +73962,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 189
+          "linea": 220
         },
         {
           "nombre": "polizaAsegura",
@@ -73921,12 +73970,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<RespuestaPoliza>",
-          "linea": 193
+          "linea": 224
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7c2ec6b46f59"
+      "hash": "e897ba7cab2d"
     },
     {
       "ruta": "apps/plataforma/lib/pricing-calendar.ts",
@@ -102007,6 +102056,68 @@
       "hash": "c4363308daea"
     },
     {
+      "ruta": "packages/module-seguros/src/cobertura-detalle.ts",
+      "ambito": "packages/module-seguros",
+      "exporta": [
+        "interpretarCapital",
+        "extraerDetalleCobertura"
+      ],
+      "funciones": [
+        {
+          "nombre": "interpretarCapital",
+          "kind": "function",
+          "exportada": true,
+          "params": "capital: string | null | undefined",
+          "retorno": "CapitalCobertura",
+          "linea": 27
+        },
+        {
+          "nombre": "objeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 57
+        },
+        {
+          "nombre": "lista",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown>[]",
+          "linea": 60
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 65
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 70
+        },
+        {
+          "nombre": "extraerDetalleCobertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "datosExtra: unknown",
+          "retorno": "DetalleCobertura | null",
+          "linea": 77,
+          "resumen": "`null` cuando `datos_extra` no trae nada legible: la UI no pinta columna vacía."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0e00b8146ebe"
+    },
+    {
       "ruta": "packages/module-seguros/src/documento-auto.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Normalización de lo que una máquina dice haber leído en una PÓLIZA DE AUTO. Puro: sin BD, sin red, sin proveedor de IA. Vive aquí y no en la app porque es LA regla que decide si un campo existe, y esa decisión no puede depender de qué modelo respondió. ─── Por qué es distinto del de `@central/module",
@@ -107691,7 +107802,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2790,
-    "funciones": 7905
+    "archivos": 2791,
+    "funciones": 7917
   }
 }
