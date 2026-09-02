@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T16:05:16Z",
+  "generadoEn": "2026-09-02T17:27:50Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1951,7 +1951,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 20
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1975,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 23
       },
       "rrhh": {
         "estado": "no",
@@ -2001,7 +2001,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "no",
@@ -3605,6 +3605,7 @@
       "/api/operador/ingesta",
       "/api/operador/poliza",
       "/api/operador/resumen",
+      "/api/operador/siniestro",
       "/api/operador/vencimientos"
     ],
     "asegura-portal": [
@@ -4425,6 +4426,7 @@
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/impagados",
+      "/api/correduria/siniestro",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -4865,6 +4867,7 @@
       "seguros.consent_logs",
       "seguros.conversaciones",
       "seguros.corredurias",
+      "seguros.cotizacion_precios",
       "seguros.cotizaciones",
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
@@ -5822,7 +5825,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1240,
+    "apis": 1242,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
