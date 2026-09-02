@@ -38,8 +38,14 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
   const historicas = ficha.polizas.filter(p => !p.viva)
   const abiertos = ficha.siniestros.filter(s => s.abierto)
 
+  // `minmax(0, 1fr)` NO es decorativo: sin él, la pista implícita de este grid se dimensiona con
+  // el contenido más ancho —la tabla de pólizas, que declara `minWidth: 880`— y arrastra la página
+  // entera a 910 px en un móvil de 390. El `overflowX: 'auto'` de la tabla queda anulado, porque
+  // para cuando actúa su contenedor ya ha crecido. Y el desbordamiento NO se ve en `body`: como
+  // `LayoutShell` declara `overflowY: 'auto'`, CSS le activa también el eje X y es él quien
+  // scrollea. Medido en Chromium el 02/09/2026: 910 → 390 px solo con esta línea.
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
       <div>
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
         <PageHeader

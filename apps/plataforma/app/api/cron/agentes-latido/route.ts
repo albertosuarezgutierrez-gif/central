@@ -170,6 +170,38 @@ const PROBES: Record<string, Prisma.Sql> = {
     FROM agente_latidos WHERE agente = 'sivra_experimentos'`,
 }
 
+/**
+ * Persiste el veredicto de UN agente en `agente_salud` para que lo pueda leer una pantalla.
+ *
+ * Hasta el 02/09/2026 esto no existía: el vigía evaluaba los 27 agentes y TIRABA el resultado
+ * (JSON de respuesta + Telegram). Con 8 rutinas sin ALERTA_TOKEN, ese trabajo desaparecía sin
+ * dejar rastro consultable, y /operador/agentes pintaba ⚪ «sin telemetría» sobre 23 agentes
+ * cuyo estado real se estaba calculando cada mañana y se perdía.
+ *
+ * Nunca lanza: un fallo al guardar el parte no puede tumbar al vigía que lo produce.
+ * `horas` va como NULL —no como 0— cuando no hay señal: son cosas distintas.
+ */
+async function guardarSalud(
+  ag: { id: string; etiqueta: string; maxHoras: number; nota: string },
+  evaluadoAt: Date,
+  alerta: boolean,
+  horas: number | null,
+  motivo: string,
+  sondaError: string | null,
+): Promise<void> {
+  try {
+    await prisma.$executeRaw`
+      INSERT INTO agente_salud (agente, evaluado_at, alerta, horas, motivo, max_horas, etiqueta, nota, sonda_error)
+      VALUES (${ag.id}, ${evaluadoAt}, ${alerta}, ${horas}, ${motivo}, ${ag.maxHoras}, ${ag.etiqueta}, ${ag.nota}, ${sondaError})
+      ON CONFLICT (agente) DO UPDATE SET
+        evaluado_at = EXCLUDED.evaluado_at, alerta = EXCLUDED.alerta, horas = EXCLUDED.horas,
+        motivo = EXCLUDED.motivo, max_horas = EXCLUDED.max_horas, etiqueta = EXCLUDED.etiqueta,
+        nota = EXCLUDED.nota, sonda_error = EXCLUDED.sonda_error`
+  } catch (e) {
+    console.error('[agentes-latido] no se pudo persistir la salud de', ag.id, e)
+  }
+}
+
 async function handler(req: NextRequest) {
   if (!isCronAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -203,14 +235,19 @@ async function handler(req: NextRequest) {
         ultimoIntento: ultimoIntento?.toISOString() ?? null,
       })
       if (ev.alerta) alertas.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.\n  ${ag.nota}`)
+      await guardarSalud(ag, ahora, ev.alerta, ev.horas, ev.motivo, null)
     } catch (e) {
       // 🚨 Una sonda rota NO es un agente sano. Antes se tragaba en silencio
       // "para no dar falsas alarmas", pero eso convierte un vigía averiado en un
       // parte de buena salud: si la tabla desaparece o cambia de nombre, el
       // agente deja de estar vigilado y nadie se entera. Se avisa aparte y con
       // otro tono: «no se ha podido comprobar», que no es «está bien».
-      resultados.push({ id: ag.id, error: String((e as Error)?.message ?? e) })
-      sondasRotas.push(`• <b>${ag.etiqueta}</b>: no se ha podido comprobar (${String((e as Error)?.message ?? e).slice(0, 120)}).`)
+      const msg = String((e as Error)?.message ?? e)
+      resultados.push({ id: ag.id, error: msg })
+      sondasRotas.push(`• <b>${ag.etiqueta}</b>: no se ha podido comprobar (${msg.slice(0, 120)}).`)
+      // Una sonda rota se PERSISTE como tal: si no, la pantalla se quedaría con el veredicto
+      // bueno de ayer y leería «no se ha podido comprobar» como «sigue estando bien».
+      await guardarSalud(ag, ahora, true, null, 'no se ha podido comprobar: la sonda falló', msg.slice(0, 400))
     }
   }
 
