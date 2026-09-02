@@ -121,10 +121,10 @@ function Titulares({ polizas, vivas, abiertos }: { polizas: PolizaFicha[]; vivas
         }
       />
       <Kpi
-        label="Recibos pendientes"
+        label="Recibos al cobro"
         valor={sinInformar === polizas.length ? '—' : String(pendientes)}
         color={pendientes > 0 ? '#c96' : undefined}
-        sub={sinRecibo > 0 ? `${sinRecibo} póliza(s) sin recibos informados` : 'sobre los recibos informados'}
+        sub={sinRecibo > 0 ? `${sinRecibo} póliza(s) sin recibos informados` : pendientes > 0 ? 'emitidos y aún sin cargar: no es deuda' : 'sobre los recibos informados'}
       />
       <Kpi
         label="Siniestros abiertos"
@@ -425,7 +425,7 @@ function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
     )
   }
   if (r.devueltos > 0) return <span style={{ color: '#d66' }}>🔴 {r.devueltos} devuelto(s)</span>
-  if (r.pendientes > 0) return <span style={{ color: '#c96' }}>🟡 {r.pendientes} pendiente(s)</span>
+  if (r.pendientes > 0) return <span style={{ color: '#c96' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">🟡 {r.pendientes} al cobro</span>
   // 🚨 Todos anulados (20 de 109 vivas) se pintaba «🟢 0 cobrado(s)»: cero
   // cobros no es estar al día — es una póliza cancelada o sustituida.
   if (r.cobrados === 0 && r.anulados > 0) {
