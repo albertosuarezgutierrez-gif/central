@@ -4,7 +4,19 @@
 
 **Goal:** Que un cliente de Grupo Asegura entre en `apps/asegura-portal`, vea el calendario de vencimientos de sus pólizas vivas y reciba UN aviso por email con la fecha hasta la que puede actuar.
 
-**Architecture:** Toda la aritmética de fechas y toda regla de «esto genera aviso o no» vive en `@central/module-seguros-portal`, pura y testeada con `node --test`. La app añade una tabla `portal_obligacion` colgada del bien, un derivador que la rellena desde la cartera de la identidad de la sesión, una sección en la bóveda y un endpoint de cron que envía por el puerto de canal que ya manda el código de acceso.
+**Architecture:** Toda la aritmética de fechas y toda regla de «esto genera aviso o no» vive en `@central/module-seguros-portal`, pura y testeada con `node --test`. La app del portal añade una tabla `portal_obligacion` colgada del bien, un derivador que la rellena desde la cartera de la identidad de la sesión, y una sección en la bóveda.
+
+🚨 **CORRECCIÓN del 02/09/2026, medida sobre el código: el aviso NO puede salir del portal.**
+`portal_canal` guarda **solo `valor_hash`** (SHA-256 con pimienta, `lib/auth.ts:28`) y el
+`ClienteEmail` del schema del portal tiene **solo `email_lookup_hash`**: el rol
+`prisma_asegura_portal` no puede leer la columna del email. No hay ninguna dirección a la que
+enviar, y un hash no se revierte. El spec daba por hecho un destinatario que no existe.
+
+**Por eso el envío vive en `apps/asegura`** (el panel del corredor), que corre con `prisma_seguros`
+(BYPASSRLS) y sí lee `cliente_emails`. El portal se queda con el aviso EN PANTALLA y nunca toca un
+dato personal. El transporte es Resend, que `@central/core-email` ya elige solo cuando existe
+`RESEND_API_KEY` (`packages/core-email/src/transporter.ts:32`). WhatsApp entra después como un
+adaptador más, cuando esto esté rodado.
 
 **Tech Stack:** TypeScript, Next.js 15 (App Router), Prisma 5 (multiSchema, schema `seguros`), `node --test`, Vercel Cron.
 
@@ -24,11 +36,10 @@
 | `apps/asegura-portal/lib/obligaciones.ts` | **Nuevo.** Deriva y lee las obligaciones de la identidad de la sesión. Pasa por `lib/session`. |
 | `apps/asegura-portal/app/(portal)/boveda/Calendario.tsx` | **Nuevo.** La sección visual. Sin lógica: recibe filas ya decididas. |
 | `apps/asegura-portal/app/(portal)/boveda/page.tsx` | **Modificar.** Montar `<Calendario/>`. |
-| `apps/asegura-portal/lib/avisos.ts` | **Nuevo.** Selección y envío del aviso. **No** pasa por sesión (el cron no la tiene): lleva su propio cepo. |
-| `apps/asegura-portal/app/api/cron/avisos/route.ts` | **Nuevo.** Endpoint del cron, autorizado por `CRON_SECRET`. |
-| `apps/asegura-portal/lib/cron-auth.ts` | **Nuevo.** Verificación del Bearer. |
-| `apps/asegura-portal/vercel.json` | **Modificar.** Declarar el cron. |
-| `test/regression-portal-aislamiento.test.ts` | **Modificar.** Exención razonada de `lib/avisos.ts` + cepo sustitutorio. |
+| `apps/asegura/prisma/asegura.prisma` | **Modificar.** Declarar `PortalObligacion` para que el corredor la lea. |
+| `apps/asegura/lib/avisos-vencimiento.ts` | **Nuevo.** Selección y envío del aviso, con el email de `cliente_emails`. |
+| `apps/asegura/app/api/cron/avisos-vencimiento/route.ts` | **Nuevo.** Endpoint del cron, autorizado por `CRON_SECRET`. |
+| `apps/asegura/vercel.json` | **Modificar.** Declarar el cron. |
 | `test/regression-portal-obligaciones.test.ts` | **Nuevo.** Los cepos de negocio (import_ref, NULL, procedencia). |
 
 ---
