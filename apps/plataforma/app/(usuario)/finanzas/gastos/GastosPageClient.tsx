@@ -199,8 +199,16 @@ export default function GastosPageClient({ year: initYear, quarter: initQuarter,
         </div>
       </div>
 
-      {/* Export */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+      {/* Export + el control de tarjeta.
+          💳 `/finanzas/tarjeta-credito` es una pantalla VIVA (cargos del mes de la tarjeta de
+          Kutxabank, por destino, con los que faltan por clasificar) y no tenía UN SOLO enlace en
+          todo el repo: ni menú, ni paleta de comandos, ni ninguna otra página. Solo se llegaba
+          escribiendo la URL. Ella sí enlaza aquí («N sin clasificar»), así que este es el enlace
+          de vuelta que faltaba — mismo caso que `/sivra/partes/establecimientos`. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+        <BtnLink href="/finanzas/tarjeta-credito" variante="secundario" tam="sm">
+          💳 Tarjeta de crédito
+        </BtnLink>
         <BtnLink
           href={`/api/finanzas/gastos/export?year=${efectivoYear}&quarter=${efectivoQuarter}${efectivoDesde ? `&desde=${efectivoDesde}&hasta=${efectivoHasta}` : ''}`}
           variante="primario"
