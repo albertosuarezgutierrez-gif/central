@@ -4,8 +4,9 @@
 
 import {
   leerIntervinientes, leerObjeto, leerPago, leerRecibos, leerRetarificacion,
-  type IntervinienteFicha, type ObjetoFicha, type PagoFicha, type RecibosPoliza, type SiniestroFicha, type MotivoFicha,
+  type IntervinienteFicha, type ObjetoFicha, type PagoFicha, type RecibosPoliza, type MotivoFicha,
 } from './ficha-asegura.ts'
+import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 import type { DocumentoResumen, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { DetalleCobertura } from '@central/module-seguros'
@@ -84,7 +85,8 @@ export type Poliza = {
   coberturas: CoberturaFicha[]
   recibos: RecibosPoliza | null
   listaRecibos: ReciboFicha[]
-  siniestros: SiniestroFicha[]
+  /** `null` = asegura no manda la lista (no es «sin siniestros», que es `[]`). */
+  siniestros: SiniestroCartera[] | null
   intervinientes: IntervinienteFicha[] | null
   /** `null` = no se pudo contar. `0` = se contó y no hay. */
   documentos: number | null
@@ -154,19 +156,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       })
     }
   }
-  const siniestros: SiniestroFicha[] = []
-  if (Array.isArray(p.siniestros)) {
-    for (const fila of p.siniestros) {
-      if (typeof fila !== 'object' || fila === null) continue
-      const s = fila as Record<string, unknown>
-      if (typeof s.id !== 'string') continue
-      siniestros.push({
-        id: s.id, polizaId: cadena(s.polizaId) ?? '', estado: cadena(s.estado) ?? 'sin_informar', tipo: cadena(s.tipo),
-        referencia: cadena(s.referencia), fecha: cadena(s.fecha), reserva: numero(s.reserva), indemnizacion: numero(s.indemnizacion),
-        tramitador: cadena(s.tramitador), abierto: s.abierto === true,
-      })
-    }
-  }
+  const siniestros = leerSiniestros(p.siniestros)
   const g = p.gemela
   const gemela =
     typeof g === 'object' && g !== null && typeof (g as Record<string, unknown>).polizaId === 'string'

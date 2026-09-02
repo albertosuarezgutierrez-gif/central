@@ -40,7 +40,8 @@ test('una ficha completa se lee entera', () => {
   assert.equal(r.ficha.nombre, 'Jose Suarez Salas')
   assert.equal(r.ficha.polizas[0].prima, 431.85)
   assert.equal(r.ficha.polizas[0].recibos?.cobradoEur, 863.7)
-  assert.equal(r.ficha.siniestros[0].abierto, true)
+  assert.equal(r.ficha.siniestros?.[0].abierto, true)
+  assert.equal(r.ficha.siniestros?.[0].origen, 'cima')
   assert.equal(r.ficha.contacto.emailIlegible, true)
 })
 
@@ -60,7 +61,26 @@ test('🚨 una prima o una reserva ausentes se quedan en null, jamás en 0', () 
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
   assert.equal(r.ficha.polizas[0].prima, null)
-  assert.equal(r.ficha.siniestros[0].reserva, null)
+  assert.equal(r.ficha.siniestros?.[0].reserva, null)
+})
+
+test('🚨 siniestros: una lista que no es lista es null (no se pudo leer), y [] es «se miró y no hay»', () => {
+  const sinLista = structuredClone(FICHA_OK)
+  ;(sinLista.ficha as Record<string, unknown>).siniestros = undefined
+  const r1 = interpretarFicha(200, sinLista)
+  assert.equal(r1.estado, 'ok')
+  if (r1.estado === 'ok') assert.equal(r1.ficha.siniestros, null)
+  const vacia = structuredClone(FICHA_OK)
+  ;(vacia.ficha as Record<string, unknown>).siniestros = []
+  const r2 = interpretarFicha(200, vacia)
+  assert.equal(r2.estado, 'ok')
+  if (r2.estado === 'ok') assert.deepEqual(r2.ficha.siniestros, [])
+  // Una fila rara se salta: no tumba la ficha ni la lista.
+  const rara = structuredClone(FICHA_OK)
+  ;(rara.ficha.siniestros as unknown[]).push({ sinId: true })
+  const r3 = interpretarFicha(200, rara)
+  assert.equal(r3.estado, 'ok')
+  if (r3.estado === 'ok') assert.equal(r3.ficha.siniestros?.length, 1)
 })
 
 test('media ficha es peor que ninguna: una póliza rota invalida el conjunto', () => {
