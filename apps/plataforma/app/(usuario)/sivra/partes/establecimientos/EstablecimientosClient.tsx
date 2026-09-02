@@ -7,7 +7,7 @@ type Prueba = { ok: boolean; accion: string; detalle: string }
 
 const CAJA: React.CSSProperties = {
   border: '1px solid var(--border)', borderRadius: 10, padding: '1rem', marginBottom: '.75rem',
-  background: 'var(--card)',
+  background: 'var(--surface)',
 }
 const CAMPO: React.CSSProperties = {
   width: '100%', padding: '.55rem .6rem', borderRadius: 6,
@@ -186,7 +186,7 @@ export default function EstablecimientosClient({ inicial }: { inicial: Estableci
             {p && (
               <div style={{
                 marginTop: '.75rem', padding: '.6rem .75rem', borderRadius: 6, fontSize: '.85rem',
-                background: p.ok ? 'var(--positive-bg, var(--card))' : 'var(--warning-bg)',
+                background: p.ok ? 'var(--positive-bg, var(--surface))' : 'var(--warning-bg)',
                 color: 'var(--text)',
               }}>
                 {p.ok ? '🟢 ' : p.accion === 'esperar' ? '🟠 ' : '🔴 '}
