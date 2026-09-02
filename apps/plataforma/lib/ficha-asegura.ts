@@ -1,6 +1,7 @@
 import type { DocumentoResumen, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import { leerContactos, leerIdentidad, type ContactosCliente, type IdentidadFicha } from './cliente-edicion-asegura.ts'
+import { leerRelaciones, type RelacionCartera } from './relaciones-asegura.ts'
 // La ficha de un cliente de la correduría, leída por el puerto de central-asegura.
 //
 // ─── Por qué esto vive en plataforma y no en asegura ────────────────────────
@@ -149,6 +150,11 @@ export type Ficha = {
   contactos: ContactosCliente | null
   /** Nombre/apellidos/DNI enmascarado/fecha de nacimiento. `null` = versión de asegura anterior. */
   identidad: IdentidadFicha | null
+  /**
+   * Cónyuge, hijos, empresa… y quién autoriza a quién a ver sus seguros.
+   * `null` = asegura no manda el bloque o no pudo consultarlo: NO es «no tiene familia».
+   */
+  relaciones: RelacionCartera[] | null
 }
 
 export type RespuestaFicha =
@@ -403,6 +409,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       documentos: leerDocumentos(f.documentos),
       contactos: leerContactos(f.contactos),
       identidad: leerIdentidad(f.identidad),
+      relaciones: leerRelaciones(f.relaciones),
       piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }

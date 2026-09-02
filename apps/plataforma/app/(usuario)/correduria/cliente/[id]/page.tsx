@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarCliente from '../../EditarCliente'
+import Relaciones from '../../Relaciones'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
@@ -39,6 +40,8 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
   const canceladas = ficha.polizas.filter(p => p.viva && p.estado === 'cancelada')
   const historicas = ficha.polizas.filter(p => !p.viva)
   const abiertos = ficha.siniestros.filter(s => s.abierto)
+  // Solo el cónyuge sube a la cabecera; el resto de vínculos vive en la tarjeta 👪.
+  const conyuge = ficha.relaciones?.find(r => r.tipo === 'Cónyuge/Pareja de Hecho') ?? null
 
   // `minmax(0, 1fr)` NO es decorativo: sin él, la pista implícita de este grid se dimensiona con
   // el contenido más ancho —la tabla de pólizas, que declara `minWidth: 880`— y arrastra la página
@@ -57,6 +60,11 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
                 con pólizas vivas ES cliente, diga lo que diga el enum. */}
             <span>{ficha.tipo === 'cliente' || vivas.length > 0 ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
             <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} />
+            {conyuge && (
+              <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
+                💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
+              </span>
+            )}
           </span>}
         />
       </div>
@@ -74,6 +82,11 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
           contacto={ficha.contacto}
           documentos={ficha.documentos}
         />
+      </Tarjeta>
+
+      {/* Quién es de quién y quién autoriza a quién a ver sus seguros. `null` = no se pudo leer, no «sin familia». */}
+      <Tarjeta titulo="👪 Relaciones y autorizaciones">
+        <Relaciones clienteId={ficha.id} nombreFicha={ficha.nombre} inicial={ficha.relaciones} />
       </Tarjeta>
 
       <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={ficha.intervinientes} />
