@@ -77,7 +77,7 @@ flowchart TB
 | Agente | Función | Cadencia | Entrega | Telegram | Archivo |
 |---|---|---|---|---|---|
 | Auditoría nocturna ligera | Reconcilia memoria+skills+docs vs código/infra; vigila crons | Diaria 04:00 | texto→main / raro→PR draft | ✅ | `.claude/skills/auditoria-central` · `/auditoria-diaria` |
-| Auditoría semanal profunda | Typecheck 4 apps + tests + seguridad multi-tenant + infra | Domingo 04:00 | mixto + informe | ✅ | `auditoria-central --profunda` |
+| Auditoría semanal profunda | `auditoria-central` entera: typecheck de las 12 apps (matriz de `tests.yml`) + tests + seguridad multi-tenant + infra + tramos caros de pricing y correduría | Domingo 04:00 | mixto + informe | ✅ | `auditoria-central --profunda` |
 | Facturas correo | Gmail → clasifica facturas → Drive → concilia con banca | Diaria 08:00 | PR draft | ✅ | `.claude/skills/facturas-correo` |
 | Pricing agente (SIVRA) | Estudia mercado → precio → aplica por Paso 4 → aprende en BD | Lunes 06:00 | PR draft | ✅ | `.claude/skills/pricing-agente` |
 | Vigilante fiscal IRPF + ayudas | Contrasta importes con BOE/BOJA; actualiza constante + BD. Además radar de convocatorias de ayudas → Telegram | Día 1 mes 07:00 | PR draft | ✅ | `.claude/skills/fiscal-novedades` |
