@@ -33,12 +33,20 @@ vencimiento, cuando ya eres tú quien avisa.
 
 ## Ideas, por orden de lo que yo haría
 
-### A. v1 — intranet de los clientes de la casa 🟢 spec escrito
+### A. v1 — intranet de los clientes de la casa ✅ CONSTRUIDA (02/09/2026)
 Sus pólizas de CIMA, su calendario de vencimientos y la bóveda de pólizas de fuera.
-**Estado:** `docs/superpowers/specs/2026-09-02-asegura-portal-calendario-clientes-design.md`, PR #2144.
-**Bloqueo:** cuatro envs en el proyecto Vercel `asegura-portal` — dependen de Alberto.
+**Estado:** código en `main` vía PR #2144. Tabla `seguros.portal_obligacion` aplicada, derivador con
+poda, calendario con la fecha accionable (art. 22 LCS) y **enlace de un clic** en el correo de acceso.
+El aviso por correo sale de `apps/asegura` (el portal solo guarda hashes: no tiene destinatario).
+**Bloqueo para que se vea:** las envs del proyecto Vercel `asegura-portal` (`DATABASE_URL`,
+`PII_LOOKUP_KEY` idéntica a la de `central-asegura`, los dos secretos de sesión/canal y
+`PORTAL_PUBLIC_URL`), más `CRON_SECRET` en `central-asegura`. Dependen de Alberto.
+**Y antes de encender el aviso:** contar en modo ensayo y comprobar que salen ≤109.
 
-### B. Motor de obligaciones genérico — tengas o no la póliza con nosotros 🟡
+### B. Motor de obligaciones genérico — tengas o no la póliza con nosotros 🟡 media hecha
+🟢 **La mitad de abajo ya existe:** `portal_obligacion` nació colgada del **bien** con `poliza_id`
+opcional y un enum de tipo que ya incluye `itv`, `carnet`, `recibo`, `mantenimiento`, `revision_gas` y
+`libre`. Lo que falta es la UI de alta y los derivadores por tipo, no el modelo.
 ITV, mantenimiento (por fecha **o por km**), carnet/CAP, tacógrafo, revisión de gas, certificado
 energético, IBI, licencia de actividad, extintores, vacuna del perro. Cuelga del **bien**, no de la
 póliza: por eso `portal_obligacion.poliza_id` es opcional desde el primer día.
