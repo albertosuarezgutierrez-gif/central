@@ -256,6 +256,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/09/2026) 🚨 «Ojo con duplicar»: agrupar personas por NIF, no por nombre
+- (02/09/2026) 👤 «Personas en sus pólizas», arriba en la ficha
 - (02/09/2026) 🏢 GLOBAL 2: el titular no salía en su propia póliza
 - (02/09/2026) 🏠🏍️ «Haz todo» + el catálogo de Avant2
 - (02/09/2026) 🧹 Limpieza de duplicados: 16 fusiones más
@@ -264,6 +266,4 @@
 - (02/09/2026) 🧾🔑🧲 «Haz todo ok, aplica y canal leads»
 - (02/09/2026) Mergeado, probado hasta donde se puede, y el doc de plataforma al día
 - (02/09/2026) Inicio: arriba lo accionable, y dos tokens CSS fantasma
-- (02/09/2026) «Repara»: el menú mentía en dos sitios
-- (02/09/2026) 💶 «¿Por qué ha subido la prima?»
 
