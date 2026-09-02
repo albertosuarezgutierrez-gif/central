@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T17:47:40Z",
+  "generadoEn": "2026-09-02T19:59:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -375,7 +375,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 35
       },
       "rrhh": {
         "estado": "usado",
@@ -1951,7 +1951,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 22
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4517,6 +4517,7 @@
       "/api/inversion/underwrite",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/operador/agente-consulta",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
       "/api/publico/correduria/lead",
@@ -5830,7 +5831,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1245,
+    "apis": 1246,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
