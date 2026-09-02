@@ -268,6 +268,8 @@ model Cliente {
   absorbidos    Cliente[]  @relation("FusionCliente")
   telefonos     ClienteTelefono[]
   emails        ClienteEmail[]
+  relacionesA   ClienteRelacion[] @relation("RelacionA")
+  relacionesB   ClienteRelacion[] @relation("RelacionB")
   polizas       Poliza[]
   siniestros    Siniestro[]
   intervenciones PolizaInterviniente[]
@@ -288,6 +290,26 @@ model ClienteTelefono {
   cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("cliente_telefonos")
+}
+
+/// Vínculos cliente↔cliente del CRM (dos filas por vínculo, una por sentido).
+/// `tipo_relacion` = B respecto de A; `puede_ver_polizas` = A autoriza a B a ver
+/// las pólizas de A. Reglas en `@central/module-seguros` (relaciones.ts).
+model ClienteRelacion {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId    String   @map("correduria_id") @db.Uuid
+  clienteAId      String   @map("cliente_a_id") @db.Uuid
+  clienteBId      String   @map("cliente_b_id") @db.Uuid
+  tipoRelacion    String   @map("tipo_relacion") @db.VarChar(60)
+  puedeVerPolizas Boolean  @default(false) @map("puede_ver_polizas")
+  observaciones   String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  clienteA Cliente @relation("RelacionA", fields: [clienteAId], references: [id], onDelete: Cascade)
+  clienteB Cliente @relation("RelacionB", fields: [clienteBId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteAId, clienteBId, tipoRelacion], map: "uq_cliente_relaciones_a_b_tipo")
+  @@map("cliente_relaciones")
 }
 
 model ClienteEmail {

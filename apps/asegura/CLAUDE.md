@@ -532,6 +532,20 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   - Todo cambio deja fila en **`historial_interno`** (`gestion`/`contacto`/`nota`, best-effort) SIN valores
     de identidad ni dirección. Cifra con las mismas primitivas que el CRM (`module-seguros-pii`): sin
     `PII_ENCRYPTION_KEY` en producción la escritura FALLA con 500, nunca guarda en claro.
+- **👪 RELACIONES entre clientes y AUTORIZACIÓN para ver los seguros del otro (02/09/2026).** Alberto: «es
+  marido de María Antonia… por si autoriza María Antonia que José vea sus seguros». La tabla **YA EXISTÍA**:
+  `cliente_relaciones` (1.708 filas del CRM, José↔María Antonia incluidas), **dos filas por vínculo, una por
+  sentido**, con tipos recíprocos (`Hijo/a`↔`Padre/Madre`) y el vocabulario del CRM (18 tipos + los pares del
+  volcado «Tomador - Propietario»). El CRM colapsaba `puede_ver_polizas` con un OR de los dos sentidos y lo
+  dejaba «informativo»; aquí queda FIJADO: fila A→B = «B es <tipo> de A» y `puede_ver_polizas` = **A autoriza a
+  B a ver las pólizas de A**. Direccional a propósito: se da y se quita SOLO desde la ficha de quien autoriza.
+  Reglas puras en `@central/module-seguros` (`relaciones.ts`: `relacionesDeFicha` funde los dos sentidos,
+  `clientesVisiblesPara` es lo que un portal enseñaría además de lo propio); BD en `lib/cartera-relaciones.ts`;
+  puerto **`/cliente/relaciones`** (GET · POST crea los dos sentidos · PATCH autoriza/revoca · DELETE borra el
+  par). La ficha manda `relaciones` (`null` = no se pudo leer). Cada alta/autorización deja fila en
+  `historial_interno` de las DOS fichas: es un consentimiento y se tiene que ver quién lo anotó y cuándo.
+  ⚠️ `prisma_asegura_portal` NO tiene grant sobre la tabla: el portal del cliente todavía no enseña los
+  seguros de nadie más; cuando se haga, `clientesQuePuedeVer()` ya dice a quién.
 
 ### 🔎 Qué se puede buscar de verdad, y qué NO (medido 01/09/2026)
 

@@ -28,6 +28,7 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 import { enmascararDni, retarificabilidad, type ContactoCliente, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
+import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
 import { listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
@@ -212,6 +213,11 @@ export type FichaCliente = {
    * el DNI entero no cruza el puerto) y fecha de nacimiento.
    */
   identidad: Identidad
+  /**
+   * Con quién está vinculado (cónyuge, hijos, empresa…) y quién puede ver los
+   * seguros de quién. `null` = no se ha podido consultar. NO es «no tiene familia».
+   */
+  relaciones: RelacionCartera[] | null
   polizas: PolizaFicha[]
   siniestros: SiniestroFicha[]
   /**
@@ -346,6 +352,7 @@ export async function fichaCliente(
   // Todos los suyos: los del cliente y los colgados de sus pólizas/siniestros.
   const documentos = await listarDocumentos(correduriaId, { clienteId: c.id })
   const contactos = await listarContactos(correduriaId, c.id)
+  const relaciones = await listarRelaciones(correduriaId, c.id)
 
   return {
     id: c.id,
@@ -370,6 +377,7 @@ export async function fichaCliente(
     intervinientes,
     documentos,
     contactos,
+    relaciones,
     identidad: {
       nombre: c.nombre,
       apellidos: c.apellidos,
