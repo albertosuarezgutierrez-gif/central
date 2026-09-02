@@ -1,6 +1,17 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
-> **Estado: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Ejecución EN MARCHA, paso a paso.**
+> **✅ 02/09/2026 — FASE 2 (copia de la BD) HECHA.** Las 52 tablas / 86.628 filas del `public` de
+> Manuel están en el schema `seguros` de central, con las 131 FKs y verificación por recuento y
+> checksum. Cómo se salvó el bloqueo del 01/09: `pg_dump` local no valía (16 vs 17) y el secreto del
+> Vault traía una contraseña suelta, no una URL — pero **`apply_migration` del conector de Supabase
+> entra en el proyecto de Manuel como `postgres`** (el `execute_sql` va como `supabase_read_only_user`),
+> así que se creó un rol temporal `traspaso_lectura` (SELECT-only), se copió por `dblink` desde central
+> y **se dio de baja el rol y se vació el secreto** al terminar. El origen sigue siendo la fuente viva
+> (CIMA entra allí y las apps leen de allí); la copia es una foto. Siguiente paso: repuntar lectura +
+> ingesta, no antes de las DOS pruebas (descifrar y buscar) sobre la copia — siguen pendientes de las
+> claves, que llegan con el Vercel de Manuel.
+>
+> **Estado anterior: PLAN TÉCNICO CERRADO POR AMBAS PARTES (26/08/2026). Ejecución EN MARCHA, paso a paso.**
 > 🔁 **No hay cita:** Alberto le pide a Manuel **una cosa cada vez** y él responde cuando puede. Ver
 > «CAMBIO DE MODO», abajo — manda sobre el guion de la ventana 13:00–15:00, que queda de alternativa.
 > ⚪ **Y NO hay ningún paso con reloj** (corregido por Alberto el 26/08): el CRM aún no está operativo
