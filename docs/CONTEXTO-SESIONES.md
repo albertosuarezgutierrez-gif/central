@@ -100,6 +100,25 @@
 
 ---
 
+### 🫀 (02/09/2026, tarde) El vigía de agentes tiraba su trabajo, y el panel se descuadraba en móvil (PR #2066 mergeado)
+- **`/operador/agentes` pintaba ⚪ sobre 23 de 29 agentes… y el dato SÍ existía.** El cron `agentes-latido` evalúa 27
+  agentes cada mañana con su umbral y su sonda, y **no lo guardaba**: solo iba al JSON de su respuesta y a un Telegram
+  que en **8 rutinas no está cableado**. Ahora lo persiste en `agente_salud` y la pantalla lo lee (6 → 13 con
+  telemetría), más una sección con los **19 latidos vigilados que no salían en ninguna pantalla**.
+- ⚠️ **Persistir un veredicto crea un riesgo PEOR:** un vigía muerto congelaría la pantalla en su último verde. Por eso
+  **caduca a las 36 h** → gris «nadie ha comprobado». Decisión en `lib/agentes-salud-clasificar.ts` (puro, 10 tests):
+  caducado ≠ veredicto · sonda rota ≠ sano · `horas` NULL ≠ 0 (colapsarlo a 0 lo pinta VERDE, 0 ≤ cualquier umbral).
+- 📱 **Responsive, y el hallazgo de MÉTODO que lo tapaba:** `LayoutShell` declara `overflowY:'auto'` sin `overflowX`, y
+  por la regla de CSS Overflow el eje X computa a `auto` → **el scroller horizontal es LayoutShell, no `<body>`**. O sea
+  **`document.body.scrollWidth` NUNCA delata un desbordamiento en esta app**, y con esa medición mala se dio el problema
+  por inexistente. Se mide sobre el scroller.
+- **La causa:** un `display:grid` sin `gridTemplateColumns` dimensiona su pista implícita con el contenido más ancho, así
+  que una tabla de `minWidth:880` arrastra la página y **anula el `overflowX` de la propia tabla**. Medido en Chromium:
+  cliente 910→390 · póliza 590→390 · pricing-auto 354→320. `apartamentos` NO se cura así (su gráfica de 12 meses mide
+  ~513 px de min-content): el scroll va en la gráfica, 408→320/390.
+- **Pendiente de Alberto:** las **9 páginas sin ningún contenedor** (van a sangre, sin margen) y las 8 rutinas sin
+  `ALERTA_TOKEN` — esos tokens se ponen en `/operador/secretos`, no los puede poner un agente.
+
 ### 🧱 (02/09/2026, noche) Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)
 - Con #2045, `apps/plataforma` queda **entera** sobre `PageHeader`: 43 cabeceras + 3 `BtnLink` + 9 `ThinBar`, en
   **4 tandas de agentes** con lista EXPLÍCITA de ficheros por tanda (y de los prohibidos) para no pisarse.
