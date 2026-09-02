@@ -116,7 +116,8 @@ asesoramiento y arrastra análisis objetivo e IPID (ver Riesgos).
 ## Destino declarado — hacia dónde va esta fontanería
 
 Esto **no se construye en la v1**. Se escribe para que la v1 no se diseñe en una dirección que haya
-que deshacer.
+que deshacer. El banco de ideas completo, con coste y bloqueo de cada una, está en
+`docs/CORREDURIA-INTRANET-IDEAS.md`.
 
 - **Producto abierto a cualquiera.** El eje no es «mira tus pólizas» (sirve a 80 personas) sino
   «aporta tus seguros y yo te aviso» (sirve a los ~32.520 leads). Un lead que se registra y declara
@@ -177,7 +178,9 @@ escritura o envío dirigido a leads.
 - **El cambio de mediador no se automatiza de punta a punta.** [Probable] Exige mandato firmado por
   el tomador, cada compañía tiene su procedimiento y la aceptación no está garantizada. Lo
   automatizable es el papel (carta de nombramiento pre-rellenada con lo que la IA leyó de la
-  póliza), la firma y el seguimiento del estado. [Suposición] Y se hereda la póliza al precio que
+  póliza), la firma y el seguimiento del estado. La firma **no hay que construirla**:
+  `@central/core-firma` ya hace firma avanzada eIDAS art. 26 con hash del documento y evidencia, y
+  su método `otp_email` es exactamente cómo identifica el portal (molde vivo: `apps/rrhh`). [Suposición] Y se hereda la póliza al precio que
   ponga la compañía en la renovación: se gana la relación y el dato, no el margen inmediato.
 - **Un aviso de «mejor oferta» es asesoramiento**, no información. [Probable] Arrastra análisis
   objetivo e IPID (RDL 3/2020). El texto de los avisos de la v1 se mantiene informativo por eso.
