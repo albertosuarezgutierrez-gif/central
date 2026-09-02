@@ -1,0 +1,64 @@
+{
+  "novedades": [
+    {
+      "titulo": "🧹 Cerrado lo que quedaba del auditor: novedades fuera del generado + la ambigüedad, vigilada",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🗞️ Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "📄 El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🧱 Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🩺 Salud de la arquitectura a cero avisos (/admin → 🗺️ Estructura)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🧩 Las 5 primitivas huérfanas: se MIDIÓ antes de decidir (PR #2045 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🕳️ El feed PSD2 tenía dos estados donde hay tres (PR #2042 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🗺️ plataforma: podar lo inalcanzable y agrupar el menú por TRABAJO (PR #2038 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "⚪ Comisiones: el «no se ha podido leer la cartera» no decía DÓNDE mirar (PR #2029 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🪞 La skill de UI llevaba DOS MESES contradiciendo al CLAUDE.md de su app",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🧱 plataforma: el CUERPO del Inicio, al sistema de diseño (PR #2024 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "📎 Correduría: documentos de verdad sobre la BD de casa (PR #2022 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🔐 Correduría: TRASPASO CERRADO salvo Fly — auth copiada, CRM solo como motor de CIMA (PR #2007 mergeado)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🖼️ plataforma: el rediseño LLEGA a la pantalla (PRs #2013 y #2018)",
+      "fecha": "02/09/2026"
+    },
+    {
+      "titulo": "🎨 plataforma: sistema de diseño vivo, color por tokens y SEIS tokens fantasma (PR #2011)",
+      "fecha": "02/09/2026"
+    }
+  ]
+}

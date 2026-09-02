@@ -32,6 +32,22 @@
 
 ---
 
+### 🧹 (02/09/2026) Cerrado lo que quedaba del auditor: novedades fuera del generado + la ambigüedad, vigilada
+- **Opción 2 hecha:** `novedades` sale a `apps/plataforma/lib/novedades.generated.json`. Se derivan de la
+  MEMORIA, no del código, así que mezclarlas con la radiografía hacía que cada PR que anotara memoria
+  reescribiera el JSON grande. Comprobado: añadir una entrada ya no toca `estructura.generated.json`.
+- 🪤 **La ambigüedad del troceo era un bug ACTIVO, no teórico:** `- **Hecho por Claude Chrome (02/09):**`
+  —cuerpo de una entrada— se leía como cabecera y salía como novedad con fecha vacía; solo se salvaba por
+  caer en la posición 16 de 15. Medido, no supuesto.
+- **El arreglo NO fue endurecer el parser.** Se probó exigir la fecha al final de la negrita y los datos lo
+  tumbaron: 14 de 137 cabeceras reales de la historia la llevan en medio (`**título (30/06) — texto.**`).
+  Endurecer las habría convertido en cuerpo. Se arregló el DATO (fecha fuera de los paréntesis) y se puso
+  un guardián que caza la recaída con el mensaje de cómo escribirlo.
+- Guardián probado en los dos sentidos: falla con la línea mala, pasa con la buena. 180/180 en la raíz,
+  17/17 rotar-memoria, `--check` ✓, typecheck de plataforma OK.
+- ⚠️ Y una trampa de método: un `git checkout -- docs/CONTEXTO-SESIONES.md` para limpiar una prueba se
+  llevó por delante el arreglo de esa misma línea. Verificar después de restaurar, no antes.
+
 ### 🗞️ (02/09/2026) Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba
 - El extractor usaba un regex que casa con CUALQUIER bullet en negrita, y el cuerpo de cada entrada está
   lleno de sub-bullets SIN indentar. El panel pintaba trozos de argumentación a media frase («Cablear un
@@ -360,7 +376,7 @@
   (sesión sin memoria, sin PR y sin bitácora = pendiente perdido) y reconciliar TODAS las skills de agentes contra código y
   `list_triggers`, no solo las maestro. PR #2006. Ojo: `guardian-rama.mjs` da falso positivo en clon **shallow** (el `main`
   local no está en la historia truncada de `origin/main`); un `git fetch origin` lo calla.
-- **Hecho por Claude Chrome (02/09):** las rutinas 1 y 2 quedan con **Supabase + Supabase asegura + Vercel** (llevaban los 16
+- **Hecho por Claude Chrome el 02/09:** las rutinas 1 y 2 quedan con **Supabase + Supabase asegura + Vercel** (llevaban los 16
   conectores heredados, Gmail/Stripe/HubSpot incluidos). Verificado contra la skill: no usa ninguno de los quitados. Chrome
   destapó además que la diaria corre a **10:00 CEST** desde el 27/08 (Alberto la movió por el reset de cuota, memoria
   del 27/08) y el doc decía 04:00; corregido en `RUTINAS-PROGRAMADAS.md` §1/§3/cadencias. `ALERTA_TOKEN` de las rutinas

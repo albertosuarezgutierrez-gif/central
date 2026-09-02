@@ -52,6 +52,32 @@ test('el título no arrastra la fecha ni el matiz entre paréntesis', () => {
   assert.equal(fechaDeEntrada(['### 🕳️ (02/09/2026, noche) El feed PSD2']), '02/09/2026')
 })
 
+// 🪤 La ambigüedad que NO resuelve el parser, y por eso la vigila un test.
+// Una cabecera del formato antiguo y un sub-bullet del cuerpo son la MISMA sintaxis; lo único
+// que las separa es que la cabecera lleva la fecha ENTRE PARÉNTESIS. Así que un bullet de
+// cuerpo que cite una fecha entre paréntesis se lee como entrada y se cuela en el panel —
+// medido el 02/09/2026 con `- **Hecho por Claude Chrome (02/09):**`, que salía como novedad
+// con la fecha vacía y solo se salvaba por caer en la posición 16 de 15.
+// El arreglo no es endurecer el parser (las cabeceras reales llevan la fecha en medio tan a
+// menudo como al final: 14 de 137 en la historia archivada), sino no escribir eso en el cuerpo.
+test('la memoria viva no tiene bullets de cuerpo con fecha entre paréntesis', () => {
+  const lineas = readFileSync(join(RAIZ, 'docs', 'CONTEXTO-SESIONES.md'), 'utf8').split('\n')
+  const culpables: string[] = []
+  let dentroDeEntrada = false
+  for (const l of lineas) {
+    if (l.startsWith('### ')) { dentroDeEntrada = true; continue }
+    if (dentroDeEntrada && l.startsWith('- **') && /\([0-3]?\d\/[01]\d(?:\/20\d\d)?\)/.test(l)) {
+      culpables.push(l.slice(0, 90))
+    }
+  }
+  assert.deepEqual(
+    culpables, [],
+    'Un bullet del CUERPO con la fecha entre paréntesis se lee como cabecera de entrada y se ' +
+    'cuela en las novedades del panel. Arreglo: saca la fecha de los paréntesis («el 02/09:» en ' +
+    'vez de «(02/09):»), o indenta el bullet si de verdad es un sub-item.',
+  )
+})
+
 test('sobre la memoria REAL: hay novedades y todas traen fecha', () => {
   const txt = readFileSync(join(RAIZ, 'docs', 'CONTEXTO-SESIONES.md'), 'utf8')
   const n = extraerNovedades(txt)
