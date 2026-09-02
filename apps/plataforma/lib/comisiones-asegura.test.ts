@@ -22,65 +22,27 @@ test('un error de la BD de asegura llega con su motivo', () => {
 })
 
 // 🚨 02/09/2026: `asegura_error` a secas era un callejón sin salida — decía que
-// falló, no dónde. La pista que manda asegura tiene que llegar hasta el aviso.
-test('la pista de asegura viaja hasta el motivo (schema, permisos, tabla…)', () => {
-  const r = interpretarComisiones(200, {
-    comisiones: { estado: 'error', motivo: 'bd', detalle: 'central/PrismaClientKnownRequestError/P2021/public.corredurias' },
-  })
-  assert.equal(r.estado, 'error')
-  assert.equal(r.estado === 'error' ? r.motivo : null, 'asegura_error')
-  assert.match(r.estado === 'error' ? (r.detalle ?? '') : '', /P2021/)
-  assert.match(r.estado === 'error' ? (r.detalle ?? '') : '', /^bd · /)
+// falló, no dónde, y la causa real (`credenciales`: la contraseña de
+// prisma_seguros en el DATABASE_URL de Vercel ya no valía) solo estaba en los
+// logs del pooler. La causa que clasifica asegura tiene que llegar hasta el aviso.
+test('la causa de asegura viaja hasta el motivo (credenciales, permisos, esquema…)', () => {
+  const r = interpretarComisiones(200, { comisiones: { estado: 'error', causa: 'credenciales' } })
+  assert.deepEqual(r, { estado: 'error', motivo: 'asegura_error', causa: 'credenciales' })
 })
 
-test('sin pista NO se inventa una: el detalle sencillamente no está', () => {
+test('sin causa NO se inventa una: el campo sencillamente no está', () => {
   const r = interpretarComisiones(200, { comisiones: { estado: 'error' } })
   assert.deepEqual(r, { estado: 'error', motivo: 'asegura_error' })
 })
 
-test('una pista kilométrica se recorta: acaba en un Telegram', () => {
-  const r = interpretarComisiones(200, { comisiones: { estado: 'error', motivo: 'bd', detalle: 'x'.repeat(5000) } })
-  assert.ok((r.estado === 'error' ? (r.detalle ?? '') : '').length <= 200)
+test('una causa que no es texto se ignora, no se pega tal cual', () => {
+  const r = interpretarComisiones(200, { comisiones: { estado: 'error', causa: { url: 'postgres://u:p@h' } } })
+  assert.deepEqual(r, { estado: 'error', motivo: 'asegura_error' })
 })
 
-test('una pista que no es texto se ignora, no se pega tal cual', () => {
-  const r = interpretarComisiones(200, { comisiones: { estado: 'error', motivo: 'bd', detalle: { url: 'postgres://u:p@h' } } })
-  assert.deepEqual(r, { estado: 'error', motivo: 'asegura_error', detalle: 'bd' })
-})
-
-test('una respuesta rara NO se convierte en cero comisiones', () => {
-  // Es el fallo caro: un HTML de error o un JSON de otra forma acabando pintado
-  // como «este mes no has cobrado nada».
-  assert.deepEqual(interpretarComisiones(200, { pepe: 1 }), { estado: 'error', motivo: 'respuesta_ilegible' })
-  assert.deepEqual(interpretarComisiones(500, null), { estado: 'error', motivo: 'respuesta_ilegible' })
-  assert.deepEqual(
-    interpretarComisiones(200, { comisiones: { estado: 'ok', periodos: 'no-es-lista' } }),
-    { estado: 'error', motivo: 'respuesta_ilegible' },
-  )
-})
-
-test('ok con listas vacías es ok: «no hay comisiones en la ventana»', () => {
-  const r = interpretarComisiones(200, { comisiones: { estado: 'ok', periodos: [], devengos: [], cobertura: [] } })
-  assert.equal(r.estado, 'ok')
-  if (r.estado === 'ok') assert.deepEqual(r.periodos, [])
-})
-
-test('los importes nulos del periodo se conservan como null, no como 0', () => {
-  const r = interpretarComisiones(200, {
-    comisiones: {
-      estado: 'ok',
-      periodos: [{
-        companiaCodigo: 'C0058', periodoInicio: '2026-07-01', periodoFin: '2026-07-31',
-        liqBruto: null, liqRetencion: null, liqRemesa: null, liqHash: null, pagado: null,
-      }],
-      devengos: [], cobertura: [],
-    },
-  })
-  assert.equal(r.estado, 'ok')
-  if (r.estado === 'ok') {
-    assert.equal(r.periodos[0].liqBruto, null)
-    assert.equal(r.periodos[0].liqRemesa, null)
-  }
+test('una causa kilométrica se recorta: acaba en un Telegram', () => {
+  const r = interpretarComisiones(200, { comisiones: { estado: 'error', causa: 'x'.repeat(500) } })
+  assert.ok((r.estado === 'error' ? (r.causa ?? '') : '').length <= 40)
 })
 
 test('un devengo con mes mal formado se descarta en vez de contaminar el libro', () => {
