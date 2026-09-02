@@ -11,7 +11,7 @@ export {
   decryptField,
   encryptFieldNullable,
   decryptFieldNullable,
-} from './field-encryption'
+} from './field-encryption.ts'
 export {
   normalizeEmailForHash,
   normalizeTelefonoForHash,
@@ -22,4 +22,4 @@ export {
   looksLikeFullEmail,
   looksLikeFullTelefono,
   looksLikeDniNieCif,
-} from './blind-index'
+} from './blind-index.ts'

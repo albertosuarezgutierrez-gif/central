@@ -122,6 +122,12 @@ export type Ficha = {
   tipo: string
   segmento: string | null
   contacto: ContactoFicha
+  /**
+   * Por qué lo cifrado no se abre, según asegura: `sin_clave` · `mal_formada` ·
+   * `no_abre` · `sin_muestra` · `ok`. `null` = una versión de asegura que aún
+   * no lo manda. Es lo que convierte «cifrado» en «falta la variable en Vercel».
+   */
+  piiClave: string | null
   polizas: PolizaFicha[]
   siniestros: SiniestroFicha[]
   /**
@@ -382,6 +388,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       siniestros,
       intervinientes: leerIntervinientes(f.intervinientes),
       documentos: leerDocumentos(f.documentos),
+      piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }
 }
