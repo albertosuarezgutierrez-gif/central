@@ -278,3 +278,56 @@ export function emparejar(catalogo: Opcion[], texto: string | null): Opcion | nu
   const coincidencias = catalogo.filter((o) => normalizarTexto(o.nombre) === buscado)
   return coincidencias.length === 1 ? coincidencias[0] : null
 }
+
+// ─── Hogar: tipo de vía y valores por defecto (gratis) ───────────────────────
+
+/** `GET /road-types`: los tipos de vía (`Calle`, `Avenida`…). Van en `risk.address.roadType.id`. */
+export async function tiposDeVia(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/road-types'))
+}
+
+/**
+ * Los ids que usa el EJEMPLO del portal para cada catálogo de hogar
+ * (`docs/CODEOSCOPIC-API-PORTAL.md`, § Hogar). No se mandan a ciegas: solo se
+ * preseleccionan si el catálogo vivo los trae (`elegirDefecto`), y siempre
+ * como SUPUESTO que la pantalla enseña. Son el «piso normal, sin alarma, sin
+ * puerta blindada» — lo conservador, que no abarata el precio.
+ */
+export const DEFECTOS_HOGAR: Partial<Record<CatalogoHogar, string>> = {
+  'property-types': 'MiddleFloor',
+  uses: 'Owner',
+  'occupancy-types': 'MainResidence',
+  locations: 'CityCentre',
+  'build-materials': 'NonCombustible',
+  'build-qualities': 'Normal',
+  'alarm-types': 'NoAlarm',
+  'door-types': 'NonReinforcedOtherDoor',
+  'settlement-types': 'ReplacementValue',
+}
+export const DEFECTO_TIPO_VIA = 'Calle'
+
+/**
+ * La opción por defecto de un desplegable: la preferida si el catálogo la
+ * trae; si no, la primera; con catálogo vacío, `null` (no hay nada que
+ * suponer). El llamante la marca como supuesto en los dos primeros casos.
+ */
+export function elegirDefecto(catalogo: Opcion[], idPreferido: string | null | undefined): Opcion | null {
+  if (catalogo.length === 0) return null
+  if (idPreferido) {
+    const exacta = catalogo.find((o) => o.id === idPreferido)
+    if (exacta) return exacta
+  }
+  return catalogo[0]
+}
+
+/**
+ * ¿Esta opción de `/home/uses` significa «propietario»? Sirve para
+ * preseleccionar «el tomador es el dueño» (que manda la misma persona como
+ * `risk.owner`). Es una preselección visible, no una decisión: el corredor la
+ * puede cambiar.
+ */
+export function pareceOpcionPropietario(o: Opcion | null): boolean {
+  if (!o) return false
+  const t = `${normalizarTexto(o.id)} ${normalizarTexto(o.nombre)}`
+  return /owner|propietari|due[nñ]o/.test(t)
+}

@@ -145,3 +145,29 @@ test('normalizarTexto quita tildes de verdad', () => {
   assert.equal(normalizarTexto('Alcalá de Guadaíra'), 'alcala de guadaira')
   assert.equal(normalizarTexto('  CÓRDOBA '), 'cordoba')
 })
+
+// ─── Hogar: defectos del portal y tipo de vía ────────────────────────────────
+
+import { DEFECTOS_HOGAR, elegirDefecto, pareceOpcionPropietario } from './catalogos.ts'
+
+test('elegirDefecto: el id del ejemplo del portal si el catálogo lo trae; si no, la primera; vacío → null', () => {
+  const cat: Opcion[] = [{ id: 'ConnectedAlarm', nombre: 'Alarma conectada' }, { id: 'NoAlarm', nombre: 'Sin alarma' }]
+  assert.deepEqual(elegirDefecto(cat, DEFECTOS_HOGAR['alarm-types']), { id: 'NoAlarm', nombre: 'Sin alarma' })
+  assert.deepEqual(elegirDefecto(cat, 'NoExiste'), cat[0])
+  assert.deepEqual(elegirDefecto(cat, null), cat[0])
+  assert.equal(elegirDefecto([], 'NoAlarm'), null)
+})
+
+test('los defectos cubren los nueve desplegables obligatorios del HomeRisk y ninguno más', () => {
+  assert.deepEqual(Object.keys(DEFECTOS_HOGAR).sort(), [
+    'alarm-types', 'build-materials', 'build-qualities', 'door-types', 'locations',
+    'occupancy-types', 'property-types', 'settlement-types', 'uses',
+  ])
+})
+
+test('pareceOpcionPropietario: por id o por nombre, sin tildes; lo demás no', () => {
+  assert.ok(pareceOpcionPropietario({ id: 'Owner', nombre: 'Propietario' }))
+  assert.ok(pareceOpcionPropietario({ id: 'X', nombre: 'Dueño' }))
+  assert.ok(!pareceOpcionPropietario({ id: 'Tenant', nombre: 'Inquilino' }))
+  assert.ok(!pareceOpcionPropietario(null))
+})

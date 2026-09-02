@@ -148,39 +148,64 @@ Del changelog del portal: **`identification` y `identificationType` están DEPRE
 1. **Preguntar a la API por los ramos** (`GET /insurance-lines`) en cuanto haya conexión. Gratis.
 2. **Pedir precio de los créditos de `GET /vehicles`** a `comercial@codeoscopic.com` — decide si
    «matrícula → precio» es viable para clientes nuevos.
-3. Exportar del portal el detalle de `POST /insurances` para **hogar**, si `supports.rating` sale a
-   `true`: es el único ramo con volumen en la cartera (19 pólizas) además de auto.
+3. ✅ (02/09/2026) El detalle de `POST /insurances` para **hogar** ya está extraído del snapshot: ver la
+   sección siguiente.
 
-## 🏠 Hogar: lo que está cableado y lo que FALTA del portal (02/09/2026)
+## 🏠 Hogar: el contrato `HomeRisk`, VERIFICADO contra el portal (02/09/2026)
 
-**Cableado sin gastar:** `GET /insurance-lines` (id exacto del ramo), los 10 catálogos `/home/*`
-(`catalogoHogar()` en `apps/asegura/lib/codeoscopic/catalogos.ts`), la precalificación desde la
-cartera + gemela + Catastro (`desde-cartera-hogar.ts`) y el constructor `peticion-hogar.ts`.
+**De dónde sale:** del mismo snapshot MHTML del 01/09 (16 MB; vive en los uploads de la sesión, no en el
+repo). El 02/09 se decodificó entero (`python email` → HTML → texto) y ahí estaba el esquema completo de
+`POST /insurances` para hogar (opción `3 HomeRisk` del `risk`), los ejemplos de request/response de
+`POST /home/recommend-limits` y los roles de persona de hogar. La sección anterior de este documento decía
+que «el detalle del cuerpo para hogar no se extrajo»: era verdad hasta que se buscó. Alberto (02/09): «usa
+la IA e internet para nombres, no? tienes ya el contexto de todo como yo».
 
-🚨 **Lo que NO tenemos es el esquema del `risk` de hogar de `POST /insurances`.** El snapshot MHTML del
-portal del 01/09 contiene el índice de operaciones, pero el detalle del cuerpo para hogar no se
-extrajo. Los nombres de campo que hoy manda `peticion-hogar.ts` (`CAMPOS_VENDOR`) son **por analogía**
-con el cuerpo de auto (verificado) y con el nombre de cada catálogo:
+**Cableado y gratis:** `GET /insurance-lines` (id exacto del ramo), los 10 catálogos `/home/*` +
+`GET /road-types` (`catalogoHogar()` y `tiposDeVia()` en `apps/asegura/lib/codeoscopic/catalogos.ts`), la
+precalificación desde cartera + gemela + Catastro (`desde-cartera-hogar.ts`, que trocea la dirección con
+`partirDireccion`) y el constructor `peticion-hogar.ts`, cuya tabla `CAMPOS_VENDOR` es esta:
 
-| Nuestro dato | Campo que se manda hoy (PROVISIONAL) | De dónde sale el id |
-|---|---|---|
-| CP + municipio | `risk.address.{postalCode, town.id}` | como en `persona.addresses` (verificado en auto) |
-| tipo de vivienda | `risk.propertyType.id` | `/home/property-types` |
-| uso | `risk.use.id` | `/home/uses` |
-| ocupación | `risk.occupancyType.id` | `/home/occupancy-types` |
-| ubicación / asentamiento | `risk.location.id` / `risk.settlementType.id` | `/home/locations` / `/home/settlement-types` |
-| material / calidad / puerta / alarma | `risk.buildMaterial.id` … `risk.alarmType.id` | sus catálogos |
-| año / m² | `risk.constructionYear` / `risk.surface` | ficha, gemela o Catastro |
-| capitales | `risk.limits.{building, contents}` | ficha; `POST /home/recommend-limits` por cablear |
+| Nuestro dato (`DatosHogar`) | Campo del vendor (`risk.…`) | Oblig. | De dónde sale |
+|---|---|---|---|
+| cp, municipioId, tipoViaId, nombreVia, numeroVia | `address.{postalCode, town.id, roadType.id, roadName, roadNumber}` | ✱ todos | ficha/gemela troceada; `/towns?postalCode=`; `/road-types` |
+| planta, puertaVivienda, referenciaCatastral | `address.{floor, door, cadastralReference}` | — | troceo de la dirección; Catastro |
+| anioConstruccion / metrosCuadrados | `yearBuilt` / `floorArea` (construida, con terrazas y garaje) | ✱ | ficha, gemela o Catastro |
+| habitaciones | `rooms` (≥1, sin salón/cocina/baños) | ✱ | **ninguna ficha lo tiene** → estimado por m², supuesto |
+| anioUltimaReforma | `lastReformYear` | si hay reforma | a mano (Lagun Aro lo exige) |
+| tipoVivienda | `buildingType.id` | ✱ | `/home/property-types` (ej. `MiddleFloor`) |
+| uso ⚠️ | `use.id` = **RÉGIMEN** (propietario/inquilino) | ✱ | `/home/uses` (ej. `Owner`/«Propietario») |
+| ocupacion ⚠️ | `occupancy.id` = **USO** (habitual/segunda) | ✱ | `/home/occupancy-types` (ej. `MainResidence`/«Habitual») |
+| ubicacion / asentamiento | `location.id` / `settlementType.id` | ✱ | `/home/locations` (`CityCentre`) / `/home/settlement-types` (`ReplacementValue`) |
+| material / calidad | `materials.id` / `buildQuality.id` | ✱ | `/home/build-materials` (`NonCombustible`) / `/home/build-qualities` (`Normal`) |
+| alarma / puertasSecundarias | `alarm.id` / `secondaryDoorsType.id` | ✱ | `/home/alarm-types` (`NoAlarm`) / `/home/door-types` (`NonReinforcedOtherDoor`) |
+| puertaPrincipalBlindada, ventanasSeguras, urbanizacionCerrada | `securityMainDoor`, `securityWindows`, `gatedCommunity` | ✱ | ficha no los tiene → `false`, supuesto |
+| vigilante | `securityGuard` | — | solo si se dice |
+| propietarioEsTomador | `owner` (la misma persona que `holder`) | rol `owner` min 1 | preseleccionado si el régimen «parece propietario» |
+| capitalContinente / capitalContenido | `buildingsLimit` / `contentsLimit` | al menos uno | ficha/gemela; **no se inventan** |
+| joyasEnCajaFuerte, joyasFueraDeCaja | `jewelsInSafeBoxLimit`, `jewelsOutSafeBoxLimit` (0…100000) | ✱ | 0, supuesto optimista |
+| objetosDeValor, perrosPeligrosos | `highValueItemsLimit`, `numberOfDangerousDogs` | ✱ | 0, supuesto optimista |
 
-**Qué pasa si el nombre está mal:** el vendor responde **400 de validación**, que `cliente.ts` clasifica
-como `validacion` = **no se cobra** (`pruebaQueNoHuboCargo`), y su mensaje dice qué campo sobra o falta.
-La pantalla de retarificar hogar enseña ese mensaje entero. Un cuerpo aceptado es una cotización de
-verdad (0,50€), que es lo que se busca.
+Los ids entre paréntesis son los del **ejemplo del portal** (`DEFECTOS_HOGAR` en `catalogos.ts`): la pantalla
+los preselecciona **solo si el catálogo vivo los trae** (`elegirDefecto`) y siempre como supuesto visible.
+No se manda ningún id que no haya venido de un catálogo.
 
-📋 **Lo que tiene que exportar Alberto del portal** (`portal.api-int.codeoscopic.io`, con su acceso; desde
-el contenedor de Claude el dominio está bloqueado por política): (1) el **ejemplo de request** de
-`POST /insurances` con `insuranceLine` de hogar — el objeto `risk` entero; (2) el esquema
-(`CreateInsuranceRequest_V1` → `risk` de `Home`/`Household`) con obligatorios y opcionales; (3) request y
-response de `POST /home/recommend-limits`, y si tiene nota de créditos. Con eso se corrige `CAMPOS_VENDOR`
-en un solo sitio y se retira el aviso de «no verificado» de la pantalla.
+**Roles de persona de hogar** (`GET /home/person-roles`, ejemplo del portal): `holder` (path `holder`) exige
+`identification`, `birthDate`, `name` y `phone` (patrón `^[9|8|7|6][0-9]{8}$`); `maritalStatus`, `gender`,
+`email`, `town` y `address` no son obligatorios. `owner` (path `risk.owner`, min 1 / max 1) no exige ningún
+campo; `holder` lleva `owner` como rol por defecto y requerido, por eso se manda la misma persona.
+
+**`POST /home/recommend-limits`** (gratis según el portal, que no menciona créditos; puede tardar >1 min):
+mismo `holder` + `risk` que la cotización (en el ejemplo el `risk` lleva además `floorId` y `reformed`), sin
+`insuranceLine`. Responde `{ buildingsLimit: {average, highest, lowest}, contentsLimit: {…}, results: [ {product, buildingsLimit, contentsLimit} ] }`
+(los `results` por compañía solo con `?includeIndividualResults=true`). **Por cablear**: es la forma de no
+teclear capitales a ojo cuando la ficha no los trae.
+
+**Lo que respondió el ejemplo del portal a una cotización de hogar** (útil para saber qué mensajes esperar):
+Reale y Catalana «Error de conexión con la compañía»; Lagun Aro «Es obligatorio indicar los años de las
+ultimas reformas realizadas»; Mutua Tinerfeña «No se permite asegurar viviendas fuera de las Islas Canarias»;
+Mussap «Garantía obligatoria no definida». O sea: **por compañía**, y una cotización con errores de
+compañía sigue siendo una cotización cobrada.
+
+**Qué pasa si algo está mal:** el vendor responde **400 de validación**, que `cliente.ts` clasifica como
+`validacion` = **no se cobra** (`pruebaQueNoHuboCargo`), y su mensaje dice qué campo sobra o falta. La
+pantalla enseña ese mensaje entero. Un cuerpo aceptado es una cotización de verdad (0,50€).
