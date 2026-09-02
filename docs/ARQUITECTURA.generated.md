@@ -259,11 +259,11 @@
 - (02/09/2026) 📘 Visión del CRM de la correduría
 - (02/09/2026) 👪 Relaciones entre clientes + autorización para ver los seguros del otro
 - (02/09/2026) ✏️ Editar y ➕ dar de alta clientes desde `/correduria`
+- (02/09/2026) 🛡️ Auditoría de garantías por compañía + diseño del expediente de tarificación
 - (02/09/2026) 🏠 Codeoscopic: el contrato `HomeRisk` de hogar, VERIFICADO y cableado (PR #2088)
 - (02/09/2026) 🏠 Codeoscopic: retarificar HOGAR, cableado de punta a punta (PR #2071 mergeado)
 - (02/09/2026) 🧹 Cerrado lo que quedaba del auditor: novedades fuera del generado + la ambigüedad, vigilada
 - (02/09/2026) 🗞️ Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba
 - (02/09/2026) 📄 El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)
 - (02/09/2026) 🔌 Cinco vigías sin canal dejan latido y se ven en la pantalla (PR #2086)
-- (02/09/2026) 🔗 Un SOLO hub financiero: `/finanzas` entra en `/banca` (PR #2083 mergeado)
 
