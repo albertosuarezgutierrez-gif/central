@@ -108,6 +108,19 @@ el email a `limpiezascruzz@gmail.com` y la ficha de `/sivra/mensajes` no los abr
 > sino por el **puerto HTTP** (ver abajo) — patrón de aislamiento entre apps.
 > `IAREST_SUPABASE_URL` / `IAREST_SUPABASE_SERVICE_KEY` ya no se usan en plataforma.
 
+## 💶 Un solo hub financiero (02/09/2026, PR #2083)
+`/finanzas` **ya no es un hub**: es un redirect a `/banca?tab=ingresos`. Los dos coexistían y su pestaña
+«Categorías» montaba `finanzas/CategoriasTab.tsx`, **el mismo fichero** que el segmento Personal de `/banca`.
+Lo que NO era duplicado —los banners de salud de extracción, ayudas y novedad fiscal, y los KPIs propios— se
+trajo entero: `FinanzasClient` se monta en `/banca` con el prop `embebido` (sin su `<main>`, que ya lo pone
+`<Pagina>`) y perdió su sistema de pestañas.
+
+Segmentos de `/banca`: **Dinero · Ingresos · Negocios · Fiscal · Personal** (`banca/SegTabs.tsx`).
+
+⚠️ Las páginas hijas **siguen donde estaban**: `/finanzas/gastos`, `/finanzas/fiscal`, `/finanzas/pilar` y
+`/finanzas/tarjeta-credito` son rutas vivas, solo que ya no cuelgan de un hub. No las borres al ver que su
+padre redirige.
+
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 

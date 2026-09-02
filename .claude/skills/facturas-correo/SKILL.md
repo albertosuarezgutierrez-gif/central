@@ -83,3 +83,23 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
   patrones especiales (ENDESA dúplex, CUPS luz por piso, EMASESA, SIQUE), resumen a Alberto,
   trigger, límites v1, auto-informe y protocolo del canal de aviso (preflight `/api/internal/alerta`).
   Léelo para conciliar contra banco o cerrar la pasada.
+
+## Deja huella del latido (OBLIGATORIO, incluso si fue mal)
+
+```
+POST {PLATAFORMA_URL}/api/internal/latido
+Authorization: Bearer {ALERTA_TOKEN}
+{ "agente":"facturas_correo", "ok":<true|false>, "detalle":"<parte>" }
+```
+Es el ÚLTIMO acto de la pasada, justo antes del auto-informe (Paso 5 →). `ok = true` **si completaste la
+pasada entera** — candidatos Gmail leídos, clasificados, archivados, **barrido del backlog 4.0 hecho** y
+conciliación contra banco — aunque no hubiera facturas nuevas: «sin candidatos» con el barrido hecho es
+`ok:true`; una pasada que se saltó el 4.0 o dejó correos `sinLeer` sin etiquetar no lo es.
+El `detalle` es el parte corto: candidatos revisados · archivados en Drive · conciliados (auto / para tu
+decisión) · `PDF-pendiente` / `Extraccion-fallida` · backlog `facturas_drive` sin casar. ⚠️ No lo confundas
+con el latido `facturas-scan`: ese lo deja el cron de Vercel; este lo deja la SESIÓN de esta rutina.
+Si algo revienta a mitad, **manda el latido con `ok:false` antes de rendirte**: un agente sin huella
+se lee como «no se dispara» y manda a mirar al sitio equivocado.
+
+⚠️ Sin `ALERTA_TOKEN` en el prompt de la rutina este POST devuelve 401 y el agente sale en rojo en
+`/operador/agentes` con «sin ninguna señal registrada». Eso es correcto: está mudo. No lo tapes.

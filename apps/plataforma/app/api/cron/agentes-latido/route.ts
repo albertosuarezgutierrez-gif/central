@@ -168,6 +168,23 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_experimentos: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_experimentos'`,
+  // Rutinas de Claude Code que dejan latido por /api/internal/latido (02/09/2026). La huella es la
+  // PASADA, con `ultimo_at` para distinguir «no se dispara» de «arranca y no termina».
+  psd2_health_check: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'psd2_health_check'`,
+  facturas_correo: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'facturas_correo'`,
+  fiscal_novedades: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'fiscal_novedades'`,
+  rrhh_compliance: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'rrhh_compliance'`,
+  github_vigia: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'github_vigia'`,
 }
 
 /**

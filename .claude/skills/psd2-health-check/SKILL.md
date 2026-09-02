@@ -108,6 +108,24 @@ Muestra en el chat:
 - Volumen 30d: {mov_30d} vs 30d anteriores: {mov_30d_prev}
 - Acción recomendada si aplica
 
+## Paso 4 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
+
+```
+POST {PLATAFORMA_URL}/api/internal/latido
+Authorization: Bearer {ALERTA_TOKEN}
+{ "agente":"psd2_health_check", "ok":<true|false>, "detalle":"<parte>" }
+```
+`ok = true` **si pudiste ejecutar la consulta de frescura y dar un veredicto** — aunque el veredicto sea
+anomalía: el latido dice que el VIGÍA funcionó, no que el banco esté bien (la anomalía va por
+`/api/internal/alerta`, Paso 2). `ok = false` solo si no llegaste a consultar o no pudiste decidir.
+El `detalle` es el parte corto del Paso 3: estado (`OK` / `ANOMALÍA MODERADA` / `ANOMALÍA CRÍTICA`),
+último movimiento y hace cuántos días, `mov_30d` vs `mov_30d_prev`, y `psd2_sin_fecha` si fue > 0.
+Si algo revienta a mitad, **manda el latido con `ok:false` antes de rendirte**: un agente sin huella
+se lee como «no se dispara» y manda a mirar al sitio equivocado.
+
+⚠️ Sin `ALERTA_TOKEN` en el prompt de la rutina este POST devuelve 401 y el agente sale en rojo en
+`/operador/agentes` con «sin ninguna señal registrada». Eso es correcto: está mudo. No lo tapes.
+
 ## Herramientas
 
 - **Supabase** (`wswbehlcuxqxyinousql`): `execute_sql` para las consultas

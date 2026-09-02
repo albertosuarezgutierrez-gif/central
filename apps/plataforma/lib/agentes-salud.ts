@@ -93,13 +93,21 @@ export async function getSaludLatidos(): Promise<Record<string, SaludLatido>> {
  * Mapearlos daría un verde prestado de otro agente, que es peor que un gris honesto.
  */
 export const LATIDOS_POR_AGENTE: Record<string, string[]> = {
-  'facturas-correo': ['facturas_gmail'],
+  // ⚠️ CORREGIDO 02/09/2026: antes 'facturas-correo' apuntaba a 'facturas_gmail', que es el CRON
+  // de las 06:15 — OTRO proceso sobre el mismo buzón. Eso era un verde prestado, justo lo que este
+  // mapa dice no hacer. La rutina de Claude tiene ahora su propio latido.
+  'facturas-correo': ['facturas_correo'],
   'pricing-agente': ['pricing'],
   'trading-analista': ['trading_watchdog', 'trading_operaciones'],
   'mercado-booking': ['sivra_mercado_booking'],
   'correo-triaje': ['correo_triaje'],
   'agente-huesped': ['sivra_mensajes_prog'],
   'subastas': ['subastas_mercado'],
+  // Las cinco rutinas que hasta hoy no dejaban huella (ver AGENTES_VIGILADOS).
+  'psd2-health-check': ['psd2_health_check'],
+  'fiscal-novedades': ['fiscal_novedades'],
+  'rrhh-compliance-calendar': ['rrhh_compliance'],
+  'github-vigia': ['github_vigia'],
 }
 
 const PEOR: Record<EstadoSalud, number> = { verde: 0, gris: 1, ambar: 2, rojo: 3 }

@@ -107,6 +107,24 @@ BOE/BOJA a fecha X"). Idempotente: re-ejecutar no duplica avisos.
 7. **Nunca tramites ni contactes a nadie** (ni a la asesoría, ni a clientes): el radar informa a
    Alberto y decide él (regla global de comunicaciones salientes en el CLAUDE.md raíz).
 
+## Paso 6 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
+
+```
+POST {PLATAFORMA_URL}/api/internal/latido
+Authorization: Bearer {ALERTA_TOKEN}
+{ "agente":"fiscal_novedades", "ok":<true|false>, "detalle":"<parte>" }
+```
+`ok = true` **si consultaste las fuentes oficiales (AEAT/BOE/BOJA) y comparaste con `IMPORTES_POR_ANIO`**,
+y además pasaste el radar de ayudas (Paso 5) — con o sin cambios: «sin cambios; revisado a fecha X» es
+`ok:true`. `ok = false` si no llegaste a contrastar (fuentes inaccesibles, proxy, sesión cortada).
+El `detalle` es el parte corto: campos contrastados y cuántos cambiaron (PR draft si lo hubo) · ayudas
+nuevas / re-avisos de cierre / descartadas · perfiles de cliente revisados · dudas sin resolver.
+Si algo revienta a mitad, **manda el latido con `ok:false` antes de rendirte**: un agente sin huella
+se lee como «no se dispara» y manda a mirar al sitio equivocado.
+
+⚠️ Sin `ALERTA_TOKEN` en el prompt de la rutina este POST devuelve 401 y el agente sale en rojo en
+`/operador/agentes` con «sin ninguna señal registrada». Eso es correcto: está mudo. No lo tapes.
+
 ## Canal de aviso — protocolo común
 **Preflight AL ARRANCAR** (no al final): `GET {PLATAFORMA_URL}/api/internal/alerta` con
 `Authorization: Bearer {ALERTA_TOKEN}`. `200` → canal vivo; enviar con

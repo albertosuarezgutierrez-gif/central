@@ -86,6 +86,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Prompt** | `Ejecuta la skill facturas-correo` |
 | **MCPs** | Gmail + Drive + Supabase |
 | **Qué hace** | Revisa Gmail, clasifica facturas (personal vs deducible), archiva en Drive y concilia con movimientos bancarios de plataforma. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`facturas_correo`) desde el 02/09/2026 — `ok:true` = pasada completa incluido el barrido 4.0 del backlog, aunque no hubiera facturas nuevas. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 4. Pricing agente (SIVRA) — *activa*
 | | |
@@ -105,6 +106,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Supabase. **GitHub nativo** (abre el PR). WebFetch + WebSearch son herramientas nativas de Claude, no MCPs externos. |
 | **Qué hace** | Contrasta `IMPORTES_POR_ANIO` de `/finanzas` con BOE (estatal) + BOJA (Andalucía). Si una deducción/mínimo cambia: actualiza la constante por PR draft e inserta en `fiscal_novedades` (`beneficia = nuevo > anterior`) → la app avisa en pantalla. Sin cambios → sin PR. |
 | **Verificar** | Si el chat dice "sin cambios; revisado contra BOE a fecha X" → funciona. Si hay cambio → PR draft `claude/fiscal-novedades-<fecha>`. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`fiscal_novedades`) desde el 02/09/2026 — `ok:true` = fuentes consultadas y comparadas con `IMPORTES_POR_ANIO` + radar de ayudas pasado, con o sin cambios. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 6. Guardián PSD2 / Enable Banking — *activa*
 | | |
@@ -114,6 +116,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Supabase |
 | **Qué hace** | Verifica que `movimientos_bancarios` tiene datos frescos (<48h). Si el cron Vercel `psd2-sync` lleva >48h sin importar datos, o hay una caída >50% en volumen mensual, alerta por Telegram y anota en `CONTEXTO-SESIONES.md`. Sin anomalías → sin ruido. |
 | **Verificar** | El chat de la sesión muestra `✅ OK` o `🚨 ANOMALÍA`. Comprobar que la fecha de último movimiento es reciente. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`psd2_health_check`) desde el 02/09/2026 — `ok:true` = la consulta de frescura corrió y dio veredicto, aunque el veredicto sea anomalía (el vigía funcionó; el banco es otra cosa). Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 7. ialimp client health (Sique Brilla) — *activa*
 | | |
@@ -156,6 +159,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Ninguno |
 | **Qué hace** | Lee `docs/ROADMAP-rrhh.md`, filtra ítems 🔴 obligatorios no completados y genera un informe de plazos legales (RD 8/2019 fichaje, RGPD art.28, canal denuncias, etc.). Mantiene visibilidad sobre obligaciones con riesgo de multa. |
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`rrhh_compliance`) desde el 02/09/2026 — `ok:true` = roadmap leído e informe con la lista de 🔴 pendientes generado. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 8-bis. Mercado real por fecha (SIVRA / Booking) — *ACTIVA desde el 08/08/2026*
 > Creada a mano por Alberto («SIVRA mercado booking (diario)») tras dos meses de latido en «sin
@@ -210,6 +214,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para repos externos (el MCP de GitHub va scopeado a `central`) y Bash para `pnpm outdated`/`audit`. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso Telegram (si faltan, se omite). |
 | **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
 | **Resultado** | Actualiza `docs/VIGIA-OSS.md` (versiones vistas + bitácora). Algo que merece ojo → **Telegram**; bump pequeño y seguro → **PR draft** `claude/github-vigia-<fecha>`. Sin novedades → sin ruido. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`github_vigia`) desde el 02/09/2026 — `ok:true` = las tres patas recorridas y `docs/VIGIA-OSS.md` actualizado, aunque no haya novedades. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 11. Buscador de IA (LLMs gratis) — *pendiente de trigger*
 | | |

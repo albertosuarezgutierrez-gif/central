@@ -112,6 +112,39 @@
 
 ---
 
+### 🔌 (02/09/2026, tarde) Cinco vigías sin canal dejan latido y se ven en la pantalla (PR #2086)
+- Ocho rutinas de Claude sin `ALERTA_TOKEN`: Telegram mudo y sin latido, o sea **invisibles**. Alberto decidió no
+  poner el token; se deja el circuito cerrado para que, cuando lo pegue, aparezcan solas. Mientras: **rojo con «sin
+  ninguna señal registrada»**, que es la verdad, no ruido.
+- Se cablean **cinco** (`psd2_health_check` 192 h · `facturas_correo` 30 h · `fiscal_novedades`, `rrhh_compliance`,
+  `github_vigia` 840 h) en los CUATRO sitios: allowlist de `/api/internal/latido`, `AGENTES_VIGILADOS` (27→32), sonda
+  del cron vigía y mapa de `/operador/agentes`, más el paso «Deja huella» en cada `SKILL.md`.
+- **Las otras tres, a propósito NO:** `mercado-booking`/`trading-analista` ya estaban cableadas (solo falta token);
+  `pricing-agente` ya se vigila por datos; `ialimp-client-health` vigila a un cliente que **ya no usa ialimp** — cablear
+  un agente muerto es fabricar un rojo sin sentido.
+- ⚠️ **Mi «salida sin tokens» era falsa**: el endpoint de latido se autentica con el MISMO `ALERTA_TOKEN`. Lo que sí
+  es cierto y cambia el coste: es **UN valor**, pegado ocho veces, no ocho secretos.
+- Corregido un verde prestado: `facturas-correo` (rutina 11:00) apuntaba al latido del **cron** `facturas_gmail` (06:15).
+- 🪤 **Lección de guardián:** un `(dd/mm)` dentro de un bullet de cuerpo rompe `rotar-memoria` y dos tests. Las fechas
+  del cuerpo van SIN paréntesis.
+
+### 🔗 (02/09/2026, tarde) Un SOLO hub financiero: `/finanzas` entra en `/banca` (PR #2083 mergeado)
+- **Alberto lo dijo horas antes («hay mucha duplicidad») y esta sesión lo convirtió en un dilema de arquitectura
+  en vez de medirlo.** Medido: la pestaña «Categorías» de `/finanzas` montaba `finanzas/CategoriasTab.tsx`, **el
+  mismo fichero** que el segmento Personal de `/banca` — la misma pantalla en dos URLs, con enlaces de ida y vuelta.
+- ⚠️ **Y corrige una segunda afirmación propia hecha sin mirar** («la única diferencia es una pestaña»): el resto de
+  `/finanzas` NO era duplicado — traía sus banners de salud de extracción, ayudas con plazo y novedad fiscal, y sus
+  KPIs. Nada de eso existía en `/banca`. No había que ELEGIR entre dos hubs: había que traer uno dentro del otro.
+- `/banca` gana el segmento **«Ingresos»** (monta `FinanzasClient` con prop `embebido`, sin su `<main>` porque ya lo
+  pone `<Pagina>`); `FinanzasClient` pierde su sistema de pestañas; `/finanzas` queda como **redirect** (conserva
+  `?tab=gastos|fiscal` y manda `?tab=categorias` a `/banca?tab=personal`, la que sobrevive).
+- Las hijas (`/finanzas/gastos`, `/fiscal`, `/pilar`, `/tarjeta-credito`) **no se tocan**: solo dejan de colgar de un
+  hub que ya no existe. Repuntados los 3 enlaces a la raíz vieja (sivra/fiscal, PilarClient, paleta de comandos).
+- **Método, que es la lección de la tarde:** dos veces se afirmó algo del diseño sin haberlo medido, y las dos veces
+  era falso. La medición era barata (un `grep` de quién importa `CategoriasTab`).
+- **Sigue pendiente de Alberto:** las 8 rutinas sin `ALERTA_TOKEN` — **decidió dejarlo como está el mismo 02/09**, con la
+  consecuencia declarada: si el sync bancario se rompe, no hay canal que avise. Y las 9 páginas sin contenedor.
+
 ### 🫀 (02/09/2026, tarde) El vigía de agentes tiraba su trabajo, y el panel se descuadraba en móvil (PR #2066 mergeado)
 - **`/operador/agentes` pintaba ⚪ sobre 23 de 29 agentes… y el dato SÍ existía.** El cron `agentes-latido` evalúa 27
   agentes cada mañana con su umbral y su sonda, y **no lo guardaba**: solo iba al JSON de su respuesta y a un Telegram
