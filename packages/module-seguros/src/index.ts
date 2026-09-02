@@ -64,6 +64,8 @@ export {
   planBusqueda,
   avisoDireccion,
   explicarVacio,
+  normalizarDireccion,
+  direccionCoincide,
   type Criterio,
   type TipoCriterio,
   type PlanBusqueda,

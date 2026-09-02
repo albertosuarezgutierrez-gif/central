@@ -312,7 +312,11 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
 - ✅ **Catastro para HOGAR, HECHO el 02/09/2026 (en plataforma, `/correduria/hogar`):** con la dirección
   o la referencia catastral salen m², año, uso y CP del Catastro (`@central/core-catastro`, paquete
   extraído de subastas). Verificado con el 2º-14 de San Vicente 40: 76 m²/1994, lo mismo que la póliza
-  del CRM. Lo que sigue pendiente aquí es **cotizar hogar en Codeoscopic**: `GET /insurance-lines` (gratis).
+  del CRM. ✅ **`GET /insurance-lines` HECHO** (`lineasDeSeguro()` + `hogarDisponible()` en
+  `lib/codeoscopic/catalogos.ts`, puerto `/api/operador/codeoscopic/lineas`, gratis, con el interruptor
+  apagado; `/correduria/hogar` en plataforma lo pinta con tres estados). Lo que queda es la **petición de
+  hogar** (`peticion-hogar.ts`, el equivalente de `peticion-auto.ts`) — y eso ya cuesta 0,50€ por prueba,
+  así que espera a saber el id del ramo y al OK de Alberto.
 - **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
@@ -341,6 +345,14 @@ sistema (las cuatro tablas a 0, `polizas.documento_url` 0%, `storage.objects` va
 
 Y falta el estado **«pedido pero no recibido»**: sin él, «0 documentos» no distingue no habérselo
 pedido de que el cliente no lo mande. Es la regla de `CLAUDE.md` aplicada al archivo.
+
+⏸️ **Decisión del 02/09/2026: los ficheros NO se guardan hasta que cierre el traspaso.** `/cartera/subir`
+lee la póliza y devuelve lo leído + hash, sin persistir. Guardarlos exige una tabla (`cliente_documentos`
+no existe; `poliza_documentos` exige póliza) y un cubo con ciclo de vida para PII, y **el schema `seguros`
+lo está moviendo otra conversación** (volcado del 02/09): crear tablas ahí a la vez, o escribir en la base
+de Manuel (rol SELECT-only), es pisar el traspaso. Cuando la lectura apunte a `seguros`, el diseño es:
+`documentos` colgados de cliente **o** de póliza **o** de siniestro (una tabla, tres FKs opcionales), estado
+`pedido`/`recibido`/`revisado`, fichero en Vercel Blob privado, `visible_por_cliente` para el portal.
 
 ## 🔌 El puerto que sirve la pantalla de plataforma (01/09/2026)
 
@@ -383,8 +395,8 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
 | **DNI** | **índice ciego, EXACTO** | **3.904 = 12%** |
 | teléfono | índice ciego, exacto | 5.377 = 16% |
 | email | índice ciego, exacto | 4.308 = 13% |
-| **dirección (calle)** | 🚫 **CIFRADA (170 de 170 pólizas con `direccion`)** | **0 por SQL** — ver abajo |
-| localidad / CP **del riesgo** | en claro en `datos_especificos` (`localidad`, `cp`) | 179 / 328 pólizas — **todavía NO se busca** (02/09/2026) |
+| **dirección (calle)** | CIFRADA (`v1:`) → **se DESCIFRA EN MEMORIA** y se compara sin acentos/signos | 170 pólizas; sin clave = «ilegibles», y se dice |
+| localidad / CP **del riesgo** | en claro en `datos_especificos` (`localidad`, `cp`), SQL sobre el JSON | 179 / 328 pólizas (**desde el 02/09/2026**) |
 
 🚨 **Las tres búsquedas por índice ciego son la trampa de esta pantalla.** Un «no aparece» por DNI es
 casi siempre «esa ficha no tiene hash calculado», no «ese DNI no está en la cartera» — y si la clave
@@ -392,14 +404,15 @@ del índice se desincronizara, **la búsqueda no daría error: devolvería vací
 silencioso que ya avisa este documento). Por eso cada bloque de resultados viaja con su **cobertura**
 y la UI dice sobre cuántas fichas ha podido mirar. `explicarVacio()` redacta esa frase.
 
-🚫 **La calle no se puede buscar por SQL** (va cifrada `v1:…`) y se declara con `avisoDireccion()`,
-ofreciendo ciudad/CP. Devolver «ningún resultado» sería afirmar que ese cliente no vive en esa calle.
-⚠️ **Corrección del 02/09/2026:** la frase anterior («imposible de ninguna forma») era demasiado
-rotunda. Alberto enseñó el CRM pintando «CL SAN VICENTE, 40» en claro, y la explicación es doble:
-(1) esta app **tiene la clave** (`decryptField`) y son solo 170 pólizas → descifrar en memoria y
-filtrar es viable; (2) `localidad` y `cp` **del riesgo** van en claro al lado, y el buscador solo
-miraba la ciudad/CP **del cliente** — la casa de Rota de un cliente de Sevilla no salía por «rota».
-Ninguna de las dos está hecha aún.
+🛣️ **La calle SÍ se busca desde el 02/09/2026, descifrando en memoria.** Por SQL es imposible (cifrado
+autenticado `v1:…`, sin índice ciego), pero son ~170 pólizas y esta app tiene la clave: `porDireccion()`
+las trae (tope 2.000), las descifra y compara con `direccionCoincide()` (sin acentos, sin signos: «san
+vicente 40» casa con «CL SAN VICENTE, 40 2º-14»). La cobertura del bloque es **legibles / con calle**:
+sin `PII_ENCRYPTION_KEY`, `decryptField` devuelve el cifrado tal cual y eso cuenta como **ilegible** —
+`avisoDireccion(n)` dice cuántas no se han leído en vez de devolver un vacío que diría «nadie vive ahí».
+Y `porRiesgo()` mira `localidad`/`cp` **del bien** (la casa de Rota de un cliente de Sevilla sale por
+«rota» o por `11520`). Historia: hasta ese día se declaraba «imposible» — Alberto enseñó el CRM pintando
+«CL SAN VICENTE, 40» en claro y la frase era falsa.
 
 Un término se busca por **todos** los criterios que encaje: `41003` es a la vez código postal y número
 de póliza plausibles, y no hay forma de saber cuál se quería.

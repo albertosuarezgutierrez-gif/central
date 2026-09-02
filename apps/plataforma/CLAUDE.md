@@ -1419,7 +1419,15 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `no_encontrado` · `direccion_ilegible` · `error`), API `POST /api/correduria/catastro` (sesión).
   Usa `@central/core-catastro` (extraído de subastas; `lib/subastas/enriquecer.ts` lo re-exporta).
   🚨 La referencia de 14 es el EDIFICIO y no trae m² ni año: se pide la de 20 (`precalificarHogar`
-  lo declara). Pedir precio de hogar a Codeoscopic sigue SIN conectar (solo auto).
+  lo declara). Pedir precio de hogar a Codeoscopic sigue SIN conectar (solo auto), pero la página ya
+  dice si **hogar tarifica** para nuestra organización: `lineasCodeoscopic()` → puerto
+  `GET /api/operador/codeoscopic/lineas` (= `GET /insurance-lines` del vendor, **gratis**, corre con
+  el interruptor apagado). Tres estados: `disponible` (con el id EXACTO del ramo, que es lo que va en
+  `insuranceLine`) · `ausente` (hay que pedírselo a Codeoscopic) · `desconocido` (no se pudo mirar).
+- **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
+  del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
+  —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no
+  tiene la clave, el aviso dice cuántas direcciones no ha podido leer; un bloque vacío ahí no es «nadie».
 - **💳 Forma de pago en la ficha (Alberto, 02/09/2026):** columna «Pago» por póliza —periodicidad
   (`fraccionamiento`, CIMA lo trae en 108/109 vivas), forma de cobro del último recibo (CC/OF/TA →
   domiciliado/oficina/tarjeta) y el **recargo por fraccionar**, que CIMA NO da y se deriva de los

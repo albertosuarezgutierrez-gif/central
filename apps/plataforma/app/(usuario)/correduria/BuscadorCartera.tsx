@@ -18,7 +18,8 @@ import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados, type Hallazgo } f
  * «no aparece» ahí es casi siempre «esa ficha no tiene hash», no «no está en la
  * cartera» — y si la clave se desincronizara, la búsqueda no daría error:
  * devolvería vacío. Por eso cada bloque enseña sobre cuántas fichas ha podido
- * mirar de verdad. La dirección no se puede buscar de ninguna forma.
+ * mirar de verdad. La calle del riesgo va cifrada y asegura la descifra en
+ * memoria para buscar (son ~170); sin clave lo dice, no devuelve vacío.
  */
 const ETIQUETAS: Record<string, string> = {
   nombre: '👤 Por nombre',
@@ -27,8 +28,10 @@ const ETIQUETAS: Record<string, string> = {
   dni: '🪪 Por DNI',
   telefono: '📞 Por teléfono',
   email: '✉️ Por email',
-  codigo_postal: '📮 Por código postal',
-  ciudad: '📍 Por ciudad',
+  codigo_postal: '📮 Por código postal (del cliente)',
+  ciudad: '📍 Por ciudad (del cliente)',
+  riesgo: '🏠 Por localidad o CP del riesgo',
+  direccion: '🛣️ Por calle del riesgo',
 }
 
 type Estado =
@@ -60,7 +63,7 @@ export default function BuscadorCartera() {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Nombre, matrícula, nº de póliza, DNI, teléfono, email, ciudad o CP"
+          placeholder="Nombre, matrícula, póliza, DNI, teléfono, email, ciudad, CP o calle del riesgo"
           aria-label="Buscar en la cartera"
           autoFocus
           style={{
@@ -89,8 +92,9 @@ function Resultado({ estado, termino }: { estado: Estado; termino: string }) {
   if (estado.fase === 'quieto') {
     return (
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-        Se busca a la vez por todo lo que el término pueda ser. La dirección no: va cifrada en la
-        base y no se puede consultar — usa la ciudad o el código postal.
+        Se busca a la vez por todo lo que el término pueda ser: nombre, matrícula, póliza, DNI,
+        teléfono, email, ciudad/CP del cliente y también localidad, CP o calle del RIESGO (la casa
+        de la playa sale buscando «rota» o «san vicente 40»).
       </div>
     )
   }

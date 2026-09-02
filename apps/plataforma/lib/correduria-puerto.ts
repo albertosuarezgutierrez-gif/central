@@ -324,6 +324,60 @@ export async function buscarAsegura(q: string): Promise<Busqueda> {
   }
 }
 
+// ─── Ramos de Codeoscopic (¿tarifica hogar?) ─────────────────────────────────
+
+export type HogarCodeoscopic =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export type LineasCodeoscopic =
+  | { estado: 'sin_configurar'; mensaje: string | null }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; ramos: string[]; hogar: HogarCodeoscopic }
+
+/**
+ * Puro. `hogar` degrada a `desconocido` ante cualquier forma rara: afirmar
+ * «hogar disponible» o «ausente» sobre un JSON que no se entiende sería lo
+ * mismo que inventarlo.
+ */
+export function interpretarLineas(status: number, json: unknown): LineasCodeoscopic {
+  if (status === 401) return { estado: 'error', motivo: 'secreto' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje: cadena(o.mensaje) }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: cadena(o.mensaje) ?? `HTTP ${status}` }
+  const ramos = Array.isArray(o.lineas)
+    ? o.lineas.map((l) => cadena((l as Record<string, unknown>)?.nombre)).filter((x): x is string => x !== null)
+    : []
+  return { estado: 'ok', ramos, hogar: leerHogar(o.hogar) }
+}
+
+function leerHogar(v: unknown): HogarCodeoscopic {
+  if (typeof v !== 'object' || v === null) return { estado: 'desconocido' }
+  const h = v as Record<string, unknown>
+  if (h.estado === 'disponible') {
+    const id = cadena(h.id)
+    if (id === null) return { estado: 'desconocido' }
+    return { estado: 'disponible', id, nombre: cadena(h.nombre) ?? id }
+  }
+  if (h.estado === 'ausente') {
+    const ramos = Array.isArray(h.ramos) ? h.ramos.map(cadena).filter((x): x is string => x !== null) : []
+    return { estado: 'ausente', ramos }
+  }
+  return { estado: 'desconocido' }
+}
+
+export async function lineasCodeoscopic(): Promise<LineasCodeoscopic> {
+  try {
+    const r = await pedir('/api/operador/codeoscopic/lineas')
+    if (r === null) return { estado: 'sin_configurar', mensaje: null }
+    return interpretarLineas(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 export async function impagadosAsegura(): Promise<Impagados> {
   try {
     const r = await pedir('/api/operador/impagados')

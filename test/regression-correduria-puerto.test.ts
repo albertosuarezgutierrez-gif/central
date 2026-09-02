@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   interpretarBusqueda,
   interpretarImpagados,
+  interpretarLineas,
 } from '../apps/plataforma/lib/correduria-puerto.ts'
 
 // ── Buscador ────────────────────────────────────────────────────────────────
@@ -154,4 +155,37 @@ test('el fallo de la cola propaga su motivo', () => {
   assert.deepEqual(interpretarImpagados(403, null), { estado: 'error', motivo: 'secreto_rechazado' })
   assert.deepEqual(interpretarImpagados(200, { estado: 'error' }), { estado: 'error', motivo: 'asegura_error' })
   assert.deepEqual(interpretarImpagados(200, { estado: 'ok' }), { estado: 'error', motivo: 'respuesta_ilegible' })
+})
+
+// ── Ramos de Codeoscopic (¿tarifica hogar?) ─────────────────────────────────
+
+test('hogar disponible llega con el id exacto del vendor', () => {
+  const r = interpretarLineas(200, {
+    estado: 'ok',
+    lineas: [{ id: 'Car', nombre: 'Auto' }, { id: 'Home', nombre: 'Hogar' }],
+    hogar: { estado: 'disponible', id: 'Home', nombre: 'Hogar' },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.ramos, ['Auto', 'Hogar'])
+  assert.deepEqual(r.hogar, { estado: 'disponible', id: 'Home', nombre: 'Hogar' })
+})
+
+test('🚨 un hogar «disponible» sin id NO se cree: pasa a desconocido', () => {
+  const r = interpretarLineas(200, { estado: 'ok', lineas: [], hogar: { estado: 'disponible' } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.hogar, { estado: 'desconocido' })
+})
+
+test('sin configurar, secreto rechazado y error no se confunden entre sí', () => {
+  assert.deepEqual(interpretarLineas(200, { estado: 'sin_configurar', mensaje: 'faltan X' }), {
+    estado: 'sin_configurar',
+    mensaje: 'faltan X',
+  })
+  assert.deepEqual(interpretarLineas(401, null), { estado: 'error', motivo: 'secreto' })
+  assert.deepEqual(interpretarLineas(502, { estado: 'error', mensaje: 'host caído' }), {
+    estado: 'error',
+    motivo: 'host caído',
+  })
 })

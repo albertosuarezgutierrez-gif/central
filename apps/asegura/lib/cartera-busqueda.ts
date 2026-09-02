@@ -6,12 +6,13 @@
 //   nombre/apellidos  EN CLARO   32.600 / 32.600  → parcial, fiable
 //   matrícula         EN CLARO    4.504 pólizas   → parcial
 //   nº de póliza      EN CLARO    6.895 pólizas   → parcial
-//   ciudad            EN CLARO    4.482 fichas    → parcial
-//   código postal     EN CLARO   16.398 fichas    → parcial
+//   ciudad            EN CLARO    4.482 fichas    → parcial (la del CLIENTE)
+//   código postal     EN CLARO   16.398 fichas    → parcial (el del CLIENTE)
+//   riesgo (loc/CP)   EN CLARO   179 / 328 pólizas → parcial, en `datos_especificos`
 //   DNI               CIFRADO     3.904 fichas    → EXACTO por índice ciego
 //   teléfono          CIFRADO     5.377 fichas    → EXACTO por índice ciego
 //   email             CIFRADO     4.308 fichas    → EXACTO por índice ciego
-//   dirección         CIFRADA     0 buscables     → 🚫 IMPOSIBLE
+//   dirección (calle) CIFRADA     170 pólizas     → se DESCIFRA EN MEMORIA y se filtra
 //
 // 🚨 Las tres búsquedas por índice ciego son la trampa de esta pantalla. Solo
 // el 12% de las fichas tiene calculado el hash del DNI, así que un «no aparece»
@@ -20,12 +21,21 @@
 // devolvería vacío. Por eso cada bloque de resultados viaja con su COBERTURA y
 // la pantalla dice sobre cuántas fichas ha podido mirar de verdad.
 //
-// La dirección NO tiene arreglo por SQL: va cifrada entera. Se declara y se
-// ofrece ciudad/CP, que es lo más cercano que sí funciona.
+// La calle NO tiene arreglo por SQL: va cifrada entera (`v1:`). Pero son ~170
+// pólizas y esta app tiene la clave, así que se traen, se descifran en memoria
+// y se comparan normalizadas. Si la clave falta, `decryptField` devuelve el
+// cifrado tal cual: eso se cuenta como «ilegible» y se DICE — un vacío ahí no
+// es «nadie vive en esa calle». (Corrección del 02/09/2026: el CRM de Manuel
+// pinta «CL SAN VICENTE, 40» en claro; declararlo «imposible» era falso.)
+//
+// Y el segundo hueco que destapó el mismo caso: `localidad`/`cp` del RIESGO van
+// en claro en `datos_especificos`, y el buscador solo miraba la ciudad/CP del
+// cliente. La casa de Rota de un cliente de Sevilla no salía por «rota».
 
 import {
   avisoDireccion,
   avisoHermanas,
+  direccionCoincide,
   explicarVacio,
   planBusqueda,
   vitalidadFicha,
@@ -36,7 +46,12 @@ import {
   type TipoCriterio,
   type Vitalidad,
 } from '@central/module-seguros'
-import { computeDniLookupHash, computeEmailLookupHash, computeTelefonoLookupHash } from '@central/module-seguros-pii'
+import {
+  computeDniLookupHash,
+  computeEmailLookupHash,
+  computeTelefonoLookupHash,
+  decryptField,
+} from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 /** Un resultado: siempre lleva a la ficha de un cliente. */
@@ -114,10 +129,13 @@ export async function buscarEnCartera(
   )
   const conAlgo = bloques.filter((b) => b !== null) as BloqueResultados[]
 
-  // Si nada ha salido y el término parece una calle, se dice por qué.
+  // La calle se ha intentado descifrar: si había direcciones y NINGUNA se pudo
+  // leer, se avisa. Un bloque vacío ahí no es «nadie vive en esa calle».
   const avisos = [...plan.avisos]
-  const nadaEncontrado = conAlgo.every((b) => b.hallazgos.length === 0)
-  if (nadaEncontrado && pareceDireccion(plan.termino)) avisos.push(avisoDireccion())
+  const calle = conAlgo.find((b) => b.tipo === 'direccion')
+  if (calle?.cobertura && calle.cobertura.total > 0 && calle.cobertura.alcanzables === 0) {
+    avisos.push(avisoDireccion(calle.cobertura.total))
+  }
 
   await enriquecer(correduriaId, conAlgo)
 
@@ -125,14 +143,6 @@ export async function buscarEnCartera(
   for (const b of conAlgo) for (const h of b.hallazgos) ids.add(h.clienteId)
 
   return { ...vacio, bloques: conAlgo, avisos, distintos: ids.size }
-}
-
-/**
- * Un término con sigla de vía o número de portal es casi seguro una dirección.
- * No se usa para BUSCAR (no se puede), sino para explicar el vacío bien.
- */
-function pareceDireccion(t: string): boolean {
-  return /\b(calle|c\/|avda?|avenida|plaza|pza|paseo|camino|carretera|ctra|urb|urbanizaci)/i.test(t)
 }
 
 async function ejecutar(correduriaId: string, c: Criterio): Promise<BloqueResultados | null> {
@@ -143,6 +153,10 @@ async function ejecutar(correduriaId: string, c: Criterio): Promise<BloqueResult
       return porCiudad(correduriaId, c)
     case 'codigo_postal':
       return porCodigoPostal(correduriaId, c)
+    case 'riesgo':
+      return porRiesgo(correduriaId, c)
+    case 'direccion':
+      return porDireccion(correduriaId, c)
     case 'matricula':
       return porMatricula(correduriaId, c)
     case 'poliza':
@@ -326,6 +340,151 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
     aviso: null,
   }))
   return bloque(c, hallazgos, await coberturaMatricula(correduriaId))
+}
+
+/**
+ * Localidad o CP del RIESGO: viven en claro en `datos_especificos` de la
+ * póliza (`localidad`, `cp`), no en la ficha del cliente. Es lo que hace que
+ * la casa de la playa salga buscando el pueblo, aunque el cliente viva en
+ * Sevilla. Un CP de 5 dígitos se compara exacto; un texto, por fragmento.
+ */
+async function porRiesgo(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
+  const db = prismaAsegura()
+  const esCp = /^\d{5}$/.test(c.valor)
+  const filas = await db.$queryRaw<
+    { id: string; nombre: string; apellidos: string; tipo: string; donde: string; numero: string | null }[]
+  >`
+    select distinct on (cl.id)
+      cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
+      concat_ws(' ', p.datos_especificos->>'localidad', p.datos_especificos->>'cp') as donde,
+      p.numero_poliza as numero
+    from polizas p
+    join clientes cl on cl.id = p.cliente_id
+    where p.correduria_id = ${correduriaId}::uuid
+      and p.merged_into_poliza_id is null
+      and cl.merged_into_cliente_id is null
+      and (
+        ${esCp} and p.datos_especificos->>'cp' = ${c.valor}
+        or (not ${esCp}) and unaccent(p.datos_especificos->>'localidad') ilike unaccent(${'%' + c.valor + '%'})
+      )
+    limit ${LIMITE}
+  `.catch(async () => {
+    // `unaccent` puede no estar instalada en el origen: se reintenta sin ella
+    // antes que devolver vacío. Vacío aquí diría «nadie asegura nada ahí».
+    return db.$queryRaw<
+      { id: string; nombre: string; apellidos: string; tipo: string; donde: string; numero: string | null }[]
+    >`
+      select distinct on (cl.id)
+        cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
+        concat_ws(' ', p.datos_especificos->>'localidad', p.datos_especificos->>'cp') as donde,
+        p.numero_poliza as numero
+      from polizas p
+      join clientes cl on cl.id = p.cliente_id
+      where p.correduria_id = ${correduriaId}::uuid
+        and p.merged_into_poliza_id is null
+        and cl.merged_into_cliente_id is null
+        and (
+          ${esCp} and p.datos_especificos->>'cp' = ${c.valor}
+          or (not ${esCp}) and p.datos_especificos->>'localidad' ilike ${'%' + c.valor + '%'}
+        )
+      limit ${LIMITE}
+    `
+  })
+  const conteos = await polizasDe(filas.map((f) => f.id))
+  const hallazgos: Hallazgo[] = filas.map((f) => ({
+    ...aHallazgo({ ...f, _count: { polizas: conteos.get(f.id) ?? 0 } }, ''),
+    porque: `riesgo en ${f.donde.trim()}${f.numero ? ` · póliza ${f.numero}` : ''}`,
+  }))
+  return bloque(c, hallazgos, await coberturaRiesgo(correduriaId, esCp ? 'cp' : 'localidad'))
+}
+
+async function coberturaRiesgo(
+  correduriaId: string,
+  campo: 'cp' | 'localidad',
+): Promise<{ alcanzables: number; total: number } | null> {
+  try {
+    const db = prismaAsegura()
+    const filas = await db.$queryRaw<{ con: bigint; total: bigint }[]>`
+      select
+        count(*) filter (where nullif(btrim(datos_especificos->>${campo}), '') is not null)::bigint as con,
+        count(*)::bigint as total
+      from polizas
+      where correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null
+    `
+    const f = filas[0]
+    return f ? { alcanzables: Number(f.con), total: Number(f.total) } : null
+  } catch {
+    return null
+  }
+}
+
+/** Tope de direcciones que se traen para descifrar. Hoy son 170; el tope es por si crece. */
+const MAX_DIRECCIONES = 2000
+
+/**
+ * La calle del riesgo, DESCIFRADA EN MEMORIA. Por SQL es imposible (cifrado
+ * autenticado, sin índice ciego), pero son ~170 pólizas y la app tiene la
+ * clave: se traen todas, se descifran y se comparan sin acentos ni signos.
+ *
+ * La cobertura del bloque es «cuántas se han podido leer de cuántas hay»:
+ * sin clave, `decryptField` devuelve el `v1:…` tal cual y eso cuenta como
+ * ilegible, no como «esa póliza no tiene calle».
+ */
+async function porDireccion(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
+  const db = prismaAsegura()
+  const filas = await db.$queryRaw<
+    {
+      id: string
+      nombre: string
+      apellidos: string
+      tipo: string
+      direccion: string
+      localidad: string | null
+      numero: string | null
+    }[]
+  >`
+    select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
+           p.datos_especificos->>'direccion' as direccion,
+           p.datos_especificos->>'localidad' as localidad,
+           p.numero_poliza as numero
+    from polizas p
+    join clientes cl on cl.id = p.cliente_id
+    where p.correduria_id = ${correduriaId}::uuid
+      and p.merged_into_poliza_id is null
+      and cl.merged_into_cliente_id is null
+      and nullif(btrim(p.datos_especificos->>'direccion'), '') is not null
+    limit ${MAX_DIRECCIONES}
+  `
+  let legibles = 0
+  const vistos = new Set<string>()
+  const encontrados: { f: (typeof filas)[number]; claro: string }[] = []
+  for (const f of filas) {
+    const claro = descifrarCalle(f.direccion)
+    if (claro === null) continue
+    legibles++
+    if (vistos.has(f.id) || !direccionCoincide(claro, c.valor)) continue
+    vistos.add(f.id)
+    encontrados.push({ f, claro })
+    if (encontrados.length >= LIMITE) break
+  }
+  const conteos = await polizasDe(encontrados.map((e) => e.f.id))
+  const hallazgos: Hallazgo[] = encontrados.map(({ f, claro }) => ({
+    ...aHallazgo({ ...f, _count: { polizas: conteos.get(f.id) ?? 0 } }, ''),
+    porque: `riesgo en ${claro}${f.localidad ? `, ${f.localidad}` : ''}${f.numero ? ` · póliza ${f.numero}` : ''}`,
+  }))
+  return bloque(c, hallazgos, { alcanzables: legibles, total: filas.length })
+}
+
+/** `null` = no se ha podido leer (sin clave, o cifrado corrupto). Nunca se inventa. */
+function descifrarCalle(v: string): string | null {
+  if (!v.startsWith('v1:')) return v
+  try {
+    const claro = decryptField(v)
+    // Sin clave, `decryptField` devuelve el cifrado tal cual: eso NO es legible.
+    return claro.startsWith('v1:') ? null : claro
+  } catch {
+    return null
+  }
 }
 
 async function porNumeroPoliza(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
