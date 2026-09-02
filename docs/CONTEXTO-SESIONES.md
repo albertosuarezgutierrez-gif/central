@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏠🏍️ «Haz todo» + el catálogo de Avant2 (02/09/2026, noche).** Mergeado #2130 (horquilla enchufada
+  + capital de hogar por corroboración). Alberto pasó el catálogo de Integra: cruzado con las 109 vivas
+  (tres compañías) sale que **RC no es un ramo de Codeoscopic** —8 activas sin camino automático— y que
+  **moto sí existe** y no la tarificamos; ⚠️ es catálogo comercial, no configuración (Fidelidade, viva
+  para nosotros, ni sale). Probando la ficha contra pólizas REALES de hogar aparecieron dos fallos:
+  «responsabilidad civil del **inmueble**» se colaba como capital del continente (353.665,88€ plausible
+  y falso; en EIAC `RC` es otro `claves_bien`), y `GET /car/brands` traía las marcas recortadas porque
+  `onlyPopular` es `true` por defecto. Los dos con cepo mordido. Segunda pasada al snapshot del portal:
+  contrato de moto, 131 operaciones, y la caducidad de un precio **solo aparece tras el re-rate** (que
+  explica los 15 `expires_at` a NULL). PR #2133. `portal.api-int.codeoscopic.io` está **bloqueado por
+  la política de red** del entorno: se lee del snapshot del 01/09.
+
 - **💾📐🗺️ Etapa 2 de tarificación + el mapa de campos (02/09/2026, tarde-noche).** Cada cotización
   cuesta 0,50€ y no es idempotente, así que ahora se GUARDA lo que se recibe (`seguros.cotizaciones` +
   `cotizacion_precios`, invariante `simulado = (intento_id is null)` en la BD) y `estimar()`/`mereceLaPena()`
