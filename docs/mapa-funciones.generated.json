@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T17:47:40Z",
-  "sha": "6d999a1952f6e792b20480c9529db27f5f82b574",
+  "generadoEn": "2026-09-02T19:18:59Z",
+  "sha": "305e79e6455983409ba7c3f84e440574673677d1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5414,12 +5414,39 @@
       ],
       "funciones": [
         {
+          "nombre": "hoyEnMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 151,
+          "resumen": "Hoy en Madrid, `YYYY-MM-DD`: la horquilla pesa la antigüedad de cada caso."
+        },
+        {
+          "nombre": "estimacionIlegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "EstimacionFicha",
+          "linea": 163,
+          "resumen": "Qué se enseña cuando NO se han podido leer los casos. Los ceros de `fuente` aquí no dicen «no hay»: dicen «no se ha podido contar», y por eso van SIEMPRE acompañados de la etiqueta, que es lo que la p"
+        },
+        {
+          "nombre": "estimacionPoliza",
+          "kind": "function",
+          "exportada": false,
+          "params": "input: { correduriaId: string ramo: string /** La que se estima: queda fuera de sus propios casos, no se compara consigo misma. */ polizaId: string primaActual: number | null riesgo: RiesgoAEstimar tx: EjecutorLectura }",
+          "retorno": "Promise<EstimacionFicha>",
+          "linea": 187,
+          "resumen": "La estimación de una póliza: reúne los casos, construye la horquilla y dice si merece la pena gastar los 0,50€ de una cotización de verdad. 🚨 Solo LEE la base de datos. No llama a Codeoscopic ni de l"
+        },
+        {
           "nombre": "descifrar",
           "kind": "function",
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 102
+          "linea": 221
         },
         {
           "nombre": "ilegible",
@@ -5427,7 +5454,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 111
+          "linea": 230
         },
         {
           "nombre": "esObjetoPlano",
@@ -5435,7 +5462,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 114
+          "linea": 233
         },
         {
           "nombre": "texto",
@@ -5443,7 +5470,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 117
+          "linea": 236
         },
         {
           "nombre": "fechaIso",
@@ -5451,7 +5478,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 120
+          "linea": 239
         },
         {
           "nombre": "num",
@@ -5459,7 +5486,7 @@
           "exportada": false,
           "params": "d: unknown",
           "retorno": "number | null",
-          "linea": 123
+          "linea": 242
         },
         {
           "nombre": "datosConDireccion",
@@ -5467,7 +5494,7 @@
           "exportada": true,
           "params": "datos: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 130,
+          "linea": 249,
           "resumen": "La dirección del riesgo va cifrada en `datos_especificos`; se descifra si se puede."
         },
         {
@@ -5476,12 +5503,12 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string",
           "retorno": "Promise<FichaPoliza | null>",
-          "linea": 139
+          "linea": 258
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "214b51a108e1"
+      "hash": "7710b42b2abb"
     },
     {
       "ruta": "apps/asegura/lib/cartera-relaciones.ts",
@@ -5745,6 +5772,97 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6f8e4231da53"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/casos.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Los CASOS con los que se estima una prima. Impuro (BD), pero SOLO LECTURA. `horquilla.ts` es puro a propósito: la decisión de gastar 0,50€ tiene que poder probarse sin base de datos. Éste es el módulo que va a buscar con qué alimentarla, y solo mira dos sitios: 1. La CARTERA VIVA (`import_ref IS NUL",
+      "exporta": [
+        "casosDeRamo"
+      ],
+      "funciones": [
+        {
+          "nombre": "casosDeRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ correduriaId, ramo, tx, excluirPolizaId = null }: PeticionCasos",
+          "retorno": "Promise<CasosDeRamo>",
+          "linea": 96,
+          "resumen": "Reúne los casos de un ramo: cartera + cotizaciones reales. Lo que NO hace: filtrar por parecido (eso es de `horquilla.ts`), ni rellenar huecos. Un dato que la ficha no trae viaja como `null` hasta el "
+        },
+        {
+          "nombre": "casosDeCartera",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, ramo: string, tx: EjecutorLectura, excluirPolizaId: string | null,",
+          "retorno": "Promise<Caso[]>",
+          "linea": 118
+        },
+        {
+          "nombre": "esTablaInexistente",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 214,
+          "resumen": "¿Es este error «esa tabla no existe» y NADA más? Se mira el código, no el texto suelto: Prisma envuelve el error crudo en un `P2010` y deja el código de Postgres en `meta.code` y dentro del mensaje («"
+        },
+        {
+          "nombre": "casosDeCotizaciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, ramo: string, tx: EjecutorLectura,",
+          "retorno": "Promise<",
+          "linea": 221
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 288
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 291
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 295
+        },
+        {
+          "nombre": "objetoPlano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 299
+        },
+        {
+          "nombre": "coberturasLeibles",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "",
+          "linea": 304,
+          "resumen": "Las garantías tal como las quiere `capitalesHogar`, vengan como json o como texto."
+        }
+      ],
+      "tablas": [
+        "lateral",
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "1b53dc948d03"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/catalogos.ts",
@@ -52085,7 +52203,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 20,
+          "linea": 21,
           "resumen": "La ficha de UNA póliza (Alberto, 02/09/2026: «no puedo pinchar en la póliza para ir a la pantalla de póliza, ahí especifica más los datos de ese seguro, documentación, siniestros, recibos»). Todo en u"
         },
         {
@@ -52094,7 +52212,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 143,
+          "linea": 154,
           "resumen": "Qué asegura. Si la copia de CIMA no lo trae y la GEMELA del volcado sí (10 de las 109 vivas: la casa de Rota está en la copia de junio), se enseña la gemela y se dice de dónde sale. Sin gemela informa"
         },
         {
@@ -52103,7 +52221,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: Poliza['coberturas'] }",
           "retorno": null,
-          "linea": 175
+          "linea": 186
         },
         {
           "nombre": "fechaCorta",
@@ -52111,7 +52229,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string",
-          "linea": 231
+          "linea": 242
         },
         {
           "nombre": "CapitalCobertura",
@@ -52119,7 +52237,7 @@
           "exportada": false,
           "params": "{ capital, descripcion }: { capital: string | null; descripcion: string | null }",
           "retorno": null,
-          "linea": 237
+          "linea": 248
         },
         {
           "nombre": "Limites",
@@ -52127,7 +52245,7 @@
           "exportada": false,
           "params": "{ detalle }: { detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 249
+          "linea": 260
         },
         {
           "nombre": "Franquicia",
@@ -52135,7 +52253,7 @@
           "exportada": false,
           "params": "{ texto, detalle }: { texto: string | null; detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 264
+          "linea": 275
         },
         {
           "nombre": "Recibos",
@@ -52143,7 +52261,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 282
+          "linea": 293
         },
         {
           "nombre": "Intervinientes",
@@ -52151,7 +52269,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 321
+          "linea": 332
         },
         {
           "nombre": "Dato",
@@ -52159,7 +52277,7 @@
           "exportada": false,
           "params": "{ label, valor, nota, color }: { label: string; valor: string | null; nota?: string; color?: string }",
           "retorno": null,
-          "linea": 342
+          "linea": 353
         },
         {
           "nombre": "NoSePudo",
@@ -52167,7 +52285,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 359
+          "linea": 370
         },
         {
           "nombre": "Tarjeta",
@@ -52175,7 +52293,7 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 383
+          "linea": 394
         },
         {
           "nombre": "fmt",
@@ -52183,12 +52301,55 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 386
+          "linea": 397
+        },
+        {
+          "nombre": "Estimacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ e, retarificar }: { e: Poliza['estimacion']; retarificar: { href: string; rotulo: string } | null }",
+          "retorno": null,
+          "linea": 415,
+          "resumen": "─── ¿Merece la pena pedir precio? ──────────────────────────────────────── Va pegada a la evolución de la prima porque responde a la MISMA pregunta: pedir precio cuesta 0,50€ reales y esto dice si com"
+        },
+        {
+          "nombre": "Estimado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, eur: importe }: { etiqueta: string; eur: number }",
+          "retorno": null,
+          "linea": 490,
+          "resumen": "Un número ESTIMADO: `≈`, tamaño y color propios para no confundirlo con una prima real."
+        },
+        {
+          "nombre": "tonoVeredicto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: NonNullable<Poliza['estimacion']>['veredicto']",
+          "retorno": "React.CSSProperties",
+          "linea": 505
+        },
+        {
+          "nombre": "CapitalesHogar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }",
+          "retorno": null,
+          "linea": 519,
+          "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── Cinco estados y ninguno se colapsa con otro. El que más muerde es `solo_sublimites`: `mayorEur` NO es el continente — pintarl"
+        },
+        {
+          "nombre": "Capital",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, c }: { titulo: string; c: CapitalAsegurado | null }",
+          "retorno": null,
+          "linea": 532
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "13dccf566475"
+      "hash": "77fa11753e0f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Relaciones.tsx",
@@ -76985,6 +77146,8 @@
       "ambito": "apps/plataforma",
       "resumen": "La ficha de UNA póliza, leída por el puerto de central-asegura. Misma disciplina que `ficha-asegura.ts`: interpretación PURA, cuatro estados, y cada bloque con su propio «no se sabe».",
       "exporta": [
+        "leerEstimacion",
+        "leerCapitalesHogar",
         "interpretarPoliza",
         "polizaAsegura"
       ],
@@ -77012,7 +77175,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 113
+          "linea": 121
         },
         {
           "nombre": "numero",
@@ -77020,7 +77183,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 116
+          "linea": 124
         },
         {
           "nombre": "entero",
@@ -77028,7 +77191,59 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 119
+          "linea": 127
+        },
+        {
+          "nombre": "leerHorquilla",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "HorquillaEstimacion | null",
+          "linea": 172,
+          "resumen": "Los tres números o nada: media horquilla es una horquilla inventada."
+        },
+        {
+          "nombre": "leerFuenteEstimacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "FuenteEstimacion | null",
+          "linea": 184
+        },
+        {
+          "nombre": "esVeredictoEstimacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is VeredictoEstimacion",
+          "linea": 193
+        },
+        {
+          "nombre": "leerEstimacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "EstimacionPrima | null",
+          "linea": 202,
+          "resumen": "Copia defensiva de la estimación. Sin `etiqueta` legible NO se devuelve nada: esa frase es lo único que impide que la horquilla se lea como una oferta, así que sin ella no se pinta el bloque (y nunca "
+        },
+        {
+          "nombre": "leerCapitalAsegurado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "CapitalAsegurado | null",
+          "linea": 226,
+          "resumen": "Un estado de `CapitalAsegurado` solo se acepta con TODOS sus campos; si no, `null` («no se pudo leer»)."
+        },
+        {
+          "nombre": "leerCapitalesHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "CapitalesHogarFicha | null",
+          "linea": 254,
+          "resumen": "`null` = asegura no manda los capitales (versión vieja) o llegan ilegibles los DOS lados."
         },
         {
           "nombre": "interpretarPoliza",
@@ -77036,7 +77251,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaPoliza",
-          "linea": 123
+          "linea": 263
         },
         {
           "nombre": "urlAsegura",
@@ -77044,7 +77259,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 220
+          "linea": 362
         },
         {
           "nombre": "polizaAsegura",
@@ -77052,12 +77267,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<RespuestaPoliza>",
-          "linea": 224
+          "linea": 366
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1c41071dc580"
+      "hash": "d079105c1174"
     },
     {
       "ruta": "apps/plataforma/lib/pricing-calendar.ts",
@@ -106025,6 +106240,58 @@
       "hash": "ebd240509f6a"
     },
     {
+      "ruta": "packages/module-seguros/src/garantias.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "De las garantías de una póliza de hogar al CAPITAL ASEGURADO. PURO. 🚨 ESTO ES UNA MULETA, NO EL DISEÑO BUENO — y conviene saberlo antes de leer una línea más. El estándar EIAC **SÍ manda el capital etiquetado**: §13.99 `tipo_capital` es una lista de `Capital`, y cada uno lleva CUATRO campos, tres d",
+      "exporta": [
+        "ladoDeGarantia",
+        "capitalAsegurado",
+        "capitalesHogar",
+        "eurDeCapital"
+      ],
+      "funciones": [
+        {
+          "nombre": "ladoDeGarantia",
+          "kind": "function",
+          "exportada": true,
+          "params": "descripcion: string | null | undefined",
+          "retorno": "LadoRiesgo | null",
+          "linea": 96,
+          "resumen": "¿Este nombre de garantía cubre la vivienda o el mobiliario? Solo mira el vocabulario MEDIDO en la cartera. Lo que no encaje devuelve `null` y queda fuera del recuento: una garantía sin clasificar no e"
+        },
+        {
+          "nombre": "capitalAsegurado",
+          "kind": "function",
+          "exportada": true,
+          "params": "coberturas: readonly CoberturaLeible[], lado: LadoRiesgo,",
+          "retorno": "CapitalAsegurado",
+          "linea": 114,
+          "resumen": "El capital asegurado de un lado, por corroboración entre garantías. Nunca devuelve un número sin decir en cuántas garantías se apoya: es lo que separa «912.322€ porque lo dicen seis» de «912.322€ porq"
+        },
+        {
+          "nombre": "capitalesHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "coberturas: readonly CoberturaLeible[]",
+          "retorno": "CapitalesHogar",
+          "linea": 178,
+          "resumen": "Los dos capitales que pide el tarificador de hogar, cada uno con su porqué."
+        },
+        {
+          "nombre": "eurDeCapital",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CapitalAsegurado",
+          "retorno": "number | null",
+          "linea": 186,
+          "resumen": "El euro si lo hay, `null` si no. Para quien solo quiera el número y ya sepa que puede faltar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ca17a14b8504"
+    },
+    {
       "ruta": "packages/module-seguros/src/importe-eiac.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Los importes de los EIAC llegan como TEXTO, no como numeric: así los guarda `poliza_recibos` (prima_total, prima_neta, comision_bruta, comision_liquida) y así los guarda `cuenta_efectivo`. Alguien tiene que convertirlos, y ese alguien es el sitio donde más barato sale mentir. ─── Por qué no vale `Nu",
@@ -111854,7 +112121,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2848,
-    "funciones": 8290
+    "archivos": 2850,
+    "funciones": 8317
   }
 }
