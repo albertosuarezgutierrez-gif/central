@@ -85,6 +85,44 @@
 - Regla nueva en el CLAUDE.md raíz: **todo lo mecánico va a un subagente**, repartido POR ARCHIVOS.
 - **Pendiente:** migrar los ~4.900 inline styles restantes (semanas, por goteo). CI 19/19 verde.
 
+### 🔑 (02/09/2026) `GH_PAT_TRIGGER`: rotado (caduca 01/12/2026, sin `Workflows`); clásico borrado; B pendiente en Vercel
+- La entrada 🔴 del 01/09 («renovar el PAT») **ya está resuelta**: el 401 duró del 31/08 13:25 al 01/09 ~08:50 UTC;
+  desde el PR #1933 (08:53) la radiografía vuelve a abrirse y a mergearla el bot (38 PRs hasta hoy, #2008 incluido).
+  Las 123 ramas huérfanas quedaron barridas (1 viva). Nadie anotó la renovación: se dedujo de los PRs.
+- **Lo que un agente NO puede ver:** tipo de token (clásico con `repo` = TODOS los repos de Alberto; fine-grained =
+  solo `central`), permisos y fecha de caducidad. Lo usa en 4 workflows (`auditoria.yml`, `rutinas-automerge.yml`,
+  `ai-programar.yml`, `latido-reparar.yml`) y necesita solo **Contents + Pull requests: write** sobre `central`.
+- **Medido por Chrome (02/09, solo lectura):** es fine-grained, solo `central`, pero **SIN caducidad** y con
+  **Workflows: read/write** además de Contents + Pull requests. El secret se actualizó el 01/09 10:52 CEST. Ese
+  permiso extra es el que convierte una fuga en «leo todos los secrets»: con él se puede empujar a una rama un
+  workflow que vuelque `${{ secrets.* }}` y abrir el PR (mismo repo = con secrets). Lo que lo justificaría es el
+  camino 6b de `rutinas-automerge.yml` (merge de `main` en la rama del PR: si `main` tocó un workflow desde que
+  nació la rama, el push lo necesita) — no hay ningún rechazo por ese motivo en la memoria.
+- **Segundo token vivo** `central-ai-programar-trigger-2` (29/07, sin caducidad, Contents + PRs, usado esta
+  semana): NO es el del secret. [Probable] es el `GITHUB_TOKEN` de Vercel (sivra/plataforma, agente SEO de los
+  lunes, `seo-landing.ts`) o el `GH_PAT` de ia-rest (`blog-seo`, `agente-arquitecto`): los tres escriben en
+  `central` por Contents API con justo esos permisos. **No borrar sin comprobar en Vercel** qué env lo lleva.
+- Un clásico «Claude Full Access Token» (21 scopes, sin caducidad, «Never used») está para borrar.
+- 🔴 **El camino 6b de `rutinas-automerge.yml` NO empuja con el PAT aunque lo lleve en la URL (medido 02/09 06:39 UTC
+  en este mismo PR):** el bot resolvió el conflicto y empujó el merge, pero `tests.yml` salió con `actor:
+  github-actions[bot]` y `conclusion: action_required` (a la espera de aprobación manual), así que los 12
+  requeridos no corren y el PR se queda en BLOCKED. Causa [Probable]: `actions/checkout@v4` deja
+  `http.https://github.com/.extraheader` con el `GITHUB_TOKEN` y pisa al PAT de la URL — el mismo fallo que
+  explicaba el «git push sí cuela» del 01/09 en `auditoria.yml`. Arreglo: `persist-credentials: false` en el
+  checkout (o borrar el extraheader antes del push). Es workflow → carril 2, PR aparte. Hasta entonces, un PR de
+  registro que entre en conflicto necesita un push humano después del merge del bot.
+- **Rotado por Alberto (Chrome, 02/09 09:03 CEST):** token nuevo fine-grained `GH_PAT_TRIGGER (central) 2026-12-01`,
+  solo `central`, Metadata R + Contents R/W + Pull requests R/W, **sin `Workflows`, caduca el 01/12/2026** (la
+  primera generación salió sin caducidad y se regeneró). Secret actualizado 09:03. Clásico «Claude Full Access
+  Token» **borrado**. El token viejo A (`… - sep 2026`) sigue vivo A PROPÓSITO hasta ver «Last used» en el nuevo;
+  [Probable] ya lo usó: la radiografía #2017 se abrió a las 07:14 UTC, 11 min después del cambio de secret.
+  Quedan sin caducidad: `central-ai-programar-trigger-2` (= B), `seo-housesevillana-panel` y `token` (nunca
+  usados) y los clásicos `house-sevillana-deploy` / `roi-intranet deploy token`. **Pendientes:** borrar A mañana,
+  inventariar B en Vercel (prompt dado) y rotarlo, guardián Telegram del 401 + `persist-credentials: false` (PR aparte).
+- 🚨 **Método: el bot lee la lista de archivos del OBJETO PR, y GitHub la deja atrasada.** Tras el merge 6b del bot,
+  el PR seguía con `base.sha` = el `main` de la madrugada y **98 archivos** (el diff real `origin/main...HEAD` era 1);
+  el bot lo rechazó como «no registro». Se desatasca como el lag de #1962: push con contenido real y esperar.
+
 ### 🔍 (02/09/2026) Rutinas de auditoría: cobertura exhaustiva tras la correduría
 - Alberto pidió revisar la diaria y la semanal («hemos metido más cosas como correduría»). Medido: las dos decían
   **«8 apps»** desde junio (y `AGENTES-MAPA` «4») con **12** en `apps/`; ni una línea sobre la correduría; el
