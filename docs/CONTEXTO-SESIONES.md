@@ -37,8 +37,9 @@
   provincia/notas; identidad SOLO con `documentoId` de un DNI recibido → 422 `documento_requerido`) y `POST
   /cliente` (alta `lead`, 409 con las fichas que ya tienen ese DNI/tel/email; DNI nunca se fuerza). Reglas
   puras en `module-seguros/cliente-edicion.ts` (10 tests); pantalla `EditarCliente.tsx` + `/cliente/nuevo`.
-  Historial en `historial_interno` sin PII. ⚠️ Sin probar contra producción (aquí no hay clave PII): la
-  primera edición real la hace Alberto tras el deploy. CIMA NO cambia `tipo` de una ficha `lead` al engancharle
+  Historial en `historial_interno` sin PII. **PR #2093 mergeado.** ⚠️ Sin prueba real todavía: el proxy del
+  contenedor bloquea `central-asegura.vercel.app` (CONNECT 403) y plataforma redirige sin sesión, así que la
+  primera edición/alta la hace Alberto y se comprueba después en `seguros.historial_interno` (0 filas hoy). CIMA NO cambia `tipo` de una ficha `lead` al engancharle
   póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
 
 ---
