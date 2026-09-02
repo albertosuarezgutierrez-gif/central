@@ -574,3 +574,31 @@ test('🚨 la ruta que gasta pasa `contexto` a cotizar: sin él se paga y no se 
   assert.match(cuerpo, /puerta:\s*'corredor'/, 'esta ruta es la del corredor: su tope es el de la casa')
   assert.match(cuerpo, /polizaId/, 'sin la póliza, la cotización guardada no se puede reenseñar en su ficha')
 })
+
+// ─── El otro fallo que ya ocurrió: importar exigía una base de datos ─────────
+//
+// Este guardián IMPORTA `cotizaciones.ts` y `cotizar.ts` para probarlos de
+// verdad con un doble de la transacción. La cadena de imports llega a
+// `lib/db.ts`, y mientras ese módulo construía el cliente al cargarse, bastaba
+// con importar cualquier pieza de `lib/` para que el proceso muriera donde no
+// hubiera un cliente generado. En local pasaba —los typechecks lo generan
+// antes— y en CI no: el job `Tests (packages + guardián)` no corre
+// `prisma generate`, así que este fichero entero se caía con un error que no
+// hablaba de cotizaciones y costaba media tarde encontrar.
+test('🚨 `lib/db.ts` construye el cliente al USARLO, no al importarlo', () => {
+  const src = FUENTE('apps/asegura/lib/db.ts')
+  const nivelSuperior = src
+    .split('\n')
+    .filter((l) => /^(export )?const .*=|^export const prisma/.test(l))
+    .join('\n')
+  assert.doesNotMatch(
+    nivelSuperior,
+    /new PrismaClient\(\)/,
+    'volver a construir el cliente en el cuerpo del módulo tumba este guardián entero en CI',
+  )
+  assert.match(
+    src,
+    /function cliente\(\)/,
+    'la construcción diferida vive en `cliente()`: si desaparece, algo ha vuelto a hacerse en la carga',
+  )
+})
