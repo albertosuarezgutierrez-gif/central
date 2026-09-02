@@ -68,6 +68,14 @@
   lunes, `seo-landing.ts`) o el `GH_PAT` de ia-rest (`blog-seo`, `agente-arquitecto`): los tres escriben en
   `central` por Contents API con justo esos permisos. **No borrar sin comprobar en Vercel** qué env lo lleva.
 - Un clásico «Claude Full Access Token» (21 scopes, sin caducidad, «Never used») está para borrar.
+- 🔴 **El camino 6b de `rutinas-automerge.yml` NO empuja con el PAT aunque lo lleve en la URL (medido 02/09 06:39 UTC
+  en este mismo PR):** el bot resolvió el conflicto y empujó el merge, pero `tests.yml` salió con `actor:
+  github-actions[bot]` y `conclusion: action_required` (a la espera de aprobación manual), así que los 12
+  requeridos no corren y el PR se queda en BLOCKED. Causa [Probable]: `actions/checkout@v4` deja
+  `http.https://github.com/.extraheader` con el `GITHUB_TOKEN` y pisa al PAT de la URL — el mismo fallo que
+  explicaba el «git push sí cuela» del 01/09 en `auditoria.yml`. Arreglo: `persist-credentials: false` en el
+  checkout (o borrar el extraheader antes del push). Es workflow → carril 2, PR aparte. Hasta entonces, un PR de
+  registro que entre en conflicto necesita un push humano después del merge del bot.
 - Decisión pendiente de Alberto: rotar A sin `Workflows` y con caducidad 90 días (+ guardián Telegram del 401 en
   `auditoria.yml`, porque el fallo es mudo), inventariar B en Vercel y rotarlo igual, borrar el clásico.
 
