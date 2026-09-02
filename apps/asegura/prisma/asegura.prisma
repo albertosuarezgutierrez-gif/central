@@ -49,6 +49,8 @@ enum EstadoPoliza {
 enum PolizaOrigen {
   gestionada_correduria
   declarada_usuario
+  /// La emitimos nosotros por Codeoscopic y CIMA aún no la ha traído (spec 2026-09-02, D2).
+  emitida_codeoscopic
 
   @@map("poliza_origen")
 }
@@ -120,6 +122,10 @@ enum FuenteOrigen {
   recomendacion
   renovacion
   otros
+  /// Canales de lead (02/09/2026): formulario público, portal del cliente, WhatsApp (cuando haya WABA).
+  web
+  portal
+  whatsapp
 
   @@map("fuente_origen")
 }
@@ -546,6 +552,23 @@ model Liquidacion {
 // prisma/sql/2026-09-02_seguros_documentos.sql. Sin relaciones a propósito: se
 // consulta siempre con `correduriaId` explícito y se valida el destino antes de
 // escribir (lib/cartera-documentos.ts).
+// ─── Compañías por código DGS (02/09/2026) ────────────────────────────────────
+// El puente entre Codeoscopic (habla en código DGS) y CIMA (habla en NOMBRE exacto).
+// `nombreCima` NULL = no se ha visto ninguna póliza de CIMA de esa compañía: no se
+// inventa. SQL en prisma/sql/2026-09-02_seguros_companias_dgs.sql.
+model CompaniaDgs {
+  codigoDgs   String   @id @map("codigo_dgs") @db.VarChar(16)
+  nombreComun String   @map("nombre_comun") @db.VarChar(255)
+  nombreCima  String?  @map("nombre_cima") @db.VarChar(255)
+  enCima      Boolean  @default(false) @map("en_cima")
+  activa      Boolean  @default(true)
+  notas       String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("companias_dgs")
+}
+
 model Documento {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId      String    @map("correduria_id") @db.Uuid

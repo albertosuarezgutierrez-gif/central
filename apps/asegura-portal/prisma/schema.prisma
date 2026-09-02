@@ -25,6 +25,8 @@ enum PortalProcedencia {
   compania
   calculado
   declarado
+  /// Añadida a la BD el 02/09/2026 (`2026-09-02_portal_rol_vinculo_grants.sql`): el módulo la definía y la BD no.
+  documento
 
   @@map("portal_procedencia")
   @@schema("seguros")
@@ -48,9 +50,10 @@ model PortalIdentidad {
   creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
 
-  canales PortalCanal[]
-  bienes  PortalBien[]
-  polizas PortalPolizaDeclarada[]
+  canales  PortalCanal[]
+  bienes   PortalBien[]
+  polizas  PortalPolizaDeclarada[]
+  vinculos PortalVinculo[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -133,5 +136,347 @@ model PortalConsentimiento {
   creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
 
   @@map("portal_consentimiento")
+  @@schema("seguros")
+}
+
+// ─── Fase 4: la costura identidad ↔ ficha de la cartera ─────────────────────
+// Sin fila aquí, el portal no lee NADA de la cartera para esa identidad. Se
+// crea al canjear el código por índice ciego del email (`lib/vinculo.ts`) o a
+// mano desde plataforma (`origen = manual`). `nivel` y `origen` son `text` con
+// CHECK en la BD (no enum de Postgres): se validan en código contra `NIVELES`.
+model PortalVinculo {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String   @map("identidad_id") @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  nivel        String   @default("gestionar")
+  origen       String
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@unique([identidadId, clienteId])
+  @@map("portal_vinculo")
+  @@schema("seguros")
+}
+
+// ─── Cartera: SOLO LECTURA, y SOLO las columnas que el rol puede leer ───────
+// 🚨 El rol `prisma_asegura_portal` tiene `GRANT SELECT (columnas…)` por tabla
+// (`prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`). Prisma pide cada
+// columna declarada aquí por su nombre: declarar una que NO esté en el GRANT
+// hace fallar la consulta ENTERA en la BD (`permission denied for column`).
+// Es a propósito: DNI, IBAN, teléfono, email, direcciones y comentarios
+// internos no se pueden leer desde el portal ni queriendo. Esta lista es un
+// espejo del SQL, no una elección de UI. Sin relaciones entre modelos: cada
+// lectura es una consulta aparte desde `lib/cartera-lectura.ts`.
+//
+// Los enums se copian de `apps/asegura/prisma/asegura.prisma` con su `@@map`
+// (viven en el schema `seguros`). Tipados como String reventarían al comparar.
+
+enum TipoSeguro {
+  auto
+  moto
+  hogar
+  vida
+  salud
+  decesos
+  responsabilidad_civil
+  comercio
+  comunidades
+  otros
+
+  @@map("tipo_seguro")
+  @@schema("seguros")
+}
+
+enum EstadoPoliza {
+  activa
+  vencida
+  cancelada
+  en_renovacion
+  en_vigor
+  fin_riesgo
+  recibo_devuelto
+  cambio_clave
+  anula_al_vencimiento
+  competencia
+
+  @@map("estado_poliza")
+  @@schema("seguros")
+}
+
+enum PolizaOrigen {
+  gestionada_correduria
+  declarada_usuario
+  emitida_codeoscopic
+
+  @@map("poliza_origen")
+  @@schema("seguros")
+}
+
+enum Fraccionamiento {
+  anual
+  semestral
+  trimestral
+  mensual
+
+  @@map("fraccionamiento")
+  @@schema("seguros")
+}
+
+enum SegmentoCliente {
+  cliente
+  ex_cliente
+  prospecto
+
+  @@map("segmento_cliente")
+  @@schema("seguros")
+}
+
+enum TipoCliente {
+  cliente
+  lead
+  beneficiario
+
+  @@map("tipo_cliente")
+  @@schema("seguros")
+}
+
+enum TipoPersona {
+  fisica
+  juridica
+
+  @@map("tipo_persona")
+  @@schema("seguros")
+}
+
+enum IntervinienteRol {
+  propietario
+  conductor_habitual
+  conductor_ocasional
+  contacto
+  beneficiario
+  asegurado
+
+  @@map("interviniente_rol")
+  @@schema("seguros")
+}
+
+enum IntervinienteOrigen {
+  manual
+  cima
+
+  @@map("interviniente_origen")
+  @@schema("seguros")
+}
+
+enum ReciboEstado {
+  cobrado
+  pendiente
+  devuelto
+  anulado
+  emitido
+
+  @@map("recibo_estado")
+  @@schema("seguros")
+}
+
+enum EstadoSiniestro {
+  abierto
+  en_tramitacion
+  cerrado
+  rechazado
+
+  @@map("estado_siniestro")
+  @@schema("seguros")
+}
+
+enum SiniestroOrigen {
+  gestionado_correduria
+  cima
+
+  @@map("siniestro_origen")
+  @@schema("seguros")
+}
+
+enum SiniestroGravedad {
+  leve
+  moderado
+  grave
+  muy_grave
+
+  @@map("siniestro_gravedad")
+  @@schema("seguros")
+}
+
+/// GRANT: (id, nombre). Ni email, ni teléfono, ni credenciales de WhatsApp.
+model Correduria {
+  id     String @id @db.Uuid
+  nombre String @db.VarChar(255)
+
+  @@map("corredurias")
+  @@schema("seguros")
+}
+
+/// GRANT: sin dni, telefono, email, direccion, fecha_nacimiento, cuenta_bancaria ni notas.
+model Cliente {
+  id                  String          @id @db.Uuid
+  correduriaId        String          @map("correduria_id") @db.Uuid
+  nombre              String          @db.VarChar(255)
+  apellidos           String          @db.VarChar(255)
+  tipo                TipoCliente
+  segmento            SegmentoCliente
+  tipoPersona         TipoPersona?    @map("tipo_persona")
+  activo              Boolean
+  importRef           String?         @map("import_ref") @db.VarChar(100)
+  emailLookupHash     String?         @map("email_lookup_hash")
+  telefonoLookupHash  String?         @map("telefono_lookup_hash")
+  mergedIntoClienteId String?         @map("merged_into_cliente_id") @db.Uuid
+  createdAt           DateTime        @map("created_at") @db.Timestamp(6)
+
+  @@map("clientes")
+  @@schema("seguros")
+}
+
+/// GRANT: sin la columna `email` (cifrada). Solo el índice ciego.
+model ClienteEmail {
+  id              String  @id @db.Uuid
+  correduriaId    String  @map("correduria_id") @db.Uuid
+  clienteId       String  @map("cliente_id") @db.Uuid
+  emailLookupHash String? @map("email_lookup_hash")
+  esPrincipal     Boolean @map("es_principal")
+  etiqueta        String? @db.VarChar(30)
+
+  @@map("cliente_emails")
+  @@schema("seguros")
+}
+
+/// GRANT: sin cuenta_bancaria, documento_url, comercial_id ni la cadena de renovaciones.
+model Poliza {
+  id                 String           @id @db.Uuid
+  correduriaId       String           @map("correduria_id") @db.Uuid
+  clienteId          String           @map("cliente_id") @db.Uuid
+  tipo               TipoSeguro
+  aseguradora        String           @db.VarChar(255)
+  numeroPoliza       String?          @map("numero_poliza") @db.VarChar(100)
+  fechaInicio        DateTime?        @map("fecha_inicio") @db.Date
+  fechaVencimiento   DateTime?        @map("fecha_vencimiento") @db.Date
+  primaAnual         Decimal?         @map("prima_anual") @db.Decimal(10, 2)
+  primaMensual       Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
+  primaBruta         Decimal?         @map("prima_bruta") @db.Decimal(10, 2)
+  fraccionamiento    Fraccionamiento?
+  estado             EstadoPoliza
+  situacion          String?          @db.VarChar(4)
+  datosEspecificos   Json?            @map("datos_especificos")
+  coberturas         Json?
+  importRef          String?          @map("import_ref") @db.VarChar(100)
+  origen             PolizaOrigen
+  idPolizaEntidad    String?          @map("id_poliza_entidad") @db.VarChar(50)
+  codigoEntidadDgs   String?          @map("codigo_entidad_dgs") @db.VarChar(16)
+  ramoDgs            String?          @map("ramo_dgs") @db.VarChar(8)
+  fechaEfectoInicial DateTime?        @map("fecha_efecto_inicial") @db.Date
+  mergedIntoPolizaId String?          @map("merged_into_poliza_id") @db.Uuid
+  createdAt          DateTime         @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime         @map("updated_at") @db.Timestamp(6)
+
+  @@map("polizas")
+  @@schema("seguros")
+}
+
+model PolizaCobertura {
+  id                  String    @id @db.Uuid
+  correduriaId        String    @map("correduria_id") @db.Uuid
+  polizaId            String    @map("poliza_id") @db.Uuid
+  numeroOrden         Int?      @map("numero_orden")
+  codigo              String?
+  descripcion         String?
+  capitalAsegurado    String?   @map("capital_asegurado")
+  descripcionCapital  String?   @map("descripcion_capital")
+  franquicia          String?
+  fechaInicio         DateTime? @map("fecha_inicio") @db.Timestamptz(6)
+  fechaFin            DateTime? @map("fecha_fin") @db.Timestamptz(6)
+  modalidadValoracion String?   @map("modalidad_valoracion")
+  datosExtra          Json?     @map("datos_extra")
+
+  @@map("poliza_coberturas")
+  @@schema("seguros")
+}
+
+/// GRANT: sin iban (cifrado) ni comisiones (dato del corredor, no del cliente).
+model PolizaRecibo {
+  id                 String        @id @db.Uuid
+  correduriaId       String        @map("correduria_id") @db.Uuid
+  polizaId           String        @map("poliza_id") @db.Uuid
+  situacion          ReciboEstado?
+  claseRecibo        String?       @map("clase_recibo")
+  fechaEfectoInicial DateTime?     @map("fecha_efecto_inicial") @db.Timestamptz(6)
+  fechaEfectoActual  DateTime?     @map("fecha_efecto_actual") @db.Timestamptz(6)
+  fechaVencimiento   DateTime?     @map("fecha_vencimiento") @db.Timestamptz(6)
+  fechaEmision       DateTime?     @map("fecha_emision") @db.Timestamptz(6)
+  fechaSituacion     DateTime?     @map("fecha_situacion") @db.Timestamptz(6)
+  /// Importes en TEXT tal cual llegan del EIAC: parsear con `importeEiac()`.
+  primaTotal         String?       @map("prima_total")
+  primaNeta          String?       @map("prima_neta")
+  formaPago          String?       @map("forma_pago")
+
+  @@map("poliza_recibos")
+  @@schema("seguros")
+}
+
+/// GRANT: sin lugar_direccion (cifrada), comentario (interno), reservas ni indemnizaciones.
+model Siniestro {
+  id                 String             @id @db.Uuid
+  correduriaId       String             @map("correduria_id") @db.Uuid
+  clienteId          String             @map("cliente_id") @db.Uuid
+  polizaId           String             @map("poliza_id") @db.Uuid
+  estado             EstadoSiniestro
+  tipo               String?            @db.VarChar(60)
+  referencia         String?            @db.VarChar(100)
+  fechaHora          DateTime?          @map("fecha_hora") @db.Timestamptz(6)
+  lugarCp            String?            @map("lugar_cp") @db.VarChar(10)
+  lugarCiudad        String?            @map("lugar_ciudad") @db.VarChar(100)
+  lugarProvincia     String?            @map("lugar_provincia") @db.VarChar(100)
+  tramitadorNombre   String?            @map("tramitador_nombre") @db.VarChar(255)
+  tramitadorTelefono String?            @map("tramitador_telefono") @db.VarChar(30)
+  tramitadorEmail    String?            @map("tramitador_email") @db.VarChar(255)
+  peritoNombre       String?            @map("perito_nombre") @db.VarChar(255)
+  peritoTelefono     String?            @map("perito_telefono") @db.VarChar(30)
+  peritoEmail        String?            @map("perito_email") @db.VarChar(255)
+  origen             SiniestroOrigen
+  idSiniestroEntidad String?            @map("id_siniestro_entidad") @db.VarChar(50)
+  gravedad           SiniestroGravedad?
+  createdAt          DateTime           @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @map("updated_at") @db.Timestamptz(6)
+
+  @@map("siniestros")
+  @@schema("seguros")
+}
+
+/// GRANT: sin nif, nombre, apellidos, teléfono, email ni fechas (todo cifrado). Solo el papel.
+model PolizaInterviniente {
+  id           String              @id @db.Uuid
+  polizaId     String              @map("poliza_id") @db.Uuid
+  correduriaId String              @map("correduria_id") @db.Uuid
+  rol          IntervinienteRol
+  clienteId    String?             @map("cliente_id") @db.Uuid
+  tipoRelacion String?             @map("tipo_relacion") @db.VarChar(60)
+  origen       IntervinienteOrigen
+
+  @@map("poliza_intervinientes")
+  @@schema("seguros")
+}
+
+/// GRANT: sin `observaciones` (texto libre del corredor). Fila A→B con
+/// `puede_ver_polizas` = A autoriza a B a ver las pólizas de A.
+model ClienteRelacion {
+  id              String   @id @db.Uuid
+  correduriaId    String   @map("correduria_id") @db.Uuid
+  clienteAId      String   @map("cliente_a_id") @db.Uuid
+  clienteBId      String   @map("cliente_b_id") @db.Uuid
+  tipoRelacion    String   @map("tipo_relacion") @db.VarChar(60)
+  puedeVerPolizas Boolean  @map("puede_ver_polizas")
+  createdAt       DateTime @map("created_at") @db.Timestamptz(6)
+
+  @@map("cliente_relaciones")
   @@schema("seguros")
 }

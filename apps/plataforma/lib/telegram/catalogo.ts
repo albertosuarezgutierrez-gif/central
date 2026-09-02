@@ -532,6 +532,12 @@ export const AVISOS: AvisoTelegram[] = [
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',
     cuando: 'Todos los días a las 09:30',
   },
+  {
+    id: 'correduria.lead-nuevo', categoria: 'correduria',
+    titulo: 'Lead nuevo desde la web',
+    que: 'Alguien ha pedido presupuesto en /seguros: sus datos, qué quiere y el enlace a su ficha (o que no se pudo registrar).',
+    cuando: 'Al llegar un formulario',
+  },
 ]
 
 export const AVISOS_POR_ID: ReadonlyMap<string, AvisoTelegram> =

@@ -37,9 +37,11 @@ real medido, orden de trabajo). Después, según lo que toques:
 
 Lectura y cuidado de la cartera: hecho (buscador, ficha cliente/póliza, edición, relaciones,
 documentos, retención, retarificar, historial visible, estado derivado, guardián de duplicadas,
-siniestros desde la ficha, «por qué ha subido la prima»). Falta: emisión en central + conciliación
-CIMA (spec hecha, pendiente de OK), leads por canal, portal leyendo la cartera (sus tablas no
-existen en la BD). Tabla completa en el documento (§4) y orden en §9.
+siniestros desde la ficha, «por qué ha subido la prima», canal de leads web `/seguros`, portal Fase 4
+leyendo la cartera por `portal_vinculo`, acuñado de emitidas D2 + reglas de conciliación D3/D4). Falta:
+el ENVÍO al vendor (sin sandbox para el gate de idempotencia), el port de la ingesta CIMA, WhatsApp
+(sin WABA) y desplegar el portal (contraseña del rol, `DATABASE_URL`, `PII_LOOKUP_KEY`). Tabla
+completa en el documento (§4) y orden en §9.
 
 9. **Siniestros: dos orígenes, dos reglas.** En uno de CIMA el estado lo fija la compañía (CIMA lo
    reescribe en cada pull) y se anota lo que CIMA no manda; en uno nuestro, la referencia de la
@@ -47,3 +49,8 @@ existen en la BD). Tabla completa en el documento (§4) y orden en §9.
 10. **La prima por anualidad se DERIVA de los recibos por aniversario, no por año natural**, y
     `sin_datos` (CIMA no manda la anualidad anterior, o el ciclo está incompleto) es la respuesta
     para la mayoría de las vivas: nunca se pinta como «no ha subido».
+11. **El portal lee la cartera por COLUMNAS con `prisma_asegura_portal` (sin BYPASSRLS)**: su schema
+    Prisma declara solo las columnas concedidas; declarar una más rompe en la BD. El vínculo
+    identidad ↔ ficha nace del email por índice ciego y **con varias fichas no se adivina**.
+12. **Un lead web nunca fuerza un duplicado**: si el dato ya está en una ficha se anota el contacto
+    ahí. Y el Telegram sale aunque el puerto esté caído: es el único rastro en ese caso.

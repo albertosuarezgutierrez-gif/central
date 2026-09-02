@@ -243,3 +243,13 @@ export function editarClienteAsegura(body: Record<string, unknown>): Promise<Ree
 export function altaClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente', { method: 'POST', body: JSON.stringify(body) })
 }
+
+/**
+ * `POST /api/operador/cliente/historial` — anota una fila de historial en una
+ * ficha que ya existe (`{ clienteId, tipo, texto, actor? }`). Lo usa el canal de
+ * leads web cuando el teléfono/email ya está en la cartera: no se duplica la
+ * ficha, se anota el contacto.
+ */
+export function historialClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/historial', { method: 'POST', body: JSON.stringify(body) })
+}
