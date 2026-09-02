@@ -3,6 +3,7 @@
 // declaración responsable de cada concurso. Imita layout/paleta del v1 y F2.
 'use client';
 import { useEffect, useState } from 'react';
+import { PageHeader } from '@/components/ui';
 
 const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'var(--border)', muted:'var(--muted)' };
 const FONT = 'Nunito, system-ui, sans-serif';
@@ -26,9 +27,11 @@ export default function PerfilConcursos() {
 
   return (
     <div style={{ fontFamily:FONT, color:C.text, background:C.bg, minHeight:'100vh', padding:16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', maxWidth:560, marginBottom:4 }}>
-        <h1 style={{ fontWeight:900, fontSize:24, margin:0 }}>Perfil de empresa (concursos)</h1>
-        <a href="/concursos" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>← Concursos</a>
+      <div style={{ maxWidth:560 }}>
+        <PageHeader
+          titulo="Perfil de empresa (concursos)"
+          acciones={<a href="/concursos" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>← Concursos</a>}
+        />
       </div>
       <p style={{ color:C.muted, fontSize:14, margin:'0 0 16px' }}>Estos datos rellenan el DEUC y la declaración responsable de cada concurso.</p>
       <form onSubmit={guardar} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:16, display:'grid', gap:10, maxWidth:560, width:'100%', boxSizing:'border-box' }}>

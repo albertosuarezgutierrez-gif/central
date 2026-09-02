@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { eur } from '@/lib/dinero'
 import { MOTIVOS_PUERTO, type EnRiesgo, type Impagados } from '@/lib/correduria-puerto'
+import { BtnLink } from '@/components/ui'
 
 /**
  * 📞 A quién hay que llamar hoy: los recibos devueltos y los vencidos sin
@@ -181,15 +182,9 @@ function Fila({ f, urlAsegura }: { f: EnRiesgo; urlAsegura: string }) {
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
         {f.telefono ? (
-          <a
-            href={`tel:${f.telefono.replace(/\s/g, '')}`}
-            style={{
-              minHeight: 44, display: 'inline-flex', alignItems: 'center', padding: '0 16px',
-              borderRadius: 8, border: '1px solid var(--border)', fontWeight: 700,
-            }}
-          >
+          <BtnLink href={`tel:${f.telefono.replace(/\s/g, '')}`} variante="secundario">
             📞 {f.telefono}
-          </a>
+          </BtnLink>
         ) : (
           <span
             style={{ fontSize: 12, color: 'var(--muted)', alignSelf: 'center' }}

@@ -1,5 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import { PageHeader } from '@/components/ui'
+import { Bell } from 'lucide-react'
 
 type Aviso = {
   id: string
@@ -109,7 +111,7 @@ export default function TelegramClient() {
 
   return (
     <div style={{ padding: '20px 16px', maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>🔔 Avisos de Telegram</h1>
+      <PageHeader titulo="Avisos de Telegram" icono={<Bell size={20} strokeWidth={1.75} />} />
       <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 16px' }}>
         Todo lo que el bot te manda por su cuenta, y el interruptor de cada cosa. Lo que apagues
         aquí deja de enviarse (los agentes lo siguen haciendo y lo puedes ver en su pantalla).

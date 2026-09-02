@@ -1,5 +1,7 @@
 'use client'
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { Bot } from 'lucide-react'
+import { PageHeader } from '@/components/ui'
 
 const PISOS = [
   { id: '', label: 'Todos los pisos' },
@@ -54,10 +56,7 @@ export default function AgentePage() {
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '28px 20px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 8px)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-        <span style={{ fontSize: 24 }}>🤖</span>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Agente de precios</h1>
-      </div>
+      <PageHeader titulo="Agente de precios" icono={<Bot size={20} strokeWidth={1.75} />} />
       <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0, marginBottom: 14 }}>
         Pregúntale por qué puso un precio o dale instrucciones (“sé más agresivo en Semana Santa”). Las reglas
         se guardan y el agente las respeta en su próximo ciclo, siempre con los raíles (suelo de coste, tope diario, pausa).

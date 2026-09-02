@@ -6,6 +6,7 @@ import {
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
 } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,11 +41,13 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
     <div style={{ display: 'grid', gap: 16 }}>
       <div>
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
-        <h1 style={{ margin: '6px 0 2px', fontSize: 24 }}>{ficha.nombre}</h1>
-        <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <span>{ficha.tipo === 'cliente' ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
-          <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} />
-        </div>
+        <PageHeader
+          titulo={ficha.nombre}
+          sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <span>{ficha.tipo === 'cliente' ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
+            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} />
+          </span>}
+        />
       </div>
 
       <Acciones />

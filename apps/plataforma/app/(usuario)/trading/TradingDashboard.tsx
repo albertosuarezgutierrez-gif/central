@@ -10,6 +10,8 @@ import { etiquetaCalidad, rankearUniverso, type EmpresaUniverso } from '@central
 import OnboardingBanner from './OnboardingBanner'
 import RadarExplorador, { type FilaExplorador } from './RadarExplorador'
 import CarteraEstudio from './CarteraEstudio'
+import { PageHeader } from '@/components/ui'
+import { TrendingUp } from 'lucide-react'
 import CarteraCohetes, { type CarteraCohetesData } from './CarteraCohetes'
 import AnalisisSimbolo from './AnalisisSimbolo'
 import DetallePerezoso from './DetallePerezoso'
@@ -369,10 +371,11 @@ export default async function TradingDashboard({ carteraCohetes, carteraReal, tr
 
   const cabecera = (
     <>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
-        <h1 style={{ margin: 0, fontSize: 24 }}>📈 Laboratorio de inversión</h1>
-        <span style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>SOLO SIMULADO · PAPER</span>
-      </div>
+      <PageHeader
+        titulo="Laboratorio de inversión"
+        icono={<TrendingUp size={20} strokeWidth={1.75} />}
+        acciones={<span style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700 }}>SOLO SIMULADO · PAPER</span>}
+      />
       <p style={{ color: 'var(--muted)', marginTop: 4, marginBottom: 8, fontSize: 14 }}>
         El agente estudia el mercado y opera <strong>en simulación</strong>. No toca tu cuenta real de Interactive Brokers.
         {ultimaPasada ? <> Última pasada del agente: <strong>{fechaCorta(ultimaPasada)}</strong> — la renueva su pasada nocturna (lun–vie), no el botón «Actualizar».</> : null}

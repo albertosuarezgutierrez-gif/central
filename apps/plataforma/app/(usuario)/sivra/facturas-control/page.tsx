@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { calcularEstado, type EstadoFactura } from '@/lib/sivra/facturas-control'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 type ProvRow = {
   id: string; label: string; destino: string; importeAprox: string
@@ -118,11 +119,9 @@ export default function FacturasControlPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 960 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-          Control de facturas
-        </h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <PageHeader
+        titulo="Control de facturas"
+        acciones={<>
           <select
             value={mes}
             onChange={e => setMes(Number(e.target.value))}
@@ -137,8 +136,8 @@ export default function FacturasControlPage() {
           >
             {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-        </div>
-      </div>
+        </>}
+      />
 
       {!loading && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
