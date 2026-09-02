@@ -15,6 +15,18 @@
 -- vía viable: `pg_dump` local es 16.x y el origen es 17.6, así que se niega a
 -- volcarlo.
 --
+-- ✅ EJECUTADO el 02/09/2026: 52 tablas, 86.628 filas, 131 FKs, 0 desajustes.
+--    Cómo se consiguió la credencial (el 01/09 quedó bloqueado por ella): el
+--    `execute_sql` del conector de Supabase entra en el proyecto de Manuel como
+--    `supabase_read_only_user`, pero `apply_migration` entra como `postgres`.
+--    Con eso se creó un rol temporal `traspaso_lectura` (LOGIN, BYPASSRLS,
+--    SELECT sobre public), se puso su URL en el Vault, se copió, y al acabar
+--    se DIO DE BAJA el rol y se VACIÓ el secreto (la contraseña pasó por la
+--    sesión). Para re-sincronizar: repetir esos tres pasos. URL que funciona
+--    desde central: pooler `aws-1-eu-central-1.pooler.supabase.com:5432` con
+--    usuario `rol.uijsgeocgdaxkhvwtjqs` (el host directo `db.<ref>` rechaza la
+--    conexión y el clúster `aws-0` no conoce el tenant).
+--
 -- 🔐 LA CREDENCIAL NO ESTÁ EN ESTE FICHERO Y NO DEBE ESTARLO.
 --    Se lee del Vault de Supabase de central, dentro del bloque, y nunca se
 --    devuelve en ningún resultado. Antes de ejecutar, crear el secreto:
@@ -73,6 +85,13 @@ BEGIN
       AND c.relkind = 'r'
       AND c.relname NOT LIKE 'portal\_%'
       AND c.relname <> '_volcado_control'
+      -- Y SOLO lo que existe en el origen. `seguros` ya tiene tablas propias de
+      -- central (p. ej. `codeoscopic_consumo`, del 01/09) que el origen no conoce;
+      -- sin esta guarda el bloque falla en esa tabla y hace ROLLBACK de todo lo
+      -- copiado antes (le pasó el 02/09/2026: 0 filas tras copiar 20 tablas).
+      AND c.relname IN (
+        SELECT t FROM dblink(v_conn, $q$SELECT tablename FROM pg_tables WHERE schemaname = 'public'$q$) AS o(t text)
+      )
     ORDER BY c.relname
   LOOP
     -- Idempotencia: una tabla ya copiada no se vuelve a copiar. Sin esto, un
@@ -106,7 +125,7 @@ BEGIN
       -- El mensaje de dblink puede arrastrar la cadena de conexión. Se corta aquí
       -- y se re-lanza sin ella: un error no puede ser la vía por la que se filtra
       -- una credencial a un log.
-      RAISE EXCEPTION 'Fallo copiando la tabla %: %', v_tabla, SQLERRM
+      RAISE EXCEPTION 'Fallo copiando la tabla %: %', v_tabla, regexp_replace(SQLERRM, v_conn, '***', 'g')
         USING HINT = 'Revisa que el rol del secreto tenga SELECT sobre public.' || v_tabla;
     END;
 
