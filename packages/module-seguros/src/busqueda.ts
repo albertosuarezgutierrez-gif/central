@@ -17,12 +17,17 @@
 //   · DNI              → CIFRADO. Solo se encuentra por índice ciego y EXACTO,
 //                        y solo 3.904 de 32.600 fichas (12%) tienen el hash.
 //   · teléfono / email → ídem: 5.377 (16%) y 4.308 (13%).
-//   · ciudad / CP      → EN CLARO: 4.482 y 16.398.
-//   · dirección        → CIFRADA, las 1.954 que hay. **NO se puede buscar.**
+//   · ciudad / CP      → EN CLARO: 4.482 y 16.398. Son los del CLIENTE.
+//   · riesgo           → `localidad`/`cp` del bien asegurado, EN CLARO dentro
+//                        de `datos_especificos` (179 / 328 pólizas, 02/09/2026).
+//                        La casa de Rota de un cliente de Sevilla solo sale por aquí.
+//   · dirección        → CIFRADA (`v1:`), 170 pólizas. Por SQL no se puede; se
+//                        DESCIFRA EN MEMORIA (son pocas y la app tiene la clave)
+//                        y se filtra. Si la clave falta, se dice — no se calla.
 //
-// De ahí `Aviso`: un criterio que no puede dar resultados no se ejecuta y se
-// CUENTA. «No he encontrado a nadie» y «por ahí no se puede buscar» son cosas
-// distintas, y la segunda dice qué hacer en su lugar.
+// De ahí `Aviso`: un criterio que no ha podido mirar se CUENTA. «No he encontrado
+// a nadie» y «por ahí no he podido buscar» son cosas distintas, y la segunda
+// dice qué hacer en su lugar.
 
 export type TipoCriterio =
   | 'nombre'
@@ -33,6 +38,10 @@ export type TipoCriterio =
   | 'email'
   | 'codigo_postal'
   | 'ciudad'
+  /** Localidad o CP del RIESGO (`datos_especificos`), no del cliente. */
+  | 'riesgo'
+  /** Calle del riesgo, descifrada en memoria. */
+  | 'direccion'
 
 export type Criterio = {
   tipo: TipoCriterio
@@ -133,32 +142,64 @@ export function planBusqueda(termino: string): PlanBusqueda {
     criterios.push({ tipo: 'poliza', valor: c, coincidencia: 'parcial' })
   }
 
-  // ── Texto: nombre y, si no lleva dígitos, también ciudad ──
+  // ── Texto: nombre y, si no lleva dígitos, también ciudad y localidad del riesgo ──
   if (/[A-ZÁÉÍÓÚÑ]/i.test(t)) {
     criterios.push({ tipo: 'nombre', valor: t, coincidencia: 'parcial' })
     if (!/\d/.test(t) && !t.includes('@')) {
       criterios.push({ tipo: 'ciudad', valor: t, coincidencia: 'parcial' })
+      criterios.push({ tipo: 'riesgo', valor: t, coincidencia: 'parcial' })
     }
+    // La calle: cualquier texto con letras que no sea un email. «san vicente 40»
+    // lleva dígitos y SÍ es una dirección — por eso no se excluye como la ciudad.
+    if (!t.includes('@')) {
+      criterios.push({ tipo: 'direccion', valor: t, coincidencia: 'parcial' })
+    }
+  }
+  // Un CP también es un CP del riesgo: la segunda residencia no está en la ficha.
+  if (RE_CP.test(c)) {
+    criterios.push({ tipo: 'riesgo', valor: c, coincidencia: 'parcial' })
   }
 
   return { ...base, criterios, buscable: criterios.length > 0 }
 }
 
 /**
- * Lo que hay que decir cuando alguien busca una DIRECCIÓN.
+ * Lo que hay que decir cuando la calle NO se ha podido mirar.
  *
- * No es un mensaje de error ni una lista vacía: es que ese campo va cifrado en
- * la base y una consulta SQL no puede mirarlo. Devolver «ningún resultado»
- * sería afirmar que ese cliente no vive en esa calle, que es justo lo contrario
- * de lo que se sabe. Se ofrece lo que SÍ funciona: la ciudad y el CP.
+ * La dirección va cifrada; se descifra en memoria para buscar, y eso exige la
+ * clave. Sin ella, devolver «ningún resultado» sería afirmar que ese cliente no
+ * vive en esa calle, que es justo lo contrario de lo que se sabe. Se ofrece lo
+ * que SÍ funciona sin clave: la localidad y el CP del riesgo, que van en claro.
+ *
+ * `ilegibles` = pólizas con dirección que no se han podido descifrar.
  */
-export function avisoDireccion(): Aviso {
+export function avisoDireccion(ilegibles?: number): Aviso {
+  const cuantas =
+    ilegibles === undefined ? 'las direcciones' : `${ilegibles.toLocaleString('es-ES')} direcciones`
   return {
     tema: 'direccion',
     texto:
-      'La dirección va cifrada en la base, así que no se puede buscar por calle. ' +
-      'Prueba con la ciudad o con el código postal, que sí están en claro.',
+      `No se ha podido descifrar ${cuantas} (falta la clave de cifrado en asegura), así que ` +
+      'por calle NO se ha mirado. Prueba con la localidad o el código postal del riesgo, ' +
+      'que van en claro.',
   }
+}
+
+/** Sin acentos, en mayúsculas, sin signos: «CL SAN VICENTE, 40» ≈ «san vicente 40». */
+export function normalizarDireccion(v: string): string {
+  return v
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9Ñ]+/g, ' ')
+    .trim()
+}
+
+/** ¿La calle `direccion` contiene el término? Ambos normalizados. */
+export function direccionCoincide(direccion: string, termino: string): boolean {
+  const t = normalizarDireccion(termino)
+  if (t === '') return false
+  return normalizarDireccion(direccion).includes(t)
 }
 
 /**
@@ -186,6 +227,13 @@ export function explicarVacio(tipo: TipoCriterio, cob: Cobertura | null): string
     email: 'el email',
     codigo_postal: 'el código postal',
     ciudad: 'la ciudad',
+    riesgo: 'la localidad o el CP del riesgo',
+    direccion: 'la calle del riesgo',
+  }
+  // Para la calle, «alcanzables» son las direcciones DESCIFRADAS: 0 con total > 0
+  // es «no se ha podido leer ninguna», no «nadie vive ahí».
+  if (tipo === 'direccion' && cob.alcanzables === 0 && cob.total > 0) {
+    return `Hay ${cob.total.toLocaleString('es-ES')} pólizas con calle y no se ha podido descifrar ninguna.`
   }
   if (pct >= 99) return `Se ha buscado por ${nombres[tipo]} en toda la cartera.`
   return (

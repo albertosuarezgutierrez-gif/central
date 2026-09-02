@@ -1,5 +1,9 @@
 import Link from 'next/link'
-import { fichaAsegura, urlRetarificar, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
+import { contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
+import {
+  fichaAsegura, urlRetarificar, urlSubirPoliza,
+  type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
+} from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +27,11 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
   if (r.estado !== 'ok') return <NoSePudo estado={r} />
 
   const { ficha } = r
-  const vivas = ficha.polizas.filter(p => p.viva)
+  // 🚨 «Viva» = entra por CIMA; pero 42 de las 109 CIMA están CANCELADAS
+  // (medido 02/09/2026). Mezclarlas con las activas infla «pólizas vivas» y
+  // pone un «Retarificar» en un seguro que ya no existe.
+  const vivas = ficha.polizas.filter(p => p.viva && p.estado !== 'cancelada')
+  const canceladas = ficha.polizas.filter(p => p.viva && p.estado === 'cancelada')
   const historicas = ficha.polizas.filter(p => !p.viva)
   const abiertos = ficha.siniestros.filter(s => s.abierto)
 
@@ -34,13 +42,26 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
         <h1 style={{ margin: '6px 0 2px', fontSize: 24 }}>{ficha.nombre}</h1>
         <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <span>{ficha.tipo === 'cliente' ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
-          <Contacto c={ficha.contacto} />
+          <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} />
         </div>
       </div>
 
+      <Acciones />
+
       <Titulares polizas={ficha.polizas} vivas={vivas.length} abiertos={abiertos.length} />
 
-      <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza entra hoy por CIMA." />
+      <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={ficha.intervinientes} />
+
+      {canceladas.length > 0 && (
+        <Polizas
+          titulo={`Canceladas en CIMA (${canceladas.length})`}
+          nota="La compañía las manda por CIMA con estado «cancelada»: ya no aseguran nada. Sirven para saber qué tuvo y cuánto pagaba."
+          polizas={canceladas}
+          vacio=""
+          plegado
+          intervinientes={ficha.intervinientes}
+        />
+      )}
 
       <Siniestros lista={ficha.siniestros} />
 
@@ -51,6 +72,7 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
           polizas={historicas}
           vacio=""
           plegado
+          intervinientes={ficha.intervinientes}
         />
       )}
     </div>
@@ -108,23 +130,71 @@ function Kpi({ label, valor, sub, color }: { label: string; valor: string; sub?:
   )
 }
 
-// ── Contacto ────────────────────────────────────────────────────────────────
+// ── Acciones ────────────────────────────────────────────────────────────────
+// Lo que se puede HACER desde la ficha, además de mirar. Subir un documento es
+// gratis (el agente lo lee; el precio se pide aparte) y vive en asegura porque
+// comparte pantalla con la cotización que sale de lo leído.
 
-function Contacto({ c }: { c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null } }) {
+function Acciones() {
+  return (
+    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 }}>
+      <a
+        href={urlSubirPoliza()}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, minHeight: 44, display: 'inline-flex', alignItems: 'center', fontWeight: 600 }}
+      >
+        📄 Subir póliza o documento ↗
+      </a>
+      <span style={{ color: 'var(--muted)' }} title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. El fichero NO se guarda todavía: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
+        el agente la lee y enseña lo que ha encontrado · hoy solo auto · el fichero no se guarda aún
+      </span>
+    </div>
+  )
+}
+
+// ── Contacto ────────────────────────────────────────────────────────────────
+// 🚨 «Sin teléfono» en la ficha del TOMADOR no es «no hay a quién llamar».
+// Esquiansa (empresa) no tiene teléfono; su conductor habitual —dueño del
+// coche— sí, en su propia ficha enlazada por CIMA. `contactoEfectivo` mira
+// primero al tomador y luego a los intervinientes, y dice DE QUIÉN es el número.
+
+function Contacto({ c, intervinientes }: {
+  c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
+  intervinientes: IntervinienteFicha[] | null
+}) {
   const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
+  const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
+  const quien = ef.quien
+    ? `${ef.quien.nombre ?? 'sin nombre legible'}, ${etiquetaRol(ef.quien.rol)}`
+    : null
+  const deOtro = (via: 'tomador' | 'interviniente' | null) =>
+    via === 'interviniente' && quien ? (
+      <span style={{ fontSize: 11 }}>
+        {' '}({ef.quien?.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{quien}</Link> : quien})
+      </span>
+    ) : null
+  // Sin intervinientes que mirar, «sin teléfono» solo habla del tomador.
+  const coletilla = ef.intervinientesSinMirar ? ' · intervinientes sin comprobar' : ''
   return (
     <>
-      {c.telefono ? (
-        <a href={`tel:${c.telefono.replace(/\s/g, '')}`}>📞 {c.telefono}</a>
+      {ef.telefono ? (
+        <span>
+          <a href={`tel:${ef.telefono.replace(/\s/g, '')}`}>📞 {ef.telefono}</a>
+          {deOtro(ef.viaTelefono)}
+        </span>
       ) : (
         // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
         // en sitios distintos (la clave PII vs. pedírselo al cliente).
-        <span title={c.telefonoIlegible ? 'Está guardado pero cifrado con otra clave: no se puede leer desde aquí' : 'No consta teléfono en su ficha'}>
-          📞 {c.telefonoIlegible ? 'cifrado' : 'sin teléfono'}
+        <span title={c.telefonoIlegible ? 'Está guardado pero cifrado con otra clave: no se puede leer desde aquí' : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
+          📞 {c.telefonoIlegible ? 'cifrado' : `sin teléfono${coletilla}`}
         </span>
       )}
-      {c.email ? (
-        <a href={`mailto:${c.email}`}>✉️ {c.email}</a>
+      {ef.email ? (
+        <span>
+          <a href={`mailto:${ef.email}`}>✉️ {ef.email}</a>
+          {deOtro(ef.viaEmail)}
+        </span>
       ) : (
         <span title={c.emailIlegible ? 'Cifrado con otra clave: no se puede leer desde aquí' : 'No consta email'}>
           ✉️ {c.emailIlegible ? 'cifrado' : 'sin email'}
@@ -143,8 +213,9 @@ const TIPOS: Record<string, string> = {
   comunidades: '🏢 Comunidad', otros: '📄 Otros',
 }
 
-function Polizas({ titulo, nota, polizas, vacio, plegado }: {
+function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
   titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean
+  intervinientes: IntervinienteFicha[] | null
 }) {
   if (polizas.length === 0) {
     if (!vacio) return null
@@ -158,7 +229,7 @@ function Polizas({ titulo, nota, polizas, vacio, plegado }: {
     <>
       {nota && <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>{nota}</p>}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 880 }}>
           <thead>
             <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
               <th style={th}>Ramo</th>
@@ -166,6 +237,7 @@ function Polizas({ titulo, nota, polizas, vacio, plegado }: {
               <th style={th}>Compañía</th>
               <th style={th}>Vence</th>
               <th style={{ ...th, textAlign: 'right' }}>Prima</th>
+              <th style={th}>Pago</th>
               <th style={th}>Recibos</th>
               <th style={th} />
             </tr>
@@ -176,10 +248,11 @@ function Polizas({ titulo, nota, polizas, vacio, plegado }: {
                 <td style={td}>{TIPOS[p.tipo] ?? p.tipo}</td>
                 <td style={{ ...td, minWidth: 140 }}>
                   <ObjetoCelda p={p} />
+                  <Intervinientes lista={intervinientes} polizaId={p.id} />
                 </td>
                 <td style={td}>
-                  {p.aseguradora}
-                  {p.numeroPoliza && <div style={sub}>nº {p.numeroPoliza}</div>}
+                  <Link href={`/correduria/poliza/${p.id}`} style={{ fontWeight: 600 }}>{p.aseguradora}</Link>
+                  <div style={sub}>{p.numeroPoliza ? `nº ${p.numeroPoliza}` : 'sin número'} · <Link href={`/correduria/poliza/${p.id}`}>ver póliza →</Link></div>
                 </td>
                 <td style={{ ...td, whiteSpace: 'nowrap' }}>
                   {p.fechaVencimiento ? (
@@ -189,15 +262,17 @@ function Polizas({ titulo, nota, polizas, vacio, plegado }: {
                     <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado el vencimiento">sin fecha</span>
                   )}
                   <div style={sub}>{p.estado.replace(/_/g, ' ')}</div>
+                  <Anulacion vencimiento={p.fechaVencimiento} viva={p.viva} />
                 </td>
                 <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {p.prima === null
                     ? <span style={{ color: 'var(--muted)' }} title="La compañía no informa la prima">sin dato</span>
                     : eur(p.prima)}
                 </td>
+                <td style={td}><CeldaPago p={p} /></td>
                 <td style={td}><CeldaRecibos r={p.recibos} /></td>
                 <td style={td}>
-                  {p.retarificable ? (
+                  {p.retarificable && p.estado !== 'cancelada' ? (
                     // El único salto a asegura: es donde se gasta el dinero, y
                     // se gasta detrás de su propia pantalla de confirmación.
                     <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ whiteSpace: 'nowrap' }}>
@@ -227,6 +302,32 @@ function Polizas({ titulo, nota, polizas, vacio, plegado }: {
   )
 }
 
+/**
+ * Quién más figura en la póliza (propietario, conductor habitual, contacto…),
+ * debajo de qué asegura. Se omite al tomador: ya es el título de la ficha.
+ * `null` = asegura no los informa; se calla en vez de afirmar que no hay.
+ */
+function Intervinientes({ lista, polizaId }: { lista: IntervinienteFicha[] | null; polizaId: string }) {
+  if (lista === null) return null
+  const otros = lista.filter(i => i.polizaId === polizaId && !i.esTomador)
+  if (otros.length === 0) return null
+  return (
+    <div style={{ ...sub, marginTop: 4 }}>
+      {otros.map((i, n) => (
+        <div key={`${i.rol}-${n}`}>
+          <span style={{ textTransform: 'capitalize' }}>{etiquetaRol(i.rol)}</span>:{' '}
+          {i.fichaId ? (
+            <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
+          ) : (
+            i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
+          )}
+          {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`}>📞</a></>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function ObjetoCelda({ p }: { p: PolizaFicha }) {
   if (p.objeto === null) {
     return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura no informa este campo">—</span>
@@ -246,6 +347,50 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
       {p.objeto.titulo}
       {p.objeto.detalle && <div style={sub}>{p.objeto.detalle}</div>}
     </span>
+  )
+}
+
+/**
+ * Forma de pago (Alberto, 02/09/2026): son contratos anuales que la compañía
+ * FINANCIA al fraccionar, cobrando por ello. Lo que CIMA da es la periodicidad
+ * y la forma de cobro; el recargo se deriva de los recibos del ciclo, y solo
+ * se afirma con el ciclo completo — con la mitad de los recibos la resta sale
+ * negativa y parecería que fraccionar ahorra.
+ */
+function CeldaPago({ p }: { p: PolizaFicha }) {
+  if (p.pago === null) {
+    return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura no informa la forma de pago">—</span>
+  }
+  const { fraccionamiento, formaCobro, recargo } = p.pago
+  return (
+    <span style={{ whiteSpace: 'nowrap' }}>
+      {etiquetaFraccionamiento(fraccionamiento)}
+      {formaCobro && <div style={sub}>{formaCobro}</div>}
+      {recargo.estado === 'calculado' && (
+        <div style={{ ...sub, color: '#c96' }} title={`${eur(recargo.sumaRecibos)} en ${recargo.recibos} recibos frente a ${eur(recargo.primaAnual)} de prima anual`}>
+          +{eur(recargo.recargoEur)} ({recargo.recargoPct.toLocaleString('es-ES')}%) por fraccionar
+        </div>
+      )}
+      {recargo.estado === 'sin_datos' && fraccionamiento !== null && fraccionamiento !== 'anual' && (
+        <div style={sub} title={recargo.motivo}>recargo sin calcular</div>
+      )}
+    </span>
+  )
+}
+
+/**
+ * La única salida de una póliza es su vencimiento, avisando 30 días antes
+ * (LCS art. 22). Se pinta solo en las vivas y solo mientras merece la pena
+ * saberlo: cuando el plazo de aviso está cerca o ya ha pasado.
+ */
+function Anulacion({ vencimiento, viva }: { vencimiento: string | null; viva: boolean }) {
+  if (!viva) return null
+  const v = ventanaAnulacion(vencimiento)
+  if (v === null || v.diasParaAvisar > 60) return null
+  return (
+    <div style={{ ...sub, color: v.enPlazo ? '#c96' : 'var(--muted)' }} title="Contrato anual: solo se anula al vencimiento, con 30 días de preaviso">
+      {v.enPlazo ? `avisar antes del ${fmt(v.limiteAviso)} para no renovar` : 'plazo de aviso pasado: renueva otro año'}
+    </div>
   )
 }
 
@@ -270,6 +415,11 @@ function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
   }
   if (r.devueltos > 0) return <span style={{ color: '#d66' }}>🔴 {r.devueltos} devuelto(s)</span>
   if (r.pendientes > 0) return <span style={{ color: '#c96' }}>🟡 {r.pendientes} pendiente(s)</span>
+  // 🚨 Todos anulados (20 de 109 vivas) se pintaba «🟢 0 cobrado(s)»: cero
+  // cobros no es estar al día — es una póliza cancelada o sustituida.
+  if (r.cobrados === 0 && r.anulados > 0) {
+    return <span style={{ color: 'var(--muted)' }} title="Todos los recibos están anulados: la póliza se canceló o se sustituyó. No hay cobro.">⚪ {r.anulados} anulado(s)</span>
+  }
   return (
     <span style={{ color: 'var(--muted)' }}>
       🟢 {r.cobrados} cobrado(s)

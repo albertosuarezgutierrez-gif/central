@@ -26,7 +26,8 @@ Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build�
 entender la arquitectura.
 
 🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son ~80 clientes /
-109 pólizas**: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las
+109 pólizas** — ⚠️ y de esas 109, **42 están `cancelada`** (medido 02/09/2026): **67 activas**; CIMA manda
+también las canceladas y `import_ref IS NULL` no las distingue —: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las
 otras 28.729 son volcado histórico cargado en jun/2026 (`intranet:` 26.117 con vencimientos
 2013-2018 y `asegura_app:` 2.612) y **ninguna** vence en los últimos 18 meses. Regla de Alberto:
 **CIMA = cliente actual; el resto = lead** (32.520). Consecuencia para el código: **las pólizas con
@@ -308,6 +309,14 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   compañía lo consulta igual al emitir, así que la siniestralidad presumida **se corrige sola** — por
   eso el aviso «puede abaratar el precio» no es cosmético.
   ⚠️ No verificado contra `tirea.es`: el proxy lo bloquea por política de la organización.
+- ✅ **Catastro para HOGAR, HECHO el 02/09/2026 (en plataforma, `/correduria/hogar`):** con la dirección
+  o la referencia catastral salen m², año, uso y CP del Catastro (`@central/core-catastro`, paquete
+  extraído de subastas). Verificado con el 2º-14 de San Vicente 40: 76 m²/1994, lo mismo que la póliza
+  del CRM. ✅ **`GET /insurance-lines` HECHO** (`lineasDeSeguro()` + `hogarDisponible()` en
+  `lib/codeoscopic/catalogos.ts`, puerto `/api/operador/codeoscopic/lineas`, gratis, con el interruptor
+  apagado; `/correduria/hogar` en plataforma lo pinta con tres estados). Lo que queda es la **petición de
+  hogar** (`peticion-hogar.ts`, el equivalente de `peticion-auto.ts`) — y eso ya cuesta 0,50€ por prueba,
+  así que espera a saber el id del ramo y al OK de Alberto.
 - **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
@@ -337,15 +346,38 @@ sistema (las cuatro tablas a 0, `polizas.documento_url` 0%, `storage.objects` va
 Y falta el estado **«pedido pero no recibido»**: sin él, «0 documentos» no distingue no habérselo
 pedido de que el cliente no lo mande. Es la regla de `CLAUDE.md` aplicada al archivo.
 
+⏸️ **Decisión del 02/09/2026: los ficheros NO se guardan hasta que cierre el traspaso.** `/cartera/subir`
+lee la póliza y devuelve lo leído + hash, sin persistir. Guardarlos exige una tabla (`cliente_documentos`
+no existe; `poliza_documentos` exige póliza) y un cubo con ciclo de vida para PII, y **el schema `seguros`
+lo está moviendo otra conversación** (volcado del 02/09): crear tablas ahí a la vez, o escribir en la base
+de Manuel (rol SELECT-only), es pisar el traspaso. Cuando la lectura apunte a `seguros`, el diseño es:
+`documentos` colgados de cliente **o** de póliza **o** de siniestro (una tabla, tres FKs opcionales), estado
+`pedido`/`recibido`/`revisado`, fichero en Vercel Blob privado, `visible_por_cliente` para el portal.
+
 ## 🔌 El puerto que sirve la pantalla de plataforma (01/09/2026)
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
 - **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene
   menos de 3 letras: eso NO es «no hay nadie».
-- **`GET /cliente?id=`** — la ficha entera de una vez (pólizas + recibos + siniestros + contacto),
-  para que `plataforma` no encadene tres llamadas. Cuatro estados: `sin_configurar` · `error` ·
-  **`no_encontrado`** (se miró y no está) · `ok`. Los dos primeros NO se colapsan con el tercero.
+- **`GET /cliente?id=`** — la ficha entera de una vez (pólizas + recibos + siniestros + contacto +
+  **intervinientes** + **pago**: periodicidad, forma de cobro y recargo por fraccionar con 3 estados), para que `plataforma` no encadene tres llamadas. Cuatro estados: `sin_configurar` ·
+  `error` · **`no_encontrado`** (se miró y no está) · `ok`. Los dos primeros NO se colapsan con el tercero.
+  🚨 **`intervinientes` (02/09/2026): «sin teléfono» en el tomador NO es «no hay a quién llamar».**
+  Esquiansa (empresa) no tiene teléfono; su `conductor_habitual` —dueño del coche— sí, en su propia
+  ficha enlazada por CIMA. Medido sobre las 109 vivas: **81 traen intervinientes** (95 filas: 67
+  propietario, 21 conductor habitual, 5 asegurado, 1 contacto, 1 ocasional), **14 enlazados a OTRA
+  ficha** distinta del tomador, y de los 25 tomadores vivos sin teléfono **6 lo tienen en un
+  interviniente**. Nombre/teléfono/email del interviniente van cifrados (95/95); si su fila no trae
+  teléfono se lee el de la ficha enlazada. `leerIntervinientes` devuelve **`null` si la consulta falla**
+  (no `[]`: eso diría «no hay nadie más»). Quién se llama lo decide `contactoEfectivo()` de
+  `@central/module-seguros` (puro, 7 tests): tomador primero; si no, el primer interviniente por
+  prioridad de rol (contacto > conductor habitual > propietario…), y la pantalla dice DE QUIÉN es.
+- **`GET /poliza?id=`** (02/09/2026) — la ficha de UNA póliza: coberturas, todos los recibos, siniestros,
+  intervinientes, nº de documentos (`null` si no se pudo contar) y la **copia gemela** (mismo `numero_poliza`
+  en la otra cara: la de CIMA trae vencimiento y recibos, la del volcado la dirección del riesgo). La
+  dirección del RIESGO sí cruza el puerto (sin ella un hogar no se identifica); la del tomador, no.
+  `lib/cartera-poliza.ts`. El `/cliente` usa la gemela para rellenar el objeto cuando CIMA no lo manda.
 - **`GET /buscar?q=`** — el buscador de TODO (ver abajo).
 - **`GET /impagados`** — la cola de retención (ver abajo).
 
@@ -363,7 +395,8 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
 | **DNI** | **índice ciego, EXACTO** | **3.904 = 12%** |
 | teléfono | índice ciego, exacto | 5.377 = 16% |
 | email | índice ciego, exacto | 4.308 = 13% |
-| **dirección** | 🚫 **CIFRADA (1.954 de 1.954)** | **0 — imposible** |
+| **dirección (calle)** | CIFRADA (`v1:`) → **se DESCIFRA EN MEMORIA** y se compara sin acentos/signos | 170 pólizas; sin clave = «ilegibles», y se dice |
+| localidad / CP **del riesgo** | en claro en `datos_especificos` (`localidad`, `cp`), SQL sobre el JSON | 179 / 328 pólizas (**desde el 02/09/2026**) |
 
 🚨 **Las tres búsquedas por índice ciego son la trampa de esta pantalla.** Un «no aparece» por DNI es
 casi siempre «esa ficha no tiene hash calculado», no «ese DNI no está en la cartera» — y si la clave
@@ -371,11 +404,42 @@ del índice se desincronizara, **la búsqueda no daría error: devolvería vací
 silencioso que ya avisa este documento). Por eso cada bloque de resultados viaja con su **cobertura**
 y la UI dice sobre cuántas fichas ha podido mirar. `explicarVacio()` redacta esa frase.
 
-🚫 **La dirección no se puede buscar de ninguna forma** y se declara con `avisoDireccion()`, ofreciendo
-ciudad/CP. Devolver «ningún resultado» sería afirmar que ese cliente no vive en esa calle.
+🛣️ **La calle SÍ se busca desde el 02/09/2026, descifrando en memoria.** Por SQL es imposible (cifrado
+autenticado `v1:…`, sin índice ciego), pero son ~170 pólizas y esta app tiene la clave: `porDireccion()`
+las trae (tope 2.000), las descifra y compara con `direccionCoincide()` (sin acentos, sin signos: «san
+vicente 40» casa con «CL SAN VICENTE, 40 2º-14»). La cobertura del bloque es **legibles / con calle**:
+sin `PII_ENCRYPTION_KEY`, `decryptField` devuelve el cifrado tal cual y eso cuenta como **ilegible** —
+`avisoDireccion(n)` dice cuántas no se han leído en vez de devolver un vacío que diría «nadie vive ahí».
+Y `porRiesgo()` mira `localidad`/`cp` **del bien** (la casa de Rota de un cliente de Sevilla sale por
+«rota» o por `11520`). Historia: hasta ese día se declaraba «imposible» — Alberto enseñó el CRM pintando
+«CL SAN VICENTE, 40» en claro y la frase era falsa.
 
 Un término se busca por **todos** los criterios que encaje: `41003` es a la vez código postal y número
 de póliza plausibles, y no hay forma de saber cuál se quería.
+
+### 🧬 Duplicidades en la cartera (medido 02/09/2026)
+
+**`clientes.tipo` NO dice si una ficha es de hoy.** «Jose Suarez Salas» sale dos veces, las dos
+`tipo='cliente'`: la de mayo (7 pólizas, 6 por CIMA, vence 2027) es la viva; la de junio (14 pólizas,
+todas `asegura_app:`, vence 2016) es el volcado. Y la muerta enseña el número más grande. Por eso el
+buscador rotula ahora por **`vitalidad`** (`@central/module-seguros/vitalidad.ts`, puro, 12 tests):
+`viva` = entra por CIMA o vence dentro de 18 meses · `historica` · `sin_fecha` · `desconocida`. Las
+dos últimas NO entierran a nadie: `polizasCima === null` es «no se contó», jamás 0.
+
+Cifras sobre las 32.600 fichas (cero fusionadas nunca, `merged_into_*` sin estrenar):
+- **740 grupos comparten teléfono** (1.599 fichas). **203 de ellos con nombres distintos**: familias
+  y empresas, NO duplicados. Por eso no se fusiona nada automáticamente ni se dice «duplicado» a secas.
+- De los **80 clientes vivos, 48 tienen otra ficha** (36 por teléfono, 38 por nombre exacto, 1 por DNI).
+- **16 de las 109 pólizas vivas existen en las dos caras** (misma `numero_poliza` con `import_ref`
+  NULL y con `asegura_app:`), y en **10 cada copia tiene la mitad del dato**: la de CIMA trae el
+  vencimiento, la del volcado trae la **dirección del riesgo** (localidad/CP en claro). La ficha viva
+  sola no sabe dónde está la casa. Pendiente: leer la copia gemela al pintar la ficha.
+- 🚨 **1 cliente duplicado DENTRO de la cartera viva**: dos fichas con pólizas CIMA cada una (2+1),
+  sin teléfono común, sin póliza común. **Es la ingesta de CIMA creando una ficha nueva** en vez de
+  colgar la póliza de la existente — a Manuel. Renovaciones lo pinta como dos personas.
+
+El rol de esta app es SELECT-only: **no puede fusionar**. Lo que hace es medir, rotular y enlazar a
+la ficha viva desde la histórica (`avisoHermanas()`).
 
 ### 📞 La cola de retención — recibos devueltos (`lib/cartera-impagados.ts`)
 

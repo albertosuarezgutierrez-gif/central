@@ -81,6 +81,7 @@
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
 - `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`, `@central/core-telegram`.
+- `@central/core-catastro` (02/09/2026) — Catastro (servicios libres): parseo puro + dirección→referencia + adaptador HTTP con cerrojo anti-corte + `precalificarHogar()`. Nació en `module-subastas` (que ahora lo re-exporta) y lo comparte la correduría para hogar.
 - `@central/brand` — **capa de marca por cliente/tenant** (casa de marcas). Contrato `Marca { paleta, tipografia, logos, radio }`
   + `emitirRootCss(marca)` que la app inyecta en el `<head>` para sobreescribir los tokens de `globals.css` sin reescribir CSS
   (`--brand` = color dominante/identidad, `--accent` = decorativo). Cada cliente = un `src/marcas/<cliente>.ts` con sus hex/fuentes/logo

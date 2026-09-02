@@ -64,6 +64,8 @@ export {
   planBusqueda,
   avisoDireccion,
   explicarVacio,
+  normalizarDireccion,
+  direccionCoincide,
   type Criterio,
   type TipoCriterio,
   type PlanBusqueda,
@@ -79,3 +81,29 @@ export {
   type Retencion,
   type ResumenRetencion,
 } from './retencion.ts'
+export {
+  MESES_CARTERA_VIVA,
+  vitalidadFicha,
+  etiquetaVitalidad,
+  explicarVitalidad,
+  avisoHermanas,
+  type Vitalidad,
+  type SenalesFicha,
+  type Hermana,
+  type AvisoHermanas,
+} from './vitalidad.ts'
+export {
+  etiquetaRol,
+  contactoEfectivo,
+  type IntervinienteFicha,
+  type ContactoEfectivo,
+} from './intervinientes.ts'
+export {
+  FRACCIONES,
+  etiquetaFraccionamiento,
+  etiquetaFormaPago,
+  recargoFraccionamiento,
+  ventanaAnulacion,
+  type ReciboCiclo,
+  type RecargoFraccionamiento,
+} from './pago.ts'

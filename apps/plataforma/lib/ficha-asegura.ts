@@ -39,6 +39,18 @@ export type ObjetoFicha = {
   nota: string | null
 }
 
+/** El recargo por fraccionar: TRES estados. `sin_datos` nunca se pinta como 0€. */
+export type RecargoFicha =
+  | { estado: 'no_aplica' }
+  | { estado: 'sin_datos'; motivo: string }
+  | { estado: 'calculado'; primaAnual: number; sumaRecibos: number; recargoEur: number; recargoPct: number; recibos: number }
+
+export type PagoFicha = {
+  fraccionamiento: string | null
+  formaCobro: string | null
+  recargo: RecargoFicha
+}
+
 export type PolizaFicha = {
   id: string
   tipo: string
@@ -56,6 +68,8 @@ export type PolizaFicha = {
   /** `null` = la versión desplegada de asegura aún no manda el bloque de recibos.
    *  NO es «no tiene recibos»: eso sería `total: 0`, que ya significa otra cosa. */
   recibos: RecibosPoliza | null
+  /** `null` = asegura no manda el bloque de pago (versión más vieja). */
+  pago: PagoFicha | null
 }
 
 export type SiniestroFicha = {
@@ -81,6 +95,21 @@ export type ContactoFicha = {
   codigoPostal: string | null
 }
 
+/** Quién más hay en una póliza. Misma forma que en `@central/module-seguros`. */
+export type IntervinienteFicha = {
+  polizaId: string
+  rol: string
+  nombre: string | null
+  nombreIlegible: boolean
+  telefono: string | null
+  email: string | null
+  telefonoIlegible: boolean
+  emailIlegible: boolean
+  fichaId: string | null
+  esTomador: boolean
+  origen: string
+}
+
 export type Ficha = {
   id: string
   nombre: string
@@ -89,6 +118,12 @@ export type Ficha = {
   contacto: ContactoFicha
   polizas: PolizaFicha[]
   siniestros: SiniestroFicha[]
+  /**
+   * `null` = asegura no informa intervinientes (versión desplegada más vieja, o
+   * su consulta falló). Entonces «sin teléfono» solo significa «el tomador no
+   * lo tiene» — y la pantalla lo dice así, no como «nadie lo tiene».
+   */
+  intervinientes: IntervinienteFicha[] | null
 }
 
 export type RespuestaFicha =
@@ -115,7 +150,7 @@ function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
 }
 
-function leerObjeto(v: unknown): ObjetoFicha | null {
+export function leerObjeto(v: unknown): ObjetoFicha | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
   if (typeof o.estado !== 'string' || !ESTADOS_OBJETO.has(o.estado)) return null
@@ -163,6 +198,59 @@ export function leerRecibos(v: unknown): RecibosPoliza | null {
           }
         : null,
   }
+}
+
+/** El bloque de pago, o `null` si no llega. Un recargo con estado raro se
+ *  degrada a `sin_datos`: nunca a «calculado» con un número que nadie calculó. */
+export function leerPago(v: unknown): PagoFicha | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const r = (typeof o.recargo === 'object' && o.recargo !== null ? o.recargo : {}) as Record<string, unknown>
+  let recargo: RecargoFicha
+  if (r.estado === 'no_aplica') recargo = { estado: 'no_aplica' }
+  else if (
+    r.estado === 'calculado' &&
+    numero(r.primaAnual) !== null && numero(r.sumaRecibos) !== null &&
+    numero(r.recargoEur) !== null && numero(r.recargoPct) !== null
+  ) {
+    recargo = {
+      estado: 'calculado',
+      primaAnual: r.primaAnual as number, sumaRecibos: r.sumaRecibos as number,
+      recargoEur: r.recargoEur as number, recargoPct: r.recargoPct as number,
+      recibos: entero(r.recibos) ?? 0,
+    }
+  } else recargo = { estado: 'sin_datos', motivo: cadena(r.motivo) ?? 'sin informar' }
+  return { fraccionamiento: cadena(o.fraccionamiento), formaCobro: cadena(o.formaCobro), recargo }
+}
+
+/**
+ * Los intervinientes, o `null` si el bloque no llega. Una fila con forma rara
+ * se salta (no invalida la ficha: son un extra para llamar, no el contrato).
+ */
+export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: IntervinienteFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const i = fila as Record<string, unknown>
+    const polizaId = cadena(i.polizaId)
+    const rol = cadena(i.rol)
+    if (polizaId === null || rol === null) continue
+    out.push({
+      polizaId,
+      rol,
+      nombre: cadena(i.nombre),
+      nombreIlegible: i.nombreIlegible === true,
+      telefono: cadena(i.telefono),
+      email: cadena(i.email),
+      telefonoIlegible: i.telefonoIlegible === true,
+      emailIlegible: i.emailIlegible === true,
+      fichaId: cadena(i.fichaId),
+      esTomador: i.esTomador === true,
+      origen: cadena(i.origen) ?? 'sin_informar',
+    })
+  }
+  return out
 }
 
 /**
@@ -215,6 +303,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       viva: p.viva === true,
       retarificable: p.retarificable === true,
       recibos: leerRecibos(p.recibos),
+      pago: leerPago(p.pago),
     })
   }
 
@@ -256,6 +345,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       },
       polizas,
       siniestros,
+      intervinientes: leerIntervinientes(f.intervinientes),
     },
   }
 }
@@ -344,4 +434,10 @@ export async function buscarEnAsegura(q: string): Promise<RespuestaBusqueda> {
  *  que gasta dinero y vive detrás de su propia sesión). Pública, no es secreto. */
 export function urlRetarificar(polizaId: string): string {
   return `${urlAsegura()}/cartera/poliza/${polizaId}`
+}
+
+/** Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura
+ *  porque comparte pantalla con la cotización que sale de lo leído. Gratis. */
+export function urlSubirPoliza(): string {
+  return `${urlAsegura()}/cartera/subir`
 }

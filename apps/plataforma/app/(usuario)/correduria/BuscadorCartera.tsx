@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados } from '@/lib/correduria-puerto'
+import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados, type Hallazgo } from '@/lib/correduria-puerto'
 
 /**
  * Un solo cuadro para encontrar a cualquiera: nombre, matrícula, nº de póliza,
@@ -18,7 +18,8 @@ import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados } from '@/lib/corr
  * «no aparece» ahí es casi siempre «esa ficha no tiene hash», no «no está en la
  * cartera» — y si la clave se desincronizara, la búsqueda no daría error:
  * devolvería vacío. Por eso cada bloque enseña sobre cuántas fichas ha podido
- * mirar de verdad. La dirección no se puede buscar de ninguna forma.
+ * mirar de verdad. La calle del riesgo va cifrada y asegura la descifra en
+ * memoria para buscar (son ~170); sin clave lo dice, no devuelve vacío.
  */
 const ETIQUETAS: Record<string, string> = {
   nombre: '👤 Por nombre',
@@ -27,8 +28,10 @@ const ETIQUETAS: Record<string, string> = {
   dni: '🪪 Por DNI',
   telefono: '📞 Por teléfono',
   email: '✉️ Por email',
-  codigo_postal: '📮 Por código postal',
-  ciudad: '📍 Por ciudad',
+  codigo_postal: '📮 Por código postal (del cliente)',
+  ciudad: '📍 Por ciudad (del cliente)',
+  riesgo: '🏠 Por localidad o CP del riesgo',
+  direccion: '🛣️ Por calle del riesgo',
 }
 
 type Estado =
@@ -60,7 +63,7 @@ export default function BuscadorCartera() {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Nombre, matrícula, nº de póliza, DNI, teléfono, email, ciudad o CP"
+          placeholder="Nombre, matrícula, póliza, DNI, teléfono, email, ciudad, CP o calle del riesgo"
           aria-label="Buscar en la cartera"
           autoFocus
           style={{
@@ -89,8 +92,9 @@ function Resultado({ estado, termino }: { estado: Estado; termino: string }) {
   if (estado.fase === 'quieto') {
     return (
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-        Se busca a la vez por todo lo que el término pueda ser. La dirección no: va cifrada en la
-        base y no se puede consultar — usa la ciudad o el código postal.
+        Se busca a la vez por todo lo que el término pueda ser: nombre, matrícula, póliza, DNI,
+        teléfono, email, ciudad/CP del cliente y también localidad, CP o calle del RIESGO (la casa
+        de la playa sale buscando «rota» o «san vicente 40»).
       </div>
     )
   }
@@ -198,12 +202,64 @@ function Bloque({ b }: { b: BloqueResultados }) {
               {h.nombre}
             </Link>
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-              {h.tipo === 'cliente' ? '✅ cliente' : '🕐 lead'} · {h.polizas} póliza(s) · {h.porque}
+              <Vitalidad h={h} /> · {h.polizas} póliza(s) · {h.porque}
             </div>
+            {h.aviso && (
+              <div
+                style={{
+                  fontSize: 11,
+                  marginTop: 6,
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  background: h.aviso.clase === 'duplicado' ? 'var(--warn-bg, #fff7ed)' : 'transparent',
+                  color: h.aviso.clase === 'duplicado' ? 'var(--warn, #9a3412)' : 'var(--muted)',
+                  lineHeight: 1.5,
+                }}
+              >
+                {h.aviso.clase === 'duplicado' ? '⚠️ ' : 'ℹ️ '}
+                {h.aviso.texto}{' '}
+                {h.aviso.preferida && (
+                  <Link href={`/correduria/cliente/${h.aviso.preferida.clienteId}`} style={{ fontWeight: 600 }}>
+                    Abrir la ficha viva →
+                  </Link>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>
     </div>
+  )
+}
+
+/**
+ * 🚨 Lo que NO se pinta aquí: `h.tipo`, el enum de la BD. Decía «✅ cliente» en
+ * las DOS fichas de Jose Suarez Salas — la viva y el volcado de 2016— porque la
+ * carga de junio las marcó todas igual. El rótulo sale ahora de `vitalidad`,
+ * que se deriva de si sus pólizas entran por CIMA y de cuándo vencen.
+ *
+ * Cuatro estados, no dos: «sin comprobar» y «sin vencimiento» son distintos de
+ * «volcado histórico», y ninguno de los dos entierra la ficha.
+ */
+function Vitalidad({ h }: { h: Hallazgo }) {
+  const cima = h.polizasCima
+  const detalle =
+    h.vitalidad === 'viva' && cima !== null && cima > 0
+      ? `${cima} póliza(s) entran por CIMA`
+      : h.ultimoVencimiento !== null
+        ? `último vencimiento ${h.ultimoVencimiento}`
+        : 'ninguna póliza informa vencimiento'
+  const pinta: Record<Hallazgo['vitalidad'], { icono: string; texto: string; color?: string }> = {
+    viva: { icono: '✅', texto: 'cartera viva' },
+    historica: { icono: '🗄️', texto: 'volcado histórico', color: 'var(--muted)' },
+    sin_fecha: { icono: '❔', texto: 'sin vencimiento informado' },
+    desconocida: { icono: '❔', texto: 'sin comprobar' },
+  }
+  const p = pinta[h.vitalidad]
+  return (
+    <span title={detalle} style={p.color ? { color: p.color } : undefined}>
+      {p.icono} {p.texto}
+    </span>
   )
 }
 

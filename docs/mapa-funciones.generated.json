@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T22:15:51Z",
-  "sha": "1a85db13b68e0d33814dee7909370459e9dc7732",
+  "generadoEn": "2026-09-02T05:23:01Z",
+  "sha": "d6a177086324eda8384f7c9c5ca4c30a511ca609",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3606,6 +3606,27 @@
       "hash": "322af34a7b69"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/lineas/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "GET /api/operador/codeoscopic/lineas — los ramos que Codeoscopic tarifica para nuestra organización, y si HOGAR está entre ellos. **No gasta ninguna cotización**: `GET /insurance-lines` es un catálogo"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/lineas",
+      "hash": "921a540f3ce9"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/sonda/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -3688,6 +3709,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/ingesta",
       "hash": "4f4c1daff309"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/poliza/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "GET /api/operador/poliza?id=<uuid> — la ficha de UNA póliza: coberturas, todos los recibos, siniestros, intervinientes, documentos y la copia gemela del volcado. Read-only, gratis. Mismos cuatro estad"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/poliza",
+      "hash": "743ea37c476a"
     },
     {
       "ruta": "apps/asegura/app/api/operador/resumen/route.ts",
@@ -3913,7 +3955,7 @@
           "exportada": false,
           "params": "fn: () => string | null",
           "retorno": "string | null",
-          "linea": 71,
+          "linea": 105,
           "resumen": "Las claves cifradas pueden faltar en desarrollo: eso NO es «no hay nadie»."
         },
         {
@@ -3922,16 +3964,7 @@
           "exportada": true,
           "params": "correduriaId: string, termino: string,",
           "retorno": "Promise<Resultados>",
-          "linea": 79
-        },
-        {
-          "nombre": "pareceDireccion",
-          "kind": "function",
-          "exportada": false,
-          "params": "t: string",
-          "retorno": "boolean",
-          "linea": 113,
-          "resumen": "Un término con sigla de vía o número de portal es casi seguro una dirección. No se usa para BUSCAR (no se puede), sino para explicar el vacío bien."
+          "linea": 113
         },
         {
           "nombre": "ejecutar",
@@ -3939,7 +3972,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados | null>",
-          "linea": 117
+          "linea": 148
         },
         {
           "nombre": "cobertura",
@@ -3947,7 +3980,7 @@
           "exportada": false,
           "params": "correduriaId: string, where: Record<string, unknown>,",
           "retorno": "Promise<",
-          "linea": 141,
+          "linea": 176,
           "resumen": "Cuenta cuántas fichas pueden salir por un campo, para no mentir con el vacío."
         },
         {
@@ -3956,7 +3989,8 @@
           "exportada": false,
           "params": "f: FilaCliente, porque: string",
           "retorno": "Hallazgo",
-          "linea": 176
+          "linea": 216,
+          "resumen": "El hallazgo SIN enriquecer. Nace en «desconocida» a propósito: si el paso de enriquecimiento falla, la pantalla dirá «sin comprobar» en vez de heredar un «cartera viva» que nadie ha verificado."
         },
         {
           "nombre": "bloque",
@@ -3964,7 +3998,7 @@
           "exportada": false,
           "params": "c: Criterio, hallazgos: Hallazgo[], cob: { alcanzables: number; total: number } | null,",
           "retorno": "BloqueResultados",
-          "linea": 186
+          "linea": 231
         },
         {
           "nombre": "porNombre",
@@ -3972,7 +4006,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 200
+          "linea": 245
         },
         {
           "nombre": "porCiudad",
@@ -3980,7 +4014,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 229
+          "linea": 274
         },
         {
           "nombre": "porCodigoPostal",
@@ -3988,7 +4022,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 248
+          "linea": 293
         },
         {
           "nombre": "porMatricula",
@@ -3996,8 +4030,43 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 267,
+          "linea": 312,
           "resumen": "La matrícula vive EN CLARO dentro de `datos_especificos`, así que se busca con SQL crudo sobre el JSON — Prisma no filtra por `->>` con `contains`."
+        },
+        {
+          "nombre": "porRiesgo",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio",
+          "retorno": "Promise<BloqueResultados>",
+          "linea": 351,
+          "resumen": "Localidad o CP del RIESGO: viven en claro en `datos_especificos` de la póliza (`localidad`, `cp`), no en la ficha del cliente. Es lo que hace que la casa de la playa salga buscando el pueblo, aunque e"
+        },
+        {
+          "nombre": "coberturaRiesgo",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, campo: 'cp' | 'localidad',",
+          "retorno": "Promise<",
+          "linea": 401
+        },
+        {
+          "nombre": "porDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, c: Criterio",
+          "retorno": "Promise<BloqueResultados>",
+          "linea": 433,
+          "resumen": "La calle del riesgo, DESCIFRADA EN MEMORIA. Por SQL es imposible (cifrado autenticado, sin índice ciego), pero son ~170 pólizas y la app tiene la clave: se traen todas, se descifran y se comparan sin "
+        },
+        {
+          "nombre": "descifrarCalle",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string",
+          "retorno": "string | null",
+          "linea": 479,
+          "resumen": "`null` = no se ha podido leer (sin clave, o cifrado corrupto). Nunca se inventa."
         },
         {
           "nombre": "porNumeroPoliza",
@@ -4005,7 +4074,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 295
+          "linea": 490
         },
         {
           "nombre": "porHash",
@@ -4013,7 +4082,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio, campo: 'dniLookupHash' | 'telefonoLookupHash' | 'emailLookupHash', hash: string | null,",
           "retorno": "Promise<BloqueResultados | null>",
-          "linea": 322,
+          "linea": 517,
           "resumen": "Búsqueda por índice ciego. `hash === null` significa que la clave no está configurada: NO se consulta y NO se devuelve una lista vacía, porque eso se leería como «ese DNI no está en la cartera»."
         },
         {
@@ -4022,7 +4091,7 @@
           "exportada": false,
           "params": "ids: string[]",
           "retorno": "Promise<Map<string, number>>",
-          "linea": 344
+          "linea": 539
         },
         {
           "nombre": "coberturaMatricula",
@@ -4030,7 +4099,7 @@
           "exportada": false,
           "params": "correduriaId: string,",
           "retorno": "Promise<",
-          "linea": 355
+          "linea": 550
         },
         {
           "nombre": "coberturaPolizas",
@@ -4038,7 +4107,33 @@
           "exportada": false,
           "params": "correduriaId: string, where: Record<string, unknown>,",
           "retorno": "Promise<",
-          "linea": 374
+          "linea": 569
+        },
+        {
+          "nombre": "senalesDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, ids: string[],",
+          "retorno": "Promise<Map<string, Senales> | null>",
+          "linea": 601,
+          "resumen": "`null` = la consulta falló. Un Map vacío = se miró y no hay nada."
+        },
+        {
+          "nombre": "hermanasDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, ids: string[]",
+          "retorno": "Promise<HermanaCruda[] | null>",
+          "linea": 639,
+          "resumen": "Otras fichas SIN fusionar que comparten el índice ciego del teléfono. Es el único vínculo fiable que hay: el DNI solo lo tiene el 12% de las fichas, y la ficha histórica de este caso ni siquiera lo ti"
+        },
+        {
+          "nombre": "enriquecer",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, bloques: BloqueResultados[]",
+          "retorno": "Promise<void>",
+          "linea": 666
         }
       ],
       "tablas": [
@@ -4046,7 +4141,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "53a6798749c0"
+      "hash": "aca6e5a43bb7"
     },
     {
       "ruta": "apps/asegura/lib/cartera-ficha.ts",
@@ -4065,7 +4160,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 44,
+          "linea": 49,
           "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa. Los valores cifrados llevan el prefijo `v1:`. Si no lo llevan, es que están en claro (así llegaron algunos del volcado) y se devuelven tal c"
         },
         {
@@ -4074,7 +4169,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 55,
+          "linea": 60,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null."
         },
         {
@@ -4083,7 +4178,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 59
+          "linea": 64
         },
         {
           "nombre": "fechaIso",
@@ -4091,7 +4186,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 63
+          "linea": 68
         },
         {
           "nombre": "buscarClientes",
@@ -4099,7 +4194,7 @@
           "exportada": true,
           "params": "correduriaId: string, termino: string, limite = 20,",
           "retorno": "Promise<ClienteEncontrado[]>",
-          "linea": 73,
+          "linea": 78,
           "resumen": "Busca clientes por nombre o apellidos. Nombre y apellidos van EN CLARO en la base, así que esta búsqueda no depende del índice ciego — que es justo lo que la hace fiable: si fallara la clave de lookup"
         },
         {
@@ -4108,8 +4203,26 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<FichaCliente | null>",
-          "linea": 185,
+          "linea": 210,
           "resumen": "La ficha entera de un cliente en UNA consulta: quién es, cómo se le llama, qué tiene contratado, cómo va de recibos y qué siniestros arrastra. Es el corazón del «pincho en el nombre y lo tengo todo». "
+        },
+        {
+          "nombre": "objetoConGemela",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown",
+          "retorno": "ObjetoAsegurado",
+          "linea": 394,
+          "resumen": "El objeto de la póliza; si CIMA no lo informa y la gemela del volcado sí, el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre «no informado» (la dirección existe, solo que no se"
+        },
+        {
+          "nombre": "leerIntervinientes",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, idsPolizas: string[],",
+          "retorno": "Promise<IntervinienteFicha[] | null>",
+          "linea": 421,
+          "resumen": "Los intervinientes de las pólizas del cliente, ya descifrados. Nombre, teléfono y email del interviniente van cifrados (95 de 95 en las pólizas vivas). Cuando CIMA lo enlaza a su PROPIA ficha (`client"
         },
         {
           "nombre": "ilegible",
@@ -4117,7 +4230,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 336,
+          "linea": 462,
           "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
         },
         {
@@ -4126,7 +4239,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 354
+          "linea": 480
         },
         {
           "nombre": "normalizarFecha",
@@ -4134,13 +4247,13 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 439,
+          "linea": 565,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b2ee4514e9ac"
+      "hash": "f18774f34f82"
     },
     {
       "ruta": "apps/asegura/lib/cartera-impagados.ts",
@@ -4208,6 +4321,87 @@
       ],
       "rutaApi": null,
       "hash": "59513025d93e"
+    },
+    {
+      "ruta": "apps/asegura/lib/cartera-poliza.ts",
+      "ambito": "apps/asegura",
+      "resumen": "La ficha de UNA póliza: lo que la fila de la ficha del cliente no cabe. Coberturas, todos los recibos, siniestros, intervinientes, documentos y la COPIA GEMELA del volcado, que a veces sabe lo que CIMA no manda. ─── La copia gemela (medido 02/09/2026) ──────────────────────────────────── 16 de las 1",
+      "exporta": [
+        "datosConDireccion",
+        "fichaPoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "descifrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 83
+        },
+        {
+          "nombre": "ilegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 92
+        },
+        {
+          "nombre": "esObjetoPlano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 95
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 98
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date | null | undefined",
+          "retorno": "string | null",
+          "linea": 101
+        },
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: unknown",
+          "retorno": "number | null",
+          "linea": 104
+        },
+        {
+          "nombre": "datosConDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "datos: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 111,
+          "resumen": "La dirección del riesgo va cifrada en `datos_especificos`; se descifra si se puede."
+        },
+        {
+          "nombre": "fichaPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string",
+          "retorno": "Promise<FichaPoliza | null>",
+          "linea": 121
+        }
+      ],
+      "tablas": [
+        "poliza_documentos"
+      ],
+      "rutaApi": null,
+      "hash": "ae55b52b677b"
     },
     {
       "ruta": "apps/asegura/lib/cartera.ts",
@@ -4288,6 +4482,8 @@
         "marcas",
         "modelos",
         "versiones",
+        "lineasDeSeguro",
+        "hogarDisponible",
         "normalizarMatricula",
         "fechaMatriculacionDeMatricula",
         "leerFecha",
@@ -4380,12 +4576,29 @@
           "resumen": "Las VERSIONES de un modelo. El `id` de cada una es el código Base7."
         },
         {
+          "nombre": "lineasDeSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic",
+          "retorno": "Promise<Opcion[]>",
+          "linea": 137,
+          "resumen": "`GET /insurance-lines`: los ramos que Codeoscopic tiene habilitados para esta organización. Es la respuesta a «¿se puede cotizar HOGAR?» sin preguntárselo a nadie por email y sin gastar: es un GET de "
+        },
+        {
+          "nombre": "hogarDisponible",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: Opcion[]",
+          "retorno": "DisponibilidadHogar",
+          "linea": 158
+        },
+        {
           "nombre": "normalizarMatricula",
           "kind": "function",
           "exportada": true,
           "params": "m: string",
           "retorno": "string",
-          "linea": 146
+          "linea": 184
         },
         {
           "nombre": "fechaMatriculacionDeMatricula",
@@ -4393,7 +4606,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, matricula: string,",
           "retorno": "Promise<FechaMatriculacion>",
-          "linea": 150
+          "linea": 188
         },
         {
           "nombre": "leerFecha",
@@ -4401,7 +4614,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "string | null",
-          "linea": 172,
+          "linea": 210,
           "resumen": "`{\"date\":\"2021-10-01\"}` → `'2021-10-01'`. Cualquier otra cosa → `null`."
         },
         {
@@ -4410,7 +4623,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 183,
+          "linea": 221,
           "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO»."
         },
         {
@@ -4419,13 +4632,13 @@
           "exportada": true,
           "params": "catalogo: Opcion[], texto: string | null",
           "retorno": "Opcion | null",
-          "linea": 200,
+          "linea": 238,
           "resumen": "Busca en un catálogo la opción cuyo nombre coincide con un texto del CRM. 🚫 Solo empareja EXACTO (ya normalizado). Ante la duda devuelve `null`, y el llamante lo trata como «hay que elegirlo a mano»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6bf2a59227d8"
+      "hash": "d99c0d95b85e"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/cliente.ts",
@@ -5291,8 +5504,8 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<AmbitoCorreduria>",
-          "linea": 19,
-          "resumen": "Resuelve a qué correduría pertenece la cuenta de la sesión. Hoy devuelve SIEMPRE `pendiente`, porque la tabla que vincula cuenta ↔ correduría vive en el schema `seguros` y todavía no existe. Eso es co"
+          "linea": 21,
+          "resumen": "Resuelve a qué correduría pertenece la cuenta de la sesión. Desde el volcado del 02/09/2026 el vínculo existe: `seguros.usuarios` trae los 17 usuarios del CRM de origen con su `correduria_id`, y la cu"
         },
         {
           "nombre": "correduriaIdActual",
@@ -5300,13 +5513,16 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<string>",
-          "linea": 34,
+          "linea": 49,
           "resumen": "Azúcar: el `correduriaId` de la sesión, o lanza. Ver `exigirCorreduriaId`."
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "public",
+        "seguros"
+      ],
       "rutaApi": null,
-      "hash": "d7b0b72e7d54"
+      "hash": "ee0d56ab0ab9"
     },
     {
       "ruta": "apps/asegura/middleware.ts",
@@ -49067,7 +49283,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 39
+          "linea": 42
         },
         {
           "nombre": "Resultado",
@@ -49075,7 +49291,7 @@
           "exportada": false,
           "params": "{ estado, termino }: { estado: Estado; termino: string }",
           "retorno": null,
-          "linea": 88
+          "linea": 91
         },
         {
           "nombre": "Bloque",
@@ -49083,7 +49299,16 @@
           "exportada": false,
           "params": "{ b }: { b: BloqueResultados }",
           "retorno": null,
-          "linea": 175
+          "linea": 179
+        },
+        {
+          "nombre": "Vitalidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ h }: { h: Hallazgo }",
+          "retorno": null,
+          "linea": 244,
+          "resumen": "🚨 Lo que NO se pinta aquí: `h.tipo`, el enum de la BD. Decía «✅ cliente» en las DOS fichas de Jose Suarez Salas — la viva y el volcado de 2016— porque la carga de junio las marcó todas igual. El rótu"
         },
         {
           "nombre": "Nota",
@@ -49091,12 +49316,12 @@
           "exportada": false,
           "params": "{ color, children }: { color: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 210
+          "linea": 266
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df62e592b562"
+      "hash": "c185926b0d00"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/page.tsx",
@@ -49111,7 +49336,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 19,
+          "linea": 23,
           "resumen": "La ficha del cliente de la correduría, DENTRO del cuadro de mando. Alberto usa una sola pantalla —esta— para todos sus negocios: la correduría es uno más. `apps/asegura` es el back (tiene la BD de la "
         },
         {
@@ -49120,7 +49345,7 @@
           "exportada": false,
           "params": "{ polizas, vivas, abiertos }: { polizas: PolizaFicha[]; vivas: number; abiertos: number }",
           "retorno": null,
-          "linea": 65
+          "linea": 87
         },
         {
           "nombre": "Kpi",
@@ -49128,23 +49353,40 @@
           "exportada": false,
           "params": "{ label, valor, sub, color }: { label: string; valor: string; sub?: string; color?: string }",
           "retorno": null,
-          "linea": 101
+          "linea": 123
+        },
+        {
+          "nombre": "Acciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 138
         },
         {
           "nombre": "Contacto",
           "kind": "function",
           "exportada": false,
-          "params": "{ c }: { c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null } }",
+          "params": "{ c, intervinientes }: { c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null } intervinientes: IntervinienteFicha[] | null }",
           "retorno": null,
-          "linea": 113
+          "linea": 162
         },
         {
           "nombre": "Polizas",
           "kind": "function",
           "exportada": false,
-          "params": "{ titulo, nota, polizas, vacio, plegado }: { titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean }",
+          "params": "{ titulo, nota, polizas, vacio, plegado, intervinientes }: { titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean intervinientes: IntervinienteFicha[] | null }",
           "retorno": null,
-          "linea": 146
+          "linea": 216
+        },
+        {
+          "nombre": "Intervinientes",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ lista, polizaId }: { lista: IntervinienteFicha[] | null; polizaId: string }",
+          "retorno": null,
+          "linea": 310,
+          "resumen": "Quién más figura en la póliza (propietario, conductor habitual, contacto…), debajo de qué asegura. Se omite al tomador: ya es el título de la ficha. `null` = asegura no los informa; se calla en vez de"
         },
         {
           "nombre": "ObjetoCelda",
@@ -49152,7 +49394,25 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 230
+          "linea": 331
+        },
+        {
+          "nombre": "CeldaPago",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ p }: { p: PolizaFicha }",
+          "retorno": null,
+          "linea": 360,
+          "resumen": "Forma de pago (Alberto, 02/09/2026): son contratos anuales que la compañía FINANCIA al fraccionar, cobrando por ello. Lo que CIMA da es la periodicidad y la forma de cobro; el recargo se deriva de los"
+        },
+        {
+          "nombre": "Anulacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ vencimiento, viva }: { vencimiento: string | null; viva: boolean }",
+          "retorno": null,
+          "linea": 386,
+          "resumen": "La única salida de una póliza es su vencimiento, avisando 30 días antes (LCS art. 22). Se pinta solo en las vivas y solo mientras merece la pena saberlo: cuando el plazo de aviso está cerca o ya ha pa"
         },
         {
           "nombre": "CeldaRecibos",
@@ -49160,7 +49420,7 @@
           "exportada": false,
           "params": "{ r }: { r: RecibosPoliza | null }",
           "retorno": null,
-          "linea": 260,
+          "linea": 405,
           "resumen": "El estado de cobro de UNA póliza. Cuatro cosas distintas, cuatro pintados: null → asegura no manda el bloque (desplegar). total 0 → la compañía no ha mandado recibos (18 de 109 vivas, medido). devuelt"
         },
         {
@@ -49169,7 +49429,7 @@
           "exportada": false,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 282
+          "linea": 432
         },
         {
           "nombre": "Siniestros",
@@ -49177,7 +49437,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: { id: string; estado: string; tipo: string | null; referencia: string | null; fecha: string | null; reserva: number | null; indemnizacion: number | null; tramitador: string | null; abierto: boolean }[] }",
           "retorno": null,
-          "linea": 289
+          "linea": 439
         },
         {
           "nombre": "NoSePudo",
@@ -49185,7 +49445,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 355
+          "linea": 505
         },
         {
           "nombre": "Tarjeta",
@@ -49193,7 +49453,7 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 397
+          "linea": 547
         },
         {
           "nombre": "fmt",
@@ -49201,13 +49461,13 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 407,
+          "linea": 557,
           "resumen": "Fecha siempre en español: \"2026-06-03\" → \"03/06/2026\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "64b7064fe038"
+      "hash": "4c27aadc3c08"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CorreduriaClient.tsx",
@@ -49247,7 +49507,7 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 283
+          "linea": 286
         },
         {
           "nombre": "num",
@@ -49255,7 +49515,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 465
+          "linea": 468
         },
         {
           "nombre": "CarteraViva",
@@ -49263,7 +49523,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 467
+          "linea": 470
         },
         {
           "nombre": "CeldaObjeto",
@@ -49271,7 +49531,7 @@
           "exportada": false,
           "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
           "retorno": null,
-          "linea": 630,
+          "linea": 633,
           "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
         },
         {
@@ -49280,12 +49540,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 663
+          "linea": 666
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0125525d2648"
+      "hash": "cb57390ff02a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -49334,6 +49594,88 @@
       "hash": "f894a6487de2"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/hogar/HogarCatastro.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "HogarCatastro"
+      ],
+      "funciones": [
+        {
+          "nombre": "HogarCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "Resultado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, onElegir }: { r: Respuesta; onElegir: (rc: string) => void }",
+          "retorno": null,
+          "linea": 87
+        },
+        {
+          "nombre": "Dato",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor }: { label: string; valor: string | null }",
+          "retorno": null,
+          "linea": 152
+        },
+        {
+          "nombre": "Caja",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ tono, titulo, children }: { tono: 'ok' | 'aviso' | 'error' | 'neutro'; titulo: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 161
+        },
+        {
+          "nombre": "Pestana",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ activa, onClick, children }: { activa: boolean; onClick: () => void; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 171
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0d1f2a68f3f4"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/hogar/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "HogarPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "HogarPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "Presupuesto de HOGAR con solo la dirección: el Catastro da m², año de construcción y uso. Fase 1 (presupuesto rápido) del principio de Alberto — lo que falte se supone y se marca; se verifica al emiti"
+        },
+        {
+          "nombre": "RamoHogar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ l }: { l: LineasCodeoscopic }",
+          "retorno": null,
+          "linea": 35,
+          "resumen": "¿Se puede cotizar hogar en Codeoscopic? Sale de `GET /insurance-lines`, que es gratis. Tres estados a la vista; «desconocido» no se pinta como «no»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ed320401c911"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -49353,6 +49695,92 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9bfc230508b9"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PolizaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PolizaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "La ficha de UNA póliza (Alberto, 02/09/2026: «no puedo pinchar en la póliza para ir a la pantalla de póliza, ahí especifica más los datos de ese seguro, documentación, siniestros, recibos»). Todo en u"
+        },
+        {
+          "nombre": "Objeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ p }: { p: Poliza }",
+          "retorno": null,
+          "linea": 142,
+          "resumen": "Qué asegura. Si la copia de CIMA no lo trae y la GEMELA del volcado sí (10 de las 109 vivas: la casa de Rota está en la copia de junio), se enseña la gemela y se dice de dónde sale. Sin gemela informa"
+        },
+        {
+          "nombre": "Coberturas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ lista }: { lista: Poliza['coberturas'] }",
+          "retorno": null,
+          "linea": 174
+        },
+        {
+          "nombre": "Recibos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ p }: { p: Poliza }",
+          "retorno": null,
+          "linea": 203
+        },
+        {
+          "nombre": "Intervinientes",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ p }: { p: Poliza }",
+          "retorno": null,
+          "linea": 239
+        },
+        {
+          "nombre": "Dato",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ label, valor, nota, color }: { label: string; valor: string | null; nota?: string; color?: string }",
+          "retorno": null,
+          "linea": 260
+        },
+        {
+          "nombre": "NoSePudo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
+          "retorno": null,
+          "linea": 277
+        },
+        {
+          "nombre": "Tarjeta",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 301
+        },
+        {
+          "nombre": "fmt",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 304
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "789918db69f1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Retencion.tsx",
@@ -51652,7 +52080,7 @@
           "exportada": false,
           "params": "{ tipo, onChange, disabled }: { tipo: string; onChange: (v: string) => void; disabled?: boolean }",
           "retorno": null,
-          "linea": 441,
+          "linea": 447,
           "resumen": "Override manual del tipo de aparato: la categoría Tuya del NIVIAN puede no reconocerse y entonces la cerradura se pinta como ventilador. Aquí se fuerza «Cerradura» para que salga su tarjeta de acceso."
         },
         {
@@ -51661,14 +52089,14 @@
           "exportada": false,
           "params": "{ titulo, b }: { titulo: string; b: BloqueSonda }",
           "retorno": null,
-          "linea": 453
+          "linea": 459
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "1c91466785a4"
+      "hash": "261e6e4f158d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/domotica/page.tsx",
@@ -53606,7 +54034,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "02bc8cef3c75"
+      "hash": "a3914ed56633"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -56286,6 +56714,27 @@
       "hash": "cd6ddb5fc208"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/catastro/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "POST /api/correduria/catastro — m², año y uso de una vivienda para el presupuesto de hogar. Gratis (servicio público) y read-only."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/catastro",
+      "hash": "6ec9b303efe9"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/cliente/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -58884,7 +59333,7 @@
           "exportada": true,
           "params": "_req: Request, ctx: { params: Promise<{ id: string; ref: string }> }",
           "retorno": null,
-          "linea": 16,
+          "linea": 11,
           "resumen": "Borra un PIN (por su reserva_ref). Sesión de usuario. Intenta borrarlo en la cerradura y lo marca 'borrado' en la BD. `ref` viene URL-encoded (puede contener ':' del prefijo manual)."
         },
         {
@@ -58893,8 +59342,8 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string; ref: string }> }",
           "retorno": null,
-          "linea": 52,
-          "resumen": "· si el borrado sale bien y la creación falla, el huésped se queda con un código muerto. Ese caso se marca `estado='error'` y se canta: NO se deja como 'activo', porque el mensaje de la víspera lee ju"
+          "linea": 41,
+          "resumen": "Repone la ventana de validez de un PIN VIVO. Sesión de usuario: esto ES la «autorización nuestra». Body: { desde?, hasta? } (ISO/datetime-local). Sin body, se recalcula desde la reserva de Smoobu con "
         }
       ],
       "tablas": [
@@ -58903,7 +59352,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/[id]/pin/[ref]",
-      "hash": "17cb055fd03a"
+      "hash": "af8bdb982b9a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/acceso/[id]/pin/route.ts",
@@ -58967,7 +59416,7 @@
           "exportada": false,
           "params": "offsetDias = 0",
           "retorno": "string",
-          "linea": 31,
+          "linea": 32,
           "resumen": "Fecha 'YYYY-MM-DD' en Europe/Madrid, hoy + offsetDias."
         },
         {
@@ -58976,7 +59425,7 @@
           "exportada": false,
           "params": "min: number",
           "retorno": "string",
-          "linea": 39,
+          "linea": 40,
           "resumen": "\"135\" → \"2 h 15 min\". Para que el aviso se lea sin hacer cuentas mentales."
         },
         {
@@ -58985,7 +59434,7 @@
           "exportada": false,
           "params": "b: SmoobuBooking, ...keys: string[]",
           "retorno": "string",
-          "linea": 49,
+          "linea": 50,
           "resumen": "Lee un campo de la reserva de Smoobu probando varias formas (el JSON no es 100% estable)."
         },
         {
@@ -58994,7 +59443,7 @@
           "exportada": false,
           "params": "dispId: string, r: ReservaAcceso, desdeEpoch: number, hastaEpoch: number, campos: { estado: string; pin?: string; tuya_password_id?: string; modo?: string; detalle?: unknown },",
           "retorno": null,
-          "linea": 55,
+          "linea": 56,
           "resumen": "Guarda/actualiza la fila del PIN de una reserva (idempotente por el índice único)."
         },
         {
@@ -59003,7 +59452,7 @@
           "exportada": false,
           "params": "pin: string, nombreDisp: string",
           "retorno": "string",
-          "linea": 76,
+          "linea": 77,
           "resumen": "Mensaje al huésped con el PIN (canal 'huesped'/'ambos'). Texto sobrio, sin datos de más."
         },
         {
@@ -59012,7 +59461,7 @@
           "exportada": false,
           "params": "cfg: ConfigAcceso, r: ReservaAcceso, pin: string, nombreDisp: string",
           "retorno": "Promise<boolean>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "Entrega el PIN según el canal configurado. Devuelve true si se entregó por algún canal."
         },
         {
@@ -59021,7 +59470,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 99
+          "linea": 100
         }
       ],
       "tablas": [
@@ -59031,7 +59480,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/domotica/acceso/programador",
-      "hash": "3458e9f72c66"
+      "hash": "4cd0bc7498f5"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/domotica/comando/route.ts",
@@ -61093,7 +61542,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 45,
+          "linea": 47,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -61102,7 +61551,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 62,
+          "linea": 64,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -61111,7 +61560,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 88
+          "linea": 90
         },
         {
           "nombre": "getPendiente",
@@ -61119,7 +61568,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 115
+          "linea": 117
         },
         {
           "nombre": "POST",
@@ -61127,7 +61576,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 120
+          "linea": 122
         }
       ],
       "tablas": [
@@ -61152,7 +61601,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "0794948af493"
+      "hash": "b8b730cda298"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -63470,7 +63919,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cef70c8bdce1"
+      "hash": "b0da7fb6ba27"
     },
     {
       "ruta": "apps/plataforma/app/login/page.tsx",
@@ -67883,6 +68332,36 @@
       "hash": "8f807fe1f7cf"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria-hogar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Presupuesto de HOGAR desde el Catastro: con la referencia catastral —o con la dirección— salen m², año de construcción y uso sin preguntarle nada al cliente. Es la fase 1 (presupuesto rápido) aplicada al ramo de hogar. Vive en plataforma y no en asegura porque NO es dato de la cartera: es un servici",
+      "exporta": [
+        "normalizarReferencia",
+        "consultarHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarReferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 40
+        },
+        {
+          "nombre": "consultarHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ConsultaHogar",
+          "retorno": "Promise<RespuestaHogar>",
+          "linea": 44
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "56c4f206bd86"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria-puerto.ts",
       "ambito": "apps/plataforma",
       "resumen": "Los dos lectores nuevos del puerto de asegura: el buscador de TODO y la cola de retención (recibos devueltos). Interpretación PURA + la llamada. El diccionario de motivos vive AQUÍ y no en cada componente: estaba copiado en dos sitios y, cuando asegura no responde, la pantalla apilaba tres recuadros",
@@ -67890,6 +68369,8 @@
         "interpretarBusqueda",
         "interpretarImpagados",
         "buscarAsegura",
+        "interpretarLineas",
+        "lineasCodeoscopic",
         "impagadosAsegura"
       ],
       "funciones": [
@@ -67918,12 +68399,29 @@
           "linea": 26
         },
         {
+          "nombre": "vitalidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Vitalidad",
+          "linea": 67,
+          "resumen": "Una vitalidad que no se reconoce NO tumba la lista: degrada a «desconocida», que es el estado que no afirma nada. Así una versión más vieja de asegura (que no manda el campo) sigue sirviendo la búsque"
+        },
+        {
+          "nombre": "hermanas",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Hermana[] | null",
+          "linea": 71
+        },
+        {
           "nombre": "interpretarBusqueda",
           "kind": "function",
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Busqueda",
-          "linea": 62
+          "linea": 107
         },
         {
           "nombre": "interpretarImpagados",
@@ -67931,7 +68429,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Impagados",
-          "linea": 175
+          "linea": 235
         },
         {
           "nombre": "urlAsegura",
@@ -67939,7 +68437,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 242
+          "linea": 302
         },
         {
           "nombre": "pedir",
@@ -67947,7 +68445,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "Promise<",
-          "linea": 246
+          "linea": 306
         },
         {
           "nombre": "buscarAsegura",
@@ -67955,7 +68453,32 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<Busqueda>",
-          "linea": 257
+          "linea": 317
+        },
+        {
+          "nombre": "interpretarLineas",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LineasCodeoscopic",
+          "linea": 344,
+          "resumen": "Puro. `hogar` degrada a `desconocido` ante cualquier forma rara: afirmar «hogar disponible» o «ausente» sobre un JSON que no se entiende sería lo mismo que inventarlo."
+        },
+        {
+          "nombre": "leerHogar",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "HogarCodeoscopic",
+          "linea": 356
+        },
+        {
+          "nombre": "lineasCodeoscopic",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<LineasCodeoscopic>",
+          "linea": 371
         },
         {
           "nombre": "impagadosAsegura",
@@ -67963,12 +68486,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Impagados>",
-          "linea": 267
+          "linea": 381
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a145b971cd6b"
+      "hash": "a52bc727f1d8"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -69493,6 +70016,83 @@
       "hash": "ed80fbf1f6d0"
     },
     {
+      "ruta": "apps/plataforma/lib/domotica/reponer-ventana-puro.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/domotica/reponer-ventana-puro.ts — parte PURA (sin BD, sin Tuya, sin Telegram) de la reposición de la ventana de un PIN desde Telegram. Separada para poder testearla con `node --test`. El aviso «🕒 N PIN con la ventana desactualizada» se lee en el móvil, y hasta el 02/09/2026 su única salida era",
+      "exporta": [
+        "callbackReponerVentana",
+        "botonesReponerVentana",
+        "horaMadridCorta",
+        "textoResultadoReponer"
+      ],
+      "funciones": [
+        {
+          "nombre": "callbackReponerVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "dispositivoId: string, reservaRef: string",
+          "retorno": "string",
+          "linea": 21,
+          "resumen": "`callback_data` del botón «🔄 ventana» de un PIN: `dom_ventana:<dispositivoId>:<reservaRef>`."
+        },
+        {
+          "nombre": "botonesReponerVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "dispositivoId: string, desajustes: Desajuste[]",
+          "retorno": "Boton[][]",
+          "linea": 32,
+          "resumen": "Un botón por desajuste, en filas de uno (el texto lleva el nombre del huésped y no cabe de dos en dos en el móvil). Los que no quepan en los 64 bytes de Telegram se quedan SIN botón —el texto del avis"
+        },
+        {
+          "nombre": "horaMadridCorta",
+          "kind": "function",
+          "exportada": true,
+          "params": "ms: number",
+          "retorno": "string",
+          "linea": 46,
+          "resumen": "\"2026-09-04T09:00:00.000Z\" → \"04/09 11:00\" en hora de Madrid, para que el resultado se lea sin cuentas. Se monta a mano desde `formatToParts`: el ICU del runtime no siempre respeta `2-digit` en es-ES."
+        },
+        {
+          "nombre": "textoResultadoReponer",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservaRef: string, r: ResultadoReponer",
+          "retorno": "string",
+          "linea": 63,
+          "resumen": "Texto que el bot responde tras pulsar el botón. Dice lo que pasó de verdad: si el código cambió (Tuya cayó a modo offline y generó otro), lo canta en mayúsculas, porque el huésped tiene el viejo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6c5830dc2733"
+    },
+    {
+      "ruta": "apps/plataforma/lib/domotica/reponer-ventana.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/domotica/reponer-ventana.ts — repone la ventana de validez de un PIN VIVO. Un solo camino para las dos puertas que lo piden: el botón «🔄 ventana» de /sivra/domotica (PATCH /api/sivra/domotica/acceso/[id]/pin/[ref], con sesión) y el botón del aviso de Telegram (webhook, chat de Alberto). Quien l",
+      "exporta": [
+        "reponerVentanaPin"
+      ],
+      "funciones": [
+        {
+          "nombre": "reponerVentanaPin",
+          "kind": "function",
+          "exportada": true,
+          "params": "dispositivoId: string, reservaRef: string, body: { desde?: string; hasta?: string } = {},",
+          "retorno": "Promise<ResultadoReponer>",
+          "linea": 32,
+          "resumen": "`desde`/`hasta` (ISO/datetime-local) opcionales. Sin ellos, se recalcula desde la reserva de Smoobu con los márgenes de hoy — el caso «he subido el margen de salida y quiero aplicarlo a este». Con `de"
+        }
+      ],
+      "tablas": [
+        "domotica_acceso_pin",
+        "domotica_dispositivos"
+      ],
+      "rutaApi": null,
+      "hash": "1163e92cc1ea"
+    },
+    {
       "ruta": "apps/plataforma/lib/domotica/tipo.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/domotica/tipo.ts — clasificación pura del tipo de aparato Tuya y config de acceso por defecto.",
@@ -70751,12 +71351,16 @@
       "ambito": "apps/plataforma",
       "resumen": "La ficha de un cliente de la correduría, leída por el puerto de central-asegura. ─── Por qué esto vive en plataforma y no en asegura ──────────────────────── Alberto usa UNA pantalla: este cuadro de mando, con todos sus negocios. La correduría es un negocio más, y `apps/asegura` es su BACK (tiene la",
       "exporta": [
+        "leerObjeto",
         "leerRecibos",
+        "leerPago",
+        "leerIntervinientes",
         "interpretarFicha",
         "interpretarBusqueda",
         "fichaAsegura",
         "buscarEnAsegura",
-        "urlRetarificar"
+        "urlRetarificar",
+        "urlSubirPoliza"
       ],
       "funciones": [
         {
@@ -70765,7 +71369,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 104
+          "linea": 139
         },
         {
           "nombre": "numero",
@@ -70773,7 +71377,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 110,
+          "linea": 145,
           "resumen": "Número o `null`. Un `null` que llega del puerto se QUEDA en null: es «la compañía no lo informa», y convertirlo en 0 es la mentira de siempre."
         },
         {
@@ -70782,15 +71386,15 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 114
+          "linea": 149
         },
         {
           "nombre": "leerObjeto",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "v: unknown",
           "retorno": "ObjetoFicha | null",
-          "linea": 118
+          "linea": 153
         },
         {
           "nombre": "leerRecibos",
@@ -70798,8 +71402,26 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "RecibosPoliza | null",
-          "linea": 137,
+          "linea": 172,
           "resumen": "Los recibos, o `null` si el bloque no llega o llega con forma rara. Una forma rara NO se degrada a un resumen a ceros: eso pintaría «al corriente» sobre una póliza de la que no se sabe nada. Degrada a"
+        },
+        {
+          "nombre": "leerPago",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "PagoFicha | null",
+          "linea": 205,
+          "resumen": "El bloque de pago, o `null` si no llega. Un recargo con estado raro se degrada a `sin_datos`: nunca a «calculado» con un número que nadie calculó."
+        },
+        {
+          "nombre": "leerIntervinientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "IntervinienteFicha[] | null",
+          "linea": 230,
+          "resumen": "Los intervinientes, o `null` si el bloque no llega. Una fila con forma rara se salta (no invalida la ficha: son un extra para llamar, no el contrato)."
         },
         {
           "nombre": "interpretarFicha",
@@ -70807,7 +71429,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaFicha",
-          "linea": 175,
+          "linea": 263,
           "resumen": "Interpretación PURA de la respuesta del puerto de ficha. Una póliza con forma inesperada invalida la ficha entera, igual que en la lista de vencimientos: media ficha es peor que ninguna, porque nadie "
         },
         {
@@ -70816,7 +71438,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaBusqueda",
-          "linea": 273
+          "linea": 363
         },
         {
           "nombre": "urlAsegura",
@@ -70824,7 +71446,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 308
+          "linea": 398
         },
         {
           "nombre": "pedir",
@@ -70832,7 +71454,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "Promise<",
-          "linea": 312
+          "linea": 402
         },
         {
           "nombre": "fichaAsegura",
@@ -70840,7 +71462,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<RespuestaFicha>",
-          "linea": 323
+          "linea": 413
         },
         {
           "nombre": "buscarEnAsegura",
@@ -70848,7 +71470,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<RespuestaBusqueda>",
-          "linea": 333
+          "linea": 423
         },
         {
           "nombre": "urlRetarificar",
@@ -70856,13 +71478,22 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "string",
-          "linea": 345,
+          "linea": 435,
           "resumen": "La URL de asegura para los saltos que SÍ tienen que ir allí (retarificar, que gasta dinero y vive detrás de su propia sesión). Pública, no es secreto."
+        },
+        {
+          "nombre": "urlSubirPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 441,
+          "resumen": "Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura porque comparte pantalla con la cotización que sale de lo leído. Gratis."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "904da1a9309c"
+      "hash": "72ee71221f55"
     },
     {
       "ruta": "apps/plataforma/lib/financiero.ts",
@@ -72708,6 +73339,68 @@
       ],
       "rutaApi": null,
       "hash": "e466fa50ab91"
+    },
+    {
+      "ruta": "apps/plataforma/lib/poliza-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "La ficha de UNA póliza, leída por el puerto de central-asegura. Misma disciplina que `ficha-asegura.ts`: interpretación PURA, cuatro estados, y cada bloque con su propio «no se sabe».",
+      "exporta": [
+        "interpretarPoliza",
+        "polizaAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 71
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 74
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 77
+        },
+        {
+          "nombre": "interpretarPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaPoliza",
+          "linea": 81
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 184
+        },
+        {
+          "nombre": "polizaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<RespuestaPoliza>",
+          "linea": 188
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a1b84bbb32a3"
     },
     {
       "ruta": "apps/plataforma/lib/pricing-calendar.ts",
@@ -79767,10 +80460,6 @@
         "bajarFicha",
         "estadoPujasViva",
         "guardarObservacionPujas",
-        "bajarCatastro",
-        "bajarCoordenadas",
-        "resolverNombreVia",
-        "buscarRefPorDireccion",
         "geocodificarMunicipio",
         "capturarResultados"
       ],
@@ -79781,24 +80470,7 @@
           "exportada": false,
           "params": "url: string, ms = 20000, cookie?: string",
           "retorno": "Promise<string>",
-          "linea": 48
-        },
-        {
-          "nombre": "turnoCatastro",
-          "kind": "function",
-          "exportada": false,
-          "params": "pausaExtra = 0",
-          "retorno": "Promise<void>",
-          "linea": 82,
-          "resumen": "Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra` añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba de cortar y hay que darle aire, no basta con el e"
-        },
-        {
-          "nombre": "bajarCatastroHttp",
-          "kind": "function",
-          "exportada": false,
-          "params": "url: string",
-          "retorno": "Promise<string>",
-          "linea": 89
+          "linea": 43
         },
         {
           "nombre": "bajarFicha",
@@ -79806,7 +80478,7 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<FichaBoe>",
-          "linea": 118,
+          "linea": 70,
           "resumen": "Descarga y parsea las tres pestañas de la ficha de una subasta. 🚨 Un HTTP 200 que NO sea la ficha (mantenimiento del Portal, muro de un WAF, página de error) es lo más peligroso que puede pasar aquí:"
         },
         {
@@ -79815,7 +80487,7 @@
           "exportada": true,
           "params": "identificador: string",
           "retorno": "Promise<PujasFicha>",
-          "linea": 152,
+          "linea": 104,
           "resumen": "Estado de las PUJAS en vivo, de la pestaña que de verdad lo publica. 🚨 Esto sustituye a `mejorPujaViva`, que leía la pestaña GENERAL — donde solo están la puja MÍNIMA y los tramos. Nunca encontraba n"
         },
         {
@@ -79824,44 +80496,8 @@
           "exportada": true,
           "params": "args: { dedupeKey: string identificador: string | null pujas: PujasFicha fechaFin?: Date | string | null }",
           "retorno": "Promise<boolean>",
-          "linea": 175,
+          "linea": 127,
           "resumen": "Guarda una observación de pujas: el último estado en la fila y una línea en el HISTÓRICO (`subastas_pujas_obs`). El histórico es lo único que permitirá saber DESPUÉS **cuándo entró la primera puja**: "
-        },
-        {
-          "nombre": "bajarCatastro",
-          "kind": "function",
-          "exportada": true,
-          "params": "refCatastral: string",
-          "retorno": "Promise<DatosCatastro | null>",
-          "linea": 223,
-          "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
-        },
-        {
-          "nombre": "bajarCoordenadas",
-          "kind": "function",
-          "exportada": true,
-          "params": "refCatastral: string",
-          "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 238,
-          "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
-        },
-        {
-          "nombre": "resolverNombreVia",
-          "kind": "function",
-          "exportada": true,
-          "params": "provincia: string, municipio: string, sigla: string, calle: string,",
-          "retorno": "Promise<",
-          "linea": 256,
-          "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
-        },
-        {
-          "nombre": "buscarRefPorDireccion",
-          "kind": "function",
-          "exportada": true,
-          "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
-          "retorno": "Promise<",
-          "linea": 284,
-          "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
           "nombre": "esperarTurnoNominatim",
@@ -79869,7 +80505,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 352
+          "linea": 176
         },
         {
           "nombre": "geocodificarMunicipio",
@@ -79877,7 +80513,7 @@
           "exportada": true,
           "params": "municipio: string, provincia?: string | null,",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 370,
+          "linea": 194,
           "resumen": "Centro del municipio por Nominatim (OSM, gratis). Es el escalón APROXIMADO para las subastas sin referencia catastral (la mayoría del corpus): mejor un pin honesto en el centro del pueblo que un mapa "
         },
         {
@@ -79886,7 +80522,7 @@
           "exportada": false,
           "params": "identificador: string",
           "retorno": "Promise<ResultadoSubasta | null>",
-          "linea": 407,
+          "linea": 231,
           "resumen": "Desenlace desde el certificado de cierre (PDF público del Portal): «La subasta concluyó con pujas (puja máxima X euros)» / «concluyó sin pujas». `null` = certificado no disponible o marcado no reconoc"
         },
         {
@@ -79895,7 +80531,7 @@
           "exportada": true,
           "params": "max = 20",
           "retorno": "Promise<",
-          "linea": 430
+          "linea": 254
         }
       ],
       "tablas": [
@@ -79903,7 +80539,7 @@
         "subastas_pujas_obs"
       ],
       "rutaApi": null,
-      "hash": "cadaeb0512f0"
+      "hash": "74c3bc7167f9"
     },
     {
       "ruta": "apps/plataforma/lib/subastas/gmail-boe.ts",
@@ -81010,7 +81646,8 @@
       "exporta": [
         "tgAlert",
         "tgAlertButtons",
-        "tgAvisoAlerta"
+        "tgAvisoAlerta",
+        "tgAvisoAlertaBotones"
       ],
       "funciones": [
         {
@@ -81045,11 +81682,20 @@
           "retorno": "Promise<void>",
           "linea": 29,
           "resumen": "`tgAlert` con el interruptor del panel /telegram. `id` debe estar en `lib/telegram/catalogo.ts`."
+        },
+        {
+          "nombre": "tgAvisoAlertaBotones",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, mensaje: string, nivel: keyof typeof EMOJI, botones: Boton[][]",
+          "retorno": "Promise<number | null>",
+          "linea": 36,
+          "resumen": "`tgAlertButtons` con el interruptor del panel /telegram (misma envoltura SIVRA que `tgAvisoAlerta`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9380b1bb8ae0"
+      "hash": "6ed95e274dd2"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/avisos.ts",
@@ -96066,6 +96712,330 @@
       "hash": "60dfe7979389"
     },
     {
+      "ruta": "packages/core-catastro/src/hogar.ts",
+      "ambito": "packages/core-catastro",
+      "resumen": "De la ficha del Catastro a lo que un seguro de HOGAR necesita para dar precio: m², año de construcción, uso y dónde está. PURO. ─── Por qué existe (Alberto, 02/09/2026) ─────────────────────────────────── «En el Catastro, con la referencia catastral te da todos los datos importantes para poder tarif",
+      "exporta": [
+        "precalificarHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpiaDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "ldt: string | null",
+          "retorno": "string | null",
+          "linea": 62
+        },
+        {
+          "nombre": "precalificarHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: DatosCatastro",
+          "retorno": "PrecalificacionHogar",
+          "linea": 71
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "60a3c663a9d3"
+    },
+    {
+      "ruta": "packages/core-catastro/src/http.ts",
+      "ambito": "packages/core-catastro",
+      "resumen": "Adaptador HTTP del Catastro: la RED. El parseo es puro y vive en `parser.ts`. Notas de campo (probadas contra los servicios reales, jul/2026): · El host rechaza la conexión sin un User-Agent de navegador. · El endpoint REST `/json/` devuelve 400; el que funciona es el `.asmx` que responde XML. Extra",
+      "exporta": [
+        "bajarCatastro",
+        "bajarCoordenadas",
+        "resolverNombreVia",
+        "buscarRefPorDireccion",
+        "inmueblesPorDireccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "bajar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, ms = 20000, cookie?: string",
+          "retorno": "Promise<string>",
+          "linea": 34
+        },
+        {
+          "nombre": "turnoCatastro",
+          "kind": "function",
+          "exportada": false,
+          "params": "pausaExtra = 0",
+          "retorno": "Promise<void>",
+          "linea": 68,
+          "resumen": "Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra` añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba de cortar y hay que darle aire, no basta con el e"
+        },
+        {
+          "nombre": "bajarCatastroHttp",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string",
+          "retorno": "Promise<string>",
+          "linea": 75
+        },
+        {
+          "nombre": "bajarCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "refCatastral: string",
+          "retorno": "Promise<DatosCatastro | null>",
+          "linea": 102,
+          "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
+        },
+        {
+          "nombre": "bajarCoordenadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "refCatastral: string",
+          "retorno": "Promise<CoordenadasCatastro | null>",
+          "linea": 117,
+          "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
+        },
+        {
+          "nombre": "resolverNombreVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "provincia: string, municipio: string, sigla: string, calle: string,",
+          "retorno": "Promise<",
+          "linea": 135,
+          "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
+        },
+        {
+          "nombre": "buscarRefPorDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
+          "retorno": "Promise<",
+          "linea": 163,
+          "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
+        },
+        {
+          "nombre": "inmueblesPorDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
+          "retorno": "Promise<",
+          "linea": 235,
+          "resumen": "Los inmuebles de un portal, para que UNA PERSONA elija el piso. Es la pieza que le falta a `buscarRefPorDireccion` para el seguro de hogar: allí, con varios pisos en el portal, se devuelve la parcela "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b06448787685"
+    },
+    {
+      "ruta": "packages/core-catastro/src/parser.ts",
+      "ambito": "packages/core-catastro",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de la respuesta del Catastro (servicios web LIBRES de la Sede Electrónica, sin registro ni clave). Endpoint que FUNCIONA (probado el 28/07/2026): https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCal",
+      "exporta": [
+        "parsearCatastro",
+        "errorCatastro",
+        "refParcela",
+        "direccionCatastro",
+        "parsearInmueblesDnploc",
+        "parcelaUnica",
+        "normVia",
+        "tokensVia",
+        "terminoBusquedaVia",
+        "parsearVias",
+        "elegirVia",
+        "paramsDnploc",
+        "parsearCoordenadas",
+        "superficieUtil"
+      ],
+      "funciones": [
+        {
+          "nombre": "etiqueta",
+          "kind": "function",
+          "exportada": false,
+          "params": "xml: string, tag: string",
+          "retorno": "string | null",
+          "linea": 38
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "xml: string, tag: string",
+          "retorno": "number | null",
+          "linea": 45
+        },
+        {
+          "nombre": "parsearCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "DatosCatastro",
+          "linea": 54,
+          "resumen": "Convierte el XML de `Consulta_DNPRC` en datos utilizables."
+        },
+        {
+          "nombre": "vacio",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "DatosCatastro",
+          "linea": 78
+        },
+        {
+          "nombre": "errorCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "string | null",
+          "linea": 87,
+          "resumen": "¿La respuesta indica error del servicio (referencia inexistente, etc.)?"
+        },
+        {
+          "nombre": "refParcela",
+          "kind": "function",
+          "exportada": true,
+          "params": "rc?: string | null",
+          "retorno": "string | null",
+          "linea": 110,
+          "resumen": "Referencia catastral de PARCELA: los 14 primeros caracteres. Es la que acepta `Consulta_CPMRC` (con los 20 del bien concreto responde «LA REFERENCIA CATASTRAL DEBE SER DE 14 POSICIONES», comprobado el"
+        },
+        {
+          "nombre": "direccionCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "ldt?: string | null",
+          "retorno": "DireccionCatastro | null",
+          "linea": 135,
+          "resumen": "Convierte el `ldt` del Catastro en algo que un humano y un buscador de mapas entiendan. El formato de origen es denso y con ruido: «AV PEDRO ROMERO (DE) 2 Es:1 Pl:07 Pt:B 41007 SEVILLA» y de ahí sale "
+        },
+        {
+          "nombre": "parsearInmueblesDnploc",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "InmuebleCatastro[]",
+          "linea": 185,
+          "resumen": "Parsea `Consulta_DNPLOC` — el servicio LIBRE que resuelve DIRECCIÓN → referencia catastral. Es lo que permite ubicar con exactitud las subastas que el BOE publica con dirección pero SIN referencia cat"
+        },
+        {
+          "nombre": "parcelaUnica",
+          "kind": "function",
+          "exportada": true,
+          "params": "inmuebles: InmuebleCatastro[]",
+          "retorno": "string | null",
+          "linea": 215,
+          "resumen": "Parcela común a todos los inmuebles de una respuesta DNPLOC. `null` si la respuesta mezcla parcelas (dirección ambigua): en ese caso NO se elige una a dedo, porque ubicaría el inmueble en el edificio "
+        },
+        {
+          "nombre": "normVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 260,
+          "resumen": "Normaliza CONSERVANDO LA Ñ. `norm()` la convierte en «N» y eso rompe la búsqueda en el callejero del Catastro: verificado el 31/07/2026 que `NombreVia=CAÑAL` encuentra «CARLOS CAÑAL» y `NombreVia=CANA"
+        },
+        {
+          "nombre": "tokensVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string[]",
+          "linea": 278,
+          "resumen": "Tokens con los que se compara un nombre de vía (sin artículos ni Ñ)."
+        },
+        {
+          "nombre": "terminoBusquedaVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "calle: string",
+          "retorno": "string",
+          "linea": 292,
+          "resumen": "Término con el que preguntar al callejero. **El servicio busca por SUBCADENA** (verificado: `OLIVA` encuentra «NUESTRA SEÑORA D LA OLIVA»), así que se manda UNA palabra distintiva en vez del nombre en"
+        },
+        {
+          "nombre": "parsearVias",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "Array<",
+          "linea": 309,
+          "resumen": "Nombres de vía del callejero oficial (`ConsultaVia`), que busca por SUBCADENA. Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el Catastro, y ese formato es impredecible: mue"
+        },
+        {
+          "nombre": "elegirVia",
+          "kind": "function",
+          "exportada": true,
+          "params": "vias: Array<{ tipo: string; nombre: string }>, buscada: string",
+          "retorno": "string | null",
+          "linea": 332,
+          "resumen": "Elige el nombre OFICIAL entre los candidatos del callejero comparando TOKENS, no cadenas: es la única forma de casar «PACO GANDÍA» con «PACO GANDIA» y «Nuestra Señora de la Oliva» con «NUESTRA SEÑORA "
+        },
+        {
+          "nombre": "paramsDnploc",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion?: string | null",
+          "retorno": "ParamsDnploc | null",
+          "linea": 366,
+          "resumen": "Traduce la dirección tal como la publica el BOE a los parámetros de `Consulta_DNPLOC`. Ejemplos reales del corpus: «AVENIDA PEDRO ROMERO Nº 2, planta séptima de la casa número…» → { sigla:'AV', calle:"
+        },
+        {
+          "nombre": "parsearCoordenadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "CoordenadasCatastro | null",
+          "linea": 437,
+          "resumen": "Convierte el XML de `Consulta_CPMRC` en coordenadas WGS84. `null` si el servicio no las da (error, referencia inexistente o respuesta corrupta) — nunca devuelve un punto inventado."
+        },
+        {
+          "nombre": "superficieUtil",
+          "kind": "function",
+          "exportada": true,
+          "params": "catastro?: number | null, anuncio?: number | null",
+          "retorno": "number | null",
+          "linea": 469,
+          "resumen": "Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que publica el anuncio. POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del €/m² de mercado. Si el scori"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cdd69258685d"
+    },
+    {
+      "ruta": "packages/core-catastro/src/texto.ts",
+      "ambito": "packages/core-catastro",
+      "resumen": "Dos utilidades de texto que el parser del Catastro necesita. Son copia literal de `@central/module-subastas` (email-boe.ts y parsing.ts) para que este núcleo NO dependa del módulo de subastas.",
+      "exporta": [
+        "decodificarHtml",
+        "norm"
+      ],
+      "funciones": [
+        {
+          "nombre": "decodificarHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 21,
+          "resumen": "Decodifica entidades HTML y colapsa espacios."
+        },
+        {
+          "nombre": "norm",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 34,
+          "resumen": "Minúsculas sin diacríticos y con espacios colapsados (para COMPARAR)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "59957d131ca8"
+    },
+    {
       "ruta": "packages/core-email/src/transporter.ts",
       "ambito": "packages/core-email",
       "exporta": [
@@ -100429,6 +101399,8 @@
       "exporta": [
         "planBusqueda",
         "avisoDireccion",
+        "normalizarDireccion",
+        "direccionCoincide",
         "explicarVacio"
       ],
       "funciones": [
@@ -100438,7 +101410,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string",
-          "linea": 85
+          "linea": 94
         },
         {
           "nombre": "compacto",
@@ -100446,7 +101418,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string",
-          "linea": 90,
+          "linea": 99,
           "resumen": "Quita todo lo que no sea letra o dígito y sube a mayúsculas."
         },
         {
@@ -100455,17 +101427,35 @@
           "exportada": true,
           "params": "termino: string",
           "retorno": "PlanBusqueda",
-          "linea": 99,
+          "linea": 108,
           "resumen": "Decide dónde buscar un término. Puede devolver varios criterios: `41003` es a la vez un código postal plausible y un número de póliza plausible, y no hay forma de saber cuál quería quien lo teclea — a"
         },
         {
           "nombre": "avisoDireccion",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "ilegibles?: number",
           "retorno": "Aviso",
-          "linea": 155,
-          "resumen": "Lo que hay que decir cuando alguien busca una DIRECCIÓN. No es un mensaje de error ni una lista vacía: es que ese campo va cifrado en la base y una consulta SQL no puede mirarlo. Devolver «ningún resu"
+          "linea": 176,
+          "resumen": "Lo que hay que decir cuando la calle NO se ha podido mirar. La dirección va cifrada; se descifra en memoria para buscar, y eso exige la clave. Sin ella, devolver «ningún resultado» sería afirmar que e"
+        },
+        {
+          "nombre": "normalizarDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 189,
+          "resumen": "Sin acentos, en mayúsculas, sin signos: «CL SAN VICENTE, 40» ≈ «san vicente 40»."
+        },
+        {
+          "nombre": "direccionCoincide",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion: string, termino: string",
+          "retorno": "boolean",
+          "linea": 199,
+          "resumen": "¿La calle `direccion` contiene el término? Ambos normalizados."
         },
         {
           "nombre": "explicarVacio",
@@ -100473,12 +101463,12 @@
           "exportada": true,
           "params": "tipo: TipoCriterio, cob: Cobertura | null",
           "retorno": "string",
-          "linea": 175
+          "linea": 216
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "282393d3dc29"
+      "hash": "c4363308daea"
     },
     {
       "ruta": "packages/module-seguros/src/documento-auto.ts",
@@ -100683,6 +101673,45 @@
       "hash": "c66b5547c62d"
     },
     {
+      "ruta": "packages/module-seguros/src/intervinientes.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Quién más hay en una póliza, y a quién se llama cuando el tomador no tiene teléfono. 🚨 Caso fundacional (02/09/2026): la ficha de **Esquiansa** (una empresa) decía «sin teléfono · sin email». Y era verdad… de la ficha del tomador. La póliza lleva un `conductor_habitual` (Juan Manuel, dueño y conduc",
+      "exporta": [
+        "etiquetaRol",
+        "contactoEfectivo"
+      ],
+      "funciones": [
+        {
+          "nombre": "etiquetaRol",
+          "kind": "function",
+          "exportada": true,
+          "params": "rol: string",
+          "retorno": "string",
+          "linea": 46
+        },
+        {
+          "nombre": "contactoEfectivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "tomador: { telefono: string | null; email: string | null }, intervinientes: IntervinienteFicha[] | null,",
+          "retorno": "ContactoEfectivo",
+          "linea": 71,
+          "resumen": "A quién se llama. El tomador manda; si no tiene, el primer interviniente (por prioridad de rol) que sí tenga. `intervinientes === null` = no se ha podido mirar, y se dice — nunca se colapsa con «no ha"
+        },
+        {
+          "nombre": "prioridad",
+          "kind": "function",
+          "exportada": false,
+          "params": "rol: string",
+          "retorno": "number",
+          "linea": 108
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0e27e371f8d6"
+    },
+    {
       "ruta": "packages/module-seguros/src/objeto.ts",
       "ambito": "packages/module-seguros",
       "resumen": "QUÉ asegura cada póliza — el «objeto asegurado». Una lista de renovaciones con cliente, ramo y prima no basta para llamar a nadie: el mismo tomador puede tener tres pólizas de auto, y «Auto · Mapfre · 431,85€» no dice CUÁL. Lo que identifica la póliza en la conversación es el bien: la matrícula y el",
@@ -100799,6 +101828,65 @@
       "hash": "77ade921171e"
     },
     {
+      "ruta": "packages/module-seguros/src/pago.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Forma de pago de una póliza y lo que cuesta fraccionarla. ─── Lo que dictó Alberto (02/09/2026) ────────────────────────────────────── «La póliza realmente solo se puede anular en vencimiento: son contratos anuales, y las compañías te FINANCIAN el pago (forma de pago) cobrando un interés. Esto lo te",
+      "exporta": [
+        "etiquetaFraccionamiento",
+        "etiquetaFormaPago",
+        "recargoFraccionamiento",
+        "ventanaAnulacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "etiquetaFraccionamiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: string | null",
+          "retorno": "string",
+          "linea": 32
+        },
+        {
+          "nombre": "etiquetaFormaPago",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string | null",
+          "retorno": "string | null",
+          "linea": 44,
+          "resumen": "El código EIAC de la forma de cobro del recibo. `null` = no informado."
+        },
+        {
+          "nombre": "dentroDelCiclo",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string | null, vencimiento: string | null",
+          "retorno": "boolean",
+          "linea": 70
+        },
+        {
+          "nombre": "recargoFraccionamiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "args: { fraccionamiento: string | null primaAnual: number | null vencimiento: string | null recibos: ReciboCiclo[] }",
+          "retorno": "RecargoFraccionamiento",
+          "linea": 85,
+          "resumen": "Cuánto cuesta fraccionar ESTA anualidad. Solo se calcula con el ciclo COMPLETO (tantos recibos no anulados como fracciones): con la mitad de los recibos la resta sale negativa y parecería que fraccion"
+        },
+        {
+          "nombre": "ventanaAnulacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimiento: string | null, hoy: Date = new Date(),",
+          "retorno": "",
+          "linea": 129,
+          "resumen": "Cuándo se puede dejar la póliza. Los contratos son ANUALES (LCS art. 22): la única salida es el vencimiento, avisando con 30 días. Antes de eso, cambiar de compañía no libera de pagar el resto del cic"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7a9f6dcf48ab"
+    },
+    {
       "ruta": "packages/module-seguros/src/recibos.ts",
       "ambito": "packages/module-seguros",
       "resumen": "El estado de cobro de una póliza, que es la pregunta que Alberto hace antes de llamar a nadie: ¿este cliente está al corriente? 🚨 Esa pregunta tiene TRES respuestas, no dos, y la tercera es la que más se pierde: «no lo sé». Medido el 01/09/2026, 18 de las 109 pólizas vivas no tienen NI UN recibo en",
@@ -100822,7 +101910,7 @@
           "exportada": true,
           "params": "r: RecibosPoliza",
           "retorno": "string",
-          "linea": 64,
+          "linea": 67,
           "resumen": "La frase que acompaña al estado. Dice qué hacer, no solo qué pasa."
         },
         {
@@ -100831,13 +101919,13 @@
           "exportada": true,
           "params": "lista: readonly ReciboCrudo[]",
           "retorno": "RecibosPoliza",
-          "linea": 85,
+          "linea": 90,
           "resumen": "Resume los recibos de UNA póliza. Recibe la lista YA ordenada por emisión descendente (el primero es el último recibo). `anulado` no entra en pendientes ni en cobrados: no es deuda ni ingreso, y meter"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4242a8566126"
+      "hash": "f24273ea7ca5"
     },
     {
       "ruta": "packages/module-seguros/src/retencion.ts",
@@ -100961,13 +102049,13 @@
           "exportada": true,
           "params": "polizas: Array<{ primaAnual?: number | null; primaBruta?: number | null }>,",
           "retorno": "",
-          "linea": 119,
+          "linea": 122,
           "resumen": "Suma de primas conocidas + cuántas no lo son. Nunca «X €» a secas cuando falta información."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9be62266042a"
+      "hash": "0650453c81ab"
     },
     {
       "ruta": "packages/module-seguros/src/vigencia.ts",
@@ -101009,6 +102097,65 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "532b2af1289e"
+    },
+    {
+      "ruta": "packages/module-seguros/src/vitalidad.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "¿Esta ficha es un cliente de HOY o un resto del volcado histórico? 🚨 El campo `clientes.tipo` NO lo dice, aunque lo parezca. Medido el 02/09/2026: «Jose Suarez Salas» sale DOS veces en el buscador, las dos marcadas `tipo='cliente'`, y son cosas opuestas: ficha de mayo 7 pólizas, 6 por CIMA, vence 2",
+      "exporta": [
+        "vitalidadFicha",
+        "etiquetaVitalidad",
+        "explicarVitalidad",
+        "avisoHermanas"
+      ],
+      "funciones": [
+        {
+          "nombre": "limiteVivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "hoy: Date",
+          "retorno": "Date",
+          "linea": 44
+        },
+        {
+          "nombre": "vitalidadFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: SenalesFicha, hoy: Date = new Date()",
+          "retorno": "Vitalidad",
+          "linea": 54,
+          "resumen": "Clasifica una ficha. El orden importa: `polizasCima === null` sale ANTES que nada, porque «no se ha contado» no puede acabar pintado como «histórica»."
+        },
+        {
+          "nombre": "etiquetaVitalidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: Vitalidad",
+          "retorno": "string",
+          "linea": 70
+        },
+        {
+          "nombre": "explicarVitalidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: Vitalidad, f: SenalesFicha",
+          "retorno": "string",
+          "linea": 75,
+          "resumen": "La frase que explica POR QUÉ, para que el rótulo no haya que creérselo."
+        },
+        {
+          "nombre": "avisoHermanas",
+          "kind": "function",
+          "exportada": true,
+          "params": "propia: Vitalidad, hermanas: Hermana[] | null",
+          "retorno": "AvisoHermanas | null",
+          "linea": 116,
+          "resumen": "Qué decir cuando una ficha tiene hermanas. `null` cuando no hay ninguna o cuando no se ha podido mirar — el silencio aquí no afirma nada."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "348eb2ae8ff1"
     },
     {
       "ruta": "packages/module-ses/src/enviar.ts",
@@ -101651,182 +102798,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "561f7f263c52"
-    },
-    {
-      "ruta": "packages/module-subastas/src/catastro.ts",
-      "ambito": "packages/module-subastas",
-      "resumen": "──────────────────────────────────────────────────────────────────────────── Parseo PURO de la respuesta del Catastro (servicios web LIBRES de la Sede Electrónica, sin registro ni clave). Endpoint que FUNCIONA (probado el 28/07/2026): https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCal",
-      "exporta": [
-        "parsearCatastro",
-        "errorCatastro",
-        "refParcela",
-        "direccionCatastro",
-        "parsearInmueblesDnploc",
-        "parcelaUnica",
-        "normVia",
-        "tokensVia",
-        "terminoBusquedaVia",
-        "parsearVias",
-        "elegirVia",
-        "paramsDnploc",
-        "parsearCoordenadas",
-        "superficieUtil"
-      ],
-      "funciones": [
-        {
-          "nombre": "etiqueta",
-          "kind": "function",
-          "exportada": false,
-          "params": "xml: string, tag: string",
-          "retorno": "string | null",
-          "linea": 39
-        },
-        {
-          "nombre": "numero",
-          "kind": "function",
-          "exportada": false,
-          "params": "xml: string, tag: string",
-          "retorno": "number | null",
-          "linea": 46
-        },
-        {
-          "nombre": "parsearCatastro",
-          "kind": "function",
-          "exportada": true,
-          "params": "xml: string",
-          "retorno": "DatosCatastro",
-          "linea": 55,
-          "resumen": "Convierte el XML de `Consulta_DNPRC` en datos utilizables."
-        },
-        {
-          "nombre": "vacio",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": "DatosCatastro",
-          "linea": 79
-        },
-        {
-          "nombre": "errorCatastro",
-          "kind": "function",
-          "exportada": true,
-          "params": "xml: string",
-          "retorno": "string | null",
-          "linea": 88,
-          "resumen": "¿La respuesta indica error del servicio (referencia inexistente, etc.)?"
-        },
-        {
-          "nombre": "refParcela",
-          "kind": "function",
-          "exportada": true,
-          "params": "rc?: string | null",
-          "retorno": "string | null",
-          "linea": 111,
-          "resumen": "Referencia catastral de PARCELA: los 14 primeros caracteres. Es la que acepta `Consulta_CPMRC` (con los 20 del bien concreto responde «LA REFERENCIA CATASTRAL DEBE SER DE 14 POSICIONES», comprobado el"
-        },
-        {
-          "nombre": "direccionCatastro",
-          "kind": "function",
-          "exportada": true,
-          "params": "ldt?: string | null",
-          "retorno": "DireccionCatastro | null",
-          "linea": 136,
-          "resumen": "Convierte el `ldt` del Catastro en algo que un humano y un buscador de mapas entiendan. El formato de origen es denso y con ruido: «AV PEDRO ROMERO (DE) 2 Es:1 Pl:07 Pt:B 41007 SEVILLA» y de ahí sale "
-        },
-        {
-          "nombre": "parsearInmueblesDnploc",
-          "kind": "function",
-          "exportada": true,
-          "params": "xml: string",
-          "retorno": "InmuebleCatastro[]",
-          "linea": 186,
-          "resumen": "Parsea `Consulta_DNPLOC` — el servicio LIBRE que resuelve DIRECCIÓN → referencia catastral. Es lo que permite ubicar con exactitud las subastas que el BOE publica con dirección pero SIN referencia cat"
-        },
-        {
-          "nombre": "parcelaUnica",
-          "kind": "function",
-          "exportada": true,
-          "params": "inmuebles: InmuebleCatastro[]",
-          "retorno": "string | null",
-          "linea": 216,
-          "resumen": "Parcela común a todos los inmuebles de una respuesta DNPLOC. `null` si la respuesta mezcla parcelas (dirección ambigua): en ese caso NO se elige una a dedo, porque ubicaría el inmueble en el edificio "
-        },
-        {
-          "nombre": "normVia",
-          "kind": "function",
-          "exportada": true,
-          "params": "s: string",
-          "retorno": "string",
-          "linea": 261,
-          "resumen": "Normaliza CONSERVANDO LA Ñ. `norm()` la convierte en «N» y eso rompe la búsqueda en el callejero del Catastro: verificado el 31/07/2026 que `NombreVia=CAÑAL` encuentra «CARLOS CAÑAL» y `NombreVia=CANA"
-        },
-        {
-          "nombre": "tokensVia",
-          "kind": "function",
-          "exportada": true,
-          "params": "nombre: string",
-          "retorno": "string[]",
-          "linea": 279,
-          "resumen": "Tokens con los que se compara un nombre de vía (sin artículos ni Ñ)."
-        },
-        {
-          "nombre": "terminoBusquedaVia",
-          "kind": "function",
-          "exportada": true,
-          "params": "calle: string",
-          "retorno": "string",
-          "linea": 293,
-          "resumen": "Término con el que preguntar al callejero. **El servicio busca por SUBCADENA** (verificado: `OLIVA` encuentra «NUESTRA SEÑORA D LA OLIVA»), así que se manda UNA palabra distintiva en vez del nombre en"
-        },
-        {
-          "nombre": "parsearVias",
-          "kind": "function",
-          "exportada": true,
-          "params": "xml: string",
-          "retorno": "Array<",
-          "linea": 310,
-          "resumen": "Nombres de vía del callejero oficial (`ConsultaVia`), que busca por SUBCADENA. Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el Catastro, y ese formato es impredecible: mue"
-        },
-        {
-          "nombre": "elegirVia",
-          "kind": "function",
-          "exportada": true,
-          "params": "vias: Array<{ tipo: string; nombre: string }>, buscada: string",
-          "retorno": "string | null",
-          "linea": 333,
-          "resumen": "Elige el nombre OFICIAL entre los candidatos del callejero comparando TOKENS, no cadenas: es la única forma de casar «PACO GANDÍA» con «PACO GANDIA» y «Nuestra Señora de la Oliva» con «NUESTRA SEÑORA "
-        },
-        {
-          "nombre": "paramsDnploc",
-          "kind": "function",
-          "exportada": true,
-          "params": "direccion?: string | null",
-          "retorno": "ParamsDnploc | null",
-          "linea": 367,
-          "resumen": "Traduce la dirección tal como la publica el BOE a los parámetros de `Consulta_DNPLOC`. Ejemplos reales del corpus: «AVENIDA PEDRO ROMERO Nº 2, planta séptima de la casa número…» → { sigla:'AV', calle:"
-        },
-        {
-          "nombre": "parsearCoordenadas",
-          "kind": "function",
-          "exportada": true,
-          "params": "xml: string",
-          "retorno": "CoordenadasCatastro | null",
-          "linea": 435,
-          "resumen": "Convierte el XML de `Consulta_CPMRC` en coordenadas WGS84. `null` si el servicio no las da (error, referencia inexistente o respuesta corrupta) — nunca devuelve un punto inventado."
-        },
-        {
-          "nombre": "superficieUtil",
-          "kind": "function",
-          "exportada": true,
-          "params": "catastro?: number | null, anuncio?: number | null",
-          "retorno": "number | null",
-          "linea": 467,
-          "resumen": "Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que publica el anuncio. POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del €/m² de mercado. Si el scori"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "ba8b4caa67a5"
     },
     {
       "ruta": "packages/module-subastas/src/ciclo-vida.ts",
@@ -106106,7 +107077,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2766,
-    "funciones": 7768
+    "archivos": 2783,
+    "funciones": 7853
   }
 }

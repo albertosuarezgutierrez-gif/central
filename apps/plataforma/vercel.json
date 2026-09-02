@@ -1,5 +1,8 @@
 {
   "ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/plataforma --sin-previews",
+  "github": {
+    "silent": true
+  },
   "buildCommand": "prisma generate && next build",
   "installCommand": "npx --yes pnpm@10.33.0 install --no-frozen-lockfile",
   "framework": "nextjs",

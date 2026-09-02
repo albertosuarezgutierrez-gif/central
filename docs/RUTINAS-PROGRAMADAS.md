@@ -59,10 +59,10 @@ cosas. El de registro se mergea solo y no envejece; el que cambia comportamiento
 ### 1. Auditoría nocturna ligera — *activa*
 | | |
 |---|---|
-| **Cuándo** | Diaria, ~**04:00 CEST** |
+| **Cuándo** | Diaria, **10:00 CEST (`0 8 * * *` UTC)** — movida el **27/08/2026** por Alberto desde la UI (junto con mercado-booking y facturas) para correr DESPUÉS del reset de cuota semanal de los sábados (07:00 UTC); antes 04:00 CEST. Este doc siguió diciendo «04:00» seis días: la auditoría no se leía a sí misma. Cron verificado por `list_triggers` y por el historial de ejecuciones (04:01 hasta el 27/08, 10:01 desde el 28/08) el 02/09/2026. |
 | **Prompt** | `Ejecuta /auditoria-diaria` |
-| **MCPs / envs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo; si faltan, el aviso se omite). |
-| **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons/agentes** (paso 2-bis: `agente_latidos` como fuente preferida + filas frescas en BD para lo no instrumentado + reconciliación de cobertura contra `CRON_JOBS`/`AGENTES_VIGILADOS`/este doc) + **backlog de PRs de rutinas y salud del automerge** (paso 2-ter: PRs de registro atascados, conflictos, drafts olvidados, workflow `rutinas-automerge` vivo). SALTA typecheck/tests pesados. |
+| **MCPs / envs** | **Supabase + Supabase asegura + Vercel** (lectura) — y NADA más: el 02/09/2026 las dos rutinas de auditoría llevaban los **16 conectores heredados** del formulario (Gmail, Stripe, HubSpot, Booking, Adobe, Drive, Calendar…) y se dejaron en esos tres vía Claude Chrome, verificado releyendo cada rutina tras guardar. La skill solo usa Supabase (central + origen de Manuel), Vercel, GitHub nativo y HTTPS a plataforma; no manda correo ni toca ningún otro servicio. **GitHub es nativo** al vincular el repo — ya cubre lectura + abrir el PR + push a `main`. Para el aviso, `PLATAFORMA_URL` + `ALERTA_TOKEN` **en el ENTORNO `Default` de la rutina, no en el prompt** (rutinas 1 y 2 comparten entorno con `trading-analista`; ver pendiente 10) — por eso el prompt es una sola línea y Chrome reporta «NO/NO» al buscarlas ahí (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo; si faltan, el aviso se omite). |
+| **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + **las conversaciones del rango** (`list_sessions`: toda sesión sin entrada de memoria, sin PR y sin bitácora es un pendiente perdido) + skills-maestro **y TODAS las skills de agentes** (datos duros contra código y `list_triggers`) + los `CLAUDE.md` de las 12 apps + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift) + **heartbeat de crons/agentes** (paso 2-bis: `agente_latidos` como fuente preferida + filas frescas en BD para lo no instrumentado + reconciliación de cobertura contra `CRON_JOBS`/`AGENTES_VIGILADOS`/este doc) + **backlog de PRs de rutinas y salud del automerge** (paso 2-ter: PRs de registro atascados, conflictos, drafts olvidados, workflow `rutinas-automerge` vivo) + **💰 salud del precio** (2bis) + **🛡️ salud de la correduría** (2-quater, desde 02/09/2026: latidos `correduria_*`, foto `seguros.*` vs origen, gasto Codeoscopic, cepos de aislamiento). SALTA typecheck/tests pesados. |
 | **Resultado (dos carriles)** | **Carril 1:** los arreglos de **texto** (memoria/skills/docs/manuales) se **auto-aplican a `main`** (sin PR) y se anotan en `docs/AUTO-APLICADOS.md`. Si el entorno no deja empujar a `main` → PR propio SOLO con ficheros de registro, que **se mergea solo** (ver "Cómo llega el texto a `main`" abajo). **Carril 2:** lo "raro" (código, infra, crons mudos, gran radio) → **PR draft** `claude/auditoria-diaria-<fecha>` + **aviso Telegram** con botón-URL al PR. **Sin nada** → sin push, sin PR, sin aviso. |
 
 Es la **red de seguridad** del guardián de cierre (`.claude/hooks/persist-memoria.sh`):
@@ -73,15 +73,16 @@ caza lo que las sesiones del día no anotaron a mano.
 |---|---|
 | **Cuándo** | Semanal (domingos, ~**04:00 CEST**) |
 | **Prompt** | `Ejecuta /auditoria-diaria --profunda` |
-| **MCPs / envs** | Supabase + Vercel. **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
-| **Qué hace** | `auditoria-central` ENTERA: typecheck de las 8 apps + tests + seguridad multi-tenant + `pnpm audit` + infra por MCP (incl. `ignoreCommand` en los 8 `vercel.json`) + coherencia de docs. |
+| **MCPs / envs** | **Supabase + Supabase asegura + Vercel** (lectura; los 16 heredados se quitaron el 02/09/2026, igual que en la rutina 1). **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` en el entorno `Default` (no en el prompt) para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
+| **Qué hace** | `auditoria-central` ENTERA: typecheck de las **12** apps (la matriz de `tests.yml`, no una cifra fija — este doc dijo «8» dos meses mientras nacían mariscos, asegura, asegura-portal y housesevillana) + tests + seguridad multi-tenant (incl. los schemas `rrhh`/`seguros` con BYPASSRLS, donde el aislamiento es del código) + `pnpm audit` + infra por MCP (incl. `ignoreCommand` en los 12 `vercel.json`) + coherencia de docs. |
 | **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
+| **🛡️ Correduría (obligatorio, 02/09/2026)** | Además del bloque **2-quater «Salud de la correduría»** diario (latidos `correduria_*`, foto `seguros.*` vs origen de Manuel por recuentos, gasto Codeoscopic, cepos de aislamiento, §21 pausada a propósito), la semanal hace el tramo caro: typecheck de `apps/asegura` con sus **dos** schemas de Prisma, tests de `packages/module-seguros{,-pii,-portal}` (cifrado + índice ciego), foto vs origen **con checksums** (método de `prisma/sql/2026-09-01_seguros_volcado_datos.sql`) y `docs/TRASPASO-CORREDURIA.md` §pendientes contra el código (¿sigue leyendo del origen? ¿contrato de encargado firmado?). Necesita el conector **`Supabase_asegura`** (solo lectura) adjunto a las rutinas 1 y 2 — sin él, el bloque dice «no he podido mirar el origen», nunca «coincide». |
 | **💰 Pricing (obligatorio, 27/08/2026)** | Además del bloque 2bis diario, la pasada semanal hace el tramo CARO, que es el que decide dinero a medio plazo: **(a)** re-corre la consulta de posición vs mercado de `docs/POSICION-MERCADO-lejano.md` §«La consulta» y **rellena su tabla de seguimiento** (ratio por piso, «más caros que TODOS los comps», cobertura); **(b)** comprueba las **tres** condiciones para reencender `antelacion_k` y dice explícitamente cuáles se cumplen y cuáles no —nunca la enciende sola: eso lo decide Alberto—; **(c)** mide la **oscilación por piso** en 7 días (la consulta del bloque 2bis, desglosada por `property_id`) y la compara con la semana anterior: si sube, es que el motor se está peleando consigo mismo; **(d)** corre `node --test lib/sivra/pricing-*.test.ts` en `apps/plataforma` (246 tests el 27/08/2026) — si alguno cae, es 🔴 y **el motor tiene prioridad sobre cualquier otro hallazgo de la pasada**. |
 
 ### 3. Facturas correo — *activa*
 | | |
 |---|---|
-| **Cuándo** | Diaria, **08:00 CEST** |
+| **Cuándo** | Diaria, **11:00 CEST (`0 9 * * *` UTC)** — movida el 27/08/2026 tras el reset de cuota (antes 08:00 CEST) |
 | **Prompt** | `Ejecuta la skill facturas-correo` |
 | **MCPs** | Gmail + Drive + Supabase |
 | **Qué hace** | Revisa Gmail, clasifica facturas (personal vs deducible), archiva en Drive y concilia con movimientos bancarios de plataforma. |
@@ -409,6 +410,7 @@ del token o firmar la petición, no quitarla.
 | Radar España (`trig_01NLeiXPfS3PwwyVS4or7geo`) | ✅ idéntico |
 | Coordinador patrimonial (`trig_01NtNkTDWKX7UbDjkWYfQpuq`) | ✅ idéntico |
 | SIVRA mercado booking (`trig_01Sr5KXErpEhGCtT1F16hv4W`) | 🔴 **VACÍO** |
+| Auditoría diaria (`trig_01V5zon2W6BrP8g5sizopESo`) y semanal profunda (`trig_019n8QubPF7eAgk3nz3KzM2P`) | ➡️ **no va en el prompt**: vive en el entorno `Default` de la rutina (verificado 20/07/2026 por una pasada real; el 02/09 Chrome confirmó que el prompt es solo `Ejecuta /auditoria-diaria`). Al rotar, se cambia en el entorno, no en estas dos |
 
 ⚠️ **Esta tabla NO es exhaustiva**: son las seis rutinas que se miraron ese día. Las envs de una
 rutina no se leen por API, así que al rotar hay que abrirlas TODAS en la UI y comprobarlas una a
@@ -423,10 +425,10 @@ una — no fiarse de esta lista.
 
 | Día/hora | Rutina |
 |---|---|
-| Diaria 04:00 | Auditoría nocturna ligera |
+| Diaria 10:00 | Auditoría nocturna ligera (`0 8 * * *` UTC; movida el 27/08/2026, antes 04:00) |
 | Días 1 y 15, ~10:00 | Seguimiento quincenal del laboratorio de inversión |
-| Diaria 08:00 | Facturas correo |
-| Diaria 05:30 | Mercado real por fecha (SIVRA / Booking) |
+| Diaria 11:00 | Facturas correo (movida el 27/08/2026, antes 08:00) |
+| Diaria 10:30 | Mercado real por fecha (SIVRA / Booking) (movida el 27/08/2026, antes 05:30) |
 | Diaria 11:00 | Vigilancia diaria pricing SIVRA (*temporal*) |
 | Lunes 06:00 | Pricing agente SIVRA |
 | Miércoles 09:00 | Guardián PSD2 |
