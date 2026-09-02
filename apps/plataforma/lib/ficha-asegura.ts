@@ -1,4 +1,4 @@
-import type { DocumentoResumen, EstadoClienteDerivado, Retarificabilidad } from '@central/module-seguros'
+import type { Anualidad, DocumentoResumen, EstadoClienteDerivado, EvolucionPrima, Retarificabilidad, VeredictoPrima } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import { leerContactos, leerIdentidad, type ContactosCliente, type IdentidadFicha } from './cliente-edicion-asegura.ts'
 import { leerRelaciones, type RelacionCartera } from './relaciones-asegura.ts'
@@ -86,7 +86,16 @@ export type PolizaFicha = {
   recibos: RecibosPoliza | null
   /** `null` = asegura no manda el bloque de pago (versión más vieja). */
   pago: PagoFicha | null
+  /**
+   * «¿Por qué ha subido la prima?» en compacto (veredicto + % + frase).
+   * `null` = la versión desplegada de asegura no lo manda o llega ilegible:
+   * NO es `sin_datos` (que es «se miró y CIMA no da la anualidad anterior»).
+   */
+  evolucionPrima: EvolucionPrimaCompacta | null
 }
+
+/** Lo que la ficha del cliente recibe por póliza: el veredicto sin la lista de anualidades. */
+export type EvolucionPrimaCompacta = Pick<EvolucionPrima, 'veredicto' | 'variacionPct' | 'explicacion'>
 
 /**
  * Un siniestro de la ficha. La forma la fija `siniestros-asegura.ts`
@@ -279,6 +288,72 @@ export function leerRetarificacion(v: unknown): Retarificabilidad | null {
   }
 }
 
+const VEREDICTOS_PRIMA: readonly VeredictoPrima[] = ['sube_por_siniestros', 'sube_sin_siniestro', 'no_atribuible', 'igual', 'baja', 'sin_datos']
+
+/** `null` o número finito se devuelven tal cual; cualquier otra cosa es basura → `undefined`. */
+function numeroONulo(v: unknown): number | null | undefined {
+  if (v === null) return null
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+
+/**
+ * El veredicto compacto de la prima, o `null` si no llega o llega con forma rara.
+ *
+ * Nunca se inventa un `sin_datos`: ese estado significa «asegura miró y CIMA no
+ * manda la anualidad anterior», y aquí solo se sabe que asegura no ha dicho
+ * nada. Tampoco un `variacionPct: 0`, que diría «igual» sobre lo que no se sabe.
+ */
+export function leerEvolucionCompacta(v: unknown): EvolucionPrimaCompacta | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.veredicto !== 'string' || !(VEREDICTOS_PRIMA as readonly string[]).includes(o.veredicto)) return null
+  const variacionPct = numeroONulo(o.variacionPct)
+  if (variacionPct === undefined) return null
+  if (typeof o.explicacion !== 'string') return null
+  return { veredicto: o.veredicto as VeredictoPrima, variacionPct, explicacion: o.explicacion }
+}
+
+function leerAnualidad(v: unknown): Anualidad | null {
+  if (typeof v !== 'object' || v === null) return null
+  const a = v as Record<string, unknown>
+  const desde = cadena(a.desde)
+  const hasta = cadena(a.hasta)
+  const recibos = entero(a.recibos)
+  const suplementos = entero(a.suplementos)
+  const siniestros = entero(a.siniestros)
+  const esperados = a.esperados === null ? null : entero(a.esperados)
+  const primaTotal = numeroONulo(a.primaTotal)
+  const primaNeta = numeroONulo(a.primaNeta)
+  const variacionPct = numeroONulo(a.variacionPct)
+  if (
+    desde === null || hasta === null || recibos === null || suplementos === null || siniestros === null ||
+    esperados === undefined || typeof a.completa !== 'boolean' ||
+    primaTotal === undefined || primaNeta === undefined || variacionPct === undefined
+  ) return null
+  return { desde, hasta, recibos, esperados, completa: a.completa, primaTotal, primaNeta, suplementos, siniestros, variacionPct }
+}
+
+/**
+ * La evolución entera (con anualidades), o `null` si no llega o llega rara.
+ * Una anualidad ilegible tumba el bloque entero: media lista compararía mal
+ * y pintaría un porcentaje sobre ciclos que no están.
+ */
+export function leerEvolucionPrima(v: unknown): EvolucionPrima | null {
+  const compacta = leerEvolucionCompacta(v)
+  if (compacta === null) return null
+  const o = v as Record<string, unknown>
+  if (!Array.isArray(o.anualidades)) return null
+  const anualidades: Anualidad[] = []
+  for (const fila of o.anualidades) {
+    const a = leerAnualidad(fila)
+    if (a === null) return null
+    anualidades.push(a)
+  }
+  const siniestrosSinFecha = entero(o.siniestrosSinFecha)
+  if (siniestrosSinFecha === null) return null
+  return { ...compacta, anualidades, siniestrosSinFecha }
+}
+
 /** El bloque de pago, o `null` si no llega. Un recargo con estado raro se
  *  degrada a `sin_datos`: nunca a «calculado» con un número que nadie calculó. */
 export function leerPago(v: unknown): PagoFicha | null {
@@ -441,6 +516,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       retarificacion: leerRetarificacion(p.retarificacion),
       recibos: leerRecibos(p.recibos),
       pago: leerPago(p.pago),
+      evolucionPrima: leerEvolucionCompacta(p.evolucionPrima),
     })
   }
 
