@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T05:46:23Z",
+  "generadoEn": "2026-09-02T07:14:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5375,6 +5375,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Pendiente:",
+      "fecha": ""
+    },
+    {
       "titulo": "Hecho por Claude Chrome (02/09):",
       "fecha": ""
     },
@@ -5415,6 +5419,10 @@
       "fecha": ""
     },
     {
+      "titulo": "Pendiente de Alberto (panel Vercel, 4 pasos en `docs/TRASPASO-CORREDURIA.md` «CIERRE»):",
+      "fecha": ""
+    },
+    {
       "titulo": "`/cartera/renovaciones`",
       "fecha": ""
     },
@@ -5424,14 +5432,6 @@
     },
     {
       "titulo": "BD de matrículas gratis: no la hay útil.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Siguiente ramo: HOGAR",
-      "fecha": ""
-    },
-    {
-      "titulo": "`deductible` la traen 10 de 18 precios",
       "fecha": ""
     }
   ],
