@@ -309,6 +309,7 @@ test('🚨 asegura viejo sin `confirmadaCima`/`estado`/`historial` → viva de s
   assert.equal(r.ficha.estado, null, 'sin estado derivado se cae a la regla anterior, no a «lead»')
   assert.equal(r.ficha.historial, null, '«no se pudo leer» ≠ «sin anotaciones»')
   assert.equal(r.ficha.cotizacionesVivas, null, 'sin contar ≠ 0 presupuestos')
+  assert.equal(r.ficha.polizas[0].evolucionPrima, null, '«no manda la evolución» ≠ sin_datos ≠ igual')
 })
 
 test('confirmadaCima se lee tal cual: una viva sin confirmar es «pendiente de CIMA»', () => {

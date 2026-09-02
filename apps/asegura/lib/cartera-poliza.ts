@@ -18,6 +18,8 @@ import {
   objetoAsegurado,
   primaReferencia,
   recargoFraccionamiento,
+  evolucionPrima,
+  type EvolucionPrima,
   resumirRecibos,
   type IntervinienteFicha,
   type ObjetoAsegurado,
@@ -85,6 +87,12 @@ export type FichaPoliza = {
   /** La lista (con estado pedido/recibido/revisado). `null` = no se pudo consultar. */
   listaDocumentos: DocumentoResumen[] | null
   pago: { fraccionamiento: string | null; formaCobro: string | null; recargo: RecargoFraccionamiento }
+  /**
+   * «Por qué ha subido»: prima por anualidad (aniversario a aniversario, recibos CA/NP)
+   * y veredicto con siniestros del ciclo anterior. `sin_datos` cuando CIMA no manda la
+   * anualidad anterior o el ciclo está incompleto — NUNCA se pinta como «no ha subido».
+   */
+  evolucionPrima: EvolucionPrima
   /** `retarificacion.retarificable`, mantenido por compatibilidad con quien ya lo lee. */
   retarificable: boolean
   /** Por qué ramo se puede pedir precio (auto/hogar), o por qué no, mirando también la gemela. */
@@ -144,7 +152,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         orderBy: { numeroOrden: 'asc' },
       },
       recibos: {
-        select: { id: true, situacion: true, primaTotal: true, fechaEmision: true, fechaVencimiento: true, formaPago: true },
+        select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEmision: true, fechaVencimiento: true, formaPago: true },
         orderBy: { fechaEmision: 'desc' },
       },
       siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
@@ -248,6 +256,15 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, formaPago: etiquetaFormaPago(r.formaPago),
     })),
     siniestros: p.siniestros.map(mapSiniestro),
+    evolucionPrima: evolucionPrima({
+      fechaInicio: fechaIso(p.fechaInicio),
+      fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+      recibos: p.recibos.map((r) => ({
+        id: r.id, claseRecibo: r.claseRecibo ?? null, fechaEfectoInicial: fechaIso(r.fechaEfectoInicial), fechaEmision: fechaIso(r.fechaEmision),
+        situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal, primaNeta: r.primaNeta,
+      })),
+      siniestros: p.siniestros.map((x) => ({ fechaHora: x.fechaHora instanceof Date ? x.fechaHora.toISOString() : null, estado: String(x.estado) })),
+    }),
     intervinientes,
     documentos,
     listaDocumentos,

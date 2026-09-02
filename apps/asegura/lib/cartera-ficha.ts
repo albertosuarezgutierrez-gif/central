@@ -19,6 +19,8 @@ import {
   objetoAsegurado,
   primaReferencia,
   recargoFraccionamiento,
+  evolucionPrima,
+  type VeredictoPrima,
   resumirRecibos,
   type IntervinienteFicha,
   type ObjetoAsegurado,
@@ -166,6 +168,12 @@ export type PolizaFicha = {
     formaCobro: string | null
     recargo: RecargoFraccionamiento
   }
+  /**
+   * «Por qué ha subido», compacto: veredicto sobre la última anualidad frente a la anterior
+   * (recibos CA/NP por ciclo de aniversario + siniestros del ciclo anterior). `sin_datos` = CIMA
+   * no manda la anualidad anterior o el ciclo está incompleto; nunca se pinta como «igual».
+   */
+  evolucionPrima: { veredicto: VeredictoPrima; variacionPct: number | null; explicacion: string }
 }
 
 export type SiniestroFicha = {
@@ -335,6 +343,9 @@ export async function fichaCliente(
             polizaId: true,
             situacion: true,
             primaTotal: true,
+            primaNeta: true,
+            claseRecibo: true,
+            fechaEfectoInicial: true,
             fechaEmision: true,
             fechaVencimiento: true,
             formaPago: true,
@@ -461,6 +472,18 @@ export async function fichaCliente(
             formaPago: r.formaPago,
           })),
         ),
+        evolucionPrima: (() => {
+          const e = evolucionPrima({
+            fechaInicio: fechaIso(p.fechaInicio),
+            fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+            recibos: (recibosPorPoliza.get(p.id) ?? []).map((r) => ({
+              id: r.id, claseRecibo: r.claseRecibo ?? null, fechaEfectoInicial: fechaIso(r.fechaEfectoInicial), fechaEmision: fechaIso(r.fechaEmision),
+              situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal, primaNeta: r.primaNeta,
+            })),
+            siniestros: siniestros.filter((x) => x.polizaId === p.id).map((x) => ({ fechaHora: x.fechaHora instanceof Date ? x.fechaHora.toISOString() : null, estado: String(x.estado) })),
+          })
+          return { veredicto: e.veredicto, variacionPct: e.variacionPct, explicacion: e.explicacion }
+        })(),
         pago: {
           fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
           formaCobro: etiquetaFormaPago(recibosPorPoliza.get(p.id)?.[0]?.formaPago ?? null),

@@ -231,3 +231,15 @@ export {
   type SeguimientoSiniestro,
   type SeguimientoRevisado,
 } from './siniestros.ts'
+export {
+  evolucionPrima,
+  etiquetaVeredictoPrima,
+  inicioCiclo,
+  UMBRAL_IGUAL_PCT,
+  UMBRAL_SUBIDA_GENERAL_PCT,
+  type ReciboEvolucion,
+  type SiniestroEvolucion,
+  type Anualidad,
+  type VeredictoPrima,
+  type EvolucionPrima,
+} from './prima-evolucion.ts'

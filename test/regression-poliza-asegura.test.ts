@@ -28,6 +28,7 @@ test('una póliza completa se lee entera, con su gemela y sus coberturas', () =>
   assert.equal(r.poliza.coberturas[0].capital, '105000')
   assert.equal(r.poliza.documentos, 0)
   assert.equal(r.poliza.pago?.recargo.estado, 'no_aplica')
+  assert.equal(r.poliza.evolucionPrima, null, 'sin el bloque (asegura vieja) → null, no sin_datos')
 })
 
 test('🚨 sin clave `gemela` no se afirma que no exista; con `gemela: null` sí', () => {

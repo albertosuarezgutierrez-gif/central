@@ -5,6 +5,7 @@ import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
 import Historial from '../../Historial'
 import Siniestros from '../../Siniestros'
+import EvolucionPrima from '../../EvolucionPrima'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
@@ -379,6 +380,10 @@ function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
                   {p.prima === null
                     ? <span style={{ color: 'var(--muted)' }} title="La compañía no informa la prima">sin dato</span>
                     : eur(p.prima)}
+                  {/* Solo en las vivas: en el volcado histórico no hay anualidades que comparar. */}
+                  {p.viva && p.estado !== 'cancelada' && (
+                    <div style={{ marginTop: 4 }}><EvolucionPrima modo="chip" evolucion={p.evolucionPrima} /></div>
+                  )}
                 </td>
                 <td style={td}><CeldaPago p={p} /></td>
                 <td style={td}><CeldaRecibos r={p.recibos} /></td>

@@ -102,7 +102,7 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 | Portal del cliente leyendo la cartera | ❌ hoy solo bóveda de pólizas que el usuario declara; sin FK a `clientes` | `apps/asegura-portal` |
 | Autorizados en el portal | ❌ regla escrita (`clientesVisiblesPara`), sin grant ni UI | `module-seguros/relaciones.ts` |
 | Apertura/seguimiento de siniestro desde la ficha | ✅ abrir (origen `gestionado_correduria`), seguimiento (tramitador, perito, gravedad, reserva, indemnización, notas fechadas), estado por transiciones, documentos del parte; en uno de CIMA el estado lo fija la compañía. La referencia de la compañía se guarda también en `id_siniestro_entidad` para que el pull de CIMA case en vez de duplicar | `module-seguros/siniestros.ts` · `asegura/lib/cartera-siniestros.ts` · `/api/operador/siniestro` · `plataforma/…/Siniestros.tsx` |
-| «Por qué ha subido la prima» | ❌ | — |
+| «Por qué ha subido la prima» | ✅ `evolucionPrima()`: prima por ANUALIDAD (aniversario a aniversario, recibos `CA`/`NP`; los `SU` aparte) + siniestros del ciclo anterior → `sube_por_siniestros` · `sube_sin_siniestro` (candidata a retarificar; ≤5 % parece tarifa general) · `no_atribuible` (siniestros sin fecha) · `igual` · `baja` · `sin_datos`. Cobertura medida: 29 vivas con dos anualidades, 25 con una, 13 sin recibos → para la mayoría la respuesta honesta es «CIMA no manda la anualidad anterior» | `module-seguros/prima-evolucion.ts` · `cartera-poliza.ts` / `cartera-ficha.ts` (`evolucionPrima`) · plataforma `EvolucionPrima.tsx` |
 
 ## 5. La pieza crítica: conciliar Codeoscopic ↔ CIMA
 
@@ -205,9 +205,11 @@ tiene vetadas hasta decidirlo (nada sale sin su OK; emisión en sandbox).
    sin tabla oficial aquí, así que se pinta como código y no se le inventa nombre. CIMA reescribe en
    cada pull `estado`, `tipo`, `fecha_hora` y `lugar_*`, y NUNCA tramitador/perito/gravedad/reserva/
    indemnización/comentario (son «manual del corredor»): por eso eso es justo lo que se anota.
-7. **«Por qué ha subido»**: comparar la prima de dos anualidades con los siniestros del ciclo y el
-   recargo por fraccionar; helper puro con tres estados (sube por siniestros / sube sin siniestro →
-   retarificar / no se puede saber porque CIMA no manda la anualidad anterior).
+7. ✅ **«Por qué ha subido»** — hecho 02/09/2026. Medido antes: la prima por anualidad NO es un dato de
+   CIMA, se deriva de los recibos `CA`/`NP` agrupados **por aniversario** (una semestral del 1/10 tiene
+   10/2024+04/2025 en la misma anualidad; por año natural se compara mal). Un siniestro solo explica la
+   subida si cayó en el ciclo ANTERIOR a la renovación; uno sin fecha impide afirmar «sin siniestro».
+   Lo que no hace: no sabe la tarifa general de cada compañía (el umbral del 5 % es heurístico).
 
 ## 10. Reglas para las sesiones que toquen esto
 

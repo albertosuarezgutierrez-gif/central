@@ -3,11 +3,11 @@
 // cada bloque con su propio «no se sabe».
 
 import {
-  leerIntervinientes, leerObjeto, leerPago, leerRecibos, leerRetarificacion,
+  leerEvolucionPrima, leerIntervinientes, leerObjeto, leerPago, leerRecibos, leerRetarificacion,
   type IntervinienteFicha, type ObjetoFicha, type PagoFicha, type RecibosPoliza, type MotivoFicha,
 } from './ficha-asegura.ts'
 import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
-import type { DocumentoResumen, Retarificabilidad } from '@central/module-seguros'
+import type { DocumentoResumen, EvolucionPrima, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { DetalleCobertura } from '@central/module-seguros'
 
@@ -96,6 +96,12 @@ export type Poliza = {
   retarificable: boolean
   /** Ramo/motivo/fuente del veredicto. `null` = asegura (versión vieja) no lo manda. */
   retarificacion: Retarificabilidad | null
+  /**
+   * «¿Por qué ha subido la prima?»: anualidades derivadas de los recibos CA/NP
+   * y veredicto. `null` = asegura no lo manda o llega ilegible; NO es
+   * `sin_datos`, que es «se miró y CIMA no da la anualidad anterior».
+   */
+  evolucionPrima: EvolucionPrima | null
 }
 
 export type RespuestaPoliza =
@@ -206,6 +212,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       pago: leerPago(p.pago),
       retarificable: p.retarificable === true,
       retarificacion: leerRetarificacion(p.retarificacion),
+      evolucionPrima: leerEvolucionPrima(p.evolucionPrima),
     },
   }
 }
