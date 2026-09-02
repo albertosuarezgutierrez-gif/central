@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
+import type { CapitalAsegurado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
@@ -56,13 +57,15 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
       {/* ── Qué asegura ─────────────────────────────────────────────────── */}
       <Tarjeta titulo="Qué asegura">
         <Objeto p={p} />
+        {/* Solo en hogar, y solo si asegura los manda: `null` no es «no tiene capital». */}
+        {p.capitalesHogar && <CapitalesHogar caps={p.capitalesHogar} />}
       </Tarjeta>
 
       {/* ── Fechas, prima y pago ─────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
         <Dato label="Efecto inicial" valor={p.fechaEfectoInicial ? fmt(p.fechaEfectoInicial) : null} nota="desde cuándo está con la compañía (la antigüedad del bonus)" />
         <Dato label="Inicio de esta anualidad" valor={p.fechaInicio ? fmt(p.fechaInicio) : null} />
-        <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={anul ? (anul.enPlazo ? `para no renovar, avisar antes del ${fmt(anul.limiteAviso)}` : 'plazo de aviso pasado: renueva otro año') : cancelada ? 'cancelada' : undefined} color={anul?.enPlazo && anul.diasParaAvisar <= 60 ? '#c96' : undefined} />
+        <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={anul ? (anul.enPlazo ? `para no renovar, avisar antes del ${fmt(anul.limiteAviso)}` : 'plazo de aviso pasado: renueva otro año') : cancelada ? 'cancelada' : undefined} color={anul?.enPlazo && anul.diasParaAvisar <= 60 ? 'var(--warning)' : undefined} />
         <Dato label="Prima" valor={p.prima !== null ? eur(p.prima) : null} nota={p.primaAnual !== null && p.primaBruta !== null && p.primaAnual !== p.primaBruta ? `neta ${eur(p.primaAnual)} · bruta ${eur(p.primaBruta)}` : undefined} />
         <Dato label="Forma de pago" valor={p.pago ? etiquetaFraccionamiento(p.pago.fraccionamiento) : null} nota={p.pago?.formaCobro ?? undefined} />
         <Dato
@@ -90,6 +93,14 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         modo="tarjeta"
         evolucion={p.evolucionPrima}
         retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : { motivo: p.retarificacion?.motivo ?? null }}
+      />
+
+      {/* ── ¿Merece la pena pedir precio? ───────────────────────────────── */}
+      {/* Pegado a la evolución de la prima a propósito: las dos contestan a la
+          misma pregunta, y ésta es la que dice si compensa gastar los 0,50€. */}
+      <Estimacion
+        e={p.estimacion}
+        retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : null}
       />
 
       {/* ── Siniestros ──────────────────────────────────────────────────── */}
@@ -386,4 +397,195 @@ function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNo
 function fmt(iso: string): string {
   const [y, m, d] = iso.split('-')
   return d && m && y ? `${d}/${m}/${y}` : iso
+}
+
+/* ─── ¿Merece la pena pedir precio? ────────────────────────────────────────
+ * Va pegada a la evolución de la prima porque responde a la MISMA pregunta:
+ * pedir precio cuesta 0,50€ reales y esto dice si compensa gastarlos.
+ *
+ * 🚨 Lo que esta tarjeta NO puede hacer es leerse como el precio de una
+ * compañía: si el cliente ve «180€» y luego le dicen 260€, no vuelve. De ahí
+ * que (a) se pinte SIEMPRE la `etiqueta` que manda el puerto, tal cual, sin
+ * resumirla; (b) los números vayan con `≈`, en el color de aviso informativo y
+ * más pequeños que los importes REALES de la ficha (`Dato`, 18 px en
+ * `--text`), para que no se confundan con una prima cobrada; y (c) el veredicto
+ * `no-se` se pinte con su porqué en vez de esconder el bloque — no mojarse es
+ * una respuesta, no un hueco.
+ */
+function Estimacion({ e, retarificar }: { e: Poliza['estimacion']; retarificar: { href: string; rotulo: string } | null }) {
+  if (e === null) {
+    return (
+      <div style={{ ...tarjeta, borderStyle: 'dashed' }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>🔮 ¿Merece la pena pedir precio?</div>
+        <p style={muted}>La versión desplegada de asegura todavía no manda la estimación: no se sabe si compensa.</p>
+      </div>
+    )
+  }
+  return (
+    <div style={cajaEstimacion}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>🔮 ¿Merece la pena pedir precio?</span>
+        <span style={{ ...chipBase, ...tonoVeredicto(e.veredicto) }}>{ROTULO_VEREDICTO[e.veredicto]}</span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+        <p style={{ ...muted, color: 'var(--text)' }}>
+          {e.porque || 'asegura no explica el veredicto.'}
+        </p>
+
+        {e.horquilla ? (
+          <div>
+            <div style={{ ...sub, marginBottom: 4 }}>Horquilla estimada</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
+              <Estimado etiqueta="más barato" eur={e.horquilla.minEur} />
+              <Estimado etiqueta="lo más habitual" eur={e.horquilla.medianaEur} />
+              <Estimado etiqueta="más caro" eur={e.horquilla.maxEur} />
+            </div>
+          </div>
+        ) : (
+          <p style={{ ...muted, color: 'var(--text)' }}>
+            Sin horquilla: {e.sinBase ?? 'asegura no dice por qué (no se sabe si es que aún no hay casos o si los que hay han caducado).'}
+          </p>
+        )}
+
+        {/* La etiqueta del puerto, VERBATIM: es la frase que dice que esto no es un precio. */}
+        <p style={{ ...sub, color: 'var(--text)' }}>{e.etiqueta}</p>
+
+        {(e.base !== null || e.antiguedadMedianaMeses !== null) && (
+          <p style={sub}>
+            {e.base === 'parecidos' && 'Se apoya en pólizas parecidas de la cartera.'}
+            {e.base === 'toda-la-cartera' && 'Se apoya en toda la cartera: no hay bastantes pólizas parecidas.'}
+            {e.antiguedadMedianaMeses !== null && (
+              <> {e.base !== null ? ' ' : ''}Antigüedad mediana de los casos: {e.antiguedadMedianaMeses.toLocaleString('es-ES', { maximumFractionDigits: 1 })} meses.</>
+            )}
+          </p>
+        )}
+
+        {/* Que no haya cotizaciones en la BD es INFORMACIÓN, no un error: la
+            estimación existe, solo que apoyada en menos sitios. */}
+        {e.fuente === null ? (
+          <p style={sub}>asegura no dice de dónde salen los casos.</p>
+        ) : e.fuente.cotizacionesDisponibles ? (
+          <p style={sub}>{e.fuente.cartera} de la cartera · {e.fuente.cotizaciones} cotizaciones guardadas.</p>
+        ) : (
+          <p style={sub}>
+            Se apoya solo en la cartera ({e.fuente.cartera} caso(s)): las cotizaciones guardadas todavía no están en la
+            base de datos.
+          </p>
+        )}
+
+        {retarificar && (
+          e.veredicto === 'merece' ? (
+            <div><a href={retarificar.href} target="_blank" rel="noopener noreferrer" style={botonPedirPrecio}>{retarificar.rotulo}</a></div>
+          ) : (
+            <p style={sub}><a href={retarificar.href} target="_blank" rel="noopener noreferrer">Pedir precio igualmente ↗</a> (cuesta 0,50€)</p>
+          )
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Un número ESTIMADO: `≈`, tamaño y color propios para no confundirlo con una prima real. */
+function Estimado({ etiqueta, eur: importe }: { etiqueta: string; eur: number }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={sub}>{etiqueta}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--info)', whiteSpace: 'nowrap' }}>≈ {eur(importe)}</div>
+    </div>
+  )
+}
+
+const ROTULO_VEREDICTO: Record<NonNullable<Poliza['estimacion']>['veredicto'], string> = {
+  merece: '✅ merece pedir precio',
+  'no-merece': '⏸️ no compensa ahora',
+  'no-se': '❔ no se sabe',
+}
+
+function tonoVeredicto(v: NonNullable<Poliza['estimacion']>['veredicto']): React.CSSProperties {
+  switch (v) {
+    case 'merece': return { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--info)' }
+    case 'no-merece': return { background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }
+    case 'no-se': return { background: 'transparent', color: 'var(--muted)', border: '1px dashed var(--border)' }
+  }
+}
+
+/* ─── Capitales de hogar ───────────────────────────────────────────────────
+ * Cinco estados y ninguno se colapsa con otro. El que más muerde es
+ * `solo_sublimites`: `mayorEur` NO es el continente — pintarlo como si lo fuera
+ * daría un capital plausible y falso, que es el modo de fallo más caro de este
+ * repo (un número que se lee bien y miente).
+ */
+function CapitalesHogar({ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }) {
+  return (
+    <div style={{ borderTop: '1px solid var(--border)', marginTop: 10, paddingTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+      <Capital titulo="Continente (el inmueble)" c={caps.continente} />
+      <Capital titulo="Contenido (el mobiliario)" c={caps.contenido} />
+      <p style={{ ...sub, gridColumn: '1 / -1', margin: 0 }}>
+        Ninguna compañía manda una fila que diga «este es el capital»: se deriva de las garantías, y solo se afirma
+        cuando varias coinciden en el mismo importe.
+      </p>
+    </div>
+  )
+}
+
+function Capital({ titulo, c }: { titulo: string; c: CapitalAsegurado | null }) {
+  const marco: React.CSSProperties = { border: `1px ${c === null || c.estado !== 'consenso' ? 'dashed' : 'solid'} var(--border)`, borderRadius: 10, padding: '10px 12px', minWidth: 0, display: 'grid', gap: 4 }
+  const cabecera = <div style={{ fontSize: 12, color: 'var(--muted)' }}>{titulo}</div>
+  if (c === null) {
+    return <div style={marco}>{cabecera}<div style={muted}>asegura no manda este capital.</div></div>
+  }
+  switch (c.estado) {
+    case 'consenso':
+      return (
+        <div style={{ ...marco, borderStyle: 'solid' }}>
+          {cabecera}
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{eur(c.eur)}</div>
+          <div style={sub}>Lo dicen {c.garantias} garantías de esta póliza.</div>
+          {c.ejemplo && <div style={sub}>p. ej. «{c.ejemplo}»</div>}
+        </div>
+      )
+    case 'solo_sublimites':
+      return (
+        <div style={marco}>
+          {cabecera}
+          <div style={{ fontSize: 18, fontWeight: 400, color: 'var(--muted)' }} title="No se puede derivar de las garantías">sin dato</div>
+          <div style={sub}>{c.motivo}</div>
+          {/* Etiquetado como lo que es. Nunca como el capital. */}
+          <div style={sub} title="Es el tope de UNA garantía suelta, no la suma asegurada">
+            El mayor sublímite: {eur(c.mayorEur)}
+          </div>
+        </div>
+      )
+    case 'todo_cero':
+      return (
+        <div style={marco}>
+          {cabecera}
+          <div style={{ fontSize: 15, fontWeight: 600 }}>Sin capital propio</div>
+          <div style={sub}>{c.motivo}</div>
+        </div>
+      )
+    default:
+      return (
+        <div style={marco}>
+          {cabecera}
+          <div style={{ fontSize: 18, fontWeight: 400, color: 'var(--muted)' }}>sin dato</div>
+          <div style={sub}>{c.motivo}</div>
+        </div>
+      )
+  }
+}
+
+const chipBase: React.CSSProperties = {
+  display: 'inline-block', fontSize: 11, padding: '2px 8px', borderRadius: 999, whiteSpace: 'nowrap', lineHeight: 1.5,
+}
+// Punteada y en el tono informativo: se distingue de un vistazo de las tarjetas
+// de importes REALES de arriba, que van con borde continuo sobre el fondo normal.
+const cajaEstimacion: React.CSSProperties = {
+  border: '1px dashed var(--info)', background: 'var(--info-bg)', borderRadius: 12, padding: 14,
+}
+// ≥44 px táctil: es el botón que manda a gastar dinero.
+const botonPedirPrecio: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', minHeight: 44, padding: '0 14px', borderRadius: 10,
+  background: 'var(--primary)', color: 'var(--surface)', fontWeight: 600, fontSize: 13, textDecoration: 'none',
 }
