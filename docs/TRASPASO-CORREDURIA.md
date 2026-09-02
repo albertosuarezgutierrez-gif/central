@@ -8,6 +8,10 @@
 > `dry_run` (run #187) dejó `cima_pull_started`/`cima_pull_completed` en **`seguros.operational_events`
 > de central** con `queueDepth: 128` (los 128 ficheros del ledger copiado). Código, Vercel, Actions y
 > datos: todo en la cuenta de Alberto. El cron sigue a las 05:30 y 11:30 UTC y escribe aquí.
+> **Y el pull REAL también (09:25 UTC, run #188, `mode: real`):** Actions → CRM → Fly → TIREA (6 páginas,
+> 128 resultados) → `seguros.operational_events` de central, `errorsCount: 0`. `processed: 0` porque los
+> 128 de la cola ya están en `cima_ficheros` (86 `confirmed` + 42 `review`, el último del 30/08): no había
+> nada nuevo que persistir. El único trozo fuera de casa sigue siendo el adaptador Java en el Fly de Manuel.
 >
 > Lo que costó la mañana, para no repetirlo: (1) `DATABASE_URL` de `central-asegura` es **Sensitive**
 > en Vercel y no se puede copiar → rol propio en vez de rotar `prisma_seguros`; (2) el bloqueo real de
