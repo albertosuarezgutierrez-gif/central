@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T09:41:53Z",
+  "generadoEn": "2026-09-02T10:11:55Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5380,6 +5380,14 @@
   ],
   "novedades": [
     {
+      "titulo": "No se pudo diagnosticar porque nadie lo contaba:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Endurecido el camino más probable:",
+      "fecha": ""
+    },
+    {
       "titulo": "Pendiente de decisión de Alberto:",
       "fecha": ""
     },
@@ -5429,14 +5437,6 @@
     },
     {
       "titulo": "Corrección",
-      "fecha": ""
-    },
-    {
-      "titulo": "Contacto/intervinientes",
-      "fecha": ""
-    },
-    {
-      "titulo": "Catastro para hogar HECHO",
       "fecha": ""
     }
   ],
