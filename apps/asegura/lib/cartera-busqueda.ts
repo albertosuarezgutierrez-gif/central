@@ -25,11 +25,16 @@
 
 import {
   avisoDireccion,
+  avisoHermanas,
   explicarVacio,
   planBusqueda,
+  vitalidadFicha,
   type Aviso,
+  type AvisoHermanas,
   type Criterio,
+  type Hermana,
   type TipoCriterio,
+  type Vitalidad,
 } from '@central/module-seguros'
 import { computeDniLookupHash, computeEmailLookupHash, computeTelefonoLookupHash } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
@@ -38,11 +43,25 @@ import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 export type Hallazgo = {
   clienteId: string
   nombre: string
-  /** `cliente` = entra por CIMA · `lead` = ficha histórica. */
+  /**
+   * El enum `clientes.tipo` de la BD. 🚨 NO sirve para saber si es un cliente
+   * de hoy: el volcado de junio marcó `tipo='cliente'` fichas cuyo último
+   * vencimiento es de 2016. Para eso está `vitalidad`.
+   */
   tipo: string
   polizas: number
   /** Por qué ha salido: «matrícula 1234BCD», «CP 41003»… */
   porque: string
+  /** Pólizas que entran por CIMA. `null` = no se pudo contar, NO 0. */
+  polizasCima: number | null
+  /** Vencimiento más lejano. `null` = ninguna póliza informa fecha. */
+  ultimoVencimiento: string | null
+  /** Cartera viva / volcado histórico / no se sabe. Derivado, no del enum. */
+  vitalidad: Vitalidad
+  /** Otras fichas sin fusionar con su mismo teléfono. `null` = no se miró. */
+  hermanas: Hermana[] | null
+  /** Qué decir de esas hermanas, o `null` si no hay nada que decir. */
+  aviso: AvisoHermanas | null
 }
 
 export type BloqueResultados = {
@@ -99,6 +118,8 @@ export async function buscarEnCartera(
   const avisos = [...plan.avisos]
   const nadaEncontrado = conAlgo.every((b) => b.hallazgos.length === 0)
   if (nadaEncontrado && pareceDireccion(plan.termino)) avisos.push(avisoDireccion())
+
+  await enriquecer(correduriaId, conAlgo)
 
   const ids = new Set<string>()
   for (const b of conAlgo) for (const h of b.hallazgos) ids.add(h.clienteId)
@@ -173,6 +194,11 @@ const SELECT_CLIENTE = {
   _count: { select: { polizas: true } },
 } as const
 
+/**
+ * El hallazgo SIN enriquecer. Nace en «desconocida» a propósito: si el paso de
+ * enriquecimiento falla, la pantalla dirá «sin comprobar» en vez de heredar un
+ * «cartera viva» que nadie ha verificado.
+ */
 function aHallazgo(f: FilaCliente, porque: string): Hallazgo {
   return {
     clienteId: f.id,
@@ -180,6 +206,11 @@ function aHallazgo(f: FilaCliente, porque: string): Hallazgo {
     tipo: String(f.tipo),
     polizas: f._count.polizas,
     porque,
+    polizasCima: null,
+    ultimoVencimiento: null,
+    vitalidad: 'desconocida',
+    hermanas: null,
+    aviso: null,
   }
 }
 
@@ -282,12 +313,17 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
     limit ${LIMITE}
   `
   const conteos = await polizasDe(filas.map((f) => f.id))
-  const hallazgos = filas.map((f) => ({
+  const hallazgos: Hallazgo[] = filas.map((f) => ({
     clienteId: f.id,
     nombre: `${f.nombre} ${f.apellidos}`.trim(),
     tipo: f.tipo,
     polizas: conteos.get(f.id) ?? 0,
     porque: `matrícula ${f.matricula}`,
+    polizasCima: null,
+    ultimoVencimiento: null,
+    vitalidad: 'desconocida',
+    hermanas: null,
+    aviso: null,
   }))
   return bloque(c, hallazgos, await coberturaMatricula(correduriaId))
 }
@@ -385,5 +421,122 @@ async function coberturaPolizas(
     return { alcanzables, total }
   } catch {
     return null
+  }
+}
+
+// ── Enriquecimiento: ¿esta ficha es de HOY? ─────────────────────────────────
+//
+// 🚨 El problema que resuelve, medido el 02/09/2026 sobre «suarez salas»: el
+// buscador devolvía DOS fichas idénticas a la vista, las dos rotuladas
+// «✅ cliente», una con 14 pólizas y otra con 7. La de 14 es el volcado de
+// junio (último vencimiento: 2016). La de 7 es la viva (vence en 2027). El
+// número más grande está en la ficha muerta, así que es la que atrae el clic.
+//
+// No se fusiona nada: el rol de esta app es SELECT-only sobre la BD de Manuel,
+// y además 203 de los 740 grupos que comparten teléfono llevan nombres
+// distintos (familias, empresas) y NO son duplicados. Se mide y se dice.
+
+type Senales = { polizasCima: number | null; ultimoVencimiento: string | null }
+
+/** `null` = la consulta falló. Un Map vacío = se miró y no hay nada. */
+async function senalesDe(
+  correduriaId: string,
+  ids: string[],
+): Promise<Map<string, Senales> | null> {
+  if (ids.length === 0) return new Map()
+  try {
+    const db = prismaAsegura()
+    const filas = await db.$queryRaw<{ cliente_id: string; cima: number; ultimo: Date | null }[]>`
+      select cliente_id::text as cliente_id,
+             count(*) filter (where import_ref is null)::int as cima,
+             max(fecha_vencimiento) as ultimo
+      from polizas
+      where correduria_id = ${correduriaId}::uuid
+        and merged_into_poliza_id is null
+        and cliente_id::text = any(${ids}::text[])
+      group by cliente_id
+    `
+    return new Map(
+      filas.map((f) => [
+        f.cliente_id,
+        {
+          polizasCima: Number(f.cima),
+          ultimoVencimiento: f.ultimo === null ? null : f.ultimo.toISOString().slice(0, 10),
+        },
+      ]),
+    )
+  } catch {
+    return null
+  }
+}
+
+type HermanaCruda = { de: string; id: string; nombre: string; mismoNombre: boolean }
+
+/**
+ * Otras fichas SIN fusionar que comparten el índice ciego del teléfono. Es el
+ * único vínculo fiable que hay: el DNI solo lo tiene el 12% de las fichas, y
+ * la ficha histórica de este caso ni siquiera lo tiene calculado.
+ */
+async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaCruda[] | null> {
+  if (ids.length === 0) return []
+  try {
+    const db = prismaAsegura()
+    return await db.$queryRaw<HermanaCruda[]>`
+      select c.id::text as "de", o.id::text as id,
+             btrim(o.nombre || ' ' || o.apellidos) as nombre,
+             (lower(btrim(o.nombre)) = lower(btrim(c.nombre))
+              and lower(btrim(o.apellidos)) = lower(btrim(c.apellidos))) as "mismoNombre"
+      from clientes c
+      join clientes o
+        on o.telefono_lookup_hash = c.telefono_lookup_hash
+       and o.id <> c.id
+       and o.correduria_id = c.correduria_id
+       and o.merged_into_cliente_id is null
+      where c.correduria_id = ${correduriaId}::uuid
+        and c.telefono_lookup_hash is not null
+        and c.id::text = any(${ids}::text[])
+      limit 200
+    `
+  } catch {
+    // NO se devuelve []: eso diría «no tiene duplicados», que es lo que
+    // tranquiliza. `null` deja el aviso en silencio sin afirmar nada.
+    return null
+  }
+}
+
+async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Promise<void> {
+  const ids = [...new Set(bloques.flatMap((b) => b.hallazgos.map((h) => h.clienteId)))]
+  if (ids.length === 0) return
+
+  const crudas = await hermanasDe(correduriaId, ids)
+  // Las señales se piden también de las hermanas: para poder decir «la otra es
+  // la viva» hay que saber si de verdad lo es.
+  const todos = [...new Set([...ids, ...(crudas ?? []).map((h) => h.id)])]
+  const senales = await senalesDe(correduriaId, todos)
+
+  const senalDe = (id: string): Senales =>
+    senales === null ? { polizasCima: null, ultimoVencimiento: null } : (senales.get(id) ?? { polizasCima: 0, ultimoVencimiento: null })
+
+  const porFicha = new Map<string, Hermana[]>()
+  for (const h of crudas ?? []) {
+    const lista = porFicha.get(h.de) ?? []
+    lista.push({
+      clienteId: h.id,
+      nombre: h.nombre,
+      mismoNombre: h.mismoNombre,
+      vitalidad: vitalidadFicha(senalDe(h.id)),
+    })
+    porFicha.set(h.de, lista)
+  }
+
+  for (const b of bloques) {
+    for (const h of b.hallazgos) {
+      const s = senalDe(h.clienteId)
+      h.polizasCima = s.polizasCima
+      h.ultimoVencimiento = s.ultimoVencimiento
+      h.vitalidad = vitalidadFicha(s)
+      h.hermanas = crudas === null ? null : (porFicha.get(h.clienteId) ?? [])
+      h.aviso = avisoHermanas(h.vitalidad, h.hermanas)
+    }
   }
 }

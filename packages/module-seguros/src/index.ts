@@ -79,3 +79,14 @@ export {
   type Retencion,
   type ResumenRetencion,
 } from './retencion.ts'
+export {
+  MESES_CARTERA_VIVA,
+  vitalidadFicha,
+  etiquetaVitalidad,
+  explicarVitalidad,
+  avisoHermanas,
+  type Vitalidad,
+  type SenalesFicha,
+  type Hermana,
+  type AvisoHermanas,
+} from './vitalidad.ts'

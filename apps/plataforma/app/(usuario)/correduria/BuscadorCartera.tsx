@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados } from '@/lib/correduria-puerto'
+import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados, type Hallazgo } from '@/lib/correduria-puerto'
 
 /**
  * Un solo cuadro para encontrar a cualquiera: nombre, matrícula, nº de póliza,
@@ -198,12 +198,64 @@ function Bloque({ b }: { b: BloqueResultados }) {
               {h.nombre}
             </Link>
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-              {h.tipo === 'cliente' ? '✅ cliente' : '🕐 lead'} · {h.polizas} póliza(s) · {h.porque}
+              <Vitalidad h={h} /> · {h.polizas} póliza(s) · {h.porque}
             </div>
+            {h.aviso && (
+              <div
+                style={{
+                  fontSize: 11,
+                  marginTop: 6,
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  background: h.aviso.clase === 'duplicado' ? 'var(--warn-bg, #fff7ed)' : 'transparent',
+                  color: h.aviso.clase === 'duplicado' ? 'var(--warn, #9a3412)' : 'var(--muted)',
+                  lineHeight: 1.5,
+                }}
+              >
+                {h.aviso.clase === 'duplicado' ? '⚠️ ' : 'ℹ️ '}
+                {h.aviso.texto}{' '}
+                {h.aviso.preferida && (
+                  <Link href={`/correduria/cliente/${h.aviso.preferida.clienteId}`} style={{ fontWeight: 600 }}>
+                    Abrir la ficha viva →
+                  </Link>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>
     </div>
+  )
+}
+
+/**
+ * 🚨 Lo que NO se pinta aquí: `h.tipo`, el enum de la BD. Decía «✅ cliente» en
+ * las DOS fichas de Jose Suarez Salas — la viva y el volcado de 2016— porque la
+ * carga de junio las marcó todas igual. El rótulo sale ahora de `vitalidad`,
+ * que se deriva de si sus pólizas entran por CIMA y de cuándo vencen.
+ *
+ * Cuatro estados, no dos: «sin comprobar» y «sin vencimiento» son distintos de
+ * «volcado histórico», y ninguno de los dos entierra la ficha.
+ */
+function Vitalidad({ h }: { h: Hallazgo }) {
+  const cima = h.polizasCima
+  const detalle =
+    h.vitalidad === 'viva' && cima !== null && cima > 0
+      ? `${cima} póliza(s) entran por CIMA`
+      : h.ultimoVencimiento !== null
+        ? `último vencimiento ${h.ultimoVencimiento}`
+        : 'ninguna póliza informa vencimiento'
+  const pinta: Record<Hallazgo['vitalidad'], { icono: string; texto: string; color?: string }> = {
+    viva: { icono: '✅', texto: 'cartera viva' },
+    historica: { icono: '🗄️', texto: 'volcado histórico', color: 'var(--muted)' },
+    sin_fecha: { icono: '❔', texto: 'sin vencimiento informado' },
+    desconocida: { icono: '❔', texto: 'sin comprobar' },
+  }
+  const p = pinta[h.vitalidad]
+  return (
+    <span title={detalle} style={p.color ? { color: p.color } : undefined}>
+      {p.icono} {p.texto}
+    </span>
   )
 }
 

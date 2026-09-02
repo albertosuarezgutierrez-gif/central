@@ -29,12 +29,57 @@ function entero(v: unknown): number | null {
 
 // ── Buscador ────────────────────────────────────────────────────────────────
 
+/**
+ * `viva` = entra por CIMA o vence dentro de la ventana · `historica` = volcado
+ * de junio · `sin_fecha` / `desconocida` = NO se sabe, y no se disfraza.
+ */
+export type Vitalidad = 'viva' | 'historica' | 'sin_fecha' | 'desconocida'
+
+export type Hermana = {
+  clienteId: string
+  nombre: string
+  mismoNombre: boolean
+  vitalidad: Vitalidad
+}
+
 export type Hallazgo = {
   clienteId: string
   nombre: string
+  /** El enum de la BD. No dice si es un cliente de hoy: para eso, `vitalidad`. */
   tipo: string
   polizas: number
   porque: string
+  /** Pólizas por CIMA. `null` = no se contó, NO 0. */
+  polizasCima: number | null
+  ultimoVencimiento: string | null
+  vitalidad: Vitalidad
+  /** `null` = asegura no informa hermanas (versión vieja, o no se pudo mirar).
+   *  `[]` = se miró y no hay. Pintarlos igual diría «no hay duplicados». */
+  hermanas: Hermana[] | null
+  aviso: { clase: 'duplicado' | 'comparte'; texto: string; preferida: Hermana | null } | null
+}
+
+const VITALIDADES = new Set(['viva', 'historica', 'sin_fecha', 'desconocida'])
+
+/** Una vitalidad que no se reconoce NO tumba la lista: degrada a «desconocida»,
+ *  que es el estado que no afirma nada. Así una versión más vieja de asegura
+ *  (que no manda el campo) sigue sirviendo la búsqueda. */
+function vitalidad(v: unknown): Vitalidad {
+  return typeof v === 'string' && VITALIDADES.has(v) ? (v as Vitalidad) : 'desconocida'
+}
+
+function hermanas(v: unknown): Hermana[] | null {
+  if (!Array.isArray(v)) return null
+  const out: Hermana[] = []
+  for (const h of v) {
+    if (typeof h !== 'object' || h === null) continue
+    const o = h as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    const nombre = cadena(o.nombre)
+    if (id === null || nombre === null) continue
+    out.push({ clienteId: id, nombre, mismoNombre: o.mismoNombre === true, vitalidad: vitalidad(o.vitalidad) })
+  }
+  return out
 }
 
 export type BloqueResultados = {
@@ -85,12 +130,27 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
       if (typeof x.clienteId !== 'string' || typeof x.nombre !== 'string') {
         return { estado: 'error', motivo: 'respuesta_ilegible' }
       }
+      const hs = hermanas(x.hermanas)
+      const av = x.aviso as Record<string, unknown> | null | undefined
+      const textoAviso = typeof av === 'object' && av !== null ? cadena(av.texto) : null
       hallazgos.push({
         clienteId: x.clienteId,
         nombre: x.nombre,
         tipo: cadena(x.tipo) ?? 'sin_informar',
         polizas: entero(x.polizas) ?? 0,
         porque: cadena(x.porque) ?? '',
+        polizasCima: entero(x.polizasCima),
+        ultimoVencimiento: cadena(x.ultimoVencimiento),
+        vitalidad: vitalidad(x.vitalidad),
+        hermanas: hs,
+        aviso:
+          textoAviso === null || av == null
+            ? null
+            : {
+                clase: av.clase === 'comparte' ? 'comparte' : 'duplicado',
+                texto: textoAviso,
+                preferida: hermanas([av.preferida])?.[0] ?? null,
+              },
       })
     }
     const c = o.cobertura

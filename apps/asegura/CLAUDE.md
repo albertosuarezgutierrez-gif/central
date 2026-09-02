@@ -349,7 +349,8 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
 | **DNI** | **índice ciego, EXACTO** | **3.904 = 12%** |
 | teléfono | índice ciego, exacto | 5.377 = 16% |
 | email | índice ciego, exacto | 4.308 = 13% |
-| **dirección** | 🚫 **CIFRADA (1.954 de 1.954)** | **0 — imposible** |
+| **dirección (calle)** | 🚫 **CIFRADA (170 de 170 pólizas con `direccion`)** | **0 por SQL** — ver abajo |
+| localidad / CP **del riesgo** | en claro en `datos_especificos` (`localidad`, `cp`) | 179 / 328 pólizas — **todavía NO se busca** (02/09/2026) |
 
 🚨 **Las tres búsquedas por índice ciego son la trampa de esta pantalla.** Un «no aparece» por DNI es
 casi siempre «esa ficha no tiene hash calculado», no «ese DNI no está en la cartera» — y si la clave
@@ -357,11 +358,41 @@ del índice se desincronizara, **la búsqueda no daría error: devolvería vací
 silencioso que ya avisa este documento). Por eso cada bloque de resultados viaja con su **cobertura**
 y la UI dice sobre cuántas fichas ha podido mirar. `explicarVacio()` redacta esa frase.
 
-🚫 **La dirección no se puede buscar de ninguna forma** y se declara con `avisoDireccion()`, ofreciendo
-ciudad/CP. Devolver «ningún resultado» sería afirmar que ese cliente no vive en esa calle.
+🚫 **La calle no se puede buscar por SQL** (va cifrada `v1:…`) y se declara con `avisoDireccion()`,
+ofreciendo ciudad/CP. Devolver «ningún resultado» sería afirmar que ese cliente no vive en esa calle.
+⚠️ **Corrección del 02/09/2026:** la frase anterior («imposible de ninguna forma») era demasiado
+rotunda. Alberto enseñó el CRM pintando «CL SAN VICENTE, 40» en claro, y la explicación es doble:
+(1) esta app **tiene la clave** (`decryptField`) y son solo 170 pólizas → descifrar en memoria y
+filtrar es viable; (2) `localidad` y `cp` **del riesgo** van en claro al lado, y el buscador solo
+miraba la ciudad/CP **del cliente** — la casa de Rota de un cliente de Sevilla no salía por «rota».
+Ninguna de las dos está hecha aún.
 
 Un término se busca por **todos** los criterios que encaje: `41003` es a la vez código postal y número
 de póliza plausibles, y no hay forma de saber cuál se quería.
+
+### 🧬 Duplicidades en la cartera (medido 02/09/2026)
+
+**`clientes.tipo` NO dice si una ficha es de hoy.** «Jose Suarez Salas» sale dos veces, las dos
+`tipo='cliente'`: la de mayo (7 pólizas, 6 por CIMA, vence 2027) es la viva; la de junio (14 pólizas,
+todas `asegura_app:`, vence 2016) es el volcado. Y la muerta enseña el número más grande. Por eso el
+buscador rotula ahora por **`vitalidad`** (`@central/module-seguros/vitalidad.ts`, puro, 12 tests):
+`viva` = entra por CIMA o vence dentro de 18 meses · `historica` · `sin_fecha` · `desconocida`. Las
+dos últimas NO entierran a nadie: `polizasCima === null` es «no se contó», jamás 0.
+
+Cifras sobre las 32.600 fichas (cero fusionadas nunca, `merged_into_*` sin estrenar):
+- **740 grupos comparten teléfono** (1.599 fichas). **203 de ellos con nombres distintos**: familias
+  y empresas, NO duplicados. Por eso no se fusiona nada automáticamente ni se dice «duplicado» a secas.
+- De los **80 clientes vivos, 48 tienen otra ficha** (36 por teléfono, 38 por nombre exacto, 1 por DNI).
+- **16 de las 109 pólizas vivas existen en las dos caras** (misma `numero_poliza` con `import_ref`
+  NULL y con `asegura_app:`), y en **10 cada copia tiene la mitad del dato**: la de CIMA trae el
+  vencimiento, la del volcado trae la **dirección del riesgo** (localidad/CP en claro). La ficha viva
+  sola no sabe dónde está la casa. Pendiente: leer la copia gemela al pintar la ficha.
+- 🚨 **1 cliente duplicado DENTRO de la cartera viva**: dos fichas con pólizas CIMA cada una (2+1),
+  sin teléfono común, sin póliza común. **Es la ingesta de CIMA creando una ficha nueva** en vez de
+  colgar la póliza de la existente — a Manuel. Renovaciones lo pinta como dos personas.
+
+El rol de esta app es SELECT-only: **no puede fusionar**. Lo que hace es medir, rotular y enlazar a
+la ficha viva desde la histórica (`avisoHermanas()`).
 
 ### 📞 La cola de retención — recibos devueltos (`lib/cartera-impagados.ts`)
 
