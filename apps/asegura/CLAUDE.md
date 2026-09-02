@@ -19,19 +19,32 @@ helper puro y probado `urlFuenteCartera` (`lib/asegura-url.ts`). `ASEGURA_FUENTE
 Supabase de Manuel (`ASEGURA_DATABASE_URL`). La fuente elegida sin conexión es «pendiente», nunca
 cae a la otra en silencio.
 
-🚨 **El `?schema=seguros` se FUERZA, pisando el que traiga `DATABASE_URL` (02/09/2026, PR #2029).** Esa
-cadena es la MISMA que usa la auth (`lib/db.ts`), donde el schema correcto es `public`; si llega de Vercel
-con `?schema=public` y se respetara, el cliente de la CARTERA apuntaría ahí — y en `public` **no existe
-`corredurias`** (falla toda la cartera) mientras que **`clientes` SÍ existe y es OTRA tabla**: leerías los
-clientes de central creyendo que son los de la correduría. El schema de la cartera no es negociable.
+✅ **CAUSA MEDIDA del «no se puede leer la cartera» (02/09/2026): `credenciales`.**
+La contraseña de **`prisma_seguros` se rotó tres veces ese día** (05:51, 05:52 y 10:17, visto en
+`postgres_logs`) y el `DATABASE_URL` de Vercel `central-asegura` se quedó con la vieja → toda consulta
+a la cartera moría en `password authentication failed for user "prisma_seguros"`, y ese texto **solo
+existía en los logs del pooler de Supabase**. El propio repo ya lo avisaba por escrito en el SQL de
+`crm_seguros`: «la `DATABASE_URL` de central-asegura es Sensitive en Vercel y no se puede copiar; en vez
+de rotar la contraseña de prisma_seguros (**tumbaría central-asegura**), el CRM entra con su rol». Se
+rotó igual. 🚨 **Al rotar la contraseña de un rol, el mismo PR/paso actualiza el `DATABASE_URL` (y
+`DIRECT_URL`) del proyecto Vercel que lo usa** — si no, la app queda muerta sin que nada más falle.
 
-🚨 **Y un fallo de lectura NUNCA sale pelado: `{estado:'error', motivo, detalle}`.** `motivo` distingue
-`bd` de `sin_correduria` (se arreglan en sitios distintos) y `detalle` es una pista CORTA y sin secretos
-(`lib/comisiones-motivo.ts`, puro y testeado): fuente + nombre del error + código de Prisma + tabla.
-**Jamás el `message` crudo** — el de `PrismaClientInitializationError` lleva usuario y contraseña dentro,
-y esto viaja a plataforma y de ahí a un Telegram. Además se `console.error` el error entero: hasta este PR
-los dos `catch {}` de la ruta y de `lib/comisiones.ts` no dejaban rastro **ni en los logs de la función**,
-y por eso «no se ha podido leer la cartera» fue un callejón sin salida durante días.
+⚠️ **El `?schema=seguros` FORZADO (PR #2029) NO era la causa** — se escribió aquí como hipótesis
+probable y resultó falsa; corregido el 02/09/2026. Se conserva como blindaje y por lo que dice de
+diseño: `DATABASE_URL` es la MISMA cadena que usa la auth (`lib/db.ts`), donde el schema correcto es
+`public`, y respetar el que traiga apuntaría el cliente de la CARTERA a `public` — donde **no existe
+`corredurias`** (falla todo) pero **sí `clientes`**, que es OTRA tabla: leerías los clientes de central
+creyendo que son los de la correduría. Nunca ha llegado a pasar; que no pueda pasar es el punto.
+
+🚨 **Y un fallo de lectura NUNCA sale pelado: `{estado:'error', causa}`.** Las NUEVE rutas de
+`/api/operador/*` usan el MISMO clasificador, **`lib/error-cartera.ts`** (puro y testeado):
+`credenciales` · `permisos` · `conexion` · `esquema` · `sin_correduria` · `otro` — seis causas que se
+arreglan en seis sitios distintos. `registrarErrorCartera()` la registra en el log del servidor y la
+devuelve para la respuesta; `describirErrorCartera()` **borra la URL de conexión** del mensaje antes de
+loguearlo, porque lleva usuario y contraseña dentro y esto viaja a plataforma y de ahí a un Telegram.
+⚠️ **Un clasificador y solo uno**: el PR #2029 creó `lib/comisiones-motivo.ts` para lo mismo unas horas
+antes que el #2034, y dos módulos que clasifican el mismo error divergen — se retiró el 02/09/2026 y la
+ruta de comisiones pasó al compartido. Al añadir una ruta al puerto, usa `registrarErrorCartera`.
 
 🚨 **El origen NO está vivo: está CONGELADO desde el 31/08 06:15 UTC, y no por decisión.** Medido en
 los logs de Vercel: el CRM de Manuel (repo `albertosuarezgutierrez-gif/asegura` + proyecto Vercel

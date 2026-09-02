@@ -15,6 +15,7 @@ import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { tgAviso } from '@/lib/telegram/avisos'
 import { comisionesAsegura, nombreCompania } from '@/lib/comisiones-asegura'
+import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { estadoCuadre, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
 
 export const dynamic = 'force-dynamic'
@@ -53,14 +54,14 @@ export async function GET(req: NextRequest) {
     await tgAviso(
       'correduria.cima-liq',
       `⚪ <b>Comisiones</b> — no se ha podido leer la cartera (<code>${com.motivo}</code>).\n` +
-        // El detalle es la mitad útil del aviso: `asegura_error` sin él no dice
-        // si hay que tocar el schema, los permisos o la BD. Si asegura no lo
-        // manda se DICE que no se sabe, no se deja el hueco en blanco.
-        `Pista: <code>${com.detalle ?? 'sin detalle — asegura no lo manda'}</code>\n` +
+        // La causa es la mitad útil del aviso: `asegura_error` sin ella no dice
+        // si hay que tocar la contraseña, los permisos o el schema. Si asegura no
+        // la manda se DICE que no se sabe, no se deja el hueco en blanco.
+        `Causa: ${describirCausaAsegura(com.causa) ?? '<i>sin causa — asegura no la manda</i>'}\n` +
         `El libro queda marcado como <b>no comprobado</b>, no a cero.`,
       { html: true },
     )
-    return NextResponse.json({ ok: false, motivo: com.motivo, detalle: com.detalle ?? null }, { status: 502 })
+    return NextResponse.json({ ok: false, motivo: com.motivo, causa: com.causa ?? null }, { status: 502 })
   }
 
   // ── Cobertura por compañía ────────────────────────────────────────────────

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
-import { aseguraConfigurada, fuenteCartera } from '@/lib/asegura-db'
+import { registrarErrorCartera } from '@/lib/error-cartera'
+import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { comisionesCartera, detalleError } from '@/lib/comisiones'
+import { comisionesCartera } from '@/lib/comisiones'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,25 +11,26 @@ export const dynamic = 'force-dynamic'
 // (read-only). La respuesta conserva los TRES estados de ComisionesCartera:
 // quien consume no puede confundir «puerto sin conectar» con «no hay comisiones».
 //
-// 🚨 Y un `error` NUNCA sale pelado: lleva `motivo` y una pista sin secretos.
-// Hasta el 02/09/2026 este endpoint devolvía `{estado:'error'}` a secas desde
-// tres sitios distintos y se tragaba la excepción sin loguearla: el aviso decía
-// «no se ha podido leer la cartera» y no había forma —ni aquí ni en los logs de
-// la función— de saber si era el schema, los permisos o la fila que falta.
+// 🚨 Y un `error` NUNCA sale pelado: lleva su `causa` del mismo clasificador que
+// las otras ocho rutas del puerto (`lib/error-cartera.ts`), porque credenciales,
+// permisos, conexión, esquema y «no hay correduría» se arreglan en cinco sitios
+// distintos. Hasta el 02/09/2026 esto devolvía `{estado:'error'}` a secas desde
+// tres sitios y se tragaba la excepción sin loguearla: el aviso decía «no se ha
+// podido leer la cartera» y la causa real (`credenciales` — la contraseña de
+// `prisma_seguros` en el DATABASE_URL de Vercel ya no valía) solo se veía en los
+// logs del pooler de Supabase.
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ comisiones: { estado: 'sin_configurar' } })
 
     const correduria = await correduriaUnica()
-    // BD configurada pero sin fila de correduría: raro de verdad → error
-    // visible, nunca unas comisiones a cero. Y con su propio motivo, porque esto
-    // se arregla en la BD y no en la conexión.
+    // BD configurada pero sin fila de correduría: raro de verdad → error visible,
+    // nunca unas comisiones a cero. Con su propia causa, porque esto se arregla en
+    // la BD y no en la conexión.
     if (!correduria) {
-      console.error('[comisiones] BD conectada pero sin fila en corredurias', { fuente: fuenteCartera() })
-      return NextResponse.json({
-        comisiones: { estado: 'error', motivo: 'sin_correduria', detalle: `${fuenteCartera()}/sin-corredurias` },
-      })
+      console.error('[cartera] operador/comisiones → sin_correduria · la BD responde y `corredurias` está vacía')
+      return NextResponse.json({ comisiones: { estado: 'error', causa: 'sin_correduria' } })
     }
 
     const desdeParam = new URL(req.url).searchParams.get('desde')
@@ -40,10 +42,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ comisiones: await comisionesCartera(correduria.id, desde) })
   } catch (e) {
     // Lo que llegue hasta aquí es casi siempre `correduriaUnica()`: conexión,
-    // schema o permisos. Se loguea entero y se responde con la pista corta.
-    console.error('[comisiones] el puerto no ha podido servir las comisiones', e)
+    // credenciales, schema o permisos.
     return NextResponse.json({
-      comisiones: { estado: 'error', motivo: 'bd', detalle: detalleError(e, fuenteCartera()) },
+      comisiones: { estado: 'error', causa: registrarErrorCartera('operador/comisiones', e) },
     })
   }
 }

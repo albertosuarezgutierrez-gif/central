@@ -1371,13 +1371,16 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   Agente» lleva el texto en **EBCDIC (cp500)** dentro de los content streams y Node no trae esa
   codificación → tabla explícita en `lib/correduria/pdf-allianz.ts`.
 - UI: pestaña «Cuadre» en `/correduria`. Los importes que no han llegado se pintan **«—», nunca 0,00€**.
-- 🚨 **Un `estado:'error'` del puerto lleva SIEMPRE motivo y pista (02/09/2026, PR #2029).** El aviso decía
-  «no se ha podido leer la cartera (`asegura_error`)» y ahí se acababa: dos `catch {}` mudos en asegura
-  colapsaban conexión, schema equivocado, permiso que falta y fila-que-no-está en el mismo error pelado, sin
-  un `console.error` que lo dejara ni en los logs de la función. Ahora `ComisionesAsegura` trae `detalle?`
-  (`central/PrismaClientKnownRequestError/P2021/public.corredurias`) y el Telegram lo enseña — o dice que
-  asegura no lo manda, que es otra cosa. **Nunca el `message` crudo de Prisma: lleva la cadena de conexión
-  dentro y esto acaba en un Telegram** (test que lo fija en `apps/asegura/lib/comisiones-motivo.test.ts`).
+- 🚨 **Un `estado:'error'` del puerto lleva SIEMPRE su CAUSA (02/09/2026, PRs #2029 y #2034).** El aviso
+  decía «no se ha podido leer la cartera (`asegura_error`)» y ahí se acababa: los `catch {}` de asegura
+  colapsaban credenciales, permisos, conexión, schema y fila-que-no-está en el mismo error pelado, sin un
+  `console.error` que lo dejara ni en los logs de la función. Ahora `ComisionesAsegura` trae `causa?` del
+  clasificador único `apps/asegura/lib/error-cartera.ts` y `describirCausaAsegura()` (en
+  `lib/correduria-puerto.ts`) la traduce a la frase que dice dónde tocar; el Telegram la enseña — o dice
+  que asegura no la manda, que es otra cosa.
+  ✅ **La causa REAL resultó ser `credenciales`:** la contraseña de `prisma_seguros` se rotó tres veces ese
+  día y el `DATABASE_URL` del proyecto Vercel `central-asegura` se quedó con la vieja. **No era el schema**
+  — esa hipótesis se escribió aquí como probable y era falsa.
   ⚠️ Al escribir el aviso de un fallo, la pregunta no es «¿he dicho que falló?» sino **«¿dice dónde mirar?»**.
 - 🚨 **PENDIENTE — la cifra fiscal de comisiones sigue siendo una ESTIMACIÓN.** `lib/finanzas.ts:594`
   eleva el neto del banco al bruto con `× (0,15/0,85)` y da por hecho que TODO abono de seguros es una
