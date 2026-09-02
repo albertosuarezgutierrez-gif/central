@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **«Haz todo» del CRM, primera tanda (02/09/2026).** Estado del cliente DERIVADO (`estadoCliente`: cliente =
+  póliza confirmada por CIMA, `id_poliza_entidad` informado — las 109 vivas lo tienen; emitida pendiente de CIMA;
+  con presupuesto = cotización ≤60 días; ex-cliente; lead), historial visible en la ficha (plegado), guardián de
+  pólizas duplicadas (`/api/operador/duplicados`, hoy 0) y spec de emisión en central + conciliación CIMA
+  (`docs/superpowers/specs/2026-09-02-emision-conciliacion-cima-design.md`, **pendiente de OK de Alberto**: no se
+  emite sin la prueba de idempotencia del sandbox). Medido: las tablas `portal_*` del portal del cliente NO existen
+  en la BD (DDL sin aplicar) → el portal es código sin base; leads por canal sin canal aún (no hay WABA ni web).
+
 - **📘 Visión del CRM de la correduría (02/09/2026).** Alberto, por voz: «lo que estamos hablando es un
   CRM» — buscador → ficha cliente (pólizas confirmadas por CIMA) → ficha póliza (datos, recibos,
   siniestros, limpio, detalle al pinchar), misma forma para la intranet del cliente; leads que se
