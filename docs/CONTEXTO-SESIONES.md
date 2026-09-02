@@ -32,6 +32,21 @@
 
 ---
 
+### 🕳️ (02/09/2026, noche) El feed PSD2 tenía dos estados donde hay tres (PR #2042 mergeado)
+- `/banca` pintaba «último mov. **ninguno**» sobre un NULL. `ultimoMov` es `MAX(fecha_operacion)` y esa columna es
+  **nullable**: NULL = «trajo apuntes, pero no sé de cuándo son», que es lo contrario de lo que decía el texto.
+- **Medido antes de tocar, y corrige lo que yo mismo había apuntado:** 0 filas sin fecha en las **2.123** de la tabla
+  (los seis orígenes). Es una violación **latente**, no una mentira activa — pero el esquema la permite.
+- Se saca del JSX a `lineaCuentasFeed()` (helper puro + 5 tests). De paso: la lista vacía dejaba la línea en blanco
+  (una conexión vinculada que aún no trae nada) y la fecha salía en ISO crudo en un panel que usa dd/mm.
+- ⚠️ **Mismo agujero en la skill `psd2-health-check`**, y ahí el fallo es peor: `MAX()` y los `COUNT(... FILTER)`
+  ignoran los NULL, así que un feed que entregue apuntes sin fecha se declararía **roto**. Anotado con su consulta
+  de descarte.
+- 🔁 **El bloque Personal de `/banca` daba vueltas en círculo**: sus salidas iban a `/finanzas?tab=categorias`, que
+  monta EL MISMO componente que ya estabas viendo. Ahora apuntan a `/banca?tab=personal` (el filtro `?banco=` viaja igual).
+- **Límite estructural anotado, no arreglable ahí:** `cuentas_bancarias` no tiene columna que la ligue a
+  `conexiones_banco` — una cuenta psd2 recién vinculada y a cero es indistinguible de una manual o de Excel.
+
 ### 🗺️ (02/09/2026, noche) plataforma: podar lo inalcanzable y agrupar el menú por TRABAJO (PR #2038 mergeado)
 - Inventario medido de la app entera: **76 páginas · 51 entradas de menú · 25 fuera del menú · 7 inalcanzables · 0 enlaces rotos**.
   Mapa completo en `docs/PLATAFORMA-MAPA-PAGINAS.md` (incluye qué NO se comprobó).
