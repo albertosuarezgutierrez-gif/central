@@ -32,7 +32,7 @@
 
 ---
 
-### 🧱 (02/09/2026, noche) Las 43 cabeceras restantes, al componente compartido (PR #2054)
+### 🧱 (02/09/2026, noche) Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)
 - Con #2045, `apps/plataforma` queda **entera** sobre `PageHeader`: 43 cabeceras + 3 `BtnLink` + 9 `ThinBar`, en
   **4 tandas de agentes** con lista EXPLÍCITA de ficheros por tanda (y de los prohibidos) para no pisarse.
 - 🔧 **Dos huecos de las primitivas que solo se ven al adoptarlas de verdad**, los dos destapados por botones reales
@@ -44,6 +44,12 @@
   `pricing-auto`/`pricing-rentabilidad` dejan su paleta hex fija: su título ya responde al tema.
 - El commit lleva **`[preview]`** a propósito: con `--sin-previews`, 43 pantallas cambiando de aspecto se verían por
   primera vez EN PRODUCCIÓN. Un build es más barato que eso.
+- 🚨 **Y el `[preview]` falló DOS veces seguidas antes de funcionar** (lo caro: el síntoma es idéntico a un
+  build legítimamente ignorado, así que no falla nada). Necesita **DOS condiciones a la vez**: ir en el asunto
+  del **ÚLTIMO** commit del push (el script lee `VERCEL_GIT_COMMIT_MESSAGE`, el HEAD empujado) **Y** que ese
+  commit **toque la app** — `[preview]` levanta el veto de `--sin-previews` (paso 1b de
+  `scripts/vercel-ignore-build.mjs`) pero el paso 3 salta igual por rutas. Un commit que solo toca un `.md` de
+  la raíz NO construye, lleve marcador o no. Documentado en el `CLAUDE.md` raíz y en el de plataforma.
 - **Sin migrar a propósito:** `banca/transferencia` (sus 3 `<h1>` son estados de un formulario) e
   `invitado/limpieza` (única pantalla de Vanesa, intranet de invitado, no el panel `(usuario)`).
 
