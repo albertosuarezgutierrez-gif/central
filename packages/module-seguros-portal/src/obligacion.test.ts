@@ -110,3 +110,65 @@ test('una cadena vacia en importRef cuenta como volcado, no como CIMA', () => {
     false,
   )
 })
+
+// ── El cepo de la vigencia ────────────────────────────────────────────────────
+import { obligacionDerivable } from './obligacion.ts'
+
+test('una poliza CANCELADA no deriva obligacion, aunque venza en el futuro', () => {
+  // 42 de las 109 pólizas de CIMA están canceladas y 5 tienen vencimiento
+  // futuro: sin este cepo llegarían a disparar un correo real diciéndole a un
+  // cliente que decida sobre una póliza que ya no existe.
+  assert.equal(
+    obligacionDerivable({
+      importRef: null,
+      fechaVencimiento: new Date(Date.UTC(2027, 3, 28)),
+      vigencia: 'no_vigente',
+    }),
+    false,
+  )
+})
+
+test('una poliza activa con el vencimiento YA PASADO no deriva obligacion', () => {
+  // 18 pólizas `activa` de CIMA tienen vencimiento pasado; la más vieja es de
+  // enero de 2013. `vigenciaPoliza()` ya las marca `no_vigente`. Pintarlas
+  // sería decirle al cliente «tienes hasta el 13/02/2015 para renovar».
+  assert.equal(
+    obligacionDerivable({
+      importRef: null,
+      fechaVencimiento: new Date(Date.UTC(2013, 0, 27)),
+      vigencia: 'no_vigente',
+    }),
+    false,
+  )
+})
+
+test('«pendiente» tampoco deriva: sin fecha no se sabe, y no se inventa', () => {
+  assert.equal(
+    obligacionDerivable({ importRef: null, fechaVencimiento: null, vigencia: 'pendiente' }),
+    false,
+  )
+})
+
+test('una poliza vigente de CIMA con fecha SI deriva', () => {
+  assert.equal(
+    obligacionDerivable({
+      importRef: null,
+      fechaVencimiento: new Date(Date.UTC(2027, 3, 28)),
+      vigencia: 'vigente',
+    }),
+    true,
+  )
+})
+
+test('el cepo del volcado historico manda sobre el de la vigencia', () => {
+  // Una del volcado no deriva ni marcándola vigente: son 28.729 y el filtro de
+  // `import_ref` es el que evita el desastre.
+  assert.equal(
+    obligacionDerivable({
+      importRef: 'intranet:44012',
+      fechaVencimiento: new Date(Date.UTC(2027, 3, 28)),
+      vigencia: 'vigente',
+    }),
+    false,
+  )
+})

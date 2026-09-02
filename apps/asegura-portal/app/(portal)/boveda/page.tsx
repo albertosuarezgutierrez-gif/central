@@ -6,7 +6,11 @@ import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
-import { obligacionesDeIdentidad, sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
+import {
+  obligacionesDeIdentidad,
+  polizasSinFechaDeVencimiento,
+  sincronizarObligacionesDeIdentidad,
+} from '@/lib/obligaciones'
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
@@ -69,7 +73,7 @@ export default async function Boveda() {
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mis seguros</h1>
 
-      <Calendario obligaciones={obligaciones} />
+      <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
 
       <section className="seccion" aria-labelledby="cartera-titulo">
         <h2 id="cartera-titulo">Tus seguros en {correduria}</h2>

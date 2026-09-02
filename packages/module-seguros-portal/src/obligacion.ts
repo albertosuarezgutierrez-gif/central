@@ -49,3 +49,32 @@ export function polizaGeneraObligacion(p: {
   if (p.importRef !== null) return false
   return p.fechaVencimiento !== null
 }
+
+/**
+ * 🚨 El segundo cepo, y el que faltaba — medido contra la cartera real el
+ * 02/09/2026. `import_ref IS NULL` NO significa «viva y actual»: de las 109
+ * pólizas que entran por CIMA,
+ *
+ *   · **42 están `cancelada`** (5 de ellas con vencimiento futuro), y
+ *   · **18 están `activa` con el vencimiento ya pasado** — la más vieja, de
+ *     **enero de 2013**.
+ *
+ * Sin este cepo el calendario del cliente diría «tienes hasta el 13/02/2015
+ * para decidir si la renuevas» de una póliza muerta, y las 5 canceladas con
+ * fecha futura llegarían a disparar un correo real. Las dos cosas son la misma
+ * mentira: un dato viejo presentado como actual.
+ *
+ * `vigencia` la decide `vigenciaPoliza()` de `@central/module-seguros`, que ya
+ * es de tres estados: `'pendiente'` («no se sabe», sin fecha) tampoco deriva —
+ * pero NO se calla, se cuenta aparte para que la pantalla lo diga.
+ */
+export type VigenciaObligacion = 'vigente' | 'no_vigente' | 'pendiente'
+
+export function obligacionDerivable(p: {
+  importRef: string | null
+  fechaVencimiento: Date | null
+  vigencia: VigenciaObligacion
+}): boolean {
+  if (!polizaGeneraObligacion(p)) return false
+  return p.vigencia === 'vigente'
+}

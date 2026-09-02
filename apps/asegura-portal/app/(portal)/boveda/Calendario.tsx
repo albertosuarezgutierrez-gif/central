@@ -11,7 +11,14 @@ import type { ObligacionVista } from '@/lib/obligaciones'
  * Y pinta la procedencia SIEMPRE: un dato `calculado` o `declarado` no puede
  * tener el mismo aspecto que uno que confirmó la compañía.
  */
-export default function Calendario({ obligaciones }: { obligaciones: ObligacionVista[] }) {
+export default function Calendario({
+  obligaciones,
+  sinFecha,
+}: {
+  obligaciones: ObligacionVista[]
+  /** Pólizas en vigor cuya fecha de vencimiento la compañía no ha informado. */
+  sinFecha: number
+}) {
   return (
     <section className="seccion" aria-labelledby="calendario-titulo">
       <h2 id="calendario-titulo">Tu calendario</h2>
@@ -30,6 +37,19 @@ export default function Calendario({ obligaciones }: { obligaciones: ObligacionV
             <Fila key={o.id} o={o} />
           ))}
         </ul>
+      )}
+
+      {sinFecha > 0 && (
+        // El tercer estado, dicho en voz alta: estas pólizas NO es que no
+        // venzan, es que no sabemos cuándo. Callarlas y enseñar el resto
+        // convertiría el calendario en una lista incompleta con aspecto de
+        // completa — y el cliente decidiría sobre ella.
+        <p className="suave" style={{ marginBottom: 0 }}>
+          {sinFecha === 1
+            ? 'Hay 1 póliza en vigor de la que todavía no tenemos fecha de vencimiento, así que no aparece aquí.'
+            : `Hay ${sinFecha} pólizas en vigor de las que todavía no tenemos fecha de vencimiento, así que no aparecen aquí.`}{' '}
+          Están más abajo, con el resto de tus seguros; escríbenos y lo comprobamos con la compañía.
+        </p>
       )}
     </section>
   )

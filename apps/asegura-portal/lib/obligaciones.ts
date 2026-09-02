@@ -8,7 +8,7 @@
 // funciones `…DeIdentidad` reciben el id ya resuelto por quien YA pasó por la
 // puerta (la página de la bóveda lo hace una sola vez por render); las
 // `…DeSesion` lo resuelven aquí. Lo vigila `test/regression-portal-aislamiento.test.ts`.
-import { fechaAccionable, polizaGeneraObligacion, type Procedencia } from '@central/module-seguros-portal'
+import { fechaAccionable, obligacionDerivable, type Procedencia } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, type CarteraPortal } from './cartera-lectura'
 import { prisma } from './db'
@@ -58,7 +58,15 @@ export async function sincronizarObligacionesDeIdentidad(
       // (la compañía ya la confirmó), que es una pregunta distinta de «vino por el
       // volcado histórico». Usarlo aquí dejaría fuera las pólizas que emitimos
       // nosotros y aún no ha confirmado CIMA, que sí tienen que avisar.
-      if (!polizaGeneraObligacion({ importRef: null, fechaVencimiento: p.fechaVencimiento })) continue
+      //
+      // 🚨 Y el segundo cepo, medido: `import_ref IS NULL` NO quiere decir «viva
+      // y actual». De las 109 pólizas de CIMA, 42 están canceladas (5 con
+      // vencimiento futuro) y 18 están activas con el vencimiento ya pasado —
+      // la más vieja de enero de 2013. Sin `vigencia` el calendario diría
+      // «tienes hasta el 13/02/2015 para renovar».
+      if (!obligacionDerivable({ importRef: null, fechaVencimiento: p.fechaVencimiento, vigencia: p.vigencia })) {
+        continue
+      }
       // El cepo de arriba ya garantiza que hay fecha; esto se lo dice al tipo.
       const evento = p.fechaVencimiento
       if (evento === null) continue
@@ -132,4 +140,23 @@ export async function obligacionesDeSesion(): Promise<ObligacionVista[]> {
   const identidad = await getIdentidad()
   if (!identidad) return []
   return obligacionesDeIdentidad(identidad.id)
+}
+
+/**
+ * Cuántas pólizas vivas de la cartera NO han podido entrar al calendario porque
+ * la compañía no ha informado su fecha de vencimiento.
+ *
+ * No se descartan en silencio: cero obligaciones y «no tienes vencimientos» es
+ * exactamente el «no lo he mirado» disfrazado de «no hay» que el repo persigue.
+ * La pantalla lo dice y manda al cliente donde sí está el dato.
+ *
+ * Solo cuenta las que están en vigor por estado (`pendiente` = estado vigente
+ * sin fecha). Una cancelada sin fecha no le interesa a nadie.
+ */
+export function polizasSinFechaDeVencimiento(cartera: CarteraPortal): number {
+  let n = 0
+  for (const titular of cartera.propias) {
+    for (const p of titular.polizas) if (p.vigencia === 'pendiente') n += 1
+  }
+  return n
 }

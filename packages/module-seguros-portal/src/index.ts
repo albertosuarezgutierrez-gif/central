@@ -17,4 +17,6 @@ export {
   fechaAccionable,
   entraEnVentana,
   polizaGeneraObligacion,
+  obligacionDerivable,
 } from './obligacion.ts'
+export type { VigenciaObligacion } from './obligacion.ts'
