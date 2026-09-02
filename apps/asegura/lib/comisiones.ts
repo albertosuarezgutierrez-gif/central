@@ -1,12 +1,20 @@
-// Comisiones de la correduría leídas de la cartera real (BD de Manuel, vía
-// `ASEGURA_DATABASE_URL`). Esta app es la ÚNICA que toca esa BD; plataforma las
-// consume por el puerto `/api/operador/comisiones`.
+// Comisiones de la correduría leídas de la cartera real (schema `seguros` de la BD
+// compartida; `ASEGURA_FUENTE=origen` vuelve al Supabase de Manuel). Esta app es la
+// ÚNICA que toca esas tablas; plataforma las consume por el puerto
+// `/api/operador/comisiones`.
 //
 // 🚨 Tres estados, nunca dos: sin la env es `sin_configurar` — que NO es «no hay
 // comisiones» —, y un fallo de BD es `error`. Un catch que devolviera listas
 // vacías convertiría una caída en «la compañía no te ha pagado», que es
 // exactamente la afirmación falsa que este módulo existe para evitar.
-import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+//
+// Y el `error` va SIEMPRE con motivo y con una pista sin secretos: un `error`
+// pelado deja el aviso en «no se ha podido leer» sin decir dónde mirar, que es
+// justo donde se quedó atascado el libro de comisiones el 02/09/2026.
+import { aseguraConfigurada, fuenteCartera, prismaAsegura } from './asegura-db'
+import { detalleError, type MotivoErrorCartera } from './comisiones-motivo'
+
+export { detalleError, type MotivoErrorCartera }
 
 /**
  * Importe EIAC (guardado en TEXT) → número. `null` si no se puede leer.
@@ -55,7 +63,7 @@ export type CoberturaCompania = {
 
 export type ComisionesCartera =
   | { estado: 'sin_configurar' }
-  | { estado: 'error' }
+  | { estado: 'error'; motivo: MotivoErrorCartera; detalle?: string }
   | {
       estado: 'ok'
       periodos: PeriodoComisiones[]
@@ -164,7 +172,11 @@ export async function comisionesCartera(correduriaId: string, desde: Date): Prom
       .sort((a, b) => a.companiaCodigo.localeCompare(b.companiaCodigo))
 
     return { estado: 'ok', periodos, devengos, cobertura }
-  } catch {
-    return { estado: 'error' }
+  } catch (e) {
+    // El log es la mitad de la reparación: sin él, «no se ha podido leer la
+    // cartera» no dice DÓNDE mirar. Va a los logs de la función, no a la
+    // respuesta, así que puede ser más explícito que `detalleError`.
+    console.error('[comisiones] la cartera no se ha podido leer', e)
+    return { estado: 'error', motivo: 'bd', detalle: detalleError(e, fuenteCartera()) }
   }
 }
