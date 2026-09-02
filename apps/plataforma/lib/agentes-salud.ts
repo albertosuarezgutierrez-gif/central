@@ -4,9 +4,10 @@
 // "sin telemetría" (honesto: no inventamos verde). Nunca lanza: cada consulta cae a null.
 
 import { prisma } from '@/lib/db'
+import { clasificarSalud, type EstadoSalud, type SaludAgente, type SaludLatido, type FilaSalud } from './agentes-salud-clasificar'
 
-export type EstadoSalud = 'verde' | 'ambar' | 'rojo' | 'gris'
-export type SaludAgente = { ultima: string | null; horas: number | null; estado: EstadoSalud; detalle: string }
+export { clasificarSalud } from './agentes-salud-clasificar'
+export type { EstadoSalud, SaludAgente, SaludLatido, FilaSalud } from './agentes-salud-clasificar'
 
 // Horas de margen esperadas entre ejecuciones por agente (verde ≤ margen, ámbar ≤ 2×, rojo >2×).
 // On-demand (director) y semanales llevan margen holgado para no dar falsos rojos.
@@ -55,4 +56,81 @@ export async function getSaludAgentes(): Promise<Record<string, SaludAgente>> {
   const out: Record<string, SaludAgente> = {}
   for (const id of Object.keys(INTERVALO_H)) out[id] = semaforo(id, s[id] ?? null)
   return out
+}
+
+
+// ─── Salud desde el vigía de latidos (02/09/2026) ────────────────────────────────────────────
+// La decisión vive en `agentes-salud-clasificar.ts` (puro y testeado); aquí solo la consulta.
+
+/**
+ * Veredicto persistido del vigía, por id de agente vigilado. Devuelve `{}` si la tabla no existe
+ * todavía o la consulta falla: preferimos «no sé» a inventar un verde.
+ */
+export async function getSaludLatidos(): Promise<Record<string, SaludLatido>> {
+  let filas: FilaSalud[]
+  try {
+    filas = await prisma.$queryRaw<FilaSalud[]>`
+      SELECT agente, evaluado_at, alerta, horas, motivo, max_horas, etiqueta, nota, sonda_error
+      FROM agente_salud`
+  } catch {
+    return {}
+  }
+  const ahora = Date.now()
+  const out: Record<string, SaludLatido> = {}
+  for (const f of filas) out[f.agente] = clasificarSalud(f, ahora)
+  return out
+}
+
+/**
+ * Mapa id-del-catálogo → ids de latido que lo respaldan. Explícito y NO derivable: el catálogo
+ * usa kebab-case («pricing-agente») y el registro de latidos snake_case con otra granularidad
+ * («pricing»), y algunos agentes tienen DOS latidos. Un `join` por nombre no funcionaría.
+ *
+ * Solo se mapea lo que de verdad mide al mismo agente. Deliberadamente SIN mapear, aunque el
+ * nombre invite:
+ *   · `ialimp-client-health` (skill que mide la salud del CLIENTE) ≠ `ialimp_pms` (el sync).
+ *   · `impagos-ialimp` (ialimp) ≠ `sivra_extras_impago` (extras del huésped de SIVRA).
+ * Mapearlos daría un verde prestado de otro agente, que es peor que un gris honesto.
+ */
+export const LATIDOS_POR_AGENTE: Record<string, string[]> = {
+  'facturas-correo': ['facturas_gmail'],
+  'pricing-agente': ['pricing'],
+  'trading-analista': ['trading_watchdog', 'trading_operaciones'],
+  'mercado-booking': ['sivra_mercado_booking'],
+  'correo-triaje': ['correo_triaje'],
+  'agente-huesped': ['sivra_mensajes_prog'],
+  'subastas': ['subastas_mercado'],
+}
+
+const PEOR: Record<EstadoSalud, number> = { verde: 0, gris: 1, ambar: 2, rojo: 3 }
+
+/**
+ * Salud del catálogo: el latido manda sobre la sonda local (tiene umbral declarado y lo evalúa
+ * el vigía), y con varios latidos gana el PEOR — un agente con dos patas está sano solo si lo
+ * están las dos.
+ */
+export async function getSaludAgentesCompleta(): Promise<Record<string, SaludAgente>> {
+  const [sondas, latidos] = await Promise.all([getSaludAgentes(), getSaludLatidos()])
+  const out: Record<string, SaludAgente> = { ...sondas }
+  for (const [idCatalogo, ids] of Object.entries(LATIDOS_POR_AGENTE)) {
+    const vistos = ids.map(i => latidos[i]).filter((x): x is SaludLatido => !!x)
+    if (vistos.length === 0) continue
+    const peor = vistos.reduce((a, b) => (PEOR[b.estado] > PEOR[a.estado] ? b : a))
+    out[idCatalogo] = { ultima: peor.ultima, horas: peor.horas, estado: peor.estado, detalle: peor.detalle }
+  }
+  return out
+}
+
+/**
+ * Los latidos vigilados que NO tienen fila en el catálogo de la pantalla. Son 19 de 27: agentes
+ * con umbral y sonda cuyo estado no se veía en ningún sitio. Se pintan aparte en vez de
+ * quedarse fuera, que es como estaban.
+ */
+export async function getLatidosFueraDelCatalogo(): Promise<SaludLatido[]> {
+  const latidos = await getSaludLatidos()
+  const mapeados = new Set(Object.values(LATIDOS_POR_AGENTE).flat())
+  return Object.entries(latidos)
+    .filter(([id]) => !mapeados.has(id))
+    .map(([, v]) => v)
+    .sort((a, b) => PEOR[b.estado] - PEOR[a.estado])
 }
