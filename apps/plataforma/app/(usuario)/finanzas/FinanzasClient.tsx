@@ -114,7 +114,7 @@ function AyudaBanner({ ayudas, onDescartar }: { ayudas: ResumenFinanciero['deduc
               {a.encaje && <div style={{ marginTop: '2px' }}>{a.encaje}</div>}
               {a.url && <> <a href={a.url} target="_blank" rel="noreferrer" style={{ color: 'var(--warning)', textDecoration: 'underline' }}>convocatoria</a></>}
             </div>
-            <button onClick={() => onDescartar(a.id)} style={{ fontSize: '12px', padding: '4px 10px', background: '#fff', border: '1px solid #f6e05e', borderRadius: '6px', cursor: 'pointer', color: 'var(--warning)', fontWeight: 600, minHeight: '32px' }}>Descartar</button>
+            <button onClick={() => onDescartar(a.id)} style={{ fontSize: '12px', padding: '4px 10px', background: 'var(--surface)', border: '1px solid #f6e05e', borderRadius: '6px', cursor: 'pointer', color: 'var(--warning)', fontWeight: 600, minHeight: '32px' }}>Descartar</button>
           </div>
         )
       })}
@@ -135,7 +135,7 @@ function NovedadBanner({ novedades, onDescartar }: { novedades: ResumenFinancier
             {n.importeAnterior != null && n.importeNuevo != null && <> sube de {fmt(n.importeAnterior)} a <strong>{fmt(n.importeNuevo)}</strong></>}
             {n.fuenteUrl && <> · <a href={n.fuenteUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--positive)', textDecoration: 'underline' }}>fuente ({n.ambito.toUpperCase()})</a></>}
           </div>
-          <button onClick={() => onDescartar(n.id)} style={{ fontSize: '12px', padding: '4px 10px', background: '#fff', border: '1px solid #9ae6b4', borderRadius: '6px', cursor: 'pointer', color: 'var(--positive)', fontWeight: 600 }}>Entendido</button>
+          <button onClick={() => onDescartar(n.id)} style={{ fontSize: '12px', padding: '4px 10px', background: 'var(--surface)', border: '1px solid #9ae6b4', borderRadius: '6px', cursor: 'pointer', color: 'var(--positive)', fontWeight: 600 }}>Entendido</button>
         </div>
       ))}
     </div>

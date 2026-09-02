@@ -180,7 +180,7 @@ export default function SeoPage() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--positive)' }}>Aplicado en housesevillana.es — Vercel desplegará en ~60s</div>
               </div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Nuevo title</div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 12, background: '#fff', padding: '8px 12px', borderRadius: 4, border: '1px solid var(--positive-bg)' }}>{result.title}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 12, background: 'var(--surface)', padding: '8px 12px', borderRadius: 4, border: '1px solid var(--positive-bg)' }}>{result.title}</div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Análisis</div>
               <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6 }}>{result.analysis}</div>
             </div>

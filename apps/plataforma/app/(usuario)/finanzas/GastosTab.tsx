@@ -281,7 +281,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
               <span>{m.fecha ?? '—'} · {m.banco}</span>
               <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--text)' }}>{m.destinoLabel}</span>
               {m.amortizable && <span style={{ padding: '1px 7px', borderRadius: 10, background: '#e9d8fd', color: '#553c9a' }}>📦 amortizable</span>}
-              {m.deduccionCuotaTipo && <span style={{ padding: '1px 7px', borderRadius: 10, background: '#e6fffa', color: 'var(--positive)' }}>{DEDUCCION_CUOTA_LABEL[m.deduccionCuotaTipo]}</span>}
+              {m.deduccionCuotaTipo && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--positive-bg)', color: 'var(--positive)' }}>{DEDUCCION_CUOTA_LABEL[m.deduccionCuotaTipo]}</span>}
               {m.deducible && (m.conciliado || m.facturaRef
                 ? <span style={{ color: 'var(--positive)' }}>📎 con factura</span>
                 : <span style={{ color: 'var(--warning)' }}>❗ sin justificante</span>)}

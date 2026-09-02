@@ -71,7 +71,7 @@ export default function PersonasClient({ personas, sugerencias, rrhhDisponible }
             </div>
             <div className="personas-roles" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               {p.roles.map((r, j) => (
-                <span key={j} style={{ fontSize: 12, background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px' }}>
+                <span key={j} style={{ fontSize: 12, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px' }}>
                   {VICON[r.vertical]} <b>{r.rol}</b> · {VLABEL[r.vertical]}{r.empresa ? ` · ${r.empresa}` : ''}{r.email ? ` · ${r.email}` : ''}
                 </span>
               ))}
