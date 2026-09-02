@@ -255,6 +255,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (02/09/2026) 🗞️ Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba
 - (02/09/2026) 📄 El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)
 - (02/09/2026) 🧱 Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)
 - (02/09/2026) 🩺 Salud de la arquitectura a cero avisos (/admin → 🗺️ Estructura)
@@ -264,5 +265,4 @@
 - (02/09/2026) ⚪ Comisiones: el «no se ha podido leer la cartera» no decía DÓNDE mirar (PR #2029 mergeado)
 - (02/09/2026) 🪞 La skill de UI llevaba DOS MESES contradiciendo al CLAUDE.md de su app
 - (02/09/2026) 🧱 plataforma: el CUERPO del Inicio, al sistema de diseño (PR #2024 mergeado)
-- (02/09/2026) 📎 Correduría: documentos de verdad sobre la BD de casa (PR #2022 mergeado)
 

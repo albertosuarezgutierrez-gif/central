@@ -32,6 +32,29 @@
 
 ---
 
+### 🗞️ (02/09/2026) Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba
+- El extractor usaba un regex que casa con CUALQUIER bullet en negrita, y el cuerpo de cada entrada está
+  lleno de sub-bullets SIN indentar. El panel pintaba trozos de argumentación a media frase («Cablear un
+  valor es lo que deja una primitiva sin adoptar:»), **0 de 15 con fecha**, y las entradas `###` —el
+  formato de casi todas las sesiones— no salían NUNCA. Ahora, 15 de 15 fechadas.
+- 🔍 **Lo gordo estaba debajo:** `rotar-memoria` tenía el mismo agujero, porque un sub-bullet y una cabecera
+  antigua son la MISMA sintaxis. Contaba **138 «entradas» donde hay 65**: al rotar el mes, 73 sub-bullets se
+  habrían archivado como sesiones sueltas. No había saltado porque aún no tocaba rotar.
+- La separación no es sintáctica sino de ESTADO: con una entrada nueva abierta, un bullet en negrita es
+  cuerpo suyo — salvo que lleve fecha, que es lo que tiene una cabecera de verdad. La primera versión sin
+  esa excepción rompió un test de `rotar-memoria`; el fixture tenía razón y la regla estaba mal.
+- Un solo criterio: `auditar-novedades.mjs` importa el troceo de `rotar-memoria`, no lo reimplementa.
+  Guardián `regression-novedades-memoria.test.ts` (5 tests), uno contra la memoria REAL. PR #2064.
+- 🪤 **Y al anotar ESTA entrada me la pegué con lo mismo:** insertarla buscando la subcadena `###` la metió
+  dentro del PREÁMBULO, que cita el formato como ejemplo. Se vio porque la novedad 1 salió sin fecha. Para
+  localizar la primera entrada hay que mirar LÍNEAS en columna 0, no subcadenas.
+- Antes, en la misma sesión: **PR #2044** (panel de Salud a cero avisos: la reimplementación de alquiler al
+  módulo compartido + CLAUDE.md de almacen y asegura-portal) y **PR #2053** (el `--check` deja de romperse
+  porque una sesión anote memoria; criterio de comparación a `auditar-comparacion.mjs`, testeado).
+- ⚠️ **Carrera confirmada dos veces:** si `main` avanza entre tu merge y el squash, el generado entra
+  mintiendo (el #2044 dejó el mapa apuntando a un archivo que #2047 había borrado). Lo absorbe
+  `auditoria.yml`, que YA existe y regenera post-merge por PR — comprobado corriendo tras el merge.
+
 ### 📄 (02/09/2026) El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)
 - Alberto subió «movimientos (2).pdf» al chat 📎 y recibió «prueba con una foto más nítida o un PDF que tenga texto».
 - **Descartado que fuera pdf-parse, con datos:** el cron `subastas-enriquecer` leyó decenas de PDF en prod esa misma
