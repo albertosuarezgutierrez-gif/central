@@ -32,6 +32,19 @@
 
 ---
 
+### 📄 (02/09/2026) El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR pendiente)
+- Alberto subió «movimientos (2).pdf» al chat 📎 y recibió «prueba con una foto más nítida o un PDF que tenga texto».
+- **Descartado que sea pdf-parse:** el cron `subastas-enriquecer` leyó decenas de PDF en prod esa misma mañana
+  (`documentos.legible=true`, 06:15-09:31 UTC) y la lib va bien en local. **El PDF no traía capa de texto.**
+- **Causa real:** `extraerDesdeBuffer` cerraba el paso ahí — sin OCR y sin decir cuál de los tres desenlaces era,
+  pese a que `rasterizarPdf` (PDFium) + visión ya existían y los usan `factura-limpieza-lectura` y el lector registral.
+- Ahora: `MotivoSinLectura` (pdf_ilegible · pdf_sin_texto{no_intentado|sin_paginas|error|sin_datos} · formato) →
+  mensaje que dice si se ha MIRADO o no y enruta a `/banca → Importar`; y `opts.ocr` (solo el chat, no los barridos).
+- **Sin cerrar:** no se ha visto el PDF de Alberto, así que si con visión tampoco sale importe/fecha, el mensaje lo dirá
+  pero seguirá sin leerse. `require('pdf-parse')` de `app/api/sivra/expenses/parse-invoice/route.ts` sigue en la raíz.
+
+---
+
 ### 🗺️ (02/09/2026, noche) plataforma: podar lo inalcanzable y agrupar el menú por TRABAJO (PR #2038 mergeado)
 - Inventario medido de la app entera: **76 páginas · 51 entradas de menú · 25 fuera del menú · 7 inalcanzables · 0 enlaces rotos**.
   Mapa completo en `docs/PLATAFORMA-MAPA-PAGINAS.md` (incluye qué NO se comprobó).
