@@ -145,6 +145,9 @@ importers:
       '@central/core-catastro':
         specifier: workspace:*
         version: link:../../packages/core-catastro
+      '@central/core-email':
+        specifier: workspace:*
+        version: link:../../packages/core-email
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
@@ -154,6 +157,9 @@ importers:
       '@central/module-seguros-pii':
         specifier: workspace:*
         version: link:../../packages/module-seguros-pii
+      '@central/module-seguros-portal':
+        specifier: workspace:*
+        version: link:../../packages/module-seguros-portal
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)

@@ -732,6 +732,46 @@ póliza. Sin él el nombre de la lista de renovaciones es texto muerto y hay que
 cliente a mano. En `plataforma` es opcional (`string | null`) porque una versión desplegada más vieja
 de esta app no lo manda: entonces el nombre no se enlaza y se dice por qué.
 
+## ✉️ El cron de avisos de vencimiento (02/09/2026) — apagado por defecto
+
+`GET /api/cron/avisos-vencimiento` (diario 08:00 UTC, `vercel.json`) manda **un** correo por
+obligación a punto de dejar de ser accionable. Las obligaciones las escribe el **portal del cliente**
+(`seguros.portal_obligacion`); el envío está aquí y no allí por una razón medida, no por gusto:
+
+🚨 **El portal solo guarda hashes.** `portal_canal.valor_hash` es un SHA-256 con pimienta y el
+`ClienteEmail` de su schema solo declara `email_lookup_hash`; el rol `prisma_asegura_portal` **no tiene
+GRANT sobre la columna del email**. Un hash no se revierte: **desde el portal no hay destinatario**.
+Esta app corre con `prisma_seguros` (BYPASSRLS) y sí lee `cliente_emails` cifrado, así que el correo
+sale de aquí y el portal se queda con el aviso en pantalla.
+
+**Los tres cerrojos, y por qué los tres:** detrás de este endpoint hay correos a clientes reales.
+
+1. **Sin `CRON_SECRET` no se autoriza a nadie — tampoco en desarrollo** (`lib/cron-auth.ts`, más duro
+   que el de `apps/plataforma`, que conserva el paso franco en dev). Un olvido de env tiene que fallar
+   ruidosamente con 401, no funcionar abierto. **Solo `Authorization: Bearer`**: un `?secret=` dejaría
+   la credencial en los logs de acceso.
+2. **Sin `ASEGURA_AVISOS_ACTIVOS=1` no sale ni un correo**: se cuenta y se informa. Cualquier otro
+   valor (`'true'`, `'0'`, ausente) deja el modo cuenta — la ambigüedad se resuelve hacia NO enviar.
+   `?contar=1` fuerza el ensayo aunque estén activos. **Primero se comprueba el número** (debe ser
+   ≤ 109, las pólizas vivas de CIMA); si sale de miles, el filtro de `import_ref` no está funcionando
+   y **no se enciende nada**.
+3. **Una obligación cuya póliza es del volcado histórico no es candidata**, aunque llegara hasta aquí:
+   la consulta re-filtra `import_ref IS NULL` y `merged_into_poliza_id IS NULL`. Sin ese cepo, un error
+   aguas arriba son 28.729 «se te venció el seguro» de pólizas de 2013-2018.
+
+**Lo que NO hace, que es la parte que se copia mal:** no devuelve un `enviados: 0` tranquilizador
+cuando falta el proveedor de correo o el remitente. Eso lanza y el endpoint responde **503**, porque
+«no he podido» no puede leerse igual que «hoy no tocaba nadie». Y una candidata sin email legible
+—descifrado fallido, `email_opt_out_at`, o una obligación declarada por el usuario sin póliza de
+cartera— cuenta como **`sinCanal`**, que es la verdad, en vez de restarse del total y desaparecer.
+
+`avisada_at` se sella **inmediatamente** tras el envío aceptado: es lo único que impide que un
+reintento mande el mismo aviso dos veces. Si el sello falla se grita `ENVIADO PERO NO SELLADO`.
+
+Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), `ASEGURA_MAIL_FROM` y
+un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
+Guardián: `test/regression-portal-obligaciones.test.ts`.
+
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se
   descargan los ficheros de las compañías, si usa Vercel Blob y qué dominios tiene.
