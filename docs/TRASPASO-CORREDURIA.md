@@ -44,6 +44,15 @@
 >    Inventario del grafo a portar en curso (02/09). Cuando esté en verde con un pull real, se apaga
 >    el CRM de Vercel y su workflow de Actions.
 >
+> ⏸️ **APARCADO por Alberto (02/09/2026, minutos después): «fly es barato y ya está hecho, hay otras
+> prioridades».** Se queda el statu quo, que funciona: cron de Actions → CRM en Vercel (sin login,
+> solo motor) → adaptador en Fly → TIREA → `seguros` de central. **Lo único que queda es el paso 1
+> (transferir la app de Fly a una cuenta de Alberto), sin prisa** — el borrador v8 de abajo sirve tal
+> cual cuando Manuel tenga cinco minutos. El paso 2 (port de `cima-pull`) NO se hace ahora; el
+> inventario se guarda como referencia para cuando toque. Vigilancia mientras tanto: el bloque
+> «Salud de la correduría» de la auditoría diaria mira `seguros.operational_events`
+> (`cima_pull_started/completed`); si un día no hay latido, es el cron o Fly.
+>
 > ### 📝 Mensaje a Manuel — v8 (02/09/2026) — BORRADOR, **no se envía sin OK de Alberto**
 >
 > > Manuel, dos cosas del adaptador de CIMA y con eso cerramos lo que queda:
