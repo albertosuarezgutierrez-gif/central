@@ -112,6 +112,9 @@ type Pendiente = {
   booking_id: string; property_id: string | null; borrador: string | null
   categoria: string | null; tg_message_id: number | null; esperando_edit: boolean; idioma: string | null
   esperando_retoque: boolean; pregunta: string | null
+  // El aviso DECLARÓ que esto no estaba en la guía y prometió aprenderlo: eso obliga a guardar la
+  // respuesta como hecho del piso aunque el mensaje del huésped no tuviera forma de pregunta.
+  hueco_guia: boolean | null
 }
 
 async function getPendiente(bookingId: string): Promise<Pendiente | null> {
@@ -848,7 +851,7 @@ export async function POST(req: NextRequest) {
       `).catch(() => {})
       // El agente aprende de TODAS las respuestas de Alberto, no solo de las correcciones: un borrador
       // aprobado tal cual es un ejemplo de tono/criterio igual de válido para ese piso (lo lee contexto.ts).
-      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '' })
+      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '', huecoGuia: pend.hueco_guia === true })
       // 🍼 EXTRAS DE PAGO. Si lo que acabas de aprobar cotiza un extra del catálogo a su precio,
       // se registra la OFERTA. Esa fila es lo único que autoriza a mandar después el enlace de pago
       // solo cuando el huésped diga que sí: «el precio lo aprobó Alberto» pasa a ser un hecho de la
@@ -942,7 +945,7 @@ export async function POST(req: NextRequest) {
           UPDATE mensajes_log SET auto_sent = true
           WHERE booking_id = ${bookingId} AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
         `).catch(() => {})
-        await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '' })
+        await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '', huecoGuia: pend.hueco_guia === true })
         await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
         await tgSend(`✅ Enviado al huésped:\n${escapeHtml(pend.borrador || '')}`)
         return NextResponse.json({ ok: true, approved: true })

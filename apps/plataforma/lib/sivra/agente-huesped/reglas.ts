@@ -209,3 +209,76 @@ export function esAutomatico(subject: string, text: string): boolean {
   if ((subject || '').trim() !== '') return true
   return /check.?in online|disponible para tu reserva|self.?check.?in|enregistrement en ligne/i.test(text || '')
 }
+
+// ── ¿Por qué escala? Hueco de la GUÍA vs control de calidad CAÍDO ───────────
+//
+// Los dos escalan igual y hasta ahora se contaban como lo mismo: un `motivo` que casara con
+// /no cubre|no se pudo verificar/ pintaba «❓ Esto no lo encuentro en la guía» y anotaba un hueco.
+// Pero «no se pudo verificar» es que el clasificador de calidad NO RESPONDIÓ (timeout o caída del
+// proveedor): no dice nada sobre la guía. Tratarlo como hueco es convertir un «no lo he podido
+// mirar» en un «no lo tengo», que es justo lo que la regla del monorepo prohíbe — y encima ensucia
+// `mensajes_guia_gaps` con preguntas que sí estaban cubiertas (caso real 02/09/2026, reserva
+// 153122091: «Haré el check in por aquí» se anotó como hueco de House Sevillana con el control caído).
+export type EscaladoMin = {
+  needs_human?: boolean
+  apoyada_en_fuente?: boolean
+  categoria?: string
+  sentimiento?: string
+  motivo?: string
+}
+export type TipoHueco = 'guia' | 'control_caido' | 'ninguno'
+
+export function tipoHueco(dec: EscaladoMin | null | undefined): TipoHueco {
+  if (!dec || !dec.needs_human || dec.apoyada_en_fuente) return 'ninguno'
+  // Lo sensible y las recomendaciones escalan por política o por diseño, no por ignorancia.
+  if (dec.categoria === 'recomendacion' || dec.sentimiento === 'negativo') return 'ninguno'
+  const m = dec.motivo || ''
+  // El `motivo` puede venir concatenado (guardrail del importe + escalado). Si en algún punto hubo
+  // algo que NO se pudo comprobar, gana eso: no se afirma un hueco que no se ha llegado a ver.
+  if (/no se pudo verificar/.test(m)) return 'control_caido'
+  if (/no cubre/.test(m)) return 'guia'
+  return 'ninguno'
+}
+
+// ── Dato personal dentro de un HECHO del piso ──────────────────────────────
+//
+// Un hecho se inyecta en el prompt de TODAS las conversaciones futuras de ese piso, así que un
+// teléfono, un IBAN o un email colados ahí dejan de ser un dato de una reserva y pasan a ser algo
+// que el agente puede repetirle a cualquier huésped. Caso real (31/08/2026, `mensajes_hechos` id=3):
+// se guardó como hecho permanente de House Sevillana la respuesta entera de Alberto a Raquel,
+// con su móvil de Bizum dentro. Esta guarda es la última red antes de escribir.
+const RE_TELEFONO = /(?:\+\d{1,3}[\s.-]?)?(?:\d[\s.-]?){9,}/
+const RE_IBAN = /\b[A-Z]{2}\d{2}[\s]?(?:[A-Z0-9]{4}[\s]?){3,7}[A-Z0-9]{1,4}\b/
+const RE_EMAIL = /[\w.+-]+@[\w-]+\.[\w.]{2,}/
+
+export function contieneDatoPersonal(txt: string): boolean {
+  const t = txt || ''
+  return RE_EMAIL.test(t) || RE_IBAN.test(t) || RE_TELEFONO.test(t)
+}
+
+// ── Destilado del HECHO (parte pura) ───────────────────────────────────────
+//
+// Lo que se guardaba como «hecho del piso» era la RESPUESTA ENTERA de Alberto, carta incluida.
+// Medido el 02/09/2026 en `mensajes_hechos`: «¡Hola, Claudio! Gracias por escribirnos…», «Hi Maria,
+// I can confirm that your reservation for Luxury Busto (16 Oct 2026 – 18 Oct 2026)…», y un tercero
+// con el móvil de Bizum. Eso no es conocimiento del piso: es correspondencia con UN huésped, y va al
+// prompt de TODAS las conversaciones futuras como si fuera la guía. Tres daños a la vez — ruido, un
+// dato personal repetible a cualquiera, y un estado de UN DÍA («nuestro parking está ocupado»)
+// convertido en característica permanente de la vivienda.
+//
+// Por eso el hecho se DESTILA (una frase, sin nombres ni datos de una reserva) y esta función decide
+// si lo destilado sirve. Conservadora a propósito: ante la duda no se guarda nada. Un hecho perdido
+// se vuelve a enseñar; un hecho falso o personal se le cuenta a todos los huéspedes que vengan.
+const RE_NADA = /^(nada|ninguno|ninguna|none|n\/a|-|—)\b/i
+const MIN_HECHO = 15
+const MAX_HECHO = 400
+
+export function interpretarDestilado(bruto: string): string {
+  const t = (bruto || '').trim().replace(/^["'«»]+|["'«»]+$/g, '').trim()
+  if (!t || RE_NADA.test(t)) return ''
+  if (t.length < MIN_HECHO || t.length > MAX_HECHO) return ''
+  // Varias líneas = el modelo se puso a redactar en vez de destilar; una carta no es un hecho.
+  if (t.split('\n').filter(l => l.trim()).length > 2) return ''
+  if (contieneDatoPersonal(t)) return ''
+  return t
+}

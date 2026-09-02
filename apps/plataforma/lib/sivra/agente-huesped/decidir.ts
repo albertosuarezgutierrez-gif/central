@@ -110,9 +110,16 @@ Te doy la INFORMACIÓN disponible del alojamiento, el último mensaje del huésp
 Responde con UNA sola palabra, sin nada más:
 ESCALAR → si el borrador no resuelve lo que pide el huésped, si la INFORMACIÓN no cubre la pregunta, o si el mensaje es una queja / pide dinero, cambios, cancelación o es una emergencia.
 OK → si el borrador responde correctamente y con datos que están en la INFORMACIÓN.`
+  // Los HECHOS del piso van también aquí, no solo al redactor. Si el control de calidad solo ve la
+  // ficha y la guía, todo lo que Alberto enseña le resulta invisible: contesta ESCALAR («la
+  // INFORMACIÓN no cubre la pregunta») por muchas veces que se le haya enseñado el mismo asunto, y
+  // como ese veredicto es el que dispara el aviso «❓ Esto no lo encuentro en la guía», el agente
+  // parece no aprender NUNCA. Medido el 02/09/2026: el phishing por WhatsApp se había enseñado tres
+  // veces (mensajes_hechos id=4 y 5, y una más que cayó en mensajes_aprendizaje) y seguía escalando.
+  const hechosQA = (ctx.hechos || []).map(h => `- ${h}`).join('\n')
   const user = `INFORMACIÓN:
 ${ctx.ficha || '(sin ficha)'}
-${ctx.guia ? `\nGUÍA:\n${ctx.guia}` : ''}
+${ctx.guia ? `\nGUÍA:\n${ctx.guia}` : ''}${hechosQA ? `\nHECHOS DE ESTE PISO (los enseñó el anfitrión; valen tanto como la guía):\n${hechosQA}` : ''}
 
 MENSAJE DEL HUÉSPED: ${pregunta}
 
