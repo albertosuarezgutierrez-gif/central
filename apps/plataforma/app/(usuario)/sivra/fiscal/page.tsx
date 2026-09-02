@@ -108,7 +108,7 @@ export default function FiscalPage() {
           <div style={{ fontWeight: 600, fontSize: 14 }}>Declaración IRPF completa</div>
           <div style={{ fontSize: 13, color: 'var(--muted)' }}>
             Base imponible, tramos, deducciones y cuota estimada →{' '}
-            <a href="/finanzas" style={{ color: 'var(--primary)' }}>Ver en Finanzas ↗</a>
+            <a href="/banca?tab=ingresos" style={{ color: 'var(--primary)' }}>Ver en Banca ↗</a>
           </div>
         </div>
       </div>

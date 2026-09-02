@@ -1,25 +1,25 @@
 'use client'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import type { ResumenFinanciero, MovResumen } from '@/lib/finanzas'
-import CategoriasTab from './CategoriasTab'
 import { Banknote } from 'lucide-react'
 import { eur } from '@/lib/dinero'
 import { PageHeader } from '@/components/ui'
 
 // Gastos y Fiscal viven en sus páginas propias (/finanzas/gastos y /finanzas/fiscal,
-// PR #646/#686); aquí solo queda lo que no existe en otro sitio. Los links viejos
-// ?tab=gastos|fiscal se redirigen en el componente.
-type Tab = 'ingresos' | 'categorias'
-const TABS: { v: Tab; label: string }[] = [
-  { v: 'ingresos', label: '💰 Ingresos' },
-  { v: 'categorias', label: '📊 Categorías' },
-]
+// PR #646/#686). La pestaña «Categorías» se retiró el 02/09/2026: montaba LITERALMENTE el
+// mismo `CategoriasTab` que el segmento Personal de /banca, así que la misma pantalla existía
+// en dos URLs y se podía dar vueltas entre ellas. Sobrevive la de /banca.
+//
+// Sin pestañas, este componente es el cuerpo del segmento «Ingresos» de /banca (`embebido`),
+// que es donde vive ahora. Ya no hay dos hubs financieros.
 
 type Props = {
   initialData: ResumenFinanciero | null
   year: number
   quarter: number
+  /** Montado dentro de /banca como segmento: /banca ya pone el contenedor de página. */
+  embebido?: boolean
 }
 
 function fmt(n: number) {
@@ -166,29 +166,22 @@ function SaludExtraccionBanner({ salud }: { salud: ResumenFinanciero['saludExtra
   )
 }
 
-export default function FinanzasClient({ initialData, year, quarter }: Props) {
+export default function FinanzasClient({ initialData, year, quarter, embebido }: Props) {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const tab: Tab = (TABS.some(t => t.v === searchParams.get('tab')) ? searchParams.get('tab') : 'ingresos') as Tab
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [isPending, startTransition] = useTransition()
   const [showMovs, setShowMovs] = useState<'pisos' | 'personal' | null>(null)
 
   // Los tabs Gastos y Fiscal se desmantelaron (duplicaban /finanzas/gastos y /finanzas/fiscal).
-  useEffect(() => {
-    const t = searchParams.get('tab')
-    if (t === 'gastos') router.replace('/finanzas/gastos')
-    else if (t === 'fiscal') router.replace('/finanzas/fiscal')
-  }, [searchParams, router])
-
-  function navigate(y: number, q: number, t: Tab = tab) {
+  // La URL en la que vive esto es ahora /banca?tab=ingresos. `/finanzas` redirige aquí, así que
+  // el periodo se navega sobre /banca y no sobre una ruta que ya no existe como hub.
+  function navigate(y: number, q: number) {
     startTransition(async () => {
       const res = await fetch(`/api/finanzas?year=${y}&quarter=${q}`)
       if (res.ok) setData(await res.json())
     })
-    router.push(`/finanzas?year=${y}&quarter=${q}&tab=${t}`, { scroll: false })
+    router.push(`/banca?tab=ingresos&year=${y}&quarter=${q}`, { scroll: false })
   }
-  function setTab(t: Tab) { router.push(`/finanzas?year=${year}&quarter=${quarter}&tab=${t}`, { scroll: false }) }
 
   const refresh = () => navigate(year, quarter)
 
@@ -216,12 +209,18 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
   const periodoLabel = quarter === 0 ? `Año ${year}` : `Q${quarter} ${year}`
 
 
+  const Envoltorio = embebido
+    ? ({ children }: { children: React.ReactNode }) => <>{children}</>
+    : ({ children }: { children: React.ReactNode }) => (
+        <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>{children}</main>
+      )
+
   return (
-    <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
+    <Envoltorio>
 
       {/* ── Controles ── */}
       <PageHeader
-        titulo="Finanzas personales"
+        titulo={embebido ? 'Ingresos' : 'Finanzas personales'}
         icono={<Banknote size={20} strokeWidth={1.75} />}
         acciones={<>
         <select
@@ -278,19 +277,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
             ))}
           </div>
 
-          {/* ── Pestañas ── */}
-          <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '20px', flexWrap: 'wrap' }}>
-            {TABS.map(t => (
-              <button key={t.v} onClick={() => setTab(t.v)} style={{
-                padding: '8px 16px', border: 'none', borderBottom: `2px solid ${tab === t.v ? 'var(--primary)' : 'transparent'}`,
-                background: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: tab === t.v ? 700 : 400,
-                color: tab === t.v ? 'var(--primary)' : 'var(--muted)', marginBottom: '-1px',
-              }}>{t.label}</button>
-            ))}
-          </div>
-
           {/* ════════ INGRESOS ════════ */}
-          {tab === 'ingresos' && (
           <div className="finanzas-bloques" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '20px' }}>
 
             {/* Correduría */}
@@ -386,16 +373,8 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               </div>
             </a>
           </div>
-          )}
-
-
-
-          {/* ════════ CATEGORÍAS ════════ */}
-          {tab === 'categorias' && (
-            <CategoriasTab year={year} month={quarter} />
-          )}
         </>
       )}
-    </main>
+    </Envoltorio>
   )
 }
