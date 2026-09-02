@@ -94,15 +94,64 @@ Primitivas Tremor-look compartidas y **server-safe** (sin hooks): `cardStyle`, `
 (con `DeltaBadge` ▲/▼), `ThinBar`, `BarListRow`, `LegendDot`, `EMERALD`/`ROSE`. Patrón a copiar
 al tocar cualquier otra página de plataforma. Va con una pasada transversal de identidad visual:
 **Inter** vía `next/font` (`var(--font-inter)`), **tokens semánticos** (`--positive/--negative/--warning/--info`
-+ variantes `-bg`, cero hex inline), **modo oscuro automático** (`prefers-color-scheme: dark` +
-`ThemeToggle.tsx` en el pie del sidebar — 🌗 Auto → ☀️ Claro → 🌙 Oscuro, `localStorage('theme')` +
-`html[data-theme]`, script anti-parpadeo en `layout.tsx`) y **veto al oscurecimiento forzado del
-navegador** (`[data-theme="light"] { color-scheme: only light }` — sin esto, Chrome/Samsung Internet
-en ahorro de batería repintan a oscuro aunque el usuario elija Claro). Recharts adaptado por CSS
++ variantes `-bg`, cero hex inline), **modo oscuro SOLO A MANO** (ver 🚨 justo debajo). Recharts adaptado por CSS
 (`.recharts-cartesian-grid line` / `.recharts-cartesian-axis-tick text`) para que la rejilla siga
 los tokens en oscuro. **plataforma NO usa Tailwind** (CSS vars) — este sistema es propio, no Tremor
 copy-paste; sivra/ialimp/rrhh/ia-rest sí tienen Tailwind y ahí Tremor entraría literal. Adopción por
 goteo: traer el patrón cuando una pantalla lo necesite, no migrar todo de golpe.
 
-<!-- verificado: 2026-08-07 -->
+🚨 **CORREGIDO el 02/09/2026 — este documento describía el modo oscuro AL REVÉS, y describía justo el bug.**
+Decía «modo oscuro automático (`prefers-color-scheme: dark`)» y un toggle de TRES estados
+«🌗 Auto → ☀️ Claro → 🌙 Oscuro». Las dos cosas son falsas desde el **PR #707 (03/07/2026)**, y lo que
+describía es exactamente la causa del fallo que Alberto reportó con captura: el ahorro de batería del móvil
+ponía el sistema en oscuro y **el panel se oscurecía solo**. Medido contra el código el 02/09/2026:
+- `grep prefers-color-scheme apps/plataforma/app/globals.css` → **cero coincidencias**.
+- `:root` lleva **`color-scheme: only light`** (el `only` VETA además el oscurecimiento forzado de
+  Chrome/Samsung Internet con batería baja); el bloque oscuro vive solo en `[data-theme="dark"]`.
+- `ThemeToggle.tsx` es **BINARIO**: `type Tema = 'light' | 'dark'`, sin ningún estado «Auto».
+⚠️ **NO reintroducir un modo que siga al sistema ni media queries de `prefers-color-scheme`**: fue la causa
+del bug. Y la lección de método: **una skill puede contradecir al `CLAUDE.md` de su propia app durante dos
+meses sin que nada falle** — ni `tsc` ni los tests leen prosa. Antes de dar por buena una afirmación de este
+documento sobre comportamiento, cotéjala con el código (un `grep` basta).
 
+## El CUERPO del Inicio, migrado (02/09/2026, PR #2024)
+
+El lote #2011→#2018 tocó el **chrome** de `/banca` (pestañas, migas, ancho, cabecera del libro) y Alberto
+respondió **«no está terminado, ¿no?»**. Tenía razón: **el cuerpo de la página no lo tocó nadie**, y el
+cuerpo es lo que se ve al abrir. Su captura además iba desplazada hacia abajo — el sidebar es fijo, así que
+las pestañas nuevas quedaban por encima del recorte.
+
+🚨 **El defecto de fondo, que ya se había cometido una vez el MISMO día:** #2011 diagnosticó que el
+`ui.tsx` viejo «existía como documento, no como código» porque nadie lo importaba… y publicó cuatro
+primitivas nuevas (`PageHeader`, `KpiCard`, `Badge`, `btnStyle`) **también sin ningún consumidor**. Por eso
+Alberto no vio ni un píxel de cambio. Medido antes de #2024: **7 primitivas a cero consumidores**, y
+`ResumenPeriodo.tsx` con su propia `card`, su propio `Kpi` y su propio `<style>` incrustado.
+
+**Estado tras #2024** (`/banca` sigue siendo la implementación de referencia):
+- Usan el sistema: `banca/ResumenPeriodo.tsx`, `banca/NegociosResumen.tsx`, `banca/page.tsx`.
+- `IntervaloSelector.tsx` (compartido con `/finanzas`): segmentado + chips ligeros en vez de quince
+  pastillas con borde. Un control de navegación no puede pesar como el contenido que filtra.
+- Rejillas (`.bk-kpis`, `.bk-neg`, `.bk-graf`, `.neg-grid`) en `globals.css`. Los `!important` que
+  llevaban solo existían para ganarle al estilo EN LÍNEA; sin él, sobran.
+- `DeltaBadge` con `bueno`: colorea por **significado**, no por signo (gastar menos = verde).
+
+🚨 **Una exención del guardián de tokens puede llevar un motivo FALSO y sobrevivir POR ESO.** Las barras del
+`ComposedChart` estaban exentas de `test/regression-tokens-color.test.ts` con el motivo escrito «son series
+de recharts, no estados». Falso: **ingreso y gasto SON el par semántico**, y el hex no cambiaba en modo
+oscuro. Sobrevivió al barrido de ~734 hex precisamente porque su justificación tenía buena pinta.
+Convertidas a `var(--positive)`/`var(--negative)` y exención retirada; la dona sí sigue en paleta
+CATEGÓRICA (ahí el motivo se sostiene: teñir una categoría de rojo diría que ese gasto está mal).
+
+⏸️ **PENDIENTE DE DECISIÓN DE ALBERTO — no lo resuelvas por tu cuenta:**
+1. **`PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot` siguen a CERO consumidores.** NO se
+   enchufaron a la fuerza: hacerlo sería repetir el defecto que este lote arregla. En `/banca` el hueco de
+   `PageHeader` ya lo ocupan las migas + el saldo con su botón 👁, y forzarlo empeoraría la pantalla.
+   O se usan donde encajen de verdad, o se borran.
+2. **`banca/page.tsx:221` pinta «último mov. ninguno» sobre un `ultimoMov` NULL** (`lib/psd2-estado.ts`):
+   un «no se ha podido leer» servido como afirmación, contra la regla del NULL. Sin tocar porque cambia un
+   texto que Alberto lee a diario.
+
+⚠️ **Ninguna de estas pantallas se ha visto renderizada** (las apps llevan `--sin-previews` y la sesión no
+tiene navegador): alineaciones y espaciados están razonados sobre el código, no medidos.
+
+<!-- verificado: 2026-09-02 -->
