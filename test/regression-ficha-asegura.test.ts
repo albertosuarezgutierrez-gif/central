@@ -217,6 +217,7 @@ test('🚨 sin bloques `contactos`/`identidad` (asegura viejo) → null, NO list
   if (r.estado !== 'ok') return
   assert.equal(r.ficha.contactos, null, '«no se han podido leer» ≠ «no tiene teléfonos»')
   assert.equal(r.ficha.identidad, null)
+  assert.equal(r.ficha.relaciones, null, '«no se han podido leer» ≠ «no tiene familia»')
   assert.equal(r.ficha.contacto.direccion, null)
   assert.equal(r.ficha.contacto.direccionIlegible, false)
 })
@@ -244,4 +245,31 @@ test('los bloques nuevos se leen enteros, con el cifrado como fila ilegible', ()
   assert.deepEqual(r.ficha.contactos?.emails, [], 'lista vacía con bloque presente SÍ es «no tiene email»')
   assert.equal(r.ficha.identidad?.dniEnmascarado, '*****678Z')
   assert.equal(r.ficha.contacto.direccionIlegible, true)
+})
+
+// ── Relaciones y autorizaciones (02/09/2026) ────────────────────────────────
+
+test('🚨 el bloque `relaciones` se lee entero; [] es «sin relaciones anotadas» y null «no se pudo mirar»', () => {
+  const con = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: {
+      ...FICHA_OK.ficha,
+      relaciones: [
+        { idIda: 'r1', idVuelta: 'r2', relacionadoId: 'c2', tipo: 'Cónyuge/Pareja de Hecho', autorizaVer: true, puedeVer: false, observaciones: null, nombre: 'María Antonia Gutierrez Alcala', tipoCliente: 'cliente', polizasVivas: null },
+        'basura',
+      ],
+    },
+  })
+  assert.equal(con.estado, 'ok')
+  if (con.estado !== 'ok') return
+  assert.equal(con.ficha.relaciones?.length, 1, 'la fila rara se salta sin tumbar el bloque')
+  assert.equal(con.ficha.relaciones?.[0].autorizaVer, true)
+  assert.equal(con.ficha.relaciones?.[0].puedeVer, false)
+  assert.equal(con.ficha.relaciones?.[0].polizasVivas, null, 'sin contar ≠ 0')
+
+  const vacio = interpretarFicha(200, { ...FICHA_OK, ficha: { ...FICHA_OK.ficha, relaciones: [] } })
+  if (vacio.estado === 'ok') assert.deepEqual(vacio.ficha.relaciones, [])
+
+  const roto = interpretarFicha(200, { ...FICHA_OK, ficha: { ...FICHA_OK.ficha, relaciones: 'no' } })
+  if (roto.estado === 'ok') assert.equal(roto.ficha.relaciones, null, 'una lista que no es lista → null, no []')
 })

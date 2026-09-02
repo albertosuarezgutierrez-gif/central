@@ -1494,6 +1494,15 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
     La ficha nueva nace `lead`; «Cliente (CIMA)» lo da tener pólizas vivas, no el `tipo` (CIMA no lo cambia).
   - `contactos === null` / `identidad === null` = asegura no lo manda (versión anterior o consulta caída): se
     dice, nunca se pinta «sin teléfonos». Un contacto `ilegible` (clave PII) se enseña como «cifrado».
+- **👪 Relaciones y autorizaciones en la ficha (02/09/2026).** Alberto: «es marido de María Antonia… por si
+  autoriza María Antonia que José vea sus seguros». Tarjeta «👪 Relaciones y autorizaciones» (`Relaciones.tsx`) sobre
+  el proxy `/api/correduria/cliente/relaciones` (GET/POST/PATCH/DELETE); lector puro `lib/relaciones-asegura.ts`
+  (+ test). Un vínculo se lee desde la ficha («María Antonia · Cónyuge/Pareja de Hecho»); 💍 en la cabecera si hay
+  cónyuge. **La autorización es DIRECCIONAL y se da solo desde la ficha de quien autoriza**: en la de José el
+  botón es «Autorizar a María Antonia a ver los seguros de José»; lo contrario «se decide desde la ficha de María
+  Antonia» (enlace). Es un consentimiento del titular: queda quién y cuándo en `historial_interno` de las dos
+  fichas. `relaciones === null` = no se pudo leer (nunca «sin familia»); `[]` sí es «se miró y no hay». Los datos
+  vienen de `cliente_relaciones` (1.708 filas del CRM ya cargadas). El portal del cliente aún NO los usa.
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no

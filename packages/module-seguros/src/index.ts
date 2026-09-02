@@ -179,3 +179,15 @@ export {
   type AltaRevisada,
   type Coincidencia,
 } from './cliente-edicion.ts'
+export {
+  TIPOS_RELACION,
+  GRUPOS_RELACION,
+  tipoRelacion,
+  tipoInverso,
+  relacionesDeFicha,
+  clientesVisiblesPara,
+  explicarAutorizacion,
+  type TipoRelacion,
+  type RelacionFila,
+  type RelacionFicha,
+} from './relaciones.ts'
