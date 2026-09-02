@@ -1421,6 +1421,9 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
 
 ## 🗂️ La correduría se trabaja DESDE AQUÍ — ficha del cliente y accesos directos (01/09/2026)
 
+> 📘 **Visión y orden de trabajo del CRM de la correduría: `docs/CORREDURIA-CRM-VISION.md`** (dictado de
+> Alberto, 02/09/2026; skill router `correduria-crm`). Léelo antes de añadir pantallas o escrituras.
+
 > Alberto: *«asegura hay que meterlo en correduría, yo solo uso UNA página»* · *«pincho en Jose Suárez
 > Salas y directamente me lleva a su ficha, donde tengo todos sus datos, pólizas, recibos, siniestros.
 > Rápido y limpio»*.

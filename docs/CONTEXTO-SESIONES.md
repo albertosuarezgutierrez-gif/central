@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📘 Visión del CRM de la correduría (02/09/2026).** Alberto, por voz: «lo que estamos hablando es un
+  CRM» — buscador → ficha cliente (pólizas confirmadas por CIMA) → ficha póliza (datos, recibos,
+  siniestros, limpio, detalle al pinchar), misma forma para la intranet del cliente; leads que se
+  crean solos por web/WhatsApp/agente; todo cambio guardado; CIMA y Codeoscopic «saben más que
+  nosotros» y hay que compaginarlas al emitir. Escrito en **`docs/CORREDURIA-CRM-VISION.md`** (visión,
+  estado medido §4, la pieza crítica §5: hoy CIMA empareja por número + NOMBRE de compañía, ignora
+  `import_ref` y pisa `cliente_id` → una emitida por Codeoscopic se duplica o se sobreescribe; orden de
+  trabajo §9) + skill router **`correduria-crm`**. Nada de código: el punto 1 del orden exige spec y OK.
+
 - **👪 Relaciones entre clientes + autorización para ver los seguros del otro (02/09/2026).** Alberto, tras
   probar la edición (José: móvil principal, verificado en `historial_interno`): «es marido de María Antonia…
   por si autoriza María Antonia que José vea sus seguros». La tabla `cliente_relaciones` YA existía (1.708 filas
