@@ -62,6 +62,18 @@
   (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`; enlace Git verificado: el bot de Vercel ya lo lista con su Root
   Directory, deployment «Ignored» por `--sin-previews`). Pendiente de Alberto en el panel:
   `DATABASE_URL` (plantilla en el SQL), `PII_LOOKUP_KEY` = la de central-asegura, secretos de sesión/canal.
+- **Inicio: arriba lo accionable, y dos tokens CSS fantasma (02/09/2026).** Alberto pidió «página de inicio
+  con resumen de lo más importante». Inicio NO estaba vacío: estaba saturado (512 líneas — saldo, cuentas,
+  bróker, gráficas, P&L, fiscal, antifraude, fugas, benchmark y el libro entero), y lo accionable quedaba
+  bajo cuatro secciones de consulta. Nueva banda «Pide acción hoy» encima de todo (`HoyAccionable.tsx` +
+  `lib/inicio-acciones.ts`, puro, 14 tests): banco viejo PRIMERO (envenena el resto de números), pólizas
+  ≤60d desde la correduría, y movimientos/ingresos/duplicados/facturas sin clasificar. Tres estados en
+  todo: `0` ≠ `null` ≠ `'no_aplica'` — «no hay banco» no es «no se sabe», y un fallo de consulta se
+  declara en vez de callarse. De camino: **`var(--card)` y `var(--line)` NO existían** y los usaban 4
+  pantallas (`/operador/agentes`, `/operador/ia`, facturas, partes) → se pintaban sin fondo NI borde,
+  porque CSS invalida la declaración entera y no da error; por eso la página de agentes «no parecía una
+  página». Guardián `test/regression-tokens-css.test.ts`. Y consulta por agente en `/operador/agentes`
+  (expediente: ficha + semáforo + latidos + vigía). PR #2131.
 - **«Repara»: el menú mentía en dos sitios (02/09/2026).** Sin objetivo dicho, así que se buscó qué estaba roto de
   verdad. (1) El lateral encendía DOS entradas a la vez: «Inicio» + el segmento en `/banca?tab=*` (lo introdujo
   #2106 — «Inicio» ES `/banca` y los cinco segmentos comparten esa ruta), y «Pricing Lab» + «Pricing auto» /
