@@ -259,6 +259,22 @@ cambio toca una pantalla que ya viola la regla, corrígela en el mismo PR.
 ## Responsive — regla global permanente
 **Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.
 
+## 📱 Medir el responsive: el `body` MIENTE en plataforma — regla global permanente
+**Antes de dar por bueno que una pantalla no desborda, comprueba QUÉ elemento estás midiendo.** En
+`apps/plataforma`, `LayoutShell` declara `overflowY:'auto'` sin `overflowX`; por la regla de CSS Overflow
+(si un eje deja de ser `visible`, el otro computa a `auto`), **el scroller horizontal es LayoutShell, no
+`<body>`**. Consecuencia medida el 02/09/2026: `document.body.scrollWidth` era 390 —igual al viewport—
+mientras el contenido desbordaba a 910 px. Con esa medición se declaró «no desborda» un fallo que el
+usuario estaba viendo en su móvil. Se mide sobre el scroller y sus descendientes:
+`sc.scrollWidth > sc.clientWidth`, y luego los hijos cuyo `getBoundingClientRect().right` se sale.
+
+**Y la causa más común, que además se disfraza de arreglada:** un `display:grid` sin `gridTemplateColumns`
+dimensiona su pista implícita con el contenido más ancho. Una tabla con `minWidth` dentro arrastra la
+página entera **y anula su propio `overflowX:'auto'`** — cuando este actúa, su contenedor ya creció. El
+arreglo es `gridTemplateColumns: 'minmax(0, 1fr)'` en el grid contenedor. Pero **no siempre basta**: si lo
+que no cabe es un flex cuyo min-content ya supera la pantalla (una gráfica de 12 columnas mensuales, p. ej.),
+el scroll hay que ponerlo en ese elemento, no en su contenedor.
+
 ## Rendimiento UI — regla global permanente
 **Ninguna página monta cientos/miles de filas de golpe.** Las listas largas (movimientos bancarios, reservas, logs…) usan: desplegables **cerrados por defecto con montaje perezoso** (el contenido solo se renderiza al abrir — OJO: un `<details>` cerrado igualmente crea todo su DOM), **paginación client-side** (~50 filas + «Ver más»), y auto-apertura cuando hay filtros activos. Las recargas tras una acción mantienen la lista visible (atenuada), sin loader a pantalla completa que desmonte todo. Patrón de referencia: `apps/plataforma/app/(usuario)/finanzas/GastosTab.tsx` (PR #666). Si un cambio toca una página que viola esta regla, aprovecha para corregirla en el mismo PR.
 
