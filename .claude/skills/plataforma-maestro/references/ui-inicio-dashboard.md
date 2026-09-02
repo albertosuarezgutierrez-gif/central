@@ -64,7 +64,32 @@ dejaron sin borrar, a la espera de la Fase 2 de des-duplicación (ver `docs/CONT
 **LANDMINE (igual que el resto de widgets):** las funciones `getResumen*`/`getAviso*` del dashboard
 deben replicar la lógica de las páginas/APIs correspondientes; no simplificar con SQL puro.
 
-## Sistema de diseño "paquete moderno" — `dashboard/ui.tsx` (02/07/2026)
+## Sistema de diseño — `components/ui.tsx` (02/09/2026; nació como `dashboard/ui.tsx` el 02/07/2026)
+
+🚨 **Se MOVIÓ y se AMPLIÓ.** Vivía en `app/(usuario)/dashboard/ui.tsx`, pero `/dashboard` acabó siendo una
+página que solo redirige a `/banca`: el sistema de diseño colgaba de una ruta muerta. Y al auditarlo el
+02/09/2026, **NINGÚN archivo lo importaba** — existía como documento, no como código, mientras las pantallas
+se escribían con ~4.900 `style={{}}` a mano y 223 verdes/rojos en hex fijo (ilegibles en oscuro). Ahora vive
+en **`apps/plataforma/components/ui.tsx`** (`@/components/ui`) y `/banca` es su implementación de referencia.
+
+**Primitivas nuevas** (además de las de abajo): `Pagina` (ancho por tipo de contenido: `lectura` 960 /
+`tabla` 1400 — sustituye al `maxWidth:'960px'` copiado en 14 páginas) · `PageHeader` · `KpiCard` (icono en
+pastilla tintada) · `Badge` · `btnStyle`/`BtnLink` (se exporta el ESTILO, no un componente con `onClick`:
+el archivo es server-safe y un handler obligaría a `'use client'` en cada consumidor) · `TablaScroll` ·
+`colorImporte` · y **`Dato`/`Pendiente`**, que son los tres estados de un valor.
+
+**`Dato` — la regla del NULL, por construcción.** La regla raíz «dato que NO hay ≠ dato que NO se ha
+mirado» se cumplía por VIGILANCIA. La lógica pura vive en **`lib/dato.ts`** (`estadoDato`, `esPendiente`,
+`colorImporte`) con guardián en `test/regression-dato-tres-estados.test.ts`: `null`/`undefined` =
+«pendiente» · `[]`/`''` = «revisado, no hay» · **el `0` es un VALOR** (el error simétrico, el que aparece al
+arreglar el primero: «0 €» es una afirmación legítima que alguien comprobó). `Pendiente` lo pinta con borde
+**discontinuo** si se rellenará y **continuo** si la fuente no lo va a traer nunca.
+
+**CSS fuera de las páginas:** el padding responsive de `.pagina` y la cabecera `.page-header` viven en
+`globals.css`. Un estilo inline no admite media queries, y ese era justo el motivo de que 47 páginas
+acabaran con un bloque `<style>{`…`}</style>` incrustado (201 `!important` entre todas).
+
+### Lo que ya había (sigue vigente)
 Primitivas Tremor-look compartidas y **server-safe** (sin hooks): `cardStyle`, `CardHeader`, `Stat`
 (con `DeltaBadge` ▲/▼), `ThinBar`, `BarListRow`, `LegendDot`, `EMERALD`/`ROSE`. Patrón a copiar
 al tocar cualquier otra página de plataforma. Va con una pasada transversal de identidad visual:
