@@ -1506,6 +1506,12 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   Antonia» (enlace). Es un consentimiento del titular: queda quién y cuándo en `historial_interno` de las dos
   fichas. `relaciones === null` = no se pudo leer (nunca «sin familia»); `[]` sí es «se miró y no hay». Los datos
   vienen de `cliente_relaciones` (1.708 filas del CRM ya cargadas). El portal del cliente aún NO los usa.
+- **🕘 Estado derivado en la cabecera, historial plegado y aviso de duplicadas (02/09/2026).** El rótulo de la
+  ficha sale de `ficha.estado` (asegura lo deriva: cliente / con presupuesto / lead / ex-cliente, con `motivo` en
+  el `title`); las pólizas `viva && !confirmadaCima` van a un bloque «📝 Emitidas, pendientes de confirmación por
+  CIMA» y no cuentan como vivas. Tarjeta «🕘 Historial» al final, plegada y con montaje perezoso (`null` = no se
+  pudo leer ≠ `[]`). `Duplicadas.tsx` bajo la cartera viva avisa de pólizas vivas con el mismo número y compañía
+  (proxy `/api/correduria/duplicados`); si no se pudo comprobar, lo dice, nunca calla.
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no

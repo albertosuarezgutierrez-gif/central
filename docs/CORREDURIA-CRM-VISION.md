@@ -77,10 +77,10 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 
 | Se pinta | Regla |
 |---|---|
-| ✅ Cliente (CIMA) | tiene alguna póliza viva (`import_ref IS NULL`, no cancelada) — ya implementado en la ficha |
-| 📝 Con presupuesto | sin póliza viva y con una cotización no expirada (`cotizaciones.estado` pendiente/enviada, o proyecto Codeoscopic en `cotizacion`/`preemision`) — **pendiente** |
+| ✅ Cliente (CIMA) | tiene alguna póliza **confirmada por CIMA** (`import_ref IS NULL` y `id_poliza_entidad` informado), no cancelada — `estadoCliente()` |
+| 📝 Con presupuesto | sin póliza confirmada y con una póliza **emitida pendiente de CIMA**, o una cotización pendiente/enviada de los últimos 60 días — hecho |
 | 🕐 Lead | ninguna de las dos |
-| ⚫ Ex-cliente | tuvo pólizas y todas están canceladas/vencidas — **pendiente** (hoy sale como Lead) |
+| ⚫ Ex-cliente | tuvo pólizas (canceladas en CIMA o del volcado histórico) y ninguna viva — hecho |
 
 ## 4. Lo que existe hoy (medido 02/09/2026) y lo que falta
 

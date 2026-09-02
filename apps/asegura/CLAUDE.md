@@ -549,6 +549,14 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `historial_interno` de las DOS fichas: es un consentimiento y se tiene que ver quién lo anotó y cuándo.
   ⚠️ `prisma_asegura_portal` NO tiene grant sobre la tabla: el portal del cliente todavía no enseña los
   seguros de nadie más; cuando se haga, `clientesQuePuedeVer()` ya dice a quién.
+- **🕘 Estado derivado, historial y duplicadas (02/09/2026, «haz todo»).** La ficha manda `estado`
+  (`estadoCliente()` de module-seguros: cliente = póliza **confirmada por CIMA** = `import_ref IS NULL` **y**
+  `id_poliza_entidad` informado; «emitida, pendiente de CIMA» = viva sin entidad, hoy 0 de 109; con presupuesto =
+  cotización pendiente/enviada de ≤60 días; ex-cliente; lead), cada póliza `confirmadaCima`, `historial` (últimas
+  50 de `historial_interno`, `lib/cartera-historial.ts`) y `cotizacionesVivas`. **`GET /duplicados`**: vivas con el
+  mismo número normalizado + código DGS (`polizasDuplicadas`, puro) — el guardián de la conciliación
+  Codeoscopic↔CIMA; `emitidaYCima` marca el grupo que hay que casar. Diseño de la emisión en central y la
+  conciliación: `docs/superpowers/specs/2026-09-02-emision-conciliacion-cima-design.md` (pendiente de OK).
 
 ### 🔎 Qué se puede buscar de verdad, y qué NO (medido 01/09/2026)
 
