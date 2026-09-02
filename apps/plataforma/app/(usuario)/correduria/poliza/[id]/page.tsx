@@ -23,7 +23,12 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
   const anul = p.viva && !cancelada ? ventanaAnulacion(p.fechaVencimiento) : null
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    // `minmax(0, 1fr)` NO es decorativo (mismo caso que la ficha de cliente): sin él la pista
+    // implícita de este grid se dimensiona con su contenido más ancho —las tablas de recibos,
+    // coberturas y siniestros, que declaran `minWidth: 560`— y arrastra la página entera fuera
+    // del móvil. El `overflowX: 'auto'` que las envuelve queda anulado, porque para cuando actúa
+    // su contenedor ya ha crecido. Medido en Chromium el 02/09/2026: 590 → 390 con esta línea.
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
       <div>
         <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link href="/correduria">← Correduría</Link>

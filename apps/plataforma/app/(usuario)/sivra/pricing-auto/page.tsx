@@ -332,7 +332,10 @@ export default function PricingAutoPage() {
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 16 }}>
+      {/* `minmax(0, 1fr)`: sin él la pista implícita crece con el contenido más ancho de las
+          tarjetas —la tabla del histórico— y arrastra la página. Medido en Chromium el
+          02/09/2026 a 320 px: 354 → 320. No cambia nada en escritorio. */}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16 }}>
         {props.map((p) => {
           const d = draft[p.property_id]; if (!d) return null
           const m = p.market
