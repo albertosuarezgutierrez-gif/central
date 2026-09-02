@@ -637,6 +637,13 @@ que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míra
     el síntoma es idéntico a un build legítimamente ignorado, así que **compruébalo en el status de Vercel
     del PR en vez de darlo por hecho**.
     ialimp NO lo lleva a propósito: cliente vivo (Sique Brilla) → ahí sigue la regla «preview verde antes de main».
+  - 🟡 **Y el falso positivo al revés (02/09/2026): «Building» NO significa que se vaya a construir.** Al
+    empujar, el comentario de Vercel del PR pinta los proyectos en **Building** durante unos segundos y
+    LUEGO pasan a `Ignored`: el `ignoreCommand` corre DENTRO del deployment, así que el estado intermedio
+    existe siempre. Ese día se estuvo a punto de dar la alarma de «se están construyendo los once
+    proyectos, como en el incidente de los 600 US$» **dos veces**, leyendo esos comentarios intermedios.
+    El estado que vale es el FINAL: `get_status` sobre el head del PR, donde cada `Vercel – *` dice
+    `Canceled by Ignored Build Step`. No diagnostiques gasto desde un comentario que se reescribe solo.
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
