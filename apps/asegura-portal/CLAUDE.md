@@ -22,9 +22,10 @@ su ficha de la cartera y enseñarle SUS pólizas vivas) se construyó el 02/09/2
   dentro de Postgres y **no ha pasado por ningún chat ni repo**. Verificado con `dblink` desde la BD:
   entra por el pooler y por el host directo, lee la cartera y `clientes.dni` le da `42501`.
 - **Proyecto Vercel `asegura-portal` CREADO el 02/09/2026** por la API (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`,
-  Root Directory `apps/asegura-portal`, sin build). ⚠️ La API no pudo verificar el enlace al repo (el
-  token del MCP solo ve 5 proyectos del equipo): **confirmar en el panel** Git → `central` y el Root
-  Directory antes de dar por hecho el primer deploy.
+  Root Directory `apps/asegura-portal`, sin build). El token del MCP no puede releerlo (solo ve 5
+  proyectos del equipo), pero el **enlace Git está verificado por otro camino**: en el siguiente push
+  el bot de Vercel listó `asegura-portal` con ese Root Directory y el deployment salió «Ignored» por
+  `--sin-previews` (PR #2123, 17:41 UTC). Construirá solo con pushes a `main` que toquen la app.
 - **Falta, y de quién depende (Alberto, panel de Vercel — la API no escribe envs):**
   1. **`DATABASE_URL`** = `postgresql://prisma_asegura_portal.wswbehlcuxqxyinousql:<VAULT>@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true`,
      con `<VAULT>` leído del secreto de arriba. **Rotar** = repetir el bloque SQL **y** cambiar esta env
