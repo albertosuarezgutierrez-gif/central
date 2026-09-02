@@ -255,6 +255,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Es un cambio de ASPECTO, no solo de código:
+- Sin migrar a propósito:
 - La reimplementación era real, no un falso positivo:
 - `CLAUDE.md` propios
 - Cablear un valor es lo que deja una primitiva sin adoptar:
@@ -263,6 +265,4 @@
 - Podado (1.204 líneas):
 - Menú reagrupado por trabajo:
 - Pendiente de decisión de Alberto:
-- No se pudo diagnosticar porque nadie lo contaba:
-- Deuda propia, saldada en #2047:
 

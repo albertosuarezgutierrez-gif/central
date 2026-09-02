@@ -5380,6 +5380,14 @@
   ],
   "novedades": [
     {
+      "titulo": "Es un cambio de ASPECTO, no solo de código:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Sin migrar a propósito:",
+      "fecha": ""
+    },
+    {
       "titulo": "La reimplementación era real, no un falso positivo:",
       "fecha": ""
     },
@@ -5429,14 +5437,6 @@
     },
     {
       "titulo": "#2013",
-      "fecha": ""
-    },
-    {
-      "titulo": "#2018",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente:",
       "fecha": ""
     }
   ],
