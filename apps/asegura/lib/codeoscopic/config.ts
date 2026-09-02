@@ -135,3 +135,25 @@ export function explicarConfig(r: ResolucionConfig): string {
   if (r.estado === 'apagado') return `Tarificación apagada. ${r.motivo}`
   return `Tarificación encendida pero mal configurada: faltan ${r.faltan.join(', ')}.`
 }
+
+// ─── Modo SIMULACIÓN ─────────────────────────────────────────────────────────
+//
+// Un interruptor APARTE del de tarificación, y a propósito: no es «tarificar
+// barato», es NO tarificar. Con él puesto, el embudo (`cotizar.ts`) devuelve una
+// respuesta inventada por nosotros sin llamar al vendor, sin credenciales y sin
+// tocar el libro de consumo — sirve para ver la pantalla entera funcionando sin
+// gastar los 0,50€ de cada cotización real.
+//
+// 🚨 Las dos reglas que sostienen todo lo demás:
+//  1. **Sale del ENTORNO DEL SERVIDOR, jamás de la petición.** Si un parámetro
+//     del cuerpo o del query pudiera pedir simulación, cualquiera podría hacer
+//     que la app enseñara precios inventados a un cliente. Por eso esta función
+//     solo mira `env` y no hay ninguna otra forma de encender el modo.
+//  2. **Solo el literal `'true'` enciende.** Un `'1'`, un `'si'` o un `'TRUE'`
+//     dejan el modo apagado: encender por accidente es peor que no encender.
+export const ENV_SIMULACION = 'CODEOSCOPIC_SIMULACION'
+
+/** ¿Está puesto el modo simulación? Puro: solo lee del objeto de entorno. */
+export function simulacionActiva(env: Record<string, string | undefined>): boolean {
+  return env[ENV_SIMULACION] === 'true'
+}
