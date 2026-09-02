@@ -30,9 +30,11 @@ entonces, así que la copia del 02/09 está completa** y no hace falta re-sincro
 ✅ **CERRADO el 02/09/2026 a las 06:36 UTC.** El proyecto Vercel `asegura` (el CRM, Drizzle) conecta a
 la BD `central` con el rol **`crm_seguros`** (LOGIN, BYPASSRLS, DML sobre `seguros`, `search_path =
 seguros`, cero visibilidad de `public`), por el pooler `aws-0-eu-west-1:6543`. Prueba: `/api/health`
-en `db: ok` y el `cima-pull` en dry run (run #187) escribió `cima_pull_started/completed` en
+en `db: ok`; el `cima-pull` en dry run (run #187) y **el pull REAL (run #188, 09:25 UTC, `mode: real`,
+0 errores, 6 páginas de TIREA leídas)** escribieron `cima_pull_started/completed` en
 `seguros.operational_events` de central. El cron de CIMA (05:30 y 11:30 UTC, GitHub Actions del repo
-`asegura`) escribe desde entonces aquí. **No arreglar la contraseña del origen**: el origen congelado es
+`asegura`) escribe desde entonces aquí. `processed: 0` en ese pull no es fallo: los 128 ficheros de la
+cola TIREA ya están en `cima_ficheros` (86 `confirmed` + 42 `review`); lo nuevo se verá cuando llegue. **No arreglar la contraseña del origen**: el origen congelado es
 la copia de seguridad. La contraseña de `crm_seguros` pasó por un chat; **Alberto decidió NO rotarla**
 (02/09/2026): no se toca sin que lo pida él.
 Detalle y lecciones (variable Sensitive, plantilla sin sustituir, mirar `get_runtime_errors` y no el
