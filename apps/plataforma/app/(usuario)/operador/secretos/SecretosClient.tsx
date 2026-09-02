@@ -183,7 +183,7 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                   {/* FASE 2 — formulario de edición blindada (solo claves editable) */}
                   {s.editable && editing === s.name && (
                     <div style={{
-                      background: 'var(--surface-2, #f8fafc)', border: '1px solid var(--border)',
+                      background: 'var(--bg)', border: '1px solid var(--border)',
                       borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8,
                     }}>
                       <div style={{ fontSize: 11.5, color: 'var(--warning)', background: 'var(--warning-bg)', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px' }}>

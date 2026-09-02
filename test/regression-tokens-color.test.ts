@@ -196,7 +196,7 @@ test('el mapeo cubre las dos mitades de cada pareja (tono vivo y fondo suave)', 
 // `var(--card, transparent)` es inofensivo. Lo que se prohíbe es INVENTARSE el token.
 test('todo token usado con respaldo existe de verdad en globals.css', () => {
   const css = fs.readFileSync(path.join(ROOT, 'apps/plataforma/app/globals.css'), 'utf8')
-  const definidos = new Set(Array.from(css.matchAll(/^\s*(--[a-z-]+)\s*:/gm), m => m[1]))
+  const definidos = new Set(Array.from(css.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gm), m => m[1]))
 
   const fallos: string[] = []
   const COMPONENTS = path.join(ROOT, 'apps/plataforma/components')
@@ -204,7 +204,9 @@ test('todo token usado con respaldo existe de verdad en globals.css', () => {
   for (const abs of arboles.flatMap(d => [...tsx(d)])) {
     const rel = path.relative(path.join(ROOT, 'apps/plataforma'), abs)
     fs.readFileSync(abs, 'utf8').split('\n').forEach((linea, i) => {
-      for (const m of linea.matchAll(/var\(\s*(--[a-z-]+)\s*,\s*([^)]*)/g)) {
+      // `[a-z0-9-]`, con DÍGITOS: un token puede llamarse `--surface-2`, y con `[a-z-]` el
+      // guardián no lo veía — era ciego justo en el caso que existe para cazar (02/09/2026).
+      for (const m of linea.matchAll(/var\(\s*(--[a-z0-9-]+)\s*,\s*([^)]*)/g)) {
         const [, token, respaldo] = m
         if (definidos.has(token)) continue
         // Un token inexistente cuyo respaldo es OTRO token (`var(--card-bg, var(--surface))`) pinta
