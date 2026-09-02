@@ -1522,6 +1522,12 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   LCS (7 días) si se abre tarde, no bloquea. Proxy `/api/correduria/siniestro` (GET · POST · PATCH) → puerto
   `/api/operador/siniestro`; lector puro `lib/siniestros-asegura.ts` con defaults conservadores para una asegura
   vieja (`origen` ausente → CIMA). `lista === null` = no se pudo leer, nunca «sin siniestros».
+- **💶 «¿Por qué ha subido la prima?» (02/09/2026, noche).** `EvolucionPrima.tsx`: chip por póliza en la ficha
+  de cliente (`etiquetaVeredictoPrima` + `%`, la explicación en el `title`) y tarjeta en la página de póliza
+  (frase + anualidades: prima del ciclo, recibos/esperados con ⚠️ si el ciclo está incompleto, siniestros del
+  ciclo, variación). TRES cosas distintas en pantalla: `null` (asegura vieja no lo manda) ≠ `sin_datos` (se
+  miró: CIMA no da la anualidad anterior) ≠ `igual`. «Sube sin siniestro» por encima del 5 % enlaza a
+  retarificar. Lectores puros en `lib/poliza-asegura.ts` / `lib/ficha-asegura.ts`.
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no
