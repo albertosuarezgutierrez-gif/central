@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T14:20:43Z",
+  "generadoEn": "2026-09-02T15:12:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1951,7 +1951,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 17
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1975,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 19
       },
       "rrhh": {
         "estado": "no",
@@ -2001,7 +2001,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-portal": {
         "estado": "no",
@@ -3592,6 +3592,8 @@
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/operador/buscar",
       "/api/operador/cliente",
+      "/api/operador/cliente/contactos",
+      "/api/operador/cliente/relaciones",
       "/api/operador/clientes",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/sonda",
@@ -4412,6 +4414,8 @@
       "/api/correduria/cartera",
       "/api/correduria/catastro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente/contactos",
+      "/api/correduria/cliente/relaciones",
       "/api/correduria/clientes",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
@@ -5811,7 +5815,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1234,
+    "apis": 1238,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
