@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T11:22:53Z",
-  "sha": "cfd48228e160e598b2e45fd4705bd583902b00ff",
+  "generadoEn": "2026-09-02T11:31:43Z",
+  "sha": "055c5764598f75aadb1f7fde7bc73f2503d4d263",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3701,13 +3701,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 18,
+          "linea": 22,
           "resumen": "GET ?desde=YYYY-MM-DD — comisiones de la cartera para el cuadre de plataforma (read-only). La respuesta conserva los TRES estados de ComisionesCartera: quien consume no puede confundir «puerto sin con"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/comisiones",
-      "hash": "4a2e3fb00f10"
+      "hash": "f11a31f0b9d1"
     },
     {
       "ruta": "apps/asegura/app/api/operador/documentos/[id]/route.ts",
@@ -5443,28 +5443,6 @@
       "hash": "86690c96e136"
     },
     {
-      "ruta": "apps/asegura/lib/comisiones-motivo.ts",
-      "ambito": "apps/asegura",
-      "resumen": "Por qué NO se ha podido leer la cartera — módulo PURO (sin Prisma ni red), para que se pueda probar sin generar el cliente ni tocar la BD. 🚨 Existe porque un `estado: 'error'` pelado es un callejón sin salida: dice que falló, no dónde. Un fallo de conexión, un schema equivocado, un permiso que falt",
-      "exporta": [
-        "detalleError"
-      ],
-      "funciones": [
-        {
-          "nombre": "detalleError",
-          "kind": "function",
-          "exportada": true,
-          "params": "e: unknown, fuente: string",
-          "retorno": "string",
-          "linea": 22,
-          "resumen": "Pista CORTA y sin secretos sobre el fallo real: fuente + nombre del error + código de Prisma + la tabla/columna que Prisma no encontró. Con un `central/PrismaClientKnownRequestError/P2021/public.corre"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "fce8f26afcae"
-    },
-    {
       "ruta": "apps/asegura/lib/comisiones.ts",
       "ambito": "apps/asegura",
       "resumen": "Comisiones de la correduría leídas de la cartera real (schema `seguros` de la BD compartida; `ASEGURA_FUENTE=origen` vuelve al Supabase de Manuel). Esta app es la ÚNICA que toca esas tablas; plataforma las consume por el puerto `/api/operador/comisiones`. 🚨 Tres estados, nunca dos: sin la env es `s",
@@ -5502,7 +5480,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5db72857589d"
+      "hash": "b61d25065cbb"
     },
     {
       "ruta": "apps/asegura/lib/dinero.ts",
@@ -57266,7 +57244,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         }
       ],
       "tablas": [
@@ -57279,7 +57257,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "ea90099b3ad3"
+      "hash": "23263502e426"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/concursos-avisos/route.ts",
@@ -67217,7 +67195,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 61
+          "linea": 63
         },
         {
           "nombre": "str",
@@ -67225,7 +67203,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 62
+          "linea": 64
         },
         {
           "nombre": "interpretarComisiones",
@@ -67233,7 +67211,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "ComisionesAsegura",
-          "linea": 71,
+          "linea": 73,
           "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Cualquier forma inesperada degrada a `error`, NUNCA a unas comisiones inventadas ni a listas vacías: una lista vacía con estado `ok`"
         },
         {
@@ -67242,7 +67220,7 @@
           "exportada": true,
           "params": "desde: string",
           "retorno": "Promise<ComisionesAsegura>",
-          "linea": 129,
+          "linea": 130,
           "resumen": "Lee las comisiones por el puerto de central-asegura. La URL no es un secreto y cae al dominio del proyecto; el secreto NUNCA tiene fallback."
         },
         {
@@ -67251,13 +67229,13 @@
           "exportada": true,
           "params": "codigo: string",
           "retorno": "string",
-          "linea": 164,
+          "linea": 165,
           "resumen": "Nombre legible, o el propio código si no está en el mapa. Devolver el código crudo es correcto: inventar un nombre sería peor que no saberlo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2ab80b6721a5"
+      "hash": "f0db9004dee1"
     },
     {
       "ruta": "apps/plataforma/lib/comparativa-declaracion.ts",
@@ -107724,7 +107702,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2793,
-    "funciones": 7906
+    "archivos": 2792,
+    "funciones": 7905
   }
 }
