@@ -49,7 +49,8 @@
 > solo motor) → adaptador en Fly → TIREA → `seguros` de central. **Lo único que queda es el paso 1
 > (transferir la app de Fly a una cuenta de Alberto), sin prisa** — el borrador v8 de abajo sirve tal
 > cual cuando Manuel tenga cinco minutos. El paso 2 (port de `cima-pull`) NO se hace ahora; el
-> inventario se guarda como referencia para cuando toque. Vigilancia mientras tanto: el bloque
+> inventario está en **`docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`** (8.817 líneas portables, 26 tests,
+> contrato del adaptador, repo privado de Manuel del Java) para cuando toque. Vigilancia mientras tanto: el bloque
 > «Salud de la correduría» de la auditoría diaria mira `seguros.operational_events`
 > (`cima_pull_started/completed`); si un día no hay latido, es el cron o Fly.
 >
