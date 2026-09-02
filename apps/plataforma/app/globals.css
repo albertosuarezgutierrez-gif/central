@@ -106,6 +106,16 @@ html[data-nav-plegado='1'] .sidebar-desktop .nav-pie { padding: 12px 8px !import
   .sidebar-desktop { transition: none; }
 }
 
+/* Secciones plegables del lateral («Mi negocio» / «Mis pisos» / «Operador»).
+   Vivían como una constante `CSS_SECCIONES` inyectada por `UserSidebar.tsx` en un `<style>`, o sea
+   partidas del bloque de arriba, que gobierna el MISMO lateral: quien tocaba una no veía la otra.
+   El grupo colapsado se oculta… salvo con el lateral plegado a tira de iconos, donde no hay
+   cabecera que pulsar para volver a abrirlo y esconderlo dejaría los enlaces inalcanzables. */
+.nav-seccion-btn { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; background: transparent; border: 0; cursor: pointer; font-family: inherit; font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; text-align: left; border-radius: 8px; }
+.nav-seccion-btn:hover { color: var(--text); }
+.nav-grupo[data-colapsado='1'] { display: none; }
+html[data-nav-plegado='1'] .sidebar-desktop .nav-grupo[data-colapsado='1'] { display: block; }
+
 /* Recharts hereda los tokens (los atributos SVG tienen menor prioridad que el CSS,
    así que esto adapta rejilla y ejes también en modo oscuro). */
 .recharts-cartesian-grid line { stroke: var(--border); }
@@ -137,4 +147,472 @@ html[data-saldo-oculto='1'] .saldo-privado {
 /* Sin animación para quien pide menos movimiento (el blur entra/sale de golpe). */
 @media (prefers-reduced-motion: reduce) {
   .saldo-privado { transition: none; }
+}
+
+/* === Contenedor y cabecera de página (components/ui.tsx: <Pagina>, <PageHeader>) ===
+   Había un `maxWidth: '960px'` + `padding: '32px 24px'` copiado a mano en 14 páginas, y como un
+   estilo inline no admite media queries, cada página que quería adaptarse en móvil acababa
+   incrustando su propio bloque `<style>` con `!important`. El padding responsive vive aquí una
+   sola vez; el ancho (lectura 960 / tabla 1400) lo elige <Pagina> por tipo de contenido. */
+.pagina { padding: 32px 24px; }
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
+}
+.page-header-acciones { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 768px) {
+  .pagina { padding: 20px 14px; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .page-header-acciones { width: 100%; }
+}
+
+/* === Libro de movimientos de /banca en móvil ===
+   Vivía como un bloque `<style>` incrustado dentro del Server Component de la página (cadena de
+   texto, sin tipado y peleándose por especificidad). En vez de scroll horizontal —que aplastaba
+   el concepto a «B…»— la fila se APILA: concepto a ancho completo arriba (legible), y debajo
+   fecha + badges + importe. El select de negocio y el 🤖 se ocultan: para reclasificar o
+   preguntar está la FICHA que se abre al tocar el movimiento, y es lo que descongestiona la fila.
+   El chip de negocio aparece SOLO en móvil porque en escritorio esa información ya la da el
+   select (sin él, un gasto ✅ deducible no decía a qué negocio estaba asignado — PR #1267). */
+@media (max-width: 768px) {
+  .banca-header { flex-direction: column !important; align-items: flex-start !important; }
+  .banca-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .banca-acciones { flex-wrap: wrap !important; gap: 8px !important; }
+  .banca-movs-outer { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .banca-movs-row { min-width: 0 !important; flex-wrap: wrap !important; row-gap: 4px; align-items: baseline !important; }
+  .banca-mov-concepto { flex: 1 1 100% !important; order: -1; }
+  .banca-mov-concepto-txt { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+  .banca-mov-select, .banca-mov-sug { display: none !important; }
+  .banca-mov-destino-chip { display: inline-block !important; }
+  .banca-mov-fecha { width: auto !important; }
+  .banca-mov-amt { margin-left: auto; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   CSS DE PANTALLA (02/09/2026) — recogido de los 43 bloques `<style>{`…`}</style>` que vivían
+   incrustados dentro de los componentes.
+
+   Por qué estaba ahí: un `style={{}}` inline no admite media queries, así que toda pantalla que
+   quisiera adaptarse en móvil (regla responsive del CLAUDE.md raíz) acababa metiendo un bloque
+   `<style>` con su propio CSS en una CADENA DE TEXTO: sin tipado, sin herramientas, invisible para
+   cualquier búsqueda de selectores y peleándose por especificidad a base de `!important`.
+   Los `!important` se conservan TAL CUAL: quitarlos es otro cambio y rompería cascadas que hoy
+   funcionan (cada regla pelea contra el estilo inline del propio elemento, que gana siempre).
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* === Animaciones compartidas ===
+   COLISIÓN REAL al juntar el CSS: `@keyframes spin` estaba definido TRES veces (dos en
+   /sivra/mensajes y una en /sivra/seo) con la misma animación escrita de dos formas
+   (`to{rotate(360deg)}` y `from{rotate(0)} to{rotate(360deg)}`, equivalentes). En global, la
+   última definición gana en silencio; se deja UNA sola copia. `pulse` venía de /sivra/mensajes. */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .5 } }
+
+/* === Paleta de comandos (Cmd/Ctrl+K, `(usuario)/CommandPalette.tsx`) ===
+   En móvil el panel flotante se salía por los lados y la lista crecía sin fin: se ancla a los
+   márgenes de la pantalla y el scroll se lo queda la lista, no el diálogo entero. */
+@media (max-width: 768px) {
+  .palette-panel { width: calc(100% - 32px) !important; max-width: unset !important; max-height: 80vh !important; display: flex; flex-direction: column; }
+  .palette-list { flex: 1; overflow-y: auto; }
+}
+
+/* === Mensajes del huésped en la ficha del apartamento (`apartamentos/MensajesHuesped.tsx`) ===
+   La fila de cada paso reservaba un ancho fijo para el "cuándo", que en móvil comprimía el texto
+   del paso a nada. Corte a 640px (no 768): el bloque convive con la ficha, no ocupa la pantalla. */
+@media (max-width: 640px) {
+  .msg-pisos { grid-template-columns: 1fr !important; }
+  .msg-paso { flex-direction: column !important; gap: 2px !important; }
+  .msg-paso-cuando { min-width: 0 !important; }
+}
+
+/* === Listado de apartamentos (`apartamentos/page.tsx`) ===
+   La tira de KPIs pasa a dos por fila y luego a una: apilarlos de golpe deja media pantalla vacía
+   con el dato principal fuera de vista. */
+@media (max-width: 768px) {
+  .aptos-header { flex-direction: column !important; align-items: flex-start !important; }
+  .aptos-kpi-strip { gap: 16px !important; }
+  .aptos-kpi-strip > div { min-width: calc(50% - 8px) !important; }
+  .aptos-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 480px) {
+  .aptos-kpi-strip > div { min-width: 100% !important; }
+}
+
+/* === Ficha de un apartamento (`apartamentos/[id]/page.tsx`) ===
+   Seis tablas (reservas, gastos, portales, histórico) en dos columnas. En móvil las columnas se
+   apilan y cada tabla scrollea DENTRO de su caja, para que el cuerpo de la página nunca scrollee
+   de lado (regla responsive del CLAUDE.md raíz). */
+@media (max-width: 768px) {
+  .aptodet-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .aptodet-two-col { grid-template-columns: 1fr !important; }
+  .aptodet-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 480px) {
+  .aptodet-kpi-grid { grid-template-columns: 1fr !important; }
+}
+
+/* === Comunicación (`comunicacion/ComunicacionClient.tsx` y `comunicacion/config/ConfigClient.tsx`) ===
+   Maestro-detalle: en móvil la bandeja deja de ser una columna lateral y se convierte en una tira
+   de altura acotada arriba, con el hilo debajo (si no, ninguna de las dos es usable). */
+@media (max-width: 768px) {
+  .comun-layout { flex-direction: column !important; }
+  .comun-bandeja { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; max-height: 200px; }
+  .comun-header-actions { flex-wrap: wrap !important; gap: 8px !important; }
+  .cfg-content { padding: 16px !important; }
+  .cfg-form-row { flex-direction: column !important; }
+  .cfg-form-row > * { width: 100% !important; flex: unset !important; }
+}
+
+/* === Correduría (`correduria/CorreduriaClient.tsx`) ===
+   La matriz compañía×mes no cabe en móvil de ninguna manera: scrollea en su propia caja. Los KPIs
+   bajan a dos por fila y luego a una. */
+@media (max-width: 768px) {
+  .corr-header { flex-direction: column !important; align-items: flex-start !important; }
+  .corr-kpis { grid-template-columns: 1fr 1fr !important; }
+  .corr-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 480px) {
+  .corr-kpis { grid-template-columns: 1fr !important; }
+}
+
+/* === Cuadre de comisiones de la correduría (`correduria/CuadreComisiones.tsx`) ===
+   Único bloque de esta tanda que NO era responsive sino estructura de tabla: los tres ejes
+   (esperado · liquidado · banco) piden 720px mínimos para que un importe no parta en dos líneas y
+   se lea como otro número. Cifras a la derecha y en `tabular-nums` para poder compararlas de un
+   vistazo columna abajo. El botón mantiene los 44px táctiles de la regla responsive. */
+.cuadre-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.cuadre-tabla { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
+.cuadre-tabla th, .cuadre-tabla td { padding: 8px 10px; white-space: nowrap; }
+.cuadre-tabla td.num, .cuadre-tabla th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.cuadre-btn { min-height: 44px; min-width: 44px; }
+
+/* === Finanzas: hub (`finanzas/FinanzasClient.tsx`) y selector de intervalo (`IntervaloSelector.tsx`) ===
+   El selector de intervalo lo comparten varias pantallas de dinero: en móvil sus pastillas
+   envuelven en vez de comprimirse, porque un rango de fechas ilegible se toca mal y se lee peor. */
+@media (max-width: 768px) {
+  .finanzas-kpi-grid { grid-template-columns: 1fr 1fr !important; }
+  .finanzas-bloques { grid-template-columns: 1fr !important; }
+  .iv-filtros { flex-direction: column !important; align-items: stretch !important; }
+  .iv-pills { flex-wrap: wrap !important; }
+}
+@media (max-width: 480px) {
+  .finanzas-kpi-grid { grid-template-columns: 1fr !important; }
+}
+
+/* === Declaración: hijos y columnas (`finanzas/fiscal/FiscalPageClient.tsx`) ===
+   La fila de un hijo son cuatro campos en línea (nombre · fecha 130px · % 70px · ✕). Bajo 520px el
+   nombre se comprimía a 0 y no se veía de quién era la deducción: pasa a ancho completo arriba y
+   el resto envuelve debajo. */
+@media (max-width: 768px) {
+  .fiscal-cols { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 520px) {
+  .fiscal-hijo-row { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; align-items: center !important; }
+  .fiscal-hijo-row > input:first-child { flex: 1 1 100% !important; min-width: 0 !important; }
+  .fiscal-hijo-row > input[type="date"] { flex: 1 1 130px !important; min-width: 0 !important; }
+  .fiscal-hijo-row > input[type="number"] { flex: 1 1 70px !important; min-width: 0 !important; }
+}
+
+/* === Triaje de gastos (`finanzas/gastos/GastosPageClient.tsx`) === */
+@media (max-width: 768px) {
+  .gastos-filtros { flex-direction: column !important; gap: 8px !important; }
+  .gastos-modo-pills { flex-wrap: wrap !important; }
+}
+
+/* === Proyección fiscal (`finanzas/proyeccion/ProyeccionClient.tsx`) === */
+@media (max-width: 768px) {
+  .proyec-cols { grid-template-columns: 1fr !important; }
+  .proyec-kpis { grid-template-columns: 1fr 1fr !important; }
+  .patrones-cols { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 480px) {
+  .proyec-kpis { grid-template-columns: 1fr !important; }
+}
+
+/* === Radiografía financiera (`finanzas/radiografia/RadiografiaClient.tsx`) ===
+   Las tres lentes (Personal · Negocios · Fiscal) scrollean de lado como una tira de pestañas en
+   vez de envolver: envolviéndose se pierde la noción de que son tres vistas del mismo periodo. */
+@media (max-width: 768px) {
+  .rg-kpis { grid-template-columns: 1fr 1fr !important; }
+  .rg-lentes { overflow-x: auto; }
+  .rg-cuentas { grid-template-columns: 1fr !important; }
+}
+
+/* === Tarjeta de crédito (`finanzas/tarjeta-credito/TarjetaCreditoClient.tsx`) === */
+@media (max-width: 768px) {
+  .tarj-header { flex-direction: column !important; align-items: flex-start !important; }
+  .tarj-kpis { flex-direction: column !important; }
+}
+
+/* === Operador · Clientes (`operador/clientes/ClientesClient.tsx`) ===
+   El modal de alta de cliente se salía por los lados del móvil (ancho fijo + `max-width`), así que
+   los botones de guardar quedaban fuera de la pantalla. */
+@media (max-width: 768px) {
+  .clientes-kpis { grid-template-columns: 1fr 1fr !important; }
+  .clientes-card { flex-direction: column !important; align-items: flex-start !important; }
+  .clientes-card-actions { width: 100%; justify-content: flex-start !important; flex-wrap: wrap !important; }
+  .clientes-modal { width: calc(100% - 32px) !important; max-width: unset !important; }
+}
+
+/* === Operador · paneles de ia-rest (cobros · crecimiento · CRM · restaurantes · sistema ·
+   suscripciones) ===
+   Todos siguen el mismo patrón: la rejilla de métricas baja a dos columnas y la tabla scrollea en
+   su propia caja. Se agrupan aquí porque son la MISMA regla repetida seis veces con otro nombre de
+   clase; separarlas por pantalla solo escondería que son lo mismo. */
+@media (max-width: 768px) {
+  .cobros-stats { grid-template-columns: 1fr 1fr !important; }
+  .cobros-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .crec-metrics { grid-template-columns: 1fr 1fr !important; }
+  .crec-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .crec-tabs { flex-wrap: wrap !important; }
+  .crm-filters { flex-wrap: wrap !important; }
+  .crm-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .rest-kpis { grid-template-columns: 1fr 1fr !important; }
+  .rest-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .sistema-cards { grid-template-columns: 1fr 1fr !important; }
+  .sistema-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .suscrip-stats { grid-template-columns: 1fr 1fr !important; }
+  .suscrip-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+}
+
+/* === Operador · soporte y sugerencias de ia-rest ===
+   Maestro-detalle con panel lateral fijo (360/380px): en móvil el panel deja de ser columna y pasa
+   a ancho completo debajo de la lista. */
+@media (max-width: 768px) {
+  .soporte-layout { grid-template-columns: 1fr !important; }
+  .soporte-panel { width: 100% !important; }
+  .suger-layout { grid-template-columns: 1fr !important; }
+  .suger-list { width: 100% !important; }
+  .suger-panel { width: 100% !important; }
+}
+
+/* === Operador · Personas a través de verticales (`operador/personas/PersonasClient.tsx`) ===
+   Cada persona trae sus roles por vertical y, si procede, una sugerencia de enlace: en móvil los
+   tres bloques se apilan para que el rol no quede cortado a media palabra. */
+@media (max-width: 768px) {
+  .personas-list-item { flex-direction: column !important; align-items: flex-start !important; }
+  .personas-roles { flex-direction: column !important; }
+  .personas-sugerencia { flex-direction: column !important; align-items: flex-start !important; }
+}
+
+/* === Operador · RR.HH. (empleados y solicitudes) === */
+@media (max-width: 768px) {
+  .emp-filters { flex-direction: column !important; }
+  .emp-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .solic-filters { flex-direction: column !important; }
+  .solic-card { flex-direction: column !important; align-items: flex-start !important; }
+  .solic-card-meta { width: 100% !important; flex-direction: row !important; flex-wrap: wrap; gap: 6px; }
+}
+
+/* === SIVRA · Calendario de reservas (`sivra/calendario/page.tsx`) ===
+   Los botones de navegación de mes envuelven a 480px en vez de comprimirse: son el único modo de
+   moverse por el calendario y por debajo de 44px dejan de poder tocarse. */
+@media (max-width: 768px) {
+  .cal-header { flex-direction: column !important; align-items: flex-start !important; }
+  .cal-stats-row { flex-direction: column !important; }
+  .cal-stats-row > div { width: 100% !important; min-width: unset !important; }
+  .cal-legend { flex-direction: column !important; gap: 6px !important; }
+  .cal-detail { flex-direction: column !important; }
+  .cal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+}
+@media (max-width: 480px) {
+  .cal-nav-btns { flex-wrap: wrap !important; }
+}
+
+/* === SIVRA · Gastos (`sivra/expenses/page.tsx`) ===
+   El modal de alta/edición pasa a ocupar la pantalla entera en móvil: con ancho fijo, el formulario
+   de un gasto (fecha, importe, categoría, propiedad) quedaba a medias fuera. */
+@media (max-width: 768px) {
+  .expenses-header { flex-direction: column !important; align-items: flex-start !important; }
+  .expenses-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+  .expenses-filters { flex-direction: column !important; align-items: stretch !important; }
+  .expenses-filters select { width: 100% !important; box-sizing: border-box; }
+  .expenses-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .expenses-modal { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
+  .expenses-form-2col { grid-template-columns: 1fr !important; }
+  .expenses-form-3col { grid-template-columns: 1fr !important; }
+}
+
+/* === SIVRA · Fiscal por piso (`sivra/fiscal/page.tsx`) ===
+   OJO: comparte el prefijo `.fiscal-` con `finanzas/fiscal/FiscalPageClient.tsx` pero NINGÚN nombre
+   de clase coincide (allí son `.fiscal-cols` y `.fiscal-hijo-row`). Se dejan sin renombrar a
+   propósito para no tocar el JSX de dos pantallas por una colisión que no existe. */
+@media (max-width: 768px) {
+  .fiscal-header { flex-direction: column !important; align-items: flex-start !important; }
+  .fiscal-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+  .fiscal-grand-grid { grid-template-columns: 1fr !important; }
+  .fiscal-prop-summary { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
+  .fiscal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+}
+
+/* === SIVRA · Gastos fijos (`sivra/gastos-fijos/page.tsx`) ===
+   El selector de `[style*="gridColumn"]` casa los campos que el JSX marca como "de ancho completo"
+   (concepto, notas) para que no se partan en dos al reducir la rejilla del formulario. */
+@media (max-width: 768px) {
+  .fijos-header { flex-direction: column !important; align-items: flex-start !important; }
+  .fijos-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+  .fijos-form-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .fijos-form-grid > [style*="gridColumn"] { grid-column: 1 / -1 !important; }
+  .fijos-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 480px) {
+  .fijos-form-grid { grid-template-columns: 1fr !important; }
+}
+
+/* === SIVRA · Ingresos (`sivra/income/page.tsx`) ===
+   Los filtros (piso, portal, texto, fechas) pasan a ancho completo apilados: en línea, cada
+   `select` quedaba tan estrecho que no se leía el nombre del piso seleccionado. */
+@media (max-width: 768px) {
+  .income-header { flex-direction: column !important; align-items: flex-start !important; }
+  .income-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .income-split-grid { grid-template-columns: 1fr !important; }
+  .income-filters { flex-direction: column !important; align-items: stretch !important; }
+  .income-filters select, .income-filters input, .income-filters button { width: 100% !important; box-sizing: border-box; }
+  .income-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .income-adv-filters { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 480px) {
+  .income-kpi-grid { grid-template-columns: 1fr !important; }
+  .income-adv-filters { grid-template-columns: 1fr !important; }
+}
+
+/* === SIVRA · Inversión (`sivra/inversion/page.tsx`) ===
+   Las estadísticas mantienen 4 columnas a 768px (son cifras cortas y comparables entre sí) y solo
+   bajan a 2 en móvil pequeño. */
+@media (max-width: 768px) {
+  .inv-header { flex-direction: column !important; align-items: flex-start !important; }
+  .inv-stats-grid { grid-template-columns: repeat(4, 1fr) !important; }
+  .inv-filters { flex-direction: column !important; }
+  .inv-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+  .inv-cards-grid { grid-template-columns: 1fr !important; }
+  .inv-price-row { flex-wrap: wrap !important; }
+}
+@media (max-width: 480px) {
+  .inv-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .inv-header > div:last-child { flex-wrap: wrap !important; }
+}
+
+/* === SIVRA · Admin de limpiadoras (`sivra/limpiadoras/LimpiadoresClient.tsx`) ===
+   Diez pestañas y el bloque más grande de toda esta tanda. El caso que lo motivó es el de
+   Disponibilidad: su rejilla de 5 columnas fijas (día · check · inicio · fin · horas) no cabe en
+   ≤320px porque los dos `input[type=time]` no bajan de su `min-content`, y la página entera
+   acababa scrolleando de lado. Pasa a `flex-wrap`: el día a lo ancho arriba y el resto envuelve. */
+@media (max-width: 768px) {
+  .limp-stats-row { flex-direction: column !important; }
+  .limp-stats-row > div { flex: none !important; width: 100% !important; }
+  .limp-grid-2 { grid-template-columns: 1fr !important; }
+  .limp-grid-3 { grid-template-columns: 1fr !important; }
+  .limp-disp-row { grid-template-columns: 50px 36px 1fr 1fr 60px !important; gap: 4px !important; }
+  .limp-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+  .limp-card { width: 100% !important; min-width: unset !important; }
+  .limp-factura-grid { grid-template-columns: 1fr 1fr !important; }
+  .limp-tarifa-grid { grid-template-columns: 1fr 1fr !important; }
+  .limp-session-header { flex-direction: column !important; align-items: flex-start !important; }
+  .limp-session-header > div:last-child { text-align: left !important; }
+  .limp-btn-row { flex-wrap: wrap !important; }
+}
+@media (max-width: 480px) {
+  .limp-factura-grid { grid-template-columns: 1fr !important; }
+  .limp-tarifa-grid { grid-template-columns: 1fr !important; }
+  .limp-hide-xs { display: none !important; }
+  .limp-disp-row { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 6px 8px !important; }
+  .limp-disp-row > span { flex: 1 0 100% !important; }
+  .limp-disp-row input[type="time"] { flex: 1 1 90px !important; min-width: 0 !important; }
+}
+
+/* === SIVRA · Mensajería con huéspedes (`sivra/mensajes/page.tsx`) ===
+   Chat a pantalla completa: la burbuja sube al 90% del ancho y la fila de respuesta se apila, pero
+   sus botones (enviar / borrador IA) siguen EN LÍNEA — apilarlos también dejaba el enviar debajo
+   del pliegue en un móvil pequeño. `spin` y `pulse` viven arriba, en animaciones compartidas. */
+@media (max-width: 768px) {
+  .msg-bubble { max-width: 90% !important; }
+  .msg-actions { flex-wrap: wrap !important; }
+  .msg-reply-row { flex-direction: column !important; }
+  .msg-reply-row > div:last-child { flex-direction: row !important; }
+  .msg-hint-row { flex-wrap: wrap !important; }
+}
+
+/* === SIVRA · Mercado (`sivra/mercado/page.tsx`) ===
+   La rejilla de estadísticas baja de 3 a 2 columnas en vez de a 1: son comparables entre sí (piso
+   contra mediana de zona) y en una sola columna se dejan de comparar. */
+@media (max-width: 768px) {
+  .mercado-portal-grid { grid-template-columns: 1fr !important; }
+  .mercado-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .mercado-pos-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .mercado-apt-grid { grid-template-columns: 1fr !important; }
+  .mercado-bench-layout { grid-template-columns: 1fr !important; }
+  .mercado-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .mercado-prop-tabs { flex-wrap: wrap !important; }
+  .mercado-actions { flex-wrap: wrap !important; }
+}
+@media (max-width: 480px) {
+  .mercado-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .mercado-pos-grid { grid-template-columns: 1fr !important; }
+}
+
+/* === SIVRA · Pricing manual (`sivra/pricing/page.tsx`) === */
+@media (max-width: 768px) {
+  .pricing-header { flex-direction: column !important; gap: 12px !important; }
+  .pricing-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+  .pricing-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .pricing-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 480px) {
+  .pricing-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* === SIVRA · Pricing automático (`sivra/pricing-auto/page.tsx`) ===
+   Las estadísticas por piso se quedan EN FILA envolviendo (no en columna): son el parte de la
+   última pasada del motor y se leen de un vistazo, no una a una. */
+@media (max-width: 768px) {
+  .pricingauto-top-bar { flex-direction: column !important; align-items: stretch !important; }
+  .pricingauto-pilot-grid { flex-direction: column !important; }
+  .pricingauto-pilot-card { flex: unset !important; min-width: unset !important; }
+  .pricingauto-prop-header { flex-direction: column !important; align-items: flex-start !important; }
+  .pricingauto-prop-stats { flex-direction: row !important; flex-wrap: wrap !important; gap: 12px !important; }
+  .pricingauto-params-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .pricingauto-hist-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .pricingauto-actions { flex-wrap: wrap !important; }
+}
+@media (max-width: 480px) {
+  .pricingauto-params-grid { grid-template-columns: 1fr !important; }
+}
+
+/* === SIVRA · Resultado por pisos (`sivra/resultado-pisos/*`) ===
+   El selector de rango de MESES ocupa el ancho completo en móvil: es la pieza que gobierna toda la
+   pantalla y con los campos comprimidos no se acertaba a tocar el correcto. */
+@media (max-width: 768px) {
+  .rp-kpis { grid-template-columns: 1fr 1fr !important; }
+  .rp-sel { flex-direction: column; align-items: stretch !important; }
+  .rp-sel input, .rp-sel select { width: 100%; }
+  .rp-graf { grid-template-columns: 1fr !important; }
+}
+
+/* === SIVRA · SEO (`sivra/seo/page.tsx`) ===
+   Los botones que lanzan una pasada (probar / analizar, ~30s) pasan a ancho completo en móvil
+   pequeño: son acciones lentas y caras de repetir, así que conviene que se toquen a la primera. */
+@media (max-width: 768px) {
+  .seo-header { flex-direction: column !important; align-items: flex-start !important; }
+  .seo-changes-row { flex-direction: column !important; }
+  .seo-changes-row > div { width: 100% !important; }
+  .seo-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+}
+@media (max-width: 480px) {
+  .seo-header .seo-actions { width: 100% !important; }
+  .seo-header button { width: 100% !important; justify-content: center !important; }
+}
+
+/* === SIVRA · Pestañas extra del admin de limpiadoras (`sivra/limpiadoras/extra-tabs.tsx`) ===
+   Mismo caso que los de arriba con una indirección más: el CSS no estaba en el `<style>` sino en una
+   constante `EXTRA_STYLES` del propio módulo, lo que lo hacía invisible incluso buscando `<style>`. */
+@media (max-width: 768px) {
+  .extra-grid-2 { grid-template-columns: 1fr !important; }
+  .extra-grid-3 { grid-template-columns: 1fr !important; }
+  .extra-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+  .extra-btn-row { flex-wrap: wrap !important; }
+  .extra-card { width: 100% !important; min-width: unset !important; }
+  .extra-informe-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 480px) {
+  .extra-hide-xs { display: none !important; }
 }

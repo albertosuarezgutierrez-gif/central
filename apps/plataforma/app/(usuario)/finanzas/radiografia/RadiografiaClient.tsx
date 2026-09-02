@@ -56,7 +56,7 @@ function TramoBar({ tramosIRPF, base }: { tramosIRPF: Fiscal['tramosIRPF']; base
           const width = Math.max(0, ((hasta - t.desde) / MAX) * 100)
           return (
             <div key={i} title={`${(t.tipo * 100).toFixed(0)}%: ${eur(t.desde)} – ${t.hasta ? eur(t.hasta) : '∞'}`}
-              style={{ width: `${width}%`, background: COLORES[i] ?? '#e2e8f0', height: '100%' }} />
+              style={{ width: `${width}%`, background: COLORES[i] ?? 'var(--border)', height: '100%' }} />
           )
         })}
         {base > 0 && <div style={{ position: 'absolute', top: 0, bottom: 0, width: '3px', background: '#2d3748', left: `${pct}%` }} />}
@@ -69,7 +69,7 @@ function TramoBar({ tramosIRPF, base }: { tramosIRPF: Fiscal['tramosIRPF']; base
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
         {tramosIRPF.filter(t => t.importe > 0 || t.desde === 0).map((t, i) => (
           <span key={i} style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '2px', background: COLORES[i] ?? '#e2e8f0' }} />
+            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '2px', background: COLORES[i] ?? 'var(--border)' }} />
             {(t.tipo * 100).toFixed(0)}%{t.importe > 0 && <strong> → {eur(t.importe)}</strong>}
           </span>
         ))}
@@ -95,7 +95,7 @@ function MomentoCard({ titulo, sub, c }: { titulo: string; sub: string; c: Compa
             <div style={{ fontSize: '12px', fontWeight: 600 }}>{f.label} {f.recomendada && <span style={{ fontSize: '10px', background: 'var(--primary)', color: '#fff', padding: '1px 6px', borderRadius: '8px' }}>✓ mejor</span>}</div>
             <div style={{ fontSize: '10px', color: 'var(--muted)' }}>Base: {eur(f.base)}</div>
           </div>
-          <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', color: f.resultado <= 0 ? 'var(--primary)' : '#e53e3e' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', color: f.resultado <= 0 ? 'var(--primary)' : 'var(--negative)' }}>
             {f.resultado <= 0 ? 'Devuelven' : 'A pagar'} {eur(Math.abs(f.resultado))}
           </div>
         </div>
@@ -136,7 +136,6 @@ export default function RadiografiaClient({ periodo, resumen, fiscalAnual, decla
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
-      <style>{`@media (max-width:768px){.rg-kpis{grid-template-columns:1fr 1fr!important}.rg-lentes{overflow-x:auto}.rg-cuentas{grid-template-columns:1fr!important}}`}</style>
 
       <h1 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 16px' }}>📊 Radiografía financiera</h1>
 
@@ -234,7 +233,7 @@ export default function RadiografiaClient({ periodo, resumen, fiscalAnual, decla
                 <MomentoCard titulo="🔮 Fin de año (estimación)" sub={`+ ${eur(declaracion.bases.deltaFuturo)} de reservas futuras y recurrentes → base ${eur(declaracion.bases.finAnio)}`} c={declaracion.finAnio} />
               </div>
               {/* Palanca de gasto: cuánto ahorra meter más gasto deducible antes del 31/12 */}
-              <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: '#c6f6d5', borderRadius: '6px', color: '#22543d', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: 'var(--positive-bg)', borderRadius: '6px', color: 'var(--positive)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div>💡 <strong>Cada 1.000 € más de gasto deducible ⇒ ~{declaracion.palanca.ahorroPorMilGasto} € menos de cuota</strong> (tramo marginal proyectado: {(declaracion.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
                 {declaracion.palanca.gastoParaBajarTramo !== null && declaracion.palanca.tipoPrevio !== null && declaracion.palanca.gastoParaBajarTramo > 0 && (
                   <div>🎯 Para que la base proyectada baje al tramo del {(declaracion.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{eur(declaracion.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({declaracion.mesesRestantes} meses restantes) → ahorro ~<strong>{eur(declaracion.palanca.ahorroBajarTramo ?? 0)}</strong>.</div>

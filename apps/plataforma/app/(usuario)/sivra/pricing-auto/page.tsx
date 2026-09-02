@@ -71,7 +71,7 @@ const NUM_FIELDS: { key: keyof Settings; label: string; step: number; hint: stri
 
 const C = {
   green: "#7EC820", ink: "#1A2535", soft: "#6B7F96", line: "#E8EDF3",
-  bg: "#F6F8FB", card: "#FFFFFF", warn: "#C2410C", ok: "#15803D",
+  bg: "#F6F8FB", card: "#FFFFFF", warn: "#C2410C", ok: "var(--positive)",
 }
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -232,21 +232,6 @@ export default function PricingAutoPage() {
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1100, margin: "0 auto" }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .pricingauto-top-bar { flex-direction: column !important; align-items: stretch !important; }
-          .pricingauto-pilot-grid { flex-direction: column !important; }
-          .pricingauto-pilot-card { flex: unset !important; min-width: unset !important; }
-          .pricingauto-prop-header { flex-direction: column !important; align-items: flex-start !important; }
-          .pricingauto-prop-stats { flex-direction: row !important; flex-wrap: wrap !important; gap: 12px !important; }
-          .pricingauto-params-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .pricingauto-hist-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-          .pricingauto-actions { flex-wrap: wrap !important; }
-        }
-        @media (max-width: 480px) {
-          .pricingauto-params-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
       <div style={{ marginBottom: 14 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: C.ink, margin: 0 }}>Pricing Auto · Panel del propietario</h1>
         <p style={{ fontSize: 13, color: C.soft, margin: "6px 0 0" }}>
@@ -285,7 +270,7 @@ export default function PricingAutoPage() {
           </div>
           <div className="pricingauto-pilot-grid" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {Object.values(pilot).map((p) => {
-              const color = p.verdict === "rojo" ? C.warn : p.verdict === "amarillo" ? "#B45309" : C.ok
+              const color = p.verdict === "rojo" ? C.warn : p.verdict === "amarillo" ? "var(--warning)" : C.ok
               const dot = p.verdict === "rojo" ? "🔴" : p.verdict === "amarillo" ? "🟡" : "🟢"
               const name = props.find(x => x.property_id === p.property_id)?.name ?? p.property_id
               return (
@@ -300,7 +285,7 @@ export default function PricingAutoPage() {
                     Mercado: <b style={{ color: C.ink }}>{p.market_p50_guest ?? "?"}€</b> ·
                     Calendario: <b style={{ color: p.open_horizon_days != null && p.open_horizon_days < 60 ? C.warn : C.ink }}>{p.open_horizon_days ?? "?"}d</b>
                   </div>
-                  {p.proposal && <div style={{ fontSize: 12, color: "#1e40af", marginTop: 4 }}>💡 {p.proposal}</div>}
+                  {p.proposal && <div style={{ fontSize: 12, color: "var(--info)", marginTop: 4 }}>💡 {p.proposal}</div>}
                   <div style={{ fontSize: 10, color: C.soft, marginTop: 4 }}>act. {p.tracked_on}</div>
                 </div>
               )
@@ -341,7 +326,7 @@ export default function PricingAutoPage() {
         </div>
       )}
       {paused && (
-        <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 13, color: "#92400E", fontWeight: 600 }}>
+        <div style={{ background: "var(--warning-bg)", border: "1px solid #FCD34D", borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 13, color: "var(--warning)", fontWeight: 600 }}>
           ⏸ Motor PAUSADO — no se escribirá ningún precio en Smoobu (ni el cron ni «Aplicar»).
         </div>
       )}

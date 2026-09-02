@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Pagina } from '@/components/ui'
 
 type QARun = {
   id: string
@@ -33,10 +34,10 @@ const fecha = (s: string) =>
   new Date(s).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 function scoreColor(score: number | null) {
-  if (score === null) return '#94a3b8'
-  if (score >= 90) return '#16a34a'
-  if (score >= 75) return '#d97706'
-  return '#dc2626'
+  if (score === null) return 'var(--muted)'
+  if (score >= 90) return 'var(--positive)'
+  if (score >= 75) return 'var(--warning)'
+  return 'var(--negative)'
 }
 
 export default function SistemaClient() {
@@ -60,13 +61,7 @@ export default function SistemaClient() {
   const lastRun = qa.runs[0]
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .sistema-cards { grid-template-columns: 1fr 1fr !important; }
-          .sistema-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-      `}</style>
+    <Pagina ancho="tabla">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🔬 Sistema · ia-rest</h1>
         <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
@@ -82,9 +77,9 @@ export default function SistemaClient() {
           <div className="sistema-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', marginBottom: '16px' }}>
             {[
               { label: 'Score', val: lastRun.score !== null ? `${lastRun.score}%` : '—', color: scoreColor(lastRun.score) },
-              { label: 'OK', val: String(lastRun.ok), color: '#16a34a' },
-              { label: 'Warnings', val: String(lastRun.warnings), color: '#d97706' },
-              { label: 'Fallidos', val: String(lastRun.fallidos), color: '#dc2626' },
+              { label: 'OK', val: String(lastRun.ok), color: 'var(--positive)' },
+              { label: 'Warnings', val: String(lastRun.warnings), color: 'var(--warning)' },
+              { label: 'Fallidos', val: String(lastRun.fallidos), color: 'var(--negative)' },
               { label: 'Críticos', val: String(lastRun.criticos), color: '#7c3aed' },
             ].map(k => (
               <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px' }}>
@@ -115,11 +110,11 @@ export default function SistemaClient() {
                     </span>
                   </td>
                   <td style={{ padding: '8px 12px' }}>
-                    <span style={{ color: '#16a34a' }}>{r.ok}</span>
+                    <span style={{ color: 'var(--positive)' }}>{r.ok}</span>
                     {' / '}
-                    <span style={{ color: '#d97706' }}>{r.warnings}</span>
+                    <span style={{ color: 'var(--warning)' }}>{r.warnings}</span>
                     {' / '}
-                    <span style={{ color: '#dc2626' }}>{r.fallidos}</span>
+                    <span style={{ color: 'var(--negative)' }}>{r.fallidos}</span>
                   </td>
                   <td style={{ padding: '8px 12px', color: 'var(--muted)' }}>
                     {r.duracion_ms ? `${(r.duracion_ms / 1000).toFixed(1)}s` : '—'}
@@ -175,6 +170,6 @@ export default function SistemaClient() {
           )}
         </div>
       )}
-    </main>
+    </Pagina>
   )
 }

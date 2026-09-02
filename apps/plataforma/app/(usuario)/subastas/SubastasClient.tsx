@@ -397,7 +397,7 @@ function Puntuacion({ v }: { v: number | null }) {
   if (v == null) {
     return <span style={{ fontSize: 12, color: 'var(--muted)' }}>sin datos para puntuar</span>
   }
-  const color = v >= 40 ? 'var(--positive, #15803d)' : v >= 20 ? 'var(--warning, #b45309)' : 'var(--muted)'
+  const color = v >= 40 ? 'var(--positive)' : v >= 20 ? 'var(--warning)' : 'var(--muted)'
   return <span style={{ fontWeight: 700, color }}>{v}/100</span>
 }
 
@@ -421,7 +421,7 @@ function PanelTesoreria({ t }: { t: Tesoreria }) {
   const falta = calculado && plan.deficit != null && plan.deficit > 0
 
   return (
-    <div style={{ ...card, borderLeft: `4px solid ${falta ? 'var(--danger, #dc2626)' : calculado ? 'var(--success, #16a34a)' : 'var(--warning, #d97706)'}` }}>
+    <div style={{ ...card, borderLeft: `4px solid ${falta ? 'var(--negative)' : calculado ? 'var(--positive)' : 'var(--warning)'}` }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline' }}>
         <strong style={{ color: 'var(--text)', fontSize: 15 }}>💰 Depósitos para pujar</strong>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -451,7 +451,7 @@ function PanelTesoreria({ t }: { t: Tesoreria }) {
       )}
 
       {calculado && (
-        <p style={{ margin: '6px 0 0', fontSize: 14, color: falta ? 'var(--danger, #dc2626)' : 'var(--text)' }}>
+        <p style={{ margin: '6px 0 0', fontSize: 14, color: falta ? 'var(--negative)' : 'var(--text)' }}>
           {saldo.cuentas === 0
             ? '⚠️ No hay saldo de cuentas corrientes con el que contrastar.'
             : falta
@@ -818,7 +818,7 @@ function NotaSimpleViva({ dedupeKey }: { dedupeKey: string }) {
             {cargando ? 'Leyendo la nota…' : '🔍 Comparar con la certificación'}
           </button>
 
-          {r?.error && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--negative, #b91c1c)' }}>⚠️ {r.error}</p>}
+          {r?.error && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--negative)' }}>⚠️ {r.error}</p>}
 
           {r && !r.error && (
             <div style={{ marginTop: 10 }}>
@@ -1110,14 +1110,14 @@ function SimuladorPuja({ s, o, params }: { s: Subasta; o?: Oportunidad | null; p
           {descuento != null && o?.valorMercado != null && (
             <div>
               Descuento real sobre {eur(o.valorMercado)}:{' '}
-              <strong style={{ color: descuento >= 0.25 ? 'var(--positive, #15803d)' : descuento >= 0 ? 'var(--text)' : 'var(--negative, #b91c1c)' }}>
+              <strong style={{ color: descuento >= 0.25 ? 'var(--positive)' : descuento >= 0 ? 'var(--text)' : 'var(--negative)' }}>
                 {(descuento * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })}%
               </strong>
             </div>
           )}
           {banda && <div>{banda}</div>}
           {inadmisible && (
-            <div style={{ color: 'var(--negative, #b91c1c)' }}>⚠️ Por debajo de la puja mínima ({eur(s.pujaMinima!)}): no la admiten.</div>
+            <div style={{ color: 'var(--negative)' }}>⚠️ Por debajo de la puja mínima ({eur(s.pujaMinima!)}): no la admiten.</div>
           )}
           {desalineada && (
             <div style={{ color: 'var(--muted)', fontSize: 12 }}>
@@ -1353,7 +1353,7 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params, precioM2
               {o.valorOrientativo && (
                 <span
                   title="El €/m² es la mediana de todo el municipio, donde el precio cambia mucho por barrio. Orienta, pero no sirve para decidir una puja."
-                  style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: 'var(--warning-bg, #fef3c7)', color: 'var(--text)' }}
+                  style={{ marginLeft: 6, padding: '1px 6px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: 'var(--warning-bg)', color: 'var(--text)' }}
                 >
                   ⚠️ orientativo
                 </span>
@@ -1418,7 +1418,7 @@ function FichaSubasta({ s, o, acciones, extra, doc, escenarios, params, precioM2
                     </ul>
                   )}
                   {o.avisos.length > 0 && (
-                    <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'var(--warning-bg, #fef3c7)' }}>
+                    <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: 'var(--warning-bg)' }}>
                       <strong style={{ fontSize: 12 }}>Ojo:</strong>
                       <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12 }}>
                         {o.avisos.map((a, i) => <li key={i}>{a}</li>)}
@@ -1707,14 +1707,14 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
             {datos.indice.trimestral != null && <>, {datos.indice.trimestral > 0 ? '+' : ''}{datos.indice.trimestral.toLocaleString('es-ES', { maximumFractionDigits: 1 })}% el último trimestre</>}
             {' '}(IPV del INE{datos.indice.etiqueta ? `, ${datos.indice.etiqueta}` : ''}).
             {datos.indice.trimestral != null && datos.indice.trimestral < 0 && (
-              <strong style={{ color: 'var(--warning, #b45309)' }}> ⚠️ El precio oficial CAYÓ el último trimestre — posible giro de mercado.</strong>
+              <strong style={{ color: 'var(--warning)' }}> ⚠️ El precio oficial CAYÓ el último trimestre — posible giro de mercado.</strong>
             )}</>
           )}
           {datos.pulso && datos.pulso.anuncios >= 20 && (
             <span>
               {' '}✂️ De los {datos.pulso.anuncios} anuncios vigilados, el <strong>{Math.round(datos.pulso.pctConBajada * 100)}%</strong> ha bajado de precio
               {datos.pulso.recorteMedio != null && <> (recorte medio {(datos.pulso.recorteMedio * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })}%)</>}
-              {datos.pulso.pctConBajada >= 0.25 && <strong style={{ color: 'var(--warning, #b45309)' }}> — mercado enfriándose en tus zonas</strong>}.
+              {datos.pulso.pctConBajada >= 0.25 && <strong style={{ color: 'var(--warning)' }}> — mercado enfriándose en tus zonas</strong>}.
             </span>
           )}
           {(datos.calibracion ?? [])
@@ -1735,7 +1735,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
       {datos.calibPuja?.lectura && (
         <p style={{
           ...card, marginTop: 0, marginBottom: 12, fontSize: 13, color: 'var(--text)',
-          background: 'var(--warning-bg, #fef3c7)', padding: 12,
+          background: 'var(--warning-bg)', padding: 12,
         }}>
           🎯 <strong>Nuestra puja máxima vs. el remate real:</strong> {datos.calibPuja.lectura}
           {datos.calibPuja.ratioMediano != null && (
@@ -1881,7 +1881,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                     detalles={(bajo || p.rendimiento) ? (
                       <>
                         {bajo && (
-                          <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
+                          <p style={{ margin: '4px 0 0', color: 'var(--positive)', fontSize: 13 }}>
                             ⬇️ Ha bajado {p.comparable.bajadas} {p.comparable.bajadas === 1 ? 'vez' : 'veces'}: de{' '}
                             {eur(p.comparable.precioInicial!)} a {eur(p.comparable.precio)} — no se vende, margen para negociar
                           </p>
@@ -1991,7 +1991,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                   detalles={
                     <>
                       {bajo && (
-                        <p style={{ margin: '4px 0 0', color: 'var(--positive, #15803d)', fontSize: 13 }}>
+                        <p style={{ margin: '4px 0 0', color: 'var(--positive)', fontSize: 13 }}>
                           ⬇️ Ha bajado {ch.comparable.bajadas} {ch.comparable.bajadas === 1 ? 'vez' : 'veces'}: de{' '}
                           {eur(ch.comparable.precioInicial!)} a {eur(ch.comparable.precio)} — no se vende, margen para negociar
                         </p>
@@ -2019,18 +2019,18 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                       )}
                       <LineaRendimiento r={ch.rendimiento} dormitorios={ch.comparable.habitaciones} />
                       {ch.comparable.aReformar && (
-                        <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                        <p style={{ margin: '4px 0 0', color: 'var(--warning)', fontSize: 12 }}>
                           🔨 El propio anuncio se declara «a reformar»
                         </p>
                       )}
                       {ch.descuentoNeto != null && (
-                        <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                        <p style={{ margin: '4px 0 0', color: 'var(--warning)', fontSize: 12 }}>
                           🔨 Huele a obra (descuento de derribo): aun pagando levantarla (~1.100€/m²) quedaría un{' '}
                           −{(ch.descuentoNeto * 100).toFixed(0)}% neto frente a la zona
                         </p>
                       )}
                       {ch.sospechoso && (
-                        <p style={{ margin: '4px 0 0', color: 'var(--warning, #b45309)', fontSize: 12 }}>
+                        <p style={{ margin: '4px 0 0', color: 'var(--warning)', fontSize: 12 }}>
                           Descuento anormalmente alto: verifica el estado real del inmueble en el anuncio.
                         </p>
                       )}
@@ -2154,7 +2154,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                       {/* El tipo de bien ya sale en las características de la ficha. */}
                       {r.esPlaya && <span>🏖️ costa Huelva</span>}
                       {r.flipApto && r.margenFlipPct != null && (
-                        <span style={{ color: r.margenFlipPct >= 0.25 ? 'var(--positive, #15803d)' : 'var(--muted)', fontWeight: 600 }}>
+                        <span style={{ color: r.margenFlipPct >= 0.25 ? 'var(--positive)' : 'var(--muted)', fontWeight: 600 }}>
                           🔨 flip ~{Math.round(r.margenFlipPct * 100)}%{r.margenFlip != null && ` (${eur(r.margenFlip)})`}
                         </span>
                       )}
@@ -2177,7 +2177,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                         739.210,43€ y «techo» de 887.052,43€). Enseñarlo como
                         recomendación es lo que hace pagar de más. */}
                     {r.subasta.techoFiable === false && r.subasta.techoMotivo && (
-                      <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--negative, #b91c1c)' }}>
+                      <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--negative)' }}>
                         ⚠️ {r.subasta.techoMotivo}
                       </p>
                     )}
@@ -2203,7 +2203,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
                             ⚠️ inadmisible (por debajo de la puja mínima) es
                             aviso; el resto informa sin alarmar. */}
                         {r.pujaMaxima.notas.map((n, i) => (
-                          <p key={i} style={{ margin: '2px 0 0', fontSize: 12, color: r.pujaMaxima?.admisible === false ? 'var(--negative, #b91c1c)' : 'var(--muted)' }}>
+                          <p key={i} style={{ margin: '2px 0 0', fontSize: 12, color: r.pujaMaxima?.admisible === false ? 'var(--negative)' : 'var(--muted)' }}>
                             {r.pujaMaxima?.admisible === false ? '⚠️' : 'ℹ️'} {n}
                           </p>
                         ))}

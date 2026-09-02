@@ -72,7 +72,7 @@ function TarjetaCard({ t, mes }: { t: Tarjeta; mes: string }) {
           {t.ibanMascara && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{t.ibanMascara}</div>}
         </div>
         {sinClasificar > 0 && (
-          <Link href="/finanzas/gastos" style={{ marginLeft: 'auto', fontSize: '12px', background: '#fef3c7', color: '#92400e', borderRadius: '999px', padding: '3px 10px', fontWeight: 700, textDecoration: 'none' }}>
+          <Link href="/finanzas/gastos" style={{ marginLeft: 'auto', fontSize: '12px', background: 'var(--warning-bg)', color: 'var(--warning)', borderRadius: '999px', padding: '3px 10px', fontWeight: 700, textDecoration: 'none' }}>
             ⚠️ {sinClasificar} sin clasificar
           </Link>
         )}
@@ -82,12 +82,12 @@ function TarjetaCard({ t, mes }: { t: Tarjeta; mes: string }) {
       <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <div style={kpiBox}>
           <div style={kpiLabel}>Total gastado</div>
-          <div style={{ ...kpiVal, color: '#dc2626' }}>{eur(totalGastado)}</div>
+          <div style={{ ...kpiVal, color: 'var(--negative)' }}>{eur(totalGastado)}</div>
         </div>
         {totalAbonado > 0 && (
           <div style={kpiBox}>
             <div style={kpiLabel}>Abonos / devoluciones</div>
-            <div style={{ ...kpiVal, color: '#16a34a' }}>{eur(totalAbonado)}</div>
+            <div style={{ ...kpiVal, color: 'var(--positive)' }}>{eur(totalAbonado)}</div>
           </div>
         )}
         <div style={kpiBox}>
@@ -102,7 +102,7 @@ function TarjetaCard({ t, mes }: { t: Tarjeta; mes: string }) {
           <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Por categoría</div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {Object.entries(porDestino).sort((a, b) => b[1] - a[1]).map(([d, v]) => (
-              <span key={d} style={{ fontSize: '12px', background: d === 'sin_clasificar' ? '#fee2e2' : 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px' }}>
+              <span key={d} style={{ fontSize: '12px', background: d === 'sin_clasificar' ? 'var(--negative-bg)' : 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px' }}>
                 <span style={{ fontWeight: 700 }}>{DESTINO_LABEL[d] ?? d}</span> {eur(v)}
               </span>
             ))}
@@ -130,9 +130,9 @@ function TarjetaCard({ t, mes }: { t: Tarjeta; mes: string }) {
                     {DESTINO_LABEL[m.destino] ?? m.destino}
                   </span>
                 )}
-                {!m.destino && <span style={{ fontSize: '11px', color: '#b45309', flexShrink: 0 }}>sin categoría</span>}
+                {!m.destino && <span style={{ fontSize: '11px', color: 'var(--warning)', flexShrink: 0 }}>sin categoría</span>}
                 {m.conciliado && <span style={{ fontSize: '12px', flexShrink: 0 }} title="Conciliado">🔗</span>}
-                <div style={{ fontWeight: 700, color: '#dc2626', flexShrink: 0, width: '80px', textAlign: 'right' }}>{eur(Math.abs(m.importe))}</div>
+                <div style={{ fontWeight: 700, color: 'var(--negative)', flexShrink: 0, width: '80px', textAlign: 'right' }}>{eur(Math.abs(m.importe))}</div>
               </div>
             ))}
           </div>
@@ -175,12 +175,6 @@ export default function TarjetaCreditoClient({
 
   return (
     <div style={{ padding: '24px', maxWidth: '860px', margin: '0 auto' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .tarj-header { flex-direction: column !important; align-items: flex-start !important; }
-          .tarj-kpis { flex-direction: column !important; }
-        }
-      `}</style>
 
       <div className="tarj-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>💳 Tarjeta de crédito</h1>

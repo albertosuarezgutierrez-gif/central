@@ -3,12 +3,12 @@ import { useState, useMemo } from 'react'
 import type { SecretEntry, SecretTipo, DondeVive } from '@/lib/secrets-registry'
 
 const TIPO_LABEL: Record<SecretTipo, { label: string; color: string; bg: string }> = {
-  'firma-sesion':    { label: 'Firma de sesión', color: '#b91c1c', bg: '#fee2e2' },
+  'firma-sesion':    { label: 'Firma de sesión', color: 'var(--negative)', bg: 'var(--negative-bg)' },
   'token-inter-app': { label: 'Token inter-app', color: '#9333ea', bg: '#f3e8ff' },
   'cron':            { label: 'Cron / operador',  color: '#c2410c', bg: '#ffedd5' },
   'api-externa':     { label: 'API externa',      color: '#0284c7', bg: '#e0f2fe' },
-  'login-humano':    { label: 'Login humano',     color: '#15803d', bg: '#dcfce7' },
-  'hash-usuario':    { label: 'Hash de usuario',  color: '#475569', bg: '#e2e8f0' },
+  'login-humano':    { label: 'Login humano',     color: 'var(--positive)', bg: 'var(--positive-bg)' },
+  'hash-usuario':    { label: 'Hash de usuario',  color: '#475569', bg: 'var(--border)' },
 }
 
 const DONDE_LABEL: Record<DondeVive, string> = {
@@ -89,7 +89,7 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
 
       {/* Banner: este panel NO muestra valores */}
       <div style={{
-        background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e',
+        background: 'var(--warning-bg)', border: '1px solid #fde68a', color: 'var(--warning)',
         borderRadius: 10, padding: '10px 14px', fontSize: 13, marginBottom: 20, lineHeight: 1.5,
       }}>
         🛡️ Este panel <b>nunca muestra valores</b>. Las claves marcadas <b>editable</b> (API externas y
@@ -134,7 +134,7 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <code style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)' }}>{s.name}</code>
                         {s.obligatoria && (
-                          <span style={{ fontSize: 10.5, fontWeight: 700, color: '#b91c1c', background: '#fee2e2', borderRadius: 5, padding: '1px 6px' }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--negative)', background: 'var(--negative-bg)', borderRadius: 5, padding: '1px 6px' }}>
                             obligatoria en prod
                           </span>
                         )}
@@ -145,7 +145,7 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                         )}
                       </div>
                       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 3 }}>{s.proposito}</div>
-                      {s.nota && <div style={{ fontSize: 11.5, color: '#b45309', marginTop: 3 }}>⚠️ {s.nota}</div>}
+                      {s.nota && <div style={{ fontSize: 11.5, color: 'var(--warning)', marginTop: 3 }}>⚠️ {s.nota}</div>}
                     </div>
 
                     <div style={{ textAlign: 'right', minWidth: 200 }}>
@@ -186,7 +186,7 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                       background: 'var(--surface-2, #f8fafc)', border: '1px solid var(--border)',
                       borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8,
                     }}>
-                      <div style={{ fontSize: 11.5, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 11.5, color: 'var(--warning)', background: 'var(--warning-bg)', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px' }}>
                         🔒 El valor se escribe en Vercel ({s.proyecto || '—'}) y <b>no se vuelve a leer</b>.
                         Al guardar se lanza el <b>redeploy automáticamente</b> (no entras a Vercel).
                       </div>
@@ -219,7 +219,7 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                           onClick={() => guardar(s.name)}
                           style={{
                             fontSize: 13, fontWeight: 700, cursor: busy || !val || !pwd ? 'not-allowed' : 'pointer',
-                            color: '#fff', background: busy || !val || !pwd ? '#94a3b8' : '#0284c7',
+                            color: '#fff', background: busy || !val || !pwd ? 'var(--muted)' : '#0284c7',
                             border: 'none', borderRadius: 8, padding: '8px 16px',
                           }}
                         >
@@ -232,8 +232,8 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
                   {msg && msg.key === s.name && (
                     <div style={{
                       fontSize: 12.5, padding: '6px 10px', borderRadius: 6,
-                      color: msg.aviso ? '#b45309' : msg.ok ? '#15803d' : '#b91c1c',
-                      background: msg.aviso ? '#fffbeb' : msg.ok ? '#dcfce7' : '#fee2e2',
+                      color: msg.aviso ? 'var(--warning)' : msg.ok ? 'var(--positive)' : 'var(--negative)',
+                      background: msg.aviso ? 'var(--warning-bg)' : msg.ok ? 'var(--positive-bg)' : 'var(--negative-bg)',
                     }}>
                       {msg.text}
                     </div>

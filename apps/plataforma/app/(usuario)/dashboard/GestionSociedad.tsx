@@ -36,7 +36,7 @@ export function NuevaSociedadBtn() {
             <Field label="CIF (opcional)">
               <input value={cif} onChange={e => setCif(e.target.value)} style={inputStyle} />
             </Field>
-            {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}
+            {err && <p style={{ color: 'var(--negative)', fontSize: '13px' }}>{err}</p>}
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setOpen(false)} style={cancelStyle}>Cancelar</button>
               <button type="submit" disabled={loading} style={submitStyle}>{loading ? 'Creando…' : 'Crear'}</button>
@@ -83,7 +83,7 @@ export function EditarSociedadBtn({ id, nombre: nombreActual, cif: cifActual }: 
             <Field label="CIF (opcional)">
               <input value={cif} onChange={e => setCif(e.target.value)} style={inputStyle} />
             </Field>
-            {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}
+            {err && <p style={{ color: 'var(--negative)', fontSize: '13px' }}>{err}</p>}
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setOpen(false)} style={cancelStyle}>Cancelar</button>
               <button type="submit" disabled={loading} style={submitStyle}>{loading ? 'Guardando…' : 'Guardar'}</button>
@@ -178,7 +178,7 @@ export function NuevoNegocioBtn({ sociedadId }: { sociedadId: string }) {
                 />
               </Field>
             )}
-            {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}
+            {err && <p style={{ color: 'var(--negative)', fontSize: '13px' }}>{err}</p>}
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setOpen(false)} style={cancelStyle}>Cancelar</button>
               <button type="submit" disabled={loading} style={submitStyle}>{loading ? 'Creando…' : 'Crear'}</button>
@@ -249,7 +249,7 @@ export function EditarNegocioBtn({ id, nombre: nombreActual, sector: sectorActua
                 <input value={refExt} onChange={e => setRefExt(e.target.value)} placeholder={app === 'ia-rest' ? 'UUID del local en ia-rest' : 'UUID de empresa en ialimp'} style={inputStyle} />
               </Field>
             )}
-            {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}
+            {err && <p style={{ color: 'var(--negative)', fontSize: '13px' }}>{err}</p>}
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button type="button" onClick={() => setOpen(false)} style={cancelStyle}>Cancelar</button>
               <button type="submit" disabled={loading} style={submitStyle}>{loading ? 'Guardando…' : 'Guardar'}</button>

@@ -82,12 +82,6 @@ export default function GastosPageClient({ year: initYear, quarter: initQuarter,
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .gastos-filtros { flex-direction: column !important; gap: 8px !important; }
-          .gastos-modo-pills { flex-wrap: wrap !important; }
-        }
-      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>

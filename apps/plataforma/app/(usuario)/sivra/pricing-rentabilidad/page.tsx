@@ -10,7 +10,7 @@ import { eur } from '@/lib/dinero'
 
 const C = {
   ink: '#1A2535', soft: '#6B7F96', line: '#E8EDF3',
-  bg: '#F6F8FB', card: '#FFFFFF', warn: '#C2410C', ok: '#15803D', bad: '#B91C1C',
+  bg: '#F6F8FB', card: '#FFFFFF', warn: '#C2410C', ok: 'var(--positive)', bad: 'var(--negative)',
 }
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']

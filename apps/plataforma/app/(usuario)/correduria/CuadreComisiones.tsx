@@ -46,12 +46,12 @@ const SEMAFORO: Record<EstadoCuadre, { icono: string; texto: string; color: stri
   'no-comprobado': { icono: '⚪', texto: 'No comprobado', color: 'var(--muted)' },
   'sin-cobertura': { icono: '⚫', texto: 'Sin fuente', color: 'var(--muted)' },
   'sin-datos': { icono: '⏳', texto: 'Sin datos aún', color: 'var(--muted)' },
-  'esperado-sin-liquidar': { icono: '🟠', texto: 'Devengado sin liquidar', color: '#ea580c' },
-  'liquidado-sin-cobrar': { icono: '🟠', texto: 'Liquidado sin ingresar', color: '#ea580c' },
+  'esperado-sin-liquidar': { icono: '🟠', texto: 'Devengado sin liquidar', color: 'var(--warning)' },
+  'liquidado-sin-cobrar': { icono: '🟠', texto: 'Liquidado sin ingresar', color: 'var(--warning)' },
   'cobrado-sin-liquidar': { icono: '🟡', texto: 'Ingreso sin explicar', color: '#ca8a04' },
-  deudor: { icono: '🔵', texto: 'Saldo deudor', color: '#2563eb' },
-  descuadra: { icono: '🔴', texto: 'Descuadra', color: '#dc2626' },
-  cuadra: { icono: '🟢', texto: 'Cuadra', color: '#16a34a' },
+  deudor: { icono: '🔵', texto: 'Saldo deudor', color: 'var(--info)' },
+  descuadra: { icono: '🔴', texto: 'Descuadra', color: 'var(--negative)' },
+  cuadra: { icono: '🟢', texto: 'Cuadra', color: 'var(--positive)' },
 }
 
 // Los estados que significan «todavía no se sabe» — el total anual con alguno
@@ -112,13 +112,6 @@ export default function CuadreComisiones({ año }: { año: number }) {
 
   return (
     <div style={caja}>
-      <style>{`
-        .cuadre-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .cuadre-tabla { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
-        .cuadre-tabla th, .cuadre-tabla td { padding: 8px 10px; white-space: nowrap; }
-        .cuadre-tabla td.num, .cuadre-tabla th.num { text-align: right; font-variant-numeric: tabular-nums; }
-        .cuadre-btn { min-height: 44px; min-width: 44px; }
-      `}</style>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>🧾 Cuadre de comisiones {libro.año}</div>
@@ -152,7 +145,7 @@ export default function CuadreComisiones({ año }: { año: number }) {
           Alberto manda a la asesoría. */}
       {!total.cerrado && (
         <div style={{
-          background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 8,
+          background: 'var(--warning-bg)', border: '1px solid #fdba74', borderRadius: 8,
           padding: '10px 12px', fontSize: 13, color: '#9a3412', marginBottom: 14,
         }}>
           ⚠️ <b>Total provisional.</b> {total.pendientes} periodo(s) sin dato o sin fuente todavía, así
@@ -325,7 +318,7 @@ function ModalConfirmar({ periodo, onCerrar, onGuardado }: {
           Si la dejas en blanco, la remesa se queda sin saber (no se inventa restando un 15 %).
         </div>
 
-        {error && <div style={{ fontSize: 13, color: '#dc2626', marginBottom: 10 }}>{error}</div>}
+        {error && <div style={{ fontSize: 13, color: 'var(--negative)', marginBottom: 10 }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button

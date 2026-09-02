@@ -35,7 +35,7 @@ export default function SaldoTotal({ texto, positivo }: { texto: string; positiv
     <div>
       <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div className="saldo-privado" style={{ fontSize: '28px', fontWeight: 800, color: positivo ? '#16a34a' : '#dc2626' }}>
+        <div className="saldo-privado" style={{ fontSize: '28px', fontWeight: 800, color: positivo ? 'var(--positive)' : 'var(--negative)' }}>
           {texto}
         </div>
         <button

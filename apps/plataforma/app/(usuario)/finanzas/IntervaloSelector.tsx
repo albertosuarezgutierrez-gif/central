@@ -64,7 +64,6 @@ export default function IntervaloSelector({ basePath, periodo }: { basePath: str
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 16px' }}>
-      <style>{`@media (max-width:768px){.iv-filtros{flex-direction:column!important;align-items:stretch!important}.iv-pills{flex-wrap:wrap!important}}`}</style>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
         <div className="iv-pills" style={{ display: 'flex', gap: '6px', flex: 1 }}>
           {(['mes', 'trimestre', 'rango'] as PeriodoMode[]).map(m => (

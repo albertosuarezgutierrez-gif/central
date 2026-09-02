@@ -135,24 +135,12 @@ export default function ExpensesPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .expenses-header { flex-direction: column !important; align-items: flex-start !important; }
-          .expenses-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
-          .expenses-filters { flex-direction: column !important; align-items: stretch !important; }
-          .expenses-filters select { width: 100% !important; box-sizing: border-box; }
-          .expenses-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-          .expenses-modal { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
-          .expenses-form-2col { grid-template-columns: 1fr !important; }
-          .expenses-form-3col { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
       <div className="expenses-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Gastos</h1>
           {!loading && (
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-              {gastos.length} registros · Total: <strong style={{ color: '#dc2626' }}>{eur(totalSum)}</strong>
+              {gastos.length} registros · Total: <strong style={{ color: 'var(--negative)' }}>{eur(totalSum)}</strong>
             </p>
           )}
         </div>
@@ -256,7 +244,7 @@ export default function ExpensesPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 6, fontWeight: 600 }}>
                   Adjuntar factura (PDF/imagen)
-                  {aiSource && <span style={{ marginLeft: 8, color: '#15803d', fontWeight: 700 }}>✨ Extraído: {aiSource}</span>}
+                  {aiSource && <span style={{ marginLeft: 8, color: 'var(--positive)', fontWeight: 700 }}>✨ Extraído: {aiSource}</span>}
                 </label>
                 <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange}
                   style={{ fontSize: 13, width: '100%' }} />
@@ -321,7 +309,7 @@ export default function ExpensesPage() {
                 <textarea value={form.notas} onChange={e => handleFormChange('notas', e.target.value)} rows={2} style={{ ...inp, resize: 'none' }} />
               </div>
 
-              {err && <p style={{ color: '#dc2626', fontSize: 13, background: '#fef2f2', padding: '8px 12px', borderRadius: 6, margin: 0 }}>{err}</p>}
+              {err && <p style={{ color: 'var(--negative)', fontSize: 13, background: 'var(--negative-bg)', padding: '8px 12px', borderRadius: 6, margin: 0 }}>{err}</p>}
 
               <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
                 <button onClick={() => { setShowModal(false); setAiSource(null) }} style={{ flex: 1, padding: '10px', border: '1px solid var(--border)', borderRadius: 6, background: 'transparent', fontSize: 13, cursor: 'pointer', color: 'var(--muted)' }}>Cancelar</button>

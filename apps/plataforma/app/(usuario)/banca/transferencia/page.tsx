@@ -23,9 +23,9 @@ const input: React.CSSProperties = {
   minHeight: 44,
   padding: '10px 12px',
   borderRadius: 10,
-  border: '1px solid var(--border, #d5d8e0)',
-  background: 'var(--card, #fff)',
-  color: 'var(--text, #111)',
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text)',
   fontSize: 16,
 }
 const btn: React.CSSProperties = {
@@ -94,7 +94,7 @@ export default function TransferenciaPage() {
           <>
             <p style={{ marginTop: 16 }}>Falta el último paso: <b>fírmala en tu banco</b>.</p>
             <a href={resultado.auth_url} target="_blank" rel="noreferrer"
-               style={{ ...btn, display: 'block', textAlign: 'center', lineHeight: '44px', background: 'var(--primary, #4f46e5)', color: '#fff', textDecoration: 'none' }}>
+               style={{ ...btn, display: 'block', textAlign: 'center', lineHeight: '44px', background: 'var(--primary)', color: '#fff', textDecoration: 'none' }}>
               🔐 Firmar en el banco
             </a>
           </>
@@ -105,13 +105,13 @@ export default function TransferenciaPage() {
               {' '}para importarlo en la web de tu banco.
             </p>
             <button onClick={() => descargarXml(resultado.xml)}
-                    style={{ ...btn, background: 'var(--primary, #4f46e5)', color: '#fff' }}>
+                    style={{ ...btn, background: 'var(--primary)', color: '#fff' }}>
               ⬇️ Descargar SEPA XML
             </button>
           </>
         )}
         <button onClick={() => { setResultado(null); setFase('form'); setNombre(''); setIban(''); setImporte(''); setConcepto('') }}
-                style={{ ...btn, background: 'transparent', color: 'var(--primary, #4f46e5)', border: '1px solid var(--border, #d5d8e0)' }}>
+                style={{ ...btn, background: 'transparent', color: 'var(--primary)', border: '1px solid var(--border)' }}>
           Nueva transferencia
         </button>
       </div>
@@ -123,7 +123,7 @@ export default function TransferenciaPage() {
     return (
       <div style={box}>
         <h1 style={{ fontSize: 20, marginBottom: 8 }}>¿Confirmas la transferencia?</h1>
-        <div style={{ border: '1px solid var(--border, #d5d8e0)', borderRadius: 12, padding: 16, background: 'var(--card, #fff)', marginTop: 12 }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 16, background: 'var(--surface)', marginTop: 12 }}>
           <Fila k="Destinatario" v={nombre} />
           <Fila k="IBAN" v={iban.replace(/\s/g, '').toUpperCase()} />
           <Fila k="Importe" v={eur(Math.round(importeNum * 100) / 100)} destacado />
@@ -133,11 +133,11 @@ export default function TransferenciaPage() {
           Revisa bien el IBAN y el importe. Nada sale de tu cuenta hasta que lo firmes en el banco.
         </p>
         <button disabled={cargando} onClick={enviar}
-                style={{ ...btn, background: 'var(--primary, #4f46e5)', color: '#fff', opacity: cargando ? 0.6 : 1 }}>
+                style={{ ...btn, background: 'var(--primary)', color: '#fff', opacity: cargando ? 0.6 : 1 }}>
           {cargando ? 'Ordenando…' : '✅ Sí, ordenar'}
         </button>
         <button disabled={cargando} onClick={() => setFase('form')}
-                style={{ ...btn, background: 'transparent', color: 'var(--text, #111)', border: '1px solid var(--border, #d5d8e0)', marginTop: 8 }}>
+                style={{ ...btn, background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', marginTop: 8 }}>
           Volver
         </button>
       </div>
@@ -164,10 +164,10 @@ export default function TransferenciaPage() {
       <label style={label}>Concepto (opcional)</label>
       <input style={input} value={concepto} onChange={e => setConcepto(e.target.value)} placeholder="Motivo de la transferencia" maxLength={140} />
 
-      {error && <p style={{ color: 'var(--danger, #c0392b)', marginTop: 12, fontSize: 14 }}>⚠️ {error}</p>}
+      {error && <p style={{ color: 'var(--negative)', marginTop: 12, fontSize: 14 }}>⚠️ {error}</p>}
 
       <button disabled={!formOk} onClick={() => { setError(null); setFase('confirmar') }}
-              style={{ ...btn, background: formOk ? 'var(--primary, #4f46e5)' : 'var(--border, #d5d8e0)', color: '#fff', cursor: formOk ? 'pointer' : 'not-allowed' }}>
+              style={{ ...btn, background: formOk ? 'var(--primary)' : 'var(--border)', color: '#fff', cursor: formOk ? 'pointer' : 'not-allowed' }}>
         Continuar
       </button>
     </div>

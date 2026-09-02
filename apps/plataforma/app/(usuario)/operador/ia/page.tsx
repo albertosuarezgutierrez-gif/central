@@ -32,7 +32,7 @@ export default async function OperadorIaPage() {
       </p>
 
       {r.presupuesto.limite > 0 && r.presupuesto.ratio >= 0.8 && (
-        <div style={{ ...card, marginTop: 16, borderColor: r.presupuesto.ratio >= 1 ? '#dc2626' : '#d97706', background: r.presupuesto.ratio >= 1 ? '#fef2f2' : '#fffbeb' }}>
+        <div style={{ ...card, marginTop: 16, borderColor: r.presupuesto.ratio >= 1 ? 'var(--negative)' : 'var(--warning)', background: r.presupuesto.ratio >= 1 ? 'var(--negative-bg)' : 'var(--warning-bg)' }}>
           <strong>{r.presupuesto.ratio >= 1 ? '🛑 Presupuesto mensual agotado' : '⚠️ Presupuesto mensual casi agotado'}</strong>
           {' — '}{r.presupuesto.usado} / {r.presupuesto.limite} llamadas ({Math.round(r.presupuesto.ratio * 100)}%).
           {r.presupuesto.ratio >= 1 ? ' La pasarela está devolviendo 429 (las verticales caen a su fallback directo).' : ' Sube AI_GATEWAY_LIMITE_MENSUAL o revisa el uso.'}
@@ -40,7 +40,7 @@ export default async function OperadorIaPage() {
       )}
 
       {r.hoy.limite_diario > 0 && r.hoy.coste >= r.hoy.limite_diario && (
-        <div style={{ ...card, marginTop: 16, borderColor: '#dc2626', background: '#fef2f2' }}>
+        <div style={{ ...card, marginTop: 16, borderColor: 'var(--negative)', background: 'var(--negative-bg)' }}>
           <strong>🛑 Presupuesto diario en € agotado</strong>
           {' — '}{eur(r.hoy.coste)} / {eur(r.hoy.limite_diario)} hoy. Las llamadas DE PAGO (OpenRouter) están bloqueadas hasta mañana; la cadena gratis sigue sirviendo.
         </div>
@@ -51,8 +51,8 @@ export default async function OperadorIaPage() {
         <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Coste mes</div><div style={{ fontSize: 22, fontWeight: 700 }}>{eur(r.mes.coste)}</div></div>
         <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Gasto hoy</div><div style={{ fontSize: 22, fontWeight: 700 }}>{eur(r.hoy.coste)}<span style={{ fontSize: 12, color: 'var(--muted)' }}> / {r.hoy.limite_diario > 0 ? eur(r.hoy.limite_diario) : '∞'}</span></div></div>
         <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Tokens</div><div style={{ fontSize: 22, fontWeight: 700 }}>{r.mes.tokens.toLocaleString('es-ES')}</div></div>
-        <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>OK</div><div style={{ fontSize: 22, fontWeight: 700, color: '#16a34a' }}>{r.mes.ok}</div></div>
-        <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Errores</div><div style={{ fontSize: 22, fontWeight: 700, color: r.mes.errores ? '#dc2626' : 'inherit' }}>{r.mes.errores}</div></div>
+        <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>OK</div><div style={{ fontSize: 22, fontWeight: 700, color: 'var(--positive)' }}>{r.mes.ok}</div></div>
+        <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Errores</div><div style={{ fontSize: 22, fontWeight: 700, color: r.mes.errores ? 'var(--negative)' : 'inherit' }}>{r.mes.errores}</div></div>
         <div style={kpi}><div style={{ color: 'var(--muted)', fontSize: 12 }}>Latencia media</div><div style={{ fontSize: 22, fontWeight: 700 }}>{r.mes.ms_medio} ms</div></div>
       </div>
 
@@ -60,13 +60,13 @@ export default async function OperadorIaPage() {
         <h2 style={{ fontSize: 15, marginBottom: 6 }}>🧠 Agente Director</h2>
         <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 6px' }}>
           Modo: <strong>{MODO_LABEL[r.director.modo] ?? r.director.modo}</strong> · decisiones este mes: {r.director.total_mes}
-          {r.director.fallos_mes > 0 && <span style={{ color: '#dc2626' }}> ({r.director.fallos_mes} fallos → default)</span>}
+          {r.director.fallos_mes > 0 && <span style={{ color: 'var(--negative)' }}> ({r.director.fallos_mes} fallos → default)</span>}
           {' '}· caché semántica: {cacheActiva() ? `activa (${cache.entradas} entradas, ${cache.hitsMes} hits/mes)` : 'apagada'}
         </p>
         <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>
           Catálogo <strong>v{r.director.version}</strong> · {r.director.modelos} modelos · degradación por presupuesto:{' '}
           {r.director.presupuestoRatio >= r.director.umbral
-            ? <strong style={{ color: '#d97706' }}>activa</strong>
+            ? <strong style={{ color: 'var(--warning)' }}>activa</strong>
             : <span>inactiva</span>}{' '}
           (hoy {Math.round(r.director.presupuestoRatio * 100)}% del límite diario, umbral {Math.round(r.director.umbral * 100)}%)
         </p>
@@ -79,7 +79,7 @@ export default async function OperadorIaPage() {
                   <tr key={i}>
                     <td style={td}>{new Date(d.creada_at).toLocaleString('es-ES')}</td>
                     <td style={td}>{d.modelo ?? '—'}</td>
-                    <td style={{ ...td, color: d.ok ? '#16a34a' : '#dc2626' }}>{d.ok ? 'ok' : 'fallo → default'}</td>
+                    <td style={{ ...td, color: d.ok ? 'var(--positive)' : 'var(--negative)' }}>{d.ok ? 'ok' : 'fallo → default'}</td>
                     <td style={td}>{d.ms}</td>
                   </tr>
                 ))}
@@ -159,7 +159,7 @@ export default async function OperadorIaPage() {
                   <td style={td}>{u.endpoint}</td>
                   <td style={td}>{u.proveedor}</td>
                   <td style={td}>{u.modelo ?? '—'}</td>
-                  <td style={{ ...td, color: u.ok ? '#16a34a' : '#dc2626' }}>{u.ok ? 'ok' : (u.error ?? 'error')}</td>
+                  <td style={{ ...td, color: u.ok ? 'var(--positive)' : 'var(--negative)' }}>{u.ok ? 'ok' : (u.error ?? 'error')}</td>
                   <td style={td}>{u.tokens.toLocaleString('es-ES')}</td>
                   <td style={td}>{u.coste.toFixed(4)} €</td>
                   <td style={td}>{u.ms}</td>

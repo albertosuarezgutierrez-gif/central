@@ -48,17 +48,6 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
 
   return (
     <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .aptos-header { flex-direction: column !important; align-items: flex-start !important; }
-          .aptos-kpi-strip { gap: 16px !important; }
-          .aptos-kpi-strip > div { min-width: calc(50% - 8px) !important; }
-          .aptos-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 480px) {
-          .aptos-kpi-strip > div { min-width: 100% !important; }
-        }
-      `}</style>
       <div className="aptos-header" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700 }}>🏨 Mis apartamentos</h1>
         <Filtro year={year} month={month} />
@@ -76,10 +65,10 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
       }}>
         <KPI label="Ingresos periodo" value={fmtEur(kTur.ingresos)} color="var(--primary)" />
         <KPI label="Gastos periodo" value={fmtEur(kTur.gastos)} color="var(--muted)" />
-        <KPI label="Resultado" value={fmtEur(kTur.ingresos - kTur.gastos)} color={kTur.ingresos - kTur.gastos >= 0 ? '#16a34a' : '#dc2626'} />
+        <KPI label="Resultado" value={fmtEur(kTur.ingresos - kTur.gastos)} color={kTur.ingresos - kTur.gastos >= 0 ? 'var(--positive)' : 'var(--negative)'} />
         <KPI label={`Ingresos ${year}`} value={fmtEur(kTur.anio)} color="var(--text)" />
         <KPI label="Noches ocupadas" value={`${kTur.noches} noches`} color="var(--text)" />
-        <KPI label="Ocupación media" value={`${kTur.ocup}%`} color={kTur.ocup >= 70 ? '#16a34a' : kTur.ocup >= 40 ? '#d97706' : '#dc2626'} />
+        <KPI label="Ocupación media" value={`${kTur.ocup}%`} color={kTur.ocup >= 70 ? 'var(--positive)' : kTur.ocup >= 40 ? 'var(--warning)' : 'var(--negative)'} />
       </div>
 
       {/* KPI — Duplex + seguros (cuenta BBVA, unidad aparte) */}
@@ -93,7 +82,7 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
       }}>
         <KPI label="Ingresos periodo" value={fmtEur(kBbva.ingresos)} color="var(--primary)" />
         <KPI label="Gastos periodo" value={fmtEur(kBbva.gastos)} color="var(--muted)" />
-        <KPI label="Resultado" value={fmtEur(kBbva.ingresos - kBbva.gastos)} color={kBbva.ingresos - kBbva.gastos >= 0 ? '#16a34a' : '#dc2626'} />
+        <KPI label="Resultado" value={fmtEur(kBbva.ingresos - kBbva.gastos)} color={kBbva.ingresos - kBbva.gastos >= 0 ? 'var(--positive)' : 'var(--negative)'} />
         <KPI label={`Ingresos ${year}`} value={fmtEur(kBbva.anio)} color="var(--text)" />
       </div>
 
@@ -124,7 +113,7 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 <FinStat label="Ingresos mes" value={fmtEur(p.ingresosMes)} />
                 <FinStat label="Gastos mes" value={fmtEur(p.gastosMes)} />
-                <FinStat label="Resultado" value={fmtEur(p.resultadoMes)} color={p.resultadoMes >= 0 ? '#16a34a' : '#dc2626'} />
+                <FinStat label="Resultado" value={fmtEur(p.resultadoMes)} color={p.resultadoMes >= 0 ? 'var(--positive)' : 'var(--negative)'} />
               </div>
 
               {/* Ocupación + ADR */}
@@ -137,7 +126,7 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
                   <div style={{
                     height: '100%', borderRadius: '3px',
                     width: `${Math.min(p.ocupacion, 100)}%`,
-                    background: p.ocupacion >= 70 ? '#16a34a' : p.ocupacion >= 40 ? '#d97706' : '#dc2626',
+                    background: p.ocupacion >= 70 ? 'var(--positive)' : p.ocupacion >= 40 ? 'var(--warning)' : 'var(--negative)',
                     transition: 'width .3s',
                   }} />
                 </div>

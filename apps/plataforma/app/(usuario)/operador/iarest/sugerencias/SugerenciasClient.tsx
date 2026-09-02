@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { Pagina } from '@/components/ui'
 
 type Sugerencia = {
   id: string
@@ -18,10 +19,10 @@ const CATEGORIAS = ['', 'bug', 'mejora', 'nueva_funcionalidad', 'otro']
 const ESTADOS_FILTER = ['', 'pendiente', 'en_progreso', 'descartado', 'completado']
 
 const estadoColor: Record<string, string> = {
-  pendiente: '#f59e0b',
-  en_progreso: '#2563eb',
-  descartado: '#6b7280',
-  completado: '#16a34a',
+  pendiente: 'var(--warning)',
+  en_progreso: 'var(--info)',
+  descartado: 'var(--muted)',
+  completado: 'var(--positive)',
 }
 
 function fecha(s: string) {
@@ -76,14 +77,7 @@ export default function SugerenciasClient() {
   }
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .suger-layout { grid-template-columns: 1fr !important; }
-          .suger-list { width: 100% !important; }
-          .suger-panel { width: 100% !important; }
-        }
-      `}</style>
+    <Pagina ancho="lectura">
       <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '20px' }}>💡 Sugerencias · ia-rest</h1>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -212,6 +206,6 @@ export default function SugerenciasClient() {
           </div>
         )}
       </div>
-    </main>
+    </Pagina>
   )
 }

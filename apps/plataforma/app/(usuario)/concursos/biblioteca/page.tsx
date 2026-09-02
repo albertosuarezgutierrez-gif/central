@@ -4,7 +4,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
+const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'var(--border)', muted:'var(--muted)' };
 const FONT = 'Nunito, system-ui, sans-serif';
 
 // Valores de TipoDocumentoBiblioteca del módulo (mantener en sync).
@@ -75,7 +75,7 @@ export default function Biblioteca() {
             {load ? 'Guardando…' : 'Añadir'}
           </button>
         </form>
-        {error && <div style={{ color:'#991b1b', fontSize:13, marginTop:8 }}>{error}</div>}
+        {error && <div style={{ color:'var(--negative)', fontSize:13, marginTop:8 }}>{error}</div>}
       </div>
 
       {/* Listado */}

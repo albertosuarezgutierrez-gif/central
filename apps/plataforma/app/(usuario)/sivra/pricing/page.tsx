@@ -81,26 +81,15 @@ export default function PricingPage() {
 
   const estadoBadge = (e: string) => {
     const map: Record<string, { bg: string; color: string }> = {
-      reservado: { bg: '#dcfce7', color: '#16a34a' },
-      libre:     { bg: '#fee2e2', color: '#dc2626' },
-      pendiente: { bg: '#fef9c3', color: '#ca8a04' },
+      reservado: { bg: 'var(--positive-bg)', color: 'var(--positive)' },
+      libre:     { bg: 'var(--negative-bg)', color: 'var(--negative)' },
+      pendiente: { bg: 'var(--warning-bg)', color: '#ca8a04' },
     }
     return map[e] ?? { bg: 'var(--surface)', color: 'var(--muted)' }
   }
 
   return (
     <div style={{ padding: '24px', maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .pricing-header { flex-direction: column !important; gap: 12px !important; }
-          .pricing-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
-          .pricing-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
-          .pricing-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-        @media (max-width: 480px) {
-          .pricing-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        }
-      `}</style>
       <div className="pricing-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Pricing Lab</h1>
@@ -123,8 +112,8 @@ export default function PricingPage() {
         <div className="pricing-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
           {[
             { label: "Total experimentos", val: resumen.total, color: 'var(--text)' },
-            { label: "Reservados ✅", val: resumen.reservados, color: '#16a34a' },
-            { label: "Libres ❌", val: resumen.libres, color: '#dc2626' },
+            { label: "Reservados ✅", val: resumen.reservados, color: 'var(--positive)' },
+            { label: "Libres ❌", val: resumen.libres, color: 'var(--negative)' },
             { label: "Pendientes ⏳", val: resumen.pendientes, color: '#ca8a04' },
             { label: "Ocupación experimento", val: resumen.ocupacion_experimento_pct ? `${resumen.ocupacion_experimento_pct}%` : "—", color: 'var(--primary)' },
           ].map(c => (

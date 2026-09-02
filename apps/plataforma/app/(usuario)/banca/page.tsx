@@ -21,6 +21,7 @@ import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
 import TicketsSuper from './TicketsSuper'
 import SegTabs from './SegTabs'
+import { Pagina, colorImporte, Dato } from '@/components/ui'
 import SaldoTotal from './SaldoTotal'
 import NegociosResumen from './NegociosResumen'
 import FiscalResumen from './FiscalResumen'
@@ -56,11 +57,11 @@ export default async function BancaPage({ searchParams }: {
   // así /banca (Dinero, por defecto) NO paga el coste del holding en cada visita.
   if (tab === 'negocios') {
     return (
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <Pagina ancho="lectura">
         <MiniChatContable periodoLabel={`${new Date().getFullYear()}`} />
         <div style={{ margin: '8px 0 20px' }}><SegTabs active="negocios" /></div>
         <NegociosResumen cuentaId={session.id} nombre={session.nombre} />
-      </main>
+      </Pagina>
     )
   }
 
@@ -74,11 +75,11 @@ export default async function BancaPage({ searchParams }: {
       ? await safe(calcularEstadoDeclaracion(session.id, anioFiscal, resumenAnual), null)
       : null
     return (
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <Pagina ancho="lectura">
         <MiniChatContable periodoLabel={`${anioFiscal}`} />
         <div style={{ margin: '8px 0 20px' }}><SegTabs active="fiscal" /></div>
         <FiscalResumen fiscal={resumenAnual?.fiscal ?? null} declaracion={declaracion} year={anioFiscal} />
-      </main>
+      </Pagina>
     )
   }
 
@@ -88,11 +89,11 @@ export default async function BancaPage({ searchParams }: {
   // (mes actual por defecto), así que aquí solo hace falta pasarle el año en curso.
   if (tab === 'personal') {
     return (
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <Pagina ancho="tabla">
         <MiniChatContable periodoLabel={`${new Date().getFullYear()}`} />
         <div style={{ margin: '8px 0 20px' }}><SegTabs active="personal" /></div>
         <CategoriasTab year={new Date().getFullYear()} month={0} />
-      </main>
+      </Pagina>
     )
   }
 
@@ -161,26 +162,7 @@ export default async function BancaPage({ searchParams }: {
   const hayCuentas = saldo.cuentas.length > 0 || brokerSaldos.length > 0
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-        <style>{`
-          @media (max-width: 768px) {
-            .banca-header { flex-direction: column !important; align-items: flex-start !important; }
-            .banca-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-            .banca-acciones { flex-wrap: wrap !important; gap: 8px !important; }
-            /* Libro de movimientos en móvil: en vez de scroll horizontal (que aplastaba el concepto a
-               «B…»), la fila se APILA — concepto a ancho completo arriba (legible), y debajo fecha +
-               badges + importe. El select de negocio y el 🤖 se OCULTAN (para reclasificar/preguntar
-               está la FICHA al tocar el movimiento), que es lo que descongestiona la fila. */
-            .banca-movs-outer { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-            .banca-movs-row { min-width: 0 !important; flex-wrap: wrap !important; row-gap: 4px; align-items: baseline !important; }
-            .banca-mov-concepto { flex: 1 1 100% !important; order: -1; }
-            .banca-mov-concepto-txt { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
-            .banca-mov-select, .banca-mov-sug { display: none !important; }
-            .banca-mov-destino-chip { display: inline-block !important; }
-            .banca-mov-fecha { width: auto !important; }
-            .banca-mov-amt { margin-left: auto; }
-          }
-        `}</style>
+    <Pagina ancho="tabla">
 
         {/* 🤖 Pregúntale a tus cuentas — el agente contable, ARRIBA DEL TODO (encima de las pestañas) */}
         <MiniChatContable periodoLabel={etiquetaPeriodo} />
@@ -263,8 +245,10 @@ export default async function BancaPage({ searchParams }: {
                     {c.banco || 'Banco'} {c.ibanMascara || ''}
                     {c.sincronizada && <span title="Sincronizada automáticamente (PSD2)" style={{ marginLeft: '6px', fontSize: '12px' }}>🔄</span>}
                   </div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626' }}>
-                    {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
+                  <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: c.saldoActual == null ? 'var(--muted)' : colorImporte(c.saldoActual) }}>
+                    <Dato valor={c.saldoActual} pendiente="Sin informar" donde="el portal del banco">
+                      {fmtEur(c.saldoActual ?? 0)}
+                    </Dato>
                   </div>
                   {c.saldoFecha && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {c.saldoFecha}</div>}
                 </div>
@@ -275,7 +259,7 @@ export default async function BancaPage({ searchParams }: {
                 <div key={`broker-${b.broker}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)', position: 'relative' }}>
                   <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>📈 Inversión</div>
                   <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{b.broker}</div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: b.saldo >= 0 ? '#16a34a' : '#dc2626' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: colorImporte(b.saldo) }}>
                     {fmtEur(b.saldo)}
                   </div>
                   {b.actualizado && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {b.actualizado}</div>}
@@ -295,8 +279,10 @@ export default async function BancaPage({ searchParams }: {
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{c.sociedadNombre}</div>
                       <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>{c.banco || 'Banco'} {c.ibanMascara || ''}</div>
-                      <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: (c.saldoActual ?? 0) >= 0 ? '#16a34a' : '#dc2626' }}>
-                        {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
+                      <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: c.saldoActual == null ? 'var(--muted)' : colorImporte(c.saldoActual) }}>
+                        <Dato valor={c.saldoActual} pendiente="Sin informar" donde="el portal del banco">
+                      {fmtEur(c.saldoActual ?? 0)}
+                    </Dato>
                       </div>
                       {c.saldoFecha && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {c.saldoFecha}</div>}
                     </div>
@@ -324,11 +310,11 @@ export default async function BancaPage({ searchParams }: {
                 <div key={p.propertyId} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', boxShadow: 'var(--shadow)' }}>
                   <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '2px' }}>{p.nombre}</div>
                   <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{p.reservas} reserva{p.reservas === 1 ? '' : 's'}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '2px 0' }}><span style={{ color: 'var(--muted)' }}>Ingresos</span><strong style={{ color: '#16a34a' }}>{eur(p.ingresos)}</strong></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '2px 0' }}><span style={{ color: 'var(--muted)' }}>Gastos</span><strong style={{ color: '#dc2626' }}>{eur(p.gastos.total)}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '2px 0' }}><span style={{ color: 'var(--muted)' }}>Ingresos</span><strong style={{ color: 'var(--positive)' }}>{eur(p.ingresos)}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '2px 0' }}><span style={{ color: 'var(--muted)' }}>Gastos</span><strong style={{ color: 'var(--negative)' }}>{eur(p.gastos.total)}</strong></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '4px 0', marginTop: '4px', borderTop: '1px solid var(--border)' }}>
                     <span style={{ fontWeight: 600 }}>Resultado</span>
-                    <strong style={{ color: p.resultado >= 0 ? '#16a34a' : '#dc2626' }}>{eur(p.resultado)} <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}>({p.margen.toFixed(0)}%)</span></strong>
+                    <strong style={{ color: colorImporte(p.resultado) }}>{eur(p.resultado)} <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}>({p.margen.toFixed(0)}%)</span></strong>
                   </div>
                 </div>
               ))}
@@ -420,7 +406,7 @@ export default async function BancaPage({ searchParams }: {
                 {tesoreria.proyecciones.map(p => (
                   <div key={p.dias} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
                     <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>Saldo proyectado · {p.dias} días</div>
-                    <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px', color: p.proyectado >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(p.proyectado)}</div>
+                    <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px', color: colorImporte(p.proyectado) }}>{fmtEur(p.proyectado)}</div>
                     <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>+{fmtEur(p.entradas)} entran · −{fmtEur(p.salidas)} salen</div>
                   </div>
                 ))}
@@ -431,7 +417,7 @@ export default async function BancaPage({ searchParams }: {
                   <div key={r.clave + i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
                     <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.concepto}</div>
                     <div style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>cada ~{r.intervaloDias}d · ×{r.ocurrencias}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: r.importeMedio >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{fmtEur(r.importeMedio)}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: colorImporte(r.importeMedio), flexShrink: 0, width: '92px', textAlign: 'right' }}>{fmtEur(r.importeMedio)}</div>
                   </div>
                 ))}
               </div>
@@ -444,6 +430,6 @@ export default async function BancaPage({ searchParams }: {
 
         {/* Reglas aprendidas (transparencia): lo que el sistema aprendió al reclasificar, con borrar */}
         {saldo.cuentas.length > 0 && <ReglasAprendidas />}
-      </main>
+      </Pagina>
   )
 }

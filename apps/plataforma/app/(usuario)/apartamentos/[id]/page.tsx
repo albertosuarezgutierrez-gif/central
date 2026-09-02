@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { getApartamentoDetalle } from '@/lib/propiedades'
 import { fmtEur } from '@/lib/banca'
+import { Pagina } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,17 +56,7 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
     : null
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .aptodet-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .aptodet-two-col { grid-template-columns: 1fr !important; }
-          .aptodet-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-        @media (max-width: 480px) {
-          .aptodet-kpi-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+    <Pagina ancho="tabla">
 
       {/* Breadcrumb + título */}
       <div style={{ marginBottom: '24px' }}>
@@ -86,16 +77,16 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
       }}>
         <KPICard label={`Ingresos ${mesActual}`} value={fmtEur(d.ingresosMes)} color="var(--primary)"
           sub={yoyPct != null ? `${yoyPct >= 0 ? '+' : ''}${yoyPct}% vs ${anio - 1}` : undefined}
-          subColor={yoyPct != null ? (yoyPct >= 0 ? '#16a34a' : '#dc2626') : undefined} />
+          subColor={yoyPct != null ? (yoyPct >= 0 ? 'var(--positive)' : 'var(--negative)') : undefined} />
         <KPICard label={`Gastos ${mesActual}`} value={fmtEur(d.gastosMes)} color="var(--text)" />
-        <KPICard label="Resultado mes" value={fmtEur(d.resultadoMes)} color={d.resultadoMes >= 0 ? '#16a34a' : '#dc2626'} />
+        <KPICard label="Resultado mes" value={fmtEur(d.resultadoMes)} color={d.resultadoMes >= 0 ? 'var(--positive)' : 'var(--negative)'} />
         <KPICard label="Ocupación mes" value={`${d.ocupacion}%`}
-          color={d.ocupacion >= 70 ? '#16a34a' : d.ocupacion >= 40 ? '#d97706' : '#dc2626'}
+          color={d.ocupacion >= 70 ? 'var(--positive)' : d.ocupacion >= 40 ? 'var(--warning)' : 'var(--negative)'}
           sub={`${d.noches} noches`} />
         <KPICard label="ADR (€/noche)" value={d.adr > 0 ? fmtEur(d.adr) : '—'} color="var(--text)" />
         <KPICard label={`Ingresos ${anio}`} value={fmtEur(d.ingresosAnio)} color="var(--primary)" />
         <KPICard label={`Gastos ${anio}`} value={fmtEur(d.gastosAnio)} color="var(--text)" />
-        <KPICard label={`Resultado ${anio}`} value={fmtEur(d.resultadoAnio)} color={d.resultadoAnio >= 0 ? '#16a34a' : '#dc2626'} />
+        <KPICard label={`Resultado ${anio}`} value={fmtEur(d.resultadoAnio)} color={d.resultadoAnio >= 0 ? 'var(--positive)' : 'var(--negative)'} />
       </div>
 
       <div className="aptodet-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -125,7 +116,7 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
             </table>
           )}
           {gaps.length > 0 && (
-            <div style={{ marginTop: '10px', padding: '8px 12px', background: '#fef9c3', borderRadius: '6px', fontSize: '12px', color: '#92400e' }}>
+            <div style={{ marginTop: '10px', padding: '8px 12px', background: 'var(--warning-bg)', borderRadius: '6px', fontSize: '12px', color: 'var(--warning)' }}>
               ⚠️ Huecos libres: {gaps.map(g => `${g.dias}d (${g.desde} → ${g.hasta})`).join(' · ')}
             </div>
           )}
@@ -192,7 +183,7 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
                     <Td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--bg)', minWidth: '50px' }}>
-                          <div style={{ height: '100%', borderRadius: '2px', width: `${Math.min(ocup, 100)}%`, background: ocup >= 70 ? '#16a34a' : ocup >= 40 ? '#d97706' : '#dc2626' }} />
+                          <div style={{ height: '100%', borderRadius: '2px', width: `${Math.min(ocup, 100)}%`, background: ocup >= 70 ? 'var(--positive)' : ocup >= 40 ? 'var(--warning)' : 'var(--negative)' }} />
                         </div>
                         <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{ocup}%</span>
                       </div>
@@ -303,7 +294,7 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
         )}
       </Section>
 
-    </main>
+    </Pagina>
   )
 }
 

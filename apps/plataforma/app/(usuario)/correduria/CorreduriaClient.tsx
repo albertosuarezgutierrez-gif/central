@@ -90,16 +90,6 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
 
   return (
     <div style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .corr-header { flex-direction: column !important; align-items: flex-start !important; }
-          .corr-kpis { grid-template-columns: 1fr 1fr !important; }
-          .corr-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        }
-        @media (max-width: 480px) {
-          .corr-kpis { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
 
       {/* Header */}
       <div className="corr-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
@@ -139,7 +129,7 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
       {!loading && !error && pendiente > 0 && (
         <button
           onClick={() => setModal({ titulo: 'Pendiente de confirmar', compania: '__PENDIENTE__' })}
-          style={{ width: '100%', textAlign: 'left', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 12, padding: '12px 16px', cursor: 'pointer', marginBottom: 20, minHeight: 44 }}
+          style={{ width: '100%', textAlign: 'left', background: 'var(--warning-bg)', border: '1px solid #fdba74', borderRadius: 12, padding: '12px 16px', cursor: 'pointer', marginBottom: 20, minHeight: 44 }}
         >
           <span style={{ fontSize: 13, color: '#9a3412' }}>
             ⚠️ <strong>{eur(pendiente)}</strong> en movimientos de seguros sin confirmar a qué
@@ -187,7 +177,7 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
 
       {/* Error */}
       {error && (
-        <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: '#dc2626', marginBottom: 24 }}>
+        <div style={{ background: 'var(--negative-bg)', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: 'var(--negative)', marginBottom: 24 }}>
           {error}
         </div>
       )}
@@ -221,7 +211,7 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
                 const esOtras = f.compania === COMPANIA_OTRAS
                 return (
                   <tr key={f.compania} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 16px', fontWeight: 600, color: esOtras ? '#ea580c' : 'var(--text)', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: 'var(--surface)' }}>
+                    <td style={{ padding: '10px 16px', fontWeight: 600, color: esOtras ? 'var(--warning)' : 'var(--text)', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: 'var(--surface)' }}>
                       {esOtras ? '⚠️ ' : ''}{companiaLabel(f.compania)}
                     </td>
                     {MESES.map((_, i) => {
@@ -340,14 +330,14 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
 
         <div style={{ padding: 16 }}>
           {loading && <div style={{ textAlign: 'center', padding: 32, color: 'var(--muted)' }}>Cargando…</div>}
-          {error && <div style={{ color: '#dc2626', padding: 12 }}>{error}</div>}
+          {error && <div style={{ color: 'var(--negative)', padding: 12 }}>{error}</div>}
           {!loading && !error && movs.length === 0 && (
             <div style={{ textAlign: 'center', padding: 32, color: 'var(--muted)' }}>No quedan movimientos en este desglose.</div>
           )}
           {!loading && !error && movs.map(m => {
             const sospechoso = m.motivo === 'descarte' && !m.confirmado
             return (
-              <div key={m.id} style={{ border: `1px solid ${sospechoso ? '#fdba74' : 'var(--border)'}`, background: sospechoso ? '#fff7ed' : 'transparent', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
+              <div key={m.id} style={{ border: `1px solid ${sospechoso ? '#fdba74' : 'var(--border)'}`, background: sospechoso ? 'var(--warning-bg)' : 'transparent', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word' }}>{m.concepto || m.contraparte || '(sin concepto)'}</div>
@@ -356,12 +346,12 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
                     </div>
                     <div style={{ fontSize: 11, marginTop: 5 }}>
                       {m.motivo === 'nombre'
-                        ? <span style={{ color: '#16a34a' }}>✅ Clasificado por nombre de aseguradora</span>
-                        : <span style={{ color: '#ea580c' }}>⚠️ Clasificado por descarte ({m.banco}) — revisa que sea de seguros</span>}
-                      {m.confirmado && <span style={{ color: '#16a34a', marginLeft: 8 }}>· ✓ Confirmado</span>}
+                        ? <span style={{ color: 'var(--positive)' }}>✅ Clasificado por nombre de aseguradora</span>
+                        : <span style={{ color: 'var(--warning)' }}>⚠️ Clasificado por descarte ({m.banco}) — revisa que sea de seguros</span>}
+                      {m.confirmado && <span style={{ color: 'var(--positive)', marginLeft: 8 }}>· ✓ Confirmado</span>}
                     </div>
                     <div style={{ fontSize: 11, marginTop: 3, color: 'var(--muted)' }}>
-                      Compañía: <strong style={{ color: m.compania === COMPANIA_OTRAS ? '#ea580c' : 'var(--text)' }}>{companiaLabel(m.compania)}</strong>
+                      Compañía: <strong style={{ color: m.compania === COMPANIA_OTRAS ? 'var(--warning)' : 'var(--text)' }}>{companiaLabel(m.compania)}</strong>
                       {m.companiaManual && <span style={{ marginLeft: 6 }}>✍️ asignada</span>}
                     </div>
                   </div>
@@ -382,7 +372,7 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
                       <input value={otra} onChange={e => setOtra(e.target.value)} placeholder="Otra compañía…"
                         style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, flex: '1 1 160px', minWidth: 0 }} />
                       <button disabled={busy === m.id || !otra.trim()} onClick={() => confirmar(m.id, otra.trim())}
-                        style={{ padding: '5px 10px', border: '1px solid #16a34a', borderRadius: 8, background: otra.trim() ? '#16a34a' : 'var(--surface)', color: otra.trim() ? '#fff' : 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: otra.trim() ? 'pointer' : 'default' }}>
+                        style={{ padding: '5px 10px', border: '1px solid var(--positive)', borderRadius: 8, background: otra.trim() ? 'var(--positive)' : 'var(--surface)', color: otra.trim() ? '#fff' : 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: otra.trim() ? 'pointer' : 'default' }}>
                         Usar
                       </button>
                       <button disabled={busy === m.id} onClick={() => confirmar(m.id, null)}
@@ -396,7 +386,7 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
                 <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                   {!m.confirmado ? (
                     <button disabled={busy === m.id} onClick={() => { setPicker(m.id); setOtra('') }}
-                      style={{ padding: '6px 12px', border: '1px solid #16a34a', borderRadius: 8, background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      style={{ padding: '6px 12px', border: '1px solid var(--positive)', borderRadius: 8, background: 'var(--positive)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                       ✓ Es de seguros · elegir compañía
                     </button>
                   ) : (

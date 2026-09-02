@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { Pagina } from '@/components/ui'
 
 type Metrica = { label: string; valor: string }
 type Cliente = { vertical: 'ialimp' | 'sivra' | 'iarest' | 'rrhh'; id: string; nombre: string; email?: string | null; activo: boolean; puedeBloquear: boolean; metricas: Metrica[] }
@@ -96,15 +97,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
   const activos = clientes.filter(c => c.activo && c.id !== 'iarest-info').length
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .clientes-kpis { grid-template-columns: 1fr 1fr !important; }
-          .clientes-card { flex-direction: column !important; align-items: flex-start !important; }
-          .clientes-card-actions { width: 100%; justify-content: flex-start !important; flex-wrap: wrap !important; }
-          .clientes-modal { width: calc(100% - 32px) !important; max-width: unset !important; }
-        }
-      `}</style>
+    <Pagina ancho="lectura">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
         <div>
@@ -133,7 +126,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
         ))}
       </div>
 
-      {error && <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px' }}>{error}</div>}
+      {error && <div style={{ background: 'var(--negative-bg)', color: 'var(--negative)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px' }}>{error}</div>}
       {loading && <div style={{ color: 'var(--muted)', fontSize: '14px' }}>Cargando clientes…</div>}
 
       {verticales.map(v => {
@@ -166,8 +159,8 @@ export default function ClientesClient({ operador }: { operador: string }) {
                     {c.id !== 'iarest-info' && (
                       <span style={{
                         fontSize: '11px', fontWeight: 700, borderRadius: '6px', padding: '3px 10px',
-                        background: c.activo ? '#dcfce7' : '#fef2f2',
-                        color: c.activo ? '#16a34a' : '#dc2626',
+                        background: c.activo ? 'var(--positive-bg)' : 'var(--negative-bg)',
+                        color: c.activo ? 'var(--positive)' : 'var(--negative)',
                       }}>
                         {c.activo ? '● Activo' : '● Bloqueado'}
                       </span>
@@ -184,8 +177,8 @@ export default function ClientesClient({ operador }: { operador: string }) {
                         onClick={() => toggle(c)}
                         disabled={busy === c.vertical + c.id}
                         style={{
-                          background: c.activo ? '#fef2f2' : '#dcfce7',
-                          color: c.activo ? '#dc2626' : '#16a34a',
+                          background: c.activo ? 'var(--negative-bg)' : 'var(--positive-bg)',
+                          color: c.activo ? 'var(--negative)' : 'var(--positive)',
                           border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
                         }}
                       >
@@ -240,8 +233,8 @@ export default function ClientesClient({ operador }: { operador: string }) {
         <div onClick={() => setShowNuevo(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 50 }}>
           <form onClick={e => e.stopPropagation()} onSubmit={crear} className="clientes-modal" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
             <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>➕ Nuevo cliente</div>
-            {nuevoErr && <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px' }}>{nuevoErr}</div>}
-            {nuevoOk && <div style={{ background: '#dcfce7', color: '#16a34a', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px' }}>{nuevoOk}</div>}
+            {nuevoErr && <div style={{ background: 'var(--negative-bg)', color: 'var(--negative)', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px' }}>{nuevoErr}</div>}
+            {nuevoOk && <div style={{ background: 'var(--positive-bg)', color: 'var(--positive)', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px' }}>{nuevoOk}</div>}
             <Field label="Vertical">
               <select value={nuevo.vertical} onChange={e => setNuevo(n => ({ ...n, vertical: e.target.value }))} style={inp}>
                 <option value="ialimp">Limpieza · ialimp</option>
@@ -276,7 +269,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
           </form>
         </div>
       )}
-    </main>
+    </Pagina>
   )
 }
 

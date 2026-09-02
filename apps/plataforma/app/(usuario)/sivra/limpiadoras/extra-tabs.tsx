@@ -1,26 +1,11 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { eur } from '@/lib/dinero'
-// Responsive CSS injected once (prefix: extra-)
-const EXTRA_STYLES = `
-  @media (max-width: 768px) {
-    .extra-grid-2 { grid-template-columns: 1fr !important; }
-    .extra-grid-3 { grid-template-columns: 1fr !important; }
-    .extra-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
-    .extra-btn-row { flex-wrap: wrap !important; }
-    .extra-card { width: 100% !important; min-width: unset !important; }
-    .extra-informe-grid { grid-template-columns: 1fr !important; }
-  }
-  @media (max-width: 480px) {
-    .extra-hide-xs { display: none !important; }
-  }
-`
-
 const PROPS = [
-  { id: 'prop_house_sevillana', name: 'House Sevillana', color: '#16a34a', short: 'HS' },
-  { id: 'prop_duplex_center',   name: 'Dúplex Center',   color: '#2563eb', short: 'DC' },
+  { id: 'prop_house_sevillana', name: 'House Sevillana', color: 'var(--positive)', short: 'HS' },
+  { id: 'prop_duplex_center',   name: 'Dúplex Center',   color: 'var(--info)', short: 'DC' },
   { id: 'prop_luxury_busto',    name: 'Luxury Busto',    color: '#9333ea', short: 'LB' },
-  { id: 'prop_busto_reform',    name: 'Busto Reform',    color: '#ea580c', short: 'BR' },
+  { id: 'prop_busto_reform',    name: 'Busto Reform',    color: 'var(--warning)', short: 'BR' },
 ]
 const FREQ_OPTS = [
   { value:'per_change', label:'Cada cambio' },
@@ -117,7 +102,6 @@ export function TabChecklists() {
 
   return (
     <div>
-      <style>{EXTRA_STYLES}</style>
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
         {PROPS.map(p=>(
           <button key={p.id} onClick={()=>setSelProp(p.id)}
@@ -178,9 +162,9 @@ export function TabChecklists() {
                   <div style={{fontWeight:600,fontSize:14,marginBottom:4,color:'var(--text)'}}>{item.description}</div>
                   <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
                     <Badge label={FREQ_OPTS.find(f=>f.value===item.frequency)?.label||item.frequency} color="var(--text)" bg="var(--border)"/>
-                    {item.requires_photo&&<Badge label="📷 Foto" color="#1d4ed8" bg="#eff6ff"/>}
-                    {item.es_critico&&<Badge label="🔴 Crítico" color="#dc2626" bg="#fee2e2"/>}
-                    {item.foto_referencia_url&&<Badge label="🖼️ Ref" color="#16a34a" bg="#dcfce7"/>}
+                    {item.requires_photo&&<Badge label="📷 Foto" color="var(--info)" bg="var(--info-bg)"/>}
+                    {item.es_critico&&<Badge label="🔴 Crítico" color="var(--negative)" bg="var(--negative-bg)"/>}
+                    {item.foto_referencia_url&&<Badge label="🖼️ Ref" color="var(--positive)" bg="var(--positive-bg)"/>}
                   </div>
                 </div>
                 <div style={{display:'flex',gap:6,alignItems:'center'}}>
@@ -194,7 +178,7 @@ export function TabChecklists() {
                   <button onClick={()=>{setEditId(item.id);setEditData({...item})}}
                     style={{background:'none',border:'1px solid var(--border)',borderRadius:7,padding:'4px 8px',fontSize:11,cursor:'pointer'}}>✏️</button>
                   <button onClick={()=>deleteItem(item.id)}
-                    style={{background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:16,padding:'0 4px'}}>×</button>
+                    style={{background:'none',border:'none',color:'var(--negative)',cursor:'pointer',fontSize:16,padding:'0 4px'}}>×</button>
                 </div>
               </div>
             )}
@@ -360,8 +344,8 @@ export function TabFacturacion() {
   if (loading && facturas.length === 0) return <Spinner/>
   const ESTADOS: Record<string,{bg:string;col:string;label:string}> = {
     borrador:{bg:'var(--border)',col:'var(--muted)',label:'Borrador'},
-    enviada:{bg:'#dbeafe',col:'#1d4ed8',label:'Enviada'},
-    pagada:{bg:'#dcfce7',col:'#16a34a',label:'✓ Pagada'},
+    enviada:{bg:'var(--info-bg)',col:'var(--info)',label:'Enviada'},
+    pagada:{bg:'var(--positive-bg)',col:'var(--positive)',label:'✓ Pagada'},
   }
 
   return (
@@ -414,7 +398,7 @@ export function TabFacturacion() {
 
       {view==='facturas'&&(
         <div>
-          <div style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:12,padding:16,marginBottom:16}}>
+          <div style={{background:'var(--positive-bg)',border:'1px solid #86efac',borderRadius:12,padding:16,marginBottom:16}}>
             <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:'#1B4332'}}>📄 Generar nueva factura</div>
             <div className="extra-grid-3" style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:10}}>
               <select value={gen.limpiadora_id} onChange={e=>setGen(p=>({...p,limpiadora_id:e.target.value}))}
@@ -455,11 +439,11 @@ export function TabFacturacion() {
                     🖨️ Informe PDF
                   </button>
                   {f.estado==='borrador'&&<button onClick={()=>updateEstado(f.id,'enviada')}
-                    style={{border:'1px solid #bfdbfe',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',background:'#eff6ff',color:'#1d4ed8',fontWeight:600}}>
+                    style={{border:'1px solid #bfdbfe',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',background:'var(--info-bg)',color:'var(--info)',fontWeight:600}}>
                     📤 Marcar enviada
                   </button>}
                   {f.estado==='enviada'&&<button onClick={()=>updateEstado(f.id,'pagada')}
-                    style={{border:'1px solid #86efac',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',background:'#dcfce7',color:'#16a34a',fontWeight:600}}>
+                    style={{border:'1px solid #86efac',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',background:'var(--positive-bg)',color:'var(--positive)',fontWeight:600}}>
                     ✓ Marcar pagada
                   </button>}
                 </div>

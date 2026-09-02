@@ -80,7 +80,7 @@ export default function DomoticaClient() {
 
       {error && (
         <div style={{
-          borderRadius: 8, border: '1px solid var(--border)', borderLeft: '3px solid #ef4444',
+          borderRadius: 8, border: '1px solid var(--border)', borderLeft: '3px solid var(--negative)',
           background: 'var(--surface)', color: 'var(--text)', padding: 12, fontSize: 13,
         }}>{error}</div>
       )}

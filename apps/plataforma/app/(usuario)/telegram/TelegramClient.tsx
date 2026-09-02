@@ -122,7 +122,7 @@ export default function TelegramClient() {
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>tipos de aviso</div>
         </div>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: silenciados ? 'var(--warning, #b45309)' : 'var(--text)' }}>{silenciados}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: silenciados ? 'var(--warning)' : 'var(--text)' }}>{silenciados}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>silenciados</div>
         </div>
         <div>
@@ -130,14 +130,14 @@ export default function TelegramClient() {
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>recibidos ({datos.dias} días)</div>
         </div>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: ahorrados ? 'var(--positive, #15803d)' : 'var(--text)' }}>{ahorrados ?? '—'}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: ahorrados ? 'var(--positive)' : 'var(--text)' }}>{ahorrados ?? '—'}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>no enviados por ti</div>
         </div>
       </div>
 
       {/* Qué se sabe y qué no. Un 0 sin registro NO es «no llega ninguno». */}
       {!datos.preferenciasDisponibles && (
-        <div style={{ ...card, borderColor: 'var(--negative, #b91c1c)', fontSize: 13 }}>
+        <div style={{ ...card, borderColor: 'var(--negative)', fontSize: 13 }}>
           ⚠️ No se pueden leer las preferencias (¿falta aplicar la migración
           {' '}<code>2026-09-01_telegram_avisos.sql</code>?). Mientras tanto <b>todos los avisos siguen
           llegando</b> — los interruptores no guardarán nada.
@@ -160,7 +160,7 @@ export default function TelegramClient() {
         </div>
       )}
 
-      {error && <div style={{ ...card, borderColor: 'var(--negative, #b91c1c)', fontSize: 13 }}>⚠️ {error}</div>}
+      {error && <div style={{ ...card, borderColor: 'var(--negative)', fontSize: 13 }}>⚠️ {error}</div>}
 
       {datos.categorias.map(cat => {
         const items = datos.avisos.filter(a => a.categoria === cat.id)
