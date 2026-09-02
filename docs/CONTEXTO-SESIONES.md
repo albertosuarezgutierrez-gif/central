@@ -41,7 +41,8 @@
   **empieza a entrar por CIMA** → el dato declarado pasa a verificado solo, y su firma **ya existe**
   (`@central/core-firma`, eIDAS art. 26, método `otp_email` = como entra el portal; molde `apps/rrhh`).
   Todas las ideas guardadas en **`docs/CORREDURIA-INTRANET-IDEAS.md`** con coste y bloqueo de cada una.
-  Spec + banco de ideas en PR draft **#2144**.
+  Spec + banco de ideas + **plan de implementación**
+  (`docs/superpowers/plans/2026-09-02-asegura-portal-calendario-v1.md`, 9 tareas TDD) en PR draft **#2144**.
 
 - **🏠🏍️ «Haz todo» + el catálogo de Avant2 (02/09/2026, noche).** Mergeado #2130 (horquilla enchufada
   + capital de hogar por corroboración). Alberto pasó el catálogo de Integra: cruzado con las 109 vivas
