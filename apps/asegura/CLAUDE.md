@@ -93,7 +93,15 @@ entender la arquitectura.
 también las canceladas y `import_ref IS NULL` no las distingue —: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las
 otras 28.729 son volcado histórico cargado en jun/2026 (`intranet:` 26.117 con vencimientos
 2013-2018 y `asegura_app:` 2.612) y **ninguna** vence en los últimos 18 meses. Regla de Alberto:
-**CIMA = cliente actual; el resto = lead** (32.520). Consecuencia para el código: **las pólizas con
+**CIMA = cliente actual; el resto = lead** (32.520).
+
+📊 **Y qué ramos son esas 109, medido el 02/09/2026** (`polizas.tipo`, `import_ref IS NULL`):
+**80 auto · 19 hogar · 9 responsabilidad civil · 1 moto**. O sea, la correduría hoy es *auto* con
+una cola de hogar y RC — que es exactamente el orden en que conviene tener listos los ramos para
+tarificar. Cuenta los ramos con esta consulta antes de citar la cifra: la moto se cuela fuera de
+los «tres ramos» de los que se habla en las reuniones.
+
+Consecuencia para el código: **las pólizas con
 `import_ref` NO generan recordatorios** — serían 28.729 avisos de «se te venció» sobre pólizas de
 hace ocho años. Diseño completo en
 `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
@@ -339,10 +347,18 @@ Alberto quiere estrenar esto: **primero a mano, sobre clientes de verdad**, y au
 - **Lo que la ficha SÍ da y ahorra teclear:** la póliza actual pasa a ser la «anterior» de la
   cotización — número, **código DGS de la compañía** y antigüedad salen de ella, que es de donde
   viene el bonus.
-- **El vehículo hay que elegirlo**, y no es un fallo: medido el 01/09/2026, las **80 pólizas de auto
-  vivas (CIMA) traen matrícula y NADA más** — ni marca, ni modelo, ni año. Se elige del catálogo de
-  Codeoscopic (marca→modelo→versión), que es **gratis**; buscar por matrícula es lo que cuesta
-  créditos. La fecha de matriculación sí sale sola de la matrícula, gratis, y es **aproximada**.
+- **El vehículo hay que elegirlo**, y no es un fallo. ⚠️ **Corregido el 02/09/2026:** aquí ponía que
+  las 80 pólizas de auto vivas «traen matrícula y NADA más — ni marca, ni modelo, ni año», y es
+  **falso en la mitad**. Medido sobre `seguros.polizas` (`import_ref IS NULL`): las **80/80 traen
+  matrícula, marca Y modelo** (`FORD / TOURNEO COURIER`, `CITROEN / XSARA PICASSO`…). Lo que NO trae
+  **ninguna** es **versión ni año** (0 de 80), y la versión es justo lo que pide el tarificador. Así
+  que la conclusión operativa no cambia —hay que bajar al catálogo de Codeoscopic
+  (marca→modelo→versión), que es **gratis**, mientras que buscar por matrícula cuesta créditos—
+  pero **se entra ya en el tercer escalón**, no en el primero: marca y modelo se traen de la ficha
+  y solo se pregunta la versión. La fecha de matriculación sí sale sola de la matrícula, gratis, y
+  es **aproximada**.
+  La lección de método es la de siempre en este repo: antes de escribir «no lo trae», mirar la
+  columna. Aquí «no lo he sabido leer» viajó 24 horas disfrazado de dato medido.
 - **Centinelas del CRM:** 20.860 fichas se llaman literalmente «Lead». `desde-cartera.ts` los trata
   como ausencia — mandar «Lead» como nombre de pila sería basura con forma de dato.
 - **El sexo sale del campo `saludo`** (`'1'` = hombre, `'2'` = mujer; validado contra los nombres de
