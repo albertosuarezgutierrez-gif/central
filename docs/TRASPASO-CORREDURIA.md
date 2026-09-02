@@ -1,5 +1,157 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
+> ## ✅ TRASPASO CERRADO (02/09/2026, 06:36 UTC) — el CRM corre sobre NUESTRA base
+>
+> **Medido, no supuesto:** tras poner en el proyecto Vercel `asegura` un `DATABASE_URL` contra la BD
+> `central` con el rol **`crm_seguros`** (creado ese día: LOGIN, BYPASSRLS, DML sobre `seguros`,
+> `search_path = seguros`, sin ver `public`), `/api/health` pasó a `db: ok` y el `cima-pull` en
+> `dry_run` (run #187) dejó `cima_pull_started`/`cima_pull_completed` en **`seguros.operational_events`
+> de central** con `queueDepth: 128` (los 128 ficheros del ledger copiado). Código, Vercel, Actions y
+> datos: todo en la cuenta de Alberto. El cron sigue a las 05:30 y 11:30 UTC y escribe aquí.
+>
+> Lo que costó la mañana, para no repetirlo: (1) `DATABASE_URL` de `central-asegura` es **Sensitive**
+> en Vercel y no se puede copiar → rol propio en vez de rotar `prisma_seguros`; (2) el bloqueo real de
+> 40 minutos fue **pegar la plantilla con el hueco `TU_CONTRASEÑA_AQUI` sin sustituir**; el driver lo
+> decía en los logs de Vercel (`password authentication failed for user "crm_seguros"`), el `/api/health`
+> lo tapa con un `Failed query: SELECT 1` genérico. Siempre mirar `get_runtime_errors`, no el health.
+> La contraseña de `crm_seguros` pasó por el chat (captura de pantalla). **Alberto decidió el 02/09/2026
+> que NO se rota** («el punto 2 no se hace»): queda anotado y no se toca sin que lo pida.
+>
+> ## 🔐 AUTH TAMBIÉN EN CASA (02/09/2026, ~09:00 UTC) — copiada, pero NO se va a usar
+>
+> 🛑 **Decisión de Alberto, minutos después de copiarla:** «yo eso no lo quiero… no es necesario el
+> acceso, eso ya desarrollaremos». La web del CRM de Manuel no es una pantalla que Alberto vaya a abrir:
+> las pantallas de la correduría se hacen en `plataforma` → `/correduria`. Por tanto **los pasos 1-5 de
+> abajo NO se ejecutan** (login, Google, TOTP, SMTP del CRM). El CRM sigue desplegado únicamente como
+> **motor de ingesta de CIMA** (cron → `app.grupoasegura.com` → Fly → TIREA), que escribe en `seguros`
+> de central con `crm_seguros` sin necesitar login. Dependencia que queda viva por eso: el adaptador
+> de Fly en la cuenta de Manuel; se sustituye el día que haya ingesta propia. La copia de `auth.*`
+> queda en central como respaldo, sin uso.
+>
+> ## 🚚 INGESTA DE CIMA EN CASA (decidido 02/09/2026, «hacemos todo como dices») — dos pasos
+>
+> **Objetivo:** que las pólizas de CIMA sigan entrando sin depender del CRM de Manuel ni de su Fly.
+> El adaptador Java (SOAP WSE con el JAR oficial de TIREA) **no se reescribe**: es la pieza que
+> funciona y la que TIREA homologa. Se mueve de dueño y se porta la lógica TS que ya es nuestra.
+>
+> 1. **Adaptador Fly → cuenta de Alberto.** Alberto no tiene cuenta en Fly (paso A1 del guion):
+>    crear cuenta + organización, invitar a Manuel, y Manuel mueve `asegura-app-cima-adapter` a esa
+>    org. Los secrets (credenciales TIREA de PRODUCCIÓN, de Alberto) viajan con la app; el nombre
+>    `asegura-app-cima-adapter.fly.dev` no cambia. Pedirle también el **repo del adaptador**
+>    (transferir o fork), para poder redesplegar el día que haga falta.
+> 2. **`cima-pull` + parsers EIAC → `apps/asegura`** como cron propio que escribe en `seguros` de
+>    central. Es mover código del repo `asegura` (ya de Alberto) al monorepo, no inventarlo.
+>    Inventario del grafo a portar en curso (02/09). Cuando esté en verde con un pull real, se apaga
+>    el CRM de Vercel y su workflow de Actions.
+>
+> ⏸️ **APARCADO por Alberto (02/09/2026, minutos después): «fly es barato y ya está hecho, hay otras
+> prioridades».** Se queda el statu quo, que funciona: cron de Actions → CRM en Vercel (sin login,
+> solo motor) → adaptador en Fly → TIREA → `seguros` de central. **Lo único que queda es el paso 1
+> (transferir la app de Fly a una cuenta de Alberto), sin prisa** — el borrador v8 de abajo sirve tal
+> cual cuando Manuel tenga cinco minutos. El paso 2 (port de `cima-pull`) NO se hace ahora; el
+> inventario está en **`docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`** (8.817 líneas portables, 26 tests,
+> contrato del adaptador, repo privado de Manuel del Java) para cuando toque. Vigilancia mientras tanto: el bloque
+> «Salud de la correduría» de la auditoría diaria mira `seguros.operational_events`
+> (`cima_pull_started/completed`); si un día no hay latido, es el cron o Fly.
+>
+> ### 📝 Mensaje a Manuel — v8 (02/09/2026) — BORRADOR, **no se envía sin OK de Alberto**
+>
+> > Manuel, dos cosas del adaptador de CIMA y con eso cerramos lo que queda:
+> >
+> > **1. Fly.** Me he hecho cuenta y organización en Fly.io (`<nombre-org>`). Te he invitado con tu
+> > email; cuando la aceptes, mueve `asegura-app-cima-adapter` a mi org desde tu panel (Settings →
+> > Transfer). Con eso los secrets de TIREA viajan con la app y el nombre no cambia, así que el cron
+> > sigue funcionando igual. Antes de moverla, apunta los valores de los secrets en tu gestor de
+> > contraseñas por si el traslado los perdiera; `fly secrets list` solo enseña nombres.
+> >
+> > **2. El repo del adaptador.** Pásame el repositorio del adaptador Java (transfiérelo a mi GitHub
+> > o hazme un fork) para poder redesplegarlo yo si algún día hace falta. Sin prisa ninguna.
+> >
+> > Lo demás ya está: la base, el repo del CRM y Vercel están en mi cuenta y funcionando. Gracias
+> > por todo, de verdad.
+>
+> ⚠️ Antes de mandarlo, Alberto crea la cuenta/org en Fly y sustituye `<nombre-org>`.
+>
+> **Copiado por dblink al `auth.*` de central, con los MISMOS UUID:** 9 `auth.users` (Alberto y Manuel
+> con su hash bcrypt y su TOTP verificado; 7 de pruebas), 11 `auth.identities` (email + google de los dos
+> admins) y 2 `auth.mfa_factors`. 9/9 enlazados con `seguros.usuarios.auth_user_id`, así que las 86
+> políticas RLS del CRM y cualquier `usuario_id` de la cartera siguen apuntando a la persona correcta. El
+> trigger `on_auth_user_created` → `seguros.handle_new_user()` está creado en central (portado de
+> `public.handle_new_user`). Referencia: `apps/asegura/prisma/sql/2026-09-02_seguros_auth_traspaso.sql`.
+> El rol temporal de lectura en el proyecto de Manuel se borró el mismo día.
+>
+> **Inventario medido del CRM:** su dependencia de Supabase es SOLO Auth (`signInWithPassword`, OTP del
+> portal, MFA TOTP, `auth.admin.createUser/generateLink/deleteUser/listUsers`). Ni storage, ni realtime,
+> ni RPC. El único `.from()` por PostgREST (`record-evidence.ts`, `mediator_audit_log`) **no tiene
+> llamadores** en producción — el flujo Auto-Submit ya lo hace por Drizzle en la misma transacción.
+> No hay código que cambiar en el repo `asegura`.
+>
+> **Lo que SOLO puede hacer Alberto (dashboards), y hasta entonces el login sigue contra el proyecto de
+> Manuel, que funciona:**
+> 1. Supabase **central** (`wswbehlcuxqxyinousql`) → Authentication → URL Configuration: Site URL
+>    `https://app.grupoasegura.com`; Redirect URLs `https://app.grupoasegura.com/auth/callback` y
+>    `https://app.grupoasegura.com/**`.
+> 2. Authentication → Providers → Google: el mismo Client ID/Secret que usa el proyecto de Manuel
+>    (runbook `docs/runbooks/google-oauth-setup.md` del repo `asegura`), y en Google Cloud Console
+>    añadir `https://wswbehlcuxqxyinousql.supabase.co/auth/v1/callback` a los redirect URIs. Sin esto
+>    el botón «Google» falla; el login con contraseña + TOTP no lo necesita.
+> 3. Authentication → Multi-factor: TOTP activado (los factores copiados son TOTP).
+> 4. Vercel → proyecto `asegura` → Environment Variables (Production): `NEXT_PUBLIC_SUPABASE_URL` =
+>    `https://wswbehlcuxqxyinousql.supabase.co`; `NEXT_PUBLIC_SUPABASE_ANON_KEY` = la anon key legacy
+>    de central (Settings → API); `SUPABASE_SERVICE_ROLE_KEY` = la service_role de central (mismo
+>    sitio, es secreta: no pasa por chats). Redeploy.
+> 5. Comprobar: entrar en `app.grupoasegura.com` con contraseña + código de la app de autenticación.
+>    Las sesiones abiertas caducan (las firmó el otro proyecto): hay que volver a entrar una vez.
+>
+> ⚠️ Emails de Auth (OTP del portal, recuperación): el SMTP por defecto de Supabase solo entrega a los
+> miembros del equipo y con límite por hora. Para el portal de clientes hará falta SMTP propio
+> (Resend) en central, como tuviera Manuel. No bloquea el login del corredor.
+>
+> ## 🎯 CIERRE DEL TRASPASO (02/09/2026) — qué quedaba y quién lo hizo (histórico de la mañana)
+>
+> **Medido, no supuesto, el 02/09/2026.** Este documento iba por detrás de la realidad: el repo
+> `asegura` (el CRM de Manuel: ingestor CIMA, claves PII, Drizzle) **ya está en la cuenta de Alberto**
+> y **su proyecto de Vercel (`asegura`, `app.grupoasegura.com`) ya está en el equipo de Alberto** —
+> los despliegues desde el 31/08 06:11 UTC los firma su cuenta. Los secrets de Actions (`CRON_SECRET`,
+> Slack) viajaron: el cron se dispara y llega al endpoint. Y la BD está copiada en `seguros`.
+>
+> 🚨 **Pero el CRM está CAÍDO desde el 31/08 06:15 UTC.** Logs de Vercel: `password authentication
+> failed for user "postgres"` en toda consulta (386 fallos en `/api/health`, y el `cima-pull` devuelve
+> 500 desde entonces: 3 corridas fallidas). El `DATABASE_URL` del proyecto apunta al Supabase de
+> Manuel con una contraseña que ya no vale. Nadie lo vio: el aviso Slack del cron no está configurado.
+> Efecto colateral bueno: **el origen lleva congelado desde ese momento**, así que la copia del 02/09
+> está completa y no hay nada que re-sincronizar.
+>
+> **Lo que ya está hecho por dentro (02/09):** funciones y 26 triggers del CRM portados a `seguros`;
+> `prisma_seguros` con `search_path = seguros` (el CRM nombra las tablas sin esquema → resuelve en la
+> copia sin tocar su código) y EXECUTE sobre las funciones; `apps/asegura` (y por su puerto
+> `plataforma` → `/correduria`) lee ya de la copia por defecto (`urlFuenteCartera`).
+>
+> **Lo que SOLO puede hacer Alberto (el conector de Vercel no edita variables) — 4 pasos, ~10 min:**
+>
+> 1. Vercel → proyecto **`asegura`** → Settings → Environment Variables → **`DATABASE_URL`**
+>    (Production): sustituir por el valor de **`DATABASE_URL` del proyecto `central-asegura`**
+>    (rol `prisma_seguros`, pooler `aws-0-eu-west-1…:6543`). Ningún secreto nuevo: se reutiliza el que ya
+>    existe. Guardar también una copia del valor viejo por si hubiera que volver.
+> 2. Deployments → **Redeploy** del último de producción (`49a3d9d0`).
+> 3. Comprobar: `https://app.grupoasegura.com/api/health` debe decir `db: ok`; entrar con tu cuenta
+>    (la auth sigue en el Supabase de Manuel —ver «lo que queda»— y funciona igual); abrir un cliente.
+> 4. GitHub → repo `asegura` → Actions → `cima-pull` → **Run workflow con `dry_run = true`** → debe
+>    devolver `ok: true`. Luego sin dry_run: los ficheros que TIREA guardó estos días entran solos
+>    (el ingestor deduplica por hash).
+>
+> **Lo que queda después, por orden, y no es urgente:**
+> - **Auth**: `NEXT_PUBLIC_SUPABASE_URL` / `ANON_KEY` / `SERVICE_ROLE_KEY` siguen apuntando al proyecto
+>   de Manuel (9 usuarios en `auth.users`, 2 reales). Migrarlos a central exige recrearlos en nuestro
+>   Supabase Auth y tocar `usuarios.auth_user_id`; hasta entonces el login depende de su proyecto.
+> - `src/lib/mediator-audit/record-evidence.ts` escribe `mediator_audit_log` **por PostgREST** (única
+>   escritura fuera de Drizzle) → iría al proyecto de Manuel. Cambiarla a Drizzle en el repo `asegura`.
+> - El trigger `handle_new_user` (sobre `auth.users`) se queda en el proyecto de Manuel: un alta nueva
+>   de usuario no crea fila en `seguros.usuarios` hasta migrar la auth.
+> - **NO arreglar la contraseña del origen.** Congelado es la copia de seguridad del traspaso.
+> - Manuel: transferir la app de Fly (adaptador TIREA) y cancelar su Pro. Sin prisa: el adaptador
+>   responde igual desde su org.
+>
 > **✅ 02/09/2026 — FASE 2 (copia de la BD) HECHA.** Las 52 tablas / 86.628 filas del `public` de
 > Manuel están en el schema `seguros` de central, con las 131 FKs y verificación por recuento y
 > checksum. Cómo se salvó el bloqueo del 01/09: `pg_dump` local no valía (16 vs 17) y el secreto del

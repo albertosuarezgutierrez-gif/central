@@ -616,3 +616,12 @@ html[data-saldo-oculto='1'] .saldo-privado {
 @media (max-width: 480px) {
   .extra-hide-xs { display: none !important; }
 }
+
+/* === Migas de pan de cabecera ===
+   Una línea monoespaciada y pequeña sobre el título: dice DÓNDE estás sin gastar el tamaño del
+   titular, que en el Inicio lo ocupa el saldo. Mono y no sans a propósito — es metadato de
+   navegación, no contenido, y la diferencia de familia lo separa de un vistazo. */
+.migas {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px; letter-spacing: .03em; color: var(--muted); margin-bottom: 3px;
+}
