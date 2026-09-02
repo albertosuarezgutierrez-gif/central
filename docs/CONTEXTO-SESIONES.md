@@ -37,7 +37,9 @@
   Ahora la clave es el NIF: asegura emite una etiqueta OPACA (`p1`, `p2`…) —el NIF no sale del backend—
   y dos NIF distintos no se funden jamás. Medido: GLOBAL 2 tiene **tres** NIF distintos, uno por
   furgoneta; en toda la cartera hoy 0 personas se partían (409 de 504 filas no traen NIF y siguen
-  cayendo al nombre). 5 cepos nuevos, tres mordidos. PR #2145.
+  cayendo al nombre). 5 cepos nuevos, tres mordidos. **Queda como regla global** en el CLAUDE.md de
+  la raíz («agrupar por IDENTIDAD, nunca por la etiqueta») y como reglas 12-13 de la skill
+  `correduria-crm` (con la del tomador, que tampoco es un interviniente). PR #2145.
 
 - **👤 «Personas en sus pólizas», arriba en la ficha (02/09/2026, noche).** Alberto: «en empresas y
   particulares se puede poner arriba las personas de contacto o relaciones». La tarjeta «Relaciones»

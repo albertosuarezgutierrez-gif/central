@@ -52,5 +52,14 @@ completa en el documento (§4) y orden en §9.
 11. **El portal lee la cartera por COLUMNAS con `prisma_asegura_portal` (sin BYPASSRLS)**: su schema
     Prisma declara solo las columnas concedidas; declarar una más rompe en la BD. El vínculo
     identidad ↔ ficha nace del email por índice ciego y **con varias fichas no se adivina**.
-12. **Un lead web nunca fuerza un duplicado**: si el dato ya está en una ficha se anota el contacto
+12. **Quién es quién se decide por NIF, nunca por nombre.** Agrupar personas por el nombre falla en
+    las dos direcciones: parte a una en dos filas (enlazada a su ficha en una póliza y suelta en otra)
+    y, peor, funde a dos parientes homónimos con los teléfonos mezclados. Orden: NIF → ficha → nombre,
+    y dos NIF distintos NO se funden jamás. El NIF no cruza el puerto: asegura manda una etiqueta
+    opaca por respuesta (`p1`, `p2`…) que solo sirve para agrupar. Hoy 409 de 504 filas de
+    intervinientes no traen NIF (volcado) y caen al nombre, así que el aviso sigue vivo.
+13. **El TOMADOR no es un interviniente**: es el `cliente_id` de la póliza y no está en
+    `poliza_intervinientes`. Toda pantalla que liste «quién hay en la póliza» tiene que ponerlo ella,
+    o el titular desaparece (pasaba en las 4 pólizas vivas de GLOBAL 2).
+14. **Un lead web nunca fuerza un duplicado**: si el dato ya está en una ficha se anota el contacto
     ahí. Y el Telegram sale aunque el puerto esté caído: es el único rastro en ese caso.
