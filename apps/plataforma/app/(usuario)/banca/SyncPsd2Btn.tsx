@@ -43,7 +43,7 @@ export default function SyncPsd2Btn() {
         {estado === 'corriendo' ? '⏳ Sincronizando…' : '🔄 Sincronizar ahora'}
       </button>
       {detalle && (
-        <div style={{ marginTop: '4px', fontSize: '12px', color: estado === 'error' ? 'var(--negative, #b91c1c)' : 'var(--muted)' }}>
+        <div style={{ marginTop: '4px', fontSize: '12px', color: estado === 'error' ? 'var(--negative)' : 'var(--muted)' }}>
           {estado === 'error' ? '❌ ' : ''}{detalle}
         </div>
       )}

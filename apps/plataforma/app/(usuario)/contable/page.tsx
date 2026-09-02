@@ -164,7 +164,7 @@ export default function ContablePage() {
             }}>
               {m.texto}
               {m.guardados && m.guardados.length > 0 && (
-                <div style={{ marginTop: 8, fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--positive)', fontWeight: 600 }}>
                   {m.guardados.map(g => <div key={g.clave}>✓ Recordado ({g.clave}): “{g.insight}”</div>)}
                 </div>
               )}
@@ -179,7 +179,7 @@ export default function ContablePage() {
                           <button onClick={() => resolverAccion(i, a.id, 'descartar')} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 13, cursor: 'pointer' }}>Descartar</button>
                         </div>
                       ) : (
-                        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: a.estado === 'ejecutada' ? '#16a34a' : a.estado === 'descartada' ? 'var(--muted)' : '#dc2626' }}>
+                        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: a.estado === 'ejecutada' ? 'var(--positive)' : a.estado === 'descartada' ? 'var(--muted)' : 'var(--negative)' }}>
                           {a.estado === 'ejecutada' ? '✓ Hecho' : a.estado === 'descartada' ? 'Descartada' : `⚠️ ${a.mensaje || 'Error'}`}
                         </div>
                       )}

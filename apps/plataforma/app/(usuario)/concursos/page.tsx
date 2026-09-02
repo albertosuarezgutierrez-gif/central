@@ -5,7 +5,7 @@ import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinim
 import type { Biblioteca } from '@central/module-concursos';
 import { eur as fmtEur } from '@/lib/dinero';
 
-const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
+const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'var(--border)', muted:'var(--muted)' };
 const FONT = 'Nunito, system-ui, sans-serif';
 
 // Sincroniza "Seguir" (buscador) con el panel "Mis concursos" sin prop drilling.
@@ -16,9 +16,9 @@ const ESTADO_LABEL: Record<string,string> = { interesado:'⭐ Interesado', prepa
 
 const SOBRE_LABEL: Record<string,string> = { administrativo:'📋 Sobre administrativo', tecnico:'📐 Sobre técnico', economico:'💶 Sobre económico' };
 const SEMAFORO: Record<string,{bg:string;txt:string;label:string}> = {
-  verde: { bg:'#dcfce7', txt:'#166534', label:'🟢 Adelante' },
-  ambar: { bg:'#fef9c3', txt:'#854d0e', label:'🟡 Revisar' },
-  rojo:  { bg:'#fee2e2', txt:'#991b1b', label:'🔴 No apto' },
+  verde: { bg:'var(--positive-bg)', txt:'var(--positive)', label:'🟢 Adelante' },
+  ambar: { bg:'var(--warning-bg)', txt:'var(--warning)', label:'🟡 Revisar' },
+  rojo:  { bg:'var(--negative-bg)', txt:'var(--negative)', label:'🔴 No apto' },
 };
 
 const eur = (n:number|undefined) => n==null ? '—' : fmtEur(n);
@@ -103,7 +103,7 @@ export default function Concursos() {
             🤖 Analizar texto
           </button>
           {load && <span style={{ color:C.muted }}>Analizando el pliego…</span>}
-          {error && <span style={{ color:'#991b1b' }}>{error}</span>}
+          {error && <span style={{ color:'var(--negative)' }}>{error}</span>}
         </div>
       </div>
 
@@ -173,7 +173,7 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
   return (
     <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:16, maxWidth:760, width:'100%', boxSizing:'border-box' }}>
       {ocrAplicado && (
-        <div style={{ background:'#eff6ff', color:'#1e40af', borderRadius:8, padding:'6px 10px', fontSize:12, marginBottom:8 }}>
+        <div style={{ background:'var(--info-bg)', color:'var(--info)', borderRadius:8, padding:'6px 10px', fontSize:12, marginBottom:8 }}>
           📄 Documento escaneado — texto extraído con OCR (visión IA).
         </div>
       )}
@@ -249,7 +249,7 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
       {sobre && (
         <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
           {sobre.perfil_completo===false && (
-            <div style={{ background:'#fef9c3', color:'#854d0e', borderRadius:8, padding:'6px 10px', fontSize:13, marginBottom:8 }}>
+            <div style={{ background:'var(--warning-bg)', color:'var(--warning)', borderRadius:8, padding:'6px 10px', fontSize:13, marginBottom:8 }}>
               Completa el <a href="/concursos/perfil" style={{ color:C.indigo, fontWeight:800 }}>perfil de empresa</a> para rellenar el DEUC.
             </div>
           )}
@@ -300,8 +300,8 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
           <div style={{ fontSize:13, marginTop:6 }}>
             Margen: <strong>{fmtEur(evalOferta.margen_euros)} ({evalOferta.margen_pct}%)</strong> ·
             Puntos económicos: <strong>{evalOferta.puntos_economicos}</strong>
-            {evalOferta.temeraria && <span style={{ color:'#b91c1c', fontWeight:800 }}> · ⚠️ Baja temeraria (umbral {eur(evalOferta.umbral_temeraria ?? undefined)})</span>}
-            {' '}<span style={{ color: evalOferta.viable ? '#15803d' : '#b91c1c', fontWeight:800 }}>{evalOferta.viable ? '✅ Viable' : '❌ No viable'}</span>
+            {evalOferta.temeraria && <span style={{ color:'var(--negative)', fontWeight:800 }}> · ⚠️ Baja temeraria (umbral {eur(evalOferta.umbral_temeraria ?? undefined)})</span>}
+            {' '}<span style={{ color: evalOferta.viable ? 'var(--positive)' : 'var(--negative)', fontWeight:800 }}>{evalOferta.viable ? '✅ Viable' : '❌ No viable'}</span>
           </div>
         )}
         <button onClick={guardarOferta} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer' }}>Guardar oferta</button>
@@ -314,10 +314,10 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
           {estadoPres.dias_para_fin === null
             ? <span style={{ color:C.muted }}>Sin fecha de fin de plazo en la ficha.</span>
             : estadoPres.plazo_abierto
-              ? <span style={{ color: estadoPres.urgente ? '#b91c1c' : C.text, fontWeight:800 }}>
+              ? <span style={{ color: estadoPres.urgente ? 'var(--negative)' : C.text, fontWeight:800 }}>
                   {estadoPres.urgente ? '🔴 ' : '🗓️ '}Quedan {estadoPres.dias_para_fin} día{estadoPres.dias_para_fin===1?'':'s'} para presentar
                 </span>
-              : <span style={{ color:'#b91c1c', fontWeight:800 }}>⛔ Plazo de presentación cerrado</span>}
+              : <span style={{ color:'var(--negative)', fontWeight:800 }}>⛔ Plazo de presentación cerrado</span>}
         </div>
         <div style={{ display:'flex', gap:14, flexWrap:'wrap', margin:'8px 0', fontSize:13 }}>
           <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={sobresListos.administrativo} onChange={toggleSobre('administrativo')} /> Administrativo</label>
@@ -325,15 +325,15 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
           <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={sobresListos.economico} onChange={toggleSobre('economico')} /> Económico</label>
         </div>
         {estadoPres.listo
-          ? <div style={{ color:'#15803d', fontWeight:800, fontSize:13 }}>✅ Listo para presentar</div>
-          : <ul style={{ margin:'4px 0', paddingLeft:18, fontSize:13, color:'#b45309' }}>{estadoPres.pendientes.map((p:string,i:number)=>(<li key={i}>{p}</li>))}</ul>}
+          ? <div style={{ color:'var(--positive)', fontWeight:800, fontSize:13 }}>✅ Listo para presentar</div>
+          : <ul style={{ margin:'4px 0', paddingLeft:18, fontSize:13, color:'var(--warning)' }}>{estadoPres.pendientes.map((p:string,i:number)=>(<li key={i}>{p}</li>))}</ul>}
         <div style={{ fontSize:12, color:C.muted, marginTop:6 }}>
           Si te requieren subsanar hoy, el plazo (3 días hábiles, art. 141 LCSP) vencería el <strong>{subsanacion.fecha_limite}</strong>.
         </div>
       </div>
 
       {f.avisos?.length>0 && (
-        <div style={{ background:'#fef9c3', color:'#854d0e', borderRadius:10, padding:'8px 12px', fontSize:13 }}>
+        <div style={{ background:'var(--warning-bg)', color:'var(--warning)', borderRadius:10, padding:'8px 12px', fontSize:13 }}>
           <strong>Revisar:</strong> {f.avisos.join(' · ')}
         </div>
       )}
@@ -399,7 +399,7 @@ function RadarPanel() {
 
   return (
     <div style={{ border:`1px solid ${C.border}`, borderRadius:12, padding:14, marginBottom:14 }}>
-      <strong style={{ fontSize:15 }}>📡 Radar de oportunidades{noVistos>0 && <span style={{ marginLeft:8, background:'#b91c1c', color:'#fff', borderRadius:999, padding:'1px 8px', fontSize:12 }}>{noVistos} nuevas</span>}</strong>
+      <strong style={{ fontSize:15 }}>📡 Radar de oportunidades{noVistos>0 && <span style={{ marginLeft:8, background:'var(--negative)', color:'#fff', borderRadius:999, padding:'1px 8px', fontSize:12 }}>{noVistos} nuevas</span>}</strong>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'10px 0' }}>
         <input placeholder="CPV de interés (coma)" value={cpvStr} onChange={e=>setCrit({...crit, cpv:e.target.value})} style={{ minWidth:0 }} />
         <input placeholder="Palabras clave (coma)" value={kwStr} onChange={e=>setCrit({...crit, palabras_clave:e.target.value})} style={{ minWidth:0 }} />
@@ -616,9 +616,9 @@ function BuscadorPanel() {
             <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
               <strong style={{ fontSize:14 }}>{a.titulo}</strong>
               <div style={{ display:'flex', gap:6, alignItems:'center', whiteSpace:'nowrap' }}>
-                {enc==='verde' && <span title="Encaja con tu radar" style={{ fontSize:11, fontWeight:700, background:'#dcfce7', color:'#166534', borderRadius:999, padding:'2px 7px' }}>🟢 Encaja</span>}
-                {enc==='ambar' && <span title="Encaje parcial" style={{ fontSize:11, fontWeight:700, background:'#fef9c3', color:'#854d0e', borderRadius:999, padding:'2px 7px' }}>🟡 Posible</span>}
-                {d!==null && <span style={{ fontSize:12, color: d<=3?'#b91c1c':C.muted, fontWeight:700 }}>{d<0?'cerrado':`${d} d`}</span>}
+                {enc==='verde' && <span title="Encaja con tu radar" style={{ fontSize:11, fontWeight:700, background:'var(--positive-bg)', color:'var(--positive)', borderRadius:999, padding:'2px 7px' }}>🟢 Encaja</span>}
+                {enc==='ambar' && <span title="Encaje parcial" style={{ fontSize:11, fontWeight:700, background:'var(--warning-bg)', color:'var(--warning)', borderRadius:999, padding:'2px 7px' }}>🟡 Posible</span>}
+                {d!==null && <span style={{ fontSize:12, color: d<=3?'var(--negative)':C.muted, fontWeight:700 }}>{d<0?'cerrado':`${d} d`}</span>}
               </div>
             </div>
             <div style={{ fontSize:12, color:C.muted }}>{a.organo}{a.provincia?` · ${a.provincia}`:''}{a.presupuesto?` · ${fmtEur(Number(a.presupuesto))}`:''}</div>
@@ -629,7 +629,7 @@ function BuscadorPanel() {
               {!resumenes[a.id] && <button onClick={()=>pedirResumen(a)} disabled={cargandoResumen===a.id} style={{ fontSize:12, background:'transparent', color:C.indigo, border:0, padding:0, fontFamily:FONT, fontWeight:700, cursor:'pointer' }}>{cargandoResumen===a.id?'✨ resumiendo…':'✨ ¿Me conviene?'}</button>}
               <button onClick={()=>preparar(a)} title="Crea el expediente y ábrelo para preparar la oferta" style={{ fontSize:12, background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'3px 10px', fontFamily:FONT, fontWeight:700, cursor:'pointer' }}>📝 Preparar candidatura</button>
               {seguidas.has(a.dedupe_key)
-                ? <span style={{ fontSize:12, color:'#166534', fontWeight:700 }}>📌 Siguiendo</span>
+                ? <span style={{ fontSize:12, color:'var(--positive)', fontWeight:700 }}>📌 Siguiendo</span>
                 : <button onClick={()=>seguir(a)} style={{ fontSize:12, background:'transparent', color:C.indigo, border:`1px solid ${C.indigo}`, borderRadius:8, padding:'3px 10px', fontFamily:FONT, fontWeight:700, cursor:'pointer' }}>📌 Seguir</button>}
             </div>
           </div>
@@ -667,7 +667,7 @@ function MisConcursosPanel() {
           <div key={s.id} style={{ border:`1px solid ${C.border}`, borderRadius:10, padding:10 }}>
             <div style={{ display:'flex', justifyContent:'space-between', gap:8, alignItems:'flex-start' }}>
               <strong style={{ fontSize:14 }}>{l.titulo || 'Licitación'}</strong>
-              {d!==null && <span style={{ fontSize:12, color: d<=3?'#b91c1c':C.muted, fontWeight:700, whiteSpace:'nowrap' }}>{d<0?'cerrado':`${d} d`}</span>}
+              {d!==null && <span style={{ fontSize:12, color: d<=3?'var(--negative)':C.muted, fontWeight:700, whiteSpace:'nowrap' }}>{d<0?'cerrado':`${d} d`}</span>}
             </div>
             <div style={{ fontSize:12, color:C.muted }}>{l.organo}{l.provincia?` · ${l.provincia}`:''}{l.presupuesto?` · ${fmtEur(Number(l.presupuesto))}`:''}</div>
             <div style={{ display:'flex', gap:10, alignItems:'center', marginTop:6, flexWrap:'wrap' }}>

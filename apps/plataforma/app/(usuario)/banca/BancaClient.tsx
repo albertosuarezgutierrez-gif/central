@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { colorImporte } from '@/components/ui'
 import { deducibleDeMovimiento } from '@/lib/deducibilidad'
 
 type SociedadOpt = { id: string; nombre: string }
@@ -193,8 +194,8 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
                   <input value={iban} onChange={e => setIban(e.target.value)} placeholder="ES…" style={input} />
                 </label>
               </div>
-              {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}
-              {msg && <p style={{ color: '#16a34a', fontSize: '13px' }}>{msg}</p>}
+              {err && <p style={{ color: 'var(--negative)', fontSize: '13px' }}>{err}</p>}
+              {msg && <p style={{ color: 'var(--positive)', fontSize: '13px' }}>{msg}</p>}
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setOpen(false)} style={cancel}>Cerrar</button>
                 <button type="submit" disabled={loading} style={submitBtn}>{loading ? 'Importando…' : 'Importar'}</button>
@@ -283,7 +284,7 @@ export function SubirFacturaBtn() {
       <button onClick={() => fileRef.current?.click()} disabled={loading} style={ghost}>{loading ? 'Leyendo…' : '📄 Subir factura (OCR)'}</button>
       <input ref={fileRef} type="file" accept="image/*" onChange={onPick} style={{ display: 'none' }} />
       {msg && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{msg}</span>}
-      {err && <span style={{ fontSize: '12px', color: '#dc2626' }}>{err}</span>}
+      {err && <span style={{ fontSize: '12px', color: 'var(--negative)' }}>{err}</span>}
     </span>
   )
 }
@@ -334,7 +335,7 @@ export function ConectarBancoBtn({ sociedades }: { sociedades: SociedadOpt[] }) 
             <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Open Banking (PSD2): autorizas en tu banco y los saldos/movimientos entran solos.</p>
             {estado === 'cargando' && <p style={{ fontSize: '14px', color: 'var(--muted)' }}>Cargando bancos…</p>}
             {estado === 'no-config' && <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Falta configurar Enable Banking (envs <code>ENABLEBANKING_APP_ID</code> y <code>ENABLEBANKING_PRIVATE_KEY</code> en Vercel). Mientras tanto, importa el Excel/Norma 43.</p>}
-            {estado === 'error' && <p style={{ fontSize: '13px', color: '#dc2626' }}>{err}</p>}
+            {estado === 'error' && <p style={{ fontSize: '13px', color: 'var(--negative)' }}>{err}</p>}
             {estado === 'ok' && (
               <form onSubmit={conectar} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <label style={lbl}>Sociedad
@@ -347,7 +348,7 @@ export function ConectarBancoBtn({ sociedades }: { sociedades: SociedadOpt[] }) 
                     {insts.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                   </select>
                 </label>
-                {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}
+                {err && <p style={{ color: 'var(--negative)', fontSize: '13px' }}>{err}</p>}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button type="button" onClick={() => setOpen(false)} style={cancel}>Cerrar</button>
                   <button type="submit" disabled={loading} style={submitBtn}>{loading ? 'Conectando…' : 'Ir a mi banco →'}</button>
@@ -423,7 +424,7 @@ export function RevisarBandeja({ movimientos, destinoLabel }: {
           <div key={m.id} className="banca-revisar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div className="banca-revisar-fecha" style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div className="banca-revisar-concepto" style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
-            <div className="banca-revisar-importe" style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <div className="banca-revisar-importe" style={{ fontSize: '14px', fontWeight: 700, color: colorImporte(m.importe), flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
             <div className="banca-revisar-acciones" style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
               <button style={btn} disabled={guardando === m.id} onClick={() => asignar(m.id, 'seguros')}>🛡️ Correduría</button>
               <button style={btn} disabled={guardando === m.id} onClick={() => asignar(m.id, 'personal')}>👨‍👩‍👧 Personal</button>
@@ -525,10 +526,10 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
           {pend.map(g => (
             <div key={g.clave} style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: g.confianza === 'alta' ? '#fee2e2' : '#fef3c7', color: g.confianza === 'alta' ? '#b91c1c' : '#92400e' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: g.confianza === 'alta' ? 'var(--negative-bg)' : 'var(--warning-bg)', color: g.confianza === 'alta' ? 'var(--negative)' : 'var(--warning)' }}>
                   {g.confianza === 'alta' ? 'Sospecha alta' : 'Sospecha baja'}
                 </span>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>{eur(g.importe)}</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--negative)' }}>{eur(g.importe)}</span>
               </div>
               {g.movimientos.map(m => (
                 <div key={m.id} className="banca-dup-mov" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
@@ -536,7 +537,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                   <span className="banca-dup-concepto" style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
                   {m.cuentaLabel && <span title="Banco / cuenta donde está este cargo" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   {m.origen && <span style={{ fontSize: '10px', color: 'var(--muted)', background: 'var(--border)', borderRadius: '4px', padding: '1px 5px', flexShrink: 0, fontWeight: 500 }}>{m.origen}</span>}
-                  <span className="banca-dup-importe" style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                  <span className="banca-dup-importe" style={{ fontWeight: 700, color: 'var(--negative)', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                 </div>
               ))}
               <div className="banca-dup-acciones" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
@@ -563,7 +564,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                   <span className="banca-dup-concepto" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
                   {m.cuentaLabel && <span title="Banco / cuenta" style={{ fontSize: '10px', color: 'var(--text)', background: 'var(--primary-light)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}>🏦 {m.cuentaLabel}</span>}
                   <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>{m.estado === 'confirmado' ? 'cobro doble' : 'normal'}</span>
-                  <span className="banca-dup-importe" style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                  <span className="banca-dup-importe" style={{ fontWeight: 700, color: 'var(--negative)', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                   <button disabled={busy === m.id} onClick={() => reactivar(m.id)} style={{ ...dupGhost, fontSize: '12px', flexShrink: 0 }}>Reactivar</button>
                 </div>
               ))}
@@ -590,7 +591,7 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
 }
 
 const dupGhost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
-const dupDanger: React.CSSProperties = { background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
+const dupDanger: React.CSSProperties = { background: 'var(--negative)', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
 
 // Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar.
 export function RevisarCorreoBtn() {
@@ -818,7 +819,7 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
             <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
               {m.conciliado ? '🔗' : ''}
             </div>
-            <div className="banca-mov-amt" style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <div className="banca-mov-amt" style={{ fontSize: '14px', fontWeight: 700, color: colorImporte(m.importe), flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
           {sug && (
             <div style={{ padding: '0 16px 12px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -970,7 +971,7 @@ export function IngresosPorRevisar({ ingresos, destinoLabel }: {
               <option value="" disabled>Asignar negocio…</option>
               {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
             </select>
-            <div className="banca-ingr-importe" style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <div className="banca-ingr-importe" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--positive)', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
         ))}
       </div>
@@ -1040,7 +1041,7 @@ export function ReglasAprendidas() {
                       {r.creadoAt && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>aprendida {r.creadoAt}</div>}
                     </div>
                     <button onClick={() => borrar(r.clave)} title="Borrar regla"
-                      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', color: '#dc2626', cursor: 'pointer', flexShrink: 0 }}>
+                      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', color: 'var(--negative)', cursor: 'pointer', flexShrink: 0 }}>
                       Borrar
                     </button>
                   </div>

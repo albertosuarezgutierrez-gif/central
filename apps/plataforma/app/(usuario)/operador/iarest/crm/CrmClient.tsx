@@ -39,19 +39,19 @@ type Totales = {
 type Data = { leads: Lead[]; totales: Totales }
 
 const ESTADO_COLORES: Record<string, { bg: string; color: string }> = {
-  nuevo: { bg: '#2563eb20', color: '#2563eb' },
+  nuevo: { bg: '#2563eb20', color: 'var(--info)' },
   contactado: { bg: '#7c3aed20', color: '#7c3aed' },
-  interesado: { bg: '#d9770620', color: '#d97706' },
+  interesado: { bg: '#d9770620', color: 'var(--warning)' },
   demo: { bg: '#0891b220', color: '#0891b2' },
   propuesta: { bg: '#65a30d20', color: '#65a30d' },
-  negociacion: { bg: '#ea580c20', color: '#ea580c' },
-  cliente: { bg: '#16a34a20', color: '#16a34a' },
-  descartado: { bg: '#94a3b820', color: '#94a3b8' },
+  negociacion: { bg: '#ea580c20', color: 'var(--warning)' },
+  cliente: { bg: '#16a34a20', color: 'var(--positive)' },
+  descartado: { bg: '#94a3b820', color: 'var(--muted)' },
 }
 
 function estadoBadge(estado: string | null) {
   const e = estado ?? 'sin_estado'
-  const c = ESTADO_COLORES[e] ?? { bg: '#94a3b820', color: '#94a3b8' }
+  const c = ESTADO_COLORES[e] ?? { bg: '#94a3b820', color: 'var(--muted)' }
   return (
     <span style={{
       fontSize: '11px', padding: '2px 8px', borderRadius: '6px',
@@ -62,7 +62,7 @@ function estadoBadge(estado: string | null) {
 
 function scoreBadge(score: number | null) {
   if (score === null) return <span style={{ color: 'var(--muted)' }}>—</span>
-  const color = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626'
+  const color = score >= 70 ? 'var(--positive)' : score >= 40 ? 'var(--warning)' : 'var(--negative)'
   return <span style={{ fontWeight: 700, color }}>{score}</span>
 }
 
@@ -114,12 +114,6 @@ export default function CrmClient() {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .crm-filters { flex-wrap: wrap !important; }
-          .crm-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🎯 CRM · ia-rest</h1>
         <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
@@ -141,7 +135,7 @@ export default function CrmClient() {
           Todos ({totales.total})
         </button>
         {ESTADOS_ORDEN.filter(e => totales.por_estado[e]).map(e => {
-          const c = ESTADO_COLORES[e] ?? { bg: '#94a3b820', color: '#94a3b8' }
+          const c = ESTADO_COLORES[e] ?? { bg: '#94a3b820', color: 'var(--muted)' }
           const activo = filtroEstado === e
           return (
             <button
@@ -245,7 +239,7 @@ export default function CrmClient() {
                               <div key={c.id} style={{ background: 'var(--bg, #fff)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px 12px', fontSize: '12px' }}>
                                 <div style={{ fontWeight: 600, marginBottom: '2px' }}>
                                   {c.nombre || '—'}
-                                  {c.es_decisor && <span style={{ marginLeft: '6px', fontSize: '10px', background: '#16a34a20', color: '#16a34a', padding: '1px 5px', borderRadius: '4px' }}>decisor</span>}
+                                  {c.es_decisor && <span style={{ marginLeft: '6px', fontSize: '10px', background: '#16a34a20', color: 'var(--positive)', padding: '1px 5px', borderRadius: '4px' }}>decisor</span>}
                                 </div>
                                 {c.cargo && <div style={{ color: 'var(--muted)' }}>{c.cargo}</div>}
                                 {c.email && <div style={{ color: 'var(--muted)' }}>{c.email}</div>}

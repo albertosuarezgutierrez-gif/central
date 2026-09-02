@@ -113,14 +113,6 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .proyec-cols { grid-template-columns: 1fr !important; }
-          .proyec-kpis { grid-template-columns: 1fr 1fr !important; }
-          .patrones-cols { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 480px) { .proyec-kpis { grid-template-columns: 1fr !important; } }
-      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
@@ -139,7 +131,7 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
       {loading ? (
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Calculando proyección…</div>
       ) : error ? (
-        <div style={{ padding: '24px', textAlign: 'center', color: '#e53e3e' }}>{error}</div>
+        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--negative)' }}>{error}</div>
       ) : data && calculo ? (
         <>
           {/* KPIs */}
@@ -147,8 +139,8 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
             {[
               { label: 'Base real acumulada', value: data.baseReal, color: 'var(--primary)', sub: 'Datos bancarios confirmados' },
               { label: 'Ingresos futuros (reservas)', value: data.ingresosFuturos, color: '#805ad5', sub: `${data.reservasFuturas.length} meses con reservas` },
-              { label: 'Base proyectada a cierre', value: baseProyectada, color: '#e53e3e', sub: `Tramo: ${(calculo.tramoActual.tipo * 100).toFixed(0)}%` },
-              { label: 'Resultado estimado', value: resultadoFinal, color: resultadoFinal <= 0 ? 'var(--primary)' : '#e53e3e', sub: resultadoFinal <= 0 ? 'A devolver' : 'A pagar' },
+              { label: 'Base proyectada a cierre', value: baseProyectada, color: 'var(--negative)', sub: `Tramo: ${(calculo.tramoActual.tipo * 100).toFixed(0)}%` },
+              { label: 'Resultado estimado', value: resultadoFinal, color: resultadoFinal <= 0 ? 'var(--primary)' : 'var(--negative)', sub: resultadoFinal <= 0 ? 'A devolver' : 'A pagar' },
             ].map(k => (
               <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '4px' }}>{k.label}</div>
@@ -160,11 +152,11 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
 
           {/* Alerta de tramo */}
           {calculo.margenHastaProximoTramo !== null && calculo.margenHastaProximoTramo < 8000 && (
-            <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'var(--negative-bg)', border: '1px solid #feb2b2', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '20px' }}>⚠️</span>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#742a2a' }}>Cerca del siguiente tramo</div>
-                <div style={{ fontSize: '12px', color: '#742a2a' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--negative)' }}>Cerca del siguiente tramo</div>
+                <div style={{ fontSize: '12px', color: 'var(--negative)' }}>
                   Te quedan <strong>{fmt(calculo.margenHastaProximoTramo)}</strong> para entrar al {tramosAnio.find(t => t.desde > baseProyectada) ? `${(tramosAnio.find(t => t.desde > baseProyectada)!.tipo * 100).toFixed(0)}%` : 'siguiente tramo'}.
                   Considera aplazar ingresos al año siguiente.
                 </div>
@@ -233,14 +225,14 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                   <span style={{ color: 'var(--muted)' }}>Cuota estimada</span>
-                  <span style={{ fontWeight: 700, color: '#e53e3e' }}>{fmt(calculo.cuotaTotal)}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--negative)' }}>{fmt(calculo.cuotaTotal)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                   <span style={{ color: 'var(--muted)' }}>Tipo efectivo</span>
                   <span style={{ fontWeight: 600 }}>{(calculo.tipoEfectivo * 100).toFixed(1)}%</span>
                 </div>
                 {ingresoExtra > 0 && (
-                  <div style={{ marginTop: '8px', padding: '8px 10px', background: cruzaTramo ? '#fff5f5' : '#c6f6d5', borderRadius: '6px', fontSize: '12px', color: cruzaTramo ? '#742a2a' : '#22543d', fontWeight: 600 }}>
+                  <div style={{ marginTop: '8px', padding: '8px 10px', background: cruzaTramo ? 'var(--negative-bg)' : 'var(--positive-bg)', borderRadius: '6px', fontSize: '12px', color: cruzaTramo ? 'var(--negative)' : 'var(--positive)', fontWeight: 600 }}>
                     {cruzaTramo
                       ? `⚠️ Este ingreso te sube al ${(calculo.tramoActual.tipo * 100).toFixed(0)}% (+${fmt(diferenciaCuota)} de IRPF extra)`
                       : `✓ Sin cambio de tramo · +${fmt(diferenciaCuota)} de IRPF`}
@@ -269,9 +261,9 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
               <div className="patrones-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {/* Ingresos recurrentes */}
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#276749', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--positive)', marginBottom: '8px' }}>
                     Ingresos proyectados
-                    <span style={{ marginLeft: '8px', color: '#22543d', background: '#c6f6d5', borderRadius: '4px', padding: '2px 6px' }}>
+                    <span style={{ marginLeft: '8px', color: 'var(--positive)', background: 'var(--positive-bg)', borderRadius: '4px', padding: '2px 6px' }}>
                       +{fmt(data.ingresosRecurrentesProyectados ?? 0)}
                     </span>
                   </div>
@@ -283,16 +275,16 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
                         <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.etiqueta}</div>
                         <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{fmt(p.importeMedioMensual)}/mes × {mesesRestantes}</div>
                       </div>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#276749', whiteSpace: 'nowrap' }}>+{fmt(p.importeMedioMensual * mesesRestantes)}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--positive)', whiteSpace: 'nowrap' }}>+{fmt(p.importeMedioMensual * mesesRestantes)}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Gastos deducibles recurrentes */}
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#9b2c2c', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--negative)', marginBottom: '8px' }}>
                     Gastos proyectados
-                    <span style={{ marginLeft: '8px', color: '#742a2a', background: '#fed7d7', borderRadius: '4px', padding: '2px 6px' }}>
+                    <span style={{ marginLeft: '8px', color: 'var(--negative)', background: 'var(--negative-bg)', borderRadius: '4px', padding: '2px 6px' }}>
                       -{fmt(data.gastosDeduciblesProyectados ?? 0)}
                     </span>
                   </div>
@@ -304,7 +296,7 @@ export default function ProyeccionClient({ year: initYear }: { year: number }) {
                         <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.etiqueta}</div>
                         <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{fmt(p.importeMedioMensual)}/mes × {mesesRestantes}</div>
                       </div>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#9b2c2c', whiteSpace: 'nowrap' }}>-{fmt(p.importeMedioMensual * mesesRestantes)}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--negative)', whiteSpace: 'nowrap' }}>-{fmt(p.importeMedioMensual * mesesRestantes)}</span>
                     </div>
                   ))}
                 </div>

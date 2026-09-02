@@ -5,16 +5,16 @@ import { eur } from '@/lib/dinero'
 
 // ─── Constantes ────────────────────────────────────────────────
 const PROPS = [
-  { id: 'prop_house_sevillana', name: 'House Sevillana', color: '#16a34a', short: 'HS' },
-  { id: 'prop_duplex_center',   name: 'Dúplex Center',   color: '#2563eb', short: 'DC' },
+  { id: 'prop_house_sevillana', name: 'House Sevillana', color: 'var(--positive)', short: 'HS' },
+  { id: 'prop_duplex_center',   name: 'Dúplex Center',   color: 'var(--info)', short: 'DC' },
   { id: 'prop_luxury_busto',    name: 'Luxury Busto',    color: '#9333ea', short: 'LB' },
-  { id: 'prop_busto_reform',    name: 'Busto Reform',    color: '#ea580c', short: 'BR' },
+  { id: 'prop_busto_reform',    name: 'Busto Reform',    color: 'var(--warning)', short: 'BR' },
 ]
 const DIAS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const TIPO_LIMPIEZA = [
-  { value: 'estandar',      label: '🧹 Estándar',      color: '#16a34a' },
-  { value: 'profunda',      label: '🫧 Profunda',       color: '#2563eb' },
-  { value: 'gran_suciedad', label: '⚠️ Gran suciedad',  color: '#dc2626' },
+  { value: 'estandar',      label: '🧹 Estándar',      color: 'var(--positive)' },
+  { value: 'profunda',      label: '🫧 Profunda',       color: 'var(--info)' },
+  { value: 'gran_suciedad', label: '⚠️ Gran suciedad',  color: 'var(--negative)' },
 ]
 const CAT_PROVEEDOR = ['general', 'limpieza', 'lenceria', 'lavanderia', 'mantenimiento']
 const CAT_PRODUCTO  = ['limpieza', 'lenceria', 'amenities', 'consumible', 'herramienta']
@@ -113,9 +113,9 @@ function TabHoy() {
     <div>
       <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <StatCard value={sessions.length} label="Total hoy" />
-        <StatCard value={pending} label="Pendientes" color="#f59e0b" />
-        <StatCard value={done} label="Completadas" color="#16a34a" />
-        <StatCard value={hTotal > 0 ? `${Math.floor(hTotal/60)}h ${hTotal%60}m` : '—'} label="Tiempo total" color="#2563eb" />
+        <StatCard value={pending} label="Pendientes" color="var(--warning)" />
+        <StatCard value={done} label="Completadas" color="var(--positive)" />
+        <StatCard value={hTotal > 0 ? `${Math.floor(hTotal/60)}h ${hTotal%60}m` : '—'} label="Tiempo total" color="var(--info)" />
       </div>
       {sessions.length === 0 && (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)' }}>
@@ -133,8 +133,8 @@ function TabHoy() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 700, color: p?.color }}>{p?.name}</span>
                   <TipoBadge tipo={s.tipo_limpieza || 'estandar'} />
-                  {sts === 'completada' && <Badge label="✓ Hecho" color="#16a34a" bg="#dcfce7" />}
-                  {sts === 'en_curso'   && <Badge label="↻ En curso" color="#2563eb" bg="#dbeafe" />}
+                  {sts === 'completada' && <Badge label="✓ Hecho" color="var(--positive)" bg="var(--positive-bg)" />}
+                  {sts === 'en_curso'   && <Badge label="↻ En curso" color="var(--info)" bg="var(--info-bg)" />}
                   {sts === 'pendiente'  && <Badge label="○ Pendiente" color="var(--muted)" bg="var(--border)" />}
                 </div>
                 {s.guest_out && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>Sale: {s.guest_out} · Entra: {s.guest_in || '—'}</div>}
@@ -161,7 +161,7 @@ function TabHoy() {
                   onFocus={() => fetchCandidatas(s)}
                   onChange={e => assign(s.id, e.target.value || null)}
                   style={{ width: '100%', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 8px', fontSize: 12, background: 'var(--surface)', color: 'var(--text)',
-                    borderColor: s.limpiadora_id ? '#16a34a' : '#f59e0b' }}>
+                    borderColor: s.limpiadora_id ? 'var(--positive)' : 'var(--warning)' }}>
                   <option value="">Sin asignar</option>
                   {(candidatas[s.id] || (s.limpiadora_id ? [{ id: s.limpiadora_id, nombre: s.limpiadora_nombre || s.limpiadora_id }] : [])).map((c: any) => (
                     <option key={c.id} value={c.id}>
@@ -174,7 +174,7 @@ function TabHoy() {
             </div>
 
             {s.nota_propietario && (
-              <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: '#92400e' }}>
+              <div style={{ background: 'var(--warning-bg)', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: 'var(--warning)' }}>
                 📌 {s.nota_propietario}
               </div>
             )}
@@ -282,7 +282,7 @@ function TabTareas() {
             onKeyDown={e => { if (e.key === 'Enter') crear() }}
             style={{ ...inputTarea, flex: 1 }} />
           <button onClick={crear} disabled={!nueva.texto.trim() || guardando}
-            style={{ ...btnTarea, background: '#16a34a', color: '#fff', border: 'none', opacity: !nueva.texto.trim() || guardando ? .5 : 1 }}>
+            style={{ ...btnTarea, background: 'var(--positive)', color: '#fff', border: 'none', opacity: !nueva.texto.trim() || guardando ? .5 : 1 }}>
             Añadir
           </button>
         </div>
@@ -302,7 +302,7 @@ function TabTareas() {
             return (
               <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px', marginBottom: 6 }}>
                 <button onClick={() => toggle(t)} title={t.hecha ? 'Marcar pendiente' : 'Marcar hecha'}
-                  style={{ width: 24, height: 24, minWidth: 24, borderRadius: 8, border: `2px solid ${t.hecha ? '#16a34a' : 'var(--border)'}`, background: t.hecha ? '#16a34a' : 'transparent', color: '#fff', cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>
+                  style={{ width: 24, height: 24, minWidth: 24, borderRadius: 8, border: `2px solid ${t.hecha ? 'var(--positive)' : 'var(--border)'}`, background: t.hecha ? 'var(--positive)' : 'transparent', color: '#fff', cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>
                   {t.hecha ? '✓' : ''}
                 </button>
                 <div style={{ flex: 1, fontSize: 13, color: t.hecha ? 'var(--muted)' : 'var(--text)', textDecoration: t.hecha ? 'line-through' : 'none' }}>
@@ -377,8 +377,8 @@ function TabSemana() {
 
       <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <StatCard value={sessions.length} label="Sesiones" />
-        <StatCard value={sessions.filter(s => s.completed_at).length} label="Completadas" color="#16a34a" />
-        <StatCard value={totalHoras > 0 ? `${Math.floor(totalHoras/60)}h` : '—'} label="Horas totales" color="#2563eb" />
+        <StatCard value={sessions.filter(s => s.completed_at).length} label="Completadas" color="var(--positive)" />
+        <StatCard value={totalHoras > 0 ? `${Math.floor(totalHoras/60)}h` : '—'} label="Horas totales" color="var(--info)" />
       </div>
 
       {limpiadoras.map(l => {
@@ -403,13 +403,13 @@ function TabSemana() {
                 if (ds.length === 0) return null
                 return (
                   <div key={day} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
-                    <div style={{ width: 60, fontSize: 11, color: day === today ? '#16a34a' : 'var(--muted)', fontWeight: day === today ? 700 : 400, paddingTop: 2, flexShrink: 0 }}>{fmtDate(day)}</div>
+                    <div style={{ width: 60, fontSize: 11, color: day === today ? 'var(--positive)' : 'var(--muted)', fontWeight: day === today ? 700 : 400, paddingTop: 2, flexShrink: 0 }}>{fmtDate(day)}</div>
                     <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {ds.map(s => {
                         const p = pBy(s.property_id)
                         const done = !!s.completed_at
                         return (
-                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: done ? '#dcfce7' : p?.color + '18', border: `1px solid ${done ? '#86efac' : p?.color + '40'}`, borderRadius: 8, padding: '3px 8px', fontSize: 11 }}>
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: done ? 'var(--positive-bg)' : p?.color + '18', border: `1px solid ${done ? '#86efac' : p?.color + '40'}`, borderRadius: 8, padding: '3px 8px', fontSize: 11 }}>
                             <span style={{ fontWeight: 700, color: p?.color }}>{p?.short}</span>
                             {done && <span>✓</span>}
                             {s.tipo_limpieza === 'gran_suciedad' && <span>⚠️</span>}
@@ -427,7 +427,7 @@ function TabSemana() {
       })}
 
       {sessions.filter(s => !s.limpiadora_id).length > 0 && (
-        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 12, padding: 16 }}>
+        <div style={{ background: 'var(--warning-bg)', border: '1px solid #fed7aa', borderRadius: 12, padding: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 13, color: '#c2410c', marginBottom: 8 }}>
             ⚠️ {sessions.filter(s => !s.limpiadora_id).length} sesiones sin asignar
           </div>
@@ -601,7 +601,7 @@ function TabDisponibilidad() {
                 <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 8 }}>{a.fecha_inicio} → {a.fecha_fin}</span>
                 <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{a.motivo}</span>
               </div>
-              <button onClick={() => delAusencia(a.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 16 }}>×</button>
+              <button onClick={() => delAusencia(a.id)} style={{ background: 'none', border: 'none', color: 'var(--negative)', cursor: 'pointer', fontSize: 16 }}>×</button>
             </div>
           )
         })}
@@ -702,8 +702,8 @@ function TabProveedores() {
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{p.nombre}</div>
                   {p.empresa && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{p.empresa}</div>}
                   <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                    <Badge label={p.categoria} color="#1B4332" bg="#f0fdf4" />
-                    {p.num_productos > 0 && <Badge label={`${p.num_productos} productos`} color="#2563eb" bg="#eff6ff" />}
+                    <Badge label={p.categoria} color="#1B4332" bg="var(--positive-bg)" />
+                    {p.num_productos > 0 && <Badge label={`${p.num_productos} productos`} color="var(--info)" bg="var(--info-bg)" />}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
@@ -820,9 +820,9 @@ function TabLenceria() {
     <div>
       <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <StatCard value={totalPiezas} label="Total piezas" />
-        <StatCard value={disponibles} label="Disponibles" color="#16a34a" />
-        <StatCard value={enLavanderia} label="En lavandería" color="#2563eb" />
-        <StatCard value={filtered.reduce((a, i) => a + (i.cantidad_sucia || 0), 0)} label="Sucias" color="#f59e0b" />
+        <StatCard value={disponibles} label="Disponibles" color="var(--positive)" />
+        <StatCard value={enLavanderia} label="En lavandería" color="var(--info)" />
+        <StatCard value={filtered.reduce((a, i) => a + (i.cantidad_sucia || 0), 0)} label="Sucias" color="var(--warning)" />
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -880,7 +880,7 @@ function TabLenceria() {
           {its.map((item: any) => {
             const bajoBajo = item.cantidad_disponible < 2
             return (
-              <div key={item.id} style={{ background: bajoBajo ? '#fff7ed' : 'var(--surface)', border: `1px solid ${bajoBajo ? '#fed7aa' : 'var(--border)'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 6 }}>
+              <div key={item.id} style={{ background: bajoBajo ? 'var(--warning-bg)' : 'var(--surface)', border: `1px solid ${bajoBajo ? '#fed7aa' : 'var(--border)'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <div>
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{item.tipo.replace(/_/g, ' ')}</span>
@@ -923,7 +923,7 @@ function TabLimpiadoras() {
   const [limpiadoras, setLimpiadoras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ nombre: '', telefono: '', pin: '', color: '#16a34a', propiedades: [] as string[] })
+  const [form, setForm] = useState({ nombre: '', telefono: '', pin: '', color: 'var(--positive)', propiedades: [] as string[] })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -941,7 +941,7 @@ function TabLimpiadoras() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
     })
-    setForm({ nombre: '', telefono: '', pin: '', color: '#16a34a', propiedades: [] })
+    setForm({ nombre: '', telefono: '', pin: '', color: 'var(--positive)', propiedades: [] })
     setShowForm(false); load()
   }
 
@@ -999,7 +999,7 @@ function TabLimpiadoras() {
               {l.telefono && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{l.telefono}</div>}
             </div>
             <div style={{ marginLeft: 'auto' }}>
-              <Badge label={l.activa ? 'Activa' : 'Inactiva'} color={l.activa ? '#16a34a' : 'var(--muted)'} bg={l.activa ? '#dcfce7' : 'var(--border)'} />
+              <Badge label={l.activa ? 'Activa' : 'Inactiva'} color={l.activa ? 'var(--positive)' : 'var(--muted)'} bg={l.activa ? 'var(--positive-bg)' : 'var(--border)'} />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -1037,15 +1037,15 @@ function TabStock() {
     <div>
       <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <StatCard value={filtered.length} label="Artículos" />
-        <StatCard value={alertas.length} label="⚠️ Alertas" color={alertas.length > 0 ? '#dc2626' : '#16a34a'} />
+        <StatCard value={alertas.length} label="⚠️ Alertas" color={alertas.length > 0 ? 'var(--negative)' : 'var(--positive)'} />
       </div>
       {alertas.length > 0 && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: 12, marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#dc2626', marginBottom: 8 }}>⚠️ Stock bajo</div>
+        <div style={{ background: 'var(--negative-bg)', border: '1px solid var(--negative-bg)', borderRadius: 12, padding: 12, marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--negative)', marginBottom: 8 }}>⚠️ Stock bajo</div>
           {alertas.map(i => (
-            <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: '1px solid #fecaca' }}>
+            <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: '1px solid var(--negative-bg)' }}>
               <span style={{ color: 'var(--text)' }}>{i.articulo} — {pBy(i.property_id)?.short}</span>
-              <span style={{ color: '#dc2626', fontWeight: 700 }}>{i.stock_actual} / mín {i.stock_minimo} {i.unidad}</span>
+              <span style={{ color: 'var(--negative)', fontWeight: 700 }}>{i.stock_actual} / mín {i.stock_minimo} {i.unidad}</span>
             </div>
           ))}
         </div>
@@ -1066,7 +1066,7 @@ function TabStock() {
         const bajo = i.stock_actual < i.stock_minimo
         const pct = Math.min(100, Math.round(i.stock_actual / Math.max(1, i.stock_minimo) * 100))
         return (
-          <div key={i.id} style={{ background: bajo ? '#fff7ed' : 'var(--surface)', border: `1px solid ${bajo ? '#fed7aa' : 'var(--border)'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 6 }}>
+          <div key={i.id} style={{ background: bajo ? 'var(--warning-bg)' : 'var(--surface)', border: `1px solid ${bajo ? '#fed7aa' : 'var(--border)'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <div>
                 <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{i.articulo}</span>
@@ -1075,7 +1075,7 @@ function TabStock() {
               <span style={{ fontWeight: 700, fontSize: 13, color: bajo ? '#c2410c' : 'var(--text)' }}>{i.stock_actual} {i.unidad}</span>
             </div>
             <div style={{ background: 'var(--border)', borderRadius: 4, height: 4 }}>
-              <div style={{ width: `${pct}%`, height: 4, borderRadius: 4, background: bajo ? '#ef4444' : '#16a34a', transition: 'width .3s' }} />
+              <div style={{ width: `${pct}%`, height: 4, borderRadius: 4, background: bajo ? 'var(--negative)' : 'var(--positive)', transition: 'width .3s' }} />
             </div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>Mínimo: {i.stock_minimo} {i.unidad}</div>
           </div>
@@ -1091,33 +1091,6 @@ export default function LimpiadoresClient() {
 
   return (
     <>
-      <style>{`
-        @media (max-width: 768px) {
-          .limp-stats-row { flex-direction: column !important; }
-          .limp-stats-row > div { flex: none !important; width: 100% !important; }
-          .limp-grid-2 { grid-template-columns: 1fr !important; }
-          .limp-grid-3 { grid-template-columns: 1fr !important; }
-          .limp-disp-row { grid-template-columns: 50px 36px 1fr 1fr 60px !important; gap: 4px !important; }
-          .limp-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
-          .limp-card { width: 100% !important; min-width: unset !important; }
-          .limp-factura-grid { grid-template-columns: 1fr 1fr !important; }
-          .limp-tarifa-grid { grid-template-columns: 1fr 1fr !important; }
-          .limp-session-header { flex-direction: column !important; align-items: flex-start !important; }
-          .limp-session-header > div:last-child { text-align: left !important; }
-          .limp-btn-row { flex-wrap: wrap !important; }
-        }
-        @media (max-width: 480px) {
-          .limp-factura-grid { grid-template-columns: 1fr !important; }
-          .limp-tarifa-grid { grid-template-columns: 1fr !important; }
-          .limp-hide-xs { display: none !important; }
-          /* Disponibilidad: el grid de 5 columnas fijas (día · check · inicio · fin · horas)
-             no cabe en ≤320px (los 2 inputs 'time' no bajan de su min-content) → scroll
-             horizontal de la página. Pasa a flex-wrap: día a lo ancho arriba, el resto envuelve. */
-          .limp-disp-row { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 6px 8px !important; }
-          .limp-disp-row > span { flex: 1 0 100% !important; }
-          .limp-disp-row input[type="time"] { flex: 1 1 90px !important; min-width: 0 !important; }
-        }
-      `}</style>
       <div style={{ fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif', minHeight: '100vh', background: 'var(--surface)' }}>
         {/* Header */}
         <div style={{ background: 'linear-gradient(135deg,#1B4332,#2D6A4F)', padding: '20px 24px 0' }}>

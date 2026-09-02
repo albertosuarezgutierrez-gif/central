@@ -202,7 +202,7 @@ export default function IntranetLimpieza() {
       </header>
 
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 13, borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+        <div style={{ background: 'var(--negative-bg)', border: '1px solid var(--negative-bg)', color: 'var(--negative)', fontSize: 13, borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
           No se han podido cargar los datos. Revisa la conexión y recarga la página.
         </div>
       )}
@@ -314,7 +314,7 @@ export default function IntranetLimpieza() {
             <span><span style={{ display: 'inline-block', width: 18, height: 10, borderRadius: 4, background: '#3E6AA8', verticalAlign: 'middle', marginRight: 4 }} />ocupado</span>
             <span><b>→</b> entrada (nº huéspedes)</span>
             <span>🧽 limpieza</span>
-            <span><span style={{ color: '#b45309' }}>🧽</span> entra huésped el mismo día</span>
+            <span><span style={{ color: 'var(--warning)' }}>🧽</span> entra huésped el mismo día</span>
           </div>
         )}
       </section>
@@ -338,7 +338,7 @@ export default function IntranetLimpieza() {
               <div key={limp?.id ?? `${propertyId}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px', marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                   <span style={{ fontWeight: 800, fontSize: 15, color: p?.color }}>{p?.label ?? propertyId}</span>
-                  {limp?.hecha && <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>✓ Hecha</span>}
+                  {limp?.hecha && <span style={{ ...chip, background: 'var(--positive-bg)', color: 'var(--positive)' }}>✓ Hecha</span>}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   <span style={{ ...chip, background: 'var(--primary-light, rgba(79,70,229,.08))', color: 'var(--primary)' }}>Salida {limp?.salida ?? '11:00'}</span>
@@ -346,8 +346,8 @@ export default function IntranetLimpieza() {
                     <span style={chip}>👥 Sale{paxSalida === 1 ? ' 1 huésped' : `n ${paxSalida} huéspedes`}</span>
                   )}
                   {entra
-                    ? <span style={{ ...chip, background: '#fef3c7', color: '#b45309' }}>⚠️ Entra{entra.pax != null ? `n ${entra.pax}` : ' huésped'} a las {limp?.entrada ?? '15:00'}</span>
-                    : <span style={{ ...chip, background: '#dcfce7', color: '#15803d' }}>Sin entrada hoy</span>}
+                    ? <span style={{ ...chip, background: 'var(--warning-bg)', color: 'var(--warning)' }}>⚠️ Entra{entra.pax != null ? `n ${entra.pax}` : ' huésped'} a las {limp?.entrada ?? '15:00'}</span>
+                    : <span style={{ ...chip, background: 'var(--positive-bg)', color: 'var(--positive)' }}>Sin entrada hoy</span>}
                   {limp?.tipo && limp.tipo !== 'estandar' && <span style={chip}>{limp.tipo === 'profunda' ? '🫧 Profunda' : '⚠️ Gran suciedad'}</span>}
                 </div>
                 {limp?.nota && <div style={nota}>📌 <b>Alberto:</b> {limp.nota}</div>}
@@ -372,7 +372,7 @@ export default function IntranetLimpieza() {
           {pendientesSmoobu.filter(pe => pe.checkIn === sel && enFiltro(pe.propertyId)).map((pe, i) => {
             const p = propDe(pe.propertyId)
             return (
-              <div key={`pend-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #fde68a', background: '#fef9c3', borderRadius: 12, padding: '10px 12px', marginBottom: 8, fontSize: 14, color: '#92400e' }}>
+              <div key={`pend-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #fde68a', background: 'var(--warning-bg)', borderRadius: 12, padding: '10px 12px', marginBottom: 8, fontSize: 14, color: 'var(--warning)' }}>
                 <span>⚠️</span>
                 <span><b style={{ color: p?.color }}>{p?.label ?? pe.propertyId}</b> — entra un huésped de Booking que aún no aparece en el calendario oficial. Alberto lo está arreglando; cuenta con la limpieza.</span>
               </div>
@@ -405,7 +405,7 @@ export default function IntranetLimpieza() {
             return (
               <button key={t.id} onClick={() => toggleTarea(t)}
                 style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', textAlign: 'left', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px', marginBottom: 8, background: 'transparent', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit', fontSize: 14 }}>
-                <span style={{ width: 24, height: 24, minWidth: 24, borderRadius: 8, border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14, background: t.hecha ? '#16a34a' : 'transparent', borderColor: t.hecha ? '#16a34a' : 'var(--border)' }}>{t.hecha ? '✓' : ''}</span>
+                <span style={{ width: 24, height: 24, minWidth: 24, borderRadius: 8, border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14, background: t.hecha ? 'var(--positive)' : 'transparent', borderColor: t.hecha ? 'var(--positive)' : 'var(--border)' }}>{t.hecha ? '✓' : ''}</span>
                 <span style={{ flex: 1, color: t.hecha ? 'var(--muted)' : 'var(--text)', textDecoration: t.hecha ? 'line-through' : 'none' }}>
                   {p && <span style={{ display: 'block', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', color: p.color }}>{p.label}</span>}
                   {t.texto}
@@ -541,7 +541,7 @@ function FormParte({ propertyId, fecha, onEnviado }: {
           Cancelar
         </button>
       </div>
-      {error && <div style={{ color: '#b91c1c', fontSize: 12.5, marginTop: 6 }}>{error}</div>}
+      {error && <div style={{ color: 'var(--negative)', fontSize: 12.5, marginTop: 6 }}>{error}</div>}
     </div>
   )
 }
@@ -604,7 +604,7 @@ function FilaPiso({ piso, dias, sel, hoy, reservas, limpiezas, pendientes, onSel
               ) : undefined,
             )}
             {hayLimpieza && (
-              <span title="Limpieza" style={{ position: 'absolute', zIndex: 2, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 20, height: 20, borderRadius: '50%', background: entra ? '#d97706' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🧽</span>
+              <span title="Limpieza" style={{ position: 'absolute', zIndex: 2, left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 20, height: 20, borderRadius: '50%', background: entra ? 'var(--warning)' : 'var(--positive)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🧽</span>
             )}
             {pendientes.some(pe => pe.propertyId === piso.id && pe.checkIn === k) && (
               <span title="Reserva de Booking pendiente de Smoobu" style={{ position: 'absolute', zIndex: 2, left: '50%', top: 2, transform: 'translateX(-50%)', fontSize: 11 }}>⚠️</span>
@@ -630,6 +630,6 @@ const chip: React.CSSProperties = {
   background: 'var(--border)', color: 'var(--muted)',
 }
 const nota: React.CSSProperties = {
-  background: '#fef9c3', border: '1px solid #fde68a', color: '#92400e',
+  background: 'var(--warning-bg)', border: '1px solid #fde68a', color: 'var(--warning)',
   borderRadius: 10, padding: '7px 10px', fontSize: 13, marginTop: 8,
 }

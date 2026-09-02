@@ -21,13 +21,6 @@ export default async function MensajesHuesped() {
       background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
       padding: '20px 24px', marginBottom: '28px', boxShadow: 'var(--shadow)',
     }}>
-      <style>{`
-        @media (max-width: 640px) {
-          .msg-pisos { grid-template-columns: 1fr !important; }
-          .msg-paso { flex-direction: column !important; gap: 2px !important; }
-          .msg-paso-cuando { min-width: 0 !important; }
-        }
-      `}</style>
 
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <h2 style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>📬 Mensajes automáticos al huésped</h2>
@@ -63,7 +56,7 @@ export default async function MensajesHuesped() {
             <div style={{ color: 'var(--muted)', marginTop: '4px' }}>
               {p.enviados > 0 && <>{p.enviados} enviado{p.enviados === 1 ? '' : 's'} · </>}
               {p.enSombra > 0 && <>{p.enSombra} en sombra · </>}
-              {p.fallos > 0 && <span style={{ color: '#dc2626', fontWeight: 700 }}>{p.fallos} con fallo · </span>}
+              {p.fallos > 0 && <span style={{ color: 'var(--negative)', fontWeight: 700 }}>{p.fallos} con fallo · </span>}
               {p.enviados === 0 && p.enSombra === 0 && p.fallos === 0 && <>sin movimientos todavía</>}
               {p.ultimoEnvio && <>último {fecha(p.ultimoEnvio)}</>}
             </div>

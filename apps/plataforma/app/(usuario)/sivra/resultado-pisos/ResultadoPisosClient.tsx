@@ -98,7 +98,6 @@ export default function ResultadoPisosClient({ desdeInicial, hastaInicial, pisoI
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
-      <style>{`@media (max-width:768px){.rp-kpis{grid-template-columns:1fr 1fr!important}.rp-sel{flex-direction:column;align-items:stretch!important}.rp-sel input,.rp-sel select{width:100%}}`}</style>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Rendimiento por piso</h1>
@@ -112,7 +111,7 @@ export default function ResultadoPisosClient({ desdeInicial, hastaInicial, pisoI
         onCsv={() => exportarCsv(mesesF, `resultado-pisos_${desde}_${hasta}.csv`)}
       />
 
-      {error && <p style={{ color: 'var(--danger, #dc2626)' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--negative)' }}>{error}</p>}
       {cargando && !data && <p style={{ color: 'var(--muted)' }}>Calculando…</p>}
 
       {data && (
@@ -124,7 +123,7 @@ export default function ResultadoPisosClient({ desdeInicial, hastaInicial, pisoI
             <Kpi label="Gastos" valor={eur(tot.gastos)} color="var(--muted)"
               delta={variacionPct(tot.gastos, totAnt?.gastos ?? null)} base={totAnt?.gastos ?? null} deltaMaloSiSube />
             <Kpi label="Resultado" valor={eur(tot.resultado)}
-              color={tot.resultado >= 0 ? 'var(--success, #16a34a)' : 'var(--danger, #dc2626)'}
+              color={tot.resultado >= 0 ? 'var(--positive)' : 'var(--negative)'}
               delta={variacionPct(tot.resultado, totAnt && totAnt.resultado > 0 ? totAnt.resultado : null)}
               base={totAnt?.resultado ?? null} />
             <Kpi label="Margen" valor={tot.ingresos > 0 ? `${Math.round((tot.resultado / tot.ingresos) * 100)} %` : '—'}
@@ -209,7 +208,7 @@ function Kpi({ label, valor, color, delta, base, sub, deltaMaloSiSube }: {
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 700, color }}>{valor}</div>
       {tieneDelta ? (
-        <div style={{ fontSize: 12, marginTop: 4, color: bueno ? 'var(--success, #16a34a)' : 'var(--danger, #dc2626)' }}>
+        <div style={{ fontSize: 12, marginTop: 4, color: bueno ? 'var(--positive)' : 'var(--negative)' }}>
           {delta! > 0 ? '▲' : delta! < 0 ? '▼' : '—'} {delta! > 0 ? '+' : ''}{delta}% vs año ant.
           {base != null && <span style={{ color: 'var(--muted)' }}> ({eur(base)})</span>}
         </div>
@@ -432,7 +431,7 @@ function TablaPisos({ agregado, unMes }: { agregado: PLPiso[]; unMes: boolean })
               <CeldaGasto v={p.gastos.comunidad} />
               <CeldaGasto v={p.gastos.otros} />
               <td style={{ ...tdR, fontWeight: 600 }}>{eur(p.gastos.total)}</td>
-              <td style={{ ...tdR, fontWeight: 700, color: p.resultado >= 0 ? 'var(--success, #16a34a)' : 'var(--danger, #dc2626)' }}>{eur(p.resultado)}</td>
+              <td style={{ ...tdR, fontWeight: 700, color: p.resultado >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{eur(p.resultado)}</td>
               <td style={{ ...tdR, fontWeight: 700, color: colorMargen(p.margen) }}>{p.ingresos > 0 ? `${p.margen} %` : '—'}</td>
             </tr>
           ))}
@@ -449,7 +448,7 @@ function TablaPisos({ agregado, unMes }: { agregado: PLPiso[]; unMes: boolean })
               <td style={tdR}>{totGastos.comunidad > 0 ? eur(totGastos.comunidad) : '—'}</td>
               <td style={tdR}>{totGastos.otros > 0 ? eur(totGastos.otros) : '—'}</td>
               <td style={tdR}>{eur(tot.gastos)}</td>
-              <td style={{ ...tdR, color: tot.resultado >= 0 ? 'var(--success, #16a34a)' : 'var(--danger, #dc2626)' }}>{eur(tot.resultado)}</td>
+              <td style={{ ...tdR, color: tot.resultado >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{eur(tot.resultado)}</td>
               <td style={{ ...tdR, color: colorMargen(tot.ingresos > 0 ? Math.round((tot.resultado / tot.ingresos) * 100) : 0) }}>
                 {tot.ingresos > 0 ? `${Math.round((tot.resultado / tot.ingresos) * 100)} %` : '—'}
               </td>

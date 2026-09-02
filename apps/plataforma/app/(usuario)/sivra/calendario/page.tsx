@@ -106,19 +106,6 @@ export default function CalendarioPage() {
 
   return (
     <div style={{ padding: '24px 20px', maxWidth: '100%' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .cal-header { flex-direction: column !important; align-items: flex-start !important; }
-          .cal-stats-row { flex-direction: column !important; }
-          .cal-stats-row > div { width: 100% !important; min-width: unset !important; }
-          .cal-legend { flex-direction: column !important; gap: 6px !important; }
-          .cal-detail { flex-direction: column !important; }
-          .cal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
-        }
-        @media (max-width: 480px) {
-          .cal-nav-btns { flex-wrap: wrap !important; }
-        }
-      `}</style>
       {/* Header */}
       <div className="cal-header" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
@@ -168,7 +155,7 @@ export default function CalendarioPage() {
           </span>
         ))}
         <span style={{ marginLeft: 4 }}>🧹 = turno limpieza urgente</span>
-        <span style={{ color: '#ef4444' }}>■ = gap 1-2 días (difícil vender)</span>
+        <span style={{ color: 'var(--negative)' }}>■ = gap 1-2 días (difícil vender)</span>
       </div>
 
       {/* Gantt timeline */}
@@ -381,13 +368,13 @@ function UpcomingArrivals({ incomes, now }: { incomes: Income[]; now: Date }) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontWeight: 600, color: 'var(--text)' }}>{fmt(inc.checkIn)}</span>
                         {isToday && <span style={{ padding: '1px 6px', borderRadius: 20, background: 'var(--primary)', color: '#fff', fontSize: 9, fontWeight: 700 }}>HOY</span>}
-                        {isTomorrow && <span style={{ padding: '1px 6px', borderRadius: 20, background: '#f59e0b', color: '#fff', fontSize: 9, fontWeight: 700 }}>MAÑANA</span>}
+                        {isTomorrow && <span style={{ padding: '1px 6px', borderRadius: 20, background: 'var(--warning)', color: '#fff', fontSize: 9, fontWeight: 700 }}>MAÑANA</span>}
                       </div>
                       <div style={{ fontSize: 10, color: 'var(--muted)' }}>→ {fmt(inc.checkOut)}</div>
                     </td>
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: prop?.color || '#94a3b8', flexShrink: 0 }} />
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: prop?.color || 'var(--muted)', flexShrink: 0 }} />
                         <span style={{ fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap' }}>{prop?.label || inc.propertyId}</span>
                       </div>
                     </td>

@@ -16,9 +16,9 @@ type ScenarioData = {
 
 const OUR_PRICES = [
   { id: "prop_house_sevillana",  label: "House Sevillana", emoji: "🏛️", color: "#6366f1", normal: 314, corpus: 570 },
-  { id: "prop_duplex_center",    label: "Duplex Center",   emoji: "🏢", color: "#10b981", normal: 121, corpus: 200 },
-  { id: "prop_luxury_busto",     label: "Luxury Busto",    emoji: "✨", color: "#ef4444", normal: 150, corpus: 235 },
-  { id: "prop_busto_reform",     label: "Busto Reform",    emoji: "🏠", color: "#f59e0b", normal: 80,  corpus: 132 },
+  { id: "prop_duplex_center",    label: "Duplex Center",   emoji: "🏢", color: "var(--positive)", normal: 121, corpus: 200 },
+  { id: "prop_luxury_busto",     label: "Luxury Busto",    emoji: "✨", color: "var(--negative)", normal: 150, corpus: 235 },
+  { id: "prop_busto_reform",     label: "Busto Reform",    emoji: "🏠", color: "var(--warning)", normal: 80,  corpus: 132 },
 ]
 
 const PORTALS = [
@@ -45,7 +45,7 @@ const FALLBACK_PROPS = [
     insight: "House Sevillana es el único de 6 hab + parking + 290m² en casco antiguo. Nuestro precio (314€) ya supera el p75 del mercado 4 pax (217€). Producto diferencial sin competencia directa real.",
   },
   {
-    id: "prop_duplex_center", label: "Duplex Center", color: "#10b981", emoji: "🏢",
+    id: "prop_duplex_center", label: "Duplex Center", color: "var(--positive)", emoji: "🏢",
     beds: 1, baths: 1, maxGuests: 4, m2: 95,
     zona: "Centro histórico · Sevilla",
     tags: ["1 hab + sofá","4 pax","95m²","Dúplex"],
@@ -60,7 +60,7 @@ const FALLBACK_PROPS = [
     insight: "Duplex Center en semana normal: precio (121€) está por debajo del p50 mercado (170€). Margen real de subida del 20-30%.",
   },
   {
-    id: "prop_luxury_busto", label: "Luxury Busto", color: "#ef4444", emoji: "✨",
+    id: "prop_luxury_busto", label: "Luxury Busto", color: "var(--negative)", emoji: "✨",
     beds: 2, baths: 1, maxGuests: 5, m2: 110,
     zona: "Zona Bustos Tavera · Sevilla",
     tags: ["2 hab","5 camas","110m²","Premium"],
@@ -75,7 +75,7 @@ const FALLBACK_PROPS = [
     insight: "Luxury Busto (2 hab, 5 camas): precio (150€) en el p25-p50 del mercado. Potencial de subida a 180-200€ sin perder competitividad.",
   },
   {
-    id: "prop_busto_reform", label: "Busto Reform", color: "#f59e0b", emoji: "🏠",
+    id: "prop_busto_reform", label: "Busto Reform", color: "var(--warning)", emoji: "🏠",
     beds: 1, baths: 1, maxGuests: 2, m2: 60,
     zona: "Zona Bustos Tavera · Sevilla",
     tags: ["1 hab","2 pax","Reformado"],
@@ -93,14 +93,14 @@ const fmtEUR = (n: number) => `${Math.round(n).toLocaleString("es-ES")}€`
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })
 
 function getPosition(price: number, stats: ScenarioStats) {
-  if (price < stats.p25)  return { label: "Bajo mercado ⬇", color: "#ef4444" }
-  if (price < stats.p50)  return { label: "Mercado medio",  color: "#f59e0b" }
-  if (price <= stats.p75) return { label: "Mercado alto",   color: "#10b981" }
+  if (price < stats.p25)  return { label: "Bajo mercado ⬇", color: "var(--negative)" }
+  if (price < stats.p50)  return { label: "Mercado medio",  color: "var(--warning)" }
+  if (price <= stats.p75) return { label: "Mercado alto",   color: "var(--positive)" }
   return { label: "Premium ⬆", color: "#6366f1" }
 }
 
 const PORTAL_COLORS: Record<string,string> = {
-  booking: "#003580", tripadvisor: "#00aa6c", expedia: "#f59e0b", all: "#6B7F96"
+  booking: "#003580", tripadvisor: "#00aa6c", expedia: "var(--warning)", all: "#6B7F96"
 }
 
 export default function MercadoPage() {
@@ -154,7 +154,7 @@ export default function MercadoPage() {
   const p50 = sorted[Math.floor(sorted.length/2)]
   const p75 = sorted[Math.floor(sorted.length*0.75)]
   const ourPos = ourPrice < p50 ? "bajo" : ourPrice <= p75 ? "medio" : "alto"
-  const ourPosColor = ourPos === "bajo" ? "#ef4444" : ourPos === "medio" ? "#f59e0b" : "#10b981"
+  const ourPosColor = ourPos === "bajo" ? "var(--negative)" : ourPos === "medio" ? "var(--warning)" : "var(--positive)"
 
   const portalStats = PORTALS.filter(p => p.id !== "all").map(pt => {
     const key = `${scenario}_${pt.id}`
@@ -164,22 +164,6 @@ export default function MercadoPage() {
 
   return (
     <div style={{ padding: '16px 24px', maxWidth: 960, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .mercado-portal-grid { grid-template-columns: 1fr !important; }
-          .mercado-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
-          .mercado-pos-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .mercado-apt-grid { grid-template-columns: 1fr !important; }
-          .mercado-bench-layout { grid-template-columns: 1fr !important; }
-          .mercado-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-          .mercado-prop-tabs { flex-wrap: wrap !important; }
-          .mercado-actions { flex-wrap: wrap !important; }
-        }
-        @media (max-width: 480px) {
-          .mercado-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .mercado-pos-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -221,7 +205,7 @@ export default function MercadoPage() {
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{pt.label}</span>
               </div>
               {pt.hasData
-                ? <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 999, background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>LIVE</span>
+                ? <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 999, background: 'var(--positive-bg)', color: 'var(--positive)', fontWeight: 600 }}>LIVE</span>
                 : <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 999, background: 'var(--surface)', color: 'var(--muted)' }}>sin datos</span>
               }
             </div>
@@ -290,10 +274,10 @@ export default function MercadoPage() {
             <div className="mercado-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
               {[
                 { label:"Mínimo", val:stats.min, color:"#6B7F96" },
-                { label:"P25",    val:stats.p25, color:"#f59e0b" },
-                { label:"Mediana",val:stats.p50, color:"#10b981" },
+                { label:"P25",    val:stats.p25, color:"var(--warning)" },
+                { label:"Mediana",val:stats.p50, color:"var(--positive)" },
                 { label:"P75",    val:stats.p75, color:"#6366f1" },
-                { label:"Máximo", val:stats.max, color:"#ef4444" },
+                { label:"Máximo", val:stats.max, color:"var(--negative)" },
               ].map(s => (
                 <div key={s.label} style={{ background: 'var(--surface)', borderRadius: 6, padding: 12, textAlign: 'center', border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 4 }}>{s.label}</div>
@@ -306,12 +290,12 @@ export default function MercadoPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ position: 'relative', height: 20, background: 'var(--surface)', borderRadius: 999, overflow: 'hidden' }}>
                 <div style={{
-                  position: 'absolute', top: 0, height: '100%', opacity: 0.2, background: '#10b981', borderRadius: 999,
+                  position: 'absolute', top: 0, height: '100%', opacity: 0.2, background: 'var(--positive)', borderRadius: 999,
                   left: `${((stats.p25-stats.min)/(stats.max-stats.min))*100}%`,
                   width: `${((stats.p75-stats.p25)/(stats.max-stats.min))*100}%`
                 }}/>
                 <div style={{
-                  position: 'absolute', top: 2, height: 16, width: 2, background: '#10b981', opacity: 0.6, borderRadius: 999,
+                  position: 'absolute', top: 2, height: 16, width: 2, background: 'var(--positive)', opacity: 0.6, borderRadius: 999,
                   left: `${((stats.p50-stats.min)/(stats.max-stats.min))*100}%`
                 }}/>
               </div>
@@ -358,7 +342,7 @@ export default function MercadoPage() {
                         <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', borderRadius: 999, background: PORTAL_COLORS[portal] ?? "#6B7F96", width: `${((apt.price_night-stats.min)/(stats.max-stats.min))*100}%` }}/>
                       </div>
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', width: 56, flexShrink: 0 }}>{fmtEUR(apt.price_night)}</span>
-                      {apt.score && <span style={{ fontSize: 10, color: '#f59e0b' }}>★{apt.score}</span>}
+                      {apt.score && <span style={{ fontSize: 10, color: 'var(--warning)' }}>★{apt.score}</span>}
                       <span style={{ fontSize: 10, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{apt.name}</span>
                     </div>
                   ))}
@@ -410,9 +394,9 @@ export default function MercadoPage() {
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>{fmtEUR(gMax)}</span>
               </div>
               <div style={{ position: 'relative', height: 24, background: 'var(--surface)', borderRadius: 999, overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: 0, height: '100%', opacity: 0.2, background: '#10b981', borderRadius: 999, left: `${((p50-gMin)/(gMax-gMin))*100}%`, width: `${((p75-p50)/(gMax-gMin))*100}%` }}/>
+                <div style={{ position: 'absolute', top: 0, height: '100%', opacity: 0.2, background: 'var(--positive)', borderRadius: 999, left: `${((p50-gMin)/(gMax-gMin))*100}%`, width: `${((p75-p50)/(gMax-gMin))*100}%` }}/>
                 {comp.map((c,i) => (
-                  <div key={i} style={{ position: 'absolute', top: 4, width: 8, height: 16, borderRadius: 2, opacity: 0.6, background: '#94a3b8', left: `${((c.price-gMin)/(gMax-gMin))*100}%`, transform: 'translateX(-50%)' }}/>
+                  <div key={i} style={{ position: 'absolute', top: 4, width: 8, height: 16, borderRadius: 2, opacity: 0.6, background: 'var(--muted)', left: `${((c.price-gMin)/(gMax-gMin))*100}%`, transform: 'translateX(-50%)' }}/>
                 ))}
                 <div style={{ position: 'absolute', top: 0, width: 4, height: 24, borderRadius: 999, left: `${((ourPrice-gMin)/(gMax-gMin))*100}%`, background: prop.color, transform: 'translateX(-50%)', boxShadow: `0 0 8px ${prop.color}` }}/>
               </div>
@@ -437,13 +421,13 @@ export default function MercadoPage() {
                   return (
                     <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '12px 16px', fontWeight: 500, color: 'var(--text)' }}>{c.name}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}><span style={{ color: '#f59e0b', fontWeight: 600 }}>★ {c.score}</span></td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}><span style={{ color: 'var(--warning)', fontWeight: 600 }}>★ {c.score}</span></td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
                           <div style={{ width: 64, height: 6, background: 'var(--surface)', borderRadius: 999, overflow: 'hidden' }}>
-                            <div style={{ height: '100%', borderRadius: 999, width: `${bar}%`, background: isAbove ? '#ef4444' : '#10b981' }}/>
+                            <div style={{ height: '100%', borderRadius: 999, width: `${bar}%`, background: isAbove ? 'var(--negative)' : 'var(--positive)' }}/>
                           </div>
-                          <span style={{ fontWeight: 700, width: 56, textAlign: 'right', color: isAbove ? '#ef4444' : '#10b981' }}>{fmtEUR(c.price)}</span>
+                          <span style={{ fontWeight: 700, width: 56, textAlign: 'right', color: isAbove ? 'var(--negative)' : 'var(--positive)' }}>{fmtEUR(c.price)}</span>
                         </div>
                       </td>
                     </tr>
@@ -468,9 +452,9 @@ export default function MercadoPage() {
                 {[
                   { label:"Nuestro precio",  val:fmtEUR(ourPrice),           color:prop.color },
                   { label:"Mínimo comp-set", val:fmtEUR(Math.min(...prices)),color:"#6B7F96"  },
-                  { label:"Mediana (p50)",   val:fmtEUR(p50),                color:"#f59e0b"  },
-                  { label:"Percentil 75",    val:fmtEUR(p75),                color:"#10b981"  },
-                  { label:"Máximo comp-set", val:fmtEUR(Math.max(...prices)),color:"#ef4444"  },
+                  { label:"Mediana (p50)",   val:fmtEUR(p50),                color:"var(--warning)"  },
+                  { label:"Percentil 75",    val:fmtEUR(p75),                color:"var(--positive)"  },
+                  { label:"Máximo comp-set", val:fmtEUR(Math.max(...prices)),color:"var(--negative)"  },
                 ].map(k => (
                   <div key={k.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 12, color: 'var(--muted)' }}>{k.label}</span>

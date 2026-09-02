@@ -48,26 +48,26 @@ export default function ActividadClient({ actores, desde, total, empresas }: {
 
   useEffect(() => { cargar() }, [empresa, tipo, accion]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSize: 12, color: '#64748b', fontWeight: 700, whiteSpace: 'nowrap' }
+  const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSize: 12, color: 'var(--muted)', fontWeight: 700, whiteSpace: 'nowrap' }
   const td: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderTop: '1px solid #f1f5f9', whiteSpace: 'nowrap' }
-  const select: React.CSSProperties = { padding: '8px 10px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, background: 'white' }
+  const select: React.CSSProperties = { padding: '8px 10px', borderRadius: 10, border: '1.5px solid var(--border)', fontSize: 13, background: 'white' }
 
   return (
     <div style={{ padding: '24px clamp(16px,4vw,40px)', maxWidth: 1100, margin: '0 auto' }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>👁️ Actividad ialimp</h1>
-      <p style={{ color: '#64748b', fontSize: 14, marginTop: 4 }}>
+      <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
         Accesos y actividad de los usuarios del SaaS (dueña, usuarios, limpiadoras y propietarios). {total} eventos registrados.
       </p>
-      <p style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '8px 12px' }}>
+      <p style={{ fontSize: 12, color: 'var(--warning)', background: 'var(--warning-bg)', border: '1px solid #fde68a', borderRadius: 10, padding: '8px 12px' }}>
         ⚠️ El registro está activo desde {desde ? fmtFecha(desde) : 'el despliegue del 15/08/2026'} — de fechas anteriores no hay
         datos (no significa que no hubiera actividad). El superadmin no se registra.
       </p>
 
       {/* Último acceso por persona */}
-      <section style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, marginTop: 16 }}>
+      <section style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, marginTop: 16 }}>
         <div style={{ padding: '12px 16px', fontWeight: 800 }}>Último acceso por persona</div>
         {actores.length === 0 ? (
-          <p style={{ padding: '0 16px 16px', color: '#64748b', fontSize: 13 }}>
+          <p style={{ padding: '0 16px 16px', color: 'var(--muted)', fontSize: 13 }}>
             Sin actividad registrada todavía (el registro acaba de estrenarse: se irá llenando con cada acceso).
           </p>
         ) : (
@@ -81,9 +81,9 @@ export default function ActividadClient({ actores, desde, total, empresas }: {
                 {actores.map((a, i) => (
                   <tr key={`${a.actor_tipo}-${a.actor_id ?? i}`}>
                     <td style={td}>{TIPO_ICON[a.actor_tipo] ?? '👤'} <b>{a.actor_nombre ?? '—'}</b>{' '}
-                      <span style={{ color: '#94a3b8', fontSize: 11 }}>{TIPO_LABEL[a.actor_tipo] ?? a.actor_tipo}</span></td>
+                      <span style={{ color: 'var(--muted)', fontSize: 11 }}>{TIPO_LABEL[a.actor_tipo] ?? a.actor_tipo}</span></td>
                     <td style={td}>{a.empresa_nombre ?? '—'}</td>
-                    <td style={td}>{a.ultimo_login ? fmtFecha(a.ultimo_login) : <span style={{ color: '#94a3b8' }}>sin login registrado</span>}</td>
+                    <td style={td}>{a.ultimo_login ? fmtFecha(a.ultimo_login) : <span style={{ color: 'var(--muted)' }}>sin login registrado</span>}</td>
                     <td style={td}>{fmtFecha(a.ultima_actividad)}</td>
                     <td style={td}>{a.eventos}</td>
                   </tr>
@@ -95,7 +95,7 @@ export default function ActividadClient({ actores, desde, total, empresas }: {
       </section>
 
       {/* Historial */}
-      <section style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, marginTop: 16 }}>
+      <section style={{ background: 'white', border: '1px solid var(--border)', borderRadius: 12, marginTop: 16 }}>
         <div style={{ padding: '12px 16px', fontWeight: 800 }}>Historial</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '0 16px 12px' }}>
           <select value={empresa} onChange={e => setEmpresa(e.target.value)} style={select}>
@@ -133,13 +133,13 @@ export default function ActividadClient({ actores, desde, total, empresas }: {
                   <td style={td}>{ACCION_LABEL[f.accion] ?? f.accion}{f.detalle ? ` · ${f.detalle}` : ''}</td>
                   <td style={{ ...td, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis' }} title={f.ruta ?? ''}>
                     {f.ruta ?? '—'}{f.metodo && f.metodo !== 'GET' ? ` (${f.metodo})` : ''}</td>
-                  <td style={{ ...td, color: '#94a3b8', fontSize: 12 }}>{f.ip ?? '—'}</td>
+                  <td style={{ ...td, color: 'var(--muted)', fontSize: 12 }}>{f.ip ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {!cargando && filas.length === 0 && (
-            <p style={{ padding: '4px 16px 16px', color: '#64748b', fontSize: 13 }}>Nada registrado con estos filtros.</p>
+            <p style={{ padding: '4px 16px 16px', color: 'var(--muted)', fontSize: 13 }}>Nada registrado con estos filtros.</p>
           )}
         </div>
         {hayMas && (

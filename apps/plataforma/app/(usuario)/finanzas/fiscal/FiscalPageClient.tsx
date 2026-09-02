@@ -25,7 +25,7 @@ function TramoBar({ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal'
           const width = Math.max(0, ((hasta - desde) / MAX) * 100)
           return (
             <div key={i} title={`${(t.tipo * 100).toFixed(0)}%: ${fmt(desde)} – ${t.hasta ? fmt(t.hasta) : '∞'}`}
-              style={{ width: `${width}%`, background: COLORES[i] ?? '#e2e8f0', height: '100%' }} />
+              style={{ width: `${width}%`, background: COLORES[i] ?? 'var(--border)', height: '100%' }} />
           )
         })}
         {base > 0 && (
@@ -44,7 +44,7 @@ function TramoBar({ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal'
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
         {tramosIRPF.filter(t => t.importe > 0 || t.desde === 0).map((t, i) => (
           <span key={i} style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '2px', background: COLORES[i] ?? '#e2e8f0' }} />
+            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '2px', background: COLORES[i] ?? 'var(--border)' }} />
             {(t.tipo * 100).toFixed(0)}%
             {t.importe > 0 && <strong> → {fmt(t.importe)}</strong>}
           </span>
@@ -81,23 +81,13 @@ function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinancie
           <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>⚙️ Mi situación familiar y fiscal</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--muted)' }}>×</button>
         </div>
-        <style>{`
-          @media (max-width: 520px) {
-            /* Móvil: la fila del hijo se apila (evita que 'Nombre' se comprima a 0 tras la
-               fecha 130px + %disc 70px). Nombre a ancho completo arriba; fecha/%/✕ debajo. */
-            .fiscal-hijo-row { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; align-items: center !important; }
-            .fiscal-hijo-row > input:first-child { flex: 1 1 100% !important; min-width: 0 !important; }
-            .fiscal-hijo-row > input[type="date"] { flex: 1 1 130px !important; min-width: 0 !important; }
-            .fiscal-hijo-row > input[type="number"] { flex: 1 1 70px !important; min-width: 0 !important; }
-          }
-        `}</style>
         <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Hijos / descendientes</div>
         {hijos.map((h, i) => (
           <div key={i} className="fiscal-hijo-row" style={{ display: 'grid', gridTemplateColumns: '1fr 130px 70px auto', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
             <input style={inputStyle} placeholder="Nombre" value={h.nombre} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, nombre: e.target.value } : x))} />
             <input style={inputStyle} type="date" value={h.fechaNacimiento} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, fechaNacimiento: e.target.value } : x))} />
             <input style={inputStyle} type="number" placeholder="% disc." value={h.gradoDiscapacidad} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, gradoDiscapacidad: Number(e.target.value) } : x))} />
-            <button onClick={() => setHijos(hs => hs.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer', fontSize: '16px' }}>×</button>
+            <button onClick={() => setHijos(hs => hs.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: 'var(--negative)', cursor: 'pointer', fontSize: '16px' }}>×</button>
           </div>
         ))}
         <button onClick={() => setHijos(hs => [...hs, { id: '', nombre: '', fechaNacimiento: '', gradoDiscapacidad: 0, computoCompleto: true }])} style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: '1px dashed var(--border)', borderRadius: '6px', padding: '6px', cursor: 'pointer', width: '100%', marginBottom: '16px' }}>+ Añadir hijo</button>
@@ -161,11 +151,6 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
   const d = data
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .fiscal-cols { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -238,7 +223,7 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
               <div>
                 <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Tramos IRPF {year}</div>
                 <TramoBar tramosIRPF={d.fiscal.tramosIRPF} base={d.fiscal.baseImponibleEstimada} />
-                <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '6px', border: `1px solid ${d.fiscal.tramoActual.tipo >= 0.37 ? '#feb2b2' : 'var(--border)'}`, background: d.fiscal.tramoActual.tipo >= 0.37 ? '#fff5f5' : 'var(--primary-light)', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '6px', border: `1px solid ${d.fiscal.tramoActual.tipo >= 0.37 ? '#feb2b2' : 'var(--border)'}`, background: d.fiscal.tramoActual.tipo >= 0.37 ? 'var(--negative-bg)' : 'var(--primary-light)', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span><strong>Tramo marginal: {(d.fiscal.tramoActual.tipo * 100).toFixed(0)}%</strong> ({fmt(d.fiscal.tramoActual.desde)}–{d.fiscal.tramoActual.hasta ? fmt(d.fiscal.tramoActual.hasta) : '∞'})</span>
                   </div>
@@ -261,8 +246,8 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
                 <>
                   <div key={`q${t.q}`} style={{ fontWeight: 600, padding: '5px 0', borderBottom: '1px solid var(--border)' }}>Q{t.q}</div>
                   <div style={{ textAlign: 'right', padding: '5px 0', borderBottom: '1px solid var(--border)', color: 'var(--primary)' }}>{fmt(t.ingresos)}</div>
-                  <div style={{ textAlign: 'right', padding: '5px 0', borderBottom: '1px solid var(--border)', color: '#e53e3e' }}>{fmt(t.gastosDeducibles)}</div>
-                  <div style={{ textAlign: 'right', padding: '5px 0', borderBottom: '1px solid var(--border)', fontWeight: 600, color: t.resultado >= 0 ? 'var(--primary)' : '#e53e3e' }}>{fmt(t.resultado)}</div>
+                  <div style={{ textAlign: 'right', padding: '5px 0', borderBottom: '1px solid var(--border)', color: 'var(--negative)' }}>{fmt(t.gastosDeducibles)}</div>
+                  <div style={{ textAlign: 'right', padding: '5px 0', borderBottom: '1px solid var(--border)', fontWeight: 600, color: t.resultado >= 0 ? 'var(--primary)' : 'var(--negative)' }}>{fmt(t.resultado)}</div>
                 </>
               ))}
             </div>
@@ -301,9 +286,9 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
                         <span style={{ color: 'var(--muted)' }}>− Retenciones ya pagadas</span>
                         <span style={{ fontWeight: 600, color: 'var(--primary)' }}>−{fmt(r.retenciones)}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: r.resultado <= 0 ? '#c6f6d5' : '#fff5f5', border: `1px solid ${r.resultado <= 0 ? '#9ae6b4' : '#feb2b2'}` }}>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: r.resultado <= 0 ? '#22543d' : '#742a2a' }}>{r.resultado <= 0 ? '✓ Te sale a DEVOLVER' : '⚠️ Te sale a PAGAR'}</span>
-                        <span style={{ fontSize: '18px', fontWeight: 800, color: r.resultado <= 0 ? '#22543d' : '#742a2a' }}>{fmt(Math.abs(r.resultado))}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: r.resultado <= 0 ? 'var(--positive-bg)' : 'var(--negative-bg)', border: `1px solid ${r.resultado <= 0 ? '#9ae6b4' : '#feb2b2'}` }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: r.resultado <= 0 ? 'var(--positive)' : 'var(--negative)' }}>{r.resultado <= 0 ? '✓ Te sale a DEVOLVER' : '⚠️ Te sale a PAGAR'}</span>
+                        <span style={{ fontSize: '18px', fontWeight: 800, color: r.resultado <= 0 ? 'var(--positive)' : 'var(--negative)' }}>{fmt(Math.abs(r.resultado))}</span>
                       </div>
                       <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>♻️ reembolsable · 🌅 Andalucía</div>
                       {r.deducciones.some(dd => dd.clave === 'maternidad') && (
@@ -315,7 +300,7 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
               </div>
               <div>
                 {d.deducciones.avisos.map((a, i) => (
-                  <div key={i} style={{ fontSize: '12px', padding: '8px 10px', background: '#fefcbf', border: '1px solid #faf089', borderRadius: '6px', marginBottom: '6px', color: '#744210' }}>💡 {a}</div>
+                  <div key={i} style={{ fontSize: '12px', padding: '8px 10px', background: 'var(--warning-bg)', border: '1px solid #faf089', borderRadius: '6px', marginBottom: '6px', color: 'var(--warning)' }}>💡 {a}</div>
                 ))}
                 {d.deducciones.sugerencias.length > 0 && (
                   <div style={{ marginBottom: '8px' }}>
@@ -331,7 +316,7 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
                     {d.deducciones.historico.map(h => (
                       <div key={h.anio} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
                         <span><strong>{h.anio}</strong></span>
-                        <span style={{ color: h.resultado <= 0 ? 'var(--primary)' : '#e53e3e' }}>{h.resultado <= 0 ? '▼' : '▲'} {fmt(Math.abs(h.resultado))}</span>
+                        <span style={{ color: h.resultado <= 0 ? 'var(--primary)' : 'var(--negative)' }}>{h.resultado <= 0 ? '▼' : '▲'} {fmt(Math.abs(h.resultado))}</span>
                       </div>
                     ))}
                   </div>
@@ -379,7 +364,7 @@ function MomentoCard({ titulo, sub, c }: { titulo: string; sub: string; c: Compa
             <div style={{ fontSize: '12px', fontWeight: 600 }}>{f.label} {f.recomendada && <span style={{ fontSize: '10px', background: 'var(--primary)', color: '#fff', padding: '1px 6px', borderRadius: '8px' }}>✓ mejor</span>}</div>
             <div style={{ fontSize: '10px', color: 'var(--muted)' }}>Base: {fmt(f.base)}</div>
           </div>
-          <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', color: f.resultado <= 0 ? 'var(--primary)' : '#e53e3e' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', color: f.resultado <= 0 ? 'var(--primary)' : 'var(--negative)' }}>
             {f.resultado <= 0 ? 'Devuelven' : 'A pagar'} {fmt(Math.abs(f.resultado))}
           </div>
         </div>
@@ -414,7 +399,7 @@ function DeclaracionBlock({ year, initial, initialYear }: { year: number; initia
       </div>
 
       {error ? (
-        <div style={{ fontSize: '12px', color: '#e53e3e', textAlign: 'center', padding: '16px' }}>No se pudo calcular. Recarga la página.</div>
+        <div style={{ fontSize: '12px', color: 'var(--negative)', textAlign: 'center', padding: '16px' }}>No se pudo calcular. Recarga la página.</div>
       ) : !estado ? (
         <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center', padding: '16px' }}>Calculando…</div>
       ) : (
@@ -426,7 +411,7 @@ function DeclaracionBlock({ year, initial, initialYear }: { year: number; initia
           </div>
 
           {/* Palanca de gasto: cuánto ahorra meter más gasto deducible antes del 31/12 */}
-          <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: '#c6f6d5', borderRadius: '6px', color: '#22543d', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ marginTop: '12px', fontSize: '12px', padding: '10px 12px', background: 'var(--positive-bg)', borderRadius: '6px', color: 'var(--positive)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div>💡 <strong>Cada 1.000€ más de gasto deducible ⇒ ~{eurSinDecimales(estado.palanca.ahorroPorMilGasto)} menos de cuota</strong> (tramo marginal proyectado: {(estado.palanca.tipoMarginal * 100).toFixed(0)}%). No hay salto de golpe al cambiar de tramo: solo el exceso tributa al tipo alto.</div>
             {estado.palanca.gastoParaBajarTramo !== null && estado.palanca.tipoPrevio !== null && estado.palanca.gastoParaBajarTramo > 0 && (
               <div>🎯 Para que la base proyectada baje al tramo del {(estado.palanca.tipoPrevio * 100).toFixed(0)}%: <strong>{fmt(estado.palanca.gastoParaBajarTramo)}</strong> de gasto antes del 31/12 ({estado.mesesRestantes} meses restantes) → ahorro ~<strong>{fmt(estado.palanca.ahorroBajarTramo ?? 0)}</strong>.</div>

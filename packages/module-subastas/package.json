@@ -16,5 +16,8 @@
     "test": "node --test test/*.test.ts"
   },
   "sideEffects": false,
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@central/core-catastro": "workspace:*"
+  }
 }

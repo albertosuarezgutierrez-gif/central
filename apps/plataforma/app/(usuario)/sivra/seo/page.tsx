@@ -83,19 +83,6 @@ export default function SeoPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 896 }}>
-      <style>{`
-        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        @media (max-width: 768px) {
-          .seo-header { flex-direction: column !important; align-items: flex-start !important; }
-          .seo-changes-row { flex-direction: column !important; }
-          .seo-changes-row > div { width: 100% !important; }
-          .seo-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
-        }
-        @media (max-width: 480px) {
-          .seo-header .seo-actions { width: 100% !important; }
-          .seo-header button { width: 100% !important; justify-content: center !important; }
-        }
-      `}</style>
 
       {/* Header + button */}
       <div className="seo-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -145,10 +132,10 @@ export default function SeoPage() {
         const verde = sondeo.estado === 'puede-escribir'
         const ambar = sondeo.estado === 'desconocido'
         const paleta = verde
-          ? { bg: '#f0fdf4', bd: '#bbf7d0', fg: '#15803d', icono: '✅', titulo: 'El token puede commitear la landing' }
+          ? { bg: 'var(--positive-bg)', bd: '#bbf7d0', fg: 'var(--positive)', icono: '✅', titulo: 'El token puede commitear la landing' }
           : ambar
-            ? { bg: '#fffbeb', bd: '#fde68a', fg: '#b45309', icono: '🟠', titulo: 'No he podido determinarlo' }
-            : { bg: '#fef2f2', bd: '#fecaca', fg: '#b91c1c', icono: '❌', titulo: 'El token NO puede commitear la landing' }
+            ? { bg: 'var(--warning-bg)', bd: '#fde68a', fg: 'var(--warning)', icono: '🟠', titulo: 'No he podido determinarlo' }
+            : { bg: 'var(--negative-bg)', bd: 'var(--negative-bg)', fg: 'var(--negative)', icono: '❌', titulo: 'El token NO puede commitear la landing' }
         return (
           <div style={{ marginBottom: 20, borderRadius: 6, padding: 16, background: paleta.bg, border: `1px solid ${paleta.bd}` }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: paleta.fg, marginBottom: 6 }}>
@@ -181,19 +168,19 @@ export default function SeoPage() {
       {result && !running && (
         <div style={{
           marginBottom: 20, borderRadius: 6, padding: 20,
-          background: result.error ? '#fef2f2' : '#f0fdf4',
-          border: `1px solid ${result.error ? '#fecaca' : '#bbf7d0'}`,
+          background: result.error ? 'var(--negative-bg)' : 'var(--positive-bg)',
+          border: `1px solid ${result.error ? 'var(--negative-bg)' : '#bbf7d0'}`,
         }}>
           {result.error ? (
-            <div style={{ fontSize: 13, color: '#b91c1c' }}><span style={{ fontWeight: 600 }}>❌ Error:</span> {result.error}</div>
+            <div style={{ fontSize: 13, color: 'var(--negative)' }}><span style={{ fontWeight: 600 }}>❌ Error:</span> {result.error}</div>
           ) : (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <span style={{ fontSize: 18 }}>🚀</span>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>Aplicado en housesevillana.es — Vercel desplegará en ~60s</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--positive)' }}>Aplicado en housesevillana.es — Vercel desplegará en ~60s</div>
               </div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Nuevo title</div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 12, background: '#fff', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1fae5' }}>{result.title}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 12, background: 'var(--surface)', padding: '8px 12px', borderRadius: 4, border: '1px solid var(--positive-bg)' }}>{result.title}</div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>Análisis</div>
               <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6 }}>{result.analysis}</div>
             </div>
@@ -254,9 +241,9 @@ export default function SeoPage() {
                           { label: 'Desc antes',     val: p.currentDescription, muted: true },
                           { label: 'Desc aplicada',  val: p.description,        muted: false },
                         ].map(r => (
-                          <div key={r.label} className="seo-changes-row" style={{ display: 'flex', gap: 8, padding: 8, borderRadius: 4, fontSize: 12, background: r.muted ? '#f9f9f9' : '#f0fdf4' }}>
-                            <span style={{ flexShrink: 0, fontWeight: 600, width: 96, color: r.muted ? '#9ca3af' : '#15803d' }}>{r.label}</span>
-                            <span style={{ color: r.muted ? '#9ca3af' : '#15803d', fontWeight: r.muted ? 400 : 500 }}>{r.val}</span>
+                          <div key={r.label} className="seo-changes-row" style={{ display: 'flex', gap: 8, padding: 8, borderRadius: 4, fontSize: 12, background: r.muted ? '#f9f9f9' : 'var(--positive-bg)' }}>
+                            <span style={{ flexShrink: 0, fontWeight: 600, width: 96, color: r.muted ? '#9ca3af' : 'var(--positive)' }}>{r.label}</span>
+                            <span style={{ color: r.muted ? '#9ca3af' : 'var(--positive)', fontWeight: r.muted ? 400 : 500 }}>{r.val}</span>
                           </div>
                         ))}
                       </div>

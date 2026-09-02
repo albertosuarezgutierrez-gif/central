@@ -110,8 +110,11 @@ export function etiquetaUrgencia(u: UrgenciaRenovacion): string {
 export function primaReferencia(
   p: { primaAnual?: number | null; primaBruta?: number | null },
 ): number | null {
-  if (typeof p.primaBruta === 'number' && Number.isFinite(p.primaBruta)) return p.primaBruta
-  if (typeof p.primaAnual === 'number' && Number.isFinite(p.primaAnual)) return p.primaAnual
+  // 🚨 Un 0 NO es una prima: 24 de las 109 vivas traen `prima_anual=0` o
+  // `prima_bruta=0` del EIAC (medido 02/09/2026, casi todas canceladas) y
+  // pintarlo como «0,00€» afirma que el seguro es gratis. Es «no informada».
+  if (typeof p.primaBruta === 'number' && Number.isFinite(p.primaBruta) && p.primaBruta > 0) return p.primaBruta
+  if (typeof p.primaAnual === 'number' && Number.isFinite(p.primaAnual) && p.primaAnual > 0) return p.primaAnual
   return null
 }
 

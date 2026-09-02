@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Pagina } from '@/components/ui'
 
 type Post = { id: string; titulo: string | null; caption: string | null; estado: string; tipo: string; alcance: number | null; likes: number | null; created_at: string }
 type Borrador = { id: string; titulo: string | null; plantilla: string | null; tema_elegido: string | null; estado: string; created_at: string }
@@ -42,14 +43,7 @@ export default function CrecimientoClient() {
   ]
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .crec-metrics { grid-template-columns: 1fr 1fr !important; }
-          .crec-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-          .crec-tabs { flex-wrap: wrap !important; }
-        }
-      `}</style>
+    <Pagina ancho="tabla">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>📈 Crecimiento · ia-rest</h1>
         <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
@@ -117,7 +111,7 @@ export default function CrecimientoClient() {
                 <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '8px 12px', fontWeight: 600 }}>{p.titulo || '—'}</td>
                   <td style={{ padding: '8px 12px' }}>
-                    <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '6px', background: p.estado === 'publicado' ? '#16a34a20' : '#94a3b820', color: p.estado === 'publicado' ? '#16a34a' : '#94a3b8', fontWeight: 600 }}>{p.estado}</span>
+                    <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '6px', background: p.estado === 'publicado' ? '#16a34a20' : '#94a3b820', color: p.estado === 'publicado' ? 'var(--positive)' : 'var(--muted)', fontWeight: 600 }}>{p.estado}</span>
                   </td>
                   <td style={{ padding: '8px 12px', color: 'var(--muted)' }}>{p.alcance ?? '—'}</td>
                   <td style={{ padding: '8px 12px', color: 'var(--muted)' }}>{p.likes ?? '—'}</td>
@@ -141,7 +135,7 @@ export default function CrecimientoClient() {
                 <td style={{ padding: '8px 12px', fontWeight: 600 }}>{b.titulo}</td>
                 <td style={{ padding: '8px 12px', color: 'var(--muted)' }}>{b.keyword || '—'}</td>
                 <td style={{ padding: '8px 12px' }}>
-                  <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '6px', background: b.estado === 'publicado' ? '#16a34a20' : '#2563eb20', color: b.estado === 'publicado' ? '#16a34a' : '#2563eb', fontWeight: 600 }}>{b.estado}</span>
+                  <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '6px', background: b.estado === 'publicado' ? '#16a34a20' : '#2563eb20', color: b.estado === 'publicado' ? 'var(--positive)' : 'var(--info)', fontWeight: 600 }}>{b.estado}</span>
                 </td>
                 <td style={{ padding: '8px 12px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fecha(b.created_at)}</td>
               </tr>
@@ -171,6 +165,6 @@ export default function CrecimientoClient() {
           </div>
         </div>
       )}
-    </main>
+    </Pagina>
   )
 }

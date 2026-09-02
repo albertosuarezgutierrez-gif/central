@@ -103,3 +103,63 @@ test('la búsqueda propaga el motivo del fallo, no un vacío', () => {
   assert.deepEqual(interpretarBusqueda(200, { estado: 'error' }), { estado: 'error', motivo: 'asegura_error' })
   assert.deepEqual(interpretarBusqueda(200, { estado: 'ok' }), { estado: 'error', motivo: 'respuesta_ilegible' })
 })
+
+// ── Intervinientes (02/09/2026) ─────────────────────────────────────────────
+// Esquiansa (empresa) «sin teléfono»: el número está en su conductor habitual.
+
+test('los intervinientes se leen y una fila rara se salta sin tumbar la ficha', () => {
+  const r = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: {
+      ...FICHA_OK.ficha,
+      intervinientes: [
+        { polizaId: 'p1', rol: 'conductor_habitual', nombre: 'Juan Manuel Lopez Benjumea', telefono: '600', fichaId: 'f2', esTomador: false, origen: 'cima' },
+        { rol: 'propietario' }, // sin polizaId: se salta
+        'basura',
+      ],
+    },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.intervinientes?.length, 1)
+  assert.equal(r.ficha.intervinientes?.[0].telefono, '600')
+  assert.equal(r.ficha.intervinientes?.[0].fichaId, 'f2')
+})
+
+test('🚨 sin bloque de intervinientes → null, NO lista vacía', () => {
+  // `[]` diría «no hay nadie más a quien llamar»; `null` dice «asegura no lo informa».
+  const r = interpretarFicha(200, FICHA_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.intervinientes, null)
+  const vacio = interpretarFicha(200, { ...FICHA_OK, ficha: { ...FICHA_OK.ficha, intervinientes: [] } })
+  assert.equal(vacio.estado, 'ok')
+  if (vacio.estado !== 'ok') return
+  assert.deepEqual(vacio.ficha.intervinientes, [])
+})
+
+// ── Forma de pago (02/09/2026) ──────────────────────────────────────────────
+
+test('el bloque de pago se lee, y un recargo con forma rara degrada a sin_datos', () => {
+  const con = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: { ...FICHA_OK.ficha, polizas: [{ ...FICHA_OK.ficha.polizas[0], pago: { fraccionamiento: 'semestral', formaCobro: 'domiciliado', recargo: { estado: 'calculado', primaAnual: 400, sumaRecibos: 420, recargoEur: 20, recargoPct: 5, recibos: 2 } } }] },
+  })
+  assert.equal(con.estado, 'ok')
+  if (con.estado !== 'ok') return
+  assert.equal(con.ficha.polizas[0].pago?.recargo.estado, 'calculado')
+  const raro = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: { ...FICHA_OK.ficha, polizas: [{ ...FICHA_OK.ficha.polizas[0], pago: { fraccionamiento: 'semestral', recargo: { estado: 'calculado', recargoEur: 'veinte' } } }] },
+  })
+  assert.equal(raro.estado, 'ok')
+  if (raro.estado !== 'ok') return
+  assert.equal(raro.ficha.polizas[0].pago?.recargo.estado, 'sin_datos')
+})
+
+test('🚨 sin bloque de pago → null, no «anual» ni «0€ de recargo»', () => {
+  const r = interpretarFicha(200, FICHA_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.polizas[0].pago, null)
+})

@@ -35,8 +35,8 @@ function VerifBadge({ v }: { v: { confirmados: number; total: number } }) {
   return (
     <span style={{
       fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px',
-      background: all ? '#c6f6d5' : '#fefcbf',
-      color: all ? '#276749' : '#744210',
+      background: all ? 'var(--positive-bg)' : 'var(--warning-bg)',
+      color: all ? 'var(--positive)' : 'var(--warning)',
       border: `1px solid ${all ? '#9ae6b4' : '#f6e05e'}`,
     }}>
       {v.confirmados}/{v.total} ✓
@@ -52,7 +52,7 @@ function MovTable({ movs, onConfirmar }: { movs: MovResumen[]; onConfirmar?: (id
         <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0', fontSize: '12px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ color: 'var(--muted)', whiteSpace: 'nowrap', minWidth: '36px' }}>{m.fecha?.slice(5) ?? '—'}</div>
           <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>{m.concepto}</div>
-          <div style={{ fontWeight: 600, color: m.importe >= 0 ? 'var(--primary)' : '#e53e3e', whiteSpace: 'nowrap' }}>
+          <div style={{ fontWeight: 600, color: m.importe >= 0 ? 'var(--primary)' : 'var(--negative)', whiteSpace: 'nowrap' }}>
             {m.importe >= 0 ? '+' : ''}{fmt(m.importe)}
           </div>
           {onConfirmar && (
@@ -62,8 +62,8 @@ function MovTable({ movs, onConfirmar }: { movs: MovResumen[]; onConfirmar?: (id
               style={{
                 fontSize: '11px', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', flexShrink: 0,
                 border: `1px solid ${m.confirmado ? '#9ae6b4' : 'var(--border)'}`,
-                background: m.confirmado ? '#c6f6d5' : 'var(--surface)',
-                color: m.confirmado ? '#276749' : 'var(--muted)',
+                background: m.confirmado ? 'var(--positive-bg)' : 'var(--surface)',
+                color: m.confirmado ? 'var(--positive)' : 'var(--muted)',
                 fontWeight: m.confirmado ? 700 : 400,
               }}
             >{m.confirmado ? '✓' : '✓'}</button>
@@ -103,18 +103,18 @@ function AyudaBanner({ ayudas, onDescartar }: { ayudas: ResumenFinanciero['deduc
           ? 'plazo por confirmar'
           : a.diasRestantes === 0 ? '¡el plazo acaba HOY!' : `quedan ${a.diasRestantes} días (hasta ${a.plazoFin})`
         return (
-          <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap', background: '#fefcbf', border: '1px solid #f6e05e', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '8px' }}>
+          <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap', background: 'var(--warning-bg)', border: '1px solid #f6e05e', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '8px' }}>
             <span style={{ fontSize: '20px' }}>💶</span>
-            <div style={{ flex: 1, minWidth: '220px', fontSize: '13px', color: '#744210' }}>
+            <div style={{ flex: 1, minWidth: '220px', fontSize: '13px', color: 'var(--warning)' }}>
               <strong>Ayuda con plazo abierto:</strong> {a.titulo}
               {a.organismo && <> · {a.organismo}</>}
               {a.cuantiaTexto && <> · <strong>{a.cuantiaTexto}</strong></>}
               {' · '}
-              <span style={{ color: urgente ? '#c53030' : '#744210', fontWeight: urgente ? 700 : 400 }}>{plazo}</span>
+              <span style={{ color: urgente ? 'var(--negative)' : 'var(--warning)', fontWeight: urgente ? 700 : 400 }}>{plazo}</span>
               {a.encaje && <div style={{ marginTop: '2px' }}>{a.encaje}</div>}
-              {a.url && <> <a href={a.url} target="_blank" rel="noreferrer" style={{ color: '#744210', textDecoration: 'underline' }}>convocatoria</a></>}
+              {a.url && <> <a href={a.url} target="_blank" rel="noreferrer" style={{ color: 'var(--warning)', textDecoration: 'underline' }}>convocatoria</a></>}
             </div>
-            <button onClick={() => onDescartar(a.id)} style={{ fontSize: '12px', padding: '4px 10px', background: '#fff', border: '1px solid #f6e05e', borderRadius: '6px', cursor: 'pointer', color: '#744210', fontWeight: 600, minHeight: '32px' }}>Descartar</button>
+            <button onClick={() => onDescartar(a.id)} style={{ fontSize: '12px', padding: '4px 10px', background: 'var(--surface)', border: '1px solid #f6e05e', borderRadius: '6px', cursor: 'pointer', color: 'var(--warning)', fontWeight: 600, minHeight: '32px' }}>Descartar</button>
           </div>
         )
       })}
@@ -128,14 +128,14 @@ function NovedadBanner({ novedades, onDescartar }: { novedades: ResumenFinancier
   return (
     <div style={{ marginBottom: '16px' }}>
       {novedades.map(n => (
-        <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#c6f6d5', border: '1px solid #9ae6b4', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '8px' }}>
+        <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--positive-bg)', border: '1px solid #9ae6b4', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '8px' }}>
           <span style={{ fontSize: '20px' }}>📈</span>
-          <div style={{ flex: 1, fontSize: '13px', color: '#22543d' }}>
+          <div style={{ flex: 1, fontSize: '13px', color: 'var(--positive)' }}>
             <strong>Novedad fiscal a tu favor:</strong> «{n.concepto}»
             {n.importeAnterior != null && n.importeNuevo != null && <> sube de {fmt(n.importeAnterior)} a <strong>{fmt(n.importeNuevo)}</strong></>}
-            {n.fuenteUrl && <> · <a href={n.fuenteUrl} target="_blank" rel="noreferrer" style={{ color: '#22543d', textDecoration: 'underline' }}>fuente ({n.ambito.toUpperCase()})</a></>}
+            {n.fuenteUrl && <> · <a href={n.fuenteUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--positive)', textDecoration: 'underline' }}>fuente ({n.ambito.toUpperCase()})</a></>}
           </div>
-          <button onClick={() => onDescartar(n.id)} style={{ fontSize: '12px', padding: '4px 10px', background: '#fff', border: '1px solid #9ae6b4', borderRadius: '6px', cursor: 'pointer', color: '#22543d', fontWeight: 600 }}>Entendido</button>
+          <button onClick={() => onDescartar(n.id)} style={{ fontSize: '12px', padding: '4px 10px', background: 'var(--surface)', border: '1px solid #9ae6b4', borderRadius: '6px', cursor: 'pointer', color: 'var(--positive)', fontWeight: 600 }}>Entendido</button>
         </div>
       ))}
     </div>
@@ -216,15 +216,6 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .finanzas-kpi-grid { grid-template-columns: 1fr 1fr !important; }
-          .finanzas-bloques { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 480px) {
-          .finanzas-kpi-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
 
       {/* ── Controles ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -271,8 +262,8 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
           <div className="finanzas-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
             {[
               { label: 'Ingresos netos', value: totalIngresos, color: 'var(--primary)', sub: periodoLabel },
-              { label: 'Gastos totales', value: totalGastos, color: '#e53e3e', sub: 'Negocio + personal' },
-              { label: 'Resultado negocio', value: totalResultado, color: totalResultado >= 0 ? 'var(--primary)' : '#e53e3e', sub: antPct !== null ? `${antPct >= 0 ? '↑' : '↓'} ${Math.abs(antPct).toFixed(0)}% vs ${year - 1}` : undefined },
+              { label: 'Gastos totales', value: totalGastos, color: 'var(--negative)', sub: 'Negocio + personal' },
+              { label: 'Resultado negocio', value: totalResultado, color: totalResultado >= 0 ? 'var(--primary)' : 'var(--negative)', sub: antPct !== null ? `${antPct >= 0 ? '↑' : '↓'} ${Math.abs(antPct).toFixed(0)}% vs ${year - 1}` : undefined },
             ].map(k => (
               <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '4px' }}>{k.label}</div>
@@ -312,8 +303,8 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 {[
                   { label: 'Cobrado neto', value: d.correduria.cobradoNeto, color: 'var(--primary)' },
-                  { label: 'Gastos activ.', value: d.correduria.gastosDeducibles, color: '#e53e3e' },
-                  { label: 'Resultado', value: d.correduria.resultado, color: d.correduria.resultado >= 0 ? 'var(--primary)' : '#e53e3e' },
+                  { label: 'Gastos activ.', value: d.correduria.gastosDeducibles, color: 'var(--negative)' },
+                  { label: 'Resultado', value: d.correduria.resultado, color: d.correduria.resultado >= 0 ? 'var(--primary)' : 'var(--negative)' },
                 ].map(k => (
                   <div key={k.label} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{k.label}</div>
@@ -357,17 +348,17 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                       <div style={{ fontSize: '10px', color: 'var(--muted)' }}>{r.sub}</div>
                     </div>
                     <div style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmt(r.ing)}</div>
-                    <div style={{ color: '#e53e3e', fontWeight: 600 }}>{fmt(r.gas)}</div>
+                    <div style={{ color: 'var(--negative)', fontWeight: 600 }}>{fmt(r.gas)}</div>
                   </div>
                 </div>
               ))}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px', padding: '6px 0', fontSize: '13px', fontWeight: 700 }}>
                 <div>Total pisos</div>
                 <div style={{ color: 'var(--primary)' }}>{fmt(d.pisos.total.ingresos)}</div>
-                <div style={{ color: '#e53e3e' }}>{fmt(d.pisos.total.gastos)}</div>
+                <div style={{ color: 'var(--negative)' }}>{fmt(d.pisos.total.gastos)}</div>
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--primary-light)', borderRadius: '4px', padding: '5px 8px', marginTop: '4px' }}>
-                Resultado: <strong style={{ color: d.pisos.total.resultado >= 0 ? 'var(--primary)' : '#e53e3e' }}>{fmt(d.pisos.total.resultado)}</strong>
+                Resultado: <strong style={{ color: d.pisos.total.resultado >= 0 ? 'var(--primary)' : 'var(--negative)' }}>{fmt(d.pisos.total.resultado)}</strong>
                 <span style={{ marginLeft: '8px', color: 'var(--muted)' }}>· Amortización: configura valor de construcción</span>
               </div>
               <MiniChart porMes={d.pisos.porMes} color="#48bb78" />

@@ -101,15 +101,6 @@ export default function FiscalPage() {
 
   return (
     <div style={{ padding: '32px 24px', maxWidth: 1100, margin: '0 auto' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .fiscal-header { flex-direction: column !important; align-items: flex-start !important; }
-          .fiscal-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
-          .fiscal-grand-grid { grid-template-columns: 1fr !important; }
-          .fiscal-prop-summary { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
-          .fiscal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-      `}</style>
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ fontSize: 20 }}>💶</span>
         <div>
@@ -155,8 +146,8 @@ export default function FiscalPage() {
         <div className="fiscal-grand-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
           {[
             { label: 'Ingresos brutos', value: `${eur(grand.ingresos)}`, color: 'var(--text)' },
-            { label: 'Gastos deducibles', value: `${eur(grand.totalGastos)}`, color: '#ef4444' },
-            { label: 'Resultado neto', value: `${eur(grand.resultadoNeto)}`, color: grand.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' },
+            { label: 'Gastos deducibles', value: `${eur(grand.totalGastos)}`, color: 'var(--negative)' },
+            { label: 'Resultado neto', value: `${eur(grand.resultadoNeto)}`, color: grand.resultadoNeto >= 0 ? 'var(--positive)' : 'var(--negative)' },
           ].map(({ label, value, color }) => (
             <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{label} {year}</div>
@@ -171,7 +162,7 @@ export default function FiscalPage() {
       )}
 
       {error && (
-        <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: '#dc2626', marginBottom: 24 }}>
+        <div style={{ background: 'var(--negative-bg)', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: 'var(--negative)', marginBottom: 24 }}>
           {error}
         </div>
       )}
@@ -192,8 +183,8 @@ export default function FiscalPage() {
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>{propName}</h2>
               <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--muted)' }}>
                 <span>Ingresos: <strong style={{ color: 'var(--text)' }}>{eur(totals.ingresos)}</strong></span>
-                <span>Gastos: <strong style={{ color: '#ef4444' }}>{eur(totals.totalGastos)}</strong></span>
-                <span>Neto: <strong style={{ color: totals.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' }}>{eur(totals.resultadoNeto)}</strong></span>
+                <span>Gastos: <strong style={{ color: 'var(--negative)' }}>{eur(totals.totalGastos)}</strong></span>
+                <span>Neto: <strong style={{ color: totals.resultadoNeto >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{eur(totals.resultadoNeto)}</strong></span>
               </div>
             </div>
 
@@ -218,8 +209,8 @@ export default function FiscalPage() {
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{eur(r.gastos100)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{eur(r.gastosProp)}</td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{eur(r.gastosAlquiler)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: '#ef4444' }}>{eur(r.totalGastos)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: r.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' }}>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--negative)' }}>{eur(r.totalGastos)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: r.resultadoNeto >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
                         {eur(r.resultadoNeto)}
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{r.reservas}</td>
@@ -231,8 +222,8 @@ export default function FiscalPage() {
                     <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 12 }}>TOTAL {year}</td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text)' }}>{eur(totals.ingresos)}</td>
                     <td colSpan={3} />
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: '#ef4444' }}>{eur(totals.totalGastos)}</td>
-                    <td style={{ padding: '10px 14px', textAlign: 'right', color: totals.resultadoNeto >= 0 ? '#22c55e' : '#ef4444' }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--negative)' }}>{eur(totals.totalGastos)}</td>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', color: totals.resultadoNeto >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
                       {eur(totals.resultadoNeto)}
                     </td>
                     <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--muted)' }}>{totals.reservas}</td>

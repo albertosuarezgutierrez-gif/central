@@ -6,7 +6,7 @@ import EmpresaCard, { type Empresa } from './EmpresaCard'
 const PAGE = 50
 const CUADRANTE: Record<string, { label: string; color: string }> = {
   caza: { label: '🎯 Zona caza', color: 'var(--primary)' },
-  declive: { label: '⚠️ Declive', color: 'var(--warning, #b45309)' },
+  declive: { label: '⚠️ Declive', color: 'var(--warning)' },
   sano: { label: '😴 Sano', color: 'var(--muted)' },
   ignorar: { label: '🚫 Ignorar', color: 'var(--muted)' },
 }

@@ -22,8 +22,8 @@ export default async function PatrimonioPage() {
       <h1 style={{ fontSize: 22, margin: 0 }}>🏛️ Patrimonio</h1>
 
       {/* Neto mínimo — SIEMPRE declarando lo que falta. */}
-      <section style={{ background: 'var(--card-bg, var(--surface, #fff))', border: '1px solid var(--border, #e5e7eb)', borderRadius: 12, padding: 16 }}>
-        <div style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>
+      <section style={{ background: 'var(--card-bg, var(--surface, #fff))', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
           Patrimonio neto {resumen.parcial ? '(mínimo conocido — parcial)' : ''}
         </div>
         <div style={{ fontSize: 30, fontWeight: 700 }}>{eurSinDecimales(resumen.neto)}</div>
@@ -34,7 +34,7 @@ export default async function PatrimonioPage() {
           <span>🏦 Deuda conocida: <strong>−{eurSinDecimales(resumen.pasivosConocidos)}</strong>{resumen.pasivoDesconocido ? ' (+ hipoteca sin cuantificar)' : ''}</span>
         </div>
         {resumen.parcial && (
-          <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: 'var(--warning-bg, #fef3c7)', fontSize: 13 }}>
+          <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: 'var(--warning-bg)', fontSize: 13 }}>
             ⚠️ Este neto es un mínimo — falta por saber:
             <ul style={{ margin: '4px 0 0 18px' }}>
               {resumen.faltan.map(f => <li key={f}>{f}</li>)}
@@ -46,11 +46,11 @@ export default async function PatrimonioPage() {
       {/* Activos, en cards apiladas (funciona en ≥320 px sin tabla ancha). */}
       <section style={{ display: 'grid', gap: 12 }}>
         {activos.map(a => (
-          <article key={a.id} style={{ background: 'var(--card-bg, var(--surface, #fff))', border: '1px solid var(--border, #e5e7eb)', borderRadius: 12, padding: 14 }}>
+          <article key={a.id} style={{ background: 'var(--card-bg, var(--surface, #fff))', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontWeight: 700 }}>{a.nombre}</div>
-                <div style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>
                   {a.direccion ?? 'dirección pendiente'}
                   {a.tenencia === 'alquilado' && ' · subarrendado (no es activo en propiedad)'}
                   {a.uso === 'vivienda_habitual' && ' · vivienda habitual'}
@@ -60,16 +60,16 @@ export default async function PatrimonioPage() {
                 {a.estadoValor === 'valorado' && a.valoracion && (
                   <>
                     <div style={{ fontWeight: 700, fontSize: 18 }}>{eurSinDecimales(a.valoracion.valor)}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted, #6b7280)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>
                       {fuenteCorta(a.valoracion.fuente)} · {a.valoracion.fecha} · enfoque {a.valoracion.enfoque}
                     </div>
                   </>
                 )}
                 {a.estadoValor === 'pendiente_valoracion' && (
-                  <div style={{ fontSize: 13, padding: '4px 8px', borderRadius: 8, background: 'var(--warning-bg, #fef3c7)' }}>🟠 sin valorar todavía</div>
+                  <div style={{ fontSize: 13, padding: '4px 8px', borderRadius: 8, background: 'var(--warning-bg)' }}>🟠 sin valorar todavía</div>
                 )}
                 {a.estadoValor === 'no_aplica' && (
-                  <div style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>— no computa en el neto</div>
+                  <div style={{ fontSize: 13, color: 'var(--muted)' }}>— no computa en el neto</div>
                 )}
               </div>
             </div>
@@ -84,18 +84,18 @@ export default async function PatrimonioPage() {
               )}
             </div>
             {a.valoraciones.length > 1 && (
-              <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted, #6b7280)' }}>
+              <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
                 Valoración dual: {a.valoraciones.map(v => `${v.enfoque} ${eurSinDecimales(v.valor)} (${v.fecha})`).join(' · ')}
               </div>
             )}
-            {a.notas && <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted, #6b7280)' }}>{a.notas}</div>}
+            {a.notas && <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>{a.notas}</div>}
           </article>
         ))}
       </section>
 
       {/* Intake: lo que el coordinador necesita de Alberto. */}
       {intake.length > 0 && (
-        <section style={{ background: 'var(--card-bg, var(--surface, #fff))', border: '1px solid var(--border, #e5e7eb)', borderRadius: 12, padding: 14 }}>
+        <section style={{ background: 'var(--card-bg, var(--surface, #fff))', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
           <div style={{ fontWeight: 700 }}>❓ Datos que faltan (el coordinador los preguntará)</div>
           <ul style={{ margin: '6px 0 0 18px', fontSize: 14 }}>
             {intake.map(p => <li key={p}>{p}</li>)}

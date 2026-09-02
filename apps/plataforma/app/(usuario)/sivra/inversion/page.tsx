@@ -14,9 +14,9 @@ type Inmueble = {
   estado: string; notas: string | null; is_new: boolean; created_at: string
 }
 
-const SCORE_COLOR = (s: number) => s >= 8 ? '#16a34a' : s >= 6 ? '#ca8a04' : s >= 4 ? '#ea580c' : '#dc2626'
+const SCORE_COLOR = (s: number) => s >= 8 ? 'var(--positive)' : s >= 6 ? '#ca8a04' : s >= 4 ? 'var(--warning)' : 'var(--negative)'
 const ESTADOS = ['pendiente', 'interesa', 'visitado', 'descartado']
-const ESTADO_COLOR: Record<string, string> = { pendiente: '#6b7280', interesa: '#2563eb', visitado: '#16a34a', descartado: '#dc2626' }
+const ESTADO_COLOR: Record<string, string> = { pendiente: 'var(--muted)', interesa: 'var(--info)', visitado: 'var(--positive)', descartado: 'var(--negative)' }
 const TIPO_ICON: Record<string, string> = { chalet: '🏡', parcela: '🌿', finca: '🌾', casa: '🏠', piso: '🏢', apartamento: '🏖️' }
 const PAGE_SIZE = 60
 
@@ -58,7 +58,7 @@ function stripHtml(html: string): string {
 
 function Toast({ msg, type, onClose }: { msg: string; type: 'ok' | 'err' | 'info'; onClose: () => void }) {
   useEffect(() => { const t = setTimeout(onClose, 4500); return () => clearTimeout(t) }, [onClose])
-  const cl = type === 'ok' ? '#16a34a' : type === 'err' ? '#dc2626' : '#2563eb'
+  const cl = type === 'ok' ? 'var(--positive)' : type === 'err' ? 'var(--negative)' : 'var(--info)'
   return (
     <div style={{
       position: 'fixed', bottom: 20, right: 20, zIndex: 50,
@@ -78,10 +78,10 @@ function ConfirmBar({ onYes, onNo }: { onYes: () => void; onNo: () => void }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '8px 16px',
       borderRadius: 12, fontSize: 12, marginBottom: 12,
-      background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', color: '#dc2626',
+      background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', color: 'var(--negative)',
     }}>
       <span style={{ flex: 1 }}>⚠ ¿Eliminar esta propiedad? No se puede deshacer.</span>
-      <button onClick={onYes} style={{ padding: '4px 12px', borderRadius: 8, fontWeight: 600, background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer' }}>Eliminar</button>
+      <button onClick={onYes} style={{ padding: '4px 12px', borderRadius: 8, fontWeight: 600, background: 'var(--negative)', color: '#fff', border: 'none', cursor: 'pointer' }}>Eliminar</button>
       <button onClick={onNo} style={{ padding: '4px 12px', borderRadius: 8, background: 'var(--border)', color: 'var(--muted)', border: 'none', cursor: 'pointer' }}>Cancelar</button>
     </div>
   )
@@ -115,10 +115,10 @@ function PreviewModal({ item, onClose }: { item: Inmueble; onClose: () => void }
             </div>
             <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>📍 {item.zona} · {fmtPrice(item.precio)}{item.metros ? ` · ${item.metros}m²` : ''}</p>
             <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-              {item.tiene_piscina && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: '#dbeafe', color: '#1d4ed8' }}>🏊</span>}
+              {item.tiene_piscina && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--info-bg)', color: 'var(--info)' }}>🏊</span>}
               {item.cerca_playa   && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: '#e0f2fe', color: '#0369a1' }}>🏖️</span>}
-              {item.es_rustica    && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: '#dcfce7', color: '#15803d' }}>🌾</span>}
-              {item.es_subasta    && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: '#fef3c7', color: '#92400e' }}>⚖️</span>}
+              {item.es_rustica    && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--positive-bg)', color: 'var(--positive)' }}>🌾</span>}
+              {item.es_subasta    && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--warning-bg)', color: 'var(--warning)' }}>⚖️</span>}
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 22, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>✕</button>
@@ -129,7 +129,7 @@ function PreviewModal({ item, onClose }: { item: Inmueble; onClose: () => void }
             <div style={{ display: 'flex', gap: 8 }}>
               <a href={`tel:${item.telefono}`} style={{
                 flex: 1, fontSize: 12, padding: '8px 12px', borderRadius: 8, fontWeight: 500, textAlign: 'center',
-                background: 'rgba(22,163,74,0.08)', color: '#16a34a', border: '1px solid rgba(22,163,74,0.2)', textDecoration: 'none',
+                background: 'rgba(22,163,74,0.08)', color: 'var(--positive)', border: '1px solid rgba(22,163,74,0.2)', textDecoration: 'none',
               }}>📞 {item.telefono}</a>
               <a href={waUrl(item.telefono)} target="_blank" rel="noreferrer" style={{
                 fontSize: 12, padding: '8px 12px', borderRadius: 8, fontWeight: 500,
@@ -140,7 +140,7 @@ function PreviewModal({ item, onClose }: { item: Inmueble; onClose: () => void }
           {item.email_from && !isPortalSender(item.email_from) && (
             <a href={`mailto:${item.email_from}`} style={{
               display: 'block', fontSize: 12, padding: '8px 12px', borderRadius: 8, textAlign: 'center',
-              background: 'rgba(37,99,235,0.06)', color: '#2563eb', border: '1px solid rgba(37,99,235,0.15)', textDecoration: 'none',
+              background: 'rgba(37,99,235,0.06)', color: 'var(--info)', border: '1px solid rgba(37,99,235,0.15)', textDecoration: 'none',
             }}>✉ {item.email_from.replace(/<.*?>|\(.*?\)/g, '').trim()}</a>
           )}
           <a href={googleUrl(item)} target="_blank" rel="noreferrer" style={{
@@ -150,7 +150,7 @@ function PreviewModal({ item, onClose }: { item: Inmueble; onClose: () => void }
           {gUrl && (
             <a href={gUrl} target="_blank" rel="noreferrer" style={{
               display: 'block', fontSize: 12, padding: '8px 12px', borderRadius: 8, textAlign: 'center',
-              background: 'rgba(37,99,235,0.06)', color: '#2563eb', border: '1px solid rgba(37,99,235,0.15)', textDecoration: 'none',
+              background: 'rgba(37,99,235,0.06)', color: 'var(--info)', border: '1px solid rgba(37,99,235,0.15)', textDecoration: 'none',
             }}>📧 Abrir en Gmail</a>
           )}
         </div>
@@ -225,9 +225,9 @@ function Card({ item, onEstado, onDelete, onPreview, editingId, setEditingId, ed
           {item.es_bajada_precio && item.precio_anterior && (
             <div style={{ fontSize: 13, textDecoration: 'line-through', color: 'rgba(220,38,38,.5)' }}>{fmtPrice(item.precio_anterior)}</div>
           )}
-          {item.precio && <div style={{ fontSize: 20, fontWeight: 700, color: item.es_bajada_precio ? '#16a34a' : 'var(--primary)', letterSpacing: '-0.03em' }}>{fmtPrice(item.precio)}</div>}
+          {item.precio && <div style={{ fontSize: 20, fontWeight: 700, color: item.es_bajada_precio ? 'var(--positive)' : 'var(--primary)', letterSpacing: '-0.03em' }}>{fmtPrice(item.precio)}</div>}
           {item.es_bajada_precio && item.precio_anterior && item.precio && (
-            <div style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(22,163,74,.1)', color: '#16a34a' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(22,163,74,.1)', color: 'var(--positive)' }}>
               -{Math.round((1 - item.precio / item.precio_anterior) * 100)}%
             </div>
           )}
@@ -235,11 +235,11 @@ function Card({ item, onEstado, onDelete, onPreview, editingId, setEditingId, ed
         </div>
 
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
-          {item.es_bajada_precio && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 600, background: 'rgba(22,163,74,.08)', color: '#16a34a', border: '1px solid rgba(22,163,74,.2)' }}>📉 BAJADA</span>}
-          {item.tiene_piscina && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: '#dbeafe', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>🏊 Piscina</span>}
+          {item.es_bajada_precio && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 600, background: 'rgba(22,163,74,.08)', color: 'var(--positive)', border: '1px solid rgba(22,163,74,.2)' }}>📉 BAJADA</span>}
+          {item.tiene_piscina && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid #bfdbfe' }}>🏊 Piscina</span>}
           {item.cerca_playa   && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}>🏖️ Playa</span>}
-          {item.es_rustica    && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>🌾 Rústica</span>}
-          {item.es_subasta    && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>⚖️ Subasta</span>}
+          {item.es_rustica    && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--positive-bg)', color: 'var(--positive)', border: '1px solid #bbf7d0' }}>🌾 Rústica</span>}
+          {item.es_subasta    && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid #fde68a' }}>⚖️ Subasta</span>}
         </div>
 
         <p style={{ fontSize: 12, fontStyle: 'italic', marginBottom: 12, color: 'var(--muted)', lineHeight: 1.5 }}>"{item.razon_chollo}"</p>
@@ -290,7 +290,7 @@ function Card({ item, onEstado, onDelete, onPreview, editingId, setEditingId, ed
           {gUrl && (
             <a href={gUrl} target="_blank" rel="noreferrer" style={{
               fontSize: 12, padding: '4px 8px', borderRadius: 8,
-              background: 'rgba(37,99,235,.06)', color: '#2563eb', border: '1px solid rgba(37,99,235,.15)', textDecoration: 'none',
+              background: 'rgba(37,99,235,.06)', color: 'var(--info)', border: '1px solid rgba(37,99,235,.15)', textDecoration: 'none',
             }}>📧</a>
           )}
           <a href={googleUrl(item)} target="_blank" rel="noreferrer" style={{
@@ -449,20 +449,6 @@ export default function InversionPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 1280 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .inv-header { flex-direction: column !important; align-items: flex-start !important; }
-          .inv-stats-grid { grid-template-columns: repeat(4, 1fr) !important; }
-          .inv-filters { flex-direction: column !important; }
-          .inv-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
-          .inv-cards-grid { grid-template-columns: 1fr !important; }
-          .inv-price-row { flex-wrap: wrap !important; }
-        }
-        @media (max-width: 480px) {
-          .inv-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .inv-header > div:last-child { flex-wrap: wrap !important; }
-        }
-      `}</style>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {previewItem && <PreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />}
 
@@ -486,7 +472,7 @@ export default function InversionPage() {
       </div>
 
       {analyzing && progress && (
-        <div style={{ marginBottom: 16, padding: '8px 16px', borderRadius: 8, fontSize: 12, background: 'rgba(22,163,74,.06)', border: '1px solid rgba(22,163,74,.15)', color: '#16a34a' }}>
+        <div style={{ marginBottom: 16, padding: '8px 16px', borderRadius: 8, fontSize: 12, background: 'rgba(22,163,74,.06)', border: '1px solid rgba(22,163,74,.15)', color: 'var(--positive)' }}>
           ⏳ {progress}
         </div>
       )}
@@ -603,7 +589,7 @@ export default function InversionPage() {
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           {bestLink && <a href={bestLink} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'var(--primary)' }}>🔗</a>}
                           {item.telefono && <a href={waUrl(item.telefono)} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: '#25D166' }}>📞</a>}
-                          {gUrl && <a href={gUrl} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: '#2563eb' }}>📧</a>}
+                          {gUrl && <a href={gUrl} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'var(--info)' }}>📧</a>}
                           <a href={googleUrl(item)} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: 'var(--muted)' }}>🔍</a>
                           <button onClick={() => setPreviewItem(item)} style={{ fontSize: 14, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>👁</button>
                           <button onClick={() => setConfirmId(item.id)} style={{ fontSize: 14, color: 'rgba(220,38,38,.6)', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>

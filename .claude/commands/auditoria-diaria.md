@@ -10,7 +10,9 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 > corregir el **drift** entre lo que afirman la memoria/skills/docs y lo que de verdad
 > hace el código y la infra.
 >
-> **MCPs que necesita:** Supabase + Vercel + github (todo lectura, salvo abrir el PR).
+> **MCPs que necesita:** Supabase + Vercel + github (todo lectura, salvo abrir el PR) + **`Supabase_asegura`**
+> (solo lectura; es el ORIGEN de la cartera de la correduría, el Supabase de Manuel — lo usa el bloque
+> 2-quater. Si no está adjunto, ese bloque dice «no he podido mirar el origen», nunca «coincide»).
 >
 > **Para el aviso por Telegram** necesita `PLATAFORMA_URL` + `ALERTA_TOKEN` en la env de la
 > rutina (ver "Arquitectura de notificaciones Telegram" en `docs/RUTINAS-PROGRAMADAS.md`).
@@ -22,11 +24,17 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 >
 > **Dos cadencias (ver `docs/RUTINAS-PROGRAMADAS.md`):**
 > - **Ligera (por defecto, diaria):** reconcilia memoria/skills/docs + checks baratos
->   (lockfile, radiografía de estructura, drift skills↔código). SALTA typecheck de las 8
+>   (lockfile, radiografía de estructura, drift skills↔código). SALTA typecheck de las 12
 >   apps y tests pesados. Rápida y de bajo ruido. Es la red de seguridad del guardián de
 >   cierre (`persist-memoria.sh`): caza lo que las sesiones no anotaron a mano.
 > - **Profunda (`/auditoria-diaria --profunda`, semanal):** corre `auditoria-central`
->   ENTERA (typecheck de las 8 apps + tests + seguridad multi-tenant + infra por MCP).
+>   ENTERA (typecheck de las 12 apps + tests + seguridad multi-tenant + infra por MCP).
+>
+> ⚠️ **«Las 12 apps» no es una cifra para copiar: es `ls apps` cruzado con la matriz de
+> `.github/workflows/tests.yml`.** Este doc decía «8» desde junio mientras nacían mariscos, asegura,
+> asegura-portal y housesevillana — y nadie las typechequeaba en la pasada semanal. Si `ls apps` y la
+> matriz difieren, es hallazgo 🔴 (una app fuera de la matriz no la mira nadie: `housesevillana`
+> vivió 15 días con 5 errores TS por eso).
 
 ## Dos carriles de entrega (lo que cambió — léelo antes de tocar nada)
 El problema histórico no era de alcance sino de **entrega**: todo se quedaba en un PR draft
@@ -94,11 +102,17 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
 2. **Auditoría según cadencia.**
    - **Modo ligero (por defecto):** invoca **`auditoria-central`** pero recorre solo los
      bloques baratos (integridad estructural: lockfile + radiografía + `transpilePackages`;
-     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 8 apps y los
+     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 12 apps y los
      tests pesados — esos son de la pasada semanal.
    - **Modo profundo (`--profunda` en el prompt):** recorre `auditoria-central` ENTERA
-     (integridad, typecheck de las 8 apps, tests, seguridad multi-tenant, deps, infra real
-     por MCP, coherencia de docs).
+     (integridad, typecheck de las 12 apps, tests, seguridad multi-tenant, deps, infra real
+     por MCP, coherencia de docs). **Tramo de la correduría en la profunda (02/09/2026):**
+     typecheck de `apps/asegura` con sus DOS schemas (`prisma generate && prisma generate
+     --schema prisma/asegura.prisma`; con uno solo sale `TS2307` falso), tests de
+     `packages/module-seguros{,-pii,-portal}` (el cifrado y el índice ciego: si se rompen, los
+     clientes dejan de ENCONTRARSE sin ningún error), la foto `seguros.*` vs el origen con
+     checksums (bloque 2-quater c), y `docs/TRASPASO-CORREDURIA.md` §pendientes contra el código
+     (¿sigue leyendo del origen? ¿sigue sin firmar el contrato de encargado?).
    Distingue error real de ruido de entorno; no infles conteos.
 
 2-bis. **Heartbeat de crons y agentes** (barato, corre SIEMPRE — también en modo ligero).
@@ -235,6 +249,87 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
       vigilante está muerto → 🔴 + Telegram.
    Sin nada raro → una línea verde y sigue.
 
+2-quater. **🛡️ SALUD DE LA CORREDURÍA — bloque OBLIGATORIO en TODAS las pasadas** (nuevo
+   02/09/2026, petición de Alberto: las rutinas tienen que cubrir TODO lo que se ha metido, y la
+   correduría es lo que más creció sin que esta auditoría la mirase — ni una línea hasta hoy).
+
+   🚨 **Por qué no basta con el heartbeat.** La correduría tiene tres fallos que un latido verde
+   no desmiente: (1) la ingesta de CIMA estuvo **dos meses** (24/06→30/08/2026) sin procesar 42
+   ficheros —23 recibos por 7.721,71€ de prima— con el health-check del CRM de origen en verde
+   (medía `ficherosError`, que valía cero; lo perdido estaba en `cuarentenaTotal`); (2) desde el
+   02/09/2026 la cartera vive en DOS sitios —el origen de Manuel (`uijsgeocgdaxkhvwtjqs`, que sigue
+   recibiendo CIMA) y la FOTO en `seguros.*` de central— y **divergen cada día**; (3) `apps/asegura`
+   es la única app del monorepo que gasta dinero real (0,50€ por tarificación en Codeoscopic).
+
+   **a) Latidos (consulta a) del 2-bis).** `correduria_renovaciones` (06:30) y `correduria_ingesta`
+   (06:45) están en `AGENTES_VIGILADOS` (30 h). **Sin fila = nunca corrió**, no «ok» (el vigía de
+   ingesta nació el 01/09/2026 por la tarde; su primera fila posible es del 02/09). Lee el
+   `detalle`: «no se ha podido comprobar» / «puerto sin configurar» es que faltó la LECTURA
+   (`ASEGURA_OPERADOR_SECRET` distinto entre plataforma y asegura, o la BD de asegura caída) y NO
+   dice que la ingesta o las renovaciones vayan bien. `cima-liq` (07:30, libro de comisiones,
+   escribe `comisiones_*`) **no deja latido**: huella CONDICIONADA — solo se investiga si el latido
+   de ingesta va en rojo o si `/correduria` pinta el cuadre vacío; proponer su latido es carril 2.
+
+   **b) Lo que NO es una huella: la frescura del origen.** La cartera viva son ~109 pólizas y CIMA
+   trae **0-3 pólizas/recibos por SEMANA**, con huecos de dos-tres semanas medidos (03/08→17/08/2026
+   sin nada; el 02/09 la última póliza era del 24/08). `max(created_at)` de `polizas` o
+   `poliza_recibos` en el origen es huella de ACTIVIDAD, no de salud — la misma trampa que
+   `updates/sync` en temporada baja: **no la marques ⛔ por vieja.** La señal de salud es la del
+   vigía (ficheros en cuarentena / pólizas huérfanas), no la fecha.
+
+   **c) Foto vs origen** (MCP `Supabase_asegura` para el origen, `Supabase` para central; en la
+   ligera solo recuentos, en la profunda también los checksums del método de
+   `apps/asegura/prisma/sql/2026-09-01_seguros_volcado_datos.sql`):
+
+   ```sql
+   -- ORIGEN (Supabase_asegura)
+   SELECT count(*) FILTER (WHERE import_ref IS NULL) AS vivas, count(*) AS total,
+          max(created_at) AS ultima FROM polizas;
+   SELECT count(*) AS recibos, max(created_at) AS ultimo FROM poliza_recibos;
+   -- CENTRAL (schema seguros)
+   SELECT count(*) AS total, max(created_at) AS ultima FROM seguros.polizas;
+   SELECT count(*) AS recibos, max(created_at) AS ultimo FROM seguros.poliza_recibos;
+   SELECT count(*) AS tablas, max(copiado_at) AS ultima_copia FROM seguros._volcado_control;
+   ```
+
+   Que difieran es **lo esperado** (la foto es del 02/09/2026): lo que se reporta es CUÁNTO
+   (filas que el origen tiene y la foto no) y desde cuándo. Mientras el código lea del origen
+   (`ASEGURA_DATABASE_URL`, `apps/asegura/lib/asegura-db.ts`, `prisma/asegura.prisma`) la
+   divergencia no rompe nada. El día que un PR apunte `asegura.prisma` a `seguros.*` **sin
+   re-copia previa**, la pantalla de Alberto (`/correduria` en plataforma) pasa a mentir con datos
+   de semanas → ese PR es hallazgo 🔴 aunque compile. Regla NULL≠0: si la consulta al origen
+   falla (conector no adjunto, permiso), es «no he podido mirar», nunca «coinciden».
+
+   **d) Dinero** (schema `seguros` de central):
+
+   ```sql
+   SELECT count(*) AS cotizaciones_7d, coalesce(sum(coste_cents), 0) AS cents,
+          count(*) FILTER (WHERE estado = 'descartado') AS descartadas
+   FROM seguros.codeoscopic_consumo WHERE creado_at > now() - interval '7 days';
+   ```
+
+   El flag `CODEOSCOPIC_TARIFICACION_ACTIVA` **no se puede leer desde aquí** (env de Vercel): la
+   señal es la fila. Cualquier cotización sin una decisión de Alberto anotada en la memoria es 🔴
+   Telegram. Una cotización sin desenlace (`cerrado_at IS NULL` >150 s) cuenta como gastada por
+   diseño — no la «limpies». El cepo de código es `test/regression-asegura-gasto-codeoscopic.test.ts`.
+
+   **e) Aislamiento** — comprobar que los cepos siguen en `pnpm test:guardia`, no re-derivarlos:
+   `regression-asegura-aislamiento` (toda consulta a `seguros.*` pasa por `lib/tenant`, porque
+   `prisma_seguros` es BYPASSRLS y las 86 RLS del origen ya no tienen sujeto: el fallo sería «se ve
+   todo sin que falle nada»), `regression-portal-aislamiento` (asegura-portal: rol propio SIN
+   BYPASSRLS, un asegurado solo ve lo suyo), `regression-asegura-operador-publico` +
+   `regression-correduria-puerto` (el puerto `/api/operador/*` exige Bearer y plataforma lo consume
+   solo por `lib/correduria-puerto.ts`). Un PR del rango que toque `seguros.*`, `lib/tenant*` o el
+   puerto sin tocar su cepo = 🟡 carril 2.
+
+   **f) La rutina §21 (`agente-correduria`, martes) está PAUSADA a propósito** (decisión de
+   Alberto, 01/09/2026): no la reportes como muda ni propongas reactivarla. Sí es hallazgo que
+   aparezca una entrada suya en `docs/AGENTES-BITACORA.md` estando pausada (correría sin que él
+   lo pidiera).
+
+   Cualquier 🔴 de este bloque → **Telegram inmediato** y el detalle al PR del carril 2. **No se
+   salta en modo ligero.**
+
 2bis. **💰 SALUD DEL PRECIO — bloque OBLIGATORIO en TODAS las pasadas** (nuevo 27/08/2026,
    petición expresa de Alberto: *«nos jugamos mucho dinero»*).
 
@@ -343,16 +438,50 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    PR draft del **carril 2** (no a `main`).
 
 4. **Reconciliación de memoria y skills** (el núcleo, **carril 1**):
+   - **Las CONVERSACIONES del rango, no solo los commits** (petición de Alberto, 02/09/2026:
+     *«revisa las conversaciones por si hay algo pendiente por hacer; actualiza skill, memoria,
+     agentes, todo»*). El límite conocido de este doc —una sesión de solo charla no deja commit y
+     el guardián no la ve— se ataca desde la lista de sesiones, que SÍ persiste fuera del
+     contenedor: `list_sessions` (MCP Claude Code Remote, `mine: true`, últimas ~48 h) y
+     `get_session` para el título/estado de cada una. Por cada sesión del rango comprueba que
+     tiene **al menos una** de estas huellas: entrada en `docs/CONTEXTO-SESIONES.md`, PR (abierto
+     o mergeado) de su rama `claude/*`, o línea en `docs/AGENTES-BITACORA.md` si era una rutina.
+     Una sesión **sin ninguna** es una decisión o un pendiente que se perdió: anótala en la memoria
+     con su título y fecha como «pendiente de confirmar con Alberto» (carril 1) — no inventes lo
+     que se habló. Las sesiones con PR abierto **sin mergear** son pendientes reales: lístalas con
+     su nº en el informe (cruza con 2-ter). ⚠️ Sin acceso al transcript, la señal es
+     título + PR + memoria; si la herramienta no está adjunta, dilo («no he podido listar
+     sesiones»), no «no hay pendientes».
    - `docs/CONTEXTO-SESIONES.md`: añade entrada(s) de lo hecho en el rango que no esté
-     anotado; mueve a "hecho" los pendientes ya resueltos; corrige el "Estado actual".
+     anotado; mueve a "hecho" los pendientes ya resueltos; corrige el "Estado actual". El bloque
+     **«Estado vivo»** se comprueba bullet a bullet contra el CÓDIGO (¿sigue abierto?), igual que
+     `HUECOS-ABIERTOS.md`: un pendiente ya cerrado que sigue listado envejece hacia el lado malo.
    - **Rotación mensual de la memoria (ahorro de contexto):** si el archivo vivo contiene
      entradas de un mes YA CERRADO, ejecuta `node scripts/rotar-memoria.mjs` (idempotente;
      las archiva en `docs/memoria/AAAA-MM.md`). Además, si ves entradas nuevas que violan
      la regla de tamaño (~8 líneas máx), resúmelas en el archivo vivo (carril 1).
-   - Skills-maestro (`central-maestro`, `ia-rest-maestro`, `sivra-maestro`,
-     `ialimp-maestro`, `plataforma-maestro`) y los `apps/*/CLAUDE.md`: corrige cualquier
-     afirmación que el código contradiga (rutas, envs, tablas, reglas, estado). Si una
-     skill y el código discrepan, **manda el código**.
+   - Skills-maestro (**los 7**: `central-maestro`, `ia-rest-maestro`, `sivra-maestro`,
+     `ialimp-maestro`, `plataforma-maestro`, `transporte-maestro`, `alquiler-maestro` — la
+     lista real es `ls -d .claude/skills/*-maestro`, no esta línea), la skill de dominio
+     `agente-correduria` (su `references/sector.md` acumula hechos del sector: contrástalos como
+     datos duros) y los **`apps/*/CLAUDE.md` de las 12 apps** (ia-rest tiene además `AGENTS.md`;
+     **`almacen` y `asegura-portal` NO tienen `CLAUDE.md`** — su contexto vive en `CLAUDE.md` raíz
+     y en `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`; no lo
+     repitas como hallazgo cada noche, pero sí si un PR del rango les cambia el comportamiento y
+     nadie lo anota en ningún sitio): corrige cualquier afirmación que el código contradiga
+     (rutas, envs, tablas, reglas, estado). Si una skill y el código discrepan, **manda el código**.
+     ⚠️ En `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md` el dato que más envejece es
+     **de dónde LEE el código** (origen de Manuel vs `seguros.*`): compáralo contra
+     `apps/asegura/lib/asegura-db.ts` y `prisma/asegura.prisma`, no contra el doc.
+   - **TODAS las skills de agentes, no solo las maestro** (la lista es `docs/SKILLS.md`
+     §«Agentes programados» cruzada con `ls .claude/skills`): por cada una, sus **datos duros**
+     (tablas, rutas de API, envs por nombre, umbrales, cadencia, estado del trigger) contra el
+     código y contra `list_triggers` (id, cron, `enabled`, `last_run`). Una skill que dice
+     «rutina activa» con el trigger deshabilitado —o al revés— es hallazgo carril 1 en el doc y
+     carril 2 si el trigger es lo que está mal. Lo que NO tocas aquí es el COMPORTAMIENTO del
+     agente (reglas, criterios): eso es del `agentes-entrenador` semanal, que se apoya en
+     rendimiento; tú solo la frescura factual. Si detectas un patrón de rendimiento, déjaselo
+     como hallazgo en `docs/FEEDBACK-AGENTES.md`, no lo arregles tú.
    - **Reglas DICTADAS por Alberto (fiscal/negocio) — check de contradicciones:** estas
      reglas NO las decide el código; su fuente canónica es la skill del dominio
      (`perfil-fiscal` para las fiscales). Si la MISMA regla aparece distinta en la memoria

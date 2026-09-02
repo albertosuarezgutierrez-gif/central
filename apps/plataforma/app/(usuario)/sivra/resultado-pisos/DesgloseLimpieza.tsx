@@ -53,7 +53,7 @@ export default function DesgloseLimpieza({ desglose, onCambio }: {
     }}>
       <div style={{ fontWeight: 600, marginBottom: 6 }}>🧹 Desglose de la limpieza de este mes</div>
       {desglose.facturasIlegibles && (
-        <p style={{ margin: '0 0 8px', color: 'var(--danger, #dc2626)' }}>
+        <p style={{ margin: '0 0 8px', color: 'var(--negative)' }}>
           ⚠️ No se han podido leer las facturas aportadas, así que lo de abajo puede salir como
           «estimado» estándolo ya medido. ({desglose.facturasIlegibles})
         </p>
@@ -86,7 +86,7 @@ export default function DesgloseLimpieza({ desglose, onCambio }: {
           <input type="file" accept="application/pdf,image/*" onChange={subir} disabled={subiendo} style={{ display: 'none' }} />
         </label>
         {msg && (
-          <span style={{ color: msg.tipo === 'ok' ? 'var(--success, #16a34a)' : 'var(--danger, #dc2626)' }}>
+          <span style={{ color: msg.tipo === 'ok' ? 'var(--positive)' : 'var(--negative)' }}>
             {msg.texto}
           </span>
         )}

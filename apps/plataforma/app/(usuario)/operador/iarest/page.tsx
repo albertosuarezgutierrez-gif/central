@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdmin } from '@/lib/superadmin'
 import Link from 'next/link'
+import { Pagina } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,7 +61,7 @@ export default async function OperadorIaRestPage() {
   ]
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+    <Pagina ancho="lectura">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🍽️ ia-rest</h1>
         <a
@@ -92,6 +93,6 @@ export default async function OperadorIaRestPage() {
           </Link>
         ))}
       </div>
-    </main>
+    </Pagina>
   )
 }

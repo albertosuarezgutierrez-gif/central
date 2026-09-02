@@ -1393,6 +1393,51 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   Server component; datos por `lib/ficha-asegura.ts` (interpretación PURA + tests en
   `test/regression-ficha-asegura.test.ts`).
 - **Accesos directos:** el nombre del cliente en la tabla de Renovaciones es un enlace a su ficha.
+- **📑 `/correduria/poliza/[id]` — la ficha de UNA póliza (Alberto, 02/09/2026: «pincho en la póliza y ahí
+  especifica más: datos, documentación, siniestros, recibos»).** Objeto asegurado (con la **copia gemela**
+  del volcado cuando CIMA no manda la dirección del riesgo), efecto inicial/anualidad/vencimiento con la
+  ventana de anulación, prima neta/bruta, forma de pago y recargo, **coberturas** (1.418 filas en las 109
+  vivas; el capital es TEXTO del EIAC —«ILIMITADO», «VALOR VENAL»— y no se numera), todos los recibos,
+  siniestros, intervinientes y documentación (`0` en toda la base = «todavía no se guarda ninguno», y se
+  dice). Lector `lib/poliza-asegura.ts` (`gemelaInformada` distingue «no hay gemela» de «asegura no la
+  busca»; `documentos: null` ≠ 0), tests en `test/regression-poliza-asegura.test.ts`. En la ficha del
+  cliente, la compañía y «ver póliza →» enlazan aquí.
+  🚨 **42 de las 109 pólizas CIMA están `cancelada`** (medido 02/09/2026): la ficha las saca de «Pólizas
+  vivas» a un bloque plegado «Canceladas en CIMA» y no ofrece «Retarificar» sobre ellas. **Recibos todos
+  anulados** (20 vivas) se pintaba «🟢 0 cobrado(s)»: ahora es «⚪ N anulado(s)» (`estadoCobro` ganó el
+  estado `anulados`). Y **prima 0 no es una prima** (24 vivas): `primaReferencia` devuelve `null` → «sin dato».
+- **📞 El teléfono de la ficha sale de `contactoEfectivo()` (02/09/2026), no solo del tomador.** Una
+  empresa (Esquiansa) decía «sin teléfono» teniendo a su conductor habitual con teléfono en la ficha
+  enlazada por CIMA. Ahora el número lleva entre paréntesis DE QUIÉN es (con enlace a su ficha), y cada
+  póliza lista sus intervinientes debajo de «Qué asegura». `intervinientes === null` = asegura no los
+  informa → «sin teléfono · intervinientes sin comprobar», nunca «nadie tiene teléfono».
+- **🏠 `/correduria/hogar` — presupuesto de hogar desde el Catastro (02/09/2026).** Con la dirección
+  («Calle San Vicente 40, 2º 14» + municipio + provincia) o la referencia catastral de 20, el Catastro da
+  m², año de construcción, uso y CP — gratis, sin preguntar al cliente. Verificado sobre el caso real de
+  Alberto: 76 m² · 1994 · Residencial · 41002, idéntico a lo tecleado en la póliza. Lógica en
+  `lib/correduria-hogar.ts` (6 estados: `ok` · `elegir` —varios pisos: elige una persona— · `ambigua` ·
+  `no_encontrado` · `direccion_ilegible` · `error`), API `POST /api/correduria/catastro` (sesión).
+  Usa `@central/core-catastro` (extraído de subastas; `lib/subastas/enriquecer.ts` lo re-exporta).
+  🚨 La referencia de 14 es el EDIFICIO y no trae m² ni año: se pide la de 20 (`precalificarHogar`
+  lo declara). Pedir precio de hogar a Codeoscopic sigue SIN conectar (solo auto), pero la página ya
+  dice si **hogar tarifica** para nuestra organización: `lineasCodeoscopic()` → puerto
+  `GET /api/operador/codeoscopic/lineas` (= `GET /insurance-lines` del vendor, **gratis**, corre con
+  el interruptor apagado). Tres estados: `disponible` (con el id EXACTO del ramo, que es lo que va en
+  `insuranceLine`) · `ausente` (hay que pedírselo a Codeoscopic) · `desconocido` (no se pudo mirar).
+- **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
+  del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
+  —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no
+  tiene la clave, el aviso dice cuántas direcciones no ha podido leer; un bloque vacío ahí no es «nadie».
+- **💳 Forma de pago en la ficha (Alberto, 02/09/2026):** columna «Pago» por póliza —periodicidad
+  (`fraccionamiento`, CIMA lo trae en 108/109 vivas), forma de cobro del último recibo (CC/OF/TA →
+  domiciliado/oficina/tarjeta) y el **recargo por fraccionar**, que CIMA NO da y se deriva de los
+  recibos del ciclo con TRES estados (`recargoFraccionamiento()` en module-seguros, 8 tests): solo se
+  afirma con el ciclo completo — con 2 de 4 recibos la resta sale negativa y parecería que fraccionar
+  ahorra. Bajo «Vence», `ventanaAnulacion()` recuerda que el contrato es anual y solo se deja al
+  vencimiento avisando 30 días antes (se pinta cuando faltan ≤60 días).
+- **📄 «Subir póliza o documento ↗»** (botón en la ficha) salta a `asegura/cartera/subir`: el agente lee
+  el PDF/foto y enseña lo leído. Es gratis. **Hoy solo lee pólizas de AUTO y NO guarda el fichero**
+  (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
 - **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
   email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
   encaje (`41003` es CP y nº de póliza plausibles a la vez).
@@ -1477,6 +1522,37 @@ inventario ni forma de callar uno solo: para bajar ruido había que buscar el `t
   `test/regression-sql-fecha-parametro.test.ts` en el CI de este mismo PR.
 - Migración `prisma/sql/2026-09-01_telegram_avisos.sql` **aplicada** (incluye el `GRANT USAGE` de
   `telegram_avisos_log_id_seq` a `prisma_plataforma`: sin él el `bigserial` no deja insertar).
+
+## 🎨 Sistema de diseño — `components/ui.tsx` (02/09/2026)
+Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pasó a solo REDIRIGIR a
+`/banca`: el sistema de diseño colgaba de una ruta muerta. Y al auditarlo, **ningún archivo lo importaba**
+— existía como documento, no como código, mientras las pantallas se escribían con ~4.900 objetos
+`style={{}}` a mano y 223 verdes/rojos en hex fijo (ilegibles en modo oscuro). Movido a
+**`components/ui.tsx`** (`@/components/ui`); **`/banca` es la implementación de referencia**.
+- **Adopción POR GOTEO** (regla del CLAUDE.md raíz): se trae el patrón cuando una pantalla lo necesita.
+  Migrar los ~4.900 inline styles de golpe rompería pantallas que hoy funcionan.
+- **Ancho por tipo de contenido:** `<Pagina ancho="lectura">` (960, resúmenes/fichas) o `"tabla"` (1400,
+  páginas cuyo cuerpo es una tabla). Sustituye al `maxWidth:'960px'` que estaba copiado en 14 páginas.
+- **Nada de hex.** Colores SIEMPRE por token (`var(--positive)`, `var(--negative)`…); para un importe,
+  `colorImporte(n)`. Lo vigila `test/regression-tokens-color.test.ts`.
+- **`btnStyle()` devuelve el ESTILO, no un componente con `onClick`:** el archivo es server-safe y un
+  handler obligaría a `'use client'` en cada pantalla que lo importe.
+- **CSS responsive en `globals.css`, no en la página.** Un estilo inline no admite media queries, y ese
+  era el motivo de que 47 páginas llevaran un bloque `<style>` incrustado (201 `!important` entre todas).
+
+### 🚨 `Dato` — los tres estados, por construcción
+La regla raíz «dato que NO hay ≠ dato que NO se ha mirado» se cumplía por VIGILANCIA: cada pantalla nueva
+tenía que acordarse. La lógica pura vive en **`lib/dato.ts`** (`estadoDato`/`esPendiente`), con guardián en
+`test/regression-dato-tres-estados.test.ts`:
+- `null`/`undefined` → **«pendiente»** (nadie lo ha mirado; columna de enriquecimiento sin pasada aún).
+- `[]`/`''` → **«revisado, no hay»**.
+- **el `0` es un VALOR**, no un hueco. Es el error simétrico, el que aparece justo al arreglar el primero:
+  «0 €» y «0 incidencias» son afirmaciones legítimas que alguien comprobó, y tratarlas como «sin revisar»
+  hace que la pantalla deje de decir lo que sabe.
+
+`<Pendiente>` lo pinta con borde **discontinuo** (se rellenará) o **continuo** (`definitivo`: la fuente no
+lo va a traer nunca — prometer una pasada que no llega es la otra forma de mentir). `donde` dice dónde
+mirar mientras tanto (la ficha oficial, el portal del banco…).
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

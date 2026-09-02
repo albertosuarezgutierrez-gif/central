@@ -44,13 +44,6 @@ export default function ConfigClient({ negocios }: { negocios: Negocio[] }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .cfg-content { padding: 16px !important; }
-          .cfg-form-row { flex-direction: column !important; }
-          .cfg-form-row > * { width: 100% !important; flex: unset !important; }
-        }
-      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>⚙️ Configurar comunicación</div>
         <a href="/comunicacion" style={{ color: C.muted, fontSize: 13, textDecoration: 'none' }}>← Volver al hub</a>

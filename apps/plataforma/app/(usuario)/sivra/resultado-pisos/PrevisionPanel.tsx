@@ -28,7 +28,7 @@ export default function PrevisionPanel({ piso }: { piso: string }) {
     return (
       <section style={{ ...card, marginBottom: 16 }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>🔮 Previsión</h2>
-        <p style={{ color: 'var(--danger, #dc2626)', fontSize: 13, margin: '8px 0 0' }}>{error}</p>
+        <p style={{ color: 'var(--negative)', fontSize: 13, margin: '8px 0 0' }}>{error}</p>
       </section>
     )
   }
@@ -140,7 +140,7 @@ function Ritmo({ f }: { f: PrevisionMesPiso }) {
   const bueno = p.deltaPct >= 0
   return (
     <span>
-      <span style={{ color: bueno ? 'var(--success, #16a34a)' : 'var(--danger, #dc2626)', fontWeight: 600 }}>
+      <span style={{ color: bueno ? 'var(--positive)' : 'var(--negative)', fontWeight: 600 }}>
         {bueno ? '▲' : '▼'} {p.deltaPct > 0 ? '+' : ''}{p.deltaPct}%
       </span>{' '}
       <span style={{ color: 'var(--muted)' }}>
@@ -187,7 +187,7 @@ function Seguimiento({ seguimiento, haySnapshots }: { seguimiento: PrevisionData
                   <td style={td}>
                     {s.desvioPct == null
                       ? <span style={{ color: 'var(--muted)' }}>— (previsión incompleta)</span>
-                      : <span style={{ fontWeight: 600, color: Math.abs(s.desvioPct) <= 10 ? 'var(--success, #16a34a)' : 'var(--warning, #ca8a04)' }}>
+                      : <span style={{ fontWeight: 600, color: Math.abs(s.desvioPct) <= 10 ? 'var(--positive)' : 'var(--warning, #ca8a04)' }}>
                           {s.desvioPct > 0 ? '+' : ''}{s.desvioPct}%
                         </span>}
                   </td>

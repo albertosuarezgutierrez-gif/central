@@ -29,12 +29,57 @@ function entero(v: unknown): number | null {
 
 // ── Buscador ────────────────────────────────────────────────────────────────
 
+/**
+ * `viva` = entra por CIMA o vence dentro de la ventana · `historica` = volcado
+ * de junio · `sin_fecha` / `desconocida` = NO se sabe, y no se disfraza.
+ */
+export type Vitalidad = 'viva' | 'historica' | 'sin_fecha' | 'desconocida'
+
+export type Hermana = {
+  clienteId: string
+  nombre: string
+  mismoNombre: boolean
+  vitalidad: Vitalidad
+}
+
 export type Hallazgo = {
   clienteId: string
   nombre: string
+  /** El enum de la BD. No dice si es un cliente de hoy: para eso, `vitalidad`. */
   tipo: string
   polizas: number
   porque: string
+  /** Pólizas por CIMA. `null` = no se contó, NO 0. */
+  polizasCima: number | null
+  ultimoVencimiento: string | null
+  vitalidad: Vitalidad
+  /** `null` = asegura no informa hermanas (versión vieja, o no se pudo mirar).
+   *  `[]` = se miró y no hay. Pintarlos igual diría «no hay duplicados». */
+  hermanas: Hermana[] | null
+  aviso: { clase: 'duplicado' | 'comparte'; texto: string; preferida: Hermana | null } | null
+}
+
+const VITALIDADES = new Set(['viva', 'historica', 'sin_fecha', 'desconocida'])
+
+/** Una vitalidad que no se reconoce NO tumba la lista: degrada a «desconocida»,
+ *  que es el estado que no afirma nada. Así una versión más vieja de asegura
+ *  (que no manda el campo) sigue sirviendo la búsqueda. */
+function vitalidad(v: unknown): Vitalidad {
+  return typeof v === 'string' && VITALIDADES.has(v) ? (v as Vitalidad) : 'desconocida'
+}
+
+function hermanas(v: unknown): Hermana[] | null {
+  if (!Array.isArray(v)) return null
+  const out: Hermana[] = []
+  for (const h of v) {
+    if (typeof h !== 'object' || h === null) continue
+    const o = h as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    const nombre = cadena(o.nombre)
+    if (id === null || nombre === null) continue
+    out.push({ clienteId: id, nombre, mismoNombre: o.mismoNombre === true, vitalidad: vitalidad(o.vitalidad) })
+  }
+  return out
 }
 
 export type BloqueResultados = {
@@ -85,12 +130,27 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
       if (typeof x.clienteId !== 'string' || typeof x.nombre !== 'string') {
         return { estado: 'error', motivo: 'respuesta_ilegible' }
       }
+      const hs = hermanas(x.hermanas)
+      const av = x.aviso as Record<string, unknown> | null | undefined
+      const textoAviso = typeof av === 'object' && av !== null ? cadena(av.texto) : null
       hallazgos.push({
         clienteId: x.clienteId,
         nombre: x.nombre,
         tipo: cadena(x.tipo) ?? 'sin_informar',
         polizas: entero(x.polizas) ?? 0,
         porque: cadena(x.porque) ?? '',
+        polizasCima: entero(x.polizasCima),
+        ultimoVencimiento: cadena(x.ultimoVencimiento),
+        vitalidad: vitalidad(x.vitalidad),
+        hermanas: hs,
+        aviso:
+          textoAviso === null || av == null
+            ? null
+            : {
+                clase: av.clase === 'comparte' ? 'comparte' : 'duplicado',
+                texto: textoAviso,
+                preferida: hermanas([av.preferida])?.[0] ?? null,
+              },
       })
     }
     const c = o.cobertura
@@ -259,6 +319,60 @@ export async function buscarAsegura(q: string): Promise<Busqueda> {
     const r = await pedir(`/api/operador/buscar?q=${encodeURIComponent(q)}`)
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarBusqueda(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Ramos de Codeoscopic (¿tarifica hogar?) ─────────────────────────────────
+
+export type HogarCodeoscopic =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export type LineasCodeoscopic =
+  | { estado: 'sin_configurar'; mensaje: string | null }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; ramos: string[]; hogar: HogarCodeoscopic }
+
+/**
+ * Puro. `hogar` degrada a `desconocido` ante cualquier forma rara: afirmar
+ * «hogar disponible» o «ausente» sobre un JSON que no se entiende sería lo
+ * mismo que inventarlo.
+ */
+export function interpretarLineas(status: number, json: unknown): LineasCodeoscopic {
+  if (status === 401) return { estado: 'error', motivo: 'secreto' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje: cadena(o.mensaje) }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: cadena(o.mensaje) ?? `HTTP ${status}` }
+  const ramos = Array.isArray(o.lineas)
+    ? o.lineas.map((l) => cadena((l as Record<string, unknown>)?.nombre)).filter((x): x is string => x !== null)
+    : []
+  return { estado: 'ok', ramos, hogar: leerHogar(o.hogar) }
+}
+
+function leerHogar(v: unknown): HogarCodeoscopic {
+  if (typeof v !== 'object' || v === null) return { estado: 'desconocido' }
+  const h = v as Record<string, unknown>
+  if (h.estado === 'disponible') {
+    const id = cadena(h.id)
+    if (id === null) return { estado: 'desconocido' }
+    return { estado: 'disponible', id, nombre: cadena(h.nombre) ?? id }
+  }
+  if (h.estado === 'ausente') {
+    const ramos = Array.isArray(h.ramos) ? h.ramos.map(cadena).filter((x): x is string => x !== null) : []
+    return { estado: 'ausente', ramos }
+  }
+  return { estado: 'desconocido' }
+}
+
+export async function lineasCodeoscopic(): Promise<LineasCodeoscopic> {
+  try {
+    const r = await pedir('/api/operador/codeoscopic/lineas')
+    if (r === null) return { estado: 'sin_configurar', mensaje: null }
+    return interpretarLineas(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }

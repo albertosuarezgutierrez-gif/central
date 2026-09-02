@@ -5,16 +5,22 @@ description: Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Ú
 
 # Auditoría con contexto — monorepo `central`
 
-Casa de marcas: raíz = matriz (sin producto), `packages/*` = 38 núcleos TS puros
+Casa de marcas: raíz = matriz (sin producto), `packages/*` = 41 núcleos TS puros
 (`main: ./src/index.ts`, **sin build** → cada consumidor DEBE listarlos en
-`transpilePackages`), `apps/*` = 8 verticales Next.js (ia-rest, ialimp, sivra, plataforma,
-rrhh, transporte, alquiler, almacen) que buildan **aisladas por Root Directory** en Vercel.
-BD Supabase **compartida** (`wswbehlcuxqxyinousql`): ialimp/sivra/plataforma/rrhh/transporte/
-alquiler/almacen en schema `public` (scope `empresa_id`/tenant) e **ia-rest en su schema
-`iarest`** (runtime + Edge Functions + crons desde el cierre 19/08/2026). El proyecto viejo
-`efncqyvhniaxsirhdxaa` fue BORRADO definitivamente el 19/08/2026 — ya no existe; el único
-proyecto Supabase de la cuenta es `central`. Lee `MATRIZ.md` y `docs/CONTEXTO-SESIONES.md`
-(entradas de arriba) antes de empezar.
+`transpilePackages`), `apps/*` = **12 verticales** Next.js (ia-rest, ialimp, sivra, plataforma,
+rrhh, transporte, alquiler, almacen, mariscos, asegura, asegura-portal, housesevillana) que
+buildan **aisladas por Root Directory** en Vercel. ⚠️ **Las cifras de este párrafo caducan
+solas**: la lista que manda es `ls apps` cruzada con la matriz de `.github/workflows/tests.yml`
+(este doc dijo «8» durante dos meses mientras nacían cuatro apps). BD Supabase **compartida**
+(`wswbehlcuxqxyinousql`) con CUATRO ámbitos: schema `public` (ialimp/sivra/plataforma/transporte/
+alquiler/almacen/mariscos/asegura-portal, scope `empresa_id`/tenant), **`iarest`** (ia-rest:
+runtime + Edge Functions + crons desde el cierre 19/08/2026), **`rrhh`** (rol `rrhh_app`,
+BYPASSRLS) y **`seguros`** (correduría: rol `prisma_seguros` BYPASSRLS; desde el 02/09/2026 tiene
+la cartera COPIADA como foto fija, pero **el código sigue leyendo del origen de Manuel**,
+`uijsgeocgdaxkhvwtjqs`, por `ASEGURA_DATABASE_URL` — conector MCP `Supabase_asegura`, solo
+lectura). `housesevillana` no tiene BD propia (lee disponibilidad por `/api/publico/*` de
+plataforma). El proyecto viejo `efncqyvhniaxsirhdxaa` fue BORRADO el 19/08/2026 — ya no existe.
+Lee `MATRIZ.md` y `docs/CONTEXTO-SESIONES.md` (entradas de arriba) antes de empezar.
 
 ## Cuándo usar
 Tras renames de scope (`@iarest/*`→`@central/*`), migraciones de BD, mover/crear
@@ -35,21 +41,29 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 - Guardián: `pnpm test:guardia` (falla si reaparece `@iarest/`). Grep manual de scopes viejos.
 - **`transpilePackages` vs deps**: cada `@central/*` declarado debe estar en `transpilePackages`
   de su app (exportan TS crudo). Cada import `@central/*` debe estar declarado en deps.
-- **`ignoreCommand` en los 8 `apps/*/vercel.json`**: cada uno debe llevar
+- **`ignoreCommand` en los 12 `apps/*/vercel.json`**: cada uno debe llevar
   `"ignoreCommand": "node ../../scripts/vercel-ignore-build.mjs apps/<app>"` (regla 🚨 de
-  `CLAUDE.md`). Una app sin él reconstruye en CADA push del monorepo — incidente 15/07/2026,
-  ~600 US$ de Build CPU en un mes (PR #904). App nueva sin la clave = hallazgo 🔴.
+  `CLAUDE.md`), y **`--sin-previews` en todas salvo ialimp** (cliente vivo). Una app sin él
+  reconstruye en CADA push del monorepo — incidente 15/07/2026, ~600 US$ de Build CPU en un mes
+  (PR #904). App nueva sin la clave = hallazgo 🔴.
+- **App fuera de la matriz de `tests.yml`** (`ls apps` ≠ `matrix.app`) = hallazgo 🔴: nadie la
+  typechequea. `housesevillana` vivió 15 días así con 5 errores `TS5097` (12→27/08/2026).
 
 ### 2. Compila y typechequea TODO (no solo ia-rest)
-- Las apps con Prisma (**ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen** — las
-  7; ia-rest es la única sin Prisma) necesitan `prisma generate --schema=apps/<app>/prisma/schema.prisma`
-  ANTES de typechequear (si no, miles de falsos `Property 'sql' does not exist on typeof Prisma`, o
-  falsos `Property 'X' does not exist on type 'PrismaClient<...>'` si el client regenerado es el de
-  OTRA app). Los 7 schemas escriben al MISMO `@prisma/client` → genera el de cada app justo antes de
-  chequearla, en el mismo orden en que se van a typechequear.
-- `tsc --noEmit -p apps/<app>/tsconfig.json` en las **8** apps. **OJO**: ialimp, plataforma, rrhh,
-  transporte, alquiler y almacen llevan `typescript.ignoreBuildErrors: true` → el build verde NO
-  garantiza tipos sanos; el typecheck sí. El CI (`tests.yml`) typechequea las apps con Prisma.
+- Las apps con Prisma (**10**: ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen,
+  mariscos, asegura, asegura-portal; sin Prisma solo ia-rest y housesevillana) necesitan
+  `prisma generate` ANTES de typechequear (si no, miles de falsos `Property 'sql' does not exist on
+  typeof Prisma`, o falsos `Property 'X' does not exist on type 'PrismaClient<...>'` si el client
+  regenerado es el de OTRA app). Los schemas escriben al MISMO `@prisma/client` → genera el de cada
+  app justo antes de chequearla, en el mismo orden en que se van a typechequear.
+  ⚠️ **`apps/asegura` tiene DOS schemas** (`prisma/schema.prisma` → `seguros.*` de central, y
+  `prisma/asegura.prisma` → la cartera de Manuel, `output = ../lib/generated/asegura-client`).
+  Generar solo el primero deja el typecheck rojo con `TS2307: Cannot find module
+  './generated/asegura-client'` mientras el CI está verde: usa el script de la app
+  (`prisma generate && prisma generate --schema prisma/asegura.prisma`).
+- `tsc --noEmit -p apps/<app>/tsconfig.json` en las **12** apps (la matriz de `tests.yml`). **OJO**:
+  ialimp, plataforma, rrhh, transporte, alquiler y almacen llevan `typescript.ignoreBuildErrors: true`
+  → el build verde NO garantiza tipos sanos; el typecheck sí.
 - **GOTCHA del CI (rompió `tests.yml` en main):** `prisma generate` y `tsc` deben correr **desde el dir de
   cada app** (`working-directory: apps/<app>` + `pnpm exec prisma generate` / `tsc -p tsconfig.json`), NO desde
   la raíz — `prisma`/`typescript` son deps de cada app, no de la raíz (`pnpm exec` desde la raíz → `Command
@@ -66,12 +80,36 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 ### 3. Tests
 - `pnpm test` (guardián + packages). Runner = `node --test` (Node 22 strippea tipos); imports de
   `src` con extensión `.ts` EXPLÍCITA. Prioriza por riesgo-si-se-rompe: `core-fiscal` (IVA/VeriFactu)
-  > `core-identity` (tenant) > `core-ai` > resto. Mockea red/SDK; tests puros y deterministas.
+  > `core-identity` (tenant) > **`module-seguros-pii`** (cifrado de IBAN/DNI + índice ciego: si el
+  índice cambia, los clientes siguen legibles pero **dejan de encontrarse sin error**) >
+  `module-seguros{,-portal}` > `core-ai` > resto. Mockea red/SDK; tests puros y deterministas.
+- **Guardianes de `test/*.test.ts` (`pnpm test:guardia`)**: son cepos de reglas, no tests de
+  unidad; si un PR del rango toca el código que vigilan sin tocar el cepo, míralo. Los de la
+  correduría: `regression-asegura-aislamiento` (toda consulta a `seguros.*` pasa por `lib/tenant`),
+  `regression-portal-aislamiento` (asegura-portal), `regression-asegura-operador-publico` +
+  `regression-correduria-puerto` (puerto `/api/operador/*` con Bearer), `regression-asegura-gasto-
+  codeoscopic` (0,50€ por cotización, contador persistente), `regression-ficha-asegura`,
+  `regression-correduria-menu`. Los de las rutinas: `regression-rutas-rutina`, `regression-rutina-
+  tokens`, `regression-rutinas-numeracion`, `regression-automerge-registro`.
 
 ### 4. Seguridad + multi-tenant (lo más crítico — BD compartida)
 - Toda query scoped por `empresa_id`/tenant en la BD compartida `wswbehlcuxqxyinousql`; ia-rest
   aísla por su schema `iarest` dentro del mismo proyecto (funciones con `search_path` fijado,
   clientes con `db: { schema: 'iarest' }`) — ningún cruce entre tenants ni entre schemas.
+- **Los roles con BYPASSRLS convierten el aislamiento en cosa del CÓDIGO** (`rrhh_app`,
+  `prisma_seguros`, `central_asegura` sobre el origen de Manuel): ahí el fallo no es «no se ve
+  nada» sino «se ve todo sin que falle nada». Correduría: las 86 RLS del CRM de origen se resuelven
+  por `auth.uid()` de Supabase Auth y **ya no tienen sujeto** con la auth propia de `apps/asegura`;
+  la puerta única es `lib/tenant-ambito.ts` (tres estados: `pendiente`/`sin-asignar`/`ok`, con
+  `exigirCorreduriaId()` que LANZA). `asegura-portal` va al revés a propósito: rol
+  `prisma_asegura_portal` **sin** BYPASSRLS + secreto de sesión propio. Apps con auth propia
+  (cookie + `jose` contra `public.cuentas`): mariscos, asegura, asegura-portal — cada una con su
+  `*_SESSION_SECRET` sin fallback a literal.
+- **Puertos HTTP entre apps** (`/api/operador/*` de asegura ← plataforma `lib/correduria-puerto.ts`
+  con `ASEGURA_OPERADOR_SECRET`; `/api/operador/empresas` de rrhh ← god-panel con
+  `RRHH_OPERADOR_SECRET`; `/api/publico/*` de plataforma ← housesevillana, el ÚNICO sin sesión):
+  el mismo valor tiene que estar en los DOS proyectos Vercel; un 401 aquí es «no se pudo leer»,
+  no «no hay datos» (y el latido `correduria_renovaciones` lo dice en su `detalle`).
 - Secretos: ningún `.env` commiteado; sin claves reales hardcodeadas (anon keys de cliente son
   semi-públicas pero anótalas). Crons exigen `Authorization: Bearer CRON_SECRET`.
 - **Guardián de secretos** (gate en `pnpm test:guardia`): `test/regression-secrets.test.ts` falla si un
@@ -92,15 +130,29 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 
 ### 6. Infra real (MCP, solo lectura)
 - Supabase: el proyecto de producción es el compartido `wswbehlcuxqxyinousql` (todas las verticales;
-  ia-rest en schema `iarest`). El viejo `efncqyvhniaxsirhdxaa` fue BORRADO el 19/08/2026:
-  `list_projects` debe devolver SOLO `central` — si aparece cualquier otro proyecto, investígalo. `list_migrations`
-  (¿migraciones del repo aplicadas?), `list_tables` y `list_edge_functions` en el compartido.
-- Vercel: `list_projects` puede no listar las 8 apps si alguna vive en otro team/cuenta fuera del
+  ia-rest en `iarest`, rrhh en `rrhh`, correduría en `seguros`). El viejo `efncqyvhniaxsirhdxaa` fue
+  BORRADO el 19/08/2026: `list_projects` debe devolver SOLO `central` — si aparece cualquier otro
+  proyecto, investígalo. `list_migrations` (¿migraciones del repo aplicadas?), `list_tables` y
+  `list_edge_functions` en el compartido.
+- **El origen de la correduría es OTRA cuenta Supabase** (la de Manuel, `uijsgeocgdaxkhvwtjqs`,
+  conector `Supabase_asegura`, solo lectura): no sale en `list_projects` de central y eso es
+  correcto. Ahí solo se mira (a) la foto `seguros.*` vs origen (recuentos; checksums en la
+  profunda — bloque 2-quater de `/auditoria-diaria`) y (b) `get_advisors` de seguridad si el
+  conector lo permite. **Nunca** escribir ni tocar su RLS: es infra de Manuel hasta el corte.
+- Vercel: `list_projects` puede no listar las 12 apps si alguna vive en otro team/cuenta fuera del
   alcance del conector — no lo des por "no desplegada" sin más, márcalo para que Alberto lo mire a
   mano en el dashboard. `list_deployments` (último deploy de cada proyecto visible y su resultado).
+  `mariscos` está pendiente de proyecto Vercel a propósito (ver `apps/mariscos/CLAUDE.md`).
 
 ### 7. Coherencia de docs
-- `CLAUDE.md`/`AGENTS.md` por app y `MATRIZ.md` vs realidad. Actualiza `CONTEXTO-SESIONES.md`.
+- `CLAUDE.md`/`AGENTS.md` por app (10 de las 12 lo tienen; `almacen` y `asegura-portal` no — su
+  contexto vive en `CLAUDE.md` raíz y en `docs/superpowers/specs/`) y `MATRIZ.md` vs realidad.
+  Actualiza `CONTEXTO-SESIONES.md`. En la correduría el dato que más envejece es **de dónde lee el
+  código** (origen de Manuel vs `seguros.*`): contrástalo con `apps/asegura/lib/asegura-db.ts`.
+- **Los docs que cuentan apps/rutinas envejecen solos**: `docs/AGENTES-MAPA.md`,
+  `docs/RUTINAS-PROGRAMADAS.md` §1-2, este SKILL y `.claude/commands/auditoria-diaria.md`
+  llevaban «8 apps» (y AGENTES-MAPA «4») con 12 en `apps/`. Cruza toda cifra de apps contra
+  `ls apps` y la matriz de `tests.yml`, nunca contra otro doc.
 
 ## Reglas
 - Distingue **error real** de **ruido de entorno** (Prisma sin generar, falta `@types/node` en el

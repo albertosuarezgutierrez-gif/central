@@ -9,9 +9,9 @@ type ProvRow = {
 }
 
 const BADGE: Record<EstadoFactura, { icon: string; label: string; bg: string; color: string }> = {
-  ok:        { icon: '✅', label: 'En Drive',  bg: '#f0fdf4', color: '#166534' },
-  pendiente: { icon: '⏳', label: 'En plazo',  bg: '#fefce8', color: '#854d0e' },
-  falta:     { icon: '❌', label: 'Falta',     bg: '#fef2f2', color: '#991b1b' },
+  ok:        { icon: '✅', label: 'En Drive',  bg: 'var(--positive-bg)', color: 'var(--positive)' },
+  pendiente: { icon: '⏳', label: 'En plazo',  bg: 'var(--warning-bg)', color: 'var(--warning)' },
+  falta:     { icon: '❌', label: 'Falta',     bg: 'var(--negative-bg)', color: 'var(--negative)' },
 }
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -110,7 +110,7 @@ export default function FacturasControlPage() {
           {isUp ? 'Subiendo…' : '📎 Subir PDF'}
         </button>
         {rowMsg && (
-          <div style={{ fontSize: 11, marginTop: 4, color: rowMsg.ok ? '#166534' : '#991b1b' }}>{rowMsg.text}</div>
+          <div style={{ fontSize: 11, marginTop: 4, color: rowMsg.ok ? 'var(--positive)' : 'var(--negative)' }}>{rowMsg.text}</div>
         )}
       </>
     )
@@ -142,9 +142,9 @@ export default function FacturasControlPage() {
 
       {!loading && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-          {counts.ok > 0 && <Chip label={`${counts.ok} en Drive`} bg="#f0fdf4" color="#166534" />}
-          {counts.falta > 0 && <Chip label={`${counts.falta} ${counts.falta === 1 ? 'falta' : 'faltan'}`} bg="#fef2f2" color="#991b1b" />}
-          {counts.pendiente > 0 && <Chip label={`${counts.pendiente} en plazo`} bg="#fefce8" color="#854d0e" />}
+          {counts.ok > 0 && <Chip label={`${counts.ok} en Drive`} bg="var(--positive-bg)" color="var(--positive)" />}
+          {counts.falta > 0 && <Chip label={`${counts.falta} ${counts.falta === 1 ? 'falta' : 'faltan'}`} bg="var(--negative-bg)" color="var(--negative)" />}
+          {counts.pendiente > 0 && <Chip label={`${counts.pendiente} en plazo`} bg="var(--warning-bg)" color="var(--warning)" />}
         </div>
       )}
 

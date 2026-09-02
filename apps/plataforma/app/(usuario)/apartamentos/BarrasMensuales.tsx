@@ -23,9 +23,9 @@ export default function BarrasMensuales({ titulo, badge, serie }: { titulo: stri
           {badge && <span style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--bg)', padding: '2px 8px', borderRadius: '20px' }}>{badge}</span>}
         </div>
         <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
-          <span style={{ color: '#16a34a' }}>● Ingresos {fmtEur(totalIng)}</span>
-          <span style={{ color: '#dc2626' }}>● Gastos {fmtEur(totalGas)}</span>
-          <span style={{ fontWeight: 700, color: neto >= 0 ? '#16a34a' : '#dc2626' }}>Neto {fmtEur(neto)}</span>
+          <span style={{ color: 'var(--positive)' }}>● Ingresos {fmtEur(totalIng)}</span>
+          <span style={{ color: 'var(--negative)' }}>● Gastos {fmtEur(totalGas)}</span>
+          <span style={{ fontWeight: 700, color: neto >= 0 ? 'var(--positive)' : 'var(--negative)' }}>Neto {fmtEur(neto)}</span>
         </div>
       </div>
 
@@ -35,11 +35,11 @@ export default function BarrasMensuales({ titulo, badge, serie }: { titulo: stri
           return (
             <div key={m.mes} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%' }}>
               <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '2px', width: '100%' }}>
-                <div title={`Ingresos ${fmtEur(m.ingresos)}`} style={{ width: '45%', height: `${(m.ingresos / max) * 100}%`, minHeight: m.ingresos > 0 ? '2px' : '0', background: '#16a34a', borderRadius: '3px 3px 0 0' }} />
-                <div title={`Gastos ${fmtEur(m.gastos)}`} style={{ width: '45%', height: `${(m.gastos / max) * 100}%`, minHeight: m.gastos > 0 ? '2px' : '0', background: '#dc2626', borderRadius: '3px 3px 0 0' }} />
+                <div title={`Ingresos ${fmtEur(m.ingresos)}`} style={{ width: '45%', height: `${(m.ingresos / max) * 100}%`, minHeight: m.ingresos > 0 ? '2px' : '0', background: 'var(--positive)', borderRadius: '3px 3px 0 0' }} />
+                <div title={`Gastos ${fmtEur(m.gastos)}`} style={{ width: '45%', height: `${(m.gastos / max) * 100}%`, minHeight: m.gastos > 0 ? '2px' : '0', background: 'var(--negative)', borderRadius: '3px 3px 0 0' }} />
               </div>
               <span style={{ fontSize: '10px', color: 'var(--muted)' }}>{MESES_CORTO[m.mes - 1]}</span>
-              <span style={{ fontSize: '10px', fontWeight: 600, color: net >= 0 ? '#16a34a' : '#dc2626' }}>{net !== 0 ? fmtK(net) : '·'}</span>
+              <span style={{ fontSize: '10px', fontWeight: 600, color: net >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{net !== 0 ? fmtK(net) : '·'}</span>
             </div>
           )
         })}

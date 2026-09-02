@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-01T22:15:51Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T05:46:23Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 12 apps · 39 packages · 23 capacidades · 38 skills · 1228 rutas API.
+**Resumen:** 12 apps · 40 packages · 23 capacidades · 38 skills · 1231 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -18,10 +18,10 @@
 - **Tablas (3):** alquiler_alquileres, alquiler_lineas, alquiler_materiales
 - **Rutas API:** 4
 ### asegura
-- **Módulos que usa:** core-ai, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
+- **Módulos que usa:** core-ai, core-catastro, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (54):** seguros._volcado_control, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas, seguros.cuenta_efectivo, seguros.gestiones, seguros.historial_interno…
-- **Rutas API:** 14
+- **Rutas API:** 16
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-email, core-identity, module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -48,10 +48,10 @@
 - **Tablas (2):** mariscos_envasados, mariscos_partidas
 - **Rutas API:** 4
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-ses, module-subastas, module-trading
+- **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (130):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor, correo_reglas…
-- **Rutas API:** 329
+- **Rutas API:** 330
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -72,6 +72,9 @@
 - **core-ai** (core) → `@central/core-ai`
   - Lo usan: asegura, asegura-portal, ia-rest, ialimp, plataforma, rrhh, sivra
   - Depende de: —
+- **core-catastro** (core) → `@central/core-catastro`
+  - Lo usan: asegura, plataforma
+  - Depende de: module-subastas
 - **core-email** (core) → `@central/core-email`
   - Lo usan: asegura-portal, ialimp, plataforma, rrhh, sivra
   - Depende de: —
@@ -176,7 +179,7 @@
   - Depende de: —
 - **module-subastas** (module) → `@central/module-subastas`
   - Lo usan: plataforma
-  - Depende de: module-concursos
+  - Depende de: core-catastro, module-concursos
 - **module-trading** (module) → `@central/module-trading`
   - Lo usan: plataforma
   - Depende de: —
@@ -253,14 +256,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- `/cartera/renovaciones`
-- NO hay botón de «retarificar todas»
-- BD de matrículas gratis: no la hay útil.
-- Siguiente ramo: HOGAR
-- `deductible` la traen 10 de 18 precios
-- `modality.category`
-- El canal es un PUERTO
-- Los 15 precios reales del 29/07 son TODOS `estimado`
-- Corrección de hecho:
-- Apagado por defecto
+- Hecho por Claude Chrome (02/09):
+- Duplicado «Jose Suarez Salas»
+- Auditoría de duplicidades
+- Corrección
+- Contacto/intervinientes
+- Catastro para hogar HECHO
+- Forma de pago
+- Pantalla de PÓLIZA hecha
+- «Haz todo» (2ª tanda, mismo PR #2001):
+- Alberto repuso los dos PIN desde el panel
 

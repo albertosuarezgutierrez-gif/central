@@ -8,8 +8,8 @@ export default function ConsejoFiscalBox({ estado }: { estado: EntradaConsejo })
   const c = consejoFiscal(estado, new Date())
   const pagar = c.tono === 'pagar'
   // Cálido si sale a pagar (llama a la acción), verde si devuelven. Mismos hex que el resto del módulo.
-  const bg = pagar ? '#feebc8' : '#c6f6d5'
-  const fg = pagar ? '#7b341e' : '#22543d'
+  const bg = pagar ? 'var(--warning-bg)' : 'var(--positive-bg)'
+  const fg = pagar ? 'var(--warning)' : 'var(--positive)'
   return (
     <div style={{ padding: '12px 14px', background: bg, borderRadius: '8px', color: fg, display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
       <div style={{ fontSize: '13px', fontWeight: 700 }}>🧭 Qué haría yo</div>
