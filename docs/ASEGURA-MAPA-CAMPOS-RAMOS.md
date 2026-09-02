@@ -195,14 +195,37 @@ modalidad_valoracion IS NOT NULL   → 0
 datos_extra <> '{}'                → 0
 ```
 
-O sea: **la columna que guardaría el capital existe y está VACÍA en las 37 filas** (en el conjunto de
-la tabla sí se rellena: 1.003 de 1.425 filas traen un número). Eso es **«nadie lo ha rellenado» para
-hogar**, no «no hay capital». No se puede colapsar a 0: un continente inventado da un precio
-inventado.
+⚠️ **CORREGIDO el 02/09/2026 — la conclusión de arriba era FALSA, y el fallo es el que este repo
+tiene documentado como el más caro: el dato SÍ estaba, con otro nombre.** Las 37 filas vacías son las
+que se llaman **literalmente** «continente»/«contenido», y esas compañías no rellenan el capital. Pero
+las otras lo llaman distinto **y sí lo traen**:
 
-**Qué hacer:** (b) **preguntárselo al corredor/cliente**, o (a) **cablear `POST /home/recommend-limits`**
-(gratis según el portal; devuelve continente y contenido recomendados con media/máx/mín por compañía).
-**Ninguna de las dos está hecha hoy.**
+```
+-- hogar vivo, capital que parsea como número (medido 02/09/2026):
+daños vivienda              9/9 filas   →  hasta 912.322 €   (= continente)
+daños mobiliario            9/9 filas   →  hasta 117.081 €   (= contenido)
+incendio y ot.daños vivienda   9/9      →  mismo capital
+incendio y ot.daños mobiliario 9/9      →  mismo capital
+```
+
+Y el volumen real de coberturas de hogar no son 37 filas sino **716, en las 19 pólizas, 365 con
+capital** y las 716 con descripción. Filtrar por el nombre exacto de la garantía dejó fuera el 95% de
+la tabla.
+
+**O sea: CIMA SÍ trae continente y contenido.** Lo que faltaba no era el dato, era el **diccionario de
+nomenclaturas**: cada compañía nombra la misma garantía a su manera y nadie las había reducido a un
+campo canónico.
+
+**Qué hacer, en este orden:** (a) **mapear descripción de garantía → campo canónico**
+(`continente`/`contenido`), que es barato y desbloquea 9 de 19 hogares hoy mismo; (b) para las que aun
+así no lo traigan, preguntárselo al corredor/cliente o cablear `POST /home/recommend-limits` (gratis
+según el portal). ⚠️ Ojo con el `0`: hay capitales a cero, y **cero es un dato («revisado, es cero»),
+no un hueco** — colapsar el hueco a 0 da un precio inventado.
+
+📌 **Lección de método, que es el motivo de que esto se escriba aquí:** la primera pasada midió
+`descripcion IN ('continente','contenido')` y concluyó «nadie lo ha rellenado». La consulta era
+correcta y la conclusión falsa. Antes de declarar que una columna está vacía, **mira cómo se llama el
+dato en cada fuente**, no solo si hay filas con el nombre que tú esperabas.
 
 | campo | ¿oblig.? | ¿CIMA? | cobertura | qué hacer |
 |---|---|---|---|---|
