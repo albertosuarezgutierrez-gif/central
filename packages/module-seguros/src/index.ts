@@ -191,3 +191,16 @@ export {
   type RelacionFila,
   type RelacionFicha,
 } from './relaciones.ts'
+export {
+  estadoCliente,
+  DIAS_PRESUPUESTO_VIVO,
+  type EstadoCliente,
+  type SenalesCliente,
+  type EstadoClienteDerivado,
+} from './estado-cliente.ts'
+export {
+  normalizarNumeroPoliza,
+  polizasDuplicadas,
+  type PolizaParaDuplicados,
+  type GrupoDuplicado,
+} from './duplicados.ts'
