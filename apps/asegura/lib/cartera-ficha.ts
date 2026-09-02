@@ -31,6 +31,7 @@ import { listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
 import { elegirRiesgo, hogarDeDatos, type HogarCartera } from './codeoscopic/desde-cartera-hogar.ts'
+import { estadoClavePii, type EstadoClavePii } from './pii-estado'
 
 /** Un resultado de búsqueda: lo justo para elegir a quién abrir. */
 export type ClienteEncontrado = {
@@ -191,6 +192,12 @@ export type FichaCliente = {
   tipo: string
   segmento: string | null
   contacto: ContactoFicha
+  /**
+   * Si lo cifrado no se abre, POR QUÉ (ver `lib/pii-estado.ts`). Sin esto,
+   * «cifrado» en pantalla es el mismo texto con la clave sin poner, mal
+   * pegada o distinta de la del CRM — tres arreglos distintos.
+   */
+  pii: { clave: EstadoClavePii }
   polizas: PolizaFicha[]
   siniestros: SiniestroFicha[]
   /**
@@ -335,6 +342,10 @@ export async function fichaCliente(
       provincia: c.provincia ?? null,
       codigoPostal: c.codigoPostal ?? null,
     },
+    // Por qué no se abre lo cifrado, si no se abre: sin clave / mal pegada /
+    // distinta de la del CRM. Se prueba con el teléfono o el email de ESTA
+    // ficha. Nunca viaja la clave, solo el veredicto.
+    pii: { clave: estadoClavePii(c.telefono ?? c.email ?? null) },
     intervinientes,
     documentos,
     polizas: c.polizas.map((p) => {

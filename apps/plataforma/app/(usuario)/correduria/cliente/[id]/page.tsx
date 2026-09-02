@@ -52,7 +52,7 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
           titulo={ficha.nombre}
           sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <span>{ficha.tipo === 'cliente' ? '✅ Cliente (CIMA)' : '🕐 Lead'}</span>
-            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} />
+            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} />
           </span>}
         />
       </div>
@@ -170,10 +170,22 @@ function Acciones() {
 // coche— sí, en su propia ficha enlazada por CIMA. `contactoEfectivo` mira
 // primero al tomador y luego a los intervinientes, y dice DE QUIÉN es el número.
 
-function Contacto({ c, intervinientes }: {
+// «cifrado» a secas no dice dónde tocar. asegura manda por qué no abre la clave
+// (02/09/2026: Alberto copió variables en Vercel tres veces a ciegas porque
+// «sin clave», «mal pegada» y «clave distinta» se veían idénticas).
+const CAUSA_PII: Record<string, string> = {
+  sin_clave: 'central-asegura no tiene PII_ENCRYPTION_KEY, o no se ha redesplegado tras añadirla',
+  mal_formada: 'PII_ENCRYPTION_KEY en central-asegura no son 64 caracteres hexadecimales: se pegó mal',
+  no_abre: 'PII_ENCRYPTION_KEY en central-asegura no es la misma que la del proyecto asegura',
+  sin_muestra: 'no hay ningún dato cifrado con el que probar la clave',
+}
+
+function Contacto({ c, intervinientes, piiClave }: {
   c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
   intervinientes: IntervinienteFicha[] | null
+  piiClave: string | null
 }) {
+  const causaPii = piiClave === null ? 'la clave no abre este dato (asegura no dice por qué: versión anterior)' : CAUSA_PII[piiClave] ?? `estado de clave desconocido: ${piiClave}`
   const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
   const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
   const quien = ef.quien
@@ -197,8 +209,8 @@ function Contacto({ c, intervinientes }: {
       ) : (
         // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
         // en sitios distintos (la clave PII vs. pedírselo al cliente).
-        <span title={c.telefonoIlegible ? 'Está guardado pero cifrado con otra clave: no se puede leer desde aquí' : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
-          📞 {c.telefonoIlegible ? 'cifrado' : `sin teléfono${coletilla}`}
+        <span title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
+          📞 {c.telefonoIlegible ? `cifrado · ${causaPii}` : `sin teléfono${coletilla}`}
         </span>
       )}
       {ef.email ? (
@@ -207,8 +219,8 @@ function Contacto({ c, intervinientes }: {
           {deOtro(ef.viaEmail)}
         </span>
       ) : (
-        <span title={c.emailIlegible ? 'Cifrado con otra clave: no se puede leer desde aquí' : 'No consta email'}>
-          ✉️ {c.emailIlegible ? 'cifrado' : 'sin email'}
+        <span title={c.emailIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : 'No consta email'}>
+          ✉️ {c.emailIlegible ? `cifrado · ${causaPii}` : 'sin email'}
         </span>
       )}
       {sitio && <span>📍 {sitio}</span>}

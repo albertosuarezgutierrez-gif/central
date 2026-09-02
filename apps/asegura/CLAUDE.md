@@ -191,6 +191,28 @@ desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
 proyecto de Vercel de Manuel — **no se piden por mensaje**.
 
+🔑 **`PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` — las DOS claves de datos personales, copiadas a
+`central-asegura` el 02/09/2026 (a mano por Alberto, desde Vercel `asegura`; nombres confirmados en el
+código del CRM: 92 y 40 usos).** Sin la primera, teléfono/email/DNI/dirección salen «cifrado»; sin la
+segunda, buscar por DNI/teléfono/email devuelve vacío SIN error. Reglas medidas ese día:
+- **Tienen que ser EXACTAMENTE las mismas que en el proyecto Vercel `asegura`** (el CRM cifra al ingerir
+  CIMA y central lee): 64 hex cada una. Compartir la clave no es opcional mientras las dos apps escriban y
+  lean la misma base; el día que central ingiera CIMA por su cuenta, se apaga el CRM y la clave vive en un
+  solo sitio.
+- 🚨 **Una variable nueva NO se aplica hasta el Redeploy.** Se añadió, se recargó la ficha, seguía
+  «cifrado»: faltaba redesplegar. Y **nunca pulsar «Rotate Variable»** en Vercel: genera un valor nuevo y
+  toda la cartera cifrada queda ilegible en el acto.
+- La marca «Needs Attention» de Vercel en `asegura` es SU aviso «parece un secreto y es visible: guárdala
+  como Sensitive», no una fuga ni la cadencia de 90 días del runbook de Manuel (eso es otra cosa, y sigue
+  pendiente). ⏸️ **Rotación = tarea aparte con ventana**: el cifrado `v1:` es de clave única
+  (`packages/module-seguros-pii`), así que rotar exige un job que descifre con la vieja y recifre con la
+  nueva todas las columnas PII de `seguros` y cambiar las DOS Vercel en el mismo minuto.
+- **La ficha dice POR QUÉ no descifra:** `lib/pii-estado.ts` (`estadoClavePii`, puro, 5 tests) prueba la
+  clave contra el teléfono/email de la propia ficha y `/api/operador/cliente` lo manda como `pii.clave`
+  (`ok` · `sin_clave` · `mal_formada` · `no_abre` · `sin_muestra`); plataforma lo pinta al lado de
+  «cifrado». Antes los tres `descifrar()` se tragaban el error y «sin clave», «mal pegada» y «clave
+  distinta» se veían idénticas. Nunca viaja ni se registra el valor de la clave.
+
 ## 🔗 La cadena de CIMA: cinco sistemas, no uno (confirmado por Manuel, 26/08/2026)
 
 La descarga de las compañías **no es un cron nuestro ni un SFTP**. Es una cadena, y cada eslabón la corta:
