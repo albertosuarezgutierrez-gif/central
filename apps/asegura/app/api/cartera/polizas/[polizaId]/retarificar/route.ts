@@ -98,6 +98,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ polizaId: stri
     cuerpo: preparado.peticion,
     motivo: preparado.motivo,
     solicitadoPor: session.nombre ?? 'desconocido',
+    // Sin esto la cotización se pide, se paga y NO se guarda: el precio moriría
+    // en la pestaña del navegador y recargar volvería a costar 0,50€.
+    // `clienteId` va a null a propósito: la ficha de origen trae el cliente por
+    // sus datos, no por su id, y un id inventado con BYPASSRLS no da error —
+    // colgaría la cotización de otra persona.
+    contexto: {
+      ramo: origen.tipo,
+      puerta: 'corredor',
+      polizaId,
+      clienteId: null,
+    },
   })
 
   if (!r.ok) {
