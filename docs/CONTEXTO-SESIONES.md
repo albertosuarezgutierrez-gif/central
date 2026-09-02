@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧾🔑🧲 «Haz todo ok, aplica y canal leads» (02/09/2026, noche).** Alberto dio OK a la spec de emisión,
+  «aplica» al DDL del portal y pidió el canal de leads. **BD (irreversible, aplicado):** Fase 1 del portal +
+  `portal_vinculo` + rol `prisma_asegura_portal` (NOBYPASSRLS, sin contraseña, SELECT por columnas, sin PII);
+  enums `fuente_origen` +`web/portal/whatsapp` y `poliza_origen` +`emitida_codeoscopic`; tabla
+  `companias_dgs` (15 códigos, `nombre_cima` solo en las 3 medidas). **Emisión:** reglas puras D2/D3/D4
+  (`module-seguros/emision.ts`) + `registrarPolizaEmitida` + puerto cerrado tras `CODEOSCOPIC_EMISION_ACTIVA`;
+  **el envío al vendor NO se construye** (no hay sandbox para el gate de idempotencia). Portal Fase 4 (vínculo
+  por email, lectura por columnas) y canal web (`/seguros` en plataforma → alta `fuente=web` → Telegram
+  `correduria.lead-nuevo`) construidos por agentes; PR de la tarde. Pendiente de Alberto: contraseña del rol
+  + `DATABASE_URL` + `PII_LOOKUP_KEY` en el proyecto Vercel del portal (¿existe?), y entorno de pruebas de Codeoscopic.
 - **💶 «¿Por qué ha subido la prima?» (02/09/2026).** Punto 7 de la visión, tras el «cuando vayan terminando
   mergea prueba y actualiza» de Alberto (#2111 mergeado). `evolucionPrima()` en module-seguros: prima por
   anualidad derivada de recibos `CA`/`NP` agrupados POR ANIVERSARIO (no año natural), ciclo solo si completo,
