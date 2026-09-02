@@ -13,6 +13,11 @@ import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import {
+  estableJson as stable,
+  estableMd as stableMd,
+  estableMapa as stableMapa,
+} from './auditar-comparacion.mjs'
 
 const ROOT = join(fileURLToPath(import.meta.url), '..', '..')
 const APPS_DIR = join(ROOT, 'apps')
@@ -438,9 +443,7 @@ const mapaFunciones = {
     funciones: mfArchivos.reduce((n, a) => n + a.funciones.length, 0),
   },
 }
-// El `sha` (y el timestamp) se ignoran al comparar: un commit sin cambio de firmas
-// NO debe marcar el índice como desfasado (evita churn / auto-commits en bucle).
-const stableMapa = o => JSON.stringify({ ...o, generadoEn: '', sha: '' }, null, 2)
+// El criterio de comparación (qué cuenta como "desfasado") vive en `auditar-comparacion.mjs`.
 
 // ── Archivo-resumen legible (docs/ARQUITECTURA.generated.md) ───────────────────
 // Mapa completo en markdown para que una sesión NUEVA de Claude lea la arquitectura
@@ -491,11 +494,7 @@ function buildMd(o) {
   return L.join('\n') + '\n'
 }
 
-// `generadoEn` se ignora al comparar (cambia en cada corrida). Así el fichero solo
-// cambia cuando cambia la estructura real → sin churn ni auto-commits en bucle.
-const stable = o => JSON.stringify({ ...o, generadoEn: '' }, null, 2)
-// Para el markdown: ignora la línea del timestamp al comparar.
-const stableMd = s => s.replace(/\(20\d\d-[^)]*Z\)/g, '(TS)')
+
 
 if (process.argv.includes('--check')) {
   const prevJson = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
@@ -523,7 +522,9 @@ if (process.argv.includes('--check')) {
 
   const md = buildMd(out)
   const prevMd = existsSync(MD_OUT) ? readFileSync(MD_OUT, 'utf8') : ''
-  if (stableMd(md) === stableMd(prevMd)) console.log('✓ Markdown ya al día.')
+  // Byte a byte (no `stableMd`): al comparar se ignoran las novedades, pero al ESCRIBIR se
+  // refrescan. Sin churn: si nada estructural cambió, `out.generadoEn` conserva el anterior.
+  if (md === prevMd) console.log('✓ Markdown ya al día.')
   else { writeFileSync(MD_OUT, md); console.log(`✓ Markdown escrito en ${relative(ROOT, MD_OUT)}`) }
 
   // Índice de funciones: conserva timestamp/sha anteriores si las firmas no cambiaron → sin churn.
