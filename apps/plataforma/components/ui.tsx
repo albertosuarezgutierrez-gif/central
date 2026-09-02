@@ -230,13 +230,28 @@ export function btnStyle(variante: 'primario' | 'secundario' | 'sutil' = 'secund
 }
 
 /** Botón que en realidad navega. Para acciones con handler usa `btnStyle` en tu client component. */
-export function BtnLink({ href, variante, tam, children }: {
+export function BtnLink({ href, variante, tam, nuevaPestana, children }: {
   href: string
   variante?: 'primario' | 'secundario' | 'sutil'
   tam?: 'sm' | 'md'
+  /**
+   * Abre en pestaña nueva. No es un capricho: sin esto la primitiva NO servía para tres botones
+   * reales de la app (firmar en el banco por SCA, subir una póliza a asegura, comparar precio en
+   * otra compañía) y se quedaban sin migrar — un enlace-botón sin `target` está incompleto.
+   * El `rel` va implícito y no es opcional: `_blank` sin `noopener` deja a la página destino
+   * acceso a `window.opener`.
+   */
+  nuevaPestana?: boolean
   children: ReactNode
 }) {
-  return <a href={href} style={{ ...btnStyle(variante, tam), textDecoration: 'none' }}>{children}</a>
+  return (
+    <a
+      href={href}
+      target={nuevaPestana ? '_blank' : undefined}
+      rel={nuevaPestana ? 'noopener noreferrer' : undefined}
+      style={{ ...btnStyle(variante, tam), textDecoration: 'none' }}
+    >{children}</a>
+  )
 }
 
 // ─── Dato: los TRES estados de un valor ──────────────────────────────────────────────────────
@@ -329,7 +344,7 @@ export function ThinBar({ pct, color, width, alto, track }: {
 }) {
   return (
     <div style={{ background: track || 'var(--primary-light)', borderRadius: 999, height: alto ?? 6, width: width ?? '100%', overflow: 'hidden', flexShrink: 0 }}>
-      <div style={{ height: '100%', borderRadius: 999, background: color || 'var(--primary)', width: `${Math.min(100, Math.max(0, pct))}%` }} />
+      <div style={{ height: '100%', borderRadius: 999, background: color || 'var(--primary)', width: `${Math.min(100, Math.max(0, pct))}%`, transition: 'width .25s ease' }} />
     </div>
   )
 }

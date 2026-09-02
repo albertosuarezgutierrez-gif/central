@@ -201,17 +201,9 @@ function Fila({ f, urlAsegura }: { f: EnRiesgo; urlAsegura: string }) {
         {/* Retener «en otra compañía» es pedir precio de calle, y eso gasta
             0,50€ reales: vive en asegura, tras su pantalla de confirmación. */}
         {f.retarificable && (
-          <a
-            href={`${urlAsegura}/cartera/poliza/${f.polizaId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              minHeight: 44, display: 'inline-flex', alignItems: 'center', padding: '0 16px',
-              borderRadius: 8, border: '1px solid var(--border)', fontWeight: 600,
-            }}
-          >
+          <BtnLink href={`${urlAsegura}/cartera/poliza/${f.polizaId}`} variante="secundario" nuevaPestana>
             Precio en otra compañía ↗
-          </a>
+          </BtnLink>
         )}
       </div>
     </div>

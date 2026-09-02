@@ -6,7 +6,7 @@ import {
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
 } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
-import { PageHeader } from '@/components/ui'
+import { PageHeader, BtnLink } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -147,14 +147,9 @@ function Kpi({ label, valor, sub, color }: { label: string; valor: string; sub?:
 function Acciones() {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 }}>
-      <a
-        href={urlSubirPoliza()}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, minHeight: 44, display: 'inline-flex', alignItems: 'center', fontWeight: 600 }}
-      >
+      <BtnLink href={urlSubirPoliza()} variante="secundario" nuevaPestana>
         📄 Subir póliza o documento ↗
-      </a>
+      </BtnLink>
       <span style={{ color: 'var(--muted)' }} title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. El fichero NO se guarda todavía: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
         el agente la lee y enseña lo que ha encontrado · hoy solo auto · el fichero no se guarda aún
       </span>
