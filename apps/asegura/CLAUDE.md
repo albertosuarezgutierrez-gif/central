@@ -146,9 +146,18 @@ El resto de `/cartera` (buscar, ficha) sigue vivo como respaldo del corredor, pe
   nunca `0,00€`.
 
 ## Envs
-`DATABASE_URL`, `DIRECT_URL` (rol `prisma_seguros`), `ASEGURA_SESSION_SECRET`.
-**De la cartera en vivo (01/09/2026, FUNCIONANDO):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
-(SELECT-only + BYPASSRLS) contra ASEGURA-prod-eu por el pooler :6543 de eu-central-1; la URL la
+`DATABASE_URL`, `DIRECT_URL` (rol `prisma_seguros`; **desde el 02/09/2026 también es la conexión de la
+CARTERA**, con `?schema=seguros` que añade `lib/asegura-url.ts`), `ASEGURA_SESSION_SECRET`.
+⚠️ **Contraseña de `prisma_seguros` ROTADA el 02/09/2026 a las 10:17 UTC** (`ALTER ROLE`, verificador
+SCRAM): la que llevaba `DATABASE_URL` en Vercel la rechazaba el pooler (8 `password authentication failed`
+en `supavisor_logs` entre 07:31 y 10:06, y `/correduria` en plataforma pintaba «no puede leer su BD»). Dos
+lecciones medidas: (1) el pooler **cachea las credenciales unos minutos**: justo tras un `ALTER ROLE …
+PASSWORD` sigue rechazando la nueva aunque el host directo `db.<ref>.supabase.co:5432` ya la acepte — espera
+2-3 min antes de diagnosticar; (2) el puerto `/api/operador/*` devuelve ahora `causa`
+(`credenciales|permisos|conexion|esquema|sin_correduria|otro`, `lib/error-cartera.ts`) y la registra en
+el log SIN la URL, así que la pantalla de plataforma dice la causa sin ir a los logs del pooler.
+**Camino de vuelta al origen (solo con `ASEGURA_FUENTE=origen`):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
+(SELECT-only + BYPASSRLS) contra el Supabase congelado de Manuel por el pooler :6543 de eu-central-1; la URL la
 normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
 puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
 desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.
