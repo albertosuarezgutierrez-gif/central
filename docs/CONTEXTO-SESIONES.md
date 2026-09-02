@@ -30,6 +30,25 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏠 Ficha revisable de hogar + precios simulados (02/09/2026).** PR #2096. La pantalla que faltaba
+  entre «tengo los datos» y «gasto 0,50€»: cada campo dice de dónde sale (póliza / volcado / Catastro /
+  ficha / supuesto), los supuestos que ABARATAN van marcados aparte, lo que falta bloquea y dice qué
+  falta, y la firmeza va pegada al precio (en hogar la 1ª cotización SIEMPRE es estimada). Lógica en el
+  puro `lib/codeoscopic/resumen-hogar.ts`, que la pantalla reusa en cliente al corregir.
+  **Modo simulación** `CODEOSCOPIC_SIMULACION=true`: paso 0 del embudo, sin vendor ni libro ni tope;
+  se marca con `simulado` (dato, no texto), `projectId` NEGATIVO y `estimate:true`; `restantesHoy` es
+  `null` = «no se ha mirado», no 0. Arreglado: `origenRetarificacion()` sin try/catch dejaba la página
+  en blanco; `primaAnual` viaja con NULL intacto (sin él NO se pinta la comparación).
+  ⏳ Alberto: poner `CODEOSCOPIC_SIMULACION=true` en Vercel `central-asegura` para ver precios.
+  ❓ Sin contestar: qué decía el error que vio en `/cartera/poliza/5b0150ee-…`.
+
+- **🛡️ Auditoría: NO hace falta tabla de garantías por compañía (02/09/2026).** PR #2096 (docs) +
+  `docs/superpowers/specs/2026-09-02-expediente-tarificacion-hogar-design.md`. No existe catálogo de
+  garantías por API (`guarantee`/`warranty`/`franchise`/`excess` = 0 apariciones en todo el portal del
+  fabricante), no hay forma de fijar por API los defectos de una compañía, y los que Alberto ya
+  configuró en Avant2 se heredan solos al cotizar: una tabla nuestra crearía dos verdades. Las opciones
+  por compañía solo se pintan con el iframe del fabricante + puerto que le reenvíe (aparcado).
+
 - **📘 Visión del CRM de la correduría (02/09/2026).** Alberto, por voz: «lo que estamos hablando es un
   CRM» — buscador → ficha cliente (pólizas confirmadas por CIMA) → ficha póliza (datos, recibos,
   siniestros, limpio, detalle al pinchar), misma forma para la intranet del cliente; leads que se
