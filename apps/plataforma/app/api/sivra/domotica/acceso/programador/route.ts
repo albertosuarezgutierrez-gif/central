@@ -12,7 +12,8 @@ import {
   reconciliar, ventanaPin, madridEpoch, necesitaAvisoOffline, desajustesVentana,
   type ReservaAcceso, type PinExistente,
 } from '@/lib/domotica/acceso-programador'
-import { tgAvisoAlerta } from '@/lib/telegram'
+import { tgAvisoAlerta, tgAvisoAlertaBotones } from '@/lib/telegram'
+import { botonesReponerVentana } from '@/lib/domotica/reponer-ventana-puro'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
@@ -221,9 +222,13 @@ export async function GET(req: NextRequest) {
           else if (x.entradaMin < 0) partes.push(`abre ${minutosLegibles(-x.entradaMin)} más tarde de lo que toca`)
           return `· reserva ${x.reservaRef} (${x.propertyId}${x.guestName ? `, ${x.guestName}` : ''}): ${partes.join(' y ')}${x.entregado ? ' — el huésped YA tiene ese código' : ''}`
         })
-        await tgAvisoAlerta('pisos.domotica-acceso', 
-          `🕒 ${d.nombre}: ${porAvisar.length} PIN con la ventana desactualizada (fechas cambiadas o márgenes nuevos). No los toco solo — repónlos desde /sivra/domotica con «🔄 ventana».\n${lineas.join('\n')}`,
+        // El botón por PIN corre el MISMO camino que el «🔄 ventana» del panel (reponerVentanaPin, vía
+        // el webhook de Telegram con prefijo `dom_`): el aviso se lee en el móvil y ahí se resuelve,
+        // en vez de remitir a una pantalla que se abre horas después. Sigue sin tocarse solo.
+        await tgAvisoAlertaBotones('pisos.domotica-acceso',
+          `🕒 ${d.nombre}: ${porAvisar.length} PIN con la ventana desactualizada (fechas cambiadas o márgenes nuevos). No los toco solo — repónlos con el botón de abajo o desde /sivra/domotica con «🔄 ventana».\n${lineas.join('\n')}`,
           'aviso',
+          botonesReponerVentana(d.id, porAvisar),
         ).catch(() => {})
         await prisma.$executeRaw`
           UPDATE domotica_acceso_pin
