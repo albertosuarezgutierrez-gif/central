@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T11:04:30Z",
-  "sha": "670d753bd9b168903626ff14e7119715d01df2db",
+  "generadoEn": "2026-09-02T11:22:53Z",
+  "sha": "cfd48228e160e598b2e45fd4705bd583902b00ff",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48717,7 +48717,7 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; month?: string }> }",
           "retorno": null,
-          "linea": 18
+          "linea": 20
         },
         {
           "nombre": "KPI",
@@ -48725,7 +48725,7 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color: string }",
           "retorno": null,
-          "linea": 174
+          "linea": 175
         },
         {
           "nombre": "FinStat",
@@ -48733,12 +48733,12 @@
           "exportada": false,
           "params": "{ label, value, color }: { label: string; value: string; color?: string }",
           "retorno": null,
-          "linea": 183
+          "linea": 184
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "74f5f50fc896"
+      "hash": "bb6c2be910ff"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/AnalisisIAPanel.tsx",
@@ -49176,7 +49176,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 41,
+          "linea": 42,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
         },
         {
@@ -49185,7 +49185,7 @@
           "exportada": false,
           "params": "{ icono, children, sub }: { icono: ReactNode; children: ReactNode; sub?: string }",
           "retorno": null,
-          "linea": 50,
+          "linea": 51,
           "resumen": "Título de sección: icono en `--muted` a la izquierda del `<h2>`. Mismo patrón (y mismas medidas) que el helper homónimo de `ResumenPeriodo.tsx`, para que las secciones de esta página y las del resumen"
         },
         {
@@ -49194,7 +49194,7 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 60
+          "linea": 61
         }
       ],
       "tablas": [
@@ -49203,7 +49203,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "9da89caf1023"
+      "hash": "557e3ab5e120"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -49258,7 +49258,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "508c361db062"
+      "hash": "7c947d5bc3c2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/SaldoTotal.tsx",
@@ -49382,12 +49382,12 @@
           "exportada": true,
           "params": "{ isOperator }: { isOperator: boolean }",
           "retorno": null,
-          "linea": 27
+          "linea": 29
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7926c807f102"
+      "hash": "11f5e114a2e9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/comunicacion/ComunicacionClient.tsx",
@@ -49849,7 +49849,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 13
+          "linea": 15
         },
         {
           "nombre": "fmtFecha",
@@ -49857,7 +49857,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 18,
+          "linea": 20,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -49866,7 +49866,7 @@
           "exportada": true,
           "params": "{ urlAsegura }: { urlAsegura: string }",
           "retorno": null,
-          "linea": 57
+          "linea": 59
         },
         {
           "nombre": "DesgloseModal",
@@ -49874,7 +49874,7 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 277
+          "linea": 276
         },
         {
           "nombre": "num",
@@ -49882,7 +49882,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 459
+          "linea": 458
         },
         {
           "nombre": "CarteraViva",
@@ -49890,7 +49890,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 461
+          "linea": 460
         },
         {
           "nombre": "CeldaObjeto",
@@ -49898,7 +49898,7 @@
           "exportada": false,
           "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
           "retorno": null,
-          "linea": 627,
+          "linea": 626,
           "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
         },
         {
@@ -49907,12 +49907,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 660
+          "linea": 659
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6ba64d3491f8"
+      "hash": "3bdd252c7495"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -51057,7 +51057,7 @@
           "exportada": false,
           "params": "mes: string",
           "retorno": null,
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "prevMes",
@@ -51065,7 +51065,7 @@
           "exportada": false,
           "params": "mes: string",
           "retorno": null,
-          "linea": 39
+          "linea": 41
         },
         {
           "nombre": "nextMes",
@@ -51073,7 +51073,7 @@
           "exportada": false,
           "params": "mes: string",
           "retorno": null,
-          "linea": 43
+          "linea": 45
         },
         {
           "nombre": "TarjetaCard",
@@ -51081,7 +51081,7 @@
           "exportada": false,
           "params": "{ t, mes }: { t: Tarjeta; mes: string }",
           "retorno": null,
-          "linea": 48
+          "linea": 50
         },
         {
           "nombre": "TarjetaCreditoClient",
@@ -51089,12 +51089,12 @@
           "exportada": true,
           "params": "{ tarjetas, mes, hasTarjetas, }: { tarjetas: Tarjeta[] mes: string hasTarjetas: boolean }",
           "retorno": null,
-          "linea": 161
+          "linea": 163
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b105c537067e"
+      "hash": "7bdfb7c0c7d7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/inversion/page.tsx",
@@ -52195,7 +52195,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         },
         {
           "nombre": "addDays",
@@ -52203,7 +52203,7 @@
           "exportada": false,
           "params": "date: Date, n: number",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "daysBetween",
@@ -52211,7 +52211,7 @@
           "exportada": false,
           "params": "a: Date, b: Date",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "shortDay",
@@ -52219,7 +52219,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "fmtEur",
@@ -52227,7 +52227,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "fmt",
@@ -52235,7 +52235,7 @@
           "exportada": false,
           "params": "d: string",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "CalendarioPage",
@@ -52243,7 +52243,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "UpcomingArrivals",
@@ -52251,12 +52251,12 @@
           "exportada": false,
           "params": "{ incomes, now }: { incomes: Income[]; now: Date }",
           "retorno": null,
-          "linea": 333
+          "linea": 330
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dc1dde1412c9"
+      "hash": "de05a28b0c98"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/domotica/DomoticaClient.tsx",
@@ -52354,7 +52354,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "ExpensesPage",
@@ -52362,14 +52362,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "f26d6e1a11df"
+      "hash": "97574266a6a4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/facturas-control/page.tsx",
@@ -52414,7 +52414,7 @@
           "exportada": false,
           "params": "year: number, rows: FiscalRow[]",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "FiscalPage",
@@ -52422,14 +52422,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 52
+          "linea": 53
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "0895e135625c"
+      "hash": "eec2d01b2f1a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/gastos-fijos/page.tsx",
@@ -52444,7 +52444,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 5
+          "linea": 6
         },
         {
           "nombre": "emptyForm",
@@ -52452,7 +52452,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "GastosFijosPage",
@@ -52460,14 +52460,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "d6a4dfc6824b"
+      "hash": "200258af39ea"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/income/page.tsx",
@@ -52482,14 +52482,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "d646c0dbd465"
+      "hash": "f5651bc4f2b3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/inversion/page.tsx",
@@ -53024,14 +53024,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "43d5dfbe7f95"
+      "hash": "a168d018618a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/sivra/resultado-pisos/compartido.ts",
@@ -53413,12 +53413,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e7faec9faf3e"
+      "hash": "da59e29469d6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/subastas/MapaSubastas.tsx",
@@ -64220,9 +64220,7 @@
         "Pendiente",
         "Dato",
         "ThinBar",
-        "BarListRow",
-        "TablaScroll",
-        "LegendDot"
+        "TablaScroll"
       ],
       "funciones": [
         {
@@ -64328,19 +64326,10 @@
           "nombre": "ThinBar",
           "kind": "function",
           "exportada": true,
-          "params": "{ pct, color, width }: { pct: number; color?: string; width?: number | string }",
+          "params": "{ pct, color, width, alto, track }: { pct: number color?: string width?: number | string alto?: number track?: string }",
           "retorno": null,
-          "linea": 318,
-          "resumen": "Barra fina de progreso."
-        },
-        {
-          "nombre": "BarListRow",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ label, value, pct, share }: { label: ReactNode value: ReactNode pct: number share?: string }",
-          "retorno": null,
-          "linea": 327,
-          "resumen": "Fila de «BarList»: barra tintada de fondo con la etiqueta encima y el valor fuera, a la derecha."
+          "linea": 323,
+          "resumen": "Barra fina de progreso. `alto` y `track` son configurables porque cablearlos era justo lo que dejaba la primitiva sin adoptar: de los 11 sitios que pintan esta barra a mano (medido 02/09/2026) solo 3 "
         },
         {
           "nombre": "TablaScroll",
@@ -64348,22 +64337,13 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 358,
+          "linea": 341,
           "resumen": "Envoltorio de tabla ancha: scroll horizontal PROPIO, para que el cuerpo de la página nunca scrollee de lado (regla responsive del CLAUDE.md raíz)."
-        },
-        {
-          "nombre": "LegendDot",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ color, label }: { color: string; label: string }",
-          "retorno": null,
-          "linea": 363,
-          "resumen": "Punto de leyenda."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f56384cdc48"
+      "hash": "bb51df2c5ee3"
     },
     {
       "ruta": "apps/plataforma/lib/actividad-ialimp.ts",
@@ -74177,9 +74157,11 @@
       "exporta": [
         "diasEntre",
         "fechaCaducidadConsent",
+        "fmtDDMM",
         "esNota",
         "partirAvisos",
-        "semaforoFeed"
+        "semaforoFeed",
+        "lineaCuentasFeed"
       ],
       "funciones": [
         {
@@ -74201,7 +74183,7 @@
         {
           "nombre": "fmtDDMM",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "iso: string",
           "retorno": "string",
           "linea": 39
@@ -74230,11 +74212,19 @@
           "params": "p: { hoyISO: string // Último movimiento psd2 importado (el más reciente entre todas las cuentas del feed). ultimoMovISO: string | null // ultimo_avisos del último sync; null = el sync aún no reporta (fila anterior al cambio) — // NO equiva",
           "retorno": "EstadoFeed",
           "linea": 61
+        },
+        {
+          "nombre": "lineaCuentasFeed",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentas: CuentaFeed[]",
+          "retorno": "string",
+          "linea": 143
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c3b33db13851"
+      "hash": "25ababa2908d"
     },
     {
       "ruta": "apps/plataforma/lib/psd2.ts",
@@ -107735,6 +107725,6 @@
   ],
   "resumen": {
     "archivos": 2793,
-    "funciones": 7907
+    "funciones": 7906
   }
 }

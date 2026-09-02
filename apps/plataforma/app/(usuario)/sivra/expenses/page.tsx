@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { CATEGORIAS_GASTO as CATEGORIAS, PROPS_GASTO as PROPS, PROP_NAMES_GASTO as PROP_NAMES } from '@/lib/sivra/constantes'
 import { eur } from '@/lib/dinero'
+import { PageHeader, BtnLink } from '@/components/ui'
 const YEARS  = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 // Filas montadas de inicio; el resto sale con «Ver más» (el API devuelve hasta 500).
@@ -135,24 +136,18 @@ export default function ExpensesPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
-      <div className="expenses-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Gastos</h1>
-          {!loading && (
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-              {gastos.length} registros · Total: <strong style={{ color: 'var(--negative)' }}>{eur(totalSum)}</strong>
-            </p>
-          )}
-        </div>
-        <div className="expenses-header-actions" style={{ display: 'flex', gap: 8 }}>
-          <a href="/sivra/gastos-fijos" style={{ padding: '8px 14px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, color: 'var(--muted)', textDecoration: 'none', background: 'var(--surface)' }}>
-            📋 Gastos fijos
-          </a>
+      <PageHeader
+        titulo="Gastos"
+        sub={loading ? undefined : (
+          <>{gastos.length} registros · Total: <strong style={{ color: 'var(--negative)' }}>{eur(totalSum)}</strong></>
+        )}
+        acciones={<>
+          <BtnLink href="/sivra/gastos-fijos" variante="secundario" tam="sm">📋 Gastos fijos</BtnLink>
           <button onClick={() => setShowModal(true)} style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             + Añadir gasto
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Filters */}
       <div className="expenses-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>

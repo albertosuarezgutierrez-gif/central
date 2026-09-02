@@ -49,6 +49,26 @@ WHERE origen = 'psd2';
 > dentro de una alerta crítica y se pinta en permanencia en `/banca`. Que no llegue aviso de una nota
 > es lo ESPERADO, no un vigía roto; esta skill sí debe seguir mirándola en `ultimo_avisos` y contarla.
 
+> 🕳️ **`fecha_operacion` es NULLABLE, y esta consulta no lo ve.** `MAX(fecha_operacion)` ignora los
+> NULL y los `COUNT(*) FILTER (WHERE fecha_operacion >= …)` tampoco los cuentan: un apunte que el
+> banco entregue SIN fecha entra en la BD, se ve en el libro, y para esta skill es como si no
+> hubiera llegado. El fallo que produce es el caro de los dos: declarar el feed **roto** (o en
+> caída de volumen) cuando en realidad está entregando — la misma confusión entre «no hay dato» y
+> «no sé leer el dato» que arregló el PR #2042 en la línea de `/banca`.
+>
+> Medido el 02/09/2026: **0 filas sin `fecha_operacion` en las 2.123 de la tabla**, en los seis
+> orígenes (`psd2`, `xls`, `xls-kutxa`, `xls-bbva`, `pdf`, `manual`). O sea: hoy no pasa, pero el
+> esquema lo permite. Antes de declarar una anomalía por frescura, descarta este caso:
+>
+> ```sql
+> SELECT count(*) AS psd2_sin_fecha
+> FROM movimientos_bancarios
+> WHERE origen = 'psd2' AND fecha_operacion IS NULL;
+> ```
+>
+> Si devuelve > 0, **no es un feed seco: es un feed que trae apuntes sin fecha**. Dilo así, con el
+> número, y no lo cuentes como «sin datos».
+
 Evalúa:
 - `ultimo_movimiento < CURRENT_DATE - 2` → **anomalía crítica** (>48h sin datos)
 - `mov_30d < mov_30d_prev * 0.5` → **anomalía moderada** (caída >50 % en volumen)

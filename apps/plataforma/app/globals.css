@@ -229,7 +229,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    La tira de KPIs pasa a dos por fila y luego a una: apilarlos de golpe deja media pantalla vacía
    con el dato principal fuera de vista. */
 @media (max-width: 768px) {
-  .aptos-header { flex-direction: column !important; align-items: flex-start !important; }
   .aptos-kpi-strip { gap: 16px !important; }
   .aptos-kpi-strip > div { min-width: calc(50% - 8px) !important; }
   .aptos-grid { grid-template-columns: 1fr !important; }
@@ -267,7 +266,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    La matriz compañía×mes no cabe en móvil de ninguna manera: scrollea en su propia caja. Los KPIs
    bajan a dos por fila y luego a una. */
 @media (max-width: 768px) {
-  .corr-header { flex-direction: column !important; align-items: flex-start !important; }
   .corr-kpis { grid-template-columns: 1fr 1fr !important; }
   .corr-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
@@ -345,7 +343,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
 
 /* === Tarjeta de crédito (`finanzas/tarjeta-credito/TarjetaCreditoClient.tsx`) === */
 @media (max-width: 768px) {
-  .tarj-header { flex-direction: column !important; align-items: flex-start !important; }
   .tarj-kpis { flex-direction: column !important; }
 }
 
@@ -410,26 +407,18 @@ html[data-saldo-oculto='1'] .saldo-privado {
 }
 
 /* === SIVRA · Calendario de reservas (`sivra/calendario/page.tsx`) ===
-   Los botones de navegación de mes envuelven a 480px en vez de comprimirse: son el único modo de
-   moverse por el calendario y por debajo de 44px dejan de poder tocarse. */
+   La tira de stats y la leyenda se apilan; la tabla scrollea en su propia caja. */
 @media (max-width: 768px) {
-  .cal-header { flex-direction: column !important; align-items: flex-start !important; }
   .cal-stats-row { flex-direction: column !important; }
   .cal-stats-row > div { width: 100% !important; min-width: unset !important; }
   .cal-legend { flex-direction: column !important; gap: 6px !important; }
   .cal-detail { flex-direction: column !important; }
   .cal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
 }
-@media (max-width: 480px) {
-  .cal-nav-btns { flex-wrap: wrap !important; }
-}
-
 /* === SIVRA · Gastos (`sivra/expenses/page.tsx`) ===
    El modal de alta/edición pasa a ocupar la pantalla entera en móvil: con ancho fijo, el formulario
    de un gasto (fecha, importe, categoría, propiedad) quedaba a medias fuera. */
 @media (max-width: 768px) {
-  .expenses-header { flex-direction: column !important; align-items: flex-start !important; }
-  .expenses-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
   .expenses-filters { flex-direction: column !important; align-items: stretch !important; }
   .expenses-filters select { width: 100% !important; box-sizing: border-box; }
   .expenses-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
@@ -443,8 +432,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    de clase coincide (allí son `.fiscal-cols` y `.fiscal-hijo-row`). Se dejan sin renombrar a
    propósito para no tocar el JSX de dos pantallas por una colisión que no existe. */
 @media (max-width: 768px) {
-  .fiscal-header { flex-direction: column !important; align-items: flex-start !important; }
-  .fiscal-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
   .fiscal-grand-grid { grid-template-columns: 1fr !important; }
   .fiscal-prop-summary { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
   .fiscal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
@@ -454,8 +441,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    El selector de `[style*="gridColumn"]` casa los campos que el JSX marca como "de ancho completo"
    (concepto, notas) para que no se partan en dos al reducir la rejilla del formulario. */
 @media (max-width: 768px) {
-  .fijos-header { flex-direction: column !important; align-items: flex-start !important; }
-  .fijos-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
   .fijos-form-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .fijos-form-grid > [style*="gridColumn"] { grid-column: 1 / -1 !important; }
   .fijos-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
@@ -468,7 +453,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    Los filtros (piso, portal, texto, fechas) pasan a ancho completo apilados: en línea, cada
    `select` quedaba tan estrecho que no se leía el nombre del piso seleccionado. */
 @media (max-width: 768px) {
-  .income-header { flex-direction: column !important; align-items: flex-start !important; }
   .income-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .income-split-grid { grid-template-columns: 1fr !important; }
   .income-filters { flex-direction: column !important; align-items: stretch !important; }
@@ -557,8 +541,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
 
 /* === SIVRA · Pricing manual (`sivra/pricing/page.tsx`) === */
 @media (max-width: 768px) {
-  .pricing-header { flex-direction: column !important; gap: 12px !important; }
-  .pricing-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
   .pricing-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
   .pricing-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
 }
@@ -597,7 +579,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    Los botones que lanzan una pasada (probar / analizar, ~30s) pasan a ancho completo en móvil
    pequeño: son acciones lentas y caras de repetir, así que conviene que se toquen a la primera. */
 @media (max-width: 768px) {
-  .seo-header { flex-direction: column !important; align-items: flex-start !important; }
   .seo-changes-row { flex-direction: column !important; }
   .seo-changes-row > div { width: 100% !important; }
   .seo-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }

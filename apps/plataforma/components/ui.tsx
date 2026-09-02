@@ -314,39 +314,22 @@ export function Dato({ valor, children, pendiente, vacio, definitivo, donde }: {
 
 // ─── Barras y tablas ─────────────────────────────────────────────────────────────────────────
 
-/** Barra fina de progreso. */
-export function ThinBar({ pct, color, width }: { pct: number; color?: string; width?: number | string }) {
-  return (
-    <div style={{ background: 'var(--primary-light)', borderRadius: 999, height: 6, width: width ?? '100%', overflow: 'hidden', flexShrink: 0 }}>
-      <div style={{ height: '100%', borderRadius: 999, background: color || 'var(--primary)', width: `${Math.min(100, Math.max(0, pct))}%` }} />
-    </div>
-  )
-}
-
-/** Fila de «BarList»: barra tintada de fondo con la etiqueta encima y el valor fuera, a la derecha. */
-export function BarListRow({ label, value, pct, share }: {
-  label: ReactNode
-  value: ReactNode
+/**
+ * Barra fina de progreso. `alto` y `track` son configurables porque cablearlos era justo lo que
+ * dejaba la primitiva sin adoptar: de los 11 sitios que pintan esta barra a mano (medido
+ * 02/09/2026) solo 3 usaban 6px. El radio no hace falta parametrizarlo — 999 se clampa a la
+ * mitad del alto, así que una barra de 4px sale con el radio 2 que se dibujaba a mano.
+ */
+export function ThinBar({ pct, color, width, alto, track }: {
   pct: number
-  share?: string
+  color?: string
+  width?: number | string
+  alto?: number
+  track?: string
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ flex: 1, position: 'relative', height: 32, minWidth: 0 }}>
-        <div style={{
-          position: 'absolute', inset: 0, width: `${Math.min(100, Math.max(2, pct))}%`,
-          background: 'var(--primary-light)', borderRadius: 6,
-        }} />
-        <div style={{
-          position: 'relative', height: '100%', display: 'flex', alignItems: 'center',
-          padding: '0 10px', fontSize: 13, fontWeight: 500, color: 'var(--text)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>{label}</div>
-      </div>
-      <div style={{ flexShrink: 0, textAlign: 'right', minWidth: 92 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-        {share && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{share}</span>}
-      </div>
+    <div style={{ background: track || 'var(--primary-light)', borderRadius: 999, height: alto ?? 6, width: width ?? '100%', overflow: 'hidden', flexShrink: 0 }}>
+      <div style={{ height: '100%', borderRadius: 999, background: color || 'var(--primary)', width: `${Math.min(100, Math.max(0, pct))}%` }} />
     </div>
   )
 }
@@ -359,12 +342,3 @@ export function TablaScroll({ children }: { children: ReactNode }) {
   return <div className="overflow-table" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>{children}</div>
 }
 
-/** Punto de leyenda. */
-export function LegendDot({ color, label }: { color: string; label: string }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
-      <span style={{ width: 8, height: 8, borderRadius: 999, background: color, display: 'inline-block' }} />
-      {label}
-    </span>
-  )
-}

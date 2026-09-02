@@ -8,6 +8,7 @@ import { DESTINO_LABEL } from '@/lib/categorizar'
 import { getTesoreria } from '@/lib/tesoreria'
 import { getBrokerSaldos } from '@/lib/broker'
 import { getEstadoFeedPsd2 } from '@/lib/psd2-estado'
+import { lineaCuentasFeed } from '@/lib/psd2-semaforo'
 import { eur } from '@/lib/dinero'
 import IntervaloSelector from '../finanzas/IntervaloSelector'
 import { periodoLabel, type Periodo } from '../finanzas/periodo'
@@ -245,7 +246,7 @@ export default async function BancaPage({ searchParams }: {
                 <div key={`nota-${i}`} style={{ marginTop: '4px', color: 'var(--text)' }}>{n}</div>
               ))}
               <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--muted)' }}>
-                {feedPsd2.cuentas.map(c => `${c.banco || 'Banco'} ${c.mascara || ''}: último mov. ${c.ultimoMov ?? 'ninguno'}`).join(' · ')}
+                {lineaCuentasFeed(feedPsd2.cuentas)}
                 {feedPsd2.estado.nivel === 'ok' && feedPsd2.estado.detalles[0] ? ` · ${feedPsd2.estado.detalles[0]}` : ''}
               </div>
               <SyncPsd2Btn />

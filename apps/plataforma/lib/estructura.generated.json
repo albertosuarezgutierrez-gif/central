@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T11:04:18Z",
+  "generadoEn": "2026-09-02T11:22:53Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5380,6 +5380,26 @@
   ],
   "novedades": [
     {
+      "titulo": "La reimplementación era real, no un falso positivo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "`CLAUDE.md` propios",
+      "fecha": ""
+    },
+    {
+      "titulo": "Cablear un valor es lo que deja una primitiva sin adoptar:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Medido antes de tocar, y corrige lo que yo mismo había apuntado:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Límite estructural anotado, no arreglable ahí:",
+      "fecha": ""
+    },
+    {
       "titulo": "Podado (1.204 líneas):",
       "fecha": ""
     },
@@ -5417,26 +5437,6 @@
     },
     {
       "titulo": "Pendiente:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pendiente:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Lo que un agente NO puede ver:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Medido por Chrome (02/09, solo lectura):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Segundo token vivo",
-      "fecha": ""
-    },
-    {
-      "titulo": "Rotado por Alberto (Chrome, 02/09 09:03 CEST):",
       "fecha": ""
     }
   ],
