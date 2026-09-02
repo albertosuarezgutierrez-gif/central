@@ -9,6 +9,8 @@ import { registrarOferta } from '@/lib/sivra/extras/reserva'
 import { enviarOrdenLimpieza, ordenYaEnviada } from '@/lib/sivra/extras/orden-limpieza'
 import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
 import { tgAvisoBotones } from '@/lib/telegram'
+import { reponerVentanaPin } from '@/lib/domotica/reponer-ventana'
+import { PREFIJO_CALLBACK_DOMOTICA, ACCION_VENTANA, textoResultadoReponer } from '@/lib/domotica/reponer-ventana-puro'
 import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion } from '@/lib/sivra/agente-huesped/aprender'
 import { resolverHecho } from '@/lib/sivra/agente-huesped/hechos'
@@ -779,6 +781,21 @@ export async function POST(req: NextRequest) {
           ? `🧠 <b>Aprendido:</b> ${escapeHtml(hechoTxt)}`
           : `🗑️ <i>Descartado:</i> ${escapeHtml(hechoTxt)}`).catch(() => {})
       }
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Domótica: «🔄 ventana» desde el aviso de PIN desactualizado (dom_ventana:<dispId>:<ref>) ──
+    // La pulsación en el chat de Alberto es la autorización; la reposición es la misma que la del
+    // botón de /sivra/domotica. Se contesta con un mensaje NUEVO, no editando el aviso: el aviso
+    // puede llevar varios botones y editarlo borraría el teclado con los que faltan por pulsar.
+    if (prefix === PREFIJO_CALLBACK_DOMOTICA && action === ACCION_VENTANA) {
+      const [dispId, reservaRef] = [args[0] || '', args[1] || '']
+      if (!dispId || !reservaRef) { await tgAnswerCallback(cb.id, 'Botón incompleto'); return NextResponse.json({ ok: true }) }
+      const r = await reponerVentanaPin(dispId, reservaRef).catch((e): { ok: false; status: number; error: string } => ({
+        ok: false, status: 500, error: e instanceof Error ? e.message : String(e),
+      }))
+      await tgAnswerCallback(cb.id, r.ok ? (r.sinCambio ? 'Ya estaba bien' : 'Ventana repuesta ✅') : 'No se pudo')
+      await tgSend(`🔑 <b>Acceso</b>\n${escapeHtml(textoResultadoReponer(reservaRef, r))}`).catch(() => {})
       return NextResponse.json({ ok: true })
     }
 

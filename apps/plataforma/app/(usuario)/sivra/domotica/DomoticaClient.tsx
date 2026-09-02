@@ -271,12 +271,18 @@ function TarjetaAcceso({ d, apartamentos, ocupado, setOcupado, setError, cargar 
   // El código NO cambia (se recrea con el mismo), así que lo que el huésped ya tenga sigue valiendo.
   async function ajustarVentana(ref: string) {
     if (!confirm('¿Reponer la ventana de este PIN con las fechas y los márgenes de hoy?\n\nEl código NO cambia. Se retira de la cerradura y se vuelve a crear igual, así que hay unos segundos en los que no abre.')) return
-    setError('')
+    setOcupado(true); setError(null)
     const r = await fetch(`/api/sivra/domotica/acceso/${d.id}/pin/${encodeURIComponent(ref)}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}',
     }).then(x => x.json()).catch(() => null)
+    // Recargar ANTES de poner el mensaje: `cargar()` limpia el error al empezar. Sin esta recarga la
+    // fila seguía pintando la ventana vieja aunque la cerradura ya tuviera la nueva (02/09/2026:
+    // Alberto repuso dos PIN y vio «sigue en 11:00» con la BD ya en 13:00).
+    await cargar(); setOcupado(false)
     if (!r || r.error) setError(r?.error || 'Error ajustando la ventana')
     else if (r.sinCambio) setError('La ventana ya era la correcta: no se ha tocado nada.')
+    else if (r.pinCambio) setError(`⚠️ Ventana repuesta, pero la cerradura no aceptó el mismo código: el nuevo es ${r.pin}. El huésped tiene el viejo — mándale el nuevo.`)
+    else setError(`✅ Ventana repuesta (${fmtDT(r.desde)} → ${fmtDT(r.hasta)}). El código sigue siendo ${r.pin}.`)
   }
 
   async function borrarPinRow(ref: string) {

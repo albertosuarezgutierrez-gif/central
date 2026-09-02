@@ -6,7 +6,7 @@
 // Las respuestas del bot a un mensaje o botón de Alberto siguen con `tgSend` (no se silencian).
 export * from '@central/core-telegram'
 import { tgSend, tgSendButtons, escapeHtml, type Boton } from '@central/core-telegram'
-import { avisoPermitido, avisoEnviado } from './telegram/avisos'
+import { avisoPermitido, avisoEnviado, tgAvisoBotones as _tgAvisoBotones } from './telegram/avisos'
 
 export { tgAviso, tgAvisoBotones, avisoPermitido, avisoEnviado } from './telegram/avisos'
 
@@ -30,6 +30,11 @@ export async function tgAvisoAlerta(id: string, mensaje: string, nivel: keyof ty
   if (!(await avisoPermitido(id))) return
   await tgSend(envoltura(mensaje, nivel))
   await avisoEnviado(id)
+}
+
+/** `tgAlertButtons` con el interruptor del panel /telegram (misma envoltura SIVRA que `tgAvisoAlerta`). */
+export async function tgAvisoAlertaBotones(id: string, mensaje: string, nivel: keyof typeof EMOJI, botones: Boton[][]): Promise<number | null> {
+  return _tgAvisoBotones(id, envoltura(mensaje, nivel), botones)
 }
 
 export { escapeHtml }
