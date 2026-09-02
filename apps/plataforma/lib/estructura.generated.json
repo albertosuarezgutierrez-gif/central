@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T09:41:53Z",
+  "generadoEn": "2026-09-02T11:04:18Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1546,8 +1546,8 @@
         "evidencias": 5
       },
       "alquiler": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "asegura": {
         "estado": "no",
@@ -5380,6 +5380,30 @@
   ],
   "novedades": [
     {
+      "titulo": "Podado (1.204 líneas):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Menú reagrupado por trabajo:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente de decisión de Alberto:",
+      "fecha": ""
+    },
+    {
+      "titulo": "No se pudo diagnosticar porque nadie lo contaba:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Endurecido el camino más probable:",
+      "fecha": ""
+    },
+    {
+      "titulo": "De regalo, la 7ª medición del CI mudo (anotada en `CLAUDE.md`), y la más limpia:",
+      "fecha": ""
+    },
+    {
       "titulo": "Pendiente de decisión de Alberto:",
       "fecha": ""
     },
@@ -5414,38 +5438,11 @@
     {
       "titulo": "Rotado por Alberto (Chrome, 02/09 09:03 CEST):",
       "fecha": ""
-    },
-    {
-      "titulo": "Hecho por Claude Chrome (02/09):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Duplicado «Jose Suarez Salas»",
-      "fecha": ""
-    },
-    {
-      "titulo": "Auditoría de duplicidades",
-      "fecha": ""
-    },
-    {
-      "titulo": "Corrección",
-      "fecha": ""
-    },
-    {
-      "titulo": "Contacto/intervinientes",
-      "fecha": ""
-    },
-    {
-      "titulo": "Catastro para hogar HECHO",
-      "fecha": ""
     }
   ],
   "saludRepo": {
     "packagesSinDescripcion": [],
-    "appsSinClaudeMd": [
-      "almacen",
-      "asegura-portal"
-    ],
+    "appsSinClaudeMd": [],
     "appsSinVercelJson": []
   },
   "gaps": {
@@ -5870,22 +5867,7 @@
         ]
       }
     ],
-    "reimplementaciones": [
-      {
-        "capacidad": "almacen-stock",
-        "label": "Almacén / stock / ASN",
-        "modulo": "module-materiales",
-        "conModulo": [
-          "almacen",
-          "ia-rest",
-          "ialimp",
-          "sivra"
-        ],
-        "duplicada": [
-          "alquiler"
-        ]
-      }
-    ]
+    "reimplementaciones": []
   },
   "resumen": {
     "verticales": 12,
@@ -5895,6 +5877,6 @@
     "apis": 1235,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
-    "reimplementaciones": 1
+    "reimplementaciones": 0
   }
 }
