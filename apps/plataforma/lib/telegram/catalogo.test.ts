@@ -18,7 +18,7 @@ import { AVISOS, AVISOS_POR_ID, CATEGORIAS, avisoDeCategoriaCorreo } from './cat
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url))
 // `avisoPermitido`/`avisoEnviado` son la vía para lo que `tgAviso` no cubre (p. ej. una foto).
-const EMISOR = /\b(?:tgAviso(?:Botones|Alerta)?|avisoPermitido|avisoEnviado)\(\s*'([^']+)'/g
+const EMISOR = /\b(?:tgAviso(?:Botones|Alerta|AlertaBotones)?|avisoPermitido|avisoEnviado)\(\s*'([^']+)'/g
 
 /** Ids que se emiten con un id calculado (mapa en el catálogo), no con literal en la llamada. */
 const POR_MAPA = ['personal-importante', 'huespedes', 'agoda-huespedes', 'leads-negocio', 'seguridad-sospechosa']

@@ -32,6 +32,16 @@
 
 ---
 
+### 🔑 (02/09/2026) Domótica: el aviso «PIN con la ventana desactualizada» lleva botón para reponerla desde Telegram
+- Disparador: aviso 🕒 de Socorro con 2 PIN (reservas 152490601 y 150885616) caducando 2 h antes de lo debido,
+  y su única salida era abrir `/sivra/domotica` en el portátil. Desde el contenedor no hay Tuya/Smoobu, así que
+  **esos dos PIN siguen SIN reponer**: hay que pulsar «🔄 ventana» en el panel o, tras desplegar, el botón del aviso.
+- La reposición se extrajo a `lib/domotica/reponer-ventana.ts` (un solo camino para el PATCH del panel y el
+  webhook); el cron manda el aviso con `tgAvisoAlertaBotones` y un botón `dom_ventana:<disp>:<ref>` por PIN
+  (helper puro `reponer-ventana-puro.ts`, límite de 64 bytes vigilado por test). Resultado por mensaje nuevo,
+  y si Tuya cae a offline y el código CAMBIA se canta en mayúsculas (antes el PATCH lo callaba).
+- Sigue sin tocarse solo, a propósito (Tuya borra+recrea). Guardián del catálogo ampliado a `tgAvisoAlertaBotones`.
+
 ### 🔎 (01/09/2026) Correduría: buscador de TODO, cola de retención y limpieza de la pantalla
 - 🗑️ **Borrada** `/cartera/renovaciones` de asegura (duplicaba la de plataforma) y su menú.
 - 🔎 **Buscador universal**: nombre · matrícula · nº póliza · DNI · teléfono · email · ciudad · CP.
