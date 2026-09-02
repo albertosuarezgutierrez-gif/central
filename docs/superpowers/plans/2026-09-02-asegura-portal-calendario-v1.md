@@ -756,242 +756,93 @@ git commit -m "feat(portal): calendario con la fecha accionable y su procedencia
 
 ---
 
-## Task 7: El envío del aviso
+## Task 7: El envío del aviso — **desde `apps/asegura`, no desde el portal**
+
+🚨 **Esta tarea se reescribió el 02/09/2026.** La versión anterior ponía el envío en
+`apps/asegura-portal/lib/avisos.ts`. **No se puede**, y está medido sobre el código:
+
+- `portal_canal` guarda **solo `valor_hash`** — SHA-256 con pimienta (`apps/asegura-portal/lib/auth.ts:28`).
+- El modelo `ClienteEmail` del schema del portal tiene **solo `email_lookup_hash`**; el rol
+  `prisma_asegura_portal` no tiene `GRANT` sobre la columna del email.
+
+O sea: **el portal no tiene ninguna dirección a la que enviar**, y un hash no se revierte. El spec daba
+por hecho un destinatario que no existe. El envío vive en el panel del corredor, que corre con
+`prisma_seguros` (BYPASSRLS) y sí lee `cliente_emails`. El portal se queda con el aviso **en pantalla**
+(Task 6) y nunca toca un dato personal.
 
 **Files:**
-- Create: `apps/asegura-portal/lib/avisos.ts`
-- Create: `apps/asegura-portal/lib/cron-auth.ts`
-- Create: `apps/asegura-portal/app/api/cron/avisos/route.ts`
-- Modify: `apps/asegura-portal/vercel.json`
+- Modify: `apps/asegura/prisma/asegura.prisma` — declarar `PortalObligacion` (los grants a
+  `prisma_seguros` son `SELECT, UPDATE`: ni inserta ni borra).
+- Create: `apps/asegura/lib/avisos-vencimiento.ts` — selección, destinatario y envío.
+- Create: `apps/asegura/lib/cron-auth.ts` — Bearer del cron (si la app no tiene ya uno equivalente).
+- Create: `apps/asegura/app/api/cron/avisos-vencimiento/route.ts`
+- Modify: `apps/asegura/vercel.json` — añadir `crons` (**sin tocar `ignoreCommand`**).
 
-- [ ] **Step 1: Escribir la verificación del Bearer**
+### Las reglas, que son lo que importa de esta tarea
 
-Crea `apps/asegura-portal/lib/cron-auth.ts`:
+1. **Sin `CRON_SECRET` definido NO se autoriza a nadie.** Dejar pasar «en desarrollo» convierte un
+   olvido de env en producción en un endpoint abierto que manda correos a clientes reales.
+2. **El cron no manda nada mientras `ASEGURA_AVISOS_ACTIVOS !== '1'`.** Modo cuenta por defecto,
+   `?contar=1` para forzarlo, y salida `{ candidatas, enviados, sinCanal, fallidos, soloContar }`.
+   Un cron de avisos no se estrena a ciegas sobre una base ya cargada.
+3. **El destinatario sale de la PROPIA fila** (obligación → identidad → ficha → email), nunca de un
+   parámetro de la request.
+4. **`avisada_at` se sella justo después del envío aceptado**, para que un reintento no duplique.
+5. **El email está cifrado** (`cliente_emails.email`, formato `v1:iv:cipher:tag`): se descifra con el
+   camino que la app ya tiene (`decryptField` + `PII_ENCRYPTION_KEY`). No se improvisa criptografía.
+6. **La aritmética no se reimplementa:** `entraEnVentana()` y `DIAS_VENTANA_AVISO` salen de
+   `@central/module-seguros-portal`, que es donde están testeados.
+7. **`apps/asegura` tiene DOS schemas de Prisma.** El typecheck necesita los dos generados: el script
+   del `package.json` de la app (`prisma generate && prisma generate --schema prisma/asegura.prisma`).
 
-```ts
-import type { NextRequest } from 'next/server'
-
-/**
- * Sin `CRON_SECRET` definido NO se autoriza a nadie. La alternativa —dejar
- * pasar en desarrollo— convierte un olvido de env en producción en un endpoint
- * abierto que manda correos a los clientes.
- */
-export function cronAutorizado(req: NextRequest): boolean {
-  const secreto = process.env.CRON_SECRET
-  if (!secreto) return false
-  return req.headers.get('authorization') === `Bearer ${secreto}`
-}
-```
-
-- [ ] **Step 2: Escribir el selector y el envío**
-
-Crea `apps/asegura-portal/lib/avisos.ts`:
-
-```ts
-// El cron NO tiene sesión: recorre las obligaciones de TODAS las identidades.
-// Por eso está exento del cepo de `lib/session` en
-// `test/regression-portal-aislamiento.test.ts`, y por eso lleva su propio cepo:
-// cada aviso sale al canal de LA identidad dueña de la obligación, resuelto
-// dentro del bucle. Nunca hay un destinatario que no venga de la propia fila.
-import { prisma } from './db'
-import { obtenerCanal } from './canal'
-import { entraEnVentana, DIAS_VENTANA_AVISO } from '@central/module-seguros-portal'
-import { fechaEs } from './fechas'
-
-export type ResultadoPasada = {
-  candidatas: number
-  enviados: number
-  sinCanal: number
-  fallidos: number
-}
-
-/**
- * `soloContar: true` no manda nada. Es el modo con el que se estrena el cron:
- * un cron de avisos no se enciende a ciegas sobre una base ya cargada.
- */
-export async function pasadaDeAvisos(opts: { hoy: Date; soloContar: boolean }): Promise<ResultadoPasada> {
-  const limite = new Date(opts.hoy.getTime() + DIAS_VENTANA_AVISO * 86_400_000)
-
-  const pendientes = await prisma.portalObligacion.findMany({
-    where: {
-      avisadaAt: null,
-      fechaAccionable: { gte: opts.hoy, lte: limite },
-    },
-    include: { identidad: { include: { canales: true } } },
-  })
-
-  const r: ResultadoPasada = { candidatas: pendientes.length, enviados: 0, sinCanal: 0, fallidos: 0 }
-  if (opts.soloContar) return r
-
-  for (const o of pendientes) {
-    if (!entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy: opts.hoy })) continue
-
-    const destino = o.identidad.canales.find((c) => c.tipo === 'email')
-    if (!destino) {
-      r.sinCanal++
-      continue
-    }
-    const canal = obtenerCanal('email')
-    if (!canal) {
-      r.sinCanal++
-      continue
-    }
-
-    const texto =
-      `${o.titulo}: vence el ${fechaEs(o.fechaEvento)}. ` +
-      `Tienes hasta el ${fechaEs(o.fechaAccionable)} para decidir si lo renuevas.`
-
-    const ok = await canal.enviarCodigo(destino.destino, texto)
-    if (!ok) {
-      r.fallidos++
-      continue
-    }
-
-    // El sello va inmediatamente después del envío aceptado: un reintento del
-    // cron no puede mandar el mismo aviso dos veces.
-    await prisma.portalObligacion.update({ where: { id: o.id }, data: { avisadaAt: new Date() } })
-    r.enviados++
-  }
-
-  return r
-}
-```
-
-> ⚠️ **Comprueba los nombres reales antes de dar por buena esta consulta:** el modelo del canal puede llamarse distinto a `canales` / `destino` / `tipo`. Mira `apps/asegura-portal/prisma/schema.prisma` (`model PortalCanal`) y ajusta. Si el destino está **hasheado** (`hashCanal()` en `lib/auth.ts`), NO se puede enviar desde el hash: en ese caso el envío necesita el destino en claro y hay que parar y decírselo a Alberto en vez de inventar un camino.
-
-- [ ] **Step 3: Escribir el endpoint**
-
-Crea `apps/asegura-portal/app/api/cron/avisos/route.ts`:
-
-```ts
-import { NextRequest, NextResponse } from 'next/server'
-import { cronAutorizado } from '@/lib/cron-auth'
-import { pasadaDeAvisos } from '@/lib/avisos'
-
-export const dynamic = 'force-dynamic'
-export const maxDuration = 120
-
-/**
- * `?contar=1` no manda nada: solo dice cuántas obligaciones caen en la ventana.
- * Es el modo con el que se estrena, y el que se usa para comprobar que el
- * número es el esperado ANTES de encender el envío.
- */
-export async function GET(req: NextRequest) {
-  if (!cronAutorizado(req)) {
-    return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
-  }
-
-  const soloContar =
-    req.nextUrl.searchParams.get('contar') === '1' || process.env.PORTAL_AVISOS_ACTIVOS !== '1'
-
-  const r = await pasadaDeAvisos({ hoy: new Date(), soloContar })
-  return NextResponse.json({ ...r, soloContar })
-}
-```
-
-- [ ] **Step 4: Declarar el cron**
-
-En `apps/asegura-portal/vercel.json`, añade la clave `crons` al objeto raíz:
-
-```json
-  "crons": [
-    { "path": "/api/cron/avisos", "schedule": "0 8 * * *" }
-  ]
-```
-
-- [ ] **Step 5: Typecheck**
+### Verificación
 
 ```bash
-cd /home/user/central/apps/asegura-portal
+cd /home/user/central/apps/asegura
 npx --yes pnpm@10.33.0 exec prisma generate
+npx --yes pnpm@10.33.0 exec prisma generate --schema prisma/asegura.prisma
 npx --yes pnpm@10.33.0 exec tsc --noEmit -p tsconfig.json
+cd /home/user/central && node --test test/regression-secrets.test.ts
 ```
 
-Esperado: sin errores.
+### Envs nuevas (proyecto Vercel `central-asegura`)
 
-- [ ] **Step 6: Commit**
-
-```bash
-cd /home/user/central
-git add apps/asegura-portal/lib/avisos.ts apps/asegura-portal/lib/cron-auth.ts apps/asegura-portal/app/api/cron/avisos/route.ts apps/asegura-portal/vercel.json
-git commit -m "feat(portal): aviso diario del vencimiento por el puerto de canal"
-```
+`CRON_SECRET` · `ASEGURA_AVISOS_ACTIVOS` (**no la definas todavía**) · `RESEND_API_KEY` y el remitente,
+si la app no los tenía ya.
 
 ---
 
 ## Task 8: Los guardianes
 
 **Files:**
-- Modify: `test/regression-portal-aislamiento.test.ts`
 - Create: `test/regression-portal-obligaciones.test.ts`
 
-- [ ] **Step 1: Exentar `lib/avisos.ts` con su razón escrita**
+🚨 **Reescrita junto con la Task 7.** La versión anterior exentaba
+`apps/asegura-portal/lib/avisos.ts` en `test/regression-portal-aislamiento.test.ts`. Ese fichero **ya
+no existe**: el envío se fue a `apps/asegura`, que ese guardián ni siquiera barre (solo mira
+`git ls-files apps/asegura-portal`). **No se toca la lista de EXENTOS** — añadir algo ahí es una
+decisión, no un trámite, y aquí no hace falta ninguna.
 
-En `test/regression-portal-aislamiento.test.ts`, dentro del `Set` `EXENTOS`, añade:
+El derivador del portal (`lib/obligaciones.ts`) **sí** entra en el guardián existente por la puerta
+normal: importa `lib/session` y filtra por `identidadId`. No necesita exención.
 
-```ts
-  // El cron de avisos corre SIN sesión: recorre las obligaciones de todas las
-  // identidades. Su garantía no es el filtro por `identidadId` sino que el
-  // destinatario sale de la PROPIA fila (`o.identidad.canales`), nunca de un
-  // parámetro. Lo vigila `test/regression-portal-obligaciones.test.ts`.
-  'apps/asegura-portal/lib/avisos.ts',
-```
+- [ ] **Step 1: Escribir los cepos de negocio**
 
-- [ ] **Step 2: Escribir el cepo sustitutorio**
+Crea `test/regression-portal-obligaciones.test.ts` con, al menos:
 
-Crea `test/regression-portal-obligaciones.test.ts`:
+- Ninguna póliza con `import_ref` (`'intranet:1'`, `'asegura_app:2'` y **`''`**) genera obligación.
+- Un vencimiento `null` nunca genera obligación: `NULL` es «no se sabe», no «no vence».
+- El aviso nunca sale **después** de la fecha accionable (avisar de un plazo vencido no es un servicio).
+- La fecha accionable es siempre **anterior** a la del evento.
+- **El destinatario del aviso sale de la fila**, no de la request: `apps/asegura/lib/avisos-vencimiento.ts`
+  no puede leer `searchParams` ni el cuerpo de la petición para decidir a quién escribe.
+- **El interruptor existe**: `apps/asegura/app/api/cron/avisos-vencimiento/route.ts` menciona
+  `ASEGURA_AVISOS_ACTIVOS`, y `apps/asegura/lib/cron-auth.ts` **no** deja pasar sin `CRON_SECRET`.
+- **El portal no manda avisos**: ningún fichero de `apps/asegura-portal` importa un transporte de
+  correo para avisar de vencimientos. Es el cepo que impide que la corrección de la Task 7 se deshaga
+  sola dentro de tres meses.
 
-```ts
-// Cepos de negocio del calendario del portal. `node --test`.
-import { test } from 'node:test'
-import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { polizaGeneraObligacion, entraEnVentana, fechaAccionable } from '@central/module-seguros-portal'
-
-const ROOT = join(import.meta.dirname, '..')
-
-test('ninguna poliza con import_ref genera obligacion', () => {
-  for (const ref of ['intranet:1', 'asegura_app:2', '']) {
-    assert.equal(
-      polizaGeneraObligacion({ importRef: ref, fechaVencimiento: new Date(Date.UTC(2026, 5, 1)) }),
-      false,
-      `import_ref ${JSON.stringify(ref)} no puede generar aviso`,
-    )
-  }
-})
-
-test('un vencimiento NULL nunca genera obligacion', () => {
-  assert.equal(polizaGeneraObligacion({ importRef: null, fechaVencimiento: null }), false)
-})
-
-test('el aviso nunca sale despues de la fecha accionable', () => {
-  const accionable = new Date(Date.UTC(2026, 1, 10))
-  assert.equal(entraEnVentana({ fechaAccionable: accionable, hoy: new Date(Date.UTC(2026, 1, 11)) }), false)
-})
-
-test('la fecha accionable siempre es ANTERIOR al evento', () => {
-  const evento = new Date(Date.UTC(2026, 2, 15))
-  assert.ok(fechaAccionable(evento).getTime() < evento.getTime())
-})
-
-test('el cron de avisos saca el destinatario de la fila, no de un parametro', () => {
-  // `lib/avisos.ts` está exento del cepo de sesión porque corre sin ella. Esta
-  // es la garantía que lo sustituye: si alguien añade un destinatario que no
-  // venga de `o.identidad`, el aviso puede acabar en el buzón equivocado.
-  const src = readFileSync(join(ROOT, 'apps/asegura-portal/lib/avisos.ts'), 'utf8')
-  assert.match(src, /o\.identidad\.canales/, 'el destino tiene que salir de la identidad de la obligación')
-  assert.doesNotMatch(src, /searchParams|req\.|params\./, 'el cron no acepta destinatarios por parámetro')
-})
-
-test('el cron no manda nada mientras PORTAL_AVISOS_ACTIVOS no valga 1', () => {
-  // Un cron de avisos no se estrena a ciegas sobre una base ya cargada.
-  const src = readFileSync(join(ROOT, 'apps/asegura-portal/app/api/cron/avisos/route.ts'), 'utf8')
-  assert.match(src, /PORTAL_AVISOS_ACTIVOS/)
-})
-```
-
-- [ ] **Step 3: Ejecutar los dos guardianes**
+- [ ] **Step 2: Ejecutar los dos guardianes**
 
 ```bash
 cd /home/user/central
@@ -1000,18 +851,18 @@ node --test test/regression-portal-aislamiento.test.ts test/regression-portal-ob
 
 Esperado: `fail 0`.
 
-- [ ] **Step 4: Ejecutar la suite completa**
+- [ ] **Step 3: Ejecutar la suite completa**
 
 ```bash
-cd /home/user/central && npx --yes pnpm@10.33.0 test
+npx --yes pnpm@10.33.0 test
 ```
 
 Esperado: `fail 0`. Es el check requerido `Tests (packages + guardián)`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add test/regression-portal-aislamiento.test.ts test/regression-portal-obligaciones.test.ts
+git add test/regression-portal-obligaciones.test.ts
 git commit -m "test(portal): cepos del calendario y del destinatario del aviso"
 ```
 
