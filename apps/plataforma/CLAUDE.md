@@ -1478,6 +1478,22 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   (`test/regression-documentos-asegura.test.ts`, 4): `null` = no se pudo consultar ≠ `[]` = no hay. La lista trae
   el estado **pedido / recibido / revisado** y ofrece primero los tipos que faltan para emitir auto
   (`NECESARIOS_EMISION_AUTO`). Los ficheros viven en `seguros.documentos` (bytea, ≤10 MB); aquí no se guarda nada.
+- **✏️ Editar y ➕ dar de alta clientes DESDE AQUÍ (02/09/2026).** Alberto: «pero no puedo editar» · «ni
+  añadir; cliente puede tener varios tlf y mails» · «cualquier dato básico, DNI, nombre, fecha de nacimiento…
+  tendrá que solicitarlo documentado». Tarjeta «✏️ Datos del cliente» en la ficha (`EditarCliente.tsx`) y
+  `/correduria/cliente/nuevo` (`NuevoCliente.tsx`), sobre los proxies `/api/correduria/cliente` (POST alta,
+  PATCH edición) y `/api/correduria/cliente/contactos` (GET/POST/PATCH/DELETE), que reenvían al puerto de
+  asegura con `actor = email de la sesión`. Lector puro `lib/cliente-edicion-asegura.ts` (+ test).
+  - **Tres bloques con tres reglas:** teléfonos/emails (varios, etiqueta cerrada, ⭐ principal — el principal
+    es lo que espeja `clientes.telefono/email` y lo que lee todo lo demás) y dirección/CP/ciudad/provincia/
+    notas se cambian **libremente**; la **identidad** (DNI, nombre, apellidos, fecha de nacimiento) **solo
+    con un documento tipo DNI recibido en 📎 Documentos**, que se elige en un `<select>` y viaja como
+    `documentoId`. Sin él, el bloque está deshabilitado y ofrece «Pedir DNI» (anota `pedido`).
+  - **Alta = buscar primero.** El puerto devuelve 409 con las fichas que ya tienen ese DNI/teléfono/email; la
+    pantalla enlaza a ellas. DNI repetido: no se crea. Teléfono/email repetido: «Crear igualmente» (`forzar`).
+    La ficha nueva nace `lead`; «Cliente (CIMA)» lo da tener pólizas vivas, no el `tipo` (CIMA no lo cambia).
+  - `contactos === null` / `identidad === null` = asegura no lo manda (versión anterior o consulta caída): se
+    dice, nunca se pinta «sin teléfonos». Un contacto `ilegible` (clave PII) se enseña como «cifrado».
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no

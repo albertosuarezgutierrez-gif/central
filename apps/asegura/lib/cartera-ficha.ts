@@ -26,7 +26,8 @@ import {
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
-import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
+import { enmascararDni, retarificabilidad, type ContactoCliente, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
+import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
@@ -181,6 +182,9 @@ export type ContactoFicha = {
    *  «no tiene teléfono»: es que aquí no se puede leer, y se dice. */
   telefonoIlegible: boolean
   emailIlegible: boolean
+  /** La calle va cifrada; `direccionIlegible` = está pero la clave no la abre. */
+  direccion: string | null
+  direccionIlegible: boolean
   ciudad: string | null
   provincia: string | null
   codigoPostal: string | null
@@ -198,6 +202,16 @@ export type FichaCliente = {
    * pegada o distinta de la del CRM — tres arreglos distintos.
    */
   pii: { clave: EstadoClavePii }
+  /**
+   * TODOS sus teléfonos y emails (tablas hijas; o el de la columna si no hay
+   * filas). `null` = no se han podido consultar. NO es «solo tiene uno».
+   */
+  contactos: { telefonos: ContactoCliente[]; emails: ContactoCliente[] } | null
+  /**
+   * Lo que se edita solo con documento: nombre, apellidos, DNI (ENMASCARADO —
+   * el DNI entero no cruza el puerto) y fecha de nacimiento.
+   */
+  identidad: Identidad
   polizas: PolizaFicha[]
   siniestros: SiniestroFicha[]
   /**
@@ -240,6 +254,10 @@ export async function fichaCliente(
       segmento: true,
       telefono: true,
       email: true,
+      dni: true,
+      fechaNacimiento: true,
+      tipoPersona: true,
+      direccion: true,
       ciudad: true,
       provincia: true,
       codigoPostal: true,
@@ -327,6 +345,7 @@ export async function fichaCliente(
 
   // Todos los suyos: los del cliente y los colgados de sus pólizas/siniestros.
   const documentos = await listarDocumentos(correduriaId, { clienteId: c.id })
+  const contactos = await listarContactos(correduriaId, c.id)
 
   return {
     id: c.id,
@@ -338,6 +357,8 @@ export async function fichaCliente(
       email: descifrar(c.email),
       telefonoIlegible: ilegible(c.telefono),
       emailIlegible: ilegible(c.email),
+      direccion: descifrar(c.direccion),
+      direccionIlegible: ilegible(c.direccion),
       ciudad: c.ciudad ?? null,
       provincia: c.provincia ?? null,
       codigoPostal: c.codigoPostal ?? null,
@@ -348,6 +369,16 @@ export async function fichaCliente(
     pii: { clave: estadoClavePii(c.telefono ?? c.email ?? null) },
     intervinientes,
     documentos,
+    contactos,
+    identidad: {
+      nombre: c.nombre,
+      apellidos: c.apellidos,
+      dniEnmascarado: enmascararDni(descifrar(c.dni)),
+      dniIlegible: ilegible(c.dni),
+      fechaNacimiento: descifrar(c.fechaNacimiento),
+      fechaNacimientoIlegible: ilegible(c.fechaNacimiento),
+      tipoPersona: c.tipoPersona === null ? null : String(c.tipoPersona),
+    },
     polizas: c.polizas.map((p) => {
       const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
       const datosGemela = p.importRef === null && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined

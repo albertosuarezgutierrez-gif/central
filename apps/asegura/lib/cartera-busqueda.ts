@@ -527,6 +527,30 @@ async function porHash(
     select: SELECT_CLIENTE,
     take: LIMITE,
   })
+  // Los teléfonos y emails SECUNDARIOS (tablas hijas, desde el 02/09/2026 se
+  // editan desde plataforma) también encuentran la ficha: el segundo móvil de
+  // un cliente es un dato suyo tanto como el primero.
+  if (campo !== 'dniLookupHash') {
+    const vistos = new Set(filas.map((f) => f.id))
+    const hijas =
+      campo === 'telefonoLookupHash'
+        ? await db.clienteTelefono.findMany({
+            where: { correduriaId, telefonoLookupHash: hash, cliente: { mergedIntoClienteId: null } },
+            select: { cliente: { select: SELECT_CLIENTE } },
+            take: LIMITE,
+          })
+        : await db.clienteEmail.findMany({
+            where: { correduriaId, emailLookupHash: hash, cliente: { mergedIntoClienteId: null } },
+            select: { cliente: { select: SELECT_CLIENTE } },
+            take: LIMITE,
+          })
+    for (const h of hijas) {
+      if (!vistos.has(h.cliente.id)) {
+        vistos.add(h.cliente.id)
+        filas.push(h.cliente)
+      }
+    }
+  }
   const etiqueta =
     c.tipo === 'dni' ? `DNI ${c.valor}` : c.tipo === 'telefono' ? `teléfono ${c.valor}` : `email ${c.valor}`
   return bloque(
