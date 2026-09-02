@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T05:46:23Z",
+  "generadoEn": "2026-09-02T06:55:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5375,6 +5375,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Pendiente:",
+      "fecha": ""
+    },
+    {
       "titulo": "Hecho por Claude Chrome (02/09):",
       "fecha": ""
     },
@@ -5428,10 +5432,6 @@
     },
     {
       "titulo": "Siguiente ramo: HOGAR",
-      "fecha": ""
-    },
-    {
-      "titulo": "`deductible` la traen 10 de 18 precios",
       "fecha": ""
     }
   ],

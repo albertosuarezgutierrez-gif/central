@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T05:46:23Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-02T06:55:01Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -256,6 +256,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- Pendiente:
 - Hecho por Claude Chrome (02/09):
 - Duplicado «Jose Suarez Salas»
 - Auditoría de duplicidades
@@ -265,5 +266,4 @@
 - Forma de pago
 - Pantalla de PÓLIZA hecha
 - «Haz todo» (2ª tanda, mismo PR #2001):
-- Alberto repuso los dos PIN desde el panel
 
