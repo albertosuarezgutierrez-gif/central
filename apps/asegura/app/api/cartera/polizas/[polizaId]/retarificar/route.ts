@@ -25,6 +25,7 @@ import type { Supuesto } from '@/lib/codeoscopic/desde-cartera'
 import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
 import { lineasDeSeguro, hogarDisponible } from '@/lib/codeoscopic/catalogos'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
+import { MARCA_SIMULACION } from '@/lib/codeoscopic/simulacion'
 import { resumirCotizacion } from '@/lib/codeoscopic/respuesta'
 
 export const runtime = 'nodejs'
@@ -110,6 +111,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ polizaId: stri
 
   return NextResponse.json({
     ok: true,
+    // 🚨 La marca de simulado viaja SIEMPRE y como booleano, también cuando es
+    // `false`: si se enviara solo al simular, una versión vieja de la pantalla
+    // no podría distinguir «precio real» de «campo que no me han mandado». Y
+    // cuando es `true` va además la frase, para que se pueda pintar sin que la
+    // pantalla tenga que redactarla.
+    simulado: r.simulado,
+    ...(r.simulado ? { avisoSimulacion: MARCA_SIMULACION } : {}),
     coste: r.coste,
     restantesHoy: r.restantesHoy,
     resumen: resumirCotizacion(r.cotizacion),

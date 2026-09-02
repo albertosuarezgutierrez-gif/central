@@ -1,6 +1,9 @@
 // Orquestador de la cotización: la única puerta por la que se gasta dinero.
 //
 // El orden de los pasos ES el diseño:
+//   0. Simulación     → si está puesta, se devuelve una cotización INVENTADA y
+//                       marcada (`simulado: true`) y no se toca nada más: ni
+//                       vendor, ni libro, ni tope. No ha costado nada.
 //   1. Config          → si está apagada o incompleta, no hay llamada.
 //   2. Ámbito          → sin correduría no hay libro contra el que contar.
 //   3. Libro           → si no se puede leer, NO se cotiza (fail closed).
@@ -13,14 +16,35 @@
 // exactamente lo que convierte un tope en un adorno.
 
 import { randomUUID } from 'node:crypto'
-import { resolverConfig, explicarConfig, COSTE_COTIZACION_CENTS, type Topes } from './config.ts'
+import {
+  resolverConfig,
+  explicarConfig,
+  simulacionActiva,
+  COSTE_COTIZACION_CENTS,
+  type Topes,
+} from './config.ts'
 import { puedeCotizar, eurCents, type Veredicto, type Consumo } from './contador.ts'
 import { consumoActual, reservar, cerrarFacturable, cerrarDescartado } from './consumo.ts'
 import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
+import { cotizacionSimulada } from './simulacion.ts'
 
 export type ResultadoCotizacion =
-  | { ok: true; cotizacion: Cotizacion; coste: string; restantesHoy: number }
+  | {
+      ok: true
+      /**
+       * 🚨 `true` = la cotización NO la ha dado ninguna compañía: la ha
+       * inventado `simulacion.ts` porque el modo simulación está puesto en el
+       * servidor. Es un dato del objeto, no un texto dentro de un mensaje, para
+       * que no se pueda perder por el camino: quien pinte esto tiene que poder
+       * distinguirlo de un precio real sin leer prosa.
+       */
+      simulado: boolean
+      cotizacion: Cotizacion
+      coste: string
+      /** `null` = no se ha mirado el libro (simulación). NO es «quedan 0». */
+      restantesHoy: number | null
+    }
   | { ok: false; razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor'; mensaje: string }
 
 export type PeticionCotizacion = {
@@ -100,6 +124,26 @@ export async function cotizar(
   p: PeticionCotizacion,
   env: Record<string, string | undefined> = process.env,
 ): Promise<ResultadoCotizacion> {
+  // 0 — SIMULACIÓN. Va lo PRIMERO, y por eso el resto de pasos ni se ejecuta:
+  // no hay llamada, luego no hay cargo; y sin cargo no hay nada que reservar,
+  // que cerrar ni que contar contra el tope. El interruptor sale de `env` —del
+  // servidor—, nunca de `p`: si viniera en la petición, cualquiera podría pedir
+  // que la app enseñara precios inventados a un cliente.
+  if (simulacionActiva(env)) {
+    return {
+      ok: true,
+      simulado: true,
+      cotizacion: cotizacionSimulada(p.cuerpo),
+      // No ha costado nada, y esto no es un redondeo: no ha salido la petición.
+      coste: eurCents(0),
+      // No se ha leído `seguros.codeoscopic_consumo` (no hacía falta), así que
+      // no se sabe cuántas quedan hoy. `null` es «no se ha mirado»; un número
+      // aquí sería inventar cupo. Tampoco se anota nada: una simulación no
+      // consume tope ni alimenta ninguna estimación posterior.
+      restantesHoy: null,
+    }
+  }
+
   // 1 — Config
   const r = resolverConfig(env)
   if (r.estado === 'apagado') return { ok: false, razon: 'apagado', mensaje: explicarConfig(r) }
@@ -159,6 +203,8 @@ export async function cotizar(
 
     return {
       ok: true,
+      // Explícito: este precio SÍ lo ha dado una compañía y SÍ ha costado 0,50€.
+      simulado: false,
       cotizacion,
       coste: eurCents(COSTE_COTIZACION_CENTS),
       restantesHoy: veredicto.restantesHoy - 1,

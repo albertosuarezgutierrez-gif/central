@@ -209,3 +209,91 @@ compañía sigue siendo una cotización cobrada.
 **Qué pasa si algo está mal:** el vendor responde **400 de validación**, que `cliente.ts` clasifica como
 `validacion` = **no se cobra** (`pruebaQueNoHuboCargo`), y su mensaje dice qué campo sobra o falta. La
 pantalla enseña ese mensaje entero. Un cuerpo aceptado es una cotización de verdad (0,50€).
+
+
+## 🛡️ Garantías y opciones por compañía — auditado el 02/09/2026
+
+Alberto preguntó si hacía falta una pantalla nuestra para preconfigurar, por compañía, las
+garantías y sus capitales (lo que él hacía en Avant2). Se auditó el snapshot del portal entero
+y el CRM de Manuel. **La respuesta es que no hace falta, y estas son las razones medidas.**
+
+### Lo que el fabricante NO tiene
+
+| Lo que buscábamos | Lo que hay |
+|---|---|
+| Catálogo de garantías por producto | **No existe.** `guarantee`, `warranty`, `franchise` y `excess` aparecen **cero veces** en todo el portal |
+| Fijar por API los capitales por defecto de una compañía | **No existe.** Solo se pueden *pisar* petición a petición (`products[].options`) |
+| Saber de antemano qué opciones pide cada producto | **No existe por REST.** La única vía documentada es su formulario incrustado |
+| Desglose de prima como JSON | **No existe.** Solo dentro del PDF de informe (`includePremiumBreakdown`) |
+
+`GET /insurances/{id}/offers/{offerId}/coverages` **no es** un catálogo de garantías: el propio
+portal dice que «the set of coverages returned is the same for all the offers» — es una rejilla
+comparativa normalizada de Avant2, de solo lectura, con `included` + `text`, **sin capital y sin
+franquicia**.
+
+### Dónde vive entonces la configuración
+
+En Avant2, colgada de la **`config`** del producto, que en la práctica es la clave de conexión de
+la correduría con esa compañía (los `config.name` de los ejemplos son códigos como `25499` o
+`M06YT80013`). El fabricante lo dice así:
+
+> «Avant2 defines proper default options for each product and also allows you to configure these
+> default options for most products. However, if you plan on using this API to complete the rating
+> of these quotes and issue insurance applications, depending on the product you will probably be
+> required to specify the final value for certain options.»
+
+Y explica por qué no publica un catálogo: «These options are defined by vendors themselves and vary
+substantially from one vendor to another and, sometimes, even across products of the same vendor».
+Su solución es una librería JavaScript que pinta el formulario de cada producto dentro de un
+`iframe`, con un `dataCallback` que hay que reenviar por `POST /product-form-requests` (el iframe no
+puede llevar el token: usar credenciales de cliente en el navegador está «explicitly forbidden»).
+
+**Consecuencia práctica:** lo que Alberto preconfiguró en Avant2 se hereda al cotizar por API sin
+pedir nada. Duplicarlo en una tabla nuestra crearía dos verdades, y la que manda es la suya.
+
+### Lo que sí se puede leer y escribir por API
+
+- `GET /insurances/{id}/offers/{offerId}` — «Retrieves an insurance offer **with its product
+  options**». Devuelve `formattedOptions` (`label` + `formattedValue`, listo para pintar: «Mínimo
+  litigioso: 300 €», «Núm. de baños: 1», «Alarma de agua conectada: No») y `options`
+  (`id` + `label` + `textValue`). **Este es el cuadro que ve Alberto**, y por aquí se lee.
+- `POST /insurances/{id}/offers` — re-tarificar cambiando `mainQuote.product.options`.
+- `POST /insurances` acepta `products[].config.id` + `products[].options` para pisar los valores por
+  defecto ya en la primera cotización.
+- `POST /home/recommend-limits` — **el único punto de la API que da un capital por defecto por
+  compañía**: continente y contenido recomendados, con media, máximo y mínimo, desglosados por
+  `results[].product.config` y con `favorite: true` marcando la configuración preferida.
+
+### 🚨 En hogar el primer precio es SIEMPRE estimado
+
+En el ejemplo de hogar del portal, **todas** las cotizaciones traen `"estimate": true` y
+`actions: [{"id": "ReRate", "required": true}]`. El portal: «This operation is **mandatory** for
+offers whose quotes have the action `ReRate` as required». O sea: para un precio firme de hogar hay
+una segunda llamada obligatoria. El CRM de Manuel trata ese re-rate como **facturable y no
+idempotente** (`noRetry` siempre), así que **un precio firme de hogar probablemente cuesta el
+doble**. Sin medir todavía: se mide en la primera cotización real.
+
+### Lo que cada compañía exige y no se puede anticipar
+
+El error de Lagun Aro que ya conocíamos («Es obligatorio indicar los años de las ultimas reformas
+realizadas») llega en `errors[].messages[].description`, **después** de cotizar. No hay ninguna
+operación que lo anticipe: `GET /insurances/{id}/policy-application-fields` es de emisión y exige una
+oferta ya existente. La respuesta del fabricante a este problema es, otra vez, el formulario
+incrustado.
+
+Sí hay una pista aprovechable y gratis: `GET /home/person-roles` devuelve, por campo,
+`requiredForRatingProducts`, «the products that require the field to complete the rating», con la
+advertencia de que tocar esos campos después de cotizar **invalida las cotizaciones anteriores**.
+
+### Qué hizo Manuel con todo esto
+
+Construyó la tubería y **nunca la pantalla**: leer los campos de una compañía, coger sus valores por
+defecto, proyectarlos a `product.options` y meterlos en el re-rate **después** de aceptar un precio.
+Con una sola compañía en catálogo (Allianz auto a terceros, 14 campos) y **sin tocar hogar**
+(`insuranceLine: { id: "Car" }` está escrito a fuego). Su ADR-010 avisa de que en hogar el formulario
+trae subformularios anidados (joyas, perros peligrosos) que su mecanismo plano no cubre. Parte de eso
+nosotros ya lo mandamos dentro del `risk`.
+
+Trampas que él pagó y conviene heredar: el formulario tarda como una tarificación (timeout de 150 s,
+no el de 5 s), el re-rate y la emisión **no se reintentan nunca** por ser facturables, y antes de
+gastar se comprueba que no falte ningún obligatorio para no pagar por un rechazo seguro.

@@ -555,6 +555,12 @@ export type OrigenRetarificacion = {
    * de las dos — que NO es «no tiene casa». Solo se rellena en pólizas de hogar.
    */
   hogar: HogarCartera | null
+  /**
+   * Lo que el cliente paga HOY al año, para comparar con los precios nuevos.
+   * `null` = la ficha no lo trae — que NO es «no paga nada»: sin este número la
+   * pantalla no pinta la comparación en vez de inventarse un ahorro.
+   */
+  primaAnual: number | null
   retarificacion: Retarificabilidad
 }
 
@@ -578,6 +584,7 @@ export async function origenRetarificacion(
       fechaInicio: true,
       fechaEfectoInicial: true,
       fechaVencimiento: true,
+      primaAnual: true,
       datosEspecificos: true,
       cliente: {
         select: {
@@ -665,6 +672,8 @@ export async function origenRetarificacion(
     tipo: String(p.tipo),
     estado: String(p.estado),
     hogar,
+    // Decimal de Prisma: `null` se queda en null, jamás en 0.
+    primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
     retarificacion,
   }
 }

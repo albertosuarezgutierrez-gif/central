@@ -1,10 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import type { CatalogoHogar, DisponibilidadHogar } from '@/lib/codeoscopic/catalogos'
-import { pareceOpcionPropietario, type Opcion } from '@/lib/codeoscopic/opciones'
-import { TOPE_JOYAS, type ReparoHogar } from '@/lib/codeoscopic/peticion-hogar'
-import type { CatalogoResuelto, SupuestoHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
+import { useMemo, useState } from 'react'
+import type { DisponibilidadHogar } from '@/lib/codeoscopic/catalogos'
+import type { Opcion } from '@/lib/codeoscopic/opciones'
+import { revisarDatosHogar, TOPE_JOYAS, type DatosHogar } from '@/lib/codeoscopic/peticion-hogar'
+import type { PrecalificacionHogar, SupuestoHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
+import {
+  resumen as armarResumen,
+  CATALOGOS_PANTALLA,
+  CAMPO_DE_CATALOGO,
+  GRUPOS,
+  PROCEDENCIAS,
+  type CatalogoPantalla,
+  type Fila,
+  type Resumen,
+} from '@/lib/codeoscopic/resumen-hogar'
 import type { Veredicto } from '@/lib/codeoscopic/contador'
 import { eur } from '@/lib/dinero'
 
@@ -26,265 +36,199 @@ type Resultado =
   | {
       estado: 'ok'
       coste: string
-      restantesHoy: number
+      /** `null` = no se ha mirado el libro (modo simulación), NUNCA «quedan 0». */
+      restantesHoy: number | null
+      /** El precio lo ha inventado central para ver la pantalla: no lo ha dado ninguna compañía. */
+      simulado: boolean
+      avisoSimulacion: string | null
       resumen: string
       precios: Precio[]
       supuestos: SupuestoHogar[]
       fuenteRiesgo: string | null
     }
-  | { estado: 'faltan'; faltan: ReparoHogar[] }
+  | { estado: 'faltan'; faltan: { campo: string; motivo: string }[] }
   | { estado: 'error'; mensaje: string; clase: 'tope' | 'ramo' | 'vendor' | 'otro' }
-
-/**
- * Lo que la ficha (o la precalificación) ya trae y el corredor puede corregir.
- * `null` = no consta. Lo que sea un supuesto ya viene declarado en la lista de
- * supuestos de la página: aquí solo se prefija el formulario.
- */
-export type PrefijadosHogar = {
-  // ── Dónde ──
-  cp: string | null
-  tipoViaId: string | null
-  nombreVia: string | null
-  numeroVia: string | null
-  planta: string | null
-  puertaVivienda: string | null
-  /** La dirección ENTERA tal como está en la ficha, para comprobar el troceo. */
-  direccionEntera: string | null
-  // ── Cómo es ──
-  metrosCuadrados: number | null
-  anioConstruccion: number | null
-  habitaciones: number | null
-  // ── Cuánto ──
-  capitalContinente: number | null
-  capitalContenido: number | null
-  // ── Quién / cuándo ──
-  propietarioEsTomador: boolean
-  fechaEfecto: string | null
-}
-
-/**
- * Los NUEVE catálogos de hogar que el vendor exige (verificado contra el
- * portal el 02/09/2026). Ya no hay «opcionales»: sin uno de estos no hay cuerpo.
- */
-export const CATALOGOS_PANTALLA = [
-  'property-types',
-  'uses',
-  'occupancy-types',
-  'locations',
-  'settlement-types',
-  'build-materials',
-  'build-qualities',
-  'door-types',
-  'alarm-types',
-] as const satisfies readonly CatalogoHogar[]
-export type CatalogoPantalla = (typeof CATALOGOS_PANTALLA)[number]
-
-/** Del nombre del catálogo al campo de `DatosHogar` / `ResueltosHogar` que rellena. */
-export const CAMPO_DE_CATALOGO: Record<CatalogoPantalla, Exclude<CatalogoResuelto, 'tipoVia'>> = {
-  'property-types': 'tipoVivienda',
-  uses: 'uso',
-  'occupancy-types': 'ocupacion',
-  locations: 'ubicacion',
-  'settlement-types': 'asentamiento',
-  'build-materials': 'material',
-  'build-qualities': 'calidad',
-  'door-types': 'puertasSecundarias',
-  'alarm-types': 'alarma',
-}
 
 /** El id por defecto de cada desplegable (o `null` si el catálogo no da nada que suponer). */
 export type DefectosHogar = Record<CatalogoPantalla | 'road-types', string | null>
 
 /**
- * Etiquetas que dicen lo que significan DE VERDAD. Dos nombres del vendor
- * engañan: `uses` es el régimen (propietario/inquilino) y `occupancy-types` el
- * uso (habitual/segunda residencia).
+ * Campos que la precalificación puede echar en falta y que NO tienen fila en la
+ * ficha (viven en la persona, no en la vivienda). Sin esto un hueco de sexo
+ * apagaría el botón sin decir por qué: el peor de los estados, «no se sabe»
+ * disfrazado de nada.
  */
-const ETIQUETAS: Record<CatalogoPantalla, string> = {
-  'property-types': 'Tipo de vivienda',
-  uses: 'Régimen (propietario / inquilino)',
-  'occupancy-types': 'Uso (habitual / segunda residencia)',
-  locations: 'Ubicación',
-  'settlement-types': 'Liquidación del siniestro',
-  'build-materials': 'Material de construcción',
-  'build-qualities': 'Calidad de construcción',
-  'door-types': 'Puertas secundarias',
-  'alarm-types': 'Alarma',
+const HUERFANOS: Record<string, { etiqueta: string; tipo: 'texto' | 'sexo' }> = {
+  sexo: { etiqueta: 'Sexo', tipo: 'sexo' },
+  cpResidencia: { etiqueta: 'Código postal de residencia', tipo: 'texto' },
 }
-
-const TEXTOS = ['nombreVia', 'numeroVia', 'planta', 'puertaVivienda'] as const
-const NUMEROS = ['metrosCuadrados', 'anioConstruccion', 'habitaciones', 'capitalContinente', 'capitalContenido'] as const
-const LIMITES = ['joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos'] as const
-const PROTECCIONES = ['puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada'] as const
-
-const ETIQUETA_PROTECCION: Record<(typeof PROTECCIONES)[number], string> = {
-  puertaPrincipalBlindada: 'Puerta principal blindada',
-  ventanasSeguras: 'Ventanas con rejas o cristales de seguridad',
-  urbanizacionCerrada: 'Urbanización cerrada',
-}
-
-type Eleccion = { valor: string; supuesto: boolean }
 
 /**
- * El botón de hogar: el segundo sitio de la app donde un clic cuesta 0,50€.
+ * La ficha de hogar: **se lee, no se rellena.**
  *
- * Mismas tres decisiones que el de auto (precio EN el botón, deshabilitado
- * mientras cotiza, sin reintento automático). El contrato del `risk` de hogar
- * está verificado contra el portal (02/09/2026); aun así el 502 del vendor se
- * enseña ENTERO, porque si el contrato cambia ese mensaje es lo que dirá qué
- * campo sobra o falta. Un 400 de validación NO se cobra.
+ * Todo llega puesto (de la póliza, del volcado, del Catastro o supuesto) y cada
+ * fila dice DE DÓNDE sale; el corredor solo toca lo que esté mal, con el lápiz.
+ * Es la diferencia entre un formulario en blanco —donde un valor por defecto es
+ * indistinguible de un dato real en cuanto se escribe— y un expediente que
+ * declara su propia procedencia.
  *
- * Lo que el vendor exige y la ficha no guarda (calle troceada, habitaciones,
- * protecciones, joyas, perros) arranca con un supuesto declarado y se puede
- * corregir aquí antes de pagar.
+ * Las filas las arma `lib/codeoscopic/resumen-hogar.ts` (puro) en el SERVIDOR.
+ * Al corregir una, la ficha se rehace **aquí**, con la misma función pura y el
+ * mismo revisor que usa el puerto: recalcular en el cliente evita duplicar el
+ * formateo y, sobre todo, evita que la pantalla y el servidor discrepen sobre
+ * qué falta. No hay ida y vuelta al servidor: corregir no cuesta dinero.
+ *
+ * El botón sigue siendo lo único que gasta (0,50€ por clic) y conserva su
+ * contrato con el puerto: `resueltos` + `correcciones`.
  */
 export default function RetarificadorHogar({
   polizaId,
-  faltanInicial,
-  civiles,
-  municipios,
-  vias,
-  estadoCivilAuto,
-  catalogos,
+  resumen: resumenServidor,
+  pre,
   defectos,
+  vias,
+  catalogos,
+  estadosCiviles,
+  municipios,
   fallosCatalogo,
   ramo,
-  prefijados,
   consumo,
+  primaActual,
   deshabilitado,
 }: {
   polizaId: string
-  faltanInicial: ReparoHogar[]
-  civiles: Opcion[]
-  municipios: Opcion[]
+  /** La ficha ya armada en el servidor: es lo que se pinta mientras nadie corrija nada. */
+  resumen: Resumen
+  /** La precalificación entera, para rehacer la ficha al corregir una fila. */
+  pre: PrecalificacionHogar
+  defectos: DefectosHogar
   /** `/road-types`. Vacío = no se pudo leer, y el tipo de vía es obligatorio. */
   vias: Opcion[]
-  estadoCivilAuto: Opcion | null
-  catalogos: Partial<Record<CatalogoHogar, Opcion[]>>
-  defectos: DefectosHogar
+  catalogos: Partial<Record<CatalogoPantalla, Opcion[]>>
+  estadosCiviles: Opcion[]
+  municipios: Opcion[]
   /** Catálogos que no se han podido leer (por nombre). Todos son obligatorios: uno bloquea el botón. */
   fallosCatalogo: string[]
   ramo: DisponibilidadHogar
-  prefijados: PrefijadosHogar
   consumo: Consumo
+  /** Lo que el cliente paga HOY al año. `null` = no consta en la ficha, y entonces no se dice nada. */
+  primaActual: number | null
   deshabilitado: boolean
 }) {
-  const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
-  const [municipioId, setMunicipioId] = useState(municipios.length === 1 ? municipios[0].id : '')
-  // Los nueve arrancan en el defecto de la pantalla (el ejemplo del portal si
-  // el catálogo lo trae; si no, la primera opción) y se marcan como supuesto
-  // hasta que el corredor los toque: el precio sale con ellos.
-  const [desplegables, setDesplegables] = useState<Record<CatalogoPantalla, Eleccion>>(() => {
-    const o = {} as Record<CatalogoPantalla, Eleccion>
-    for (const n of CATALOGOS_PANTALLA) o[n] = { valor: defectos[n] ?? '', supuesto: true }
-    return o
-  })
-  const [tipoVia, setTipoVia] = useState<Eleccion>({ valor: defectos['road-types'] ?? '', supuesto: true })
-  const [textos, setTextos] = useState<Record<(typeof TEXTOS)[number], string>>({
-    nombreVia: prefijados.nombreVia ?? '',
-    numeroVia: prefijados.numeroVia ?? '',
-    planta: prefijados.planta ?? '',
-    puertaVivienda: prefijados.puertaVivienda ?? '',
-  })
-  const [referenciaCatastral, setReferenciaCatastral] = useState('')
-  const [numeros, setNumeros] = useState<Record<(typeof NUMEROS)[number] | 'anioUltimaReforma', string>>({
-    metrosCuadrados: prefijados.metrosCuadrados?.toString() ?? '',
-    anioConstruccion: prefijados.anioConstruccion?.toString() ?? '',
-    habitaciones: prefijados.habitaciones?.toString() ?? '',
-    anioUltimaReforma: '',
-    capitalContinente: prefijados.capitalContinente?.toString() ?? '',
-    capitalContenido: prefijados.capitalContenido?.toString() ?? '',
-  })
-  // Las protecciones arrancan a «no» como supuesto (lo conservador: marcarlas abarata).
-  const [protecciones, setProtecciones] = useState<Record<(typeof PROTECCIONES)[number], boolean>>({
-    puertaPrincipalBlindada: false,
-    ventanasSeguras: false,
-    urbanizacionCerrada: false,
-  })
-  // Tres estados: no se sabe (no viaja) / sí / no.
-  const [vigilante, setVigilante] = useState<'' | 'si' | 'no'>('')
-  // Los cuatro límites son 0 POR DISEÑO (el vendor los exige y la ficha no los tiene).
-  const [limites, setLimites] = useState<Record<(typeof LIMITES)[number], string>>({
-    joyasEnCajaFuerte: '0',
-    joyasFueraDeCaja: '0',
-    objetosDeValor: '0',
-    perrosPeligrosos: '0',
-  })
-  const [propietario, setPropietario] = useState(prefijados.propietarioEsTomador)
-  const [propietarioTocado, setPropietarioTocado] = useState(false)
-  const [fechaEfecto, setFechaEfecto] = useState(prefijados.fechaEfecto ?? '')
-  const [cp, setCp] = useState(prefijados.cp ?? '')
-  const [correccionesPersona, setCorreccionesPersona] = useState<Record<string, string>>({})
+  // Lo que el corredor ha corregido a mano, por campo. `null` = «lo ha dejado
+  // vacío», que NO es lo mismo que no haberlo tocado.
+  const [correcciones, setCorrecciones] = useState<Record<string, unknown>>({})
+  const [editando, setEditando] = useState<string | null>(null)
+  const [borrador, setBorrador] = useState('')
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
-  function elegir(n: CatalogoPantalla, valor: string) {
-    setDesplegables((d) => ({ ...d, [n]: { valor, supuesto: false } }))
-    // Si cambia el régimen, se re-preselecciona «el tomador es el dueño» — SOLO
-    // si el corredor no ha tocado ese checkbox a mano.
-    if (n === 'uses' && !propietarioTocado) {
-      setPropietario(pareceOpcionPropietario(catalogos.uses?.find((o) => o.id === valor) ?? null))
+  const corregidos = useMemo(() => new Set(Object.keys(correcciones)), [correcciones])
+
+  // Qué desplegables trae la pantalla por DEFECTO (no elegidos por nadie). Se
+  // toma de la ficha del servidor: es la que sabe qué supuso la precalificación.
+  const supuestosDeOrigen = useMemo(
+    () => new Set(resumenServidor.supuestos.map((f) => f.campo as string)),
+    [resumenServidor],
+  )
+
+  const ficha: Resumen = useMemo(() => {
+    if (corregidos.size === 0) return resumenServidor
+    const datos = { ...pre.datos, ...correcciones } as Partial<DatosHogar>
+    return armarResumen(
+      {
+        ...pre,
+        datos,
+        // El mismo revisor que usa el puerto antes de gastar: si aquí falta
+        // algo, allí también, y al revés.
+        faltan: revisarDatosHogar(datos),
+        // Un campo corregido deja de ser un supuesto: lo ha dicho una persona.
+        supuestos: pre.supuestos.filter((s) => !corregidos.has(s.campo as string)),
+      },
+      { catalogos, estadosCiviles, municipios, corregidos, nivel: 'corredor' },
+    )
+  }, [pre, correcciones, corregidos, resumenServidor, catalogos, estadosCiviles, municipios])
+
+  const porCampo = useMemo(() => new Map(ficha.filas.map((f) => [f.campo as string, f])), [ficha])
+
+  // Lo que falta y NO tiene fila (sexo, CP de residencia): se teclea aparte.
+  const faltanSinFila = useMemo(() => {
+    const conFila = new Set(ficha.filas.map((f) => f.campo as string))
+    const vistos = new Set<string>()
+    return (corregidos.size === 0 ? pre.faltan : revisarDatosHogar({ ...pre.datos, ...correcciones } as Partial<DatosHogar>))
+      .filter((f) => {
+        const c = f.campo as string
+        if (conFila.has(c) || vistos.has(c)) return false
+        vistos.add(c)
+        return true
+      })
+  }, [pre, correcciones, corregidos, ficha])
+
+  function abrir(f: Fila) {
+    setEditando(f.campo as string)
+    setBorrador(aTexto(f))
+  }
+
+  function guardar(f: Fila) {
+    const valor = deTexto(f, borrador)
+    setCorrecciones((c) => ({ ...c, [f.campo as string]: valor }))
+    setEditando(null)
+  }
+
+  function deshacer(campo: string) {
+    setCorrecciones((c) => {
+      const { [campo]: _fuera, ...resto } = c
+      return resto
+    })
+    setEditando(null)
+  }
+
+  /** Los ids de catálogo que viajan como `resueltos` (el puerto los espera ahí, no en `correcciones`). */
+  const CAMPOS_RESUELTOS = useMemo(() => {
+    const s = new Set<string>(['municipioId', 'estadoCivil', 'tipoViaId', 'propietarioEsTomador'])
+    for (const n of CATALOGOS_PANTALLA) s.add(CAMPO_DE_CATALOGO[n])
+    return s
+  }, [])
+
+  function cuerpoResueltos(): Record<string, unknown> {
+    const ids: Record<string, string | null> = {}
+    const supuestos: Record<string, boolean> = {}
+    for (const n of CATALOGOS_PANTALLA) {
+      const campo = CAMPO_DE_CATALOGO[n]
+      ids[campo] = cadena(porCampo.get(campo)?.valor)
+      // Sigue siendo un valor por defecto de la pantalla mientras nadie lo toque.
+      supuestos[campo] = !corregidos.has(campo) && supuestosDeOrigen.has(campo)
+    }
+    return {
+      municipioId: entero(porCampo.get('municipioId')?.valor),
+      estadoCivilId: cadena(porCampo.get('estadoCivil')?.valor) ?? '',
+      tipoViaId: cadena(porCampo.get('tipoViaId')?.valor),
+      ...ids,
+      propietarioEsTomador: porCampo.get('propietarioEsTomador')?.valor === true,
+      supuestos: { ...supuestos, tipoVia: !corregidos.has('tipoViaId') && supuestosDeOrigen.has('tipoViaId') },
     }
   }
 
-  /**
-   * Solo viaja como corrección lo que el corredor ha CAMBIADO respecto a lo
-   * prefijado (textos y números). Los sí/no viajan SIEMPRE (un «no» es una
-   * respuesta, no un hueco) y los cuatro límites también (son 0 por diseño).
-   */
-  function correcciones(): Record<string, unknown> {
-    const c: Record<string, unknown> = { ...correccionesPersona }
-    for (const k of TEXTOS) {
-      const v = textos[k].trim()
-      if (v === '' || v === (prefijados[k] ?? '')) continue
-      c[k] = v
+  /** Solo viaja lo que ha tocado una persona; lo demás ya lo tiene la precalificación del servidor. */
+  function cuerpoCorrecciones(): Record<string, unknown> {
+    const c: Record<string, unknown> = {}
+    for (const [campo, valor] of Object.entries(correcciones)) {
+      if (CAMPOS_RESUELTOS.has(campo)) continue
+      c[campo] = valor
     }
-    if (referenciaCatastral.trim()) c.referenciaCatastral = referenciaCatastral.trim()
-    for (const k of NUMEROS) {
-      const v = numeros[k].trim()
-      const original = prefijados[k]
-      if (v === '') continue
-      if (original !== null && Number(v) === original) continue
-      c[k] = Number(v)
-    }
-    if (numeros.anioUltimaReforma.trim()) c.anioUltimaReforma = Number(numeros.anioUltimaReforma)
-    for (const k of PROTECCIONES) c[k] = protecciones[k]
-    if (vigilante !== '') c.vigilante = vigilante === 'si'
-    for (const k of LIMITES) {
-      const v = limites[k].trim()
-      c[k] = v === '' ? 0 : Number(v)
-    }
-    if (fechaEfecto && fechaEfecto !== prefijados.fechaEfecto) c.fechaEfecto = fechaEfecto
-    if (cp.trim() && cp.trim() !== prefijados.cp) c.cp = cp.trim()
     return c
   }
 
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
     try {
-      const ids: Record<string, string | null> = {}
-      const supuestos: Record<string, boolean> = { tipoVia: tipoVia.supuesto }
-      for (const n of CATALOGOS_PANTALLA) {
-        ids[CAMPO_DE_CATALOGO[n]] = desplegables[n].valor || null
-        supuestos[CAMPO_DE_CATALOGO[n]] = desplegables[n].supuesto
-      }
       const res = await fetch(`/api/cartera/polizas/${polizaId}/retarificar`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          resueltos: {
-            municipioId: municipioId ? Number(municipioId) : null,
-            estadoCivilId,
-            tipoViaId: tipoVia.valor || null,
-            ...ids,
-            propietarioEsTomador: propietario,
-            supuestos,
-          },
-          correcciones: correcciones(),
-        }),
+        body: JSON.stringify({ resueltos: cuerpoResueltos(), correcciones: cuerpoCorrecciones() }),
       })
       const j = (await res.json()) as Record<string, unknown>
       if (res.status === 422) {
-        setResultado({ estado: 'faltan', faltan: (j.faltan as ReparoHogar[]) ?? [] })
+        setResultado({ estado: 'faltan', faltan: (j.faltan as { campo: string; motivo: string }[]) ?? [] })
         return
       }
       if (!res.ok) {
@@ -299,7 +243,11 @@ export default function RetarificadorHogar({
       setResultado({
         estado: 'ok',
         coste: String(j.coste),
-        restantesHoy: Number(j.restantesHoy),
+        // OJO: `Number(null)` es 0, y eso convertiría un «no se ha mirado» en
+        // un «quedan 0 cotizaciones». Se conserva el hueco.
+        restantesHoy: typeof j.restantesHoy === 'number' ? j.restantesHoy : null,
+        simulado: j.simulado === true,
+        avisoSimulacion: typeof j.avisoSimulacion === 'string' ? j.avisoSimulacion : null,
         resumen: String(j.resumen),
         precios: (j.precios as Precio[]) ?? [],
         supuestos: (j.supuestos as SupuestoHogar[]) ?? [],
@@ -319,404 +267,128 @@ export default function RetarificadorHogar({
 
   // Un catálogo obligatorio sin leer (o vacío) bloquea: sin ids válidos no hay cuerpo.
   const fallaObligatorio =
-    CATALOGOS_PANTALLA.some((n) => fallosCatalogo.includes(n) || !(catalogos[n]?.length)) ||
+    CATALOGOS_PANTALLA.some((n) => fallosCatalogo.includes(n) || !catalogos[n]?.length) ||
     fallosCatalogo.includes('road-types') ||
     vias.length === 0
 
-  const faltanCampos = [
-    !municipioId && 'el municipio',
-    !estadoCivilId && 'el estado civil',
-    !tipoVia.valor && 'el tipo de vía',
-    !textos.nombreVia.trim() && 'el nombre de la vía',
-    !textos.numeroVia.trim() && 'el número',
-    ...CATALOGOS_PANTALLA.map((n) => !desplegables[n].valor && ETIQUETAS[n].toLowerCase()),
-    !numeros.metrosCuadrados.trim() && 'los m²',
-    !numeros.anioConstruccion.trim() && 'el año de construcción',
-    !numeros.habitaciones.trim() && 'las habitaciones',
-    !numeros.capitalContinente.trim() && !numeros.capitalContenido.trim() && 'un capital (continente o contenido)',
-    !fechaEfecto && 'la fecha de efecto',
-  ].filter(Boolean) as string[]
-
   const cotizando = resultado.estado === 'cotizando'
+  const consumoPermite = 'error' in consumo ? false : consumo.veredicto.permitido
   const puedePulsar =
-    !deshabilitado &&
-    ramo.estado === 'disponible' &&
-    !fallaObligatorio &&
-    !cotizando &&
-    faltanCampos.length === 0 &&
-    !('error' in consumo ? true : !consumo.veredicto.permitido)
-
-  const estiloCheck = { display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, color: 'inherit', fontSize: 14, margin: 0 } as const
-  const estiloCaja = { width: 20, height: 20, padding: 0, margin: 0, flex: '0 0 auto' } as const
+    !deshabilitado && ramo.estado === 'disponible' && !fallaObligatorio && !cotizando && ficha.listo && consumoPermite
 
   return (
     <>
-      <div className="card">
-        <h2>La vivienda</h2>
-        <p className="muted">
-          Los desplegables son los catálogos de hogar de Codeoscopic y <strong>no cuestan nada</strong>. El vendor
-          exige los nueve (contrato verificado contra su portal el 02/09/2026): arrancan en el valor por defecto{' '}
-          <em>como supuesto</em> y, si no los tocas, el precio sale con ellos y así se dirá. Lo que la ficha no
-          guarda (calle troceada, habitaciones, protecciones, joyas, perros) también arranca con un supuesto que
-          puedes corregir antes de pagar.
-        </p>
-        {fallosCatalogo.length > 0 && (
-          <p className="err">
-            No se han podido leer estos catálogos: {fallosCatalogo.join(', ')}. Todos son obligatorios, así que no
-            se puede cotizar todavía. No es un problema de la ficha.
+      {primaActual !== null && (
+        <div className="card">
+          <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+            Lo que paga hoy
           </p>
-        )}
-
-        <h3 style={{ marginTop: 12 }}>Dónde está</h3>
-        <div className="form-grid">
-          <div>
-            <label htmlFor="cp">Código postal del riesgo</label>
-            <input id="cp" inputMode="numeric" value={cp} onChange={(e) => setCp(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="municipio">Municipio</label>
-            <select id="municipio" value={municipioId} onChange={(e) => setMunicipioId(e.target.value)}>
-              <option value="">
-                {municipios.length === 0 ? 'Sin código postal utilizable' : 'Elige municipio'}
-              </option>
-              {municipios.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </select>
-            {municipios.length > 1 && (
-              <span className="muted" style={{ fontSize: 12 }}>
-                Este CP tiene {municipios.length} municipios: decide tú, no se elige uno a ciegas.
-              </span>
-            )}
-          </div>
-          <div>
-            <label htmlFor="via">Tipo de vía</label>
-            <select
-              id="via"
-              value={tipoVia.valor}
-              onChange={(e) => setTipoVia({ valor: e.target.value, supuesto: false })}
-              disabled={vias.length === 0}
-            >
-              <option value="">{vias.length ? 'Elige' : 'Catálogo no disponible'}</option>
-              {vias.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.nombre}
-                </option>
-              ))}
-            </select>
-            {tipoVia.supuesto && tipoVia.valor && (
-              <span className="badge warn" style={{ fontSize: 12 }}>
-                supuesto: valor por defecto
-              </span>
-            )}
-          </div>
-          <div>
-            <label htmlFor="nombreVia">Nombre de la vía</label>
-            <input id="nombreVia" value={textos.nombreVia} onChange={(e) => setTextos((t) => ({ ...t, nombreVia: e.target.value }))} />
-          </div>
-          <div>
-            <label htmlFor="numeroVia">Número</label>
-            <input id="numeroVia" value={textos.numeroVia} onChange={(e) => setTextos((t) => ({ ...t, numeroVia: e.target.value }))} />
-          </div>
-          <div>
-            <label htmlFor="planta">Planta</label>
-            <input id="planta" value={textos.planta} onChange={(e) => setTextos((t) => ({ ...t, planta: e.target.value }))} />
-          </div>
-          <div>
-            <label htmlFor="puerta">Puerta</label>
-            <input id="puerta" value={textos.puertaVivienda} onChange={(e) => setTextos((t) => ({ ...t, puertaVivienda: e.target.value }))} />
-          </div>
-          <div>
-            <label htmlFor="refcat">Referencia catastral (opcional)</label>
-            <input id="refcat" value={referenciaCatastral} onChange={(e) => setReferenciaCatastral(e.target.value)} />
-          </div>
-        </div>
-        {prefijados.direccionEntera && (
-          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            Dirección en la ficha: «{prefijados.direccionEntera}» — comprueba que el troceo en tipo de vía, nombre,
-            número, planta y puerta es correcto.
+          <p style={{ margin: '2px 0 0', fontSize: 26, fontWeight: 800, color: 'var(--brand)' }}>
+            {eur(primaActual)} <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--muted)' }}>al año</span>
           </p>
-        )}
-
-        <h3 style={{ marginTop: 16 }}>Cómo es</h3>
-        <div className="form-grid">
-          <div>
-            <label htmlFor="m2">Superficie (m²)</label>
-            <input
-              id="m2"
-              type="number"
-              min={1}
-              inputMode="decimal"
-              value={numeros.metrosCuadrados}
-              onChange={(e) => setNumeros((x) => ({ ...x, metrosCuadrados: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label htmlFor="anio">Año de construcción</label>
-            <input
-              id="anio"
-              type="number"
-              min={1500}
-              inputMode="numeric"
-              value={numeros.anioConstruccion}
-              onChange={(e) => setNumeros((x) => ({ ...x, anioConstruccion: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label htmlFor="habitaciones">Habitaciones (sin salón, cocina ni baños)</label>
-            <input
-              id="habitaciones"
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={numeros.habitaciones}
-              onChange={(e) => setNumeros((x) => ({ ...x, habitaciones: e.target.value }))}
-            />
-            {prefijados.habitaciones !== null && Number(numeros.habitaciones) === prefijados.habitaciones && (
-              <span className="badge warn" style={{ fontSize: 12 }}>
-                supuesto: estimadas por los m²
-              </span>
-            )}
-          </div>
-          <div>
-            <label htmlFor="reforma">Año de última reforma (opcional)</label>
-            <input
-              id="reforma"
-              type="number"
-              min={1500}
-              inputMode="numeric"
-              value={numeros.anioUltimaReforma}
-              onChange={(e) => setNumeros((x) => ({ ...x, anioUltimaReforma: e.target.value }))}
-            />
-          </div>
-          {CATALOGOS_PANTALLA.map((n) => (
-            <div key={n}>
-              <label htmlFor={`cat-${n}`}>{ETIQUETAS[n]}</label>
-              <select
-                id={`cat-${n}`}
-                value={desplegables[n].valor}
-                onChange={(e) => elegir(n, e.target.value)}
-                disabled={!(catalogos[n]?.length)}
-              >
-                <option value="">{catalogos[n]?.length ? 'Elige' : 'Catálogo no disponible'}</option>
-                {(catalogos[n] ?? []).map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.nombre}
-                  </option>
-                ))}
-              </select>
-              {desplegables[n].supuesto && desplegables[n].valor && (
-                <span className="badge warn" style={{ fontSize: 12 }}>
-                  supuesto: valor por defecto
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <h3 style={{ marginTop: 16 }}>Protecciones</h3>
-        <p className="muted" style={{ fontSize: 12 }}>
-          Arrancan a «no» como supuesto, que es lo conservador: si marcas alguna, el precio baja.
-        </p>
-        <div className="form-grid">
-          {PROTECCIONES.map((k) => (
-            <label key={k} htmlFor={`prot-${k}`} style={estiloCheck}>
-              <input
-                id={`prot-${k}`}
-                type="checkbox"
-                style={estiloCaja}
-                checked={protecciones[k]}
-                onChange={(e) => setProtecciones((p) => ({ ...p, [k]: e.target.checked }))}
-              />
-              {ETIQUETA_PROTECCION[k]}
-            </label>
-          ))}
-          <div>
-            <label htmlFor="vigilante">Vigilante</label>
-            <select id="vigilante" value={vigilante} onChange={(e) => setVigilante(e.target.value as '' | 'si' | 'no')}>
-              <option value="">No se sabe (no viaja)</option>
-              <option value="si">Sí</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-        </div>
-
-        <h3 style={{ marginTop: 16 }}>Cuánto se asegura y desde cuándo</h3>
-        <div className="form-grid">
-          <div>
-            <label htmlFor="continente">Capital continente (€)</label>
-            <input
-              id="continente"
-              type="number"
-              min={0}
-              inputMode="decimal"
-              value={numeros.capitalContinente}
-              onChange={(e) => setNumeros((x) => ({ ...x, capitalContinente: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label htmlFor="contenido">Capital contenido (€)</label>
-            <input
-              id="contenido"
-              type="number"
-              min={0}
-              inputMode="decimal"
-              value={numeros.capitalContenido}
-              onChange={(e) => setNumeros((x) => ({ ...x, capitalContenido: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label htmlFor="efecto">Fecha de efecto</label>
-            <input id="efecto" type="date" value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} />
-          </div>
-        </div>
-        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          Los capitales NO se inventan: si la ficha no los trae, hay que teclearlos. Un continente
-          inventado da un precio inventado.
-        </p>
-
-        <details style={{ marginTop: 12 }}>
-          <summary>Joyas, objetos de valor y perros (arrancan a 0: el vendor los exige y la ficha no los tiene)</summary>
-          <div className="form-grid" style={{ marginTop: 8 }}>
-            <div>
-              <label htmlFor="joyasCaja">Joyas en caja fuerte (€, hasta {eur(TOPE_JOYAS)})</label>
-              <input
-                id="joyasCaja"
-                type="number"
-                min={0}
-                max={TOPE_JOYAS}
-                inputMode="numeric"
-                value={limites.joyasEnCajaFuerte}
-                onChange={(e) => setLimites((l) => ({ ...l, joyasEnCajaFuerte: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label htmlFor="joyasFuera">Joyas fuera de caja fuerte (€, hasta {eur(TOPE_JOYAS)})</label>
-              <input
-                id="joyasFuera"
-                type="number"
-                min={0}
-                max={TOPE_JOYAS}
-                inputMode="numeric"
-                value={limites.joyasFueraDeCaja}
-                onChange={(e) => setLimites((l) => ({ ...l, joyasFueraDeCaja: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label htmlFor="objetos">Objetos de valor (€)</label>
-              <input
-                id="objetos"
-                type="number"
-                min={0}
-                inputMode="numeric"
-                value={limites.objetosDeValor}
-                onChange={(e) => setLimites((l) => ({ ...l, objetosDeValor: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label htmlFor="perros">Perros potencialmente peligrosos</label>
-              <input
-                id="perros"
-                type="number"
-                min={0}
-                inputMode="numeric"
-                value={limites.perrosPeligrosos}
-                onChange={(e) => setLimites((l) => ({ ...l, perrosPeligrosos: e.target.value }))}
-              />
-            </div>
-          </div>
-          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            Si hay joyas, objetos de valor o perros y se dejan a 0, el precio real sube.
+          <p className="muted" style={{ margin: '6px 0 0', fontSize: 12 }}>
+            Cada precio que llegue se compara con esta cifra.
           </p>
-        </details>
-      </div>
-
-      <div className="card">
-        <h2>El tomador</h2>
-        <div className="form-grid">
-          <div>
-            <label htmlFor="civil">Estado civil</label>
-            <select id="civil" value={estadoCivilId} onChange={(e) => setEstadoCivilId(e.target.value)}>
-              <option value="">Elige estado civil</option>
-              {civiles.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
-            {estadoCivilAuto && (
-              <span className="muted" style={{ fontSize: 12 }}>
-                Cogido de la ficha.
-              </span>
-            )}
-          </div>
-          <label htmlFor="propietario" style={estiloCheck}>
-            <input
-              id="propietario"
-              type="checkbox"
-              style={estiloCaja}
-              checked={propietario}
-              onChange={(e) => {
-                setPropietario(e.target.checked)
-                setPropietarioTocado(true)
-              }}
-            />
-            El tomador es el propietario de la vivienda
-          </label>
         </div>
-        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          Si lo es, viaja también como propietario en la petición (la misma persona). Se preselecciona según el
-          régimen elegido arriba hasta que lo toques.
-        </p>
+      )}
 
-        {faltanInicial.some((f) => CAMPOS_A_MANO[f.campo] || f.campo === 'sexo') && (
-          <>
-            <p className="muted" style={{ marginTop: 12 }}>
-              De la ficha faltan estos datos. Rellénalos aquí — no se inventan solos:
-            </p>
-            <div className="form-grid">
-              {faltanInicial.some((f) => f.campo === 'sexo') && (
-                <div>
-                  <label htmlFor="c-sexo">Sexo</label>
-                  <select
-                    id="c-sexo"
-                    value={correccionesPersona.sexo ?? ''}
-                    onChange={(e) => setCorreccionesPersona((c) => ({ ...c, sexo: e.target.value }))}
-                  >
-                    <option value="">Elige</option>
-                    <option value="hombre">Hombre</option>
-                    <option value="mujer">Mujer</option>
-                  </select>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    La ficha no lo dice y no se adivina por el nombre.
-                  </span>
-                </div>
-              )}
-              {faltanInicial
-                .filter((f) => CAMPOS_A_MANO[f.campo])
-                .map((f) => (
-                  <div key={f.campo}>
-                    <label htmlFor={`c-${f.campo}`}>{CAMPOS_A_MANO[f.campo]!.etiqueta}</label>
-                    <input
-                      id={`c-${f.campo}`}
-                      type={CAMPOS_A_MANO[f.campo]!.tipo}
-                      value={correccionesPersona[f.campo] ?? ''}
-                      onChange={(e) => setCorreccionesPersona((c) => ({ ...c, [f.campo]: e.target.value }))}
-                    />
+      {fallosCatalogo.length > 0 && (
+        <div className="card err">
+          No se han podido leer estos catálogos: {fallosCatalogo.join(', ')}. Todos son obligatorios para el
+          vendor, así que no se puede cotizar todavía. No es un problema de la ficha.
+        </div>
+      )}
+
+      {(ficha.faltan.length > 0 || faltanSinFila.length > 0) && (
+        <div className="card">
+          <h2 style={{ color: 'var(--danger)' }}>Falta esto para poder pedir precio</h2>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
+            {ficha.faltan.map((f) => (
+              <li key={f.campo as string} style={{ marginBottom: 6 }}>
+                <strong>{f.etiqueta}</strong>: {f.falta}{' '}
+                <a href={`#fila-${String(f.campo)}`} onClick={() => abrir(f)}>
+                  corregir ↓
+                </a>
+              </li>
+            ))}
+          </ul>
+          {faltanSinFila.length > 0 && (
+            <div className="form-grid" style={{ marginTop: 12 }}>
+              {faltanSinFila.map((f) => {
+                const campo = f.campo as string
+                const h = HUERFANOS[campo]
+                return (
+                  <div key={campo}>
+                    <label htmlFor={`h-${campo}`}>{h?.etiqueta ?? campo}</label>
+                    {h?.tipo === 'sexo' ? (
+                      <select
+                        id={`h-${campo}`}
+                        value={String(correcciones[campo] ?? '')}
+                        onChange={(e) => setCorrecciones((c) => ({ ...c, [campo]: e.target.value || null }))}
+                        style={{ minHeight: 44 }}
+                      >
+                        <option value="">Elige</option>
+                        <option value="hombre">Hombre</option>
+                        <option value="mujer">Mujer</option>
+                      </select>
+                    ) : (
+                      <input
+                        id={`h-${campo}`}
+                        value={String(correcciones[campo] ?? '')}
+                        onChange={(e) => setCorrecciones((c) => ({ ...c, [campo]: e.target.value || null }))}
+                        style={{ minHeight: 44 }}
+                      />
+                    )}
                     <span className="muted" style={{ fontSize: 12 }}>
                       {f.motivo}
                     </span>
                   </div>
-                ))}
+                )
+              })}
             </div>
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
+      {/* ── La ficha ───────────────────────────────────────────────────────── */}
+      {GRUPOS.map((g) => {
+        const filas = ficha.filas.filter((f) => f.grupo === g.id)
+        if (filas.length === 0) return null
+        return (
+          <div className="card" key={g.id}>
+            <h2>{g.titulo}</h2>
+            {g.nota && (
+              <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                {g.nota}
+              </p>
+            )}
+            <div style={{ marginTop: 8 }}>
+              {filas.map((f) => (
+                <FilaFicha
+                  key={f.campo as string}
+                  fila={f}
+                  editando={editando === (f.campo as string)}
+                  borrador={borrador}
+                  setBorrador={setBorrador}
+                  abrir={() => abrir(f)}
+                  cerrar={() => setEditando(null)}
+                  guardar={() => guardar(f)}
+                  deshacer={() => deshacer(f.campo as string)}
+                  vias={vias}
+                  catalogos={catalogos}
+                  estadosCiviles={estadosCiviles}
+                  municipios={municipios}
+                  defectos={defectos}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* ── El botón: lo único que gasta ───────────────────────────────────── */}
       <div className="card">
-        <h2>Cotizar</h2>
+        <h2>Pedir precio</h2>
         {ramo.estado !== 'disponible' && (
           <p className="err">
             {ramo.estado === 'ausente'
@@ -739,9 +411,12 @@ export default function RetarificadorHogar({
             )}
           </p>
         )}
-
-        {faltanCampos.length > 0 && (
-          <p className="muted">Antes de cotizar falta: {faltanCampos.join(', ')}.</p>
+        {ficha.optimistas.length > 0 && (
+          <p className="muted" style={{ fontSize: 12 }}>
+            ⚠️ {ficha.optimistas.length} de los supuestos ABARATAN el precio ({ficha.optimistas
+              .map((f) => f.etiqueta.toLowerCase())
+              .join(', ')}): si el cliente los desmiente, la prima real sube.
+          </p>
         )}
 
         <button
@@ -753,6 +428,11 @@ export default function RetarificadorHogar({
         >
           {cotizando ? 'Cotizando… (puede tardar hasta 2 min)' : 'Pedir precio (0,50€)'}
         </button>
+        {!ficha.listo && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            El botón se enciende cuando no falte nada arriba. Corregir la ficha no cuesta nada.
+          </p>
+        )}
 
         {resultado.estado === 'faltan' && (
           <div style={{ marginTop: 12 }}>
@@ -771,7 +451,8 @@ export default function RetarificadorHogar({
           <div className="err" style={{ marginTop: 12 }}>
             {resultado.clase === 'tope' && '🛑 Tope alcanzado: '}
             {resultado.clase === 'ramo' && '🚫 Ramo: '}
-            {resultado.clase === 'vendor' && '⚠️ Respuesta del vendor (entera, porque dice qué campo del contrato sobra o falta): '}
+            {resultado.clase === 'vendor' &&
+              '⚠️ Respuesta del vendor (entera, porque dice qué campo del contrato sobra o falta): '}
             {resultado.clase === 'otro' && '⚠️ '}
             <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{resultado.mensaje}</span>
             {resultado.clase === 'vendor' && (
@@ -784,11 +465,30 @@ export default function RetarificadorHogar({
 
         {resultado.estado === 'ok' && (
           <div style={{ marginTop: 12 }}>
+            {/* Un precio simulado y uno real se leen igual: la única diferencia
+                está en este cartel, así que va ENCIMA del listado y no como
+                nota al pie. */}
+            {resultado.simulado && (
+              <div
+                className="card"
+                style={{ borderColor: 'var(--warn)', background: 'rgba(217, 119, 6, 0.08)', marginBottom: 12 }}
+              >
+                <p style={{ margin: 0, fontWeight: 700, color: 'var(--warn)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+                <p style={{ margin: '4px 0 0' }}>
+                  {resultado.avisoSimulacion ??
+                    'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha ' +
+                      'gastado ni un céntimo.'}
+                </p>
+              </div>
+            )}
             <p>
               <strong>{resultado.resumen}</strong>
             </p>
             <p className="muted">
-              Coste de esta consulta: {resultado.coste} · quedan hoy {resultado.restantesHoy}.
+              Coste de esta consulta: {resultado.coste}
+              {/* `null` = no se ha leído el libro (simulación). Decir «quedan 0»
+                  sería convertir un «no se sabe» en una cifra. */}
+              {resultado.restantesHoy !== null && <> · quedan hoy {resultado.restantesHoy}</>}.
               {resultado.fuenteRiesgo && <> · riesgo según: {FUENTE[resultado.fuenteRiesgo] ?? resultado.fuenteRiesgo}</>}
             </p>
             <div className="table-wrap">
@@ -798,6 +498,7 @@ export default function RetarificadorHogar({
                     <th>Compañía</th>
                     <th>Producto</th>
                     <th>Prima anual</th>
+                    <th>{primaActual === null ? 'Diferencia' : 'Frente a lo que paga hoy'}</th>
                     <th>Firmeza</th>
                   </tr>
                 </thead>
@@ -808,12 +509,12 @@ export default function RetarificadorHogar({
                       <td>{p.producto ?? '—'}</td>
                       <td>{eur(p.primaAnual)}</td>
                       <td>
+                        <Diferencia primaActual={primaActual} nueva={p.primaAnual ?? null} />
+                      </td>
+                      <td>
                         {/* La firmeza va PEGADA al precio: enseñar la prima sola
                             promete algo que la compañía no ha cerrado. */}
-                        <span
-                          className={`badge ${p.firmeza === 'firme' ? 'ok' : 'warn'}`}
-                          title={p.avisos?.join(' · ')}
-                        >
+                        <span className={`badge ${p.firmeza === 'firme' ? 'ok' : 'warn'}`} title={p.avisos?.join(' · ')}>
                           {p.firmeza ?? 'sin determinar'}
                         </span>
                       </td>
@@ -822,10 +523,10 @@ export default function RetarificadorHogar({
                 </tbody>
               </table>
             </div>
-            {resultado.precios.some((p) => p.firmeza !== 'firme') && (
+            {!resultado.simulado && resultado.precios.some((p) => p.firmeza !== 'firme') && (
               <p className="muted">
-                Los precios marcados como estimado o condicionado <strong>no son ofertas
-                cerradas</strong>: la compañía puede cambiarlos al verificar los datos.
+                Los precios marcados como estimado o condicionado <strong>no son ofertas cerradas</strong>: la
+                compañía puede cambiarlos al verificar los datos.
               </p>
             )}
             {resultado.supuestos.length > 0 && (
@@ -835,8 +536,8 @@ export default function RetarificadorHogar({
                 </p>
                 <ul>
                   {resultado.supuestos.map((s) => (
-                    <li key={`${s.campo}-${String(s.valor)}`}>
-                      <strong>{s.campo}</strong>: <code>{String(s.valor)}</code> — {s.porque}
+                    <li key={`${String(s.campo)}-${String(s.valor)}`}>
+                      <strong>{String(s.campo)}</strong>: <code>{String(s.valor)}</code> — {s.porque}
                       {s.optimista && (
                         <>
                           {' '}
@@ -855,17 +556,321 @@ export default function RetarificadorHogar({
   )
 }
 
+// ─── Una fila de la ficha ────────────────────────────────────────────────────
+
+function FilaFicha({
+  fila,
+  editando,
+  borrador,
+  setBorrador,
+  abrir,
+  cerrar,
+  guardar,
+  deshacer,
+  vias,
+  catalogos,
+  estadosCiviles,
+  municipios,
+  defectos,
+}: {
+  fila: Fila
+  editando: boolean
+  borrador: string
+  setBorrador: (v: string) => void
+  abrir: () => void
+  cerrar: () => void
+  guardar: () => void
+  deshacer: () => void
+  vias: Opcion[]
+  catalogos: Partial<Record<CatalogoPantalla, Opcion[]>>
+  estadosCiviles: Opcion[]
+  municipios: Opcion[]
+  defectos: DefectosHogar
+}) {
+  const campo = fila.campo as string
+  // Un dato personal que ya consta NO se reescribe aquí (`editable: false`),
+  // pero si FALTA hay que poder teclearlo: no se inventa solo y sin él no hay
+  // precio. Es la única puerta que se le abre.
+  const sePuedeTocar = fila.editable || fila.falta !== null
+
+  return (
+    <div
+      id={`fila-${campo}`}
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'flex-start',
+        gap: 8,
+        padding: '10px 0',
+        borderTop: '1px solid var(--border)',
+      }}
+    >
+      <div style={{ flex: '1 1 180px', minWidth: 0 }}>
+        <div className="muted" style={{ fontSize: 12, fontWeight: 600 }}>
+          {fila.etiqueta}
+        </div>
+        {!editando && (
+          <>
+            <div style={{ fontSize: 15, wordBreak: 'break-word' }}>
+              {fila.falta !== null && fila.legible === '—' ? <span className="muted">—</span> : fila.legible}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4, alignItems: 'center' }}>
+              {fila.procedencia && (
+                <span className={`badge ${fila.procedencia === 'corregido' ? 'ok' : ''}`} style={{ fontSize: 11 }}>
+                  {PROCEDENCIAS[fila.procedencia]}
+                </span>
+              )}
+              {fila.optimista && (
+                <span className="badge warn" style={{ fontSize: 11 }}>
+                  esto puede subir
+                </span>
+              )}
+              {fila.falta !== null && (
+                <span className="badge danger" style={{ fontSize: 11 }}>
+                  falta: {fila.falta}
+                </span>
+              )}
+            </div>
+            {/* El porqué de un supuesto es la letra pequeña del precio: tiene
+                que poder leerse ENTERO, no recortado en un `title`. */}
+            {fila.porque && (
+              <details style={{ marginTop: 4 }}>
+                <summary className="muted" style={{ fontSize: 12, cursor: 'pointer', minHeight: 24 }}>
+                  por qué
+                </summary>
+                <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                  {fila.porque}
+                </p>
+              </details>
+            )}
+          </>
+        )}
+
+        {editando && (
+          <div style={{ marginTop: 4 }}>
+            <Control
+              fila={fila}
+              borrador={borrador}
+              setBorrador={setBorrador}
+              vias={vias}
+              catalogos={catalogos}
+              estadosCiviles={estadosCiviles}
+              municipios={municipios}
+              defectos={defectos}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+              <button type="button" className="primary" onClick={guardar} style={{ minHeight: 44 }}>
+                Guardar
+              </button>
+              <button type="button" className="ghost" onClick={cerrar} style={{ minHeight: 44 }}>
+                Cancelar
+              </button>
+              {fila.procedencia === 'corregido' && (
+                <button type="button" className="ghost" onClick={deshacer} style={{ minHeight: 44 }}>
+                  Volver al valor de la ficha
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {!editando && sePuedeTocar && (
+        <button
+          type="button"
+          className="ghost"
+          onClick={abrir}
+          aria-label={`Corregir ${fila.etiqueta}`}
+          title={`Corregir ${fila.etiqueta}`}
+          style={{ minWidth: 44, minHeight: 44, flex: '0 0 auto' }}
+        >
+          ✏️
+        </button>
+      )}
+    </div>
+  )
+}
+
+function Control({
+  fila,
+  borrador,
+  setBorrador,
+  vias,
+  catalogos,
+  estadosCiviles,
+  municipios,
+  defectos,
+}: {
+  fila: Fila
+  borrador: string
+  setBorrador: (v: string) => void
+  vias: Opcion[]
+  catalogos: Partial<Record<CatalogoPantalla, Opcion[]>>
+  estadosCiviles: Opcion[]
+  municipios: Opcion[]
+  defectos: DefectosHogar
+}) {
+  const id = `edit-${String(fila.campo)}`
+  const alto = { minHeight: 44 } as const
+
+  if (fila.control === 'siNo') {
+    return (
+      <label htmlFor={id} style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, color: 'inherit', fontSize: 14 }}>
+        <input
+          id={id}
+          type="checkbox"
+          checked={borrador === 'si'}
+          onChange={(e) => setBorrador(e.target.checked ? 'si' : 'no')}
+          style={{ width: 20, height: 20, padding: 0, margin: 0, flex: '0 0 auto' }}
+        />
+        Sí
+      </label>
+    )
+  }
+
+  if (fila.control === 'siNoNoSe') {
+    return (
+      <select id={id} value={borrador} onChange={(e) => setBorrador(e.target.value)} style={alto}>
+        {/* Tres estados: «no se sabe» es una respuesta, no un hueco — y no viaja. */}
+        <option value="">No se sabe (no viaja)</option>
+        <option value="si">Sí</option>
+        <option value="no">No</option>
+      </select>
+    )
+  }
+
+  if (fila.control === 'municipio') {
+    return (
+      <>
+        <select id={id} value={borrador} onChange={(e) => setBorrador(e.target.value)} style={alto}>
+          <option value="">{municipios.length === 0 ? 'Sin código postal utilizable' : 'Elige municipio'}</option>
+          {municipios.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.nombre}
+            </option>
+          ))}
+        </select>
+        {municipios.length > 1 && (
+          <span className="muted" style={{ fontSize: 12 }}>
+            Este CP tiene {municipios.length} municipios: decide tú, no se elige uno a ciegas.
+          </span>
+        )}
+      </>
+    )
+  }
+
+  if (fila.control === 'opcion' || String(fila.campo) === 'tipoViaId') {
+    // El tipo de vía es un texto en la ficha pero un id de `/road-types` para el
+    // vendor: si se teclea a mano no vale, así que se elige de su catálogo.
+    const esVia = String(fila.campo) === 'tipoViaId'
+    const lista = esVia
+      ? vias
+      : String(fila.campo) === 'estadoCivil'
+        ? estadosCiviles
+        : (fila.catalogo ? catalogos[fila.catalogo] : undefined) ?? []
+    const porDefecto = esVia ? defectos['road-types'] : fila.catalogo ? defectos[fila.catalogo] : null
+    return (
+      <select id={id} value={borrador} onChange={(e) => setBorrador(e.target.value)} style={alto} disabled={lista.length === 0}>
+        <option value="">{lista.length === 0 ? 'Catálogo no disponible' : 'Elige'}</option>
+        {lista.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.nombre}
+            {o.id === porDefecto ? ' (el de la pantalla)' : ''}
+          </option>
+        ))}
+      </select>
+    )
+  }
+
+  if (fila.control === 'fecha') {
+    return <input id={id} type="date" value={borrador} onChange={(e) => setBorrador(e.target.value)} style={alto} />
+  }
+
+  if (fila.control === 'numero' || fila.control === 'euros') {
+    const esJoya = String(fila.campo) === 'joyasEnCajaFuerte' || String(fila.campo) === 'joyasFueraDeCaja'
+    return (
+      <>
+        <input
+          id={id}
+          type="number"
+          min={0}
+          {...(esJoya ? { max: TOPE_JOYAS } : {})}
+          inputMode="decimal"
+          value={borrador}
+          onChange={(e) => setBorrador(e.target.value)}
+          style={alto}
+        />
+        {esJoya && (
+          <span className="muted" style={{ fontSize: 12 }}>
+            Hasta {eur(TOPE_JOYAS)}.
+          </span>
+        )}
+      </>
+    )
+  }
+
+  return <input id={id} value={borrador} onChange={(e) => setBorrador(e.target.value)} style={alto} />
+}
+
+/**
+ * El precio nuevo frente al que paga hoy. Sin prima actual NO se inventa una
+ * comparación: se dice que no consta, que es distinto de «no hay diferencia».
+ */
+function Diferencia({ primaActual, nueva }: { primaActual: number | null; nueva: number | null }) {
+  if (primaActual === null) return <span className="muted">no consta lo que paga hoy</span>
+  if (nueva === null || Number.isNaN(nueva)) return <span className="muted">—</span>
+  const delta = nueva - primaActual
+  if (Math.abs(delta) < 0.005) return <span className="muted">igual</span>
+  const sube = delta > 0
+  return (
+    <span style={{ color: sube ? 'var(--danger)' : 'var(--ok)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+      {sube ? '▲ sube' : '▼ ahorra'} {eur(Math.abs(delta))}
+    </span>
+  )
+}
+
+// ─── Conversión entre el valor de la fila y el control ───────────────────────
+
+function aTexto(f: Fila): string {
+  if (f.control === 'siNo') return f.valor === true ? 'si' : 'no'
+  if (f.control === 'siNoNoSe') return typeof f.valor === 'boolean' ? (f.valor ? 'si' : 'no') : ''
+  if (f.valor === null || f.valor === undefined) return ''
+  return String(f.valor)
+}
+
+function deTexto(f: Fila, t: string): unknown {
+  switch (f.control) {
+    case 'siNo':
+      return t === 'si'
+    case 'siNoNoSe':
+      // `null` = no se sabe. No es `false`: «no» es una respuesta y esto no lo es.
+      return t === '' ? null : t === 'si'
+    case 'numero':
+    case 'euros':
+    case 'municipio': {
+      const n = Number(t.trim())
+      return t.trim() === '' || !Number.isFinite(n) ? null : n
+    }
+    default:
+      return t.trim() === '' ? null : t.trim()
+  }
+}
+
+function cadena(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+function entero(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
 const FUENTE: Record<string, string> = {
   poliza: 'la póliza',
   gemela: 'la copia del volcado de junio/2026',
   catastro: 'el Catastro',
-}
-
-/** Los campos de la persona que el corredor puede teclear cuando la ficha no los trae. */
-const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefined> = {
-  dni: { etiqueta: 'DNI', tipo: 'text' },
-  nombre: { etiqueta: 'Nombre', tipo: 'text' },
-  apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
-  telefono: { etiqueta: 'Móvil', tipo: 'tel' },
-  fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
 }
