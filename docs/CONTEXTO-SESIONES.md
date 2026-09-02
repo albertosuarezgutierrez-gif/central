@@ -32,6 +32,20 @@
 
 ---
 
+### 🛡️ (02/09/2026, noche III) Auditoría de garantías por compañía + diseño del expediente de tarificación
+- Alberto pregunta si hace falta una pantalla para preconfigurar las garantías y capitales de cada
+  compañía (lo que él hacía en Avant2). **Auditado el portal entero y el CRM de Manuel: NO hace falta.**
+  No existe catálogo de garantías por API (`guarantee`/`franchise` = 0 apariciones), no se pueden fijar
+  por API los valores por defecto, y los que él configuró en Avant2 **se heredan solos al cotizar**.
+  Detalle citado en `docs/CODEOSCOPIC-API-PORTAL.md` § Garantías y opciones por compañía.
+- 🚨 Dos hallazgos que cambian el plan: en hogar **el primer precio es siempre estimado** y el re-rate
+  es obligatorio (probablemente cuesta el doble, sin medir), y las opciones por compañía solo se pintan
+  con desplegable usando el **formulario incrustado** del fabricante.
+- Diseño acordado en `docs/superpowers/specs/2026-09-02-expediente-tarificacion-hogar-design.md`:
+  un **expediente puro** con procedencia por campo, tres puertas (corredor, agente, web) con tope propio
+  cada una, ficha revisable con la prima actual al lado, y guardar cada cotización para estimar una
+  horquilla propia y **decidir si merece la pena gastar** los 0,50€. Falta el visto bueno de Alberto.
+
 ### 🏠 (02/09/2026, noche II) Codeoscopic: el contrato `HomeRisk` de hogar, VERIFICADO y cableado (PR #2088)
 - Alberto: «usa la IA e internet para nombres, no? tienes ya el contexto de todo como yo». Internet no sirvió
   (codeoscopic.com, el portal y archive.org están bloqueados por el proxy) pero el **snapshot MHTML del portal
