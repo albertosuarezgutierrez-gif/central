@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T07:50:32Z",
+  "generadoEn": "2026-09-02T09:41:53Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5380,6 +5380,10 @@
   ],
   "novedades": [
     {
+      "titulo": "Pendiente de decisión de Alberto:",
+      "fecha": ""
+    },
+    {
       "titulo": "#2013",
       "fecha": ""
     },
@@ -5433,10 +5437,6 @@
     },
     {
       "titulo": "Catastro para hogar HECHO",
-      "fecha": ""
-    },
-    {
-      "titulo": "Forma de pago",
       "fecha": ""
     }
   ],

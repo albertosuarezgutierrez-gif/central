@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T07:50:32Z",
-  "sha": "0c341fcdb50b3dbf4a175c09e134c6cfd22f2b66",
+  "generadoEn": "2026-09-02T09:41:53Z",
+  "sha": "d4b8c74a152062608432316d12d3e263bbdb06d6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48965,7 +48965,7 @@
           "exportada": false,
           "params": "cuentaId: string, anio: number",
           "retorno": null,
-          "linea": 15
+          "linea": 28
         },
         {
           "nombre": "getAvisoModelo130",
@@ -48973,7 +48973,7 @@
           "exportada": false,
           "params": "cuentaId: string, anio: number",
           "retorno": "Promise<TrimPilar | null>",
-          "linea": 33
+          "linea": 46
         },
         {
           "nombre": "safe",
@@ -48981,7 +48981,7 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: T",
           "retorno": "Promise<T>",
-          "linea": 52
+          "linea": 65
         },
         {
           "nombre": "NegociosResumen",
@@ -48989,7 +48989,7 @@
           "exportada": true,
           "params": "{ cuentaId, nombre }: { cuentaId: string; nombre: string }",
           "retorno": null,
-          "linea": 56
+          "linea": 69
         },
         {
           "nombre": "CorreduriaCard",
@@ -48997,7 +48997,7 @@
           "exportada": false,
           "params": "{ correduria, anio }: { correduria: Awaited<ReturnType<typeof getResumenFinanciero>>['correduria'] anio: number }",
           "retorno": null,
-          "linea": 206
+          "linea": 221
         },
         {
           "nombre": "NegocioCard",
@@ -49005,7 +49005,7 @@
           "exportada": false,
           "params": "{ neg, fin, url, anio }: { neg: { nombre: string; sector: string; app: string | null } fin: ResumenFinanciero url: string | null anio: number }",
           "retorno": null,
-          "linea": 238
+          "linea": 249
         },
         {
           "nombre": "AlertasBanner",
@@ -49013,7 +49013,7 @@
           "exportada": false,
           "params": "{ alertas, gastosSinClasificar }: { alertas: Alertas gastosSinClasificar: { total: number; importe: number } }",
           "retorno": null,
-          "linea": 295
+          "linea": 311
         },
         {
           "nombre": "AvisoModelo130",
@@ -49021,7 +49021,7 @@
           "exportada": false,
           "params": "{ trim }: { trim: TrimPilar }",
           "retorno": null,
-          "linea": 347
+          "linea": 379
         },
         {
           "nombre": "IntercompanyCard",
@@ -49029,25 +49029,19 @@
           "exportada": false,
           "params": "{ consolidado, nombrePorSociedad, anio, }: { consolidado: ResultadoConsolidado nombrePorSociedad: Record<string, string> anio: number }",
           "retorno": null,
-          "linea": 367
-        },
-        {
-          "nombre": "FinStat",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ label, value, color }: { label: string; value: string; color?: string }",
-          "retorno": null,
-          "linea": 434
+          "linea": 403
         }
       ],
       "tablas": [
         "cuentas_bancarias",
+        "lucide",
         "next",
+        "react",
         "sociedades",
         "v_movimientos_activos"
       ],
       "rutaApi": null,
-      "hash": "c33bd8a6a663"
+      "hash": "f41986411de0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/page.tsx",
@@ -49062,8 +49056,17 @@
           "exportada": false,
           "params": "p: Promise<T>, fallback: F",
           "retorno": "Promise<T | F>",
-          "linea": 40,
+          "linea": 41,
           "resumen": "/banca = Inicio unificado con control 💶 Dinero | 🏢 Negocios (SegTabs, por navegación → carga perezosa: cada pestaña computa SOLO sus datos). Dinero (por defecto): resumen negocio+personal (misma fue"
+        },
+        {
+          "nombre": "TituloSeccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ icono, children, sub }: { icono: ReactNode; children: ReactNode; sub?: string }",
+          "retorno": null,
+          "linea": 50,
+          "resumen": "Título de sección: icono en `--muted` a la izquierda del `<h2>`. Mismo patrón (y mismas medidas) que el helper homónimo de `ResumenPeriodo.tsx`, para que las secciones de esta página y las del resumen"
         },
         {
           "nombre": "BancaPage",
@@ -49071,15 +49074,16 @@
           "exportada": true,
           "params": "{ searchParams }: { searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }> }",
           "retorno": null,
-          "linea": 44
+          "linea": 60
         }
       ],
       "tablas": [
         "lucide",
-        "next"
+        "next",
+        "react"
       ],
       "rutaApi": null,
-      "hash": "ebeda8e1c4d2"
+      "hash": "9da89caf1023"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/ResumenPeriodo.tsx",
@@ -49089,20 +49093,39 @@
       ],
       "funciones": [
         {
-          "nombre": "Kpi",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ label, valor, sub, tono }: { label: string; valor: string; sub?: string; tono?: 'pos' | 'neg' | 'neutro' }",
-          "retorno": null,
-          "linea": 18
-        },
-        {
           "nombre": "etiquetaMes",
           "kind": "function",
           "exportada": false,
           "params": "mes: string",
           "retorno": "string",
-          "linea": 30
+          "linea": 31
+        },
+        {
+          "nombre": "TituloSeccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ icono, children, sub }: { icono: React.ReactNode; children: React.ReactNode; sub?: string }",
+          "retorno": null,
+          "linea": 34,
+          "resumen": "Título de sección con icono, para que los bloques del Inicio se lean como uno solo."
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ icono, label, nota, children }: { icono: React.ReactNode; label: string; nota?: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 45,
+          "resumen": "Fila «concepto → cifra» de las tarjetas Negocios/Personal."
+        },
+        {
+          "nombre": "Salida",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ href, children }: { href: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 64,
+          "resumen": "Enlace de pie de tarjeta."
         },
         {
           "nombre": "ResumenPeriodo",
@@ -49110,12 +49133,12 @@
           "exportada": true,
           "params": "{ resumen, evolucion, periodoLabel }: { resumen: ResumenFinanciero evolucion: MesEvolucion[] periodoLabel: string }",
           "retorno": null,
-          "linea": 32
+          "linea": 75
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a30616b76bca"
+      "hash": "508c361db062"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/banca/SaldoTotal.tsx",
@@ -50700,15 +50723,16 @@
           "exportada": true,
           "params": "{ basePath, periodo }: { basePath: string; periodo: Periodo }",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         }
       ],
       "tablas": [
+        "lucide",
         "next",
         "react"
       ],
       "rutaApi": null,
-      "hash": "5cf1706abfb3"
+      "hash": "372cb9daa35b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/finanzas/page.tsx",
@@ -107757,6 +107781,6 @@
   ],
   "resumen": {
     "archivos": 2792,
-    "funciones": 7914
+    "funciones": 7916
   }
 }
