@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T11:41:53Z",
+  "generadoEn": "2026-09-02T12:43:35Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -375,7 +375,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "usado",
@@ -1725,7 +1725,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -4380,7 +4380,6 @@
       "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/banca/ticket",
-      "/api/banca/transferencia",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -5380,64 +5379,64 @@
   ],
   "novedades": [
     {
-      "titulo": "La reimplementación era real, no un falso positivo:",
-      "fecha": ""
+      "titulo": "🗞️ Las «novedades» del panel no eran novedades — y debajo, la memoria se fragmentaba",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "`CLAUDE.md` propios",
-      "fecha": ""
+      "titulo": "📄 El agente contable no sabía leer un PDF escaneado — y tampoco decía por qué (PR #2051 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Cablear un valor es lo que deja una primitiva sin adoptar:",
-      "fecha": ""
+      "titulo": "🧱 Las 43 cabeceras restantes, al componente compartido (PR #2054 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Medido antes de tocar, y corrige lo que yo mismo había apuntado:",
-      "fecha": ""
+      "titulo": "🩺 Salud de la arquitectura a cero avisos (/admin → 🗺️ Estructura)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Límite estructural anotado, no arreglable ahí:",
-      "fecha": ""
+      "titulo": "🧩 Las 5 primitivas huérfanas: se MIDIÓ antes de decidir (PR #2045 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Podado (1.204 líneas):",
-      "fecha": ""
+      "titulo": "🕳️ El feed PSD2 tenía dos estados donde hay tres (PR #2042 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Menú reagrupado por trabajo:",
-      "fecha": ""
+      "titulo": "🗺️ plataforma: podar lo inalcanzable y agrupar el menú por TRABAJO (PR #2038 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Pendiente de decisión de Alberto:",
-      "fecha": ""
+      "titulo": "⚪ Comisiones: el «no se ha podido leer la cartera» no decía DÓNDE mirar (PR #2029 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "No se pudo diagnosticar porque nadie lo contaba:",
-      "fecha": ""
+      "titulo": "🪞 La skill de UI llevaba DOS MESES contradiciendo al CLAUDE.md de su app",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Deuda propia, saldada en #2047:",
-      "fecha": ""
+      "titulo": "🧱 plataforma: el CUERPO del Inicio, al sistema de diseño (PR #2024 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "De regalo, la 7ª medición del CI mudo (anotada en `CLAUDE.md`), y la más limpia:",
-      "fecha": ""
+      "titulo": "📎 Correduría: documentos de verdad sobre la BD de casa (PR #2022 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Pendiente de decisión de Alberto:",
-      "fecha": ""
+      "titulo": "🔐 Correduría: TRASPASO CERRADO salvo Fly — auth copiada, CRM solo como motor de CIMA (PR #2007 mergeado)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "#2013",
-      "fecha": ""
+      "titulo": "🖼️ plataforma: el rediseño LLEGA a la pantalla (PRs #2013 y #2018)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "#2018",
-      "fecha": ""
+      "titulo": "🎨 plataforma: sistema de diseño vivo, color por tokens y SEIS tokens fantasma (PR #2011)",
+      "fecha": "02/09/2026"
     },
     {
-      "titulo": "Pendiente:",
-      "fecha": ""
+      "titulo": "🔑 `GH_PAT_TRIGGER`: rotado (caduca 01/12/2026, sin `Workflows`); clásico borrado; B pendiente en Vercel",
+      "fecha": "02/09/2026"
     }
   ],
   "saludRepo": {
@@ -5874,7 +5873,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1235,
+    "apis": 1234,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

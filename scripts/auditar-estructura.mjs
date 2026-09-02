@@ -18,6 +18,7 @@ import {
   estableMd as stableMd,
   estableMapa as stableMapa,
 } from './auditar-comparacion.mjs'
+import { extraerNovedades } from './auditar-novedades.mjs'
 
 const ROOT = join(fileURLToPath(import.meta.url), '..', '..')
 const APPS_DIR = join(ROOT, 'apps')
@@ -384,17 +385,11 @@ const skills = dirs(SKILLS_DIR)
   .sort((a, b) => a.id.localeCompare(b.id))
 
 // Novedades: cabeceras de entrada de docs/CONTEXTO-SESIONES.md (timeline, lo más reciente arriba).
-const novedades = []
-if (existsSync(CTX_FILE)) {
-  const txt = readFileSync(CTX_FILE, 'utf8')
-  for (const m of txt.matchAll(/^[-*] \*\*(.+?)\*\*/gm)) {
-    const raw = m[1].trim()
-    const dm = raw.match(/(\d{2}\/\d{2}\/\d{4})/)
-    const titulo = raw.replace(/\s*—\s*\d{2}\/\d{2}\/\d{4}\s*$/, '').trim()
-    novedades.push({ titulo, fecha: dm ? dm[1] : '' })
-    if (novedades.length >= 15) break
-  }
-}
+// Titulares de las últimas sesiones. El criterio de qué es una entrada vive en
+// `auditar-novedades.mjs` (que lo toma de `rotar-memoria.mjs`): el regex que había aquí
+// casaba con cualquier bullet en negrita, así que pintaba sub-bullets del cuerpo —sin
+// fecha— y no veía NINGUNA entrada del formato `### `.
+const novedades = existsSync(CTX_FILE) ? extraerNovedades(readFileSync(CTX_FILE, 'utf8')) : []
 
 // Salud derivable del repo (señales baratas; lo runtime se lee en vivo en el panel).
 const saludRepo = {
