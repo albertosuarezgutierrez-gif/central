@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import Link from 'next/link'
+import { Shield } from 'lucide-react'
+import { PageHeader, BtnLink } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
@@ -93,14 +95,11 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
     <div style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto' }}>
 
       {/* Header */}
-      <div className="corr-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>🛡️ Correduría</h1>
-        </div>
-        <Link href="/correduria/hogar" style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, minHeight: 44, display: 'inline-flex', alignItems: 'center', fontWeight: 600, fontSize: 13 }}>
-          🏠 Presupuesto de hogar
-        </Link>
-      </div>
+      <PageHeader
+        titulo="Correduría"
+        icono={<Shield size={20} strokeWidth={1.75} />}
+        acciones={<BtnLink href="/correduria/hogar" variante="secundario">🏠 Presupuesto de hogar</BtnLink>}
+      />
 
       {/* ── 1. BUSCAR ──────────────────────────────────────────────────────
           Lo primero, y HERMANO de la cartera, nunca hijo: `CarteraViva` hace

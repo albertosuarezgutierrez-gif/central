@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 interface FiscalRow {
   propertyId: string
@@ -112,34 +113,32 @@ export default function FiscalPage() {
         </div>
       </div>
       {/* Header */}
-      <div className="fiscal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>Fiscal IRPF</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-            Rendimientos de capital inmobiliario por propiedad y trimestre
-          </p>
-        </div>
-        <div className="fiscal-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <select
-            value={year}
-            onChange={e => setYear(Number(e.target.value))}
-            style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, background: 'var(--surface)', color: 'var(--text)' }}
-          >
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <button
-            onClick={() => downloadCSV(year, rows)}
-            disabled={rows.length === 0}
-            style={{
-              padding: '8px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-              border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff',
-              opacity: rows.length === 0 ? 0.5 : 1,
-            }}
-          >
-            Descargar CSV
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Fiscal IRPF"
+        sub="Rendimientos de capital inmobiliario por propiedad y trimestre"
+        acciones={
+          <>
+            <select
+              value={year}
+              onChange={e => setYear(Number(e.target.value))}
+              style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, background: 'var(--surface)', color: 'var(--text)' }}
+            >
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <button
+              onClick={() => downloadCSV(year, rows)}
+              disabled={rows.length === 0}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff',
+                opacity: rows.length === 0 ? 0.5 : 1,
+              }}
+            >
+              Descargar CSV
+            </button>
+          </>
+        }
+      />
 
       {/* Grand totals */}
       {rows.length > 0 && (
