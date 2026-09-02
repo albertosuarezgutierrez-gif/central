@@ -104,8 +104,10 @@ export {
 export {
   etiquetaRol,
   contactoEfectivo,
+  filasIntervinientes,
   type IntervinienteFicha,
   type ContactoEfectivo,
+  type FilasIntervinientes,
 } from './intervinientes.ts'
 export {
   FRACCIONES,
@@ -155,6 +157,7 @@ export {
   normalizarEmail,
   normalizarContacto,
   normalizarDni,
+  etiquetasIdentidad,
   enmascararDni,
   normalizarFechaNacimiento,
   normalizarNombre,
@@ -181,6 +184,7 @@ export {
   type TipoContacto,
   type ContactoCliente,
   type TipoPersona,
+  type EtiquetasIdentidad,
   type CampoIdentidad,
   type CampoLibre,
   type EdicionCliente,

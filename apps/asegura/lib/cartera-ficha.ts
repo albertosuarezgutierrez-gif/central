@@ -545,6 +545,12 @@ async function leerIntervinientes(
   try {
     const filas = await db.polizaInterviniente.findMany({
       where: { correduriaId, polizaId: { in: idsPolizas } },
+      // 🚨 Sin `orderBy`, Postgres devuelve las filas en el orden que le apetece.
+      // Con varias del MISMO rol —GLOBAL 2 tiene tres furgonetas y tres
+      // conductores habituales distintos— `contactoEfectivo` ordena de forma
+      // estable, así que el teléfono que se pinta en la ficha cambiaba de una
+      // recarga a otra sin que nada fallara. El orden es parte del resultado.
+      orderBy: [{ polizaId: 'asc' }, { rol: 'asc' }, { id: 'asc' }],
       select: {
         polizaId: true, rol: true, clienteId: true, origen: true,
         nombre: true, apellidos: true, telefono: true, email: true,

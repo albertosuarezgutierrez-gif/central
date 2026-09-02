@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏢 GLOBAL 2: el titular no salía en su propia póliza (02/09/2026, noche).** Alberto, revisando la
+  6930FBP: «¿no aparece propietario la empresa?». Cierto — el **tomador NO es un interviniente** (es el
+  `cliente_id` de la póliza), así que la tarjeta, que solo pintaba `poliza_intervinientes`, dejaba fuera
+  a la empresa titular en las 4 pólizas vivas de GLOBAL 2. Ahora va delante y con su rótulo
+  (`filasIntervinientes`, con cepo). Dos hallazgos más de la misma ficha: la consulta de intervinientes
+  **no tenía `orderBy`**, y con tres furgonetas y tres conductores habituales distintos el teléfono
+  «de la empresa» que se pintaba podía cambiar de una recarga a otra — ahora es determinista y dice de
+  qué matrícula sale. Y a una sociedad se le pedía «DNI, apellidos y fecha de nacimiento»:
+  `etiquetasIdentidad` rotula CIF/razón social/constitución. El CIF de GLOBAL 2 es suyo, no el DNI de
+  nadie (comprobado por hash, sin leer el valor). Mergeado #2139.
+
 - **🏠🏍️ «Haz todo» + el catálogo de Avant2 (02/09/2026, noche).** Mergeado #2130 (horquilla enchufada
   + capital de hogar por corroboración). Alberto pasó el catálogo de Integra: cruzado con las 109 vivas
   (tres compañías) sale que **RC no es un ramo de Codeoscopic** —8 activas sin camino automático— y que

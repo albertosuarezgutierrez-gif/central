@@ -35,6 +35,9 @@ export type IntervinienteFicha = {
 }
 
 const ROLES: Record<string, string> = {
+  // `tomador` no viene del enum del CRM: lo sintetiza `filasIntervinientes` a
+  // partir del titular de la póliza (ver abajo).
+  tomador: 'tomador',
   propietario: 'propietario',
   conductor_habitual: 'conductor habitual',
   conductor_ocasional: 'conductor ocasional',
@@ -56,8 +59,11 @@ export type ContactoEfectivo = {
   /** De dónde sale el teléfono: del tomador o de un interviniente. */
   viaTelefono: 'tomador' | 'interviniente' | null
   viaEmail: 'tomador' | 'interviniente' | null
-  /** Quién es, cuando no es el tomador — para decir «📞 (Juan Manuel, conductor habitual)». */
-  quien: { nombre: string | null; rol: string; fichaId: string | null } | null
+  /** Quién es, cuando no es el tomador — para decir «📞 (Juan Manuel, conductor habitual)».
+   *  `polizaId` es DE QUÉ póliza sale: una empresa con tres furgonetas tiene tres
+   *  conductores habituales distintos, y el número es el de UNO de ellos, no el
+   *  «teléfono de la empresa» (GLOBAL 2, 02/09/2026). */
+  quien: { nombre: string | null; rol: string; fichaId: string | null; polizaId: string } | null
   /** `true` cuando asegura NO informa intervinientes: entonces «sin teléfono»
    *  solo significa «el tomador no lo tiene», no «nadie lo tiene». */
   intervinientesSinMirar: boolean
@@ -91,7 +97,7 @@ export function contactoEfectivo(
     if (t) {
       base.telefono = t.telefono
       base.viaTelefono = 'interviniente'
-      base.quien = { nombre: t.nombre, rol: t.rol, fichaId: t.fichaId }
+      base.quien = { nombre: t.nombre, rol: t.rol, fichaId: t.fichaId, polizaId: t.polizaId }
     }
   }
   if (!base.email) {
@@ -99,7 +105,7 @@ export function contactoEfectivo(
     if (e) {
       base.email = e.email
       base.viaEmail = 'interviniente'
-      base.quien ??= { nombre: e.nombre, rol: e.rol, fichaId: e.fichaId }
+      base.quien ??= { nombre: e.nombre, rol: e.rol, fichaId: e.fichaId, polizaId: e.polizaId }
     }
   }
   return base
@@ -108,4 +114,53 @@ export function contactoEfectivo(
 function prioridad(rol: string): number {
   const i = PRIORIDAD_CONTACTO.indexOf(rol)
   return i === -1 ? PRIORIDAD_CONTACTO.length : i
+}
+
+/**
+ * Las filas que se pintan en la tarjeta «Intervinientes», con el TOMADOR
+ * delante.
+ *
+ * 🚨 El tomador NO es un interviniente: es el `cliente_id` de la propia póliza,
+ * y por eso no está en `poliza_intervinientes`. La tarjeta solo pintaba esa
+ * tabla, así que en una póliza cuyo único interviniente es el conductor la
+ * empresa titular no salía por ningún lado — Alberto lo vio el 02/09/2026 en la
+ * 6930FBP (Allianz 056309613), donde CIMA manda un `conductor_habitual` y nada
+ * más: la tarjeta listaba a una persona y del titular, ni rastro. El titular
+ * está en la BD y se sabe SIEMPRE; lo que faltaba era pintarlo.
+ *
+ * Si la compañía ya mandó una fila que ES el tomador (un `propietario` que
+ * coincide con la ficha del titular, que es el caso más común), no se duplica:
+ * esa fila ya se rotula «(el tomador)».
+ */
+export type FilasIntervinientes = {
+  filas: IntervinienteFicha[]
+  /** `sin_mirar` = no se pudo leer la tabla (≠ «no hay nadie más»).
+   *  `solo_tomador` = se miró y la compañía no mandó a nadie más. */
+  aviso: 'sin_mirar' | 'solo_tomador' | null
+}
+
+export function filasIntervinientes(
+  tomador: { polizaId: string; fichaId: string | null; nombre: string | null },
+  lista: IntervinienteFicha[] | null,
+): FilasIntervinientes {
+  const yaEsta = (lista ?? []).some((i) => i.esTomador)
+  const fila: IntervinienteFicha = {
+    polizaId: tomador.polizaId,
+    rol: 'tomador',
+    nombre: tomador.nombre,
+    nombreIlegible: false,
+    telefono: null,
+    email: null,
+    telefonoIlegible: false,
+    emailIlegible: false,
+    fichaId: tomador.fichaId,
+    esTomador: true,
+    // Ni `cima` ni `manual`: sale de la póliza misma.
+    origen: 'poliza',
+  }
+  const filas = yaEsta ? [...(lista ?? [])] : [fila, ...(lista ?? [])]
+  return {
+    filas,
+    aviso: lista === null ? 'sin_mirar' : lista.length === 0 ? 'solo_tomador' : null,
+  }
 }

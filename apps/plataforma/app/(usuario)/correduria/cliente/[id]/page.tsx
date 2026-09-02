@@ -70,7 +70,7 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
                 puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
                 diga el enum. */}
             <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={ficha.tipo === 'cliente' || vivas.length > 0} />
-            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} />
+            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
             {conyuge && (
               <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                 💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -261,12 +261,14 @@ const CAUSA_PII: Record<string, string> = {
   sin_muestra: 'no hay ningún dato cifrado con el que probar la clave',
 }
 
-function Contacto({ c, intervinientes, piiClave, contactos }: {
+function Contacto({ c, intervinientes, piiClave, contactos, polizas }: {
   c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
   intervinientes: IntervinienteFicha[] | null
   piiClave: string | null
   /** Todos los teléfonos/emails; `null` = asegura no manda el bloque (no se afirma «solo uno»). */
   contactos: ContactosCliente | null
+  /** Para decir de QUÉ póliza sale el número prestado (la matrícula, si es auto). */
+  polizas: { id: string; matricula: string | null; numeroPoliza: string | null }[]
 }) {
   // «(+N)» = hay más aparte del principal; se ven y editan en ✏️ Datos del cliente.
   const masTel = contactos && contactos.telefonos.length > 1 ? contactos.telefonos.length - 1 : 0
@@ -275,8 +277,13 @@ function Contacto({ c, intervinientes, piiClave, contactos }: {
   const causaPii = piiClave === null ? 'la clave no abre este dato (asegura no dice por qué: versión anterior)' : CAUSA_PII[piiClave] ?? `estado de clave desconocido: ${piiClave}`
   const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
   const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
+  // 🚨 De QUÉ póliza sale. GLOBAL 2 tiene tres furgonetas con TRES conductores
+  // habituales distintos: sin esto la ficha pinta el número de uno de ellos como
+  // si fuera «el teléfono de la empresa» (Alberto, 02/09/2026).
+  const suya = ef.quien ? polizas.find(x => x.id === ef.quien!.polizaId) ?? null : null
+  const deQue = suya?.matricula ? ` del ${suya.matricula}` : suya?.numeroPoliza ? ` de la nº ${suya.numeroPoliza}` : ''
   const quien = ef.quien
-    ? `${ef.quien.nombre ?? 'sin nombre legible'}, ${etiquetaRol(ef.quien.rol)}`
+    ? `${ef.quien.nombre ?? 'sin nombre legible'}, ${etiquetaRol(ef.quien.rol)}${deQue}`
     : null
   const deOtro = (via: 'tomador' | 'interviniente' | null) =>
     via === 'interviniente' && quien ? (
