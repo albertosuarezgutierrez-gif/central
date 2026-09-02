@@ -28,7 +28,7 @@ description: >
 | Cuadro de mando consolidado, god-panel `/admin`, Cuenta→Sociedad→Negocio, **concursos/licitaciones** | **plataforma** | `plataforma-maestro` |
 | Flota/camiones como negocio, vehículos, conductores, portes, rutas, servicios de transporte, intercompany flota→catering | **transporte** | `transporte-maestro` |
 | Alquiler de materiales/menaje (catálogo, tarifas/día, fianzas, disponibilidad, reserva→devolución), intercompany materiales→eventos | **alquiler** | `alquiler-maestro` |
-| Correduría de seguros **OPERATIVA**: clientes, pólizas, siniestros, vencimientos, integraciones con aseguradoras | **asegura** (Grupo Asegura) — 🚧 **el ESQUELETO ya existe** en `apps/asegura` (auth, layout, manifiestos); la **cartera aún NO está migrada** | `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md` |
+| Correduría de seguros **OPERATIVA**: clientes, pólizas, siniestros, vencimientos, integraciones con aseguradoras | **asegura** (Grupo Asegura) — ✅ **la cartera YA está en central** (schema `seguros`, 02/09/2026); `apps/asegura` es la trastienda (BD + `/api/operador/*`), las pantallas van en `plataforma` → `/correduria` | `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md` |
 | "¿Se ha roto algo?", auditoría, pruebas/testeo, post-rename/migración | (transversal) | `auditoria-central` |
 | Logo, banner, imagen de marca, mockup visual, iconos, diseño gráfico, activo visual | (transversal Adobe CC) | `adobe-diseno` |
 | "Adáptalo a la imagen corporativa de X", "corporativo 100%", cliente/tenant nuevo o rebrand, dejar la UI idéntica a SU marca (logo/colores/tipografía) | (transversal `@central/brand`) | `marca-cliente` |
@@ -38,14 +38,13 @@ Preguntar por «la correduría» es ambiguo y las dos respuestas viven en sitios
 - **Comisiones COBRADAS** (matriz compañía×mes, CIMA/TIREA, derivado de `movimientos_bancarios`
   con `destino='seguros'`, siempre BBVA) → **existe y está vivo** en `apps/plataforma /correduria`
   + `lib/correduria.ts` → skill `plataforma-maestro`.
-- **Operativa del CRM** (clientes, pólizas, siniestros) → **el ESQUELETO ya está** en `apps/asegura`
-  (auth propia, layout, manifiestos; 26/08/2026), pero **la cartera NO se ha migrado**. La desarrolló
-  **Manuel Suárez** (hermano de Alberto) en SU Supabase (`uijsgeocgdaxkhvwtjqs`, que Claude **sí lee por
-  `project_id`**) y SU Vercel. Fase 1 CERRADA con inventario medido: **52 tablas, 32.600 clientes, 28.843
-  pólizas, 92 MB**. En `central`: schema `seguros` (vacío) + rol `prisma_seguros` (inerte, sin contraseña),
-  en `apps/asegura/prisma/sql/2026-08-19_asegura_bootstrap.sql`.
-  🚨 **Es una migración EN CALIENTE:** CIMA/EIAC descarga ficheros a diario en el despliegue de Manuel →
-  apagarlo corta la entrada de pólizas, recibos y siniestros. El corte necesita **fecha y hora acordadas**.
+- **Operativa del CRM** (clientes, pólizas, siniestros) → **la cartera YA ESTÁ EN CENTRAL** desde el
+  02/09/2026: schema `seguros` (54 tablas, 32.600 fichas, 28.843 pólizas), `apps/asegura` la lee por
+  defecto y la sirve por `/api/operador/*`; las pantallas se montan en `plataforma` → `/correduria`,
+  NO en `apps/asegura` ni en la web del CRM de Manuel (que no se usa). El CRM (repo `asegura` + Vercel,
+  ya de Alberto) sigue desplegado **solo como motor de ingesta de CIMA** escribiendo en `seguros`. El
+  Supabase de Manuel (`uijsgeocgdaxkhvwtjqs`) es una foto congelada. Único cabo: el adaptador Java en
+  el Fly de Manuel (`docs/TRASPASO-CORREDURIA.md`). Ya NO hay migración en caliente ni corte que acordar.
   ⚠️ **RLS y auth son UNA decisión:** las 86 políticas se resuelven todas por `auth.uid()` de Supabase Auth;
   al re-plataformar la auth, y con `prisma_seguros` en BYPASSRLS, el fallo no sería «no se ve nada» sino
   **«se ve todo sin que falle nada»**. Estado, mensaje a Manuel y pasos: `docs/TRASPASO-CORREDURIA.md`.
