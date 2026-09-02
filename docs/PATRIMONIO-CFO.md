@@ -5,12 +5,21 @@
 > `.claude/skills/patrimonio-cfo/SKILL.md`. Diseño:
 > `docs/superpowers/specs/2026-08-22-patrimonio-cfo-design.md`.
 
-**Última pasada:** **24/08/2026 — DOSSIER INICIAL** (fuera de ciclo, a petición expresa de
-Alberto; ejecutada desde la sesión del canal conversacional, PR #1648). Informe Telegram
-enviado (messageId 3554). ⚠️ El termómetro del radar seguía SIN MEDIR (el `radar-espana`
-corre su primera pasada el 01/09): no se abrió ningún escenario disparado por ciclo, y las
-valoraciones usadas son el AVM de BBVA del 23/08 (pantallazo), no tasaciones.
-**Próxima pasada ordinaria: 02/09/2026** (con el termómetro del 01/09 delante).
+**Última pasada:** **02/09/2026 — 1ª pasada ordinaria del ciclo mensual**, con el termómetro
+del radar (01/09) ya delante. Preflight Telegram OK (200). **Próxima pasada ordinaria:
+02/10/2026.**
+
+⚠️ **Aviso de método, importante para leer la foto de abajo: la valoración "vigente" se
+volvió inestable este mes.** La regla del sistema (`patrimonio-resumen.ts`) es «la más
+reciente gana», y el 01/09 el radar refrescó `agente:m2zona` para los 3 inmuebles — más
+fresco que el AVM de BBVA del 23/08 — así que la vigente saltó de AVM a m2zona **en los
+tres a la vez**. Sube House Sevillana +390.100€ (832.000→1.222.100, la fórmula plana €/m²
+del casco antiguo sobrevalora una casa de 275 m² frente a los pisos de 60-120 m² que dominan
+la muestra — el propio radar lo señala) y baja Monte Carmelo −175.855€ (764.000→588.145, por
+el proxy municipal de `los-remedios`, que sigue sin existir como zona propia). Ninguno de los
+dos movimientos es apreciación real de mercado: es un artefacto de qué fuente ganó por fecha.
+**Por eso esta pasada da DOS cifras de neto** (ver Foto patrimonial) y recomienda una tasación
+real para House y Monte Carmelo antes de dar por buena la vigente del sistema.
 
 ## 💬 Canal conversacional por Telegram (24/08/2026)
 Alberto puede hablar con el agente patrimonial desde el móvil, sin esperar a la pasada mensual:
@@ -30,31 +39,52 @@ Objetivo **mixto** (rentas hoy + crecimiento largo plazo) · riesgo **dinámico*
 apalancamiento/rotación con el peor caso cuantificado; salvaguarda: Socorro = base de
 subsistencia familiar, siempre marcada) · **nunca ejecuta ni comunica a terceros**.
 
-## 📸 Foto patrimonial (24/08/2026 — primera foto)
+## 📸 Foto patrimonial (02/09/2026)
 
-**Neto mínimo conocido: 1.777.111,91€** (es un MÍNIMO: valoraciones AVM no contrastadas con
-tasación y dos cuentas sin saldo conocido; el capital de la hipoteca y la cuenta BBVA personal
-ya están confirmados).
-- 🏠 Inmuebles **1.890.000€** — AVM BBVA 23/08: Socorro 832.000€ · Dúplex 294.000€ · Monte
-  Carmelo 764.000€. (Las de Alberto y las `agente:m2zona` del 23/08 quedan al lado en
-  `patrimonio_valoraciones`; la vigente por activo es la más fresca.)
-- 💧 Liquidez **51.068,02€** — BBVA 19.940,62€ + Kutxabank 10.693,78€ (a 24/08) + **BBVA
-  personal ****2620 con 20.433,62€** (saldo a 27/06 — Alberto confirmó el 24/08/2026 que es
-  suya y cuenta; `oculta=false` en `cuentas_bancarias`, saldo pendiente de refrescar).
-  Declaradas y NO sumadas: N26 y Kutxa-Pilar sin saldo conocido.
-- 📈 IBKR **31.666,48€** (23/08) — sin alerta Modelo 720 (umbral de aviso 45.000€).
-- 🏦 Hipoteca Monte Carmelo **−195.622,59€ — CONFIRMADO por Alberto (24/08/2026**, pantalla
-  «Información del préstamo» de la app del banco; corrige el 195.324€ que dictó primero de memoria).
+**Neto mínimo — DOS lecturas por el aviso de método de arriba:**
+- **Neto "sistema" (vigente = más reciente, m2zona en las 3): 1.983.706,13€.**
+- **Neto comparable con la foto anterior (AVM en las 3, misma fuente que el 24/08):
+  1.772.557,13€** — Δ **−4.554,78€ (−0,26%)** vs los 1.777.111,91€ del 24/08. Prácticamente
+  plano; la liquidez bajó (ver abajo) y el broker subió, se compensan casi entero. **Esta es
+  la lectura que hay que seguir mes a mes** hasta que haya tasación real — la del "sistema"
+  puede saltar otros ±400k el día que cualquiera de las dos fuentes se refresque de nuevo.
+
+Ambas son un MÍNIMO: valoraciones sin tasación, BBVA personal con saldo de hace 68 días, y
+1 cuenta más sin saldo (Kutxa-Pilar; N26 igual).
+
+- 🏠 Inmuebles: **2.101.149€ (vigente sistema)** / **1.890.000€ (comparable AVM)**. Por activo
+  (vigente 01/09 vs AVM 23/08): Socorro **1.222.100€ / 832.000€** · Dúplex **290.904€ /
+  294.000€** (estos dos casi coinciden — el Dúplex no tiene el problema de método) · Monte
+  Carmelo **588.145€ / 764.000€**.
+- 💧 Liquidez **45.475,00€** — BBVA 18.637,10€ (02/09) + Kutxabank 6.404,28€ (02/09) + BBVA
+  personal ****2620 20.433,62€ (saldo a 27/06, **sin refrescar desde hace 68 días** — pedir a
+  Alberto que lo actualice). **Bajó 5.593€ vs el 24/08** (BBVA −1.303,52€, Kutxabank
+  −4.289,50€) — sin alarma (incluye el traslado de 1.065€ al plan de pensiones, ver hipoteca
+  abajo), pero merece vigilarse el mes que viene. Declaradas y NO sumadas: N26 y Kutxa-Pilar.
+- 📈 IBKR **32.704,72€** (01/09, +1.038,24€ vs 24/08) — sin alerta Modelo 720 (umbral 45.000€).
+- 🏦 Hipoteca Monte Carmelo **−195.622,59€** (sin cambio; cuota de agosto conciliada con el
+  recibo del banco, 772,86€ — ficha y banco cuadran, sin acción del vigía).
 
 **Yield neto 12m** (incomes − gastos del piso − ¼ de los compartidos `prop_multi_apartamentos`;
 aproximación declarada — no incluye lo que solo está en banca):
-| Activo | P&L 12m | Yield s/ vigente | Lectura |
-|---|---|---|---|
-| Socorro/House | ~66.195€ | **~8,0%** | Muy por encima de letras (2,663%) e indexado (~7% hist.). Mantener — base de subsistencia. |
-| Dúplex | ~18.056€ | **~6,1%** | Venta a 320k → 271-286k netos; equivalencia solo con riesgo bolsa. Ventana pendiente del termómetro. |
-| Bustos (subarr.) | ~24.437€ | n/a | Negocio sin capital propio. Mantener mientras dure el subarriendo. |
+| Activo | P&L 12m | Yield s/ AVM | Yield s/ vigente sistema | Lectura |
+|---|---|---|---|---|
+| Socorro/House | 92.555,75€ | **11,1%** | 7,6% | Por encima de letras (2,16% neto) e indexado (~7% hist.) con cualquiera de las dos valoraciones. Mantener — base de subsistencia. |
+| Dúplex | 18.987,90€ | **6,5%** | 6,5% | Por debajo del indexado histórico y, sobre todo, muy por debajo en eficiencia de rotación (ver abajo). Ventana de venta sigue pendiente del termómetro — sin agotamiento todavía. |
+| Bustos (subarr.) | 30.150,20€ | n/a | n/a | Negocio sin capital propio. Mantener mientras dure el subarriendo. |
 
-*Foto anterior: no hay (primera pasada). La comparación de evolución empieza el 02/09.*
+**Modelo Socorro — eficiencia por rotación (12m móviles, se recalcula cada mes):**
+| Activo | Reservas | Noches | €/reserva | €/noche |
+|---|---|---|---|---|
+| Socorro/House | 74 | 210 | **1.250,75€** | 440,74€ |
+| Dúplex | 65 | 261 | **292,12€** | 72,75€ |
+
+House sigue rindiendo **4,3× más por reserva** que el Dúplex con casi el mismo nº de
+reservas — mismo patrón que sostiene las recomendaciones #3 (venta abierta) y #4 (rotación a
+costa de Huelva), ambas aún sin decisión de Alberto.
+
+*Foto anterior: 24/08/2026 (dossier inicial), 1.777.111,91€ — comparación por la lectura AVM,
+ver arriba.*
 
 La foto viva se ve en `/patrimonio` (plataforma); la base está sembrada
 (22/08/2026, revisada 23/08/2026): **3 activos en propiedad** — Socorro 50/50 (275 m², RC
@@ -66,7 +96,19 @@ hipoteca de cuota conocida y capital sin dato). Los 2 Bustos
 fuera del patrimonio, su negocio sigue en SIVRA. Valoraciones `agente:m2zona` (enfoque
 vivienda) en `patrimonio_valoraciones` junto a las de Alberto — ver `docs/RADAR-ESPANA.md`.
 
-## 🧭 Recomendaciones vivas (registradas 24/08/2026, pendientes de decisión)
+## 🧭 Recomendaciones vivas (pendientes de decisión — ver estado 02/09/2026 abajo de cada una)
+
+**Estado a 02/09/2026:** #1 aceptada y en curso (sin acción nueva este mes: cuota conciliada,
+período 2026-27 ya cubierto). #2, #3 y #4 siguen **sin decisión de Alberto** — no se duplican,
+se listan tal cual con lo que cambió este mes debajo de cada una.
+
+⚠️ **Contexto nuevo para #4 (rotación a costa de Huelva): el euríbor sube y encarece la vía
+"no vender, apalancar".** El radar del 01/09 mide euríbor en 2,855% (máximo desde sept-2024) y
+~85% de probabilidad de que el BCE suba 25 p.b. el 10/09/2026. El escenario
+`via_hipoteca_26_08` de #4 comparaba fricción de venta (~32.400€) contra interés de una
+hipoteca nueva (~9.000€/año) — con tipos subiendo, ese segundo número es ahora una
+infraestimación; no se recalcula esta pasada (haría falta una oferta real de hipoteca), pero
+al decidir hay que pedir el tipo actualizado, no el de finales de agosto.
 
 - **#1 Hipoteca: recuperar la bonificación perdida (~0,20 pts) y NO amortizar hoy**
   — amortizar rinde el 1,31% aplicado vs ~2,16% neto de letras 12m (2,663% bruto, última
@@ -145,8 +187,10 @@ sigue viva y se cuenta?~~ (✅ cerrado 24/08/2026 — «es mía, personal»: des
 Gmail de Alberto**: la «Liquidación de Costes» definitiva de la compraventa está en el adjunto
 `PF ALBERTO SUAREZ.PDF` del email de María Luz (CajaSur) del **16/09/2021**, hilo
 «856289293-5 SUAREZ GUTIERREZ, ALBERTO Exp. nº: 210297423» (hubo un faltante de 120,49€ sobre
-la provisión). El conector de Gmail no descarga adjuntos: falta abrir ese PDF y pasar las
-cifras a `patrimonio_activos` (o que Alberto las dicte).
+la provisión). Sigue sin abrirse: **02/09/2026, el conector `gmail-adjuntos` no conectó esta
+sesión** (`CONNECTION_CLOSED`) — no es que el dato no exista, es que esta pasada no pudo
+mirarlo. Reintentar la próxima pasada; si vuelve a fallar, avisar a Alberto de que revise el
+conector desde `/config`.
 
 Primer cuestionario previsto para el dossier inicial: ~~m² y ref. catastral de Socorro y
 Monte Carmelo~~ (cerrado 23/08/2026 — Alberto dio las refs y el Catastro dio m²/año);

@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-02 · patrimonio-cfo** · hizo: 1ª pasada ordinaria del ciclo mensual (día 2). Preflight
+  Telegram OK. Foto patrimonial con doble lectura de neto (1.772.557€ comparable AVM, casi plano
+  vs 24/08; 1.983.706€ "vigente sistema", inflado por un artefacto de método — m2zona superó al
+  AVM en House y Monte Carmelo el mismo día, recomendado pedir tasación real). Yields + tabla
+  "modelo Socorro" recalculados con P&L 12m fresco (Socorro 11,1%/7,6%, Dúplex 6,5%/6,5%, 4,3x
+  menos €/reserva). Contexto nuevo añadido a la reco #4 (euríbor subiendo, BCE probable +25pb
+  10/09, encarece la vía "no vender, hipotecar"). Hipoteca: cuota conciliada con el banco, sin
+  cambios. Sin recomendaciones nuevas registradas (las #2/#3/#4 siguen abiertas sin decisión).
+  Telegram enviado (messageId 3926); `docs/PATRIMONIO-CFO.md` actualizado.
+  dudas: —; fallos: conector `gmail-adjuntos` no conectó esta sesión (`CONNECTION_CLOSED`) —
+  bloqueó abrir el PDF de gastos de adquisición de Monte Carmelo, ya localizado; reintentar
+  próxima pasada. PRs/commits: (este commit).
 - **2026-09-01 · facturas-correo** · hizo: pasada diaria (primera desde el 23/08, hueco de 9 días).
   Preflight `/api/internal/alerta` 200. Paso 0: Vía B sana (última copia `_buzon_pdf` hoy mismo,
   `dias_caido=0`); `agente_salud` actualizado. Backlog barrido: `PDF-pendiente` vacío;
