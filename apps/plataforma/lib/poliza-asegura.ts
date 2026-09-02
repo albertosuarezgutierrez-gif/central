@@ -6,6 +6,8 @@ import {
   leerIntervinientes, leerObjeto, leerPago, leerRecibos,
   type IntervinienteFicha, type ObjetoFicha, type PagoFicha, type RecibosPoliza, type SiniestroFicha, type MotivoFicha,
 } from './ficha-asegura.ts'
+import type { DocumentoResumen } from '@central/module-seguros'
+import { leerDocumentos } from './documentos-asegura.ts'
 
 export type CoberturaFicha = {
   orden: number | null
@@ -58,6 +60,8 @@ export type Poliza = {
   intervinientes: IntervinienteFicha[] | null
   /** `null` = no se pudo contar. `0` = se contó y no hay. */
   documentos: number | null
+  /** La lista con estados. `null` = asegura no la informa o no se pudo. */
+  listaDocumentos: DocumentoResumen[] | null
   pago: PagoFicha | null
   retarificable: boolean
 }
@@ -175,6 +179,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       siniestros,
       intervinientes: leerIntervinientes(p.intervinientes),
       documentos: 'documentos' in p ? entero(p.documentos) : null,
+      listaDocumentos: leerDocumentos(p.listaDocumentos),
       pago: leerPago(p.pago),
       retarificable: p.retarificable === true,
     },

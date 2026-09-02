@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
+import Documentos from '../../Documentos'
 import {
   fichaAsegura, urlRetarificar, urlSubirPoliza,
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
@@ -64,6 +65,11 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
       )}
 
       <Siniestros lista={ficha.siniestros} />
+
+      {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
+      <Tarjeta titulo="📎 Documentos">
+        <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+      </Tarjeta>
 
       {historicas.length > 0 && (
         <Polizas

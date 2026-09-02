@@ -380,13 +380,25 @@ sistema (las cuatro tablas a 0, `polizas.documento_url` 0%, `storage.objects` va
 Y falta el estado **«pedido pero no recibido»**: sin él, «0 documentos» no distingue no habérselo
 pedido de que el cliente no lo mande. Es la regla de `CLAUDE.md` aplicada al archivo.
 
-⏸️ **Decisión del 02/09/2026: los ficheros NO se guardan hasta que cierre el traspaso.** `/cartera/subir`
-lee la póliza y devuelve lo leído + hash, sin persistir. Guardarlos exige una tabla (`cliente_documentos`
-no existe; `poliza_documentos` exige póliza) y un cubo con ciclo de vida para PII, y **el schema `seguros`
-lo está moviendo otra conversación** (volcado del 02/09): crear tablas ahí a la vez, o escribir en la base
-de Manuel (rol SELECT-only), es pisar el traspaso. Cuando la lectura apunte a `seguros`, el diseño es:
-`documentos` colgados de cliente **o** de póliza **o** de siniestro (una tabla, tres FKs opcionales), estado
-`pedido`/`recibido`/`revisado`, fichero en Vercel Blob privado, `visible_por_cliente` para el portal.
+✅ **HECHO el 02/09/2026 (tarde), en cuanto la cartera estuvo en casa: tabla PROPIA `seguros.documentos`.**
+Una tabla para los tres sitios (cliente | póliza | siniestro: tres FKs opcionales y un CHECK de «colgado de
+algo»), con **`estado` pedido / recibido / revisado** — `pedido` es una fila SIN fichero, y así «0 documentos»
+deja de confundirse con «se lo pedí y no lo ha mandado». El fichero va en **`contenido bytea` (≤ 10 MB)** dentro
+de la misma BD, a propósito: son PDFs/fotos de ~100 clientes y así lo gobierna el mismo rol que la cartera, sin
+cubo de Storage ni claves nuevas en Vercel (si algún día pesa, se saca a Storage y la columna queda a NULL).
+SQL en `prisma/sql/2026-09-02_seguros_documentos.sql` (aplicada como migración `seguros_documentos`; los
+cuatro CHECK probados en la BD real en un bloque con rollback). `poliza_documentos` del CRM se deja intacta
+(0 filas) y se suma al contador de la póliza.
+- **Lógica pura** en `@central/module-seguros/documentos.ts` (5 tests): tipos, `revisarDocumento()` (PDF/foto,
+  ≤10 MB), `resumenDocumentos()` con TRES estados (`sin_consultar` ≠ `ninguno` ≠ `ok`) y
+  `documentosQueFaltan()` sobre `NECESARIOS_EMISION_AUTO` (DNI, permiso, ficha técnica) — un `pedido` sigue faltando.
+- **`lib/cartera-documentos.ts`**: `resolverDestino()` comprueba que cliente/póliza/siniestro son de ESTA
+  correduría antes de escribir (con BYPASSRLS un id ajeno no falla: da los datos de otro); las listas devuelven
+  `null` si la consulta falla, nunca `[]`; el fichero solo lo trae `leerDocumento()` de uno en uno.
+- **Puerto**: `GET/POST /api/operador/documentos` (lista · multipart guarda · json `{pedir:true}` anota) y
+  `GET/PATCH/DELETE /api/operador/documentos/[id]` (bytes · revisar · borrar). La ficha (`/cliente`) trae
+  `documentos` y la póliza (`/poliza`) `listaDocumentos`. La pantalla está en plataforma (`Documentos.tsx`).
+- `/cartera/subir` (leer la póliza con IA) sigue aparte y sigue SIN guardar: leer y archivar son dos botones.
 
 ## 🔌 El puerto que sirve la pantalla de plataforma (01/09/2026)
 
@@ -413,6 +425,7 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   dirección del RIESGO sí cruza el puerto (sin ella un hogar no se identifica); la del tomador, no.
   `lib/cartera-poliza.ts`. El `/cliente` usa la gemela para rellenar el objeto cuando CIMA no lo manda.
 - **`GET /buscar?q=`** — el buscador de TODO (ver abajo).
+- **`/documentos`** (02/09/2026) — ver «Documentos» más arriba: lista, subir, pedir, revisar, borrar, bytes.
 - **`GET /impagados`** — la cola de retención (ver abajo).
 
 ### 🔎 Qué se puede buscar de verdad, y qué NO (medido 01/09/2026)
