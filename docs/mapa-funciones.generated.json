@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-01T22:15:51Z",
-  "sha": "1a85db13b68e0d33814dee7909370459e9dc7732",
+  "generadoEn": "2026-09-02T04:58:51Z",
+  "sha": "304a164b2d7ce8c28a5f64ce6eaec6aa51275e54",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5291,8 +5291,8 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<AmbitoCorreduria>",
-          "linea": 19,
-          "resumen": "Resuelve a qué correduría pertenece la cuenta de la sesión. Hoy devuelve SIEMPRE `pendiente`, porque la tabla que vincula cuenta ↔ correduría vive en el schema `seguros` y todavía no existe. Eso es co"
+          "linea": 21,
+          "resumen": "Resuelve a qué correduría pertenece la cuenta de la sesión. Desde el volcado del 02/09/2026 el vínculo existe: `seguros.usuarios` trae los 17 usuarios del CRM de origen con su `correduria_id`, y la cu"
         },
         {
           "nombre": "correduriaIdActual",
@@ -5300,13 +5300,16 @@
           "exportada": true,
           "params": "cuentaId: string",
           "retorno": "Promise<string>",
-          "linea": 34,
+          "linea": 49,
           "resumen": "Azúcar: el `correduriaId` de la sesión, o lanza. Ver `exigirCorreduriaId`."
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "public",
+        "seguros"
+      ],
       "rutaApi": null,
-      "hash": "d7b0b72e7d54"
+      "hash": "ee0d56ab0ab9"
     },
     {
       "ruta": "apps/asegura/middleware.ts",
@@ -53606,7 +53609,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "02bc8cef3c75"
+      "hash": "a3914ed56633"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -63470,7 +63473,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cef70c8bdce1"
+      "hash": "b0da7fb6ba27"
     },
     {
       "ruta": "apps/plataforma/app/login/page.tsx",
