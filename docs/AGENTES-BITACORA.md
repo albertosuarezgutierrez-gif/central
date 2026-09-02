@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-02 · psd2-health-check** · hizo: preflight `/api/internal/alerta` 200 (canal vivo);
+  consulta de frescura sobre `movimientos_bancarios WHERE origen='psd2'`: último movimiento
+  2026-09-01 (hace 1 día, <48h OK), mov_30d=50 vs mov_30d_prev=68 (no hay caída >50%) → estado
+  ✅ OK, sin anomalía, sin alerta enviada. Revisadas también `conexiones_banco.ultimo_avisos`: la
+  conexión Kutxabank activa (`vinculada`, sync hoy) solo lleva la nota `ℹ️` ya conocida (ventana de
+  89 días rechazada, importa desde 2026-08-03) — no cuenta como fallo; las otras 3 filas con avisos
+  sin prefijo son conexiones `sustituida`/`caducada` con syncs de 17/08, ya no activas. dudas: —;
+  fallos: —; PRs/commits: — (solo bitácora, sin tocar código).
 - **2026-09-01 · facturas-correo** · hizo: pasada diaria (primera desde el 23/08, hueco de 9 días).
   Preflight `/api/internal/alerta` 200. Paso 0: Vía B sana (última copia `_buzon_pdf` hoy mismo,
   `dias_caido=0`); `agente_salud` actualizado. Backlog barrido: `PDF-pendiente` vacío;
