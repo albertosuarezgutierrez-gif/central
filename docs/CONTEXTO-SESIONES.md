@@ -32,6 +32,21 @@
 
 ---
 
+### 🖼️ (02/09/2026) plataforma: el rediseño LLEGA a la pantalla (PRs #2013 y #2018)
+- Alberto tras mergear #2011: «yo lo veo igual». **No era caché.** Ese PR mandó a producción cuatro
+  primitivas —`PageHeader`, `KpiCard`, `Badge`, `btnStyle`— **con CERO consumidores**: exactamente el
+  defecto que ese mismo PR diagnosticaba en el `ui.tsx` viejo, repetido el mismo día. Un sistema de
+  diseño que nadie importa no cambia ni un píxel; el guardián de tokens no lo caza porque no hay falta.
+- **#2013** enchufa lo visible: pestañas de `SegTabs` de pastilla-en-caja a **subrayado con iconos
+  lucide**, migas sobre el saldo, `<Pagina>` en las 4 vistas de `/banca`, azulejo de icono en cuentas y
+  brókeres, `colorImporte` en vez de hex, `<Dato>` en el saldo sin informar.
+- **#2018** pone la cabecera del libro de movimientos, y lo interesante es lo que destapó: **dos de las
+  columnas no eran columnas.** El 🤖 solo se pintaba en los cargos (en un ingreso, negocio e importe se
+  corrían 30 px) y el `<select>` de negocio se anchaba según el texto de su opción. Sin rótulos encima
+  no se notaba. Cabecera oculta en móvil (la fila se apila) y solo si hay filas.
+- **Pendiente:** siguen ~4.900 inline styles y 20 clases muertas movidas a `globals.css`, tres de ellas
+  con hueco responsive real (`/sivra/expenses` con modal a `maxWidth:520` en móvil). CI verde en ambos.
+
 ### 🎨 (02/09/2026) plataforma: sistema de diseño vivo, color por tokens y SEIS tokens fantasma (PR #2011)
 - Salió de «mírate Argon Dashboard». No se importó nada de él: es un kit Bootstrap estático y el problema
   no era la piel. **`dashboard/ui.tsx`, que el CLAUDE.md documentaba como sistema de diseño, NO lo importaba
