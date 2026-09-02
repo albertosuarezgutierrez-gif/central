@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-01T22:15:51Z",
+  "generadoEn": "2026-09-02T05:23:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -20,6 +20,11 @@
       "id": "core-ai",
       "tipo": "core",
       "npm": "@central/core-ai"
+    },
+    {
+      "id": "core-catastro",
+      "tipo": "core",
+      "npm": "@central/core-catastro"
     },
     {
       "id": "core-email",
@@ -379,6 +384,56 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-catastro": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       },
       "transporte": {
         "estado": "no",
@@ -820,7 +875,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 8
       },
       "rrhh": {
         "estado": "usado",
@@ -1896,7 +1951,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1920,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 8
       },
       "rrhh": {
         "estado": "no",
@@ -1946,7 +2001,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-portal": {
         "estado": "no",
@@ -3440,6 +3495,9 @@
   },
   "depsModulos": {
     "core-ai": [],
+    "core-catastro": [
+      "module-subastas"
+    ],
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
@@ -3486,6 +3544,7 @@
     "module-seguros-portal": [],
     "module-ses": [],
     "module-subastas": [
+      "core-catastro",
       "module-concursos"
     ],
     "module-trading": [],
@@ -3534,10 +3593,12 @@
       "/api/operador/buscar",
       "/api/operador/cliente",
       "/api/operador/clientes",
+      "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/comisiones",
       "/api/operador/impagados",
       "/api/operador/ingesta",
+      "/api/operador/poliza",
       "/api/operador/resumen",
       "/api/operador/vencimientos"
     ],
@@ -4348,6 +4409,7 @@
       "/api/correduria",
       "/api/correduria/buscar",
       "/api/correduria/cartera",
+      "/api/correduria/catastro",
       "/api/correduria/cliente",
       "/api/correduria/clientes",
       "/api/correduria/comisiones",
@@ -5313,6 +5375,42 @@
   ],
   "novedades": [
     {
+      "titulo": "Duplicado «Jose Suarez Salas»",
+      "fecha": ""
+    },
+    {
+      "titulo": "Auditoría de duplicidades",
+      "fecha": ""
+    },
+    {
+      "titulo": "Corrección",
+      "fecha": ""
+    },
+    {
+      "titulo": "Contacto/intervinientes",
+      "fecha": ""
+    },
+    {
+      "titulo": "Catastro para hogar HECHO",
+      "fecha": ""
+    },
+    {
+      "titulo": "Forma de pago",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pantalla de PÓLIZA hecha",
+      "fecha": ""
+    },
+    {
+      "titulo": "«Haz todo» (2ª tanda, mismo PR #2001):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Alberto repuso los dos PIN desde el panel",
+      "fecha": ""
+    },
+    {
       "titulo": "`/cartera/renovaciones`",
       "fecha": ""
     },
@@ -5334,42 +5432,6 @@
     },
     {
       "titulo": "`modality.category`",
-      "fecha": ""
-    },
-    {
-      "titulo": "El canal es un PUERTO",
-      "fecha": ""
-    },
-    {
-      "titulo": "Los 15 precios reales del 29/07 son TODOS `estimado`",
-      "fecha": ""
-    },
-    {
-      "titulo": "Corrección de hecho:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Apagado por defecto",
-      "fecha": ""
-    },
-    {
-      "titulo": "Hallazgo:",
-      "fecha": ""
-    },
-    {
-      "titulo": "Siguiente paso al confirmar envs:",
-      "fecha": ""
-    },
-    {
-      "titulo": "SMS con enlace `wa.me` para que escriba el cliente primero y salga gratis: descartado.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Campaña a los 32.520 leads: descartada.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Sí al inbound de cualquiera",
       "fecha": ""
     }
   ],
@@ -5822,10 +5884,10 @@
   },
   "resumen": {
     "verticales": 12,
-    "packages": 39,
+    "packages": 40,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1228,
+    "apis": 1231,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
