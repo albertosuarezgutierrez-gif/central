@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T05:46:23Z",
+  "generadoEn": "2026-09-02T07:50:32Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1951,7 +1951,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 12
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1975,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 12
       },
       "rrhh": {
         "estado": "no",
@@ -3596,6 +3596,8 @@
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/comisiones",
+      "/api/operador/documentos",
+      "/api/operador/documentos/[id]",
       "/api/operador/impagados",
       "/api/operador/ingesta",
       "/api/operador/poliza",
@@ -4415,6 +4417,8 @@
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/detalle",
+      "/api/correduria/documentos",
+      "/api/correduria/documentos/[id]",
       "/api/correduria/impagados",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
@@ -4859,6 +4863,7 @@
       "seguros.cotizaciones",
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
+      "seguros.documentos",
       "seguros.gestiones",
       "seguros.historial_interno",
       "seguros.lds_consent",
@@ -5375,6 +5380,38 @@
   ],
   "novedades": [
     {
+      "titulo": "#2013",
+      "fecha": ""
+    },
+    {
+      "titulo": "#2018",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Pendiente:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Lo que un agente NO puede ver:",
+      "fecha": ""
+    },
+    {
+      "titulo": "Medido por Chrome (02/09, solo lectura):",
+      "fecha": ""
+    },
+    {
+      "titulo": "Segundo token vivo",
+      "fecha": ""
+    },
+    {
+      "titulo": "Rotado por Alberto (Chrome, 02/09 09:03 CEST):",
+      "fecha": ""
+    },
+    {
       "titulo": "Hecho por Claude Chrome (02/09):",
       "fecha": ""
     },
@@ -5400,38 +5437,6 @@
     },
     {
       "titulo": "Forma de pago",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pantalla de PÓLIZA hecha",
-      "fecha": ""
-    },
-    {
-      "titulo": "«Haz todo» (2ª tanda, mismo PR #2001):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Alberto repuso los dos PIN desde el panel",
-      "fecha": ""
-    },
-    {
-      "titulo": "`/cartera/renovaciones`",
-      "fecha": ""
-    },
-    {
-      "titulo": "NO hay botón de «retarificar todas»",
-      "fecha": ""
-    },
-    {
-      "titulo": "BD de matrículas gratis: no la hay útil.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Siguiente ramo: HOGAR",
-      "fecha": ""
-    },
-    {
-      "titulo": "`deductible` la traen 10 de 18 precios",
       "fecha": ""
     }
   ],
@@ -5887,7 +5892,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 38,
-    "apis": 1231,
+    "apis": 1235,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 1
