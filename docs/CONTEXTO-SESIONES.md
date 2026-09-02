@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💾📐🗺️ Etapa 2 de tarificación + el mapa de campos (02/09/2026, tarde-noche).** Cada cotización
+  cuesta 0,50€ y no es idempotente, así que ahora se GUARDA lo que se recibe (`seguros.cotizaciones` +
+  `cotizacion_precios`, invariante `simulado = (intento_id is null)` en la BD) y `estimar()`/`mereceLaPena()`
+  dicen si merece la pena pedirla (PR #2116). Cerrado de paso el fallo que el propio cambio creó: la ruta
+  no pasaba `contexto`, o sea se pagaba y NO se guardaba. **⚠️ El SQL sigue SIN aplicar en Supabase.**
+  🐛 CI rojo dos veces por un motivo que no hablaba de cotizaciones: `lib/db.ts` construía el `PrismaClient`
+  AL IMPORTAR, y el job `Tests` no corre `prisma generate` (en local sí estaba, por los typechecks) —
+  ahora es diferido tras un `Proxy`, con cepo. 🗺️ Un agente midió el **mapa de campos** Codeoscopic×CIMA
+  (PR #2125, `docs/ASEGURA-MAPA-CAMPOS-RAMOS.md`): **RC está bloqueado porque Codeoscopic NO ofrece el ramo**
+  (lo cierra `GET /insurance-lines`, gratis y ya implementado, sin llamar nunca); hogar tiene `capital_asegurado`
+  NULL en sus 37 filas de coberturas; y 14 de las 80 «auto» son motos por marca con `insuranceLine:'Car'` a fuego.
+  Corregido en `apps/asegura/CLAUDE.md` (PR #2121) que auto «solo trae matrícula»: trae marca y modelo al 100%,
+  lo que falta es la versión. Pendiente de Alberto: 20 suposiciones por aprobar y `CODEOSCOPIC_SIMULACION=true`.
 - **🧠 El agente de huéspedes «no aprendía» — y el que decidía nunca leyó lo aprendido (02/09/2026).** Queja de
   Alberto sobre el borrador a Claudio (153122091). El aprendizaje SÍ escribía: el phishing por WhatsApp estaba
   enseñado tres veces. Lo que fallaba: (1) `debeEscalar` (control de calidad) solo veía ficha+guía, nunca
@@ -48,8 +61,13 @@
   (`module-seguros/emision.ts`) + `registrarPolizaEmitida` + puerto cerrado tras `CODEOSCOPIC_EMISION_ACTIVA`;
   **el envío al vendor NO se construye** (no hay sandbox para el gate de idempotencia). Portal Fase 4 (vínculo
   por email, lectura por columnas) y canal web (`/seguros` en plataforma → alta `fuente=web` → Telegram
-  `correduria.lead-nuevo`) construidos por agentes; PR de la tarde. Pendiente de Alberto: contraseña del rol
-  + `DATABASE_URL` + `PII_LOOKUP_KEY` en el proyecto Vercel del portal (¿existe?), y entorno de pruebas de Codeoscopic.
+  `correduria.lead-nuevo`) construidos por agentes. **PR #2118 mergeado** (`f0dc7cbb`); probado en prod:
+  `/seguros` 200, lead vacío 422, honeypot 200 sin efectos. **«Hazlo» (portal):** contraseña de
+  `prisma_asegura_portal` generada EN la BD y guardada en el **Vault** (`prisma_asegura_portal_password`),
+  verificada por dblink (pooler OK, `dni` → 42501); proyecto Vercel `asegura-portal` creado por API
+  (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`; enlace Git verificado: el bot de Vercel ya lo lista con su Root
+  Directory, deployment «Ignored» por `--sin-previews`). Pendiente de Alberto en el panel:
+  `DATABASE_URL` (plantilla en el SQL), `PII_LOOKUP_KEY` = la de central-asegura, secretos de sesión/canal.
 - **«Repara»: el menú mentía en dos sitios (02/09/2026).** Sin objetivo dicho, así que se buscó qué estaba roto de
   verdad. (1) El lateral encendía DOS entradas a la vez: «Inicio» + el segmento en `/banca?tab=*` (lo introdujo
   #2106 — «Inicio» ES `/banca` y los cinco segmentos comparten esa ruta), y «Pricing Lab» + «Pricing auto» /
