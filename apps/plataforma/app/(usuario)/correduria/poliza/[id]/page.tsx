@@ -522,8 +522,8 @@ function CapitalesHogar({ caps }: { caps: NonNullable<Poliza['capitalesHogar']> 
       <Capital titulo="Continente (el inmueble)" c={caps.continente} />
       <Capital titulo="Contenido (el mobiliario)" c={caps.contenido} />
       <p style={{ ...sub, gridColumn: '1 / -1', margin: 0 }}>
-        Ninguna compañía manda una fila que diga «este es el capital»: se deriva de las garantías, y solo se afirma
-        cuando varias coinciden en el mismo importe.
+        El estándar EIAC sí manda el capital etiquetado, pero nuestra ingesta guarda el importe y tira la etiqueta:
+        aquí se deriva de las garantías, y solo se afirma cuando varias coinciden en el mismo importe.
       </p>
     </div>
   )

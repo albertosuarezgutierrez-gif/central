@@ -264,7 +264,13 @@ pedir nada. Duplicarlo en una tabla nuestra crearía dos verdades, y la que mand
   compañía**: continente y contenido recomendados, con media, máximo y mínimo, desglosados por
   `results[].product.config` y con `favorite: true` marcando la configuración preferida.
 
-### 🚨 En hogar el primer precio es SIEMPRE estimado
+### 🚨 El primer precio es SIEMPRE estimado — y NO solo en hogar
+
+⚠️ **Corregido el 02/09/2026 releyendo el snapshot.** Este apartado se escribió como una
+particularidad de hogar y no lo es: en los ejemplos del propio portal, **las 28 cotizaciones del
+ejemplo de coche traen `"estimate": true`**, 23 de ellas con `actions:[{"id":"ReRate","required":true}]`,
+y el ejemplo de moto igual. O sea, el «primer precio estimado + re-tarificación obligatoria» aplica a
+auto, moto y hogar por igual. Lo que sigue vale, pero no como excepción del ramo.
 
 En el ejemplo de hogar del portal, **todas** las cotizaciones traen `"estimate": true` y
 `actions: [{"id": "ReRate", "required": true}]`. El portal: «This operation is **mandatory** for
@@ -373,3 +379,159 @@ Analytics, bCover, Tesis ERP— es producto suyo, no API.
 
 ⚠️ Lo que este documento **no** autoriza a decir: cuántas de esas compañías puede cotizar Grupo
 Asegura de verdad. Eso son `GET /insurance-lines` y los acuerdos firmados, no un PDF de marketing.
+
+---
+
+# 🔬 Segunda pasada al snapshot (02/09/2026): moto, el índice entero y las dos preguntas caras
+
+El `.mht` del portal se volvió a decodificar entero buscando lo que la primera pasada no miró. El
+portal es un **rapi-doc sobre un OpenAPI**; los esquemas se leen del árbol del DOM, y **los ejemplos
+de los seis ramos están todos ahí** (request solo el de coche; respuestas las seis).
+
+## 🏍️ El ramo MOTO, contrato completo
+
+Hoy no está cableado y **es el ramo más barato de añadir**: `MotorcycleRisk` es `CarRisk` con cuatro
+diferencias, ni una más.
+
+| | Auto (`CarRisk`) | Moto (`MotorcycleRisk`) |
+|---|---|---|
+| `drivingExperience`* | **no existe** | **obligatorio** (`/motorcycle/driving-experience-options`: `ThisMotorcycle`, `OtherMotorcycle`) |
+| `previousMotorcycle.code` | — | obligatorio **si** `drivingExperience = OtherMotorcycle` |
+| `secondaryDriver` | sí (conductor ocasional) | **no existe** |
+| `lightTrailer`* | **obligatorio** (remolque ligero) | no existe |
+| `installedOptions` | sí (opciones Base7) | **no existe** |
+| Todo lo demás | idéntico | idéntico |
+
+Obligatorios del `risk` de moto: `vehicle.code` (Base7), `circulationAddress.postalCode` +
+`circulationAddress.town.id`, `garageType.id`, `primaryDriver`, `owner`, `drivingExperience.id`,
+`previouslyInsured`. Condicional: `registrationDate` «**Required:** if `registrationPlate` is not null».
+
+**Y una diferencia fina que ahorra un 400 pagado:** en el `holder` de moto, `town` y `address` son
+`required: false`; en auto son `required: true`. El resto (identificación, nacimiento, estado civil,
+sexo, nombre, teléfono) es obligatorio en los dos, con el mismo `phone.pattern`
+`^[9|8|7|6][0-9]{8}$`.
+
+Sus **11 catálogos** (todos gratis): `/motorcycle/` `brands` · `brands/{id}/models` ·
+`brands/{id}/models/{id}/vehicles` · `driving-experience-options` · `driving-license-issuing-zones` ·
+`driving-licenses` · `engine-types` · `garage-types` · `insurance-companies` · `person-roles` ·
+`registration-date`. Dos detalles medidos: `driving-licenses` de moto añade **`maxDisplacement`**
+(`{"id":"A1","minAge":16,"maxDisplacement":125}`), que auto no trae; y en `…/vehicles` el parámetro
+`engine` es **obligatorio y enum cerrado** (`Gasoline` | `Diesel` | `Others`), mientras que en auto es
+texto libre.
+
+## 🚨 `onlyPopular` tiene `Default: true` — y nos estaba recortando las marcas
+
+`GET /car/brands` (y el de moto) admite `onlyPopular`, **por defecto `true`**. Llamarlo a secas
+devuelve solo las marcas «populares»: **una marca fuera de esa lista no aparece en el desplegable, sin
+error y sin hueco que la delate** — se ve exactamente igual que si no existiera, y deja un coche
+entero sin poder retarificar. Corregido el 02/09/2026 (`catalogos.ts` pasa `onlyPopular=false`
+explícito) con cepo en `test/regression-asegura-gasto-codeoscopic.test.ts`, verificado quitándolo.
+
+## Lo demás de AUTO que no estaba escrito
+
+- **Catálogos sin citar:** `/car/driving-license-issuing-zones` · `/car/driving-licenses` ·
+  `/car/engine-types` · `/car/garage-types` · `/car/insurance-companies` · `/car/person-roles` ·
+  **`/car/vehicles/{vehicleCode}/options`** (las opciones catalogadas de ESE coche en Base7).
+- **Campos del `risk` sin citar:** `installedOptions[]` (con `includedOptions`/`excludedOptions`/
+  `requiredOptions`), `installedAccessories[]`, `lightTrailer`, `secondaryDriver`, `purchaseDate`,
+  `kilometersPerYear` (Min 0 / Max 9.999.999). Y ojo: **`circulationAddress` NO es una dirección** —
+  son solo `postalCode` + `town.id`.
+- **Reglas literales:** matrícula `^([ceCE]?\d{4}[\D\w]{3})|([\D\w]{1,2}\d{4}[\D\w]{1,2})$` ·
+  `externalId` `^[a-zA-Z0-9-._~]+$` · `GET /insurances`: «the date range cannot be wider than 1 year»
+  y `fromDate`/`toDate` obligatorias si no mandas `id`/`externalId` · `PATCH /insurances/{id}` es
+  **incremental** y descarta lo que no esté en el esquema.
+- 🎯 **`person-roles` acepta `offerId`** y entonces devuelve lo que hace falta **para EMITIR** esa
+  oferta, no para cotizar. Es la lista de tareas de la fase 2 servida por el vendor. Y avisa:
+  «incorporating or modifying these fields **after quoting will invalidate any previous quotes**
+  (they will need to be re-rated)».
+
+## El índice: 131 operaciones
+
+**Insurance (9)**: `/insurance-companies` · `/insurance-lines` · `/insurance-lines/{id}/products` ·
+`/insurance-vendors` · `GET /insurances` · **`POST /insurances`** (cotizar) · `GET|PATCH /insurances/{id}` ·
+`POST /insurances/{id}/reports`.
+**Offer (3)**: `POST …/offers` (re-tarificar) · `GET …/offers/{id}` · `GET …/offers/{id}/coverages`
+(rejilla comparativa normalizada de garantías — es lo que hoy nos falta para comparar coberturas).
+**Quote (1)**: `PATCH …/quotes/{id}` — **solo toca `brokerFee`**.
+**Policy application (5)** · **Policy (6)** · **Claim (8)** · **Receipt (7)** · **Report (1)** ·
+**File (1)** · **Brokerage (9)** · **Sales organization (3)** · **Client (16)** · **ASM app (2)** ·
+**Product Form (1)** · **Person (12)** · **Location (7)** · **Payment (2)** · **Vehicle (1)** ·
+**Car (11)** · **Motorcycle (11)** · **Home (11)** · **Health/Burial (1+1)** · **Term life (2)**.
+
+Las marcadas `[TBM]` exigen licencia de **Tesis Broker Manager** (todo `Brokerage`, y los `POST/PUT/
+DELETE` de clientes, siniestros y recibos). `POST /reports` tipo `PolicyApplications` exporta
+**en el formato del ERP de la organización — y el portal cita EIAC**: hay un puente documentado entre
+lo que emitamos por Codeoscopic y el estándar por el que entra CIMA.
+
+⚠️ **Y algo que NO está: webhooks.** Las palabras `webhook`, `subscribe`, `notification` y `polling`
+aparecen **cero veces** en todo el snapshot; la API es petición/respuesta síncrona, avisando de que
+cotizar «can take more than a minute». Esto **no** demuestra que el webhook que ya tenemos no exista
+—se configura en el panel de Codeoscopic, no en esta API— pero sí que **no hay contrato publicado
+que leer**: lo que sepamos de él saldrá de sus entregas reales, no de aquí.
+
+## ⏳ Caducidad de un precio: la mejor pista que hay
+
+**El portal no documenta ninguna caducidad.** No define `expires_at` en ningún sitio. La única frase
+que la roza está en `POST /insurances/{id}/offers`: una vez re-tarificado, no debería hacer falta
+repetirlo «unless other restrictions apply (such as the **offer being expired**)».
+
+Pero los EJEMPLOS traen `quote.expirationDate`, y **dónde aparece es lo informativo**:
+
+| Ejemplo del portal | ¿trae `expirationDate`? |
+|---|---|
+| `POST /insurances` (los seis ramos) | **NO** |
+| `GET /insurances/{id}` | **NO** |
+| `GET …/offers/{id}` con la oferta aún `estimate:true` | **NO** |
+| **`POST …/offers`** (ya re-tarificado) | **SÍ** |
+| **`…/policy-applications`** | **SÍ** |
+
+**Deducción, no afirmación del portal:** la caducidad **aparece cuando el precio deja de ser
+estimado**, o sea tras el re-rate — que es exactamente lo que explica nuestra medición de que **los 15
+precios reales tenían `expires_at` a NULL**: eran todos primeros precios estimados. Y el plazo **lo
+pone cada compañía**: en los cinco ejemplos va de 15 a 60 días desde la creación, y respecto a la
+fecha de efecto va de **−1** a **+22** días (uno caduca ANTES de entrar en vigor). **No se puede
+calcular: hay que leer el campo.**
+
+Sigue sin respuesta: cuánto vale un precio ya pagado y si una cotización caducada se puede reabrir
+sin volver a pagar.
+
+## 🔁 Idempotencia: la pregunta sigue abierta, y el portal empeora el riesgo
+
+Búsqueda exhaustiva de `idempot`, `retry`, `duplicate`, `dedup`, `charge`, `billing`, `credit`:
+**cero coincidencias**. No hay cabecera `Idempotency-Key`, ni una nota de qué pasa al repetir un
+`POST /insurances`. El portal **ni siquiera menciona que cotizar cueste dinero** (la única nota
+económica de toda la API es la de créditos de `GET /vehicles`).
+
+Lo más cercano, en literal:
+
+- **`POST /insurances`, campo `id` del cuerpo:** «If the insurance project has already been quoted,
+  set this field to the previous insurance project identifier, so the new insurance project gets
+  **associated** with the previous one. Otherwise… **a new independent insurance project will be
+  created**.» Asocia; **no deduplica**.
+- **`externalId`:** sirve para **buscar después** (`GET /insurances?externalId=`). No se documenta
+  ninguna restricción de unicidad. Es la herramienta para **detectar** un duplicado, no para evitarlo.
+- **502/503/504:** «Please, **try again** the operation in a few minutes.» O sea: **el fabricante te
+  pide reintentar la misma operación que él describe como creadora de un proyecto nuevo e
+  independiente.** Eso refuerza la política de un solo intento que ya tiene el código.
+- `POST …/policy-applications` avisa de que «the main product will be submitted first and, **if
+  accepted**, the addons next»: puede quedarse **a medias**, y no dice cómo reanudarlo.
+
+**Conclusión operativa:** la pregunta «¿un reintento duplica proyecto y cargo?» **no la responde el
+portal** y hay que preguntarla a `soporteapi@codeoscopic.com` (comercial, para créditos:
+`comercial@codeoscopic.com`). Mientras tanto: un intento, `externalId` siempre puesto, y consultar
+antes de gastar.
+
+## Cabeceras y detalles de cableado que faltaban
+
+- `Accept: application/vnd.codeoscopic.v1+json` es **obligatoria en todas las peticiones**: ahí se
+  elige la versión de cada operación.
+- `X-Client-App` — «**will be mandatory eventually**»; el valor lo da su soporte por correduría.
+- `X-User-Email` es **obligatoria** en `POST …/offers`, y «some operations, such as the quote
+  operation, cannot be executed as a brokerage».
+- `X-Total-Count` **solo viene en la primera página** (`pageNumber=1`).
+- Esquema de error: `path`, `requestId`, `error`, `message`, `status`, `timestamp` — el portal pide
+  incluirlo entero al reportar incidencias, así que **se registran los seis**.
+- Caducan además: el `access_token` (`expires_in: 360`), el token de app (`120 s`), el borrador de
+  `/insurance-drafts` (24 h) y el fichero del informe de ofertas (24 h, y **solo se descarga una vez**).
+- **El changelog del portal tiene UNA entrada, de 2024-03-07.** La API no publica cambios desde
+  entonces.

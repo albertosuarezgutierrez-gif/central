@@ -104,8 +104,18 @@ export async function tiposDeGaraje(config: ConfigCodeoscopic): Promise<Opcion[]
   return normalizarOpciones(await catalogo(config, '/car/garage-types'))
 }
 
+/**
+ * Las marcas de coche.
+ *
+ * 🚨 `onlyPopular` va EXPLÍCITO a `false`, y no es cosmético: el portal lo
+ * documenta con **`Default: true`**, así que llamar a `/car/brands` a secas
+ * devuelve solo las marcas «populares» — el resto sencillamente no aparece, sin
+ * error y sin hueco que lo delate. En el desplegable se vería igual que si la
+ * marca no existiera, que es la forma silenciosa de mentir que persigue
+ * `CLAUDE.md`. Medido en el snapshot del portal el 02/09/2026.
+ */
 export async function marcas(config: ConfigCodeoscopic): Promise<Opcion[]> {
-  return normalizarOpciones(await catalogo(config, '/car/brands'))
+  return normalizarOpciones(await catalogo(config, '/car/brands?onlyPopular=false'))
 }
 
 export async function modelos(config: ConfigCodeoscopic, marcaId: string): Promise<Opcion[]> {
