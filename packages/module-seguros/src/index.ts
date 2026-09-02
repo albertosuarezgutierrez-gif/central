@@ -124,3 +124,13 @@ export {
   type DocumentoResumen,
   type ResumenDocumentos,
 } from './documentos.ts'
+export {
+  retarificabilidad,
+  RIESGO_HOGAR_MINIMO,
+  numeroPositivo,
+  anioPlausible,
+  cpValido,
+  type Retarificabilidad,
+  type RamoRetarificable,
+  type EntradaRetarificable,
+} from './retarificable.ts'

@@ -5,6 +5,9 @@
 // en dos sitios y, cuando asegura no responde, la pantalla apilaba tres
 // recuadros de error distintos diciendo lo mismo.
 
+import type { Retarificabilidad } from '@central/module-seguros'
+import { leerRetarificacion } from './ficha-asegura.ts'
+
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
 
 export const MOTIVOS_PUERTO: Record<MotivoPuerto, string> = {
@@ -207,6 +210,8 @@ export type EnRiesgo = {
   diasParaExtincion: number | null
   accion: string
   retarificable: boolean
+  /** Ramo/motivo/fuente del veredicto. `null`/ausente = asegura (versión vieja) no lo manda. */
+  retarificacion?: Retarificabilidad | null
 }
 
 export type Impagados =
@@ -275,6 +280,7 @@ export function interpretarImpagados(status: number, json: unknown): Impagados {
       diasParaExtincion: numero(o.diasParaExtincion),
       accion: cadena(o.accion) ?? '',
       retarificable: o.retarificable === true,
+      retarificacion: leerRetarificacion(o.retarificacion),
     })
   }
 

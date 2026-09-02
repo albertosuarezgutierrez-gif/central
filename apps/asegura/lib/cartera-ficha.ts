@@ -26,10 +26,11 @@ import {
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
-import type { DocumentoResumen } from '@central/module-seguros'
+import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
 import { listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
+import { elegirRiesgo, hogarDeDatos, type HogarCartera } from './codeoscopic/desde-cartera-hogar.ts'
 
 /** Un resultado de búsqueda: lo justo para elegir a quién abrir. */
 export type ClienteEncontrado = {
@@ -138,6 +139,8 @@ export type PolizaFicha = {
   viva: boolean
   /** Solo las de auto con matrícula se pueden retarificar hoy. */
   retarificable: boolean
+  /** Por qué ramo se puede (o por qué no). Misma frase en todas las pantallas. */
+  retarificacion: Retarificabilidad
   /** Lo que se sabe de los recibos de ESTA póliza. Ver `RecibosPoliza`. */
   recibos: RecibosPoliza
   /**
@@ -336,6 +339,13 @@ export async function fichaCliente(
     documentos,
     polizas: c.polizas.map((p) => {
       const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
+      const datosGemela = p.importRef === null && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined
+      const retarificacion = retarificabilidad({
+        tipo: String(p.tipo),
+        estado: String(p.estado),
+        datos,
+        datosGemela: esObjetoPlano(datosGemela) ? datosGemela : null,
+      })
       const matricula = datos ? texto(datos.matricula) : null
       return {
         id: p.id,
@@ -353,7 +363,8 @@ export async function fichaCliente(
         objeto: objetoConGemela(String(p.tipo), datos, p.importRef === null && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined),
         matricula,
         viva: p.importRef === null,
-        retarificable: String(p.tipo) === 'auto' && matricula !== null,
+        retarificable: retarificacion.retarificable,
+        retarificacion,
         recibos: resumirRecibos(
           (recibosPorPoliza.get(p.id) ?? []).map((r) => ({
             id: r.id,
@@ -486,6 +497,15 @@ export type OrigenRetarificacion = {
   poliza: PolizaCartera
   /** Para pintar de qué póliza se habla. */
   etiqueta: string
+  tipo: string
+  estado: string
+  /**
+   * El riesgo de HOGAR (m², año, CP, capitales, calle descifrada), de la póliza
+   * o de su copia gemela del volcado. `null` = no hay riesgo legible en ninguna
+   * de las dos — que NO es «no tiene casa». Solo se rellena en pólizas de hogar.
+   */
+  hogar: HogarCartera | null
+  retarificacion: Retarificabilidad
 }
 
 export async function origenRetarificacion(
@@ -500,6 +520,8 @@ export async function origenRetarificacion(
     select: {
       id: true,
       tipo: true,
+      estado: true,
+      importRef: true,
       aseguradora: true,
       numeroPoliza: true,
       codigoEntidadDgs: true,
@@ -538,6 +560,31 @@ export async function origenRetarificacion(
 
   const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
 
+  // 🧬 La copia GEMELA (mismo número en la otra cara): CIMA no manda el objeto
+  // de hogar, el volcado sí. Si la consulta falla queda `null` — «no se ha
+  // podido mirar», y la pantalla lo dirá; nunca se inventa un riesgo.
+  const gemelaDatos: unknown = p.numeroPoliza
+    ? await db.poliza
+        .findFirst({
+          where: {
+            correduriaId, mergedIntoPolizaId: null, numeroPoliza: p.numeroPoliza, id: { not: p.id },
+            importRef: p.importRef === null ? { not: null } : null,
+          },
+          select: { datosEspecificos: true },
+        })
+        .then((g) => g?.datosEspecificos ?? null)
+        .catch(() => null)
+    : null
+  const datosGemela = esObjetoPlano(gemelaDatos) ? gemelaDatos : null
+  const esHogar = String(p.tipo) === 'hogar'
+  const hogar = esHogar
+    ? elegirRiesgo(
+        hogarDeDatos(datos, 'poliza', descifrar(texto(datos?.direccion))),
+        hogarDeDatos(datosGemela, 'gemela', descifrar(texto(datosGemela?.direccion))),
+      )
+    : null
+  const retarificacion = retarificabilidad({ tipo: String(p.tipo), estado: String(p.estado), datos, datosGemela })
+
   const cliente: ClienteCartera = {
     nombre: p.cliente.nombre,
     apellidos: p.cliente.apellidos,
@@ -565,6 +612,10 @@ export async function origenRetarificacion(
     cliente,
     poliza,
     etiqueta: `${p.aseguradora}${p.numeroPoliza ? ` · ${p.numeroPoliza}` : ''}`,
+    tipo: String(p.tipo),
+    estado: String(p.estado),
+    hogar,
+    retarificacion,
   }
 }
 

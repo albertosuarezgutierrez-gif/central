@@ -6,6 +6,7 @@ import {
   type IntervinienteFicha, type PolizaFicha, type RecibosPoliza,
 } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
+import { rotuloRetarificar } from '../../rotulo-retarificar'
 
 export const dynamic = 'force-dynamic'
 
@@ -282,7 +283,7 @@ function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
                     // El único salto a asegura: es donde se gasta el dinero, y
                     // se gasta detrás de su propia pantalla de confirmación.
                     <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ whiteSpace: 'nowrap' }}>
-                      Retarificar ↗
+                      {rotuloRetarificar(p.retarificacion)}
                     </a>
                   ) : (
                     <span style={{ color: 'var(--muted)' }} title={motivoNoRetarificable(p)}>—</span>
@@ -436,6 +437,9 @@ function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
 }
 
 function motivoNoRetarificable(p: PolizaFicha): string {
+  // asegura ya manda el motivo (auto Y hogar, con la copia gemela mirada);
+  // el texto de abajo es el respaldo para una versión desplegada más vieja.
+  if (p.retarificacion?.motivo) return p.retarificacion.motivo
   if (p.tipo !== 'auto') return `Hoy solo se retarifica auto (esta es de ${p.tipo}).`
   return 'La compañía no ha informado la matrícula, y sin ella no se puede identificar el vehículo.'
 }

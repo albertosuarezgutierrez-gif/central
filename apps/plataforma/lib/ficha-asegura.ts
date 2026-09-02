@@ -1,4 +1,4 @@
-import type { DocumentoResumen } from '@central/module-seguros'
+import type { DocumentoResumen, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 // La ficha de un cliente de la correduría, leída por el puerto de central-asegura.
 //
@@ -67,6 +67,10 @@ export type PolizaFicha = {
   matricula: string | null
   viva: boolean
   retarificable: boolean
+  /** Por qué ramo se retarifica (auto/hogar), por qué NO, y de dónde salen los
+   *  datos del riesgo. `null` = la versión desplegada de asegura aún no lo manda:
+   *  entonces se cae al booleano `retarificable` de siempre. */
+  retarificacion: Retarificabilidad | null
   /** `null` = la versión desplegada de asegura aún no manda el bloque de recibos.
    *  NO es «no tiene recibos»: eso sería `total: 0`, que ya significa otra cosa. */
   recibos: RecibosPoliza | null
@@ -204,6 +208,32 @@ export function leerRecibos(v: unknown): RecibosPoliza | null {
   }
 }
 
+const RAMOS_RETARIFICABLES = new Set(['auto', 'hogar'])
+const FUENTES_RETARIFICACION = new Set(['poliza', 'gemela'])
+
+/**
+ * El veredicto de retarificación, o `null` si no llega o llega con forma rara.
+ *
+ * Nunca se inventa un `{retarificable:false}`: eso pintaría «no se puede» sobre
+ * una póliza de la que solo se sabe que asegura no ha dicho nada. `null` deja
+ * que la pantalla caiga al booleano `retarificable` de siempre.
+ */
+export function leerRetarificacion(v: unknown): Retarificabilidad | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.retarificable !== 'boolean') return null
+  const ramo = o.ramo === null ? null : typeof o.ramo === 'string' && RAMOS_RETARIFICABLES.has(o.ramo) ? o.ramo : undefined
+  const fuente = o.fuente === null ? null : typeof o.fuente === 'string' && FUENTES_RETARIFICACION.has(o.fuente) ? o.fuente : undefined
+  if (ramo === undefined || fuente === undefined) return null
+  if (o.motivo !== null && typeof o.motivo !== 'string') return null
+  return {
+    ramo: ramo as Retarificabilidad['ramo'],
+    retarificable: o.retarificable,
+    motivo: cadena(o.motivo),
+    fuente: fuente as Retarificabilidad['fuente'],
+  }
+}
+
 /** El bloque de pago, o `null` si no llega. Un recargo con estado raro se
  *  degrada a `sin_datos`: nunca a «calculado» con un número que nadie calculó. */
 export function leerPago(v: unknown): PagoFicha | null {
@@ -306,6 +336,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       matricula: cadena(p.matricula),
       viva: p.viva === true,
       retarificable: p.retarificable === true,
+      retarificacion: leerRetarificacion(p.retarificacion),
       recibos: leerRecibos(p.recibos),
       pago: leerPago(p.pago),
     })

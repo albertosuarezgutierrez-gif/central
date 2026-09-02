@@ -3,6 +3,7 @@ import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, eti
 import Documentos from '../../Documentos'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
+import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
@@ -37,7 +38,7 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
           <span>{p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
           {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
           {p.retarificable && (
-            <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>Retarificar ↗</a>
+            <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>{rotuloRetarificar(p.retarificacion)}</a>
           )}
         </div>
       </div>

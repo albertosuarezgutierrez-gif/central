@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireSession } from '@/lib/session'
 import { correduriaUnica } from '@/lib/cartera'
-import { origenRetarificacion } from '@/lib/cartera-ficha'
+import { origenRetarificacion, type OrigenRetarificacion } from '@/lib/cartera-ficha'
 import { precalificarAuto, type Resueltos } from '@/lib/codeoscopic/desde-cartera'
+import { precalificarHogarCartera, type ResueltosHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
 import { resolverConfig } from '@/lib/codeoscopic/config'
 import {
   estadosCiviles,
@@ -11,10 +12,21 @@ import {
   municipiosPorCp,
   fechaMatriculacionDeMatricula,
   emparejar,
+  lineasDeSeguro,
+  hogarDisponible,
+  catalogoHogar,
+  type CatalogoHogar,
+  type DisponibilidadHogar,
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
 import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
+import { eur } from '@/lib/dinero'
 import Retarificador from './retarificador'
+import RetarificadorHogar, {
+  CATALOGOS_OBLIGATORIOS,
+  CATALOGOS_OPCIONALES,
+  type PrefijadosHogar,
+} from './retarificador-hogar'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +41,10 @@ export const dynamic = 'force-dynamic'
  * El orden de la pantalla es el orden del razonamiento: primero qué se sabe,
  * luego qué se ha SUPUESTO (que es la letra pequeña del precio), luego qué
  * falta, y solo al final el botón.
+ *
+ * Ramifica por el ramo (`origen.tipo`): auto y hogar tienen cada uno su
+ * pantalla; cualquier otro ramo se explica con el `motivo` de
+ * `retarificabilidad()` y no tiene botón.
  */
 export default async function RetarificarPage({
   params,
@@ -51,6 +67,45 @@ export default async function RetarificarPage({
   const origen = await origenRetarificacion(correduria.id, polizaId)
   if (!origen) notFound()
 
+  if (origen.tipo === 'auto') return <PantallaAuto origen={origen} polizaId={polizaId} correduriaId={correduria.id} />
+  if (origen.tipo === 'hogar') return <PantallaHogar origen={origen} polizaId={polizaId} correduriaId={correduria.id} />
+
+  return (
+    <div className="grid">
+      <Cabecera origen={origen} detalle={`ramo ${origen.tipo}`} />
+      <div className="card">
+        <h2>Esta póliza no se puede retarificar todavía</h2>
+        <p>{origen.retarificacion.motivo ?? `Hoy no se retarifica el ramo «${origen.tipo}».`}</p>
+      </div>
+    </div>
+  )
+}
+
+function Cabecera({ origen, detalle }: { origen: OrigenRetarificacion; detalle: string }) {
+  return (
+    <div>
+      <p className="muted">
+        <Link href="/cartera">← Cartera</Link>
+      </p>
+      <h1>Retarificar</h1>
+      <p className="muted">
+        {origen.etiqueta} · {detalle}
+      </p>
+    </div>
+  )
+}
+
+// ─── AUTO ────────────────────────────────────────────────────────────────────
+
+async function PantallaAuto({
+  origen,
+  polizaId,
+  correduriaId,
+}: {
+  origen: OrigenRetarificacion
+  polizaId: string
+  correduriaId: string
+}) {
   // ── Catálogos y matrícula: todo gratis, y con el interruptor apagado ───────
   const r = resolverConfig(process.env, { ignorarInterruptor: true })
   let civiles: Opcion[] = []
@@ -106,19 +161,11 @@ export default async function RetarificarPage({
   }
 
   const pre = precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
-  const consumo = await estadoConsumo(correduria.id)
+  const consumo = await estadoConsumo(correduriaId)
 
   return (
     <div className="grid">
-      <div>
-        <p className="muted">
-          <Link href="/cartera">← Cartera</Link>
-        </p>
-        <h1>Retarificar</h1>
-        <p className="muted">
-          {origen.etiqueta} · matrícula {origen.poliza.matricula ?? '—'}
-        </p>
-      </div>
+      <Cabecera origen={origen} detalle={`matrícula ${origen.poliza.matricula ?? '—'}`} />
 
       {fallaCatalogo && <div className="card err">{fallaCatalogo}</div>}
 
@@ -145,28 +192,7 @@ export default async function RetarificarPage({
         </div>
       </div>
 
-      {pre.supuestos.length > 0 && (
-        <div className="card">
-          <h2>⚠️ Lo que se ha supuesto</h2>
-          <p className="muted">
-            Ninguno de estos datos está en la ficha. El precio sale con ellos, así que forman parte
-            de la letra pequeña: si alguno no es cierto, la prima real cambia.
-          </p>
-          <ul>
-            {pre.supuestos.map((s) => (
-              <li key={`${s.campo}-${String(s.valor)}`}>
-                <strong>{s.campo}</strong>: <code>{String(s.valor)}</code> — {s.porque}
-                {s.optimista && (
-                  <>
-                    {' '}
-                    <span className="badge warn">puede abaratar el precio</span>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <Supuestos supuestos={pre.supuestos} />
 
       <Retarificador
         polizaId={polizaId}
@@ -179,6 +205,208 @@ export default async function RetarificarPage({
         consumo={'error' in consumo ? { error: consumo.error } : consumo}
         deshabilitado={fallaCatalogo !== null}
       />
+    </div>
+  )
+}
+
+// ─── HOGAR ───────────────────────────────────────────────────────────────────
+
+const FUENTE_RIESGO: Record<string, string> = {
+  poliza: 'de la póliza',
+  gemela: 'de la copia del volcado de junio/2026 (misma póliza, tecleada a mano en el CRM)',
+}
+
+async function PantallaHogar({
+  origen,
+  polizaId,
+  correduriaId,
+}: {
+  origen: OrigenRetarificacion
+  polizaId: string
+  correduriaId: string
+}) {
+  // ── Todo gratis: catálogos, municipios y los ramos habilitados ────────────
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  let civiles: Opcion[] = []
+  let municipios: Opcion[] = []
+  const catalogos: Partial<Record<CatalogoHogar, Opcion[]>> = {}
+  const fallosCatalogo: string[] = []
+  let ramo: DisponibilidadHogar = { estado: 'desconocido' }
+  let fallaConfig: string | null = null
+
+  const cpRiesgo = origen.hogar?.cp ?? origen.cliente.codigoPostal
+  const nombres = [...CATALOGOS_OBLIGATORIOS, ...CATALOGOS_OPCIONALES]
+
+  if (r.estado === 'lista') {
+    const cfg = r.config
+    const [c, m, l, ...cats] = await Promise.all([
+      estadosCiviles(cfg).catch((e: unknown) => errar(e)),
+      cpRiesgo ? municipiosPorCp(cfg, cpRiesgo).catch((e: unknown) => errar(e)) : Promise.resolve([]),
+      lineasDeSeguro(cfg).catch((e: unknown) => errar(e)),
+      ...nombres.map((n) =>
+        catalogoHogar(cfg, n).catch((): Opcion[] | null => null),
+      ),
+    ])
+    civiles = c
+    municipios = m
+    ramo = hogarDisponible(l)
+    nombres.forEach((n, i) => {
+      const lista = cats[i]
+      // `null` = no se pudo leer; `[]` = llegó vacío. Los dos bloquean si es
+      // obligatorio, pero se dicen distinto.
+      if (lista === null || lista.length === 0) fallosCatalogo.push(n)
+      else catalogos[n] = lista
+    })
+    if (civiles.length === 0) fallosCatalogo.push('marital-statuses')
+  } else {
+    fallaConfig =
+      'Codeoscopic no está configurado en este entorno, así que no hay catálogos ni se puede cotizar.'
+  }
+
+  const estadoCivilAuto = emparejar(civiles, origen.cliente.estadoCivil)
+  const primero = (n: CatalogoHogar) => catalogos[n]?.[0]?.id ?? null
+
+  // La precalificación inicial: con los defectos de la pantalla (primera
+  // opción de cada obligatorio) marcados como supuestos, para que se vean.
+  const resueltos: ResueltosHogar = {
+    municipioId: municipios.length === 1 ? Number(municipios[0].id) : null,
+    estadoCivilId: estadoCivilAuto?.id ?? null,
+    tipoVivienda: primero('property-types'),
+    uso: primero('uses'),
+    ocupacion: primero('occupancy-types'),
+    supuestos: { tipoVivienda: true, uso: true, ocupacion: true },
+  }
+  const pre = precalificarHogarCartera(
+    origen.cliente,
+    { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, hogar: origen.hogar },
+    resueltos,
+    hoyIso(),
+  )
+  const consumo = await estadoConsumo(correduriaId)
+
+  const h = origen.hogar
+  const prefijados: PrefijadosHogar = {
+    cp: typeof pre.datos.cp === 'string' ? pre.datos.cp : null,
+    metrosCuadrados: h?.metrosCuadrados ?? null,
+    anioConstruccion: h?.anioConstruccion ?? null,
+    capitalContinente: h?.capitalContinente ?? null,
+    capitalContenido: h?.capitalContenido ?? null,
+    fechaEfecto: typeof pre.datos.fechaEfecto === 'string' ? pre.datos.fechaEfecto : null,
+  }
+
+  const estadoRamo =
+    ramo.estado === 'disponible' ? (
+      <p className="badge ok">Hogar tarifica para esta organización · id del ramo: <code>{ramo.id}</code></p>
+    ) : ramo.estado === 'ausente' ? (
+      <div className="card err">
+        Hogar NO está entre los ramos que Codeoscopic tarifica para esta organización (hay: {ramo.ramos.join(', ')}).
+        El botón queda deshabilitado hasta que lo den de alta.
+      </div>
+    ) : (
+      <div className="card err">
+        No se ha podido comprobar si hogar tarifica para esta organización: la lista de ramos no llegó. No es
+        «no tarifica», es «no se sabe» — y sin saberlo no se cotiza.
+      </div>
+    )
+
+  return (
+    <div className="grid">
+      <Cabecera origen={origen} detalle={`hogar · ${h?.localidad ?? h?.cp ?? 'riesgo sin localizar'}`} />
+
+      {fallaConfig && <div className="card err">{fallaConfig}</div>}
+      {!fallaConfig && estadoRamo}
+
+      <div className="card">
+        <h2>Lo que se manda desde la ficha</h2>
+        <p className="muted">
+          {h === null ? (
+            <>
+              Ni la póliza ni su copia del volcado traen el riesgo: <strong>tecléalo</strong> abajo o consúltalo en el
+              Catastro (plataforma → correduría → hogar).
+            </>
+          ) : (
+            <>
+              El riesgo sale <strong>{FUENTE_RIESGO[h.fuente ?? ''] ?? 'de origen desconocido'}</strong>.
+            </>
+          )}
+        </p>
+        <div className="table-wrap">
+          <table>
+            <tbody>
+              <Fila etiqueta="Compañía actual (código DGS)" valor={origen.poliza.codigoEntidadDgs} />
+              <Fila etiqueta="Póliza anterior" valor={origen.poliza.numeroPoliza} />
+              <Fila etiqueta="Vencimiento actual" valor={origen.poliza.fechaVencimiento} />
+              <Fila etiqueta="Dirección del riesgo" valor={h?.direccion ?? null} nota="No viaja al vendor: solo para reconocer la casa." />
+              <Fila etiqueta="Localidad" valor={h?.localidad ?? null} />
+              <Fila
+                etiqueta="Código postal del riesgo"
+                valor={h?.cp ?? null}
+                nota={h?.cp ? null : origen.cliente.codigoPostal ? `Se supone el del tomador (${origen.cliente.codigoPostal}).` : null}
+              />
+              <Fila etiqueta="Superficie" valor={h?.metrosCuadrados !== null && h?.metrosCuadrados !== undefined ? `${h.metrosCuadrados} m²` : null} />
+              <Fila etiqueta="Año de construcción" valor={h?.anioConstruccion?.toString() ?? null} />
+              <Fila etiqueta="Capital continente" valor={h?.capitalContinente != null ? eur(h.capitalContinente) : null} />
+              <Fila etiqueta="Capital contenido" valor={h?.capitalContenido != null ? eur(h.capitalContenido) : null} />
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <p style={{ margin: 0 }}>
+          🚨 <strong>El formato del riesgo de hogar del vendor NO está verificado.</strong> Si lo rechaza por validación
+          (400) <strong>NO se cobra</strong> y el mensaje dirá qué campo sobra o falta; si lo acepta, es una cotización real
+          (0,50€).
+        </p>
+      </div>
+
+      <Supuestos supuestos={pre.supuestos} />
+
+      <RetarificadorHogar
+        polizaId={polizaId}
+        faltanInicial={pre.faltan}
+        civiles={civiles}
+        municipios={municipios}
+        estadoCivilAuto={estadoCivilAuto}
+        catalogos={catalogos}
+        fallosCatalogo={fallosCatalogo}
+        ramo={ramo}
+        prefijados={prefijados}
+        consumo={'error' in consumo ? { error: consumo.error } : consumo}
+        deshabilitado={fallaConfig !== null}
+      />
+    </div>
+  )
+}
+
+// ─── Piezas comunes ──────────────────────────────────────────────────────────
+
+function Supuestos({
+  supuestos,
+}: {
+  supuestos: Array<{ campo: string; valor: unknown; porque: string; optimista?: boolean }>
+}) {
+  if (supuestos.length === 0) return null
+  return (
+    <div className="card">
+      <h2>⚠️ Lo que se ha supuesto</h2>
+      <p className="muted">
+        Ninguno de estos datos está en la ficha. El precio sale con ellos, así que forman parte
+        de la letra pequeña: si alguno no es cierto, la prima real cambia.
+      </p>
+      <ul>
+        {supuestos.map((s, i) => (
+          <li key={`${s.campo}-${String(s.valor)}-${i}`}>
+            <strong>{s.campo}</strong>: <code>{String(s.valor)}</code> — {s.porque}
+            {s.optimista && (
+              <>
+                {' '}
+                <span className="badge warn">puede abaratar el precio</span>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

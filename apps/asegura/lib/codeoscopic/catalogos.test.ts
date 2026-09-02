@@ -7,8 +7,33 @@ import {
   leerFecha,
   emparejar,
   hogarDisponible,
+  CATALOGOS_HOGAR,
+  esCatalogoHogar,
+  catalogoHogar,
   type Opcion,
 } from './catalogos.ts'
+import type { ConfigCodeoscopic } from './config.ts'
+
+// ─── Catálogos de hogar: lista cerrada, nada de paths con texto libre ───────
+
+test('los diez catálogos de hogar del portal están en la lista, y solo esos', () => {
+  assert.deepEqual([...CATALOGOS_HOGAR].sort(), [
+    'alarm-types', 'build-materials', 'build-qualities', 'door-types', 'locations',
+    'occupancy-types', 'person-roles', 'property-types', 'settlement-types', 'uses',
+  ])
+  assert.ok(esCatalogoHogar('uses'))
+  assert.ok(!esCatalogoHogar('recommend-limits'), 'recommend-limits es POST: no es un catálogo')
+  assert.ok(!esCatalogoHogar('../insurances'))
+  assert.ok(!esCatalogoHogar(42))
+})
+
+test('🚫 un nombre fuera de la lista se rechaza ANTES de tocar la red', async () => {
+  const config = {} as ConfigCodeoscopic // si se llegara a la red, reventaría por otro sitio
+  await assert.rejects(
+    () => catalogoHogar(config, '../insurances' as never),
+    /codeoscopic_catalogo_hogar_desconocido/,
+  )
+})
 
 // ─── ¿Tarifica hogar? Tres estados ──────────────────────────────────────────
 

@@ -1419,11 +1419,16 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `no_encontrado` · `direccion_ilegible` · `error`), API `POST /api/correduria/catastro` (sesión).
   Usa `@central/core-catastro` (extraído de subastas; `lib/subastas/enriquecer.ts` lo re-exporta).
   🚨 La referencia de 14 es el EDIFICIO y no trae m² ni año: se pide la de 20 (`precalificarHogar`
-  lo declara). Pedir precio de hogar a Codeoscopic sigue SIN conectar (solo auto), pero la página ya
-  dice si **hogar tarifica** para nuestra organización: `lineasCodeoscopic()` → puerto
-  `GET /api/operador/codeoscopic/lineas` (= `GET /insurance-lines` del vendor, **gratis**, corre con
-  el interruptor apagado). Tres estados: `disponible` (con el id EXACTO del ramo, que es lo que va en
+  lo declara). La página dice si **hogar tarifica** para nuestra organización: `lineasCodeoscopic()` →
+  puerto `GET /api/operador/codeoscopic/lineas` (= `GET /insurance-lines` del vendor, **gratis**, corre
+  con el interruptor apagado). Tres estados: `disponible` (con el id EXACTO del ramo, que es lo que va en
   `insuranceLine`) · `ausente` (hay que pedírselo a Codeoscopic) · `desconocido` (no se pudo mirar).
+  ✅ **Pedir precio de hogar SÍ conecta desde el 02/09/2026 (tarde):** en la ficha del cliente y de la
+  póliza, «Retarificar hogar ↗» salta a la pantalla de confirmación de asegura, que ramifica por ramo.
+  El puerto manda por póliza `retarificacion: {ramo, retarificable, motivo, fuente}` (helper
+  `retarificabilidad()` de `@central/module-seguros`); `null` si asegura es más viejo → se cae al
+  booleano de antes. `motivo` es la frase del `title` cuando no se puede (ya no vive aquí duplicada).
+  Hogar exige m² + año + CP en la póliza o en su copia gemela del volcado — CIMA no los manda.
 - **📎 Documentos en la ficha del cliente y de la póliza (02/09/2026, tarde):** `Documentos.tsx` (client) sobre
   `/api/correduria/documentos` (POST multipart = subir · POST json `{pedir:true}` = anotar pedido) y
   `/api/correduria/documentos/[id]` (GET = el fichero en streaming · PATCH revisar · DELETE), que reenvían al puerto

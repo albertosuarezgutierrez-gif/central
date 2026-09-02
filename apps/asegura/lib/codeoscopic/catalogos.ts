@@ -126,6 +126,42 @@ export async function versiones(
   )
 }
 
+// ─── Catálogos de HOGAR (gratis) ─────────────────────────────────────────────
+
+/**
+ * Los diez catálogos de hogar del portal (`docs/CODEOSCOPIC-API-PORTAL.md`).
+ * La lista es CERRADA a propósito: el path se construye con el nombre, y un
+ * nombre fuera de aquí sería un GET a una ruta inventada. No cuesta dinero
+ * (son consultas), pero tampoco se hace: un catálogo que «no existe» y un
+ * catálogo que no se ha podido leer tienen que poder distinguirse.
+ */
+export const CATALOGOS_HOGAR = [
+  'property-types',
+  'build-materials',
+  'build-qualities',
+  'door-types',
+  'alarm-types',
+  'locations',
+  'occupancy-types',
+  'settlement-types',
+  'uses',
+  'person-roles',
+] as const
+
+export type CatalogoHogar = (typeof CATALOGOS_HOGAR)[number]
+
+export function esCatalogoHogar(nombre: unknown): nombre is CatalogoHogar {
+  return typeof nombre === 'string' && (CATALOGOS_HOGAR as readonly string[]).includes(nombre)
+}
+
+/** `GET /home/<nombre>`, normalizado. Rechaza con `Error` un nombre fuera de la lista. */
+export async function catalogoHogar(config: ConfigCodeoscopic, nombre: CatalogoHogar): Promise<Opcion[]> {
+  if (!esCatalogoHogar(nombre)) {
+    throw new Error(`codeoscopic_catalogo_hogar_desconocido: «${String(nombre)}» no está entre ${CATALOGOS_HOGAR.join(', ')}`)
+  }
+  return normalizarOpciones(await catalogo(config, `/home/${nombre}`))
+}
+
 // ─── Ramos que tarifican para NUESTRA organización (gratis) ──────────────────
 
 /**

@@ -26,7 +26,7 @@ import {
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
-import type { DocumentoResumen } from '@central/module-seguros'
+import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
 import { contarDocumentosPoliza, listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import type { SiniestroFicha } from './cartera-ficha'
@@ -81,7 +81,10 @@ export type FichaPoliza = {
   /** La lista (con estado pedido/recibido/revisado). `null` = no se pudo consultar. */
   listaDocumentos: DocumentoResumen[] | null
   pago: { fraccionamiento: string | null; formaCobro: string | null; recargo: RecargoFraccionamiento }
+  /** `retarificacion.retarificable`, mantenido por compatibilidad con quien ya lo lee. */
   retarificable: boolean
+  /** Por qué ramo se puede pedir precio (auto/hogar), o por qué no, mirando también la gemela. */
+  retarificacion: Retarificabilidad
 }
 
 function descifrar(v: string | null | undefined): string | null {
@@ -193,7 +196,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
   ])
 
   const datos = datosConDireccion(p.datosEspecificos)
-  const matricula = datos ? texto(datos.matricula) : null
+  const datosGemela = esObjetoPlano(gemela?.datosEspecificos) ? gemela.datosEspecificos : null
+  const retarificacion = retarificabilidad({ tipo: String(p.tipo), estado: String(p.estado), datos, datosGemela })
   const coberturasTexto = p.coberturasRel.map((c) => c.descripcion).filter((d): d is string => !!d)
   const recibosCrudos = p.recibos.map((r) => ({
     id: r.id, situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal,
@@ -258,6 +262,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         recibos: recibosCrudos.map((r) => ({ importe: importeEiac(r.primaTotal), fechaEmision: r.fechaEmision, situacion: r.situacion })),
       }),
     },
-    retarificable: String(p.tipo) === 'auto' && matricula !== null,
+    retarificable: retarificacion.retarificable,
+    retarificacion,
   }
 }

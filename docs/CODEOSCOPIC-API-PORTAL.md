@@ -150,3 +150,37 @@ Del changelog del portal: **`identification` y `identificationType` están DEPRE
    «matrícula → precio» es viable para clientes nuevos.
 3. Exportar del portal el detalle de `POST /insurances` para **hogar**, si `supports.rating` sale a
    `true`: es el único ramo con volumen en la cartera (19 pólizas) además de auto.
+
+## 🏠 Hogar: lo que está cableado y lo que FALTA del portal (02/09/2026)
+
+**Cableado sin gastar:** `GET /insurance-lines` (id exacto del ramo), los 10 catálogos `/home/*`
+(`catalogoHogar()` en `apps/asegura/lib/codeoscopic/catalogos.ts`), la precalificación desde la
+cartera + gemela + Catastro (`desde-cartera-hogar.ts`) y el constructor `peticion-hogar.ts`.
+
+🚨 **Lo que NO tenemos es el esquema del `risk` de hogar de `POST /insurances`.** El snapshot MHTML del
+portal del 01/09 contiene el índice de operaciones, pero el detalle del cuerpo para hogar no se
+extrajo. Los nombres de campo que hoy manda `peticion-hogar.ts` (`CAMPOS_VENDOR`) son **por analogía**
+con el cuerpo de auto (verificado) y con el nombre de cada catálogo:
+
+| Nuestro dato | Campo que se manda hoy (PROVISIONAL) | De dónde sale el id |
+|---|---|---|
+| CP + municipio | `risk.address.{postalCode, town.id}` | como en `persona.addresses` (verificado en auto) |
+| tipo de vivienda | `risk.propertyType.id` | `/home/property-types` |
+| uso | `risk.use.id` | `/home/uses` |
+| ocupación | `risk.occupancyType.id` | `/home/occupancy-types` |
+| ubicación / asentamiento | `risk.location.id` / `risk.settlementType.id` | `/home/locations` / `/home/settlement-types` |
+| material / calidad / puerta / alarma | `risk.buildMaterial.id` … `risk.alarmType.id` | sus catálogos |
+| año / m² | `risk.constructionYear` / `risk.surface` | ficha, gemela o Catastro |
+| capitales | `risk.limits.{building, contents}` | ficha; `POST /home/recommend-limits` por cablear |
+
+**Qué pasa si el nombre está mal:** el vendor responde **400 de validación**, que `cliente.ts` clasifica
+como `validacion` = **no se cobra** (`pruebaQueNoHuboCargo`), y su mensaje dice qué campo sobra o falta.
+La pantalla de retarificar hogar enseña ese mensaje entero. Un cuerpo aceptado es una cotización de
+verdad (0,50€), que es lo que se busca.
+
+📋 **Lo que tiene que exportar Alberto del portal** (`portal.api-int.codeoscopic.io`, con su acceso; desde
+el contenedor de Claude el dominio está bloqueado por política): (1) el **ejemplo de request** de
+`POST /insurances` con `insuranceLine` de hogar — el objeto `risk` entero; (2) el esquema
+(`CreateInsuranceRequest_V1` → `risk` de `Home`/`Household`) con obligatorios y opcionales; (3) request y
+response de `POST /home/recommend-limits`, y si tiene nota de créditos. Con eso se corrige `CAMPOS_VENDOR`
+en un solo sitio y se retira el aviso de «no verificado» de la pantalla.

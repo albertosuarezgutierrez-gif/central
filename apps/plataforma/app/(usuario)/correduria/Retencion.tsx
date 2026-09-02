@@ -215,7 +215,7 @@ function Fila({ f, urlAsegura }: { f: EnRiesgo; urlAsegura: string }) {
               borderRadius: 8, border: '1px solid var(--border)', fontWeight: 600,
             }}
           >
-            Precio en otra compañía ↗
+            {f.retarificacion?.ramo === 'hogar' ? 'Precio de hogar en otra compañía ↗' : 'Precio en otra compañía ↗'}
           </a>
         )}
       </div>

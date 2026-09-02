@@ -8,6 +8,11 @@ import {
   tiposDeGaraje,
   estadosCiviles,
   municipiosPorCp,
+  lineasDeSeguro,
+  hogarDisponible,
+  catalogoHogar,
+  esCatalogoHogar,
+  CATALOGOS_HOGAR,
 } from '@/lib/codeoscopic/catalogos'
 
 export const runtime = 'nodejs'
@@ -59,6 +64,24 @@ export async function GET(req: Request) {
         const cp = url.searchParams.get('cp')
         if (!cp) return NextResponse.json({ error: 'falta cp' }, { status: 400 })
         return NextResponse.json({ opciones: await municipiosPorCp(config, cp) })
+      }
+      // ── Hogar ── los diez catálogos `/home/*`, por nombre CERRADO: el path se
+      // construye con él y no se aceptan nombres que no estén en la lista.
+      case 'hogar': {
+        const nombre = url.searchParams.get('nombre')
+        if (!esCatalogoHogar(nombre)) {
+          return NextResponse.json(
+            { error: `falta o no existe el catálogo de hogar «${nombre ?? ''}»: vale uno de ${CATALOGOS_HOGAR.join(', ')}` },
+            { status: 400 },
+          )
+        }
+        return NextResponse.json({ opciones: await catalogoHogar(config, nombre) })
+      }
+      // Los ramos habilitados para esta organización y, resuelto aquí mismo,
+      // si hogar está entre ellos (con su id EXACTO). Tres estados, no dos.
+      case 'lineas': {
+        const lineas = await lineasDeSeguro(config)
+        return NextResponse.json({ opciones: lineas, hogar: hogarDisponible(lineas) })
       }
       default:
         return NextResponse.json({ error: `catálogo desconocido: ${tipo}` }, { status: 400 })

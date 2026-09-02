@@ -55,3 +55,26 @@ test('«no se pudo mirar» y «se miró y no está» no son lo mismo', () => {
   assert.equal(interpretarPoliza(200, { estado: 'error' }).estado, 'error')
   assert.equal(interpretarPoliza(200, { estado: 'ok', poliza: { id: 'x' } }).estado, 'error')
 })
+
+// ── Retarificación por ramo (02/09/2026: AUTO → AUTO+HOGAR) ─────────────────
+
+test('🚨 sin `retarificacion` → null (asegura vieja); con el veredicto de hogar → entero; con basura → null', () => {
+  const sin = interpretarPoliza(200, POLIZA_OK)
+  assert.equal(sin.estado, 'ok')
+  if (sin.estado !== 'ok') return
+  assert.equal(sin.poliza.retarificacion, null)
+  assert.equal(sin.poliza.retarificable, false, 'el booleano de siempre se conserva')
+
+  const con = interpretarPoliza(200, {
+    estado: 'ok',
+    poliza: { ...POLIZA_OK.poliza, retarificable: true, retarificacion: { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'gemela' } },
+  })
+  assert.equal(con.estado, 'ok')
+  if (con.estado !== 'ok') return
+  assert.deepEqual(con.poliza.retarificacion, { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'gemela' })
+
+  const basura = interpretarPoliza(200, { estado: 'ok', poliza: { ...POLIZA_OK.poliza, retarificacion: { ramo: 'hogar', retarificable: 'sí' } } })
+  assert.equal(basura.estado, 'ok')
+  if (basura.estado !== 'ok') return
+  assert.equal(basura.poliza.retarificacion, null, 'nunca un veredicto a medias')
+})
