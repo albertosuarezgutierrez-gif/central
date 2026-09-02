@@ -3,10 +3,10 @@
 // cada bloque con su propio «no se sabe».
 
 import {
-  leerIntervinientes, leerObjeto, leerPago, leerRecibos,
+  leerIntervinientes, leerObjeto, leerPago, leerRecibos, leerRetarificacion,
   type IntervinienteFicha, type ObjetoFicha, type PagoFicha, type RecibosPoliza, type SiniestroFicha, type MotivoFicha,
 } from './ficha-asegura.ts'
-import type { DocumentoResumen } from '@central/module-seguros'
+import type { DocumentoResumen, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { DetalleCobertura } from '@central/module-seguros'
 
@@ -92,6 +92,8 @@ export type Poliza = {
   listaDocumentos: DocumentoResumen[] | null
   pago: PagoFicha | null
   retarificable: boolean
+  /** Ramo/motivo/fuente del veredicto. `null` = asegura (versión vieja) no lo manda. */
+  retarificacion: Retarificabilidad | null
 }
 
 export type RespuestaPoliza =
@@ -213,6 +215,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       listaDocumentos: leerDocumentos(p.listaDocumentos),
       pago: leerPago(p.pago),
       retarificable: p.retarificable === true,
+      retarificacion: leerRetarificacion(p.retarificacion),
     },
   }
 }

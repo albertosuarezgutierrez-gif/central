@@ -63,9 +63,10 @@ function RamoHogar({ l }: { l: LineasCodeoscopic }) {
   if (h.estado === 'disponible') {
     return (
       <div style={{ ...base, borderColor: '#4a8' }}>
-        ✅ <strong>Hogar tarifica en Codeoscopic</strong> (ramo <code>{h.id}</code> · {h.nombre}). El
-        siguiente paso es construir la petición de hogar con los datos del Catastro; cada cotización
-        cuesta 0,50€ y solo se lanza con OK explícito.
+        ✅ <strong>Hogar tarifica en Codeoscopic</strong> (ramo <code>{h.id}</code> · {h.nombre}). Para
+        pedir precio de hogar de un cliente: abre su ficha y pulsa «Retarificar hogar ↗» en la póliza (hace
+        falta que la póliza o su copia del volcado traigan m², año y CP). Cada cotización cuesta 0,50€ y se
+        confirma en la pantalla de asegura.
       </div>
     )
   }

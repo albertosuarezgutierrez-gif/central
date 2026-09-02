@@ -19,9 +19,16 @@
 //   · el recibo está devuelto pero sin fecha de vencimiento → sí sale, con
 //     estado `sin_fecha`, porque podría ser el más viejo de todos.
 
-import { retencion, resumirRetencion, type EstadoRetencion, type ResumenRetencion } from '@central/module-seguros'
+import {
+  retencion,
+  resumirRetencion,
+  retarificabilidad,
+  primaReferencia,
+  type EstadoRetencion,
+  type ResumenRetencion,
+  type Retarificabilidad,
+} from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
-import { primaReferencia } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 // 🚨 Las situaciones que significan «este dinero no ha entrado» son DOS, y no
@@ -56,8 +63,16 @@ export type ClienteEnRiesgo = {
   diasParaExtincion: number | null
   accion: string
   prioridad: number
-  /** `true` si es de auto con matrícula: se puede pedir precio de otra compañía. */
+  /** `retarificacion.retarificable`: se puede pedir precio de otra compañía. */
   retarificable: boolean
+  /**
+   * Por qué ramo (auto/hogar) o por qué no. Aquí se juzga SOLO con los datos de
+   * la propia póliza: la copia gemela no se consulta en esta lista (sería una
+   * consulta más por fila en la pantalla que hay que abrir cada mañana), así que
+   * una de hogar cuyo riesgo vive en la gemela saldrá como «faltan datos» aquí
+   * y como retarificable en su ficha. Es el estado conservador, no un error.
+   */
+  retarificacion: Retarificabilidad
 }
 
 export type ColaRetencion = {
@@ -134,6 +149,7 @@ export async function colaRetencion(
           tipo: true,
           aseguradora: true,
           numeroPoliza: true,
+          estado: true,
           primaAnual: true,
           primaBruta: true,
           datosEspecificos: true,
@@ -187,6 +203,7 @@ export async function colaRetencion(
         : null
     const fecha = fechaIso(r.fechaVencimiento)
     const ret = retencion(fecha, hoy)
+    const retarificacion = retarificabilidad({ tipo: String(p.tipo), estado: String(p.estado), datos, datosGemela: null })
     filas.push({
       polizaId: p.id,
       clienteId: p.cliente.id,
@@ -211,8 +228,8 @@ export async function colaRetencion(
       diasParaExtincion: ret.diasParaExtincion,
       accion: ret.accion,
       prioridad: ret.prioridad,
-      // Solo auto con matrícula se puede llevar hoy a otra compañía.
-      retarificable: String(p.tipo) === 'auto' && matricula !== null,
+      retarificable: retarificacion.retarificable,
+      retarificacion,
     })
   }
 

@@ -386,9 +386,22 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   extraído de subastas). Verificado con el 2º-14 de San Vicente 40: 76 m²/1994, lo mismo que la póliza
   del CRM. ✅ **`GET /insurance-lines` HECHO** (`lineasDeSeguro()` + `hogarDisponible()` en
   `lib/codeoscopic/catalogos.ts`, puerto `/api/operador/codeoscopic/lineas`, gratis, con el interruptor
-  apagado; `/correduria/hogar` en plataforma lo pinta con tres estados). Lo que queda es la **petición de
-  hogar** (`peticion-hogar.ts`, el equivalente de `peticion-auto.ts`) — y eso ya cuesta 0,50€ por prueba,
-  así que espera a saber el id del ramo y al OK de Alberto.
+  apagado; `/correduria/hogar` en plataforma lo pinta con tres estados).
+  ✅ **Retarificar HOGAR, cableado el 02/09/2026 (Alberto: «quiero probar con algún hogar de José Suárez
+  Salas»).** Mismo patrón que auto, ramificado por `origen.tipo` en `/cartera/poliza/[polizaId]` y en su
+  `POST …/retarificar`: `lib/codeoscopic/peticion-hogar.ts` (`revisarDatosHogar` gratis antes de gastar,
+  `construirPeticionHogar(d, lineaId)` — **el id del ramo viene SIEMPRE de `/insurance-lines`, nunca se
+  escribe a mano**), `desde-cartera-hogar.ts` (precalificación con TRES procedencias del riesgo: póliza,
+  **gemela** del volcado o Catastro, cada una rotulada; los capitales viejos van como supuesto `optimista`;
+  nada personal ni ningún capital se inventa), `persona.ts` (el tomador es la MISMA proyección que en auto,
+  sin carnet) y los 10 catálogos `/home/*` (`catalogoHogar()`, gratis). Quién puede retarificar y por qué
+  ramo lo decide **un solo helper**, `retarificabilidad()` de `@central/module-seguros` (antes la misma
+  expresión estaba copiada en tres sitios): hogar exige m² + año + CP en la póliza O en su gemela.
+  🚨 **El contrato del `risk` de hogar del vendor NO está verificado** — los nombres de campo viven en
+  `CAMPOS_VENDOR` por analogía con auto y con los catálogos. Un 400 de validación **no se cobra** y su
+  mensaje dice qué está mal; la pantalla lo enseña entero. Lo que hay que exportar del portal está en
+  `docs/CODEOSCOPIC-API-PORTAL.md` (§ Hogar). Caso de prueba: las dos de Occident vivas de J.S.S. (el
+  riesgo está solo en la gemela; la de Sevilla es la verificada con el Catastro: 76 m² / 1994 / 41002).
 - **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo

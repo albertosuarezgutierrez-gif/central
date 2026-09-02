@@ -202,7 +202,7 @@ function Fila({ f, urlAsegura }: { f: EnRiesgo; urlAsegura: string }) {
             0,50€ reales: vive en asegura, tras su pantalla de confirmación. */}
         {f.retarificable && (
           <BtnLink href={`${urlAsegura}/cartera/poliza/${f.polizaId}`} variante="secundario" nuevaPestana>
-            Precio en otra compañía ↗
+            {f.retarificacion?.ramo === 'hogar' ? 'Precio de hogar en otra compañía ↗' : 'Precio en otra compañía ↗'}
           </BtnLink>
         )}
       </div>

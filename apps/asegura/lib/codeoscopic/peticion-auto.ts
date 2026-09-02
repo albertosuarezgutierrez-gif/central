@@ -9,20 +9,14 @@
 // Las reglas no son adivinadas: salen del builder de Manuel, verificado por él
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
+import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
+
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
-export type DatosAuto = {
+export type DatosAuto = DatosPersona & {
   // ── Persona (va tres veces: tomador, propietario y conductor) ──
-  dni: string
-  nombre: string
-  apellido1: string
-  apellido2?: string | null
-  fechaNacimiento: string // aaaa-mm-dd
-  sexo: 'hombre' | 'mujer'
-  estadoCivil: string // id del catálogo del vendor
-  telefono: string
+  // dni, nombre, apellidos, nacimiento, sexo, estado civil, teléfono y
+  // residencia vienen de `DatosPersona` (compartido con hogar).
   fechaCarnet: string
-  cpResidencia?: string | null
-  municipioResidenciaId?: number | null
 
   // ── Vehículo ──
   codigoVehiculo: string // el código Base7 de la VERSIÓN, del catálogo
@@ -54,7 +48,6 @@ export type DatosAuto = {
 /** Un problema concreto del formulario, señalando el campo. */
 export type Reparo = { campo: keyof DatosAuto; motivo: string }
 
-const RE_TELEFONO = /^[67][0-9]{8}$/
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
 /**
@@ -67,22 +60,17 @@ export function revisarDatosAuto(d: Partial<DatosAuto>): Reparo[] {
   const r: Reparo[] = []
   const falta = (c: keyof DatosAuto, m = 'hace falta para poder cotizar') => r.push({ campo: c, motivo: m })
 
+  // ── La persona: reglas compartidas con hogar ──
+  for (const x of revisarPersona(d)) r.push(x)
+
   // ── Obligatorios sin matiz ──
-  for (const c of [
-    'dni', 'nombre', 'apellido1', 'estadoCivil', 'codigoVehiculo', 'matricula', 'garaje',
-  ] as const) {
+  for (const c of ['codigoVehiculo', 'matricula', 'garaje'] as const) {
     if (!texto(d[c])) falta(c)
   }
-  for (const c of ['fechaNacimiento', 'fechaCarnet', 'fechaMatriculacion', 'fechaEfecto'] as const) {
+  for (const c of ['fechaCarnet', 'fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
     else if (!RE_FECHA.test(String(d[c]))) r.push({ campo: c, motivo: 'la fecha tiene que ser aaaa-mm-dd' })
   }
-  if (d.sexo !== 'hombre' && d.sexo !== 'mujer') falta('sexo')
-
-  // El vendor valida el móvil: mejor rechazarlo aquí que pagar por un 400.
-  if (!texto(d.telefono)) falta('telefono')
-  else if (!RE_TELEFONO.test(String(d.telefono).replace(/\s/g, '')))
-    r.push({ campo: 'telefono', motivo: 'tiene que ser un móvil español: 9 dígitos empezando por 6 o 7' })
 
   // Kilómetros: obligatorio para el vendor aunque parezca un detalle.
   if (d.kmAnuales === undefined || d.kmAnuales === null) falta('kmAnuales')
@@ -93,12 +81,6 @@ export function revisarDatosAuto(d: Partial<DatosAuto>): Reparo[] {
   if (!texto(d.cpCirculacion)) falta('cpCirculacion')
   if (!numero(d.municipioCirculacionId))
     falta('municipioCirculacionId', 'hay que resolver el municipio por código postal antes de cotizar')
-
-  // ── Residencia: si va uno, va el otro (lo exige el vendor) ──
-  const hayMunicipioRes = numero(d.municipioResidenciaId)
-  const hayCpRes = texto(d.cpResidencia)
-  if (hayMunicipioRes && !hayCpRes)
-    r.push({ campo: 'cpResidencia', motivo: 'si mandas el municipio de residencia, el código postal es obligatorio' })
 
   // ── Historial: todo condicional al interruptor ──
   if (d.aseguradoAntes) {
@@ -156,7 +138,7 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
   // identification by different data» si un solo campo difiere entre ellos — y
   // tampoco deja omitir ninguno. Por eso se construye UNA vez y se reutiliza el
   // mismo objeto, en lugar de escribirlo tres veces y confiar en no equivocarse.
-  const persona = construirPersona(d)
+  const persona = construirPersona(d, { fechaCarnet: d.fechaCarnet })
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },
@@ -207,31 +189,4 @@ export function exigeDetalleDeSiniestros(d: Partial<DatosAuto>): boolean {
   if (!d.aseguradoAntes) return false
   if (!numero(d.aniosSinSiniestros)) return false
   return d.aniosSinSiniestros! < 5 && d.aniosSinSiniestros !== d.aniosAsegurado
-}
-
-function construirPersona(d: DatosAuto): Record<string, unknown> {
-  const persona: Record<string, unknown> = {
-    identificationDocument: { type: { id: 'Dni' }, id: d.dni.trim().toUpperCase() },
-    name: d.nombre.trim(),
-    surname: d.apellido1.trim(),
-    birthDate: d.fechaNacimiento,
-    gender: { id: d.sexo === 'hombre' ? 'Male' : 'Female' },
-    maritalStatus: { id: d.estadoCivil },
-    phones: [{ number: d.telefono.replace(/\s/g, ''), primary: true }],
-    drivingLicenses: [{ type: { id: 'B' }, date: d.fechaCarnet, issuingZone: { id: 'Spain' } }],
-  }
-  if (texto(d.apellido2)) persona.surname2 = d.apellido2!.trim()
-
-  // La dirección solo viaja si están las DOS mitades: el vendor rechaza el
-  // municipio sin código postal. Cuatro productos del grupo de salida la exigen.
-  if (texto(d.cpResidencia) && numero(d.municipioResidenciaId)) {
-    persona.addresses = [
-      { postalCode: d.cpResidencia, town: { id: d.municipioResidenciaId }, primary: true },
-    ]
-  }
-
-  // 🔒 Lo que NO se manda, y es deliberado: email, calle y número, ocupación,
-  // situación laboral y país de nacimiento. No hacen falta para el precio, así
-  // que no salen de aquí. Menos datos personales fuera, menos que proteger.
-  return persona
 }

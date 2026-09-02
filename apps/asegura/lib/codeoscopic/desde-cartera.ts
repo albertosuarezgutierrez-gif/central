@@ -168,7 +168,7 @@ export function aniosEntre(desde: string | null, hasta: string): number | null {
 }
 
 /** El día siguiente a una fecha aaaa-mm-dd. */
-function diaSiguiente(f: string): string {
+export function diaSiguiente(f: string): string {
   const d = new Date(`${f}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + 1)
   return d.toISOString().slice(0, 10)

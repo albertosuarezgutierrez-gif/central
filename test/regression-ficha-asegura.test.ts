@@ -4,6 +4,7 @@ import {
   interpretarBusqueda,
   interpretarFicha,
   leerRecibos,
+  leerRetarificacion,
 } from '../apps/plataforma/lib/ficha-asegura.ts'
 
 const FICHA_OK = {
@@ -162,4 +163,48 @@ test('🚨 sin bloque de pago → null, no «anual» ni «0€ de recargo»', ()
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
   assert.equal(r.ficha.polizas[0].pago, null)
+})
+
+// ── Retarificación por ramo (02/09/2026: AUTO → AUTO+HOGAR) ─────────────────
+
+test('🚨 sin el campo `retarificacion` → null, NO un veredicto a falso inventado', () => {
+  // Una versión desplegada más vieja de asegura no lo manda: la pantalla cae
+  // al booleano `retarificable` de siempre, no a «no se puede».
+  const r = interpretarFicha(200, FICHA_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.polizas[0].retarificacion, null)
+  assert.equal(r.ficha.polizas[0].retarificable, true, 'el booleano de siempre se conserva')
+})
+
+test('el veredicto de hogar se lee entero (ramo, motivo y fuente)', () => {
+  const r = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: {
+      ...FICHA_OK.ficha,
+      polizas: [{ ...FICHA_OK.ficha.polizas[0], tipo: 'hogar', retarificacion: { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'gemela' } }],
+    },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.ficha.polizas[0].retarificacion, { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'gemela' })
+  const no = leerRetarificacion({ ramo: null, retarificable: false, motivo: 'Faltan datos del riesgo para tarificar hogar (m², CP).', fuente: null })
+  assert.equal(no?.retarificable, false)
+  assert.equal(no?.motivo, 'Faltan datos del riesgo para tarificar hogar (m², CP).')
+})
+
+test('🚨 un veredicto con basura degrada a null, nunca a un objeto a medias', () => {
+  assert.equal(leerRetarificacion('sí'), null)
+  assert.equal(leerRetarificacion({ ramo: 'vida', retarificable: true, motivo: null, fuente: 'poliza' }), null)
+  assert.equal(leerRetarificacion({ ramo: 'auto', retarificable: 'true', motivo: null, fuente: 'poliza' }), null)
+  assert.equal(leerRetarificacion({ ramo: 'auto', retarificable: true, motivo: null, fuente: 'catastro' }), null)
+  assert.equal(leerRetarificacion({ ramo: 'auto', retarificable: true, motivo: 42, fuente: 'poliza' }), null)
+  assert.equal(leerRetarificacion({}), null)
+  const r = interpretarFicha(200, {
+    ...FICHA_OK,
+    ficha: { ...FICHA_OK.ficha, polizas: [{ ...FICHA_OK.ficha.polizas[0], retarificacion: 'basura' }] },
+  })
+  assert.equal(r.estado, 'ok', 'la basura en este campo no tumba la ficha: es un extra, no el contrato')
+  if (r.estado !== 'ok') return
+  assert.equal(r.ficha.polizas[0].retarificacion, null)
 })
