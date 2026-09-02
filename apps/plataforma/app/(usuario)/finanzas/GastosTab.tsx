@@ -217,7 +217,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
   // Solo la primera carga tapa la página; las recargas tras una acción mantienen la lista visible
   // (atenuada) en vez de desmontarla y volver a montarla entera.
   if (loading && !data) return <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Cargando gastos…</div>
-  if (error) return <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: '#dc2626' }}>{error}</div>
+  if (error) return <div style={{ background: 'var(--negative-bg)', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', color: 'var(--negative)' }}>{error}</div>
   if (!data) return null
 
   const pisoNombre = (id: string) => data.pisos.find(p => p.id === id)?.nombre ?? id
@@ -273,7 +273,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
     const sug = sugerencias[m.id]
     const sinJustif = m.deducible && !m.conciliado && !m.facturaRef
     return (
-      <div style={{ border: `1px solid ${enBandeja ? '#fdba74' : 'var(--border)'}`, background: enBandeja ? '#fff7ed' : 'transparent', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+      <div style={{ border: `1px solid ${enBandeja ? '#fdba74' : 'var(--border)'}`, background: enBandeja ? 'var(--warning-bg)' : 'transparent', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word' }}>{m.concepto}</div>
@@ -281,17 +281,17 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
               <span>{m.fecha ?? '—'} · {m.banco}</span>
               <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--text)' }}>{m.destinoLabel}</span>
               {m.amortizable && <span style={{ padding: '1px 7px', borderRadius: 10, background: '#e9d8fd', color: '#553c9a' }}>📦 amortizable</span>}
-              {m.deduccionCuotaTipo && <span style={{ padding: '1px 7px', borderRadius: 10, background: '#e6fffa', color: '#276749' }}>{DEDUCCION_CUOTA_LABEL[m.deduccionCuotaTipo]}</span>}
+              {m.deduccionCuotaTipo && <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--positive-bg)', color: 'var(--positive)' }}>{DEDUCCION_CUOTA_LABEL[m.deduccionCuotaTipo]}</span>}
               {m.deducible && (m.conciliado || m.facturaRef
-                ? <span style={{ color: '#16a34a' }}>📎 con factura</span>
-                : <span style={{ color: '#ea580c' }}>❗ sin justificante</span>)}
+                ? <span style={{ color: 'var(--positive)' }}>📎 con factura</span>
+                : <span style={{ color: 'var(--warning)' }}>❗ sin justificante</span>)}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             {m.bucket !== 'traspaso' && (
               <span title={m.deducible ? 'Deducible IRPF' : 'No deducible'} style={{ fontSize: 14, lineHeight: 1 }}>{m.deducible ? '✅' : '❌'}</span>
             )}
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(m.importe)}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--negative)', whiteSpace: 'nowrap' }}>−{fmt(m.importe)}</div>
           </div>
         </div>
 
@@ -320,7 +320,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
             <button disabled={busy === m.id} onClick={() => aplicarSugerencia(m.id, sug)} style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>Confirmar</button>
           </div>
         )}
-        {sug === 'error' && <div style={{ marginTop: 6, fontSize: 11, color: '#ea580c' }}>La IA no pudo sugerir ahora mismo.</div>}
+        {sug === 'error' && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--warning)' }}>La IA no pudo sugerir ahora mismo.</div>}
 
         {/* Acciones */}
         <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -335,7 +335,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
           ) : (
             <>
               {enBandeja && (
-                <button disabled={busy === m.id} onClick={() => confirmar(m.id)} style={{ ...btn, border: '1px solid #16a34a', background: '#16a34a', color: '#fff', fontWeight: 600 }}>✓ Está bien</button>
+                <button disabled={busy === m.id} onClick={() => confirmar(m.id)} style={{ ...btn, border: '1px solid var(--positive)', background: 'var(--positive)', color: '#fff', fontWeight: 600 }}>✓ Está bien</button>
               )}
               <button disabled={busy === m.id} onClick={() => setReclasif(m.id)} style={btn}>↪ Reclasificar</button>
               <button disabled={busy === m.id} onClick={() => toggleAmort(m.id, !m.amortizable)} style={{ ...btn, ...(m.amortizable ? { borderColor: '#9f7aea', color: '#553c9a' } : {}) }}>
@@ -357,16 +357,16 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
                   <span style={{ fontSize: 12, color: 'var(--muted)' }}>Deducción cuota:</span>
                   {(['mecenazgo', 'guarderia', 'deportiva_and'] as DeduccionCuotaTipo[]).map(t => (
                     <button key={t} disabled={busy === m.id} onClick={() => setDeduccionCuota(m.id, t)}
-                      style={{ ...btn, ...(m.deduccionCuotaTipo === t ? { borderColor: '#276749', color: '#276749', fontWeight: 600 } : {}) }}>
+                      style={{ ...btn, ...(m.deduccionCuotaTipo === t ? { borderColor: 'var(--positive)', color: 'var(--positive)', fontWeight: 600 } : {}) }}>
                       {DEDUCCION_CUOTA_LABEL[t]}
                     </button>
                   ))}
-                  {m.deduccionCuotaTipo && <button disabled={busy === m.id} onClick={() => setDeduccionCuota(m.id, null)} style={{ ...btn, color: '#dc2626' }}>quitar</button>}
+                  {m.deduccionCuotaTipo && <button disabled={busy === m.id} onClick={() => setDeduccionCuota(m.id, null)} style={{ ...btn, color: 'var(--negative)' }}>quitar</button>}
                   <button onClick={() => setCuotaTipoSelector(null)} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
                 </>
               ) : m.destino === 'personal' ? (
                 <button disabled={busy === m.id} onClick={() => setCuotaTipoSelector(m.id)}
-                  style={{ ...btn, ...(m.deduccionCuotaTipo ? { borderColor: '#276749', color: '#276749' } : {}) }}>
+                  style={{ ...btn, ...(m.deduccionCuotaTipo ? { borderColor: 'var(--positive)', color: 'var(--positive)' } : {}) }}>
                   {m.deduccionCuotaTipo ? `${DEDUCCION_CUOTA_LABEL[m.deduccionCuotaTipo]} ✎` : '🏛️ deducción cuota'}
                 </button>
               ) : null}
@@ -388,7 +388,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
     const abierto = expandido === key
     const sel = reclasifGrupo === key
     return (
-      <div style={{ border: '1px solid #fdba74', background: '#fff7ed', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+      <div style={{ border: '1px solid #fdba74', background: 'var(--warning-bg)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', wordBreak: 'break-word' }}>
@@ -399,7 +399,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
                   identifica banco ni fecha). En grupos de varios las fechas difieren → se ven al desplegar. */}
               {g.count === 1 && <span>{g.movs[0].fecha ?? '—'}{g.movs[0].banco ? ` · ${g.movs[0].banco}` : ''}</span>}
               <span style={{ padding: '1px 7px', borderRadius: 10, background: 'var(--primary-light)', color: 'var(--text)' }}>{g.movs[0].destinoLabel}</span>
-              {g.sinJustificante > 0 && <span style={{ color: '#ea580c' }}>❗ {g.sinJustificante} sin justificante</span>}
+              {g.sinJustificante > 0 && <span style={{ color: 'var(--warning)' }}>❗ {g.sinJustificante} sin justificante</span>}
               {g.count > 1 && <button onClick={() => setExpandido(abierto ? null : key)} style={{ ...btn, padding: '1px 8px', fontSize: 11 }}>{abierto ? 'ocultar' : `ver ${g.count}`}</button>}
             </div>
           </div>
@@ -407,7 +407,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
             {g.movs[0].bucket !== 'traspaso' && (
               <span title={g.movs[0].deducible ? 'Deducible IRPF' : 'No deducible'} style={{ fontSize: 14, lineHeight: 1 }}>{g.movs[0].deducible ? '✅' : '❌'}</span>
             )}
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#e53e3e', whiteSpace: 'nowrap' }}>−{fmt(g.total)}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--negative)', whiteSpace: 'nowrap' }}>−{fmt(g.total)}</div>
           </div>
         </div>
 
@@ -432,7 +432,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
             </>
           ) : (
             <>
-              <button disabled={busy === key} onClick={() => confirmarGrupo(g)} style={{ ...btn, border: '1px solid #16a34a', background: '#16a34a', color: '#fff', fontWeight: 600 }}>✓ Está bien{g.count > 1 ? ` (${g.count})` : ''}</button>
+              <button disabled={busy === key} onClick={() => confirmarGrupo(g)} style={{ ...btn, border: '1px solid var(--positive)', background: 'var(--positive)', color: '#fff', fontWeight: 600 }}>✓ Está bien{g.count > 1 ? ` (${g.count})` : ''}</button>
               <button disabled={busy === key} onClick={() => setReclasifGrupo(key)} style={btn}>↪ Reclasificar{g.count > 1 ? ` los ${g.count}` : ''}</button>
               {g.count === 1 && comentando !== g.movs[0].id && !g.movs[0].comentario && (
                 <button disabled={busy === key} onClick={() => setComentando(g.movs[0].id)} style={btn}>💬 comentar</button>
@@ -458,7 +458,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
           { label: 'Deducible del año', value: fmt(data.resumen.deducibleTotal), color: 'var(--primary)' },
           { label: 'A amortizar', value: fmt(data.resumen.amortizablesTotal), color: '#805ad5' },
           { label: 'No deducible', value: fmt(data.resumen.noDeducibleTotal), color: 'var(--muted)' },
-          { label: 'Deducibles SIN justificante', value: String(data.resumen.sinJustificante), color: data.resumen.sinJustificante ? '#ea580c' : 'var(--primary)' },
+          { label: 'Deducibles SIN justificante', value: String(data.resumen.sinJustificante), color: data.resumen.sinJustificante ? 'var(--warning)' : 'var(--primary)' },
         ].map(k => (
           <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>{k.label}</div>
@@ -470,7 +470,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
       {/* Tracker deducciones de cuota IRPF */}
       {(data.cuotaDeduccionResumen.mecenazgo > 0 || data.cuotaDeduccionResumen.guarderia > 0 || data.cuotaDeduccionResumen.deportivaAnd > 0) && (
         <div style={{ marginBottom: 16, background: '#f0fff4', border: '1px solid #9ae6b4', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#276749', marginBottom: 8 }}>🏛️ Deducciones de cuota IRPF (personal pero con ahorro fiscal directo)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--positive)', marginBottom: 8 }}>🏛️ Deducciones de cuota IRPF (personal pero con ahorro fiscal directo)</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
             {[
               { tipo: 'mecenazgo' as DeduccionCuotaTipo, total: data.cuotaDeduccionResumen.mecenazgo,
@@ -481,11 +481,11 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
                 cuota: Math.round(Math.min(data.cuotaDeduccionResumen.deportivaAnd, 100) * 0.15) },
             ].filter(k => k.total > 0).map(k => (
               <div key={k.tipo} style={{ background: 'white', borderRadius: 8, padding: '8px 10px', border: '1px solid #9ae6b4' }}>
-                <div style={{ fontSize: 12, color: '#276749', fontWeight: 600 }}>{DEDUCCION_CUOTA_LABEL[k.tipo]}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#276749' }}>−{eur(k.cuota)} en cuota</div>
+                <div style={{ fontSize: 12, color: 'var(--positive)', fontWeight: 600 }}>{DEDUCCION_CUOTA_LABEL[k.tipo]}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--positive)' }}>−{eur(k.cuota)} en cuota</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                   gastado {fmt(k.total)} · límite base {eur(DEDUCCION_CUOTA_LIMITE[k.tipo])}
-                  {k.total > DEDUCCION_CUOTA_LIMITE[k.tipo] && <span style={{ color: '#ea580c' }}> · excede límite</span>}
+                  {k.total > DEDUCCION_CUOTA_LIMITE[k.tipo] && <span style={{ color: 'var(--warning)' }}> · excede límite</span>}
                 </div>
               </div>
             ))}
@@ -562,7 +562,7 @@ export default function GastosTab({ year, quarter, desde, hasta }: { year: numbe
               )}
             </div>
             <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Agrupado por comercio: una decisión clasifica todos los iguales y aprende la regla (pasados y futuros). «🤖 Sugerir todo» propone el destino de cada grupo de una pasada.</p>
-            {sugLoteEstado === 'error' && <div style={{ fontSize: 12, color: '#ea580c', marginBottom: 8 }}>La IA no pudo sugerir ahora mismo.</div>}
+            {sugLoteEstado === 'error' && <div style={{ fontSize: 12, color: 'var(--warning)', marginBottom: 8 }}>La IA no pudo sugerir ahora mismo.</div>}
             {gruposFiltrados.length === 0
               ? <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
                   {data.porRevisarGrupos.length === 0 ? '✓ Nada pendiente de revisar en este periodo.' : '🔍 No hay resultados con estos filtros.'}
@@ -707,19 +707,19 @@ function DesgloseEditor({ mov, pisos, busy, error, onSave, onCancel }: {
         })}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, color: sumaOk ? '#16a34a' : '#ea580c', fontWeight: 600 }}>Suma: {suma.toFixed(1)}%</span>
+        <span style={{ fontSize: 12, color: sumaOk ? 'var(--positive)' : 'var(--warning)', fontWeight: 600 }}>Suma: {suma.toFixed(1)}%</span>
         <button disabled={sugBusy} onClick={repartirPorActividad} style={{ ...btn, border: '1px solid var(--primary)', color: 'var(--primary)' }} title="Reparte según nº de limpiezas × camas de cada piso en el mes del cargo (margen más realista)">{sugBusy ? 'calculando…' : '⚡ por actividad'}</button>
         <button onClick={repartirIgual} style={btn}>partes iguales</button>
         <button disabled={busy || !sumaOk || incluidos.length === 0}
           onClick={() => onSave(incluidos.map(p => ({ propiedad: p.id, porcentaje: parseFloat(pct[p.id]) || 0 })))}
           style={{ ...btn, border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>Guardar reparto</button>
         {mov.desglose.length > 0 && (
-          <button disabled={busy} onClick={() => onSave([])} style={{ ...btn, color: '#dc2626' }}>quitar desglose</button>
+          <button disabled={busy} onClick={() => onSave([])} style={{ ...btn, color: 'var(--negative)' }}>quitar desglose</button>
         )}
         <button onClick={onCancel} style={{ ...btn, border: 'none', background: 'none', color: 'var(--muted)' }}>cancelar</button>
       </div>
       {sugNota && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)' }}>{sugNota}. Revisa y guarda.</div>}
-      {error && <div style={{ marginTop: 6, fontSize: 11, color: '#dc2626' }}>{error}</div>}
+      {error && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--negative)' }}>{error}</div>}
     </div>
   )
 }

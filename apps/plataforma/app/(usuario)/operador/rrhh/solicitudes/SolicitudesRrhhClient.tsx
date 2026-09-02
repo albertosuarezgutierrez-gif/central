@@ -21,9 +21,9 @@ const TIPO_ETIQUETA: Record<string, string> = {
 }
 
 const ESTADO_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  solicitada: { label: 'Solicitada', color: '#b45309', bg: '#fef3c7' },
-  aprobada:   { label: 'Aprobada',   color: '#16a34a', bg: '#dcfce7' },
-  rechazada:  { label: 'Rechazada',  color: '#dc2626', bg: '#fee2e2' },
+  solicitada: { label: 'Solicitada', color: 'var(--warning)', bg: 'var(--warning-bg)' },
+  aprobada:   { label: 'Aprobada',   color: 'var(--positive)', bg: 'var(--positive-bg)' },
+  rechazada:  { label: 'Rechazada',  color: 'var(--negative)', bg: 'var(--negative-bg)' },
 }
 
 function fmt(d: string | null) {
@@ -58,13 +58,6 @@ export default function SolicitudesRrhhClient({ solicitudes }: { solicitudes: So
 
   return (
     <div style={{ padding: '24px', maxWidth: 900 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .solic-filters { flex-direction: column !important; }
-          .solic-card { flex-direction: column !important; align-items: flex-start !important; }
-          .solic-card-meta { width: 100% !important; flex-direction: row !important; flex-wrap: wrap; gap: 6px; }
-        }
-      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>RR.HH. · Solicitudes</h1>
         <span style={{ fontSize: 13, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px' }}>{visibles.length} / {solicitudes.length}</span>

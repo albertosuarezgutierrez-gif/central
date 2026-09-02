@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { Pagina } from '@/components/ui'
 
 type Ticket = {
   id: string
@@ -16,9 +17,9 @@ const ESTADOS = ['', 'abierto', 'escalado', 'resuelto'] as const
 type EstadoFiltro = typeof ESTADOS[number]
 
 const estadoColor: Record<string, string> = {
-  abierto: '#2563eb',
-  escalado: '#dc2626',
-  resuelto: '#16a34a',
+  abierto: 'var(--info)',
+  escalado: 'var(--negative)',
+  resuelto: 'var(--positive)',
 }
 
 function fecha(s: string) {
@@ -75,13 +76,7 @@ export default function SoporteClient() {
   }
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .soporte-layout { grid-template-columns: 1fr !important; }
-          .soporte-panel { width: 100% !important; }
-        }
-      `}</style>
+    <Pagina ancho="lectura">
       <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '20px' }}>🎫 Soporte · ia-rest</h1>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -202,6 +197,6 @@ export default function SoporteClient() {
           </div>
         )}
       </div>
-    </main>
+    </Pagina>
   )
 }

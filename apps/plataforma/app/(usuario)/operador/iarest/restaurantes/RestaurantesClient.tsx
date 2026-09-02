@@ -25,10 +25,10 @@ const PLANES: Record<string, string> = {
 }
 
 function planBadge(plan: string, status: string | null, activo: boolean): { label: string; color: string } {
-  if (!activo) return { label: 'Inactivo', color: '#94a3b8' }
-  if (status === 'trial') return { label: 'Trial', color: '#d97706' }
-  if (status === 'cancelado') return { label: 'Cancelado', color: '#dc2626' }
-  return { label: PLANES[plan] ?? plan, color: '#16a34a' }
+  if (!activo) return { label: 'Inactivo', color: 'var(--muted)' }
+  if (status === 'trial') return { label: 'Trial', color: 'var(--warning)' }
+  if (status === 'cancelado') return { label: 'Cancelado', color: 'var(--negative)' }
+  return { label: PLANES[plan] ?? plan, color: 'var(--positive)' }
 }
 
 const fecha = (s: string | null) =>
@@ -63,12 +63,6 @@ export default function RestaurantesClient() {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .rest-kpis { grid-template-columns: 1fr 1fr !important; }
-          .rest-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🍽️ Restaurantes · ia-rest</h1>
         <a

@@ -32,6 +32,7 @@
     "fast-xml-parser": "^5.10.1",
     "imapflow": "^1.6.5",
     "jose": "^5.9.3",
+    "lucide-react": "^1.39.0",
     "mailparser": "^3.9.14",
     "next": "^15.5.22",
     "pdf-parse": "^1.1.1",

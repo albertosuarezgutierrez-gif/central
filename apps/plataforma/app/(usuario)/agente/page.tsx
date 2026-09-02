@@ -96,7 +96,7 @@ export default function AgentePage() {
             }}>
               {m.texto}
               {m.guardado && (
-                <div style={{ marginTop: 8, fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--positive)', fontWeight: 600 }}>
                   ✓ Guardado como regla ({m.guardado.temporada}): “{m.guardado.insight}”
                 </div>
               )}

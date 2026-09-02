@@ -138,7 +138,7 @@ export default function MapaHolding({ posicionesIniciales }: { posicionesInicial
                   width: 8,
                   height: 8,
                   borderRadius: 8,
-                  background: viva(p.capturadoAt) ? '#16a34a' : '#9aa0aa',
+                  background: viva(p.capturadoAt) ? 'var(--positive)' : '#9aa0aa',
                   display: 'inline-block',
                 }}
               />

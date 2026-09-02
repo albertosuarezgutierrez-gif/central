@@ -35,7 +35,7 @@ function rangoMes(offset: number): { desde: string; hasta: string } {
 }
 
 const INSIGHT_ICON: Record<string, string> = { ahorro: '💰', alerta: '⚠️', tendencia: '📈' }
-const INSIGHT_COLOR: Record<string, string> = { ahorro: '#10b981', alerta: '#f59e0b', tendencia: '#6366f1' }
+const INSIGHT_COLOR: Record<string, string> = { ahorro: 'var(--positive)', alerta: 'var(--warning)', tendencia: '#6366f1' }
 
 // Opciones de los desplegables para reasignar. Los gastos usan la lista de gasto; para alertas y
 // para el desplegable "todas" se ofrece gasto + ingreso.
@@ -314,7 +314,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
           <button onClick={autoTag} disabled={autoTagging} style={{ ...btnStyle, marginLeft: 'auto' }}>
             {autoTagging ? 'Clasificando…' : '🤖 Auto-clasificar'}
           </button>
-          {autoTagMsg && <span style={{ fontSize: '12px', width: '100%', color: autoTagMsg.startsWith('⚠️') ? '#ef4444' : '#10b981' }}>{autoTagMsg}</span>}
+          {autoTagMsg && <span style={{ fontSize: '12px', width: '100%', color: autoTagMsg.startsWith('⚠️') ? 'var(--negative)' : 'var(--positive)' }}>{autoTagMsg}</span>}
         </div>
         {atencionOpen && (
           <div style={{ padding: '12px 14px' }}>
@@ -353,7 +353,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
     const up = d > 0
     return (
       <span title="Frente a tu media de los últimos 6 meses"
-        style={{ fontSize: '10px', fontWeight: 600, color: up ? '#ef4444' : '#10b981', whiteSpace: 'nowrap' }}>
+        style={{ fontSize: '10px', fontWeight: 600, color: up ? 'var(--negative)' : 'var(--positive)', whiteSpace: 'nowrap' }}>
         {up ? '▲' : '▼'}{Math.abs(d)}%
       </span>
     )
@@ -383,7 +383,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
       </tr>,
       isExp && (
         <tr key={`${c.subcategoria}-detail`} style={{ borderTop: '1px solid var(--border)' }}>
-          <td colSpan={4} style={{ padding: '12px', background: 'var(--background, #fafafa)' }}>
+          <td colSpan={4} style={{ padding: '12px', background: 'var(--bg)' }}>
             {ms?.loading && (
               <p style={{ fontSize: '12px', color: 'var(--muted)', margin: 0 }}>Cargando comercios…</p>
             )}
@@ -406,7 +406,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                           {minTicket !== null && m.ticket_medio === minTicket && ms.data!.length > 1 && (
                             <span style={{
                               marginLeft: '6px', fontSize: '10px', fontWeight: 600,
-                              background: '#d1fae5', color: '#065f46',
+                              background: 'var(--positive-bg)', color: 'var(--positive)',
                               padding: '1px 5px', borderRadius: '4px',
                             }}>💰 Más barato</span>
                           )}
@@ -515,7 +515,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
         </div>
         <div style={{ fontSize: '28px', fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>{eur(totalGastos)}</div>
         {preset === 'mes_actual' && comparativaTotal?.deltaPct != null && comparativaTotal.deltaPct !== 0 && (
-          <div style={{ fontSize: '12px', fontWeight: 600, marginTop: '2px', color: comparativaTotal.deltaPct > 0 ? '#ef4444' : '#10b981' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, marginTop: '2px', color: comparativaTotal.deltaPct > 0 ? 'var(--negative)' : 'var(--positive)' }}>
             {comparativaTotal.deltaPct > 0 ? '▲' : '▼'} {Math.abs(comparativaTotal.deltaPct)}% vs tu media de los últimos 6 meses
           </div>
         )}
@@ -658,7 +658,7 @@ export default function CategoriasTab({ year, month }: { year: number; month: nu
                     <td style={{ padding: '8px 12px', textAlign: 'right' }}>
                       <button
                         onClick={() => eliminarAlerta(a.categoria)}
-                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}
+                        style={{ color: 'var(--negative)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}
                       >
                         Eliminar
                       </button>

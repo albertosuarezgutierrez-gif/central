@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import type { EmpleadoRrhh } from '@/lib/rrhh-operador'
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
-  activo: { label: 'Activo', color: '#16a34a' },
+  activo: { label: 'Activo', color: 'var(--positive)' },
   baja:   { label: 'Baja',   color: '#9ca3af' },
 }
 
@@ -33,12 +33,6 @@ export default function EmpleadosRrhhClient({ empleados }: { empleados: Empleado
 
   return (
     <div style={{ padding: '24px', maxWidth: 900 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .emp-filters { flex-direction: column !important; }
-          .emp-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>RR.HH. · Empleados</h1>
         <span style={{ fontSize: 13, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px' }}>{visibles.length} / {empleados.length}</span>
@@ -76,7 +70,7 @@ export default function EmpleadosRrhhClient({ empleados }: { empleados: Empleado
       <div className="emp-table-wrap" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
-            <tr style={{ background: 'var(--background, #f9f9f9)', borderBottom: '1px solid var(--border)' }}>
+            <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
               {['Empresa', 'Nombre', 'Email', 'Puesto', 'Estado', 'Alta'].map(h => (
                 <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
               ))}
@@ -93,7 +87,7 @@ export default function EmpleadosRrhhClient({ empleados }: { empleados: Empleado
                   <span style={{
                     fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 12,
                     color: ESTADOS[e.estado]?.color ?? 'var(--muted)',
-                    background: e.estado === 'activo' ? '#dcfce7' : 'var(--border)',
+                    background: e.estado === 'activo' ? 'var(--positive-bg)' : 'var(--border)',
                   }}>{ESTADOS[e.estado]?.label ?? e.estado}</span>
                 </td>
                 <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 13 }}>

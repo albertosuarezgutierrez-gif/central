@@ -4,7 +4,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
+const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'var(--border)', muted:'var(--muted)' };
 const FONT = 'Nunito, system-ui, sans-serif';
 
 const INPUT: React.CSSProperties = { padding:'10px 12px', borderRadius:12, border:`1px solid ${C.border}`, fontFamily:FONT, fontSize:14, boxSizing:'border-box', width:'100%' };

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { Pagina } from '@/components/ui'
 
 type Cuenta = {
   id: string
@@ -27,14 +28,14 @@ const fecha = (s: string | null) =>
 
 // Color por estado de Stripe. Sin customer → "Sin Stripe".
 function estadoBadge(c: Cuenta): { label: string; color: string } {
-  if (!c.stripe_customer_id) return { label: 'Sin Stripe', color: '#64748b' }
+  if (!c.stripe_customer_id) return { label: 'Sin Stripe', color: 'var(--muted)' }
   switch (c.stripe_estado) {
     case 'activa':
-    case 'activo':         return { label: 'Activa', color: '#16a34a' }
-    case 'pendiente_pago': return { label: 'Pendiente pago', color: '#2563eb' }
-    case 'cancelando':     return { label: 'Cancelando', color: '#d97706' }
-    case 'cancelada':      return { label: 'Cancelada', color: '#dc2626' }
-    default:               return { label: c.stripe_estado || 'Customer creado', color: '#64748b' }
+    case 'activo':         return { label: 'Activa', color: 'var(--positive)' }
+    case 'pendiente_pago': return { label: 'Pendiente pago', color: 'var(--info)' }
+    case 'cancelando':     return { label: 'Cancelando', color: 'var(--warning)' }
+    case 'cancelada':      return { label: 'Cancelada', color: 'var(--negative)' }
+    default:               return { label: c.stripe_estado || 'Customer creado', color: 'var(--muted)' }
   }
 }
 
@@ -59,13 +60,7 @@ export default function SuscripcionesClient() {
   if (error) return <p style={{ padding: '32px', color: '#e53' }}>{error}</p>
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .suscrip-stats { grid-template-columns: 1fr 1fr !important; }
-          .suscrip-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-      `}</style>
+    <Pagina ancho="tabla">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>💳 Suscripciones · ia-rest</h1>
         <a
@@ -137,6 +132,6 @@ export default function SuscripcionesClient() {
       ) : (
         <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '48px' }}>Sin cuentas con suscripción.</p>
       )}
-    </main>
+    </Pagina>
   )
 }

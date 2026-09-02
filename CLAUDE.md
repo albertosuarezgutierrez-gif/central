@@ -150,6 +150,34 @@ Al construir cualquier aviso a un tercero (limpieza, gestoría, huésped, conduc
 ## Estilo de respuesta — regla global permanente
 **Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
 
+## 🤖 Trabajo mecánico → SIEMPRE a un agente — regla global permanente
+**Todo lo MECÁNICO se delega a un subagente (`Task`), nunca se hace en la sesión principal.** Cada archivo
+que lee la sesión principal se queda en su contexto para siempre; un agente lo lee, hace el trabajo y
+devuelve solo el informe. Dictado por Alberto (02/09/2026): «todo lo mecánico que hagamos SIEMPRE usas
+agente, ahorrar token».
+
+**Es mecánico** (→ agente): renombrados masivos · el mismo patrón aplicado a N archivos · barridos de
+sustitución (hex→tokens, imports, rutas) · boilerplate · migraciones planas · rastrear en qué archivos
+aparece algo · leer un directorio entero para responder una pregunta acotada.
+
+**NO es mecánico** (→ lo hace la sesión): el diseño de la pieza central, la decisión de arquitectura, lo
+que exige criterio o negociar con Alberto, y los cambios de 1-2 archivos que ya se tienen delante
+(delegarlos cuesta más de lo que ahorra).
+
+**Cómo repartir sin que se pisen:** reparto **por archivos**, y en el prompt de cada agente va la lista
+EXPLÍCITA de lo que puede tocar y de lo que NO (incluidos los archivos que edita la sesión principal en
+paralelo). Dos agentes sobre el mismo archivo es un conflicto silencioso: el segundo pisa al primero y
+nada falla. Los archivos compartidos por varios (`globals.css`, un `index.ts` de barril) los toca UNO
+solo — normalmente la sesión principal.
+
+**Todo agente verifica antes de informar:** typecheck de su app y los tests que toque su cambio, con la
+salida pegada en el informe. Un agente que dice «hecho» sin haber visto un comando en verde es la forma
+más cara de este patrón. Y **ningún agente commitea ni empuja**: eso lo hace la sesión, que es la que ve
+el conjunto.
+
+Complementa a `delegar-codigo` (que delega la ESCRITURA a un coder barato por `/api/ai/ejecutar`) y a
+`code-map` (que acota QUÉ leer antes de leer). Esta regla es sobre a QUIÉN se le da el trabajo.
+
 ## Comunicaciones salientes — regla global permanente
 **NUNCA enviar correos, mensajes ni ninguna comunicación a terceros (email a la asesoría, a clientes,
 a quien sea) sin autorización explícita de Alberto para ESE envío concreto.** Que Alberto pida que un
@@ -414,10 +442,13 @@ salió verde):
 Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
 desbloquea nada.
 
-⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 11** (se añadió `asegura` el 26/08 y
-`housesevillana` el 27/08). Los 9 de la tabla son los que el **ruleset exige**; los dos nuevos
-**corren pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que no se
-afirma). `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
+⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 12** — verificado leyendo el `app:` del
+workflow el 02/09/2026: `ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen,
+mariscos, asegura, asegura-portal, housesevillana` (se añadió `asegura` el 26/08, `housesevillana`
+el 27/08 y **`asegura-portal`** después). Los 9 de la tabla son los que el **ruleset exige**; los
+tres nuevos **corren pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que
+no se afirma). Cuenta los nombres del workflow antes de citar esta cifra: se ha quedado corta dos
+veces ya. `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
 sus 5 errores `TS5097` vivieron 15 días sin que nadie los viera: una app que no está en la matriz
 no la typechequea nadie. **Al crear una app nueva, añadirla a la matriz es parte del alta**, igual
 que el `ignoreCommand`.

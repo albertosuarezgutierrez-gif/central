@@ -44,7 +44,7 @@ export default function HeatmapEstacionalidad({ piso }: { piso: string }) {
         🗓️ Estacionalidad (margen por piso y mes, últimos 24 meses)
       </summary>
       {estado === 'cargando' && <p style={{ color: 'var(--muted)', fontSize: 13 }}>Calculando los 24 meses… (la primera vez tarda unos segundos)</p>}
-      {estado === 'error' && <p style={{ color: 'var(--danger, #dc2626)', fontSize: 13 }}>No se ha podido calcular el heatmap.</p>}
+      {estado === 'error' && <p style={{ color: 'var(--negative)', fontSize: 13 }}>No se ha podido calcular el heatmap.</p>}
       {data && (
         <div style={{ overflowX: 'auto', marginTop: 10 }}>
           <table style={{ borderCollapse: 'separate', borderSpacing: 2, fontSize: 11 }}>

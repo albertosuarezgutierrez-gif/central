@@ -211,8 +211,8 @@ function Bloque({ b }: { b: BloqueResultados }) {
                   marginTop: 6,
                   padding: '6px 8px',
                   borderRadius: 6,
-                  background: h.aviso.clase === 'duplicado' ? 'var(--warn-bg, #fff7ed)' : 'transparent',
-                  color: h.aviso.clase === 'duplicado' ? 'var(--warn, #9a3412)' : 'var(--muted)',
+                  background: h.aviso.clase === 'duplicado' ? 'var(--warning-bg)' : 'transparent',
+                  color: h.aviso.clase === 'duplicado' ? 'var(--warning)' : 'var(--muted)',
                   lineHeight: 1.5,
                 }}
               >

@@ -126,7 +126,7 @@ export default function EmpresaCard({ e, onCambio, invitado = false }: { e: Empr
         {e.enriquecida && <span style={chip('var(--primary-light)')}>enriquecida</span>}
         {e.cnae && <span style={chip('var(--bg)')}>CNAE {e.cnae}</span>}
         {typeof e.facturacion === 'number' && <span style={chip('var(--bg)')}>{eur(e.facturacion)}</span>}
-        {e.preconcurso && <span style={chip('var(--warning-bg, #fef3c7)')}>preconcurso</span>}
+        {e.preconcurso && <span style={chip('var(--warning-bg)')}>preconcurso</span>}
         {e.cif && <span style={chip('var(--bg)')}>{e.cif}</span>}
       </div>
 

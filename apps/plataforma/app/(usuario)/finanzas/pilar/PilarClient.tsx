@@ -18,8 +18,8 @@ function fmtDec(n: number) {
 }
 
 const ESTADO_BADGE: Record<TrimPilar['estado'], { label: string; bg: string; color: string }> = {
-  pasado: { label: '✓ Plazo pasado', bg: '#c6f6d5', color: '#276749' },
-  proximo: { label: '⚠️ Próximo', bg: '#fefcbf', color: '#744210' },
+  pasado: { label: '✓ Plazo pasado', bg: 'var(--positive-bg)', color: 'var(--positive)' },
+  proximo: { label: '⚠️ Próximo', bg: 'var(--warning-bg)', color: 'var(--warning)' },
   futuro: { label: 'Pendiente', bg: 'var(--border)', color: 'var(--muted)' },
 }
 
@@ -66,7 +66,7 @@ function ClientesTable({ clientes }: { clientes: ClientePilar[] }) {
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.contraparte}</span>
           <span style={{ textAlign: 'right', color: 'var(--muted)' }}>{c.numCobros}</span>
           <span style={{ textAlign: 'right', fontWeight: 600, color: 'var(--primary)' }}>{fmt(c.total)}</span>
-          <span style={{ textAlign: 'right', fontWeight: c.pct >= 75 ? 700 : 400, color: c.pct >= 75 ? '#e53e3e' : 'var(--muted)' }}>{c.pct.toFixed(0)}%</span>
+          <span style={{ textAlign: 'right', fontWeight: c.pct >= 75 ? 700 : 400, color: c.pct >= 75 ? 'var(--negative)' : 'var(--muted)' }}>{c.pct.toFixed(0)}%</span>
         </div>
       ))}
     </div>
@@ -133,7 +133,7 @@ export default function PilarClient({ initialData, year, quarter }: Props) {
         <>
           {/* Notas manuales (p.ej. importes estimados al cargar un extracto a mano) */}
           {d.notas.length > 0 && (
-            <div style={{ background: '#e6f3ff', border: '1px solid #63b3ed', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#2c5282' }}>
+            <div style={{ background: 'var(--info-bg)', border: '1px solid #63b3ed', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: 'var(--info)' }}>
               {d.notas.map((n, i) => (
                 <div key={i} style={i > 0 ? { marginTop: '6px' } : undefined}>📝 {n}</div>
               ))}
@@ -150,9 +150,9 @@ export default function PilarClient({ initialData, year, quarter }: Props) {
           {/* KPIs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
             <KpiCard label="Cobros clientes" value={d.cobros} color="#9f7aea" sub={periodoLabel} />
-            <KpiCard label="Gastos profesionales" value={d.gastosProfesionales} color="#e53e3e" />
-            <KpiCard label="Cuota autónomos" value={d.cuotaAutonomos} color="#e53e3e" />
-            <KpiCard label="Rendimiento neto" value={d.rendimientoNeto} color={d.rendimientoNeto >= 0 ? '#38a169' : '#e53e3e'} sub={`Ret. est. 15%: ${fmt(d.retenciones)}`} />
+            <KpiCard label="Gastos profesionales" value={d.gastosProfesionales} color="var(--negative)" />
+            <KpiCard label="Cuota autónomos" value={d.cuotaAutonomos} color="var(--negative)" />
+            <KpiCard label="Rendimiento neto" value={d.rendimientoNeto} color={d.rendimientoNeto >= 0 ? 'var(--positive)' : 'var(--negative)'} sub={`Ret. est. 15%: ${fmt(d.retenciones)}`} />
           </div>
 
           {/* Evolución mensual */}
@@ -190,7 +190,7 @@ export default function PilarClient({ initialData, year, quarter }: Props) {
                     ) : (
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                         <span style={{ color: 'var(--muted)' }}>Rend. neto: {fmt(t.rendimientoNeto)} × 20%</span>
-                        <span style={{ fontWeight: 700, color: t.pagoFraccionado > 0 ? '#e53e3e' : '#38a169' }}>
+                        <span style={{ fontWeight: 700, color: t.pagoFraccionado > 0 ? 'var(--negative)' : 'var(--positive)' }}>
                           {t.pagoFraccionado > 0 ? `Ingresar ${fmt(t.pagoFraccionado)}` : 'Ret. cubren todo'}
                         </span>
                       </div>
@@ -225,7 +225,7 @@ export default function PilarClient({ initialData, year, quarter }: Props) {
                       {m.categoria === 'cobro_cliente' ? 'cobro' : m.categoria === 'cuota_autonomos' ? 'TGSS' : 'gasto prof.'}
                     </span>
                   )}
-                  <span style={{ fontWeight: 700, color: m.importe >= 0 ? '#9f7aea' : '#e53e3e', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontWeight: 700, color: m.importe >= 0 ? '#9f7aea' : 'var(--negative)', whiteSpace: 'nowrap' }}>
                     {m.importe >= 0 ? '+' : ''}{fmt(m.importe)}
                   </span>
                 </div>

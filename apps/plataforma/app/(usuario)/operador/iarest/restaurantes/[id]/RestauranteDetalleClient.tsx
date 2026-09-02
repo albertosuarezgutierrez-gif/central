@@ -74,7 +74,7 @@ export default function RestauranteDetalleClient({ id }: { id: string }) {
         <span style={{
           fontSize: '13px', fontWeight: 600, padding: '4px 12px', borderRadius: '8px',
           background: restaurante.activo ? '#16a34a20' : '#94a3b820',
-          color: restaurante.activo ? '#16a34a' : '#94a3b8',
+          color: restaurante.activo ? 'var(--positive)' : 'var(--muted)',
         }}>
           {restaurante.activo ? 'Activo' : 'Inactivo'}
         </span>

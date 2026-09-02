@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
 import { getAlertas, type Alertas } from '@/lib/banca'
+import { colorImporte } from '@/components/ui'
 import { getResumenPilar, getResumenFinanciero, type TrimPilar } from '@/lib/finanzas'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from '../dashboard/GestionSociedad'
 
@@ -226,7 +227,7 @@ function CorreduriaCard({ correduria, anio }: {
           <FinStat
             label="Resultado"
             value={fmtEur(correduria.resultado)}
-            color={correduria.resultado >= 0 ? '#16a34a' : '#dc2626'}
+            color={colorImporte(correduria.resultado)}
           />
         </div>
       </div>
@@ -271,7 +272,7 @@ function NegocioCard({ neg, fin, url, anio }: {
               <FinStat
                 label="Resultado"
                 value={fmtEur(fin.resultadoHoy ?? fin.resultadoYtd)}
-                color={(fin.resultadoHoy ?? fin.resultadoYtd) >= 0 ? '#16a34a' : '#dc2626'}
+                color={colorImporte(fin.resultadoHoy ?? fin.resultadoYtd)}
               />
             </div>
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
@@ -348,15 +349,15 @@ function AvisoModelo130({ trim }: { trim: TrimPilar }) {
   return (
     <Link href="/finanzas/pilar" style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
       <div style={{
-        background: proximo ? '#fff7ed' : 'var(--primary-light)',
-        border: `1px solid ${proximo ? '#f59e0b' : 'var(--primary)'}`,
+        background: proximo ? 'var(--warning-bg)' : 'var(--primary-light)',
+        border: `1px solid ${proximo ? 'var(--warning)' : 'var(--primary)'}`,
         borderRadius: 'var(--radius)', padding: '12px 16px',
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13,
       }}>
-        <span style={{ fontWeight: 700, color: proximo ? '#b45309' : 'var(--primary)' }}>📅 Modelo 130 · {trim.q}T</span>
+        <span style={{ fontWeight: 700, color: proximo ? 'var(--warning)' : 'var(--primary)' }}>📅 Modelo 130 · {trim.q}T</span>
         <span style={{ color: 'var(--text)' }}>vence <strong>{trim.plazo}</strong></span>
         <span style={{ color: 'var(--text)' }}>· a ingresar <strong>{fmtEur(trim.pagoFraccionado)}</strong></span>
-        {proximo && <span style={{ color: '#b45309', fontWeight: 700 }}>· ¡plazo próximo!</span>}
+        {proximo && <span style={{ color: 'var(--warning)', fontWeight: 700 }}>· ¡plazo próximo!</span>}
         <span style={{ marginLeft: 'auto', color: 'var(--primary)', fontWeight: 600 }}>Ver →</span>
       </div>
     </Link>
@@ -389,13 +390,13 @@ function IntercompanyCard({
       <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'center', margin: '14px 0' }}>
         <FinStat label="Ingresos (suma bruta)" value={fmtEur(agregadoBruto.ingresos)} />
         <span style={{ color: 'var(--muted)', fontSize: '18px' }}>−</span>
-        <FinStat label="Intercompany eliminado" value={fmtEur(eliminaciones.ingresos)} color="#dc2626" />
+        <FinStat label="Intercompany eliminado" value={fmtEur(eliminaciones.ingresos)} color="var(--negative)" />
         <span style={{ color: 'var(--muted)', fontSize: '18px' }}>=</span>
         <FinStat label="Ingresos reales del grupo" value={fmtEur(real.ingresos)} color="var(--primary)" />
         <FinStat
           label="Resultado del grupo"
           value={fmtEur(real.resultado)}
-          color={real.resultado >= 0 ? '#16a34a' : '#dc2626'}
+          color={colorImporte(real.resultado)}
         />
       </div>
       <p style={{ fontSize: '12px', color: 'var(--muted)', margin: '0 0 12px' }}>
@@ -415,10 +416,10 @@ function IntercompanyCard({
             {internas.map(s => (
               <tr key={s.sociedadId} style={{ borderTop: '1px solid var(--border)' }}>
                 <td style={{ padding: '6px 8px 6px 0' }}>{nombrePorSociedad[s.sociedadId] ?? s.sociedadId}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: '#16a34a' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--positive)' }}>
                   {s.ingresosIntercompany > 0 ? fmtEur(s.ingresosIntercompany) : '—'}
                 </td>
-                <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', color: '#dc2626' }}>
+                <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', color: 'var(--negative)' }}>
                   {s.gastosIntercompany > 0 ? fmtEur(s.gastosIntercompany) : '—'}
                 </td>
               </tr>

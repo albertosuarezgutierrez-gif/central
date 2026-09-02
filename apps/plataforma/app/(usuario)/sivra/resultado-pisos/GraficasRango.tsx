@@ -68,7 +68,6 @@ export default function GraficasRango({ meses, mesesAnterior, agregado, pisoFilt
 
   return (
     <section style={{ marginBottom: 20 }}>
-      <style>{`@media (max-width:768px){.rp-graf{grid-template-columns:1fr!important}}`}</style>
 
       {hayEvolucion && (
         <div style={{ ...card, marginBottom: 12 }}>

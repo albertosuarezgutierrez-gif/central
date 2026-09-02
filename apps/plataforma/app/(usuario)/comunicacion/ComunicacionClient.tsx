@@ -39,13 +39,6 @@ export default function ComunicacionClient({ operador, negocios, categorias }: {
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)', color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .comun-layout { flex-direction: column !important; }
-          .comun-bandeja { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; max-height: 200px; }
-          .comun-header-actions { flex-wrap: wrap !important; gap: 8px !important; }
-        }
-      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>💬 Comunicación</div>
         <div className="comun-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -137,7 +130,7 @@ function NuevoModal({ negocios, categorias, onClose, onCreado }: { negocios: Neg
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,.15)' }}>
         <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>✏️ Nuevo mensaje</div>
-        {err && <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>{err}</div>}
+        {err && <div style={{ background: 'var(--negative-bg)', color: 'var(--negative)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>{err}</div>}
 
         <Lbl>Destinatario</Lbl>
         <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>

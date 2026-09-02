@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdmin } from '@/lib/superadmin'
 import MapaArquitectura from '@/app/admin/MapaArquitectura'
+import { Pagina } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,12 +14,12 @@ export default async function OperadorEstructuraPage() {
   if (!admin) redirect('/dashboard')
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+    <Pagina ancho="tabla">
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '2px' }}>🗺️ Estructura del repo</h1>
         <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Radiografía viva del monorepo · auto-generada en cada push</div>
       </div>
       <MapaArquitectura theme="light" />
-    </main>
+    </Pagina>
   )
 }

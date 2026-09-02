@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { eur } from '@/lib/dinero'
+import { Pagina } from '@/components/ui'
 
 type Restaurante = {
   nombre: string
@@ -44,13 +45,7 @@ export default function CobrosClient() {
   if (error) return <p style={{ padding: '32px', color: '#e53' }}>{error}</p>
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .cobros-stats { grid-template-columns: 1fr 1fr !important; }
-          .cobros-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-      `}</style>
+    <Pagina ancho="tabla">
       <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>💶 Cobros · ia-rest</h1>
 
       {totales && (
@@ -133,6 +128,6 @@ export default function CobrosClient() {
       {restaurantes.length === 0 && !loading && (
         <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '48px' }}>Sin datos de cobros.</p>
       )}
-    </main>
+    </Pagina>
   )
 }

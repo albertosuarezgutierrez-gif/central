@@ -100,21 +100,6 @@ export default function IncomePage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 1200 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .income-header { flex-direction: column !important; align-items: flex-start !important; }
-          .income-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .income-split-grid { grid-template-columns: 1fr !important; }
-          .income-filters { flex-direction: column !important; align-items: stretch !important; }
-          .income-filters select, .income-filters input, .income-filters button { width: 100% !important; box-sizing: border-box; }
-          .income-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-          .income-adv-filters { grid-template-columns: repeat(2, 1fr) !important; }
-        }
-        @media (max-width: 480px) {
-          .income-kpi-grid { grid-template-columns: 1fr !important; }
-          .income-adv-filters { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
       <div className="income-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Ingresos — Reservas</h1>
@@ -190,7 +175,7 @@ export default function IncomePage() {
             Filtros{filtrosActivos > 0 ? ` (${filtrosActivos})` : ''}
           </button>
           {filtrosActivos > 0 && (
-            <button onClick={limpiarFiltros} style={{ ...inp, cursor: 'pointer', color: '#dc2626', border: '1px solid #fecaca', background: 'transparent', whiteSpace: 'nowrap' }}>Limpiar</button>
+            <button onClick={limpiarFiltros} style={{ ...inp, cursor: 'pointer', color: 'var(--negative)', border: '1px solid var(--negative-bg)', background: 'transparent', whiteSpace: 'nowrap' }}>Limpiar</button>
           )}
         </div>
 
@@ -321,7 +306,7 @@ export default function IncomePage() {
                         </span>
                       </td>
                       <td style={{ padding: '10px 14px', textAlign: 'center' }}>{inc.nights}</td>
-                      <td style={{ padding: '10px 14px', fontWeight: 700, color: '#10b981', whiteSpace: 'nowrap' }}>{fmt(inc.amount)}</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--positive)', whiteSpace: 'nowrap' }}>{fmt(inc.amount)}</td>
                     </tr>
                   ))}
                 </tbody>

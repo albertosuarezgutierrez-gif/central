@@ -207,8 +207,8 @@ export default function MapaSubastas() {
           🎯 Solo mi radar {enRadar > 0 && `(${enRadar})`}
         </label>
         <span style={{ color: 'var(--muted)' }}>
-          <span style={{ color: '#4f46e5' }}>●</span> radar · <span style={{ color: '#16a34a' }}>●</span> libre/desconocida ·{' '}
-          <span style={{ color: '#b45309' }}>●</span> ocupada · <span style={{ color: '#16a34a' }}>○</span> ubicación aproximada
+          <span style={{ color: '#4f46e5' }}>●</span> radar · <span style={{ color: 'var(--positive)' }}>●</span> libre/desconocida ·{' '}
+          <span style={{ color: 'var(--warning)' }}>●</span> ocupada · <span style={{ color: 'var(--positive)' }}>○</span> ubicación aproximada
         </span>
       </div>
 

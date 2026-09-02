@@ -1523,6 +1523,37 @@ inventario ni forma de callar uno solo: para bajar ruido había que buscar el `t
 - Migración `prisma/sql/2026-09-01_telegram_avisos.sql` **aplicada** (incluye el `GRANT USAGE` de
   `telegram_avisos_log_id_seq` a `prisma_plataforma`: sin él el `bigserial` no deja insertar).
 
+## 🎨 Sistema de diseño — `components/ui.tsx` (02/09/2026)
+Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pasó a solo REDIRIGIR a
+`/banca`: el sistema de diseño colgaba de una ruta muerta. Y al auditarlo, **ningún archivo lo importaba**
+— existía como documento, no como código, mientras las pantallas se escribían con ~4.900 objetos
+`style={{}}` a mano y 223 verdes/rojos en hex fijo (ilegibles en modo oscuro). Movido a
+**`components/ui.tsx`** (`@/components/ui`); **`/banca` es la implementación de referencia**.
+- **Adopción POR GOTEO** (regla del CLAUDE.md raíz): se trae el patrón cuando una pantalla lo necesita.
+  Migrar los ~4.900 inline styles de golpe rompería pantallas que hoy funcionan.
+- **Ancho por tipo de contenido:** `<Pagina ancho="lectura">` (960, resúmenes/fichas) o `"tabla"` (1400,
+  páginas cuyo cuerpo es una tabla). Sustituye al `maxWidth:'960px'` que estaba copiado en 14 páginas.
+- **Nada de hex.** Colores SIEMPRE por token (`var(--positive)`, `var(--negative)`…); para un importe,
+  `colorImporte(n)`. Lo vigila `test/regression-tokens-color.test.ts`.
+- **`btnStyle()` devuelve el ESTILO, no un componente con `onClick`:** el archivo es server-safe y un
+  handler obligaría a `'use client'` en cada pantalla que lo importe.
+- **CSS responsive en `globals.css`, no en la página.** Un estilo inline no admite media queries, y ese
+  era el motivo de que 47 páginas llevaran un bloque `<style>` incrustado (201 `!important` entre todas).
+
+### 🚨 `Dato` — los tres estados, por construcción
+La regla raíz «dato que NO hay ≠ dato que NO se ha mirado» se cumplía por VIGILANCIA: cada pantalla nueva
+tenía que acordarse. La lógica pura vive en **`lib/dato.ts`** (`estadoDato`/`esPendiente`), con guardián en
+`test/regression-dato-tres-estados.test.ts`:
+- `null`/`undefined` → **«pendiente»** (nadie lo ha mirado; columna de enriquecimiento sin pasada aún).
+- `[]`/`''` → **«revisado, no hay»**.
+- **el `0` es un VALOR**, no un hueco. Es el error simétrico, el que aparece justo al arreglar el primero:
+  «0 €» y «0 incidencias» son afirmaciones legítimas que alguien comprobó, y tratarlas como «sin revisar»
+  hace que la pantalla deje de decir lo que sabe.
+
+`<Pendiente>` lo pinta con borde **discontinuo** (se rellenará) o **continuo** (`definitivo`: la fuente no
+lo va a traer nunca — prometer una pasada que no llega es la otra forma de mentir). `donde` dice dónde
+mirar mientras tanto (la ficha oficial, el portal del banco…).
+
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.
 - Sin credenciales en repo.

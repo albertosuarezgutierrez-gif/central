@@ -106,18 +106,6 @@ export default function GastosFijosPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
-      <style>{`
-        @media (max-width: 768px) {
-          .fijos-header { flex-direction: column !important; align-items: flex-start !important; }
-          .fijos-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
-          .fijos-form-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .fijos-form-grid > [style*="gridColumn"] { grid-column: 1 / -1 !important; }
-          .fijos-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-        }
-        @media (max-width: 480px) {
-          .fijos-form-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
       <div className="fijos-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Gastos fijos</h1>
         <div className="fijos-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -133,7 +121,7 @@ export default function GastosFijosPage() {
       </p>
 
       {genResult && (
-        <div style={{ marginBottom: 16, background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 6, padding: '10px 14px', fontSize: 13 }}>{genResult}</div>
+        <div style={{ marginBottom: 16, background: 'var(--positive-bg)', color: 'var(--positive)', border: '1px solid #bbf7d0', borderRadius: 6, padding: '10px 14px', fontSize: 13 }}>{genResult}</div>
       )}
 
       {/* Form */}
@@ -203,7 +191,7 @@ export default function GastosFijosPage() {
             {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear gasto fijo'}
           </button>
           {editing && <button onClick={reset} style={{ background: 'none', border: 'none', fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>Cancelar</button>}
-          {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? '#dc2626' : 'var(--muted)' }}>{msg}</span>}
+          {msg && <span style={{ fontSize: 13, color: msg.startsWith('Error') ? 'var(--negative)' : 'var(--muted)' }}>{msg}</span>}
         </div>
       </div>
 
@@ -235,13 +223,13 @@ export default function GastosFijosPage() {
                   <td style={{ padding: '10px 14px', textAlign: 'center', color: 'var(--muted)' }}>{f.dia_mes}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>{fmtEUR(f.total)}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                    <button onClick={() => toggle(f)} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, fontWeight: 600, border: 'none', cursor: 'pointer', background: f.activo ? '#dcfce7' : '#f3f4f6', color: f.activo ? '#15803d' : '#6b7280' }}>
+                    <button onClick={() => toggle(f)} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 10, fontWeight: 600, border: 'none', cursor: 'pointer', background: f.activo ? 'var(--positive-bg)' : '#f3f4f6', color: f.activo ? 'var(--positive)' : 'var(--muted)' }}>
                       {f.activo ? 'Sí' : 'No'}
                     </button>
                   </td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     <button onClick={() => startEdit(f)} style={{ fontSize: 12, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', marginRight: 12 }}>Editar</button>
-                    <button onClick={() => remove(f)} style={{ fontSize: 12, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer' }}>Borrar</button>
+                    <button onClick={() => remove(f)} style={{ fontSize: 12, color: 'var(--negative)', background: 'none', border: 'none', cursor: 'pointer' }}>Borrar</button>
                   </td>
                 </tr>
               ))}

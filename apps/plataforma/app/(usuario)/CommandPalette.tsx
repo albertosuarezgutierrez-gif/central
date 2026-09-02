@@ -72,12 +72,6 @@ export default function CommandPalette({ isOperator }: { isOperator: boolean }) 
 
   return (
     <>
-      <style>{`
-        @media (max-width: 768px) {
-          .palette-panel { width: calc(100% - 32px) !important; max-width: unset !important; max-height: 80vh !important; display: flex; flex-direction: column; }
-          .palette-list { flex: 1; overflow-y: auto; }
-        }
-      `}</style>
       <div
         onClick={() => setOpen(false)}
         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 16px 16px' }}

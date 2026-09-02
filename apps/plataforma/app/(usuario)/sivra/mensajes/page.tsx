@@ -18,27 +18,27 @@ type Thread = {
 }
 
 const STATUS_CONFIG = {
-  pendiente:  { label:'Pendiente',  bg:'#fef3c7', text:'#92400e', dot:'#f59e0b' },
-  urgente:    { label:'Urgente',    bg:'#fee2e2', text:'#991b1b', dot:'#ef4444' },
-  respondido: { label:'Respondido', bg:'#dcfce7', text:'#166534', dot:'#22c55e' },
+  pendiente:  { label:'Pendiente',  bg:'var(--warning-bg)', text:'var(--warning)', dot:'var(--warning)' },
+  urgente:    { label:'Urgente',    bg:'var(--negative-bg)', text:'var(--negative)', dot:'var(--negative)' },
+  respondido: { label:'Respondido', bg:'var(--positive-bg)', text:'var(--positive)', dot:'var(--positive)' },
 }
 const PORTAL_COLOR: Record<string,string> = {
   BOOKING:'#003580', AIRBNB:'#FF5A5F', VRBO:'#3B5998',
-  DIRECTO:'#10B981', EXPEDIA:'#FFC72C', AGODA:'#E84142', OTRO:'#5A9A12',
+  DIRECTO:'var(--positive)', EXPEDIA:'#FFC72C', AGODA:'#E84142', OTRO:'#5A9A12',
 }
 // Tonos del chip de órdenes a la limpieza. El de «no se ha podido consultar» es ÁMBAR a propósito:
 // en verde se leería como «comprobado y todo en orden», que es justo lo que no se sabe.
 const ORDEN_TONO: Record<string, { bg:string; color:string }> = {
-  ok:     { bg:'#dcfce7', color:'#166534' },
-  aviso:  { bg:'#fef3c7', color:'#92400e' },
-  error:  { bg:'#fee2e2', color:'#991b1b' },
+  ok:     { bg:'var(--positive-bg)', color:'var(--positive)' },
+  aviso:  { bg:'var(--warning-bg)', color:'var(--warning)' },
+  error:  { bg:'var(--negative-bg)', color:'var(--negative)' },
   neutro: { bg:'#f4f4f5', color:'#52525b' },
 }
 
 const CLASS_CONFIG = {
-  trivial:    { icon:'✅', label:'Trivial',    color:'#22c55e', bg:'#dcfce7' },
-  info:       { icon:'💬', label:'Info',       color:'#3b82f6', bg:'#dbeafe' },
-  importante: { icon:'🔴', label:'Importante', color:'#ef4444', bg:'#fee2e2' },
+  trivial:    { icon:'✅', label:'Trivial',    color:'var(--positive)', bg:'var(--positive-bg)' },
+  info:       { icon:'💬', label:'Info',       color:'var(--info)', bg:'var(--info-bg)' },
+  importante: { icon:'🔴', label:'Importante', color:'var(--negative)', bg:'var(--negative-bg)' },
 }
 
 // Sivra brand colors
@@ -51,7 +51,7 @@ const C = {
   white: '#FFFFFF',
   muted: '#9898A8',
   muted2: '#6B7F96',
-  red: '#ef4444',
+  red: 'var(--negative)',
 }
 
 function fmtTime(ts: string) {
@@ -398,23 +398,11 @@ export default function MensajesPage() {
         <Spinner size={32}/>
         <p style={{ fontSize:14, color:C.muted, marginTop:12 }}>Cargando mensajes…</p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 
   return (
     <>
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-        @media (max-width: 768px) {
-          .msg-bubble { max-width: 90% !important; }
-          .msg-actions { flex-wrap: wrap !important; }
-          .msg-reply-row { flex-direction: column !important; }
-          .msg-reply-row > div:last-child { flex-direction: row !important; }
-          .msg-hint-row { flex-wrap: wrap !important; }
-        }
-      `}</style>
       <div style={{ display:'flex', height:'calc(100vh - 56px)', overflow:'hidden' }}>
 
         {/* ── Thread list ── */}
@@ -435,7 +423,7 @@ export default function MensajesPage() {
                     <span style={{ padding:'2px 8px', borderRadius:20, background:C.red, fontSize:11, fontWeight:700, animation:'pulse 1.5s infinite' }}>{urgentCount} 🔴</span>
                   )}
                   {pendCount>0&&urgentCount===0&&(
-                    <span style={{ padding:'2px 8px', borderRadius:20, background:'#f59e0b', fontSize:11, fontWeight:700 }}>{pendCount}</span>
+                    <span style={{ padding:'2px 8px', borderRadius:20, background:'var(--warning)', fontSize:11, fontWeight:700 }}>{pendCount}</span>
                   )}
                   <button onClick={()=>loadThreads()} title="Actualizar" style={{
                     width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center',
@@ -447,7 +435,7 @@ export default function MensajesPage() {
               <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
                 {([
                   {id:'activos',    label:'Activos',     color:C.lime,    count: pendCount},
-                  {id:'respondido', label:'Respondidos', color:'#22c55e', count: 0},
+                  {id:'respondido', label:'Respondidos', color:'var(--positive)', count: 0},
                   {id:'trivial',    label:`Trivial${trivialCount>0?` (${trivialCount})`:''}`, color:C.muted, count: 0},
                   {id:'todos',      label:'Todos',       color:C.muted,   count: 0},
                 ] as const).map(f=>(
@@ -644,9 +632,9 @@ export default function MensajesPage() {
 
               {/* Alert banner */}
               {aiAlert&&!aiLoading&&(
-                <div style={{ margin:'0 20px 8px', padding:12, background:'#7f1d1d', border:'1px solid #ef4444', borderRadius:6 }}>
+                <div style={{ margin:'0 20px 8px', padding:12, background:'#7f1d1d', border:'1px solid var(--negative)', borderRadius:6 }}>
                   <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8 }}>
-                    <span style={{ fontSize:14, color:'#fecaca', lineHeight:1.5 }}>{aiAlert}</span>
+                    <span style={{ fontSize:14, color:'#fff', lineHeight:1.5 }}>{aiAlert}</span>
                     <button onClick={()=>setAiAlert(null)} style={{ fontSize:10, color:'#fca5a5', background:'none', border:'none', cursor:'pointer', flexShrink:0 }}>✕</button>
                   </div>
                   <p style={{ fontSize:12, color:'#f87171', marginTop:6 }}>Decide y responde manualmente.</p>
@@ -664,7 +652,7 @@ export default function MensajesPage() {
                          hint.trim() ? '✏️ Borrador IA (con tu idea)' : '✨ Borrador IA (Claude)'}
                       </span>
                       {hint.trim() && aiSource === 'claude' && (
-                        <span style={{ fontSize:10, padding:'1px 6px', borderRadius:4, background:'#f0fdf4', color:'#15803d', border:'1px solid #bbf7d0' }}>
+                        <span style={{ fontSize:10, padding:'1px 6px', borderRadius:4, background:'var(--positive-bg)', color:'var(--positive)', border:'1px solid #bbf7d0' }}>
                           💡 {hint.length > 30 ? hint.slice(0,30)+'…' : hint}
                         </span>
                       )}

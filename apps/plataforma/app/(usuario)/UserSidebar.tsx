@@ -1,90 +1,134 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import {
+  Banknote, BedDouble, Bell, Bot, Briefcase, Building2, Calculator, CalendarDays,
+  ChartColumn, ChartLine, ChartPie, ChevronDown, ClipboardList, Coins, Cog, Cpu,
+  CreditCard, Euro, Eye, Fan, FileText, FlaskConical, Gavel, House, KeyRound,
+  Landmark, Lightbulb, MessageCircle, MessageSquare, Network, Receipt, Satellite,
+  Scale, Search, SearchCheck, Send, Shield, Sparkles, Store, Target, Ticket,
+  TrendingUp, User, UserCheck, Users, UtensilsCrossed, Wrench,
+  type LucideIcon,
+} from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+
+// Iconos de lucide, NO emojis: cada sistema operativo pinta el emoji a su manera (color,
+// grosor y hasta dibujo distintos), así que el mismo lateral se veía de una forma en el móvil
+// de Alberto y de otra en el escritorio. Se guarda el COMPONENTE del icono (no un string) y
+// se pinta con `color: 'currentColor'` para que herede el color del enlace (activo/inactivo).
 
 const NAV_NEGOCIO = [
   // 🏠 Inicio = Resumen + Banca FUSIONADOS (Fase 2). Una sola entrada: /banca con control
   // 💶 Dinero (saldos+movimientos+IA) | 🏢 Negocios (holding, antiguo Resumen). Absorbe también la
   // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
   // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
-  { href: '/banca', icon: '🏠', label: 'Inicio' },
-  { href: '/banca/transferencia', icon: '💸', label: 'Transferencia' },
+  { href: '/banca', icon: House, label: 'Inicio' },
+  { href: '/banca/transferencia', icon: Send, label: 'Transferencia' },
   // Bandeja del agente de facturas. Es el destino del aviso de Telegram, que hasta el 29/08/2026
   // enlazaba a una página inexistente; sin esta entrada, lo acumulado solo se ve al llegar una
   // factura nueva (el aviso cuenta las de ESA pasada, no la bandeja entera).
-  { href: '/expenses/pendientes', icon: '🧾', label: 'Facturas por revisar' },
-  { href: '/agente', icon: '🤖', label: 'Agente precios' },
-  { href: '/contable', icon: '🧮', label: 'Contable' },
-  { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
+  { href: '/expenses/pendientes', icon: Receipt, label: 'Facturas por revisar' },
+  { href: '/agente', icon: Bot, label: 'Agente precios' },
+  { href: '/contable', icon: Calculator, label: 'Contable' },
+  { href: '/limpiezas', icon: Sparkles, label: 'Limpiezas' },
   // 🛡️ Correduría: la matriz de comisiones + la cartera en vivo de central-asegura. Vivía
   // SOLO como enlace desde las tarjetas de /banca (31/08/2026: «no me sale correduría»), así
   // que si no pasabas por Inicio la sección era invisible.
-  { href: '/correduria', icon: '🛡️', label: 'Correduría' },
-  { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
+  { href: '/correduria', icon: Shield, label: 'Correduría' },
+  { href: '/comunicacion', icon: MessageSquare, label: 'Comunicación' },
   // 🔔 Qué te manda el bot por su cuenta, y el interruptor de cada aviso (01/09/2026:
   // «revisa las notificaciones de Telegram, son muchas»).
-  { href: '/telegram', icon: '🔔', label: 'Avisos Telegram' },
-  { href: '/concursos', icon: '🏛️', label: 'Concursos' },
-  { href: '/subastas', icon: '⚖️', label: 'Subastas y chollos' },
-  { href: '/inversion', icon: '🏘️', label: 'Analizar compra' },
-  { href: '/empresas', icon: '🏢', label: 'Empresas' },
-  { href: '/trading', icon: '📈', label: 'Inversión' },
-  { href: '/patrimonio', icon: '💼', label: 'Patrimonio' },
+  { href: '/telegram', icon: Bell, label: 'Avisos Telegram' },
+  { href: '/concursos', icon: Landmark, label: 'Concursos' },
+  { href: '/subastas', icon: Gavel, label: 'Subastas y chollos' },
+  { href: '/inversion', icon: SearchCheck, label: 'Analizar compra' },
+  { href: '/empresas', icon: Building2, label: 'Empresas' },
+  { href: '/trading', icon: TrendingUp, label: 'Inversión' },
+  { href: '/patrimonio', icon: Briefcase, label: 'Patrimonio' },
 ]
 
 // Entrada única para una cuenta acotada a la sección Empresas (rol='empresas').
-const NAV_SOLO_EMPRESAS = [{ href: '/empresas', icon: '🏢', label: 'Empresas' }]
+const NAV_SOLO_EMPRESAS = [{ href: '/empresas', icon: Building2, label: 'Empresas' }]
 
 const NAV_PISOS = [
   // 🏨 Apartamentos vivía en «Mi negocio» y se quedó sin entrada al fusionar Resumen+Banca
   // (16/07/2026): la página nunca se borró, pero solo se llegaba por el Cmd+K o por un
   // «Detalle →» suelto, así que en la práctica era invisible. Restaurada aquí, que es donde
   // Alberto busca los pisos, y es la que lleva el resumen del ciclo de mensajes al huésped.
-  { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
-  { href: '/sivra/resultado-pisos', icon: '📈', label: 'Resultado pisos' },
-  { href: '/sivra/calendario', icon: '📅', label: 'Calendario' },
-  { href: '/sivra/income', icon: '💰', label: 'Ingresos' },
-  { href: '/sivra/expenses', icon: '🧾', label: 'Gastos' },
-  { href: '/sivra/gastos-fijos', icon: '📋', label: 'Gastos fijos' },
-  { href: '/sivra/facturas-control', icon: '🗂️', label: 'Facturas' },
-  { href: '/sivra/fiscal', icon: '📊', label: 'Fiscal IRPF' },
-  { href: '/sivra/mensajes', icon: '📨', label: 'Mensajes' },
-  { href: '/sivra/mercado', icon: '📊', label: 'Competencia' },
-  { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
-  { href: '/sivra/pricing-auto', icon: '⚙️', label: 'Pricing auto' },
-  { href: '/sivra/pricing-rentabilidad', icon: '⚖️', label: 'Motor vs PL' },
-  { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
-  { href: '/sivra/limpiadoras', icon: '🛠️', label: 'Admin limpiezas' },
-  { href: '/sivra/domotica', icon: '🌀', label: 'Domótica' },
+  { href: '/apartamentos', icon: BedDouble, label: 'Apartamentos' },
+  { href: '/sivra/resultado-pisos', icon: ChartLine, label: 'Resultado pisos' },
+  { href: '/sivra/calendario', icon: CalendarDays, label: 'Calendario' },
+  { href: '/sivra/income', icon: Coins, label: 'Ingresos' },
+  { href: '/sivra/expenses', icon: CreditCard, label: 'Gastos' },
+  { href: '/sivra/gastos-fijos', icon: ClipboardList, label: 'Gastos fijos' },
+  { href: '/sivra/facturas-control', icon: FileText, label: 'Facturas' },
+  { href: '/sivra/fiscal', icon: ChartPie, label: 'Fiscal IRPF' },
+  { href: '/sivra/mensajes', icon: MessageCircle, label: 'Mensajes' },
+  { href: '/sivra/mercado', icon: ChartColumn, label: 'Competencia' },
+  { href: '/sivra/pricing', icon: FlaskConical, label: 'Pricing Lab' },
+  { href: '/sivra/pricing-auto', icon: Cog, label: 'Pricing auto' },
+  { href: '/sivra/pricing-rentabilidad', icon: Scale, label: 'Motor vs PL' },
+  { href: '/sivra/seo', icon: Search, label: 'SEO' },
+  { href: '/sivra/limpiadoras', icon: Wrench, label: 'Admin limpiezas' },
+  { href: '/sivra/domotica', icon: Fan, label: 'Domótica' },
 ]
 
 const NAV_OPERADOR = [
-  { href: '/operador/clientes', icon: '🏢', label: 'Clientes' },
-  { href: '/operador/personas', icon: '👤', label: 'Personas' },
-  { href: '/operador/flota-mapa', icon: '🛰️', label: 'Flota (mapa)' },
-  { href: '/operador/iarest', icon: '🍽️', label: 'ia-rest' },
-  { href: '/operador/iarest/restaurantes', icon: '🏪', label: 'Restaurantes', sub: true },
-  { href: '/operador/iarest/cobros', icon: '💶', label: 'Cobros', sub: true },
-  { href: '/operador/iarest/suscripciones', icon: '💳', label: 'Suscripciones', sub: true },
-  { href: '/operador/iarest/soporte', icon: '🎫', label: 'Soporte', sub: true },
-  { href: '/operador/iarest/sugerencias', icon: '💡', label: 'Sugerencias', sub: true },
-  { href: '/operador/iarest/crecimiento', icon: '📈', label: 'Crecimiento', sub: true },
-  { href: '/operador/iarest/sistema', icon: '🔬', label: 'Sistema', sub: true },
-  { href: '/operador/iarest/crm', icon: '🎯', label: 'CRM', sub: true },
-  { href: '/operador/actividad', icon: '👁️', label: 'Actividad ialimp' },
-  { href: '/operador/agentes', icon: '🤖', label: 'Agentes' },
-  { href: '/operador/ia', icon: '💸', label: 'IA · gasto' },
-  { href: '/operador/rrhh', icon: '👥', label: 'RR.HH.' },
-  { href: '/operador/rrhh/empleados', icon: '🧑‍💼', label: 'Empleados', sub: true },
-  { href: '/operador/rrhh/solicitudes', icon: '📋', label: 'Solicitudes', sub: true },
-  { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
-  { href: '/operador/secretos', icon: '🔑', label: 'Secretos' },
+  { href: '/operador/clientes', icon: Building2, label: 'Clientes' },
+  { href: '/operador/personas', icon: User, label: 'Personas' },
+  { href: '/operador/flota-mapa', icon: Satellite, label: 'Flota (mapa)' },
+  { href: '/operador/iarest', icon: UtensilsCrossed, label: 'ia-rest' },
+  { href: '/operador/iarest/restaurantes', icon: Store, label: 'Restaurantes', sub: true },
+  { href: '/operador/iarest/cobros', icon: Euro, label: 'Cobros', sub: true },
+  { href: '/operador/iarest/suscripciones', icon: CreditCard, label: 'Suscripciones', sub: true },
+  { href: '/operador/iarest/soporte', icon: Ticket, label: 'Soporte', sub: true },
+  { href: '/operador/iarest/sugerencias', icon: Lightbulb, label: 'Sugerencias', sub: true },
+  { href: '/operador/iarest/crecimiento', icon: TrendingUp, label: 'Crecimiento', sub: true },
+  { href: '/operador/iarest/sistema', icon: Cpu, label: 'Sistema', sub: true },
+  { href: '/operador/iarest/crm', icon: Target, label: 'CRM', sub: true },
+  { href: '/operador/actividad', icon: Eye, label: 'Actividad ialimp' },
+  { href: '/operador/agentes', icon: Bot, label: 'Agentes' },
+  { href: '/operador/ia', icon: Banknote, label: 'IA · gasto' },
+  { href: '/operador/rrhh', icon: Users, label: 'RR.HH.' },
+  { href: '/operador/rrhh/empleados', icon: UserCheck, label: 'Empleados', sub: true },
+  { href: '/operador/rrhh/solicitudes', icon: ClipboardList, label: 'Solicitudes', sub: true },
+  { href: '/operador/estructura', icon: Network, label: 'Estructura' },
+  { href: '/operador/secretos', icon: KeyRound, label: 'Secretos' },
 ]
 
 const NAV_OPERADOR_RESTRINGIDO = new Set(['/operador/clientes', '/operador/rrhh', '/operador/rrhh/empleados', '/operador/rrhh/solicitudes'])
 
+// Secciones PLEGABLES (01/09/2026). El lateral tenía 52 entradas planas y no lo navegaba
+// nadie: al entrar se ve un menú corto (la sección donde estás) y el resto a un clic.
+type ClaveSeccion = 'negocio' | 'pisos' | 'operador'
+const LS_SECCION: Record<ClaveSeccion, string> = {
+  negocio: 'nav-seccion-negocio',
+  pisos: 'nav-seccion-pisos',
+  operador: 'nav-seccion-operador',
+}
+
+function enLista(lista: { href: string }[], path: string): boolean {
+  return lista.some(n => path === n.href || path.startsWith(n.href + '/'))
+}
+
+// Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el
+// cliente, así que el primer pintado ya trae la sección buena abierta (sin salto al hidratar).
+function seccionDeRuta(path: string): ClaveSeccion | null {
+  if (enLista(NAV_PISOS, path)) return 'pisos'
+  if (enLista(NAV_OPERADOR, path)) return 'operador'
+  if (enLista(NAV_NEGOCIO, path)) return 'negocio'
+  return null
+}
+
+// 🚨 El lateral tiene DOS plegados distintos y no pueden pisarse:
+//   · `html[data-nav-plegado='1']` = tira de solo iconos (globals.css). Ahí las cabeceras de
+//     sección NO se ven (llevan `nav-solo-abierto`), así que una sección colapsada dejaría sus
+//     entradas INALCANZABLES: sin cabecera no hay dónde pulsar para abrirla. Por eso, en modo
+//     tira, se enseñan TODAS las entradas aunque su sección esté colapsada.
+//   · las secciones plegables de aquí abajo, que solo mandan con el lateral abierto.
+// Se resuelve en CSS (no con el estado de React) para que valga desde el primer pintado: el
+// atributo lo pone el script anti-parpadeo del layout antes de que hidrate nada.
 export default function UserSidebar({ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }) {
   const path = usePathname()
   const router = useRouter()
@@ -96,6 +140,12 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   // script anti-parpadeo de layout.tsx antes del primer pintado (ver globals.css). Aquí solo se
   // lee para el rótulo/aria del botón y se alterna el atributo + localStorage.
   const [plegado, setPlegado] = useState(false)
+  // Secciones abiertas. El valor inicial NO lee localStorage (rompería la hidratación): sale de
+  // la ruta activa, que el servidor también conoce. Lo guardado se aplica en el efecto de abajo.
+  const [abiertas, setAbiertas] = useState<Record<ClaveSeccion, boolean>>(() => {
+    const activa = seccionDeRuta(path)
+    return { negocio: activa === null || activa === 'negocio', pisos: activa === 'pisos', operador: activa === 'operador' }
+  })
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)')
@@ -109,6 +159,38 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
     try {
       setPlegado(localStorage.getItem('nav-plegado') === '1')
     } catch { /* localStorage bloqueado: abierto */ }
+  }, [])
+
+  useEffect(() => {
+    try {
+      setAbiertas(prev => {
+        const sig = { ...prev }
+        for (const clave of Object.keys(LS_SECCION) as ClaveSeccion[]) {
+          const guardado = localStorage.getItem(LS_SECCION[clave])
+          if (guardado === '1') sig[clave] = true
+          else if (guardado === '0') sig[clave] = false
+        }
+        return sig
+      })
+    } catch { /* sin persistencia: se queda el valor por ruta */ }
+  }, [])
+
+  // La sección que contiene la ruta activa se abre SIEMPRE. Si no, un plegado guardado dejaría
+  // escondida justo la entrada en la que estás (y el enlace activo sin pintar en ningún sitio).
+  useEffect(() => {
+    const activa = seccionDeRuta(path)
+    if (!activa) return
+    setAbiertas(prev => (prev[activa] ? prev : { ...prev, [activa]: true }))
+  }, [path])
+
+  const alternarSeccion = useCallback((clave: ClaveSeccion) => {
+    setAbiertas(prev => {
+      const sig = !prev[clave]
+      try {
+        localStorage.setItem(LS_SECCION[clave], sig ? '1' : '0')
+      } catch { /* sin persistencia */ }
+      return { ...prev, [clave]: sig }
+    })
   }, [])
 
   function alternarPlegado() {
@@ -126,65 +208,100 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
     router.push('/login')
   }
 
+  function Icono({ de: De, sub }: { de: LucideIcon; sub?: boolean }) {
+    return <De size={16} strokeWidth={1.75} color="currentColor" style={{ flexShrink: 0, opacity: sub ? 0.9 : 1 }} aria-hidden />
+  }
+
+  function CabeceraSeccion({ clave, titulo, primera }: { clave: ClaveSeccion; titulo: string; primera?: boolean }) {
+    const abierta = abiertas[clave]
+    return (
+      <button
+        type="button"
+        onClick={() => alternarSeccion(clave)}
+        className="nav-solo-abierto nav-seccion-btn"
+        aria-expanded={abierta}
+        aria-controls={`nav-grupo-${clave}`}
+        style={{ padding: primera ? '4px 12px 6px' : '16px 12px 6px' }}
+      >
+        <span>{titulo}</span>
+        <ChevronDown
+          size={14}
+          strokeWidth={1.75}
+          color="currentColor"
+          aria-hidden
+          style={{ flexShrink: 0, transform: abierta ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform .15s ease' }}
+        />
+      </button>
+    )
+  }
+
   function NavLinks() {
     return (
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
-        <div className="nav-solo-abierto" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
-        {(soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO).map(({ href, icon, label }) => {
-          const active = path === href || path.startsWith(href + '/')
-          return (
-            <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '9px 12px',
-              borderRadius: '10px', marginBottom: '2px',
-              fontWeight: active ? 600 : 400,
-              background: active ? 'var(--primary-light)' : 'transparent',
-              color: active ? 'var(--primary)' : 'var(--text)',
-              fontSize: '14px', textDecoration: 'none',
-            }}>
-              <span>{icon}</span><span className="nav-solo-abierto">{label}</span>
-            </Link>
-          )
-        })}
+        <CabeceraSeccion clave="negocio" titulo="Mi negocio" primera />
+        <div id="nav-grupo-negocio" className="nav-grupo" data-colapsado={abiertas.negocio ? undefined : '1'}>
+          {(soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO).map(({ href, icon, label }) => {
+            const active = path === href || path.startsWith(href + '/')
+            return (
+              <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '9px 12px',
+                borderRadius: '10px', marginBottom: '2px',
+                fontWeight: active ? 600 : 400,
+                background: active ? 'var(--primary-light)' : 'transparent',
+                color: active ? 'var(--primary)' : 'var(--text)',
+                fontSize: '14px', textDecoration: 'none',
+              }}>
+                <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
+              </Link>
+            )
+          })}
+        </div>
 
-        {!soloEmpresas && <div className="nav-solo-abierto" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Pisos · detalle</div>}
-        {!soloEmpresas && NAV_PISOS.map(({ href, icon, label }) => {
-          const active = path.startsWith(href)
-          return (
-            <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
-              fontWeight: active ? 600 : 400,
-              background: active ? 'var(--primary-light)' : 'transparent',
-              color: active ? 'var(--primary)' : 'var(--text)',
-              fontSize: '14px', textDecoration: 'none',
-            }}>
-              <span>{icon}</span><span className="nav-solo-abierto">{label}</span>
-            </Link>
-          )
-        })}
-
-        {!soloEmpresas && isOperator && (
-          <>
-            <div className="nav-solo-abierto" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
-            {NAV_OPERADOR.filter(n => operadorRol !== 'operador' || NAV_OPERADOR_RESTRINGIDO.has(n.href)).map(({ href, icon, label, sub }) => {
-              const exactActive = sub
-                ? path === href || path.startsWith(href + '/')
-                : path === href || (path.startsWith(href + '/') && !NAV_OPERADOR.some(n => n.sub && (path === n.href || path.startsWith(n.href + '/'))))
+        {!soloEmpresas && <CabeceraSeccion clave="pisos" titulo="Pisos · detalle" />}
+        {!soloEmpresas && (
+          <div id="nav-grupo-pisos" className="nav-grupo" data-colapsado={abiertas.pisos ? undefined : '1'}>
+            {NAV_PISOS.map(({ href, icon, label }) => {
+              const active = path.startsWith(href)
               return (
                 <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: sub ? '6px 12px 6px 28px' : '9px 12px',
-                  borderRadius: '10px', marginBottom: '2px',
-                  fontWeight: exactActive ? 600 : 400,
-                  background: exactActive ? 'var(--primary-light)' : 'transparent',
-                  color: exactActive ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
-                  fontSize: sub ? '13px' : '14px', textDecoration: 'none',
+                  padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
+                  fontWeight: active ? 600 : 400,
+                  background: active ? 'var(--primary-light)' : 'transparent',
+                  color: active ? 'var(--primary)' : 'var(--text)',
+                  fontSize: '14px', textDecoration: 'none',
                 }}>
-                  <span>{icon}</span><span className="nav-solo-abierto">{label}</span>
+                  <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
                 </Link>
               )
             })}
+          </div>
+        )}
+
+        {!soloEmpresas && isOperator && (
+          <>
+            <CabeceraSeccion clave="operador" titulo="Operador" />
+            <div id="nav-grupo-operador" className="nav-grupo" data-colapsado={abiertas.operador ? undefined : '1'}>
+              {NAV_OPERADOR.filter(n => operadorRol !== 'operador' || NAV_OPERADOR_RESTRINGIDO.has(n.href)).map(({ href, icon, label, sub }) => {
+                const exactActive = sub
+                  ? path === href || path.startsWith(href + '/')
+                  : path === href || (path.startsWith(href + '/') && !NAV_OPERADOR.some(n => n.sub && (path === n.href || path.startsWith(n.href + '/'))))
+                return (
+                  <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: sub ? '6px 12px 6px 28px' : '9px 12px',
+                    borderRadius: '10px', marginBottom: '2px',
+                    fontWeight: exactActive ? 600 : 400,
+                    background: exactActive ? 'var(--primary-light)' : 'transparent',
+                    color: exactActive ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
+                    fontSize: sub ? '13px' : '14px', textDecoration: 'none',
+                  }}>
+                    <Icono de={icon} sub={sub} /><span className="nav-solo-abierto">{label}</span>
+                  </Link>
+                )
+              })}
+            </div>
           </>
         )}
       </div>
