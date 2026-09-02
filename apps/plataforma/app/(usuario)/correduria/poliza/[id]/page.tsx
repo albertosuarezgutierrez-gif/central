@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
@@ -175,21 +175,48 @@ function Coberturas({ lista }: { lista: Poliza['coberturas'] }) {
   if (lista.length === 0) {
     return <Tarjeta titulo="Coberturas"><p style={muted}>La compañía no ha mandado el detalle de coberturas por CIMA.</p></Tarjeta>
   }
+  const hayDetalle = lista.some((c) => c.detalle)
+  const hayVigencia = lista.some((c) => c.desde || c.hasta)
   return (
     <div style={tarjeta}>
       <details open={lista.length <= 12}>
         <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>Coberturas ({lista.length})</summary>
+        <p style={{ ...muted, marginTop: 6 }}>
+          Códigos de la compañía, no de la correduría: el mismo número significa cosas distintas en Mapfre y en Occident.
+          «Sin capital propio» es lo que manda la compañía como 0: la garantía existe y se paga según condicionado.
+        </p>
         <div style={{ overflowX: 'auto', marginTop: 10 }}>
           <table style={tabla}>
-            <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>#</th><th style={th}>Cobertura</th><th style={th}>Capital</th><th style={th}>Franquicia</th></tr></thead>
+            <thead>
+              <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+                <th style={th}>#</th><th style={th}>Cobertura</th><th style={th}>Capital</th>
+                {hayDetalle && <th style={th}>Límite</th>}
+                <th style={th}>Franquicia</th>
+                {hayDetalle && <th style={th}>Prima</th>}
+                {hayVigencia && <th style={th}>Vigencia</th>}
+              </tr>
+            </thead>
             <tbody>
               {lista.map((c, i) => (
                 <tr key={`${c.codigo ?? ''}-${i}`} style={{ borderTop: '1px solid var(--border)' }}>
                   <td style={{ ...td, color: 'var(--muted)' }}>{c.orden ?? i + 1}</td>
-                  <td style={td}>{c.descripcion ?? c.codigo ?? '—'}{c.codigo && c.descripcion && <div style={sub}>{c.codigo}</div>}</td>
-                  {/* El capital es TEXTO del EIAC («ILIMITADO», «VALOR VENAL»): no se numera. */}
-                  <td style={td}>{c.capital ?? <span style={muted}>—</span>}{c.descripcionCapital && <div style={sub}>{c.descripcionCapital}</div>}</td>
-                  <td style={td}>{c.franquicia ?? <span style={muted}>—</span>}</td>
+                  <td style={td}>
+                    {c.descripcion ?? c.codigo ?? '—'}
+                    {(c.codigo || c.modalidad) && (
+                      <div style={sub}>{c.codigo}{c.codigo && c.modalidad ? ' · ' : ''}{c.modalidad && <span title="Modalidad de valoración (código EIAC de la compañía)">val. {c.modalidad}</span>}</div>
+                    )}
+                  </td>
+                  <td style={td}><CapitalCobertura capital={c.capital} descripcion={c.descripcionCapital} /></td>
+                  {hayDetalle && <td style={td}><Limites detalle={c.detalle ?? null} /></td>}
+                  <td style={td}><Franquicia texto={c.franquicia} detalle={c.detalle ?? null} /></td>
+                  {hayDetalle && (
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                      {c.detalle?.prima?.total !== null && c.detalle?.prima?.total !== undefined ? eur(c.detalle.prima.total)
+                        : c.detalle?.prima?.neta !== null && c.detalle?.prima?.neta !== undefined ? <>{eur(c.detalle.prima.neta)} <span style={sub}>neta</span></>
+                        : <span style={muted}>—</span>}
+                    </td>
+                  )}
+                  {hayVigencia && <td style={{ ...td, whiteSpace: 'nowrap' }}>{c.desde || c.hasta ? `${fechaCorta(c.desde)} → ${fechaCorta(c.hasta)}` : <span style={muted}>—</span>}</td>}
                 </tr>
               ))}
             </tbody>
@@ -197,6 +224,57 @@ function Coberturas({ lista }: { lista: Poliza['coberturas'] }) {
         </div>
       </details>
     </div>
+  )
+}
+
+function fechaCorta(iso: string | null): string {
+  if (!iso) return '?'
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return y && m && d ? `${d}/${m}/${y}` : iso
+}
+
+function CapitalCobertura({ capital, descripcion }: { capital: string | null; descripcion: string | null }) {
+  const c = interpretarCapital(capital)
+  const pie = descripcion && <div style={sub}>{descripcion}</div>
+  switch (c.tipo) {
+    case 'ilimitado': return <>Ilimitado{pie}</>
+    case 'sin_capital': return <><span style={muted} title="La compañía manda 0: la garantía no lleva capital propio (RC obligatoria, asistencia, defensa…)">sin capital propio</span>{pie}</>
+    case 'importe': return <>{eur(c.importe)}{pie}</>
+    case 'texto': return <>{c.texto}{pie}</>
+    default: return <><span style={muted}>—</span>{pie}</>
+  }
+}
+
+function Limites({ detalle }: { detalle: Poliza['coberturas'][number]['detalle'] | null }) {
+  if (!detalle || detalle.limites.length === 0) return <span style={muted}>—</span>
+  return (
+    <>
+      {detalle.limites.map((l, i) => (
+        <div key={i} style={{ whiteSpace: 'nowrap' }}>
+          {l.maximo !== null ? eur(l.maximo) : l.minimo !== null ? eur(l.minimo) : '—'}
+          {l.descripcion && <span style={sub}> {l.descripcion}</span>}
+          {!l.descripcion && l.clase && <span style={sub} title="Clase de límite (código EIAC)"> {l.clase}</span>}
+        </div>
+      ))}
+    </>
+  )
+}
+
+function Franquicia({ texto, detalle }: { texto: string | null; detalle: Poliza['coberturas'][number]['detalle'] | null }) {
+  const fr = detalle?.franquicias ?? []
+  if (fr.length === 0) return texto ? <>{texto}</> : <span style={muted}>—</span>
+  return (
+    <>
+      {fr.map((f, i) => (
+        <div key={i} style={{ whiteSpace: 'nowrap' }}>
+          {f.porcentaje !== null ? `${f.porcentaje.toLocaleString('es-ES')} %` : ''}
+          {f.minimo !== null || f.maximo !== null ? (
+            <span style={sub}> {f.minimo !== null ? `mín. ${eur(f.minimo)}` : ''}{f.minimo !== null && f.maximo !== null ? ' · ' : ''}{f.maximo !== null ? `máx. ${eur(f.maximo)}` : ''}</span>
+          ) : null}
+          {f.porcentaje === null && f.minimo === null && f.maximo === null && (f.clase ?? texto ?? '—')}
+        </div>
+      ))}
+    </>
   )
 }
 

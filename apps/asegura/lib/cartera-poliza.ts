@@ -23,8 +23,7 @@ import {
   type ObjetoAsegurado,
   type RecargoFraccionamiento,
   type ReciboResumen,
-  type RecibosPoliza,
-} from '@central/module-seguros'
+  type RecibosPoliza, extraerDetalleCobertura, type DetalleCobertura } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import type { DocumentoResumen } from '@central/module-seguros'
 import { contarDocumentosPoliza, listarDocumentos } from './cartera-documentos'
@@ -41,6 +40,10 @@ export type CoberturaFicha = {
   franquicia: string | null
   desde: string | null
   hasta: string | null
+  /** Código EIAC de modalidad de valoración (VP/VT/VE…), tal cual: no hay tabla oficial en el repo. */
+  modalidad: string | null
+  /** Límites, franquicias y prima de la propia cobertura, leídos de `datos_extra` (null si no trae nada). */
+  detalle: DetalleCobertura | null
 }
 
 export type FichaPoliza = {
@@ -134,7 +137,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       primaAnual: true, primaBruta: true, primaMensual: true, fraccionamiento: true, datosEspecificos: true,
       cliente: { select: { id: true, nombre: true, apellidos: true } },
       coberturasRel: {
-        select: { numeroOrden: true, codigo: true, descripcion: true, capitalAsegurado: true, descripcionCapital: true, franquicia: true, fechaInicio: true, fechaFin: true },
+        select: { numeroOrden: true, codigo: true, descripcion: true, capitalAsegurado: true, descripcionCapital: true, franquicia: true, fechaInicio: true, fechaFin: true, modalidadValoracion: true, datosExtra: true },
         orderBy: { numeroOrden: 'asc' },
       },
       recibos: {
@@ -236,6 +239,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       orden: c.numeroOrden ?? null, codigo: c.codigo ?? null, descripcion: c.descripcion ?? null,
       capital: c.capitalAsegurado ?? null, descripcionCapital: c.descripcionCapital ?? null, franquicia: c.franquicia ?? null,
       desde: fechaIso(c.fechaInicio), hasta: fechaIso(c.fechaFin),
+      modalidad: c.modalidadValoracion ?? null, detalle: extraerDetalleCobertura(c.datosExtra),
     })),
     recibos: resumirRecibos(recibosCrudos),
     listaRecibos: recibosCrudos.map((r) => ({
