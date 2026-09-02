@@ -50,6 +50,27 @@
 - Regla nueva en el CLAUDE.md raíz: **todo lo mecánico va a un subagente**, repartido POR ARCHIVOS.
 - **Pendiente:** migrar los ~4.900 inline styles restantes (semanas, por goteo). CI 19/19 verde.
 
+### 🔑 (02/09/2026) `GH_PAT_TRIGGER`: renovado el 01/09, alcance y caducidad sin verificar
+- La entrada 🔴 del 01/09 («renovar el PAT») **ya está resuelta**: el 401 duró del 31/08 13:25 al 01/09 ~08:50 UTC;
+  desde el PR #1933 (08:53) la radiografía vuelve a abrirse y a mergearla el bot (38 PRs hasta hoy, #2008 incluido).
+  Las 123 ramas huérfanas quedaron barridas (1 viva). Nadie anotó la renovación: se dedujo de los PRs.
+- **Lo que un agente NO puede ver:** tipo de token (clásico con `repo` = TODOS los repos de Alberto; fine-grained =
+  solo `central`), permisos y fecha de caducidad. Lo usa en 4 workflows (`auditoria.yml`, `rutinas-automerge.yml`,
+  `ai-programar.yml`, `latido-reparar.yml`) y necesita solo **Contents + Pull requests: write** sobre `central`.
+- **Medido por Chrome (02/09, solo lectura):** es fine-grained, solo `central`, pero **SIN caducidad** y con
+  **Workflows: read/write** además de Contents + Pull requests. El secret se actualizó el 01/09 10:52 CEST. Ese
+  permiso extra es el que convierte una fuga en «leo todos los secrets»: con él se puede empujar a una rama un
+  workflow que vuelque `${{ secrets.* }}` y abrir el PR (mismo repo = con secrets). Lo que lo justificaría es el
+  camino 6b de `rutinas-automerge.yml` (merge de `main` en la rama del PR: si `main` tocó un workflow desde que
+  nació la rama, el push lo necesita) — no hay ningún rechazo por ese motivo en la memoria.
+- **Segundo token vivo** `central-ai-programar-trigger-2` (29/07, sin caducidad, Contents + PRs, usado esta
+  semana): NO es el del secret. [Probable] es el `GITHUB_TOKEN` de Vercel (sivra/plataforma, agente SEO de los
+  lunes, `seo-landing.ts`) o el `GH_PAT` de ia-rest (`blog-seo`, `agente-arquitecto`): los tres escriben en
+  `central` por Contents API con justo esos permisos. **No borrar sin comprobar en Vercel** qué env lo lleva.
+- Un clásico «Claude Full Access Token» (21 scopes, sin caducidad, «Never used») está para borrar.
+- Decisión pendiente de Alberto: rotar A sin `Workflows` y con caducidad 90 días (+ guardián Telegram del 401 en
+  `auditoria.yml`, porque el fallo es mudo), inventariar B en Vercel y rotarlo igual, borrar el clásico.
+
 ### 🔍 (02/09/2026) Rutinas de auditoría: cobertura exhaustiva tras la correduría
 - Alberto pidió revisar la diaria y la semanal («hemos metido más cosas como correduría»). Medido: las dos decían
   **«8 apps»** desde junio (y `AGENTES-MAPA` «4») con **12** en `apps/`; ni una línea sobre la correduría; el
