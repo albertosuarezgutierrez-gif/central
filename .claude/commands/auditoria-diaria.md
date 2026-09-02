@@ -438,8 +438,24 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    PR draft del **carril 2** (no a `main`).
 
 4. **Reconciliación de memoria y skills** (el núcleo, **carril 1**):
+   - **Las CONVERSACIONES del rango, no solo los commits** (petición de Alberto, 02/09/2026:
+     *«revisa las conversaciones por si hay algo pendiente por hacer; actualiza skill, memoria,
+     agentes, todo»*). El límite conocido de este doc —una sesión de solo charla no deja commit y
+     el guardián no la ve— se ataca desde la lista de sesiones, que SÍ persiste fuera del
+     contenedor: `list_sessions` (MCP Claude Code Remote, `mine: true`, últimas ~48 h) y
+     `get_session` para el título/estado de cada una. Por cada sesión del rango comprueba que
+     tiene **al menos una** de estas huellas: entrada en `docs/CONTEXTO-SESIONES.md`, PR (abierto
+     o mergeado) de su rama `claude/*`, o línea en `docs/AGENTES-BITACORA.md` si era una rutina.
+     Una sesión **sin ninguna** es una decisión o un pendiente que se perdió: anótala en la memoria
+     con su título y fecha como «pendiente de confirmar con Alberto» (carril 1) — no inventes lo
+     que se habló. Las sesiones con PR abierto **sin mergear** son pendientes reales: lístalas con
+     su nº en el informe (cruza con 2-ter). ⚠️ Sin acceso al transcript, la señal es
+     título + PR + memoria; si la herramienta no está adjunta, dilo («no he podido listar
+     sesiones»), no «no hay pendientes».
    - `docs/CONTEXTO-SESIONES.md`: añade entrada(s) de lo hecho en el rango que no esté
-     anotado; mueve a "hecho" los pendientes ya resueltos; corrige el "Estado actual".
+     anotado; mueve a "hecho" los pendientes ya resueltos; corrige el "Estado actual". El bloque
+     **«Estado vivo»** se comprueba bullet a bullet contra el CÓDIGO (¿sigue abierto?), igual que
+     `HUECOS-ABIERTOS.md`: un pendiente ya cerrado que sigue listado envejece hacia el lado malo.
    - **Rotación mensual de la memoria (ahorro de contexto):** si el archivo vivo contiene
      entradas de un mes YA CERRADO, ejecuta `node scripts/rotar-memoria.mjs` (idempotente;
      las archiva en `docs/memoria/AAAA-MM.md`). Además, si ves entradas nuevas que violan
@@ -457,6 +473,15 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      ⚠️ En `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md` el dato que más envejece es
      **de dónde LEE el código** (origen de Manuel vs `seguros.*`): compáralo contra
      `apps/asegura/lib/asegura-db.ts` y `prisma/asegura.prisma`, no contra el doc.
+   - **TODAS las skills de agentes, no solo las maestro** (la lista es `docs/SKILLS.md`
+     §«Agentes programados» cruzada con `ls .claude/skills`): por cada una, sus **datos duros**
+     (tablas, rutas de API, envs por nombre, umbrales, cadencia, estado del trigger) contra el
+     código y contra `list_triggers` (id, cron, `enabled`, `last_run`). Una skill que dice
+     «rutina activa» con el trigger deshabilitado —o al revés— es hallazgo carril 1 en el doc y
+     carril 2 si el trigger es lo que está mal. Lo que NO tocas aquí es el COMPORTAMIENTO del
+     agente (reglas, criterios): eso es del `agentes-entrenador` semanal, que se apoya en
+     rendimiento; tú solo la frescura factual. Si detectas un patrón de rendimiento, déjaselo
+     como hallazgo en `docs/FEEDBACK-AGENTES.md`, no lo arregles tú.
    - **Reglas DICTADAS por Alberto (fiscal/negocio) — check de contradicciones:** estas
      reglas NO las decide el código; su fuente canónica es la skill del dominio
      (`perfil-fiscal` para las fiscales). Si la MISMA regla aparece distinta en la memoria

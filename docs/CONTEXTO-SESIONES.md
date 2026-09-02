@@ -42,6 +42,10 @@
   pausada a propósito. Regla nueva: la frescura del ORIGEN es actividad, no salud (CIMA trae 0-3 filas/semana).
 - Semanal: tramo correduría (typecheck asegura con dos schemas, tests `module-seguros*`, checksums foto vs origen,
   TRASPASO §pendientes). Toda cifra de apps se cruza contra `ls apps` + matriz de `tests.yml`, nunca contra otro doc.
+- Añadido a la diaria (petición de Alberto en la misma sesión): revisar las **conversaciones** del rango por `list_sessions`
+  (sesión sin memoria, sin PR y sin bitácora = pendiente perdido) y reconciliar TODAS las skills de agentes contra código y
+  `list_triggers`, no solo las maestro. PR #2006. Ojo: `guardian-rama.mjs` da falso positivo en clon **shallow** (el `main`
+  local no está en la historia truncada de `origin/main`); un `git fetch origin` lo calla.
 - **Pendiente de Alberto:** adjuntar `Supabase_asegura` a las rutinas 1 y 2 en la UI; sin él el bloque c) queda en
   «no he podido mirar». Visto al pasar (no de esta sesión): `sivra_domotica_acceso` en rojo (1 cerradura con ERROR).
 
