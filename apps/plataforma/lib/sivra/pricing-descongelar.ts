@@ -35,6 +35,28 @@
 //      fecha tuvo un evento descartado y hoy no le queda ningún evento vivo, se libera SIN esperar
 //      los 21 días — la razón que justificaba el precio alto ya no existe.
 //
+//   3. SALTO NUESTRO. La guarda de outlier parte de que «este precio alto sabe algo que el modelo
+//      no ve» (un puente, un evento). Esa premisa solo se sostiene si el precio viene de FUERA del
+//      modelo. Un precio que el propio motor escribió hace unas horas no aporta ninguna prueba
+//      independiente: es su propia salida, y usarla como evidencia deja al motor incapaz de
+//      deshacer lo que acaba de hacer.
+//
+//      Caso fundacional (03/09/2026, PR #2228 y su seguimiento). El filtro de liga del #2192 subió
+//      a Busto Reform 61 noches de jul/ago-2027 de 82€ a 113€ en la pasada de las 14:30. La guarda
+//      de monotonía del #2228 corrigió el objetivo esa misma tarde… y no sirvió de nada: con la
+//      base normal del mes en ~80€, 113/80 = 1,41 supera el OUTLIER_RATIO de 1,40, así que la
+//      guarda leyó el precio inflado como «noche especial» y bloqueó la corrección. De 61 noches
+//      solo se arreglaron 3 —las que quedaron justo por debajo del 1,40—. **La salida del fallo se
+//      convirtió en la prueba que protegía al fallo**, y la llave por antigüedad no abría hasta
+//      pasados 21 días.
+//
+//      Se libera SOLO cuando la última escritura del motor: (a) es reciente, (b) fue una SUBIDA,
+//      (c) es la que CRUZÓ el umbral —antes de ella la fecha no era outlier— y (d) su precio es el
+//      que hoy sigue vivo. Las cuatro juntas describen «el motor se acaba de disparar solo». Si el
+//      propietario tocó el precio en Smoobu después, (d) falla y la guarda retiene: un precio suyo
+//      sí es prueba de fuera del modelo. Y una fecha que lleva tiempo cara no cumple (a): esa la
+//      sigue tratando la llave por antigüedad, que es más lenta a propósito.
+
 // 🚨 Lo que esto NO hace: no baja ningún precio por su cuenta ni toca el objetivo. Solo retira el
 // veto de las guardas para que el resto del motor —raíl, suelos, techo— haga su trabajo. Y NO se
 // aplica cuando la fecha SÍ tiene un evento vivo con premio: ahí el objetivo ya sube por su cuenta
@@ -45,6 +67,14 @@
 /** Días sin poder reescribir una fecha a partir de los cuales la guarda deja de proteger. */
 export const DIAS_CONGELADA = 21
 
+/**
+ * Horas dentro de las cuales una subida escrita por el motor sigue siendo «suya» y por tanto no
+ * vale como prueba de que la noche es especial. Cubre con holgura las 3 pasadas del día (08:30 ·
+ * 14:30 · 20:30) y un hueco de fin de semana; más allá, la fecha ya ha sobrevivido a varias
+ * pasadas con datos nuevos y deja de ser un disparo suelto.
+ */
+export const HORAS_SALTO_NUESTRO = 48
+
 export type DescongelarInput = {
   /**
    * Días desde la última escritura de ESA fecha en `pricing_applied`.
@@ -54,6 +84,13 @@ export type DescongelarInput = {
   diasSinEscribir: number | null
   /** La fecha tuvo un evento DESCARTADO y hoy no le queda ninguno vivo. */
   rumorCaido: boolean
+  /**
+   * La última escritura del motor sobre esta fecha es una subida RECIENTE que cruzó ella misma el
+   * umbral de outlier, y su precio es el que sigue vivo. O sea: el precio que la guarda está
+   * protegiendo lo puso el propio motor, no el mercado ni el propietario.
+   * Lo calcula quien tiene los precios delante (el route); aquí solo se decide con él.
+   */
+  saltoNuestro?: boolean
 }
 
 export type DescongelarOpts = {
@@ -76,6 +113,12 @@ export function descongelar(i: DescongelarInput, o: DescongelarOpts = {}): Desco
   // El rumor caído manda: la razón que subió el precio ya no existe, no hay nada que esperar.
   if (i.rumorCaido) {
     return { libera: true, motivo: 'el evento que subió esta fecha se descartó' }
+  }
+
+  // Un precio que escribimos nosotros hace horas no es prueba de nada: sin esto, el motor no
+  // puede deshacer su propia subida y cualquier fallo que infle un precio se sella solo 21 días.
+  if (i.saltoNuestro) {
+    return { libera: true, motivo: 'la subida que la puso cara la escribió el motor hace horas' }
   }
 
   const dias = i.diasSinEscribir
@@ -102,13 +145,59 @@ export function detalleDescongeladas(
     // El nº de días varía por fecha: se agrupa por la FAMILIA del motivo, no por el texto exacto.
     const clave = f.motivo.includes('descartó')
       ? 'rumor descartado'
-      : f.motivo.includes('nunca')
-        ? 'nunca tarificada'
-        : 'antigüedad'
+      : f.motivo.includes('el motor hace horas')
+        ? 'subida propia reciente'
+        : f.motivo.includes('nunca')
+          ? 'nunca tarificada'
+          : 'antigüedad'
     porMotivo.set(clave, (porMotivo.get(clave) ?? 0) + 1)
   }
   const trozos = [...porMotivo.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([k, n]) => `${n} por ${k}`)
   return `🔓 ${filas.length} noche(s) descongelada(s): ${trozos.join(' · ')}`
+}
+
+/** La última escritura del motor sobre una fecha, tal y como la lee `pricing_applied`. */
+export type UltimaEscritura = {
+  /** horas transcurridas desde que se escribió */
+  horas: number
+  /** precio que había ANTES de esa escritura (`old_price`); `null` = no consta */
+  prev: number | null
+  /** precio que dejó esa escritura (`new_price`) */
+  ult: number
+}
+
+export type SaltoNuestroCtx = {
+  /** precio VIVO hoy en el canal, en la misma unidad que `prev`/`ult` */
+  old: number | null
+  /** «precio normal» del piso para ese día (mes/global), el mismo que usa la guarda de outlier */
+  normalBase: number
+  /** el OUTLIER_RATIO del motor; se recibe para no tener dos copias del umbral */
+  umbral: number
+  horasMax?: number
+}
+
+/**
+ * ¿El precio alto que hoy protege la guarda de outlier lo puso el propio motor hace unas horas?
+ *
+ * Exige las CUATRO a la vez, y cada una descarta un caso en el que el precio sí es prueba de algo:
+ *  (a) reciente — una fecha que lleva días cara ya ha sobrevivido a pasadas con datos nuevos;
+ *  (b) fue una subida — si nuestra última escritura bajó, no hay disparo propio que deshacer;
+ *  (c) la cruzó ella — si ya era outlier antes, la razón viene de más atrás y no es este salto;
+ *  (d) su precio es el que sigue vivo — si el propietario lo cambió en Smoobu después, el precio
+ *      de hoy es SUYO, viene de fuera del modelo y la guarda tiene que retener.
+ *
+ * Sin lectura de historial (`null`) devuelve `false`: no poder comprobarlo no es haber comprobado
+ * que el salto es nuestro, y la degradación conservadora aquí es NO descongelar.
+ */
+export function esSaltoNuestro(ue: UltimaEscritura | null, ctx: SaltoNuestroCtx): boolean {
+  if (!ue || ctx.old == null) return false
+  if (!(ctx.normalBase > 0) || !(ctx.umbral > 0)) return false
+  const horasMax = ctx.horasMax ?? HORAS_SALTO_NUESTRO
+  if (!Number.isFinite(ue.horas) || ue.horas < 0 || ue.horas > horasMax) return false   // (a)
+  if (ue.prev == null || !(ue.ult > ue.prev)) return false                              // (b)
+  const techo = ctx.normalBase * ctx.umbral
+  if (!(ue.ult > techo) || ue.prev > techo) return false                                // (c)
+  return Math.round(ue.ult) === Math.round(ctx.old)                                     // (d)
 }
