@@ -261,5 +261,32 @@ test('normalizarAlta hereda las reglas del parche y exige compañia o numero', a
     ramo: null,
     primaAnual: null,
     fechaVencimiento: null,
+    matricula: null,
+    bastidor: null,
+    fechaMatriculacion: null,
   })
+})
+
+// El `deepEqual` de arriba es el cepo: obliga a que ampliar el alta se decida
+// aquí y no se cuele. Este test dice qué se decidió y por qué, para que el
+// siguiente que añada un campo tenga que responder a la misma pregunta.
+test('los tres campos del vehiculo entran en el alta, y NINGUNO es obligatorio', async () => {
+  const { normalizarAlta } = await import('../apps/asegura-portal/lib/poliza-editable.ts')
+
+  // La matrícula entra en el alta porque es de donde sale la fecha de
+  // matriculación estimada. Si solo se pudiera declarar corrigiendo después,
+  // el autorrelleno no tendría de dónde salir el día que se da de alta.
+  const r = normalizarAlta({ compania: 'Axa', matricula: '1234 bcd' }, HOY)
+  assert.equal(r.ok, true)
+  assert.equal((r as { ok: true; datos: { matricula: string | null } }).datos.matricula, '1234BCD')
+
+  // Y la guarda sigue siendo SOLO la identificación: un vehículo entero sin
+  // compañía ni número no identifica una póliza, y un alta con compañía y sin
+  // vehículo es perfectamente válida. Pedirle el bastidor a alguien para
+  // dejarle apuntar su seguro es trasladarle el trabajo de la correduría.
+  assert.deepEqual(normalizarAlta({ matricula: '1234BCD', bastidor: 'VF1RFB00X66123456' }, HOY), {
+    ok: false,
+    error: 'sin_identificacion',
+  })
+  assert.equal(normalizarAlta({ compania: 'Axa' }, HOY).ok, true)
 })

@@ -38,6 +38,14 @@ export type PolizaEditable = {
   /** `YYYY-MM-DD` o null: es lo que come `<input type="date">` y lo que espera el PATCH. */
   fechaVencimiento: string | null
   /**
+   * Los tres del VEHÍCULO. Solo se pintan si el ramo los tiene detrás (lo
+   * decide `CamposPoliza`), pero viajan siempre en el tipo: si dependieran del
+   * ramo también aquí, cambiar «auto» por «hogar» y volver perdería lo tecleado.
+   */
+  matricula: string | null
+  bastidor: string | null
+  fechaMatriculacion: string | null
+  /**
    * ¿Salió de un PDF o una foto que leyó la IA? Decide el TONO del hueco: si
    * hubo documento, un campo vacío es «no lo hemos encontrado en el documento»
    * (no se ha sabido leer), no «no existe». Mismo criterio que `NO_LEIDO` en
@@ -60,6 +68,9 @@ type Cambios = {
   ramo?: string | null
   primaAnual?: number | null
   fechaVencimiento?: string | null
+  matricula?: string | null
+  bastidor?: string | null
+  fechaMatriculacion?: string | null
 }
 
 function aFormulario(v: Valores): Formulario {
@@ -71,6 +82,9 @@ function aFormulario(v: Valores): Formulario {
     // En el input se teclea un número plano (320.5); el formato español
     // `320,50€` es para MOSTRAR, no para escribir.
     primaAnual: v.primaAnual == null ? '' : String(v.primaAnual),
+    matricula: v.matricula ?? '',
+    bastidor: v.bastidor ?? '',
+    fechaMatriculacion: v.fechaMatriculacion ?? '',
   }
 }
 
@@ -85,6 +99,16 @@ function calcularCambios(form: Formulario, base: Valores, prima: number | null):
   if (prima !== base.primaAnual) c.primaAnual = prima
   const fechaVencimiento = form.fechaVencimiento || null
   if (fechaVencimiento !== base.fechaVencimiento) c.fechaVencimiento = fechaVencimiento
+  // Matrícula y bastidor se mandan en MAYÚSCULAS y sin espacios porque así es
+  // como los normaliza el servidor: comparar el texto crudo contra lo guardado
+  // marcaría como «cambio» un `1234 bcd` que ya está guardado como `1234BCD`,
+  // y cada guardado mandaría un parche que no cambia nada.
+  const matricula = form.matricula.trim().toUpperCase().replace(/[\s-]/g, '') || null
+  if (matricula !== base.matricula) c.matricula = matricula
+  const bastidor = form.bastidor.trim().toUpperCase().replace(/[\s-]/g, '') || null
+  if (bastidor !== base.bastidor) c.bastidor = bastidor
+  const fechaMatriculacion = form.fechaMatriculacion || null
+  if (fechaMatriculacion !== base.fechaMatriculacion) c.fechaMatriculacion = fechaMatriculacion
   return c
 }
 
@@ -95,6 +119,10 @@ function aplicar(base: Valores, c: Cambios): Valores {
     ramo: c.ramo !== undefined ? c.ramo : base.ramo,
     primaAnual: c.primaAnual !== undefined ? c.primaAnual : base.primaAnual,
     fechaVencimiento: c.fechaVencimiento !== undefined ? c.fechaVencimiento : base.fechaVencimiento,
+    matricula: c.matricula !== undefined ? c.matricula : base.matricula,
+    bastidor: c.bastidor !== undefined ? c.bastidor : base.bastidor,
+    fechaMatriculacion:
+      c.fechaMatriculacion !== undefined ? c.fechaMatriculacion : base.fechaMatriculacion,
   }
 }
 
@@ -115,6 +143,9 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     ramo: poliza.ramo,
     primaAnual: poliza.primaAnual,
     fechaVencimiento: poliza.fechaVencimiento,
+    matricula: poliza.matricula,
+    bastidor: poliza.bastidor,
+    fechaMatriculacion: poliza.fechaMatriculacion,
   }))
   const [form, setForm] = useState<Formulario>(() => aFormulario(guardado))
   const [abierto, setAbierto] = useState(false)
@@ -217,7 +248,7 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
    * secas: se dice que no se ha encontrado en el papel. Un vacío se lee como
    * «no hay»; esto es «no lo hemos sabido leer», que es otra cosa.
    */
-  function ayudaHueco(campo: Exclude<Campo, 'fechaVencimiento'>): string | null {
+  function ayudaHueco(campo: 'compania' | 'numeroPoliza' | 'ramo' | 'primaAnual'): string | null {
     if (!poliza.deDocumento || guardado[campo] !== null) return null
     return 'No lo hemos encontrado en el documento'
   }

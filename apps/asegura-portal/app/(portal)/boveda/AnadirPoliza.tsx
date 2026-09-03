@@ -87,6 +87,15 @@ export function AnadirPoliza({
           ramo: form.ramo || null,
           primaAnual: prima,
           fechaVencimiento: form.fechaVencimiento || null,
+          // Los tres del vehículo se mandan SIEMPRE, aunque el bloque no esté
+          // desplegado: si el ramo elegido no los pinta van vacíos y viajan como
+          // `null`, que es exactamente lo que hay que guardar. Mandarlos solo
+          // cuando el bloque está visible haría que el cuerpo dependiera de un
+          // estado de pantalla, y ese es el tipo de acoplamiento que luego
+          // pierde datos al cambiar de ramo y volver.
+          matricula: form.matricula.trim() || null,
+          bastidor: form.bastidor.trim() || null,
+          fechaMatriculacion: form.fechaMatriculacion || null,
         }),
       })
 

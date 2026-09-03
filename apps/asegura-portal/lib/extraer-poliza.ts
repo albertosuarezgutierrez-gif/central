@@ -6,10 +6,24 @@
 // @central/module-seguros-portal). Y la normalización —qué es dato y qué es un
 // «no lo sé» disfrazado— vive en ese módulo puro, no aquí: es la regla que
 // decide si un campo existe, y no puede depender de qué proveedor respondió.
+//
+// Los identificadores del BIEN (matrícula, bastidor y fecha de matriculación)
+// se leen aquí pero se validan en `lib/poliza-editable.ts`, que es puro: la
+// misma regla tiene que valer para lo que lee la máquina y para lo que corrige
+// a mano la persona. Lo único que cambia es la reacción — aquí, un valor que no
+// tiene forma de bastidor sale `null` («no lo hemos sabido leer») y la póliza
+// se guarda igual; allí es un error que la persona ve.
 import { aiComplete, openrouterVision, cleanJSON } from '@central/core-ai'
 import { normalizarPolizaLeida, polizaLeidaVacia, type PolizaLeida } from '@central/module-seguros-portal'
 
-export type PolizaExtraida = PolizaLeida
+import { normalizarVehiculoLeido, vehiculoLeidoVacio, type VehiculoLeido } from './poliza-editable'
+
+/**
+ * Lo que se lee de un documento: el contrato (`PolizaLeida`) más el vehículo
+ * (`VehiculoLeido`). Son cosas distintas —una póliza cambia, el coche no— y
+ * viven juntas solo mientras no exista una ficha de bien propia.
+ */
+export type PolizaExtraida = PolizaLeida & VehiculoLeido
 
 export type ResultadoExtraccion = {
   datos: PolizaExtraida
@@ -19,15 +33,18 @@ export type ResultadoExtraccion = {
 
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null}
+{"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null}
 Reglas:
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
 - "primaAnual" en euros, solo el número, con punto decimal.
-- Si un dato NO aparece en el documento, pon null. NUNCA lo inventes ni lo deduzcas.`
+- "matricula": la matrícula española del vehículo asegurado, tal cual aparece.
+- "bastidor": el número de bastidor o VIN del vehículo, 17 caracteres. Cópialo carácter a carácter; NUNCA lo completes, ni lo corrijas, ni rellenes los que no leas.
+- "fechaMatriculacion": la fecha de PRIMERA MATRICULACIÓN del vehículo, que no es la fecha de efecto ni la de vencimiento de la póliza.
+- Si un dato NO aparece en el documento, pon null. NUNCA lo inventes ni lo deduzcas, y NUNCA escribas "N/A", "no consta", "desconocido" ni un guion: eso es null.`
 
-/** Nada leído: los cinco campos a `null` y `fuente: 'none'`. */
+/** Nada leído: TODOS los campos a `null` y `fuente: 'none'`. */
 function nadaLeido(): ResultadoExtraccion {
-  return { datos: polizaLeidaVacia(), fuente: 'none' }
+  return { datos: { ...polizaLeidaVacia(), ...vehiculoLeidoVacio() }, fuente: 'none' }
 }
 
 export async function extraerPoliza(
@@ -81,14 +98,23 @@ export async function extraerPoliza(
 }
 
 /**
- * Un JSON que no parsea devuelve los cinco campos a `null`, NUNCA campos a
+ * Un JSON que no parsea devuelve TODOS los campos a `null`, NUNCA campos a
  * medias ni cadenas de cajón. Media extracción pintada como póliza es peor que
  * ninguna: el usuario se cree que está guardada.
+ *
+ * Las dos normalizaciones son independientes a propósito: el contrato lo
+ * normaliza el módulo puro compartido (`@central/module-seguros-portal`) y el
+ * vehículo `lib/poliza-editable.ts`, que es el mismo que valida la corrección a
+ * mano. Ninguna de las dos lanza.
  */
+export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): PolizaExtraida {
+  return { ...normalizarPolizaLeida(bruto), ...normalizarVehiculoLeido(bruto, hoy) }
+}
+
 function parsear(salida: string): PolizaExtraida {
   try {
-    return normalizarPolizaLeida(JSON.parse(cleanJSON(salida)))
+    return parsearPolizaExtraida(JSON.parse(cleanJSON(salida)))
   } catch {
-    return polizaLeidaVacia()
+    return { ...polizaLeidaVacia(), ...vehiculoLeidoVacio() }
   }
 }

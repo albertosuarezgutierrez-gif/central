@@ -147,6 +147,13 @@ model PortalPolizaDeclarada {
   ramo                 String?
   primaAnual           Decimal?          @map("prima_anual") @db.Decimal(10, 2)
   fechaVencimiento     DateTime?         @map("fecha_vencimiento") @db.Date
+  /// Del BIEN asegurado, no del contrato: viven aquí mientras no haya ficha de
+  /// vehículo propia. `null` = «no se sabe» (nadie lo ha leído ni escrito), que
+  /// NO es «el vehículo no tiene bastidor». Se validan en `lib/poliza-editable.ts`
+  /// (VIN de 17 sin I/O/Q, matrícula compactada) antes de llegar aquí.
+  matricula            String?
+  bastidor             String?
+  fechaMatriculacion   DateTime?         @map("fecha_matriculacion") @db.Date
   procedencia          PortalProcedencia @default(declarado)
   confirmadaPorUsuario Boolean           @default(false) @map("confirmada_por_usuario")
   documentoNombre      String?           @map("documento_nombre")

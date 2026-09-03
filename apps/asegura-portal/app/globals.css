@@ -5,39 +5,82 @@
  * el corredor vean el mismo producto. Lo que NO se copia es la densidad: allí
  * hay tablas de 12 columnas y aquí entra gente de la calle desde el móvil.
  *
- * Los nombres de token son los de plataforma (`--surface`, `--primary`,
- * `--muted`…) a propósito: son los que `@central/brand` puede sobreescribir el
- * día que exista `MARCA_GRUPO_ASEGURA`. Los nombres viejos del portal
- * (`--brand`, `--peligro`, `--texto-suave`…) se conservan como ALIAS para no
- * romper los `style={{}}` que ya los usan: si se borran, la pantalla de entrada
- * pierde el color de error sin que falle nada.
+ * 🎨 MARCA (03/09/2026). El color ya NO se decide aquí: lo pone
+ * `MARCA_ASEGURA` de `@central/brand`, que `app/layout.tsx` inyecta como un
+ * `:root{…}` en el `<head>`. Los valores de este fichero son solo el RESPALDO.
+ *
+ * Por qué `@layer portal-base`: `emitirRootCss()` emite los nombres de la casa
+ * de marcas (`--brand`, `--bg`, `--text`, `--sans`…) y este fichero usa los de
+ * plataforma (`--primary`, `--surface`, `--radius`…). Los que coinciden se
+ * pisarían según el orden en que Next monte el `<head>` — que no está
+ * garantizado — y el fallo sería MUDO: la pantalla se quedaría índigo sin que
+ * nada reventase. Con una capa no hay carrera: en CSS, lo NO capado gana
+ * siempre a lo capado, y el bloque de marca va sin capa.
+ *
+ * Los que NO coinciden se derivan abajo, fuera de la capa
+ * (`--primary: var(--brand)`), así que siguen al token de marca sea cual sea.
  */
-:root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --border: #e5e7eb;
-  --text: #0f172a;
-  --muted: #64748b;
-  --primary: #4f46e5;
-  --primary-light: #eef2ff;
-  --primary-hover: #4338ca;
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --shadow-lift: 0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 32px -12px rgba(15, 23, 42, 0.14);
+@layer portal-base {
+  :root {
+    /* Superficies y texto — mismos nombres que emite @central/brand. */
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel2: #f8fafd;
+    --border: #e5e7eb;
+    --border-soft: #eef1f6;
+    --text: #0f172a;
+    --muted: #64748b;
+    --muted2: #94a3b8;
 
-  --positive: #059669;
+    /* Marca. `--brand` es la identidad; `--accent` el decorativo (filetes). */
+    --brand: #4f46e5;
+    --brand-ink: #4338ca;
+    --brand-soft: rgba(79, 70, 229, 0.1);
+    --accent: #6366f1;
+    --accent-ink: #4338ca;
+    --accent-soft: #eef2ff;
+
+    /* Estados. Deliberadamente fuera del azul de marca: un aviso pintado del
+     * color de la marca deja de leerse como aviso. */
+    --ok: #059669;
+    --warn: #b45309;
+    --danger: #dc2626;
+
+    /* Tipografía y forma. */
+    --serif: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --radio: 14px;
+  }
+}
+
+:root {
+  /* ── Puente marca → tokens de plataforma ───────────────────────────────
+   * Estos SÍ van fuera de la capa: son derivados, no respaldos. Si
+   * `@central/brand` cambia el azul, `--primary` lo sigue solo. */
+  --primary: var(--brand);
+  --primary-hover: var(--brand-ink);
+  --primary-light: var(--accent-soft);
+  --surface: var(--panel);
+  --radius: var(--radio);
+  --positive: var(--ok);
+  --negative: var(--danger);
+  --warning: var(--warn);
+
+  /* Tintes de estado: la marca no los declara (solo el color pleno), así que
+   * se quedan aquí. */
   --positive-bg: #ecfdf5;
-  --negative: #dc2626;
   --negative-bg: #fef2f2;
-  --warning: #b45309;
   --warning-bg: #fffbeb;
   --warning-border: #fcd34d;
 
-  /* Alias de compatibilidad (los usan estilos inline ya escritos). */
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-lift: 0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 32px -12px rgba(15, 23, 42, 0.14);
+
+  /* Alias de compatibilidad (los usan estilos inline ya escritos). Ojo: aquí
+   * `--brand` NO se puede aliasar a `--primary` como antes — sería un ciclo. */
   --fondo: var(--bg);
   --texto: var(--text);
   --borde: var(--border);
-  --brand: var(--primary);
   --texto-suave: var(--muted);
   --texto-tenue: var(--muted);
   --peligro: var(--negative);
@@ -63,7 +106,7 @@
 
 body {
   margin: 0;
-  font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -88,6 +131,9 @@ input, select, textarea, button { font: inherit; }
   padding: 12px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  /* Filete de acento: es lo único decorativo del portal y basta para que la
+   * primera franja de pantalla ya sea de la correduría. */
+  border-top: 3px solid var(--accent);
 }
 .marca-escudo {
   display: inline-flex;
@@ -101,9 +147,11 @@ input, select, textarea, button { font: inherit; }
   color: var(--primary);
 }
 .marca-nombre {
+  font-family: var(--serif);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  color: var(--brand-ink);
 }
 .marca-coletilla {
   margin-left: auto;
@@ -121,6 +169,7 @@ input, select, textarea, button { font: inherit; }
   margin-bottom: 20px;
 }
 .seccion h2 {
+  font-family: var(--serif);
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 12px;
@@ -128,6 +177,7 @@ input, select, textarea, button { font: inherit; }
 }
 
 h1 {
+  font-family: var(--serif);
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -423,3 +473,19 @@ h1 {
 }
 
 .lista-titulo { font-size: 13px; font-weight: 600; margin: 18px 0 8px; }
+
+/* ── Marca de la pantalla de entrada ─────────────────────────────────────
+ * El asegurado llega aquí desde un correo con un código. Antes de pedirle nada
+ * tiene que ver de quién es el portal, y a ese tamaño el monograma se lee: la
+ * barra de arriba lo lleva a 15 px, aquí a 34. */
+.entrada-marca {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius);
+  background: var(--primary-light);
+  color: var(--brand);
+  margin-bottom: 14px;
+}

@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
+    "@central/brand": "workspace:*",
     "@central/core-ai": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-identity": "workspace:*",

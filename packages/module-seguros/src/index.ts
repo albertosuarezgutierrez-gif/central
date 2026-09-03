@@ -349,3 +349,15 @@ export {
   type GrupoChoque,
   type PlanBackfillDni,
 } from './backfill-dni.ts'
+
+export {
+  ALFABETO_SERIE,
+  PRIMERA_MATRICULA_MODERNA,
+  ULTIMO_HITO_CONOCIDO,
+  normalizarMatricula,
+  formatoMatricula,
+  ordinalMatricula,
+  fechaMatriculacionEstimada,
+  type FormatoMatricula,
+  type MatriculacionEstimada,
+} from './matricula.ts'

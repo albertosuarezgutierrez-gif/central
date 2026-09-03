@@ -215,6 +215,14 @@ export default async function Boveda() {
                     fechaVencimiento: p.fechaVencimiento
                       ? p.fechaVencimiento.toISOString().slice(0, 10)
                       : null,
+                    matricula: p.matricula,
+                    bastidor: p.bastidor,
+                    // Columna `date`, igual que el vencimiento: medianoche UTC,
+                    // así que el ISO recortado es el día exacto y no se corre
+                    // uno según la zona del navegador.
+                    fechaMatriculacion: p.fechaMatriculacion
+                      ? p.fechaMatriculacion.toISOString().slice(0, 10)
+                      : null,
                     deDocumento: p.documentoNombre !== null,
                   }}
                 />

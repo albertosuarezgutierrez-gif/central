@@ -59,6 +59,18 @@ async function altaConDocumento(req: Request, identidadId: string) {
       ramo: datos.ramo,
       primaAnual: datos.primaAnual,
       fechaVencimiento: datos.fechaVencimiento ? new Date(`${datos.fechaVencimiento}T00:00:00Z`) : null,
+      // Los tres del vehículo, si el documento los traía. `null` es lo normal:
+      // una póliza de hogar no tiene matrícula, y una de auto puede no traer el
+      // bastidor impreso. Se guardan ya validados por `extraer-poliza.ts` —un
+      // bastidor que no cumple la forma llega `null`, porque un VIN mal leído no
+      // es un dato incompleto, es OTRO coche.
+      matricula: datos.matricula,
+      bastidor: datos.bastidor,
+      // Medianoche UTC, igual que el vencimiento: la columna es `date` y así el
+      // día no se corre según la zona del servidor.
+      fechaMatriculacion: datos.fechaMatriculacion
+        ? new Date(`${datos.fechaMatriculacion}T00:00:00Z`)
+        : null,
       // Siempre `declarado`: lo ha aportado el usuario. Que lo haya leído una IA
       // no lo convierte en dato verificado — al revés, es donde más se inventa.
       procedencia: 'declarado',
