@@ -423,6 +423,11 @@ model Poliza {
   codigoEntidadDgs   String?          @map("codigo_entidad_dgs") @db.VarChar(16)
   ramoDgs            String?          @map("ramo_dgs") @db.VarChar(8)
   fechaEfectoInicial DateTime?        @map("fecha_efecto_inicial") @db.Date
+  /// Huella del último EIAC que escribió la fila. Solo la pone el pipeline de
+  /// CIMA, así que es la marca de «la ingesta ha tocado esto» — y con ella se
+  /// decide la cartera VIVA (ver `WHERE_CARTERA_VIVA` de @central/module-seguros).
+  /// GRANT concedido el 03/09/2026; sin él la consulta entera reventaría.
+  eiacXmlHash        String?          @map("eiac_xml_hash") @db.VarChar(64)
   mergedIntoPolizaId String?          @map("merged_into_poliza_id") @db.Uuid
   createdAt          DateTime         @map("created_at") @db.Timestamp(6)
   updatedAt          DateTime         @map("updated_at") @db.Timestamp(6)

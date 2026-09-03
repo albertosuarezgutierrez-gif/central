@@ -22,6 +22,7 @@ import {
   type AperturaSiniestro,
   type OrigenSiniestro,
   type SeguimientoSiniestro,
+  esVolcadoHistorico,
 } from '@central/module-seguros'
 import { encryptField } from '@central/module-seguros-pii'
 import { prismaAsegura } from './asegura-db'
@@ -161,10 +162,13 @@ export async function abrirSiniestro(
   const db = prismaAsegura()
   const poliza = await db.poliza.findFirst({
     where: { id: a.polizaId, correduriaId, mergedIntoPolizaId: null },
-    select: { id: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, importRef: true },
+    select: { id: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, importRef: true, eiacXmlHash: true },
   })
   if (!poliza) return noEncontrado('La póliza no existe en esta correduría.')
-  if (poliza.importRef !== null) return invalido('Esa póliza es del volcado histórico, no está viva en CIMA: no se abre un siniestro sobre ella.')
+  // Volcado histórico = lead, no cliente. OJO: no basta con `import_ref`, porque
+  // una fila del volcado que la ingesta de CIMA mantiene al día SÍ es cartera viva
+  // (ver `cartera-viva.ts`); sobre esa sí se abre siniestro.
+  if (esVolcadoHistorico(poliza)) return invalido('Esa póliza es del volcado histórico, no está viva en CIMA: no se abre un siniestro sobre ella.')
 
   const creado = await db.siniestro.create({
     data: {

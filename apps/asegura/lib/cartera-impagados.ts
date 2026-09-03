@@ -256,7 +256,10 @@ async function polizasSinRecibo(correduriaId: string): Promise<number> {
     from polizas p
     where p.correduria_id = ${correduriaId}::uuid
       and p.merged_into_poliza_id is null
-      and p.import_ref is null
+      -- Cartera VIVA: import_ref IS NULL NO basta. Una fila del volcado que la
+      -- ingesta de CIMA mantiene al día conserva su import_ref viejo y se marca
+      -- con eiac_xml_hash. Regla única en @central/module-seguros (cartera-viva.ts).
+      and (p.import_ref is null or p.eiac_xml_hash is not null)
       and not exists (select 1 from poliza_recibos r where r.poliza_id = p.id)
   `
   return Number(filas[0]?.n ?? 0)

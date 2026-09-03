@@ -295,6 +295,24 @@
 
 ---
 
+### 🩹 (03/09/2026) La cartera viva se contaba mal: `import_ref IS NULL` dejaba fuera a un cliente
+
+- **Agujero medido:** cuando la ingesta de CIMA trae una póliza que YA existía en el volcado, actualiza la
+  fila vieja y le deja su `import_ref`. Esa póliza —que CIMA mantiene al día— contaba como *lead*.
+  Caso: `3021700291186` de **Reale (C0613)**, vence 19/09/2027, suplemento EIAC el 25/08. Reale figuraba
+  con **0 vivas** y su cliente era invisible en CRM y portal. Cartera real: **80 clientes / 110 pólizas**
+  (no 79/109); volcado 28.728. Ramos: auto 81 · hogar 19 · RC 9 · moto 1; 42 canceladas, 68 no.
+- **Arreglo:** regla única en `@central/module-seguros` (`cartera-viva.ts`): viva = `import_ref IS NULL`
+  **o** `eiac_xml_hash IS NOT NULL`. Barrido en asegura, portal y plataforma + guardián
+  `test/regression-cartera-viva.test.ts`. `eiacXmlHash` es OBLIGATORIO en las firmas a propósito: si fuera
+  opcional, olvidar pedirlo a la BD volvería a la regla vieja en silencio. GRANT de esa columna al rol del
+  portal (aplicado y en `prisma/sql/`). Verificado: 322/322 tests, typecheck asegura/portal/plataforma, QA.
+- **Pendiente CIMA (aparte, sin enviar):** borrador en Gmail a `soporte@cimaseg.es` con (A) **Generali
+  C0072**: credencial activa desde 19/05 y **cero ficheros** — no hay confirmación de activación suya, y
+  en el Portal tampoco aparece nada; (B) el proceso EIAC **841** (alta de siniestros, Mediador→Entidad):
+  el estándar lo prevé pero el adaptador solo hace bajada y producción iba en EIAC v6 (SAU-22134, 30/04).
+  **Reale no manda la carga masiva 199/299** — eso se pide a Reale, no a TIREA.
+
 ### 🧾 (02/09/2026, noche IV) Cuadre de comisiones: por qué está a cero y hasta dónde puede cuadrar (solo lectura)
 - Alberto preguntó si ya se cuadra al céntimo con BBVA + CIMA. **Medido en BD, sin tocar nada:** el libro
   (`comisiones_devengo`/`comisiones_cobertura`) está a **0 filas** porque el cron `cima-liq` (07:30 UTC) corrió a las

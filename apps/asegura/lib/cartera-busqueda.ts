@@ -631,7 +631,8 @@ async function senalesDe(
     const db = prismaAsegura()
     const filas = await db.$queryRaw<{ cliente_id: string; cima: number; ultimo: Date | null }[]>`
       select cliente_id::text as cliente_id,
-             count(*) filter (where import_ref is null)::int as cima,
+             -- Cartera viva: la que CIMA trae o mantiene (cartera-viva.ts).
+             count(*) filter (where import_ref is null or eiac_xml_hash is not null)::int as cima,
              max(fecha_vencimiento) as ultimo
       from polizas
       where correduria_id = ${correduriaId}::uuid
@@ -721,7 +722,8 @@ async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaC
         on pb.tipo = pa.tipo
        and pb.cliente_id <> pa.cliente_id
        and pb.merged_into_poliza_id is null
-       and (pa.import_ref is null or pb.import_ref is null)
+       and ((pa.import_ref is null or pa.eiac_xml_hash is not null)
+         or (pb.import_ref is null or pb.eiac_xml_hash is not null))
        and upper(regexp_replace(pb.numero_poliza, '[^A-Za-z0-9]', '', 'g'))
          = upper(regexp_replace(pa.numero_poliza, '[^A-Za-z0-9]', '', 'g'))
       join clientes o

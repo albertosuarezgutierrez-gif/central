@@ -1163,7 +1163,11 @@ importers:
 
   packages/module-seguros-pii: {}
 
-  packages/module-seguros-portal: {}
+  packages/module-seguros-portal:
+    dependencies:
+      '@central/module-seguros':
+        specifier: workspace:*
+        version: link:../module-seguros
 
   packages/module-ses: {}
 

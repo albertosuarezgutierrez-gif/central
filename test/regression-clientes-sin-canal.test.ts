@@ -32,11 +32,15 @@ const CLIENTE = readFileSync(`${RAIZ}apps/plataforma/app/(usuario)/correduria/Co
 
 // ── 1. El recuento es SOLO de la cartera viva ───────────────────────────────
 
-test('🚨 la consulta se restringe a las pólizas que entran por CIMA', () => {
+test('🚨 la consulta se restringe a la CARTERA VIVA, con los dos brazos de la regla', () => {
+  // Los dos brazos (`cartera-viva.ts` de `@central/module-seguros`): sin el
+  // primero entrarían las ~32.500 fichas del volcado histórico; sin el segundo
+  // se caerían las que CIMA mantiene al día conservando su `import_ref` viejo
+  // —y con ellas, clientes enteros (medido 03/09/2026: uno de Reale)—.
   assert.match(
     SQL,
-    /and\s+p\.import_ref\s+is\s+null/i,
-    'sin `p.import_ref is null` la lista incluiría las ~32.520 fichas del volcado histórico',
+    /and\s+\(\s*p\.import_ref\s+is\s+null\s+or\s+p\.eiac_xml_hash\s+is\s+not\s+null\s*\)/i,
+    'la lista tiene que filtrar por cartera viva con la regla de dos brazos',
   )
 })
 

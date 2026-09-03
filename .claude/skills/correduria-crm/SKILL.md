@@ -27,12 +27,20 @@ real medido, orden de trabajo). Después, según lo que toques:
 1. **Dos caras, dos apps.** Corredor en `apps/plataforma` (`/correduria`); cliente en
    `apps/asegura-portal` (rol `prisma_asegura_portal` sin BYPASSRLS, secreto propio). Nunca una
    pantalla compartida con permisos. En el portal el aislamiento **lo da el código**, no RLS.
-2. **«Cliente» = póliza viva de CIMA** (`import_ref IS NULL`, y `''` cuenta como volcado: es el valor
-   de cajón que se cuela por `IS NULL`, `??` y `COALESCE`). Lo emitido por nosotros es «pendiente
-   de confirmación» hasta que CIMA lo trae. El estado del cliente se DERIVA, no se guarda.
+2. **«Cliente» = póliza viva de CIMA**, y qué es «viva» lo decide UNA fuente:
+   `packages/module-seguros/src/cartera-viva.ts` de `@central/module-seguros` (`esCarteraViva()`,
+   `WHERE_CARTERA_VIVA`, `sqlCarteraViva()`) = **`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`**.
+   No lo reimplementes en una consulta. `''` cuenta como volcado: es el valor de cajón que se cuela por
+   `IS NULL`, `??` y `COALESCE`. Lo emitido por nosotros es «pendiente de confirmación» hasta que CIMA lo
+   trae. El estado del cliente se DERIVA, no se guarda.
+   🚨 **`import_ref IS NULL` a secas tenía un agujero (medido 03/09/2026).** Cuando CIMA trae una póliza
+   que ya estaba en el volcado no crea fila nueva: actualiza la vieja y le deja su `import_ref`, así que
+   una póliza que CIMA mantiene al día contaba como lead. El segundo brazo (`eiac_xml_hash`, que solo
+   escribe el pipeline EIAC) lo tapa. Hoy afecta a **1** póliza, la `3021700291186` de **Reale (C0613)**,
+   que dejaba a Reale con «0 pólizas vivas» y a su cliente invisible en el CRM y en el portal.
    🚨 **`confirmadaCima` (`id_poliza_entidad !== null`) NO vale como filtro de cartera viva**: es otra
    pregunta, y usarlo dejaría fuera justo lo que emitimos nosotros y CIMA aún no ha confirmado.
-   Cifras medidas el 02/09/2026: **~80 clientes / 109 pólizas** vivas. Las otras **28.729** pólizas
+   Cifras al 03/09/2026: **80 clientes / 110 pólizas** vivas. Las otras **28.728** pólizas
    (32.520 fichas, vencimientos 2013-2018) son volcado histórico = **leads**, jamás «clientes».
 3. **Toda escritura** va por `/api/operador/*` de asegura con `correduriaId` explícito y deja fila en
    `historial_interno`. Reglas puras en `@central/module-seguros` con test.
@@ -92,7 +100,7 @@ orden en §9.
     🚨 **Y ese cron está APAGADO:** sin `ASEGURA_AVISOS_ACTIVOS === '1'` solo cuenta (`?contar=1`
     fuerza el ensayo); sin `CRON_SECRET` no se autoriza a nadie **tampoco en desarrollo** (más duro
     que `apps/plataforma`) y solo por `Authorization: Bearer`, nunca `?secret=`. **Antes de
-    encenderlo se cuenta: si no salen ≤109 el filtro no funciona y no se enciende nada.**
+    encenderlo se cuenta: si no salen ≤110 el filtro no funciona y no se enciende nada.**
 16. **La fecha que se le enseña al cliente NO es la del vencimiento**, es la **accionable** =
     vencimiento **− 30 días** de preaviso del tomador (art. 22 LCS). «Vence el 15 de marzo» le deja
     creer que tiene hasta el 15: el plazo se le pasó el 13 de febrero. La aritmética

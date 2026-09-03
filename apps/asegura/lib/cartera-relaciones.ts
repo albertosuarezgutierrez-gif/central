@@ -15,6 +15,7 @@ import {
   type RelacionFicha,
   type RelacionFila,
 } from '@central/module-seguros'
+import { WHERE_CARTERA_VIVA } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 
 export type RelacionCartera = RelacionFicha & {
@@ -55,7 +56,7 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
     })
     const vivas = await db.poliza.groupBy({
       by: ['clienteId'],
-      where: { clienteId: { in: ids }, correduriaId, importRef: null, mergedIntoPolizaId: null },
+      where: { clienteId: { in: ids }, correduriaId, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null },
       _count: { _all: true },
     })
     const nVivas = new Map(vivas.map((v) => [v.clienteId, v._count._all]))

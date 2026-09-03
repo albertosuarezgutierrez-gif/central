@@ -28,6 +28,7 @@ import {
   type RecibosPoliza, extraerDetalleCobertura, type DetalleCobertura } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
+import { esCarteraViva, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { capitalesHogar, eurDeCapital, type CapitalAsegurado } from '@central/module-seguros'
 import { contarDocumentosPoliza, listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
@@ -262,7 +263,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     where: { id: polizaId, correduriaId, mergedIntoPolizaId: null },
     select: {
       id: true, tipo: true, aseguradora: true, codigoEntidadDgs: true, numeroPoliza: true, idPolizaEntidad: true,
-      ramoDgs: true, estado: true, situacion: true, origen: true, importRef: true,
+      ramoDgs: true, estado: true, situacion: true, origen: true, importRef: true, eiacXmlHash: true,
       fechaEfectoInicial: true, fechaInicio: true, fechaVencimiento: true,
       primaAnual: true, primaBruta: true, primaMensual: true, fraccionamiento: true, datosEspecificos: true,
       cliente: { select: { id: true, nombre: true, apellidos: true } },
@@ -322,9 +323,11 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
           .findFirst({
             where: {
               correduriaId, mergedIntoPolizaId: null, numeroPoliza: p.numeroPoliza, id: { not: p.id },
-              importRef: p.importRef === null ? { not: null } : null,
+              // La gemela es la de la OTRA cara: si ésta es viva, la copia del volcado;
+              // si ésta es del volcado, la que mantiene CIMA.
+              ...(esCarteraViva(p) ? WHERE_VOLCADO_HISTORICO : WHERE_CARTERA_VIVA),
             },
-            select: { id: true, clienteId: true, importRef: true, datosEspecificos: true, tipo: true, fechaVencimiento: true },
+            select: { id: true, clienteId: true, importRef: true, eiacXmlHash: true, datosEspecificos: true, tipo: true, fechaVencimiento: true },
           })
           .catch(() => null),
     contarDocumentosPoliza(correduriaId, p.id),
@@ -390,7 +393,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     estado: String(p.estado),
     situacion: p.situacion ?? null,
     origen: String(p.origen),
-    viva: p.importRef === null,
+    viva: esCarteraViva(p),
     fechaEfectoInicial: fechaIso(p.fechaEfectoInicial),
     fechaInicio: fechaIso(p.fechaInicio),
     fechaVencimiento: fechaIso(p.fechaVencimiento),
@@ -405,7 +408,9 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         : {
             polizaId: gemela.id,
             clienteId: gemela.clienteId,
-            importRef: gemela.importRef ?? 'cima',
+            // Con qué cara se etiqueta la gemela. `'cima'` cuando es cartera viva —
+            // incluida la fila del volcado que CIMA mantiene, que SÍ lleva `import_ref`.
+            importRef: esCarteraViva(gemela) ? 'cima' : (gemela.importRef ?? 'cima'),
             objeto: objetoAsegurado({ tipo: String(gemela.tipo), datos: datosConDireccion(gemela.datosEspecificos), coberturas: null }),
             fechaVencimiento: fechaIso(gemela.fechaVencimiento),
           },

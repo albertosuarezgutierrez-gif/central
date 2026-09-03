@@ -70,10 +70,20 @@ export type PolizaFicha = {
   matricula: string | null
   viva: boolean
   /**
-   * `import_ref IS NULL` **y** `id_poliza_entidad` informado: CIMA la ha traído.
+   * Que CIMA la haya traído: asegura lo deriva de `id_poliza_entidad` sobre una
+   * póliza de la cartera viva (`apps/asegura/lib/cartera-ficha.ts`).
    * `viva && !confirmadaCima` = emitida por nosotros y aún sin confirmar por
    * CIMA — NO cuenta como viva ni genera avisos. Si asegura no manda el campo
    * (versión anterior), vale `viva` (el comportamiento de siempre).
+   *
+   * ⚠️ NO es lo mismo que «cartera viva» y NO sirve para filtrarla: cartera
+   * viva es `import_ref IS NULL` **O** `eiac_xml_hash IS NOT NULL`
+   * (`esCarteraViva` de `@central/module-seguros`), así que desde el 03/09/2026
+   * una póliza VIVA puede llevar `import_ref` — la que CIMA mantiene al día
+   * sobre una fila que ya venía del volcado. Preguntar `import_ref IS NULL` aquí
+   * mandaría esas pólizas al bloque «emitidas, pendientes de CIMA», que es falso.
+   * Quien lo decide es asegura: esta app no toca la BD de la cartera, solo pinta
+   * lo que le mandan (y si no manda el campo, cae a `viva`).
    */
   confirmadaCima: boolean
   retarificable: boolean

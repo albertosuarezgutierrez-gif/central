@@ -41,7 +41,7 @@ su ficha de la cartera y enseñarle SUS pólizas vivas) se construyó el 02/09/2
 
 ## Qué es, y por qué es una app APARTE de `apps/asegura`
 
-El producto no es «mira tus pólizas»: es **«aporta tus seguros»**. Mirar sirve a los ~80 clientes vivos
+El producto no es «mira tus pólizas»: es **«aporta tus seguros»**. Mirar sirve a los 80 clientes vivos
 de la cartera; aportar sirve además a los ~32.520 leads. Por eso el portal es **abierto a cualquiera**,
 sea cliente o no, y por eso la bóveda guarda pólizas **que no son de la correduría**.
 
@@ -190,8 +190,11 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
   verificar añade `vinculo: <estado>` y `app/page.tsx` avisa una línea en `ambiguo`/`sin_clave`/`error`.
   Solo `tipo === 'email'`: **un móvil es un hogar** y devuelve `sin_ficha` sin buscar.
 - **Lectura (`lib/cartera-lectura.ts`, `carteraDeIdentidad(identidadId)`):** parte SIEMPRE de
-  `portal_vinculo` filtrado por `identidadId`. Pólizas **vivas** = `import_ref IS NULL AND
-  merged_into_poliza_id IS NULL` (las de CIMA); las 28.729 del volcado histórico **no se enseñan**.
+  `portal_vinculo` filtrado por `identidadId`. Pólizas **vivas** = `WHERE_CARTERA_VIVA` de
+  `@central/module-seguros` (`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`) `AND
+  merged_into_poliza_id IS NULL`; las 28.728 del volcado histórico **no se enseñan**. El segundo brazo se
+  añadió el 03/09/2026: una póliza que ya estaba en el volcado y que CIMA mantiene al día conserva su
+  `import_ref` viejo, y con el filtro anterior desaparecía de la bóveda de su dueño (1 fila hoy, la de Reale).
   `confirmadaCima = id_poliza_entidad !== null` (si no, chip «pendiente de confirmación por la compañía»).
   Por póliza: coberturas (total + 4 primeras), recibos (próximo al cobro por `situacion`
   `pendiente`/`emitido`, devueltos, último cobrado; **`total: 0` = «sin recibos informados», no «al
@@ -221,9 +224,11 @@ correduría. `UNIQUE (identidad_id, poliza_id)` es lo que hace idempotente al de
   creer que tiene hasta el 15, cuando el plazo para oponerse se le pasó el 13 de febrero. Se resta en
   **días**, no en meses: `setUTCMonth(m-1)` sobre un 31 de marzo da un 31 de febrero que JavaScript
   normaliza al 3 de marzo sin avisar.
-- **`polizaGeneraObligacion()` es el cepo que evita 28.729 avisos.** Solo `import_ref IS NULL` (CIMA).
-  Y `''` cuenta como volcado: la cadena vacía es el valor de cajón que se cuela por `IS NULL`, `??` y
-  `COALESCE`. ⚠️ **`confirmadaCima` NO sirve para este cepo** — es `id_poliza_entidad !== null`, que es
+- **`polizaGeneraObligacion()` es el cepo que evita 28.728 avisos.** Qué es «viva» NO lo decide él: llama
+  a `esCarteraViva()` de `@central/module-seguros` (`packages/module-seguros/src/cartera-viva.ts`,
+  dependencia que ganó `@central/module-seguros-portal` el 03/09/2026) = `import_ref IS NULL` **o**
+  `eiac_xml_hash IS NOT NULL`. Y `''` cuenta como volcado: la cadena vacía es el valor de cajón que se cuela
+  por `IS NULL`, `??` y `COALESCE`. ⚠️ **`confirmadaCima` NO sirve para este cepo** — es `id_poliza_entidad !== null`, que es
   otra pregunta; usarlo dejaría fuera las pólizas que emitimos nosotros y CIMA aún no confirma.
 - **`lib/obligaciones.ts` también PODA.** Una póliza que deja de estar viva (cancelada, fusionada, fin
   de riesgo) seguiría pintando su vencimiento para siempre. Solo poda las que vinieron de la cartera
@@ -263,7 +268,8 @@ Lo vigila `test/regression-portal-enlace-acceso.test.ts`.
 - **Rol:** `prisma_asegura_portal`, **SIN BYPASSRLS**, DML sobre `portal_*` y **`SELECT` por columnas**
   sobre `corredurias`, `clientes`, `cliente_emails`, `polizas`, `poliza_coberturas`, `poliza_recibos`,
   `siniestros`, `poliza_intervinientes`, `cliente_relaciones` (`prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`,
-  aplicado 02/09/2026; **sin contraseña** hasta que Alberto la ponga). Es lo que toca internet: no lleva
+  aplicado 02/09/2026; **sin contraseña** hasta que Alberto la ponga). El 03/09/2026 se añadió
+  `GRANT SELECT (eiac_xml_hash) ON seguros.polizas`, que la regla de cartera viva necesita leer. Es lo que toca internet: no lleva
   la llave maestra.
 - **DDL:** `prisma/sql/2026-09-01_portal_fase1.sql` — 3 ENUM + **6 tablas**: `portal_identidad`,
   `portal_canal`, `portal_codigo`, `portal_bien`, `portal_poliza_declarada`, `portal_consentimiento`;
@@ -314,7 +320,9 @@ precisamente lo que vigila el guardián.
   devuelvan `permission denied for column dni` (42501) — typecheckea, compila y revienta en producción.
   Los modelos de cartera de `prisma/schema.prisma` son un **espejo del SQL de grants**, no una elección
   de UI; lo vigila `test/regression-portal-aislamiento.test.ts`. Para leer una columna nueva: primero
-  el `GRANT`, después el schema, en ese orden.
+  el `GRANT`, después el schema, en ese orden. Caso real (03/09/2026): la regla de cartera viva pasó a
+  mirar `eiac_xml_hash`; hasta conceder `GRANT SELECT (eiac_xml_hash) ON seguros.polizas TO
+  prisma_asegura_portal` moría la lectura ENTERA de `Poliza`, no solo esa columna.
 - **El cliente Prisma generado es COMPARTIDO por el `.pnpm` del monorepo** (`node_modules/.pnpm/@prisma+client@5.22.0…/.prisma/client`):
   un `prisma generate` de otra app lo pisa y el typecheck del portal falla con `Property 'portalIdentidad'
   does not exist on type 'PrismaClient'`. No es el código: regenera desde `apps/asegura-portal` antes de
@@ -371,8 +379,9 @@ de «Estado» arriba — `DATABASE_URL` con la contraseña del Vault, `PII_LOOKU
 autorizaciones a terceros (`portal_autorizacion`, con nivel propio) y portal de empresas.
 
 🚨 **Dos reglas del spec que hay que tener delante antes de tocar recordatorios o vinculación:**
-- **Ninguna póliza del volcado histórico (`import_ref IS NOT NULL`) genera un aviso.** Si el motor
-  leyera esas fechas mandaría hasta **28.729** «se te venció el seguro» de pólizas de 2013-2018.
+- **Ninguna póliza del volcado histórico genera un aviso** (volcado = `import_ref IS NOT NULL` **y**
+  `eiac_xml_hash IS NULL`; ver `esVolcadoHistorico()`). Si el motor leyera esas fechas mandaría hasta
+  **28.728** «se te venció el seguro» de pólizas de 2013-2018.
 - **Un número de móvil identifica un HOGAR, no a una persona** (740 números compartidos por 1.599
   fichas, medido 01/09/2026). Un número compartido **nunca resuelve solo** a una ficha. El email sí es
   identificador limpio: 0 duplicados entre clientes distintos.

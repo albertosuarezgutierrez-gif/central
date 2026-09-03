@@ -7,6 +7,8 @@
  * Se resta en DÍAS, no en meses: `setUTCMonth(m - 1)` sobre un 31 de marzo da
  * un 31 de febrero, que JavaScript normaliza al 3 de marzo sin avisar.
  */
+import { esCarteraViva } from '@central/module-seguros'
+
 export const DIAS_PREAVISO_TOMADOR = 30
 
 const MS_DIA = 86_400_000
@@ -34,19 +36,28 @@ export function entraEnVentana(x: { fechaAccionable: Date; hoy: Date }): boolean
 }
 
 /**
- * 🚨 La regla que evita el desastre. Solo generan obligación las pólizas que
- * entran por CIMA (`import_ref IS NULL`). Las del volcado histórico se
- * consultan y nada más.
+ * 🚨 La regla que evita el desastre. Solo generan obligación las pólizas de la
+ * CARTERA VIVA; las del volcado histórico se consultan y nada más.
  *
- * `importRef: ''` cuenta como volcado a propósito: la cadena vacía es el valor
- * de cajón que se cuela por `IS NULL`, `??` y `COALESCE`. Ante la duda, el
+ * Qué es «viva» NO se decide aquí: es `esCarteraViva()` de
+ * `@central/module-seguros` (`cartera-viva.ts`), y no basta con
+ * `import_ref IS NULL`. Una fila del volcado que la ingesta de CIMA mantiene al
+ * día conserva su `import_ref` viejo y se marca con `eiac_xml_hash`: es cartera
+ * de hoy y su vencimiento SÍ hay que avisarlo. Medido el 03/09/2026 sobre la
+ * cartera real; con la regla de un solo brazo se caía un cliente entero.
+ *
+ * `importRef: ''` sigue contando como volcado a propósito: la cadena vacía es el
+ * valor de cajón que se cuela por `IS NULL`, `??` y `COALESCE`. Ante la duda, el
  * estado conservador es NO avisar.
  */
 export function polizaGeneraObligacion(p: {
   importRef: string | null
+  /** OBLIGATORIO a propósito: si fuera opcional, quien olvide pedirlo a la BD
+   *  volvería a la regla vieja de un solo brazo sin que nada fallase. */
+  eiacXmlHash: string | null
   fechaVencimiento: Date | null
 }): boolean {
-  if (p.importRef !== null) return false
+  if (!esCarteraViva(p)) return false
   return p.fechaVencimiento !== null
 }
 
@@ -72,6 +83,7 @@ export type VigenciaObligacion = 'vigente' | 'no_vigente' | 'pendiente'
 
 export function obligacionDerivable(p: {
   importRef: string | null
+  eiacXmlHash: string | null
   fechaVencimiento: Date | null
   vigencia: VigenciaObligacion
 }): boolean {

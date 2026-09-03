@@ -2,7 +2,7 @@
 // de pólizas duplicadas en la cartera viva. Solo lectura; `correduriaId`
 // explícito en todo. `null` = no se pudo consultar, nunca `[]`.
 
-import { polizasDuplicadas, type GrupoDuplicado } from '@central/module-seguros'
+import { polizasDuplicadas, WHERE_CARTERA_VIVA, type GrupoDuplicado } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 
 export type HistorialFila = { id: string; tipo: string; texto: string; fecha: string }
@@ -44,7 +44,7 @@ export async function cotizacionesVivas(correduriaId: string, clienteId: string,
 export async function duplicadasCartera(correduriaId: string): Promise<GrupoDuplicado[] | null> {
   try {
     const filas = await prismaAsegura().poliza.findMany({
-      where: { correduriaId, importRef: null, mergedIntoPolizaId: null },
+      where: { correduriaId, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null },
       select: { id: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true, idPolizaEntidad: true, estado: true },
     })
     return polizasDuplicadas(
