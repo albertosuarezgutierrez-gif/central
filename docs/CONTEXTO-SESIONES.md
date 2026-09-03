@@ -68,6 +68,18 @@
   (30-60 días, donde SÍ da tiempo a mover de compañía)**, 5 con el plazo ya pasado y 🚩 **18 vivas
   por CIMA con vencimiento ANTERIOR a hoy** — o CIMA no refresca la fecha al prorrogar, o están
   vencidas de verdad; sin mirar, no se afirma.
+- **🔑 Portal del cliente: envs puestas y la lección de las claves irreversibles (03/09/2026).**
+  En `asegura-portal` quedan `DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_FROM`,
+  `PORTAL_MAIL_REPLY_TO` y `PORTAL_PUBLIC_URL`. Dos cosas que costaron la noche: (1) **una env
+  `Sensitive` de Vercel NO se puede releer** —es escritura solo—, y `PII_LOOKUP_KEY` es
+  IRREVERSIBLE (índices ÚNICOS sobre el índice ciego: cambiarla obliga a recalcular 4 tablas), así
+  que jamás se genera una nueva; el valor estaba en el proyecto `asegura`, de donde ya se copió el
+  02/09. (2) El **bucle del `ignoreCommand`**: cambiar una env no llega a producción, Vercel no
+  redespliega si hay una producción más nueva, y los commits de la auditoría crean una cada pocos
+  minutos y la cancelan. La única salida es un commit que toque `apps/asegura-portal/`.
+  **Pendiente:** que Alberto pida un código con el email de un cliente CIMA — es lo que valida a la
+  vez el envío por Resend y la `PII_LOOKUP_KEY`. Y llevar las claves a Shared env vars + gestor.
+
 - **🎨 Portal del cliente: correo propio y aspecto de plataforma (03/09/2026).** Dominio de envío
   `envios.grupoasegura.es` **verificado en Resend** (DKIM+SPF+MX en IONOS). Es un SUBDOMINIO a
   propósito: solo puede haber un SPF por dominio y la raíz ya tiene el de IONOS — fusionarlos a mano
