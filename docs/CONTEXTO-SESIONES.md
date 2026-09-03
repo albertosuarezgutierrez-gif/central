@@ -30,7 +30,7 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, tras mergear #2206).**
+- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, PR #2211 mergeado).**
   `DELETE /api/operador/poliza/intervinientes` + botón «quitar» en Contactos de plataforma. Tres
   guardas: una fila de **CIMA no se borra** (409; el pull la recrearía, y plataforma ni pinta el botón),
   el **snapshot va ANTES del borrado** y si falla no se borra nada, y **el tomador no tiene botón** porque
