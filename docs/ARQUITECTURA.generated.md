@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-03T12:38:59Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-03T13:15:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1261 rutas API.
+**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1265 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -25,8 +25,8 @@
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
-- **Tablas (9):** seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_poliza_declarada, seguros.portal_vinculo
-- **Rutas API:** 5
+- **Tablas (12):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_poliza_declarada, seguros.portal_vinculo
+- **Rutas API:** 9
 ### housesevillana
 - **Módulos que usa:** —
 - **Capacidades:** —
@@ -256,6 +256,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/09/2026) 🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos
+- (03/09/2026) 🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive
 - (03/09/2026) 🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera
 - (03/09/2026) 🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR
 - (03/09/2026) 🔴 «Sin dato» en el capital de hogar era un «no lo he mirado»
@@ -264,6 +266,4 @@
 - (03/09/2026) ⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición
 - (03/09/2026) 🏷️ El motor de pricing tarificaba en un percentil que tres pisos no han alcanzado jamás
 - (03/09/2026) 🚑 El cliente ya puede dar parte de un siniestro desde el portal
-- (03/09/2026) 📅 mercado-booking: julio y agosto 2027 ya tienen bucket elegible, otra vez
-- (03/09/2026) ✅ El libro de comisiones vuelve a leer la cartera — incidente `asegura_error` CERRADO
 
