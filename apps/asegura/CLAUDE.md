@@ -770,6 +770,48 @@ lápida no puede tener ninguna póliza de CIMA. Ensayo en seco: las cuatro guard
   sino que **repone los tres `*_lookup_hash` desde `snapshot_before`** al final del propio fichero (con
   guarda de unicidad), en vez de dejarlo para una segunda pasada descubierta después.
 
+🚨 **POR QUÉ quedan 552 grupos sin fusionar, y no es indecisión: el blind index de DNI está a
+medias (medido 03/09/2026, PR #2206).** Alberto vio dos «Pilar Piña Franco» (`intranet:cli:174` +
+`asegura_app:cli2:174`, ninguna con póliza de CIMA) y preguntó por qué se duplican. La causa no es el
+criterio, es que **el criterio no puede preguntar**: hay **19.696 fichas con DNI guardado y 15.800 de
+ellas con `dni_lookup_hash` a NULL**, así que el lote 2 —mismo hash de DNI, el criterio fuerte— solo
+pudo mirar 3.896. De los **556 grupos nombre+teléfono** (1.132 fichas, 528 cruzando los dos volcados),
+**552 tienen el hash ausente en algún lado**. Los otros lotes tampoco los cazan por diseño: el 3 exige
+que el superviviente tenga pólizas de CIMA, el 4 póliza común, el 5 vehículo común.
+
+🚨 **Y el backfill de ese hash NO es un `UPDATE`.** `uq_clientes_dni_lookup_hash` es **UNIQUE** sobre
+`dni_lookup_hash` para `tipo='cliente'`: escribirlo revienta en la segunda ficha de cada DNI repetido
+(741 fichas `cliente` en riesgo; los 15.059 leads no, el índice es parcial). [Probable] es justo por
+qué faltan — el importador se comió el conflicto. **El choque no es un estorbo: es el hallazgo**, un
+DNI repetido es la misma persona dos veces. De ahí el orden, que no se puede invertir:
+**(1) calcular en seco → (2) fusionar los choques con OK explícito → (3) escribir los hashes.**
+El paso 1 y el 3 son `GET`/`POST /api/operador/backfill-dni` (vive aquí porque necesita
+`PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY`); la regla es pura y está en
+`@central/module-seguros` (`backfill-dni.ts`, `planBackfillDni()`, 11 tests), con los tres estados de
+siempre: un DNI que **no descifra es `ilegible`, jamás «sin DNI»**, y un valor de cajón
+(`PENDIENTE`, `X`) **no genera hash** para que no funda a dos personas.
+
+🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ESCRITO Y SIN
+EJECUTAR: el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un
+error». Las dos mitades ciertas y por motivos distintos:
+- **Francisco Chacón Matito figura de conductor ocasional en pólizas de 52 tomadores sin relación
+  entre sí** (Phenix Automoción, Kartenbrot, Esquiansa y 49 particulares); Antonio Sevico, 16, y es
+  «ocasional» del propio Matito. **Son los dos únicos por encima de 4**; el tercero no pasa de 3. Es el
+  comodín que el CRM viejo metía cuando no sabía a quién poner.
+- 🚨 **Pero Matito es una PERSONA REAL y su ficha no se toca.** De sus 60 filas de interviniente, **59
+  son del volcado** (`origen='manual'`, creadas todas en 57 segundos el 21/06 entre las 17:58:47 y las
+  17:59:44, sin NIF, sin nombre propio, **ninguna sobre cartera viva**) y **1 es de CIMA** (conductor
+  HABITUAL, con NIF, póliza viva) **que se queda** — borrarla no serviría: el siguiente pull la
+  recrearía. La frontera es limpia y no hay que adivinarla: las **408** filas `manual` de
+  `poliza_intervinientes` cuelgan TODAS de pólizas del volcado; las **96** de CIMA, todas de vivas.
+- Alcance: **77 intervinientes + 120 relaciones** ocasional/contacto, y **ninguna de las 120 lleva
+  `puede_ver_polizas`** (la lección del lote 5: el consentimiento colgaba de la ficha que no era). Las
+  8 de familia —Hijo/a, Cónyuge, Padre/Madre, Amigo/a, Empresa, Administración— se quedan. Reversible:
+  `seguros.interviniente_purga_log.snapshot_before`, append-only por trigger.
+- ⚠️ **Y «no se puede borrar» es LITERAL: el puerto no tiene ningún `DELETE`** de intervinientes ni de
+  relaciones (`/api/operador/cliente` es GET · POST · PATCH). No es un botón roto: la operación no
+  existe, y hasta que exista el próximo comodín también se quitará por SQL.
+
 Desde el 02/09 el rol `prisma_seguros` sí escribe, pero las fusiones se hacen por SQL con su lote y su
 guarda de identidad (no hay botón «fusionar» en la UI, a propósito); el buscador mide, rotula y enlaza a
 la ficha viva desde la histórica (`avisoHermanas()`).
