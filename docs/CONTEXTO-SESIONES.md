@@ -49,6 +49,18 @@
   redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
   `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
   este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
+- **🧪 La PRIMERA simulación real destapó dos mentiras más, y la BD las cazó (03/09/2026).** Alberto pulsó
+  «Simular precio» en una póliza de auto: `seguros.tarificaciones` guardó 1 fila `simulado=true`,
+  `intento_id NULL`, `project_id -377989` y **0 filas en el libro de gasto** — la simulación funciona y no
+  costó un céntimo. Pero (1) la tabla pintaba **«—» en las tres primas** que la BD sí tenía (49,60 · 68,80 ·
+  84,80€): el componente declaraba `primaAnual` y el backend manda `primaEur`, y como los campos del tipo
+  local son opcionales **TypeScript no dijo nada**; y (2) le devolvió productos de **HOGAR** para un coche
+  («Fiatc Hogar», «Mapfre Hogar») porque `simulacion.ts` se escribió solo para ese ramo y `cotizar()` lo
+  usaba para todos — de ahí las primas de 50-85€, que son los gastos fijos de la fórmula de hogar aplicada a
+  un coche. Ahora hay molde por ramo: auto con Reale/Occident/Mutua Madrileña **sacadas del fixture real**
+  (251,62-647,68€, la horquilla medida) y **`moto`/`rc` devuelven CERO precios diciendo por qué**, en vez de
+  caer a hogar. Cepos: 12 casos de vehículo + 28 de simulación.
+
 - **🚗 El catálogo de versiones exige el COMBUSTIBLE, y la doc decía lo contrario (03/09/2026).**
   Con marca/modelo ya preseleccionados, el desplegable de versiones salía vacío y con un 400 crudo del
   vendor: `/car/brands/{id}/models/{id}/vehicles` pide `engine` **también en auto**, y
