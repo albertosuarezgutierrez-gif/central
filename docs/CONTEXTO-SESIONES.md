@@ -77,6 +77,17 @@
   (30-60 días, donde SÍ da tiempo a mover de compañía)**, 5 con el plazo ya pasado y 🚩 **18 vivas
   por CIMA con vencimiento ANTERIOR a hoy** — o CIMA no refresca la fecha al prorrogar, o están
   vencidas de verdad; sin mirar, no se afirma.
+- **✍️ El portal del cliente ya deja corregir la póliza a mano (03/09/2026).** La pantalla decía
+  «complétala a mano cuando quieras» y no había dónde: solo existía subir el fichero. Ahora hay
+  `PATCH /api/polizas/[id]` + `normalizarParche()` puro + formulario. **La fecha de vencimiento NO es
+  obligatoria, a propósito** (Alberto la quería obligatoria): quien no la sabe se la inventa, y una
+  fecha inventada dispara un aviso de renovación falso — el «no lo sé disfrazado de valor». Sin
+  fecha, la tarjeta lo dice en voz alta y ofrece la acción. Cepos: el PATCH escribe con `updateMany`
+  filtrando por `identidadId` (el uuid viaja al navegador) y el 404 no distingue «no existe» de «no
+  es tuya». 17 tests del validador + 362/362 la suite guardiana. **Medido de paso:** coberturas,
+  recibos, siniestros y tramitador YA se leían en `cartera-lectura.ts`; lo que NO existe es
+  «solicitar cambios» (cero modelo, cero ruta).
+
 - **🌶️ La pimienta del portal se apagaba sola (03/09/2026).** `hashCanal` leía
   `ASEGURA_PORTAL_CANAL_PEPPER ?? ''`: sin la env la app NO fallaba, seguía dando de alta y escribía
   en `portal_canal` **SHA-256 pelados del email** — justo lo que ese hash existe para evitar. Medido
