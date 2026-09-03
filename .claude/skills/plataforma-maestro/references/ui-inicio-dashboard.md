@@ -228,4 +228,49 @@ Y el hallazgo colateral: **9 botones del desglose de comisiones estaban a ~26 px
 Un estilo escrito a mano se salta el mínimo táctil sin que nada falle — el guardián es usar
 `btnStyle()`, no recordarlo.
 
+## 📱 Segunda captura: el coste NO son los iconos, es que todo es una caja (03/09/2026)
+
+Alberto, sobre `/correduria/cliente/[id]`: «iconos muy grandes… ocupa mucha página». **Los iconos
+no eran el coste** (van a 13px) pero su lectura tenía media razón: eran **emoji**, y un ⭐/📞/✉️ a
+13px pesa mucho más que el trazo lucide del mismo tamaño. Lo que ocupaba la página, medido en
+`EditarCliente.tsx` y **cuadrado por los dos lados** (el CSS y la captura, escalando por el `campo`
+de 44px — la comprobación que faltó en el PR anterior):
+
+| | alto CSS |
+|---|---|
+| formulario «Añadir», **siempre desplegado** | **~246 px** |
+| 3 contactos, cada uno en su caja | ~313 px |
+| *pantalla útil de su móvil* | *~706 px* |
+
+**El 35% de la pantalla para teclear nueve dígitos**, en una ficha que se abre para LEER un teléfono
+y llamar. Un formulario permanente cobra a las trescientas consultas el precio de la vez que se da
+de alta un contacto: **se pliega en `<details>`**, y eso solo ya devuelve 200 px.
+
+🚨 **Un `flexWrap` en la fila de una lista da DOS alturas al mismo tipo de dato**, y se ve a simple
+vista: en la captura el primer teléfono medía ~58 px y el segundo ~84, porque solo el segundo
+llevaba «Hacer principal» (~150 px de rótulo) y a 332 px útiles los botones caían a otra línea.
+Quitar el `flexWrap` obliga a que quepa todo — y lo que hace que quepa es convertir el rótulo en
+icono, no encoger el botón.
+
+**`btnIcono(variante, tam)` en `components/ui.tsx`** es la primitiva para eso: botón cuadrado de
+44×44 (o 34 en `sm`) que **mantiene el mínimo táctil**, que es justo lo que se salta un estilo a
+mano. ⚠️ **NUNCA para una acción destructiva.** «Borrar» conserva su texto: es irreversible, y en
+las 19 pantallas de la correduría no hay **ni un** precedente de icono solo para algo así — lo que
+se gana en alto no compensa inventarlo. A icono van las acciones inocuas o idempotentes (marcar
+principal, fijar, copiar) y **siempre** con `aria-label` y `title`: el icono no es el nombre.
+
+**Y un contacto deja de ser una caja para ser una LÍNEA** con separador fino. Borde, fondo y radio
+se gastan POR FUNCIÓN (regla de este mismo fichero) y «soy un teléfono» no es una función — mismo
+criterio que `Bloque.tsx` en el rediseño de `/correduria`.
+
+⏸️ **Estado de la adopción, para quien siga:** el patrón «una caja por elemento» está en **19
+componentes** de la correduría (~42 `border: 1px solid var(--border)`, ~51 `flexWrap`). Migrado
+**solo `EditarCliente`**, que es el de la captura. NO se barre de golpe: manda la adopción POR
+GOTEO del `CLAUDE.md` de plataforma, y sin poder ver ninguna renderizada un barrido masivo es
+apostar 19 pantallas a ciegas. Las siguientes por uso serían Relaciones, Documentos y Siniestros.
+
+🪤 **Hallazgo colateral sin arreglar:** `className="edicion-fila"` aparece 4 veces en
+`EditarCliente.tsx` y **no tiene ninguna regla en `globals.css`**. Gancho muerto, la misma forma
+que el landmine de `var(--card)`: no falla, no se ve, y quien lo lea creerá que ahí hay responsive.
+
 <!-- verificado: 2026-09-03 -->
