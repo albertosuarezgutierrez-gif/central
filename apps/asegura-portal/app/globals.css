@@ -165,6 +165,13 @@ h1 {
 }
 .cartera-card .linea strong { color: var(--text); }
 .cartera-card .nivel { font-size: 12px; color: var(--muted); }
+/* Regla de visibilidad del 03/09/2026: lo que se OCULTA no se pinta (no hay
+ * clase para «vacío»), y lo que se DICE EN VOZ ALTA sale del gris de `.linea`
+ * — si «tu compañía no nos ha informado de ningún recibo» se pinta como una
+ * nota tenue más, se lee como «todo en orden». `.ojo` es para lo que además
+ * cambia lo que el cliente puede esperar de nosotros (no poder avisarle). */
+.cartera-card .linea.dicho { color: var(--text); }
+.cartera-card .linea.dicho.ojo { color: var(--warning); font-weight: 600; }
 
 /* ── Chips (píldoras) — mismas proporciones que los Badge de plataforma ── */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -236,6 +243,9 @@ h1 {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
 }
+/* `.boton` lo usa también un <a> (el aviso de recibo devuelto abre el correo de
+ * la correduría): sin esto hereda el subrayado del enlace y parece otra cosa. */
+.boton { text-decoration: none; }
 .boton-subir input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .boton-subir[aria-disabled='true'] { opacity: 0.6; cursor: progress; }
 

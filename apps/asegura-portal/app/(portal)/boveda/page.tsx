@@ -189,42 +189,73 @@ function Titular({ titular, propia }: { titular: TitularPortal; propia: boolean 
   )
 }
 
+/** Buzón único de la correduría. No hay ninguna ruta de API para esto todavía:
+ *  el aviso sale por el mismo canal que ya usa el correo del código
+ *  (`PORTAL_MAIL_REPLY_TO`), y no se inventa un endpoint que no existe. */
+const CORREO_CORREDURIA = 'hola@grupoasegura.es'
+
+/**
+ * Una póliza de la CARTERA.
+ *
+ * Regla de visibilidad del 03/09/2026 (ver `CLAUDE.md` de la app): lo que no
+ * cambia una decisión del cliente **no se pinta vacío, se quita**; lo que sí la
+ * cambia se dice con una frase entera. Por eso aquí no queda ni un «—», ni un
+ * «no visible en tu nivel», ni un «pendiente»: un campo a `null` por nivel es
+ * un dato que esta persona no tiene derecho a ver, y anunciarlo solo genera una
+ * pregunta que Alberto tiene que contestar.
+ */
 function Card({ p }: { p: PolizaPortal }) {
   const vence = fechaEs(p.fechaVencimiento)
+  // `numeroPoliza === null` = la compañía no lo informó (el nivel `tarjeta` ya
+  // lo enseña): se oculta, la cabecera ya identifica la póliza.
+  const cabecera = [p.numeroPoliza && `Póliza ${p.numeroPoliza}`, vence && `Vence el ${vence}`].filter(Boolean)
+
   return (
     <li className="cartera-card">
       <h3>
         {p.compania} <span className="tenue">· {RAMO[p.ramo] ?? p.ramo}</span>
       </h3>
-      <div className="linea">
-        {p.numeroPoliza === null ? 'Nº de póliza no visible en tu nivel' : `Póliza ${p.numeroPoliza}`}
-        {' · '}
-        {vence ? `Vence el ${vence}` : 'Sin fecha de vencimiento informada'}
-      </div>
-      <div className="linea">
-        {/* `prima: null` = el nivel no la enseña; `anual: null` = la compañía no la ha informado. Nunca 0. */}
-        {p.prima === null
-          ? 'Prima no visible en tu nivel'
-          : p.prima.anual === null
-            ? 'Prima anual —'
-            : `Prima anual ${eur(p.prima.anual)}${p.prima.fraccionamiento ? ` (${p.prima.fraccionamiento})` : ''}`}
-      </div>
-      <Recibos p={p} />
-      {p.coberturas !== null && p.coberturas.total > 0 && (
-        <div className="linea">
-          {p.coberturas.lista.join(' · ')}
-          {p.coberturas.total > p.coberturas.lista.length && ` y ${p.coberturas.total - p.coberturas.lista.length} más`}
+
+      {/* ARRIBA DEL TODO y antes que ningún dato: un recibo devuelto es lo
+          único de esta tarjeta que puede costarle la cobertura. */}
+      <AvisoReciboDevuelto p={p} />
+
+      {cabecera.length > 0 && <div className="linea">{cabecera.join(' · ')}</div>}
+
+      {/* Sin vencimiento no hay calendario: se dice, porque el silencio aquí se
+          lee como «ya te avisaremos» y no vamos a poder. */}
+      {p.fechaVencimiento === null && (
+        <div className="linea dicho ojo">
+          No sabemos cuándo vence
+          {p.vigencia === 'pendiente'
+            ? ': no podemos avisarte ni confirmarte que siga en vigor.'
+            : ', así que no podemos avisarte.'}
         </div>
       )}
+
+      {/* `prima === null` = el nivel no la enseña → se oculta.
+          `prima.anual === null` = la compañía no la ha informado → tampoco
+          cambia nada que el cliente pueda hacer, así que se oculta también.
+          Lo que NUNCA sale es un `0,00€` en lugar de un hueco. */}
+      {p.prima !== null && p.prima.anual !== null && (
+        <div className="linea">
+          Prima anual <strong>{eur(p.prima.anual)}</strong>
+          {p.prima.fraccionamiento ? ` (${p.prima.fraccionamiento})` : ''}
+        </div>
+      )}
+
+      <Recibos p={p} />
+      <Coberturas p={p} />
+
       <div className="chips">
         <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>{ESTADO[p.estado] ?? p.estado}</span>
-        {p.vigencia === 'pendiente' && <span className="chip aviso">vigencia sin confirmar: falta el vencimiento</span>}
         {!p.confirmadaCima && <span className="chip aviso">pendiente de confirmación por la compañía</span>}
+        {/* Sin tramitador ni teléfono de gestión: el punto de contacto es la
+            correduría (regla de visibilidad, `CLAUDE.md` de la app). */}
         {p.siniestrosAbiertos.map((s) => (
           <span key={s.id} className="chip aviso">
             siniestro {s.estado === 'en_tramitacion' ? 'en tramitación' : 'abierto'}
             {s.referencia ? ` ${s.referencia}` : ''}
-            {s.tramitadorTelefono ? ` · tramitador ${s.tramitadorTelefono}` : ''}
           </span>
         ))}
       </div>
@@ -232,23 +263,105 @@ function Card({ p }: { p: PolizaPortal }) {
   )
 }
 
+/**
+ * 🚨 EL aviso de la pantalla: `devueltos > 0` significa que la compañía intentó
+ * cobrar y NO pudo. Es lo único que puede dejar a esta persona sin cobertura
+ * sin que ella se entere, así que va arriba y con una acción al lado.
+ *
+ * 🚨 Y la línea que no se puede cruzar: un recibo **devuelto** no es un recibo
+ * **pendiente/al cobro**. El pendiente está emitido y aún sin cargar — es
+ * información neutra («tu próximo recibo») y vive en `<Recibos>`, jamás aquí.
+ * Pintar un pendiente como impago acusa de moroso a quien está al día; es
+ * exactamente el fallo que se corrigió en `/correduria` (PR #2179).
+ *
+ * No se pinta ningún importe: `RecibosPortal` da el NÚMERO de devueltos, no su
+ * cuantía, y el importe del próximo al cobro es de otro recibo. Poner ahí una
+ * cifra que no es la del devuelto sería inventarla.
+ */
+function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
+  const devueltos = p.recibos?.devueltos ?? 0
+  if (devueltos === 0) return null
+
+  const identifica = p.numeroPoliza ? `póliza ${p.numeroPoliza}` : `póliza de ${p.compania} (${RAMO[p.ramo] ?? p.ramo})`
+  const asunto = `Recibo devuelto · ${identifica}`
+  const cuerpo = [
+    'Hola:',
+    '',
+    `En el portal me aparece ${devueltos === 1 ? 'un recibo devuelto' : `${devueltos} recibos devueltos`} de mi ${identifica} con ${p.compania}.`,
+    'Quiero regularizarlo. ¿Me decís cómo?',
+    '',
+    'Gracias.',
+  ].join('\n')
+  const mailto = `mailto:${CORREO_CORREDURIA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
+
+  return (
+    <div className="aviso-linea">
+      <strong>
+        {devueltos === 1 ? 'Tienes un recibo devuelto' : `Tienes ${devueltos} recibos devueltos`}
+      </strong>{' '}
+      — el cobro se intentó y no salió. Mientras no se regularice, la compañía puede dejar de cubrirte.
+      <a className="boton" href={mailto}>
+        Avisar a la correduría
+      </a>
+    </div>
+  )
+}
+
+/**
+ * Recibos, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`.
+ *
+ * - `recibos === null` → el nivel de esta persona no enseña recibos. No es una
+ *   ausencia del dato: se oculta y no se menciona.
+ * - `total === 0` → **la compañía no ha informado recibos**, que NO es «estás al
+ *   corriente». Esa frase se dice entera porque el silencio sí se leería así.
+ */
 function Recibos({ p }: { p: PolizaPortal }) {
-  if (p.recibos === null) return <div className="nivel">Recibos no visibles en tu nivel</div>
+  if (p.recibos === null) return null
   const r = p.recibos
-  // `total: 0` es «la compañía no ha mandado recibos», NO «al corriente».
-  if (r.total === 0) return <div className="nivel">Sin recibos informados por la compañía</div>
+  if (r.total === 0) {
+    return <div className="linea dicho">Tu compañía no nos ha informado de ningún recibo.</div>
+  }
+
+  const partes: string[] = []
+  if (r.proximoAlCobro) {
+    // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
+    // se cuenta lo que se sabe (la fecha) y se calla lo que no.
+    const cuando = fechaEs(r.proximoAlCobro.fechaVencimiento)
+    const importe = r.proximoAlCobro.importe
+    if (importe !== null) partes.push(`Tu próximo recibo: ${eur(importe)}${cuando ? ` el ${cuando}` : ''}`)
+    else if (cuando) partes.push(`Tu próximo recibo vence el ${cuando}`)
+  }
+  if (r.ultimoCobrado) {
+    const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
+    const importe = r.ultimoCobrado.importe
+    if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
+    else if (cuando) partes.push(`último cobrado el ${cuando}`)
+  }
+  // Ni un solo dato que enseñar (recibos sin importe ni fecha): no se pinta una
+  // línea vacía, y tampoco «ningún recibo al cobro», que se leería como «nada
+  // que pagar» sin que nadie lo haya comprobado.
+  if (partes.length === 0) return null
+  return <div className="linea">{partes.join(' · ')}</div>
+}
+
+/**
+ * Coberturas. `null` = el nivel no las enseña (se oculta); `total === 0` = **no
+ * nos consta el detalle**, que NO es «no tienes coberturas»: decirle eso a
+ * alguien que sí las tiene es empujarle a contratar lo que ya paga.
+ */
+function Coberturas({ p }: { p: PolizaPortal }) {
+  if (p.coberturas === null) return null
+  const c = p.coberturas
+  if (c.total === 0) return <div className="linea dicho">No nos consta el detalle de coberturas.</div>
+  // `total > 0` con la lista vacía = las coberturas vienen sin descripción ni
+  // código. Se dice cuántas hay, que es lo único cierto.
+  if (c.lista.length === 0) {
+    return <div className="linea">{c.total === 1 ? '1 cobertura informada' : `${c.total} coberturas informadas`}</div>
+  }
   return (
     <div className="linea">
-      {r.devueltos > 0 && <span style={{ color: 'var(--peligro)' }}>{r.devueltos} recibo(s) devuelto(s) · </span>}
-      {r.proximoAlCobro
-        ? `Próximo recibo ${r.proximoAlCobro.importe === null ? '—' : eur(r.proximoAlCobro.importe)}${
-            r.proximoAlCobro.fechaVencimiento ? ` el ${fechaEs(r.proximoAlCobro.fechaVencimiento)}` : ''
-          }`
-        : 'Ningún recibo al cobro'}
-      {r.ultimoCobrado &&
-        ` · Último cobrado ${r.ultimoCobrado.importe === null ? '—' : eur(r.ultimoCobrado.importe)}${
-          r.ultimoCobrado.fechaEmision ? ` (${fechaEs(r.ultimoCobrado.fechaEmision)})` : ''
-        }`}
+      {c.lista.join(' · ')}
+      {c.total > c.lista.length && ` y ${c.total - c.lista.length} más`}
     </div>
   )
 }
