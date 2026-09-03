@@ -24,9 +24,17 @@ const SECRET = () => requireSecret('ASEGURA_PORTAL_SESSION_SECRET', 'portal-dev-
  * Hash del canal para poder buscarlo sin guardar el email o el móvil en claro.
  * Va con pimienta de entorno: sin ella, una tabla de hashes de emails es
  * trivial de revertir con un diccionario.
+ *
+ * Por eso la pimienta usa `requireSecret` y no `?? ''`. Con el fallback vacío la
+ * app NO fallaba: seguía funcionando y guardaba SHA-256 pelados del email, que
+ * es justo lo que este hash existe para evitar — la protección se apagaba sola y
+ * nadie se enteraba (medido en producción el 03/09/2026: el envío del código
+ * funcionaba con la env sin poner). El guardián `test/regression-secrets.test.ts`
+ * no lo caza a propósito, porque su regla —«una cadena vacía no es una credencial
+ * usable»— es cierta para un secreto que FIRMA y falsa para una pimienta.
  */
 export function hashCanal(valor: string): string {
-  const pimienta = process.env.ASEGURA_PORTAL_CANAL_PEPPER ?? ''
+  const pimienta = requireSecret('ASEGURA_PORTAL_CANAL_PEPPER', 'portal-dev-pepper-change-in-prod')
   return createHash('sha256').update(`${pimienta}:${valor.trim().toLowerCase()}`).digest('hex')
 }
 
