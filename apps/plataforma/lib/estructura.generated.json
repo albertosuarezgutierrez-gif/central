@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-03T07:34:33Z",
+  "generadoEn": "2026-09-03T08:43:13Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1955,7 +1955,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "housesevillana": {
         "estado": "no",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "housesevillana": {
         "estado": "no",
@@ -3617,7 +3617,8 @@
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
-      "/api/polizas"
+      "/api/polizas",
+      "/api/polizas/[id]"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -5839,7 +5840,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1249,
+    "apis": 1250,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

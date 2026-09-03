@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-03T07:34:33Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-03T08:43:13Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1249 rutas API.
+**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1250 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (8):** seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_obligacion, seguros.portal_poliza_declarada, seguros.portal_vinculo
-- **Rutas API:** 3
+- **Rutas API:** 4
 ### housesevillana
 - **Módulos que usa:** —
 - **Capacidades:** —
@@ -260,10 +260,10 @@
 - (03/09/2026) 🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente`
 - (03/09/2026) 🔎 Check-in post-fusión CIMA
 - (03/09/2026) 🗂️ Ficha de cliente de la correduría: cabecera + pestañas, y los colores de la app de Manuel
+- (03/09/2026) ✍️ El portal del cliente ya deja corregir la póliza a mano
 - (03/09/2026) 🌶️ La pimienta del portal se apagaba sola
 - (03/09/2026) 🔑 Portal del cliente: envs puestas y la lección de las claves irreversibles
 - (03/09/2026) 🎨 Portal del cliente: correo propio y aspecto de plataforma
 - (03/09/2026) 👪 «Antonio Sevico no aparece en Relaciones»: no era un fallo de lectura
 - (03/09/2026) 🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto
-- (03/09/2026) 🧪 La PRIMERA simulación real destapó dos mentiras más, y la BD las cazó
 

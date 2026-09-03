@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T08:17:12Z",
-  "sha": "ccfc43852697eafe9f38c1964720bed0279790bc",
+  "generadoEn": "2026-09-03T08:43:13Z",
+  "sha": "7ec2320124cc3f00e1a3ce4cbecf0dd4083e9cea",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2910,6 +2910,79 @@
       "hash": "a71b19c979eb"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/EditarPoliza.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "EditarPoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "campoDelError",
+          "kind": "function",
+          "exportada": false,
+          "params": "codigo: string",
+          "retorno": "Campo | null",
+          "linea": 87
+        },
+        {
+          "nombre": "aFormulario",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: Valores",
+          "retorno": "Formulario",
+          "linea": 92
+        },
+        {
+          "nombre": "primaDesdeTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "number | null | 'invalida' | 'cero'",
+          "linea": 111,
+          "resumen": "`null` = el hueco, y es válido (dejar la prima en blanco es una respuesta). `'invalida'` = hay algo escrito que no es un número. `'cero'` va aparte porque un 0 no es basura: es un hueco con forma de n"
+        },
+        {
+          "nombre": "calcularCambios",
+          "kind": "function",
+          "exportada": false,
+          "params": "form: Formulario, base: Valores, prima: number | null",
+          "retorno": "Cambios",
+          "linea": 120
+        },
+        {
+          "nombre": "aplicar",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: Valores, c: Cambios",
+          "retorno": "Valores",
+          "linea": 134
+        },
+        {
+          "nombre": "textoFecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string | null",
+          "linea": 145,
+          "resumen": "`YYYY-MM-DD` → `dd/mm/aaaa`, en UTC (una fecha `date` no tiene hora ni zona)."
+        },
+        {
+          "nombre": "EditarPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ poliza, ramos }: { poliza: PolizaEditable; ramos: readonly RamoOpcion[] }",
+          "retorno": null,
+          "linea": 149
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "84932e05b5c2"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -2922,7 +2995,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 47
+          "linea": 54
         },
         {
           "nombre": "Titular",
@@ -2930,7 +3003,7 @@
           "exportada": false,
           "params": "{ titular, propia }: { titular: TitularPortal; propia: boolean }",
           "retorno": null,
-          "linea": 140
+          "linea": 169
         },
         {
           "nombre": "Card",
@@ -2938,7 +3011,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 163
+          "linea": 192
         },
         {
           "nombre": "Recibos",
@@ -2946,12 +3019,12 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 206
+          "linea": 235
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f71f0ea16c24"
+      "hash": "be56826dee03"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx",
@@ -3015,6 +3088,29 @@
       ],
       "rutaApi": "/api/acceso/verificar",
       "hash": "bf6a4c85ab1e"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/polizas/[id]/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "Corrección a mano de una póliza que el propio cliente subió. 🚨 El aislamiento de este portal NO lo da RLS (el rol `prisma_asegura_portal` consulta sin políticas que resuelvan `auth.uid()`): lo da EST"
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/polizas/[id]",
+      "hash": "58886d72cf13"
     },
     {
       "ruta": "apps/asegura-portal/app/api/polizas/route.ts",
@@ -3415,6 +3511,56 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3f5e18db0609"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/poliza-editable.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Normalización del PARCHE con el que el cliente corrige a mano una póliza que él mismo subió. Módulo PURO a propósito (ni Prisma ni Next): lo que se decide aquí es qué es un dato y qué es basura, y eso tiene que poder testearse sin BD. Las tres reglas que justifican que esto exista: 1. Cadena vacía N",
+      "exporta": [
+        "parsearFechaISO",
+        "normalizarParche"
+      ],
+      "funciones": [
+        {
+          "nombre": "parsearFechaISO",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string, hoy: Date = new Date()",
+          "retorno": "",
+          "linea": 52,
+          "resumen": "Convierte `YYYY-MM-DD` en un `Date` a medianoche UTC, o devuelve el motivo del rechazo. Se exige el formato EXACTO (nada de `new Date(string)`, que acepta casi cualquier cosa y adivina zona horaria) y"
+        },
+        {
+          "nombre": "normalizarTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: unknown",
+          "retorno": "",
+          "linea": 77,
+          "resumen": "`''` y `' '` son un borrado, no un valor."
+        },
+        {
+          "nombre": "normalizarPrima",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: unknown",
+          "retorno": "",
+          "linea": 87,
+          "resumen": "Prima: número finito >= 0. Se acepta string numérica (los `<input>` mandan texto)."
+        },
+        {
+          "nombre": "normalizarParche",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: unknown, hoy: Date = new Date()",
+          "retorno": "ResultadoParche",
+          "linea": 114,
+          "resumen": "Valida y normaliza el cuerpo de un PATCH. Solo se propagan las claves conocidas y presentes: cualquier otra cosa que venga en el JSON se ignora en silencio (que es lo correcto — no es un error del usu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "646d7a671b2a"
     },
     {
       "ruta": "apps/asegura-portal/lib/session.ts",
@@ -113529,7 +113675,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2882,
-    "funciones": 8428
+    "archivos": 2885,
+    "funciones": 8440
   }
 }
