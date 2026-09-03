@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚑 El cliente ya puede dar parte de un siniestro desde el portal (03/09/2026).** PR **#2195** (mergeado)
+  llevó la regla de visibilidad dictada por Alberto —se OCULTA lo que, si falta, no le cambia nada al cliente
+  (tramitador, perito); se DICE EN VOZ ALTA lo que sí (sin vencimiento, `recibos.total === 0`)— más el aviso
+  de recibo devuelto. PR **#2199** (abierto) trae el parte: tabla `seguros.portal_parte_siniestro` (aplicada;
+  el rol del portal solo INSERTA y LEE), el puerto `/api/operador/partes` en asegura y la bandeja en
+  `/correduria`. 🚨 **La regla nueva: un parte ENVIADO no es un siniestro COMUNICADO a la compañía** — somos
+  mediadores del cliente, no del asegurador, y «enviado» se lee como «hecho». Blindado en tres capas
+  (`comunicadoACompania()`, un CHECK en la BD y `test/regression-portal-parte-siniestro.test.ts`). Heridos y
+  terceros son TRI-ESTADO con «No lo sé» por defecto: un checkbox diría «sin heridos» de algo que nadie
+  preguntó. Se colapsó una duplicación mía de `plazoComunicacion` (art. 16 LCS) contra la de
+  `@central/module-seguros`. Pendiente: el **historial de actividad del cliente** que pidió Alberto (va sin
+  tabla nueva: sus actos ya están fechados en las tablas `portal_*`) y decidir si el parte sobre una póliza
+  AUTORIZADA debe seguir permitiéndose (hoy sí, marcando el titular real).
+
 - **✅ El libro de comisiones vuelve a leer la cartera — incidente `asegura_error` CERRADO (03/09/2026).**
   Verificado tras el cron de las 07:30 UTC: **12 filas en `comisiones_devengo` + 4 en `comisiones_cobertura`,
   todas `leido_ok = true`**, con datos reales (Mapfre, Allianz, Occident, Reale y liquidaciones CIMA con hash).
