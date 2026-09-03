@@ -76,6 +76,13 @@ dupliques: con una lista por app, la pantalla acaba ofreciendo filtros que el pu
 eso devuelve cero resultados sin un solo error. Un valor de filtro que no se reconoce se DECLARA
 (`descartados`), nunca se ignora — ignorarlo convierte «los de ramo XYZ» en «todos».
 
+El listado que lo consume ya existe de punta a punta: `GET /api/operador/cartera` (asegura) → proxy
+`/api/correduria/cartera-lista` (con CSV) → `ListaCartera.tsx`. 🚨 Dos cosas que se aprendieron
+ejecutando su SQL contra la BD real, no leyéndolo: **24 de las 110 pólizas vivas guardan `prima = 0`**
+(sin `nullif` se sirven como «0,00€», un importe inventado sin hueco que lo delate), y **el guardián de
+ese SQL tiene que leer el FUENTE con `readFileSync`** — `tsc` no mira dentro de un `Prisma.sql`, y un
+test que importe el módulo tumba el job `Tests (packages + guardián)`, que corre sin `prisma generate`.
+
 ## Estado en una línea (02/09/2026)
 
 Lectura y cuidado de la cartera: hecho (buscador, ficha cliente/póliza, edición, relaciones,

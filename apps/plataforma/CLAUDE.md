@@ -1684,10 +1684,25 @@ cancelada 42 — compañías Mapfre 64 · Allianz 26 · Occident 19 · Reale 1. 
 se ofrecen** en el filtro: un desplegable que solo enseña lo que ya existe no deja buscar un hueco, y
 buscar huecos es para lo que sirve esto.
 
-⏳ **PENDIENTE (no está construido, y la sección lo DICE en pantalla en vez de fingir que no hay
-clientes):** el endpoint `GET /api/operador/cartera` del puerto de asegura, su proxy
-`/api/correduria/cartera-lista`, el componente `ListaCartera.tsx` con la barra de filtros y la
-exportación a CSV.
+✅ **CONSTRUIDO ENTERO (03/09/2026, PR #2205):** `GET /api/operador/cartera` en el puerto de asegura
+(`lib/cartera-filtro.ts`, paginado en SQL, con facetas), el proxy `/api/correduria/cartera-lista`
+(`formato=csv`; la primera línea del fichero es `describirFiltro`, o sea el filtro que lo generó),
+el lector `lib/cartera-lista-asegura.ts` (16 tests) y `ListaCartera.tsx` en la sección **Clientes**.
+
+🚨 **Y la trampa que solo salió al EJECUTAR la consulta contra la BD, no al leerla: un `0` GUARDADO
+tampoco es una prima.** De las 110 pólizas vivas, **60 traen importe, 26 lo traen NULL y 24 lo traen
+a 0**. Sin `nullif(coalesce(prima_bruta, prima_anual), 0)` esas 24 filas pintan «0,00€» — una
+afirmación sobre lo que paga el cliente que nadie ha comprobado, que es la regla NULL≠0 por su lado
+menos visible (aquí no hay hueco que delate el fallo: sale un número plausible). Lo fija
+`apps/asegura/lib/cartera-filtro.test.ts`, que lee el **FUENTE** con `readFileSync` a propósito: lo
+que vigila vive dentro de un `Prisma.sql`, donde ni `tsc` ni `next build` miran, y además así no
+importa Prisma — el job `Tests (packages + guardián)` corre `node --test lib/*.test.ts` **sin**
+`prisma generate`, y un import del cliente generado lo tumbaría.
+
+⚠️ **Las facetas se calculan sobre `grupo` + `q`, NO sobre el resto de filtros seleccionados.** Es
+deliberado: así los contadores de los desplegables no bailan al marcar una casilla. Lo que se pierde
+es que un contador puede prometer resultados que otro filtro activo descarta; lo que se gana es que
+el desplegable siga siendo un mapa de la cartera y no del recorte que ya has hecho.
 
 ⏸️ **Y la subida MASIVA de PDFs de póliza queda fuera por una decisión pendiente, no por tiempo:**
 `asegura/cartera/subir` lee el PDF pero **no guarda el fichero** porque no está decidido dónde ni
