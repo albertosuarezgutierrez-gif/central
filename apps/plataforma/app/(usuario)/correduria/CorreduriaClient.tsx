@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { Shield, CalendarClock, Landmark, FolderOpen, Plus, House, Wrench } from 'lucide-react'
-import { Pagina, PageHeader, BtnLink, Badge } from '@/components/ui'
+import { Shield, CalendarClock, Landmark, FolderOpen } from 'lucide-react'
+import { Pagina, PageHeader, Badge } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
 import BuscadorCartera from './BuscadorCartera'
+import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
@@ -230,22 +231,7 @@ export default function CorreduriaClient() {
       <PageHeader
         titulo="Correduría"
         icono={<Shield size={20} strokeWidth={1.75} />}
-acciones={
-          <>
-            <BtnLink href="/correduria/cliente/nuevo" variante="primario">
-              <Plus size={15} strokeWidth={1.75} aria-hidden /> Nuevo cliente
-            </BtnLink>
-            <BtnLink href="/correduria/hogar" variante="secundario">
-              <House size={15} strokeWidth={1.75} aria-hidden /> Presupuesto de hogar
-            </BtnLink>
-            {/* Mantenimiento va aquí y no en el cuerpo: no es trabajo del día,
-                es una pasada de cuando toca. Un bloque permanente en la pantalla
-                que se abre cada mañana sería ruido por una tarea de una tarde. */}
-            <BtnLink href="/correduria/mantenimiento" variante="secundario">
-              <Wrench size={15} strokeWidth={1.75} aria-hidden /> Mantenimiento
-            </BtnLink>
-          </>
-        }
+        acciones={<AccionesCabecera />}
       />
 
       {/* ── EL BUSCADOR, SIEMPRE ────────────────────────────────────────────
@@ -563,6 +549,35 @@ function CarteraResumen({ cartera }: { cartera: Cartera | null }) {
   )
 }
 
+/**
+ * Botón de la ficha de un movimiento del desglose.
+ *
+ * 🚨 Existe porque estos nueve botones estaban escritos a mano con
+ * `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los
+ * **44px táctiles** que garantiza `btnStyle()` y que el resto del repo respeta.
+ * Se reclasifica un movimiento con el pulgar y en el móvil, que es donde
+ * trabaja Alberto — un objetivo de 26px se falla y se pulsa el de al lado.
+ * `minHeight` sin padding vertical necesita el `inline-flex` + `center`, o el
+ * texto se queda pegado arriba.
+ */
+function btnMini(tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true): React.CSSProperties {
+  const base: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+    minHeight: 44, padding: tono === 'plano' ? '0 8px' : '0 12px',
+    borderRadius: 8, fontSize: 13, fontWeight: 600,
+    cursor: activo ? 'pointer' : 'default', whiteSpace: 'nowrap',
+  }
+  if (tono === 'plano') return { ...base, border: 'none', background: 'none', color: 'var(--muted)', fontWeight: 400 }
+  if (tono === 'ok') {
+    return {
+      ...base, border: '1px solid var(--positive)',
+      background: activo ? 'var(--positive)' : 'var(--surface)',
+      color: activo ? '#fff' : 'var(--muted)',
+    }
+  }
+  return { ...base, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }
+}
+
 function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }) {
   const [movs, setMovs] = useState<MovDetalle[]>([])
   const [loading, setLoading] = useState(true)
@@ -656,35 +671,35 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                       {COMPANIAS_CONOCIDAS.map(c => (
                         <button key={c} disabled={busy === m.id} onClick={() => confirmar(m.id, c)}
-                          style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}>
+                          style={btnMini('neutral')}>
                           {c}
                         </button>
                       ))}
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                       <input value={otra} onChange={e => setOtra(e.target.value)} placeholder="Otra compañía…"
-                        style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, flex: '1 1 160px', minWidth: 0 }} />
+                        style={{ padding: '0 10px', minHeight: 44, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 16, flex: '1 1 160px', minWidth: 0 }} />
                       <button disabled={busy === m.id || !otra.trim()} onClick={() => confirmar(m.id, otra.trim())}
-                        style={{ padding: '5px 10px', border: '1px solid var(--positive)', borderRadius: 8, background: otra.trim() ? 'var(--positive)' : 'var(--surface)', color: otra.trim() ? '#fff' : 'var(--muted)', fontSize: 12, fontWeight: 600, cursor: otra.trim() ? 'pointer' : 'default' }}>
+                        style={btnMini('ok', !!otra.trim())}>
                         Usar
                       </button>
                       <button disabled={busy === m.id} onClick={() => confirmar(m.id, null)}
-                        style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}>
+                        style={btnMini('neutral')}>
                         No lo sé
                       </button>
-                      <button onClick={() => { setPicker(null); setOtra('') }} style={{ padding: '5px 8px', border: 'none', background: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer' }}>cancelar</button>
+                      <button onClick={() => { setPicker(null); setOtra('') }} style={btnMini('plano')}>cancelar</button>
                     </div>
                   </div>
                 ) : (
                 <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                   {!m.confirmado ? (
                     <button disabled={busy === m.id} onClick={() => { setPicker(m.id); setOtra('') }}
-                      style={{ padding: '6px 12px', border: '1px solid var(--positive)', borderRadius: 8, background: 'var(--positive)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      style={btnMini('ok')}>
                       Es de seguros · elegir compañía
                     </button>
                   ) : (
                     <button disabled={busy === m.id} onClick={() => { setPicker(m.id); setOtra('') }}
-                      style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      style={btnMini('neutral')}>
                       {m.compania === COMPANIA_OTRAS ? 'Asignar compañía' : 'Cambiar compañía'}
                     </button>
                   )}
@@ -693,15 +708,15 @@ function DesgloseModal({ info, año, onClose, onChanged }: { info: ModalInfo; a�
                       <span style={{ fontSize: 12, color: 'var(--muted)' }}>Mover a:</span>
                       {DESTINOS_RECLASIF.map(d => (
                         <button key={d.v} disabled={busy === m.id} onClick={() => reclasificar(m.id, d.v)}
-                          style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, cursor: 'pointer' }}>
+                          style={btnMini('neutral')}>
                           {d.label}
                         </button>
                       ))}
-                      <button onClick={() => setReclasif(null)} style={{ padding: '5px 8px', border: 'none', background: 'none', color: 'var(--muted)', fontSize: 12, cursor: 'pointer' }}>cancelar</button>
+                      <button onClick={() => setReclasif(null)} style={btnMini('plano')}>cancelar</button>
                     </span>
                   ) : (
                     <button disabled={busy === m.id} onClick={() => setReclasif(m.id)}
-                      style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      style={btnMini('neutral')}>
                       No es de seguros ▾
                     </button>
                   )}

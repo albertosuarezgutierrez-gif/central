@@ -71,7 +71,11 @@ export default function BuscadorCartera() {
       <form onSubmit={buscar} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'stretch' }}>
         {/* El campo manda: ocupa el ancho y la lupa va DENTRO, posicionada — no
             como carácter, que se desalinea con la fuente del sistema. */}
-        <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 0, display: 'flex' }}>
+        {/* `1 1 180px` y no 260: con gap 8 y el botón «Buscar» (~88px), 260 sumaba
+            358px y en un móvil de 360 el ancho útil son 332 (`.pagina` quita 14+14),
+            así que el botón caía a una segunda fila y costaba 45px de alto. Con 180
+            entran los dos en una línea y el campo crece con el `flex-grow`. */}
+        <div style={{ position: 'relative', flex: '1 1 180px', minWidth: 0, display: 'flex' }}>
           <Search
             size={18}
             strokeWidth={1.75}
@@ -85,9 +89,13 @@ export default function BuscadorCartera() {
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Nombre, NIF, matrícula, nº de póliza, teléfono, email o calle del riesgo"
+            placeholder="Nombre, NIF, matrícula, póliza…"
             aria-label="Buscar en la cartera"
-            autoFocus
+            /* SIN `autoFocus`: en móvil abría el teclado al entrar en la pantalla y
+               tapaba media pantalla antes de que a Alberto le diera tiempo a mirar
+               lo que hay que hacer hoy, que es para lo que abre esta página. El
+               placeholder se acorta por lo mismo: la explicación entera vive en el
+               desplegable «¿Qué puedo buscar?», a un toque. */
             style={{
               width: '100%', minWidth: 0, padding: '12px 14px 12px 40px', minHeight: 44,
               borderRadius: 10, border: '1px solid var(--border)',
@@ -106,11 +114,26 @@ export default function BuscadorCartera() {
 function Resultado({ estado, termino }: { estado: Estado; termino: string }) {
   if (estado.fase === 'quieto') {
     return (
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
-        Se busca a la vez por todo lo que el término pueda ser: nombre, matrícula, póliza, DNI,
-        teléfono, email, ciudad/CP del cliente y también localidad, CP o calle del RIESGO (la casa
-        de la playa sale buscando «rota» o «san vicente 40»).
-      </div>
+      <details style={{ marginTop: 8 }}>
+        {/* Plegado a propósito: el texto entero son 6 líneas (~89px) en móvil, y es
+            útil la PRIMERA vez que se abre la pantalla, no las trescientas
+            siguientes. No se borra —explica que la búsqueda mira también el
+            riesgo, que no es evidente— pero deja de comerse la primera pantalla. */}
+        <summary
+          style={{
+            fontSize: 12, color: 'var(--muted)', cursor: 'pointer',
+            listStyle: 'none', userSelect: 'none',
+            display: 'inline-flex', alignItems: 'center', minHeight: 32,
+          }}
+        >
+          ¿Qué puedo buscar?
+        </summary>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6, lineHeight: 1.5 }}>
+          Se busca a la vez por todo lo que el término pueda ser: nombre, matrícula, póliza, DNI,
+          teléfono, email, ciudad/CP del cliente y también localidad, CP o calle del RIESGO (la casa
+          de la playa sale buscando «rota» o «san vicente 40»).
+        </div>
+      </details>
     )
   }
   if (estado.fase === 'buscando') {

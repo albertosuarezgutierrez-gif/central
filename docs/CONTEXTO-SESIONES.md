@@ -30,6 +30,29 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📱 `/correduria` en el MÓVIL, con la primera captura real (03/09/2026).** Alberto, sobre la
+  pantalla ya rediseñada: «aún se puede mejorar… casi siempre uso el móvil». 🚨 Y ahí está lo
+  importante: la skill `plataforma-maestro` advertía que **ninguna pantalla de la app se ha visto
+  nunca renderizada** (`--sin-previews`, las sesiones no tienen navegador) y que los espaciados
+  están «razonados sobre el código, no medidos». Su captura es el primer dato real. Medido sobre
+  ella: **~520 px de cabecera sobre ~740 de pantalla**, el 70% antes del primer trabajo. ⚠️ La
+  primera cifra que se le dio —«1.550 px»— era **falsa**: eran píxeles de la imagen, no CSS; se
+  corrigió antes de tocar código. El reparto real era 176 px de botones · 101 de buscador · 89 de
+  ayuda · 49 de título. 🚨 **Y el diagnóstico intuitivo también era falso: `PageHeader` no tenía
+  nada que arreglar** (ya se apila y da `width:100%` a las acciones a ≤768). El problema era solo
+  de esta pantalla: **tres** `BtnLink` `md` con rótulos largos en `acciones`, cuando ninguna otra
+  de las 56 pasa de dos y la única que llegó a siete —`/banca`— las colapsó en un menú. Se hace lo
+  mismo (`AccionesCabecera.tsx`: «Nuevo cliente» visible + `<details>` con hogar y mantenimiento),
+  la ayuda del buscador se pliega, el campo cede ancho (`1 1 180px`) para que «Buscar» no caiga a
+  otra fila, **fuera el `autoFocus`** (abría el teclado al entrar y tapaba media pantalla) y las
+  pestañas pasan a `position:sticky`. De regalo, los **9 botones del desglose de comisiones estaban
+  a ~26 px** —muy por debajo del mínimo táctil de 44 del repo—: helper `btnMini()`. ⚠️ **Se
+  mergeó SIN que nadie abriera la preview**: se forzó con `[preview]` (única app construida,
+  las otras 10 en `Ignored`) y se le pasó el enlace a Alberto, pero pidió mergear antes de
+  mirarla. O sea que **la pantalla renderizada sigue sin verse**, igual que las otras 55: lo
+  medido son tsc/tests/build, y los px salen de su captura y del CSS, no de la página viva. Si
+  algo se ve raro en `/correduria` en móvil, empieza por aquí y no por el código.
+
 - **🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos (03/09/2026, PR #2210).**
   1️⃣ **El email de Alberto estaba en `cliente_emails` de DOS desconocidos**, así que `vincularIdentidad`
   contaba 2 candidatos, devolvía `ambiguo` y su bóveda salía **vacía sin un solo error**. Ahora desempata
