@@ -1561,7 +1561,7 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   🚨 **Vive FUERA de `CarteraViva`, nunca dentro.** Estaba anidado ahí y ese bloque hace `return`
   temprano cuando el puerto falla → el buscador desaparecía justo el día que asegura no responde.
   🚨 **DNI, teléfono y email van por índice ciego y solo alcanzan al 12-16% de las fichas**; la
-  dirección va cifrada y **no se puede buscar**. Cada bloque enseña su cobertura y el vacío se explica
+  calle del riesgo la descifra asegura en memoria (~170) y **sí se busca desde el 02/09**. Cada bloque enseña su cobertura y el vacío se explica
   (`explicarVacio()`), porque un «no aparece» ahí NO es «no está en la cartera».
 - **📞 Cola de retención (`Retencion.tsx`)**: los recibos devueltos y los vencidos sin cobrar,
   ordenados por el **reloj** (art. 15 LCS) y no por el importe. 🔴 «sin cobertura» = el cliente circula

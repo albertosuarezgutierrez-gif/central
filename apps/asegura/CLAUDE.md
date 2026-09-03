@@ -687,6 +687,24 @@ nombre+teléfono que toquen la cartera viva** y **0 pólizas colgando de una lá
 🚫 **Lo que sigue sin fusionarse a propósito:** los ~545 grupos que solo comparten nombre+teléfono y
 NO tocan la cartera viva (leads del volcado, donde el fijo compartido suele ser una familia).
 
+🧩 **Lote 4 (03/09/2026, `2026-09-03_fusion_poliza_comun_lote4.sql`): «Global2» → «GLOBAL 2
+INSTALACIONES TÉCNICAS», 51 fichas fusionadas en total.** Alberto la vio en el buscador y dictó «mismo
+cliente». Se escapó a los tres lotes porque el nombre no casaba y ninguna tenía teléfono; lo que las
+identifica es la RC **547875907** (Occident en CIMA, «Plus Ultra» —marca absorbida por Occident— en el
+volcado). Medido antes de fusionar: era **el único par** de toda la base con una póliza de CIMA
+repetida en otra ficha. Dos lecciones que quedan cableadas:
+- **El buscador ya relaciona hermanas por PÓLIZA común, no solo por teléfono** (`hermanasDe` en
+  `lib/cartera-busqueda.ts`; `Hermana.vinculo` + `avisoHermanas` en module-seguros): con vínculo
+  `poliza` es «duplicado» aunque el nombre difiera. 🚨 **Solo cuenta si una de las dos pólizas es de
+  CIMA**: por número+ramo a secas hay **2.123 pares** que NO son duplicados (el volcado `intranet:`
+  reutiliza números —«NOLOSE» en 18 fichas— y las 15 que tocaban la viva llevaban «pendiente» como
+  número, el centinela disfrazado de dato). Se midió antes de escribir el criterio, no después.
+- **El motor de fusión tenía un hueco latente:** anula los hashes de la lápida ANTES de heredar, así
+  que la viva heredó `email` cifrado pero no `email_lookup_hash` → buscar por ese email devolvía
+  vacío. En los 50 supervivientes anteriores no había hueco (medido); aquí se repuso desde
+  `snapshot_before` (segunda pasada en el mismo SQL). Si se escribe un lote 5, hereda los hashes
+  ANTES de anularlos en la lápida.
+
 Cifras sobre las 32.600 fichas (medidas ANTES de esas 50 fusiones):
 - **740 grupos comparten teléfono** (1.599 fichas). **203 de ellos con nombres distintos**: familias
   y empresas, NO duplicados. Por eso no se fusiona nada automáticamente ni se dice «duplicado» a secas.
@@ -699,7 +717,8 @@ Cifras sobre las 32.600 fichas (medidas ANTES de esas 50 fusiones):
   sin teléfono común, sin póliza común. **Es la ingesta de CIMA creando una ficha nueva** en vez de
   colgar la póliza de la existente — a Manuel. Renovaciones lo pinta como dos personas.
 
-El rol de esta app es SELECT-only: **no puede fusionar**. Lo que hace es medir, rotular y enlazar a
+Desde el 02/09 el rol `prisma_seguros` sí escribe, pero las fusiones se hacen por SQL con su lote y su
+guarda de identidad (no hay botón «fusionar» en la UI, a propósito); el buscador mide, rotula y enlaza a
 la ficha viva desde la histórica (`avisoHermanas()`).
 
 ### 📞 La cola de retención — recibos devueltos (`lib/cartera-impagados.ts`)
