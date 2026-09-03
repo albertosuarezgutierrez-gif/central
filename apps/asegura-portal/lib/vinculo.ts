@@ -9,8 +9,11 @@
 // Reglas (spec §vinculación, 01/09/2026):
 // - Solo el EMAIL vincula solo: 0 duplicados entre clientes distintos. Un móvil
 //   identifica un HOGAR (740 números compartidos por 1.599 fichas) y NO vincula.
-// - Exactamente UNA ficha → vínculo `gestionar`. Varias → `ambiguo` y NO se
-//   vincula: no se adivina, lo revisa el corredor.
+// - Una sola ficha CANDIDATA → vínculo `gestionar`. Varias empatadas → `ambiguo`
+//   y NO se vincula: no se adivina, lo revisa el corredor. Qué significa
+//   «empatadas» lo decide `elegirFicha()`, que vive aparte en
+//   `lib/vinculo-elegir.ts` (pura, con su `.test.ts`) porque una decisión
+//   repartida entre los `await` de esta función no se puede probar sin BD.
 // - Sin `PII_LOOKUP_KEY` no hay hash y no se vincula a ciegas (`sin_clave`).
 // - El resultado NUNCA bloquea el login: la identidad ya existe; esto solo
 //   decide si además tiene cartera detrás.
@@ -18,6 +21,10 @@
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
+import { elegirFicha, type Candidato } from './vinculo-elegir'
+
+export { elegirFicha }
+export type { Candidato, FichaElegida } from './vinculo-elegir'
 
 export type EstadoVinculo = 'ok' | 'ya_vinculada' | 'sin_ficha' | 'ambiguo' | 'sin_clave' | 'error'
 
@@ -49,7 +56,13 @@ export async function vincularIdentidad(
 
   try {
     // Dos sitios donde puede vivir el email de una ficha: la columna principal
-    // de `clientes` y la tabla `cliente_emails` (varios emails por ficha).
+    // de `clientes` (el email de ESA ficha) y la tabla `cliente_emails` (los
+    // emails de contacto, que pueden ser de otra persona). De ahí salen las dos
+    // procedencias que desempata `elegirFicha`.
+    //
+    // Esta función SOLO recoge filas. La decisión no se escribe entre los
+    // `await`: ahí es imposible de probar y fácil de romper sin que falle nada,
+    // que es exactamente cómo el caso de Alberto llegó a producción.
     const [directas, secundarias] = await Promise.all([
       prisma.cliente.findMany({
         where: { emailLookupHash: hash, mergedIntoClienteId: null },
@@ -61,24 +74,30 @@ export async function vincularIdentidad(
       }),
     ])
 
-    const candidatos = new Map<string, string>() // clienteId → correduriaId
-    for (const c of directas) candidatos.set(c.id, c.correduriaId)
+    const candidatos: Candidato[] = directas.map((c) => ({
+      clienteId: c.id,
+      correduriaId: c.correduriaId,
+      principal: true,
+    }))
 
-    const idsSecundarios = secundarias.map((e) => e.clienteId).filter((id) => !candidatos.has(id))
+    // Las fichas fusionadas (lápida `merged_into_cliente_id`) se descartan: en
+    // la rama principal lo hace el `where` de arriba, y aquí este segundo
+    // `findMany` con el mismo filtro. Una fusionada no es candidata por NINGÚN
+    // camino. Las que ya vienen por la columna principal no se vuelven a pedir:
+    // ya están, y con la procedencia buena.
+    const yaPrincipales = new Set(candidatos.map((c) => c.clienteId))
+    const idsSecundarios = [...new Set(secundarias.map((e) => e.clienteId))].filter((id) => !yaPrincipales.has(id))
     if (idsSecundarios.length > 0) {
-      // Las fichas fusionadas (lápida `merged_into_cliente_id`) se descartan:
-      // la ficha viva es la que absorbió.
       const vivas = await prisma.cliente.findMany({
         where: { id: { in: idsSecundarios }, mergedIntoClienteId: null },
         select: { id: true, correduriaId: true },
       })
-      for (const c of vivas) candidatos.set(c.id, c.correduriaId)
+      for (const c of vivas) candidatos.push({ clienteId: c.id, correduriaId: c.correduriaId, principal: false })
     }
 
-    if (candidatos.size === 0) return { estado: 'sin_ficha' }
-    if (candidatos.size > 1) return { estado: 'ambiguo' }
-
-    const [clienteId, correduriaId] = [...candidatos.entries()][0]
+    const elegida = elegirFicha(candidatos)
+    if (elegida.estado !== 'ok') return { estado: elegida.estado }
+    const { clienteId, correduriaId } = elegida
 
     const existente = await prisma.portalVinculo.findUnique({
       where: { identidadId_clienteId: { identidadId, clienteId } },

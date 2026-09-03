@@ -43,6 +43,7 @@ import {
   type ParteEstado,
   type PlazoComunicacion,
 } from '@central/module-seguros-portal'
+import { estadoDocumento, tipoDocumento, type EstadoDocumento, type TipoDocumento } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 
@@ -55,6 +56,28 @@ export type ClienteDelParte = {
    * null` en el parte, no con un nombre inventado dentro de una ficha.
    */
   nombre: string | null
+}
+
+/**
+ * Un fichero que el CLIENTE adjuntó al parte (fotos del golpe, el PDF del
+ * amistoso, el presupuesto del taller). Vive en `seguros.documentos` con
+ * `portal_parte_id`, así que es la MISMA tabla que el resto de papeles de la
+ * correduría — no hay una segunda bandeja.
+ *
+ * 📎 **Los bytes NO viajan aquí**: se descargan de uno en uno por el puerto que
+ * ya existe, `GET /api/operador/documentos/{id}`, que filtra por correduría.
+ */
+export type AdjuntoDelParte = {
+  id: string
+  /** `null` = la fila no guardó nombre. No se inventa uno. */
+  nombre: string | null
+  /** Siempre de la lista cerrada de `@central/module-seguros`: lo normaliza el portal al escribir. */
+  mime: string | null
+  bytes: number | null
+  tipo: TipoDocumento
+  estado: EstadoDocumento
+  /** ISO-8601. */
+  creadoEn: string
 }
 
 export type PartePortal = {
@@ -93,6 +116,20 @@ export type PartePortal = {
    * como error, porque un `null` ahí se leería como «es suyo».
    */
   titularDistinto: ClienteDelParte | null
+  /**
+   * Lo que el cliente adjuntó.
+   *
+   * 🚨 TRES estados: `null` = **la consulta de documentos falló** y no se sabe
+   * si hay fotos · `[]` = se miró y no adjuntó nada · con datos = los que hay.
+   * Pintar un `null` como «sin adjuntos» le diría a Alberto que no hay fotos de
+   * un accidente sobre el que nadie ha mirado, y es justo antes de llamar a la
+   * compañía cuando eso importa.
+   *
+   * Un fallo aquí NO tumba la bandeja: el parte se sigue viendo, que es lo que
+   * hay que tramitar. Por eso se degrada a `null` con un log, en vez de lanzar
+   * como hace la lectura de la cartera.
+   */
+  adjuntos: AdjuntoDelParte[] | null
 }
 
 export type FiltrosPartes = {
@@ -223,13 +260,75 @@ function fechaIso(d: Date): string {
 }
 
 /**
+ * Los adjuntos de un lote de partes, agrupados por parte.
+ *
+ * 🚨 Devuelve `null` cuando la consulta FALLA, y ese `null` se propaga a cada
+ * parte tal cual. Un `Map` vacío se pintaría como «no adjuntó nada», que es la
+ * mentira que persigue la regla de la casa: dato que NO hay ≠ dato que NO se ha
+ * mirado. Aquí importa el doble, porque Alberto decide con esto si llama a la
+ * compañía con fotos o sin ellas.
+ *
+ * Se filtra SIEMPRE por `correduriaId`: con BYPASSRLS, un id de otra correduría
+ * no daría error — daría los documentos de otro. Y NO se trae `contenido`: los
+ * bytes se piden de uno en uno por `GET /api/operador/documentos/{id}`.
+ */
+async function adjuntosPorParte(
+  correduriaId: string,
+  parteIds: string[],
+): Promise<Map<string, AdjuntoDelParte[]> | null> {
+  if (parteIds.length === 0) return new Map()
+  try {
+    const filas = await prismaAsegura().documento.findMany({
+      where: { correduriaId, portalParteId: { in: parteIds } },
+      select: {
+        id: true,
+        portalParteId: true,
+        nombreFichero: true,
+        mimeType: true,
+        sizeBytes: true,
+        tipo: true,
+        estado: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    })
+    const mapa = new Map<string, AdjuntoDelParte[]>()
+    for (const f of filas) {
+      if (f.portalParteId === null) continue
+      const lista = mapa.get(f.portalParteId) ?? []
+      lista.push({
+        id: f.id,
+        nombre: f.nombreFichero,
+        mime: f.mimeType,
+        bytes: f.sizeBytes,
+        tipo: tipoDocumento(f.tipo),
+        estado: estadoDocumento(f.estado),
+        creadoEn: f.createdAt.toISOString(),
+      })
+      mapa.set(f.portalParteId, lista)
+    }
+    return mapa
+  } catch (e) {
+    console.error('[partes-portal] no se pudieron leer los adjuntos:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+/**
  * Monta la salida del puerto. `titulares` trae el dueño de cada `polizaId` que
  * había que comparar; que falte una que se pidió es un error de quien llama, no
  * un `null` (ver `listarPartes`).
  */
 function aParte(
   p: FilaParte,
-  ctx: { vinculos: Map<string, string>; titulares: Map<string, string>; nombres: Map<string, string | null>; hoy: Date },
+  ctx: {
+    vinculos: Map<string, string>
+    titulares: Map<string, string>
+    nombres: Map<string, string | null>
+    /** `null` = la consulta de documentos falló para TODO el lote. */
+    adjuntos: Map<string, AdjuntoDelParte[]> | null
+    hoy: Date
+  },
 ): PartePortal {
   const clienteId = ctx.vinculos.get(p.identidadId) ?? null
   const cliente: ClienteDelParte | null =
@@ -265,6 +364,9 @@ function aParte(
     creadoEn: p.creadoEn.toISOString(),
     plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy: ctx.hoy }),
     titularDistinto,
+    // `null` del lote entero ⇒ `null` en este parte: «no se ha podido mirar».
+    // Un parte sin ficheros da `[]`, que es «se miró y no hay».
+    adjuntos: ctx.adjuntos === null ? null : ctx.adjuntos.get(p.id) ?? [],
   }
 }
 
@@ -295,7 +397,9 @@ async function completar(correduriaId: string, filas: FilaParte[], hoy: Date): P
 
   const idsFicha = [...new Set([...vinculos.values(), ...titulares.values()])]
   const nombres = await nombresDeClientes(correduriaId, idsFicha)
-  return filas.map((f) => aParte(f, { vinculos, titulares, nombres, hoy }))
+  // Una sola consulta para el lote entero, nunca una por parte.
+  const adjuntos = await adjuntosPorParte(correduriaId, filas.map((f) => f.id))
+  return filas.map((f) => aParte(f, { vinculos, titulares, nombres, adjuntos, hoy }))
 }
 
 /**

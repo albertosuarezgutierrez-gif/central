@@ -8,6 +8,11 @@ import {
   DIAS_COMUNICACION_LCS,
   LUGAR_MAX,
 } from '@central/module-seguros-portal'
+// Del módulo puro, que no importa `node:*` ni red: se puede cargar desde un
+// componente de cliente. La revisión del fichero es LA MISMA que hace el
+// servidor — dos listas distintas acabarían aceptando aquí lo que allí se
+// rechaza, y el usuario lo descubriría después de subir 10 MB desde el móvil.
+import { MAX_ADJUNTOS_POR_PARTE, revisarDocumento } from '@central/module-seguros'
 
 import { fechaEs } from '@/lib/fechas'
 
@@ -73,6 +78,30 @@ export type ParteEnviado = {
   comunicado: boolean
   estado?: string
   plazo: Plazo
+  /**
+   * Los ficheros que mandó con este parte.
+   *
+   * 🚨 CUATRO estados, y los tres primeros se dicen distinto:
+   *   - `undefined` → esta pantalla no ha recibido el dato (la página no lo
+   *     pasa). No se pinta nada: callar es lo único cierto.
+   *   - `null`      → **se intentó consultar y falló**. Se dice, porque un
+   *     silencio aquí se lee como «no mandé nada».
+   *   - `[]`        → se miró y no adjuntó ninguno.
+   *   - con datos   → los que hay, con su enlace de descarga.
+   */
+  adjuntos?: AdjuntoEnviado[] | null
+}
+
+/**
+ * Un fichero ya guardado. Se declara aquí, y no se importa de
+ * `lib/adjuntos-parte`, a propósito: ese módulo usa `node:crypto` y arrastrarlo
+ * a un componente de cliente rompe el build de producción sin que el typecheck
+ * ni los tests digan nada.
+ */
+export type AdjuntoEnviado = {
+  id: string
+  nombre: string | null
+  bytes: number | null
 }
 
 export type Plazo = {
@@ -223,6 +252,40 @@ function aTriestado(v: Triestado): boolean | null {
   return null
 }
 
+/**
+ * Un fichero elegido y en qué punto está.
+ *
+ * `estado` es por FICHERO y no del envío entero, y esa es la decisión de diseño
+ * de todo este bloque: si la cuarta foto falla, las tres primeras ya están
+ * dentro y la pantalla tiene que poder decir CUÁL falta. Un todo-o-nada
+ * perdería las tres buenas por culpa de la cuarta, y esas fotos no se pueden
+ * repetir con el coche ya retirado.
+ */
+type EstadoFichero = 'espera' | 'subiendo' | 'ok' | 'error'
+type Elegido = {
+  /** Clave estable para React: el nombre se repite (todos los móviles hacen `IMG_0001.jpg`). */
+  clave: string
+  fichero: File
+  estado: EstadoFichero
+  /** Por qué no ha entrado. Texto para leer, no un código. */
+  motivo: string | null
+}
+
+let contadorClaves = 0
+
+/** ¿Merece la pena reintentarlo? Solo si el fichero en sí vale: lo que falló fue el viaje. */
+function reintentable(e: Elegido): boolean {
+  return revisarDocumento({ type: e.fichero.type, size: e.fichero.size, name: e.fichero.name }) === null
+}
+
+/** Tamaño legible. `null` = la fila no guardó el tamaño; no se inventa un 0 KB. */
+function pesoLegible(bytes: number | null): string | null {
+  if (bytes === null || bytes <= 0) return null
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
 export function ParteSiniestro({
   polizas,
   partes,
@@ -241,8 +304,20 @@ export function ParteSiniestro({
   const [errores, setErrores] = useState<Partial<Record<Campo, string>>>({})
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)
   const [recibido, setRecibido] = useState<Plazo | null>(null)
+  const [ficheros, setFicheros] = useState<Elegido[]>([])
+  /**
+   * El parte YA creado. Se guarda porque los adjuntos cuelgan de él: si alguno
+   * falla, «Reintentar» tiene que poder volver a subirlo SIN crear otro parte.
+   * Dos partes del mismo accidente son dos expedientes que alguien tiene que
+   * cerrar a mano.
+   */
+  const [parteId, setParteId] = useState<string | null>(null)
 
   const enviando = estado === 'enviando'
+  const subidos = ficheros.filter((f) => f.estado === 'ok')
+  const fallidos = ficheros.filter((f) => f.estado === 'error')
+  /** Los que fallaron por el camino (no por ser un fichero que no admitimos). */
+  const recuperables = fallidos.filter(reintentable)
 
   function abrir() {
     // El formulario se monta SOLO al abrirlo (regla de rendimiento de UI del
@@ -250,6 +325,8 @@ export function ParteSiniestro({
     setForm(VACIO)
     setErrores({})
     setErrorGeneral(null)
+    setFicheros([])
+    setParteId(null)
     setEstado('reposo')
     setAbierto(true)
   }
@@ -271,6 +348,102 @@ export function ParteSiniestro({
    *  —«No lo sé» incluida— es válida y el backend nunca las rechaza. */
   function responder(campo: 'hayHeridos' | 'hayTerceros', valor: Triestado) {
     setForm((f) => ({ ...f, [campo]: valor }))
+  }
+
+  /**
+   * Añade ficheros a la lista. Se ACUMULAN: en el móvil, «hacer una foto» y
+   * «elegir de la galería» son dos viajes distintos al mismo input, y sustituir
+   * la lista en cada uno borraría lo anterior sin avisar.
+   *
+   * La revisión se hace aquí, con la MISMA función que usa el servidor: un
+   * fichero que no vale se queda en la lista **marcado y con su motivo** en vez
+   * de desaparecer. Desaparecer se lee como «ya está subido».
+   */
+  function elegir(e: React.ChangeEvent<HTMLInputElement>) {
+    const nuevos = Array.from(e.target.files ?? [])
+    e.target.value = '' // permite volver a elegir el mismo fichero
+    if (nuevos.length === 0) return
+
+    setFicheros((previos) => {
+      const hueco = MAX_ADJUNTOS_POR_PARTE - previos.length
+      const entran = nuevos.slice(0, Math.max(0, hueco))
+      const añadidos: Elegido[] = entran.map((f) => {
+        const reparo = revisarDocumento({ type: f.type, size: f.size, name: f.name })
+        // Un fichero rechazado nace en `error` CON su motivo, no se descarta:
+        // desaparecer de la lista se lee como «ya está subido».
+        return { clave: `f${contadorClaves++}`, fichero: f, estado: reparo ? 'error' : 'espera', motivo: reparo }
+      })
+      if (entran.length < nuevos.length) {
+        setErrorGeneral(
+          `Solo caben ${MAX_ADJUNTOS_POR_PARTE} ficheros por parte, así que no hemos cogido ` +
+            `${nuevos.length - entran.length} de los que has elegido. Si falta algo importante, dínoslo.`,
+        )
+      }
+      return [...previos, ...añadidos]
+    })
+  }
+
+  /** Quitar uno de la lista ANTES de enviar. Después ya no: lo enviado es una comunicación. */
+  function quitar(clave: string) {
+    setFicheros((f) => f.filter((x) => x.clave !== clave))
+  }
+
+  /**
+   * Sube los ficheros de uno en uno contra un parte que YA existe.
+   *
+   * En serie y no en paralelo a propósito: son hasta 10 MB cada uno desde un
+   * móvil con mala cobertura, y cuatro subidas a la vez se estorban entre
+   * ellas. El resultado de cada una se pinta en cuanto se sabe.
+   */
+  async function subirTodos(idParte: string, cuales: readonly Elegido[]) {
+    for (const elegido of cuales) {
+      setFicheros((f) => f.map((x) => (x.clave === elegido.clave ? { ...x, estado: 'subiendo', motivo: null } : x)))
+      try {
+        const body = new FormData()
+        body.append('documento', elegido.fichero)
+        const r = await fetch(`/api/siniestros/${idParte}/adjuntos`, { method: 'POST', body })
+        if (r.status === 201) {
+          setFicheros((f) => f.map((x) => (x.clave === elegido.clave ? { ...x, estado: 'ok', motivo: null } : x)))
+          continue
+        }
+        // El motivo lo redacta el servidor (es el mismo texto del módulo puro).
+        // Si no llega ninguno, se dice lo que se sabe y nada más.
+        const cuerpo = (await r.json().catch(() => null)) as { motivo?: unknown } | null
+        const motivo =
+          typeof cuerpo?.motivo === 'string' && cuerpo.motivo.trim() !== ''
+            ? cuerpo.motivo
+            : r.status === 401
+              ? 'Se ha cerrado tu sesión, así que este fichero no ha entrado.'
+              : 'No hemos podido guardarlo.'
+        setFicheros((f) => f.map((x) => (x.clave === elegido.clave ? { ...x, estado: 'error', motivo } : x)))
+      } catch {
+        setFicheros((f) =>
+          f.map((x) =>
+            x.clave === elegido.clave
+              ? { ...x, estado: 'error', motivo: 'No hemos podido subirlo: comprueba tu conexión.' }
+              : x,
+          ),
+        )
+      }
+    }
+    // La lista de partes se refresca al final, una sola vez, y sin loader a
+    // pantalla completa: nada se desmonta debajo de la persona.
+    router.refresh()
+  }
+
+  /**
+   * Reintenta SOLO los que fallaron por el camino, contra el MISMO parte.
+   *
+   * Nunca crea otro parte: dos partes del mismo accidente son dos expedientes
+   * que alguien tiene que cerrar a mano. Y no reintenta los que rechazó la
+   * revisión local (un vídeo, un fichero de 30 MB): reintentar eso es gastarle
+   * los datos del móvil para volver al mismo sitio.
+   */
+  async function reintentar() {
+    if (parteId === null) return
+    const pendientes = ficheros.filter((f) => f.estado === 'error' && reintentable(f))
+    if (pendientes.length === 0) return
+    await subirTodos(parteId, pendientes)
   }
 
   async function enviar(e: React.FormEvent<HTMLFormElement>) {
@@ -319,11 +492,24 @@ export function ParteSiniestro({
       })
 
       if (r.status === 201) {
-        const cuerpo = (await r.json().catch(() => null)) as { plazo?: Plazo } | null
+        const cuerpo = (await r.json().catch(() => null)) as { plazo?: Plazo; id?: unknown } | null
         setRecibido(cuerpo?.plazo ?? null)
         setEstado('enviado')
         setAbierto(false)
         setForm(VACIO)
+
+        // 🚨 Los adjuntos van DESPUÉS y cuelgan de este parte. Nunca al revés:
+        // un fichero subido antes que su parte es un fichero huérfano que no ve
+        // nadie. Y el parte ya está dentro pase lo que pase con las fotos —
+        // contar el siniestro es lo urgente; la foto se puede reintentar.
+        const idParte = typeof cuerpo?.id === 'string' ? cuerpo.id : null
+        const porSubir = ficheros.filter((f) => f.estado === 'espera')
+        if (idParte !== null && porSubir.length > 0) {
+          setParteId(idParte)
+          await subirTodos(idParte, porSubir)
+          return
+        }
+        setParteId(idParte)
         // Refresca la lista SIN loader a pantalla completa: la lista de partes
         // no se desmonta ni se pierde el sitio donde estaba la persona.
         router.refresh()
@@ -401,6 +587,35 @@ export function ParteSiniestro({
             <p className={recibido.fueraDePlazo ? 'recibido-plazo ojo' : 'recibido-plazo'}>
               {textoPlazo(recibido)}
             </p>
+          )}
+
+          {/* 🚨 Qué fichero entró y cuál no, uno por uno. Un «enviado» a secas
+              deja a la persona creyendo que las cuatro fotos están dentro
+              cuando solo hay tres — y la que falta es siempre la del otro
+              coche. */}
+          {ficheros.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <p className="recibido-plazo" style={{ margin: '0 0 6px' }}>
+                {subidos.length === ficheros.length
+                  ? subidos.length === 1
+                    ? 'Nos ha llegado el fichero que adjuntaste.'
+                    : `Nos han llegado los ${subidos.length} ficheros que adjuntaste.`
+                  : `Han entrado ${subidos.length} de ${ficheros.length} ficheros.`}
+              </p>
+              <ListaFicheros ficheros={ficheros} onQuitar={null} />
+              {recuperables.length > 0 && (
+                <button type="button" className="boton secundario" onClick={reintentar} style={{ marginTop: 8 }}>
+                  Reintentar {recuperables.length === 1 ? 'el que falta' : `los ${recuperables.length} que faltan`}
+                </button>
+              )}
+              {fallidos.length > 0 && (
+                // Ni una promesa de que lo arreglamos nosotros: el fichero no
+                // ha salido de su móvil y aquí no hay nada que recuperar.
+                <p className="editor-ayuda" style={{ marginTop: 6 }}>
+                  Lo que no haya entrado no lo tenemos. Si es importante, vuelve a intentarlo o dínoslo al llamarnos.
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -536,6 +751,14 @@ export function ParteSiniestro({
             valor={form.hayTerceros}
             deshabilitado={enviando}
             onCambio={(v) => responder('hayTerceros', v)}
+          />
+
+          <Adjuntar
+            uid={uid}
+            ficheros={ficheros}
+            deshabilitado={enviando}
+            onElegir={elegir}
+            onQuitar={quitar}
           />
 
           <div className="editor-campo">

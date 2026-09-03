@@ -232,6 +232,57 @@ model PortalParteSiniestro {
   @@schema("seguros")
 }
 
+/// Los ficheros que el CLIENTE adjunta a un parte de siniestro.
+///
+/// Es la tabla `seguros.documentos` de siempre —la misma que usa el panel del
+/// corredor— más la columna `portal_parte_id` (03/09/2026,
+/// `prisma/sql/2026-09-03_documentos_adjuntos_parte.sql`). No hay tabla propia
+/// del portal a propósito: dos bandejas de documentos serían dos sitios donde
+/// mirar y ninguno completo.
+///
+/// 🚨 El rol `prisma_asegura_portal` tiene aquí `SELECT, INSERT` y **nada más**.
+/// Sin UPDATE y sin DELETE: un adjunto de un parte es prueba de lo que se
+/// declaró, y quien lo mandó no lo retira solo. Declarar un `update`/`delete`
+/// en el código no lo concedería — fallaría en la BD, que es donde tiene que
+/// fallar.
+///
+/// El GRANT es por COLUMNAS y aquí están las 19 concedidas: ni una más. Prisma
+/// pide cada columna declarada por su nombre, así que una de más hace fallar la
+/// consulta ENTERA con `permission denied for column`.
+model Documento {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId      String    @map("correduria_id") @db.Uuid
+  clienteId         String?   @map("cliente_id") @db.Uuid
+  polizaId          String?   @map("poliza_id") @db.Uuid
+  siniestroId       String?   @map("siniestro_id") @db.Uuid
+  /// El parte del portal del que cuelga. Sin relación de Prisma: el resto de
+  /// modelos de cartera de este schema tampoco las tienen, y una FK declarada
+  /// aquí obligaría a un `include` que el rol no siempre puede resolver.
+  portalParteId     String?   @map("portal_parte_id") @db.Uuid
+  /// `text` con CHECK en la BD, no enum: se valida con `tipoDocumento()` de
+  /// `@central/module-seguros`.
+  tipo              String    @default("otro")
+  estado            String    @default("recibido")
+  nombreFichero     String?   @map("nombre_fichero")
+  /// 🚨 SIEMPRE uno de `MIMES_DOCUMENTO`, nunca el que mandó el navegador: lo
+  /// normaliza `mimeDocumento()` antes de escribir. Es lo que impide que un
+  /// fichero se devuelva luego con un Content-Type que el navegador ejecute.
+  mimeType          String?   @map("mime_type")
+  sizeBytes         Int?      @map("size_bytes")
+  sha256            String?
+  contenido         Bytes?
+  notas             String?
+  subidoPor         String    @default("corredor") @map("subido_por")
+  visiblePorCliente Boolean   @default(false) @map("visible_por_cliente")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revisadoAt        DateTime? @map("revisado_at") @db.Timestamptz(6)
+  revisadoPor       String?   @map("revisado_por")
+
+  @@index([portalParteId])
+  @@map("documentos")
+  @@schema("seguros")
+}
+
 model PortalConsentimiento {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   identidadId  String   @map("identidad_id") @db.Uuid

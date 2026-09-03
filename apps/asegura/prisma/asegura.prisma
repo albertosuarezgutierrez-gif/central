@@ -575,6 +575,11 @@ model Documento {
   clienteId         String?   @map("cliente_id") @db.Uuid
   polizaId          String?   @map("poliza_id") @db.Uuid
   siniestroId       String?   @map("siniestro_id") @db.Uuid
+  /// El parte de siniestro del PORTAL del que cuelga (03/09/2026). Lo escribe
+  /// `apps/asegura-portal` cuando el cliente adjunta fotos o el PDF del
+  /// amistoso; aquí es solo lectura, y es lo que hace que esos ficheros
+  /// aparezcan en la bandeja de partes de Alberto y no en un cajón aparte.
+  portalParteId     String?   @map("portal_parte_id") @db.Uuid
   tipo              String    @default("otro")
   estado            String    @default("recibido")
   nombreFichero     String?   @map("nombre_fichero")
@@ -591,6 +596,7 @@ model Documento {
 
   @@index([correduriaId, clienteId])
   @@index([correduriaId, polizaId])
+  @@index([portalParteId])
   @@map("documentos")
 }
 
