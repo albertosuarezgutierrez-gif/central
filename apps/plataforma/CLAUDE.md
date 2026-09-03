@@ -1596,16 +1596,20 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
 - **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
   pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
 
-🎨 **Rediseño: de una tira de ocho bloques a CUATRO SECCIONES (03/09/2026).** Alberto: *«minimalista,
+🎨 **Rediseño: de una tira de ocho bloques a CINCO SECCIONES (03/09/2026).** Alberto: *«minimalista,
 óptima y productiva»*. La pantalla era un scroll único con ocho bloques del MISMO peso visual —los
 partes que ha abierto un cliente y nadie ha mirado pesaban igual que la matriz de comisiones cobradas
 de hace tres años— y cada bloque pintaba su propia caja (borde 1px + radio 12 + padding 14, repetida
 en seis ficheros), así que ninguno decía «mírame a mí primero».
 
 - **Buscador arriba, siempre**, fuera de las secciones: es lo más usado y además tiene que sobrevivir
-  a que el puerto falle. Cuatro secciones: **Hoy** (partes · retención · renovaciones dentro del
-  preaviso) · **Cartera** (KPIs + los 90 días) · **Comisiones** (cuadre + banda pendiente + matriz del
-  banco, y el selector de AÑO gobierna solo esta) · **Datos** (duplicadas · sin canal).
+  a que el puerto falle. Cinco secciones: **Hoy** (partes · retención · renovaciones dentro del
+  preaviso) · **Clientes** (el listado filtrable) · **Cartera** (KPIs + los 90 días) · **Comisiones**
+  (cuadre + banda pendiente + matriz del banco, y el selector de AÑO gobierna solo esta) · **Datos**
+  (duplicadas · sin canal).
+- **«Clientes» y «Cartera» no son lo mismo** aunque hablen de la misma gente: una es la herramienta de
+  trabajo (filtrar y sacar una lista para llamar) y la otra el resumen. Compartir pestaña haría que la
+  foto —que se mira una vez al día— compitiera con el filtro, que se usa constantemente.
 - **Mismo idioma visual que `banca/SegTabs.tsx` y `cliente/[id]/FichaTabs.tsx`** —subrayado, iconos
   lucide, contador— en vez de inventar uno nuevo para esta pantalla. `Secciones.tsx`.
 - 🚨 **Una pestaña ESCONDE, y por eso el contador no es decoración: es lo que impide que esconda
@@ -1642,6 +1646,53 @@ para los mismos datos.
 
 ⚠️ **`test/regression-clientes-sin-canal.test.ts` exigía el literal `<SinCanal />`.** Se relajó a
 `/<SinCanal[\s/>]/`: lo que ese test vigila es que el bloque SIGA MONTADO en la pantalla, no su firma.
+
+### 🔎 Listado FILTRABLE de la cartera — el vocabulario, y el campo que MIENTE (03/09/2026)
+Alberto: *«quiero filtro por todo, ramo, tipo cliente (con póliza, leads…), porque quiero filtrar por
+clientes y [que suban] las pólizas en vigor que haya»*. Lo primero que hay que saber: **eso no era un
+filtro, era una pantalla que no existe.** `/correduria` no tiene ninguna LISTA de clientes — solo un
+buscador que exige un término (`/api/operador/clientes?q=`, y con menos de 3 letras devuelve vacío) y
+**no hay ningún endpoint de listado ni en plataforma ni en el puerto de asegura**. Un desplegable de
+ramo no filtra nada si no hay nada que filtrar.
+
+**Lo construido en este PR es el vocabulario compartido:** `filtro-cartera.ts` de
+`@central/module-seguros` (puro, 14 tests) — `RAMOS`, `ESTADOS`, `VENTANAS`, `parseFiltroCartera`,
+`describirFiltro`, `filtroActivo`, `diasDeVentana`. Lo comparten las DOS apps (asegura para construir
+la consulta, plataforma para pintar los desplegables): con una lista por app, el día que se añada un
+ramo la pantalla ofrece un filtro que el puerto no entiende, y **las dos formas de ese desajuste
+devuelven cero resultados sin un solo error**.
+
+🚨 **`clientes.tipo` NO sirve para decidir quién es cliente y quién lead.** Medido el 03/09/2026 contra
+la BD: dice **2.742 «cliente» y 29.860 «lead»** cuando la cartera viva son **80 clientes / 110
+pólizas**. Es un campo del volcado de 2013-2018 que no mantiene nadie. El grupo se DERIVA de tener
+alguna póliza de cartera viva (`esCarteraViva`, `cartera-viva.ts`), que es la única fuente de esa
+verdad en el repo. Filtrar por la columna habría devuelto 2.742 fichas muertas con cara de cartera.
+
+🚨 **Un valor de filtro que no se reconoce NO se ignora en silencio:** `parseFiltroCartera` devuelve
+`descartados[]` y la pantalla lo dice. Ignorarlo convierte «enséñame los de ramo XYZ» en «enséñamelo
+todo» — la respuesta que más se parece a haber funcionado y que nunca es cierta. Mismo criterio con
+`buscable:false` (texto de menos de 3 letras): «no se ha buscado» no es «no hay resultados».
+
+**Venta cruzada (`sinRamo`)**: el cliente no tiene NINGUNA póliza viva de ese ramo. Se anula sobre
+`grupo=leads` a propósito — un lead no tiene ninguna póliza viva, así que TODOS cumplirían «no tiene
+hogar» y el filtro parecería funcionar devolviendo los 29.860 enteros. Sobre la cartera viva sí mide
+el hueco real, que es grande: **81 autos contra 19 hogares**.
+
+**Distribución REAL de la cartera viva (03/09/2026, para no inventarse los desplegables):** ramos
+auto 81 · hogar 19 · responsabilidad_civil 9 · moto 1 · (el resto del enum, 0) — estados activa 68 ·
+cancelada 42 — compañías Mapfre 64 · Allianz 26 · Occident 19 · Reale 1. Los ramos con 0 pólizas **sí
+se ofrecen** en el filtro: un desplegable que solo enseña lo que ya existe no deja buscar un hueco, y
+buscar huecos es para lo que sirve esto.
+
+⏳ **PENDIENTE (no está construido, y la sección lo DICE en pantalla en vez de fingir que no hay
+clientes):** el endpoint `GET /api/operador/cartera` del puerto de asegura, su proxy
+`/api/correduria/cartera-lista`, el componente `ListaCartera.tsx` con la barra de filtros y la
+exportación a CSV.
+
+⏸️ **Y la subida MASIVA de PDFs de póliza queda fuera por una decisión pendiente, no por tiempo:**
+`asegura/cartera/subir` lee el PDF pero **no guarda el fichero** porque no está decidido dónde ni
+cuánto tiempo se conservan documentos con un DNI dentro; y en lote falta responder cómo se decide a
+qué póliza pertenece cada archivo (el lector solo entiende AUTO).
 
 🧹 **Reorganización de la pantalla (agente de diseño, 01/09/2026).** Alberto: *«hay duplicidad y ahí
 solo tiene que salir datos importantes»*. Se pasó de 12 KPIs a **4** y el orden es ahora

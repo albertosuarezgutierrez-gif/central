@@ -30,8 +30,8 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **🎨 Rediseño de `/correduria`: de ocho bloques apilados a cuatro secciones (03/09/2026).**
-  Alberto: «minimalista, óptima y productiva». Buscador arriba y **Hoy · Cartera · Comisiones · Datos**
+- **🎨 Rediseño de `/correduria`: de ocho bloques apilados a cinco secciones (03/09/2026).**
+  Alberto: «minimalista, óptima y productiva». Buscador arriba y **Hoy · Clientes · Cartera · Comisiones · Datos**
   con contador en la barra (`secciones.ts`, puro + 9 tests) — una pestaña esconde, y el badge es lo
   que impide que esconda TRABAJO: `{n}` · `n+` (alguna cola ilegible) · `!` (ninguna legible), nunca 0.
   🚨 **Bug real corregido: `Vencimientos` vivía DENTRO de `CarteraViva`, tras sus tres `return`
@@ -40,6 +40,15 @@
   Ahora es `Renovaciones.tsx`, hermana, con el fetch subido a la pantalla (una llamada, dos secciones).
   Un bloque deja de ser una caja (`Bloque.tsx`): borde+fondo solo para ALARMAS con alguien esperando.
   Emojis de estado → `Badge`; iconos → lucide. 3 agentes en paralelo por reparto de archivos.
+  Después, Alberto pidió **filtro por todo** (ramo, tipo de cliente, venta cruzada) para sacar listas:
+  eso NO era un filtro sino una pantalla que no existe —solo hay buscador por texto, sin endpoint de
+  listado en ninguna de las dos apps—. Entra el vocabulario compartido (`filtro-cartera.ts` de
+  module-seguros, 14 tests) y la quinta sección **Clientes**, que DECLARA que aún no está montada.
+  🚨 Medido: **`clientes.tipo` dice 2.742 clientes / 29.860 leads cuando la cartera viva son 80** —
+  columna muerta del volcado; el grupo se deriva de `esCarteraViva()`. Hueco de venta cruzada real:
+  81 autos contra 19 hogares. PENDIENTE: endpoint `/api/operador/cartera`, proxy, `ListaCartera.tsx`
+  y CSV. La subida MASIVA de PDFs queda fuera por decisión pendiente (dónde se guardan documentos con
+  DNI, y cómo se casa cada PDF con su póliza), no por tiempo. PR #2205.
 
 - **⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición (03/09/2026).**
   Alberto pidió estudio legal y benchmark sectorial para «José autoriza a María a ver sus pólizas».
