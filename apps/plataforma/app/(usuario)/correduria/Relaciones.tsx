@@ -2,11 +2,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { GRUPOS_RELACION, SIN_VINCULO, explicarAutorizacion, permiteAutorizar, type TipoRelacion } from '@central/module-seguros'
+import { GRUPOS_RELACION, SIN_VINCULO, permiteAutorizar, type TipoRelacion } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import {
+  explicarEstadoAutorizacion,
+  fechaLarga,
   interpretarRelaciones,
   textoMotivoRelaciones,
+  type AutorizacionCartera,
   type RelacionCartera,
   type RespuestaRelaciones,
 } from '@/lib/relaciones-asegura'
@@ -24,6 +27,16 @@ import type { RespuestaBusqueda } from '@/lib/ficha-asegura'
  *     decidió desde la OTRA ficha. Por eso aquí solo hay botón para lo primero:
  *     una autorización es un consentimiento del titular y se anota desde la
  *     ficha de quien lo da.
+ *
+ * 🚨 Desde el 03/09/2026 esto NO es un sí/no. La pantalla dice TRES cosas
+ * distintas, porque mandan a hacer cosas distintas:
+ *   · **sin autorización** — no hay ninguna anotada.
+ *   · **anotada, pendiente de aceptar** — Alberto anotó el consentimiento que le
+ *     dieron por teléfono, y el autorizado **TODAVÍA NO VE NADA** hasta que la
+ *     acepte en su portal. Es el estado que antes no existía y que un booleano
+ *     pintaba como si ya viera.
+ *   · **en vigor hasta el <fecha>** — con su alcance, y diciendo si la anotó la
+ *     correduría o la concedió el cliente desde su pantalla.
  *
  * Dos «no lo sé» que NO se pintan como «no tiene»: `inicial === null` (asegura
  * no manda el bloque o no pudo leerlo) y `polizasVivas === null` (sin contar).
@@ -84,7 +97,13 @@ export default function Relaciones({
   }
 
   function autorizar(r: RelacionCartera, autoriza: boolean) {
-    if (!autoriza && !confirm(`¿Revocar la autorización? ${r.nombre} dejará de poder ver los seguros de ${nombreFicha}.`)) return
+    if (!autoriza) {
+      // Una PENDIENTE todavía no abría nada: decir «dejará de ver» ahí sería falso.
+      const efecto = r.autorizacion?.estado === 'vigente'
+        ? `${r.nombre} dejará de poder ver los seguros de ${nombreFicha}.`
+        : `Se retira la autorización anotada (${r.nombre} todavía no veía nada).`
+      if (!confirm(`¿Revocar la autorización? ${efecto}`)) return
+    }
     void ejecutar(`aut-${r.relacionadoId}`, 'PATCH', { relacionadoId: r.relacionadoId, autoriza })
   }
 
@@ -96,7 +115,9 @@ export default function Relaciones({
   }
 
   function quitar(r: RelacionCartera) {
-    if (!confirm(`¿Quitar la relación con ${r.nombre}? Se borra en los dos sentidos (también la autorización, si la había).`)) return
+    // La relación se borra; la autorización NO se borra, se REVOCA — es la prueba
+    // de que existió y hasta cuándo, y eso es justo lo que no se puede perder.
+    if (!confirm(`¿Quitar la relación con ${r.nombre}? Se borra en los dos sentidos, y la autorización que hubiera queda revocada (se conserva en el registro).`)) return
     void ejecutar(`del-${r.relacionadoId}`, 'DELETE', { relacionadoId: r.relacionadoId })
   }
 
@@ -151,7 +172,9 @@ export default function Relaciones({
       />
 
       <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
-        La autorización es un consentimiento del titular: anótala solo si te lo ha dado (queda registrado quién y cuándo).
+        La autorización es un consentimiento del titular: <strong>tú la ANOTAS, no la das</strong>. Anótala solo si te
+        la ha dado por teléfono o en papel (queda registrado quién, cuándo y con qué texto). Caduca al año y no abre
+        nada hasta que la persona autorizada la acepte en su portal.
       </p>
     </div>
   )
@@ -172,6 +195,7 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
   // ninguno. Ni se explica quién ve qué ni se ofrece autorizar (el puerto lo
   // rechaza igualmente con un 422, y el portal ni mira esas filas).
   const revisadoSinVinculo = !permiteAutorizar(r.tipo)
+  const viva = r.autorizacion?.estado === 'vigente' || r.autorizacion?.estado === 'pendiente'
   if (revisadoSinVinculo) {
     return (
       <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
@@ -206,15 +230,9 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
         </span>
       </div>
 
-      <div style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-        <span aria-hidden>{r.autorizaVer ? '🔓' : '🔒'}</span>
-        <span>
-          {r.autorizaVer
-            ? <><strong>{r.nombre}</strong> puede ver los seguros de {nombreFicha}</>
-            : <><strong>{r.nombre}</strong> no ve los seguros de {nombreFicha}</>}
-        </span>
-      </div>
-      <div style={{ fontSize: 11, color: 'var(--muted)' }} title={explicarAutorizacion(r, nombreFicha, r.nombre)}>
+      <EstadoAutorizacion a={r.autorizacion} nombreOtro={r.nombre} nombreFicha={nombreFicha} />
+
+      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
         ¿{nombreFicha} ve los de {r.nombre}? <strong>{r.puedeVer ? 'sí' : 'no'}</strong> · se decide desde{' '}
         <Link href={ficha}>la ficha de {r.nombre}</Link>
       </div>
@@ -224,20 +242,60 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
       )}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {r.autorizaVer ? (
-          <button type="button" disabled={enCurso} onClick={() => onAutorizar(r, false)} style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left' }}>
-            🔒 Revocar la autorización
+        {/* Hay algo que revocar mientras la autorización no esté ya cerrada: una
+            PENDIENTE también se revoca (existe, aunque no abra nada todavía). */}
+        {viva ? (
+          <button type="button" disabled={enCurso} onClick={() => onAutorizar(r, false)} style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            🔒 {r.autorizacion?.estado === 'pendiente' ? 'Retirar la autorización anotada' : 'Revocar la autorización'}
           </button>
         ) : (
-          <button type="button" disabled={enCurso} onClick={() => onAutorizar(r, true)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left' }}>
-            🔓 Autorizar a {r.nombre} a ver los seguros de {nombreFicha}
+          <button type="button" disabled={enCurso} onClick={() => onAutorizar(r, true)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            🔓 Anotar que {nombreFicha} autoriza a {r.nombre} a ver sus seguros
           </button>
         )}
-        <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal' }}>
+        <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44 }}>
           Quitar relación
         </button>
       </div>
     </li>
+  )
+}
+
+// ─── El estado de la autorización ────────────────────────────────────────────
+
+/**
+ * 🚨 Los TRES estados en pantalla. El titular sale de
+ * `explicarEstadoAutorizacion` (puro y con test) para que la frase que decide
+ * Alberto no viva dentro del JSX, que es donde «pendiente» se convertiría en
+ * «ve» al tocar un `?:`.
+ */
+function EstadoAutorizacion({ a, nombreOtro, nombreFicha }: {
+  a: AutorizacionCartera | null
+  nombreOtro: string
+  nombreFicha: string
+}) {
+  const icono = a === null ? '🔒' : a.estado === 'vigente' ? '🔓' : a.estado === 'pendiente' ? '🕐' : '🔒'
+  const color = a?.estado === 'vigente' ? 'var(--positive)' : a?.estado === 'pendiente' ? 'var(--warning)' : 'var(--muted)'
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, borderLeft: `3px solid ${color}`, paddingLeft: 8 }}>
+      <div style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'flex-start', minWidth: 0 }}>
+        <span aria-hidden>{icono}</span>
+        <span style={{ overflowWrap: 'anywhere' }}>{explicarEstadoAutorizacion(a, nombreOtro, nombreFicha)}</span>
+      </div>
+      {a?.estado === 'pendiente' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+          Está anotada y registrada, pero <strong>no abre nada todavía</strong>: la doble aceptación es lo que deja
+          constancia de que {nombreOtro} sabe que hay un permiso a su nombre.
+        </div>
+      )}
+      {a?.estado === 'vigente' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+          {a.origen === 'corredor' ? 'La anotó la correduría' : 'La concedió el cliente desde su portal'} · caduca el{' '}
+          {fechaLarga(a.caducaEn)} (no se renueva sola) · alcance:{' '}
+          {a.alcances.length > 0 ? a.alcances.join(', ') : 'sin detallar'}
+        </div>
+      )}
+    </div>
   )
 }
 

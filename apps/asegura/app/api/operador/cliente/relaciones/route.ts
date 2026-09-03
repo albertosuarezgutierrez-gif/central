@@ -14,11 +14,16 @@ export const dynamic = 'force-dynamic'
  *
  *   GET    ?id=<clienteId>                                        → { estado:'ok', relaciones }
  *   POST   { clienteId, relacionadoId, tipo, observaciones?, actor } → crea el vínculo (dos sentidos)
- *   PATCH  { clienteId, relacionadoId, autoriza: boolean, actor }   → clienteId autoriza/revoca a relacionadoId
+ *   PATCH  { clienteId, relacionadoId, autoriza: boolean, alcance?, actor } → clienteId autoriza/revoca a relacionadoId
  *   DELETE { clienteId, relacionadoId, actor }                      → borra el vínculo entero
  *
  * `autoriza` se escribe SIEMPRE desde la ficha de quien autoriza: en la ficha
  * de María Antonia se decide si José ve los seguros de María Antonia, no al revés.
+ *
+ * 🚨 El PATCH ya no cambia un booleano: escribe una fila de `portal_autorizacion`
+ * con `origen = 'corredor'` (la correduría ANOTA un consentimiento recibido por
+ * teléfono o en papel; no autoriza por el cliente) y esa fila nace PENDIENTE —
+ * no abre nada hasta que el autorizado la acepte en el portal.
  */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -44,7 +49,14 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   return escribir(req, (c, b) =>
-    autorizarVer(c, cadena(b.clienteId) ?? '', { relacionadoId: cadena(b.relacionadoId) ?? '', autoriza: b.autoriza === true, actor: actorDe(b) }),
+    autorizarVer(c, cadena(b.clienteId) ?? '', {
+      relacionadoId: cadena(b.relacionadoId) ?? '',
+      autoriza: b.autoriza === true,
+      // Sin `alcance` se anota el más pequeño («ver»). Un alcance que no se puede
+      // conceder NO se ignora en silencio: `autorizarVer` responde 422 con la razón.
+      alcance: b.alcance,
+      actor: actorDe(b),
+    }),
   )
 }
 

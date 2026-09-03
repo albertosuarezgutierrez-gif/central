@@ -1,11 +1,26 @@
 // Relaciones entre clientes (`seguros.cliente_relaciones`) y la AUTORIZACIÓN
-// para ver los seguros del otro. Reglas puras en `@central/module-seguros`
-// (relaciones.ts); aquí solo BD, con `correduriaId` explícito en todo.
+// para ver los seguros del otro. Reglas puras de las relaciones en
+// `@central/module-seguros` (relaciones.ts) y de la autorización en
+// `@central/module-seguros-portal` (autorizacion.ts); aquí solo BD, con
+// `correduriaId` explícito en todo.
 //
-// Forma de la tabla (heredada del CRM): DOS filas por vínculo, una por
-// sentido. Fila A→B: `tipo` = «B es <tipo> de A»; `puedeVerPolizas` = «A
-// autoriza a B a ver las pólizas de A». La autorización se da SIEMPRE desde
-// la ficha de quien autoriza (A): es su consentimiento, no el del otro.
+// Forma de la tabla de relaciones (heredada del CRM): DOS filas por vínculo,
+// una por sentido. Fila A→B: `tipo` = «B es <tipo> de A».
+//
+// 🚨 El consentimiento YA NO vive aquí (03/09/2026). `cliente_relaciones
+// .puede_ver_polizas` es DATO MUERTO —apagado en las 1.706 filas y sin nadie
+// que lo escriba— porque un booleano no dice quién lo dio, cuándo, con qué
+// texto ni hasta cuándo (art. 7.1 RGPD: hay que poder DEMOSTRARLO). Lo
+// sustituye `seguros.portal_autorizacion`, y de ahí sale todo lo que esta capa
+// afirma sobre quién ve qué:
+//
+//   · `RelacionFila.puedeVerPolizas` (el contrato de `@central/module-seguros`)
+//     se pasa CALCULADO: `true` solo si hay una autorización VIGENTE de A a B.
+//     No se lee de la columna.
+//   · Una autorización que la correduría anota (`origen = 'corredor'`) NO abre
+//     nada hasta que el autorizado la ACEPTE en el portal. Ese hueco es el
+//     estado `pendiente`, y es la diferencia entre «no hay» y «hay, pero
+//     todavía no ve nada».
 
 import {
   clientesVisiblesPara,
@@ -17,39 +32,168 @@ import {
   type RelacionFila,
 } from '@central/module-seguros'
 import { WHERE_CARTERA_VIVA } from '@central/module-seguros'
+import {
+  alcanceConcedible,
+  autorizacionVigente,
+  caducidadPorDefecto,
+  esAlcance,
+  estadoAutorizacion,
+  type Alcance,
+  type EstadoAutorizacion,
+} from '@central/module-seguros-portal'
 import { prismaAsegura } from './asegura-db'
+
+/**
+ * El texto que la correduría dice haber leído al cliente cuando anota por
+ * teléfono o en papel. Sin versión de texto no se puede demostrar QUÉ consintió.
+ */
+export const TEXTO_AUTORIZACION_CORREDOR_V1 = 'v1-2026-09-03-corredor'
+
+/** El alcance que se anota si no se dice otro: el más pequeño. */
+export const ALCANCE_POR_DEFECTO: Alcance = 'ver'
+
+/**
+ * La autorización que gobierna un vínculo, tal y como se pinta.
+ *
+ * 🚨 Tres estados, no dos (y aquí son cuatro, que es el mismo principio):
+ * `null` en `RelacionCartera.autorizacion` = **no hay ninguna**; `pendiente` =
+ * concedida y **todavía no ve nada** porque el autorizado no la ha aceptado;
+ * `vigente` = ve; `caducada`/`revocada` = la hubo y ya no vale. Colapsar
+ * `pendiente` con `vigente` sería decirle a Alberto que alguien ve unos datos
+ * que no ve; colapsarlo con `null`, esconderle que hay un consentimiento suyo
+ * esperando.
+ */
+export type AutorizacionRelacion = {
+  estado: EstadoAutorizacion
+  /** Los alcances que están en ese estado (uno por fila; la BD deja varios). */
+  alcances: Alcance[]
+  caducaEn: Date
+  /** `portal` = lo concedió el cliente en su pantalla · `corredor` = lo anotó la correduría. */
+  origen: string
+}
 
 export type RelacionCartera = RelacionFicha & {
   nombre: string
   tipoCliente: string
   /** Pólizas vivas (de CIMA) del relacionado. `null` = no se pudo contar. */
   polizasVivas: number | null
+  /**
+   * La autorización de LA FICHA hacia el relacionado. `null` = no hay ninguna
+   * anotada — nunca «no se pudo leer»: si la consulta falla, `listarRelaciones`
+   * entera devuelve `null` y la pantalla lo dice.
+   */
+  autorizacion: AutorizacionRelacion | null
 }
 
 type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; status: 404 | 409 | 422 | 500 }
 
-async function filasDe(correduriaId: string, clienteId: string): Promise<RelacionFila[]> {
-  const db = prismaAsegura()
-  const filas = await db.clienteRelacion.findMany({
-    where: { correduriaId, OR: [{ clienteAId: clienteId }, { clienteBId: clienteId }] },
-    orderBy: { createdAt: 'asc' },
+// ─── Autorizaciones ──────────────────────────────────────────────────────────
+
+type FilaAutorizacion = {
+  otorganteClienteId: string
+  autorizadoClienteId: string
+  alcance: string
+  origen: string
+  aceptadoEn: Date | null
+  caducaEn: Date
+  revocadoEn: Date | null
+}
+
+function clavePar(otorgante: string, autorizado: string): string {
+  return `${otorgante}→${autorizado}`
+}
+
+/** Prioridad al resumir: lo que abre datos manda sobre lo que ya no vale. */
+const ORDEN_ESTADO: Record<EstadoAutorizacion, number> = { vigente: 4, pendiente: 3, caducada: 2, revocada: 1 }
+
+/**
+ * Resume las autorizaciones de un par en la que gobierna. Puro (recibe `hoy`).
+ * Si hay varias en el mismo estado —la BD permite un alcance por fila— se
+ * juntan sus alcances y se toma la caducidad más lejana, que es la que manda.
+ */
+export function resumirAutorizacion(filas: readonly FilaAutorizacion[], hoy: Date): AutorizacionRelacion | null {
+  if (filas.length === 0) return null
+  const conEstado = filas.map((f) => ({ f, estado: estadoAutorizacion(f, hoy) }))
+  const mejor = conEstado.reduce((m, x) => (ORDEN_ESTADO[x.estado] > ORDEN_ESTADO[m.estado] ? x : m))
+  const delEstado = conEstado.filter((x) => x.estado === mejor.estado)
+  // Un alcance que no está en el vocabulario no se inventa ni se pinta: se calla.
+  const alcances = [...new Set(delEstado.map((x) => x.f.alcance).filter((a): a is Alcance => esAlcance(a)))]
+  const gobierna = delEstado.reduce((m, x) => (x.f.caducaEn.getTime() > m.f.caducaEn.getTime() ? x : m))
+  return { estado: mejor.estado, alcances, caducaEn: gobierna.f.caducaEn, origen: gobierna.f.origen }
+}
+
+/**
+ * Las autorizaciones en las que interviene `clienteId`, indexadas por par.
+ * Lanza si la consulta falla — a propósito: quien llama degrada a `null`, que
+ * es «no se pudo leer», y NUNCA a «no hay autorización».
+ */
+async function autorizacionesDe(correduriaId: string, clienteId: string): Promise<Map<string, FilaAutorizacion[]>> {
+  const filas = await prismaAsegura().portalAutorizacion.findMany({
+    where: { correduriaId, OR: [{ otorganteClienteId: clienteId }, { autorizadoClienteId: clienteId }] },
+    select: {
+      otorganteClienteId: true,
+      autorizadoClienteId: true,
+      alcance: true,
+      origen: true,
+      aceptadoEn: true,
+      caducaEn: true,
+      revocadoEn: true,
+    },
   })
-  return filas.map((f) => ({
+  const por = new Map<string, FilaAutorizacion[]>()
+  for (const f of filas) {
+    const k = clavePar(f.otorganteClienteId, f.autorizadoClienteId)
+    const ya = por.get(k)
+    if (ya) ya.push(f)
+    else por.set(k, [f])
+  }
+  return por
+}
+
+// ─── Relaciones ──────────────────────────────────────────────────────────────
+
+/**
+ * Las filas de relación de una ficha, con `puedeVerPolizas` CALCULADO desde
+ * `portal_autorizacion` (la columna homónima de la tabla ya no se lee).
+ */
+async function vinculosDe(
+  correduriaId: string,
+  clienteId: string,
+): Promise<{ filas: RelacionFila[]; autorizaciones: Map<string, FilaAutorizacion[]> }> {
+  const db = prismaAsegura()
+  const [crudas, autorizaciones] = await Promise.all([
+    db.clienteRelacion.findMany({
+      where: { correduriaId, OR: [{ clienteAId: clienteId }, { clienteBId: clienteId }] },
+      orderBy: { createdAt: 'asc' },
+    }),
+    autorizacionesDe(correduriaId, clienteId),
+  ])
+  const hoy = new Date()
+  const filas = crudas.map((f) => ({
     id: f.id,
     clienteAId: f.clienteAId,
     clienteBId: f.clienteBId,
     tipo: f.tipoRelacion,
-    puedeVerPolizas: f.puedeVerPolizas,
+    // A→B: «A autoriza a B a ver las pólizas de A». Solo VIGENTE abre datos:
+    // una pendiente de aceptar no enseña nada todavía.
+    puedeVerPolizas: (autorizaciones.get(clavePar(f.clienteAId, f.clienteBId)) ?? []).some((a) => autorizacionVigente(a, hoy)),
     observaciones: f.observaciones,
   }))
+  return { filas, autorizaciones }
+}
+
+async function filasDe(correduriaId: string, clienteId: string): Promise<RelacionFila[]> {
+  return (await vinculosDe(correduriaId, clienteId)).filas
 }
 
 /** Las relaciones de una ficha con nombre y pólizas vivas del otro. `null` = no se pudo consultar. */
 export async function listarRelaciones(correduriaId: string, clienteId: string): Promise<RelacionCartera[] | null> {
   try {
     const db = prismaAsegura()
-    const rel = relacionesDeFicha(await filasDe(correduriaId, clienteId), clienteId)
+    const { filas, autorizaciones } = await vinculosDe(correduriaId, clienteId)
+    const rel = relacionesDeFicha(filas, clienteId)
     if (rel.length === 0) return []
+    const hoy = new Date()
     const ids = rel.map((r) => r.relacionadoId)
     const otros = await db.cliente.findMany({
       where: { id: { in: ids }, correduriaId },
@@ -73,6 +217,7 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
           nombre: `${o.nombre} ${o.apellidos}`.trim(),
           tipoCliente: String(o.tipo),
           polizasVivas: nVivas.get(o.id) ?? 0,
+          autorizacion: resumirAutorizacion(autorizaciones.get(clavePar(clienteId, r.relacionadoId)) ?? [], hoy),
         }
       })
       .filter((r): r is RelacionCartera => r !== null)
@@ -134,17 +279,48 @@ export async function crearRelacion(
   }
 }
 
+const MOTIVO_ALCANCE_NO_CONCEDIBLE =
+  'Ese alcance no se puede conceder: hoy solo «ver» y «ver_economico». Dar partes o manejar documentos en nombre de otro es un apoderamiento, no una autorización de lectura.'
+
+/** Texto del estado en el que ya está una autorización, para el motivo del 409. */
+function porQueYaHay(estado: EstadoAutorizacion): string {
+  switch (estado) {
+    case 'vigente':
+      return 'ya hay una autorización EN VIGOR con ese alcance. Si quieres cambiarla, revócala primero: así queda constancia de las dos'
+    case 'pendiente':
+      return 'ya hay una autorización anotada con ese alcance, pendiente de que la acepte el autorizado'
+    default:
+      return 'ya hay una autorización con ese alcance entre esas dos fichas'
+  }
+}
+
 /**
- * `clienteId` AUTORIZA (o revoca) a `relacionadoId` a ver sus pólizas. Se
- * escribe en la fila ida (clienteId→relacionadoId); si el volcado solo trajo
- * la vuelta, se crea la ida con el tipo inverso. Queda en el historial de los
- * dos: es un consentimiento, y se tiene que poder ver quién lo dio y cuándo.
+ * `clienteId` AUTORIZA (o revoca) a `relacionadoId` a ver sus pólizas.
+ *
+ * 🚨 Lo que se escribe es una fila de `portal_autorizacion` con
+ * `origen = 'corredor'`: Alberto **no autoriza en nombre del cliente**, ANOTA
+ * el consentimiento que el cliente le dio por teléfono o en papel. Por eso
+ * lleva `otorgado_por_actor` (quién lo anotó) y NO `otorgado_por_identidad_id`
+ * (que es la identidad del cliente en el portal; un CHECK de la BD obliga a
+ * que sea uno u otro, nunca los dos).
+ *
+ * Y por eso **no abre nada todavía**: nace sin `aceptado_en`, o sea
+ * `pendiente`, hasta que el autorizado entre al portal y la acepte. Eso es a
+ * propósito y no se salta desde aquí.
+ *
+ * Queda en el historial de las dos fichas: es un consentimiento, y se tiene que
+ * poder ver quién lo dio y cuándo.
  */
 export async function autorizarVer(
   correduriaId: string,
   clienteId: string,
-  entrada: { relacionadoId: string; autoriza: boolean; actor: string },
+  entrada: { relacionadoId: string; autoriza: boolean; alcance?: unknown; actor: string },
 ): Promise<ResultadoRelacion> {
+  const alcance = entrada.alcance === undefined || entrada.alcance === null ? ALCANCE_POR_DEFECTO : alcanceConcedible(entrada.alcance)
+  // 🚨 Con una razón, nunca en silencio: `partes` y `documentos` existen en el
+  // vocabulario pero son APODERAMIENTO (actuar en nombre de otro), no lectura.
+  // Se corta ANTES de tocar la BD; revocar no mira el alcance y no pasa por aquí.
+  if (entrada.autoriza && alcance === null) return { ok: false, estado: 'invalido', motivo: MOTIVO_ALCANCE_NO_CONCEDIBLE, status: 422 }
   try {
     if (!(await ambosDeLaCorreduria(correduriaId, clienteId, entrada.relacionadoId))) {
       return { ok: false, estado: 'no_encontrado', motivo: 'Alguna de las dos fichas no existe en esta correduría.', status: 404 }
@@ -157,22 +333,96 @@ export async function autorizarVer(
     if (entrada.autoriza && idas.some((i) => !permiteAutorizar(i.tipoRelacion))) {
       return { ok: false, estado: 'invalido', motivo: 'Ese vínculo está anotado como «Sin vínculo»: para autorizar a ver las pólizas hace falta antes una relación de verdad.', status: 422 }
     }
-    if (idas.length > 0) {
-      await db.clienteRelacion.updateMany({ where: { id: { in: idas.map((i) => i.id) } }, data: { puedeVerPolizas: entrada.autoriza } })
-    } else {
+
+    if (!entrada.autoriza) {
+      // Revocar es revocar del todo: se cierran TODAS las vivas de ese par, sea
+      // cual sea su alcance. El botón de Alberto dice «deja de ver mis seguros».
+      const r = await db.portalAutorizacion.updateMany({
+        where: { correduriaId, otorganteClienteId: clienteId, autorizadoClienteId: entrada.relacionadoId, revocadoEn: null },
+        data: { revocadoEn: new Date(), revocadoPor: 'corredor', revocadoPorActor: entrada.actor },
+      })
+      if (r.count === 0) {
+        return { ok: false, estado: 'no_encontrado', motivo: 'No hay ninguna autorización que revocar entre esas dos fichas.', status: 404 }
+      }
+      await anotar(correduriaId, clienteId, `REVOCA la autorización de la ficha ${entrada.relacionadoId} a ver sus pólizas (${r.count} autorización(es)) — anotado desde plataforma por ${entrada.actor}`)
+      await anotar(correduriaId, entrada.relacionadoId, `La ficha ${clienteId} le retira la autorización a ver sus pólizas — anotado desde plataforma por ${entrada.actor}`)
+      return devolver(correduriaId, clienteId)
+    }
+
+    // Ya cortado arriba cuando `autoriza`; aquí solo estrecha el tipo (revocar
+    // ya ha vuelto con su `return`, así que a partir de esta línea se concede).
+    if (alcance === null) return { ok: false, estado: 'invalido', motivo: MOTIVO_ALCANCE_NO_CONCEDIBLE, status: 422 }
+
+    if (idas.length === 0) {
       const vuelta = await db.clienteRelacion.findFirst({ where: { correduriaId, clienteAId: entrada.relacionadoId, clienteBId: clienteId } })
       if (!vuelta) return { ok: false, estado: 'no_encontrado', motivo: 'Esas fichas no están relacionadas: añade primero la relación.', status: 404 }
-      await db.clienteRelacion.create({
-        data: { correduriaId, clienteAId: clienteId, clienteBId: entrada.relacionadoId, tipoRelacion: tipoInverso(vuelta.tipoRelacion), puedeVerPolizas: entrada.autoriza },
+      if (!permiteAutorizar(tipoInverso(vuelta.tipoRelacion))) {
+        return { ok: false, estado: 'invalido', motivo: 'Ese vínculo está anotado como «Sin vínculo»: para autorizar a ver las pólizas hace falta antes una relación de verdad.', status: 422 }
+      }
+    }
+
+    // El índice único parcial de la BD (una viva por otorgante+autorizado+alcance)
+    // impide dos iguales. Se comprueba antes para poder decir POR QUÉ, en vez de
+    // devolver el error crudo de Postgres.
+    const viva = await db.portalAutorizacion.findFirst({
+      where: { correduriaId, otorganteClienteId: clienteId, autorizadoClienteId: entrada.relacionadoId, alcance, revocadoEn: null },
+      select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
+    })
+    const ahora = new Date()
+    if (viva) {
+      const estado = estadoAutorizacion(viva, ahora)
+      // Una CADUCADA sí se puede renovar: se cierra con `revocado_por = 'caducidad'`
+      // —que no es una revocación, es liberar el sitio del índice único— y se
+      // anota una nueva. Las dos quedan en la tabla, que es la prueba.
+      if (estado !== 'caducada') {
+        return { ok: false, estado: 'conflicto', motivo: `No se ha anotado: ${porQueYaHay(estado)}.`, status: 409 }
+      }
+      await db.portalAutorizacion.update({
+        where: { id: viva.id },
+        data: { revocadoEn: ahora, revocadoPor: 'caducidad', revocadoPorActor: entrada.actor },
       })
     }
-    const verbo = entrada.autoriza ? 'AUTORIZA' : 'REVOCA la autorización a'
-    await anotar(correduriaId, clienteId, `${verbo} la ficha ${entrada.relacionadoId} a ver sus pólizas — anotado desde plataforma por ${entrada.actor}`)
-    await anotar(correduriaId, entrada.relacionadoId, `La ficha ${clienteId} ${entrada.autoriza ? 'le autoriza' : 'le retira la autorización'} a ver sus pólizas — anotado desde plataforma por ${entrada.actor}`)
+
+    try {
+      await db.portalAutorizacion.create({
+        data: {
+          correduriaId,
+          otorganteClienteId: clienteId,
+          autorizadoClienteId: entrada.relacionadoId,
+          alcance,
+          origen: 'corredor',
+          otorgadoPorActor: entrada.actor,
+          caducaEn: caducidadPorDefecto(new Date()),
+          versionTexto: TEXTO_AUTORIZACION_CORREDOR_V1,
+        },
+      })
+    } catch (e) {
+      // Carrera contra el índice único: mismo caso, mismo mensaje.
+      if (esViolacionDeUnico(e)) {
+        return { ok: false, estado: 'conflicto', motivo: 'No se ha anotado: ya hay una autorización con ese alcance entre esas dos fichas.', status: 409 }
+      }
+      throw e
+    }
+
+    const pendiente = 'Queda PENDIENTE: no verá nada hasta que la acepte en el portal.'
+    await anotar(
+      correduriaId,
+      clienteId,
+      `AUTORIZA a la ficha ${entrada.relacionadoId} a ver sus pólizas (alcance «${alcance}») — consentimiento recibido por la correduría y anotado desde plataforma por ${entrada.actor}. ${pendiente}`,
+    )
+    await anotar(
+      correduriaId,
+      entrada.relacionadoId,
+      `La ficha ${clienteId} le autoriza a ver sus pólizas (alcance «${alcance}») — anotado desde plataforma por ${entrada.actor}. ${pendiente}`,
+    )
     return devolver(correduriaId, clienteId)
   } catch (e) {
     return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }
   }
+}
+
+function esViolacionDeUnico(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'P2002'
 }
 
 /** Borra el vínculo entero (los dos sentidos). */
@@ -183,11 +433,25 @@ export async function borrarRelacion(
 ): Promise<ResultadoRelacion> {
   try {
     const db = prismaAsegura()
+    // Quitar la relación no borra el consentimiento: se revoca, que es lo que
+    // deja constancia de que lo hubo y hasta cuándo. Borrarlo sería perder la
+    // prueba justo cuando más falta hace.
+    await db.portalAutorizacion.updateMany({
+      where: {
+        correduriaId,
+        revocadoEn: null,
+        OR: [
+          { otorganteClienteId: clienteId, autorizadoClienteId: entrada.relacionadoId },
+          { otorganteClienteId: entrada.relacionadoId, autorizadoClienteId: clienteId },
+        ],
+      },
+      data: { revocadoEn: new Date(), revocadoPor: 'corredor', revocadoPorActor: entrada.actor },
+    })
     const r = await db.clienteRelacion.deleteMany({
       where: { correduriaId, OR: [{ clienteAId: clienteId, clienteBId: entrada.relacionadoId }, { clienteAId: entrada.relacionadoId, clienteBId: clienteId }] },
     })
     if (r.count === 0) return { ok: false, estado: 'no_encontrado', motivo: 'No había ningún vínculo entre esas fichas.', status: 404 }
-    await anotar(correduriaId, clienteId, `Relación con la ficha ${entrada.relacionadoId} borrada desde plataforma por ${entrada.actor}`)
+    await anotar(correduriaId, clienteId, `Relación con la ficha ${entrada.relacionadoId} borrada desde plataforma por ${entrada.actor} (las autorizaciones vivas entre las dos fichas quedan revocadas)`)
     return devolver(correduriaId, clienteId)
   } catch (e) {
     return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }

@@ -17,11 +17,44 @@
 //   · `autorizaVer` = LA FICHA autoriza al relacionado a ver los seguros de la
 //     ficha. `puedeVer` = la ficha puede ver los del relacionado (lo decidió el
 //     otro desde SU ficha). Direccional a propósito.
+//   · 🚨 Desde el 03/09/2026 esos dos booleanos ya NO son el dato: son el
+//     resumen de «¿lo ve HOY?» (autorización VIGENTE). El dato es
+//     `autorizacion`, que distingue **no hay** (`null`) de **anotada y aún sin
+//     aceptar** (`pendiente`, no ve nada) de **en vigor**. La pantalla dice los
+//     tres; colapsarlos en «sí/no» es lo que había antes y lo que se quitó.
 //
 // Regla de siempre: `relaciones: null` = «no se pudo consultar», `[]` = «se miró
 // y no hay ninguna anotada». Un `null` NUNCA se pinta como «no tiene familia».
 
 import type { RelacionFicha } from '@central/module-seguros'
+
+// 🚨 El vocabulario de la autorización vive en `@central/module-seguros-portal`
+// (`src/autorizacion.ts`), que es la fuente. Se repite aquí como listas de
+// lectura porque `apps/plataforma` no declara ese paquete y esta capa solo
+// VALIDA lo que llega por el puerto: nada de esto decide accesos — lo que
+// abre datos se decide en asegura y en el portal.
+export const ALCANCES_PORTAL = ['ver', 'ver_economico', 'partes', 'documentos'] as const
+export type AlcancePortal = (typeof ALCANCES_PORTAL)[number]
+export const ESTADOS_AUTORIZACION_PORTAL = ['pendiente', 'vigente', 'caducada', 'revocada'] as const
+export type EstadoAutorizacionPortal = (typeof ESTADOS_AUTORIZACION_PORTAL)[number]
+
+/**
+ * La autorización que gobierna un vínculo. 🚨 Tres estados, no dos:
+ * `autorizacion: null` = **no hay ninguna anotada**; `pendiente` = la hay pero
+ * el autorizado no la ha aceptado, así que **todavía no ve nada**; `vigente` =
+ * ve. `caducada`/`revocada` = la hubo y ya no vale.
+ *
+ * Nunca significa «no se ha podido leer»: eso es `relaciones === null`, y la
+ * pantalla lo dice con otras palabras.
+ */
+export type AutorizacionCartera = {
+  estado: EstadoAutorizacionPortal
+  alcances: AlcancePortal[]
+  /** ISO del puerto (`Date` serializada). `fechaLarga()` la pinta en español. */
+  caducaEn: string
+  /** `portal` = lo concedió el cliente · `corredor` = lo anotó la correduría. */
+  origen: string
+}
 
 /** Un vínculo de la ficha, con lo que la cartera sabe del relacionado. */
 export type RelacionCartera = RelacionFicha & {
@@ -29,6 +62,57 @@ export type RelacionCartera = RelacionFicha & {
   tipoCliente: string
   /** Pólizas vivas del relacionado. `null` = asegura no las contó (NO es 0). */
   polizasVivas: number | null
+  /** La autorización de la ficha hacia el relacionado. `null` = no hay ninguna. */
+  autorizacion: AutorizacionCartera | null
+}
+
+/**
+ * Una autorización del puerto, o `null` si no viene o no tiene forma. Un
+ * estado desconocido NO se inventa: se devuelve `null`, y entonces la pantalla
+ * dice «sin autorización», que es lo conservador (nunca «ve»).
+ */
+export function leerAutorizacion(v: unknown): AutorizacionCartera | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.estado !== 'string' || !(ESTADOS_AUTORIZACION_PORTAL as readonly string[]).includes(o.estado)) return null
+  const caducaEn = cadena(o.caducaEn)
+  if (caducaEn === null || Number.isNaN(Date.parse(caducaEn))) return null
+  const alcances = Array.isArray(o.alcances)
+    ? o.alcances.filter((a): a is AlcancePortal => typeof a === 'string' && (ALCANCES_PORTAL as readonly string[]).includes(a))
+    : []
+  return {
+    estado: o.estado as EstadoAutorizacionPortal,
+    alcances,
+    caducaEn,
+    origen: cadena(o.origen) ?? 'sin_informar',
+  }
+}
+
+/** Una fecha ISO en castellano de pantalla: «12 de marzo de 2027». */
+export function fechaLarga(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+/**
+ * Qué se enseña de una autorización, en una frase. Vive aquí (puro, con test)
+ * y no en el JSX: es el titular que Alberto lee para decidir, y el sitio donde
+ * «pendiente» se convertiría en «ve» por descuido.
+ */
+export function explicarEstadoAutorizacion(a: AutorizacionCartera | null, nombreOtro: string, nombreFicha: string): string {
+  if (a === null) return `${nombreOtro} no ve los seguros de ${nombreFicha}: no hay ninguna autorización.`
+  const nivel = a.alcances.includes('ver_economico') ? 've también lo económico (prima y recibos)' : 've la tarjeta de la póliza'
+  switch (a.estado) {
+    case 'vigente':
+      return `${nombreOtro} ve los seguros de ${nombreFicha} — ${nivel}. En vigor hasta el ${fechaLarga(a.caducaEn)}.`
+    case 'pendiente':
+      return `Autorización anotada${a.origen === 'corredor' ? ' por la correduría' : ''}, pendiente de que ${nombreOtro} la acepte en el portal: TODAVÍA NO VE NADA. Caduca el ${fechaLarga(a.caducaEn)}.`
+    case 'caducada':
+      return `La autorización caducó el ${fechaLarga(a.caducaEn)}: ${nombreOtro} ya no ve los seguros de ${nombreFicha}.`
+    case 'revocada':
+      return `Autorización revocada: ${nombreOtro} no ve los seguros de ${nombreFicha}.`
+  }
 }
 
 function cadena(v: unknown): string | null {
@@ -57,6 +141,7 @@ export function leerRelacion(v: unknown): RelacionCartera | null {
     nombre: cadena(o.nombre) ?? 'sin nombre',
     tipoCliente: cadena(o.tipoCliente) ?? 'sin_informar',
     polizasVivas: enteroONull(o.polizasVivas),
+    autorizacion: leerAutorizacion(o.autorizacion),
   }
 }
 
