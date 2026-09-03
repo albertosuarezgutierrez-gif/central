@@ -368,4 +368,50 @@ h1 {
  * que el texto. */
 .recibido-plazo.ojo { color: var(--warning); font-weight: 600; }
 
+/* ── Adjuntos del parte ──────────────────────────────────────────────────
+ * Los ficheros que el cliente elige (fotos del golpe, el amistoso en PDF) y,
+ * más abajo, los que ya viajaron con un parte enviado.
+ *
+ * Apilados a 320 px: el nombre que pone un móvil (`IMG_20260903_181233.jpg`) no
+ * cabe al lado de un botón de 44 px sin partir la página. En cuanto hay sitio,
+ * el botón «Quitar» se va a la derecha. */
+.adjuntos { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.adjunto {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+@media (min-width: 420px) {
+  .adjunto { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+}
+.adjunto-datos { display: grid; gap: 2px; min-width: 0; }
+/* `overflow-wrap` y NO un recorte con `…`: dos fotos del mismo móvil se
+ * diferencian por el final del nombre, así que recortarlas las deja idénticas y
+ * el «no ha entrado esta» deja de decir cuál. */
+.adjunto-nombre { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.adjunto-meta { font-size: 12px; color: var(--muted); }
+.adjunto-estado.ok { color: var(--positive); font-weight: 600; }
+/* El fallo de UN fichero va en el color de error, pero es de ese fichero: el
+ * parte ya está enviado y no se cae por esto. El motivo se pinta debajo. */
+.adjunto-estado.error { color: var(--negative); font-weight: 600; }
+/* `.boton` viene a ancho completo (columna de móvil); con sitio, al ancho justo. */
+@media (min-width: 420px) { .adjunto .boton { width: auto; } }
+
+/* Los ya enviados: enlaces de descarga, con 44 px de alto pulsable aunque el
+ * texto sea de una línea. */
+.adjuntos-enviados { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.adjuntos-enviados li { min-width: 0; }
+.adjuntos-enviados a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px 0;
+  color: var(--primary);
+  overflow-wrap: anywhere;
+}
+
 .lista-titulo { font-size: 13px; font-weight: 600; margin: 18px 0 8px; }

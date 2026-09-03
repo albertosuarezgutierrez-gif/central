@@ -12,7 +12,12 @@ import {
 // componente de cliente. La revisión del fichero es LA MISMA que hace el
 // servidor — dos listas distintas acabarían aceptando aquí lo que allí se
 // rechaza, y el usuario lo descubriría después de subir 10 MB desde el móvil.
-import { MAX_ADJUNTOS_POR_PARTE, revisarDocumento } from '@central/module-seguros'
+import {
+  MAX_ADJUNTOS_POR_PARTE,
+  MAX_BYTES_DOCUMENTO,
+  MIMES_DOCUMENTO,
+  revisarDocumento,
+} from '@central/module-seguros'
 
 import { fechaEs } from '@/lib/fechas'
 
@@ -278,12 +283,58 @@ function reintentable(e: Elegido): boolean {
   return revisarDocumento({ type: e.fichero.type, size: e.fichero.size, name: e.fichero.name }) === null
 }
 
+/**
+ * Cuántos de los elegidos ocupan de verdad una plaza del tope.
+ *
+ * Los que rechazó la revisión local —un vídeo, un fichero de 30 MB— NO cuentan:
+ * no se van a subir nunca. Contarlos dejaría a alguien sin poder añadir la foto
+ * que sí vale por culpa de tres vídeos que ya sabemos que no entran, y con el
+ * accidente todavía delante.
+ */
+function ocupanPlaza(ficheros: readonly Elegido[]): number {
+  return ficheros.filter(reintentable).length
+}
+
 /** Tamaño legible. `null` = la fila no guardó el tamaño; no se inventa un 0 KB. */
 function pesoLegible(bytes: number | null): string | null {
   if (bytes === null || bytes <= 0) return null
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+/**
+ * Lo que el selector de ficheros del móvil ofrece de entrada.
+ *
+ * Sale de `MIMES_DOCUMENTO`, la MISMA lista cerrada con la que `revisarDocumento`
+ * decide aquí y con la que el servidor decide después: escribir los tipos a mano
+ * es cómo se acaba ofreciendo elegir algo que luego se rechaza.
+ *
+ * Las extensiones van ADEMÁS de los mime a propósito: hay navegadores (Android,
+ * y algún gestor de ficheros) que mandan `''` o `application/octet-stream` para
+ * un `.pdf`, y sin la extensión en el `accept` ese fichero sale en gris y no se
+ * puede ni elegir. Es un filtro de comodidad, no la seguridad: quien quiera
+ * puede saltárselo, y por eso se vuelve a revisar aquí y otra vez en el servidor.
+ */
+const ACCEPT = [...MIMES_DOCUMENTO, '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic'].join(',')
+
+/** El tope por fichero, en MB, para decirlo en pantalla ANTES de que lo intente. */
+const MAX_MB = MAX_BYTES_DOCUMENTO / 1024 / 1024
+
+/**
+ * Cómo se dice cada estado de un fichero.
+ *
+ * `espera` dice lo que va a pasar y CUÁNDO —«se subirá al enviar»—, no «listo»:
+ * elegir una foto no la ha mandado a ningún sitio, y creer que sí es la misma
+ * clase de error que creer que el parte ya está en la compañía.
+ */
+const ESTADO_FICHERO: Record<EstadoFichero, { texto: string; clase: string }> = {
+  espera: { texto: 'se subirá al enviar el parte', clase: 'adjunto-estado' },
+  subiendo: { texto: 'subiendo…', clase: 'adjunto-estado' },
+  ok: { texto: 'nos ha llegado', clase: 'adjunto-estado ok' },
+  // El «no ha entrado» va SIEMPRE acompañado del motivo, que se pinta debajo.
+  // Un estado en rojo sin explicación deja a la persona reintentando lo mismo.
+  error: { texto: 'no ha entrado', clase: 'adjunto-estado error' },
 }
 
 export function ParteSiniestro({
@@ -364,23 +415,30 @@ export function ParteSiniestro({
     e.target.value = '' // permite volver a elegir el mismo fichero
     if (nuevos.length === 0) return
 
-    setFicheros((previos) => {
-      const hueco = MAX_ADJUNTOS_POR_PARTE - previos.length
-      const entran = nuevos.slice(0, Math.max(0, hueco))
-      const añadidos: Elegido[] = entran.map((f) => {
-        const reparo = revisarDocumento({ type: f.type, size: f.size, name: f.name })
-        // Un fichero rechazado nace en `error` CON su motivo, no se descarta:
-        // desaparecer de la lista se lee como «ya está subido».
-        return { clave: `f${contadorClaves++}`, fichero: f, estado: reparo ? 'error' : 'espera', motivo: reparo }
-      })
-      if (entran.length < nuevos.length) {
-        setErrorGeneral(
-          `Solo caben ${MAX_ADJUNTOS_POR_PARTE} ficheros por parte, así que no hemos cogido ` +
-            `${nuevos.length - entran.length} de los que has elegido. Si falta algo importante, dínoslo.`,
-        )
-      }
-      return [...previos, ...añadidos]
+    // El hueco se calcula con el estado que ya hay en pantalla, FUERA del
+    // `setFicheros`: llamar a `setErrorGeneral` dentro de un updater es escribir
+    // en otro estado durante el render, y React lo ejecuta dos veces en
+    // desarrollo. Aquí no hace falta — un `change` del input es un solo evento.
+    const hueco = Math.max(0, MAX_ADJUNTOS_POR_PARTE - ocupanPlaza(ficheros))
+    const entran = nuevos.slice(0, hueco)
+    const añadidos: Elegido[] = entran.map((f) => {
+      const reparo = revisarDocumento({ type: f.type, size: f.size, name: f.name })
+      // Un fichero rechazado nace en `error` CON su motivo, no se descarta:
+      // desaparecer de la lista se lee como «ya está subido».
+      return { clave: `f${contadorClaves++}`, fichero: f, estado: reparo ? 'error' : 'espera', motivo: reparo }
     })
+    setFicheros((previos) => [...previos, ...añadidos])
+
+    // 🚨 Lo que no cabe se DICE, con cuántos son. Cogerlos en silencio dejaría a
+    // alguien creyendo que ha mandado ocho fotos cuando solo entraron las diez
+    // primeras de su selección.
+    if (entran.length < nuevos.length) {
+      const fuera = nuevos.length - entran.length
+      setErrorGeneral(
+        `Solo caben ${MAX_ADJUNTOS_POR_PARTE} ficheros por parte, así que ${fuera === 1 ? 'no hemos cogido 1' : `no hemos cogido ${fuera}`} ` +
+          'de los que has elegido. Si falta algo importante, dínoslo y lo vemos.',
+      )
+    }
   }
 
   /** Quitar uno de la lista ANTES de enviar. Después ya no: lo enviado es una comunicación. */
@@ -868,6 +926,219 @@ function Triple({
   )
 }
 
+/**
+ * «Adjunta fotos o documentos» — el bloque del formulario que elige ficheros.
+ *
+ * ─── Varios ficheros y de varios tipos ───────────────────────────────────────
+ * `multiple` a propósito: de un golpe salen cuatro fotos, no una. Y los tipos
+ * NO se escriben aquí — salen de `MIMES_DOCUMENTO` y el tope de
+ * `MAX_BYTES_DOCUMENTO`, los mismos que aplica el servidor. Dos listas
+ * distintas acabarían ofreciendo elegir algo que luego se rechaza, y el usuario
+ * lo descubriría después de subir 10 MB desde el móvil.
+ *
+ * ─── Elegir NO es enviar, y se dice ──────────────────────────────────────────
+ * Los ficheros se suben DESPUÉS de crear el parte (ver `enviar()`), así que
+ * mientras se está rellenando el formulario no ha salido nada del teléfono. Por
+ * eso el estado de salida se llama «se subirá al enviar el parte» y no «listo».
+ * Y adjuntar un papel no cambia una coma de lo otro: el parte lo tenemos
+ * nosotros y todavía no está en la compañía. Ver la cabecera del fichero.
+ *
+ * ─── Móvil (≥320 px) ─────────────────────────────────────────────────────────
+ * El `<input type="file">` nativo no llega a 44 px táctiles ni se puede estilar,
+ * así que se esconde dentro de un `.boton-subir` —el mismo patrón que
+ * `SubirPoliza.tsx`—, que sí los tiene. El input sigue existiendo y sigue siendo
+ * el que recibe el foco del teclado: no es un `div` con un `onClick`.
+ */
+function Adjuntar({
+  uid,
+  ficheros,
+  deshabilitado,
+  onElegir,
+  onQuitar,
+}: {
+  uid: string
+  ficheros: readonly Elegido[]
+  deshabilitado: boolean
+  onElegir: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onQuitar: (clave: string) => void
+}) {
+  // Los rechazados en local no ocupan plaza: ver `ocupanPlaza()`.
+  const ocupadas = ocupanPlaza(ficheros)
+  const lleno = ocupadas >= MAX_ADJUNTOS_POR_PARTE
+  const bloqueado = deshabilitado || lleno
+
+  return (
+    <div className="editor-campo">
+      <label htmlFor={`${uid}-adjuntos`}>Fotos y documentos</label>
+      <p className="editor-ayuda" id={`${uid}-adjuntos-ayuda`}>
+        Si tienes fotos del golpe o del destrozo, el parte amistoso, el atestado o el presupuesto del
+        taller, adjúntalos aquí: nos ahorra pedírtelos después, y de un accidente no se pueden volver a
+        hacer fotos. Puedes elegir varios de una vez. <strong>No es obligatorio</strong>: el parte se
+        manda igual.
+      </p>
+      {/* El límite se dice ANTES, no cuando el fichero ya se ha rechazado. */}
+      <p className="editor-ayuda">
+        Admitimos PDF y fotos (JPG, PNG, WEBP o HEIC), hasta {MAX_MB} MB cada uno y un máximo de{' '}
+        {MAX_ADJUNTOS_POR_PARTE} por parte.
+      </p>
+
+      <label className="boton-subir" aria-disabled={bloqueado}>
+        {lleno
+          ? `Ya has elegido ${MAX_ADJUNTOS_POR_PARTE}, que es el máximo`
+          : ficheros.length === 0
+            ? 'Elegir fotos o PDF'
+            : 'Añadir más ficheros'}
+        <input
+          id={`${uid}-adjuntos`}
+          type="file"
+          multiple
+          accept={ACCEPT}
+          onChange={onElegir}
+          disabled={bloqueado}
+          aria-describedby={`${uid}-adjuntos-ayuda`}
+        />
+      </label>
+
+      {ficheros.length > 0 && (
+        <p className="editor-ayuda">
+          {ocupadas} de {MAX_ADJUNTOS_POR_PARTE} elegidos.
+        </p>
+      )}
+
+      {/* Mientras se envía no se puede quitar nada: el fichero puede estar ya de
+          viaje, y un botón que no hace lo que dice es peor que no estar. */}
+      <ListaFicheros ficheros={ficheros} onQuitar={deshabilitado ? null : onQuitar} />
+    </div>
+  )
+}
+
+/**
+ * Los ficheros elegidos, uno por línea, CADA UNO con su estado.
+ *
+ * 🚨 Es el corazón de «subir 5 y que fallen 2 deja 3 subidos y 2 explicados».
+ * Un fichero rechazado —por la revisión local o por el servidor— se queda en la
+ * lista **con su nombre y su motivo**, nunca desaparece: desaparecer se lee como
+ * «ya está subido», que es exactamente lo contrario de lo que ha pasado. Y el
+ * resumen de arriba («han entrado 3 de 5») no basta por sí solo: sin saber CUÁL
+ * falta, la persona no puede reintentarlo ni contárnoslo por teléfono.
+ *
+ * `onQuitar === null` = la lista es de solo lectura (ya se ha enviado el parte).
+ * Lo adjuntado a un parte enviado no se retira desde aquí: es prueba de lo que
+ * se declaró, y el rol de base de datos del portal tampoco tiene DELETE.
+ *
+ * `aria-live="polite"` porque el estado de cada fichero cambia solo, mientras
+ * suben: sin eso, quien navega con lector de pantalla no se entera de que el
+ * cuarto ha fallado.
+ */
+function ListaFicheros({
+  ficheros,
+  onQuitar,
+}: {
+  ficheros: readonly Elegido[]
+  onQuitar: ((clave: string) => void) | null
+}) {
+  if (ficheros.length === 0) return null
+
+  return (
+    <ul className="adjuntos" aria-live="polite">
+      {ficheros.map((f) => {
+        // El nombre puede venir vacío (una foto hecha en el momento en algún
+        // navegador). Se dice, no se deja el hueco.
+        const nombre = f.fichero.name.trim() === '' ? 'Fichero sin nombre' : f.fichero.name
+        const peso = pesoLegible(f.fichero.size)
+        const { texto, clase } = ESTADO_FICHERO[f.estado]
+        return (
+          <li key={f.clave} className="adjunto">
+            <div className="adjunto-datos">
+              <span className="adjunto-nombre">{nombre}</span>
+              <span className="adjunto-meta">
+                {peso !== null && <>{peso} · </>}
+                <span className={clase}>{texto}</span>
+              </span>
+              {/* El motivo lo redacta el módulo puro o el servidor, y baja tal
+                  cual: dice qué pasa con ESTE fichero y qué se puede hacer. */}
+              {f.motivo !== null && <p className="editor-error">{f.motivo}</p>}
+            </div>
+            {onQuitar !== null && (
+              <button
+                type="button"
+                className="boton secundario"
+                onClick={() => onQuitar(f.clave)}
+                aria-label={`Quitar ${nombre}`}
+              >
+                Quitar
+              </button>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/**
+ * Los ficheros que ya viajaron con un parte enviado, con su enlace de descarga.
+ *
+ * 🚨 CUATRO estados, y la diferencia entre los tres primeros es toda la regla de
+ * la casa («dato que NO hay ≠ dato que NO se ha mirado»):
+ *   - `undefined` → la página no pasó el dato. No se pinta NADA: callar es lo
+ *     único cierto cuando no se ha preguntado.
+ *   - `null`      → se preguntó y la consulta FALLÓ. Se dice en voz alta: un
+ *     hueco aquí se lee como «no mandé nada», y es justo lo que hace que alguien
+ *     no vuelva a subir la foto que sí hacía falta.
+ *   - `[]`        → se miró y no adjuntó ninguno. Se dice también, porque es un
+ *     hecho comprobado y distinto del anterior.
+ *   - con datos   → los que hay, cada uno con su enlace.
+ *
+ * El enlace apunta al puerto que devuelve el fichero como DESCARGA y solo si el
+ * parte es de quien lo pide (`GET /api/siniestros/{id}/adjuntos/{documentoId}`).
+ */
+function AdjuntosDelParte({
+  parteId,
+  adjuntos,
+}: {
+  parteId: string
+  adjuntos: AdjuntoEnviado[] | null | undefined
+}) {
+  if (adjuntos === undefined) return null
+
+  if (adjuntos === null) {
+    return (
+      <div className="linea dicho">
+        No hemos podido comprobar qué ficheros adjuntaste a este parte. Vuelve a cargar la página; si sigue
+        igual, dínoslo y lo miramos.
+      </div>
+    )
+  }
+
+  if (adjuntos.length === 0) {
+    return <div className="linea">No adjuntaste ningún fichero a este parte.</div>
+  }
+
+  return (
+    <>
+      <div className="linea dicho">
+        {adjuntos.length === 1 ? 'Nos mandaste 1 fichero:' : `Nos mandaste ${adjuntos.length} ficheros:`}
+      </div>
+      <ul className="adjuntos-enviados">
+        {adjuntos.map((a) => {
+          const peso = pesoLegible(a.bytes)
+          return (
+            <li key={a.id}>
+              <a href={`/api/siniestros/${parteId}/adjuntos/${a.id}`}>
+                {/* `null` = la fila no guardó nombre. No se inventa uno ni se
+                    deja el enlace mudo: sin texto no se puede ni pulsar. */}
+                {a.nombre ?? 'Documento sin nombre'}
+              </a>
+              {peso !== null && <span className="suave"> · {peso}</span>}
+            </li>
+          )
+        })}
+      </ul>
+    </>
+  )
+}
+
 /** Los partes que ya ha mandado esta persona. */
 function ListaPartes({ partes }: { partes: readonly ParteEnviado[] }) {
   if (partes.length === 0) {
@@ -902,6 +1173,11 @@ function ListaPartes({ partes }: { partes: readonly ParteEnviado[] }) {
                 ) : (
                   <div className="linea dicho">{textoPlazo(p.plazo)}</div>
                 ))}
+
+              {/* Lo que adjuntó, con sus cuatro estados. Ver `AdjuntosDelParte`:
+                  una lista vacía NO se pinta igual que un «no se ha podido
+                  mirar». */}
+              <AdjuntosDelParte parteId={p.id} adjuntos={p.adjuntos} />
 
               <div className="chips">
                 {/* 🚨 El chip verde SOLO cuando `comunicado` es `true`. No se

@@ -246,9 +246,14 @@ model PortalParteSiniestro {
 /// en el código no lo concedería — fallaría en la BD, que es donde tiene que
 /// fallar.
 ///
-/// El GRANT es por COLUMNAS y aquí están las 19 concedidas: ni una más. Prisma
-/// pide cada columna declarada por su nombre, así que una de más hace fallar la
-/// consulta ENTERA con `permission denied for column`.
+/// ⚠️ Y aquí el GRANT es de TABLA, no por columnas — es la excepción dentro de
+/// este schema, donde la cartera (`clientes`, `polizas`, `poliza_recibos`…) se
+/// concede columna a columna. El SQL es `grant select, insert on
+/// seguros.documentos`, así que las 19 columnas están cubiertas. Lo que sí sigue
+/// mordiendo es lo otro: este modelo es un ESPEJO EXACTO de las 19 columnas
+/// reales de la tabla (verificado contra la BD el 03/09/2026). Prisma pide cada
+/// columna declarada por su nombre, así que una que no exista —o que un día se
+/// revoque— hace fallar la consulta ENTERA, no solo ese campo.
 model Documento {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId      String    @map("correduria_id") @db.Uuid

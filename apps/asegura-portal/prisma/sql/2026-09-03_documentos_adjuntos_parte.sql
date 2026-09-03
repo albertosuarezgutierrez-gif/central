@@ -30,7 +30,8 @@ comment on column seguros.documentos.portal_parte_id is
   'Parte de siniestro del portal del que cuelga este documento (lo sube el cliente). ON DELETE SET NULL: el fichero sobrevive al parte, porque es la prueba.';
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- BLOQUE 2 — 🚨 PENDIENTE DE APLICAR. Sin esto NO se puede insertar un adjunto.
+-- BLOQUE 2 — ✅ APLICADO el 03/09/2026 a la Supabase compartida (verificado leyendo
+-- `pg_get_constraintdef`). Sin esto NO se puede insertar un adjunto.
 --
 -- El CHECK original exige que el documento cuelgue de un cliente, una póliza o
 -- un siniestro. Un adjunto de un parte puede no tener NINGUNO de los tres: el

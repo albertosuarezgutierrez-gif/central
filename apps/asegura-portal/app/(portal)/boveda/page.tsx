@@ -125,6 +125,14 @@ export default async function Boveda() {
     comunicado: p.comunicado,
     estado: p.estado,
     plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy }),
+    // 🚨 El `null` se PROPAGA tal cual: significa «no se han podido consultar»,
+    // y la pantalla lo dice. Colapsarlo aquí con un `?? []` lo convertiría en
+    // «no adjuntaste nada», que es afirmar algo que nadie ha mirado — y hace
+    // que quien sí mandó la foto del atestado no la vuelva a mandar.
+    // Del adjunto solo bajan id, nombre y tamaño: el mime y el tipo son para
+    // decidir qué se sirve, y eso se decide en el servidor al descargarlo.
+    adjuntos:
+      p.adjuntos === null ? null : p.adjuntos.map((a) => ({ id: a.id, nombre: a.nombre, bytes: a.bytes })),
   }))
 
   return (
