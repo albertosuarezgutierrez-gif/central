@@ -256,6 +256,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/09/2026) 📱 Segunda captura de móvil: la ficha del cliente
 - (03/09/2026) 📱 `/correduria` en el MÓVIL, con la primera captura real
 - (03/09/2026) 🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos
 - (03/09/2026) 🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive
@@ -265,5 +266,4 @@
 - (03/09/2026) 🧬 Por qué se duplican las fichas: el blind index de DNI está a medias
 - (03/09/2026) 🃏 «Matito no se puede borrar»: era un COMODÍN del volcado, y el DELETE no existe
 - (03/09/2026) ⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición
-- (03/09/2026) 🏷️ El motor de pricing tarificaba en un percentil que tres pisos no han alcanzado jamás
 
