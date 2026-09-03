@@ -173,6 +173,19 @@
   en `docs/ASEGURA-AUTORIZACION-TERCEROS.md`. **No se programó nada: faltan dos decisiones suyas**
   (apagar las 104 ya; si «gestionar» exige verificar la identidad del autorizado).
 
+- **🔄 El filtro de comparables SUBÍA precios en dos meses del año (03/09/2026, PR #2228).**
+  Seguimiento del #2192 el mismo día: su primera pasada en producción subió a Busto Reform un
+  **+37,8%** en jul-ago/2027 (61 noches, 82→113€, el tope exacto del raíl). El filtro de liga abarata
+  el ancla en 10 de los 12 meses pero la **encarece** en julio (98,0→146,4€) y agosto (101,0→141,6€):
+  usa la NOTA como proxy de liga y la correlación nota↔precio **se invierte en temporada baja** — en
+  verano los comps mejor puntuados son los BARATOS. **Error de método que lo dejó pasar:** el efecto se
+  midió sobre el corpus AGREGADO de 30 días cuando el motor tarifica **por MES**; en el agregado no
+  encarece a ninguno de los cuatro, así que la medición original no era falsa, era en la unidad
+  equivocada. Cura: `guardaMonotoniaLiga` — si quitar comps sube el percentil, ese grupo no aplica el
+  filtro. La liga pasa de `WHERE` a columna `en_liga` para tener los dos corpus del mismo scan. De paso
+  se cerró un agujero abierto en el mismo cambio (`MIN_SAMPLE` dejaba de proteger al corpus filtrado) y
+  el techo por ADR dejó de ser mudo donde no puede actuar (`suelo_manda`, 14 de 48 piso×mes; NO se capa
+  — hundiría House a 300€ 7 meses, y la mediana se probó y empeora 5 casos).
 - **🏷️ El motor de pricing tarificaba en un percentil que tres pisos no han alcanzado jamás (03/09/2026, PR #2192).**
   Alberto: «pocas reservas, solo funciona House Sevillana». Medido: cada piso vende de verdad en P9 (Busto,
   ADR 84€) / P19 (Luxury, 135€) / P22 (Duplex, 111€) / **P57 (House, 560€)** del mercado, con `target_pctl`
