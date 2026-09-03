@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T05:54:53Z",
-  "sha": "655b6cc11b939b3f2e338ea8bc4668612b650f63",
+  "generadoEn": "2026-09-03T07:05:37Z",
+  "sha": "e9d9dac5c7e91af50aa88891e0baeee7d620ff85",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5744,7 +5744,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 94
+          "linea": 104
         },
         {
           "nombre": "fechaIso",
@@ -5752,7 +5752,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 98
+          "linea": 108
         },
         {
           "nombre": "descifrar",
@@ -5760,7 +5760,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 103,
+          "linea": 113,
           "resumen": "Descifra sin convertir un fallo en «no tiene teléfono»."
         },
         {
@@ -5769,7 +5769,7 @@
           "exportada": false,
           "params": "texto: string | null",
           "retorno": "number | null",
-          "linea": 114,
+          "linea": 124,
           "resumen": "Importe del EIAC: solo la forma medida (`NNN.NN`). Cualquier otra → null."
         },
         {
@@ -5778,7 +5778,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: Date = new Date(),",
           "retorno": "Promise<ColaRetencion>",
-          "linea": 122
+          "linea": 132
         },
         {
           "nombre": "polizasSinRecibo",
@@ -5786,7 +5786,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 252,
+          "linea": 279,
           "resumen": "Pólizas VIVAS (las que entran por CIMA) de las que la compañía no ha mandado ni un recibo. Es el hueco que la pantalla tiene que declarar: sin este número, una cola de impagados vacía se leería como «"
         }
       ],
@@ -5795,7 +5795,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "fabe18d61d67"
+      "hash": "cf1dd77c2e9e"
     },
     {
       "ruta": "apps/asegura/lib/cartera-poliza.ts",
@@ -53303,7 +53303,7 @@
           "exportada": true,
           "params": "{ urlAsegura }: { urlAsegura: string }",
           "retorno": null,
-          "linea": 39
+          "linea": 48
         },
         {
           "nombre": "Fila",
@@ -53311,7 +53311,7 @@
           "exportada": false,
           "params": "{ f, urlAsegura }: { f: EnRiesgo; urlAsegura: string }",
           "retorno": null,
-          "linea": 145
+          "linea": 170
         },
         {
           "nombre": "Huecos",
@@ -53319,7 +53319,7 @@
           "exportada": false,
           "params": "{ datos }: { datos: Extract<Impagados, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 217,
+          "linea": 242,
           "resumen": "Los dos huecos que hacen que esta lista NO sea la foto completa de lo que está sin cobrar. Sin decirlos, una cola vacía se lee como «todo al día»."
         },
         {
@@ -53328,12 +53328,12 @@
           "exportada": false,
           "params": "{ titulo, extra, children, }: { titulo?: string extra?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 244
+          "linea": 269
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "74f9273811e3"
+      "hash": "99ae45058d47"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/rotulo-retarificar.ts",
@@ -72804,7 +72804,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Impagados",
-          "linea": 256
+          "linea": 272
         },
         {
           "nombre": "urlAsegura",
@@ -72812,7 +72812,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 324
+          "linea": 350
         },
         {
           "nombre": "pedir",
@@ -72820,7 +72820,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "Promise<",
-          "linea": 328
+          "linea": 354
         },
         {
           "nombre": "buscarAsegura",
@@ -72828,7 +72828,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<Busqueda>",
-          "linea": 339
+          "linea": 365
         },
         {
           "nombre": "interpretarLineas",
@@ -72836,7 +72836,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LineasCodeoscopic",
-          "linea": 366,
+          "linea": 392,
           "resumen": "Puro. `hogar` degrada a `desconocido` ante cualquier forma rara: afirmar «hogar disponible» o «ausente» sobre un JSON que no se entiende sería lo mismo que inventarlo."
         },
         {
@@ -72845,7 +72845,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "HogarCodeoscopic",
-          "linea": 378
+          "linea": 404
         },
         {
           "nombre": "lineasCodeoscopic",
@@ -72853,7 +72853,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LineasCodeoscopic>",
-          "linea": 393
+          "linea": 419
         },
         {
           "nombre": "impagadosAsegura",
@@ -72861,7 +72861,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Impagados>",
-          "linea": 403
+          "linea": 429
         },
         {
           "nombre": "booleano",
@@ -72869,7 +72869,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 468,
+          "linea": 494,
           "resumen": "Tri-estado de verdad: un campo ausente es `null` («no se informó»), no `false`. Con `=== true` a secas, un puerto que no manda el campo diría que TODOS están sin email."
         },
         {
@@ -72878,7 +72878,7 @@
           "exportada": true,
           "params": "email: boolean | null, telefono: boolean | null",
           "retorno": "EstadoCanal",
-          "linea": 474,
+          "linea": 500,
           "resumen": "El estado se DERIVA de los dos canales; no se cree el que venga en el JSON. Si falta cualquiera de los dos, el resultado es `no_comprobado`."
         },
         {
@@ -72887,7 +72887,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SinCanal",
-          "linea": 482
+          "linea": 508
         },
         {
           "nombre": "sinCanalAsegura",
@@ -72895,12 +72895,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SinCanal>",
-          "linea": 536
+          "linea": 562
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "42d077ae1623"
+      "hash": "32c67e347904"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -73454,18 +73454,35 @@
           "linea": 22
         },
         {
+          "nombre": "sinTildes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "Sin acentos: las compañías escriben «anulacion» y «anulación» el mismo día."
+        },
+        {
+          "nombre": "esReciboAseguradora",
+          "kind": "function",
+          "exportada": false,
+          "params": "from: string, subject: string",
+          "retorno": "boolean",
+          "linea": 44
+        },
+        {
           "nombre": "clasificarPorKeyword",
           "kind": "function",
           "exportada": true,
           "params": "from: string, subject: string",
           "retorno": "KeywordMatch | null",
-          "linea": 51,
+          "linea": 77,
           "resumen": "Clasifica un correo por reglas deterministas de alta precisión. Devuelve null si ninguna aplica (entonces decide la IA). NUNCA usa 'seguridad-sospechosa' ni 'personal-importante': esos exigen el juici"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "acc64eacee8d"
+      "hash": "55c1bcaf4669"
     },
     {
       "ruta": "apps/plataforma/lib/correo/reserva-booking.ts",
@@ -73541,7 +73558,7 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "RutaCorreo",
-          "linea": 134
+          "linea": 149
         },
         {
           "nombre": "descripcionParaPrompt",
@@ -73549,13 +73566,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 143,
+          "linea": 158,
           "resumen": "Genera el bloque de categorías para el prompt de clasificación (sin duplicar la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e36a9037ea04"
+      "hash": "b0b1b2d02fcc"
     },
     {
       "ruta": "apps/plataforma/lib/correo/smoobu-notificacion.ts",
@@ -73694,7 +73711,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 64
+          "linea": 65
         },
         {
           "nombre": "digestTriaje",
@@ -73702,7 +73719,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 197,
+          "linea": 198,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -73711,7 +73728,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 237,
+          "linea": 238,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         }
       ],
@@ -73721,7 +73738,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "10cd6c2e6cf8"
+      "hash": "c31212b870f6"
     },
     {
       "ruta": "apps/plataforma/lib/cron-auth.ts",
@@ -87119,7 +87136,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 546
+          "linea": 552
         },
         {
           "nombre": "avisosDe",
@@ -87127,7 +87144,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 551,
+          "linea": 557,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -87136,13 +87153,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 561,
+          "linea": 567,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "edae8f138123"
+      "hash": "4802c3ebee66"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -108195,16 +108212,16 @@
           "exportada": false,
           "params": "desde: string | null, hoy: Date",
           "retorno": "number | null",
-          "linea": 60
+          "linea": 94
         },
         {
           "nombre": "retencion",
           "kind": "function",
           "exportada": true,
-          "params": "vencimiento: string | null, hoy: Date = new Date()",
+          "params": "vencimiento: string | null, situacion: SituacionRecibo, hoy: Date = new Date(),",
           "retorno": "Retencion",
-          "linea": 72,
-          "resumen": "Qué se puede hacer todavía con un recibo devuelto. `vencimiento` es la fecha del RECIBO (ISO `aaaa-mm-dd`), no la de la póliza."
+          "linea": 109,
+          "resumen": "Qué se puede hacer todavía con un recibo que no ha entrado. `vencimiento` es la fecha del RECIBO (ISO `aaaa-mm-dd`), no la de la póliza. `situacion` es lo que AFIRMA la compañía, y no tiene valor por "
         },
         {
           "nombre": "resumirRetencion",
@@ -108212,12 +108229,12 @@
           "exportada": true,
           "params": "filas: readonly { estado: EstadoRetencion; prima: number | null }[],",
           "retorno": "ResumenRetencion",
-          "linea": 144
+          "linea": 211
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5fa0d7682cbd"
+      "hash": "af1ea85dff44"
     },
     {
       "ruta": "packages/module-seguros/src/siniestros.ts",
@@ -113461,6 +113478,6 @@
   ],
   "resumen": {
     "archivos": 2881,
-    "funciones": 8422
+    "funciones": 8424
   }
 }

@@ -256,6 +256,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/09/2026) 🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente`
 - (03/09/2026) 🔎 Check-in post-fusión CIMA
 - (03/09/2026) 🗂️ Ficha de cliente de la correduría: cabecera + pestañas, y los colores de la app de Manuel
 - (03/09/2026) 🎨 Portal del cliente: correo propio y aspecto de plataforma
@@ -265,5 +266,4 @@
 - (03/09/2026) 🚗 El catálogo de versiones exige el COMBUSTIBLE, y la doc decía lo contrario
 - (03/09/2026) 🔧 «Retarificar» mentía dos veces, y las dos igual: un «no lo sé» convertido en «no lo hay»
 - (03/09/2026) ✅ Tarificaciones guardadas APLICADAS en la BD
-- (03/09/2026) Correduría: «Global2» y «GLOBAL 2 INSTALACIONES TÉCNICAS» eran el mismo cliente
 
