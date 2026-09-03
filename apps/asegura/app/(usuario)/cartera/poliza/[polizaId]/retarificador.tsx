@@ -14,10 +14,22 @@ import { eur } from '@/lib/dinero'
 
 type Consumo = { veredicto: Veredicto; gastadoMes: string } | { error: string }
 
+/**
+ * Un precio tal y como lo manda `/api/cartera/polizas/{id}/retarificar`.
+ *
+ * 🚨 Los nombres son los de `lib/codeoscopic/respuesta.ts` y NO se cambian por
+ * comodidad: este tipo se escribió a mano con `primaAnual`, el backend manda
+ * `primaEur`, y como todos los campos eran opcionales el desajuste no dio ni un
+ * error de tipos. La pantalla pintó «—» sobre primas que existían — 49,60€,
+ * 68,80€ y 84,80€ estaban guardadas en `seguros.tarificacion_precios` mientras
+ * la tabla decía que no había dato (medido el 03/09/2026, primera simulación
+ * real de Alberto). Un «no lo sé» inventado encima de un dato que sí estaba.
+ */
 type Precio = {
   compania?: string | null
   producto?: string | null
-  primaAnual?: number | null
+  /** Prima total del periodo, en euros. El nombre viene del backend. */
+  primaEur?: number | null
   firmeza?: string
   categoria?: string | null
   franquiciaEur?: number | null
@@ -881,7 +893,7 @@ function Precios({
                 <td>{p.producto ?? '—'}</td>
                 <td>{p.categoria ?? <span className="muted">sin declarar</span>}</td>
                 <td>
-                  <strong>{eur(p.primaAnual)}</strong>
+                  <strong>{eur(p.primaEur)}</strong>
                   {r.simulado && (
                     <>
                       {' '}
