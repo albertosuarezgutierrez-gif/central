@@ -419,6 +419,18 @@ Sus **11 catálogos** (todos gratis): `/motorcycle/` `brands` · `brands/{id}/mo
 `engine` es **obligatorio y enum cerrado** (`Gasoline` | `Diesel` | `Others`), mientras que en auto es
 texto libre.
 
+> 🚨 **CORREGIDO el 03/09/2026: en AUTO `engine` también es OBLIGATORIO.** Aquí ponía que en auto
+> era «texto libre», y se leyó como «opcional». No lo es: pedir
+> `/car/brands/731/models/8689/vehicles` sin él devuelve **400** — «Query parameter 'engine' is
+> required on path '/car/brands/{brandId}/models/{modelId}/vehicles' but not found in request.»
+> Medido en producción, con la pantalla de retarificar delante y el desplegable de versiones vacío.
+> Libre lo será el formato; opcional, no. Los valores salen del catálogo **`/car/engine-types`**
+> (gratis), nunca de un literal nuestro.
+>
+> Lección de método, la de siempre en este repo: **el snapshot del portal describe el contrato; el
+> contrato de verdad lo dicta la respuesta.** Un campo documentado como «libre» no es un campo que
+> se pueda omitir.
+
 ## 🚨 `onlyPopular` tiene `Default: true` — y nos estaba recortando las marcas
 
 `GET /car/brands` (y el de moto) admite `onlyPopular`, **por defecto `true`**. Llamarlo a secas

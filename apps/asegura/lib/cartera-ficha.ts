@@ -35,7 +35,12 @@ import { cotizacionesVivas, historialCliente, type HistorialFila } from './carte
 import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
-import type { ClienteCartera, PolizaCartera } from './codeoscopic/desde-cartera.ts'
+import type {
+  ClienteCartera,
+  PolizaCartera,
+  VehiculoConocido,
+  VersionCandidata,
+} from './codeoscopic/desde-cartera.ts'
 import { elegirRiesgo, hogarDeDatos, type HogarCartera } from './codeoscopic/desde-cartera-hogar.ts'
 import { estadoClavePii, type EstadoClavePii } from './pii-estado'
 
@@ -602,6 +607,63 @@ function ilegible(v: string | null | undefined): boolean {
  * 🚨 Ese recuento es «anotados», no «ocurridos». Se devuelve tal cual y es el
  * mapeador quien decide qué hacer con el cero — aquí no se interpreta.
  */
+/**
+ * Lo que la cartera sabe del COCHE de una póliza de auto.
+ *
+ * Marca y modelo salen de la propia póliza (o de su gemela del volcado, que a
+ * veces es la que los trae). La VERSIÓN no la trae ninguna póliza viva, así que
+ * se buscan las que hayan quedado anotadas en OTRAS pólizas de la misma
+ * matrícula — histórico incluido.
+ *
+ * 🚨 Esas versiones son PISTAS y viajan como tales:
+ *  - son texto libre del volcado, no códigos Base7 del catálogo del vendor;
+ *  - la misma matrícula puede traer dos que se contradigan (medido en
+ *    `0432GLT`: «FORTWO COUPE PURE 52…» y «FORFOUR PURE 1.1…»);
+ *  - por eso cada una viaja con su procedencia y NUNCA se elige sola.
+ *
+ * Si la consulta falla, `versiones` queda `[]` y marca/modelo siguen valiendo:
+ * no se tumba la pantalla por no haber podido mirar el histórico. Lo que no se
+ * hace nunca es afirmar una versión que no se ha leído.
+ */
+async function vehiculoDePoliza(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  polizaId: string,
+  matricula: string | null,
+  datos: Record<string, unknown> | null,
+  datosGemela: Record<string, unknown> | null,
+): Promise<VehiculoConocido> {
+  const marca = texto(datos?.marca) ?? texto(datosGemela?.marca)
+  const modelo = texto(datos?.modelo) ?? texto(datosGemela?.modelo)
+
+  // Sin matrícula no hay por dónde cruzar: se devuelve lo que se sepa y ya.
+  if (matricula === null) return { marca, modelo, versiones: [] }
+
+  const filas = await db
+    .$queryRaw<{ version: string; numero_poliza: string | null; historica: boolean }[]>`
+      select distinct
+        p.datos_especificos->>'version' as version,
+        p.numero_poliza,
+        (p.import_ref is not null) as historica
+      from polizas p
+      where p.correduria_id = ${correduriaId}::uuid
+        and p.merged_into_poliza_id is null
+        and p.id <> ${polizaId}::uuid
+        and upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g'))
+            = upper(regexp_replace(${matricula}, '[^A-Za-z0-9]', '', 'g'))
+        and nullif(btrim(p.datos_especificos->>'version'), '') is not null
+      limit 10
+    `
+    .catch(() => [] as { version: string; numero_poliza: string | null; historica: boolean }[])
+
+  const versiones: VersionCandidata[] = filas.map((f) => ({
+    version: f.version.trim(),
+    procedencia: `póliza ${f.numero_poliza ?? 'sin número'}${f.historica ? ' (histórica)' : ''}`,
+  }))
+
+  return { marca, modelo, versiones }
+}
+
 export type OrigenRetarificacion = {
   cliente: ClienteCartera
   poliza: PolizaCartera
@@ -714,10 +776,14 @@ export async function origenRetarificacion(
     fechaCarnet: normalizarFecha(descifrar(conductor?.fechaCarnet)),
   }
 
+  const matricula = datos ? texto(datos.matricula) : null
+  const vehiculo = await vehiculoDePoliza(db, correduriaId, p.id, matricula, datos, datosGemela)
+
   const poliza: PolizaCartera = {
     numeroPoliza: p.numeroPoliza ?? null,
     codigoEntidadDgs: p.codigoEntidadDgs ?? null,
-    matricula: datos ? texto(datos.matricula) : null,
+    matricula,
+    vehiculo,
     // La relación con la compañía empieza en el efecto inicial; si no consta,
     // vale el inicio de esta póliza. Si tampoco, `null` = no se sabe.
     fechaEfectoInicial: fechaIso(p.fechaEfectoInicial) ?? fechaIso(p.fechaInicio),

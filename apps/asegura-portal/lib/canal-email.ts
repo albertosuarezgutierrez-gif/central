@@ -25,6 +25,14 @@ export const canalEmail: Canal = {
       return false
     }
 
+    // Se manda DESDE el subdominio de envío (`envios.grupoasegura.es`, el que
+    // está verificado en Resend) pero se responde AL buzón único de la
+    // correduría. Verificar el dominio raíz obligaría a fusionar a mano el SPF
+    // de Resend con el de IONOS —solo puede haber un registro SPF— y un error
+    // ahí deja a la correduría sin correo de trabajo. Con `Reply-To` el cliente
+    // contesta a `hola@grupoasegura.es` sin tocar nada de eso.
+    const replyTo = process.env.PORTAL_MAIL_REPLY_TO?.trim() || undefined
+
     // El enlace es una comodidad, no el mecanismo: si no hay dominio
     // configurado el correo sale igual con el código, que es lo que de verdad
     // abre la puerta. Nunca al revés.
@@ -54,6 +62,7 @@ export const canalEmail: Canal = {
       await transporter.sendMail({
         from,
         to: destino,
+        ...(replyTo ? { replyTo } : {}),
         subject: `${codigo} es tu código de acceso`,
         text: texto,
         html,

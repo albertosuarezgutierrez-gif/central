@@ -5,6 +5,7 @@ import {
   marcas,
   modelos,
   versiones,
+  tiposDeMotor,
   tiposDeGaraje,
   estadosCiviles,
   municipiosPorCp,
@@ -49,13 +50,23 @@ export async function GET(req: Request) {
         if (!marcaId) return NextResponse.json({ error: 'falta marcaId' }, { status: 400 })
         return NextResponse.json({ opciones: await modelos(config, marcaId) })
       }
+      case 'motores':
+        return NextResponse.json({ opciones: await tiposDeMotor(config) })
       case 'versiones': {
         const marcaId = url.searchParams.get('marcaId')
         const modeloId = url.searchParams.get('modeloId')
-        if (!marcaId || !modeloId) {
-          return NextResponse.json({ error: 'faltan marcaId y modeloId' }, { status: 400 })
+        // 🚨 `motor` es obligatorio: sin él el vendor devuelve 400 y la pantalla
+        // se queda sin versiones — que es justo el dato que hay que elegir.
+        // Se rechaza aquí, con su nombre, en vez de dejar que el 400 del vendor
+        // llegue crudo a la pantalla (fue lo que pasó el 03/09/2026).
+        const motor = url.searchParams.get('motor')
+        if (!marcaId || !modeloId || !motor) {
+          return NextResponse.json(
+            { error: 'faltan marcaId, modeloId y motor' },
+            { status: 400 },
+          )
         }
-        return NextResponse.json({ opciones: await versiones(config, marcaId, modeloId) })
+        return NextResponse.json({ opciones: await versiones(config, marcaId, modeloId, motor) })
       }
       case 'garajes':
         return NextResponse.json({ opciones: await tiposDeGaraje(config) })
