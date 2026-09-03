@@ -26,6 +26,7 @@
 // (`recibido_at`, `abierto_en_compania_at`) los pone el corredor desde su app.
 import { comunicadoACompania, type ParteEstado, type ParteNormalizado } from '@central/module-seguros-portal'
 
+import { adjuntosPorParte, type AdjuntoParte } from './adjuntos-parte'
 import { prisma } from './db'
 import { getIdentidad } from './session'
 
@@ -59,6 +60,19 @@ export type PartePortal = {
   /** Póliza que el propio cliente aportó al portal. */
   polizaDeclaradaId: string | null
   creadoEn: Date
+  /**
+   * Los ficheros que adjuntó (fotos, el PDF del amistoso).
+   *
+   * 🚨 TRES estados, y el primero es el que importa:
+   *   - `null`  → **no se ha podido consultar**. La pantalla lo dice; no puede
+   *     pintar «no adjuntaste nada», que es afirmar algo que nadie ha mirado.
+   *   - `[]`    → se miró y no hay ninguno.
+   *   - con datos → los que hay.
+   *
+   * Un fallo al leer los adjuntos NO tumba la lista de partes: el parte, que es
+   * lo que de verdad importa, se sigue viendo.
+   */
+  adjuntos: AdjuntoParte[] | null
 }
 
 /**
@@ -101,9 +115,15 @@ export async function partesDeIdentidad(identidadId: string): Promise<PartePorta
     take: MAX_PARTES,
   })
 
+  // Una sola consulta para los adjuntos de TODOS los partes (nada de una por
+  // fila). `null` si falla: se propaga como «no se ha podido consultar» a cada
+  // parte, en vez de dejar a todos con la lista vacía.
+  const adjuntos = await adjuntosPorParte(identidadId, filas.map((f) => f.id))
+
   return filas.map((f) => ({
     ...f,
     comunicado: comunicadoACompania(f.estado),
+    adjuntos: adjuntos === null ? null : adjuntos.get(f.id) ?? [],
   }))
 }
 

@@ -30,6 +30,38 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos (03/09/2026, PR #2210).**
+  1️⃣ **El email de Alberto estaba en `cliente_emails` de DOS desconocidos**, así que `vincularIdentidad`
+  contaba 2 candidatos, devolvía `ambiguo` y su bóveda salía **vacía sin un solo error**. Ahora desempata
+  `lib/vinculo-elegir.ts` (puro, 10 tests): el email PRINCIPAL de una ficha es su identidad y gana a N
+  secundarios; dos principales siguen sin adivinarse. 2️⃣ **El SSO de Vercel (`all_except_custom_domains`
+  sin dominio propio) tapaba la producción entera** — bajado a `preview`: ningún cliente habría entrado
+  jamás. 3️⃣ El portal llevaba **3 despliegues en `ERROR`** por `node:crypto` en el barril. Prueba
+  montada: autorización **José Suarez Salas → Alberto** (`alcance ver`, `origen corredor`, nace
+  PENDIENTE: se acepta desde el portal) + relación Padre/Hijo. José tiene 6 pólizas, 4 vivas.
+  ⚠️ **Sin consentimiento escrito de José**: es una prueba, no un consentimiento acreditado.
+  🚨 Pendiente de Alberto, y corta el login antes que nada: confirmar `ASEGURA_PORTAL_SESSION_SECRET`
+  (falló hoy 08:06 con «no configurado en producción») y `ASEGURA_PORTAL_CANAL_PEPPER`.
+  Entra además: **adjuntos en el parte** (varios ficheros, el rechazado se explica y no tumba a los
+  demás; `documentos_colgado_de_algo` ampliado con `portal_parte_id` o los 32.520 leads no podían subir
+  nada).
+
+- **🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive (03/09/2026).**
+  El logo que había en Drive (`cropped-logo-bn-350x100-1.png`) **no servía**: recorte de WordPress de
+  **157×45 px** y **un solo gris `#F6F6F6`** sobre transparencia (377 px opacos de 7.065) — la variante
+  en blanco para fondos oscuros, sin un píxel de color del que sacar paleta. La marca real vive en
+  `app.grupoasegura.com`: azules declarados en **OKLCH** (`oklch(.4 .17 265)` / `(.62 .2 265)` /
+  `(.78 .14 264)` → **#193BA1 / #497CFD / #89B5FF**) y el **monograma «AS» vectorial** en `/icon.svg`.
+  Ambos traídos al repo: `packages/brand/src/marcas/asegura.ts` (`MARCA_ASEGURA`) y
+  `apps/asegura-portal/public/brand/marca-asegura.svg` (con `currentColor`). ⚠️ El portal sigue en el
+  **índigo `#4f46e5` por defecto de Tailwind** y **no consume `@central/brand`**: aplicarlo es lo siguiente.
+  🚫 **`grupoasegura.es` y `boe.es` los bloquea el proxy del entorno** (403 en el CONNECT); a la app se
+  llegó por `mcp__Vercel__web_fetch_vercel_url`, que no pasa por ahí. Apúntalo antes de perder el rato.
+  📌 «La mejor correduría de España» **no se puede escribir en una página**: superioridad sin acreditar
+  es práctica desleal (Ley 3/1991 arts. 5-7) más publicidad DGSFP. El mensaje que sí aguanta y que
+  nadie más tiene: el cliente ve **quién más ve sus pólizas** y se lo quita él.
+  🔐 En la carpeta ASEGURA de Drive hay un `contraseñas CODEOSCOPIC.docx` — avisado, sin abrir.
+
 - **🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera (03/09/2026).**
   Alberto: «minimalista, óptima y productiva» y «filtro por todo». Buscador arriba y cinco secciones
   **Hoy · Clientes · Cartera · Comisiones · Datos** con contador (`secciones.ts`, puro + 9 tests): una

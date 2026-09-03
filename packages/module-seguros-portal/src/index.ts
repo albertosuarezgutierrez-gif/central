@@ -39,3 +39,28 @@ export type {
   ResultadoParte,
   PlazoComunicacion,
 } from './parte-siniestro.ts'
+export {
+  ALCANCES,
+  ALCANCES_CONCEDIBLES,
+  TITULOS_REPRESENTACION,
+  alcancesConcedibles,
+  tituloRepresentacion,
+  DIAS_VIGENCIA,
+  ESTADOS_AUTORIZACION,
+  alcanceConcedible,
+  autorizacionVigente,
+  caducidadPorDefecto,
+  camposDeAlcance,
+  camposDeAlcances,
+  esAlcance,
+  estadoAutorizacion,
+  etiquetaNivelAlcances,
+  puedeAutorizar,
+} from './autorizacion.ts'
+export type {
+  Alcance,
+  AutorizacionFechas,
+  EstadoAutorizacion,
+  TipoOtorgante,
+  TituloRepresentacion,
+} from './autorizacion.ts'
