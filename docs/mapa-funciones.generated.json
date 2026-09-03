@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T04:31:44Z",
-  "sha": "e2d6fc5339ea6c50146551dc00cc9014a008d94a",
+  "generadoEn": "2026-09-03T05:00:23Z",
+  "sha": "7fd91031a753f45585c923929490dd2119130b88",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3531,7 +3531,7 @@
           "exportada": true,
           "params": "{ params, }: { params: Promise<{ polizaId: string }> }",
           "retorno": null,
-          "linea": 58,
+          "linea": 59,
           "resumen": "Pantalla de retarificación de UNA póliza. Todo lo que se hace aquí, en el servidor, es GRATIS: leer la ficha, resolver los catálogos y preguntar la fecha de matriculación por la matrícula. Lo que cues"
         },
         {
@@ -3540,7 +3540,7 @@
           "exportada": false,
           "params": "{ origen, detalle }: { origen: OrigenRetarificacion; detalle: string }",
           "retorno": null,
-          "linea": 114
+          "linea": 115
         },
         {
           "nombre": "PantallaAuto",
@@ -3548,7 +3548,7 @@
           "exportada": false,
           "params": "{ origen, polizaId, correduriaId, }: { origen: OrigenRetarificacion polizaId: string correduriaId: string }",
           "retorno": null,
-          "linea": 130
+          "linea": 131
         },
         {
           "nombre": "PantallaHogar",
@@ -3556,7 +3556,7 @@
           "exportada": false,
           "params": "{ origen, polizaId, correduriaId, }: { origen: OrigenRetarificacion polizaId: string correduriaId: string }",
           "retorno": null,
-          "linea": 244
+          "linea": 247
         },
         {
           "nombre": "Supuestos",
@@ -3564,7 +3564,7 @@
           "exportada": false,
           "params": "{ supuestos, }: { supuestos: Array<{ campo: string; valor: unknown; porque: string; optimista?: boolean }> }",
           "retorno": null,
-          "linea": 387
+          "linea": 390
         },
         {
           "nombre": "Fila",
@@ -3572,7 +3572,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, nota, }: { etiqueta: string valor: string | null nota?: string | null }",
           "retorno": null,
-          "linea": 417
+          "linea": 420
         },
         {
           "nombre": "errar",
@@ -3580,7 +3580,7 @@
           "exportada": false,
           "params": "_e: unknown",
           "retorno": "Opcion[]",
-          "linea": 445
+          "linea": 448
         },
         {
           "nombre": "hoyIso",
@@ -3588,12 +3588,12 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 451
+          "linea": 454
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "433187b28300"
+      "hash": "067160fa0112"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/poliza/[polizaId]/retarificador-hogar.tsx",
@@ -3683,20 +3683,115 @@
       ],
       "funciones": [
         {
+          "nombre": "buscarEnCatalogo",
+          "kind": "function",
+          "exportada": false,
+          "params": "catalogo: Opcion[], texto: string | null",
+          "retorno": "Emparejamiento",
+          "linea": 83,
+          "resumen": "Empareja un texto de la ficha con una opción del catálogo. Mismo criterio que `emparejar()` de `opciones.ts` —exacto y normalizado, y ante la duda no preselecciona— pero devolviendo POR QUÉ no ha casa"
+        },
+        {
           "nombre": "Retarificador",
           "kind": "function",
           "exportada": true,
-          "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, estadoCivilAuto, fechaMatriculacion, consumo, deshabilitado, }: { polizaId: string faltanInicial: Reparo[] garajes: Opcion[] civiles: Opcion[] municipios: Opcion[] estadoCivilAuto: Op",
+          "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, estadoCivilAuto, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, }: { polizaId: string faltanInicial: Reparo[] garajes: Opcion[] civiles: Opcion[] municipios: Opcion",
           "retorno": null,
-          "linea": 46,
-          "resumen": "El único sitio de la app donde un clic cuesta 0,50€. Tres cosas son deliberadas: - El botón dice el precio EN el botón, no en una nota al pie. - Se deshabilita mientras cotiza: `POST /insurances` no e"
+          "linea": 113,
+          "resumen": "El único sitio de la app donde un clic cuesta 0,50€ — **salvo en simulación**. Cuatro cosas son deliberadas: - El botón dice EN el botón lo que cuesta el clic, no en una nota al pie, y dice la verdad "
+        },
+        {
+          "nombre": "Precios",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, simulacion, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean }",
+          "retorno": null,
+          "linea": 744
+        },
+        {
+          "nombre": "BannerSimulacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 928,
+          "resumen": "El cartel de simulación, arriba del todo y sin ambigüedad. 🚨 Sustituye al aviso ROJO de «tarificación apagada» que se pintaba aquí. Ese aviso era falso con la simulación puesta: en `cotizar()` el pas"
+        },
+        {
+          "nombre": "CabeceraPaso",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ n, titulo, sub }: { n: number; titulo: string; sub?: string }",
+          "retorno": null,
+          "linea": 954
+        },
+        {
+          "nombre": "Paso",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ n, titulo, sub, children, }: { n: number titulo: string sub?: string children: React.ReactNode }",
+          "retorno": null,
+          "linea": 986
+        },
+        {
+          "nombre": "Campo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ id, etiqueta, falta, faltaTexto, ayuda, children, }: { id: string etiqueta: string falta: boolean faltaTexto?: string ayuda?: React.ReactNode children: React.ReactNode }",
+          "retorno": null,
+          "linea": 1012,
+          "resumen": "Un campo del formulario: etiqueta, control, ayuda y —si falta— su marca. La marca va AQUÍ y no en una lista encima del botón: «falta la versión» a diez centímetros del desplegable de la versión obliga"
+        },
+        {
+          "nombre": "SabidoDeLaFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ vehiculo, autoMarca, autoModelo, }: { vehiculo: VehiculoConocido autoMarca: Emparejamiento autoModelo: Emparejamiento }",
+          "retorno": null,
+          "linea": 1053,
+          "resumen": "Lo que la cartera YA sabe del coche: informativo, compacto y sin competir con los campos. Sustituye al texto que durante un día negó que la compañía mandara el modelo. Era falso y medido al revés: las"
+        },
+        {
+          "nombre": "Dato",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, valor, estado, }: { etiqueta: string valor: string | null estado: Emparejamiento['estado'] }",
+          "retorno": null,
+          "linea": 1093
+        },
+        {
+          "nombre": "ProcedenciaCatalogo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ emp, elegido, que, }: { emp: Emparejamiento elegido: string que: string }",
+          "retorno": null,
+          "linea": 1130,
+          "resumen": "De dónde sale lo que hay puesto en un desplegable — o por qué no hay nada."
+        },
+        {
+          "nombre": "PistasDeVersion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ versiones }: { versiones: VersionCandidata[] }",
+          "retorno": null,
+          "linea": 1177,
+          "resumen": "Las versiones vistas en OTRAS pólizas de la misma matrícula. 🚨 Son PISTAS, nunca una selección. Son texto histórico de otra póliza, no códigos Base7 del catálogo, y con dos o más pueden contradecirse"
+        },
+        {
+          "nombre": "Contador",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ consumo, simulacion }: { consumo: Consumo; simulacion: boolean }",
+          "retorno": null,
+          "linea": 1231,
+          "resumen": "El contador de gasto. En simulación no se toca el libro, así que su estado se cuenta como información de contexto y NO en rojo: un «tarificación apagada» en rojo sobre una pantalla que sí funciona y n"
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "71eb93721449"
+      "hash": "21a4a9fc2b9b"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/subir/page.tsx",
@@ -5475,7 +5570,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 59,
+          "linea": 64,
           "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa. Los valores cifrados llevan el prefijo `v1:`. Si no lo llevan, es que están en claro (así llegaron algunos del volcado) y se devuelven tal c"
         },
         {
@@ -5484,7 +5579,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 70,
+          "linea": 75,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null."
         },
         {
@@ -5493,7 +5588,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 74
+          "linea": 79
         },
         {
           "nombre": "fechaIso",
@@ -5501,7 +5596,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 78
+          "linea": 83
         },
         {
           "nombre": "buscarClientes",
@@ -5509,7 +5604,7 @@
           "exportada": true,
           "params": "correduriaId: string, termino: string, limite = 20,",
           "retorno": "Promise<ClienteEncontrado[]>",
-          "linea": 88,
+          "linea": 93,
           "resumen": "Busca clientes por nombre o apellidos. Nombre y apellidos van EN CLARO en la base, así que esta búsqueda no depende del índice ciego — que es justo lo que la hace fiable: si fallara la clave de lookup"
         },
         {
@@ -5518,7 +5613,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<FichaCliente | null>",
-          "linea": 287,
+          "linea": 292,
           "resumen": "La ficha entera de un cliente en UNA consulta: quién es, cómo se le llama, qué tiene contratado, cómo va de recibos y qué siniestros arrastra. Es el corazón del «pincho en el nombre y lo tengo todo». "
         },
         {
@@ -5527,7 +5622,7 @@
           "exportada": false,
           "params": "tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown",
           "retorno": "ObjetoAsegurado",
-          "linea": 512,
+          "linea": 517,
           "resumen": "El objeto de la póliza; si CIMA no lo informa y la gemela del volcado sí, el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre «no informado» (la dirección existe, solo que no se"
         },
         {
@@ -5536,7 +5631,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, idsPolizas: string[],",
           "retorno": "Promise<IntervinienteFicha[] | null>",
-          "linea": 538,
+          "linea": 543,
           "resumen": "Los intervinientes de las pólizas del cliente, ya descifrados. Nombre, teléfono y email del interviniente van cifrados (95 de 95 en las pólizas vivas). Cuando CIMA lo enlaza a su PROPIA ficha (`client"
         },
         {
@@ -5545,8 +5640,17 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 594,
+          "linea": 599,
           "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
+        },
+        {
+          "nombre": "vehiculoDePoliza",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, polizaId: string, matricula: string | null, datos: Record<string, unknown> | null, datosGemela: Record<string, unknown> | null,",
+          "retorno": "Promise<VehiculoConocido>",
+          "linea": 628,
+          "resumen": "- por eso cada una viaja con su procedencia y NUNCA se elige sola. Si la consulta falla, `versiones` queda `[]` y marca/modelo siguen valiendo: no se tumba la pantalla por no haber podido mirar el his"
         },
         {
           "nombre": "origenRetarificacion",
@@ -5554,7 +5658,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 627
+          "linea": 689
         },
         {
           "nombre": "normalizarFecha",
@@ -5562,13 +5666,15 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 746,
+          "linea": 812,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "polizas"
+      ],
       "rutaApi": null,
-      "hash": "ef215f60fdf3"
+      "hash": "f6b0a7ef373d"
     },
     {
       "ruta": "apps/asegura/lib/cartera-historial.ts",
@@ -6932,7 +7038,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 121
+          "linea": 156
         },
         {
           "nombre": "nombreUtil",
@@ -6940,7 +7046,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 127
+          "linea": 162
         },
         {
           "nombre": "partirApellidos",
@@ -6948,7 +7054,7 @@
           "exportada": true,
           "params": "apellidos: string | null",
           "retorno": "",
-          "linea": 134,
+          "linea": 169,
           "resumen": "«Pérez García» → ['Pérez', 'García']. El vendor quiere los dos por separado."
         },
         {
@@ -6957,7 +7063,7 @@
           "exportada": true,
           "params": "saludo: string | null",
           "retorno": "'hombre' | 'mujer' | null",
-          "linea": 150,
+          "linea": 185,
           "resumen": "Sexo a partir del tratamiento del CRM. Medido el 01/09/2026 sobre las 32.600 fichas: con `saludo='1'` los nombres de pila más frecuentes son Jose, Juan, Antonio, Francisco y Manuel; con `'2'`, María. "
         },
         {
@@ -6966,7 +7072,7 @@
           "exportada": true,
           "params": "desde: string | null, hasta: string",
           "retorno": "number | null",
-          "linea": 162,
+          "linea": 197,
           "resumen": "Años completos entre dos fechas aaaa-mm-dd. `null` si alguna no es fecha."
         },
         {
@@ -6975,7 +7081,7 @@
           "exportada": true,
           "params": "f: string",
           "retorno": "string",
-          "linea": 171,
+          "linea": 206,
           "resumen": "El día siguiente a una fecha aaaa-mm-dd."
         },
         {
@@ -6984,7 +7090,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaCartera, resueltos: Resueltos, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 183,
+          "linea": 218,
           "resumen": "Construye la precalificación. `hoy` entra por parámetro para que la función sea pura y los tests no dependan del calendario."
         },
         {
@@ -6993,7 +7099,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "boolean",
-          "linea": 305,
+          "linea": 340,
           "resumen": "¿Se puede cotizar ya? Azúcar para la pantalla y para el puerto, que tienen que decidir lo mismo y no deben hacerlo cada uno a su manera."
         },
         {
@@ -7002,13 +7108,13 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "Supuesto[]",
-          "linea": 314,
+          "linea": 349,
           "resumen": "Los supuestos que cambian el precio a mejor. La pantalla los enseña aparte porque son los que pueden decepcionar luego: si el cliente sí tuvo siniestros, la prima real sube respecto a lo que se le ha "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3da41f224f9a"
+      "hash": "4a05d70d1612"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/horquilla.ts",
@@ -112959,6 +113065,6 @@
   ],
   "resumen": {
     "archivos": 2871,
-    "funciones": 8380
+    "funciones": 8392
   }
 }

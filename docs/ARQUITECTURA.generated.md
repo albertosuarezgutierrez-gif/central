@@ -257,6 +257,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (03/09/2026) 🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto
+- (03/09/2026) 🔧 «Retarificar» mentía dos veces, y las dos igual: un «no lo sé» convertido en «no lo hay»
 - (03/09/2026) ✅ Tarificaciones guardadas APLICADAS en la BD
 - (03/09/2026) Correduría: «Global2» y «GLOBAL 2 INSTALACIONES TÉCNICAS» eran el mismo cliente
 - (02/09/2026) 📅 Intranet del cliente CONSTRUIDA: calendario, aviso y enlace de un clic
@@ -265,5 +266,4 @@
 - (02/09/2026) 👤 «Personas en sus pólizas», arriba en la ficha
 - (02/09/2026) 🏢 GLOBAL 2: el titular no salía en su propia póliza
 - (02/09/2026) 🗓️ Intranet de clientes de la correduría: spec del calendario de vencimientos
-- (02/09/2026) 🏠🏍️ «Haz todo» + el catálogo de Avant2
 
