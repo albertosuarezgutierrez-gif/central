@@ -371,7 +371,15 @@ async function polizasDeClientes(
       -- Las dos primas son la MISMA magnitud en dos columnas distintas; si
       -- ninguna trae dato, el resultado es null. Nunca 0: «no informada» y
       -- «gratis» no se pueden confundir en una lista de comisiones.
-      coalesce(prima_bruta, prima_anual)::float8 as prima
+      --
+      -- 🚨 Y el nullif NO es cosmética: un 0 GUARDADO tampoco es una prima.
+      -- Medido el 03/09/2026 sobre la cartera viva: 60 pólizas traen importe,
+      -- 26 lo traen NULL y **24 lo traen a 0**. Sin esto, esas 24 filas
+      -- pintarían «0,00€» —una afirmación sobre lo que paga el cliente que
+      -- nadie ha comprobado— en vez de «sin dato». Es el mismo criterio que ya
+      -- aplica primaReferencia en la ficha de la póliza; si algún día una
+      -- prima de 0€ fuera real, se distinguirá en origen, no aquí.
+      nullif(coalesce(prima_bruta, prima_anual), 0)::float8 as prima
     from (
       select p.*, row_number() over (
         partition by p.cliente_id order by p.fecha_vencimiento desc nulls last, p.id

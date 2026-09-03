@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { Shield, CalendarClock, Landmark, FolderOpen, Plus, House, Users } from 'lucide-react'
+import { Shield, CalendarClock, Landmark, FolderOpen, Plus, House } from 'lucide-react'
 import { Pagina, PageHeader, BtnLink, Badge } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
@@ -13,6 +13,7 @@ import SinCanal from './SinCanal'
 import PartesPortal from './PartesPortal'
 import Bloque from './Bloque'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
+import ListaCartera from './ListaCartera'
 import Secciones, { type ContadoresSeccion } from './Secciones'
 import { MOTIVOS, type MotivoError } from './estado-puerto'
 import {
@@ -133,6 +134,7 @@ export default function CorreduriaClient() {
   const [nSinCanal, setNSinCanal] = useState<number | null | undefined>(undefined)
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
+  const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
 
   // La sección inicial viaja en la URL (`?s=`), y los cambios la reescriben con
   // `history.replaceState`: un enlace sigue llevando donde debe, pero cambiar
@@ -193,6 +195,13 @@ export default function CorreduriaClient() {
       contador: agregarContadores([nPartes, nRetencion, nRenovaciones]),
       tono: 'malo',
       title: 'Partes sin atender, recibos que reclamar y renovaciones dentro del plazo de preaviso',
+    },
+    clientes: {
+      // Aquí el número NO es trabajo pendiente, es cuántos clientes cumplen el
+      // filtro. Por eso va en tono neutro: pintarlo de alarma como los demás
+      // haría que una cartera sana pareciera una cola de trabajo.
+      contador: agregarContadores([nClientes]),
+      title: 'Clientes que cumplen el filtro actual',
     },
     comisiones: {
       contador: agregarContadores([nCuadre]),
@@ -273,17 +282,7 @@ export default function CorreduriaClient() {
           provincia, vencimiento o hueco de venta cruzada, y sacar la lista.
           Es la herramienta de trabajo; «Cartera» es la foto. */}
       <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
-        <Bloque
-          titulo="Clientes"
-          Icono={Users}
-          sub="El listado filtrable de la cartera: por ramo, compañía, provincia, vencimiento o hueco de venta cruzada."
-        >
-          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
-            Todavía no está montado: el puerto de asegura no tiene endpoint de listado —hoy solo hay
-            buscador por texto—, así que esta sección espera a que exista. No significa que no haya
-            clientes: están en la cartera y se buscan arriba.
-          </p>
-        </Bloque>
+        <ListaCartera onContador={setNClientes} />
       </div>
 
       {/* ══ CARTERA ══════════════════════════════════════════════════════════ */}
