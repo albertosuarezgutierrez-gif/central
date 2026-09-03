@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✅ El libro de comisiones vuelve a leer la cartera — incidente `asegura_error` CERRADO (03/09/2026).**
+  Verificado tras el cron de las 07:30 UTC: **12 filas en `comisiones_devengo` + 4 en `comisiones_cobertura`,
+  todas `leido_ok = true`**, con datos reales (Mapfre, Allianz, Occident, Reale y liquidaciones CIMA con hash).
+  Cero `password authentication failed` en `postgres_logs` desde la rotación del 02/09 a las 10:17 → la causa
+  medida (`credenciales`: `DATABASE_URL` de Vercel `central-asegura` desfasado respecto a `prisma_seguros`)
+  está resuelta. ⚠️ **La hipótesis del `?schema=seguros` forzado NUNCA fue la causa** — sigue escrita como
+  falsa a propósito en los tres `CLAUDE.md`. Pendiente distinto y sano: `banco_total` a NULL en las 12 filas
+  = conciliación bancaria «aún no comprobada», no 0 €. PRs previos #2029 → #2034 → #2047 → #2049.
+
 - **🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente` (03/09/2026).**
   Alberto preguntó por María Alcalá (hogar Mapfre, «🔴 Sin cobertura · hace 56 días»). Medido en BD: el recibo
   de 225,97€ está **`pendiente`**, DOMICILIADO, póliza en vigor, y su fila no se toca desde la carga del 24/06
