@@ -16,6 +16,8 @@ import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
+import { sqlCompDeNuestraLiga, sqlNotaCreible } from "@/lib/sivra/pricing-comps-liga"
+import { aplicarTechoAdr } from "@/lib/sivra/pricing-techo-adr"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
 import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
 import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
@@ -128,7 +130,10 @@ export async function POST(req: NextRequest) {
         percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric med,
         percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric flo,
         percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric cei,
-        percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)::numeric mkt_score,
+        -- Solo notas CREIBLES: un 10,0 con 6 resenas no mide nada y movia esta mediana (el caso
+        -- real, 68 apariciones en el corpus de Busto). Ver sqlNotaCreible.
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)
+          FILTER (WHERE ${Prisma.raw(sqlNotaCreible("m."))})::numeric mkt_score,
         COUNT(*)::int AS sample_n,
         (CURRENT_DATE - MAX(l.sd))::int AS market_age_days
       FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
@@ -138,6 +143,10 @@ export async function POST(req: NextRequest) {
         -- Plausibilidad €/plaza (17/08/2026): un comp muy por debajo del minimo por plaza es una
         -- HABITACION vestida de piso entero (ver pricing-comps-plausibles.ts) y no entra al percentil.
         AND ${Prisma.raw(sqlCompPlausible("m."))}
+        -- Liga (03/09/2026): un comp con nota CREIBLE muy por encima de la nuestra no es competencia
+        -- nuestra. Sin esto, el corpus de Busto (6,9) tenia una mediana de 8,8 y el 100% de sus comps
+        -- puntuaba mejor. Ver pricing-comps-liga.ts.
+        AND ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))}
       GROUP BY m.scenario, s.target_pctl, s.floor_pctl, s.ceil_pctl
     ),
     occ AS (
@@ -155,7 +164,7 @@ export async function POST(req: NextRequest) {
       -- Los dos factores del ajuste, POR SEPARADO: el de demanda se gatea por fecha segun la
       -- antelacion real del piso (ver pricing-demanda.ts) y el de calidad aplica siempre.
       GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)::float8 AS demand_factor,
-      GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90)::float8 AS quality_factor,
+      GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.75)::float8 AS quality_factor,
       -- Los ingredientes del factor de demanda, en crudo: hacen falta para RECALCULARLO con la
       -- ocupacion del MES de cada fecha (ver pricing-demanda.ts). El de arriba, con la
       -- ocupacion anual, queda de fallback para los meses sin snapshot.
@@ -409,6 +418,9 @@ export async function POST(req: NextRequest) {
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
+      -- LEFT y no JOIN: sin fila de ajustes no sabemos en que liga jugamos, y eso DEJA PASAR al
+      -- comparable (ver pricing-comps-liga.ts), nunca lo descarta en silencio.
+      LEFT JOIN pricing_settings sl ON sl.property_id = m.scenario
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
@@ -421,6 +433,10 @@ export async function POST(req: NextRequest) {
         AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
         AND ${Prisma.raw(sqlCompPlausible("m."))}
+        -- Liga (03/09/2026): fuera los comps con nota creible MUY por encima de la nuestra. El
+        -- corpus de un piso puntuado 6,9 traia Mercer Residences (9,1) y Palacio Bucarelli (9,1),
+        -- y el motor tomaba su percentil 55. Ver pricing-comps-liga.ts.
+        AND ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
@@ -477,12 +493,19 @@ export async function POST(req: NextRequest) {
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
+      -- LEFT y no JOIN: sin fila de ajustes no sabemos en que liga jugamos, y eso DEJA PASAR al
+      -- comparable (ver pricing-comps-liga.ts), nunca lo descarta en silencio.
+      LEFT JOIN pricing_settings sl ON sl.property_id = m.scenario
       WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
         AND m.checkin_date >= CURRENT_DATE
         AND m.search_date >= CURRENT_DATE - 120
         AND NOT m.corpus_clonado   -- mismo motivo que en el bucket del mes
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
         AND ${Prisma.raw(sqlCompPlausible("m."))}
+        -- Liga (03/09/2026): fuera los comps con nota creible MUY por encima de la nuestra. El
+        -- corpus de un piso puntuado 6,9 traia Mercer Residences (9,1) y Palacio Bucarelli (9,1),
+        -- y el motor tomaba su percentil 55. Ver pricing-comps-liga.ts.
+        AND ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,
@@ -537,6 +560,14 @@ export async function POST(req: NextRequest) {
       porPiso.get(row.pid)!.push({ mes: row.m, adr: row.adr, nights: row.nights })
     }
     for (const [pid, rows] of porPiso) priorIdx.set(pid, indicesPrior(rows))
+  }
+  // ADR BRUTO propio por piso x mes, de la MISMA lectura que el prior (no es una consulta mas).
+  // Alimenta el techo por ADR (`pricing-techo-adr.ts`): el prior solo sabe multiplicar el ancla de
+  // mercado por un indice, asi que nada comparaba nunca el precio con euros que alguien haya pagado.
+  const adrMes = new Map<string, Map<number, { adr: number; nights: number }>>()
+  for (const row of priorRows) {
+    if (!adrMes.has(row.pid)) adrMes.set(row.pid, new Map())
+    adrMes.get(row.pid)!.set(row.m, { adr: Number(row.adr), nights: Number(row.nights) })
   }
 
   // ─── Velocidad de conversión por mes (17/07/2026, OK de Alberto) ───────────────────────
@@ -746,6 +777,10 @@ export async function POST(req: NextRequest) {
     // la respuesta a propósito: un precio que baja por el techo debe poder distinguirse de uno que
     // baja porque el mercado del mes se hundió.
     const techoAcotadas: { fecha: string; techo: number; origen: "fecha" | "mes" }[] = []
+    // Fechas recortadas por el TECHO POR ADR PROPIO. Viajan a la respuesta a proposito: si
+    // este rail muerde en fechas normales, la senal es que el ancla de mercado se ha vuelto a
+    // ir de liga — no que el rail este haciendo bien su trabajo en silencio.
+    const adrAcotadas: { fecha: string; techo: number; adr: number }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -992,6 +1027,33 @@ export async function POST(req: NextRequest) {
       // del PROPIETARIO: max_price manda siempre (hoy NULL en los cuatro, pero el orden importa).
       if (r.max_price != null) target = Math.min(target, r.max_price)
       if (acote.acotado) techoAcotadas.push({ fecha: date, techo: tMkt.techo, origen: tMkt.origen! })
+      // 💶 TECHO por ADR PROPIO (03/09/2026, ver pricing-techo-adr.ts). El techo de arriba mira el
+      // MERCADO; este mira los euros que este piso ha cobrado de verdad ese mes. Hacia falta porque
+      // un ancla de mercado envenenada -comps fuera de nuestra liga- se propagaba entera hasta
+      // Smoobu sin que nada la contrastara: los tres pisos que no se venden pedian x1,6-3,1 lo que
+      // habian cobrado en su vida. NO toca las fechas de evento (el historico del mes no las
+      // describe) y desciende por el mismo `acotarPorTecho`, o sea a velocidad de rail y sin
+      // perforar min_price.
+      //
+      // Se DESCARTA su `liberaCongelacion`, y es correcto, no un olvido: las dos guardas que ese
+      // flag desactiva (Karol G con evFactor >= 2, y «evento a ciegas» desde 1,15) solo actuan en
+      // fechas de EVENTO, que son exactamente las que este techo no toca. Propagarlo solo podria
+      // descongelar una fecha de evento por una via que nunca la ha juzgado.
+      {
+        const aq = adrMes.get(r.property_id)?.get(Number(ym.slice(5, 7)))
+        const tAdr = aplicarTechoAdr({
+          objetivo: target,
+          adrBase: aq ? aBase(aq.adr) : null,
+          nochesMuestra: aq?.nights ?? 0,
+          factorEvento: evFactor,
+          suelo: r.min_price,
+        })
+        if (tAdr.motivo === 'aplicado' && tAdr.techo != null) {
+          const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: r.min_price })
+          if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBase(aq!.adr)) })
+          target = acA.target
+        }
+      }
       const liberaTecho = acote.liberaCongelacion
       // 🔓 Segunda llave (27/08/2026). El techo solo abre donde hay mercado MEDIDO de la fecha, y
       // eso es una cuarta parte del calendario: 249 de 279 noches congeladas no podían salir nunca.
@@ -1175,6 +1237,10 @@ export async function POST(req: NextRequest) {
       // Fechas recortadas por el techo de mercado medido en esta pasada (y de dónde salió el techo).
       techo_mercado: techoAcotadas.length > 0
         ? { fechas: techoAcotadas.length, sample: techoAcotadas.slice(0, 5) }
+        : undefined,
+      // Fechas recortadas por el techo por ADR propio (03/09/2026). Ver `pricing-techo-adr.ts`.
+      techo_adr: adrAcotadas.length > 0
+        ? { fechas: adrAcotadas.length, sample: adrAcotadas.slice(0, 5) }
         : undefined,
       // Fechas de evento confirmado que NO se bajaron por falta de mercado fiable propio. Van en la
       // respuesta a propósito: un precio congelado que no se declara es indistinguible de uno olvidado.
