@@ -29,13 +29,22 @@
 --      caen Matito (52) y Antonio Sevico (16, que además es «conductor ocasional»
 --      del propio Matito). El tercero de la lista no pasa de 3 tomadores, así que
 --      no hay zona gris que arbitrar.
+--   3. 🚨 **el comodín NO es el TOMADOR de esa póliza.** Dictado por Alberto el
+--      03/09/2026 al revisar este lote: «matito no conduce 52 coches, quitado, si
+--      no es tomador». Lo suyo es suyo: figurar en la póliza de la que uno es
+--      titular no es un comodín, es el titular. Medido: no salva ninguna de las 77
+--      filas de interviniente (Matito 0 de 59, Sevico 0 de 18 son sobre pólizas
+--      propias), **pero sí 2 relaciones** — el par «Matito tomador ↔ Sevico su
+--      conductor ocasional», en sus dos sentidos, que es un vínculo de verdad.
+--      Se deja escrita aunque hoy no salve intervinientes: la próxima ejecución
+--      sobre otros datos la necesita.
 --
 -- Se borran también sus relaciones «Ocasional/Contacto - Tomador», que son la otra
 -- cara del mismo comodín (es de donde sale la etiqueta «Tomador - Ocasional» que se
 -- pinta bajo el nombre). **NO se tocan las relaciones de familia** —Hijo/a,
 -- Cónyuge/Pareja de Hecho, Padre/Madre, Amigo/a, Empresa, Administración—, que son
 -- dato bueno, ni ninguna con `puede_ver_polizas = true`: comprobado antes de
--- escribir esto, **ninguna de las 120 candidatas lleva autorización** (la lección
+-- escribir esto, **ninguna de las 118 candidatas lleva autorización** (la lección
 -- del lote 5 fue justo esa: el consentimiento colgaba de la ficha que no era).
 --
 -- REVERSIBLE POR DISEÑO: nada se borra sin dejar antes la fila entera en
@@ -114,7 +123,11 @@ begin
   --    fila de CIMA de Matito; sin ella este lote borraría dato bueno y vivo.
   for r in
     select pi.* from seguros.poliza_intervinientes pi
-    where pi.cliente_id = any(comodines) and pi.origen = 'manual'
+    join seguros.polizas p on p.id = pi.poliza_id
+    where pi.cliente_id = any(comodines)
+      and pi.origen = 'manual'
+      -- Guarda 3: en SU propia póliza no es un comodín, es el titular.
+      and p.cliente_id is distinct from pi.cliente_id
   loop
     insert into seguros.interviniente_purga_log
       (correduria_id, tabla, fila_id, cliente_id, motivo, lote, actor, snapshot_before)
@@ -136,6 +149,14 @@ begin
       and cr.tipo_relacion in (
         'Ocasional - Tomador', 'Tomador - Ocasional',
         'Contacto - Tomador', 'Tomador - Contacto'
+      )
+      -- Guarda 3, aquí: el tipo es «papel de A - papel de B», así que el comodín
+      -- es el TOMADOR si está en A con 'Tomador - …' o en B con '… - Tomador'.
+      -- Ese vínculo se queda (hoy son 2 filas: Matito tomador ↔ Sevico ocasional).
+      and not (
+        (cr.cliente_a_id = any(comodines) and split_part(cr.tipo_relacion, ' - ', 1) = 'Tomador')
+        or
+        (cr.cliente_b_id = any(comodines) and split_part(cr.tipo_relacion, ' - ', 2) = 'Tomador')
       )
   loop
     insert into seguros.interviniente_purga_log
@@ -164,4 +185,4 @@ end $$;
 --  group by origen;                                                    -- cima | 1
 --
 -- select count(*) from seguros.interviniente_purga_log
---  where lote = 'purga-comodin-2026-09-03';                            -- 77 + 120 = 197
+--  where lote = 'purga-comodin-2026-09-03';                            -- 77 + 118 = 195

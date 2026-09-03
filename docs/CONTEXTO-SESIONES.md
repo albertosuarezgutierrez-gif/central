@@ -43,9 +43,11 @@
   de **52 tomadores sin relación entre sí** (Antonio Sevico, 16). Las 408 filas `origen='manual'` de
   `poliza_intervinientes` son del 21/06 y NINGUNA toca cartera viva; las 96 de CIMA sí. 🚨 **Matito es
   real**: 59 filas basura + **1 de CIMA (conductor habitual, con NIF, póliza viva) que se queda**. Lote
-  reversible escrito y **SIN EJECUTAR** (`2026-09-03_purga_intervinientes_comodin_lote6.sql`: 77
-  intervinientes + 120 relaciones ocasional/contacto sin autorización; familia intacta). Y «no se puede
-  borrar» es literal: el puerto no tiene **ningún DELETE** de intervinientes ni relaciones.
+  lote reversible **EJECUTADO** (`..._purga_intervinientes_comodin_lote6.sql`): **77 intervinientes +
+  118 relaciones**, 195 snapshots en `interviniente_purga_log` (append-only). Alberto añadió la 3ª
+  guarda —«si no es tomador»—, que salva 2 relaciones (Matito tomador ↔ Sevico ocasional). Verificado:
+  a Matito le queda 1 fila y es la de CIMA; 0 personas con ≥4 tomadores. Y «no se puede borrar» era
+  literal: el puerto no tiene **ningún DELETE** de intervinientes ni relaciones.
 - **⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición (03/09/2026).**
   Alberto pidió estudio legal y benchmark sectorial para «José autoriza a María a ver sus pólizas».
   🚨 Medido: **104 `cliente_relaciones.puede_ver_polizas = true`, TODAS creadas el 21/06/2026** (día del

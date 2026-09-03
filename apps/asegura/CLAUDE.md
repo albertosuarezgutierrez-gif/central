@@ -791,8 +791,8 @@ El paso 1 y el 3 son `GET`/`POST /api/operador/backfill-dni` (vive aquí porque 
 siempre: un DNI que **no descifra es `ilegible`, jamás «sin DNI»**, y un valor de cajón
 (`PENDIENTE`, `X`) **no genera hash** para que no funda a dos personas.
 
-🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ESCRITO Y SIN
-EJECUTAR: el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un
+🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ✅ EJECUTADO:
+el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un
 error». Las dos mitades ciertas y por motivos distintos:
 - **Francisco Chacón Matito figura de conductor ocasional en pólizas de 52 tomadores sin relación
   entre sí** (Phenix Automoción, Kartenbrot, Esquiansa y 49 particulares); Antonio Sevico, 16, y es
@@ -804,10 +804,19 @@ error». Las dos mitades ciertas y por motivos distintos:
   HABITUAL, con NIF, póliza viva) **que se queda** — borrarla no serviría: el siguiente pull la
   recrearía. La frontera es limpia y no hay que adivinarla: las **408** filas `manual` de
   `poliza_intervinientes` cuelgan TODAS de pólizas del volcado; las **96** de CIMA, todas de vivas.
-- Alcance: **77 intervinientes + 120 relaciones** ocasional/contacto, y **ninguna de las 120 lleva
-  `puede_ver_polizas`** (la lección del lote 5: el consentimiento colgaba de la ficha que no era). Las
-  8 de familia —Hijo/a, Cónyuge, Padre/Madre, Amigo/a, Empresa, Administración— se quedan. Reversible:
-  `seguros.interviniente_purga_log.snapshot_before`, append-only por trigger.
+- 🚨 **Tercera guarda, dictada por Alberto al revisar el lote: «si no es tomador».** En SU propia
+  póliza uno no es un comodín, es el titular. Medido: **no salva ningún interviniente** (Matito 0 de
+  59, Sevico 0 de 18 eran sobre pólizas propias) **pero sí 2 relaciones** — el par «Matito tomador ↔
+  Sevico su conductor ocasional», en sus dos sentidos, que es un vínculo de verdad. Queda cableada
+  aunque hoy solo actúe en un sitio.
+- Alcance FINAL: **77 intervinientes + 118 relaciones** ocasional/contacto, y **ninguna de las 118
+  llevaba `puede_ver_polizas`** (la lección del lote 5: el consentimiento colgaba de la ficha que no
+  era). Reversible: `seguros.interviniente_purga_log.snapshot_before`, append-only por trigger.
+- ✅ **Verificado tras ejecutar (03/09/2026):** 195 filas en el log; a Matito le queda **1** fila de
+  interviniente y es la de **CIMA**; entre los dos quedan **10** relaciones (8 de familia/empresa +
+  las 2 salvadas); **0 personas** intervienen ya en pólizas de ≥4 tomadores. ⚠️ Ese recuento solo da
+  0 si se excluye `cliente_id IS NULL`: hay 6 intervinientes de CIMA sin ficha enlazada que agrupan
+  juntos y parecen «una persona con 5 tomadores» sin serlo.
 - ⚠️ **Y «no se puede borrar» es LITERAL: el puerto no tiene ningún `DELETE`** de intervinientes ni de
   relaciones (`/api/operador/cliente` es GET · POST · PATCH). No es un botón roto: la operación no
   existe, y hasta que exista el próximo comodín también se quitará por SQL.
