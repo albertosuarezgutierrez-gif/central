@@ -196,10 +196,17 @@ type FilaCotizacion = {
 /**
  * Código de Postgres para «la tabla no existe» (`undefined_table`).
  *
- * ⏳ Guarda TEMPORAL: `seguros.cotizaciones` todavía no está creada — su SQL
- * (`prisma/sql/2026-09-02_cotizaciones_guardadas.sql`) está sin aplicar. En
+ * ⏳ Guarda TEMPORAL: `seguros.tarificaciones` todavía no está creada — su SQL
+ * (`prisma/sql/2026-09-02_tarificaciones_guardadas.sql`) está sin aplicar. En
  * cuanto se aplique, esta guarda y el `catch` de abajo se pueden BORRAR y la
  * consulta pasa a fallar como cualquier otra.
+ *
+ * 🚨 Y ojo con el nombre, que ya costó un susto: **`seguros.cotizaciones` SÍ
+ * existe** y NO es esta — es la del cotizador web (25 filas, viva, la lee
+ * `cartera-historial.ts` para el contador de presupuestos de la ficha). Por eso
+ * estas tablas se llaman `tarificaciones`. Verlas con el mismo nombre llevó a
+ * dar por aplicable un `create table if not exists` que sobre la tabla vieja
+ * es un no-op SILENCIOSO: Postgres suelta un NOTICE y Supabase pinta «Success».
  */
 const TABLA_INEXISTENTE = '42P01'
 
@@ -233,7 +240,7 @@ async function casosDeCotizaciones(
         co.metros_cuadrados                                as metros,
         co.anio_construccion                               as anio,
         co.capital_continente::float8                      as capital
-      from seguros.cotizaciones co
+      from seguros.tarificaciones co
       -- 🚨 UNA cotización = UN caso, no uno por precio recibido.
       --
       -- Una tarificación devuelve el precio de N compañías para la MISMA casa.
@@ -243,8 +250,8 @@ async function casosDeCotizaciones(
       -- «lo que ese riesgo puede conseguir».
       join lateral (
         select cp2.compania, cp2.prima_eur
-        from seguros.cotizacion_precios cp2
-        where cp2.cotizacion_id = co.id
+        from seguros.tarificacion_precios cp2
+        where cp2.tarificacion_id = co.id
           and cp2.prima_eur > 0
         order by cp2.prima_eur asc
         limit 1
