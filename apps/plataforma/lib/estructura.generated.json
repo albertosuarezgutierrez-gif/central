@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-03T13:57:58Z",
+  "generadoEn": "2026-09-03T18:36:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -355,7 +355,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 3
       },
       "housesevillana": {
         "estado": "no",
@@ -1955,7 +1955,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 17
+        "evidencias": 18
       },
       "housesevillana": {
         "estado": "no",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "housesevillana": {
         "estado": "no",
