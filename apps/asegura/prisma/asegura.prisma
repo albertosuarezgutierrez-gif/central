@@ -726,6 +726,11 @@ model PortalAutorizacion {
   otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
   autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
   alcance                String
+  /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
+  /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta;
+  /// el CHECK `portal_autorizacion_apoderamiento_con_titulo` lo exige en cuanto el
+  /// alcance es `partes` o `documentos`. Las de una persona física van siempre a `null`.
+  tituloRepresentacion   String?   @map("titulo_representacion")
   origen                 String    @default("portal")
   otorgadoEn             DateTime  @default(now()) @map("otorgado_en") @db.Timestamptz(6)
   otorgadoPorIdentidadId String?   @map("otorgado_por_identidad_id") @db.Uuid

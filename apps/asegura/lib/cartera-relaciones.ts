@@ -38,8 +38,11 @@ import {
   caducidadPorDefecto,
   esAlcance,
   estadoAutorizacion,
+  tituloRepresentacion,
   type Alcance,
   type EstadoAutorizacion,
+  type TipoOtorgante,
+  type TituloRepresentacion,
 } from '@central/module-seguros-portal'
 import { prismaAsegura } from './asegura-db'
 
@@ -51,6 +54,35 @@ export const TEXTO_AUTORIZACION_CORREDOR_V1 = 'v1-2026-09-03-corredor'
 
 /** El alcance que se anota si no se dice otro: el más pequeño. */
 export const ALCANCE_POR_DEFECTO: Alcance = 'ver'
+
+/** Los dos alcances que son ACTUAR en nombre de otro. Solo los delega una SOCIEDAD. */
+const APODERAMIENTO: readonly Alcance[] = ['partes', 'documentos']
+
+function esApoderamiento(a: Alcance): boolean {
+  return APODERAMIENTO.includes(a)
+}
+
+/**
+ * Qué es la ficha que cede, leído de `clientes.tipo_persona`.
+ *
+ * 🚨 `null` = **no consta**, y se trata como `'fisica'`, que es el lado
+ * restrictivo: de una persona solo se delega mirar. Tratar el hueco como
+ * sociedad repartiría apoderamientos por una columna vacía — y hoy la mayoría de
+ * la cartera la tiene a NULL. Al PINTAR sí se distingue (`tipoOtorgante` viaja
+ * como `null`): no es lo mismo «es una persona» que «no lo hemos podido leer».
+ */
+function tipoDeFicha(v: string | null | undefined): TipoOtorgante {
+  return v === 'juridica' ? 'juridica' : 'fisica'
+}
+
+/** El tipo de persona de una ficha de ESTA correduría. `null` = no existe o está fusionada. */
+async function tipoPersonaDe(correduriaId: string, clienteId: string): Promise<TipoOtorgante | null> {
+  const f = await prismaAsegura().cliente.findFirst({
+    where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
+    select: { tipoPersona: true },
+  })
+  return f === null ? null : tipoDeFicha(f.tipoPersona)
+}
 
 /**
  * La autorización que gobierna un vínculo, tal y como se pinta.
@@ -67,6 +99,11 @@ export type AutorizacionRelacion = {
   estado: EstadoAutorizacion
   /** Los alcances que están en ese estado (uno por fila; la BD deja varios). */
   alcances: Alcance[]
+  /**
+   * Con qué título representa a la sociedad quien la recibió. `null` = no consta
+   * — lo normal cuando cede una persona, porque ahí no se representa a nadie.
+   */
+  tituloRepresentacion: string | null
   caducaEn: Date
   /** `portal` = lo concedió el cliente en su pantalla · `corredor` = lo anotó la correduría. */
   origen: string
@@ -75,6 +112,13 @@ export type AutorizacionRelacion = {
 export type RelacionCartera = RelacionFicha & {
   nombre: string
   tipoCliente: string
+  /**
+   * Qué es LA FICHA que cede (no el relacionado), repetido en cada fila porque es
+   * lo que cruza el puerto: de él depende si desde esa ficha se puede delegar
+   * solo mirar (persona) o su gestión entera (sociedad). `null` = no se pudo
+   * leer; la pantalla entonces no ofrece apoderamiento, que es el lado seguro.
+   */
+  tipoOtorgante: TipoOtorgante | null
   /** Pólizas vivas (de CIMA) del relacionado. `null` = no se pudo contar. */
   polizasVivas: number | null
   /**
@@ -93,6 +137,7 @@ type FilaAutorizacion = {
   otorganteClienteId: string
   autorizadoClienteId: string
   alcance: string
+  tituloRepresentacion: string | null
   origen: string
   aceptadoEn: Date | null
   caducaEn: Date
@@ -119,7 +164,17 @@ export function resumirAutorizacion(filas: readonly FilaAutorizacion[], hoy: Dat
   // Un alcance que no está en el vocabulario no se inventa ni se pinta: se calla.
   const alcances = [...new Set(delEstado.map((x) => x.f.alcance).filter((a): a is Alcance => esAlcance(a)))]
   const gobierna = delEstado.reduce((m, x) => (x.f.caducaEn.getTime() > m.f.caducaEn.getTime() ? x : m))
-  return { estado: mejor.estado, alcances, caducaEn: gobierna.f.caducaEn, origen: gobierna.f.origen }
+  // El título que conste en alguna fila de ese mismo estado (una de lectura no lo
+  // lleva, y una de apoderamiento sí). Si no hay ninguno es `null`: «no consta»,
+  // nunca una cadena vacía que se cuele por las guardas de NULL de quien lo pinte.
+  const titulo = delEstado.map((x) => x.f.tituloRepresentacion).find((t) => t !== null && t !== '') ?? null
+  return {
+    estado: mejor.estado,
+    alcances,
+    tituloRepresentacion: titulo,
+    caducaEn: gobierna.f.caducaEn,
+    origen: gobierna.f.origen,
+  }
 }
 
 /**
@@ -134,6 +189,7 @@ async function autorizacionesDe(correduriaId: string, clienteId: string): Promis
       otorganteClienteId: true,
       autorizadoClienteId: true,
       alcance: true,
+      tituloRepresentacion: true,
       origen: true,
       aceptadoEn: true,
       caducaEn: true,
@@ -194,6 +250,10 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
     const rel = relacionesDeFicha(filas, clienteId)
     if (rel.length === 0) return []
     const hoy = new Date()
+    // Qué es la ficha que cede. Va en cada fila (es lo que cruza el puerto) y
+    // `null` = no se pudo leer: la pantalla de plataforma no ofrece apoderamiento
+    // sobre una ficha de la que no sabemos si es una empresa o una persona.
+    const tipoOtorgante = await tipoPersonaDe(correduriaId, clienteId)
     const ids = rel.map((r) => r.relacionadoId)
     const otros = await db.cliente.findMany({
       where: { id: { in: ids }, correduriaId },
@@ -216,6 +276,7 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
           ...r,
           nombre: `${o.nombre} ${o.apellidos}`.trim(),
           tipoCliente: String(o.tipo),
+          tipoOtorgante,
           polizasVivas: nVivas.get(o.id) ?? 0,
           autorizacion: resumirAutorizacion(autorizaciones.get(clavePar(clienteId, r.relacionadoId)) ?? [], hoy),
         }
@@ -279,8 +340,24 @@ export async function crearRelacion(
   }
 }
 
-const MOTIVO_ALCANCE_NO_CONCEDIBLE =
-  'Ese alcance no se puede conceder: hoy solo «ver» y «ver_economico». Dar partes o manejar documentos en nombre de otro es un apoderamiento, no una autorización de lectura.'
+/**
+ * Por qué no se puede anotar ese alcance, y la razón depende de QUIÉN cede.
+ *
+ * 🚨 Desde el 03/09/2026 esto ya no es una regla sobre el alcance: es una regla
+ * sobre el otorgante. Una PERSONA solo delega mirar —dar partes en su nombre es
+ * un poder, y un tick en una pantalla no lo es (art. 16 LCS: si el parte va mal,
+ * hay que poder decir quién firmó)—. Una SOCIEDAD no tiene datos personales, así
+ * que lo que delega no es consentimiento sino REPRESENTACIÓN mercantil, y esa se
+ * delega entera. Decir «hoy solo ver» sobre una empresa sería falso.
+ */
+function motivoAlcanceNoConcedible(tipo: TipoOtorgante): string {
+  return tipo === 'juridica'
+    ? 'Ese alcance no existe: «ver», «ver_economico», «partes» y «documentos» son los únicos.'
+    : 'Esa ficha es una PERSONA, y de una persona solo se puede anotar que deja MIRAR («ver» o «ver_economico»). Dar partes o manejar documentos en su nombre es un apoderamiento, no una autorización de lectura: eso solo lo delega una sociedad en quien la representa.'
+}
+
+const MOTIVO_TITULO_REQUERIDO =
+  'Falta el título con el que se representa a la sociedad («administrador», «apoderado» o «empleado_autorizado»). Sin él no se anota: lo que esa persona declare obliga a la empresa, y «alguien de la empresa» no es un título que oponerle a la compañía.'
 
 /** Texto del estado en el que ya está una autorización, para el motivo del 409. */
 function porQueYaHay(estado: EstadoAutorizacion): string {
@@ -310,20 +387,44 @@ function porQueYaHay(estado: EstadoAutorizacion): string {
  *
  * Queda en el historial de las dos fichas: es un consentimiento, y se tiene que
  * poder ver quién lo dio y cuándo.
+ *
+ * 🚨 Y desde el 03/09/2026 lo que se puede anotar depende de QUIÉN cede
+ * (`clientes.tipo_persona`): de una PERSONA solo «ver»/«ver_economico»; de una
+ * SOCIEDAD también «partes» y «documentos», y entonces hace falta el TÍTULO con
+ * el que se la representa. No es un permiso más fino: es que ahí no hay
+ * consentimiento de datos personales sino representación mercantil.
  */
 export async function autorizarVer(
   correduriaId: string,
   clienteId: string,
-  entrada: { relacionadoId: string; autoriza: boolean; alcance?: unknown; actor: string },
+  entrada: { relacionadoId: string; autoriza: boolean; alcance?: unknown; tituloRepresentacion?: unknown; actor: string },
 ): Promise<ResultadoRelacion> {
-  const alcance = entrada.alcance === undefined || entrada.alcance === null ? ALCANCE_POR_DEFECTO : alcanceConcedible(entrada.alcance)
-  // 🚨 Con una razón, nunca en silencio: `partes` y `documentos` existen en el
-  // vocabulario pero son APODERAMIENTO (actuar en nombre de otro), no lectura.
-  // Se corta ANTES de tocar la BD; revocar no mira el alcance y no pasa por aquí.
-  if (entrada.autoriza && alcance === null) return { ok: false, estado: 'invalido', motivo: MOTIVO_ALCANCE_NO_CONCEDIBLE, status: 422 }
   try {
     if (!(await ambosDeLaCorreduria(correduriaId, clienteId, entrada.relacionadoId))) {
       return { ok: false, estado: 'no_encontrado', motivo: 'Alguna de las dos fichas no existe en esta correduría.', status: 404 }
+    }
+    // 🚨 Qué ES la ficha que cede, y con eso qué se puede anotar. Ya no se puede
+    // decidir antes de tocar la BD: de una persona solo se delega mirar, de una
+    // sociedad su gestión entera. `null` no llega aquí (`ambosDeLaCorreduria` ya
+    // ha confirmado que la ficha existe y no está fusionada) y, si llegara, cae
+    // a `'fisica'`, el lado que no abre nada de más.
+    const tipoOtorgante = (await tipoPersonaDe(correduriaId, clienteId)) ?? 'fisica'
+    const alcance =
+      entrada.alcance === undefined || entrada.alcance === null
+        ? ALCANCE_POR_DEFECTO
+        : alcanceConcedible(entrada.alcance, tipoOtorgante)
+    // Con una razón, nunca en silencio. Revocar no mira el alcance.
+    if (entrada.autoriza && alcance === null) {
+      return { ok: false, estado: 'invalido', motivo: motivoAlcanceNoConcedible(tipoOtorgante), status: 422 }
+    }
+    // El título solo tiene sentido en una sociedad: en una ficha de persona no se
+    // representa a nadie, así que se descarta en vez de guardarlo.
+    const titulo: TituloRepresentacion | null =
+      tipoOtorgante === 'juridica' ? tituloRepresentacion(entrada.tituloRepresentacion) : null
+    // Apoderamiento sin título no entra. La BD lo repite con un CHECK, pero
+    // llegar hasta allí devolvería un error de Postgres en vez de decir qué falta.
+    if (entrada.autoriza && alcance !== null && esApoderamiento(alcance) && titulo === null) {
+      return { ok: false, estado: 'invalido', motivo: MOTIVO_TITULO_REQUERIDO, status: 422 }
     }
     const db = prismaAsegura()
     const idas = await db.clienteRelacion.findMany({ where: { correduriaId, clienteAId: clienteId, clienteBId: entrada.relacionadoId } })
@@ -351,7 +452,7 @@ export async function autorizarVer(
 
     // Ya cortado arriba cuando `autoriza`; aquí solo estrecha el tipo (revocar
     // ya ha vuelto con su `return`, así que a partir de esta línea se concede).
-    if (alcance === null) return { ok: false, estado: 'invalido', motivo: MOTIVO_ALCANCE_NO_CONCEDIBLE, status: 422 }
+    if (alcance === null) return { ok: false, estado: 'invalido', motivo: motivoAlcanceNoConcedible(tipoOtorgante), status: 422 }
 
     if (idas.length === 0) {
       const vuelta = await db.clienteRelacion.findFirst({ where: { correduriaId, clienteAId: entrada.relacionadoId, clienteBId: clienteId } })
@@ -390,6 +491,7 @@ export async function autorizarVer(
           otorganteClienteId: clienteId,
           autorizadoClienteId: entrada.relacionadoId,
           alcance,
+          tituloRepresentacion: titulo,
           origen: 'corredor',
           otorgadoPorActor: entrada.actor,
           caducaEn: caducidadPorDefecto(new Date()),
@@ -405,15 +507,19 @@ export async function autorizarVer(
     }
 
     const pendiente = 'Queda PENDIENTE: no verá nada hasta que la acepte en el portal.'
+    // El alcance Y el título van en el historial: un apoderamiento anotado sin
+    // decir con qué título se ejerce es media prueba, y la mitad que falta es la
+    // que hace falta el día que la compañía discuta un parte.
+    const detalle = `alcance «${alcance}»${titulo ? `, como ${titulo}` : ''}`
     await anotar(
       correduriaId,
       clienteId,
-      `AUTORIZA a la ficha ${entrada.relacionadoId} a ver sus pólizas (alcance «${alcance}») — consentimiento recibido por la correduría y anotado desde plataforma por ${entrada.actor}. ${pendiente}`,
+      `AUTORIZA a la ficha ${entrada.relacionadoId} a ver sus pólizas (${detalle}) — consentimiento recibido por la correduría y anotado desde plataforma por ${entrada.actor}. ${pendiente}`,
     )
     await anotar(
       correduriaId,
       entrada.relacionadoId,
-      `La ficha ${clienteId} le autoriza a ver sus pólizas (alcance «${alcance}») — anotado desde plataforma por ${entrada.actor}. ${pendiente}`,
+      `La ficha ${clienteId} le autoriza a ver sus pólizas (${detalle}) — anotado desde plataforma por ${entrada.actor}. ${pendiente}`,
     )
     return devolver(correduriaId, clienteId)
   } catch (e) {

@@ -28,6 +28,13 @@ CREATE TABLE IF NOT EXISTS seguros.portal_autorizacion (
   otorgante_cliente_id      uuid NOT NULL REFERENCES seguros.clientes(id),
   autorizado_cliente_id     uuid NOT NULL REFERENCES seguros.clientes(id),
   alcance                   text NOT NULL CHECK (alcance IN ('ver', 'ver_economico', 'partes', 'documentos')),
+  -- Con qué título representa a la SOCIEDAD quien recibe un apoderamiento. Solo tiene
+  -- sentido cuando quien cede es una persona JURÍDICA: el RGPD protege a las personas
+  -- físicas, y por eso de una física solo se delega mirar; una sociedad no tiene datos
+  -- personales y lo que hay ahí no es consentimiento sino REPRESENTACIÓN mercantil.
+  -- 🚨 Y de una representación tiene que constar CÓMO: si quien la ejerce da un parte,
+  -- la que queda obligada es la sociedad, y «alguien de la empresa» no es un título.
+  titulo_representacion     text,
   -- Por dónde entró el consentimiento. `corredor` = la correduría anota uno recibido
   -- por teléfono o en papel. 🚨 Que se distinga NO es contabilidad: un consentimiento
   -- que la correduría se auto-anota no puede ser indistinguible del que dio el
@@ -70,7 +77,20 @@ CREATE TABLE IF NOT EXISTS seguros.portal_autorizacion (
   CONSTRAINT portal_autorizacion_revoca_con_quien
     CHECK ((revocado_en IS NULL) = (revocado_por IS NULL)),
   CONSTRAINT portal_autorizacion_caduca_despues
-    CHECK (caduca_en > otorgado_en)
+    CHECK (caduca_en > otorgado_en),
+  -- El vocabulario de los títulos, en la BD y no solo en el código: una fila con
+  -- «jefe» dentro sería un poder que nadie sabría interpretar tres años después.
+  CONSTRAINT portal_autorizacion_titulo CHECK (
+    titulo_representacion IS NULL
+    OR titulo_representacion IN ('administrador', 'apoderado', 'empleado_autorizado')
+  ),
+  -- 🚨 Apoderamiento SIN título no entra. `partes` y `documentos` son actuar en nombre
+  -- de otro, y sin saber con qué título se actuó no hay nada que oponerle a la compañía
+  -- el día que discuta la cobertura (art. 16 LCS). Los alcances de lectura no lo piden:
+  -- ahí `NULL` es «no aplica», no un hueco.
+  CONSTRAINT portal_autorizacion_apoderamiento_con_titulo CHECK (
+    alcance NOT IN ('partes', 'documentos') OR titulo_representacion IS NOT NULL
+  )
 );
 
 -- Una VIVA por (otorgante, autorizado, alcance). Las revocadas se quedan: son el historial que

@@ -31,13 +31,18 @@
 // lo hizo), `ip`/`userAgent` (desde dónde) y `caducaEn` (hasta cuándo).
 import {
   alcanceConcedible,
+  alcancesConcedibles,
   caducidadPorDefecto,
+  esAlcance,
   estadoAutorizacion,
   NIVELES,
   puedeAutorizar as nivelPuedeAutorizar,
+  tituloRepresentacion,
   type Alcance,
   type EstadoAutorizacion,
   type Nivel,
+  type TipoOtorgante,
+  type TituloRepresentacion,
 } from '@central/module-seguros-portal'
 import { permiteAutorizar, SIN_VINCULO } from '@central/module-seguros'
 
@@ -64,6 +69,48 @@ export const TEXTO_AUTORIZACION = [
   'La autorización caduca al año y puedo revocarla en cualquier momento desde el portal.',
   'Quedará registrado qué días ha consultado mis seguros, y ese registro lo veo yo.',
 ].join('\n')
+
+/**
+ * El texto de la REPRESENTACIÓN, que es otro consentimiento y por eso es otra
+ * versión.
+ *
+ * 🚨 No es un matiz de redacción: `TEXTO_AUTORIZACION` afirma «no verá mis datos
+ * personales (DNI, cuenta bancaria)» y «no puede dar partes», y las dos frases son
+ * FALSAS cuando quien cede es una sociedad — su IBAN y su CIF son datos de la
+ * empresa, y quien la representa puede obligarla. Guardar esa versión en una fila
+ * de apoderamiento sería guardar como prueba un texto que dice lo contrario de lo
+ * que se concedió, que es peor que no guardar ninguno.
+ */
+export const TEXTO_REPRESENTACION_V1 = 'v1-2026-09-03-representacion'
+
+/** El texto exacto de `TEXTO_REPRESENTACION_V1`. La pantalla lo enseña TAL CUAL. */
+export const TEXTO_REPRESENTACION = [
+  'Autorizo a esta persona a actuar por la sociedad ante Grupo Asegura, con el título que se indica.',
+  'Verá los seguros de la sociedad, lo que paga, su CIF y la cuenta bancaria de los recibos: son datos de la empresa, no de una persona.',
+  'Si le doy «dar partes», lo que declare obliga a la sociedad frente a la compañía.',
+  'No puede autorizar a nadie más: ampliar el círculo lo decide la sociedad.',
+  'La autorización caduca al año y puedo revocarla en cualquier momento desde el portal.',
+  'Quedará registrado qué días ha consultado los seguros de la sociedad, y ese registro lo veo yo.',
+].join('\n')
+
+/** Los dos alcances que son ACTUAR en nombre de otro, no mirar. Solo los delega una sociedad. */
+const APODERAMIENTO: readonly Alcance[] = ['partes', 'documentos']
+
+function esApoderamiento(a: Alcance): boolean {
+  return APODERAMIENTO.includes(a)
+}
+
+/**
+ * Qué es quien cede, leído de `clientes.tipo_persona`.
+ *
+ * 🚨 `null` = **no consta**, y se trata como `'fisica'`. No es colapsar un «no lo
+ * sé» en un dato: es elegir el lado RESTRICTIVO, el único que no abre nada de más.
+ * Al revés —tratar el hueco como sociedad— repartiría apoderamientos sobre fichas
+ * de personas por una columna vacía. Hoy la mayoría de la cartera la tiene a NULL.
+ */
+function tipoDeFicha(v: string | null | undefined): TipoOtorgante {
+  return v === 'juridica' ? 'juridica' : 'fisica'
+}
 
 /** Cuántas filas se traen. Regla de rendimiento UI de la casa. */
 const MAX_AUTORIZACIONES = 200
@@ -124,6 +171,21 @@ export type AutorizacionVista = {
   otorganteNombre: string | null
   autorizadoClienteId: string
   autorizadoNombre: string | null
+  /**
+   * Con qué título representa a la sociedad quien recibe un apoderamiento
+   * (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta,
+   * y en una fila de persona física eso es lo normal: ahí no se representa a
+   * nadie, se mira. La BD lo exige en cuanto el alcance es `partes` o
+   * `documentos` (`portal_autorizacion_apoderamiento_con_titulo`).
+   */
+  tituloRepresentacion: string | null
+  /**
+   * Qué es quien cede. `null` = **no lo sabemos** (su ficha ya no se puede leer
+   * o está fusionada), y entonces la pantalla no afirma qué ve el autorizado:
+   * de una persona nunca ve IBAN ni DNI, pero de una sociedad SÍ, y decir la
+   * frase de una sobre la otra es exactamente la mentira que esto evita.
+   */
+  tipoOtorgante: TipoOtorgante | null
   otorgadoEn: Date
   aceptadoEn: Date | null
   caducaEn: Date
@@ -159,6 +221,20 @@ export type Candidato = {
   tipoRelacion: string
   /** Alcances que ya ocupan sitio para esta pareja (pendientes o vigentes). */
   yaConcedidos: Alcance[]
+  /**
+   * Qué es la ficha DESDE la que se concede. Va aquí para que la pantalla no lo
+   * adivine por el nombre («…S.L.» no es un dato) ni lo pregunte: de una persona
+   * solo se delega mirar, de una sociedad se delega su gestión. Cuando la ficha
+   * no dice qué es (`tipo_persona` a NULL, que hoy es la mayoría de la cartera)
+   * vale `'fisica'`, el lado restrictivo.
+   */
+  tipoOtorgante: TipoOtorgante
+  /**
+   * Los alcances que ESTA ficha puede conceder hoy, ya resueltos por el módulo
+   * puro. La pantalla pinta esta lista y no una suya: dos listas del mismo
+   * vocabulario acaban discrepando, y la que decide es la del backend.
+   */
+  alcancesPosibles: Alcance[]
 }
 
 export type AutorizacionesPortal = {
@@ -185,6 +261,7 @@ type ResultadoConceder =
 export type ErrorConceder =
   | 'datos_invalidos'
   | 'alcance_no_disponible'
+  | 'titulo_requerido'
   | 'ficha_no_tuya'
   | 'nivel_insuficiente'
   | 'sin_relacion'
@@ -205,18 +282,26 @@ async function fichasDeIdentidad(identidadId: string) {
   })
 }
 
+type FichaVista = { nombre: string; tipo: TipoOtorgante }
+
 /**
- * Nombre para pintar de cada ficha. Las fusionadas (`merged_into_cliente_id`) y
- * las que ya no existen **no salen del mapa**, y por eso su nombre acaba en
- * `null`: es «no se sabe», no un hueco que rellenar.
+ * Nombre y tipo de persona de cada ficha, para pintar. Las fusionadas
+ * (`merged_into_cliente_id`) y las que ya no existen **no salen del mapa**, y por
+ * eso su nombre y su tipo acaban en `null`: es «no se sabe», no un hueco que
+ * rellenar.
  */
-async function nombresDeFichas(ids: string[]): Promise<Map<string, string>> {
+async function fichasPorId(ids: string[]): Promise<Map<string, FichaVista>> {
   if (ids.length === 0) return new Map()
   const clientes = await prisma.cliente.findMany({
     where: { id: { in: ids }, mergedIntoClienteId: null },
-    select: { id: true, nombre: true, apellidos: true },
+    select: { id: true, nombre: true, apellidos: true, tipoPersona: true },
   })
-  return new Map(clientes.map((c) => [c.id, `${c.nombre} ${c.apellidos}`.trim()]))
+  return new Map(
+    clientes.map((c) => [
+      c.id,
+      { nombre: `${c.nombre} ${c.apellidos}`.trim(), tipo: tipoDeFicha(c.tipoPersona) },
+    ]),
+  )
 }
 
 /**
@@ -319,7 +404,7 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
     if (!parejas.has(clave)) parejas.set(clave, { otorgante: mio, autorizado: otro, tipoRelacion: r.tipoRelacion })
   }
 
-  const nombrePor = await nombresDeFichas([
+  const fichaPor = await fichasPorId([
     ...new Set([
       ...misIds,
       ...filas.map((f) => f.otorganteClienteId),
@@ -327,7 +412,11 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
       ...[...parejas.values()].map((p) => p.autorizado),
     ]),
   ])
-  const nombre = (id: string): string | null => nombrePor.get(id) ?? null
+  const nombre = (id: string): string | null => fichaPor.get(id)?.nombre ?? null
+  // `null` = la ficha no se pudo leer. NO se cae a `'fisica'` aquí: en el alta sí
+  // (no conceder de más), pero al PINTAR una fila ya concedida un tipo inventado
+  // haría afirmar qué ve el autorizado sobre una ficha que no hemos mirado.
+  const tipoDe = (id: string): TipoOtorgante | null => fichaPor.get(id)?.tipo ?? null
 
   const aVista = (f: (typeof filas)[number], conUsos: boolean): AutorizacionVista => {
     const estado = estadoAutorizacion(
@@ -343,6 +432,8 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
       // `camposDeAlcances`, que no acepta nada fuera del vocabulario.
       alcance: f.alcance as Alcance,
       estado,
+      tituloRepresentacion: f.tituloRepresentacion,
+      tipoOtorgante: tipoDe(f.otorganteClienteId),
       otorganteClienteId: f.otorganteClienteId,
       otorganteNombre: nombre(f.otorganteClienteId),
       autorizadoClienteId: f.autorizadoClienteId,
@@ -368,6 +459,11 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
     autorizadoClienteId: p.autorizado,
     autorizadoNombre: nombre(p.autorizado),
     tipoRelacion: p.tipoRelacion,
+    // Aquí sí se cae a `'fisica'` cuando la ficha no se pudo leer: esto alimenta
+    // el formulario de ALTA, y el lado restrictivo es el único que no ofrece un
+    // apoderamiento sobre una ficha de la que no sabemos qué es.
+    tipoOtorgante: tipoDe(p.otorgante) ?? 'fisica',
+    alcancesPosibles: [...alcancesConcedibles(tipoDe(p.otorgante) ?? 'fisica')],
     yaConcedidos: vistasOtorgadas
       .filter(
         (v) =>
@@ -398,13 +494,23 @@ export async function autorizacionesDeSesion(): Promise<AutorizacionesPortal | n
  *
  * El orden de las comprobaciones no es decorativo — va de lo que no toca la BD
  * a lo que sí, y de lo que no revela nada a lo que podría:
- *   1. El alcance (puro): `partes`/`documentos` son APODERAMIENTO y hoy no se
- *      conceden. Se dice con una razón, nunca en silencio.
+ *   1. Que el alcance exista siquiera (puro, sin BD).
  *   2. La ficha otorgante es MÍA (`portal_vinculo`) — sin esto, cualquiera con
  *      sesión regala los datos de otro mandando su uuid en el JSON.
  *   3. Mi NIVEL sobre esa ficha me deja conceder (módulo puro).
- *   4. Existe relación en la cartera entre las dos fichas.
- *   5. No hay ya una viva igual.
+ *   4. **Qué ES la ficha que cede**, y con eso, si el alcance se puede conceder.
+ *   5. Un apoderamiento sin TÍTULO no entra (y la BD lo repite con un CHECK).
+ *   6. Existe relación en la cartera entre las dos fichas.
+ *   7. No hay ya una viva igual.
+ *
+ * 🚨 El paso 4 es el que cambió el 03/09/2026 y por eso la decisión del alcance
+ * dejó de ser lo primero: **ya no depende solo del alcance, sino de quién cede**.
+ * El RGPD protege a las personas físicas, así que de una persona solo se delega
+ * MIRAR; una sociedad no tiene datos personales y lo que hay ahí no es
+ * consentimiento sino REPRESENTACIÓN mercantil, que sí se delega entera. Saber
+ * qué es la ficha exige leerla, y leerla exige haber comprobado antes que es mía
+ * — de ahí el orden. Lo puro que se podía adelantar (¿es siquiera un alcance?)
+ * sigue delante, antes de tocar la BD.
  *
  * Nace **apagada** (`aceptadoEn: null` → estado `pendiente`) y con fecha de fin:
  * art. 25.2 RGPD, y porque `caducaEn` es lo único que resuelve el divorcio —
@@ -415,6 +521,8 @@ export async function conceder(datos: {
   otorganteClienteId: string
   autorizadoClienteId: string
   alcance: string
+  /** Solo lo lleva la representación de una sociedad; en una física se ignora. */
+  tituloRepresentacion?: unknown
   ip: string | null
   userAgent: string | null
 }): Promise<ResultadoConceder> {
@@ -428,17 +536,13 @@ export async function conceder(datos: {
     }
   }
 
-  const alcance = alcanceConcedible(datos.alcance)
-  if (alcance === null) {
+  // Lo único del alcance que se puede decidir sin la BD: si ni siquiera está en
+  // el vocabulario. Lo demás depende de quién cede, y eso hay que leerlo.
+  if (!esAlcance(datos.alcance)) {
     return {
       ok: false,
       error: 'alcance_no_disponible',
-      // Se explica en vez de callarse: «ver los partes» y «ver los documentos»
-      // no son grados de mirar, son actuar en nombre de otro. Un tick en una
-      // pantalla no es un poder, y si María declara mal la compañía discute la
-      // cobertura (art. 16 LCS) sin que nadie pueda decir quién firmó.
-      mensaje:
-        'Dar partes o descargar documentos en nombre de otra persona es un apoderamiento, no un permiso de consulta, y todavía no está disponible en el portal. Hoy solo se puede autorizar a CONSULTAR los seguros.',
+      mensaje: 'Ese permiso no existe. Vuelve a cargar la pantalla y elige uno de los que salen.',
     }
   }
 
@@ -455,6 +559,59 @@ export async function conceder(datos: {
       // El consentimiento para ceder unos datos es de su dueño: quien solo está
       // autorizado a ver una ficha no puede regalarla a un tercero.
       mensaje: 'Tu acceso a esa ficha es de consulta: no permite autorizar a otras personas.',
+    }
+  }
+
+  // Qué ES la ficha que cede. Sin `try/catch`: si esta lectura falla, que suba
+  // como error. Caer a «física» ante un fallo de BD le diría a quien representa
+  // a una sociedad que no puede hacer algo que sí puede, y sonaría a norma.
+  const fichaOtorgante = await prisma.cliente.findFirst({
+    where: { id: otorganteClienteId, correduriaId: mio.correduriaId, mergedIntoClienteId: null },
+    select: { tipoPersona: true },
+  })
+  if (fichaOtorgante === null) {
+    // El vínculo apunta a una ficha que ya no está activa (fusionada o borrada):
+    // no se concede sobre ella, y se dice, en vez de conceder sobre una lápida.
+    return {
+      ok: false,
+      error: 'ficha_no_tuya',
+      mensaje: 'Esa ficha ya no está activa en la cartera. Escríbenos y lo revisamos.',
+    }
+  }
+  const tipoOtorgante = tipoDeFicha(fichaOtorgante.tipoPersona)
+
+  const alcance = alcanceConcedible(datos.alcance, tipoOtorgante)
+  if (alcance === null) {
+    return {
+      ok: false,
+      error: 'alcance_no_disponible',
+      // Se explica en vez de callarse, y ahora la razón depende de QUIÉN cede:
+      // que una sociedad delegue su gestión es representación mercantil; que la
+      // delegue una persona es dar un poder, y un tick en una pantalla no lo es
+      // —si María declara mal, la compañía discute la cobertura (art. 16 LCS)
+      // sin que nadie pueda decir quién firmó.
+      mensaje: esApoderamiento(datos.alcance)
+        ? 'Dar partes o manejar documentos en nombre de otra persona es un apoderamiento, no un permiso de consulta: eso solo puede delegarlo una SOCIEDAD, en quien la representa. Desde una ficha de persona solo se puede autorizar a CONSULTAR los seguros.'
+        : 'Ese permiso no se puede conceder desde esta ficha. Hoy solo se puede autorizar a CONSULTAR los seguros.',
+    }
+  }
+
+  // El título solo tiene sentido cuando cede una sociedad: en una ficha de
+  // persona no se representa a nadie, así que se descarta en vez de guardarlo.
+  const titulo: TituloRepresentacion | null =
+    tipoOtorgante === 'juridica' ? tituloRepresentacion(datos.tituloRepresentacion) : null
+
+  // 🚨 Apoderamiento sin título no entra. La BD lo repite con un CHECK
+  // (`portal_autorizacion_apoderamiento_con_titulo`), pero llegar hasta allí
+  // devolvería un error de Postgres en vez de decir qué falta: si quien
+  // representa da un parte, la que queda obligada es la sociedad, y «alguien de
+  // la empresa» no es un título que oponerle a la compañía.
+  if (esApoderamiento(alcance) && titulo === null) {
+    return {
+      ok: false,
+      error: 'titulo_requerido',
+      mensaje:
+        'Para actuar en nombre de la sociedad hace falta decir con qué título se hace: administrador, apoderado o empleado autorizado.',
     }
   }
 
@@ -535,10 +692,13 @@ export async function conceder(datos: {
     otorganteClienteId,
     autorizadoClienteId,
     alcance,
+    tituloRepresentacion: titulo,
     otorgadoPorIdentidadId: identidadId,
     caducaEn,
-    // Qué texto aceptó. Sin esto el consentimiento no se puede demostrar.
-    versionTexto: TEXTO_AUTORIZACION_V1,
+    // Qué texto aceptó. Sin esto el consentimiento no se puede demostrar — y por
+    // eso la sociedad guarda OTRA versión: la de la persona afirma «no verá mi
+    // IBAN ni podrá dar partes», que de una empresa es sencillamente falso.
+    versionTexto: tipoOtorgante === 'juridica' ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V1,
     // `null` cuando la cabecera no vino: no se inventa una IP ni un navegador.
     ip: datos.ip,
     userAgent: datos.userAgent,

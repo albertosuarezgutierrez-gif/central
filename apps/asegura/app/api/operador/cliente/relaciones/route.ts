@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  *
  *   GET    ?id=<clienteId>                                        → { estado:'ok', relaciones }
  *   POST   { clienteId, relacionadoId, tipo, observaciones?, actor } → crea el vínculo (dos sentidos)
- *   PATCH  { clienteId, relacionadoId, autoriza: boolean, alcance?, actor } → clienteId autoriza/revoca a relacionadoId
+ *   PATCH  { clienteId, relacionadoId, autoriza: boolean, alcance?, tituloRepresentacion?, actor } → clienteId autoriza/revoca a relacionadoId
  *   DELETE { clienteId, relacionadoId, actor }                      → borra el vínculo entero
  *
  * `autoriza` se escribe SIEMPRE desde la ficha de quien autoriza: en la ficha
@@ -24,6 +24,11 @@ export const dynamic = 'force-dynamic'
  * con `origen = 'corredor'` (la correduría ANOTA un consentimiento recibido por
  * teléfono o en papel; no autoriza por el cliente) y esa fila nace PENDIENTE —
  * no abre nada hasta que el autorizado la acepte en el portal.
+ *
+ * Si la ficha que cede es una SOCIEDAD, el alcance puede ser además
+ * `partes`/`documentos` (representación mercantil, no consentimiento de datos
+ * personales) y entonces el cuerpo trae `tituloRepresentacion`; sin él se
+ * responde 422 con la razón, no un error de Postgres.
  */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -53,8 +58,13 @@ export async function PATCH(req: Request) {
       relacionadoId: cadena(b.relacionadoId) ?? '',
       autoriza: b.autoriza === true,
       // Sin `alcance` se anota el más pequeño («ver»). Un alcance que no se puede
-      // conceder NO se ignora en silencio: `autorizarVer` responde 422 con la razón.
+      // conceder NO se ignora en silencio: `autorizarVer` responde 422 con la razón,
+      // y esa razón depende de si la ficha que cede es una persona o una sociedad.
       alcance: b.alcance,
+      // Solo lo lleva la representación de una SOCIEDAD. Quién puede qué NO se
+      // decide aquí: lo decide `autorizarVer` leyendo `clientes.tipo_persona`,
+      // porque el cuerpo de una petición no es fuente de verdad sobre eso.
+      tituloRepresentacion: b.tituloRepresentacion,
       actor: actorDe(b),
     }),
   )

@@ -226,3 +226,17 @@ test('la excepcion es SOLO para juridica: la fisica sigue sin poder apoderar', (
   assert.equal(alcancesConcedibles('fisica').includes('partes'), false)
   assert.equal(alcancesConcedibles('fisica').includes('documentos'), false)
 })
+
+test('la boveda sirve segun QUIEN cede, no con el tope de persona siempre', () => {
+  // El hueco que quedo al partir la regla en dos: `camposDeAlcances(alcances)`
+  // sin tipo sirve una autorizacion de una SOCIEDAD con el suelo de una
+  // persona. Cae del lado seguro, pero un `partes` concedido no se honraria y
+  // pareceria un fallo del codigo en vez de una regla.
+  const src = leer(CARTERA)
+  assert.match(src, /tipoPersona/, 'la boveda no lee el tipo de la ficha ajena')
+  assert.match(
+    src,
+    /camposDeAlcances\([^)]*,[^)]*\)/,
+    'camposDeAlcances se llama sin decir quien cede: usaria el default `fisica`',
+  )
+})

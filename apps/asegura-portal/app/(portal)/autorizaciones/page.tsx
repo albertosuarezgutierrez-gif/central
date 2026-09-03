@@ -54,10 +54,24 @@ export default async function AutorizacionesPage() {
       <section className="seccion" aria-labelledby="limites-titulo">
         <h2 id="limites-titulo">Qué es exactamente lo que das</h2>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
-          Quien reciba el acceso <strong>solo puede mirar tus seguros</strong>. Nunca ve tu DNI, ni tu
-          IBAN, ni tus documentos, y <strong>no puede dar partes ni tocar nada en tu nombre</strong>: ni
-          contratar, ni cambiar, ni anular. Cada acceso <strong>caduca al año</strong> y{' '}
+          Si los seguros son <strong>tuyos</strong>, quien reciba el acceso{' '}
+          <strong>solo puede mirarlos</strong>. Nunca ve tu DNI, ni tu IBAN, ni tus documentos, y{' '}
+          <strong>no puede dar partes ni tocar nada en tu nombre</strong>: ni contratar, ni cambiar, ni
+          anular. Cada acceso <strong>caduca al año</strong> y{' '}
           <strong>puedes revocarlo cuando quieras desde esta misma pantalla</strong>.
+        </p>
+        {/* 🚨 La otra mitad, desde el 03/09/2026. Dejar solo el párrafo de arriba
+            era prometer sobre una EMPRESA una protección que no existe: lo que se
+            delega ahí no es consentimiento —una sociedad no tiene datos
+            personales— sino representación mercantil, y quien la ejerce ve la
+            cuenta y puede obligar a la empresa. Callarlo sería lo peor de las dos
+            cosas: no impide nada y hace creer que sí. */}
+        <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5 }}>
+          Si los seguros son de una <strong>sociedad tuya</strong>, es distinto: ahí no estás cediendo
+          datos personales, estás diciendo <strong>quién puede representarla</strong>. Esa persona{' '}
+          <strong>sí ve lo que paga la empresa, su CIF y su cuenta</strong>, y puede llegar a{' '}
+          <strong>dar partes en su nombre</strong> — por eso se te pide con qué título lo hace. Lo que no
+          puede hacer nunca es autorizar a nadie más.
         </p>
       </section>
 

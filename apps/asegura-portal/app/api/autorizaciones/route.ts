@@ -21,9 +21,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /** El código HTTP de cada motivo. Un mapa, no una cadena de `if`: el que añada un motivo nuevo lo ve. */
 const ESTADO_HTTP: Record<ErrorConceder, number> = {
   datos_invalidos: 400,
-  // 400 y no 403: `partes`/`documentos` no es «no puedes», es «esto todavía no
-  // existe en el portal» — y la respuesta lleva `mensaje` explicándolo.
+  // 400 y no 403: no es «no puedes», es «ese permiso no se concede desde esta
+  // ficha» — y la respuesta lleva `mensaje` con la razón, que desde el
+  // 03/09/2026 depende de si quien cede es una persona o una sociedad.
   alcance_no_disponible: 400,
+  // Falta un dato de la petición (con qué título se representa a la sociedad),
+  // así que 400: la misma persona con el mismo alcance SÍ puede, diciéndolo.
+  titulo_requerido: 400,
   ficha_no_tuya: 403,
   nivel_insuficiente: 403,
   sin_relacion: 409,
@@ -73,7 +77,16 @@ export async function GET() {
   return NextResponse.json(datos)
 }
 
-/** José concede: «que María pueda ver los seguros de esta ficha mía». Nace PENDIENTE de que ella acepte. */
+/**
+ * José concede: «que María pueda ver los seguros de esta ficha mía». Nace
+ * PENDIENTE de que ella acepte.
+ *
+ * Si la ficha que cede es una SOCIEDAD, lo que se concede puede ser además
+ * representación (`partes`, `documentos`) y entonces el cuerpo trae
+ * `tituloRepresentacion`. Quién puede qué NO se decide aquí: lo decide
+ * `conceder()` leyendo el tipo de persona de la ficha, porque el tipo está en la
+ * BD y el cuerpo de una petición no es una fuente de verdad sobre él.
+ */
 export async function POST(req: Request) {
   let identidad
   try {
@@ -107,6 +120,10 @@ export async function POST(req: Request) {
     otorganteClienteId,
     autorizadoClienteId,
     alcance,
+    // Sin validar aquí: el vocabulario lo fija el módulo puro y quien decide si
+    // hace falta —y si la ficha es siquiera una sociedad— es `conceder`. Esta
+    // ruta solo comprueba la FORMA, y la forma de un título es «una cadena».
+    tituloRepresentacion: c.tituloRepresentacion,
     ip: ipDe(req),
     userAgent: userAgentDe(req),
   })

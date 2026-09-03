@@ -275,6 +275,13 @@ model PortalAutorizacion {
   otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
   autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
   alcance                String
+  /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
+  /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta,
+  /// y eso solo es legítimo cuando el alcance es de lectura: un CHECK de la BD
+  /// (`portal_autorizacion_apoderamiento_con_titulo`) exige el título en cuanto
+  /// el alcance es `partes` o `documentos`. Una persona FÍSICA no delega esos
+  /// alcances, así que sus filas lo tienen siempre a `null`.
+  tituloRepresentacion   String?   @map("titulo_representacion")
   /// `portal` = lo concedió el cliente en su pantalla. `corredor` = la correduría
   /// anotó uno recibido por otro canal. No son lo mismo y no se pueden confundir.
   origen                 String    @default("portal")

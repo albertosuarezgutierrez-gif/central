@@ -5,13 +5,21 @@ import { useRouter } from 'next/navigation'
 import { GRUPOS_RELACION, SIN_VINCULO, permiteAutorizar, type TipoRelacion } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import {
+  ALCANCE_TEXTO_PORTAL,
+  TITULOS_REPRESENTACION_PORTAL,
+  TITULO_TEXTO_PORTAL,
+  alcancesAnotables,
+  comoTitulo,
+  esApoderamientoPortal,
   explicarEstadoAutorizacion,
   fechaLarga,
   interpretarRelaciones,
   textoMotivoRelaciones,
+  type AlcancePortal,
   type AutorizacionCartera,
   type RelacionCartera,
   type RespuestaRelaciones,
+  type TituloRepresentacionPortal,
 } from '@/lib/relaciones-asegura'
 import type { RespuestaBusqueda } from '@/lib/ficha-asegura'
 
@@ -96,7 +104,17 @@ export default function Relaciones({
     }
   }
 
-  function autorizar(r: RelacionCartera, autoriza: boolean) {
+  /**
+   * Anota (o revoca) la autorización. `extra` solo llega desde una ficha de
+   * SOCIEDAD: el alcance elegido y el título con el que se la representa. Desde
+   * una ficha de persona no se manda ninguno de los dos y asegura anota el
+   * alcance más pequeño («ver»), que es lo único que una persona puede delegar.
+   */
+  function autorizar(
+    r: RelacionCartera,
+    autoriza: boolean,
+    extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+  ) {
     if (!autoriza) {
       // Una PENDIENTE todavía no abría nada: decir «dejará de ver» ahí sería falso.
       const efecto = r.autorizacion?.estado === 'vigente'
@@ -104,7 +122,26 @@ export default function Relaciones({
         : `Se retira la autorización anotada (${r.nombre} todavía no veía nada).`
       if (!confirm(`¿Revocar la autorización? ${efecto}`)) return
     }
-    void ejecutar(`aut-${r.relacionadoId}`, 'PATCH', { relacionadoId: r.relacionadoId, autoriza })
+    // 🚨 Un apoderamiento se confirma aparte: no es «deja mirar», es que esa
+    // persona puede obligar a la sociedad frente a la compañía.
+    if (autoriza && extra && esApoderamientoPortal(extra.alcance)) {
+      const titulo = comoTitulo(extra.tituloRepresentacion)
+      const ok = confirm(
+        `¿Anotar que ${nombreFicha} apodera a ${r.nombre} para ${ALCANCE_TEXTO_PORTAL[extra.alcance]}` +
+          `${titulo ? ` (${titulo})` : ''}? Lo que declare en nombre de la sociedad la OBLIGA frente a la compañía.`,
+      )
+      if (!ok) return
+    }
+    void ejecutar(`aut-${r.relacionadoId}`, 'PATCH', {
+      relacionadoId: r.relacionadoId,
+      autoriza,
+      ...(autoriza && extra
+        ? {
+            alcance: extra.alcance,
+            ...(extra.tituloRepresentacion ? { tituloRepresentacion: extra.tituloRepresentacion } : {}),
+          }
+        : {}),
+    })
   }
 
   // «Revisado: no son nada» en un clic, sin pasar por el formulario. Es la
@@ -174,7 +211,10 @@ export default function Relaciones({
       <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
         La autorización es un consentimiento del titular: <strong>tú la ANOTAS, no la das</strong>. Anótala solo si te
         la ha dado por teléfono o en papel (queda registrado quién, cuándo y con qué texto). Caduca al año y no abre
-        nada hasta que la persona autorizada la acepte en su portal.
+        nada hasta que la persona autorizada la acepte en su portal.{' '}
+        <strong>Si la ficha es una sociedad</strong>, lo que se anota no es un permiso para mirar sino{' '}
+        <strong>quién la representa</strong>: por eso se pide el título y por eso ahí sí caben los partes y la
+        documentación. De una persona solo se puede anotar que deja mirar.
       </p>
     </div>
   )
@@ -186,7 +226,11 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
   r: RelacionCartera
   nombreFicha: string
   ocupado: string | null
-  onAutorizar: (r: RelacionCartera, autoriza: boolean) => void
+  onAutorizar: (
+    r: RelacionCartera,
+    autoriza: boolean,
+    extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+  ) => void
   onQuitar: (r: RelacionCartera) => void
 }) {
   const ficha = `/correduria/cliente/${r.relacionadoId}`
@@ -196,6 +240,9 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
   // rechaza igualmente con un 422, y el portal ni mira esas filas).
   const revisadoSinVinculo = !permiteAutorizar(r.tipo)
   const viva = r.autorizacion?.estado === 'vigente' || r.autorizacion?.estado === 'pendiente'
+  // `null` (asegura no lo manda o no lo pudo leer) NO cuenta como sociedad: se
+  // ofrece solo lo de siempre, que es el lado que no apodera a nadie de más.
+  const esSociedad = r.tipoOtorgante === 'juridica'
   if (revisadoSinVinculo) {
     return (
       <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
@@ -248,7 +295,7 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
           <button type="button" disabled={enCurso} onClick={() => onAutorizar(r, false)} style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
             🔒 {r.autorizacion?.estado === 'pendiente' ? 'Retirar la autorización anotada' : 'Revocar la autorización'}
           </button>
-        ) : (
+        ) : esSociedad ? null : (
           <button type="button" disabled={enCurso} onClick={() => onAutorizar(r, true)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
             🔓 Anotar que {nombreFicha} autoriza a {r.nombre} a ver sus seguros
           </button>
@@ -257,7 +304,90 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
           Quitar relación
         </button>
       </div>
+
+      {/* 🚨 Desde una ficha de SOCIEDAD no basta un botón: hay que decir QUÉ se
+          delega (mirar o actuar) y con qué TÍTULO se la representa. Desde una
+          ficha de persona esto no aparece — ahí solo se puede dejar mirar, y
+          ofrecer un apoderamiento sería ofrecer algo que el puerto rechaza. */}
+      {!viva && esSociedad && (
+        <AnotarSociedad r={r} nombreFicha={nombreFicha} enCurso={enCurso} onAutorizar={onAutorizar} />
+      )}
     </li>
+  )
+}
+
+/**
+ * El alta de una autorización cuando la ficha es una SOCIEDAD.
+ *
+ * Lo que se delega no es consentimiento de datos personales —una sociedad no los
+ * tiene— sino REPRESENTACIÓN mercantil, y por eso aquí sí caben `partes` y
+ * `documentos`. El TÍTULO es obligatorio en esos dos (lo exige un CHECK de la BD)
+ * y aquí se pide siempre: si quien actúa por la empresa da un parte, la que queda
+ * obligada es ella, y «alguien de la empresa» no es un título.
+ */
+function AnotarSociedad({ r, nombreFicha, enCurso, onAutorizar }: {
+  r: RelacionCartera
+  nombreFicha: string
+  enCurso: boolean
+  onAutorizar: (
+    r: RelacionCartera,
+    autoriza: boolean,
+    extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+  ) => void
+}) {
+  // `''` = todavía no ha elegido, que NO es haber elegido lo más pequeño.
+  const [alcance, setAlcance] = useState<AlcancePortal | ''>('')
+  const [titulo, setTitulo] = useState<TituloRepresentacionPortal | ''>('')
+  const opciones = alcancesAnotables(r.tipoOtorgante)
+  const listo = alcance !== '' && titulo !== ''
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        <strong>{nombreFicha} es una sociedad</strong>, así que aquí no se anota un permiso para mirar:
+        se anota <strong>quién puede representarla</strong>. Quien la represente ve lo que paga, su CIF y
+        su cuenta bancaria —son datos de la empresa— y, con «dar partes», lo que declare{' '}
+        <strong>obliga a la sociedad</strong>. Lo que no puede hacer nunca es autorizar a nadie más.
+      </div>
+
+      <Campo label={`¿Qué puede hacer ${r.nombre} por ${nombreFicha}?`}>
+        <select value={alcance} onChange={(e) => setAlcance(e.target.value as AlcancePortal | '')} style={campo} disabled={enCurso}>
+          <option value="">Elige qué se delega…</option>
+          {opciones.map((a) => (
+            <option key={a} value={a}>{ALCANCE_TEXTO_PORTAL[a]}</option>
+          ))}
+        </select>
+      </Campo>
+
+      <Campo
+        label="¿Con qué título la representa?"
+        ayuda="Queda guardado con la autorización. Obligatorio para dar partes o manejar documentos: sin él, lo que declare no se le puede oponer a la compañía."
+      >
+        <select value={titulo} onChange={(e) => setTitulo(e.target.value as TituloRepresentacionPortal | '')} style={campo} disabled={enCurso}>
+          <option value="">Elige el título…</option>
+          {TITULOS_REPRESENTACION_PORTAL.map((t) => (
+            <option key={t} value={t}>{TITULO_TEXTO_PORTAL[t]}</option>
+          ))}
+        </select>
+      </Campo>
+
+      <div>
+        <button
+          type="button"
+          disabled={enCurso || !listo}
+          onClick={() => {
+            if (alcance === '' || titulo === '') return
+            onAutorizar(r, true, { alcance, tituloRepresentacion: titulo })
+          }}
+          style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+        >
+          🔓 Anotar la autorización de {nombreFicha} a {r.nombre}
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+        Nace <strong>pendiente</strong>: no abre nada hasta que {r.nombre} la acepte en su portal.
+      </div>
+    </div>
   )
 }
 
@@ -291,8 +421,11 @@ function EstadoAutorizacion({ a, nombreOtro, nombreFicha }: {
       {a?.estado === 'vigente' && (
         <div style={{ fontSize: 11, color: 'var(--muted)' }}>
           {a.origen === 'corredor' ? 'La anotó la correduría' : 'La concedió el cliente desde su portal'} · caduca el{' '}
-          {fechaLarga(a.caducaEn)} (no se renueva sola) · alcance:{' '}
-          {a.alcances.length > 0 ? a.alcances.join(', ') : 'sin detallar'}
+          {fechaLarga(a.caducaEn)} (no se renueva sola) · puede:{' '}
+          {a.alcances.length > 0 ? a.alcances.map((x) => ALCANCE_TEXTO_PORTAL[x]).join(' · ') : 'sin detallar'}
+          {/* El título solo consta cuando cede una sociedad. `null` ahí es lo
+              normal entre personas: no se representa a nadie, se mira. */}
+          {comoTitulo(a.tituloRepresentacion) ? ` · ${comoTitulo(a.tituloRepresentacion)}` : ''}
         </div>
       )}
     </div>
@@ -554,9 +687,11 @@ function Campo({ label, ayuda, children }: { label: string; ayuda?: string; chil
   )
 }
 
+// 16 px y no 14: por debajo de 16, Safari en iPhone hace ZOOM al enfocar el
+// campo y descoloca la pantalla entera. Los 44 px son el mínimo táctil.
 const campo: React.CSSProperties = {
   width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, padding: '10px 12px',
-  borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14,
+  borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 16,
 }
 const pendienteBox: React.CSSProperties = {
   fontSize: 13, lineHeight: 1.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 10px',

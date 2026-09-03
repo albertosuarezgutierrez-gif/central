@@ -43,6 +43,7 @@ import {
   etiquetaNivelAlcances,
   NIVELES,
   type Alcance,
+  type TipoOtorgante,
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
@@ -247,7 +248,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const [clientes, polizas] = await Promise.all([
     prisma.cliente.findMany({
       where: { id: { in: todosIds }, mergedIntoClienteId: null },
-      select: { id: true, nombre: true, apellidos: true },
+      // `tipoPersona` decide QUÉ se sirve de una ficha ajena: una sociedad no
+      // tiene datos personales, así que quien la representa ve su CIF y su
+      // cuenta y puede actuar por ella. Sin este campo, la bóveda serviría una
+      // autorización de empresa con el tope de una persona: caería del lado
+      // seguro, pero un `partes` concedido no se honraría y parecería un bug.
+      select: { id: true, nombre: true, apellidos: true, tipoPersona: true },
     }),
     prisma.poliza.findMany({
       // `WHERE_CARTERA_VIVA` va DENTRO del `AND`: es un `OR` de dos brazos y
@@ -355,6 +361,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   }
 
   const nombrePor = new Map(clientes.map((c) => [c.id, `${c.nombre} ${c.apellidos}`.trim()]))
+  // NULL o cualquier otra cosa → `fisica`, el lado restrictivo. La cartera real
+  // tiene `tipo_persona` casi vacía (medido 03/09/2026), así que este default
+  // NO es teórico: es el caso normal, y tiene que ser el que menos abre.
+  const tipoPor = new Map<string, TipoOtorgante>(
+    clientes.map((c) => [c.id, c.tipoPersona === 'juridica' ? 'juridica' : 'fisica']),
+  )
   const titular = (
     clienteId: string,
     nivel: Nivel,
@@ -385,7 +397,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   for (const [clienteId, a] of porOtorgante) {
     // `camposDeAlcances` va capada: pase lo que pase con los niveles, un tercero
     // no ve el IBAN ni el DNI del otorgante, ni puede actuar en su nombre.
-    const ve = camposDeAlcances(a.alcances)
+    const ve = camposDeAlcances(a.alcances, tipoPor.get(clienteId) ?? 'fisica')
     if (ve === null) continue
     const t = titular(clienteId, etiquetaNivelAlcances(a.alcances), ve, a)
     if (t === null) continue
