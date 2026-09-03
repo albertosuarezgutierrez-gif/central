@@ -77,6 +77,16 @@
   (30-60 días, donde SÍ da tiempo a mover de compañía)**, 5 con el plazo ya pasado y 🚩 **18 vivas
   por CIMA con vencimiento ANTERIOR a hoy** — o CIMA no refresca la fecha al prorrogar, o están
   vencidas de verdad; sin mirar, no se afirma.
+- **🌶️ La pimienta del portal se apagaba sola (03/09/2026).** `hashCanal` leía
+  `ASEGURA_PORTAL_CANAL_PEPPER ?? ''`: sin la env la app NO fallaba, seguía dando de alta y escribía
+  en `portal_canal` **SHA-256 pelados del email** — justo lo que ese hash existe para evitar. Medido
+  en producción: el código de acceso se envió con normalidad con la env sin poner, y el 500 que sí
+  saltó fue el de `ASEGURA_PORTAL_SESSION_SECRET` (esa sí pasa por `requireSecret`). Pasa a
+  `requireSecret` + guardián `test/regression-portal-pimienta.test.ts`. El guardián general de
+  secretos no lo cazaba **a propósito** —«un literal vacío no es una credencial usable»—, cierto
+  para un secreto que FIRMA y falso para una pimienta. ⚠️ **No mergear hasta que la env esté
+  puesta**: antes de eso tumba el alta con 500.
+
 - **🔑 Portal del cliente: envs puestas y la lección de las claves irreversibles (03/09/2026).**
   En `asegura-portal` quedan `DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_FROM`,
   `PORTAL_MAIL_REPLY_TO` y `PORTAL_PUBLIC_URL`. Dos cosas que costaron la noche: (1) **una env
