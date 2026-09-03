@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   esCompDeNuestraLiga, notaCreible, sqlCompDeNuestraLiga, sqlNotaCreible,
   MAX_VENTAJA_NOTA, MIN_RESENAS_NOTA,
+  guardaMonotoniaLiga, guardaMonotoniaLigaMed,
 } from './pricing-comps-liga.ts'
 
 // El caso fundacional: Busto Reform (6,9) contra el techo del mercado sevillano.
@@ -78,4 +79,79 @@ test('sqlNotaCreible exige nota y reseñas, sin puertas de escape', () => {
   assert.match(sql, /m\.review_count >= 30/)
   // Es la condición ESTRICTA: aquí un «no lo sé» no debe colarse en la mediana de calidad.
   assert.ok(!/IS NULL OR/.test(sql))
+})
+
+// ─── Guarda de MONOTONIA (03/09/2026, tras el incidente de Busto jul-ago 2027) ────────────────
+
+test('el filtro se DESCARTA cuando encarece: caso real de Busto julio 2027', () => {
+  // Medido en produccion: p40 sin filtrar 98,0€ / con filtro 146,4€ (+49%). El motor aplico el
+  // filtrado y subio 61 noches un 37,8% hasta el tope del rail.
+  const r = guardaMonotoniaLiga(
+    { valores: { med: 146, flo: 120, cei: 200 }, n: 22 },
+    { valores: { med: 98, flo: 80, cei: 150 }, n: 170 },
+  )
+  assert.equal(r.motivo, 'filtro_encarece')
+  assert.equal(r.valores!.med, 98, 'manda el corpus completo, que es el barato')
+  assert.equal(r.n, 170)
+})
+
+test('el filtro se APLICA cuando abarata, que es su trabajo normal', () => {
+  // Busto junio: 151,6€ -> 100,6€. Aqui el filtro si separa ligas y debe mandar.
+  const r = guardaMonotoniaLiga(
+    { valores: { med: 100, flo: 85, cei: 140 }, n: 10 },
+    { valores: { med: 151, flo: 120, cei: 210 }, n: 103 },
+  )
+  assert.equal(r.motivo, 'aplicado')
+  assert.equal(r.valores!.med, 100)
+  assert.equal(r.n, 10)
+})
+
+test('empate = se aplica: la guarda solo actua cuando ENCARECE de verdad', () => {
+  const r = guardaMonotoniaLiga(
+    { valores: { med: 120, flo: 100, cei: 160 }, n: 30 },
+    { valores: { med: 120, flo: 100, cei: 160 }, n: 30 },
+  )
+  assert.equal(r.motivo, 'aplicado')
+})
+
+test('sin corpus en liga manda el completo, y se dice cual de los dos casos es', () => {
+  const r = guardaMonotoniaLiga(
+    { valores: null, n: 0 },
+    { valores: { med: 110, flo: 90, cei: 150 }, n: 80 },
+  )
+  assert.equal(r.motivo, 'sin_corpus_liga')
+  assert.equal(r.valores!.med, 110)
+  // Y el simetrico NO se colapsa con 'aplicado': no se ha podido comprobar la monotonia.
+  const r2 = guardaMonotoniaLiga({ valores: { med: 110, flo: 90, cei: 150 }, n: 8 }, { valores: null, n: 0 })
+  assert.equal(r2.motivo, 'sin_referencia')
+  assert.notEqual(r2.motivo, 'aplicado')
+})
+
+test('el trio viaja COMPLETO: no se mezcla el med de un corpus con el floor del otro', () => {
+  // Un floor del corpus filtrado por encima del target del completo volveria a subir el precio
+  // por la puerta de atras (el floor acota por abajo). Por eso se elige el trio entero.
+  const r = guardaMonotoniaLiga(
+    { valores: { med: 146, flo: 140, cei: 200 }, n: 22 },
+    { valores: { med: 98, flo: 80, cei: 150 }, n: 170 },
+  )
+  assert.deepEqual(r.valores, { med: 98, flo: 80, cei: 150 })
+})
+
+test('la variante escalar del bucket de fecha se comporta igual', () => {
+  assert.equal(guardaMonotoniaLigaMed({ med: 146, n: 22 }, { med: 98, n: 170 }).med, 98)
+  assert.equal(guardaMonotoniaLigaMed({ med: 90, n: 22 }, { med: 98, n: 170 }).med, 90)
+  assert.equal(guardaMonotoniaLigaMed({ med: null, n: 0 }, { med: 98, n: 170 }).motivo, 'sin_corpus_liga')
+})
+
+test('PROPIEDAD: el resultado nunca supera al corpus completo (barrido)', () => {
+  for (let conLiga = 50; conLiga <= 300; conLiga += 7) {
+    for (let sinLiga = 50; sinLiga <= 300; sinLiga += 11) {
+      const r = guardaMonotoniaLiga(
+        { valores: { med: conLiga, flo: conLiga - 10, cei: conLiga + 40 }, n: 20 },
+        { valores: { med: sinLiga, flo: sinLiga - 10, cei: sinLiga + 40 }, n: 100 },
+      )
+      assert.ok(r.valores!.med <= sinLiga,
+        `el filtro subio el ancla: ${conLiga} vs ${sinLiga} -> ${r.valores!.med}`)
+    }
+  }
 })
