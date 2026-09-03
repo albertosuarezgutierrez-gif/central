@@ -60,6 +60,21 @@ export const RUTAS: RutaCorreo[] = [
     ejemplos: ['Occident regularización RC', 'Mapfre corredores', 'liquidación de comisiones'],
   },
   {
+    // 🚨 Se separa de `correduria` porque es lo ÚNICO del correo de aseguradoras que caduca:
+    // un recibo devuelto suspende la cobertura al mes (art. 15 LCS) y a los seis extingue la
+    // póliza. En el digest de las 22:30 llega tarde y se lee entre veinte comunicados
+    // comerciales. Y hace falta porque CIMA NO lo cuenta todo: el 03/09/2026 un recibo de
+    // Mapfre llevaba 56 días vencido sin que la ingesta trajera ni el cobro ni la devolución
+    // — mientras Occident y Allianz sí mandan por correo su lista de devueltos, con nombre y
+    // fecha. Este correo es, para varias compañías, la ÚNICA señal que existe.
+    categoria: 'correduria-recibo',
+    etiqueta: 'Triaje/Correduria-Recibos',
+    archivar: false,
+    aviso: 'inmediato',
+    descripcion: 'Aviso de una ASEGURADORA sobre recibos que no han entrado: devoluciones de banco, resúmenes de impagados, pólizas anuladas por impago y —lo más valioso— avisos de recibos PRÓXIMOS a la anulación. NO es una liquidación de comisiones ni un comunicado comercial (correduria), ni una factura de un proveedor de Alberto (contabilidad).',
+    ejemplos: ['Recibos devueltos de banco 14-08-2026', 'Resumen de recibos próximos a la anulación', 'Relacion anulacion polizas por impago', 'DELEGACIÓN RECIBO Nº … PÓLIZA MAPFRE'],
+  },
+  {
     categoria: 'personal-importante',
     etiqueta: 'Triaje/Personal',
     archivar: false,

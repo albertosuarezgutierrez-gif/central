@@ -588,6 +588,20 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `historial_interno` de las DOS fichas: es un consentimiento y se tiene que ver quién lo anotó y cuándo.
   ⚠️ `prisma_asegura_portal` NO tiene grant sobre la tabla: el portal del cliente todavía no enseña los
   seguros de nadie más; cuando se haga, `clientesQuePuedeVer()` ya dice a quién.
+  🆕 **Tipo `Sin vínculo` (03/09/2026, PR #2161) — «revisado y no son nada» ≠ «nadie lo ha mirado».** Alberto,
+  sobre Antonio Sevico (conductor ocasional en 18 pólizas de la cartera, con ficha propia y sin ninguna fila
+  en `cliente_relaciones`): «no tiene vinculación ninguna». Eso es un HECHO y hasta ese día no se podía
+  anotar: la tarjeta 👪 solo pinta lo declarado, así que se veía igual que no haberlo revisado — y el bloque
+  nuevo «En sus pólizas, sin vínculo declarado» habría pedido su vínculo para siempre (**17 pares así, en 15
+  fichas**, de 326). Es simétrico y **NO autoriza a nada**, con la guarda en TRES sitios y no en el botón:
+  `permiteAutorizar()` (puro), `clientesVisiblesPara()` **ignora esas filas aunque traigan
+  `puedeVerPolizas` en true** —es donde se decide quién ve las pólizas de quién— y `autorizarVer()` corta
+  con 422 antes de escribir el consentimiento. Un conductor ocasional no puede acabar viendo las pólizas del
+  tomador por un flag viejo del volcado.
+  ⚠️ **Falso positivo del guardián de aislamiento, para no perder el rato dos veces:**
+  `regression-asegura-aislamiento` marcó `cartera-relaciones.ts` como infractor porque un mensaje de error
+  acababa una frase con «ver seguros.» y el cepo busca `seguros.<letra>` con flag `i`. Se reescribe la
+  FRASE, no el cepo: uno que molesta es mejor que uno que deja pasar.
 - **🕘 Estado derivado, historial y duplicadas (02/09/2026, «haz todo»).** La ficha manda `estado`
   (`estadoCliente()` de module-seguros: cliente = póliza **confirmada por CIMA** = cartera viva
   (`esCarteraViva()`) **y** `id_poliza_entidad` informado; «emitida, pendiente de CIMA» = viva sin entidad,
@@ -731,6 +745,24 @@ Cifras sobre las 32.600 fichas (medidas ANTES de esas 50 fusiones):
   sin teléfono común, sin póliza común. **Es la ingesta de CIMA creando una ficha nueva** en vez de
   colgar la póliza de la existente — a Manuel. Renovaciones lo pinta como dos personas.
 
+🧩 **Lote 5 (03/09/2026, `2026-09-03_fusion_mismo_vehiculo_lote5.sql`) — ESCRITO Y SIN EJECUTAR.** Alberto
+vio a «María Antonia Gutiérrez Alcalá» DOS veces en «👤 Personas en sus pólizas» de José Suárez Salas y
+dictó «prepara». Son dos fichas suyas (`intranet:cli:48` con DNI · `asegura_app:cli2:48` sin él), y lo caro
+no es el duplicado: **el vínculo «Cónyuge» y su AUTORIZACIÓN cuelgan de la del volcado**, la que no tiene
+ninguna póliza viva. **3 pares**, guarda de identidad = nombre+apellidos idénticos normalizados **+ las dos
+intervienen en pólizas del MISMO VEHÍCULO** + no hay dos DNI distintos; sobrevive la que tiene DNI y la
+lápida no puede tener ninguna póliza de CIMA. Ensayo en seco: las cuatro guardas pasan en los 3.
+- **La condición del vehículo es la que decide, y se midió antes de escribirla:** solo con el nombre habría
+  **1.010 pares** que además comparten el número de import — y ese N **no es un identificador**: de los
+  4.093 pares que lo comparten, solo el **25%** comparte además el nombre. Fusionar por nombre es fundir
+  parientes homónimos.
+- **Fuera a propósito:** «Salvador Pérez Jiménez», con TRES fichas sin fusionar que no comparten ningún
+  vehículo (5242DFY · ninguna · 8100FTK+8849HLB) — con ese dato pueden ser un padre y un hijo. Y los **8**
+  pares de mismo nombre con dos DNI distintos.
+- ✅ **Cumple el aviso del lote 4** sobre los índices ciegos, por el otro camino: no hereda antes de anular,
+  sino que **repone los tres `*_lookup_hash` desde `snapshot_before`** al final del propio fichero (con
+  guarda de unicidad), en vez de dejarlo para una segunda pasada descubierta después.
+
 Desde el 02/09 el rol `prisma_seguros` sí escribe, pero las fusiones se hacen por SQL con su lote y su
 guarda de identidad (no hay botón «fusionar» en la UI, a propósito); el buscador mide, rotula y enlaza a
 la ficha viva desde la histórica (`avisoHermanas()`).
@@ -738,21 +770,41 @@ la ficha viva desde la histórica (`avisoHermanas()`).
 ### 📞 La cola de retención — recibos devueltos (`lib/cartera-impagados.ts`)
 
 Lo que decide el orden **no es el importe, es el reloj** (art. 15 LCS, modelado en
-`@central/module-seguros/retencion.ts`, puro y con 10 tests):
+`@central/module-seguros/retencion.ts`, puro y con 16 tests). 🚨 **Pero el reloj solo arranca si la
+compañía AFIRMA el impago**, así que `retencion(vencimiento, situacion, hoy)` exige la situación del
+recibo y NO tiene valor por defecto:
 
-| Desde que venció el recibo | Estado | Qué se puede hacer |
-|---|---|---|
-| < 1 mes | `en_plazo` | Se paga y no llega a pasar nada |
-| **1-6 meses** | 🔴 `suspendida` | **El cliente circula sin cobertura y no lo sabe.** Si paga, vuelve a estar cubierto en **24 h** |
-| > 6 meses | ⚫ `extinguida` | Ya no se rescata: retenerlo es **póliza nueva** → retarificar |
-| sin fecha | ❔ `sin_fecha` | No se sabe desde cuándo; va casi el primero por si es el más viejo |
+| Situación del recibo | Desde que venció | Estado | Qué se puede hacer |
+|---|---|---|---|
+| `devuelto` | < 1 mes | `en_plazo` | Se paga y no llega a pasar nada |
+| `devuelto` | **1-6 meses** | 🔴 `suspendida` | **El cliente circula sin cobertura y no lo sabe.** Si paga, vuelve a estar cubierto en **24 h** |
+| `devuelto` | > 6 meses | ⚫ `extinguida` | Ya no se rescata: retenerlo es **póliza nueva** → retarificar |
+| `pendiente` | cualquiera | 🟠 `sin_confirmar` | **NADIE ha dicho que se devolviera.** Se mira en el portal de la compañía; NO se llama al cliente |
+| (ambas) | sin fecha | ❔ `sin_fecha` | No se sabe desde cuándo; va casi el primero por si es el más viejo |
+
+🚨 **Caso fundacional (03/09/2026): la ficha de María Alcalá (hogar Mapfre `0732000113003`) decía
+«🔴 Sin cobertura · hace 56 días»** sobre un recibo de 225,97€ en situación **`pendiente`**, DOMICILIADO
+(`forma_pago='CC'`), en una póliza **en vigor** hasta 2027 — y cuya fila no se tocaba desde la carga
+inicial del 24/06 mientras CIMA seguía entrando con normalidad (128 ficheros, el último del 30/08; 8
+recibos SÍ pasaron a `cobrado` en agosto). O sea: la pantalla convertía «Mapfre no ha mandado el cobro»
+en «esta señora circula sin seguro», que es el NULL colapsado a afirmación en el sitio más caro que
+hay. Contraste: el único devuelto REAL de la cartera (Benito Azo Rejo, Occident) trae `fecha_situacion`
+= 14/08/2026, una fecha de devolución de verdad, y cuadra al día con el correo «Recibos devueltos de
+banco 14-08-2026» de `mediadores@occidentinforma.com`.
 
 - **El enum de la base solo tiene `devuelto`** (no existe `impagado`). Los `pendiente` entran en la
   cola **solo si ya vencieron**; los que no, se cuentan en `pendientesSinJuzgar` en vez de tirarse.
-- 🚨 **`sinRecibosInformados`**: las pólizas vivas sin NINGÚN recibo (18 de las 109 de entonces). No salen en la cola
+- **`resumen.suspendidas` es el único número que autoriza a decir «circulan sin cobertura»** — los
+  `sin_confirmar` van en `resumen.sinConfirmar`, aparte, con su propio cartel 🟠.
+- **`situacionRecibo` cruza el puerto** para que plataforma pueda distinguir las dos cosas; en el
+  puerto es `'devuelto' | 'pendiente' | null` y **un valor raro o ausente cae a `null`**, nunca a
+  `devuelto`: inventarse un impago confirmado es exactamente lo que esto evita.
+- 🚨 **`sinRecibosInformados`**: las pólizas vivas sin NINGÚN recibo (18 de las 109 de entonces; con la
+  regla de dos brazos la cartera viva son 110 y esa cuenta no se ha vuelto a medir). No salen en la cola
   y **eso no es «están pagadas»** — la UI lo declara debajo de la lista.
-- Varios devueltos de la misma póliza → se queda **el más antiguo**: es el que manda el reloj, y
-  duplicar la fila duplicaría la llamada.
+- Varios recibos sin cobrar de la misma póliza → **un `devuelto` gana a cualquier `pendiente`** (es un
+  hecho contra un dato que falta) y, dentro de la misma situación, se queda **el más antiguo**: es el
+  que manda el reloj, y duplicar la fila duplicaría la llamada.
 - El puerto lleva el **teléfono descifrado** a propósito: el propósito de la lista es descolgar.
 
 🔒 **Lo que NO cruza el puerto, a propósito: DNI, IBAN y dirección.** Para trabajar una renovación no

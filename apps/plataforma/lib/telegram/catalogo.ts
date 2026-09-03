@@ -271,6 +271,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
+    id: 'correo.correduria-recibo', categoria: 'correo',
+    titulo: 'Recibos sin cobrar de la correduría',
+    que: 'Devoluciones de banco, impagados y avisos de anulación que mandan las compañías. Es lo único del correo de aseguradoras que caduca: al mes se suspende la cobertura.',
+    cuando: 'Al llegar (revisión cada 10 min)',
+  },
+  {
     id: 'correo.leads', categoria: 'correo',
     titulo: 'Oportunidades de negocio',
     que: 'Leads entrantes, partnerships y respuestas a mailings de ia-rest / ialimp.',
@@ -563,6 +569,7 @@ export function avisoDeCategoriaCorreo(categoria: string): string | null {
     'personal-importante': 'correo.personal-importante',
     'huespedes': 'correo.huespedes',
     'agoda-huespedes': 'correo.agoda',
+    'correduria-recibo': 'correo.correduria-recibo',
     'leads-negocio': 'correo.leads',
     'seguridad-sospechosa': 'correo.seguridad',
   }

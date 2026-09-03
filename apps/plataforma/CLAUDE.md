@@ -502,6 +502,30 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   `rutas.ts` contra las skills. ⚠️ Vercel NO puede disparar la rutina Claude `facturas-correo`: la
   contabilidad etiquetada se recoge en su pasada de las 08:00.
 
+- **📬 `correduria-recibo` — la categoría que NO puede esperar al digest (03/09/2026).** El correo de
+  aseguradoras iba entero a `correduria` (aviso `digest`, 22:30). Dentro de esos 55 correos había
+  cuatro clases que **caducan**: «Recibos devueltos de banco» y «Resumen de recibos anulados por
+  impago» de `mediadores@occidentinforma.com`, «Relacion anulacion polizas por impago» de
+  `mediador@allianz.es` y —el más valioso— **«Resumen de recibos PRÓXIMOS a la anulación»**, que llega
+  ANTES de que caiga la cobertura (art. 15 LCS: al mes se suspende). Categoría propia con
+  `aviso:'inmediato'`, etiqueta `Triaje/Correduria-Recibos`, id `correo.correduria-recibo` en el
+  catálogo de Telegram (silenciable como el resto).
+- 🚨 **Su regla determinista va PRIMERA y exige DOS condiciones a la vez** (`esReciboAseguradora` en
+  `lib/correo/keywords.ts`): remitente de aseguradora **Y** asunto de recibo. Por dominio a secas,
+  `occidentinforma.com` se lleva al digest los tres tipos de correo que manda el mismo día (siniestro,
+  comunicado comercial y recibos devueltos); por asunto a secas, «Recibo de su pago a IONOS» de PayPal
+  se colaría en la correduría. El asunto se compara **sin tildes**: las compañías escriben «anulacion»
+  y «anulación» el mismo día.
+- ⚠️ **Esto NO cubre a Mapfre para impagos, y conviene saberlo antes de fiarse:** en los 55 correos de
+  correduría medidos (04/07→03/09/2026) Mapfre solo manda comunicados comerciales y un
+  `dmapcccrecibosoperac@mapfre.com` «DELEGACIÓN RECIBO Nº…». **El caso de María Alcalá —56 días con el
+  recibo sin constar cobrado— no habría saltado tampoco por correo.** Para Occident, Allianz y Reale el
+  correo SÍ es una fuente real, y para varias es la única que existe.
+- 🚫 **Lo que NO se pudo cablear y por qué:** anotar el hecho en la ficha del cliente. El único puerto
+  de escritura genérico es `POST /api/operador/cliente/historial` → `seguros.historial_interno`, y esa
+  tabla tiene **`cliente_id NOT NULL`**: sin resolver el correo a un cliente concreto (el detalle va en
+  adjunto o en el cuerpo, sin parsear) no hay a quién colgar la nota. El aviso inmediato es lo que hay.
+
 - [x] **Domótica Tuya — ventilador de techo Socorro (03/07/2026, PR #714):** regla de Alberto: día de
   LLEGADA a las 15:00 hora Madrid, si en Sevilla hace >30°C, ENCIENDE solo el ventilador (nunca la luz);
   día de SALIDA a las 11:30, APAGA siempre (idempotente, cubre el desfase del mando RF). Cron

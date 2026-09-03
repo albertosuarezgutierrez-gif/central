@@ -69,6 +69,39 @@ export type ClienteCartera = {
   fechaCarnet: string | null
 }
 
+/**
+ * Una versión de vehículo vista en OTRA póliza de la misma matrícula.
+ *
+ * 🚨 Es una PISTA, no un dato: es texto libre del volcado histórico, no un
+ * código Base7 del catálogo del vendor, y la misma matrícula puede traer dos
+ * que se contradigan (medido: `0432GLT` sale como «FORTWO COUPE PURE 52» en una
+ * póliza y como «FORFOUR PURE 1.1» en otra). Por eso viaja con su procedencia
+ * y NUNCA se autoselecciona, ni cuando solo hay una: elige el corredor.
+ */
+export type VersionCandidata = {
+  /** El texto tal cual se guardó. */
+  version: string
+  /** De qué póliza sale, para poder decirlo en pantalla. */
+  procedencia: string
+}
+
+/**
+ * Lo que la ficha SÍ sabe del coche.
+ *
+ * ⚠️ Corregido el 03/09/2026: durante un día se dio por hecho que las pólizas
+ * vivas solo traían matrícula. Es falso — las 80 de auto traen matrícula, marca
+ * Y modelo; lo único que no trae ninguna es la versión. La pantalla decía «la
+ * compañía manda la matrícula pero no el modelo» y obligaba a teclear de cero
+ * algo que ya estaba en la BD.
+ */
+export type VehiculoConocido = {
+  /** `null` = no consta en la póliza. NO es «el coche no tiene marca». */
+  marca: string | null
+  modelo: string | null
+  /** Puede ser `[]`: nadie ha anotado nunca una versión de esta matrícula. */
+  versiones: VersionCandidata[]
+}
+
 export type PolizaCartera = {
   /** Número de la póliza actual: pasa a ser la ANTERIOR de la cotización. */
   numeroPoliza: string | null
@@ -86,6 +119,8 @@ export type PolizaCartera = {
    * optimista; con >0 deja de ser supuesto y pasa a ser dato.
    */
   siniestrosRegistrados: number
+  /** Marca, modelo y versiones candidatas. Ver `VehiculoConocido`. */
+  vehiculo: VehiculoConocido
 }
 
 /**

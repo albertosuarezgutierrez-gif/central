@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { GRUPOS_RELACION, explicarAutorizacion, type TipoRelacion } from '@central/module-seguros'
+import { GRUPOS_RELACION, SIN_VINCULO, explicarAutorizacion, permiteAutorizar, type TipoRelacion } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import {
   interpretarRelaciones,
@@ -35,15 +35,24 @@ export default function Relaciones({
   clienteId,
   nombreFicha,
   inicial,
+  sinVinculo = [],
 }: {
   clienteId: string
   nombreFicha: string
   inicial: RelacionCartera[] | null
+  /** Personas que salen en SUS pólizas, con ficha propia y sin vínculo anotado.
+   *  Se ofrecen aquí para declararlas de un clic: antes salían en la tarjeta
+   *  👤 con un «se anota en Relaciones» y aquí no aparecían por ningún lado. */
+  sinVinculo?: SugerenciaVinculo[]
 }) {
   const router = useRouter()
   const [lista, setLista] = useState<RelacionCartera[] | null>(inicial)
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [resultado, setResultado] = useState<RespuestaRelaciones | null>(null)
+  // El contador fuerza a remontar `Anadir` en cada clic: así el formulario nace
+  // ya con esa ficha elegida sin tocar el estado de otro componente mientras se
+  // pinta (React lo prohíbe), y volver a pulsar el mismo nombre lo reabre.
+  const [preseleccion, setPreseleccion] = useState<{ cand: Candidato; n: number } | null>(null)
 
   async function llamar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>): Promise<RespuestaRelaciones> {
     try {
@@ -77,6 +86,13 @@ export default function Relaciones({
   function autorizar(r: RelacionCartera, autoriza: boolean) {
     if (!autoriza && !confirm(`¿Revocar la autorización? ${r.nombre} dejará de poder ver los seguros de ${nombreFicha}.`)) return
     void ejecutar(`aut-${r.relacionadoId}`, 'PATCH', { relacionadoId: r.relacionadoId, autoriza })
+  }
+
+  // «Revisado: no son nada» en un clic, sin pasar por el formulario. Es la
+  // respuesta correcta para la mayoría de los que salen ahí (Alberto, 03/09/2026:
+  // «Antonio Sevico no tiene vinculación ninguna») y hasta hoy no se podía decir.
+  function sinVinculoDe(p: SugerenciaVinculo) {
+    void ejecutar(`nada-${p.fichaId}`, 'POST', { relacionadoId: p.fichaId, tipo: SIN_VINCULO })
   }
 
   function quitar(r: RelacionCartera) {
@@ -113,12 +129,25 @@ export default function Relaciones({
 
       {resultado && resultado.estado !== 'ok' && <Aviso r={resultado} />}
 
+      {/* `lista === null` = no se han podido leer las relaciones. Entonces no se sabe
+          quién tiene vínculo y quién no, y ofrecer «declarar» a todos sería afirmar
+          que no lo tienen: se calla (regla `null` ≠ `[]`). */}
+      <SinVinculo
+        personas={lista === null ? [] : sinVinculo.filter((p) => !lista.some((r) => r.relacionadoId === p.fichaId))}
+        nombreFicha={nombreFicha}
+        onDeclarar={(p) => setPreseleccion((v) => ({ cand: { id: p.fichaId, nombre: p.nombre, tipo: '', polizas: 0 }, n: (v?.n ?? 0) + 1 }))}
+        onSinVinculo={sinVinculoDe}
+        ocupado={ocupado}
+      />
+
       <Anadir
+        key={preseleccion?.n ?? 0}
         clienteId={clienteId}
         nombreFicha={nombreFicha}
         yaRelacionados={lista ? lista.map((r) => r.relacionadoId) : []}
         ocupado={ocupado === 'add'}
         onCrear={(body) => ejecutar('add', 'POST', body)}
+        preseleccion={preseleccion?.cand ?? null}
       />
 
       <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
@@ -139,6 +168,33 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
 }) {
   const ficha = `/correduria/cliente/${r.relacionadoId}`
   const enCurso = ocupado === `aut-${r.relacionadoId}` || ocupado === `del-${r.relacionadoId}`
+  // `Sin vínculo` no es un parentesco: es la constancia de que se miró y no hay
+  // ninguno. Ni se explica quién ve qué ni se ofrece autorizar (el puerto lo
+  // rechaza igualmente con un 422, y el portal ni mira esas filas).
+  const revisadoSinVinculo = !permiteAutorizar(r.tipo)
+  if (revisadoSinVinculo) {
+    return (
+      <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
+          <Link href={ficha} style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{r.nombre}</Link>
+          <span style={{ fontSize: 13 }}>· revisado: no hay vínculo</span>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Sale en las pólizas de {nombreFicha} pero no es nada suyo. Queda anotado para no volver
+          a preguntarlo, y <strong>no puede ver sus seguros</strong>: para autorizar a alguien hace
+          falta antes una relación de verdad.
+        </div>
+        {r.observaciones && (
+          <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
+        )}
+        <div>
+          <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal' }}>
+            Quitar la anotación
+          </button>
+        </div>
+      </li>
+    )
+  }
   return (
     <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
@@ -189,18 +245,21 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
 
 type Candidato = { id: string; nombre: string; tipo: string; polizas: number }
 
-function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear }: {
+function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, preseleccion }: {
   clienteId: string
   nombreFicha: string
   yaRelacionados: string[]
   ocupado: boolean
   onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones>
+  /** Ficha ya elegida desde «sin vínculo declarado»: se salta el buscador.
+   *  El padre remonta este componente al cambiarla, así que basta con nacer con ella. */
+  preseleccion: Candidato | null
 }) {
-  const [abierto, setAbierto] = useState(false)
+  const [abierto, setAbierto] = useState(preseleccion !== null)
   const [q, setQ] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [busqueda, setBusqueda] = useState<RespuestaBusqueda | null>(null)
-  const [elegido, setElegido] = useState<Candidato | null>(null)
+  const [elegido, setElegido] = useState<Candidato | null>(preseleccion)
   const [tipo, setTipo] = useState<TipoRelacion>('Cónyuge/Pareja de Hecho')
   const [observaciones, setObservaciones] = useState('')
 
@@ -253,7 +312,10 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear }: {
         onSubmit={(e) => { e.preventDefault(); void buscar() }}
         style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, alignItems: 'end' }}
       >
-        <Campo label="Buscar la otra ficha por nombre, DNI, teléfono o email">
+        {/* Solo NOMBRE y APELLIDOS: `buscarClientes` (apps/asegura/lib/cartera-ficha.ts)
+            no mira DNI, teléfono ni email, y un DNI tecleado aquí devuelve vacío,
+            que se lee como «no está en la cartera». */}
+        <Campo label="Buscar la otra ficha por nombre y apellidos">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="María Antonia…" style={campo} autoComplete="off" />
         </Campo>
         <button type="submit" disabled={buscando || q.trim() === ''} style={btnStyle('secundario')}>
@@ -328,6 +390,79 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear }: {
           <button type="button" onClick={() => setAbierto(false)} style={btnStyle('sutil')}>Cancelar</button>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Las que salen en sus pólizas y no tienen vínculo ────────────────────────
+
+export type SugerenciaVinculo = {
+  fichaId: string
+  nombre: string
+  papel: string
+  /** Hay otra fila con el mismo nombre y no se distinguen: puede ser la misma
+   *  persona con dos fichas, y una de ellas quizá ya tenga el vínculo puesto. */
+  ojoDuplicada: boolean
+}
+
+/**
+ * 🚨 Alberto, 03/09/2026, sobre la ficha de José Suárez Salas: «Antonio Sevico,
+ * y aquí no aparece en Relaciones y autorizaciones».
+ *
+ * No era un fallo de lectura: Antonio tiene ficha propia (interviene como
+ * conductor ocasional en 18 pólizas de la cartera) pero NADIE le anotó un
+ * vínculo, y esta tarjeta solo pinta `cliente_relaciones`. La tarjeta 👤 lo
+ * mandaba a anotarlo «en Relaciones y autorizaciones» y al llegar aquí había
+ * que teclear su nombre en un buscador y acertar. Ahora sale, y con su botón.
+ *
+ * Medido el 03/09/2026 en la cartera: 17 pares persona↔ficha así, en 15 fichas.
+ *
+ * Que estén aquí NO es un vínculo: es «esta persona sale en sus pólizas y no
+ * has dicho qué es tuyo». La lista vacía se calla; no se inventa una relación.
+ */
+function SinVinculo({ personas, nombreFicha, onDeclarar, onSinVinculo, ocupado }: {
+  personas: SugerenciaVinculo[]
+  nombreFicha: string
+  onDeclarar: (p: SugerenciaVinculo) => void
+  onSinVinculo: (p: SugerenciaVinculo) => void
+  ocupado: string | null
+}) {
+  if (personas.length === 0) return null
+  return (
+    <div style={{ border: '1px dashed var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+      <div style={{ fontSize: 13, fontWeight: 700 }}>En sus pólizas, sin vínculo declarado</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        Salen en las pólizas de {nombreFicha} y tienen ficha propia, pero nadie ha anotado qué relación
+        tienen con {nombreFicha}. Declararla NO autoriza a nadie a ver nada: la autorización se da
+        después, con su botón.
+      </div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6 }}>
+        {personas.map((p) => (
+          <li key={p.fichaId} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Link href={`/correduria/cliente/${p.fichaId}`} style={{ fontSize: 13, fontWeight: 600, overflowWrap: 'anywhere' }}>{p.nombre}</Link>
+            {p.papel && <span style={{ fontSize: 12, color: 'var(--muted)' }}>· {p.papel}</span>}
+            <button type="button" onClick={() => onDeclarar(p)} style={{ ...btnStyle('secundario', 'sm'), whiteSpace: 'normal', textAlign: 'left' }}>
+              👪 Declarar vínculo
+            </button>
+            {/* La otra respuesta posible, y la más frecuente. Sin ella, esta lista
+                pediría el vínculo de un conductor ocasional hasta el fin de los días. */}
+            <button
+              type="button"
+              disabled={ocupado === `nada-${p.fichaId}`}
+              onClick={() => onSinVinculo(p)}
+              style={{ ...btnStyle('sutil', 'sm'), whiteSpace: 'normal', textAlign: 'left' }}
+            >
+              {ocupado === `nada-${p.fichaId}` ? 'Guardando…' : 'No hay vínculo'}
+            </button>
+            {p.ojoDuplicada && (
+              <span style={{ fontSize: 11, color: 'var(--warning)', flexBasis: '100%' }}>
+                ⚠️ Hay otra ficha con este mismo nombre en sus pólizas: mira arriba antes de declararlo,
+                que el vínculo puede estar ya puesto en la otra.
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

@@ -35,6 +35,13 @@ export const TIPOS_RELACION = [
   'Administración',
   'Dueño',
   'Otra',
+  // 🚨 No es un parentesco: es «revisado, y no hay ninguno». Sin él, la pantalla
+  // no puede distinguir «nadie lo ha mirado» de «lo he mirado y no son nada»
+  // — los dos se veían como una ficha sin relaciones. Alberto, 03/09/2026:
+  // «Antonio Sevico no tiene vinculación ninguna». Un conductor ocasional que
+  // sale en dos pólizas y no es familia de nadie es el caso normal, no un
+  // pendiente que haya que arrastrar para siempre en la tarjeta 👪.
+  'Sin vínculo',
 ] as const
 
 export type TipoRelacion = (typeof TIPOS_RELACION)[number]
@@ -45,7 +52,25 @@ export const GRUPOS_RELACION: readonly { categoria: string; tipos: readonly Tipo
   { categoria: 'Empresa', tipos: ['Empresa', 'Empleado/a', 'Socio/a', 'Accionista', 'Administración'] },
   { categoria: 'Propiedad', tipos: ['Dueño'] },
   { categoria: 'Otra', tipos: ['Otra'] },
+  { categoria: 'Ninguno', tipos: ['Sin vínculo'] },
 ]
+
+/** «Revisado y no son nada»: se anota como vínculo para que se pueda distinguir
+ *  de «nadie lo ha mirado», pero NO es un parentesco y no autoriza a nada. */
+export const SIN_VINCULO = 'Sin vínculo' as const
+
+/**
+ * Si con este tipo tiene sentido autorizar a ver los seguros del otro.
+ *
+ * `Sin vínculo` dice que esas dos personas no son nada la una de la otra: una
+ * autorización ahí sería un consentimiento sin relación que lo sostenga, y por
+ * el camino abriría las pólizas de la ficha a alguien que solo conduce su
+ * coche. Se prohíbe en el puerto Y se esconde el botón; el portal, además, ni
+ * mira esas filas (`clientesVisiblesPara`).
+ */
+export function permiteAutorizar(tipo: string): boolean {
+  return tipo !== SIN_VINCULO
+}
 
 export function tipoRelacion(v: unknown): TipoRelacion | null {
   return typeof v === 'string' && (TIPOS_RELACION as readonly string[]).includes(v) ? (v as TipoRelacion) : null
@@ -71,6 +96,7 @@ const INVERSO: Record<TipoRelacion, TipoRelacion> = {
   Administración: 'Empresa',
   Dueño: 'Empresa',
   Otra: 'Otra',
+  'Sin vínculo': 'Sin vínculo',
 }
 
 /**
@@ -159,6 +185,10 @@ export function relacionesDeFicha(filas: readonly RelacionFila[], clienteId: str
 export function clientesVisiblesPara(filas: readonly RelacionFila[], clienteId: string): string[] {
   const out: string[] = []
   for (const f of filas) {
+    // Una fila «Sin vínculo» no da acceso a nada aunque traiga el flag puesto:
+    // aquí es donde se decide quién ve las pólizas de quién, así que la guarda
+    // vive también aquí y no solo en el botón que lo escribe.
+    if (!permiteAutorizar(f.tipo)) continue
     if (f.clienteBId === clienteId && f.clienteAId !== clienteId && f.puedeVerPolizas && !out.includes(f.clienteAId)) out.push(f.clienteAId)
   }
   return out

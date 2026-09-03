@@ -196,7 +196,11 @@ export async function cotizar(
   // servidor—, nunca de `p`: si viniera en la petición, cualquiera podría pedir
   // que la app enseñara precios inventados a un cliente.
   if (simulacionActiva(env)) {
-    const inventada = cotizacionSimulada(p.cuerpo)
+    // El RAMO viaja hasta el simulador: sin él usaba el molde de hogar para
+    // todo y una póliza de auto salía con compañías de hogar y primas de 50€
+    // (fallo medido el 03/09/2026). El contexto es opcional, así que puede no
+    // venir; `moldeDeRamo` decide qué hacer entonces.
+    const inventada = cotizacionSimulada(p.cuerpo, p.contexto?.ramo)
     // Se guarda IGUAL que una real, y a propósito: así se puede recorrer la
     // pantalla entera sin gastar. Va marcada `simulado: true` y SIN intentoId
     // —no hay línea en el libro porque no hubo llamada ni cargo—, que es el

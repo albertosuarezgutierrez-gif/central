@@ -97,6 +97,7 @@ export {
   retencion,
   resumirRetencion,
   type EstadoRetencion,
+  type SituacionRecibo,
   type Retencion,
   type ResumenRetencion,
 } from './retencion.ts'
@@ -209,6 +210,8 @@ export {
 export {
   TIPOS_RELACION,
   GRUPOS_RELACION,
+  SIN_VINCULO,
+  permiteAutorizar,
   tipoRelacion,
   tipoInverso,
   relacionesDeFicha,
@@ -300,3 +303,11 @@ export {
   type CapitalAsegurado,
   type CapitalesHogar,
 } from './garantias.ts'
+export {
+  clasificarPolizaFicha,
+  resumenFicha,
+  type ClasePolizaFicha,
+  type PolizaResumible,
+  type ProximoVencimiento,
+  type ResumenFicha,
+} from './ficha-resumen.ts'
