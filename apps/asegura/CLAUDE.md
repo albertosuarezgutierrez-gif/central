@@ -575,6 +575,20 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `historial_interno` de las DOS fichas: es un consentimiento y se tiene que ver quién lo anotó y cuándo.
   ⚠️ `prisma_asegura_portal` NO tiene grant sobre la tabla: el portal del cliente todavía no enseña los
   seguros de nadie más; cuando se haga, `clientesQuePuedeVer()` ya dice a quién.
+  🆕 **Tipo `Sin vínculo` (03/09/2026, PR #2161) — «revisado y no son nada» ≠ «nadie lo ha mirado».** Alberto,
+  sobre Antonio Sevico (conductor ocasional en 18 pólizas de la cartera, con ficha propia y sin ninguna fila
+  en `cliente_relaciones`): «no tiene vinculación ninguna». Eso es un HECHO y hasta ese día no se podía
+  anotar: la tarjeta 👪 solo pinta lo declarado, así que se veía igual que no haberlo revisado — y el bloque
+  nuevo «En sus pólizas, sin vínculo declarado» habría pedido su vínculo para siempre (**17 pares así, en 15
+  fichas**, de 326). Es simétrico y **NO autoriza a nada**, con la guarda en TRES sitios y no en el botón:
+  `permiteAutorizar()` (puro), `clientesVisiblesPara()` **ignora esas filas aunque traigan
+  `puedeVerPolizas` en true** —es donde se decide quién ve las pólizas de quién— y `autorizarVer()` corta
+  con 422 antes de escribir el consentimiento. Un conductor ocasional no puede acabar viendo las pólizas del
+  tomador por un flag viejo del volcado.
+  ⚠️ **Falso positivo del guardián de aislamiento, para no perder el rato dos veces:**
+  `regression-asegura-aislamiento` marcó `cartera-relaciones.ts` como infractor porque un mensaje de error
+  acababa una frase con «ver seguros.» y el cepo busca `seguros.<letra>` con flag `i`. Se reescribe la
+  FRASE, no el cepo: uno que molesta es mejor que uno que deja pasar.
 - **🕘 Estado derivado, historial y duplicadas (02/09/2026, «haz todo»).** La ficha manda `estado`
   (`estadoCliente()` de module-seguros: cliente = póliza **confirmada por CIMA** = `import_ref IS NULL` **y**
   `id_poliza_entidad` informado; «emitida, pendiente de CIMA» = viva sin entidad, hoy 0 de 109; con presupuesto =
@@ -716,6 +730,24 @@ Cifras sobre las 32.600 fichas (medidas ANTES de esas 50 fusiones):
 - 🚨 **1 cliente duplicado DENTRO de la cartera viva**: dos fichas con pólizas CIMA cada una (2+1),
   sin teléfono común, sin póliza común. **Es la ingesta de CIMA creando una ficha nueva** en vez de
   colgar la póliza de la existente — a Manuel. Renovaciones lo pinta como dos personas.
+
+🧩 **Lote 5 (03/09/2026, `2026-09-03_fusion_mismo_vehiculo_lote5.sql`) — ESCRITO Y SIN EJECUTAR.** Alberto
+vio a «María Antonia Gutiérrez Alcalá» DOS veces en «👤 Personas en sus pólizas» de José Suárez Salas y
+dictó «prepara». Son dos fichas suyas (`intranet:cli:48` con DNI · `asegura_app:cli2:48` sin él), y lo caro
+no es el duplicado: **el vínculo «Cónyuge» y su AUTORIZACIÓN cuelgan de la del volcado**, la que no tiene
+ninguna póliza viva. **3 pares**, guarda de identidad = nombre+apellidos idénticos normalizados **+ las dos
+intervienen en pólizas del MISMO VEHÍCULO** + no hay dos DNI distintos; sobrevive la que tiene DNI y la
+lápida no puede tener ninguna póliza de CIMA. Ensayo en seco: las cuatro guardas pasan en los 3.
+- **La condición del vehículo es la que decide, y se midió antes de escribirla:** solo con el nombre habría
+  **1.010 pares** que además comparten el número de import — y ese N **no es un identificador**: de los
+  4.093 pares que lo comparten, solo el **25%** comparte además el nombre. Fusionar por nombre es fundir
+  parientes homónimos.
+- **Fuera a propósito:** «Salvador Pérez Jiménez», con TRES fichas sin fusionar que no comparten ningún
+  vehículo (5242DFY · ninguna · 8100FTK+8849HLB) — con ese dato pueden ser un padre y un hijo. Y los **8**
+  pares de mismo nombre con dos DNI distintos.
+- ✅ **Cumple el aviso del lote 4** sobre los índices ciegos, por el otro camino: no hereda antes de anular,
+  sino que **repone los tres `*_lookup_hash` desde `snapshot_before`** al final del propio fichero (con
+  guarda de unicidad), en vez de dejarlo para una segunda pasada descubierta después.
 
 Desde el 02/09 el rol `prisma_seguros` sí escribe, pero las fusiones se hacen por SQL con su lote y su
 guarda de identidad (no hay botón «fusionar» en la UI, a propósito); el buscador mide, rotula y enlaza a

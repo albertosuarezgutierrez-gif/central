@@ -49,7 +49,9 @@
   la ficha (nada de teclear el nombre y acertar). **Y el duplicado que Alberto no preguntó:** María Antonia
   sale dos veces porque hay DOS fichas suyas (`intranet:cli:48` con DNI y `asegura_app:cli2:48` sin él) y
   el vínculo «Cónyuge» cuelga de la del volcado, la que no tiene ninguna póliza viva. Se marca en pantalla
-  (`homonimia`). Alberto dictó «prepara» → **lote 5 escrito y sin ejecutar**
+  (`homonimia`). **Mergeado (PR #2161) y probado con los datos REALES de la ficha**: 4 personas, las dos
+  María Antonia marcadas `sin_distinguir`, Antonio en el bloque nuevo, y tras «No hay vínculo» deja de
+  pedirse y NO ve las pólizas de José. Alberto dictó «prepara» → **lote 5 escrito y SIN EJECUTAR**
   (`apps/asegura/prisma/sql/2026-09-03_fusion_mismo_vehiculo_lote5.sql`): 3 pares, guarda = mismo nombre
   normalizado **+ mismo vehículo** + no dos DNI; con solo el nombre habría 1.010 y fundiría homónimos.
   Y su segundo dictado —«Antonio Sevico no tiene vinculación ninguna»— destapó que no se podía ANOTAR eso:
