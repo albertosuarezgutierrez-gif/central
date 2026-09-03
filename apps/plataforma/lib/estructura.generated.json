@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-03T07:34:33Z",
+  "generadoEn": "2026-09-03T09:51:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1951,11 +1951,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 25
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 12
       },
       "housesevillana": {
         "estado": "no",
@@ -1975,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 30
       },
       "rrhh": {
         "estado": "no",
@@ -2051,11 +2051,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 11
       },
       "housesevillana": {
         "estado": "no",
@@ -2074,8 +2074,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "rrhh": {
         "estado": "no",
@@ -3599,7 +3599,10 @@
       "/api/operador/cliente/historial",
       "/api/operador/cliente/relaciones",
       "/api/operador/clientes",
+      "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/lineas",
+      "/api/operador/codeoscopic/precalificar",
+      "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/comisiones",
       "/api/operador/documentos",
@@ -3607,6 +3610,7 @@
       "/api/operador/duplicados",
       "/api/operador/impagados",
       "/api/operador/ingesta",
+      "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza/emitida",
       "/api/operador/resumen",
@@ -3617,7 +3621,9 @@
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
-      "/api/polizas"
+      "/api/polizas",
+      "/api/polizas/[id]",
+      "/api/siniestros"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -4432,6 +4438,7 @@
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/impagados",
+      "/api/correduria/partes",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
       "/api/correduria/vencimientos",
@@ -4918,6 +4925,7 @@
       "seguros.portal_consentimiento",
       "seguros.portal_identidad",
       "seguros.portal_obligacion",
+      "seguros.portal_parte_siniestro",
       "seguros.portal_poliza_declarada",
       "seguros.portal_vinculo"
     ],
@@ -5839,7 +5847,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1249,
+    "apis": 1256,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
