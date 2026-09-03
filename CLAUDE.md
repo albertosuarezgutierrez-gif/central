@@ -505,6 +505,17 @@ para no confundir el diagnóstico con el lag): aquí el `head.sha` del PR **coin
 `git ls-remote` en los pasos 3 y 4 —o sea, no había lag que esperar— y aun así no arrancaba nada. Con
 el lag descartado, la palanca correcta es la de abajo.
 
+🔁 **OCTAVA medición (03/09/2026, PR #2183) — el des-draft SOLO, sin push posterior, SÍ disparó.**
+Secuencia limpia y sin nada de por medio: push de la rama (07:50, token de App) → **0 runs** · PR abierto
+**en draft** por la herramienta MCP (07:51) → **0 runs de los requeridos** · **des-draftear** (`draft:false`)
+→ ✅ **los 12 requeridos arrancan a los segundos** (07:51:13), verdes en ~3,5 min, 19/19 en total.
+**Sin merge de `main`, sin segundo push, sin esperar el lag.**
+
+⚠️ Esto **contradice la matización de la séptima** («des-draftear a secas no basta, hace falta un push
+después»). Las dos están medidas, así que la conclusión honesta es que **el des-draft a veces basta y a
+veces no** — igual que el draft silencia a veces y no siempre. Sigue sin haber causa medida; lo que hay
+es un orden que funciona en las ocho. **No reescribas la séptima: era cierta en su PR.**
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
 2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
