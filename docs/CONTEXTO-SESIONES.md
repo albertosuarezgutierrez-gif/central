@@ -46,7 +46,25 @@
   nadie más tiene: el cliente ve **quién más ve sus pólizas** y se lo quita él.
   🔐 En la carpeta ASEGURA de Drive hay un `contraseñas CODEOSCOPIC.docx` — avisado, sin abrir.
 
-- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, tras mergear #2206).**
+- **🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera (03/09/2026).**
+  Alberto: «minimalista, óptima y productiva» y «filtro por todo». Buscador arriba y cinco secciones
+  **Hoy · Clientes · Cartera · Comisiones · Datos** con contador (`secciones.ts`, puro + 9 tests): una
+  pestaña esconde, y el badge es lo que impide que esconda TRABAJO — `{n}` · `n+` (alguna cola ilegible)
+  · `!` (ninguna legible), nunca 0. 🚨 **Bug real: `Vencimientos` vivía DENTRO de `CarteraViva`, tras sus
+  tres `return` tempranos** → con el puerto caído las renovaciones desaparecían en silencio y su manejo
+  de error era código muerto; ahora es `Renovaciones.tsx`, hermana. Un bloque deja de ser una caja
+  (`Bloque.tsx`): borde+fondo solo para alarmas con alguien esperando. El filtro va entero: vocabulario
+  compartido por las DOS apps (`filtro-cartera.ts`, 14 tests) + `GET /api/operador/cartera` + proxy con
+  CSV + `ListaCartera.tsx` (ramo, «que NO tenga», compañía, provincia, estado, ventana de vencimiento,
+  canal, leads aparte y paginados). 🚨 Dos medidas que lo condicionan: **`clientes.tipo` dice 2.742
+  clientes / 29.860 leads cuando la cartera viva son 80** (columna muerta del volcado — el grupo se
+  deriva de `esCarteraViva()`), y **24 de las 110 pólizas vivas guardan `prima = 0`**, que sin `nullif`
+  se servía como «0,00€». Un valor de filtro no reconocido se DECLARA (`descartados[]`) en vez de
+  ignorarse: ignorarlo convierte «enséñame ramo XYZ» en «enséñamelo todo». Hueco de venta cruzada real:
+  81 autos contra 19 hogares. ⏳ Fuera a propósito: la subida MASIVA de PDFs, por decisión pendiente
+  (dónde se guardan documentos con un DNI dentro y cómo se casa cada PDF con su póliza), no por tiempo.
+  PR #2205.
+- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, PR #2211 mergeado).**
   `DELETE /api/operador/poliza/intervinientes` + botón «quitar» en Contactos de plataforma. Tres
   guardas: una fila de **CIMA no se borra** (409; el pull la recrearía, y plataforma ni pinta el botón),
   el **snapshot va ANTES del borrado** y si falla no se borra nada, y **el tomador no tiene botón** porque

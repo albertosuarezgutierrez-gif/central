@@ -40,6 +40,10 @@ real medido, orden de trabajo). Después, según lo que toques:
    que dejaba a Reale con «0 pólizas vivas» y a su cliente invisible en el CRM y en el portal.
    🚨 **`confirmadaCima` (`id_poliza_entidad !== null`) NO vale como filtro de cartera viva**: es otra
    pregunta, y usarlo dejaría fuera justo lo que emitimos nosotros y CIMA aún no ha confirmado.
+   🚨 **Y `clientes.tipo` TAMPOCO vale para decir quién es cliente y quién lead (medido 03/09/2026).**
+   Esa columna dice **2.742 «cliente» y 29.860 «lead»** cuando la cartera viva son **80 clientes**: es
+   un campo del volcado que no mantiene nadie. Cualquier listado o filtro que la lea devuelve 2.742
+   fichas muertas con cara de cartera. El grupo se DERIVA de `esCarteraViva()`, como todo lo demás.
    Cifras al 03/09/2026: **80 clientes / 110 pólizas** vivas. Las otras **28.728** pólizas
    (32.520 fichas, vencimientos 2013-2018) son volcado histórico = **leads**, jamás «clientes».
 3. **Toda escritura** va por `/api/operador/*` de asegura con `correduriaId` explícito y deja fila en
@@ -53,6 +57,31 @@ real medido, orden de trabajo). Después, según lo que toques:
    prevista es el aviso de vencimiento del calendario, que es **informativo** (no asesoramiento) y va
    apagado — regla 13.
 8. `null` ≠ `[]` en recibos, documentos, contactos, relaciones: la pantalla lo dice, no lo colapsa.
+
+## 🎨 La pantalla son CINCO SECCIONES, no un scroll (03/09/2026)
+
+`/correduria` pasó de ocho bloques apilados del mismo peso a **Hoy · Clientes · Cartera · Comisiones ·
+Datos** (`secciones.ts` + `Secciones.tsx`), con el buscador SIEMPRE arriba y fuera de las pestañas.
+Antes de añadir un bloque, decide en qué sección vive; y si trae una cola de trabajo, **reporta su
+contador al padre** (`onContador?: (n: number|null) => void`, llamado en el `.then` y guardado en un
+`useRef`): una pestaña esconde, y el badge es lo único que impide que esconda TRABAJO. Tres desenlaces
+y ninguno es 0 — `{n}` · `n+` (alguna cola ilegible) · `!` (ninguna legible).
+
+Un bloque **NO pinta caja propia**: se envuelve en `<Bloque>`, que da línea fina + título; `destacado`
+(fondo tintado) se reserva para alarmas con alguien esperando al otro lado.
+
+**El vocabulario del filtro de cartera** (ramos, estados, ventanas de vencimiento, parseo de la URL)
+vive en `filtro-cartera.ts` de `@central/module-seguros` y lo comparten asegura y plataforma. No lo
+dupliques: con una lista por app, la pantalla acaba ofreciendo filtros que el puerto no entiende, y
+eso devuelve cero resultados sin un solo error. Un valor de filtro que no se reconoce se DECLARA
+(`descartados`), nunca se ignora — ignorarlo convierte «los de ramo XYZ» en «todos».
+
+El listado que lo consume ya existe de punta a punta: `GET /api/operador/cartera` (asegura) → proxy
+`/api/correduria/cartera-lista` (con CSV) → `ListaCartera.tsx`. 🚨 Dos cosas que se aprendieron
+ejecutando su SQL contra la BD real, no leyéndolo: **24 de las 110 pólizas vivas guardan `prima = 0`**
+(sin `nullif` se sirven como «0,00€», un importe inventado sin hueco que lo delate), y **el guardián de
+ese SQL tiene que leer el FUENTE con `readFileSync`** — `tsc` no mira dentro de un `Prisma.sql`, y un
+test que importe el módulo tumba el job `Tests (packages + guardián)`, que corre sin `prisma generate`.
 
 ## Estado en una línea (02/09/2026)
 
