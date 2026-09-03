@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-03T13:57:58Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-03T18:36:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -256,6 +256,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/09/2026) 🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA
 - (03/09/2026) 📱 Segunda captura de móvil: la ficha del cliente
 - (03/09/2026) 📱 `/correduria` en el MÓVIL, con la primera captura real
 - (03/09/2026) 🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos
@@ -265,5 +266,4 @@
 - (03/09/2026) 🔴 «Sin dato» en el capital de hogar era un «no lo he mirado»
 - (03/09/2026) 🧬 Por qué se duplican las fichas: el blind index de DNI está a medias
 - (03/09/2026) 🃏 «Matito no se puede borrar»: era un COMODÍN del volcado, y el DELETE no existe
-- (03/09/2026) ⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición
 
