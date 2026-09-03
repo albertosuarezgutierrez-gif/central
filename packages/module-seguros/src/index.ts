@@ -316,3 +316,12 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+
+export {
+  planBackfillDni,
+  type FichaDni,
+  type Destino,
+  type FilaPlan,
+  type GrupoChoque,
+  type PlanBackfillDni,
+} from './backfill-dni.ts'

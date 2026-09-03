@@ -42,6 +42,24 @@
   `test/regression-capital-hogar-volcado.test.ts` — que nació escaneando solo los fuentes y **pasaba 6/6
   con el módulo apagado**; lleva ya dos tests de comportamiento con los datos reales.
 
+- **🧬 Por qué se duplican las fichas: el blind index de DNI está a medias (03/09/2026).**
+  Alberto vio dos «Pilar Piña Franco» en `/correduria`. No es un fallo del CRM: son dos volcados
+  (`intranet:cli:174` + `asegura_app:cli2:174`) cargados sin deduplicar entre sí. 🚨 Causa medida:
+  **15.800 fichas tienen DNI cifrado y `dni_lookup_hash` a NULL**, así que el criterio fuerte (mismo
+  NIF) solo pudo mirar 3.896 de 19.696 → quedan **556 grupos nombre+teléfono (1.132 fichas)**, 552 con
+  el hash ausente. Y no es un UPDATE: `uq_clientes_dni_lookup_hash` es UNIQUE, así que **el choque ES
+  la lista de fusiones**. Orden: calcular en seco → fusionar → escribir (`/api/operador/backfill-dni`,
+  GET seco / POST escribe; regla pura `planBackfillDni` + 11 tests).
+- **🃏 «Matito no se puede borrar»: era un COMODÍN del volcado, y el DELETE no existe (03/09/2026).**
+  Francisco Chacón Matito salía de conductor ocasional en la ficha de Pilar; medido, figura en pólizas
+  de **52 tomadores sin relación entre sí** (Antonio Sevico, 16). Las 408 filas `origen='manual'` de
+  `poliza_intervinientes` son del 21/06 y NINGUNA toca cartera viva; las 96 de CIMA sí. 🚨 **Matito es
+  real**: 59 filas basura + **1 de CIMA (conductor habitual, con NIF, póliza viva) que se queda**. Lote
+  lote reversible **EJECUTADO** (`..._purga_intervinientes_comodin_lote6.sql`): **77 intervinientes +
+  118 relaciones**, 195 snapshots en `interviniente_purga_log` (append-only). Alberto añadió la 3ª
+  guarda —«si no es tomador»—, que salva 2 relaciones (Matito tomador ↔ Sevico ocasional). Verificado:
+  a Matito le queda 1 fila y es la de CIMA; 0 personas con ≥4 tomadores. Y «no se puede borrar» era
+  literal: el puerto no tiene **ningún DELETE** de intervinientes ni relaciones.
 - **⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición (03/09/2026).**
   Alberto pidió estudio legal y benchmark sectorial para «José autoriza a María a ver sus pólizas».
   🚨 Medido: **104 `cliente_relaciones.puede_ver_polizas = true`, TODAS creadas el 21/06/2026** (día del
