@@ -48,7 +48,7 @@
   81 autos contra 19 hogares. ⏳ Fuera a propósito: la subida MASIVA de PDFs, por decisión pendiente
   (dónde se guardan documentos con un DNI dentro y cómo se casa cada PDF con su póliza), no por tiempo.
   PR #2205.
-- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, tras mergear #2206).**
+- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, PR #2211 mergeado).**
   `DELETE /api/operador/poliza/intervinientes` + botón «quitar» en Contactos de plataforma. Tres
   guardas: una fila de **CIMA no se borra** (409; el pull la recrearía, y plataforma ni pinta el botón),
   el **snapshot va ANTES del borrado** y si falla no se borra nada, y **el tomador no tiene botón** porque
