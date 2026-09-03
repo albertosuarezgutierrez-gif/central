@@ -1,5 +1,5 @@
 'use client'
-import { ListChecks, Shield, Receipt, TriangleAlert } from 'lucide-react'
+import { ListChecks, Users, Shield, Receipt, TriangleAlert } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { SECCIONES, type Seccion, type Contador } from './secciones'
 
@@ -28,6 +28,7 @@ import { SECCIONES, type Seccion, type Contador } from './secciones'
 
 const META: Record<Seccion, { label: string; Icono: LucideIcon }> = {
   hoy: { label: 'Hoy', Icono: ListChecks },
+  clientes: { label: 'Clientes', Icono: Users },
   cartera: { label: 'Cartera', Icono: Shield },
   comisiones: { label: 'Comisiones', Icono: Receipt },
   datos: { label: 'Datos', Icono: TriangleAlert },
@@ -48,9 +49,9 @@ export default function Secciones({ activa, contadores, onCambiar }: {
     <div
       role="tablist"
       aria-label="Secciones de la correduría"
-      // El scroll horizontal vive AQUÍ, no en la página: en 320 px cuatro
-      // pestañas con icono no caben, y un `flexWrap` las apila en dos filas
-      // que empujan el contenido.
+      // El scroll horizontal vive AQUÍ, no en la página: en 320 px cinco
+      // pestañas con icono no caben ni de lejos, y un `flexWrap` las apila en
+      // dos filas que empujan el contenido.
       style={{
         display: 'flex', gap: 18, flexWrap: 'nowrap',
         overflowX: 'auto', borderBottom: '1px solid var(--border)',

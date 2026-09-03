@@ -5,16 +5,23 @@
  * `contarAccionables` sean comprobables con `node --test`, que no sabe importar
  * `.tsx` — mismo reparto que `cliente/[id]/tabs.ts`.
  *
- * ─── Por qué cuatro secciones y no una tira de ocho bloques ──────────────────
+ * ─── Por qué CINCO secciones y no una tira de ocho bloques ───────────────────
  * La pantalla tenía ocho bloques apilados con el MISMO peso visual: los partes
  * que ha abierto un cliente y nadie ha mirado pesaban igual que la matriz de
  * comisiones cobradas de hace tres años. Lo que hace productiva una pantalla no
  * es enseñar más, es que lo primero que se ve sea lo único que hay que hacer.
  *
  *   Hoy       → lo que se hace con el teléfono en la mano y caduca.
- *   Cartera   → quién hay y qué vence (los 90 días enteros).
+ *   Clientes  → el listado FILTRABLE: buscar por ramo, compañía, provincia,
+ *               vencimiento o hueco de venta cruzada, y sacar la lista.
+ *   Cartera   → la foto: cuántos hay y qué vence (los 90 días enteros).
  *   Comisiones→ el dinero: devengado, liquidado y lo que entró al banco.
  *   Datos     → la calidad del dato (duplicadas, gente sin canal). No urge.
+ *
+ * «Clientes» y «Cartera» no son lo mismo aunque hablen de la misma gente: una
+ * es la herramienta de trabajo (filtrar y sacar una lista para llamar) y la
+ * otra el resumen. Meterlas en la misma pestaña haría que la foto —que se mira
+ * una vez al día— compitiera con el filtro, que se usa constantemente.
  *
  * ─── Y por qué esconder no es perder ────────────────────────────────────────
  * Una pestaña esconde, y un aviso que no se ve es un aviso que no existe (regla
@@ -24,9 +31,9 @@
  * no se pinta) y `null` = «no se ha podido leer», que se pinta `!` y NUNCA 0.
  */
 
-export type Seccion = 'hoy' | 'cartera' | 'comisiones' | 'datos'
+export type Seccion = 'hoy' | 'clientes' | 'cartera' | 'comisiones' | 'datos'
 
-export const SECCIONES: readonly Seccion[] = ['hoy', 'cartera', 'comisiones', 'datos']
+export const SECCIONES: readonly Seccion[] = ['hoy', 'clientes', 'cartera', 'comisiones', 'datos']
 
 /** Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy». */
 export function seccionDeParametro(v: string | string[] | undefined): Seccion {

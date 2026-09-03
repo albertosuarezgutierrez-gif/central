@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { Shield, CalendarClock, Landmark, FolderOpen, Plus, House } from 'lucide-react'
+import { Shield, CalendarClock, Landmark, FolderOpen, Plus, House, Users } from 'lucide-react'
 import { Pagina, PageHeader, BtnLink, Badge } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
@@ -22,7 +22,7 @@ import {
 /**
  * La pantalla de la correduría.
  *
- * ─── Rediseño del 03/09/2026: de una tira de ocho bloques a cuatro secciones ─
+ * ─── Rediseño del 03/09/2026: de una tira de ocho bloques a cinco secciones ─
  * Antes era un scroll único con ocho bloques del MISMO peso visual: los partes
  * que ha abierto un cliente y nadie ha mirado pesaban igual que la matriz de
  * comisiones cobradas de hace tres años, y cada uno pintaba su propia caja con
@@ -30,10 +30,10 @@ import {
  * productiva una pantalla no es enseñar más: es que lo primero que se ve sea lo
  * único que hay que hacer.
  *
- * Ahora: el buscador arriba (lo más usado), y cuatro secciones —Hoy · Cartera ·
- * Comisiones · Datos— con CONTADOR en la barra, que es lo que impide que una
- * pestaña esconda trabajo. Ver `secciones.ts` para el reparto y `Bloque.tsx`
- * para por qué un bloque ya no es una caja.
+ * Ahora: el buscador arriba (lo más usado), y cinco secciones —Hoy · Clientes ·
+ * Cartera · Comisiones · Datos— con CONTADOR en la barra, que es lo que impide
+ * que una pestaña esconda trabajo. Ver `secciones.ts` para el reparto y
+ * `Bloque.tsx` para por qué un bloque ya no es una caja.
  *
  * ─── Qué NO cambia, y por qué ───────────────────────────────────────────────
  * · Todos los bloques se MONTAN siempre, aunque su sección esté oculta: así
@@ -265,6 +265,24 @@ export default function CorreduriaClient() {
           sub="Las que aún se pueden mover: dentro del mes de preaviso el tomador ya no puede oponerse a la prórroga (LCS art. 22). La ventana completa de 90 días está en «Cartera»."
         >
           <Renovaciones datos={vencimientos} filtro="accionables" />
+        </Bloque>
+      </div>
+
+      {/* ══ CLIENTES ═════════════════════════════════════════════════════════
+          El listado FILTRABLE de la cartera: filtrar por ramo, compañía,
+          provincia, vencimiento o hueco de venta cruzada, y sacar la lista.
+          Es la herramienta de trabajo; «Cartera» es la foto. */}
+      <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
+        <Bloque
+          titulo="Clientes"
+          Icono={Users}
+          sub="El listado filtrable de la cartera: por ramo, compañía, provincia, vencimiento o hueco de venta cruzada."
+        >
+          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+            Todavía no está montado: el puerto de asegura no tiene endpoint de listado —hoy solo hay
+            buscador por texto—, así que esta sección espera a que exista. No significa que no haya
+            clientes: están en la cartera y se buscan arriba.
+          </p>
         </Bloque>
       </div>
 

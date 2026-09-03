@@ -311,3 +311,23 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export {
+  parseFiltroCartera,
+  filtroActivo,
+  describirFiltro,
+  diasDeVentana,
+  etiquetaRamo,
+  RAMOS,
+  ESTADOS,
+  VENTANAS,
+  POR_PAGINA_DEFECTO,
+  POR_PAGINA_MAX,
+  MIN_LETRAS_BUSQUEDA,
+  type RamoSeguro,
+  type GrupoCartera,
+  type EstadoPolizaFiltro,
+  type VentanaVencimiento,
+  type FiltroCanal,
+  type FiltroCartera,
+  type ParseFiltro,
+} from './filtro-cartera.ts'

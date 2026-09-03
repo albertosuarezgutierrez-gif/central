@@ -5,7 +5,7 @@ import {
 } from './secciones.ts'
 
 /**
- * Las cuatro secciones de la correduría.
+ * Las cinco secciones de la correduría.
  *
  * Lo que se vigila aquí no es el reparto (eso es una decisión de diseño que
  * puede cambiar) sino las dos cosas que, si se rompen, la pantalla MIENTE:
@@ -26,6 +26,10 @@ test('un ?s= desconocido o ausente cae en «Hoy», no en blanco', () => {
 
 test('todas las secciones declaradas se resuelven a sí mismas', () => {
   for (const s of SECCIONES) assert.equal(seccionDeParametro(s), s)
+  // El listado filtrable vive en su propia sección: es la herramienta de
+  // trabajo, y compartir pestaña con la foto de la cartera haría que el
+  // resumen —que se mira una vez al día— compitiera con el filtro.
+  assert.ok(SECCIONES.includes('clientes'))
 })
 
 test('«a tiempo» NO es trabajo de hoy; las tres urgencias del preaviso sí', () => {
