@@ -713,3 +713,37 @@ model PortalParteSiniestro {
   @@index([identidadId])
   @@map("portal_parte_siniestro")
 }
+
+/// El consentimiento de un cliente para que OTRO vea sus seguros
+/// (`seguros.portal_autorizacion`). El corredor la ve, la anota cuando el
+/// cliente se lo da por teléfono, y la puede revocar — pero NO la concede en
+/// nombre de nadie: por eso `origen` distingue de dónde salió, y una anotada
+/// por la correduría sigue sin abrir nada hasta que el autorizado la ACEPTE
+/// en el portal. Reglas puras en `@central/module-seguros-portal/autorizacion`.
+model PortalAutorizacion {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
+  autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
+  alcance                String
+  origen                 String    @default("portal")
+  otorgadoEn             DateTime  @default(now()) @map("otorgado_en") @db.Timestamptz(6)
+  otorgadoPorIdentidadId String?   @map("otorgado_por_identidad_id") @db.Uuid
+  otorgadoPorActor       String?   @map("otorgado_por_actor")
+  aceptadoEn             DateTime? @map("aceptado_en") @db.Timestamptz(6)
+  aceptadoPorIdentidadId String?   @map("aceptado_por_identidad_id") @db.Uuid
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  revocadoEn             DateTime? @map("revocado_en") @db.Timestamptz(6)
+  /// `otorgante` | `autorizado` | `corredor` | `caducidad`. `caducidad` no es una
+  /// revocación: cierra una ya caducada para liberar el índice único al renovarla.
+  revocadoPor            String?   @map("revocado_por")
+  revocadoPorIdentidadId String?   @map("revocado_por_identidad_id") @db.Uuid
+  revocadoPorActor       String?   @map("revocado_por_actor")
+  versionTexto           String    @map("version_texto")
+  ip                     String?   @db.Inet
+  userAgent              String?   @map("user_agent")
+
+  @@index([otorganteClienteId])
+  @@index([autorizadoClienteId])
+  @@map("portal_autorizacion")
+}

@@ -267,6 +267,60 @@ model PortalVinculo {
   @@schema("seguros")
 }
 
+/// El consentimiento de José para que María vea sus seguros. Reglas en
+/// `@central/module-seguros-portal/autorizacion`; nada aquí decide nada.
+model PortalAutorizacion {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
+  autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
+  alcance                String
+  /// `portal` = lo concedió el cliente en su pantalla. `corredor` = la correduría
+  /// anotó uno recibido por otro canal. No son lo mismo y no se pueden confundir.
+  origen                 String    @default("portal")
+  otorgadoEn             DateTime  @default(now()) @map("otorgado_en") @db.Timestamptz(6)
+  otorgadoPorIdentidadId String?   @map("otorgado_por_identidad_id") @db.Uuid
+  otorgadoPorActor       String?   @map("otorgado_por_actor")
+  aceptadoEn             DateTime? @map("aceptado_en") @db.Timestamptz(6)
+  aceptadoPorIdentidadId String?   @map("aceptado_por_identidad_id") @db.Uuid
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  revocadoEn             DateTime? @map("revocado_en") @db.Timestamptz(6)
+  /// `otorgante` | `autorizado` | `corredor` | `caducidad`. 🚨 `caducidad` NO es una
+  /// revocación: es el cierre de una que YA había caducado, para liberar el sitio del
+  /// índice único al renovarla. La fila se queda como historial.
+  revocadoPor            String?   @map("revocado_por")
+  revocadoPorIdentidadId String?   @map("revocado_por_identidad_id") @db.Uuid
+  revocadoPorActor       String?   @map("revocado_por_actor")
+  versionTexto           String    @map("version_texto")
+  ip                     String?   @db.Inet
+  userAgent              String?   @map("user_agent")
+
+  usos PortalAutorizacionUso[]
+
+  @@index([otorganteClienteId])
+  @@index([autorizadoClienteId])
+  @@map("portal_autorizacion")
+  @@schema("seguros")
+}
+
+/// Registro de accesos que ve el OTORGANTE: una fila por autorización, identidad
+/// y DÍA. Es lo que convierte la autorización en algo real y no un cheque en blanco.
+model PortalAutorizacionUso {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  autorizacionId String   @map("autorizacion_id") @db.Uuid
+  identidadId    String   @map("identidad_id") @db.Uuid
+  dia            DateTime @db.Date
+  visitas        Int      @default(1)
+  primeraEn      DateTime @default(now()) @map("primera_en") @db.Timestamptz(6)
+  ultimaEn       DateTime @default(now()) @map("ultima_en") @db.Timestamptz(6)
+
+  autorizacion PortalAutorizacion @relation(fields: [autorizacionId], references: [id], onDelete: Cascade)
+
+  @@unique([autorizacionId, identidadId, dia])
+  @@map("portal_autorizacion_uso")
+  @@schema("seguros")
+}
+
 // ─── Cartera: SOLO LECTURA, y SOLO las columnas que el rol puede leer ───────
 // 🚨 El rol `prisma_asegura_portal` tiene `GRANT SELECT (columnas…)` por tabla
 // (`prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`). Prisma pide cada
@@ -586,7 +640,11 @@ model ClienteRelacion {
   clienteAId      String   @map("cliente_a_id") @db.Uuid
   clienteBId      String   @map("cliente_b_id") @db.Uuid
   tipoRelacion    String   @map("tipo_relacion") @db.VarChar(60)
-  puedeVerPolizas Boolean  @map("puede_ver_polizas")
+  // 🚫 `puede_ver_polizas` NO está aquí a propósito (03/09/2026): el consentimiento
+  // vive en `PortalAutorizacion` y el rol del portal ya no puede LEER esa columna.
+  // Si vuelve al modelo, un `findMany` sin `select` explícito revienta en la BD —
+  // que es donde tiene que reventar. Las relaciones se siguen leyendo: son las que
+  // le ofrecen a José a quién puede autorizar.
   createdAt       DateTime @map("created_at") @db.Timestamptz(6)
 
   @@map("cliente_relaciones")

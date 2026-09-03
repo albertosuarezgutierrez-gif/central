@@ -560,3 +560,62 @@ sugerirle que te autorice.
 
 📌 `docs/FUENTES-DE-VERDAD.md` ya apunta a este documento como fuente de verdad de la app
 (actualizado el 02/09/2026); el spec y el plan quedan como detalle de diseño.
+
+## 🔐 Autorizar a un tercero (03/09/2026) — y el booleano que había antes
+
+**«José deja que su mujer María vea su póliza del coche.»** Eso vive en
+`seguros.portal_autorizacion`, con las reglas puras en
+`@central/module-seguros-portal` (`src/autorizacion.ts`). Lee ese fichero antes de
+tocar nada: su cabecera es la fuente, esto es solo el resumen.
+
+🚨 **Lo que había antes y por qué no podía quedarse.** Hasta ese día lo decidía
+`cliente_relaciones.puede_ver_polizas`, un booleano del CRM de Manuel. Medido el
+03/09/2026: **104 filas lo tenían a `true` y las 104 se crearon el 21/06/2026**, el
+día del volcado — mismo día, sin excepción. O sea, **ningún cliente lo otorgó**.
+Y la columna no guarda autor, ni fecha, ni texto aceptado, ni revocación, así que
+tampoco había forma de demostrar lo contrario (art. 7.1 RGPD pide poder
+*demostrarlo*, no solo tenerlo). Encima el portal lo leía como nivel `completo`, y
+`completo` enseña el **IBAN y el DNI** del otorgante: eso no es «ver mis seguros»,
+es ver a la PERSONA.
+
+Se apagaron las 104 **sin perder nada** (foto previa en
+`seguros.cliente_relaciones_permiso_volcado`; revertir es un `UPDATE` desde ahí) y
+**las 1.706 relaciones siguen intactas**: el vínculo es conocimiento de negocio de
+Alberto y es SU dato; el permiso era de José. Son cosas distintas y por eso ahora
+viven en tablas distintas. Se pudo hacer a coste cero porque `portal_vinculo`
+estaba a **0 filas**: nadie había entrado todavía. Un día después de la primera
+invitación, lo mismo habría sido un acceso indebido del art. 33 (72 h).
+
+**Las cinco reglas que sostiene el código, y qué las protege:**
+
+| Regla | Dónde vive | Qué pasa si se rompe |
+|---|---|---|
+| Nace apagada y **caduca al año** | `caducidadPorDefecto`, `DIAS_VIGENCIA` | El caso que revienta esto es el **divorcio**: nadie entra a revocar ese día |
+| **Doble aceptación**: conceder no basta, el autorizado ACEPTA | `estadoAutorizacion` → `pendiente` | María entra en datos ajenos sin saber que hay un registro con su nombre |
+| Un tercero **nunca** ve IBAN, DNI ni documentos, ni actúa en tu nombre | `camposDeAlcance` (tope duro, fuera de la escalera de `acceso.ts`) | Vuelve el agujero del booleano |
+| **Leer ≠ actuar**: `partes` y `documentos` existen pero NO se conceden | `ALCANCES_CONCEDIBLES` | Un tick no es un poder; si María declara mal, art. 16 LCS y no se sabe quién firmó |
+| El otorgante **ve quién miró y cuándo** | `portal_autorizacion_uso` | Sin eso la autorización es un cheque en blanco |
+
+Todo ello con cepo en `test/regression-portal-autorizacion.test.ts` (12 tests, con
+las mutaciones comprobadas: no es un cepo que nunca ha disparado).
+
+⚠️ **`origen` no es contabilidad, es el requisito.** `portal` = lo concedió el
+cliente en su pantalla. `corredor` = Alberto anotó uno que el cliente le dio por
+teléfono. Un consentimiento que la correduría se auto-anota **no puede ser
+indistinguible** del que dio el interesado — y aun así no abre nada hasta que el
+autorizado lo acepte. Un CHECK de la BD obliga a que conste quién lo otorgó, y de
+la forma que corresponda a su origen: nunca los dos campos, nunca ninguno.
+
+🚫 **Al rol `prisma_asegura_portal` se le REVOCÓ el `SELECT` sobre
+`cliente_relaciones.puede_ver_polizas`**, y la columna ya no está en el modelo
+Prisma de esta app. Si alguien la devuelve al modelo, un `findMany` sin `select`
+explícito revienta en la BD — que es donde tiene que reventar. El resto de
+`cliente_relaciones` sí se lee: son las que le ofrecen a José a quién autorizar.
+
+📌 **Leer no escribe.** `carteraDeIdentidad` **no** toca el registro de accesos:
+devuelve `autorizacionesUsadas` y lo anota quien pinta la bóveda
+(`registrarUso`). Un `SELECT` que escribe se cae con el rol equivocado, y además
+no se puede testear.
+
+El estudio legal completo, con la comparativa de cómo lo resuelven la AEAT, la
+banca, el software del sector y sanidad: `docs/ASEGURA-AUTORIZACION-TERCEROS.md`.
