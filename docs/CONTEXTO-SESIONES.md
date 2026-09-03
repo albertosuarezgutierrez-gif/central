@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto (03/09/2026).**
+  `asegura-portal` sirve en https://asegura-portal.vercel.app, pero `POST /api/acceso/solicitar` daba 500:
+  `DATABASE_URL` llevaba SOLO la contraseña del Vault, no la URI entera — y el error (`the URL must start
+  with postgresql://`) no nombra ni la contraseña ni el rol, así que se diagnostica como credenciales.
+  Segunda trampa: cambiar una env no llega sola y **el redeploy a mano es imposible** — Vercel no
+  redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
+  `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
+  este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
+
 - **✅ Tarificaciones guardadas APLICADAS en la BD (03/09/2026).** PR #2154 mergeado y Alberto ejecutó el SQL:
   `seguros.tarificaciones` (22 col.) y `seguros.tarificacion_precios` (14 col.) existen en `wswbehlcuxqxyinousql`,
   la FK apunta a la tabla NUEVA y los 3 CHECK están (`simulada_sin_libro`, `puerta`, `firmeza`). `cotizacion_precios`
