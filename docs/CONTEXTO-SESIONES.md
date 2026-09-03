@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗂️ Ficha de cliente de la correduría: cabecera + pestañas, y los colores de la app de Manuel (03/09/2026).**
+  Alberto: la ficha en una columna larga (12 tarjetas) «no es práctica»; quiere el patrón de su CRM anterior.
+  Hecho con la salvaguarda que ese CRM no tiene: **los contadores de alarma viven en la CABECERA**, fuera de
+  las siete pestañas (Resumen · Pólizas · Recibos · Siniestros · Contactos · Documentos · Historial), porque lo
+  que no está en la pestaña abierta no existe. Tile nuevo: el **límite de aviso** (vencimiento −30 d, LCS 22),
+  que estaba enterrado en la tabla. Pestañas por `?tab=` (patrón de `SegTabs`): solo se renderiza la activa,
+  pero **NO ahorra la llamada al puerto** — `fichaAsegura` trae la ficha entera y se repite. Clasificación y
+  contadores salieron a `@central/module-seguros` (`ficha-resumen.ts`, 21 tests). 🎨 **Los colores salen del CSS
+  de `app.grupoasegura.com`** (repo `asegura`, oklch→hex: cobalto **#3364ee**), NO de la captura verde de la
+  conversación, que es de OTRO programa anterior. Acotados a `/correduria` por tokens (`.correduria` en
+  `globals.css` + `layout.tsx`), no por hex sueltos: plataforma es el cuadro de mando de TODOS los negocios.
+  Medido en Chromium: a 320 y 390 px el scroller no desborda y la barra de pestañas scrollea sola.
+
 - **🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto (03/09/2026).**
   `asegura-portal` sirve en https://asegura-portal.vercel.app, pero `POST /api/acceso/solicitar` daba 500:
   `DATABASE_URL` llevaba SOLO la contraseña del Vault, no la URI entera — y el error (`the URL must start

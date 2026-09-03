@@ -290,3 +290,11 @@ export {
   type CapitalAsegurado,
   type CapitalesHogar,
 } from './garantias.ts'
+export {
+  clasificarPolizaFicha,
+  resumenFicha,
+  type ClasePolizaFicha,
+  type PolizaResumible,
+  type ProximoVencimiento,
+  type ResumenFicha,
+} from './ficha-resumen.ts'
