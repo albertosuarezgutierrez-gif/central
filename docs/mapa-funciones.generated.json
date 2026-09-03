@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T09:51:45Z",
-  "sha": "a3d74306a8da6efc3e34fa6b6ae406a8b189e723",
+  "generadoEn": "2026-09-03T11:51:52Z",
+  "sha": "3ba2565457ee36ad66f2587b9a49e64e3c24eeaf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4387,6 +4387,37 @@
       "hash": "3686319ff9f2"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/backfill-dni/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "GET /api/operador/backfill-dni — plan EN SECO del backfill del blind index de DNI. No escribe nada. Devuelve cuántas fichas se pueden rellenar, cuántas chocan (= DNI repetido = candidatos a fusión) y "
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 48,
+          "resumen": "POST /api/operador/backfill-dni — ESCRIBE los hashes que no chocan. Idempotente: sólo toca fichas con `dni_lookup_hash` a NULL, así que repetirlo no cambia nada. Las que chocan se quedan como están a "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/backfill-dni",
+      "hash": "e8a2365b6741"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/buscar/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -5448,6 +5479,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d1dbe3ca7d3c"
+    },
+    {
+      "ruta": "apps/asegura/lib/backfill-dni.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Backfill del blind index de DNI de la cartera (`clientes.dni_lookup_hash`). El PORQUÉ, la aritmética y el orden de los tres pasos están en la pieza pura, `packages/module-seguros/src/backfill-dni.ts`. Aquí sólo se hacen las dos cosas que no se pueden hacer sin claves ni sin BD: DESCIFRAR el DNI y, c",
+      "exporta": [
+        "backfillDniLookupHash"
+      ],
+      "funciones": [
+        {
+          "nombre": "backfillDniLookupHash",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opciones: { seco: boolean },",
+          "retorno": "Promise<ResultadoBackfill>",
+          "linea": 48,
+          "resumen": "Lee TODAS las fichas de la correduría con DNI, calcula el plan y —sólo si `seco === false`— escribe los hashes que no chocan. El plan se calcula siempre sobre la cartera ENTERA aunque se vaya a escrib"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bc9864e40352"
     },
     {
       "ruta": "apps/asegura/lib/cartera-busqueda.ts",
@@ -108430,6 +108483,44 @@
       "hash": "073c4ad492bf"
     },
     {
+      "ruta": "packages/module-seguros/src/backfill-dni.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Backfill del blind index de DNI (`clientes.dni_lookup_hash`). EL PROBLEMA (medido 03/09/2026): 19.696 fichas tienen el DNI guardado cifrado pero **15.800 de ellas no tienen `dni_lookup_hash`**. Ese hash es la única forma de preguntar «¿hay otra ficha con este mismo DNI?» sin descifrar la base entera",
+      "exporta": [
+        "planBackfillDni"
+      ],
+      "funciones": [
+        {
+          "nombre": "planBackfillDni",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichas: FichaDni[], hash: (dni: string) => string | null, pareceDocumento?: (dni: string) => boolean,",
+          "retorno": "PlanBackfillDni",
+          "linea": 107,
+          "resumen": "Decide, sin tocar la BD, qué hash se puede escribir y cuál chocaría. `hash` es la función de hashing real (`computeDniLookupHash` de `@central/module-seguros-pii`), inyectada para que esta pieza sea p"
+        },
+        {
+          "nombre": "anota",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Map<string, { ids: string[]; preexistente: boolean }>, hash: string, id: string, yaLoTenia: boolean,",
+          "retorno": "void",
+          "linea": 173
+        },
+        {
+          "nombre": "seguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "fn: () => string | null",
+          "retorno": "string | null",
+          "linea": 193
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f4e934605d42"
+    },
+    {
       "ruta": "packages/module-seguros/src/busqueda.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Un solo cuadro de búsqueda para toda la cartera: se teclea lo que se tenga a mano —una matrícula que dicta el cliente por teléfono, su DNI, el número de póliza de un recibo, un apellido— y esto decide DÓNDE hay que mirar. ─── Por qué la clasificación es pura y vive aquí ─────────────────────────── P",
@@ -115137,7 +115228,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2906,
-    "funciones": 8571
+    "archivos": 2909,
+    "funciones": 8577
   }
 }
