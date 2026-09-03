@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos (03/09/2026, PR #2210).**
+  1️⃣ **El email de Alberto estaba en `cliente_emails` de DOS desconocidos**, así que `vincularIdentidad`
+  contaba 2 candidatos, devolvía `ambiguo` y su bóveda salía **vacía sin un solo error**. Ahora desempata
+  `lib/vinculo-elegir.ts` (puro, 10 tests): el email PRINCIPAL de una ficha es su identidad y gana a N
+  secundarios; dos principales siguen sin adivinarse. 2️⃣ **El SSO de Vercel (`all_except_custom_domains`
+  sin dominio propio) tapaba la producción entera** — bajado a `preview`: ningún cliente habría entrado
+  jamás. 3️⃣ El portal llevaba **3 despliegues en `ERROR`** por `node:crypto` en el barril. Prueba
+  montada: autorización **José Suarez Salas → Alberto** (`alcance ver`, `origen corredor`, nace
+  PENDIENTE: se acepta desde el portal) + relación Padre/Hijo. José tiene 6 pólizas, 4 vivas.
+  ⚠️ **Sin consentimiento escrito de José**: es una prueba, no un consentimiento acreditado.
+  🚨 Pendiente de Alberto, y corta el login antes que nada: confirmar `ASEGURA_PORTAL_SESSION_SECRET`
+  (falló hoy 08:06 con «no configurado en producción») y `ASEGURA_PORTAL_CANAL_PEPPER`.
+  Entra además: **adjuntos en el parte** (varios ficheros, el rechazado se explica y no tumba a los
+  demás; `documentos_colgado_de_algo` ampliado con `portal_parte_id` o los 32.520 leads no podían subir
+  nada).
+
 - **🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive (03/09/2026).**
   El logo que había en Drive (`cropped-logo-bn-350x100-1.png`) **no servía**: recorte de WordPress de
   **157×45 px** y **un solo gris `#F6F6F6`** sobre transparencia (377 px opacos de 7.065) — la variante
