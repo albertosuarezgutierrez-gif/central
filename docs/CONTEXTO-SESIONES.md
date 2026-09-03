@@ -83,11 +83,15 @@
   montada: autorización **José Suarez Salas → Alberto** (`alcance ver`, `origen corredor`, nace
   PENDIENTE: se acepta desde el portal) + relación Padre/Hijo. José tiene 6 pólizas, 4 vivas.
   ⚠️ **Sin consentimiento escrito de José**: es una prueba, no un consentimiento acreditado.
-  🚨 Pendiente de Alberto, y corta el login antes que nada: confirmar `ASEGURA_PORTAL_SESSION_SECRET`
-  (falló hoy 08:06 con «no configurado en producción») y `ASEGURA_PORTAL_CANAL_PEPPER`.
+  ✅ Las dos envs estaban: Alberto entró a las 13:25 (logs). ⚠️ **Pero su bóveda salió VACÍA: el
+  vínculo devolvió `sin_ficha`** (0 filas en `portal_vinculo`, sin error en logs) y se le vinculó **a
+  mano** (`origen: manual`). Sin resolver: si entró con OTRO email que el de su ficha (benigno) o si la
+  **`PII_LOOKUP_KEY` del portal ≠ la de `asegura`** (se copió a mano en 3 proyectos) — en ese caso
+  NINGÚN cliente se vinculará solo. Se comprueba pidiendo el código con el email exacto de una ficha.
   Entra además: **adjuntos en el parte** (varios ficheros, el rechazado se explica y no tumba a los
   demás; `documentos_colgado_de_algo` ampliado con `portal_parte_id` o los 32.520 leads no podían subir
-  nada).
+  nada) y **alta de póliza A MANO sin documento** (PR #2227: misma validación que editar,
+  `confirmadaPorUsuario: true` porque la tecleó una persona).
 
 - **🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive (03/09/2026).**
   El logo que había en Drive (`cropped-logo-bn-350x100-1.png`) **no servía**: recorte de WordPress de
