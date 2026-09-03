@@ -42,6 +42,12 @@
   conversación, que es de OTRO programa anterior. Acotados a `/correduria` por tokens (`.correduria` en
   `globals.css` + `layout.tsx`), no por hex sueltos: plataforma es el cuadro de mando de TODOS los negocios.
   Medido en Chromium: a 320 y 390 px el scroller no desborda y la barra de pestañas scrollea sola.
+  ✅ **Mergeado (PR #2169) y en producción**, y probado con la cartera REAL: en el cliente con más
+  pólizas vivas el tile nuevo destapa lo que la tabla escondía — vence el 24/09 (21 días) pero **el
+  plazo de preaviso se pasó el 25/08**. En toda la cartera: de 67 vivas, **6 en «última llamada»
+  (30-60 días, donde SÍ da tiempo a mover de compañía)**, 5 con el plazo ya pasado y 🚩 **18 vivas
+  por CIMA con vencimiento ANTERIOR a hoy** — o CIMA no refresca la fecha al prorrogar, o están
+  vencidas de verdad; sin mirar, no se afirma.
 - **🎨 Portal del cliente: correo propio y aspecto de plataforma (03/09/2026).** Dominio de envío
   `envios.grupoasegura.es` **verificado en Resend** (DKIM+SPF+MX en IONOS). Es un SUBDOMINIO a
   propósito: solo puede haber un SPF por dominio y la raíz ya tiene el de IONOS — fusionarlos a mano
