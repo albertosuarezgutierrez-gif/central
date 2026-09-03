@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { Shield, CalendarClock, Landmark, FolderOpen, Plus, House } from 'lucide-react'
+import { Shield, CalendarClock, Landmark, FolderOpen, Plus, House, Wrench } from 'lucide-react'
 import { Pagina, PageHeader, BtnLink, Badge } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
@@ -230,13 +230,19 @@ export default function CorreduriaClient() {
       <PageHeader
         titulo="Correduría"
         icono={<Shield size={20} strokeWidth={1.75} />}
-        acciones={
+acciones={
           <>
             <BtnLink href="/correduria/cliente/nuevo" variante="primario">
               <Plus size={15} strokeWidth={1.75} aria-hidden /> Nuevo cliente
             </BtnLink>
             <BtnLink href="/correduria/hogar" variante="secundario">
               <House size={15} strokeWidth={1.75} aria-hidden /> Presupuesto de hogar
+            </BtnLink>
+            {/* Mantenimiento va aquí y no en el cuerpo: no es trabajo del día,
+                es una pasada de cuando toca. Un bloque permanente en la pantalla
+                que se abre cada mañana sería ruido por una tarea de una tarde. */}
+            <BtnLink href="/correduria/mantenimiento" variante="secundario">
+              <Wrench size={15} strokeWidth={1.75} aria-hidden /> Mantenimiento
             </BtnLink>
           </>
         }

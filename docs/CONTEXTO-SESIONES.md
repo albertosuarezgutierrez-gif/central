@@ -30,25 +30,44 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **🎨 Rediseño de `/correduria`: de ocho bloques apilados a cinco secciones (03/09/2026).**
-  Alberto: «minimalista, óptima y productiva». Buscador arriba y **Hoy · Clientes · Cartera · Comisiones · Datos**
-  con contador en la barra (`secciones.ts`, puro + 9 tests) — una pestaña esconde, y el badge es lo
-  que impide que esconda TRABAJO: `{n}` · `n+` (alguna cola ilegible) · `!` (ninguna legible), nunca 0.
-  🚨 **Bug real corregido: `Vencimientos` vivía DENTRO de `CarteraViva`, tras sus tres `return`
-  tempranos** → con el puerto caído la tabla de renovaciones desaparecía en silencio y su propio
-  manejo de error era código muerto (mismo fallo que ya se sacó fuera para el buscador y `Duplicadas`).
-  Ahora es `Renovaciones.tsx`, hermana, con el fetch subido a la pantalla (una llamada, dos secciones).
-  Un bloque deja de ser una caja (`Bloque.tsx`): borde+fondo solo para ALARMAS con alguien esperando.
-  Emojis de estado → `Badge`; iconos → lucide. 3 agentes en paralelo por reparto de archivos.
-  Después, Alberto pidió **filtro por todo** (ramo, tipo de cliente, venta cruzada) para sacar listas:
-  eso NO era un filtro sino una pantalla que no existe —solo hay buscador por texto, sin endpoint de
-  listado en ninguna de las dos apps—. Entra el vocabulario compartido (`filtro-cartera.ts` de
-  module-seguros, 14 tests) y la quinta sección **Clientes**, que DECLARA que aún no está montada.
-  🚨 Medido: **`clientes.tipo` dice 2.742 clientes / 29.860 leads cuando la cartera viva son 80** —
-  columna muerta del volcado; el grupo se deriva de `esCarteraViva()`. Hueco de venta cruzada real:
-  81 autos contra 19 hogares. PENDIENTE: endpoint `/api/operador/cartera`, proxy, `ListaCartera.tsx`
-  y CSV. La subida MASIVA de PDFs queda fuera por decisión pendiente (dónde se guardan documentos con
-  DNI, y cómo se casa cada PDF con su póliza), no por tiempo. PR #2205.
+- **🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera (03/09/2026).**
+  Alberto: «minimalista, óptima y productiva» y «filtro por todo». Buscador arriba y cinco secciones
+  **Hoy · Clientes · Cartera · Comisiones · Datos** con contador (`secciones.ts`, puro + 9 tests): una
+  pestaña esconde, y el badge es lo que impide que esconda TRABAJO — `{n}` · `n+` (alguna cola ilegible)
+  · `!` (ninguna legible), nunca 0. 🚨 **Bug real: `Vencimientos` vivía DENTRO de `CarteraViva`, tras sus
+  tres `return` tempranos** → con el puerto caído las renovaciones desaparecían en silencio y su manejo
+  de error era código muerto; ahora es `Renovaciones.tsx`, hermana. Un bloque deja de ser una caja
+  (`Bloque.tsx`): borde+fondo solo para alarmas con alguien esperando. El filtro va entero: vocabulario
+  compartido por las DOS apps (`filtro-cartera.ts`, 14 tests) + `GET /api/operador/cartera` + proxy con
+  CSV + `ListaCartera.tsx` (ramo, «que NO tenga», compañía, provincia, estado, ventana de vencimiento,
+  canal, leads aparte y paginados). 🚨 Dos medidas que lo condicionan: **`clientes.tipo` dice 2.742
+  clientes / 29.860 leads cuando la cartera viva son 80** (columna muerta del volcado — el grupo se
+  deriva de `esCarteraViva()`), y **24 de las 110 pólizas vivas guardan `prima = 0`**, que sin `nullif`
+  se servía como «0,00€». Un valor de filtro no reconocido se DECLARA (`descartados[]`) en vez de
+  ignorarse: ignorarlo convierte «enséñame ramo XYZ» en «enséñamelo todo». Hueco de venta cruzada real:
+  81 autos contra 19 hogares. ⏳ Fuera a propósito: la subida MASIVA de PDFs, por decisión pendiente
+  (dónde se guardan documentos con un DNI dentro y cómo se casa cada PDF con su póliza), no por tiempo.
+  PR #2205.
+- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, tras mergear #2206).**
+  `DELETE /api/operador/poliza/intervinientes` + botón «quitar» en Contactos de plataforma. Tres
+  guardas: una fila de **CIMA no se borra** (409; el pull la recrearía, y plataforma ni pinta el botón),
+  el **snapshot va ANTES del borrado** y si falla no se borra nada, y **el tomador no tiene botón** porque
+  su fila se sintetiza (`IntervinienteFicha.id = null`, con test). `interviniente_purga_log.cliente_id`
+  pasa a admitir NULL: un interviniente puede no tener ficha, y meter ahí el `poliza_id` para rellenar
+  la columna habría sido un dato que miente. Y **`/correduria/mantenimiento`** (nueva) enseña en seco el
+  estado del blind index de DNI; el paso de ESCRIBIR no se ofrece mientras queden choques, porque el
+  índice único haría fallar la escritura a la mitad.
+- **🔴 «Sin dato» en el capital de hogar era un «no lo he mirado» (03/09/2026).** La ficha de Occident
+  `GPDFS3000276` decía «sin dato» en continente y contenido y lo justificaba afirmando que «esta compañía
+  las manda sin importe propio» — falso: 11 de sus 40 coberturas SÍ traen capital (sublímites y RC). Y el
+  capital estaba guardado: `continente 61000 / contenido 7000` en la copia del volcado, **el mismo objeto
+  del que la pantalla ya sacaba los 76 m² y el 1994**. Medido al preguntar Alberto de dónde sale: las
+  **coberturas sí vienen de CIMA** (1.425 filas en la cartera viva) pero **el capital no** — de las 37
+  garantías de continente/contenido de las 19 pólizas de hogar vivas, **ninguna trae importe**. Arreglado
+  con una SEGUNDA fuente rotulada (estado `del_volcado`; el consenso de CIMA gana siempre y
+  `eurDeCapital()` sigue sin devolverlo). Alcance: 7 de 19. Cepo:
+  `test/regression-capital-hogar-volcado.test.ts` — que nació escaneando solo los fuentes y **pasaba 6/6
+  con el módulo apagado**; lleva ya dos tests de comportamiento con los datos reales.
 
 - **🧬 Por qué se duplican las fichas: el blind index de DNI está a medias (03/09/2026).**
   Alberto vio dos «Pilar Piña Franco» en `/correduria`. No es un fallo del CRM: son dos volcados
