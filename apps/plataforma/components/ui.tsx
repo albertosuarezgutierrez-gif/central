@@ -229,6 +229,30 @@ export function btnStyle(variante: 'primario' | 'secundario' | 'sutil' = 'secund
   return { ...base, background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)' }
 }
 
+/**
+ * Botón CUADRADO de un solo icono, para la acción repetida de una fila de lista.
+ *
+ * 🚨 Existe porque el rótulo es lo que rompe la fila en el móvil, no el botón:
+ * medido el 03/09/2026 sobre la captura de Alberto de `/correduria/cliente/[id]`,
+ * «Hacer principal» mide ~150px y a 332px útiles empujaba los botones a una
+ * segunda fila (~84px de alto frente a ~58px de la fila que no lo llevaba: la
+ * misma clase de dato con dos alturas). Con el icono la fila cabe entera.
+ *
+ * ⚠️ NO lo uses para una acción DESTRUCTIVA. Un borrado sin rótulo se pulsa por
+ * error y en esta app no hay ni un precedente de icono solo para eso: lo que se
+ * gana en alto no compensa. «Borrar» se queda con su texto; lo que se convierte
+ * en icono son las acciones inocuas o idempotentes (marcar principal, fijar,
+ * copiar), y SIEMPRE con `aria-label` y `title` — el icono no es el nombre.
+ *
+ * Mantiene el mínimo táctil de 44px de la regla responsive del CLAUDE.md raíz,
+ * que es justo lo que se salta un estilo escrito a mano (los 9 botones a ~26px
+ * del desglose de comisiones, PR #2216).
+ */
+export function btnIcono(variante: 'primario' | 'secundario' | 'sutil' = 'secundario', tam: 'sm' | 'md' = 'md'): CSSProperties {
+  const lado = tam === 'sm' ? 34 : 44
+  return { ...btnStyle(variante, tam), padding: 0, width: lado, minWidth: lado, gap: 0 }
+}
+
 /** Botón que en realidad navega. Para acciones con handler usa `btnStyle` en tu client component. */
 export function BtnLink({ href, variante, tam, nuevaPestana, children }: {
   href: string
