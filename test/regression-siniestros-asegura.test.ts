@@ -9,6 +9,7 @@ import {
   ramosSiniestroParaPoliza,
   textoMotivoSiniestro,
 } from '../apps/plataforma/lib/siniestros-asegura.ts'
+import { resumenFicha } from '../packages/module-seguros/src/ficha-resumen.ts'
 
 // Siniestros desde la ficha (plataforma → puerto de asegura). Lo que se
 // protege: `null` ≠ `[]` ≠ 0 en la lista y en la reserva; los defaults
@@ -156,5 +157,17 @@ test('la ficha del cliente y la de póliza montan el componente compartido, no u
   assert.doesNotMatch(cliente, /function Siniestros\(/, 'el componente local viejo se borró')
   assert.doesNotMatch(poliza, /p\.siniestros\.length/, 'la lista puede ser null: no se cuenta a ciegas')
   // El titular «siniestros abiertos» distingue «no se pudo leer» de 0.
-  assert.match(cliente, /ficha\.siniestros === null \? null/)
+  //
+  // Desde el 03/09/2026 (ficha con pestañas) ese cálculo ya NO vive en el JSX:
+  // la cabecera lo pinta en las siete pestañas y por eso salió al helper puro
+  // `resumenFicha`. Se comprueba donde está ahora la lógica —y comprobando el
+  // COMPORTAMIENTO, que es más fuerte que el regex sobre el JSX que había aquí—,
+  // más que la pantalla le sigue pasando la lista tal cual, sin colapsarla.
+  assert.match(cliente, /resumenFicha\(\{/)
+  assert.match(cliente, /siniestros: ficha\.siniestros/)
+  assert.doesNotMatch(cliente, /ficha\.siniestros\s*\?\?\s*\[\]/)
+  assert.equal(resumenFicha({ polizas: [], siniestros: null, documentos: null }).siniestrosAbiertos, null,
+    'siniestros no leídos → null, nunca 0')
+  assert.equal(resumenFicha({ polizas: [], siniestros: [], documentos: null }).siniestrosAbiertos, 0,
+    'siniestros leídos y ninguno abierto → 0, que no es lo mismo que null')
 })
