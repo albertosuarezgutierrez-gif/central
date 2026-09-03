@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏷️ El motor de pricing tarificaba en un percentil que tres pisos no han alcanzado jamás (03/09/2026, PR #2192).**
+  Alberto: «pocas reservas, solo funciona House Sevillana». Medido: cada piso vende de verdad en P9 (Busto,
+  ADR 84€) / P19 (Luxury, 135€) / P22 (Duplex, 111€) / **P57 (House, 560€)** del mercado, con `target_pctl`
+  configurado en 0,55 / 0,50 / 0,60 / **0,60**. House es el único calibrado y el único que llena (23,2% de
+  ocupación a 180 días contra 6,6-11,6%). El corpus lo explicaba: el **100%** de los 1.961 comps de Busto
+  puntúa mejor que su 6,9 (Mercer Residences, Palacio Bucarelli dentro). Y ninguna palanca de bajada llegaba:
+  sumaban −25% donde hacía falta −40%. Nuevos `pricing-comps-liga.ts` (fuera el comp con nota creíble >1,0
+  sobre la nuestra, en los 4 corpus) y `pricing-techo-adr.ts` (techo a 1,3× el ADR propio del mes, exento en
+  eventos); clamp de calidad 0,90→0,75; `target_pctl` a 0,40/0,40/0,50/0,60 y `quality_k` 0,08 en BD.
+  El centinela del huésped comparaba la fecha contra la mediana del MES: por eso cantó el **Maratón de Sevilla**
+  (20/02/2027, ×2,93 falso; real ×1,39) y callaba los martes, que es donde estamos caros. Ahora va por fecha.
+  Guardianes #12 (percentil real vs configurado) y #13 (recorrido de palancas) para que no se repita en mudo.
+  **Pendiente:** el piloto sigue sin escribir precio a propósito (su señal es por PISO, no por fecha).
+
 - **🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente` (03/09/2026).**
   Alberto preguntó por María Alcalá (hogar Mapfre, «🔴 Sin cobertura · hace 56 días»). Medido en BD: el recibo
   de 225,97€ está **`pendiente`**, DOMICILIADO, póliza en vigor, y su fila no se toca desde la carga del 24/06
