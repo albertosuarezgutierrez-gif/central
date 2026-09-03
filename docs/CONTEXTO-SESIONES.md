@@ -436,6 +436,18 @@
 
 ---
 
+### 🧾 (03/09/2026) Comisiones: el cron ya escribe, Occident CUADRA AL CÉNTIMO y el «deudor» era un fallo de signo (solo lectura)
+- Pasada 07:30 UTC OK: 12 periodos en `comisiones_devengo`, 4 en cobertura, aviso 🔴 enviado. **CIMA no trajo nada nuevo**
+  (recibos 184 / extractos 7 / liquidaciones 9, idéntico a anoche; ingesta DEGRADADA, 62 días sin guardar).
+- 🐛 **Cruce con banco VACÍO en los 12 periodos** (`banco_total` NULL): `cima-liq` casa por `compania_seguros` y casi ningún
+  abono la tiene → hay que casar por concepto (`SALDO. M00171`/`8/92361`=Occident, `LIQ.COMISIONES AAAAMM`=Mapfre,
+  `G.65792 LIQ.000NN`=Generali, `M1454`=Asisa, `PD005`/`-FRA-COMIS-`=Caser).
+- 🐛 **Signo EIAC:** `comisiones_recibos` de Occident viene NEGATIVO = a favor del mediador; `cuadre.ts` lo pinta «deudor».
+  Con |bruto|−15% casa el banco al céntimo: abr 233,04€ · may 477,62€ (dos claves) · jul 294,30€; jun 244,53€ vs 279,68€ (+35,15€ sin explicar).
+- Allianz: remesas 80,77/19,64/17,71€ sin abono que case (no comprobado dónde cobra). Mapfre: recibos CIMA se cortan el 29/03, banco cobra hasta 02/09.
+- Banco «8.153,57€ · 11 cías» incluye **3.333,96€ de nómina/pensión** (ref. 28823484E ×3) + 0,29€ Vercel → comisión real 4.819,32€.
+- Avisado a Alberto por Telegram (`/api/internal/alerta`, msg 3976). Decisiones pendientes suyas: PR de signo+cruce, sacar la nómina de seguros, extractos Mapfre/Generali.
+
 ### 🩹 (03/09/2026) La cartera viva se contaba mal: `import_ref IS NULL` dejaba fuera a un cliente
 
 - **Agujero medido:** cuando la ingesta de CIMA trae una póliza que YA existía en el volcado, actualiza la
