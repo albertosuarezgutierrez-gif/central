@@ -192,4 +192,40 @@ está entregando.
 ⚠️ **Ninguna de estas pantallas se ha visto renderizada** (las apps llevan `--sin-previews` y la sesión no
 tiene navegador): alineaciones y espaciados están razonados sobre el código, no medidos.
 
-<!-- verificado: 2026-09-02 -->
+## 📱 El primer dato REAL en móvil: cuántas acciones caben en una cabecera (03/09/2026)
+
+El aviso de arriba dejó de ser teórico: Alberto mandó **una captura de `/correduria` en su móvil**
+—«casi siempre uso el móvil»— y es la primera vez que se mide una pantalla de esta app en vez de
+razonarla. Lo que salió:
+
+**~520 px de cabecera sobre ~740 de pantalla: el 70% antes del primer trabajo.** Reparto medido:
+**176 px los botones de acción** · 101 el buscador (campo y botón en dos filas) · 89 el párrafo de
+ayuda · 49 el título.
+
+🚨 **`PageHeader` NO era el culpable, y ese era el diagnóstico intuitivo.** Ya se apila en columna y
+ya da `width:100%` + `flex-wrap` a `.page-header-acciones` a ≤768 (`globals.css:157-167`). El
+problema era del consumidor: **tres `BtnLink` `md` con rótulos largos**. «Presupuesto de hogar»
+mide ~200 px con icono y gap, así que a 332 px útiles (360 − el padding 14+14 de `.pagina`) caben
+**uno y medio por fila → tres filas de 44 px**.
+
+**La regla que sale de aquí, y es contable, no de gusto: máximo DOS acciones en `acciones`.**
+Medido sobre las 56 cabeceras de la app: 36 llevan acciones y **casi todas son 1-2** (un `<select>`,
+un enlace, un «↻ Actualizar»). La única que llegó a siete —`/banca`— las colapsó en `AccionesBanca`.
+A la tercera, colapsa: una visible (la que se usa a diario) y el resto en un `<details>`.
+Precedente a copiar: **`correduria/AccionesCabecera.tsx`** (nativo, cierra al navegar, sin el fallo
+de `AccionesBanca` de desmontar el botón pulsado junto al modal que abre) y el `Multi` de
+`ListaCartera.tsx:410-465`.
+
+Tres cosas más que solo se ven con la pantalla delante:
+- **`autoFocus` en un buscador es hostil en móvil**: abre el teclado al entrar y tapa media pantalla
+  antes de que se lea nada. Se quitó del de la cartera.
+- **Un `flex: '1 1 260px'` con un botón al lado no cabe en 332 px** (260+8+88 = 356) y el botón cae a
+  otra fila: 45 px de alto por un cálculo de nada. `1 1 180px` los deja en la misma línea.
+- **Un texto de ayuda de 6 líneas es útil UNA vez** y ruido las trescientas siguientes: `<details>`.
+
+Y el hallazgo colateral: **9 botones del desglose de comisiones estaban a ~26 px de alto**
+(`padding:'5px 10px'` sin `minHeight`), muy por debajo de los **44 px** que garantiza `btnStyle()`.
+Un estilo escrito a mano se salta el mínimo táctil sin que nada falle — el guardián es usar
+`btnStyle()`, no recordarlo.
+
+<!-- verificado: 2026-09-03 -->
