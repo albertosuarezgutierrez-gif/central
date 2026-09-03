@@ -81,32 +81,32 @@ test('una poliza del volcado historico NO genera obligacion, aunque tenga fecha'
   // filtro, la primera pasada del cron manda miles de «se te venció el seguro»
   // sobre contratos muertos hace ocho años.
   assert.equal(
-    polizaGeneraObligacion({ importRef: 'intranet:44012', fechaVencimiento: new Date(Date.UTC(2015, 4, 10)) }),
+    polizaGeneraObligacion({ importRef: 'intranet:44012', eiacXmlHash: null, fechaVencimiento: new Date(Date.UTC(2015, 4, 10)) }),
     false,
   )
   assert.equal(
-    polizaGeneraObligacion({ importRef: 'asegura_app:991', fechaVencimiento: new Date(Date.UTC(2026, 4, 10)) }),
+    polizaGeneraObligacion({ importRef: 'asegura_app:991', eiacXmlHash: null, fechaVencimiento: new Date(Date.UTC(2026, 4, 10)) }),
     false,
   )
 })
 
 test('una poliza de CIMA con vencimiento SI genera obligacion', () => {
   assert.equal(
-    polizaGeneraObligacion({ importRef: null, fechaVencimiento: new Date(Date.UTC(2026, 4, 10)) }),
+    polizaGeneraObligacion({ importRef: null, eiacXmlHash: null, fechaVencimiento: new Date(Date.UTC(2026, 4, 10)) }),
     true,
   )
 })
 
 test('sin fecha de vencimiento no hay obligacion: NULL es «no se sabe»', () => {
   // No es «no vence». No se inventa una fecha ni se avisa; la pantalla lo dice.
-  assert.equal(polizaGeneraObligacion({ importRef: null, fechaVencimiento: null }), false)
+  assert.equal(polizaGeneraObligacion({ importRef: null, eiacXmlHash: null, fechaVencimiento: null }), false)
 })
 
 test('una cadena vacia en importRef cuenta como volcado, no como CIMA', () => {
   // El valor de cajón que se cuela por toda guarda de NULL. `''` no es «vino
   // por CIMA»: es una fila del volcado a la que le falta la referencia.
   assert.equal(
-    polizaGeneraObligacion({ importRef: '', fechaVencimiento: new Date(Date.UTC(2026, 4, 10)) }),
+    polizaGeneraObligacion({ importRef: '', eiacXmlHash: null, fechaVencimiento: new Date(Date.UTC(2026, 4, 10)) }),
     false,
   )
 })
@@ -121,6 +121,7 @@ test('una poliza CANCELADA no deriva obligacion, aunque venza en el futuro', () 
   assert.equal(
     obligacionDerivable({
       importRef: null,
+      eiacXmlHash: null,
       fechaVencimiento: new Date(Date.UTC(2027, 3, 28)),
       vigencia: 'no_vigente',
     }),
@@ -135,6 +136,7 @@ test('una poliza activa con el vencimiento YA PASADO no deriva obligacion', () =
   assert.equal(
     obligacionDerivable({
       importRef: null,
+      eiacXmlHash: null,
       fechaVencimiento: new Date(Date.UTC(2013, 0, 27)),
       vigencia: 'no_vigente',
     }),
@@ -144,7 +146,7 @@ test('una poliza activa con el vencimiento YA PASADO no deriva obligacion', () =
 
 test('«pendiente» tampoco deriva: sin fecha no se sabe, y no se inventa', () => {
   assert.equal(
-    obligacionDerivable({ importRef: null, fechaVencimiento: null, vigencia: 'pendiente' }),
+    obligacionDerivable({ importRef: null, eiacXmlHash: null, fechaVencimiento: null, vigencia: 'pendiente' }),
     false,
   )
 })
@@ -153,6 +155,7 @@ test('una poliza vigente de CIMA con fecha SI deriva', () => {
   assert.equal(
     obligacionDerivable({
       importRef: null,
+      eiacXmlHash: null,
       fechaVencimiento: new Date(Date.UTC(2027, 3, 28)),
       vigencia: 'vigente',
     }),
@@ -166,8 +169,37 @@ test('el cepo del volcado historico manda sobre el de la vigencia', () => {
   assert.equal(
     obligacionDerivable({
       importRef: 'intranet:44012',
+      eiacXmlHash: null,
       fechaVencimiento: new Date(Date.UTC(2027, 3, 28)),
       vigencia: 'vigente',
+    }),
+    false,
+  )
+})
+
+// ── El agujero de la regla de un solo brazo (medido 03/09/2026) ──────────────
+
+test('🚨 una póliza del volcado que CIMA mantiene al día SÍ genera obligación', () => {
+  // `3021700291186` de Reale (C0613): entró en el volcado de junio con su
+  // `import_ref`, y la ingesta de CIMA la actualiza (suplemento 133 del
+  // 25/08/2026) sin quitárselo. Con la regla vieja no avisaba de su vencimiento
+  // de 2027 — y con ella se caía el cliente entero de la cartera.
+  assert.equal(
+    polizaGeneraObligacion({
+      importRef: 'asegura_app:pol2:15143',
+      eiacXmlHash: 'a1b2c3',
+      fechaVencimiento: new Date(Date.UTC(2027, 8, 19)),
+    }),
+    true,
+  )
+})
+
+test('el volcado que CIMA nunca ha tocado sigue sin generar obligación', () => {
+  assert.equal(
+    polizaGeneraObligacion({
+      importRef: 'intranet:44012',
+      eiacXmlHash: null,
+      fechaVencimiento: new Date(Date.UTC(2027, 8, 19)),
     }),
     false,
   )

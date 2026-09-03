@@ -30,7 +30,7 @@
  */
 import { createMailTransporter } from '@central/core-email'
 import { decryptField } from '@central/module-seguros-pii'
-import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
+import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 import { DIAS_VENTANA_AVISO, entraEnVentana } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { eur } from './dinero'
@@ -210,7 +210,7 @@ export async function ejecutarAvisosVencimiento(opts: {
     ? await db.poliza.findMany({
         where: {
           id: { in: polizaIds },
-          importRef: null,
+          ...WHERE_CARTERA_VIVA,
           mergedIntoPolizaId: null,
           estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
         },

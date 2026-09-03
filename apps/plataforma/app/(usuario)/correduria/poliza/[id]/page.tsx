@@ -104,7 +104,9 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
       />
 
       {/* ── Siniestros ──────────────────────────────────────────────────── */}
-      {/* «Confirmada por CIMA» = viva (import_ref NULL) con id_poliza_entidad: la misma regla que la ficha. */}
+      {/* «Confirmada por CIMA» = viva y con `id_poliza_entidad`: la misma pregunta que en la ficha.
+          «Viva» ya NO es `import_ref IS NULL` (`esCarteraViva` de @central/module-seguros: también es
+          viva la que CIMA mantiene al día sobre una fila del volcado), y quien lo decide es asegura. */}
       <Siniestros
         lista={p.siniestros}
         polizas={[{ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.viva && p.idPolizaEntidad !== null }]}

@@ -58,7 +58,7 @@ GRANT SELECT (id, correduria_id, nombre, apellidos, tipo, segmento, tipo_persona
   ON seguros.clientes TO prisma_asegura_portal;
 GRANT SELECT (id, correduria_id, cliente_id, tipo, aseguradora, numero_poliza, fecha_inicio, fecha_vencimiento,
               prima_anual, prima_mensual, prima_bruta, fraccionamiento, estado, situacion, datos_especificos, coberturas,
-              import_ref, origen, id_poliza_entidad, codigo_entidad_dgs, ramo_dgs, fecha_efecto_inicial,
+              import_ref, eiac_xml_hash, origen, id_poliza_entidad, codigo_entidad_dgs, ramo_dgs, fecha_efecto_inicial,
               merged_into_poliza_id, created_at, updated_at)
   ON seguros.polizas TO prisma_asegura_portal;
 GRANT SELECT (id, correduria_id, poliza_id, numero_orden, codigo, descripcion, capital_asegurado, descripcion_capital,

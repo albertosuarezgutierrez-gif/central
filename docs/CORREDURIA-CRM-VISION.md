@@ -40,9 +40,15 @@ dinero al tarificar). Alberto no entra ahí (dictado 01/09/2026).
 
 1. **CIMA y Codeoscopic saben más que nosotros.** No inventamos un modelo de póliza: guardamos lo que
    ellas mandan, con su nombre, y lo enseñamos. Lo nuestro es enlazarlas y explicar.
-2. **Lo confirmado manda.** «Cliente» es quien tiene póliza viva entrada por CIMA (`polizas.import_ref IS NULL`);
-   el resto son leads (regla de Alberto, 01/09/2026). Una póliza emitida por nosotros es «pendiente
-   de confirmar» hasta que CIMA la trae.
+2. **Lo confirmado manda.** «Cliente» es quien tiene póliza viva entrada o mantenida por CIMA; el resto
+   son leads (regla de Alberto, 01/09/2026). Una póliza emitida por nosotros es «pendiente de confirmar»
+   hasta que CIMA la trae. Qué cuenta como VIVA lo decide una fuente única —`esCarteraViva()` de
+   `@central/module-seguros`, `packages/module-seguros/src/cartera-viva.ts`—:
+   **`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`**. El segundo brazo se añadió el 03/09/2026 porque
+   `import_ref IS NULL` a secas se dejaba fuera las pólizas del volcado que CIMA mantiene al día (ver §5:
+   la ingesta actualiza la fila vieja y le deja su `import_ref`). Cifras al 03/09/2026: **80 clientes /
+   110 pólizas** vivas, **28.728** de volcado; la fila que destapó el agujero es la `3021700291186` de
+   Reale (C0613), que dejaba a Reale con «0 pólizas vivas».
 3. **Todo cambio deja rastro.** `historial_interno` por ficha (quién, cuándo, qué; nunca el valor de
    un dato de identidad), `cliente_merge_log`/`poliza_merge_log` para fusiones, `operational_events`
    para la ingesta. Un CRM sin historial es una hoja de cálculo.
@@ -77,7 +83,7 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 
 | Se pinta | Regla |
 |---|---|
-| ✅ Cliente (CIMA) | tiene alguna póliza **confirmada por CIMA** (`import_ref IS NULL` y `id_poliza_entidad` informado), no cancelada — `estadoCliente()` |
+| ✅ Cliente (CIMA) | tiene alguna póliza **confirmada por CIMA** (cartera viva por `esCarteraViva()` y `id_poliza_entidad` informado), no cancelada — `estadoCliente()` |
 | 📝 Con presupuesto | sin póliza confirmada y con una póliza **emitida pendiente de CIMA**, o una cotización pendiente/enviada de los últimos 60 días — hecho |
 | 🕐 Lead | ninguna de las dos |
 | ⚫ Ex-cliente | tuvo pólizas (canceladas en CIMA o del volcado histórico) y ninguna viva — hecho |
@@ -117,6 +123,9 @@ primer cliente nuevo la va a pisar. Hechos medidos en el código (02/09/2026):
 - **CIMA** (`poliza-matching.ts`) empareja por (1) `numero_poliza` normalizado + `aseguradora` EXACTA;
   (2) si no, `cliente_id` + `aseguradora` + `fecha_inicio`; (3) si no, inserta. `import_ref` **no
   interviene**. Si casa, `update` reescribe la fila, **incluido `cliente_id`**.
+  🚨 De aquí sale el agujero de la cartera viva medido el 03/09/2026: si lo que casa es una fila del
+  volcado, se actualiza CONSERVANDO su `import_ref`, y un filtro `import_ref IS NULL` la contaba como
+  lead aunque CIMA la mantenga al día. Lo tapa el segundo brazo `eiac_xml_hash IS NOT NULL` (§2).
 
 Lo que pasará sin cambiar nada, en orden de probabilidad:
 

@@ -405,6 +405,28 @@
 
 ---
 
+### 🩹 (03/09/2026) La cartera viva se contaba mal: `import_ref IS NULL` dejaba fuera a un cliente
+
+- **Agujero medido:** cuando la ingesta de CIMA trae una póliza que YA existía en el volcado, actualiza la
+  fila vieja y le deja su `import_ref`. Esa póliza —que CIMA mantiene al día— contaba como *lead*.
+  Caso: `3021700291186` de **Reale (C0613)**, vence 19/09/2027, suplemento EIAC el 25/08. Reale figuraba
+  con **0 vivas** y su cliente era invisible en CRM y portal. Cartera real: **80 clientes / 110 pólizas**
+  (no 79/109); volcado 28.728. Ramos: auto 81 · hogar 19 · RC 9 · moto 1; 42 canceladas, 68 no.
+- **Arreglo:** regla única en `@central/module-seguros` (`cartera-viva.ts`): viva = `import_ref IS NULL`
+  **o** `eiac_xml_hash IS NOT NULL`. Barrido en asegura, portal y plataforma + guardián
+  `test/regression-cartera-viva.test.ts`. `eiacXmlHash` es OBLIGATORIO en las firmas a propósito: si fuera
+  opcional, olvidar pedirlo a la BD volvería a la regla vieja en silencio. GRANT de esa columna al rol del
+  portal (aplicado y en `prisma/sql/`). Verificado: 322/322 tests, typecheck asegura/portal/plataforma, QA.
+- 🚫 **CIMA NO deja declarar siniestros. Preguntado y respondido el mismo día (SAU-23934).** El
+  proceso **841** existe en la norma EIAC pero **no en CIMA**, las entidades no lo tienen integrado y
+  «no hay fecha ni está planificada» su puesta en marcha; la **7.1 sigue sin cambios**. El único envío
+  corredor→entidad abierto es el método **`enviarFichero`**, y solo para los **procesos 761 y 77X de
+  recibos** (qué son exactamente, sin comprobar). Lección: **que un proceso esté en la norma no
+  significa que CIMA lo transporte** — se pregunta antes de diseñar. Muere el port del 841.
+- **Pendiente (borrador en Gmail, SIN enviar):** **Generali C0072** — credencial activa desde el 19/05,
+  **cero ficheros**, sin confirmación de activación por TIREA y en el Portal tampoco aparece nada.
+  **Reale no manda la carga masiva 199/299** — eso se pide a Reale, no a TIREA.
+
 ### 🧾 (02/09/2026, noche IV) Cuadre de comisiones: por qué está a cero y hasta dónde puede cuadrar (solo lectura)
 - Alberto preguntó si ya se cuadra al céntimo con BBVA + CIMA. **Medido en BD, sin tocar nada:** el libro
   (`comisiones_devengo`/`comisiones_cobertura`) está a **0 filas** porque el cron `cima-liq` (07:30 UTC) corrió a las

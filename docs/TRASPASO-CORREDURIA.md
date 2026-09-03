@@ -1036,7 +1036,9 @@ XSD—, el **4º campo del nombre del fichero es el código de proceso**, y sepa
   `311/361` siniestros. Ninguno manda el histórico.
 - **Carga masiva (transacción `CM`)**: **`199` pólizas · `299` recibos · `269` movimientos de
   recibo · `399` siniestros**. Esto sí manda todo, y **se pide fuera del canal**: no existe ningún
-  proceso EIAC para solicitarla (el único `SO` es el `841`, solicitud de alta de siniestro).
+  proceso EIAC para solicitarla (el único `SO` es el `841`, solicitud de alta de siniestro —
+  que además **no está disponible en CIMA**: confirmado por TIREA el 03/09/2026, ticket SAU-23934;
+  el único envío corredor→entidad abierto hoy es `enviarFichero` para los procesos 761 y 77X de recibos).
 
 Medido en `cima_ficheros`: **Mapfre** mandó `199` (132 pólizas) y `299`; **Allianz** mandó `199`
 (26 pólizas → 26 en cartera, cuadra exacto); **Occident y Reale, ninguna carga masiva**; y el

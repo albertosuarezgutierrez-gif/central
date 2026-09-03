@@ -13,7 +13,10 @@
 // ellos por teléfono o en el despacho, le pida el correo y deje de estar aquí.
 //
 // ─── Qué se cuenta como cliente (y qué NO) ──────────────────────────────────
-// 🚨 Cartera VIVA = pólizas que entran por CIMA (`polizas.import_ref IS NULL`).
+// 🚨 Cartera VIVA = las pólizas que CIMA trae o MANTIENE (regla única en
+// `cartera-viva.ts` de `@central/module-seguros`: `import_ref IS NULL` **o**
+// `eiac_xml_hash IS NOT NULL`, porque una fila del volcado que CIMA actualiza
+// conserva su `import_ref` viejo y también es cartera de hoy).
 // Las otras ~28.700 pólizas son el volcado histórico de junio/2026 (`import_ref`
 // `intranet:` / `asegura_app:`, vencimientos 2013-2018) y sus ~32.520 fichas son
 // LEADS, no clientes actuales. Si se mezclaran, esta pantalla diría «32.520
@@ -124,8 +127,8 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
   if (!aseguraConfigurada()) return vacio
   const db = prismaAsegura()
 
-  // 🚨 `p.import_ref is null` es la línea que separa los ~79 clientes de hoy de
-  // las ~32.520 fichas del volcado histórico. No se toca.
+  // 🚨 El filtro de cartera viva es la línea que separa los ~80 clientes de hoy
+  // de las ~32.500 fichas del volcado histórico. No se toca.
   // `nullif(btrim(...), '')` porque una cadena vacía es tan «sin canal» como un
   // NULL, y colarla como dato diría que sí se le puede escribir.
   const filas = await db.$queryRaw<FilaSql[]>`
@@ -162,7 +165,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       from polizas p
       where p.cliente_id = c.id
         and p.correduria_id = c.correduria_id
-        and p.import_ref is null
+        and (p.import_ref is null or p.eiac_xml_hash is not null)
         and p.merged_into_poliza_id is null
     ) v on true
     where c.correduria_id = ${correduriaId}::uuid

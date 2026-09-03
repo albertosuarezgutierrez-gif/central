@@ -88,21 +88,33 @@ Lo que hay aquí es el **armazón** —auth, layout, manifiestos, gate de build�
 `seguros`. El resto de este apartado describe el estado ANTERIOR al volcado y sigue valiendo para
 entender la arquitectura.
 
-🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son ~80 clientes /
-109 pólizas** — ⚠️ y de esas 109, **42 están `cancelada`** (medido 02/09/2026): **67 activas**; CIMA manda
-también las canceladas y `import_ref IS NULL` no las distingue —: las que entran por CIMA, que se distinguen por **`polizas.import_ref IS NULL`**. Las
-otras 28.729 son volcado histórico cargado en jun/2026 (`intranet:` 26.117 con vencimientos
-2013-2018 y `asegura_app:` 2.612) y **ninguna** vence en los últimos 18 meses. Regla de Alberto:
-**CIMA = cliente actual; el resto = lead** (32.520).
+🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son 80 clientes /
+110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. ⚠️ De esas 110, **42 están `cancelada`**
+y **68 no** (medido 03/09/2026): CIMA manda también las canceladas y la regla de cartera viva no las
+distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. Los ramos:
+**auto 81 · hogar 19 · responsabilidad civil 9 · moto 1**. Las otras 28.728 son volcado histórico cargado en
+jun/2026 (`intranet:` 26.117 con vencimientos 2013-2018 y `asegura_app:` 2.611) y **ninguna** vence en los
+últimos 18 meses. Regla de Alberto: **CIMA = cliente actual; el resto = lead** (32.520).
 
-📊 **Y qué ramos son esas 109, medido el 02/09/2026** (`polizas.tipo`, `import_ref IS NULL`):
-**80 auto · 19 hogar · 9 responsabilidad civil · 1 moto**. O sea, la correduría hoy es *auto* con
+🚨 **Y la cartera viva NO es `import_ref IS NULL` a secas (agujero medido el 03/09/2026).** Cuando la
+ingesta de CIMA trae una póliza que YA existía en el volcado no crea fila nueva: actualiza la vieja y le
+deja su `import_ref` viejo (`poliza-matching.ts` casa por número + compañía; el `import_ref` no interviene).
+La regla correcta, única y testeada en `packages/module-seguros/src/cartera-viva.ts` de
+`@central/module-seguros` (`esCarteraViva()`, `WHERE_CARTERA_VIVA`, `sqlCarteraViva()`), es
+**`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`** — el hash solo lo escribe el pipeline EIAC, o sea
+«CIMA ha tocado esta fila». Hoy cambia **1** póliza: la `3021700291186` de **Reale (C0613)**, auto, vence
+19/09/2027, con `import_ref` `asegura_app:pol2:15143` y suplemento EIAC (proceso 133) del 25/08/2026 — con
+la regla vieja **Reale figuraba con 0 pólizas vivas** y ese cliente era invisible en el CRM y en el portal.
+`import_ref = ''` sigue contando como volcado (0 filas hoy).
+
+📊 **Y qué ramos son esas 110** — medido el 03/09/2026 con la regla de dos brazos (`polizas.tipo`):
+**81 auto · 19 hogar · 9 responsabilidad civil · 1 moto**. O sea, la correduría hoy es *auto* con
 una cola de hogar y RC — que es exactamente el orden en que conviene tener listos los ramos para
 tarificar. Cuenta los ramos con esta consulta antes de citar la cifra: la moto se cuela fuera de
 los «tres ramos» de los que se habla en las reuniones.
 
-Consecuencia para el código: **las pólizas con
-`import_ref` NO generan recordatorios** — serían 28.729 avisos de «se te venció» sobre pólizas de
+Consecuencia para el código: **las pólizas del volcado histórico (con `import_ref` y SIN
+`eiac_xml_hash`) NO generan recordatorios** — serían 28.728 avisos de «se te venció» sobre pólizas de
 hace ocho años. Diseño completo en
 `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
 
@@ -349,9 +361,10 @@ Alberto quiere estrenar esto: **primero a mano, sobre clientes de verdad**, y au
   viene el bonus.
 - **El vehículo hay que elegirlo**, y no es un fallo. ⚠️ **Corregido el 02/09/2026:** aquí ponía que
   las 80 pólizas de auto vivas «traen matrícula y NADA más — ni marca, ni modelo, ni año», y es
-  **falso en la mitad**. Medido sobre `seguros.polizas` (`import_ref IS NULL`): las **80/80 traen
+  **falso en la mitad**. Medido sobre `seguros.polizas` (las **81** de auto vivas con la regla de dos
+  brazos; la 81ª comprobada aparte el 03/09/2026 y se comporta igual): las **81/81 traen
   matrícula, marca Y modelo** (`FORD / TOURNEO COURIER`, `CITROEN / XSARA PICASSO`…). Lo que NO trae
-  **ninguna** es **versión ni año** (0 de 80), y la versión es justo lo que pide el tarificador. Así
+  **ninguna** es **versión ni año** (0 de 81), y la versión es justo lo que pide el tarificador. Así
   que la conclusión operativa no cambia —hay que bajar al catálogo de Codeoscopic
   (marca→modelo→versión), que es **gratis**, mientras que buscar por matrícula cuesta créditos—
   pero **se entra ya en el tercer escalón**, no en el primero: marca y modelo se traen de la ficha
@@ -522,7 +535,7 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `error` · **`no_encontrado`** (se miró y no está) · `ok`. Los dos primeros NO se colapsan con el tercero.
   🚨 **`intervinientes` (02/09/2026): «sin teléfono» en el tomador NO es «no hay a quién llamar».**
   Esquiansa (empresa) no tiene teléfono; su `conductor_habitual` —dueño del coche— sí, en su propia
-  ficha enlazada por CIMA. Medido sobre las 109 vivas: **81 traen intervinientes** (95 filas: 67
+  ficha enlazada por CIMA. Medido sobre las 109 vivas de entonces: **81 traen intervinientes** (95 filas: 67
   propietario, 21 conductor habitual, 5 asegurado, 1 contacto, 1 ocasional), **14 enlazados a OTRA
   ficha** distinta del tomador, y de los 25 tomadores vivos sin teléfono **6 lo tienen en un
   interviniente**. Nombre/teléfono/email del interviniente van cifrados (95/95); si su fila no trae
@@ -590,8 +603,9 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   acababa una frase con «ver seguros.» y el cepo busca `seguros.<letra>` con flag `i`. Se reescribe la
   FRASE, no el cepo: uno que molesta es mejor que uno que deja pasar.
 - **🕘 Estado derivado, historial y duplicadas (02/09/2026, «haz todo»).** La ficha manda `estado`
-  (`estadoCliente()` de module-seguros: cliente = póliza **confirmada por CIMA** = `import_ref IS NULL` **y**
-  `id_poliza_entidad` informado; «emitida, pendiente de CIMA» = viva sin entidad, hoy 0 de 109; con presupuesto =
+  (`estadoCliente()` de module-seguros: cliente = póliza **confirmada por CIMA** = cartera viva
+  (`esCarteraViva()`) **y** `id_poliza_entidad` informado; «emitida, pendiente de CIMA» = viva sin entidad,
+  0 de las 109 de entonces; con presupuesto =
   cotización pendiente/enviada de ≤60 días; ex-cliente; lead), cada póliza `confirmadaCima`, `historial` (últimas
   50 de `historial_interno`, `lib/cartera-historial.ts`) y `cotizacionesVivas`. **`GET /duplicados`**: vivas con el
   mismo número normalizado + código DGS (`polizasDuplicadas`, puro) — el guardián de la conciliación
@@ -723,7 +737,7 @@ Cifras sobre las 32.600 fichas (medidas ANTES de esas 50 fusiones):
 - **740 grupos comparten teléfono** (1.599 fichas). **203 de ellos con nombres distintos**: familias
   y empresas, NO duplicados. Por eso no se fusiona nada automáticamente ni se dice «duplicado» a secas.
 - De los **80 clientes vivos, 48 tienen otra ficha** (36 por teléfono, 38 por nombre exacto, 1 por DNI).
-- **16 de las 109 pólizas vivas existen en las dos caras** (misma `numero_poliza` con `import_ref`
+- **16 de las 109 pólizas vivas de entonces existen en las dos caras** (misma `numero_poliza` con `import_ref`
   NULL y con `asegura_app:`), y en **10 cada copia tiene la mitad del dato**: la de CIMA trae el
   vencimiento, la del volcado trae la **dirección del riesgo** (localidad/CP en claro). La ficha viva
   sola no sabe dónde está la casa. Pendiente: leer la copia gemela al pintar la ficha.
@@ -785,7 +799,8 @@ banco 14-08-2026» de `mediadores@occidentinforma.com`.
 - **`situacionRecibo` cruza el puerto** para que plataforma pueda distinguir las dos cosas; en el
   puerto es `'devuelto' | 'pendiente' | null` y **un valor raro o ausente cae a `null`**, nunca a
   `devuelto`: inventarse un impago confirmado es exactamente lo que esto evita.
-- 🚨 **`sinRecibosInformados`**: las pólizas vivas sin NINGÚN recibo (18 de 109). No salen en la cola
+- 🚨 **`sinRecibosInformados`**: las pólizas vivas sin NINGÚN recibo (18 de las 109 de entonces; con la
+  regla de dos brazos la cartera viva son 110 y esa cuenta no se ha vuelto a medir). No salen en la cola
   y **eso no es «están pagadas»** — la UI lo declara debajo de la lista.
 - Varios recibos sin cobrar de la misma póliza → **un `devuelto` gana a cualquier `pendiente`** (es un
   hecho contra un dato que falta) y, dentro de la misma situación, se queda **el más antiguo**: es el
@@ -823,11 +838,12 @@ sale de aquí y el portal se queda con el aviso en pantalla.
 2. **Sin `ASEGURA_AVISOS_ACTIVOS=1` no sale ni un correo**: se cuenta y se informa. Cualquier otro
    valor (`'true'`, `'0'`, ausente) deja el modo cuenta — la ambigüedad se resuelve hacia NO enviar.
    `?contar=1` fuerza el ensayo aunque estén activos. **Primero se comprueba el número** (debe ser
-   ≤ 109, las pólizas vivas de CIMA); si sale de miles, el filtro de `import_ref` no está funcionando
+   ≤ 110, las pólizas vivas de CIMA); si sale de miles, el filtro de cartera viva no está funcionando
    y **no se enciende nada**.
 3. **Una obligación cuya póliza es del volcado histórico no es candidata**, aunque llegara hasta aquí:
-   la consulta re-filtra `import_ref IS NULL` y `merged_into_poliza_id IS NULL`. Sin ese cepo, un error
-   aguas arriba son 28.729 «se te venció el seguro» de pólizas de 2013-2018.
+   la consulta re-filtra con `WHERE_CARTERA_VIVA` de `@central/module-seguros` (`import_ref IS NULL` O
+   `eiac_xml_hash IS NOT NULL`) y `merged_into_poliza_id IS NULL`. Sin ese cepo, un error aguas arriba
+   son 28.728 «se te venció el seguro» de pólizas de 2013-2018.
 
 **Lo que NO hace, que es la parte que se copia mal:** no devuelve un `enviados: 0` tranquilizador
 cuando falta el proveedor de correo o el remitente. Eso lanza y el endpoint responde **503**, porque

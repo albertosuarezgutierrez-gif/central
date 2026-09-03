@@ -1,0 +1,16 @@
+-- 03/09/2026 · El portal necesita distinguir cartera VIVA de volcado histórico.
+--
+-- La regla no es solo `import_ref IS NULL`: cuando la ingesta de CIMA trae una
+-- póliza que YA existía en el volcado, actualiza la fila vieja y le deja su
+-- `import_ref` antiguo, marcándola con `eiac_xml_hash`. Esa póliza es cartera de
+-- hoy y su vencimiento hay que avisarlo. Sin esta columna el portal dejaba fuera
+-- a un cliente entero (medido: 79 → 80 clientes, 109 → 110 pólizas).
+--
+-- Es un hash del XML EIAC: no es dato personal. Solo SELECT.
+--
+-- Ya aplicado en la Supabase compartida el 03/09/2026 (migración
+-- `portal_grant_eiac_xml_hash_polizas`). Este archivo existe para que un entorno
+-- reconstruido desde el repo no levante el portal con la columna declarada en el
+-- schema de Prisma y sin permiso: eso mata la consulta ENTERA de pólizas con
+-- `permission denied for column eiac_xml_hash`, no solo esa columna.
+GRANT SELECT (eiac_xml_hash) ON seguros.polizas TO prisma_asegura_portal;

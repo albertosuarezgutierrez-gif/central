@@ -12,13 +12,31 @@
 //   - campo a `null`             → el dato existe pero el NIVEL no lo enseña.
 //     (`prima: null` no es «sin prima»: es «no visible en tu nivel».)
 //
-// «Vivas» = las que entran por CIMA: `import_ref IS NULL` y sin lápida de
-// fusión. Las 28.729 del volcado histórico (vencimientos 2013-2018) NO se
-// enseñan: un cliente vería «tu seguro venció en 2016» de una póliza que no
+// «Vivas» = las que entran o se MANTIENEN por CIMA, más lo que hemos emitido
+// nosotros y CIMA aún no ha traído — el criterio único de `WHERE_CARTERA_VIVA`
+// (`@central/module-seguros/cartera-viva`), y sin lápida de fusión.
+//
+// 🚨 Hasta el 03/09/2026 esto era solo `import_ref IS NULL`, y ese filtro tenía
+// un agujero MEDIDO: cuando la ingesta de CIMA trae una póliza que YA existía en
+// el volcado histórico no crea fila nueva — actualiza la vieja y le deja su
+// `import_ref` de 2017. Esa póliza, que CIMA mantiene al día, desaparecía de la
+// bóveda de su dueño: el cliente entraba y veía «no tienes pólizas» de un seguro
+// que está pagando. Por eso el criterio es la UNIÓN de dos preguntas:
+// `import_ref IS NULL` (nació fuera del volcado) O `eiac_xml_hash IS NOT NULL`
+// (la ingesta EIAC la ha escrito alguna vez, venga de donde venga).
+//
+// Las ~28.700 del volcado histórico (vencimientos 2013-2018, sin hash) siguen SIN
+// enseñarse: un cliente vería «tu seguro venció en 2016» de una póliza que no
 // existe. `confirmadaCima` = CIMA la ha traído (`id_poliza_entidad`); una
 // emitida por nosotros aún sin confirmar se dice como tal.
 import { camposVisibles, NIVELES, type Nivel } from '@central/module-seguros-portal'
-import { clientesVisiblesPara, importeEiac, vigenciaPoliza, type Vigencia } from '@central/module-seguros'
+import {
+  clientesVisiblesPara,
+  importeEiac,
+  vigenciaPoliza,
+  WHERE_CARTERA_VIVA,
+  type Vigencia,
+} from '@central/module-seguros'
 
 import { prisma } from './db'
 import { getIdentidad } from './session'
@@ -62,6 +80,12 @@ export type PolizaPortal = {
   vigencia: Vigencia
   /** CIMA la ha traído. `false` = emitida por nosotros y la compañía aún no la confirma. */
   confirmadaCima: boolean
+  /**
+   * De dónde viene la fila, tal cual está en la BD. NO es para pintarlo: es lo
+   * que necesitan aguas abajo (`lib/obligaciones.ts`) para volver a preguntar
+   * «¿es cartera viva?» con los datos REALES en vez de darlo por hecho.
+   */
+  procedencia: { importRef: string | null; eiacXmlHash: string | null }
   /** `null` = no visible en este nivel (no «sin prima»). `anual: null` = la compañía no la ha informado. */
   prima: { anual: number | null; mensual: number | null; fraccionamiento: string | null } | null
   /** `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel. */
@@ -161,7 +185,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       select: { id: true, nombre: true, apellidos: true },
     }),
     prisma.poliza.findMany({
-      where: { clienteId: { in: todosIds }, importRef: null, mergedIntoPolizaId: null },
+      // `WHERE_CARTERA_VIVA` va DENTRO del `AND`: es un `OR` de dos brazos y
+      // dejarlo suelto al lado del resto mezclaría las ramas (devolvería
+      // pólizas de otros clientes con `import_ref IS NULL`).
+      where: {
+        AND: [{ clienteId: { in: todosIds }, mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA],
+      },
       orderBy: [{ fechaVencimiento: 'desc' }, { createdAt: 'desc' }],
     }),
   ])
@@ -231,6 +260,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento: p.fechaVencimiento }, hoy),
       confirmadaCima: p.idPolizaEntidad !== null,
+      procedencia: { importRef: p.importRef, eiacXmlHash: p.eiacXmlHash },
       prima: ve.prima
         ? {
             // `Decimal` de Prisma → número ANTES de formatear; null se queda null.

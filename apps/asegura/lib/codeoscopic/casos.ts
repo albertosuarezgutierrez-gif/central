@@ -4,7 +4,7 @@
 // poder probarse sin base de datos. Éste es el módulo que va a buscar con qué
 // alimentarla, y solo mira dos sitios:
 //
-//   1. La CARTERA VIVA (`import_ref IS NULL`): lo que pagan de verdad los
+//   1. La CARTERA VIVA (`cartera-viva.ts` de `@central/module-seguros`): lo que
 //      clientes de esta correduría en ese ramo. Las 28.729 pólizas del volcado
 //      histórico quedan fuera — sus vencimientos son de 2013-2018 y sus primas
 //      no dicen nada del mercado de hoy.
@@ -142,7 +142,10 @@ async function casosDeCartera(
       )                                                      as coberturas
     from seguros.polizas p
     where p.correduria_id = ${correduriaId}::uuid
-      and p.import_ref is null
+      -- Cartera VIVA: import_ref IS NULL NO basta. Una fila del volcado que la
+      -- ingesta de CIMA mantiene al día conserva su import_ref viejo y se marca
+      -- con eiac_xml_hash. Regla única en @central/module-seguros (cartera-viva.ts).
+      and (p.import_ref is null or p.eiac_xml_hash is not null)
       and p.merged_into_poliza_id is null
       and p.tipo::text = ${ramo}
       and coalesce(p.fecha_inicio, p.fecha_efecto_inicial) is not null

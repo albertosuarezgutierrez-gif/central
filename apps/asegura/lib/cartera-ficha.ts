@@ -29,6 +29,7 @@ import {
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
+import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
 import { cotizacionesVivas, historialCliente, type HistorialFila } from './cartera-historial'
@@ -147,7 +148,7 @@ export type PolizaFicha = {
   /** Qué asegura, con su propio estado (conocido / no informado / cifrado / sin objeto). */
   objeto: ObjetoAsegurado
   matricula: string | null
-  /** `true` cuando entra por CIMA (`import_ref` a null) = cartera viva. */
+  /** `true` cuando es cartera VIVA: la mantiene CIMA, o la emitimos nosotros y está pendiente (ver `cartera-viva.ts`). */
   viva: boolean
   /**
    * `true` cuando CIMA la ha traído (`id_poliza_entidad` informado). Una `viva`
@@ -327,6 +328,7 @@ export async function fichaCliente(
           fraccionamiento: true,
           datosEspecificos: true,
           importRef: true,
+          eiacXmlHash: true,
           idPolizaEntidad: true,
         },
         orderBy: { fechaVencimiento: 'desc' },
@@ -370,12 +372,12 @@ export async function fichaCliente(
   // que CIMA no manda. Se lee de una vez para todas las pólizas de CIMA sin
   // objeto. Si la consulta falla, no pasa nada: el objeto queda «sin informar»,
   // que es lo que ya decía — nunca se inventa.
-  const numerosCima = c.polizas.filter((p) => p.importRef === null && p.numeroPoliza).map((p) => p.numeroPoliza as string)
+  const numerosCima = c.polizas.filter((p) => esCarteraViva(p) && p.numeroPoliza).map((p) => p.numeroPoliza as string)
   const gemelas = numerosCima.length === 0
     ? new Map<string, unknown>()
     : await db.poliza
         .findMany({
-          where: { correduriaId, mergedIntoPolizaId: null, importRef: { not: null }, numeroPoliza: { in: numerosCima } },
+          where: { correduriaId, mergedIntoPolizaId: null, ...WHERE_VOLCADO_HISTORICO, numeroPoliza: { in: numerosCima } },
           select: { numeroPoliza: true, datosEspecificos: true },
         })
         .then((filas) => new Map(filas.map((f) => [f.numeroPoliza as string, f.datosEspecificos])))
@@ -395,10 +397,10 @@ export async function fichaCliente(
   const historial = await historialCliente(correduriaId, c.id)
   const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
   const estado = estadoCliente({
-    polizasConfirmadasActivas: c.polizas.filter((p) => p.importRef === null && p.idPolizaEntidad !== null && String(p.estado) !== 'cancelada').length,
-    polizasConfirmadasCanceladas: c.polizas.filter((p) => p.importRef === null && p.idPolizaEntidad !== null && String(p.estado) === 'cancelada').length,
-    polizasHistoricas: c.polizas.filter((p) => p.importRef !== null).length,
-    polizasPendientesCima: c.polizas.filter((p) => p.importRef === null && p.idPolizaEntidad === null).length,
+    polizasConfirmadasActivas: c.polizas.filter((p) => esCarteraViva(p) && p.idPolizaEntidad !== null && String(p.estado) !== 'cancelada').length,
+    polizasConfirmadasCanceladas: c.polizas.filter((p) => esCarteraViva(p) && p.idPolizaEntidad !== null && String(p.estado) === 'cancelada').length,
+    polizasHistoricas: c.polizas.filter((p) => esVolcadoHistorico(p)).length,
+    polizasPendientesCima: c.polizas.filter((p) => esCarteraViva(p) && p.idPolizaEntidad === null).length,
     cotizacionesVivas: presupuestos,
   })
 
@@ -440,7 +442,7 @@ export async function fichaCliente(
     },
     polizas: c.polizas.map((p) => {
       const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
-      const datosGemela = p.importRef === null && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined
+      const datosGemela = esCarteraViva(p) && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined
       const retarificacion = retarificabilidad({
         tipo: String(p.tipo),
         estado: String(p.estado),
@@ -461,10 +463,10 @@ export async function fichaCliente(
           primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
         }),
         fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
-        objeto: objetoConGemela(String(p.tipo), datos, p.importRef === null && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined),
+        objeto: objetoConGemela(String(p.tipo), datos, esCarteraViva(p) && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined),
         matricula,
-        viva: p.importRef === null,
-        confirmadaCima: p.importRef === null && p.idPolizaEntidad !== null,
+        viva: esCarteraViva(p),
+        confirmadaCima: esCarteraViva(p) && p.idPolizaEntidad !== null,
         retarificable: retarificacion.retarificable,
         retarificacion,
         recibos: resumirRecibos(
@@ -700,6 +702,7 @@ export async function origenRetarificacion(
       tipo: true,
       estado: true,
       importRef: true,
+      eiacXmlHash: true,
       aseguradora: true,
       numeroPoliza: true,
       codigoEntidadDgs: true,
@@ -747,7 +750,9 @@ export async function origenRetarificacion(
         .findFirst({
           where: {
             correduriaId, mergedIntoPolizaId: null, numeroPoliza: p.numeroPoliza, id: { not: p.id },
-            importRef: p.importRef === null ? { not: null } : null,
+            // La gemela es siempre la de la OTRA cara: si ésta es viva, la copia del
+            // volcado; si ésta es del volcado, la que mantiene CIMA.
+            ...(esCarteraViva(p) ? WHERE_VOLCADO_HISTORICO : WHERE_CARTERA_VIVA),
           },
           select: { datosEspecificos: true },
         })

@@ -54,8 +54,14 @@
   **Esqueleto desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
   manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
   🚨 **Y OJO CON LA CIFRA (medido 01/09/2026): 32.600 fichas ≠ 32.600 clientes.** La **cartera VIVA son
-  ~80 clientes / 109 pólizas** — las que entran por CIMA, identificables por `polizas.import_ref IS NULL`.
-  Las otras 28.729 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
+  80 clientes / 110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. Qué cuenta como viva lo
+  decide una fuente única, `esCarteraViva()` de `@central/module-seguros`
+  (`packages/module-seguros/src/cartera-viva.ts`): **`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`**.
+  El segundo brazo tapa un agujero medido el 03/09/2026 — cuando CIMA trae una póliza que YA estaba en el
+  volcado no crea fila nueva: actualiza la vieja y le deja su `import_ref`, así que una póliza que CIMA
+  mantiene al día contaba como lead (hoy afecta a **1** fila: la `3021700291186` de Reale C0613, auto,
+  vence 19/09/2027, que dejaba a Reale con «0 pólizas vivas»).
+  Las otras 28.728 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
   jun/2026, vencimientos 2013-2018) y **ninguna** tiene vencimiento en los últimos 18 meses. Regla de Alberto:
   **lo que entra por CIMA es cliente actual; el resto son leads** (32.520). Detalle en
   `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.

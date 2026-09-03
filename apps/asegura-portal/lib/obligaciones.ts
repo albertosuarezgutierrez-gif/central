@@ -8,6 +8,7 @@
 // funciones `…DeIdentidad` reciben el id ya resuelto por quien YA pasó por la
 // puerta (la página de la bóveda lo hace una sola vez por render); las
 // `…DeSesion` lo resuelven aquí. Lo vigila `test/regression-portal-aislamiento.test.ts`.
+import { esCarteraViva } from '@central/module-seguros'
 import { fechaAccionable, obligacionDerivable, type Procedencia } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, type CarteraPortal } from './cartera-lectura'
@@ -34,9 +35,13 @@ export type ObligacionVista = {
  * `cartera` es opcional para no leer la cartera dos veces en el mismo render:
  * la página ya la tiene delante cuando llama aquí. Si no se pasa, se lee.
  *
- * Solo `import_ref IS NULL` llega hasta aquí: `carteraDeIdentidad()` ya devuelve
- * únicamente pólizas vivas (`lib/cartera-lectura.ts`), y `polizaGeneraObligacion()`
- * es el segundo cepo por si algún día alguien relaja ese `where`.
+ * Solo llega CARTERA VIVA: `carteraDeIdentidad()` ya filtra por
+ * `WHERE_CARTERA_VIVA` (`lib/cartera-lectura.ts`), y aquí se vuelve a preguntar
+ * con los datos REALES de la fila (`p.procedencia`) por si algún día alguien
+ * relaja ese `where`. Desde el 03/09/2026 «viva» ya NO es `import_ref IS NULL`:
+ * es `import_ref IS NULL` **O** `eiac_xml_hash IS NOT NULL` — una póliza que
+ * CIMA actualiza sobre una fila del volcado conserva su `import_ref` viejo y
+ * aun así hay que avisar de su vencimiento.
  */
 export async function sincronizarObligacionesDeIdentidad(
   identidadId: string,
@@ -59,12 +64,30 @@ export async function sincronizarObligacionesDeIdentidad(
       // volcado histórico». Usarlo aquí dejaría fuera las pólizas que emitimos
       // nosotros y aún no ha confirmado CIMA, que sí tienen que avisar.
       //
-      // 🚨 Y el segundo cepo, medido: `import_ref IS NULL` NO quiere decir «viva
-      // y actual». De las 109 pólizas de CIMA, 42 están canceladas (5 con
+      // Cepo 1 — de dónde viene la fila. Se pregunta con los valores REALES de
+      // la BD, no con un `null` cableado: desde el 03/09/2026 una póliza del
+      // volcado que CIMA mantiene al día (con `eiac_xml_hash`) SÍ es cartera
+      // viva y SÍ tiene que avisar, y con el criterio viejo se quedaba fuera.
+      if (!esCarteraViva(p.procedencia)) continue
+
+      // Cepo 2 — medido: estar en la cartera viva NO quiere decir «viva y
+      // actual». De las 109 pólizas de CIMA, 42 están canceladas (5 con
       // vencimiento futuro) y 18 están activas con el vencimiento ya pasado —
       // la más vieja de enero de 2013. Sin `vigencia` el calendario diría
       // «tienes hasta el 13/02/2015 para renovar».
-      if (!obligacionDerivable({ importRef: null, fechaVencimiento: p.fechaVencimiento, vigencia: p.vigencia })) {
+      //
+      // `obligacionDerivable()` vuelve a pasar por el cepo 1 (usa la misma
+      // `esCarteraViva`), así que se le dan los valores REALES de la fila: es
+      // redundante a propósito, para que la regla no dependa de que quien llama
+      // se acuerde de filtrar antes.
+      if (
+        !obligacionDerivable({
+          importRef: p.procedencia.importRef,
+          eiacXmlHash: p.procedencia.eiacXmlHash,
+          fechaVencimiento: p.fechaVencimiento,
+          vigencia: p.vigencia,
+        })
+      ) {
         continue
       }
       // El cepo de arriba ya garantiza que hay fecha; esto se lo dice al tipo.

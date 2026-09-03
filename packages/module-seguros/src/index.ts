@@ -1,4 +1,14 @@
 export {
+  esCarteraViva,
+  esVolcadoHistorico,
+  sqlCarteraViva,
+  sqlVolcadoHistorico,
+  WHERE_CARTERA_VIVA,
+  WHERE_VOLCADO_HISTORICO,
+  type EntradaCarteraViva,
+} from './cartera-viva.ts'
+
+export {
   POLIZA_ESTADOS_VIGENTES,
   esEstadoVigente,
   vigenciaPoliza,
