@@ -26,7 +26,7 @@
 // hay test que lo alcance desde aquí. Este fichero es la mitad que sí se ve.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 import {
@@ -39,6 +39,7 @@ import {
   estadoAutorizacion,
 } from '../packages/module-seguros-portal/src/autorizacion.ts'
 import { camposVisibles } from '../packages/module-seguros-portal/src/acceso.ts'
+import { generarCodigo } from '../packages/module-seguros-portal/src/codigo.ts'
 
 const RAIZ = join(import.meta.dirname, '..')
 const leerCrudo = (rel: string) => readFileSync(join(RAIZ, rel), 'utf8')
@@ -239,4 +240,41 @@ test('la boveda sirve segun QUIEN cede, no con el tope de persona siempre', () =
     /camposDeAlcances\([^)]*,[^)]*\)/,
     'camposDeAlcances se llama sin decir quien cede: usaria el default `fisica`',
   )
+})
+
+// ─── 7. El barril no puede arrastrar `node:` al navegador ───────────────────
+// Coste medido: TRES despliegues de producción seguidos en ERROR el 03/09/2026
+// (`UnhandledSchemeError: Reading from "node:crypto"`), con el portal sin
+// desplegar desde que entró el parte de siniestro. Y lo peor del fallo es que
+// no lo ve nadie: el typecheck pasa, los tests pasan —en Node el módulo
+// existe— y el check `Lint · TypeCheck · Build` solo construye `apps/ia-rest`.
+// Solo lo dice el build de producción del portal, que nadie mira.
+
+test('ningun fichero del barril importa un modulo `node:`', () => {
+  const dir = join(RAIZ, 'packages/module-seguros-portal/src')
+  const culpables: string[] = []
+  for (const f of readdirSync(dir)) {
+    if (!f.endsWith('.ts') || f.endsWith('.test.ts')) continue
+    // `from 'node:x'` o `import 'node:x'`, ya sin comentarios.
+    if (/from\s*['"]node:|import\s*['"]node:/.test(sinComentarios(readFileSync(join(dir, f), 'utf8')))) {
+      culpables.push(f)
+    }
+  }
+  assert.deepEqual(
+    culpables,
+    [],
+    `del barril de @central/module-seguros-portal tiran los COMPONENTES DE CLIENTE del portal: un import \`node:\` aqui revienta el build de produccion con UnhandledSchemeError. Usa Web Crypto o saca el fichero del barril. Culpables: ${culpables.join(', ')}`,
+  )
+})
+
+test('generarCodigo sigue dando seis digitos y sin sesgo de resto', () => {
+  const vistos = new Set<string>()
+  for (let i = 0; i < 500; i++) {
+    const c = generarCodigo()
+    assert.match(c, /^\d{6}$/)
+    vistos.add(c)
+  }
+  // Con 500 tiradas sobre un millon, repetirse mas de un par de veces delataria
+  // un generador roto (p. ej. uno que devolviera siempre el mismo valor).
+  assert.ok(vistos.size > 490, `demasiadas repeticiones: ${vistos.size}/500`)
 })
