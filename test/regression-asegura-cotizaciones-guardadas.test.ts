@@ -136,9 +136,9 @@ function libreta(opciones: { fallarEn?: number } = {}): Libreta {
     get transacciones() {
       return estado.transacciones
     },
-    cabecera: () => fila(escrituras.filter((e) => /seguros\.cotizaciones/.test(e.sql))[0]),
+    cabecera: () => fila(escrituras.filter((e) => /seguros\.tarificaciones/.test(e.sql))[0]),
     precios: () =>
-      escrituras.filter((e) => /seguros\.cotizacion_precios/.test(e.sql)).map(fila),
+      escrituras.filter((e) => /seguros\.tarificacion_precios/.test(e.sql)).map(fila),
   }
 }
 
@@ -546,12 +546,12 @@ test('el detector de orden distingue un embudo sano de uno roto', () => {
 
 test('el lector de filas casa columnas con valores, y protesta si no cuadran', () => {
   const buena = fila({
-    sql: 'insert into seguros.cotizaciones (a, b) values (?::uuid, ?)',
+    sql: 'insert into seguros.tarificaciones (a, b) values (?::uuid, ?)',
     valores: [1, null],
   })
   assert.deepEqual(buena, { a: 1, b: null })
   assert.throws(
-    () => fila({ sql: 'insert into seguros.cotizaciones (a, b) values (?)', valores: [1] }),
+    () => fila({ sql: 'insert into seguros.tarificaciones (a, b) values (?)', valores: [1] }),
     /2 columnas pero enlaza 1/,
   )
 })

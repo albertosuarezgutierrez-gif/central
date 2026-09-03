@@ -301,14 +301,21 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
 `false`.
 
 
-## 5. El negocio real de ASegura (estado 01/09/2026)
-- Cartera en el Supabase de ASEGURA (leída en vivo por plataforma): **50 pólizas en
-  vigor · 995 sin fecha · 27.793 históricas · 2.742 clientes · 29.858 leads · 7
-  siniestros**. ⚠️ «Sin fecha» = enriquecimiento pendiente, no «no vencen».
+## 5. El negocio real de ASegura (estado 01/09/2026, con lo del 02/09 marcado)
+- 📍 **Dónde está la cartera HOY: en el schema `seguros` de la Supabase compartida de central**
+  (traspaso cerrado el 02/09/2026). El Supabase de Manuel (`uijsgeocgdaxkhvwtjqs`) queda como **foto
+  congelada**: los conteos de abajo son de esa foto, y los mismos datos son los que se leen ahora en
+  central. Lo que sigue en el CRM de Manuel es **solo la ingesta de CIMA** (rol `crm_seguros`), con
+  su adaptador Java todavía en el Fly de él.
+- Fotografía del 01/09: **50 pólizas en vigor · 995 sin fecha · 27.793 históricas · 2.742 clientes ·
+  29.858 leads · 7 siniestros**. ⚠️ «Sin fecha» = enriquecimiento pendiente, no «no vencen». ⚠️ Y
+  estos conteos son del CRM con SUS criterios: **la cifra que se usa para hablar de cartera es la de
+  §8** (`import_ref IS NULL` → 109 pólizas / 80 clientes; el resto, leads).
 - El CRM lo desarrolló Manuel (favor de hermano, arranque del proyecto) pero **el negocio
-  y la web son de Alberto**. El CRM aún no está operativo (nadie lo usa a diario) → el
-  traspaso a `apps/asegura` va sin ventana, paso a paso (`docs/TRASPASO-CORREDURIA.md`).
-- Ingesta diaria EIAC de las compañías → entra en ese Supabase (cron de Manuel).
+  y la web son de Alberto**. Nadie lo usa a diario, y su **web NO se migra** (decisión de Alberto,
+  02/09): las pantallas de la correduría se montan en `plataforma` → `/correduria`
+  (`docs/TRASPASO-CORREDURIA.md`).
+- Ingesta diaria EIAC de las compañías → la escribe el CRM en el schema `seguros` de central.
 - **Inventario de la BD (01/09/2026, `public` del Supabase de ASEGURA).** Núcleo: `clientes`
   32.600 · `polizas` 28.843 · `cliente_telefonos` 4.794 · `cliente_emails` 4.017 ·
   `oportunidades` 3.676 · `bienes_asegurables` 1.614 · `poliza_coberturas` 1.425 ·
@@ -558,8 +565,14 @@ no está publicada, así que **241 / 2151 / 282 no están verificados** — y mu
 propios además del estándar. Por eso el campo semántico que se usa es `polizas.tipo`, no `ramo_dgs`.
 
 ## 7. El activo dormido
-- Los **29.858 leads** son el activo comercial dormido: nadie los trabaja hoy. RGPD manda:
-  verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
+- Las **32.520 fichas sin póliza viva de CIMA** (32.600 − los ~80 clientes actuales, medido
+  02/09/2026) son el activo comercial dormido: nadie las trabaja hoy. Son **leads**, no clientes —
+  la regla de Alberto es «lo que entra por CIMA es cliente actual; el resto son leads». (El «29.858»
+  que se anotó el 01/09 salía de la tabla `leads` del CRM de Manuel, que cuenta otra cosa.) RGPD
+  manda: verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
+- La jugada pensada para ellos **no es una campaña, es el portal**: que declaren sus seguros y sus
+  fechas y reciban avisos («tráeme tus seguros y tus fechas y yo te aviso de todo»). El backlog con
+  lo que cuesta cada variante está en `docs/CORREDURIA-INTRANET-IDEAS.md`.
 
 ## 8. Qué hay DE VERDAD detrás de una ficha de cliente (medido 01/09/2026)
 
@@ -610,6 +623,13 @@ viva y `wa_opt_in` false en los 80 · `recordatorios`, `whatsapp_outbound_messag
 - **Contacto: la columna plana gana a la tabla multivalor.** `clientes.telefono` 55/80 y
   `clientes.email` 40/80, contra `cliente_telefonos` 16 y `cliente_emails` 15 — y **0 clientes con
   más de uno**. `cliente_direcciones` **no existe** (`clientes.direccion` 62/80).
+  🚨 **Y el dato que decide si un aviso puede existir (medido 02/09/2026 sobre los 79 clientes de
+  CIMA, cruzando columna plana y tabla): 44 con email · 52 con teléfono · 53 con alguno de los dos ·
+  26 con NINGUNO.** Con esos 26 no hay forma de comunicarse, y desde el código se ven idénticos a
+  uno al que sí se avisó — cualquier conteo de «avisados» los suma como éxito si no se separan.
+  El teléfono además **no identifica**: **740 números están compartidos por 1.599 fichas**, o sea un
+  móvil es un HOGAR y no una persona. El email sí es identificador limpio: **0 duplicados** entre
+  clientes distintos, y por eso es lo único con lo que se vincula una identidad del portal a su ficha.
 - **26 pólizas de auto vivas no traen prima** (`prima_anual` 76,1%). Nunca pintarlas como 0,00€ ni
   sumarlas como cero.
 - **El objeto asegurado está en dos sitios y sin FK a la póliza.** La matrícula sí está en

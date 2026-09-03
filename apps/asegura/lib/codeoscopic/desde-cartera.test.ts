@@ -34,6 +34,7 @@ const POLIZA: PolizaCartera = {
   fechaEfectoInicial: '2016-03-01',
   fechaVencimiento: '2026-10-15',
   siniestrosRegistrados: 0,
+  vehiculo: { marca: 'SMART', modelo: 'FORFOUR', versiones: [] },
 }
 
 const RESUELTOS: Resueltos = {

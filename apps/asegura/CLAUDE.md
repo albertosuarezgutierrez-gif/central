@@ -453,6 +453,16 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
   a nadie por email.
+- 🚨 **RC NO tiene ramo en Codeoscopic (02/09/2026, catálogo oficial de Integra que pasó Alberto).**
+  La matriz del fabricante tiene siete columnas —autos, hogar, motos, decesos, vida, salud y
+  complementarios— y **responsabilidad civil no está en ninguna**, igual que el portal solo publica
+  catálogos `/car`, `/motorcycle`, `/home`, `/term-life`, `/health` y `/burial`. Son **9 pólizas
+  vivas (8 activas)** para las que `retarificabilidad()` dice «hoy solo se retarifica auto y hogar»:
+  ese «hoy» **no es un todavía**, no hay endpoint que cablear. Se llama a la compañía.
+  **Moto sí existe** (12 de las 18 compañías) y no la tarificamos — 1 póliza, así que no corre prisa.
+  Cruce entero con la cartera y la matriz completa en `docs/CODEOSCOPIC-API-PORTAL.md`. ⚠️ Ese
+  catálogo es comercial y **no dice qué tiene abierto Grupo Asegura**: eso sigue siendo
+  `GET /insurance-lines`, y se nota en que **Fidelidade —viva para nosotros— ni sale en él**.
 
 ## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)
 
@@ -565,6 +575,20 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `historial_interno` de las DOS fichas: es un consentimiento y se tiene que ver quién lo anotó y cuándo.
   ⚠️ `prisma_asegura_portal` NO tiene grant sobre la tabla: el portal del cliente todavía no enseña los
   seguros de nadie más; cuando se haga, `clientesQuePuedeVer()` ya dice a quién.
+  🆕 **Tipo `Sin vínculo` (03/09/2026, PR #2161) — «revisado y no son nada» ≠ «nadie lo ha mirado».** Alberto,
+  sobre Antonio Sevico (conductor ocasional en 18 pólizas de la cartera, con ficha propia y sin ninguna fila
+  en `cliente_relaciones`): «no tiene vinculación ninguna». Eso es un HECHO y hasta ese día no se podía
+  anotar: la tarjeta 👪 solo pinta lo declarado, así que se veía igual que no haberlo revisado — y el bloque
+  nuevo «En sus pólizas, sin vínculo declarado» habría pedido su vínculo para siempre (**17 pares así, en 15
+  fichas**, de 326). Es simétrico y **NO autoriza a nada**, con la guarda en TRES sitios y no en el botón:
+  `permiteAutorizar()` (puro), `clientesVisiblesPara()` **ignora esas filas aunque traigan
+  `puedeVerPolizas` en true** —es donde se decide quién ve las pólizas de quién— y `autorizarVer()` corta
+  con 422 antes de escribir el consentimiento. Un conductor ocasional no puede acabar viendo las pólizas del
+  tomador por un flag viejo del volcado.
+  ⚠️ **Falso positivo del guardián de aislamiento, para no perder el rato dos veces:**
+  `regression-asegura-aislamiento` marcó `cartera-relaciones.ts` como infractor porque un mensaje de error
+  acababa una frase con «ver seguros.» y el cepo busca `seguros.<letra>` con flag `i`. Se reescribe la
+  FRASE, no el cepo: uno que molesta es mejor que uno que deja pasar.
 - **🕘 Estado derivado, historial y duplicadas (02/09/2026, «haz todo»).** La ficha manda `estado`
   (`estadoCliente()` de module-seguros: cliente = póliza **confirmada por CIMA** = `import_ref IS NULL` **y**
   `id_poliza_entidad` informado; «emitida, pendiente de CIMA» = viva sin entidad, hoy 0 de 109; con presupuesto =
@@ -667,7 +691,35 @@ buscador rotula ahora por **`vitalidad`** (`@central/module-seguros/vitalidad.ts
 `viva` = entra por CIMA o vence dentro de 18 meses · `historica` · `sin_fecha` · `desconocida`. Las
 dos últimas NO entierran a nadie: `polizasCima === null` es «no se contó», jamás 0.
 
-Cifras sobre las 32.600 fichas (cero fusionadas nunca, `merged_into_*` sin estrenar):
+✅ **Y desde el 02/09/2026 SÍ se fusiona: 50 fichas** (`merged_into_cliente_id` + `cliente_merge_log`,
+que es **append-only** por trigger). Tres lotes, cada uno con su criterio de identidad escrito en el
+propio SQL (`apps/asegura/prisma/sql/2026-09-02_fusion_*.sql`): `fusion-cima` (34, nombre o teléfono
+**+** póliza común o DNI), `fusion-dni` (8, mismo hash de DNI) y `fusion-nombre-telefono` (8, nombre +
+apellidos + teléfono con OK expreso de Alberto porque **no** comparten póliza). Nada se borra: la
+lápida guarda `snapshot_before`. Tras los tres: **0 grupos con DNI repetido**, **0 grupos
+nombre+teléfono que toquen la cartera viva** y **0 pólizas colgando de una lápida**.
+🚫 **Lo que sigue sin fusionarse a propósito:** los ~545 grupos que solo comparten nombre+teléfono y
+NO tocan la cartera viva (leads del volcado, donde el fijo compartido suele ser una familia).
+
+🧩 **Lote 4 (03/09/2026, `2026-09-03_fusion_poliza_comun_lote4.sql`): «Global2» → «GLOBAL 2
+INSTALACIONES TÉCNICAS», 51 fichas fusionadas en total.** Alberto la vio en el buscador y dictó «mismo
+cliente». Se escapó a los tres lotes porque el nombre no casaba y ninguna tenía teléfono; lo que las
+identifica es la RC **547875907** (Occident en CIMA, «Plus Ultra» —marca absorbida por Occident— en el
+volcado). Medido antes de fusionar: era **el único par** de toda la base con una póliza de CIMA
+repetida en otra ficha. Dos lecciones que quedan cableadas:
+- **El buscador ya relaciona hermanas por PÓLIZA común, no solo por teléfono** (`hermanasDe` en
+  `lib/cartera-busqueda.ts`; `Hermana.vinculo` + `avisoHermanas` en module-seguros): con vínculo
+  `poliza` es «duplicado» aunque el nombre difiera. 🚨 **Solo cuenta si una de las dos pólizas es de
+  CIMA**: por número+ramo a secas hay **2.123 pares** que NO son duplicados (el volcado `intranet:`
+  reutiliza números —«NOLOSE» en 18 fichas— y las 15 que tocaban la viva llevaban «pendiente» como
+  número, el centinela disfrazado de dato). Se midió antes de escribir el criterio, no después.
+- **El motor de fusión tenía un hueco latente:** anula los hashes de la lápida ANTES de heredar, así
+  que la viva heredó `email` cifrado pero no `email_lookup_hash` → buscar por ese email devolvía
+  vacío. En los 50 supervivientes anteriores no había hueco (medido); aquí se repuso desde
+  `snapshot_before` (segunda pasada en el mismo SQL). Si se escribe un lote 5, hereda los hashes
+  ANTES de anularlos en la lápida.
+
+Cifras sobre las 32.600 fichas (medidas ANTES de esas 50 fusiones):
 - **740 grupos comparten teléfono** (1.599 fichas). **203 de ellos con nombres distintos**: familias
   y empresas, NO duplicados. Por eso no se fusiona nada automáticamente ni se dice «duplicado» a secas.
 - De los **80 clientes vivos, 48 tienen otra ficha** (36 por teléfono, 38 por nombre exacto, 1 por DNI).
@@ -679,7 +731,26 @@ Cifras sobre las 32.600 fichas (cero fusionadas nunca, `merged_into_*` sin estre
   sin teléfono común, sin póliza común. **Es la ingesta de CIMA creando una ficha nueva** en vez de
   colgar la póliza de la existente — a Manuel. Renovaciones lo pinta como dos personas.
 
-El rol de esta app es SELECT-only: **no puede fusionar**. Lo que hace es medir, rotular y enlazar a
+🧩 **Lote 5 (03/09/2026, `2026-09-03_fusion_mismo_vehiculo_lote5.sql`) — ESCRITO Y SIN EJECUTAR.** Alberto
+vio a «María Antonia Gutiérrez Alcalá» DOS veces en «👤 Personas en sus pólizas» de José Suárez Salas y
+dictó «prepara». Son dos fichas suyas (`intranet:cli:48` con DNI · `asegura_app:cli2:48` sin él), y lo caro
+no es el duplicado: **el vínculo «Cónyuge» y su AUTORIZACIÓN cuelgan de la del volcado**, la que no tiene
+ninguna póliza viva. **3 pares**, guarda de identidad = nombre+apellidos idénticos normalizados **+ las dos
+intervienen en pólizas del MISMO VEHÍCULO** + no hay dos DNI distintos; sobrevive la que tiene DNI y la
+lápida no puede tener ninguna póliza de CIMA. Ensayo en seco: las cuatro guardas pasan en los 3.
+- **La condición del vehículo es la que decide, y se midió antes de escribirla:** solo con el nombre habría
+  **1.010 pares** que además comparten el número de import — y ese N **no es un identificador**: de los
+  4.093 pares que lo comparten, solo el **25%** comparte además el nombre. Fusionar por nombre es fundir
+  parientes homónimos.
+- **Fuera a propósito:** «Salvador Pérez Jiménez», con TRES fichas sin fusionar que no comparten ningún
+  vehículo (5242DFY · ninguna · 8100FTK+8849HLB) — con ese dato pueden ser un padre y un hijo. Y los **8**
+  pares de mismo nombre con dos DNI distintos.
+- ✅ **Cumple el aviso del lote 4** sobre los índices ciegos, por el otro camino: no hereda antes de anular,
+  sino que **repone los tres `*_lookup_hash` desde `snapshot_before`** al final del propio fichero (con
+  guarda de unicidad), en vez de dejarlo para una segunda pasada descubierta después.
+
+Desde el 02/09 el rol `prisma_seguros` sí escribe, pero las fusiones se hacen por SQL con su lote y su
+guarda de identidad (no hay botón «fusionar» en la UI, a propósito); el buscador mide, rotula y enlaza a
 la ficha viva desde la histórica (`avisoHermanas()`).
 
 ### 📞 La cola de retención — recibos devueltos (`lib/cartera-impagados.ts`)
@@ -711,6 +782,46 @@ a nadie, que es el propósito entero de la ficha.
 póliza. Sin él el nombre de la lista de renovaciones es texto muerto y hay que volver a buscar al
 cliente a mano. En `plataforma` es opcional (`string | null`) porque una versión desplegada más vieja
 de esta app no lo manda: entonces el nombre no se enlaza y se dice por qué.
+
+## ✉️ El cron de avisos de vencimiento (02/09/2026) — apagado por defecto
+
+`GET /api/cron/avisos-vencimiento` (diario 08:00 UTC, `vercel.json`) manda **un** correo por
+obligación a punto de dejar de ser accionable. Las obligaciones las escribe el **portal del cliente**
+(`seguros.portal_obligacion`); el envío está aquí y no allí por una razón medida, no por gusto:
+
+🚨 **El portal solo guarda hashes.** `portal_canal.valor_hash` es un SHA-256 con pimienta y el
+`ClienteEmail` de su schema solo declara `email_lookup_hash`; el rol `prisma_asegura_portal` **no tiene
+GRANT sobre la columna del email**. Un hash no se revierte: **desde el portal no hay destinatario**.
+Esta app corre con `prisma_seguros` (BYPASSRLS) y sí lee `cliente_emails` cifrado, así que el correo
+sale de aquí y el portal se queda con el aviso en pantalla.
+
+**Los tres cerrojos, y por qué los tres:** detrás de este endpoint hay correos a clientes reales.
+
+1. **Sin `CRON_SECRET` no se autoriza a nadie — tampoco en desarrollo** (`lib/cron-auth.ts`, más duro
+   que el de `apps/plataforma`, que conserva el paso franco en dev). Un olvido de env tiene que fallar
+   ruidosamente con 401, no funcionar abierto. **Solo `Authorization: Bearer`**: un `?secret=` dejaría
+   la credencial en los logs de acceso.
+2. **Sin `ASEGURA_AVISOS_ACTIVOS=1` no sale ni un correo**: se cuenta y se informa. Cualquier otro
+   valor (`'true'`, `'0'`, ausente) deja el modo cuenta — la ambigüedad se resuelve hacia NO enviar.
+   `?contar=1` fuerza el ensayo aunque estén activos. **Primero se comprueba el número** (debe ser
+   ≤ 109, las pólizas vivas de CIMA); si sale de miles, el filtro de `import_ref` no está funcionando
+   y **no se enciende nada**.
+3. **Una obligación cuya póliza es del volcado histórico no es candidata**, aunque llegara hasta aquí:
+   la consulta re-filtra `import_ref IS NULL` y `merged_into_poliza_id IS NULL`. Sin ese cepo, un error
+   aguas arriba son 28.729 «se te venció el seguro» de pólizas de 2013-2018.
+
+**Lo que NO hace, que es la parte que se copia mal:** no devuelve un `enviados: 0` tranquilizador
+cuando falta el proveedor de correo o el remitente. Eso lanza y el endpoint responde **503**, porque
+«no he podido» no puede leerse igual que «hoy no tocaba nadie». Y una candidata sin email legible
+—descifrado fallido, `email_opt_out_at`, o una obligación declarada por el usuario sin póliza de
+cartera— cuenta como **`sinCanal`**, que es la verdad, en vez de restarse del total y desaparecer.
+
+`avisada_at` se sella **inmediatamente** tras el envío aceptado: es lo único que impide que un
+reintento mande el mismo aviso dos veces. Si el sello falla se grita `ENVIADO PERO NO SELLADO`.
+
+Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), `ASEGURA_MAIL_FROM` y
+un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
+Guardián: `test/regression-portal-obligaciones.test.ts`.
 
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se

@@ -1,6 +1,6 @@
 // lib/sivra/agente-huesped/orquestador.ts — procesa el último mensaje del huésped de una reserva.
 import { construirContexto } from './contexto'
-import { detectLang, detectCategory } from './reglas'
+import { detectLang, detectCategory, tipoHueco } from './reglas'
 import { decidir, type Decision } from './decidir'
 import { recomendar } from './recomendar'
 import { enviarAlHuesped } from './enviar'
@@ -125,9 +125,10 @@ export async function procesarMensajeHuesped(
     // Hueco de conocimiento: escalamos porque la respuesta no queda cubierta por las fuentes. Antes
     // solo se anotaba cuando NO había ni ficha ni guía, así que con la guía leída no se anotaría
     // nunca — y el hueco es justo lo que hay que enseñarle. No se anota lo sensible (queja/dinero),
-    // que escala por política y no por ignorancia.
-    if (dec.needs_human && !dec.apoyada_en_fuente && dec.categoria !== 'recomendacion'
-        && dec.sentimiento !== 'negativo' && /no cubre|no se pudo verificar/.test(dec.motivo || '')) {
+    // que escala por política y no por ignorancia. Y `control_caido` TAMPOCO se anota: con el
+    // clasificador mudo no se ha llegado a mirar si la guía lo cubre, así que apuntarlo como hueco
+    // ensucia `mensajes_guia_gaps` con preguntas que sí estaban cubiertas.
+    if (tipoHueco(dec) === 'guia') {
       await registrarGap(ctx.propertyId, pregunta)
     }
 

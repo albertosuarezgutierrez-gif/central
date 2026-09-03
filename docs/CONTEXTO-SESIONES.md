@@ -36,6 +36,214 @@
   **falló 3 veces con HTTP 500 del CRM** (31/08 11:34, 01/09 10:19 y 15:30) sin heartbeat en la BD y sin aviso
   en Telegram (solo Slack); se recuperó solo el 02/09 (4 runs verdes). GitHub retrasa el cron de las 05:30
   hasta ~3 h (ayer 09:47), así que a las 06:18 «no ha corrido» no es fallo: recomprobación programada a las 09:43.
+- **🗂️ Ficha de cliente de la correduría: cabecera + pestañas, y los colores de la app de Manuel (03/09/2026).**
+  Alberto: la ficha en una columna larga (12 tarjetas) «no es práctica»; quiere el patrón de su CRM anterior.
+  Hecho con la salvaguarda que ese CRM no tiene: **los contadores de alarma viven en la CABECERA**, fuera de
+  las siete pestañas (Resumen · Pólizas · Recibos · Siniestros · Contactos · Documentos · Historial), porque lo
+  que no está en la pestaña abierta no existe. Tile nuevo: el **límite de aviso** (vencimiento −30 d, LCS 22),
+  que estaba enterrado en la tabla. Pestañas por `?tab=` (patrón de `SegTabs`): solo se renderiza la activa,
+  pero **NO ahorra la llamada al puerto** — `fichaAsegura` trae la ficha entera y se repite. Clasificación y
+  contadores salieron a `@central/module-seguros` (`ficha-resumen.ts`, 21 tests). 🎨 **Los colores salen del CSS
+  de `app.grupoasegura.com`** (repo `asegura`, oklch→hex: cobalto **#3364ee**), NO de la captura verde de la
+  conversación, que es de OTRO programa anterior. Acotados a `/correduria` por tokens (`.correduria` en
+  `globals.css` + `layout.tsx`), no por hex sueltos: plataforma es el cuadro de mando de TODOS los negocios.
+  Medido en Chromium: a 320 y 390 px el scroller no desborda y la barra de pestañas scrollea sola.
+  ✅ **Mergeado (PR #2169) y en producción**, y probado con la cartera REAL: en el cliente con más
+  pólizas vivas el tile nuevo destapa lo que la tabla escondía — vence el 24/09 (21 días) pero **el
+  plazo de preaviso se pasó el 25/08**. En toda la cartera: de 67 vivas, **6 en «última llamada»
+  (30-60 días, donde SÍ da tiempo a mover de compañía)**, 5 con el plazo ya pasado y 🚩 **18 vivas
+  por CIMA con vencimiento ANTERIOR a hoy** — o CIMA no refresca la fecha al prorrogar, o están
+  vencidas de verdad; sin mirar, no se afirma.
+- **🎨 Portal del cliente: correo propio y aspecto de plataforma (03/09/2026).** Dominio de envío
+  `envios.grupoasegura.es` **verificado en Resend** (DKIM+SPF+MX en IONOS). Es un SUBDOMINIO a
+  propósito: solo puede haber un SPF por dominio y la raíz ya tiene el de IONOS — fusionarlos a mano
+  dejaría a la correduría sin correo. El remitente es `no-reply@envios…` con **`Reply-To`
+  `hola@grupoasegura.es`** (env `PORTAL_MAIL_REPLY_TO`), el buzón único que quiere Alberto.
+  El portal adopta los tokens y las formas de `apps/plataforma` (Inter, `--primary #4f46e5`, cards
+  con `--surface`/`--border`, radios 10/14, 44 px táctiles), con nombres de token que
+  `@central/brand` sabe sobreescribir. **Pendiente:** la paleta REAL de Grupo Asegura — el único
+  logo (Drive) es b/n y lleva «Low Cost», que ya no se usa, y ni `grupoasegura.es` ni la web de
+  Manuel son alcanzables desde el contenedor (proxy de egress + SSO de Vercel).
+
+- **👪 «Antonio Sevico no aparece en Relaciones»: no era un fallo de lectura (03/09/2026).** En la ficha de
+  José Suárez Salas, la tarjeta 👤 mandaba a anotar el vínculo «en Relaciones y autorizaciones» y allí no
+  había ni rastro: esa tarjeta solo pinta `cliente_relaciones`, y el volcado del CRM creó filas para el
+  propietario y el contacto pero NO para el conductor ocasional. **Medido: 17 pares persona↔ficha así, en
+  15 fichas** (de 326). Ahora salen en la propia tarjeta 👪 con botón «Declarar vínculo» que preselecciona
+  la ficha (nada de teclear el nombre y acertar). **Y el duplicado que Alberto no preguntó:** María Antonia
+  sale dos veces porque hay DOS fichas suyas (`intranet:cli:48` con DNI y `asegura_app:cli2:48` sin él) y
+  el vínculo «Cónyuge» cuelga de la del volcado, la que no tiene ninguna póliza viva. Se marca en pantalla
+  (`homonimia`). **Mergeado (PR #2161) y probado con los datos REALES de la ficha**: 4 personas, las dos
+  María Antonia marcadas `sin_distinguir`, Antonio en el bloque nuevo, y tras «No hay vínculo» deja de
+  pedirse y NO ve las pólizas de José. Alberto dictó «prepara» → **lote 5 escrito y SIN EJECUTAR**
+  (`apps/asegura/prisma/sql/2026-09-03_fusion_mismo_vehiculo_lote5.sql`): 3 pares, guarda = mismo nombre
+  normalizado **+ mismo vehículo** + no dos DNI; con solo el nombre habría 1.010 y fundiría homónimos.
+  Y su segundo dictado —«Antonio Sevico no tiene vinculación ninguna»— destapó que no se podía ANOTAR eso:
+  nuevo tipo `Sin vínculo` (no autoriza nada, ni con el flag puesto: la guarda vive en `clientesVisiblesPara`
+  y en el puerto, no solo en el botón). **Pendiente: que Alberto ejecute el lote 5.**
+
+- **🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto (03/09/2026).**
+  `asegura-portal` sirve en https://asegura-portal.vercel.app, pero `POST /api/acceso/solicitar` daba 500:
+  `DATABASE_URL` llevaba SOLO la contraseña del Vault, no la URI entera — y el error (`the URL must start
+  with postgresql://`) no nombra ni la contraseña ni el rol, así que se diagnostica como credenciales.
+  Segunda trampa: cambiar una env no llega sola y **el redeploy a mano es imposible** — Vercel no
+  redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
+  `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
+  este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
+- **🧪 La PRIMERA simulación real destapó dos mentiras más, y la BD las cazó (03/09/2026).** Alberto pulsó
+  «Simular precio» en una póliza de auto: `seguros.tarificaciones` guardó 1 fila `simulado=true`,
+  `intento_id NULL`, `project_id -377989` y **0 filas en el libro de gasto** — la simulación funciona y no
+  costó un céntimo. Pero (1) la tabla pintaba **«—» en las tres primas** que la BD sí tenía (49,60 · 68,80 ·
+  84,80€): el componente declaraba `primaAnual` y el backend manda `primaEur`, y como los campos del tipo
+  local son opcionales **TypeScript no dijo nada**; y (2) le devolvió productos de **HOGAR** para un coche
+  («Fiatc Hogar», «Mapfre Hogar») porque `simulacion.ts` se escribió solo para ese ramo y `cotizar()` lo
+  usaba para todos — de ahí las primas de 50-85€, que son los gastos fijos de la fórmula de hogar aplicada a
+  un coche. Ahora hay molde por ramo: auto con Reale/Occident/Mutua Madrileña **sacadas del fixture real**
+  (251,62-647,68€, la horquilla medida) y **`moto`/`rc` devuelven CERO precios diciendo por qué**, en vez de
+  caer a hogar. Cepos: 12 casos de vehículo + 28 de simulación.
+
+- **🚗 El catálogo de versiones exige el COMBUSTIBLE, y la doc decía lo contrario (03/09/2026).**
+  Con marca/modelo ya preseleccionados, el desplegable de versiones salía vacío y con un 400 crudo del
+  vendor: `/car/brands/{id}/models/{id}/vehicles` pide `engine` **también en auto**, y
+  `docs/CODEOSCOPIC-API-PORTAL.md` afirmaba que ahí era «texto libre» (se leyó como opcional). Sin
+  versiones no hay código Base7 y no se puede cotizar: la pantalla quedaba inútil. Añadido el catálogo
+  `/car/engine-types` (gratis) y un desplegable **Combustible** antes de Versión; el puerto rechaza la
+  petición sin `motor` con su nombre en vez de dejar pasar el 400. **No se adivina de la ficha**: lo que
+  ella guarda es un código EIAC («1»), de otro catálogo — traducirlo sería inventar el motor de un coche
+  real. Doc corregida y cepo ampliado (10 casos). Método: **el snapshot del portal describe el contrato;
+  el contrato de verdad lo dicta la respuesta.**
+
+- **🔧 «Retarificar» mentía dos veces, y las dos igual: un «no lo sé» convertido en «no lo hay» (03/09/2026).**
+  Alberto abrió la pantalla y preguntó por los datos del coche. (1) Decía «la compañía manda la matrícula pero
+  no el modelo»: **falso** — las 80 pólizas de auto vivas traen matrícula, marca Y modelo (la de la captura,
+  `SMART / FORFOUR`); lo único que no trae ninguna es la **versión**. Ahora marca y modelo se preseleccionan
+  desde la ficha y las versiones del histórico se enseñan como PISTAS con su procedencia, sin autoseleccionarse
+  jamás — la misma matrícula puede traer dos que se contradigan (medido en `0432GLT`). (2) El aviso rojo
+  «Tarificación apagada… cuesta 0,50€» se pintaba aunque `CODEOSCOPIC_SIMULACION` estuviera puesta, y la
+  simulación es el **paso 0 de `cotizar()`, antes** del interruptor de gasto: el botón cotizaba gratis mientras
+  la pantalla decía lo contrario. Ya lo dice bien, y qué precio es simulado lo decide la RESPUESTA (`simulado`
+  OR `projectId` negativo), nunca la prop. Y por «esto está muy mal estructurado y diseñado» (Alberto): pantalla
+  rediseñada en 3 pasos, el coste separado y en rojo, las faltas marcadas en su propio campo. Cepo:
+  `test/regression-retarificar-vehiculo.test.ts`. **Regla nueva: el rediseño de UI se delega SIEMPRE a un agente.**
+
+- **✅ Tarificaciones guardadas APLICADAS en la BD (03/09/2026).** PR #2154 mergeado y Alberto ejecutó el SQL:
+  `seguros.tarificaciones` (22 col.) y `seguros.tarificacion_precios` (14 col.) existen en `wswbehlcuxqxyinousql`,
+  la FK apunta a la tabla NUEVA y los 3 CHECK están (`simulada_sin_libro`, `puerta`, `firmeza`). `cotizacion_precios`
+  NO se creó y la vieja `seguros.cotizaciones` sigue intacta con sus 25 filas: la colisión no llegó a la BD.
+  Verificado por catálogo (`pg_constraint`), no por el «Success» de Supabase. `CODEOSCOPIC_SIMULACION=true` puesta
+  en Vercel `central-asegura` con redeploy READY 04:11 UTC; **el valor no se puede leer desde fuera** — lo confirma
+  el rótulo «Simulación» al retarificar. Probarlo es seguro: sin simulación, el siguiente escalón es
+  `CODEOSCOPIC_TARIFICACION_ACTIVA`, que sigue apagado → responde «apagado», nunca un cargo.
+
+- **Correduría: «Global2» y «GLOBAL 2 INSTALACIONES TÉCNICAS» eran el mismo cliente (03/09/2026).**
+  Alberto lo vio en el buscador de `/correduria`. Fusionadas por SQL (lote 4, `2026-09-03_fusion_poliza_comun_lote4.sql`,
+  51 lápidas en total, 0 pólizas colgando): la identidad es la RC 547875907 (Occident en CIMA / Plus Ultra en el
+  volcado); el nombre y el teléfono no la cazaban. La viva hereda email, CP y ciudad (Salteras) y las 2 pólizas
+  (incluida la Generali de auto, que CIMA no trae). El buscador relaciona ahora hermanas por **póliza común**
+  (solo si una de las dos es de CIMA: por número a secas hay 2.123 pares falsos, «pendiente»/«NOLOSE» incluidos).
+  Hueco latente del motor de fusión reparado en este caso (hash de email no heredado). **PR #2151 MERGEADO**
+  (19/19 checks verdes). Probado DESPUÉS del merge contra la BD: buscar «global» da UNA ficha (7 pólizas),
+  hermanasDe no inventa nada, el email heredado ya encuentra la ficha por índice ciego (columna e hija) y el
+  vínculo `poliza` dispara sobre un escenario sintético revertido; 226/226 tests del módulo.
+  Pendiente: nada nuevo; el duplicado vivo 2+1 creado por la ingesta CIMA sigue siendo de Manuel.
+
+- **📅 Intranet del cliente CONSTRUIDA: calendario, aviso y enlace de un clic (02/09/2026, noche V).**
+  Implementado el spec entero en el PR #2144 con subagentes. **El agujero que apareció al hacerlo:**
+  `import_ref IS NULL` NO significa «viva y actual» — de las 109 pólizas de CIMA, **42 están canceladas**
+  (5 con vencimiento futuro) y **18 activas con el vencimiento pasado** (la más vieja, de **enero de 2013**).
+  El calendario habría dicho «tienes hasta el 13/02/2015 para renovar» y las canceladas habrían mandado
+  correo real; el cepo es `vigenciaPoliza()` compuesta en `obligacionDerivable()`. **El aviso NO puede salir
+  del portal** (solo guarda hashes; su rol no lee el email): se mudó a `apps/asegura`, apagado por defecto
+  (`ASEGURA_AVISOS_ACTIVOS`, `CRON_SECRET` sin paso franco en dev). Añadidos el enlace de un clic del correo
+  (**no canjea**: lo consumirían los escáneres antivirus) y la lista de los **26 clientes sin ningún canal**
+  en `/correduria`. 315/315 guardianes. **Falta solo Alberto:** las envs de `asegura-portal` y `CRON_SECRET`.
+
+- **💥 Colisión de nombres: `seguros.cotizaciones` YA EXISTÍA (02/09/2026, noche).** El SQL de las
+  cotizaciones guardadas se escribió con ese nombre, y estuve a punto de decirle a Alberto que lo
+  aplicara. **`seguros.cotizaciones` es la tabla del COTIZADOR WEB** —25 filas, de julio a hoy, la lee
+  `cartera-historial.ts` para el contador de presupuestos de la ficha— y no tiene ninguna de las
+  columnas que escribe `guardarCotizacion()`. El fallo NO avisa: `create table if not exists` sobre
+  una tabla existente es un no-op silencioso (NOTICE + «Success» en Supabase), así que se habría
+  creado solo la tabla de precios colgada por FK de la tabla equivocada y, como `guardarSinTumbar` se
+  traga el error a propósito, la pantalla habría dicho «no ha quedado copia» para siempre sin un solo
+  error rojo — descubriéndose en la renovación de 2027 con la tabla de comparación vacía. Renombradas
+  a **`seguros.tarificaciones` + `tarificacion_precios`** (SQL, fichero, 3 sitios de código y 2
+  tests), con cepo `test/regression-tarificaciones-nombre.test.ts` (mordido). La vieja NO se toca.
+  Regla que deja: **al aplicar DDL sobre un schema heredado, mira ANTES si el nombre existe;
+  «Success» no dice que se haya creado nada.**
+
+- **🚨 «Ojo con duplicar»: agrupar personas por NIF, no por nombre (02/09/2026, noche).** Aviso de Alberto
+  sobre GLOBAL 2. `personasDePolizas` agrupaba por ficha y, a falta de ficha, por NOMBRE — y el peligro
+  va en las dos direcciones: **partir** a una persona en dos filas (enlazada a su ficha en una póliza y
+  suelta en otra) y, peor, **fundir a dos parientes homónimos** en una sola con los teléfonos mezclados.
+  Ahora la clave es el NIF: asegura emite una etiqueta OPACA (`p1`, `p2`…) —el NIF no sale del backend—
+  y dos NIF distintos no se funden jamás. Medido: GLOBAL 2 tiene **tres** NIF distintos, uno por
+  furgoneta; en toda la cartera hoy 0 personas se partían (409 de 504 filas no traen NIF y siguen
+  cayendo al nombre). 5 cepos nuevos, tres mordidos. **Queda como regla global** en el CLAUDE.md de
+  la raíz («agrupar por IDENTIDAD, nunca por la etiqueta») y como reglas 12-13 de la skill
+  `correduria-crm` (con la del tomador, que tampoco es un interviniente). **Mergeado (#2145) y
+  probado contra la BD**: la tarjeta de GLOBAL 2 pinta 3 filas, una por conductor con su matrícula,
+  y la persona que sale en dos pólizas (la activa y la cancelada del 6930FBP) colapsa en UNA. En la
+  cartera hay 260 fichas con intervinientes y solo 2 con varias personas identificadas por NIF: el
+  arreglo es barato hoy y protege el día que CIMA mande NIF en más filas (hoy 407 de 426 no lo traen).
+
+- **👤 «Personas en sus pólizas», arriba en la ficha (02/09/2026, noche).** Alberto: «en empresas y
+  particulares se puede poner arriba las personas de contacto o relaciones». La tarjeta «Relaciones»
+  solo enseña lo DECLARADO a mano (`cliente_relaciones`) y casi nadie lo tiene; mientras, CIMA ya dice
+  quién conduce cada coche y con qué teléfono, pero enterrado póliza por póliza. Nueva tarjeta que
+  agrupa **por persona** (no por póliza): nombre, qué es en cada una con su matrícula, teléfono/email
+  pinchables, enlace a su ficha si CIMA la enlazó, y si tiene o no vínculo declarado. `personasDePolizas`
+  con 7 cepos, dos mordidos. En GLOBAL 2 salen sus tres conductores de un vistazo.
+
+- **🏢 GLOBAL 2: el titular no salía en su propia póliza (02/09/2026, noche).** Alberto, revisando la
+  6930FBP: «¿no aparece propietario la empresa?». Cierto — el **tomador NO es un interviniente** (es el
+  `cliente_id` de la póliza), así que la tarjeta, que solo pintaba `poliza_intervinientes`, dejaba fuera
+  a la empresa titular en las 4 pólizas vivas de GLOBAL 2. Ahora va delante y con su rótulo
+  (`filasIntervinientes`, con cepo). Dos hallazgos más de la misma ficha: la consulta de intervinientes
+  **no tenía `orderBy`**, y con tres furgonetas y tres conductores habituales distintos el teléfono
+  «de la empresa» que se pintaba podía cambiar de una recarga a otra — ahora es determinista y dice de
+  qué matrícula sale. Y a una sociedad se le pedía «DNI, apellidos y fecha de nacimiento»:
+  `etiquetasIdentidad` rotula CIF/razón social/constitución. El CIF de GLOBAL 2 es suyo, no el DNI de
+  nadie (comprobado por hash, sin leer el valor). Mergeado #2139.
+
+- **🗓️ Intranet de clientes de la correduría: spec del calendario de vencimientos (02/09/2026, noche IV).**
+  Alberto quiere la intranet de clientes; se le devolvió lo incómodo: **ya está diseñada y a medio construir**
+  (spec del 01/09, Fase 1+4 en `main`, DDL aplicado) y **muerta por cuatro envs de Vercel que dependen de él**
+  — con `PII_LOOKUP_KEY` distinta a la de `central-asegura` entra todo el mundo y **nadie ve su cartera, sin error**.
+  Decidido cortar por la **v1 de sus ~80 clientes**: pólizas de CIMA + calendario + la bóveda ya construida,
+  **cero Avant2** (0,50€ por consulta y NO idempotente → un botón público o una vigilancia periódica son 4 cifras/mes).
+  Única pieza nueva: `portal_obligacion`, colgada del **bien** con `poliza_id` opcional (sirve luego a ITV/gas).
+  De Alberto salió lo mejor: el **cambio de mediador** convierte un lead en cliente sin tarificar y su póliza
+  **empieza a entrar por CIMA** → el dato declarado pasa a verificado solo, y su firma **ya existe**
+  (`@central/core-firma`, eIDAS art. 26, método `otp_email` = como entra el portal; molde `apps/rrhh`).
+  Todas las ideas guardadas en **`docs/CORREDURIA-INTRANET-IDEAS.md`** con coste y bloqueo de cada una.
+  Spec + banco de ideas + **plan de implementación**
+  (`docs/superpowers/plans/2026-09-02-asegura-portal-calendario-v1.md`, 9 tareas TDD) en PR draft **#2144**.
+
+- **🏠🏍️ «Haz todo» + el catálogo de Avant2 (02/09/2026, noche).** Mergeado #2130 (horquilla enchufada
+  + capital de hogar por corroboración). Alberto pasó el catálogo de Integra: cruzado con las 109 vivas
+  (tres compañías) sale que **RC no es un ramo de Codeoscopic** —8 activas sin camino automático— y que
+  **moto sí existe** y no la tarificamos; ⚠️ es catálogo comercial, no configuración (Fidelidade, viva
+  para nosotros, ni sale). Probando la ficha contra pólizas REALES de hogar aparecieron dos fallos:
+  «responsabilidad civil del **inmueble**» se colaba como capital del continente (353.665,88€ plausible
+  y falso; en EIAC `RC` es otro `claves_bien`), y `GET /car/brands` traía las marcas recortadas porque
+  `onlyPopular` es `true` por defecto. Los dos con cepo mordido. Segunda pasada al snapshot del portal:
+  contrato de moto, 131 operaciones, y la caducidad de un precio **solo aparece tras el re-rate** (que
+  explica los 15 `expires_at` a NULL). PR #2133. `portal.api-int.codeoscopic.io` está **bloqueado por
+  la política de red** del entorno: se lee del snapshot del 01/09.
+
+- **🧹 Limpieza de duplicados: 16 fusiones más (02/09/2026, noche).** «Unifica lo que puedas». José
+  Suárez Salas **ya estaba** unificado (una ficha, 21 pólizas) — corregido lo que se le dijo antes.
+  Dos lotes nuevos sobre el motor del de la tarde: **`fusion-dni`** (8, mismo hash de DNI, criterio ya
+  aprobado) y **`fusion-nombre-telefono`** (8, nombre+apellidos+teléfono, **fuera** del criterio porque
+  no comparten póliza → se preguntó y Alberto dijo que sí; 20 pólizas y 14 bienes movidos). Tras los
+  tres lotes: **0 DNI repetidos, 0 grupos nombre+teléfono con cartera viva, 0 pólizas en una lápida**;
+  50 fusionadas, 32.551 vivas. ⚠️ Fallo propio: la herencia de huecos no cogió unos apellidos porque
+  `clientes.apellidos` es **NOT NULL** (su hueco es `''`) y se filtraba por `is_nullable` comparando con
+  `IS NULL` — la cadena vacía se cuela por toda guarda de NULL. Y `cliente_merge_log` es **append-only**
+  por trigger: una corrección posterior no se anota editando su fila. PR #2139. **NO se tocan** los ~545
+  grupos que solo comparten nombre+teléfono sin cartera viva (familias con el fijo común).
+
 - **💾📐🗺️ Etapa 2 de tarificación + el mapa de campos (02/09/2026, tarde-noche).** Cada cotización
   cuesta 0,50€ y no es idempotente, así que ahora se GUARDA lo que se recibe (`seguros.cotizaciones` +
   `cotizacion_precios`, invariante `simulado = (intento_id is null)` en la BD) y `estimar()`/`mereceLaPena()`
@@ -45,10 +253,24 @@
   AL IMPORTAR, y el job `Tests` no corre `prisma generate` (en local sí estaba, por los typechecks) —
   ahora es diferido tras un `Proxy`, con cepo. 🗺️ Un agente midió el **mapa de campos** Codeoscopic×CIMA
   (PR #2125, `docs/ASEGURA-MAPA-CAMPOS-RAMOS.md`): **RC está bloqueado porque Codeoscopic NO ofrece el ramo**
-  (lo cierra `GET /insurance-lines`, gratis y ya implementado, sin llamar nunca); hogar tiene `capital_asegurado`
-  NULL en sus 37 filas de coberturas; y 14 de las 80 «auto» son motos por marca con `insuranceLine:'Car'` a fuego.
+  (lo cierra `GET /insurance-lines`, gratis y ya implementado, sin llamar nunca); 14 de las 80 «auto» son motos por marca con `insuranceLine:'Car'` a fuego.
+  ⚠️ **Y una corrección del mismo día, que la cazó Alberto acordándose mejor que yo:** el informe decía
+  «hogar tiene `capital_asegurado` NULL en sus 37 filas de coberturas» y lo di por bueno sin medirlo. Son
+  **716 filas en las 19 pólizas, 365 con capital**: CIMA SÍ trae continente y contenido, pero cada compañía
+  los llama a su manera («daños vivienda» = continente, hasta 912.322€). Faltaba el diccionario de
+  nomenclaturas, no el dato. Corregido en `docs/ASEGURA-MAPA-CAMPOS-RAMOS.md`.
   Corregido en `apps/asegura/CLAUDE.md` (PR #2121) que auto «solo trae matrícula»: trae marca y modelo al 100%,
   lo que falta es la versión. Pendiente de Alberto: 20 suposiciones por aprobar y `CODEOSCOPIC_SIMULACION=true`.
+- **🧠 El agente de huéspedes «no aprendía» — y el que decidía nunca leyó lo aprendido (02/09/2026).** Queja de
+  Alberto sobre el borrador a Claudio (153122091). El aprendizaje SÍ escribía: el phishing por WhatsApp estaba
+  enseñado tres veces. Lo que fallaba: (1) `debeEscalar` (control de calidad) solo veía ficha+guía, nunca
+  `ctx.hechos` → ESCALAR eterno, y ese veredicto es el que dispara el «❓ no lo encuentro en la guía»;
+  (2) «no se pudo verificar» (clasificador mudo) se contaba como hueco de guía → nuevo `tipoHueco` puro;
+  (3) el «hecho» guardado era la carta entera, con nombre del huésped, el móvil de Bizum y estados de un día
+  («el parking está ocupado») → ahora se destila a una frase y, si no se puede, no se guarda y se dice;
+  (4) `esHechoDelPiso` exigía pregunta y el phishing llega como afirmación → el hueco declarado viaja en
+  `mensajes_pendientes_tg.hueco_guia` (migración aplicada). ⏳ PENDIENTE de Alberto: purgar los 6 hechos
+  ya guardados (móvil de Bizum, «parking ocupado», «no hay cuna» ya desmentido). PR pendiente.
 - **🧾🔑🧲 «Haz todo ok, aplica y canal leads» (02/09/2026, noche).** Alberto dio OK a la spec de emisión,
   «aplica» al DDL del portal y pidió el canal de leads. **BD (irreversible, aplicado):** Fase 1 del portal +
   `portal_vinculo` + rol `prisma_asegura_portal` (NOBYPASSRLS, sin contraseña, SELECT por columnas, sin PII);
@@ -64,6 +286,28 @@
   (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`; enlace Git verificado: el bot de Vercel ya lo lista con su Root
   Directory, deployment «Ignored» por `--sin-previews`). Pendiente de Alberto en el panel:
   `DATABASE_URL` (plantilla en el SQL), `PII_LOOKUP_KEY` = la de central-asegura, secretos de sesión/canal.
+- **Mergeado, probado hasta donde se puede, y el doc de plataforma al día (02/09/2026, noche).** #2131 y
+  #2122 (agente de huéspedes) mergeados; los checks arrancaron solos con el PR EN DRAFT y sin lag, así que no
+  hizo falta ninguna palanca de la sección de CI. 🚨 **No hay fuga de coste en Vercel**: los 11 proyectos
+  acabaron `Ignored`, los «Building» del bot eran el estado transitorio antes del ignore step — la hipótesis
+  del merge de `main` sobraba. ⚠️ **Y el aspecto sigue SIN ver**: con `--sin-previews` la rama no construyó
+  ninguna vez, y probar las rutas desde fuera no vale (un `/ruta-que-no-existe` da el MISMO 307 a `/login`
+  que `/asistentes`, porque el middleware corre antes). `apps/plataforma/CLAUDE.md` corregido: decía que el
+  chat vivía en `/agente` y `/contable`, que hoy son redirects.
+- **Inicio: arriba lo accionable, y dos tokens CSS fantasma (02/09/2026).** Alberto pidió «página de inicio
+  con resumen de lo más importante». Inicio NO estaba vacío: estaba saturado (512 líneas — saldo, cuentas,
+  bróker, gráficas, P&L, fiscal, antifraude, fugas, benchmark y el libro entero), y lo accionable quedaba
+  bajo cuatro secciones de consulta. Nueva banda «Pide acción hoy» encima de todo (`HoyAccionable.tsx` +
+  `lib/inicio-acciones.ts`, puro, 14 tests): banco viejo PRIMERO (envenena el resto de números), pólizas
+  ≤60d desde la correduría, y movimientos/ingresos/duplicados/facturas sin clasificar. Tres estados en
+  todo: `0` ≠ `null` ≠ `'no_aplica'` — «no hay banco» no es «no se sabe», y un fallo de consulta se
+  declara en vez de callarse. De camino: **`var(--card)` y `var(--line)` NO existían** y los usaban 4
+  pantallas (`/operador/agentes`, `/operador/ia`, facturas, partes) → se pintaban sin fondo NI borde,
+  porque CSS invalida la declaración entera y no da error; por eso la página de agentes «no parecía una
+  página». Guardián `test/regression-tokens-css.test.ts`. Y consulta por agente en `/operador/agentes`
+  (expediente: ficha + semáforo + latidos + vigía). Y `/asistentes`: los dos chats con los que SE
+  PUEDE hablar (contable y precios) juntos, movidos con `git mv` sin reescribirlos —/contable y
+  /agente quedan como redirect, y el menú pasa de dos entradas a una. PR #2131.
 - **«Repara»: el menú mentía en dos sitios (02/09/2026).** Sin objetivo dicho, así que se buscó qué estaba roto de
   verdad. (1) El lateral encendía DOS entradas a la vez: «Inicio» + el segmento en `/banca?tab=*` (lo introdujo
   #2106 — «Inicio» ES `/banca` y los cinco segmentos comparten esa ruta), y «Pricing Lab» + «Pricing auto» /
@@ -146,6 +390,17 @@
   póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
 
 ---
+
+### 🧾 (02/09/2026, noche IV) Cuadre de comisiones: por qué está a cero y hasta dónde puede cuadrar (solo lectura)
+- Alberto preguntó si ya se cuadra al céntimo con BBVA + CIMA. **Medido en BD, sin tocar nada:** el libro
+  (`comisiones_devengo`/`comisiones_cobertura`) está a **0 filas** porque el cron `cima-liq` (07:30 UTC) corrió a las
+  07:31 con la contraseña vieja de `prisma_seguros` (aviso ⚪ en `telegram_avisos_log`); la env se arregló a las 11:10.
+  **La pasada del 03/09 es la primera prueba real.**
+- **CIMA NO trae liquidaciones de todas:** extractos solo de Allianz (3, remesa 118,12€) y Occident (4, saldo deudor,
+  remesa 0); Mapfre 153 recibos y ningún extracto; Generali/Asisa/Caser/MBI… nada. Cuadre al céntimo posible en 2 de 11.
+- Ruido en el «8.111,89€ · 11 compañías» del banco: una pensión (905,52€, 31/03) y un abono Vercel (0,29€) con
+  `destino='seguros'`. Contradicción abierta: Occident deudor ~−1.470€ en `cuenta_efectivo` vs >1.270€ cobrados (M00171).
+- Rutina one-shot 03/09 08:15 UTC en esta sesión: analizar todo tras el cron y avisar por Telegram (`/api/internal/alerta`).
 
 ### 🛡️ (02/09/2026, noche III) Auditoría de garantías por compañía + diseño del expediente de tarificación
 - Alberto pregunta si hace falta una pantalla para preconfigurar las garantías y capitales de cada

@@ -85,6 +85,25 @@ test('los catálogos NO cotizan: son consultas gratis y solo hacen GET', () => {
   )
 })
 
+test('🚨 el catálogo de MARCAS pide onlyPopular=false: por defecto el vendor recorta la lista', () => {
+  // El portal documenta `onlyPopular` con **Default: true** en `GET /car/brands`.
+  // Llamarlo a secas devuelve solo las marcas «populares»: una marca que no esté
+  // en esa lista NO aparece en el desplegable, sin error y sin hueco que lo
+  // delate — se ve exactamente igual que si no existiera. Es la ausencia
+  // silenciosa que persigue `CLAUDE.md`, y aquí además hace imposible
+  // retarificar un coche entero.
+  const src = readFileSync(join(ROOT, 'apps/asegura/lib/codeoscopic/catalogos.ts'), 'utf8')
+  const llamadas = src.match(/'\/car\/brands[^']*'/g) ?? []
+  assert.ok(llamadas.length > 0, 'debe existir la llamada al catálogo de marcas')
+  for (const l of llamadas) {
+    if (l.includes('/models')) continue // los modelos de UNA marca no tienen ese filtro
+    assert.ok(
+      l.includes('onlyPopular=false'),
+      `la llamada ${l} tiene que pasar onlyPopular=false explícitamente`,
+    )
+  }
+})
+
 test('la precalificación no inventa datos PERSONALES, solo circunstancias', () => {
   // Un km/año supuesto es una hipótesis del riesgo y se enseña. Un DNI o una
   // fecha de nacimiento supuestos serían datos falsos de una persona real.

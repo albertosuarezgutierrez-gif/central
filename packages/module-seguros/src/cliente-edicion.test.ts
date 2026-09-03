@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   MOTIVO_DOCUMENTO_REQUERIDO,
   coincidenciaBloquea,
+  etiquetasIdentidad,
   documentoAcredita,
   documentosAcreditativos,
   enmascararDni,
@@ -175,4 +176,19 @@ test('el historial del alta dice por dónde entró el lead, sin datos de identid
   assert.equal(manual, 'Alta manual desde plataforma por alberto@x.es (comparte teléfono/email con otra ficha, a sabiendas)')
   const reco = textoHistorialAlta({ fuente: 'recomendacion', notas: null }, { actor: 'alberto@x.es' })
   assert.equal(reco, 'Alta manual desde plataforma por alberto@x.es (fuente: recomendación)')
+})
+
+test('GLOBAL 2: a una empresa no se le pide DNI ni fecha de nacimiento', () => {
+  const e = etiquetasIdentidad('juridica')
+  assert.equal(e.documento, 'CIF')
+  assert.equal(e.nombre, 'Razón social')
+  assert.equal(e.fecha, 'Fecha de constitución')
+  assert.equal(e.pedir, 'CIF')
+})
+
+test('sin clasificar NO es «física»: se queda el rótulo neutro', () => {
+  // 32.520 fichas del volcado tienen tipo_persona a NULL.
+  assert.equal(etiquetasIdentidad(null).documento, 'DNI / NIE / CIF')
+  assert.equal(etiquetasIdentidad(null).fecha, 'Fecha de nacimiento')
+  assert.equal(etiquetasIdentidad('fisica').documento, 'DNI / NIE / CIF')
 })

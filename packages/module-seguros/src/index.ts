@@ -104,8 +104,12 @@ export {
 export {
   etiquetaRol,
   contactoEfectivo,
+  filasIntervinientes,
+  personasDePolizas,
   type IntervinienteFicha,
   type ContactoEfectivo,
+  type FilasIntervinientes,
+  type PersonaDePolizas,
 } from './intervinientes.ts'
 export {
   FRACCIONES,
@@ -155,6 +159,7 @@ export {
   normalizarEmail,
   normalizarContacto,
   normalizarDni,
+  etiquetasIdentidad,
   enmascararDni,
   normalizarFechaNacimiento,
   normalizarNombre,
@@ -181,6 +186,7 @@ export {
   type TipoContacto,
   type ContactoCliente,
   type TipoPersona,
+  type EtiquetasIdentidad,
   type CampoIdentidad,
   type CampoLibre,
   type EdicionCliente,
@@ -193,6 +199,8 @@ export {
 export {
   TIPOS_RELACION,
   GRUPOS_RELACION,
+  SIN_VINCULO,
+  permiteAutorizar,
   tipoRelacion,
   tipoInverso,
   relacionesDeFicha,
@@ -273,3 +281,22 @@ export {
   type CimaPoliza,
   type Conciliacion,
 } from './emision.ts'
+export {
+  ladoDeGarantia,
+  capitalAsegurado,
+  capitalesHogar,
+  eurDeCapital,
+  GARANTIAS_MINIMAS_CONSENSO,
+  type LadoRiesgo,
+  type CoberturaLeible,
+  type CapitalAsegurado,
+  type CapitalesHogar,
+} from './garantias.ts'
+export {
+  clasificarPolizaFicha,
+  resumenFicha,
+  type ClasePolizaFicha,
+  type PolizaResumible,
+  type ProximoVencimiento,
+  type ResumenFicha,
+} from './ficha-resumen.ts'

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T16:05:16Z",
+  "generadoEn": "2026-09-03T05:54:53Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -375,7 +375,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 35
       },
       "rrhh": {
         "estado": "usado",
@@ -450,8 +450,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "asegura-portal": {
         "estado": "usado",
@@ -875,7 +875,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "rrhh": {
         "estado": "usado",
@@ -1951,11 +1951,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 23
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 8
       },
       "housesevillana": {
         "estado": "no",
@@ -1975,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 28
       },
       "rrhh": {
         "estado": "no",
@@ -2001,11 +2001,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 11
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "housesevillana": {
         "estado": "no",
@@ -2051,11 +2051,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 7
       },
       "housesevillana": {
         "estado": "no",
@@ -3541,7 +3541,9 @@
       "module-seguros-portal"
     ],
     "module-seguros-pii": [],
-    "module-seguros-portal": [],
+    "module-seguros-portal": [
+      "module-seguros"
+    ],
     "module-ses": [],
     "module-subastas": [
       "core-catastro",
@@ -3590,9 +3592,11 @@
       "/api/cartera/catalogos",
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
+      "/api/cron/avisos-vencimiento",
       "/api/operador/buscar",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
+      "/api/operador/cliente/historial",
       "/api/operador/cliente/relaciones",
       "/api/operador/clientes",
       "/api/operador/codeoscopic/lineas",
@@ -3604,7 +3608,10 @@
       "/api/operador/impagados",
       "/api/operador/ingesta",
       "/api/operador/poliza",
+      "/api/operador/poliza/emitida",
       "/api/operador/resumen",
+      "/api/operador/sin-canal",
+      "/api/operador/siniestro",
       "/api/operador/vencimientos"
     ],
     "asegura-portal": [
@@ -4425,6 +4432,8 @@
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/impagados",
+      "/api/correduria/sin-canal",
+      "/api/correduria/siniestro",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -4513,8 +4522,10 @@
       "/api/inversion/underwrite",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/operador/agente-consulta",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
+      "/api/publico/correduria/lead",
       "/api/publico/disponibilidad",
       "/api/sivra/conciliar-booking",
       "/api/sivra/domotica/acceso/[id]",
@@ -4840,6 +4851,7 @@
       "alquiler_materiales"
     ],
     "asegura": [
+      "if",
       "seguros._volcado_control",
       "seguros.bien_documentos",
       "seguros.bienes_asegurables",
@@ -4862,6 +4874,7 @@
       "seguros.codeoscopic_product_forms",
       "seguros.codeoscopic_projects",
       "seguros.codeoscopic_webhook_events",
+      "seguros.companias_dgs",
       "seguros.consent_logs",
       "seguros.conversaciones",
       "seguros.corredurias",
@@ -4892,6 +4905,8 @@
       "seguros.siniestro_testigos",
       "seguros.siniestros",
       "seguros.solicitud_cambio_documentos",
+      "seguros.tarificacion_precios",
+      "seguros.tarificaciones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
       "seguros.whatsapp_outbound_messages"
@@ -4902,7 +4917,9 @@
       "seguros.portal_codigo",
       "seguros.portal_consentimiento",
       "seguros.portal_identidad",
-      "seguros.portal_poliza_declarada"
+      "seguros.portal_obligacion",
+      "seguros.portal_poliza_declarada",
+      "seguros.portal_vinculo"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -5822,7 +5839,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1240,
+    "apis": 1249,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

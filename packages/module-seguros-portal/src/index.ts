@@ -11,3 +11,12 @@ export {
   seLeyoAlgo,
 } from './poliza-leida.ts'
 export type { RamoPoliza, PolizaLeida } from './poliza-leida.ts'
+export {
+  DIAS_PREAVISO_TOMADOR,
+  DIAS_VENTANA_AVISO,
+  fechaAccionable,
+  entraEnVentana,
+  polizaGeneraObligacion,
+  obligacionDerivable,
+} from './obligacion.ts'
+export type { VigenciaObligacion } from './obligacion.ts'

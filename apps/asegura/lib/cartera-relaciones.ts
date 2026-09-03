@@ -9,6 +9,7 @@
 
 import {
   clientesVisiblesPara,
+  permiteAutorizar,
   relacionesDeFicha,
   tipoInverso,
   tipoRelacion,
@@ -149,6 +150,12 @@ export async function autorizarVer(
     }
     const db = prismaAsegura()
     const idas = await db.clienteRelacion.findMany({ where: { correduriaId, clienteAId: clienteId, clienteBId: entrada.relacionadoId } })
+    // «Sin vínculo» = revisado y no son nada el uno del otro. Autorizar ahí sería
+    // abrir las pólizas de la ficha a quien solo conduce su coche. Se corta aquí,
+    // no solo escondiendo el botón: el puerto es lo que escribe el consentimiento.
+    if (entrada.autoriza && idas.some((i) => !permiteAutorizar(i.tipoRelacion))) {
+      return { ok: false, estado: 'invalido', motivo: 'Ese vínculo está anotado como «Sin vínculo»: para autorizar a ver las pólizas hace falta antes una relación de verdad.', status: 422 }
+    }
     if (idas.length > 0) {
       await db.clienteRelacion.updateMany({ where: { id: { in: idas.map((i) => i.id) } }, data: { puedeVerPolizas: entrada.autoriza } })
     } else {

@@ -6,7 +6,7 @@
 > `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo) y
 > `docs/superpowers/plans/2026-09-01-asegura-portal-fase-1.md` (lo que se construyó de verdad).
 
-## Estado (02/09/2026): Fase 1 mergeada + Fase 4 en código; DDL aplicado; NO desplegada
+## Estado (03/09/2026): DESPLEGADA en Vercel; Fase 1 mergeada + Fase 4 en código; DDL aplicado
 
 Fase 1 entró en `main` el 01/09/2026 con el PR **#1965** (`f12b7b46`): entrar con un código de un solo
 uso y subir una póliza propia, leída por IA, con su procedencia. **Fase 4** (vincular la identidad con
@@ -31,6 +31,8 @@ su ficha de la cartera y enseñarle SUS pólizas vivas) se construyó el 02/09/2
      con `<VAULT>` leído del secreto de arriba. **Rotar** = repetir el bloque SQL **y** cambiar esta env
      en el mismo paso: una sin la otra deja la app muerta en silencio con `password authentication
      failed`, que solo se ve en los logs del pooler (lección de `prisma_seguros`, 02/09/2026).
+     ✅ **PUESTA el 03/09/2026** — ver «Puesta en producción» más abajo: se pegó primero solo la
+     contraseña y el portal devolvía 500 sin nombrarla.
   2. **`PII_LOOKUP_KEY` en ese proyecto, IDÉNTICA a la de `central-asegura`.** Es la clave del índice
      ciego (`clientes.email_lookup_hash`): con otra clave el hash no casa y **nadie se vincula nunca**
      (`sin_clave`/`sin_ficha` para todo el mundo, sin error). Sin ella en producción el módulo lanza y
@@ -38,6 +40,51 @@ su ficha de la cartera y enseñarle SUS pólizas vivas) se construyó el 02/09/2
   3. `ASEGURA_PORTAL_SESSION_SECRET` y `ASEGURA_PORTAL_CANAL_PEPPER` (sin ellas la app no arranca /
      el hash del canal es reversible), resto de envs (tabla de abajo) y la WABA de WhatsApp (no existe;
      por eso el canal es un puerto).
+
+## 🚀 Puesta en producción (03/09/2026): las dos trampas, medidas
+
+El proyecto Vercel es `asegura-portal` (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`, enlazado al repo
+`central`) y sirve en **https://asegura-portal.vercel.app**. Al enchufar las envs por primera vez
+salieron dos fallos que **no se parecen en nada a lo que son**. Los dos están medidos, no supuestos.
+
+### 1. `DATABASE_URL` no es la contraseña: es la URL entera
+
+El secreto del Vault (`prisma_asegura_portal_password`) es SOLO la contraseña. Pegarlo tal cual como
+valor de `DATABASE_URL` devuelve un 500 en `POST /api/acceso/solicitar` con un error que **no nombra
+ni la contraseña ni el rol**, así que se diagnostica como problema de credenciales y no lo es:
+
+```
+Invalid `prisma.portalCodigo.create()` invocation:
+error: Error validating datasource `db`: the URL must start with the
+protocol `postgresql://` or `postgres://`.   -->  schema.prisma:8
+```
+
+El valor bueno es el de la lista de arriba. Y si la contraseña lleva `/ @ : + # ?` hay que
+**percent-encodearla** (`%2F %40 %3A %2B %23 %3F`) o la URI se parte por la mitad y el error vuelve,
+distinto pero igual de opaco.
+
+### 2. Cambiar una env no basta, y aquí el redeploy a mano puede ser IMPOSIBLE
+
+Las envs se resuelven **en el build**, así que un cambio no llega a producción hasta que haya un
+deployment nuevo. Y en este repo esa puerta se cierra sola:
+
+- Vercel **no deja redesplegar** un deployment de producción si existe otro más nuevo
+  («A more recent Production Deployment has been created»).
+- Cada push a `main` crea uno más nuevo, y el `ignoreCommand` lo **cancela** si el commit no toca
+  `apps/asegura-portal/` ni uno de sus 6 packages.
+
+Como `main` recibe a diario commits de memoria y de la auditoría que no tocan esta app, el último
+deployment READY se queda congelado y **no hay ningún botón que lo desatasque**. Medido el 03/09:
+ocho deployments seguidos en `CANCELED` y el redeploy manual cancelado también, con
+
+```
+⏭ skip: el commit no toca apps/asegura-portal ni ninguno de sus packages (consume 6)
+```
+
+**La salida es un commit REAL que toque la app** — este `CLAUDE.md` sirve, porque vive dentro de
+`apps/asegura-portal/`. No es un commit vacío ni un truco para despertar el CI: es exactamente el
+mecanismo que el `ignoreCommand` declara. Consecuencia práctica: **al cambiar una env de esta app,
+cuenta con que quien la activa es el siguiente PR que toque la app**, no el botón de Redeploy.
 
 ## Qué es, y por qué es una app APARTE de `apps/asegura`
 
@@ -63,13 +110,16 @@ compartido (`lib/auth.ts`).
 ```
 apps/asegura-portal/            Next.js 15 (App Router), React 19, Prisma 5 (multiSchema)
   app/page.tsx                  Entrada: pedir código → verificar (cliente, 2 fases)
-  app/(portal)/boveda/          Cartera (propias + autorizadas) y bóveda de aportadas + SubirPoliza.tsx
+  app/(portal)/boveda/          Cartera (propias + autorizadas), calendario y bóveda de aportadas
+                                (+ SubirPoliza.tsx, Calendario.tsx)
   app/api/acceso/solicitar      POST — genera y manda el código
   app/api/acceso/verificar      POST — canjea el código y pone la cookie
   app/api/polizas               POST — sube un PDF/foto, lo lee la IA, lo guarda
   lib/session.ts                🚪 LA PUERTA ÚNICA: de aquí sale de quién es la sesión
   lib/vinculo.ts                Fase 4: identidad → ficha de la cartera por índice ciego del email
   lib/cartera-lectura.ts        Fase 4: lo que se LEE de la cartera para una identidad (por portal_vinculo)
+  lib/obligaciones.ts           Calendario: deriva y poda las obligaciones de una identidad
+  lib/enlace-acceso.ts          El enlace de un clic del correo (NO canjea: pre-rellena)
   lib/fechas.ts                 fechaEs() en UTC (las columnas `date` llegan como medianoche UTC)
   lib/auth.ts                   cookie, JWT (jose vía core-identity), hashCanal()
   lib/canal.ts                  el PUERTO de canal (registro de adaptadores)
@@ -206,6 +256,53 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
 - **Ningún `clienteId` entra desde la request.** Todo id de ficha sale de `portal_vinculo` o de una
   relación leída a partir de él.
 
+## 📅 El calendario de vencimientos (02/09/2026) — y por qué el aviso NO sale de aquí
+
+La tabla es **`seguros.portal_obligacion`** (`prisma/sql/2026-09-03_portal_obligacion.sql`, aplicada
+el 02/09/2026). Cuelga del **bien**, no de la póliza: `poliza_id` es opcional a propósito para que el
+mismo motor sirva luego a ITV, carnet o revisión de gas de alguien que no tiene ninguna póliza con la
+correduría. `UNIQUE (identidad_id, poliza_id)` es lo que hace idempotente al derivador.
+
+- **La fecha que se enseña NO es la del vencimiento.** `fechaAccionable()` (módulo puro) resta los
+  **30 días de preaviso del tomador** (art. 22 LCS): decirle a alguien «vence el 15 de marzo» le deja
+  creer que tiene hasta el 15, cuando el plazo para oponerse se le pasó el 13 de febrero. Se resta en
+  **días**, no en meses: `setUTCMonth(m-1)` sobre un 31 de marzo da un 31 de febrero que JavaScript
+  normaliza al 3 de marzo sin avisar.
+- **`polizaGeneraObligacion()` es el cepo que evita 28.729 avisos.** Solo `import_ref IS NULL` (CIMA).
+  Y `''` cuenta como volcado: la cadena vacía es el valor de cajón que se cuela por `IS NULL`, `??` y
+  `COALESCE`. ⚠️ **`confirmadaCima` NO sirve para este cepo** — es `id_poliza_entidad !== null`, que es
+  otra pregunta; usarlo dejaría fuera las pólizas que emitimos nosotros y CIMA aún no confirma.
+- **`lib/obligaciones.ts` también PODA.** Una póliza que deja de estar viva (cancelada, fusionada, fin
+  de riesgo) seguiría pintando su vencimiento para siempre. Solo poda las que vinieron de la cartera
+  (`polizaId` no nulo): las declaradas por la persona son suyas. Y **sin vínculo no toca nada**: «no
+  sabemos qué ficha es la suya» no autoriza ni a crear ni a borrar.
+- **El chip del aviso dice el hecho, no la promesa:** «todavía no te hemos avisado», nunca «te
+  avisaremos». El cron vive en la otra app y no manda nada con su interruptor apagado; esta app no
+  puede comprobarlo desde aquí.
+
+🚨 **El envío vive en `apps/asegura`, y no es una preferencia: está medido.** `portal_canal` guarda
+**solo `valor_hash`** (SHA-256 con pimienta, `lib/auth.ts:28`) y el `ClienteEmail` de este schema solo
+`email_lookup_hash`. El rol `prisma_asegura_portal` **no tiene GRANT sobre la columna del email**. Un
+hash no se revierte: **desde el portal no hay ninguna dirección a la que escribir.** El panel del
+corredor corre con `prisma_seguros` (BYPASSRLS) y sí lee `cliente_emails` cifrado. El portal se queda
+con el aviso **en pantalla** y nunca toca un dato personal. Lo vigila
+`test/regression-portal-obligaciones.test.ts` (ningún fichero del portal importa un transporte de
+correo), para que la corrección no se deshaga sola dentro de tres meses.
+
+## 🔑 Entrar de un clic: el enlace del correo NO canjea
+
+El correo del código lleva además un enlace `https://<PORTAL_PUBLIC_URL>/?d=<email>&c=<código>` que
+abre la pantalla **con los dos campos ya puestos**. La persona pulsa «Entrar» y ya.
+
+**El enlace no abre sesión por sí mismo, y es deliberado.** Un enlace que canjeara con un GET lo
+consumirían los escáneres antivirus del correo y el prefetch de los clientes antes de que el usuario
+lo tocase: le saldría `ya_usado` y parecería culpa suya. El canje sigue siendo el POST que dispara
+ella; `app/page.tsx` limpia el código de la barra con `replaceState` nada más leerlo.
+
+Sin `PORTAL_PUBLIC_URL`, o si no es **https**, no se manda enlace y el correo sale igual **con el
+código**, que es lo que de verdad abre la puerta — nunca al revés, y nunca con un dominio adivinado.
+Lo vigila `test/regression-portal-enlace-acceso.test.ts`.
+
 ## Infraestructura
 
 - **BD:** la Supabase **compartida de la casa**, schema **`seguros`** (el mismo donde vive la cartera
@@ -217,9 +314,9 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
   la llave maestra.
 - **DDL:** `prisma/sql/2026-09-01_portal_fase1.sql` — 3 ENUM + **6 tablas**: `portal_identidad`,
   `portal_canal`, `portal_codigo`, `portal_bien`, `portal_poliza_declarada`, `portal_consentimiento`;
-  y `prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql` — **`portal_vinculo`** + rol + grants. Las otras
-  **5** del spec (`portal_autorizacion`, `portal_obligacion`, `portal_aviso`, `portal_auditoria`,
-  `portal_revision`) llegan con sus fases. ⚠️ La memoria del
+  y `prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql` — **`portal_vinculo`** + rol + grants. `prisma/sql/2026-09-03_portal_obligacion.sql` — **`portal_obligacion`** + su enum
+  (aplicada 02/09/2026). Las otras **4** del spec (`portal_autorizacion`, `portal_aviso`,
+  `portal_auditoria`, `portal_revision`) llegan con sus fases. ⚠️ La memoria del
   01/09/2026 dice «las otras 5»: son 6 — el spec lista 11 y `portal_codigo` ni siquiera está en él.
 - **Vercel:** Root Directory `apps/asegura-portal`, install `npx --yes pnpm@10.33.0 install
   --no-frozen-lockfile`, región **`fra1`** (la BD está en Europa: no cruzar el Atlántico), y el
@@ -237,6 +334,7 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
 | `ASEGURA_PORTAL_CANAL_PEPPER` | Pimienta del hash del canal. Sin ella, una tabla de hashes de emails se revierte con un diccionario |
 | `PII_LOOKUP_KEY` | Clave HMAC del índice ciego de la cartera (64 hex). **Idéntica a la de `central-asegura`** o nadie se vincula. Sin ella: `sin_clave`, se entra sin cartera |
 | `PORTAL_MAIL_FROM` | Remitente del correo con el código. Si falta, el envío devuelve `false` (502), no revienta |
+| `PORTAL_PUBLIC_URL` | Dominio **https** del portal, para el enlace de un clic del correo. Si falta o no es https, el correo sale igual **solo con el código**: no se inventa un dominio |
 | `OPENROUTER_API_KEY` | Visión, para leer pólizas en foto. Si falta, la extracción degrada a `none` |
 | Proveedor de correo (lo lee `@central/core-email` solo) | `RESEND_API_KEY`, **o** `SMTP_USER`+`SMTP_PASSWORD` (+`SMTP_HOST`/`SMTP_PORT`), **o** `GMAIL_USER`+`GMAIL_APP_PASSWORD` |
 

@@ -27,6 +27,10 @@ import { Pagina, colorImporte, Dato, cardStyle, CardHeader, KpiCard } from '@/co
 import { CircleAlert, CircleCheck, Hotel, Landmark, RefreshCw, TrendingUp, TriangleAlert, Wallet } from 'lucide-react'
 import SaldoTotal from './SaldoTotal'
 import NegociosResumen from './NegociosResumen'
+import HoyAccionable from './HoyAccionable'
+import { vencimientosAsegura } from '@/lib/cartera-asegura'
+import { listarPendientes } from '@/lib/agente-facturas/pendientes'
+import type { EstadoInicio } from '@/lib/inicio-acciones'
 import FiscalResumen from './FiscalResumen'
 import CategoriasTab from '../finanzas/CategoriasTab'
 import FinanzasClient from '../finanzas/FinanzasClient'
@@ -181,7 +185,7 @@ export default async function BancaPage({ searchParams }: {
   const esMesUnico = !!desde && desde.slice(0, 7) === hasta.slice(0, 7)
   const mesPL = (desde || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`).slice(0, 7)
 
-  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion, brokerSaldos, feedPsd2] = await Promise.all([
+  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion, brokerSaldos, feedPsd2, vencPolizas, nFacturas] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientosLedger(session.id, { desde: desde || undefined, hasta: hasta || undefined }, 50, 0),
@@ -195,6 +199,13 @@ export default async function BancaPage({ searchParams }: {
     safe(getEvolucionMensual(session.id, 12), []),
     safe(getBrokerSaldos(session.id), []),
     safe(getEstadoFeedPsd2(session.id), null),
+    // Vencimientos de la correduría a 60 días: es lo único de la banda de acción que no vivía ya
+    // en esta página. `vencimientosAsegura` ya devuelve tres estados (ok / sin_configurar / error)
+    // — no hay que colapsarlos aquí.
+    safe(vencimientosAsegura(60), null),
+    // La bandeja de facturas. `undefined` = la consulta falló → la banda dirá «no se pudo contar»,
+    // que NO es lo mismo que cero.
+    safe(listarPendientes().then(l => l.length), undefined),
   ])
 
   // El saldo del bróker (IBKR, refrescado por el agente `trading-analista`) suma al total del grupo
@@ -202,6 +213,31 @@ export default async function BancaPage({ searchParams }: {
   const brokerTotal = brokerSaldos.reduce((acc, b) => acc + b.saldo, 0)
   const totalGrupo = saldo.total + brokerTotal
   const hayCuentas = saldo.cuentas.length > 0 || brokerSaldos.length > 0
+
+  // ── Estado para la banda «pide acción hoy» ────────────────────────────────────────────────────
+  // 🚨 Los tres estados del banco no se colapsan: sin conexión vinculada `getEstadoFeedPsd2`
+  // devuelve null, y `safe()` devuelve TAMBIÉN null si la consulta falla. Distinguirlos importa:
+  // «no tienes banco» no es «no se sabe si está al día».
+  const horasDesdeBanco: EstadoInicio['horasDesdeBanco'] = (() => {
+    if (!feedPsd2) return null            // sin datos: puede ser sin banco o consulta caída → no se afirma
+    if (!feedPsd2.ultimoSync) return null // vinculado pero sin ningún sync: tampoco se sabe
+    const ms = Date.now() - new Date(feedPsd2.ultimoSync).getTime()
+    return Number.isFinite(ms) ? ms / 3_600_000 : null
+  })()
+
+  const estadoInicio: EstadoInicio = {
+    porRevisar: porRevisar.length,
+    ingresosPorRevisar: ingresosRevisar.length,
+    duplicados: duplicados.length,
+    facturasPendientes: nFacturas ?? null,
+    horasDesdeBanco,
+    polizas:
+      vencPolizas == null ? null
+      : vencPolizas.estado === 'ok'
+        ? { estado: 'ok', enDias: vencPolizas.dias, polizas: vencPolizas.polizas.map(p => ({ cliente: p.cliente, dias: p.dias })) }
+      : vencPolizas.estado === 'sin_configurar' ? { estado: 'sin_configurar' }
+      : { estado: 'error', motivo: vencPolizas.motivo },
+  }
 
   return (
     <Pagina ancho="tabla">
@@ -211,6 +247,11 @@ export default async function BancaPage({ searchParams }: {
 
         {/* Inicio unificado: 💶 Dinero (saldos + movimientos + IA) | 🏢 Negocios (holding). */}
         <div style={{ margin: '4px 0 22px' }}><SegTabs active="dinero" /></div>
+
+        {/* 🔔 Lo que pide acción HOY, antes que ningún número. Inicio traía saldo, cuentas,
+            gráficas y P&L por delante de lo accionable, así que el trabajo pendiente quedaba
+            enterrado bajo cuatro secciones de consulta (02/09/2026). */}
+        <HoyAccionable estado={estadoInicio} />
 
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           {/* El saldo se pinta con su botón 👁 (SaldoTotal.tsx): desenfoca la cifra para poder

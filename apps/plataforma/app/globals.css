@@ -651,3 +651,29 @@ html[data-saldo-oculto='1'] .saldo-privado {
 @media (max-width: 768px) {
   .neg-grid { grid-template-columns: 1fr; }
 }
+
+/* === Acento de sección: la correduría (Grupo Asegura) ========================
+   Alberto pidió (03/09/2026) que la correduría se pareciera a la app que hizo
+   Manuel, `app.grupoasegura.com`. Sus colores NO están puestos a ojo: salen de
+   `src/app/globals.css` de ese repo, convertidos de oklch a hex —
+   `oklch(0.555 0.215 265)` = #3364ee en claro, `oklch(0.62 0.2 265)` = #497cfd
+   en oscuro; la superficie acento es `oklch(0.95 0.045 265)` = #e0efff sobre
+   `oklch(0.34 0.13 265)` = #16307a.
+
+   ⚠️ La captura verde de aquella conversación es de OTRO programa anterior, no
+   de la app de Manuel. Si algún día alguien "corrige" esto a verde, mírelo antes.
+
+   Se redefinen los TOKENS, no se pintan hex en los componentes (regla del
+   bloque de arriba): así toda la sección hereda el acento y el modo oscuro sale
+   solo. Y se queda acotado a /correduria a propósito: plataforma es el cuadro
+   de mando de TODOS los negocios de Alberto, no el de la correduría. */
+.correduria {
+  --primary: #3364ee;
+  --primary-light: #e0efff;
+  --primary-hover: #16307a;
+}
+[data-theme="dark"] .correduria {
+  --primary: #497cfd;
+  --primary-light: rgba(73, 124, 253, .16);
+  --primary-hover: #9fbcff;
+}

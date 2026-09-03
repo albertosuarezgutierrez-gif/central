@@ -104,8 +104,18 @@ export async function tiposDeGaraje(config: ConfigCodeoscopic): Promise<Opcion[]
   return normalizarOpciones(await catalogo(config, '/car/garage-types'))
 }
 
+/**
+ * Las marcas de coche.
+ *
+ * 🚨 `onlyPopular` va EXPLÍCITO a `false`, y no es cosmético: el portal lo
+ * documenta con **`Default: true`**, así que llamar a `/car/brands` a secas
+ * devuelve solo las marcas «populares» — el resto sencillamente no aparece, sin
+ * error y sin hueco que lo delate. En el desplegable se vería igual que si la
+ * marca no existiera, que es la forma silenciosa de mentir que persigue
+ * `CLAUDE.md`. Medido en el snapshot del portal el 02/09/2026.
+ */
 export async function marcas(config: ConfigCodeoscopic): Promise<Opcion[]> {
-  return normalizarOpciones(await catalogo(config, '/car/brands'))
+  return normalizarOpciones(await catalogo(config, '/car/brands?onlyPopular=false'))
 }
 
 export async function modelos(config: ConfigCodeoscopic, marcaId: string): Promise<Opcion[]> {
@@ -114,16 +124,41 @@ export async function modelos(config: ConfigCodeoscopic, marcaId: string): Promi
   )
 }
 
-/** Las VERSIONES de un modelo. El `id` de cada una es el código Base7. */
+/**
+ * Los tipos de motor de coche. Gratis, y hace falta ANTES que las versiones.
+ * Ver `versiones()`.
+ */
+export async function tiposDeMotor(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/engine-types'))
+}
+
+/**
+ * Las VERSIONES de un modelo. El `id` de cada una es el código Base7.
+ *
+ * 🚨 **`engine` es OBLIGATORIO también en auto**, y sin él el vendor responde
+ * `400 Bad Request`: «Query parameter 'engine' is required on path
+ * '/car/brands/{brandId}/models/{modelId}/vehicles' but not found in request.»
+ * Medido en producción el 03/09/2026, sobre `/car/brands/731/models/8689`.
+ *
+ * ⚠️ Esto CORRIGE lo que decía `docs/CODEOSCOPIC-API-PORTAL.md`: que `engine`
+ * era obligatorio «en moto, mientras que en auto es texto libre». Libre lo será,
+ * pero opcional no es. La lección es la de siempre aquí: el snapshot del portal
+ * describe el contrato, y el contrato de verdad lo dicta la respuesta.
+ *
+ * El valor sale del catálogo `/car/engine-types` (`tiposDeMotor`), no de un
+ * literal nuestro: si mañana añaden un combustible, el desplegable lo trae solo.
+ */
 export async function versiones(
   config: ConfigCodeoscopic,
   marcaId: string,
   modeloId: string,
+  motor: string,
 ): Promise<Opcion[]> {
   return normalizarOpciones(
     await catalogo(
       config,
-      `/car/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}/vehicles`,
+      `/car/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+        `/vehicles?engine=${encodeURIComponent(motor)}`,
     ),
   )
 }

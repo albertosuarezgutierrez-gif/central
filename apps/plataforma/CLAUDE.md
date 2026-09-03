@@ -7,7 +7,8 @@ Un dueño con varios negocios de sectores distintos inicia sesión aquí y ve **
 Jerarquía: `Cuenta → Sociedad (CIF) → Negocio (sector)`.
 
 > **🌐 URL producción (web principal):** **`https://plataforma-ten-flame.vercel.app`** (login en `/login`).
-> Es el dashboard + el **chat 🤖 Agente IA** (`/agente`). OJO: **sivra** (motor de pricing dinámico y sus
+> Es el dashboard + los **chats con los que se puede hablar** (`/asistentes`; `/agente` y `/contable`
+> quedaron como redirect desde el 02/09/2026). OJO: **sivra** (motor de pricing dinámico y sus
 > endpoints `/api/pricing/*`) es **otra app**, en `housesevillana.vercel.app` — no confundir dominios.
 
 ## Stack
@@ -509,7 +510,8 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   (`DomoticaClient.tsx`). Tablas `domotica_dispositivos` + `domotica_log` (dedupe por
   `${accion}:${reservaRef}`).
 
-- [x] **Agente conversacional de finanzas (`/contable` + Telegram; `lib/contable/`):** chat que responde
+- [x] **Agente conversacional de finanzas (`/asistentes?a=contable` —antes `/contable`, hoy redirect— +
+  Telegram; `lib/contable/`):** chat que responde
   sobre TODAS las cuentas/actividades de Alberto y propone acciones (que él confirma en pantalla). **Dos
   caminos:** (1) DETERMINISTA — `intencion.ts` (puro, sin BD) detecta preguntas estructuradas (gasto del
   mes/año, por concepto, por subcategoría de consumo, **por segmento de negocio nombrado en solitario**
@@ -1559,7 +1561,7 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   🚨 **Vive FUERA de `CarteraViva`, nunca dentro.** Estaba anidado ahí y ese bloque hace `return`
   temprano cuando el puerto falla → el buscador desaparecía justo el día que asegura no responde.
   🚨 **DNI, teléfono y email van por índice ciego y solo alcanzan al 12-16% de las fichas**; la
-  dirección va cifrada y **no se puede buscar**. Cada bloque enseña su cobertura y el vacío se explica
+  calle del riesgo la descifra asegura en memoria (~170) y **sí se busca desde el 02/09**. Cada bloque enseña su cobertura y el vacío se explica
   (`explicarVacio()`), porque un «no aparece» ahí NO es «no está en la cartera».
 - **📞 Cola de retención (`Retencion.tsx`)**: los recibos devueltos y los vencidos sin cobrar,
   ordenados por el **reloj** (art. 15 LCS) y no por el importe. 🔴 «sin cobertura» = el cliente circula
@@ -1698,6 +1700,45 @@ tenía que acordarse. La lógica pura vive en **`lib/dato.ts`** (`estadoDato`/`e
 `<Pendiente>` lo pinta con borde **discontinuo** (se rellenará) o **continuo** (`definitivo`: la fuente no
 lo va a traer nunca — prometer una pasada que no llega es la otra forma de mentir). `donde` dice dónde
 mirar mientras tanto (la ficha oficial, el portal del banco…).
+
+## 🏠 El Inicio: arriba lo que PIDE ACCIÓN, y los tres guardianes de navegación (02/09/2026, PRs #2115 y #2131)
+
+`/banca` no estaba vacío, estaba **saturado**: 512 líneas de saldo, cuentas, bróker, gráficas, P&L, fiscal,
+antifraude, fugas, benchmark y el libro entero, con lo accionable enterrado bajo cuatro secciones de consulta.
+
+- **Banda «Pide acción hoy»** (`banca/HoyAccionable.tsx`) encima de todo, con la lógica PURA en
+  `lib/inicio-acciones.ts` (14 tests). Orden fijo: **banco viejo PRIMERO** (`BANCO_STALE_H = 48`; si el feed
+  está parado, el resto de números de la pantalla están envenenados y decir cualquier otra cosa antes es
+  mentir por omisión), luego pólizas que vencen a ≤60 días desde el puerto de la correduría, y luego lo que
+  falta por clasificar (movimientos, ingresos, duplicados, facturas).
+- 🚨 **`horasDesdeBanco` tiene TRES valores, no dos:** un número (el dato), `null` («no se ha podido
+  comprobar») y `'no_aplica'` («no hay banco vinculado»). Por eso el estado vacío distingue **«Nada pendiente
+  hoy.»** de **«Nada pendiente de lo que se ha podido comprobar.»** — colapsarlos convertiría un fallo de
+  consulta en un 🟢, que es el modo de fallo más caro del repo.
+- **`/asistentes`** reúne los dos chats con los que SE PUEDE hablar (contable y precios). Se movieron con
+  `git mv` **sin reescribirlos** y solo ganaron un prop `cabecera` que se pinta DENTRO de su `<main>` (los dos
+  calculan su alto con `calc(100vh - 8px)`: cualquier cosa por encima los desborda). `/contable` y `/agente`
+  son redirects. No confundirlos con `/operador/agentes`, que son los **29 crons y sesiones efímeras** — ahí
+  no hay nadie al otro lado, y su consulta responde leyendo el EXPEDIENTE del agente
+  (`lib/agentes-expediente.ts`: ficha + semáforo + `agente_latidos` + `agente_salud`).
+
+🚨 **Un token CSS que no existe no da NINGÚN error: CSS invalida la declaración entera.** `var(--card)` y
+`var(--line)` no estaban definidos en ninguna parte y los usaban cuatro pantallas (`/operador/agentes`,
+`/operador/ia`, facturas por revisar, partes de viajeros): se pintaban **sin fondo y sin borde**, como una
+lista sin formato, y nadie las reportaba rotas porque no hay nada que ver fallar. Sustituidos por `--surface`
+y `--border`. Lo vigila **`test/regression-tokens-css.test.ts`**: todo `var(--token)` **sin fallback** tiene
+que apuntar a un token definido. Un token con fallback (`var(--x, #fff)`) no cuenta —ahí el autor ya declaró
+qué pasa si falta— y los tres que se inyectan en caliente están declarados con su motivo (`--brand`,
+`--accent` de `@central/brand`, `--font-inter` de next/font).
+
+**Y dos guardianes más de navegación, del mismo par de PRs:**
+- **`lib/nav-activo.ts`** (puro, 13 tests) decide qué entrada del lateral se enciende. El criterio estaba
+  inline en tres sitios del TSX, de tres formas y **dos mal**: `usePathname()` NO devuelve la query, así que
+  los cinco segmentos de `/banca?tab=*` encendían «Inicio» a la vez que el suyo; y el prefijo sin barra final
+  hacía que `/sivra/pricing` encendiera también `/sivra/pricing-auto`.
+- **`test/regression-panel-alcanzable.test.ts`** recorre las 69 pantallas del panel y exige que a cada una se
+  llegue por un enlace de fuera de su propia carpeta (tercer huérfano en dos días:
+  `/finanzas/tarjeta-credito`). Las excepciones están vacías a propósito.
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

@@ -51,7 +51,7 @@ export type ResultadoCotizacion =
       /** `null` = no se ha mirado el libro (simulación). NO es «quedan 0». */
       restantesHoy: number | null
       /**
-       * Qué pasó con la COPIA en `seguros.cotizaciones`. Tres estados y no un
+       * Qué pasó con la COPIA en `seguros.tarificaciones`. Tres estados y no un
        * booleano: «guardada», «se intentó y falló (con el motivo)» y «ni se
        * intentó». El precio de arriba vale igual —ya está pagado— pero quien lo
        * pinte tiene que poder decir que no ha quedado copia, en vez de suponer
@@ -196,7 +196,11 @@ export async function cotizar(
   // servidor—, nunca de `p`: si viniera en la petición, cualquiera podría pedir
   // que la app enseñara precios inventados a un cliente.
   if (simulacionActiva(env)) {
-    const inventada = cotizacionSimulada(p.cuerpo)
+    // El RAMO viaja hasta el simulador: sin él usaba el molde de hogar para
+    // todo y una póliza de auto salía con compañías de hogar y primas de 50€
+    // (fallo medido el 03/09/2026). El contexto es opcional, así que puede no
+    // venir; `moldeDeRamo` decide qué hacer entonces.
+    const inventada = cotizacionSimulada(p.cuerpo, p.contexto?.ramo)
     // Se guarda IGUAL que una real, y a propósito: así se puede recorrer la
     // pantalla entera sin gastar. Va marcada `simulado: true` y SIN intentoId
     // —no hay línea en el libro porque no hubo llamada ni cargo—, que es el

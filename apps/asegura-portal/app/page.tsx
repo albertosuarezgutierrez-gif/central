@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function Entrada() {
   const [destino, setDestino] = useState('')
@@ -7,6 +7,28 @@ export default function Entrada() {
   const [fase, setFase] = useState<'pedir' | 'verificar'>('pedir')
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [desdeEnlace, setDesdeEnlace] = useState(false)
+
+  // El enlace del correo trae el email y el código ya puestos, pero NO entra
+  // solo: el canje sigue siendo un POST que dispara la persona. Un enlace que
+  // canjeara con el GET lo consumirían los escáneres antivirus del correo antes
+  // de que el usuario lo tocase, y el código le saldría `ya_usado`.
+  //
+  // Se lee de `window.location` en un efecto y no con `useSearchParams` para no
+  // arrastrar la página entera a render dinámico por leer dos parámetros.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const d = q.get('d')
+    const c = q.get('c')
+    if (!d || !c) return
+
+    setDestino(d)
+    setCodigo(c)
+    setFase('verificar')
+    setDesdeEnlace(true)
+    // El código no se queda en la barra ni en el historial más de lo necesario.
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   async function pedir() {
     setError(null)
@@ -41,9 +63,12 @@ export default function Entrada() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: '0 auto', padding: '3rem 1rem' }}>
-      <h1 style={{ fontSize: '1.5rem' }}>Mis seguros</h1>
-      <p className="suave">Todos tus seguros en un sitio. Gratis, seas cliente o no.</p>
+    <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
+      <div className="seccion">
+        <h1>Mis seguros</h1>
+        <p className="suave" style={{ marginTop: 0 }}>
+          Todos tus seguros en un sitio. Gratis, seas cliente o no.
+        </p>
 
       {fase === 'pedir' ? (
         <>
@@ -52,29 +77,35 @@ export default function Entrada() {
             value={destino}
             onChange={(e) => setDestino(e.target.value)}
             placeholder="tu@email.com"
-            style={{ width: '100%', padding: 12, fontSize: 16, minHeight: 44 }}
+            className="campo"
           />
-          <button onClick={pedir} style={{ width: '100%', padding: 12, minHeight: 44, marginTop: 12 }}>
+          <button onClick={pedir} className="boton" style={{ marginTop: 12 }}>
             Enviarme un código
           </button>
         </>
       ) : (
         <>
+          <p className="suave" style={{ marginTop: 0 }}>
+            {desdeEnlace
+              ? `Tu código ya está puesto. Pulsa «Entrar» para acceder como ${destino}.`
+              : `Te hemos enviado un código a ${destino}. Caduca en 10 minutos.`}
+          </p>
           <input
             inputMode="numeric"
             value={codigo}
             onChange={(e) => setCodigo(e.target.value)}
             placeholder="123456"
-            style={{ width: '100%', padding: 12, fontSize: 16, minHeight: 44 }}
+            className="campo"
           />
-          <button onClick={verificar} style={{ width: '100%', padding: 12, minHeight: 44, marginTop: 12 }}>
+          <button onClick={verificar} className="boton" style={{ marginTop: 12 }}>
             Entrar
           </button>
         </>
       )}
 
-      {error && <p style={{ color: 'var(--peligro)', marginTop: 12 }}>{textoError(error)}</p>}
-      {aviso && <p className="aviso-linea" role="status">{aviso}</p>}
+        {error && <p style={{ color: 'var(--negative)', marginTop: 12 }}>{textoError(error)}</p>}
+        {aviso && <p className="aviso-linea" role="status">{aviso}</p>}
+      </div>
     </main>
   )
 }

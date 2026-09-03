@@ -6,7 +6,7 @@
 // no tiene con qué compararse.
 //
 // El contrato de las dos tablas está en
-// `prisma/sql/2026-09-02_cotizaciones_guardadas.sql`, y de ahí salen tres
+// `prisma/sql/2026-09-02_tarificaciones_guardadas.sql`, y de ahí salen tres
 // invariantes que aquí NO se negocian:
 //
 //   1. `simulado = (intento_id is null)`. Una cotización real siempre tiene su
@@ -222,7 +222,7 @@ export async function guardarCotizacion(
 
   return enTransaccion(async (tx) => {
     const filas = await tx.$queryRaw<{ id: string }[]>`
-      insert into seguros.cotizaciones (
+      insert into seguros.tarificaciones (
         correduria_id, intento_id, simulado, project_id_codeoscopic,
         ramo, puerta, poliza_id, cliente_id, fecha_efecto, peticion,
         codigo_postal, municipio_id, metros_cuadrados, anio_construccion,
@@ -259,8 +259,8 @@ export async function guardarCotizacion(
 
     for (const p of e.cotizacion.precios) {
       await tx.$executeRaw`
-        insert into seguros.cotizacion_precios (
-          cotizacion_id, compania, producto, modalidad, categoria,
+        insert into seguros.tarificacion_precios (
+          tarificacion_id, compania, producto, modalidad, categoria,
           prima_eur, entrada_eur, franquicia_eur, firmeza, requiere_rerate,
           referencia_vendor, avisos
         ) values (

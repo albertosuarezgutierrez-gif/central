@@ -256,6 +256,25 @@ campo intermedio (`s.datos` de la ingesta) que aguas abajo ya no existía.
 Al añadir una columna de enriquecimiento nueva, esto es parte del PR, no un apaño posterior. Si un
 cambio toca una pantalla que ya viola la regla, corrígela en el mismo PR.
 
+## 👥 Agrupar personas: por IDENTIDAD, nunca por la etiqueta — regla global permanente
+**Cuando juntes filas que hablan de «la misma persona», agrupa por su identificador, no por su
+nombre.** El nombre es la etiqueta, no la identidad, y falla en las DOS direcciones:
+
+- **Partir a una en dos**: la misma persona escrita distinto («JUAN PEREZ LOPEZ» / «Juan Perez»), o
+  enlazada a su ficha en un sitio y suelta en otro, sale duplicada. Se ve, y molesta.
+- **Fundir a dos en una**: dos homónimos —un padre y un hijo en la póliza del mismo coche, dos
+  huéspedes con el mismo nombre, dos empleados— colapsan en una fila **con los teléfonos, correos y
+  papeles mezclados**. Esta es la cara CARA: duplicar se nota, mezclar no, y encima el resultado es
+  plausible. Es el mismo fallo que el «dato leído mal» de la regla anterior.
+
+Qué hacer: orden **identificador (DNI/NIF/CIF, id externo) → enlace a su ficha → nombre**, cayendo al
+nombre SOLO cuando no hay ninguno de los dos primeros, y **dos identificadores distintos no se funden
+jamás**, coincida lo que coincida el resto. Si el identificador es un dato personal, no lo saques del
+backend para agrupar: emite una etiqueta opaca por respuesta (`p1`, `p2`…). Cuando la identidad acabe
+siendo el nombre, dilo en la pantalla —de qué póliza/reserva sale cada cosa— y no afirmes nada más.
+Caso fundacional (02/09/2026, PR #2145): «ojo con duplicar», de Alberto, sobre las personas de las
+pólizas de GLOBAL 2 — tres furgonetas, tres conductores distintos.
+
 ## Responsive — regla global permanente
 **Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.
 
@@ -530,6 +549,18 @@ No lo es: con `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (≈20 s, el
 con `TS2307: Cannot find module './generated/asegura-client'` **en local mientras el CI está verde** — el
 workflow usa el script de la app, que genera los dos. El comando completo es el de su `package.json`:
 `prisma generate && prisma generate --schema prisma/asegura.prisma`. (Medido 01/09/2026.)
+
+🚨 **Y OJO CON GENERAR DOS APPS A LA VEZ: el cliente por defecto de Prisma es UNO
+SOLO para todo el monorepo** (`node_modules/.pnpm/@prisma+client@…/@prisma/client`).
+Cada `prisma generate` de una app lo **sobrescribe**, así que generar plataforma
+deja el typecheck de asegura en rojo con errores que parecen de código —
+`Property 'companiaDgs' does not exist on type 'PrismaClient'`, enums a los que
+«les faltan» valores— en ficheros que nadie ha tocado. Medido el 02/09/2026 con
+dos agentes trabajando en paralelo: **`main` estaba sana y el rojo era local.**
+En CI no pasa porque cada `Typecheck · <app>` corre en su propio job. Antes de
+diagnosticar un typecheck rojo en local, **regenera el cliente de ESA app y
+repite** — y si estás corriendo trabajos en paralelo sobre dos apps, no te fíes
+del typecheck de la que no generaste la última.
 | `Análisis estático · Patrones conocidos` | `pnpm exec tsx scripts/qa-check.ts` | **`apps/ia-rest`** (el workflow lleva `working-directory`) |
 | `Lint · TypeCheck · Build` | `pnpm run lint` · `pnpm exec tsc --noEmit` · `pnpm run build` | **`apps/ia-rest`** (idem) |
 
@@ -625,6 +656,13 @@ que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míra
     el síntoma es idéntico a un build legítimamente ignorado, así que **compruébalo en el status de Vercel
     del PR en vez de darlo por hecho**.
     ialimp NO lo lleva a propósito: cliente vivo (Sique Brilla) → ahí sigue la regla «preview verde antes de main».
+  - 🟡 **Y el falso positivo al revés (02/09/2026): «Building» NO significa que se vaya a construir.** Al
+    empujar, el comentario de Vercel del PR pinta los proyectos en **Building** durante unos segundos y
+    LUEGO pasan a `Ignored`: el `ignoreCommand` corre DENTRO del deployment, así que el estado intermedio
+    existe siempre. Ese día se estuvo a punto de dar la alarma de «se están construyendo los once
+    proyectos, como en el incidente de los 600 US$» **dos veces**, leyendo esos comentarios intermedios.
+    El estado que vale es el FINAL: `get_status` sobre el head del PR, donde cada `Vercel – *` dice
+    `Canceled by Ignored Build Step`. No diagnostiques gasto desde un comentario que se reescribe solo.
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
