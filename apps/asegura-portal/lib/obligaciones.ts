@@ -9,7 +9,7 @@
 // puerta (la página de la bóveda lo hace una sola vez por render); las
 // `…DeSesion` lo resuelven aquí. Lo vigila `test/regression-portal-aislamiento.test.ts`.
 import { esCarteraViva } from '@central/module-seguros'
-import { fechaAccionable, obligacionDerivable, type Procedencia } from '@central/module-seguros-portal'
+import { etiquetaRamo, fechaAccionable, obligacionDerivable, type Procedencia } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, type CarteraPortal } from './cartera-lectura'
 import { prisma } from './db'
@@ -103,7 +103,9 @@ export async function sincronizarObligacionesDeIdentidad(
             identidadId,
             polizaId: p.id,
             tipo: 'poliza',
-            titulo: `${p.ramo} · ${p.compania}`,
+            // La etiqueta, no el enum: este título es lo que el cliente lee en
+            // «Tu calendario», y `responsabilidad_civil` no es castellano.
+            titulo: `${etiquetaRamo(p.ramo) ?? p.ramo} · ${p.compania}`,
             fechaEvento: evento,
             fechaAccionable: accionable,
             procedencia: 'compania',
@@ -111,7 +113,9 @@ export async function sincronizarObligacionesDeIdentidad(
           // `avisadaAt` NO se toca: el sello del envío es lo único que impide
           // avisar dos veces de lo mismo.
           update: {
-            titulo: `${p.ramo} · ${p.compania}`,
+            // La etiqueta, no el enum: este título es lo que el cliente lee en
+            // «Tu calendario», y `responsabilidad_civil` no es castellano.
+            titulo: `${etiquetaRamo(p.ramo) ?? p.ramo} · ${p.compania}`,
             fechaEvento: evento,
             fechaAccionable: accionable,
             actualizadaAt: new Date(),

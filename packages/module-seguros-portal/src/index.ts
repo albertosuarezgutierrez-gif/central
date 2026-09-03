@@ -6,6 +6,8 @@ export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, estadoCodigo } from './co
 export type { EstadoCodigo, CodigoGuardado } from './codigo.ts'
 export {
   RAMOS_POLIZA,
+  ETIQUETA_RAMO,
+  etiquetaRamo,
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
