@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T09:51:45Z",
-  "sha": "a3d74306a8da6efc3e34fa6b6ae406a8b189e723",
+  "generadoEn": "2026-09-03T11:59:45Z",
+  "sha": "c564c27c4386a5174a2463c94315f66ddf8e5603",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4387,6 +4387,37 @@
       "hash": "3686319ff9f2"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/backfill-dni/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "GET /api/operador/backfill-dni — plan EN SECO del backfill del blind index de DNI. No escribe nada. Devuelve cuántas fichas se pueden rellenar, cuántas chocan (= DNI repetido = candidatos a fusión) y "
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 48,
+          "resumen": "POST /api/operador/backfill-dni — ESCRIBE los hashes que no chocan. Idempotente: sólo toca fichas con `dni_lookup_hash` a NULL, así que repetirlo no cambia nada. Las que chocan se quedan como están a "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/backfill-dni",
+      "hash": "e8a2365b6741"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/buscar/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -5450,6 +5481,28 @@
       "hash": "d1dbe3ca7d3c"
     },
     {
+      "ruta": "apps/asegura/lib/backfill-dni.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Backfill del blind index de DNI de la cartera (`clientes.dni_lookup_hash`). El PORQUÉ, la aritmética y el orden de los tres pasos están en la pieza pura, `packages/module-seguros/src/backfill-dni.ts`. Aquí sólo se hacen las dos cosas que no se pueden hacer sin claves ni sin BD: DESCIFRAR el DNI y, c",
+      "exporta": [
+        "backfillDniLookupHash"
+      ],
+      "funciones": [
+        {
+          "nombre": "backfillDniLookupHash",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opciones: { seco: boolean },",
+          "retorno": "Promise<ResultadoBackfill>",
+          "linea": 48,
+          "resumen": "Lee TODAS las fichas de la correduría con DNI, calcula el plan y —sólo si `seco === false`— escribe los hashes que no chocan. El plan se calcula siempre sobre la cartera ENTERA aunque se vaya a escrib"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bc9864e40352"
+    },
+    {
       "ruta": "apps/asegura/lib/cartera-busqueda.ts",
       "ambito": "apps/asegura",
       "resumen": "El buscador de TODO: nombre, matrícula, nº de póliza, DNI, teléfono, email, ciudad o código postal. Un solo cuadro; aquí se ejecuta lo que `planBusqueda()` haya decidido que se puede mirar. ─── Lo que se puede buscar y lo que NO (medido el 01/09/2026) ───────────── nombre/apellidos EN CLARO 32.600 /",
@@ -6287,7 +6340,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a9f5954710a0"
+      "hash": "3d3c7ad46e41"
     },
     {
       "ruta": "apps/asegura/lib/cartera-relaciones.ts",
@@ -53967,8 +54020,8 @@
           "exportada": false,
           "params": "{ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }",
           "retorno": null,
-          "linea": 537,
-          "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── Cinco estados y ninguno se colapsa con otro. El que más muerde es `solo_sublimites`: `mayorEur` NO es el continente — pintarl"
+          "linea": 543,
+          "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── SEIS estados y ninguno se colapsa con otro. Los dos que muerden: · `solo_sublimites`: `mayorEur` NO es el continente — pintar"
         },
         {
           "nombre": "Capital",
@@ -53976,12 +54029,12 @@
           "exportada": false,
           "params": "{ titulo, c }: { titulo: string; c: CapitalAsegurado | null }",
           "retorno": null,
-          "linea": 550
+          "linea": 557
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0e1a5ded10cf"
+      "hash": "734ea0559a76"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/acciones.ts",
@@ -79571,7 +79624,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "HorquillaEstimacion | null",
-          "linea": 172,
+          "linea": 177,
           "resumen": "Los tres números o nada: media horquilla es una horquilla inventada."
         },
         {
@@ -79580,7 +79633,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FuenteEstimacion | null",
-          "linea": 184
+          "linea": 189
         },
         {
           "nombre": "esVeredictoEstimacion",
@@ -79588,7 +79641,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is VeredictoEstimacion",
-          "linea": 193
+          "linea": 198
         },
         {
           "nombre": "leerEstimacion",
@@ -79596,7 +79649,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EstimacionPrima | null",
-          "linea": 202,
+          "linea": 207,
           "resumen": "Copia defensiva de la estimación. Sin `etiqueta` legible NO se devuelve nada: esa frase es lo único que impide que la horquilla se lea como una oferta, así que sin ella no se pinta el bloque (y nunca "
         },
         {
@@ -79605,7 +79658,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CapitalAsegurado | null",
-          "linea": 226,
+          "linea": 231,
           "resumen": "Un estado de `CapitalAsegurado` solo se acepta con TODOS sus campos; si no, `null` («no se pudo leer»)."
         },
         {
@@ -79614,7 +79667,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "CapitalesHogarFicha | null",
-          "linea": 254,
+          "linea": 266,
           "resumen": "`null` = asegura no manda los capitales (versión vieja) o llegan ilegibles los DOS lados."
         },
         {
@@ -79623,7 +79676,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaPoliza",
-          "linea": 263
+          "linea": 275
         },
         {
           "nombre": "urlAsegura",
@@ -79631,7 +79684,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 362
+          "linea": 374
         },
         {
           "nombre": "polizaAsegura",
@@ -79639,12 +79692,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<RespuestaPoliza>",
-          "linea": 366
+          "linea": 378
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d079105c1174"
+      "hash": "752bb92b0575"
     },
     {
       "ruta": "apps/plataforma/lib/pricing-calendar.ts",
@@ -108430,6 +108483,44 @@
       "hash": "073c4ad492bf"
     },
     {
+      "ruta": "packages/module-seguros/src/backfill-dni.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Backfill del blind index de DNI (`clientes.dni_lookup_hash`). EL PROBLEMA (medido 03/09/2026): 19.696 fichas tienen el DNI guardado cifrado pero **15.800 de ellas no tienen `dni_lookup_hash`**. Ese hash es la única forma de preguntar «¿hay otra ficha con este mismo DNI?» sin descifrar la base entera",
+      "exporta": [
+        "planBackfillDni"
+      ],
+      "funciones": [
+        {
+          "nombre": "planBackfillDni",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichas: FichaDni[], hash: (dni: string) => string | null, pareceDocumento?: (dni: string) => boolean,",
+          "retorno": "PlanBackfillDni",
+          "linea": 107,
+          "resumen": "Decide, sin tocar la BD, qué hash se puede escribir y cuál chocaría. `hash` es la función de hashing real (`computeDniLookupHash` de `@central/module-seguros-pii`), inyectada para que esta pieza sea p"
+        },
+        {
+          "nombre": "anota",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Map<string, { ids: string[]; preexistente: boolean }>, hash: string, id: string, yaLoTenia: boolean,",
+          "retorno": "void",
+          "linea": 173
+        },
+        {
+          "nombre": "seguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "fn: () => string | null",
+          "retorno": "string | null",
+          "linea": 193
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f4e934605d42"
+    },
+    {
       "ruta": "packages/module-seguros/src/busqueda.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Un solo cuadro de búsqueda para toda la cartera: se teclea lo que se tenga a mano —una matrícula que dicta el cliente por teléfono, su DNI, el número de póliza de un recibo, un apellido— y esto decide DÓNDE hay que mirar. ─── Por qué la clasificación es pura y vive aquí ─────────────────────────── P",
@@ -109215,9 +109306,11 @@
       "resumen": "De las garantías de una póliza de hogar al CAPITAL ASEGURADO. PURO. 🚨 ESTO ES UNA MULETA, NO EL DISEÑO BUENO — y conviene saberlo antes de leer una línea más. El estándar EIAC **SÍ manda el capital etiquetado**: §13.99 `tipo_capital` es una lista de `Capital`, y cada uno lleva CUATRO campos, tres d",
       "exporta": [
         "ladoDeGarantia",
+        "importeDelVolcado",
         "capitalAsegurado",
         "capitalesHogar",
-        "eurDeCapital"
+        "eurDeCapital",
+        "eurDeCapitalConVolcado"
       ],
       "funciones": [
         {
@@ -109226,26 +109319,44 @@
           "exportada": true,
           "params": "descripcion: string | null | undefined",
           "retorno": "LadoRiesgo | null",
-          "linea": 103,
+          "linea": 132,
           "resumen": "¿Este nombre de garantía cubre la vivienda o el mobiliario? Solo mira el vocabulario MEDIDO en la cartera. Lo que no encaje devuelve `null` y queda fuera del recuento: una garantía sin clasificar no e"
+        },
+        {
+          "nombre": "importeDelVolcado",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 175,
+          "resumen": "El importe del volcado, o `null`. Viene como texto y hay que desconfiar de él: `''`, `'0'`, `'-'` y cualquier cosa no numérica son AUSENCIA, nunca un capital de 0€. Mismas reglas que `hogarDeDatos` en"
         },
         {
           "nombre": "capitalAsegurado",
           "kind": "function",
           "exportada": true,
-          "params": "coberturas: readonly CoberturaLeible[], lado: LadoRiesgo,",
+          "params": "coberturas: readonly CoberturaLeible[], lado: LadoRiesgo, volcado?: CapitalVolcado | null,",
           "retorno": "CapitalAsegurado",
-          "linea": 128,
-          "resumen": "El capital asegurado de un lado, por corroboración entre garantías. Nunca devuelve un número sin decir en cuántas garantías se apoya: es lo que separa «912.322€ porque lo dicen seis» de «912.322€ porq"
+          "linea": 205,
+          "resumen": "El capital asegurado de un lado, por corroboración entre garantías. Nunca devuelve un número sin decir de dónde sale: `consenso` dice en cuántas garantías se apoya, y `del_volcado` dice que no viene d"
+        },
+        {
+          "nombre": "capitalPorGarantias",
+          "kind": "function",
+          "exportada": false,
+          "params": "coberturas: readonly CoberturaLeible[], lado: LadoRiesgo,",
+          "retorno": "Exclude<CapitalAsegurado,",
+          "linea": 224,
+          "resumen": "Lo que dicen SOLO las garantías. Sin el consenso, ningún estado trae importe."
         },
         {
           "nombre": "capitalesHogar",
           "kind": "function",
           "exportada": true,
-          "params": "coberturas: readonly CoberturaLeible[]",
+          "params": "coberturas: readonly CoberturaLeible[], volcado?: CapitalesVolcado | null,",
           "retorno": "CapitalesHogar",
-          "linea": 197,
-          "resumen": "Los dos capitales que pide el tarificador de hogar, cada uno con su porqué."
+          "linea": 320,
+          "resumen": "Los dos capitales que pide el tarificador de hogar, cada uno con su porqué. `volcado` son los capitales de la copia de ESTA misma póliza en el volcado (`datos_especificos.continente` / `.contenido`, q"
         },
         {
           "nombre": "eurDeCapital",
@@ -109253,13 +109364,22 @@
           "exportada": true,
           "params": "c: CapitalAsegurado",
           "retorno": "number | null",
-          "linea": 205,
-          "resumen": "El euro si lo hay, `null` si no. Para quien solo quiera el número y ya sepa que puede faltar."
+          "linea": 339,
+          "resumen": "El euro si lo hay, `null` si no. Para quien solo quiera el número y ya sepa que puede faltar. 🚨 `del_volcado` NO sale por aquí: es un capital de junio de 2026 sin rótulo de procedencia, y quien pide "
+        },
+        {
+          "nombre": "eurDeCapitalConVolcado",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CapitalAsegurado",
+          "retorno": "number | null",
+          "linea": 344,
+          "resumen": "El euro venga del consenso o del volcado. Úsalo solo donde un dato viejo valga más que un hueco."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ba8a0c1fc59a"
+      "hash": "40066db72049"
     },
     {
       "ruta": "packages/module-seguros/src/importe-eiac.ts",
@@ -115137,7 +115257,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2906,
-    "funciones": 8571
+    "archivos": 2909,
+    "funciones": 8580
   }
 }
