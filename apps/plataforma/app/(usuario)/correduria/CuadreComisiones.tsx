@@ -1,6 +1,9 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Receipt, TriangleAlert, PenLine } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { Badge, btnStyle, type Tono } from '@/components/ui'
+import Bloque from './Bloque'
 import type { EstadoCuadre } from '@/lib/correduria/cuadre'
 
 // Libro de comisiones: DEVENGADO (recibos cobrados) → LIQUIDADO (extracto de la
@@ -42,16 +45,20 @@ interface Libro {
   total: { bruto: number; retencion: number; cerrado: boolean; pendientes: number }
 }
 
-const SEMAFORO: Record<EstadoCuadre, { icono: string; texto: string; color: string }> = {
-  'no-comprobado': { icono: '⚪', texto: 'No comprobado', color: 'var(--muted)' },
-  'sin-cobertura': { icono: '⚫', texto: 'Sin fuente', color: 'var(--muted)' },
-  'sin-datos': { icono: '⏳', texto: 'Sin datos aún', color: 'var(--muted)' },
-  'esperado-sin-liquidar': { icono: '🟠', texto: 'Devengado sin liquidar', color: 'var(--warning)' },
-  'liquidado-sin-cobrar': { icono: '🟠', texto: 'Liquidado sin ingresar', color: 'var(--warning)' },
-  'cobrado-sin-liquidar': { icono: '🟡', texto: 'Ingreso sin explicar', color: '#ca8a04' },
-  deudor: { icono: '🔵', texto: 'Saldo deudor', color: 'var(--info)' },
-  descuadra: { icono: '🔴', texto: 'Descuadra', color: 'var(--negative)' },
-  cuadra: { icono: '🟢', texto: 'Cuadra', color: 'var(--positive)' },
+// El estado se lee por la FORMA de la píldora, no por un círculo de color: 🟠 y
+// 🟡 son indistinguibles a 12px —y ahí estaba justo la diferencia entre «la
+// compañía no ha liquidado» y «entró dinero que nadie explica»— y cada sistema
+// operativo los dibuja distintos.
+const SEMAFORO: Record<EstadoCuadre, { texto: string; tono: Tono }> = {
+  'no-comprobado': { texto: 'No comprobado', tono: 'neutral' },
+  'sin-cobertura': { texto: 'Sin fuente', tono: 'neutral' },
+  'sin-datos': { texto: 'Sin datos aún', tono: 'neutral' },
+  'esperado-sin-liquidar': { texto: 'Devengado sin liquidar', tono: 'aviso' },
+  'liquidado-sin-cobrar': { texto: 'Liquidado sin ingresar', tono: 'aviso' },
+  'cobrado-sin-liquidar': { texto: 'Ingreso sin explicar', tono: 'aviso' },
+  deudor: { texto: 'Saldo deudor', tono: 'info' },
+  descuadra: { texto: 'Descuadra', tono: 'negativo' },
+  cuadra: { texto: 'Cuadra', tono: 'positivo' },
 }
 
 // Los estados que significan «todavía no se sabe» — el total anual con alguno
@@ -74,70 +81,100 @@ function fmt(iso: string) {
   return d && m && y ? `${d}/${m}` : iso
 }
 
-export default function CuadreComisiones({ año }: { año: number }) {
+// La letra pequeña que califica el titular. NO se borra por minimalismo: sin
+// ella, «bruto» y «remesa» parecen el mismo número mal sumado.
+const SUB = (
+  <>
+    Devengado (recibos cobrados) → liquidado (extracto) → cobrado (BBVA).{' '}
+    <b>La retención la hace y la ingresa la compañía</b>, no tú: cobras ya el neto. Ese 15 % lo
+    declaran en el modelo 190 a tu nombre, así que en tu renta cuenta como <b>pago a cuenta</b> (se
+    resta de la cuota), nunca como un gasto. De ahí que <b>a tu renta vaya el bruto</b> y al banco
+    llegue la <b>remesa</b> (bruto − retención): comparar el bruto contra el banco descuadra
+    siempre por ese 15 %. Un importe que no ha llegado se pinta «—», nunca 0,00€.
+  </>
+)
+
+export default function CuadreComisiones({ año, onContador, primero }: {
+  año: number
+  /**
+   * Cuántos periodos siguen SIN dato (`total.pendientes`), para el contador de
+   * la sección. Se llama una vez por carga, nunca en el render.
+   *
+   * 🚨 `null` es «no se ha podido leer» (o «todavía cargando») y NO se colapsa
+   * a 0: un 0 diría «el libro está cerrado», que es justo lo contrario.
+   */
+  onContador?: (n: number | null) => void
+  primero?: boolean
+}) {
   const [libro, setLibro] = useState<Libro | null>(null)
   const [fallo, setFallo] = useState(false)
   const [confirmando, setConfirmando] = useState<Periodo | null>(null)
 
+  // El callback vive en una ref para que `cargar` no dependa de su identidad:
+  // el padre suele pasar una flecha en línea, y meterla en las deps del
+  // `useEffect` sería un fetch por render.
+  const contador = useRef(onContador)
+  useEffect(() => { contador.current = onContador })
+
   const cargar = useCallback(() => {
     setFallo(false)
+    contador.current?.(null)
     fetch(`/api/correduria/comisiones?año=${año}`)
       .then(r => { if (!r.ok) throw new Error('no'); return r.json() })
-      .then(setLibro)
-      .catch(() => { setLibro(null); setFallo(true) })
+      .then((l: Libro) => {
+        setLibro(l)
+        contador.current?.(typeof l?.total?.pendientes === 'number' ? l.total.pendientes : null)
+      })
+      .catch(() => { setLibro(null); setFallo(true); contador.current?.(null) })
   }, [año])
 
   useEffect(() => { cargar() }, [cargar])
 
-  const caja: React.CSSProperties = {
-    border: '1px solid var(--border)', borderRadius: 12, padding: '16px',
-    background: 'var(--surface)', marginBottom: 28,
-  }
-
   if (fallo) {
     return (
-      <div style={{ ...caja, borderColor: '#d66' }}>
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>🧾 Cuadre de comisiones · sin respuesta</div>
+      <Bloque
+        titulo={`Cuadre de comisiones ${año} · sin respuesta`}
+        Icono={Receipt}
+        tono="malo"
+        primero={primero}
+      >
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>
           No se ha podido leer el libro de comisiones. Esto NO significa que no haya comisiones.
         </div>
-      </div>
+      </Bloque>
     )
   }
 
-  if (!libro) return <div style={{ ...caja, color: 'var(--muted)', fontSize: 13 }}>Cargando cuadre de comisiones…</div>
+  if (!libro) {
+    return (
+      <Bloque titulo={`Cuadre de comisiones ${año}`} Icono={Receipt} primero={primero}>
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>Cargando cuadre de comisiones…</div>
+      </Bloque>
+    )
+  }
 
   const { periodos, cobertura, total } = libro
   const sinFuente = cobertura.filter(c => !c.tiene_recibos_cima && !c.tiene_liq_cima && !c.tiene_correo_importe)
 
   return (
-    <div style={caja}>
-
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>🧾 Cuadre de comisiones {libro.año}</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-          Devengado (recibos cobrados) → liquidado (extracto) → cobrado (BBVA).
-        </div>
-      </div>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-        <b>La retención la hace y la ingresa la compañía</b>, no tú: cobras ya el neto. Ese 15 % lo
-        declaran en el modelo 190 a tu nombre, así que en tu renta cuenta como <b>pago a cuenta</b> (se
-        resta de la cuota), nunca como un gasto. De ahí que <b>a tu renta vaya el bruto</b> y al banco
-        llegue la <b>remesa</b> (bruto − retención): comparar el bruto contra el banco descuadra
-        siempre por ese 15 %.
-      </div>
+    <Bloque titulo={`Cuadre de comisiones ${libro.año}`} sub={SUB} Icono={Receipt} primero={primero}>
 
       {/* ── Total del año ─────────────────────────────────────────────────── */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 14,
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
+        gap: 12, marginBottom: 14,
       }}>
         <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>Comisión bruta (a tu renta)</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>{eur(total.bruto)}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
+            {eur(total.bruto)}
+          </div>
         </div>
         <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>Retención 15 % (modelo 190)</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{eur(total.retencion)}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+            {eur(total.retencion)}
+          </div>
         </div>
       </div>
 
@@ -145,11 +182,15 @@ export default function CuadreComisiones({ año }: { año: number }) {
           Alberto manda a la asesoría. */}
       {!total.cerrado && (
         <div style={{
-          background: 'var(--warning-bg)', border: '1px solid #fdba74', borderRadius: 8,
-          padding: '10px 12px', fontSize: 13, color: '#9a3412', marginBottom: 14,
+          display: 'flex', gap: 8, alignItems: 'flex-start',
+          background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: 8,
+          padding: '10px 12px', fontSize: 13, color: 'var(--warning)', marginBottom: 14,
         }}>
-          ⚠️ <b>Total provisional.</b> {total.pendientes} periodo(s) sin dato o sin fuente todavía, así
-          que esta cifra puede subir. No la mandes a la asesoría como cerrada.
+          <TriangleAlert size={15} strokeWidth={1.75} aria-hidden style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>
+            <b>Total provisional.</b> {total.pendientes} periodo(s) sin dato o sin fuente todavía, así
+            que esta cifra puede subir. No la mandes a la asesoría como cerrada.
+          </span>
         </div>
       )}
 
@@ -163,15 +204,15 @@ export default function CuadreComisiones({ año }: { año: number }) {
         <div className="cuadre-wrap">
           <table className="cuadre-tabla">
             <thead>
-              <tr style={{ background: 'rgba(0,0,0,.03)', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ textAlign: 'left' }}>Compañía</th>
-                <th style={{ textAlign: 'left' }}>Periodo</th>
-                <th className="num">Devengado</th>
-                <th className="num">Liquidado</th>
-                <th className="num">Retención</th>
-                <th className="num">Remesa</th>
-                <th className="num">Banco</th>
-                <th style={{ textAlign: 'left' }}>Estado</th>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Compañía</th>
+                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Periodo</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Devengado</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Liquidado</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Retención</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Remesa</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Banco</th>
+                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Estado</th>
                 <th />
               </tr>
             </thead>
@@ -187,21 +228,28 @@ export default function CuadreComisiones({ año }: { año: number }) {
                     </td>
                     <td className="num" style={{ fontWeight: 600 }}>
                       {imp(p.liqBruto)}
-                      {p.liqOrigen === 'manual' && <span title="confirmado a mano" style={{ marginLeft: 4 }}>✍️</span>}
+                      {p.liqOrigen === 'manual' && (
+                        <span
+                          title="confirmado a mano"
+                          aria-label="confirmado a mano"
+                          style={{ marginLeft: 4, color: 'var(--muted)', display: 'inline-flex', verticalAlign: '-2px' }}
+                        >
+                          <PenLine size={13} strokeWidth={1.75} aria-hidden />
+                        </span>
+                      )}
                     </td>
                     <td className="num">{imp(p.liqRetencion)}</td>
                     <td className="num">{imp(p.liqRemesa)}</td>
                     <td className="num">{imp(p.banco)}</td>
-                    <td style={{ color: s.color }} title={AYUDA[p.estado] ?? ''}>{s.icono} {s.texto}</td>
+                    <td>
+                      <Badge tono={s.tono} title={AYUDA[p.estado] ?? undefined}>{s.texto}</Badge>
+                    </td>
                     <td>
                       <button
                         className="cuadre-btn"
                         onClick={() => setConfirmando(p)}
-                        style={{
-                          border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)',
-                          cursor: 'pointer', color: 'var(--text)', fontSize: 12, padding: '0 10px',
-                        }}
-                      >✍️ Anotar</button>
+                        style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, padding: '0 12px' }}
+                      >Anotar</button>
                     </td>
                   </tr>
                 )
@@ -215,10 +263,10 @@ export default function CuadreComisiones({ año }: { año: number }) {
       {/* Sin esto el total parecería completo estando ciego a compañías enteras. */}
       {sinFuente.length > 0 && (
         <div style={{
-          marginTop: 14, background: 'rgba(0,0,0,.03)', border: '1px solid var(--border)',
-          borderRadius: 8, padding: '10px 12px', fontSize: 13,
+          marginTop: 14, border: '1px solid var(--border)', borderRadius: 8,
+          padding: '10px 12px', fontSize: 13, color: 'var(--muted)',
         }}>
-          ⚫ <b>Sin ninguna fuente de importe:</b> {sinFuente.map(c => c.compania).join(', ')}. No es que no
+          <b>Sin ninguna fuente de importe:</b> {sinFuente.map(c => c.compania).join(', ')}. No es que no
           te paguen: es que no llega ni por CIMA ni por correo, así que sus comisiones NO están en el total
           de arriba. Pedirlo a TIREA es una gestión pendiente.
         </div>
@@ -231,7 +279,7 @@ export default function CuadreComisiones({ año }: { año: number }) {
           onGuardado={() => { setConfirmando(null); cargar() }}
         />
       )}
-    </div>
+    </Bloque>
   )
 }
 
@@ -297,8 +345,9 @@ function ModalConfirmar({ periodo, onCerrar, onGuardado }: {
           padding: 20, width: '95vw', maxWidth: 420,
         }}
       >
-        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
-          ✍️ {periodo.compania} · {fmt(periodo.inicio)} → {fmt(periodo.fin)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>
+          <PenLine size={15} strokeWidth={1.75} aria-hidden />
+          {periodo.compania} · {fmt(periodo.inicio)} → {fmt(periodo.fin)}
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
           Copia los importes del extracto de la compañía. Queda marcado como confirmado a mano, y CIMA
@@ -320,15 +369,12 @@ function ModalConfirmar({ periodo, onCerrar, onGuardado }: {
 
         {error && <div style={{ fontSize: 13, color: 'var(--negative)', marginBottom: 10 }}>{error}</div>}
 
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button
-            onClick={onCerrar}
-            style={{ minHeight: 44, padding: '0 16px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}
-          >Cancelar</button>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button onClick={onCerrar} style={btnStyle('secundario')}>Cancelar</button>
           <button
             onClick={guardar}
             disabled={guardando}
-            style={{ minHeight: 44, padding: '0 16px', border: 'none', borderRadius: 8, background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontWeight: 600, opacity: guardando ? 0.6 : 1 }}
+            style={{ ...btnStyle('primario'), opacity: guardando ? 0.6 : 1 }}
           >{guardando ? 'Guardando…' : 'Guardar'}</button>
         </div>
       </div>

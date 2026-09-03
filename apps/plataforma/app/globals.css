@@ -272,6 +272,16 @@ html[data-saldo-oculto='1'] .saldo-privado {
 @media (max-width: 480px) {
   .corr-kpis { grid-template-columns: 1fr !important; }
 }
+/* El primer bloque de una sección no pinta su línea de separación: iría pegada debajo del borde
+   de la barra de pestañas y se verían dos rayas. NO se resuelve con un prop `primero` en el JSX
+   porque cuál es el primero DEPENDE DE LOS DATOS —`PartesPortal` y `Duplicadas` devuelven `null`
+   cuando su cola está vacía—, así que solo el navegador sabe quién quedó arriba. `!important`
+   porque `Bloque.tsx` pone su borde en un estilo inline. */
+.corr-panel > section:first-of-type {
+  border-top: none !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
 
 /* === Cuadre de comisiones de la correduría (`correduria/CuadreComisiones.tsx`) ===
    Único bloque de esta tanda que NO era responsive sino estructura de tabla: los tres ejes
