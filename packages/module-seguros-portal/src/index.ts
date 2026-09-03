@@ -42,6 +42,9 @@ export type {
 export {
   ALCANCES,
   ALCANCES_CONCEDIBLES,
+  TITULOS_REPRESENTACION,
+  alcancesConcedibles,
+  tituloRepresentacion,
   DIAS_VIGENCIA,
   ESTADOS_AUTORIZACION,
   alcanceConcedible,
@@ -54,4 +57,10 @@ export {
   etiquetaNivelAlcances,
   puedeAutorizar,
 } from './autorizacion.ts'
-export type { Alcance, AutorizacionFechas, EstadoAutorizacion } from './autorizacion.ts'
+export type {
+  Alcance,
+  AutorizacionFechas,
+  EstadoAutorizacion,
+  TipoOtorgante,
+  TituloRepresentacion,
+} from './autorizacion.ts'

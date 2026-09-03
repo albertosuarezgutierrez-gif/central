@@ -44,10 +44,43 @@ export const ALCANCES = ['ver', 'ver_economico', 'partes', 'documentos'] as cons
 export type Alcance = (typeof ALCANCES)[number]
 
 /**
- * Los que se pueden conceder HOY. Los otros dos son apoderamiento (ver cabecera)
- * y entran cuando exista dónde grabar la identidad de quien ejecuta cada acto.
+ * Qué es quien cede. **No es cosmético: es la línea que parte esta regla en dos.**
+ *
+ * El RGPD protege a las personas FÍSICAS. Una sociedad no tiene datos personales,
+ * así que «Pilar gestiona las pólizas de GLOBAL 2» no es un problema de
+ * consentimiento: es **representación mercantil**, la misma figura que un
+ * apoderado en un banco. Por eso una jurídica puede delegar lo que una física no.
+ *
+ * Lo que NO desaparece con una jurídica: que conste **con qué título** actúa
+ * (`tituloRepresentacion`), porque si da un parte, la que queda obligada es la
+ * sociedad. Y que la ficha de la sociedad puede arrastrar datos de personas
+ * físicas (conductores, empleados): eso lo tapa la vista, no esta regla.
+ */
+export type TipoOtorgante = 'fisica' | 'juridica'
+
+/**
+ * De una persona FÍSICA solo se puede delegar mirar.
+ *
+ * `partes` y `documentos` son apoderamiento: actuar en nombre de otro. Si María
+ * declara mal, la compañía discute la cobertura (art. 16 LCS) y hay que poder
+ * decir quién firmó — y un tick en una pantalla no es un poder.
  */
 export const ALCANCES_CONCEDIBLES: readonly Alcance[] = ['ver', 'ver_economico']
+
+/** Una sociedad delega TODO: quien la representa actúa por ella, no «en nombre de un tercero». */
+export function alcancesConcedibles(tipo: TipoOtorgante): readonly Alcance[] {
+  return tipo === 'juridica' ? ALCANCES : ALCANCES_CONCEDIBLES
+}
+
+/** Títulos con los que se puede representar a una sociedad. Se guarda cuál. */
+export const TITULOS_REPRESENTACION = ['administrador', 'apoderado', 'empleado_autorizado'] as const
+export type TituloRepresentacion = (typeof TITULOS_REPRESENTACION)[number]
+
+export function tituloRepresentacion(v: unknown): TituloRepresentacion | null {
+  if (typeof v !== 'string') return null
+  const t = v.trim().toLowerCase()
+  return (TITULOS_REPRESENTACION as readonly string[]).includes(t) ? (t as TituloRepresentacion) : null
+}
 
 /** Un año. Se renueva; no se prorroga sola. */
 export const DIAS_VIGENCIA = 365
@@ -100,11 +133,16 @@ export function puedeAutorizar(nivel: Nivel): boolean {
   return nivel === 'gestionar' || nivel === 'administrar'
 }
 
-/** `null` = no es un alcance, o no es de los que hoy se pueden conceder. */
-export function alcanceConcedible(v: unknown): Alcance | null {
+/**
+ * `null` = no es un alcance, o no es de los que se pueden conceder para ESE tipo
+ * de otorgante. `tipo` por defecto `'fisica'`: quien no diga qué es, se trata
+ * como persona, que es el lado restrictivo. Un default permisivo aquí abriría
+ * apoderamientos por omisión.
+ */
+export function alcanceConcedible(v: unknown, tipo: TipoOtorgante = 'fisica'): Alcance | null {
   if (typeof v !== 'string') return null
   const a = v.trim().toLowerCase()
-  return (ALCANCES_CONCEDIBLES as readonly string[]).includes(a) ? (a as Alcance) : null
+  return (alcancesConcedibles(tipo) as readonly string[]).includes(a) ? (a as Alcance) : null
 }
 
 export function esAlcance(v: unknown): v is Alcance {
@@ -112,9 +150,9 @@ export function esAlcance(v: unknown): v is Alcance {
 }
 
 /**
- * Suelo duro de toda autorización a un tercero. No depende del alcance ni del
- * nivel: son datos de la PERSONA (IBAN, DNI, sus documentos) o son ACTOS en su
- * nombre. Que estén aquí y no en la escalera de `acceso.ts` es a propósito —
+ * Suelo duro cuando quien cede es una persona FÍSICA. No depende del alcance ni
+ * del nivel: son datos de la PERSONA (IBAN, DNI, sus documentos) o son ACTOS en
+ * su nombre. Que estén aquí y no en la escalera de `acceso.ts` es a propósito —
  * así ningún alcance nuevo los puede reabrir por descuido.
  */
 const NUNCA_A_UN_TERCERO = {
@@ -126,16 +164,36 @@ const NUNCA_A_UN_TERCERO = {
   autorizarTerceros: false,
 } as const
 
+/**
+ * Suelo cuando quien cede es una SOCIEDAD. Casi no hay: su IBAN y su CIF son
+ * datos de la empresa, y quien la representa los necesita para su trabajo.
+ *
+ * Lo único que no se delega nunca es **reautorizar a un cuarto**: que la
+ * sociedad amplíe el círculo es una decisión suya, y tiene que pasar por su
+ * propio camino de representación, no heredarse de una autorización.
+ */
+const NUNCA_NI_REPRESENTANDO = { autorizarTerceros: false } as const
+
 const NIVEL_DE_ALCANCE: Record<Alcance, Nivel> = {
   ver: 'tarjeta',
   ver_economico: 'completo',
-  partes: 'completo',
+  partes: 'gestionar',
   documentos: 'completo',
 }
 
-/** Qué enseña un alcance concreto, ya capado. */
-export function camposDeAlcance(alcance: Alcance): CamposVisibles {
-  return { ...camposVisibles(NIVEL_DE_ALCANCE[alcance]), ...NUNCA_A_UN_TERCERO }
+/** Qué enseña un alcance concreto, ya capado según quién cede. */
+export function camposDeAlcance(alcance: Alcance, tipo: TipoOtorgante = 'fisica'): CamposVisibles {
+  const base = camposVisibles(NIVEL_DE_ALCANCE[alcance])
+  if (tipo === 'fisica') return { ...base, ...NUNCA_A_UN_TERCERO }
+  // Una sociedad delega su gestión, pero `documentos` y `partes` son alcances
+  // distintos: tener uno no da el otro. Se abren de uno en uno, no en bloque.
+  return {
+    ...base,
+    documentos: alcance === 'documentos' || alcance === 'partes' ? base.documentos : false,
+    abrirParte: alcance === 'partes' ? base.abrirParte : false,
+    crearPeticiones: alcance === 'partes' ? base.crearPeticiones : false,
+    ...NUNCA_NI_REPRESENTANDO,
+  }
 }
 
 /**
@@ -143,15 +201,20 @@ export function camposDeAlcance(alcance: Alcance): CamposVisibles {
  * la unión campo a campo, con el mismo suelo. Sin alcances vigentes no se
  * enseña nada — y «nada» aquí significa nada, no la tarjeta por cortesía.
  */
-export function camposDeAlcances(alcances: readonly Alcance[]): CamposVisibles | null {
+export function camposDeAlcances(
+  alcances: readonly Alcance[],
+  tipo: TipoOtorgante = 'fisica',
+): CamposVisibles | null {
   if (alcances.length === 0) return null
-  const base = camposDeAlcance(alcances[0])
+  const base = camposDeAlcance(alcances[0], tipo)
   const union = { ...base }
   for (const a of alcances.slice(1)) {
-    const c = camposDeAlcance(a)
+    const c = camposDeAlcance(a, tipo)
     for (const k of Object.keys(union) as (keyof CamposVisibles)[]) union[k] ||= c[k]
   }
-  return { ...union, ...NUNCA_A_UN_TERCERO }
+  return tipo === 'fisica'
+    ? { ...union, ...NUNCA_A_UN_TERCERO }
+    : { ...union, ...NUNCA_NI_REPRESENTANDO }
 }
 
 /**
@@ -160,5 +223,6 @@ export function camposDeAlcances(alcances: readonly Alcance[]): CamposVisibles |
  * `camposDeAlcances`, que va capado. Nunca uses esto para autorizar nada.
  */
 export function etiquetaNivelAlcances(alcances: readonly Alcance[]): Nivel {
-  return alcances.includes('ver_economico') ? 'completo' : 'tarjeta'
+  if (alcances.includes('partes')) return 'gestionar'
+  return alcances.includes('ver_economico') || alcances.includes('documentos') ? 'completo' : 'tarjeta'
 }

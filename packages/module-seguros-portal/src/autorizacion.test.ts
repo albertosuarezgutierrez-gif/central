@@ -12,6 +12,9 @@ import {
   estadoAutorizacion,
   etiquetaNivelAlcances,
   puedeAutorizar,
+  alcancesConcedibles,
+  TITULOS_REPRESENTACION,
+  tituloRepresentacion,
 } from './autorizacion.ts'
 import { NIVELES, camposVisibles } from './acceso.ts'
 
@@ -142,4 +145,73 @@ test('la etiqueta de nivel es solo texto y no decide nada', () => {
   assert.equal(etiquetaNivelAlcances(['ver', 'ver_economico']), 'completo')
   // Aunque la etiqueta diga `completo`, lo servido sigue sin iban.
   assert.equal(camposDeAlcances(['ver_economico'])?.iban, false)
+})
+
+// ─── Persona jurídica: representación, no consentimiento (03/09/2026) ────────
+// Caso real: Pilar Piña Franco gestiona las pólizas de GLOBAL 2 INSTALACIONES
+// TÉCNICAS, `tipo_persona = 'juridica'`. El RGPD protege a las personas
+// FÍSICAS: una sociedad no tiene datos personales, así que ahí no hay
+// consentimiento que dar — hay representación mercantil.
+
+test('una sociedad puede delegar TODO; una persona fisica solo mirar', () => {
+  assert.deepEqual([...alcancesConcedibles('fisica')], ['ver', 'ver_economico'])
+  assert.deepEqual([...alcancesConcedibles('juridica')], [...ALCANCES])
+  assert.equal(alcanceConcedible('partes', 'juridica'), 'partes')
+  assert.equal(alcanceConcedible('documentos', 'juridica'), 'documentos')
+  assert.equal(alcanceConcedible('partes', 'fisica'), null)
+})
+
+test('quien no dice de que tipo es, se trata como PERSONA', () => {
+  // El default tiene que caer al lado restrictivo: uno permisivo aqui abriria
+  // apoderamientos por omision, que es el fallo que no se ve.
+  assert.equal(alcanceConcedible('partes'), null)
+  assert.equal(camposDeAlcance('partes').abrirParte, false)
+  assert.equal(camposDeAlcance('ver_economico').iban, false)
+})
+
+test('representar a una sociedad SI da su IBAN y su CIF', () => {
+  // Son datos de la empresa, no de una persona, y quien la representa los
+  // necesita para su trabajo. Esto es lo que el tope de la fisica prohibe.
+  const eco = camposDeAlcance('ver_economico', 'juridica')
+  assert.equal(eco.iban, true)
+  assert.equal(eco.dniTomador, true)
+  assert.equal(camposDeAlcance('ver_economico', 'fisica').iban, false)
+})
+
+test('los alcances de una sociedad se abren de uno en uno, no en bloque', () => {
+  const eco = camposDeAlcance('ver_economico', 'juridica')
+  assert.equal(eco.abrirParte, false, 'ver lo economico no da para dar partes')
+  assert.equal(eco.documentos, false, 'ver lo economico no da los documentos')
+
+  const partes = camposDeAlcance('partes', 'juridica')
+  assert.equal(partes.abrirParte, true)
+  assert.equal(partes.crearPeticiones, true)
+
+  const docs = camposDeAlcance('documentos', 'juridica')
+  assert.equal(docs.documentos, true)
+  assert.equal(docs.abrirParte, false, 'subir documentacion no da para dar partes')
+})
+
+test('ni representando se puede reautorizar a un cuarto', () => {
+  // Ampliar el circulo es decision de la sociedad y pasa por su propio camino
+  // de representacion; no se hereda de una autorizacion.
+  for (const a of ALCANCES) {
+    assert.equal(camposDeAlcance(a, 'juridica').autorizarTerceros, false, `${a} reautoriza`)
+  }
+  assert.equal(camposDeAlcances(ALCANCES, 'juridica')?.autorizarTerceros, false)
+})
+
+test('el titulo con el que se representa a la sociedad se valida y se guarda', () => {
+  // Si Pilar da un parte, la que queda obligada es GLOBAL 2: tiene que constar
+  // por que podia hacerlo.
+  assert.deepEqual([...TITULOS_REPRESENTACION], ['administrador', 'apoderado', 'empleado_autorizado'])
+  assert.equal(tituloRepresentacion('  Administrador '), 'administrador')
+  assert.equal(tituloRepresentacion('jefe'), null)
+  assert.equal(tituloRepresentacion(null), null)
+})
+
+test('la etiqueta de nivel sube a gestionar cuando hay partes', () => {
+  assert.equal(etiquetaNivelAlcances(['partes']), 'gestionar')
+  assert.equal(etiquetaNivelAlcances(['documentos']), 'completo')
+  assert.equal(etiquetaNivelAlcances(['ver']), 'tarjeta')
 })

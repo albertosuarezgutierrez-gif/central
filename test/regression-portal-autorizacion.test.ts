@@ -32,6 +32,8 @@ import { join } from 'node:path'
 import {
   ALCANCES,
   ALCANCES_CONCEDIBLES,
+  alcanceConcedible,
+  alcancesConcedibles,
   camposDeAlcance,
   camposDeAlcances,
   estadoAutorizacion,
@@ -192,4 +194,35 @@ test('la lectura de la cartera no escribe el registro de accesos', () => {
   )
   // Devuelve QUÉ se usó para que lo anote quien pinta la bóveda.
   assert.match(src, /autorizacionesUsadas/)
+})
+
+// ─── 6. La grieta que abre la persona jurídica ───────────────────────────────
+// Una sociedad no tiene datos personales, así que puede delegar lo que una
+// persona no. Esa excepción es correcta, y es exactamente el sitio por donde se
+// puede colar la vieja: basta con que alguien la aplique por omisión.
+
+test('el default de tipo de otorgante es PERSONA, el lado restrictivo', () => {
+  // Un default permisivo aqui abriria apoderamientos por omision: el fallo que
+  // no se ve, porque no falla nada.
+  assert.equal(alcanceConcedible('partes'), null)
+  assert.equal(camposDeAlcance('partes').abrirParte, false)
+  assert.equal(camposDeAlcance('ver_economico').iban, false)
+  assert.equal(camposDeAlcances(['ver_economico'])?.dniTomador, false)
+})
+
+test('representar a una sociedad NUNCA da reautorizar a un cuarto', () => {
+  for (const a of ALCANCES) {
+    assert.equal(
+      camposDeAlcance(a, 'juridica').autorizarTerceros,
+      false,
+      `el alcance ${a} deja a un representante ampliar el circulo de la sociedad`,
+    )
+  }
+  assert.equal(camposDeAlcances(ALCANCES, 'juridica')?.autorizarTerceros, false)
+})
+
+test('la excepcion es SOLO para juridica: la fisica sigue sin poder apoderar', () => {
+  assert.deepEqual([...alcancesConcedibles('fisica')], [...ALCANCES_CONCEDIBLES])
+  assert.equal(alcancesConcedibles('fisica').includes('partes'), false)
+  assert.equal(alcancesConcedibles('fisica').includes('documentos'), false)
 })
