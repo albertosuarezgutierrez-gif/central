@@ -15,6 +15,22 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-03 · trading-analista** · hizo: PASO 0 sin huella de hoy (último saldo 02/09 20:16,
+  sin fila `trading_pasadas` de hoy) → pasada completa a las 20:15 UTC (disparo normal, no
+  repesca). Preflight `/api/internal/alerta` 200. NAV IBKR 33.068,94€ empujado a `/saldo` (sin
+  salto >15%). Cartera real (CVX 6 uds, VWCE 188 uds) empujada a `/cartera`, 0 descartadas, track
+  OK. `get_account_trades(DAYS_7)` sin operaciones nuevas → `/operaciones` con array vacío +
+  latido `trading_operaciones` ok. Velas de los 24 símbolos de la watchlist delegadas a un
+  subagente (uno a uno, protocolo anti-barajado) para no cargar el contexto principal con OHLCV —
+  mecánico, por la regla de delegación. `/analizar`: 24 analizados, 0
+  vetados/descartados/suplantados/divergentes, top-5 cantado con `stopViable`; ninguna idea pasó
+  las barreras (concentración, posición ya abierta, tendencia bajista) → 0 compras paper nuevas.
+  Contraste de frescura (Yahoo) desfasado 1 día en los 24 símbolos (`sinJuzgar`=24) — cantado en
+  Telegram, es la fuente de contraste, no una anomalía de datos. `/puntuar`: 88 puntuadas, 0
+  cerradas, 0 stops paper aplicados. Atribución earnings: 36 tesis dentro de ventana (+1,21%
+  medio), 0 muestra limpia hoy, 1.812 sin consultar aún. Resumen por Telegram enviado (messageId
+  3998). Hoy es jueves, sin bloque de radar/satélite (solo lunes).
+  dudas: —; fallos: —; PRs/commits: — (solo bitácora y BD vía endpoints, sin tocar código).
 - **2026-09-03 · mercado-booking** · hizo: pasada ACOTADA por prioridad temporal (agosto 2026),
   pedida vía `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6 fechas
   × 4 pisos, aforo correcto por piso) → 240 comps `booking_mcp` escritos, 0 sin respuesta, 0
