@@ -199,6 +199,8 @@ export {
 export {
   TIPOS_RELACION,
   GRUPOS_RELACION,
+  SIN_VINCULO,
+  permiteAutorizar,
   tipoRelacion,
   tipoInverso,
   relacionesDeFicha,

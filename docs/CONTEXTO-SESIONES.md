@@ -42,6 +42,31 @@
   conversación, que es de OTRO programa anterior. Acotados a `/correduria` por tokens (`.correduria` en
   `globals.css` + `layout.tsx`), no por hex sueltos: plataforma es el cuadro de mando de TODOS los negocios.
   Medido en Chromium: a 320 y 390 px el scroller no desborda y la barra de pestañas scrollea sola.
+- **🎨 Portal del cliente: correo propio y aspecto de plataforma (03/09/2026).** Dominio de envío
+  `envios.grupoasegura.es` **verificado en Resend** (DKIM+SPF+MX en IONOS). Es un SUBDOMINIO a
+  propósito: solo puede haber un SPF por dominio y la raíz ya tiene el de IONOS — fusionarlos a mano
+  dejaría a la correduría sin correo. El remitente es `no-reply@envios…` con **`Reply-To`
+  `hola@grupoasegura.es`** (env `PORTAL_MAIL_REPLY_TO`), el buzón único que quiere Alberto.
+  El portal adopta los tokens y las formas de `apps/plataforma` (Inter, `--primary #4f46e5`, cards
+  con `--surface`/`--border`, radios 10/14, 44 px táctiles), con nombres de token que
+  `@central/brand` sabe sobreescribir. **Pendiente:** la paleta REAL de Grupo Asegura — el único
+  logo (Drive) es b/n y lleva «Low Cost», que ya no se usa, y ni `grupoasegura.es` ni la web de
+  Manuel son alcanzables desde el contenedor (proxy de egress + SSO de Vercel).
+
+- **👪 «Antonio Sevico no aparece en Relaciones»: no era un fallo de lectura (03/09/2026).** En la ficha de
+  José Suárez Salas, la tarjeta 👤 mandaba a anotar el vínculo «en Relaciones y autorizaciones» y allí no
+  había ni rastro: esa tarjeta solo pinta `cliente_relaciones`, y el volcado del CRM creó filas para el
+  propietario y el contacto pero NO para el conductor ocasional. **Medido: 17 pares persona↔ficha así, en
+  15 fichas** (de 326). Ahora salen en la propia tarjeta 👪 con botón «Declarar vínculo» que preselecciona
+  la ficha (nada de teclear el nombre y acertar). **Y el duplicado que Alberto no preguntó:** María Antonia
+  sale dos veces porque hay DOS fichas suyas (`intranet:cli:48` con DNI y `asegura_app:cli2:48` sin él) y
+  el vínculo «Cónyuge» cuelga de la del volcado, la que no tiene ninguna póliza viva. Se marca en pantalla
+  (`homonimia`). Alberto dictó «prepara» → **lote 5 escrito y sin ejecutar**
+  (`apps/asegura/prisma/sql/2026-09-03_fusion_mismo_vehiculo_lote5.sql`): 3 pares, guarda = mismo nombre
+  normalizado **+ mismo vehículo** + no dos DNI; con solo el nombre habría 1.010 y fundiría homónimos.
+  Y su segundo dictado —«Antonio Sevico no tiene vinculación ninguna»— destapó que no se podía ANOTAR eso:
+  nuevo tipo `Sin vínculo` (no autoriza nada, ni con el flag puesto: la guarda vive en `clientesVisiblesPara`
+  y en el puerto, no solo en el botón). **Pendiente: que Alberto ejecute el lote 5.**
 
 - **🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto (03/09/2026).**
   `asegura-portal` sirve en https://asegura-portal.vercel.app, pero `POST /api/acceso/solicitar` daba 500:
@@ -51,6 +76,29 @@
   redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
   `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
   este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
+- **🚗 El catálogo de versiones exige el COMBUSTIBLE, y la doc decía lo contrario (03/09/2026).**
+  Con marca/modelo ya preseleccionados, el desplegable de versiones salía vacío y con un 400 crudo del
+  vendor: `/car/brands/{id}/models/{id}/vehicles` pide `engine` **también en auto**, y
+  `docs/CODEOSCOPIC-API-PORTAL.md` afirmaba que ahí era «texto libre» (se leyó como opcional). Sin
+  versiones no hay código Base7 y no se puede cotizar: la pantalla quedaba inútil. Añadido el catálogo
+  `/car/engine-types` (gratis) y un desplegable **Combustible** antes de Versión; el puerto rechaza la
+  petición sin `motor` con su nombre en vez de dejar pasar el 400. **No se adivina de la ficha**: lo que
+  ella guarda es un código EIAC («1»), de otro catálogo — traducirlo sería inventar el motor de un coche
+  real. Doc corregida y cepo ampliado (10 casos). Método: **el snapshot del portal describe el contrato;
+  el contrato de verdad lo dicta la respuesta.**
+
+- **🔧 «Retarificar» mentía dos veces, y las dos igual: un «no lo sé» convertido en «no lo hay» (03/09/2026).**
+  Alberto abrió la pantalla y preguntó por los datos del coche. (1) Decía «la compañía manda la matrícula pero
+  no el modelo»: **falso** — las 80 pólizas de auto vivas traen matrícula, marca Y modelo (la de la captura,
+  `SMART / FORFOUR`); lo único que no trae ninguna es la **versión**. Ahora marca y modelo se preseleccionan
+  desde la ficha y las versiones del histórico se enseñan como PISTAS con su procedencia, sin autoseleccionarse
+  jamás — la misma matrícula puede traer dos que se contradigan (medido en `0432GLT`). (2) El aviso rojo
+  «Tarificación apagada… cuesta 0,50€» se pintaba aunque `CODEOSCOPIC_SIMULACION` estuviera puesta, y la
+  simulación es el **paso 0 de `cotizar()`, antes** del interruptor de gasto: el botón cotizaba gratis mientras
+  la pantalla decía lo contrario. Ya lo dice bien, y qué precio es simulado lo decide la RESPUESTA (`simulado`
+  OR `projectId` negativo), nunca la prop. Y por «esto está muy mal estructurado y diseñado» (Alberto): pantalla
+  rediseñada en 3 pasos, el coste separado y en rojo, las faltas marcadas en su propio campo. Cepo:
+  `test/regression-retarificar-vehiculo.test.ts`. **Regla nueva: el rediseño de UI se delega SIEMPRE a un agente.**
 
 - **✅ Tarificaciones guardadas APLICADAS en la BD (03/09/2026).** PR #2154 mergeado y Alberto ejecutó el SQL:
   `seguros.tarificaciones` (22 col.) y `seguros.tarificacion_precios` (14 col.) existen en `wswbehlcuxqxyinousql`,

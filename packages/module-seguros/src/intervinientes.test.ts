@@ -238,3 +238,43 @@ test('sin NIF en ninguna fila se comporta como antes (409 de 504 filas hoy)', ()
   ], POLIZAS, [])
   assert.equal(r?.length, 1)
 })
+
+// ── Homonimia: se dice, no se funde ni se calla (03/09/2026) ─────────────────
+
+test('José Suárez Salas: la misma persona en DOS fichas se marca «sin_distinguir»', () => {
+  // Medido en la cartera: «María Antonia Gutiérrez Alcalá» sale dos veces con
+  // las mismas tres matrículas porque hay dos fichas suyas (una del volcado
+  // `intranet:cli:48` con DNI, otra de `asegura_app:cli2:48` sin él). No se
+  // funden —una no trae NIF— pero la pantalla tiene que poder decirlo.
+  const r = personasDePolizas([
+    base({ polizaId: 'pA', rol: 'propietario', nombre: 'Maria Antonia Gutierrez Alcala', personaClave: 'p1', fichaId: 'f-cima' }),
+    base({ polizaId: 'pB', rol: 'propietario', nombre: 'María Antonia Gutiérrez Alcalá', fichaId: 'f-volcado' }),
+  ], POLIZAS, [])
+  assert.equal(r?.length, 2)
+  assert.deepEqual(r?.map(p => p.homonimia), ['sin_distinguir', 'sin_distinguir'])
+})
+
+test('dos homónimos con NIF distinto se marcan «distinta_persona», no «duplicada»', () => {
+  const r = personasDePolizas([
+    base({ polizaId: 'pA', rol: 'conductor_habitual', nombre: 'Juan Perez', personaClave: 'p1' }),
+    base({ polizaId: 'pB', rol: 'conductor_habitual', nombre: 'Juan Perez', personaClave: 'p2' }),
+  ], POLIZAS, [])
+  assert.deepEqual(r?.map(p => p.homonimia), ['distinta_persona', 'distinta_persona'])
+})
+
+test('sin homónima, `homonimia` es null (no se avisa de nada)', () => {
+  const r = personasDePolizas([
+    base({ polizaId: 'pA', rol: 'conductor_habitual', nombre: 'A', fichaId: 'f1' }),
+    base({ polizaId: 'pB', rol: 'conductor_habitual', nombre: 'B', fichaId: 'f2' }),
+  ], POLIZAS, [])
+  assert.deepEqual(r?.map(p => p.homonimia), [null, null])
+})
+
+test('las tildes no parten a una persona en dos cuando el nombre es lo único que hay', () => {
+  const r = personasDePolizas([
+    base({ polizaId: 'pA', rol: 'propietario', nombre: 'María Antonia' }),
+    base({ polizaId: 'pB', rol: 'propietario', nombre: 'MARIA  ANTONIA' }),
+  ], POLIZAS, [])
+  assert.equal(r?.length, 1)
+  assert.equal(r?.[0].homonimia, null)
+})

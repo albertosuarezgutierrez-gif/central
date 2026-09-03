@@ -62,6 +62,9 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
     documentos: ficha.documentos,
   })
 
+  // Se calculan UNA vez y las usan tres cosas: el contador de la pestaña, la
+  // tarjeta 👤 y la 👪 —que ofrece declarar el vínculo de quien sale sin él
+  // (Antonio Sevico en la ficha de José Suárez Salas, 03/09/2026)—.
   // `null` = no se pudo leer quién interviene; el contador no se pinta (y no se
   // pinta 0, que diría «no hay nadie»).
   const personas = personasDePolizas(
@@ -110,7 +113,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         />
       )}
 
-      {tab === 'contactos' && <TabContactos ficha={ficha} />}
+      {tab === 'contactos' && <TabContactos ficha={ficha} personas={personas} />}
 
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       {tab === 'documentos' && (

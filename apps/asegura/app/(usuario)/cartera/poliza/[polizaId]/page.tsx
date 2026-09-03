@@ -4,6 +4,7 @@ import { requireSession } from '@/lib/session'
 import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion, type OrigenRetarificacion } from '@/lib/cartera-ficha'
 import { precalificarAuto, type Resueltos } from '@/lib/codeoscopic/desde-cartera'
+import { simulacionActiva } from '@/lib/codeoscopic/config'
 import {
   precalificarHogarCartera,
   partirDireccion,
@@ -226,6 +227,8 @@ async function PantallaAuto({
 
       <Retarificador
         polizaId={polizaId}
+        vehiculo={origen.poliza.vehiculo}
+        simulacion={simulacionActiva(process.env)}
         faltanInicial={pre.faltan}
         garajes={garajes}
         civiles={civiles}
