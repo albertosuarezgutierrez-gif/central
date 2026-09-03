@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-03T12:38:59Z",
+  "generadoEn": "2026-09-03T13:36:11Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -351,7 +351,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 1
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1951,11 +1951,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 30
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 17
       },
       "housesevillana": {
         "estado": "no",
@@ -2051,11 +2051,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 14
       },
       "housesevillana": {
         "estado": "no",
@@ -2075,7 +2075,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -3625,9 +3625,13 @@
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
+      "/api/autorizaciones",
+      "/api/autorizaciones/[id]",
       "/api/polizas",
       "/api/polizas/[id]",
-      "/api/siniestros"
+      "/api/siniestros",
+      "/api/siniestros/[id]/adjuntos",
+      "/api/siniestros/[id]/adjuntos/[documentoId]"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -4926,6 +4930,9 @@
       "seguros.whatsapp_outbound_messages"
     ],
     "asegura-portal": [
+      "seguros.cliente_relaciones_permiso_volcado",
+      "seguros.portal_autorizacion",
+      "seguros.portal_autorizacion_uso",
       "seguros.portal_bien",
       "seguros.portal_canal",
       "seguros.portal_codigo",
@@ -5854,7 +5861,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1261,
+    "apis": 1265,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
