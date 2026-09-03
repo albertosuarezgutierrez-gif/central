@@ -297,11 +297,16 @@ export {
   capitalAsegurado,
   capitalesHogar,
   eurDeCapital,
+  eurDeCapitalConVolcado,
+  importeDelVolcado,
   GARANTIAS_MINIMAS_CONSENSO,
+  CAPITAL_DEL_VOLCADO_MOTIVO,
   type LadoRiesgo,
   type CoberturaLeible,
   type CapitalAsegurado,
   type CapitalesHogar,
+  type CapitalVolcado,
+  type CapitalesVolcado,
 } from './garantias.ts'
 export {
   clasificarPolizaFicha,
@@ -311,3 +316,12 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+
+export {
+  planBackfillDni,
+  type FichaDni,
+  type Destino,
+  type FilaPlan,
+  type GrupoChoque,
+  type PlanBackfillDni,
+} from './backfill-dni.ts'
