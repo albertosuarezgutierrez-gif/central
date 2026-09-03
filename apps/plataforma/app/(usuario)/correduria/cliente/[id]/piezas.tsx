@@ -88,11 +88,12 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes 
                 <td style={td}><CeldaRecibos r={p.recibos} /></td>
                 <td style={td}>
                   {p.retarificable && p.estado !== 'cancelada' ? (
-                    // El único salto a asegura: es donde se gasta el dinero, y
-                    // se gasta detrás de su propia pantalla de confirmación.
-                    <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ whiteSpace: 'nowrap' }}>
+                    // Interna desde el 03/09/2026: la pantalla que gasta los
+                    // 0,50€ vive en /correduria, con su confirmación delante.
+                    // Ya no salta a asegura, que echaba al login.
+                    <Link href={urlRetarificar(p.id)} style={{ whiteSpace: 'nowrap' }}>
                       {rotuloRetarificar(p.retarificacion)}
-                    </a>
+                    </Link>
                   ) : (
                     <span style={{ color: 'var(--muted)' }} title={motivoNoRetarificable(p)}>—</span>
                   )}

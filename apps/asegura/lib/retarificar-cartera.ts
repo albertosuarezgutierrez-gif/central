@@ -63,6 +63,7 @@ import {
 } from '@/lib/codeoscopic/peticion-hogar'
 import type { Supuesto } from '@/lib/codeoscopic/desde-cartera'
 import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
+import { sanearSupuestos } from '@/lib/codeoscopic/precalificar-publica'
 import {
   marcas,
   modelos,
@@ -242,7 +243,17 @@ export function respuestaRetarificacion(
       guardado: r.guardado,
       // Los supuestos viajan CON el precio para que la pantalla los enseñe al
       // lado de la prima, no en otra pestaña: son la letra pequeña de esa cifra.
-      supuestos: preparado.supuestos,
+      //
+      // 🔒 Pero SANEADOS: uno de ellos es `cpCirculacion`, y su valor es el
+      // código postal DEL TOMADOR («se supone que el coche circula y aparca
+      // donde vive»). El puerto no publica la dirección a propósito
+      // (`apps/asegura/CLAUDE.md`), y un CP es dirección. Se conserva el
+      // supuesto entero —campo, motivo y marca de optimista— y solo se retira
+      // el valor, con `oculto: true`: esconderlo del todo cambiaría una fuga
+      // por un silencio sobre la letra pequeña del precio, que es la otra forma
+      // de mentir. Detectado el 03/09/2026 al mover la pantalla a plataforma:
+      // la fuga ya existía aquí antes de la mudanza.
+      supuestos: sanearSupuestos(preparado.supuestos),
       ...(preparado.fuenteRiesgo !== undefined ? { fuenteRiesgo: preparado.fuenteRiesgo } : {}),
     },
   }

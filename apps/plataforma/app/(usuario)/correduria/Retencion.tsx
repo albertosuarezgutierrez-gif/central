@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { eur } from '@/lib/dinero'
 import { MOTIVOS_PUERTO, type EnRiesgo, type Impagados } from '@/lib/correduria-puerto'
+import { urlRetarificar } from '@/lib/ficha-asegura'
 import { BtnLink } from '@/components/ui'
 
 /**
@@ -36,7 +37,7 @@ const TIPOS: Record<string, string> = {
 
 const POR_PAGINA = 25
 
-export default function Retencion({ urlAsegura }: { urlAsegura: string }) {
+export default function Retencion() {
   const [datos, setDatos] = useState<Impagados | null>(null)
   const [ver, setVer] = useState(POR_PAGINA)
 
@@ -120,7 +121,7 @@ export default function Retencion({ urlAsegura }: { urlAsegura: string }) {
               el teléfono en la mano, y el botón de llamar tiene que ser táctil. */}
           <div style={{ display: 'grid', gap: 8 }}>
             {visibles.map((f) => (
-              <Fila key={f.polizaId} f={f} urlAsegura={urlAsegura} />
+              <Fila key={f.polizaId} f={f} />
             ))}
           </div>
           {ver < filas.length && (
@@ -142,7 +143,7 @@ export default function Retencion({ urlAsegura }: { urlAsegura: string }) {
   )
 }
 
-function Fila({ f, urlAsegura }: { f: EnRiesgo; urlAsegura: string }) {
+function Fila({ f }: { f: EnRiesgo }) {
   const e = ESTILO[f.estado]
   return (
     <div
@@ -199,10 +200,15 @@ function Fila({ f, urlAsegura }: { f: EnRiesgo; urlAsegura: string }) {
         )}
 
         {/* Retener «en otra compañía» es pedir precio de calle, y eso gasta
-            0,50€ reales: vive en asegura, tras su pantalla de confirmación. */}
+            0,50€ reales — así que sigue habiendo una pantalla de confirmación
+            delante. Lo que cambia desde el 03/09/2026 es DÓNDE: era un salto a
+            asegura (otro dominio, otra sesión → 307 al login, medido en
+            producción) y ahora es interna, en /correduria. Por eso tampoco
+            abre pestaña nueva. Hogar todavía no está portado y `urlRetarificar`
+            manda a una pantalla que reenvía a asegura, que es donde funciona. */}
         {f.retarificable && (
-          <BtnLink href={`${urlAsegura}/cartera/poliza/${f.polizaId}`} variante="secundario" nuevaPestana>
-            {f.retarificacion?.ramo === 'hogar' ? 'Precio de hogar en otra compañía ↗' : 'Precio en otra compañía ↗'}
+          <BtnLink href={urlRetarificar(f.polizaId)} variante="secundario">
+            {f.retarificacion?.ramo === 'hogar' ? 'Precio de hogar en otra compañía' : 'Precio en otra compañía'}
           </BtnLink>
         )}
       </div>

@@ -84,6 +84,20 @@
   redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
   `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
   este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
+- **🔀 Retarificar se muda a `/correduria`: se acabó el salto al login (03/09/2026).** Alberto quiso
+  retarificar a un cliente desde su pantalla y le echó al login — medido: `GET /cartera/poliza/… → 307`.
+  No era un fallo: `asegura` y `plataforma` son dos apps con sesiones distintas y retarificar vivía en la
+  primera. Dictado suyo: unificar. Tres endpoints nuevos en el puerto (`codeoscopic/catalogos`,
+  `precalificar` y el que GASTA, `retarificar`), la pantalla portada a `/correduria/poliza/[id]/retarificar`
+  y **6 enlaces ↗ internalizados** (uno, el de la cola de retención, no estaba ni en el inventario).
+  🚨 Tres cosas que destapó la mudanza: (1) `lib/operador.ts` **no distingue método**, así que servir el
+  gasto por el puerto abría un cargo a quien tuviera el Bearer → cerrojo **`confirmado === true` estricto**
+  antes de tocar la BD; (2) esconder `cotizar()` en el lib compartido dejaba el guardián del gasto **en
+  verde sin vigilar ninguna ruta** — falso verde sobre el dinero, así que la llamada se queda en cada ruta;
+  (3) **el CP del tomador ya cruzaba el puerto** dentro de los supuestos (`cpCirculacion`), fuga anterior a
+  la mudanza: `sanearSupuestos()` retira el valor y **conserva el supuesto**, porque ocultarlo entero
+  cambiaría una fuga por un silencio sobre la letra pequeña del precio. Hogar sigue saltando a asegura.
+
 - **🧪 La PRIMERA simulación real destapó dos mentiras más, y la BD las cazó (03/09/2026).** Alberto pulsó
   «Simular precio» en una póliza de auto: `seguros.tarificaciones` guardó 1 fila `simulado=true`,
   `intento_id NULL`, `project_id -377989` y **0 filas en el libro de gasto** — la simulación funciona y no
