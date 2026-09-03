@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, personasDePolizas, ventanaAnulacion, type EstadoClienteDerivado, type PersonaDePolizas } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, SIN_VINCULO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, personasDePolizas, ventanaAnulacion, type EstadoClienteDerivado, type PersonaDePolizas } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
@@ -662,7 +662,9 @@ function PersonasPolizas({ ficha, personas }: { ficha: Ficha; personas: PersonaD
           {p.email && <> · <a href={`mailto:${p.email}`}>✉️</a></>}
           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
             {p.relacionDeclarada
-              ? `👪 ${p.relacionDeclarada}`
+              ? (p.relacionDeclarada === SIN_VINCULO
+                  ? '✅ revisado: no hay vínculo — sale en sus pólizas y no es nada suyo'
+                  : `👪 ${p.relacionDeclarada}`)
               : p.fichaId
                 ? 'sin vínculo declarado — abajo, en 👪 Relaciones y autorizaciones, hay un botón para anotarlo'
                 : 'CIMA no la ha enlazado a una ficha propia: no se le puede declarar un vínculo todavía'}

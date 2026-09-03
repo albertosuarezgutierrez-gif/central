@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { GRUPOS_RELACION, explicarAutorizacion, type TipoRelacion } from '@central/module-seguros'
+import { GRUPOS_RELACION, SIN_VINCULO, explicarAutorizacion, permiteAutorizar, type TipoRelacion } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import {
   interpretarRelaciones,
@@ -88,6 +88,13 @@ export default function Relaciones({
     void ejecutar(`aut-${r.relacionadoId}`, 'PATCH', { relacionadoId: r.relacionadoId, autoriza })
   }
 
+  // «Revisado: no son nada» en un clic, sin pasar por el formulario. Es la
+  // respuesta correcta para la mayoría de los que salen ahí (Alberto, 03/09/2026:
+  // «Antonio Sevico no tiene vinculación ninguna») y hasta hoy no se podía decir.
+  function sinVinculoDe(p: SugerenciaVinculo) {
+    void ejecutar(`nada-${p.fichaId}`, 'POST', { relacionadoId: p.fichaId, tipo: SIN_VINCULO })
+  }
+
   function quitar(r: RelacionCartera) {
     if (!confirm(`¿Quitar la relación con ${r.nombre}? Se borra en los dos sentidos (también la autorización, si la había).`)) return
     void ejecutar(`del-${r.relacionadoId}`, 'DELETE', { relacionadoId: r.relacionadoId })
@@ -129,6 +136,8 @@ export default function Relaciones({
         personas={lista === null ? [] : sinVinculo.filter((p) => !lista.some((r) => r.relacionadoId === p.fichaId))}
         nombreFicha={nombreFicha}
         onDeclarar={(p) => setPreseleccion((v) => ({ cand: { id: p.fichaId, nombre: p.nombre, tipo: '', polizas: 0 }, n: (v?.n ?? 0) + 1 }))}
+        onSinVinculo={sinVinculoDe}
+        ocupado={ocupado}
       />
 
       <Anadir
@@ -159,6 +168,33 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
 }) {
   const ficha = `/correduria/cliente/${r.relacionadoId}`
   const enCurso = ocupado === `aut-${r.relacionadoId}` || ocupado === `del-${r.relacionadoId}`
+  // `Sin vínculo` no es un parentesco: es la constancia de que se miró y no hay
+  // ninguno. Ni se explica quién ve qué ni se ofrece autorizar (el puerto lo
+  // rechaza igualmente con un 422, y el portal ni mira esas filas).
+  const revisadoSinVinculo = !permiteAutorizar(r.tipo)
+  if (revisadoSinVinculo) {
+    return (
+      <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
+          <Link href={ficha} style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{r.nombre}</Link>
+          <span style={{ fontSize: 13 }}>· revisado: no hay vínculo</span>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Sale en las pólizas de {nombreFicha} pero no es nada suyo. Queda anotado para no volver
+          a preguntarlo, y <strong>no puede ver sus seguros</strong>: para autorizar a alguien hace
+          falta antes una relación de verdad.
+        </div>
+        {r.observaciones && (
+          <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
+        )}
+        <div>
+          <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal' }}>
+            Quitar la anotación
+          </button>
+        </div>
+      </li>
+    )
+  }
   return (
     <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
@@ -384,10 +420,12 @@ export type SugerenciaVinculo = {
  * Que estén aquí NO es un vínculo: es «esta persona sale en sus pólizas y no
  * has dicho qué es tuyo». La lista vacía se calla; no se inventa una relación.
  */
-function SinVinculo({ personas, nombreFicha, onDeclarar }: {
+function SinVinculo({ personas, nombreFicha, onDeclarar, onSinVinculo, ocupado }: {
   personas: SugerenciaVinculo[]
   nombreFicha: string
   onDeclarar: (p: SugerenciaVinculo) => void
+  onSinVinculo: (p: SugerenciaVinculo) => void
+  ocupado: string | null
 }) {
   if (personas.length === 0) return null
   return (
@@ -405,6 +443,16 @@ function SinVinculo({ personas, nombreFicha, onDeclarar }: {
             {p.papel && <span style={{ fontSize: 12, color: 'var(--muted)' }}>· {p.papel}</span>}
             <button type="button" onClick={() => onDeclarar(p)} style={{ ...btnStyle('secundario', 'sm'), whiteSpace: 'normal', textAlign: 'left' }}>
               👪 Declarar vínculo
+            </button>
+            {/* La otra respuesta posible, y la más frecuente. Sin ella, esta lista
+                pediría el vínculo de un conductor ocasional hasta el fin de los días. */}
+            <button
+              type="button"
+              disabled={ocupado === `nada-${p.fichaId}`}
+              onClick={() => onSinVinculo(p)}
+              style={{ ...btnStyle('sutil', 'sm'), whiteSpace: 'normal', textAlign: 'left' }}
+            >
+              {ocupado === `nada-${p.fichaId}` ? 'Guardando…' : 'No hay vínculo'}
             </button>
             {p.ojoDuplicada && (
               <span style={{ fontSize: 11, color: 'var(--warning)', flexBasis: '100%' }}>
