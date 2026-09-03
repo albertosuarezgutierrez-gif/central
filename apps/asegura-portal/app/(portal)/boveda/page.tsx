@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-import { etiquetaProcedencia } from '@central/module-seguros-portal'
+import { etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
@@ -11,10 +11,12 @@ import {
   polizasSinFechaDeVencimiento,
   sincronizarObligacionesDeIdentidad,
 } from '@/lib/obligaciones'
+import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
 import { EditarPoliza } from './EditarPoliza'
+import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
 
 export const dynamic = 'force-dynamic'
@@ -55,16 +57,17 @@ export default async function Boveda() {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
-  // Las dos lecturas parten de la misma sesión: la cartera por `portal_vinculo`
-  // de esta identidad, y la bóveda de declaradas por `identidadId`. Ninguna
-  // acepta un id que venga de fuera.
-  const [cartera, declaradas] = await Promise.all([
+  // Las tres lecturas parten de la misma sesión: la cartera por `portal_vinculo`
+  // de esta identidad, y la bóveda de declaradas y los partes por `identidadId`.
+  // Ninguna acepta un id que venga de fuera.
+  const [cartera, declaradas, partes] = await Promise.all([
     carteraDeIdentidad(identidad.id),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
       orderBy: { creadaEn: 'desc' },
       take: 50,
     }),
+    partesDeIdentidad(identidad.id),
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
@@ -75,6 +78,53 @@ export default async function Boveda() {
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo Asegura'
+
+  // Lo que se le ofrece elegir al dar un parte. Incluye las AUTORIZADAS a
+  // propósito: la ruta acepta lo mismo (`carteraDeIdentidad` propias +
+  // autorizadas), y ofrecer menos de lo que el backend admite deja fuera al
+  // conductor que sí puede declarar el golpe del coche de su padre. La lista
+  // sale SIEMPRE de la cartera ya leída para esta identidad: ningún id de
+  // póliza entra desde la request.
+  const polizasParte: PolizaOpcionParte[] = [
+    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p))),
+    ...cartera.autorizadas.flatMap((t) =>
+      t.polizas.map((p) => opcionCartera(p, t.nombre)),
+    ),
+    ...declaradas.map((p) => ({
+      valor: `declarada:${p.id}`,
+      etiqueta: [
+        p.compania ?? 'Compañía sin identificar',
+        p.ramo ? RAMO[p.ramo] ?? p.ramo : null,
+        p.numeroPoliza ? `nº ${p.numeroPoliza}` : null,
+        // Se dice de dónde sale para que no parezca otra póliza de la
+        // correduría: esta la aportó la propia persona y puede que nosotros no
+        // la tengamos contratada.
+        'la añadiste tú',
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    })),
+  ]
+
+  // El plazo del art. 16 LCS se calcula AQUÍ, en el servidor, y no en el
+  // componente de cliente: `plazoComunicacion` necesita un «hoy», y un «hoy»
+  // calculado en el navegador daría un número distinto al del servidor en el
+  // primer render (aviso de hidratación) y otro más en cada zona horaria. La
+  // página es `force-dynamic`, así que se recalcula en cada visita.
+  const hoy = new Date()
+  const partesEnviados: ParteEnviado[] = partes.map((p: PartePortal) => ({
+    id: p.id,
+    // Columna `date`: llega como medianoche UTC, así que el ISO recortado es
+    // exactamente el día que declaró la persona, sin desfase de zona.
+    fechaHecho: p.fechaHecho.toISOString().slice(0, 10),
+    descripcion: p.descripcion,
+    // 🚨 De `comunicado` (que sale de `comunicadoACompania()`), NUNCA de un
+    // `estado !== 'enviado'`: `recibido` es «lo hemos leído nosotros», que es
+    // justo el estado que se confunde con estar comunicado a la compañía.
+    comunicado: p.comunicado,
+    estado: p.estado,
+    plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy }),
+  }))
 
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
@@ -108,6 +158,11 @@ export default async function Boveda() {
           ))}
         </section>
       )}
+
+      {/* El parte va ANTES de la bóveda de aportadas: quien entra con un
+          siniestro recién ocurrido tiene prisa, y la bóveda es una tarea
+          tranquila que puede esperar a mañana. */}
+      <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
 
       <section className="seccion" aria-labelledby="boveda-titulo">
         <h2 id="boveda-titulo">Pólizas que has añadido tú</h2>
@@ -364,4 +419,25 @@ function Coberturas({ p }: { p: PolizaPortal }) {
       {c.total > c.lista.length && ` y ${c.total - c.lista.length} más`}
     </div>
   )
+}
+
+/**
+ * La etiqueta de una póliza de la CARTERA en el desplegable del parte.
+ *
+ * Con `titular` cuando la póliza es de otra persona que ha autorizado a esta:
+ * sin el nombre, dos pólizas de auto de la misma compañía son indistinguibles y
+ * el parte acaba colgado de la del padre en vez de la del hijo.
+ */
+function opcionCartera(p: PolizaPortal, titular?: string): PolizaOpcionParte {
+  return {
+    valor: `cartera:${p.id}`,
+    etiqueta: [
+      p.compania,
+      RAMO[p.ramo] ?? p.ramo,
+      p.numeroPoliza ? `nº ${p.numeroPoliza}` : null,
+      titular ? `de ${titular}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  }
 }

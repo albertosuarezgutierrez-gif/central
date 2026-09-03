@@ -20,3 +20,22 @@ export {
   obligacionDerivable,
 } from './obligacion.ts'
 export type { VigenciaObligacion } from './obligacion.ts'
+export {
+  PARTE_ESTADOS,
+  DIAS_COMUNICACION_LCS,
+  DESCRIPCION_MIN,
+  DESCRIPCION_MAX,
+  LUGAR_MAX,
+  ANIOS_MAXIMOS_ATRAS,
+  comunicadoACompania,
+  parsearFechaHecho,
+  plazoComunicacion,
+  normalizarParte,
+} from './parte-siniestro.ts'
+export type {
+  ParteEstado,
+  ParteEntrada,
+  ParteNormalizado,
+  ResultadoParte,
+  PlazoComunicacion,
+} from './parte-siniestro.ts'
