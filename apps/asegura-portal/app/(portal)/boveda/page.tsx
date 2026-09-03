@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
@@ -129,6 +130,13 @@ export default async function Boveda() {
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mis seguros</h1>
+
+      {/* La pantalla del consentimiento. Va arriba y no escondida al final: quien
+          quiere saber quién le está mirando los seguros —o quitárselo a alguien—
+          no debería tener que recorrer toda la bóveda para encontrarlo. */}
+      <p style={{ margin: '0 0 16px', fontSize: 14 }}>
+        <Link href="/autorizaciones">Quién puede ver mis seguros</Link>
+      </p>
 
       <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
 
