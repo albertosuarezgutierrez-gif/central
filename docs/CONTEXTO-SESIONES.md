@@ -30,6 +30,12 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔎 Check-in post-fusión CIMA (03/09/2026, 06:18 UTC).** Fusión `fusion-cima-2026-09-02` (34 fusiones,
+  33 supervivientes, 13:16–13:35 UTC) verificada tras el pull programado de las 15:12 UTC: **0 fichas nuevas,
+  0 reapariciones, 0 pólizas colgando de lápida**. Hallazgo colateral: el cron `cima-pull` del repo `asegura`
+  **falló 3 veces con HTTP 500 del CRM** (31/08 11:34, 01/09 10:19 y 15:30) sin heartbeat en la BD y sin aviso
+  en Telegram (solo Slack); se recuperó solo el 02/09 (4 runs verdes). GitHub retrasa el cron de las 05:30
+  hasta ~3 h (ayer 09:47), así que a las 06:18 «no ha corrido» no es fallo: recomprobación programada a las 09:43.
 - **💾📐🗺️ Etapa 2 de tarificación + el mapa de campos (02/09/2026, tarde-noche).** Cada cotización
   cuesta 0,50€ y no es idempotente, así que ahora se GUARDA lo que se recibe (`seguros.cotizaciones` +
   `cotizacion_precios`, invariante `simulado = (intento_id is null)` en la BD) y `estimar()`/`mereceLaPena()`
