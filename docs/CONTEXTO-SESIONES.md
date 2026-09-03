@@ -30,7 +30,7 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **📱 `/correduria` en el MÓVIL, con la primera captura real (03/09/2026).** Alberto, sobre la
+- **📱 `/correduria` en el MÓVIL, con la primera captura real (03/09/2026, PR #2216).** Alberto, sobre la
   pantalla ya rediseñada: «aún se puede mejorar… casi siempre uso el móvil». 🚨 Y ahí está lo
   importante: la skill `plataforma-maestro` advertía que **ninguna pantalla de la app se ha visto
   nunca renderizada** (`--sin-previews`, las sesiones no tienen navegador) y que los espaciados
@@ -52,6 +52,10 @@
   mirarla. O sea que **la pantalla renderizada sigue sin verse**, igual que las otras 55: lo
   medido son tsc/tests/build, y los px salen de su captura y del CSS, no de la página viva. Si
   algo se ve raro en `/correduria` en móvil, empieza por aquí y no por el código.
+  🤖 CI, **novena medición** de la sección del `CLAUDE.md` raíz: el push del merge de `main` con el
+  PR **en draft** salió mudo y el **des-draft a secas** disparó los 19 runs al instante, sin push
+  posterior — como la octava, y otra vez contra la matización de la séptima. Sigue sin causa; el
+  orden documentado resuelve, así que no gastes tiempo en diagnosticarla.
 
 - **🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos (03/09/2026, PR #2210).**
   1️⃣ **El email de Alberto estaba en `cliente_emails` de DOS desconocidos**, así que `vincularIdentidad`
