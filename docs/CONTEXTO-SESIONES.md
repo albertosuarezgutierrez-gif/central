@@ -682,6 +682,14 @@
 
 ---
 
+### 🧊 (03/09/2026) La guarda de outlier protegía al fallo que ella misma debía deshacer (PR seguimiento del #2228)
+- La pasada de las 20:30 (1ª con la guarda de monotonía) corrigió **3** de las 61 noches infladas de Busto; las otras 58 seguían a 113€.
+- Causa: el **outlier de precio actual** (`OUTLIER_RATIO 1,4`, >30 días). El bug del #2192 las dejó a 113€ con base normal ~80 → 1,41, y la guarda leyó ese precio inflado como «noche especial». La salida del fallo se volvió su coartada; la llave por antigüedad no abría hasta 21 días.
+- Alcance medido: **86 noches de 3 pisos, TODAS a la venta**, salto medio +28% (Busto 67 · Luxury 12 · Dúplex 7).
+- Cura: 3ª llave de `descongelar` — `esSaltoNuestro` (puro, 11 tests). Libera solo si la última escritura es (a) ≤48 h, (b) subida, (c) la que cruzó el umbral y (d) su precio es el que sigue vivo. Si el propietario tocó Smoobu después, (d) falla y retiene.
+- `ultima_escritura` pasa de `MAX()` a `DISTINCT ON` para traer old/new y horas. SQL ejecutado contra la BD real antes de mergear.
+- Verificado: 742 sivra · 463 guardián · 53 vitest · tsc 0.
+
 ### 🧾 (03/09/2026) Comisiones: el cron ya escribe, Occident CUADRA AL CÉNTIMO y el «deudor» era un fallo de signo (solo lectura)
 - Pasada 07:30 UTC OK: 12 periodos en `comisiones_devengo`, 4 en cobertura, aviso 🔴 enviado. **CIMA no trajo nada nuevo**
   (recibos 184 / extractos 7 / liquidaciones 9, idéntico a anoche; ingesta DEGRADADA, 62 días sin guardar).
