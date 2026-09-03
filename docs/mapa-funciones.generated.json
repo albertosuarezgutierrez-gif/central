@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T18:36:09Z",
-  "sha": "e4d1d046d8a9ce8383ac20745abeb2b07c601ea0",
+  "generadoEn": "2026-09-03T21:03:22Z",
+  "sha": "c27259a264a37bcd1bca42b0e073294b1abd4c37",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -68680,7 +68680,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "0a810e6ded5b"
+      "hash": "76ad34cff324"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -87665,7 +87665,8 @@
       "resumen": "lib/sivra/pricing-descongelar.ts — la SEGUNDA llave de los congeladores. POR QUÉ (27/08/2026). El motor tiene dos guardas que abortan la escritura de una fecha para no bajarle el precio «a ciegas»: la de OUTLIER (el precio vivo supera en +40% lo normal del piso y faltan más de 30 días) y la de EVENT",
       "exporta": [
         "descongelar",
-        "detalleDescongeladas"
+        "detalleDescongeladas",
+        "esSaltoNuestro"
       ],
       "funciones": [
         {
@@ -87674,7 +87675,7 @@
           "exportada": true,
           "params": "i: DescongelarInput, o: DescongelarOpts = {}",
           "retorno": "Descongelar",
-          "linea": 72
+          "linea": 109
         },
         {
           "nombre": "detalleDescongeladas",
@@ -87682,13 +87683,22 @@
           "exportada": true,
           "params": "filas: { fecha: string; motivo: string }[],",
           "retorno": "string | null",
-          "linea": 96,
+          "linea": 139,
           "resumen": "Parte legible para la respuesta y el latido. Una descongelación en masa tiene que poder distinguirse de una pasada normal sin abrir la BD."
+        },
+        {
+          "nombre": "esSaltoNuestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "ue: UltimaEscritura | null, ctx: SaltoNuestroCtx",
+          "retorno": "boolean",
+          "linea": 194,
+          "resumen": "(d) su precio es el que sigue vivo — si el propietario lo cambió en Smoobu después, el precio de hoy es SUYO, viene de fuera del modelo y la guarda tiene que retener. Sin lectura de historial (`null`)"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a86f8eb5699b"
+      "hash": "4262e60b94d5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-engine.ts",
@@ -117468,6 +117478,6 @@
   ],
   "resumen": {
     "archivos": 2938,
-    "funciones": 8783
+    "funciones": 8784
   }
 }
