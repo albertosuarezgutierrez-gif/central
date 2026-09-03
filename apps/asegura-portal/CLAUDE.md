@@ -328,6 +328,56 @@ Lo protege **`test/regression-portal-visibilidad.test.ts`** (raíz del repo, `no
 `tramitador*`/`perito*` vuelven a `lib/cartera-lectura.ts`, **y también** si desaparecen los tres
 datos del lado «voz alta» o los comentarios que explican que su `0` es un hueco.
 
+## 🚑 El parte de siniestro (03/09/2026) — y la frase que NO se puede decir
+
+El cliente da parte desde `/boveda` (`ParteSiniestro.tsx` → `POST /api/siniestros` →
+`lib/partes-siniestro.ts` → `seguros.portal_parte_siniestro`). Rellena **solo lo que sabe él**: qué ha
+pasado, cuándo, dónde, si hay heridos y si hay terceros. Tramitador, perito y referencia **no se le
+piden ni se le enseñan**: los pone la compañía y son gestión del corredor (regla de visibilidad).
+
+🚨 **Un parte enviado NO es un siniestro comunicado a la compañía.** Una correduría es mediadora del
+CLIENTE, no del asegurador: contárnoslo a nosotros no es, jurídicamente, comunicárselo a la entidad.
+Entre que el cliente pulsa «enviar» y que Alberto lo abre pasan horas o días, y en ese hueco el
+cliente **cree que ya está hecho y deja de hacer nada**. Es el peor modo de fallo del portal: no se
+ve, no da error, y lo paga quien confió en la pantalla.
+
+- El vocabulario está en el módulo puro (`packages/module-seguros-portal/src/parte-siniestro.ts`):
+  `enviado` → `recibido` (lo hemos leído NOSOTROS) → `abierto_en_compania` → `descartado`.
+- **`comunicadoACompania(estado)` es la ÚNICA fuente de «tu compañía ya lo sabe».** Nunca
+  `estado !== 'enviado'`, que es el atajo de una línea que parece razonable y convierte «lo hemos
+  recibido» en «está comunicado».
+- El cepo está en la BD además de en el código: `CHECK portal_parte_abierto_con_sello` impide poner
+  `abierto_en_compania` sin `abierto_en_compania_at` **y** `siniestro_id`. Probado contra la BD real
+  con un INSERT dentro de un ROLLBACK — un CHECK que nadie ha visto morder es una suposición.
+- **El portal solo INSERTA y LEE**: el rol no tiene UPDATE ni DELETE sobre la tabla. Lo declarado es
+  una comunicación, no un borrador.
+
+**Los dos tri-estados.** `hay_heridos` y `hay_terceros` son `boolean` NULLABLE y la UI ofrece tres
+opciones («Sí» / «No» / **«No lo sé», marcada de salida**), no un checkbox. `null` = «no lo ha
+contestado»; `false` = «ha dicho que no». Colapsarlos deja al corredor leyendo «sin heridos» de un
+accidente sobre el que nadie preguntó, y un parte con heridos se tramita en horas mientras uno de
+chapa espera al lunes. `normalizarTriestado()` normaliza acento, caja y espacios antes de comparar:
+un `<select>` que emitiera `'Sí'` contra una lista de `'si'` dejaría **todos** los partes a `null` y
+nadie vería un error, porque `null` es un estado legítimo.
+
+**El plazo del art. 16 LCS (7 días) no se reimplementa aquí.** `plazoComunicacion()` del módulo del
+portal **delega** en el de `@central/module-seguros`, que es el que ya usa el panel del corredor, y
+solo le cambia la forma. Dos cuentas del mismo plazo legal en el mismo monorepo acaban dando plazos
+distintos del mismo siniestro sin que ninguna pantalla falle. Y `fueraDePlazo` **NO es pérdida de
+cobertura**: el art. 16 solo permite reclamar los daños del retraso, y perder el derecho exige dolo o
+culpa grave. Un portal que asuste a quien avisa tarde consigue que no avise nunca.
+
+**Se puede dar parte de una póliza AUTORIZADA** (de las que alguien te deja ver). Ver no es gestionar,
+pero bloquearlo sería peor: quien conducía el coche de su padre es justo el que sabe qué pasó. La
+salida no es prohibirlo sino que Alberto lo vea — el puerto del corredor marca esos partes.
+
+Lo protege **`test/regression-portal-parte-siniestro.test.ts`** (raíz, `node --test`): la forma de
+`comunicadoACompania`, el atajo `\.estado !== 'enviado'`, las frases afirmativas prohibidas, el
+«ya no te cubren», el colapso del tri-estado y un cepo POSITIVO (alguien tiene que usar `comunicado`,
+o la pantalla pasa todos los negativos sencillamente callándose). ⚠️ El guardián **quita los
+comentarios antes de mirar**: sin eso se muerde a sí mismo, porque el texto correcto de la pantalla
+es «todavía NO está comunicado a tu compañía» y contiene la frase prohibida.
+
 ## 📅 El calendario de vencimientos (02/09/2026) — y por qué el aviso NO sale de aquí
 
 La tabla es **`seguros.portal_obligacion`** (`prisma/sql/2026-09-03_portal_obligacion.sql`, aplicada

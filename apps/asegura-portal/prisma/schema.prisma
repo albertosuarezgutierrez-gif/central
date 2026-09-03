@@ -60,6 +60,23 @@ enum PortalObligacionTipo {
   @@schema("seguros")
 }
 
+/// El ciclo de vida de un parte declarado por el cliente.
+///
+/// 🚨 `enviado` y `recibido` NO significan que la compañía lo sepa: la
+/// correduría es mediadora del cliente, no del asegurador. Solo
+/// `abierto_en_compania` —y la BD exige sello y `siniestro_id` para ponerlo—
+/// autoriza a decírselo. Ver `comunicadoACompania()` en
+/// `@central/module-seguros-portal`.
+enum PortalParteEstado {
+  enviado
+  recibido
+  abierto_en_compania
+  descartado
+
+  @@map("portal_parte_estado")
+  @@schema("seguros")
+}
+
 model PortalIdentidad {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre         String?
@@ -71,6 +88,7 @@ model PortalIdentidad {
   polizas      PortalPolizaDeclarada[]
   vinculos     PortalVinculo[]
   obligaciones PortalObligacion[]
+  partes       PortalParteSiniestro[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -136,8 +154,9 @@ model PortalPolizaDeclarada {
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
 
-  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
-  bien      PortalBien?     @relation(fields: [bienId], references: [id])
+  identidad PortalIdentidad        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  bien      PortalBien?            @relation(fields: [bienId], references: [id])
+  partes    PortalParteSiniestro[]
 
   @@map("portal_poliza_declarada")
   @@schema("seguros")
@@ -170,6 +189,46 @@ model PortalObligacion {
   @@unique([identidadId, polizaId])
   @@index([identidadId])
   @@map("portal_obligacion")
+  @@schema("seguros")
+}
+
+/// El parte que abre el CLIENTE. Es una DECLARACIÓN de siniestro, no un
+/// siniestro: `seguros.siniestros` es la cartera que llena CIMA y el rol del
+/// portal no escribe en ella. DDL y motivos en
+/// `prisma/sql/2026-09-03_portal_parte_siniestro.sql`.
+///
+/// El portal solo INSERTA y LEE lo suyo: no hay UPDATE ni DELETE para el
+/// cliente, porque lo declarado es una comunicación y no un borrador.
+model PortalParteSiniestro {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId         String            @map("identidad_id") @db.Uuid
+  /// Póliza de la CARTERA. Sin relación de Prisma: el rol no escribe en `polizas`.
+  polizaId            String?           @map("poliza_id") @db.Uuid
+  polizaDeclaradaId   String?           @map("poliza_declarada_id") @db.Uuid
+  descripcion         String
+  /// NOT NULL: sin ella no hay plazo del art. 16 LCS que contar.
+  fechaHecho          DateTime          @map("fecha_hecho") @db.Date
+  /// `HH:MM` y APROXIMADA. Texto, no `time`: una hora inventada es peor que ninguna.
+  horaAproximada      String?           @map("hora_aproximada")
+  lugar               String?
+  /// 🚨 `null` = no lo ha contestado; `false` = ha dicho que no. No se colapsan.
+  hayHeridos          Boolean?          @map("hay_heridos")
+  hayTerceros         Boolean?          @map("hay_terceros")
+  estado              PortalParteEstado @default(enviado)
+  /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
+  siniestroId         String?           @map("siniestro_id") @db.Uuid
+  recibidoAt          DateTime?         @map("recibido_at") @db.Timestamptz(6)
+  abiertoEnCompaniaAt DateTime?         @map("abierto_en_compania_at") @db.Timestamptz(6)
+  descartadoAt        DateTime?         @map("descartado_at") @db.Timestamptz(6)
+  motivoDescarte      String?           @map("motivo_descarte")
+  creadoEn            DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime          @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  identidad       PortalIdentidad        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  polizaDeclarada PortalPolizaDeclarada? @relation(fields: [polizaDeclaradaId], references: [id])
+
+  @@index([identidadId])
+  @@map("portal_parte_siniestro")
   @@schema("seguros")
 }
 
