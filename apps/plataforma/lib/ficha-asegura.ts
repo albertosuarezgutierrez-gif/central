@@ -130,6 +130,14 @@ export type ContactoFicha = {
 
 /** Quién más hay en una póliza. Misma forma que en `@central/module-seguros`. */
 export type IntervinienteFicha = {
+  /**
+   * La FILA de `poliza_intervinientes`, que es lo que se puede quitar.
+   * `null` SOLO en el tomador: esa fila no existe en la base, la sintetiza
+   * `filasIntervinientes()` a partir del titular de la póliza. Por eso al
+   * tomador no se le ofrece «quitar» — no hay nada que borrar, y el botón
+   * prometería algo que no existe.
+   */
+  id: string | null
   polizaId: string
   rol: string
   nombre: string | null
@@ -405,6 +413,9 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
     const rol = cadena(i.rol)
     if (polizaId === null || rol === null) continue
     out.push({
+      // `null` = asegura no la manda (versión anterior del puerto): entonces la
+      // fila no se puede quitar y la pantalla no ofrece el botón.
+      id: cadena(i.id),
       polizaId,
       rol,
       nombre: cadena(i.nombre),

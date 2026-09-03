@@ -559,7 +559,7 @@ async function leerIntervinientes(
       // recarga a otra sin que nada fallara. El orden es parte del resultado.
       orderBy: [{ polizaId: 'asc' }, { rol: 'asc' }, { id: 'asc' }],
       select: {
-        polizaId: true, rol: true, clienteId: true, origen: true,
+        id: true, polizaId: true, rol: true, clienteId: true, origen: true,
         nombre: true, apellidos: true, telefono: true, email: true, nifLookupHash: true,
         cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
       },
@@ -578,6 +578,7 @@ async function leerIntervinientes(
       const telefono = descifrar(f.telefono) ?? descifrar(f.cliente?.telefono)
       const email = descifrar(f.email) ?? descifrar(f.cliente?.email)
       return {
+        id: f.id,
         polizaId: f.polizaId,
         rol: String(f.rol),
         nombre: propio ?? deFicha,

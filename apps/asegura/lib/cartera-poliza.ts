@@ -287,7 +287,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         // Determinista a propósito: ver la nota de `cartera-ficha`.
         orderBy: [{ rol: 'asc' }, { id: 'asc' }],
         select: {
-          polizaId: true, rol: true, clienteId: true, origen: true, nombre: true, apellidos: true, telefono: true, email: true,
+          id: true, polizaId: true, rol: true, clienteId: true, origen: true, nombre: true, apellidos: true, telefono: true, email: true,
           nifLookupHash: true,
           cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
         },
@@ -304,7 +304,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
           const telefono = descifrar(f.telefono) ?? descifrar(f.cliente?.telefono)
           const email = descifrar(f.email) ?? descifrar(f.cliente?.email)
           return {
-            polizaId: f.polizaId, rol: String(f.rol), nombre: propio ?? deFicha,
+            id: f.id, polizaId: f.polizaId, rol: String(f.rol), nombre: propio ?? deFicha,
             nombreIlegible: propio === null && deFicha === null && (ilegible(f.nombre) || ilegible(f.apellidos)),
             telefono, email,
             telefonoIlegible: telefono === null && (ilegible(f.telefono) || ilegible(f.cliente?.telefono)),
