@@ -1596,6 +1596,53 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
 - **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
   pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
 
+🎨 **Rediseño: de una tira de ocho bloques a CUATRO SECCIONES (03/09/2026).** Alberto: *«minimalista,
+óptima y productiva»*. La pantalla era un scroll único con ocho bloques del MISMO peso visual —los
+partes que ha abierto un cliente y nadie ha mirado pesaban igual que la matriz de comisiones cobradas
+de hace tres años— y cada bloque pintaba su propia caja (borde 1px + radio 12 + padding 14, repetida
+en seis ficheros), así que ninguno decía «mírame a mí primero».
+
+- **Buscador arriba, siempre**, fuera de las secciones: es lo más usado y además tiene que sobrevivir
+  a que el puerto falle. Cuatro secciones: **Hoy** (partes · retención · renovaciones dentro del
+  preaviso) · **Cartera** (KPIs + los 90 días) · **Comisiones** (cuadre + banda pendiente + matriz del
+  banco, y el selector de AÑO gobierna solo esta) · **Datos** (duplicadas · sin canal).
+- **Mismo idioma visual que `banca/SegTabs.tsx` y `cliente/[id]/FichaTabs.tsx`** —subrayado, iconos
+  lucide, contador— en vez de inventar uno nuevo para esta pantalla. `Secciones.tsx`.
+- 🚨 **Una pestaña ESCONDE, y por eso el contador no es decoración: es lo que impide que esconda
+  TRABAJO.** Cada bloque reporta el suyo hacia arriba (`onContador?: (n: number|null) => void`,
+  llamado en el `.then`, guardado en un `useRef` para que una lambda del padre no relance el fetch en
+  bucle) y `agregarContadores` (`secciones.ts`, puro, 9 tests) da **tres** desenlaces: `{n}` exacto ·
+  **`n+`** cuando alguna cola no se pudo leer (el número es un SUELO, no el total) · **`!`** cuando
+  ninguna se pudo leer. Nunca un 0. Y `undefined` (aún cargando) NO es `null` (ilegible): confundirlos
+  pinta un «!» de alarma en cada pestaña durante la carga, y eso enseña a ignorar el badge.
+- **Todos los bloques se MONTAN siempre**, aunque su sección esté oculta (`display:none`): es de donde
+  salen los contadores, y son los mismos fetch en paralelo que ya se hacían al abrir. Lo que se oculta
+  es el DOM, no la lectura. La sección viaja en `?s=` por `history.replaceState`, **no por `Link`**:
+  navegar remontaría el client component y volvería a pedirle todo al puerto en cada clic.
+- **Un bloque deja de ser una caja** (`Bloque.tsx`): línea fina + título + contenido. Borde, fondo y
+  sombra se gastan POR FUNCIÓN (regla de `components/ui.tsx`) y «soy una sección» no es una función:
+  `destacado` se reserva para alarmas con alguien esperando al otro lado (partes sin atender, recibos
+  suspendidos, clientes sin canal). Si todo destaca, no destaca nada.
+- 🚨 **Cuál es el PRIMER bloque de una sección depende de los DATOS** —`PartesPortal` y `Duplicadas`
+  devuelven `null` cuando su cola está vacía—, así que la línea de separación de arriba la quita CSS
+  (`.corr-panel > section:first-of-type` en `globals.css`), no un prop `primero` en el JSX: solo el
+  navegador sabe quién quedó arriba.
+- **Emojis fuera**: los que eran etiqueta de estado (🔴🟠🟡⚫✅) → `<Badge tono=…>` —🟠 y 🟡 son
+  indistinguibles a 12px, y ahí estaba la diferencia entre «aún puedes moverla» y «ya se prorroga
+  sola»—; los de ramo (🚗🏠🧬) → el texto a secas; los de título → iconos lucide.
+
+🚨 **Y el bug que destapó el rediseño: `Vencimientos` vivía DENTRO de `CarteraViva`**, después de sus
+tres `return` tempranos. O sea: el día que el puerto de central-asegura fallaba, **la tabla de
+renovaciones —la máquina comercial de la correduría— desaparecía en silencio**, y su propio manejo de
+error, que existe, era código muerto. Es EXACTAMENTE el fallo por el que `BuscadorCartera` y
+`Duplicadas` ya se habían sacado fuera; a esta se le había pasado. Ahora es `Renovaciones.tsx`,
+hermana y no hija, y el `fetch` de los vencimientos vive en la pantalla porque la misma lista alimenta
+dos secciones (`filtro: 'accionables' | 'todas'`) y montarla dos veces serían dos llamadas al puerto
+para los mismos datos.
+
+⚠️ **`test/regression-clientes-sin-canal.test.ts` exigía el literal `<SinCanal />`.** Se relajó a
+`/<SinCanal[\s/>]/`: lo que ese test vigila es que el bloque SIGA MONTADO en la pantalla, no su firma.
+
 🧹 **Reorganización de la pantalla (agente de diseño, 01/09/2026).** Alberto: *«hay duplicidad y ahí
 solo tiene que salir datos importantes»*. Se pasó de 12 KPIs a **4** y el orden es ahora
 **buscar → cartera → a quién llamar → cuadre → detalle del banco (plegado)**. Lo retirado y por qué:

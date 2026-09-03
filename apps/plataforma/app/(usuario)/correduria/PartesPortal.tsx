@@ -1,9 +1,11 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Siren } from 'lucide-react'
 import { Badge, Pendiente, btnStyle } from '@/components/ui'
 import { fechaEs, fechaHoraEs } from '@/lib/ficha-asegura'
+import Bloque from './Bloque'
 import {
   interpretarEscrituraParte,
   interpretarPartes,
@@ -16,13 +18,14 @@ import {
 } from '@/lib/partes-asegura'
 
 /**
- * 🆘 Los partes de siniestro que ha abierto el CLIENTE desde el portal
+ * Los partes de siniestro que ha abierto el CLIENTE desde el portal
  * (`apps/asegura-portal`), sin atender.
  *
  * Va arriba del todo de `/correduria` porque **es lo más urgente que hay en esa
  * página: una persona esperando.** El cliente pulsó «enviar», dio por hecho que
  * ya estaba comunicado y no va a volver a llamar; hasta hoy estos partes no los
- * veía nadie.
+ * veía nadie. Es el único bloque de la pantalla que se pinta `destacado`: el
+ * fondo tintado no es decoración, es lo que hace que se lea antes que el resto.
  *
  * ─── Lo que esta pantalla NO puede decir ────────────────────────────────────
  * 1. **`comunicado` es la única fuente de «la compañía ya lo sabe».** Nunca se
@@ -38,6 +41,9 @@ import {
  * 4. **Que este bloque no aparezca significa «no hay partes sin atender»**, y
  *    por eso un fallo de lectura NO se calla: un panel de avisos que desaparece
  *    en silencio se lee como buenas noticias.
+ * 5. **El contador que sube a la cabecera es `null` cuando no se ha podido
+ *    leer.** Un 0 ahí afirmaría «no hay nadie esperando», que es la mentira que
+ *    el resto de este fichero existe para evitar.
  *
  * Rendimiento: el texto completo del parte se monta solo al abrir su
  * `<details>` (uno cerrado crearía igualmente todo su DOM).
@@ -46,7 +52,13 @@ type Mensaje = { tono: 'ok' | 'error'; texto: string }
 
 const POR_PAGINA = 20
 
-export default function PartesPortal() {
+export default function PartesPortal({ onContador }: {
+  /**
+   * Cuántas personas están esperando (`partes sin atender + ilegibles`), para
+   * la cabecera de la pantalla. `null` = **no se ha podido saber**; nunca 0.
+   */
+  onContador?: (n: number | null) => void
+}) {
   const router = useRouter()
   // `null` = primera lectura en curso. Después guarda SIEMPRE la última lectura
   // buena: si una recarga falla, se conserva lo que se vio y se avisa del fallo
@@ -58,6 +70,20 @@ export default function PartesPortal() {
   const [ocupado, setOcupado] = useState(false)
   const [mensaje, setMensaje] = useState<Mensaje | null>(null)
   const [ver, setVer] = useState(POR_PAGINA)
+
+  // El aviso al padre va por ref para que un handler inline no reinicie la
+  // lectura en cada render (y para no llamarlo NUNCA desde el cuerpo del
+  // render: eso sería un bucle infinito de re-renders).
+  const avisar = useRef(onContador)
+  useEffect(() => { avisar.current = onContador }, [onContador])
+
+  /**
+   * Una lectura → un contador. Cualquier «no se ha podido» (puerto caído, ruta
+   * que asegura no sirve, secreto sin configurar) sube como `null`.
+   */
+  const contar = useCallback((r: RespuestaPartes) => {
+    avisar.current?.(r.estado === 'ok' ? partesSinAtender(r.partes).length + r.ilegibles : null)
+  }, [])
 
   const leer = useCallback(async (): Promise<RespuestaPartes> => {
     try {
@@ -81,9 +107,10 @@ export default function PartesPortal() {
       if (!vivo) return
       setLectura((prev) => (r.estado === 'ok' ? r : (prev ?? r)))
       if (r.estado === 'ok') { setPartes(partesSinAtender(r.partes)); setIlegibles(r.ilegibles) }
+      contar(r)
     })
     return () => { vivo = false }
-  }, [leer])
+  }, [leer, contar])
 
   /**
    * Un cambio de estado. La fila NO se quita hasta que asegura confirma: quitarla
@@ -114,6 +141,10 @@ export default function PartesPortal() {
       const nueva = await leer()
       if (nueva.estado === 'ok') adoptar(nueva)
       else setMensaje({ tono: 'error', texto: `${hecho} Pero la bandeja no se ha podido refrescar (${porqueNoSeLee(nueva)}): lo de abajo es la última lectura buena.` })
+      // También aquí, y con la recarga fallida incluida: si no se ha podido
+      // releer, lo que hay en pantalla es una foto vieja y el contador de la
+      // cabecera tiene que decir «no lo sé», no un número que ya no consta.
+      contar(nueva)
     } else if (r.estado === 'no_encontrado') {
       setMensaje({ tono: 'error', texto: 'Ese parte ya no está en asegura. Recarga la página para ver la bandeja de verdad.' })
     } else if (r.estado === 'sin_configurar') {
@@ -129,15 +160,26 @@ export default function PartesPortal() {
 
   if (lectura.estado !== 'ok') {
     // 🚨 Nunca silencio: aquí «no se ha podido mirar» y «no hay partes» son la
-    // misma imagen, y una de las dos deja a alguien esperando.
+    // misma imagen, y una de las dos deja a alguien esperando. No va
+    // `destacado` a propósito — el fondo tintado se reserva para cuando SÍ
+    // consta que hay alguien esperando; esto es un hueco, y se dice como hueco.
     return (
-      <div
-        style={{ ...marcoAviso, marginBottom: 20 }}
-        title="No es «no hay partes sin atender»: es que no se han podido leer."
+      <Bloque
+        tono="aviso"
+        Icono={Siren}
+        titulo="Partes del portal"
+        accion={<Badge tono="aviso">No se han podido leer</Badge>}
+        sub={
+          <>
+            No se han podido leer ({porqueNoSeLee(lectura)}).{' '}
+            <strong>No significa que no haya ninguno esperando.</strong>
+          </>
+        }
       >
-        🆘 <strong>Partes del portal: no se han podido leer</strong> ({porqueNoSeLee(lectura)}).{' '}
-        <strong>No significa que no haya ninguno esperando.</strong>
-      </div>
+        <p style={pMuted}>
+          Míralos en asegura hasta que el puerto vuelva.
+        </p>
+      </Bloque>
     )
   }
 
@@ -146,24 +188,22 @@ export default function PartesPortal() {
   const visibles = ordenarPorEspera(partes).slice(0, ver)
 
   return (
-    <div style={{ ...marcoAviso, marginBottom: 20 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', marginBottom: 4 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>
-          🆘 {partes.length} parte(s) de siniestro sin atender
-        </div>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-          los ha abierto el cliente desde el portal · hay alguien esperando
-        </span>
-      </div>
-
-      <p style={{ ...pMuted, marginBottom: 10 }}>
-        Un parte enviado <strong>no es un siniestro comunicado a la compañía</strong>: el cliente ya
-        cree que está hecho. Mientras siga aquí, la entidad no sabe nada.
-      </p>
-
+    <Bloque
+      destacado
+      tono="malo"
+      Icono={Siren}
+      titulo={`${partes.length} parte(s) de siniestro sin atender`}
+      sub={
+        <>
+          Los ha abierto el cliente desde el portal: hay alguien esperando. Un parte enviado{' '}
+          <strong>no es un siniestro comunicado a la compañía</strong> — el cliente ya cree que está
+          hecho, y mientras siga aquí la entidad no sabe nada.
+        </>
+      }
+    >
       {ilegibles > 0 && (
-        <p style={{ ...pMuted, marginBottom: 10 }}>
-          ⚠️ Además, {ilegibles} parte(s) llegaron con una forma que no se ha podido leer: no están en
+        <p style={{ ...pMuted, marginTop: 0 }}>
+          Además, {ilegibles} parte(s) llegaron con una forma que no se ha podido leer: no están en
           esta lista y hay que mirarlos en asegura.
         </p>
       )}
@@ -174,7 +214,7 @@ export default function PartesPortal() {
           style={{
             border: `1px solid ${mensaje.tono === 'ok' ? 'var(--positive)' : 'var(--negative)'}`,
             color: mensaje.tono === 'ok' ? 'var(--positive)' : 'var(--negative)',
-            borderRadius: 8, padding: '8px 10px', fontSize: 13, marginBottom: 10,
+            borderRadius: 8, padding: '8px 10px', fontSize: 13, margin: '10px 0',
           }}
         >
           {mensaje.texto}
@@ -184,7 +224,10 @@ export default function PartesPortal() {
       {/* Atenuada durante la escritura/recarga: la lista NO se desmonta. */}
       <div
         style={{
-          display: 'grid', gap: 10,
+          // Una sola columna DECLARADA: un grid sin `gridTemplateColumns`
+          // dimensiona su pista con el contenido más ancho y arrastra la página
+          // entera a 320px (regla de responsive del CLAUDE.md raíz).
+          display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10,
           opacity: ocupado ? 0.55 : 1,
           pointerEvents: ocupado ? 'none' : undefined,
           transition: 'opacity .15s ease',
@@ -201,7 +244,7 @@ export default function PartesPortal() {
           Ver {Math.min(POR_PAGINA, partes.length - ver)} más
         </button>
       )}
-    </div>
+    </Bloque>
   )
 }
 
@@ -234,18 +277,18 @@ function Parte({
   const color = p.hayHeridos === true ? 'var(--negative)' : 'var(--warning)'
 
   return (
-    <div style={{ border: '1px solid var(--border)', borderLeft: `4px solid ${color}`, borderRadius: 8, padding: 12, background: 'var(--surface)' }}>
+    <div style={{ border: '1px solid var(--border)', borderLeft: `4px solid ${color}`, borderRadius: 8, padding: 12, background: 'var(--surface)', minWidth: 0 }}>
       {/* Quién */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
         {p.cliente ? (
-          <Link href={`/correduria/cliente/${p.cliente.id}`} style={{ fontWeight: 700, fontSize: 15 }}>
+          <Link href={`/correduria/cliente/${p.cliente.id}`} style={{ fontWeight: 700, fontSize: 15, overflowWrap: 'anywhere' }}>
             {p.cliente.nombre}
           </Link>
         ) : (
           // 🚨 En voz alta: no es «cliente desconocido», es trabajo pendiente.
-          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--negative)' }}>
-            ⚠️ Sin vincular a ninguna ficha de la cartera
-          </span>
+          <Badge tono="negativo" title="Hay que identificar a esta persona antes de poder abrir nada en la compañía.">
+            Sin vincular a ninguna ficha
+          </Badge>
         )}
         {p.plazo ? (
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -272,8 +315,8 @@ function Parte({
 
       {/* A quién hay que llamar cuando el tomador es otro */}
       {p.titularDistinto && (
-        <p style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>
-          📇 El tomador de la póliza es{' '}
+        <p style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45, overflowWrap: 'anywhere' }}>
+          El tomador de la póliza es{' '}
           <Link href={`/correduria/cliente/${p.titularDistinto.id}`} style={{ fontWeight: 600 }}>
             {p.titularDistinto.nombre}
           </Link>
@@ -285,12 +328,12 @@ function Parte({
       )}
 
       {/* Cuándo y dónde */}
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-        📅 {p.fechaHecho ? fechaEs(p.fechaHecho) : <Pendiente texto="sin fecha del hecho" />}
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6, overflowWrap: 'anywhere' }}>
+        {p.fechaHecho ? fechaEs(p.fechaHecho) : <Pendiente texto="sin fecha del hecho" />}
         {' · '}
         {p.horaAproximada ? `${p.horaAproximada} h` : <Pendiente texto="sin hora" donde="pregúntasela al llamar" />}
         {' · '}
-        📍 {p.lugar ? p.lugar : <Pendiente texto="sin lugar" donde="pregúntaselo al llamar" />}
+        {p.lugar ? p.lugar : <Pendiente texto="sin lugar" donde="pregúntaselo al llamar" />}
         {p.creadoEn && ` · parte enviado el ${fechaHoraEs(p.creadoEn)}`}
       </div>
 
@@ -299,13 +342,13 @@ function Parte({
         <Triestado
           valor={p.hayHeridos}
           pregunta="Heridos"
-          si={{ texto: '🚑 Con heridos', tono: 'negativo' }}
+          si={{ texto: 'Con heridos', tono: 'negativo' }}
           no="Sin heridos"
         />
         <Triestado
           valor={p.hayTerceros}
           pregunta="Terceros"
-          si={{ texto: '👥 Con terceros implicados', tono: 'aviso' }}
+          si={{ texto: 'Con terceros implicados', tono: 'aviso' }}
           no="Sin terceros"
         />
         {/* La ÚNICA fuente de «la compañía ya lo sabe» es este campo. */}
@@ -328,7 +371,7 @@ function Parte({
           onToggle={(e) => setTextoAbierto((e.currentTarget as HTMLDetailsElement).open)}
           style={{ marginTop: 8 }}
         >
-          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 32, display: 'flex', alignItems: 'center' }}>
+          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>
             Lo que cuenta el cliente
           </summary>
           {textoAbierto && (
@@ -346,10 +389,10 @@ function Parte({
           style={btnStyle('secundario')}
           onClick={() => { void cambiar(p.id, { estado: 'recibido' }, 'Parte marcado como recibido. Ojo: la compañía sigue sin saberlo.') }}
         >
-          👀 Marcar recibido
+          Marcar recibido
         </button>
         <button type="button" style={btnStyle(form === 'abrir' ? 'secundario' : 'primario')} onClick={() => setForm((f) => (f === 'abrir' ? null : 'abrir'))}>
-          🏢 Abrir en la compañía
+          Abrir en la compañía
         </button>
         <button type="button" style={btnStyle('sutil')} onClick={() => setForm((f) => (f === 'descartar' ? null : 'descartar'))}>
           Descartar
@@ -444,11 +487,6 @@ function Triestado({
 }
 
 // ─── Piel ────────────────────────────────────────────────────────────────────
-
-const marcoAviso: React.CSSProperties = {
-  border: '1px solid var(--warning)', background: 'var(--warning-bg)',
-  borderRadius: 12, padding: 14, fontSize: 13, color: 'var(--text)',
-}
 
 const pMuted: React.CSSProperties = { fontSize: 12, color: 'var(--muted)', lineHeight: 1.5, margin: '6px 0' }
 

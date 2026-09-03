@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎨 Rediseño de `/correduria`: de ocho bloques apilados a cuatro secciones (03/09/2026).**
+  Alberto: «minimalista, óptima y productiva». Buscador arriba y **Hoy · Cartera · Comisiones · Datos**
+  con contador en la barra (`secciones.ts`, puro + 9 tests) — una pestaña esconde, y el badge es lo
+  que impide que esconda TRABAJO: `{n}` · `n+` (alguna cola ilegible) · `!` (ninguna legible), nunca 0.
+  🚨 **Bug real corregido: `Vencimientos` vivía DENTRO de `CarteraViva`, tras sus tres `return`
+  tempranos** → con el puerto caído la tabla de renovaciones desaparecía en silencio y su propio
+  manejo de error era código muerto (mismo fallo que ya se sacó fuera para el buscador y `Duplicadas`).
+  Ahora es `Renovaciones.tsx`, hermana, con el fetch subido a la pantalla (una llamada, dos secciones).
+  Un bloque deja de ser una caja (`Bloque.tsx`): borde+fondo solo para ALARMAS con alguien esperando.
+  Emojis de estado → `Badge`; iconos → lucide. 3 agentes en paralelo por reparto de archivos.
+
 - **⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición (03/09/2026).**
   Alberto pidió estudio legal y benchmark sectorial para «José autoriza a María a ver sus pólizas».
   🚨 Medido: **104 `cliente_relaciones.puede_ver_polizas = true`, TODAS creadas el 21/06/2026** (día del
