@@ -331,3 +331,12 @@ export {
   type FiltroCartera,
   type ParseFiltro,
 } from './filtro-cartera.ts'
+
+export {
+  planBackfillDni,
+  type FichaDni,
+  type Destino,
+  type FilaPlan,
+  type GrupoChoque,
+  type PlanBackfillDni,
+} from './backfill-dni.ts'
