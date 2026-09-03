@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔴 «Sin dato» en el capital de hogar era un «no lo he mirado» (03/09/2026).** La ficha de Occident
+  `GPDFS3000276` decía «sin dato» en continente y contenido y lo justificaba afirmando que «esta compañía
+  las manda sin importe propio» — falso: 11 de sus 40 coberturas SÍ traen capital (sublímites y RC). Y el
+  capital estaba guardado: `continente 61000 / contenido 7000` en la copia del volcado, **el mismo objeto
+  del que la pantalla ya sacaba los 76 m² y el 1994**. Medido al preguntar Alberto de dónde sale: las
+  **coberturas sí vienen de CIMA** (1.425 filas en la cartera viva) pero **el capital no** — de las 37
+  garantías de continente/contenido de las 19 pólizas de hogar vivas, **ninguna trae importe**. Arreglado
+  con una SEGUNDA fuente rotulada (estado `del_volcado`; el consenso de CIMA gana siempre y
+  `eurDeCapital()` sigue sin devolverlo). Alcance: 7 de 19. Cepo:
+  `test/regression-capital-hogar-volcado.test.ts` — que nació escaneando solo los fuentes y **pasaba 6/6
+  con el módulo apagado**; lleva ya dos tests de comportamiento con los datos reales.
+
 - **⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición (03/09/2026).**
   Alberto pidió estudio legal y benchmark sectorial para «José autoriza a María a ver sus pólizas».
   🚨 Medido: **104 `cliente_relaciones.puede_ver_polizas = true`, TODAS creadas el 21/06/2026** (día del

@@ -161,8 +161,13 @@ export type EstimacionPrima = {
 
 /* ─── Capitales de hogar ────────────────────────────────────────────────────
  * `CapitalAsegurado` vive en `@central/module-seguros` (`garantias.ts`) y tiene
- * CINCO estados que no se pueden colapsar entre sí: en particular `mayorEur` de
+ * SEIS estados que no se pueden colapsar entre sí: en particular `mayorEur` de
  * `solo_sublimites` NO es el continente, es el mayor sublímite.
+ *
+ * 🚨 Y `del_volcado` NO es un `consenso`: trae un importe, pero de la copia
+ * HISTÓRICA de la póliza (junio de 2026), no de lo que manda hoy la compañía.
+ * Su `motivo` es lo único que impide leerlo como el capital actual, así que sin
+ * `motivo` no se acepta el estado — igual que sin `eur`.
  */
 
 /** Cada lado por separado: uno ilegible no se lleva por delante al otro. `null` = no se pudo leer. */
@@ -233,6 +238,13 @@ function leerCapitalAsegurado(v: unknown): CapitalAsegurado | null {
       const garantias = entero(c.garantias)
       if (eur === null || garantias === null) return null
       return { estado: 'consenso', eur, garantias, ejemplo: cadena(c.ejemplo) }
+    }
+    case 'del_volcado': {
+      const eur = numero(c.eur)
+      // Sin `motivo` no se pinta: un capital del volcado sin su rótulo de
+      // procedencia es exactamente el fallo que este estado vino a arreglar.
+      if (eur === null || motivo === null) return null
+      return { estado: 'del_volcado', eur, motivo }
     }
     case 'solo_sublimites': {
       const mayorEur = numero(c.mayorEur)
