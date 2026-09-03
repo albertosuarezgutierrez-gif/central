@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente` (03/09/2026).**
+  Alberto preguntó por María Alcalá (hogar Mapfre, «🔴 Sin cobertura · hace 56 días»). Medido en BD: el recibo
+  de 225,97€ está **`pendiente`**, DOMICILIADO, póliza en vigor, y su fila no se toca desde la carga del 24/06
+  mientras CIMA sigue entrando (128 ficheros, 8 recibos SÍ pasaron a `cobrado` en agosto). Nadie ha dicho que
+  se devolviera. `retencion()` exige ahora la `situacion` (sin default) y devuelve **`sin_confirmar`** 🟠 con
+  los plazos del art. 15 en `null` — sin impago no hay reloj; `resumen.sinConfirmar` va aparte del contador que
+  autoriza a decir «circulan sin cobertura». Un `devuelto` gana al `pendiente` en el dedupe por póliza.
+  **Triaje de correo:** categoría `correduria-recibo` (aviso inmediato) para los avisos de recibos de Occident/
+  Allianz/Reale/Mapfre — regla determinista con DOS condiciones (aseguradora Y asunto). ⚠️ Mapfre NO manda
+  impagos por correo: el caso de María tampoco habría saltado por ahí. Anotar el hecho en la ficha del cliente
+  queda BLOQUEADO por `historial_interno.cliente_id NOT NULL` (sin resolver el correo a un cliente, no hay a
+  quién colgarlo). Verificado: batería completa 0 fallos, typecheck de asegura y plataforma, QA y lint.
+
 - **🗂️ Ficha de cliente de la correduría: cabecera + pestañas, y los colores de la app de Manuel (03/09/2026).**
   Alberto: la ficha en una columna larga (12 tarjetas) «no es práctica»; quiere el patrón de su CRM anterior.
   Hecho con la salvaguarda que ese CRM no tiene: **los contadores de alarma viven en la CABECERA**, fuera de

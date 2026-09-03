@@ -87,6 +87,7 @@ export {
   retencion,
   resumirRetencion,
   type EstadoRetencion,
+  type SituacionRecibo,
   type Retencion,
   type ResumenRetencion,
 } from './retencion.ts'

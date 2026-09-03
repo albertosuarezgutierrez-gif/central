@@ -756,21 +756,40 @@ la ficha viva desde la histórica (`avisoHermanas()`).
 ### 📞 La cola de retención — recibos devueltos (`lib/cartera-impagados.ts`)
 
 Lo que decide el orden **no es el importe, es el reloj** (art. 15 LCS, modelado en
-`@central/module-seguros/retencion.ts`, puro y con 10 tests):
+`@central/module-seguros/retencion.ts`, puro y con 16 tests). 🚨 **Pero el reloj solo arranca si la
+compañía AFIRMA el impago**, así que `retencion(vencimiento, situacion, hoy)` exige la situación del
+recibo y NO tiene valor por defecto:
 
-| Desde que venció el recibo | Estado | Qué se puede hacer |
-|---|---|---|
-| < 1 mes | `en_plazo` | Se paga y no llega a pasar nada |
-| **1-6 meses** | 🔴 `suspendida` | **El cliente circula sin cobertura y no lo sabe.** Si paga, vuelve a estar cubierto en **24 h** |
-| > 6 meses | ⚫ `extinguida` | Ya no se rescata: retenerlo es **póliza nueva** → retarificar |
-| sin fecha | ❔ `sin_fecha` | No se sabe desde cuándo; va casi el primero por si es el más viejo |
+| Situación del recibo | Desde que venció | Estado | Qué se puede hacer |
+|---|---|---|---|
+| `devuelto` | < 1 mes | `en_plazo` | Se paga y no llega a pasar nada |
+| `devuelto` | **1-6 meses** | 🔴 `suspendida` | **El cliente circula sin cobertura y no lo sabe.** Si paga, vuelve a estar cubierto en **24 h** |
+| `devuelto` | > 6 meses | ⚫ `extinguida` | Ya no se rescata: retenerlo es **póliza nueva** → retarificar |
+| `pendiente` | cualquiera | 🟠 `sin_confirmar` | **NADIE ha dicho que se devolviera.** Se mira en el portal de la compañía; NO se llama al cliente |
+| (ambas) | sin fecha | ❔ `sin_fecha` | No se sabe desde cuándo; va casi el primero por si es el más viejo |
+
+🚨 **Caso fundacional (03/09/2026): la ficha de María Alcalá (hogar Mapfre `0732000113003`) decía
+«🔴 Sin cobertura · hace 56 días»** sobre un recibo de 225,97€ en situación **`pendiente`**, DOMICILIADO
+(`forma_pago='CC'`), en una póliza **en vigor** hasta 2027 — y cuya fila no se tocaba desde la carga
+inicial del 24/06 mientras CIMA seguía entrando con normalidad (128 ficheros, el último del 30/08; 8
+recibos SÍ pasaron a `cobrado` en agosto). O sea: la pantalla convertía «Mapfre no ha mandado el cobro»
+en «esta señora circula sin seguro», que es el NULL colapsado a afirmación en el sitio más caro que
+hay. Contraste: el único devuelto REAL de la cartera (Benito Azo Rejo, Occident) trae `fecha_situacion`
+= 14/08/2026, una fecha de devolución de verdad, y cuadra al día con el correo «Recibos devueltos de
+banco 14-08-2026» de `mediadores@occidentinforma.com`.
 
 - **El enum de la base solo tiene `devuelto`** (no existe `impagado`). Los `pendiente` entran en la
   cola **solo si ya vencieron**; los que no, se cuentan en `pendientesSinJuzgar` en vez de tirarse.
+- **`resumen.suspendidas` es el único número que autoriza a decir «circulan sin cobertura»** — los
+  `sin_confirmar` van en `resumen.sinConfirmar`, aparte, con su propio cartel 🟠.
+- **`situacionRecibo` cruza el puerto** para que plataforma pueda distinguir las dos cosas; en el
+  puerto es `'devuelto' | 'pendiente' | null` y **un valor raro o ausente cae a `null`**, nunca a
+  `devuelto`: inventarse un impago confirmado es exactamente lo que esto evita.
 - 🚨 **`sinRecibosInformados`**: las pólizas vivas sin NINGÚN recibo (18 de 109). No salen en la cola
   y **eso no es «están pagadas»** — la UI lo declara debajo de la lista.
-- Varios devueltos de la misma póliza → se queda **el más antiguo**: es el que manda el reloj, y
-  duplicar la fila duplicaría la llamada.
+- Varios recibos sin cobrar de la misma póliza → **un `devuelto` gana a cualquier `pendiente`** (es un
+  hecho contra un dato que falta) y, dentro de la misma situación, se queda **el más antiguo**: es el
+  que manda el reloj, y duplicar la fila duplicaría la llamada.
 - El puerto lleva el **teléfono descifrado** a propósito: el propósito de la lista es descolgar.
 
 🔒 **Lo que NO cruza el puerto, a propósito: DNI, IBAN y dirección.** Para trabajar una renovación no

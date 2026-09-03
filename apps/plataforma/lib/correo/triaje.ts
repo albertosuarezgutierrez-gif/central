@@ -54,6 +54,7 @@ function mensajeAviso(o: {
 function etiquetaBonita(categoria: string): string {
   const m: Record<string, string> = {
     'personal-importante': 'Personal importante',
+    'correduria-recibo': 'Recibo sin cobrar (correduría)',
     'huespedes': 'Huésped',
     'leads-negocio': 'Oportunidad de negocio',
     'seguridad-sospechosa': 'Seguridad',

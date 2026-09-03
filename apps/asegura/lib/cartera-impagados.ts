@@ -12,12 +12,15 @@
 // La urgencia la calcula `retencion()`, que es puro y está probado.
 //
 // ─── Tres estados, como siempre ────────────────────────────────────────────
-// Aquí el «no se sabe» es doble y hay que separarlo:
+// Aquí el «no se sabe» es TRIPLE y hay que separarlo:
 //   · la póliza no tiene NINGÚN recibo informado → no sale en esta lista, y eso
 //     NO significa que esté pagada (18 de 109 vivas están así, medido el
 //     01/09/2026). Se cuenta aparte, en `sinRecibosInformados`.
 //   · el recibo está devuelto pero sin fecha de vencimiento → sí sale, con
 //     estado `sin_fecha`, porque podría ser el más viejo de todos.
+//   · 🚨 el recibo está `pendiente` y ya venció → sale con estado
+//     `sin_confirmar`. Que no conste cobrado NO es que se haya devuelto: nadie
+//     ha dicho eso. Ver la cabecera de `retencion.ts` (caso 03/09/2026).
 
 import {
   retencion,
@@ -25,6 +28,7 @@ import {
   retarificabilidad,
   primaReferencia,
   type EstadoRetencion,
+  type SituacionRecibo,
   type ResumenRetencion,
   type Retarificabilidad,
 } from '@central/module-seguros'
@@ -58,6 +62,12 @@ export type ClienteEnRiesgo = {
   /** Importe del recibo devuelto. `null` = el texto del EIAC no se pudo leer. */
   importeRecibo: number | null
   fechaRecibo: string | null
+  /**
+   * Lo que AFIRMA la compañía del recibo. Va hasta la pantalla a propósito: sin
+   * esto no se puede distinguir «se devolvió» de «no ha llegado el cobro», que
+   * es la diferencia entre llamar a un cliente y mirar el portal.
+   */
+  situacionRecibo: SituacionRecibo
   estado: EstadoRetencion
   dias: number | null
   diasParaExtincion: number | null
@@ -176,9 +186,16 @@ export async function colaRetencion(
     return true
   })
 
-  // Una póliza puede tener varios recibos devueltos. Se queda el MÁS ANTIGUO,
-  // que es el que manda el reloj: si ese ya suspendió la cobertura, los
-  // posteriores no cambian nada y duplicar la fila duplicaría la llamada.
+  // Una póliza puede tener varios recibos sin cobrar. Se queda UNO, y el orden
+  // de preferencia no es solo la fecha:
+  //   1. 🚨 un `devuelto` gana a cualquier `pendiente`, sea cual sea la fecha.
+  //      El devuelto es un HECHO que la compañía afirma; el pendiente es un
+  //      dato que falta. Quedarse con el pendiente por ser más antiguo
+  //      escondería el único impago confirmado de la póliza.
+  //   2. dentro de la misma situación, el MÁS ANTIGUO, que es el que manda el
+  //      reloj: si ese ya suspendió la cobertura, los posteriores no cambian
+  //      nada y duplicar la fila duplicaría la llamada.
+  //   3. sin fecha gana: no se sabe desde cuándo, y podría ser el más viejo.
   const porPoliza = new Map<string, (typeof recibos)[number]>()
   for (const r of accionables) {
     const previo = porPoliza.get(r.poliza.id)
@@ -186,7 +203,12 @@ export async function colaRetencion(
       porPoliza.set(r.poliza.id, r)
       continue
     }
-    // Sin fecha gana: no se sabe desde cuándo, y podría ser el más viejo.
+    const nuevoDevuelto = String(r.situacion) === 'devuelto'
+    const previoDevuelto = String(previo.situacion) === 'devuelto'
+    if (nuevoDevuelto !== previoDevuelto) {
+      if (nuevoDevuelto) porPoliza.set(r.poliza.id, r)
+      continue
+    }
     if (previo.fechaVencimiento === null) continue
     if (r.fechaVencimiento === null || r.fechaVencimiento < previo.fechaVencimiento) {
       porPoliza.set(r.poliza.id, r)
@@ -202,7 +224,11 @@ export async function colaRetencion(
         ? datos.matricula.trim()
         : null
     const fecha = fechaIso(r.fechaVencimiento)
-    const ret = retencion(fecha, hoy)
+    // `SITUACIONES_IMPAGO` solo deja pasar estas dos, pero se estrecha aquí en
+    // vez de castear: una situación nueva en el enum caería en el lado
+    // conservador («no consta»), no en el que afirma que no hay cobertura.
+    const situacion: SituacionRecibo = String(r.situacion) === 'devuelto' ? 'devuelto' : 'pendiente'
+    const ret = retencion(fecha, situacion, hoy)
     const retarificacion = retarificabilidad({ tipo: String(p.tipo), estado: String(p.estado), datos, datosGemela: null })
     filas.push({
       polizaId: p.id,
@@ -223,6 +249,7 @@ export async function colaRetencion(
       }),
       importeRecibo: importeRecibo(r.primaTotal),
       fechaRecibo: fecha,
+      situacionRecibo: situacion,
       estado: ret.estado,
       dias: ret.dias,
       diasParaExtincion: ret.diasParaExtincion,
