@@ -141,8 +141,15 @@ export default function Retarificador({
   const [marcas, setMarcas] = useState<Opcion[]>([])
   const [modelos, setModelos] = useState<Opcion[]>([])
   const [versiones, setVersiones] = useState<Opcion[]>([])
+  const [motores, setMotores] = useState<Opcion[]>([])
   const [marcaId, setMarcaId] = useState('')
   const [modeloId, setModeloId] = useState('')
+  // 🚨 El combustible NO es un adorno: `/car/…/vehicles` lo exige como
+  // parámetro `engine` y sin él responde 400, así que sin elegirlo no hay
+  // versiones que enseñar. Y no se adivina de la ficha: lo que ella guarda es
+  // un código EIAC («1»), de OTRO catálogo — traducirlo a ojo sería inventar el
+  // motor de un coche real. Lo elige el corredor.
+  const [motorId, setMotorId] = useState('')
   const [codigoVehiculo, setCodigoVehiculo] = useState('')
   const [cargando, setCargando] = useState<string | null>(null)
   const [fallo, setFallo] = useState<string | null>(null)
@@ -232,12 +239,13 @@ export default function Retarificador({
       if (mo.estado !== 'casa') return
       setModeloId(mo.opcion.id)
 
-      setCargando('versiones')
+      // Las versiones NO se pueden pedir todavía: falta el combustible, que es
+      // obligatorio en el catálogo del vendor. Se baja su lista y ahí para la
+      // cadena automática — el corredor elige motor y entonces sí.
+      setCargando('motores')
       try {
-        const vs = await catalogo(
-          `tipo=versiones&marcaId=${encodeURIComponent(m.opcion.id)}&modeloId=${encodeURIComponent(mo.opcion.id)}`,
-        )
-        if (vivo) setVersiones(vs)
+        const ms = await catalogo('tipo=motores')
+        if (vivo) setMotores(ms)
       } catch (e) {
         if (vivo) setFallo((e as Error).message)
       } finally {
@@ -269,16 +277,35 @@ export default function Retarificador({
     }
   }
 
-  async function alElegirModelo(id: string) {
+  function alElegirModelo(id: string) {
     setModeloId(id)
     setCodigoVehiculo('')
+    // Cambiar de modelo invalida las versiones, pero NO el combustible: el
+    // coche sigue siendo el mismo y volver a preguntarlo sería ruido.
     setVersiones([])
-    if (!id) return
+    if (id && motorId) void cargarVersiones(marcaId, id, motorId)
+  }
+
+  function alElegirMotor(id: string) {
+    setMotorId(id)
+    setCodigoVehiculo('')
+    setVersiones([])
+    if (id && modeloId) void cargarVersiones(marcaId, modeloId, id)
+  }
+
+  /**
+   * Las versiones del catálogo. Los TRES parámetros son obligatorios para el
+   * vendor: sin `engine` responde 400 y la pantalla se queda sin el único dato
+   * que de verdad hay que elegir.
+   */
+  async function cargarVersiones(marca: string, modelo: string, motor: string) {
     setCargando('versiones')
+    setFallo(null)
     try {
       setVersiones(
         await catalogo(
-          `tipo=versiones&marcaId=${encodeURIComponent(marcaId)}&modeloId=${encodeURIComponent(id)}`,
+          `tipo=versiones&marcaId=${encodeURIComponent(marca)}` +
+            `&modeloId=${encodeURIComponent(modelo)}&motor=${encodeURIComponent(motor)}`,
         ),
       )
     } catch (e) {
@@ -448,6 +475,35 @@ export default function Retarificador({
           </Campo>
 
           <Campo
+            id="motor"
+            etiqueta="Combustible"
+            falta={motorId === ''}
+            faltaTexto="lo elige el corredor"
+            ayuda={
+              <span>
+                El catálogo del vendor <strong>exige</strong> el combustible para poder darte las
+                versiones. La ficha no lo dice en un formato que se pueda traducir sin adivinar, así
+                que lo eliges tú.
+              </span>
+            }
+          >
+            <select
+              id="motor"
+              value={motorId}
+              onChange={(e) => alElegirMotor(e.target.value)}
+              disabled={deshabilitado || cargando === 'motores'}
+              style={{ minHeight: 44 }}
+            >
+              <option value="">{cargando === 'motores' ? 'Cargando…' : 'Elige combustible'}</option>
+              {motores.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nombre}
+                </option>
+              ))}
+            </select>
+          </Campo>
+
+          <Campo
             id="version"
             etiqueta="Versión"
             falta={faltaVersion}
@@ -455,7 +511,8 @@ export default function Retarificador({
             ayuda={
               <span>
                 Es el único dato del coche que <strong>ninguna</strong> póliza guarda, y el que pide
-                el tarificador (código Base7).
+                el tarificador (código Base7). El catálogo las lista por combustible, así que ese va
+                primero.
               </span>
             }
           >
@@ -463,10 +520,16 @@ export default function Retarificador({
               id="version"
               value={codigoVehiculo}
               onChange={(e) => setCodigoVehiculo(e.target.value)}
-              disabled={!modeloId || cargando === 'versiones'}
+              disabled={!modeloId || !motorId || cargando === 'versiones'}
               style={{ minHeight: 44 }}
             >
-              <option value="">{cargando === 'versiones' ? 'Cargando…' : 'Elige versión'}</option>
+              <option value="">
+                {cargando === 'versiones'
+                  ? 'Cargando…'
+                  : !motorId
+                    ? 'Elige antes el combustible'
+                    : 'Elige versión'}
+              </option>
               {versiones.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.nombre}
