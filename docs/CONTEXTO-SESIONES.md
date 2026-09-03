@@ -30,6 +30,27 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA (03/09/2026, PR #2235).**
+  Alberto: «cuando seleccione un tipo de seguro, que despliegue los campos necesarios». Auto/moto →
+  matrícula, fecha de matriculación y bastidor; otro ramo, nada (un tarificador pide todo siempre
+  porque calcula precio; el portal solo recoge lo que el cliente sabe). 🚨 **La fecha NO necesita API:
+  la serie nacional es secuencial, así que la matrícula lleva dentro su fecha** —
+  `fechaMatriculacionEstimada()` interpola 313 hitos mensuales, gratis y offline. Medido contra datos
+  reales: **1.352/1.430 aciertan el año exacto (94,5%)**, 96,6% a ±1 año, sin deriva; la tabla trae su
+  huella (abril-2020 avanza UNA serie: el confinamiento). ⚠️ **La estimación no se guarda sola**: se
+  enseña y solo entra si la persona pulsa «Usar esta fecha» — escribirla la dejaría indistinguible de
+  la leída del permiso de circulación. **Bastidor** porque es el que da la VERSIÓN: de las 82 pólizas
+  de auto vivas, todas traen marca y modelo y **ninguna** versión. Corregido de camino: Avant2 **no**
+  da fecha de matriculación (es tarificador, no fuente de ficha técnica) y el retarificador de
+  `/correduria` la pide a mano.
+  🎨 **Y la marca por fin en la pantalla.** `MARCA_ASEGURA` existía desde esa mañana pero la app no
+  consumía `@central/brand`. 🚨 **Los nombres de token NO casaban** (`--brand/--accent/--panel` vs
+  `--primary/--surface`): inyectar el `<style>` habría dejado el índigo `#4f46e5` intacto **sin fallar
+  nada**. Y el alias `--brand: var(--primary)` iba al revés (invertirlo = ciclo). Segundo fallo mudo:
+  los nombres que SÍ coincidían dependían del orden del `<head>` → respaldos a `@layer portal-base`,
+  marca sin capa (lo no-capado gana). Verificado EN EL NAVEGADOR con Playwright, no a ojo:
+  `--primary` = `#3364ee`. Único no verificado: la tipografía (el contenedor no llega a Google Fonts).
+
 - **📱 Segunda captura de móvil: la ficha del cliente (03/09/2026, PR #2223).** Alberto sobre
   `/correduria/cliente/[id]`: «iconos muy grandes… ocupa mucha página». 🚨 **Los iconos no eran el
   coste** (13px), pero su lectura tenía media razón: eran EMOJI, que a ese tamaño pesan mucho más
