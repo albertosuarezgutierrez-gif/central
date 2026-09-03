@@ -12,6 +12,12 @@
 //   - campo a `null`             → el dato existe pero el NIVEL no lo enseña.
 //     (`prima: null` no es «sin prima»: es «no visible en tu nivel».)
 //
+// Y un CUARTO estado que NO es ninguno de los tres: el dato que sencillamente
+// no va en la vista del cliente (tramitador, perito, referencias internas de
+// gestión). Ese no se pinta vacío ni «pendiente»: no existe en el tipo ni en el
+// `select`. Regla de visibilidad de Alberto (03/09/2026), en el CLAUDE.md de
+// esta app; afina —no deroga— la regla del NULL del CLAUDE.md de la raíz.
+//
 // «Vivas» = las que entran o se MANTIENEN por CIMA, más lo que hemos emitido
 // nosotros y CIMA aún no ha traído — el criterio único de `WHERE_CARTERA_VIVA`
 // (`@central/module-seguros/cartera-viva`), y sin lápida de fusión.
@@ -60,13 +66,29 @@ export type RecibosPortal = {
   ultimoCobrado: ReciboPortal | null
 }
 
+/**
+ * Lo que el CLIENTE ve de un siniestro suyo.
+ *
+ * 🚫 **Aquí NO hay tramitador ni perito, y no es un dato que falte: es gestión
+ * del corredor.** Regla de visibilidad del portal (Alberto, 03/09/2026): se
+ * oculta lo que al cliente no le cambia nada, y el punto de contacto único es
+ * Alberto — el cliente le llama a él, no al tramitador de la compañía. Por eso
+ * estos campos no están en el tipo NI en el `select`: no se piden a la BD, así
+ * que no hay nada que se pueda pintar «en gris» ni «pendiente» por descuido.
+ *
+ * ⚠️ Esto NO deroga la regla del `CLAUDE.md` de la raíz («dato que NO hay ≠
+ * dato que NO se ha mirado»): la afina. Lo que se calla es lo que NO cambia lo
+ * que el cliente haría. Lo que sí cambiaría su decisión —sin vencimiento,
+ * `recibos.total === 0`, `coberturas.total === 0`— se sigue diciendo en voz
+ * alta, y para eso este fichero tiene que SEGUIR trayendo el dato.
+ *
+ * Lo protege `test/regression-portal-visibilidad.test.ts`.
+ */
 export type SiniestroPortal = {
   id: string
   estado: string
   referencia: string | null
   fechaHora: Date | null
-  tramitadorNombre: string | null
-  tramitadorTelefono: string | null
 }
 
 export type PolizaPortal = {
@@ -225,8 +247,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               estado: true,
               referencia: true,
               fechaHora: true,
-              tramitadorNombre: true,
-              tramitadorTelefono: true,
+              // Sin `tramitadorNombre`/`tramitadorTelefono` a propósito: son
+              // gestión del corredor, no dato del cliente (ver SiniestroPortal).
             },
             orderBy: { fechaHora: 'desc' },
           }),
@@ -284,9 +306,6 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         estado: s.estado,
         referencia: s.referencia,
         fechaHora: s.fechaHora,
-        // Contacto de la COSA (tramitador de la compañía), visible en todos los niveles.
-        tramitadorNombre: ve.telefonoSiniestros ? s.tramitadorNombre : null,
-        tramitadorTelefono: ve.telefonoSiniestros ? s.tramitadorTelefono : null,
       })),
     }
   }
