@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T09:51:45Z",
-  "sha": "a3d74306a8da6efc3e34fa6b6ae406a8b189e723",
+  "generadoEn": "2026-09-03T12:31:21Z",
+  "sha": "b225e25815d441b8d51b8dc3e4fdb3f1828a54a3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4387,6 +4387,37 @@
       "hash": "3686319ff9f2"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/backfill-dni/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "GET /api/operador/backfill-dni — plan EN SECO del backfill del blind index de DNI. No escribe nada. Devuelve cuántas fichas se pueden rellenar, cuántas chocan (= DNI repetido = candidatos a fusión) y "
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 48,
+          "resumen": "POST /api/operador/backfill-dni — ESCRIBE los hashes que no chocan. Idempotente: sólo toca fichas con `dni_lookup_hash` a NULL, así que repetirlo no cambia nada. Las que chocan se quedan como están a "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/backfill-dni",
+      "hash": "e8a2365b6741"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/buscar/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -5002,6 +5033,27 @@
       "hash": "27eebfe642be"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/poliza/intervinientes/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "DELETE /api/operador/poliza/intervinientes — quitar a una persona de UNA póliza. DELETE { intervinienteId, actor, motivo? } El hueco que tapa: hasta el 03/09/2026 el puerto no tenía forma de quitar un"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/poliza/intervinientes",
+      "hash": "5776ab1cfbbd"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/poliza/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -5448,6 +5500,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d1dbe3ca7d3c"
+    },
+    {
+      "ruta": "apps/asegura/lib/backfill-dni.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Backfill del blind index de DNI de la cartera (`clientes.dni_lookup_hash`). El PORQUÉ, la aritmética y el orden de los tres pasos están en la pieza pura, `packages/module-seguros/src/backfill-dni.ts`. Aquí sólo se hacen las dos cosas que no se pueden hacer sin claves ni sin BD: DESCIFRAR el DNI y, c",
+      "exporta": [
+        "backfillDniLookupHash"
+      ],
+      "funciones": [
+        {
+          "nombre": "backfillDniLookupHash",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opciones: { seco: boolean },",
+          "retorno": "Promise<ResultadoBackfill>",
+          "linea": 48,
+          "resumen": "Lee TODAS las fichas de la correduría con DNI, calcula el plan y —sólo si `seco === false`— escribe los hashes que no chocan. El plan se calcula siempre sobre la cartera ENTERA aunque se vaya a escrib"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bc9864e40352"
     },
     {
       "ruta": "apps/asegura/lib/cartera-busqueda.ts",
@@ -6035,7 +6109,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 601,
+          "linea": 602,
           "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
         },
         {
@@ -6044,7 +6118,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, polizaId: string, matricula: string | null, datos: Record<string, unknown> | null, datosGemela: Record<string, unknown> | null,",
           "retorno": "Promise<VehiculoConocido>",
-          "linea": 630,
+          "linea": 631,
           "resumen": "- por eso cada una viaja con su procedencia y NUNCA se elige sola. Si la consulta falla, `versiones` queda `[]` y marca/modelo siguen valiendo: no se tumba la pantalla por no haber podido mirar el his"
         },
         {
@@ -6053,7 +6127,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 691
+          "linea": 692
         },
         {
           "nombre": "normalizarFecha",
@@ -6061,7 +6135,7 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 817,
+          "linea": 818,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
@@ -6069,7 +6143,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "9bd92d12c679"
+      "hash": "d3319f3dcbaa"
     },
     {
       "ruta": "apps/asegura/lib/cartera-historial.ts",
@@ -6184,6 +6258,41 @@
       "hash": "1cdfe263416d"
     },
     {
+      "ruta": "apps/asegura/lib/cartera-intervinientes.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Quitar una persona de una póliza (`poliza_intervinientes`), desde plataforma. EL PORQUÉ (03/09/2026): Alberto, desde la ficha de Pilar Piña Franco, dijo «Matito no se puede borrar, es un error». Las dos mitades eran ciertas: la fila era basura del volcado, y borrarla era literalmente imposible — el ",
+      "exporta": [
+        "quitarInterviniente"
+      ],
+      "funciones": [
+        {
+          "nombre": "quitarInterviniente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, intervinienteId: string, entrada: { actor: string; motivo?: string },",
+          "retorno": "Promise<ResultadoQuitar>",
+          "linea": 42,
+          "resumen": "Quita a una persona de UNA póliza. `intervinienteId` es la fila, no el cliente: la misma persona puede intervenir en varias pólizas y solo se quita en la que se está mirando."
+        },
+        {
+          "nombre": "anotar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string | null, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 118,
+          "resumen": "Best-effort: que el historial falle no deshace el borrado, pero se grita."
+        }
+      ],
+      "tablas": [
+        "historial_interno",
+        "interviniente_purga_log",
+        "poliza_intervinientes"
+      ],
+      "rutaApi": null,
+      "hash": "eb1164d4c291"
+    },
+    {
       "ruta": "apps/asegura/lib/cartera-poliza.ts",
       "ambito": "apps/asegura",
       "resumen": "La ficha de UNA póliza: lo que la fila de la ficha del cliente no cabe. Coberturas, todos los recibos, siniestros, intervinientes, documentos y la COPIA GEMELA del volcado, que a veces sabe lo que CIMA no manda. ─── La copia gemela (medido 02/09/2026) ──────────────────────────────────── 16 de las 1",
@@ -6287,7 +6396,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a9f5954710a0"
+      "hash": "6a201f27a150"
     },
     {
       "ruta": "apps/asegura/lib/cartera-relaciones.ts",
@@ -53080,7 +53189,7 @@
           "exportada": true,
           "params": "{ ficha, personas }: { ficha: Ficha /** `null` = asegura no pudo leer quién interviene; NO es «no hay nadie». */ personas: PersonaDePolizas[] | null }",
           "retorno": null,
-          "linea": 18,
+          "linea": 31,
           "resumen": "Con quién se habla de esta ficha: sus datos, quién sale en sus pólizas y qué vínculos están declarados. Los tres bloques viven juntos a propósito: la pregunta que traen es la misma («¿a quién llamo y "
         },
         {
@@ -53089,8 +53198,68 @@
           "exportada": false,
           "params": "{ ficha, personas }: { ficha: Ficha; personas: PersonaDePolizas[] | null }",
           "retorno": null,
-          "linea": 57,
+          "linea": 70,
           "resumen": "Con quién se puede hablar de esta ficha, agrupado por PERSONA y no por póliza: GLOBAL 2 tiene tres furgonetas con tres conductores distintos y esa gente estaba enterrada póliza por póliza. Quién sale "
+        },
+        {
+          "nombre": "Papel",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ papel, quien, linea, ocupado, onQuitar }: { papel: { rol: string; etiqueta: string | null } quien: string linea: Coincidencia ocupado: string | null onQuitar: (fila: IntervinienteFicha, quien: string, dondePoliza: string) => void }",
+          "retorno": null,
+          "linea": 177,
+          "resumen": "Un papel («conductor ocasional del 1234ABC») con lo que se puede hacer con él."
+        },
+        {
+          "nombre": "Aviso",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r }: { r: Exclude<RespuestaQuitarInterviniente, { estado: 'ok' }> }",
+          "retorno": null,
+          "linea": 237
+        },
+        {
+          "nombre": "lineaDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "persona: PersonaDePolizas, rol: string, etiqueta: string | null, filas: IntervinienteFicha[], idsPorEtiqueta: Map<string, string[]>,",
+          "retorno": "Coincidencia",
+          "linea": 275
+        },
+        {
+          "nombre": "esLaMisma",
+          "kind": "function",
+          "exportada": false,
+          "params": "fila: IntervinienteFicha, persona: PersonaDePolizas",
+          "retorno": "boolean",
+          "linea": 299,
+          "resumen": "¿Esta fila es de esta persona? Identificador primero (la ficha enlazada) y solo se cae al nombre cuando NINGUNA de las dos lo tiene. Dos fichas distintas no se funden jamás, coincida lo que coincida e"
+        },
+        {
+          "nombre": "normalizar",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: string | null",
+          "retorno": "string | null",
+          "linea": 306
+        },
+        {
+          "nombre": "papelesDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PersonaDePolizas",
+          "retorno": "",
+          "linea": 312,
+          "resumen": "Los papeles de una persona, uno por póliza (que es la unidad que se quita)."
+        },
+        {
+          "nombre": "etiquetasDePolizas",
+          "kind": "function",
+          "exportada": false,
+          "params": "ficha: Ficha",
+          "retorno": "Map<string, string[]>",
+          "linea": 324,
+          "resumen": "Etiqueta de póliza → sus ids. Es una lista porque dos pólizas pueden rotularse igual."
         },
         {
           "nombre": "candidatasAVincular",
@@ -53098,13 +53267,13 @@
           "exportada": false,
           "params": "personas: PersonaDePolizas[] | null",
           "retorno": "",
-          "linea": 119,
+          "linea": 340,
           "resumen": "Las personas de sus pólizas a las que SE PUEDE declarar un vínculo hoy: tienen ficha propia y no tienen ninguno anotado. Sin ficha no hay a quién vincular, y con vínculo ya no hace falta ofrecerlo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5c6207d67e7f"
+      "hash": "92228dcf1a34"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabPolizas.tsx",
@@ -53266,7 +53435,7 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 309
+          "linea": 315
         },
         {
           "nombre": "num",
@@ -53274,7 +53443,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 491
+          "linea": 497
         },
         {
           "nombre": "CarteraViva",
@@ -53282,7 +53451,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 493
+          "linea": 499
         },
         {
           "nombre": "CeldaObjeto",
@@ -53290,7 +53459,7 @@
           "exportada": false,
           "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
           "retorno": null,
-          "linea": 659,
+          "linea": 665,
           "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
         },
         {
@@ -53299,12 +53468,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 692
+          "linea": 698
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3a89b75212d4"
+      "hash": "d0071b02dcbc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -53695,6 +53864,43 @@
       "hash": "9b32237d69f0"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "MantenimientoPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "MantenimientoPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "escribir los hashes es el PASO 3 y solo puede ir después de fusionar los choques, que se hacen por lote SQL con los nombres delante. Por eso aquí no hay botón de escribir mientras `enChoque > 0`."
+        },
+        {
+          "nombre": "BlindIndexDni",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ plan }: { plan: PlanBackfillDni }",
+          "retorno": null,
+          "linea": 52
+        },
+        {
+          "nombre": "Cifra",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ n, rotulo, nota, alerta }: { n: number; rotulo: string; nota: string; alerta?: boolean }",
+          "retorno": null,
+          "linea": 114
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a50c54363f72"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/NuevoCliente.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -53967,8 +54173,8 @@
           "exportada": false,
           "params": "{ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }",
           "retorno": null,
-          "linea": 537,
-          "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── Cinco estados y ninguno se colapsa con otro. El que más muerde es `solo_sublimites`: `mayorEur` NO es el continente — pintarl"
+          "linea": 543,
+          "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── SEIS estados y ninguno se colapsa con otro. Los dos que muerden: · `solo_sublimites`: `mayorEur` NO es el continente — pintar"
         },
         {
           "nombre": "Capital",
@@ -53976,12 +54182,12 @@
           "exportada": false,
           "params": "{ titulo, c }: { titulo: string; c: CapitalAsegurado | null }",
           "retorno": null,
-          "linea": 550
+          "linea": 557
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0e1a5ded10cf"
+      "hash": "734ea0559a76"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/acciones.ts",
@@ -61612,6 +61818,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/impagados",
       "hash": "4e472275c6d0"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/intervinientes/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "/api/correduria/intervinientes — quitar a una persona de UNA póliza. Esta app no toca la BD de la correduría: reenvía al puerto de asegura (`DELETE /api/operador/poliza/intervinientes`) con el secreto"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/intervinientes",
+      "hash": "5b40afa0a0a1"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/partes/route.ts",
@@ -73789,7 +74016,9 @@
         "impagadosAsegura",
         "derivarEstadoCanal",
         "interpretarSinCanal",
-        "sinCanalAsegura"
+        "sinCanalAsegura",
+        "planBackfillDni",
+        "interpretarPlanBackfill"
       ],
       "funciones": [
         {
@@ -73947,11 +74176,28 @@
           "params": "",
           "retorno": "Promise<SinCanal>",
           "linea": 562
+        },
+        {
+          "nombre": "planBackfillDni",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<PlanBackfillDni>",
+          "linea": 608
+        },
+        {
+          "nombre": "interpretarPlanBackfill",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "PlanBackfillDni",
+          "linea": 619,
+          "resumen": "Puro: separado para poder probarlo sin red."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "32c67e347904"
+      "hash": "aa0dc4515124"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -77127,7 +77373,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 215
+          "linea": 223
         },
         {
           "nombre": "numero",
@@ -77135,7 +77381,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 221,
+          "linea": 229,
           "resumen": "Número o `null`. Un `null` que llega del puerto se QUEDA en null: es «la compañía no lo informa», y convertirlo en 0 es la mentira de siempre."
         },
         {
@@ -77144,7 +77390,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 225
+          "linea": 233
         },
         {
           "nombre": "leerObjeto",
@@ -77152,7 +77398,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ObjetoFicha | null",
-          "linea": 229
+          "linea": 237
         },
         {
           "nombre": "leerRecibos",
@@ -77160,7 +77406,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "RecibosPoliza | null",
-          "linea": 248,
+          "linea": 256,
           "resumen": "Los recibos, o `null` si el bloque no llega o llega con forma rara. Una forma rara NO se degrada a un resumen a ceros: eso pintaría «al corriente» sobre una póliza de la que no se sabe nada. Degrada a"
         },
         {
@@ -77169,7 +77415,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Retarificabilidad | null",
-          "linea": 289,
+          "linea": 297,
           "resumen": "El veredicto de retarificación, o `null` si no llega o llega con forma rara. Nunca se inventa un `{retarificable:false}`: eso pintaría «no se puede» sobre una póliza de la que solo se sabe que asegura"
         },
         {
@@ -77178,7 +77424,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null | undefined",
-          "linea": 308,
+          "linea": 316,
           "resumen": "`null` o número finito se devuelven tal cual; cualquier otra cosa es basura → `undefined`."
         },
         {
@@ -77187,7 +77433,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EvolucionPrimaCompacta | null",
-          "linea": 320,
+          "linea": 328,
           "resumen": "El veredicto compacto de la prima, o `null` si no llega o llega con forma rara. Nunca se inventa un `sin_datos`: ese estado significa «asegura miró y CIMA no manda la anualidad anterior», y aquí solo "
         },
         {
@@ -77196,7 +77442,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Anualidad | null",
-          "linea": 330
+          "linea": 338
         },
         {
           "nombre": "leerEvolucionPrima",
@@ -77204,7 +77450,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EvolucionPrima | null",
-          "linea": 355,
+          "linea": 363,
           "resumen": "La evolución entera (con anualidades), o `null` si no llega o llega rara. Una anualidad ilegible tumba el bloque entero: media lista compararía mal y pintaría un porcentaje sobre ciclos que no están."
         },
         {
@@ -77213,7 +77459,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PagoFicha | null",
-          "linea": 373,
+          "linea": 381,
           "resumen": "El bloque de pago, o `null` si no llega. Un recargo con estado raro se degrada a `sin_datos`: nunca a «calculado» con un número que nadie calculó."
         },
         {
@@ -77222,7 +77468,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "IntervinienteFicha[] | null",
-          "linea": 398,
+          "linea": 406,
           "resumen": "Los intervinientes, o `null` si el bloque no llega. Una fila con forma rara se salta (no invalida la ficha: son un extra para llamar, no el contrato)."
         },
         {
@@ -77231,7 +77477,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EstadoClienteDerivado | null",
-          "linea": 432,
+          "linea": 443,
           "resumen": "El estado derivado, o `null` si no llega o llega con forma rara. Nunca se inventa un `lead`: eso pintaría «no es cliente» sobre alguien de quien solo se sabe que asegura no ha dicho nada."
         },
         {
@@ -77240,7 +77486,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "AnotacionHistorial[] | null",
-          "linea": 449,
+          "linea": 460,
           "resumen": "El historial, o `null` si no llega o no es lista. Una fila rara se salta (no tumba el bloque); una LISTA que no es lista degrada a `null` entero — jamás a `[]`, que diría «sin anotaciones»."
         },
         {
@@ -77249,7 +77495,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 466,
+          "linea": 477,
           "resumen": "«2026-06-03» (o un ISO con hora) → «03/06/2026». Una fecha ilegible se deja tal cual."
         },
         {
@@ -77258,7 +77504,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 472,
+          "linea": 483,
           "resumen": "«2026-09-02T14:30:00Z» → «02/09/2026 16:30» (hora de Madrid). Una fecha ilegible se deja tal cual."
         },
         {
@@ -77267,7 +77513,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaFicha",
-          "linea": 487,
+          "linea": 498,
           "resumen": "Interpretación PURA de la respuesta del puerto de ficha. Una póliza con forma inesperada invalida la ficha entera, igual que en la lista de vencimientos: media ficha es peor que ninguna, porque nadie "
         },
         {
@@ -77276,7 +77522,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaBusqueda",
-          "linea": 586
+          "linea": 597
         },
         {
           "nombre": "urlAsegura",
@@ -77284,7 +77530,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 621
+          "linea": 632
         },
         {
           "nombre": "pedir",
@@ -77292,7 +77538,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "Promise<",
-          "linea": 625
+          "linea": 636
         },
         {
           "nombre": "fichaAsegura",
@@ -77300,7 +77546,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<RespuestaFicha>",
-          "linea": 636
+          "linea": 647
         },
         {
           "nombre": "buscarEnAsegura",
@@ -77308,7 +77554,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<RespuestaBusqueda>",
-          "linea": 646
+          "linea": 657
         },
         {
           "nombre": "urlRetarificar",
@@ -77316,7 +77562,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "string",
-          "linea": 668,
+          "linea": 679,
           "resumen": "La pantalla de retarificación, **DENTRO de plataforma** desde el 03/09/2026. Antes devolvía la URL de `apps/asegura`, y ese salto era el problema: es otro dominio con otra sesión, así que en producció"
         },
         {
@@ -77325,7 +77571,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "string",
-          "linea": 681,
+          "linea": 692,
           "resumen": "El salto a asegura que TODAVÍA queda: **hogar**. Su retarificador es otro componente (metros, año de construcción, capitales y el Catastro del riesgo) y no está portado. No se enlaza desde las fichas:"
         },
         {
@@ -77334,13 +77580,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 687,
+          "linea": 698,
           "resumen": "Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura porque comparte pantalla con la cotización que sale de lo leído. Gratis."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7cf2e396bbe4"
+      "hash": "aa569e4fca02"
     },
     {
       "ruta": "apps/plataforma/lib/financiero.ts",
@@ -78283,6 +78529,71 @@
       ],
       "rutaApi": null,
       "hash": "e477be37ba4e"
+    },
+    {
+      "ruta": "apps/plataforma/lib/intervinientes-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Quitar a una persona de UNA póliza de la correduría, desde la ficha de plataforma. EL PORQUÉ (03/09/2026): Alberto, mirando «👤 Personas en sus pólizas», vio a «Francisco Chacón Matito» como conductor ocasional y dijo «no se puede borrar, es un error». Era literal en las dos mitades: la fila era bas",
+      "exporta": [
+        "interpretarQuitarInterviniente",
+        "textoMotivoInterviniente",
+        "quitarIntervinienteAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 19
+        },
+        {
+          "nombre": "interpretarQuitarInterviniente",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaQuitarInterviniente",
+          "linea": 35
+        },
+        {
+          "nombre": "textoMotivoInterviniente",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: string",
+          "retorno": "string",
+          "linea": 50,
+          "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 65
+        },
+        {
+          "nombre": "cabeceras",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Record<string, string> | null",
+          "linea": 69
+        },
+        {
+          "nombre": "quitarIntervinienteAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "intervinienteId: string, actor: string, motivo?: string,",
+          "retorno": "Promise<Reenvio>",
+          "linea": 81,
+          "resumen": "`DELETE /api/operador/poliza/intervinientes` — `{intervinienteId, actor, motivo?}`. `intervinienteId` es la FILA, no el cliente: la misma persona puede intervenir en varias pólizas y solo se quita de "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "83a385aea673"
     },
     {
       "ruta": "apps/plataforma/lib/inversion/competencia.ts",
@@ -79571,7 +79882,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "HorquillaEstimacion | null",
-          "linea": 172,
+          "linea": 177,
           "resumen": "Los tres números o nada: media horquilla es una horquilla inventada."
         },
         {
@@ -79580,7 +79891,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FuenteEstimacion | null",
-          "linea": 184
+          "linea": 189
         },
         {
           "nombre": "esVeredictoEstimacion",
@@ -79588,7 +79899,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is VeredictoEstimacion",
-          "linea": 193
+          "linea": 198
         },
         {
           "nombre": "leerEstimacion",
@@ -79596,7 +79907,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "EstimacionPrima | null",
-          "linea": 202,
+          "linea": 207,
           "resumen": "Copia defensiva de la estimación. Sin `etiqueta` legible NO se devuelve nada: esa frase es lo único que impide que la horquilla se lea como una oferta, así que sin ella no se pinta el bloque (y nunca "
         },
         {
@@ -79605,7 +79916,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CapitalAsegurado | null",
-          "linea": 226,
+          "linea": 231,
           "resumen": "Un estado de `CapitalAsegurado` solo se acepta con TODOS sus campos; si no, `null` («no se pudo leer»)."
         },
         {
@@ -79614,7 +79925,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "CapitalesHogarFicha | null",
-          "linea": 254,
+          "linea": 266,
           "resumen": "`null` = asegura no manda los capitales (versión vieja) o llegan ilegibles los DOS lados."
         },
         {
@@ -79623,7 +79934,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaPoliza",
-          "linea": 263
+          "linea": 275
         },
         {
           "nombre": "urlAsegura",
@@ -79631,7 +79942,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 362
+          "linea": 374
         },
         {
           "nombre": "polizaAsegura",
@@ -79639,12 +79950,12 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<RespuestaPoliza>",
-          "linea": 366
+          "linea": 378
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d079105c1174"
+      "hash": "752bb92b0575"
     },
     {
       "ruta": "apps/plataforma/lib/pricing-calendar.ts",
@@ -108430,6 +108741,44 @@
       "hash": "073c4ad492bf"
     },
     {
+      "ruta": "packages/module-seguros/src/backfill-dni.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Backfill del blind index de DNI (`clientes.dni_lookup_hash`). EL PROBLEMA (medido 03/09/2026): 19.696 fichas tienen el DNI guardado cifrado pero **15.800 de ellas no tienen `dni_lookup_hash`**. Ese hash es la única forma de preguntar «¿hay otra ficha con este mismo DNI?» sin descifrar la base entera",
+      "exporta": [
+        "planBackfillDni"
+      ],
+      "funciones": [
+        {
+          "nombre": "planBackfillDni",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichas: FichaDni[], hash: (dni: string) => string | null, pareceDocumento?: (dni: string) => boolean,",
+          "retorno": "PlanBackfillDni",
+          "linea": 107,
+          "resumen": "Decide, sin tocar la BD, qué hash se puede escribir y cuál chocaría. `hash` es la función de hashing real (`computeDniLookupHash` de `@central/module-seguros-pii`), inyectada para que esta pieza sea p"
+        },
+        {
+          "nombre": "anota",
+          "kind": "function",
+          "exportada": false,
+          "params": "m: Map<string, { ids: string[]; preexistente: boolean }>, hash: string, id: string, yaLoTenia: boolean,",
+          "retorno": "void",
+          "linea": 173
+        },
+        {
+          "nombre": "seguro",
+          "kind": "function",
+          "exportada": false,
+          "params": "fn: () => string | null",
+          "retorno": "string | null",
+          "linea": 193
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f4e934605d42"
+    },
+    {
       "ruta": "packages/module-seguros/src/busqueda.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Un solo cuadro de búsqueda para toda la cartera: se teclea lo que se tenga a mano —una matrícula que dicta el cliente por teléfono, su DNI, el número de póliza de un recibo, un apellido— y esto decide DÓNDE hay que mirar. ─── Por qué la clasificación es pura y vive aquí ─────────────────────────── P",
@@ -109215,9 +109564,11 @@
       "resumen": "De las garantías de una póliza de hogar al CAPITAL ASEGURADO. PURO. 🚨 ESTO ES UNA MULETA, NO EL DISEÑO BUENO — y conviene saberlo antes de leer una línea más. El estándar EIAC **SÍ manda el capital etiquetado**: §13.99 `tipo_capital` es una lista de `Capital`, y cada uno lleva CUATRO campos, tres d",
       "exporta": [
         "ladoDeGarantia",
+        "importeDelVolcado",
         "capitalAsegurado",
         "capitalesHogar",
-        "eurDeCapital"
+        "eurDeCapital",
+        "eurDeCapitalConVolcado"
       ],
       "funciones": [
         {
@@ -109226,26 +109577,44 @@
           "exportada": true,
           "params": "descripcion: string | null | undefined",
           "retorno": "LadoRiesgo | null",
-          "linea": 103,
+          "linea": 132,
           "resumen": "¿Este nombre de garantía cubre la vivienda o el mobiliario? Solo mira el vocabulario MEDIDO en la cartera. Lo que no encaje devuelve `null` y queda fuera del recuento: una garantía sin clasificar no e"
+        },
+        {
+          "nombre": "importeDelVolcado",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 175,
+          "resumen": "El importe del volcado, o `null`. Viene como texto y hay que desconfiar de él: `''`, `'0'`, `'-'` y cualquier cosa no numérica son AUSENCIA, nunca un capital de 0€. Mismas reglas que `hogarDeDatos` en"
         },
         {
           "nombre": "capitalAsegurado",
           "kind": "function",
           "exportada": true,
-          "params": "coberturas: readonly CoberturaLeible[], lado: LadoRiesgo,",
+          "params": "coberturas: readonly CoberturaLeible[], lado: LadoRiesgo, volcado?: CapitalVolcado | null,",
           "retorno": "CapitalAsegurado",
-          "linea": 128,
-          "resumen": "El capital asegurado de un lado, por corroboración entre garantías. Nunca devuelve un número sin decir en cuántas garantías se apoya: es lo que separa «912.322€ porque lo dicen seis» de «912.322€ porq"
+          "linea": 205,
+          "resumen": "El capital asegurado de un lado, por corroboración entre garantías. Nunca devuelve un número sin decir de dónde sale: `consenso` dice en cuántas garantías se apoya, y `del_volcado` dice que no viene d"
+        },
+        {
+          "nombre": "capitalPorGarantias",
+          "kind": "function",
+          "exportada": false,
+          "params": "coberturas: readonly CoberturaLeible[], lado: LadoRiesgo,",
+          "retorno": "Exclude<CapitalAsegurado,",
+          "linea": 224,
+          "resumen": "Lo que dicen SOLO las garantías. Sin el consenso, ningún estado trae importe."
         },
         {
           "nombre": "capitalesHogar",
           "kind": "function",
           "exportada": true,
-          "params": "coberturas: readonly CoberturaLeible[]",
+          "params": "coberturas: readonly CoberturaLeible[], volcado?: CapitalesVolcado | null,",
           "retorno": "CapitalesHogar",
-          "linea": 197,
-          "resumen": "Los dos capitales que pide el tarificador de hogar, cada uno con su porqué."
+          "linea": 320,
+          "resumen": "Los dos capitales que pide el tarificador de hogar, cada uno con su porqué. `volcado` son los capitales de la copia de ESTA misma póliza en el volcado (`datos_especificos.continente` / `.contenido`, q"
         },
         {
           "nombre": "eurDeCapital",
@@ -109253,13 +109622,22 @@
           "exportada": true,
           "params": "c: CapitalAsegurado",
           "retorno": "number | null",
-          "linea": 205,
-          "resumen": "El euro si lo hay, `null` si no. Para quien solo quiera el número y ya sepa que puede faltar."
+          "linea": 339,
+          "resumen": "El euro si lo hay, `null` si no. Para quien solo quiera el número y ya sepa que puede faltar. 🚨 `del_volcado` NO sale por aquí: es un capital de junio de 2026 sin rótulo de procedencia, y quien pide "
+        },
+        {
+          "nombre": "eurDeCapitalConVolcado",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CapitalAsegurado",
+          "retorno": "number | null",
+          "linea": 344,
+          "resumen": "El euro venga del consenso o del volcado. Úsalo solo donde un dato viejo valga más que un hueco."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ba8a0c1fc59a"
+      "hash": "40066db72049"
     },
     {
       "ruta": "packages/module-seguros/src/importe-eiac.ts",
@@ -109367,7 +109745,7 @@
           "exportada": true,
           "params": "rol: string",
           "retorno": "string",
-          "linea": 57
+          "linea": 65
         },
         {
           "nombre": "contactoEfectivo",
@@ -109375,7 +109753,7 @@
           "exportada": true,
           "params": "tomador: { telefono: string | null; email: string | null }, intervinientes: IntervinienteFicha[] | null,",
           "retorno": "ContactoEfectivo",
-          "linea": 85,
+          "linea": 93,
           "resumen": "A quién se llama. El tomador manda; si no tiene, el primer interviniente (por prioridad de rol) que sí tenga. `intervinientes === null` = no se ha podido mirar, y se dice — nunca se colapsa con «no ha"
         },
         {
@@ -109384,7 +109762,7 @@
           "exportada": false,
           "params": "rol: string",
           "retorno": "number",
-          "linea": 122
+          "linea": 130
         },
         {
           "nombre": "filasIntervinientes",
@@ -109392,7 +109770,7 @@
           "exportada": true,
           "params": "tomador: { polizaId: string; fichaId: string | null; nombre: string | null }, lista: IntervinienteFicha[] | null,",
           "retorno": "FilasIntervinientes",
-          "linea": 150
+          "linea": 158
         },
         {
           "nombre": "personasDePolizas",
@@ -109400,7 +109778,7 @@
           "exportada": true,
           "params": "intervinientes: IntervinienteFicha[] | null, polizas: readonly { id: string; etiqueta: string }[], relaciones: readonly { relacionadoId: string; tipo: string }[] | null,",
           "retorno": "PersonaDePolizas[] | null",
-          "linea": 239
+          "linea": 249
         },
         {
           "nombre": "normalizarNombre",
@@ -109408,7 +109786,7 @@
           "exportada": false,
           "params": "n: string | null",
           "retorno": "string | undefined",
-          "linea": 312,
+          "linea": 322,
           "resumen": "Un nombre para compararlo con otro: sin espacios de más, sin tildes, en minúsculas."
         },
         {
@@ -109417,13 +109795,13 @@
           "exportada": false,
           "params": "lista: PersonaDePolizas[]",
           "retorno": "void",
-          "linea": 329,
+          "linea": 339,
           "resumen": "Marca las filas que comparten nombre con otra. 🚨 Caso fundacional (03/09/2026, ficha de José Suárez Salas): «María Antonia Gutiérrez Alcalá» salía DOS veces, con las mismas tres matrículas. No era un"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e82ced6cd89c"
+      "hash": "2ff13ccacbec"
     },
     {
       "ruta": "packages/module-seguros/src/objeto.ts",
@@ -115137,7 +115515,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2906,
-    "funciones": 8571
+    "archivos": 2914,
+    "funciones": 8602
   }
 }
