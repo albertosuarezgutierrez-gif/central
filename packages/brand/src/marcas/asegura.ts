@@ -6,9 +6,16 @@ import type { Marca } from '../tipos'
 // sacados de un manual de marca (no hay). Se midieron de la app que hizo Manuel
 // —`app.grupoasegura.com`, la única superficie de marca que existe hoy— así:
 //
-//   - Los AZULES estaban declarados en OKLCH (`oklch(0.4 0.17 265)`,
-//     `oklch(0.62 0.2 265)`, `oklch(0.78 0.14 264)`) y se convirtieron a sRGB.
-//     Hue 264-265 en las tres: es un azul, y es deliberado, no un accidente.
+//   - Los AZULES salen del bloque `:root` del CSS compilado de la app.
+//
+// ⚠️ **Corrección del 03/09/2026, unas horas después de la primera versión de
+// este fichero.** El primario NO es `#193BA1`. Esa primera lectura se sacó de
+// los oklch que aparecían inline en el HTML, y resultó ser el FINAL de un
+// degradado (`from-primary to-[oklch(0.4_0.17_265)]`, el del cuadro del
+// monograma «AS»): aparece una sola vez en toda la app. El token de verdad es
+// `--primary: #3364ee` = oklch(0.555 0.215 265.1). `#193BA1` encaja como tinta
+// oscura del primario, que es donde se ha quedado.
+// Lección: leer el CSS compilado, no los estilos inline de una página.
 //   - El MONOGRAMA se trajo vectorial de `/icon.svg` → `public/brand/marca-asegura.svg`.
 //
 // ⚠️ Y lo que NO sirvió: el logo que había en Drive
@@ -25,38 +32,52 @@ export const MARCA_ASEGURA: Marca = {
   id: 'asegura',
   nombre: 'Grupo Asegura',
   paleta: {
-    // Medidos: oklch(0.4 0.17 265) / oklch(0.62 0.2 265) / oklch(0.78 0.14 264).
-    primario: '#193BA1',
-    primarioInk: '#122B75',
-    primarioSuave: 'rgba(25, 59, 161, 0.10)',
+    // `--primary` del `:root` de la app. Medido en el CSS compilado.
+    primario: '#3364ee',
+    // El final del degradado del monograma. Sirve de tinta oscura.
+    primarioInk: '#193BA1',
+    primarioSuave: 'rgba(51, 100, 238, 0.10)',
+    // `--primary` del modo OSCURO de la app. Como acento del claro funciona,
+    // pero conviene saber que allí no es un acento: es el primario de la noche.
     acento: '#497CFD',
     acentoInk: '#2F5FD9',
-    acentoSuave: 'rgba(73, 124, 253, 0.14)',
-    // Neutros con sesgo frío hacia el azul de marca: un gris puro al lado de
-    // este azul se ve sucio, y además delata que no se eligió.
-    fondo: '#F5F7FB',
-    fondo2: '#EDF1F8',
+    // = su `--surface-accent`, la superficie tintada de marca.
+    acentoSuave: '#E3EFFF',
+    // 🚨 Los neutros de la app son grises PUROS (croma 0.000), no fríos. Aquí
+    // se dejan con un sesgo mínimo hacia el azul: es una DECISIÓN nuestra, no
+    // una medición suya, y por eso está dicho.
+    fondo: '#FCFCFC',
+    fondo2: '#F5F5F5',
     panel: '#FFFFFF',
     panel2: '#F8FAFD',
-    borde: '#DDE3EE',
+    borde: '#DFDFDF',
     bordeSuave: '#E9EDF5',
-    texto: '#111726',
-    textoTenue: '#5A6478',
+    texto: '#121212',
+    textoTenue: '#696969',
     textoTenue2: '#8C95A6',
-    // Semánticos, separados del azul de marca a propósito: un aviso que se pinta
-    // del color de la marca deja de leerse como aviso.
-    ok: '#1E7A55',
+    // Semánticos, separados del azul de marca a propósito: un aviso que se
+    // pinta del color de la marca deja de leerse como aviso.
+    //
+    // ⚠️ El verde de la app (`--success: #118659`) da **4,47:1** sobre su
+    // fondo — por debajo de AA para texto normal. Allí se salva porque solo se
+    // usa a peso 600-800. Aquí se mantiene el nuestro, que tiene más margen.
+    ok: '#059669',
     warn: '#9A6510',
-    peligro: '#B3261E',
+    peligro: '#E40014',
   },
   tipografia: {
-    // Una correduría vende criterio, no simpatía. Una grotesca con algo de
-    // carácter para los titulares y una humanista neutra para el cuerpo: se lee
-    // bien un vencimiento en un móvil a 320 px, que es donde se va a leer.
-    titulos: "'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    // 📌 MEDIDO (no elegido): la app sirve `--font-sans: Inter`,
+    // `--font-display: Fraunces` (serif) y `--font-mono: JetBrains Mono`.
+    //
+    // Se adopta **Inter para todo**. Fraunces se queda fuera a propósito: allí
+    // vive a 2-4 rem en titulares de landing, y en el portal el titular más
+    // grande es un h1 de 20 px. A ese tamaño no aporta carácter — solo un
+    // segundo webfont en la carga de alguien que abre el portal desde el móvil
+    // después de recibir un correo.
+    titulos: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     cuerpo: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     googleFontsHref:
-      'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Inter:wght@400;500;600&display=swap',
+      'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
   },
   logos: {
     wordmark: 'Grupo Asegura',
@@ -64,5 +85,6 @@ export const MARCA_ASEGURA: Marca = {
     monograma: '/brand/marca-asegura.svg',
     lockup: '/brand/marca-asegura.svg',
   },
-  radio: '12px',
+  // `--radius` de la app. Su escala deriva de aquí: .6 / .8 / 1 / 1.4 / 1.8.
+  radio: '16px',
 }
