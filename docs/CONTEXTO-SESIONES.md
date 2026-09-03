@@ -192,7 +192,9 @@
   0 reapariciones, 0 pólizas colgando de lápida**. Hallazgo colateral: el cron `cima-pull` del repo `asegura`
   **falló 3 veces con HTTP 500 del CRM** (31/08 11:34, 01/09 10:19 y 15:30) sin heartbeat en la BD y sin aviso
   en Telegram (solo Slack); se recuperó solo el 02/09 (4 runs verdes). GitHub retrasa el cron de las 05:30
-  hasta ~3 h (ayer 09:47), así que a las 06:18 «no ha corrido» no es fallo: recomprobación programada a las 09:43.
+  hasta ~3 h (ayer 09:47), así que a las 06:18 «no ha corrido» no es fallo. **Cerrado 13:30 UTC:** el cron
+  corrió a las 09:59 (run 191, `schedule`, success, 0 errores, 2 cuentas procesadas, 0 pólizas); fusión sigue
+  limpia (0 reapariciones, 0 lápidas). La única ficha del día (10:31, tipo lead, sin pólizas) no es CIMA.
 
 - **🗂️ Ficha de cliente de la correduría: cabecera + pestañas, y los colores de la app de Manuel (03/09/2026).**
   Alberto: la ficha en una columna larga (12 tarjetas) «no es práctica»; quiere el patrón de su CRM anterior.
