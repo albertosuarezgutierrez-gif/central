@@ -416,7 +416,10 @@
   **o** `eiac_xml_hash IS NOT NULL`. Barrido en asegura, portal y plataforma + guardián
   `test/regression-cartera-viva.test.ts`. `eiacXmlHash` es OBLIGATORIO en las firmas a propósito: si fuera
   opcional, olvidar pedirlo a la BD volvería a la regla vieja en silencio. GRANT de esa columna al rol del
-  portal (aplicado y en `prisma/sql/`). Verificado: 322/322 tests, typecheck asegura/portal/plataforma, QA.
+  portal (aplicado y en `prisma/sql/`). ✅ **MERGEADO (#2164) y verificado sobre `main` ya fusionada:**
+  343/343 tests, guardián 4/4, typecheck de las tres apps, y `central-asegura` desplegada en producción
+  desde ese commit (READY). Contado de nuevo contra la BD: **80 clientes / 110 pólizas**, Reale con 1 viva
+  (la regla vieja seguiría dando 109).
 - 🚫 **CIMA NO deja declarar siniestros. Preguntado y respondido el mismo día (SAU-23934).** El
   proceso **841** existe en la norma EIAC pero **no en CIMA**, las entidades no lo tienen integrado y
   «no hay fecha ni está planificada» su puesta en marcha; la **7.1 sigue sin cambios**. El único envío
