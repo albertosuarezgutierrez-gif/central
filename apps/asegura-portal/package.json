@@ -7,6 +7,7 @@
     "build": "npm run prisma:generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test lib/*.test.ts",
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
