@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T13:57:58Z",
-  "sha": "4f24ef23ade758aff6f9e05236973d7c7149fe91",
+  "generadoEn": "2026-09-03T15:18:51Z",
+  "sha": "f5bebe68f6d20a75c049169bfa808c79473b88c5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54441,7 +54441,7 @@
           "exportada": true,
           "params": "{ clienteId, contactos, identidad, contacto, documentos, }: { clienteId: string contactos: ContactosCliente | null identidad: IdentidadFicha | null contacto: { direccion: string | null direccionIlegible: boolean codigoPostal: string | null ",
           "retorno": null,
-          "linea": 49,
+          "linea": 51,
           "resumen": "Editar los datos de un cliente de la correduría, desde la ficha de plataforma. Tres bloques con tres reglas distintas (dictado de Alberto, 02/09/2026): · Teléfonos y emails: varios, con etiqueta y pri"
         },
         {
@@ -54450,15 +54450,15 @@
           "exportada": false,
           "params": "{ clienteId, inicial }: { clienteId: string; inicial: ContactosCliente | null }",
           "retorno": null,
-          "linea": 81
+          "linea": 83
         },
         {
           "nombre": "ListaContactos",
           "kind": "function",
           "exportada": false,
-          "params": "{ titulo, items, ocupado, onPrincipal, onBorrar }: { titulo: string items: ContactoCliente[] ocupado: boolean onPrincipal: (id: string) => void onBorrar: (c: ContactoCliente) => void }",
+          "params": "{ titulo, icono: Icono, items, ocupado, onPrincipal, onBorrar }: { titulo: string icono: LucideIcon items: ContactoCliente[] ocupado: boolean onPrincipal: (id: string) => void onBorrar: (c: ContactoCliente) => void }",
           "retorno": null,
-          "linea": 224
+          "linea": 238
         },
         {
           "nombre": "ValorContacto",
@@ -54466,7 +54466,7 @@
           "exportada": false,
           "params": "{ c }: { c: ContactoCliente }",
           "retorno": null,
-          "linea": 263
+          "linea": 302
         },
         {
           "nombre": "BloqueDireccion",
@@ -54474,7 +54474,7 @@
           "exportada": false,
           "params": "{ clienteId, contacto }: { clienteId: string contacto: { direccion: string | null; direccionIlegible: boolean; codigoPostal: string | null; ciudad: string | null; provincia: string | null } }",
           "retorno": null,
-          "linea": 285
+          "linea": 324
         },
         {
           "nombre": "BloqueIdentidad",
@@ -54482,7 +54482,7 @@
           "exportada": false,
           "params": "{ clienteId, identidad, documentos }: { clienteId: string identidad: IdentidadFicha | null documentos: DocumentoResumen[] | null }",
           "retorno": null,
-          "linea": 392
+          "linea": 431
         },
         {
           "nombre": "Aviso",
@@ -54490,7 +54490,7 @@
           "exportada": false,
           "params": "{ r, ok, ocupado, onForzar, textoForzar }: { r: ResultadoEscritura | null ok: string ocupado: boolean onForzar?: () => void textoForzar?: string }",
           "retorno": null,
-          "linea": 561
+          "linea": 600
         },
         {
           "nombre": "Campo",
@@ -54498,15 +54498,16 @@
           "exportada": false,
           "params": "{ label, mal, ayuda, children }: { label: string; mal?: boolean; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 608
+          "linea": 647
         }
       ],
       "tablas": [
+        "lucide",
         "next",
         "react"
       ],
       "rutaApi": null,
-      "hash": "665ad9ab9d2a"
+      "hash": "777501660c99"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/EvolucionPrima.tsx",
@@ -70322,6 +70323,7 @@
         "DeltaBadge",
         "Badge",
         "btnStyle",
+        "btnIcono",
         "BtnLink",
         "Pendiente",
         "Dato",
@@ -70402,12 +70404,21 @@
           "resumen": "─── Botones ───────────────────────────────────────────────────────────────────────────────── Se exporta el ESTILO, no un componente con `onClick`: este archivo es server-safe y un handler obligaría a"
         },
         {
+          "nombre": "btnIcono",
+          "kind": "function",
+          "exportada": true,
+          "params": "variante: 'primario' | 'secundario' | 'sutil' = 'secundario', tam: 'sm' | 'md' = 'md'",
+          "retorno": "CSSProperties",
+          "linea": 251,
+          "resumen": "Botón CUADRADO de un solo icono, para la acción repetida de una fila de lista. 🚨 Existe porque el rótulo es lo que rompe la fila en el móvil, no el botón: medido el 03/09/2026 sobre la captura de Alb"
+        },
+        {
           "nombre": "BtnLink",
           "kind": "function",
           "exportada": true,
           "params": "{ href, variante, tam, nuevaPestana, children }: { href: string variante?: 'primario' | 'secundario' | 'sutil' tam?: 'sm' | 'md' /** * Abre en pestaña nueva. No es un capricho: sin esto la primitiva NO servía para tres botones * reales de l",
           "retorno": null,
-          "linea": 233,
+          "linea": 257,
           "resumen": "Botón que en realidad navega. Para acciones con handler usa `btnStyle` en tu client component."
         },
         {
@@ -70416,7 +70427,7 @@
           "exportada": true,
           "params": "{ texto, definitivo, donde }: { texto?: ReactNode definitivo?: boolean donde?: string }",
           "retorno": null,
-          "linea": 275,
+          "linea": 299,
           "resumen": "El hueco, dicho en voz alta. Borde discontinuo = se rellenará; continuo = no lo hará nunca. `donde` dice al usuario dónde mirar mientras tanto (la ficha oficial, el portal del banco…)."
         },
         {
@@ -70425,7 +70436,7 @@
           "exportada": true,
           "params": "{ valor, children, pendiente, vacio, definitivo, donde }: { valor: unknown children?: ReactNode pendiente?: ReactNode vacio?: ReactNode definitivo?: boolean donde?: string }",
           "retorno": null,
-          "linea": 314,
+          "linea": 338,
           "resumen": "Pinta un valor respetando sus tres estados. <Dato valor={f.cargas} vacio=\"Sin cargas\" donde=\"la certificación de cargas\"> {eur(f.cargas)} </Dato> `children` es cómo se pinta el valor cuando LO HAY (ya"
         },
         {
@@ -70434,7 +70445,7 @@
           "exportada": true,
           "params": "{ pct, color, width, alto, track }: { pct: number color?: string width?: number | string alto?: number track?: string }",
           "retorno": null,
-          "linea": 338,
+          "linea": 362,
           "resumen": "Barra fina de progreso. `alto` y `track` son configurables porque cablearlos era justo lo que dejaba la primitiva sin adoptar: de los 11 sitios que pintan esta barra a mano (medido 02/09/2026) solo 3 "
         },
         {
@@ -70443,13 +70454,13 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 356,
+          "linea": 380,
           "resumen": "Envoltorio de tabla ancha: scroll horizontal PROPIO, para que el cuerpo de la página nunca scrollee de lado (regla responsive del CLAUDE.md raíz)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7f7e19da8c16"
+      "hash": "bd3a5f577fa5"
     },
     {
       "ruta": "apps/plataforma/lib/actividad-ialimp.ts",
@@ -117128,6 +117139,6 @@
   ],
   "resumen": {
     "archivos": 2934,
-    "funciones": 8752
+    "funciones": 8753
   }
 }
