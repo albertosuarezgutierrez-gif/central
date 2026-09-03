@@ -16,6 +16,27 @@
 // de 319€ → ×1,58 = 504€, y el precio vivo real de House en Smoobu está en 450-522€.
 export const ELASTICIDAD_AFORO = 1.1
 
+// ⚠️ QUÉ PROTEGE DE VERDAD ESTE FACTOR, Y QUÉ NO (medido 03/09/2026, no supuesto).
+//
+// `market_rates.guests` NO es el aforo del comparable: es el aforo con el que SE BUSCÓ. Y la rutina
+// de mercado busca siempre con el `max_guests` del propio piso, así que en el corpus vivo
+// `factorAforo(z.max_guests, m.guests)` sale **1,000 en el 97,1% de las filas** (11.248 de 11.582) y
+// solo difiere en **5** filas del corpus fiable. En la práctica, hoy, este factor NO mueve nada.
+//
+// Eso NO es una avería, y conviene no "arreglarlo": la homogeneidad de aforo no la da este factor,
+// la da la BÚSQUEDA. Al pedirle a Booking alojamientos para 12 personas, lo que vuelve son sitios
+// que duermen a 12 — ya son comparables, y por eso el factor correcto es 1. Las filas donde sí
+// difiere son las del barrido antiguo, que se buscó con otro aforo (House a 8 y 9, Luxury a 4): ahí
+// el factor sigue haciendo el trabajo para el que se midió y por eso se conserva.
+//
+// 🚨 Lo que este factor NO puede hacer, y que ninguna otra pieza hace tampoco: distinguir el tamaño
+// REAL de dos comparables devueltos por la MISMA búsqueda. En una búsqueda para 12, un piso que
+// duerme a 12 y otro que duerme a 16 entran los dos, al mismo peso. El portal no publica la
+// capacidad por resultado y el conector no la devuelve, así que no hay dato con el que corregirlo
+// — no es que esté pendiente, es que la fuente no lo trae. Antes de escribir en cualquier sitio que
+// "los comparables están normalizados por aforo", léase este párrafo: lo están por la búsqueda, no
+// por una medición del comparable.
+
 // Cotas de seguridad: por muy dispar que sea el aforo, no multiplicamos ni dividimos sin freno.
 export const FACTOR_MIN = 0.6
 export const FACTOR_MAX = 2.5

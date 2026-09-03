@@ -56,9 +56,17 @@ export function computeRecommendation(
   const ceil = percentile(prices, p.ceil_pctl)
   const mktScore = scores.length ? percentile(scores, 0.5) : null
 
-  // CALIDAD: nuestras reseñas vs la mediana del mercado, acotado ±10%.
+  // CALIDAD: nuestras reseñas vs la mediana del mercado. Acotado +10% / −25%.
+  //
+  // 🚨 El suelo era 0,90 y ESO era el problema (03/09/2026): con el corpus sin filtrar por liga, la
+  // brecha real de Busto era de 1,9 puntos (6,9 contra 8,8) y el clamp la traducía en un −10% —
+  // el descuento máximo que el motor podía aplicar por ser peor que TODOS sus comparables.
+  // Ahora la corrección vive sobre todo en la SELECCIÓN del corpus (`pricing-comps-liga.ts`), que
+  // es donde corresponde, y este factor queda de red: con el corpus ya en nuestra liga la brecha
+  // cae a 0,3-0,9 puntos y el factor apenas se mueve (0,93-0,98 medido). El suelo más bajo está
+  // para el día que el corpus vuelva a irse, no para hacer el trabajo del filtro.
   const qualityFactor = (p.own_score != null && mktScore != null)
-    ? clamp(1 + (Number(p.own_score) - mktScore) * Number(p.quality_k), 0.90, 1.10)
+    ? clamp(1 + (Number(p.own_score) - mktScore) * Number(p.quality_k), 0.75, 1.10)
     : 1.0
   // DEMANDA: ocupación propia vs ocupación neutra, acotado ±~8%.
   const demandFactor = (occupancy != null && Number.isFinite(occupancy))

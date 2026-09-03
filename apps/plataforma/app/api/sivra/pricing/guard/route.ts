@@ -16,6 +16,10 @@ import {
   type NocheClasificada,
 } from "@/lib/sivra/noches-sin-income"
 import { listarReservasVentana, runSync } from "@/lib/sivra/smoobu-sync"
+import {
+  brechaCalibracion, recorridoPalancas, decidirRecorrido, fraccionNecesaria,
+} from "@/lib/sivra/pricing-calibracion"
+import { BAJADA_MAX } from "@/lib/sivra/prior-estacional"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -52,6 +56,18 @@ export const maxDuration = 60
 //      ciclos como misterio. Contrasta contra Smoobu en vivo, REPARA re-lanzando el sync sobre la
 //      ventana de llegada, y solo avisa de lo que de verdad es un fallo (una reserva sin sync o una
 //      noche que nada explica) — un bloqueo manual del dueño es normal y no suena.
+//   #12 CALIBRACIÓN (03/09/2026): vendemos en un percentil de mercado y tarificamos en otro. Todos
+//      los centinelas de arriba contrastan el precio VIVO contra el MERCADO, y con eso los cuatro
+//      pisos salían bien; nadie contrastaba el precio vivo contra LO QUE HEMOS COBRADO. Medido ese
+//      día: Busto vende en el P9 del mercado con target_pctl 0,55, Luxury en el P19 con 0,50 y
+//      Duplex en el P22 con 0,60 — meses pidiendo ×1,6-3,1 lo que han cobrado nunca, sin una sola
+//      alerta. House (P57 contra 0,60) es el único calibrado y el único que llena.
+//   #13 RECORRIDO (03/09/2026): el motor no PUEDE llegar al precio que haría falta. El espejo del
+//      #12: aunque decidiera bajar, sus palancas están topadas o muertas (clamp de calidad −10%,
+//      prior estacional −15% pero solo sin bucket de mes —y siempre lo hay—, urgencia k=0,5 → −12,5%
+//      y solo pegada a la fecha, y `pilot_enabled` que anota pero NO escribe precio). Sumadas dan
+//      ~−25% cuando hacía falta −40%. Un motor que no alcanza y no lo dice es indistinguible de uno
+//      que decide que el precio está bien.
 //
 // ⚠️ #4 y #5 comparan contra el mercado NORMALIZADO por aforo (`pricing_factor_aforo`), igual que el
 // motor. Iban sin normalizar hasta el 01/08/2026, así que en el único piso donde importaba —House,
@@ -71,6 +87,26 @@ const PROP_NAMES: Record<string, string> = {
 }
 
 const SUB_UMBRAL = 0.80 // el vivo por debajo del 80% del p50 de mercado de ese día cuenta como "por debajo"
+
+// Topes REALES de las palancas de bajada del motor (#13). Se declaran aquí, con su fuente, porque
+// el check vale exactamente lo que valga su fidelidad al motor: si una de estas cambia allí y no
+// aquí, el guardián mide un motor que no existe.
+/**
+ * Suelo del clamp de calidad: `clamp(..., 0.75, 1.10)` de lib/sivra/pricing-engine.ts.
+ * Era 0,90 hasta el 03/09/2026; se amplió al mover la corrección de calidad a la SELECCIÓN del
+ * corpus (`pricing-comps-liga.ts`). Lo vigila `lib/sivra/pricing-palancas-fidelidad.test.ts`, que
+ * lee el FUENTE del motor: este número es una COPIA, y una copia desincronizada hace que el
+ * guardián mida un motor que no existe — que es justo lo que dice el comentario de arriba.
+ */
+const CLAMP_CALIDAD_MIN = 0.75
+/** descuento máximo de la urgencia con k=1: `descuentoMax` por defecto de pricing-lastminute.ts */
+const LASTMINUTE_DESCUENTO_MAX = 0.25
+/**
+ * ¿Escribe precio el piloto? NO: `pilot_enabled` solo alimenta el agente de seguimiento
+ * (app/api/sivra/pricing/pilot-track), que ANOTA. Mientras siga así es una palanca muerta, y la
+ * constante existe para que el día que escriba precio esto se cambie en un sitio.
+ */
+const PILOTO_ESCRIBE_PRECIO = false
 
 export async function GET(req: NextRequest) {
   // Auth: CRON_SECRET o sesión válida
@@ -514,6 +550,152 @@ export async function GET(req: NextRequest) {
     if (b.alerta) noCatalogados.push({ fecha: d.fecha, factor: factorConocido, ...base, motivo: b.motivo })
   }
 
+  // #12 CALIBRACIÓN: vendemos en un percentil y tarificamos en otro (03/09/2026). El agujero que
+  // deja todo lo de arriba: los centinelas #4/#5 comparan el precio VIVO contra el MERCADO, y ahí
+  // los cuatro pisos salían bien. Nadie comparaba el precio vivo contra LO QUE HEMOS COBRADO —
+  // medido ese día, tres de los cuatro llevaban MESES pidiendo ×1,6-3,1 lo que han cobrado nunca
+  // (Busto vende en el P9 del mercado con target_pctl 0,55) y ningún guardián lo vio.
+  //
+  // 🚨 El ADR va en BRUTO: `COALESCE(amount_gross, amount)`. `amount` es NETO de comisión de canal
+  // (ratio bruto/neto medido 1,246 en BOOKING), así que leerlo tal cual subestimaría el ADR un ~20%
+  // y el piso saldría MÁS descalibrado de lo que está: un número plausible y falso, que es el fallo
+  // caro de esta casa. El corpus de mercado va normalizado por aforo y filtrado por plausibilidad
+  // €/plaza, igual que en #4/#5 — si el guardián no filtra lo mismo que el motor, su silencio no vale.
+  let calibIlegible: string | null = null
+  const marcarCalibIlegible = (que: string) => (e: unknown) => {
+    calibIlegible = `${que}: ${String(e).slice(0, 100)}`
+    return [] as never[]
+  }
+
+  const calibSettings = await prisma.$queryRaw<{
+    property_id: string; target_pctl: number | null; lastminute_k: number; pilot_enabled: boolean
+  }[]>(Prisma.sql`
+    SELECT s.property_id,
+           s.target_pctl::float8 AS target_pctl,
+           COALESCE(s.lastminute_k, 0)::float8 AS lastminute_k,
+           COALESCE(s.pilot_enabled, false) AS pilot_enabled
+    FROM pricing_settings s
+    WHERE s.property_id LIKE 'prop_%'
+  `).catch(marcarCalibIlegible('pricing_settings'))
+
+  // ADR bruto realizado de los últimos 13 meses. SUM/SUM (el agregado no necesita cruzar noche a
+  // noche); el `::date` en las dos comparaciones es obligatorio porque hay filas con `checkIn` a
+  // las 12:00 UTC y sin él la ventana se corre un día.
+  const adrRows = await prisma.$queryRaw<{ property_id: string; adr: number | null; noches: number }[]>(Prisma.sql`
+    SELECT i."propertyId" AS property_id,
+           (SUM(COALESCE(i.amount_gross, i.amount)) / NULLIF(SUM(i.nights), 0))::float8 AS adr,
+           COALESCE(SUM(i.nights), 0)::int AS noches
+    FROM incomes i
+    WHERE i.nights > 0
+      AND COALESCE(i.amount_gross, i.amount) > 0
+      AND i."checkIn"::date >= CURRENT_DATE - INTERVAL '13 months'
+      AND i."checkIn"::date < CURRENT_DATE
+    GROUP BY 1
+  `).catch(marcarCalibIlegible('incomes'))
+
+  const corpusRows = await prisma.$queryRaw<{ property_id: string; precio: number }[]>(Prisma.sql`
+    SELECT m.scenario AS property_id,
+           (m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::float8 AS precio
+    FROM market_rates m
+    LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
+    WHERE m.scenario LIKE 'prop_%'
+      AND m.search_date >= CURRENT_DATE - INTERVAL '21 days'
+      AND m.checkin_date >= CURRENT_DATE
+      AND m.price_night > 0
+      AND ${Prisma.raw(sqlCompPlausible("m."))}
+  `).catch(marcarCalibIlegible('market_rates'))
+
+  // ¿Tiene el piso bucket de MES en el mercado? Es lo que decide si el prior estacional a la baja
+  // llega a actuar: `aplicarPrior` solo aplica su techo `sin` bucket de mes (prior-estacional.ts), y
+  // el motor da por bueno un bucket con ≥3 comps y ≥3 fechas distintas (MIN_BUCKET/MIN_FECHAS_MES de
+  // apply/route.ts) — un listón que se cumple siempre, así que en la práctica la palanca está muerta.
+  const bucketRows = await prisma.$queryRaw<{ property_id: string; meses: number; con_bucket: number }[]>(Prisma.sql`
+    WITH b AS (
+      SELECT m.scenario, date_trunc('month', m.checkin_date) AS mes,
+             COUNT(*) AS n, COUNT(DISTINCT m.checkin_date) AS fechas
+      FROM market_rates m
+      WHERE m.scenario LIKE 'prop_%'
+        AND m.search_date >= CURRENT_DATE - INTERVAL '21 days'
+        AND m.checkin_date >= CURRENT_DATE
+        AND m.price_night > 0
+        AND ${Prisma.raw(sqlCompPlausible("m."))}
+      GROUP BY 1, 2
+    )
+    SELECT scenario AS property_id,
+           COUNT(*)::int AS meses,
+           COUNT(*) FILTER (WHERE n >= 3 AND fechas >= 3)::int AS con_bucket
+    FROM b GROUP BY 1
+  `).catch(marcarCalibIlegible('market_rates (buckets de mes)'))
+
+  const adrDe = new Map(adrRows.map(r => [r.property_id, r]))
+  const bucketDe = new Map(bucketRows.map(r => [r.property_id, r]))
+  const corpusDe = new Map<string, number[]>()
+  for (const r of corpusRows) {
+    const l = corpusDe.get(r.property_id) ?? []
+    l.push(Number(r.precio))
+    corpusDe.set(r.property_id, l)
+  }
+
+  type CalibHit = {
+    property_id: string
+    ev: ReturnType<typeof brechaCalibracion>
+    adr: number | null
+    noches: number
+    comps: number
+    rec: ReturnType<typeof recorridoPalancas>
+    recEv: ReturnType<typeof decidirRecorrido>
+  }
+  const calibHits: CalibHit[] = []
+  const calibSinMuestra: string[] = []
+  const recorridoHits: CalibHit[] = []
+
+  for (const s of calibSettings) {
+    const adr = adrDe.get(s.property_id)
+    const corpus = corpusDe.get(s.property_id) ?? []
+    const ev = brechaCalibracion({
+      adrReal: adr?.adr == null ? null : Number(adr.adr),
+      nochesMuestra: Number(adr?.noches ?? 0),
+      preciosMercado: corpus,
+      targetPctl: Number(s.target_pctl ?? Number.NaN),
+    })
+
+    // #13 RECORRIDO: ¿puede el motor LLEGAR al precio que haría falta? Las cuatro palancas de bajada
+    // con sus topes REALES: el clamp de calidad de pricing-engine.ts (0,90), el tope del prior
+    // (BAJADA_MAX) que solo vive sin bucket de mes, la urgencia (k del piso × 0,25 de descuento
+    // máximo, el defecto de pricing-lastminute.ts) y el piloto, que hoy ANOTA pero no escribe precio.
+    const b = bucketDe.get(s.property_id)
+    const priorBajadaViva = b && Number(b.meses) > 0 ? Number(b.con_bucket) < Number(b.meses) / 2 : true
+    const rec = recorridoPalancas({
+      clampCalidadMin: CLAMP_CALIDAD_MIN,
+      priorBajadaMax: BAJADA_MAX,
+      priorBajadaViva,
+      lastminuteK: Number(s.lastminute_k ?? 0),
+      lastminuteDescuentoMax: LASTMINUTE_DESCUENTO_MAX,
+      pilotEscribe: PILOTO_ESCRIBE_PRECIO,
+    })
+    const recEv = decidirRecorrido({
+      recorridoMin: rec.recorridoMin,
+      fraccionNecesaria: fraccionNecesaria({
+        adrReal: adr?.adr == null ? null : Number(adr.adr),
+        preciosMercado: corpus,
+        targetPctl: Number(s.target_pctl ?? Number.NaN),
+      }),
+      palancasMuertas: rec.palancasMuertas,
+    })
+
+    const hit: CalibHit = {
+      property_id: s.property_id, ev, rec, recEv,
+      adr: adr?.adr == null ? null : Number(adr.adr),
+      noches: Number(adr?.noches ?? 0),
+      comps: corpus.length,
+    }
+    // «sin muestra» NO es «ok»: se cuenta aparte y sale en la respuesta y en el latido, para que un
+    // guardián mudo por falta de datos no se lea como un guardián conforme.
+    if (ev.estado === 'sin_muestra') calibSinMuestra.push(s.property_id)
+    else if (ev.estado !== 'ok') calibHits.push(hit)
+    if (recEv.alerta) recorridoHits.push(hit)
+  }
+
   // Inserta alerta si no hay ya una IGUAL sin resolver (sin límite de tiempo). Antes la ventana era
   // "últimas 24h": como el cron corre a diario a la misma hora, cada pasada quedaba justo fuera de esa
   // ventana y creaba una fila NUEVA por día → el mismo aviso (p.ej. "tocando el precio mínimo") se
@@ -664,6 +846,41 @@ export async function GET(req: NextRequest) {
     if (ok) created++
   }
 
+  // #12: la calibración. Prioridad ALTA cuando es grave (>30 puntos de percentil): tres pisos
+  // llevaban meses así. `sin_muestra` NO crea alerta —no se sabe— pero sale en la respuesta y en el
+  // latido para que el silencio no se lea como conformidad.
+  for (const c of calibHits) {
+    const nombre = PROP_NAMES[c.property_id] ?? c.property_id
+    const pR = Math.round((c.ev.pctlReal ?? 0) * 100)
+    const pT = Math.round(c.ev.targetPctl * 100)
+    const ok = await pushAlert({
+      tipo: "calibracion_percentil",
+      prioridad: c.ev.estado === 'grave' ? "alta" : "media",
+      property_id: c.property_id,
+      titulo: `${nombre}: vende en el P${pR} del mercado y tarifica a P${pT}`,
+      detalle: `${c.ev.motivo} ADR bruto ${Math.round(c.adr ?? 0)}€ sobre ${c.noches} noches (13 meses) contra ` +
+        `${c.comps} comparables del piso. O el objetivo está mal puesto, o el piso no vale ese percentil: ` +
+        `mientras no cuadren, el motor pide un precio que nadie ha pagado.`,
+      dato_actual: Math.round(c.adr ?? 0),
+      dato_mercado: c.ev.ancla == null ? undefined : Math.round(c.ev.ancla),
+      diferencia_pct: Math.round((c.ev.brecha ?? 0) * 100),
+    })
+    if (ok) created++
+  }
+  // #13: el recorrido. Siempre ALTA: es la razón por la que el #12 no se corrige solo, y no se arregla
+  // esperando otra pasada — hay que tocar las palancas.
+  for (const c of recorridoHits) {
+    const nombre = PROP_NAMES[c.property_id] ?? c.property_id
+    const ok = await pushAlert({
+      tipo: "recorrido_insuficiente", prioridad: "alta", property_id: c.property_id,
+      titulo: `${nombre}: el motor no PUEDE bajar hasta el precio al que se vende`,
+      detalle: `${c.recEv.motivo} Aunque el motor decidiera bajar, no llega: revisa el clamp de calidad, ` +
+        `el prior estacional, lastminute_k o el target_pctl del piso.`,
+      diferencia_pct: c.recEv.faltanPct == null ? undefined : Math.round(c.recEv.faltanPct * 100),
+    })
+    if (ok) created++
+  }
+
   // ── AVISO A ALBERTO POR TELEGRAM ──────────────────────────────────────────────
   // Manda UN mensaje con las alertas alta/media aún NO avisadas (cubre también las que crea
   // mercado/cron, p.ej. precio_bajo). Se marca `avisado_at` para no repetir el mismo aviso.
@@ -714,8 +931,8 @@ export async function GET(req: NextRequest) {
   // nada que avisar». Se registra al final a propósito —lo que importa es que la pasada COMPLETÓ— y
   // una tabla de eventos ilegible cuenta como pasada mala: con los centinelas #7/#8 apagados, media
   // vigilancia no es vigilancia.
-  await registrarLatido('sivra_pricing_guard', !eventosIlegibles && !fantasmasIlegibles, [
-    `${reversions.length + floorHits.length + subHits.length + reservasBajas.length + plazaHits.length + aforoHits.length} hallazgos`,
+  await registrarLatido('sivra_pricing_guard', !eventosIlegibles && !fantasmasIlegibles && !calibIlegible, [
+    `${reversions.length + floorHits.length + subHits.length + reservasBajas.length + plazaHits.length + aforoHits.length + calibHits.length + recorridoHits.length} hallazgos`,
     `${created} alertas nuevas, ${avisadas} avisadas`,
     `${mercadoDia.length} fechas con mercado evaluable`,
     fantasmas.length
@@ -723,18 +940,24 @@ export async function GET(req: NextRequest) {
         `${syncReparadas ? `, ${syncReparadas} reparadas` : ''}, ${fantasmaCnt.bloqueo_manual} bloqueo manual, ` +
         `${fantasmaCnt.cancelada} cancelación pendiente, ${fantasmaCnt.sin_explicar} sin explicar)`
       : '',
+    `${calibHits.length} descalibrados, ${recorridoHits.length} sin recorrido` +
+      (calibSinMuestra.length ? `, ${calibSinMuestra.length} SIN MUESTRA (${calibSinMuestra.join(', ')})` : ''),
+    calibIlegible ? `checks #12/#13 SIN evaluar (${calibIlegible})` : '',
     eventosIlegibles ? 'pricing_eventos_auto ILEGIBLE: #7 y #8 sin evaluar' : '',
     fantasmasIlegibles ? `check #10 SIN evaluar (${fantasmasIlegibles})` : '',
   ].filter(Boolean).join(' · ')).catch(() => {})
 
   return NextResponse.json({
-    ok: !eventosIlegibles && !fantasmasIlegibles,
+    ok: !eventosIlegibles && !fantasmasIlegibles && !calibIlegible,
     degradado: [
       eventosIlegibles
         ? "pricing_eventos_auto ilegible: los centinelas de evento (#7 y #8) NO se han evaluado en esta pasada"
         : null,
       fantasmasIlegibles
         ? `check #10 (noches sin income) SIN evaluar: ${fantasmasIlegibles}`
+        : null,
+      calibIlegible
+        ? `checks #12 (calibración) y #13 (recorrido) SIN evaluar: ${calibIlegible}`
         : null,
     ].filter(Boolean).join(" · ") || undefined,
     reversions: reversions.length,
@@ -756,6 +979,12 @@ export async function GET(req: NextRequest) {
     noches_cancelada_pendiente: fantasmaCnt.cancelada,
     noches_sin_explicar: fantasmaCnt.sin_explicar,
     sync_reparadas: syncReparadas,
+    // #12/#13: los tres recuentos van SIEMPRE juntos. «0 descalibrados» a solas se leería como
+    // «los cuatro pisos están calibrados», y puede significar que ninguno tenía muestra que mirar.
+    calibracion_desviada: calibHits.length,
+    calibracion_sin_muestra: calibSinMuestra.length,
+    calibracion_evaluados: calibSettings.length - calibSinMuestra.length,
+    recorrido_insuficiente: recorridoHits.length,
     alerts_created: created,
     avisadas,
   })
