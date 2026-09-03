@@ -50,6 +50,20 @@
   (**no canjea**: lo consumirían los escáneres antivirus) y la lista de los **26 clientes sin ningún canal**
   en `/correduria`. 315/315 guardianes. **Falta solo Alberto:** las envs de `asegura-portal` y `CRON_SECRET`.
 
+- **💥 Colisión de nombres: `seguros.cotizaciones` YA EXISTÍA (02/09/2026, noche).** El SQL de las
+  cotizaciones guardadas se escribió con ese nombre, y estuve a punto de decirle a Alberto que lo
+  aplicara. **`seguros.cotizaciones` es la tabla del COTIZADOR WEB** —25 filas, de julio a hoy, la lee
+  `cartera-historial.ts` para el contador de presupuestos de la ficha— y no tiene ninguna de las
+  columnas que escribe `guardarCotizacion()`. El fallo NO avisa: `create table if not exists` sobre
+  una tabla existente es un no-op silencioso (NOTICE + «Success» en Supabase), así que se habría
+  creado solo la tabla de precios colgada por FK de la tabla equivocada y, como `guardarSinTumbar` se
+  traga el error a propósito, la pantalla habría dicho «no ha quedado copia» para siempre sin un solo
+  error rojo — descubriéndose en la renovación de 2027 con la tabla de comparación vacía. Renombradas
+  a **`seguros.tarificaciones` + `tarificacion_precios`** (SQL, fichero, 3 sitios de código y 2
+  tests), con cepo `test/regression-tarificaciones-nombre.test.ts` (mordido). La vieja NO se toca.
+  Regla que deja: **al aplicar DDL sobre un schema heredado, mira ANTES si el nombre existe;
+  «Success» no dice que se haya creado nada.**
+
 - **🚨 «Ojo con duplicar»: agrupar personas por NIF, no por nombre (02/09/2026, noche).** Aviso de Alberto
   sobre GLOBAL 2. `personasDePolizas` agrupaba por ficha y, a falta de ficha, por NOMBRE — y el peligro
   va en las dos direcciones: **partir** a una persona en dos filas (enlazada a su ficha en una póliza y

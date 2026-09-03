@@ -1,4 +1,19 @@
--- Cotizaciones guardadas — apps/asegura
+-- Tarificaciones guardadas — apps/asegura
+--
+-- 🚨 POR QUÉ NO SE LLAMAN `cotizaciones`: ese nombre YA ESTÁ COGIDO en el
+-- schema `seguros`. `seguros.cotizaciones` es la tabla del COTIZADOR WEB —
+-- viva (25 filas, de julio a hoy), con `tipo_seguro`, `lead_origen`,
+-- `datos_cotizacion`… y la lee `cartera-historial.ts` para el contador de
+-- presupuestos de la ficha de cliente. No se toca.
+--
+-- Este fichero llegó a escribirse con el nombre colisionado, y el fallo NO
+-- avisa: `create table if not exists` sobre una tabla que existe es un no-op
+-- silencioso —Postgres suelta un NOTICE y Supabase pinta «Success»— así que
+-- se habría creado solo la tabla de precios, colgada por FK de la tabla
+-- EQUIVOCADA, y como `guardarSinTumbar` se traga el error a propósito la
+-- pantalla habría dicho «no ha quedado copia» para siempre, sin un solo error
+-- rojo. Al aplicar un DDL sobre un schema heredado: mira ANTES si el nombre
+-- existe; «Success» no dice que se haya creado nada.
 -- ============================================================================
 -- Hoy se apunta lo que se GASTA (`codeoscopic_consumo`) pero no lo que se
 -- RECIBE: los precios viven en la pestaña del navegador. Recargar es tirar
@@ -15,7 +30,7 @@
 --    costó dinero?» se responde con una columna y no con una suposición — y la
 --    horquilla puede excluir lo simulado sin depender de que alguien se acuerde.
 
-create table if not exists seguros.cotizaciones (
+create table if not exists seguros.tarificaciones (
   id                      uuid primary key default gen_random_uuid(),
 
   -- Aislamiento por correduría: mismo contrato que el resto de `seguros`.
@@ -78,14 +93,14 @@ create table if not exists seguros.cotizaciones (
 -- recencia. El índice parcial deja escrito en el esquema que lo simulado NO
 -- alimenta ninguna estimación.
 create index if not exists cotizaciones_horquilla_idx
-  on seguros.cotizaciones (correduria_id, ramo, creado_at desc)
+  on seguros.tarificaciones (correduria_id, ramo, creado_at desc)
   where not simulado;
 
 create index if not exists cotizaciones_poliza_idx
-  on seguros.cotizaciones (poliza_id)
+  on seguros.tarificaciones (poliza_id)
   where poliza_id is not null;
 
-comment on table seguros.cotizaciones is
+comment on table seguros.tarificaciones is
   'Cada tarificación pedida, con la petición íntegra y el riesgo desnormalizado. '
   'Lo simulado se guarda igual (para poder recorrer la pantalla sin gastar) pero '
   'queda marcado y excluido de toda estimación.';
@@ -94,10 +109,10 @@ comment on table seguros.cotizaciones is
 -- ── Los precios: una fila por CONFIGURACIÓN de producto, no por compañía ─────
 -- Una misma compañía puede devolver varias configuraciones con precios
 -- distintos, y agrupar por compañía perdería justo eso.
-create table if not exists seguros.cotizacion_precios (
+create table if not exists seguros.tarificacion_precios (
   id                uuid primary key default gen_random_uuid(),
-  cotizacion_id     uuid        not null
-                    references seguros.cotizaciones (id) on delete cascade,
+  tarificacion_id     uuid        not null
+                    references seguros.tarificaciones (id) on delete cascade,
 
   compania          text        not null,
   producto          text        not null,
@@ -127,13 +142,13 @@ create table if not exists seguros.cotizacion_precios (
   creado_at         timestamptz not null default now()
 );
 
-create index if not exists cotizacion_precios_cotizacion_idx
-  on seguros.cotizacion_precios (cotizacion_id);
+create index if not exists cotizacion_precios_tarificacion_idx
+  on seguros.tarificacion_precios (tarificacion_id);
 
 -- Para la capa 2 de la horquilla: tarifa observada por compañía.
 create index if not exists cotizacion_precios_compania_idx
-  on seguros.cotizacion_precios (compania, creado_at desc);
+  on seguros.tarificacion_precios (compania, creado_at desc);
 
-comment on table seguros.cotizacion_precios is
+comment on table seguros.tarificacion_precios is
   'Un precio por configuración de producto. La firmeza viaja con el precio: sin '
   'ella, un estimado se reenseña mañana como si fuera cerrado.';

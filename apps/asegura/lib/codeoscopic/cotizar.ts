@@ -51,7 +51,7 @@ export type ResultadoCotizacion =
       /** `null` = no se ha mirado el libro (simulación). NO es «quedan 0». */
       restantesHoy: number | null
       /**
-       * Qué pasó con la COPIA en `seguros.cotizaciones`. Tres estados y no un
+       * Qué pasó con la COPIA en `seguros.tarificaciones`. Tres estados y no un
        * booleano: «guardada», «se intentó y falló (con el motivo)» y «ni se
        * intentó». El precio de arriba vale igual —ya está pagado— pero quien lo
        * pinte tiene que poder decir que no ha quedado copia, en vez de suponer

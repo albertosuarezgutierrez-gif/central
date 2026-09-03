@@ -24,7 +24,7 @@ function doble(opciones: Opciones = {}) {
     async $queryRaw<T = unknown>(sql: TemplateStringsArray, ...valores: unknown[]): Promise<T> {
       const texto = sql.join(' ? ')
       consultas.push({ sql: texto, valores })
-      if (/from\s+seguros\.cotizaciones/.test(texto)) {
+      if (/from\s+seguros\.tarificaciones/.test(texto)) {
         if (opciones.fallaCotizaciones !== undefined) throw opciones.fallaCotizaciones
         return (opciones.cotizaciones ?? []) as T
       }
@@ -188,7 +188,7 @@ test('no entran las cotizaciones SIMULADAS ni las pólizas del volcado históric
   await casosDeRamo({ correduriaId: CORREDURIA, ramo: 'hogar', tx })
 
   const cartera = consultas.find((c) => /from\s+seguros\.polizas/.test(c.sql))!
-  const cotizaciones = consultas.find((c) => /from\s+seguros\.cotizaciones/.test(c.sql))!
+  const cotizaciones = consultas.find((c) => /from\s+seguros\.tarificaciones/.test(c.sql))!
   // Las simuladas son números que nos inventamos nosotros: estimar sobre ellas
   // sería estimar sobre nuestra propia invención.
   assert.match(cotizaciones.sql, /and\s+not\s+co\.simulado/)
@@ -248,7 +248,7 @@ test('🚨 UNA cotización aporta UN caso, no uno por compañía que respondió'
   const { tx, consultas } = doble({ cartera: [], cotizaciones: [] })
   await casosDeRamo({ correduriaId: CORREDURIA, ramo: 'hogar', tx })
 
-  const cot = consultas.find((c) => /from\s+seguros\.cotizaciones/.test(c.sql))!
+  const cot = consultas.find((c) => /from\s+seguros\.tarificaciones/.test(c.sql))!
   // Quince precios de la MISMA casa no son quince observaciones del mercado: en
   // una muestra de diecinueve, esa casa mandaría sobre la horquilla entera.
   assert.match(cot.sql, /limit\s+1/i, 'un solo precio por cotización')
