@@ -36,7 +36,10 @@
   volcado); el nombre y el teléfono no la cazaban. La viva hereda email, CP y ciudad (Salteras) y las 2 pólizas
   (incluida la Generali de auto, que CIMA no trae). El buscador relaciona ahora hermanas por **póliza común**
   (solo si una de las dos es de CIMA: por número a secas hay 2.123 pares falsos, «pendiente»/«NOLOSE» incluidos).
-  Hueco latente del motor de fusión reparado en este caso (hash de email no heredado). Docs actualizadas.
+  Hueco latente del motor de fusión reparado en este caso (hash de email no heredado). **PR #2151 MERGEADO**
+  (19/19 checks verdes). Probado DESPUÉS del merge contra la BD: buscar «global» da UNA ficha (7 pólizas),
+  hermanasDe no inventa nada, el email heredado ya encuentra la ficha por índice ciego (columna e hija) y el
+  vínculo `poliza` dispara sobre un escenario sintético revertido; 226/226 tests del módulo.
   Pendiente: nada nuevo; el duplicado vivo 2+1 creado por la ingesta CIMA sigue siendo de Manuel.
 
 - **📅 Intranet del cliente CONSTRUIDA: calendario, aviso y enlace de un clic (02/09/2026, noche V).**
