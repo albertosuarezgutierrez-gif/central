@@ -5,26 +5,29 @@ import { useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 
+import {
+  CamposPoliza,
+  MENSAJE_400,
+  MENSAJE_PRIMA_CERO,
+  campoDelError,
+  primaDesdeTexto,
+  type Campo,
+  type Errores,
+  type Formulario,
+  type RamoOpcion,
+} from './CamposPoliza'
+
 /**
  * Corrección a mano de una póliza que ha subido el propio cliente.
  *
- * Esta pantalla la abre gente de la calle desde su móvil, así que manda el
- * móvil: una columna, controles de 44 px y los `<input>` a 16 px (por debajo,
- * Safari en iPhone hace zoom al enfocar y descoloca la página). Todo eso lo dan
- * ya `.campo` y `.boton` de `globals.css`.
- *
- * 🚨 LA FECHA DE VENCIMIENTO **NO ES OBLIGATORIA**, Y NO SE DEBE «ARREGLAR».
- * Va la primera y destacada porque es el dato que permite avisar antes de que
- * la póliza venza — pero no lleva `required` ni bloquea el guardado, a
- * propósito: quien no la sabe se la inventaría, y una fecha inventada dispara
- * un aviso de renovación FALSO. Un hueco dice «no lo sabemos» y se puede
- * preguntar a la compañía; una fecha equivocada no se puede distinguir de una
- * buena. Es la regla de la casa «dato que NO hay ≠ dato que NO se ha mirado»:
- * mejor el hueco declarado que el dato inventado. Si alguien viene a ponerle un
- * `required`, esto es el porqué de que no lo tenga.
+ * Los cinco campos, sus textos y sus reglas de pantalla (móvil primero, la
+ * fecha destacada pero NO obligatoria, la prima a 0 que es un hueco) viven en
+ * `CamposPoliza.tsx`, compartidos con el alta a mano (`AnadirPoliza.tsx`). Aquí
+ * queda lo que es propio de CORREGIR: qué cambia respecto a lo guardado, y el
+ * tono del hueco cuando la póliza vino de un documento.
  */
 
-export type RamoOpcion = { valor: string; etiqueta: string }
+export type { RamoOpcion }
 
 export type PolizaEditable = {
   id: string
@@ -43,8 +46,6 @@ export type PolizaEditable = {
   deDocumento: boolean
 }
 
-type Campo = 'fechaVencimiento' | 'compania' | 'numeroPoliza' | 'ramo' | 'primaAnual'
-type Formulario = Record<Campo, string>
 type Valores = Omit<PolizaEditable, 'id' | 'deDocumento'>
 type Estado = 'reposo' | 'guardando' | 'guardado' | 'error'
 
@@ -61,34 +62,6 @@ type Cambios = {
   fechaVencimiento?: string | null
 }
 
-const MENSAJE_400: Record<Campo, string> = {
-  fechaVencimiento: 'Esa fecha no nos vale. Compruébala en tu póliza; si no la sabes, déjala en blanco.',
-  primaAnual: 'Esa prima no nos vale. Escríbela en euros al año, por ejemplo 320,50.',
-  compania: 'Ese nombre de compañía no nos vale. Escríbelo tal cual aparece en tu póliza.',
-  numeroPoliza: 'Ese número de póliza no nos vale. Cópialo tal cual aparece en tu póliza.',
-  ramo: 'Ese tipo de seguro no nos vale. Elige uno de la lista.',
-}
-
-/**
- * Un 400 se le enseña a la persona JUNTO AL CAMPO que lo ha provocado, no como
- * «error genérico»: si el backend dice qué campo falla, hay que decírselo donde
- * lo está escribiendo. El código del backend es un identificador, así que se
- * mapea por lo que nombra. Si no se reconoce, NO se adivina un campo: se enseña
- * el aviso general con el código literal, que es honesto y le sirve al soporte.
- */
-const CAMPO_POR_ERROR: ReadonlyArray<readonly [RegExp, Campo]> = [
-  [/venc|fecha/i, 'fechaVencimiento'],
-  [/prima/i, 'primaAnual'],
-  [/compan|compañ/i, 'compania'],
-  [/n(u|ú)mero/i, 'numeroPoliza'],
-  [/ramo/i, 'ramo'],
-]
-
-function campoDelError(codigo: string): Campo | null {
-  for (const [patron, campo] of CAMPO_POR_ERROR) if (patron.test(codigo)) return campo
-  return null
-}
-
 function aFormulario(v: Valores): Formulario {
   return {
     fechaVencimiento: v.fechaVencimiento ?? '',
@@ -99,22 +72,6 @@ function aFormulario(v: Valores): Formulario {
     // `320,50€` es para MOSTRAR, no para escribir.
     primaAnual: v.primaAnual == null ? '' : String(v.primaAnual),
   }
-}
-
-/**
- * `null` = el hueco, y es válido (dejar la prima en blanco es una respuesta).
- * `'invalida'` = hay algo escrito que no es un número. `'cero'` va aparte porque
- * un 0 no es basura: es un hueco con forma de número, y a quien lo escribe hay
- * que decirle que deje el campo vacío, no que «no vale» (mismo criterio que
- * `normalizarPolizaLeida` en @central/module-seguros-portal).
- */
-function primaDesdeTexto(t: string): number | null | 'invalida' | 'cero' {
-  const limpio = t.trim().replace(/[€\s]/g, '').replace(',', '.')
-  if (limpio === '') return null
-  const n = Number(limpio)
-  if (!Number.isFinite(n) || n < 0) return 'invalida'
-  if (n === 0) return 'cero'
-  return Math.round(n * 100) / 100
 }
 
 function calcularCambios(form: Formulario, base: Valores, prima: number | null): Cambios {
@@ -162,7 +119,7 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
   const [form, setForm] = useState<Formulario>(() => aFormulario(guardado))
   const [abierto, setAbierto] = useState(false)
   const [estado, setEstado] = useState<Estado>('reposo')
-  const [errores, setErrores] = useState<Partial<Record<Campo, string>>>({})
+  const [errores, setErrores] = useState<Errores>({})
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)
 
   function abrir() {
@@ -197,7 +154,7 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
       setErrores({
         primaAnual:
           prima === 'cero'
-            ? 'Una prima de 0 € no nos dice nada. Si no la sabes, déjala en blanco.'
+            ? MENSAJE_PRIMA_CERO
             : MENSAJE_400.primaAnual,
       })
       return
@@ -317,107 +274,20 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
 
       {abierto && (
         <form className="editor-form" onSubmit={guardar} noValidate>
-          {/* La fecha, la PRIMERA y destacada: es la que decide si podemos
-              avisar. Destacada ≠ obligatoria (ver la cabecera del fichero). */}
-          <div className="editor-campo editor-destacado">
-            <label htmlFor={`venc-${poliza.id}`}>Fecha de vencimiento</label>
-            <p className="editor-ayuda" id={`venc-ayuda-${poliza.id}`}>
-              Es lo que nos permite avisarte antes de que la póliza venza y no se te renueve sin querer.
-              <strong> Si no la sabes, déjala en blanco</strong> y lo comprobamos con tu compañía: una fecha
-              inventada nos haría avisarte el día que no es.
-            </p>
-            <input
-              id={`venc-${poliza.id}`}
-              className="campo"
-              type="date"
-              value={form.fechaVencimiento}
-              onChange={(e) => escribir('fechaVencimiento', e.target.value)}
-              aria-describedby={`venc-ayuda-${poliza.id}`}
-              aria-invalid={errores.fechaVencimiento ? true : undefined}
-              disabled={guardando}
-            />
-            {errores.fechaVencimiento && <p className="editor-error">{errores.fechaVencimiento}</p>}
-          </div>
-
-          <div className="editor-campo">
-            <label htmlFor={`comp-${poliza.id}`}>Compañía</label>
-            {ayudaHueco('compania') && <p className="editor-ayuda">{ayudaHueco('compania')}</p>}
-            <input
-              id={`comp-${poliza.id}`}
-              className="campo"
-              type="text"
-              value={form.compania}
-              onChange={(e) => escribir('compania', e.target.value)}
-              placeholder="Mapfre, Allianz…"
-              autoComplete="off"
-              aria-invalid={errores.compania ? true : undefined}
-              disabled={guardando}
-            />
-            {errores.compania && <p className="editor-error">{errores.compania}</p>}
-          </div>
-
-          <div className="editor-campo">
-            <label htmlFor={`num-${poliza.id}`}>Nº de póliza</label>
-            {ayudaHueco('numeroPoliza') && <p className="editor-ayuda">{ayudaHueco('numeroPoliza')}</p>}
-            <input
-              id={`num-${poliza.id}`}
-              className="campo"
-              type="text"
-              value={form.numeroPoliza}
-              onChange={(e) => escribir('numeroPoliza', e.target.value)}
-              autoComplete="off"
-              aria-invalid={errores.numeroPoliza ? true : undefined}
-              disabled={guardando}
-            />
-            {errores.numeroPoliza && <p className="editor-error">{errores.numeroPoliza}</p>}
-          </div>
-
-          <div className="editor-campo">
-            <label htmlFor={`ramo-${poliza.id}`}>Tipo de seguro</label>
-            {ayudaHueco('ramo') && <p className="editor-ayuda">{ayudaHueco('ramo')}</p>}
-            <select
-              id={`ramo-${poliza.id}`}
-              className="campo"
-              value={form.ramo}
-              onChange={(e) => escribir('ramo', e.target.value)}
-              aria-invalid={errores.ramo ? true : undefined}
-              disabled={guardando}
-            >
-              {/* «No lo sé» es una respuesta válida y explícita, no un hueco a
-                  rellenar con el primero de la lista. */}
-              <option value="">No lo sé</option>
-              {ramos.map((r) => (
-                <option key={r.valor} value={r.valor}>
-                  {r.etiqueta}
-                </option>
-              ))}
-            </select>
-            {errores.ramo && <p className="editor-error">{errores.ramo}</p>}
-          </div>
-
-          <div className="editor-campo">
-            <label htmlFor={`prima-${poliza.id}`}>Prima anual (€)</label>
-            <p className="editor-ayuda" id={`prima-ayuda-${poliza.id}`}>
-              {ayudaHueco('primaAnual') ??
-                (guardado.primaAnual == null
-                  ? 'Lo que pagas al año. Si no lo sabes, déjalo en blanco.'
-                  : `Ahora tienes anotado ${eur(guardado.primaAnual)}.`)}
-            </p>
-            <input
-              id={`prima-${poliza.id}`}
-              className="campo"
-              type="text"
-              inputMode="decimal"
-              value={form.primaAnual}
-              onChange={(e) => escribir('primaAnual', e.target.value)}
-              placeholder="320,50"
-              autoComplete="off"
-              aria-describedby={`prima-ayuda-${poliza.id}`}
-              aria-invalid={errores.primaAnual ? true : undefined}
-              disabled={guardando}
-            />
-            {errores.primaAnual && <p className="editor-error">{errores.primaAnual}</p>}
-          </div>
+          <CamposPoliza
+            idPrefix={poliza.id}
+            ramos={ramos}
+            form={form}
+            errores={errores}
+            escribir={escribir}
+            disabled={guardando}
+            ayudaHueco={ayudaHueco}
+            ayudaPrima={
+              guardado.primaAnual == null
+                ? 'Lo que pagas al año. Si no lo sabes, déjalo en blanco.'
+                : `Ahora tienes anotado ${eur(guardado.primaAnual)}.`
+            }
+          />
 
           {errorGeneral && (
             <p className="editor-error" role="alert">

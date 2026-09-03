@@ -249,6 +249,14 @@ h1 {
 .boton-subir input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .boton-subir[aria-disabled='true'] { opacity: 0.6; cursor: progress; }
 
+/* Los dos caminos del alta («Elegir PDF o foto» / «Añadirla a mano»): apilados
+ * a 320 px, uno al lado del otro en cuanto caben dos botones de 44 px. */
+.alta-acciones { display: grid; gap: 8px; }
+@media (min-width: 420px) { .alta-acciones { grid-template-columns: 1fr 1fr; } }
+/* El formulario del alta cuelga de la sección, no de un `.editor`: le hace
+ * falta el mismo aire por arriba que tiene el editor de una tarjeta. */
+.seccion > .editor-form { margin-top: 12px; }
+
 /* ── Campos ──────────────────────────────────────────────────────────────
  * 16 px de fuente a propósito: por debajo, Safari en iPhone hace zoom al
  * enfocar el campo y descoloca la pantalla. */

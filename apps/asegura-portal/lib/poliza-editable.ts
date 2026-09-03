@@ -154,3 +154,54 @@ export function normalizarParche(entrada: unknown, hoy: Date = new Date()): Resu
 
   return { ok: true, parche }
 }
+
+// ─── Alta A MANO (sin documento) ─────────────────────────────────────────────
+//
+// Quien tiene la póliza en papel, o no tiene el PDF a mano, declara los mismos
+// cinco campos que puede corregir después. La validación es LA MISMA que la del
+// PATCH —se pasa por `normalizarParche`— a propósito: un valor que se rechaza al
+// editar no puede colarse al crear, y viceversa. Lo único que añade el alta:
+//
+//  1. Todas las claves existen en el resultado. En un alta no hay «no lo toques»:
+//     lo que no se ha escrito es `null` («no lo sé»), y se guarda así.
+//  2. Hace falta al menos compañía O número de póliza. Una fila con ramo y prima
+//     pero sin nada que diga DE QUÉ seguro se habla no es una póliza: es ruido
+//     que nadie —ni la persona ni el corredor— va a poder reconocer después.
+
+/** Los cinco campos declarables, TODOS presentes. `null` = «no lo sé», y es válido. */
+export type DatosAlta = {
+  compania: string | null
+  numeroPoliza: string | null
+  ramo: string | null
+  primaAnual: number | null
+  fechaVencimiento: Date | null
+}
+
+export type ResultadoAlta =
+  | { ok: true; datos: DatosAlta }
+  | { ok: false; error: string }
+
+/**
+ * Valida y normaliza el cuerpo de un alta a mano. Reutiliza `normalizarParche`
+ * para que las reglas sean una sola; un cuerpo sin ninguna clave conocida (que
+ * para el PATCH es `parche_vacio`) aquí es un alta sin identificar, y se dice así.
+ */
+export function normalizarAlta(entrada: unknown, hoy: Date = new Date()): ResultadoAlta {
+  const r = normalizarParche(entrada, hoy)
+  if (!r.ok && r.error !== 'parche_vacio') return r
+
+  const p: ParchePoliza = r.ok ? r.parche : {}
+  const datos: DatosAlta = {
+    compania: p.compania ?? null,
+    numeroPoliza: p.numeroPoliza ?? null,
+    ramo: p.ramo ?? null,
+    primaAnual: p.primaAnual ?? null,
+    fechaVencimiento: p.fechaVencimiento ?? null,
+  }
+
+  if (datos.compania === null && datos.numeroPoliza === null) {
+    return { ok: false, error: 'sin_identificacion' }
+  }
+
+  return { ok: true, datos }
+}

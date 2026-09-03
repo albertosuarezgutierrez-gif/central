@@ -211,3 +211,55 @@ test('el PATCH filtra por identidadId y NUNCA usa update() a secas', () => {
   assert.match(fuente, /confirmadaPorUsuario:\s*true/)
   assert.match(fuente, /procedencia:\s*'declarado'/)
 })
+
+// ── 6. Cepo del alta A MANO: misma validación, fila confirmada, identidad de la cookie ──
+
+test('el POST a mano pasa por normalizarAlta y nace confirmada, sin documento ni extraccion', () => {
+  const fuente = leer('apps/asegura-portal/app/api/polizas/route.ts')
+
+  // La rama JSON existe y valida con el MISMO módulo que el PATCH. Sin esto,
+  // una prima negativa o un 2026-02-31 se rechazarían al corregir y entrarían
+  // al crear.
+  assert.match(fuente, /application\/json/)
+  assert.match(fuente, /normalizarAlta\(/)
+  assert.match(fuente, /sin_identificacion|normalizado\.error/)
+
+  // La identidad sale de la cookie, no del cuerpo.
+  assert.match(fuente, /requireIdentidad\(\)/)
+  assert.equal(
+    /identidadId:\s*(cuerpo|body|datos|form)\b/.test(fuente),
+    false,
+    'la identidad nunca puede venir del cuerpo de la petición',
+  )
+
+  // La fila a mano: confirmada (la ha escrito una persona), declarada, y con
+  // los dos huecos del documento a null, no a un nombre de cajón.
+  assert.match(fuente, /confirmadaPorUsuario:\s*true/, 'el alta a mano nace confirmada por el usuario')
+  assert.match(fuente, /confirmadaPorUsuario:\s*false/, 'el alta con documento sigue naciendo SIN confirmar')
+  assert.match(fuente, /documentoNombre:\s*null/)
+  // `Prisma.DbNull` (NULL de SQL), no `null` (que Prisma rechaza) ni `JsonNull`
+  // (un `null` DENTRO del JSON, que se cuela por `IS NULL`).
+  assert.match(fuente, /extraccionBruta:\s*Prisma\.DbNull/)
+  // Solo se cuentan las líneas de código (con su coma), no la mención del comentario de cabecera.
+  assert.equal((fuente.match(/procedencia:\s*'declarado',/g) ?? []).length, 2, 'las dos ramas guardan `declarado`')
+})
+
+test('normalizarAlta hereda las reglas del parche y exige compañia o numero', async () => {
+  const { normalizarAlta } = await import('../apps/asegura-portal/lib/poliza-editable.ts')
+  assert.deepEqual(normalizarAlta({}, HOY), { ok: false, error: 'sin_identificacion' })
+  assert.deepEqual(normalizarAlta({ ramo: 'auto' }, HOY), { ok: false, error: 'sin_identificacion' })
+  assert.deepEqual(normalizarAlta({ compania: 'Axa', primaAnual: -1 }, HOY), { ok: false, error: 'prima_negativa' })
+  assert.deepEqual(normalizarAlta({ numeroPoliza: '1', fechaVencimiento: '2026-02-31' }, HOY), {
+    ok: false,
+    error: 'fecha_inexistente',
+  })
+  const r = normalizarAlta({ compania: 'Axa' }, HOY)
+  assert.equal(r.ok, true)
+  assert.deepEqual((r as { ok: true; datos: unknown }).datos, {
+    compania: 'Axa',
+    numeroPoliza: null,
+    ramo: null,
+    primaAnual: null,
+    fechaVencimiento: null,
+  })
+})
