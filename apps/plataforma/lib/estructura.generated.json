@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-03T07:34:33Z",
+  "generadoEn": "2026-09-03T09:03:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1955,7 +1955,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "housesevillana": {
         "estado": "no",
@@ -1975,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "rrhh": {
         "estado": "no",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "housesevillana": {
         "estado": "no",
@@ -3599,7 +3599,10 @@
       "/api/operador/cliente/historial",
       "/api/operador/cliente/relaciones",
       "/api/operador/clientes",
+      "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/lineas",
+      "/api/operador/codeoscopic/precalificar",
+      "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/sonda",
       "/api/operador/comisiones",
       "/api/operador/documentos",
@@ -3617,7 +3620,8 @@
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
-      "/api/polizas"
+      "/api/polizas",
+      "/api/polizas/[id]"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -5839,7 +5843,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1249,
+    "apis": 1253,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
