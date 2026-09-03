@@ -1790,7 +1790,12 @@ Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pas
 - **Nada de hex.** Colores SIEMPRE por token (`var(--positive)`, `var(--negative)`…); para un importe,
   `colorImporte(n)`. Lo vigila `test/regression-tokens-color.test.ts`.
 - **`btnStyle()` devuelve el ESTILO, no un componente con `onClick`:** el archivo es server-safe y un
-  handler obligaría a `'use client'` en cada pantalla que lo importe.
+  handler obligaría a `'use client'` en cada pantalla que lo importe. **`btnIcono()`** (03/09/2026,
+  PR #2223) es su hermano cuadrado de 44×44 para la acción repetida de una fila de lista: existe porque
+  lo que rompe la fila en móvil es el RÓTULO, no el botón (en la ficha del cliente «Hacer principal»
+  medía ~150px y con `flexWrap` daba dos alturas al mismo dato, ~58px y ~84px).
+  🚨 **NUNCA para una acción destructiva**: un borrado sin rótulo se pulsa por error y no hay ni un
+  precedente en la app; a icono van las inocuas o idempotentes, y siempre con `aria-label` + `title`.
 - **CSS responsive en `globals.css`, no en la página.** Un estilo inline no admite media queries, y ese
   era el motivo de que 47 páginas llevaran un bloque `<style>` incrustado (201 `!important` entre todas).
 
@@ -1816,10 +1821,13 @@ retirada; la dona sí sigue en paleta categórica (ahí el motivo se sostiene). 
 sigue siendo una exención que hay que releer, no una decisión cerrada.**
 
 ⏸️ **Dos cosas PENDIENTES DE DECISIÓN DE ALBERTO, no deuda técnica anónima:**
-1. **`PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot` siguen con CERO consumidores.** NO se
-   enchufaron a la fuerza en ningún sitio: hacerlo sería repetir el defecto que este lote arregla. En
-   `/banca` el hueco de `PageHeader` ya lo ocupan las migas + el saldo con su botón 👁. O se usan donde
+1. ~~**`PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot` siguen con CERO consumidores.**~~
+   ✅ **Medido el 03/09/2026 y esta frase YA ERA FALSA:** `PageHeader` tiene **55** consumidores,
+   `BtnLink` **8** y `ThinBar` **8** — se adoptaron solas por goteo, que es como se pretendía. Siguen a
+   cero **`BarListRow` y `LegendDot`**, y para esas dos la disyuntiva sigue en pie: o se usan donde
    encajen de verdad, o se borran — un catálogo que nadie importa no es un sistema, es documentación.
+   ⚠️ Lección de método: un recuento escrito en un doc **caduca solo**; antes de citar «tiene N
+   consumidores» vuelve a contarlo (`grep -rl` sobre `app`+`components`), no lo copies de aquí.
 2. **`banca/page.tsx:221` dice «último mov. ninguno» cuando `ultimoMov` es NULL** (`lib/psd2-estado.ts`),
    que es un «no se ha podido leer» servido como afirmación — la regla del NULL incumplida en la pantalla
    del banco. Sin tocar porque cambia un texto que Alberto lee a diario.
