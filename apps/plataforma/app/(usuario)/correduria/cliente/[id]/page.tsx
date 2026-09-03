@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, personasDePolizas, ventanaAnulacion, type EstadoClienteDerivado } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, personasDePolizas, ventanaAnulacion, type EstadoClienteDerivado, type PersonaDePolizas } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
@@ -50,6 +50,17 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
   const abiertos = ficha.siniestros === null ? null : ficha.siniestros.filter(s => s.abierto).length
   // Solo el cónyuge sube a la cabecera; el resto de vínculos vive en la tarjeta 👪.
   const conyuge = ficha.relaciones?.find(r => r.tipo === 'Cónyuge/Pareja de Hecho') ?? null
+  // Las personas de sus pólizas se calculan UNA vez y las usan las DOS tarjetas:
+  // 👤 las pinta, y 👪 ofrece declarar el vínculo de las que no lo tienen. Antes
+  // solo las pintaba 👤, y quien salía ahí sin vínculo (Antonio Sevico en la
+  // ficha de José Suárez Salas, 03/09/2026) no aparecía por ningún lado en 👪:
+  // la tarjeta mandaba a anotarlo a un sitio donde había que buscarlo a mano.
+  const personas = personasDePolizas(
+    ficha.intervinientes,
+    ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) })),
+    ficha.relaciones,
+  )
+  const sinVinculo = candidatasAVincular(personas)
 
   // `minmax(0, 1fr)` NO es decorativo: sin él, la pista implícita de este grid se dimensiona con
   // el contenido más ancho —la tabla de pólizas, que declara `minWidth: 880`— y arrastra la página
@@ -88,7 +99,7 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
           «Relaciones» solo enseña lo declarado a mano y casi nadie lo tiene; esto
           es quién sale en SUS pólizas, que es lo que CIMA sí nos dice. */}
       <Tarjeta titulo="👤 Personas en sus pólizas">
-        <PersonasPolizas ficha={ficha} />
+        <PersonasPolizas ficha={ficha} personas={personas} />
       </Tarjeta>
 
       {/* Editar: contactos (libres), dirección (libre) e identidad (solo con DNI recibido). */}
@@ -104,7 +115,7 @@ export default async function FichaCorreduriaPage({ params }: { params: Promise<
 
       {/* Quién es de quién y quién autoriza a quién a ver sus seguros. `null` = no se pudo leer, no «sin familia». */}
       <Tarjeta titulo="👪 Relaciones y autorizaciones">
-        <Relaciones clienteId={ficha.id} nombreFicha={ficha.nombre} inicial={ficha.relaciones} />
+        <Relaciones clienteId={ficha.id} nombreFicha={ficha.nombre} inicial={ficha.relaciones} sinVinculo={sinVinculo} />
       </Tarjeta>
 
       <Polizas titulo="Pólizas vivas" polizas={vivas} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={ficha.intervinientes} />
@@ -622,12 +633,7 @@ const sub: React.CSSProperties = { fontSize: 11, color: 'var(--muted)' }
 // póliza: GLOBAL 2 tiene tres furgonetas con tres conductores distintos y esa
 // gente estaba enterrada póliza por póliza. Quién sale y cómo se agrupa lo
 // decide `personasDePolizas`, testeado aparte.
-function PersonasPolizas({ ficha }: { ficha: Ficha }) {
-  const personas = personasDePolizas(
-    ficha.intervinientes,
-    ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) })),
-    ficha.relaciones,
-  )
+function PersonasPolizas({ ficha, personas }: { ficha: Ficha; personas: PersonaDePolizas[] | null }) {
   // Tres estados, no dos: no es lo mismo «no se ha podido mirar» que «no hay nadie».
   if (personas === null) return <p style={{ fontSize: 13, color: 'var(--muted)' }}>asegura no ha podido leer quién interviene en sus pólizas.</p>
   if (personas.length === 0) {
@@ -658,13 +664,51 @@ function PersonasPolizas({ ficha }: { ficha: Ficha }) {
             {p.relacionDeclarada
               ? `👪 ${p.relacionDeclarada}`
               : p.fichaId
-                ? 'sin vínculo declarado — se anota en 👪 Relaciones y autorizaciones'
+                ? 'sin vínculo declarado — abajo, en 👪 Relaciones y autorizaciones, hay un botón para anotarlo'
                 : 'CIMA no la ha enlazado a una ficha propia: no se le puede declarar un vínculo todavía'}
           </div>
+          {/* Dos filas con el mismo nombre no son un fallo de la pantalla: o son dos
+              personas (padre e hijo con NIF distinto) o son dos fichas de la misma
+              persona. Se dice cuál de las dos cosas es, y cuando no se sabe, se dice
+              que no se sabe — nunca se funden dos identidades. */}
+          {p.homonimia === 'distinta_persona' && (
+            <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+              👥 Hay otra persona con este mismo nombre en sus pólizas, con NIF distinto: son dos, no una.
+            </div>
+          )}
+          {p.homonimia === 'sin_distinguir' && (
+            <div style={{ fontSize: 11, color: 'var(--warning)' }}>
+              ⚠️ Aparece otra fila con este mismo nombre y no se puede distinguir (a alguna le falta el NIF):
+              puede ser la misma persona con la ficha duplicada. No se funden desde aquí.
+            </div>
+          )}
         </div>
       ))}
     </div>
   )
+}
+
+/**
+ * Las personas de sus pólizas a las que SE PUEDE declarar un vínculo hoy:
+ * tienen ficha propia y no tienen ninguno anotado. Sin ficha no hay a quién
+ * vincular, y con vínculo ya no hace falta ofrecerlo.
+ */
+function candidatasAVincular(personas: PersonaDePolizas[] | null): { fichaId: string; nombre: string; papel: string; ojoDuplicada: boolean }[] {
+  const out = new Map<string, { fichaId: string; nombre: string; papel: string; ojoDuplicada: boolean }>()
+  for (const p of personas ?? []) {
+    // Sin nombre legible no se puede ofrecer un botón que diga a quién vincula.
+    if (p.fichaId === null || p.relacionDeclarada !== null || p.nombre === null) continue
+    if (out.has(p.fichaId)) continue
+    out.set(p.fichaId, {
+      fichaId: p.fichaId,
+      nombre: p.nombre,
+      papel: p.papeles.map(x => etiquetaRol(x.rol)).join(' · '),
+      // Otra fila se llama igual y no se puede distinguir: declarar el vínculo
+      // aquí puede acabar en dos relaciones con la misma persona, una por ficha.
+      ojoDuplicada: p.homonimia === 'sin_distinguir',
+    })
+  }
+  return [...out.values()]
 }
 
 /** Cómo se nombra una póliza en una frase: la matrícula si la hay. */

@@ -223,6 +223,17 @@ export type PersonaDePolizas = {
   /** Su vínculo declarado en «Relaciones», si lo tiene. `null` = no hay ninguno
    *  anotado, que es el caso normal: CIMA no declara parentescos. */
   relacionDeclarada: string | null
+  /**
+   * Otra fila de la lista se llama IGUAL. `null` = no hay homónima.
+   *
+   * `distinta_persona` = las dos traen NIF y son distintos: son dos personas
+   * de verdad (el padre y el hijo de la póliza del coche), y la lista tiene
+   * que enseñar las dos.
+   * `sin_distinguir` = a alguna le falta el NIF, así que NO se sabe si son dos
+   * personas o una ficha duplicada. Se dice; no se funden (fundir dos
+   * identidades mezcla teléfonos y es la mentira cara) ni se calla.
+   */
+  homonimia: 'distinta_persona' | 'sin_distinguir' | null
 }
 
 export function personasDePolizas(
@@ -248,7 +259,7 @@ export function personasDePolizas(
 
   for (const i of intervinientes) {
     if (i.esTomador) continue
-    const nombreClave = i.nombre?.trim().toLowerCase()
+    const nombreClave = normalizarNombre(i.nombre)
     const porFicha = i.fichaId ? fichaDe.get(i.fichaId) : undefined
     const clave =
       i.personaClave !== null ? `nif:${i.personaClave}`
@@ -267,6 +278,7 @@ export function personasDePolizas(
         email: null,
         papeles: [],
         relacionDeclarada: i.fichaId ? rel.get(i.fichaId) ?? null : null,
+        homonimia: null,
       }
       por.set(clave, p)
     }
@@ -289,8 +301,44 @@ export function personasDePolizas(
 
   const lista = [...por.values()]
   for (const p of lista) p.papeles.sort((a, b) => prioridad(a.rol) - prioridad(b.rol))
+  marcarHomonimas(lista)
   return lista.sort((a, b) => {
     const d = prioridad(a.papeles[0]?.rol ?? '') - prioridad(b.papeles[0]?.rol ?? '')
     return d !== 0 ? d : (a.nombre ?? '').localeCompare(b.nombre ?? '', 'es')
   })
+}
+
+/** Un nombre para compararlo con otro: sin espacios de más, sin tildes, en minúsculas. */
+function normalizarNombre(n: string | null): string | undefined {
+  const s = n?.normalize('NFD').replace(/\p{Diacritic}/gu, '').trim().replace(/\s+/g, ' ').toLowerCase()
+  return s === '' ? undefined : s
+}
+
+/**
+ * Marca las filas que comparten nombre con otra.
+ *
+ * 🚨 Caso fundacional (03/09/2026, ficha de José Suárez Salas): «María Antonia
+ * Gutiérrez Alcalá» salía DOS veces, con las mismas tres matrículas. No era un
+ * fallo de agrupación: son dos fichas distintas de la cartera —una del volcado
+ * `intranet:cli:48` con DNI, otra de `asegura_app:cli2:48` sin él— y agrupar
+ * por NIF (regla 12) no puede ni debe fundirlas. Lo que sí se puede hacer es
+ * DECIRLO, en vez de dejar dos filas gemelas que parecen un error de la
+ * pantalla. Si las dos traen NIF y son distintos, son dos personas y se dice
+ * también: ahí duplicar sería lo correcto.
+ */
+function marcarHomonimas(lista: PersonaDePolizas[]): void {
+  const porNombre = new Map<string, PersonaDePolizas[]>()
+  for (const p of lista) {
+    const nm = normalizarNombre(p.nombre)
+    if (nm === undefined) continue
+    const g = porNombre.get(nm)
+    if (g) g.push(p)
+    else porNombre.set(nm, [p])
+  }
+  for (const grupo of porNombre.values()) {
+    if (grupo.length < 2) continue
+    // Todas con NIF y en grupos distintos = NIF distintos: son personas distintas.
+    const todasConNif = grupo.every((p) => p.clave.startsWith('nif:'))
+    for (const p of grupo) p.homonimia = todasConNif ? 'distinta_persona' : 'sin_distinguir'
+  }
 }
