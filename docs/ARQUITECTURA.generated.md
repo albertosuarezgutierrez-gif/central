@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-03T07:34:33Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-03T09:26:30Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1249 rutas API.
+**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1256 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,12 +21,12 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (59):** if, seguros._volcado_control, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas, seguros.cuenta_efectivo…
-- **Rutas API:** 26
+- **Rutas API:** 30
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
-- **Tablas (8):** seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_obligacion, seguros.portal_poliza_declarada, seguros.portal_vinculo
-- **Rutas API:** 3
+- **Tablas (9):** seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_poliza_declarada, seguros.portal_vinculo
+- **Rutas API:** 5
 ### housesevillana
 - **Módulos que usa:** —
 - **Capacidades:** —
@@ -48,10 +48,10 @@
 - **Tablas (2):** mariscos_envasados, mariscos_partidas
 - **Rutas API:** 4
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-ses, module-subastas, module-trading
+- **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (130):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor, correo_reglas…
-- **Rutas API:** 338
+- **Rutas API:** 339
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -172,7 +172,7 @@
   - Lo usan: asegura, asegura-portal
   - Depende de: —
 - **module-seguros-portal** (module) → `@central/module-seguros-portal`
-  - Lo usan: asegura, asegura-portal
+  - Lo usan: asegura, asegura-portal, plataforma
   - Depende de: module-seguros
 - **module-ses** (module) → `@central/module-ses`
   - Lo usan: plataforma
@@ -256,14 +256,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/09/2026) 🚑 El cliente ya puede dar parte de un siniestro desde el portal
+- (03/09/2026) 📅 mercado-booking: julio y agosto 2027 ya tienen bucket elegible, otra vez
 - (03/09/2026) ✅ El libro de comisiones vuelve a leer la cartera — incidente `asegura_error` CERRADO
 - (03/09/2026) 🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente`
 - (03/09/2026) 🔎 Check-in post-fusión CIMA
 - (03/09/2026) 🗂️ Ficha de cliente de la correduría: cabecera + pestañas, y los colores de la app de Manuel
+- (03/09/2026) ✍️ El portal del cliente ya deja corregir la póliza a mano
 - (03/09/2026) 🌶️ La pimienta del portal se apagaba sola
 - (03/09/2026) 🔑 Portal del cliente: envs puestas y la lección de las claves irreversibles
 - (03/09/2026) 🎨 Portal del cliente: correo propio y aspecto de plataforma
-- (03/09/2026) 👪 «Antonio Sevico no aparece en Relaciones»: no era un fallo de lectura
-- (03/09/2026) 🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto
-- (03/09/2026) 🧪 La PRIMERA simulación real destapó dos mentiras más, y la BD las cazó
 
