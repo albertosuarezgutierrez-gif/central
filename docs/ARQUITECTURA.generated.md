@@ -256,6 +256,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/09/2026) Correduría: «Global2» y «GLOBAL 2 INSTALACIONES TÉCNICAS» eran el mismo cliente
 - (02/09/2026) 📅 Intranet del cliente CONSTRUIDA: calendario, aviso y enlace de un clic
 - (02/09/2026) 🚨 «Ojo con duplicar»: agrupar personas por NIF, no por nombre
 - (02/09/2026) 👤 «Personas en sus pólizas», arriba en la ficha
@@ -265,5 +266,4 @@
 - (02/09/2026) 🧹 Limpieza de duplicados: 16 fusiones más
 - (02/09/2026) 💾📐🗺️ Etapa 2 de tarificación + el mapa de campos
 - (02/09/2026) 🧠 El agente de huéspedes «no aprendía» — y el que decidía nunca leyó lo aprendido
-- (02/09/2026) 🧾🔑🧲 «Haz todo ok, aplica y canal leads»
 
