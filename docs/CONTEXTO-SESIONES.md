@@ -307,10 +307,14 @@
   `test/regression-cartera-viva.test.ts`. `eiacXmlHash` es OBLIGATORIO en las firmas a propósito: si fuera
   opcional, olvidar pedirlo a la BD volvería a la regla vieja en silencio. GRANT de esa columna al rol del
   portal (aplicado y en `prisma/sql/`). Verificado: 322/322 tests, typecheck asegura/portal/plataforma, QA.
-- **Pendiente CIMA (aparte, sin enviar):** borrador en Gmail a `soporte@cimaseg.es` con (A) **Generali
-  C0072**: credencial activa desde 19/05 y **cero ficheros** — no hay confirmación de activación suya, y
-  en el Portal tampoco aparece nada; (B) el proceso EIAC **841** (alta de siniestros, Mediador→Entidad):
-  el estándar lo prevé pero el adaptador solo hace bajada y producción iba en EIAC v6 (SAU-22134, 30/04).
+- 🚫 **CIMA NO deja declarar siniestros. Preguntado y respondido el mismo día (SAU-23934).** El
+  proceso **841** existe en la norma EIAC pero **no en CIMA**, las entidades no lo tienen integrado y
+  «no hay fecha ni está planificada» su puesta en marcha; la **7.1 sigue sin cambios**. El único envío
+  corredor→entidad abierto es el método **`enviarFichero`**, y solo para los **procesos 761 y 77X de
+  recibos** (qué son exactamente, sin comprobar). Lección: **que un proceso esté en la norma no
+  significa que CIMA lo transporte** — se pregunta antes de diseñar. Muere el port del 841.
+- **Pendiente (borrador en Gmail, SIN enviar):** **Generali C0072** — credencial activa desde el 19/05,
+  **cero ficheros**, sin confirmación de activación por TIREA y en el Portal tampoco aparece nada.
   **Reale no manda la carga masiva 199/299** — eso se pide a Reale, no a TIREA.
 
 ### 🧾 (02/09/2026, noche IV) Cuadre de comisiones: por qué está a cero y hasta dónde puede cuadrar (solo lectura)

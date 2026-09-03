@@ -461,7 +461,8 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
   movimientos de recibo · 399 siniestros**.
 
   🚨 **Y no hay ningún proceso EIAC para PEDIR una carga masiva.** El único Mediador→Entidad con
-  transacción SO es el **841, Solicitud alta nuevos siniestros**. Así que el 199/299/399 se pide
+  transacción SO es el **841, Solicitud alta nuevos siniestros** — que además NO está disponible en
+  CIMA (ver abajo, medido el 03/09/2026). Así que el 199/299/399 se pide
   **fuera del canal**, a la compañía. Por eso «no hay botón» y por eso una petición mal nombrada se
   contesta con un «eso no se hace»: **el término correcto es «carga masiva», proceso 199/299/399**,
   no «carga inicial» ni «primera carga», que no existen en la norma.
@@ -488,11 +489,25 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
   📌 **Petición que corresponde a cada una:** Occident → 199 + 299 + 399 · Reale → 199 + 299 ·
   Allianz → 299 + 399 · Mapfre → 399.
 
-  ✅ **Y esto corrige el apartado de arriba sobre siniestros:** el proceso **841 «Solicitud alta
-  nuevos siniestros» (Mediador → Entidad, transacción SO) EXISTE en el estándar** — o sea, declarar
-  un siniestro desde nuestro CRM **sí está previsto**. Lo que no consta es que ninguna compañía lo
-  tenga activado para Alberto, que es una afirmación distinta y mucho más barata de resolver:
-  se pregunta.
+  🚫 **NO SE PUEDEN DECLARAR SINIESTROS POR CIMA. Preguntado y respondido (03/09/2026, ticket
+  SAU-23934).** El proceso **841 «Solicitud alta nuevos siniestros»** (Mediador → Entidad,
+  transacción SO) **existe en el estándar EIAC pero NO en CIMA**. Literal de `accesos.cima@tirea.es`:
+  «El proceso 841 no está disponible para utilizarse a través de CIMA y las entidades no lo tienen
+  integrado mediante CIMA. **No hay fecha ni está planificada** por el momento la puesta en marcha.»
+  Y el calendario de la **7.1 sigue sin cambios**: las entidades continúan desarrollándola.
+  ⚠️ Esto CORRIGE lo que ponía aquí antes («declarar un siniestro desde nuestro CRM sí está
+  previsto… solo falta que alguna compañía lo active»): estaba leído del estándar, no del canal.
+  **Que un proceso figure en la norma EIAC no significa que CIMA lo transporte.** Antes de diseñar
+  nada sobre un proceso, pregunta si CIMA lo tiene en marcha.
+  📌 Consecuencia práctica: un siniestro se sigue declarando por el canal de cada compañía
+  (teléfono/web) y en el CRM se abre como `gestionado_correduria`, guardando la referencia que dé
+  la compañía en `id_siniestro_entidad` para que el pull de CIMA case sobre esa fila.
+
+  ⬆️ **Lo que SÍ se puede subir a la entidad, y es el único camino abierto (03/09/2026):** el WS
+  Estándar tiene un método **`enviarFichero`**, y hoy solo admite los **procesos 761 y 77X, de
+  RECIBOS**. Nuestra integración no lo usa (solo `RecibirFicherosPendientes` + `ConfirmarDescarga`).
+  ⚠️ Qué son exactamente el 761 y el 77X **no se ha comprobado contra la norma**: no lo des por
+  sabido ni construyas nada encima sin mirarlo primero.
 
 - **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
   431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
