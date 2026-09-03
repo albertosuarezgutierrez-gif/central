@@ -118,3 +118,29 @@ test('el combustible NO se adivina del código de la ficha', () => {
   assert.doesNotMatch(src, /vehiculo\.combustible/)
   assert.match(src, /motorId/)
 })
+
+// ─── La prima que estaba y se pintaba como «—» ──────────────────────────────
+//
+// 03/09/2026, primera simulación real: la tabla de precios enseñaba «—» en las
+// tres primas mientras `seguros.tarificacion_precios` guardaba 49,60€, 68,80€ y
+// 84,80€. El componente declaraba su propio tipo `Precio` con `primaAnual` y el
+// backend manda `primaEur` (`lib/codeoscopic/respuesta.ts`). Como TODOS los
+// campos del tipo local son opcionales, el desajuste no produjo ni un error de
+// tipos: solo un dato real convertido en «no lo sé», que es la mentira que este
+// repo persigue.
+
+test('la pantalla lee el nombre que manda el backend para la prima', () => {
+  const src = leer(`${PANTALLA}/retarificador.tsx`)
+  assert.match(src, /primaEur\?: number \| null/)
+  assert.match(src, /eur\(p\.primaEur\)/)
+  assert.doesNotMatch(
+    src,
+    /p\.primaAnual/,
+    'vuelve a leerse `primaAnual`, que el backend no manda: la prima saldría como «—»',
+  )
+})
+
+test('el backend sigue llamándola `primaEur` — si cambia, este cepo lo dice', () => {
+  const src = leer('apps/asegura/lib/codeoscopic/respuesta.ts')
+  assert.match(src, /primaEur: number/)
+})
