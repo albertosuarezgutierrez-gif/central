@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-03T09:51:45Z",
+  "generadoEn": "2026-09-03T12:38:59Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1951,7 +1951,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 25
+        "evidencias": 28
       },
       "asegura-portal": {
         "estado": "usado",
@@ -1975,7 +1975,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 30
+        "evidencias": 33
       },
       "rrhh": {
         "estado": "no",
@@ -2001,7 +2001,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3538,6 +3538,7 @@
       "module-documental"
     ],
     "module-seguros": [
+      "module-seguros-pii",
       "module-seguros-portal"
     ],
     "module-seguros-pii": [],
@@ -3593,7 +3594,9 @@
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/cron/avisos-vencimiento",
+      "/api/operador/backfill-dni",
       "/api/operador/buscar",
+      "/api/operador/cartera",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
       "/api/operador/cliente/historial",
@@ -3613,6 +3616,7 @@
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza/emitida",
+      "/api/operador/poliza/intervinientes",
       "/api/operador/resumen",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
@@ -4426,6 +4430,7 @@
       "/api/correduria",
       "/api/correduria/buscar",
       "/api/correduria/cartera",
+      "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
       "/api/correduria/cliente",
       "/api/correduria/cliente/contactos",
@@ -4438,6 +4443,7 @@
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/impagados",
+      "/api/correduria/intervinientes",
       "/api/correduria/partes",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
@@ -4891,6 +4897,7 @@
       "seguros.documentos",
       "seguros.gestiones",
       "seguros.historial_interno",
+      "seguros.interviniente_purga_log",
       "seguros.lds_consent",
       "seguros.liquidacion_movimientos",
       "seguros.liquidaciones",
@@ -5847,7 +5854,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1256,
+    "apis": 1261,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
