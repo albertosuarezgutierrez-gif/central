@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición (03/09/2026).**
+  Alberto pidió estudio legal y benchmark sectorial para «José autoriza a María a ver sus pólizas».
+  🚨 Medido: **104 `cliente_relaciones.puede_ver_polizas = true`, TODAS creadas el 21/06/2026** (día del
+  volcado del CRM) → ninguna la otorgó un cliente, y la tabla no tiene autor/fecha/revocación con que
+  acreditarlo. **12 apuntan a póliza viva** (6 otorgantes; una es «Ocasional - Tomador») y el portal ya
+  las sirve a nivel `completo` (`cartera-lectura.ts:149`). ✅ **`portal_vinculo` = 0: nadie ha entrado
+  aún**, así que hoy cuesta un UPDATE y tras la primera invitación es art. 33 RGPD — manda el ORDEN. La
+  pantalla-muro que proponía Alberto («si no autoriza, se bloquea») choca con el art. 7.4 RGPD. Estudio
+  en `docs/ASEGURA-AUTORIZACION-TERCEROS.md`. **No se programó nada: faltan dos decisiones suyas**
+  (apagar las 104 ya; si «gestionar» exige verificar la identidad del autorizado).
+
 - **🏷️ El motor de pricing tarificaba en un percentil que tres pisos no han alcanzado jamás (03/09/2026, PR #2192).**
   Alberto: «pocas reservas, solo funciona House Sevillana». Medido: cada piso vende de verdad en P9 (Busto,
   ADR 84€) / P19 (Luxury, 135€) / P22 (Duplex, 111€) / **P57 (House, 560€)** del mercado, con `target_pctl`
