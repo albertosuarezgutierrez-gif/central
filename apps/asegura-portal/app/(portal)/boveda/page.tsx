@@ -38,7 +38,7 @@ const RAMO: Record<string, string> = {
 /** Las opciones del selector de ramo salen del MISMO mapa que las etiquetas de
  *  arriba (que son las de `RAMOS_POLIZA`), para que la lista de la pantalla y la
  *  que acepta el backend no se separen con el tiempo. Va como prop porque
- *  `EditarPoliza` es un componente de cliente. */
+ *  `EditarPoliza` y `SubirPoliza` (alta a mano) son componentes de cliente. */
 const RAMOS_OPCIONES = Object.entries(RAMO).map(([valor, etiqueta]) => ({ valor, etiqueta }))
 
 const ESTADO: Record<string, string> = {
@@ -232,7 +232,9 @@ export default async function Boveda() {
         )}
       </section>
 
-      <SubirPoliza />
+      {/* Las opciones de ramo son las MISMAS que las de `EditarPoliza`: un alta a mano
+          y una corrección ofrecen la misma lista. */}
+      <SubirPoliza ramos={RAMOS_OPCIONES} />
     </main>
   )
 }
