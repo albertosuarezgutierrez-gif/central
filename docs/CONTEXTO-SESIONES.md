@@ -46,7 +46,12 @@
   la ayuda del buscador se pliega, el campo cede ancho (`1 1 180px`) para que «Buscar» no caiga a
   otra fila, **fuera el `autoFocus`** (abría el teclado al entrar y tapaba media pantalla) y las
   pestañas pasan a `position:sticky`. De regalo, los **9 botones del desglose de comisiones estaban
-  a ~26 px** —muy por debajo del mínimo táctil de 44 del repo—: helper `btnMini()`.
+  a ~26 px** —muy por debajo del mínimo táctil de 44 del repo—: helper `btnMini()`. ⚠️ **Se
+  mergeó SIN que nadie abriera la preview**: se forzó con `[preview]` (única app construida,
+  las otras 10 en `Ignored`) y se le pasó el enlace a Alberto, pero pidió mergear antes de
+  mirarla. O sea que **la pantalla renderizada sigue sin verse**, igual que las otras 55: lo
+  medido son tsc/tests/build, y los px salen de su captura y del CSS, no de la página viva. Si
+  algo se ve raro en `/correduria` en móvil, empieza por aquí y no por el código.
 - **🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera (03/09/2026).**
   Alberto: «minimalista, óptima y productiva» y «filtro por todo». Buscador arriba y cinco secciones
   **Hoy · Clientes · Cartera · Comisiones · Datos** con contador (`secciones.ts`, puro + 9 tests): una
