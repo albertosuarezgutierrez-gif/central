@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📱 Segunda captura de móvil: la ficha del cliente (03/09/2026, PR #2223).** Alberto sobre
+  `/correduria/cliente/[id]`: «iconos muy grandes… ocupa mucha página». 🚨 **Los iconos no eran el
+  coste** (13px), pero su lectura tenía media razón: eran EMOJI, que a ese tamaño pesan mucho más
+  que el trazo lucide. Lo que ocupaba era **el formulario «Añadir» siempre desplegado: ~246px sobre
+  ~706 de pantalla — el 35% para teclear nueve dígitos**, en una ficha que se abre para LEER un
+  teléfono. Se pliega en `<details>`; los contactos pasan de caja a línea; fuera el `flexWrap`, que
+  daba DOS alturas al mismo dato (~58px la fila sin «Hacer principal», ~84px la que lo llevaba — se
+  veía en su captura). Primitiva nueva **`btnIcono()`** en `components/ui.tsx`, con el contrato
+  escrito de que **NUNCA se usa para una acción destructiva**: «Borrar» conserva su texto porque no
+  hay ni un precedente de icono solo para algo irreversible. ⏸️ **El patrón está en 19 componentes
+  de la correduría y solo se migró el de la captura** (adopción por goteo); siguen Relaciones,
+  Documentos y Siniestros. ⚠️ Tercera pantalla seguida **mergeada sin que nadie abriera la preview**
+  — esta vez SÍ existía y estaba `Ready`, pero pidió mergear igual. De paso: el `CLAUDE.md` decía
+  que 5 primitivas tenían «CERO consumidores» y **ya era falso** (`PageHeader` 55, `BtnLink` 8,
+  `ThinBar` 8); corregido, con la lección de que un recuento en un doc caduca solo.
+
 - **📱 `/correduria` en el MÓVIL, con la primera captura real (03/09/2026, PR #2216).** Alberto, sobre la
   pantalla ya rediseñada: «aún se puede mejorar… casi siempre uso el móvil». 🚨 Y ahí está lo
   importante: la skill `plataforma-maestro` advertía que **ninguna pantalla de la app se ha visto
