@@ -221,7 +221,13 @@ export type EnRiesgo = {
   prima: number | null
   importeRecibo: number | null
   fechaRecibo: string | null
-  estado: 'en_plazo' | 'suspendida' | 'extinguida' | 'sin_fecha'
+  /**
+   * Lo que AFIRMA la compañía del recibo: `devuelto` = el cobro falló y lo dice
+   * ella; `pendiente` = no consta cobrado, que NO es lo mismo.
+   * `null` = asegura (versión vieja) no lo manda, o sea que tampoco se sabe.
+   */
+  situacionRecibo: 'devuelto' | 'pendiente' | null
+  estado: 'en_plazo' | 'suspendida' | 'extinguida' | 'sin_fecha' | 'sin_confirmar'
   dias: number | null
   diasParaExtincion: number | null
   accion: string
@@ -237,10 +243,14 @@ export type Impagados =
       estado: 'ok'
       filas: EnRiesgo[]
       resumen: {
+        /** Impago CONFIRMADO y pasado el mes: los únicos que se pueden dar
+         *  por «sin cobertura». */
         suspendidas: number
         enPlazo: number
         extinguidas: number
         sinFecha: number
+        /** Vencidos sin noticia de la compañía: se miran, no se llaman. */
+        sinConfirmar: number
         /** `null` = ninguna informa prima. NO es 0,00€. */
         primaEnRiesgo: number | null
         sinPrima: number
@@ -251,7 +261,13 @@ export type Impagados =
       pendientesSinJuzgar: number
     }
 
-const ESTADOS_RETENCION = new Set(['en_plazo', 'suspendida', 'extinguida', 'sin_fecha'])
+const ESTADOS_RETENCION = new Set([
+  'en_plazo',
+  'suspendida',
+  'extinguida',
+  'sin_fecha',
+  'sin_confirmar',
+])
 
 export function interpretarImpagados(status: number, json: unknown): Impagados {
   if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
@@ -291,6 +307,13 @@ export function interpretarImpagados(status: number, json: unknown): Impagados {
       prima: numero(o.prima),
       importeRecibo: numero(o.importeRecibo),
       fechaRecibo: cadena(o.fechaRecibo),
+      // Cualquier cosa que no sea exactamente una de las dos situaciones se
+      // queda en `null` («no se sabe»), nunca en `devuelto`: inventarse un
+      // impago confirmado es justo lo que esta pantalla no puede hacer.
+      situacionRecibo:
+        o.situacionRecibo === 'devuelto' || o.situacionRecibo === 'pendiente'
+          ? o.situacionRecibo
+          : null,
       estado: o.estado as EnRiesgo['estado'],
       dias: numero(o.dias),
       diasParaExtincion: numero(o.diasParaExtincion),
@@ -309,6 +332,9 @@ export function interpretarImpagados(status: number, json: unknown): Impagados {
       enPlazo: entero(res.enPlazo) ?? 0,
       extinguidas: entero(res.extinguidas) ?? 0,
       sinFecha: entero(res.sinFecha) ?? 0,
+      // 0 aquí sí es correcto contra una versión vieja de asegura: ese estado
+      // no existía, así que no había ninguno.
+      sinConfirmar: entero(res.sinConfirmar) ?? 0,
       primaEnRiesgo: numero(res.primaEnRiesgo),
       sinPrima: entero(res.sinPrima) ?? 0,
     },

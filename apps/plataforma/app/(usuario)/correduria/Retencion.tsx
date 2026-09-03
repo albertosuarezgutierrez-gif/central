@@ -17,6 +17,13 @@ import { BtnLink } from '@/components/ui'
  * cobertura en 24 horas**, y ese es todo el trabajo. Una póliza de 200€ a la
  * que le quedan tres días vale más que una de 800€ devuelta ayer.
  *
+ * ─── 🚨 Y lo que NO se puede decir de una fila ─────────────────────────────
+ * «Sin cobertura» solo se pinta sobre un recibo que la compañía dice haber
+ * DEVUELTO. Un recibo que simplemente no consta cobrado es un dato que falta,
+ * no un impago, y va en 🟠 «Sin confirmar»: se mira en el portal de la
+ * compañía, no se llama al cliente a decirle que no está asegurado. Caso
+ * fundacional 03/09/2026 en la cabecera de `retencion.ts`.
+ *
  * ─── Lo que esta lista NO puede decir ──────────────────────────────────────
  * Que esté vacía no significa que esté todo cobrado: hay pólizas vivas de las
  * que la compañía no ha mandado ni un recibo, y de esas no se sabe nada. Se
@@ -24,6 +31,8 @@ import { BtnLink } from '@/components/ui'
  */
 const ESTILO: Record<EnRiesgo['estado'], { icono: string; label: string; color: string }> = {
   suspendida: { icono: '🔴', label: 'Sin cobertura', color: '#d66' },
+  // 🟠 Venció y no consta cobrado, pero NADIE ha dicho que se devolviera.
+  sin_confirmar: { icono: '🟠', label: 'Sin confirmar', color: '#c96' },
   sin_fecha: { icono: '❔', label: 'Sin fecha', color: '#c96' },
   en_plazo: { icono: '🟡', label: 'Aún cubierto', color: '#c96' },
   extinguida: { icono: '⚫', label: 'Extinguida', color: 'var(--muted)' },
@@ -96,6 +105,8 @@ export default function Retencion({ urlAsegura }: { urlAsegura: string }) {
         )
       }
     >
+      {/* 🚨 Este cartel afirma que alguien no tiene seguro, así que solo cuenta
+          los impagos que la compañía CONFIRMA. Ver `resumen.sinConfirmar`. */}
       {resumen.suspendidas > 0 && (
         <div
           style={{
@@ -106,6 +117,20 @@ export default function Retencion({ urlAsegura }: { urlAsegura: string }) {
           🔴 <strong>{resumen.suspendidas} cliente(s) circulan sin cobertura y probablemente no lo
           saben.</strong> Si pagan, vuelven a estar cubiertos en 24 horas — por eso esta llamada es
           la primera del día.
+        </div>
+      )}
+
+      {resumen.sinConfirmar > 0 && (
+        <div
+          style={{
+            border: '1px solid #c96', borderRadius: 8, padding: '10px 12px',
+            marginBottom: 12, fontSize: 13, lineHeight: 1.5,
+          }}
+        >
+          🟠 <strong>{resumen.sinConfirmar} recibo(s) vencidos sin noticia de la compañía.</strong>{' '}
+          No consta que se cobraran, pero <strong>tampoco que se devolvieran</strong>: puede que
+          estén pagados y falte el fichero. Se comprueban en el portal de la aseguradora —{' '}
+          <strong>no se llama al cliente a decirle que no tiene cobertura.</strong>
         </div>
       )}
 
