@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T15:49:26Z",
-  "sha": "0fdcac79ac53bdb85d8e77419b559dee7bada6ea",
+  "generadoEn": "2026-09-03T18:24:31Z",
+  "sha": "46cc19d835f85f1bace914402364b3fe0e9a324c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3095,7 +3095,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "956cad36f004"
+      "hash": "ba7aff76131e"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/Calendario.tsx",
@@ -3136,12 +3136,21 @@
       ],
       "funciones": [
         {
+          "nombre": "mesYAno",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 82,
+          "resumen": "`2014-03-11` → `marzo de 2014`. Sin `Date`: aquí solo se parte un ISO."
+        },
+        {
           "nombre": "campoDelError",
           "kind": "function",
           "exportada": true,
           "params": "codigo: string",
           "retorno": "Campo | null",
-          "linea": 66
+          "linea": 114
         },
         {
           "nombre": "primaDesdeTexto",
@@ -3149,7 +3158,7 @@
           "exportada": true,
           "params": "t: string",
           "retorno": "number | null | 'invalida' | 'cero'",
-          "linea": 78,
+          "linea": 127,
           "resumen": "`null` = el hueco, y es válido (dejar la prima en blanco es una respuesta). `'invalida'` = hay algo escrito que no es un número. `'cero'` va aparte porque un 0 no es basura: es un hueco con forma de n"
         },
         {
@@ -3158,12 +3167,21 @@
           "exportada": true,
           "params": "{ idPrefix, ramos, form, errores, escribir, disabled, ayudaHueco, ayudaPrima }: Props",
           "retorno": null,
-          "linea": 105
+          "linea": 154
+        },
+        {
+          "nombre": "CamposVehiculo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ idPrefix, form, errores, escribir, disabled, }: { idPrefix: string form: Formulario errores: Errores escribir: (campo: Campo, valor: string) => void disabled: boolean }",
+          "retorno": null,
+          "linea": 286,
+          "resumen": "El bloque del VEHÍCULO: se despliega solo cuando el tipo de seguro lo tiene detrás (`RAMOS_CON_VEHICULO`). Ninguno de los tres es obligatorio, por la misma razón que el vencimiento: el cliente está ap"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "442f798b19fd"
+      "hash": "24c8eebe477c"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/EditarPoliza.tsx",
@@ -3178,7 +3196,7 @@
           "exportada": false,
           "params": "v: Valores",
           "retorno": "Formulario",
-          "linea": 65
+          "linea": 76
         },
         {
           "nombre": "calcularCambios",
@@ -3186,7 +3204,7 @@
           "exportada": false,
           "params": "form: Formulario, base: Valores, prima: number | null",
           "retorno": "Cambios",
-          "linea": 77
+          "linea": 91
         },
         {
           "nombre": "aplicar",
@@ -3194,7 +3212,7 @@
           "exportada": false,
           "params": "base: Valores, c: Cambios",
           "retorno": "Valores",
-          "linea": 91
+          "linea": 115
         },
         {
           "nombre": "textoFecha",
@@ -3202,7 +3220,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string | null",
-          "linea": 102,
+          "linea": 130,
           "resumen": "`YYYY-MM-DD` → `dd/mm/aaaa`, en UTC (una fecha `date` no tiene hora ni zona)."
         },
         {
@@ -3211,12 +3229,12 @@
           "exportada": true,
           "params": "{ poliza, ramos }: { poliza: PolizaEditable; ramos: readonly RamoOpcion[] }",
           "retorno": null,
-          "linea": 106
+          "linea": 134
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0c54f8b6e0e"
+      "hash": "1769f0eb7da5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/page.tsx",
@@ -3239,7 +3257,7 @@
           "exportada": false,
           "params": "{ titular, propia }: { titular: TitularPortal; propia: boolean }",
           "retorno": null,
-          "linea": 234
+          "linea": 242
         },
         {
           "nombre": "Card",
@@ -3247,7 +3265,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 272,
+          "linea": 280,
           "resumen": "Una póliza de la CARTERA. Regla de visibilidad del 03/09/2026 (ver `CLAUDE.md` de la app): lo que no cambia una decisión del cliente **no se pinta vacío, se quita**; lo que sí la cambia se dice con un"
         },
         {
@@ -3256,7 +3274,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 360,
+          "linea": 368,
           "resumen": "🚨 EL aviso de la pantalla: `devueltos > 0` significa que la compañía intentó cobrar y NO pudo. Es lo único que puede dejar a esta persona sin cobertura sin que ella se entere, así que va arriba y con"
         },
         {
@@ -3265,7 +3283,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 397,
+          "linea": 405,
           "resumen": "Recibos, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`. - `recibos === null` → el nivel de esta persona no enseña recibos. No es una ausencia del dato: se oculta y no se menciona. - `to"
         },
         {
@@ -3274,7 +3292,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 431,
+          "linea": 439,
           "resumen": "Coberturas. `null` = el nivel no las enseña (se oculta); `total === 0` = **no nos consta el detalle**, que NO es «no tienes coberturas»: decirle eso a alguien que sí las tiene es empujarle a contratar"
         },
         {
@@ -3283,13 +3301,13 @@
           "exportada": false,
           "params": "p: PolizaPortal, titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 455,
+          "linea": 463,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27eb30610e10"
+      "hash": "b61cadd93cd1"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -3624,14 +3642,14 @@
           "exportada": false,
           "params": "req: Request, identidadId: string",
           "retorno": null,
-          "linea": 75
+          "linea": 87
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/polizas",
-      "hash": "18aa4696a186"
+      "hash": "76c81bb1ae3e"
     },
     {
       "ruta": "apps/asegura-portal/app/api/siniestros/[id]/adjuntos/[documentoId]/route.ts",
@@ -3706,26 +3724,39 @@
       ],
       "funciones": [
         {
-          "nombre": "Escudo",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": null,
-          "linea": 19,
-          "resumen": "El escudo de la cabecera. Va como SVG en línea y no como fichero porque el único logo que existe hoy (`cropped-logo-bn-350x100-1.png`, en el Drive) está en blanco y negro y lleva el reclamo «Low Cost»"
-        },
-        {
           "nombre": "RootLayout",
           "kind": "function",
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 27
+          "linea": 14
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "73903fe22b25"
+      "hash": "61e4d72bdd8b"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/MarcaAsegura.tsx",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Monograma «AS» de Grupo Asegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no como `<img src=\"/brand/...\">` por dos razones: 1. El `fill` es `currentColor`: así el logo toma el colo",
+      "exporta": [
+        "MarcaAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "MarcaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ alto = 14 }: { alto?: number }",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "Monograma «AS» de Grupo Asegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no com"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "02349f8949ef"
     },
     {
       "ruta": "apps/asegura-portal/app/page.tsx",
@@ -3740,7 +3771,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 4
+          "linea": 6
         },
         {
           "nombre": "textoError",
@@ -3748,7 +3779,7 @@
           "exportada": false,
           "params": "codigo: string",
           "retorno": "string",
-          "linea": 113
+          "linea": 120
         },
         {
           "nombre": "textoVinculo",
@@ -3756,13 +3787,13 @@
           "exportada": false,
           "params": "estado: string | undefined",
           "retorno": "string | null",
-          "linea": 127,
+          "linea": 134,
           "resumen": "Solo los estados del vínculo que la persona tiene que saber; el resto no dice nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c681bde7546e"
+      "hash": "be1e6f11417c"
     },
     {
       "ruta": "apps/asegura-portal/lib/adjuntos-parte.ts",
@@ -4181,7 +4212,8 @@
       "ambito": "apps/asegura-portal",
       "resumen": "Lee una póliza que aporta el usuario: PDF → texto → IA, o foto → visión. Replica el pipeline ya probado de apps/sivra/lib/agente-facturas/extraer.ts. ⚠️ Lo que sale de aquí es SIEMPRE un dato leído por una máquina, nunca un dato de contrato: quien lo guarde lo marca `declarado` (ver `procedencia.ts`",
       "exporta": [
-        "extraerPoliza"
+        "extraerPoliza",
+        "parsearPolizaExtraida"
       ],
       "funciones": [
         {
@@ -4190,8 +4222,8 @@
           "exportada": false,
           "params": "",
           "retorno": "ResultadoExtraccion",
-          "linea": 29,
-          "resumen": "Nada leído: los cinco campos a `null` y `fuente: 'none'`."
+          "linea": 46,
+          "resumen": "Nada leído: TODOS los campos a `null` y `fuente: 'none'`."
         },
         {
           "nombre": "extraerPoliza",
@@ -4199,7 +4231,16 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 33
+          "linea": 50
+        },
+        {
+          "nombre": "parsearPolizaExtraida",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: unknown, hoy: Date = new Date()",
+          "retorno": "PolizaExtraida",
+          "linea": 110,
+          "resumen": "Un JSON que no parsea devuelve TODOS los campos a `null`, NUNCA campos a medias ni cadenas de cajón. Media extracción pintada como póliza es peor que ninguna: el usuario se cree que está guardada. Las"
         },
         {
           "nombre": "parsear",
@@ -4207,13 +4248,12 @@
           "exportada": false,
           "params": "salida: string",
           "retorno": "PolizaExtraida",
-          "linea": 88,
-          "resumen": "Un JSON que no parsea devuelve los cinco campos a `null`, NUNCA campos a medias ni cadenas de cajón. Media extracción pintada como póliza es peor que ninguna: el usuario se cree que está guardada."
+          "linea": 114
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "946609c7b573"
+      "hash": "90faa5f87ae2"
     },
     {
       "ruta": "apps/asegura-portal/lib/fechas.ts",
@@ -4356,18 +4396,134 @@
       "resumen": "Normalización del PARCHE con el que el cliente corrige a mano una póliza que él mismo subió. Módulo PURO a propósito (ni Prisma ni Next): lo que se decide aquí es qué es un dato y qué es basura, y eso tiene que poder testearse sin BD. Las tres reglas que justifican que esto exista: 1. Cadena vacía N",
       "exporta": [
         "parsearFechaISO",
+        "esCentinelaSinDato",
+        "compactarIdentificador",
+        "esBastidorValido",
+        "esMatriculaValida",
+        "normalizarMatricula",
+        "normalizarBastidor",
+        "parsearFechaMatriculacion",
+        "normalizarFechaMatriculacionISO",
+        "vehiculoLeidoVacio",
+        "normalizarVehiculoLeido",
         "normalizarParche",
         "normalizarAlta"
       ],
       "funciones": [
+        {
+          "nombre": "descomponerFechaISO",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string,",
+          "retorno": "",
+          "linea": 64,
+          "resumen": "Formato EXACTO y fecha que EXISTE, sin opinar sobre el rango. El rango no es de la fecha: es de CADA CAMPO —un vencimiento mira al futuro y una matriculación al pasado—, así que se comprueba en quien "
+        },
+        {
+          "nombre": "medianocheUTC",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "Date",
+          "linea": 89,
+          "resumen": "Medianoche UTC del día de `d`. Comparar contra `new Date()` a pelo haría que «hoy» fuera futuro durante casi todo el día."
+        },
         {
           "nombre": "parsearFechaISO",
           "kind": "function",
           "exportada": true,
           "params": "valor: string, hoy: Date = new Date()",
           "retorno": "",
-          "linea": 52,
-          "resumen": "Convierte `YYYY-MM-DD` en un `Date` a medianoche UTC, o devuelve el motivo del rechazo. Se exige el formato EXACTO (nada de `new Date(string)`, que acepta casi cualquier cosa y adivina zona horaria) y"
+          "linea": 98,
+          "resumen": "Convierte `YYYY-MM-DD` en un `Date` a medianoche UTC, o devuelve el motivo del rechazo. Es la fecha de VENCIMIENTO: se rechaza lo que no puede ser el vencimiento de una póliza viva (un 1970 tecleado d"
+        },
+        {
+          "nombre": "esCentinelaSinDato",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "boolean",
+          "linea": 195,
+          "resumen": "¿Es esto un «no lo sé» disfrazado de valor? Dos criterios, y el segundo es el que salva de los centinelas que nadie pone en la lista: un identificador con UN SOLO carácter repetido no identifica nada "
+        },
+        {
+          "nombre": "compactarIdentificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "string | null",
+          "linea": 205,
+          "resumen": "Mayúsculas y sin separadores. `null` si no es texto o si es un centinela."
+        },
+        {
+          "nombre": "esBastidorValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "boolean",
+          "linea": 224
+        },
+        {
+          "nombre": "esMatriculaValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "boolean",
+          "linea": 245
+        },
+        {
+          "nombre": "normalizarMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "string | null",
+          "linea": 254,
+          "resumen": "Matrícula normalizada, o `null` («no se sabe») si no la hay o no tiene forma de serlo."
+        },
+        {
+          "nombre": "normalizarBastidor",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "string | null",
+          "linea": 261,
+          "resumen": "Bastidor normalizado, o `null`. Ante la duda, `null`: ver el aviso de arriba."
+        },
+        {
+          "nombre": "parsearFechaMatriculacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string, hoy: Date = new Date(),",
+          "retorno": "",
+          "linea": 277,
+          "resumen": "La fecha de PRIMERA MATRICULACIÓN. Mira al pasado, al revés que el vencimiento: un coche no se matricula mañana. Una fecha futura es un año tecleado de más, o un extractor que ha leído el vencimiento "
+        },
+        {
+          "nombre": "normalizarFechaMatriculacionISO",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown, hoy: Date = new Date()",
+          "retorno": "string | null",
+          "linea": 295,
+          "resumen": "La misma regla, en la forma que necesita el extractor: `YYYY-MM-DD` o `null`."
+        },
+        {
+          "nombre": "vehiculoLeidoVacio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "VehiculoLeido",
+          "linea": 312,
+          "resumen": "Los tres campos a «no se sabe»."
+        },
+        {
+          "nombre": "normalizarVehiculoLeido",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: unknown, hoy: Date = new Date()",
+          "retorno": "VehiculoLeido",
+          "linea": 322,
+          "resumen": "Normaliza lo que sea que haya devuelto el modelo. Nunca lanza: si la entrada no es un objeto, los tres campos son `null`. Es el espejo de `normalizarPolizaLeida()` de `@central/module-seguros-portal`,"
         },
         {
           "nombre": "normalizarTexto",
@@ -4375,7 +4531,7 @@
           "exportada": false,
           "params": "valor: unknown",
           "retorno": "",
-          "linea": 77,
+          "linea": 342,
           "resumen": "`''` y `' '` son un borrado, no un valor."
         },
         {
@@ -4384,7 +4540,7 @@
           "exportada": false,
           "params": "valor: unknown",
           "retorno": "",
-          "linea": 87,
+          "linea": 352,
           "resumen": "Prima: número finito >= 0. Se acepta string numérica (los `<input>` mandan texto)."
         },
         {
@@ -4393,7 +4549,7 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ResultadoParche",
-          "linea": 114,
+          "linea": 379,
           "resumen": "Valida y normaliza el cuerpo de un PATCH. Solo se propagan las claves conocidas y presentes: cualquier otra cosa que venga en el JSON se ignora en silencio (que es lo correcto — no es un error del usu"
         },
         {
@@ -4402,13 +4558,13 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ResultadoAlta",
-          "linea": 189,
+          "linea": 514,
           "resumen": "Valida y normaliza el cuerpo de un alta a mano. Reutiliza `normalizarParche` para que las reglas sean una sola; un cuerpo sin ninguna clave conocida (que para el PATCH es `parche_vacio`) aquí es un al"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "952bf3601e99"
+      "hash": "3ffbe3bfbb23"
     },
     {
       "ruta": "apps/asegura-portal/lib/session.ts",
@@ -111524,6 +111680,82 @@
       "hash": "2ff13ccacbec"
     },
     {
+      "ruta": "packages/module-seguros/src/matricula.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Estimación de la fecha de matriculación a partir de la matrícula española. 🚨 LO PRIMERO, PORQUE ES LO QUE MÁS DUELE SI SE OLVIDA: esto es una ESTIMACIÓN, nunca un dato oficial. Lo único que sabe este módulo es en qué POSICIÓN de la serie nacional cae una matrícula; la fecha sale de interpolar esa p",
+      "exporta": [
+        "normalizarMatricula",
+        "formatoMatricula",
+        "ordinalMatricula",
+        "fechaMatriculacionEstimada"
+      ],
+      "funciones": [
+        {
+          "nombre": "diasDesdeCivil",
+          "kind": "function",
+          "exportada": false,
+          "params": "anio: number, mes: number, dia: number",
+          "retorno": "number",
+          "linea": 125
+        },
+        {
+          "nombre": "civilDesdeDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "dias: number",
+          "retorno": "string",
+          "linea": 134
+        },
+        {
+          "nombre": "ordinalDeSerie",
+          "kind": "function",
+          "exportada": false,
+          "params": "serie: string",
+          "retorno": "number",
+          "linea": 152
+        },
+        {
+          "nombre": "normalizarMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "string",
+          "linea": 182,
+          "resumen": "Quita todo lo que no sea letra o dígito (espacios, guiones, puntos) y pasa a mayúsculas."
+        },
+        {
+          "nombre": "formatoMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "FormatoMatricula",
+          "linea": 197,
+          "resumen": "Qué clase de matrícula es. El orden importa: `C1234BCD` es un ciclomotor (3 letras finales), mientras que `C1234BC` es una provincial de A Coruña."
+        },
+        {
+          "nombre": "ordinalMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "number | null",
+          "linea": 209,
+          "resumen": "Posición de la matrícula en la serie nacional: cuántas se emitieron antes. `0000BBB` → 0, `0001BBB` → 1, `0000BCB` → 10.000. `null` si no es moderna."
+        },
+        {
+          "nombre": "fechaMatriculacionEstimada",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "MatriculacionEstimada | null",
+          "linea": 249,
+          "resumen": "· su ordinal es POSTERIOR al último hito conocido (`ULTIMO_HITO_CONOCIDO`): extrapolar más allá de la tabla es inventarse el futuro. Si la matrícula es de verdad reciente, la respuesta correcta es act"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "703cd96860ef"
+    },
+    {
       "ruta": "packages/module-seguros/src/objeto.ts",
       "ambito": "packages/module-seguros",
       "resumen": "QUÉ asegura cada póliza — el «objeto asegurado». Una lista de renovaciones con cliente, ramo y prima no basta para llamar a nadie: el mismo tomador puede tener tres pólizas de auto, y «Auto · Mapfre · 431,85€» no dice CUÁL. Lo que identifica la póliza en la conversación es el bien: la matrícula y el",
@@ -117235,7 +117467,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2936,
-    "funciones": 8761
+    "archivos": 2938,
+    "funciones": 8783
   }
 }
