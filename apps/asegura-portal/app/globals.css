@@ -165,6 +165,13 @@ h1 {
 }
 .cartera-card .linea strong { color: var(--text); }
 .cartera-card .nivel { font-size: 12px; color: var(--muted); }
+/* Regla de visibilidad del 03/09/2026: lo que se OCULTA no se pinta (no hay
+ * clase para «vacío»), y lo que se DICE EN VOZ ALTA sale del gris de `.linea`
+ * — si «tu compañía no nos ha informado de ningún recibo» se pinta como una
+ * nota tenue más, se lee como «todo en orden». `.ojo` es para lo que además
+ * cambia lo que el cliente puede esperar de nosotros (no poder avisarle). */
+.cartera-card .linea.dicho { color: var(--text); }
+.cartera-card .linea.dicho.ojo { color: var(--warning); font-weight: 600; }
 
 /* ── Chips (píldoras) — mismas proporciones que los Badge de plataforma ── */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -236,6 +243,9 @@ h1 {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
 }
+/* `.boton` lo usa también un <a> (el aviso de recibo devuelto abre el correo de
+ * la correduría): sin esto hereda el subrayado del enlace y parece otra cosa. */
+.boton { text-decoration: none; }
 .boton-subir input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .boton-subir[aria-disabled='true'] { opacity: 0.6; cursor: progress; }
 
@@ -253,3 +263,109 @@ h1 {
   border-radius: 10px;
 }
 .campo::placeholder { color: var(--muted); }
+
+/* ── Editor de una póliza declarada ──────────────────────────────────────
+ * Una columna a 320 px: etiqueta, ayuda y campo apilados. Los controles ya
+ * heredan los 44 px de `.campo`/`.boton`, así que aquí solo va el ritmo
+ * vertical y los colores del estado. */
+.editor { display: grid; gap: 10px; margin-top: 12px; }
+.editor-form { display: grid; gap: 14px; }
+.editor-campo { display: grid; gap: 4px; min-width: 0; }
+.editor-campo > label { font-size: 13px; font-weight: 600; }
+.editor-ayuda { font-size: 12px; color: var(--muted); margin: 0; }
+.editor-error { font-size: 13px; font-weight: 600; color: var(--negative); margin: 0; }
+
+/* La fecha de vencimiento va destacada porque es la que decide si podemos
+ * avisar. Destacada NO es obligatoria: ver la cabecera de `EditarPoliza.tsx`. */
+.editor-destacado {
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+/* Apilados a 320 px; en cuanto hay sitio, guardar y cancelar en la misma fila. */
+.editor-acciones { display: grid; gap: 8px; }
+@media (min-width: 420px) { .editor-acciones { grid-template-columns: 1fr 1fr; } }
+
+.boton.secundario { background: var(--surface); color: var(--primary); }
+.boton.secundario:hover { background: var(--primary-light); border-color: var(--primary-hover); }
+.boton:disabled { opacity: 0.6; cursor: progress; }
+.aviso-linea .boton { margin-top: 10px; }
+
+/* ── Parte de siniestro ──────────────────────────────────────────────────
+ * Lo abre gente desde el móvil justo después del golpe, así que aquí no hay
+ * ni una fila de dos columnas por debajo de 420 px y todo lo pulsable pasa de
+ * 44 px. Reutiliza `.campo`, `.boton`, `.editor-*` y `.cartera-card`: lo único
+ * propio es el área de texto, el tri-estado y la caja de «lo hemos recibido». */
+
+/* El campo principal del parte: si es del alto de un `<input>`, la gente
+ * escribe «me han dado» y se queda tan ancha. Alto suficiente para 4-5 líneas,
+ * y `resize: vertical` para que pueda crecer sin romper el ancho a 320 px. */
+.campo-area {
+  min-height: 132px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+/* `(obligatorio)` dicho con todas las letras al lado de la etiqueta. El
+ * asterisco solito no lo entiende media España, y esta es la ÚNICA obligatoria
+ * del formulario: marcarla es lo que hace creíble que el resto no lo sea. */
+.obligatorio { font-weight: 600; color: var(--negative); }
+
+/* Un `<fieldset>` trae borde, padding y márgenes propios del navegador que
+ * descuadran la columna. Se resetea y se comporta como un `.editor-campo`. */
+.editor-campo.grupo {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0; /* sin esto, un fieldset no encoge por debajo de su contenido */
+}
+.editor-campo.grupo > legend { font-size: 13px; font-weight: 600; padding: 0; }
+
+/* Tri-estado: «Sí» / «No» / «No lo sé». Las TRES a la vista a propósito — hay
+ * que ver que la marcada de salida es «No lo sé». Se envuelven a 320 px en vez
+ * de encogerse: un objetivo táctil de 30 px no se acierta con prisa. */
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 15px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+/* El radio se queda VISIBLE: `:has()` resalta la opción marcada, pero si un
+ * navegador no lo soporta el punto del radio sigue diciendo cuál está elegida.
+ * Esconderlo y fiarlo todo al `:has()` dejaría el formulario mudo. */
+.opcion input { width: 18px; height: 18px; margin: 0; flex: 0 0 auto; accent-color: var(--primary); }
+.opcion:has(input:checked) { border-color: var(--primary); background: var(--primary-light); font-weight: 600; }
+.opcion:has(input:disabled) { opacity: 0.6; cursor: progress; }
+
+/* 🚨 La caja de «lo hemos recibido». Verde suave porque la acción salió bien,
+ * pero el texto que manda es el de `.recibido-clave`: «todavía no está
+ * comunicado a tu compañía». Si alguien la pinta entera de verde triunfal, el
+ * cliente lee «hecho» y deja de hacer lo que le toca durante días. */
+.recibido {
+  background: var(--positive-bg);
+  border: 1px solid var(--positive);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.recibido > strong { color: var(--positive); }
+.recibido-clave { margin: 6px 0 0; color: var(--text); }
+.recibido-plazo { margin: 8px 0 0; color: var(--muted); }
+/* Fuera de plazo se destaca, pero en tono de aviso, NUNCA en rojo de error: no
+ * ha perdido la cobertura (art. 16 LCS) y el color no puede decir lo contrario
+ * que el texto. */
+.recibido-plazo.ojo { color: var(--warning); font-weight: 600; }
+
+.lista-titulo { font-size: 13px; font-weight: 600; margin: 18px 0 8px; }

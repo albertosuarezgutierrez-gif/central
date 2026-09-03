@@ -105,8 +105,13 @@ test('las versiones se piden con el combustible, que el vendor exige', () => {
 })
 
 test('el puerto rechaza una petición de versiones sin motor, con su nombre', () => {
-  const src = leer('apps/asegura/app/api/cartera/catalogos/route.ts')
-  assert.match(src, /const motor = url\.searchParams\.get\('motor'\)/)
+  // 03/09/2026: el `switch` de catálogos se extrajo a `lib/retarificar-cartera.ts`
+  // (`resolverCatalogo`) porque ahora lo sirven DOS rutas — la de sesión de
+  // asegura y `/api/operador/codeoscopic/catalogos`, que es la que consume
+  // `plataforma` → `/correduria`. Una copia del switch que se quedara sin esta
+  // guarda no daría error: dejaría el desplegable de versiones vacío otra vez.
+  const src = leer('apps/asegura/lib/retarificar-cartera.ts')
+  assert.match(src, /const motor = params\.get\('motor'\)/)
   assert.match(src, /if \(!marcaId \|\| !modeloId \|\| !motor\)/)
 })
 

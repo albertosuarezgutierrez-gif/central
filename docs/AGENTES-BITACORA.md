@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-03 · mercado-booking** · hizo: pasada ACOTADA por prioridad temporal (agosto 2026),
+  pedida vía `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6 fechas
+  × 4 pisos, aforo correcto por piso) → 240 comps `booking_mcp` escritos, 0 sin respuesta, 0
+  anuncios propios colados (los 4 propios de la ventana `escaparate` salieron por `hotel_names` y
+  se escribieron aparte, no como comps). 4/4 ventanas de escaparate propio medidas también.
+  **Objetivo cumplido**: julio-2027 y agosto-2027 llegan a 3 fechas distintas con 10
+  comparables/fecha por piso — la línea de prioridad temporal de la skill se retira en este PR.
+  Cupo de 24 agotado en la pasada prioritaria; no quedó margen para la pasada normal del resto del
+  plan (568 candidatas totales, solo 28 pedidas). dudas: —; fallos: —; PRs/commits: —.
 - **2026-09-02 · trading-analista** · hizo: PASO 0 sin huella de hoy (último saldo 01/09 20:16,
   sin fila `trading_pasadas` de hoy) → pasada completa a las 20:15 UTC (disparo normal, no
   repesca). Preflight `/api/internal/alerta` 200. NAV IBKR 32.862,88€ empujado a `/saldo` (sin

@@ -11,6 +11,7 @@ import BuscadorCartera from './BuscadorCartera'
 import Retencion from './Retencion'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
+import PartesPortal from './PartesPortal'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -58,7 +59,7 @@ interface ModalInfo {
   mes?: string
 }
 
-export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string }) {
+export default function CorreduriaClient() {
   const añoActual = new Date().getFullYear()
   const [año, setAño] = useState(añoActual)
   const [filas, setFilas] = useState<Fila[]>([])
@@ -123,15 +124,26 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
           hace `return` temprano cuando el puerto falla y se llevaría el aviso. */}
       <Duplicadas />
 
-      {/* ── 3. A QUIÉN LLAMAR HOY ───────────────────────────────────────────
+      {/* ── 3. UNA PERSONA ESPERANDO ────────────────────────────────────────
+          Los partes de siniestro que ha abierto el CLIENTE desde el portal y
+          nadie ha mirado todavía. Va lo primero de las tres colas de trabajo
+          —antes incluso que el teléfono— porque el que lo mandó cree que su
+          compañía ya lo sabe, y hasta que se abra allí no lo sabe nadie.
+          Solo se pinta si hay alguno sin atender; si NO se puede leer, lo dice
+          (un panel de avisos que desaparece en silencio se lee como calma). */}
+      <div style={{ marginBottom: 20 }}>
+        <PartesPortal />
+      </div>
+
+      {/* ── 4. A QUIÉN LLAMAR HOY ───────────────────────────────────────────
           Recibos devueltos y vencidos sin cobrar, por urgencia REAL. Es la
           pantalla comercial: lo único de aquí que se hace con el teléfono en
           la mano. Va antes que el dinero ya cobrado a propósito. */}
       <div style={{ marginBottom: 20 }}>
-        <Retencion urlAsegura={urlAsegura} />
+        <Retencion />
       </div>
 
-      {/* ── 3 bis. A QUIÉN NO SE PUEDE LLAMAR ───────────────────────────────
+      {/* ── 4 bis. A QUIÉN NO SE PUEDE LLAMAR ───────────────────────────────
           El reverso de la lista de arriba: los clientes de la cartera viva sin
           email ni teléfono. No hay nada que enviarles —el aviso de vencimiento
           se pierde y no pueden entrar al portal—, así que el trabajo es pedir
@@ -141,7 +153,7 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
         <SinCanal />
       </div>
 
-      {/* ── 4. ¿ME PAGAN LO QUE ME DEBEN? ──────────────────────────────────
+      {/* ── 5. ¿ME PAGAN LO QUE ME DEBEN? ──────────────────────────────────
           Cuadre devengado → liquidado → cobrado. Va ANTES de la matriz de
           banco porque la matriz solo ve el ingreso (la remesa) y la cifra que
           va a la renta es el bruto. */}
@@ -162,7 +174,7 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
         </button>
       )}
 
-      {/* ── 5. EL DETALLE DEL BANCO ────────────────────────────────────────
+      {/* ── 6. EL DETALLE DEL BANCO ────────────────────────────────────────
           Cerrado por defecto y con montaje perezoso: es auditoría fina, no la
           foto que se mira cada día. Se abre solo si hay algo sin confirmar.
           🚨 No se borra: el modal de desglose es el ÚNICO camino para

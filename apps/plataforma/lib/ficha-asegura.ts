@@ -653,9 +653,32 @@ export async function buscarEnAsegura(q: string): Promise<RespuestaBusqueda> {
   }
 }
 
-/** La URL de asegura para los saltos que SÍ tienen que ir allí (retarificar,
- *  que gasta dinero y vive detrás de su propia sesión). Pública, no es secreto. */
+/**
+ * La pantalla de retarificación, **DENTRO de plataforma** desde el 03/09/2026.
+ *
+ * Antes devolvía la URL de `apps/asegura`, y ese salto era el problema: es otro
+ * dominio con otra sesión, así que en producción `GET /cartera/poliza/<id>`
+ * respondía `307 /login` y Alberto se quedaba fuera. La operación la sirve ahora
+ * el puerto de operador y la pinta `/correduria/poliza/<id>/retarificar`.
+ *
+ * Al ser interna, **quien la enlace no necesita `target="_blank"`**: abrir una
+ * pestaña nueva para quedarse en la misma app solo estorba en el móvil.
+ * Lo vigila `test/regression-retarificar-plataforma.test.ts`.
+ */
 export function urlRetarificar(polizaId: string): string {
+  return `/correduria/poliza/${polizaId}/retarificar`
+}
+
+/**
+ * El salto a asegura que TODAVÍA queda: **hogar**.
+ *
+ * Su retarificador es otro componente (metros, año de construcción, capitales y
+ * el Catastro del riesgo) y no está portado. No se enlaza desde las fichas: solo
+ * lo usa la pantalla interna cuando la póliza resulta ser de hogar, para mandar
+ * al único sitio donde hoy funciona en vez de fingir que no se puede.
+ * Pública, no es un secreto.
+ */
+export function urlRetarificarHogarAsegura(polizaId: string): string {
   return `${urlAsegura()}/cartera/poliza/${polizaId}`
 }
 

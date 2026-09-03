@@ -272,7 +272,7 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
   `confirmadaCima = id_poliza_entidad !== null` (si no, chip «pendiente de confirmación por la compañía»).
   Por póliza: coberturas (total + 4 primeras), recibos (próximo al cobro por `situacion`
   `pendiente`/`emitido`, devueltos, último cobrado; **`total: 0` = «sin recibos informados», no «al
-  corriente»**), siniestros `abierto`/`en_tramitacion` con el teléfono del tramitador.
+  corriente»**), siniestros `abierto`/`en_tramitacion` **sin tramitador ni perito** (regla de visibilidad del 03/09/2026, sección de abajo).
 - **Autorizadas:** `cliente_relaciones` fila A→B con `puede_ver_polizas` = **A autoriza a B** (semántica
   de `clientesVisiblesPara` de `@central/module-seguros`; se le pasa `observaciones: null` porque el rol
   no la lee y el helper no la usa). Mis fichas son B; las pólizas vivas de cada A salen bajo «Seguros que
@@ -285,6 +285,98 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
   email») ≠ vinculada sin pólizas vivas ≠ campo oculto por nivel. Y `prima_anual` `null` → «—», nunca 0.
 - **Ningún `clienteId` entra desde la request.** Todo id de ficha sale de `portal_vinculo` o de una
   relación leída a partir de él.
+
+## 👁 Regla de visibilidad del portal (03/09/2026) — qué se OCULTA y qué se DICE EN VOZ ALTA
+
+Dictado de Alberto, literal: **«que aparezcan los datos que tengamos, el resto que no aparezca vacío,
+simplemente no se ve… por ejemplo tramitador no, porque esa es función mía».**
+
+Traducido a la regla operativa que implementa `lib/cartera-lectura.ts`:
+
+> **SE OCULTA** si la ausencia del dato **no cambia nada** para el cliente.
+> **SE DICE EN VOZ ALTA** si la ausencia **cambia lo que el cliente haría**.
+
+**Lado «se oculta».** No son datos vacíos: son datos que **no van en la vista del cliente**.
+
+- **Tramitador (nombre y teléfono)** y cualquier **referencia interna de gestión**. El punto de
+  contacto único es **Alberto**: el cliente le llama a él, no al tramitador de la compañía. Saber
+  quién tramita por dentro no le cambia una sola decisión.
+- No se pintan en gris, ni como «pendiente», ni como «—». **Desaparecen del tipo y del `select`**:
+  `SiniestroPortal` ya no los declara y `prisma.siniestro.findMany` ya no los pide. Un campo que no
+  se trae de la BD es un campo que nadie puede pintar por descuido tres meses después.
+- El flag `telefonoSiniestros` de `camposVisibles()` (`@central/module-seguros-portal`) **sigue
+  existiendo** y hoy no lo consume nadie: vive en el módulo puro con su propio test, y quitarlo es
+  tocar el paquete, no esta app. Se deja documentado aquí para que el siguiente que lo mire sepa que
+  es un hueco conocido y no un olvido.
+
+**Lado «se dice en voz alta».** Esta capa **tiene que seguir trayendo el dato** para que la UI pueda
+decirlo; la que lo pinta es `app/(portal)/boveda/`:
+
+| Situación | Lo que NO se puede decir | Por qué |
+|---|---|---|
+| Sin `fechaVencimiento` | «vigente» a secas | `vigenciaPoliza()` da `pendiente`: no se sabe si sigue viva |
+| `recibos.total === 0` | «al corriente de pago» | Es «la compañía no ha informado recibos» |
+| `coberturas.total === 0` | «no tiene coberturas» | Es «no hay coberturas informadas» |
+
+🚨 **Esto NO deroga la regla del `CLAUDE.md` de la RAÍZ («dato que NO hay ≠ dato que NO se ha
+mirado»): la AFINA para el portal del cliente.** Quien lea solo una de las dos se lleva la idea
+contraria: la de la raíz prohíbe convertir un «no lo sé» en un «no hay», y esta añade que hay datos
+que **ni siquiera son del cliente** y que enseñarlos vacíos solo genera preguntas que Alberto tiene
+que contestar. La frontera es **para quién cambia la decisión**, no si el valor es `null`.
+
+Lo protege **`test/regression-portal-visibilidad.test.ts`** (raíz del repo, `node --test`): falla si
+`tramitador*`/`perito*` vuelven a `lib/cartera-lectura.ts`, **y también** si desaparecen los tres
+datos del lado «voz alta» o los comentarios que explican que su `0` es un hueco.
+
+## 🚑 El parte de siniestro (03/09/2026) — y la frase que NO se puede decir
+
+El cliente da parte desde `/boveda` (`ParteSiniestro.tsx` → `POST /api/siniestros` →
+`lib/partes-siniestro.ts` → `seguros.portal_parte_siniestro`). Rellena **solo lo que sabe él**: qué ha
+pasado, cuándo, dónde, si hay heridos y si hay terceros. Tramitador, perito y referencia **no se le
+piden ni se le enseñan**: los pone la compañía y son gestión del corredor (regla de visibilidad).
+
+🚨 **Un parte enviado NO es un siniestro comunicado a la compañía.** Una correduría es mediadora del
+CLIENTE, no del asegurador: contárnoslo a nosotros no es, jurídicamente, comunicárselo a la entidad.
+Entre que el cliente pulsa «enviar» y que Alberto lo abre pasan horas o días, y en ese hueco el
+cliente **cree que ya está hecho y deja de hacer nada**. Es el peor modo de fallo del portal: no se
+ve, no da error, y lo paga quien confió en la pantalla.
+
+- El vocabulario está en el módulo puro (`packages/module-seguros-portal/src/parte-siniestro.ts`):
+  `enviado` → `recibido` (lo hemos leído NOSOTROS) → `abierto_en_compania` → `descartado`.
+- **`comunicadoACompania(estado)` es la ÚNICA fuente de «tu compañía ya lo sabe».** Nunca
+  `estado !== 'enviado'`, que es el atajo de una línea que parece razonable y convierte «lo hemos
+  recibido» en «está comunicado».
+- El cepo está en la BD además de en el código: `CHECK portal_parte_abierto_con_sello` impide poner
+  `abierto_en_compania` sin `abierto_en_compania_at` **y** `siniestro_id`. Probado contra la BD real
+  con un INSERT dentro de un ROLLBACK — un CHECK que nadie ha visto morder es una suposición.
+- **El portal solo INSERTA y LEE**: el rol no tiene UPDATE ni DELETE sobre la tabla. Lo declarado es
+  una comunicación, no un borrador.
+
+**Los dos tri-estados.** `hay_heridos` y `hay_terceros` son `boolean` NULLABLE y la UI ofrece tres
+opciones («Sí» / «No» / **«No lo sé», marcada de salida**), no un checkbox. `null` = «no lo ha
+contestado»; `false` = «ha dicho que no». Colapsarlos deja al corredor leyendo «sin heridos» de un
+accidente sobre el que nadie preguntó, y un parte con heridos se tramita en horas mientras uno de
+chapa espera al lunes. `normalizarTriestado()` normaliza acento, caja y espacios antes de comparar:
+un `<select>` que emitiera `'Sí'` contra una lista de `'si'` dejaría **todos** los partes a `null` y
+nadie vería un error, porque `null` es un estado legítimo.
+
+**El plazo del art. 16 LCS (7 días) no se reimplementa aquí.** `plazoComunicacion()` del módulo del
+portal **delega** en el de `@central/module-seguros`, que es el que ya usa el panel del corredor, y
+solo le cambia la forma. Dos cuentas del mismo plazo legal en el mismo monorepo acaban dando plazos
+distintos del mismo siniestro sin que ninguna pantalla falle. Y `fueraDePlazo` **NO es pérdida de
+cobertura**: el art. 16 solo permite reclamar los daños del retraso, y perder el derecho exige dolo o
+culpa grave. Un portal que asuste a quien avisa tarde consigue que no avise nunca.
+
+**Se puede dar parte de una póliza AUTORIZADA** (de las que alguien te deja ver). Ver no es gestionar,
+pero bloquearlo sería peor: quien conducía el coche de su padre es justo el que sabe qué pasó. La
+salida no es prohibirlo sino que Alberto lo vea — el puerto del corredor marca esos partes.
+
+Lo protege **`test/regression-portal-parte-siniestro.test.ts`** (raíz, `node --test`): la forma de
+`comunicadoACompania`, el atajo `\.estado !== 'enviado'`, las frases afirmativas prohibidas, el
+«ya no te cubren», el colapso del tri-estado y un cepo POSITIVO (alguien tiene que usar `comunicado`,
+o la pantalla pasa todos los negativos sencillamente callándose). ⚠️ El guardián **quita los
+comentarios antes de mirar**: sin eso se muerde a sí mismo, porque el texto correcto de la pantalla
+es «todavía NO está comunicado a tu compañía» y contiene la frase prohibida.
 
 ## 📅 El calendario de vencimientos (02/09/2026) — y por qué el aviso NO sale de aquí
 

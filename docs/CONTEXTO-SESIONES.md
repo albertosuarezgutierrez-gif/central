@@ -44,6 +44,27 @@
   Guardianes #12 (percentil real vs configurado) y #13 (recorrido de palancas) para que no se repita en mudo.
   **Pendiente:** el piloto sigue sin escribir precio a propósito (su señal es por PISO, no por fecha).
 
+- **🚑 El cliente ya puede dar parte de un siniestro desde el portal (03/09/2026).** PR **#2195** (mergeado)
+  llevó la regla de visibilidad dictada por Alberto —se OCULTA lo que, si falta, no le cambia nada al cliente
+  (tramitador, perito); se DICE EN VOZ ALTA lo que sí (sin vencimiento, `recibos.total === 0`)— más el aviso
+  de recibo devuelto. PR **#2199** (abierto) trae el parte: tabla `seguros.portal_parte_siniestro` (aplicada;
+  el rol del portal solo INSERTA y LEE), el puerto `/api/operador/partes` en asegura y la bandeja en
+  `/correduria`. 🚨 **La regla nueva: un parte ENVIADO no es un siniestro COMUNICADO a la compañía** — somos
+  mediadores del cliente, no del asegurador, y «enviado» se lee como «hecho». Blindado en tres capas
+  (`comunicadoACompania()`, un CHECK en la BD y `test/regression-portal-parte-siniestro.test.ts`). Heridos y
+  terceros son TRI-ESTADO con «No lo sé» por defecto: un checkbox diría «sin heridos» de algo que nadie
+  preguntó. Se colapsó una duplicación mía de `plazoComunicacion` (art. 16 LCS) contra la de
+  `@central/module-seguros`. Pendiente: el **historial de actividad del cliente** que pidió Alberto (va sin
+  tabla nueva: sus actos ya están fechados en las tablas `portal_*`) y decidir si el parte sobre una póliza
+  AUTORIZADA debe seguir permitiéndose (hoy sí, marcando el titular real).
+
+- **📅 mercado-booking: julio y agosto 2027 ya tienen bucket elegible, otra vez (03/09/2026).**
+  Pasada prioritaria acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 240 comps reales en
+  24 ventanas + 4/4 escaparate propio medido. Objetivo cumplido (3 fechas × 10 comps/piso en
+  cada mes). ⚠️ **Pendiente para Alberto (ya señalado el 29/08 y sigue sin quitarse):** la línea
+  "PRIORIDAD TEMPORAL" vive en la config del disparo programado, fuera del repo — esta sesión no
+  tiene acceso para borrarla, así que la próxima pasada la repetirá si no se quita a mano.
+
 - **✅ El libro de comisiones vuelve a leer la cartera — incidente `asegura_error` CERRADO (03/09/2026).**
   Verificado tras el cron de las 07:30 UTC: **12 filas en `comisiones_devengo` + 4 en `comisiones_cobertura`,
   todas `leido_ok = true`**, con datos reales (Mapfre, Allianz, Occident, Reale y liquidaciones CIMA con hash).
@@ -91,6 +112,17 @@
   (30-60 días, donde SÍ da tiempo a mover de compañía)**, 5 con el plazo ya pasado y 🚩 **18 vivas
   por CIMA con vencimiento ANTERIOR a hoy** — o CIMA no refresca la fecha al prorrogar, o están
   vencidas de verdad; sin mirar, no se afirma.
+- **✍️ El portal del cliente ya deja corregir la póliza a mano (03/09/2026).** La pantalla decía
+  «complétala a mano cuando quieras» y no había dónde: solo existía subir el fichero. Ahora hay
+  `PATCH /api/polizas/[id]` + `normalizarParche()` puro + formulario. **La fecha de vencimiento NO es
+  obligatoria, a propósito** (Alberto la quería obligatoria): quien no la sabe se la inventa, y una
+  fecha inventada dispara un aviso de renovación falso — el «no lo sé disfrazado de valor». Sin
+  fecha, la tarjeta lo dice en voz alta y ofrece la acción. Cepos: el PATCH escribe con `updateMany`
+  filtrando por `identidadId` (el uuid viaja al navegador) y el 404 no distingue «no existe» de «no
+  es tuya». 17 tests del validador + 362/362 la suite guardiana. **Medido de paso:** coberturas,
+  recibos, siniestros y tramitador YA se leían en `cartera-lectura.ts`; lo que NO existe es
+  «solicitar cambios» (cero modelo, cero ruta).
+
 - **🌶️ La pimienta del portal se apagaba sola (03/09/2026).** `hashCanal` leía
   `ASEGURA_PORTAL_CANAL_PEPPER ?? ''`: sin la env la app NO fallaba, seguía dando de alta y escribía
   en `portal_canal` **SHA-256 pelados del email** — justo lo que ese hash existe para evitar. Medido
@@ -149,6 +181,20 @@
   redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
   `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
   este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
+- **🔀 Retarificar se muda a `/correduria`: se acabó el salto al login (03/09/2026).** Alberto quiso
+  retarificar a un cliente desde su pantalla y le echó al login — medido: `GET /cartera/poliza/… → 307`.
+  No era un fallo: `asegura` y `plataforma` son dos apps con sesiones distintas y retarificar vivía en la
+  primera. Dictado suyo: unificar. Tres endpoints nuevos en el puerto (`codeoscopic/catalogos`,
+  `precalificar` y el que GASTA, `retarificar`), la pantalla portada a `/correduria/poliza/[id]/retarificar`
+  y **6 enlaces ↗ internalizados** (uno, el de la cola de retención, no estaba ni en el inventario).
+  🚨 Tres cosas que destapó la mudanza: (1) `lib/operador.ts` **no distingue método**, así que servir el
+  gasto por el puerto abría un cargo a quien tuviera el Bearer → cerrojo **`confirmado === true` estricto**
+  antes de tocar la BD; (2) esconder `cotizar()` en el lib compartido dejaba el guardián del gasto **en
+  verde sin vigilar ninguna ruta** — falso verde sobre el dinero, así que la llamada se queda en cada ruta;
+  (3) **el CP del tomador ya cruzaba el puerto** dentro de los supuestos (`cpCirculacion`), fuga anterior a
+  la mudanza: `sanearSupuestos()` retira el valor y **conserva el supuesto**, porque ocultarlo entero
+  cambiaría una fuga por un silencio sobre la letra pequeña del precio. Hogar sigue saltando a asegura.
+
 - **🧪 La PRIMERA simulación real destapó dos mentiras más, y la BD las cazó (03/09/2026).** Alberto pulsó
   «Simular precio» en una póliza de auto: `seguros.tarificaciones` guardó 1 fila `simulado=true`,
   `intento_id NULL`, `project_id -377989` y **0 filas en el libro de gasto** — la simulación funciona y no
@@ -449,6 +495,18 @@
   póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
 
 ---
+
+### 🧾 (03/09/2026) Comisiones: el cron ya escribe, Occident CUADRA AL CÉNTIMO y el «deudor» era un fallo de signo (solo lectura)
+- Pasada 07:30 UTC OK: 12 periodos en `comisiones_devengo`, 4 en cobertura, aviso 🔴 enviado. **CIMA no trajo nada nuevo**
+  (recibos 184 / extractos 7 / liquidaciones 9, idéntico a anoche; ingesta DEGRADADA, 62 días sin guardar).
+- 🐛 **Cruce con banco VACÍO en los 12 periodos** (`banco_total` NULL): `cima-liq` casa por `compania_seguros` y casi ningún
+  abono la tiene → hay que casar por concepto (`SALDO. M00171`/`8/92361`=Occident, `LIQ.COMISIONES AAAAMM`=Mapfre,
+  `G.65792 LIQ.000NN`=Generali, `M1454`=Asisa, `PD005`/`-FRA-COMIS-`=Caser).
+- 🐛 **Signo EIAC:** `comisiones_recibos` de Occident viene NEGATIVO = a favor del mediador; `cuadre.ts` lo pinta «deudor».
+  Con |bruto|−15% casa el banco al céntimo: abr 233,04€ · may 477,62€ (dos claves) · jul 294,30€; jun 244,53€ vs 279,68€ (+35,15€ sin explicar).
+- Allianz: remesas 80,77/19,64/17,71€ sin abono que case (no comprobado dónde cobra). Mapfre: recibos CIMA se cortan el 29/03, banco cobra hasta 02/09.
+- Banco «8.153,57€ · 11 cías» incluye **3.333,96€ de nómina/pensión** (ref. 28823484E ×3) + 0,29€ Vercel → comisión real 4.819,32€.
+- Avisado a Alberto por Telegram (`/api/internal/alerta`, msg 3976). Decisiones pendientes suyas: PR de signo+cruce, sacar la nómina de seguros, extractos Mapfre/Generali.
 
 ### 🩹 (03/09/2026) La cartera viva se contaba mal: `import_ref IS NULL` dejaba fuera a un cliente
 

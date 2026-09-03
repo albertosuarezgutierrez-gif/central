@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T07:34:33Z",
-  "sha": "0e47f8b8994928570d03f3ed2a43b1e38131500a",
+  "generadoEn": "2026-09-03T08:17:12Z",
+  "sha": "ccfc43852697eafe9f38c1964720bed0279790bc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3128,8 +3128,8 @@
           "exportada": true,
           "params": "valor: string",
           "retorno": "string",
-          "linea": 28,
-          "resumen": "Hash del canal para poder buscarlo sin guardar el email o el móvil en claro. Va con pimienta de entorno: sin ella, una tabla de hashes de emails es trivial de revertir con un diccionario."
+          "linea": 36,
+          "resumen": "Hash del canal para poder buscarlo sin guardar el email o el móvil en claro. Va con pimienta de entorno: sin ella, una tabla de hashes de emails es trivial de revertir con un diccionario. Por eso la p"
         },
         {
           "nombre": "crearSesion",
@@ -3137,7 +3137,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<string>",
-          "linea": 33
+          "linea": 41
         },
         {
           "nombre": "verificarSesion",
@@ -3145,12 +3145,12 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "Promise<",
-          "linea": 38
+          "linea": 46
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c1a36232d813"
+      "hash": "df7b5033572e"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
