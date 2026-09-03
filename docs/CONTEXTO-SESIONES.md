@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive (03/09/2026).**
+  El logo que había en Drive (`cropped-logo-bn-350x100-1.png`) **no servía**: recorte de WordPress de
+  **157×45 px** y **un solo gris `#F6F6F6`** sobre transparencia (377 px opacos de 7.065) — la variante
+  en blanco para fondos oscuros, sin un píxel de color del que sacar paleta. La marca real vive en
+  `app.grupoasegura.com`: azules declarados en **OKLCH** (`oklch(.4 .17 265)` / `(.62 .2 265)` /
+  `(.78 .14 264)` → **#193BA1 / #497CFD / #89B5FF**) y el **monograma «AS» vectorial** en `/icon.svg`.
+  Ambos traídos al repo: `packages/brand/src/marcas/asegura.ts` (`MARCA_ASEGURA`) y
+  `apps/asegura-portal/public/brand/marca-asegura.svg` (con `currentColor`). ⚠️ El portal sigue en el
+  **índigo `#4f46e5` por defecto de Tailwind** y **no consume `@central/brand`**: aplicarlo es lo siguiente.
+  🚫 **`grupoasegura.es` y `boe.es` los bloquea el proxy del entorno** (403 en el CONNECT); a la app se
+  llegó por `mcp__Vercel__web_fetch_vercel_url`, que no pasa por ahí. Apúntalo antes de perder el rato.
+  📌 «La mejor correduría de España» **no se puede escribir en una página**: superioridad sin acreditar
+  es práctica desleal (Ley 3/1991 arts. 5-7) más publicidad DGSFP. El mensaje que sí aguanta y que
+  nadie más tiene: el cliente ve **quién más ve sus pólizas** y se lo quita él.
+  🔐 En la carpeta ASEGURA de Drive hay un `contraseñas CODEOSCOPIC.docx` — avisado, sin abrir.
+
 - **⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición (03/09/2026).**
   Alberto pidió estudio legal y benchmark sectorial para «José autoriza a María a ver sus pólizas».
   🚨 Medido: **104 `cliente_relaciones.puede_ver_polizas = true`, TODAS creadas el 21/06/2026** (día del
