@@ -60,7 +60,7 @@ test('el caso real de Jose Suarez Salas: la de 14 pólizas es la muerta', () => 
 
 test('hermanas con el mismo nombre: se avisa de duplicado y se señala la viva', () => {
   const a = avisoHermanas('historica', [
-    { clienteId: 'x', nombre: 'Jose Suarez Salas', mismoNombre: true, vitalidad: 'viva' },
+    { clienteId: 'x', nombre: 'Jose Suarez Salas', mismoNombre: true, vitalidad: 'viva', vinculo: 'telefono', poliza: null },
   ])
   assert.equal(a?.clase, 'duplicado')
   assert.equal(a?.preferida?.clienteId, 'x')
@@ -68,7 +68,7 @@ test('hermanas con el mismo nombre: se avisa de duplicado y se señala la viva',
 
 test('desde la ficha viva no se manda a ningún lado, solo se avisa', () => {
   const a = avisoHermanas('viva', [
-    { clienteId: 'x', nombre: 'Jose Suarez Salas', mismoNombre: true, vitalidad: 'historica' },
+    { clienteId: 'x', nombre: 'Jose Suarez Salas', mismoNombre: true, vitalidad: 'historica', vinculo: 'telefono', poliza: null },
   ])
   assert.equal(a?.clase, 'duplicado')
   assert.equal(a?.preferida, null)
@@ -77,7 +77,7 @@ test('desde la ficha viva no se manda a ningún lado, solo se avisa', () => {
 test('🚨 mismo teléfono con OTRO nombre no es un duplicado', () => {
   // 203 de los 740 grupos son familias/empresas compartiendo número.
   const a = avisoHermanas('viva', [
-    { clienteId: 'y', nombre: 'Pilar Alcalá', mismoNombre: false, vitalidad: 'viva' },
+    { clienteId: 'y', nombre: 'Pilar Alcalá', mismoNombre: false, vitalidad: 'viva', vinculo: 'telefono', poliza: null },
   ])
   assert.equal(a?.clase, 'comparte')
   assert.equal(a?.preferida, null)
@@ -87,4 +87,23 @@ test('sin hermanas, o sin poder mirarlas, no se dice nada', () => {
   assert.equal(avisoHermanas('viva', []), null)
   // `null` = no se pudo consultar. El silencio no afirma «no hay duplicados».
   assert.equal(avisoHermanas('viva', null), null)
+})
+
+test('🚨 póliza común con OTRO nombre SÍ es un duplicado: la póliza identifica', () => {
+  // «Global2» (volcado) y «GLOBAL 2 INSTALACIONES TÉCNICAS» (CIMA) compartían
+  // la RC 547875907 y salían como dos clientes (03/09/2026).
+  const a = avisoHermanas('sin_fecha', [
+    { clienteId: 'g', nombre: 'GLOBAL 2 INSTALACIONES TÉCNICAS', mismoNombre: false, vitalidad: 'viva', vinculo: 'poliza', poliza: '547875907' },
+  ])
+  assert.equal(a?.clase, 'duplicado')
+  assert.equal(a?.preferida?.clienteId, 'g')
+  assert.match(a?.texto ?? '', /547875907/)
+})
+
+test('desde la viva, la gemela por póliza se avisa sin mandar a ningún lado', () => {
+  const a = avisoHermanas('viva', [
+    { clienteId: 'h', nombre: 'Global2', mismoNombre: false, vitalidad: 'sin_fecha', vinculo: 'poliza', poliza: '547875907' },
+  ])
+  assert.equal(a?.clase, 'duplicado')
+  assert.equal(a?.preferida, null)
 })

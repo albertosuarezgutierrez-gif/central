@@ -653,12 +653,40 @@ async function senalesDe(
   }
 }
 
-type HermanaCruda = { de: string; id: string; nombre: string; mismoNombre: boolean }
+type HermanaCruda = {
+  de: string
+  id: string
+  nombre: string
+  mismoNombre: boolean
+  vinculo: 'telefono' | 'poliza'
+  poliza: string | null
+}
 
 /**
- * Otras fichas SIN fusionar que comparten el índice ciego del teléfono. Es el
- * único vínculo fiable que hay: el DNI solo lo tiene el 12% de las fichas, y
- * la ficha histórica de este caso ni siquiera lo tiene calculado.
+ * Otras fichas SIN fusionar que son, o pueden ser, la misma persona. Dos
+ * vínculos, y no pesan igual:
+ *
+ * - **Póliza común** (mismo número normalizado y mismo ramo, **y una de las dos
+ *   entra por CIMA**): es un IDENTIFICADOR, no una etiqueta. Caso fundacional
+ *   (03/09/2026): «Global2» (volcado, 2 pólizas) y «GLOBAL 2 INSTALACIONES
+ *   TÉCNICAS» (CIMA, 5) salían como dos clientes y compartían la RC 547875907 —
+ *   el nombre no casaba y el teléfono no lo tenía ninguna, así que este buscador
+ *   no las relacionaba.
+ *   🚨 La condición de CIMA NO es opcional, y salió de medir antes de escribir:
+ *   solo por número+ramo hay **2.123 pares** de fichas sin fusionar en la base,
+ *   y NO son duplicados: el volcado `intranet:` reutiliza números («NOLOSE» en 18
+ *   fichas, «032422484» en 8 — varios coches de una familia bajo el mismo número
+ *   legacy) y las 15 que tocaban la cartera viva llevaban literalmente
+ *   «pendiente» como número — el centinela disfrazado de dato. Con una de las dos
+ *   de CIMA (número real de la compañía), ≥4 dígitos y sin dos DNI distintos, el
+ *   par de GLOBAL 2 era el ÚNICO de toda la base. Un número de CIMA solo puede
+ *   estar en otra ficha si es la misma persona o si CIMA creó una ficha nueva en
+ *   vez de colgar la póliza de la existente (el duplicado vivo que se vio el 02/09).
+ * - **Teléfono común**: solo pista. 203 de los 740 grupos que comparten número
+ *   son familias o empresas, así que aquí decide `mismoNombre`.
+ *
+ * El DNI no entra porque las fichas con el mismo hash YA están fusionadas
+ * (0 grupos desde el 02/09/2026) y el 88 % no lo tiene calculado.
  */
 async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaCruda[] | null> {
   if (ids.length === 0) return []
@@ -668,7 +696,9 @@ async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaC
       select c.id::text as "de", o.id::text as id,
              btrim(o.nombre || ' ' || o.apellidos) as nombre,
              (lower(btrim(o.nombre)) = lower(btrim(c.nombre))
-              and lower(btrim(o.apellidos)) = lower(btrim(c.apellidos))) as "mismoNombre"
+              and lower(btrim(o.apellidos)) = lower(btrim(c.apellidos))) as "mismoNombre",
+             'telefono'::text as vinculo,
+             null::text as poliza
       from clientes c
       join clientes o
         on o.telefono_lookup_hash = c.telefono_lookup_hash
@@ -678,6 +708,32 @@ async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaC
       where c.correduria_id = ${correduriaId}::uuid
         and c.telefono_lookup_hash is not null
         and c.id::text = any(${ids}::text[])
+      union
+      select c.id::text as "de", o.id::text as id,
+             btrim(o.nombre || ' ' || o.apellidos) as nombre,
+             (lower(btrim(o.nombre)) = lower(btrim(c.nombre))
+              and lower(btrim(o.apellidos)) = lower(btrim(c.apellidos))) as "mismoNombre",
+             'poliza'::text as vinculo,
+             min(pa.numero_poliza) as poliza
+      from clientes c
+      join polizas pa on pa.cliente_id = c.id and pa.merged_into_poliza_id is null
+      join polizas pb
+        on pb.tipo = pa.tipo
+       and pb.cliente_id <> pa.cliente_id
+       and pb.merged_into_poliza_id is null
+       and (pa.import_ref is null or pb.import_ref is null)
+       and upper(regexp_replace(pb.numero_poliza, '[^A-Za-z0-9]', '', 'g'))
+         = upper(regexp_replace(pa.numero_poliza, '[^A-Za-z0-9]', '', 'g'))
+      join clientes o
+        on o.id = pb.cliente_id
+       and o.correduria_id = c.correduria_id
+       and o.merged_into_cliente_id is null
+       and not (o.dni_lookup_hash is not null and c.dni_lookup_hash is not null
+                and o.dni_lookup_hash <> c.dni_lookup_hash)
+      where c.correduria_id = ${correduriaId}::uuid
+        and c.id::text = any(${ids}::text[])
+        and length(regexp_replace(pa.numero_poliza, '[^0-9]', '', 'g')) >= 4
+      group by c.id, o.id, o.nombre, o.apellidos, c.nombre, c.apellidos
       limit 200
     `
   } catch {
@@ -700,14 +756,20 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
   const senalDe = (id: string): Senales =>
     senales === null ? { polizasCima: null, ultimoVencimiento: null } : (senales.get(id) ?? { polizasCima: 0, ultimoVencimiento: null })
 
-  const porFicha = new Map<string, Hermana[]>()
+  // La misma ficha puede llegar por los dos vínculos: se queda UNA, y manda el
+  // de póliza porque es el que identifica.
+  const porFicha = new Map<string, Map<string, Hermana>>()
   for (const h of crudas ?? []) {
-    const lista = porFicha.get(h.de) ?? []
-    lista.push({
+    const lista = porFicha.get(h.de) ?? new Map<string, Hermana>()
+    const previa = lista.get(h.id)
+    if (previa && previa.vinculo === 'poliza') continue
+    lista.set(h.id, {
       clienteId: h.id,
       nombre: h.nombre,
       mismoNombre: h.mismoNombre,
       vitalidad: vitalidadFicha(senalDe(h.id)),
+      vinculo: h.vinculo,
+      poliza: h.poliza,
     })
     porFicha.set(h.de, lista)
   }
@@ -718,7 +780,7 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
       h.polizasCima = s.polizasCima
       h.ultimoVencimiento = s.ultimoVencimiento
       h.vitalidad = vitalidadFicha(s)
-      h.hermanas = crudas === null ? null : (porFicha.get(h.clienteId) ?? [])
+      h.hermanas = crudas === null ? null : [...(porFicha.get(h.clienteId)?.values() ?? [])]
       h.aviso = avisoHermanas(h.vitalidad, h.hermanas)
     }
   }
