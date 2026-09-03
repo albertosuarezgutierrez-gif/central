@@ -15,6 +15,11 @@
 //     manda un aviso de renovación. Un `2026-02-31` que JS «arregla» solo a
 //     2026-03-03, o un 1970 tecleado de más, produce un aviso falso que el
 //     cliente sí lee. Se rechaza en la puerta.
+//  4. Aquí viven también las reglas de los IDENTIFICADORES DEL BIEN (matrícula,
+//     bastidor y fecha de matriculación), y no en `lib/extraer-poliza.ts`, para
+//     que la máquina que lee el PDF y la persona que lo corrige apliquen LA
+//     MISMA regla. Este fichero no importa nada: por eso puede ser la fuente
+//     única sin arrastrar `@central/core-ai` a media app.
 
 /** Campos que el cliente puede corregir. `null` = borrar el dato; ausente = no tocarlo. */
 export type ParchePoliza = {
@@ -23,6 +28,10 @@ export type ParchePoliza = {
   ramo?: string | null
   primaAnual?: number | null
   fechaVencimiento?: Date | null
+  /** Del BIEN, no del contrato. Ver la sección de identificadores más abajo. */
+  matricula?: string | null
+  bastidor?: string | null
+  fechaMatriculacion?: Date | null
 }
 
 export type ResultadoParche =
@@ -44,14 +53,19 @@ export const ANIOS_MAXIMOS_VISTA = 50
 const RE_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/
 
 /**
- * Convierte `YYYY-MM-DD` en un `Date` a medianoche UTC, o devuelve el motivo del
- * rechazo. Se exige el formato EXACTO (nada de `new Date(string)`, que acepta
- * casi cualquier cosa y adivina zona horaria) y se comprueba que la fecha EXISTE:
+ * Formato EXACTO y fecha que EXISTE, sin opinar sobre el rango. El rango no es
+ * de la fecha: es de CADA CAMPO —un vencimiento mira al futuro y una
+ * matriculación al pasado—, así que se comprueba en quien llama.
+ *
+ * Se exige el formato exacto (nada de `new Date(string)`, que acepta casi
+ * cualquier cosa y adivina zona horaria) y se comprueba que la fecha existe:
  * `Date.UTC(2026, 1, 31)` no falla, desborda a marzo. Se reconstruye y se compara.
  */
-export function parsearFechaISO(valor: string, hoy: Date = new Date()): { ok: true; fecha: Date } | { ok: false; error: string } {
+function descomponerFechaISO(
+  valor: string,
+): { ok: true; fecha: Date } | { ok: false; error: 'formato' | 'inexistente' } {
   const m = RE_FECHA.exec(valor)
-  if (!m) return { ok: false, error: 'fecha_formato' }
+  if (!m) return { ok: false, error: 'formato' }
 
   const anio = Number(m[1])
   const mes = Number(m[2])
@@ -64,14 +78,265 @@ export function parsearFechaISO(valor: string, hoy: Date = new Date()): { ok: tr
     fecha.getUTCMonth() !== mes - 1 ||
     fecha.getUTCDate() !== dia
   ) {
-    return { ok: false, error: 'fecha_inexistente' }
+    return { ok: false, error: 'inexistente' }
   }
-
-  if (anio < ANIO_MINIMO) return { ok: false, error: 'fecha_fuera_de_rango' }
-  if (anio > hoy.getUTCFullYear() + ANIOS_MAXIMOS_VISTA) return { ok: false, error: 'fecha_fuera_de_rango' }
 
   return { ok: true, fecha }
 }
+
+/** Medianoche UTC del día de `d`. Comparar contra `new Date()` a pelo haría que
+ *  «hoy» fuera futuro durante casi todo el día. */
+function medianocheUTC(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+}
+
+/**
+ * Convierte `YYYY-MM-DD` en un `Date` a medianoche UTC, o devuelve el motivo del
+ * rechazo. Es la fecha de VENCIMIENTO: se rechaza lo que no puede ser el
+ * vencimiento de una póliza viva (un 1970 tecleado de más, un 2200).
+ */
+export function parsearFechaISO(valor: string, hoy: Date = new Date()): { ok: true; fecha: Date } | { ok: false; error: string } {
+  const r = descomponerFechaISO(valor)
+  if (!r.ok) return { ok: false, error: r.error === 'formato' ? 'fecha_formato' : 'fecha_inexistente' }
+
+  const anio = r.fecha.getUTCFullYear()
+  if (anio < ANIO_MINIMO) return { ok: false, error: 'fecha_fuera_de_rango' }
+  if (anio > hoy.getUTCFullYear() + ANIOS_MAXIMOS_VISTA) return { ok: false, error: 'fecha_fuera_de_rango' }
+
+  return { ok: true, fecha: r.fecha }
+}
+
+// ─── Identificadores del BIEN: matrícula, bastidor (VIN) y matriculación ─────
+//
+// Son datos del VEHÍCULO, no del contrato; viajan dentro de la póliza declarada
+// porque es donde el cliente los aporta hoy. Las reglas viven aquí por dos
+// razones, y las dos importan:
+//
+//  1. Son LA MISMA regla para el extractor de IA (`lib/extraer-poliza.ts`) y
+//     para la corrección a mano. Dos copias divergen, y entonces el portal
+//     acepta al editar lo que rechazó al leer — o al revés.
+//  2. La REACCIÓN sí cambia según quién habla, y ese matiz vive en la frontera:
+//     · una MÁQUINA que lee mal → `null` («no lo hemos sabido leer»): la póliza
+//       se guarda igual y se completa a mano;
+//     · una PERSONA que teclea mal → ERROR, para que lo vea y lo corrija.
+//       Anularle en silencio lo que ha escrito es peor: se cree que está guardado.
+//
+// 🚨 Un bastidor mal leído es PEOR que ninguno: identifica OTRO coche, y con él
+// se pide precio, se retarifica y se declara un siniestro.
+
+/**
+ * Lo que un extractor —o una persona con prisa— escribe cuando NO sabe el dato.
+ * Ninguno es un dato: todos significan «no se sabe», y por eso se anulan ANTES
+ * de escribir. Un centinela se cuela por TODAS las guardas basadas en NULL
+ * (`??`, `COALESCE`, `IS NULL`) y termina pisando dato bueno: es exactamente el
+ * caso `'otro'` de `subastas.tipo_bien` que cuenta el `CLAUDE.md` de la raíz.
+ * Se compara en minúsculas y recortado.
+ */
+export const CENTINELAS_SIN_DATO: readonly string[] = [
+  '',
+  '-',
+  '--',
+  '---',
+  '–',
+  '—',
+  '.',
+  '..',
+  '...',
+  '?',
+  '??',
+  '*',
+  'n/a',
+  'n.a.',
+  'na',
+  'nc',
+  's/n',
+  'sn',
+  'null',
+  'undefined',
+  'nan',
+  'none',
+  'ninguno',
+  'ninguna',
+  'desconocido',
+  'desconocida',
+  'sin datos',
+  'sin dato',
+  'sin matricula',
+  'sin matrícula',
+  'sin bastidor',
+  'no consta',
+  'no consta en el documento',
+  'no disponible',
+  'no especificado',
+  'no especificada',
+  'no figura',
+  'no encontrado',
+  'no encontrada',
+  'no indicado',
+  'no indicada',
+  'no aplica',
+  'no legible',
+  'ilegible',
+  'pendiente',
+]
+
+const SET_CENTINELAS = new Set(CENTINELAS_SIN_DATO)
+
+/** Lo que separa un identificador escrito a mano: espacios, guiones, puntos, barras. */
+const RE_SEPARADORES = /[\s.\-–—_/]/g
+
+/**
+ * ¿Es esto un «no lo sé» disfrazado de valor? Dos criterios, y el segundo es el
+ * que salva de los centinelas que nadie pone en la lista: un identificador con
+ * UN SOLO carácter repetido no identifica nada — `'0000000'`, `'-----'` y,
+ * peor, `'00000000000000000'` y `'XXXXXXXXXXXXXXXXX'`, que tienen 17 caracteres
+ * y pasarían la forma de un VIN sin despeinarse.
+ */
+export function esCentinelaSinDato(valor: string): boolean {
+  const limpio = valor.trim().toLowerCase()
+  if (SET_CENTINELAS.has(limpio)) return true
+  const compacto = limpio.replace(RE_SEPARADORES, '')
+  if (compacto === '') return true
+  if (compacto.length >= 2 && new Set(compacto).size === 1) return true
+  return false
+}
+
+/** Mayúsculas y sin separadores. `null` si no es texto o si es un centinela. */
+export function compactarIdentificador(valor: unknown): string | null {
+  if (typeof valor !== 'string') return null
+  if (esCentinelaSinDato(valor)) return null
+  const compacto = valor.toUpperCase().replace(RE_SEPARADORES, '')
+  return compacto === '' ? null : compacto
+}
+
+/**
+ * Forma de un VIN (ISO 3779): 17 caracteres alfanuméricos SIN **I, O ni Q** —
+ * la norma las excluye para que no se confundan con 1 y 0 al leerlas, así que
+ * un bastidor con una I es una lectura equivocada, no un bastidor raro. Y 16 o
+ * 18 caracteres no es «casi»: es otro número.
+ *
+ * ⚠️ NO se comprueba el dígito de control de la posición 9: es obligatorio en
+ * Norteamérica (FMVSS 115) y NO en Europa, así que exigirlo tiraría la mayoría
+ * de los bastidores reales de esta cartera. Aquí se valida FORMA, no existencia.
+ */
+export const RE_BASTIDOR = /^[A-HJ-NPR-Z0-9]{17}$/
+
+export function esBastidorValido(valor: string): boolean {
+  return RE_BASTIDOR.test(valor)
+}
+
+/**
+ * Forma de una matrícula española ya compactada y en mayúsculas. Cubre la
+ * actual (`1234BCD`), la provincial (`SE1234BC`, `M123456`) y las especiales de
+ * remolque o histórico (`R1234BBB`, `H1234BCD`).
+ *
+ * No se exige el juego de consonantes de la matrícula moderna
+ * (`BCDFGHJKLMNPRSTVWXYZ`) porque la MISMA expresión tiene que dar por buenas
+ * las provinciales, donde sí hay vocales (`SE`, `A`, `O`, `MA`…). Lo que sí
+ * hace es descartar la prosa: «NO CONSTA EN LA PÓLIZA» no tiene forma de
+ * matrícula. Es una comprobación de FORMA, no una consulta a la DGT: dice que
+ * eso PUEDE ser una matrícula, nunca que exista ni que sea de este coche.
+ */
+export const RE_MATRICULA = /^[A-Z]{0,3}[0-9]{3,6}[A-Z]{0,3}$/
+
+/** Las españolas van de 5 (`B1234`, anteriores a 1971) a 9 caracteres. */
+export const LONGITUD_MATRICULA = { min: 5, max: 9 } as const
+
+export function esMatriculaValida(valor: string): boolean {
+  return (
+    valor.length >= LONGITUD_MATRICULA.min &&
+    valor.length <= LONGITUD_MATRICULA.max &&
+    RE_MATRICULA.test(valor)
+  )
+}
+
+/** Matrícula normalizada, o `null` («no se sabe») si no la hay o no tiene forma de serlo. */
+export function normalizarMatricula(valor: unknown): string | null {
+  const compacto = compactarIdentificador(valor)
+  if (compacto === null) return null
+  return esMatriculaValida(compacto) ? compacto : null
+}
+
+/** Bastidor normalizado, o `null`. Ante la duda, `null`: ver el aviso de arriba. */
+export function normalizarBastidor(valor: unknown): string | null {
+  const compacto = compactarIdentificador(valor)
+  if (compacto === null) return null
+  return esBastidorValido(compacto) ? compacto : null
+}
+
+/** Antes de 1900 no hay vehículos matriculados que aseguremos: es un tecleo. */
+export const ANIO_MINIMO_MATRICULACION = 1900
+
+/**
+ * La fecha de PRIMERA MATRICULACIÓN. Mira al pasado, al revés que el
+ * vencimiento: un coche no se matricula mañana. Una fecha futura es un año
+ * tecleado de más, o un extractor que ha leído el vencimiento de la póliza y lo
+ * ha puesto aquí — y con ella el vehículo pasa a tener antigüedad negativa, que
+ * es justo lo que se usa para tarificar.
+ */
+export function parsearFechaMatriculacion(
+  valor: string,
+  hoy: Date = new Date(),
+): { ok: true; fecha: Date } | { ok: false; error: string } {
+  const r = descomponerFechaISO(valor)
+  if (!r.ok) {
+    return { ok: false, error: r.error === 'formato' ? 'fecha_matriculacion_formato' : 'fecha_matriculacion_inexistente' }
+  }
+  if (r.fecha.getUTCFullYear() < ANIO_MINIMO_MATRICULACION) {
+    return { ok: false, error: 'fecha_matriculacion_fuera_de_rango' }
+  }
+  if (r.fecha.getTime() > medianocheUTC(hoy).getTime()) {
+    return { ok: false, error: 'fecha_matriculacion_futura' }
+  }
+  return { ok: true, fecha: r.fecha }
+}
+
+/** La misma regla, en la forma que necesita el extractor: `YYYY-MM-DD` o `null`. */
+export function normalizarFechaMatriculacionISO(valor: unknown, hoy: Date = new Date()): string | null {
+  if (typeof valor !== 'string') return null
+  const limpio = valor.trim()
+  if (esCentinelaSinDato(limpio)) return null
+  const r = parsearFechaMatriculacion(limpio, hoy)
+  return r.ok ? r.fecha.toISOString().slice(0, 10) : null
+}
+
+/** Lo que el extractor dice haber leído del vehículo. `null` = «no se sabe». */
+export type VehiculoLeido = {
+  matricula: string | null
+  bastidor: string | null
+  /** `YYYY-MM-DD`, para viajar igual que `fechaVencimiento` de `PolizaLeida`. */
+  fechaMatriculacion: string | null
+}
+
+/** Los tres campos a «no se sabe». */
+export function vehiculoLeidoVacio(): VehiculoLeido {
+  return { matricula: null, bastidor: null, fechaMatriculacion: null }
+}
+
+/**
+ * Normaliza lo que sea que haya devuelto el modelo. Nunca lanza: si la entrada
+ * no es un objeto, los tres campos son `null`. Es el espejo de
+ * `normalizarPolizaLeida()` de `@central/module-seguros-portal`, y está aquí
+ * —y no allí— porque el mismo fichero tiene que servir a la corrección a mano.
+ */
+export function normalizarVehiculoLeido(bruto: unknown, hoy: Date = new Date()): VehiculoLeido {
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return vehiculoLeidoVacio()
+  const o = bruto as Record<string, unknown>
+  return {
+    matricula: normalizarMatricula(o.matricula),
+    bastidor: normalizarBastidor(o.bastidor),
+    fechaMatriculacion: normalizarFechaMatriculacionISO(o.fechaMatriculacion, hoy),
+  }
+}
+
+/**
+ * Los identificadores que admite el PATCH, con el error que se devuelve cuando
+ * la persona escribe algo que NO tiene la forma de ese identificador.
+ */
+const IDENTIFICADORES_PARCHE = [
+  { campo: 'matricula', normaliza: normalizarMatricula, error: 'matricula_invalida' },
+  { campo: 'bastidor', normaliza: normalizarBastidor, error: 'bastidor_invalido' },
+] as const
 
 /** `''` y `'   '` son un borrado, no un valor. */
 function normalizarTexto(valor: unknown): { ok: true; valor: string | null } | { ok: false; error: string } {
@@ -150,6 +415,45 @@ export function normalizarParche(entrada: unknown, hoy: Date = new Date()): Resu
     }
   }
 
+  // Identificadores del bien. Tres reacciones distintas, y ninguna es cosmética:
+  //   · `null` o centinela (`'N/A'`, `'no consta'`, `'   '`) → BORRADO. La
+  //     persona está diciendo «no lo sé», que es un dato legítimo.
+  //   · forma incorrecta → ERROR. Un bastidor de 16 caracteres no es «casi»:
+  //     identifica otro coche, y anulárselo en silencio le deja creyendo que lo
+  //     ha guardado.
+  for (const { campo, normaliza, error } of IDENTIFICADORES_PARCHE) {
+    if (!(campo in bruto)) continue
+    const valor = bruto[campo]
+    if (valor === undefined) continue
+    if (valor === null) {
+      parche[campo] = null
+      continue
+    }
+    if (typeof valor !== 'string') return { ok: false, error }
+    if (esCentinelaSinDato(valor)) {
+      parche[campo] = null
+      continue
+    }
+    const limpio = normaliza(valor)
+    if (limpio === null) return { ok: false, error }
+    parche[campo] = limpio
+  }
+
+  if ('fechaMatriculacion' in bruto && bruto.fechaMatriculacion !== undefined) {
+    const valor = bruto.fechaMatriculacion
+    if (valor === null) {
+      parche.fechaMatriculacion = null
+    } else if (typeof valor !== 'string') {
+      return { ok: false, error: 'fecha_matriculacion_formato' }
+    } else if (esCentinelaSinDato(valor)) {
+      parche.fechaMatriculacion = null
+    } else {
+      const r = parsearFechaMatriculacion(valor.trim(), hoy)
+      if (!r.ok) return { ok: false, error: r.error }
+      parche.fechaMatriculacion = r.fecha
+    }
+  }
+
   if (Object.keys(parche).length === 0) return { ok: false, error: 'parche_vacio' }
 
   return { ok: true, parche }
@@ -168,13 +472,34 @@ export function normalizarParche(entrada: unknown, hoy: Date = new Date()): Resu
 //     pero sin nada que diga DE QUÉ seguro se habla no es una póliza: es ruido
 //     que nadie —ni la persona ni el corredor— va a poder reconocer después.
 
-/** Los cinco campos declarables, TODOS presentes. `null` = «no lo sé», y es válido. */
+// 🚧 Los identificadores del bien (matrícula, bastidor, fecha de matriculación)
+// NO están en el alta a mano todavía, y es a propósito: la forma EXACTA de
+// `DatosAlta` está fijada por `test/regression-portal-poliza-editable.test.ts`
+// (raíz del repo), que compara el objeto entero con `deepEqual`: ampliarla y
+// actualizar ese guardián van en el MISMO commit, a propósito. Si el guardián
+// pudiera quedarse atrás, dejaría de vigilar justo lo que vigila — que nadie
+// añada un campo al alta sin mirar qué se le está pidiendo al cliente.
+//
+// Los tres del VEHÍCULO entran aquí y no solo por el PATCH porque el alta a
+// mano es EL sitio donde el cliente teclea la matrícula, y de la matrícula sale
+// la fecha de matriculación estimada. Sin ellos en el alta, el autorrelleno no
+// tendría de dónde salir hasta que el cliente corrigiera la ficha después.
+//
+// 🚨 Ninguno es obligatorio, y eso no es pereza: la única guarda es que la
+// póliza quede IDENTIFICADA (compañía o número). Pedirle a un cliente el
+// bastidor para dejarle apuntar su seguro es trasladarle el trabajo de la
+// correduría, y el formulario que no se rellena no guarda nada.
+
+/** Los ocho campos declarables, TODOS presentes. `null` = «no lo sé», y es válido. */
 export type DatosAlta = {
   compania: string | null
   numeroPoliza: string | null
   ramo: string | null
   primaAnual: number | null
   fechaVencimiento: Date | null
+  matricula: string | null
+  bastidor: string | null
+  fechaMatriculacion: Date | null
 }
 
 export type ResultadoAlta =
@@ -197,6 +522,9 @@ export function normalizarAlta(entrada: unknown, hoy: Date = new Date()): Result
     ramo: p.ramo ?? null,
     primaAnual: p.primaAnual ?? null,
     fechaVencimiento: p.fechaVencimiento ?? null,
+    matricula: p.matricula ?? null,
+    bastidor: p.bastidor ?? null,
+    fechaMatriculacion: p.fechaMatriculacion ?? null,
   }
 
   if (datos.compania === null && datos.numeroPoliza === null) {

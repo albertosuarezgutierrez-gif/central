@@ -23,9 +23,19 @@
  * `required`, esto es el porqué de que no lo tenga.
  */
 
+import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
+
 export type RamoOpcion = { valor: string; etiqueta: string }
 
-export type Campo = 'fechaVencimiento' | 'compania' | 'numeroPoliza' | 'ramo' | 'primaAnual'
+export type Campo =
+  | 'fechaVencimiento'
+  | 'compania'
+  | 'numeroPoliza'
+  | 'ramo'
+  | 'primaAnual'
+  | 'matricula'
+  | 'bastidor'
+  | 'fechaMatriculacion'
 export type Formulario = Record<Campo, string>
 export type Errores = Partial<Record<Campo, string>>
 
@@ -35,7 +45,21 @@ export const FORMULARIO_VACIO: Formulario = {
   numeroPoliza: '',
   ramo: '',
   primaAnual: '',
+  matricula: '',
+  bastidor: '',
+  fechaMatriculacion: '',
 }
+
+/**
+ * Los ramos que tienen vehículo detrás, y por tanto los únicos que despliegan
+ * el bloque de matrícula / bastidor.
+ *
+ * 🚨 Esto es lo que separa esta pantalla de una solicitud de seguro: un
+ * tarificador pide TODOS sus campos siempre porque necesita calcular un precio;
+ * aquí el cliente solo apunta lo que tiene, y enseñarle «matrícula» debajo de
+ * su seguro de decesos es ruido que le hace dudar de si se ha equivocado.
+ */
+const RAMOS_CON_VEHICULO: ReadonlySet<string> = new Set(['auto', 'moto'])
 
 export const MENSAJE_400: Record<Campo, string> = {
   fechaVencimiento: 'Esa fecha no nos vale. Compruébala en tu póliza; si no la sabes, déjala en blanco.',
@@ -43,6 +67,22 @@ export const MENSAJE_400: Record<Campo, string> = {
   compania: 'Ese nombre de compañía no nos vale. Escríbelo tal cual aparece en tu póliza.',
   numeroPoliza: 'Ese número de póliza no nos vale. Cópialo tal cual aparece en tu póliza.',
   ramo: 'Ese tipo de seguro no nos vale. Elige uno de la lista.',
+  matricula: 'Esa matrícula no nos vale. Escríbela tal cual, por ejemplo 1234 BCD.',
+  bastidor: 'Ese bastidor no nos vale. Son 17 caracteres y no llevan las letras I, O ni Q.',
+  fechaMatriculacion: 'Esa fecha de matriculación no nos vale. Está en tu permiso de circulación.',
+}
+
+/** Los meses, para decir «matriculado hacia marzo de 2014» y no «hacia 2014-03-11». */
+const MESES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
+/** `2014-03-11` → `marzo de 2014`. Sin `Date`: aquí solo se parte un ISO. */
+function mesYAno(iso: string): string {
+  const [a, m] = iso.split('-')
+  const i = Number(m) - 1
+  return MESES[i] ? `${MESES[i]} de ${a}` : a ?? iso
 }
 
 export const MENSAJE_PRIMA_CERO = 'Una prima de 0 € no nos dice nada. Si no la sabes, déjala en blanco.'
@@ -61,9 +101,18 @@ const CAMPO_POR_ERROR: ReadonlyArray<readonly [RegExp, Campo]> = [
   [/compan|compañ/i, 'compania'],
   [/n(u|ú)mero/i, 'numeroPoliza'],
   [/ramo/i, 'ramo'],
+  [/matricula|matrícula/i, 'matricula'],
+  [/bastidor|vin/i, 'bastidor'],
 ]
 
+// La de matriculación tiene que ganarle a la genérica de fecha, así que se
+// resuelve aparte y primero. (Un `error: 'fecha_matriculacion_invalida'` que
+// pintara el aviso bajo «vencimiento» mandaría a la persona a corregir el
+// campo que NO está mal, que es peor que no decir nada.)
+const CAMPO_MATRICULACION: readonly [RegExp, Campo] = [/matriculacion|matriculación/i, 'fechaMatriculacion']
+
 export function campoDelError(codigo: string): Campo | null {
+  if (CAMPO_MATRICULACION[0].test(codigo)) return CAMPO_MATRICULACION[1]
   for (const [patron, campo] of CAMPO_POR_ERROR) if (patron.test(codigo)) return campo
   return null
 }
@@ -184,6 +233,10 @@ export function CamposPoliza({ idPrefix, ramos, form, errores, escribir, disable
         {errores.ramo && <p className="editor-error">{errores.ramo}</p>}
       </div>
 
+      {RAMOS_CON_VEHICULO.has(form.ramo) && (
+        <CamposVehiculo idPrefix={idPrefix} form={form} errores={errores} escribir={escribir} disabled={disabled} />
+      )}
+
       <div className="editor-campo">
         <label htmlFor={`prima-${idPrefix}`}>Prima anual (€)</label>
         <p className="editor-ayuda" id={`prima-ayuda-${idPrefix}`}>
@@ -203,6 +256,130 @@ export function CamposPoliza({ idPrefix, ramos, form, errores, escribir, disable
           disabled={disabled}
         />
         {errores.primaAnual && <p className="editor-error">{errores.primaAnual}</p>}
+      </div>
+    </>
+  )
+}
+
+/**
+ * El bloque del VEHÍCULO: se despliega solo cuando el tipo de seguro lo tiene
+ * detrás (`RAMOS_CON_VEHICULO`).
+ *
+ * Ninguno de los tres es obligatorio, por la misma razón que el vencimiento: el
+ * cliente está apuntando su seguro, no pidiendo precio. Quien no sepa su
+ * bastidor lo deja en blanco y la póliza se guarda igual.
+ *
+ * 🚨 LA FECHA ESTIMADA NO SE GUARDA SOLA, Y ESO ES EL DISEÑO, NO UN OLVIDO.
+ * De la matrícula sale una fecha CALCULADA (la serie nacional es secuencial, así
+ * que la matrícula lleva dentro su propia fecha ±unas semanas). Escribirla en el
+ * campo por su cuenta la convertiría, aguas abajo, en indistinguible de la que
+ * viene del permiso de circulación: mismo `fecha_matriculacion`, misma pinta, y
+ * nadie podría volver a saber cuál era una lectura y cuál una cuenta nuestra.
+ * Así que se ENSEÑA, y solo entra en el campo si la persona pulsa «Usar esta
+ * fecha» — ahí ya es su declaración, no nuestra suposición. Es la regla de la
+ * casa: un dato calculado nunca se sirve como un dato confirmado.
+ *
+ * Y el aviso del importado no es un detalle legal: en un vehículo traído de
+ * fuera la matriculación ESPAÑOLA no es la primera del vehículo, y para el
+ * precio del seguro manda la primera. La estimación no puede saberlo.
+ */
+function CamposVehiculo({
+  idPrefix,
+  form,
+  errores,
+  escribir,
+  disabled,
+}: {
+  idPrefix: string
+  form: Formulario
+  errores: Errores
+  escribir: (campo: Campo, valor: string) => void
+  disabled: boolean
+}) {
+  const estimada = fechaMatriculacionEstimada(form.matricula)
+  // Solo se ofrece cuando el campo está VACÍO: si ya hay una fecha (leída del
+  // documento o escrita por la persona), una estimación nuestra no tiene nada
+  // que corregirle, y ofrecer pisarla sería invitar a empeorar el dato.
+  const ofrecerEstimada = estimada !== null && form.fechaMatriculacion.trim() === ''
+
+  return (
+    <>
+      <div className="editor-campo">
+        <label htmlFor={`mat-${idPrefix}`}>Matrícula</label>
+        <input
+          id={`mat-${idPrefix}`}
+          className="campo"
+          type="text"
+          value={form.matricula}
+          onChange={(e) => escribir('matricula', e.target.value)}
+          placeholder="1234 BCD"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          aria-describedby={ofrecerEstimada ? `mat-est-${idPrefix}` : undefined}
+          aria-invalid={errores.matricula ? true : undefined}
+          disabled={disabled}
+        />
+        {errores.matricula && <p className="editor-error">{errores.matricula}</p>}
+        {ofrecerEstimada && (
+          <div className="editor-ayuda" id={`mat-est-${idPrefix}`}>
+            <p>
+              Por la matrícula, este coche es de <strong>{mesYAno(estimada.estimada)}</strong> aproximadamente.
+              Lo calculamos nosotros a partir del número, <strong>no es un dato oficial</strong>, y no acierta si
+              el coche vino de fuera de España.
+            </p>
+            <button
+              type="button"
+              className="boton-secundario"
+              onClick={() => escribir('fechaMatriculacion', estimada.estimada)}
+              disabled={disabled}
+            >
+              Usar esta fecha
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`matfec-${idPrefix}`}>Fecha de matriculación</label>
+        <p className="editor-ayuda" id={`matfec-ayuda-${idPrefix}`}>
+          La que viene en tu permiso de circulación. Si no la tienes a mano, déjala en blanco.
+        </p>
+        <input
+          id={`matfec-${idPrefix}`}
+          className="campo"
+          type="date"
+          value={form.fechaMatriculacion}
+          onChange={(e) => escribir('fechaMatriculacion', e.target.value)}
+          aria-describedby={`matfec-ayuda-${idPrefix}`}
+          aria-invalid={errores.fechaMatriculacion ? true : undefined}
+          disabled={disabled}
+        />
+        {errores.fechaMatriculacion && <p className="editor-error">{errores.fechaMatriculacion}</p>}
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`bast-${idPrefix}`}>Bastidor</label>
+        <p className="editor-ayuda" id={`bast-ayuda-${idPrefix}`}>
+          Los 17 caracteres de tu ficha técnica. Es lo que identifica la versión exacta de tu coche, así que
+          nos ahorra preguntártela — pero <strong>si no lo tienes, déjalo en blanco</strong>.
+        </p>
+        <input
+          id={`bast-${idPrefix}`}
+          className="campo"
+          type="text"
+          value={form.bastidor}
+          onChange={(e) => escribir('bastidor', e.target.value)}
+          placeholder="VF1RFB00X66123456"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          maxLength={17}
+          aria-describedby={`bast-ayuda-${idPrefix}`}
+          aria-invalid={errores.bastidor ? true : undefined}
+          disabled={disabled}
+        />
+        {errores.bastidor && <p className="editor-error">{errores.bastidor}</p>}
       </div>
     </>
   )
