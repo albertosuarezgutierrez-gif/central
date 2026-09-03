@@ -256,6 +256,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (03/09/2026) ⚖️ Autorizar a un tercero en el portal del cliente: estudio legal + medición
 - (03/09/2026) 🏷️ El motor de pricing tarificaba en un percentil que tres pisos no han alcanzado jamás
 - (03/09/2026) 🚑 El cliente ya puede dar parte de un siniestro desde el portal
 - (03/09/2026) 📅 mercado-booking: julio y agosto 2027 ya tienen bucket elegible, otra vez
@@ -265,5 +266,4 @@
 - (03/09/2026) 🗂️ Ficha de cliente de la correduría: cabecera + pestañas, y los colores de la app de Manuel
 - (03/09/2026) ✍️ El portal del cliente ya deja corregir la póliza a mano
 - (03/09/2026) 🌶️ La pimienta del portal se apagaba sola
-- (03/09/2026) 🔑 Portal del cliente: envs puestas y la lección de las claves irreversibles
 
