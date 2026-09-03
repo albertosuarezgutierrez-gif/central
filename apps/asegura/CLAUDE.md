@@ -29,6 +29,13 @@ de rotar la contraseña de prisma_seguros (**tumbaría central-asegura**), el CR
 rotó igual. 🚨 **Al rotar la contraseña de un rol, el mismo PR/paso actualiza el `DATABASE_URL` (y
 `DIRECT_URL`) del proyecto Vercel que lo usa** — si no, la app queda muerta sin que nada más falle.
 
+✅ **CERRADO Y VERIFICADO (03/09/2026, 07:30 UTC).** El cron `/api/cron/cima-liq` volvió a leer la
+cartera: **12 filas en `comisiones_devengo` y 4 en `comisiones_cobertura`, todas con `leido_ok = true`**
+y datos reales (Mapfre, Allianz, Occident, Reale; liquidaciones CIMA con hash). Sin un solo
+`password authentication failed` en `postgres_logs` desde la última rotación del 02/09 a las 10:17.
+⚠️ Lo que sigue en «no comprobado» **a propósito** es la conciliación bancaria: `banco_total` está a
+NULL en las 12 filas porque nadie ha cruzado los abonos todavía — eso es «aún no se sabe», no «0 €».
+
 ⚠️ **El `?schema=seguros` FORZADO (PR #2029) NO era la causa** — se escribió aquí como hipótesis
 probable y resultó falsa; corregido el 02/09/2026. Se conserva como blindaje y por lo que dice de
 diseño: `DATABASE_URL` es la MISMA cadena que usa la auth (`lib/db.ts`), donde el schema correcto es

@@ -44,6 +44,15 @@
   Guardianes #12 (percentil real vs configurado) y #13 (recorrido de palancas) para que no se repita en mudo.
   **Pendiente:** el piloto sigue sin escribir precio a propósito (su señal es por PISO, no por fecha).
 
+- **✅ El libro de comisiones vuelve a leer la cartera — incidente `asegura_error` CERRADO (03/09/2026).**
+  Verificado tras el cron de las 07:30 UTC: **12 filas en `comisiones_devengo` + 4 en `comisiones_cobertura`,
+  todas `leido_ok = true`**, con datos reales (Mapfre, Allianz, Occident, Reale y liquidaciones CIMA con hash).
+  Cero `password authentication failed` en `postgres_logs` desde la rotación del 02/09 a las 10:17 → la causa
+  medida (`credenciales`: `DATABASE_URL` de Vercel `central-asegura` desfasado respecto a `prisma_seguros`)
+  está resuelta. ⚠️ **La hipótesis del `?schema=seguros` forzado NUNCA fue la causa** — sigue escrita como
+  falsa a propósito en los tres `CLAUDE.md`. Pendiente distinto y sano: `banco_total` a NULL en las 12 filas
+  = conciliación bancaria «aún no comprobada», no 0 €. PRs previos #2029 → #2034 → #2047 → #2049.
+
 - **🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente` (03/09/2026).**
   Alberto preguntó por María Alcalá (hogar Mapfre, «🔴 Sin cobertura · hace 56 días»). Medido en BD: el recibo
   de 225,97€ está **`pendiente`**, DOMICILIADO, póliza en vigor, y su fila no se toca desde la carga del 24/06
@@ -82,6 +91,28 @@
   (30-60 días, donde SÍ da tiempo a mover de compañía)**, 5 con el plazo ya pasado y 🚩 **18 vivas
   por CIMA con vencimiento ANTERIOR a hoy** — o CIMA no refresca la fecha al prorrogar, o están
   vencidas de verdad; sin mirar, no se afirma.
+- **🌶️ La pimienta del portal se apagaba sola (03/09/2026).** `hashCanal` leía
+  `ASEGURA_PORTAL_CANAL_PEPPER ?? ''`: sin la env la app NO fallaba, seguía dando de alta y escribía
+  en `portal_canal` **SHA-256 pelados del email** — justo lo que ese hash existe para evitar. Medido
+  en producción: el código de acceso se envió con normalidad con la env sin poner, y el 500 que sí
+  saltó fue el de `ASEGURA_PORTAL_SESSION_SECRET` (esa sí pasa por `requireSecret`). Pasa a
+  `requireSecret` + guardián `test/regression-portal-pimienta.test.ts`. El guardián general de
+  secretos no lo cazaba **a propósito** —«un literal vacío no es una credencial usable»—, cierto
+  para un secreto que FIRMA y falso para una pimienta. ⚠️ **No mergear hasta que la env esté
+  puesta**: antes de eso tumba el alta con 500.
+
+- **🔑 Portal del cliente: envs puestas y la lección de las claves irreversibles (03/09/2026).**
+  En `asegura-portal` quedan `DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_FROM`,
+  `PORTAL_MAIL_REPLY_TO` y `PORTAL_PUBLIC_URL`. Dos cosas que costaron la noche: (1) **una env
+  `Sensitive` de Vercel NO se puede releer** —es escritura solo—, y `PII_LOOKUP_KEY` es
+  IRREVERSIBLE (índices ÚNICOS sobre el índice ciego: cambiarla obliga a recalcular 4 tablas), así
+  que jamás se genera una nueva; el valor estaba en el proyecto `asegura`, de donde ya se copió el
+  02/09. (2) El **bucle del `ignoreCommand`**: cambiar una env no llega a producción, Vercel no
+  redespliega si hay una producción más nueva, y los commits de la auditoría crean una cada pocos
+  minutos y la cancelan. La única salida es un commit que toque `apps/asegura-portal/`.
+  **Pendiente:** que Alberto pida un código con el email de un cliente CIMA — es lo que valida a la
+  vez el envío por Resend y la `PII_LOOKUP_KEY`. Y llevar las claves a Shared env vars + gestor.
+
 - **🎨 Portal del cliente: correo propio y aspecto de plataforma (03/09/2026).** Dominio de envío
   `envios.grupoasegura.es` **verificado en Resend** (DKIM+SPF+MX en IONOS). Es un SUBDOMINIO a
   propósito: solo puede haber un SPF por dominio y la raíz ya tiene el de IONOS — fusionarlos a mano
@@ -430,7 +461,10 @@
   **o** `eiac_xml_hash IS NOT NULL`. Barrido en asegura, portal y plataforma + guardián
   `test/regression-cartera-viva.test.ts`. `eiacXmlHash` es OBLIGATORIO en las firmas a propósito: si fuera
   opcional, olvidar pedirlo a la BD volvería a la regla vieja en silencio. GRANT de esa columna al rol del
-  portal (aplicado y en `prisma/sql/`). Verificado: 322/322 tests, typecheck asegura/portal/plataforma, QA.
+  portal (aplicado y en `prisma/sql/`). ✅ **MERGEADO (#2164) y verificado sobre `main` ya fusionada:**
+  343/343 tests, guardián 4/4, typecheck de las tres apps, y `central-asegura` desplegada en producción
+  desde ese commit (READY). Contado de nuevo contra la BD: **80 clientes / 110 pólizas**, Reale con 1 viva
+  (la regla vieja seguiría dando 109).
 - 🚫 **CIMA NO deja declarar siniestros. Preguntado y respondido el mismo día (SAU-23934).** El
   proceso **841** existe en la norma EIAC pero **no en CIMA**, las entidades no lo tienen integrado y
   «no hay fecha ni está planificada» su puesta en marcha; la **7.1 sigue sin cambios**. El único envío

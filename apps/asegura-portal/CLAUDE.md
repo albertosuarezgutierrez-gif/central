@@ -86,6 +86,33 @@ ocho deployments seguidos en `CANCELED` y el redeploy manual cancelado también,
 mecanismo que el `ignoreCommand` declara. Consecuencia práctica: **al cambiar una env de esta app,
 cuenta con que quien la activa es el siguiente PR que toque la app**, no el botón de Redeploy.
 
+### 3. Las claves: dónde viven y cuáles NO se pueden regenerar
+
+Cierre del 03/09. Las envs del portal están puestas en Vercel (`asegura-portal`, Production):
+`DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_FROM`
+(`Grupo Asegura <no-reply@envios.grupoasegura.es>`), `PORTAL_MAIL_REPLY_TO`
+(`hola@grupoasegura.es`, el buzón único de la correduría) y `PORTAL_PUBLIC_URL`.
+
+Lo que costó una noche entera y conviene no repetir:
+
+**Una variable marcada `Sensitive` en Vercel es de ESCRITURA SOLO.** No se puede volver a leer, ni
+por su dueño. Es un buzón, no un almacén. Da igual cuántas veces se recargue la página: el valor no
+vuelve. Por eso hay que separar las claves en dos clases y tratarlas distinto:
+
+| Clase | Cuáles | Si se pierde el valor |
+|---|---|---|
+| Regenerable | `RESEND_API_KEY`, `ASEGURA_PORTAL_SESSION_SECRET`, `ASEGURA_PORTAL_CANAL_PEPPER`, `CRON_SECRET` | se crea otra y ya |
+| **Irreversible** | **`PII_LOOKUP_KEY`**, `PII_ENCRYPTION_KEY`, contraseñas de rol de BD | migración sobre la cartera real |
+
+`PII_LOOKUP_KEY` es la peor de todas: sobre los hashes del índice ciego hay **índices ÚNICOS**, así
+que cambiarla obliga a recalcular `clientes`, `cliente_emails`, `cliente_telefonos` y
+`poliza_intervinientes`. **Nunca se genera una nueva para «arreglar» que no se encuentre.** El mismo
+valor vive hoy en tres proyectos de Vercel —`asegura` (el CRM de Manuel, donde estaba VISIBLE y de
+donde se copió), `central-asegura` y `asegura-portal`— y esa duplicación a mano es justo el problema.
+Lo que toca: subirla una vez a **Shared Environment Variables** del equipo y enlazarla, más una copia
+legible en un gestor de contraseñas para las irreversibles. Sin eso, un despiste deja la cartera
+inaccesible sin un solo error en los logs.
+
 ## Qué es, y por qué es una app APARTE de `apps/asegura`
 
 El producto no es «mira tus pólizas»: es **«aporta tus seguros»**. Mirar sirve a los 80 clientes vivos
