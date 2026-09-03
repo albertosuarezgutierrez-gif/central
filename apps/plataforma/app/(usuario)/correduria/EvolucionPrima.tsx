@@ -1,6 +1,7 @@
 'use client'
 import { UMBRAL_SUBIDA_GENERAL_PCT, etiquetaVeredictoPrima, type Anualidad, type EvolucionPrima as Evolucion, type VeredictoPrima } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
+import Link from 'next/link'
 import { fechaEs, type EvolucionPrimaCompacta } from '@/lib/ficha-asegura'
 
 /**
@@ -87,7 +88,8 @@ function Cuerpo({ evolucion, retarificar }: { evolucion: Evolucion; retarificar?
       {candidata && (
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           {retarificar && 'href' in retarificar ? (
-            <a href={retarificar.href} target="_blank" rel="noopener noreferrer" style={botonRetarificar}>{retarificar.rotulo}</a>
+            /* Interna desde el 03/09/2026 (ver `urlRetarificar`). */
+            <Link href={retarificar.href} style={botonRetarificar}>{retarificar.rotulo}</Link>
           ) : (
             <span style={{ ...chipBase, ...chipAviso }}>candidata a retarificar</span>
           )}

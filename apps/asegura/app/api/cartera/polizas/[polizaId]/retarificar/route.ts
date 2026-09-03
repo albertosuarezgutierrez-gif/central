@@ -1,32 +1,11 @@
 import { NextResponse } from 'next/server'
 import { requireSession } from '@/lib/session'
-import { correduriaUnica } from '@/lib/cartera'
-import { origenRetarificacion, type OrigenRetarificacion } from '@/lib/cartera-ficha'
-import { precalificarAuto, type Resueltos } from '@/lib/codeoscopic/desde-cartera'
-import {
-  precalificarHogarCartera,
-  type CatalogoResuelto,
-  type CatastroHogar,
-  type ResueltosHogar,
-  type SupuestoHogar,
-} from '@/lib/codeoscopic/desde-cartera-hogar'
-import {
-  construirPeticionAuto,
-  revisarDatosAuto,
-  type DatosAuto,
-} from '@/lib/codeoscopic/peticion-auto'
-import {
-  construirPeticionHogar,
-  revisarDatosHogar,
-  CATALOGOS_HOGAR_OBLIGATORIOS,
-  type DatosHogar,
-} from '@/lib/codeoscopic/peticion-hogar'
-import type { Supuesto } from '@/lib/codeoscopic/desde-cartera'
-import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
-import { lineasDeSeguro, hogarDisponible } from '@/lib/codeoscopic/catalogos'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
-import { MARCA_SIMULACION } from '@/lib/codeoscopic/simulacion'
-import { resumirCotizacion } from '@/lib/codeoscopic/respuesta'
+import {
+  prepararRetarificacion,
+  respuestaRetarificacion,
+  type CuerpoRetarificacion,
+} from '@/lib/retarificar-cartera'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -38,343 +17,39 @@ export const maxDuration = 180
 /**
  * Retarifica una póliza de la cartera. **Esta ruta GASTA 0,50€ por llamada.**
  *
- * Es la única de `/api/cartera/*` que cuesta dinero, y por eso:
- *   - es `POST`, nunca un `GET` que un prefetch del navegador pueda disparar;
- *   - vuelve a revisar los datos GRATIS antes de llamar: si falta algo devuelve
- *     422 con la lista completa y no se gasta nada;
- *   - deja que `cotizar()` haga de portero (interruptor, libro y tope), en vez
- *     de repetir aquí esas decisiones.
+ * Es la única de `/api/cartera/*` que cuesta dinero, y por eso es `POST`, nunca
+ * un `GET` que un prefetch del navegador pueda disparar.
  *
- * En el cuerpo llegan los huecos que la ficha no tiene (versión del vehículo,
- * municipio, garaje…) y las correcciones del corredor. Aquí NO se rellena nada
- * solo: lo que se podía suponer ya lo ha puesto el mapeador, marcado como tal.
+ * Todo lo que se puede hacer mal —mapear la ficha, revisar los datos GRATIS
+ * antes de llamar, construir el cuerpo del vendor, redactar la respuesta— vive
+ * en `lib/retarificar-cartera.ts`, compartido con la gemela del puerto de
+ * operador (`/api/operador/codeoscopic/retarificar`, la que sirve a
+ * `plataforma` → `/correduria`). Dos copias de lo que gasta dinero divergen, y
+ * la que diverge es la que nadie mira.
  *
- * Ramifica por el ramo de la póliza (`origen.tipo`): AUTO y HOGAR construyen
- * su cuerpo cada uno con su mapeador y su revisor, y los dos pasan por el
- * MISMO `cotizar()`. Cualquier otro ramo es un 409 con el motivo de
- * `retarificabilidad()`, que es la misma frase que pinta la ficha.
+ * Lo que esta ruta decide, y es lo ÚNICO que la distingue de su gemela: **quién
+ * autoriza** —la cookie de sesión de asegura— y de dónde sale `solicitadoPor`.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ polizaId: string }> }) {
   const session = await requireSession()
   const { polizaId } = await ctx.params
 
-  const correduria = await correduriaUnica().catch(() => null)
-  if (!correduria) {
-    return NextResponse.json(
-      {
-        error:
-          'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
-          'ni se cotiza. Esto NO significa que la póliza no exista.',
-      },
-      { status: 503 },
-    )
-  }
+  const cuerpo = (await req.json().catch(() => ({}))) as CuerpoRetarificacion
 
-  const origen = await origenRetarificacion(correduria.id, polizaId)
-  if (!origen) return NextResponse.json({ error: 'póliza no encontrada' }, { status: 404 })
-
-  const cuerpo = (await req.json().catch(() => ({}))) as CuerpoPeticion
-
-  // ── El cuerpo que viaja, según el ramo. Todo lo de aquí es GRATIS ─────────
-  let preparado: Preparado
-  if (origen.tipo === 'auto') {
-    preparado = prepararAuto(origen, cuerpo, polizaId)
-  } else if (origen.tipo === 'hogar') {
-    preparado = await prepararHogar(origen, cuerpo, polizaId)
-  } else {
-    return NextResponse.json(
-      {
-        error: origen.retarificacion.motivo ?? `hoy no se retarifica el ramo «${origen.tipo}»`,
-        gastado: '0,00€',
-      },
-      { status: 409 },
-    )
-  }
-  if ('respuesta' in preparado) return preparado.respuesta
-
-  // ── La llamada que cuesta dinero, por el único embudo ─────────────────────
-  const r = await cotizar({
-    correduriaId: correduria.id,
-    cuerpo: preparado.peticion,
-    motivo: preparado.motivo,
+  const p = await prepararRetarificacion({
+    polizaId,
     solicitadoPor: session.nombre ?? 'desconocido',
-    // Sin esto la cotización se pide, se paga y NO se guarda: el precio moriría
-    // en la pestaña del navegador y recargar volvería a costar 0,50€.
-    // `clienteId` va a null a propósito: la ficha de origen trae el cliente por
-    // sus datos, no por su id, y un id inventado con BYPASSRLS no da error —
-    // colgaría la cotización de otra persona.
-    contexto: {
-      ramo: origen.tipo,
-      puerta: 'corredor',
-      polizaId,
-      clienteId: null,
-    },
+    cuerpo,
   })
-
-  if (!r.ok) {
-    // 402 cuando el freno es el TOPE: eso no es un fallo, es el tope haciendo
-    // su trabajo, y la pantalla lo cuenta distinto de un error del vendor.
-    return NextResponse.json(
-      { error: r.mensaje, razon: r.razon },
-      { status: r.razon === 'tope' ? 402 : r.razon === 'vendor' ? 502 : 503 },
-    )
+  // Corta ANTES del vendor (422 faltan datos · 409 ramo · 404 póliza · 503):
+  // esas respuestas llevan `gastado: '0,00€'` y son el caso normal.
+  if (p.estado === 'corte') {
+    return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })
   }
 
-  return NextResponse.json({
-    ok: true,
-    // 🚨 La marca de simulado viaja SIEMPRE y como booleano, también cuando es
-    // `false`: si se enviara solo al simular, una versión vieja de la pantalla
-    // no podría distinguir «precio real» de «campo que no me han mandado». Y
-    // cuando es `true` va además la frase, para que se pueda pintar sin que la
-    // pantalla tenga que redactarla.
-    simulado: r.simulado,
-    ...(r.simulado ? { avisoSimulacion: MARCA_SIMULACION } : {}),
-    coste: r.coste,
-    restantesHoy: r.restantesHoy,
-    resumen: resumirCotizacion(r.cotizacion),
-    projectId: r.cotizacion.projectId,
-    precios: r.cotizacion.precios,
-    fallos: r.cotizacion.fallos,
-    // Los supuestos viajan CON el precio para que la pantalla los enseñe al
-    // lado de la prima, no en otra pestaña: son la letra pequeña de esa cifra.
-    supuestos: preparado.supuestos,
-    ...(preparado.fuenteRiesgo !== undefined ? { fuenteRiesgo: preparado.fuenteRiesgo } : {}),
-  })
-}
+  // ── La única línea que cuesta dinero, por el único embudo ────────────────
+  const r = await cotizar(p.peticion)
 
-type CuerpoPeticion = {
-  resueltos?: Record<string, unknown>
-  correcciones?: Record<string, unknown>
-  catastro?: Record<string, unknown> | null
-}
-
-type Preparado =
-  | {
-      peticion: Record<string, unknown>
-      motivo: string
-      supuestos: Supuesto[] | SupuestoHogar[]
-      fuenteRiesgo?: 'poliza' | 'gemela' | 'catastro' | null
-    }
-  | { respuesta: NextResponse }
-
-function sinGasto(cuerpo: Record<string, unknown>, status: number): { respuesta: NextResponse } {
-  return { respuesta: NextResponse.json({ ...cuerpo, gastado: '0,00€' }, { status }) }
-}
-
-// ─── AUTO ────────────────────────────────────────────────────────────────────
-
-function prepararAuto(origen: OrigenRetarificacion, cuerpo: CuerpoPeticion, polizaId: string): Preparado {
-  const resueltos: Resueltos = {
-    municipioId: numero(cuerpo.resueltos?.municipioId),
-    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
-    fechaMatriculacion: cadena(cuerpo.resueltos?.fechaMatriculacion),
-    codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
-    garaje: cadena(cuerpo.resueltos?.garaje),
-    garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
-  }
-
-  const pre = precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
-
-  // Las correcciones del corredor mandan sobre lo supuesto: es una persona
-  // diciendo el dato de verdad. Se revisa OTRA VEZ con el resultado, porque una
-  // corrección puede arreglar un hueco y también puede romper otra regla.
-  const datos: Partial<DatosAuto> = { ...pre.datos, ...limpiarCorrecciones<DatosAuto>(cuerpo.correcciones) }
-  const faltan = revisarDatosAuto(datos)
-
-  if (faltan.length > 0) {
-    // 422 y NI UN CÉNTIMO gastado. Es el caso normal la primera vez.
-    return sinGasto({ error: 'faltan datos para cotizar', faltan }, 422)
-  }
-
-  let peticion: Record<string, unknown>
-  try {
-    peticion = construirPeticionAuto(datos as DatosAuto)
-  } catch (e) {
-    return sinGasto({ error: e instanceof Error ? e.message : String(e) }, 422)
-  }
-  // Nuestra referencia, para casar después la cotización con la póliza.
-  peticion.externalId = `poliza:${polizaId}`
-  return { peticion, motivo: 'defensa-cartera', supuestos: pre.supuestos }
-}
-
-// ─── HOGAR ───────────────────────────────────────────────────────────────────
-
-/** Los ids de catálogo que la pantalla puede haber puesto por defecto (y que así lo declara). */
-const CLAVES_SUPUESTOS: readonly CatalogoResuelto[] = [...CATALOGOS_HOGAR_OBLIGATORIOS, 'tipoVia']
-
-/** Correcciones que llegan como TEXTO del formulario y viajan como número. */
-const CORRECCIONES_NUMERICAS = [
-  'metrosCuadrados',
-  'anioConstruccion',
-  'capitalContinente',
-  'capitalContenido',
-  'municipioId',
-  'habitaciones',
-  'anioUltimaReforma',
-  'joyasEnCajaFuerte',
-  'joyasFueraDeCaja',
-  'objetosDeValor',
-  'perrosPeligrosos',
-] as const
-
-/** Correcciones sí/no. `false` es una respuesta, no un hueco: se conserva. */
-const CORRECCIONES_BOOLEANAS = [
-  'puertaPrincipalBlindada',
-  'ventanasSeguras',
-  'vigilante',
-  'urbanizacionCerrada',
-  'propietarioEsTomador',
-] as const
-
-/**
- * ✅ El contrato del `risk` de hogar está verificado contra el portal del
- * fabricante (02/09/2026; ver la cabecera de `peticion-hogar.ts`). Aun así el
- * 502 devuelve el mensaje ENTERO del vendor: si el contrato cambia algún día,
- * ese mensaje es lo que dice qué campo sobra o falta, y un 400 de validación
- * no se cobra.
- */
-async function prepararHogar(
-  origen: OrigenRetarificacion,
-  cuerpo: CuerpoPeticion,
-  polizaId: string,
-): Promise<Preparado> {
-  const rs: Record<string, unknown> = esObjetoPlano(cuerpo.resueltos) ? cuerpo.resueltos : {}
-  const s = esObjetoPlano(rs.supuestos) ? rs.supuestos : {}
-  // Solo `true` cuenta como «es un defecto de la pantalla»; lo demás es «elegido».
-  const supuestos: Partial<Record<CatalogoResuelto, boolean>> = {}
-  for (const k of CLAVES_SUPUESTOS) if (s[k] === true) supuestos[k] = true
-
-  const resueltos: ResueltosHogar = {
-    municipioId: numero(rs.municipioId),
-    estadoCivilId: cadena(rs.estadoCivilId),
-    tipoViaId: cadena(rs.tipoViaId),
-    tipoVivienda: cadena(rs.tipoVivienda),
-    uso: cadena(rs.uso),
-    ocupacion: cadena(rs.ocupacion),
-    ubicacion: cadena(rs.ubicacion),
-    material: cadena(rs.material),
-    calidad: cadena(rs.calidad),
-    alarma: cadena(rs.alarma),
-    puertasSecundarias: cadena(rs.puertasSecundarias),
-    asentamiento: cadena(rs.asentamiento),
-    // `null` = la pantalla no lo ha decidido; el mapeador lo supone y lo declara.
-    propietarioEsTomador: booleano(rs.propietarioEsTomador),
-    supuestos,
-  }
-  const catastro: CatastroHogar | null = esObjetoPlano(cuerpo.catastro)
-    ? {
-        metrosCuadrados: numero(cuerpo.catastro.metrosCuadrados),
-        anioConstruccion: numero(cuerpo.catastro.anioConstruccion),
-        codigoPostal: cadena(cuerpo.catastro.codigoPostal),
-        uso: cadena(cuerpo.catastro.uso),
-      }
-    : null
-
-  const pre = precalificarHogarCartera(
-    origen.cliente,
-    {
-      numeroPoliza: origen.poliza.numeroPoliza,
-      fechaVencimiento: origen.poliza.fechaVencimiento,
-      hogar: origen.hogar,
-    },
-    resueltos,
-    hoyIso(),
-    catastro,
-  )
-
-  // Los números del formulario llegan como TEXTO («76», «61000»); se convierten
-  // aquí y lo que no es número se descarta (queda lo precalificado), nunca a 0.
-  // Los sí/no aceptan boolean o 'true'/'false'; cualquier otra cosa se descarta.
-  // Los textos (tipo de vía, calle, número, planta, puerta, referencia
-  // catastral, CP) ya llegan recortados de `limpiarCorrecciones`.
-  const correcciones = limpiarCorrecciones<DatosHogar>(cuerpo.correcciones) as Record<string, unknown>
-  for (const k of CORRECCIONES_NUMERICAS) {
-    if (k in correcciones) {
-      const n = numero(correcciones[k])
-      if (n === null) delete correcciones[k]
-      else correcciones[k] = n
-    }
-  }
-  for (const k of CORRECCIONES_BOOLEANAS) {
-    if (k in correcciones) {
-      const b = booleano(correcciones[k])
-      if (b === null) delete correcciones[k]
-      else correcciones[k] = b
-    }
-  }
-  const datos: Partial<DatosHogar> = { ...pre.datos, ...(correcciones as Partial<DatosHogar>) }
-  const faltan = revisarDatosHogar(datos)
-  if (faltan.length > 0) {
-    return sinGasto({ error: 'faltan datos para cotizar', faltan }, 422)
-  }
-
-  // ── El id del ramo: de `/insurance-lines` (gratis), nunca escrito a mano ──
-  // Con el interruptor ignorado a propósito: mirar si hogar tarifica es una
-  // consulta; el gasto lo decide `cotizar()` con el interruptor de verdad.
-  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
-  if (cfg.estado !== 'lista') {
-    return sinGasto({ error: explicarConfig(cfg) }, 503)
-  }
-  const lineas = await lineasDeSeguro(cfg.config).catch(() => [])
-  const hogar = hogarDisponible(lineas)
-  if (hogar.estado !== 'disponible') {
-    return sinGasto(
-      { error: 'hogar no tarifica para esta organización (o no se ha podido comprobar)', hogar },
-      409,
-    )
-  }
-
-  let peticion: Record<string, unknown>
-  try {
-    peticion = construirPeticionHogar(datos as DatosHogar, hogar.id)
-  } catch (e) {
-    return sinGasto({ error: e instanceof Error ? e.message : String(e) }, 422)
-  }
-  peticion.externalId = `poliza:${polizaId}`
-  return {
-    peticion,
-    motivo: 'defensa-cartera-hogar',
-    supuestos: pre.supuestos,
-    fuenteRiesgo: pre.fuenteRiesgo,
-  }
-}
-
-// ─── Utilidades ──────────────────────────────────────────────────────────────
-
-function cadena(v: unknown): string | null {
-  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
-}
-
-function numero(v: unknown): number | null {
-  if (typeof v === 'string' && v.trim() === '') return null
-  const n = typeof v === 'string' ? Number(v) : v
-  return typeof n === 'number' && Number.isFinite(n) ? n : null
-}
-
-/** `true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta). */
-function booleano(v: unknown): boolean | null {
-  if (typeof v === 'boolean') return v
-  if (v === 'true') return true
-  if (v === 'false') return false
-  return null
-}
-
-function esObjetoPlano(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v)
-}
-
-function hoyIso(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
-/** Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto. */
-function limpiarCorrecciones<T>(c: Record<string, unknown> | undefined): Partial<T> {
-  if (!c || typeof c !== 'object') return {}
-  const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(c)) {
-    if (v === null || v === undefined) continue
-    if (typeof v === 'string' && v.trim() === '') continue
-    out[k] = typeof v === 'string' ? v.trim() : v
-  }
-  return out as Partial<T>
+  const res = respuestaRetarificacion(r, p)
+  return NextResponse.json(res.cuerpo, { status: res.status })
 }

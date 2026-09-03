@@ -564,11 +564,19 @@ test('el lector de filas casa columnas con valores, y protesta si no cuadran', (
 // la pestaña del navegador. Recargar vuelve a costar 0,50€ y nada falla a la
 // vista, que es el modo de fallo más caro que hay en esta app.
 test('🚨 la ruta que gasta pasa `contexto` a cotizar: sin él se paga y no se guarda', () => {
-  const ruta = FUENTE('apps/asegura/app/api/cartera/polizas/[polizaId]/retarificar/route.ts')
-  const llamada = ruta.slice(ruta.indexOf('await cotizar({'))
-  assert.ok(llamada.length > 0, 'la ruta ya no llama a cotizar(): revisa este guardián')
+  // 03/09/2026: la petición ya no se arma dentro de la ruta. Al unificar la
+  // correduría en `plataforma` → `/correduria` hubo que servir la retarificación
+  // también por `/api/operador/codeoscopic/retarificar`, y la preparación se
+  // extrajo a `lib/retarificar-cartera.ts` para que las dos rutas usen LA MISMA
+  // (dos copias de lo que gasta dinero divergen). Este guardián sigue el código:
+  // lo que vigila —que el `contexto` viaje— no ha cambiado, solo dónde se monta.
+  // La llamada `await cotizar(...)` sigue en cada ruta a propósito: es así como
+  // `regression-asegura-gasto-codeoscopic` las reconoce y les prohíbe un `GET`.
+  const lib = FUENTE('apps/asegura/lib/retarificar-cartera.ts')
+  const llamada = lib.slice(lib.indexOf('peticion: {'))
+  assert.ok(llamada.length > 0, 'el lib ya no arma la petición de cotizar(): revisa este guardián')
 
-  const cuerpo = llamada.slice(0, llamada.indexOf('})') + 2)
+  const cuerpo = llamada.slice(0, llamada.indexOf('\n    },') + 6)
   assert.match(cuerpo, /contexto:\s*\{/, 'la ruta no pasa `contexto`: la cotización se pagaría sin guardarse')
   assert.match(cuerpo, /ramo:\s*origen\.tipo/, 'el ramo se saca de la póliza, nunca se escribe a mano')
   assert.match(cuerpo, /puerta:\s*'corredor'/, 'esta ruta es la del corredor: su tope es el de la casa')
