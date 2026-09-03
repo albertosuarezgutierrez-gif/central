@@ -6,7 +6,7 @@
 > `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo) y
 > `docs/superpowers/plans/2026-09-01-asegura-portal-fase-1.md` (lo que se construyó de verdad).
 
-## Estado (02/09/2026): Fase 1 mergeada + Fase 4 en código; DDL aplicado; NO desplegada
+## Estado (03/09/2026): DESPLEGADA en Vercel; Fase 1 mergeada + Fase 4 en código; DDL aplicado
 
 Fase 1 entró en `main` el 01/09/2026 con el PR **#1965** (`f12b7b46`): entrar con un código de un solo
 uso y subir una póliza propia, leída por IA, con su procedencia. **Fase 4** (vincular la identidad con
@@ -31,6 +31,8 @@ su ficha de la cartera y enseñarle SUS pólizas vivas) se construyó el 02/09/2
      con `<VAULT>` leído del secreto de arriba. **Rotar** = repetir el bloque SQL **y** cambiar esta env
      en el mismo paso: una sin la otra deja la app muerta en silencio con `password authentication
      failed`, que solo se ve en los logs del pooler (lección de `prisma_seguros`, 02/09/2026).
+     ✅ **PUESTA el 03/09/2026** — ver «Puesta en producción» más abajo: se pegó primero solo la
+     contraseña y el portal devolvía 500 sin nombrarla.
   2. **`PII_LOOKUP_KEY` en ese proyecto, IDÉNTICA a la de `central-asegura`.** Es la clave del índice
      ciego (`clientes.email_lookup_hash`): con otra clave el hash no casa y **nadie se vincula nunca**
      (`sin_clave`/`sin_ficha` para todo el mundo, sin error). Sin ella en producción el módulo lanza y
@@ -38,6 +40,51 @@ su ficha de la cartera y enseñarle SUS pólizas vivas) se construyó el 02/09/2
   3. `ASEGURA_PORTAL_SESSION_SECRET` y `ASEGURA_PORTAL_CANAL_PEPPER` (sin ellas la app no arranca /
      el hash del canal es reversible), resto de envs (tabla de abajo) y la WABA de WhatsApp (no existe;
      por eso el canal es un puerto).
+
+## 🚀 Puesta en producción (03/09/2026): las dos trampas, medidas
+
+El proyecto Vercel es `asegura-portal` (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`, enlazado al repo
+`central`) y sirve en **https://asegura-portal.vercel.app**. Al enchufar las envs por primera vez
+salieron dos fallos que **no se parecen en nada a lo que son**. Los dos están medidos, no supuestos.
+
+### 1. `DATABASE_URL` no es la contraseña: es la URL entera
+
+El secreto del Vault (`prisma_asegura_portal_password`) es SOLO la contraseña. Pegarlo tal cual como
+valor de `DATABASE_URL` devuelve un 500 en `POST /api/acceso/solicitar` con un error que **no nombra
+ni la contraseña ni el rol**, así que se diagnostica como problema de credenciales y no lo es:
+
+```
+Invalid `prisma.portalCodigo.create()` invocation:
+error: Error validating datasource `db`: the URL must start with the
+protocol `postgresql://` or `postgres://`.   -->  schema.prisma:8
+```
+
+El valor bueno es el de la lista de arriba. Y si la contraseña lleva `/ @ : + # ?` hay que
+**percent-encodearla** (`%2F %40 %3A %2B %23 %3F`) o la URI se parte por la mitad y el error vuelve,
+distinto pero igual de opaco.
+
+### 2. Cambiar una env no basta, y aquí el redeploy a mano puede ser IMPOSIBLE
+
+Las envs se resuelven **en el build**, así que un cambio no llega a producción hasta que haya un
+deployment nuevo. Y en este repo esa puerta se cierra sola:
+
+- Vercel **no deja redesplegar** un deployment de producción si existe otro más nuevo
+  («A more recent Production Deployment has been created»).
+- Cada push a `main` crea uno más nuevo, y el `ignoreCommand` lo **cancela** si el commit no toca
+  `apps/asegura-portal/` ni uno de sus 6 packages.
+
+Como `main` recibe a diario commits de memoria y de la auditoría que no tocan esta app, el último
+deployment READY se queda congelado y **no hay ningún botón que lo desatasque**. Medido el 03/09:
+ocho deployments seguidos en `CANCELED` y el redeploy manual cancelado también, con
+
+```
+⏭ skip: el commit no toca apps/asegura-portal ni ninguno de sus packages (consume 6)
+```
+
+**La salida es un commit REAL que toque la app** — este `CLAUDE.md` sirve, porque vive dentro de
+`apps/asegura-portal/`. No es un commit vacío ni un truco para despertar el CI: es exactamente el
+mecanismo que el `ignoreCommand` declara. Consecuencia práctica: **al cambiar una env de esta app,
+cuenta con que quien la activa es el siguiente PR que toque la app**, no el botón de Redeploy.
 
 ## Qué es, y por qué es una app APARTE de `apps/asegura`
 

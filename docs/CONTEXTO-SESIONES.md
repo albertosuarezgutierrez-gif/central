@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto (03/09/2026).**
+  `asegura-portal` sirve en https://asegura-portal.vercel.app, pero `POST /api/acceso/solicitar` daba 500:
+  `DATABASE_URL` llevaba SOLO la contraseña del Vault, no la URI entera — y el error (`the URL must start
+  with postgresql://`) no nombra ni la contraseña ni el rol, así que se diagnostica como credenciales.
+  Segunda trampa: cambiar una env no llega sola y **el redeploy a mano es imposible** — Vercel no
+  redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
+  `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
+  este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
 - **🔧 «Retarificar» mentía dos veces, y las dos igual: un «no lo sé» convertido en «no lo hay» (03/09/2026).**
   Alberto abrió la pantalla y preguntó por los datos del coche. (1) Decía «la compañía manda la matrícula pero
   no el modelo»: **falso** — las 80 pólizas de auto vivas traen matrícula, marca Y modelo (la de la captura,
