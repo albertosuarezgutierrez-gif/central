@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, tras mergear #2206).**
+  `DELETE /api/operador/poliza/intervinientes` + botón «quitar» en Contactos de plataforma. Tres
+  guardas: una fila de **CIMA no se borra** (409; el pull la recrearía, y plataforma ni pinta el botón),
+  el **snapshot va ANTES del borrado** y si falla no se borra nada, y **el tomador no tiene botón** porque
+  su fila se sintetiza (`IntervinienteFicha.id = null`, con test). `interviniente_purga_log.cliente_id`
+  pasa a admitir NULL: un interviniente puede no tener ficha, y meter ahí el `poliza_id` para rellenar
+  la columna habría sido un dato que miente. Y **`/correduria/mantenimiento`** (nueva) enseña en seco el
+  estado del blind index de DNI; el paso de ESCRIBIR no se ofrece mientras queden choques, porque el
+  índice único haría fallar la escritura a la mitad.
 - **🧬 Por qué se duplican las fichas: el blind index de DNI está a medias (03/09/2026).**
   Alberto vio dos «Pilar Piña Franco» en `/correduria`. No es un fallo del CRM: son dos volcados
   (`intranet:cli:174` + `asegura_app:cli2:174`) cargados sin deduplicar entre sí. 🚨 Causa medida:
