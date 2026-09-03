@@ -48,7 +48,11 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
             <span>{p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
             {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
             {p.retarificable && (
-              <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>{rotuloRetarificar(p.retarificacion)}</a>
+              /* Interna desde el 03/09/2026: la retarificación se pinta en
+                 /correduria y ya no salta a asegura, que echaba al login. Sin
+                 `target="_blank"` a propósito: abrir una pestaña para quedarse
+                 en la misma app solo estorba en el móvil. */
+              <Link href={urlRetarificar(p.id)} style={{ fontWeight: 600 }}>{rotuloRetarificar(p.retarificacion)}</Link>
             )}
           </span>}
         />
@@ -490,9 +494,9 @@ function Estimacion({ e, retarificar }: { e: Poliza['estimacion']; retarificar: 
 
         {retarificar && (
           e.veredicto === 'merece' ? (
-            <div><a href={retarificar.href} target="_blank" rel="noopener noreferrer" style={botonPedirPrecio}>{retarificar.rotulo}</a></div>
+            <div><Link href={retarificar.href} style={botonPedirPrecio}>{retarificar.rotulo}</Link></div>
           ) : (
-            <p style={sub}><a href={retarificar.href} target="_blank" rel="noopener noreferrer">Pedir precio igualmente ↗</a> (cuesta 0,50€)</p>
+            <p style={sub}><Link href={retarificar.href}>Pedir precio igualmente</Link> (cuesta 0,50€)</p>
           )
         )}
       </div>

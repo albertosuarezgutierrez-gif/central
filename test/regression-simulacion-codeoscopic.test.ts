@@ -140,18 +140,30 @@ test('el resultado del embudo lleva la marca como CAMPO, no como texto', () => {
   )
 })
 
-test('la marca no se pierde por el camino: quien cotiza, la devuelve', () => {
-  const rutas = ficheros(/^apps\/asegura\/app\/.*route\.ts$/).filter((f) => {
-    const src = FUENTE(f)
-    return /\bcotizar\s*\(/.test(src) && /from ['"][^'"]*codeoscopic\/cotizar['"]/.test(src)
-  })
-  assert.ok(rutas.length > 0, 'ninguna ruta llama a cotizar(): el cepo se ha quedado ciego')
-  const mudas = rutas.filter((f) => !/simulado:\s*r\.simulado/.test(FUENTE(f)))
+test('la marca no se pierde por el camino: quien redacta la respuesta, la devuelve', () => {
+  // 03/09/2026: la respuesta de la retarificación ya no se redacta dentro de la
+  // ruta. Al unificar la correduría en `plataforma` → `/correduria` la misma
+  // operación se sirve por dos puertas (sesión de asegura y
+  // `/api/operador/codeoscopic/retarificar`) y el payload se extrajo a
+  // `lib/retarificar-cartera.ts` para que las dos manden EXACTAMENTE lo mismo.
+  //
+  // Así que el cepo ya no persigue «quien llama a cotizar()» sino **quien
+  // convierte un `ResultadoCotizacion` en respuesta**, que es donde la marca se
+  // puede perder. Se reconoce por leer `r.cotizacion`: si alguien redacta un
+  // payload a partir del resultado del embudo, tiene que propagar `simulado`.
+  const redactores = ficheros(/^apps\/asegura\/(app|lib)\/.*\.tsx?$/).filter((f) =>
+    /\br\.cotizacion\b/.test(FUENTE(f)),
+  )
+  assert.ok(
+    redactores.length > 0,
+    'nadie redacta una respuesta a partir de una cotización: el cepo se ha quedado ciego',
+  )
+  const mudos = redactores.filter((f) => !/simulado:\s*r\.simulado/.test(FUENTE(f)))
   assert.deepEqual(
-    mudas,
+    mudos,
     [],
-    'Estas rutas cotizan pero no propagan `simulado` en su respuesta: la pantalla no puede ' +
-      `distinguir un precio inventado de uno real:\n  - ${mudas.join('\n  - ')}`,
+    'Estos ficheros convierten una cotización en respuesta pero no propagan `simulado`: la ' +
+      `pantalla no puede distinguir un precio inventado de uno real:\n  - ${mudos.join('\n  - ')}`,
   )
 })
 

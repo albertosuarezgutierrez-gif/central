@@ -58,7 +58,7 @@ interface ModalInfo {
   mes?: string
 }
 
-export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string }) {
+export default function CorreduriaClient() {
   const añoActual = new Date().getFullYear()
   const [año, setAño] = useState(añoActual)
   const [filas, setFilas] = useState<Fila[]>([])
@@ -128,7 +128,7 @@ export default function CorreduriaClient({ urlAsegura }: { urlAsegura: string })
           pantalla comercial: lo único de aquí que se hace con el teléfono en
           la mano. Va antes que el dinero ya cobrado a propósito. */}
       <div style={{ marginBottom: 20 }}>
-        <Retencion urlAsegura={urlAsegura} />
+        <Retencion />
       </div>
 
       {/* ── 3 bis. A QUIÉN NO SE PUEDE LLAMAR ───────────────────────────────

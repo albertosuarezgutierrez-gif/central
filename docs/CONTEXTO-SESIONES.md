@@ -44,6 +44,13 @@
   tabla nueva: sus actos ya están fechados en las tablas `portal_*`) y decidir si el parte sobre una póliza
   AUTORIZADA debe seguir permitiéndose (hoy sí, marcando el titular real).
 
+- **📅 mercado-booking: julio y agosto 2027 ya tienen bucket elegible, otra vez (03/09/2026).**
+  Pasada prioritaria acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 240 comps reales en
+  24 ventanas + 4/4 escaparate propio medido. Objetivo cumplido (3 fechas × 10 comps/piso en
+  cada mes). ⚠️ **Pendiente para Alberto (ya señalado el 29/08 y sigue sin quitarse):** la línea
+  "PRIORIDAD TEMPORAL" vive en la config del disparo programado, fuera del repo — esta sesión no
+  tiene acceso para borrarla, así que la próxima pasada la repetirá si no se quita a mano.
+
 - **✅ El libro de comisiones vuelve a leer la cartera — incidente `asegura_error` CERRADO (03/09/2026).**
   Verificado tras el cron de las 07:30 UTC: **12 filas en `comisiones_devengo` + 4 en `comisiones_cobertura`,
   todas `leido_ok = true`**, con datos reales (Mapfre, Allianz, Occident, Reale y liquidaciones CIMA con hash).
@@ -160,6 +167,20 @@
   redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
   `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
   este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
+- **🔀 Retarificar se muda a `/correduria`: se acabó el salto al login (03/09/2026).** Alberto quiso
+  retarificar a un cliente desde su pantalla y le echó al login — medido: `GET /cartera/poliza/… → 307`.
+  No era un fallo: `asegura` y `plataforma` son dos apps con sesiones distintas y retarificar vivía en la
+  primera. Dictado suyo: unificar. Tres endpoints nuevos en el puerto (`codeoscopic/catalogos`,
+  `precalificar` y el que GASTA, `retarificar`), la pantalla portada a `/correduria/poliza/[id]/retarificar`
+  y **6 enlaces ↗ internalizados** (uno, el de la cola de retención, no estaba ni en el inventario).
+  🚨 Tres cosas que destapó la mudanza: (1) `lib/operador.ts` **no distingue método**, así que servir el
+  gasto por el puerto abría un cargo a quien tuviera el Bearer → cerrojo **`confirmado === true` estricto**
+  antes de tocar la BD; (2) esconder `cotizar()` en el lib compartido dejaba el guardián del gasto **en
+  verde sin vigilar ninguna ruta** — falso verde sobre el dinero, así que la llamada se queda en cada ruta;
+  (3) **el CP del tomador ya cruzaba el puerto** dentro de los supuestos (`cpCirculacion`), fuga anterior a
+  la mudanza: `sanearSupuestos()` retira el valor y **conserva el supuesto**, porque ocultarlo entero
+  cambiaría una fuga por un silencio sobre la letra pequeña del precio. Hogar sigue saltando a asegura.
+
 - **🧪 La PRIMERA simulación real destapó dos mentiras más, y la BD las cazó (03/09/2026).** Alberto pulsó
   «Simular precio» en una póliza de auto: `seguros.tarificaciones` guardó 1 fila `simulado=true`,
   `intento_id NULL`, `project_id -377989` y **0 filas en el libro de gasto** — la simulación funciona y no
