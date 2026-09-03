@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✅ Tarificaciones guardadas APLICADAS en la BD (03/09/2026).** PR #2154 mergeado y Alberto ejecutó el SQL:
+  `seguros.tarificaciones` (22 col.) y `seguros.tarificacion_precios` (14 col.) existen en `wswbehlcuxqxyinousql`,
+  la FK apunta a la tabla NUEVA y los 3 CHECK están (`simulada_sin_libro`, `puerta`, `firmeza`). `cotizacion_precios`
+  NO se creó y la vieja `seguros.cotizaciones` sigue intacta con sus 25 filas: la colisión no llegó a la BD.
+  Verificado por catálogo (`pg_constraint`), no por el «Success» de Supabase. `CODEOSCOPIC_SIMULACION=true` puesta
+  en Vercel `central-asegura` con redeploy READY 04:11 UTC; **el valor no se puede leer desde fuera** — lo confirma
+  el rótulo «Simulación» al retarificar. Probarlo es seguro: sin simulación, el siguiente escalón es
+  `CODEOSCOPIC_TARIFICACION_ACTIVA`, que sigue apagado → responde «apagado», nunca un cargo.
+
 - **Correduría: «Global2» y «GLOBAL 2 INSTALACIONES TÉCNICAS» eran el mismo cliente (03/09/2026).**
   Alberto lo vio en el buscador de `/correduria`. Fusionadas por SQL (lote 4, `2026-09-03_fusion_poliza_comun_lote4.sql`,
   51 lápidas en total, 0 pólizas colgando): la identidad es la RC 547875907 (Occident en CIMA / Plus Ultra en el
