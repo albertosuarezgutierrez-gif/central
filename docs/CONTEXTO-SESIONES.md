@@ -49,6 +49,17 @@
   redespliega si hay una producción más nueva, y el `ignoreCommand` cancela toda la que no toque
   `apps/asegura-portal/` (8 `CANCELED` seguidos, medido). La salida es un commit real que toque la app:
   este PR. **Pendiente:** el login de un cliente CIMA, que es lo que valida `PII_LOOKUP_KEY`.
+- **🚗 El catálogo de versiones exige el COMBUSTIBLE, y la doc decía lo contrario (03/09/2026).**
+  Con marca/modelo ya preseleccionados, el desplegable de versiones salía vacío y con un 400 crudo del
+  vendor: `/car/brands/{id}/models/{id}/vehicles` pide `engine` **también en auto**, y
+  `docs/CODEOSCOPIC-API-PORTAL.md` afirmaba que ahí era «texto libre» (se leyó como opcional). Sin
+  versiones no hay código Base7 y no se puede cotizar: la pantalla quedaba inútil. Añadido el catálogo
+  `/car/engine-types` (gratis) y un desplegable **Combustible** antes de Versión; el puerto rechaza la
+  petición sin `motor` con su nombre en vez de dejar pasar el 400. **No se adivina de la ficha**: lo que
+  ella guarda es un código EIAC («1»), de otro catálogo — traducirlo sería inventar el motor de un coche
+  real. Doc corregida y cepo ampliado (10 casos). Método: **el snapshot del portal describe el contrato;
+  el contrato de verdad lo dicta la respuesta.**
+
 - **🔧 «Retarificar» mentía dos veces, y las dos igual: un «no lo sé» convertido en «no lo hay» (03/09/2026).**
   Alberto abrió la pantalla y preguntó por los datos del coche. (1) Decía «la compañía manda la matrícula pero
   no el modelo»: **falso** — las 80 pólizas de auto vivas traen matrícula, marca Y modelo (la de la captura,

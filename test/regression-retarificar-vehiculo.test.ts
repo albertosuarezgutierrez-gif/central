@@ -86,3 +86,35 @@ test('no vuelve la frase que negaba la marca y el modelo', () => {
     )
   }
 })
+
+// ─── El combustible, que es obligatorio y no lo era en el código ─────────────
+//
+// 03/09/2026, en producción: el desplegable de versiones salía vacío y con un
+// 400 crudo del vendor encima. `/car/brands/{id}/models/{id}/vehicles` exige el
+// parámetro `engine`, también en AUTO — la doc del portal decía que ahí era
+// «texto libre» y se leyó como «opcional». Sin versiones no hay código Base7, y
+// sin código Base7 no se puede cotizar: el fallo dejaba la pantalla inútil.
+
+test('las versiones se piden con el combustible, que el vendor exige', () => {
+  const src = leer('apps/asegura/lib/codeoscopic/catalogos.ts')
+  assert.match(src, /vehicles\?engine=\$\{encodeURIComponent\(motor\)\}/)
+  // Y el valor sale de su catálogo, no de un literal nuestro: si mañana añaden
+  // un combustible, el desplegable lo trae solo.
+  assert.match(src, /export async function tiposDeMotor\(/)
+  assert.match(src, /'\/car\/engine-types'/)
+})
+
+test('el puerto rechaza una petición de versiones sin motor, con su nombre', () => {
+  const src = leer('apps/asegura/app/api/cartera/catalogos/route.ts')
+  assert.match(src, /const motor = url\.searchParams\.get\('motor'\)/)
+  assert.match(src, /if \(!marcaId \|\| !modeloId \|\| !motor\)/)
+})
+
+test('el combustible NO se adivina del código de la ficha', () => {
+  // La ficha guarda `combustible: "1"`, que es un código EIAC de otro catálogo.
+  // Traducirlo a ojo sería inventar el motor de un coche real — la regla del
+  // repo sobre los valores de cajón, aplicada a un desplegable.
+  const src = leer(`${PANTALLA}/retarificador.tsx`)
+  assert.doesNotMatch(src, /vehiculo\.combustible/)
+  assert.match(src, /motorId/)
+})
