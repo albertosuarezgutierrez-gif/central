@@ -14,6 +14,7 @@ import {
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
+import { EditarPoliza } from './EditarPoliza'
 import { SubirPoliza } from './SubirPoliza'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +31,12 @@ const RAMO: Record<string, string> = {
   comunidades: 'Comunidades',
   otros: 'Otros',
 }
+
+/** Las opciones del selector de ramo salen del MISMO mapa que las etiquetas de
+ *  arriba (que son las de `RAMOS_POLIZA`), para que la lista de la pantalla y la
+ *  que acepta el backend no se separen con el tiempo. Va como prop porque
+ *  `EditarPoliza` es un componente de cliente. */
+const RAMOS_OPCIONES = Object.entries(RAMO).map(([valor, etiqueta]) => ({ valor, etiqueta }))
 
 const ESTADO: Record<string, string> = {
   activa: 'En vigor',
@@ -114,11 +121,13 @@ export default async function Boveda() {
               <li key={p.id} className="cartera-card">
                 <h3>
                   {p.compania ?? 'Compañía sin identificar'}
-                  {p.ramo && <span className="tenue"> · {p.ramo}</span>}
+                  {/* La MISMA etiqueta que ofrece el selector de `EditarPoliza`:
+                      si la tarjeta dice «responsabilidad_civil» y el desplegable
+                      «Responsabilidad civil», parecen dos cosas distintas. */}
+                  {p.ramo && <span className="tenue"> · {RAMO[p.ramo] ?? p.ramo}</span>}
                 </h3>
                 <div className="linea">
-                  {p.fechaVencimiento ? `Vence el ${fechaEs(p.fechaVencimiento)}` : 'No sabemos cuándo vence'}
-                  {' · '}
+                  {p.numeroPoliza ? `Póliza ${p.numeroPoliza} · ` : ''}
                   {/* `Decimal` de Prisma: se convierte a número ANTES de formatear.
                       `null` sale como «—», jamás como «0,00€». */}
                   {p.primaAnual == null ? 'Prima —' : `Prima ${eur(Number(p.primaAnual))}`}
@@ -126,6 +135,26 @@ export default async function Boveda() {
                 <div className="nivel" style={{ marginTop: 4 }}>
                   {etiquetaProcedencia(p.procedencia)}
                 </div>
+                {/* El vencimiento NO se pinta aquí: lo lleva entero `EditarPoliza`,
+                    que es quien puede decir «no sabemos cuándo vence» CON la acción
+                    al lado y quien refleja al instante lo que se acaba de guardar. */}
+                <EditarPoliza
+                  ramos={RAMOS_OPCIONES}
+                  poliza={{
+                    id: p.id,
+                    compania: p.compania,
+                    numeroPoliza: p.numeroPoliza,
+                    ramo: p.ramo,
+                    // `Decimal | null` → `number | null`. `null` NO es 0: es «no lo sabemos».
+                    primaAnual: p.primaAnual == null ? null : Number(p.primaAnual),
+                    // Columna `date`: llega como medianoche UTC, así que el ISO
+                    // recortado es exactamente el día, sin desfase de zona.
+                    fechaVencimiento: p.fechaVencimiento
+                      ? p.fechaVencimiento.toISOString().slice(0, 10)
+                      : null,
+                    deDocumento: p.documentoNombre !== null,
+                  }}
+                />
               </li>
             ))}
           </ul>

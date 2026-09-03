@@ -253,3 +253,32 @@ h1 {
   border-radius: 10px;
 }
 .campo::placeholder { color: var(--muted); }
+
+/* ── Editor de una póliza declarada ──────────────────────────────────────
+ * Una columna a 320 px: etiqueta, ayuda y campo apilados. Los controles ya
+ * heredan los 44 px de `.campo`/`.boton`, así que aquí solo va el ritmo
+ * vertical y los colores del estado. */
+.editor { display: grid; gap: 10px; margin-top: 12px; }
+.editor-form { display: grid; gap: 14px; }
+.editor-campo { display: grid; gap: 4px; min-width: 0; }
+.editor-campo > label { font-size: 13px; font-weight: 600; }
+.editor-ayuda { font-size: 12px; color: var(--muted); margin: 0; }
+.editor-error { font-size: 13px; font-weight: 600; color: var(--negative); margin: 0; }
+
+/* La fecha de vencimiento va destacada porque es la que decide si podemos
+ * avisar. Destacada NO es obligatoria: ver la cabecera de `EditarPoliza.tsx`. */
+.editor-destacado {
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+/* Apilados a 320 px; en cuanto hay sitio, guardar y cancelar en la misma fila. */
+.editor-acciones { display: grid; gap: 8px; }
+@media (min-width: 420px) { .editor-acciones { grid-template-columns: 1fr 1fr; } }
+
+.boton.secundario { background: var(--surface); color: var(--primary); }
+.boton.secundario:hover { background: var(--primary-light); border-color: var(--primary-hover); }
+.boton:disabled { opacity: 0.6; cursor: progress; }
+.aviso-linea .boton { margin-top: 10px; }
