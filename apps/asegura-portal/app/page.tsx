@@ -63,9 +63,12 @@ export default function Entrada() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: '0 auto', padding: '3rem 1rem' }}>
-      <h1 style={{ fontSize: '1.5rem' }}>Mis seguros</h1>
-      <p className="suave">Todos tus seguros en un sitio. Gratis, seas cliente o no.</p>
+    <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
+      <div className="seccion">
+        <h1>Mis seguros</h1>
+        <p className="suave" style={{ marginTop: 0 }}>
+          Todos tus seguros en un sitio. Gratis, seas cliente o no.
+        </p>
 
       {fase === 'pedir' ? (
         <>
@@ -74,9 +77,9 @@ export default function Entrada() {
             value={destino}
             onChange={(e) => setDestino(e.target.value)}
             placeholder="tu@email.com"
-            style={{ width: '100%', padding: 12, fontSize: 16, minHeight: 44 }}
+            className="campo"
           />
-          <button onClick={pedir} style={{ width: '100%', padding: 12, minHeight: 44, marginTop: 12 }}>
+          <button onClick={pedir} className="boton" style={{ marginTop: 12 }}>
             Enviarme un código
           </button>
         </>
@@ -92,16 +95,17 @@ export default function Entrada() {
             value={codigo}
             onChange={(e) => setCodigo(e.target.value)}
             placeholder="123456"
-            style={{ width: '100%', padding: 12, fontSize: 16, minHeight: 44 }}
+            className="campo"
           />
-          <button onClick={verificar} style={{ width: '100%', padding: 12, minHeight: 44, marginTop: 12 }}>
+          <button onClick={verificar} className="boton" style={{ marginTop: 12 }}>
             Entrar
           </button>
         </>
       )}
 
-      {error && <p style={{ color: 'var(--peligro)', marginTop: 12 }}>{textoError(error)}</p>}
-      {aviso && <p className="aviso-linea" role="status">{aviso}</p>}
+        {error && <p style={{ color: 'var(--negative)', marginTop: 12 }}>{textoError(error)}</p>}
+        {aviso && <p className="aviso-linea" role="status">{aviso}</p>}
+      </div>
     </main>
   )
 }

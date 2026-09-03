@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎨 Portal del cliente: correo propio y aspecto de plataforma (03/09/2026).** Dominio de envío
+  `envios.grupoasegura.es` **verificado en Resend** (DKIM+SPF+MX en IONOS). Es un SUBDOMINIO a
+  propósito: solo puede haber un SPF por dominio y la raíz ya tiene el de IONOS — fusionarlos a mano
+  dejaría a la correduría sin correo. El remitente es `no-reply@envios…` con **`Reply-To`
+  `hola@grupoasegura.es`** (env `PORTAL_MAIL_REPLY_TO`), el buzón único que quiere Alberto.
+  El portal adopta los tokens y las formas de `apps/plataforma` (Inter, `--primary #4f46e5`, cards
+  con `--surface`/`--border`, radios 10/14, 44 px táctiles), con nombres de token que
+  `@central/brand` sabe sobreescribir. **Pendiente:** la paleta REAL de Grupo Asegura — el único
+  logo (Drive) es b/n y lleva «Low Cost», que ya no se usa, y ni `grupoasegura.es` ni la web de
+  Manuel son alcanzables desde el contenedor (proxy de egress + SSO de Vercel).
+
 - **🔌 Portal del cliente ENCHUFADO en Vercel, y las dos trampas que lo tenían muerto (03/09/2026).**
   `asegura-portal` sirve en https://asegura-portal.vercel.app, pero `POST /api/acceso/solicitar` daba 500:
   `DATABASE_URL` llevaba SOLO la contraseña del Vault, no la URI entera — y el error (`the URL must start
