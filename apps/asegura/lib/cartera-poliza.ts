@@ -343,9 +343,26 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
   // garantías: ninguna compañía manda una fila que diga «este es el
   // continente», y coger el importe más alto daría un número plausible y falso
   // (ver `garantias.ts` en `@central/module-seguros`).
+  //
+  // 🚨 Y se le pasa la SEGUNDA fuente: los capitales que la copia del volcado
+  // guarda en su `datos_especificos` («61000» / «7000», como texto). El dato ya
+  // está en memoria —es el mismo objeto del que salen los m² y el año que la
+  // ficha ya pintaba—, así que aquí no se consulta nada nuevo. Hasta el
+  // 03/09/2026 se cogían unos campos de ese objeto y no otros, y luego la ficha
+  // afirmaba que el capital «no consta»: el «no lo he mirado» disfrazado de «no
+  // lo hay» que prohíbe `CLAUDE.md`.
+  //
+  // Cuál de las dos caras ES el volcado depende de cuál se está mirando: si
+  // ésta es la viva, el volcado es la gemela; si ésta ya es la del volcado, es
+  // ella misma. Con `null` el módulo entiende «no se ha mirado» y no dice nada
+  // del volcado en sus motivos.
+  const datosVolcado = esCarteraViva(p) ? datosGemela : datos
   const capitales =
     String(p.tipo) === 'hogar'
-      ? capitalesHogar(p.coberturasRel.map((c) => ({ descripcion: c.descripcion, capital: c.capitalAsegurado })))
+      ? capitalesHogar(
+          p.coberturasRel.map((c) => ({ descripcion: c.descripcion, capital: c.capitalAsegurado })),
+          datosVolcado ? { continente: datosVolcado.continente, contenido: datosVolcado.contenido } : null,
+        )
       : null
   // El riesgo puede venir de la póliza o de su copia gemela: CIMA no manda el
   // objeto de hogar y la del volcado sí. Lo que no traiga ninguna sigue a
