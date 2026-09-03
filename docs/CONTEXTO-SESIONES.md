@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧾 facturas-correo: pasada diaria, Petroprix agosto + Fly.io/Manuel archivados y conciliados (03/09/2026).**
+  Vía B sana. Backlog `Revisar` (Fly.io-Manuel Suárez, cargo -5,96€) y candidato nuevo (Petroprix
+  170€, apareció mal ubicado en el árbol personal `PERSONAL (SEGUROS)`) archivados en Drive y
+  conciliados/registrados. Barrido `v_facturas_sin_cargo`: 0 filas sin revisar. Detalle en
+  `docs/AGENTES-BITACORA.md`. ⚠️ **Para Alberto:** 6 hilos en `Luz pendiente 2026` (abr-jun/2026,
+  TotalEnergies contratos viejos de la SL) sin cerrar — no reconciliables contra Kutxa/BBVA por
+  regla ya documentada; y 1 hilo etiquetado `Facturas/Extraccion-fallida` que en realidad es un
+  mensaje de huésped de Booking sospechoso ("check if you are compromised"), no una factura.
+
 - **📅 mercado-booking: julio y agosto 2027 ya tienen bucket elegible, otra vez (03/09/2026).**
   Pasada prioritaria acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 240 comps reales en
   24 ventanas + 4/4 escaparate propio medido. Objetivo cumplido (3 fechas × 10 comps/piso en
