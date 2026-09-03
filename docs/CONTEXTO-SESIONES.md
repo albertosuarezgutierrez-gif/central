@@ -91,7 +91,10 @@
   Entra además: **adjuntos en el parte** (varios ficheros, el rechazado se explica y no tumba a los
   demás; `documentos_colgado_de_algo` ampliado con `portal_parte_id` o los 32.520 leads no podían subir
   nada) y **alta de póliza A MANO sin documento** (PR #2227: misma validación que editar,
-  `confirmadaPorUsuario: true` porque la tecleó una persona).
+  `confirmadaPorUsuario: true` porque la tecleó una persona). 📱 Primera captura real de la bóveda
+  (Alberto, 17:39): el calendario pintaba `responsabilidad_civil` crudo → `etiquetaRamo()` única en el
+  módulo; y «Prima anual 67,86€» junto a «próximo recibo 73,39€» parecía un error de cuentas: la
+  `prima_anual` es la NETA y `prima_bruta` = recibo → se enseña la bruta «(impuestos incluidos)».
 
 - **🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive (03/09/2026).**
   El logo que había en Drive (`cropped-logo-bn-350x100-1.png`) **no servía**: recorte de WordPress de

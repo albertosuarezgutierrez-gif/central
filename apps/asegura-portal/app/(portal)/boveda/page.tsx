@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
+import { ETIQUETA_RAMO, etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
@@ -22,18 +22,10 @@ import { SubirPoliza } from './SubirPoliza'
 
 export const dynamic = 'force-dynamic'
 
-const RAMO: Record<string, string> = {
-  auto: 'Auto',
-  moto: 'Moto',
-  hogar: 'Hogar',
-  vida: 'Vida',
-  salud: 'Salud',
-  decesos: 'Decesos',
-  responsabilidad_civil: 'Responsabilidad civil',
-  comercio: 'Comercio',
-  comunidades: 'Comunidades',
-  otros: 'Otros',
-}
+// La MISMA tabla que usa el calendario (`lib/obligaciones.ts`) y el módulo: un
+// mapa local aquí es como se llegó a pintar «Responsabilidad civil» en la
+// tarjeta y `responsabilidad_civil` en el calendario de la misma pantalla.
+const RAMO: Record<string, string> = ETIQUETA_RAMO
 
 /** Las opciones del selector de ramo salen del MISMO mapa que las etiquetas de
  *  arriba (que son las de `RAMOS_POLIZA`), para que la lista de la pantalla y la
@@ -310,10 +302,24 @@ function Card({ p }: { p: PolizaPortal }) {
           `prima.anual === null` = la compañía no la ha informado → tampoco
           cambia nada que el cliente pueda hacer, así que se oculta también.
           Lo que NUNCA sale es un `0,00€` en lugar de un hueco. */}
-      {p.prima !== null && p.prima.anual !== null && (
+      {/* Lo que el cliente PAGA es la bruta (neta + impuestos y recargos = el
+          recibo). Con solo la neta al lado de «tu próximo recibo: 73,39€» la
+          pantalla parecía no saber sumar (captura de Alberto, 03/09/2026). Si la
+          bruta no está, se enseña la neta y se dice que lo es. */}
+      {p.prima !== null && (p.prima.bruta !== null || p.prima.anual !== null) && (
         <div className="linea">
-          Prima anual <strong>{eur(p.prima.anual)}</strong>
-          {p.prima.fraccionamiento ? ` (${p.prima.fraccionamiento})` : ''}
+          {p.prima.bruta !== null ? (
+            <>
+              Prima anual <strong>{eur(p.prima.bruta)}</strong>
+              <span className="tenue"> (impuestos incluidos)</span>
+            </>
+          ) : (
+            <>
+              Prima neta anual <strong>{eur(p.prima.anual as number)}</strong>
+              <span className="tenue"> (sin impuestos)</span>
+            </>
+          )}
+          {p.prima.fraccionamiento ? ` · ${p.prima.fraccionamiento}` : ''}
         </div>
       )}
 
