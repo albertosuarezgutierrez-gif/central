@@ -10,7 +10,7 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
-import { descongelar, detalleDescongeladas } from "@/lib/sivra/pricing-descongelar"
+import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
@@ -711,14 +711,30 @@ export async function POST(req: NextRequest) {
   // motor se comporta EXACTAMENTE como antes del 27/08/2026. Es la degradación conservadora — un
   // fallo aquí no puede descongelar de más, solo de menos — pero se declara igual, porque un
   // candado que deja de abrirse en silencio es lo que costó 279 noches.
-  const escrituraRows = await prisma.$queryRaw<{ pid: string; rate_date: string; dias: number }[]>(Prisma.sql`
-    SELECT property_id AS pid, rate_date::text AS rate_date,
-           (CURRENT_DATE - MAX(applied_at)::date)::int AS dias
+  // Trae ADEMAS el precio de esa ultima escritura (old/new) y su antiguedad en HORAS: es lo que
+  // permite saber si el precio alto que hoy protege la guarda de outlier lo escribimos NOSOTROS en
+  // la pasada anterior. Ver la llave 3 de `pricing-descongelar.ts`. El DISTINCT ON da la fila mas
+  // reciente por fecha; el MAX() anterior solo daba el dia.
+  const escrituraRows = await prisma.$queryRaw<{
+    pid: string; rate_date: string; dias: number; horas: number
+    prev_price: number | null; ult_price: number
+  }[]>(Prisma.sql`
+    SELECT DISTINCT ON (property_id, rate_date)
+           property_id AS pid, rate_date::text AS rate_date,
+           (CURRENT_DATE - applied_at::date)::int AS dias,
+           (EXTRACT(EPOCH FROM (NOW() - applied_at)) / 3600)::float8 AS horas,
+           old_price AS prev_price, new_price AS ult_price
     FROM pricing_applied
     WHERE dry_run = false AND rate_date >= CURRENT_DATE
-    GROUP BY property_id, rate_date
+    ORDER BY property_id, rate_date, applied_at DESC
   `).catch((e) => { lecturasCaidas.push({ nombre: 'ultima_escritura', error: String(e).slice(0, 120) }); return [] })
   const diasSinEscribir = new Map(escrituraRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.dias)]))
+  /** Ultima escritura por fecha, para decidir si la subida que la puso cara es nuestra. */
+  const ultimaEscritura = new Map(escrituraRows.map(x => [`${x.pid}|${x.rate_date}`, {
+    horas: Number(x.horas),
+    prev: x.prev_price == null ? null : Number(x.prev_price),
+    ult: Number(x.ult_price),
+  }]))
   /** true = la lectura respondió (aunque sea con 0 filas). Sin ella, «nunca escrita» no es afirmable. */
   const hayHistorialEscrituras = !lecturasCaidas.some(l => l.nombre === 'ultima_escritura')
 
@@ -1161,6 +1177,10 @@ export async function POST(req: NextRequest) {
               ? (diasSinEscribir.get(`${r.property_id}|${date}`) ?? null)
               : 0,
             rumorCaido: rumorCaido.has(date),
+            saltoNuestro: esSaltoNuestro(
+              hayHistorialEscrituras ? ultimaEscritura.get(`${r.property_id}|${date}`) ?? null : null,
+              { old, normalBase, umbral: OUTLIER_RATIO, horasMax: HORAS_SALTO_NUESTRO },
+            ),
           })
       const liberaGuardas = liberaTecho || desc.libera
       // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
