@@ -15,6 +15,26 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-03 · facturas-correo** · hizo: preflight `/api/internal/alerta` 200 (canal vivo). Vía B
+  sana (última copia `_buzon_pdf` 02/09, 1 día de retraso). Barrido backlog `PDF-pendiente`: 0 ·
+  `Revisar`: 1 hilo (Fly.io/Manuel Suárez, 6 días parado, tenía a la vez `Procesada`+`Revisar`) →
+  cargo -5,96€ del 31/08 localizado exacto en banco, archivado en Drive y conciliado (`destino=seguros`,
+  ya estaba bien clasificado) → etiqueta `Revisar` retirada. Paso 4.0 (`v_facturas_sin_cargo`): 0 filas
+  `sin_revisar` (las 8 `revisada_sin_cargo` existentes, sin cambios). Candidatos Gmail 48h: 1 factura
+  real (Petroprix agosto, 170€, SIEMPRE correduría) — apareció ya archivada por otra vía en el árbol
+  personal `…PERSONAL (SEGUROS)/AGOSTO` (mal ubicado); re-archivada en `FACTURAS Apartamentos/2026/
+  08-Agosto-2026`, aviso de duplicado en `_DUPLICADOS_BORRAR`, registrada en `facturas_drive` con
+  `sin_cargo_motivo=sin_cargo_localizado` (son 3 cargos tarjeta + 1 efectivo sueltos, ninguno en el
+  feed bancario). El resto de candidatos (3 hilos Booking mensajes de huésped + 1 circular operativa
+  Mapfre) descartados, no son facturas. Duplicados sueltos en raíz `2026` (2× `FACTURA JULIO SOCORRO.pdf`)
+  ya tenían aviso de una pasada anterior, sin acción nueva. `agente_salud` actualizado (ok=true,
+  dias_caido=1). Latido `facturas_correo` ok=true. dudas: 1 hilo con etiqueta `Facturas/
+  Extraccion-fallida` que en realidad es un mensaje de huésped de Booking (posible ingeniería social,
+  "check if you are compromised") sin relación con facturas — no tocado, revisar si el clasificador que
+  puso esa etiqueta se está confundiendo; 6 hilos en `Luz pendiente 2026` de abr-jun/2026 (TotalEnergies,
+  contratos viejos de la SL) sin `Facturas/Procesada`, no reconciliables contra Kutxa/BBVA por regla ya
+  documentada — pendientes de que Alberto decida si quiere que se archiven como histórico o se
+  destaguen; fallos: —; PRs/commits: rama `claude/cool-archimedes-s2z4dx`.
 - **2026-09-03 · mercado-booking** · hizo: pasada ACOTADA por prioridad temporal (agosto 2026),
   pedida vía `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6 fechas
   × 4 pisos, aforo correcto por piso) → 240 comps `booking_mcp` escritos, 0 sin respuesta, 0
