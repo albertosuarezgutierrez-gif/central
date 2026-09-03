@@ -93,12 +93,43 @@ export const MIMES_DOCUMENTO = [
 export const MAX_BYTES_DOCUMENTO = 10 * 1024 * 1024
 
 /**
+ * Cuántos ficheros caben colgando de una misma cosa (hoy, un parte de
+ * siniestro del portal).
+ *
+ * No es una regla de negocio: es un tope. Cada fichero son hasta 10 MB en una
+ * columna `bytea` de la misma base que la cartera. Vive aquí, y no en la app,
+ * porque lo tienen que saber los DOS lados —la pantalla, para no dejar elegir
+ * once, y el servidor, para no fiarse de la pantalla— y dos números distintos
+ * dan un rechazo que el usuario no vio venir.
+ */
+export const MAX_ADJUNTOS_POR_PARTE = 10
+
+export type MimeDocumento = (typeof MIMES_DOCUMENTO)[number]
+
+/**
  * Devuelve el motivo del rechazo (texto para pantalla) o `null` si el fichero
  * vale. Se comprueba en el navegador ANTES de subir y otra vez en el servidor.
+ *
+ * 🚨 La lista es CERRADA a propósito. «Documentos de todo tipo» incluye,
+ * literalmente, un ejecutable: un portal abierto a cualquiera que acepte
+ * cualquier fichero es un buzón de malware con nuestro dominio delante. Lo que
+ * hay aquí —PDF y foto— cubre el 95 % de un parte y de una póliza.
  */
 export function revisarDocumento(f: { type: string; size: number; name?: string }): string | null {
   const esPdfPorNombre = (f.name ?? '').toLowerCase().endsWith('.pdf')
   if (!(MIMES_DOCUMENTO as readonly string[]).includes(f.type) && !esPdfPorNombre) {
+    // El vídeo se rechaza CON su motivo, no como «tipo raro»: es lo que la
+    // gente graba primero en un accidente, y un «no admitido» a secas le deja
+    // pensando que ha hecho algo mal en vez de que le pidamos otra cosa. No
+    // entra por dos razones a la vez: 10 MB son ~10 s de móvil, y el fichero
+    // vive en una columna `bytea` de la misma base que la cartera.
+    if (f.type.startsWith('video/')) {
+      return (
+        'Todavía no podemos recibir vídeos: el máximo son ' +
+        `${MAX_BYTES_DOCUMENTO / 1024 / 1024} MB, que no dan ni para diez segundos. ` +
+        'Mándanos fotos y, si el vídeo importa, dínoslo y lo vemos contigo.'
+      )
+    }
     return `Tipo de fichero no admitido (${f.type || 'desconocido'}). Sube un PDF o una foto.`
   }
   if (f.size <= 0) return 'El fichero está vacío.'
@@ -106,6 +137,37 @@ export function revisarDocumento(f: { type: string; size: number; name?: string 
     return `El fichero pesa ${(f.size / 1024 / 1024).toFixed(1)} MB y el máximo son ${MAX_BYTES_DOCUMENTO / 1024 / 1024} MB.`
   }
   return null
+}
+
+/**
+ * El mime con el que se GUARDA y con el que se SIRVE, resuelto desde la lista
+ * cerrada. `null` = el fichero no vale (mismo criterio que `revisarDocumento`).
+ *
+ * 🚨 Existe para que el `mime_type` de la fila NUNCA sea el que mandó el
+ * navegador sin mirar. El `type` de un `File` lo elige quien sube: un
+ * `text/html` guardado tal cual y devuelto después con ese `Content-Type` se
+ * ejecuta en nuestro dominio, con la cookie de sesión del que lo abra. Aquí se
+ * normaliza a uno de los cinco de `MIMES_DOCUMENTO` o no se guarda nada.
+ *
+ * El PDF por nombre existe porque pasa de verdad: algunos navegadores mandan
+ * `''` o `application/octet-stream` para un `.pdf`.
+ */
+export function mimeDocumento(f: { type: string; name?: string }): MimeDocumento | null {
+  const t = f.type.trim().toLowerCase()
+  if ((MIMES_DOCUMENTO as readonly string[]).includes(t)) return t as MimeDocumento
+  if ((f.name ?? '').toLowerCase().endsWith('.pdf')) return 'application/pdf'
+  return null
+}
+
+/**
+ * Qué TIPO de documento es un adjunto de un parte de siniestro.
+ *
+ * Decisión de producto (03/09/2026): la foto del golpe es `foto` y el PDF es
+ * `parte_siniestro` (el amistoso, el atestado, el presupuesto del taller). No
+ * se adivina por el nombre del fichero: `IMG_0421.pdf` no es una foto.
+ */
+export function tipoAdjuntoParte(mime: MimeDocumento): TipoDocumento {
+  return mime === 'application/pdf' ? 'parte_siniestro' : 'foto'
 }
 
 // ─── Resumen de una lista, con sus TRES estados ──────────────────────────────

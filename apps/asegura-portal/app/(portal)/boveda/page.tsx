@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
@@ -124,11 +125,26 @@ export default async function Boveda() {
     comunicado: p.comunicado,
     estado: p.estado,
     plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy }),
+    // 🚨 El `null` se PROPAGA tal cual: significa «no se han podido consultar»,
+    // y la pantalla lo dice. Colapsarlo aquí con un `?? []` lo convertiría en
+    // «no adjuntaste nada», que es afirmar algo que nadie ha mirado — y hace
+    // que quien sí mandó la foto del atestado no la vuelva a mandar.
+    // Del adjunto solo bajan id, nombre y tamaño: el mime y el tipo son para
+    // decidir qué se sirve, y eso se decide en el servidor al descargarlo.
+    adjuntos:
+      p.adjuntos === null ? null : p.adjuntos.map((a) => ({ id: a.id, nombre: a.nombre, bytes: a.bytes })),
   }))
 
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mis seguros</h1>
+
+      {/* La pantalla del consentimiento. Va arriba y no escondida al final: quien
+          quiere saber quién le está mirando los seguros —o quitárselo a alguien—
+          no debería tener que recorrer toda la bóveda para encontrarlo. */}
+      <p style={{ margin: '0 0 16px', fontSize: 14 }}>
+        <Link href="/autorizaciones">Quién puede ver mis seguros</Link>
+      </p>
 
       <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
 
