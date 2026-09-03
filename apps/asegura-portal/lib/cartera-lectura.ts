@@ -247,8 +247,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               estado: true,
               referencia: true,
               fechaHora: true,
-              // Sin `tramitadorNombre`/`tramitadorTelefono` a propósito: son
-              // gestión del corredor, no dato del cliente (ver SiniestroPortal).
+              // Ni tramitador ni perito, a propósito: son gestión del
+              // corredor, no dato del cliente (ver `SiniestroPortal`). El cepo
+              // `test/regression-portal-visibilidad.test.ts` falla si vuelven,
+              // así que ni siquiera se nombran aquí.
             },
             orderBy: { fechaHora: 'desc' },
           }),
