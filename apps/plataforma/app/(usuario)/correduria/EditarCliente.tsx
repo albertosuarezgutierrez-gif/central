@@ -19,7 +19,9 @@ import {
   type EdicionCliente,
   type TipoContacto,
 } from '@central/module-seguros'
-import { btnStyle } from '@/components/ui'
+import { Phone, Mail, Star, Plus } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { btnStyle, btnIcono } from '@/components/ui'
 import {
   interpretarEscritura,
   textoMotivo,
@@ -166,16 +168,27 @@ function BloqueContactos({ clienteId, inicial }: { clienteId: string; inicial: C
         </div>
       ) : (
         <>
-          <ListaContactos titulo="📞 Teléfonos" items={lista.telefonos} ocupado={ocupado} onPrincipal={hacerPrincipal} onBorrar={borrar} />
-          <ListaContactos titulo="✉️ Emails" items={lista.emails} ocupado={ocupado} onPrincipal={hacerPrincipal} onBorrar={borrar} />
+          <ListaContactos titulo="Teléfonos" icono={Phone} items={lista.telefonos} ocupado={ocupado} onPrincipal={hacerPrincipal} onBorrar={borrar} />
+          <ListaContactos titulo="Emails" icono={Mail} items={lista.emails} ocupado={ocupado} onPrincipal={hacerPrincipal} onBorrar={borrar} />
         </>
       )}
 
+      {/* 🚨 PLEGADO por defecto, y es lo que más alto ahorra de toda la tarjeta:
+          desplegado mide ~246px (dos filas de `campo` porque el 3er `<select>`
+          no cabe, + el checkbox de 44 + el botón de 44 + gaps) sobre ~706px de
+          pantalla útil en el móvil de Alberto — el 35% para teclear nueve
+          dígitos. Y esta ficha se abre para LEER un teléfono y llamar, no para
+          añadir uno: el formulario permanente cobraba a las trescientas
+          consultas el precio de la vez que se da de alta un contacto.
+          `<details>` nativo y no `useState`, como el resto del repo. */}
+      <details style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+        <summary style={{ ...btnStyle('secundario'), listStyle: 'none', userSelect: 'none' }}>
+          <Plus size={15} strokeWidth={1.75} aria-hidden /> Añadir teléfono o email
+        </summary>
       <form
         onSubmit={(e) => { e.preventDefault(); void anadir() }}
-        style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}
+        style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, paddingTop: 10 }}
       >
-        <div style={{ fontSize: 13, fontWeight: 600 }}>Añadir</div>
         <div className="edicion-fila" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select
             value={tipo}
@@ -209,6 +222,7 @@ function BloqueContactos({ clienteId, inicial }: { clienteId: string; inicial: C
           </button>
         </div>
       </form>
+      </details>
 
       <Aviso
         r={resultado}
@@ -221,8 +235,9 @@ function BloqueContactos({ clienteId, inicial }: { clienteId: string; inicial: C
   )
 }
 
-function ListaContactos({ titulo, items, ocupado, onPrincipal, onBorrar }: {
+function ListaContactos({ titulo, icono: Icono, items, ocupado, onPrincipal, onBorrar }: {
   titulo: string
+  icono: LucideIcon
   items: ContactoCliente[]
   ocupado: boolean
   onPrincipal: (id: string) => void
@@ -230,28 +245,52 @@ function ListaContactos({ titulo, items, ocupado, onPrincipal, onBorrar }: {
 }) {
   return (
     <div>
-      <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 4 }}>{titulo}</div>
+      {/* Icono lucide y no emoji: un 📞 a 13px pesa mucho más que el trazo del
+          mismo tamaño, y es parte de lo que Alberto leyó como «iconos muy
+          grandes» en su captura. Misma decisión que el rediseño del PR #2216. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 2 }}>
+        <Icono size={13} strokeWidth={1.75} aria-hidden /> {titulo}
+      </div>
       {items.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>Ninguno en la ficha (se ha mirado).</div>
       ) : (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
-          {items.map((c) => (
-            <li key={c.id} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px' }}>
-              <span style={{ flex: '1 1 160px', minWidth: 0, fontSize: 14, overflowWrap: 'anywhere' }}>
-                {c.principal && <span title="Principal" style={{ marginRight: 4 }}>⭐</span>}
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+          {items.map((c, i) => (
+            /* Una LÍNEA con separador fino, no una caja: borde, fondo y radio se
+               gastan POR FUNCIÓN (regla de `components/ui.tsx`) y «soy un
+               teléfono» no es una función. Y sin `flexWrap`: envolver es lo que
+               daba dos alturas a la misma clase de dato (~58px la fila sin
+               «Hacer principal», ~84px la que lo llevaba). */
+            <li
+              key={c.id}
+              style={{
+                display: 'flex', gap: 8, alignItems: 'center', minHeight: 44,
+                borderTop: i === 0 ? undefined : '1px solid var(--border)',
+              }}
+            >
+              <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: 14, overflowWrap: 'anywhere' }}>
+                {c.principal && (
+                  <Star size={13} strokeWidth={2} fill="currentColor" aria-label="Principal" style={{ marginRight: 4, verticalAlign: -1 }} />
+                )}
                 <ValorContacto c={c} />
                 {c.etiqueta && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{c.etiqueta}</span>}
               </span>
-              <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {!c.principal && (
-                  <button type="button" disabled={ocupado || c.ilegible} onClick={() => onPrincipal(c.id)} style={btnStyle('secundario')} title={c.ilegible ? 'No se puede hacer principal un dato que no se puede leer' : undefined}>
-                    Hacer principal
-                  </button>
-                )}
-                <button type="button" disabled={ocupado} onClick={() => onBorrar(c)} style={{ ...btnStyle('sutil'), color: 'var(--negative)' }}>
-                  Borrar
+              {!c.principal && (
+                <button
+                  type="button"
+                  disabled={ocupado || c.ilegible}
+                  onClick={() => onPrincipal(c.id)}
+                  style={btnIcono('sutil')}
+                  aria-label={`Hacer principal: ${c.valor ?? 'este contacto'}`}
+                  title={c.ilegible ? 'No se puede hacer principal un dato que no se puede leer' : 'Hacer principal'}
+                >
+                  <Star size={16} strokeWidth={1.75} aria-hidden />
                 </button>
-              </span>
+              )}
+              {/* El destructivo CONSERVA su rótulo a propósito — ver `btnIcono`. */}
+              <button type="button" disabled={ocupado} onClick={() => onBorrar(c)} style={{ ...btnStyle('sutil'), color: 'var(--negative)' }}>
+                Borrar
+              </button>
             </li>
           ))}
         </ul>
