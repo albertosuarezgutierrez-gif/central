@@ -61,4 +61,80 @@ Sin código nuevo bajo los paths de docs con sello `verificado:` antiguo; nada q
 rango.
 
 ---
-<!-- verificado: 2026-09-01 -->
+
+## ✅ Pasada ligera — 03/09/2026
+
+**Rango:** 50 commits desde la última auditoría (01/09, `65da9a5`) hasta hoy (`c4fc90f`), día
+dedicado casi por completo a la correduría (`apps/asegura`, `apps/asegura-portal`,
+`packages/module-seguros*`, `/correduria` de plataforma): ficha de cliente con pestañas, fusión de
+duplicados (lotes 4-5), personas sin vínculo, portal del cliente en Vercel, cotizaciones guardadas,
+cuadre de comisiones e incidente de lectura de cartera (`asegura_error`, CERRADO). Todo verificado
+y auto-documentado por las propias sesiones en `docs/CONTEXTO-SESIONES.md`.
+
+### Estructura y lockfile — sanos
+`auditar-estructura.mjs --check` ✓ (ya regenerada por los propios commits del rango, varios
+`chore(auditoría)` de por medio). `pnpm-lock.yaml`/manifiestos sin diff pendiente.
+
+### 🔴 Heartbeat de crons/agentes (paso 2-bis) — dos `⛔` que siguen sin resolver
+- **`sivra_domotica_acceso`**: `ok=false` desde el 01/09 12:40 UTC (43,5h), detalle: *"2
+  cerradura(s) · 1 con la ventana desactualizada · **1 con ERROR**"*. Ya se había «visto al pasar»
+  el 02/09 (memoria de ese día) pero sigue sin resolver >24h después — una cerradura real de un
+  piso en estado de error afecta al acceso de huéspedes. `agente_reparaciones`: sin intento
+  automático en curso para este agente.
+- **`sivra_pilot_track`**: `ok=false` desde el 01/09 09:15 UTC (46,9h), *"snapshot viejo (1d) —
+  ¿corrió rates/snapshot?"*. Sin intento de reparación automática. Menor prioridad (tracking del
+  piloto de pricing, no dinero directo), pero es un `⛔` nuevo desde la pasada del 01/09.
+- `ses_transporte` sigue en rojo por el motivo ya conocido (sin acción de Alberto en el portal
+  SES) — no es hallazgo nuevo. Resto de ~29 agentes, dentro de su cadencia.
+
+### Backlog de PRs de rutinas (paso 2-ter) — sano, con una nota
+`rutinas-automerge.yml` activo (dos PRs de registro de hoy mergeados en <4 min). Sin PRs de
+registro atascados >24h. 🟡 **`#1997`** (draft): su título dice "pasada diaria trading-analista
+01/09" pero su diff real son 19 archivos de `apps/asegura` (ficha, retarificador, Codeoscopic) —
+posible rama reutilizada por error. Revisar antes de mergear tal cual: el contenido no coincide
+con lo que anuncia. `#2016` (draft mensual `patrimonio-cfo`) sin bloqueo aparente.
+
+### 🔴 Salud del precio SIVRA (paso 2bis, obligatorio) — el motor corre pero no escribe
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` (sin roturas de raíl) ·
+`oscilantes=16` (sigue bajando). Pero: **última pasada real hace 23,6h** (>10h de umbral) y el
+latido `sivra_pricing_apply` (`ok=true`, corrió hace 11,6h) reporta *"0 noche(s) escritas en 4
+piso(s)"* — el cron se ejecuta y no falla, pero lleva al menos una pasada sin aplicar ningún
+precio. Palancas: los 4 pisos con `enabled`/`apply_enabled=true`, `min_price` puesto,
+`antelacion_k=0` (apagada, correcto) — no es un apagado de palanca. **Causa sin determinar**;
+merece revisión de por qué el motor decide "0 noches" de forma sostenida.
+
+### 🔴 Salud de la correduría (paso 2-quater, obligatorio) — cola CIMA atascada
+`correduria_renovaciones` fresco y sano. `correduria_ingesta`: `ok=true` (el latido en sí
+funciona) pero su propio `detalle` dice **"ingesta CIMA DEGRADADA"** — 3 ficheros sin procesar en
+7 días + 20 pólizas cuyos recibos/siniestros no casan con la cartera (39 de backlog ya conocido).
+Confirmado por SQL directa: **`queueDepth=128`, `processed=0`** en las últimas 4 pasadas de
+`cima_pull` (incluidas 3 en modo `real`, sin errores reportados), sin ningún pull nuevo desde el
+02/09 15:13 UTC — el cron 05:30 UTC de hoy aún no ha dejado evento (dentro del margen de retraso
+conocido de GitHub Actions, ~3h). **No es una sorpresa nueva**: la propia sesión de hoy ya lo
+documentó a las 06:18 UTC (`docs/CONTEXTO-SESIONES.md`, "Check-in post-fusión CIMA") con
+recomprobación agendada ~09:43 y lo atribuye a los 3 fallos HTTP 500 del adaptador Java (Fly de
+Manuel) del 31/08-01/09. Esta pasada confirma que, a las 08:06 UTC, la cola sigue exactamente
+igual (128/0) — sigue sin resolver, por eso se repite el aviso. Codeoscopic: 0 cotizaciones/0€ en
+7 días (sin gasto, sin alarma). Tests de aislamiento (`regression-asegura-aislamiento`,
+`regression-portal-aislamiento`, `regression-asegura-operador-publico`,
+`regression-correduria-puerto`, `regression-asegura-gasto-codeoscopic`) existen los 5 (no se
+corrió la suite completa, modo ligero). `agente-correduria`: sin entradas nuevas en
+`AGENTES-BITACORA.md`, sigue pausada correctamente.
+
+### Reconciliación memoria/skills — un dato corregido (carril 2, ficheros de comportamiento)
+Sin drift de fondo (las 50 sesiones del rango se auto-documentaron con mucho detalle). Único
+hallazgo: **"54 tablas" era un dato viejo** — el recuento real y verificado en `apps/asegura/CLAUDE.md`,
+`docs/TRASPASO-CORREDURIA.md` y `docs/FUENTES-DE-VERDAD.md` es **52 tablas** en el schema `seguros`.
+Corregido en `CLAUDE.md:69` y `.claude/skills/central-maestro/SKILL.md:42`. Va a este PR (carril 2)
+en vez de a `main` directo porque son ficheros de comportamiento (`CLAUDE.md`/`.claude/skills/**`),
+no de registro puro. `HUECOS-ABIERTOS.md`, `SKILLS.md` (ya lista `correduria-crm`),
+`FUENTES-DE-VERDAD.md` y las reglas fiscales dictadas por Alberto: sin discrepancias. Sin cambios
+en `apps/ia-rest/**` con superficie de usuario → nada que tocar en manuales.
+
+**Nota de entorno:** el push directo a `main` no está disponible desde esta sesión (branch
+asignado por el harness de tareas) — el fix de texto de comportamiento y el informe van juntos a
+este PR de carril 2 en vez de fragmentarse, siguiendo el plan B del apartado "Dos carriles" de la
+skill.
+
+---
+<!-- verificado: 2026-09-03 -->

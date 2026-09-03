@@ -39,7 +39,7 @@ Preguntar por «la correduría» es ambiguo y las dos respuestas viven en sitios
   con `destino='seguros'`, siempre BBVA) → **existe y está vivo** en `apps/plataforma /correduria`
   + `lib/correduria.ts` → skill `plataforma-maestro`.
 - **Operativa del CRM** (clientes, pólizas, siniestros) → **la cartera YA ESTÁ EN CENTRAL** desde el
-  02/09/2026: schema `seguros` (54 tablas, 32.600 fichas, 28.843 pólizas), `apps/asegura` la lee por
+  02/09/2026: schema `seguros` (52 tablas, 32.600 fichas, 28.843 pólizas), `apps/asegura` la lee por
   defecto y la sirve por `/api/operador/*`; las pantallas se montan en `plataforma` → `/correduria`,
   NO en `apps/asegura` ni en la web del CRM de Manuel (que no se usa). El CRM (repo `asegura` + Vercel,
   ya de Alberto) sigue desplegado **solo como motor de ingesta de CIMA** escribiendo en `seguros`. El

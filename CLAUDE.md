@@ -66,7 +66,7 @@
   **lo que entra por CIMA es cliente actual; el resto son leads** (32.520). Detalle en
   `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
   ✅ **La cartera YA ESTÁ EN CASA (traspaso cerrado el 02/09/2026, PRs #2002 → #2007):** las 32.600
-  fichas / 28.843 pólizas / 54 tablas viven en el schema `seguros` de la Supabase compartida, y
+  fichas / 28.843 pólizas / 52 tablas viven en el schema `seguros` de la Supabase compartida, y
   `apps/asegura` las lee de ahí por defecto (`ASEGURA_FUENTE=origen` es el único camino de vuelta al
   Supabase de Manuel, `uijsgeocgdaxkhvwtjqs`, que queda como foto congelada). El CRM de Manuel (repo
   `asegura` + Vercel `asegura`, ya en la cuenta de Alberto) **apunta también a central** con el rol
