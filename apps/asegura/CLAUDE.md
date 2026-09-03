@@ -817,9 +817,23 @@ error». Las dos mitades ciertas y por motivos distintos:
   las 2 salvadas); **0 personas** intervienen ya en pólizas de ≥4 tomadores. ⚠️ Ese recuento solo da
   0 si se excluye `cliente_id IS NULL`: hay 6 intervinientes de CIMA sin ficha enlazada que agrupan
   juntos y parecen «una persona con 5 tomadores» sin serlo.
-- ⚠️ **Y «no se puede borrar» es LITERAL: el puerto no tiene ningún `DELETE`** de intervinientes ni de
-  relaciones (`/api/operador/cliente` es GET · POST · PATCH). No es un botón roto: la operación no
-  existe, y hasta que exista el próximo comodín también se quitará por SQL.
+- ✅ **Y el hueco que lo hizo necesario está tapado (03/09/2026, mismo día):
+  `DELETE /api/operador/poliza/intervinientes`** (`lib/cartera-intervinientes.ts`), con el botón
+  «quitar» en la pestaña Contactos de plataforma. `{ intervinienteId, actor, motivo? }`. Tres guardas:
+  - 🚨 **Una fila de `origen='cima'` NO se borra: 409.** El siguiente pull la recrearía, así que el
+    botón prometería algo que no puede cumplir — y de paso se tiraría dato bueno y vivo. Plataforma
+    ni siquiera pinta el botón en esas filas: dice «la manda CIMA».
+  - **Reversible**: la fila entera va a `interviniente_purga_log` (lote `quitado-desde-plataforma`)
+    ANTES de borrarla, y **si el snapshot falla no se borra nada**: sin registro no hay vuelta atrás.
+    `cliente_id` del log pasó a admitir NULL (`prisma/sql/2026-09-03_interviniente_purga_log_cliente_opcional.sql`)
+    porque un interviniente puede no estar enlazado a ninguna ficha — meter ahí el `poliza_id` para
+    rellenar la columna habría sido un dato que miente.
+  - **El TOMADOR no se puede quitar y por eso no tiene botón**: `IntervinienteFicha.id` es `null` en
+    su fila, que la sintetiza `filasIntervinientes()` y no existe en la base (test que lo fija en
+    `packages/module-seguros/src/intervinientes.test.ts`).
+  El SQL crudo de ese lib **no prefija `seguros.`** — la conexión ya trae `?schema=seguros` y, además,
+  un `seguros.x` en código dispara el guardián de aislamiento. Las relaciones ya tenían su `DELETE`
+  desde el 02/09 (`/cliente/relaciones`).
 
 Desde el 02/09 el rol `prisma_seguros` sí escribe, pero las fusiones se hacen por SQL con su lote y su
 guarda de identidad (no hay botón «fusionar» en la UI, a propósito); el buscador mide, rotula y enlaza a

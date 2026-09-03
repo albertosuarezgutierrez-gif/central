@@ -101,7 +101,13 @@ export default function CorreduriaClient() {
       <PageHeader
         titulo="Correduría"
         icono={<Shield size={20} strokeWidth={1.75} />}
-        acciones={<BtnLink href="/correduria/hogar" variante="secundario">🏠 Presupuesto de hogar</BtnLink>}
+        acciones={<>
+          <BtnLink href="/correduria/hogar" variante="secundario">🏠 Presupuesto de hogar</BtnLink>
+          {/* Mantenimiento va aquí y no en el cuerpo: no es trabajo del día,
+              es una pasada de cuando toca. Un bloque permanente en la pantalla
+              que se abre cada mañana sería ruido por una tarea de una tarde. */}
+          <BtnLink href="/correduria/mantenimiento" variante="secundario">🔧 Mantenimiento</BtnLink>
+        </>}
       />
 
       {/* ── 1. BUSCAR ──────────────────────────────────────────────────────

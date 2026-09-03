@@ -5,7 +5,7 @@ import { contactoEfectivo, etiquetaRol, filasIntervinientes, personasDePolizas, 
 const base = (x: Partial<IntervinienteFicha>): IntervinienteFicha => ({
   polizaId: 'p1', rol: 'propietario', nombre: null, nombreIlegible: false,
   telefono: null, email: null, telefonoIlegible: false, emailIlegible: false,
-  fichaId: null, esTomador: false, origen: 'cima', personaClave: null, ...x,
+  id: 'i1', fichaId: null, esTomador: false, origen: 'cima', personaClave: null, ...x,
 })
 
 test('el tomador manda: si tiene teléfono, no se mira a nadie más', () => {
@@ -277,4 +277,15 @@ test('las tildes no parten a una persona en dos cuando el nombre es lo único qu
   ], POLIZAS, [])
   assert.equal(r?.length, 1)
   assert.equal(r?.[0].homonimia, null)
+})
+
+test('la fila sintética del TOMADOR no trae id: no es una fila que se pueda quitar', () => {
+  // Es lo que gobierna el botón «quitar» de plataforma. Si algún día esta fila
+  // llevara un id, la pantalla ofrecería borrar algo que no existe en la base.
+  const r = filasIntervinientes(TITULAR, [base({ rol: 'conductor_habitual' })])
+  const tomador = r.filas.find((f) => f.rol === 'tomador')
+  assert.ok(tomador, 'debería sintetizarse la fila del tomador')
+  assert.equal(tomador.id, null)
+  // Y las que SÍ vienen de la base la conservan, que es lo que se manda al borrar.
+  assert.equal(r.filas.find((f) => f.rol === 'conductor_habitual')?.id, 'i1')
 })
