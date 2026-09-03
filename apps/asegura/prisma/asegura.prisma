@@ -653,3 +653,63 @@ model PortalObligacion {
   @@index([identidadId])
   @@map("portal_obligacion")
 }
+
+// ─── El PARTE de siniestro del portal, visto desde el panel del corredor ────
+// Espejo de `seguros.portal_parte_siniestro` (DDL y motivos en
+// `apps/asegura-portal/prisma/sql/2026-09-03_portal_parte_siniestro.sql`).
+//
+// 🚨 Un parte NO es un siniestro: es la DECLARACIÓN de uno. Entre los dos hay
+// un paso humano —Alberto lo abre en la entidad— y mientras no ocurra, la
+// compañía NO sabe nada. Qué estado autoriza a decir lo contrario lo decide
+// `comunicadoACompania()` de `@central/module-seguros-portal`, nunca un
+// `estado !== 'enviado'` escrito a mano aquí o aguas abajo.
+//
+// 🚨 Aquí es LECTURA + el movimiento de estado: los grants de `prisma_seguros`
+// sobre esa tabla son exactamente `SELECT, UPDATE`. Quien INSERTA es el portal,
+// con su propio rol. (Los DEFAULT PRIVILEGES del schema le dan de hecho DML
+// completo; declarar aquí más de lo que toca sería apoyarse en eso.)
+//
+// Sin relaciones a `portal_identidad` ni a `portal_poliza_declarada`: esos
+// modelos no existen en este schema —el corredor no los necesita— y una
+// relación a un modelo ausente no compila. Los ids quedan como escalares, igual
+// que `PortalObligacion.polizaId`.
+enum PortalParteEstado {
+  enviado
+  recibido
+  abierto_en_compania
+  descartado
+
+  @@map("portal_parte_estado")
+}
+
+model PortalParteSiniestro {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Quién lo mandó. La ficha de la cartera detrás (si la hay) sale de
+  /// `portal_vinculo`; sin fila ahí no sabemos quién es, y eso se dice.
+  identidadId String @map("identidad_id") @db.Uuid
+  /// Póliza de la CARTERA. Puede ser de OTRO cliente que le autorizó a verla.
+  polizaId          String? @map("poliza_id") @db.Uuid
+  polizaDeclaradaId String? @map("poliza_declarada_id") @db.Uuid
+  descripcion       String
+  /// NOT NULL: sin ella no hay plazo del art. 16 LCS que contar.
+  fechaHecho     DateTime @map("fecha_hecho") @db.Date
+  /// `HH:MM` y APROXIMADA. Texto, no `time`: una hora inventada es peor que ninguna.
+  horaAproximada String?  @map("hora_aproximada")
+  lugar          String?
+  /// 🚨 `null` = no lo ha contestado; `false` = ha dicho que no. No se colapsan:
+  /// un parte con heridos se tramita en horas y otro espera al lunes.
+  hayHeridos          Boolean?          @map("hay_heridos")
+  hayTerceros         Boolean?          @map("hay_terceros")
+  estado              PortalParteEstado @default(enviado)
+  /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
+  siniestroId         String?           @map("siniestro_id") @db.Uuid
+  recibidoAt          DateTime?         @map("recibido_at") @db.Timestamptz(6)
+  abiertoEnCompaniaAt DateTime?         @map("abierto_en_compania_at") @db.Timestamptz(6)
+  descartadoAt        DateTime?         @map("descartado_at") @db.Timestamptz(6)
+  motivoDescarte      String?           @map("motivo_descarte")
+  creadoEn            DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime          @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@index([identidadId])
+  @@map("portal_parte_siniestro")
+}
