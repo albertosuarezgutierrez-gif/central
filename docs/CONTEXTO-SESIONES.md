@@ -46,6 +46,15 @@
   nadie más tiene: el cliente ve **quién más ve sus pólizas** y se lo quita él.
   🔐 En la carpeta ASEGURA de Drive hay un `contraseñas CODEOSCOPIC.docx` — avisado, sin abrir.
 
+- **🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR (03/09/2026, tras mergear #2206).**
+  `DELETE /api/operador/poliza/intervinientes` + botón «quitar» en Contactos de plataforma. Tres
+  guardas: una fila de **CIMA no se borra** (409; el pull la recrearía, y plataforma ni pinta el botón),
+  el **snapshot va ANTES del borrado** y si falla no se borra nada, y **el tomador no tiene botón** porque
+  su fila se sintetiza (`IntervinienteFicha.id = null`, con test). `interviniente_purga_log.cliente_id`
+  pasa a admitir NULL: un interviniente puede no tener ficha, y meter ahí el `poliza_id` para rellenar
+  la columna habría sido un dato que miente. Y **`/correduria/mantenimiento`** (nueva) enseña en seco el
+  estado del blind index de DNI; el paso de ESCRIBIR no se ofrece mientras queden choques, porque el
+  índice único haría fallar la escritura a la mitad.
 - **🔴 «Sin dato» en el capital de hogar era un «no lo he mirado» (03/09/2026).** La ficha de Occident
   `GPDFS3000276` decía «sin dato» en continente y contenido y lo justificaba afirmando que «esta compañía
   las manda sin importe propio» — falso: 11 de sus 40 coberturas SÍ traen capital (sublímites y RC). Y el

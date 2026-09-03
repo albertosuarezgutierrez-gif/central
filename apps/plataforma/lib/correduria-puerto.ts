@@ -568,3 +568,75 @@ export async function sinCanalAsegura(): Promise<SinCanal> {
     return { estado: 'error', motivo: 'red' }
   }
 }
+
+// ─── Backfill del blind index de DNI (mantenimiento) ─────────────────────────
+//
+// EL PORQUÉ (03/09/2026, PR #2206): la cartera arrastra 556 grupos de fichas
+// duplicadas y el criterio fuerte para fusionarlas —mismo NIF— está ciego en
+// **15.800 fichas que tienen el DNI guardado y `dni_lookup_hash` a NULL**. Sin
+// ese hash no se puede ni preguntar si dos fichas son la misma persona.
+//
+// 🚨 Y el arreglo NO es un UPDATE: `uq_clientes_dni_lookup_hash` es UNIQUE, así
+// que la segunda ficha de cada DNI repetido revienta al escribir. **El choque no
+// es un estorbo, es el hallazgo.** De ahí los tres pasos, en este orden:
+//   1. CALCULAR en seco (esto, un GET que no escribe nada)
+//   2. FUSIONAR los choques por lote SQL, con los nombres delante de Alberto
+//   3. ESCRIBIR los hashes, ya sin conflicto posible
+//
+// Por eso aquí solo vive el paso 1. El paso 3 (`POST`) no se expone mientras
+// queden choques: un botón que promete escribir y revienta a la mitad es peor
+// que no tenerlo.
+
+export type PlanBackfillDni =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | {
+      estado: 'ok'
+      /** Fichas con DNI y sin hash que se pueden escribir sin chocar con nadie. */
+      rellenables: number
+      /** Fichas en un DNI repetido: NO se escriben, se fusionan antes. */
+      enChoque: number
+      /** Grupos de fichas que comparten DNI. Esto es la lista de fusiones. */
+      grupos: number
+      /** DNI que no descifra o que no parece un documento. NO es «sin DNI». */
+      ilegibles: number
+      yaTiene: number
+      sinDni: number
+      total: number
+    }
+
+export async function planBackfillDni(): Promise<PlanBackfillDni> {
+  try {
+    const r = await pedir('/api/operador/backfill-dni')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarPlanBackfill(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** Puro: separado para poder probarlo sin red. */
+export function interpretarPlanBackfill(status: number, json: unknown): PlanBackfillDni {
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
+  }
+  const j = (json ?? {}) as Record<string, unknown>
+  if (j.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (j.estado !== 'ok') {
+    const causa = typeof j.causa === 'string' ? j.causa : typeof j.motivo === 'string' ? j.motivo : `respuesta ${status}`
+    return { estado: 'error', motivo: causa }
+  }
+  const r = (j.resumen ?? {}) as Record<string, unknown>
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  const choques = Array.isArray(j.choques) ? j.choques.length : 0
+  return {
+    estado: 'ok',
+    rellenables: n(r.rellenables),
+    enChoque: n(r.enChoque),
+    grupos: choques,
+    ilegibles: n(r.ilegibles),
+    yaTiene: n(r.yaTiene),
+    sinDni: n(r.sinDni),
+    total: n(r.total),
+  }
+}
