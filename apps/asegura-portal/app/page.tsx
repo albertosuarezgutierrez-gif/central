@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 
+import { MarcaAsegura } from './MarcaAsegura'
+
 export default function Entrada() {
   const [destino, setDestino] = useState('')
   const [codigo, setCodigo] = useState('')
@@ -65,6 +67,11 @@ export default function Entrada() {
   return (
     <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
       <div className="seccion">
+        {/* El logo va EN LÍNEA (no `<img src>`): esta es la primera pantalla y
+            no puede quedarse un instante sin decir de quién es. */}
+        <span className="entrada-marca">
+          <MarcaAsegura alto={34} />
+        </span>
         <h1>Mis seguros</h1>
         <p className="suave" style={{ marginTop: 0 }}>
           Todos tus seguros en un sitio. Gratis, seas cliente o no.

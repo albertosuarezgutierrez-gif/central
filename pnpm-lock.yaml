@@ -212,6 +212,9 @@ importers:
 
   apps/asegura-portal:
     dependencies:
+      '@central/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
