@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-02T22:09:18Z",
+  "generadoEn": "2026-09-03T04:05:18Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4851,6 +4851,7 @@
       "alquiler_materiales"
     ],
     "asegura": [
+      "if",
       "seguros._volcado_control",
       "seguros.bien_documentos",
       "seguros.bienes_asegurables",
@@ -4877,7 +4878,6 @@
       "seguros.consent_logs",
       "seguros.conversaciones",
       "seguros.corredurias",
-      "seguros.cotizacion_precios",
       "seguros.cotizaciones",
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
@@ -4905,6 +4905,8 @@
       "seguros.siniestro_testigos",
       "seguros.siniestros",
       "seguros.solicitud_cambio_documentos",
+      "seguros.tarificacion_precios",
+      "seguros.tarificaciones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
       "seguros.whatsapp_outbound_messages"

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-02T22:09:18Z",
-  "sha": "79a00bb34472d2dff53653dc55c2aa704cdc977c",
+  "generadoEn": "2026-09-03T04:05:18Z",
+  "sha": "514dda7b3d4e7c39251d650bda47b463a2762d70",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5142,8 +5142,8 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<HermanaCruda[] | null>",
-          "linea": 663,
-          "resumen": "Otras fichas SIN fusionar que comparten el índice ciego del teléfono. Es el único vínculo fiable que hay: el DNI solo lo tiene el 12% de las fichas, y la ficha histórica de este caso ni siquiera lo ti"
+          "linea": 691,
+          "resumen": "Otras fichas SIN fusionar que son, o pueden ser, la misma persona. Dos vínculos, y no pesan igual: - **Póliza común** (mismo número normalizado y mismo ramo, **y una de las dos entra por CIMA**): es u"
         },
         {
           "nombre": "enriquecer",
@@ -5151,7 +5151,7 @@
           "exportada": false,
           "params": "correduriaId: string, bloques: BloqueResultados[]",
           "retorno": "Promise<void>",
-          "linea": 690
+          "linea": 746
         }
       ],
       "tablas": [
@@ -5159,7 +5159,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "bb7fe3ce4891"
+      "hash": "c6381a5d7954"
     },
     {
       "ruta": "apps/asegura/lib/cartera-documentos.ts",
@@ -6128,7 +6128,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 214,
+          "linea": 221,
           "resumen": "¿Es este error «esa tabla no existe» y NADA más? Se mira el código, no el texto suelto: Prisma envuelve el error crudo en un `P2010` y deja el código de Postgres en `meta.code` y dentro del mensaje («"
         },
         {
@@ -6137,7 +6137,7 @@
           "exportada": false,
           "params": "correduriaId: string, ramo: string, tx: EjecutorLectura,",
           "retorno": "Promise<",
-          "linea": 221
+          "linea": 228
         },
         {
           "nombre": "texto",
@@ -6145,7 +6145,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 288
+          "linea": 295
         },
         {
           "nombre": "numero",
@@ -6153,7 +6153,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 291
+          "linea": 298
         },
         {
           "nombre": "entero",
@@ -6161,7 +6161,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 295
+          "linea": 302
         },
         {
           "nombre": "objetoPlano",
@@ -6169,7 +6169,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 299
+          "linea": 306
         },
         {
           "nombre": "coberturasLeibles",
@@ -6177,7 +6177,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 304,
+          "linea": 311,
           "resumen": "Las garantías tal como las quiere `capitalesHogar`, vengan como json o como texto."
         }
       ],
@@ -6186,7 +6186,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "1b53dc948d03"
+      "hash": "aced14d9bd2c"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/catalogos.ts",
@@ -6751,7 +6751,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "7261f2a5fb6c"
+      "hash": "abcfa2319fae"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/cotizar.ts",
@@ -6801,7 +6801,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "168454e11a23"
+      "hash": "988f65c933e9"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera-hogar.ts",
@@ -108030,13 +108030,13 @@
           "exportada": true,
           "params": "propia: Vitalidad, hermanas: Hermana[] | null",
           "retorno": "AvisoHermanas | null",
-          "linea": 116,
+          "linea": 127,
           "resumen": "Qué decir cuando una ficha tiene hermanas. `null` cuando no hay ninguna o cuando no se ha podido mirar — el silencio aquí no afirma nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "348eb2ae8ff1"
+      "hash": "220fdcc57aaf"
     },
     {
       "ruta": "packages/module-ses/src/enviar.ts",
