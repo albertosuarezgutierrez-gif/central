@@ -10,7 +10,7 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
-import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro } from "@/lib/sivra/pricing-descongelar"
+import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
@@ -1180,6 +1180,13 @@ export async function POST(req: NextRequest) {
             saltoNuestro: esSaltoNuestro(
               hayHistorialEscrituras ? ultimaEscritura.get(`${r.property_id}|${date}`) ?? null : null,
               { old, normalBase, umbral: OUTLIER_RATIO, horasMax: HORAS_SALTO_NUESTRO },
+            ),
+            // Cuarta llave: el motor ya iba bajando esta fecha y el raíl no le dejó llegar. Ver la
+            // cabecera de `pricing-descongelar.ts` — 448 noches se quedaron a medio descenso tras la
+            // recalibración del 03/09 porque la guarda de outlier las paró en la primera pasada.
+            descensoEnCurso: esDescensoNuestro(
+              hayHistorialEscrituras ? ultimaEscritura.get(`${r.property_id}|${date}`) ?? null : null,
+              { old },
             ),
           })
       const liberaGuardas = liberaTecho || desc.libera
