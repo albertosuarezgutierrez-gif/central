@@ -28,7 +28,7 @@ description: >
 | Cuadro de mando consolidado, god-panel `/admin`, Cuenta→Sociedad→Negocio, **concursos/licitaciones** | **plataforma** | `plataforma-maestro` |
 | Flota/camiones como negocio, vehículos, conductores, portes, rutas, servicios de transporte, intercompany flota→catering | **transporte** | `transporte-maestro` |
 | Alquiler de materiales/menaje (catálogo, tarifas/día, fianzas, disponibilidad, reserva→devolución), intercompany materiales→eventos | **alquiler** | `alquiler-maestro` |
-| Correduría de seguros **OPERATIVA**: clientes, pólizas, siniestros, vencimientos, integraciones con aseguradoras | **asegura** (Grupo Asegura) — ✅ **la cartera YA está en central** (schema `seguros`, 02/09/2026); `apps/asegura` es la trastienda (BD + `/api/operador/*`), las pantallas van en `plataforma` → `/correduria` | `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md` |
+| Correduría de seguros **OPERATIVA**: clientes, pólizas, siniestros, vencimientos, integraciones con aseguradoras | **asegura** (Grupo ASegura) — ✅ **la cartera YA está en central** (schema `seguros`, 02/09/2026); `apps/asegura` es la trastienda (BD + `/api/operador/*`), las pantallas van en `plataforma` → `/correduria` | `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md` |
 | "¿Se ha roto algo?", auditoría, pruebas/testeo, post-rename/migración | (transversal) | `auditoria-central` |
 | Logo, banner, imagen de marca, mockup visual, iconos, diseño gráfico, activo visual | (transversal Adobe CC) | `adobe-diseno` |
 | "Adáptalo a la imagen corporativa de X", "corporativo 100%", cliente/tenant nuevo o rebrand, dejar la UI idéntica a SU marca (logo/colores/tipografía) | (transversal `@central/brand`) | `marca-cliente` |

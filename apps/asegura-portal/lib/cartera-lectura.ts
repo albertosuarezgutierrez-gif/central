@@ -35,14 +35,19 @@
 // enseñarse: un cliente vería «tu seguro venció en 2016» de una póliza que no
 // existe. `confirmadaCima` = CIMA la ha traído (`id_poliza_entidad`); una
 // emitida por nosotros aún sin confirmar se dice como tal.
-import { camposVisibles, NIVELES, type Nivel } from '@central/module-seguros-portal'
 import {
-  clientesVisiblesPara,
-  importeEiac,
-  vigenciaPoliza,
-  WHERE_CARTERA_VIVA,
-  type Vigencia,
-} from '@central/module-seguros'
+  autorizacionVigente,
+  camposDeAlcances,
+  camposVisibles,
+  esAlcance,
+  etiquetaNivelAlcances,
+  NIVELES,
+  type Alcance,
+  type TipoOtorgante,
+  type CamposVisibles,
+  type Nivel,
+} from '@central/module-seguros-portal'
+import { importeEiac, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
 
 import { prisma } from './db'
 import { getIdentidad } from './session'
@@ -109,18 +114,32 @@ export type PolizaPortal = {
    */
   procedencia: { importRef: string | null; eiacXmlHash: string | null }
   /** `null` = no visible en este nivel (no «sin prima»). `anual: null` = la compañía no la ha informado. */
-  prima: { anual: number | null; mensual: number | null; fraccionamiento: string | null } | null
+  /** `anual` es la prima NETA (`polizas.prima_anual`); `bruta` es lo que el cliente paga de verdad
+   *  (`prima_bruta`: neta + impuestos y recargos, y coincide con `prima_total` del recibo). Medido el
+   *  03/09/2026 en la 548238086: anual 67,86€, bruta 73,39€, recibo 73,39€. Enseñar solo la neta al
+   *  lado de un recibo mayor parece un error de cuentas. */
+  prima: { anual: number | null; bruta: number | null; mensual: number | null; fraccionamiento: string | null } | null
   /** `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel. */
   coberturas: { total: number; lista: string[] } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
-  siniestrosAbiertos: SiniestroPortal[]
+  /** `null` = no visible en este nivel. `[]` = no hay ninguno abierto. */
+  siniestrosAbiertos: SiniestroPortal[] | null
 }
 
 export type TitularPortal = {
   clienteId: string
   nombre: string
+  /**
+   * Etiqueta para pintar («ve la tarjeta» / «ve también lo económico»). Lo que
+   * DE VERDAD se ha servido son los campos que trae cada `PolizaPortal`; esto
+   * no decide nada. En `autorizadas` sale de `etiquetaNivelAlcances`, que va
+   * capada, así que decir `completo` aquí NO significa que se haya enseñado el
+   * IBAN — no se enseña nunca.
+   */
   nivel: Nivel
+  /** Presente SOLO en `autorizadas`: de qué consentimiento viene y hasta cuándo. */
+  autorizacion?: { ids: string[]; alcances: Alcance[]; caducaEn: Date }
   polizas: PolizaPortal[]
 }
 
@@ -130,23 +149,29 @@ export type CarteraPortal = {
   correduria: string | null
   /** Fichas de la propia identidad, con el nivel de su vínculo. */
   propias: TitularPortal[]
-  /** Fichas de OTROS que han autorizado a ver sus pólizas (`cliente_relaciones`). */
+  /** Fichas de OTROS que han autorizado a ver sus pólizas (`portal_autorizacion`). */
   autorizadas: TitularPortal[]
+  /**
+   * Las autorizaciones que esta lectura ha USADO de verdad, para que el
+   * llamante lo anote en el registro de accesos que ve el otorgante
+   * (`registrarUso` de `lib/autorizaciones`). Vacío = no se abrió nada ajeno.
+   *
+   * Va aquí y no se escribe dentro de esta función a propósito: leer no
+   * escribe. Quien pinta la bóveda decide si registra.
+   */
+  autorizacionesUsadas: string[]
 }
 
-const SIN_VINCULO: CarteraPortal = { vinculada: false, correduria: null, propias: [], autorizadas: [] }
+const SIN_VINCULO: CarteraPortal = {
+  vinculada: false,
+  correduria: null,
+  propias: [],
+  autorizadas: [],
+  autorizacionesUsadas: [],
+}
 
 /** Coberturas que se listan en la card antes del «y N más». */
 const COBERTURAS_EN_CARD = 4
-
-/**
- * Nivel de lo AJENO. `cliente_relaciones.puede_ver_polizas` es un booleano: la
- * tabla del CRM no guarda un nivel por autorización. Se lee como `completo`
- * (prima y recibos sí; crear peticiones y autorizar a terceros, no): quien te
- * autoriza a ver sus seguros te enseña lo que paga, pero no te deja gestionarlos.
- * Cuando exista `portal_autorizacion` (Fase 5) el nivel vendrá de ahí.
- */
-const NIVEL_AUTORIZADA: Nivel = 'completo'
 
 /** `nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo. */
 function nivelDeVinculo(v: string): Nivel {
@@ -178,33 +203,62 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const propiosIds = vinculos.map((v) => v.clienteId)
   const nivelPorCliente = new Map(vinculos.map((v) => [v.clienteId, nivelDeVinculo(v.nivel)]))
 
-  // Quién me autoriza: filas A→(mi cliente) con el flag. `clientesVisiblesPara`
-  // fija la semántica (A autoriza a B); `observaciones` no es legible por el
-  // rol y el helper no la usa para decidir, así que va a null.
-  const filasAutorizacion = await prisma.clienteRelacion.findMany({
-    where: { clienteBId: { in: propiosIds }, puedeVerPolizas: true },
-    select: { id: true, clienteAId: true, clienteBId: true, tipoRelacion: true, puedeVerPolizas: true },
+  // ── Lo AJENO: quién me ha autorizado ──────────────────────────────────────
+  //
+  // 🚨 Hasta el 03/09/2026 esto salía de `cliente_relaciones.puede_ver_polizas`,
+  // un booleano del CRM sin autor, sin fecha y sin revocación. Las 104 filas que
+  // lo tenían a `true` se crearon TODAS el día del volcado (21/06/2026): nadie
+  // las otorgó. Se apagaron, y al rol de esta app se le quitó el permiso de leer
+  // esa columna — así que aunque alguien reescriba esto, no puede volver.
+  //
+  // Se traen las NO revocadas y la vigencia la decide `autorizacionVigente`, en
+  // el módulo puro: una sola fuente para la regla, en vez de repetirla en el
+  // WHERE y otra vez en la UI (que es como se desincronizan).
+  const filasAutorizacion = await prisma.portalAutorizacion.findMany({
+    where: { autorizadoClienteId: { in: propiosIds }, revocadoEn: null },
+    select: {
+      id: true,
+      otorganteClienteId: true,
+      alcance: true,
+      aceptadoEn: true,
+      caducaEn: true,
+      revocadoEn: true,
+    },
   })
-  const filas = filasAutorizacion.map((f) => ({
-    id: f.id,
-    clienteAId: f.clienteAId,
-    clienteBId: f.clienteBId,
-    tipo: f.tipoRelacion,
-    puedeVerPolizas: f.puedeVerPolizas,
-    observaciones: null,
-  }))
-  const autorizadosIds: string[] = []
-  for (const mio of propiosIds) {
-    for (const a of clientesVisiblesPara(filas, mio)) {
-      if (!propiosIds.includes(a) && !autorizadosIds.includes(a)) autorizadosIds.push(a)
+  const ahora = new Date()
+  const porOtorgante = new Map<string, { ids: string[]; alcances: Alcance[]; caducaEn: Date }>()
+  for (const f of filasAutorizacion) {
+    // Un alcance que la BD tiene y el módulo no conoce NO abre nada: se ignora.
+    // (Al revés que un `?? 'ver'`, que convertiría un valor desconocido en acceso.)
+    if (!esAlcance(f.alcance)) continue
+    if (!autorizacionVigente(f, ahora)) continue
+    if (propiosIds.includes(f.otorganteClienteId)) continue
+    const g = porOtorgante.get(f.otorganteClienteId)
+    if (g) {
+      g.ids.push(f.id)
+      g.alcances.push(f.alcance)
+      // La ficha se ve hasta que caduque la ÚLTIMA que sigue abriéndola.
+      if (f.caducaEn.getTime() > g.caducaEn.getTime()) g.caducaEn = f.caducaEn
+    } else {
+      porOtorgante.set(f.otorganteClienteId, {
+        ids: [f.id],
+        alcances: [f.alcance],
+        caducaEn: f.caducaEn,
+      })
     }
   }
+  const autorizadosIds = [...porOtorgante.keys()]
 
   const todosIds = [...propiosIds, ...autorizadosIds]
   const [clientes, polizas] = await Promise.all([
     prisma.cliente.findMany({
       where: { id: { in: todosIds }, mergedIntoClienteId: null },
-      select: { id: true, nombre: true, apellidos: true },
+      // `tipoPersona` decide QUÉ se sirve de una ficha ajena: una sociedad no
+      // tiene datos personales, así que quien la representa ve su CIF y su
+      // cuenta y puede actuar por ella. Sin este campo, la bóveda serviría una
+      // autorización de empresa con el tope de una persona: caería del lado
+      // seguro, pero un `partes` concedido no se honraría y parecería un bug.
+      select: { id: true, nombre: true, apellidos: true, tipoPersona: true },
     }),
     prisma.poliza.findMany({
       // `WHERE_CARTERA_VIVA` va DENTRO del `AND`: es un `OR` de dos brazos y
@@ -270,8 +324,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const siniestrosPor = agrupar(siniestros)
   const hoy = new Date()
 
-  const aPortal = (p: (typeof polizas)[number], nivel: Nivel): PolizaPortal => {
-    const ve = camposVisibles(nivel)
+  const aPortal = (p: (typeof polizas)[number], ve: CamposVisibles): PolizaPortal => {
     const cobs = coberturasPor.get(p.id) ?? []
     const recs = recibosPor.get(p.id) ?? []
     return {
@@ -289,6 +342,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         ? {
             // `Decimal` de Prisma → número ANTES de formatear; null se queda null.
             anual: p.primaAnual === null ? null : Number(p.primaAnual),
+            bruta: p.primaBruta === null ? null : Number(p.primaBruta),
             mensual: p.primaMensual === null ? null : Number(p.primaMensual),
             fraccionamiento: p.fraccionamiento,
           }
@@ -303,17 +357,34 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           }
         : null,
       recibos: ve.recibos ? resumirRecibosPortal(recs) : null,
-      siniestrosAbiertos: (siniestrosPor.get(p.id) ?? []).map((s) => ({
-        id: s.id,
-        estado: s.estado,
-        referencia: s.referencia,
-        fechaHora: s.fechaHora,
-      })),
+      // 🚨 `null` = NO VISIBLE EN TU NIVEL. `[]` = no hay ninguno abierto. Son
+      // cosas distintas y la UI dice cada una con sus palabras. Hasta el
+      // 04/09/2026 esto no miraba `ve` y un tercero con el alcance más bajo
+      // veía los siniestros abiertos de quien le autorizó.
+      siniestrosAbiertos: ve.siniestros
+        ? (siniestrosPor.get(p.id) ?? []).map((s) => ({
+            id: s.id,
+            estado: s.estado,
+            referencia: s.referencia,
+            fechaHora: s.fechaHora,
+          }))
+        : null,
     }
   }
 
   const nombrePor = new Map(clientes.map((c) => [c.id, `${c.nombre} ${c.apellidos}`.trim()]))
-  const titular = (clienteId: string, nivel: Nivel): TitularPortal | null => {
+  // NULL o cualquier otra cosa → `fisica`, el lado restrictivo. La cartera real
+  // tiene `tipo_persona` casi vacía (medido 03/09/2026), así que este default
+  // NO es teórico: es el caso normal, y tiene que ser el que menos abre.
+  const tipoPor = new Map<string, TipoOtorgante>(
+    clientes.map((c) => [c.id, c.tipoPersona === 'juridica' ? 'juridica' : 'fisica']),
+  )
+  const titular = (
+    clienteId: string,
+    nivel: Nivel,
+    ve: CamposVisibles,
+    autorizacion?: { ids: string[]; alcances: Alcance[]; caducaEn: Date },
+  ): TitularPortal | null => {
     // Una ficha fusionada o que ya no existe no se pinta: sin nombre no hay titular.
     const nombre = nombrePor.get(clienteId)
     if (nombre === undefined) return null
@@ -321,15 +392,39 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       clienteId,
       nombre,
       nivel,
-      polizas: polizas.filter((p) => p.clienteId === clienteId).map((p) => aPortal(p, nivel)),
+      ...(autorizacion ? { autorizacion } : {}),
+      polizas: polizas.filter((p) => p.clienteId === clienteId).map((p) => aPortal(p, ve)),
     }
+  }
+
+  const propias = propiosIds
+    .map((id) => {
+      const nivel = nivelPorCliente.get(id) ?? 'tarjeta'
+      return titular(id, nivel, camposVisibles(nivel))
+    })
+    .filter((t): t is TitularPortal => t !== null)
+
+  const autorizadas: TitularPortal[] = []
+  const autorizacionesUsadas: string[] = []
+  for (const [clienteId, a] of porOtorgante) {
+    // `camposDeAlcances` va capada: pase lo que pase con los niveles, un tercero
+    // no ve el IBAN ni el DNI del otorgante, ni puede actuar en su nombre.
+    const ve = camposDeAlcances(a.alcances, tipoPor.get(clienteId) ?? 'fisica')
+    if (ve === null) continue
+    const t = titular(clienteId, etiquetaNivelAlcances(a.alcances), ve, a)
+    if (t === null) continue
+    autorizadas.push(t)
+    // Solo cuenta como USO lo que de verdad se ha servido: una autorización de
+    // una ficha que ya no existe no se anota como que alguien miró algo.
+    autorizacionesUsadas.push(...a.ids)
   }
 
   return {
     vinculada: true,
     correduria: correduria?.nombre ?? null,
-    propias: propiosIds.map((id) => titular(id, nivelPorCliente.get(id) ?? 'tarjeta')).filter((t): t is TitularPortal => t !== null),
-    autorizadas: autorizadosIds.map((id) => titular(id, NIVEL_AUTORIZADA)).filter((t): t is TitularPortal => t !== null),
+    propias,
+    autorizadas,
+    autorizacionesUsadas,
   }
 }
 

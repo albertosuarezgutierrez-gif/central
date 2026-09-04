@@ -130,6 +130,14 @@ export type ContactoFicha = {
 
 /** Quién más hay en una póliza. Misma forma que en `@central/module-seguros`. */
 export type IntervinienteFicha = {
+  /**
+   * La FILA de `poliza_intervinientes`, que es lo que se puede quitar.
+   * `null` SOLO en el tomador: esa fila no existe en la base, la sintetiza
+   * `filasIntervinientes()` a partir del titular de la póliza. Por eso al
+   * tomador no se le ofrece «quitar» — no hay nada que borrar, y el botón
+   * prometería algo que no existe.
+   */
+  id: string | null
   polizaId: string
   rol: string
   nombre: string | null
@@ -151,6 +159,13 @@ export type Ficha = {
   id: string
   nombre: string
   tipo: string
+  /**
+   * `false` = ficha DESCARTADA en asegura (borrado suave): no sale en el
+   * buscador ni en la lista, pero su ficha se abre para poder restaurarla.
+   * `null` = una versión de asegura que aún no manda el campo — y entonces la
+   * pantalla NO afirma que esté activa ni que esté descartada: no lo sabe.
+   */
+  activo: boolean | null
   segmento: string | null
   contacto: ContactoFicha
   /**
@@ -405,6 +420,9 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
     const rol = cadena(i.rol)
     if (polizaId === null || rol === null) continue
     out.push({
+      // `null` = asegura no la manda (versión anterior del puerto): entonces la
+      // fila no se puede quitar y la pantalla no ofrece el botón.
+      id: cadena(i.id),
       polizaId,
       rol,
       nombre: cadena(i.nombre),
@@ -546,6 +564,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       id: f.id,
       nombre: f.nombre,
       tipo: cadena(f.tipo) ?? 'sin_informar',
+      activo: typeof f.activo === 'boolean' ? f.activo : null,
       segmento: cadena(f.segmento),
       contacto: {
         telefono: cadena(c.telefono),

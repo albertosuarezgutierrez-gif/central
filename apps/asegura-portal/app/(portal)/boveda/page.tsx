@@ -1,6 +1,7 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
+import { ETIQUETA_RAMO, etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
@@ -21,23 +22,15 @@ import { SubirPoliza } from './SubirPoliza'
 
 export const dynamic = 'force-dynamic'
 
-const RAMO: Record<string, string> = {
-  auto: 'Auto',
-  moto: 'Moto',
-  hogar: 'Hogar',
-  vida: 'Vida',
-  salud: 'Salud',
-  decesos: 'Decesos',
-  responsabilidad_civil: 'Responsabilidad civil',
-  comercio: 'Comercio',
-  comunidades: 'Comunidades',
-  otros: 'Otros',
-}
+// La MISMA tabla que usa el calendario (`lib/obligaciones.ts`) y el módulo: un
+// mapa local aquí es como se llegó a pintar «Responsabilidad civil» en la
+// tarjeta y `responsabilidad_civil` en el calendario de la misma pantalla.
+const RAMO: Record<string, string> = ETIQUETA_RAMO
 
 /** Las opciones del selector de ramo salen del MISMO mapa que las etiquetas de
  *  arriba (que son las de `RAMOS_POLIZA`), para que la lista de la pantalla y la
  *  que acepta el backend no se separen con el tiempo. Va como prop porque
- *  `EditarPoliza` es un componente de cliente. */
+ *  `EditarPoliza` y `SubirPoliza` (alta a mano) son componentes de cliente. */
 const RAMOS_OPCIONES = Object.entries(RAMO).map(([valor, etiqueta]) => ({ valor, etiqueta }))
 
 const ESTADO: Record<string, string> = {
@@ -77,7 +70,7 @@ export default async function Boveda() {
   const obligaciones = await obligacionesDeIdentidad(identidad.id)
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
-  const correduria = cartera.correduria ?? 'Grupo Asegura'
+  const correduria = cartera.correduria ?? 'Grupo ASegura'
 
   // Lo que se le ofrece elegir al dar un parte. Incluye las AUTORIZADAS a
   // propósito: la ruta acepta lo mismo (`carteraDeIdentidad` propias +
@@ -124,11 +117,26 @@ export default async function Boveda() {
     comunicado: p.comunicado,
     estado: p.estado,
     plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy }),
+    // 🚨 El `null` se PROPAGA tal cual: significa «no se han podido consultar»,
+    // y la pantalla lo dice. Colapsarlo aquí con un `?? []` lo convertiría en
+    // «no adjuntaste nada», que es afirmar algo que nadie ha mirado — y hace
+    // que quien sí mandó la foto del atestado no la vuelva a mandar.
+    // Del adjunto solo bajan id, nombre y tamaño: el mime y el tipo son para
+    // decidir qué se sirve, y eso se decide en el servidor al descargarlo.
+    adjuntos:
+      p.adjuntos === null ? null : p.adjuntos.map((a) => ({ id: a.id, nombre: a.nombre, bytes: a.bytes })),
   }))
 
   return (
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mis seguros</h1>
+
+      {/* La pantalla del consentimiento. Va arriba y no escondida al final: quien
+          quiere saber quién le está mirando los seguros —o quitárselo a alguien—
+          no debería tener que recorrer toda la bóveda para encontrarlo. */}
+      <p style={{ margin: '0 0 16px', fontSize: 14 }}>
+        <Link href="/autorizaciones">Quién puede ver mis seguros</Link>
+      </p>
 
       <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
 
@@ -202,10 +210,38 @@ export default async function Boveda() {
                     ramo: p.ramo,
                     // `Decimal | null` → `number | null`. `null` NO es 0: es «no lo sabemos».
                     primaAnual: p.primaAnual == null ? null : Number(p.primaAnual),
+                    referenciaCatastral: p.referenciaCatastral ?? null,
+                    // Un jsonb puede traer cualquier cosa; si no es un objeto plano
+                    // se degrada a `null` en vez de reventar el render. Un origen
+                    // ilegible es «no sabemos de dónde vino», no una excusa para
+                    // dejar de pintar la póliza entera.
+                    datosRamoOrigen:
+                      p.datosRamoOrigen && typeof p.datosRamoOrigen === 'object' && !Array.isArray(p.datosRamoOrigen)
+                        ? (Object.fromEntries(
+                            Object.entries(p.datosRamoOrigen as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
+                          ) as Record<string, string>)
+                        : null,
                     // Columna `date`: llega como medianoche UTC, así que el ISO
                     // recortado es exactamente el día, sin desfase de zona.
                     fechaVencimiento: p.fechaVencimiento
                       ? p.fechaVencimiento.toISOString().slice(0, 10)
+                      : null,
+                    // `datos_ramo` es `jsonb`: Prisma lo entrega como `JsonValue`,
+                    // que incluye arrays y escalares. La pantalla solo sabe pintar
+                    // un objeto de campos, así que lo que no lo sea entra como
+                    // `null` («no hay nada declarado») en vez de reventar el
+                    // render con una fila corrupta.
+                    datosRamo:
+                      p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
+                        ? (p.datosRamo as Record<string, string | number | boolean>)
+                        : null,
+                    matricula: p.matricula,
+                    bastidor: p.bastidor,
+                    // Columna `date`, igual que el vencimiento: medianoche UTC,
+                    // así que el ISO recortado es el día exacto y no se corre
+                    // uno según la zona del navegador.
+                    fechaMatriculacion: p.fechaMatriculacion
+                      ? p.fechaMatriculacion.toISOString().slice(0, 10)
                       : null,
                     deDocumento: p.documentoNombre !== null,
                   }}
@@ -216,7 +252,9 @@ export default async function Boveda() {
         )}
       </section>
 
-      <SubirPoliza />
+      {/* Las opciones de ramo son las MISMAS que las de `EditarPoliza`: un alta a mano
+          y una corrección ofrecen la misma lista. */}
+      <SubirPoliza ramos={RAMOS_OPCIONES} />
     </main>
   )
 }
@@ -292,10 +330,24 @@ function Card({ p }: { p: PolizaPortal }) {
           `prima.anual === null` = la compañía no la ha informado → tampoco
           cambia nada que el cliente pueda hacer, así que se oculta también.
           Lo que NUNCA sale es un `0,00€` en lugar de un hueco. */}
-      {p.prima !== null && p.prima.anual !== null && (
+      {/* Lo que el cliente PAGA es la bruta (neta + impuestos y recargos = el
+          recibo). Con solo la neta al lado de «tu próximo recibo: 73,39€» la
+          pantalla parecía no saber sumar (captura de Alberto, 03/09/2026). Si la
+          bruta no está, se enseña la neta y se dice que lo es. */}
+      {p.prima !== null && (p.prima.bruta !== null || p.prima.anual !== null) && (
         <div className="linea">
-          Prima anual <strong>{eur(p.prima.anual)}</strong>
-          {p.prima.fraccionamiento ? ` (${p.prima.fraccionamiento})` : ''}
+          {p.prima.bruta !== null ? (
+            <>
+              Prima anual <strong>{eur(p.prima.bruta)}</strong>
+              <span className="tenue"> (impuestos incluidos)</span>
+            </>
+          ) : (
+            <>
+              Prima neta anual <strong>{eur(p.prima.anual as number)}</strong>
+              <span className="tenue"> (sin impuestos)</span>
+            </>
+          )}
+          {p.prima.fraccionamiento ? ` · ${p.prima.fraccionamiento}` : ''}
         </div>
       )}
 
@@ -307,7 +359,11 @@ function Card({ p }: { p: PolizaPortal }) {
         {!p.confirmadaCima && <span className="chip aviso">pendiente de confirmación por la compañía</span>}
         {/* Sin tramitador ni teléfono de gestión: el punto de contacto es la
             correduría (regla de visibilidad, `CLAUDE.md` de la app). */}
-        {p.siniestrosAbiertos.map((s) => (
+        {/* `null` = tu nivel no llega a los siniestros de esta póliza; NO se
+            pinta nada, porque un chip que dijera «no visible» le contaría a un
+            tercero que hay algo que mirar. `[]` = no hay ninguno abierto, y
+            tampoco se pinta: la ausencia de chip ya lo dice. */}
+        {(p.siniestrosAbiertos ?? []).map((s) => (
           <span key={s.id} className="chip aviso">
             siniestro {s.estado === 'en_tramitacion' ? 'en tramitación' : 'abierto'}
             {s.referencia ? ` ${s.referencia}` : ''}

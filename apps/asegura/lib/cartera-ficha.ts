@@ -105,6 +105,9 @@ export async function buscarClientes(
     where: {
       correduriaId,
       mergedIntoClienteId: null,
+      // Las fichas DESCARTADAS no salen en ninguna búsqueda: descartar es
+      // justamente quitarlas de donde se mira (`lib/cartera-edicion.ts`).
+      activo: true,
       // Cada palabra tiene que aparecer en el nombre O en los apellidos: así
       // «jose suarez» encuentra a José Suárez sin depender del orden.
       AND: palabras.map((p) => ({
@@ -235,6 +238,11 @@ export type FichaCliente = {
   id: string
   nombre: string
   tipo: string
+  /**
+   * `false` = ficha DESCARTADA (borrado suave): no sale en el buscador, la
+   * lista ni los contadores, pero su ficha se abre para poder restaurarla.
+   */
+  activo: boolean
   segmento: string | null
   contacto: ContactoFicha
   /**
@@ -296,6 +304,9 @@ export async function fichaCliente(
 ): Promise<FichaCliente | null> {
   if (!aseguraConfigurada()) return null
   const db = prismaAsegura()
+  // 🚨 Aquí NO se filtra por `activo`, y es deliberado: una ficha descartada
+  // tiene que poder abrirse por su URL para poder RESTAURARLA. Lo que viaja es
+  // el propio `activo`, y la pantalla lo dice con un cartel arriba.
   const c = await db.cliente.findFirst({
     where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
     select: {
@@ -303,6 +314,7 @@ export async function fichaCliente(
       nombre: true,
       apellidos: true,
       tipo: true,
+      activo: true,
       segmento: true,
       telefono: true,
       email: true,
@@ -408,6 +420,7 @@ export async function fichaCliente(
     id: c.id,
     nombre: `${c.nombre} ${c.apellidos}`.trim(),
     tipo: String(c.tipo),
+    activo: c.activo,
     segmento: c.segmento === null ? null : String(c.segmento),
     contacto: {
       telefono: descifrar(c.telefono),
@@ -559,7 +572,7 @@ async function leerIntervinientes(
       // recarga a otra sin que nada fallara. El orden es parte del resultado.
       orderBy: [{ polizaId: 'asc' }, { rol: 'asc' }, { id: 'asc' }],
       select: {
-        polizaId: true, rol: true, clienteId: true, origen: true,
+        id: true, polizaId: true, rol: true, clienteId: true, origen: true,
         nombre: true, apellidos: true, telefono: true, email: true, nifLookupHash: true,
         cliente: { select: { nombre: true, apellidos: true, telefono: true, email: true } },
       },
@@ -578,6 +591,7 @@ async function leerIntervinientes(
       const telefono = descifrar(f.telefono) ?? descifrar(f.cliente?.telefono)
       const email = descifrar(f.email) ?? descifrar(f.cliente?.email)
       return {
+        id: f.id,
         polizaId: f.polizaId,
         rol: String(f.rol),
         nombre: propio ?? deFicha,

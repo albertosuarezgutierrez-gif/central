@@ -1,6 +1,12 @@
-# CLAUDE.md — apps/asegura (Grupo Asegura, correduría de seguros)
+# CLAUDE.md — apps/asegura (Grupo ASegura, correduría de seguros)
 
-> Vertical de la **correduría de seguros** de Alberto (nombre comercial **Grupo Asegura**).
+> ✍️ **El nombre comercial se escribe «Grupo ASegura», con A y S mayúsculas** (dictado por Alberto,
+> 04/09/2026). El monograma «AS» del logo es el nombre: A de Alberto, S de Suárez. Escribirlo con
+> la ese minúscula no es una errata de estilo — se come la marca, y es lo que el autocorrector
+> escribe solo. Grafía canónica en BD: `seguros.corredurias.nombre`. Guardián en todo el repo:
+> `test/regression-nombre-comercial-asegura.test.ts`.
+
+> Vertical de la **correduría de seguros** de Alberto (nombre comercial **Grupo ASegura**).
 > Lee antes `docs/TRASPASO-CORREDURIA.md`: esta app es el DESTINO de un traspaso en curso,
 > no un desarrollo desde cero.
 
@@ -434,7 +440,7 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
 - 🎯 **SINCO (= fichero SIHSA de TIREA)** es el bonificador de verdad: historial de siniestralidad de
   los **últimos 5 años** —justo la ventana de `lastFiveYearsAccidents`— consultable **al tarificar**.
   ⚠️ Se ofrece a **«Entidades Aseguradoras»**, y una correduría NO lo es: **no está confirmado** que
-  Grupo Asegura pueda consultarlo (preguntar a TIREA, `accesos.cima@tirea.es`, que ya hay relación
+  Grupo ASegura pueda consultarlo (preguntar a TIREA, `accesos.cima@tirea.es`, que ya hay relación
   por CIMA). Lo que SÍ está claro es que **el asegurado puede pedir el suyo gratis**. Y asúmelo: la
   compañía lo consulta igual al emitir, así que la siniestralidad presumida **se corrige sola** — por
   eso el aviso «puede abaratar el precio» no es cosmético.
@@ -481,7 +487,7 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   ese «hoy» **no es un todavía**, no hay endpoint que cablear. Se llama a la compañía.
   **Moto sí existe** (12 de las 18 compañías) y no la tarificamos — 1 póliza, así que no corre prisa.
   Cruce entero con la cartera y la matriz completa en `docs/CODEOSCOPIC-API-PORTAL.md`. ⚠️ Ese
-  catálogo es comercial y **no dice qué tiene abierto Grupo Asegura**: eso sigue siendo
+  catálogo es comercial y **no dice qué tiene abierto Grupo ASegura**: eso sigue siendo
   `GET /insurance-lines`, y se nota en que **Fidelidade —viva para nosotros— ni sale en él**.
 
 ## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)
@@ -785,6 +791,76 @@ lápida no puede tener ninguna póliza de CIMA. Ensayo en seco: las cuatro guard
 - ✅ **Cumple el aviso del lote 4** sobre los índices ciegos, por el otro camino: no hereda antes de anular,
   sino que **repone los tres `*_lookup_hash` desde `snapshot_before`** al final del propio fichero (con
   guarda de unicidad), en vez de dejarlo para una segunda pasada descubierta después.
+
+🚨 **POR QUÉ quedan 552 grupos sin fusionar, y no es indecisión: el blind index de DNI está a
+medias (medido 03/09/2026, PR #2206).** Alberto vio dos «Pilar Piña Franco» (`intranet:cli:174` +
+`asegura_app:cli2:174`, ninguna con póliza de CIMA) y preguntó por qué se duplican. La causa no es el
+criterio, es que **el criterio no puede preguntar**: hay **19.696 fichas con DNI guardado y 15.800 de
+ellas con `dni_lookup_hash` a NULL**, así que el lote 2 —mismo hash de DNI, el criterio fuerte— solo
+pudo mirar 3.896. De los **556 grupos nombre+teléfono** (1.132 fichas, 528 cruzando los dos volcados),
+**552 tienen el hash ausente en algún lado**. Los otros lotes tampoco los cazan por diseño: el 3 exige
+que el superviviente tenga pólizas de CIMA, el 4 póliza común, el 5 vehículo común.
+
+🚨 **Y el backfill de ese hash NO es un `UPDATE`.** `uq_clientes_dni_lookup_hash` es **UNIQUE** sobre
+`dni_lookup_hash` para `tipo='cliente'`: escribirlo revienta en la segunda ficha de cada DNI repetido
+(741 fichas `cliente` en riesgo; los 15.059 leads no, el índice es parcial). [Probable] es justo por
+qué faltan — el importador se comió el conflicto. **El choque no es un estorbo: es el hallazgo**, un
+DNI repetido es la misma persona dos veces. De ahí el orden, que no se puede invertir:
+**(1) calcular en seco → (2) fusionar los choques con OK explícito → (3) escribir los hashes.**
+El paso 1 y el 3 son `GET`/`POST /api/operador/backfill-dni` (vive aquí porque necesita
+`PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY`); la regla es pura y está en
+`@central/module-seguros` (`backfill-dni.ts`, `planBackfillDni()`, 11 tests), con los tres estados de
+siempre: un DNI que **no descifra es `ilegible`, jamás «sin DNI»**, y un valor de cajón
+(`PENDIENTE`, `X`) **no genera hash** para que no funda a dos personas.
+📸 **Desde el 04/09/2026 el plan deja FOTO en `seguros.backfill_dni_plan`** (una fila, se sobreescribe
+en cada GET/POST; `resumen` + `choques` como listas de uuid, sin DNI ni hash ni nombre —
+`2026-09-04_backfill_dni_plan.sql`). Es el puente entre el paso 1 y el 2: los grupos de mismo DNI solo
+se pueden calcular con la clave (aquí) y el lote de fusión se escribe desde la BD; antes se perdían al
+cerrar la respuesta. Abrir `/correduria/mantenimiento` en plataforma basta para refrescarla.
+
+🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ✅ EJECUTADO:
+el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un
+error». Las dos mitades ciertas y por motivos distintos:
+- **Francisco Chacón Matito figura de conductor ocasional en pólizas de 52 tomadores sin relación
+  entre sí** (Phenix Automoción, Kartenbrot, Esquiansa y 49 particulares); Antonio Sevico, 16, y es
+  «ocasional» del propio Matito. **Son los dos únicos por encima de 4**; el tercero no pasa de 3. Es el
+  comodín que el CRM viejo metía cuando no sabía a quién poner.
+- 🚨 **Pero Matito es una PERSONA REAL y su ficha no se toca.** De sus 60 filas de interviniente, **59
+  son del volcado** (`origen='manual'`, creadas todas en 57 segundos el 21/06 entre las 17:58:47 y las
+  17:59:44, sin NIF, sin nombre propio, **ninguna sobre cartera viva**) y **1 es de CIMA** (conductor
+  HABITUAL, con NIF, póliza viva) **que se queda** — borrarla no serviría: el siguiente pull la
+  recrearía. La frontera es limpia y no hay que adivinarla: las **408** filas `manual` de
+  `poliza_intervinientes` cuelgan TODAS de pólizas del volcado; las **96** de CIMA, todas de vivas.
+- 🚨 **Tercera guarda, dictada por Alberto al revisar el lote: «si no es tomador».** En SU propia
+  póliza uno no es un comodín, es el titular. Medido: **no salva ningún interviniente** (Matito 0 de
+  59, Sevico 0 de 18 eran sobre pólizas propias) **pero sí 2 relaciones** — el par «Matito tomador ↔
+  Sevico su conductor ocasional», en sus dos sentidos, que es un vínculo de verdad. Queda cableada
+  aunque hoy solo actúe en un sitio.
+- Alcance FINAL: **77 intervinientes + 118 relaciones** ocasional/contacto, y **ninguna de las 118
+  llevaba `puede_ver_polizas`** (la lección del lote 5: el consentimiento colgaba de la ficha que no
+  era). Reversible: `seguros.interviniente_purga_log.snapshot_before`, append-only por trigger.
+- ✅ **Verificado tras ejecutar (03/09/2026):** 195 filas en el log; a Matito le queda **1** fila de
+  interviniente y es la de **CIMA**; entre los dos quedan **10** relaciones (8 de familia/empresa +
+  las 2 salvadas); **0 personas** intervienen ya en pólizas de ≥4 tomadores. ⚠️ Ese recuento solo da
+  0 si se excluye `cliente_id IS NULL`: hay 6 intervinientes de CIMA sin ficha enlazada que agrupan
+  juntos y parecen «una persona con 5 tomadores» sin serlo.
+- ✅ **Y el hueco que lo hizo necesario está tapado (03/09/2026, mismo día):
+  `DELETE /api/operador/poliza/intervinientes`** (`lib/cartera-intervinientes.ts`), con el botón
+  «quitar» en la pestaña Contactos de plataforma. `{ intervinienteId, actor, motivo? }`. Tres guardas:
+  - 🚨 **Una fila de `origen='cima'` NO se borra: 409.** El siguiente pull la recrearía, así que el
+    botón prometería algo que no puede cumplir — y de paso se tiraría dato bueno y vivo. Plataforma
+    ni siquiera pinta el botón en esas filas: dice «la manda CIMA».
+  - **Reversible**: la fila entera va a `interviniente_purga_log` (lote `quitado-desde-plataforma`)
+    ANTES de borrarla, y **si el snapshot falla no se borra nada**: sin registro no hay vuelta atrás.
+    `cliente_id` del log pasó a admitir NULL (`prisma/sql/2026-09-03_interviniente_purga_log_cliente_opcional.sql`)
+    porque un interviniente puede no estar enlazado a ninguna ficha — meter ahí el `poliza_id` para
+    rellenar la columna habría sido un dato que miente.
+  - **El TOMADOR no se puede quitar y por eso no tiene botón**: `IntervinienteFicha.id` es `null` en
+    su fila, que la sintetiza `filasIntervinientes()` y no existe en la base (test que lo fija en
+    `packages/module-seguros/src/intervinientes.test.ts`).
+  El SQL crudo de ese lib **no prefija `seguros.`** — la conexión ya trae `?schema=seguros` y, además,
+  un `seguros.x` en código dispara el guardián de aislamiento. Las relaciones ya tenían su `DELETE`
+  desde el 02/09 (`/cliente/relaciones`).
 
 Desde el 02/09 el rol `prisma_seguros` sí escribe, pero las fusiones se hacen por SQL con su lote y su
 guarda de identidad (no hay botón «fusionar» en la UI, a propósito); el buscador mide, rotula y enlaza a

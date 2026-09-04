@@ -1596,6 +1596,119 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
 - **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
   pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
 
+🎨 **Rediseño: de una tira de ocho bloques a CINCO SECCIONES (03/09/2026).** Alberto: *«minimalista,
+óptima y productiva»*. La pantalla era un scroll único con ocho bloques del MISMO peso visual —los
+partes que ha abierto un cliente y nadie ha mirado pesaban igual que la matriz de comisiones cobradas
+de hace tres años— y cada bloque pintaba su propia caja (borde 1px + radio 12 + padding 14, repetida
+en seis ficheros), así que ninguno decía «mírame a mí primero».
+
+- **Buscador arriba, siempre**, fuera de las secciones: es lo más usado y además tiene que sobrevivir
+  a que el puerto falle. Cinco secciones: **Hoy** (partes · retención · renovaciones dentro del
+  preaviso) · **Clientes** (el listado filtrable) · **Cartera** (KPIs + los 90 días) · **Comisiones**
+  (cuadre + banda pendiente + matriz del banco, y el selector de AÑO gobierna solo esta) · **Datos**
+  (duplicadas · sin canal).
+- **«Clientes» y «Cartera» no son lo mismo** aunque hablen de la misma gente: una es la herramienta de
+  trabajo (filtrar y sacar una lista para llamar) y la otra el resumen. Compartir pestaña haría que la
+  foto —que se mira una vez al día— compitiera con el filtro, que se usa constantemente.
+- **Mismo idioma visual que `banca/SegTabs.tsx` y `cliente/[id]/FichaTabs.tsx`** —subrayado, iconos
+  lucide, contador— en vez de inventar uno nuevo para esta pantalla. `Secciones.tsx`.
+- 🚨 **Una pestaña ESCONDE, y por eso el contador no es decoración: es lo que impide que esconda
+  TRABAJO.** Cada bloque reporta el suyo hacia arriba (`onContador?: (n: number|null) => void`,
+  llamado en el `.then`, guardado en un `useRef` para que una lambda del padre no relance el fetch en
+  bucle) y `agregarContadores` (`secciones.ts`, puro, 9 tests) da **tres** desenlaces: `{n}` exacto ·
+  **`n+`** cuando alguna cola no se pudo leer (el número es un SUELO, no el total) · **`!`** cuando
+  ninguna se pudo leer. Nunca un 0. Y `undefined` (aún cargando) NO es `null` (ilegible): confundirlos
+  pinta un «!» de alarma en cada pestaña durante la carga, y eso enseña a ignorar el badge.
+- **Todos los bloques se MONTAN siempre**, aunque su sección esté oculta (`display:none`): es de donde
+  salen los contadores, y son los mismos fetch en paralelo que ya se hacían al abrir. Lo que se oculta
+  es el DOM, no la lectura. La sección viaja en `?s=` por `history.replaceState`, **no por `Link`**:
+  navegar remontaría el client component y volvería a pedirle todo al puerto en cada clic.
+- **Un bloque deja de ser una caja** (`Bloque.tsx`): línea fina + título + contenido. Borde, fondo y
+  sombra se gastan POR FUNCIÓN (regla de `components/ui.tsx`) y «soy una sección» no es una función:
+  `destacado` se reserva para alarmas con alguien esperando al otro lado (partes sin atender, recibos
+  suspendidos, clientes sin canal). Si todo destaca, no destaca nada.
+- 🚨 **Cuál es el PRIMER bloque de una sección depende de los DATOS** —`PartesPortal` y `Duplicadas`
+  devuelven `null` cuando su cola está vacía—, así que la línea de separación de arriba la quita CSS
+  (`.corr-panel > section:first-of-type` en `globals.css`), no un prop `primero` en el JSX: solo el
+  navegador sabe quién quedó arriba.
+- **Emojis fuera**: los que eran etiqueta de estado (🔴🟠🟡⚫✅) → `<Badge tono=…>` —🟠 y 🟡 son
+  indistinguibles a 12px, y ahí estaba la diferencia entre «aún puedes moverla» y «ya se prorroga
+  sola»—; los de ramo (🚗🏠🧬) → el texto a secas; los de título → iconos lucide.
+
+🚨 **Y el bug que destapó el rediseño: `Vencimientos` vivía DENTRO de `CarteraViva`**, después de sus
+tres `return` tempranos. O sea: el día que el puerto de central-asegura fallaba, **la tabla de
+renovaciones —la máquina comercial de la correduría— desaparecía en silencio**, y su propio manejo de
+error, que existe, era código muerto. Es EXACTAMENTE el fallo por el que `BuscadorCartera` y
+`Duplicadas` ya se habían sacado fuera; a esta se le había pasado. Ahora es `Renovaciones.tsx`,
+hermana y no hija, y el `fetch` de los vencimientos vive en la pantalla porque la misma lista alimenta
+dos secciones (`filtro: 'accionables' | 'todas'`) y montarla dos veces serían dos llamadas al puerto
+para los mismos datos.
+
+⚠️ **`test/regression-clientes-sin-canal.test.ts` exigía el literal `<SinCanal />`.** Se relajó a
+`/<SinCanal[\s/>]/`: lo que ese test vigila es que el bloque SIGA MONTADO en la pantalla, no su firma.
+
+### 🔎 Listado FILTRABLE de la cartera — el vocabulario, y el campo que MIENTE (03/09/2026)
+Alberto: *«quiero filtro por todo, ramo, tipo cliente (con póliza, leads…), porque quiero filtrar por
+clientes y [que suban] las pólizas en vigor que haya»*. Lo primero que hay que saber: **eso no era un
+filtro, era una pantalla que no existe.** `/correduria` no tiene ninguna LISTA de clientes — solo un
+buscador que exige un término (`/api/operador/clientes?q=`, y con menos de 3 letras devuelve vacío) y
+**no hay ningún endpoint de listado ni en plataforma ni en el puerto de asegura**. Un desplegable de
+ramo no filtra nada si no hay nada que filtrar.
+
+**Lo construido en este PR es el vocabulario compartido:** `filtro-cartera.ts` de
+`@central/module-seguros` (puro, 14 tests) — `RAMOS`, `ESTADOS`, `VENTANAS`, `parseFiltroCartera`,
+`describirFiltro`, `filtroActivo`, `diasDeVentana`. Lo comparten las DOS apps (asegura para construir
+la consulta, plataforma para pintar los desplegables): con una lista por app, el día que se añada un
+ramo la pantalla ofrece un filtro que el puerto no entiende, y **las dos formas de ese desajuste
+devuelven cero resultados sin un solo error**.
+
+🚨 **`clientes.tipo` NO sirve para decidir quién es cliente y quién lead.** Medido el 03/09/2026 contra
+la BD: dice **2.742 «cliente» y 29.860 «lead»** cuando la cartera viva son **80 clientes / 110
+pólizas**. Es un campo del volcado de 2013-2018 que no mantiene nadie. El grupo se DERIVA de tener
+alguna póliza de cartera viva (`esCarteraViva`, `cartera-viva.ts`), que es la única fuente de esa
+verdad en el repo. Filtrar por la columna habría devuelto 2.742 fichas muertas con cara de cartera.
+
+🚨 **Un valor de filtro que no se reconoce NO se ignora en silencio:** `parseFiltroCartera` devuelve
+`descartados[]` y la pantalla lo dice. Ignorarlo convierte «enséñame los de ramo XYZ» en «enséñamelo
+todo» — la respuesta que más se parece a haber funcionado y que nunca es cierta. Mismo criterio con
+`buscable:false` (texto de menos de 3 letras): «no se ha buscado» no es «no hay resultados».
+
+**Venta cruzada (`sinRamo`)**: el cliente no tiene NINGUNA póliza viva de ese ramo. Se anula sobre
+`grupo=leads` a propósito — un lead no tiene ninguna póliza viva, así que TODOS cumplirían «no tiene
+hogar» y el filtro parecería funcionar devolviendo los 29.860 enteros. Sobre la cartera viva sí mide
+el hueco real, que es grande: **81 autos contra 19 hogares**.
+
+**Distribución REAL de la cartera viva (03/09/2026, para no inventarse los desplegables):** ramos
+auto 81 · hogar 19 · responsabilidad_civil 9 · moto 1 · (el resto del enum, 0) — estados activa 68 ·
+cancelada 42 — compañías Mapfre 64 · Allianz 26 · Occident 19 · Reale 1. Los ramos con 0 pólizas **sí
+se ofrecen** en el filtro: un desplegable que solo enseña lo que ya existe no deja buscar un hueco, y
+buscar huecos es para lo que sirve esto.
+
+✅ **CONSTRUIDO ENTERO (03/09/2026, PR #2205):** `GET /api/operador/cartera` en el puerto de asegura
+(`lib/cartera-filtro.ts`, paginado en SQL, con facetas), el proxy `/api/correduria/cartera-lista`
+(`formato=csv`; la primera línea del fichero es `describirFiltro`, o sea el filtro que lo generó),
+el lector `lib/cartera-lista-asegura.ts` (16 tests) y `ListaCartera.tsx` en la sección **Clientes**.
+
+🚨 **Y la trampa que solo salió al EJECUTAR la consulta contra la BD, no al leerla: un `0` GUARDADO
+tampoco es una prima.** De las 110 pólizas vivas, **60 traen importe, 26 lo traen NULL y 24 lo traen
+a 0**. Sin `nullif(coalesce(prima_bruta, prima_anual), 0)` esas 24 filas pintan «0,00€» — una
+afirmación sobre lo que paga el cliente que nadie ha comprobado, que es la regla NULL≠0 por su lado
+menos visible (aquí no hay hueco que delate el fallo: sale un número plausible). Lo fija
+`apps/asegura/lib/cartera-filtro.test.ts`, que lee el **FUENTE** con `readFileSync` a propósito: lo
+que vigila vive dentro de un `Prisma.sql`, donde ni `tsc` ni `next build` miran, y además así no
+importa Prisma — el job `Tests (packages + guardián)` corre `node --test lib/*.test.ts` **sin**
+`prisma generate`, y un import del cliente generado lo tumbaría.
+
+⚠️ **Las facetas se calculan sobre `grupo` + `q`, NO sobre el resto de filtros seleccionados.** Es
+deliberado: así los contadores de los desplegables no bailan al marcar una casilla. Lo que se pierde
+es que un contador puede prometer resultados que otro filtro activo descarta; lo que se gana es que
+el desplegable siga siendo un mapa de la cartera y no del recorte que ya has hecho.
+
+⏸️ **Y la subida MASIVA de PDFs de póliza queda fuera por una decisión pendiente, no por tiempo:**
+`asegura/cartera/subir` lee el PDF pero **no guarda el fichero** porque no está decidido dónde ni
+cuánto tiempo se conservan documentos con un DNI dentro; y en lote falta responder cómo se decide a
+qué póliza pertenece cada archivo (el lector solo entiende AUTO).
+
 🧹 **Reorganización de la pantalla (agente de diseño, 01/09/2026).** Alberto: *«hay duplicidad y ahí
 solo tiene que salir datos importantes»*. Se pasó de 12 KPIs a **4** y el orden es ahora
 **buscar → cartera → a quién llamar → cuadre → detalle del banco (plegado)**. Lo retirado y por qué:
@@ -1677,7 +1790,12 @@ Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pas
 - **Nada de hex.** Colores SIEMPRE por token (`var(--positive)`, `var(--negative)`…); para un importe,
   `colorImporte(n)`. Lo vigila `test/regression-tokens-color.test.ts`.
 - **`btnStyle()` devuelve el ESTILO, no un componente con `onClick`:** el archivo es server-safe y un
-  handler obligaría a `'use client'` en cada pantalla que lo importe.
+  handler obligaría a `'use client'` en cada pantalla que lo importe. **`btnIcono()`** (03/09/2026,
+  PR #2223) es su hermano cuadrado de 44×44 para la acción repetida de una fila de lista: existe porque
+  lo que rompe la fila en móvil es el RÓTULO, no el botón (en la ficha del cliente «Hacer principal»
+  medía ~150px y con `flexWrap` daba dos alturas al mismo dato, ~58px y ~84px).
+  🚨 **NUNCA para una acción destructiva**: un borrado sin rótulo se pulsa por error y no hay ni un
+  precedente en la app; a icono van las inocuas o idempotentes, y siempre con `aria-label` + `title`.
 - **CSS responsive en `globals.css`, no en la página.** Un estilo inline no admite media queries, y ese
   era el motivo de que 47 páginas llevaran un bloque `<style>` incrustado (201 `!important` entre todas).
 
@@ -1703,10 +1821,13 @@ retirada; la dona sí sigue en paleta categórica (ahí el motivo se sostiene). 
 sigue siendo una exención que hay que releer, no una decisión cerrada.**
 
 ⏸️ **Dos cosas PENDIENTES DE DECISIÓN DE ALBERTO, no deuda técnica anónima:**
-1. **`PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot` siguen con CERO consumidores.** NO se
-   enchufaron a la fuerza en ningún sitio: hacerlo sería repetir el defecto que este lote arregla. En
-   `/banca` el hueco de `PageHeader` ya lo ocupan las migas + el saldo con su botón 👁. O se usan donde
+1. ~~**`PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot` siguen con CERO consumidores.**~~
+   ✅ **Medido el 03/09/2026 y esta frase YA ERA FALSA:** `PageHeader` tiene **55** consumidores,
+   `BtnLink` **8** y `ThinBar` **8** — se adoptaron solas por goteo, que es como se pretendía. Siguen a
+   cero **`BarListRow` y `LegendDot`**, y para esas dos la disyuntiva sigue en pie: o se usan donde
    encajen de verdad, o se borran — un catálogo que nadie importa no es un sistema, es documentación.
+   ⚠️ Lección de método: un recuento escrito en un doc **caduca solo**; antes de citar «tiene N
+   consumidores» vuelve a contarlo (`grep -rl` sobre `app`+`components`), no lo copies de aquí.
 2. **`banca/page.tsx:221` dice «último mov. ninguno» cuando `ultimoMov` es NULL** (`lib/psd2-estado.ts`),
    que es un «no se ha podido leer» servido como afirmación — la regla del NULL incumplida en la pantalla
    del banco. Sin tocar porque cambia un texto que Alberto lee a diario.

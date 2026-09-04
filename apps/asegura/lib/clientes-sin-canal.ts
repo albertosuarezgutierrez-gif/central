@@ -254,6 +254,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
   const filas = await db.$queryRaw<FilaSql[]>`
     with base as (
       select
+<<<<<<< HEAD
         c.id,
         c.correduria_id,
         btrim(concat_ws(' ', c.nombre, c.apellidos)) as nombre,
@@ -350,6 +351,24 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       ) x
     ) w on true
     order by b.nombre
+=======
+        count(*)::int as polizas_cima,
+        min(p.fecha_vencimiento) filter (where p.fecha_vencimiento >= current_date) as proximo_vencimiento,
+        count(*) filter (where p.fecha_vencimiento is null)::int as polizas_sin_fecha,
+        sum(coalesce(p.prima_anual, p.prima_bruta))::float8 as prima,
+        count(*) filter (where p.prima_anual is null and p.prima_bruta is null)::int as polizas_sin_prima
+      from polizas p
+      where p.cliente_id = c.id
+        and p.correduria_id = c.correduria_id
+        and (p.import_ref is null or p.eiac_xml_hash is not null)
+        and p.merged_into_poliza_id is null
+    ) v on true
+    where c.correduria_id = ${correduriaId}::uuid
+      and c.merged_into_cliente_id is null
+      and c.activo
+      and v.polizas_cima > 0
+    order by c.apellidos, c.nombre
+>>>>>>> origin/main
     limit ${LIMITE + 1}
   `
 

@@ -272,6 +272,16 @@ html[data-saldo-oculto='1'] .saldo-privado {
 @media (max-width: 480px) {
   .corr-kpis { grid-template-columns: 1fr !important; }
 }
+/* El primer bloque de una sección no pinta su línea de separación: iría pegada debajo del borde
+   de la barra de pestañas y se verían dos rayas. NO se resuelve con un prop `primero` en el JSX
+   porque cuál es el primero DEPENDE DE LOS DATOS —`PartesPortal` y `Duplicadas` devuelven `null`
+   cuando su cola está vacía—, así que solo el navegador sabe quién quedó arriba. `!important`
+   porque `Bloque.tsx` pone su borde en un estilo inline. */
+.corr-panel > section:first-of-type {
+  border-top: none !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
 
 /* === Cuadre de comisiones de la correduría (`correduria/CuadreComisiones.tsx`) ===
    Único bloque de esta tanda que NO era responsive sino estructura de tabla: los tres ejes
@@ -652,7 +662,7 @@ html[data-saldo-oculto='1'] .saldo-privado {
   .neg-grid { grid-template-columns: 1fr; }
 }
 
-/* === Acento de sección: la correduría (Grupo Asegura) ========================
+/* === Acento de sección: la correduría (Grupo ASegura) ========================
    Alberto pidió (03/09/2026) que la correduría se pareciera a la app que hizo
    Manuel, `app.grupoasegura.com`. Sus colores NO están puestos a ojo: salen de
    `src/app/globals.css` de ese repo, convertidos de oklch a hex —
@@ -676,4 +686,17 @@ html[data-saldo-oculto='1'] .saldo-privado {
   --primary: #497cfd;
   --primary-light: rgba(73, 124, 253, .16);
   --primary-hover: #9fbcff;
+}
+
+/* === Solo para lectores de pantalla ===
+   Un rótulo que la vista no necesita pero la accesibilidad sí. Nació al quitar
+   la cabecera visible de /correduria (04/09/2026): el escudo y el título
+   «Correduría» comían ~62px de la primera pantalla del móvil para decir dónde
+   estás en la página que abres a propósito, pero una página sin `<h1>` deja a
+   un lector de pantalla sin encabezado por el que navegar.
+   No se usa `display:none` ni `visibility:hidden` a propósito: eso lo esconde
+   TAMBIÉN del lector, que es justo lo contrario de lo que se busca. */
+.solo-lectores {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }

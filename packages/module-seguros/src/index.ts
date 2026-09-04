@@ -135,16 +135,20 @@ export {
   TIPOS_DOCUMENTO,
   MIMES_DOCUMENTO,
   MAX_BYTES_DOCUMENTO,
+  MAX_ADJUNTOS_POR_PARTE,
   NECESARIOS_EMISION_AUTO,
   etiquetaTipoDocumento,
   etiquetaEstadoDocumento,
   tipoDocumento,
   estadoDocumento,
   revisarDocumento,
+  mimeDocumento,
+  tipoAdjuntoParte,
   resumenDocumentos,
   documentosQueFaltan,
   type TipoDocumento,
   type EstadoDocumento,
+  type MimeDocumento,
   type DocumentoResumen,
   type ResumenDocumentos,
 } from './documentos.ts'
@@ -261,6 +265,11 @@ export {
   type SeguimientoSiniestro,
   type SeguimientoRevisado,
 } from './siniestros.ts'
+
+export {
+  EIAC_TIPOLOGIA_SINIESTRO,
+  descripcionEiacSiniestro,
+} from './eiac-siniestros.ts'
 export {
   evolucionPrima,
   etiquetaVeredictoPrima,
@@ -297,11 +306,16 @@ export {
   capitalAsegurado,
   capitalesHogar,
   eurDeCapital,
+  eurDeCapitalConVolcado,
+  importeDelVolcado,
   GARANTIAS_MINIMAS_CONSENSO,
+  CAPITAL_DEL_VOLCADO_MOTIVO,
   type LadoRiesgo,
   type CoberturaLeible,
   type CapitalAsegurado,
   type CapitalesHogar,
+  type CapitalVolcado,
+  type CapitalesVolcado,
 } from './garantias.ts'
 export {
   clasificarPolizaFicha,
@@ -311,3 +325,58 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export {
+  parseFiltroCartera,
+  filtroActivo,
+  describirFiltro,
+  diasDeVentana,
+  etiquetaRamo,
+  RAMOS,
+  ESTADOS,
+  VENTANAS,
+  POR_PAGINA_DEFECTO,
+  POR_PAGINA_MAX,
+  MIN_LETRAS_BUSQUEDA,
+  type RamoSeguro,
+  type GrupoCartera,
+  type EstadoPolizaFiltro,
+  type VentanaVencimiento,
+  type FiltroCanal,
+  type FiltroCartera,
+  type ParseFiltro,
+} from './filtro-cartera.ts'
+
+export {
+  planBackfillDni,
+  type FichaDni,
+  type Destino,
+  type FilaPlan,
+  type GrupoChoque,
+  type PlanBackfillDni,
+} from './backfill-dni.ts'
+
+export {
+  ALFABETO_SERIE,
+  PRIMERA_MATRICULA_MODERNA,
+  ULTIMO_HITO_CONOCIDO,
+  normalizarMatricula,
+  formatoMatricula,
+  ordinalMatricula,
+  fechaMatriculacionEstimada,
+  type FormatoMatricula,
+  type MatriculacionEstimada,
+} from './matricula.ts'
+
+export {
+  MEDIADOR,
+  NO_EXCLUSIVIDAD,
+  CANALES_RECLAMACION,
+  PUNTOS_PRECONTRACTUALES,
+  VERSION_TEXTOS_LEGALES,
+  FECHA_TEXTOS_LEGALES,
+  lineaIdentificacion,
+  type CanalReclamacion,
+  type IdCanalReclamacion,
+  type PuntoPrecontractual,
+  type IdPuntoPrecontractual,
+} from './mediador.ts'

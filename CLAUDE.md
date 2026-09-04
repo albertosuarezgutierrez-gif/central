@@ -46,7 +46,11 @@
   CONSERVA el lote, etiqueta por canal (con/sin lote). Compone `@central/module-pesca`. BD compartida (auth
   propio, cookie `mariscos_session`). Ver `apps/mariscos/CLAUDE.md`. **Pendiente para darla por viva:** proyecto
   Vercel, ejecutar su SQL en Supabase (preview→prod), sembrar cuenta real de Mariscos González.
-- **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto).
+- **`apps/asegura`** — **Grupo ASegura**: correduría de seguros (nombre comercial de Alberto).
+  ✍️ **Se escribe «Grupo ASegura», con A y S mayúsculas** (04/09/2026): el monograma «AS» del logo
+  ES el nombre (A de Alberto, S de Suárez), así que escribirlo con la ese minúscula no es una
+  errata de estilo: se come la marca. Es el valor de `seguros.corredurias.nombre` en BD y lo protege
+  en todo el repo `test/regression-nombre-comercial-asegura.test.ts` (gate en `pnpm test:guardia`).
   🖥️ **NO es una pantalla: es la trastienda.** Alberto trabaja la correduría desde
   `apps/plataforma` → `/correduria` (su única pantalla, con todos sus negocios); asegura tiene la BD de
   la cartera, la sirve por el puerto `/api/operador/*` y es la única que gasta dinero al retarificar.
@@ -86,7 +90,7 @@
   ⚠️ Las **86 políticas RLS** del CRM se resolvían por
   `auth.uid()`; en central el aislamiento es cosa del código (con BYPASSRLS el fallo sería «se ve todo sin
   fallar»). Ver `apps/asegura/CLAUDE.md`.
-- **`apps/asegura-portal`** — **portal del CLIENTE** de Grupo Asegura (Fase 1, 01/09/2026). App aparte
+- **`apps/asegura-portal`** — **portal del CLIENTE** de Grupo ASegura (Fase 1, 01/09/2026). App aparte
   de `apps/asegura` a propósito: aquella es el panel del CORREDOR, esta la ve el asegurado, y por eso
   usa **rol propio `prisma_asegura_portal` SIN BYPASSRLS** y su propio secreto de sesión
   (`ASEGURA_PORTAL_SESSION_SECRET`). Compone `@central/module-seguros-portal`. Identidad por código

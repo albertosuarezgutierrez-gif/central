@@ -292,7 +292,10 @@ test('la pantalla declara que mide presencia, no validez', () => {
 
 test('la pantalla está montada en /correduria', () => {
   assert.match(CLIENTE, /import SinCanal from '\.\/SinCanal'/)
-  assert.match(CLIENTE, /<SinCanal \/>/)
+  // Se monta con props desde el rediseño del 03/09/2026 (`onContador`, que sube
+  // el recuento a la barra de secciones para que la pestaña «Datos» no esconda
+  // trabajo). Lo que este test vigila es que SIGA MONTADO, no su firma.
+  assert.match(CLIENTE, /<SinCanal[\s/>]/)
 })
 
 test('el grid contenedor lleva plantilla: si no, arrastra la página en móvil', () => {

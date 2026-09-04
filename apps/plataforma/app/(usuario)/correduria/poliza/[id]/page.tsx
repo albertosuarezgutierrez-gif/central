@@ -529,10 +529,16 @@ function tonoVeredicto(v: NonNullable<Poliza['estimacion']>['veredicto']): React
 }
 
 /* ─── Capitales de hogar ───────────────────────────────────────────────────
- * Cinco estados y ninguno se colapsa con otro. El que más muerde es
- * `solo_sublimites`: `mayorEur` NO es el continente — pintarlo como si lo fuera
- * daría un capital plausible y falso, que es el modo de fallo más caro de este
- * repo (un número que se lee bien y miente).
+ * SEIS estados y ninguno se colapsa con otro. Los dos que muerden:
+ *
+ *  · `solo_sublimites`: `mayorEur` NO es el continente — pintarlo como si lo
+ *    fuera daría un capital plausible y falso, que es el modo de fallo más caro
+ *    de este repo (un número que se lee bien y miente).
+ *  · `del_volcado`: SÍ es el capital, pero el de la copia histórica de la
+ *    póliza (junio de 2026), no el que manda hoy la compañía. Se pinta con
+ *    marco punteado y su procedencia SIEMPRE visible, nunca como el consenso:
+ *    un capital viejo leído como actual decide mal si el cliente está
+ *    infraasegurado, y eso es peor que un hueco.
  */
 function CapitalesHogar({ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }) {
   return (
@@ -541,7 +547,8 @@ function CapitalesHogar({ caps }: { caps: NonNullable<Poliza['capitalesHogar']> 
       <Capital titulo="Contenido (el mobiliario)" c={caps.contenido} />
       <p style={{ ...sub, gridColumn: '1 / -1', margin: 0 }}>
         El estándar EIAC sí manda el capital etiquetado, pero nuestra ingesta guarda el importe y tira la etiqueta:
-        aquí se deriva de las garantías, y solo se afirma cuando varias coinciden en el mismo importe.
+        aquí se deriva de las garantías, y solo se afirma cuando varias coinciden en el mismo importe. Cuando no
+        lo hacen se mira la copia de esta misma póliza en el volcado histórico, y entonces se dice que viene de ahí.
       </p>
     </div>
   )
@@ -561,6 +568,22 @@ function Capital({ titulo, c }: { titulo: string; c: CapitalAsegurado | null }) 
           <div style={{ fontSize: 18, fontWeight: 700 }}>{eur(c.eur)}</div>
           <div style={sub}>Lo dicen {c.garantias} garantías de esta póliza.</div>
           {c.ejemplo && <div style={sub}>p. ej. «{c.ejemplo}»</div>}
+        </div>
+      )
+    // 🚨 Trae importe, pero NO es el consenso: marco punteado, el importe en el
+    // tono apagado y la procedencia debajo, sin recortar. Es lo único que
+    // separa «61.000€ que dice la compañía hoy» de «61.000€ que decía en 2026».
+    case 'del_volcado':
+      return (
+        <div style={marco}>
+          {cabecera}
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--muted)' }} title="Capital de la copia histórica de esta póliza, no el de hoy">
+            {eur(c.eur)}
+          </div>
+          <div style={{ ...chipBase, background: 'transparent', color: 'var(--muted)', border: '1px dashed var(--border)', justifySelf: 'start' }}>
+            del volcado histórico
+          </div>
+          <div style={sub}>{c.motivo}</div>
         </div>
       )
     case 'solo_sublimites':

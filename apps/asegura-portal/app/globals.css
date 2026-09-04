@@ -5,39 +5,82 @@
  * el corredor vean el mismo producto. Lo que NO se copia es la densidad: allí
  * hay tablas de 12 columnas y aquí entra gente de la calle desde el móvil.
  *
- * Los nombres de token son los de plataforma (`--surface`, `--primary`,
- * `--muted`…) a propósito: son los que `@central/brand` puede sobreescribir el
- * día que exista `MARCA_GRUPO_ASEGURA`. Los nombres viejos del portal
- * (`--brand`, `--peligro`, `--texto-suave`…) se conservan como ALIAS para no
- * romper los `style={{}}` que ya los usan: si se borran, la pantalla de entrada
- * pierde el color de error sin que falle nada.
+ * 🎨 MARCA (03/09/2026). El color ya NO se decide aquí: lo pone
+ * `MARCA_ASEGURA` de `@central/brand`, que `app/layout.tsx` inyecta como un
+ * `:root{…}` en el `<head>`. Los valores de este fichero son solo el RESPALDO.
+ *
+ * Por qué `@layer portal-base`: `emitirRootCss()` emite los nombres de la casa
+ * de marcas (`--brand`, `--bg`, `--text`, `--sans`…) y este fichero usa los de
+ * plataforma (`--primary`, `--surface`, `--radius`…). Los que coinciden se
+ * pisarían según el orden en que Next monte el `<head>` — que no está
+ * garantizado — y el fallo sería MUDO: la pantalla se quedaría índigo sin que
+ * nada reventase. Con una capa no hay carrera: en CSS, lo NO capado gana
+ * siempre a lo capado, y el bloque de marca va sin capa.
+ *
+ * Los que NO coinciden se derivan abajo, fuera de la capa
+ * (`--primary: var(--brand)`), así que siguen al token de marca sea cual sea.
  */
-:root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --border: #e5e7eb;
-  --text: #0f172a;
-  --muted: #64748b;
-  --primary: #4f46e5;
-  --primary-light: #eef2ff;
-  --primary-hover: #4338ca;
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --shadow-lift: 0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 32px -12px rgba(15, 23, 42, 0.14);
+@layer portal-base {
+  :root {
+    /* Superficies y texto — mismos nombres que emite @central/brand. */
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel2: #f8fafd;
+    --border: #e5e7eb;
+    --border-soft: #eef1f6;
+    --text: #0f172a;
+    --muted: #64748b;
+    --muted2: #94a3b8;
 
-  --positive: #059669;
+    /* Marca. `--brand` es la identidad; `--accent` el decorativo (filetes). */
+    --brand: #4f46e5;
+    --brand-ink: #4338ca;
+    --brand-soft: rgba(79, 70, 229, 0.1);
+    --accent: #6366f1;
+    --accent-ink: #4338ca;
+    --accent-soft: #eef2ff;
+
+    /* Estados. Deliberadamente fuera del azul de marca: un aviso pintado del
+     * color de la marca deja de leerse como aviso. */
+    --ok: #059669;
+    --warn: #b45309;
+    --danger: #dc2626;
+
+    /* Tipografía y forma. */
+    --serif: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --radio: 14px;
+  }
+}
+
+:root {
+  /* ── Puente marca → tokens de plataforma ───────────────────────────────
+   * Estos SÍ van fuera de la capa: son derivados, no respaldos. Si
+   * `@central/brand` cambia el azul, `--primary` lo sigue solo. */
+  --primary: var(--brand);
+  --primary-hover: var(--brand-ink);
+  --primary-light: var(--accent-soft);
+  --surface: var(--panel);
+  --radius: var(--radio);
+  --positive: var(--ok);
+  --negative: var(--danger);
+  --warning: var(--warn);
+
+  /* Tintes de estado: la marca no los declara (solo el color pleno), así que
+   * se quedan aquí. */
   --positive-bg: #ecfdf5;
-  --negative: #dc2626;
   --negative-bg: #fef2f2;
-  --warning: #b45309;
   --warning-bg: #fffbeb;
   --warning-border: #fcd34d;
 
-  /* Alias de compatibilidad (los usan estilos inline ya escritos). */
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-lift: 0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 32px -12px rgba(15, 23, 42, 0.14);
+
+  /* Alias de compatibilidad (los usan estilos inline ya escritos). Ojo: aquí
+   * `--brand` NO se puede aliasar a `--primary` como antes — sería un ciclo. */
   --fondo: var(--bg);
   --texto: var(--text);
   --borde: var(--border);
-  --brand: var(--primary);
   --texto-suave: var(--muted);
   --texto-tenue: var(--muted);
   --peligro: var(--negative);
@@ -63,7 +106,7 @@
 
 body {
   margin: 0;
-  font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -88,6 +131,9 @@ input, select, textarea, button { font: inherit; }
   padding: 12px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  /* Filete de acento: es lo único decorativo del portal y basta para que la
+   * primera franja de pantalla ya sea de la correduría. */
+  border-top: 3px solid var(--accent);
 }
 .marca-escudo {
   display: inline-flex;
@@ -101,9 +147,11 @@ input, select, textarea, button { font: inherit; }
   color: var(--primary);
 }
 .marca-nombre {
+  font-family: var(--serif);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  color: var(--brand-ink);
 }
 .marca-coletilla {
   margin-left: auto;
@@ -121,6 +169,7 @@ input, select, textarea, button { font: inherit; }
   margin-bottom: 20px;
 }
 .seccion h2 {
+  font-family: var(--serif);
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 12px;
@@ -128,6 +177,7 @@ input, select, textarea, button { font: inherit; }
 }
 
 h1 {
+  font-family: var(--serif);
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -249,6 +299,14 @@ h1 {
 .boton-subir input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .boton-subir[aria-disabled='true'] { opacity: 0.6; cursor: progress; }
 
+/* Los dos caminos del alta («Elegir PDF o foto» / «Añadirla a mano»): apilados
+ * a 320 px, uno al lado del otro en cuanto caben dos botones de 44 px. */
+.alta-acciones { display: grid; gap: 8px; }
+@media (min-width: 420px) { .alta-acciones { grid-template-columns: 1fr 1fr; } }
+/* El formulario del alta cuelga de la sección, no de un `.editor`: le hace
+ * falta el mismo aire por arriba que tiene el editor de una tarjeta. */
+.seccion > .editor-form { margin-top: 12px; }
+
 /* ── Campos ──────────────────────────────────────────────────────────────
  * 16 px de fuente a propósito: por debajo, Safari en iPhone hace zoom al
  * enfocar el campo y descoloca la pantalla. */
@@ -368,4 +426,173 @@ h1 {
  * que el texto. */
 .recibido-plazo.ojo { color: var(--warning); font-weight: 600; }
 
+/* ── Adjuntos del parte ──────────────────────────────────────────────────
+ * Los ficheros que el cliente elige (fotos del golpe, el amistoso en PDF) y,
+ * más abajo, los que ya viajaron con un parte enviado.
+ *
+ * Apilados a 320 px: el nombre que pone un móvil (`IMG_20260903_181233.jpg`) no
+ * cabe al lado de un botón de 44 px sin partir la página. En cuanto hay sitio,
+ * el botón «Quitar» se va a la derecha. */
+.adjuntos { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.adjunto {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+@media (min-width: 420px) {
+  .adjunto { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+}
+.adjunto-datos { display: grid; gap: 2px; min-width: 0; }
+/* `overflow-wrap` y NO un recorte con `…`: dos fotos del mismo móvil se
+ * diferencian por el final del nombre, así que recortarlas las deja idénticas y
+ * el «no ha entrado esta» deja de decir cuál. */
+.adjunto-nombre { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.adjunto-meta { font-size: 12px; color: var(--muted); }
+.adjunto-estado.ok { color: var(--positive); font-weight: 600; }
+/* El fallo de UN fichero va en el color de error, pero es de ese fichero: el
+ * parte ya está enviado y no se cae por esto. El motivo se pinta debajo. */
+.adjunto-estado.error { color: var(--negative); font-weight: 600; }
+/* `.boton` viene a ancho completo (columna de móvil); con sitio, al ancho justo. */
+@media (min-width: 420px) { .adjunto .boton { width: auto; } }
+
+/* Los ya enviados: enlaces de descarga, con 44 px de alto pulsable aunque el
+ * texto sea de una línea. */
+.adjuntos-enviados { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.adjuntos-enviados li { min-width: 0; }
+.adjuntos-enviados a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px 0;
+  color: var(--primary);
+  overflow-wrap: anywhere;
+}
+
 .lista-titulo { font-size: 13px; font-weight: 600; margin: 18px 0 8px; }
+
+/* ── Marca de la pantalla de entrada ─────────────────────────────────────
+ * El asegurado llega aquí desde un correo con un código. Antes de pedirle nada
+ * tiene que ver de quién es el portal, y a ese tamaño el monograma se lee: la
+ * barra de arriba lo lleva a 15 px, aquí a 34. */
+.entrada-marca {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius);
+  background: var(--primary-light);
+  color: var(--brand);
+  margin-bottom: 14px;
+}
+
+/* ── Pie legal ────────────────────────────────────────────────────────────
+ * Sale en TODAS las pantallas, la de entrada incluida: el art. 19 de la Ley
+ * 16/2018 pide que el cliente identifique al mediador antes de darle un dato, y
+ * la única pantalla que ve quien aún no ha entrado es la que le pide el correo.
+ * Los enlaces van a 44 px de alto pulsable — se leen desde el móvil, que es
+ * desde donde entra casi todo el mundo. */
+.pie-legal {
+  max-width: 720px;
+  margin: 32px auto 0;
+  padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.pie-legal-identidad { margin: 0 0 4px; overflow-wrap: anywhere; }
+.pie-legal nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 18px;
+}
+.pie-legal nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--primary);
+  text-decoration: none;
+}
+.pie-legal nav a:hover { text-decoration: underline; }
+
+/* ── Páginas legales ──────────────────────────────────────────────────────
+ * Texto largo y sin sesión. Medida corta (más de ~75 caracteres por línea no se
+ * lee), y las tablas con su propio scroll para que no arrastren la página
+ * entera a lo ancho en un móvil de 320 px. */
+.legal {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 8px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.legal h1 { font-size: 24px; line-height: 1.25; margin: 4px 0 12px; }
+.legal h2 { font-size: 17px; margin: 28px 0 8px; }
+.legal h3 { font-size: 15px; margin: 18px 0 6px; }
+.legal p { margin: 0 0 12px; }
+.legal ul, .legal ol { margin: 0 0 12px; padding-left: 20px; }
+.legal li { margin-bottom: 6px; }
+.legal a { color: var(--primary); overflow-wrap: anywhere; }
+.legal code {
+  font-size: 13px;
+  background: var(--primary-light);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.legal-antetitulo {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0;
+}
+.legal-entradilla { font-size: 16px; color: var(--text); }
+.legal-nota { font-size: 14px; color: var(--muted); }
+.legal-version { font-size: 12px; color: var(--muted2); margin-top: 28px; }
+.legal-volver { max-width: 720px; margin: 0 auto; padding: 0 16px 8px; font-size: 14px; }
+.legal-volver a { color: var(--primary); }
+
+/* Aquello que, si el cliente no lo lee, le cuesta la cobertura: el parte no es
+ * la comunicación a la compañía. Se pinta como aviso, no como párrafo. */
+.legal-destacado {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: var(--text);
+}
+
+.legal-datos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0 0 12px; }
+.legal-datos dt { font-size: 13px; color: var(--muted); margin-top: 10px; }
+.legal-datos dd { margin: 0; }
+
+.legal-canales { list-style: decimal; }
+.legal-canales li { margin-bottom: 14px; }
+.legal-canales strong { display: block; }
+.legal-detalle { display: block; color: var(--muted); font-size: 14px; }
+
+/* El contenedor lleva `minmax(0, 1fr)` implícito por ser bloque, pero la tabla
+ * necesita SU propio scroll: sin él, una tabla de 3 columnas empuja el ancho de
+ * la página y el móvil scrollea en horizontal la pantalla entera. */
+.legal-tabla-scroll { overflow-x: auto; margin: 0 0 12px; }
+.legal-tabla { border-collapse: collapse; width: 100%; min-width: 380px; font-size: 14px; }
+.legal-tabla th, .legal-tabla td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.legal-tabla th { font-weight: 600; color: var(--muted); font-size: 13px; }
+
+/* El buscador del Catastro (bloque de inmueble). Una columna en móvil, como
+   todo el editor: a 320 px dos columnas dejan la etiqueta del piso ilegible. */
+.catastro { display: grid; gap: 10px; }
+.catastro-lista { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.catastro-lista li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.catastro-lista .boton { flex: 1 1 auto; min-width: 0; text-align: left; }

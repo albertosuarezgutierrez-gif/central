@@ -26,6 +26,14 @@ export type IntervinienteFicha = {
   email: string | null
   telefonoIlegible: boolean
   emailIlegible: boolean
+  /**
+   * La FILA de `poliza_intervinientes`, que es lo que se puede quitar.
+   * `null` en el TOMADOR, porque el tomador no es una fila: lo sintetiza
+   * `filasIntervinientes()` a partir del titular de la póliza. Que sea null
+   * es la razón por la que no se le puede ofrecer un «quitar» — no hay nada
+   * que borrar, y el botón prometería algo que no existe.
+   */
+  id: string | null
   /** Su propia ficha en la cartera, si CIMA la enlazó. Es un enlace, no un dato. */
   fichaId: string | null
   /**
@@ -173,6 +181,8 @@ export function filasIntervinientes(
 ): FilasIntervinientes {
   const yaEsta = (lista ?? []).some((i) => i.esTomador)
   const fila: IntervinienteFicha = {
+    // Sin `id`: esta fila no existe en la base, se sintetiza aquí.
+    id: null,
     polizaId: tomador.polizaId,
     rol: 'tomador',
     nombre: tomador.nombre,

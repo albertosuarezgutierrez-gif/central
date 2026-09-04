@@ -1,4 +1,3 @@
-import { randomInt } from 'node:crypto'
 
 /** Minutos que vive un código antes de caducar. */
 export const VALIDEZ_MINUTOS = 10
@@ -16,8 +15,36 @@ export type CodigoGuardado = {
 }
 
 /** 6 dígitos con aleatoriedad criptográfica: `Math.random` aquí sería un fallo de seguridad. */
+/**
+ * 🚨 Web Crypto (`crypto.getRandomValues`), NO `node:crypto`.
+ *
+ * Este fichero lo re-exporta el barril del paquete, y del barril tiran también
+ * los COMPONENTES DE CLIENTE del portal. Un `import ... from 'node:crypto'` aquí
+ * arrastra el esquema `node:` al bundle del navegador y **el build de producción
+ * revienta** con `UnhandledSchemeError`, mientras el typecheck y los tests pasan
+ * tan tranquilos: en Node el módulo existe. Pasó de verdad —tres despliegues de
+ * producción seguidos en ERROR el 03/09/2026, con el portal sin desplegar desde
+ * que entró el parte de siniestro— y lo tapa el cepo de
+ * `test/regression-portal-autorizacion.test.ts`.
+ *
+ * `crypto.getRandomValues` es global en Node 18+, en los navegadores y en edge,
+ * así que además vale en runtimes donde `node:crypto` no existe.
+ *
+ * **Muestreo con rechazo**, no `% 1_000_000` a secas: 2³² no es múltiplo de un
+ * millón, así que el resto favorecería a los ~295.000 primeros códigos. Se
+ * descarta el sobrante (probabilidad ~0,022 %) y se repite.
+ */
+const TOPE = 1_000_000
+const MAYOR_MULTIPLO = Math.floor(2 ** 32 / TOPE) * TOPE
+
 export function generarCodigo(): string {
-  return String(randomInt(0, 1_000_000)).padStart(6, '0')
+  const buf = new Uint32Array(1)
+  let n = 0
+  do {
+    crypto.getRandomValues(buf)
+    n = buf[0]
+  } while (n >= MAYOR_MULTIPLO)
+  return String(n % TOPE).padStart(6, '0')
 }
 
 /**

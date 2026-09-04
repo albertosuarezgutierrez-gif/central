@@ -6,6 +6,8 @@ export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, estadoCodigo } from './co
 export type { EstadoCodigo, CodigoGuardado } from './codigo.ts'
 export {
   RAMOS_POLIZA,
+  ETIQUETA_RAMO,
+  etiquetaRamo,
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
@@ -39,3 +41,47 @@ export type {
   ResultadoParte,
   PlazoComunicacion,
 } from './parte-siniestro.ts'
+export {
+  ALCANCES,
+  ALCANCES_CONCEDIBLES,
+  TITULOS_REPRESENTACION,
+  alcancesConcedibles,
+  tituloRepresentacion,
+  DIAS_VIGENCIA,
+  ESTADOS_AUTORIZACION,
+  alcanceConcedible,
+  autorizacionVigente,
+  caducidadPorDefecto,
+  camposDeAlcance,
+  camposDeAlcances,
+  esAlcance,
+  estadoAutorizacion,
+  etiquetaNivelAlcances,
+  puedeAutorizar,
+} from './autorizacion.ts'
+export type {
+  Alcance,
+  AutorizacionFechas,
+  EstadoAutorizacion,
+  TipoOtorgante,
+  TituloRepresentacion,
+} from './autorizacion.ts'
+export {
+  MAX_TEXTO_RAMO,
+  CAMPOS_POR_RAMO,
+  RAMOS_CON_CATALOGO,
+  camposDeRamo,
+  normalizarDatosRamo,
+} from './campos-ramo.ts'
+export type { TipoCampo, OpcionCampo, CampoRamo, DatosRamo, ResultadoDatosRamo } from './campos-ramo.ts'
+export {
+  ORIGENES_CAMPO,
+  MAX_DIRECCION,
+  MAX_VARIANTES,
+  esOrigenCampo,
+  normalizarOrigenes,
+  normalizarReferencia,
+  formatoReferencia,
+  variantesDireccion,
+} from './direccion-catastro.ts'
+export type { OrigenCampo, OrigenPorCampo, FormatoReferencia } from './direccion-catastro.ts'

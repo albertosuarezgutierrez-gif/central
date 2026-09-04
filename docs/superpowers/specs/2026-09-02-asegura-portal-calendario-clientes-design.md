@@ -1,4 +1,4 @@
-# Intranet de clientes de Grupo Asegura — calendario de vencimientos (v1) — diseño
+# Intranet de clientes de Grupo ASegura — calendario de vencimientos (v1) — diseño
 
 > **Ámbito:** primera entrega en producción de `apps/asegura-portal`, para los ~80 clientes vivos.
 > **No sustituye** a `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`,
@@ -141,7 +141,7 @@ que deshacer. El banco de ideas completo, con coste y bloqueo de cada una, está
   del DNI, cruzada con `@central/core-catastro` (`precalificarHogar()`, servicios libres, sin
   coste), da superficie, año y uso de la vivienda — **como hipótesis a confirmar con un toque**
   («¿es esta tu vivienda habitual? ¿eres propietario?»), nunca como base de un precio.
-- **Cambio de mediador.** Un tomador puede nombrar a Grupo Asegura mediador de una póliza que ya
+- **Cambio de mediador.** Un tomador puede nombrar a Grupo ASegura mediador de una póliza que ya
   tiene con otra compañía. Es la única vía que convierte un lead en cliente **sin tarificar, sin
   cambiar su seguro y sin gasto de Avant2**, y tiene un efecto de segundo orden que es el
   verdadero premio: [Probable] una vez eres el mediador, esa póliza **empieza a entrar por CIMA**,

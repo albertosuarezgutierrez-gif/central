@@ -3,6 +3,7 @@ import { contactoEfectivo, etiquetaRol, type ContactoEfectivo, type EstadoClient
 import { urlSubirPoliza, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink } from '@/components/ui'
+import BotonWhatsapp from '../../BotonWhatsapp'
 import { fmt } from './piezas'
 
 /**
@@ -251,8 +252,11 @@ function Contacto({ c, intervinientes, piiClave, contactos, polizas }: {
   return (
     <>
       {ef.telefono ? (
-        <span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
           <a href={`tel:${ef.telefono.replace(/\s/g, '')}`}>📞 {ef.telefono}</a>
+          {/* Solo aparece si el número es un móvil: con un fijo no se pinta nada
+              (ver `lib/telefono-wa.ts`). */}
+          <BotonWhatsapp telefono={ef.telefono} compacto />
           {deOtro(ef.viaTelefono)}
           {mas(masTel)}
         </span>

@@ -147,6 +147,35 @@ model PortalPolizaDeclarada {
   ramo                 String?
   primaAnual           Decimal?          @map("prima_anual") @db.Decimal(10, 2)
   fechaVencimiento     DateTime?         @map("fecha_vencimiento") @db.Date
+  /// Del BIEN asegurado, no del contrato: viven aquí mientras no haya ficha de
+  /// vehículo propia. `null` = «no se sabe» (nadie lo ha leído ni escrito), que
+  /// NO es «el vehículo no tiene bastidor». Se validan en `lib/poliza-editable.ts`
+  /// (VIN de 17 sin I/O/Q, matrícula compactada) antes de llegar aquí.
+  matricula            String?
+  bastidor             String?
+  fechaMatriculacion   DateTime?         @map("fecha_matriculacion") @db.Date
+  /// Identificador del BIEN inmueble, el equivalente de la matrícula para hogar,
+  /// comercio y comunidades. Es COLUMNA y no una clave de `datosRamo` porque se
+  /// consulta e indexa («¿tengo otra póliza de esta misma vivienda?»).
+  /// 🚨 SOLO la del INMUEBLE (20 caracteres). Una de 14 es la de la FINCA —el
+  /// edificio— y traería los metros del edificio a una póliza de hogar: se
+  /// rechaza en `lib/poliza-editable.ts` con un error propio, no se guarda.
+  referenciaCatastral  String?           @map("referencia_catastral")
+  /// Campos DESCRIPTIVOS propios del ramo (hogar: metros y año; moto: cilindrada…),
+  /// según el catálogo de `@central/module-seguros-portal` (`campos-ramo.ts`). Es
+  /// un `jsonb` y no columnas porque el conjunto DEPENDE del ramo y nadie filtra
+  /// por ellos. `null` = no se ha declarado nada; nunca `{}` ni un `null` dentro
+  /// del JSON, que son «no lo sé» disfrazados de dato: se escribe `Prisma.DbNull`,
+  /// jamás `Prisma.JsonNull`.
+  datosRamo            Json?             @map("datos_ramo")
+  /// De dónde salió CADA campo de `datosRamo`: sus mismas claves → `catastro` |
+  /// `documento` | `declarado` (vocabulario de `@central/module-seguros-portal`).
+  /// 76 m² del Catastro y 76 m² estimados a ojo no valen lo mismo, y la
+  /// `procedencia` de la PÓLIZA no los distingue. Se reescribe SIEMPRE junto a
+  /// `datosRamo`: un origen sin su dato es una afirmación sobre algo que no
+  /// existe. Mismas reglas de NULL que su hermano (`Prisma.DbNull`, nunca
+  /// `JsonNull` ni `{}`).
+  datosRamoOrigen      Json?             @map("datos_ramo_origen")
   procedencia          PortalProcedencia @default(declarado)
   confirmadaPorUsuario Boolean           @default(false) @map("confirmada_por_usuario")
   documentoNombre      String?           @map("documento_nombre")
@@ -232,6 +261,62 @@ model PortalParteSiniestro {
   @@schema("seguros")
 }
 
+/// Los ficheros que el CLIENTE adjunta a un parte de siniestro.
+///
+/// Es la tabla `seguros.documentos` de siempre —la misma que usa el panel del
+/// corredor— más la columna `portal_parte_id` (03/09/2026,
+/// `prisma/sql/2026-09-03_documentos_adjuntos_parte.sql`). No hay tabla propia
+/// del portal a propósito: dos bandejas de documentos serían dos sitios donde
+/// mirar y ninguno completo.
+///
+/// 🚨 El rol `prisma_asegura_portal` tiene aquí `SELECT, INSERT` y **nada más**.
+/// Sin UPDATE y sin DELETE: un adjunto de un parte es prueba de lo que se
+/// declaró, y quien lo mandó no lo retira solo. Declarar un `update`/`delete`
+/// en el código no lo concedería — fallaría en la BD, que es donde tiene que
+/// fallar.
+///
+/// ⚠️ Y aquí el GRANT es de TABLA, no por columnas — es la excepción dentro de
+/// este schema, donde la cartera (`clientes`, `polizas`, `poliza_recibos`…) se
+/// concede columna a columna. El SQL es `grant select, insert on
+/// seguros.documentos`, así que las 19 columnas están cubiertas. Lo que sí sigue
+/// mordiendo es lo otro: este modelo es un ESPEJO EXACTO de las 19 columnas
+/// reales de la tabla (verificado contra la BD el 03/09/2026). Prisma pide cada
+/// columna declarada por su nombre, así que una que no exista —o que un día se
+/// revoque— hace fallar la consulta ENTERA, no solo ese campo.
+model Documento {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId      String    @map("correduria_id") @db.Uuid
+  clienteId         String?   @map("cliente_id") @db.Uuid
+  polizaId          String?   @map("poliza_id") @db.Uuid
+  siniestroId       String?   @map("siniestro_id") @db.Uuid
+  /// El parte del portal del que cuelga. Sin relación de Prisma: el resto de
+  /// modelos de cartera de este schema tampoco las tienen, y una FK declarada
+  /// aquí obligaría a un `include` que el rol no siempre puede resolver.
+  portalParteId     String?   @map("portal_parte_id") @db.Uuid
+  /// `text` con CHECK en la BD, no enum: se valida con `tipoDocumento()` de
+  /// `@central/module-seguros`.
+  tipo              String    @default("otro")
+  estado            String    @default("recibido")
+  nombreFichero     String?   @map("nombre_fichero")
+  /// 🚨 SIEMPRE uno de `MIMES_DOCUMENTO`, nunca el que mandó el navegador: lo
+  /// normaliza `mimeDocumento()` antes de escribir. Es lo que impide que un
+  /// fichero se devuelva luego con un Content-Type que el navegador ejecute.
+  mimeType          String?   @map("mime_type")
+  sizeBytes         Int?      @map("size_bytes")
+  sha256            String?
+  contenido         Bytes?
+  notas             String?
+  subidoPor         String    @default("corredor") @map("subido_por")
+  visiblePorCliente Boolean   @default(false) @map("visible_por_cliente")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revisadoAt        DateTime? @map("revisado_at") @db.Timestamptz(6)
+  revisadoPor       String?   @map("revisado_por")
+
+  @@index([portalParteId])
+  @@map("documentos")
+  @@schema("seguros")
+}
+
 model PortalConsentimiento {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   identidadId  String   @map("identidad_id") @db.Uuid
@@ -264,6 +349,67 @@ model PortalVinculo {
 
   @@unique([identidadId, clienteId])
   @@map("portal_vinculo")
+  @@schema("seguros")
+}
+
+/// El consentimiento de José para que María vea sus seguros. Reglas en
+/// `@central/module-seguros-portal/autorizacion`; nada aquí decide nada.
+model PortalAutorizacion {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
+  autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
+  alcance                String
+  /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
+  /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta,
+  /// y eso solo es legítimo cuando el alcance es de lectura: un CHECK de la BD
+  /// (`portal_autorizacion_apoderamiento_con_titulo`) exige el título en cuanto
+  /// el alcance es `partes` o `documentos`. Una persona FÍSICA no delega esos
+  /// alcances, así que sus filas lo tienen siempre a `null`.
+  tituloRepresentacion   String?   @map("titulo_representacion")
+  /// `portal` = lo concedió el cliente en su pantalla. `corredor` = la correduría
+  /// anotó uno recibido por otro canal. No son lo mismo y no se pueden confundir.
+  origen                 String    @default("portal")
+  otorgadoEn             DateTime  @default(now()) @map("otorgado_en") @db.Timestamptz(6)
+  otorgadoPorIdentidadId String?   @map("otorgado_por_identidad_id") @db.Uuid
+  otorgadoPorActor       String?   @map("otorgado_por_actor")
+  aceptadoEn             DateTime? @map("aceptado_en") @db.Timestamptz(6)
+  aceptadoPorIdentidadId String?   @map("aceptado_por_identidad_id") @db.Uuid
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  revocadoEn             DateTime? @map("revocado_en") @db.Timestamptz(6)
+  /// `otorgante` | `autorizado` | `corredor` | `caducidad`. 🚨 `caducidad` NO es una
+  /// revocación: es el cierre de una que YA había caducado, para liberar el sitio del
+  /// índice único al renovarla. La fila se queda como historial.
+  revocadoPor            String?   @map("revocado_por")
+  revocadoPorIdentidadId String?   @map("revocado_por_identidad_id") @db.Uuid
+  revocadoPorActor       String?   @map("revocado_por_actor")
+  versionTexto           String    @map("version_texto")
+  ip                     String?   @db.Inet
+  userAgent              String?   @map("user_agent")
+
+  usos PortalAutorizacionUso[]
+
+  @@index([otorganteClienteId])
+  @@index([autorizadoClienteId])
+  @@map("portal_autorizacion")
+  @@schema("seguros")
+}
+
+/// Registro de accesos que ve el OTORGANTE: una fila por autorización, identidad
+/// y DÍA. Es lo que convierte la autorización en algo real y no un cheque en blanco.
+model PortalAutorizacionUso {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  autorizacionId String   @map("autorizacion_id") @db.Uuid
+  identidadId    String   @map("identidad_id") @db.Uuid
+  dia            DateTime @db.Date
+  visitas        Int      @default(1)
+  primeraEn      DateTime @default(now()) @map("primera_en") @db.Timestamptz(6)
+  ultimaEn       DateTime @default(now()) @map("ultima_en") @db.Timestamptz(6)
+
+  autorizacion PortalAutorizacion @relation(fields: [autorizacionId], references: [id], onDelete: Cascade)
+
+  @@unique([autorizacionId, identidadId, dia])
+  @@map("portal_autorizacion_uso")
   @@schema("seguros")
 }
 
@@ -586,7 +732,11 @@ model ClienteRelacion {
   clienteAId      String   @map("cliente_a_id") @db.Uuid
   clienteBId      String   @map("cliente_b_id") @db.Uuid
   tipoRelacion    String   @map("tipo_relacion") @db.VarChar(60)
-  puedeVerPolizas Boolean  @map("puede_ver_polizas")
+  // 🚫 `puede_ver_polizas` NO está aquí a propósito (03/09/2026): el consentimiento
+  // vive en `PortalAutorizacion` y el rol del portal ya no puede LEER esa columna.
+  // Si vuelve al modelo, un `findMany` sin `select` explícito revienta en la BD —
+  // que es donde tiene que reventar. Las relaciones se siguen leyendo: son las que
+  // le ofrecen a José a quién puede autorizar.
   createdAt       DateTime @map("created_at") @db.Timestamptz(6)
 
   @@map("cliente_relaciones")
