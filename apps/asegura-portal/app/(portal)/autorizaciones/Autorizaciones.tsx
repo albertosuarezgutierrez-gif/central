@@ -68,8 +68,38 @@ type AutorizacionVista = {
   estado: EstadoAutorizacion
   otorganteClienteId: string
   otorganteNombre: string | null
-  autorizadoClienteId: string
+  /**
+   * A quién se autorizó, cuando ES cliente de la correduría. `null` = no lo es,
+   * y entonces lo que hay relleno es `autorizadoIdentidadId`: exactamente uno de
+   * los dos, y lo obliga la BD.
+   */
+  autorizadoClienteId: string | null
+  /**
+   * Su identidad del portal, cuando NO es cliente. Se usa solo para SABER que
+   * hay alguien detrás sin ficha; **nunca se pinta** —es un uuid— ni se pinta su
+   * correo, que el portal ni siquiera guarda en claro.
+   */
+  autorizadoIdentidadId: string | null
+  /**
+   * `null` = no sabemos su nombre. Desde el 04/09/2026 eso pasa por DOS motivos
+   * distintos y solo uno se puede decir con palabras: si viene
+   * `autorizadoIdentidadId`, no hay ficha de la que sacarlo porque esa persona
+   * no es cliente — eso sí lo sabemos, y se dice («una persona invitada»).
+   */
   autorizadoNombre: string | null
+  /**
+   * La ÚNICA póliza que abre esta autorización. `null` = **todas las del
+   * otorgante, también las que contrate mañana**, y la pantalla lo tiene que
+   * decir con esas palabras: no es lo mismo prestar la del coche que la cartera
+   * entera para siempre.
+   */
+  polizaId: string | null
+  /**
+   * Cómo se llama esa póliza. `null` cuando `polizaId` es `null` (no hay una) o
+   * cuando ya no se puede leer — y entonces se dice «una póliza concreta», sin
+   * inventarse cuál ni pintar el uuid.
+   */
+  polizaEtiqueta: string | null
   /** `null` = no consta (lo normal en una autorización de persona: ahí no se representa a nadie). */
   tituloRepresentacion: string | null
   /** `null` = no se ha podido leer la ficha de quien cede: no se afirma qué ve el autorizado. */
@@ -102,7 +132,7 @@ type Candidato = {
   autorizadoNombre: string | null
   tipoRelacion: string
   /** Los que ya ocupan sitio para esta pareja (pendientes o vigentes). */
-  yaConcedidos: Alcance[]
+  yaConcedidos: { alcance: Alcance; polizaId: string | null }[]
   /** Qué es la ficha DESDE la que se concede. Lo dice el backend; aquí no se adivina por el nombre. */
   tipoOtorgante: TipoOtorgante
   /**
@@ -111,6 +141,31 @@ type Candidato = {
    * cómo acaban discrepando el formulario y lo que el backend acepta.
    */
   alcancesPosibles: Alcance[]
+  /**
+   * Las pólizas VIVAS de la ficha que cede, para poder compartir UNA sola. Los
+   * ids son los que el backend mandó y los mismos que vuelven en el POST: esta
+   * pantalla no compone ninguno.
+   *
+   * Vacía = esa ficha no tiene hoy ninguna póliza viva, y entonces **no se
+   * ofrece el desplegable**: un selector sin nada dentro se lee como «se ha
+   * roto», y lo único que cabe conceder ahí es «todas».
+   */
+  polizas: { id: string; etiqueta: string }[]
+}
+
+/**
+ * ¿Ese alcance sobre ESA póliza ya ocupa sitio para esta pareja? La póliza
+ * forma parte de la pregunta: la clave del índice único de la BD es
+ * (otorgante, autorizado, póliza, alcance), y una lista que ignorara la póliza
+ * mentiría en las dos direcciones — desactivaría compartir la del coche porque
+ * ya se compartió la de la casa, y daría por libre lo que no lo está.
+ *
+ * `''` en la pantalla es `null` en la BD: «toda la ficha». La traducción se
+ * hace aquí y en un solo sitio, que es como no se desincroniza.
+ */
+function yaOcupado(candidato: Candidato, alcance: Alcance, polizaId: string): boolean {
+  const cual = polizaId === '' ? null : polizaId
+  return candidato.yaConcedidos.some((y) => y.alcance === alcance && y.polizaId === cual)
 }
 
 type Respuesta = {
@@ -229,6 +284,8 @@ const ERROR_CONCEDER: Record<string, string> = {
   sin_relacion:
     'No nos consta la relación entre vosotros, así que no podemos darle acceso. Escríbenos y lo damos de alta.',
   ya_concedida: 'Ese acceso ya estaba concedido. Lo verás en la lista de arriba.',
+  poliza_no_es_tuya:
+    'Esa póliza ya no está en la ficha desde la que querías compartirla. Vuelve a cargar la pantalla y elige de la lista otra vez.',
 }
 
 /** Errores de `POST /api/autorizaciones/[id]`. */
@@ -329,6 +386,35 @@ function enumerarDias(usos: readonly Uso[], anioActual: number): string {
 function nombreDe(v: string | null, porDefecto: string): string {
   const n = (v ?? '').trim()
   return n === '' ? porDefecto : n
+}
+
+/**
+ * Cómo se llama en pantalla quien recibe el acceso.
+ *
+ * 🚨 Los dos huecos NO son el mismo hueco, y por eso no se dicen igual:
+ *
+ *   - Con `autorizadoIdentidadId` sabemos POR QUÉ no hay nombre: esa persona no
+ *     es cliente de la correduría, así que no hay ficha de la que sacarlo. Eso
+ *     se puede decir con palabras — «una persona invitada» — y es lo que le
+ *     permite a José reconocer a quién se lo dio.
+ *   - Sin ninguno de los dos es un «no lo sabemos» de verdad (la ficha ya no se
+ *     lee o está fusionada), y ahí solo cabe la fórmula vaga de siempre.
+ *
+ * Lo que NUNCA sale es su correo ni su uuid: el portal guarda el primero
+ * hasheado justo para no poder enseñárselo a nadie.
+ *
+ * Devuelve la forma de MEDIA frase («…el acceso de una persona invitada»); para
+ * abrir un encabezado se pasa por `enCabeza`.
+ */
+function nombreAutorizado(a: AutorizacionVista): string {
+  const n = (a.autorizadoNombre ?? '').trim()
+  if (n !== '') return n
+  return a.autorizadoIdentidadId !== null ? 'una persona invitada' : 'alguien de tu entorno'
+}
+
+/** Mayúscula inicial, para cuando la etiqueta abre un encabezado. Un nombre real no se toca. */
+function enCabeza(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 export function Autorizaciones() {
@@ -439,7 +525,7 @@ function TarjetaOtorgada({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const quien = nombreDe(a.autorizadoNombre, 'Alguien de tu entorno')
+  const quien = nombreAutorizado(a)
   // Si consta título, se dice: «ve X — como administrador/a de la sociedad». Un
   // apoderamiento sin decir con qué título se ejerce es justo lo que la BD no deja guardar.
   const titulo = comoTitulo(a.tituloRepresentacion)
@@ -472,11 +558,12 @@ function TarjetaOtorgada({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
 
   return (
     <li className="cartera-card">
-      <h3>{quien}</h3>
+      <h3>{enCabeza(quien)}</h3>
       <div className="linea">
         Ve {queVe(a.alcance, a.tipoOtorgante)}
         {titulo ? ` — ${titulo} de la sociedad` : ''}.
       </div>
+      <Ambito a={a} mias quien={quien} />
       <EstadoOtorgada a={a} quien={quien} />
       <Accesos a={a} quien={quien} />
 
@@ -527,6 +614,39 @@ function TarjetaOtorgada({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
         </div>
       )}
     </li>
+  )
+}
+
+/**
+ * 🚨 SOBRE QUÉ va esta autorización, que hasta el 04/09/2026 no se podía elegir
+ * y por eso no se decía.
+ *
+ * `polizaId === null` **no es «no lo sabemos»**: es TODAS las pólizas del
+ * otorgante, y además las que contrate más adelante, sin volver a autorizar
+ * nada. Resumirlo como «sus seguros» dejaría a José creyendo que prestó la del
+ * coche cuando ha prestado la cartera entera para siempre — que es exactamente
+ * la diferencia sobre la que decide si revoca. Por eso lleva `.ojo`: no es un
+ * detalle, es el alcance.
+ *
+ * Con `polizaId` y sin `polizaEtiqueta` legible (la póliza se fusionó, o ya no
+ * se puede leer) se dice «una póliza concreta» y se admite que no sabemos cuál.
+ * Nunca se pinta el uuid ni se adivina un nombre.
+ */
+function Ambito({ a, mias, quien }: { a: AutorizacionVista; mias: boolean; quien: string }) {
+  if (a.polizaId === null) {
+    return (
+      <div className="linea dicho ojo">
+        Alcanza a <strong>{mias ? 'todas tus pólizas' : `todas las pólizas de ${quien}`}</strong>, también a
+        las que {mias ? 'contrates' : 'contrate'} más adelante.
+      </div>
+    )
+  }
+  return (
+    <div className="linea dicho">
+      Alcanza <strong>solo a {a.polizaEtiqueta ?? 'una póliza concreta'}</strong>
+      {a.polizaEtiqueta === null ? ' (no hemos podido leer cuál es)' : ''}.{' '}
+      {mias ? 'El resto de tus seguros no los ve.' : 'El resto de sus seguros no los ves.'}
+    </div>
   )
 }
 
@@ -682,6 +802,7 @@ function TarjetaRecibida({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
     <li className="cartera-card">
       <h3>Los seguros de {quien}</h3>
       <LoQuePuedes a={a} />
+      <Ambito a={a} mias={false} quien={quien} />
 
       {a.estado === 'pendiente' && (
         <>
@@ -880,6 +1001,12 @@ function Conceder({
   // Un solo alcance, no un conjunto: `ver_economico` ya incluye lo de `ver`.
   // `''` = todavía no ha elegido, que NO es lo mismo que haber elegido el menor.
   const [alcance, setAlcance] = useState<Alcance | ''>('')
+  // Qué se comparte. `''` = TODAS las pólizas de la ficha, que es lo que
+  // significaba cualquier autorización antes del 04/09/2026 y por eso es el
+  // valor de salida. Aquí `''` sí es una respuesta (no un «sin contestar» como
+  // el alcance): lo que no puede pasar es que se conceda sin decirlo, y de eso
+  // se encarga el aviso de abajo, que está SIEMPRE a la vista.
+  const [polizaId, setPolizaId] = useState('')
   // Con qué título representa a la sociedad. `''` = sin contestar; no hay valor
   // por defecto, porque «administrador» es el título más fuerte de los tres y
   // preseleccionarlo sería que la pantalla firmara un poder por alguien.
@@ -909,6 +1036,23 @@ function Conceder({
     // acabaría anotando como apoderada a quien nadie dijo que lo fuera.
     setAlcance('')
     setTitulo('')
+    // Y la póliza más aún: las de una ficha no son las de otra, así que un id
+    // que se quedara puesto sería el de una póliza que no es del nuevo otorgante
+    // — lo rechazaría el backend, pero después de que la persona creyera haber
+    // compartido justo lo que quería.
+    setPolizaId('')
+    setError(null)
+  }
+
+  /**
+   * Cambiar de póliza puede dejar marcado un alcance que YA está concedido sobre
+   * ESA. Se suelta en vez de dejar marcada una opción que el formulario ya no
+   * admite: un radio `checked` y `disabled` a la vez es una elección que no se
+   * puede deshacer.
+   */
+  function elegirPoliza(v: string) {
+    setPolizaId(v)
+    if (alcance !== '' && candidato !== null && yaOcupado(candidato, alcance, v)) setAlcance('')
     setError(null)
   }
 
@@ -943,6 +1087,10 @@ function Conceder({
           otorganteClienteId: candidato.otorganteClienteId,
           autorizadoClienteId: candidato.autorizadoClienteId,
           alcance,
+          // Solo cuando se comparte UNA. Omitirlo es lo que significa «todas»,
+          // y se omite en vez de mandar `null` explícito para que el cuerpo
+          // diga lo mismo que la pantalla: no se ha elegido ninguna en concreto.
+          ...(polizaId !== '' ? { polizaId } : {}),
           // Solo cuando cede una sociedad. En una ficha de persona el backend lo
           // descarta igualmente: ahí no se representa a nadie.
           ...(esSociedad && titulo !== '' ? { tituloRepresentacion: titulo } : {}),
@@ -956,6 +1104,7 @@ function Conceder({
       setSeleccion('')
       setAlcance('')
       setTitulo('')
+      setPolizaId('')
       await onConcedida()
     } catch {
       // No se sabe si llegó a grabarse: se recarga para que la lista de arriba
@@ -1008,6 +1157,59 @@ function Conceder({
             </select>
           </div>
 
+          {/* 🚨 QUÉ se comparte, antes de CUÁNTO se ve de ello: primero se elige
+              el objeto y después el detalle, que es como se piensa la decisión.
+              El desplegable solo sale si hay algo que elegir — con la lista
+              vacía, un selector con una sola opción se lee como «se ha roto» y
+              encima insinuaría que hay pólizas que no salen. */}
+          {candidato !== null && candidato.polizas.length > 0 && (
+            <div className="editor-campo">
+              <label htmlFor={`${uid}-poliza`}>Qué le dejas ver</label>
+              <p className="editor-ayuda" id={`${uid}-poliza-ayuda`}>
+                Puedes darle acceso a toda tu cartera o solo a una póliza — por ejemplo, la del coche que
+                conduce.
+              </p>
+              <select
+                id={`${uid}-poliza`}
+                className="campo"
+                value={polizaId}
+                onChange={(e) => elegirPoliza(e.target.value)}
+                aria-describedby={`${uid}-poliza-ayuda`}
+                disabled={enviando}
+              >
+                <option value="">Todas mis pólizas</option>
+                {candidato.polizas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 🚨 Lo que «todas» significa de verdad, VISIBLE antes de conceder y
+              no escondido en la letra pequeña: incluye las que se contraten
+              después, sin volver a autorizar nada. Y cuando la ficha no tiene
+              hoy ninguna póliza viva, eso es lo ÚNICO que se está concediendo:
+              decir «todas» sin más ahí sonaría a nada y sería justo lo contrario. */}
+          {candidato !== null && polizaId === '' && (
+            <div className="aviso-linea">
+              {candidato.polizas.length > 0 ? (
+                <>
+                  Le vas a dar acceso a <strong>todas las pólizas de esta ficha</strong>, también a{' '}
+                  <strong>las que contrates más adelante</strong>: no hará falta autorizar nada otra vez
+                  para que las vea. Si solo quieres compartir una, elígela arriba.
+                </>
+              ) : (
+                <>
+                  Ahora mismo no tenemos ninguna póliza viva en esta ficha, así que hoy no vería ninguna —
+                  pero este acceso alcanza a <strong>las que contrates más adelante</strong> sin volver a
+                  autorizar nada.
+                </>
+              )}
+            </div>
+          )}
+
           {candidato !== null && (
             /* Radios y no casillas: son dos niveles de lo MISMO, no dos permisos
                que se sumen. Las dos a la vista para que se lea que la segunda
@@ -1018,7 +1220,13 @@ function Conceder({
               <legend>{esSociedad ? 'Qué puede hacer' : 'Qué puede ver'}</legend>
               <div className="opciones" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                 {opciones.map((x) => {
-                  const ya = candidato.yaConcedidos.includes(x)
+                  // 🚨 `yaConcedidos` trae la PÓLIZA de cada uno, y hay que
+                  // compararla: bloquear con la lista a secas le negaría a José
+                  // compartir la del coche porque ya compartió la de la casa.
+                  // `polizaId === ''` en la pantalla es `null` en la BD, que es
+                  // lo que significa «toda la ficha». La comparación es
+                  // exactamente la clave del índice único, ni más ni menos.
+                  const ya = yaOcupado(candidato, x, polizaId)
                   return (
                     <label key={x} className="opcion" style={{ alignItems: 'flex-start' }}>
                       <input
