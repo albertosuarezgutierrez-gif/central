@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧠 El control de calidad ya ve lo que Alberto responde a mano (04/09/2026).** «He respondido varias veces a
+  preguntas similares y no ha aprendido»: `debeEscalar` veía ficha + guía + HECHOS, pero NO `ctx.aprendizajes`, así que un
+  asunto resuelto a mano y nunca destilado a HECHO seguía cayendo en «la INFORMACIÓN no cubre la pregunta» — el veredicto
+  que enciende el «❓ Esto no lo encuentro en la guía». 🚨 Medidas las 30 filas reales de `mensajes_aprendizaje`: más de la
+  mitad son cortesías o respuestas CADUCAS de UNA reserva («confirmada del 20 al 22 de noviembre», «salir a las 12:00
+  porque no entra nadie»), y volcarlas como fuente las auto-enviaría a otro huésped. Entran como **PRECEDENTES** (bloque
+  aparte, «no acreditan datos») y filtradas por `precedentes.ts` (puro, 10 tests): descarta fecha/importe/hora/
+  disponibilidad/comprobación puntual/contacto. Guardián ampliado en `qa-hechos.test.ts`, probado en rojo.
+
 - **🔁 «Sigue habiendo duplicidad» (04/09/2026).** Alberto vio dos Manuel Antonio y dos Pilar Piña Franco en `/correduria`:
   son el VOLCADO (`intranet:cli:N` / `asegura_app:cli2:N`), fuera del lote CIMA a propósito. Medido: **561 grupos** mismo
   nombre+teléfono (584 fichas de más), 0 con póliza viva, 517 pares con el mismo N legado — y la lápida de casi todos
