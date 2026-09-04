@@ -10,7 +10,7 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
-import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro } from "@/lib/sivra/pricing-descongelar"
+import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
@@ -625,12 +625,27 @@ export async function POST(req: NextRequest) {
   // 2 reservas en 4 días a precio corto). Índice por mes = ADR histórico × ocupación relativa
   // (octubre destaca en NOCHES VENDIDAS más que en ADR — históricamente también se vendió
   // barato, por eso el ADR solo no basta). Se usa como SUELO del objetivo, nunca como techo.
+  // 🚨 Respeta `pricing_settings.historico_desde` igual que la consulta de antelación (:363). Un
+  // piso puede haber cambiado de PRODUCTO, y entonces su histórico anterior describe otra cosa.
+  // Faltaba aquí, y esta consulta alimenta DOS cosas: el prior estacional y el techo por ADR.
+  //
+  // Medido el 04/09/2026: House Sevillana tiene `historico_desde = 2024-01-01` precisamente porque
+  // antes eran DOS pisos. Con la ventana de 6 años su ADR sale **354€**; desde su fecha, **655€**.
+  // El techo por ADR (`ADR × 1,30`) le quedaba a la MITAD — septiembre 391€ en vez de 884€,
+  // diciembre 498 en vez de 1.113 — y en enero, julio y agosto caía por debajo de `min_price`,
+  // que es lo que dispara el `suelo_manda` documentado en el #2228. O sea: al único piso que está
+  // bien tarificado (vende a 1,14× el mercado) lo estaba empujando hacia abajo un techo derivado
+  // de cuando era otro producto.
+  //
+  // Los otros tres tienen `historico_desde` NULL, así que para ellos esto es un no-op (comprobado).
   const priorRows = await prisma.$queryRaw<{ pid: string; m: number; adr: number; nights: number }[]>(Prisma.sql`
-    SELECT "propertyId" AS pid, EXTRACT(MONTH FROM "checkIn")::int AS m,
-           (SUM(amount_gross) / NULLIF(SUM(nights), 0))::float8 AS adr,
-           SUM(nights)::float8 AS nights
-    FROM incomes
-    WHERE nights > 0 AND amount_gross > 0 AND "checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+    SELECT i."propertyId" AS pid, EXTRACT(MONTH FROM i."checkIn")::int AS m,
+           (SUM(i.amount_gross) / NULLIF(SUM(i.nights), 0))::float8 AS adr,
+           SUM(i.nights)::float8 AS nights
+    FROM incomes i
+    LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+    WHERE i.nights > 0 AND i.amount_gross > 0 AND i."checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+      AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
     GROUP BY 1, 2
   `).catch((e) => { lecturasCaidas.push({ nombre: 'prior_estacional', error: String(e).slice(0, 120) }); return [] })
   // El cálculo vive en `lib/sivra/prior-estacional.ts` (puro y testeado) porque la regla NO es
@@ -838,8 +853,11 @@ export async function POST(req: NextRequest) {
     // El "recomendado" se compone con los MISMOS dos factores que aplica cada fecha: si se
     // calculara aparte (como hacía el SQL) podría contradecir al precio que el motor escribe.
     const baseTargetGlobal = aBase(medGuestGlobal * demandFactor * qualityFactor)
-    const floorBaseGlobal = aBase(ancla.valores.flo)
-    const ceilBaseGlobal = aBase(ancla.valores.cei)
+    // 🚨 El suelo y el techo se guardan en GUEST y sin factores: se ajustan por `dqDate` DENTRO del
+    // bucle, igual que la base. Ver la nota del `clamp` más abajo — acotar un valor ya ajustado
+    // entre dos límites SIN ajustar es mezclar dos espacios, y el que perdía era el descuento.
+    const floorGuestGlobal = ancla.valores.flo
+    const ceilGuestGlobal = ancla.valores.cei
     const mesProp = mes.get(r.property_id)
     const fechaProp = fecha.get(r.property_id)
 
@@ -884,7 +902,7 @@ export async function POST(req: NextRequest) {
     // este rail muerde en fechas normales, la senal es que el ancla de mercado se ha vuelto a
     // ir de liga — no que el rail este haciendo bien su trabajo en silencio.
     const adrAcotadas: { fecha: string; techo: number; adr: number }[] = []
-    const adrSinTecho: { fecha: string; property_id: string }[] = []
+    const adrSinTecho: { fecha: string; property_id: string; motivo: string }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -918,8 +936,21 @@ export async function POST(req: NextRequest) {
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
       const baseD = useMonth ? aBase(mb!.med * dqDate) : baseGlobalD
-      const floorD = useMonth ? aBase(mb!.flo) : floorBaseGlobal
-      const ceilD = useMonth ? aBase(mb!.cei) : ceilBaseGlobal
+      // 🚨 El suelo y el techo llevan `dqDate` igual que la base (04/09/2026). Antes NO lo llevaban,
+      // y el `clamp` de la línea siguiente acotaba un valor ajustado por demanda y calidad entre dos
+      // límites SIN ajustar: en cuanto el descuento empujaba la base por debajo del `floor_pctl`, el
+      // clamp la devolvía al p25 crudo y **el descuento de calidad se anulaba a sí mismo**.
+      //
+      // Medido ese día contra producción: con `quality_factor` real de 0,848 en Busto Reform y un
+      // suelo que está al 0,874 del objetivo, el suelo mordía en **9 de sus 12 meses** y dejaba el
+      // precio un **+5,8%** por encima de lo que el motor pretendía — justo en el piso que vende en
+      // el P10 del mercado. Dúplex 3 meses (+2,9%), Luxury 1 (+1,7%), House ninguno (su factor es
+      // 0,976 y no llega a tocar el suelo).
+      //
+      // Se ajustan LOS DOS, no solo el suelo: el clamp es un intervalo y bajar una sola punta lo
+      // sesga. Con `dqDate > 1` (demanda alta) el techo tiene que subir por la misma razón.
+      const floorD = useMonth ? aBase(mb!.flo * dqDate) : aBase(floorGuestGlobal * dqDate)
+      const ceilD = useMonth ? aBase(mb!.cei * dqDate) : aBase(ceilGuestGlobal * dqDate)
       const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
       let target = clamp(baseD, floorD, ceilD)
       let eventTarget = 0
@@ -961,7 +992,8 @@ export async function POST(req: NextRequest) {
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
           const baseEv = baseSaltoEvento({
             baseMes: useMonth ? clamp(baseD, floorD, ceilD) : null,
-            baseGlobal: clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal),
+            // Mismos límites ajustados que arriba: `baseGlobalD` ya lleva `dqDate`.
+            baseGlobal: clamp(baseGlobalD, aBase(floorGuestGlobal * dqDate), aBase(ceilGuestGlobal * dqDate)),
           })
           if (baseEv.origen === "global") saltosEventoSinMes++
           const globalEvent = Math.round(baseEv.base * ev)
@@ -1157,7 +1189,16 @@ export async function POST(req: NextRequest) {
         // min_price todo el mes: en House serian 7 de 12 meses clavados a 300€, con un ADR de
         // agosto contaminado por 4 noches a 50€). Pero se CUENTA: son 14 de 48 piso-mes sin techo
         // por ADR, y hasta hoy nadie lo sabia. Un «no puedo» que no se cuenta se lee como un «ok».
-        if (tAdr.motivo === 'suelo_manda') adrSinTecho.push({ fecha: date, property_id: r.property_id })
+        // Los DOS motivos por los que un piso-mes se queda sin techo por ADR se cuentan, y por
+        // separado: `suelo_manda` (históricamente no cubre ni min_price) y `sin_muestra` (menos de
+        // MIN_NOCHES_ADR noches con las que juzgar). Antes solo se contaba el primero, así que el
+        // segundo era un hueco mudo — y desde el 04/09 hay 3 meses de House ahí, porque al respetar
+        // `historico_desde` su ventana se acorta y esos meses se quedan por debajo del mínimo. Un
+        // «no puedo» que no se cuenta se lee como un «ok»; que ahora sean dos motivos distintos no
+        // es una excusa para volver a colapsarlos.
+        if (tAdr.motivo === 'suelo_manda' || tAdr.motivo === 'sin_muestra') {
+          adrSinTecho.push({ fecha: date, property_id: r.property_id, motivo: tAdr.motivo })
+        }
         if (tAdr.motivo === 'aplicado' && tAdr.techo != null) {
           const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: r.min_price })
           if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBase(aq!.adr)) })
@@ -1180,6 +1221,13 @@ export async function POST(req: NextRequest) {
             saltoNuestro: esSaltoNuestro(
               hayHistorialEscrituras ? ultimaEscritura.get(`${r.property_id}|${date}`) ?? null : null,
               { old, normalBase, umbral: OUTLIER_RATIO, horasMax: HORAS_SALTO_NUESTRO },
+            ),
+            // Cuarta llave: el motor ya iba bajando esta fecha y el raíl no le dejó llegar. Ver la
+            // cabecera de `pricing-descongelar.ts` — 448 noches se quedaron a medio descenso tras la
+            // recalibración del 03/09 porque la guarda de outlier las paró en la primera pasada.
+            descensoEnCurso: esDescensoNuestro(
+              hayHistorialEscrituras ? ultimaEscritura.get(`${r.property_id}|${date}`) ?? null : null,
+              { old },
             ),
           })
       const liberaGuardas = liberaTecho || desc.libera
@@ -1316,7 +1364,13 @@ export async function POST(req: NextRequest) {
       // único resto del serrucho: el ancla global se mueve con lo que el barrido muestree hoy y el
       // salto de evento no pasa por el raíl. Un 0 aquí es una AFIRMACIÓN, no un silencio.
       saltos_evento_sin_mes: saltosEventoSinMes,
-      bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
+      // Los límites del parte se componen con los factores GLOBALES del piso (los mismos que
+      // `baseTargetGlobal`): por fecha llevan el `dqDate` de esa fecha, que aquí no existe.
+      bounds: {
+        floor_base: aBase(floorGuestGlobal * demandFactor * qualityFactor),
+        ceil_base: aBase(ceilGuestGlobal * demandFactor * qualityFactor),
+        min: r.min_price, max: r.max_price,
+      },
       // Antelación MEDIDA del piso POR MES (mes → días de mediana). Sin ella la palanca de urgencia
       // queda inerte, así que conviene verla para distinguir «no hacía falta bajar» de «no lo sé».
       // Va por mes y no en un solo número porque ahí estaba el fallo que se corrigió el 01/08/2026:
@@ -1358,8 +1412,15 @@ export async function POST(req: NextRequest) {
         : undefined,
       // Fechas SIN techo por ADR porque el historico del piso-mes no llega ni al suelo de coste.
       // No es un recorte que se hizo: es uno que NO se pudo hacer, y por eso va aparte.
+      // Los dos motivos van SEPARADOS: «no cubre ni el suelo» y «no hay noches con las que juzgar»
+      // mandan a sitios distintos (revisar costes vs esperar muestra), y sumarlos los esconde.
       techo_adr_sin_muestra: adrSinTecho.length > 0
-        ? { fechas: adrSinTecho.length, sample: adrSinTecho.slice(0, 5) }
+        ? {
+            fechas: adrSinTecho.length,
+            suelo_manda: adrSinTecho.filter(a => a.motivo === 'suelo_manda').length,
+            sin_muestra: adrSinTecho.filter(a => a.motivo === 'sin_muestra').length,
+            sample: adrSinTecho.slice(0, 5),
+          }
         : undefined,
       // Donde el filtro de liga se DESCARTO por encarecer (guarda de monotonia, 03/09/2026). Un
       // numero alto aqui no es una averia: dice que en esos meses la nota no separa ligas, y es

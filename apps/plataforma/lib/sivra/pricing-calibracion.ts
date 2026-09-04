@@ -294,8 +294,16 @@ export function decidirRecorrido(i: {
   return {
     alerta: true, evaluado: true, faltanPct: faltan,
     motivo:
-      `haría falta bajar al ${pct(i.fraccionNecesaria)} del ancla y el motor, con TODAS sus palancas ` +
-      `vivas a tope a la vez, solo llega al ${pct(i.recorridoMin)}: le faltan ` +
+      // 🚨 «MULTIPLICATIVAS», no «TODAS» (04/09/2026). Este modelo multiplica clamp de calidad,
+      // prior y last-minute; NO modela los dos TECHOS (mercado y ADR), que son topes absolutos y
+      // pueden dejar el objetivo por debajo de lo que dan los multiplicadores. Como el precio final
+      // es el MÍNIMO de ambas cosas, este número es una COTA SUPERIOR del recorrido: si dice que no
+      // llega, puede que un techo sí lo baje. Comprobado ese día en Luxury —techo por ADR en 0,83
+      // del ancla contra 0,656 de los multiplicadores— el veredicto no cambiaba, pero la palabra
+      // «TODAS» era falsa y hacía sonar el aviso más definitivo de lo que es.
+      `haría falta bajar al ${pct(i.fraccionNecesaria)} del ancla y el motor, con sus palancas ` +
+      `MULTIPLICATIVAS vivas a tope a la vez, solo llega al ${pct(i.recorridoMin)} (este cálculo no ` +
+      `incluye los techos de mercado y ADR, que pueden bajar más): le faltan ` +
       `${Math.round(faltan * 100)} puntos` +
       (muertas.length ? `. Palancas que no actúan: ${muertas.join(', ')}.` : '.'),
   }

@@ -61,4 +61,69 @@ Sin código nuevo bajo los paths de docs con sello `verificado:` antiguo; nada q
 rango.
 
 ---
-<!-- verificado: 2026-09-01 -->
+
+## ✅ Pasada ligera — 04/09/2026
+
+**Rango:** ~50 commits desde la última auditoría (01/09) hasta hoy (`212c210`), tres días muy
+intensos en `apps/asegura`/`apps/asegura-portal`/`correduria` (rediseño de 5 secciones, ficha con
+pestañas, siniestros, portal del cliente, campos por ramo, fusión de fichas duplicadas) y en
+pricing SIVRA (guarda del descenso interrumpido, filtro de liga). PRs #2016 (patrimonio-cfo) y
+#1997 (trading-analista) siguen en draft de días anteriores, sin acción de este pase (no llevan
+código de esta rutina).
+
+### 🟡 Hallazgo: `sivra_domotica_acceso` degradándose (carril 2, sin PR — es un estado, no un bug)
+⛔ 67,4 h sin una pasada OK (umbral 30 h; última buena el 01/09 12:40). El detalle de hoy dice
+«2 cerradura(s) · 0 PIN creado(s)/borrado(s) · 1 con la ventana desactualizada · **3 con ERROR**» —
+subió de **1** cerradura en error (visto de pasada el 02/09, `CONTEXTO-SESIONES.md` línea ~1209) a
+**3** hoy. Es un estado conocido y documentado como "no se repara solo a propósito" (Tuya
+borra+recrea el PIN), con fallback seguro para el huésped (no se queda en la puerta), pero el
+conteo va a peor y nadie lo ha vuelto a mirar desde el 02/09. `agente_reparaciones`: sin intentos
+en los últimos 7 días (el reparador automático no lo está tocando — no hay excepción con forma de
+SQLSTATE, es un estado de la API de Tuya). **Acción sugerida a Alberto:** abrir `/sivra/domotica` y
+revisar las 3 cerraduras en ERROR.
+
+### Heartbeat de crons/agentes (2-bis) — resto ✅
+29 filas en `agente_latidos`. `ses_transporte` sigue `ok=false` (ya conocido desde 21/08, pendiente
+de Alberto en el portal SES). `sivra_eventos_verificar`/`sivra_eventos` en rojo por fallos
+puntuales de búsqueda web (OpenRouter timeout/vacío), dentro de umbral, sin patrón de caída
+sostenida. `agente_reparaciones`: sin intentos en 7 días (nada que el automático esté gestionando).
+
+### 🛡️ Salud de la correduría (2-quater, obligatorio) — sin 🔴
+Latidos `correduria_renovaciones`/`correduria_ingesta` ✅. La ingesta reporta «DEGRADADA» pero su
+propio detalle lo etiqueta como backlog **ya conocido** (3 ficheros sin procesar en 7 días,
+sobre todo C0468/M00171; 20 pólizas huérfanas, 3 resolubles reprocesando, 17 esperando carga
+inicial de esa clave de mediador; «39 más arrastrados de antes»; recibos SIN sin guardar 63 días
+para la clave en cuarentena) — nada nuevo que escalar. `cima_pull_*`: último evento **03/09
+15:06** (`queueDepth=130`, `processed=0`); sin evento visible aún para la pasada de las 05:30 UTC
+de hoy en el momento de la consulta (~08:15 UTC), pero dentro del umbral de 30 h — se revisa en la
+próxima pasada, no es `parada` todavía. Codeoscopic: 0 cotizaciones en 7 días (dato real, count
+directo, no NULL colapsado). Aislamiento: cepos vigentes (no verificados línea a línea esta pasada
+ligera). §21 sigue pausada a propósito.
+
+### 💰 Salud del precio SIVRA (2bis, obligatorio) — sin 🔴
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · `oscilantes=5` (bajo) ·
+última pasada hace 0,5 h con 58 noches escritas. Palancas: los 4 pisos `enabled`/`apply_enabled`
+en `true`, `min_price` puesto, `antelacion_k=0` — sin palancas apagadas en silencio.
+
+### Backlog de PRs de rutinas + salud del automerge (2-ter) — sano
+`rutinas-automerge.yml` con decenas de runs en la última hora (vigilante vivo). 7 PRs abiertos,
+ninguno cumple el criterio de 🔴 (registro >24h sin mergear o draft >7 días): `#2245`/`#2244`/`#2243`
+son de hoy; `#2200` (docs, no-draft) ronda las 23h, a vigilar en la próxima pasada si sigue sin
+mergear; `#2188` (auditoría 03/09, draft), `#2016` (patrimonio-cfo, draft) y `#1997`
+(trading-analista, draft) llevan 1-3 días sin actividad, por debajo del umbral de 7 días.
+
+### Reconciliación memoria/skills — sin huecos detectados
+`docs/SKILLS.md` y `docs/FUENTES-DE-VERDAD.md` ya reflejan `correduria-crm`, `asegura-portal` y el
+estado "lee de `seguros.*` de central" — las propias sesiones del rango se autodocumentaron en cada
+PR (memoria + `CLAUDE.md` de la app en el mismo commit, patrón visible en #2242/#2237/#2235).
+⚠️ **No se pudo listar sesiones** (herramienta de sesiones remotas no adjunta en este entorno): no
+se cruzaron conversaciones sin commit contra memoria/PR — no se afirma que no haya pendientes
+perdidos, solo que no se ha podido mirar.
+
+### Manuales / HUECOS-ABIERTOS / rotación — sin cambios
+Ningún commit del rango toca `apps/ia-rest/**` (manuales no aplica). `docs/HUECOS-ABIERTOS.md` no
+revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotación mensual pendiente
+(septiembre sigue abierto).
+
+---
+<!-- verificado: 2026-09-04 -->
