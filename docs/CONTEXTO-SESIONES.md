@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp (04/09/2026, PR #2281).**
+  Petición de Alberto sobre la captura del buscador. Nuevo `AccionesContacto` + `lib/acciones-contacto.ts`
+  en retención, cabecera de ficha y lista de personas. 🚨 **Choque con #2259**, que en paralelo trajo
+  `BotonWhatsapp`/`telefono-wa.ts`: había DOS criterios de «admite WhatsApp» a punto de convivir (el icono
+  saldría en una pantalla y no en otra para el mismo número); el helper nuevo **delega** en `urlWhatsapp()`
+  y solo aporta el estado `ilegible`. **NO se aplica al buscador ni a Renovaciones/SinCanal**: sus payloads
+  del puerto no traen teléfono ni email — ampliarlo es decisión de PII y coste, pendiente de Alberto.
+  🔥 **Y un fallo caro medido aquí:** marcar con `[preview]` un commit de MERGE de `main` construyó los
+  **11 proyectos Vercel** (el marcador es global y el diff de un merge toca los manifiestos raíz).
+  Documentado en `CLAUDE.md`.
 - **🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez (04/09/2026).** El
   360009410197 salía de la URL de un artículo del Zendesk de **HomeExchange** (correo de Irene et
   Rico, un intercambio de casa, ni siquiera una reserva); el colador `\b(\d{9,})\b` miraba dentro de
