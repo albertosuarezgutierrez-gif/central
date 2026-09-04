@@ -246,7 +246,16 @@ export type Candidato = {
   autorizadoNombre: string | null
   tipoRelacion: string
   /** Alcances que ya ocupan sitio para esta pareja (pendientes o vigentes). */
-  yaConcedidos: Alcance[]
+  /**
+   * Los que ya ocupan sitio para esta pareja, **con la póliza a la que se
+   * concedieron** (`polizaId: null` = toda la ficha). La póliza va aquí porque
+   * sin ella la lista miente en las dos direcciones: haber compartido «ver» de
+   * toda la cartera desactivaría «ver» sobre una póliza suelta (que sí se puede
+   * conceder), y al revés. La clave del índice único de la BD es
+   * (otorgante, autorizado, COALESCE(póliza), alcance), y esta lista tiene que
+   * hablar de lo mismo que ella.
+   */
+  yaConcedidos: { alcance: Alcance; polizaId: string | null }[]
   /**
    * Qué es la ficha DESDE la que se concede. Va aquí para que la pantalla no lo
    * adivine por el nombre («…S.L.» no es un dato) ni lo pregunte: de una persona
@@ -575,7 +584,7 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
           v.autorizadoClienteId === p.autorizado &&
           ocupaElSitio(v.estado),
       )
-      .map((v) => v.alcance),
+      .map((v) => ({ alcance: v.alcance, polizaId: v.polizaId })),
   }))
 
   return {
