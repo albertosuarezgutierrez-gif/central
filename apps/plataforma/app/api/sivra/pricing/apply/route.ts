@@ -625,12 +625,27 @@ export async function POST(req: NextRequest) {
   // 2 reservas en 4 días a precio corto). Índice por mes = ADR histórico × ocupación relativa
   // (octubre destaca en NOCHES VENDIDAS más que en ADR — históricamente también se vendió
   // barato, por eso el ADR solo no basta). Se usa como SUELO del objetivo, nunca como techo.
+  // 🚨 Respeta `pricing_settings.historico_desde` igual que la consulta de antelación (:363). Un
+  // piso puede haber cambiado de PRODUCTO, y entonces su histórico anterior describe otra cosa.
+  // Faltaba aquí, y esta consulta alimenta DOS cosas: el prior estacional y el techo por ADR.
+  //
+  // Medido el 04/09/2026: House Sevillana tiene `historico_desde = 2024-01-01` precisamente porque
+  // antes eran DOS pisos. Con la ventana de 6 años su ADR sale **354€**; desde su fecha, **655€**.
+  // El techo por ADR (`ADR × 1,30`) le quedaba a la MITAD — septiembre 391€ en vez de 884€,
+  // diciembre 498 en vez de 1.113 — y en enero, julio y agosto caía por debajo de `min_price`,
+  // que es lo que dispara el `suelo_manda` documentado en el #2228. O sea: al único piso que está
+  // bien tarificado (vende a 1,14× el mercado) lo estaba empujando hacia abajo un techo derivado
+  // de cuando era otro producto.
+  //
+  // Los otros tres tienen `historico_desde` NULL, así que para ellos esto es un no-op (comprobado).
   const priorRows = await prisma.$queryRaw<{ pid: string; m: number; adr: number; nights: number }[]>(Prisma.sql`
-    SELECT "propertyId" AS pid, EXTRACT(MONTH FROM "checkIn")::int AS m,
-           (SUM(amount_gross) / NULLIF(SUM(nights), 0))::float8 AS adr,
-           SUM(nights)::float8 AS nights
-    FROM incomes
-    WHERE nights > 0 AND amount_gross > 0 AND "checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+    SELECT i."propertyId" AS pid, EXTRACT(MONTH FROM i."checkIn")::int AS m,
+           (SUM(i.amount_gross) / NULLIF(SUM(i.nights), 0))::float8 AS adr,
+           SUM(i.nights)::float8 AS nights
+    FROM incomes i
+    LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+    WHERE i.nights > 0 AND i.amount_gross > 0 AND i."checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+      AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
     GROUP BY 1, 2
   `).catch((e) => { lecturasCaidas.push({ nombre: 'prior_estacional', error: String(e).slice(0, 120) }); return [] })
   // El cálculo vive en `lib/sivra/prior-estacional.ts` (puro y testeado) porque la regla NO es
@@ -887,7 +902,7 @@ export async function POST(req: NextRequest) {
     // este rail muerde en fechas normales, la senal es que el ancla de mercado se ha vuelto a
     // ir de liga — no que el rail este haciendo bien su trabajo en silencio.
     const adrAcotadas: { fecha: string; techo: number; adr: number }[] = []
-    const adrSinTecho: { fecha: string; property_id: string }[] = []
+    const adrSinTecho: { fecha: string; property_id: string; motivo: string }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -1174,7 +1189,16 @@ export async function POST(req: NextRequest) {
         // min_price todo el mes: en House serian 7 de 12 meses clavados a 300€, con un ADR de
         // agosto contaminado por 4 noches a 50€). Pero se CUENTA: son 14 de 48 piso-mes sin techo
         // por ADR, y hasta hoy nadie lo sabia. Un «no puedo» que no se cuenta se lee como un «ok».
-        if (tAdr.motivo === 'suelo_manda') adrSinTecho.push({ fecha: date, property_id: r.property_id })
+        // Los DOS motivos por los que un piso-mes se queda sin techo por ADR se cuentan, y por
+        // separado: `suelo_manda` (históricamente no cubre ni min_price) y `sin_muestra` (menos de
+        // MIN_NOCHES_ADR noches con las que juzgar). Antes solo se contaba el primero, así que el
+        // segundo era un hueco mudo — y desde el 04/09 hay 3 meses de House ahí, porque al respetar
+        // `historico_desde` su ventana se acorta y esos meses se quedan por debajo del mínimo. Un
+        // «no puedo» que no se cuenta se lee como un «ok»; que ahora sean dos motivos distintos no
+        // es una excusa para volver a colapsarlos.
+        if (tAdr.motivo === 'suelo_manda' || tAdr.motivo === 'sin_muestra') {
+          adrSinTecho.push({ fecha: date, property_id: r.property_id, motivo: tAdr.motivo })
+        }
         if (tAdr.motivo === 'aplicado' && tAdr.techo != null) {
           const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: r.min_price })
           if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBase(aq!.adr)) })
@@ -1388,8 +1412,15 @@ export async function POST(req: NextRequest) {
         : undefined,
       // Fechas SIN techo por ADR porque el historico del piso-mes no llega ni al suelo de coste.
       // No es un recorte que se hizo: es uno que NO se pudo hacer, y por eso va aparte.
+      // Los dos motivos van SEPARADOS: «no cubre ni el suelo» y «no hay noches con las que juzgar»
+      // mandan a sitios distintos (revisar costes vs esperar muestra), y sumarlos los esconde.
       techo_adr_sin_muestra: adrSinTecho.length > 0
-        ? { fechas: adrSinTecho.length, sample: adrSinTecho.slice(0, 5) }
+        ? {
+            fechas: adrSinTecho.length,
+            suelo_manda: adrSinTecho.filter(a => a.motivo === 'suelo_manda').length,
+            sin_muestra: adrSinTecho.filter(a => a.motivo === 'sin_muestra').length,
+            sample: adrSinTecho.slice(0, 5),
+          }
         : undefined,
       // Donde el filtro de liga se DESCARTO por encarecer (guarda de monotonia, 03/09/2026). Un
       // numero alto aqui no es una averia: dice que en esos meses la nota no separa ligas, y es
