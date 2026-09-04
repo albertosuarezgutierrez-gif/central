@@ -687,3 +687,16 @@ html[data-saldo-oculto='1'] .saldo-privado {
   --primary-light: rgba(73, 124, 253, .16);
   --primary-hover: #9fbcff;
 }
+
+/* === Solo para lectores de pantalla ===
+   Un rótulo que la vista no necesita pero la accesibilidad sí. Nació al quitar
+   la cabecera visible de /correduria (04/09/2026): el escudo y el título
+   «Correduría» comían ~62px de la primera pantalla del móvil para decir dónde
+   estás en la página que abres a propósito, pero una página sin `<h1>` deja a
+   un lector de pantalla sin encabezado por el que navegar.
+   No se usa `display:none` ni `visibility:hidden` a propósito: eso lo esconde
+   TAMBIÉN del lector, que es justo lo contrario de lo que se busca. */
+.solo-lectores {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
