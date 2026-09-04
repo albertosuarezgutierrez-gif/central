@@ -27,7 +27,7 @@ import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from 
 import { getSmoobuKey } from "@/lib/smoobu"
 import { tgAviso } from '@/lib/telegram'
 import { eur } from "@/lib/dinero"
-import { anclaRail, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
+import { anclaRail, anclaRailCon, type OrigenAncla, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
 import { resumenLecturasCaidas, avisoLecturasCaidas, type LecturaCaida } from "@/lib/sivra/pricing-lecturas"
 import { PASADAS_POR_DIA_APPLY } from "@/lib/sivra/pricing-latido-apply"
 
@@ -882,6 +882,12 @@ export async function POST(req: NextRequest) {
       // agregado y no puede atribuir la mejora a la rama que se tocó (ver la migración
       // 2026-08-28_pricing_applied_ancla.sql).
       base_fuente: 'mes' | 'global'
+      // Los cuatro números que hacen auditable una decisión (migración
+      // 2026-09-04_pricing_applied_clamp.sql). Sin ellos, dos pasadas del mismo día con inputs
+      // IDÉNTICOS y resultado opuesto no se pueden distinguir — pasó el 04/09/2026 con House.
+      target_crudo: number; clamp_floor: number; clamp_ceil: number
+      // NULL cuando la fecha no tenía precio previo (`old == null`): ahí no hay raíl que anclar.
+      rail_ancla: number | null; rail_ancla_origen: OrigenAncla | null
     }[] = []
     // Fechas que la guarda «evento a ciegas» dejó sin bajar en esta pasada (van a la respuesta y
     // al aviso agrupado del final — una congelación muda sería un precio que nadie explica).
@@ -1100,16 +1106,23 @@ export async function POST(req: NextRequest) {
       // Suelo del raíl del día: lo captura también el techo de mercado de más abajo, para que un
       // precio inflado DESCIENDA a velocidad de raíl (varias pasadas), nunca de golpe.
       let railLo: number | null = null
+      // Se declaran fuera del `if` para que viajen a `pricing_applied`: dentro quedarían en el
+      // ámbito del raíl y la fila persistida volvería a no decir desde dónde se midió el tope.
+      let railAncla: number | null = null
+      let railAnclaOrigen: OrigenAncla | null = null
       if (old != null) {
         // Ancla del raíl = precio de AYER (ref24), no el de la pasada anterior de HOY: así el
         // tope ±max_change_pct es por DÍA aunque el cron corra 3 veces al día. Sin histórico
         // (fecha nueva/nunca escrita) cae al precio con el que la fecha EMPEZÓ el día, que
         // mantiene el tope diario igual; y solo en la 1ª pasada, al precio vivo.
-        const ancla = anclaRail({
+        const anclaCon = anclaRailCon({
           ref24: ref24.get(`${r.property_id}|${date}`),
           primeroHoy: anclaHoy.get(`${r.property_id}|${date}`),
           actual: old,
         })
+        const ancla = anclaCon.valor
+        railAncla = ancla
+        railAnclaOrigen = anclaCon.origen
         const lo = Math.round(ancla * (1 - Number(r.max_change_pct)))
         const hi = Math.round(ancla * (1 + Number(r.max_change_pct)))
         railLo = lo
@@ -1302,6 +1315,11 @@ export async function POST(req: NextRequest) {
         // MISMO `useMonth` que eligió `baseD` doce lineas mas arriba: no se re-deriva aqui para que
         // no puedan divergir. 'global' es la rama que oscilaba antes del PR #1811.
         base_fuente: useMonth ? 'mes' : 'global',
+        // `target_crudo` es baseD, el objetivo ANTES de acotarlo — no el `target` final, que ya
+        // pasó por clamp, evento, raíl, min_price y suelo estacional. Guardar el final sería
+        // guardar dos veces `new_price`.
+        target_crudo: Math.round(normalBase), clamp_floor: Math.round(floorD), clamp_ceil: Math.round(ceilD),
+        rail_ancla: railAncla, rail_ancla_origen: railAnclaOrigen,
       })
     }
 
@@ -1336,9 +1354,9 @@ export async function POST(req: NextRequest) {
     if (audit.length > 0 && anotable) {
       try {
         const auditRows = audit.map(a =>
-          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada}, ${a.antelacion_factor}::numeric, ${anclaOrigen}, ${a.base_fuente})`)
+          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun}, ${a.demanda_fuente}, ${a.demanda_gateada}, ${a.antelacion_factor}::numeric, ${anclaOrigen}, ${a.base_fuente}, ${a.target_crudo}::int, ${a.clamp_floor}::int, ${a.clamp_ceil}::int, ${a.rail_ancla}::int, ${a.rail_ancla_origen})`)
         await prisma.$executeRaw(Prisma.sql`
-          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada, antelacion_factor, ancla_origen, base_fuente)
+          INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run, demanda_fuente, demanda_gateada, antelacion_factor, ancla_origen, base_fuente, target_crudo, clamp_floor, clamp_ceil, rail_ancla, rail_ancla_origen)
           VALUES ${Prisma.join(auditRows)}`)
       } catch { /* no crítico */ }
     }

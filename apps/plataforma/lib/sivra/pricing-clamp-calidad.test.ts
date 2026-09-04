@@ -40,3 +40,38 @@ test('ya no quedan limites SIN ajustar: las constantes crudas no existen', () =>
 test('baseD sigue llevando dqDate (el otro lado del invariante)', () => {
   assert.match(FUENTE, /const baseD = useMonth \? aBase\(mb!\.med \* dqDate\)/)
 })
+
+// ── Guardián de la instrumentación (04/09/2026) ──────────────────────────────────────────────────
+// El clamp de arriba se pudo diagnosticar porque se leyó el FUENTE. La ida y vuelta de House del
+// mismo día no se pudo: sus dos filas de `pricing_applied` tenían inputs idénticos y resultado
+// opuesto, y los cuatro números que lo explican —el objetivo antes de acotar, las dos puntas del
+// clamp y el ancla del raíl— no se persistían.
+//
+// Estos tests no comprueban aritmética: comprueban que los datos LLEGAN a la tabla. Es un fallo
+// que compila, no rompe ningún test y solo se nota meses después, cuando hace falta auditar.
+const COLUMNAS_AUDITORIA = ['target_crudo', 'clamp_floor', 'clamp_ceil', 'rail_ancla', 'rail_ancla_origen']
+
+test('las columnas de auditoría del clamp y del raíl se persisten en pricing_applied', () => {
+  const insert = FUENTE.match(/INSERT INTO pricing_applied \(([^)]*)\)/)
+  assert.ok(insert, 'no se encuentra el INSERT de pricing_applied')
+  const cols = insert[1].split(',').map(c => c.trim())
+  for (const c of COLUMNAS_AUDITORIA) {
+    assert.ok(cols.includes(c), `pricing_applied ya no persiste «${c}»: una decisión vuelve a ser no auditable`)
+  }
+  // La lista de columnas y la de valores tienen que cuadrar, o Postgres escribe en la columna
+  // equivocada — un dato plausible en el sitio que no es, que es peor que un hueco.
+  const values = FUENTE.match(/Prisma\.sql`\(\$\{r\.property_id\}[^`]*`\)/)
+  assert.ok(values, 'no se encuentra la fila de VALUES del INSERT')
+  const nValores = (values[0].match(/\$\{/g) || []).length
+  assert.equal(nValores, cols.length,
+    `el INSERT declara ${cols.length} columnas y la fila trae ${nValores} valores`)
+})
+
+test('el ancla del raíl se registra CON su origen, resuelto en un solo sitio', () => {
+  // `anclaRailCon` devuelve valor+origen juntos a propósito. Si el motor vuelve a `anclaRail` y
+  // deriva el origen aparte, las dos precedencias se separan y la fila dirá que el ±20% se midió
+  // desde ayer cuando se midió desde el precio vivo.
+  assert.match(FUENTE, /anclaRailCon\(/, 'el motor ya no usa anclaRailCon: el origen del ancla se re-deriva')
+  assert.doesNotMatch(FUENTE, /const ancla = anclaRail\(/,
+    'el motor volvió a anclaRail() directo: el origen persistido puede divergir del valor usado')
+})
