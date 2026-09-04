@@ -1,9 +1,10 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { Search, TriangleAlert, Lock, Plus, Hourglass } from 'lucide-react'
-import { cardStyle, btnStyle, Badge, type Tono } from '@/components/ui'
-import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados, type Hallazgo } from '@/lib/correduria-puerto'
+import { Search, TriangleAlert, Lock, Plus, Hourglass, Phone, Mail } from 'lucide-react'
+import { cardStyle, btnStyle, btnIcono, Badge, type Tono } from '@/components/ui'
+import BotonWhatsapp from './BotonWhatsapp'
+import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados, type Hallazgo, type Contacto } from '@/lib/correduria-puerto'
 
 /**
  * Un solo cuadro para encontrar a cualquiera: nombre, matrícula, nº de póliza,
@@ -318,15 +319,27 @@ function Bloque({ b }: { b: BloqueResultados }) {
             key={`${b.tipo}-${h.clienteId}`}
             style={{ borderTop: '1px solid var(--border)', padding: '10px 0' }}
           >
-            <Link href={`/correduria/cliente/${h.clienteId}`} style={{ fontWeight: 600 }}>
-              {h.nombre}
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Link
+                href={`/correduria/cliente/${h.clienteId}`}
+                style={{ fontWeight: 600, flex: '1 1 auto', minWidth: 0 }}
+              >
+                {h.nombre}
+              </Link>
+              <Contactar c={h.contacto} nombre={h.nombre} />
+            </div>
             <div style={{
               fontSize: 11, color: 'var(--muted)', marginTop: 3,
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
             }}>
               <Vitalidad h={h} />
               <span>· {h.polizas} póliza(s) · {h.porque}</span>
+              {h.contacto !== null &&
+                (h.contacto.telefonoIlegible || h.contacto.emailIlegible) && (
+                  <span title="Está guardado pero esta app no puede descifrarlo. Ábrelo en la ficha.">
+                    · contacto cifrado
+                  </span>
+                )}
             </div>
             {h.aviso && (
               <div
@@ -402,6 +415,55 @@ function Nota({ color, icono, children }: {
     }}>
       {icono && <span style={{ flexShrink: 0, marginTop: 2, display: 'inline-flex' }}>{icono}</span>}
       <span>{children}</span>
+    </div>
+  )
+}
+
+/**
+ * Llamar, escribir o abrir WhatsApp DESDE EL RESULTADO, sin entrar en la ficha
+ * (Alberto, 04/09/2026: «no se ven los iconos de mail, teléfono y WhatsApp»).
+ *
+ * 🚨 Lo que NO hace, a propósito: decir que alguien no tiene teléfono. Hay tres
+ * situaciones distintas y solo UNA autoriza a pintar el icono:
+ *   · `c === null`     → asegura no manda el bloque o no se pudo consultar.
+ *   · valor `null`     → se ha mirado y no consta (o está cifrado y no abre).
+ *   · valor con texto  → se pinta.
+ * En los dos primeros casos aquí no aparece nada. Un icono apagado prometería
+ * una acción que no existe, y un texto «sin teléfono» sería una afirmación que
+ * además puede ser falsa: la FICHA cae a los intervinientes de las pólizas
+ * —el conductor habitual de una empresa— y el buscador no.
+ *
+ * El de WhatsApp lo decide `urlWhatsapp()`: con un fijo devuelve `null` y
+ * `BotonWhatsapp` no pinta nada.
+ */
+function Contactar({ c, nombre }: { c: Contacto | null; nombre: string }) {
+  if (c === null) return null
+  const tel = c.telefono?.trim() || null
+  const mail = c.email?.trim() || null
+  if (tel === null && mail === null) return null
+  return (
+    <div style={{ display: 'flex', gap: 4, flex: '0 0 auto' }}>
+      {tel && (
+        <a
+          href={`tel:${tel.replace(/\s/g, '')}`}
+          aria-label={`Llamar a ${nombre} al ${tel}`}
+          title={`Llamar al ${tel}`}
+          style={btnIcono('sutil')}
+        >
+          <Phone size={18} strokeWidth={1.75} aria-hidden />
+        </a>
+      )}
+      {tel && <BotonWhatsapp telefono={tel} />}
+      {mail && (
+        <a
+          href={`mailto:${mail}`}
+          aria-label={`Escribir a ${nombre} a ${mail}`}
+          title={`Escribir a ${mail}`}
+          style={btnIcono('sutil')}
+        >
+          <Mail size={18} strokeWidth={1.75} aria-hidden />
+        </a>
+      )}
     </div>
   )
 }
