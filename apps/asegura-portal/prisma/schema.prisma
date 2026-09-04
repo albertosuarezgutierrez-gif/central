@@ -429,6 +429,56 @@ model PortalAutorizacion {
 /// el momento de pedir obligaría a contestar «no existe», y eso convierte el
 /// portal en un oráculo para recorrer correos y sacar quién es cliente de la
 /// correduría. Ver `respuestaPublica()` en @central/module-seguros-portal.
+/// La invitacion por correo: un cliente abre sus seguros a alguien que NO esta
+/// en la cartera. Tabla aparte de `portal_autorizacion` porque al invitado
+/// todavia no se le puede apuntar —no tiene ficha ni identidad hasta que entra—
+/// y una autorizacion exige una de las dos. Se convierte en autorizacion cuando
+/// alguien PRUEBA ser ese correo, y no antes.
+///
+/// 🚨 El token del enlace NO abre sesion: dice QUE invitacion es, y quien eres lo
+/// dice el codigo de un solo uso que llega a ese mismo correo. Lee la cabecera de
+/// `@central/module-seguros-portal/invitacion` antes de tocarlo.
+model PortalInvitacion {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId             String    @map("correduria_id") @db.Uuid
+  /// La ficha cuyos seguros se abren.
+  otorganteClienteId       String    @map("otorgante_cliente_id") @db.Uuid
+  /// Y la identidad que pulso el boton: una ficha puede tener varias personas
+  /// detras, y el registro tiene que decir CUAL de ellas invito.
+  otorgadaPorIdentidadId   String    @map("otorgada_por_identidad_id") @db.Uuid
+  /// El correo invitado, por `hashCanal()`. El MISMO hash que `portal_canal`, que
+  /// es lo que permite atar la aceptacion al CORREO y no al token. Nunca en claro.
+  destinatarioCanalHash    String    @map("destinatario_canal_hash")
+  /// El token del enlace, HASHEADO. En claro solo existe dentro del correo que
+  /// sale: una tabla de invitaciones con sus tokens legibles es una tabla de llaves.
+  tokenHash                String    @map("token_hash")
+  alcance                  String
+  /// La UNICA poliza que abrira. `null` = todas las del otorgante, futuras
+  /// incluidas. FK COMPUESTA con el otorgante: la BD exige que sea suya.
+  polizaId                 String?   @map("poliza_id") @db.Uuid
+  mensaje                  String?
+  creadaEn                 DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  caducaEn                 DateTime  @map("caduca_en") @db.Timestamptz(6)
+  aceptadaEn               DateTime? @map("aceptada_en") @db.Timestamptz(6)
+  aceptadaPorIdentidadId   String?   @map("aceptada_por_identidad_id") @db.Uuid
+  /// La costura con la otra tabla. Un CHECK exige que vaya junto con
+  /// `aceptadaEn` y con quien acepto: «aceptado por el que tenia el enlace» no
+  /// es una prueba de consentimiento.
+  autorizacionId           String?   @map("autorizacion_id") @db.Uuid
+  /// Rechaza el INVITADO; retira quien invito. No es lo mismo y no se colapsan.
+  rechazadaEn              DateTime? @map("rechazada_en") @db.Timestamptz(6)
+  rechazadaPorIdentidadId  String?   @map("rechazada_por_identidad_id") @db.Uuid
+  retiradaEn               DateTime? @map("retirada_en") @db.Timestamptz(6)
+  ip                       String?   @db.Inet
+  userAgent                String?   @map("user_agent")
+
+  @@index([destinatarioCanalHash])
+  @@index([otorganteClienteId, creadaEn])
+  @@index([otorgadaPorIdentidadId, creadaEn])
+  @@map("portal_invitacion")
+  @@schema("seguros")
+}
+
 model PortalPeticionAcceso {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId           String    @map("correduria_id") @db.Uuid

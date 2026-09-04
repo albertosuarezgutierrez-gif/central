@@ -110,3 +110,24 @@ export type {
   EstadoPeticion,
   PeticionFechas,
 } from './peticion-acceso.ts'
+
+// La invitación por correo: la TERCERA puerta de la autorización, la que trae
+// gente que no está en la cartera. Lee su cabecera antes de tocar el token: no
+// abre sesión a propósito, y esa decisión tiene tres razones medidas.
+export {
+  RESULTADOS_INVITACION,
+  invitacionRevelaSiEsCliente,
+  invitacionEscrita,
+  ESTADOS_INVITACION,
+  DIAS_VIGENCIA_INVITACION,
+  MAX_INVITACIONES_DIA,
+  MAX_MENSAJE_INVITACION,
+  caducidadInvitacion,
+  estadoInvitacion,
+  invitacionResoluble,
+  BYTES_TOKEN_INVITACION,
+  normalizarTokenInvitacion,
+  CAMPOS_PROHIBIDOS_EN_INVITACION,
+  normalizarMensajeInvitacion,
+} from './invitacion.ts'
+export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './invitacion.ts'
