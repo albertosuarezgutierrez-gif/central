@@ -1,7 +1,14 @@
--- 🚨 NO SE HA EJECUTADO. Lo aplica la sesión principal contra la Supabase
--- compartida, en el MISMO paso que el cambio de `schema.prisma` (Prisma pide
--- cada columna del modelo por su nombre: si el schema declara una que la BD no
--- tiene, muere la consulta ENTERA, no esa columna).
+-- ✅ APLICADA el 04/09/2026 contra la Supabase compartida (schema `seguros`), en
+-- el MISMO paso que el cambio de `schema.prisma` — Prisma pide cada columna del
+-- modelo por su nombre: si el schema declara una que la BD no tiene, muere la
+-- consulta ENTERA, no esa columna.
+--
+-- Comprobado DESPUÉS de aplicar, no supuesto:
+--   · `portal_autorizacion_destinatario_unico` MUERDE: un INSERT con las dos
+--     columnas a NULL devuelve 23514 (probado dentro de un ROLLBACK).
+--   · los dos índices nuevos existen (`pg_indexes`).
+--   · `prisma_asegura_portal` tiene SELECT/INSERT/UPDATE sobre la columna nueva
+--     y `prisma_seguros` la puede leer (`has_column_privilege`).
 --
 -- ── QUÉ ABRE ESTO ───────────────────────────────────────────────────────────
 --

@@ -358,7 +358,22 @@ model PortalAutorizacion {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId           String    @map("correduria_id") @db.Uuid
   otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
-  autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
+  /// A quién se autoriza cuando SÍ es cliente de la correduría. `null` cuando lo
+  /// es `autorizadoIdentidadId`: exactamente una de las dos va rellena y lo obliga
+  /// la BD (CHECK `portal_autorizacion_destinatario_unico`, comprobado mordiendo).
+  autorizadoClienteId    String?   @map("autorizado_cliente_id") @db.Uuid
+  /// A quién se autoriza cuando NO es cliente: su identidad del portal, que es lo
+  /// que hay detrás de la cookie y por tanto quien de verdad mira. Se eligió la
+  /// identidad en vez de fabricarle una ficha vacía: una ficha es una persona en
+  /// la cartera, y crear una por cada invitado ensucia los 32.520 leads que ya hay.
+  autorizadoIdentidadId  String?   @map("autorizado_identidad_id") @db.Uuid
+  /// La ÚNICA póliza que abre esta autorización. `null` = todas las del otorgante,
+  /// que es lo que significaban todas las filas anteriores a esta columna — y eso
+  /// incluye las que contrate MAÑANA, cosa que la pantalla tiene que decir con esas
+  /// palabras al conceder. La FK es COMPUESTA con `otorganteClienteId` contra
+  /// `polizas(cliente_id, id)`: la BD exige que la póliza sea DEL OTORGANTE, así que
+  /// un id manipulado no cuela la póliza de un tercero (probado: 23503).
+  polizaId               String?   @map("poliza_id") @db.Uuid
   alcance                String
   /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
   /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta,
@@ -391,6 +406,8 @@ model PortalAutorizacion {
 
   @@index([otorganteClienteId])
   @@index([autorizadoClienteId])
+  @@index([autorizadoIdentidadId])
+  @@index([polizaId])
   @@map("portal_autorizacion")
   @@schema("seguros")
 }

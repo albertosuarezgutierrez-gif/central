@@ -16,10 +16,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * la persona a la que se le pidió. Es la misma decisión que toma
  * `app/api/autorizaciones/[id]/route.ts`.
  *
- * `solicitante_sin_ficha` es un 409 con nombre propio: no es «no puedes», es
- * «hoy no se puede todavía» — la autorización necesita una ficha del
- * solicitante y `autorizado_cliente_id` es NOT NULL. Distinguirlo es lo que
- * permite decírselo con palabras en vez de un error genérico.
+ * 📌 Aquí vivió `solicitante_sin_ficha` (409) hasta el 04/09/2026: conceder
+ * exigía que quien pidió fuera YA cliente, porque `autorizado_cliente_id` era
+ * NOT NULL. Ya no: se le autoriza por su IDENTIDAD del portal. El motivo se
+ * borró en vez de dejarlo de adorno — un código que no puede pasar en una tabla
+ * de códigos es una promesa falsa para quien lea esto dentro de tres meses.
  */
 const ESTADO_HTTP: Record<ErrorResolverPeticion, number> = {
   datos_invalidos: 400,
@@ -28,7 +29,6 @@ const ESTADO_HTTP: Record<ErrorResolverPeticion, number> = {
   nivel_insuficiente: 403,
   ficha_no_activa: 409,
   alcance_no_disponible: 409,
-  solicitante_sin_ficha: 409,
 }
 
 /**

@@ -520,7 +520,6 @@ export type ErrorResolverPeticion =
   | 'nivel_insuficiente'
   | 'ficha_no_activa'
   | 'alcance_no_disponible'
-  | 'solicitante_sin_ficha'
 
 export type ResultadoResolverPeticion =
   | { ok: true; estado: EstadoPeticion; autorizacionId: string | null }
@@ -632,22 +631,35 @@ export async function resolverPeticion(datos: {
     }
   }
 
-  // ⚠️ Limitación CONOCIDA, no un olvido: `portal_autorizacion.autorizado_cliente_id`
-  // es NOT NULL, así que hoy no se puede autorizar a quien todavía no tiene
-  // ficha en la cartera (o tiene varias y no se elige a cara o cruz). Se dice
-  // con un error propio y distinguible en vez de inventarle una ficha: crear
-  // una ficha fantasma para tapar el hueco ensuciaría la cartera de Alberto y
-  // dejaría autorizaciones apuntando a alguien que no existe. Lo levanta el
-  // trabajo de «autorización por identidad» que viene después.
-  if (fila.solicitanteClienteId === null) {
-    return {
-      ok: false,
-      error: 'solicitante_sin_ficha',
-      mensaje:
-        'Todavía no podemos darle acceso a esa persona: no tenemos una ficha suya en la cartera. Escríbenos y lo resolvemos.',
-    }
-  }
+  // ── A QUIÉN se autoriza: su ficha si la tiene, y si no su IDENTIDAD ──────
+  //
+  // 🚨 Hasta el 04/09/2026 esto devolvía `solicitante_sin_ficha` porque
+  // `autorizado_cliente_id` era NOT NULL. O sea: **solo se le podía dar acceso a
+  // quien YA era cliente**, que deja fuera justo el caso que de verdad pasa —el
+  // hijo que pide ver la póliza de su padre y no es cliente de nadie— y
+  // contradice el producto: la intranet del cliente es gratis y abierta a todo
+  // el mundo, porque ahí está la captación. La columna
+  // `autorizado_identidad_id` levantó el techo.
+  //
+  // Y NO se le fabrica una ficha vacía para tapar el hueco: una ficha es una
+  // persona en la cartera de Alberto, y crear una por cada invitado ensucia los
+  // 32.520 leads que ya arrastra el volcado con gente que miró una póliza una
+  // vez. Quien MIRA es una identidad — es lo que hay detrás de la cookie.
   const autorizadoClienteId = fila.solicitanteClienteId
+  const autorizadoIdentidadId = autorizadoClienteId === null ? fila.solicitanteIdentidadId : null
+
+  // ⚠️ El «no a sí mismo» de la rama de identidad NO lo puede comprobar la BD:
+  // exige mirar `portal_vinculo`, que es otra tabla, y un CHECK es de fila. Se
+  // cierra aquí. El caso no es teórico: entre que se pidió el acceso y se
+  // concede, quien pidió puede haberse vinculado a ESA MISMA ficha (entrar con
+  // el email que la resuelve), y entonces esto sería José autorizándose a sí
+  // mismo — una fila viva que no significa nada y ocupa sitio en el índice.
+  if (
+    autorizadoIdentidadId !== null &&
+    vinculos.some((v) => v.clienteId === otorganteClienteId && autorizadoIdentidadId === identidadId)
+  ) {
+    return { ok: false, error: 'no_encontrada', mensaje: 'No hemos encontrado esa petición.' }
+  }
 
   // Qué ES la ficha que cede: de ello depende QUÉ TEXTO se guarda como prueba.
   // Sin `try/catch`: si esta lectura falla, que suba como error.
@@ -680,8 +692,24 @@ export async function resolverPeticion(datos: {
     autorizacionId = await prisma.$transaction(async (tx) => {
       // Solo las que la BD considera vivas (`revocado_en IS NULL`): son
       // exactamente las que el índice único parcial deja coexistir.
+      //
+      // 🚨 Dos cosas que van en el WHERE y no se pueden caer:
+      //  - **la rama correcta** (ficha o identidad): buscar por
+      //    `autorizadoClienteId: null` traería las de CUALQUIER invitado de esa
+      //    ficha y se enlazaría la petición con la autorización de otro.
+      //  - **`polizaId: null`**: una petición pide la ficha entera, y desde el
+      //    04/09/2026 la clave del índice único incluye la póliza. Sin esto, una
+      //    autorización sobre UNA póliza contaría como «ya la tiene» y se le
+      //    daría por concedido un acceso que abre otra cosa.
       const previas = await tx.portalAutorizacion.findMany({
-        where: { otorganteClienteId, autorizadoClienteId, alcance, revocadoEn: null },
+        where: {
+          otorganteClienteId,
+          autorizadoClienteId,
+          autorizadoIdentidadId,
+          alcance,
+          polizaId: null,
+          revocadoEn: null,
+        },
         select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
       })
       const viva = previas.find((p) => estadoAutorizacion(p, hoy) !== 'caducada') ?? null
@@ -722,7 +750,13 @@ export async function resolverPeticion(datos: {
           data: {
             correduriaId: mio.correduriaId,
             otorganteClienteId,
+            // Exactamente uno de los dos va relleno, y lo obliga la BD (CHECK
+            // `portal_autorizacion_destinatario_unico`, comprobado mordiendo).
             autorizadoClienteId,
+            autorizadoIdentidadId,
+            // Una petición pide la FICHA entera, no una póliza: `null` es el
+            // valor con significado, no un hueco.
+            polizaId: null,
             alcance,
             origen: 'portal',
             otorgadoPorIdentidadId: identidadId,

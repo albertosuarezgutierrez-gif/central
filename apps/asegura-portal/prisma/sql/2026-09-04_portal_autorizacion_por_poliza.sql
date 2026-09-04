@@ -1,4 +1,10 @@
--- 🚨 NO SE HA EJECUTADO. Va en el mismo paso que su cambio de `schema.prisma`.
+-- ✅ APLICADA el 04/09/2026, en el mismo paso que su cambio de `schema.prisma`.
+--
+-- 🦷 La FK compuesta MUERDE, y se vio morder antes de darla por buena: un INSERT
+-- en el que el otorgante concede una póliza de OTRO cliente devuelve
+--   23503 … violates foreign key constraint "portal_autorizacion_poliza_del_otorgante"
+--   DETAIL: Key (otorgante_cliente_id, poliza_id)=(…) is not present in table "polizas"
+-- y el mismo INSERT con una póliza SUYA entra. Los dos, dentro de un ROLLBACK.
 --
 -- ── QUÉ ABRE ────────────────────────────────────────────────────────────────
 --

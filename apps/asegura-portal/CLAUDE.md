@@ -462,8 +462,12 @@ Lo vigila `test/regression-portal-enlace-acceso.test.ts`.
 - **DDL:** `prisma/sql/2026-09-01_portal_fase1.sql` — 3 ENUM + **6 tablas**: `portal_identidad`,
   `portal_canal`, `portal_codigo`, `portal_bien`, `portal_poliza_declarada`, `portal_consentimiento`;
   y `prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql` — **`portal_vinculo`** + rol + grants. `prisma/sql/2026-09-03_portal_obligacion.sql` — **`portal_obligacion`** + su enum
-  (aplicada 02/09/2026). Las otras **4** del spec (`portal_autorizacion`, `portal_aviso`,
-  `portal_auditoria`, `portal_revision`) llegan con sus fases. ⚠️ La memoria del
+  (aplicada 02/09/2026); `2026-09-04_portal_peticion_acceso.sql` — **`portal_peticion_acceso`**, y las dos
+  del 04/09 que ensanchan `portal_autorizacion` (**`autorizado_identidad_id`** y **`poliza_id`**), las
+  tres aplicadas ese día. ⚠️ `portal_autorizacion` + `portal_autorizacion_uso` ya existen desde el
+  03/09/2026, así que del spec quedan **2** por llegar: `portal_aviso` y `portal_auditoria`
+  (`portal_revision` tampoco se ha creado). Cuenta los ficheros de `prisma/sql/` antes de citar un
+  número: esta frase se ha quedado corta dos veces. ⚠️ La memoria del
   01/09/2026 dice «las otras 5»: son 6 — el spec lista 11 y `portal_codigo` ni siquiera está en él.
 - **Vercel:** Root Directory `apps/asegura-portal`, install `npx --yes pnpm@10.33.0 install
   --no-frozen-lockfile`, región **`fra1`** (la BD está en Europa: no cruzar el Atlántico), y el
@@ -709,3 +713,120 @@ no se puede testear.
 
 El estudio legal completo, con la comparativa de cómo lo resuelven la AEAT, la
 banca, el software del sector y sanidad: `docs/ASEGURA-AUTORIZACION-TERCEROS.md`.
+
+## 📨 Pedir acceso (la dirección CONTRARIA) — y el oráculo que hay que tener cerrado
+
+Dictado de Alberto (04/09/2026): *«se pueda mandar solicitudes por mail… José Suárez Salas puede añadir
+el mail de alguien, le diga qué relación tiene, y llega mail con acceso a la intranet»*. O sea, la
+autorización al revés: hasta ahora solo José podía empezar («deja que María vea lo mío»); ahora María
+puede pedirlo.
+
+Vive en `seguros.portal_peticion_acceso` (`prisma/sql/2026-09-04_portal_peticion_acceso.sql`, aplicada
+el 04/09/2026), con las reglas puras en `packages/module-seguros-portal/src/peticion-acceso.ts` y la BD
+en `apps/asegura-portal/lib/peticiones.ts`. **Lee la cabecera del módulo puro antes de tocar nada.**
+
+🚨 **La pieza que sostiene todo esto es `respuestaPublica()`, y no es un detalle de UX.** El portal es
+abierto: entra cualquiera. Un endpoint que conteste distinto según si el correo que le das es de un
+cliente convierte la pantalla en **una máquina de enumerar la cartera** — 32.600 fichas, a razón de un
+correo por intento. Por eso **cuatro resultados internos distintos** (`creada`, `sin_destinatario`,
+`ya_pendiente`, `ya_autorizado`) colapsan en **una sola respuesta**, `registrada`, con un texto que no
+afirma nada:
+
+> «Si esa persona tiene sus seguros con nosotros, le hemos hecho llegar tu petición. Te avisaremos aquí
+> si la concede.»
+
+Y **colapsar el texto no basta: hay que colapsar el TIEMPO y el CUERPO.** Los cuatro caminos hacen el
+mismo trabajo observable y la respuesta no lleva el id de la fila — un 202 que tarda 30 ms cuando no hay
+nadie y 300 ms cuando sí lo hay dice exactamente lo mismo que decirlo con palabras. Los dos únicos
+resultados que SÍ se distinguen son los que no revelan nada de un tercero: `a_si_mismo` (400) y
+`limite_diario` (429, tope de 5 al día).
+
+- **El destinatario se guarda por índice ciego** (`destinatario_email_hash`, el mismo HMAC que
+  `clientes.email_lookup_hash`), nunca el correo en claro: esta tabla la puede llenar cualquiera.
+- **La fila se INSERTA siempre y el índice único es la autoridad**: se intenta el INSERT y un `P2002` se
+  lee como `ya_pendiente`. Nada de un SELECT previo y un `if` — entre los dos cabe otra petición.
+- **Caduca a los 30 días**, contados en DÍAS (`setUTCMonth` sobre un 31 de marzo da un 3 de marzo sin
+  avisar), y **lo resuelto gana a la caducidad**: una concedida no se vuelve caducada al pasar el mes.
+- **Retirar ≠ rechazar.** `retiradaEn` la pone quien pidió («me he arrepentido»); `rechazadaEn`, quien
+  recibió («te he dicho que no»). Colapsarlas borra quién decidió qué.
+- **Sin permiso se contesta 404, nunca 403**: un 403 confirma que esa petición existe, y con ella que
+  existe la persona a la que se le pidió.
+- **Conceder una petición crea la autorización YA ACEPTADA**, con la fecha de la PETICIÓN y no la de hoy:
+  pedirla ES aceptarla (quien pidió ya sabe que existe un registro con su nombre — lo pidió él), pero lo
+  aceptó el día que escribió.
+
+Cepos: `packages/module-seguros-portal/src/peticion-acceso.test.ts` y
+`test/regression-portal-peticion-acceso.test.ts`, con las mutaciones comprobadas.
+
+## 🎟 Autorizar a quien NO es cliente, y autorizar UNA sola póliza (04/09/2026)
+
+Dos techos de `portal_autorizacion` que se levantaron el mismo día, con sus dos migraciones aplicadas
+(`2026-09-04_portal_autorizacion_identidad.sql` y `…_por_poliza.sql`).
+
+### 1. `autorizado_cliente_id` era NOT NULL → solo se podía autorizar a un CLIENTE
+
+Dictado de Alberto: *«la persona puede no estar… pero da igual, dale acceso y así podemos también
+captarlo de cliente. Mi idea de la intranet cliente es que sea para todo el mundo y gratis»*. El techo
+viejo hacía imposible el caso que de verdad pasa —el hijo que quiere ver la póliza de su padre y no es
+cliente de nadie— y contradecía el producto, que es justo donde está la captación.
+
+Ahora una autorización apunta **o a una FICHA (`autorizado_cliente_id`) o a una IDENTIDAD del portal
+(`autorizado_identidad_id`)**, y a exactamente una de las dos: lo obliga el CHECK
+`portal_autorizacion_destinatario_unico` (`num_nonnulls(...) = 1`).
+
+🚨 **Por qué la identidad y NO fabricarle una ficha vacía al invitado.** Quien MIRA es una identidad: es
+lo que hay detrás de la cookie. Una ficha es una persona en la cartera de Alberto, con su historial y
+sus pólizas, y crear una por cada curioso ensucia los **32.520 leads** que ya arrastra el volcado con
+gente que miró la póliza de su padre una vez.
+
+🚨 **Y las dos trampas de hacer nullable una columna que ya tenía cepos**, las dos del tipo que este repo
+persigue (no fallan, no se ven, y dejan de proteger):
+
+| Trampa | Qué pasaba | Cómo se cerró |
+|---|---|---|
+| El CHECK viejo era `otorgante <> autorizado`. En SQL **`algo <> NULL` no es FALSE: es NULL, y un CHECK que da NULL PASA** | «No puedes autorizarte a ti mismo» dejaba de existir para toda fila de identidad | Se sustituyó por `autorizado_cliente_id IS NULL OR otorgante <> autorizado` |
+| El índice único era `(otorgante, autorizado, alcance)`. En Postgres **dos NULL nunca son iguales** | La misma identidad podía acumular autorizaciones vivas infinitas sobre la misma ficha | Un índice gemelo `WHERE autorizado_identidad_id IS NOT NULL` |
+
+⚠️ Y lo que la BD **no puede** comprobar, dicho en voz alta para que no se suponga cubierto: que una
+IDENTIDAD no se autorice a sí misma exige mirar `portal_vinculo`, que es otra tabla, y un CHECK es de
+fila. **Eso lo cierra el código** (`lib/peticiones.ts`, al conceder).
+
+### 2. La autorización abría la FICHA ENTERA → ahora puede abrir UNA póliza
+
+Dictado de Alberto: *«un dueño de empresa solo quiere que una persona vea una sola póliza, no tiene por
+qué ver el resto»*. Medido sobre la cartera viva: 110 pólizas y 80 titulares, de los cuales **15 tienen
+más de una**. Esos 15 son justo los que lo piden.
+
+`poliza_id` **`NULL` = todas las del otorgante** (lo que significaban TODAS las filas anteriores a la
+columna: es un ensanche del vocabulario, no un cambio de significado). Con valor = solo esa.
+
+🦷 **La FK es COMPUESTA `(otorgante_cliente_id, poliza_id) → polizas(cliente_id, id)`, y ese es el cepo
+que de verdad importa.** Una FK normal a `polizas(id)` dejaría conceder CUALQUIER póliza de la cartera,
+incluida la de otra persona: bastaría un id manipulado en el JSON para que José «autorizara» la póliza
+de un desconocido, y la fila quedaría perfectamente válida. Se vio morder antes de darla por buena:
+`23503` con la póliza de otro, y entra con la suya.
+
+**Dos trampas que la BD NO puede vigilar**, y por eso están en el código y en la pantalla:
+
+1. **`NULL` cubre las pólizas FUTURAS.** Quien concede hoy «todas» concede también la que contrate
+   mañana. Para un empleado suele ser lo que se quiere; para un familiar puede que no. **La pantalla
+   tiene que decirlo con esas palabras al conceder** — hay un cepo positivo que falla si nadie lo dice.
+2. **Una póliza FUSIONADA deja la autorización apuntando a una fila muerta** (5 fusionadas hoy, no es
+   teórico) y el autorizado pierde el acceso **sin que nadie se entere**: no falla, deja de funcionar.
+   `lib/cartera-lectura.ts` sigue un salto de `merged_into_poliza_id`; si la fusión se llevó la póliza a
+   otra ficha, ya no es del otorgante y no se sirve.
+
+### Qué cambió en la lectura (`lib/cartera-lectura.ts`)
+
+- Las autorizaciones que me alcanzan se buscan por **mi ficha O mi identidad**. Sin el segundo brazo, el
+  invitado tenía su autorización en la BD y la bóveda ni la miraba: **no fallaba, salía vacía**.
+- **El corte de «aquí no hay nada» usa las DOS listas.** Antes bastaba con no tener `portal_vinculo`
+  para devolver `SIN_VINCULO`, y eso dejaba fuera justo a quien el producto quiere dentro. `vinculada`
+  sigue significando «hemos encontrado tu ficha», que es otra pregunta y por eso no se colapsa.
+- Los alcances de una concesión sobre la ficha entera y los de una sobre una póliza concreta **se
+  SUMAN sobre esa póliza**: quien te deja ver todo y además lo económico de la del coche ve lo económico
+  de esa y solo de esa. Por eso `camposVisibles` se resuelve **póliza a póliza**, no una vez por titular.
+- **Solo cuenta como USO lo que de verdad se ha servido**: una autorización sobre una póliza que ya no
+  está viva no se anota como que alguien miró algo. `registrarUso` y `resolver` miran también la
+  identidad — si no, el invitado no podría aceptar ni revocar, y sus visitas no constarían: el otorgante
+  leería «no ha entrado nadie» sobre alguien que sí entró.

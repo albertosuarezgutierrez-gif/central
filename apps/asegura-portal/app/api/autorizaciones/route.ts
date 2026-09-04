@@ -32,6 +32,10 @@ const ESTADO_HTTP: Record<ErrorConceder, number> = {
   nivel_insuficiente: 403,
   sin_relacion: 409,
   ya_concedida: 409,
+  // 409 y no 404: la póliza existe (o existía) y la pantalla la ofreció; lo que
+  // pasa es que ya no está en esa ficha o se fusionó. Un 404 le haría creer al
+  // otorgante que se equivocó de sitio.
+  poliza_no_es_tuya: 409,
 }
 
 /**
@@ -120,6 +124,10 @@ export async function POST(req: Request) {
     otorganteClienteId,
     autorizadoClienteId,
     alcance,
+    // La póliza concreta, si la hay. **La FORMA la valida `conceder()`**, que es
+    // quien además comprueba que sea del otorgante — aquí solo se pasa: hacerlo
+    // en los dos sitios es como las dos listas acaban discrepando.
+    polizaId: c.polizaId,
     // Sin validar aquí: el vocabulario lo fija el módulo puro y quien decide si
     // hace falta —y si la ficha es siquiera una sociedad— es `conceder`. Esta
     // ruta solo comprueba la FORMA, y la forma de un título es «una cadena».
