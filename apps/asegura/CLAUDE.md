@@ -548,8 +548,24 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   interviniente**. Nombre/teléfono/email del interviniente van cifrados (95/95); si su fila no trae
   teléfono se lee el de la ficha enlazada. `leerIntervinientes` devuelve **`null` si la consulta falla**
   (no `[]`: eso diría «no hay nadie más»). Quién se llama lo decide `contactoEfectivo()` de
-  `@central/module-seguros` (puro, 7 tests): tomador primero; si no, el primer interviniente por
-  prioridad de rol (contacto > conductor habitual > propietario…), y la pantalla dice DE QUIÉN es.
+  `@central/module-seguros` (puro, 9 tests): ficha del tomador primero; si no, **su propio dato colgado
+  de la póliza**; y solo después el primer interviniente ajeno por prioridad de rol (contacto >
+  conductor habitual > propietario…), y la pantalla dice DE QUIÉN es.
+  🚨 **Corregido el 04/09/2026: hasta ese día `contactoEfectivo` DESCARTABA los intervinientes del propio
+  tomador** (`.filter(i => !i.esTomador)`), suponiendo que su contacto ya venía en la ficha. Falso: CIMA
+  trae el email en la fila del interviniente y nadie lo copia — le pasa a `MORALES ISABEL MALDONADO`
+  (propietario, origen CIMA) y a `Juan Manuel Duran Ibañez`, a los dos la ficha les decía «sin email»
+  teniéndolo la base. Ahora `viaTelefono`/`viaEmail` tienen un valor propio, **`tomador_en_poliza`**, que
+  la ficha pinta como «📇 en su póliza, no en su ficha»: es SUYO, no de un tercero, y el aviso de
+  vencimiento —que lee la ficha— sigue sin salirle hasta que se copie.
+  🚨 **Y la misma trampa tumbaba la pantalla «Clientes sin canal»** (`lib/clientes-sin-canal.ts`), que
+  miraba SOLO las columnas de la ficha: decía «19 clientes con los que NO se puede contactar» cuando
+  eran **15**. Ahora la consulta cruza `poliza_intervinientes` de sus pólizas vivas y devuelve
+  `canalEnPoliza` / `contactoDeOtros` / `fichasContacto`; el titular usa `resumen.ilocalizables` (los que
+  no tienen nada en ningún sitio) y `sinNinguno` queda como «sin nada en su ficha». ⚖️ Son estados
+  distintos a propósito: **tener a quién llamar no es poder notificar** — el preaviso del art. 22 LCS va
+  al TOMADOR. El nombre de un interviniente suelto va cifrado y NO cruza el puerto: de esos solo el
+  recuento. Guardián: `test/regression-clientes-sin-canal.test.ts`.
 - **`GET /poliza?id=`** (02/09/2026) — la ficha de UNA póliza: coberturas, todos los recibos, siniestros,
   intervinientes, nº de documentos (`null` si no se pudo contar) y la **copia gemela** (mismo `numero_poliza`
   en la otra cara: la de CIMA trae vencimiento y recibos, la del volcado la dirección del riesgo). La

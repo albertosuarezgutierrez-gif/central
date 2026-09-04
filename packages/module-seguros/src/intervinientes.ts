@@ -64,9 +64,15 @@ const PRIORIDAD_CONTACTO = ['contacto', 'conductor_habitual', 'propietario', 'as
 export type ContactoEfectivo = {
   telefono: string | null
   email: string | null
-  /** De dónde sale el teléfono: del tomador o de un interviniente. */
-  viaTelefono: 'tomador' | 'interviniente' | null
-  viaEmail: 'tomador' | 'interviniente' | null
+  /** De dónde sale el teléfono:
+   *  · `tomador` → de su ficha.
+   *  · `tomador_en_poliza` → 🚨 SUYO, pero colgado de la póliza y no de su ficha.
+   *    Se llama igual, pero el cron de avisos lee la FICHA: hoy no le sale nada,
+   *    y se arregla copiándolo, no llamando a nadie.
+   *  · `interviniente` → de OTRA persona de la póliza. Ojo: sirve para conseguir
+   *    su contacto, no para darlo por avisado (el art. 22 LCS avisa al tomador). */
+  viaTelefono: 'tomador' | 'tomador_en_poliza' | 'interviniente' | null
+  viaEmail: 'tomador' | 'tomador_en_poliza' | 'interviniente' | null
   /** Quién es, cuando no es el tomador — para decir «📞 (Juan Manuel, conductor habitual)».
    *  `polizaId` es DE QUÉ póliza sale: una empresa con tres furgonetas tiene tres
    *  conductores habituales distintos, y el número es el de UNO de ellos, no el
@@ -78,9 +84,18 @@ export type ContactoEfectivo = {
 }
 
 /**
- * A quién se llama. El tomador manda; si no tiene, el primer interviniente
- * (por prioridad de rol) que sí tenga. `intervinientes === null` = no se ha
- * podido mirar, y se dice — nunca se colapsa con «no hay nadie más».
+ * A quién se llama. Manda la ficha del tomador; si no tiene, **su propio dato
+ * colgado de la póliza**; y solo después el primer interviniente (por prioridad
+ * de rol) que sí tenga. `intervinientes === null` = no se ha podido mirar, y se
+ * dice — nunca se colapsa con «no hay nadie más».
+ *
+ * 🚨 Hasta el 04/09/2026 este helper DESCARTABA los intervinientes del propio
+ * tomador (`.filter(i => !i.esTomador)`), dando por hecho que su contacto ya
+ * venía en `tomador`. No es cierto: CIMA trae el email en la fila del
+ * interviniente y nadie lo copia a la ficha. Medido ese día, le pasa a
+ * `MORALES ISABEL MALDONADO` (rol `propietario`, origen CIMA) y a
+ * `Juan Manuel Duran Ibañez` — a los dos la ficha les decía «sin email»
+ * teniéndolo la base. Es un dato SUYO: se prefiere a cualquier tercero.
  */
 export function contactoEfectivo(
   tomador: { telefono: string | null; email: string | null },
@@ -96,24 +111,29 @@ export function contactoEfectivo(
   }
   if (intervinientes === null || (base.telefono && base.email)) return base
 
-  const otros = intervinientes
-    .filter((i) => !i.esTomador)
-    .sort((a, b) => prioridad(a.rol) - prioridad(b.rol))
+  // Primero lo SUYO (aunque esté colgado de la póliza), después lo de terceros
+  // por prioridad de rol. El orden no es estético: son dos acciones distintas.
+  const candidatos = [...intervinientes].sort((a, b) => {
+    if (a.esTomador !== b.esTomador) return a.esTomador ? -1 : 1
+    return prioridad(a.rol) - prioridad(b.rol)
+  })
 
   if (!base.telefono) {
-    const t = otros.find((i) => i.telefono)
+    const t = candidatos.find((i) => i.telefono)
     if (t) {
       base.telefono = t.telefono
-      base.viaTelefono = 'interviniente'
-      base.quien = { nombre: t.nombre, rol: t.rol, fichaId: t.fichaId, polizaId: t.polizaId }
+      base.viaTelefono = t.esTomador ? 'tomador_en_poliza' : 'interviniente'
+      // `quien` es «de quién es este contacto cuando NO es del tomador»: si es
+      // suyo se deja a null para no atribuírselo a un tercero en la pantalla.
+      if (!t.esTomador) base.quien = { nombre: t.nombre, rol: t.rol, fichaId: t.fichaId, polizaId: t.polizaId }
     }
   }
   if (!base.email) {
-    const e = otros.find((i) => i.email)
+    const e = candidatos.find((i) => i.email)
     if (e) {
       base.email = e.email
-      base.viaEmail = 'interviniente'
-      base.quien ??= { nombre: e.nombre, rol: e.rol, fichaId: e.fichaId, polizaId: e.polizaId }
+      base.viaEmail = e.esTomador ? 'tomador_en_poliza' : 'interviniente'
+      if (!e.esTomador) base.quien ??= { nombre: e.nombre, rol: e.rol, fichaId: e.fichaId, polizaId: e.polizaId }
     }
   }
   return base

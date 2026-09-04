@@ -22,12 +22,25 @@ import {
  *      que a ese cliente no se le puede escribir cuando lo cierto es que nadie
  *      lo ha comprobado — y una lista corta de ilocalizables tranquiliza tanto
  *      como una larga alarma.
+ *
+ *   3. 🚨 **Mirar SOLO la ficha del tomador y con eso afirmar «no se le puede
+ *      contactar».** Añadido el 04/09/2026, tras cazarlo Alberto en la pantalla:
+ *      `Esquiansa` salía «ilocalizable» cuando su contacto de siempre es Juan
+ *      Manuel López Benjumea, que está en su póliza como conductor habitual con
+ *      ficha, email y teléfono. El contacto vive en TRES sitios (ficha · su
+ *      propio dato colgado de la póliza · otra persona de la póliza) y de 19
+ *      «sin canal» solo 15 eran ilocalizables de verdad.
+ *
+ *      ⚖️ Y el matiz que no se puede colapsar: tener a quién llamar NO es poder
+ *      notificar. El preaviso del art. 22 LCS va al TOMADOR, así que un tercero
+ *      localizable sirve para CONSEGUIR su correo, no para darlo por avisado.
  */
 
 const RAIZ = new URL('..', import.meta.url).pathname
 const SQL = readFileSync(`${RAIZ}apps/asegura/lib/clientes-sin-canal.ts`, 'utf8')
 const RUTA = readFileSync(`${RAIZ}apps/asegura/app/api/operador/sin-canal/route.ts`, 'utf8')
 const PANTALLA = readFileSync(`${RAIZ}apps/plataforma/app/(usuario)/correduria/SinCanal.tsx`, 'utf8')
+const PUERTO = readFileSync(`${RAIZ}apps/plataforma/lib/correduria-puerto.ts`, 'utf8')
 const CLIENTE = readFileSync(`${RAIZ}apps/plataforma/app/(usuario)/correduria/CorreduriaClient.tsx`, 'utf8')
 
 // ── 1. El recuento es SOLO de la cartera viva ───────────────────────────────
@@ -105,16 +118,105 @@ test('🚨 un recuento que no llega se queda en null, JAMÁS en 0', () => {
   if (r.estado !== 'ok') return
   assert.deepEqual(r.resumen, {
     vivos: null, conEmail: null, conTelefono: null, conAlguno: null, sinNinguno: null,
+    ilocalizables: null, rescatables: null,
   })
 })
 
-test('los cuatro estados de canal se derivan de los dos booleanos', () => {
-  assert.equal(derivarEstadoCanal(false, false), 'sin_ninguno')
-  assert.equal(derivarEstadoCanal(false, true), 'solo_telefono')
-  assert.equal(derivarEstadoCanal(true, false), 'solo_email')
-  assert.equal(derivarEstadoCanal(true, true), 'con_ambos')
-  assert.equal(derivarEstadoCanal(null, true), 'no_comprobado', 'medio dato no es un dato')
-  assert.equal(derivarEstadoCanal(true, null), 'no_comprobado')
+test('los estados de canal se derivan de lo medido, no se guardan', () => {
+  assert.equal(derivarEstadoCanal(false, false, 0, 0), 'sin_ninguno')
+  assert.equal(derivarEstadoCanal(false, true, 0, 0), 'solo_telefono')
+  assert.equal(derivarEstadoCanal(true, false, 0, 0), 'solo_email')
+  assert.equal(derivarEstadoCanal(true, true, 0, 0), 'con_ambos')
+  assert.equal(derivarEstadoCanal(null, true, 0, 0), 'no_comprobado', 'medio dato no es un dato')
+  assert.equal(derivarEstadoCanal(true, null, 0, 0), 'no_comprobado')
+})
+
+// ── 3 bis. El contacto NO vive solo en la ficha del tomador ─────────────────
+
+test('🚨 sin nada en la ficha pero con SU dato en la póliza NO es «ilocalizable»', () => {
+  // El caso de `Juan Manuel Duran Ibañez` y `MORALES ISABEL MALDONADO`: CIMA
+  // trajo su email en el interviniente y nadie lo copió a la ficha. El dato es
+  // SUYO y está en la base; lo que falla es que el cron de avisos lee la ficha.
+  assert.equal(derivarEstadoCanal(false, false, 1, 0), 'canal_en_poliza')
+})
+
+test('🚨 sin nada suyo pero con otra persona en la póliza tampoco es «ilocalizable»', () => {
+  // El caso de `Esquiansa` → Juan Manuel López Benjumea. Hay a quién llamar.
+  assert.equal(derivarEstadoCanal(false, false, 0, 1), 'contacto_via_tercero')
+})
+
+test('lo SUYO manda sobre lo de un tercero: son acciones distintas', () => {
+  // Copiar un dato a la ficha ≠ llamar a alguien para pedirle el correo.
+  assert.equal(derivarEstadoCanal(false, false, 1, 3), 'canal_en_poliza')
+})
+
+test('🚨 sin saber lo de la póliza NO se declara a nadie ilocalizable', () => {
+  // Un puerto viejo no manda esos recuentos. Con el hueco, el estado conservador
+  // es «no comprobado»: afirmar «no le llega NADA» es justo el fallo del 04/09.
+  assert.equal(derivarEstadoCanal(false, false, null, 0), 'no_comprobado')
+  assert.equal(derivarEstadoCanal(false, false, 0, null), 'no_comprobado')
+  // …pero un cliente que SÍ tiene canal propio no necesita ese dato para nada.
+  assert.equal(derivarEstadoCanal(true, true, null, null), 'con_ambos')
+})
+
+test('🚨 la consulta mira los intervinientes, no solo la ficha del tomador', () => {
+  // Sin este join la pantalla vuelve a decir «19 con los que NO se puede
+  // contactar» cuando son 15, y a llamar ilocalizable a `Esquiansa`.
+  assert.match(SQL, /join poliza_intervinientes i on i\.poliza_id = p\.id/i)
+  assert.match(SQL, /left join clientes ic on ic\.id = i\.cliente_id/i)
+  // …y distingue su propio dato (`es_el_mismo`) del de un tercero.
+  assert.match(SQL, /\(i\.cliente_id = b\.id\) as es_el_mismo/i)
+})
+
+test('la búsqueda por póliza respeta la cartera viva y los merges', () => {
+  // Sin esto, un interviniente de una póliza de 2014 «rescataría» a un cliente
+  // que hoy es ilocalizable.
+  const lateral = SQL.slice(SQL.indexOf('left join lateral'))
+  assert.match(lateral, /p\.import_ref is null or p\.eiac_xml_hash is not null/i)
+  assert.match(lateral, /p\.merged_into_poliza_id is null/i)
+  assert.match(lateral, /ic\.merged_into_cliente_id is null/i)
+})
+
+test('🚨 el nombre CIFRADO de un interviniente no se pinta ni se manda', () => {
+  // `poliza_intervinientes.nombre` viene como `v1:iv:cipher:tag`. Mandarlo sería
+  // sacar PII que además no se puede leer; pintarlo, enseñar basura.
+  assert.match(SQL, /startsWith\('v1:'\)/, 'falta la guarda del blob cifrado en asegura')
+  assert.match(PUERTO, /startsWith\('v1:'\)/, 'falta la guarda del blob cifrado en el puerto')
+  const r = interpretarSinCanal(200, {
+    estado: 'ok',
+    filas: [{
+      clienteId: 'c1', nombre: 'Esquiansa', tieneEmail: false, tieneTelefono: false,
+      canalEnPoliza: 0, contactoDeOtros: 2,
+      fichasContacto: [
+        { clienteId: 'p1', nombre: 'Juan Manuel Lopez Benjumea' },
+        { clienteId: 'p2', nombre: 'v1:TjaDV+QB:9mwrzk:qUYBLy8H' },
+      ],
+    }],
+    resumen: {},
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.filas[0].fichasContacto, [{ clienteId: 'p1', nombre: 'Juan Manuel Lopez Benjumea' }])
+  // La que no se puede nombrar sigue CONTADA: se declara el hueco, no se borra.
+  assert.equal(r.filas[0].contactoDeOtros, 2)
+  assert.equal(r.filas[0].estado, 'contacto_via_tercero')
+})
+
+test('🚨 el titular de la pantalla es «ilocalizables», no «sin canal en la ficha»', () => {
+  // Este cambio de una palabra es el fallo entero: 19 → 15.
+  assert.match(PANTALLA, /const ilocalizables = resumen\.ilocalizables/)
+  assert.match(PANTALLA, /ilocalizables\} cliente\(s\) con los que NO se puede contactar/)
+  assert.doesNotMatch(
+    PANTALLA,
+    /\$\{sinNinguno\} cliente\(s\) con los que NO se puede contactar/,
+    'el titular no puede volver a contar los que solo miran la ficha',
+  )
+})
+
+test('la pantalla dice que hay a quién llamar, y que eso NO es avisar', () => {
+  assert.match(PANTALLA, /canal_en_poliza/)
+  assert.match(PANTALLA, /contacto_via_tercero/)
+  assert.match(PANTALLA, /art\. 22 LCS/, 'el aviso formal va al tomador, y hay que decirlo')
 })
 
 test('el estado NO se cree lo que venga en el JSON: se deriva', () => {
@@ -122,7 +224,10 @@ test('el estado NO se cree lo que venga en el JSON: se deriva', () => {
   // escondería a un ilocalizable. Manda lo medido, no la etiqueta.
   const r = interpretarSinCanal(200, {
     estado: 'ok',
-    filas: [{ clienteId: 'c1', nombre: 'X', tieneEmail: false, tieneTelefono: false, estado: 'con_ambos' }],
+    filas: [{
+      clienteId: 'c1', nombre: 'X', tieneEmail: false, tieneTelefono: false,
+      canalEnPoliza: 0, contactoDeOtros: 0, estado: 'con_ambos',
+    }],
     resumen: { vivos: 79, conEmail: 44, conTelefono: 52, conAlguno: 53, sinNinguno: 26 },
   })
   assert.equal(r.estado, 'ok')
@@ -163,7 +268,7 @@ test('el fallo del puerto propaga su motivo, no una lista vacía', () => {
 test('una lista truncada NO se cuenta: los recuentos pasan a desconocidos', () => {
   assert.match(
     SQL,
-    /truncado\s*\?\s*\{ vivos: null/,
+    /truncado\s*$\s*\?\s*\{\s*$\s*vivos: null/m,
     'con la lista recortada el recuento saldría más bajo que la realidad',
   )
 })

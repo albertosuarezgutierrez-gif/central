@@ -450,8 +450,30 @@ export async function impagadosAsegura(): Promise<Impagados> {
 //               truncada). Es «no comprobado», y NO se pinta como «no tiene»:
 //               esa confusión es justo la que convierte un hueco en una
 //               afirmación tranquilizadora y falsa.
+//
+// 🚨 Y la ficha del tomador NO es el único sitio donde vive su contacto
+// (04/09/2026, lo cazó Alberto: `Esquiansa` salía «ilocalizable» y su contacto
+// de siempre es Juan Manuel López Benjumea). Hay tres sitios:
+//   1. Su ficha.
+//   2. Su propio dato colgado de la PÓLIZA y nunca copiado a la ficha
+//      (`canalEnPoliza`). El cron de avisos lee la ficha → hoy no le sale nada.
+//   3. Otra persona de su póliza (`contactoDeOtros`): hay a quién llamar.
+// ⚖️ Tener a quién llamar NO es poder notificar: el preaviso del art. 22 LCS va
+// al TOMADOR. Por eso 2 y 3 son estados propios y no un «localizable» a secas.
 
-export type EstadoCanal = 'sin_ninguno' | 'solo_telefono' | 'solo_email' | 'con_ambos' | 'no_comprobado'
+export type EstadoCanal =
+  | 'sin_ninguno'
+  | 'contacto_via_tercero'
+  | 'canal_en_poliza'
+  | 'solo_telefono'
+  | 'solo_email'
+  | 'con_ambos'
+  | 'no_comprobado'
+
+/** Ficha de una persona localizable que aparece en las pólizas del cliente.
+ *  El nombre viene de `clientes` (en claro); un interviniente suelto lleva el
+ *  nombre cifrado y por eso solo cuenta, no se nombra. */
+export type FichaContacto = { clienteId: string; nombre: string }
 
 export type ClienteCanal = {
   clienteId: string
@@ -459,6 +481,14 @@ export type ClienteCanal = {
   /** `null` = asegura no informó el campo. NO es «no tiene email». */
   tieneEmail: boolean | null
   tieneTelefono: boolean | null
+  /** Intervinientes de sus pólizas vivas que son ÉL MISMO y traen contacto.
+   *  `null` = el puerto no lo informa; NO es «no hay». */
+  canalEnPoliza: number | null
+  /** Personas distintas de él, localizables, en sus pólizas vivas. `null` = ídem. */
+  contactoDeOtros: number | null
+  /** Las de arriba que tienen ficha (nombre en claro + enlace). Puede venir más
+   *  corta que `contactoDeOtros`: los sueltos no tienen ficha. */
+  fichasContacto: FichaContacto[]
   estado: EstadoCanal
   /** `null` = no se contó. NO es «no tiene pólizas» (estaría fuera de la lista). */
   polizasCima: number | null
@@ -483,7 +513,12 @@ export type SinCanal =
         conEmail: number | null
         conTelefono: number | null
         conAlguno: number | null
+        /** Sin contacto EN SU FICHA. No es lo mismo que ilocalizable. */
         sinNinguno: number | null
+        /** 🚨 El titular: ni ficha, ni póliza, ni nadie. `null` = no comprobado. */
+        ilocalizables: number | null
+        /** Sin nada en la ficha pero con por dónde tirar. */
+        rescatables: number | null
       }
       truncado: boolean
     }
@@ -495,14 +530,44 @@ function booleano(v: unknown): boolean | null {
   return typeof v === 'boolean' ? v : null
 }
 
-/** El estado se DERIVA de los dos canales; no se cree el que venga en el JSON.
- *  Si falta cualquiera de los dos, el resultado es `no_comprobado`. */
-export function derivarEstadoCanal(email: boolean | null, telefono: boolean | null): EstadoCanal {
+/** El estado se DERIVA de dónde hay contacto; no se cree el que venga en el
+ *  JSON. Si falta cualquiera de las cuatro medidas, el resultado es
+ *  `no_comprobado`.
+ *
+ *  🚨 Ojo al último bloque: sin saber lo de la póliza NO se puede declarar a
+ *  nadie ilocalizable. Un puerto viejo (que no manda esos dos recuentos) dejaba
+ *  a los 19 pintados como «no les llega NADA», y de 19 solo 15 lo eran. Ante el
+ *  hueco, el estado conservador es «no comprobado», nunca la afirmación. */
+export function derivarEstadoCanal(
+  email: boolean | null,
+  telefono: boolean | null,
+  canalEnPoliza: number | null,
+  contactoDeOtros: number | null,
+): EstadoCanal {
   if (email === null || telefono === null) return 'no_comprobado'
   if (email && telefono) return 'con_ambos'
   if (email) return 'solo_email'
   if (telefono) return 'solo_telefono'
+  if (canalEnPoliza === null || contactoDeOtros === null) return 'no_comprobado'
+  if (canalEnPoliza > 0) return 'canal_en_poliza'
+  if (contactoDeOtros > 0) return 'contacto_via_tercero'
   return 'sin_ninguno'
+}
+
+/** Las fichas nombradas. Una entrada sin id o con el nombre cifrado (`v1:`) se
+ *  descarta: sigue contada en `contactoDeOtros`, pero no se inventa un nombre. */
+function leerFichasContacto(v: unknown): FichaContacto[] {
+  if (!Array.isArray(v)) return []
+  const out: FichaContacto[] = []
+  for (const f of v) {
+    if (typeof f !== 'object' || f === null) continue
+    const o = f as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    const nombre = cadena(o.nombre)
+    if (id === null || nombre === null || nombre.startsWith('v1:')) continue
+    out.push({ clienteId: id, nombre })
+  }
+  return out
 }
 
 export function interpretarSinCanal(status: number, json: unknown): SinCanal {
@@ -528,12 +593,17 @@ export function interpretarSinCanal(status: number, json: unknown): SinCanal {
     if (id === null || nombre === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
     const tieneEmail = booleano(o.tieneEmail)
     const tieneTelefono = booleano(o.tieneTelefono)
+    const canalEnPoliza = entero(o.canalEnPoliza)
+    const contactoDeOtros = entero(o.contactoDeOtros)
     filas.push({
       clienteId: id,
       nombre,
       tieneEmail,
       tieneTelefono,
-      estado: derivarEstadoCanal(tieneEmail, tieneTelefono),
+      canalEnPoliza,
+      contactoDeOtros,
+      fichasContacto: leerFichasContacto(o.fichasContacto),
+      estado: derivarEstadoCanal(tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros),
       polizasCima: entero(o.polizasCima),
       proximoVencimiento: cadena(o.proximoVencimiento),
       polizasSinFecha: entero(o.polizasSinFecha),
@@ -554,6 +624,8 @@ export function interpretarSinCanal(status: number, json: unknown): SinCanal {
       conTelefono: entero(res.conTelefono),
       conAlguno: entero(res.conAlguno),
       sinNinguno: entero(res.sinNinguno),
+      ilocalizables: entero(res.ilocalizables),
+      rescatables: entero(res.rescatables),
     },
     truncado: r.truncado === true,
   }

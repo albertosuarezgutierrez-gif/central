@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaRol, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { contactoEfectivo, etiquetaRol, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { urlSubirPoliza, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink } from '@/components/ui'
@@ -233,8 +233,15 @@ function Contacto({ c, intervinientes, piiClave, contactos, polizas }: {
   const quien = ef.quien
     ? `${ef.quien.nombre ?? 'sin nombre legible'}, ${etiquetaRol(ef.quien.rol)}${deQue}`
     : null
-  const deOtro = (via: 'tomador' | 'interviniente' | null) =>
-    via === 'interviniente' && quien ? (
+  // 🚨 `tomador_en_poliza` NO es «de otro»: es SUYO, pero guardado en la póliza y
+  // no en su ficha. Se dice, porque el aviso de vencimiento lee la ficha y hoy no
+  // le llega — se arregla copiándolo aquí, no llamando a nadie (04/09/2026).
+  const deOtro = (via: ContactoEfectivo['viaTelefono']) =>
+    via === 'tomador_en_poliza' ? (
+      <span style={{ fontSize: 11, color: 'var(--warning)' }} title="Está en un interviniente de su póliza, no en su ficha: el aviso de vencimiento lee la ficha, así que hoy no le sale. Cópialo a su ficha.">
+        {' '}(📇 en su póliza, no en su ficha)
+      </span>
+    ) : via === 'interviniente' && quien ? (
       <span style={{ fontSize: 11 }}>
         {' '}({ef.quien?.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{quien}</Link> : quien})
       </span>
