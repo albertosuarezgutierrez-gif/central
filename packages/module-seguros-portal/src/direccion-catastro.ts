@@ -123,23 +123,32 @@ export function variantesDireccion(direccion: string): readonly string[] {
     salida.push(limpia)
   }
 
+  // Quitar los acentos no genera variante POR SÍ SOLO —`clave()` ya los ignora,
+  // así que saldría duplicada—, pero es la entrada de todo lo demás.
   const sinAcentos = quitarAcentos(base)
-  anadir(sinAcentos)
 
-  const conSigla = expandirSigla(sinAcentos)
-  anadir(conSigla)
+  // Dos maneras de escribir la MISMA vía: con la sigla larga, y además con las
+  // abreviaturas de dentro desplegadas («Dr.» → «DOCTOR»), que es como suele
+  // estar el callejero. Cuál acierta depende del municipio: se prueban las dos.
+  const formas = [expandirSigla(sinAcentos)]
+  const conTitulos = expandirTitulos(formas[0])
+  if (clave(conTitulos) !== clave(formas[0])) formas.push(conTitulos)
 
-  // Sin el interior (piso y puerta): el Catastro busca por vía y número, y el
-  // «3º B» pegado detrás es justo lo que hace que no case.
-  const sinInterior = quitarInterior(conSigla)
-  anadir(sinInterior)
+  // De menos recorte a más: primero la dirección entera, luego sin el interior
+  // (el Catastro busca por vía y número, y el «3º B» pegado detrás es justo lo
+  // que hace que no case), luego sin el «nº», y al final solo vía y número.
+  for (const f of formas) anadir(f)
 
-  // Sin el «nº»/«num.» delante del número.
-  anadir(sinInterior.replace(/\b(n[ºo°]\.?|num\.?|numero)\s*/gi, ''))
-
-  // Solo vía y primer número: el intento más amplio, el último.
-  const soloViaNumero = sinInterior.match(/^(.*?\d+)/)
-  if (soloViaNumero) anadir(soloViaNumero[1])
+  const sinInterior = formas.map(quitarInterior)
+  for (const s of sinInterior) anadir(s)
+  for (const s of sinInterior) anadir(quitarPalabraNumero(s))
+  for (const s of sinInterior) {
+    // Vía y número, nada más. Cortado por el MISMO ancla que el interior: un
+    // `^(.*?\d+)` a pelo se quedaría con el primer número que pillara y
+    // convertiría «Calle 28 de Febrero 5» en «Calle 28», que es otra dirección.
+    const corte = finDelPortal(s)
+    if (corte !== null) anadir(s.slice(0, corte))
+  }
 
   return salida
 }
@@ -150,6 +159,11 @@ function clave(v: string): string {
 
 function quitarAcentos(v: string): string {
   return v.normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+/** Quita el «nº»/«num.»/«numero» que va delante del número de portal. */
+function quitarPalabraNumero(v: string): string {
+  return v.replace(/\b(n[ºo°]\.?|num\.?|numero)\s*/gi, '')
 }
 
 /**
@@ -163,23 +177,188 @@ const SIGLAS: ReadonlyArray<readonly [RegExp, string]> = [
   [/^avda?\.?\s+/i, 'AVENIDA '],
   [/^av\.?\s+/i, 'AVENIDA '],
   [/^pl(?:za)?\.?\s+/i, 'PLAZA '],
+  [/^pza\.?\s+/i, 'PLAZA '],
   [/^p[ºo°]\.?\s+/i, 'PASEO '],
   [/^ctra\.?\s+/i, 'CARRETERA '],
   [/^urb\.?\s+/i, 'URBANIZACION '],
   [/^trav\.?\s+/i, 'TRAVESIA '],
+  [/^ps?je\.?\s+/i, 'PASAJE '],
+  [/^gta\.?\s+/i, 'GLORIETA '],
+  [/^c(?:m?no|mo)\.?\s+/i, 'CAMINO '],
+  [/^rda\.?\s+/i, 'RONDA '],
+  [/^rbla\.?\s+/i, 'RAMBLA '],
+  [/^bda\.?\s+/i, 'BARRIADA '],
+  [/^b[ºo°]\.?\s+/i, 'BARRIO '],
+  [/^c(?:j|ll)on\.?\s+/i, 'CALLEJON '],
+  [/^cta\.?\s+/i, 'CUESTA '],
+  [/^pol(?:ig)?\.?\s+/i, 'POLIGONO '],
+  [/^prol\.?\s+/i, 'PROLONGACION '],
+  [/^sda\.?\s+/i, 'SENDA '],
 ]
+
+/**
+ * Las siglas de vía de DOS letras del Catastro, tal cual vienen en los papeles
+ * de una póliza («CL SAN VICENTE 40»).
+ *
+ * 🚨 Solo en MAYÚSCULAS y con un espacio detrás: así no hay forma de que se
+ * coman el principio de un nombre de calle —ninguna vía española empieza por
+ * una palabra de dos letras de esta lista—, que es lo que pasaría aceptando
+ * «Co…» o «Cu…» en minúscula.
+ */
+const SIGLAS_CATASTRO: Readonly<Record<string, string>> = {
+  CL: 'CALLE',
+  AV: 'AVENIDA',
+  PZ: 'PLAZA',
+  PS: 'PASEO',
+  CR: 'CARRETERA',
+  CM: 'CAMINO',
+  GL: 'GLORIETA',
+  TR: 'TRAVESIA',
+  RD: 'RONDA',
+  BO: 'BARRIO',
+  UR: 'URBANIZACION',
+  PG: 'POLIGONO',
+  CJ: 'CALLEJON',
+  RB: 'RAMBLA',
+  PJ: 'PASAJE',
+  CU: 'CUESTA',
+  CS: 'CASERIO',
+  CO: 'COLONIA',
+  VR: 'VEREDA',
+  SD: 'SENDA',
+  BR: 'BARRANCO',
+}
 
 function expandirSigla(v: string): string {
   for (const [patron, largo] of SIGLAS) if (patron.test(v)) return v.replace(patron, largo)
-  return v
+  const dos = v.match(/^([A-Z]{2})\s+(?=[A-Za-z])/)
+  const largo = dos ? SIGLAS_CATASTRO[dos[1]] : undefined
+  return largo ? `${largo} ${v.slice(dos![0].length)}` : v
 }
 
-/** Quita `3º B`, `Esc 2`, `Pl:02 Pt:14`, `bajo dcha`… todo lo que va tras el número. */
+/**
+ * `Dr.` → `DOCTOR`, `Sta.` → `SANTA`… Siempre con el punto detrás: sin él,
+ * «Sta» o «Sr» podrían ser el principio de una palabra de verdad.
+ */
+const TITULOS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bdra\.\s*/gi, 'DOCTORA '],
+  [/\bdr\.\s*/gi, 'DOCTOR '],
+  [/\bsta\.\s*/gi, 'SANTA '],
+  [/\bsto\.\s*/gi, 'SANTO '],
+  [/\bgral\.\s*/gi, 'GENERAL '],
+  [/\bntra\.\s*/gi, 'NUESTRA '],
+  [/\bntro\.\s*/gi, 'NUESTRO '],
+  [/\bsra\.\s*/gi, 'SENORA '],
+  [/\bpque\.\s*/gi, 'PARQUE '],
+]
+
+function expandirTitulos(v: string): string {
+  let salida = v
+  for (const [patron, largo] of TITULOS) salida = salida.replace(patron, largo)
+  return salida
+}
+
+// ── Quitar el interior (planta, puerta, escalera) ──────────────────────────
+//
+// 🚨 LO PELIGROSO NO ES DEJAR EL INTERIOR: ES COMERSE PARTE DE LA CALLE. «Calle
+// Bajo Guía 12», «Avenida Ático Sur», «Calle Puerta Real 8», «Plaza del Portal
+// 3» — si «bajo», «ático», «puerta» o «portal» se quitan estén donde estén,
+// sale la dirección de OTRA vía. Y una variante mala no es neutra: si el
+// Catastro la encuentra, devuelve otra vivienda, con sus metros y su año.
+//
+// Por eso todo esto está ANCLADO al número de portal: lo que va antes es el
+// nombre de la vía y no se toca NUNCA; solo se limpia lo que va detrás.
+
+/** Palabra que introduce un dato del interior, con su valor pegado o no: `Esc 2`, `Pl:02`, `Pta.3`. */
+const CLAVE_INTERIOR = /^(?:esc|escal|escalera|pl|planta|pt|pta|prta|puerta|piso|portal|ptal|bloque|blq|bl|local|nave|vivienda|viv)[.:\-]?\s*-?\d{0,3}\s*[a-z]?$/
+
+/** La planta escrita con palabras. */
+const PLANTA_INTERIOR = /^(?:bajo|bajos|bj|entresuelo|entreplanta|entlo|atico|sotano|semisotano|principal|ppal)$/
+
+/** La puerta escrita con palabras. */
+const ORIENTACION_INTERIOR = /^(?:izq|izqd|izqda|izquierda|izquierdo|dcha|dch|dcho|drcha|derecha|centro|ctro)$/
+
+/**
+ * Un número de interior: `14`, `-1`, `3º`, `4ºC`, `12B`. Como mucho tres
+ * cifras: cinco son un CÓDIGO POSTAL y ese se queda (es dato de la dirección,
+ * no del interior).
+ */
+const NUMERO_INTERIOR = /^-?\d{1,3}\s*[ºª°o]?\s*[a-z]?$/
+
+function normalizarToken(t: string): string {
+  return quitarAcentos(t).toLowerCase().replace(/^[.:;,·]+|[.:;,·]+$/g, '')
+}
+
+function esTokenInterior(t: string): boolean {
+  const n = normalizarToken(t)
+  if (n === '') return true
+  return (
+    CLAVE_INTERIOR.test(n) ||
+    PLANTA_INTERIOR.test(n) ||
+    ORIENTACION_INTERIOR.test(n) ||
+    NUMERO_INTERIOR.test(n) ||
+    /^[a-z]$/.test(n)
+  )
+}
+
+/**
+ * Dónde acaba el número de portal, que es la frontera entre «nombre de la vía»
+ * (intocable) y «interior» (lo que se puede quitar).
+ *
+ * Se coge el primer número que se comporta como portal: el que cierra la
+ * dirección, el que lleva una coma detrás o el que va seguido de algo que ya es
+ * interior. Los que no —«Calle 28 de Febrero 5»— se saltan, y si ninguno
+ * cumple se usa el último número, que es el candidato menos malo. Sin números
+ * no hay portal y no se toca nada.
+ */
+function finDelPortal(v: string): number | null {
+  const numeros = /\d+/g
+  const posibles: number[] = []
+  let m: RegExpExecArray | null
+  while ((m = numeros.exec(v)) !== null) {
+    let fin = m.index + m[0].length
+    // «12B»: la letra pegada al número (el bis) va con el portal, no es puerta.
+    if (/^[A-Za-z](?![A-Za-z])/.test(v.slice(fin))) fin += 1
+    const resto = v.slice(fin)
+    // «3º» no es un portal: es una planta.
+    if (/^\s*[ºª°]/.test(resto)) continue
+    posibles.push(fin)
+    if (/^\s*$/.test(resto) || /^\s*[,;]/.test(resto)) return fin
+    const siguiente = resto.match(/^\s+([^\s,;]+)/)
+    if (siguiente && esTokenInterior(siguiente[1])) return fin
+  }
+  return posibles.length > 0 ? posibles[posibles.length - 1] : null
+}
+
+/**
+ * Quita `3º B`, `Esc 2`, `Pl:02 Pt:14`, `bajo dcha`, `portal 2`… — pero SOLO
+ * detrás del número de portal, y dejando lo que no es interior (el código
+ * postal y la localidad se quedan: son dirección).
+ */
 function quitarInterior(v: string): string {
-  return v
-    .replace(/\b(esc(alera)?|es|pl(anta)?|pt|pta|puerta|piso|bloque|bl)\b\.?\s*:?\s*[\w-]*/gi, ' ')
-    .replace(/\b\d+\s*[ºo°ª]\s*[a-z]?\b/gi, ' ')
-    .replace(/\b(bajo|entresuelo|atico|sotano)\b\s*[a-z]?/gi, ' ')
-    .replace(/\b(izq(da)?|dcha|dch|drcha|centro)\b/gi, ' ')
-    .replace(/[,;]\s*$/, '')
+  const corte = finDelPortal(v)
+  if (corte === null) return limpiarBordes(v)
+  return limpiarBordes(v.slice(0, corte) + limpiarCola(v.slice(corte)))
+}
+
+function limpiarCola(cola: string): string {
+  const grupos = cola.split(/[,;]/)
+  const vivos: Array<{ i: number; texto: string }> = []
+  grupos.forEach((g, i) => {
+    const texto = g
+      .split(/\s+/)
+      .filter((t) => t !== '' && !esTokenInterior(t))
+      .join(' ')
+    if (texto !== '') vivos.push({ i, texto })
+  })
+  if (vivos.length === 0) return ''
+  // Si el primer trozo que sobrevive venía pegado al número (sin coma), se
+  // vuelve a pegar igual; el resto se separa con coma, como se escribió.
+  const primero = vivos[0].i === 0 ? ` ${vivos[0].texto}` : `, ${vivos[0].texto}`
+  return primero + vivos.slice(1).map((x) => `, ${x.texto}`).join('')
+}
+
+/** Espacios de más y la puntuación que queda colgando al quitar el interior. */
+function limpiarBordes(v: string): string {
+  return v.replace(/\s+/g, ' ').replace(/[\s,;.\-]+$/, '').trim()
 }

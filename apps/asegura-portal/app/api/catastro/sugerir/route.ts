@@ -3,20 +3,16 @@ import { z } from 'zod'
 
 import { MAX_DIRECCION } from '@central/module-seguros-portal'
 
-import {
-  HTTP_POR_ESTADO_SUGERENCIA,
-  sugerirDirecciones,
-  MAX_CANDIDATOS,
-  MAX_PROPUESTAS_IA,
-} from '@/lib/catastro-sugerencias'
+import { HTTP_POR_ESTADO_SUGERENCIA, sugerirDirecciones } from '@/lib/catastro-sugerencias'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 /**
- * En el peor caso se encadenan hasta {@link MAX_VARIANTES} + {@link MAX_PROPUESTAS_IA}
- * consultas al Catastro (cada una con su cerrojo de 350 ms entre peticiones) más
- * una llamada a la IA. `/api/catastro` se conforma con 30 s; esto necesita más.
+ * En el peor caso se encadenan hasta 6 variantes deterministas + 3 propuestas de
+ * la IA = 9 consultas al Catastro (cada una encadena a su vez hasta 3 peticiones,
+ * con un cerrojo de 350 ms entre ellas) más UNA llamada a la IA.
+ * `/api/catastro` se conforma con 30 s; esto necesita más.
  */
 export const maxDuration = 60
 
@@ -42,7 +38,7 @@ export const maxDuration = 60
  *
  * | HTTP | `estado`               | qué significa |
  * |------|------------------------|---------------|
- * | 200  | `candidatos`           | 1..{@link MAX_CANDIDATOS} direcciones confirmadas. **Elige la persona** |
+ * | 200  | `candidatos`           | de 1 a 3 direcciones confirmadas. **Elige la persona** |
  * | 400  | `datos_invalidos`      | el cuerpo no cumple el esquema |
  * | 401  | `sin_sesion`           | sin cookie del portal |
  * | 404  | `sin_candidatos`       | se probó todo y el Catastro no confirmó ninguna |

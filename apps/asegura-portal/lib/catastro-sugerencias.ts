@@ -54,13 +54,12 @@
 //   ia_no_disponible     503  hacía falta la IA y no la hubo. NO es «no hay».
 
 import { MAX_DIRECCION, MAX_VARIANTES, variantesDireccion } from '@central/module-seguros-portal'
-import { aiComplete, cleanJSON } from '@central/core-ai'
 
 import {
   consultarCatastroHogar,
   type ConsultaCatastro,
   type RespuestaCatastro,
-} from './catastro'
+} from './catastro.ts'
 
 // ── Topes ───────────────────────────────────────────────────────────────────
 
@@ -165,11 +164,26 @@ export function iaConfiguradaPorEnv(): boolean {
   )
 }
 
+/**
+ * ⚠️ `@central/core-ai` entra por un `import()` DINÁMICO, y no es un capricho:
+ * su `src/index.ts` reexporta con rutas SIN extensión, así que el resolvedor
+ * ESM de Node se cae con `ERR_MODULE_NOT_FOUND` al cargar el fichero — medido
+ * ya en `lib/extraer-poliza.test.ts`. Con el import arriba, este módulo entero
+ * quedaría fuera del alcance de `node --test` y toda la lógica de esta pieza se
+ * quedaría SIN cepos. Dentro de la función, el bundler de Next lo resuelve en
+ * producción y los tests nunca llegan a ejecutarlo (inyectan su puerto).
+ *
+ * `temperature: 0`: no se quiere creatividad, se quiere la MISMA reescritura
+ * para la misma dirección. `cleanJSON` es el limpiador canónico del núcleo y se
+ * aplica aquí, en el borde; la lógica de abajo vuelve a defenderse igual.
+ */
 const PUERTO_REAL: PuertoSugerencias = {
   consultarCatastro: (c) => consultarCatastroHogar(c),
   iaConfigurada: iaConfiguradaPorEnv,
-  pedirAIa: (instruccion, prompt) =>
-    aiComplete(prompt, { system: instruccion, maxTokens: MAX_TOKENS_IA, temperature: 0 }),
+  pedirAIa: async (instruccion, prompt) => {
+    const { aiComplete, cleanJSON } = await import('@central/core-ai')
+    return cleanJSON(await aiComplete(prompt, { system: instruccion, maxTokens: MAX_TOKENS_IA, temperature: 0 }))
+  },
 }
 
 // ── La instrucción para la IA ───────────────────────────────────────────────
@@ -214,6 +228,31 @@ function claveDireccion(v: string): string {
     .replace(/[^A-Z0-9]/g, '')
 }
 
+/**
+ * El JSON del modelo, o `null`. En producción el texto llega ya pasado por
+ * `cleanJSON` (ver `PUERTO_REAL`); esto vuelve a intentarlo por su cuenta
+ * —quitando las vallas de markdown y quedándose con el primer corchete y el
+ * último— porque un modelo que envuelve su respuesta en prosa no es un fallo
+ * raro. Lo que NO hace es adivinar: si no sale un JSON, son cero propuestas.
+ */
+function parsearJson(bruto: string): unknown {
+  const intentar = (v: string): unknown => {
+    try {
+      return JSON.parse(v)
+    } catch {
+      return null
+    }
+  }
+  const directo = intentar(bruto)
+  if (directo !== null) return directo
+
+  const sinVallas = bruto.replace(/```[a-z]*/gi, '').trim()
+  const inicio = sinVallas.search(/[[{]/)
+  const fin = Math.max(sinVallas.lastIndexOf(']'), sinVallas.lastIndexOf('}'))
+  if (inicio === -1 || fin <= inicio) return null
+  return intentar(sinVallas.slice(inicio, fin + 1))
+}
+
 /** Los números de portal que aparecen en un texto. */
 function numerosDe(v: string): Set<string> {
   return new Set((v.match(/\d+/g) ?? []).map((n) => String(Number(n))))
@@ -237,12 +276,8 @@ export function propuestasDeIa(
   original: string,
   yaProbadas: ReadonlySet<string> = new Set(),
 ): string[] {
-  let datos: unknown
-  try {
-    datos = JSON.parse(cleanJSON(bruto))
-  } catch {
-    return []
-  }
+  const datos = parsearJson(bruto)
+  if (datos === null) return []
 
   // El modelo puede devolver el array pelado o envuelto: las dos formas valen,
   // porque perder la lectura entera por cómo decidió anidar el JSON es tirar
