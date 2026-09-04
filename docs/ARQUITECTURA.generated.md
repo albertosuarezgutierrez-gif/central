@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-04T08:06:39Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-04T20:26:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1266 rutas API.
+**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1267 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (12):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_poliza_declarada, seguros.portal_vinculo
-- **Rutas API:** 10
+- **Rutas API:** 11
 ### housesevillana
 - **Módulos que usa:** —
 - **Capacidades:** —
@@ -256,6 +256,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (04/09/2026) ✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas
 - (04/09/2026) 💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno
 - (04/09/2026) 🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía
 - (04/09/2026) 🏠 Los 10 ramos ya despliegan SUS campos, y hogar los saca del Catastro
@@ -265,5 +266,4 @@
 - (03/09/2026) 🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos
 - (03/09/2026) 🎨 La marca de Grupo ASegura estaba en la app de Manuel, no en Drive
 - (03/09/2026) 🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera
-- (03/09/2026) 🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR
 
