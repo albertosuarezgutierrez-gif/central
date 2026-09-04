@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📸 Quitar Smoobu de Busto: las indicaciones están listas, las FOTOS no (04/09/2026).** Alberto preguntó por los dos
+  pisos de Bustos Tavera. Revisadas: los pasos son correctos y completos —el lío de las DOS cajas GRIFEMA idénticas del
+  portal ya está resuelto (Luxury = abajo, Reform = arriba, cada una con su foto en rojo)—, y en BD no falta nada
+  (portal, caja, wifi). WiFi y portal COMPARTIDOS entre los dos pisos: correcto, mismo edificio, no es un fallo.
+  🚨 **El bloqueo real: las 12 fotos de las indicaciones viven en el CDN de Smoobu** (Dúplex 5, House 3, Luxury 3,
+  Reform 2) y nadie las vigilaba. Apagar Smoobu del todo las mata EN SILENCIO: el mensaje sale con el enlace roto y el
+  huésped se planta ante las dos cajas idénticas. Se añaden `fotosDeAcceso()` + `HOST_FOTOS_ACCESO` +
+  `pasosQuePrometenFotoSinTenerla()` y 3 guardianes (probados en rojo). ⚠️ **Distinguir dos «quitar Smoobu»**: apagar
+  sus PLANTILLAS de mensajes se puede ya (`yaLoMandoSmoobu` cubre la transición sin duplicar); dejar Smoobu como PMS
+  exige copiar antes las fotos a Storage. **Pendiente de Alberto: activar los 2 pisos en `mensajes_prog_pisos`** (hoy
+  solo House) — no se toca sin su OK porque son mensajes reales a huéspedes. No se pudo comprobar que las fotos sigan
+  vivas: el proxy del contenedor da 403 a `login.smoobu.com`.
+
 - **📉 Las pasadas de pricing del 04/09: dos hallazgos y un agujero de instrumentación (04/09/2026).**
   Las 4 llaves muerden: de las 86 noches congeladas, **91 medidas y 74% ya bajaron** (Busto 70/75, ratio 0,807 = el raíl
   del −20%); quedan 11. Pero (1) **House Sevillana hace ida y vuelta dentro del día**: 7 de sus 8 fechas tocadas dos veces
