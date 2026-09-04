@@ -535,41 +535,29 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     // 30 h salta al perder un día entero y se calla si solo falló una pasada.
     maxHoras: 30,
     nota:
-<<<<<<< HEAD
-      'Los PIN temporales de Tuya no se están poniendo. Desde el 31/08/2026 el mensaje de la ' +
-      'víspera manda el PIN de ESA reserva, así que esto está en el camino del huésped. 🚦 Lo que ' +
-      'NO pasa: nadie se queda en la puerta — sin PIN vivo el mensaje cae al código MAESTRO, que ' +
-      'abre igual. Lo que SÍ pasa: se reparte una llave permanente en vez de una que caduca con la ' +
+      'Los PIN temporales de Tuya por reserva no se están creando. Desde el 31/08/2026 el mensaje ' +
+      'de la víspera manda el PIN de ESA reserva, así que esto está en el camino del huésped. ' +
+      '🚦 Lo que NO pasa: nadie se queda en la puerta — sin PIN vivo el mensaje cae al código ' +
+      'MAESTRO de `sivra_codigos_acceso`, que abre igual (verificado 04/09/2026: los cuatro pisos ' +
+      'lo tienen). Lo que SÍ pasa: se reparte una llave permanente en vez de una que caduca con la ' +
       'estancia, y en silencio. ' +
-      '🚨 EMPIEZA POR EL `detalle`, y por el `motivo`: «se ejecuta y no termina» quiere decir que el ' +
-      'cron SÍ está corriendo y que lo que falla son los PIN, que es otra avería y otro sitio donde ' +
-      'mirar. El parte crudo de cada PIN está en `domotica_acceso_pin.detalle->>\'error\'` (estado ' +
-      '`error`) — léelo antes de creerte ninguna hipótesis, esta incluida. Los códigos de Tuya ' +
-      'medidos hasta hoy separan tres averías distintas: «2001 device is offline» es la cerradura ' +
-      'sin conexión (batería/pasarela: se arregla EN EL PISO, no en el repo); «1109 param is ' +
-      'illegal» sale en la vía OFFLINE, que es justo el respaldo que debería salvar al 2001, así ' +
-      'que un 2001+1109 juntos dejan la reserva SIN PIN; «28841002 IoT Core subscription has ' +
-      'expired» se renueva en platform.tuya.com. ' +
-      '⚠️ NO des por hecho que es el IoT Core: esa era la explicación cableada aquí y el 04/09/2026 ' +
-      'ya era FALSA — sus últimos errores eran del 03/08 y lo que fallaba ese día era 2001+1109 en ' +
-      'BustoTavera, con tres reservas sin PIN (una con el huésped ya dentro). Un aviso que afirma ' +
-      'una causa vieja como conocida es peor que no decir nada: manda a stand-by ante un fallo vivo. ' +
-=======
-      'Los PIN temporales de Tuya por reserva no se están creando. Desde el 31/08/2026 ' +
-      'el mensaje de la víspera manda el PIN de ESA reserva, así que este cron está en el camino del ' +
-      'huésped. 🚦 Lo que NO pasa: nadie se queda en la puerta — sin PIN vivo el mensaje cae al ' +
-      'código MAESTRO de `sivra_codigos_acceso`, que abre igual (verificado 04/09/2026: los cuatro ' +
-      'pisos lo tienen). Lo que SÍ pasa: se reparte una llave permanente en vez de una que caduca ' +
-      'con la estancia, y en silencio. ⚠️ Este latido se pone rojo por DOS motivos distintos y hay ' +
-      'que leer el `detalle` para saber cuál: (a) el cron no corre — mira `ultimo_at`; (b) el cron ' +
-      'corre entero y hay cerraduras con ERROR — es el caso normal aquí, y entonces la avería es de ' +
-      'la cerradura, no del cron. 🚫 NO se cablea aquí la causa del error de turno: esta nota tuvo ' +
-      'un mes cableado el trial de IoT Core caducado como causa conocida, invitando a descartar el ' +
-      'aviso, y el 04/09/2026 el error real era otro (`Tuya 2001: device is offline` en Bustos ' +
-      'Tavera, que lleva 0 PIN creados de 10 intentos desde que existe). Un vigía que diagnostica ' +
-      'por ti lo que no ha mirado te convence de no mirar. La causa se lee en ' +
-      '`domotica_acceso_pin.detalle`. ' +
->>>>>>> origin/main
+      '🚨 EMPIEZA POR EL `detalle`, y por el `motivo`: este latido se pone rojo por DOS motivos ' +
+      'distintos. (a) El cron no corre — mira `ultimo_at`. (b) «Se ejecuta y no termina» quiere ' +
+      'decir que el cron SÍ está corriendo y que lo que falla son los PIN: es otra avería y otro ' +
+      'sitio donde mirar, y es el caso normal aquí. El parte crudo de cada PIN está en ' +
+      '`domotica_acceso_pin.detalle->>\'error\'` (estado `error`) — léelo antes de creerte ninguna ' +
+      'hipótesis, esta incluida. Los códigos de Tuya medidos hasta hoy separan tres averías que ' +
+      'mandan a sitios OPUESTOS: «2001 device is offline» es la cerradura sin conexión ' +
+      '(batería/pasarela: se arregla EN EL PISO, no en el repo); «1109 param is illegal» sale en ' +
+      'la vía OFFLINE, que es justo el respaldo que debería salvar al 2001, así que un 2001+1109 ' +
+      'juntos dejan la reserva SIN PIN; «28841002 IoT Core subscription has expired» se renueva en ' +
+      'platform.tuya.com. ' +
+      '🚫 NO se cablea aquí la causa del error de turno, y NO des por hecho que es el IoT Core: ' +
+      'esa era la explicación cableada aquí durante un mes, invitando a descartar el aviso, y el ' +
+      '04/09/2026 ya era FALSA — sus últimos errores eran del 03/08 y lo que fallaba ese día era ' +
+      '2001+1109 en Bustos Tavera (0 PIN creados de 10 intentos desde que existe), con tres ' +
+      'reservas sin PIN, una con el huésped ya dentro. Un vigía que diagnostica por ti lo que no ' +
+      'ha mirado te convence de no mirar. ' +
       'Huella: agente_latidos.sivra_domotica_acceso.',
   },
   {
