@@ -3,6 +3,7 @@ import { contactoEfectivo, etiquetaRol, type EstadoClienteDerivado, type Resumen
 import { urlSubirPoliza, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink } from '@/components/ui'
+import AccionesContacto from '../../AccionesContacto'
 import { fmt } from './piezas'
 
 /**
@@ -35,7 +36,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
                 diga el enum. */}
             <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={ficha.tipo === 'cliente' || resumen.conteo.vivas > 0} />
-            <Contacto c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
+            <Contacto nombre={ficha.nombre} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
             {conyuge && (
               <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                 💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -209,7 +210,9 @@ const CAUSA_PII: Record<string, string> = {
   sin_muestra: 'no hay ningún dato cifrado con el que probar la clave',
 }
 
-function Contacto({ c, intervinientes, piiClave, contactos, polizas }: {
+function Contacto({ nombre, c, intervinientes, piiClave, contactos, polizas }: {
+  /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */
+  nombre: string
   c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
   intervinientes: IntervinienteFicha[] | null
   piiClave: string | null
@@ -243,6 +246,10 @@ function Contacto({ c, intervinientes, piiClave, contactos, polizas }: {
   const coletilla = ef.intervinientesSinMirar ? ' · intervinientes sin comprobar' : ''
   return (
     <>
+      {/* Los tres iconos van juntos y al principio: es lo que se TOCA. Debajo
+          sigue el número y de quién es, que es lo que se LEE. El WhatsApp no
+          aparece sobre un fijo (`accionesContacto` lo decide). */}
+      <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} />
       {ef.telefono ? (
         <span>
           <a href={`tel:${ef.telefono.replace(/\s/g, '')}`}>📞 {ef.telefono}</a>
