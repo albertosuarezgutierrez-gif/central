@@ -20,6 +20,17 @@ export type CamposVisibles = {
   abrirParte: boolean
   prima: boolean
   recibos: boolean
+  /**
+   * Los siniestros ABIERTOS de esa póliza. Va aparte de `recibos` y de `prima`
+   * porque no es un dato del contrato: es un HECHO DE LA VIDA de su dueño —
+   * «tiene un parte abierto del 12/06»— y se puede leer sin ver un euro.
+   *
+   * 🚨 Estuvo SIN puerta hasta el 04/09/2026: `carteraDeIdentidad` los pegaba a
+   * la póliza sin mirar el nivel, mientras prima, coberturas y recibos sí la
+   * miraban. Un tercero con el alcance más bajo veía los siniestros abiertos de
+   * quien le autorizó. No fallaba nada: salían, y punto.
+   */
+  siniestros: boolean
   iban: boolean
   dniTomador: boolean
   documentos: boolean
@@ -35,6 +46,7 @@ const TARJETA: CamposVisibles = {
   abrirParte: true,
   prima: false,
   recibos: false,
+  siniestros: false,
   iban: false,
   dniTomador: false,
   documentos: false,
@@ -46,6 +58,7 @@ const COMPLETO: CamposVisibles = {
   ...TARJETA,
   prima: true,
   recibos: true,
+  siniestros: true,
   iban: true,
   dniTomador: true,
   documentos: true,

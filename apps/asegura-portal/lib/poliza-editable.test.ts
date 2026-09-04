@@ -55,20 +55,24 @@ test('solo compañia basta, y el resto sale a null (no ausente)', () => {
     matricula: null,
     bastidor: null,
     fechaMatriculacion: null,
+    referenciaCatastral: null,
     datosRamo: null,
+    datosRamoOrigen: null,
   })
-  // Las nueve claves EXISTEN: en un alta «no lo toques» no significa nada, así
+  // Las once claves EXISTEN: en un alta «no lo toques» no significa nada, así
   // que un campo que no se rellenó vale `null` y está presente, nunca ausente.
   assert.deepEqual(Object.keys(d).sort(), [
     'bastidor',
     'compania',
     'datosRamo',
+    'datosRamoOrigen',
     'fechaMatriculacion',
     'fechaVencimiento',
     'matricula',
     'numeroPoliza',
     'primaAnual',
     'ramo',
+    'referenciaCatastral',
   ])
 })
 
@@ -186,7 +190,7 @@ test('la fecha de matriculacion mira al PASADO, al reves que el vencimiento', ()
   assert.equal(falloP(normalizarParche({ fechaVencimiento: '1970-01-01' }, HOY)), 'fecha_fuera_de_rango')
 })
 
-test('el alta a mano tiene NUEVE campos: la poliza, el vehiculo y los del ramo', () => {
+test('el alta a mano tiene ONCE campos: la poliza, el bien, los del ramo y su origen', () => {
   // La forma de `DatosAlta` la fija `test/regression-portal-poliza-editable.test.ts`
   // (raíz) con un `deepEqual` del objeto entero, y los dos se actualizan a la vez:
   // ese cepo existe para que añadir un campo al alta sea una decisión y no un
@@ -194,18 +198,23 @@ test('el alta a mano tiene NUEVE campos: la poliza, el vehiculo y los del ramo',
   // es donde el cliente teclea la matrícula, y de ahí sale la fecha estimada;
   // `datosRamo` entró el 04/09/2026 porque el formulario del alta es donde se
   // despliegan los campos del ramo elegido — si no se pudieran declarar al
-  // crear, se pedirían dos veces o no se pedirían nunca.
+  // crear, se pedirían dos veces o no se pedirían nunca. Y ese mismo día
+  // entraron `referenciaCatastral` (el identificador del inmueble, de donde sale
+  // el autorrelleno del Catastro) y `datosRamoOrigen` (de dónde salió cada campo:
+  // los metros que se aceptan del Catastro no son los que se estiman a ojo).
   const d = ok(normalizarAlta({ compania: 'Axa', matricula: '1234BCD', bastidor: 'WVWZZZ1KZAW123456' }, HOY))
   assert.deepEqual(Object.keys(d).sort(), [
     'bastidor',
     'compania',
     'datosRamo',
+    'datosRamoOrigen',
     'fechaMatriculacion',
     'fechaVencimiento',
     'matricula',
     'numeroPoliza',
     'primaAnual',
     'ramo',
+    'referenciaCatastral',
   ])
   assert.equal(d.matricula, '1234BCD')
   assert.equal(d.bastidor, 'WVWZZZ1KZAW123456')
@@ -287,4 +296,184 @@ test('sin ramo conocido, datosRamo es un ERROR; borrarlo NO necesita ramo', () =
   const p = normalizarParche({ datosRamo: null }, HOY)
   assert.equal(p.ok, true)
   assert.equal((p as { ok: true; parche: { datosRamo: unknown } }).parche.datosRamo, null)
+})
+
+
+// ─── La REFERENCIA CATASTRAL: 20 es tu piso, 14 es el edificio ───────────────
+//
+// Es el identificador del BIEN inmueble, hermano de la matrícula, y por eso vive
+// en una COLUMNA y no dentro de `datosRamo`: se consulta («¿tengo otra póliza de
+// esta misma vivienda?») y está indexada.
+//
+// Lo que se fija aquí es la distinción que sostiene el campo: una referencia de
+// 14 caracteres es REAL, pero es la de la FINCA (el edificio o la parcela).
+// Aceptarla como si fuera la vivienda trae los metros del bloque entero a una
+// póliza de un piso: un número plausible y equivocado que no da error, no se ve,
+// y en un siniestro se paga como infraseguro. Y por eso su error es PROPIO: hay
+// que poder decirle a la persona «esa es la del edificio, necesitamos la de tu
+// piso» en vez de un «no es válida» que la deja sin saber qué corregir.
+
+const REF_INMUEBLE = '9872023VH5797S0001WX' // 20 caracteres: el piso
+const REF_FINCA = '9872023VH5797S' // 14: el edificio
+
+test('la referencia del INMUEBLE se guarda compactada y en mayusculas', () => {
+  const p = okP(normalizarParche({ referenciaCatastral: ' 9872023vh5797s 0001 wx ' }, HOY))
+  assert.equal(p.referenciaCatastral, REF_INMUEBLE)
+  // Y con los separadores con los que la copia la gente del recibo del IBI.
+  assert.equal(
+    okP(normalizarParche({ referenciaCatastral: '9872023VH5797S-0001-WX' }, HOY)).referenciaCatastral,
+    REF_INMUEBLE,
+  )
+})
+
+test('una referencia de FINCA (14) se rechaza con un error DISTINTO al de invalida', () => {
+  assert.equal(falloP(normalizarParche({ referenciaCatastral: REF_FINCA }, HOY)), 'referencia_catastral_de_finca')
+  // El error tiene que ser otro que el de basura: son dos conversaciones
+  // distintas con la persona.
+  assert.notEqual(
+    falloP(normalizarParche({ referenciaCatastral: REF_FINCA }, HOY)),
+    falloP(normalizarParche({ referenciaCatastral: 'esto no es una referencia' }, HOY)),
+  )
+})
+
+test('lo que no tiene forma de referencia es invalido, no un null callado', () => {
+  for (const mala of [
+    'esto no es una referencia',
+    '9872023VH5797S0001', // 18: ni finca ni inmueble
+    '9872023VH5797S0001WXY', // 21
+    '9872023VH5797S0001W*', // un carácter que no es alfanumérico
+    12345,
+    { ref: REF_INMUEBLE },
+  ]) {
+    assert.equal(
+      falloP(normalizarParche({ referenciaCatastral: mala }, HOY)),
+      'referencia_catastral_invalida',
+      JSON.stringify(mala),
+    )
+  }
+})
+
+test('centinela y null BORRAN la referencia; ausente no la toca', () => {
+  for (const centinela of ['', '   ', 'N/A', 'no consta', '-', '00000000000000000000']) {
+    const p = okP(normalizarParche({ compania: 'Axa', referenciaCatastral: centinela }, HOY))
+    assert.equal(p.referenciaCatastral, null, JSON.stringify(centinela))
+  }
+  assert.equal(okP(normalizarParche({ referenciaCatastral: null }, HOY)).referenciaCatastral, null)
+  assert.equal('referenciaCatastral' in okP(normalizarParche({ compania: 'Axa' }, HOY)), false)
+})
+
+test('la referencia entra en el alta y no es obligatoria', () => {
+  const d = ok(normalizarAlta({ compania: 'Axa', referenciaCatastral: REF_INMUEBLE }, HOY))
+  assert.equal(d.referenciaCatastral, REF_INMUEBLE)
+  // Sin ella el alta sigue siendo válida: la única guarda es la identificación.
+  assert.equal(ok(normalizarAlta({ compania: 'Axa' }, HOY)).referenciaCatastral, null)
+  // Y la de finca no se guarda a medias tampoco al crear.
+  assert.equal(
+    fallo(normalizarAlta({ compania: 'Axa', referenciaCatastral: REF_FINCA }, HOY)),
+    'referencia_catastral_de_finca',
+  )
+})
+
+// ─── El ORIGEN de los datos del ramo: viaja SIEMPRE con sus datos ────────────
+//
+// La columna responde «¿en qué me estoy apoyando?»: 76 m² que dijo el Catastro y
+// 76 m² estimados a ojo se pintan igual y no valen lo mismo. Justo por eso un
+// origen desalineado es PEOR que ninguno — pone un sello de «lo dice el
+// Catastro» sobre un valor que ya no es el que el Catastro dijo, sin error y sin
+// que se vea.
+
+test('el origen entra junto a sus datos, y los huerfanos se descartan', () => {
+  const elegido = campoTextoDelCatalogo()
+  if (!elegido) return // catálogo vacío: no hay campo con el que probar
+
+  const p = okP(
+    normalizarParche(
+      {
+        ramo: elegido.ramo,
+        datosRamo: { [elegido.id]: 'Un valor' },
+        datosRamoOrigen: { [elegido.id]: 'catastro', otroQueNoEsta: 'documento' },
+      },
+      HOY,
+      { ramoGuardado: elegido.ramo },
+    ),
+  )
+  // Solo sobrevive el origen del campo que existe de verdad en los datos.
+  assert.deepEqual(p.datosRamoOrigen, { [elegido.id]: 'catastro' })
+
+  // Un origen fuera del vocabulario tampoco entra, y si no queda ninguna clave
+  // la columna es `null`, nunca `{}`.
+  const q = okP(
+    normalizarParche(
+      { ramo: elegido.ramo, datosRamo: { [elegido.id]: 'X' }, datosRamoOrigen: { [elegido.id]: 'me lo ha dicho un amigo' } },
+      HOY,
+      { ramoGuardado: elegido.ramo },
+    ),
+  )
+  assert.equal(q.datosRamoOrigen, null)
+})
+
+test('cambiar los datos del ramo REESCRIBE el origen: los viejos ya no valen', () => {
+  const elegido = campoTextoDelCatalogo()
+  if (!elegido) return
+
+  // Datos nuevos sin orígenes → la columna de orígenes se VACÍA. Quedarse con
+  // los de antes sería afirmar de un valor nuevo lo que se sabía del anterior.
+  const p = okP(
+    normalizarParche({ datosRamo: { [elegido.id]: 'Otro' } }, HOY, { ramoGuardado: elegido.ramo }),
+  )
+  assert.equal('datosRamoOrigen' in p, true, 'el cambio de datos tiene que arrastrar el origen')
+  assert.equal(p.datosRamoOrigen, null)
+
+  // Borrar los datos borra los orígenes.
+  const q = okP(normalizarParche({ datosRamo: null }, HOY, { ramoGuardado: elegido.ramo }))
+  assert.equal(q.datosRamoOrigen, null)
+
+  // Y cambiar de ramo (que ya limpia los datos) limpia también los orígenes.
+  const r = okP(normalizarParche({ ramo: 'vida' }, HOY, { ramoGuardado: 'hogar' }))
+  assert.equal(r.datosRamo, null)
+  assert.equal(r.datosRamoOrigen, null)
+})
+
+test('un origen SIN datos que lo acompañen es un error, no un guardado a medias', () => {
+  // Aquí no se leen los datos guardados, así que aceptarlo sería escribir
+  // orígenes que nadie ha podido comprobar contra las claves que hay.
+  assert.equal(
+    falloP(normalizarParche({ compania: 'Axa', datosRamoOrigen: { metrosCuadrados: 'catastro' } }, HOY, { ramoGuardado: 'hogar' })),
+    'origen_sin_datos',
+  )
+  // Pero BORRAR el origen siempre vale: no necesita datos contra los que validar.
+  const p = okP(normalizarParche({ datosRamoOrigen: null }, HOY, { ramoGuardado: 'hogar' }))
+  assert.equal(p.datosRamoOrigen, null)
+  assert.equal('datosRamo' in p, false, 'borrar el origen no puede borrar los datos')
+})
+
+test('sin tocar datosRamo, el origen NO viaja en el parche', () => {
+  // Corregir la prima no puede reescribir de dónde salieron los metros.
+  const p = okP(normalizarParche({ primaAnual: 300 }, HOY, { ramoGuardado: 'hogar' }))
+  assert.equal('datosRamoOrigen' in p, false)
+  assert.equal('datosRamo' in p, false)
+})
+
+test('el origen entra en el alta pegado a sus datos', () => {
+  const elegido = campoTextoDelCatalogo()
+  if (!elegido) return
+
+  const d = ok(
+    normalizarAlta(
+      {
+        compania: 'Axa',
+        ramo: elegido.ramo,
+        datosRamo: { [elegido.id]: 'Un valor' },
+        datosRamoOrigen: { [elegido.id]: 'catastro' },
+      },
+      HOY,
+    ),
+  )
+  assert.deepEqual(d.datosRamoOrigen, { [elegido.id]: 'catastro' })
+
+  // Y un alta que declara orígenes sin datos falla igual que el parche.
+  assert.equal(
+    fallo(normalizarAlta({ compania: 'Axa', datosRamoOrigen: { loQueSea: 'catastro' } }, HOY)),
+    'origen_sin_datos',
+  )
 })

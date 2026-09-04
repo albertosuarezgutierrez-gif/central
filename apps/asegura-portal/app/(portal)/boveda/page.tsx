@@ -210,6 +210,17 @@ export default async function Boveda() {
                     ramo: p.ramo,
                     // `Decimal | null` → `number | null`. `null` NO es 0: es «no lo sabemos».
                     primaAnual: p.primaAnual == null ? null : Number(p.primaAnual),
+                    referenciaCatastral: p.referenciaCatastral ?? null,
+                    // Un jsonb puede traer cualquier cosa; si no es un objeto plano
+                    // se degrada a `null` en vez de reventar el render. Un origen
+                    // ilegible es «no sabemos de dónde vino», no una excusa para
+                    // dejar de pintar la póliza entera.
+                    datosRamoOrigen:
+                      p.datosRamoOrigen && typeof p.datosRamoOrigen === 'object' && !Array.isArray(p.datosRamoOrigen)
+                        ? (Object.fromEntries(
+                            Object.entries(p.datosRamoOrigen as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
+                          ) as Record<string, string>)
+                        : null,
                     // Columna `date`: llega como medianoche UTC, así que el ISO
                     // recortado es exactamente el día, sin desfase de zona.
                     fechaVencimiento: p.fechaVencimiento
@@ -348,7 +359,11 @@ function Card({ p }: { p: PolizaPortal }) {
         {!p.confirmadaCima && <span className="chip aviso">pendiente de confirmación por la compañía</span>}
         {/* Sin tramitador ni teléfono de gestión: el punto de contacto es la
             correduría (regla de visibilidad, `CLAUDE.md` de la app). */}
-        {p.siniestrosAbiertos.map((s) => (
+        {/* `null` = tu nivel no llega a los siniestros de esta póliza; NO se
+            pinta nada, porque un chip que dijera «no visible» le contaría a un
+            tercero que hay algo que mirar. `[]` = no hay ninguno abierto, y
+            tampoco se pinta: la ausencia de chip ya lo dice. */}
+        {(p.siniestrosAbiertos ?? []).map((s) => (
           <span key={s.id} className="chip aviso">
             siniestro {s.estado === 'en_tramitacion' ? 'en tramitación' : 'abierto'}
             {s.referencia ? ` ${s.referencia}` : ''}

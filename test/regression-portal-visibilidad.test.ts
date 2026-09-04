@@ -64,3 +64,24 @@ test('los tres ceros siguen documentados como «no es que esté bien»', () => {
   assert.match(src, /NO es «al corriente»/, 'el comentario de recibos.total no puede desaparecer')
   assert.match(src, /ninguna cobertura informada/, 'el comentario de coberturas.total no puede desaparecer')
 })
+
+test('los siniestros abiertos pasan por el NIVEL, como la prima y los recibos', () => {
+  // 🚨 Este cepo nace de un agujero REAL (04/09/2026): `prima`, `coberturas` y
+  // `recibos` preguntaban por `ve.*` y `siniestrosAbiertos` NO. Un tercero con
+  // el alcance más bajo (`ver` → nivel `tarjeta`) veía los siniestros abiertos
+  // de quien le autorizó: referencia, estado y fecha. No fallaba nada —salían—,
+  // que es el modo de fallo que este portal persigue.
+  const src = leer(LECTURA)
+  assert.match(
+    src,
+    /siniestrosAbiertos:\s*ve\.siniestros/,
+    '`siniestrosAbiertos` tiene que preguntar por `ve.siniestros` antes de traer nada. ' +
+      'Un siniestro abierto es un hecho de la vida del titular, no un dato del contrato.',
+  )
+  assert.match(
+    src,
+    /no visible en este nivel.*\n.*siniestrosAbiertos/i,
+    'el tipo tiene que declarar que `null` es «no visible en tu nivel» y `[]` «no hay ninguno»: ' +
+      'colapsarlos convierte un «no puedo enseñártelo» en un «no tiene».',
+  )
+})

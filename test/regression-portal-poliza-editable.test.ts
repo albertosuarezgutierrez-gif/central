@@ -269,7 +269,9 @@ test('normalizarAlta hereda las reglas del parche y exige compañia o numero', a
     matricula: null,
     bastidor: null,
     fechaMatriculacion: null,
+    referenciaCatastral: null,
     datosRamo: null,
+    datosRamoOrigen: null,
   })
 })
 
@@ -393,4 +395,109 @@ test('las dos ramas del alta escriben datosRamo, y el PATCH distingue ausente de
   // mismo filtro por identidadId que todo lo demás.
   assert.match(patch, /ramoGuardado: actual\.ramo/)
   assert.match(patch, /findFirst\(\{\s*where: \{ id, identidadId: identidad\.id \}/)
+})
+
+// ── 8. La referencia catastral es COLUMNA, y solo la del INMUEBLE ────────────
+//
+// El 04/09/2026 se había decidido meterla dentro de `datos_ramo`. Se corrigió
+// antes de que hubiera una sola fila escrita: identifica el BIEN igual que la
+// matrícula, y «¿tengo otra póliza de esta misma vivienda?» es una CONSULTA. Lo
+// que la hace columna de verdad no es el `ADD COLUMN`: es el ÍNDICE. Sin él,
+// mover el dato del JSON a una columna no cambia nada de lo que motivó moverlo.
+
+test('la referencia catastral es una COLUMNA indexada, no una clave del jsonb', () => {
+  const sql = leer('apps/asegura-portal/prisma/sql/2026-09-04_portal_referencia_catastral.sql')
+  const schema = leer('apps/asegura-portal/prisma/schema.prisma')
+
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS referencia_catastral\s+text/)
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS datos_ramo_origen\s+jsonb/)
+  // El índice es lo que justifica que sea columna. Parcial: casi ninguna fila
+  // es de inmueble.
+  assert.match(
+    sql,
+    /CREATE INDEX IF NOT EXISTS idx_portal_poliza_referencia_catastral[\s\S]*WHERE referencia_catastral IS NOT NULL/,
+    'sin índice, sacarla del jsonb no sirve de nada',
+  )
+  // 20 y solo 20: el CHECK es la red de abajo para que ningún script meta la
+  // referencia de la FINCA (14), que son los metros del edificio.
+  assert.match(sql, /\^\[A-Z0-9\]\{20\}\$/)
+  assert.match(sql, /NOT VALID/)
+  // Las dos columnas se explican en la propia BD.
+  assert.match(sql, /COMMENT ON COLUMN seguros\.portal_poliza_declarada\.referencia_catastral/)
+  assert.match(sql, /COMMENT ON COLUMN seguros\.portal_poliza_declarada\.datos_ramo_origen/)
+
+  // Y el schema de Prisma las declara mapeadas a esas columnas: sin esto, el
+  // dato se validaría y no llegaría nunca a la BD.
+  assert.match(schema, /referenciaCatastral\s+String\?\s+@map\("referencia_catastral"\)/)
+  assert.match(schema, /datosRamoOrigen\s+Json\?\s+@map\("datos_ramo_origen"\)/)
+})
+
+test('una referencia de FINCA no se guarda, y su error se distingue del de basura', async () => {
+  const { normalizarParche: np } = await import('../apps/asegura-portal/lib/poliza-editable.ts')
+
+  // 14 caracteres es el EDIFICIO. Guardarla como si fuera el piso trae los
+  // metros del bloque entero a una póliza de hogar: plausible y equivocado.
+  assert.deepEqual(np({ referenciaCatastral: '9872023VH5797S' }, HOY), {
+    ok: false,
+    error: 'referencia_catastral_de_finca',
+  })
+  assert.deepEqual(np({ referenciaCatastral: 'no consta en la poliza' }, HOY), {
+    ok: false,
+    error: 'referencia_catastral_invalida',
+  })
+  // La del inmueble sí, compactada y en mayúsculas.
+  assert.equal(
+    ok(np({ referenciaCatastral: '9872023vh5797s0001wx' }, HOY)).referenciaCatastral,
+    '9872023VH5797S0001WX',
+  )
+})
+
+// ── 9. El ORIGEN de cada campo: sin él, «76 m²» del Catastro y «76 m²» a ojo
+//      son el mismo dato ───────────────────────────────────────────────────────
+
+test('las tres escrituras hacen viajar la referencia y el origen', () => {
+  const alta = leer('apps/asegura-portal/app/api/polizas/route.ts')
+  const patch = leer('apps/asegura-portal/app/api/polizas/[id]/route.ts')
+
+  // Alta con documento: la referencia leída del PDF y los orígenes derivados.
+  assert.match(alta, /referenciaCatastral: datos\.referenciaCatastral/, 'el alta con documento escribe la referencia')
+  assert.match(alta, /datosRamoOrigen: datos\.datosRamoOrigen \?\? Prisma\.DbNull/)
+  // Alta a mano: la referencia viaja en el resto (es `text`), el origen no puede
+  // (Prisma no admite `null` en una columna `Json?`).
+  assert.match(alta, /const \{ datosRamo, datosRamoOrigen, \.\.\.resto \} = datos/)
+  assert.match(alta, /datosRamoOrigen: datosRamoOrigen \?\? Prisma\.DbNull/)
+  // `DbNull` y NUNCA `JsonNull`, en las dos rutas, también para esta columna.
+  for (const [nombre, fuente] of [['alta', alta], ['patch', patch]] as const) {
+    assert.equal(/Prisma\.JsonNull/.test(fuente), false, `${nombre}: JsonNull escribe un null dentro del JSON`)
+  }
+  // PATCH: ausente ≠ borrado, igual que con `datosRamo`. Si la clave viajara
+  // siempre, corregir la compañía borraría los orígenes sin que nada fallara.
+  assert.match(patch, /'datosRamoOrigen' in normalizado\.parche/)
+  assert.match(patch, /datosRamoOrigen \?\? Prisma\.DbNull/)
+})
+
+test('el origen viaja SIEMPRE con sus datos: ni huerfano ni caducado', async () => {
+  const { normalizarParche: np } = await import('../apps/asegura-portal/lib/poliza-editable.ts')
+
+  // Un origen sin datos en el mismo parche no se puede comprobar contra nada:
+  // es un error, no un guardado a medias.
+  assert.deepEqual(np({ compania: 'Axa', datosRamoOrigen: { metrosCuadrados: 'catastro' } }, HOY, { ramoGuardado: 'hogar' }), {
+    ok: false,
+    error: 'origen_sin_datos',
+  })
+
+  // Y cuando los datos CAMBIAN sin traer orígenes, los viejos no se quedan:
+  // hablaban de los valores anteriores. Se prefiere no afirmar nada a afirmar
+  // algo caducado — que es lo que pinta un sello de «lo dice el Catastro» sobre
+  // un número que ya no es el que dijo el Catastro.
+  const campo = camposDeRamo('hogar').find((c) => c.tipo === 'numero' || c.tipo === 'texto')
+  if (campo) {
+    const p = ok(np({ datosRamo: { [campo.id]: campo.tipo === 'numero' ? 90 : 'X' } }, HOY, { ramoGuardado: 'hogar' }))
+    assert.equal('datosRamoOrigen' in p, true, 'el cambio de datos tiene que arrastrar el origen')
+    assert.equal(p.datosRamoOrigen, null)
+  }
+
+  // Pero un parche que no toca los datos no toca los orígenes.
+  const q = ok(np({ primaAnual: 300 }, HOY, { ramoGuardado: 'hogar' }))
+  assert.equal('datosRamoOrigen' in q, false)
 })
