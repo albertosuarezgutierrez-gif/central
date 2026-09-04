@@ -98,6 +98,23 @@
   `canal_no_disponible` (503) NO es «el envío falló» (502). Tablas `portal_*` en el schema `seguros`.
   El aislamiento **no lo da RLS sino el código**, y lo vigila `test/regression-portal-aislamiento.test.ts`.
   Tiene `CLAUDE.md` propio desde el 02/09/2026 — ver `apps/asegura-portal/CLAUDE.md`.
+- **`apps/asegura-web`** — **web pública de marketing** de Grupo ASegura (04/09/2026), destinada al
+  **apex `grupoasegura.com` + `www`**, que estaban LIBRES: `app.grupoasegura.com` sirve el CRM de
+  Manuel y no se toca. Tercera app de la correduría y la única que ve alguien que aún no es cliente
+  (`asegura` = corredor, `asegura-portal` = asegurado, `asegura-web` = quien todavía no lo es).
+  🚨 **NO tiene base de datos a propósito**: sin Prisma, sin rol, sin secreto de sesión. El
+  formulario sale por `POST /api/lead`, que **reenvía desde el servidor** al canal que ya existe
+  (`/api/publico/correduria/lead` de plataforma → puerto de asegura → Telegram). Propaga
+  `x-forwarded-for` con la IP real del visitante **porque si no el límite de 6/hora por IP de
+  plataforma pasaría a ser global** y el séptimo lead legítimo de la hora se rechazaría solo.
+  Mediador desde `MEDIADOR` (`@central/module-seguros`) y colores desde `MARCA_ASEGURA`
+  (`@central/brand`): ni la clave DGSFP ni un hex se escriben aquí. Dos guardianes propios:
+  `lib/ramos.test.ts` (el copy no puede prometer ahorros ni superlativos de precio — eso lo
+  convertiría en asesoramiento y arrastraría análisis objetivo e IPID, RDL 3/2020) y
+  `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
+  divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
+  silencio). `HORARIO` y el teléfono están **ausentes a propósito** mientras no se confirmen.
+  Plan y diagnóstico en `docs/ASEGURA-MARKETING-PLAN.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).

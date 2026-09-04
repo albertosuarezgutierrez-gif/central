@@ -30,6 +30,32 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **Web pública de la correduría: `apps/asegura-web` (04/09/2026).** 17 páginas (home · 6 ramos · «cambiar de
+  correduría» · quiénes somos · 3 legales · sitemap · robots · `/api/lead`), para el **apex `grupoasegura.com` +
+  `www`, que están LIBRES** (`app.` sirve el CRM y no se toca). **Sin BD**: el formulario reenvía por servidor al
+  canal que ya existe en plataforma 🚨 **propagando `x-forwarded-for`** — sin eso el límite de 6/hora por IP pasaría
+  a ser global y el 7º lead legítimo se rechazaría solo. Mediador desde `MEDIADOR`, colores desde `MARCA_ASEGURA`:
+  ni la clave DGSFP ni un hex se escriben ahí. Dos guardianes: el copy no puede prometer ahorros ni superlativos
+  (sería asesoramiento → análisis objetivo + IPID) y la lista de ramos se compara contra el fuente de plataforma.
+  `HORARIO` y teléfono **ausentes a propósito** hasta confirmarlos. Verde: 10 tests propios, 527 del guardián, tsc,
+  eslint y `next build`. Añadida a la matriz de `tests.yml`, a `VERTICALES` y con `ignoreCommand`. PR #2285.
+  ⏸️ **Falta lo que no puede hacer un agente**: atar el dominio al proyecto Vercel nuevo, `PLATAFORMA_URL`,
+  Google Business Profile y unificar `info@`→`hola@` en la web del repo `asegura`.
+
+- **Plan de marketing y captación de Grupo ASegura (04/09/2026).** Nuevo `docs/ASEGURA-MARKETING-PLAN.md`.
+  Medido en BD: cartera viva **80 clientes / 110 pólizas (42 canceladas → 68 vivas)**, 1,4 pólizas/cliente,
+  76% Sevilla, 81 de 110 en auto (el peor ramo para captar). **Los 32.520 leads son vía CERRADA**: 82,8% sin
+  ningún contacto, 95% vence 2014-2018 y `consent_logs` tiene **2 filas** en toda la BD → sin base de
+  legitimación no hay campaña; WhatsApp descartado (0 `wa_opt_in`). Trampa: el CP **41001 en 10.933 fichas**
+  es relleno del despacho, no segmentar por CP. Verificado en Vercel: `app.grupoasegura.com` sirve el CRM,
+  pero **el apex y el `www` están LIBRES** → la web de marketing nace ahí sin desalojar nada. Orden del plan:
+  embudo (SLA de lead) y reseñas ANTES que tráfico; ramo elegido midiendo, no a ojo; Ads
+  el último. **Comisión medida sobre `seguros.poliza_recibos`** (12 meses, recibos cobrados): auto **10,44%
+  → 40,87€/póliza/año**, hogar **22,03% → 68,74€**, RC 17,09%. Hogar es el ramo prioritario, pero con 8 recibos
+  es hipótesis, no conclusión. Ojo: `comisiones_devengo` está en `public`, NO en `seguros`, y agrega por
+  (compañía, periodo), no por ramo. 🚨 **Falta la ingesta de Mapfre desde el 02/04/2026** (~5 meses; es el 64%
+  de la cartera) → el libro de comisiones está infravalorado. 🚨 Y **75 tablas de `seguros` con RLS desactivado**
+  expuestas a `anon` (`clientes`, `polizas`, `cliente_emails`) — comprobar dónde vive la clave `anon`. PR #2285.
 - **📧 El buscador ya llamaba, pero a 5 clientes vivos les faltaba el correo (04/09/2026).** #2286 llevó el
   contacto al buscador; en paralelo yo hacía lo mismo (#2289, **cerrado sin mergear**: su diseño era mejor,
   `contacto: Contacto | null` distingue «asegura no lo mandó» de «no consta», y el mío no). De mi trabajo
