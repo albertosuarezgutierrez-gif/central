@@ -69,7 +69,7 @@ test('las pestañas no se prefetchean: cada una repite la llamada al puerto', ()
   assert.match(leer('FichaTabs.tsx'), /prefetch=\{false\}/)
 })
 
-test('la sección lleva el acento de Grupo Asegura por TOKENS, no por hex sueltos', () => {
+test('la sección lleva el acento de Grupo ASegura por TOKENS, no por hex sueltos', () => {
   const layout = readFileSync(path.join(process.cwd(), 'apps/plataforma/app/(usuario)/correduria/layout.tsx'), 'utf8')
   assert.match(layout, /className="correduria"/)
   const css = readFileSync(path.join(process.cwd(), 'apps/plataforma/app/globals.css'), 'utf8')

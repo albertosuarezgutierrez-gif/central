@@ -22,6 +22,7 @@ import { revisarCierre, bloqueCierre } from './cierre'
 import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
 import { bloqueSalidaTardia, pideMasAllaDeLaVentana, SALIDA_FLEX_HASTA } from './salida'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
+import { esCierre, esIntercambioDeCortesia } from './cortesia'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 
 export type Decision = {
@@ -39,6 +40,12 @@ export type Decision = {
   // como dudosa. Es lo que autoriza el auto-envío desde el 20/08/2026: «si está en la guía, contesta
   // solo». Nunca es true si la guía no se pudo leer — eso es «no lo sé todavía», no «no hay guía».
   apoyada_en_fuente?: boolean
+  // true si el control de calidad no dio veredicto (caído o respuesta ininteligible). Normalmente
+  // implica `needs_human`; la ÚNICA excepción es el intercambio de pura cortesía (`cortesia.ts`),
+  // que sale solo aunque el control esté mudo. En ese caso este flag es lo que hace que el aviso de
+  // Telegram lo DECLARE: si no, un control muerto durante días dejaría de notarse justo en los
+  // mensajes que ya no pasan por Alberto.
+  sin_verificar?: boolean
   categoria: string
   sentimiento: 'positivo' | 'neutro' | 'negativo'
   motivo: string
@@ -65,13 +72,9 @@ const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || ''
 // ~3-10s) y hace el failover a Groq/Gemini mucho más ágil. La ventana del webhook es 300s.
 const HUESPED_TIMEOUT_MS = 15_000
 
-// Cierre de conversación que no pide nada (no requiere respuesta obligatoria; se propone igual
-// como cortesía). Solo cuando el mensaje es ÍNTEGRAMENTE una fórmula de cortesía/cierre.
-const RE_CIERRE = /^(?:muchas\s+)?(?:gracias|graciass+|ok+|vale|perfecto|genial|estupendo|de acuerdo|entendido|recibido|buenas noches|buen día|hasta (?:luego|mañana|pronto)|thanks?|thank you|thx|great|perfect|cheers|merci|grazie|danke)[\s!.,😊👍🙏❤️]*$/i
-
-function esCierre(text: string): boolean {
-  return RE_CIERRE.test((text || '').trim())
-}
+// `esCierre` (cierre de conversación que no pide nada) vive ahora en `cortesia.ts`: la regex de aquí
+// solo admitía «muchas» y nada detrás de la fórmula, así que «Muchísimas gracias, un saludo» no se
+// detectaba como cierre (reserva 152961026, 04/09/2026). Ver la cabecera de ese módulo.
 
 function sentimientoDe(pregunta: string): Decision['sentimiento'] {
   if (/no funciona|aver[ií]a|roto|sucio|fatal|p[eé]simo|terrible|enfad|queja|inacept|asco|horrible|decepcion/i.test(pregunta)) return 'negativo'
@@ -307,6 +310,14 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     : await debeEscalar(ctx, pregunta, reply)
   const escalaIA = veredicto === 'ESCALAR'
   const sinVerificar = veredicto === 'DESCONOCIDO'
+  // Un control de calidad caído bloquea el auto-envío SALVO en el único caso en el que su veredicto
+  // no aportaba nada: el huésped no pide nada («Muchísimas gracias, un saludo») y el borrador no
+  // afirma nada (ni una cifra, hora, enlace o importe). El clasificador juzga si el borrador resuelve
+  // la pregunta con datos de la INFORMACIÓN; sin pregunta y sin datos no hay nada que juzgar, así que
+  // su silencio no es un «no lo sé» sobre esta respuesta. Fuera de ese par, `DESCONOCIDO` sigue
+  // escalando como cualquier duda (dictado de Alberto 04/09/2026 + regla del repo sobre el NULL).
+  const cortesiaSinRiesgo = esIntercambioDeCortesia(pregunta, reply)
+  const bloqueaSinVerificar = sinVerificar && !cortesiaSinRiesgo
   // Salida tardía: desde el 20/08/2026 (decisión de Alberto) el agente puede confirmar SOLO la
   // ventana gratuita —hasta las 12:00— y únicamente con la ocupación YA VERIFICADA. Todo lo demás
   // sigue pasando por él: si nombra una hora posterior entra el coste de la limpieza (dinero), y si
@@ -316,7 +327,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   const dentroDeLaVentana = ventanaVerificada && !pideMasAllaDeLaVentana(pregunta, SALIDA_FLEX_HASTA)
   const escalaSalida = lateCheckout && !dentroDeLaVentana
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || escalaSalida || sinVerificar || cierreFueraDeFase || coherencia.incoherente
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || escalaSalida || bloqueaSinVerificar || cierreFueraDeFase || coherencia.incoherente
 
   // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
   // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
@@ -338,7 +349,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
         ? 'sentimiento negativo'
         : escalaIA
           ? 'la respuesta no cubre bien la pregunta — quizá falta en la guía del piso'
-          : sinVerificar
+          : bloqueaSinVerificar
             ? 'no se pudo verificar el borrador (control de calidad caído) — lo reviso yo'
           : escalaSalida
             ? `salida más allá de las ${SALIDA_FLEX_HASTA} o sin poder verificar la ocupación: lo confirma el anfitrión (tiene coste de limpieza)`
@@ -355,6 +366,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     requiere_respuesta,
     es_cortesia,
     apoyada_en_fuente,
+    sin_verificar: sinVerificar,
     categoria,
     sentimiento,
     motivo,

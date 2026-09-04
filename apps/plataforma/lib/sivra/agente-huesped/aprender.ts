@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { esHechoDelPiso } from './reglas'
 import { guardarHecho } from './hechos'
 import { destilarHecho } from './destilar'
+import { UMBRAL_PARECIDO, LONGITUD_MINIMA, palabrasClave, regexClaves } from './similitud-reglas'
 import { tgSend } from '@/lib/telegram'
 
 export async function logMensaje(p: {
@@ -53,11 +54,30 @@ export async function aprenderCorreccion(p: {
 }
 
 // Registra un hueco de la guía (incrementa el contador si ya existía esa pregunta para el piso).
+//
+// El match es por PARECIDO, no por igualdad (04/09/2026). Con `=` exacto, los cuatro avisos de
+// phishing de finales de agosto quedaron como cuatro filas de `veces = 1` en vez de una de 4, así
+// que el contador no subía casi nunca y ningún hueco recurrente destacaba. Mismas dos señales que
+// `similitud.ts` (trigrama con guarda de longitud + palabra de contenido en común) y por las mismas
+// razones medidas; la exacta gana, luego la que comparte palabra, luego la más parecida.
 export async function registrarGap(propertyId: string, pregunta: string): Promise<void> {
   const norm = (pregunta || '').toLowerCase().slice(0, 200)
+  if (!norm) return
+  const trigramaVale = norm.length >= LONGITUD_MINIMA
+  const re = regexClaves(palabrasClave(norm))
   const rows = await prisma.$queryRaw<{ id: number }[]>(Prisma.sql`
-    SELECT id FROM mensajes_guia_gaps WHERE property_id = ${propertyId} AND pregunta = ${norm} LIMIT 1
-  `)
+    SELECT id FROM mensajes_guia_gaps
+    WHERE property_id = ${propertyId}
+      AND (
+        pregunta = ${norm}
+        OR (${trigramaVale}::boolean AND extensions.word_similarity(${norm}, pregunta) >= ${UMBRAL_PARECIDO})
+        OR (${re}::text IS NOT NULL AND pregunta ~* ${re})
+      )
+    ORDER BY (pregunta = ${norm}) DESC,
+             (${re}::text IS NOT NULL AND pregunta ~* ${re}) DESC,
+             extensions.word_similarity(${norm}, pregunta) DESC
+    LIMIT 1
+  `).catch(() => [])
   if (rows[0]) {
     await prisma.$executeRaw(Prisma.sql`UPDATE mensajes_guia_gaps SET veces = veces + 1, ultima_fecha = now() WHERE id = ${rows[0].id}`).catch(() => {})
   } else {

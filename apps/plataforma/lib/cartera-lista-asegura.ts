@@ -345,7 +345,7 @@ export function construirCsv(
   opciones?: { total?: number | null; truncado?: boolean; tope?: number },
 ): string {
   const lineas: string[] = []
-  lineas.push(celda(`Cartera de Grupo Asegura — ${descripcion}`))
+  lineas.push(celda(`Cartera de Grupo ASegura — ${descripcion}`))
   const total = opciones?.total
   lineas.push(
     celda(

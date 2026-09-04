@@ -149,6 +149,6 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 - 📵 **Y antes de dar por avisado a nadie, mira si hay por dónde.** De los 79 clientes de CIMA:
   **44 con email, 52 con teléfono, 53 con alguno de los dos y 26 con NINGUNO.** Con esos 26 no hay
   forma de comunicarse, y desde el código se ven idénticos a uno al que sí se avisó (regla global
-  «¿en qué pantalla lo va a ver?»). **WhatsApp no existe** —no hay WABA de Grupo Asegura—: el canal es
+  «¿en qué pantalla lo va a ver?»). **WhatsApp no existe** —no hay WABA de Grupo ASegura—: el canal es
   un puerto y `503 canal_no_disponible` («ese canal no está montado») **NO es** `502 envio_fallido`
   («el envío no salió»). Decir lo segundo cuando pasa lo primero es mentirle al usuario.

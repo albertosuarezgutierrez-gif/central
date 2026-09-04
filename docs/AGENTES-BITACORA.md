@@ -15,6 +15,22 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-04 · mercado-booking** · hizo: 2ª pasada ACOTADA por prioridad temporal (agosto 2026,
+  ídem 03/09), `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6
+  fechas × 4 pisos con aforo correcto) → 240 comps `booking_mcp`, 0 sin respuesta, 0 propios
+  colados en mercado. 📐 escaparate: solo 1/4 medido hoy (prop_busto_reform, 85,54€/noche) — los
+  otros 3 (`prop_house_sevillana`, `prop_duplex_center`, `prop_luxury_busto`) devolvieron
+  `hotel_names_no_availability` (contado como hueco, no como canal cuadrado; el 03/09 sí midió
+  4/4, así que es una intermitencia de disponibilidad del conector, no un fallo propio). Cupo
+  diario (24 ventanas) agotado en la pasada de prioridad → sin cupo para pasada normal hoy.
+  **El objetivo de la línea de prioridad YA estaba cumplido antes de esta pasada** (el propio
+  `plan` no lista 2027-07 ni 2027-08 en `meses_sin_bucket`, solo 04/05/06/09) y la entrada del
+  03/09 ya lo declaró — la línea de prioridad sigue en el prompt programado porque nadie la ha
+  quitado del disparador, no porque falte medición. Recomendado: Alberto retira la línea
+  `PRIORIDAD TEMPORAL` del trigger programado.
+  dudas: por qué el disparador sigue trayendo la prioridad si ya se cumplió dos veces; fallos: —
+  (la falta de 3/4 en escaparate es del conector, no del agente); PRs/commits: — (solo bitácora y
+  BD vía endpoints, sin tocar código).
 - **2026-09-03 · trading-analista** · hizo: PASO 0 sin huella de hoy (último saldo 02/09 20:16,
   sin fila `trading_pasadas` de hoy) → pasada completa a las 20:15 UTC (disparo normal, no
   repesca). Preflight `/api/internal/alerta` 200. NAV IBKR 33.068,94€ empujado a `/saldo` (sin

@@ -1,4 +1,4 @@
--- Portal de Grupo Asegura — Fase 5 (03/09/2026): autorizar a un TERCERO, con consentimiento acreditable.
+-- Portal de Grupo ASegura — Fase 5 (03/09/2026): autorizar a un TERCERO, con consentimiento acreditable.
 --
 -- Sustituye a `cliente_relaciones.puede_ver_polizas`, que no podía sostenerse: no decía quién lo
 -- concedió, ni cuándo, ni con qué texto, ni cómo se revoca (art. 7.1 RGPD pide poder DEMOSTRARLO).

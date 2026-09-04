@@ -1,4 +1,10 @@
-# CLAUDE.md — apps/asegura-portal (portal del CLIENTE de Grupo Asegura)
+# CLAUDE.md — apps/asegura-portal (portal del CLIENTE de Grupo ASegura)
+
+> ✍️ **El nombre comercial se escribe «Grupo ASegura», con A y S mayúsculas** (dictado por Alberto,
+> 04/09/2026). El monograma «AS» del logo es el nombre: A de Alberto, S de Suárez. Escribirlo con
+> la ese minúscula no es una errata de estilo — se come la marca, y es lo que el autocorrector
+> escribe solo. Grafía canónica en BD: `seguros.corredurias.nombre`. Guardián en todo el repo:
+> `test/regression-nombre-comercial-asegura.test.ts`.
 
 > **Esta app la ve el ASEGURADO, no Alberto.** El panel del corredor es `apps/asegura` (lee
 > `apps/asegura/CLAUDE.md`) y la pantalla de trabajo de Alberto es `apps/plataforma` → `/correduria`.
@@ -90,7 +96,7 @@ cuenta con que quien la activa es el siguiente PR que toque la app**, no el bot�
 
 Cierre del 03/09. Las envs del portal están puestas en Vercel (`asegura-portal`, Production):
 `DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_FROM`
-(`Grupo Asegura <no-reply@envios.grupoasegura.es>`), `PORTAL_MAIL_REPLY_TO`
+(`Grupo ASegura <no-reply@envios.grupoasegura.es>`), `PORTAL_MAIL_REPLY_TO`
 (`hola@grupoasegura.es`, el buzón único de la correduría) y `PORTAL_PUBLIC_URL`.
 
 Lo que costó una noche entera y conviene no repetir:
@@ -524,6 +530,51 @@ estimada desde la matrícula: el Catastro puede estar desactualizado y quien fir
 Y los cinco estados de la respuesta están separados a propósito —no responde ≠ ahí no hay nada ≠ la
 dirección no se entiende ≠ la calle es ambigua ≠ hay quince pisos y no sabemos cuál es el suyo—
 porque colapsarlos convierte un «no lo sé» en un «no hay».
+
+## ⚖️ Bloque legal (04/09/2026) — el pie va en el layout RAÍZ, y por qué
+
+Las cuatro páginas de `app/legal/*` (`mediador`, `privacidad`, `cookies`, `condiciones`) y el
+`PieLegal` del layout raíz **no son relleno**: son el mínimo que la Ley 16/2018 (art. 19) y el RGPD
+(art. 13) exigen ANTES de que el asegurado escriba su correo. De ahí las tres decisiones:
+
+- **El pie está en `app/layout.tsx`, no en `app/(portal)/`.** La única pantalla que ve quien todavía
+  no ha entrado es la que le pide el correo; un pie montado en el grupo `(portal)` desaparece justo
+  de ahí, y el fallo no se ve.
+- **Las páginas se leen SIN sesión** (nada de `@/lib/session` en `app/legal/*`). Pedir sesión para
+  leer la política de privacidad es pedirle el dato antes de contarle qué se hace con él.
+- **Los datos del mediador salen de `@central/module-seguros` (`src/mediador.ts`), no del JSX.** Es la
+  fuente única compartida con el panel del corredor: dos copias de la clave DGSFP `CS-F/0170` es una
+  copia de más. Ahí vive también `VERSION_TEXTOS_LEGALES`, que es lo que se sella en
+  `portal_consentimiento.version_texto` — un consentimiento sin versión no acredita qué se aceptó.
+
+🚨 **Cada frase de `app/legal/privacidad/page.tsx` es una afirmación sobre el código.** Si el código
+cambia (un encargado nuevo, un dato nuevo, una cookie nueva), la página cambia **en el mismo PR** y
+sube `VERSION_TEXTOS_LEGALES`. Una política que describe la versión anterior de la app no es un texto
+viejo: es información falsa al interesado, que es una infracción distinta y peor.
+
+Lo que hoy afirma y hay que no romper sin querer:
+
+| Afirmación | Lo que la sostiene |
+|---|---|
+| «El correo no se guarda en claro» | `portal_canal.valor_hash` (SHA-256 con `ASEGURA_PORTAL_CANAL_PEPPER`) |
+| «Una sola cookie, sin analítica ni terceros» | solo `asegura_portal_session`; cero scripts de terceros |
+| «Tu documento puede procesarse fuera del EEE» | `openrouterVision` de `@central/core-ai` (OpenRouter, EE. UU.) |
+| «La base de datos está en la UE» | proyecto Supabase `central`, `eu-west-1` |
+
+**Sin banner de cookies a propósito**: con una única cookie técnica, el art. 22.2 LSSI exime del
+consentimiento. Encender analítica obliga, en el mismo PR, a reescribir `/legal/cookies`, montar el
+banner con «rechazar» tan fácil como «aceptar» y no cargar nada antes de la aceptación.
+
+Lo vigila `test/regression-portal-legal.test.ts` (9 cepos: que las páginas existan, que el pie esté en
+el layout raíz y enlace a las cuatro, que ninguna copie la clave DGSFP a mano, que ninguna exija
+sesión, que no se cuele analítica ni una segunda cookie, que las condiciones destaquen el plazo del
+art. 16 LCS y que la privacidad siga declarando la salida del documento a OpenRouter).
+
+⚠️ **Dos omisiones DELIBERADAS**, protegidas por su propio test en `packages/module-seguros/src/mediador.test.ts`:
+**no se declara ninguna lista de ramos** (el alcance de la inscripción en el registro público de la
+DGSFP no se ha comprobado; el art. 19 tampoco la exige) y **no se declara ningún DPO** (la web de
+Manuel sí lo hace, con `dpo@grupoasegura.com`; que ese buzón reciba correo no está comprobado). Se
+añaden con el dato delante, no antes.
 
 ## 🧨 Landmines
 

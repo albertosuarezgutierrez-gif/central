@@ -489,3 +489,110 @@ h1 {
   color: var(--brand);
   margin-bottom: 14px;
 }
+
+/* ── Pie legal ────────────────────────────────────────────────────────────
+ * Sale en TODAS las pantallas, la de entrada incluida: el art. 19 de la Ley
+ * 16/2018 pide que el cliente identifique al mediador antes de darle un dato, y
+ * la única pantalla que ve quien aún no ha entrado es la que le pide el correo.
+ * Los enlaces van a 44 px de alto pulsable — se leen desde el móvil, que es
+ * desde donde entra casi todo el mundo. */
+.pie-legal {
+  max-width: 720px;
+  margin: 32px auto 0;
+  padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.pie-legal-identidad { margin: 0 0 4px; overflow-wrap: anywhere; }
+.pie-legal nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 18px;
+}
+.pie-legal nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--primary);
+  text-decoration: none;
+}
+.pie-legal nav a:hover { text-decoration: underline; }
+
+/* ── Páginas legales ──────────────────────────────────────────────────────
+ * Texto largo y sin sesión. Medida corta (más de ~75 caracteres por línea no se
+ * lee), y las tablas con su propio scroll para que no arrastren la página
+ * entera a lo ancho en un móvil de 320 px. */
+.legal {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 8px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.legal h1 { font-size: 24px; line-height: 1.25; margin: 4px 0 12px; }
+.legal h2 { font-size: 17px; margin: 28px 0 8px; }
+.legal h3 { font-size: 15px; margin: 18px 0 6px; }
+.legal p { margin: 0 0 12px; }
+.legal ul, .legal ol { margin: 0 0 12px; padding-left: 20px; }
+.legal li { margin-bottom: 6px; }
+.legal a { color: var(--primary); overflow-wrap: anywhere; }
+.legal code {
+  font-size: 13px;
+  background: var(--primary-light);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.legal-antetitulo {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0;
+}
+.legal-entradilla { font-size: 16px; color: var(--text); }
+.legal-nota { font-size: 14px; color: var(--muted); }
+.legal-version { font-size: 12px; color: var(--muted2); margin-top: 28px; }
+.legal-volver { max-width: 720px; margin: 0 auto; padding: 0 16px 8px; font-size: 14px; }
+.legal-volver a { color: var(--primary); }
+
+/* Aquello que, si el cliente no lo lee, le cuesta la cobertura: el parte no es
+ * la comunicación a la compañía. Se pinta como aviso, no como párrafo. */
+.legal-destacado {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: var(--text);
+}
+
+.legal-datos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0 0 12px; }
+.legal-datos dt { font-size: 13px; color: var(--muted); margin-top: 10px; }
+.legal-datos dd { margin: 0; }
+
+.legal-canales { list-style: decimal; }
+.legal-canales li { margin-bottom: 14px; }
+.legal-canales strong { display: block; }
+.legal-detalle { display: block; color: var(--muted); font-size: 14px; }
+
+/* El contenedor lleva `minmax(0, 1fr)` implícito por ser bloque, pero la tabla
+ * necesita SU propio scroll: sin él, una tabla de 3 columnas empuja el ancho de
+ * la página y el móvil scrollea en horizontal la pantalla entera. */
+.legal-tabla-scroll { overflow-x: auto; margin: 0 0 12px; }
+.legal-tabla { border-collapse: collapse; width: 100%; min-width: 380px; font-size: 14px; }
+.legal-tabla th, .legal-tabla td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.legal-tabla th { font-weight: 600; color: var(--muted); font-size: 13px; }
+
+/* El buscador del Catastro (bloque de inmueble). Una columna en móvil, como
+   todo el editor: a 320 px dos columnas dejan la etiqueta del piso ilegible. */
+.catastro { display: grid; gap: 10px; }
+.catastro-lista { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.catastro-lista li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.catastro-lista .boton { flex: 1 1 auto; min-width: 0; text-align: left; }
