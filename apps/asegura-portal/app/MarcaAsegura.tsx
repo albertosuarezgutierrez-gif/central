@@ -1,5 +1,5 @@
 /**
- * Monograma «AS» de Grupo Asegura, EN LÍNEA.
+ * Monograma «AS» de Grupo ASegura, EN LÍNEA.
  *
  * Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de
  * `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va
@@ -21,7 +21,7 @@ export function MarcaAsegura({ alto = 14 }: { alto?: number }) {
       height={alto}
       width={(alto * 130) / 90}
       role="img"
-      aria-label="Grupo Asegura"
+      aria-label="Grupo ASegura"
       focusable="false"
     >
       <path

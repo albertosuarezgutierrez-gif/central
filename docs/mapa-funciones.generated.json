@@ -3807,7 +3807,7 @@
     {
       "ruta": "apps/asegura-portal/app/MarcaAsegura.tsx",
       "ambito": "apps/asegura-portal",
-      "resumen": "Monograma «AS» de Grupo Asegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no como `<img src=\"/brand/...\">` por dos razones: 1. El `fill` es `currentColor`: así el logo toma el colo",
+      "resumen": "Monograma «AS» de Grupo ASegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no como `<img src=\"/brand/...\">` por dos razones: 1. El `fill` es `currentColor`: así el logo toma el colo",
       "exporta": [
         "MarcaAsegura"
       ],
@@ -3819,7 +3819,7 @@
           "params": "{ alto = 14 }: { alto?: number }",
           "retorno": null,
           "linea": 17,
-          "resumen": "Monograma «AS» de Grupo Asegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no com"
+          "resumen": "Monograma «AS» de Grupo ASegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no com"
         }
       ],
       "tablas": [],
@@ -4155,7 +4155,7 @@
     {
       "ruta": "apps/asegura-portal/lib/canal.ts",
       "ambito": "apps/asegura-portal",
-      "resumen": "Puerto de canal: por dónde sale el código de acceso. WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo Asegura NO existe todavía. Cablearlo directamente habría dejado esta fase entera bloqueada esperando a Meta. Con el puerto, el día que haya número se añade `canal-whatsapp.ts` y se ",
+      "resumen": "Puerto de canal: por dónde sale el código de acceso. WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo ASegura NO existe todavía. Cablearlo directamente habría dejado esta fase entera bloqueada esperando a Meta. Con el puerto, el día que haya número se añade `canal-whatsapp.ts` y se ",
       "exporta": [
         "registrarCanal",
         "obtenerCanal"
@@ -55129,7 +55129,7 @@
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/layout.tsx",
       "ambito": "apps/plataforma",
-      "resumen": "Envoltorio de TODA la sección de la correduría. Su único trabajo es colgar la clase `.correduria`, que redefine los tokens de color con el acento cobalto de Grupo Asegura (ver el bloque en `app/globals.css`). Los componentes de dentro siguen usando `var(--primary)` sin enterarse, y el resto de plata",
+      "resumen": "Envoltorio de TODA la sección de la correduría. Su único trabajo es colgar la clase `.correduria`, que redefine los tokens de color con el acento cobalto de Grupo ASegura (ver el bloque en `app/globals.css`). Los componentes de dentro siguen usando `var(--primary)` sin enterarse, y el resto de plata",
       "exporta": [
         "CorreduriaLayout"
       ],
@@ -55141,7 +55141,7 @@
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
           "linea": 9,
-          "resumen": "Envoltorio de TODA la sección de la correduría. Su único trabajo es colgar la clase `.correduria`, que redefine los tokens de color con el acento cobalto de Grupo Asegura (ver el bloque en `app/global"
+          "resumen": "Envoltorio de TODA la sección de la correduría. Su único trabajo es colgar la clase `.correduria`, que redefine los tokens de color con el acento cobalto de Grupo ASegura (ver el bloque en `app/global"
         }
       ],
       "tablas": [],
@@ -70712,7 +70712,7 @@
     {
       "ruta": "apps/plataforma/app/seguros/page.tsx",
       "ambito": "apps/plataforma",
-      "resumen": "Landing PÚBLICA de Grupo Asegura (correduría de seguros). Fuera del grupo `(usuario)` → sin sidebar ni sesión (el middleware la tiene en PUBLIC). Es la puerta del canal de leads web: el formulario entra por `POST /api/publico/correduria/lead` → puerto de asegura → Telegram a Alberto. Honesta a propó",
+      "resumen": "Landing PÚBLICA de Grupo ASegura (correduría de seguros). Fuera del grupo `(usuario)` → sin sidebar ni sesión (el middleware la tiene en PUBLIC). Es la puerta del canal de leads web: el formulario entra por `POST /api/publico/correduria/lead` → puerto de asegura → Telegram a Alberto. Honesta a propó",
       "exporta": [
         "SegurosPage"
       ],

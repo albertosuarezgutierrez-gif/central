@@ -52,7 +52,7 @@
  * real de una inventada.
  *
  * ── PRECISIÓN MEDIDA (03/09/2026) ────────────────────────────────────────────
- * Contra 1.430 matrículas modernas reales de la cartera de Grupo Asegura que
+ * Contra 1.430 matrículas modernas reales de la cartera de Grupo ASegura que
  * llevan además el año del vehículo declarado en la póliza:
  *   · 1.352 (94,5 %) → el año estimado coincide EXACTAMENTE con el declarado.
  *   ·  1.381 (96,6 %) → dentro de ±1 año (el desfase de un año es lo normal en

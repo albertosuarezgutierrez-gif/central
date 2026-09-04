@@ -9,7 +9,7 @@ import { MarcaAsegura } from './MarcaAsegura'
 // el asegurado tiene que reconocer a su correduría, no una plantilla índigo.
 const MARCA = MARCA_ASEGURA
 
-export const metadata = { title: 'Mis seguros — Grupo Asegura' }
+export const metadata = { title: 'Mis seguros — Grupo ASegura' }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

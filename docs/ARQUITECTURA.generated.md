@@ -263,7 +263,7 @@
 - (03/09/2026) 📱 Segunda captura de móvil: la ficha del cliente
 - (03/09/2026) 📱 `/correduria` en el MÓVIL, con la primera captura real
 - (03/09/2026) 🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos
-- (03/09/2026) 🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive
+- (03/09/2026) 🎨 La marca de Grupo ASegura estaba en la app de Manuel, no en Drive
 - (03/09/2026) 🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera
 - (03/09/2026) 🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR
 

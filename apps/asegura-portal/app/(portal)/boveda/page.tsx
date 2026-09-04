@@ -70,7 +70,7 @@ export default async function Boveda() {
   const obligaciones = await obligacionesDeIdentidad(identidad.id)
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
-  const correduria = cartera.correduria ?? 'Grupo Asegura'
+  const correduria = cartera.correduria ?? 'Grupo ASegura'
 
   // Lo que se le ofrece elegir al dar un parte. Incluye las AUTORIZADAS a
   // propósito: la ruta acepta lo mismo (`carteraDeIdentidad` propias +

@@ -1,4 +1,4 @@
-# Portal de clientes, leads y empresas de Grupo Asegura — diseño
+# Portal de clientes, leads y empresas de Grupo ASegura — diseño
 
 **Fecha:** 01/09/2026 · **Vertical:** `asegura` (correduría, negocio principal de Alberto)
 **Aprobado por:** Alberto (conversación de brainstorming, 01/09/2026)
@@ -69,7 +69,7 @@ esa regla es `import_ref IS NULL`.
 4. **Rol propio `prisma_asegura_portal`, SIN BYPASSRLS**, con GRANT solo sobre las tablas `portal_*`
    y lectura acotada de la cartera. Es lo que toca internet; no lleva la llave maestra.
 5. **Lógica en `@central/module-seguros-portal`**, pura y sin BD (molde: `lib/tenant-ambito.ts`).
-6. **Canal por defecto: WhatsApp.** Email solo de rescate. **WABA nueva a nombre de Grupo Asegura** —
+6. **Canal por defecto: WhatsApp.** Email solo de rescate. **WABA nueva a nombre de Grupo ASegura** —
    la de Manuel no viaja en ninguna transferencia, y no hay historial que perder: `wa_opt_in` = 0 en
    las 32.600 fichas y `whatsapp_outbound_messages` = 0.
 7. **El eje del producto es «aporta tus seguros»**, no «mira tus pólizas». Mirar sirve a 80 personas;
