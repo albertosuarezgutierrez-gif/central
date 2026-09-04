@@ -71,6 +71,27 @@ export async function backfillDniLookupHash(
   const plan = planBackfillDni(fichas, computeDniLookupHash, looksLikeDniNieCif)
   const choques = plan.choques.map((c) => ({ fichas: c.fichas, hayPreexistente: c.hayPreexistente }))
 
+  // Foto del plan en `seguros.backfill_dni_plan` (una fila, se sobreescribe). Los
+  // grupos de mismo DNI son la lista de fusiones y solo se pueden calcular aquí,
+  // con la clave; el lote SQL los lee de la BD. Solo ids: ni DNI, ni hash, ni
+  // nombre. Si la foto falla no se pierde el plan (se devuelve igual): un GET
+  // en seco no debe morir por una tabla de apoyo.
+  // Sin prefijar el schema: la conexión de la cartera ya trae `?schema=seguros`
+  // (lib/asegura-url.ts), como el resto de libs; un `seguros.x` en SQL crudo
+  // dispara el guardián de aislamiento, y aquí el ámbito ya viene en
+  // `correduriaId`, que se escribe en la propia fila.
+  try {
+    await db.$executeRaw`
+      insert into backfill_dni_plan (id, calculado_en, seco, correduria_id, resumen, choques)
+      values (1, now(), ${opciones.seco}, ${correduriaId}::uuid,
+              ${JSON.stringify(plan.resumen)}::jsonb, ${JSON.stringify(choques)}::jsonb)
+      on conflict (id) do update
+        set calculado_en = excluded.calculado_en, seco = excluded.seco,
+            correduria_id = excluded.correduria_id, resumen = excluded.resumen, choques = excluded.choques`
+  } catch (e) {
+    console.warn('[backfill-dni] no se pudo guardar la foto del plan', e instanceof Error ? e.message : e)
+  }
+
   if (opciones.seco) {
     return { resumen: plan.resumen, choques, escritos: 0, fallidos: [], seco: true }
   }
