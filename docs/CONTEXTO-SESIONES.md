@@ -56,6 +56,61 @@
   (compañía, periodo), no por ramo. 🚨 **Falta la ingesta de Mapfre desde el 02/04/2026** (~5 meses; es el 64%
   de la cartera) → el libro de comisiones está infravalorado. 🚨 Y **75 tablas de `seguros` con RLS desactivado**
   expuestas a `anon` (`clientes`, `polizas`, `cliente_emails`) — comprobar dónde vive la clave `anon`. PR #2285.
+- **📧 El buscador ya llamaba, pero a 5 clientes vivos les faltaba el correo (04/09/2026).** #2286 llevó el
+  contacto al buscador; en paralelo yo hacía lo mismo (#2289, **cerrado sin mergear**: su diseño era mejor,
+  `contacto: Contacto | null` distingue «asegura no lo mandó» de «no consta», y el mío no). De mi trabajo
+  sobrevive lo que #2286 no tenía y estaba **medido**: `clientes.email` NO es el único sitio — **57 fichas
+  tienen email solo en `cliente_emails` y 5 son de los 80 clientes vivos** (1 de cada 16). Consulta extra que
+  solo se lanza si hay huecos. Con el TELÉFONO no hace falta: cero casos, medido. Y `porMatricula` seguía
+  repitiendo los diez campos del `Hallazgo` a mano (rompió justo al añadir `contacto`): ahora hay UN
+  `hallazgoSinEnriquecer()`. 🚨 **Segundo choque del día con otra sesión sobre el mismo archivo** (el primero
+  fue `BotonWhatsapp` en #2281): antes de construir sobre `/correduria`, mirar qué hay ya en `main`. PR #2290.
+- **🔧 Instrumentado `pricing_applied` y ACTIVADOS los mensajes de los 2 pisos de Busto (04/09/2026).** Alberto dio OK a
+  las dos cosas. (1) `pricing_applied` gana `target_crudo`, `clamp_floor`, `clamp_ceil`, `rail_ancla` y
+  **`rail_ancla_origen`** (migración aplicada a prod): son los 4 números sin los cuales la ida y vuelta de House era
+  imposible de diagnosticar —sus dos filas tenían inputs IDÉNTICOS y resultado opuesto—. El origen del ancla NO es
+  adorno: solo `ref24` hace que el tope ±20% sea DIARIO; con `actual` es por pasada, y eso distingue un raíl roto de uno
+  medido desde otro sitio. `anclaRailCon()` devuelve valor+origen JUNTOS y `anclaRail()` delega en ella, para que las dos
+  precedencias no puedan divergir. 2 guardianes de fuente + 3 tests puros, probados en rojo. (2) `mensajes_prog_pisos`:
+  Luxury Busto y Busto Reform a `activo=true`. Lo que protege de mandar la ristra atrasada es que **el modo sombra YA
+  registraba los hitos** (7 filas), que cuentan como hechos. ⚠️ Consecuencia: la reserva 154265696 de Luxury (llega el
+  05/09, en pt) tenía su `vispera_llegada` —la que lleva los CÓDIGOS— ya en sombra, así que depende de que Smoobu se los
+  mandara. `desde` de esa tabla es informativo: el orquestador solo lee `activo`.
+
+- **📸 Quitar Smoobu de Busto: las indicaciones están listas, las FOTOS no (04/09/2026).** Alberto preguntó por los dos
+  pisos de Bustos Tavera. Revisadas: los pasos son correctos y completos —el lío de las DOS cajas GRIFEMA idénticas del
+  portal ya está resuelto (Luxury = abajo, Reform = arriba, cada una con su foto en rojo)—, y en BD no falta nada
+  (portal, caja, wifi). WiFi y portal COMPARTIDOS entre los dos pisos: correcto, mismo edificio, no es un fallo.
+  🚨 **El bloqueo real: las 12 fotos de las indicaciones viven en el CDN de Smoobu** (Dúplex 5, House 3, Luxury 3,
+  Reform 2) y nadie las vigilaba. Apagar Smoobu del todo las mata EN SILENCIO: el mensaje sale con el enlace roto y el
+  huésped se planta ante las dos cajas idénticas. Se añaden `fotosDeAcceso()` + `HOST_FOTOS_ACCESO` +
+  `pasosQuePrometenFotoSinTenerla()` y 3 guardianes (probados en rojo). ⚠️ **Distinguir dos «quitar Smoobu»**: apagar
+  sus PLANTILLAS de mensajes se puede ya (`yaLoMandoSmoobu` cubre la transición sin duplicar); dejar Smoobu como PMS
+  exige copiar antes las fotos a Storage. **Pendiente de Alberto: activar los 2 pisos en `mensajes_prog_pisos`** (hoy
+  solo House) — no se toca sin su OK porque son mensajes reales a huéspedes. No se pudo comprobar que las fotos sigan
+  vivas: el proxy del contenedor da 403 a `login.smoobu.com`.
+
+- **📉 Las pasadas de pricing del 04/09: dos hallazgos y un agujero de instrumentación (04/09/2026).**
+  Las 4 llaves muerden: de las 86 noches congeladas, **91 medidas y 74% ya bajaron** (Busto 70/75, ratio 0,807 = el raíl
+  del −20%); quedan 11. Pero (1) **House Sevillana hace ida y vuelta dentro del día**: 7 de sus 8 fechas tocadas dos veces
+  bajan un 20% y vuelven a subir hasta un +50% en 100 min (los otros 3 pisos: 0 de 51). El raíl NO está roto —se ancla en
+  ayer y el neto da 20,0% clavado—, pero quema el presupuesto del día en un viaje de ida y vuelta y contradice el precio que
+  Booking cachea en medio. (2) **64 noches nuevas al suelo absoluto**: 34 de Busto Reform (ene-feb 2027, 65€) y 30 del
+  Dúplex (jul 2027, 85€), todas viniendo de por encima. 🚨 **El agujero: `pricing_applied` no guarda `target`, `floor`,
+  `ceil` ni `ref24`** — los 4 números que harían falta para saber por qué dos pasadas discrepan (sus inputs registrados son
+  IDÉNTICOS). Propuesto a Alberto instrumentar primero; **no se toca sin su OK**. La auto-resolución de alertas **aún no ha
+  corrido**: el guardián pasó a las 07:30 UTC y el PR #2243 se mergeó a las 08:06 — estrena mañana (47 `precio_revertido`
+  del 02/09 esperando). No confundir «no ha corrido» con «no funciona».
+
+- **🔐 La cerradura que falla NO es la de Socorro (04/09/2026).** Alberto preguntó por Socorro; medido: Socorro tiene
+  **3 PIN activos y entregados**, último error el 08/08. La rota es **BustoTavera** (Luxury + Busto Reform), con **10 de 10
+  intentos en error: nunca ha creado un PIN**, hoy por `Tuya 2001: device is offline` (antes 2334 y el trial de IoT Core).
+  Eso es físico —batería/wifi/gateway— y no se arregla desde código: **mano de Alberto en Bustos Tavera 22**. El fallback
+  SÍ es real y se verificó en vez de repetirse: los 4 pisos tienen `codigo_portal` en `sivra_codigos_acceso` (Busto `2022#`),
+  así que nadie se queda en la puerta. Dos arreglos al vigía: su nota llevaba **un mes cableando el trial de IoT Core como
+  causa conocida e invitando a descartar el aviso**, y `evaluarLatido` afirmaba «se ejecuta y no termina» cuando `ok=false`
+  lo escriben tanto los que arrancan (`'pasada en curso'`) como los que terminan y se declaran con problemas — ahora se
+  declara y manda el parte. Guardián nuevo (probado en rojo: cazó mi propia nota).
 
 - **📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp (04/09/2026, PR #2281).**
   Petición de Alberto sobre la captura del buscador. Nuevo `AccionesContacto` + `lib/acciones-contacto.ts`

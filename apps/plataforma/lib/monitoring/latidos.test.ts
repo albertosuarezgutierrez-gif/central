@@ -44,7 +44,7 @@ test('se ejecuta pero nunca completa → alerta que lo dice, no «sin señal»',
   assert.match(r.motivo, /pasada en curso/)
 })
 
-test('pasada buena vieja pero sigue arrancando → se dice que no termina', () => {
+test('pasada buena vieja pero sigue arrancando → dice que arrancó, sin diagnosticar cuál de los dos', () => {
   const r = evaluarLatido({
     ahora,
     ultimo: new Date('2026-07-10T08:00:00Z'),
@@ -53,6 +53,37 @@ test('pasada buena vieja pero sigue arrancando → se dice que no termina', () =
   })
   assert.equal(r.alerta, true)
   assert.match(r.motivo, /SÍ arrancó/)
+})
+
+// 04/09/2026. `ok=false` con intento fresco son DOS averías, no una: los agentes que escriben
+// `'pasada en curso'` al arrancar (facturas-scan, prevision-pisos, subastas-mercado, ses-latido)
+// mueren a medias; los que escriben solo al final (el programador de accesos de Tuya) TERMINAN y
+// se declaran con problemas. El vigía afirmaba «(se ejecuta y no termina)» para los dos, que manda
+// a mirar el reloj de la función cuando la avería está en el parte.
+test('con intento fresco NO se afirma que no termina: se ofrecen las dos y manda el parte', () => {
+  const r = evaluarLatido({
+    ahora,
+    ultimo: new Date('2026-07-10T08:00:00Z'),
+    ultimoIntento: new Date('2026-07-21T06:15:00Z'),
+    maxHoras: 30,
+    detalle: '2 cerradura(s) · 0 PIN creado(s) · 4 con ERROR',
+  })
+  assert.doesNotMatch(r.motivo, /se ejecuta y no termina/,
+    'no se puede afirmar: el mismo ok=false lo escribe quien arranca y quien termina mal')
+  assert.match(r.motivo, /se queda a medias/)
+  assert.match(r.motivo, /se declara con problemas/)
+  assert.match(r.motivo, /4 con ERROR/, 'el parte, que es lo que distingue los dos casos, va pegado')
+})
+
+// El vigía no diagnostica por ti lo que no ha mirado: la nota del programador de accesos cableaba
+// «es el trial de IoT Core caducado, no un fallo nuevo» y llevaba un mes siendo falsa (el error
+// real era `Tuya 2001: device is offline`). Una nota que te dice que ignores la alerta con una
+// causa de hace un mes es peor que no tener nota.
+test('ninguna nota de agente cablea un código de error concreto como causa', () => {
+  for (const ag of AGENTES_VIGILADOS) {
+    assert.doesNotMatch(ag.nota, /no un fallo nuevo/,
+      `${ag.id}: la nota invita a descartar la alerta con un diagnóstico que no se ha comprobado`)
+  }
 })
 
 test('pasada buena fresca → sin alerta aunque el intento sea el mismo', () => {
