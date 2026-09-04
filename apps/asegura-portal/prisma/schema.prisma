@@ -358,7 +358,22 @@ model PortalAutorizacion {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId           String    @map("correduria_id") @db.Uuid
   otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
-  autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
+  /// A quién se autoriza cuando SÍ es cliente de la correduría. `null` cuando lo
+  /// es `autorizadoIdentidadId`: exactamente una de las dos va rellena y lo obliga
+  /// la BD (CHECK `portal_autorizacion_destinatario_unico`, comprobado mordiendo).
+  autorizadoClienteId    String?   @map("autorizado_cliente_id") @db.Uuid
+  /// A quién se autoriza cuando NO es cliente: su identidad del portal, que es lo
+  /// que hay detrás de la cookie y por tanto quien de verdad mira. Se eligió la
+  /// identidad en vez de fabricarle una ficha vacía: una ficha es una persona en
+  /// la cartera, y crear una por cada invitado ensucia los 32.520 leads que ya hay.
+  autorizadoIdentidadId  String?   @map("autorizado_identidad_id") @db.Uuid
+  /// La ÚNICA póliza que abre esta autorización. `null` = todas las del otorgante,
+  /// que es lo que significaban todas las filas anteriores a esta columna — y eso
+  /// incluye las que contrate MAÑANA, cosa que la pantalla tiene que decir con esas
+  /// palabras al conceder. La FK es COMPUESTA con `otorganteClienteId` contra
+  /// `polizas(cliente_id, id)`: la BD exige que la póliza sea DEL OTORGANTE, así que
+  /// un id manipulado no cuela la póliza de un tercero (probado: 23503).
+  polizaId               String?   @map("poliza_id") @db.Uuid
   alcance                String
   /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
   /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta,
@@ -391,12 +406,74 @@ model PortalAutorizacion {
 
   @@index([otorganteClienteId])
   @@index([autorizadoClienteId])
+  @@index([autorizadoIdentidadId])
+  @@index([polizaId])
   @@map("portal_autorizacion")
   @@schema("seguros")
 }
 
 /// Registro de accesos que ve el OTORGANTE: una fila por autorización, identidad
 /// y DÍA. Es lo que convierte la autorización en algo real y no un cheque en blanco.
+/// «Papá, ¿me dejas ver tu seguro del coche?» — la dirección CONTRARIA a
+/// `PortalAutorizacion`, y la que de verdad pasa: quien no se maneja con el móvil
+/// no entra a invitar a nadie, pero su hijo sí entra a pedírselo.
+///
+/// 🚨 Tabla APARTE y no una autorización «al revés» a propósito: una autorización
+/// nacida de una petición viene YA aceptada por el autorizado (pedirla es
+/// aceptarla), así que meterlas en la misma tabla haría que «autorizaciones
+/// pendientes de aceptar» contara peticiones que nadie concedió — y esa cuenta es
+/// la prueba del art. 7.1 RGPD.
+///
+/// 🚨 Y el destinatario se guarda por HASH DEL CORREO, no por `cliente_id`: quien
+/// pide no sabe (ni debe saber) si esa persona tiene ficha. Resolver la ficha en
+/// el momento de pedir obligaría a contestar «no existe», y eso convierte el
+/// portal en un oráculo para recorrer correos y sacar quién es cliente de la
+/// correduría. Ver `respuestaPublica()` en @central/module-seguros-portal.
+model PortalPeticionAcceso {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  /// Quien PIDE. Siempre hay identidad (ha entrado al portal); la ficha puede no
+  /// existir todavía, y por eso es opcional.
+  solicitanteIdentidadId String    @map("solicitante_identidad_id") @db.Uuid
+  solicitanteClienteId   String?   @map("solicitante_cliente_id") @db.Uuid
+  /// El índice ciego del correo del destinatario (el MISMO HMAC que
+  /// `clientes.email_lookup_hash`). Nunca el correo en claro: esta tabla la puede
+  /// llenar cualquiera que entre al portal.
+  destinatarioEmailHash  String    @map("destinatario_email_hash")
+  /// La ficha del destinatario, resuelta por ese hash EN EL SERVIDOR. `null` = no
+  /// había ninguna, o había varias y no se adivina. Quien pidió no ve la
+  /// diferencia: las dos le contestan lo mismo.
+  destinatarioClienteId  String?   @map("destinatario_cliente_id") @db.Uuid
+  /// Qué pide: `ver` | `ver_economico`. Los otros dos alcances no son concedibles.
+  alcance                String
+  /// Texto libre de quien pide, para que el otro sepa quién le escribe. Va a
+  /// acabar delante de OTRA persona: se escapa al pintarlo y no entra en un
+  /// asunto de correo ni en una cabecera. Máx. 300, `null` si venía vacío.
+  mensaje                String?
+  creadaEn               DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  /// Una pendiente caduca a los 30 días: conceder hoy una pregunta de hace tres
+  /// años es contestar algo que nadie recuerda haber leído.
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  /// Lo RESUELTO gana a la caducidad (ver `estadoPeticion()`): una concedida no
+  /// se convierte en caducada al pasar el mes.
+  concedidaEn            DateTime? @map("concedida_en") @db.Timestamptz(6)
+  /// La autorización que salió de conceder esto. Es la costura entre las dos
+  /// tablas y lo que permite enseñarle al solicitante que su petición sirvió.
+  autorizacionId         String?   @map("autorizacion_id") @db.Uuid
+  rechazadaEn            DateTime? @map("rechazada_en") @db.Timestamptz(6)
+  /// La retira QUIEN PIDIÓ. No es lo mismo que un rechazo y no se colapsan: uno
+  /// dice «me he arrepentido» y el otro «me han dicho que no».
+  retiradaEn             DateTime? @map("retirada_en") @db.Timestamptz(6)
+  resueltaPorIdentidadId String?   @map("resuelta_por_identidad_id") @db.Uuid
+  ip                     String?   @db.Inet
+  userAgent              String?   @map("user_agent")
+
+  @@index([destinatarioClienteId, concedidaEn, rechazadaEn])
+  @@index([solicitanteIdentidadId, creadaEn])
+  @@map("portal_peticion_acceso")
+  @@schema("seguros")
+}
+
 model PortalAutorizacionUso {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   autorizacionId String   @map("autorizacion_id") @db.Uuid

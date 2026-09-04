@@ -85,3 +85,28 @@ export {
   variantesDireccion,
 } from './direccion-catastro.ts'
 export type { OrigenCampo, OrigenPorCampo, FormatoReferencia } from './direccion-catastro.ts'
+
+// La petición de acceso: la dirección CONTRARIA a la autorización. Su
+// `respuestaPublica()` es lo que impide que el portal sirva de oráculo para
+// averiguar quién es cliente de la correduría — lee su cabecera antes de tocar
+// nada de esto.
+export {
+  RESULTADOS_PETICION,
+  RESPUESTAS_PUBLICAS,
+  respuestaPublica,
+  TEXTO_REGISTRADA,
+  MAX_PETICIONES_DIA,
+  ESTADOS_PETICION,
+  DIAS_VIGENCIA_PETICION,
+  caducidadPeticion,
+  estadoPeticion,
+  peticionResoluble,
+  MAX_MENSAJE_PETICION,
+  normalizarMensajePeticion,
+} from './peticion-acceso.ts'
+export type {
+  ResultadoPeticion,
+  RespuestaPublica,
+  EstadoPeticion,
+  PeticionFechas,
+} from './peticion-acceso.ts'
