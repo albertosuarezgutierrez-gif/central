@@ -359,7 +359,11 @@ function Card({ p }: { p: PolizaPortal }) {
         {!p.confirmadaCima && <span className="chip aviso">pendiente de confirmación por la compañía</span>}
         {/* Sin tramitador ni teléfono de gestión: el punto de contacto es la
             correduría (regla de visibilidad, `CLAUDE.md` de la app). */}
-        {p.siniestrosAbiertos.map((s) => (
+        {/* `null` = tu nivel no llega a los siniestros de esta póliza; NO se
+            pinta nada, porque un chip que dijera «no visible» le contaría a un
+            tercero que hay algo que mirar. `[]` = no hay ninguno abierto, y
+            tampoco se pinta: la ausencia de chip ya lo dice. */}
+        {(p.siniestrosAbiertos ?? []).map((s) => (
           <span key={s.id} className="chip aviso">
             siniestro {s.estado === 'en_tramitacion' ? 'en tramitación' : 'abierto'}
             {s.referencia ? ` ${s.referencia}` : ''}
