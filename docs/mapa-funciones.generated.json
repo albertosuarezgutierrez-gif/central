@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-03T21:03:22Z",
-  "sha": "c27259a264a37bcd1bca42b0e073294b1abd4c37",
+  "generadoEn": "2026-09-04T08:00:25Z",
+  "sha": "212c2100f5b60e88446f9e14ae4ff7944ff6ebb5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3093,9 +3093,12 @@
           "linea": 40
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next",
+        "react"
+      ],
       "rutaApi": null,
-      "hash": "ba7aff76131e"
+      "hash": "50c579210faa"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/Calendario.tsx",
@@ -3141,7 +3144,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 82,
+          "linea": 83,
           "resumen": "`2014-03-11` → `marzo de 2014`. Sin `Date`: aquí solo se parte un ISO."
         },
         {
@@ -3150,7 +3153,7 @@
           "exportada": true,
           "params": "codigo: string",
           "retorno": "Campo | null",
-          "linea": 114
+          "linea": 115
         },
         {
           "nombre": "primaDesdeTexto",
@@ -3158,16 +3161,34 @@
           "exportada": true,
           "params": "t: string",
           "retorno": "number | null | 'invalida' | 'cero'",
-          "linea": 127,
+          "linea": 128,
           "resumen": "`null` = el hueco, y es válido (dejar la prima en blanco es una respuesta). `'invalida'` = hay algo escrito que no es un número. `'cero'` va aparte porque un 0 no es basura: es un hueco con forma de n"
         },
         {
           "nombre": "CamposPoliza",
           "kind": "function",
           "exportada": true,
-          "params": "{ idPrefix, ramos, form, errores, escribir, disabled, ayudaHueco, ayudaPrima }: Props",
+          "params": "{ idPrefix, ramos, form, errores, escribir, disabled, ayudaHueco, ayudaPrima, datosRamo, escribirRamo, erroresRamo, }: Props",
           "retorno": null,
-          "linea": 154
+          "linea": 172
+        },
+        {
+          "nombre": "BloqueDelRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ idPrefix, form, errores, escribir, disabled, datosRamo, escribirRamo, erroresRamo, }: { idPrefix: string form: Formulario errores: Errores escribir: (campo: Campo, valor: string) => void disabled: boolean datosRamo?: Record<string, string",
+          "retorno": null,
+          "linea": 334,
+          "resumen": "Todo lo que depende del ramo elegido, en una sola sección. 🚨 NINGUNO DE ESTOS CAMPOS ES OBLIGATORIO, igual que el vencimiento. Aquí la tentación es mayor —«si pide un seguro de hogar, los metros los "
+        },
+        {
+          "nombre": "CampoDelCatalogo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ idPrefix, campo, valor, error, escribir, disabled, }: { idPrefix: string campo: CampoRamo valor: string error?: string escribir: (id: string, valor: string) => void disabled: boolean }",
+          "retorno": null,
+          "linea": 391,
+          "resumen": "Un campo del catálogo, pintado según su `tipo`. El catálogo vive en `@central/module-seguros-portal` y no sabe de HTML: la traducción tipo → control es de esta pantalla, y es el único sitio donde ocur"
         },
         {
           "nombre": "CamposVehiculo",
@@ -3175,13 +3196,13 @@
           "exportada": false,
           "params": "{ idPrefix, form, errores, escribir, disabled, }: { idPrefix: string form: Formulario errores: Errores escribir: (campo: Campo, valor: string) => void disabled: boolean }",
           "retorno": null,
-          "linea": 286,
+          "linea": 487,
           "resumen": "El bloque del VEHÍCULO: se despliega solo cuando el tipo de seguro lo tiene detrás (`RAMOS_CON_VEHICULO`). Ninguno de los tres es obligatorio, por la misma razón que el vencimiento: el cliente está ap"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "24c8eebe477c"
+      "hash": "1a401485e78c"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/EditarPoliza.tsx",
@@ -3196,15 +3217,42 @@
           "exportada": false,
           "params": "v: Valores",
           "retorno": "Formulario",
-          "linea": 76
+          "linea": 91
+        },
+        {
+          "nombre": "aFormularioRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: Valores['datosRamo']",
+          "retorno": "Record<string, string>",
+          "linea": 112,
+          "resumen": "Lo guardado en `datos_ramo` → lo que se teclea en la pantalla. Todo a texto porque los `<input>` solo saben de texto; los booleanos vuelven a su vocabulario de tri-estado (`si`/`no`), y una clave AUSE"
+        },
+        {
+          "nombre": "ramoDelFormulario",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: Record<string, string>",
+          "retorno": "Record<string, string>",
+          "linea": 122,
+          "resumen": "Lo tecleado, sin los vacíos: un campo en blanco es «no lo sé», y no viaja."
+        },
+        {
+          "nombre": "mismoRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: Record<string, string>, b: Record<string, string>",
+          "retorno": "boolean",
+          "linea": 131,
+          "resumen": "¿Ha cambiado ALGO de los campos del ramo? Se compara por claves ordenadas para que reordenar el objeto no cuente como cambio; sin esto, cada guardado mandaría un parche que no cambia nada."
         },
         {
           "nombre": "calcularCambios",
           "kind": "function",
           "exportada": false,
-          "params": "form: Formulario, base: Valores, prima: number | null",
+          "params": "form: Formulario, base: Valores, prima: number | null, datosRamo: Record<string, string>,",
           "retorno": "Cambios",
-          "linea": 91
+          "linea": 137
         },
         {
           "nombre": "aplicar",
@@ -3212,7 +3260,7 @@
           "exportada": false,
           "params": "base: Valores, c: Cambios",
           "retorno": "Valores",
-          "linea": 115
+          "linea": 176
         },
         {
           "nombre": "textoFecha",
@@ -3220,7 +3268,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string | null",
-          "linea": 130,
+          "linea": 192,
           "resumen": "`YYYY-MM-DD` → `dd/mm/aaaa`, en UTC (una fecha `date` no tiene hora ni zona)."
         },
         {
@@ -3229,12 +3277,12 @@
           "exportada": true,
           "params": "{ poliza, ramos }: { poliza: PolizaEditable; ramos: readonly RamoOpcion[] }",
           "retorno": null,
-          "linea": 134
+          "linea": 196
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1769f0eb7da5"
+      "hash": "54b25c74ea64"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/page.tsx",
@@ -3257,7 +3305,7 @@
           "exportada": false,
           "params": "{ titular, propia }: { titular: TitularPortal; propia: boolean }",
           "retorno": null,
-          "linea": 242
+          "linea": 251
         },
         {
           "nombre": "Card",
@@ -3265,7 +3313,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 280,
+          "linea": 289,
           "resumen": "Una póliza de la CARTERA. Regla de visibilidad del 03/09/2026 (ver `CLAUDE.md` de la app): lo que no cambia una decisión del cliente **no se pinta vacío, se quita**; lo que sí la cambia se dice con un"
         },
         {
@@ -3274,7 +3322,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 368,
+          "linea": 377,
           "resumen": "🚨 EL aviso de la pantalla: `devueltos > 0` significa que la compañía intentó cobrar y NO pudo. Es lo único que puede dejar a esta persona sin cobertura sin que ella se entere, así que va arriba y con"
         },
         {
@@ -3283,7 +3331,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 405,
+          "linea": 414,
           "resumen": "Recibos, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`. - `recibos === null` → el nivel de esta persona no enseña recibos. No es una ausencia del dato: se oculta y no se menciona. - `to"
         },
         {
@@ -3292,7 +3340,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 439,
+          "linea": 448,
           "resumen": "Coberturas. `null` = el nivel no las enseña (se oculta); `total === 0` = **no nos consta el detalle**, que NO es «no tienes coberturas»: decirle eso a alguien que sí las tiene es empujarle a contratar"
         },
         {
@@ -3301,13 +3349,13 @@
           "exportada": false,
           "params": "p: PolizaPortal, titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 463,
+          "linea": 472,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b61cadd93cd1"
+      "hash": "2ea51bf5efcc"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -3590,6 +3638,26 @@
       "hash": "e36221d5b5b1"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/catastro/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 66
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/catastro",
+      "hash": "760d232f8f26"
+    },
+    {
       "ruta": "apps/asegura-portal/app/api/polizas/[id]/route.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -3602,7 +3670,7 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 22,
+          "linea": 23,
           "resumen": "Corrección a mano de una póliza que el propio cliente subió. 🚨 El aislamiento de este portal NO lo da RLS (el rol `prisma_asegura_portal` consulta sin políticas que resuelvan `auth.uid()`): lo da EST"
         }
       ],
@@ -3610,7 +3678,7 @@
         "next"
       ],
       "rutaApi": "/api/polizas/[id]",
-      "hash": "58886d72cf13"
+      "hash": "63d865606aa1"
     },
     {
       "ruta": "apps/asegura-portal/app/api/polizas/route.ts",
@@ -3642,14 +3710,14 @@
           "exportada": false,
           "params": "req: Request, identidadId: string",
           "retorno": null,
-          "linea": 87
+          "linea": 94
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/polizas",
-      "hash": "76c81bb1ae3e"
+      "hash": "d184e8df660b"
     },
     {
       "ruta": "apps/asegura-portal/app/api/siniestros/[id]/adjuntos/[documentoId]/route.ts",
@@ -4164,6 +4232,88 @@
       "hash": "d08f8e591711"
     },
     {
+      "ruta": "apps/asegura-portal/lib/catastro.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Rellenar la ficha de HOGAR desde el Catastro: con la dirección salen los metros construidos, el año del edificio y el código postal sin que el cliente tenga que buscar la escritura ni el recibo del IBI. Es el equivalente para hogar de lo que la matrícula hace para auto en `CamposPoliza.tsx` («Por la",
+      "exporta": [
+        "sugerenciaHogar",
+        "etiquetaInmueble",
+        "normalizarReferencia",
+        "consultarCatastroHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "sugerenciaHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosHogar",
+          "retorno": "",
+          "linea": 110,
+          "resumen": "Pasa cada dato del Catastro por el MISMO filtro que el tecleado a mano (`normalizarDatosRamo`), y campo a campo. Uno a uno y no todos juntos a propósito: `normalizarDatosRamo` rechaza el objeto ENTERO"
+        },
+        {
+          "nombre": "etiquetaInmueble",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: InmuebleCatastro",
+          "retorno": "string",
+          "linea": 158,
+          "resumen": "Etiqueta legible de un inmueble. `'00'` es la planta baja en la codificación del Catastro y se dice con palabras: un «Planta 00» en la pantalla obliga a la persona a traducir, y una persona que duda e"
+        },
+        {
+          "nombre": "opcionesDeInmuebles",
+          "kind": "function",
+          "exportada": false,
+          "params": "inmuebles: InmuebleCatastro[]",
+          "retorno": "OpcionInmueble[]",
+          "linea": 170
+        },
+        {
+          "nombre": "normalizarReferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": "string",
+          "linea": 257
+        },
+        {
+          "nombre": "consultarCatastroHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ConsultaCatastro, puerto: PuertoCatastro = PUERTO_REAL,",
+          "retorno": "Promise<RespuestaCatastro>",
+          "linea": 261
+        },
+        {
+          "nombre": "porReferencia",
+          "kind": "function",
+          "exportada": false,
+          "params": "referencia: string, puerto: PuertoCatastro",
+          "retorno": "Promise<RespuestaCatastro>",
+          "linea": 278
+        },
+        {
+          "nombre": "porDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Extract<ConsultaCatastro, { por: 'direccion' }>, puerto: PuertoCatastro,",
+          "retorno": "Promise<RespuestaCatastro>",
+          "linea": 288
+        },
+        {
+          "nombre": "desdePrecalificacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "referencia: string, pre: PrecalificacionHogar",
+          "retorno": "RespuestaCatastro",
+          "linea": 334
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "574d3c32db4c"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/dinero.ts",
       "ambito": "apps/asegura-portal",
       "resumen": "Formato de dinero ESPAÑOL, regla global del monorepo: `2.162,49€` (miles con punto, decimales con coma, € DETRÁS). Nunca `€2162.49`. Espejo exacto de apps/asegura/lib/dinero.ts.",
@@ -4212,18 +4362,65 @@
       "ambito": "apps/asegura-portal",
       "resumen": "Lee una póliza que aporta el usuario: PDF → texto → IA, o foto → visión. Replica el pipeline ya probado de apps/sivra/lib/agente-facturas/extraer.ts. ⚠️ Lo que sale de aquí es SIEMPRE un dato leído por una máquina, nunca un dato de contrato: quien lo guarde lo marca `declarado` (ver `procedencia.ts`",
       "exporta": [
+        "instruccionRamo",
+        "normalizarDatosRamoLeidos",
         "extraerPoliza",
         "parsearPolizaExtraida"
       ],
       "funciones": [
+        {
+          "nombre": "extraidaVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "PolizaExtraida",
+          "linea": 73,
+          "resumen": "Todos los campos a `null`. La forma de un fallo de lectura tiene que ser la MISMA que la de una lectura buena: si no, quien la guarda deja columnas sin tocar en vez de escribir NULL."
+        },
         {
           "nombre": "nadaLeido",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": "ResultadoExtraccion",
-          "linea": 46,
+          "linea": 78,
           "resumen": "Nada leído: TODOS los campos a `null` y `fuente: 'none'`."
+        },
+        {
+          "nombre": "describirCampo",
+          "kind": "function",
+          "exportada": false,
+          "params": "campo: CampoRamo",
+          "retorno": "string",
+          "linea": 88,
+          "resumen": "Cómo se le describe a la IA UN campo del catálogo. La forma sale del `tipo`, y el rango y las opciones del propio campo: así, el día que el catálogo gane un campo o cambie un rango, el prompt cambia s"
+        },
+        {
+          "nombre": "instruccionRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null",
+          "retorno": "string | null",
+          "linea": 118,
+          "resumen": "La instrucción de la 2ª pasada, CONSTRUIDA desde `camposDeRamo()`. Devuelve `null` cuando no hay nada que preguntar —ramo no reconocido o catálogo vacío—, y ese `null` es lo que ahorra la llamada."
+        },
+        {
+          "nombre": "normalizarDatosRamoLeidos",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null, bruto: unknown",
+          "retorno": "DatosRamo | null",
+          "linea": 140,
+          "resumen": "Lo leído en la 2ª pasada, normalizado CAMPO A CAMPO contra el catálogo del ramo. Uno a uno y no de golpe a propósito: un solo campo mal leído tiraría el objeto entero, y con él cuatro datos buenos. Un"
+        },
+        {
+          "nombre": "leerDatosRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: PolizaExtraida, pedir: (instruccion: string) => Promise<string>,",
+          "retorno": "Promise<PolizaExtraida>",
+          "linea": 167,
+          "resumen": "La 2ª pasada. `pedir` es lo único que cambia entre un PDF (texto) y una foto (visión), así que el resto —cuándo se pregunta, cómo se normaliza y qué pasa si falla— vive aquí una sola vez."
         },
         {
           "nombre": "extraerPoliza",
@@ -4231,7 +4428,7 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 50
+          "linea": 191
         },
         {
           "nombre": "parsearPolizaExtraida",
@@ -4239,7 +4436,7 @@
           "exportada": true,
           "params": "bruto: unknown, hoy: Date = new Date()",
           "retorno": "PolizaExtraida",
-          "linea": 110,
+          "linea": 262,
           "resumen": "Un JSON que no parsea devuelve TODOS los campos a `null`, NUNCA campos a medias ni cadenas de cajón. Media extracción pintada como póliza es peor que ninguna: el usuario se cree que está guardada. Las"
         },
         {
@@ -4248,12 +4445,12 @@
           "exportada": false,
           "params": "salida: string",
           "retorno": "PolizaExtraida",
-          "linea": 114
+          "linea": 274
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "90faa5f87ae2"
+      "hash": "3a893f752b5f"
     },
     {
       "ruta": "apps/asegura-portal/lib/fechas.ts",
@@ -4416,7 +4613,7 @@
           "exportada": false,
           "params": "valor: string,",
           "retorno": "",
-          "linea": 64,
+          "linea": 93,
           "resumen": "Formato EXACTO y fecha que EXISTE, sin opinar sobre el rango. El rango no es de la fecha: es de CADA CAMPO —un vencimiento mira al futuro y una matriculación al pasado—, así que se comprueba en quien "
         },
         {
@@ -4425,7 +4622,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 89,
+          "linea": 118,
           "resumen": "Medianoche UTC del día de `d`. Comparar contra `new Date()` a pelo haría que «hoy» fuera futuro durante casi todo el día."
         },
         {
@@ -4434,7 +4631,7 @@
           "exportada": true,
           "params": "valor: string, hoy: Date = new Date()",
           "retorno": "",
-          "linea": 98,
+          "linea": 127,
           "resumen": "Convierte `YYYY-MM-DD` en un `Date` a medianoche UTC, o devuelve el motivo del rechazo. Es la fecha de VENCIMIENTO: se rechaza lo que no puede ser el vencimiento de una póliza viva (un 1970 tecleado d"
         },
         {
@@ -4443,7 +4640,7 @@
           "exportada": true,
           "params": "valor: string",
           "retorno": "boolean",
-          "linea": 195,
+          "linea": 224,
           "resumen": "¿Es esto un «no lo sé» disfrazado de valor? Dos criterios, y el segundo es el que salva de los centinelas que nadie pone en la lista: un identificador con UN SOLO carácter repetido no identifica nada "
         },
         {
@@ -4452,7 +4649,7 @@
           "exportada": true,
           "params": "valor: unknown",
           "retorno": "string | null",
-          "linea": 205,
+          "linea": 234,
           "resumen": "Mayúsculas y sin separadores. `null` si no es texto o si es un centinela."
         },
         {
@@ -4461,7 +4658,7 @@
           "exportada": true,
           "params": "valor: string",
           "retorno": "boolean",
-          "linea": 224
+          "linea": 253
         },
         {
           "nombre": "esMatriculaValida",
@@ -4469,7 +4666,7 @@
           "exportada": true,
           "params": "valor: string",
           "retorno": "boolean",
-          "linea": 245
+          "linea": 274
         },
         {
           "nombre": "normalizarMatricula",
@@ -4477,7 +4674,7 @@
           "exportada": true,
           "params": "valor: unknown",
           "retorno": "string | null",
-          "linea": 254,
+          "linea": 283,
           "resumen": "Matrícula normalizada, o `null` («no se sabe») si no la hay o no tiene forma de serlo."
         },
         {
@@ -4486,7 +4683,7 @@
           "exportada": true,
           "params": "valor: unknown",
           "retorno": "string | null",
-          "linea": 261,
+          "linea": 290,
           "resumen": "Bastidor normalizado, o `null`. Ante la duda, `null`: ver el aviso de arriba."
         },
         {
@@ -4495,7 +4692,7 @@
           "exportada": true,
           "params": "valor: string, hoy: Date = new Date(),",
           "retorno": "",
-          "linea": 277,
+          "linea": 306,
           "resumen": "La fecha de PRIMERA MATRICULACIÓN. Mira al pasado, al revés que el vencimiento: un coche no se matricula mañana. Una fecha futura es un año tecleado de más, o un extractor que ha leído el vencimiento "
         },
         {
@@ -4504,7 +4701,7 @@
           "exportada": true,
           "params": "valor: unknown, hoy: Date = new Date()",
           "retorno": "string | null",
-          "linea": 295,
+          "linea": 324,
           "resumen": "La misma regla, en la forma que necesita el extractor: `YYYY-MM-DD` o `null`."
         },
         {
@@ -4513,7 +4710,7 @@
           "exportada": true,
           "params": "",
           "retorno": "VehiculoLeido",
-          "linea": 312,
+          "linea": 341,
           "resumen": "Los tres campos a «no se sabe»."
         },
         {
@@ -4522,7 +4719,7 @@
           "exportada": true,
           "params": "bruto: unknown, hoy: Date = new Date()",
           "retorno": "VehiculoLeido",
-          "linea": 322,
+          "linea": 351,
           "resumen": "Normaliza lo que sea que haya devuelto el modelo. Nunca lanza: si la entrada no es un objeto, los tres campos son `null`. Es el espejo de `normalizarPolizaLeida()` de `@central/module-seguros-portal`,"
         },
         {
@@ -4531,7 +4728,7 @@
           "exportada": false,
           "params": "valor: unknown",
           "retorno": "",
-          "linea": 342,
+          "linea": 371,
           "resumen": "`''` y `' '` son un borrado, no un valor."
         },
         {
@@ -4540,16 +4737,16 @@
           "exportada": false,
           "params": "valor: unknown",
           "retorno": "",
-          "linea": 352,
+          "linea": 381,
           "resumen": "Prima: número finito >= 0. Se acepta string numérica (los `<input>` mandan texto)."
         },
         {
           "nombre": "normalizarParche",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: unknown, hoy: Date = new Date()",
+          "params": "entrada: unknown, hoy: Date = new Date(), opciones: OpcionesParche = {},",
           "retorno": "ResultadoParche",
-          "linea": 379,
+          "linea": 408,
           "resumen": "Valida y normaliza el cuerpo de un PATCH. Solo se propagan las claves conocidas y presentes: cualquier otra cosa que venga en el JSON se ignora en silencio (que es lo correcto — no es un error del usu"
         },
         {
@@ -4558,13 +4755,13 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ResultadoAlta",
-          "linea": 514,
+          "linea": 608,
           "resumen": "Valida y normaliza el cuerpo de un alta a mano. Reutiliza `normalizarParche` para que las reglas sean una sola; un cuerpo sin ninguna clave conocida (que para el PATCH es `parche_vacio`) aquí es un al"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ffbe3bfbb23"
+      "hash": "428318b0eaa3"
     },
     {
       "ruta": "apps/asegura-portal/lib/session.ts",
@@ -105617,6 +105814,7 @@
       "ambito": "packages/core-catastro",
       "resumen": "Adaptador HTTP del Catastro: la RED. El parseo es puro y vive en `parser.ts`. Notas de campo (probadas contra los servicios reales, jul/2026): · El host rechaza la conexión sin un User-Agent de navegador. · El endpoint REST `/json/` devuelve 400; el que funciona es el `.asmx` que responde XML. Extra",
       "exporta": [
+        "motivoParaLog",
         "bajarCatastro",
         "bajarCoordenadas",
         "resolverNombreVia",
@@ -105650,12 +105848,21 @@
           "linea": 75
         },
         {
+          "nombre": "motivoParaLog",
+          "kind": "function",
+          "exportada": true,
+          "params": "des: string",
+          "retorno": "string",
+          "linea": 131,
+          "resumen": "El `<des>` del Catastro es texto suyo («LA REFERENCIA CATASTRAL NO EXISTE») y es justo lo que hay que leer para diagnosticar. Aun así se pasa por aquí antes de escribirlo: si algún día el servicio dec"
+        },
+        {
           "nombre": "bajarCatastro",
           "kind": "function",
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 102,
+          "linea": 145,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
         },
         {
@@ -105664,7 +105871,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 117,
+          "linea": 164,
           "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
         },
         {
@@ -105673,7 +105880,7 @@
           "exportada": true,
           "params": "provincia: string, municipio: string, sigla: string, calle: string,",
           "retorno": "Promise<",
-          "linea": 135,
+          "linea": 182,
           "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
         },
         {
@@ -105682,7 +105889,7 @@
           "exportada": true,
           "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 163,
+          "linea": 210,
           "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
@@ -105691,13 +105898,13 @@
           "exportada": true,
           "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 235,
+          "linea": 282,
           "resumen": "Los inmuebles de un portal, para que UNA PERSONA elija el piso. Es la pieza que le falta a `buscarRefPorDireccion` para el seguro de hogar: allí, con varios pisos en el portal, se devuelve la parcela "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b06448787685"
+      "hash": "04522337f702"
     },
     {
       "ruta": "packages/core-catastro/src/parser.ts",
@@ -110228,6 +110435,55 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "3154e4ec0962"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/campos-ramo.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Qué campos tiene CADA tipo de seguro, y qué es un dato válido en cada uno. Es el catálogo que hace que la pantalla de «añadir póliza» deje de ser un formulario genérico: al elegir el ramo se despliegan SUS campos y solo los suyos. Vive en el módulo puro porque la decisión «esto es un dato / esto es ",
+      "exporta": [
+        "camposDeRamo",
+        "normalizarDatosRamo"
+      ],
+      "funciones": [
+        {
+          "nombre": "camposDeRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "readonly CampoRamo[]",
+          "linea": 564,
+          "resumen": "Los campos de un ramo, o lista vacía si el ramo no se reconoce. Nunca lanza."
+        },
+        {
+          "nombre": "normalizarDatosRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined, entrada: unknown",
+          "retorno": "ResultadoDatosRamo",
+          "linea": 590,
+          "resumen": "Normaliza lo que llega de la pantalla o del extractor contra el catálogo del ramo. Reglas, todas por el mismo motivo (que un «no lo sé» no se guarde disfrazado de dato): - Clave que no está en el catá"
+        },
+        {
+          "nombre": "esCajon",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 638
+        },
+        {
+          "nombre": "normalizarValor",
+          "kind": "function",
+          "exportada": false,
+          "params": "campo: CampoRamo, valor: unknown",
+          "retorno": "string | number | boolean | undefined | 'invalido'",
+          "linea": 645,
+          "resumen": "`undefined` = no se escribe la clave · `'invalido'` = error con nombre del campo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "063dedc22ca1"
     },
     {
       "ruta": "packages/module-seguros-portal/src/codigo.ts",
@@ -117477,7 +117733,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2938,
-    "funciones": 8784
+    "archivos": 2941,
+    "funciones": 8808
   }
 }

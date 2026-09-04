@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-03T18:36:09Z",
+  "generadoEn": "2026-09-04T08:00:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -404,8 +404,8 @@
         "evidencias": 1
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -1955,7 +1955,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 22
       },
       "housesevillana": {
         "estado": "no",
@@ -2055,7 +2055,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 19
       },
       "housesevillana": {
         "estado": "no",
@@ -3543,6 +3543,7 @@
     ],
     "module-seguros-pii": [],
     "module-seguros-portal": [
+      "core-catastro",
       "module-seguros"
     ],
     "module-ses": [],
@@ -3627,6 +3628,7 @@
       "/api/acceso/verificar",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
+      "/api/catastro",
       "/api/polizas",
       "/api/polizas/[id]",
       "/api/siniestros",
@@ -5861,7 +5863,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1265,
+    "apis": 1266,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
