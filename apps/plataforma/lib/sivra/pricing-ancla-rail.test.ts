@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { anclaRail, topeRealSinAncla, avisoRailCiego } from './pricing-ancla-rail.ts'
+import { anclaRail, topeRealSinAncla, avisoRailCiego, anclaRailCon } from './pricing-ancla-rail.ts'
 import { PASADAS_POR_DIA_APPLY } from './pricing-latido-apply.ts'
 
 test('con precio de ayer, ése es el ancla', () => {
@@ -132,4 +132,36 @@ test('🚨 PASADAS_POR_DIA sigue cuadrando con el cron real', () => {
   assert.ok(horas, `no se pudo leer el horario de: ${linea}`)
   assert.equal(horas.split(',').length, PASADAS_POR_DIA_APPLY,
     `el cron corre ${horas.split(',').length} veces/día y el aviso asume ${PASADAS_POR_DIA_APPLY}`)
+})
+
+// ── El ancla dice de dónde sale (04/09/2026) ─────────────────────────────────────────────────────
+// `pricing_applied` no guardaba ni el ancla ni su procedencia, y sin eso no se puede distinguir un
+// raíl diario de uno por-pasada: el 04/09 House bajó un 20% y subió un 39% el mismo día, y con lo
+// registrado era imposible saber si el ±20% estaba roto o simplemente medido desde otro sitio.
+
+test('anclaRailCon devuelve valor Y origen con la precedencia ref24 > primeroHoy > actual', () => {
+  assert.deepEqual(anclaRailCon({ ref24: 100, primeroHoy: 200, actual: 300 }), { valor: 100, origen: 'ref24' })
+  assert.deepEqual(anclaRailCon({ ref24: null, primeroHoy: 200, actual: 300 }), { valor: 200, origen: 'primero_hoy' })
+  assert.deepEqual(anclaRailCon({ ref24: null, primeroHoy: null, actual: 300 }), { valor: 300, origen: 'actual' })
+})
+
+test('un ancla inválida NO se cuela ni cambia el origen a la ligera', () => {
+  // 0 y negativos se descartan igual que en `anclaRail`: si colaran, el clamp dejaría el precio
+  // en 0€. El origen tiene que reflejar la fuente que DE VERDAD se usó, no la que se intentó.
+  assert.deepEqual(anclaRailCon({ ref24: 0, primeroHoy: 200, actual: 300 }), { valor: 200, origen: 'primero_hoy' })
+  assert.deepEqual(anclaRailCon({ ref24: -5, primeroHoy: 0, actual: 300 }), { valor: 300, origen: 'actual' })
+  assert.deepEqual(anclaRailCon({ ref24: NaN, primeroHoy: undefined, actual: 300 }), { valor: 300, origen: 'actual' })
+})
+
+test('anclaRail y anclaRailCon NO pueden divergir: el valor es el mismo en todos los casos', () => {
+  // Es la razón de que `anclaRail` delegue en vez de repetir los ifs. Si alguien toca una de las
+  // dos precedencias, este test lo caza antes de que el registro empiece a mentir.
+  const casos = [
+    { ref24: 100, primeroHoy: 200, actual: 300 },
+    { ref24: null, primeroHoy: 200, actual: 300 },
+    { ref24: null, primeroHoy: null, actual: 300 },
+    { ref24: 0, primeroHoy: -1, actual: 42 },
+    { ref24: undefined, primeroHoy: 7, actual: 9 },
+  ]
+  for (const c of casos) assert.equal(anclaRail(c), anclaRailCon(c).valor, JSON.stringify(c))
 })
