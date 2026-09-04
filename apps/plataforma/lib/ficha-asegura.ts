@@ -159,6 +159,13 @@ export type Ficha = {
   id: string
   nombre: string
   tipo: string
+  /**
+   * `false` = ficha DESCARTADA en asegura (borrado suave): no sale en el
+   * buscador ni en la lista, pero su ficha se abre para poder restaurarla.
+   * `null` = una versión de asegura que aún no manda el campo — y entonces la
+   * pantalla NO afirma que esté activa ni que esté descartada: no lo sabe.
+   */
+  activo: boolean | null
   segmento: string | null
   contacto: ContactoFicha
   /**
@@ -557,6 +564,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       id: f.id,
       nombre: f.nombre,
       tipo: cadena(f.tipo) ?? 'sin_informar',
+      activo: typeof f.activo === 'boolean' ? f.activo : null,
       segmento: cadena(f.segmento),
       contacto: {
         telefono: cadena(c.telefono),

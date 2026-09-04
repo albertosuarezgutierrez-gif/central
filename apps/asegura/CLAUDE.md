@@ -796,6 +796,11 @@ El paso 1 y el 3 son `GET`/`POST /api/operador/backfill-dni` (vive aquí porque 
 `@central/module-seguros` (`backfill-dni.ts`, `planBackfillDni()`, 11 tests), con los tres estados de
 siempre: un DNI que **no descifra es `ilegible`, jamás «sin DNI»**, y un valor de cajón
 (`PENDIENTE`, `X`) **no genera hash** para que no funda a dos personas.
+📸 **Desde el 04/09/2026 el plan deja FOTO en `seguros.backfill_dni_plan`** (una fila, se sobreescribe
+en cada GET/POST; `resumen` + `choques` como listas de uuid, sin DNI ni hash ni nombre —
+`2026-09-04_backfill_dni_plan.sql`). Es el puente entre el paso 1 y el 2: los grupos de mismo DNI solo
+se pueden calcular con la clave (aquí) y el lote de fusión se escribe desde la BD; antes se perdían al
+cerrar la respuesta. Abrir `/correduria/mantenimiento` en plataforma basta para refrescarla.
 
 🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ✅ EJECUTADO:
 el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un

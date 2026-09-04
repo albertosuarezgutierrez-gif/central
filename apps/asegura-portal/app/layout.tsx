@@ -3,6 +3,7 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 import './globals.css'
 import type { ReactNode } from 'react'
 import { MarcaAsegura } from './MarcaAsegura'
+import { PieLegal } from './PieLegal'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
 // compilado de la app de Manuel (ver `packages/brand/src/marcas/asegura.ts`):
@@ -43,6 +44,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <span className="marca-coletilla">Correduría de seguros</span>
         </header>
         {children}
+        {/* En el layout raíz y no en el del portal: quien todavía no ha metido
+            el código tiene que poder identificar al mediador y leer la política
+            de privacidad ANTES de escribir su correo, no después. */}
+        <PieLegal />
       </body>
     </html>
   )

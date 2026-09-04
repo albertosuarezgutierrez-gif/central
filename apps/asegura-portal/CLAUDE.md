@@ -572,6 +572,64 @@ Y los cinco estados de la respuesta están separados a propósito —no responde
 dirección no se entiende ≠ la calle es ambigua ≠ hay quince pisos y no sabemos cuál es el suyo—
 porque colapsarlos convierte un «no lo sé» en un «no hay».
 
+## ⚖️ Bloque legal (04/09/2026) — el pie va en el layout RAÍZ, y por qué
+
+Las cuatro páginas de `app/legal/*` (`mediador`, `privacidad`, `cookies`, `condiciones`) y el
+`PieLegal` del layout raíz **no son relleno**: son el mínimo que la Ley 16/2018 (art. 19) y el RGPD
+(art. 13) exigen ANTES de que el asegurado escriba su correo. De ahí las tres decisiones:
+
+- **El pie está en `app/layout.tsx`, no en `app/(portal)/`.** La única pantalla que ve quien todavía
+  no ha entrado es la que le pide el correo; un pie montado en el grupo `(portal)` desaparece justo
+  de ahí, y el fallo no se ve.
+- **Las páginas se leen SIN sesión** (nada de `@/lib/session` en `app/legal/*`). Pedir sesión para
+  leer la política de privacidad es pedirle el dato antes de contarle qué se hace con él.
+- **Los datos del mediador salen de `@central/module-seguros` (`src/mediador.ts`), no del JSX.** Es la
+  fuente única compartida con el panel del corredor: dos copias de la clave DGSFP `CS-F/0170` es una
+  copia de más. Ahí vive también `VERSION_TEXTOS_LEGALES`, que es lo que se sella en
+  `portal_consentimiento.version_texto` — un consentimiento sin versión no acredita qué se aceptó.
+
+🚨 **Cada frase de `app/legal/privacidad/page.tsx` es una afirmación sobre el código.** Si el código
+cambia (un encargado nuevo, un dato nuevo, una cookie nueva), la página cambia **en el mismo PR** y
+sube `VERSION_TEXTOS_LEGALES`. Una política que describe la versión anterior de la app no es un texto
+viejo: es información falsa al interesado, que es una infracción distinta y peor.
+
+Lo que hoy afirma y hay que no romper sin querer:
+
+| Afirmación | Lo que la sostiene |
+|---|---|
+| «El correo no se guarda en claro» | `portal_canal.valor_hash` (SHA-256 con `ASEGURA_PORTAL_CANAL_PEPPER`) |
+| «Una sola cookie, sin analítica ni terceros» | solo `asegura_portal_session`; cero scripts de terceros |
+| «Tu documento puede procesarse fuera del EEE» | `openrouterVision` de `@central/core-ai` (OpenRouter, EE. UU.) |
+| «La base de datos está en la UE» | proyecto Supabase `central`, `eu-west-1` |
+
+**Sin banner de cookies a propósito**: con una única cookie técnica, el art. 22.2 LSSI exime del
+consentimiento. Encender analítica obliga, en el mismo PR, a reescribir `/legal/cookies`, montar el
+banner con «rechazar» tan fácil como «aceptar» y no cargar nada antes de la aceptación.
+
+Lo vigila `test/regression-portal-legal.test.ts` (9 cepos: que las páginas existan, que el pie esté en
+el layout raíz y enlace a las cuatro, que ninguna copie la clave DGSFP a mano, que ninguna exija
+sesión, que no se cuele analítica ni una segunda cookie, que las condiciones destaquen el plazo del
+art. 16 LCS y que la privacidad siga declarando la salida del documento a OpenRouter).
+
+⚠️ **Dos omisiones DELIBERADAS**, protegidas por su propio test en `packages/module-seguros/src/mediador.test.ts`:
+**no se declara ninguna lista de ramos** (el alcance de la inscripción en el registro público de la
+DGSFP no se ha comprobado; el art. 19 tampoco la exige) y **no se declara ningún DPO**. Lo segundo ya
+no es una duda: Alberto zanjó el 04/09/2026 que **solo usa un correo, `hola@grupoasegura.es`**, así
+que el `dpo@grupoasegura.com` que anuncia la web de Manuel no es un buzón suyo — anunciarlo aquí
+habría sido dar un canal de derechos que rebota. Los ramos siguen pendientes de la ficha del registro.
+
+📧 **UN solo correo, y sale de `MEDIADOR.identidad.email`.** `hola@grupoasegura.es` es a la vez el
+contacto del mediador, el canal de ejercicio de derechos RGPD y el Servicio de Atención al Cliente —
+y es el mismo buzón al que ya responde el `Reply-To` del correo del portal
+(`PORTAL_MAIL_REPLY_TO`), así que quien contesta a su código y quien presenta una queja llegan al
+mismo sitio. Dos buzones repartirían las quejas entre uno que se mira y otro que no, y el que no se
+mira incumple el plazo de un mes del SAC. Lo fija un cepo del test del módulo.
+🚨 **Cabo suelto conocido:** la web pública (repo `asegura`) sigue publicando `info@grupoasegura.es`
+en sus Términos, en su política de privacidad y en `/info-mediador`. **Dos canales de reclamación
+distintos para el mismo mediador es una contradicción entre documentos legales publicados**, no una
+errata de estilo. Unificarlo allí toca textos con `LegalVersionGate` (forzaría re-aceptación) y el
+ruleset de ese repo está bloqueado — no se hizo aquí a propósito.
+
 ## 🧨 Landmines
 
 - **🚨 Un `SELECT` de una columna NO concedida falla en la BD — la consulta ENTERA.** El rol tiene
