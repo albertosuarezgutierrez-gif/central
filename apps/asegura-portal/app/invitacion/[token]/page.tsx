@@ -56,13 +56,16 @@ export default async function InvitacionPage({ params }: { params: Promise<{ tok
   const token = normalizarTokenInvitacion(crudo)
   if (token === null) return <EnlaceMuerto />
 
-  const { existe, viva } = await invitacionPorToken(token)
-  if (!existe || !viva) return <EnlaceMuerto />
-
   const identidad = await getIdentidad()
 
   // ── 1. Sin sesión ─────────────────────────────────────────────────────────
   if (identidad === null) {
+    // `invitacionPorToken` es la ÚNICA consulta del portal sin identidad, y
+    // devuelve `{ existe, viva }` y nada más. Solo hace falta aquí: con sesión,
+    // `invitacionParaIdentidad` ya distingue los tres finales por su cuenta.
+    const { existe, viva } = await invitacionPorToken(token)
+    if (!existe || !viva) return <EnlaceMuerto />
+
     return (
       <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
         <div className="seccion">
@@ -83,8 +86,12 @@ export default async function InvitacionPage({ params }: { params: Promise<{ tok
 
   const oferta = await invitacionParaIdentidad(token, identidad.id)
 
+  // Token que no es de nadie, caducada y ya contestada salen por el MISMO sitio:
+  // el puerto ya las colapsa en `no_encontrada` y aquí no se vuelven a separar.
+  if (oferta.estado === 'no_encontrada') return <EnlaceMuerto />
+
   // ── 3. Con sesión, pero el correo no casa ────────────────────────────────
-  if (oferta === null) {
+  if (oferta.estado === 'no_es_tu_correo') {
     return (
       <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
         <div className="seccion">
@@ -108,23 +115,20 @@ export default async function InvitacionPage({ params }: { params: Promise<{ tok
   }
 
   // ── 2. Con sesión y el correo casa ───────────────────────────────────────
-  // La fecha cruza a un componente de CLIENTE, así que viaja como cadena: un
-  // `Date` no es serializable en esa frontera. Se admiten las dos formas en
-  // que puede venir del puerto (ya en ISO, o `Date` de Prisma) en vez de
-  // suponer una y quedarse con un «Invalid Date» pintado en pantalla.
-  const caducaEn =
-    typeof oferta.caducaEn === 'string' ? oferta.caducaEn : oferta.caducaEn.toISOString()
+  const inv = oferta.invitacion
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: '2rem 1rem' }}>
+      {/* La fecha cruza a un componente de CLIENTE: un `Date` no es serializable
+          en esa frontera, así que viaja en ISO y allí se formatea en español. */}
       <ResponderInvitacion
         token={token}
-        otorganteNombre={oferta.otorganteNombre}
-        alcance={oferta.alcance}
-        polizaId={oferta.polizaId}
-        polizaEtiqueta={oferta.polizaEtiqueta}
-        mensaje={oferta.mensaje}
-        caducaEn={caducaEn}
+        otorganteNombre={inv.otorganteNombre}
+        alcance={inv.alcance}
+        soloUnaPoliza={inv.soloUnaPoliza}
+        mensaje={inv.mensaje}
+        caducaEn={inv.caducaEn.toISOString()}
+        texto={inv.texto}
       />
     </main>
   )

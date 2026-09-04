@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { ALCANCES_CONCEDIBLES, MAX_MENSAJE_INVITACION } from '@central/module-seguros-portal'
 
-import { crearInvitacion, type MotivoNoEnviada } from '@/lib/invitaciones'
+import { crearInvitacion, invitacionesDeSesion, type MotivoNoEnviada } from '@/lib/invitaciones'
 import { ipDe, userAgentDe } from '@/lib/peticiones'
 import { requireIdentidad } from '@/lib/session'
 
@@ -95,4 +95,22 @@ export async function POST(req: Request) {
   // 201: la invitación se ha creado Y el correo ha salido. Sin el id de la fila
   // ni el token: la pantalla recarga su lista, que es de donde salen los ids.
   return NextResponse.json({ resultado: 'enviada' }, { status: 201 })
+}
+
+/**
+ * Lo que ESTA identidad ha invitado y lo que le han invitado a ella.
+ *
+ * 🚨 Sin `try/catch`: si la consulta falla, que suba como error. Devolver
+ * `{ enviadas: [], recibidas: [] }` haría pasar un fallo de BD por «no has
+ * invitado a nadie», que es exactamente la mentira que la regla de la casa
+ * persigue — y encima sobre la lista donde José decide si retira algo.
+ *
+ * La identidad la resuelve `invitacionesDeSesion()` desde la cookie, nunca la
+ * URL: aquí no hay ni un parámetro que pudiera decir de quién son estas
+ * invitaciones.
+ */
+export async function GET() {
+  const datos = await invitacionesDeSesion()
+  if (datos === null) return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
+  return NextResponse.json(datos)
 }

@@ -234,21 +234,33 @@ export function ResponderInvitacion({
   token,
   otorganteNombre,
   alcance,
-  polizaId,
-  polizaEtiqueta,
+  soloUnaPoliza,
   mensaje,
   caducaEn,
+  texto,
 }: {
   token: string
   /** `null` = no hemos podido leer su nombre. No se inventa uno ni se pinta un uuid. */
   otorganteNombre: string | null
   alcance: string
-  /** `null` = todas sus pólizas, también las que contrate más adelante. */
-  polizaId: string | null
-  polizaEtiqueta: string | null
+  /**
+   * `true` = una sola de sus pólizas; `false` = todas, también las que contrate
+   * más adelante. Cuál es en concreto NO se dice aquí: el puerto no lo manda, y
+   * enseñarle la matrícula o la compañía a quien todavía no ha aceptado nada es
+   * justo lo que `CAMPOS_PROHIBIDOS_EN_INVITACION` impide en el correo.
+   */
+  soloUnaPoliza: boolean
   /** Lo que escribió quien invita. `null` = no escribió nada (nunca `''`). */
   mensaje: string | null
   caducaEn: string
+  /**
+   * 🚨 El texto EXACTO que se acepta, tal y como lo manda el puerto y con la
+   * misma versión que se sella en `portal_autorizacion.version_texto`. Se pinta
+   * TAL CUAL: sin saber QUÉ se aceptó, el consentimiento no se puede demostrar
+   * (art. 7.1 RGPD). No se resume, no se reescribe y no se traduce a «lo mismo
+   * pero más corto».
+   */
+  texto: string
 }) {
   const [enviando, setEnviando] = useState<'aceptar' | 'rechazar' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -304,8 +316,7 @@ export function ResponderInvitacion({
   return (
     <div className="seccion">
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>
-        {quien} quiere darte acceso a{' '}
-        {polizaId === null ? <>sus seguros</> : <>una de sus pólizas</>}
+        {quien} quiere darte acceso a {soloUnaPoliza ? 'una de sus pólizas' : 'sus seguros'}
       </h1>
 
       {/* Lo que escribió quien invita. Va como texto (React lo escapa), y
@@ -329,16 +340,15 @@ export function ResponderInvitacion({
         Si lo aceptas, podrás ver {QUE_RECIBES[alcance] ?? 'los datos de sus pólizas.'}
       </div>
 
-      {polizaId === null ? (
+      {soloUnaPoliza ? (
         <div className="linea dicho">
-          Alcanza a <strong>todas las pólizas de {quien}</strong>, también a las que contrate más
-          adelante.
+          Alcanza <strong>solo a una de sus pólizas</strong>. El resto de sus seguros no los verás. Cuál
+          es en concreto lo verás al entrar, no antes.
         </div>
       ) : (
         <div className="linea dicho">
-          Alcanza <strong>solo a {polizaEtiqueta ?? 'una póliza concreta'}</strong>
-          {polizaEtiqueta === null ? ' (no hemos podido leer cuál es)' : ''}. El resto de sus seguros no
-          los verás.
+          Alcanza a <strong>todas las pólizas de {quien}</strong>, también a las que contrate más
+          adelante.
         </div>
       )}
 
@@ -357,6 +367,27 @@ export function ResponderInvitacion({
         guarda quién eres, cuándo lo aceptaste y cada día que entres a mirar. {quien} puede ver ese
         registro y quitarte el acceso cuando quiera. Solo podrás mirar: no puedes dar partes ni cambiar
         nada suyo, y no ves su DNI, su IBAN ni sus documentos.
+      </div>
+
+      {/* 🚨 Lo que se firma, palabra por palabra. Va delante del botón y no
+          detrás de un enlace: es la versión que queda sellada en el registro, y
+          un consentimiento del que no se puede decir QUÉ decía no se puede
+          demostrar. Se parte por líneas porque así lo compone el puerto. */}
+      <div className="editor-campo" style={{ marginTop: 12 }}>
+        <p className="editor-ayuda" style={{ margin: 0 }}>
+          Esto es exactamente lo que ha autorizado {quien}, y lo que aceptas:
+        </p>
+        <ul style={{ margin: '6px 0 0', paddingLeft: 20, fontSize: 14, lineHeight: 1.5 }}>
+          {texto
+            .split('\n')
+            .map((linea) => linea.trim())
+            .filter((linea) => linea !== '')
+            .map((linea) => (
+              <li key={linea} style={{ marginBottom: 4 }}>
+                {linea}
+              </li>
+            ))}
+        </ul>
       </div>
 
       {error && (

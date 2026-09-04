@@ -451,7 +451,12 @@ model PortalInvitacion {
   destinatarioCanalHash    String    @map("destinatario_canal_hash")
   /// El token del enlace, HASHEADO. En claro solo existe dentro del correo que
   /// sale: una tabla de invitaciones con sus tokens legibles es una tabla de llaves.
-  tokenHash                String    @map("token_hash")
+  ///
+  /// `@unique` porque la BD lo es (`idx_portal_invitacion_token`) y el modelo de
+  /// esta app es un ESPEJO del SQL, no una elección de UI: declarar menos de lo
+  /// que hay deja a Prisma sin poder usar la clave y empuja a buscar con
+  /// `findFirst`, que es la misma consulta contada peor.
+  tokenHash                String    @unique @map("token_hash")
   alcance                  String
   /// La UNICA poliza que abrira. `null` = todas las del otorgante, futuras
   /// incluidas. FK COMPUESTA con el otorgante: la BD exige que sea suya.

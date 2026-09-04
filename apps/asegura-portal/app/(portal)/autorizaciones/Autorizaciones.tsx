@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 
 import {
+  ALCANCES_CONCEDIBLES,
   DIAS_VIGENCIA,
   DIAS_VIGENCIA_INVITACION,
   MAX_MENSAJE_INVITACION,
@@ -328,18 +329,28 @@ function textoError(tabla: Record<string, string>, codigo: unknown, mensaje: unk
  */
 export type EstadoInvitacion = 'enviada' | 'aceptada' | 'rechazada' | 'retirada' | 'caducada'
 
+/**
+ * Una invitación que MANDÓ quien mira. Es `InvitacionEnviada` de
+ * `@/lib/invitaciones` después de pasar por JSON, así que las fechas llegan como
+ * cadena ISO.
+ *
+ * 🚨 Fíjate en lo que NO trae: **a quién**. La tabla guarda el correo hasheado y
+ * un hash no se revierte, así que aquí no hay ninguna dirección que pintar. No
+ * es un campo pendiente: es el precio de no tener una agenda de correos de
+ * terceros que no han consentido nada.
+ */
 type InvitacionVista = {
   id: string
   estado: EstadoInvitacion
   alcance: Alcance
-  /**
-   * Mismo vocabulario que la autorización: `null` = **todas las pólizas de la
-   * ficha, también las que se contraten mañana**. No es «no lo sabemos».
-   */
-  polizaId: string | null
-  /** `null` con `polizaId` puesto = no hemos podido leer cuál. No se pinta el uuid. */
-  polizaEtiqueta: string | null
-  enviadaEn: string
+  /** `true` = se invitó a UNA póliza; `false` = a todas las de la ficha, futuras incluidas. */
+  soloUnaPoliza: boolean
+  otorganteClienteId: string
+  /** La ficha desde la que se invitó. `null` = ya no se puede leer su nombre. */
+  otorganteNombre: string | null
+  /** Lo que José le escribió. `null` = no escribió nada (nunca `''`). */
+  mensaje: string | null
+  creadaEn: string
   caducaEn: string
 }
 
@@ -400,10 +411,13 @@ function fichasPropias(candidatos: readonly Candidato[]): FichaPropia[] {
  * que ya conocemos.
  */
 function opcionesInvitacion(f: FichaPropia): readonly Alcance[] {
-  const posibles = f.alcancesPosibles.filter((a) => CONCEDIBLES_FISICA.includes(a))
+  // `ALCANCES_CONCEDIBLES` es exactamente el `z.enum` con el que valida
+  // `POST /api/invitaciones`: se importa en vez de copiarse para que el
+  // formulario no pueda ofrecer algo que la ruta va a rechazar.
+  const posibles = f.alcancesPosibles.filter((a) => ALCANCES_CONCEDIBLES.includes(a))
   // Lista vacía = una versión del puerto más vieja de lo que espera esta
   // pantalla. Se cae al lado restrictivo, nunca a ofrecer de más.
-  return posibles.length > 0 ? posibles : CONCEDIBLES_FISICA
+  return posibles.length > 0 ? posibles : ALCANCES_CONCEDIBLES
 }
 
 /**
@@ -440,9 +454,11 @@ const ERROR_INVITAR: Record<string, string> = {
 const ERROR_INVITACION_ACCION: Record<string, string> = {
   sin_sesion: 'Se ha cerrado tu sesión. Vuelve a entrar con tu email y lo intentamos otra vez.',
   datos_invalidos: 'No hemos entendido la petición. Vuelve a cargar la pantalla e inténtalo otra vez.',
+  // La ruta contesta 404 tanto si no existe como si no es tuya, a propósito: un
+  // 403 confirmaría que esa invitación existe. El texto no puede prometer más
+  // de lo que el código sabe.
   no_encontrada: 'Esa invitación ya no existe. Vuelve a cargar la pantalla.',
-  no_te_toca: 'Esa invitación no es tuya, así que no podemos tocarla desde tu cuenta.',
-  no_resoluble: 'Esa invitación ya no está viva: no hay nada que retirar. Vuelve a cargar la pantalla.',
+  no_pendiente: 'Esa invitación ya no está pendiente: no hay nada que retirar. Vuelve a cargar la pantalla.',
 }
 
 /**
@@ -1583,7 +1599,7 @@ function TarjetaInvitacion({ i, onCambio }: { i: InvitacionVista; onCambio: () =
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const enviada = fechaLarga(i.enviadaEn)
+  const enviada = fechaLarga(i.creadaEn)
 
   async function retirar() {
     setEnviando(true)
@@ -1615,21 +1631,31 @@ function TarjetaInvitacion({ i, onCambio }: { i: InvitacionVista; onCambio: () =
           escribió; lo que necesita de esta lista es reconocer CUÁL es y en qué
           ha quedado. */}
       <h3>Invitación {enviada ? `del ${enviada}` : 'por correo'}</h3>
+      {/* De qué ficha tuya salió. Con una sola no sobra —le dice a José con qué
+          nombre le llegó el correo al otro— y con varias es lo único que
+          distingue dos invitaciones del mismo día. `null` = ya no se puede leer
+          esa ficha, y entonces no se afirma nada. */}
+      {i.otorganteNombre !== null && i.otorganteNombre.trim() !== '' && (
+        <div className="linea">Desde tu ficha {i.otorganteNombre.trim()}.</div>
+      )}
       <div className="linea">Le ofreces ver {queVe(i.alcance, 'fisica')}.</div>
-      {/* Mismo aviso que en la autorización: `polizaId === null` es la cartera
-          entera, hoy y mañana. Aquí importa aún más, porque quien recibe esto
+      {/* Mismo aviso que en la autorización: sin póliza concreta es la cartera
+          entera, hoy y mañana. Aquí importa aún más, porque quien lo recibe
           todavía no es nadie conocido. */}
-      {i.polizaId === null ? (
+      {i.soloUnaPoliza ? (
+        <div className="linea dicho">
+          Alcanza <strong>solo a una de tus pólizas</strong>. El resto de tus seguros no los vería.
+        </div>
+      ) : (
         <div className="linea dicho ojo">
           Alcanza a <strong>todas las pólizas de esa ficha</strong>, también a las que contrates más
           adelante.
         </div>
-      ) : (
-        <div className="linea dicho">
-          Alcanza <strong>solo a {i.polizaEtiqueta ?? 'una póliza concreta'}</strong>
-          {i.polizaEtiqueta === null ? ' (no hemos podido leer cuál es)' : ''}. El resto de tus seguros no
-          los vería.
-        </div>
+      )}
+      {/* Lo que TÚ escribiste. Se te devuelve porque, sin el correo del
+          invitado, es lo que te permite reconocer cuál de las tuyas es esta. */}
+      {i.mensaje !== null && i.mensaje.trim() !== '' && (
+        <div className="linea">Le escribiste: «{i.mensaje.trim()}»</div>
       )}
       <EstadoInvitacionLinea i={i} />
 
@@ -1817,13 +1843,18 @@ function Invitar({
         return
       }
 
-      const cuerpo = (await r.json().catch(() => null)) as { error?: unknown; mensaje?: unknown } | null
+      const cuerpo = (await r.json().catch(() => null)) as
+        | { error?: unknown; mensaje?: unknown; registrada?: unknown }
+        | null
 
       // 🚨 502 `envio_fallido` NO es «no se ha invitado»: la fila está escrita y
       // la invitación existe (`invitacionEscrita()` del módulo puro lo dice
-      // así). Lo que falló fue el correo. Decir «no se ha podido invitar» aquí
-      // haría que José lo intentara otra vez y se chocara con `ya_invitado`.
-      if (r.status === 502) {
+      // así, y la ruta lo repite en `registrada`). Lo que falló fue el correo.
+      // Decir «no se ha podido invitar» aquí haría que José lo intentara otra
+      // vez y se chocara con `ya_invitado`. Y se comprueba el flag en vez de
+      // deducirlo del 502: si algún día el puerto no lo afirma, esta pantalla
+      // tampoco.
+      if (r.status === 502 && cuerpo?.registrada === true) {
         setAviso({
           tono: 'ojo',
           texto:

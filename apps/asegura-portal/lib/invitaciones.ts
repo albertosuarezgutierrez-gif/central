@@ -713,8 +713,15 @@ export async function invitacionPorToken(token: unknown): Promise<{ existe: bool
   // tiene por qué llegar a una consulta.
   if (t === null) return { existe: false, viva: false }
 
+  // `findUnique` y no `findFirst`: el token es único en la BD
+  // (`idx_portal_invitacion_token`) y desde el 04/09/2026 también en el modelo,
+  // así que la consulta dice lo que de verdad pasa —como mucho una fila puede
+  // casar— en vez de dejar abierta la puerta a que alguien añada un `orderBy`
+  // creyendo que hay varias.
   const fila = await prisma.portalInvitacion.findUnique({
     where: { tokenHash: hashToken(t) },
+    // Solo lo que hace falta para decir «existe» y «sigue viva». Lo que no se
+    // trae de la BD es lo que nadie puede pintar por descuido tres meses después.
     select: { caducaEn: true, aceptadaEn: true, rechazadaEn: true, retiradaEn: true },
   })
   if (fila === null) return { existe: false, viva: false }
@@ -800,6 +807,8 @@ async function filaPorToken(token: unknown) {
   // 🚨 La segunda —y última— consulta sin identidad, por lo mismo que
   // `invitacionPorToken`: la busca quien viene del correo. Todo lo que se hace
   // con el resultado pasa después por `casaElCorreo()`.
+  // `findUnique` por lo mismo que en `invitacionPorToken`: el token es único en
+  // la BD y en el modelo.
   return prisma.portalInvitacion.findUnique({
     where: { tokenHash: hashToken(t) },
     select: {
