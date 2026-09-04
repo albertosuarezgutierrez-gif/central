@@ -7,6 +7,7 @@ import { MOTIVOS_PUERTO, type EnRiesgo, type Impagados } from '@/lib/correduria-
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { BtnLink, Badge, type Tono } from '@/components/ui'
 import Bloque from './Bloque'
+import AccionesContacto from './AccionesContacto'
 
 /**
  * 📞 A quién hay que llamar hoy: los recibos devueltos y los vencidos sin
@@ -240,6 +241,10 @@ function Fila({ f }: { f: EnRiesgo }) {
         <Link href={`/correduria/cliente/${f.clienteId}`} style={{ fontWeight: 700, fontSize: 15 }}>
           {f.cliente}
         </Link>
+        {/* Llamar · WhatsApp · escribir, al lado del nombre: en una cola de
+            retención la acción ES el contacto, y antes costaba un botón entero
+            de ancho de fila. El WhatsApp no sale si el número es un fijo. */}
+        <AccionesContacto telefono={f.telefono} ilegible={f.telefonoIlegible} quien={f.cliente} />
         <Badge tono={e.tono}>
           {e.label}
           {f.dias !== null && ` · hace ${f.dias} día(s)`}
@@ -265,12 +270,13 @@ function Fila({ f }: { f: EnRiesgo }) {
 
       <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{f.accion}</div>
 
+      {/* La fila solo existe si tiene algo dentro: un div vacío son 10px de
+          margen por ficha, y la cola de retención son muchas fichas. */}
+      {(!f.telefono || f.retarificable) && (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-        {f.telefono ? (
-          <BtnLink href={`tel:${f.telefono.replace(/\s/g, '')}`} variante="secundario">
-            📞 {f.telefono}
-          </BtnLink>
-        ) : (
+        {/* Con teléfono, los iconos están junto al nombre. Sin él NO se calla:
+            «cifrado» y «no consta» se arreglan en sitios distintos. */}
+        {!f.telefono && (
           <span
             style={{ fontSize: 12, color: 'var(--muted)', alignSelf: 'center' }}
             title={
@@ -296,6 +302,7 @@ function Fila({ f }: { f: EnRiesgo }) {
           </BtnLink>
         )}
       </div>
+      )}
     </div>
   )
 }
