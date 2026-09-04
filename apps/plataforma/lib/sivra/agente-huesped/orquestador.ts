@@ -2,6 +2,8 @@
 import { construirContexto } from './contexto'
 import { detectLang, detectCategory, tipoHueco } from './reglas'
 import { decidir, type Decision } from './decidir'
+import { decidirAutoEnvio } from './auto'
+import { aprendizajesRelevantes, hechosRelevantes } from './similitud'
 import { recomendar } from './recomendar'
 import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
@@ -101,7 +103,21 @@ export async function procesarMensajeHuesped(
     const fallbackLang = (IDIOMAS_OK.has(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en') as 'es' | 'en' | 'fr' | 'de' | 'it'
     const lang = detectLang(pregunta, fallbackLang)
     const categoria = detectCategory(pregunta) || 'general'
-    const ctx = { ...ctx0, lang }
+    // 1-ter) Recuperar lo ya aprendido que se PAREZCA a esta pregunta. `construirContexto` no puede
+    // hacerlo: se ejecuta antes de saber cuál es la pregunta (puede salir del propio historial). Lo
+    // que traía era «las 8 últimas filas del piso», que es lo que hacía que ocho «gracias a ti»
+    // enterrasen lo enseñado — el «no aprende» de Alberto (04/09/2026). Ver `similitud.ts`.
+    // `null` = no se pudo leer: se conserva lo que vino por recencia, nunca se vacía el prompt.
+    const [aprendRelev, hechosRelev] = await Promise.all([
+      aprendizajesRelevantes(ctx0.propertyId, pregunta),
+      hechosRelevantes(ctx0.propertyId, pregunta),
+    ])
+    const ctx = {
+      ...ctx0,
+      lang,
+      aprendizajes: aprendRelev ?? ctx0.aprendizajes,
+      hechos: hechosRelev ? hechosRelev.map(h => h.hecho) : ctx0.hechos,
+    }
 
     // 1-bis) ¿Es el «sí» a un extra que Alberto ya aprobó en este hilo? Entonces la respuesta es el
     // enlace de pago y no hay borrador que redactar. Todas las guardas viven en `intentarCobroAutomatico`
@@ -161,21 +177,9 @@ export async function procesarMensajeHuesped(
       dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Habla de un pago (método/datos de cobro) — eso lo autorizas tú; el único cobro automático es el enlace de Stripe.`
     }
 
-    // 3) ¿Auto-envío o propuesta por Telegram?
-    // Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato
-    // inventado / escalado IA) ni sin borrador ni con sentimiento negativo.
-    const guardasOk = !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
-    // (a) CORTESÍA de fin de estancia (despedidas / agradecimientos / cierres puros): respuestas
-    //     "siempre iguales" y de riesgo mínimo. Decisión de Alberto (26/07/2026).
-    // (b) RESPUESTA APOYADA EN UNA FUENTE (20/08/2026, decisión de Alberto): si lo que contesta sale
-    //     de la guía real del piso, de la ficha de la reserva o de los hechos que él ha enseñado, se
-    //     manda solo. Esto SUSTITUYE a la graduación por categorías (`autoPermitido`), que era un
-    //     contador de aprobaciones y no sabía nada de si la respuesta estaba respaldada: con la guía
-    //     leída, la fuente es mejor criterio que la categoría.
-    //     `apoyada_en_fuente` ya exige que la guía se haya podido leer y que nada la marque dudosa.
-    const autoCortesia = guardasOk && dec.es_cortesia === true
-    const autoApoyada = guardasOk && dec.requiere_respuesta !== false && dec.apoyada_en_fuente === true
-    const puedeAuto = autoCortesia || autoApoyada
+    // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí
+    //    solo se ejecuta. Las dos vías y sus guardas están documentadas en ese módulo.
+    const { auto: puedeAuto } = decidirAutoEnvio(dec)
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
