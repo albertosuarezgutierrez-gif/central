@@ -68,7 +68,7 @@
   La BD ya era correcta (`seguros.corredurias.nombre` = «Grupo ASegura»): era el código el que la
   contradecía. Lo blinda `test/regression-nombre-comercial-asegura.test.ts` (gate en `test:guardia`),
   que barre todo el repo versionado. Regla anotada en los tres `CLAUDE.md` (raíz, asegura, portal).
-- **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026).**
+- **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026, PR #2249).**
   Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
   revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
   saludo» tumbaba la detección → `es_cortesia=false`, la vía de cortesía ni se intentaba; (2) el
@@ -77,7 +77,7 @@
   `respuestaSinDatos`); `DESCONOCIDO` ya no bloquea SOLO cuando ni la pregunta pide nada ni el
   borrador da un dato, y el aviso de auto-envío lo DECLARA (`sin_verificar`). La decisión final se
   extrajo a `auto.ts` puro: no tenía ni un test. 31 tests nuevos.
-- **🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía (04/09/2026).**
+- **🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía (04/09/2026, PR #2249).**
   (a) No había NINGUNA recuperación por parecido: `contexto.ts` volcaba las 8 últimas filas del piso
   (`ORDER BY created_at DESC LIMIT 8`) sin mirar la pregunta → 8 «gracias» enterraban lo enseñado.
   🚨 Medido contra `mensajes_guia_gaps`: el trigram (`word_similarity`) solo caza lo casi literal
@@ -758,6 +758,16 @@
 
 ---
 
+### ⚖️ (04/09/2026, III) El portal del asegurado no tenía NADA legal: bloque 0.1+0.2 puesto
+- El portal pedía el correo sin identificar al mediador ni decir qué se hacía con el dato: cero pie legal, cero políticas. Incumplía art. 19 Ley 16/2018 y art. 13 RGPD desde que se desplegó.
+- **Fuente única nueva** `packages/module-seguros/src/mediador.ts` (DGSFP `CS-F/0170`, RC, no-exclusividad, canales SAC→DGSFP→AEPD, `VERSION_TEXTOS_LEGALES` para sellar `portal_consentimiento`), 8 tests. La comparte el panel del corredor.
+- 4 páginas en `apps/asegura-portal/app/legal/*` + `PieLegal` en el layout **RAÍZ** (si va en `(portal)` desaparece justo de la pantalla de entrada, que es donde la ley lo exige) — y se leen SIN sesión.
+- La privacidad se escribió sobre lo que la app hace de verdad: correo solo como hash, **el PDF que sube el cliente sale a OpenRouter y puede procesarse fuera del EEE** (con la alternativa de teclearlo a mano), Supabase en `eu-west-1`. **Sin banner de cookies a propósito**: una sola cookie técnica (art. 22.2 LSSI).
+- ⚠️ Dos omisiones deliberadas y testeadas: **ni lista de ramos** (registro DGSFP sin comprobar) **ni DPO** (el `dpo@grupoasegura.com` de la web de Manuel no consta que reciba). Pendiente de Alberto para poder declararlos.
+- Guardián `test/regression-portal-legal.test.ts` (9 cepos). Verde: 474/474 guardianes, 339/339 de `module-seguros`, typecheck del portal limpio. **Pendiente del bloque: 0.3 consentimientos, 0.4 export art. 15/20 por `apps/asegura`, 0.5 solicitud de supresión.**
+
+---
+
 ### 🔧 (04/09/2026, II) Reparados 3 de los 5 hilos abiertos del motor; los otros 2 medidos y sequenciados
 - **Clamp de calidad que se anulaba solo:** `target = clamp(baseD, floorD, ceilD)` con `baseD` ajustado por `dqDate` y los límites sin ajustar. Medido: `quality_factor` real 0,848 en Busto con el suelo al 0,874 del objetivo → mordía en **9 de 12 meses, +5,8%**, en el piso que vende en el P10. Dúplex 3 meses, Luxury 1, House 0. Se ajustan LOS DOS límites (el clamp es un intervalo). Guardián que lee el fuente, probado en rojo.
 - **Techo por ADR de House desde el histórico equivocado:** `priorRows` ignoraba `historico_desde`. ADR 6 años **354€** vs desde su fecha **655€** → techo a la mitad (sep 391 vs 884, dic 498 vs 1.113) y `suelo_manda` en 3 meses. No-op exacto en los otros tres (todos con `historico_desde` NULL). Trade-off declarado: 3 meses de House quedan bajo `MIN_NOCHES_ADR` → se cuentan ahora los DOS motivos de «sin techo» por separado (antes `sin_muestra` era mudo).
@@ -783,6 +793,36 @@
 - ⚠️ **Corrección a lo dicho horas antes:** el ×1,25 NO es sistémico. El camino de escritura funciona: 93-98% de ~1.400 fechas coinciden exactas con lo que empujamos (ratio mediano 1,000).
 - 📉 **Y lo que la auditoría destapó, que es lo gordo y sigue abierto:** los pisos piden un precio que nadie paga. Busto vende en **P10** y tarifica a P40 · Luxury **P16** vs P50 · Dúplex **P23** vs P40. House Sevillana es el único coherente (vende 1,14× mercado, pide 1,25×). Diagnóstico del desvío en curso.
 
+### 🌐 (04/09/2026) La web de la correduría existe, es buena y está DESENCHUFADA (solo lectura)
+
+- Analizada entera la app de Manuel (`albertosuarezgutierrez-gif/asegura`, clonada al contenedor): **13 páginas
+  públicas + cotizador + portal**, terminada y cuidada (Next 16, Drizzle, shadcn, CSP con nonce). Tesis B2C:
+  «Todos tus seguros, en un solo panel», gratis y sin permanencia. **Decisión de Alberto (04/09): se ENCHUFA donde
+  está** — reabre la del 02/09 («su web no se usa»), que queda derogada para la cara pública.
+- 🔌 **Por qué no capta nada:** `grupoasegura.com` y `.es` apuntan a **IONOS, no a Vercel** (solo vive en
+  `app.grupoasegura.com`); `/cotizador` está en `Disallow` del robots y fuera del sitemap **siendo el destino de
+  todos los CTA**; `/historia` (el único form con teléfono) es huérfana y `noindex`; **Web Analytics apagada** →
+  cero datos, que NO es cero visitas. La analítica real es PostHog EU, sin conector aquí.
+- 🚨 **PostHog corre en producción SIN banner de cookies** (medido en el HTML vivo: 0 apariciones de Cookiebot,
+  `PostHogProvider` presente). `posthog-browser.ts:16-22` hace *fail-open*: sin `NEXT_PUBLIC_COOKIEBOT_ID` no pinta
+  banner y arranca igual. Art. 22.2 LSSI, en una web que publica DPO.
+- 🚨 **`/info-mediador` declara solo AUTO y HOGAR** mientras la home vende 5 ramos y el cotizador 6 — es el papel
+  que mira la DGSFP. Además: `/contacto` da 404 enlazado desde los propios Términos; 3 claims de superioridad
+  («compañías líderes», «las mejores ofertas»); los Términos describen un **algoritmo de comparativa que no
+  existe** (el precio previo al registro es un stub fijo por ramo); texto del mediador aún `PENDING_LEGAL_REVIEW`.
+- 👥 **Dos portales de cliente y ninguno en uso: el de Manuel tiene 2 cuentas de 32.602 fichas, el nuestro 0.**
+  Él gana en documentos descargables (signed-url + `visible_por_cliente`), avisos que SALEN de verdad, RGPD art.
+  17/20 self-service y navegación móvil; el nuestro en recibos, parte de siniestro, calendario accionable (art. 22
+  LCS) y autorizaciones a terceros. Su login **no se reutiliza**: atado a la Supabase Auth congelada de Manuel.
+  Alberto pide **analizar si se pueden UNIFICAR** (análisis en curso, no decidido).
+- 📱 **WhatsApp: decidido botón `wa.me` ya, WABA después.** ⚠️ Pero en el código de Manuel hay **Cloud API completa**
+  (webhook, envío, bot IA, pantalla `/whatsapp-bot`) — [suposición] la WABA pudo existir; verificar en el panel de
+  Meta antes de repetir «no hay WABA».
+- 🗄️ De paso: esa app se quedó **sin BD del 31/08 al 02/09** (129 errores `password authentication failed`), el
+  mismo fallo de rotar contraseña sin tocar el `DATABASE_URL` ya documentado para `central-asegura`. Resuelto con
+  el redeploy del 02/09 06:32. La ingesta de Codeoscopic sigue entrando (50 webhooks/24 h).
+- **Pendiente de Alberto:** qué sirven hoy los dominios en IONOS (el proxy los bloquea desde el contenedor), qué
+  número va en el `wa.me`, y si se puede empujar rama al repo `asegura`.
 
 ### 🧊 (03/09/2026) La guarda de outlier protegía al fallo que ella misma debía deshacer (PR seguimiento del #2228)
 - La pasada de las 20:30 (1ª con la guarda de monotonía) corrigió **3** de las 61 noches infladas de Busto; las otras 58 seguían a 113€.
