@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **Plan de marketing y captación de Grupo ASegura (04/09/2026).** Nuevo `docs/ASEGURA-MARKETING-PLAN.md`.
+  Medido en BD: cartera viva **80 clientes / 110 pólizas (42 canceladas → 68 vivas)**, 1,4 pólizas/cliente,
+  76% Sevilla, 81 de 110 en auto (el peor ramo para captar). **Los 32.520 leads son vía CERRADA**: 82,8% sin
+  ningún contacto, 95% vence 2014-2018 y `consent_logs` tiene **2 filas** en toda la BD → sin base de
+  legitimación no hay campaña; WhatsApp descartado (0 `wa_opt_in`). Trampa: el CP **41001 en 10.933 fichas**
+  es relleno del despacho, no segmentar por CP. Verificado en Vercel: `app.grupoasegura.com` sirve el CRM,
+  pero **el apex y el `www` están LIBRES** → la web de marketing nace ahí sin desalojar nada. Orden del plan:
+  embudo (SLA de lead) y reseñas ANTES que tráfico; ramo elegido por `comisiones_devengo`, no a ojo; Ads
+  el último. 🚨 Hallazgo colateral: **74 tablas del schema `seguros` con RLS desactivado** expuestas a `anon`
+  (DNI, fecha de nacimiento, ramos de salud) — comprobar dónde vive la clave `anon` antes de lanzar la web.
+
 - **🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez (04/09/2026).** El
   360009410197 salía de la URL de un artículo del Zendesk de **HomeExchange** (correo de Irene et
   Rico, un intercambio de casa, ni siquiera una reserva); el colador `\b(\d{9,})\b` miraba dentro de
