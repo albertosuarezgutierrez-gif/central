@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-04T22:06:16Z",
+  "generadoEn": "2026-09-04T23:02:58Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -464,7 +464,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-web": {
         "estado": "no",
@@ -2084,7 +2084,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 37
       },
       "asegura-web": {
         "estado": "usado",
@@ -2138,7 +2138,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura-web": {
         "estado": "no",
@@ -2192,7 +2192,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 29
       },
       "asegura-web": {
         "estado": "no",
@@ -3883,6 +3883,9 @@
       "/api/autorizaciones/[id]",
       "/api/catastro",
       "/api/catastro/sugerir",
+      "/api/invitaciones",
+      "/api/invitaciones/[id]",
+      "/api/invitaciones/responder",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
@@ -5200,6 +5203,7 @@
       "seguros.portal_codigo",
       "seguros.portal_consentimiento",
       "seguros.portal_identidad",
+      "seguros.portal_invitacion",
       "seguros.portal_obligacion",
       "seguros.portal_parte_siniestro",
       "seguros.portal_peticion_acceso",
@@ -6149,7 +6153,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1270,
+    "apis": 1273,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
