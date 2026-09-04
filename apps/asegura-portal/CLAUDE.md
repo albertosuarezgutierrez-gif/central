@@ -330,9 +330,25 @@ contraria: la de la raíz prohíbe convertir un «no lo sé» en un «no hay», 
 que **ni siquiera son del cliente** y que enseñarlos vacíos solo genera preguntas que Alberto tiene
 que contestar. La frontera es **para quién cambia la decisión**, no si el valor es `null`.
 
+🚨 **Y un TERCER lado, descubierto el 04/09/2026: lo que se oculta a un TERCERO.** `prima`,
+`coberturas` y `recibos` preguntaban por `camposVisibles(nivel)` antes de servirse; **los siniestros
+abiertos no**. Se pegaban a la póliza sin mirar el nivel, así que quien te autorizaba con el alcance
+más bajo (`ver` → `tarjeta`) te estaba enseñando **sus siniestros abiertos**: referencia, estado y
+fecha. No fallaba nada. Salían. Ahora `CamposVisibles` tiene `siniestros` (`false` en `tarjeta`,
+`true` desde `completo`) y además entra en `NUNCA_A_UN_TERCERO`, el tope duro de `autorizacion.ts`:
+ni con `ver_economico`, que abre lo ECONÓMICO de la póliza y no los sucesos de quien la tiene. Un
+siniestro abierto no es un dato del contrato — es un hecho de la vida de su dueño.
+
+`siniestrosAbiertos` es por eso `SiniestroPortal[] | null`: **`null` = no visible en tu nivel**,
+`[]` = no hay ninguno abierto. La pantalla no pinta nada en ninguno de los dos casos, y eso es
+deliberado: un chip que dijera «no visible» le contaría a un tercero que hay algo que mirar, que es
+la mitad de la filtración.
+
 Lo protege **`test/regression-portal-visibilidad.test.ts`** (raíz del repo, `node --test`): falla si
-`tramitador*`/`perito*` vuelven a `lib/cartera-lectura.ts`, **y también** si desaparecen los tres
-datos del lado «voz alta» o los comentarios que explican que su `0` es un hueco.
+`tramitador*`/`perito*` vuelven a `lib/cartera-lectura.ts`, si desaparecen los tres
+datos del lado «voz alta» o los comentarios que explican que su `0` es un hueco, **y si
+`siniestrosAbiertos` deja de preguntar por `ve.siniestros`** (mutación comprobada: sin la guarda,
+4 pass / 1 fail).
 
 ## 🚑 El parte de siniestro (03/09/2026) — y la frase que NO se puede decir
 
@@ -466,11 +482,32 @@ Lo vigila `test/regression-portal-enlace-acceso.test.ts`.
 | `PII_LOOKUP_KEY` | Clave HMAC del índice ciego de la cartera (64 hex). **Idéntica a la de `central-asegura`** o nadie se vincula. Sin ella: `sin_clave`, se entra sin cartera |
 | `PORTAL_MAIL_FROM` | Remitente del correo con el código. Si falta, el envío devuelve `false` (502), no revienta |
 | `PORTAL_PUBLIC_URL` | Dominio **https** del portal, para el enlace de un clic del correo. Si falta o no es https, el correo sale igual **solo con el código**: no se inventa un dominio |
-| `OPENROUTER_API_KEY` | Visión, para leer pólizas en foto. Si falta, la extracción degrada a `none` |
+| `OPENROUTER_API_KEY` | Visión (fotos) **y, vía `aiComplete`, también los PDF**. Si falta, la extracción degrada a `none` |
 | Proveedor de correo (lo lee `@central/core-email` solo) | `RESEND_API_KEY`, **o** `SMTP_USER`+`SMTP_PASSWORD` (+`SMTP_HOST`/`SMTP_PORT`), **o** `GMAIL_USER`+`GMAIL_APP_PASSWORD` |
 
 ⚠️ **No existen envs `PORTAL_SMTP_*`**: `createMailTransporter()` no recibe credenciales por parámetro,
 las lee él del entorno. Lo único que pone el portal es el `from`.
+
+## 🤖 Leer una póliza subida: HOY NO LEE NADA, y no es por el PDF (04/09/2026)
+
+`POST /api/polizas` acaba en `fuente: 'none'` («No hemos podido leer el documento») para **todos** los
+documentos, y la causa no está en el código ni en el PDF:
+
+- Medido con una Mapfre HOGAR FAMILIAR real de 6 páginas: `pdf-parse` saca **12.076 caracteres
+  limpios**, con compañía, nº de póliza, fecha de efecto y duración. El documento se lee.
+- La ruta del PDF llama a **`aiComplete`** de `@central/core-ai`, que necesita al menos UNA de
+  `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `CEREBRAS_API_KEY` o
+  `MOONSHOT_API_KEY`. El proyecto Vercel `asegura-portal` **no tiene ninguna** (ver «Puesta en
+  producción»: solo `DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_*` y
+  `PORTAL_PUBLIC_URL`). `aiComplete` lanza → `nadaLeido()`.
+
+⚠️ **Antes de tocar el extractor, comprueba la env.** El síntoma —«no hemos podido leer»— es idéntico
+al de un PDF escaneado ilegible, y por eso se diagnostica mal: parece un problema de OCR y es una
+variable vacía.
+
+📌 Y un detalle para el día que se quiera una plantilla determinista por compañía: el texto de Mapfre
+sale con la **codificación rota** (`EspaÒa`, `PÛliza`, `ESPA—A`). Un LLM lee a través de eso; un ancla
+de texto exacto se rompe. Normalizar antes es parte del trabajo, no un pulido posterior.
 
 ## Rutas API
 

@@ -30,6 +30,32 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏠 La escalera del Catastro para hogar, y un agujero que salió por el camino (04/09/2026, PR #2255).**
+  Cuatro peldaños y se BAJA solo cuando el anterior falla: dirección → variantes DETERMINISTAS de la
+  misma dirección → una IA que PROPONE y el Catastro CONFIRMA → referencia catastral → a mano.
+  Ningún dato entra solo. Nuevas `referencia_catastral` (columna) y `datos_ramo_origen`
+  (`catastro`|`documento`|`declarado`), SQL ya aplicado. 🚨 **Y el hallazgo gordo:**
+  `carteraDeIdentidad` filtraba prima/coberturas/recibos por nivel y pegaba `siniestrosAbiertos`
+  SIN mirarlo — un tercero con alcance `ver` veía los siniestros abiertos de quien le autorizó.
+  Cerrado con `CamposVisibles.siniestros` + tope duro en `NUNCA_A_UN_TERCERO`, con mutación probada.
+- **📄 Subir una póliza no lee nada porque FALTA LA CLAVE DE IA, no porque el PDF sea malo (04/09/2026).**
+  Alberto subió una Mapfre HOGAR FAMILIAR real y salió «no hemos podido leer». Medido: `pdf-parse`
+  saca **12.076 caracteres limpios** de ese PDF. El fallo es `aiComplete`, que necesita al menos una
+  de OPENROUTER/GROQ/GEMINI/NVIDIA/CEREBRAS/MOONSHOT — y el proyecto Vercel `asegura-portal` **no
+  tiene ninguna**. Pendiente de Alberto. Ojo: el texto de Mapfre sale con la codificación rota
+  («EspaÒa», «PÛliza»); un LLM lee a través, una plantilla determinista no.
+- **🚑 CIMA NO da campos por ramo para el siniestro (medido sobre las 67 filas reales, 04/09/2026).**
+  Misma estructura (30 columnas) para todos los ramos; lo único que cambia es `tipo`, un código de la
+  compañía cuyo nombre va en `comentario`. **No es vocabulario compartido:** `1915` es «RECOBRO CICOS»
+  en auto (241) y «reclamación de tercero» en 282; lunas es `17`/`1313` en auto y `2102` en hogar.
+  Así que las causas por ramo del parte hay que diseñarlas NOSOTROS. Y `lugar_direccion` viene en
+  6/67; `tramitador`, `gravedad`, `reserva` e `indemnización` en **0**. Auto: 26 de 50 son ASISTENCIA
+  (una grúa, no un siniestro) — pintarlos como «siniestro abierto» exagera.
+- **🧹 Borrado el mail de Alberto de dos fichas ajenas (04/09/2026).** Estaba de contacto en Josefa
+  Julia Vicente Lucas y Alejandro José Soler Fernández Gao, y por eso su hash del índice ciego
+  resolvía a 3 fichas y el portal se negaba a vincular (`ambiguo`). Foto previa en
+  `seguros.cliente_emails_borrados_20260904`. Ahora resuelve a **1**. Las dos fichas se quedan con
+  cero emails: el dato era falso de todas formas.
 - **✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas (04/09/2026).** Alberto lo vio mal
   escrito en la cabecera del portal del cliente, que es la única pantalla que ve un asegurado. El
   monograma «AS» del logo ES el nombre (A de Alberto, S de Suárez), así que la ese minúscula se come
