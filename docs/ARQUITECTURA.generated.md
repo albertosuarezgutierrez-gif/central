@@ -261,14 +261,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (04/09/2026) Web pública de la correduría: `apps/asegura-web`
 - (04/09/2026) Plan de marketing y captación de Grupo ASegura
+- (04/09/2026) 📧 El buscador ya llamaba, pero a 5 clientes vivos les faltaba el correo
+- (04/09/2026) 💓 El vigía de latidos gritaba por agentes a los que aún NO les había tocado correr
+- (04/09/2026) 🔧 Instrumentado `pricing_applied` y ACTIVADOS los mensajes de los 2 pisos de Busto
+- (04/09/2026) 📸 Quitar Smoobu de Busto: las indicaciones están listas, las FOTOS no
+- (04/09/2026) 📉 Las pasadas de pricing del 04/09: dos hallazgos y un agujero de instrumentación
+- (04/09/2026) 🔐 La cerradura que falla NO es la de Socorro
 - (04/09/2026) 📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp
 - (04/09/2026) 🎟 La intranet del cliente deja de ser solo para clientes
-- (04/09/2026) 🏠 La escalera del Catastro para hogar, y un agujero que salió por el camino
-- (04/09/2026) 📄 Subir una póliza no lee nada porque FALTA LA CLAVE DE IA, no porque el PDF sea malo
-- (04/09/2026) 🚑 CIMA NO da campos por ramo para el siniestro (medido sobre las 67 filas reales, 04/09/2026).
-- (04/09/2026) 🧹 Borrado el mail de Alberto de dos fichas ajenas
-- (04/09/2026) 🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez
-- (04/09/2026) 🧠 El control de calidad ya ve lo que Alberto responde a mano
-- (04/09/2026) 🛡️ /correduria: seis peticiones de Alberto desde el móvil, PR #2259
 
