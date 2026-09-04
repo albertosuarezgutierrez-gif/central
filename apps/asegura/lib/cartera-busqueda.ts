@@ -53,6 +53,7 @@ import {
   decryptField,
 } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { campoIlegible, descifrarCampo } from './cartera-edicion'
 
 /** Un resultado: siempre lleva a la ficha de un cliente. */
 export type Hallazgo = {
@@ -77,6 +78,31 @@ export type Hallazgo = {
   hermanas: Hermana[] | null
   /** Qué decir de esas hermanas, o `null` si no hay nada que decir. */
   aviso: AvisoHermanas | null
+  /**
+   * Para llamar, escribir o abrir WhatsApp sin entrar en la ficha.
+   * 🚨 `null` = NO se ha podido consultar, que no es «no tiene teléfono».
+   */
+  contacto: Contacto | null
+}
+
+/**
+ * El teléfono y el email PRINCIPALES de la ficha (los que espeja
+ * `clientes.telefono`/`email`), descifrados en memoria.
+ *
+ * 🚨 Es el contacto del TITULAR y solo el suyo. La ficha además cae a los
+ * intervinientes de sus pólizas cuando el titular no tiene ninguno —una empresa
+ * cuyo conductor habitual sí tiene móvil—, y eso aquí NO se hace: son dos
+ * consultas más por cada uno de los 25 resultados. Consecuencia asumida: una
+ * fila puede salir sin icono y su ficha sí tenerlo. Por eso el vacío no afirma
+ * nada: simplemente no se pinta el icono, en vez de decir «sin teléfono».
+ */
+export type Contacto = {
+  /** `null` = no consta o no se descifra. Nunca «no tiene» sin más. */
+  telefono: string | null
+  /** Hay valor guardado pero la clave no lo abre: «cifrado», no «no hay». */
+  telefonoIlegible: boolean
+  email: string | null
+  emailIlegible: boolean
 }
 
 export type BloqueResultados = {
@@ -228,6 +254,7 @@ function aHallazgo(f: FilaCliente, porque: string): Hallazgo {
     vitalidad: 'desconocida',
     hermanas: null,
     aviso: null,
+    contacto: null,
   }
 }
 
@@ -345,6 +372,7 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
     vitalidad: 'desconocida',
     hermanas: null,
     aviso: null,
+    contacto: null,
   }))
   return bloque(c, hallazgos, await coberturaMatricula(correduriaId))
 }
@@ -757,10 +785,42 @@ async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaC
   }
 }
 
+/**
+ * Teléfono y email principales de cada ficha, en UNA consulta para los ≤25
+ * resultados. `null` (toda la consulta) = no se ha podido preguntar: aguas
+ * arriba eso se pinta como «no comprobado», nunca como «no tiene».
+ */
+async function contactosDe(
+  correduriaId: string,
+  ids: string[],
+): Promise<Map<string, Contacto> | null> {
+  try {
+    const db = prismaAsegura()
+    const filas = await db.cliente.findMany({
+      where: { id: { in: ids }, correduriaId },
+      select: { id: true, telefono: true, email: true },
+    })
+    return new Map(
+      filas.map((f) => [
+        f.id,
+        {
+          telefono: descifrarCampo(f.telefono),
+          telefonoIlegible: campoIlegible(f.telefono),
+          email: descifrarCampo(f.email),
+          emailIlegible: campoIlegible(f.email),
+        },
+      ]),
+    )
+  } catch {
+    return null
+  }
+}
+
 async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Promise<void> {
   const ids = [...new Set(bloques.flatMap((b) => b.hallazgos.map((h) => h.clienteId)))]
   if (ids.length === 0) return
 
+  const contactos = await contactosDe(correduriaId, ids)
   const crudas = await hermanasDe(correduriaId, ids)
   // Las señales se piden también de las hermanas: para poder decir «la otra es
   // la viva» hay que saber si de verdad lo es.
@@ -796,6 +856,17 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
       h.vitalidad = vitalidadFicha(s)
       h.hermanas = crudas === null ? null : [...(porFicha.get(h.clienteId)?.values() ?? [])]
       h.aviso = avisoHermanas(h.vitalidad, h.hermanas)
+      // `null` si la consulta entera falló; si fue bien pero esta ficha no
+      // trae fila, es que no consta —y eso SÍ se ha comprobado—.
+      h.contacto =
+        contactos === null
+          ? null
+          : (contactos.get(h.clienteId) ?? {
+              telefono: null,
+              telefonoIlegible: false,
+              email: null,
+              emailIlegible: false,
+            })
     }
   }
 }
