@@ -265,6 +265,11 @@ export {
   type SeguimientoSiniestro,
   type SeguimientoRevisado,
 } from './siniestros.ts'
+
+export {
+  EIAC_TIPOLOGIA_SINIESTRO,
+  descripcionEiacSiniestro,
+} from './eiac-siniestros.ts'
 export {
   evolucionPrima,
   etiquetaVeredictoPrima,
