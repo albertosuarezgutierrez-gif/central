@@ -838,8 +838,11 @@ export async function POST(req: NextRequest) {
     // El "recomendado" se compone con los MISMOS dos factores que aplica cada fecha: si se
     // calculara aparte (como hacía el SQL) podría contradecir al precio que el motor escribe.
     const baseTargetGlobal = aBase(medGuestGlobal * demandFactor * qualityFactor)
-    const floorBaseGlobal = aBase(ancla.valores.flo)
-    const ceilBaseGlobal = aBase(ancla.valores.cei)
+    // 🚨 El suelo y el techo se guardan en GUEST y sin factores: se ajustan por `dqDate` DENTRO del
+    // bucle, igual que la base. Ver la nota del `clamp` más abajo — acotar un valor ya ajustado
+    // entre dos límites SIN ajustar es mezclar dos espacios, y el que perdía era el descuento.
+    const floorGuestGlobal = ancla.valores.flo
+    const ceilGuestGlobal = ancla.valores.cei
     const mesProp = mes.get(r.property_id)
     const fechaProp = fecha.get(r.property_id)
 
@@ -918,8 +921,21 @@ export async function POST(req: NextRequest) {
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
       const baseD = useMonth ? aBase(mb!.med * dqDate) : baseGlobalD
-      const floorD = useMonth ? aBase(mb!.flo) : floorBaseGlobal
-      const ceilD = useMonth ? aBase(mb!.cei) : ceilBaseGlobal
+      // 🚨 El suelo y el techo llevan `dqDate` igual que la base (04/09/2026). Antes NO lo llevaban,
+      // y el `clamp` de la línea siguiente acotaba un valor ajustado por demanda y calidad entre dos
+      // límites SIN ajustar: en cuanto el descuento empujaba la base por debajo del `floor_pctl`, el
+      // clamp la devolvía al p25 crudo y **el descuento de calidad se anulaba a sí mismo**.
+      //
+      // Medido ese día contra producción: con `quality_factor` real de 0,848 en Busto Reform y un
+      // suelo que está al 0,874 del objetivo, el suelo mordía en **9 de sus 12 meses** y dejaba el
+      // precio un **+5,8%** por encima de lo que el motor pretendía — justo en el piso que vende en
+      // el P10 del mercado. Dúplex 3 meses (+2,9%), Luxury 1 (+1,7%), House ninguno (su factor es
+      // 0,976 y no llega a tocar el suelo).
+      //
+      // Se ajustan LOS DOS, no solo el suelo: el clamp es un intervalo y bajar una sola punta lo
+      // sesga. Con `dqDate > 1` (demanda alta) el techo tiene que subir por la misma razón.
+      const floorD = useMonth ? aBase(mb!.flo * dqDate) : aBase(floorGuestGlobal * dqDate)
+      const ceilD = useMonth ? aBase(mb!.cei * dqDate) : aBase(ceilGuestGlobal * dqDate)
       const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
       let target = clamp(baseD, floorD, ceilD)
       let eventTarget = 0
@@ -961,7 +977,8 @@ export async function POST(req: NextRequest) {
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
           const baseEv = baseSaltoEvento({
             baseMes: useMonth ? clamp(baseD, floorD, ceilD) : null,
-            baseGlobal: clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal),
+            // Mismos límites ajustados que arriba: `baseGlobalD` ya lleva `dqDate`.
+            baseGlobal: clamp(baseGlobalD, aBase(floorGuestGlobal * dqDate), aBase(ceilGuestGlobal * dqDate)),
           })
           if (baseEv.origen === "global") saltosEventoSinMes++
           const globalEvent = Math.round(baseEv.base * ev)
@@ -1323,7 +1340,13 @@ export async function POST(req: NextRequest) {
       // único resto del serrucho: el ancla global se mueve con lo que el barrido muestree hoy y el
       // salto de evento no pasa por el raíl. Un 0 aquí es una AFIRMACIÓN, no un silencio.
       saltos_evento_sin_mes: saltosEventoSinMes,
-      bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
+      // Los límites del parte se componen con los factores GLOBALES del piso (los mismos que
+      // `baseTargetGlobal`): por fecha llevan el `dqDate` de esa fecha, que aquí no existe.
+      bounds: {
+        floor_base: aBase(floorGuestGlobal * demandFactor * qualityFactor),
+        ceil_base: aBase(ceilGuestGlobal * demandFactor * qualityFactor),
+        min: r.min_price, max: r.max_price,
+      },
       // Antelación MEDIDA del piso POR MES (mes → días de mediana). Sin ella la palanca de urgencia
       // queda inerte, así que conviene verla para distinguir «no hacía falta bajar» de «no lo sé».
       // Va por mes y no en un solo número porque ahí estaba el fallo que se corrigió el 01/08/2026:
