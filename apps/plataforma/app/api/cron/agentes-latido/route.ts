@@ -232,6 +232,10 @@ async function handler(req: NextRequest) {
   // ha vencido. NO va con las alertas —sería la falsa alarma que provocó este cambio— pero tampoco
   // desaparece: se persiste y va al JSON, y solo se asoma al Telegram cuando ya hay algo que contar.
   const estrenos: string[] = []
+  // Averías REALES ya declaradas y fechadas (04/09/2026). Se apartan de las alertas del Telegram
+  // —no de la pantalla, ni de `agente_salud`: ahí siguen contando como alerta y en su color—
+  // porque lo que sobra es la interrupción diaria, no el registro.
+  const pendientes: string[] = []
 
   for (const ag of AGENTES_VIGILADOS) {
     const probe = PROBES[ag.id]
@@ -252,6 +256,7 @@ async function handler(req: NextRequest) {
         ahora, ultimo, maxHoras: ag.maxHoras, ultimoIntento,
         detalle: rows[0]?.detalle ?? null,
         vigiladoDesde: ag.vigiladoDesde,
+        pendienteConocido: ag.pendienteConocido,
       })
       resultados.push({
         id: ag.id,
@@ -259,7 +264,11 @@ async function handler(req: NextRequest) {
         ultimo: ultimo?.toISOString() ?? null,
         ultimoIntento: ultimoIntento?.toISOString() ?? null,
       })
-      if (ev.alerta) alertas.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.\n  ${ag.nota}`)
+      // Un pendiente declarado sigue siendo `alerta` (la pantalla y `agente_salud` lo pintan como
+      // tal): lo único que cambia es que no entra en el bloque que interrumpe. Y va SIN la `nota`,
+      // que es el runbook de «esto hay que mirarlo ahora» — aquí ya se miró y se decidió.
+      if (ev.alerta && ev.pendiente) pendientes.push(`• <b>${ag.etiqueta}</b>: ${ev.pendienteNota}.`)
+      else if (ev.alerta) alertas.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.\n  ${ag.nota}`)
       // El estreno NO arrastra la `nota`: esa es el runbook de una avería, y aquí no hay ninguna.
       else if (ev.estreno) estrenos.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.`)
       await guardarSalud(ag, ahora, ev.alerta, ev.horas, ev.motivo, null)
@@ -330,6 +339,9 @@ async function handler(req: NextRequest) {
     }
   }
 
+  // 🚨 Los pendientes y los estrenos NO abren la puerta: si lo único que queda son ellos, no hay
+  // Telegram. Mandar «📌 2 pendientes conocidos» cada mañana durante un mes es exactamente la
+  // fatiga que este bloque existe para quitar.
   if (alertas.length > 0 || sondasRotas.length > 0) {
     const bloques: string[] = []
     if (alertas.length > 0) bloques.push(`<b>Sin señal / con errores (${alertas.length})</b>\n${alertas.join('\n\n')}`)
@@ -339,6 +351,10 @@ async function handler(req: NextRequest) {
     // Se cuelga de un parte que YA se iba a mandar; nunca lo provoca. Un «⏳ 4 en estreno» diario
     // durante las cuatro semanas que tarda una rutina mensual en estrenarse es exactamente el ruido
     // que enseña a ignorar este aviso — y el estreno ya se ve entero en /operador/agentes.
+    // Igual que el estreno: se cuelga de un parte que YA se iba a mandar, nunca lo provoca.
+    if (pendientes.length > 0) {
+      bloques.push(`<b>📌 Pendientes conocidos (${pendientes.length})</b> — decididos, con fecha de revisión:\n${pendientes.join('\n')}`)
+    }
     if (estrenos.length > 0) {
       bloques.push(`<b>⏳ En estreno (${estrenos.length})</b> — aún no les ha tocado correr, no es avería:\n${estrenos.join('\n')}`)
     }
@@ -350,7 +366,7 @@ async function handler(req: NextRequest) {
 
   return NextResponse.json({
     ok: true, alertas: alertas.length, sondasRotas: sondasRotas.length,
-    estrenos: estrenos.length, purgadas, resultados,
+    estrenos: estrenos.length, pendientes: pendientes.length, purgadas, resultados,
   })
 }
 

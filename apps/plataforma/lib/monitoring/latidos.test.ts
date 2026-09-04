@@ -192,3 +192,89 @@ test('sin alerta y sin horas SOLO puede ser un estreno', () => {
     if (!r.alerta && r.estreno !== true) assert.notEqual(r.horas, null)
   }
 })
+
+// ── Pendiente conocido (04/09/2026) ───────────────────────────────────────────────────────────
+// Alberto decidió dejar dos rojos vivos a propósito. Son pendientes REALES, así que apagarlos sería
+// mentir; pero gritarlos cada mañana durante semanas es la misma fatiga de alarma que el estreno.
+// Estos tests fijan los tres candados que impiden que esto se convierta en un mute.
+const PEND = { motivo: 'cerradura sin conexión', revisarEl: '2026-07-25', mientras: '(Tuya 1109, 2001)' }
+const viejo = new Date('2026-07-01T00:00:00Z')
+
+test('avería declarada y dentro de plazo → sigue en alerta, pero marcada pendiente', () => {
+  const r = evaluarLatido({
+    ahora, ultimo: viejo, maxHoras: 30, detalle: '2 cerradura(s) · 3 con ERROR (Tuya 1109, 2001)',
+    pendienteConocido: PEND,
+  })
+  // Sigue siendo alerta a propósito: la pantalla y `agente_salud` tienen que seguir diciendo la
+  // verdad. Lo único que se aparta es la interrupción del Telegram.
+  assert.equal(r.alerta, true)
+  assert.equal(r.pendiente, true)
+  assert.match(r.pendienteNota ?? '', /cerradura sin conexión/)
+  assert.match(r.pendienteNota ?? '', /2026-07-25/)
+})
+
+// Candado 1: si el fallo CAMBIA, deja de casar y vuelve a sonar el mismo día.
+test('un código de error nuevo rompe el marcador → deja de ser pendiente', () => {
+  const r = evaluarLatido({
+    ahora, ultimo: viejo, maxHoras: 30,
+    detalle: '2 cerradura(s) · 4 con ERROR (Tuya 1109, 2001, 28841002)',
+    pendienteConocido: PEND,
+  })
+  assert.equal(r.alerta, true)
+  assert.notEqual(r.pendiente, true)
+})
+
+// Candado 1-bis: un cron que deja de escribir parte NO hereda el permiso de silencio del que sí lo
+// escribía. Sin detalle no casa nada.
+test('sin detalle NUNCA es pendiente (un cron mudo grita igual)', () => {
+  const r = evaluarLatido({ ahora, ultimo: viejo, maxHoras: 30, detalle: null, pendienteConocido: PEND })
+  assert.equal(r.alerta, true)
+  assert.notEqual(r.pendiente, true)
+})
+
+test('«sin ninguna señal registrada» tampoco puede ser pendiente', () => {
+  const r = evaluarLatido({ ahora, ultimo: null, maxHoras: 30, pendienteConocido: PEND })
+  assert.equal(r.alerta, true)
+  assert.notEqual(r.pendiente, true)
+  assert.match(r.motivo, /ni una sola ejecución/)
+})
+
+// Candado 2: caduca solo. Nadie tiene que acordarse de quitar nada.
+test('pasada la fecha de revisión vuelve a sonar sin que nadie toque nada', () => {
+  const r = evaluarLatido({
+    ahora, ultimo: viejo, maxHoras: 30, detalle: '3 con ERROR (Tuya 1109, 2001)',
+    pendienteConocido: { ...PEND, revisarEl: '2026-07-20' }, // ahora = 21/07
+  })
+  assert.equal(r.alerta, true)
+  assert.notEqual(r.pendiente, true)
+})
+
+// «Revisar el 21» significa el 21 ENTERO, no las 00:00 de ese día.
+test('el día de la revisión cuenta entero', () => {
+  const r = evaluarLatido({
+    ahora, ultimo: viejo, maxHoras: 30, detalle: '3 con ERROR (Tuya 1109, 2001)',
+    pendienteConocido: { ...PEND, revisarEl: '2026-07-21' },
+  })
+  assert.equal(r.pendiente, true)
+})
+
+test('un agente sano con pendiente declarado no inventa nada', () => {
+  const r = evaluarLatido({
+    ahora, ultimo: new Date('2026-07-21T06:00:00Z'), maxHoras: 30,
+    detalle: '3 con ERROR (Tuya 1109, 2001)', pendienteConocido: PEND,
+  })
+  assert.equal(r.alerta, false)
+  assert.notEqual(r.pendiente, true)
+})
+
+// Guardián: un pendiente mal declarado es un agente silenciado para siempre sin que nada lo delate.
+test('todo pendienteConocido declarado tiene motivo, marcador y fecha válida', () => {
+  for (const a of AGENTES_VIGILADOS) {
+    const p = a.pendienteConocido
+    if (!p) continue
+    assert.ok(p.motivo.trim().length > 10, `${a.id}: el motivo tiene que explicar por qué se deja`)
+    assert.ok(p.mientras.trim().length >= 8, `${a.id}: el marcador es demasiado corto — silenciaría de más`)
+    assert.match(p.revisarEl, /^\d{4}-\d{2}-\d{2}$/, `${a.id}: revisarEl debe ser YYYY-MM-DD`)
+    assert.ok(!Number.isNaN(new Date(p.revisarEl).getTime()), `${a.id}: revisarEl no es una fecha`)
+  }
+})

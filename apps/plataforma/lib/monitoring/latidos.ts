@@ -24,6 +24,13 @@ export type EvalLatido = {
    * y al JSON, nunca a las alertas del Telegram.
    */
   estreno?: boolean
+  /**
+   * true = sigue siendo una avería (`alerta` sigue en true) pero es la que ya está declarada y
+   * fechada en `pendienteConocido`. El Telegram la aparta de las alertas; la pantalla NO.
+   */
+  pendiente?: boolean
+  /** Frase para el bloque de pendientes: motivo + hasta cuándo. */
+  pendienteNota?: string
 }
 
 /**
@@ -72,21 +79,53 @@ export function evaluarLatido(params: {
   detalle?: string | null
   /** Fecha de alta de la vigilancia (ISO). Ver el bloque de arriba: gobierna el estreno. */
   vigiladoDesde?: string | Date | null
+  /** Avería ya declarada y fechada. Ver `AgenteVigilado.pendienteConocido`. */
+  pendienteConocido?: { motivo: string; revisarEl: string; mientras: string } | null
 }): EvalLatido {
-  const { ahora, ultimo, maxHoras, ultimoIntento = null, detalle = null, vigiladoDesde = null } = params
+  const {
+    ahora, ultimo, maxHoras, ultimoIntento = null, detalle = null,
+    vigiladoDesde = null, pendienteConocido = null,
+  } = params
+
+  /**
+   * ¿El parte de HOY sigue siendo la avería que ya está declarada?
+   *
+   * Los tres «no» son deliberados y cada uno tapa una forma de convertir esto en un mute:
+   *   · sin `detalle` no casa NADA — un cron que dejó de escribir parte no puede heredar el permiso
+   *     de silencio del que sí lo escribía;
+   *   · el marcador se compara literal, así que un fallo distinto (otro código) vuelve a sonar;
+   *   · pasada `revisarEl` caduca solo. Se compara contra el FINAL de ese día (`T23:59:59Z`) para
+   *     que «revisar el 12» signifique el 12 entero y no las 00:00 del 12.
+   */
+  const pendienteVivo = (): { motivo: string; revisarEl: string } | null => {
+    if (!pendienteConocido || !detalle) return null
+    if (!detalle.includes(pendienteConocido.mientras)) return null
+    const limite = new Date(`${pendienteConocido.revisarEl}T23:59:59Z`)
+    if (Number.isNaN(limite.getTime()) || ahora > limite) return null
+    return pendienteConocido
+  }
+  const marcarPendiente = (r: EvalLatido): EvalLatido => {
+    const p = pendienteVivo()
+    if (!p) return r
+    return {
+      ...r,
+      pendiente: true,
+      pendienteNota: `${p.motivo} — declarado pendiente hasta el ${p.revisarEl}; ese día vuelve a sonar solo`,
+    }
+  }
   const horasDe = (d: Date) => (ahora.getTime() - d.getTime()) / 3_600_000
   const coletilla = detalle ? ` — último parte: «${detalle}»` : ''
   const hIntento = ultimoIntento ? horasDe(ultimoIntento) : null
 
   if (!ultimo) {
     if (hIntento !== null) {
-      return {
+      return marcarPendiente({
         alerta: true,
         horas: null,
         motivo:
           `se ejecuta pero NUNCA completa una pasada buena (último intento hace ${hIntento.toFixed(1)} h). ` +
           `No es que no se dispare: arranca y se queda a medias${coletilla}`,
-      }
+      })
     }
     // Estreno: se dio de alta hace poco y su primera pasada todavía no ha vencido.
     const alta = vigiladoDesde ? new Date(vigiladoDesde) : null
@@ -121,11 +160,11 @@ export function evaluarLatido(params: {
     const matiz = hIntento !== null && hIntento <= maxHoras
       ? `, aunque SÍ arrancó hace ${hIntento.toFixed(1)} h (se ejecuta y no termina)`
       : ''
-    return {
+    return marcarPendiente({
       alerta: true,
       horas,
       motivo: `${horas.toFixed(1)} h sin una pasada buena (umbral ${maxHoras} h)${matiz}${coletilla}`,
-    }
+    })
   }
   return { alerta: false, horas, motivo: `activo (${horas.toFixed(1)} h)` }
 }
@@ -147,6 +186,34 @@ export type AgenteVigilado = {
    * de importar para siempre.
    */
   vigiladoDesde: string
+  /**
+   * Avería REAL, ya vista y decidida, que no se va a arreglar todavía (04/09/2026). No es un
+   * silenciador: es la diferencia entre «pendiente conocido» y «avería nueva», que hasta hoy se
+   * pintaban igual.
+   *
+   * 🚨 POR QUÉ HACÍA FALTA. El 04/09 Alberto decidió dejar dos rojos vivos a propósito —la cerradura
+   * de Bustos Tavera sin conexión y los establecimientos de SES sin dar de alta—. Los dos son
+   * pendientes de verdad, así que apagarlos sería mentir; pero gritarlos cada mañana durante semanas
+   * es la fatiga de alarma que acabábamos de quitar con el `estreno`, solo que por la otra puerta. Un
+   * parte que siempre trae dos rojos deja de leerse, y entonces el tercero tampoco se ve.
+   *
+   * Tres candados para que esto NO pueda convertirse en un mute:
+   *   1. `mientras` — marcador que TIENE que aparecer en el parte de hoy. Si el fallo cambia (otro
+   *      código de Tuya, otro motivo), deja de casar y vuelve a sonar. Un parte SIN detalle tampoco
+   *      casa: un cron que deja de correr grita igual que antes.
+   *   2. `revisarEl` — fecha en la que caduca. Pasada, vuelve a rojo él solo; nadie tiene que
+   *      acordarse de quitar nada.
+   *   3. Sigue contando como ALERTA para la pantalla y para `agente_salud`: lo que se calla es la
+   *      interrupción del Telegram, no el registro. `/operador/agentes` sigue diciendo la verdad.
+   */
+  pendienteConocido?: {
+    /** Por qué se sabe y por qué no se arregla hoy. Va en el parte. */
+    motivo: string
+    /** `YYYY-MM-DD`. Pasada esta fecha vuelve a alertar sin más. */
+    revisarEl: string
+    /** Marcador literal que debe contener el `detalle` para seguir siendo ESTE fallo. */
+    mientras: string
+  }
 }
 
 // Registro extensible. Añadir un agente = una fila aquí + su probe SQL en el route.
@@ -194,6 +261,16 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
     id: 'ses_transporte',
     vigiladoDesde: '2026-08-21',
+    // Decisión de Alberto (04/09/2026): «déjalo rojo, es un pendiente real». Lo es —la tabla está
+    // vacía y la puerta al Ministerio no está montada—, pero hoy los partes los manda Chekin, así
+    // que no hay incumplimiento y no hay prisa. Lo que no puede pasar es que grite cada mañana
+    // hasta que se dé de alta: el parte se deja de leer y el día que SES falle de verdad no se ve.
+    // ⚠️ `revisarEl` es una PROPUESTA (un mes), no una fecha que él haya dado. Cámbiala si no cuadra.
+    pendienteConocido: {
+      motivo: 'sin establecimientos dados de alta; hoy los partes los manda Chekin, así que no corre prisa',
+      revisarEl: '2026-10-06',
+      mientras: 'no hay ningún establecimiento dado de alta',
+    },
     etiqueta: '🛂 Transporte con SES.HOSPEDAJES (parte de viajeros, cron diario 07:15)',
     // Diario a las 07:15 → 30 h dejan pasar un tropiezo aislado y cazan dos días caídos.
     maxHoras: 30,
@@ -435,6 +512,17 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
     id: 'sivra_domotica_acceso',
     vigiladoDesde: '2026-08-31',
+    // Decisión de Alberto (04/09/2026): la cerradura no tiene conexión y se mira «más adelante».
+    // 🚨 `mientras` es la firma EXACTA de los códigos de hoy, con su paréntesis de cierre: si
+    // aparece un código más el marcador deja de casar y vuelve a sonar el mismo día. Y `revisarEl`
+    // NO es «dentro de un mes» a ojo: el 14/09 entra la reserva 154230951 (20 noches), así que el
+    // 12 es el último día en que reponer el PIN todavía sirve de algo.
+    // ⚠️ Las dos son PROPUESTAS mías, no fechas que él haya dado.
+    pendienteConocido: {
+      motivo: 'cerradura de Bustos Tavera sin conexión (2001) y el respaldo offline rechazado (1109); se mira en el piso',
+      revisarEl: '2026-09-12',
+      mientras: '(Tuya 1109, 2001)',
+    },
     etiqueta: '🔐 PIN por reserva de la cerradura (04:40 · 12:40 · 20:40)',
     // 3 pasadas/día → el hueco legítimo más largo es 20:40→04:40 = 8 h; el vigía mira a las 07:45.
     // 30 h salta al perder un día entero y se calla si solo falló una pasada.
