@@ -38,8 +38,12 @@
   es relleno del despacho, no segmentar por CP. Verificado en Vercel: `app.grupoasegura.com` sirve el CRM,
   pero **el apex y el `www` están LIBRES** → la web de marketing nace ahí sin desalojar nada. Orden del plan:
   embudo (SLA de lead) y reseñas ANTES que tráfico; ramo elegido por `comisiones_devengo`, no a ojo; Ads
-  el último. 🚨 Hallazgo colateral: **74 tablas del schema `seguros` con RLS desactivado** expuestas a `anon`
-  (DNI, fecha de nacimiento, ramos de salud) — comprobar dónde vive la clave `anon` antes de lanzar la web.
+  el último. **Comisión medida sobre `seguros.poliza_recibos`** (12 meses, recibos cobrados): auto **10,44%
+  → 40,87€/póliza/año**, hogar **22,03% → 68,74€**, RC 17,09%. Hogar es el ramo prioritario, pero con 8 recibos
+  es hipótesis, no conclusión. Ojo: `comisiones_devengo` está en `public`, NO en `seguros`, y agrega por
+  (compañía, periodo), no por ramo. 🚨 **Falta la ingesta de Mapfre desde el 02/04/2026** (~5 meses; es el 64%
+  de la cartera) → el libro de comisiones está infravalorado. 🚨 Y **75 tablas de `seguros` con RLS desactivado**
+  expuestas a `anon` (`clientes`, `polizas`, `cliente_emails`) — comprobar dónde vive la clave `anon`. PR #2277.
 
 - **🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez (04/09/2026).** El
   360009410197 salía de la URL de un artículo del Zendesk de **HomeExchange** (correo de Irene et

@@ -56,14 +56,42 @@ Uso legítimo de esa base: **inteligencia de mercado** (qué ramos y qué zonas 
 seguridad el CP del despacho usado como relleno del volcado — un «no lo sé» disfrazado de dato.
 **No segmentar por código postal.** Por provincia sí es fiable en agregado.
 
-**(c) Estás sobre-expuesto al peor ramo.**
-81 de 110 pólizas son auto: la comisión más baja, la rotación más alta, y la SERP la controlan
-comparadores (Rastreator, Acierto, Kelisto) y aseguradoras directas. [Seguro] Ahí no se compite
-con este presupuesto. Lo que dice la base histórica de dónde hubo negocio de verdad:
-**hogar 5.642 · salud 4.470 · decesos 773 · comercio 110 · RC 72** pólizas.
+**(c) Estás sobre-expuesto al peor ramo — y ahora está MEDIDO.**
+81 de 110 pólizas son auto. Medido sobre `seguros.poliza_recibos` (recibos **cobrados**, ventana
+01/09/2025-31/08/2026, por `fecha_efecto_actual`):
 
-🚨 **Pero el ramo NO se elige por intuición.** Se elige midiendo la **comisión bruta media por
-póliza y por ramo** contra el libro `comisiones_devengo` que ya existe. Ver §3, Fase 0.5.
+| Ramo | Pól. vivas | Con recibo cobrado | Prima neta | Comisión bruta | **Tasa** | **Comisión media/póliza/año** |
+|---|---|---|---|---|---|---|
+| auto | 81 | 21 | 8.222,52€ | 858,20€ | **10,44 %** | **40,87€** |
+| hogar | 19 | 7 | 2.184,43€ | 481,20€ | **22,03 %** | **68,74€** |
+| resp. civil | 9 | 4 | 1.220,81€ | 208,58€ | **17,09 %** | **52,15€** |
+| moto | 1 | 0 | — | — | — | sin medición |
+| **Total** | **110** | **32** | **11.627,76€** | **1.547,98€** | **13,31 %** | **48,37€** |
+
+**Hogar dobla la tasa de auto (22 % vs 10 %) con prima parecida** (312,06€ vs 391,55€): cada
+póliza de hogar renta ~69€/año frente a ~41€ de auto. Ese es el argumento para dejar de
+perseguir auto — donde además la SERP la controlan comparadores (Rastreator, Acierto, Kelisto)
+y aseguradoras directas, y [Seguro] no se compite con este presupuesto.
+
+🚨 **Pero es una hipótesis razonable, NO una conclusión medida.** Tres huecos:
+1. **Muestra insuficiente**: hogar descansa en **8 recibos de 7 pólizas**; RC en 4; moto en 0.
+2. **Sesgo de Mapfre**: es el 64 % de la cartera y casi todo el auto, y **su último recibo
+   cobrado tiene efecto 02/04/2026 — faltan ~5 meses**. El 10,44 % de auto se mide sobre un
+   periodo más corto que el de hogar: **no son comparables a pelo**, y el auto está infravalorado.
+3. **Compañías sin dato**, que sesgan cualquier total: Mapfre manda recibos pero **cero
+   liquidaciones** (devengado, no confirmado en caja); **Reale** solo tiene un recibo `pendiente`
+   con fecha centinela `0001-01-01`; **Occident** liquida con remesa **0,00€** por saldo deudor
+   (compensación, **no impago**); **Generali** no tiene ni acceso CIMA ni pólizas vivas.
+
+⚠️ **La base histórica NO puede dar muestra de hogar/salud/decesos: es un hueco, no un 0.**
+`polizas` no tiene ninguna columna de comisión, y de las 28.733 pólizas históricas **solo 1**
+tiene recibo asociado. Los volúmenes históricos (**hogar 5.642 · salud 4.470 · decesos 773 ·
+comercio 110 · RC 72**) dicen dónde hubo negocio, pero **no a qué comisión**.
+
+📌 Nota de fuentes: el libro `comisiones_devengo` / `comisiones_cobertura` **existe, pero en el
+schema `public`** (lo crea `apps/plataforma/prisma/sql/2026-09-01_comisiones_devengo.sql` sin
+cualificar), no en `seguros`, y agrega por *(compañía, periodo)* — **no por ramo**. Para elegir
+ramo la fuente correcta es `seguros.poliza_recibos`, que es lo que se ha usado aquí.
 
 ### 1.3 Estado de la presencia pública (verificado 04/09/2026)
 
@@ -137,19 +165,22 @@ a uno al que sí se avisó.
 | 0.5 | **Pedir reseña de Google a los 80 clientes actuales** | Un GBP con 0 reseñas no convierte. Es el activo local nº1 y no cuesta un euro |
 | 0.6 | **Google Search Console** + analítica **sin cookies** | Sin GSC no sabes por qué consultas entras. Sin cookies no hay banner (§2.3) |
 
-### Fase 0.5 — Elegir el ramo con un dato, no con una intuición (semana 1)
+### Fase 0.5 — Elegir el ramo con un dato ✅ medido el 04/09/2026
 
-Medir contra `comisiones_devengo` / `poliza_recibos`: **comisión bruta media por póliza y por
-ramo**, y tasa de comisión implícita (`comision_bruta / prima_neta`).
+Hecho: ver la tabla de §1.2(c). **Hogar renta ~69€/póliza/año contra ~41€ de auto**, con tasa
+del 22 % frente al 10 %. **Ramo prioritario: hogar**, como hipótesis de trabajo.
 
-Esa cifra decide si se ataca **hogar, salud, comunidades o comercio**, y es además el
-**denominador obligatorio** de la Fase 4: sin comisión media por póliza no se puede decir si
-unos Ads son rentables.
+🚨 **Y lo que salió de paso, que es un problema de negocio, no de marketing: falta la ingesta de
+Mapfre desde el 02/04/2026** — ~5 meses sin un solo recibo cobrado de la compañía que es el 64 %
+de la cartera. O CIMA dejó de traerla, o hay recibos sin conciliar. **Eso se mira antes que
+cualquier campaña**: si Mapfre no está entrando, el libro de comisiones miente y con él
+cualquier decisión de ramo.
 
-⚠️ Al presentarla: **decir siempre qué compañías faltan**. La cobertura de CIMA es desigual
-(Mapfre manda recibos pero ninguna liquidación; Occident lleva meses en saldo deudor —comisión
-negativa, que **no** es un impago—; Generali no tiene acceso). Un total sin esa nota es una
-cifra falsa. Y en ramos con 1, 9 o 19 pólizas se dice **«muestra insuficiente»**, no una media.
+Lo que cierra la decisión (y no bloquea empezar): cerrar ese hueco de Mapfre y llegar a ~20
+pólizas de hogar medidas. Mientras tanto, **hogar se ataca como apuesta razonada, dicha como tal**.
+
+📌 La **comisión media por póliza (48,37€ de media, 68,74€ en hogar)** es además el
+**denominador obligatorio** de la Fase 5: con esa cifra ya se puede juzgar si unos Ads salen.
 
 ### Fase 1 — El embudo, ANTES que el tráfico (semanas 1-2)
 
@@ -171,7 +202,7 @@ fondo es pagar por perder leads.
 `apps/asegura-web`, app pública nueva (molde: `apps/housesevillana`), sobre
 **`grupoasegura.com` + `www`**. `app.` se queda con el CRM, intacto.
 
-- Home + **una página por ramo** (el prioritario de la Fase 0.5 primero, no los seis a la vez)
+- Home + **una página por ramo**, empezando por **hogar** (§1.2c), no los seis a la vez
 - **Quiénes somos con cara y nombre de Alberto** + clave DGSFP visible. Seguros es una compra de
   confianza: un corredor sin cara es un formulario más
 - **«Cambiar de correduría sin cambiar de seguro»** — convierte un lead en cliente **sin
@@ -216,8 +247,9 @@ impresiones era inalcanzable sin tráfico. **No automatizar el SEO antes de tene
 
 ### Fase 5 — Pago (mes 6+, y solo con dos cifras medidas)
 
-No antes de conocer **comisión media por póliza (Fase 0.5)** y **coste por lead del canal
-orgánico**. Sin las dos, cualquier gasto en Ads es una apuesta. [Seguro] El CPC de seguros es de
+La comisión media por póliza ya está medida (**48,37€ de media; 68,74€ en hogar**). Falta la otra
+mitad: el **coste por lead del canal orgánico**. Sin las dos no se puede juzgar un Ad, y con
+68,74€/año de ingreso por póliza de hogar el margen de error es estrecho. [Seguro] El CPC de seguros es de
 los más caros del mercado español y la comisión de una póliza es de decenas de euros al año: el
 CAC se come el margen del primer año, y puede que del segundo.
 
@@ -242,8 +274,9 @@ Recomendación: **0 € en publicidad los primeros 3 meses**; el dinero va a dom
 
 ## 5. Hallazgo de seguridad (no es marketing, pero lo bloquea)
 
-El advisor de Supabase avisa de que **74 tablas del schema `seguros` tienen RLS desactivado** y
-quedan expuestas a los roles `anon` / `authenticated`. Dentro hay DNI (60 % de las fichas), fecha
+El advisor de Supabase avisa de que **75 tablas del schema `seguros` tienen RLS desactivado** y
+quedan expuestas a los roles `anon` / `authenticated` — entre ellas las críticas `clientes`,
+`polizas`, `cliente_emails` y `cliente_telefonos`. Dentro hay DNI (60 % de las fichas), fecha
 de nacimiento (74 %) y ramos de salud/decesos/vida — **categoría especial del art. 9 RGPD** — de
 32.600 personas.
 
