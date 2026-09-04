@@ -7,6 +7,18 @@
 // «no lo sé» disfrazado— vive en ese módulo puro, no aquí: es la regla que
 // decide si un campo existe, y no puede depender de qué proveedor respondió.
 //
+// Se lee en DOS pasadas, y la segunda solo existe a veces:
+//   1ª — el CONTRATO y el vehículo, con un esquema fijo (`INSTRUCCION`).
+//   2ª — los campos propios DEL RAMO que haya salido de la primera, con una
+//        instrucción CONSTRUIDA a partir del catálogo (`camposDeRamo()`), nunca
+//        escrita a mano aquí: una segunda copia de la lista divergiría del
+//        catálogo sin que nada fallara, y entonces la IA no devolvería nunca el
+//        campo nuevo y la columna se quedaría a `null` para siempre.
+// La 2ª pasada NO se hace si el ramo no se reconoció o si su catálogo está
+// vacío: preguntar por una lista de cero campos es gastar una llamada de IA para
+// no traer nada. Y si falla, se degrada a `datosRamo: null` — la póliza se
+// guarda igual, con su contrato, y los campos del ramo se completan a mano.
+//
 // Los identificadores del BIEN (matrícula, bastidor y fecha de matriculación)
 // se leen aquí pero se validan en `lib/poliza-editable.ts`, que es puro: la
 // misma regla tiene que valer para lo que lee la máquina y para lo que corrige
@@ -14,16 +26,29 @@
 // tiene forma de bastidor sale `null` («no lo hemos sabido leer») y la póliza
 // se guarda igual; allí es un error que la persona ve.
 import { aiComplete, openrouterVision, cleanJSON } from '@central/core-ai'
-import { normalizarPolizaLeida, polizaLeidaVacia, type PolizaLeida } from '@central/module-seguros-portal'
+import {
+  MAX_TEXTO_RAMO,
+  camposDeRamo,
+  normalizarDatosRamo,
+  normalizarPolizaLeida,
+  polizaLeidaVacia,
+  type CampoRamo,
+  type DatosRamo,
+  type PolizaLeida,
+} from '@central/module-seguros-portal'
 
 import { normalizarVehiculoLeido, vehiculoLeidoVacio, type VehiculoLeido } from './poliza-editable'
 
 /**
- * Lo que se lee de un documento: el contrato (`PolizaLeida`) más el vehículo
- * (`VehiculoLeido`). Son cosas distintas —una póliza cambia, el coche no— y
- * viven juntas solo mientras no exista una ficha de bien propia.
+ * Lo que se lee de un documento: el contrato (`PolizaLeida`), el vehículo
+ * (`VehiculoLeido`) y los campos propios del ramo (`datosRamo`). Son cosas
+ * distintas —una póliza cambia, el coche no— y viven juntas solo mientras no
+ * exista una ficha de bien propia.
+ *
+ * `datosRamo: null` significa «no se ha podido leer ninguno», que NO es «esta
+ * póliza no tiene esos datos». Nunca es `{}`.
  */
-export type PolizaExtraida = PolizaLeida & VehiculoLeido
+export type PolizaExtraida = PolizaLeida & VehiculoLeido & { datosRamo: DatosRamo | null }
 
 export type ResultadoExtraccion = {
   datos: PolizaExtraida
@@ -42,9 +67,125 @@ Reglas:
 - "fechaMatriculacion": la fecha de PRIMERA MATRICULACIÓN del vehículo, que no es la fecha de efecto ni la de vencimiento de la póliza.
 - Si un dato NO aparece en el documento, pon null. NUNCA lo inventes ni lo deduzcas, y NUNCA escribas "N/A", "no consta", "desconocido" ni un guion: eso es null.`
 
+/** Todos los campos a `null`. La forma de un fallo de lectura tiene que ser la
+ *  MISMA que la de una lectura buena: si no, quien la guarda deja columnas sin
+ *  tocar en vez de escribir NULL. */
+function extraidaVacia(): PolizaExtraida {
+  return { ...polizaLeidaVacia(), ...vehiculoLeidoVacio(), datosRamo: null }
+}
+
 /** Nada leído: TODOS los campos a `null` y `fuente: 'none'`. */
 function nadaLeido(): ResultadoExtraccion {
-  return { datos: { ...polizaLeidaVacia(), ...vehiculoLeidoVacio() }, fuente: 'none' }
+  return { datos: extraidaVacia(), fuente: 'none' }
+}
+
+/**
+ * Cómo se le describe a la IA UN campo del catálogo. La forma sale del `tipo`,
+ * y el rango y las opciones del propio campo: así, el día que el catálogo gane
+ * un campo o cambie un rango, el prompt cambia solo. Escribir la lista a mano
+ * aquí sería la segunda copia que acaba divergiendo en silencio.
+ */
+function describirCampo(campo: CampoRamo): string {
+  const forma = (() => {
+    switch (campo.tipo) {
+      case 'texto':
+        return `texto, máximo ${MAX_TEXTO_RAMO} caracteres`
+      case 'numero':
+      case 'dinero': {
+        const unidad = campo.tipo === 'dinero' ? 'número en euros, con punto decimal' : 'número'
+        const min = campo.min === undefined ? null : `mínimo ${campo.min}`
+        const max = campo.max === undefined ? null : `máximo ${campo.max}`
+        const rango = [min, max].filter(Boolean).join(', ')
+        return rango ? `${unidad} (${rango})` : unidad
+      }
+      case 'fecha':
+        return 'fecha en formato "YYYY-MM-DD"'
+      case 'opcion':
+        return `EXACTAMENTE uno de estos valores: ${(campo.opciones ?? []).map((o) => `"${o.valor}"`).join(', ')}`
+      case 'triestado':
+        return 'true o false; null si el documento no lo dice'
+    }
+  })()
+  const ayuda = campo.ayuda ? ` ${campo.ayuda}` : ''
+  return `- "${campo.id}" (${forma}): ${campo.etiqueta}${ayuda}`
+}
+
+/**
+ * La instrucción de la 2ª pasada, CONSTRUIDA desde `camposDeRamo()`. Devuelve
+ * `null` cuando no hay nada que preguntar —ramo no reconocido o catálogo vacío—,
+ * y ese `null` es lo que ahorra la llamada.
+ */
+export function instruccionRamo(ramo: string | null): string | null {
+  const campos = camposDeRamo(ramo)
+  if (campos.length === 0) return null
+  const claves = campos.map((c) => `"${c.id}"`).join(',')
+  return `Eres un extractor de datos de pólizas de seguro españolas.
+Este documento es una póliza del ramo "${ramo}". Extrae SOLO los datos de esta lista.
+Devuelve SOLO un objeto JSON, sin texto alrededor, con estas claves y ninguna más: {${claves}}
+Campos:
+${campos.map(describirCampo).join('\n')}
+Reglas:
+- Si un dato NO aparece en el documento, pon null. NUNCA lo inventes, ni lo deduzcas, ni lo estimes.
+- NUNCA escribas "N/A", "no consta", "desconocido", "pendiente" ni un guion: eso es null.
+- No añadas claves que no estén en la lista.`
+}
+
+/**
+ * Lo leído en la 2ª pasada, normalizado CAMPO A CAMPO contra el catálogo del
+ * ramo. Uno a uno y no de golpe a propósito: un solo campo mal leído tiraría el
+ * objeto entero, y con él cuatro datos buenos. Un campo que no valida no llega
+ * a medias ni con un valor de cajón — sencillamente NO está, que es el «no lo
+ * sé» honesto; si no sobrevive ninguno, `null` (la columna vacía), nunca `{}`.
+ */
+export function normalizarDatosRamoLeidos(ramo: string | null, bruto: unknown): DatosRamo | null {
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) return null
+  const o = bruto as Record<string, unknown>
+  // El modelo puede devolver las claves sueltas o envueltas en `datosRamo`: se
+  // aceptan las dos formas, porque la alternativa es perder la lectura entera
+  // por cómo decidió anidar el JSON.
+  const anidado = o.datosRamo
+  const fuente =
+    anidado && typeof anidado === 'object' && !Array.isArray(anidado)
+      ? (anidado as Record<string, unknown>)
+      : o
+
+  const datos: Record<string, string | number | boolean> = {}
+  for (const campo of camposDeRamo(ramo)) {
+    if (!(campo.id in fuente)) continue
+    const r = normalizarDatosRamo(ramo, { [campo.id]: fuente[campo.id] })
+    if (!r.ok || r.datos === null) continue
+    Object.assign(datos, r.datos)
+  }
+  return Object.keys(datos).length === 0 ? null : datos
+}
+
+/**
+ * La 2ª pasada. `pedir` es lo único que cambia entre un PDF (texto) y una foto
+ * (visión), así que el resto —cuándo se pregunta, cómo se normaliza y qué pasa
+ * si falla— vive aquí una sola vez.
+ */
+async function leerDatosRamo(
+  datos: PolizaExtraida,
+  pedir: (instruccion: string) => Promise<string>,
+): Promise<PolizaExtraida> {
+  const instruccion = instruccionRamo(datos.ramo)
+  if (instruccion === null) return datos
+
+  let salida: string
+  try {
+    salida = await pedir(instruccion)
+  } catch (e) {
+    // «No lo hemos podido mirar», no «no hay datos»: el contrato ya leído se
+    // conserva y los campos del ramo se completan a mano.
+    console.warn('[portal] 2ª pasada (campos del ramo) falló:', e)
+    return datos
+  }
+
+  try {
+    return { ...datos, datosRamo: normalizarDatosRamoLeidos(datos.ramo, JSON.parse(cleanJSON(salida))) }
+  } catch {
+    return datos
+  }
 }
 
 export async function extraerPoliza(
@@ -73,7 +214,10 @@ export async function extraerPoliza(
       console.warn('[portal] aiComplete falló:', e)
       return nadaLeido()
     }
-    return { datos: parsear(salida), fuente: 'texto' }
+    const datos = await leerDatosRamo(parsear(salida), (instruccion) =>
+      aiComplete(texto.slice(0, 20_000), { system: instruccion, maxTokens: 400 }),
+    )
+    return { datos, fuente: 'texto' }
   }
 
   if (mimeType.startsWith('image/')) {
@@ -91,7 +235,15 @@ export async function extraerPoliza(
       console.warn('[portal] openrouterVision falló:', e)
       return nadaLeido()
     }
-    return { datos: parsear(salida), fuente: 'vision' }
+    const datos = await leerDatosRamo(parsear(salida), (instruccion) =>
+      openrouterVision(
+        { apiKey },
+        instruccion,
+        [{ data: buffer.toString('base64'), mediaType: mimeType }],
+        'Extrae los datos de esta póliza.',
+      ),
+    )
+    return { datos, fuente: 'vision' }
   }
 
   return nadaLeido()
@@ -108,13 +260,21 @@ export async function extraerPoliza(
  * mano. Ninguna de las dos lanza.
  */
 export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): PolizaExtraida {
-  return { ...normalizarPolizaLeida(bruto), ...normalizarVehiculoLeido(bruto, hoy) }
+  const contrato = normalizarPolizaLeida(bruto)
+  return {
+    ...contrato,
+    ...normalizarVehiculoLeido(bruto, hoy),
+    // Normalmente `null`: los campos del ramo los trae la 2ª pasada. Se mira
+    // aquí igualmente porque un modelo puede devolverlos ya en la primera, y
+    // tirarlos obligaría a preguntar otra vez por algo que ya está dicho.
+    datosRamo: normalizarDatosRamoLeidos(contrato.ramo, bruto),
+  }
 }
 
 function parsear(salida: string): PolizaExtraida {
   try {
     return parsearPolizaExtraida(JSON.parse(cleanJSON(salida)))
   } catch {
-    return { ...polizaLeidaVacia(), ...vehiculoLeidoVacio() }
+    return extraidaVacia()
   }
 }

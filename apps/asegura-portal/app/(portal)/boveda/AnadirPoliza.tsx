@@ -48,6 +48,12 @@ export function AnadirPoliza({
 }) {
   const router = useRouter()
   const [form, setForm] = useState<Formulario>(FORMULARIO_VACIO)
+  // Los campos del ramo se guardan aunque se cambie de tipo de seguro y luego
+  // se vuelva: lo que sobra lo descarta `normalizarDatosRamo` en el servidor
+  // contra el catálogo del ramo final. Borrarlos aquí al cambiar el select
+  // castigaría al que se equivoca de opción y rectifica.
+  const [datosRamo, setDatosRamo] = useState<Record<string, string>>({})
+  const [erroresRamo, setErroresRamo] = useState<Record<string, string | undefined>>({})
   const [guardando, setGuardando] = useState(false)
   const [errores, setErrores] = useState<Errores>({})
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)
@@ -55,6 +61,12 @@ export function AnadirPoliza({
   function escribir(campo: Campo, valor: string) {
     setForm((f) => ({ ...f, [campo]: valor }))
     setErrores((e) => ({ ...e, [campo]: undefined }))
+    setErrorGeneral(null)
+  }
+
+  function escribirRamo(id: string, valor: string) {
+    setDatosRamo((d) => ({ ...d, [id]: valor }))
+    setErroresRamo((e) => ({ ...e, [id]: undefined }))
     setErrorGeneral(null)
   }
 
@@ -96,6 +108,10 @@ export function AnadirPoliza({
           matricula: form.matricula.trim() || null,
           bastidor: form.bastidor.trim() || null,
           fechaMatriculacion: form.fechaMatriculacion || null,
+          // Los del ramo van tal cual se teclearon: quien decide qué es un dato
+          // es el catálogo, en el servidor, y no esta pantalla. Aquí solo se
+          // quitan los vacíos, que son «no lo sé» y no tienen que viajar.
+          datosRamo: Object.fromEntries(Object.entries(datosRamo).filter(([, v]) => v.trim() !== '')),
         }),
       })
 
@@ -142,6 +158,9 @@ export function AnadirPoliza({
         escribir={escribir}
         disabled={guardando}
         ayudaPrima="Lo que pagas al año. Si no lo sabes, déjalo en blanco."
+        datosRamo={datosRamo}
+        escribirRamo={escribirRamo}
+        erroresRamo={erroresRamo}
       />
 
       {errorGeneral && (

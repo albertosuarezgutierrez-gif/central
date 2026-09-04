@@ -57,6 +57,29 @@
 //      sí es prueba de fuera del modelo. Y una fecha que lleva tiempo cara no cumple (a): esa la
 //      sigue tratando la llave por antigüedad, que es más lenta a propósito.
 
+//   4. DESCENSO EN CURSO. La guarda de outlier impide bajar «a ciegas» una noche que va +40% sobre
+//      lo normal del mes. Pero mide ese +40% contra `normalBase` de HOY, y `normalBase` se mueve:
+//      cuando el ancla del piso baja de golpe —una recalibración, un corpus nuevo— la distancia
+//      aparece sin que el precio se haya tocado, y la guarda la lee como «esta noche es especial».
+//
+//      Caso fundacional (04/09/2026). El 03/09 se recalibró el ancla a la baja (#2192, #2228) y
+//      `normalBase` cayó ~25% de golpe: **448 noches de los cuatro pisos** pasaron a cumplir la
+//      condición de outlier sin que nadie hubiera subido nada, y se quedaron clavadas ARRIBA. Y lo
+//      que las delata: en 243/279/186/242 de las noches lejanas a la venta **nuestra última
+//      escritura fue una BAJADA**. O sea, el motor había decidido bajar, bajó lo que el raíl del
+//      ±20%/día le dejó… y en la pasada siguiente su propia guarda le impidió terminar. Un descenso
+//      que necesita 4-5 pasadas se paraba en la primera.
+//
+//      La guarda existe para frenar una bajada A CIEGAS. Un descenso que el propio motor empezó y
+//      que sigue queriendo continuar no es ciego: es el mismo juicio, a medio aplicar. Por eso se
+//      libera cuando nuestra última escritura reciente fue a la baja y su precio es el que sigue
+//      vivo — si el propietario lo ha vuelto a subir en Smoobu, ese precio ya no es nuestro y la
+//      guarda retiene.
+//
+//      Es la simétrica de la llave 3: aquella deshace nuestra SUBIDA disparada, esta termina
+//      nuestra BAJADA interrumpida. Las dos parten de lo mismo — nuestra propia escritura reciente
+//      no es prueba de nada sobre el mercado.
+
 // 🚨 Lo que esto NO hace: no baja ningún precio por su cuenta ni toca el objetivo. Solo retira el
 // veto de las guardas para que el resto del motor —raíl, suelos, techo— haga su trabajo. Y NO se
 // aplica cuando la fecha SÍ tiene un evento vivo con premio: ahí el objetivo ya sube por su cuenta
@@ -75,6 +98,14 @@ export const DIAS_CONGELADA = 21
  */
 export const HORAS_SALTO_NUESTRO = 48
 
+/**
+ * Días dentro de los cuales una bajada nuestra sigue siendo «un descenso en curso». El raíl es de
+ * ±20% por día, así que deshacer un 1,8× cuesta 4-5 pasadas: la ventana tiene que cubrir el
+ * descenso entero o la guarda lo volvería a parar a mitad. Más allá, la fecha ya se ha estabilizado
+ * y vuelve a mandar la llave por antigüedad, que es más lenta a propósito.
+ */
+export const DIAS_DESCENSO_EN_CURSO = 7
+
 export type DescongelarInput = {
   /**
    * Días desde la última escritura de ESA fecha en `pricing_applied`.
@@ -91,6 +122,11 @@ export type DescongelarInput = {
    * Lo calcula quien tiene los precios delante (el route); aquí solo se decide con él.
    */
   saltoNuestro?: boolean
+  /**
+   * Nuestra última escritura reciente sobre esta fecha fue una BAJADA y su precio es el que sigue
+   * vivo: el motor está a medio descenso y la guarda no puede interrumpirlo.
+   */
+  descensoEnCurso?: boolean
 }
 
 export type DescongelarOpts = {
@@ -121,6 +157,11 @@ export function descongelar(i: DescongelarInput, o: DescongelarOpts = {}): Desco
     return { libera: true, motivo: 'la subida que la puso cara la escribió el motor hace horas' }
   }
 
+  // Simétrica de la anterior: el motor ya decidió bajar y el raíl no le dejó llegar en una pasada.
+  if (i.descensoEnCurso) {
+    return { libera: true, motivo: 'el motor ya está bajando esta fecha y el raíl no le dejó llegar' }
+  }
+
   const dias = i.diasSinEscribir
   if (dias == null) {
     return { libera: true, motivo: 'el motor nunca ha podido ponerle precio a esta fecha' }
@@ -147,6 +188,8 @@ export function detalleDescongeladas(
       ? 'rumor descartado'
       : f.motivo.includes('el motor hace horas')
         ? 'subida propia reciente'
+        : f.motivo.includes('ya está bajando')
+          ? 'descenso en curso'
         : f.motivo.includes('nunca')
           ? 'nunca tarificada'
           : 'antigüedad'
@@ -200,4 +243,30 @@ export function esSaltoNuestro(ue: UltimaEscritura | null, ctx: SaltoNuestroCtx)
   const techo = ctx.normalBase * ctx.umbral
   if (!(ue.ult > techo) || ue.prev > techo) return false                                // (c)
   return Math.round(ue.ult) === Math.round(ctx.old)                                     // (d)
+}
+
+/**
+ * ¿Estamos a medio bajar esta fecha nosotros mismos?
+ *
+ * Exige las tres a la vez, y cada una descarta un caso en el que la guarda SÍ debe retener:
+ *  (a) reciente — pasada la ventana, la fecha ya se estabilizó y manda la llave por antigüedad;
+ *  (b) fue una BAJADA nuestra — si nuestra última escritura subió, esto no es un descenso;
+ *  (c) su precio es el que sigue vivo — si el propietario lo ha vuelto a subir en Smoobu, el precio
+ *      de hoy es SUYO y viene de fuera del modelo.
+ *
+ * Nótese que NO mira el objetivo de hoy: la condición `target < old` ya la comprueba la guarda que
+ * llama a esto, y duplicarla aquí solo añadiría un sitio más donde equivocarse.
+ *
+ * Sin lectura de historial (`null`) devuelve `false`: no poder comprobarlo no es haber comprobado
+ * que el descenso es nuestro.
+ */
+export function esDescensoNuestro(
+  ue: UltimaEscritura | null,
+  ctx: { old: number | null; diasMax?: number },
+): boolean {
+  if (!ue || ctx.old == null) return false
+  const horasMax = (ctx.diasMax ?? DIAS_DESCENSO_EN_CURSO) * 24
+  if (!Number.isFinite(ue.horas) || ue.horas < 0 || ue.horas > horasMax) return false  // (a)
+  if (ue.prev == null || !(ue.ult < ue.prev)) return false                             // (b)
+  return Math.round(ue.ult) === Math.round(ctx.old)                                    // (c)
 }

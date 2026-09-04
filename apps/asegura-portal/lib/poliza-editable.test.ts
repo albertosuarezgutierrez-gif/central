@@ -15,6 +15,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
+import { camposDeRamo, RAMOS_POLIZA } from '@central/module-seguros-portal'
+
 import { normalizarAlta, normalizarParche } from './poliza-editable.ts'
 
 const HOY = new Date(Date.UTC(2026, 8, 3))
@@ -53,12 +55,14 @@ test('solo compañia basta, y el resto sale a null (no ausente)', () => {
     matricula: null,
     bastidor: null,
     fechaMatriculacion: null,
+    datosRamo: null,
   })
-  // Las ocho claves EXISTEN: en un alta «no lo toques» no significa nada, así
+  // Las nueve claves EXISTEN: en un alta «no lo toques» no significa nada, así
   // que un campo que no se rellenó vale `null` y está presente, nunca ausente.
   assert.deepEqual(Object.keys(d).sort(), [
     'bastidor',
     'compania',
+    'datosRamo',
     'fechaMatriculacion',
     'fechaVencimiento',
     'matricula',
@@ -182,16 +186,20 @@ test('la fecha de matriculacion mira al PASADO, al reves que el vencimiento', ()
   assert.equal(falloP(normalizarParche({ fechaVencimiento: '1970-01-01' }, HOY)), 'fecha_fuera_de_rango')
 })
 
-test('el alta a mano tiene OCHO campos: los cinco de la poliza y los tres del vehiculo', () => {
+test('el alta a mano tiene NUEVE campos: la poliza, el vehiculo y los del ramo', () => {
   // La forma de `DatosAlta` la fija `test/regression-portal-poliza-editable.test.ts`
   // (raíz) con un `deepEqual` del objeto entero, y los dos se actualizan a la vez:
   // ese cepo existe para que añadir un campo al alta sea una decisión y no un
   // descuido. Los tres del vehículo entraron el 03/09/2026 porque el alta a mano
-  // es donde el cliente teclea la matrícula, y de ahí sale la fecha estimada.
+  // es donde el cliente teclea la matrícula, y de ahí sale la fecha estimada;
+  // `datosRamo` entró el 04/09/2026 porque el formulario del alta es donde se
+  // despliegan los campos del ramo elegido — si no se pudieran declarar al
+  // crear, se pedirían dos veces o no se pedirían nunca.
   const d = ok(normalizarAlta({ compania: 'Axa', matricula: '1234BCD', bastidor: 'WVWZZZ1KZAW123456' }, HOY))
   assert.deepEqual(Object.keys(d).sort(), [
     'bastidor',
     'compania',
+    'datosRamo',
     'fechaMatriculacion',
     'fechaVencimiento',
     'matricula',
@@ -201,4 +209,82 @@ test('el alta a mano tiene OCHO campos: los cinco de la poliza y los tres del ve
   ])
   assert.equal(d.matricula, '1234BCD')
   assert.equal(d.bastidor, 'WVWZZZ1KZAW123456')
+})
+
+
+// ─── `datosRamo` en el PATCH: QUÉ RAMO manda al validar ──────────────────────
+//
+// Los campos específicos no significan nada sin su ramo, y en un parche el ramo
+// puede venir en el propio cuerpo o estar ya guardado. Lo que se fija aquí es la
+// decisión, porque las tres alternativas fallan en silencio:
+//   · validar contra el ramo VIEJO dejaría entrar datos que la pantalla del ramo
+//     nuevo no enseña nunca;
+//   · dejar los del ramo viejo al cambiar de ramo los ENTIERRA (invisibles en la
+//     pantalla, presentes en la columna, listos para reaparecer);
+//   · y aceptar `datosRamo` sin saber el ramo vaciaría la columna en cada
+//     corrección de la prima sin que nada fallara.
+
+/** Un ramo con algún campo de texto, leído del catálogo EN CALIENTE: lo llena
+ *  otra gente, y fijar aquí sus campos rompería el test con cada uno nuevo. */
+function campoTextoDelCatalogo(): { ramo: string; id: string } | null {
+  for (const ramo of RAMOS_POLIZA) {
+    const campo = camposDeRamo(ramo).find((c) => c.tipo === 'texto')
+    if (campo) return { ramo, id: campo.id }
+  }
+  return null
+}
+
+test('manda el ramo que la poliza VA A TENER: el del parche gana al guardado', () => {
+  const elegido = campoTextoDelCatalogo()
+  if (!elegido) return // catálogo vacío: no hay nada que validar todavía
+
+  // Ramo en el parche → se valida contra ESE catálogo, aunque haya otro guardado.
+  const p = normalizarParche(
+    { ramo: elegido.ramo, datosRamo: { [elegido.id]: 'Un valor' } },
+    HOY,
+    { ramoGuardado: 'vida' },
+  )
+  assert.equal(p.ok, true, JSON.stringify(p))
+  assert.deepEqual((p as { ok: true; parche: { datosRamo: unknown } }).parche.datosRamo, {
+    [elegido.id]: 'Un valor',
+  })
+
+  // Sin ramo en el parche → manda el GUARDADO, que es el que la póliza tiene.
+  const q = normalizarParche({ datosRamo: { [elegido.id]: 'Otro' } }, HOY, { ramoGuardado: elegido.ramo })
+  assert.deepEqual((q as { ok: true; parche: { datosRamo: unknown } }).parche.datosRamo, {
+    [elegido.id]: 'Otro',
+  })
+})
+
+test('cambiar de ramo LIMPIA los datos del anterior, en vez de enterrarlos', () => {
+  // Los campos del ramo viejo se quedan sin catálogo: ni se enseñan ni se pueden
+  // corregir. Se prefiere perder un dato descriptivo a conservar uno invisible
+  // que reaparecería el día que alguien volviera al ramo original.
+  const p = normalizarParche({ ramo: 'vida' }, HOY, { ramoGuardado: 'hogar' })
+  assert.equal('datosRamo' in okP(p), true, 'el cambio de ramo tiene que arrastrar el borrado')
+  assert.equal(okP(p).datosRamo, null)
+
+  // Y si el ramo NO cambia, no se toca nada: la clave ni siquiera viaja.
+  const q = normalizarParche({ ramo: 'hogar', compania: 'Axa' }, HOY, { ramoGuardado: 'hogar' })
+  assert.equal('datosRamo' in okP(q), false, 'sin cambio de ramo, datosRamo no puede viajar en el parche')
+
+  // Lo mismo cuando el parche no menciona el ramo: corregir la prima no puede
+  // borrar los campos del ramo. Es el modo de fallo silencioso que se persigue.
+  const r = normalizarParche({ primaAnual: 300 }, HOY, { ramoGuardado: 'hogar' })
+  assert.equal('datosRamo' in okP(r), false)
+})
+
+test('sin ramo conocido, datosRamo es un ERROR; borrarlo NO necesita ramo', () => {
+  // `ramoGuardado` ausente = «no se ha consultado». Aceptarlo callando sería
+  // vaciar la columna con cada parche que no dijera el ramo.
+  assert.equal(falloP(normalizarParche({ datosRamo: { loQueSea: 1 } }, HOY)), 'datos_ramo_sin_ramo')
+  // Consultado y sin ramo en la póliza: mismo caso, no hay catálogo.
+  assert.equal(
+    falloP(normalizarParche({ datosRamo: { loQueSea: 1 } }, HOY, { ramoGuardado: null })),
+    'datos_ramo_sin_ramo',
+  )
+  // Pero BORRAR no exige catálogo: `null` vacía la columna diga lo que diga el ramo.
+  const p = normalizarParche({ datosRamo: null }, HOY)
+  assert.equal(p.ok, true)
+  assert.equal((p as { ok: true; parche: { datosRamo: unknown } }).parche.datosRamo, null)
 })
