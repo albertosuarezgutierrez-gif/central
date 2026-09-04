@@ -19,7 +19,8 @@
 // no traer nada. Y si falla, se degrada a `datosRamo: null` — la póliza se
 // guarda igual, con su contrato, y los campos del ramo se completan a mano.
 //
-// Los identificadores del BIEN (matrícula, bastidor y fecha de matriculación)
+// Los identificadores del BIEN (matrícula, bastidor y fecha de matriculación
+// para el vehículo; la referencia catastral para el inmueble)
 // se leen aquí pero se validan en `lib/poliza-editable.ts`, que es puro: la
 // misma regla tiene que valer para lo que lee la máquina y para lo que corrige
 // a mano la persona. Lo único que cambia es la reacción — aquí, un valor que no
@@ -30,14 +31,21 @@ import {
   MAX_TEXTO_RAMO,
   camposDeRamo,
   normalizarDatosRamo,
+  normalizarOrigenes,
   normalizarPolizaLeida,
   polizaLeidaVacia,
   type CampoRamo,
   type DatosRamo,
+  type OrigenPorCampo,
   type PolizaLeida,
 } from '@central/module-seguros-portal'
 
-import { normalizarVehiculoLeido, vehiculoLeidoVacio, type VehiculoLeido } from './poliza-editable'
+import {
+  normalizarReferenciaCatastralLeida,
+  normalizarVehiculoLeido,
+  vehiculoLeidoVacio,
+  type VehiculoLeido,
+} from './poliza-editable'
 
 /**
  * Lo que se lee de un documento: el contrato (`PolizaLeida`), el vehículo
@@ -48,7 +56,25 @@ import { normalizarVehiculoLeido, vehiculoLeidoVacio, type VehiculoLeido } from 
  * `datosRamo: null` significa «no se ha podido leer ninguno», que NO es «esta
  * póliza no tiene esos datos». Nunca es `{}`.
  */
-export type PolizaExtraida = PolizaLeida & VehiculoLeido & { datosRamo: DatosRamo | null }
+export type PolizaExtraida = PolizaLeida &
+  VehiculoLeido & {
+    /**
+     * La referencia catastral del INMUEBLE (20 caracteres), el equivalente de la
+     * matrícula para hogar, comercio y comunidades. Una de 14 —la de la FINCA—
+     * llega `null`: es la del edificio, y con ella el autorrelleno del Catastro
+     * traería los metros del bloque entero a una póliza de un piso.
+     */
+    referenciaCatastral: string | null
+    datosRamo: DatosRamo | null
+    /**
+     * De dónde salió cada clave de `datosRamo`. Aquí SIEMPRE `documento`: lo ha
+     * leído una máquina de un PDF o de una foto, que no es lo mismo que un dato
+     * que la persona teclea (`declarado`) ni que uno que acepta del Catastro
+     * (`catastro`). Se deriva de `datosRamo`, nunca se escribe suelto: un origen
+     * sin su dato es una afirmación sobre algo que no existe.
+     */
+    datosRamoOrigen: OrigenPorCampo | null
+  }
 
 export type ResultadoExtraccion = {
   datos: PolizaExtraida
@@ -58,20 +84,43 @@ export type ResultadoExtraccion = {
 
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null}
+{"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
 Reglas:
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
 - "primaAnual" en euros, solo el número, con punto decimal.
 - "matricula": la matrícula española del vehículo asegurado, tal cual aparece.
 - "bastidor": el número de bastidor o VIN del vehículo, 17 caracteres. Cópialo carácter a carácter; NUNCA lo completes, ni lo corrijas, ni rellenes los que no leas.
 - "fechaMatriculacion": la fecha de PRIMERA MATRICULACIÓN del vehículo, que no es la fecha de efecto ni la de vencimiento de la póliza.
+- "referenciaCatastral": la referencia catastral del inmueble asegurado, tal cual aparece. Cópiala carácter a carácter; NUNCA la completes ni la corrijas.
 - Si un dato NO aparece en el documento, pon null. NUNCA lo inventes ni lo deduzcas, y NUNCA escribas "N/A", "no consta", "desconocido" ni un guion: eso es null.`
 
 /** Todos los campos a `null`. La forma de un fallo de lectura tiene que ser la
  *  MISMA que la de una lectura buena: si no, quien la guarda deja columnas sin
  *  tocar en vez de escribir NULL. */
 function extraidaVacia(): PolizaExtraida {
-  return { ...polizaLeidaVacia(), ...vehiculoLeidoVacio(), datosRamo: null }
+  return {
+    ...polizaLeidaVacia(),
+    ...vehiculoLeidoVacio(),
+    referenciaCatastral: null,
+    datosRamo: null,
+    datosRamoOrigen: null,
+  }
+}
+
+/**
+ * Los orígenes de lo que ha leído la máquina: TODAS las claves de `datosRamo` a
+ * `documento`, y ninguna más. Se DERIVA de los datos en vez de escribirse a mano
+ * en cada sitio, que es lo que garantiza que no pueda quedar un origen huérfano
+ * («los metros vienen del documento» sin metros) — el sello de «verificado»
+ * sobre un hueco. `normalizarOrigenes` remata la faena descartando lo que no
+ * exista en los datos; sin datos, `null`, nunca `{}`.
+ */
+export function origenesDelDocumento(datos: DatosRamo | null): OrigenPorCampo | null {
+  if (datos === null) return null
+  return normalizarOrigenes(
+    datos,
+    Object.fromEntries(Object.keys(datos).map((clave) => [clave, 'documento'])),
+  )
 }
 
 /** Nada leído: TODOS los campos a `null` y `fuente: 'none'`. */
@@ -182,7 +231,10 @@ async function leerDatosRamo(
   }
 
   try {
-    return { ...datos, datosRamo: normalizarDatosRamoLeidos(datos.ramo, JSON.parse(cleanJSON(salida))) }
+    const datosRamo = normalizarDatosRamoLeidos(datos.ramo, JSON.parse(cleanJSON(salida)))
+    // Datos y orígenes se reemplazan JUNTOS: los de la 1ª pasada hablaban de los
+    // valores de la 1ª pasada, y aquí acaban de cambiar.
+    return { ...datos, datosRamo, datosRamoOrigen: origenesDelDocumento(datosRamo) }
   } catch {
     return datos
   }
@@ -261,13 +313,21 @@ export async function extraerPoliza(
  */
 export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): PolizaExtraida {
   const contrato = normalizarPolizaLeida(bruto)
+  // Normalmente `null`: los campos del ramo los trae la 2ª pasada. Se mira
+  // aquí igualmente porque un modelo puede devolverlos ya en la primera, y
+  // tirarlos obligaría a preguntar otra vez por algo que ya está dicho.
+  const datosRamo = normalizarDatosRamoLeidos(contrato.ramo, bruto)
+  const o = bruto && typeof bruto === 'object' ? (bruto as Record<string, unknown>) : {}
   return {
     ...contrato,
     ...normalizarVehiculoLeido(bruto, hoy),
-    // Normalmente `null`: los campos del ramo los trae la 2ª pasada. Se mira
-    // aquí igualmente porque un modelo puede devolverlos ya en la primera, y
-    // tirarlos obligaría a preguntar otra vez por algo que ya está dicho.
-    datosRamo: normalizarDatosRamoLeidos(contrato.ramo, bruto),
+    // La misma regla que valida la corrección a mano (`lib/poliza-editable.ts`),
+    // con la reacción de la máquina: lo que no sea la referencia del INMUEBLE
+    // —incluida la de la FINCA, que es real pero es la del edificio— sale `null`
+    // y la póliza se guarda igual, para completarla a mano.
+    referenciaCatastral: normalizarReferenciaCatastralLeida(o.referenciaCatastral),
+    datosRamo,
+    datosRamoOrigen: origenesDelDocumento(datosRamo),
   }
 }
 

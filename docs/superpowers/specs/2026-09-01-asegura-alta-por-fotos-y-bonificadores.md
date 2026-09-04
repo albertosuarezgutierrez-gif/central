@@ -153,7 +153,7 @@ mínima que quiere Alberto—, pero **obliga a decirlo en pantalla**, que es lo 
 
 - Las fuentes públicas dicen «Entidades Aseguradoras» y remiten a un **listado de entidades
   adheridas** de UNESPA. **Una correduría no es una entidad aseguradora**, así que **NO está
-  confirmado que Grupo Asegura pueda consultarlo directamente.**
+  confirmado que Grupo ASegura pueda consultarlo directamente.**
 - ✅ **Lo que sí está claro:** el **propio asegurado puede pedir su historial gratis** identificándose
   con DNI y número de póliza. Esa es una vía inmediata y sin contrato: **pedírselo al cliente**.
 - 📮 **Lo que hay que preguntar** (y Alberto ya tiene relación con TIREA por CIMA, así que puede ser

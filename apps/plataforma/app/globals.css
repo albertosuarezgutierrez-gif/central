@@ -662,7 +662,7 @@ html[data-saldo-oculto='1'] .saldo-privado {
   .neg-grid { grid-template-columns: 1fr; }
 }
 
-/* === Acento de sección: la correduría (Grupo Asegura) ========================
+/* === Acento de sección: la correduría (Grupo ASegura) ========================
    Alberto pidió (03/09/2026) que la correduría se pareciera a la app que hizo
    Manuel, `app.grupoasegura.com`. Sus colores NO están puestos a ojo: salen de
    `src/app/globals.css` de ese repo, convertidos de oklch a hex —

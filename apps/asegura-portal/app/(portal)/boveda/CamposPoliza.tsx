@@ -24,6 +24,7 @@
  */
 
 import { camposDeRamo, type CampoRamo } from '@central/module-seguros-portal'
+import { BuscarInmueble, type DatosAceptados } from './BuscarInmueble'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 
 export type RamoOpcion = { valor: string; etiqueta: string }
@@ -166,6 +167,18 @@ type Props = {
    */
   datosRamo?: Record<string, string>
   escribirRamo?: (id: string, valor: string) => void
+  /**
+   * La referencia catastral YA guardada, solo para enseñarla. Es columna y no
+   * una clave de `datos_ramo` porque identifica el BIEN y se consulta.
+   */
+  referenciaCatastral?: string
+  /**
+   * Qué hacer cuando la persona ACEPTA lo que ha dicho el Catastro. Opcional
+   * por la misma razón que `escribirRamo`: sin ella no se pinta el buscador,
+   * porque una consulta cuyo «Usar estos datos» no guarda nada es peor que no
+   * ofrecerla.
+   */
+  aceptarCatastro?: (d: DatosAceptados) => void
   erroresRamo?: Record<string, string | undefined>
 }
 
@@ -180,6 +193,8 @@ export function CamposPoliza({
   ayudaPrima,
   datosRamo,
   escribirRamo,
+  referenciaCatastral,
+  aceptarCatastro,
   erroresRamo,
 }: Props) {
   const hueco = (campo: 'compania' | 'numeroPoliza' | 'ramo') => ayudaHueco?.(campo) ?? null
@@ -303,6 +318,8 @@ export function CamposPoliza({
         disabled={disabled}
         datosRamo={datosRamo}
         escribirRamo={escribirRamo}
+        referenciaCatastral={referenciaCatastral}
+        aceptarCatastro={aceptarCatastro}
         erroresRamo={erroresRamo}
       />
     </>
@@ -340,6 +357,8 @@ function BloqueDelRamo({
   datosRamo,
   escribirRamo,
   erroresRamo,
+  referenciaCatastral,
+  aceptarCatastro,
 }: {
   idPrefix: string
   form: Formulario
@@ -349,11 +368,17 @@ function BloqueDelRamo({
   datosRamo?: Record<string, string>
   escribirRamo?: (id: string, valor: string) => void
   erroresRamo?: Record<string, string | undefined>
+  referenciaCatastral?: string
+  aceptarCatastro?: (d: DatosAceptados) => void
 }) {
   const conVehiculo = RAMOS_CON_VEHICULO.has(form.ramo)
   // Sin `escribirRamo` esta pantalla no gestiona los campos del catálogo (ver
   // la nota de las props): se comporta como si el ramo no tuviera ninguno.
   const campos = escribirRamo ? camposDeRamo(form.ramo) : []
+  // El buscador del Catastro solo tiene sentido donde hay algo que rellenar con
+  // él: lo dice el propio catálogo (`desdeCatastro`), no una lista de ramos
+  // aparte que se quedaría atrás el día que se añada «comunidades».
+  const conCatastro = campos.some((c) => c.desdeCatastro === true)
   if (!conVehiculo && campos.length === 0) return null
 
   return (
@@ -365,6 +390,15 @@ function BloqueDelRamo({
 
       {conVehiculo && (
         <CamposVehiculo idPrefix={idPrefix} form={form} errores={errores} escribir={escribir} disabled={disabled} />
+      )}
+
+      {conCatastro && (
+        <BuscarInmueble
+          idPrefix={idPrefix}
+          disabled={disabled}
+          referenciaActual={referenciaCatastral}
+          aceptar={aceptarCatastro}
+        />
       )}
 
       {escribirRamo &&

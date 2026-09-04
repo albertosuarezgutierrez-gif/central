@@ -35,7 +35,7 @@ export default function LoginPage() {
   return (
     <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', padding: 16 }}>
       <form onSubmit={onSubmit} className="card" style={{ width: '100%', maxWidth: 360 }}>
-        <h1 style={{ color: 'var(--brand)' }}>Grupo Asegura</h1>
+        <h1 style={{ color: 'var(--brand)' }}>Grupo ASegura</h1>
         <p className="muted" style={{ marginTop: -2 }}>Correduría de seguros</p>
         <div className="grid" style={{ marginTop: 14 }}>
           <div>

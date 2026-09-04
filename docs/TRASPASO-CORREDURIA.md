@@ -622,7 +622,7 @@ migración irreversible.
 | A2 | Invitar a Manuel a **Vercel** (equipo `pisos-turisticos-projects`, plan **Pro** ✅) | Un *Transfer Project* solo puede apuntar a un equipo del que el emisor sea miembro |
 | A3 | Invitar a Manuel a la **organización Supabase** (`fzagbwkkzfjlsvflkkvn`, plan **free**, hoy con 1 proyecto: `central`) | Igual: el traspaso va de organización a organización |
 | A4 | Invitar a Manuel a la **org de Fly** recién creada | Para poder mover la app entre orgs |
-| A5 | Abrir en el gestor de contraseñas una entrada **«Grupo Asegura»** con huecos para: clave de cifrado, clave de índice ciego, `CRON_SECRET`, secrets de TIREA/Fly, `wa_access_token` | Es el sitio donde aterrizan los valores. Ni WhatsApp ni email |
+| A5 | Abrir en el gestor de contraseñas una entrada **«Grupo ASegura»** con huecos para: clave de cifrado, clave de índice ciego, `CRON_SECRET`, secrets de TIREA/Fly, `wa_access_token` | Es el sitio donde aterrizan los valores. Ni WhatsApp ni email |
 | A6 | **Comprobar que la org free acepta un 2º proyecto** y si el de Manuel es de pago | 🔴 Ver abajo. Se comprueba **el día antes**, no el mismo día |
 
 **A6 en detalle — el único hueco que puede obligar a cambiar de plan sobre la marcha.** La
@@ -1133,7 +1133,7 @@ cuatro cosas concretas**, y son mucho más fáciles de conceder:
 
 | Pieza | Nombre | Por qué |
 |---|---|---|
-| Vertical / carpeta / proyecto Vercel | **`apps/asegura`** | Es la **marca** del negocio, «Grupo Asegura». Y la carpeta ya existe con su SQL aplicado (PR #1489): renombrarla ahora sería churn sin ganancia |
+| Vertical / carpeta / proyecto Vercel | **`apps/asegura`** | Es la **marca** del negocio, «Grupo ASegura». Y la carpeta ya existe con su SQL aplicado (PR #1489): renombrarla ahora sería churn sin ganancia |
 | Schema de la BD | **`seguros`** | **Ya creado y aplicado** en `central`. Es el **dominio**, no la marca: si mañana la marca cambia, el schema no se toca |
 | Rol de BD de la app | **`prisma_seguros`** | Ya creado (inerte, sin contraseña). Renombrar un rol vivo por estética no se hace |
 | Módulo compartido, si aparece | **`packages/module-seguros`** | Los módulos van por dominio (`module-pesca`, `module-flota`), no por marca |

@@ -159,6 +159,11 @@ const NUNCA_A_UN_TERCERO = {
   iban: false,
   dniTomador: false,
   documentos: false,
+  // Un siniestro abierto es un hecho de la vida del otorgante, no un dato del
+  // contrato: «tu padre tiene un parte abierto» no es lo que nadie cree estar
+  // enseñando al dejar ver sus seguros. Ni siquiera con `ver_economico`, que
+  // abre lo ECONÓMICO de la póliza y no los sucesos de quien la tiene.
+  siniestros: false,
   abrirParte: false,
   crearPeticiones: false,
   autorizarTerceros: false,

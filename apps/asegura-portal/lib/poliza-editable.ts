@@ -22,6 +22,11 @@
 //     `@central/module-seguros-portal`: por eso sigue pudiendo ser la fuente
 //     única sin arrastrar `@central/core-ai` a media app (que es justo lo que
 //     impide que `node --test` cargue `lib/extraer-poliza.ts`).
+//  4bis. La REFERENCIA CATASTRAL vive con los identificadores del bien y no en
+//     `datosRamo`, por la misma razón que la matrícula: identifica la COSA y se
+//     consulta («¿tengo otra póliza de esta misma vivienda?»), no la describe.
+//     Y de las dos referencias que existe, aquí SOLO entra la del INMUEBLE:
+//     ver el bloque «Referencia catastral» más abajo.
 //  5. Los campos ESPECÍFICOS DEL RAMO (`datosRamo`, la columna `datos_ramo`)
 //     NO se validan aquí a mano: se delegan en `normalizarDatosRamo()` del
 //     catálogo (`packages/module-seguros-portal/src/campos-ramo.ts`), que es el
@@ -29,7 +34,20 @@
 //     decide aquí —y es lo delicado— es QUÉ RAMO manda al validar un parche.
 //     Ver el bloque «Datos del RAMO» al final de `normalizarParche`.
 
-import { normalizarDatosRamo, type DatosRamo } from '@central/module-seguros-portal'
+//  6. El ORIGEN de cada uno de esos campos (`datosRamoOrigen`, la columna
+//     `datos_ramo_origen`) viaja SIEMPRE pegado a sus datos. 76 m2 del Catastro
+//     y 76 m2 estimados a ojo no valen lo mismo; un origen sin su dato, o
+//     apuntando a unos datos que el mismo parche acaba de cambiar, es peor que
+//     no tener origen. Ver el bloque «Origen de los datos del ramo».
+
+import {
+  formatoReferencia,
+  normalizarDatosRamo,
+  normalizarOrigenes,
+  normalizarReferencia,
+  type DatosRamo,
+  type OrigenPorCampo,
+} from '@central/module-seguros-portal'
 
 /** Campos que el cliente puede corregir. `null` = borrar el dato; ausente = no tocarlo. */
 export type ParchePoliza = {
@@ -43,11 +61,23 @@ export type ParchePoliza = {
   bastidor?: string | null
   fechaMatriculacion?: Date | null
   /**
+   * Del BIEN inmueble, y **solo la del INMUEBLE** (20 caracteres). Una de 14 es
+   * la de la FINCA y se rechaza con un error propio: ver `normalizarParche`.
+   */
+  referenciaCatastral?: string | null
+  /**
    * Campos propios del ramo, ya normalizados contra su catálogo. `null` = vaciar
    * la columna entera (la escritura lo traduce a `Prisma.DbNull`, el NULL de SQL,
    * NUNCA a `JsonNull`, que guardaría un `null` DENTRO del JSON).
    */
   datosRamo?: DatosRamo | null
+  /**
+   * De dónde salió cada clave de `datosRamo`. **Nunca viaja solo**: si el parche
+   * no cambia `datosRamo`, mandar orígenes es un error (`origen_sin_datos`), y
+   * si lo cambia, los orígenes se reescriben con él —o se borran—. Ver el bloque
+   * «Origen de los datos del ramo» de `normalizarParche`.
+   */
+  datosRamoOrigen?: OrigenPorCampo | null
 }
 
 /**
@@ -358,6 +388,65 @@ export function normalizarVehiculoLeido(bruto: unknown, hoy: Date = new Date()):
   }
 }
 
+// ─── Referencia catastral: 20 es tu piso, 14 es el edificio ──────────────────
+//
+// El identificador del BIEN inmueble, hermano de la matrícula: por eso vive en
+// una COLUMNA (`referencia_catastral`) y no dentro de `datosRamo` — se consulta
+// («¿tengo otra póliza de esta misma vivienda?») y está indexada.
+//
+// 🚨 La distinción que sostiene todo esto: la referencia de **20** caracteres es
+// la del INMUEBLE (el piso concreto) y la de **14** la de la FINCA (el edificio
+// entero o la parcela). Aceptar una de 14 como si identificara la vivienda trae
+// los metros del EDIFICIO a una póliza de hogar: un número plausible y
+// equivocado, que no da error, no se ve, y en un siniestro se paga como
+// infraseguro. Aquí SOLO entra la del inmueble.
+//
+// Y por eso los dos rechazos son DISTINTOS: quien llama tiene que poder decirle
+// a la persona «esa es la del edificio, necesitamos la de tu piso» en vez de un
+// «no es válida» que la deja sin saber qué corregir. `formatoReferencia()` del
+// módulo puro devuelve QUÉ es, precisamente para poder separarlos.
+
+export type ResultadoReferenciaCatastral =
+  | { ok: true; referencia: string | null }
+  | { ok: false; error: 'referencia_catastral_de_finca' | 'referencia_catastral_invalida' }
+
+/**
+ * Referencia del INMUEBLE, compactada y en mayúsculas. Tres salidas y no dos:
+ *  - `null` (con `ok`): no la hay, o es un centinela («no consta», «-»). «No lo
+ *    sé» es un dato legítimo y no es obligatoria.
+ *  - `referencia_catastral_de_finca`: tiene 14 y es real, pero es la del
+ *    edificio. Se dice así para que se le pueda pedir la del piso.
+ *  - `referencia_catastral_invalida`: no tiene forma de referencia.
+ */
+export function normalizarReferenciaCatastral(valor: unknown): ResultadoReferenciaCatastral {
+  if (valor === null || valor === undefined) return { ok: true, referencia: null }
+  if (typeof valor !== 'string') return { ok: false, error: 'referencia_catastral_invalida' }
+  if (esCentinelaSinDato(valor)) return { ok: true, referencia: null }
+
+  const compacta = normalizarReferencia(valor)
+  switch (formatoReferencia(compacta)) {
+    case 'inmueble':
+      return { ok: true, referencia: compacta }
+    case 'finca':
+      return { ok: false, error: 'referencia_catastral_de_finca' }
+    default:
+      return { ok: false, error: 'referencia_catastral_invalida' }
+  }
+}
+
+/**
+ * La misma regla en la forma que necesita el EXTRACTOR: lo que no sea la
+ * referencia del inmueble sale `null` («no lo hemos sabido leer») y la póliza se
+ * guarda igual. Incluida la de FINCA: que el PDF traiga la del edificio no la
+ * convierte en la del piso, y guardarla sería exactamente el dato plausible y
+ * equivocado que esta sección persigue. La persona la corrige después, y ahí sí
+ * ve el error, porque quien habla es ella.
+ */
+export function normalizarReferenciaCatastralLeida(valor: unknown): string | null {
+  const r = normalizarReferenciaCatastral(valor)
+  return r.ok ? r.referencia : null
+}
+
 /**
  * Los identificadores que admite el PATCH, con el error que se devuelve cuando
  * la persona escribe algo que NO tiene la forma de ese identificador.
@@ -487,6 +576,16 @@ export function normalizarParche(
     }
   }
 
+  // La referencia catastral sigue la MISMA gramática que la matrícula —ausente
+  // no se toca, `null` o centinela borra, forma incorrecta es un ERROR—, con un
+  // matiz que no es cosmético: la de 14 caracteres NO es «casi» la del piso, es
+  // la del edificio, y por eso tiene error propio.
+  if ('referenciaCatastral' in bruto && bruto.referenciaCatastral !== undefined) {
+    const r = normalizarReferenciaCatastral(bruto.referenciaCatastral)
+    if (!r.ok) return { ok: false, error: r.error }
+    parche.referenciaCatastral = r.referencia
+  }
+
   // ── Datos del RAMO: qué catálogo manda, y qué pasa al cambiar de ramo ──────
   //
   // Los campos específicos NO significan nada sin su ramo: `metrosCuadrados` es
@@ -538,6 +637,48 @@ export function normalizarParche(
     parche.datosRamo = null
   }
 
+  // ── Origen de los datos del ramo: viaja SIEMPRE pegado a sus datos ─────────
+  //
+  // La pregunta que responde esta columna es «¿en qué me estoy apoyando?»: 76 m²
+  // que dijo el Catastro y 76 m² que alguien estimó a ojo se pintan igual y no
+  // valen lo mismo. Y justo por eso un origen desalineado es PEOR que no tener
+  // ninguno: pone un sello de «lo dice el Catastro» sobre un número que ya no es
+  // el que el Catastro dijo, y eso no da error ni se ve.
+  //
+  // De ahí la decisión, que es la conservadora de las tres posibles:
+  //
+  //  1. **Si el parche CAMBIA `datosRamo`, los orígenes se reescriben con él.**
+  //     Los viejos hablaban de los datos viejos: dejarlos sería afirmar de un
+  //     valor nuevo lo que se sabía del anterior. Si el cuerpo trae orígenes, se
+  //     normalizan CONTRA LOS DATOS DEL PROPIO PARCHE (`normalizarOrigenes`
+  //     descarta toda clave que no exista en ellos, que es el origen huérfano);
+  //     si no los trae, la columna se vacía: sin afirmación es mejor que con una
+  //     afirmación caducada. Borrar `datosRamo` (o cambiar de ramo, que también
+  //     lo borra) arrastra el borrado de los orígenes por el mismo camino.
+  //  2. **Sin cambio de `datosRamo`, mandar orígenes es un ERROR**
+  //     (`origen_sin_datos`), no un guardado a medias: aquí no se leen los datos
+  //     guardados, así que aceptarlos sería escribir orígenes que nadie ha podido
+  //     comprobar contra las claves que hay. Quien quiera corregir solo el origen
+  //     de un campo manda también el `datosRamo` al que se refiere.
+  //  3. **`datosRamoOrigen: null` explícito siempre vale**: borrar no necesita
+  //     datos contra los que validar, igual que borrar `datosRamo` no necesita ramo.
+  const cambianDatosRamo = 'datosRamo' in parche
+
+  if ('datosRamoOrigen' in bruto && bruto.datosRamoOrigen !== undefined) {
+    const valor = bruto.datosRamoOrigen
+    if (valor === null) {
+      parche.datosRamoOrigen = null
+    } else if (!cambianDatosRamo) {
+      return { ok: false, error: 'origen_sin_datos' }
+    } else {
+      // `normalizarOrigenes` devuelve `null` cuando no sobrevive ninguna clave
+      // (y cuando los datos son `null`): la columna vacía, nunca `{}`.
+      parche.datosRamoOrigen = normalizarOrigenes(parche.datosRamo ?? null, valor)
+    }
+  } else if (cambianDatosRamo) {
+    parche.datosRamoOrigen = null
+  }
+
   if (Object.keys(parche).length === 0) return { ok: false, error: 'parche_vacio' }
 
   return { ok: true, parche }
@@ -571,12 +712,20 @@ export function normalizarParche(
 // los campos del ramo elegido, así que si no se pudieran declarar al crear, se
 // pedirían dos veces (una al alta y otra al corregir) o no se pedirían nunca.
 //
+// `referenciaCatastral` es el equivalente de la matrícula para un inmueble —de
+// ella sale el autorrelleno del Catastro—, y `datosRamoOrigen` entra con ella
+// porque es EN EL ALTA donde nace la única distinción que importa: los metros
+// que la persona acepta del Catastro (`catastro`) contra los que teclea a ojo
+// (`declarado`). Si el origen solo se pudiera declarar corrigiendo después, el
+// primer guardado —que es el que se usa para tarificar— no sabría de dónde
+// vienen sus propios datos.
+//
 // 🚨 Ninguno es obligatorio, y eso no es pereza: la única guarda es que la
 // póliza quede IDENTIFICADA (compañía o número). Pedirle a un cliente el
 // bastidor para dejarle apuntar su seguro es trasladarle el trabajo de la
 // correduría, y el formulario que no se rellena no guarda nada.
 
-/** Los nueve campos declarables, TODOS presentes. `null` = «no lo sé», y es válido. */
+/** Los once campos declarables, TODOS presentes. `null` = «no lo sé», y es válido. */
 export type DatosAlta = {
   compania: string | null
   numeroPoliza: string | null
@@ -587,6 +736,13 @@ export type DatosAlta = {
   bastidor: string | null
   fechaMatriculacion: Date | null
   /**
+   * La del INMUEBLE (20 caracteres) o `null`. Entra en el alta por lo mismo que
+   * la matrícula: es donde el cliente la teclea, y de ella sale el autorrelleno
+   * del Catastro (metros, año y código postal). Una de FINCA (14) no se guarda a
+   * medias: es un error, porque son los metros del edificio.
+   */
+  referenciaCatastral: string | null
+  /**
    * Los campos propios del ramo, ya validados contra su catálogo. `null` = no se
    * ha declarado ninguno, que es lo normal: **ninguno es obligatorio**, igual que
    * los del vehículo. Y sin `ramo` en el alta, mandar `datosRamo` es un error
@@ -594,6 +750,15 @@ export type DatosAlta = {
    * guardarlos a ciegas sería guardar claves que ninguna pantalla enseña.
    */
   datosRamo: DatosRamo | null
+  /**
+   * De dónde salió cada clave de `datosRamo`. En un alta lo normal es que sean
+   * todos `declarado` (los teclea la persona) y que valga `null`; el que importa
+   * es `catastro`, cuando ella acepta los metros o el año que le ha propuesto el
+   * Catastro. Un origen de una clave que no está en `datosRamo` se descarta:
+   * afirmar de dónde viene un dato que no existe es lo que pinta un sello de
+   * «verificado» sobre un hueco.
+   */
+  datosRamoOrigen: OrigenPorCampo | null
 }
 
 export type ResultadoAlta =
@@ -623,7 +788,9 @@ export function normalizarAlta(entrada: unknown, hoy: Date = new Date()): Result
     matricula: p.matricula ?? null,
     bastidor: p.bastidor ?? null,
     fechaMatriculacion: p.fechaMatriculacion ?? null,
+    referenciaCatastral: p.referenciaCatastral ?? null,
     datosRamo: p.datosRamo ?? null,
+    datosRamoOrigen: p.datosRamoOrigen ?? null,
   }
 
   if (datos.compania === null && datos.numeroPoliza === null) {
