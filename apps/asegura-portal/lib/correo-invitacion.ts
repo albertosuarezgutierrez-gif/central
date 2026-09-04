@@ -28,7 +28,6 @@
 // de la petición** (la acaba de escribir quien invita). De la BD no se puede
 // sacar ninguna —`portal_invitacion` guarda solo el hash—, así que reenviar
 // esto más tarde, desde un cron, es imposible a propósito.
-import { createMailTransporter } from '@central/core-email'
 import { DIAS_VIGENCIA_INVITACION } from '@central/module-seguros-portal'
 
 /** Escapa lo que va dentro del HTML. `mensaje` lo escribe una persona. */
@@ -173,6 +172,14 @@ export function cuerpoInvitacion(d: DatosCorreoInvitacion): CuerpoCorreo {
  * en el acceso.
  */
 export async function enviarInvitacion(destino: string, d: DatosCorreoInvitacion): Promise<boolean> {
+  // 🚨 El transporte se carga AQUÍ, no arriba, y no es un capricho de
+  // rendimiento: `cuerpoInvitacion()` tiene un cepo que recorre el texto entero
+  // buscando lo que no puede decir (`lib/invitaciones.test.ts`), y ese cepo
+  // corre con `node --test`, que no sabe resolver `@central/core-email` (su
+  // `main` importa sin extensión). Con el import arriba, el cepo no podría
+  // cargar este módulo y el texto habría que probarlo leyendo la fuente — o
+  // sea, no probarlo. El transporte se pide cuando de verdad se va a enviar.
+  const { createMailTransporter } = await import('@central/core-email')
   const transporter = createMailTransporter()
   if (!transporter) {
     console.error('[portal/invitacion] no hay proveedor de correo configurado')
