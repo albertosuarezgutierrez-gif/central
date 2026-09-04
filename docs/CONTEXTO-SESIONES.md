@@ -713,6 +713,36 @@
 - ⚠️ **Corrección a lo dicho horas antes:** el ×1,25 NO es sistémico. El camino de escritura funciona: 93-98% de ~1.400 fechas coinciden exactas con lo que empujamos (ratio mediano 1,000).
 - 📉 **Y lo que la auditoría destapó, que es lo gordo y sigue abierto:** los pisos piden un precio que nadie paga. Busto vende en **P10** y tarifica a P40 · Luxury **P16** vs P50 · Dúplex **P23** vs P40. House Sevillana es el único coherente (vende 1,14× mercado, pide 1,25×). Diagnóstico del desvío en curso.
 
+### 🌐 (04/09/2026) La web de la correduría existe, es buena y está DESENCHUFADA (solo lectura)
+
+- Analizada entera la app de Manuel (`albertosuarezgutierrez-gif/asegura`, clonada al contenedor): **13 páginas
+  públicas + cotizador + portal**, terminada y cuidada (Next 16, Drizzle, shadcn, CSP con nonce). Tesis B2C:
+  «Todos tus seguros, en un solo panel», gratis y sin permanencia. **Decisión de Alberto (04/09): se ENCHUFA donde
+  está** — reabre la del 02/09 («su web no se usa»), que queda derogada para la cara pública.
+- 🔌 **Por qué no capta nada:** `grupoasegura.com` y `.es` apuntan a **IONOS, no a Vercel** (solo vive en
+  `app.grupoasegura.com`); `/cotizador` está en `Disallow` del robots y fuera del sitemap **siendo el destino de
+  todos los CTA**; `/historia` (el único form con teléfono) es huérfana y `noindex`; **Web Analytics apagada** →
+  cero datos, que NO es cero visitas. La analítica real es PostHog EU, sin conector aquí.
+- 🚨 **PostHog corre en producción SIN banner de cookies** (medido en el HTML vivo: 0 apariciones de Cookiebot,
+  `PostHogProvider` presente). `posthog-browser.ts:16-22` hace *fail-open*: sin `NEXT_PUBLIC_COOKIEBOT_ID` no pinta
+  banner y arranca igual. Art. 22.2 LSSI, en una web que publica DPO.
+- 🚨 **`/info-mediador` declara solo AUTO y HOGAR** mientras la home vende 5 ramos y el cotizador 6 — es el papel
+  que mira la DGSFP. Además: `/contacto` da 404 enlazado desde los propios Términos; 3 claims de superioridad
+  («compañías líderes», «las mejores ofertas»); los Términos describen un **algoritmo de comparativa que no
+  existe** (el precio previo al registro es un stub fijo por ramo); texto del mediador aún `PENDING_LEGAL_REVIEW`.
+- 👥 **Dos portales de cliente y ninguno en uso: el de Manuel tiene 2 cuentas de 32.602 fichas, el nuestro 0.**
+  Él gana en documentos descargables (signed-url + `visible_por_cliente`), avisos que SALEN de verdad, RGPD art.
+  17/20 self-service y navegación móvil; el nuestro en recibos, parte de siniestro, calendario accionable (art. 22
+  LCS) y autorizaciones a terceros. Su login **no se reutiliza**: atado a la Supabase Auth congelada de Manuel.
+  Alberto pide **analizar si se pueden UNIFICAR** (análisis en curso, no decidido).
+- 📱 **WhatsApp: decidido botón `wa.me` ya, WABA después.** ⚠️ Pero en el código de Manuel hay **Cloud API completa**
+  (webhook, envío, bot IA, pantalla `/whatsapp-bot`) — [suposición] la WABA pudo existir; verificar en el panel de
+  Meta antes de repetir «no hay WABA».
+- 🗄️ De paso: esa app se quedó **sin BD del 31/08 al 02/09** (129 errores `password authentication failed`), el
+  mismo fallo de rotar contraseña sin tocar el `DATABASE_URL` ya documentado para `central-asegura`. Resuelto con
+  el redeploy del 02/09 06:32. La ingesta de Codeoscopic sigue entrando (50 webhooks/24 h).
+- **Pendiente de Alberto:** qué sirven hoy los dominios en IONOS (el proxy los bloquea desde el contenedor), qué
+  número va en el `wa.me`, y si se puede empujar rama al repo `asegura`.
 
 ### 🧊 (03/09/2026) La guarda de outlier protegía al fallo que ella misma debía deshacer (PR seguimiento del #2228)
 - La pasada de las 20:30 (1ª con la guarda de monotonía) corrigió **3** de las 61 noches infladas de Busto; las otras 58 seguían a 113€.
