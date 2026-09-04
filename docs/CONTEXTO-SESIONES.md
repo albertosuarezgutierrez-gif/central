@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría (04/09/2026).**
+  Al revisar el cuadro completo se encontró que el commit `19b74e641` llevaba **marcadores de conflicto
+  sin resolver dentro de un template literal SQL** de `clientes-sin-canal.ts`: `tsc` los ve como cadena,
+  el guardián los ve como texto y nadie ejecuta ese SQL en CI → 19/19 checks en verde sobre una consulta
+  que reventaría. Causa: leer `git merge` con `| tail -10` y el grep de marcadores con `| head`. Guardián
+  nuevo **`test/regression-sin-marcadores-conflicto.test.ts`** (recorre `git ls-files`, falla si el listado
+  viene vacío, cepo verificado). En la misma pasada se repuso **`and c.activo`**, que se había perdido al
+  reescribir el fichero, y se restauró `vigencia.ts`, que se sobrescribió sin haberlo leído.
+  Hallazgos de datos: (1) **Codeoscopic SÍ manda webhooks** —23 en 24 h, uno cada 30 min, autenticados— y
+  los rechazamos todos por mandar un array donde el validador espera objeto; `apps/asegura/CLAUDE.md` decía
+  «sin estrenar, no roto». El vigía de ingesta ahora los mira (`rechazos` en `saludIngesta`). (2) **8 de 18
+  sin canal solo tienen pólizas que ya no renuevan** y a tres se les pintaba fecha de renovación de una
+  cancelada. (3) **UPDATE masivo sin autor conocido** en `seguros` a las 21:16-21:19 UTC (1.185 clientes,
+  959 pólizas, 0 altas, sin `historial_interno`, no es pg_cron ni el pull de CIMA) — pendiente para Alberto.
+
 - **📵 «19 clientes ilocalizables» eran 15: el contacto vive en TRES sitios, no en la ficha (04/09/2026).**
   Lo vio Alberto en `/correduria`: `Esquiansa` salía «no se puede contactar» teniendo a Juan Manuel López
   Benjumea de conductor habitual, con ficha, email y teléfono. `clientes-sin-canal.ts` miraba SOLO las

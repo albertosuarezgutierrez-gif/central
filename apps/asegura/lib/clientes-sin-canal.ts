@@ -38,6 +38,17 @@
 // no para darla por avisada. Por eso los casos 2 y 3 son estados distintos y no
 // se funden en un «localizable» que tranquilizaría de más.
 //
+// ─── 🚨 Y una póliza CANCELADA no renueva (04/09/2026) ─────────────────────
+// La regla de cartera viva dice «CIMA la trae o la mantiene», NO «está en
+// vigor»: de las 110 vivas, **42 están canceladas**. Medido ese día: de los 18
+// clientes sin contacto, **8 solo tienen pólizas que ya no renuevan** —no hay
+// aviso de vencimiento que mandarles— y a tres se les pintaba «Renueva el …»
+// con la fecha de una póliza cancelada. `FERNANDO GOMEZ ARIZA` salía con
+// 10/01/2027 (la cancelada) cuando su renovación real es el 28/05/2027.
+// Qué estado sigue en juego lo decide `POLIZA_ESTADOS_VIGENTES` de
+// `@central/module-seguros` —la lista que ya reproduce la del CRM de origen—,
+// no un `<> 'cancelada'`: el enum tiene DIEZ valores.
+//
 // ─── Qué se cuenta como cliente (y qué NO) ──────────────────────────────────
 // 🚨 Cartera VIVA = las pólizas que CIMA trae o MANTIENE (regla única en
 // `cartera-viva.ts` de `@central/module-seguros`: `import_ref IS NULL` **o**
@@ -66,6 +77,7 @@
 // columna con un blob que no se pueda descifrar cuenta como «tiene canal»
 // aunque el envío luego falle. La pantalla lo dice; no se disfraza de garantía.
 
+import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 /** Tope de filas leídas. La cartera viva son decenas, no miles: si algún día se
@@ -114,8 +126,13 @@ export type ClienteCanal = {
   estado: EstadoCanal
   /** Pólizas por CIMA de este cliente (siempre ≥ 1: por eso está en la lista). */
   polizasCima: number
-  /** La renovación más cercana de HOY en adelante. `null` = no la hay (ver los
-   *  dos contadores de abajo), NUNCA «no vence». */
+  /** De esas, las que siguen en un estado que puede renovar. **`0` = ninguna
+   *  renueva**: no hay aviso de vencimiento que mandarle, así que su falta de
+   *  contacto es cierta pero NO urgente. */
+  polizasQueRenuevan: number
+  /** La renovación más cercana de HOY en adelante, **contando SOLO pólizas en
+   *  estado que renueva**. `null` = no la hay (lo dicen los contadores de al
+   *  lado), NUNCA «no vence». */
   proximoVencimiento: string | null
   /** Pólizas vivas sin fecha de vencimiento: no se sabe cuándo renuevan. */
   polizasSinFecha: number
@@ -142,6 +159,10 @@ export type ClientesSinCanal = {
     /** Sin nada en la ficha pero con por dónde tirar (`canal_en_poliza` o
      *  `contacto_via_tercero`). = `sinNinguno − ilocalizables`. */
     rescatables: number | null
+    /** De los ilocalizables, los que **ninguna de sus pólizas renueva**. Siguen
+     *  siendo ilocalizables, pero no hay nada que avisarles: separarlos es la
+     *  diferencia entre una lista de llamadas y una lista de nombres. */
+    ilocalizablesSinRenovacion: number | null
   }
   truncado: boolean
 }
@@ -155,6 +176,7 @@ type FilaSql = {
   contacto_de_otros: number
   fichas_contacto: unknown
   polizas_cima: number
+  polizas_que_renuevan: number
   proximo_vencimiento: string | null
   polizas_sin_fecha: number
   prima: number | null
@@ -237,11 +259,15 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
     resumen: {
       vivos: null, conEmail: null, conTelefono: null, conAlguno: null,
       sinNinguno: null, ilocalizables: null, rescatables: null,
+      ilocalizablesSinRenovacion: null,
     },
     truncado: false,
   }
   if (!aseguraConfigurada()) return vacio
   const db = prismaAsegura()
+  // Copia mutable para la interpolación de Prisma: `POLIZA_ESTADOS_VIGENTES` es
+  // `readonly` (`as const`) y el driver espera un array normal.
+  const VIGENTES: string[] = [...POLIZA_ESTADOS_VIGENTES]
 
   // 🚨 El filtro de cartera viva es la línea que separa los ~80 clientes de hoy
   // de las ~32.500 fichas del volcado histórico. No se toca.
@@ -254,7 +280,6 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
   const filas = await db.$queryRaw<FilaSql[]>`
     with base as (
       select
-<<<<<<< HEAD
         c.id,
         c.correduria_id,
         btrim(concat_ws(' ', c.nombre, c.apellidos)) as nombre,
@@ -273,6 +298,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
           )
         ) as tiene_telefono,
         v.polizas_cima,
+        v.polizas_que_renuevan,
         v.proximo_vencimiento,
         v.polizas_sin_fecha,
         v.prima,
@@ -281,7 +307,17 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       join lateral (
         select
           count(*)::int as polizas_cima,
-          min(p.fecha_vencimiento) filter (where p.fecha_vencimiento >= current_date) as proximo_vencimiento,
+          -- La lista de estados que renuevan viaja como parámetro desde
+          -- POLIZA_ESTADOS_VIGENTES: una sola fuente para el CRM, la ficha y
+          -- esta pantalla. Un estado NULL no cuenta como vigente, que es la
+          -- semántica que ya fija esEstadoVigente.
+          -- (Sin acentos graves aquí dentro: cierran el template literal.)
+          count(*) filter (where p.estado::text = any(${VIGENTES}))::int
+            as polizas_que_renuevan,
+          min(p.fecha_vencimiento) filter (
+            where p.fecha_vencimiento >= current_date
+              and p.estado::text = any(${VIGENTES})
+          ) as proximo_vencimiento,
           count(*) filter (where p.fecha_vencimiento is null)::int as polizas_sin_fecha,
           sum(coalesce(p.prima_anual, p.prima_bruta))::float8 as prima,
           count(*) filter (where p.prima_anual is null and p.prima_bruta is null)::int as polizas_sin_prima
@@ -293,6 +329,11 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       ) v on true
       where c.correduria_id = ${correduriaId}::uuid
         and c.merged_into_cliente_id is null
+        -- 🚨 Los dados de baja no son «clientes a los que no se puede avisar»:
+        --    es que no hay que avisarles. Este filtro EXISTÍA y se perdió al
+        --    reescribir el fichero el 04/09/2026; sin él la lista crece con
+        --    gente de la que nadie espera nada.
+        and c.activo
         and v.polizas_cima > 0
     )
     select
@@ -304,6 +345,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       coalesce(w.contacto_de_otros, 0) as contacto_de_otros,
       coalesce(w.fichas_contacto, '[]'::jsonb) as fichas_contacto,
       b.polizas_cima,
+      b.polizas_que_renuevan,
       to_char(b.proximo_vencimiento, 'YYYY-MM-DD') as proximo_vencimiento,
       b.polizas_sin_fecha,
       b.prima,
@@ -351,24 +393,6 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       ) x
     ) w on true
     order by b.nombre
-=======
-        count(*)::int as polizas_cima,
-        min(p.fecha_vencimiento) filter (where p.fecha_vencimiento >= current_date) as proximo_vencimiento,
-        count(*) filter (where p.fecha_vencimiento is null)::int as polizas_sin_fecha,
-        sum(coalesce(p.prima_anual, p.prima_bruta))::float8 as prima,
-        count(*) filter (where p.prima_anual is null and p.prima_bruta is null)::int as polizas_sin_prima
-      from polizas p
-      where p.cliente_id = c.id
-        and p.correduria_id = c.correduria_id
-        and (p.import_ref is null or p.eiac_xml_hash is not null)
-        and p.merged_into_poliza_id is null
-    ) v on true
-    where c.correduria_id = ${correduriaId}::uuid
-      and c.merged_into_cliente_id is null
-      and c.activo
-      and v.polizas_cima > 0
-    order by c.apellidos, c.nombre
->>>>>>> origin/main
     limit ${LIMITE + 1}
   `
 
@@ -390,6 +414,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       fichasContacto: leerFichas(f.fichas_contacto),
       estado: estadoCanal(tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros),
       polizasCima: f.polizas_cima,
+      polizasQueRenuevan: Number.isFinite(f.polizas_que_renuevan) ? f.polizas_que_renuevan : 0,
       proximoVencimiento: f.proximo_vencimiento ?? null,
       polizasSinFecha: f.polizas_sin_fecha,
       // Sin ninguna prima informada la suma de Postgres es NULL. Se queda en
@@ -407,6 +432,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
     ? {
         vivos: null, conEmail: null, conTelefono: null, conAlguno: null,
         sinNinguno: null, ilocalizables: null, rescatables: null,
+        ilocalizablesSinRenovacion: null,
       }
     : {
         vivos: todos.length,
@@ -416,6 +442,9 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
         sinNinguno: sinFicha.length,
         ilocalizables: todos.filter((c) => c.estado === 'sin_ninguno').length,
         rescatables: sinFicha.filter((c) => c.estado !== 'sin_ninguno').length,
+        ilocalizablesSinRenovacion: todos.filter(
+          (c) => c.estado === 'sin_ninguno' && c.polizasQueRenuevan === 0,
+        ).length,
       }
 
   return {

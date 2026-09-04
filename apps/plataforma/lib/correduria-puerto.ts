@@ -492,6 +492,9 @@ export type ClienteCanal = {
   estado: EstadoCanal
   /** `null` = no se contó. NO es «no tiene pólizas» (estaría fuera de la lista). */
   polizasCima: number | null
+  /** De esas, las que siguen en estado que renueva. `0` = ninguna renueva (no
+   *  hay aviso que mandarle); `null` = el puerto no lo informa, que NO es 0. */
+  polizasQueRenuevan: number | null
   /** Renovación más cercana. `null` = no la hay a futuro o no se sabe; los dos
    *  contadores de al lado dicen cuál de las dos cosas es. */
   proximoVencimiento: string | null
@@ -519,6 +522,8 @@ export type SinCanal =
         ilocalizables: number | null
         /** Sin nada en la ficha pero con por dónde tirar. */
         rescatables: number | null
+        /** Ilocalizables cuyas pólizas ya NO renuevan: no hay nada que avisarles. */
+        ilocalizablesSinRenovacion: number | null
       }
       truncado: boolean
     }
@@ -605,6 +610,7 @@ export function interpretarSinCanal(status: number, json: unknown): SinCanal {
       fichasContacto: leerFichasContacto(o.fichasContacto),
       estado: derivarEstadoCanal(tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros),
       polizasCima: entero(o.polizasCima),
+      polizasQueRenuevan: entero(o.polizasQueRenuevan),
       proximoVencimiento: cadena(o.proximoVencimiento),
       polizasSinFecha: entero(o.polizasSinFecha),
       prima: numero(o.prima),
@@ -626,6 +632,7 @@ export function interpretarSinCanal(status: number, json: unknown): SinCanal {
       sinNinguno: entero(res.sinNinguno),
       ilocalizables: entero(res.ilocalizables),
       rescatables: entero(res.rescatables),
+      ilocalizablesSinRenovacion: entero(res.ilocalizablesSinRenovacion),
     },
     truncado: r.truncado === true,
   }

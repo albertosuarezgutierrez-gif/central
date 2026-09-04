@@ -191,6 +191,10 @@ export default function SinCanal({
   // decía «19 con los que NO se puede contactar» cuando eran 15.
   const ilocalizables = resumen.ilocalizables
   const rescatables = resumen.rescatables
+  // 🚨 Un ilocalizable cuyas pólizas ya no renuevan sigue siendo ilocalizable,
+  // pero NO hay nada que avisarle. Mezclarlos infla la alarma y manda a llamar
+  // a quien no toca (04/09/2026: 8 de 18 estaban así).
+  const sinRenovacion = resumen.ilocalizablesSinRenovacion
   const medido = resumen.vivos !== null
   // La alarma solo se enciende con gente medida al otro lado. Con `null` (no
   // comprobado) o con la lista truncada, el hueco se dice, no se destaca.
@@ -230,6 +234,12 @@ export default function SinCanal({
           la invitación al portal— y desde el sistema se ven igual que uno al que sí se avisó. No hay
           contacto suyo en su ficha, ni en su póliza, ni de nadie más de la póliza. La próxima vez
           que hables con alguno, pídele el correo y apúntalo en su ficha.
+          {sinRenovacion !== null && sinRenovacion > 0 && (
+            <>
+              {' '}Ojo: <strong>{sinRenovacion} de ellos ya no renuevan</strong> ninguna póliza, así
+              que no hay aviso que mandarles — salen marcados abajo.
+            </>
+          )}
         </div>
       )}
 
@@ -335,7 +345,11 @@ function Fila({ f }: { f: ClienteCanal }) {
       </div>
 
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-        {f.proximoVencimiento !== null ? (
+        {f.polizasQueRenuevan === 0 ? (
+          <span title="Todas sus pólizas están en un estado que ya no renueva (cancelada, vencida, fin de riesgo…)">
+            Ya no renueva ninguna póliza: no hay aviso de vencimiento que mandarle
+          </span>
+        ) : f.proximoVencimiento !== null ? (
           <>Renueva el {fmtFecha(f.proximoVencimiento)}</>
         ) : f.polizasSinFecha !== null && f.polizasSinFecha > 0 ? (
           <span title="Sus pólizas no traen fecha de vencimiento en la base">

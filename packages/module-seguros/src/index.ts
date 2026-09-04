@@ -44,10 +44,12 @@ export {
   saludIngesta,
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
+  HORAS_RECHAZO_RECIENTE,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
   type FicheroEnCuarentena,
+  type EntradaRechazada,
 } from './ingesta.ts'
 export {
   MARCADORES_SIN_DATO,

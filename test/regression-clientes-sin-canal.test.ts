@@ -118,7 +118,7 @@ test('🚨 un recuento que no llega se queda en null, JAMÁS en 0', () => {
   if (r.estado !== 'ok') return
   assert.deepEqual(r.resumen, {
     vivos: null, conEmail: null, conTelefono: null, conAlguno: null, sinNinguno: null,
-    ilocalizables: null, rescatables: null,
+    ilocalizables: null, rescatables: null, ilocalizablesSinRenovacion: null,
   })
 })
 
@@ -302,4 +302,47 @@ test('el grid contenedor lleva plantilla: si no, arrastra la página en móvil',
   // En plataforma el scroller horizontal es LayoutShell, no <body>: un grid sin
   // gridTemplateColumns dimensiona su pista con el contenido más ancho.
   assert.match(PANTALLA, /gridTemplateColumns: 'minmax\(0, 1fr\)'/)
+})
+
+// ── 5. Una póliza que ya no renueva no genera aviso (04/09/2026) ────────────
+
+test('🚨 la renovación se calcula SOLO sobre pólizas en estado que renueva', () => {
+  // `FERNANDO GOMEZ ARIZA` salía con «Renueva el 10/01/2027» —la fecha de su
+  // póliza CANCELADA— cuando su renovación real era el 28/05/2027. Una fecha
+  // falsa en la pantalla con la que se prioriza a quién llamar.
+  assert.match(SQL, /POLIZA_ESTADOS_VIGENTES/, 'la lista de estados vigentes debe venir del módulo')
+  assert.doesNotMatch(
+    SQL,
+    /estado[^\n]*<>\s*'cancelada'/i,
+    'el enum tiene DIEZ valores: un «distinto de cancelada» se queda corto',
+  )
+  // La fecha de renovación filtra por estado, no solo por fecha futura.
+  assert.match(
+    SQL,
+    /min\(p\.fecha_vencimiento\) filter \(\s*\n\s*where p\.fecha_vencimiento >= current_date\s*\n\s*and p\.estado::text = any\(/,
+  )
+})
+
+test('🚨 el filtro de clientes de baja (`c.activo`) no se puede volver a perder', () => {
+  // Se borró sin querer al reescribir el fichero el 04/09/2026 y nada falló:
+  // la lista simplemente crecía con gente de la que nadie espera nada.
+  assert.match(SQL, /and c\.activo/)
+})
+
+test('la pantalla dice cuándo NO hay nada que avisar, en vez de callarlo', () => {
+  assert.match(PANTALLA, /polizasQueRenuevan === 0/)
+  assert.match(PANTALLA, /Ya no renueva ninguna póliza/)
+  assert.match(PANTALLA, /ilocalizablesSinRenovacion/)
+})
+
+test('🚨 «no renueva» viaja por el puerto como null cuando no se informa', () => {
+  const r = interpretarSinCanal(200, {
+    estado: 'ok',
+    filas: [{ clienteId: 'c1', nombre: 'X', tieneEmail: false, tieneTelefono: false }],
+    resumen: {},
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.filas[0].polizasQueRenuevan, null, 'ausente ⇒ no comprobado, jamás 0')
+  assert.equal(r.resumen.ilocalizablesSinRenovacion, null)
 })
