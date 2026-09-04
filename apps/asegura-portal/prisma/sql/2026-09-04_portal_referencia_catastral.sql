@@ -3,13 +3,18 @@
 --      equivalente de la matrícula para hogar / comercio / comunidades.
 --   2. `datos_ramo_origen`   — de dónde salió CADA campo de `datos_ramo`.
 --
--- 🚨 **NO SE HA EJECUTADO.** Este fichero lo aplica la sesión principal contra la
--- Supabase compartida (schema `seguros`); el agente que lo escribió no toca la
--- BD. Hasta que se aplique, el `schema.prisma` de la app declara dos columnas
--- que NO existen, y Prisma SELECCIONA todas las columnas del modelo: CUALQUIER
--- consulta a `portal_poliza_declarada` —también las que solo leen— se cae con
--- `column ... does not exist`. Schema y BD se mueven en el mismo paso, igual que
--- la contraseña de un rol y el env de su proyecto Vercel.
+-- ✅ **APLICADO el 04/09/2026** por la sesión principal contra la Supabase
+-- compartida (schema `seguros`). Verificado leyendo `information_schema.columns`:
+-- las dos columnas existen, y `has_column_privilege()` confirma que el rol
+-- `prisma_asegura_portal` puede LEERLAS y ESCRIBIRLAS (el GRANT sobre `portal_*`
+-- es de tabla, así que una columna nueva entra sola; en la cartera, que es por
+-- columnas, habría hecho falta un GRANT explícito).
+--
+-- Por qué importaba el orden: Prisma SELECCIONA todas las columnas del modelo
+-- por su nombre, así que mientras `schema.prisma` las declaraba y la BD no las
+-- tenía, CUALQUIER consulta a `portal_poliza_declarada` —también las que solo
+-- leen— se caía con `column ... does not exist`. Schema y BD se mueven en el
+-- mismo paso, igual que la contraseña de un rol y el env de su proyecto Vercel.
 --
 -- ── 1. Por qué `referencia_catastral` es COLUMNA y no una clave de `datos_ramo` ─
 -- Porque IDENTIFICA EL BIEN, no lo describe. Es exactamente el mismo caso que la

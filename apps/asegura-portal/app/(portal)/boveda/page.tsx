@@ -210,6 +210,17 @@ export default async function Boveda() {
                     ramo: p.ramo,
                     // `Decimal | null` → `number | null`. `null` NO es 0: es «no lo sabemos».
                     primaAnual: p.primaAnual == null ? null : Number(p.primaAnual),
+                    referenciaCatastral: p.referenciaCatastral ?? null,
+                    // Un jsonb puede traer cualquier cosa; si no es un objeto plano
+                    // se degrada a `null` en vez de reventar el render. Un origen
+                    // ilegible es «no sabemos de dónde vino», no una excusa para
+                    // dejar de pintar la póliza entera.
+                    datosRamoOrigen:
+                      p.datosRamoOrigen && typeof p.datosRamoOrigen === 'object' && !Array.isArray(p.datosRamoOrigen)
+                        ? (Object.fromEntries(
+                            Object.entries(p.datosRamoOrigen as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
+                          ) as Record<string, string>)
+                        : null,
                     // Columna `date`: llega como medianoche UTC, así que el ISO
                     // recortado es exactamente el día, sin desfase de zona.
                     fechaVencimiento: p.fechaVencimiento
