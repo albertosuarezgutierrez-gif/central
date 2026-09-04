@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-04T08:42:44Z",
-  "sha": "c988ef1bb39f865ea2e435144d2438ce31cfcb18",
+  "generadoEn": "2026-09-04T20:24:34Z",
+  "sha": "32314cb3c46fed65789aa4abd2d776df5cabccea",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3355,7 +3355,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2ea51bf5efcc"
+      "hash": "5946ecee5e42"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -3802,7 +3802,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "61e4d72bdd8b"
+      "hash": "a76ccfcff416"
     },
     {
       "ruta": "apps/asegura-portal/app/MarcaAsegura.tsx",
@@ -3824,7 +3824,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "02349f8949ef"
+      "hash": "9ddcc91605fc"
     },
     {
       "ruta": "apps/asegura-portal/app/page.tsx",
@@ -4131,7 +4131,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e0af143b4ed"
+      "hash": "a1e24e886225"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
@@ -4181,7 +4181,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d709c8305acc"
+      "hash": "e3d76606f5bd"
     },
     {
       "ruta": "apps/asegura-portal/lib/cartera-lectura.ts",
@@ -5239,7 +5239,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e0e0c6886a43"
+      "hash": "b07ddb3bcf74"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/layout.tsx",
@@ -5259,7 +5259,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e0bb8d5f0c29"
+      "hash": "db11ef2599e7"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/logout-button.tsx",
@@ -6256,7 +6256,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "85dd6e2de0d5"
+      "hash": "57081bded0b0"
     },
     {
       "ruta": "apps/asegura/app/login/page.tsx",
@@ -6276,7 +6276,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb05b067da2e"
+      "hash": "5eeb3f03a1fd"
     },
     {
       "ruta": "apps/asegura/app/page.tsx",
@@ -6344,7 +6344,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d0576e00e695"
+      "hash": "0d6095796e55"
     },
     {
       "ruta": "apps/asegura/lib/asegura-url.ts",
@@ -6545,7 +6545,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d1dbe3ca7d3c"
+      "hash": "7f5e74d5599a"
     },
     {
       "ruta": "apps/asegura/lib/backfill-dni.ts",
@@ -9518,7 +9518,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c0b8563c1cc"
+      "hash": "b321ba4e9807"
     },
     {
       "ruta": "apps/asegura/lib/comisiones.ts",
@@ -55146,7 +55146,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9b32237d69f0"
+      "hash": "f7f3580b9c36"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/ListaCartera.tsx",
@@ -70707,7 +70707,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "24912aea38cc"
+      "hash": "84448c19d2d3"
     },
     {
       "ruta": "apps/plataforma/app/seguros/page.tsx",
@@ -70728,7 +70728,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d34b9d42a4a7"
+      "hash": "dedd4f0281d3"
     },
     {
       "ruta": "apps/plataforma/components/ui.tsx",
@@ -73761,7 +73761,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "33b383b69c3c"
+      "hash": "45cbab954dc2"
     },
     {
       "ruta": "apps/plataforma/lib/categoria-reglas.ts",
@@ -78796,7 +78796,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "82370da44f1d"
+      "hash": "04a7aa4739b4"
     },
     {
       "ruta": "apps/plataforma/lib/extracto-csv.ts",
@@ -94211,7 +94211,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3e75a7b4075"
+      "hash": "682c4ec6704f"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -112202,7 +112202,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "703cd96860ef"
+      "hash": "cb048a189cf8"
     },
     {
       "ruta": "packages/module-seguros/src/objeto.ts",
