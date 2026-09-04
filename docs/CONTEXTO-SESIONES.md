@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔐 La cerradura que falla NO es la de Socorro (04/09/2026).** Alberto preguntó por Socorro; medido: Socorro tiene
+  **3 PIN activos y entregados**, último error el 08/08. La rota es **BustoTavera** (Luxury + Busto Reform), con **10 de 10
+  intentos en error: nunca ha creado un PIN**, hoy por `Tuya 2001: device is offline` (antes 2334 y el trial de IoT Core).
+  Eso es físico —batería/wifi/gateway— y no se arregla desde código: **mano de Alberto en Bustos Tavera 22**. El fallback
+  SÍ es real y se verificó en vez de repetirse: los 4 pisos tienen `codigo_portal` en `sivra_codigos_acceso` (Busto `2022#`),
+  así que nadie se queda en la puerta. Dos arreglos al vigía: su nota llevaba **un mes cableando el trial de IoT Core como
+  causa conocida e invitando a descartar el aviso**, y `evaluarLatido` afirmaba «se ejecuta y no termina» cuando `ok=false`
+  lo escriben tanto los que arrancan (`'pasada en curso'`) como los que terminan y se declaran con problemas — ahora se
+  declara y manda el parte. Guardián nuevo (probado en rojo: cazó mi propia nota).
+
 - **🔁 «Sigue habiendo duplicidad» (04/09/2026).** Alberto vio dos Manuel Antonio y dos Pilar Piña Franco en `/correduria`:
   son el VOLCADO (`intranet:cli:N` / `asegura_app:cli2:N`), fuera del lote CIMA a propósito. Medido: **561 grupos** mismo
   nombre+teléfono (584 fichas de más), 0 con póliza viva, 517 pares con el mismo N legado — y la lápida de casi todos
