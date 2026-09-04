@@ -232,16 +232,38 @@ test('pedirla ES aceptarla: la autorización se acepta con la fecha de la PETICI
   assert.match(LIB_CODIGO, /caducaEn: caducidadPorDefecto\(hoy\)/, 'La autorización caduca al año, como cualquier otra.')
 })
 
-test('sin ficha del solicitante no se inventa una: error propio y distinguible', () => {
-  assert.match(LIB_CODIGO, /error: 'solicitante_sin_ficha'/)
+test('sin ficha del solicitante NO se inventa una: se autoriza a su IDENTIDAD', () => {
+  // 🚨 Hasta el 04/09/2026 esto era un 409 `solicitante_sin_ficha`, porque
+  // `autorizado_cliente_id` era NOT NULL y solo se podía dar acceso a quien YA
+  // era cliente. Eso dejaba fuera el caso que de verdad pasa —el hijo que pide
+  // ver la póliza de su padre y no es cliente de nadie— y contradecía el
+  // producto: la intranet del cliente es gratis y abierta, porque ahí está la
+  // captación. La columna `autorizado_identidad_id` levantó el techo.
+  assert.ok(
+    !/solicitante_sin_ficha/.test(LIB_CODIGO) && !/solicitante_sin_ficha/.test(RUTA_ID_CODIGO),
+    'El motivo se borró en vez de dejarlo de adorno: un código que ya no puede pasar, dentro de una tabla de ' +
+      'códigos, es una promesa falsa para quien la lea dentro de tres meses.',
+  )
   assert.match(
-    RUTA_ID_CODIGO,
-    /solicitante_sin_ficha:\s*409/,
-    'Es una limitación conocida (`autorizado_cliente_id` es NOT NULL), no un «no puedes».',
+    LIB_CODIGO,
+    /autorizadoIdentidadId\s*=\s*autorizadoClienteId === null \? fila\.solicitanteIdentidadId : null/,
+    'Uno de los dos y solo uno: con ficha se autoriza la ficha, sin ficha la identidad. Los dos a la vez, o ' +
+      'ninguno, los rechaza el CHECK `portal_autorizacion_destinatario_unico`.',
   )
   assert.ok(
     !/cliente\.create|crearFicha/i.test(LIB_CODIGO),
-    'Crear una ficha para tapar el hueco ensucia la cartera y deja autorizaciones apuntando a nadie.',
+    'Crear una ficha vacía para tapar el hueco ensucia los 32.520 leads de la cartera con gente que miró una ' +
+      'póliza una vez. Quien MIRA es una identidad: es lo que hay detrás de la cookie.',
+  )
+  // ⚠️ Y el «no a sí mismo» de la rama de identidad NO lo puede comprobar la BD
+  // (exige mirar `portal_vinculo`, que es otra tabla, y un CHECK es de fila).
+  // Si esto desaparece, quien se vinculó a la ficha destinataria entre pedir y
+  // conceder se autorizaría a sí mismo: una fila viva que no significa nada y
+  // que además ocupa sitio en el índice único.
+  assert.match(
+    LIB_CODIGO,
+    /autorizadoIdentidadId !== null &&[\s\S]{0,200}v\.clienteId === otorganteClienteId/,
+    'Falta la guarda de «no a sí mismo» por identidad, que es la que la BD no puede poner.',
   )
 })
 

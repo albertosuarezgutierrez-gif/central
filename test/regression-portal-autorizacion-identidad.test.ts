@@ -33,7 +33,12 @@
 //   · quitar el brazo `autorizadoIdentidadId` de la bóveda → el invitado tiene
 //     su autorización viva en la BD y la lectura ni la mira;
 //   · volver a cortar por «no tiene vínculo» → se echa a la calle exactamente a
-//     quien el producto quiere dentro;
+//     quien el producto quiere dentro. Ese corte estuvo VIVO en las DOS
+//     pantallas hasta el 04/09/2026: `carteraDeIdentidad` devolvía `SIN_VINCULO`
+//     y `autorizacionesDeIdentidad` una respuesta vacía de relleno, así que el
+//     invitado no veía en `/autorizaciones` ni que existía la autorización que
+//     le habían abierto — y por tanto no podía ni aceptarla ni revocarla,
+//     aunque `resolver()` sí la resolviera con su id. No fallaba: salía vacía;
 //   · quitarlo de `resolver`/`registrarUso` → el invitado no puede aceptar ni
 //     revocar lo que le abrieron, y sus visitas no se anotan;
 //   · dejar de seguir `merged_into_poliza_id` → las 5 pólizas fusionadas de hoy
@@ -48,14 +53,6 @@
 // escritas, y cada aserción tiene su gemela «— el cepo muerde», que le pasa a
 // la MISMA función una copia MUTILADA del fichero y exige que la cace. Un cepo
 // que nunca ha disparado es una suposición.
-//
-// ⚠️ HUECO CONOCIDO, anotado aquí para que no se pierda (04/09/2026): la lista
-// de `autorizacionesDeIdentidad()` (`lib/autorizaciones.ts`) tiene sus tres
-// brazos bien, pero antes de llegar a ellos corta con
-// `if (vinculos.length === 0) return SIN_NADA` — el mismo corte que se arregló
-// en `carteraDeIdentidad`. Un invitado SIN ficha no ve en su pantalla la
-// autorización que le abrieron, aunque `resolver()` sí la aceptaría. No se
-// convierte aquí en test porque el fichero lo está tocando otra sesión.
 // ─────────────────────────────────────────────────────────────────────────────
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -241,6 +238,58 @@ test('el corte usa las dos listas — el cepo muerde', () => {
     'if (vinculos.length === 0) return SIN_VINCULO',
   )
   assert.notDeepEqual(fallosCorte(soloVinculos), [], 'el corte viejo (solo vínculos) tiene que disparar el cepo')
+})
+
+// ─── 2 bis. La LISTA tampoco corta por «no tiene vínculo» ───────────────────
+
+function fallosListaSinVinculo(src: string): string[] {
+  return fallos(() => {
+    const p: string[] = []
+    const cuerpo = bloqueTras(norm(src), /export async function autorizacionesDeIdentidad/)
+
+    // Regla generosa a propósito: **cualquier** `return` antes de la consulta es
+    // una salida temprana, se llame `SIN_NADA`, se escriba en línea o se
+    // esconda tras un helper. Lo único que hay antes de la consulta son
+    // declaraciones, así que aquí no hay falsos positivos que tolerar — y el
+    // cepo sobrevive a que la constante vuelva con otro nombre.
+    const consulta = cuerpo.indexOf('prisma.portalAutorizacion.findMany')
+    if (consulta < 0) {
+      p.push('`autorizacionesDeIdentidad` ya no consulta `portalAutorizacion`: o se movió, o la pantalla dejó de leer las autorizaciones')
+    } else if (/\breturn\b/.test(cuerpo.slice(0, consulta))) {
+      p.push('`autorizacionesDeIdentidad` sale por un `return` ANTES de mirar las autorizaciones: si ese corte es «no tiene vínculo», el invitado no ve en su pantalla lo que le abrieron y no lo puede ni aceptar ni revocar')
+    }
+
+    // La otra mitad: prohibir la salida temprana no sirve de nada si el brazo
+    // que hace falta llegar a mirar desaparece.
+    if (!/autorizadoIdentidadId:\s*identidadId/.test(cuerpo)) {
+      p.push('la lista no busca por `autorizadoIdentidadId`: llegar a la consulta no vale si la consulta ya no mira la rama del invitado')
+    }
+    return p
+  })
+}
+
+test('la lista de autorizaciones no corta por «no tiene vínculo»', () => {
+  assert.deepEqual(
+    fallosListaSinVinculo(crudo(AUTORIZACIONES)),
+    [],
+    'Sin vínculo, `misIds` queda `[]` y eso NO afloja ninguna frontera: los dos brazos de ficha ' +
+      '(`in: []`) no casan con nada y lo único en pie es `autorizadoIdentidadId`, que es esta ' +
+      'identidad. Cortar antes es lo que dejaba al invitado con una autorización invisible.',
+  )
+})
+
+test('la lista no corta por «no tiene vínculo» — el cepo muerde', () => {
+  const src = crudo(AUTORIZACIONES)
+
+  const conElCorteViejo = mutar(
+    src,
+    'const vinculos = await fichasDeIdentidad(identidadId)\n\n  const misIds',
+    'const vinculos = await fichasDeIdentidad(identidadId)\n  if (vinculos.length === 0) return SIN_NADA\n\n  const misIds',
+  )
+  assert.notDeepEqual(fallosListaSinVinculo(conElCorteViejo), [], 'el corte viejo tiene que disparar el cepo')
+
+  const sinTercerBrazo = mutar(src, '          { autorizadoIdentidadId: identidadId },\n        ],\n      },\n      orderBy:', '        ],\n      },\n      orderBy:')
+  assert.notDeepEqual(fallosListaSinVinculo(sinTercerBrazo), [], 'quitar el tercer brazo de la lista tiene que disparar el cepo')
 })
 
 // ─── 3. `resolver` y `registrarUso` también miran la identidad ───────────────
