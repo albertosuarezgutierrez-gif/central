@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏠 Los 10 ramos ya despliegan SUS campos, y hogar los saca del Catastro (04/09/2026, PR #2242).**
+  Alberto vio en su móvil que elegir «Hogar» no cambiaba nada: el despliegue existía solo para
+  auto/moto. Ahora los 10 ramos tienen catálogo (`campos-ramo.ts`, módulo puro, 31 tests) y sus valores
+  van a **UNA columna `datos_ramo` jsonb** —aplicada y verificada— y no a ~40 columnas casi siempre
+  vacías; los identificadores del bien siguen siendo columnas porque se consultan. **Hogar/comercio/
+  comunidades se autorrellenan desde la dirección** por `POST /api/catastro` (metros, año, CP), con
+  sesión obligatoria y cinco estados distintos: no responde ≠ no hay nada ≠ dirección ilegible ≠ calle
+  ambigua ≠ quince pisos entre los que no adivinamos. 🚨 **Nada del art. 9 RGPD**: vida/salud/decesos
+  piden datos de CONTRATO, nunca de salud, y beneficiarios es el TIPO de designación, no nombres de
+  terceros. **«Tipo de seguro» sube al 2º puesto** (estaba el último: se rellenaba todo y solo entonces
+  aparecían campos nuevos). Cambiar de ramo BORRA los datos del viejo en vez de enterrarlos invisibles.
+  Investigado y NO construido, por orden: **Google y huella** (`docs/ASEGURA-PORTAL-IDEAS.md`) — el
+  cuello de botella no es cómo se entra sino que **solo 4.310 de 32.602 fichas tienen índice ciego**.
+
 - **🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA (03/09/2026, PR #2235).**
   Alberto: «cuando seleccione un tipo de seguro, que despliegue los campos necesarios». Auto/moto →
   matrícula, fecha de matriculación y bastidor; otro ramo, nada (un tarificador pide todo siempre

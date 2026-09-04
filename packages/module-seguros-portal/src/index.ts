@@ -66,3 +66,11 @@ export type {
   TipoOtorgante,
   TituloRepresentacion,
 } from './autorizacion.ts'
+export {
+  MAX_TEXTO_RAMO,
+  CAMPOS_POR_RAMO,
+  RAMOS_CON_CATALOGO,
+  camposDeRamo,
+  normalizarDatosRamo,
+} from './campos-ramo.ts'
+export type { TipoCampo, OpcionCampo, CampoRamo, DatosRamo, ResultadoDatosRamo } from './campos-ramo.ts'

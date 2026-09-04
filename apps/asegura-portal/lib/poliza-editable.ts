@@ -18,8 +18,18 @@
 //  4. Aquí viven también las reglas de los IDENTIFICADORES DEL BIEN (matrícula,
 //     bastidor y fecha de matriculación), y no en `lib/extraer-poliza.ts`, para
 //     que la máquina que lee el PDF y la persona que lo corrige apliquen LA
-//     MISMA regla. Este fichero no importa nada: por eso puede ser la fuente
-//     única sin arrastrar `@central/core-ai` a media app.
+//     MISMA regla. Este fichero solo importa el módulo PURO
+//     `@central/module-seguros-portal`: por eso sigue pudiendo ser la fuente
+//     única sin arrastrar `@central/core-ai` a media app (que es justo lo que
+//     impide que `node --test` cargue `lib/extraer-poliza.ts`).
+//  5. Los campos ESPECÍFICOS DEL RAMO (`datosRamo`, la columna `datos_ramo`)
+//     NO se validan aquí a mano: se delegan en `normalizarDatosRamo()` del
+//     catálogo (`packages/module-seguros-portal/src/campos-ramo.ts`), que es el
+//     mismo que aplica la pantalla y el que aplica el extractor. Lo que sí se
+//     decide aquí —y es lo delicado— es QUÉ RAMO manda al validar un parche.
+//     Ver el bloque «Datos del RAMO» al final de `normalizarParche`.
+
+import { normalizarDatosRamo, type DatosRamo } from '@central/module-seguros-portal'
 
 /** Campos que el cliente puede corregir. `null` = borrar el dato; ausente = no tocarlo. */
 export type ParchePoliza = {
@@ -32,6 +42,25 @@ export type ParchePoliza = {
   matricula?: string | null
   bastidor?: string | null
   fechaMatriculacion?: Date | null
+  /**
+   * Campos propios del ramo, ya normalizados contra su catálogo. `null` = vaciar
+   * la columna entera (la escritura lo traduce a `Prisma.DbNull`, el NULL de SQL,
+   * NUNCA a `JsonNull`, que guardaría un `null` DENTRO del JSON).
+   */
+  datosRamo?: DatosRamo | null
+}
+
+/**
+ * Lo que el llamante SABE de la póliza que se está parcheando y el parche no
+ * dice. Hoy solo el ramo, y solo hace falta para una cosa: decidir contra qué
+ * catálogo se validan los `datosRamo` (ver el bloque del final).
+ *
+ * ⚠️ La clave AUSENTE significa «no se ha consultado», que NO es lo mismo que
+ * `ramoGuardado: null` («se ha mirado y la póliza no tiene ramo»). La diferencia
+ * cambia el comportamiento, así que se pasa siempre que se sepa.
+ */
+export type OpcionesParche = {
+  ramoGuardado?: string | null
 }
 
 export type ResultadoParche =
@@ -376,7 +405,11 @@ function normalizarPrima(valor: unknown): { ok: true; valor: number | null } | {
  * y presentes: cualquier otra cosa que venga en el JSON se ignora en silencio
  * (que es lo correcto — no es un error del usuario, y propagarla sí lo sería).
  */
-export function normalizarParche(entrada: unknown, hoy: Date = new Date()): ResultadoParche {
+export function normalizarParche(
+  entrada: unknown,
+  hoy: Date = new Date(),
+  opciones: OpcionesParche = {},
+): ResultadoParche {
   if (entrada === null || typeof entrada !== 'object' || Array.isArray(entrada)) {
     return { ok: false, error: 'cuerpo_invalido' }
   }
@@ -454,6 +487,57 @@ export function normalizarParche(entrada: unknown, hoy: Date = new Date()): Resu
     }
   }
 
+  // ── Datos del RAMO: qué catálogo manda, y qué pasa al cambiar de ramo ──────
+  //
+  // Los campos específicos NO significan nada sin su ramo: `metrosCuadrados` es
+  // de hogar y `cilindrada` de moto, y el catálogo descarta en silencio toda
+  // clave que no sea del ramo con el que se valida. De ahí las tres decisiones:
+  //
+  //  1. **Manda el ramo que la póliza VA A TENER**, no el que tenía. Si el
+  //     parche trae `ramo`, se valida contra ese; si no, contra el guardado que
+  //     nos pase quien llama. Validar contra el viejo dejaría entrar datos que
+  //     la pantalla del ramo nuevo no enseña nunca.
+  //  2. **Si el ramo CAMBIA y no vienen datos nuevos, los viejos se BORRAN.**
+  //     Los campos del ramo anterior ya no tienen catálogo: quedarse ahí es
+  //     enterrarlos —invisibles en pantalla, presentes en la columna— y el día
+  //     que alguien vuelva al ramo original reaparecerían como si el cliente los
+  //     hubiera declarado hoy. Se prefiere perder un dato descriptivo a
+  //     conservar uno que nadie puede ver ni corregir.
+  //     Sin `ramoGuardado` no se puede saber si el ramo cambió de verdad, así
+  //     que se toma la decisión conservadora (borrar) en vez de la que entierra.
+  //  3. **Sin ramo conocido, `datosRamo` es un ERROR, no un `null` silencioso.**
+  //     Es el modo de fallo que importa: quien llama al PATCH sin decir el ramo
+  //     guardado estaría vaciando la columna a cada corrección de la compañía o
+  //     de la prima, sin que nada fallara. Que reviente en la puerta es lo que
+  //     obliga a mirarlo. (`datosRamo: null` explícito sigue siendo un borrado
+  //     legítimo y no necesita ramo: borrar no exige catálogo.)
+  const cambiaRamo = 'ramo' in parche
+  const ramoConsultado = 'ramoGuardado' in opciones
+  const ramoGuardado = opciones.ramoGuardado ?? null
+  const ramoEfectivo = cambiaRamo ? (parche.ramo ?? null) : ramoGuardado
+
+  if ('datosRamo' in bruto && bruto.datosRamo !== undefined) {
+    const valor = bruto.datosRamo
+    if (valor === null) {
+      parche.datosRamo = null
+    } else if (ramoEfectivo === null) {
+      return { ok: false, error: 'datos_ramo_sin_ramo' }
+    } else {
+      // La validación campo a campo vive en el catálogo del módulo puro: es la
+      // MISMA que aplica la pantalla y la que aplica el extractor. Un `error`
+      // suyo (`campo_invalido:<id>`) viaja tal cual, para que la persona vea
+      // QUÉ campo ha escrito mal en vez de un «no se ha guardado» genérico.
+      const r = normalizarDatosRamo(ramoEfectivo, valor)
+      if (!r.ok) return { ok: false, error: r.error }
+      // `r.datos === null` cuando no sobrevive ninguna clave: es la columna
+      // vacía, y se escribe como tal. Un `{}` sería un objeto que existe y no
+      // dice nada, que es otro «no lo sé» disfrazado de dato.
+      parche.datosRamo = r.datos
+    }
+  } else if (cambiaRamo && (!ramoConsultado || (parche.ramo ?? null) !== ramoGuardado)) {
+    parche.datosRamo = null
+  }
+
   if (Object.keys(parche).length === 0) return { ok: false, error: 'parche_vacio' }
 
   return { ok: true, parche }
@@ -462,7 +546,7 @@ export function normalizarParche(entrada: unknown, hoy: Date = new Date()): Resu
 // ─── Alta A MANO (sin documento) ─────────────────────────────────────────────
 //
 // Quien tiene la póliza en papel, o no tiene el PDF a mano, declara los mismos
-// cinco campos que puede corregir después. La validación es LA MISMA que la del
+// campos que puede corregir después. La validación es LA MISMA que la del
 // PATCH —se pasa por `normalizarParche`— a propósito: un valor que se rechaza al
 // editar no puede colarse al crear, y viceversa. Lo único que añade el alta:
 //
@@ -472,9 +556,7 @@ export function normalizarParche(entrada: unknown, hoy: Date = new Date()): Resu
 //     pero sin nada que diga DE QUÉ seguro se habla no es una póliza: es ruido
 //     que nadie —ni la persona ni el corredor— va a poder reconocer después.
 
-// 🚧 Los identificadores del bien (matrícula, bastidor, fecha de matriculación)
-// NO están en el alta a mano todavía, y es a propósito: la forma EXACTA de
-// `DatosAlta` está fijada por `test/regression-portal-poliza-editable.test.ts`
+// 🚧 La forma EXACTA de `DatosAlta` está fijada por `test/regression-portal-poliza-editable.test.ts`
 // (raíz del repo), que compara el objeto entero con `deepEqual`: ampliarla y
 // actualizar ese guardián van en el MISMO commit, a propósito. Si el guardián
 // pudiera quedarse atrás, dejaría de vigilar justo lo que vigila — que nadie
@@ -485,12 +567,16 @@ export function normalizarParche(entrada: unknown, hoy: Date = new Date()): Resu
 // la fecha de matriculación estimada. Sin ellos en el alta, el autorrelleno no
 // tendría de dónde salir hasta que el cliente corrigiera la ficha después.
 //
+// Y `datosRamo` entra por lo mismo: el formulario del alta es donde se despliegan
+// los campos del ramo elegido, así que si no se pudieran declarar al crear, se
+// pedirían dos veces (una al alta y otra al corregir) o no se pedirían nunca.
+//
 // 🚨 Ninguno es obligatorio, y eso no es pereza: la única guarda es que la
 // póliza quede IDENTIFICADA (compañía o número). Pedirle a un cliente el
 // bastidor para dejarle apuntar su seguro es trasladarle el trabajo de la
 // correduría, y el formulario que no se rellena no guarda nada.
 
-/** Los ocho campos declarables, TODOS presentes. `null` = «no lo sé», y es válido. */
+/** Los nueve campos declarables, TODOS presentes. `null` = «no lo sé», y es válido. */
 export type DatosAlta = {
   compania: string | null
   numeroPoliza: string | null
@@ -500,6 +586,14 @@ export type DatosAlta = {
   matricula: string | null
   bastidor: string | null
   fechaMatriculacion: Date | null
+  /**
+   * Los campos propios del ramo, ya validados contra su catálogo. `null` = no se
+   * ha declarado ninguno, que es lo normal: **ninguno es obligatorio**, igual que
+   * los del vehículo. Y sin `ramo` en el alta, mandar `datosRamo` es un error
+   * (`datos_ramo_sin_ramo`): no hay catálogo contra el que validarlos, y
+   * guardarlos a ciegas sería guardar claves que ninguna pantalla enseña.
+   */
+  datosRamo: DatosRamo | null
 }
 
 export type ResultadoAlta =
@@ -512,7 +606,11 @@ export type ResultadoAlta =
  * para el PATCH es `parche_vacio`) aquí es un alta sin identificar, y se dice así.
  */
 export function normalizarAlta(entrada: unknown, hoy: Date = new Date()): ResultadoAlta {
-  const r = normalizarParche(entrada, hoy)
+  // `ramoGuardado: null` explícito y no ausente: en un alta no hay nada guardado
+  // que consultar, y eso se SABE. Así el ramo que manda al validar `datosRamo`
+  // es el que venga en el cuerpo, y si no viene ninguno el alta falla en la
+  // puerta en vez de guardar unos datos que nadie podrá enseñar.
+  const r = normalizarParche(entrada, hoy, { ramoGuardado: null })
   if (!r.ok && r.error !== 'parche_vacio') return r
 
   const p: ParchePoliza = r.ok ? r.parche : {}
@@ -525,6 +623,7 @@ export function normalizarAlta(entrada: unknown, hoy: Date = new Date()): Result
     matricula: p.matricula ?? null,
     bastidor: p.bastidor ?? null,
     fechaMatriculacion: p.fechaMatriculacion ?? null,
+    datosRamo: p.datosRamo ?? null,
   }
 
   if (datos.compania === null && datos.numeroPoliza === null) {

@@ -46,6 +46,12 @@ export type PolizaEditable = {
   bastidor: string | null
   fechaMatriculacion: string | null
   /**
+   * Los campos propios del RAMO, tal cual están guardados en la columna
+   * `datos_ramo` (jsonb). `null` = no se ha declarado ninguno — que NO es lo
+   * mismo que `{}`, y por eso la columna nunca guarda un objeto vacío.
+   */
+  datosRamo: Record<string, string | number | boolean> | null
+  /**
    * ¿Salió de un PDF o una foto que leyó la IA? Decide el TONO del hueco: si
    * hubo documento, un campo vacío es «no lo hemos encontrado en el documento»
    * (no se ha sabido leer), no «no existe». Mismo criterio que `NO_LEIDO` en
@@ -71,6 +77,15 @@ type Cambios = {
   matricula?: string | null
   bastidor?: string | null
   fechaMatriculacion?: string | null
+  /**
+   * `datos_ramo` es UNA columna, así que no admite parche por claves: o se manda
+   * el objeto entero o no se manda. Ausente = no se toca; `null` = vaciar la
+   * columna. Los valores viajan como TEXTO tal cual se teclearon: quien decide
+   * qué es un número, un booleano o basura es `normalizarDatosRamo()` en el
+   * servidor, contra el catálogo del ramo — la misma regla que aplica la IA al
+   * leer un PDF. Convertirlos aquí sería una segunda opinión sobre lo mismo.
+   */
+  datosRamo?: Record<string, string> | null
 }
 
 function aFormulario(v: Valores): Formulario {
@@ -88,7 +103,43 @@ function aFormulario(v: Valores): Formulario {
   }
 }
 
-function calcularCambios(form: Formulario, base: Valores, prima: number | null): Cambios {
+/**
+ * Lo guardado en `datos_ramo` → lo que se teclea en la pantalla. Todo a texto
+ * porque los `<input>` solo saben de texto; los booleanos vuelven a su
+ * vocabulario de tri-estado (`si`/`no`), y una clave AUSENTE se queda ausente:
+ * no se rellena con `''`, que en esta pantalla significaría «lo he borrado».
+ */
+function aFormularioRamo(datos: Valores['datosRamo']): Record<string, string> {
+  if (!datos) return {}
+  const salida: Record<string, string> = {}
+  for (const [k, v] of Object.entries(datos)) {
+    salida[k] = typeof v === 'boolean' ? (v ? 'si' : 'no') : String(v)
+  }
+  return salida
+}
+
+/** Lo tecleado, sin los vacíos: un campo en blanco es «no lo sé», y no viaja. */
+function ramoDelFormulario(datos: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(datos).filter(([, v]) => v.trim() !== ''))
+}
+
+/**
+ * ¿Ha cambiado ALGO de los campos del ramo? Se compara por claves ordenadas
+ * para que reordenar el objeto no cuente como cambio; sin esto, cada guardado
+ * mandaría un parche que no cambia nada.
+ */
+function mismoRamo(a: Record<string, string>, b: Record<string, string>): boolean {
+  const ka = Object.keys(a).sort()
+  const kb = Object.keys(b).sort()
+  return ka.length === kb.length && ka.every((k, i) => k === kb[i] && a[k] === b[k])
+}
+
+function calcularCambios(
+  form: Formulario,
+  base: Valores,
+  prima: number | null,
+  datosRamo: Record<string, string>,
+): Cambios {
   const c: Cambios = {}
   const compania = form.compania.trim() || null
   if (compania !== base.compania) c.compania = compania
@@ -109,6 +160,16 @@ function calcularCambios(form: Formulario, base: Valores, prima: number | null):
   if (bastidor !== base.bastidor) c.bastidor = bastidor
   const fechaMatriculacion = form.fechaMatriculacion || null
   if (fechaMatriculacion !== base.fechaMatriculacion) c.fechaMatriculacion = fechaMatriculacion
+
+  // Los del ramo: el objeto entero, y solo si difiere de lo guardado. Si al
+  // quitar los vacíos no queda ninguna clave, se manda `null` (vaciar la
+  // columna) y NO `{}`: un objeto vacío guardado sería un «no lo sé» disfrazado
+  // de dato, que es justo lo que la columna tiene prohibido.
+  const ramoNuevo = ramoDelFormulario(datosRamo)
+  const ramoBase = aFormularioRamo(base.datosRamo)
+  if (!mismoRamo(ramoNuevo, ramoBase)) {
+    c.datosRamo = Object.keys(ramoNuevo).length === 0 ? null : ramoNuevo
+  }
   return c
 }
 
@@ -123,6 +184,7 @@ function aplicar(base: Valores, c: Cambios): Valores {
     bastidor: c.bastidor !== undefined ? c.bastidor : base.bastidor,
     fechaMatriculacion:
       c.fechaMatriculacion !== undefined ? c.fechaMatriculacion : base.fechaMatriculacion,
+    datosRamo: c.datosRamo !== undefined ? c.datosRamo : base.datosRamo,
   }
 }
 
@@ -146,8 +208,12 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     matricula: poliza.matricula,
     bastidor: poliza.bastidor,
     fechaMatriculacion: poliza.fechaMatriculacion,
+    datosRamo: poliza.datosRamo,
   }))
   const [form, setForm] = useState<Formulario>(() => aFormulario(guardado))
+  const [datosRamo, setDatosRamo] = useState<Record<string, string>>(() =>
+    aFormularioRamo(guardado.datosRamo),
+  )
   const [abierto, setAbierto] = useState(false)
   const [estado, setEstado] = useState<Estado>('reposo')
   const [errores, setErrores] = useState<Errores>({})
@@ -158,6 +224,9 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     // tarjetas y montar 50 formularios de golpe es la regla de rendimiento de
     // UI del monorepo hecha añicos.
     setForm(aFormulario(guardado))
+    // Se re-siembra desde lo GUARDADO, igual que el resto: abrir el editor
+    // enseña lo que hay en la BD, no lo que se dejó a medias la vez anterior.
+    setDatosRamo(aFormularioRamo(guardado.datosRamo))
     setErrores({})
     setErrorGeneral(null)
     setEstado('reposo')
@@ -167,6 +236,11 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
   function cerrar() {
     setAbierto(false)
     setErrores({})
+    setErrorGeneral(null)
+  }
+
+  function escribirRamo(id: string, valor: string) {
+    setDatosRamo((d) => ({ ...d, [id]: valor }))
     setErrorGeneral(null)
   }
 
@@ -191,7 +265,7 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
       return
     }
 
-    const cambios = calcularCambios(form, guardado, prima)
+    const cambios = calcularCambios(form, guardado, prima, datosRamo)
     if (Object.keys(cambios).length === 0) {
       setErrorGeneral('No has cambiado nada, así que no hay nada que guardar.')
       return
@@ -318,6 +392,8 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
                 ? 'Lo que pagas al año. Si no lo sabes, déjalo en blanco.'
                 : `Ahora tienes anotado ${eur(guardado.primaAnual)}.`
             }
+            datosRamo={datosRamo}
+            escribirRamo={escribirRamo}
           />
 
           {errorGeneral && (

@@ -16,6 +16,11 @@ import { join } from 'node:path'
 // Se importa el FUENTE por ruta, no por el alias `@/`: la raíz del monorepo no
 // resuelve los paths de la app y `node --test` no sabría de dónde sacarlo.
 import { normalizarParche, parsearFechaISO } from '../apps/asegura-portal/lib/poliza-editable.ts'
+// El catálogo de campos por ramo. Se lee EN CALIENTE, nunca se copian aquí sus
+// campos: lo llena y lo amplía otra gente, y un test que fijara «hogar tiene
+// metrosCuadrados» se rompería con cada campo nuevo sin proteger nada.
+import { camposDeRamo } from '../packages/module-seguros-portal/src/campos-ramo.ts'
+import { RAMOS_POLIZA } from '../packages/module-seguros-portal/src/poliza-leida.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 const leer = (rel: string) => readFileSync(join(ROOT, rel), 'utf8')
@@ -264,6 +269,7 @@ test('normalizarAlta hereda las reglas del parche y exige compañia o numero', a
     matricula: null,
     bastidor: null,
     fechaMatriculacion: null,
+    datosRamo: null,
   })
 })
 
@@ -289,4 +295,102 @@ test('los tres campos del vehiculo entran en el alta, y NINGUNO es obligatorio',
     error: 'sin_identificacion',
   })
   assert.equal(normalizarAlta({ compania: 'Axa' }, HOY).ok, true)
+})
+
+
+// ── 7. `datosRamo`: entra en el alta, no es obligatorio, y sin ramo no existe ──
+
+/**
+ * Un ramo del catálogo que tenga algún campo de TEXTO, elegido en caliente. El
+ * catálogo se está llenando en paralelo: si hoy está vacío, este helper devuelve
+ * `null` y el test comprueba lo que sí puede comprobar (que la columna queda a
+ * `null`), en vez de fijar unos campos que mañana son otros.
+ */
+function campoTextoDelCatalogo(): { ramo: string; id: string } | null {
+  for (const ramo of RAMOS_POLIZA) {
+    const campo = camposDeRamo(ramo).find((c) => c.tipo === 'texto')
+    if (campo) return { ramo, id: campo.id }
+  }
+  return null
+}
+
+test('datosRamo entra en el alta y NO es obligatorio', async () => {
+  const { normalizarAlta } = await import('../apps/asegura-portal/lib/poliza-editable.ts')
+
+  // No es obligatorio, igual que ningún otro campo del alta: la única guarda
+  // sigue siendo que la póliza quede IDENTIFICADA. Pedirle al cliente los
+  // metros de su casa para dejarle apuntar su seguro es trasladarle el trabajo
+  // de la correduría, y el formulario que no se rellena no guarda nada.
+  const sin = normalizarAlta({ compania: 'Axa' }, HOY)
+  assert.equal(sin.ok, true)
+  const datosSin = (sin as { ok: true; datos: Record<string, unknown> }).datos
+  assert.equal('datosRamo' in datosSin, true, 'la clave EXISTE en el alta, aunque valga null')
+  // `null` es la columna vacía. Nunca `{}`: un objeto que existe y no dice nada
+  // es otro «no lo sé» disfrazado de dato, y pasa por `IS NULL` y `??`.
+  assert.equal(datosSin.datosRamo, null)
+
+  const elegido = campoTextoDelCatalogo()
+  if (elegido) {
+    const r = normalizarAlta(
+      { compania: 'Axa', ramo: elegido.ramo, datosRamo: { [elegido.id]: '  Un valor  ' } },
+      HOY,
+    )
+    assert.equal(r.ok, true, JSON.stringify(r))
+    assert.deepEqual((r as { ok: true; datos: { datosRamo: unknown } }).datos.datosRamo, {
+      [elegido.id]: 'Un valor',
+    })
+
+    // Una clave que NO es del catálogo de ese ramo se descarta en silencio: si
+    // se guardara, quedaría enterrada en el JSON sin pantalla que la enseñe.
+    const conIntrusa = normalizarAlta(
+      { compania: 'Axa', ramo: elegido.ramo, datosRamo: { [elegido.id]: 'X', noEstaEnElCatalogo: 'y' } },
+      HOY,
+    )
+    assert.deepEqual((conIntrusa as { ok: true; datos: { datosRamo: unknown } }).datos.datosRamo, {
+      [elegido.id]: 'X',
+    })
+
+    // Y un valor de cajón NO se escribe: la clave desaparece, y si no queda
+    // ninguna la columna es NULL, no `{}`.
+    const cajon = normalizarAlta(
+      { compania: 'Axa', ramo: elegido.ramo, datosRamo: { [elegido.id]: 'no consta' } },
+      HOY,
+    )
+    assert.equal((cajon as { ok: true; datos: { datosRamo: unknown } }).datos.datosRamo, null)
+  }
+
+  // Sin ramo NO hay catálogo contra el que validar: es un ERROR, no un guardado
+  // a medias ni un `null` callado. Guardarlos a ciegas sería escribir claves que
+  // ninguna pantalla enseña; anularlos en silencio, decirle al cliente que ha
+  // guardado algo que no está.
+  assert.deepEqual(normalizarAlta({ compania: 'Axa', datosRamo: { loQueSea: 'x' } }, HOY), {
+    ok: false,
+    error: 'datos_ramo_sin_ramo',
+  })
+})
+
+test('las dos ramas del alta escriben datosRamo, y el PATCH distingue ausente de borrado', () => {
+  const alta = leer('apps/asegura-portal/app/api/polizas/route.ts')
+  const patch = leer('apps/asegura-portal/app/api/polizas/[id]/route.ts')
+
+  // Alta con documento y alta a mano: las dos escriben la columna. Si una no lo
+  // hiciera, el campo se leería del PDF y no llegaría nunca a la BD, sin error.
+  assert.match(alta, /datosRamo: datos\.datosRamo \?\? Prisma\.DbNull/, 'el alta con documento escribe datosRamo')
+  assert.match(alta, /datosRamo: datosRamo \?\? Prisma\.DbNull/, 'el alta a mano escribe datosRamo')
+
+  // `DbNull` (NULL de SQL) y NUNCA `JsonNull`, que guardaría el literal `null`
+  // DENTRO del JSON y se colaría por todas las guardas de NULL.
+  for (const [nombre, fuente] of [['alta', alta], ['patch', patch]] as const) {
+    assert.equal(/Prisma\.JsonNull/.test(fuente), false, `${nombre}: JsonNull escribe un null dentro del JSON`)
+  }
+
+  // El PATCH: la clave AUSENTE no puede viajar en el `data`. Convertirla en
+  // `DbNull` haría que corregir la compañía borrase los campos del ramo sin que
+  // nada fallara — el modo de fallo silencioso que persigue este fichero.
+  assert.match(patch, /'datosRamo' in normalizado\.parche/, 'ausente ≠ borrado en el PATCH')
+  assert.match(patch, /datosRamo \?\? Prisma\.DbNull/)
+  // Y el ramo con el que se valida sale de la BD, no del cuerpo: se lee con el
+  // mismo filtro por identidadId que todo lo demás.
+  assert.match(patch, /ramoGuardado: actual\.ramo/)
+  assert.match(patch, /findFirst\(\{\s*where: \{ id, identidadId: identidad\.id \}/)
 })

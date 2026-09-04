@@ -23,6 +23,7 @@
  * `required`, esto es el porqué de que no lo tenga.
  */
 
+import { camposDeRamo, type CampoRamo } from '@central/module-seguros-portal'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 
 export type RamoOpcion = { valor: string; etiqueta: string }
@@ -149,9 +150,38 @@ type Props = {
   ayudaHueco?: (campo: 'compania' | 'numeroPoliza' | 'ramo' | 'primaAnual') => string | null
   /** Ayuda de la prima. Siempre hay una: el hueco de la prima se explica. */
   ayudaPrima: string
+  /**
+   * Los campos PROPIOS del ramo elegido, en crudo tal cual se teclean. Van
+   * aparte de `form` a propósito: `Formulario` es un `Record<Campo, string>`
+   * con las claves cerradas del contrato (las mismas para toda póliza), y
+   * estas cambian con el ramo. Mezclarlas obligaría a que el tipo de un
+   * formulario dependiera de un valor de ese mismo formulario.
+   *
+   * 🚨 SON OPCIONALES, Y ESO ES UNA SALVAGUARDA, NO UN DESCUIDO. Una pantalla
+   * que todavía no sabe LEER estos datos no puede ofrecerse a escribirlos: si
+   * `EditarPoliza` los pintara vacíos sobre una póliza que ya los tiene, el
+   * primer «guardar» los borraría, en silencio y sin que nada fallara. Sin
+   * `escribirRamo` el bloque del catálogo sencillamente no se pinta. El del
+   * vehículo sí, porque esas tres SON columnas y esa pantalla ya las lee.
+   */
+  datosRamo?: Record<string, string>
+  escribirRamo?: (id: string, valor: string) => void
+  erroresRamo?: Record<string, string | undefined>
 }
 
-export function CamposPoliza({ idPrefix, ramos, form, errores, escribir, disabled, ayudaHueco, ayudaPrima }: Props) {
+export function CamposPoliza({
+  idPrefix,
+  ramos,
+  form,
+  errores,
+  escribir,
+  disabled,
+  ayudaHueco,
+  ayudaPrima,
+  datosRamo,
+  escribirRamo,
+  erroresRamo,
+}: Props) {
   const hueco = (campo: 'compania' | 'numeroPoliza' | 'ramo') => ayudaHueco?.(campo) ?? null
   return (
     <>
@@ -175,6 +205,34 @@ export function CamposPoliza({ idPrefix, ramos, form, errores, escribir, disable
           disabled={disabled}
         />
         {errores.fechaVencimiento && <p className="editor-error">{errores.fechaVencimiento}</p>}
+      </div>
+
+      {/* El TIPO DE SEGURO va aquí arriba, y no al final como estaba hasta el
+          04/09/2026, porque de él dependen los campos que se despliegan más
+          abajo. Con el selector al final, la persona rellenaba el formulario
+          entero y solo entonces le aparecían campos nuevos — que es la forma
+          más fiable de que no los rellene. */}
+      <div className="editor-campo">
+        <label htmlFor={`ramo-${idPrefix}`}>Tipo de seguro</label>
+        {hueco('ramo') && <p className="editor-ayuda">{hueco('ramo')}</p>}
+        <select
+          id={`ramo-${idPrefix}`}
+          className="campo"
+          value={form.ramo}
+          onChange={(e) => escribir('ramo', e.target.value)}
+          aria-invalid={errores.ramo ? true : undefined}
+          disabled={disabled}
+        >
+          {/* «No lo sé» es una respuesta válida y explícita, no un hueco a
+              rellenar con el primero de la lista. */}
+          <option value="">No lo sé</option>
+          {ramos.map((r) => (
+            <option key={r.valor} value={r.valor}>
+              {r.etiqueta}
+            </option>
+          ))}
+        </select>
+        {errores.ramo && <p className="editor-error">{errores.ramo}</p>}
       </div>
 
       <div className="editor-campo">
@@ -211,33 +269,6 @@ export function CamposPoliza({ idPrefix, ramos, form, errores, escribir, disable
       </div>
 
       <div className="editor-campo">
-        <label htmlFor={`ramo-${idPrefix}`}>Tipo de seguro</label>
-        {hueco('ramo') && <p className="editor-ayuda">{hueco('ramo')}</p>}
-        <select
-          id={`ramo-${idPrefix}`}
-          className="campo"
-          value={form.ramo}
-          onChange={(e) => escribir('ramo', e.target.value)}
-          aria-invalid={errores.ramo ? true : undefined}
-          disabled={disabled}
-        >
-          {/* «No lo sé» es una respuesta válida y explícita, no un hueco a
-              rellenar con el primero de la lista. */}
-          <option value="">No lo sé</option>
-          {ramos.map((r) => (
-            <option key={r.valor} value={r.valor}>
-              {r.etiqueta}
-            </option>
-          ))}
-        </select>
-        {errores.ramo && <p className="editor-error">{errores.ramo}</p>}
-      </div>
-
-      {RAMOS_CON_VEHICULO.has(form.ramo) && (
-        <CamposVehiculo idPrefix={idPrefix} form={form} errores={errores} escribir={escribir} disabled={disabled} />
-      )}
-
-      <div className="editor-campo">
         <label htmlFor={`prima-${idPrefix}`}>Prima anual (€)</label>
         <p className="editor-ayuda" id={`prima-ayuda-${idPrefix}`}>
           {ayudaHueco?.('primaAnual') ?? ayudaPrima}
@@ -257,7 +288,177 @@ export function CamposPoliza({ idPrefix, ramos, form, errores, escribir, disable
         />
         {errores.primaAnual && <p className="editor-error">{errores.primaAnual}</p>}
       </div>
+
+      {/* Y AL FINAL, lo específico de ESE seguro: el bloque del vehículo (que
+          son columnas propias) y los campos del catálogo del ramo. Va después
+          de los datos del contrato porque compañía, número y prima los tiene
+          cualquiera delante; los metros de la vivienda o el capital asegurado
+          hay que ir a buscarlos. Poner primero lo que cuesta encontrar es la
+          forma de que se abandone el formulario a la mitad. */}
+      <BloqueDelRamo
+        idPrefix={idPrefix}
+        form={form}
+        errores={errores}
+        escribir={escribir}
+        disabled={disabled}
+        datosRamo={datosRamo}
+        escribirRamo={escribirRamo}
+        erroresRamo={erroresRamo}
+      />
     </>
+  )
+}
+
+/** Cómo se titula el bloque de cada ramo. Sin entrada, un título neutro. */
+const TITULO_BLOQUE: Readonly<Record<string, string>> = {
+  auto: 'Datos del coche',
+  moto: 'Datos de la moto',
+  hogar: 'Datos de la vivienda',
+  comercio: 'Datos del local',
+  comunidades: 'Datos de la comunidad',
+}
+
+/**
+ * Todo lo que depende del ramo elegido, en una sola sección.
+ *
+ * 🚨 NINGUNO DE ESTOS CAMPOS ES OBLIGATORIO, igual que el vencimiento. Aquí la
+ * tentación es mayor —«si pide un seguro de hogar, los metros los sabrá»—, y es
+ * justo la que hay que resistir: quien no los sabe los estima, y una vivienda
+ * declarada de 90 m² que son 140 se paga en un siniestro con infraseguro. Un
+ * hueco se puede preguntar; un número inventado no se distingue de uno bueno.
+ *
+ * Si el ramo no tiene catálogo (o no se ha elegido ninguno), esto no pinta
+ * NADA: cero cabecera vacía, cero «no hay datos». Un bloque vacío en pantalla
+ * le hace dudar a la persona de si se ha dejado algo.
+ */
+function BloqueDelRamo({
+  idPrefix,
+  form,
+  errores,
+  escribir,
+  disabled,
+  datosRamo,
+  escribirRamo,
+  erroresRamo,
+}: {
+  idPrefix: string
+  form: Formulario
+  errores: Errores
+  escribir: (campo: Campo, valor: string) => void
+  disabled: boolean
+  datosRamo?: Record<string, string>
+  escribirRamo?: (id: string, valor: string) => void
+  erroresRamo?: Record<string, string | undefined>
+}) {
+  const conVehiculo = RAMOS_CON_VEHICULO.has(form.ramo)
+  // Sin `escribirRamo` esta pantalla no gestiona los campos del catálogo (ver
+  // la nota de las props): se comporta como si el ramo no tuviera ninguno.
+  const campos = escribirRamo ? camposDeRamo(form.ramo) : []
+  if (!conVehiculo && campos.length === 0) return null
+
+  return (
+    <section className="editor-bloque" aria-label={TITULO_BLOQUE[form.ramo] ?? 'Datos de este seguro'}>
+      <h3 className="editor-bloque-titulo">{TITULO_BLOQUE[form.ramo] ?? 'Datos de este seguro'}</h3>
+      <p className="editor-ayuda">
+        Nada de esto es obligatorio. Rellena lo que tengas a mano y deja en blanco lo que no sepas.
+      </p>
+
+      {conVehiculo && (
+        <CamposVehiculo idPrefix={idPrefix} form={form} errores={errores} escribir={escribir} disabled={disabled} />
+      )}
+
+      {escribirRamo &&
+        campos.map((campo) => (
+          <CampoDelCatalogo
+            key={campo.id}
+            idPrefix={idPrefix}
+            campo={campo}
+            valor={datosRamo?.[campo.id] ?? ''}
+            error={erroresRamo?.[campo.id]}
+            escribir={escribirRamo}
+            disabled={disabled}
+          />
+        ))}
+    </section>
+  )
+}
+
+/**
+ * Un campo del catálogo, pintado según su `tipo`. El catálogo vive en
+ * `@central/module-seguros-portal` y no sabe de HTML: la traducción
+ * tipo → control es de esta pantalla, y es el único sitio donde ocurre.
+ */
+function CampoDelCatalogo({
+  idPrefix,
+  campo,
+  valor,
+  error,
+  escribir,
+  disabled,
+}: {
+  idPrefix: string
+  campo: CampoRamo
+  valor: string
+  error?: string
+  escribir: (id: string, valor: string) => void
+  disabled: boolean
+}) {
+  const id = `${campo.id}-${idPrefix}`
+  const idAyuda = campo.ayuda ? `${id}-ayuda` : undefined
+  const comun = {
+    id,
+    className: 'campo',
+    value: valor,
+    disabled,
+    'aria-describedby': idAyuda,
+    'aria-invalid': error ? (true as const) : undefined,
+  }
+
+  return (
+    <div className="editor-campo">
+      <label htmlFor={id}>{campo.etiqueta}</label>
+      {campo.ayuda && (
+        <p className="editor-ayuda" id={idAyuda}>
+          {campo.ayuda}
+        </p>
+      )}
+
+      {campo.tipo === 'opcion' ? (
+        <select {...comun} onChange={(e) => escribir(campo.id, e.target.value)}>
+          <option value="">No lo sé</option>
+          {(campo.opciones ?? []).map((o) => (
+            <option key={o.valor} value={o.valor}>
+              {o.etiqueta}
+            </option>
+          ))}
+        </select>
+      ) : campo.tipo === 'triestado' ? (
+        // TRES opciones, no un checkbox, y «No lo sé» de salida. Un checkbox
+        // solo sabe decir sí/no: colapsa «no me lo han preguntado» en «ha
+        // dicho que no», que es un dato falso con forma de respuesta. Mismo
+        // criterio que los tri-estados del parte de siniestro.
+        <select {...comun} onChange={(e) => escribir(campo.id, e.target.value)}>
+          <option value="">No lo sé</option>
+          <option value="si">Sí</option>
+          <option value="no">No</option>
+        </select>
+      ) : campo.tipo === 'fecha' ? (
+        <input {...comun} type="date" onChange={(e) => escribir(campo.id, e.target.value)} />
+      ) : (
+        <input
+          {...comun}
+          type="text"
+          // `inputMode` y no `type="number"`: en móvil abre el teclado numérico
+          // igual, pero deja escribir la coma decimal española y no se come el
+          // valor con las flechitas del ratón.
+          inputMode={campo.tipo === 'numero' || campo.tipo === 'dinero' ? 'decimal' : undefined}
+          autoComplete="off"
+          onChange={(e) => escribir(campo.id, e.target.value)}
+        />
+      )}
+
+      {error && <p className="editor-error">{error}</p>}
+    </div>
   )
 }
 
