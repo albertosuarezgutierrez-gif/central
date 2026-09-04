@@ -55,6 +55,18 @@
   ⚖️ No se funden en «localizable»: el art. 22 LCS avisa al TOMADOR. Mismo agujero tapado en
   `contactoEfectivo()` (descartaba los intervinientes del propio tomador; su test fijaba lo contrario).
   Regla 19 de la skill `correduria-crm`. Guardián ampliado; 28/28 + 31/31, suite y typechecks en verde.
+- **✉️ Invitar por correo a quien NO está en la cartera (04/09/2026, PR #2283).** La TERCERA puerta de
+  la autorización: José escribe un correo cualquiera y le abre sus seguros. 🚨 **El token del enlace NO
+  abre sesión** —se lo comen los escáneres del correo, es una llave reenviable, y «aceptado por el que
+  tenía el enlace» no es prueba de consentimiento (art. 7.1)—: el token dice QUÉ invitación es y el
+  código de un solo uso dice QUIÉN eres, y la aceptación se ata al CORREO comparando el `portal_canal`
+  de quien acepta. Tabla aparte porque al invitado no se le puede apuntar todavía (no tiene ficha ni
+  identidad). `sin_enlace` (503) NO escribe la fila y `envio_fallido` (502) SÍ. El correo no dice ni
+  compañía ni póliza ni matrícula: quien lo recibe aún es un desconocido. Y la pantalla de José **no
+  puede decir a quién invitó** —solo se guarda el hash—, que es decisión, no campo por rellenar.
+  📌 De paso, medido: **el teléfono de siniestros de las compañías NO existe en la BD** (`companias_dgs`
+  solo tiene código, nombres, `en_cima`, `activa` y notas). El único teléfono del schema es el de la
+  correduría — y para la hoja imprimible del frigorífico que quiere Alberto, ese es justo el bueno.
 
 - **Web pública de la correduría: `apps/asegura-web` (04/09/2026).** 17 páginas (home · 6 ramos · «cambiar de
   correduría» · quiénes somos · 3 legales · sitemap · robots · `/api/lead`), para el **apex `grupoasegura.com` +
@@ -91,6 +103,22 @@
   repitiendo los diez campos del `Hallazgo` a mano (rompió justo al añadir `contacto`): ahora hay UN
   `hallazgoSinEnriquecer()`. 🚨 **Segundo choque del día con otra sesión sobre el mismo archivo** (el primero
   fue `BotonWhatsapp` en #2281): antes de construir sobre `/correduria`, mirar qué hay ya en `main`. PR #2290.
+- **💓 El vigía de latidos gritaba por agentes a los que aún NO les había tocado correr (04/09/2026, PR #2248).**
+  De los 6 rojos del parte, **4 eran falsa alarma por construcción**: `evaluarLatido` no distinguía «no
+  hay señal porque está roto» de «no hay señal porque se declaró anteayer». Las 5 rutinas cableadas el
+  02/09 salían en ROJO desde el minuto uno y las dos mensuales (día 1) iban a seguir 27 días — mientras
+  `facturas_correo`, diaria, latía al día siguiente: la maquinaria iba bien, fallaba el juicio. Cuarto
+  estado **`estreno`** + campo `vigiladoDesde` (obligatorio, con guardián); en el panel es GRIS, no verde.
+  🚨 Los otros 2 SÍ son reales y sus `nota` **mentían**: la de domótica decía «es el trial de IoT Core,
+  conocido» y esos errores son del 03/08 — hoy es `Tuya 2001 offline` + `1109` en el respaldo, con **3
+  reservas sin PIN** (una con el huésped dentro). Alberto decide dejar los dos rojos («la cerradura no
+  tiene conexión, para más adelante» · «SES déjalo rojo, es un pendiente real») → **`pendienteConocido`**:
+  se calla la INTERRUPCIÓN, no el registro (siguen en alerta en /operador/agentes). Tres candados con
+  test: marcador del parte —un código de Tuya nuevo vuelve a sonar el mismo día, y sin `detalle` no casa
+  nada—, fecha que caduca sola, y fuera del carril de auto-reparación. Para poder distinguirlo, el parte
+  de accesos pasó de «3 con ERROR» a nombrar los códigos (tres averías que mandaban a sitios opuestos se
+  veían idénticas). ⏸️ Fechas de revisión PROPUESTAS por mí: domótica 12/09 (el 14 entra una reserva de
+  20 noches), SES 06/10.
 - **🔧 Instrumentado `pricing_applied` y ACTIVADOS los mensajes de los 2 pisos de Busto (04/09/2026).** Alberto dio OK a
   las dos cosas. (1) `pricing_applied` gana `target_crudo`, `clamp_floor`, `clamp_ceil`, `rail_ancla` y
   **`rail_ancla_origen`** (migración aplicada a prod): son los 4 números sin los cuales la ida y vuelta de House era

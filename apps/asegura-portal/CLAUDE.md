@@ -888,3 +888,95 @@ de un desconocido, y la fila quedaría perfectamente válida. Se vio morder ante
   está viva no se anota como que alguien miró algo. `registrarUso` y `resolver` miran también la
   identidad — si no, el invitado no podría aceptar ni revocar, y sus visitas no constarían: el otorgante
   leería «no ha entrado nadie» sobre alguien que sí entró.
+
+## ✉️ Invitar por correo a quien NO está en la cartera (04/09/2026)
+
+La **tercera** puerta de la autorización, y la que trae gente nueva. Dictado de Alberto: *«se pueda
+mandar solicitudes por mail… José Suárez Salas puede añadir el mail de alguien, le diga qué relación
+tiene, y llega mail con acceso a la intranet»*. Quien entra por aquí no es un cliente: es un futuro
+cliente viendo cómo trabaja la correduría con los seguros de alguien que se fía de él.
+
+Tabla `seguros.portal_invitacion` (`prisma/sql/2026-09-04_portal_invitacion.sql`, aplicada), reglas
+puras en `packages/module-seguros-portal/src/invitacion.ts` (**lee su cabecera antes de tocar el
+token**), BD en `lib/invitaciones.ts`, correo en `lib/correo-invitacion.ts`, rutas en
+`app/api/invitaciones/**`, pantallas en `app/(portal)/autorizaciones/` y `app/invitacion/[token]/`.
+
+### 🚨 El token NO abre sesión, y hay que dejarlo así
+
+La tentación es que el enlace del correo entre de un clic. **No**, por tres razones:
+
+1. **Se lo comen los escáneres.** Un GET que consume estado lo gastan el antivirus del correo y el
+   prefetch antes de que la persona lo toque — la misma lección que `lib/enlace-acceso.ts`.
+2. **Un token en un correo es una llave reenviable.** Quien reenvía el mensaje, o quien lee el buzón
+   compartido de una empresa, entraría en los seguros de un tercero sin que nada falle.
+3. **«Aceptado por el que tenía el enlace» no es una prueba de consentimiento**: es un recibo sin
+   firma, y el art. 7.1 RGPD pide poder demostrarlo.
+
+Reparto: **el token dice QUÉ invitación es; el código de un solo uso al correo invitado dice QUIÉN
+eres.** Y la aceptación se ata al **correo** (se compara el `portal_canal` de quien acepta con
+`destinatario_canal_hash`), no al token: un enlace reenviado no le sirve a nadie más. El token se
+guarda **hasheado** — una tabla de invitaciones con sus tokens legibles es una tabla de llaves.
+
+### La asimetría con `peticion-acceso.ts` es deliberada
+
+Allí los resultados **se colapsan** porque quien pregunta aprendería si el destinatario es cliente, y
+con 32.600 fichas eso es un bucle de enumeración. **Aquí no hay nada que aprender**: se invita igual
+lo sea o no. Lo que sigue sin contestarse —ni aquí ni en ningún sitio— es si ese correo está en la
+cartera: no es que se colapse, es que **no se calcula** (`invitacionRevelaSiEsCliente()` devuelve
+`false` por tipo, y tiene su test sobre TODOS los resultados).
+
+### `sin_enlace` (503) NO escribe la fila; `envio_fallido` (502) SÍ
+
+| | Qué pasó | Qué se dice |
+|---|---|---|
+| `sin_enlace` | falta `PORTAL_PUBLIC_URL` o no es https → **no se toca la BD** | «avería nuestra; no se ha creado ninguna invitación» |
+| `envio_fallido` | la fila EXISTE, lo que falló fue avisar | «la invitación está hecha, pero no hemos podido avisarle» |
+
+Aquí el enlace **es el mecanismo** (a diferencia del correo del código, donde el código abre igual la
+puerta y el enlace solo pre-rellena): una fila cuyo correo no puede salir ocupa el sitio del índice
+único y nadie podría aceptarla nunca. **No se inventa un dominio.** La respuesta lleva `registrada`,
+calculado con `invitacionEscrita()` del módulo puro, para que la pantalla no invite a reintentar algo
+que chocaría con el índice.
+
+### Lo que el correo NO puede decir
+
+Quien lo recibe todavía es un desconocido: José pudo equivocarse de dirección, o el buzón puede ser
+compartido. Dice **quién** invita, su mensaje, que caduca en 30 días y el enlace. **Nunca** compañía,
+número de póliza, matrícula ni importe — `CAMPOS_PROHIBIDOS_EN_INVITACION` vive en el módulo puro con
+un test que recorre el cuerpo del correo, para que ese «poco más» no crezca solo con el tiempo. Por lo
+mismo, la pantalla del invitado dice «solo a una de sus pólizas» **sin nombrarla**.
+
+### Landmines de esta pieza
+
+- **La pantalla de José NO puede decir a quién invitó.** La tabla guarda solo
+  `destinatario_canal_hash` y un hash no se revierte. `InvitacionEnviada` **no lleva destinatario**, y
+  eso es una decisión, no un campo por rellenar: cada invitación se identifica por su fecha, la ficha
+  y lo que ofrece. Enseñar el correo exigiría guardarlo en claro — una agenda de direcciones de
+  terceros que no han consentido nada.
+- **El alcance de una invitación es solo `ver`/`ver_economico`**, aunque la ficha sea jurídica: un
+  apoderamiento no se reparte por un enlace de correo a quien todavía no ha probado quién es. La
+  representación se sigue concediendo por `conceder()`. Lo obliga el CHECK `portal_invitacion_alcance`.
+- **`ya_autorizado` mira LAS DOS ramas** (ficha por índice ciego, identidad por `portal_canal`), con
+  la póliza en la clave. Sin `PII_LOOKUP_KEY` la rama de la ficha se degrada (log del motivo, jamás
+  del correo) en vez de bloquear; el respaldo real es que al ACEPTAR se reutiliza la autorización viva.
+- **`lib/correo-invitacion.ts` importa `@central/core-email` de forma DINÁMICA**, dentro de
+  `enviarInvitacion`. Medido: `node --test` no resuelve ese paquete (su `main` importa
+  `./transporter` sin extensión) y con el import arriba el cepo del cuerpo del correo no podía cargar
+  el módulo — o sea, se probaría leyendo la fuente, que es no probarlo.
+- **Las dos consultas por token son las ÚNICAS del portal sin identidad** (`invitacionPorToken` y
+  `filaPorToken`): la página es pública y ahí el filtro es el token, 256 bits. Están marcadas en voz
+  alta en el código y **no** hizo falta tocar la lista de EXENTOS del guardián de aislamiento.
+- **La sección «invitaciones mandadas» se carga por `GET /api/invitaciones`**, sin `try/catch`: si la
+  consulta falla, que suba. Devolver listas vacías haría pasar un fallo de BD por «no has invitado a
+  nadie» — justo sobre la lista donde José decide si retira algo. La pantalla distingue los tres
+  estados (cargando ≠ no se ha podido mirar ≠ mirado y no hay).
+- ⚠️ **Hueco conocido:** las fichas desde las que invitar salen de `candidatos`, que es lo único que
+  manda `GET /api/autorizaciones` — y `candidatos` sale de `cliente_relaciones`. Quien tenga vínculo
+  pero **ninguna relación registrada** no ve ficha que ofrecer; la pantalla lo dice («no tenemos
+  identificada ninguna ficha tuya… escríbenos») en vez de enseñar un formulario que fallaría con
+  `ficha_no_tuya`. Lo correcto a medio plazo es que el puerto mande «mis fichas» aparte de los
+  candidatos.
+
+Cepos: `packages/module-seguros-portal/src/invitacion.test.ts` (10, con las mutaciones comprobadas:
+colapsar `sin_enlace` con `envio_fallido` y sumar la caducidad en meses hacen fallar los suyos) y
+`apps/asegura-portal/lib/invitaciones.test.ts` (25).
