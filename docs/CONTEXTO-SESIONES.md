@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez (04/09/2026).** El
+  360009410197 salía de la URL de un artículo del Zendesk de **HomeExchange** (correo de Irene et
+  Rico, un intercambio de casa, ni siquiera una reserva); el colador `\b(\d{9,})\b` miraba dentro de
+  los enlaces. Y el 6144978627 (Booking, luis ortiz benito) SÍ estaba en Smoobu e `incomes`
+  (id 145652821, Luxury Busto) pero con llegada **23/04/2027**, fuera de la ventana de ±180 días.
+  Arreglado: `lib/correo/num-confirmacion.ts` (puro, quita URLs + whitelist de dominios de canal,
+  HomeExchange NO lo es), `resolverBookingId` con 2ª pasada ancha paginada y ventana del vigía a
+  −90..+540 días. Fila 19 → estado nuevo `descartada`. PR pendiente de nº.
+
 - **🛡️ /correduria: seis peticiones de Alberto desde el móvil, PR #2259 (04/09/2026).**
   Cabecera visible fuera (~62px de la 1ª pantalla; el `<h1>` se oculta con `.solo-lectores`, no se
   borra). La búsqueda vive ya en la URL (`?q=`) como la sección (`?s=`): volver con el navegador la
