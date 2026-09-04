@@ -278,3 +278,27 @@ test('todo pendienteConocido declarado tiene motivo, marcador y fecha válida', 
     assert.ok(!Number.isNaN(new Date(p.revisarEl).getTime()), `${a.id}: revisarEl no es una fecha`)
   }
 })
+
+// Guardián del CRON (04/09/2026). Lo que sigue vive en la ruta, donde ni `tsc` ni `next build` miran
+// dentro de la lógica: que un pendiente o un estreno NUNCA abran por sí solos el Telegram. Si alguien
+// mete `pendientes.length` o `estrenos.length` en esa condición, vuelve el ruido diario que este PR
+// existe para quitar, y no lo cazaría ningún test de `evaluarLatido`. Por eso se lee el FUENTE.
+test('ni los pendientes ni los estrenos disparan el Telegram por sí solos', () => {
+  const ruta = join(dirname(fileURLToPath(import.meta.url)), '../../app/api/cron/agentes-latido/route.ts')
+  const src = readFileSync(ruta, 'utf8')
+  const m = src.match(/\n {2}if \((alertas\.length[^)]*)\) \{/)
+  assert.ok(m, 'no se encuentra la condición que manda el Telegram — ¿cambió el formato?')
+  const cond = m[1]
+  assert.match(cond, /alertas\.length/, 'una alerta real sí tiene que abrir el aviso')
+  assert.doesNotMatch(cond, /pendientes\.length/, 'un pendiente conocido NO puede provocar el Telegram')
+  assert.doesNotMatch(cond, /estrenos\.length/, 'un estreno NO puede provocar el Telegram')
+})
+
+// Y que el veredicto que se PERSISTE para /operador/agentes lleve la coletilla del pendiente: sin
+// ella la pantalla enseña un rojo crudo, sin pista de que ya está visto y fechado.
+test('el motivo persistido de un pendiente dice que lo es', () => {
+  const ruta = join(dirname(fileURLToPath(import.meta.url)), '../../app/api/cron/agentes-latido/route.ts')
+  const src = readFileSync(ruta, 'utf8')
+  assert.match(src, /guardarSalud\(ag, ahora, ev\.alerta, ev\.horas, motivoSalud, null\)/)
+  assert.match(src, /ev\.pendiente && ev\.pendienteNota \? `\$\{ev\.motivo\}[^`]*\$\{ev\.pendienteNota\}`/)
+})

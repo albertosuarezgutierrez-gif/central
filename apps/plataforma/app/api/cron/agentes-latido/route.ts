@@ -271,7 +271,12 @@ async function handler(req: NextRequest) {
       else if (ev.alerta) alertas.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.\n  ${ag.nota}`)
       // El estreno NO arrastra la `nota`: esa es el runbook de una avería, y aquí no hay ninguna.
       else if (ev.estreno) estrenos.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.`)
-      await guardarSalud(ag, ahora, ev.alerta, ev.horas, ev.motivo, null)
+      // 🚨 El motivo que se PERSISTE lleva la coletilla del pendiente. Sin ella, /operador/agentes
+      // pinta el rojo con el fallo crudo y sin una sola pista de que ya está visto y fechado — que
+      // es exactamente la confusión que este cambio quita del Telegram, movida a la pantalla. Sigue
+      // en rojo a propósito: lo que se calla es la interrupción, no el hecho.
+      const motivoSalud = ev.pendiente && ev.pendienteNota ? `${ev.motivo} · 📌 ${ev.pendienteNota}` : ev.motivo
+      await guardarSalud(ag, ahora, ev.alerta, ev.horas, motivoSalud, null)
     } catch (e) {
       // 🚨 Una sonda rota NO es un agente sano. Antes se tragaba en silencio
       // "para no dar falsas alarmas", pero eso convierte un vigía averiado en un
