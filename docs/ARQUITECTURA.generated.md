@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-04T08:06:39Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-04T21:55:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1266 rutas API.
+**Resumen:** 12 apps · 40 packages · 23 capacidades · 39 skills · 1269 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -20,13 +20,13 @@
 ### asegura
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
-- **Tablas (60):** if, seguros._volcado_control, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas, seguros.cuenta_efectivo…
+- **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
 - **Rutas API:** 33
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
-- **Tablas (12):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_poliza_declarada, seguros.portal_vinculo
-- **Rutas API:** 10
+- **Tablas (13):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_vinculo
+- **Rutas API:** 13
 ### housesevillana
 - **Módulos que usa:** —
 - **Capacidades:** —
@@ -256,14 +256,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (04/09/2026) 💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno
-- (04/09/2026) 🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía
-- (04/09/2026) 🏠 Los 10 ramos ya despliegan SUS campos, y hogar los saca del Catastro
-- (03/09/2026) 🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA
-- (03/09/2026) 📱 Segunda captura de móvil: la ficha del cliente
-- (03/09/2026) 📱 `/correduria` en el MÓVIL, con la primera captura real
-- (03/09/2026) 🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos
-- (03/09/2026) 🎨 La marca de Grupo ASegura estaba en la app de Manuel, no en Drive
-- (03/09/2026) 🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera
-- (03/09/2026) 🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR
+- (04/09/2026) 🔧 Instrumentado `pricing_applied` y ACTIVADOS los mensajes de los 2 pisos de Busto
+- (04/09/2026) 📸 Quitar Smoobu de Busto: las indicaciones están listas, las FOTOS no
+- (04/09/2026) 📉 Las pasadas de pricing del 04/09: dos hallazgos y un agujero de instrumentación
+- (04/09/2026) 🔐 La cerradura que falla NO es la de Socorro
+- (04/09/2026) 📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp
+- (04/09/2026) 🎟 La intranet del cliente deja de ser solo para clientes
+- (04/09/2026) 🏠 La escalera del Catastro para hogar, y un agujero que salió por el camino
+- (04/09/2026) 📄 Subir una póliza no lee nada porque FALTA LA CLAVE DE IA, no porque el PDF sea malo
+- (04/09/2026) 🚑 CIMA NO da campos por ramo para el siniestro (medido sobre las 67 filas reales, 04/09/2026).
+- (04/09/2026) 🧹 Borrado el mail de Alberto de dos fichas ajenas
 
