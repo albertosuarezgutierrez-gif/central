@@ -210,6 +210,10 @@ function condicionesCliente(
   const conds: Prisma.Sql[] = [
     Prisma.sql`c.correduria_id = ${correduriaId}::uuid`,
     Prisma.sql`c.merged_into_cliente_id is null`,
+    // 🚨 Las fichas DESCARTADAS no salen ni en la lista ni en las facetas (esta
+    // función alimenta las dos). Descartar es exactamente esto: dejar de salir
+    // donde se mira. La ficha en sí se sigue abriendo por su URL.
+    Prisma.sql`c.activo`,
     // El GRUPO, derivado de las pólizas vivas. Nunca de `clientes.tipo`.
     f.grupo === 'viva' ? Prisma.sql`v.polizas_vivas > 0` : Prisma.sql`v.polizas_vivas = 0`,
   ]
