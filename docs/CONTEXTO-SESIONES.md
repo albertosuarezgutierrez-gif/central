@@ -30,6 +30,30 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026).**
+  Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
+  revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
+  saludo» tumbaba la detección → `es_cortesia=false`, la vía de cortesía ni se intentaba; (2) el
+  control de calidad caído (`DESCONOCIDO`) entra en `needs_human`, que es guarda común → tampoco
+  habría salido. Arreglar uno solo no cambiaba nada. Nuevo `cortesia.ts` (detector ancho + anclado, y
+  `respuestaSinDatos`); `DESCONOCIDO` ya no bloquea SOLO cuando ni la pregunta pide nada ni el
+  borrador da un dato, y el aviso de auto-envío lo DECLARA (`sin_verificar`). La decisión final se
+  extrajo a `auto.ts` puro: no tenía ni un test. 31 tests nuevos.
+- **🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía (04/09/2026).**
+  (a) No había NINGUNA recuperación por parecido: `contexto.ts` volcaba las 8 últimas filas del piso
+  (`ORDER BY created_at DESC LIMIT 8`) sin mirar la pregunta → 8 «gracias» enterraban lo enseñado.
+  🚨 Medido contra `mensajes_guia_gaps`: el trigram (`word_similarity`) solo caza lo casi literal
+  (0,62); las paráfrasis reales dan **0,20-0,21 sobre un ruido de 0,19** — la opción elegida no
+  bastaba. Y `word_similarity('hola', …)` = **1,00**. Solución: DOS señales en unión (trigram con
+  guarda de longitud ≥20 + palabra de contenido en común, que es la que caza «whatsapp» en los cuatro
+  avisos de phishing) en `similitud-reglas.ts` (puro) + `similitud.ts`, aplicadas al prompt y a
+  `registrarGap` (que comparaba por `=` exacto → 4 filas de `veces=1`). Sin resolver a propósito: los
+  SINÓNIMOS (aparcar↔parking), que son terreno de embeddings.
+  (b) **6 de las 7 filas de `mensajes_hechos` eran la carta entera** (legacy previo a #2122, que puso
+  el destilador el 02/09) y se inyectaban como «HECHOS DE ESTE PISO»: la id=3 llevaba el móvil de
+  Alberto y el nombre de una huésped. Marcadas `descartado` en BD (autorizado por Alberto).
+  ⏳ Sigue PENDIENTE: `mensajes_aprendizaje` no se le pasa al control de calidad (`debeEscalar` solo
+  ve ficha+guía+`mensajes_hechos`), así que aún escala lo ya contestado si no llegó a ser un HECHO.
 - **🏠 Los 10 ramos ya despliegan SUS campos, y hogar los saca del Catastro (04/09/2026, PR #2242).**
   Alberto vio en su móvil que elegir «Hogar» no cambiaba nada: el despliegue existía solo para
   auto/moto. Ahora los 10 ramos tienen catálogo (`campos-ramo.ts`, módulo puro, 31 tests) y sus valores
@@ -695,6 +719,14 @@
   póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
 
 ---
+
+### 🔧 (04/09/2026, II) Reparados 3 de los 5 hilos abiertos del motor; los otros 2 medidos y sequenciados
+- **Clamp de calidad que se anulaba solo:** `target = clamp(baseD, floorD, ceilD)` con `baseD` ajustado por `dqDate` y los límites sin ajustar. Medido: `quality_factor` real 0,848 en Busto con el suelo al 0,874 del objetivo → mordía en **9 de 12 meses, +5,8%**, en el piso que vende en el P10. Dúplex 3 meses, Luxury 1, House 0. Se ajustan LOS DOS límites (el clamp es un intervalo). Guardián que lee el fuente, probado en rojo.
+- **Techo por ADR de House desde el histórico equivocado:** `priorRows` ignoraba `historico_desde`. ADR 6 años **354€** vs desde su fecha **655€** → techo a la mitad (sep 391 vs 884, dic 498 vs 1.113) y `suelo_manda` en 3 meses. No-op exacto en los otros tres (todos con `historico_desde` NULL). Trade-off declarado: 3 meses de House quedan bajo `MIN_NOCHES_ADR` → se cuentan ahora los DOS motivos de «sin techo» por separado (antes `sin_muestra` era mudo).
+- **Check #13 decía «TODAS sus palancas»** y es falso: no modela los dos techos, así que su número es una COTA SUPERIOR. Comprobado que en Luxury el veredicto no cambia (techo ADR 0,83 vs multiplicadores 0,656), pero la palabra hacía sonar el aviso más definitivo de lo que es.
+- ❌ **`mkt_score` sin filtro de liga: MEDIDO Y DESCARTADO.** La mediana de score con y sin liga difiere 0,0-0,2 puntos → mueve el factor de calidad un **0,8-1,6%**. El diagnóstico lo llamó «doble conteo» y en magnitud es ruido. No se toca.
+- ⏸️ **`noches_ref` vs ventana del corpus: medido, NO cambiado hoy.** El corpus es **86,5% de 2 noches** y Busto/Dúplex tienen `noches_ref=3` → `aBase` descuenta 12,73€/noche cuando el comparable lleva 19,10€ implícitos (**+5-7%**). Pero `noches_ref` es la estancia mediana REAL de nuestras reservas y para ESO es correcto: el arreglo es que `aBase` use la ventana del corpus, no cambiar el ajuste. Sequenciado tras converger el descenso — era el 4º cambio de precio del día.
+
 
 ### 🧊 (04/09/2026) La guarda de outlier paraba el descenso que el propio motor había empezado
 - Al recalibrar el ancla a la baja el 03/09 (#2192/#2228), `normalBase` cayó ~25% de golpe: **448 noches** de los 4 pisos pasaron a cumplir `old > normalBase × 1,4` **sin que nadie hubiera subido nada**, y se quedaron clavadas ARRIBA.
