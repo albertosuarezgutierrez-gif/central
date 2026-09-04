@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📧 El buscador ya llamaba, pero a 5 clientes vivos les faltaba el correo (04/09/2026).** #2286 llevó el
+  contacto al buscador; en paralelo yo hacía lo mismo (#2289, **cerrado sin mergear**: su diseño era mejor,
+  `contacto: Contacto | null` distingue «asegura no lo mandó» de «no consta», y el mío no). De mi trabajo
+  sobrevive lo que #2286 no tenía y estaba **medido**: `clientes.email` NO es el único sitio — **57 fichas
+  tienen email solo en `cliente_emails` y 5 son de los 80 clientes vivos** (1 de cada 16). Consulta extra que
+  solo se lanza si hay huecos. Con el TELÉFONO no hace falta: cero casos, medido. Y `porMatricula` seguía
+  repitiendo los diez campos del `Hallazgo` a mano (rompió justo al añadir `contacto`): ahora hay UN
+  `hallazgoSinEnriquecer()`. 🚨 **Segundo choque del día con otra sesión sobre el mismo archivo** (el primero
+  fue `BotonWhatsapp` en #2281): antes de construir sobre `/correduria`, mirar qué hay ya en `main`. PR #2290.
 - **💓 El vigía de latidos gritaba por agentes a los que aún NO les había tocado correr (04/09/2026, PR #2248).**
   De los 6 rojos del parte, **4 eran falsa alarma por construcción**: `evaluarLatido` no distinguía «no
   hay señal porque está roto» de «no hay señal porque se declaró anteayer». Las 5 rutinas cableadas el
