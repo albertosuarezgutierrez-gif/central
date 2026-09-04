@@ -48,6 +48,7 @@ const VIGIA_MAX_H = 36
  *   2. Una SONDA ROTA no es un agente sano: es «no se ha podido comprobar», que va en rojo.
  *   3. `horas === null` significa «ni una sola ejecución ha dejado huella», NO «0 horas». Por eso
  *      con alerta y sin horas el estado es rojo y no ámbar: no hay dato con el que ser indulgente.
+ *   4. Un ESTRENO (sin alerta y sin horas) no es verde. Ver el bloque de abajo.
  */
 export function clasificarSalud(f: FilaSalud, ahoraMs: number): SaludLatido {
   const evaluadoMs = new Date(f.evaluado_at).getTime()
@@ -71,6 +72,20 @@ export function clasificarSalud(f: FilaSalud, ahoraMs: number): SaludLatido {
   }
 
   const horas = f.horas == null ? null : Number(f.horas)
+
+  // 4. ESTRENO (04/09/2026): declarado hace poco, aún sin ninguna señal, y su primera pasada todavía
+  //    no ha vencido. `evaluarLatido` no alerta —es lo correcto: no hay avería— pero pintarlo VERDE
+  //    sería peor que la falsa alarma que se acaba de quitar: diría «está bien» de un agente del que
+  //    no se sabe absolutamente nada. Es «todavía no se sabe», y para eso ya está el gris.
+  //
+  //    Se reconoce por la COMBINACIÓN `sin alerta` + `horas === null`, no por el texto del motivo:
+  //    `evaluarLatido` solo devuelve `alerta:false` en dos sitios, y el otro (agente activo) SIEMPRE
+  //    trae un número de horas. Es un invariante del módulo, no una heurística sobre una cadena —
+  //    y lo fija un test en `lib/monitoring/latidos.test.ts`.
+  if (!f.alerta && horas === null) {
+    return { ...base, ultima: null, horas: null, estado: 'gris', detalle: f.motivo }
+  }
+
   const estado: EstadoSalud = !f.alerta
     ? 'verde'
     : horas !== null && horas <= f.max_horas * 2 ? 'ambar' : 'rojo'
