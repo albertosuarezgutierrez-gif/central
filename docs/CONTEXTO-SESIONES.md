@@ -39,15 +39,21 @@
   `respuestaSinDatos`); `DESCONOCIDO` ya no bloquea SOLO cuando ni la pregunta pide nada ni el
   borrador da un dato, y el aviso de auto-envío lo DECLARA (`sin_verificar`). La decisión final se
   extrajo a `auto.ts` puro: no tenía ni un test. 31 tests nuevos.
-- **🚨 APRENDIZAJE: medido, y está roto por tres sitios (04/09/2026, sin arreglar — pendiente de tu OK).**
-  (a) **No hay recuperación por similitud**: `contexto.ts` vuelca las 8 últimas filas del piso
-  (`ORDER BY created_at DESC LIMIT 8`), sin mirar si tienen que ver con la pregunta → 8 «gracias»
-  entierran lo enseñado. (b) `mensajes_aprendizaje` **no se le pasa al control de calidad** (solo
-  ficha+guía+`mensajes_hechos`) → sigue escalando por muy contestado que esté. (c) **6 de las 7 filas
-  de `mensajes_hechos` son la carta entera** (legacy previo a #2122, que puso el destilador el
-  02/09) y siguen inyectándose como «HECHOS DE ESTE PISO»: la id=3 lleva el **móvil de Alberto y el
-  nombre de una huésped**. (d) `registrarGap` compara por igualdad exacta → 4 avisos de phishing en
-  distintas palabras = 4 filas de `veces=1`.
+- **🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía (04/09/2026).**
+  (a) No había NINGUNA recuperación por parecido: `contexto.ts` volcaba las 8 últimas filas del piso
+  (`ORDER BY created_at DESC LIMIT 8`) sin mirar la pregunta → 8 «gracias» enterraban lo enseñado.
+  🚨 Medido contra `mensajes_guia_gaps`: el trigram (`word_similarity`) solo caza lo casi literal
+  (0,62); las paráfrasis reales dan **0,20-0,21 sobre un ruido de 0,19** — la opción elegida no
+  bastaba. Y `word_similarity('hola', …)` = **1,00**. Solución: DOS señales en unión (trigram con
+  guarda de longitud ≥20 + palabra de contenido en común, que es la que caza «whatsapp» en los cuatro
+  avisos de phishing) en `similitud-reglas.ts` (puro) + `similitud.ts`, aplicadas al prompt y a
+  `registrarGap` (que comparaba por `=` exacto → 4 filas de `veces=1`). Sin resolver a propósito: los
+  SINÓNIMOS (aparcar↔parking), que son terreno de embeddings.
+  (b) **6 de las 7 filas de `mensajes_hechos` eran la carta entera** (legacy previo a #2122, que puso
+  el destilador el 02/09) y se inyectaban como «HECHOS DE ESTE PISO»: la id=3 llevaba el móvil de
+  Alberto y el nombre de una huésped. Marcadas `descartado` en BD (autorizado por Alberto).
+  ⏳ Sigue PENDIENTE: `mensajes_aprendizaje` no se le pasa al control de calidad (`debeEscalar` solo
+  ve ficha+guía+`mensajes_hechos`), así que aún escala lo ya contestado si no llegó a ser un HECHO.
 - **🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA (03/09/2026, PR #2235).**
   Alberto: «cuando seleccione un tipo de seguro, que despliegue los campos necesarios». Auto/moto →
   matrícula, fecha de matriculación y bastidor; otro ramo, nada (un tarificador pide todo siempre

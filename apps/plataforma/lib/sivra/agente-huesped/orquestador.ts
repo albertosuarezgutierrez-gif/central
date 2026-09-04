@@ -3,6 +3,7 @@ import { construirContexto } from './contexto'
 import { detectLang, detectCategory, tipoHueco } from './reglas'
 import { decidir, type Decision } from './decidir'
 import { decidirAutoEnvio } from './auto'
+import { aprendizajesRelevantes, hechosRelevantes } from './similitud'
 import { recomendar } from './recomendar'
 import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
@@ -102,7 +103,21 @@ export async function procesarMensajeHuesped(
     const fallbackLang = (IDIOMAS_OK.has(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en') as 'es' | 'en' | 'fr' | 'de' | 'it'
     const lang = detectLang(pregunta, fallbackLang)
     const categoria = detectCategory(pregunta) || 'general'
-    const ctx = { ...ctx0, lang }
+    // 1-ter) Recuperar lo ya aprendido que se PAREZCA a esta pregunta. `construirContexto` no puede
+    // hacerlo: se ejecuta antes de saber cuál es la pregunta (puede salir del propio historial). Lo
+    // que traía era «las 8 últimas filas del piso», que es lo que hacía que ocho «gracias a ti»
+    // enterrasen lo enseñado — el «no aprende» de Alberto (04/09/2026). Ver `similitud.ts`.
+    // `null` = no se pudo leer: se conserva lo que vino por recencia, nunca se vacía el prompt.
+    const [aprendRelev, hechosRelev] = await Promise.all([
+      aprendizajesRelevantes(ctx0.propertyId, pregunta),
+      hechosRelevantes(ctx0.propertyId, pregunta),
+    ])
+    const ctx = {
+      ...ctx0,
+      lang,
+      aprendizajes: aprendRelev ?? ctx0.aprendizajes,
+      hechos: hechosRelev ? hechosRelev.map(h => h.hecho) : ctx0.hechos,
+    }
 
     // 1-bis) ¿Es el «sí» a un extra que Alberto ya aprobó en este hilo? Entonces la respuesta es el
     // enlace de pago y no hay borrador que redactar. Todas las guardas viven en `intentarCobroAutomatico`
