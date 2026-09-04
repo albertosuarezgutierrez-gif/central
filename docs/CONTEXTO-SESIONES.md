@@ -35,7 +35,8 @@
   nombre+teléfono (584 fichas de más), 0 con póliza viva, 517 pares con el mismo N legado — y la lápida de casi todos
   tiene DNI cifrado SIN hash, así que fusionar por nombre sería a ciegas. Puente hecho: el plan del backfill deja foto en
   **`seguros.backfill_dni_plan`** (solo uuids; DDL aplicada) al abrir `/correduria/mantenimiento` → de ahí sale el lote 7
-  (mismo DNI). **Pendiente: que Alberto abra esa página tras el deploy y me lo diga.** Segundo hallazgo: el cron `e2e-smoke`
+  (mismo DNI). **PR #2260 mergeado y en producción (asegura + plataforma READY, 20:44 UTC); la foto sigue vacía:
+  pendiente que Alberto abra esa página y me lo diga.** Segundo hallazgo: el cron `e2e-smoke`
   del repo `asegura` (06:00 UTC, retrasado a ~10:20) creaba un lead sintético diario en la cartera real desde el 02/09 y
   fallaba antes de su limpieza — borrados los 3 (+3 cotizaciones, 9 eventos). **Alberto debe desactivar ese workflow.**
 - **✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas (04/09/2026).** Alberto lo vio mal
