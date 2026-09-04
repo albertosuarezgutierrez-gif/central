@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-04T22:06:28Z",
-  "sha": "bf754ba0a7b0a3c229596655f4ad099ef3f5898c",
+  "generadoEn": "2026-09-04T22:16:44Z",
+  "sha": "968fabc08ea58831da391524cf52bdc66fce65e0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7453,7 +7453,7 @@
           "exportada": false,
           "params": "fn: () => string | null",
           "retorno": "string | null",
-          "linea": 105,
+          "linea": 131,
           "resumen": "Las claves cifradas pueden faltar en desarrollo: eso NO es «no hay nadie»."
         },
         {
@@ -7462,7 +7462,7 @@
           "exportada": true,
           "params": "correduriaId: string, termino: string,",
           "retorno": "Promise<Resultados>",
-          "linea": 113
+          "linea": 139
         },
         {
           "nombre": "ejecutar",
@@ -7470,7 +7470,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados | null>",
-          "linea": 148
+          "linea": 174
         },
         {
           "nombre": "cobertura",
@@ -7478,7 +7478,7 @@
           "exportada": false,
           "params": "correduriaId: string, where: Record<string, unknown>,",
           "retorno": "Promise<",
-          "linea": 176,
+          "linea": 202,
           "resumen": "Cuenta cuántas fichas pueden salir por un campo, para no mentir con el vacío."
         },
         {
@@ -7487,8 +7487,17 @@
           "exportada": false,
           "params": "f: FilaCliente, porque: string",
           "retorno": "Hallazgo",
-          "linea": 219,
+          "linea": 245,
           "resumen": "El hallazgo SIN enriquecer. Nace en «desconocida» a propósito: si el paso de enriquecimiento falla, la pantalla dirá «sin comprobar» en vez de heredar un «cartera viva» que nadie ha verificado."
+        },
+        {
+          "nombre": "hallazgoSinEnriquecer",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: Pick<Hallazgo, 'clienteId' | 'nombre' | 'tipo' | 'polizas' | 'porque'>,",
+          "retorno": "Hallazgo",
+          "linea": 267,
+          "resumen": "El ÚNICO sitio que sabe qué campos tiene un `Hallazgo` recién nacido. Existe porque no lo era: `porMatricula` repetía los diez campos a mano, así que añadir uno al tipo rompía ahí y solo ahí —pasó jus"
         },
         {
           "nombre": "bloque",
@@ -7496,7 +7505,7 @@
           "exportada": false,
           "params": "c: Criterio, hallazgos: Hallazgo[], cob: { alcanzables: number; total: number } | null,",
           "retorno": "BloqueResultados",
-          "linea": 234
+          "linea": 281
         },
         {
           "nombre": "porNombre",
@@ -7504,7 +7513,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 248
+          "linea": 295
         },
         {
           "nombre": "porCiudad",
@@ -7512,7 +7521,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 279
+          "linea": 326
         },
         {
           "nombre": "porCodigoPostal",
@@ -7520,7 +7529,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 299
+          "linea": 346
         },
         {
           "nombre": "porMatricula",
@@ -7528,7 +7537,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 318,
+          "linea": 365,
           "resumen": "La matrícula vive EN CLARO dentro de `datos_especificos`, así que se busca con SQL crudo sobre el JSON — Prisma no filtra por `->>` con `contains`."
         },
         {
@@ -7537,7 +7546,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 358,
+          "linea": 402,
           "resumen": "Localidad o CP del RIESGO: viven en claro en `datos_especificos` de la póliza (`localidad`, `cp`), no en la ficha del cliente. Es lo que hace que la casa de la playa salga buscando el pueblo, aunque e"
         },
         {
@@ -7546,7 +7555,7 @@
           "exportada": false,
           "params": "correduriaId: string, campo: 'cp' | 'localidad',",
           "retorno": "Promise<",
-          "linea": 410
+          "linea": 454
         },
         {
           "nombre": "porDireccion",
@@ -7554,7 +7563,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 442,
+          "linea": 486,
           "resumen": "La calle del riesgo, DESCIFRADA EN MEMORIA. Por SQL es imposible (cifrado autenticado, sin índice ciego), pero son ~170 pólizas y la app tiene la clave: se traen todas, se descifran y se comparan sin "
         },
         {
@@ -7563,7 +7572,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string | null",
-          "linea": 489,
+          "linea": 533,
           "resumen": "`null` = no se ha podido leer (sin clave, o cifrado corrupto). Nunca se inventa."
         },
         {
@@ -7572,7 +7581,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 500
+          "linea": 544
         },
         {
           "nombre": "porHash",
@@ -7580,7 +7589,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio, campo: 'dniLookupHash' | 'telefonoLookupHash' | 'emailLookupHash', hash: string | null,",
           "retorno": "Promise<BloqueResultados | null>",
-          "linea": 527,
+          "linea": 571,
           "resumen": "Búsqueda por índice ciego. `hash === null` significa que la clave no está configurada: NO se consulta y NO se devuelve una lista vacía, porque eso se leería como «ese DNI no está en la cartera»."
         },
         {
@@ -7589,7 +7598,7 @@
           "exportada": false,
           "params": "ids: string[]",
           "retorno": "Promise<Map<string, number>>",
-          "linea": 573
+          "linea": 617
         },
         {
           "nombre": "coberturaMatricula",
@@ -7597,7 +7606,7 @@
           "exportada": false,
           "params": "correduriaId: string,",
           "retorno": "Promise<",
-          "linea": 584
+          "linea": 628
         },
         {
           "nombre": "coberturaPolizas",
@@ -7605,7 +7614,7 @@
           "exportada": false,
           "params": "correduriaId: string, where: Record<string, unknown>,",
           "retorno": "Promise<",
-          "linea": 603
+          "linea": 647
         },
         {
           "nombre": "senalesDe",
@@ -7613,7 +7622,7 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[],",
           "retorno": "Promise<Map<string, Senales> | null>",
-          "linea": 635,
+          "linea": 679,
           "resumen": "`null` = la consulta falló. Un Map vacío = se miró y no hay nada."
         },
         {
@@ -7622,8 +7631,26 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<HermanaCruda[] | null>",
-          "linea": 702,
+          "linea": 746,
           "resumen": "Otras fichas SIN fusionar que son, o pueden ser, la misma persona. Dos vínculos, y no pesan igual: - **Póliza común** (mismo número normalizado y mismo ramo, **y una de las dos entra por CIMA**): es u"
+        },
+        {
+          "nombre": "contactosDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, ids: string[],",
+          "retorno": "Promise<Map<string, Contacto> | null>",
+          "linea": 809,
+          "resumen": "Teléfono y email principales de cada ficha, en UNA consulta para los ≤25 resultados. `null` (toda la consulta) = no se ha podido preguntar: aguas arriba eso se pinta como «no comprobado», nunca como «"
+        },
+        {
+          "nombre": "rellenarEmailSecundario",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, mapa: Map<string, Contacto>,",
+          "retorno": "Promise<void>",
+          "linea": 858,
+          "resumen": "Para las fichas SIN email en `clientes.email`, el primero de `cliente_emails`. 🚨 No es un adorno, y por eso vale una consulta: medido el 04/09/2026, **57 fichas tienen email solo en esa tabla, y 5 de"
         },
         {
           "nombre": "enriquecer",
@@ -7631,7 +7658,7 @@
           "exportada": false,
           "params": "correduriaId: string, bloques: BloqueResultados[]",
           "retorno": "Promise<void>",
-          "linea": 760
+          "linea": 885
         }
       ],
       "tablas": [
@@ -7639,7 +7666,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "a917baa94258"
+      "hash": "00529c8f6e47"
     },
     {
       "ruta": "apps/asegura/lib/cartera-documentos.ts",
@@ -55159,7 +55186,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 52
+          "linea": 53
         },
         {
           "nombre": "Resultado",
@@ -55167,7 +55194,7 @@
           "exportada": false,
           "params": "{ estado, termino }: { estado: Estado; termino: string }",
           "retorno": null,
-          "linea": 167
+          "linea": 168
         },
         {
           "nombre": "Superficie",
@@ -55175,7 +55202,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 295,
+          "linea": 296,
           "resumen": "Los resultados SÍ son un objeto que aparece: aquí la tarjeta está justificada (a diferencia del campo de búsqueda, que no necesita marco)."
         },
         {
@@ -55184,7 +55211,7 @@
           "exportada": false,
           "params": "{ b }: { b: BloqueResultados }",
           "retorno": null,
-          "linea": 299
+          "linea": 300
         },
         {
           "nombre": "Vitalidad",
@@ -55192,7 +55219,7 @@
           "exportada": false,
           "params": "{ h }: { h: Hallazgo }",
           "retorno": null,
-          "linea": 375,
+          "linea": 388,
           "resumen": "🚨 Lo que NO se pinta aquí: `h.tipo`, el enum de la BD. Decía «cliente» en las DOS fichas de Jose Suarez Salas — la viva y el volcado de 2016— porque la carga de junio las marcó todas igual. El rótulo"
         },
         {
@@ -55201,12 +55228,21 @@
           "exportada": false,
           "params": "{ color, icono, children }: { color?: string icono?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 393
+          "linea": 406
+        },
+        {
+          "nombre": "Contactar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c, nombre }: { c: Contacto | null; nombre: string }",
+          "retorno": null,
+          "linea": 439,
+          "resumen": "Llamar, escribir o abrir WhatsApp DESDE EL RESULTADO, sin entrar en la ficha (Alberto, 04/09/2026: «no se ven los iconos de mail, teléfono y WhatsApp»). 🚨 Lo que NO hace, a propósito: decir que algui"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7e6271a5614b"
+      "hash": "8bde86eb75de"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/Cabecera.tsx",
@@ -69894,7 +69930,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "f22c61ddeab2"
+      "hash": "81a719ba1843"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -76894,8 +76930,17 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Vitalidad",
-          "linea": 86,
+          "linea": 101,
           "resumen": "Una vitalidad que no se reconoce NO tumba la lista: degrada a «desconocida», que es el estado que no afirma nada. Así una versión más vieja de asegura (que no manda el campo) sigue sirviendo la búsque"
+        },
+        {
+          "nombre": "contacto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Contacto | null",
+          "linea": 111,
+          "resumen": "El bloque de contacto del hallazgo. Ausente o con forma rara → `null` («no se sabe»), NUNCA un objeto a ceros: eso diría «se ha mirado y no tiene» sobre una ficha que quizá sí tiene teléfono. Es la mi"
         },
         {
           "nombre": "hermanas",
@@ -76903,7 +76948,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Hermana[] | null",
-          "linea": 90
+          "linea": 122
         },
         {
           "nombre": "interpretarBusqueda",
@@ -76911,7 +76956,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Busqueda",
-          "linea": 126
+          "linea": 158
         },
         {
           "nombre": "interpretarImpagados",
@@ -76919,7 +76964,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Impagados",
-          "linea": 272
+          "linea": 305
         },
         {
           "nombre": "urlAsegura",
@@ -76927,7 +76972,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 350
+          "linea": 383
         },
         {
           "nombre": "pedir",
@@ -76935,7 +76980,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "Promise<",
-          "linea": 354
+          "linea": 387
         },
         {
           "nombre": "buscarAsegura",
@@ -76943,7 +76988,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<Busqueda>",
-          "linea": 365
+          "linea": 398
         },
         {
           "nombre": "interpretarLineas",
@@ -76951,7 +76996,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LineasCodeoscopic",
-          "linea": 392,
+          "linea": 425,
           "resumen": "Puro. `hogar` degrada a `desconocido` ante cualquier forma rara: afirmar «hogar disponible» o «ausente» sobre un JSON que no se entiende sería lo mismo que inventarlo."
         },
         {
@@ -76960,7 +77005,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "HogarCodeoscopic",
-          "linea": 404
+          "linea": 437
         },
         {
           "nombre": "lineasCodeoscopic",
@@ -76968,7 +77013,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LineasCodeoscopic>",
-          "linea": 419
+          "linea": 452
         },
         {
           "nombre": "impagadosAsegura",
@@ -76976,7 +77021,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Impagados>",
-          "linea": 429
+          "linea": 462
         },
         {
           "nombre": "booleano",
@@ -76984,7 +77029,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 494,
+          "linea": 527,
           "resumen": "Tri-estado de verdad: un campo ausente es `null` («no se informó»), no `false`. Con `=== true` a secas, un puerto que no manda el campo diría que TODOS están sin email."
         },
         {
@@ -76993,7 +77038,7 @@
           "exportada": true,
           "params": "email: boolean | null, telefono: boolean | null",
           "retorno": "EstadoCanal",
-          "linea": 500,
+          "linea": 533,
           "resumen": "El estado se DERIVA de los dos canales; no se cree el que venga en el JSON. Si falta cualquiera de los dos, el resultado es `no_comprobado`."
         },
         {
@@ -77002,7 +77047,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SinCanal",
-          "linea": 508
+          "linea": 541
         },
         {
           "nombre": "sinCanalAsegura",
@@ -77010,7 +77055,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SinCanal>",
-          "linea": 562
+          "linea": 595
         },
         {
           "nombre": "planBackfillDni",
@@ -77018,7 +77063,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillDni>",
-          "linea": 608
+          "linea": 641
         },
         {
           "nombre": "interpretarPlanBackfill",
@@ -77026,13 +77071,13 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillDni",
-          "linea": 619,
+          "linea": 652,
           "resumen": "Puro: separado para poder probarlo sin red."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aa0dc4515124"
+      "hash": "adf28a73cc13"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -81952,7 +81997,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cb03d0c51fe6"
+      "hash": "72c2ed16f422"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -84088,6 +84133,8 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/acceso.ts — fuente ÚNICA de las instrucciones de acceso por piso. Decisión de Alberto (31/08/2026): la fuente primaria de lo que se le cuenta al huésped vive en NUESTRO repo/BD y Smoobu queda como copia de respaldo (su guest app sigue existiendo y se enlaza como complemento). Este módulo e",
       "exporta": [
+        "fotosDeAcceso",
+        "pasosQuePrometenFotoSinTenerla",
         "codigosQueFaltan",
         "bloqueAcceso"
       ],
@@ -84101,12 +84148,30 @@
           "linea": 49
         },
         {
+          "nombre": "fotosDeAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "",
+          "linea": 192,
+          "resumen": "Inventario de las fotos que las indicaciones enseñan al huésped, por piso. Existe porque esta es la ÚNICA atadura dura que le queda al proveedor: los pasos van en texto plano y funcionan sin red, pero"
+        },
+        {
+          "nombre": "pasosQuePrometenFotoSinTenerla",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "",
+          "linea": 209,
+          "resumen": "Pasos que PROMETEN una imagen («en esta foto», «la señalada en rojo», «así se ve») y no la llevan. Un paso así es peor que uno sin foto: manda a mirar algo que no está."
+        },
+        {
           "nombre": "codigosQueFaltan",
           "kind": "function",
           "exportada": true,
           "params": "propertyId: string, codigos: CodigosAcceso",
           "retorno": "string[]",
-          "linea": 192,
+          "linea": 236,
           "resumen": "¿Qué códigos necesita este piso (por sus pasos) que NO vienen en `codigos`? El orquestador usa esto para avisar a Telegram si falta un código en BD — el hueco se declara, nunca se inventa."
         },
         {
@@ -84115,13 +84180,13 @@
           "exportada": true,
           "params": "propertyId: string, codigos: CodigosAcceso, opts: { conCodigos: boolean },",
           "retorno": "string",
-          "linea": 208,
+          "linea": 252,
           "resumen": "Bloque de acceso en texto plano para las plantillas (y, más adelante, para la ficha del agente). `conCodigos:false` = versión de los 7 días: el PROCESO completo sin los códigos («el código te llega la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "71d2337c91e3"
+      "hash": "13c37a7ca6de"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/aprender.ts",
@@ -88639,6 +88704,7 @@
       "resumen": "apps/plataforma/lib/sivra/pricing-ancla-rail.ts Ancla del raíl ±max_change_pct del motor de precios de SIVRA. 🚨 Por qué existe (auditoría 19/08/2026). El raíl está documentado como tope \"±X%/DÍA\", pero el cron corre 3 veces al día: si cada pasada se ancla en el precio que dejó la anterior, el tope ",
       "exporta": [
         "anclaRail",
+        "anclaRailCon",
         "topeRealSinAncla",
         "avisoRailCiego"
       ],
@@ -88653,12 +88719,21 @@
           "resumen": "Precio sobre el que se calcula el rango ±max_change_pct de la pasada."
         },
         {
+          "nombre": "anclaRailCon",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { ref24?: number | null primeroHoy?: number | null actual: number }",
+          "retorno": "",
+          "linea": 58,
+          "resumen": "El ancla Y su procedencia, resueltas EN EL MISMO SITIO. `anclaRail()` delega aquí a propósito, en vez de que el llamante re-derive el origen con la misma cadena de ifs: dos copias de una precedencia s"
+        },
+        {
           "nombre": "esPrecio",
           "kind": "function",
           "exportada": false,
           "params": "v: number | null | undefined",
           "retorno": "v is number",
-          "linea": 53,
+          "linea": 76,
           "resumen": "Un ancla vale si es un número positivo. El 0 y los negativos se descartan a propósito en vez de colarse como ancla: un 0 haría que `lo` y `hi` fueran 0 y el clamp dejaría el precio en 0€ — regalar la "
         },
         {
@@ -88667,7 +88742,7 @@
           "exportada": true,
           "params": "maxChangePct: number, pasadasPorDia: number",
           "retorno": "",
-          "linea": 81,
+          "linea": 104,
           "resumen": "Tope REAL que queda cuando el ancla se pierde y cada pasada se ancla en la anterior. Se CALCULA en vez de escribirse a mano porque `max_change_pct` es por piso y el nº de pasadas sale del cron: un «−4"
         },
         {
@@ -88676,13 +88751,13 @@
           "exportada": true,
           "params": "fallos: LecturaAncla[], rail: { maxChangePct: number; pasadasPorDia: number },",
           "retorno": "string | null",
-          "linea": 93,
+          "linea": 116,
           "resumen": "Aviso de Telegram cuando la pasada se aborta por no poder leer el ancla. `null` si no hay fallos. Dice explícitamente que los precios se quedan como estaban Y por qué eso es lo correcto: si no, «no se"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8dc407af5c6c"
+      "hash": "d463ac69ea1f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-antelacion.ts",
@@ -119399,6 +119474,6 @@
   ],
   "resumen": {
     "archivos": 2984,
-    "funciones": 8931
+    "funciones": 8939
   }
 }
