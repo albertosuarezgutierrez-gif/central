@@ -30,6 +30,45 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎟 La intranet del cliente deja de ser solo para clientes (04/09/2026, PR #2258).** Tres piezas:
+  (1) **pedir acceso** al revés —María pide lo que antes solo José podía conceder—, con el oráculo
+  cerrado por diseño: 4 resultados internos colapsan en un `registrada` que no dice si esa persona es
+  cliente (el portal es abierto: si no, es una máquina de enumerar 32.600 fichas). (2)
+  **`autorizado_identidad_id`**: se puede autorizar a quien NO tiene ficha, sin fabricársela —quien
+  mira es una identidad, y una ficha por curioso ensucia los 32.520 leads. (3) **`poliza_id`**: el
+  dueño comparte la póliza de la nave y no la de su coche (15 de los 80 titulares vivos tienen más de
+  una), con FK COMPUESTA contra `polizas(cliente_id,id)` **vista morder** (23503 con la de otro).
+  🚨 Las tres trampas de Postgres que salieron en el camino: `x <> NULL` es NULL y **un CHECK que da
+  NULL PASA**; dos NULL **no son iguales** en un índice único; y una póliza FUSIONADA deja la
+  autorización apuntando a una fila muerta —el acceso se apaga sin que nadie se entere—, de ahí que la
+  lectura siga `merged_into_poliza_id`. Las 3 migraciones aplicadas y verificadas.
+
+- **🏠 La escalera del Catastro para hogar, y un agujero que salió por el camino (04/09/2026, PR #2255).**
+  Cuatro peldaños y se BAJA solo cuando el anterior falla: dirección → variantes DETERMINISTAS de la
+  misma dirección → una IA que PROPONE y el Catastro CONFIRMA → referencia catastral → a mano.
+  Ningún dato entra solo. Nuevas `referencia_catastral` (columna) y `datos_ramo_origen`
+  (`catastro`|`documento`|`declarado`), SQL ya aplicado. 🚨 **Y el hallazgo gordo:**
+  `carteraDeIdentidad` filtraba prima/coberturas/recibos por nivel y pegaba `siniestrosAbiertos`
+  SIN mirarlo — un tercero con alcance `ver` veía los siniestros abiertos de quien le autorizó.
+  Cerrado con `CamposVisibles.siniestros` + tope duro en `NUNCA_A_UN_TERCERO`, con mutación probada.
+- **📄 Subir una póliza no lee nada porque FALTA LA CLAVE DE IA, no porque el PDF sea malo (04/09/2026).**
+  Alberto subió una Mapfre HOGAR FAMILIAR real y salió «no hemos podido leer». Medido: `pdf-parse`
+  saca **12.076 caracteres limpios** de ese PDF. El fallo es `aiComplete`, que necesita al menos una
+  de OPENROUTER/GROQ/GEMINI/NVIDIA/CEREBRAS/MOONSHOT — y el proyecto Vercel `asegura-portal` **no
+  tiene ninguna**. Pendiente de Alberto. Ojo: el texto de Mapfre sale con la codificación rota
+  («EspaÒa», «PÛliza»); un LLM lee a través, una plantilla determinista no.
+- **🚑 CIMA NO da campos por ramo para el siniestro (medido sobre las 67 filas reales, 04/09/2026).**
+  Misma estructura (30 columnas) para todos los ramos; lo único que cambia es `tipo`, un código de la
+  compañía cuyo nombre va en `comentario`. **No es vocabulario compartido:** `1915` es «RECOBRO CICOS»
+  en auto (241) y «reclamación de tercero» en 282; lunas es `17`/`1313` en auto y `2102` en hogar.
+  Así que las causas por ramo del parte hay que diseñarlas NOSOTROS. Y `lugar_direccion` viene en
+  6/67; `tramitador`, `gravedad`, `reserva` e `indemnización` en **0**. Auto: 26 de 50 son ASISTENCIA
+  (una grúa, no un siniestro) — pintarlos como «siniestro abierto» exagera.
+- **🧹 Borrado el mail de Alberto de dos fichas ajenas (04/09/2026).** Estaba de contacto en Josefa
+  Julia Vicente Lucas y Alejandro José Soler Fernández Gao, y por eso su hash del índice ciego
+  resolvía a 3 fichas y el portal se negaba a vincular (`ambiguo`). Foto previa en
+  `seguros.cliente_emails_borrados_20260904`. Ahora resuelve a **1**. Las dos fichas se quedan con
+  cero emails: el dato era falso de todas formas.
 - **🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez (04/09/2026).** El
   360009410197 salía de la URL de un artículo del Zendesk de **HomeExchange** (correo de Irene et
   Rico, un intercambio de casa, ni siquiera una reserva); el colador `\b(\d{9,})\b` miraba dentro de
