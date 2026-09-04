@@ -22,6 +22,7 @@ import {
 import { Phone, Mail, Star, Plus } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { btnStyle, btnIcono } from '@/components/ui'
+import BotonWhatsapp from './BotonWhatsapp'
 import {
   interpretarEscritura,
   textoMotivo,
@@ -275,6 +276,9 @@ function ListaContactos({ titulo, icono: Icono, items, ocupado, onPrincipal, onB
                 <ValorContacto c={c} />
                 {c.etiqueta && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{c.etiqueta}</span>}
               </span>
+              {/* Abrir WhatsApp con ese número. Solo aparece en los móviles: un
+                  fijo (o un dato cifrado que no se puede leer) no pinta nada. */}
+              {c.tipo === 'telefono' && c.valor !== null && <BotonWhatsapp telefono={c.valor} />}
               {!c.principal && (
                 <button
                   type="button"
