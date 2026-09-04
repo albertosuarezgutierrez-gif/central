@@ -1,28 +1,15 @@
--- 🚨 NO SE HA EJECUTADO
+-- ✅ APLICADO el 04/09/2026 contra la Supabase compartida (schema `seguros`).
+-- Verificado después de aplicarlo: 17 columnas, 12 constraints (5 CHECK + FKs),
+-- 4 índices, y `has_table_privilege()` confirma que `prisma_asegura_portal`
+-- tiene INSERT y UPDATE y **NO tiene DELETE** (una petición retirada se marca,
+-- no se borra), y que `prisma_seguros` la lee.
 --
--- Portal de Grupo ASegura — «Papá, ¿me dejas ver tu seguro del coche?»: la PETICIÓN de acceso.
--- Reglas puras: `packages/module-seguros-portal/src/peticion-acceso.ts` (su cabecera es la fuente
--- de verdad del diseño; esto es solo su forma en la BD).
---
--- Lo aplica la SESIÓN PRINCIPAL contra la Supabase compartida (schema `seguros`). El agente que
--- escribió este fichero no tocó la BD.
---
--- ── 🚨 El schema de Prisma y la BD se mueven en el MISMO paso ────────────────────────────────
--- `model PortalPeticionAcceso` ya está declarado en `prisma/schema.prisma`, y Prisma pide CADA
--- columna del modelo POR SU NOMBRE en cada SELECT. Si este DDL no se aplica —o se aplica con una
--- columna de menos, o con otro nombre— la consulta que revienta no es «esa columna»: es la
--- consulta ENTERA (`column ... does not exist`, o `permission denied for column` 42501 si falta el
--- GRANT). Typecheckea, compila y muere en producción. Misma lección que `eiac_xml_hash` el
--- 03/09/2026. Por eso el orden es: primero la tabla y el GRANT, después el schema, nunca al revés.
---
--- ── Por qué es una TABLA APARTE de `portal_autorizacion` ─────────────────────────────────────
--- Una autorización que nace de una petición ya viene ACEPTADA por el autorizado (pedirla ES
--- aceptarla). Modelarla como una `portal_autorizacion` en estado raro haría que la cuenta de
--- «autorizaciones pendientes de aceptar» —que es justo la prueba del art. 7.1 RGPD— incluyera
--- peticiones que nadie ha concedido. Dos objetos, dos ciclos de vida, dos tablas.
---
--- Reejecutable: `CREATE TABLE IF NOT EXISTS` + los CHECK dentro de un DO $$ guardado por
--- `pg_constraint`, para que una segunda pasada no falle ni duplique nada.
+-- ⚠️ El GRANT era obligatorio, no decorativo: los permisos de este schema se
+-- conceden TABLA POR TABLA (ver `2026-09-02_portal_rol_vinculo_grants.sql`,
+-- líneas 47-52) y no hay ningún `ALTER DEFAULT PRIVILEGES` ni `ALL TABLES IN
+-- SCHEMA` en todo `prisma/sql/`. Una tabla `portal_*` nueva nace SIN permisos:
+-- el modelo Prisma compilaría igual y la primera consulta moriría en la BD.
+
 SET search_path = seguros, public;
 
 CREATE TABLE IF NOT EXISTS seguros.portal_peticion_acceso (
