@@ -80,3 +80,21 @@ test('la antigüedad del veredicto se expone para poder decir de cuándo es', ()
   assert.equal(Math.round(r.antiguedadH), 5)
   assert.equal(r.evaluadoAt, hace(5).toISOString())
 })
+
+test('🚨 estreno (sin alerta y sin horas) es GRIS, nunca verde', () => {
+  // El hermano simétrico del test de arriba, y el que se pasó por alto al añadir el estreno
+  // (04/09/2026): un agente declarado ayer del que no se sabe NADA no puede pintarse «está bien».
+  // Verde es una afirmación; aquí lo único cierto es que todavía no le ha tocado correr.
+  const r = clasificarSalud(
+    fila({ alerta: false, horas: null, motivo: 'en estreno: vigilado desde hace 20.0 h y aún sin señal' }),
+    AHORA,
+  )
+  assert.equal(r.estado, 'gris')
+  assert.equal(r.horas, null)
+  assert.match(r.detalle, /en estreno/)
+})
+
+test('sin alerta y CON horas sigue siendo verde (un 0 es un valor, no un hueco)', () => {
+  assert.equal(clasificarSalud(fila({ alerta: false, horas: 0 }), AHORA).estado, 'verde')
+  assert.equal(clasificarSalud(fila({ alerta: false, horas: 3 }), AHORA).estado, 'verde')
+})

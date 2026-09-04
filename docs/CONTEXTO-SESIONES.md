@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💓 El vigía de latidos gritaba por agentes a los que aún NO les había tocado correr (04/09/2026, PR pendiente).**
+  De los 6 rojos del parte, **4 eran falsa alarma por construcción**: `evaluarLatido` no distinguía «no
+  hay señal porque está roto» de «no hay señal porque se declaró anteayer». Las 5 rutinas cableadas el
+  02/09 salían en ROJO desde el minuto uno y las dos mensuales (día 1) iban a seguir 27 días — mientras
+  `facturas_correo`, diaria, latía al día siguiente: la maquinaria iba bien, fallaba el juicio. Cuarto
+  estado **`estreno`** + campo `vigiladoDesde` (obligatorio, con guardián); en el panel es GRIS, no verde.
+  🚨 Los otros 2 SÍ son reales y sus `nota` **mentían**: la de domótica decía «es el trial de IoT Core,
+  conocido» y esos errores son del 03/08 — hoy es `Tuya 2001 offline` + `1109` en el respaldo, con **3
+  reservas sin PIN** (una con el huésped dentro). ⏸️ Pendiente de Alberto: cerradura de Bustos Tavera y
+  alta de establecimientos SES (`ses_establecimientos` = 0 filas).
+
 - **🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA (03/09/2026, PR #2235).**
   Alberto: «cuando seleccione un tipo de seguro, que despliegue los campos necesarios». Auto/moto →
   matrícula, fecha de matriculación y bastidor; otro ramo, nada (un tarificador pide todo siempre

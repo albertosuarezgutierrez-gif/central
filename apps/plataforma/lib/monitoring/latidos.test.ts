@@ -90,3 +90,105 @@ test('todo agente de AGENTES_VIGILADOS tiene su sonda en PROBES del cron', () =>
     assert.ok(claves.has(a.id), `«${a.etiqueta}» (${a.id}) está declarado en AGENTES_VIGILADOS pero sin sonda en PROBES — añádela en el mismo PR`)
   }
 })
+
+// ── Estreno: el cuarto estado (04/09/2026) ────────────────────────────────────────────────────
+// Las cuatro rutinas cableadas el 02/09 salieron en ROJO con «sin ninguna señal registrada» desde
+// el minuto uno, y las dos mensuales (día 1) iban a seguir gritando hasta el 01/10 — 27 días de
+// falsa alarma sobre agentes a los que sencillamente no les había tocado correr todavía.
+test('recién dado de alta y sin señal → estreno, NO alerta', () => {
+  const r = evaluarLatido({ ahora, ultimo: null, maxHoras: 840, vigiladoDesde: '2026-07-20' })
+  assert.equal(r.alerta, false)
+  assert.equal(r.estreno, true)
+  assert.equal(r.horas, null)
+  assert.match(r.motivo, /en estreno/)
+  assert.doesNotMatch(r.motivo, /ni una sola ejecución/)
+})
+
+test('pasado su primer umbral sin señal → vuelve a ser alerta él solo', () => {
+  // Alta hace 200 h con umbral 192 h: la gracia se agotó, y nadie ha tenido que acordarse de nada.
+  const alta = new Date(ahora.getTime() - 200 * 3_600_000)
+  const r = evaluarLatido({ ahora, ultimo: null, maxHoras: 192, vigiladoDesde: alta })
+  assert.equal(r.alerta, true)
+  assert.notEqual(r.estreno, true)
+  assert.match(r.motivo, /ni una sola ejecución/)
+})
+
+// El estreno es SOLO para el silencio absoluto. Un agente que ya latió no vuelve a estrenarse:
+// si su huella envejece es avería, por reciente que sea el alta de la vigilancia.
+test('ya latió una vez → el alta reciente no lo exime', () => {
+  const r = evaluarLatido({
+    ahora,
+    ultimo: new Date('2026-07-01T00:00:00Z'),
+    maxHoras: 192,
+    vigiladoDesde: '2026-07-20',
+  })
+  assert.equal(r.alerta, true)
+  assert.notEqual(r.estreno, true)
+})
+
+// «Arranca y no termina» gana al estreno: hay señal de ejecución, así que ya se sabe algo.
+test('sin pasada buena pero con intento → sigue siendo alerta, no estreno', () => {
+  const r = evaluarLatido({
+    ahora,
+    ultimo: null,
+    ultimoIntento: new Date('2026-07-21T06:15:00Z'),
+    maxHoras: 840,
+    vigiladoDesde: '2026-07-20',
+  })
+  assert.equal(r.alerta, true)
+  assert.notEqual(r.estreno, true)
+  assert.match(r.motivo, /NUNCA completa/)
+})
+
+// Lado conservador: una fecha de alta inválida o en el futuro (un dedazo al declararla) NO puede
+// convertirse en un estreno eterno que silencie al agente para siempre.
+test('vigiladoDesde inválido o futuro → alerta, nunca estreno perpetuo', () => {
+  for (const malo of ['no-es-fecha', '2027-01-01']) {
+    const r = evaluarLatido({ ahora, ultimo: null, maxHoras: 840, vigiladoDesde: malo })
+    assert.equal(r.alerta, true, `«${malo}» debería alertar`)
+    assert.notEqual(r.estreno, true)
+  }
+})
+
+test('sin vigiladoDesde el comportamiento no cambia (sigue alertando)', () => {
+  const r = evaluarLatido({ ahora, ultimo: null, maxHoras: 6 })
+  assert.equal(r.alerta, true)
+  assert.notEqual(r.estreno, true)
+})
+
+// Guarda de regresión: declarar un latido SIN fecha de alta lo condena a salir en rojo desde el
+// despliegue hasta su primera pasada. Que sea el test quien lo recuerde, no la memoria de nadie.
+test('todo agente vigilado declara vigiladoDesde con fecha real y pasada', () => {
+  const hoy = new Date().toISOString().slice(0, 10)
+  for (const a of AGENTES_VIGILADOS) {
+    assert.match(
+      a.vigiladoDesde ?? '',
+      /^\d{4}-\d{2}-\d{2}$/,
+      `«${a.etiqueta}» (${a.id}) no declara vigiladoDesde en formato YYYY-MM-DD`,
+    )
+    assert.ok(
+      !Number.isNaN(new Date(a.vigiladoDesde).getTime()),
+      `${a.id}: vigiladoDesde no es una fecha válida`,
+    )
+    assert.ok(
+      a.vigiladoDesde <= hoy,
+      `${a.id}: vigiladoDesde (${a.vigiladoDesde}) está en el futuro — sería un estreno perpetuo`,
+    )
+  }
+})
+
+// Invariante del que depende `clasificarSalud` para pintar el estreno en GRIS y no en verde:
+// `evaluarLatido` solo devuelve `alerta:false` en dos casos, y el de «activo» SIEMPRE trae horas.
+// Si alguien añadiera un tercer «sin alerta» sin horas que no fuese un estreno, el panel lo pintaría
+// como «todavía no se sabe» y esto salta.
+test('sin alerta y sin horas SOLO puede ser un estreno', () => {
+  const casos = [
+    evaluarLatido({ ahora, ultimo: null, maxHoras: 840, vigiladoDesde: '2026-07-20' }),
+    evaluarLatido({ ahora, ultimo: new Date('2026-07-21T06:00:00Z'), maxHoras: 6 }),
+    evaluarLatido({ ahora, ultimo: null, maxHoras: 6 }),
+  ]
+  for (const r of casos) {
+    if (!r.alerta && r.horas === null) assert.equal(r.estreno, true)
+    if (!r.alerta && r.estreno !== true) assert.notEqual(r.horas, null)
+  }
+})

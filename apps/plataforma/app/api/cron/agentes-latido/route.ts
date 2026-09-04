@@ -228,6 +228,10 @@ async function handler(req: NextRequest) {
   const resultados: Array<Record<string, unknown>> = []
   const alertas: string[] = []
   const sondasRotas: string[] = []
+  // Tercer estado (04/09/2026): declarado hace poco, aún sin señal, y su primera pasada todavía no
+  // ha vencido. NO va con las alertas —sería la falsa alarma que provocó este cambio— pero tampoco
+  // desaparece: se persiste y va al JSON, y solo se asoma al Telegram cuando ya hay algo que contar.
+  const estrenos: string[] = []
 
   for (const ag of AGENTES_VIGILADOS) {
     const probe = PROBES[ag.id]
@@ -244,7 +248,11 @@ async function handler(req: NextRequest) {
       >(probe)
       const ultimo = rows[0]?.ultimo ?? null
       const ultimoIntento = rows[0]?.ultimo_intento ?? null
-      const ev = evaluarLatido({ ahora, ultimo, maxHoras: ag.maxHoras, ultimoIntento, detalle: rows[0]?.detalle ?? null })
+      const ev = evaluarLatido({
+        ahora, ultimo, maxHoras: ag.maxHoras, ultimoIntento,
+        detalle: rows[0]?.detalle ?? null,
+        vigiladoDesde: ag.vigiladoDesde,
+      })
       resultados.push({
         id: ag.id,
         ...ev,
@@ -252,6 +260,8 @@ async function handler(req: NextRequest) {
         ultimoIntento: ultimoIntento?.toISOString() ?? null,
       })
       if (ev.alerta) alertas.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.\n  ${ag.nota}`)
+      // El estreno NO arrastra la `nota`: esa es el runbook de una avería, y aquí no hay ninguna.
+      else if (ev.estreno) estrenos.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.`)
       await guardarSalud(ag, ahora, ev.alerta, ev.horas, ev.motivo, null)
     } catch (e) {
       // 🚨 Una sonda rota NO es un agente sano. Antes se tragaba en silencio
@@ -326,13 +336,22 @@ async function handler(req: NextRequest) {
     if (sondasRotas.length > 0) {
       bloques.push(`<b>Sin poder comprobar (${sondasRotas.length})</b> — esto NO es «todo bien»:\n${sondasRotas.join('\n')}`)
     }
+    // Se cuelga de un parte que YA se iba a mandar; nunca lo provoca. Un «⏳ 4 en estreno» diario
+    // durante las cuatro semanas que tarda una rutina mensual en estrenarse es exactamente el ruido
+    // que enseña a ignorar este aviso — y el estreno ya se ve entero en /operador/agentes.
+    if (estrenos.length > 0) {
+      bloques.push(`<b>⏳ En estreno (${estrenos.length})</b> — aún no les ha tocado correr, no es avería:\n${estrenos.join('\n')}`)
+    }
     await tgAviso('sistema.agentes-latido', `💓⚠️ <b>Latidos de agentes</b>\n\n${bloques.join('\n\n')}`, { html: true })
   }
 
   // Mantenimiento de la bitácora del panel /telegram (mira 30 días; se guardan 90). Best-effort.
   const purgadas = await purgarBitacora()
 
-  return NextResponse.json({ ok: true, alertas: alertas.length, sondasRotas: sondasRotas.length, purgadas, resultados })
+  return NextResponse.json({
+    ok: true, alertas: alertas.length, sondasRotas: sondasRotas.length,
+    estrenos: estrenos.length, purgadas, resultados,
+  })
 }
 
 export { handler as GET, handler as POST }

@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
       ahora,
       ultimo: fila.ultimo_ok_at,
       maxHoras: ag.maxHoras,
+      vigiladoDesde: ag.vigiladoDesde,
       ultimoIntento: fila.ultimo_at,
       detalle: fila.detalle,
     })
