@@ -361,3 +361,17 @@ export {
   type FormatoMatricula,
   type MatriculacionEstimada,
 } from './matricula.ts'
+
+export {
+  MEDIADOR,
+  NO_EXCLUSIVIDAD,
+  CANALES_RECLAMACION,
+  PUNTOS_PRECONTRACTUALES,
+  VERSION_TEXTOS_LEGALES,
+  FECHA_TEXTOS_LEGALES,
+  lineaIdentificacion,
+  type CanalReclamacion,
+  type IdCanalReclamacion,
+  type PuntoPrecontractual,
+  type IdPuntoPrecontractual,
+} from './mediador.ts'

@@ -720,6 +720,16 @@
 
 ---
 
+### ⚖️ (04/09/2026, III) El portal del asegurado no tenía NADA legal: bloque 0.1+0.2 puesto
+- El portal pedía el correo sin identificar al mediador ni decir qué se hacía con el dato: cero pie legal, cero políticas. Incumplía art. 19 Ley 16/2018 y art. 13 RGPD desde que se desplegó.
+- **Fuente única nueva** `packages/module-seguros/src/mediador.ts` (DGSFP `CS-F/0170`, RC, no-exclusividad, canales SAC→DGSFP→AEPD, `VERSION_TEXTOS_LEGALES` para sellar `portal_consentimiento`), 8 tests. La comparte el panel del corredor.
+- 4 páginas en `apps/asegura-portal/app/legal/*` + `PieLegal` en el layout **RAÍZ** (si va en `(portal)` desaparece justo de la pantalla de entrada, que es donde la ley lo exige) — y se leen SIN sesión.
+- La privacidad se escribió sobre lo que la app hace de verdad: correo solo como hash, **el PDF que sube el cliente sale a OpenRouter y puede procesarse fuera del EEE** (con la alternativa de teclearlo a mano), Supabase en `eu-west-1`. **Sin banner de cookies a propósito**: una sola cookie técnica (art. 22.2 LSSI).
+- ⚠️ Dos omisiones deliberadas y testeadas: **ni lista de ramos** (registro DGSFP sin comprobar) **ni DPO** (el `dpo@grupoasegura.com` de la web de Manuel no consta que reciba). Pendiente de Alberto para poder declararlos.
+- Guardián `test/regression-portal-legal.test.ts` (9 cepos). Verde: 474/474 guardianes, 339/339 de `module-seguros`, typecheck del portal limpio. **Pendiente del bloque: 0.3 consentimientos, 0.4 export art. 15/20 por `apps/asegura`, 0.5 solicitud de supresión.**
+
+---
+
 ### 🔧 (04/09/2026, II) Reparados 3 de los 5 hilos abiertos del motor; los otros 2 medidos y sequenciados
 - **Clamp de calidad que se anulaba solo:** `target = clamp(baseD, floorD, ceilD)` con `baseD` ajustado por `dqDate` y los límites sin ajustar. Medido: `quality_factor` real 0,848 en Busto con el suelo al 0,874 del objetivo → mordía en **9 de 12 meses, +5,8%**, en el piso que vende en el P10. Dúplex 3 meses, Luxury 1, House 0. Se ajustan LOS DOS límites (el clamp es un intervalo). Guardián que lee el fuente, probado en rojo.
 - **Techo por ADR de House desde el histórico equivocado:** `priorRows` ignoraba `historico_desde`. ADR 6 años **354€** vs desde su fecha **655€** → techo a la mitad (sep 391 vs 884, dic 498 vs 1.113) y `suelo_manda` en 3 meses. No-op exacto en los otros tres (todos con `historico_desde` NULL). Trade-off declarado: 3 meses de House quedan bajo `MIN_NOCHES_ADR` → se cuentan ahora los DOS motivos de «sin techo» por separado (antes `sin_muestra` era mudo).
