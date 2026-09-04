@@ -1,7 +1,7 @@
 ---
 name: correduria-crm
 description: >
-  El CRM de la correduría (Grupo Asegura) en /correduria de plataforma: ficha de cliente,
+  El CRM de la correduría (Grupo ASegura) en /correduria de plataforma: ficha de cliente,
   póliza, leads, relaciones, portal del cliente y la conciliación Codeoscopic↔CIMA. Úsala
   ANTES de tocar cualquier pantalla o escritura de la cartera, o si Alberto habla de
   clientes, pólizas, leads, presupuestos, siniestros o del portal. Router: el detalle vive en

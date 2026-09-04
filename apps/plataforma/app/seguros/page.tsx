@@ -1,4 +1,4 @@
-// Landing PÚBLICA de Grupo Asegura (correduría de seguros). Fuera del grupo
+// Landing PÚBLICA de Grupo ASegura (correduría de seguros). Fuera del grupo
 // `(usuario)` → sin sidebar ni sesión (el middleware la tiene en PUBLIC). Es la
 // puerta del canal de leads web: el formulario entra por
 // `POST /api/publico/correduria/lead` → puerto de asegura → Telegram a Alberto.
@@ -9,7 +9,7 @@ import type { Metadata } from 'next'
 import Formulario from './Formulario'
 
 export const metadata: Metadata = {
-  title: 'Grupo Asegura · Correduría de seguros',
+  title: 'Grupo ASegura · Correduría de seguros',
   description: 'Correduría de seguros. Comparamos entre compañías el seguro de auto, moto, hogar, vida, salud, comunidades y comercio, y te llamamos.',
 }
 
@@ -25,7 +25,7 @@ export default function SegurosPage() {
       <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <header style={{ paddingTop: 16 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, color: 'var(--primary)' }}>
-            <span aria-hidden>🛡️</span> Grupo Asegura
+            <span aria-hidden>🛡️</span> Grupo ASegura
           </div>
           <h1 style={{ fontSize: 'clamp(24px, 5vw, 34px)', lineHeight: 1.15, margin: '8px 0 6px', fontWeight: 800 }}>
             Correduría de seguros
@@ -56,7 +56,7 @@ export default function SegurosPage() {
         </section>
 
         <footer style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5, textAlign: 'center' }}>
-          Grupo Asegura · Correduría de seguros inscrita en la DGSFP con la clave CS-F/0170.
+          Grupo ASegura · Correduría de seguros inscrita en la DGSFP con la clave CS-F/0170.
         </footer>
       </div>
     </main>

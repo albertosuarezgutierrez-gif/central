@@ -54,7 +54,7 @@ const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/ap
   // la correduría): POST sin sesión, con honeypot + rate limit por IP en el handler; solo crea
   // un lead por el puerto de asegura y avisa a Alberto. No lee nada de la cartera.
   '/api/publico',
-  // Landing pública de Grupo Asegura (correduría): la ÚNICA pantalla pública de la correduría.
+  // Landing pública de Grupo ASegura (correduría): la ÚNICA pantalla pública de la correduría.
   // Server component sin sesión ni sidebar (vive fuera de `(usuario)`); no toca la BD.
   '/seguros']
 

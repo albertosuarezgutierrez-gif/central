@@ -256,14 +256,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (04/09/2026) 💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno
+- (04/09/2026) 🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía
 - (04/09/2026) 🏠 Los 10 ramos ya despliegan SUS campos, y hogar los saca del Catastro
 - (03/09/2026) 🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA
 - (03/09/2026) 📱 Segunda captura de móvil: la ficha del cliente
 - (03/09/2026) 📱 `/correduria` en el MÓVIL, con la primera captura real
 - (03/09/2026) 🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos
-- (03/09/2026) 🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive
+- (03/09/2026) 🎨 La marca de Grupo ASegura estaba en la app de Manuel, no en Drive
 - (03/09/2026) 🎨 Rediseño de `/correduria` + listado FILTRABLE de la cartera
 - (03/09/2026) 🔧 Tapado el hueco que destapó Matito: el puerto ya sabe QUITAR
-- (03/09/2026) 🔴 «Sin dato» en el capital de hogar era un «no lo he mirado»
-- (03/09/2026) 🧬 Por qué se duplican las fichas: el blind index de DNI está a medias
 

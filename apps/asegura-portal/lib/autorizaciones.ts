@@ -63,7 +63,7 @@ export const TEXTO_AUTORIZACION_V1 = 'v1-2026-09-03'
 
 /** El texto exacto que corresponde a `TEXTO_AUTORIZACION_V1`. La pantalla lo enseña TAL CUAL. */
 export const TEXTO_AUTORIZACION = [
-  'Autorizo a esta persona a CONSULTAR los seguros que tengo con Grupo Asegura.',
+  'Autorizo a esta persona a CONSULTAR los seguros que tengo con Grupo ASegura.',
   'Solo puede verlos: no puede contratar, modificar, dar partes ni actuar en mi nombre.',
   'No verá mis datos personales (DNI, cuenta bancaria) ni mis documentos.',
   'La autorización caduca al año y puedo revocarla en cualquier momento desde el portal.',
@@ -85,7 +85,7 @@ export const TEXTO_REPRESENTACION_V1 = 'v1-2026-09-03-representacion'
 
 /** El texto exacto de `TEXTO_REPRESENTACION_V1`. La pantalla lo enseña TAL CUAL. */
 export const TEXTO_REPRESENTACION = [
-  'Autorizo a esta persona a actuar por la sociedad ante Grupo Asegura, con el título que se indica.',
+  'Autorizo a esta persona a actuar por la sociedad ante Grupo ASegura, con el título que se indica.',
   'Verá los seguros de la sociedad, lo que paga, su CIF y la cuenta bancaria de los recibos: son datos de la empresa, no de una persona.',
   'Si le doy «dar partes», lo que declare obliga a la sociedad frente a la compañía.',
   'No puede autorizar a nadie más: ampliar el círculo lo decide la sociedad.',

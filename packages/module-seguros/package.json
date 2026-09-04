@@ -2,7 +2,7 @@
   "name": "@central/module-seguros",
   "version": "0.0.0",
   "private": true,
-  "description": "Dominio de la correduría (Grupo Asegura): reglas puras sobre la cartera. Empieza por la vigencia de póliza — el enum de estados no tiene «vigente» y 1.194 pólizas no tienen fecha de vencimiento, así que la vigencia son tres estados (vigente/no_vigente/pendiente), nunca dos.",
+  "description": "Dominio de la correduría (Grupo ASegura): reglas puras sobre la cartera. Empieza por la vigencia de póliza — el enum de estados no tiene «vigente» y 1.194 pólizas no tienen fecha de vencimiento, así que la vigencia son tres estados (vigente/no_vigente/pendiente), nunca dos.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

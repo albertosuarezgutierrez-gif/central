@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-04T08:06:39Z",
-  "sha": "f3a92c1248e547368ea384dbf0337a43d896b54e",
+  "generadoEn": "2026-09-04T08:42:44Z",
+  "sha": "c988ef1bb39f865ea2e435144d2438ce31cfcb18",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3807,7 +3807,7 @@
     {
       "ruta": "apps/asegura-portal/app/MarcaAsegura.tsx",
       "ambito": "apps/asegura-portal",
-      "resumen": "Monograma «AS» de Grupo Asegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no como `<img src=\"/brand/...\">` por dos razones: 1. El `fill` es `currentColor`: así el logo toma el colo",
+      "resumen": "Monograma «AS» de Grupo ASegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no como `<img src=\"/brand/...\">` por dos razones: 1. El `fill` es `currentColor`: así el logo toma el colo",
       "exporta": [
         "MarcaAsegura"
       ],
@@ -3819,7 +3819,7 @@
           "params": "{ alto = 14 }: { alto?: number }",
           "retorno": null,
           "linea": 17,
-          "resumen": "Monograma «AS» de Grupo Asegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no com"
+          "resumen": "Monograma «AS» de Grupo ASegura, EN LÍNEA. Es el mismo trazo que `public/brand/marca-asegura.svg` (traído de `app.grupoasegura.com/icon.svg`, la única fuente vectorial de la marca). Va inline y no com"
         }
       ],
       "tablas": [],
@@ -4155,7 +4155,7 @@
     {
       "ruta": "apps/asegura-portal/lib/canal.ts",
       "ambito": "apps/asegura-portal",
-      "resumen": "Puerto de canal: por dónde sale el código de acceso. WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo Asegura NO existe todavía. Cablearlo directamente habría dejado esta fase entera bloqueada esperando a Meta. Con el puerto, el día que haya número se añade `canal-whatsapp.ts` y se ",
+      "resumen": "Puerto de canal: por dónde sale el código de acceso. WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo ASegura NO existe todavía. Cablearlo directamente habría dejado esta fase entera bloqueada esperando a Meta. Con el puerto, el día que haya número se añade `canal-whatsapp.ts` y se ",
       "exporta": [
         "registrarCanal",
         "obtenerCanal"
@@ -55129,7 +55129,7 @@
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/layout.tsx",
       "ambito": "apps/plataforma",
-      "resumen": "Envoltorio de TODA la sección de la correduría. Su único trabajo es colgar la clase `.correduria`, que redefine los tokens de color con el acento cobalto de Grupo Asegura (ver el bloque en `app/globals.css`). Los componentes de dentro siguen usando `var(--primary)` sin enterarse, y el resto de plata",
+      "resumen": "Envoltorio de TODA la sección de la correduría. Su único trabajo es colgar la clase `.correduria`, que redefine los tokens de color con el acento cobalto de Grupo ASegura (ver el bloque en `app/globals.css`). Los componentes de dentro siguen usando `var(--primary)` sin enterarse, y el resto de plata",
       "exporta": [
         "CorreduriaLayout"
       ],
@@ -55141,7 +55141,7 @@
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
           "linea": 9,
-          "resumen": "Envoltorio de TODA la sección de la correduría. Su único trabajo es colgar la clase `.correduria`, que redefine los tokens de color con el acento cobalto de Grupo Asegura (ver el bloque en `app/global"
+          "resumen": "Envoltorio de TODA la sección de la correduría. Su único trabajo es colgar la clase `.correduria`, que redefine los tokens de color con el acento cobalto de Grupo ASegura (ver el bloque en `app/global"
         }
       ],
       "tablas": [],
@@ -68858,7 +68858,6 @@
       ],
       "tablas": [
         "anc",
-        "checkin",
         "eventos",
         "incomes",
         "latest",
@@ -68877,7 +68876,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "6c2db7491f95"
+      "hash": "f22c61ddeab2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -70713,7 +70712,7 @@
     {
       "ruta": "apps/plataforma/app/seguros/page.tsx",
       "ambito": "apps/plataforma",
-      "resumen": "Landing PÚBLICA de Grupo Asegura (correduría de seguros). Fuera del grupo `(usuario)` → sin sidebar ni sesión (el middleware la tiene en PUBLIC). Es la puerta del canal de leads web: el formulario entra por `POST /api/publico/correduria/lead` → puerto de asegura → Telegram a Alberto. Honesta a propó",
+      "resumen": "Landing PÚBLICA de Grupo ASegura (correduría de seguros). Fuera del grupo `(usuario)` → sin sidebar ni sesión (el middleware la tiene en PUBLIC). Es la puerta del canal de leads web: el formulario entra por `POST /api/publico/correduria/lead` → puerto de asegura → Telegram a Alberto. Honesta a propó",
       "exporta": [
         "SegurosPage"
       ],
@@ -83014,7 +83013,7 @@
           "exportada": true,
           "params": "p: { bookingId: string; propertyId: string; categoria: string; pregunta: string; respuesta: string fuente: string; confidence: number; sentimiento: string; needs_human: boolean; auto_sent: boolean; edited: boolean }",
           "retorno": "Promise<void>",
-          "linea": 9
+          "linea": 10
         },
         {
           "nombre": "aprenderCorreccion",
@@ -83022,7 +83021,7 @@
           "exportada": true,
           "params": "p: { propertyId: string; categoria: string; pregunta: string; respuestaFinal: string; huecoGuia?: boolean }",
           "retorno": "Promise<void>",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Guarda lo que Alberto aprueba o corrige. DOS destinos, no uno: · HECHO del piso (`mensajes_hechos`) si el huésped preguntaba algo y la respuesta enseña algo de la vivienda → permanente, va SIEMPRE al "
         },
         {
@@ -83031,8 +83030,8 @@
           "exportada": true,
           "params": "propertyId: string, pregunta: string",
           "retorno": "Promise<void>",
-          "linea": 56,
-          "resumen": "Registra un hueco de la guía (incrementa el contador si ya existía esa pregunta para el piso)."
+          "linea": 63,
+          "resumen": "Registra un hueco de la guía (incrementa el contador si ya existía esa pregunta para el piso). El match es por PARECIDO, no por igualdad (04/09/2026). Con `=` exacto, los cuatro avisos de phishing de "
         }
       ],
       "tablas": [
@@ -83041,7 +83040,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "33dace7ea565"
+      "hash": "629a9b1fffc0"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/atribucion.ts",
@@ -83103,6 +83102,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "045a05624554"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/auto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/auto.ts — la regla que decide si un mensaje sale SOLO hacia el huésped. Vivía como tres expresiones sueltas dentro de `procesarMensajeHuesped`, que es una función con I/O (Smoobu, BD, Telegram) y por tanto no se testeaba: sus ingredientes tenían test uno a uno (`esDespedida`",
+      "exporta": [
+        "decidirAutoEnvio"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirAutoEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "dec: Decision",
+          "retorno": "",
+          "linea": 27,
+          "resumen": "¿Puede salir solo? Dos vías, sobre una misma guarda común. Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato inventado / escalado IA / control de calidad ca"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "22abd5058276"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cierre.ts",
@@ -83289,6 +83310,48 @@
       "hash": "3297603aec32"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/cortesia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cortesía pura — el par (mensaje del huésped, borrador) que no contiene NADA que verificar. Por qué existe como módulo aparte (04/09/2026, dictado por Alberto sobre la reserva 152961026 de Esther): «Muchísimas gracias, un saludo» se propuso para revisión en vez de salir solo, y por DOS motivos indepe",
+      "exporta": [
+        "esCierre",
+        "respuestaSinDatos",
+        "esIntercambioDeCortesia"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCierre",
+          "kind": "function",
+          "exportada": true,
+          "params": "text: string",
+          "retorno": "boolean",
+          "linea": 60,
+          "resumen": "¿El mensaje del huésped es ÍNTEGRAMENTE una o varias fórmulas de cortesía? Anclado a propósito: si trae cualquier contenido real (una pregunta, un dato, una queja) → false."
+        },
+        {
+          "nombre": "respuestaSinDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "reply: string",
+          "retorno": "boolean",
+          "linea": 75,
+          "resumen": "¿El borrador es una respuesta cálida SIN ningún dato comprobable? Segunda mitad de la guarda: un mensaje de cortesía puede provocar igualmente un borrador que suelte una hora o un código, y eso sí hay"
+        },
+        {
+          "nombre": "esIntercambioDeCortesia",
+          "kind": "function",
+          "exportada": true,
+          "params": "pregunta: string, reply: string",
+          "retorno": "boolean",
+          "linea": 84,
+          "resumen": "Par cortesía↔cortesía: ni la pregunta pide nada, ni la respuesta afirma nada. Único caso en el que un control de calidad caído NO bloquea el auto-envío."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ab369b5168e7"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/decidir.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/decidir.ts — motor de decisión IA con grounding. DISEÑO (26/06/2026): la respuesta al huésped se genera como TEXTO PLANO, no como JSON. Antes el modelo debía devolver un único JSON {reply,confidence,needs_human,…}; cuando el modelo gratis (Llama 3.3 70B) fallaba al emitir JS",
@@ -83297,20 +83360,12 @@
       ],
       "funciones": [
         {
-          "nombre": "esCierre",
-          "kind": "function",
-          "exportada": false,
-          "params": "text: string",
-          "retorno": "boolean",
-          "linea": 72
-        },
-        {
           "nombre": "sentimientoDe",
           "kind": "function",
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 76
+          "linea": 79
         },
         {
           "nombre": "limpiarReply",
@@ -83318,7 +83373,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 84,
+          "linea": 87,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -83327,7 +83382,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<Veredicto>",
-          "linea": 107
+          "linea": 110
         },
         {
           "nombre": "decidir",
@@ -83335,12 +83390,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 137
+          "linea": 140
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a9a05f395fb7"
+      "hash": "7c0528b00144"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
@@ -84054,7 +84109,7 @@
           "exportada": true,
           "params": "bookingId: string, opts: { pregunta?: string; msgId?: string } = {},",
           "retorno": "Promise<",
-          "linea": 22,
+          "linea": 24,
           "resumen": "Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner` y /api/reservations"
         }
       ],
@@ -84063,7 +84118,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "3aca77df0c04"
+      "hash": "801b5e3c9dba"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -84404,6 +84459,83 @@
       "hash": "31cb530a0f02"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/similitud-reglas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/similitud-reglas.ts — parte PURA de la recuperación por parecido. Separada de `similitud.ts` (que importa `@/lib/db`) por la misma razón que `reglas.ts` lo está de `aprender.ts`: sin el alias de Next, `node --test` no puede cargar un módulo que tire de Prisma, y esto es just",
+      "exporta": [
+        "palabrasClave",
+        "regexClaves",
+        "mezclarPorRelevancia"
+      ],
+      "funciones": [
+        {
+          "nombre": "palabrasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string[]",
+          "linea": 70,
+          "resumen": "Palabras de CONTENIDO de un texto: las que dicen de qué va el mensaje. Es la señal (b), la que de verdad caza la paráfrasis."
+        },
+        {
+          "nombre": "regexClaves",
+          "kind": "function",
+          "exportada": true,
+          "params": "claves: string[]",
+          "retorno": "string | null",
+          "linea": 91,
+          "resumen": "Regex de Postgres que casa cualquiera de las claves como PALABRA ENTERA (no un trozo). `null` cuando no hay ninguna clave utilizable — y `null` significa «esta señal no opina», nunca «casa con todo»: "
+        },
+        {
+          "nombre": "mezclarPorRelevancia",
+          "kind": "function",
+          "exportada": true,
+          "params": "parecidas: T[], recientes: T[], clave: (x: T) => string, max = MAX_APRENDIZAJES, reservaRecientes = RESERVA_RECIENTES,",
+          "retorno": "T[]",
+          "linea": 103,
+          "resumen": "Mezcla lo PARECIDO con lo RECIENTE sin duplicar, respetando una cuota mínima para lo reciente. El orden de salida es el de relevancia (primero lo parecido), porque el modelo pondera más lo que ve ante"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8357cc3a85ea"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/similitud.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/similitud.ts — consultas de recuperación por parecido. El criterio (las dos señales, los umbrales y por qué) vive en `similitud-reglas.ts`, que es puro y está testeado. Aquí solo van las consultas. 🚨 `null` NO es «no hay nada»: es «no se ha podido leer» (regla del repo sobr",
+      "exporta": [
+        "aprendizajesRelevantes",
+        "hechosRelevantes"
+      ],
+      "funciones": [
+        {
+          "nombre": "aprendizajesRelevantes",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string, pregunta: string",
+          "retorno": "Promise<Aprendizaje[] | null>",
+          "linea": 35,
+          "resumen": "Aprendizajes del piso pertinentes para ESTA pregunta, mezclados con los más recientes. Devuelve `null` si no se pudo leer (≠ «este piso no tiene nada aprendido»)."
+        },
+        {
+          "nombre": "hechosRelevantes",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string, pregunta: string",
+          "retorno": "Promise<Hecho[] | null>",
+          "linea": 72,
+          "resumen": "Hechos confirmados del piso, ordenados por pertinencia para ESTA pregunta (y por recencia dentro de lo demás). No filtra: los hechos no caducan y van todos al prompt; lo que cambia es el ORDEN. `null`"
+        }
+      ],
+      "tablas": [
+        "mensajes_aprendizaje",
+        "mensajes_hechos"
+      ],
+      "rutaApi": null,
+      "hash": "a236f7c6dc9c"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/telegram-msg.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/telegram-msg.ts — propuesta por Telegram + estado pendiente.",
@@ -84447,7 +84579,7 @@
           "exportada": false,
           "params": "f: string",
           "retorno": "string",
-          "linea": 48,
+          "linea": 54,
           "resumen": "Fecha YYYY-MM-DD → DD/MM/YYYY (deja igual cualquier otro formato)."
         },
         {
@@ -84456,7 +84588,7 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, dec: Decision",
           "retorno": "Promise<void>",
-          "linea": 54,
+          "linea": 60,
           "resumen": "Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking)."
         },
         {
@@ -84465,7 +84597,7 @@
           "exportada": true,
           "params": "pend: { booking_id: string; idioma: string | null }, borrador: string, opts: { borradorEs?: string } = {},",
           "retorno": "Promise<void>",
-          "linea": 120,
+          "linea": 126,
           "resumen": "Re-propone un borrador tras ✏️ Modificar / 🔧 Retocar: muestra el texto FINAL que se va a enviar (en el idioma del huésped + 🔁 español para verificar) con los botones, y deja el pendiente listo para "
         },
         {
@@ -84474,7 +84606,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 145
+          "linea": 151
         },
         {
           "nombre": "confirmarDescartado",
@@ -84482,7 +84614,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 149
+          "linea": 155
         }
       ],
       "tablas": [
@@ -84490,7 +84622,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "d980469987a0"
+      "hash": "13514b25963e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/alertas-autoresolucion.ts",
@@ -87519,7 +87651,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ce2bbe46c512"
+      "hash": "9fcc6ab73344"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-canal.ts",
@@ -117784,7 +117916,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2942,
-    "funciones": 8812
+    "archivos": 2946,
+    "funciones": 8820
   }
 }

@@ -65,7 +65,7 @@ renderiza la pestaña activa**.
 De `app.grupoasegura.com` (la app que hizo Manuel, repo `albertosuarezgutierrez-gif/asegura`),
 leídos de su `src/app/globals.css` y convertidos de oklch a hex, **no a ojo**:
 
-| | Grupo Asegura | plataforma hoy |
+| | Grupo ASegura | plataforma hoy |
 |---|---|---|
 | Primario | `#3364ee` (claro) · `#497cfd` (oscuro) | `#4f46e5` · `#818cf8` |
 | Superficie acento | `#e0efff` sobre `#16307a` | `--primary-light: #eef2ff` |
