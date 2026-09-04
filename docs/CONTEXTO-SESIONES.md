@@ -30,6 +30,28 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🛡️ /correduria: seis peticiones de Alberto desde el móvil, PR #2259 (04/09/2026).**
+  Cabecera visible fuera (~62px de la 1ª pantalla; el `<h1>` se oculta con `.solo-lectores`, no se
+  borra). La búsqueda vive ya en la URL (`?q=`) como la sección (`?s=`): volver con el navegador la
+  restaura — antes el remonte se llevaba el `useState('')`. Icono de WhatsApp junto a los móviles
+  (`urlWhatsapp()`, puro): si no se puede afirmar que es móvil NO se pinta nada. **Bug real:** una
+  póliza de RC ofrecía «Colisión» porque `responsabilidad_civil`, `comercio` y `otros` no estaban en
+  `RAMOS_POR_TIPO_POLIZA` y el `?? null` significa «ofrécelo todo»; ahora está el enum entero + 2
+  guardianes. Nuevo `cambiarTipoRelacion` (antes corregir una etiqueta obligaba a borrar, y borrar
+  REVOCA la autorización del portal). Y **descartar ficha** (`clientes.activo=false`, reversible; NO
+  borrado duro: CIMA la recrearía en silencio), con guarda de pólizas vivas por `esCarteraViva()` y
+  tres desenlaces —si no se puede contar, no se descarta—. Regla que deja: **descartar quita la ficha
+  de donde se MIRA, no de la base**; por eso 15 lecturas filtran `activo` y `coincidencias()` del alta
+  NO (el índice único por hash sigue vivo: filtrarla diría «ese teléfono está libre» y el alta moriría
+  en un P2002).
+  ⚠️ **Corrección a lo que este repo daba por sabido:** `siniestros.ts` afirmaba «no tenemos la tabla
+  oficial» del EIAC. **Sí la hay** — el estándar V07.1 completo está en el Drive de Alberto desde el
+  02/09 (`209_IAC_ESP_DOC…`, punto 10.2 «Claves») y además es libre y gratuito en cimaseg.es.
+  Pendientes: los conductores de GLOBAL 2 que CIMA manda sin ficha propia no admiten vínculo (falta
+  «crear ficha desde interviniente»); la reactivación al volver una póliza solo cubre lo que acuña
+  asegura, no la ingesta de CIMA (vive en el CRM); `apps/asegura-portal` no filtra `activo` (hoy
+  inocuo).
+
 - **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026).**
   Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
   revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
