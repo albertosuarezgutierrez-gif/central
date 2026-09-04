@@ -37,14 +37,63 @@
   legitimación no hay campaña; WhatsApp descartado (0 `wa_opt_in`). Trampa: el CP **41001 en 10.933 fichas**
   es relleno del despacho, no segmentar por CP. Verificado en Vercel: `app.grupoasegura.com` sirve el CRM,
   pero **el apex y el `www` están LIBRES** → la web de marketing nace ahí sin desalojar nada. Orden del plan:
-  embudo (SLA de lead) y reseñas ANTES que tráfico; ramo elegido por `comisiones_devengo`, no a ojo; Ads
+  embudo (SLA de lead) y reseñas ANTES que tráfico; ramo elegido midiendo, no a ojo; Ads
   el último. **Comisión medida sobre `seguros.poliza_recibos`** (12 meses, recibos cobrados): auto **10,44%
   → 40,87€/póliza/año**, hogar **22,03% → 68,74€**, RC 17,09%. Hogar es el ramo prioritario, pero con 8 recibos
   es hipótesis, no conclusión. Ojo: `comisiones_devengo` está en `public`, NO en `seguros`, y agrega por
   (compañía, periodo), no por ramo. 🚨 **Falta la ingesta de Mapfre desde el 02/04/2026** (~5 meses; es el 64%
   de la cartera) → el libro de comisiones está infravalorado. 🚨 Y **75 tablas de `seguros` con RLS desactivado**
-  expuestas a `anon` (`clientes`, `polizas`, `cliente_emails`) — comprobar dónde vive la clave `anon`. PR #2277.
+  expuestas a `anon` (`clientes`, `polizas`, `cliente_emails`) — comprobar dónde vive la clave `anon`. PR #2285.
 
+- **📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp (04/09/2026, PR #2281).**
+  Petición de Alberto sobre la captura del buscador. Nuevo `AccionesContacto` + `lib/acciones-contacto.ts`
+  en retención, cabecera de ficha y lista de personas. 🚨 **Choque con #2259**, que en paralelo trajo
+  `BotonWhatsapp`/`telefono-wa.ts`: había DOS criterios de «admite WhatsApp» a punto de convivir (el icono
+  saldría en una pantalla y no en otra para el mismo número); el helper nuevo **delega** en `urlWhatsapp()`
+  y solo aporta el estado `ilegible`. **NO se aplica al buscador ni a Renovaciones/SinCanal**: sus payloads
+  del puerto no traen teléfono ni email — ampliarlo es decisión de PII y coste, pendiente de Alberto.
+  🔥 **Y un fallo caro medido aquí:** marcar con `[preview]` un commit de MERGE de `main` construyó los
+  **11 proyectos Vercel** (el marcador es global y el diff de un merge toca los manifiestos raíz).
+  Documentado en `CLAUDE.md`.
+- **🎟 La intranet del cliente deja de ser solo para clientes (04/09/2026, PR #2258).** Tres piezas:
+  (1) **pedir acceso** al revés —María pide lo que antes solo José podía conceder—, con el oráculo
+  cerrado por diseño: 4 resultados internos colapsan en un `registrada` que no dice si esa persona es
+  cliente (el portal es abierto: si no, es una máquina de enumerar 32.600 fichas). (2)
+  **`autorizado_identidad_id`**: se puede autorizar a quien NO tiene ficha, sin fabricársela —quien
+  mira es una identidad, y una ficha por curioso ensucia los 32.520 leads. (3) **`poliza_id`**: el
+  dueño comparte la póliza de la nave y no la de su coche (15 de los 80 titulares vivos tienen más de
+  una), con FK COMPUESTA contra `polizas(cliente_id,id)` **vista morder** (23503 con la de otro).
+  🚨 Las tres trampas de Postgres que salieron en el camino: `x <> NULL` es NULL y **un CHECK que da
+  NULL PASA**; dos NULL **no son iguales** en un índice único; y una póliza FUSIONADA deja la
+  autorización apuntando a una fila muerta —el acceso se apaga sin que nadie se entere—, de ahí que la
+  lectura siga `merged_into_poliza_id`. Las 3 migraciones aplicadas y verificadas.
+
+- **🏠 La escalera del Catastro para hogar, y un agujero que salió por el camino (04/09/2026, PR #2255).**
+  Cuatro peldaños y se BAJA solo cuando el anterior falla: dirección → variantes DETERMINISTAS de la
+  misma dirección → una IA que PROPONE y el Catastro CONFIRMA → referencia catastral → a mano.
+  Ningún dato entra solo. Nuevas `referencia_catastral` (columna) y `datos_ramo_origen`
+  (`catastro`|`documento`|`declarado`), SQL ya aplicado. 🚨 **Y el hallazgo gordo:**
+  `carteraDeIdentidad` filtraba prima/coberturas/recibos por nivel y pegaba `siniestrosAbiertos`
+  SIN mirarlo — un tercero con alcance `ver` veía los siniestros abiertos de quien le autorizó.
+  Cerrado con `CamposVisibles.siniestros` + tope duro en `NUNCA_A_UN_TERCERO`, con mutación probada.
+- **📄 Subir una póliza no lee nada porque FALTA LA CLAVE DE IA, no porque el PDF sea malo (04/09/2026).**
+  Alberto subió una Mapfre HOGAR FAMILIAR real y salió «no hemos podido leer». Medido: `pdf-parse`
+  saca **12.076 caracteres limpios** de ese PDF. El fallo es `aiComplete`, que necesita al menos una
+  de OPENROUTER/GROQ/GEMINI/NVIDIA/CEREBRAS/MOONSHOT — y el proyecto Vercel `asegura-portal` **no
+  tiene ninguna**. Pendiente de Alberto. Ojo: el texto de Mapfre sale con la codificación rota
+  («EspaÒa», «PÛliza»); un LLM lee a través, una plantilla determinista no.
+- **🚑 CIMA NO da campos por ramo para el siniestro (medido sobre las 67 filas reales, 04/09/2026).**
+  Misma estructura (30 columnas) para todos los ramos; lo único que cambia es `tipo`, un código de la
+  compañía cuyo nombre va en `comentario`. **No es vocabulario compartido:** `1915` es «RECOBRO CICOS»
+  en auto (241) y «reclamación de tercero» en 282; lunas es `17`/`1313` en auto y `2102` en hogar.
+  Así que las causas por ramo del parte hay que diseñarlas NOSOTROS. Y `lugar_direccion` viene en
+  6/67; `tramitador`, `gravedad`, `reserva` e `indemnización` en **0**. Auto: 26 de 50 son ASISTENCIA
+  (una grúa, no un siniestro) — pintarlos como «siniestro abierto» exagera.
+- **🧹 Borrado el mail de Alberto de dos fichas ajenas (04/09/2026).** Estaba de contacto en Josefa
+  Julia Vicente Lucas y Alejandro José Soler Fernández Gao, y por eso su hash del índice ciego
+  resolvía a 3 fichas y el portal se negaba a vincular (`ambiguo`). Foto previa en
+  `seguros.cliente_emails_borrados_20260904`. Ahora resuelve a **1**. Las dos fichas se quedan con
+  cero emails: el dato era falso de todas formas.
 - **🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez (04/09/2026).** El
   360009410197 salía de la URL de un artículo del Zendesk de **HomeExchange** (correo de Irene et
   Rico, un intercambio de casa, ni siquiera una reserva); el colador `\b(\d{9,})\b` miraba dentro de

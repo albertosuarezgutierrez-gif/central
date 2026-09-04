@@ -193,12 +193,6 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     select: { clienteId: true, correduriaId: true, nivel: true },
     orderBy: { creadoEn: 'asc' },
   })
-  if (vinculos.length === 0) return SIN_VINCULO
-
-  const correduria = await prisma.correduria.findUnique({
-    where: { id: vinculos[0].correduriaId },
-    select: { nombre: true },
-  })
 
   const propiosIds = vinculos.map((v) => v.clienteId)
   const nivelPorCliente = new Map(vinculos.map((v) => [v.clienteId, nivelDeVinculo(v.nivel)]))
@@ -214,40 +208,110 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   // Se traen las NO revocadas y la vigencia la decide `autorizacionVigente`, en
   // el módulo puro: una sola fuente para la regla, en vez de repetirla en el
   // WHERE y otra vez en la UI (que es como se desincronizan).
+  //
+  // 🚨 Y me alcanzan por DOS caminos, no por uno: por una FICHA mía (soy cliente
+  // de la correduría) o por mi IDENTIDAD (no lo soy, y me invitaron). El segundo
+  // brazo se añadió el 04/09/2026 con `autorizado_identidad_id`: sin él, el
+  // hijo que no es cliente de nadie tenía su autorización en la BD y la bóveda
+  // ni la miraba — no fallaba, salía vacía.
   const filasAutorizacion = await prisma.portalAutorizacion.findMany({
-    where: { autorizadoClienteId: { in: propiosIds }, revocadoEn: null },
+    where: {
+      revocadoEn: null,
+      OR: [
+        { autorizadoIdentidadId: identidadId },
+        ...(propiosIds.length > 0 ? [{ autorizadoClienteId: { in: propiosIds } }] : []),
+      ],
+    },
     select: {
       id: true,
+      correduriaId: true,
       otorganteClienteId: true,
+      polizaId: true,
       alcance: true,
       aceptadoEn: true,
       caducaEn: true,
       revocadoEn: true,
     },
   })
+
+  // 🚨 El corte de «aquí no hay nada» se decide con LAS DOS listas. Hasta el
+  // 04/09/2026 bastaba con no tener vínculo para devolver `SIN_VINCULO`, y eso
+  // dejaba fuera justo a quien el producto quiere dentro: el invitado.
+  if (vinculos.length === 0 && filasAutorizacion.length === 0) return SIN_VINCULO
+
+  // La correduría sale del vínculo si lo hay y, si no, de la autorización que
+  // me deja entrar: un invitado sin ficha también tiene que ver de quién es la
+  // pantalla en la que está.
+  const correduriaId = vinculos[0]?.correduriaId ?? filasAutorizacion[0]?.correduriaId ?? null
+  const correduria =
+    correduriaId === null
+      ? null
+      : await prisma.correduria.findUnique({ where: { id: correduriaId }, select: { nombre: true } })
+
   const ahora = new Date()
-  const porOtorgante = new Map<string, { ids: string[]; alcances: Alcance[]; caducaEn: Date }>()
+  /** Lo que abre una autorización: qué filas, con qué alcances y hasta cuándo. */
+  type Concesion = { ids: string[]; alcances: Alcance[]; caducaEn: Date }
+  const acumular = (m: Map<string, Concesion>, clave: string, id: string, alcance: Alcance, caducaEn: Date) => {
+    const g = m.get(clave)
+    if (g) {
+      g.ids.push(id)
+      g.alcances.push(alcance)
+      // Se ve hasta que caduque la ÚLTIMA que sigue abriéndolo.
+      if (caducaEn.getTime() > g.caducaEn.getTime()) g.caducaEn = caducaEn
+    } else {
+      m.set(clave, { ids: [id], alcances: [alcance], caducaEn })
+    }
+  }
+
+  // Dos vocabularios distintos y no intercambiables: `porOtorgante` son las
+  // autorizaciones sobre la ficha ENTERA (`poliza_id IS NULL`, que es lo que
+  // significaban todas las filas antes de esa columna, futuras incluidas), y
+  // `porPoliza` las que abren UNA sola. Los alcances de las dos SE SUMAN sobre
+  // esa póliza: quien te deja ver todo y además lo económico de la del coche ve
+  // lo económico de esa y solo de esa.
+  const porOtorgante = new Map<string, Concesion>()
+  const porPoliza = new Map<string, Concesion>()
+  /** Qué ficha concedió cada póliza suelta, para no servirla bajo otro titular. */
+  const otorganteDePoliza = new Map<string, string>()
+  const vigentes: typeof filasAutorizacion = []
   for (const f of filasAutorizacion) {
     // Un alcance que la BD tiene y el módulo no conoce NO abre nada: se ignora.
     // (Al revés que un `?? 'ver'`, que convertiría un valor desconocido en acceso.)
     if (!esAlcance(f.alcance)) continue
     if (!autorizacionVigente(f, ahora)) continue
     if (propiosIds.includes(f.otorganteClienteId)) continue
-    const g = porOtorgante.get(f.otorganteClienteId)
-    if (g) {
-      g.ids.push(f.id)
-      g.alcances.push(f.alcance)
-      // La ficha se ve hasta que caduque la ÚLTIMA que sigue abriéndola.
-      if (f.caducaEn.getTime() > g.caducaEn.getTime()) g.caducaEn = f.caducaEn
+    vigentes.push(f)
+  }
+
+  // 🚨 Una póliza FUSIONADA deja la autorización apuntando a una fila muerta (5
+  // fusionadas hoy, no es teórico) y el autorizado perdería el acceso SIN QUE
+  // NADIE SE ENTERE: no falla, deja de funcionar. Se sigue un salto de
+  // `merged_into_poliza_id`. Si la fusión se llevó la póliza a OTRA ficha, la
+  // póliza ya no es del otorgante y no se sirve: quien la cedió cedió la suya.
+  const idsConcedidos = [...new Set(vigentes.map((f) => f.polizaId).filter((x): x is string => x !== null))]
+  const trasFusion = new Map<string, string>()
+  if (idsConcedidos.length > 0) {
+    const filas = await prisma.poliza.findMany({
+      where: { id: { in: idsConcedidos } },
+      select: { id: true, mergedIntoPolizaId: true },
+    })
+    for (const f of filas) trasFusion.set(f.id, f.mergedIntoPolizaId ?? f.id)
+  }
+
+  for (const f of vigentes) {
+    if (!esAlcance(f.alcance)) continue
+    if (f.polizaId === null) {
+      acumular(porOtorgante, f.otorganteClienteId, f.id, f.alcance, f.caducaEn)
     } else {
-      porOtorgante.set(f.otorganteClienteId, {
-        ids: [f.id],
-        alcances: [f.alcance],
-        caducaEn: f.caducaEn,
-      })
+      // Una concedida que ya no existe en la cartera no abre nada, y tampoco se
+      // inventa: sin fila no hay destino y se cae fuera.
+      const destino = trasFusion.get(f.polizaId)
+      if (destino === undefined) continue
+      acumular(porPoliza, destino, f.id, f.alcance, f.caducaEn)
+      otorganteDePoliza.set(destino, f.otorganteClienteId)
     }
   }
-  const autorizadosIds = [...porOtorgante.keys()]
+  const autorizadosIds = [...new Set([...porOtorgante.keys(), ...otorganteDePoliza.values()])]
 
   const todosIds = [...propiosIds, ...autorizadosIds]
   const [clientes, polizas] = await Promise.all([
@@ -379,21 +443,32 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const tipoPor = new Map<string, TipoOtorgante>(
     clientes.map((c) => [c.id, c.tipoPersona === 'juridica' ? 'juridica' : 'fisica']),
   )
+  // `ve` puede ser los mismos campos para toda la ficha (lo propio) o una
+  // función que los decide PÓLIZA A PÓLIZA (lo autorizado, desde que se puede
+  // conceder una sola). Devolver `null` para una póliza no la sirve capada: la
+  // deja fuera, que es lo que significa «esa no te la han abierto».
   const titular = (
     clienteId: string,
     nivel: Nivel,
-    ve: CamposVisibles,
+    ve: CamposVisibles | ((polizaId: string) => CamposVisibles | null),
     autorizacion?: { ids: string[]; alcances: Alcance[]; caducaEn: Date },
   ): TitularPortal | null => {
     // Una ficha fusionada o que ya no existe no se pinta: sin nombre no hay titular.
     const nombre = nombrePor.get(clienteId)
     if (nombre === undefined) return null
+    const suyas = polizas
+      .filter((p) => p.clienteId === clienteId)
+      .map((p) => {
+        const campos = typeof ve === 'function' ? ve(p.id) : ve
+        return campos === null ? null : aPortal(p, campos)
+      })
+      .filter((x): x is PolizaPortal => x !== null)
     return {
       clienteId,
       nombre,
       nivel,
       ...(autorizacion ? { autorizacion } : {}),
-      polizas: polizas.filter((p) => p.clienteId === clienteId).map((p) => aPortal(p, ve)),
+      polizas: suyas,
     }
   }
 
@@ -404,23 +479,63 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     })
     .filter((t): t is TitularPortal => t !== null)
 
+  const caducaPorId = new Map(vigentes.map((f) => [f.id, f.caducaEn]))
   const autorizadas: TitularPortal[] = []
   const autorizacionesUsadas: string[] = []
-  for (const [clienteId, a] of porOtorgante) {
-    // `camposDeAlcances` va capada: pase lo que pase con los niveles, un tercero
-    // no ve el IBAN ni el DNI del otorgante, ni puede actuar en su nombre.
-    const ve = camposDeAlcances(a.alcances, tipoPor.get(clienteId) ?? 'fisica')
-    if (ve === null) continue
-    const t = titular(clienteId, etiquetaNivelAlcances(a.alcances), ve, a)
+  for (const clienteId of autorizadosIds) {
+    const tipo = tipoPor.get(clienteId) ?? 'fisica'
+    // Lo concedido sobre la ficha ENTERA. `null` = solo hay concesiones sueltas.
+    const deLaFicha = porOtorgante.get(clienteId) ?? null
+    // Lo que de verdad se ha servido, que es lo único que cuenta como USO: una
+    // autorización sobre una póliza que ya no está viva no se anota como que
+    // alguien miró algo.
+    const usadas = new Set<string>()
+    const alcancesServidos = new Set<Alcance>()
+
+    const veDe = (polizaId: string): CamposVisibles | null => {
+      // La suelta solo cuenta si la concedió ESTA ficha: dos otorgantes pueden
+      // aparecer en la misma vuelta y una póliza es de uno solo.
+      const suelta = otorganteDePoliza.get(polizaId) === clienteId ? (porPoliza.get(polizaId) ?? null) : null
+      if (deLaFicha === null && suelta === null) return null
+      const alcances = [...(deLaFicha?.alcances ?? []), ...(suelta?.alcances ?? [])]
+      // `camposDeAlcances` va capada: pase lo que pase con los niveles, un
+      // tercero no ve el IBAN ni el DNI del otorgante, ni actúa en su nombre.
+      const campos = camposDeAlcances(alcances, tipo)
+      if (campos === null) return null
+      for (const id of deLaFicha?.ids ?? []) usadas.add(id)
+      for (const id of suelta?.ids ?? []) usadas.add(id)
+      for (const a of alcances) alcancesServidos.add(a)
+      return campos
+    }
+
+    const t = titular(clienteId, 'tarjeta', veDe)
     if (t === null) continue
-    autorizadas.push(t)
-    // Solo cuenta como USO lo que de verdad se ha servido: una autorización de
-    // una ficha que ya no existe no se anota como que alguien miró algo.
-    autorizacionesUsadas.push(...a.ids)
+    // Sin una sola póliza servida y sin concesión sobre la ficha entera, no hay
+    // nada que enseñar: pintar el nombre de quien te autorizó y una lista vacía
+    // sería contar que esa persona existe en la cartera sin abrir nada.
+    if (t.polizas.length === 0 && deLaFicha === null) continue
+    const alcances = [...alcancesServidos]
+    const ids = [...usadas]
+    // Con la ficha abierta y cero pólizas vivas no se ha llamado a `veDe` ni una
+    // vez: la concesión es real y sigue siendo lo que hay que enseñar.
+    const idsFinales = ids.length > 0 ? ids : (deLaFicha?.ids ?? [])
+    const alcancesFinales = alcances.length > 0 ? alcances : [...new Set(deLaFicha?.alcances ?? [])]
+    let caduca = deLaFicha?.caducaEn ?? null
+    for (const id of idsFinales) {
+      const c = caducaPorId.get(id)
+      if (c !== undefined && (caduca === null || c.getTime() > caduca.getTime())) caduca = c
+    }
+    if (caduca === null) continue
+    autorizadas.push({
+      ...t,
+      nivel: etiquetaNivelAlcances(alcancesFinales),
+      autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca },
+    })
+    autorizacionesUsadas.push(...idsFinales)
   }
 
   return {
-    vinculada: true,
+    vinculada: vinculos.length > 0,
     correduria: correduria?.nombre ?? null,
     propias,
     autorizadas,
