@@ -38,8 +38,14 @@
   estado **`estreno`** + campo `vigiladoDesde` (obligatorio, con guardián); en el panel es GRIS, no verde.
   🚨 Los otros 2 SÍ son reales y sus `nota` **mentían**: la de domótica decía «es el trial de IoT Core,
   conocido» y esos errores son del 03/08 — hoy es `Tuya 2001 offline` + `1109` en el respaldo, con **3
-  reservas sin PIN** (una con el huésped dentro). ⏸️ Pendiente de Alberto: cerradura de Bustos Tavera y
-  alta de establecimientos SES (`ses_establecimientos` = 0 filas).
+  reservas sin PIN** (una con el huésped dentro). Alberto decide dejar los dos rojos («la cerradura no
+  tiene conexión, para más adelante» · «SES déjalo rojo, es un pendiente real») → **`pendienteConocido`**:
+  se calla la INTERRUPCIÓN, no el registro (siguen en alerta en /operador/agentes). Tres candados con
+  test: marcador del parte —un código de Tuya nuevo vuelve a sonar el mismo día, y sin `detalle` no casa
+  nada—, fecha que caduca sola, y fuera del carril de auto-reparación. Para poder distinguirlo, el parte
+  de accesos pasó de «3 con ERROR» a nombrar los códigos (tres averías que mandaban a sitios opuestos se
+  veían idénticas). ⏸️ Fechas de revisión PROPUESTAS por mí: domótica 12/09 (el 14 entra una reserva de
+  20 noches), SES 06/10.
 
 - **🏠 Los 10 ramos ya despliegan SUS campos, y hogar los saca del Catastro (04/09/2026, PR #2242).**
   Alberto vio en su móvil que elegir «Hogar» no cambiaba nada: el despliegue existía solo para
