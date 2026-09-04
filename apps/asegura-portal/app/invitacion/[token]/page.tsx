@@ -117,6 +117,10 @@ export default async function InvitacionPage({ params }: { params: Promise<{ tok
         polizaId={oferta.polizaId}
         polizaEtiqueta={oferta.polizaEtiqueta}
         mensaje={oferta.mensaje}
+        {/* La fecha cruza a un componente de cliente, así que va como cadena:
+            un `Date` no es serializable en esa frontera. Se admiten las dos
+            formas en que puede llegar del puerto (columna `date` ya en ISO,
+            o `Date` de Prisma) en vez de suponer una. */}
         caducaEn={typeof oferta.caducaEn === 'string' ? oferta.caducaEn : oferta.caducaEn.toISOString()}
       />
     </main>
