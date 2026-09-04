@@ -2,7 +2,7 @@ import { PrismaClient as AseguraPrismaClient } from './generated/asegura-client'
 import { urlFuenteCartera, type FuenteCartera } from './asegura-url'
 
 /**
- * Cliente de la CARTERA (las 52 tablas del CRM de Grupo Asegura). El cliente
+ * Cliente de la CARTERA (las 52 tablas del CRM de Grupo ASegura). El cliente
  * principal (`lib/db.ts`) sigue siendo el de la BD compartida de central, donde
  * vive la auth.
  *

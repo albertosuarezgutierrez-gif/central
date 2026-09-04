@@ -246,12 +246,13 @@ function Contacto({ nombre, c, intervinientes, piiClave, contactos, polizas }: {
   const coletilla = ef.intervinientesSinMirar ? ' · intervinientes sin comprobar' : ''
   return (
     <>
-      {/* Los tres iconos van juntos y al principio: es lo que se TOCA. Debajo
-          sigue el número y de quién es, que es lo que se LEE. El WhatsApp no
-          aparece sobre un fijo (`accionesContacto` lo decide). */}
+      {/* Los tres iconos van juntos y al principio: es lo que se TOCA. Detrás
+          sigue el número y de quién es, que es lo que se LEE. El WhatsApp lo
+          pinta ahí dentro `BotonWhatsapp`, y solo si el número es un móvil
+          (ver `lib/telefono-wa.ts`): no se repite suelto al lado del número. */}
       <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} />
       {ef.telefono ? (
-        <span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
           <a href={`tel:${ef.telefono.replace(/\s/g, '')}`}>📞 {ef.telefono}</a>
           {deOtro(ef.viaTelefono)}
           {mas(masTel)}

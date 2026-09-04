@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Search, TriangleAlert, Lock, Plus, Hourglass } from 'lucide-react'
 import { cardStyle, btnStyle, Badge, type Tono } from '@/components/ui'
@@ -52,18 +52,65 @@ type Estado =
 export default function BuscadorCartera() {
   const [q, setQ] = useState('')
   const [estado, setEstado] = useState<Estado>({ fase: 'quieto' })
+  // Cada búsqueda lleva número: si vuelven dos respuestas desordenadas (la
+  // lenta después de la rápida), solo pinta la última que se pidió.
+  const turno = useRef(0)
+
+  const lanzar = useCallback(async (termino: string) => {
+    const mio = ++turno.current
+    setEstado({ fase: 'buscando' })
+    try {
+      const res = await fetch(`/api/correduria/buscar?q=${encodeURIComponent(termino)}`)
+      const r = await res.json()
+      if (turno.current === mio) setEstado({ fase: 'hecho', r })
+    } catch {
+      if (turno.current === mio) setEstado({ fase: 'hecho', r: { estado: 'error', motivo: 'red' } })
+    }
+  }, [])
+
+  /* ── LA BÚSQUEDA VIVE EN LA URL (`?q=`), no solo en el estado de React ──────
+     🚨 Por qué (Alberto, 04/09/2026): «hay pantallas, por ejemplo de cliente,
+     que al ir atrás no guardan los datos de la búsqueda». Cierto y estructural:
+     buscar «Global», entrar en la ficha y volver con el botón del navegador
+     REMONTA esta pantalla, y con ella se iba un `useState('')` — o sea, había
+     que volver a teclear y a pulsar Buscar para seguir donde estabas.
+
+     Con el término en la URL, la vuelta atrás lo trae de serie: el navegador
+     restaura `/correduria?q=Global&s=…` y aquí se relee y se relanza. Es el
+     mismo mecanismo que ya usa la SECCIÓN (`?s=`) unas líneas más abajo, y por
+     eso se escribe igual: `history.replaceState` y no `router.push`, porque
+     navegar remontaría la pantalla entera y volvería a pedirle todo al puerto
+     de asegura en cada búsqueda.
+
+     Se lee de `window.location.search` y no de `useSearchParams()` a propósito:
+     `replaceState` a pelo no pasa por el router de Next, así que su hook puede
+     ir un paso por detrás de lo que de verdad hay en la barra de direcciones. */
+  useEffect(() => {
+    const inicial = (new URLSearchParams(window.location.search).get('q') ?? '').trim()
+    if (inicial.length < 3) return
+    setQ(inicial)
+    void lanzar(inicial)
+  }, [lanzar])
+
+  function recordarEnUrl(termino: string) {
+    const url = new URL(window.location.href)
+    if (termino === '') url.searchParams.delete('q')
+    else url.searchParams.set('q', termino)
+    window.history.replaceState(null, '', url)
+  }
 
   async function buscar(e: React.FormEvent) {
     e.preventDefault()
     const termino = q.trim()
     if (termino.length < 3) return
-    setEstado({ fase: 'buscando' })
-    try {
-      const res = await fetch(`/api/correduria/buscar?q=${encodeURIComponent(termino)}`)
-      setEstado({ fase: 'hecho', r: await res.json() })
-    } catch {
-      setEstado({ fase: 'hecho', r: { estado: 'error', motivo: 'red' } })
-    }
+    recordarEnUrl(termino)
+    await lanzar(termino)
+  }
+
+  function limpiar() {
+    setQ('')
+    setEstado({ fase: 'quieto' })
+    recordarEnUrl('')
   }
 
   return (
@@ -104,6 +151,12 @@ export default function BuscadorCartera() {
           />
         </div>
         <button type="submit" style={btnStyle('primario')}>Buscar</button>
+        {/* Aparece solo con una búsqueda hecha: es lo que quita el término de la
+            URL. Sin él, `?q=` se quedaría pegado a la pantalla y volver desde
+            una ficha reabriría para siempre la última búsqueda. */}
+        {estado.fase !== 'quieto' && (
+          <button type="button" onClick={limpiar} style={btnStyle('secundario')}>Limpiar</button>
+        )}
       </form>
 
       <Resultado estado={estado} termino={q.trim()} />

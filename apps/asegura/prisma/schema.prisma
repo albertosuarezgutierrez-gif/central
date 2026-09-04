@@ -36,6 +36,6 @@ model Cuenta {
 
 // ─── Modelo de la correduría ─────────────────────────────────────────────────
 // 🚨 AQUÍ NO HAY MODELOS TODAVÍA, Y ESO NO SIGNIFICA QUE NO EXISTA:
-// el CRM real de Grupo Asegura tiene 52 tablas y 32.600 clientes vivos en el
+// el CRM real de Grupo ASegura tiene 52 tablas y 32.600 clientes vivos en el
 // Supabase de Manuel (`uijsgeocgdaxkhvwtjqs`). Entran aquí cuando se restaure
 // su `public` sobre el schema `seguros`. "Sin modelos" = "sin migrar todavía".

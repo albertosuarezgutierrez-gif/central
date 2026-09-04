@@ -1,5 +1,5 @@
 :root {
-  --brand: #14532d;      /* PROVISIONAL: verde seguros. Se sustituye por @central/brand cuando llegue el logo real de Grupo Asegura (skill `marca-cliente`). */
+  --brand: #14532d;      /* PROVISIONAL: verde seguros. Se sustituye por @central/brand cuando llegue el logo real de Grupo ASegura (skill `marca-cliente`). */
   --brand-ink: #0d3b20;
   --brand-soft: rgba(20, 83, 45, 0.08);
   --accent: #0ea5e9;     /* decorativo */

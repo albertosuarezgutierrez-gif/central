@@ -106,7 +106,7 @@ export default function Formulario() {
           style={{ width: 22, height: 22, marginTop: 1, flexShrink: 0 }}
         />
         <span>
-          Acepto que <strong>Grupo Asegura</strong> (responsable del tratamiento) use estos datos con la finalidad de
+          Acepto que <strong>Grupo ASegura</strong> (responsable del tratamiento) use estos datos con la finalidad de
           atender mi solicitud y contactar conmigo. Puedo ejercer mis derechos de acceso, rectificación, supresión,
           oposición, limitación y portabilidad dirigiéndome a la correduría. Más información al contactar. *
         </span>

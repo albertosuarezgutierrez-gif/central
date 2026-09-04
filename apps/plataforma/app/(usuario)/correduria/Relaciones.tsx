@@ -151,6 +151,20 @@ export default function Relaciones({
     void ejecutar(`nada-${p.fichaId}`, 'POST', { relacionadoId: p.fichaId, tipo: SIN_VINCULO })
   }
 
+  /**
+   * Corregir el tipo de un vínculo ya anotado, sin quitarlo y volver a ponerlo.
+   *
+   * 🚨 No es un atajo de comodidad (Alberto, 04/09/2026, «¿cómo podría cambiar la
+   * relación?»): `quitar` REVOCA de paso la autorización del portal que hubiera
+   * —y lo hace bien, para dejar constancia—, así que corregir una etiqueta mal
+   * puesta costaba el consentimiento del cliente. El puerto rechaza el cambio si
+   * la autorización viva no cabe en el tipo nuevo, y ahí sí hay que revocar antes.
+   */
+  function cambiarTipo(r: RelacionCartera, tipo: string) {
+    if (tipo === '' || tipo === r.tipo) return
+    void ejecutar(`tipo-${r.relacionadoId}`, 'PATCH', { relacionadoId: r.relacionadoId, tipo })
+  }
+
   function quitar(r: RelacionCartera) {
     // La relación se borra; la autorización NO se borra, se REVOCA — es la prueba
     // de que existió y hasta cuándo, y eso es justo lo que no se puede perder.
@@ -180,6 +194,7 @@ export default function Relaciones({
               ocupado={ocupado}
               onAutorizar={autorizar}
               onQuitar={quitar}
+              onCambiarTipo={cambiarTipo}
             />
           ))}
         </ul>
@@ -222,7 +237,7 @@ export default function Relaciones({
 
 // ─── Un vínculo ──────────────────────────────────────────────────────────────
 
-function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
+function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo }: {
   r: RelacionCartera
   nombreFicha: string
   ocupado: string | null
@@ -232,9 +247,13 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
   ) => void
   onQuitar: (r: RelacionCartera) => void
+  onCambiarTipo: (r: RelacionCartera, tipo: string) => void
 }) {
   const ficha = `/correduria/cliente/${r.relacionadoId}`
-  const enCurso = ocupado === `aut-${r.relacionadoId}` || ocupado === `del-${r.relacionadoId}`
+  const enCurso =
+    ocupado === `aut-${r.relacionadoId}` ||
+    ocupado === `del-${r.relacionadoId}` ||
+    ocupado === `tipo-${r.relacionadoId}`
   // `Sin vínculo` no es un parentesco: es la constancia de que se miró y no hay
   // ninguno. Ni se explica quién ve qué ni se ofrece autorizar (el puerto lo
   // rechaza igualmente con un 422, y el portal ni mira esas filas).
@@ -258,11 +277,15 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
         {r.observaciones && (
           <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
         )}
-        <div>
-          <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44 }}>
             Quitar la anotación
           </button>
         </div>
+        {/* Aquí es donde más falta hace: «revisado, no hay vínculo» es la
+            respuesta rápida del día a día, y cuando resulta que sí lo había
+            (el conductor ERA el hijo) se corrige sin perder nada. */}
+        <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
       </li>
     )
   }
@@ -305,6 +328,8 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
         </button>
       </div>
 
+      <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
+
       {/* 🚨 Desde una ficha de SOCIEDAD no basta un botón: hay que decir QUÉ se
           delega (mirar o actuar) y con qué TÍTULO se la representa. Desde una
           ficha de persona esto no aparece — ahí solo se puede dejar mirar, y
@@ -313,6 +338,63 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar }: {
         <AnotarSociedad r={r} nombreFicha={nombreFicha} enCurso={enCurso} onAutorizar={onAutorizar} />
       )}
     </li>
+  )
+}
+
+/**
+ * «Cambiar el tipo» de un vínculo que ya existe.
+ *
+ * Va PLEGADO y en tono sutil a propósito: corregir una etiqueta es raro
+ * comparado con autorizar o quitar, y un desplegable abierto en cada vínculo
+ * convierte la lista en un formulario. El `<details>` nativo evita el `useState`
+ * y se cierra solo al recargar la lista.
+ *
+ * El botón solo se enciende con un tipo DISTINTO del que ya tiene: mandar el
+ * mismo devuelve un 422 del puerto, y un error por pulsar un botón que la
+ * pantalla ofrecía es la pantalla mintiendo.
+ */
+function CambiarTipo({ r, enCurso, onCambiarTipo }: {
+  r: RelacionCartera
+  enCurso: boolean
+  onCambiarTipo: (r: RelacionCartera, tipo: string) => void
+}) {
+  const [tipo, setTipo] = useState<string>(r.tipo)
+  return (
+    <details>
+      <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer', listStyle: 'none', userSelect: 'none', display: 'inline-flex', alignItems: 'center', minHeight: 32 }}>
+        Cambiar el tipo de relación
+      </summary>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
+        <select
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
+          aria-label={`Tipo de relación con ${r.nombre}`}
+          style={{
+            flex: '1 1 200px', minWidth: 0, minHeight: 44, padding: '8px 10px', borderRadius: 8,
+            border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 15,
+          }}
+        >
+          {GRUPOS_RELACION.map((g) => (
+            <optgroup key={g.categoria} label={g.categoria}>
+              {g.tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+            </optgroup>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={enCurso || tipo === r.tipo}
+          onClick={() => onCambiarTipo(r, tipo)}
+          style={{ ...btnStyle('secundario'), minHeight: 44 }}
+        >
+          Guardar
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+        Se cambia en las dos fichas y queda en el historial. La autorización del
+        portal NO se toca — si la que hay no cabe en el tipo nuevo, hay que
+        revocarla antes y la pantalla lo dirá.
+      </div>
+    </details>
   )
 }
 

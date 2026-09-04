@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/db'
@@ -37,13 +38,40 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ error: 'cuerpo_invalido' }, { status: 400 })
   }
 
-  const normalizado = normalizarParche(cuerpo)
+  // El RAMO GUARDADO, antes de validar. Los campos específicos (`datosRamo`) solo
+  // significan algo contra el catálogo de SU ramo, y en un PATCH ese ramo puede
+  // no venir en el cuerpo: sin leerlo, una corrección de la prima que arrastrara
+  // los campos del ramo se rechazaría (`datos_ramo_sin_ramo`) o —peor— vaciaría
+  // la columna. Se lee con el MISMO filtro por `identidadId`: aquí no hay
+  // consulta sin identidad de la cookie, ni siquiera para leer un ramo.
+  const actual = await prisma.portalPolizaDeclarada.findFirst({
+    where: { id, identidadId: identidad.id },
+    select: { ramo: true },
+  })
+  if (!actual) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+
+  const normalizado = normalizarParche(cuerpo, new Date(), { ramoGuardado: actual.ramo })
   if (!normalizado.ok) return NextResponse.json({ error: normalizado.error }, { status: 400 })
+
+  // Las dos columnas de JSON salen del resto: Prisma NO admite `null` en una
+  // columna `Json?`. Un borrado tiene que llegar como `DbNull` (el NULL de SQL),
+  // nunca como `JsonNull`, que escribiría el literal `null` DENTRO del JSON y se
+  // colaría por todas las guardas de NULL. `referenciaCatastral` viaja en el
+  // resto: es `text`, y ahí `null` sí es el NULL de SQL.
+  const { datosRamo, datosRamoOrigen, ...parche } = normalizado.parche
 
   const { count } = await prisma.portalPolizaDeclarada.updateMany({
     where: { id, identidadId: identidad.id },
     data: {
-      ...normalizado.parche,
+      ...parche,
+      ...('datosRamo' in normalizado.parche ? { datosRamo: datosRamo ?? Prisma.DbNull } : {}),
+      // El origen se escribe cuando el normalizador lo ha puesto en el parche, y
+      // eso ocurre SIEMPRE que los datos del ramo cambian: los orígenes viejos
+      // hablaban de los datos viejos, así que o se reescriben o se borran. Fuera
+      // de ese caso la clave no viaja y la columna no se toca (ausente ≠ borrado).
+      ...('datosRamoOrigen' in normalizado.parche
+        ? { datosRamoOrigen: datosRamoOrigen ?? Prisma.DbNull }
+        : {}),
       // El usuario ha revisado estos datos con sus ojos: eso es lo único que
       // `confirmadaPorUsuario` significa.
       confirmadaPorUsuario: true,

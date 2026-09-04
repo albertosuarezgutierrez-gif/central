@@ -5,7 +5,25 @@ import {
   polizaLeidaVacia,
   seLeyoAlgo,
   RAMOS_POLIZA,
+  ETIQUETA_RAMO,
+  etiquetaRamo,
 } from './poliza-leida.ts'
+
+test('todo ramo del vocabulario tiene etiqueta, y ninguna es el enum crudo', () => {
+  for (const r of RAMOS_POLIZA) {
+    const etiqueta = ETIQUETA_RAMO[r]
+    assert.ok(etiqueta && etiqueta.length > 0, `falta etiqueta para ${r}`)
+    assert.doesNotMatch(etiqueta, /_/, `la etiqueta de ${r} no puede llevar guion bajo: es lo que lee el cliente`)
+  }
+  assert.equal(etiquetaRamo('responsabilidad_civil'), 'Responsabilidad civil')
+})
+
+test('un ramo desconocido se devuelve tal cual, no cae a «Otros»; el vacío es null', () => {
+  assert.equal(etiquetaRamo('drones'), 'drones')
+  assert.equal(etiquetaRamo(null), null)
+  assert.equal(etiquetaRamo(undefined), null)
+  assert.equal(etiquetaRamo(''), null)
+})
 
 test('lo que no es un objeto sale con los cinco campos a null', () => {
   for (const basura of [null, undefined, 'texto', 42, [{ compania: 'Mapfre' }]]) {

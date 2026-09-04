@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   return (
     <div className="grid">
       <div>
-        <h1>Grupo Asegura</h1>
+        <h1>Grupo ASegura</h1>
         <p className="muted">Correduría de seguros — cartera, recibos y siniestros</p>
       </div>
 

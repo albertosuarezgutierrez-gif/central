@@ -265,6 +265,11 @@ export {
   type SeguimientoSiniestro,
   type SeguimientoRevisado,
 } from './siniestros.ts'
+
+export {
+  EIAC_TIPOLOGIA_SINIESTRO,
+  descripcionEiacSiniestro,
+} from './eiac-siniestros.ts'
 export {
   evolucionPrima,
   etiquetaVeredictoPrima,
@@ -349,3 +354,29 @@ export {
   type GrupoChoque,
   type PlanBackfillDni,
 } from './backfill-dni.ts'
+
+export {
+  ALFABETO_SERIE,
+  PRIMERA_MATRICULA_MODERNA,
+  ULTIMO_HITO_CONOCIDO,
+  normalizarMatricula,
+  formatoMatricula,
+  ordinalMatricula,
+  fechaMatriculacionEstimada,
+  type FormatoMatricula,
+  type MatriculacionEstimada,
+} from './matricula.ts'
+
+export {
+  MEDIADOR,
+  NO_EXCLUSIVIDAD,
+  CANALES_RECLAMACION,
+  PUNTOS_PRECONTRACTUALES,
+  VERSION_TEXTOS_LEGALES,
+  FECHA_TEXTOS_LEGALES,
+  lineaIdentificacion,
+  type CanalReclamacion,
+  type IdCanalReclamacion,
+  type PuntoPrecontractual,
+  type IdPuntoPrecontractual,
+} from './mediador.ts'

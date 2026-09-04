@@ -1,7 +1,7 @@
 # Intranet de la correduría — banco de ideas
 
 > Todo lo que salió de la conversación del **02/09/2026** con Alberto sobre la intranet de clientes
-> de Grupo Asegura. Alberto: *«guarda las ideas que hay muchas muy buenas y quiero hacer todas»*.
+> de Grupo ASegura. Alberto: *«guarda las ideas que hay muchas muy buenas y quiero hacer todas»*.
 >
 > **Qué es esto:** el backlog con lo que cada idea necesita, lo que cuesta y lo que la bloquea.
 > **Qué NO es:** un plan. Lo comprometido está en
@@ -97,7 +97,7 @@ Retarificación real. **Nunca automático, nunca en lote.** Cupo, motivo y `inte
 vencimiento, o cuando el usuario lo pide explícitamente.
 
 ### H. Cambio de mediador 🟢 la mejor idea de la conversación
-Un tomador nombra a Grupo Asegura mediador de una póliza que ya tiene con otra compañía.
+Un tomador nombra a Grupo ASegura mediador de una póliza que ya tiene con otra compañía.
 **Por qué es tan bueno:** convierte un lead en cliente **sin tarificar, sin cambiar su seguro y sin
 gastar un euro**. Y el efecto de segundo orden es el premio de verdad: [Probable] una vez eres el
 mediador, esa póliza **empieza a entrar por CIMA**, con lo que su vencimiento y su prima dejan de ser
@@ -134,7 +134,7 @@ por línea de código del proyecto y no está medido.
 ### K. Canales de aviso 🟡
 Hoy solo existe **email** (adaptador ya escrito, mismo puerto que manda el OTP).
 - **Push** (`@central/core-push`, gratis, sin Meta): para lo rutinario, cuando haya PWA instalable.
-- **WhatsApp**: el canal que Alberto quiere por defecto. **Necesita WABA propia de Grupo Asegura** —
+- **WhatsApp**: el canal que Alberto quiere por defecto. **Necesita WABA propia de Grupo ASegura** —
   la de Manuel no viaja en el traspaso, y no se pierde historial: `wa_opt_in` = 0 en las 32.600
   fichas. Plantillas pre-aprobadas (Authentication para el OTP, Utility para avisos) y opt-in en
   `portal_consentimiento`. **Dimensionar el coste por mensaje antes de prometer nada.**
@@ -152,4 +152,4 @@ acuerdo, el camino es concentrar producción en pocas compañías, y esta idea e
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?
 - Base de legitimación y plazo de conservación de las 25.882 fichas de 2015-2018. **El portal se
   puede construir sin resolverlo; cualquier campaña, no.**
-- ¿Damos de alta la WABA de Grupo Asegura ya, o se sigue con email hasta tener volumen?
+- ¿Damos de alta la WABA de Grupo ASegura ya, o se sigue con email hasta tener volumen?

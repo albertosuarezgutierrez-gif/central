@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Que un cliente de Grupo Asegura entre en `apps/asegura-portal`, vea el calendario de vencimientos de sus pólizas vivas y reciba UN aviso por email con la fecha hasta la que puede actuar.
+**Goal:** Que un cliente de Grupo ASegura entre en `apps/asegura-portal`, vea el calendario de vencimientos de sus pólizas vivas y reciba UN aviso por email con la fecha hasta la que puede actuar.
 
 **Architecture:** Toda la aritmética de fechas y toda regla de «esto genera aviso o no» vive en `@central/module-seguros-portal`, pura y testeada con `node --test`. La app del portal añade una tabla `portal_obligacion` colgada del bien, un derivador que la rellena desde la cartera de la identidad de la sesión, y una sección en la bóveda.
 

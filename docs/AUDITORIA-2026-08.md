@@ -1415,7 +1415,7 @@ Los 45 commits del rango ya estaban auto-documentados por sus propias sesiones e
 `docs/CONTEXTO-SESIONES.md` (el guardián `persist-memoria.sh` hizo su trabajo). `docs/SKILLS.md`
 verificado contra `.claude/skills/` (32) y `.claude/commands/` (3): sin huérfanos ni faltantes.
 `perfil-fiscal` sin contradicción con la regla `amortizable` de memoria. `lib/correo/rutas.ts`: sin
-skill nueva del rango que produzca correo sin categoría (la correduría de Grupo Asegura, PR #1489,
+skill nueva del rango que produzca correo sin categoría (la correduría de Grupo ASegura, PR #1489,
 ya tiene `categoria: 'correduria'`).
 
 ## 🟡→✅ Backlog de agentes vigilados — `paper_tracker` sin monitor (arreglado en este PR)
@@ -1453,7 +1453,7 @@ rango tocó housesevillana, sivra/plataforma-lib y trading — sin UI de ia-rest
 
 Rango: 36 commits desde la pasada del 20/08 05:14 UTC (`a3f4d3e..a953b05`) — cierre de la saga del
 Portal del BOE (login/2FA/captcha, #1537→#1562), agente de huéspedes SIVRA (guía real + autonomía,
-#1542/#1546), cimientos de la correduría/Grupo Asegura (#1489/#1567) y el libro de operaciones de
+#1542/#1546), cimientos de la correduría/Grupo ASegura (#1489/#1567) y el libro de operaciones de
 IBKR (#1505).
 
 ## ✅ Reconciliación memoria/skills — sin huecos

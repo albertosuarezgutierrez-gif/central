@@ -10,13 +10,15 @@ import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
-import { descongelar, detalleDescongeladas } from "@/lib/sivra/pricing-descongelar"
+import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
-import { sqlCompDeNuestraLiga, sqlNotaCreible } from "@/lib/sivra/pricing-comps-liga"
+import {
+  sqlCompDeNuestraLiga, sqlNotaCreible, guardaMonotoniaLiga, guardaMonotoniaLigaMed,
+} from "@/lib/sivra/pricing-comps-liga"
 import { aplicarTechoAdr } from "@/lib/sivra/pricing-techo-adr"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
 import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
@@ -114,6 +116,7 @@ export async function POST(req: NextRequest) {
     channel_markup: number; cuota_fija: number; noches_ref: number
     max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
+    liga_encarece: boolean | null; sample_liga: number
     flight_demand_k: number; seasonal_floor_k: number; lastminute_k: number; antelacion_k: number
   }[]>(Prisma.sql`
     WITH latest AS (${Prisma.raw(sqlUltimaPasadaUtil())}),
@@ -127,9 +130,18 @@ export async function POST(req: NextRequest) {
     -- OJO: esta consulta va en un template literal de TS, aqui NO se pueden usar backticks ni $ { }.
     mkt AS (
       SELECT m.scenario,
-        percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric med,
-        percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric flo,
-        percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric cei,
+        -- Percentiles del corpus EN NUESTRA LIGA, y a continuacion los del corpus completo: el
+        -- consumidor toma el MENOR (guarda de monotonia, ver pricing-comps-liga.ts).
+        percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
+          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric med,
+        percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
+          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric flo,
+        percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
+          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric cei,
+        percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric med_todos,
+        percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric flo_todos,
+        percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric cei_todos,
+        COUNT(*) FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::int AS sample_liga,
         -- Solo notas CREIBLES: un 10,0 con 6 resenas no mide nada y movia esta mediana (el caso
         -- real, 68 apariciones en el corpus de Busto). Ver sqlNotaCreible.
         percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)
@@ -143,10 +155,6 @@ export async function POST(req: NextRequest) {
         -- Plausibilidad €/plaza (17/08/2026): un comp muy por debajo del minimo por plaza es una
         -- HABITACION vestida de piso entero (ver pricing-comps-plausibles.ts) y no entra al percentil.
         AND ${Prisma.raw(sqlCompPlausible("m."))}
-        -- Liga (03/09/2026): un comp con nota CREIBLE muy por encima de la nuestra no es competencia
-        -- nuestra. Sin esto, el corpus de Busto (6,9) tenia una mediana de 8,8 y el 100% de sus comps
-        -- puntuaba mejor. Ver pricing-comps-liga.ts.
-        AND ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))}
       GROUP BY m.scenario, s.target_pctl, s.floor_pctl, s.ceil_pctl
     ),
     occ AS (
@@ -160,7 +168,17 @@ export async function POST(req: NextRequest) {
       -- elegirAnclaGlobal en TS, que es donde hay tests. El recomendado se compone alli con los
       -- mismos dos factores que viajan abajo, para que no pueda divergir del precio real.
       -- OJO: sin backticks ni $ { }, esto va dentro de un template literal de TS.
-      ROUND(mkt.med)::int AS med_pasada,
+      -- Guarda de monotonia de la liga (03/09/2026): el ancla filtrada NUNCA por encima de la del
+      -- corpus completo. Aqui va en SQL y no por el helper puro porque este ancla no pasa por
+      -- elegirBucket; el criterio es el mismo y liga_encarece deja constancia de cuando muerde.
+      -- El CASE por sample_liga NO es decorativo: al sacar la liga del WHERE, sample_n volvio a
+      -- contar el corpus completo, asi que MIN_SAMPLE dejo de proteger al corpus FILTRADO y un
+      -- ancla de 5 comps habria pasado el gate colgada del recuento de otro corpus.
+      ROUND(CASE WHEN mkt.sample_liga >= ${MIN_SAMPLE}
+                 THEN LEAST(COALESCE(mkt.med, mkt.med_todos), mkt.med_todos)
+                 ELSE mkt.med_todos END)::int AS med_pasada,
+      (mkt.med IS NOT NULL AND mkt.med > mkt.med_todos) AS liga_encarece,
+      COALESCE(mkt.sample_liga, 0)::int AS sample_liga,
       -- Los dos factores del ajuste, POR SEPARADO: el de demanda se gatea por fecha segun la
       -- antelacion real del piso (ver pricing-demanda.ts) y el de calidad aplica siempre.
       GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)::float8 AS demand_factor,
@@ -171,7 +189,12 @@ export async function POST(req: NextRequest) {
       COALESCE(occ.occupancy, 0.5)::float8 AS occupancy_global,
       s.demand_baseline::float8 AS demand_baseline,
       s.demand_k::float8 AS demand_k,
-      ROUND(mkt.flo)::int AS flo_pasada, ROUND(mkt.cei)::int AS cei_pasada,
+      ROUND(CASE WHEN mkt.sample_liga >= ${MIN_SAMPLE}
+                 THEN LEAST(COALESCE(mkt.flo, mkt.flo_todos), mkt.flo_todos)
+                 ELSE mkt.flo_todos END)::int AS flo_pasada,
+      ROUND(CASE WHEN mkt.sample_liga >= ${MIN_SAMPLE}
+                 THEN LEAST(COALESCE(mkt.cei, mkt.cei_todos), mkt.cei_todos)
+                 ELSE mkt.cei_todos END)::int AS cei_pasada,
       ROUND(anc.med)::int AS med_anc, ROUND(anc.flo)::int AS flo_anc, ROUND(anc.cei)::int AS cei_anc,
       COALESCE(anc.fechas, 0) AS fechas_anc,
       anc.corpus_fiable,
@@ -267,6 +290,10 @@ export async function POST(req: NextRequest) {
   // (hallazgo 4 de la auditoría 23/08/2026): cada una empuja aquí en su .catch, y al final la
   // pasada sale ok:false + Telegram + latido rojo con el nombre de lo que se perdió.
   const lecturasCaidas: LecturaCaida[] = []
+  // Donde la guarda de monotonia descarto el filtro de liga porque ENCARECIA el ancla. No es un
+  // fallo: es el filtro reconociendo que ese mes no sabe. Se declara para que no vuelva a pasar en
+  // mudo — la subida de Busto de jul-ago/2027 no la conto nadie. Ver pricing-comps-liga.ts.
+  const ligaDescartada: { property_id: string; ambito: string }[] = []
 
   // Señal de demanda por vuelos a SVQ (Fase 3). Solo influye si flight_demand_k>0 por piso.
   const flightRows = await prisma.$queryRaw<{ rate_date: string; demand_index: number }[]>(Prisma.sql`
@@ -402,6 +429,9 @@ export async function POST(req: NextRequest) {
     n: number; fechas: number
     med_fiable: number | null; flo_fiable: number | null; cei_fiable: number | null
     n_fiable: number; fechas_fiable: number
+    med_todos: number | null; flo_todos: number | null; cei_todos: number | null; n_todos: number
+    med_fiable_todos: number | null; flo_fiable_todos: number | null
+    cei_fiable_todos: number | null; n_fiable_todos: number
   }[]>(Prisma.sql`
     WITH eventos AS (
       SELECT DISTINCT rate_date FROM pricing_eventos_auto WHERE factor >= ${FACTOR_EVENTO_EXCLUIR}
@@ -415,7 +445,10 @@ export async function POST(req: NextRequest) {
       -- las dos vías contaría DOS veces en el percentil.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
         m.scenario, m.checkin_date, m.fuente,
-        m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
+        m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night,
+        -- La liga deja de filtrar en el WHERE y pasa a ser COLUMNA: el mismo scan da entonces el
+        -- corpus filtrado Y el completo, que es lo que la guarda de monotonia necesita comparar.
+        ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))} AS en_liga
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       -- LEFT y no JOIN: sin fila de ajustes no sabemos en que liga jugamos, y eso DEJA PASAR al
@@ -433,27 +466,42 @@ export async function POST(req: NextRequest) {
         AND m.checkin_date NOT IN (SELECT rate_date FROM eventos)
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
         AND ${Prisma.raw(sqlCompPlausible("m."))}
-        -- Liga (03/09/2026): fuera los comps con nota creible MUY por encima de la nuestra. El
-        -- corpus de un piso puntuado 6,9 traia Mercer Residences (9,1) y Palacio Bucarelli (9,1),
-        -- y el motor tomaba su percentil 55. Ver pricing-comps-liga.ts.
-        AND ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
-      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_guest,
-      ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night))::int AS flo_guest,
-      ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night))::int AS cei_guest,
-      COUNT(*)::int AS n,
-      COUNT(DISTINCT r.checkin_date)::int AS fechas,
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.en_liga))::int AS med_guest,
+      ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.en_liga))::int AS flo_guest,
+      ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.en_liga))::int AS cei_guest,
+      COUNT(*) FILTER (WHERE r.en_liga)::int AS n,
+      COUNT(DISTINCT r.checkin_date) FILTER (WHERE r.en_liga)::int AS fechas,
       -- Mismo percentil sobre SOLO el corpus fiable (medido por fecha, no de anuncio).
       ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night)
-            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS med_fiable,
+            FILTER (WHERE r.en_liga AND r.fuente IN ('booking_mcp','manual')))::int AS med_fiable,
       ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night)
-            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS flo_fiable,
+            FILTER (WHERE r.en_liga AND r.fuente IN ('booking_mcp','manual')))::int AS flo_fiable,
       ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night)
-            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS cei_fiable,
-      COUNT(*) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS n_fiable,
-      COUNT(DISTINCT r.checkin_date) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS fechas_fiable
+            FILTER (WHERE r.en_liga AND r.fuente IN ('booking_mcp','manual')))::int AS cei_fiable,
+      COUNT(*) FILTER (WHERE r.en_liga AND r.fuente IN ('booking_mcp','manual'))::int AS n_fiable,
+      COUNT(DISTINCT r.checkin_date) FILTER (WHERE r.en_liga AND r.fuente IN ('booking_mcp','manual'))::int AS fechas_fiable,
+      -- Corpus COMPLETO (sin filtro de liga): NO es un bucket alternativo, es el TECHO que el
+      -- filtro no puede superar. Ver la guarda de monotonia en pricing-comps-liga.ts.
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_todos,
+      ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night))::int AS flo_todos,
+      ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night))::int AS cei_todos,
+      COUNT(*)::int AS n_todos,
+      -- ... y la misma referencia para la variante FIABLE. Cada variante se compara contra SU
+      -- propio corpus sin filtrar: topar el fiable con el mixto mezclaria dos poblaciones y el
+      -- fiable puede ser legitimamente mas caro sin que la liga tenga nada que ver.
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS med_fiable_todos,
+      ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS flo_fiable_todos,
+      ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS cei_fiable_todos,
+      COUNT(*) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS n_fiable_todos
     FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
     GROUP BY r.scenario, to_char(r.checkin_date, 'YYYY-MM'), s.target_pctl, s.floor_pctl, s.ceil_pctl
   `).catch((e) => { lecturasCaidas.push({ nombre: 'bucket_mes', error: String(e).slice(0, 120) }); return [] })
@@ -462,10 +510,29 @@ export async function POST(req: NextRequest) {
   }>>()
   for (const m of mesRows) {
     if (!mes.has(m.property_id)) mes.set(m.property_id, new Map())
-    const el = elegirBucket(
+    // 🛡️ Guarda de MONOTONIA de la liga, ANTES de elegir bucket y por SEPARADO en cada variante:
+    // si quitar comps de otra liga sube el percentil, ese mes el filtro no se aplica. Sin ella el
+    // motor subio Busto un +37,8% en jul-ago/2027 el dia del estreno. Ver pricing-comps-liga.ts.
+    const gFia = guardaMonotoniaLiga(
       { valores: m.med_fiable == null ? null : { med: m.med_fiable, flo: m.flo_fiable!, cei: m.cei_fiable! },
-        n: m.n_fiable, fechas: m.fechas_fiable },
-      { valores: { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest }, n: m.n, fechas: m.fechas },
+        n: m.n_fiable },
+      { valores: m.med_fiable_todos == null ? null
+          : { med: m.med_fiable_todos, flo: m.flo_fiable_todos!, cei: m.cei_fiable_todos! },
+        n: m.n_fiable_todos },
+    )
+    const gMix = guardaMonotoniaLiga(
+      { valores: m.med_guest == null ? null : { med: m.med_guest, flo: m.flo_guest!, cei: m.cei_guest! },
+        n: m.n },
+      { valores: m.med_todos == null ? null
+          : { med: m.med_todos, flo: m.flo_todos!, cei: m.cei_todos! },
+        n: m.n_todos },
+    )
+    if (gFia.motivo === 'filtro_encarece' || gMix.motivo === 'filtro_encarece') {
+      ligaDescartada.push({ property_id: m.property_id, ambito: `mes ${m.ym}` })
+    }
+    const el = elegirBucket(
+      { valores: gFia.valores, n: gFia.n, fechas: m.fechas_fiable },
+      { valores: gMix.valores ?? { med: 0, flo: 0, cei: 0 }, n: gMix.n, fechas: m.fechas },
       MIN_BUCKET, MIN_FECHAS_MES,
     )
     if (!el) continue
@@ -479,8 +546,10 @@ export async function POST(req: NextRequest) {
   // influye en fechas con evento (acota el radio de cambio a lo que el fallo destapó).
   const MIN_FECHA_BUCKET = 3
   const fechaRows = await prisma.$queryRaw<{
-    property_id: string; rate_date: string; med_guest: number; n: number
+    property_id: string; rate_date: string; med_guest: number | null; n: number
     med_fiable: number | null; n_fiable: number
+    med_todos: number | null; n_todos: number
+    med_fiable_todos: number | null; n_fiable_todos: number
   }[]>(Prisma.sql`
     WITH recent AS (
       -- price_night NORMALIZADO al aforo del piso (ver pricing_factor_aforo); con comps del mismo
@@ -490,7 +559,10 @@ export async function POST(req: NextRequest) {
       -- las dos vías contaría DOS veces en el percentil.
       SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
         m.scenario, m.checkin_date, m.fuente,
-        m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
+        m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night,
+        -- La liga deja de filtrar en el WHERE y pasa a ser COLUMNA: el mismo scan da entonces el
+        -- corpus filtrado Y el completo, que es lo que la guarda de monotonia necesita comparar.
+        ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))} AS en_liga
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       -- LEFT y no JOIN: sin fila de ajustes no sabemos en que liga jugamos, y eso DEJA PASAR al
@@ -502,18 +574,21 @@ export async function POST(req: NextRequest) {
         AND NOT m.corpus_clonado   -- mismo motivo que en el bucket del mes
         -- Plausibilidad €/plaza (17/08/2026): fuera las habitaciones vestidas de piso entero.
         AND ${Prisma.raw(sqlCompPlausible("m."))}
-        -- Liga (03/09/2026): fuera los comps con nota creible MUY por encima de la nuestra. El
-        -- corpus de un piso puntuado 6,9 traia Mercer Residences (9,1) y Palacio Bucarelli (9,1),
-        -- y el motor tomaba su percentil 55. Ver pricing-comps-liga.ts.
-        AND ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))}
       ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
     )
     SELECT r.scenario AS property_id, r.checkin_date::text AS rate_date,
-      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_guest,
-      COUNT(*)::int AS n,
       ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night)
-            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS med_fiable,
-      COUNT(*) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS n_fiable
+            FILTER (WHERE r.en_liga))::int AS med_guest,
+      COUNT(*) FILTER (WHERE r.en_liga)::int AS n,
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.en_liga AND r.fuente IN ('booking_mcp','manual')))::int AS med_fiable,
+      COUNT(*) FILTER (WHERE r.en_liga AND r.fuente IN ('booking_mcp','manual'))::int AS n_fiable,
+      -- Techo de la guarda de monotonia (corpus completo), no un bucket alternativo.
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_todos,
+      COUNT(*)::int AS n_todos,
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night)
+            FILTER (WHERE r.fuente IN ('booking_mcp','manual')))::int AS med_fiable_todos,
+      COUNT(*) FILTER (WHERE r.fuente IN ('booking_mcp','manual'))::int AS n_fiable_todos
     FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
     GROUP BY r.scenario, r.checkin_date, s.target_pctl
   `).catch((e) => { lecturasCaidas.push({ nombre: 'bucket_fecha', error: String(e).slice(0, 120) }); return [] })
@@ -527,9 +602,17 @@ export async function POST(req: NextRequest) {
     fiablesFecha.get(f.property_id)!.set(f.rate_date, Number(f.n_fiable) || 0)
     if (!fecha.has(f.property_id)) fecha.set(f.property_id, new Map())
     // Misma regla que en el mes, con el umbral de este bucket y sin exigir fechas distintas.
+    // Guarda de monotonia tambien aqui (ver el bucket del mes y pricing-comps-liga.ts).
+    const gFia = guardaMonotoniaLigaMed({ med: f.med_fiable, n: f.n_fiable },
+                                        { med: f.med_fiable_todos, n: f.n_fiable_todos })
+    const gMix = guardaMonotoniaLigaMed({ med: f.med_guest, n: f.n },
+                                        { med: f.med_todos, n: f.n_todos })
+    if (gFia.motivo === 'filtro_encarece' || gMix.motivo === 'filtro_encarece') {
+      ligaDescartada.push({ property_id: f.property_id, ambito: `fecha ${f.rate_date}` })
+    }
     const el = elegirBucket(
-      { valores: f.med_fiable, n: f.n_fiable, fechas: 1 },
-      { valores: f.med_guest, n: f.n, fechas: 1 },
+      { valores: gFia.med, n: gFia.n, fechas: 1 },
+      { valores: gMix.med ?? 0, n: gMix.n, fechas: 1 },
       MIN_FECHA_BUCKET,
     )
     if (!el) continue
@@ -542,12 +625,27 @@ export async function POST(req: NextRequest) {
   // 2 reservas en 4 días a precio corto). Índice por mes = ADR histórico × ocupación relativa
   // (octubre destaca en NOCHES VENDIDAS más que en ADR — históricamente también se vendió
   // barato, por eso el ADR solo no basta). Se usa como SUELO del objetivo, nunca como techo.
+  // 🚨 Respeta `pricing_settings.historico_desde` igual que la consulta de antelación (:363). Un
+  // piso puede haber cambiado de PRODUCTO, y entonces su histórico anterior describe otra cosa.
+  // Faltaba aquí, y esta consulta alimenta DOS cosas: el prior estacional y el techo por ADR.
+  //
+  // Medido el 04/09/2026: House Sevillana tiene `historico_desde = 2024-01-01` precisamente porque
+  // antes eran DOS pisos. Con la ventana de 6 años su ADR sale **354€**; desde su fecha, **655€**.
+  // El techo por ADR (`ADR × 1,30`) le quedaba a la MITAD — septiembre 391€ en vez de 884€,
+  // diciembre 498 en vez de 1.113 — y en enero, julio y agosto caía por debajo de `min_price`,
+  // que es lo que dispara el `suelo_manda` documentado en el #2228. O sea: al único piso que está
+  // bien tarificado (vende a 1,14× el mercado) lo estaba empujando hacia abajo un techo derivado
+  // de cuando era otro producto.
+  //
+  // Los otros tres tienen `historico_desde` NULL, así que para ellos esto es un no-op (comprobado).
   const priorRows = await prisma.$queryRaw<{ pid: string; m: number; adr: number; nights: number }[]>(Prisma.sql`
-    SELECT "propertyId" AS pid, EXTRACT(MONTH FROM "checkIn")::int AS m,
-           (SUM(amount_gross) / NULLIF(SUM(nights), 0))::float8 AS adr,
-           SUM(nights)::float8 AS nights
-    FROM incomes
-    WHERE nights > 0 AND amount_gross > 0 AND "checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+    SELECT i."propertyId" AS pid, EXTRACT(MONTH FROM i."checkIn")::int AS m,
+           (SUM(i.amount_gross) / NULLIF(SUM(i.nights), 0))::float8 AS adr,
+           SUM(i.nights)::float8 AS nights
+    FROM incomes i
+    LEFT JOIN pricing_settings ps ON ps.property_id = i."propertyId"
+    WHERE i.nights > 0 AND i.amount_gross > 0 AND i."checkIn" >= CURRENT_DATE - INTERVAL '6 years'
+      AND (ps.historico_desde IS NULL OR i."checkIn"::date >= ps.historico_desde)
     GROUP BY 1, 2
   `).catch((e) => { lecturasCaidas.push({ nombre: 'prior_estacional', error: String(e).slice(0, 120) }); return [] })
   // El cálculo vive en `lib/sivra/prior-estacional.ts` (puro y testeado) porque la regla NO es
@@ -628,14 +726,30 @@ export async function POST(req: NextRequest) {
   // motor se comporta EXACTAMENTE como antes del 27/08/2026. Es la degradación conservadora — un
   // fallo aquí no puede descongelar de más, solo de menos — pero se declara igual, porque un
   // candado que deja de abrirse en silencio es lo que costó 279 noches.
-  const escrituraRows = await prisma.$queryRaw<{ pid: string; rate_date: string; dias: number }[]>(Prisma.sql`
-    SELECT property_id AS pid, rate_date::text AS rate_date,
-           (CURRENT_DATE - MAX(applied_at)::date)::int AS dias
+  // Trae ADEMAS el precio de esa ultima escritura (old/new) y su antiguedad en HORAS: es lo que
+  // permite saber si el precio alto que hoy protege la guarda de outlier lo escribimos NOSOTROS en
+  // la pasada anterior. Ver la llave 3 de `pricing-descongelar.ts`. El DISTINCT ON da la fila mas
+  // reciente por fecha; el MAX() anterior solo daba el dia.
+  const escrituraRows = await prisma.$queryRaw<{
+    pid: string; rate_date: string; dias: number; horas: number
+    prev_price: number | null; ult_price: number
+  }[]>(Prisma.sql`
+    SELECT DISTINCT ON (property_id, rate_date)
+           property_id AS pid, rate_date::text AS rate_date,
+           (CURRENT_DATE - applied_at::date)::int AS dias,
+           (EXTRACT(EPOCH FROM (NOW() - applied_at)) / 3600)::float8 AS horas,
+           old_price AS prev_price, new_price AS ult_price
     FROM pricing_applied
     WHERE dry_run = false AND rate_date >= CURRENT_DATE
-    GROUP BY property_id, rate_date
+    ORDER BY property_id, rate_date, applied_at DESC
   `).catch((e) => { lecturasCaidas.push({ nombre: 'ultima_escritura', error: String(e).slice(0, 120) }); return [] })
   const diasSinEscribir = new Map(escrituraRows.map(x => [`${x.pid}|${x.rate_date}`, Number(x.dias)]))
+  /** Ultima escritura por fecha, para decidir si la subida que la puso cara es nuestra. */
+  const ultimaEscritura = new Map(escrituraRows.map(x => [`${x.pid}|${x.rate_date}`, {
+    horas: Number(x.horas),
+    prev: x.prev_price == null ? null : Number(x.prev_price),
+    ult: Number(x.ult_price),
+  }]))
   /** true = la lectura respondió (aunque sea con 0 filas). Sin ella, «nunca escrita» no es afirmable. */
   const hayHistorialEscrituras = !lecturasCaidas.some(l => l.nombre === 'ultima_escritura')
 
@@ -673,6 +787,10 @@ export async function POST(req: NextRequest) {
   for (const r of recs) {
     const smoobuId = SMOOBU_ID[r.property_id]
     if (!smoobuId) { results.push({ property: r.property_id, error: "sin smoobuId" }); continue }
+    // El ancla de pasada aplica su guarda en SQL (CASE + LEAST); aqui solo se RECOGE el veredicto
+    // para que viaje por el mismo canal que el de los buckets. Sin esto seria un campo que nadie
+    // lee, que es la version elegante de no haberlo medido.
+    if (r.liga_encarece) ligaDescartada.push({ property_id: r.property_id, ambito: 'ancla de pasada' })
 
     if (!dryRun && (r.sample_n < MIN_SAMPLE || r.market_age_days > MAX_MARKET_AGE_DAYS)) {
       results.push({
@@ -735,8 +853,11 @@ export async function POST(req: NextRequest) {
     // El "recomendado" se compone con los MISMOS dos factores que aplica cada fecha: si se
     // calculara aparte (como hacía el SQL) podría contradecir al precio que el motor escribe.
     const baseTargetGlobal = aBase(medGuestGlobal * demandFactor * qualityFactor)
-    const floorBaseGlobal = aBase(ancla.valores.flo)
-    const ceilBaseGlobal = aBase(ancla.valores.cei)
+    // 🚨 El suelo y el techo se guardan en GUEST y sin factores: se ajustan por `dqDate` DENTRO del
+    // bucle, igual que la base. Ver la nota del `clamp` más abajo — acotar un valor ya ajustado
+    // entre dos límites SIN ajustar es mezclar dos espacios, y el que perdía era el descuento.
+    const floorGuestGlobal = ancla.valores.flo
+    const ceilGuestGlobal = ancla.valores.cei
     const mesProp = mes.get(r.property_id)
     const fechaProp = fecha.get(r.property_id)
 
@@ -781,6 +902,7 @@ export async function POST(req: NextRequest) {
     // este rail muerde en fechas normales, la senal es que el ancla de mercado se ha vuelto a
     // ir de liga — no que el rail este haciendo bien su trabajo en silencio.
     const adrAcotadas: { fecha: string; techo: number; adr: number }[] = []
+    const adrSinTecho: { fecha: string; property_id: string; motivo: string }[] = []
     const cur = new Date(today)
     let dayIndex = -1
     while (cur <= end) {
@@ -814,8 +936,21 @@ export async function POST(req: NextRequest) {
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
       const baseD = useMonth ? aBase(mb!.med * dqDate) : baseGlobalD
-      const floorD = useMonth ? aBase(mb!.flo) : floorBaseGlobal
-      const ceilD = useMonth ? aBase(mb!.cei) : ceilBaseGlobal
+      // 🚨 El suelo y el techo llevan `dqDate` igual que la base (04/09/2026). Antes NO lo llevaban,
+      // y el `clamp` de la línea siguiente acotaba un valor ajustado por demanda y calidad entre dos
+      // límites SIN ajustar: en cuanto el descuento empujaba la base por debajo del `floor_pctl`, el
+      // clamp la devolvía al p25 crudo y **el descuento de calidad se anulaba a sí mismo**.
+      //
+      // Medido ese día contra producción: con `quality_factor` real de 0,848 en Busto Reform y un
+      // suelo que está al 0,874 del objetivo, el suelo mordía en **9 de sus 12 meses** y dejaba el
+      // precio un **+5,8%** por encima de lo que el motor pretendía — justo en el piso que vende en
+      // el P10 del mercado. Dúplex 3 meses (+2,9%), Luxury 1 (+1,7%), House ninguno (su factor es
+      // 0,976 y no llega a tocar el suelo).
+      //
+      // Se ajustan LOS DOS, no solo el suelo: el clamp es un intervalo y bajar una sola punta lo
+      // sesga. Con `dqDate > 1` (demanda alta) el techo tiene que subir por la misma razón.
+      const floorD = useMonth ? aBase(mb!.flo * dqDate) : aBase(floorGuestGlobal * dqDate)
+      const ceilD = useMonth ? aBase(mb!.cei * dqDate) : aBase(ceilGuestGlobal * dqDate)
       const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
       let target = clamp(baseD, floorD, ceilD)
       let eventTarget = 0
@@ -857,7 +992,8 @@ export async function POST(req: NextRequest) {
           const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
           const baseEv = baseSaltoEvento({
             baseMes: useMonth ? clamp(baseD, floorD, ceilD) : null,
-            baseGlobal: clamp(baseGlobalD, floorBaseGlobal, ceilBaseGlobal),
+            // Mismos límites ajustados que arriba: `baseGlobalD` ya lleva `dqDate`.
+            baseGlobal: clamp(baseGlobalD, aBase(floorGuestGlobal * dqDate), aBase(ceilGuestGlobal * dqDate)),
           })
           if (baseEv.origen === "global") saltosEventoSinMes++
           const globalEvent = Math.round(baseEv.base * ev)
@@ -1048,6 +1184,21 @@ export async function POST(req: NextRequest) {
           factorEvento: evFactor,
           suelo: r.min_price,
         })
+        // 🔇 `suelo_manda` = el techo por ADR cae por DEBAJO del suelo de coste, o sea que este
+        // piso-mes historicamente no cubre ni min_price. NO se capa (capar fijaria el precio en
+        // min_price todo el mes: en House serian 7 de 12 meses clavados a 300€, con un ADR de
+        // agosto contaminado por 4 noches a 50€). Pero se CUENTA: son 14 de 48 piso-mes sin techo
+        // por ADR, y hasta hoy nadie lo sabia. Un «no puedo» que no se cuenta se lee como un «ok».
+        // Los DOS motivos por los que un piso-mes se queda sin techo por ADR se cuentan, y por
+        // separado: `suelo_manda` (históricamente no cubre ni min_price) y `sin_muestra` (menos de
+        // MIN_NOCHES_ADR noches con las que juzgar). Antes solo se contaba el primero, así que el
+        // segundo era un hueco mudo — y desde el 04/09 hay 3 meses de House ahí, porque al respetar
+        // `historico_desde` su ventana se acorta y esos meses se quedan por debajo del mínimo. Un
+        // «no puedo» que no se cuenta se lee como un «ok»; que ahora sean dos motivos distintos no
+        // es una excusa para volver a colapsarlos.
+        if (tAdr.motivo === 'suelo_manda' || tAdr.motivo === 'sin_muestra') {
+          adrSinTecho.push({ fecha: date, property_id: r.property_id, motivo: tAdr.motivo })
+        }
         if (tAdr.motivo === 'aplicado' && tAdr.techo != null) {
           const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: r.min_price })
           if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBase(aq!.adr)) })
@@ -1067,6 +1218,17 @@ export async function POST(req: NextRequest) {
               ? (diasSinEscribir.get(`${r.property_id}|${date}`) ?? null)
               : 0,
             rumorCaido: rumorCaido.has(date),
+            saltoNuestro: esSaltoNuestro(
+              hayHistorialEscrituras ? ultimaEscritura.get(`${r.property_id}|${date}`) ?? null : null,
+              { old, normalBase, umbral: OUTLIER_RATIO, horasMax: HORAS_SALTO_NUESTRO },
+            ),
+            // Cuarta llave: el motor ya iba bajando esta fecha y el raíl no le dejó llegar. Ver la
+            // cabecera de `pricing-descongelar.ts` — 448 noches se quedaron a medio descenso tras la
+            // recalibración del 03/09 porque la guarda de outlier las paró en la primera pasada.
+            descensoEnCurso: esDescensoNuestro(
+              hayHistorialEscrituras ? ultimaEscritura.get(`${r.property_id}|${date}`) ?? null : null,
+              { old },
+            ),
           })
       const liberaGuardas = liberaTecho || desc.libera
       // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
@@ -1202,7 +1364,13 @@ export async function POST(req: NextRequest) {
       // único resto del serrucho: el ancla global se mueve con lo que el barrido muestree hoy y el
       // salto de evento no pasa por el raíl. Un 0 aquí es una AFIRMACIÓN, no un silencio.
       saltos_evento_sin_mes: saltosEventoSinMes,
-      bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
+      // Los límites del parte se componen con los factores GLOBALES del piso (los mismos que
+      // `baseTargetGlobal`): por fecha llevan el `dqDate` de esa fecha, que aquí no existe.
+      bounds: {
+        floor_base: aBase(floorGuestGlobal * demandFactor * qualityFactor),
+        ceil_base: aBase(ceilGuestGlobal * demandFactor * qualityFactor),
+        min: r.min_price, max: r.max_price,
+      },
       // Antelación MEDIDA del piso POR MES (mes → días de mediana). Sin ella la palanca de urgencia
       // queda inerte, así que conviene verla para distinguir «no hacía falta bajar» de «no lo sé».
       // Va por mes y no en un solo número porque ahí estaba el fallo que se corrigió el 01/08/2026:
@@ -1241,6 +1409,24 @@ export async function POST(req: NextRequest) {
       // Fechas recortadas por el techo por ADR propio (03/09/2026). Ver `pricing-techo-adr.ts`.
       techo_adr: adrAcotadas.length > 0
         ? { fechas: adrAcotadas.length, sample: adrAcotadas.slice(0, 5) }
+        : undefined,
+      // Fechas SIN techo por ADR porque el historico del piso-mes no llega ni al suelo de coste.
+      // No es un recorte que se hizo: es uno que NO se pudo hacer, y por eso va aparte.
+      // Los dos motivos van SEPARADOS: «no cubre ni el suelo» y «no hay noches con las que juzgar»
+      // mandan a sitios distintos (revisar costes vs esperar muestra), y sumarlos los esconde.
+      techo_adr_sin_muestra: adrSinTecho.length > 0
+        ? {
+            fechas: adrSinTecho.length,
+            suelo_manda: adrSinTecho.filter(a => a.motivo === 'suelo_manda').length,
+            sin_muestra: adrSinTecho.filter(a => a.motivo === 'sin_muestra').length,
+            sample: adrSinTecho.slice(0, 5),
+          }
+        : undefined,
+      // Donde el filtro de liga se DESCARTO por encarecer (guarda de monotonia, 03/09/2026). Un
+      // numero alto aqui no es una averia: dice que en esos meses la nota no separa ligas, y es
+      // exactamente el dato que faltaba el dia que el filtro subio Busto un 37,8% sin avisar.
+      liga_descartada: ligaDescartada.length > 0
+        ? { grupos: ligaDescartada.length, sample: ligaDescartada.slice(0, 8) }
         : undefined,
       // Fechas de evento confirmado que NO se bajaron por falta de mercado fiable propio. Van en la
       // respuesta a propósito: un precio congelado que no se declara es indistinguible de uno olvidado.

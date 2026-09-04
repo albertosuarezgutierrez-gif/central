@@ -1,4 +1,4 @@
--- Portal de Grupo Asegura — Fase 4 (02/09/2026): rol propio, vínculo con la cartera y grants.
+-- Portal de Grupo ASegura — Fase 4 (02/09/2026): rol propio, vínculo con la cartera y grants.
 -- Se aplica DESPUÉS de 2026-09-01_portal_fase1.sql, sobre el schema `seguros` de la BD compartida.
 --
 -- Tres decisiones que este fichero fija:

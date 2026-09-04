@@ -22,6 +22,8 @@
 // bloquea: una comunicación tardía sigue siendo un siniestro que hay que
 // gestionar.
 
+import { descripcionEiacSiniestro } from './eiac-siniestros.ts'
+
 export type EstadoSiniestro = 'abierto' | 'en_tramitacion' | 'cerrado' | 'rechazado'
 export type OrigenSiniestro = 'cima' | 'gestionado_correduria'
 
@@ -68,9 +70,13 @@ export function revisarTransicion(origen: OrigenSiniestro, de: string, a: string
 
 // ─── Tipo de siniestro ───────────────────────────────────────────────────────
 //
-// CIMA guarda en `tipo` un CÓDIGO EIAC (p. ej. «1107», «17»): no tenemos la
-// tabla oficial y no se inventa un significado — se pinta como código. Los
-// nuestros llevan una clave de este catálogo, legible.
+// CIMA guarda en `tipo` un CÓDIGO EIAC (p. ej. «1107», «17»). Desde el
+// 04/09/2026 SÍ tenemos la tabla oficial de TIREA (209_IAC_ESP_DOC «Documentos
+// Estándar V07.1» v05, punto 10.2, clave 13.3.86 — transcrita en
+// `eiac-siniestros.ts`), así que un código que esté en ella se pinta con su
+// descripción oficial. El que NO esté sigue pintándose como «código CIMA NNNN»:
+// no se le inventa nombre a lo que la tabla no explica. Los siniestros nuestros
+// llevan una clave de este catálogo, legible.
 
 export const TIPOS_SINIESTRO = [
   { clave: 'colision', etiqueta: 'Colisión / accidente de circulación', ramo: 'auto' },
@@ -98,14 +104,17 @@ export function esTipoSiniestro(v: unknown): v is ClaveTipoSiniestro {
 }
 
 /**
- * Cómo se pinta el `tipo`: nuestro catálogo → su etiqueta; un código de CIMA
- * → «código CIMA 1107» (no se le pone nombre a lo que no se sabe leer); vacío
- * → «sin tipo».
+ * Cómo se pinta el `tipo`: nuestro catálogo → su etiqueta; un código EIAC que
+ * está en la tabla oficial de TIREA → su descripción; un código numérico que NO
+ * está en ella → «código CIMA 1107» (no se le pone nombre a lo que la tabla no
+ * explica); vacío → «sin tipo».
  */
 export function etiquetaTipoSiniestro(tipo: string | null | undefined): string {
   if (tipo === null || tipo === undefined || tipo.trim() === '') return 'sin tipo'
   const t = TIPOS_SINIESTRO.find((x) => x.clave === tipo)
   if (t) return t.etiqueta
+  const oficial = descripcionEiacSiniestro(tipo)
+  if (oficial !== null) return oficial
   if (/^\d{1,6}$/.test(tipo.trim())) return `código CIMA ${tipo.trim()}`
   return tipo
 }

@@ -1,6 +1,6 @@
 import type { Marca } from '../tipos'
 
-// Marca de GRUPO ASEGURA (correduría de seguros, Sevilla). 03/09/2026.
+// Marca de Grupo ASegura (correduría de seguros, Sevilla). 03/09/2026.
 //
 // 🚨 De dónde salen estos valores, porque importa: NO están puestos a ojo ni
 // sacados de un manual de marca (no hay). Se midieron de la app que hizo Manuel
@@ -30,7 +30,7 @@ import type { Marca } from '../tipos'
 // así que no se puede leer qué familia usa. Se eligen aquí y se dicen como tal.
 export const MARCA_ASEGURA: Marca = {
   id: 'asegura',
-  nombre: 'Grupo Asegura',
+  nombre: 'Grupo ASegura',
   paleta: {
     // `--primary` del `:root` de la app. Medido en el CSS compilado.
     primario: '#3364ee',
@@ -80,7 +80,7 @@ export const MARCA_ASEGURA: Marca = {
       'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
   },
   logos: {
-    wordmark: 'Grupo Asegura',
+    wordmark: 'Grupo ASegura',
     // `currentColor`: el color lo pone el contexto, no el fichero.
     monograma: '/brand/marca-asegura.svg',
     lockup: '/brand/marca-asegura.svg',

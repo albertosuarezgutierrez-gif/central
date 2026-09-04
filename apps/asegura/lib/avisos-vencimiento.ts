@@ -152,7 +152,7 @@ export function textoAviso(d: DatosCorreo): { asunto: string; texto: string; htm
     `Puedes actuar hasta el ${accionable}. Es la última fecha para comunicar que no quieres ` +
     `renovar; después la póliza se prorroga sola. El seguro vence el ${vence}.\n\n` +
     (detalle.length ? detalle.join('\n') + '\n\n' : '') +
-    `Si quieres que lo revisemos juntos, responde a este correo.\n\n— Grupo Asegura`
+    `Si quieres que lo revisemos juntos, responde a este correo.\n\n— Grupo ASegura`
   const html =
     `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px">` +
     `<p style="margin:0 0 12px"><strong>${esc(d.titulo)}</strong></p>` +
