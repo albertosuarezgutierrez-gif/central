@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔧 Instrumentado `pricing_applied` y ACTIVADOS los mensajes de los 2 pisos de Busto (04/09/2026).** Alberto dio OK a
+  las dos cosas. (1) `pricing_applied` gana `target_crudo`, `clamp_floor`, `clamp_ceil`, `rail_ancla` y
+  **`rail_ancla_origen`** (migración aplicada a prod): son los 4 números sin los cuales la ida y vuelta de House era
+  imposible de diagnosticar —sus dos filas tenían inputs IDÉNTICOS y resultado opuesto—. El origen del ancla NO es
+  adorno: solo `ref24` hace que el tope ±20% sea DIARIO; con `actual` es por pasada, y eso distingue un raíl roto de uno
+  medido desde otro sitio. `anclaRailCon()` devuelve valor+origen JUNTOS y `anclaRail()` delega en ella, para que las dos
+  precedencias no puedan divergir. 2 guardianes de fuente + 3 tests puros, probados en rojo. (2) `mensajes_prog_pisos`:
+  Luxury Busto y Busto Reform a `activo=true`. Lo que protege de mandar la ristra atrasada es que **el modo sombra YA
+  registraba los hitos** (7 filas), que cuentan como hechos. ⚠️ Consecuencia: la reserva 154265696 de Luxury (llega el
+  05/09, en pt) tenía su `vispera_llegada` —la que lleva los CÓDIGOS— ya en sombra, así que depende de que Smoobu se los
+  mandara. `desde` de esa tabla es informativo: el orquestador solo lee `activo`.
+
 - **📸 Quitar Smoobu de Busto: las indicaciones están listas, las FOTOS no (04/09/2026).** Alberto preguntó por los dos
   pisos de Bustos Tavera. Revisadas: los pasos son correctos y completos —el lío de las DOS cajas GRIFEMA idénticas del
   portal ya está resuelto (Luxury = abajo, Reform = arriba, cada una con su foto en rojo)—, y en BD no falta nada
