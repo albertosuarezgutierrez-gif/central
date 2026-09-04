@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📉 Las pasadas de pricing del 04/09: dos hallazgos y un agujero de instrumentación (04/09/2026).**
+  Las 4 llaves muerden: de las 86 noches congeladas, **91 medidas y 74% ya bajaron** (Busto 70/75, ratio 0,807 = el raíl
+  del −20%); quedan 11. Pero (1) **House Sevillana hace ida y vuelta dentro del día**: 7 de sus 8 fechas tocadas dos veces
+  bajan un 20% y vuelven a subir hasta un +50% en 100 min (los otros 3 pisos: 0 de 51). El raíl NO está roto —se ancla en
+  ayer y el neto da 20,0% clavado—, pero quema el presupuesto del día en un viaje de ida y vuelta y contradice el precio que
+  Booking cachea en medio. (2) **64 noches nuevas al suelo absoluto**: 34 de Busto Reform (ene-feb 2027, 65€) y 30 del
+  Dúplex (jul 2027, 85€), todas viniendo de por encima. 🚨 **El agujero: `pricing_applied` no guarda `target`, `floor`,
+  `ceil` ni `ref24`** — los 4 números que harían falta para saber por qué dos pasadas discrepan (sus inputs registrados son
+  IDÉNTICOS). Propuesto a Alberto instrumentar primero; **no se toca sin su OK**. La auto-resolución de alertas **aún no ha
+  corrido**: el guardián pasó a las 07:30 UTC y el PR #2243 se mergeó a las 08:06 — estrena mañana (47 `precio_revertido`
+  del 02/09 esperando). No confundir «no ha corrido» con «no funciona».
+
 - **🔐 La cerradura que falla NO es la de Socorro (04/09/2026).** Alberto preguntó por Socorro; medido: Socorro tiene
   **3 PIN activos y entregados**, último error el 08/08. La rota es **BustoTavera** (Luxury + Busto Reform), con **10 de 10
   intentos en error: nunca ha creado un PIN**, hoy por `Tuya 2001: device is offline` (antes 2334 y el trial de IoT Core).
