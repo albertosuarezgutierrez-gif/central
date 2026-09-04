@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔎 Los iconos de contacto llegan al BUSCADOR, y el puerto de asegura los trae descifrados (04/09/2026).**
+  Alberto: «si quiero». `Hallazgo` gana `telefono`/`email`/`telefonoIlegible`/`emailIlegible`; se rellenan en
+  `enriquecer()` (no en `SELECT_CLIENTE`) con UNA consulta: así la ficha que sale en varios bloques se descifra
+  una vez, y no se tocan las nueve consultas de criterio. 🚨 **Medido antes de construir:** solo el **16,6%** de
+  las 32.600 fichas tiene teléfono (15,2% email) — así que en 5 de cada 6 resultados NO habrá iconos, y eso es
+  correcto: en la cartera VIVA es el **75%**, o sea que el hueco distingue al cliente del lead de un vistazo.
+  Por eso la pantalla NO escribe «sin teléfono». El email cae a `cliente_emails` por `lateral` porque **57 fichas
+  lo tienen solo ahí y 5 son de los 80 clientes vivos**; con el teléfono no hace falta (cero casos, medido).
+  De paso, `porMatricula` construía el `Hallazgo` a mano con diez campos repetidos: ahora hay UN
+  `hallazgoSinEnriquecer()`. **`SinCanal` se queda SIN iconos a propósito** (su lista ES la de quien no tiene
+  canal). PR #2286.
 - **📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp (04/09/2026, PR #2281).**
   Petición de Alberto sobre la captura del buscador. Nuevo `AccionesContacto` + `lib/acciones-contacto.ts`
   en retención, cabecera de ficha y lista de personas. 🚨 **Choque con #2259**, que en paralelo trajo

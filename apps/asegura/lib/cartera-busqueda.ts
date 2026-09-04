@@ -77,6 +77,21 @@ export type Hallazgo = {
   hermanas: Hermana[] | null
   /** Qué decir de esas hermanas, o `null` si no hay nada que decir. */
   aviso: AvisoHermanas | null
+  /**
+   * Para llamar / escribir sin abrir la ficha (Alberto, 04/09/2026).
+   *
+   * 🚨 `null` NO significa «no tiene»: significa «no hay nada que ofrecer».
+   * Quién es quién lo dice el par `Ilegible`, igual que en la ficha
+   * (`cartera-ficha.ts`): `telefono:null` + `telefonoIlegible:false` = no
+   * consta · `telefono:null` + `telefonoIlegible:true` = lo tiene, pero la
+   * clave PII no lo abre. La pantalla NO escribe «sin teléfono» aquí —serían
+   * 5 de cada 6 resultados (medido: solo el 16,6% de las 32.600 fichas tiene
+   * teléfono)— así que la ausencia de icono no afirma nada.
+   */
+  telefono: string | null
+  email: string | null
+  telefonoIlegible: boolean
+  emailIlegible: boolean
 }
 
 export type BloqueResultados = {
@@ -217,17 +232,38 @@ const SELECT_CLIENTE = {
  * «cartera viva» que nadie ha verificado.
  */
 function aHallazgo(f: FilaCliente, porque: string): Hallazgo {
-  return {
+  return hallazgoSinEnriquecer({
     clienteId: f.id,
     nombre: `${f.nombre} ${f.apellidos}`.trim(),
     tipo: String(f.tipo),
     polizas: f._count.polizas,
     porque,
+  })
+}
+
+/**
+ * El ÚNICO sitio que sabe qué campos tiene un `Hallazgo` recién nacido.
+ *
+ * Existe porque no lo era: `porMatricula` construía el objeto a mano con los
+ * diez campos repetidos, así que añadir uno al tipo rompía ahí y solo ahí. Lo
+ * que llega enriquecido después (`enriquecer`) nace en su valor de «no se ha
+ * mirado» —nunca en 0 ni en `false` con significado—, que es lo que permite a
+ * la pantalla distinguir «no hay» de «no se sabe».
+ */
+function hallazgoSinEnriquecer(
+  base: Pick<Hallazgo, 'clienteId' | 'nombre' | 'tipo' | 'polizas' | 'porque'>,
+): Hallazgo {
+  return {
+    ...base,
     polizasCima: null,
     ultimoVencimiento: null,
     vitalidad: 'desconocida',
     hermanas: null,
     aviso: null,
+    telefono: null,
+    email: null,
+    telefonoIlegible: false,
+    emailIlegible: false,
   }
 }
 
@@ -334,18 +370,15 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
     limit ${LIMITE}
   `
   const conteos = await polizasDe(filas.map((f) => f.id))
-  const hallazgos: Hallazgo[] = filas.map((f) => ({
-    clienteId: f.id,
-    nombre: `${f.nombre} ${f.apellidos}`.trim(),
-    tipo: f.tipo,
-    polizas: conteos.get(f.id) ?? 0,
-    porque: `matrícula ${f.matricula}`,
-    polizasCima: null,
-    ultimoVencimiento: null,
-    vitalidad: 'desconocida',
-    hermanas: null,
-    aviso: null,
-  }))
+  const hallazgos: Hallazgo[] = filas.map((f) =>
+    hallazgoSinEnriquecer({
+      clienteId: f.id,
+      nombre: `${f.nombre} ${f.apellidos}`.trim(),
+      tipo: f.tipo,
+      polizas: conteos.get(f.id) ?? 0,
+      porque: `matrícula ${f.matricula}`,
+    }),
+  )
   return bloque(c, hallazgos, await coberturaMatricula(correduriaId))
 }
 
@@ -664,6 +697,92 @@ async function senalesDe(
   }
 }
 
+/** Teléfono y email de una ficha, ya descifrados y con su veredicto. */
+type Contacto = {
+  telefono: string | null
+  email: string | null
+  telefonoIlegible: boolean
+  emailIlegible: boolean
+}
+
+/**
+ * Los contactos de las fichas encontradas, en UNA consulta y descifrados aquí.
+ *
+ * Vive en el enriquecimiento, y no en `SELECT_CLIENTE`, por dos razones: la
+ * misma ficha puede salir en varios bloques (un `41003` es CP y nº de póliza a
+ * la vez) y así se descifra UNA sola vez; y no hay que tocar las nueve
+ * consultas de criterio.
+ *
+ * 🚨 El email cae a `cliente_emails` cuando `clientes.email` está vacío. No es
+ * un adorno: medido el 04/09/2026, **57 fichas tienen email SOLO en esa tabla,
+ * y 5 de ellas están entre los 80 clientes de la cartera viva** — uno de cada
+ * dieciséis. Sin el `lateral`, a cinco clientes reales les faltaría el icono de
+ * correo teniéndolo, que es la forma silenciosa de este fallo. Con el teléfono
+ * NO hace falta: se midió y hay **cero** fichas con secundario y sin principal.
+ *
+ * `null` (el Map entero) = la consulta falló y no se sabe nada. Nunca se
+ * confunde con «no tiene contacto».
+ */
+async function contactosDe(
+  correduriaId: string,
+  ids: string[],
+): Promise<Map<string, Contacto> | null> {
+  if (ids.length === 0) return new Map()
+  try {
+    const db = prismaAsegura()
+    const filas = await db.$queryRaw<{ id: string; telefono: string | null; email: string | null }[]>`
+      select c.id::text as id,
+             c.telefono,
+             coalesce(c.email, e.email) as email
+      from clientes c
+      left join lateral (
+        select ce.email
+        from cliente_emails ce
+        where ce.cliente_id = c.id
+        order by ce.created_at asc
+        limit 1
+      ) e on c.email is null
+      where c.correduria_id = ${correduriaId}::uuid
+        and c.id::text = any(${ids}::text[])
+    `
+    return new Map(
+      filas.map((f) => [
+        f.id,
+        {
+          telefono: descifrarContacto(f.telefono),
+          email: descifrarContacto(f.email),
+          telefonoIlegible: contactoIlegible(f.telefono),
+          emailIlegible: contactoIlegible(f.email),
+        },
+      ]),
+    )
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Mismo contrato que `descifrar` de `cartera-ficha.ts`: `null` = no se ha
+ * podido leer. Lo que NO está cifrado se devuelve tal cual (el volcado dejó
+ * teléfonos en claro).
+ */
+function descifrarContacto(v: string | null | undefined): string | null {
+  if (typeof v !== 'string' || v.trim() === '') return null
+  if (!v.startsWith('v1:')) return v
+  try {
+    const claro = decryptField(v)
+    // Sin clave, `decryptField` devuelve el cifrado tal cual: eso NO es legible.
+    return claro.startsWith('v1:') ? null : claro
+  } catch {
+    return null
+  }
+}
+
+/** Está guardado y cifrado, pero la clave no lo abre. Distinto de «no consta». */
+function contactoIlegible(v: string | null | undefined): boolean {
+  return typeof v === 'string' && v.startsWith('v1:') && descifrarContacto(v) === null
+}
+
 type HermanaCruda = {
   de: string
   id: string
@@ -766,6 +885,8 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
   // la viva» hay que saber si de verdad lo es.
   const todos = [...new Set([...ids, ...(crudas ?? []).map((h) => h.id)])]
   const senales = await senalesDe(correduriaId, todos)
+  // Solo de las fichas que se van a pintar: las hermanas no llevan iconos.
+  const contactos = await contactosDe(correduriaId, ids)
 
   const senalDe = (id: string): Senales =>
     senales === null ? { polizasCima: null, ultimoVencimiento: null } : (senales.get(id) ?? { polizasCima: 0, ultimoVencimiento: null })
@@ -796,6 +917,15 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
       h.vitalidad = vitalidadFicha(s)
       h.hermanas = crudas === null ? null : [...(porFicha.get(h.clienteId)?.values() ?? [])]
       h.aviso = avisoHermanas(h.vitalidad, h.hermanas)
+      // Si la consulta falló (`null`), se quedan como nacieron: sin nada que
+      // ofrecer y sin afirmar que no lo haya.
+      const cto = contactos?.get(h.clienteId)
+      if (cto) {
+        h.telefono = cto.telefono
+        h.email = cto.email
+        h.telefonoIlegible = cto.telefonoIlegible
+        h.emailIlegible = cto.emailIlegible
+      }
     }
   }
 }

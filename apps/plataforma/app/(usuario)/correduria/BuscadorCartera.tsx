@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Search, TriangleAlert, Lock, Plus, Hourglass } from 'lucide-react'
 import { cardStyle, btnStyle, Badge, type Tono } from '@/components/ui'
 import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados, type Hallazgo } from '@/lib/correduria-puerto'
+import AccionesContacto from './AccionesContacto'
 
 /**
  * Un solo cuadro para encontrar a cualquiera: nombre, matrícula, nº de póliza,
@@ -318,9 +319,21 @@ function Bloque({ b }: { b: BloqueResultados }) {
             key={`${b.tipo}-${h.clienteId}`}
             style={{ borderTop: '1px solid var(--border)', padding: '10px 0' }}
           >
-            <Link href={`/correduria/cliente/${h.clienteId}`} style={{ fontWeight: 600 }}>
-              {h.nombre}
-            </Link>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Link href={`/correduria/cliente/${h.clienteId}`} style={{ fontWeight: 600 }}>
+                {h.nombre}
+              </Link>
+              {/* Llamar · WhatsApp · escribir sin abrir la ficha. No sale en la
+                  mayoría de resultados y eso es correcto: solo el 16,6% de las
+                  32.600 fichas tiene teléfono (el 75% en la cartera VIVA), así
+                  que el hueco distingue de un vistazo al cliente del lead. */}
+              <AccionesContacto
+                telefono={h.telefono}
+                email={h.email}
+                ilegible={h.telefonoIlegible && h.emailIlegible}
+                quien={h.nombre}
+              />
+            </span>
             <div style={{
               fontSize: 11, color: 'var(--muted)', marginTop: 3,
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',

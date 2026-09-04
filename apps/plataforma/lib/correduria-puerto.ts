@@ -76,6 +76,21 @@ export type Hallazgo = {
    *  `[]` = se miró y no hay. Pintarlos igual diría «no hay duplicados». */
   hermanas: Hermana[] | null
   aviso: { clase: 'duplicado' | 'comparte'; texto: string; preferida: Hermana | null } | null
+  /**
+   * Para llamar / escribir sin abrir la ficha. `null` = nada que ofrecer, y el
+   * par `Ilegible` dice por qué: `false` = no consta · `true` = está guardado
+   * pero la clave PII no lo abre.
+   *
+   * 🚨 La pantalla NO escribe «sin teléfono» con esto. Medido el 04/09/2026:
+   * solo el 16,6% de las 32.600 fichas tiene teléfono, así que ese texto
+   * saldría en 5 de cada 6 resultados. En la cartera VIVA es el 75%, que es
+   * justo el caso en el que Alberto busca para llamar. La ausencia de icono no
+   * afirma nada; el «no consta» de verdad se dice en la ficha.
+   */
+  telefono: string | null
+  email: string | null
+  telefonoIlegible: boolean
+  emailIlegible: boolean
 }
 
 const VITALIDADES = new Set(['viva', 'historica', 'sin_fecha', 'desconocida'])
@@ -161,6 +176,12 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
         polizasCima: entero(x.polizasCima),
         ultimoVencimiento: cadena(x.ultimoVencimiento),
         vitalidad: vitalidad(x.vitalidad),
+        // Un asegura anterior a esto no manda los cuatro: se quedan en «nada
+        // que ofrecer», que no es lo mismo que afirmar que no hay contacto.
+        telefono: cadena(x.telefono),
+        email: cadena(x.email),
+        telefonoIlegible: x.telefonoIlegible === true,
+        emailIlegible: x.emailIlegible === true,
         hermanas: hs,
         aviso:
           textoAviso === null || av == null
