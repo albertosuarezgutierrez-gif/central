@@ -520,6 +520,23 @@ después»). Las dos están medidas, así que la conclusión honesta es que **el
 veces no** — igual que el draft silencia a veces y no siempre. Sigue sin haber causa medida; lo que hay
 es un orden que funciona en las ocho. **No reescribas la séptima: era cierta en su PR.**
 
+🔟 **NOVENA medición (04/09/2026, PR #2277) — el des-draft SOLO NO bastó, y confirma la séptima
+sobre la octava.** Secuencia medida paso a paso, mirando el `event` y el `actor` de cada run:
+
+| paso | qué se hizo | ¿draft? | runs de los requeridos |
+|---|---|---|---|
+| 1 | push de la rama (token de App) | — | **0** |
+| 2 | PR abierto por la herramienta MCP | **sí** | **0** (solo `Vercel Preview Comments`) |
+| 3 | merge de `main` + push (resolvía un conflicto REAL) | **sí** | **0** |
+| 4 | des-draftear (`draft:false` por la API) | pasa a no | **0** (solo `rutinas-automerge`, `pull_request_target`) |
+
+⚠️ **Y el lag quedó DESCARTADO antes de tocar nada** (procedimiento del #1962): `git ls-remote origin
+<rama>` y el `head.sha` del PR **coincidían** en los pasos 3 y 4. O sea, no había nada que esperar.
+
+Esto **confirma la séptima y contradice la octava**: des-draftear a secas no reprocesa los pushes que
+llegaron en draft, solo arma la rama. Las dos siguen medidas, así que la conclusión honesta sigue
+siendo que **el des-draft a veces basta y a veces no** — pero el orden de abajo funcionó en las nueve.
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
 2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
