@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✉️ Invitar por correo a quien NO está en la cartera (04/09/2026, PR #2283).** La TERCERA puerta de
+  la autorización: José escribe un correo cualquiera y le abre sus seguros. 🚨 **El token del enlace NO
+  abre sesión** —se lo comen los escáneres del correo, es una llave reenviable, y «aceptado por el que
+  tenía el enlace» no es prueba de consentimiento (art. 7.1)—: el token dice QUÉ invitación es y el
+  código de un solo uso dice QUIÉN eres, y la aceptación se ata al CORREO comparando el `portal_canal`
+  de quien acepta. Tabla aparte porque al invitado no se le puede apuntar todavía (no tiene ficha ni
+  identidad). `sin_enlace` (503) NO escribe la fila y `envio_fallido` (502) SÍ. El correo no dice ni
+  compañía ni póliza ni matrícula: quien lo recibe aún es un desconocido. Y la pantalla de José **no
+  puede decir a quién invitó** —solo se guarda el hash—, que es decisión, no campo por rellenar.
+  📌 De paso, medido: **el teléfono de siniestros de las compañías NO existe en la BD** (`companias_dgs`
+  solo tiene código, nombres, `en_cima`, `activa` y notas). El único teléfono del schema es el de la
+  correduría — y para la hoja imprimible del frigorífico que quiere Alberto, ese es justo el bueno.
+
 - **Web pública de la correduría: `apps/asegura-web` (04/09/2026).** 17 páginas (home · 6 ramos · «cambiar de
   correduría» · quiénes somos · 3 legales · sitemap · robots · `/api/lead`), para el **apex `grupoasegura.com` +
   `www`, que están LIBRES** (`app.` sirve el CRM y no se toca). **Sin BD**: el formulario reenvía por servidor al
