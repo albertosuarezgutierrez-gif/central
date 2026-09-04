@@ -89,6 +89,49 @@ async function bajarCatastroHttp(url: string): Promise<string> {
   }
 }
 
+// ── Diagnóstico SIN identificar la vivienda ─────────────────────────────────
+//
+// 🚨 Una referencia catastral IDENTIFICA UNA VIVIENDA CONCRETA, y en el portal
+// del cliente (`apps/asegura-portal`) la consulta va atada a una sesión: meterla
+// en una línea de log convierte el log del servidor en un registro de «qué
+// vivienda miró esta persona» — un dato personal que nadie ha decidido guardar,
+// con la retención que le toque al proveedor de logs y visible para cualquiera
+// que los lea. Hasta el 04/09/2026 esto se hacía: `console.warn('[catastro]',
+// refCatastral, err)`.
+//
+// Pero borrar el log entero es la salida perezosa: deja ciego al que investigue
+// un corte del Catastro (que corta la conexión sin avisar, ver el cerrojo de
+// arriba). Lo que se conserva es lo que sirve para diagnosticar —qué falló, por
+// qué (el `<des>` del servicio) y cuánto tardó— y lo que desaparece es el QUIÉN.
+//
+// ⚠️ **Recortar la referencia NO es anonimizar**: los 14 primeros caracteres son
+// la PARCELA, o sea el edificio y el portal. No se loguean ni enteros ni a
+// trozos. Tampoco la URL de la petición, que la lleva como parámetro: es la
+// misma fuga por otra puerta.
+
+/**
+ * Etiqueta OPACA para correlacionar líneas del mismo proceso. Es un contador,
+ * no un hash de la referencia: no deriva del identificador, así que no hay nada
+ * que revertir. Se reinicia con el proceso a propósito — que dos consultas de
+ * días distintos compartan el `#3` es justo lo que lo hace inútil para
+ * reidentificar a nadie, y dentro de una misma pasada sigue distinguiendo
+ * llamadas que se solapan.
+ */
+let nConsulta = 0
+
+/**
+ * El `<des>` del Catastro es texto suyo («LA REFERENCIA CATASTRAL NO EXISTE») y
+ * es justo lo que hay que leer para diagnosticar. Aun así se pasa por aquí
+ * antes de escribirlo: si algún día el servicio decidiera devolver la
+ * referencia dentro del mensaje, la fuga volvería por la puerta de atrás sin
+ * que nadie tocara una línea de código. Se tacha cualquier ristra de 12 o más
+ * alfanuméricos —una referencia son 14 (parcela) o 20 (bien)— y se corta a 200
+ * caracteres para que un cuerpo raro no vuelque medio XML al log.
+ */
+export function motivoParaLog(des: string): string {
+  return des.replace(/[0-9A-Za-z]{12,}/g, '[ref-oculta]').slice(0, 200)
+}
+
 /**
  * Consulta el Catastro por referencia catastral. `null` si no hay dato.
  *
@@ -100,10 +143,14 @@ async function bajarCatastroHttp(url: string): Promise<string> {
  * cuál de ellos se subasta y inventarlo sería peor que no tenerlo.
  */
 export async function bajarCatastro(refCatastral: string): Promise<DatosCatastro | null> {
+  const n = ++nConsulta
+  const t0 = Date.now()
   const xml = await bajarCatastroHttp(`${CATASTRO}?Provincia=&Municipio=&RC=${encodeURIComponent(refCatastral)}`)
   const err = errorCatastro(xml)
   if (err) {
-    console.warn('[catastro]', refCatastral, err)
+    // Ni la referencia ni la URL: solo el turno de la consulta, lo que tardó y
+    // lo que contestó el servicio. Ver el bloque de arriba antes de añadir nada.
+    console.warn(`[catastro] consulta #${n}: el servicio la rechazó tras ${Date.now() - t0} ms —`, motivoParaLog(err))
     return null
   }
   return parsearCatastro(xml)
