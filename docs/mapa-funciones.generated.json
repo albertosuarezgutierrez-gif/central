@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-04T08:06:39Z",
-  "sha": "f3a92c1248e547368ea384dbf0337a43d896b54e",
+  "generadoEn": "2026-09-04T08:34:45Z",
+  "sha": "87ad5d53be37f396e7854c98334710259dc3b78c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -68858,7 +68858,6 @@
       ],
       "tablas": [
         "anc",
-        "checkin",
         "eventos",
         "incomes",
         "latest",
@@ -68877,7 +68876,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "6c2db7491f95"
+      "hash": "f22c61ddeab2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -87519,7 +87518,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ce2bbe46c512"
+      "hash": "9fcc6ab73344"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-canal.ts",
