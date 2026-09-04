@@ -169,15 +169,21 @@ test('en ejecución, los cuatro resultados del destinatario dan la MISMA respues
   }
 })
 
-test('los estados internos no se filtran a la pantalla', () => {
-  // El otro camino al oráculo: que la API conteste con el resultado CRUDO
-  // (`sin_destinatario`) en vez de con la respuesta pública. Se busca el
-  // literal en el código del portal, ya sin comentarios.
+test('los estados internos no llegan a la PANTALLA', () => {
+  // El otro camino al oráculo: que la respuesta que viaja al navegador lleve el
+  // resultado CRUDO (`sin_destinatario`) en vez de la pública, y que la pantalla
+  // lo traduzca a un mensaje propio.
+  //
+  // 🚨 Solo se vigilan los `.tsx`, A PROPÓSITO. El servidor TIENE que nombrar
+  // esos estados —es él quien decide cuál ocurrió antes de colapsarlos—, así que
+  // prohibirlos en `lib/` y en las rutas obligaría a escribir la lógica honesta
+  // de forma retorcida, y un cepo así se acaba desactivando. Lo que ninguna
+  // pantalla necesita saber es cuál de los cuatro fue.
   const internos = RESULTADOS_PETICION.filter(
     (r) => !(RESPUESTAS_PUBLICAS as readonly string[]).includes(r),
   )
   const culpables: string[] = []
-  for (const f of ficherosDelPortal()) {
+  for (const f of ficherosDelPortal().filter((f) => f.endsWith('.tsx'))) {
     const src = leer(f)
     for (const r of internos) {
       if (new RegExp(`['"\`]${r}['"\`]`).test(src)) culpables.push(`${f} → '${r}'`)
@@ -186,9 +192,9 @@ test('los estados internos no se filtran a la pantalla', () => {
   assert.deepEqual(
     culpables,
     [],
-    'un resultado interno escrito en el portal acaba delante del usuario o en un `switch` que ' +
-      'le da respuesta propia. Contesta SIEMPRE con respuestaPublica() de ' +
-      `@central/module-seguros-portal.\n  - ${culpables.join('\n  - ')}`,
+    'una pantalla del portal nombra un resultado interno: o la API se lo ha mandado, o lo ' +
+      'deduce por su cuenta, y en los dos casos puede acabar diciendo si el destinatario existe. ' +
+      `La pantalla solo ve lo que devuelve respuestaPublica().\n  - ${culpables.join('\n  - ')}`,
   )
 })
 
