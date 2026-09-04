@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 
+import type { DatosAceptados } from './BuscarInmueble'
 import {
   CamposPoliza,
   MENSAJE_400,
@@ -52,6 +53,18 @@ export type PolizaEditable = {
    */
   datosRamo: Record<string, string | number | boolean> | null
   /**
+   * La referencia catastral del INMUEBLE (20 caracteres). Es COLUMNA y no una
+   * clave de `datos_ramo` porque identifica el BIEN y se consulta; la de 14 es
+   * la de la FINCA y el servidor la rechaza aparte.
+   */
+  referenciaCatastral: string | null
+  /**
+   * De dónde salió CADA campo de `datos_ramo`: `catastro` | `documento` |
+   * `declarado`. 76 m² que ha dicho el Catastro y 76 m² estimados a ojo no
+   * valen lo mismo, y sin esto no se distinguen.
+   */
+  datosRamoOrigen: Record<string, string> | null
+  /**
    * ¿Salió de un PDF o una foto que leyó la IA? Decide el TONO del hueco: si
    * hubo documento, un campo vacío es «no lo hemos encontrado en el documento»
    * (no se ha sabido leer), no «no existe». Mismo criterio que `NO_LEIDO` en
@@ -86,6 +99,14 @@ type Cambios = {
    * leer un PDF. Convertirlos aquí sería una segunda opinión sobre lo mismo.
    */
   datosRamo?: Record<string, string> | null
+  referenciaCatastral?: string | null
+  /**
+   * Viajan SIEMPRE pegados a `datosRamo` y nunca solos: el servidor rechaza
+   * unos orígenes sin los datos a los que se refieren (`origen_sin_datos`),
+   * porque afirmar «esto lo dijo el Catastro» sobre un valor que no viene en
+   * el parche es una afirmación que nadie puede comprobar.
+   */
+  datosRamoOrigen?: Record<string, string> | null
 }
 
 function aFormulario(v: Valores): Formulario {
@@ -139,6 +160,8 @@ function calcularCambios(
   base: Valores,
   prima: number | null,
   datosRamo: Record<string, string>,
+  origenes: Record<string, string>,
+  referenciaCatastral: string | null,
 ): Cambios {
   const c: Cambios = {}
   const compania = form.compania.trim() || null
@@ -169,7 +192,15 @@ function calcularCambios(
   const ramoBase = aFormularioRamo(base.datosRamo)
   if (!mismoRamo(ramoNuevo, ramoBase)) {
     c.datosRamo = Object.keys(ramoNuevo).length === 0 ? null : ramoNuevo
+    // Los orígenes se recortan a las claves que de verdad viajan: un origen
+    // huérfano —«los metros vienen del Catastro» cuando no hay metros— es lo
+    // que luego pinta un sello de «verificado» sobre un hueco. Si no queda
+    // ninguno, `null`, nunca `{}`.
+    const vivos = Object.fromEntries(Object.keys(ramoNuevo).map((k) => [k, origenes[k] ?? 'declarado']))
+    c.datosRamoOrigen = c.datosRamo === null || Object.keys(vivos).length === 0 ? null : vivos
   }
+
+  if (referenciaCatastral !== base.referenciaCatastral) c.referenciaCatastral = referenciaCatastral
   return c
 }
 
@@ -185,6 +216,9 @@ function aplicar(base: Valores, c: Cambios): Valores {
     fechaMatriculacion:
       c.fechaMatriculacion !== undefined ? c.fechaMatriculacion : base.fechaMatriculacion,
     datosRamo: c.datosRamo !== undefined ? c.datosRamo : base.datosRamo,
+    datosRamoOrigen: c.datosRamoOrigen !== undefined ? c.datosRamoOrigen : base.datosRamoOrigen,
+    referenciaCatastral:
+      c.referenciaCatastral !== undefined ? c.referenciaCatastral : base.referenciaCatastral,
   }
 }
 
@@ -209,10 +243,16 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     bastidor: poliza.bastidor,
     fechaMatriculacion: poliza.fechaMatriculacion,
     datosRamo: poliza.datosRamo,
+    datosRamoOrigen: poliza.datosRamoOrigen,
+    referenciaCatastral: poliza.referenciaCatastral,
   }))
   const [form, setForm] = useState<Formulario>(() => aFormulario(guardado))
   const [datosRamo, setDatosRamo] = useState<Record<string, string>>(() =>
     aFormularioRamo(guardado.datosRamo),
+  )
+  const [origenes, setOrigenes] = useState<Record<string, string>>(() => guardado.datosRamoOrigen ?? {})
+  const [referenciaCatastral, setReferenciaCatastral] = useState<string | null>(
+    () => guardado.referenciaCatastral,
   )
   const [abierto, setAbierto] = useState(false)
   const [estado, setEstado] = useState<Estado>('reposo')
@@ -227,6 +267,8 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     // Se re-siembra desde lo GUARDADO, igual que el resto: abrir el editor
     // enseña lo que hay en la BD, no lo que se dejó a medias la vez anterior.
     setDatosRamo(aFormularioRamo(guardado.datosRamo))
+    setOrigenes(guardado.datosRamoOrigen ?? {})
+    setReferenciaCatastral(guardado.referenciaCatastral)
     setErrores({})
     setErrorGeneral(null)
     setEstado('reposo')
@@ -241,6 +283,27 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
 
   function escribirRamo(id: string, valor: string) {
     setDatosRamo((d) => ({ ...d, [id]: valor }))
+    // Tecleado a mano es `declarado`, y pisa a un `catastro` anterior: si
+    // alguien corrige los metros que dio el Catastro, el dato ya no es del
+    // Catastro. Dejar el origen viejo sería el sello sobre un valor que nadie
+    // ha verificado.
+    setOrigenes((o) => ({ ...o, [id]: 'declarado' }))
+    setErrorGeneral(null)
+  }
+
+  /**
+   * Lo que la persona ACEPTA del Catastro. No entra nada por su cuenta: esto
+   * solo corre cuando ha pulsado «Usar estos datos» habiendo visto la
+   * dirección, el uso y la localidad del inmueble.
+   */
+  function aceptarCatastro(d: DatosAceptados) {
+    setDatosRamo((v) => ({ ...v, ...d.valores }))
+    setOrigenes((o) => {
+      const nuevo = { ...o }
+      for (const k of Object.keys(d.valores)) nuevo[k] = 'catastro'
+      return nuevo
+    })
+    setReferenciaCatastral(d.referencia)
     setErrorGeneral(null)
   }
 
@@ -265,7 +328,7 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
       return
     }
 
-    const cambios = calcularCambios(form, guardado, prima, datosRamo)
+    const cambios = calcularCambios(form, guardado, prima, datosRamo, origenes, referenciaCatastral)
     if (Object.keys(cambios).length === 0) {
       setErrorGeneral('No has cambiado nada, así que no hay nada que guardar.')
       return
@@ -394,6 +457,8 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
             }
             datosRamo={datosRamo}
             escribirRamo={escribirRamo}
+            referenciaCatastral={referenciaCatastral ?? undefined}
+            aceptarCatastro={aceptarCatastro}
           />
 
           {errorGeneral && (

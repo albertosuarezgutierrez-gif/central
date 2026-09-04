@@ -123,7 +123,8 @@ export type PolizaPortal = {
   coberturas: { total: number; lista: string[] } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
-  siniestrosAbiertos: SiniestroPortal[]
+  /** `null` = no visible en este nivel. `[]` = no hay ninguno abierto. */
+  siniestrosAbiertos: SiniestroPortal[] | null
 }
 
 export type TitularPortal = {
@@ -356,12 +357,18 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           }
         : null,
       recibos: ve.recibos ? resumirRecibosPortal(recs) : null,
-      siniestrosAbiertos: (siniestrosPor.get(p.id) ?? []).map((s) => ({
-        id: s.id,
-        estado: s.estado,
-        referencia: s.referencia,
-        fechaHora: s.fechaHora,
-      })),
+      // 🚨 `null` = NO VISIBLE EN TU NIVEL. `[]` = no hay ninguno abierto. Son
+      // cosas distintas y la UI dice cada una con sus palabras. Hasta el
+      // 04/09/2026 esto no miraba `ve` y un tercero con el alcance más bajo
+      // veía los siniestros abiertos de quien le autorizó.
+      siniestrosAbiertos: ve.siniestros
+        ? (siniestrosPor.get(p.id) ?? []).map((s) => ({
+            id: s.id,
+            estado: s.estado,
+            referencia: s.referencia,
+            fechaHora: s.fechaHora,
+          }))
+        : null,
     }
   }
 

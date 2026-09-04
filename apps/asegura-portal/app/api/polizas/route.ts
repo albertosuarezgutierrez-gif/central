@@ -71,6 +71,11 @@ async function altaConDocumento(req: Request, identidadId: string) {
       fechaMatriculacion: datos.fechaMatriculacion
         ? new Date(`${datos.fechaMatriculacion}T00:00:00Z`)
         : null,
+      // La referencia catastral del INMUEBLE, si el documento la traía. Solo la
+      // de 20 caracteres: una de 14 es la de la FINCA (el edificio) y llega
+      // `null` desde `extraer-poliza.ts` — guardarla traería los metros del
+      // edificio a una póliza de hogar, que es un dato plausible y equivocado.
+      referenciaCatastral: datos.referenciaCatastral,
       // Los campos propios del RAMO que el documento traía, ya validados contra
       // el catálogo del ramo detectado (`normalizarDatosRamo`, en el módulo
       // puro): lo que la IA no supo leer bien no llega hasta aquí, llega `null`.
@@ -78,6 +83,12 @@ async function altaConDocumento(req: Request, identidadId: string) {
       // y `JsonNull` guardaría el literal `null` DENTRO del JSON, que pasa todas
       // las guardas de NULL. La distinción es la misma que la de `extraccionBruta`.
       datosRamo: datos.datosRamo ?? Prisma.DbNull,
+      // Y de dónde salió cada uno de esos campos: aquí, TODOS del `documento`
+      // (los ha leído la IA del PDF o de la foto), que es distinto de lo que la
+      // persona teclea a ojo y distinto de lo que confirma del Catastro. Los
+      // orígenes se escriben en el MISMO paso que sus datos: uno sin el otro es
+      // una afirmación sobre un dato que no está.
+      datosRamoOrigen: datos.datosRamoOrigen ?? Prisma.DbNull,
       // Siempre `declarado`: lo ha aportado el usuario. Que lo haya leído una IA
       // no lo convierte en dato verificado — al revés, es donde más se inventa.
       procedencia: 'declarado',
@@ -106,17 +117,23 @@ async function altaAMano(req: Request, identidadId: string) {
   if (!normalizado.ok) return NextResponse.json({ error: normalizado.error }, { status: 400 })
   const { datos } = normalizado
 
-  // `datosRamo` sale del resto a propósito: Prisma NO admite `null` en una
-  // columna `Json?`, y el `null` de `DatosAlta` («no se ha declarado ninguno»)
-  // tiene que llegar a la BD como `DbNull` (NULL de SQL) y nunca como `JsonNull`,
-  // que escribiría el literal `null` DENTRO del JSON y se colaría por `IS NULL`.
-  const { datosRamo, ...resto } = datos
+  // Las dos columnas de JSON salen del resto a propósito: Prisma NO admite
+  // `null` en una columna `Json?`, y el `null` de `DatosAlta` («no se ha
+  // declarado ninguno») tiene que llegar a la BD como `DbNull` (NULL de SQL) y
+  // nunca como `JsonNull`, que escribiría el literal `null` DENTRO del JSON y se
+  // colaría por `IS NULL`. `referenciaCatastral` no: es una columna `text` y
+  // viaja en el resto como la matrícula.
+  const { datosRamo, datosRamoOrigen, ...resto } = datos
 
   const poliza = await prisma.portalPolizaDeclarada.create({
     data: {
       identidadId,
       ...resto,
       datosRamo: datosRamo ?? Prisma.DbNull,
+      // El origen viaja pegado a sus datos, en la misma escritura: guardar los
+      // metros sin decir que los dio el Catastro los deja indistinguibles de una
+      // estimación a ojo, y es justo la pregunta que esta columna responde.
+      datosRamoOrigen: datosRamoOrigen ?? Prisma.DbNull,
       // Sigue siendo un dato APORTADO por el cliente, no verificado contra la
       // compañía: `declarado`, igual que si viniera de un PDF.
       procedencia: 'declarado',

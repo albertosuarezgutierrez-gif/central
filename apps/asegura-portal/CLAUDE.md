@@ -1,4 +1,10 @@
-# CLAUDE.md — apps/asegura-portal (portal del CLIENTE de Grupo Asegura)
+# CLAUDE.md — apps/asegura-portal (portal del CLIENTE de Grupo ASegura)
+
+> ✍️ **El nombre comercial se escribe «Grupo ASegura», con A y S mayúsculas** (dictado por Alberto,
+> 04/09/2026). El monograma «AS» del logo es el nombre: A de Alberto, S de Suárez. Escribirlo con
+> la ese minúscula no es una errata de estilo — se come la marca, y es lo que el autocorrector
+> escribe solo. Grafía canónica en BD: `seguros.corredurias.nombre`. Guardián en todo el repo:
+> `test/regression-nombre-comercial-asegura.test.ts`.
 
 > **Esta app la ve el ASEGURADO, no Alberto.** El panel del corredor es `apps/asegura` (lee
 > `apps/asegura/CLAUDE.md`) y la pantalla de trabajo de Alberto es `apps/plataforma` → `/correduria`.
@@ -90,7 +96,7 @@ cuenta con que quien la activa es el siguiente PR que toque la app**, no el bot�
 
 Cierre del 03/09. Las envs del portal están puestas en Vercel (`asegura-portal`, Production):
 `DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_FROM`
-(`Grupo Asegura <no-reply@envios.grupoasegura.es>`), `PORTAL_MAIL_REPLY_TO`
+(`Grupo ASegura <no-reply@envios.grupoasegura.es>`), `PORTAL_MAIL_REPLY_TO`
 (`hola@grupoasegura.es`, el buzón único de la correduría) y `PORTAL_PUBLIC_URL`.
 
 Lo que costó una noche entera y conviene no repetir:

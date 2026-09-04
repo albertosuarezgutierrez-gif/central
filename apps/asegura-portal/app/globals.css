@@ -589,3 +589,10 @@ h1 {
   border-bottom: 1px solid var(--border-soft);
 }
 .legal-tabla th { font-weight: 600; color: var(--muted); font-size: 13px; }
+
+/* El buscador del Catastro (bloque de inmueble). Una columna en móvil, como
+   todo el editor: a 320 px dos columnas dejan la etiqueta del piso ilegible. */
+.catastro { display: grid; gap: 10px; }
+.catastro-lista { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.catastro-lista li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.catastro-lista .boton { flex: 1 1 auto; min-width: 0; text-align: left; }

@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas (04/09/2026).** Alberto lo vio mal
+  escrito en la cabecera del portal del cliente, que es la única pantalla que ve un asegurado. El
+  monograma «AS» del logo ES el nombre (A de Alberto, S de Suárez), así que la ese minúscula se come
+  la marca. Corregidas **96 apariciones en 56 ficheros** (UI de asegura/asegura-portal/plataforma,
+  textos de consentimiento del portal, emails de vencimiento, `@central/brand`, skills, docs).
+  La BD ya era correcta (`seguros.corredurias.nombre` = «Grupo ASegura»): era el código el que la
+  contradecía. Lo blinda `test/regression-nombre-comercial-asegura.test.ts` (gate en `test:guardia`),
+  que barre todo el repo versionado. Regla anotada en los tres `CLAUDE.md` (raíz, asegura, portal).
 - **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026).**
   Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
   revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
@@ -155,7 +163,7 @@
   módulo; y «Prima anual 67,86€» junto a «próximo recibo 73,39€» parecía un error de cuentas: la
   `prima_anual` es la NETA y `prima_bruta` = recibo → se enseña la bruta «(impuestos incluidos)».
 
-- **🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive (03/09/2026).**
+- **🎨 La marca de Grupo ASegura estaba en la app de Manuel, no en Drive (03/09/2026).**
   El logo que había en Drive (`cropped-logo-bn-350x100-1.png`) **no servía**: recorte de WordPress de
   **157×45 px** y **un solo gris `#F6F6F6`** sobre transparencia (377 px opacos de 7.065) — la variante
   en blanco para fondos oscuros, sin un píxel de color del que sacar paleta. La marca real vive en
@@ -376,7 +384,7 @@
   `hola@grupoasegura.es`** (env `PORTAL_MAIL_REPLY_TO`), el buzón único que quiere Alberto.
   El portal adopta los tokens y las formas de `apps/plataforma` (Inter, `--primary #4f46e5`, cards
   con `--surface`/`--border`, radios 10/14, 44 px táctiles), con nombres de token que
-  `@central/brand` sabe sobreescribir. **Pendiente:** la paleta REAL de Grupo Asegura — el único
+  `@central/brand` sabe sobreescribir. **Pendiente:** la paleta REAL de Grupo ASegura — el único
   logo (Drive) es b/n y lleva «Low Cost», que ya no se usa, y ni `grupoasegura.es` ni la web de
   Manuel son alcanzables desde el contenedor (proxy de egress + SSO de Vercel).
 
@@ -1521,7 +1529,7 @@
   Molde: `apps/mariscos/app/(usuario)/_forms.tsx` + `app/api/partidas/route.ts`.
 - Sigue bloqueado en lo mismo: redeploy de `central-asegura` + sonda. Sin eso, nada verificado.
 
-### 🧭 (01/09/2026) Portal de Grupo Asegura — Fase 1 MERGEADA (PR #1965 → `f12b7b46`)
+### 🧭 (01/09/2026) Portal de Grupo ASegura — Fase 1 MERGEADA (PR #1965 → `f12b7b46`)
 - App nueva `apps/asegura-portal` (Next.js, rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`
   (puro: niveles de acceso, procedencia en tres estados, código de un solo uso). 6 tablas `portal_*`
   en el schema `seguros` — **el SQL NO está aplicado todavía**; las otras 5 del spec llegan con sus fases.
@@ -1795,7 +1803,7 @@
 - **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia
   en TRES estados, código de un solo uso), 6 tablas `portal_*`, sesión propia y bóveda con subida de póliza.
 
-- **El canal de OTP es un PUERTO, no una llamada a WhatsApp**: la WABA de Grupo Asegura no existe todavía;
+- **El canal de OTP es un PUERTO, no una llamada a WhatsApp**: la WABA de Grupo ASegura no existe todavía;
   en Fase 1 se enchufan email y consola y WhatsApp entra añadiendo un fichero.
 - 🚨 **Lección de método:** las firmas de `aiComplete`, `openrouterVision` y `createMailTransporter` que
   parecían obvias eran las TRES falsas (`aiComplete` devuelve `string`; `openrouterVision` toma 5 args e
