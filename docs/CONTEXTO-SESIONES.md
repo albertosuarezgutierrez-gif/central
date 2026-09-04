@@ -682,6 +682,15 @@
 
 ---
 
+### 🧊 (04/09/2026) La guarda de outlier paraba el descenso que el propio motor había empezado
+- Al recalibrar el ancla a la baja el 03/09 (#2192/#2228), `normalBase` cayó ~25% de golpe: **448 noches** de los 4 pisos pasaron a cumplir `old > normalBase × 1,4` **sin que nadie hubiera subido nada**, y se quedaron clavadas ARRIBA.
+- Lo que lo delata: en las noches lejanas a la venta, **nuestra última escritura fue una BAJADA** (243 Busto · 279 Dúplex · 186 House · 242 Luxury). El motor decidió bajar, bajó lo que el raíl del ±20%/día le dejó, y en la pasada siguiente su propia guarda le impidió terminar. Un descenso de 4-5 pasadas se paraba en la primera.
+- Cura: **4ª llave `esDescensoNuestro`** (puro, 9 tests nuevos, 33 en el módulo). Simétrica de la 3ª: aquella deshace nuestra SUBIDA disparada, esta termina nuestra BAJADA interrumpida. Ambas parten de que nuestra propia escritura reciente no es prueba de nada sobre el mercado. Exige (a) ≤7 días, (b) fue bajada, (c) su precio es el que sigue vivo — si Alberto lo resubió en Smoobu, retiene.
+- **Radio: ~448 noches reanudan el descenso**, acotadas por raíl, `min_price`, suelo estacional y los dos techos.
+- ⚠️ Hilos ABIERTOS del diagnóstico, no cerrados: `floorD`/`ceilD` se calculan SIN `dqDate` (el clamp de calidad se anula solo); `noches_ref`=3 en Busto/Dúplex contra un corpus casi todo de 2 noches (+5-8%); `priorRows` ignora `historico_desde` (afecta a House); `mkt_score` se calcula sin filtro de liga (doble conteo a la baja); y `recorridoPalancas` del check #13 no modela los dos techos, así que su «solo llega al 66%» está desactualizado.
+- 🚨 Y una advertencia de método: mi medición del «percentil real» y la del agente NO coinciden (yo Dúplex p70/House p80; él p55/p64 contra corpus de liga). El motor fija el percentil dentro del corpus de SU liga y SU mes; medirlo contra el corpus agregado responde a otra pregunta. **Antes de tocar `target_pctl` hay que fijar UNA definición.**
+
+
 ### 🔕 (04/09/2026) El canal de avisos del pricing no se callaba nunca: 107 abiertas, 94% muertas
 - `pricing_alerts` no tenía NINGÚN camino de cierre: `pushAlert` no recrea un aviso mientras siga abierto, pero nadie lo marcaba `resuelta` al desaparecer la causa. Medido: **107 abiertas**, **54 de `precio_revertido`** desde el 10/08, y **51 de esas 54 ya cuadraban**.
 - Cura: `lib/sivra/alertas-autoresolucion.ts` (puro, 10 tests) + migración `resuelta_at`/`resuelta_por` (aplicada) + cableado en `guard/route.ts`. **Conservador por construcción**: un piso sin precio vivo HOY no se juzga — sin esa guarda, un fallo de snapshot cerraría en silencio sus alertas vivas.
