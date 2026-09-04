@@ -696,6 +696,24 @@
 
 ---
 
+### 🧊 (04/09/2026) La guarda de outlier paraba el descenso que el propio motor había empezado
+- Al recalibrar el ancla a la baja el 03/09 (#2192/#2228), `normalBase` cayó ~25% de golpe: **448 noches** de los 4 pisos pasaron a cumplir `old > normalBase × 1,4` **sin que nadie hubiera subido nada**, y se quedaron clavadas ARRIBA.
+- Lo que lo delata: en las noches lejanas a la venta, **nuestra última escritura fue una BAJADA** (243 Busto · 279 Dúplex · 186 House · 242 Luxury). El motor decidió bajar, bajó lo que el raíl del ±20%/día le dejó, y en la pasada siguiente su propia guarda le impidió terminar. Un descenso de 4-5 pasadas se paraba en la primera.
+- Cura: **4ª llave `esDescensoNuestro`** (puro, 9 tests nuevos, 33 en el módulo). Simétrica de la 3ª: aquella deshace nuestra SUBIDA disparada, esta termina nuestra BAJADA interrumpida. Ambas parten de que nuestra propia escritura reciente no es prueba de nada sobre el mercado. Exige (a) ≤7 días, (b) fue bajada, (c) su precio es el que sigue vivo — si Alberto lo resubió en Smoobu, retiene.
+- **Radio: ~448 noches reanudan el descenso**, acotadas por raíl, `min_price`, suelo estacional y los dos techos.
+- ⚠️ Hilos ABIERTOS del diagnóstico, no cerrados: `floorD`/`ceilD` se calculan SIN `dqDate` (el clamp de calidad se anula solo); `noches_ref`=3 en Busto/Dúplex contra un corpus casi todo de 2 noches (+5-8%); `priorRows` ignora `historico_desde` (afecta a House); `mkt_score` se calcula sin filtro de liga (doble conteo a la baja); y `recorridoPalancas` del check #13 no modela los dos techos, así que su «solo llega al 66%» está desactualizado.
+- 🚨 Y una advertencia de método: mi medición del «percentil real» y la del agente NO coinciden (yo Dúplex p70/House p80; él p55/p64 contra corpus de liga). El motor fija el percentil dentro del corpus de SU liga y SU mes; medirlo contra el corpus agregado responde a otra pregunta. **Antes de tocar `target_pctl` hay que fijar UNA definición.**
+
+
+### 🔕 (04/09/2026) El canal de avisos del pricing no se callaba nunca: 107 abiertas, 94% muertas
+- `pricing_alerts` no tenía NINGÚN camino de cierre: `pushAlert` no recrea un aviso mientras siga abierto, pero nadie lo marcaba `resuelta` al desaparecer la causa. Medido: **107 abiertas**, **54 de `precio_revertido`** desde el 10/08, y **51 de esas 54 ya cuadraban**.
+- Cura: `lib/sivra/alertas-autoresolucion.ts` (puro, 10 tests) + migración `resuelta_at`/`resuelta_por` (aplicada) + cableado en `guard/route.ts`. **Conservador por construcción**: un piso sin precio vivo HOY no se juzga — sin esa guarda, un fallo de snapshot cerraría en silencio sus alertas vivas.
+- Bug latente del mismo detector, arreglado: usaba `MAX(snapshot_date)` **GLOBAL**, así que el día que falle el snapshot de un piso ese piso desaparecía entero del detector. Ahora frescura POR PISO.
+- El texto del aviso decía «alguien o algo lo ha pisado en Smoobu» y mandaba a buscar a una persona. **Causa real sin identificar**: 12 de las 58 diferencias vivas son un **×1,250 EXACTO** repetido en los cuatro pisos. Hilo abierto declarado, no cerrado en falso.
+- ⚠️ **Corrección a lo dicho horas antes:** el ×1,25 NO es sistémico. El camino de escritura funciona: 93-98% de ~1.400 fechas coinciden exactas con lo que empujamos (ratio mediano 1,000).
+- 📉 **Y lo que la auditoría destapó, que es lo gordo y sigue abierto:** los pisos piden un precio que nadie paga. Busto vende en **P10** y tarifica a P40 · Luxury **P16** vs P50 · Dúplex **P23** vs P40. House Sevillana es el único coherente (vende 1,14× mercado, pide 1,25×). Diagnóstico del desvío en curso.
+
+
 ### 🧊 (03/09/2026) La guarda de outlier protegía al fallo que ella misma debía deshacer (PR seguimiento del #2228)
 - La pasada de las 20:30 (1ª con la guarda de monotonía) corrigió **3** de las 61 noches infladas de Busto; las otras 58 seguían a 113€.
 - Causa: el **outlier de precio actual** (`OUTLIER_RATIO 1,4`, >30 días). El bug del #2192 las dejó a 113€ con base normal ~80 → 1,41, y la guarda leyó ese precio inflado como «noche especial». La salida del fallo se volvió su coartada; la llave por antigüedad no abría hasta 21 días.
