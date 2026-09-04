@@ -293,13 +293,6 @@ export type AutorizacionesPortal = {
   candidatos: Candidato[]
 }
 
-const SIN_NADA: AutorizacionesPortal = {
-  puedeAutorizar: false,
-  otorgadas: [],
-  recibidas: [],
-  candidatos: [],
-}
-
 type ResultadoConceder =
   | { ok: true; id: string; estado: EstadoAutorizacion; caducaEn: Date }
   | { ok: false; error: ErrorConceder; mensaje: string }
@@ -361,8 +354,20 @@ async function fichasPorId(ids: string[]): Promise<Map<string, FichaVista>> {
  * la raíz: dato que NO hay ≠ dato que NO se ha mirado).
  */
 export async function autorizacionesDeIdentidad(identidadId: string): Promise<AutorizacionesPortal> {
+  // 🚨 Aquí había un `if (vinculos.length === 0) return` con una respuesta vacía
+  // de relleno, y era el MISMO
+  // corte que se quitó de `carteraDeIdentidad`: a un invitado sin ficha se le
+  // puede autorizar desde el 04/09/2026, y cortando por «no tiene vínculo» nunca
+  // vería en esta pantalla la autorización que le abrieron — o sea, no podría ni
+  // aceptarla ni revocarla, aunque `resolver()` sí la resolvería con su id. No
+  // fallaba: salía vacía, que es el modo de fallo que este portal persigue.
+  //
+  // Sin vínculo, `misIds` es `[]` y eso NO afloja ninguna frontera: los dos
+  // brazos de ficha (`in: []`) no casan con nada y lo único que queda en pie es
+  // `autorizadoIdentidadId`, que es exactamente esta identidad. `otorgablesIds`
+  // también queda vacío, así que `puedeAutorizar` es `false` y no se le ofrece
+  // conceder nada — que es lo correcto: no tiene pólizas que ceder.
   const vinculos = await fichasDeIdentidad(identidadId)
-  if (vinculos.length === 0) return SIN_NADA
 
   const misIds = vinculos.map((v) => v.clienteId)
   const misIdsSet = new Set(misIds)
