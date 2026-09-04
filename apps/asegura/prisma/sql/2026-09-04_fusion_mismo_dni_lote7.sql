@@ -12,6 +12,8 @@
 -- IBAN y el domicilio de una en la ficha de la otra, y no se deshace con un UPDATE.
 --
 -- ── QUÉ ENTRA ──────────────────────────────────────────────────────────────────────────────────
+--   · Los pares que el pre-vuelo descartó con los nombres delante (lista `excluidos`): el mismo
+--     DNI con nombres de dos personas distintas es un DNI mal tecleado, no una gemela.
 --   · Solo grupos de EXACTAMENTE dos fichas. Los tríos se saltan con un `notice`: los decide una
 --     persona con los nombres delante, no un bucle.
 --   · Las dos fichas existen, son de la misma correduría y ninguna está ya en lápida.
@@ -51,6 +53,16 @@ declare
   cima_a int; cima_b int; pol_a int; pol_b int;
   r record; n int; deps jsonb; snap jsonb; heredados text[]; corr uuid; hsup text; hlap text;
   hechas int := 0; saltadas int := 0;
+  -- Pares que el pre-vuelo del 04/09/2026 descartó CON LOS NOMBRES DELANTE: mismo DNI en la foto
+  -- pero nombres de dos personas distintas (grupo 249: «Antonio Manuel Mejias Heredia» /
+  -- «Yolanda Rios Vazquez»; grupo 366: «Fernando Martin Verdugo» / «Catalina Verdugo Garcia»).
+  -- El identificador coincide, pero es el DATO el que está mal en una de las dos fichas — un DNI
+  -- tecleado en la ficha de otro en el volcado— y fundirlas mezclaría los papeles de dos personas.
+  -- Se saltan aquí para que el bloque sea el registro fiel de lo que se ejecutó.
+  excluidos uuid[] := array[
+    'd1a3da30-302b-4bd7-9a04-12fc888d2e8b', '5c38e0ad-8c90-407e-892b-6c11d2f32e9e',
+    '6739c179-24e3-4d06-9312-9f975e00333c', 'afd64eec-cce5-489d-bb7a-242d7661a340'
+  ]::uuid[];
 begin
   select * into foto from seguros.backfill_dni_plan where id = 1;
   if not found then
@@ -68,6 +80,10 @@ begin
       saltadas := saltadas + 1; continue;
     end if;
     a := fichas[1]; b := fichas[2];
+    if a = any(excluidos) or b = any(excluidos) then
+      raise notice 'par %/% excluido en el pre-vuelo (nombres de dos personas distintas): se salta', a, b;
+      saltadas := saltadas + 1; continue;
+    end if;
 
     select * into ra from seguros.clientes where id = a;
     if not found then raise notice 'la ficha % ya no existe: se salta', a; saltadas := saltadas + 1; continue; end if;
