@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { interpretarCartera, interpretarObjeto, interpretarVencimientos } from './cartera-asegura.ts'
 
 const RESUMEN_OK = {
-  correduria: { nombre: 'Grupo Asegura' },
+  correduria: { nombre: 'Grupo ASegura' },
   resumen: {
     estado: 'ok', clientes: 2742, leads: 29858, polizasVigentes: 50,
     polizasPendientesFecha: 1194, polizasNoVigentes: 27599, siniestrosAbiertos: 3,
@@ -14,7 +14,7 @@ test('respuesta ok completa → ok con los seis números', () => {
   const r = interpretarCartera(200, RESUMEN_OK)
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
-  assert.equal(r.nombre, 'Grupo Asegura')
+  assert.equal(r.nombre, 'Grupo ASegura')
   assert.equal(r.polizasVigentes, 50)
   assert.equal(r.polizasPendientesFecha, 1194)
 })

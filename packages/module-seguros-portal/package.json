@@ -2,7 +2,7 @@
   "name": "@central/module-seguros-portal",
   "version": "0.0.0",
   "private": true,
-  "description": "Reglas puras del portal de clientes/leads de Grupo Asegura: qué campos ve cada papel en una póliza (dato de la COSA vs dato de la PERSONA), la procedencia de cada dato (compañía/calculado/declarado) y el código de un solo uso. Sin BD, sin red.",
+  "description": "Reglas puras del portal de clientes/leads de Grupo ASegura: qué campos ve cada papel en una póliza (dato de la COSA vs dato de la PERSONA), la procedencia de cada dato (compañía/calculado/declarado) y el código de un solo uso. Sin BD, sin red.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

@@ -242,7 +242,7 @@ consultable **en el momento de tarificar** — exactamente la ventana del campo
 `lastFiveYearsAccidents` que exige Codeoscopic. Es el bonificador de verdad.
 
 - ⚠️ **Se ofrece a «Entidades Aseguradoras del ramo de Automóvil», y una correduría NO lo es.** NO
-  está confirmado que Grupo Asegura pueda consultarlo. Hay que **preguntar a TIREA** si se añade al
+  está confirmado que Grupo ASegura pueda consultarlo. Hay que **preguntar a TIREA** si se añade al
   acuerdo que ya existe por CIMA (`accesos.cima@tirea.es`).
 - ✅ Lo que sí está claro: **el propio asegurado puede pedir su historial gratis** con DNI y número
   de póliza. Vía inmediata y sin contrato: pedírselo al cliente.
