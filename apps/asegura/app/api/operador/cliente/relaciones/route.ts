@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { autorizarVer, borrarRelacion, crearRelacion, listarRelaciones, type ResultadoRelacion } from '@/lib/cartera-relaciones'
+import { autorizarVer, borrarRelacion, cambiarTipoRelacion, crearRelacion, listarRelaciones, type ResultadoRelacion } from '@/lib/cartera-relaciones'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic'
  *
  *   GET    ?id=<clienteId>                                        → { estado:'ok', relaciones }
  *   POST   { clienteId, relacionadoId, tipo, observaciones?, actor } → crea el vínculo (dos sentidos)
+ *   PATCH  { clienteId, relacionadoId, tipo, actor }                 → CAMBIA el tipo del vínculo (los dos sentidos)
  *   PATCH  { clienteId, relacionadoId, autoriza: boolean, alcance?, tituloRepresentacion?, actor } → clienteId autoriza/revoca a relacionadoId
  *   DELETE { clienteId, relacionadoId, actor }                      → borra el vínculo entero
  *
@@ -53,8 +54,19 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  return escribir(req, (c, b) =>
-    autorizarVer(c, cadena(b.clienteId) ?? '', {
+  return escribir(req, (c, b) => {
+    // Dos escrituras distintas por el mismo verbo, y se separan por la PRESENCIA
+    // de `tipo`, no por `autoriza`: `b.autoriza === true` convierte un cuerpo sin
+    // ese campo en un `false`, así que un PATCH de tipo se leería como «revoca la
+    // autorización» y la quitaría de paso, en silencio.
+    if (b.tipo !== undefined) {
+      return cambiarTipoRelacion(c, cadena(b.clienteId) ?? '', {
+        relacionadoId: cadena(b.relacionadoId) ?? '',
+        tipo: b.tipo,
+        actor: actorDe(b),
+      })
+    }
+    return autorizarVer(c, cadena(b.clienteId) ?? '', {
       relacionadoId: cadena(b.relacionadoId) ?? '',
       autoriza: b.autoriza === true,
       // Sin `alcance` se anota el más pequeño («ver»). Un alcance que no se puede
@@ -66,8 +78,8 @@ export async function PATCH(req: Request) {
       // porque el cuerpo de una petición no es fuente de verdad sobre eso.
       tituloRepresentacion: b.tituloRepresentacion,
       actor: actorDe(b),
-    }),
-  )
+    })
+  })
 }
 
 export async function DELETE(req: Request) {

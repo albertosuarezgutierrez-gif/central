@@ -6,6 +6,7 @@ import Siniestros from '../../Siniestros'
 import { NECESARIOS_EMISION_AUTO } from '@central/module-seguros'
 import { fichaAsegura, type PolizaFicha } from '@/lib/ficha-asegura'
 import Cabecera from './Cabecera'
+import DescartarCliente from './DescartarCliente'
 import FichaTabs, { tabDeParametro } from './FichaTabs'
 import TabContactos from './TabContactos'
 import TabPolizas from './TabPolizas'
@@ -56,6 +57,10 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   const porClase: Record<ClasePolizaFicha, PolizaFicha[]> = { viva: [], pendiente_cima: [], cancelada: [], historica: [] }
   for (const p of ficha.polizas) porClase[clasificarPolizaFicha(p)].push(p)
 
+  // Pólizas de CARTERA VIVA de la ficha (`esCarteraViva` en asegura). Es la
+  // guarda del descarte: con una sola viva, la persona es un cliente de hoy.
+  const vivas = ficha.polizas.filter(p => p.viva).length
+
   const resumen = resumenFicha({
     polizas: ficha.polizas,
     siniestros: ficha.siniestros,
@@ -81,6 +86,11 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   // scrollea. Medido en Chromium el 02/09/2026: 910 → 390 px solo con esta línea.
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
+      {/* Si la ficha está DESCARTADA se dice arriba del todo, antes que nada:
+          está fuera del buscador y de la cartera, y nadie más la ve. `activo`
+          a `null` (asegura sin el campo) no pinta nada — no se afirma. */}
+      <DescartarCliente zona="aviso" clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
+
       <Cabecera ficha={ficha} resumen={resumen} />
 
       <FichaTabs
@@ -124,6 +134,11 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
 
       {/* `null` ≠ «sin anotaciones»: lo dice el propio componente. */}
       {tab === 'historial' && <Historial historial={ficha.historial} />}
+
+      {/* Zona de peligro, al final y discreta: descartar la ficha (borrado
+          suave y reversible). Se pinta en todas las pestañas a propósito — es
+          una acción sobre la FICHA, no sobre lo que se esté mirando. */}
+      <DescartarCliente clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
     </div>
   )
 }

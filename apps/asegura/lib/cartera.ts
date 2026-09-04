@@ -106,8 +106,11 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
       vence30, vence60,
     ] =
       await Promise.all([
-        db.cliente.count({ where: { correduriaId, mergedIntoClienteId: null, tipo: 'cliente' } }),
-        db.cliente.count({ where: { correduriaId, mergedIntoClienteId: null, tipo: 'lead' } }),
+        // Las fichas DESCARTADAS (`activo = false`) no se cuentan: si contaran,
+        // el titular seguiría diciendo «80 clientes» después de quitar una de
+        // la vista, y el número no cuadraría con la lista que hay debajo.
+        db.cliente.count({ where: { correduriaId, mergedIntoClienteId: null, activo: true, tipo: 'cliente' } }),
+        db.cliente.count({ where: { correduriaId, mergedIntoClienteId: null, activo: true, tipo: 'lead' } }),
         db.poliza.count({
           where: { ...basePoliza, estado: { in: estadosVigentes }, fechaVencimiento: { gte: hoy } },
         }),
@@ -170,6 +173,11 @@ export async function vencimientosProximos(
       mergedIntoPolizaId: null,
       estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
       fechaVencimiento: { gte: hoyRef, lte: hasta },
+      // Una ficha descartada no genera llamadas de renovación. (Hoy no puede
+      // haber ninguna aquí —no se descarta lo que tiene pólizas vivas—, pero
+      // «vigente con fecha futura» no es exactamente «cartera viva», así que el
+      // filtro se pone donde se lee, no se deduce.)
+      cliente: { activo: true },
     },
     orderBy: { fechaVencimiento: 'asc' },
     select: {

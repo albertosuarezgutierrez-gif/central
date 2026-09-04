@@ -447,9 +447,13 @@ function esEstadoConocido(e: string): e is EstadoSiniestro {
 
 // ─── Abrir siniestro ─────────────────────────────────────────────────────────
 
+// El rótulo del grupo se lee sobre la póliza que hay elegida arriba, así que
+// «Hogar» mentía en un comercio y en una comunidad, que ofrecen ese mismo ramo
+// de DAÑOS (agua, incendio, robo, cristales, eléctricos, fenómenos). El nombre
+// dice lo que agrupa, no de dónde salió la clave.
 const ETIQUETA_RAMO: Record<string, string> = {
   auto: 'Auto / moto',
-  hogar: 'Hogar',
+  hogar: 'Daños en el inmueble o su contenido',
   general: 'General (RC, defensa jurídica, otro)',
   salud: 'Salud',
   vida: 'Vida',
