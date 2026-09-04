@@ -71,6 +71,22 @@ test('la version de los textos legales es sellable en un consentimiento', () => 
   assert.match(FECHA_TEXTOS_LEGALES, /^\d{4}-\d{2}-\d{2}$/)
 })
 
+test('la correduria tiene UN solo correo, y es el que sale en todos los canales', () => {
+  // Alberto, 04/09/2026: «solo quiero usar un mail hola@grupoasegura.es». Dos
+  // buzones para el mismo mediador reparten las quejas entre uno que se mira y
+  // otro que no, y el que no se mira incumple el plazo de respuesta del SAC.
+  assert.equal(MEDIADOR.identidad.email, 'hola@grupoasegura.es')
+
+  const texto = JSON.stringify({ MEDIADOR, CANALES_RECLAMACION, PUNTOS_PRECONTRACTUALES })
+  assert.ok(!texto.includes('info@grupoasegura'), 'ha vuelto el correo antiguo de la web pública')
+
+  // Y el canal del SAC tiene que ser ESE correo, no otro cualquiera.
+  const sac = CANALES_RECLAMACION.find((c) => c.id === 'sac')
+  assert.ok(sac)
+  assert.equal(sac.contacto, MEDIADOR.identidad.email)
+  assert.equal(sac.href, `mailto:${MEDIADOR.identidad.email}`)
+})
+
 test('no se declara ninguna lista de ramos ni ningun DPO sin comprobar', () => {
   // Guardián de una omisión DELIBERADA: la inscripción por ramos en el registro
   // de la DGSFP no se ha mirado, y el DPO no está confirmado. Si alguien los

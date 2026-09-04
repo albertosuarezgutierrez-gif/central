@@ -37,7 +37,15 @@
   (id 145652821, Luxury Busto) pero con llegada **23/04/2027**, fuera de la ventana de ±180 días.
   Arreglado: `lib/correo/num-confirmacion.ts` (puro, quita URLs + whitelist de dominios de canal,
   HomeExchange NO lo es), `resolverBookingId` con 2ª pasada ancha paginada y ventana del vigía a
-  −90..+540 días. Fila 19 → estado nuevo `descartada`. PR pendiente de nº.
+  −90..+540 días. Fila 19 → estado nuevo `descartada`. PR #2272.
+- **🧠 El control de calidad ya ve lo que Alberto responde a mano (04/09/2026, PR #2271).** «He respondido varias veces a
+  preguntas similares y no ha aprendido»: `debeEscalar` veía ficha + guía + HECHOS, pero NO `ctx.aprendizajes`, así que un
+  asunto resuelto a mano y nunca destilado a HECHO seguía cayendo en «la INFORMACIÓN no cubre la pregunta» — el veredicto
+  que enciende el «❓ Esto no lo encuentro en la guía». 🚨 Medidas las 30 filas reales de `mensajes_aprendizaje`: más de la
+  mitad son cortesías o respuestas CADUCAS de UNA reserva («confirmada del 20 al 22 de noviembre», «salir a las 12:00
+  porque no entra nadie»), y volcarlas como fuente las auto-enviaría a otro huésped. Entran como **PRECEDENTES** (bloque
+  aparte, «no acreditan datos») y filtradas por `precedentes.ts` (puro, 10 tests): descarta fecha/importe/hora/
+  disponibilidad/comprobación puntual/contacto. Guardián ampliado en `qa-hechos.test.ts`, probado en rojo.
 
 - **🛡️ /correduria: seis peticiones de Alberto desde el móvil, PR #2259 (04/09/2026).**
   Cabecera visible fuera (~62px de la 1ª pantalla; el `<h1>` se oculta con `.solo-lectores`, no se
@@ -66,7 +74,10 @@
   nombre+teléfono (584 fichas de más), 0 con póliza viva, 517 pares con el mismo N legado — y la lápida de casi todos
   tiene DNI cifrado SIN hash, así que fusionar por nombre sería a ciegas. Puente hecho: el plan del backfill deja foto en
   **`seguros.backfill_dni_plan`** (solo uuids; DDL aplicada) al abrir `/correduria/mantenimiento` → de ahí sale el lote 7
-  (mismo DNI). **Pendiente: que Alberto abra esa página tras el deploy y me lo diga.** Segundo hallazgo: el cron `e2e-smoke`
+  (mismo DNI). **PR #2260 mergeado y en producción (asegura + plataforma READY, 20:44 UTC). Lote 7 ESCRITO y
+  probado en seco (`2026-09-04_fusion_mismo_dni_lote7.sql`: motor del lote 2, pares leídos de la foto, guardas de
+  identidad dentro); SIN ejecutar porque la foto sigue vacía: Alberto («lote 7», 04/09) tiene que abrir esa página
+  y luego se le enseña el pre-vuelo con nombres.** Segundo hallazgo: el cron `e2e-smoke`
   del repo `asegura` (06:00 UTC, retrasado a ~10:20) creaba un lead sintético diario en la cartera real desde el 02/09 y
   fallaba antes de su limpieza — borrados los 3 (+3 cotizaciones, 9 eventos). **Alberto debe desactivar ese workflow.**
 - **✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas (04/09/2026).** Alberto lo vio mal
@@ -767,13 +778,14 @@
 
 ---
 
-### ⚖️ (04/09/2026, III) El portal del asegurado no tenía NADA legal: bloque 0.1+0.2 puesto
+### ⚖️ (04/09/2026, III) El portal del asegurado no tenía NADA legal: bloque 0.1+0.2 puesto (PR #2245, mergeado)
 - El portal pedía el correo sin identificar al mediador ni decir qué se hacía con el dato: cero pie legal, cero políticas. Incumplía art. 19 Ley 16/2018 y art. 13 RGPD desde que se desplegó.
 - **Fuente única nueva** `packages/module-seguros/src/mediador.ts` (DGSFP `CS-F/0170`, RC, no-exclusividad, canales SAC→DGSFP→AEPD, `VERSION_TEXTOS_LEGALES` para sellar `portal_consentimiento`), 8 tests. La comparte el panel del corredor.
 - 4 páginas en `apps/asegura-portal/app/legal/*` + `PieLegal` en el layout **RAÍZ** (si va en `(portal)` desaparece justo de la pantalla de entrada, que es donde la ley lo exige) — y se leen SIN sesión.
 - La privacidad se escribió sobre lo que la app hace de verdad: correo solo como hash, **el PDF que sube el cliente sale a OpenRouter y puede procesarse fuera del EEE** (con la alternativa de teclearlo a mano), Supabase en `eu-west-1`. **Sin banner de cookies a propósito**: una sola cookie técnica (art. 22.2 LSSI).
-- ⚠️ Dos omisiones deliberadas y testeadas: **ni lista de ramos** (registro DGSFP sin comprobar) **ni DPO** (el `dpo@grupoasegura.com` de la web de Manuel no consta que reciba). Pendiente de Alberto para poder declararlos.
-- Guardián `test/regression-portal-legal.test.ts` (9 cepos). Verde: 474/474 guardianes, 339/339 de `module-seguros`, typecheck del portal limpio. **Pendiente del bloque: 0.3 consentimientos, 0.4 export art. 15/20 por `apps/asegura`, 0.5 solicitud de supresión.**
+- ⚠️ Dos omisiones deliberadas y testeadas: **ni lista de ramos** (registro DGSFP sin comprobar) **ni DPO**. Lo del DPO lo zanjó Alberto el mismo día: **«solo quiero usar un mail hola@grupoasegura.es»**, así que el `dpo@grupoasegura.com` de la web de Manuel no es buzón suyo. Los ramos siguen pendientes.
+- 📧 **Un solo correo, `hola@grupoasegura.es`** (contacto + derechos RGPD + SAC), desde `MEDIADOR.identidad.email`; mismo buzón que el `Reply-To` del portal. 🚨 **La web pública sigue publicando `info@` en tres textos legales** (Términos, privacidad, `/info-mediador`): dos canales de reclamación para el mismo mediador es una contradicción entre documentos publicados. Unificarlo allí toca el `LegalVersionGate` y el ruleset bloqueado del repo `asegura`.
+- Guardián `test/regression-portal-legal.test.ts` (9 cepos). Verde en CI: **18/18 checks** sobre `be7175dd0`; en local 480/480 guardianes y 339/339 de `module-seguros`, typecheck del portal limpio. **Pendiente del bloque: 0.3 consentimientos, 0.4 export art. 15/20 por `apps/asegura`, 0.5 solicitud de supresión.**
 
 ---
 
