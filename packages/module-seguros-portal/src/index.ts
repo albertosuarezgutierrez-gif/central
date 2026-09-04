@@ -74,3 +74,14 @@ export {
   normalizarDatosRamo,
 } from './campos-ramo.ts'
 export type { TipoCampo, OpcionCampo, CampoRamo, DatosRamo, ResultadoDatosRamo } from './campos-ramo.ts'
+export {
+  ORIGENES_CAMPO,
+  MAX_DIRECCION,
+  MAX_VARIANTES,
+  esOrigenCampo,
+  normalizarOrigenes,
+  normalizarReferencia,
+  formatoReferencia,
+  variantesDireccion,
+} from './direccion-catastro.ts'
+export type { OrigenCampo, OrigenPorCampo, FormatoReferencia } from './direccion-catastro.ts'
