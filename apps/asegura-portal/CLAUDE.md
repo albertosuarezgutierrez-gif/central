@@ -572,9 +572,22 @@ art. 16 LCS y que la privacidad siga declarando la salida del documento a OpenRo
 
 ⚠️ **Dos omisiones DELIBERADAS**, protegidas por su propio test en `packages/module-seguros/src/mediador.test.ts`:
 **no se declara ninguna lista de ramos** (el alcance de la inscripción en el registro público de la
-DGSFP no se ha comprobado; el art. 19 tampoco la exige) y **no se declara ningún DPO** (la web de
-Manuel sí lo hace, con `dpo@grupoasegura.com`; que ese buzón reciba correo no está comprobado). Se
-añaden con el dato delante, no antes.
+DGSFP no se ha comprobado; el art. 19 tampoco la exige) y **no se declara ningún DPO**. Lo segundo ya
+no es una duda: Alberto zanjó el 04/09/2026 que **solo usa un correo, `hola@grupoasegura.es`**, así
+que el `dpo@grupoasegura.com` que anuncia la web de Manuel no es un buzón suyo — anunciarlo aquí
+habría sido dar un canal de derechos que rebota. Los ramos siguen pendientes de la ficha del registro.
+
+📧 **UN solo correo, y sale de `MEDIADOR.identidad.email`.** `hola@grupoasegura.es` es a la vez el
+contacto del mediador, el canal de ejercicio de derechos RGPD y el Servicio de Atención al Cliente —
+y es el mismo buzón al que ya responde el `Reply-To` del correo del portal
+(`PORTAL_MAIL_REPLY_TO`), así que quien contesta a su código y quien presenta una queja llegan al
+mismo sitio. Dos buzones repartirían las quejas entre uno que se mira y otro que no, y el que no se
+mira incumple el plazo de un mes del SAC. Lo fija un cepo del test del módulo.
+🚨 **Cabo suelto conocido:** la web pública (repo `asegura`) sigue publicando `info@grupoasegura.es`
+en sus Términos, en su política de privacidad y en `/info-mediador`. **Dos canales de reclamación
+distintos para el mismo mediador es una contradicción entre documentos legales publicados**, no una
+errata de estilo. Unificarlo allí toca textos con `LegalVersionGate` (forzaría re-aceptación) y el
+ruleset de ese repo está bloqueado — no se hizo aquí a propósito.
 
 ## 🧨 Landmines
 

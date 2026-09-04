@@ -30,6 +30,29 @@ test('el control de calidad recibe los HECHOS del piso, no solo ficha y guía', 
   assert.ok(/INFORMACIÓN:/.test(cuerpo), 'el bloque INFORMACIÓN del prompt cambió de nombre — revisa este guardián')
 })
 
+// Segundo hueco del mismo tipo (04/09/2026): el control tampoco veía `ctx.aprendizajes`, así que un
+// asunto respondido a mano varias veces —pero nunca destilado a HECHO— seguía escalando. Llegan como
+// PRECEDENTES, en su propio bloque y filtrados por `precedentes.ts`; este guardián solo vigila que
+// sigan llegando, porque quitar la interpolación no rompe ni `tsc` ni el build.
+test('el control de calidad recibe los PRECEDENTES de lo ya aprobado', () => {
+  const cuerpo = cuerpoDebeEscalar()
+  assert.ok(/ctx\.aprendizajes/.test(cuerpo), 'debeEscalar no lee ctx.aprendizajes: lo respondido a mano le será invisible')
+  assert.ok(/precedentesQA/.test(cuerpo), 'los precedentes se calculan pero no se interpolan en el prompt')
+})
+
+// Y la otra mitad, que es la que evita el daño: los precedentes NO pueden entrar como INFORMACIÓN.
+// Si se mezclan ahí, el control da por buena una cifra o una disponibilidad que solo valía para otra
+// reserva, y `apoyada_en_fuente` la auto-envía.
+test('los precedentes NO se cuelan en el bloque INFORMACIÓN', () => {
+  const cuerpo = cuerpoDebeEscalar()
+  const info = cuerpo.indexOf('INFORMACIÓN:')
+  const mensaje = cuerpo.indexOf('MENSAJE DEL HUÉSPED')
+  const prec = cuerpo.indexOf('${precedentesQA}')
+  assert.ok(prec > info && prec < mensaje, 'el bloque de precedentes tiene que ir DESPUÉS de INFORMACIÓN y antes del mensaje')
+  assert.ok(/NO acreditan ning[úu]n dato concreto/.test(cuerpo),
+    'el prompt ya no le dice al control que un precedente no acredita datos: puede aprobar cifras sin comprobar')
+})
+
 test('los hechos van DENTRO del bloque INFORMACIÓN, que es lo que el prompt manda evaluar', () => {
   const cuerpo = cuerpoDebeEscalar()
   const info = cuerpo.indexOf('INFORMACIÓN:')
