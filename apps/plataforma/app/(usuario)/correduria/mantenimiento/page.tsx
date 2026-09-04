@@ -86,7 +86,9 @@ function BlindIndexDni({ plan }: { plan: PlanBackfillDni }) {
 
       <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
         Sobre {plan.total.toLocaleString('es-ES')} fichas: {plan.yaTiene.toLocaleString('es-ES')} ya tienen su
-        índice y {plan.sinDni.toLocaleString('es-ES')} no tienen DNI que indexar.
+        índice y {plan.sinDni.toLocaleString('es-ES')} no tienen DNI que indexar. Cada visita a esta página
+        deja guardados en la base los grupos de mismo DNI (solo los identificadores de las fichas, sin
+        el documento): de ahí sale el lote de fusión.
       </p>
 
       {listo ? (
