@@ -15,6 +15,24 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-04 · trading-analista** · hizo: PASO 0 sin huella de hoy (último saldo 03/09 20:16,
+  sin fila `trading_pasadas` de hoy) → pasada completa a las 20:16 UTC (disparo normal, no
+  repesca). Preflight `/api/internal/alerta` 200. NAV IBKR 33.072,49€ empujado a `/saldo` (sin
+  salto >15%). Cartera real (CVX 6 uds, VWCE 188 uds) empujada a `/cartera`, 0 descartadas, track
+  OK. `get_account_trades(DAYS_7)` sin operaciones nuevas → `/operaciones` con array vacío +
+  latido `trading_operaciones` ok. Velas de los 24 símbolos de la watchlist delegadas a un
+  subagente (protocolo anti-barajado: una a una, etiquetadas al vuelo) para no cargar el contexto
+  principal — 24/24 OK, 0 errores, longitudes verificadas (SPCX con solo 59 velas por ser
+  cotización reciente, declarado, no tratado como fallo). `/analizar`: 24 símbolos, 0
+  vetados/descartados/suplantados/divergentes, top 5 ideas (CHT y RBLX bajistas por reversión;
+  CVX alcista vetada por concentración 20%; NVO alcista vetada por SMA50; IWM bajista), 0 compras
+  paper (ninguna señal ganadora quedó alcista y sin veto). `/puntuar`: 92 tesis puntuadas, 0
+  cerradas (ninguna posición vence ventana hoy), 0 huérfanas, 0 sospechosas de reescalado.
+  Contraste con 2ª fuente: los 24 símbolos salieron `desfasados` (Stooq/Yahoo aún sin el cierre de
+  hoy a esta hora, normal justo tras el cierre) — no vetó a nadie. Resumen por Telegram enviado
+  (NAV, cartera real, top ideas con stop viable de CVX, cartera paper 3 posiciones NFLX/PLTR/SQM
+  todas en pérdida moderada desde el 31/08). No es lunes → sin sección de radar/satélite.
+  dudas: —; fallos: —; PRs/commits: — (solo bitácora y BD vía endpoints, sin tocar código).
 - **2026-09-04 · mercado-booking** · hizo: 2ª pasada ACOTADA por prioridad temporal (agosto 2026,
   ídem 03/09), `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6
   fechas × 4 pisos con aforo correcto) → 240 comps `booking_mcp`, 0 sin respuesta, 0 propios

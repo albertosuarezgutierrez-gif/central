@@ -30,6 +30,13 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📈 Pasada diaria trading-analista (04/09/2026, 20:16 UTC, disparo normal).** NAV IBKR
+  33.072,49€ → `/saldo` sin salto anómalo; cartera real (CVX 6 uds, VWCE 188 uds) → `/cartera`
+  sin descartes; sin operaciones nuevas en IBKR (7 días). `/analizar` sobre los 24 símbolos de la
+  watchlist (velas bajadas por subagente, protocolo anti-barajado, 0 errores): 0 vetados, 0
+  compras paper (top ideas bajistas o vetadas por concentración/SMA50). `/puntuar`: 92 tesis, 0
+  cierres. Resumen por Telegram enviado. Detalle en `docs/AGENTES-BITACORA.md`.
+
 - **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026).**
   Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
   revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
