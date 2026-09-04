@@ -76,6 +76,17 @@
   causa conocida e invitando a descartar el aviso**, y `evaluarLatido` afirmaba «se ejecuta y no termina» cuando `ok=false`
   lo escriben tanto los que arrancan (`'pasada en curso'`) como los que terminan y se declaran con problemas — ahora se
   declara y manda el parte. Guardián nuevo (probado en rojo: cazó mi propia nota).
+
+- **📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp (04/09/2026, PR #2281).**
+  Petición de Alberto sobre la captura del buscador. Nuevo `AccionesContacto` + `lib/acciones-contacto.ts`
+  en retención, cabecera de ficha y lista de personas. 🚨 **Choque con #2259**, que en paralelo trajo
+  `BotonWhatsapp`/`telefono-wa.ts`: había DOS criterios de «admite WhatsApp» a punto de convivir (el icono
+  saldría en una pantalla y no en otra para el mismo número); el helper nuevo **delega** en `urlWhatsapp()`
+  y solo aporta el estado `ilegible`. **NO se aplica al buscador ni a Renovaciones/SinCanal**: sus payloads
+  del puerto no traen teléfono ni email — ampliarlo es decisión de PII y coste, pendiente de Alberto.
+  🔥 **Y un fallo caro medido aquí:** marcar con `[preview]` un commit de MERGE de `main` construyó los
+  **11 proyectos Vercel** (el marcador es global y el diff de un merge toca los manifiestos raíz).
+  Documentado en `CLAUDE.md`.
 - **🎟 La intranet del cliente deja de ser solo para clientes (04/09/2026, PR #2258).** Tres piezas:
   (1) **pedir acceso** al revés —María pide lo que antes solo José podía conceder—, con el oráculo
   cerrado por diseño: 4 resultados internos colapsan en un `registrada` que no dice si esa persona es
