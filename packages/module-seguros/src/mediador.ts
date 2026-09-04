@@ -35,7 +35,7 @@
  * nadie puede decir después QUÉ se aceptó. Se sube a mano cada vez que cambie
  * el fondo de cualquiera de las páginas legales (no por una errata).
  */
-export const VERSION_TEXTOS_LEGALES = '2026-09-v1'
+export const VERSION_TEXTOS_LEGALES = '2026-09-v2'
 
 /** Fecha de la última revisión de fondo de los textos legales (ISO, UTC). */
 export const FECHA_TEXTOS_LEGALES = '2026-09-04'
@@ -50,7 +50,20 @@ export const MEDIADOR = {
     /** Clave del Registro Administrativo de Distribuidores de Seguros (DGSFP). */
     claveDgsfp: 'CS-F/0170',
     domicilio: 'San Juan de La Palma, nº 28, 41003 Sevilla',
-    email: 'info@grupoasegura.es',
+    /**
+     * 🚨 El correo ÚNICO de la correduría (Alberto, 04/09/2026: «solo quiero usar
+     * un mail hola@grupoasegura.es»). Es el mismo buzón al que ya responde el
+     * `Reply-To` del correo del portal (`PORTAL_MAIL_REPLY_TO`), así que el
+     * cliente que contesta a su código de acceso y el que presenta una queja
+     * llegan al mismo sitio — que es justo lo que un SAC tiene que garantizar.
+     *
+     * ⚠️ La web pública (repo `asegura`) sigue publicando `info@grupoasegura.es`
+     * en sus Términos, en su política de privacidad y en `/info-mediador`. Dos
+     * canales de reclamación distintos para el mismo mediador es una
+     * contradicción entre documentos legales publicados, no una errata: hay que
+     * unificarlo allí también, y ese cambio toca textos con `LegalVersionGate`.
+     */
+    email: 'hola@grupoasegura.es',
   },
   /** Seguro de responsabilidad civil profesional, art. 156.3 Ley 16/2018. */
   responsabilidadCivil: {
