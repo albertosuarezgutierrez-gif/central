@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎟 La intranet del cliente deja de ser solo para clientes (04/09/2026, PR #2258).** Tres piezas:
+  (1) **pedir acceso** al revés —María pide lo que antes solo José podía conceder—, con el oráculo
+  cerrado por diseño: 4 resultados internos colapsan en un `registrada` que no dice si esa persona es
+  cliente (el portal es abierto: si no, es una máquina de enumerar 32.600 fichas). (2)
+  **`autorizado_identidad_id`**: se puede autorizar a quien NO tiene ficha, sin fabricársela —quien
+  mira es una identidad, y una ficha por curioso ensucia los 32.520 leads. (3) **`poliza_id`**: el
+  dueño comparte la póliza de la nave y no la de su coche (15 de los 80 titulares vivos tienen más de
+  una), con FK COMPUESTA contra `polizas(cliente_id,id)` **vista morder** (23503 con la de otro).
+  🚨 Las tres trampas de Postgres que salieron en el camino: `x <> NULL` es NULL y **un CHECK que da
+  NULL PASA**; dos NULL **no son iguales** en un índice único; y una póliza FUSIONADA deja la
+  autorización apuntando a una fila muerta —el acceso se apaga sin que nadie se entere—, de ahí que la
+  lectura siga `merged_into_poliza_id`. Las 3 migraciones aplicadas y verificadas.
+
 - **🏠 La escalera del Catastro para hogar, y un agujero que salió por el camino (04/09/2026, PR #2255).**
   Cuatro peldaños y se BAJA solo cuando el anterior falla: dirección → variantes DETERMINISTAS de la
   misma dirección → una IA que PROPONE y el Catastro CONFIRMA → referencia catastral → a mano.
