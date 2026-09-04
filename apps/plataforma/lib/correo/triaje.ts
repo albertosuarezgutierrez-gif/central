@@ -10,6 +10,7 @@ import { avisoDeCategoriaCorreo } from '@/lib/telegram/catalogo'
 import { abrirTriaje } from './imap'
 import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './huespedes'
+import { esRemitenteDeCanal } from './num-confirmacion'
 import { parsearAvisoBooking } from './reserva-booking'
 import { registrarAvisoBooking, registrarReservaHuesped } from '@/lib/sivra/reservas-booking-vigia'
 import { parsearAvisoMensajesAgoda, textoAvisoAgoda } from './agoda-mensajes'
@@ -130,7 +131,15 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             // lo reconoce → puede ser una reserva que Smoobu perdió (caso James Ascott: Booking
             // no mandó ningún aviso; el único rastro fue este tipo de correo). Se registra como
             // pendiente y el vigía decide con su ventana ancha — aquí NO se afirma nada.
-            const num = extraerNumConfirmacion(correo)
+            //
+            // 🚨 Y SOLO si el correo viene de un canal por el que ENTRAN reservas (04/09/2026).
+            // Un correo de HomeExchange («Irene et Rico ha contestado a tu mensaje») produjo un
+            // 🚨 «reserva 360009410197 que Smoobu NO tiene»: ese número era el id de un artículo
+            // del Zendesk de HomeExchange dentro de un enlace. Por HomeExchange no entra ninguna
+            // estancia a Smoobu, así que un número suyo NUNCA puede estar desaparecido. El
+            // colador de nº ya no mira dentro de los enlaces (num-confirmacion.ts); esta puerta
+            // es la segunda vuelta de llave, por remitente.
+            const num = esRemitenteDeCanal(correo.from) ? extraerNumConfirmacion(correo) : null
             if (num && !(await resolverBookingId(num).catch(() => null))) {
               await registrarReservaHuesped(correo.messageId, correo.subject, num).catch(() => {})
             }
