@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧠 El control de calidad ya ve lo que Alberto responde a mano (04/09/2026, PR #2271).** «He respondido varias veces a
+  preguntas similares y no ha aprendido»: `debeEscalar` veía ficha + guía + HECHOS, pero NO `ctx.aprendizajes`, así que un
+  asunto resuelto a mano y nunca destilado a HECHO seguía cayendo en «la INFORMACIÓN no cubre la pregunta» — el veredicto
+  que enciende el «❓ Esto no lo encuentro en la guía». 🚨 Medidas las 30 filas reales de `mensajes_aprendizaje`: más de la
+  mitad son cortesías o respuestas CADUCAS de UNA reserva («confirmada del 20 al 22 de noviembre», «salir a las 12:00
+  porque no entra nadie»), y volcarlas como fuente las auto-enviaría a otro huésped. Entran como **PRECEDENTES** (bloque
+  aparte, «no acreditan datos») y filtradas por `precedentes.ts` (puro, 10 tests): descarta fecha/importe/hora/
+  disponibilidad/comprobación puntual/contacto. Guardián ampliado en `qa-hechos.test.ts`, probado en rojo.
+
 - **🛡️ /correduria: seis peticiones de Alberto desde el móvil, PR #2259 (04/09/2026).**
   Cabecera visible fuera (~62px de la 1ª pantalla; el `<h1>` se oculta con `.solo-lectores`, no se
   borra). La búsqueda vive ya en la URL (`?q=`) como la sección (`?s=`): volver con el navegador la

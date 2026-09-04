@@ -23,6 +23,7 @@ import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
 import { bloqueSalidaTardia, pideMasAllaDeLaVentana, SALIDA_FLEX_HASTA } from './salida'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
 import { esCierre, esIntercambioDeCortesia } from './cortesia'
+import { precedentesEstables, bloquePrecedentes } from './precedentes'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 
 export type Decision = {
@@ -112,7 +113,8 @@ async function debeEscalar(ctx: Contexto, pregunta: string, reply: string): Prom
 Te doy la INFORMACIÓN disponible del alojamiento, el último mensaje del huésped y el BORRADOR de respuesta.
 Responde con UNA sola palabra, sin nada más:
 ESCALAR → si el borrador no resuelve lo que pide el huésped, si la INFORMACIÓN no cubre la pregunta, o si el mensaje es una queja / pide dinero, cambios, cancelación o es una emergencia.
-OK → si el borrador responde correctamente y con datos que están en la INFORMACIÓN.`
+OK → si el borrador responde correctamente y con datos que están en la INFORMACIÓN, o si responde en la misma línea que un PRECEDENTE ya aprobado por el anfitrión.
+Los PRECEDENTES son respuestas que el anfitrión dio por buenas antes: acreditan que el asunto está resuelto, NO acreditan ningún dato concreto (cifras, horas, disponibilidad, importes). Si el borrador afirma un dato así y solo lo respalda un precedente, ESCALAR.`
   // Los HECHOS del piso van también aquí, no solo al redactor. Si el control de calidad solo ve la
   // ficha y la guía, todo lo que Alberto enseña le resulta invisible: contesta ESCALAR («la
   // INFORMACIÓN no cubre la pregunta») por muchas veces que se le haya enseñado el mismo asunto, y
@@ -120,9 +122,18 @@ OK → si el borrador responde correctamente y con datos que están en la INFORM
   // parece no aprender NUNCA. Medido el 02/09/2026: el phishing por WhatsApp se había enseñado tres
   // veces (mensajes_hechos id=4 y 5, y una más que cayó en mensajes_aprendizaje) y seguía escalando.
   const hechosQA = (ctx.hechos || []).map(h => `- ${h}`).join('\n')
+  // Y los PRECEDENTES: lo que Alberto ya aprobó a preguntas parecidas (`ctx.aprendizajes`, que
+  // llega filtrado por parecido desde `similitud.ts`). Sin esto, un asunto respondido a mano varias
+  // veces que nadie destiló a HECHO seguía escalando para siempre — la queja del 04/09/2026.
+  // 🚨 Van en su PROPIO bloque, fuera de INFORMACIÓN, y solo los estables: `precedentes.ts` descarta
+  // lo atado a una reserva («tu reserva está confirmada del 20 al 22 de noviembre», «puedes salir a
+  // las 12:00 porque no entra nadie»), que aprobado como fuente se auto-enviaría a OTRO huésped.
+  const precedentesQA = bloquePrecedentes(precedentesEstables(ctx.aprendizajes))
   const user = `INFORMACIÓN:
 ${ctx.ficha || '(sin ficha)'}
 ${ctx.guia ? `\nGUÍA:\n${ctx.guia}` : ''}${hechosQA ? `\nHECHOS DE ESTE PISO (los enseñó el anfitrión; valen tanto como la guía):\n${hechosQA}` : ''}
+
+${precedentesQA}
 
 MENSAJE DEL HUÉSPED: ${pregunta}
 
