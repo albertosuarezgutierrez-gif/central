@@ -38,6 +38,116 @@
   (mismo DNI). **Pendiente: que Alberto abra esa página tras el deploy y me lo diga.** Segundo hallazgo: el cron `e2e-smoke`
   del repo `asegura` (06:00 UTC, retrasado a ~10:20) creaba un lead sintético diario en la cartera real desde el 02/09 y
   fallaba antes de su limpieza — borrados los 3 (+3 cotizaciones, 9 eventos). **Alberto debe desactivar ese workflow.**
+- **✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas (04/09/2026).** Alberto lo vio mal
+  escrito en la cabecera del portal del cliente, que es la única pantalla que ve un asegurado. El
+  monograma «AS» del logo ES el nombre (A de Alberto, S de Suárez), así que la ese minúscula se come
+  la marca. Corregidas **96 apariciones en 56 ficheros** (UI de asegura/asegura-portal/plataforma,
+  textos de consentimiento del portal, emails de vencimiento, `@central/brand`, skills, docs).
+  La BD ya era correcta (`seguros.corredurias.nombre` = «Grupo ASegura»): era el código el que la
+  contradecía. Lo blinda `test/regression-nombre-comercial-asegura.test.ts` (gate en `test:guardia`),
+  que barre todo el repo versionado. Regla anotada en los tres `CLAUDE.md` (raíz, asegura, portal).
+- **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026).**
+  Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
+  revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
+  saludo» tumbaba la detección → `es_cortesia=false`, la vía de cortesía ni se intentaba; (2) el
+  control de calidad caído (`DESCONOCIDO`) entra en `needs_human`, que es guarda común → tampoco
+  habría salido. Arreglar uno solo no cambiaba nada. Nuevo `cortesia.ts` (detector ancho + anclado, y
+  `respuestaSinDatos`); `DESCONOCIDO` ya no bloquea SOLO cuando ni la pregunta pide nada ni el
+  borrador da un dato, y el aviso de auto-envío lo DECLARA (`sin_verificar`). La decisión final se
+  extrajo a `auto.ts` puro: no tenía ni un test. 31 tests nuevos.
+- **🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía (04/09/2026).**
+  (a) No había NINGUNA recuperación por parecido: `contexto.ts` volcaba las 8 últimas filas del piso
+  (`ORDER BY created_at DESC LIMIT 8`) sin mirar la pregunta → 8 «gracias» enterraban lo enseñado.
+  🚨 Medido contra `mensajes_guia_gaps`: el trigram (`word_similarity`) solo caza lo casi literal
+  (0,62); las paráfrasis reales dan **0,20-0,21 sobre un ruido de 0,19** — la opción elegida no
+  bastaba. Y `word_similarity('hola', …)` = **1,00**. Solución: DOS señales en unión (trigram con
+  guarda de longitud ≥20 + palabra de contenido en común, que es la que caza «whatsapp» en los cuatro
+  avisos de phishing) en `similitud-reglas.ts` (puro) + `similitud.ts`, aplicadas al prompt y a
+  `registrarGap` (que comparaba por `=` exacto → 4 filas de `veces=1`). Sin resolver a propósito: los
+  SINÓNIMOS (aparcar↔parking), que son terreno de embeddings.
+  (b) **6 de las 7 filas de `mensajes_hechos` eran la carta entera** (legacy previo a #2122, que puso
+  el destilador el 02/09) y se inyectaban como «HECHOS DE ESTE PISO»: la id=3 llevaba el móvil de
+  Alberto y el nombre de una huésped. Marcadas `descartado` en BD (autorizado por Alberto).
+  ⏳ Sigue PENDIENTE: `mensajes_aprendizaje` no se le pasa al control de calidad (`debeEscalar` solo
+  ve ficha+guía+`mensajes_hechos`), así que aún escala lo ya contestado si no llegó a ser un HECHO.
+- **🏠 Los 10 ramos ya despliegan SUS campos, y hogar los saca del Catastro (04/09/2026, PR #2242).**
+  Alberto vio en su móvil que elegir «Hogar» no cambiaba nada: el despliegue existía solo para
+  auto/moto. Ahora los 10 ramos tienen catálogo (`campos-ramo.ts`, módulo puro, 31 tests) y sus valores
+  van a **UNA columna `datos_ramo` jsonb** —aplicada y verificada— y no a ~40 columnas casi siempre
+  vacías; los identificadores del bien siguen siendo columnas porque se consultan. **Hogar/comercio/
+  comunidades se autorrellenan desde la dirección** por `POST /api/catastro` (metros, año, CP), con
+  sesión obligatoria y cinco estados distintos: no responde ≠ no hay nada ≠ dirección ilegible ≠ calle
+  ambigua ≠ quince pisos entre los que no adivinamos. 🚨 **Nada del art. 9 RGPD**: vida/salud/decesos
+  piden datos de CONTRATO, nunca de salud, y beneficiarios es el TIPO de designación, no nombres de
+  terceros. **«Tipo de seguro» sube al 2º puesto** (estaba el último: se rellenaba todo y solo entonces
+  aparecían campos nuevos). Cambiar de ramo BORRA los datos del viejo en vez de enterrarlos invisibles.
+  Investigado y NO construido, por orden: **Google y huella** (`docs/ASEGURA-PORTAL-IDEAS.md`) — el
+  cuello de botella no es cómo se entra sino que **solo 4.310 de 32.602 fichas tienen índice ciego**.
+
+- **🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA (03/09/2026, PR #2235).**
+  Alberto: «cuando seleccione un tipo de seguro, que despliegue los campos necesarios». Auto/moto →
+  matrícula, fecha de matriculación y bastidor; otro ramo, nada (un tarificador pide todo siempre
+  porque calcula precio; el portal solo recoge lo que el cliente sabe). 🚨 **La fecha NO necesita API:
+  la serie nacional es secuencial, así que la matrícula lleva dentro su fecha** —
+  `fechaMatriculacionEstimada()` interpola 313 hitos mensuales, gratis y offline. Medido contra datos
+  reales: **1.352/1.430 aciertan el año exacto (94,5%)**, 96,6% a ±1 año, sin deriva; la tabla trae su
+  huella (abril-2020 avanza UNA serie: el confinamiento). ⚠️ **La estimación no se guarda sola**: se
+  enseña y solo entra si la persona pulsa «Usar esta fecha» — escribirla la dejaría indistinguible de
+  la leída del permiso de circulación. **Bastidor** porque es el que da la VERSIÓN: de las 82 pólizas
+  de auto vivas, todas traen marca y modelo y **ninguna** versión. Corregido de camino: Avant2 **no**
+  da fecha de matriculación (es tarificador, no fuente de ficha técnica) y el retarificador de
+  `/correduria` la pide a mano.
+  🎨 **Y la marca por fin en la pantalla.** `MARCA_ASEGURA` existía desde esa mañana pero la app no
+  consumía `@central/brand`. 🚨 **Los nombres de token NO casaban** (`--brand/--accent/--panel` vs
+  `--primary/--surface`): inyectar el `<style>` habría dejado el índigo `#4f46e5` intacto **sin fallar
+  nada**. Y el alias `--brand: var(--primary)` iba al revés (invertirlo = ciclo). Segundo fallo mudo:
+  los nombres que SÍ coincidían dependían del orden del `<head>` → respaldos a `@layer portal-base`,
+  marca sin capa (lo no-capado gana). Verificado EN EL NAVEGADOR con Playwright, no a ojo:
+  `--primary` = `#3364ee`. Único no verificado: la tipografía (el contenedor no llega a Google Fonts).
+
+- **📱 Segunda captura de móvil: la ficha del cliente (03/09/2026, PR #2223).** Alberto sobre
+  `/correduria/cliente/[id]`: «iconos muy grandes… ocupa mucha página». 🚨 **Los iconos no eran el
+  coste** (13px), pero su lectura tenía media razón: eran EMOJI, que a ese tamaño pesan mucho más
+  que el trazo lucide. Lo que ocupaba era **el formulario «Añadir» siempre desplegado: ~246px sobre
+  ~706 de pantalla — el 35% para teclear nueve dígitos**, en una ficha que se abre para LEER un
+  teléfono. Se pliega en `<details>`; los contactos pasan de caja a línea; fuera el `flexWrap`, que
+  daba DOS alturas al mismo dato (~58px la fila sin «Hacer principal», ~84px la que lo llevaba — se
+  veía en su captura). Primitiva nueva **`btnIcono()`** en `components/ui.tsx`, con el contrato
+  escrito de que **NUNCA se usa para una acción destructiva**: «Borrar» conserva su texto porque no
+  hay ni un precedente de icono solo para algo irreversible. ⏸️ **El patrón está en 19 componentes
+  de la correduría y solo se migró el de la captura** (adopción por goteo); siguen Relaciones,
+  Documentos y Siniestros. ⚠️ Tercera pantalla seguida **mergeada sin que nadie abriera la preview**
+  — esta vez SÍ existía y estaba `Ready`, pero pidió mergear igual. De paso: el `CLAUDE.md` decía
+  que 5 primitivas tenían «CERO consumidores» y **ya era falso** (`PageHeader` 55, `BtnLink` 8,
+  `ThinBar` 8); corregido, con la lección de que un recuento en un doc caduca solo.
+
+- **📱 `/correduria` en el MÓVIL, con la primera captura real (03/09/2026, PR #2216).** Alberto, sobre la
+  pantalla ya rediseñada: «aún se puede mejorar… casi siempre uso el móvil». 🚨 Y ahí está lo
+  importante: la skill `plataforma-maestro` advertía que **ninguna pantalla de la app se ha visto
+  nunca renderizada** (`--sin-previews`, las sesiones no tienen navegador) y que los espaciados
+  están «razonados sobre el código, no medidos». Su captura es el primer dato real. Medido sobre
+  ella: **~520 px de cabecera sobre ~740 de pantalla**, el 70% antes del primer trabajo. ⚠️ La
+  primera cifra que se le dio —«1.550 px»— era **falsa**: eran píxeles de la imagen, no CSS; se
+  corrigió antes de tocar código. El reparto real era 176 px de botones · 101 de buscador · 89 de
+  ayuda · 49 de título. 🚨 **Y el diagnóstico intuitivo también era falso: `PageHeader` no tenía
+  nada que arreglar** (ya se apila y da `width:100%` a las acciones a ≤768). El problema era solo
+  de esta pantalla: **tres** `BtnLink` `md` con rótulos largos en `acciones`, cuando ninguna otra
+  de las 56 pasa de dos y la única que llegó a siete —`/banca`— las colapsó en un menú. Se hace lo
+  mismo (`AccionesCabecera.tsx`: «Nuevo cliente» visible + `<details>` con hogar y mantenimiento),
+  la ayuda del buscador se pliega, el campo cede ancho (`1 1 180px`) para que «Buscar» no caiga a
+  otra fila, **fuera el `autoFocus`** (abría el teclado al entrar y tapaba media pantalla) y las
+  pestañas pasan a `position:sticky`. De regalo, los **9 botones del desglose de comisiones estaban
+  a ~26 px** —muy por debajo del mínimo táctil de 44 del repo—: helper `btnMini()`. ⚠️ **Se
+  mergeó SIN que nadie abriera la preview**: se forzó con `[preview]` (única app construida,
+  las otras 10 en `Ignored`) y se le pasó el enlace a Alberto, pero pidió mergear antes de
+  mirarla. O sea que **la pantalla renderizada sigue sin verse**, igual que las otras 55: lo
+  medido son tsc/tests/build, y los px salen de su captura y del CSS, no de la página viva. Si
+  algo se ve raro en `/correduria` en móvil, empieza por aquí y no por el código.
+  🤖 CI, **novena medición** de la sección del `CLAUDE.md` raíz: el push del merge de `main` con el
+  PR **en draft** salió mudo y el **des-draft a secas** disparó los 19 runs al instante, sin push
+  posterior — como la octava, y otra vez contra la matización de la séptima. Sigue sin causa; el
+  orden documentado resuelve, así que no gastes tiempo en diagnosticarla.
+
 - **🔓 El portal del cliente ya se puede probar: tres muros, los tres medidos (03/09/2026, PR #2210).**
   1️⃣ **El email de Alberto estaba en `cliente_emails` de DOS desconocidos**, así que `vincularIdentidad`
   contaba 2 candidatos, devolvía `ambiguo` y su bóveda salía **vacía sin un solo error**. Ahora desempata
@@ -48,13 +158,20 @@
   montada: autorización **José Suarez Salas → Alberto** (`alcance ver`, `origen corredor`, nace
   PENDIENTE: se acepta desde el portal) + relación Padre/Hijo. José tiene 6 pólizas, 4 vivas.
   ⚠️ **Sin consentimiento escrito de José**: es una prueba, no un consentimiento acreditado.
-  🚨 Pendiente de Alberto, y corta el login antes que nada: confirmar `ASEGURA_PORTAL_SESSION_SECRET`
-  (falló hoy 08:06 con «no configurado en producción») y `ASEGURA_PORTAL_CANAL_PEPPER`.
+  ✅ Las dos envs estaban: Alberto entró a las 13:25 (logs). ⚠️ **Pero su bóveda salió VACÍA: el
+  vínculo devolvió `sin_ficha`** (0 filas en `portal_vinculo`, sin error en logs) y se le vinculó **a
+  mano** (`origen: manual`). Sin resolver: si entró con OTRO email que el de su ficha (benigno) o si la
+  **`PII_LOOKUP_KEY` del portal ≠ la de `asegura`** (se copió a mano en 3 proyectos) — en ese caso
+  NINGÚN cliente se vinculará solo. Se comprueba pidiendo el código con el email exacto de una ficha.
   Entra además: **adjuntos en el parte** (varios ficheros, el rechazado se explica y no tumba a los
   demás; `documentos_colgado_de_algo` ampliado con `portal_parte_id` o los 32.520 leads no podían subir
-  nada).
+  nada) y **alta de póliza A MANO sin documento** (PR #2227: misma validación que editar,
+  `confirmadaPorUsuario: true` porque la tecleó una persona). 📱 Primera captura real de la bóveda
+  (Alberto, 17:39): el calendario pintaba `responsabilidad_civil` crudo → `etiquetaRamo()` única en el
+  módulo; y «Prima anual 67,86€» junto a «próximo recibo 73,39€» parecía un error de cuentas: la
+  `prima_anual` es la NETA y `prima_bruta` = recibo → se enseña la bruta «(impuestos incluidos)».
 
-- **🎨 La marca de Grupo Asegura estaba en la app de Manuel, no en Drive (03/09/2026).**
+- **🎨 La marca de Grupo ASegura estaba en la app de Manuel, no en Drive (03/09/2026).**
   El logo que había en Drive (`cropped-logo-bn-350x100-1.png`) **no servía**: recorte de WordPress de
   **157×45 px** y **un solo gris `#F6F6F6`** sobre transparencia (377 px opacos de 7.065) — la variante
   en blanco para fondos oscuros, sin un píxel de color del que sacar paleta. La marca real vive en
@@ -138,6 +255,19 @@
   en `docs/ASEGURA-AUTORIZACION-TERCEROS.md`. **No se programó nada: faltan dos decisiones suyas**
   (apagar las 104 ya; si «gestionar» exige verificar la identidad del autorizado).
 
+- **🔄 El filtro de comparables SUBÍA precios en dos meses del año (03/09/2026, PR #2228).**
+  Seguimiento del #2192 el mismo día: su primera pasada en producción subió a Busto Reform un
+  **+37,8%** en jul-ago/2027 (61 noches, 82→113€, el tope exacto del raíl). El filtro de liga abarata
+  el ancla en 10 de los 12 meses pero la **encarece** en julio (98,0→146,4€) y agosto (101,0→141,6€):
+  usa la NOTA como proxy de liga y la correlación nota↔precio **se invierte en temporada baja** — en
+  verano los comps mejor puntuados son los BARATOS. **Error de método que lo dejó pasar:** el efecto se
+  midió sobre el corpus AGREGADO de 30 días cuando el motor tarifica **por MES**; en el agregado no
+  encarece a ninguno de los cuatro, así que la medición original no era falsa, era en la unidad
+  equivocada. Cura: `guardaMonotoniaLiga` — si quitar comps sube el percentil, ese grupo no aplica el
+  filtro. La liga pasa de `WHERE` a columna `en_liga` para tener los dos corpus del mismo scan. De paso
+  se cerró un agujero abierto en el mismo cambio (`MIN_SAMPLE` dejaba de proteger al corpus filtrado) y
+  el techo por ADR dejó de ser mudo donde no puede actuar (`suelo_manda`, 14 de 48 piso×mes; NO se capa
+  — hundiría House a 300€ 7 meses, y la mediana se probó y empeora 5 casos).
 - **🏷️ El motor de pricing tarificaba en un percentil que tres pisos no han alcanzado jamás (03/09/2026, PR #2192).**
   Alberto: «pocas reservas, solo funciona House Sevillana». Medido: cada piso vende de verdad en P9 (Busto,
   ADR 84€) / P19 (Luxury, 135€) / P22 (Duplex, 111€) / **P57 (House, 560€)** del mercado, con `target_pctl`
@@ -262,7 +392,7 @@
   `hola@grupoasegura.es`** (env `PORTAL_MAIL_REPLY_TO`), el buzón único que quiere Alberto.
   El portal adopta los tokens y las formas de `apps/plataforma` (Inter, `--primary #4f46e5`, cards
   con `--surface`/`--border`, radios 10/14, 44 px táctiles), con nombres de token que
-  `@central/brand` sabe sobreescribir. **Pendiente:** la paleta REAL de Grupo Asegura — el único
+  `@central/brand` sabe sobreescribir. **Pendiente:** la paleta REAL de Grupo ASegura — el único
   logo (Drive) es b/n y lleva «Low Cost», que ya no se usa, y ni `grupoasegura.es` ni la web de
   Manuel son alcanzables desde el contenedor (proxy de egress + SSO de Vercel).
 
@@ -605,6 +735,40 @@
   póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
 
 ---
+
+### 🔧 (04/09/2026, II) Reparados 3 de los 5 hilos abiertos del motor; los otros 2 medidos y sequenciados
+- **Clamp de calidad que se anulaba solo:** `target = clamp(baseD, floorD, ceilD)` con `baseD` ajustado por `dqDate` y los límites sin ajustar. Medido: `quality_factor` real 0,848 en Busto con el suelo al 0,874 del objetivo → mordía en **9 de 12 meses, +5,8%**, en el piso que vende en el P10. Dúplex 3 meses, Luxury 1, House 0. Se ajustan LOS DOS límites (el clamp es un intervalo). Guardián que lee el fuente, probado en rojo.
+- **Techo por ADR de House desde el histórico equivocado:** `priorRows` ignoraba `historico_desde`. ADR 6 años **354€** vs desde su fecha **655€** → techo a la mitad (sep 391 vs 884, dic 498 vs 1.113) y `suelo_manda` en 3 meses. No-op exacto en los otros tres (todos con `historico_desde` NULL). Trade-off declarado: 3 meses de House quedan bajo `MIN_NOCHES_ADR` → se cuentan ahora los DOS motivos de «sin techo» por separado (antes `sin_muestra` era mudo).
+- **Check #13 decía «TODAS sus palancas»** y es falso: no modela los dos techos, así que su número es una COTA SUPERIOR. Comprobado que en Luxury el veredicto no cambia (techo ADR 0,83 vs multiplicadores 0,656), pero la palabra hacía sonar el aviso más definitivo de lo que es.
+- ❌ **`mkt_score` sin filtro de liga: MEDIDO Y DESCARTADO.** La mediana de score con y sin liga difiere 0,0-0,2 puntos → mueve el factor de calidad un **0,8-1,6%**. El diagnóstico lo llamó «doble conteo» y en magnitud es ruido. No se toca.
+- ⏸️ **`noches_ref` vs ventana del corpus: medido, NO cambiado hoy.** El corpus es **86,5% de 2 noches** y Busto/Dúplex tienen `noches_ref=3` → `aBase` descuenta 12,73€/noche cuando el comparable lleva 19,10€ implícitos (**+5-7%**). Pero `noches_ref` es la estancia mediana REAL de nuestras reservas y para ESO es correcto: el arreglo es que `aBase` use la ventana del corpus, no cambiar el ajuste. Sequenciado tras converger el descenso — era el 4º cambio de precio del día.
+
+
+### 🧊 (04/09/2026) La guarda de outlier paraba el descenso que el propio motor había empezado
+- Al recalibrar el ancla a la baja el 03/09 (#2192/#2228), `normalBase` cayó ~25% de golpe: **448 noches** de los 4 pisos pasaron a cumplir `old > normalBase × 1,4` **sin que nadie hubiera subido nada**, y se quedaron clavadas ARRIBA.
+- Lo que lo delata: en las noches lejanas a la venta, **nuestra última escritura fue una BAJADA** (243 Busto · 279 Dúplex · 186 House · 242 Luxury). El motor decidió bajar, bajó lo que el raíl del ±20%/día le dejó, y en la pasada siguiente su propia guarda le impidió terminar. Un descenso de 4-5 pasadas se paraba en la primera.
+- Cura: **4ª llave `esDescensoNuestro`** (puro, 9 tests nuevos, 33 en el módulo). Simétrica de la 3ª: aquella deshace nuestra SUBIDA disparada, esta termina nuestra BAJADA interrumpida. Ambas parten de que nuestra propia escritura reciente no es prueba de nada sobre el mercado. Exige (a) ≤7 días, (b) fue bajada, (c) su precio es el que sigue vivo — si Alberto lo resubió en Smoobu, retiene.
+- **Radio: ~448 noches reanudan el descenso**, acotadas por raíl, `min_price`, suelo estacional y los dos techos.
+- ⚠️ Hilos ABIERTOS del diagnóstico, no cerrados: `floorD`/`ceilD` se calculan SIN `dqDate` (el clamp de calidad se anula solo); `noches_ref`=3 en Busto/Dúplex contra un corpus casi todo de 2 noches (+5-8%); `priorRows` ignora `historico_desde` (afecta a House); `mkt_score` se calcula sin filtro de liga (doble conteo a la baja); y `recorridoPalancas` del check #13 no modela los dos techos, así que su «solo llega al 66%» está desactualizado.
+- 🚨 Y una advertencia de método: mi medición del «percentil real» y la del agente NO coinciden (yo Dúplex p70/House p80; él p55/p64 contra corpus de liga). El motor fija el percentil dentro del corpus de SU liga y SU mes; medirlo contra el corpus agregado responde a otra pregunta. **Antes de tocar `target_pctl` hay que fijar UNA definición.**
+
+
+### 🔕 (04/09/2026) El canal de avisos del pricing no se callaba nunca: 107 abiertas, 94% muertas
+- `pricing_alerts` no tenía NINGÚN camino de cierre: `pushAlert` no recrea un aviso mientras siga abierto, pero nadie lo marcaba `resuelta` al desaparecer la causa. Medido: **107 abiertas**, **54 de `precio_revertido`** desde el 10/08, y **51 de esas 54 ya cuadraban**.
+- Cura: `lib/sivra/alertas-autoresolucion.ts` (puro, 10 tests) + migración `resuelta_at`/`resuelta_por` (aplicada) + cableado en `guard/route.ts`. **Conservador por construcción**: un piso sin precio vivo HOY no se juzga — sin esa guarda, un fallo de snapshot cerraría en silencio sus alertas vivas.
+- Bug latente del mismo detector, arreglado: usaba `MAX(snapshot_date)` **GLOBAL**, así que el día que falle el snapshot de un piso ese piso desaparecía entero del detector. Ahora frescura POR PISO.
+- El texto del aviso decía «alguien o algo lo ha pisado en Smoobu» y mandaba a buscar a una persona. **Causa real sin identificar**: 12 de las 58 diferencias vivas son un **×1,250 EXACTO** repetido en los cuatro pisos. Hilo abierto declarado, no cerrado en falso.
+- ⚠️ **Corrección a lo dicho horas antes:** el ×1,25 NO es sistémico. El camino de escritura funciona: 93-98% de ~1.400 fechas coinciden exactas con lo que empujamos (ratio mediano 1,000).
+- 📉 **Y lo que la auditoría destapó, que es lo gordo y sigue abierto:** los pisos piden un precio que nadie paga. Busto vende en **P10** y tarifica a P40 · Luxury **P16** vs P50 · Dúplex **P23** vs P40. House Sevillana es el único coherente (vende 1,14× mercado, pide 1,25×). Diagnóstico del desvío en curso.
+
+
+### 🧊 (03/09/2026) La guarda de outlier protegía al fallo que ella misma debía deshacer (PR seguimiento del #2228)
+- La pasada de las 20:30 (1ª con la guarda de monotonía) corrigió **3** de las 61 noches infladas de Busto; las otras 58 seguían a 113€.
+- Causa: el **outlier de precio actual** (`OUTLIER_RATIO 1,4`, >30 días). El bug del #2192 las dejó a 113€ con base normal ~80 → 1,41, y la guarda leyó ese precio inflado como «noche especial». La salida del fallo se volvió su coartada; la llave por antigüedad no abría hasta 21 días.
+- Alcance medido: **86 noches de 3 pisos, TODAS a la venta**, salto medio +28% (Busto 67 · Luxury 12 · Dúplex 7).
+- Cura: 3ª llave de `descongelar` — `esSaltoNuestro` (puro, 11 tests). Libera solo si la última escritura es (a) ≤48 h, (b) subida, (c) la que cruzó el umbral y (d) su precio es el que sigue vivo. Si el propietario tocó Smoobu después, (d) falla y retiene.
+- `ultima_escritura` pasa de `MAX()` a `DISTINCT ON` para traer old/new y horas. SQL ejecutado contra la BD real antes de mergear.
+- Verificado: 742 sivra · 463 guardián · 53 vitest · tsc 0.
 
 ### 🧾 (03/09/2026) Comisiones: el cron ya escribe, Occident CUADRA AL CÉNTIMO y el «deudor» era un fallo de signo (solo lectura)
 - Pasada 07:30 UTC OK: 12 periodos en `comisiones_devengo`, 4 en cobertura, aviso 🔴 enviado. **CIMA no trajo nada nuevo**
@@ -1333,7 +1497,7 @@
   Molde: `apps/mariscos/app/(usuario)/_forms.tsx` + `app/api/partidas/route.ts`.
 - Sigue bloqueado en lo mismo: redeploy de `central-asegura` + sonda. Sin eso, nada verificado.
 
-### 🧭 (01/09/2026) Portal de Grupo Asegura — Fase 1 MERGEADA (PR #1965 → `f12b7b46`)
+### 🧭 (01/09/2026) Portal de Grupo ASegura — Fase 1 MERGEADA (PR #1965 → `f12b7b46`)
 - App nueva `apps/asegura-portal` (Next.js, rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`
   (puro: niveles de acceso, procedencia en tres estados, código de un solo uso). 6 tablas `portal_*`
   en el schema `seguros` — **el SQL NO está aplicado todavía**; las otras 5 del spec llegan con sus fases.
@@ -1607,7 +1771,7 @@
 - **#1946**: plan de 12 tareas para `apps/asegura-portal` — módulo puro (niveles de acceso, procedencia
   en TRES estados, código de un solo uso), 6 tablas `portal_*`, sesión propia y bóveda con subida de póliza.
 
-- **El canal de OTP es un PUERTO, no una llamada a WhatsApp**: la WABA de Grupo Asegura no existe todavía;
+- **El canal de OTP es un PUERTO, no una llamada a WhatsApp**: la WABA de Grupo ASegura no existe todavía;
   en Fase 1 se enchufan email y consola y WhatsApp entra añadiendo un fichero.
 - 🚨 **Lección de método:** las firmas de `aiComplete`, `openrouterVision` y `createMailTransporter` que
   parecían obvias eran las TRES falsas (`aiComplete` devuelve `string`; `openrouterVision` toma 5 args e

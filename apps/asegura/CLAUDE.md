@@ -1,6 +1,12 @@
-# CLAUDE.md — apps/asegura (Grupo Asegura, correduría de seguros)
+# CLAUDE.md — apps/asegura (Grupo ASegura, correduría de seguros)
 
-> Vertical de la **correduría de seguros** de Alberto (nombre comercial **Grupo Asegura**).
+> ✍️ **El nombre comercial se escribe «Grupo ASegura», con A y S mayúsculas** (dictado por Alberto,
+> 04/09/2026). El monograma «AS» del logo es el nombre: A de Alberto, S de Suárez. Escribirlo con
+> la ese minúscula no es una errata de estilo — se come la marca, y es lo que el autocorrector
+> escribe solo. Grafía canónica en BD: `seguros.corredurias.nombre`. Guardián en todo el repo:
+> `test/regression-nombre-comercial-asegura.test.ts`.
+
+> Vertical de la **correduría de seguros** de Alberto (nombre comercial **Grupo ASegura**).
 > Lee antes `docs/TRASPASO-CORREDURIA.md`: esta app es el DESTINO de un traspaso en curso,
 > no un desarrollo desde cero.
 
@@ -434,7 +440,7 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
 - 🎯 **SINCO (= fichero SIHSA de TIREA)** es el bonificador de verdad: historial de siniestralidad de
   los **últimos 5 años** —justo la ventana de `lastFiveYearsAccidents`— consultable **al tarificar**.
   ⚠️ Se ofrece a **«Entidades Aseguradoras»**, y una correduría NO lo es: **no está confirmado** que
-  Grupo Asegura pueda consultarlo (preguntar a TIREA, `accesos.cima@tirea.es`, que ya hay relación
+  Grupo ASegura pueda consultarlo (preguntar a TIREA, `accesos.cima@tirea.es`, que ya hay relación
   por CIMA). Lo que SÍ está claro es que **el asegurado puede pedir el suyo gratis**. Y asúmelo: la
   compañía lo consulta igual al emitir, así que la siniestralidad presumida **se corrige sola** — por
   eso el aviso «puede abaratar el precio» no es cosmético.
@@ -481,7 +487,7 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   ese «hoy» **no es un todavía**, no hay endpoint que cablear. Se llama a la compañía.
   **Moto sí existe** (12 de las 18 compañías) y no la tarificamos — 1 póliza, así que no corre prisa.
   Cruce entero con la cartera y la matriz completa en `docs/CODEOSCOPIC-API-PORTAL.md`. ⚠️ Ese
-  catálogo es comercial y **no dice qué tiene abierto Grupo Asegura**: eso sigue siendo
+  catálogo es comercial y **no dice qué tiene abierto Grupo ASegura**: eso sigue siendo
   `GET /insurance-lines`, y se nota en que **Fidelidade —viva para nosotros— ni sale en él**.
 
 ## 🗂️ La ficha de cliente — diseño hecho, y el hueco de los documentos (01/09/2026)

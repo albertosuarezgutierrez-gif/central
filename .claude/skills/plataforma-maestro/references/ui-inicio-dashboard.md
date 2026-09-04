@@ -192,4 +192,85 @@ está entregando.
 ⚠️ **Ninguna de estas pantallas se ha visto renderizada** (las apps llevan `--sin-previews` y la sesión no
 tiene navegador): alineaciones y espaciados están razonados sobre el código, no medidos.
 
-<!-- verificado: 2026-09-02 -->
+## 📱 El primer dato REAL en móvil: cuántas acciones caben en una cabecera (03/09/2026)
+
+El aviso de arriba dejó de ser teórico: Alberto mandó **una captura de `/correduria` en su móvil**
+—«casi siempre uso el móvil»— y es la primera vez que se mide una pantalla de esta app en vez de
+razonarla. Lo que salió:
+
+**~520 px de cabecera sobre ~740 de pantalla: el 70% antes del primer trabajo.** Reparto medido:
+**176 px los botones de acción** · 101 el buscador (campo y botón en dos filas) · 89 el párrafo de
+ayuda · 49 el título.
+
+🚨 **`PageHeader` NO era el culpable, y ese era el diagnóstico intuitivo.** Ya se apila en columna y
+ya da `width:100%` + `flex-wrap` a `.page-header-acciones` a ≤768 (`globals.css:157-167`). El
+problema era del consumidor: **tres `BtnLink` `md` con rótulos largos**. «Presupuesto de hogar»
+mide ~200 px con icono y gap, así que a 332 px útiles (360 − el padding 14+14 de `.pagina`) caben
+**uno y medio por fila → tres filas de 44 px**.
+
+**La regla que sale de aquí, y es contable, no de gusto: máximo DOS acciones en `acciones`.**
+Medido sobre las 56 cabeceras de la app: 36 llevan acciones y **casi todas son 1-2** (un `<select>`,
+un enlace, un «↻ Actualizar»). La única que llegó a siete —`/banca`— las colapsó en `AccionesBanca`.
+A la tercera, colapsa: una visible (la que se usa a diario) y el resto en un `<details>`.
+Precedente a copiar: **`correduria/AccionesCabecera.tsx`** (nativo, cierra al navegar, sin el fallo
+de `AccionesBanca` de desmontar el botón pulsado junto al modal que abre) y el `Multi` de
+`ListaCartera.tsx:410-465`.
+
+Tres cosas más que solo se ven con la pantalla delante:
+- **`autoFocus` en un buscador es hostil en móvil**: abre el teclado al entrar y tapa media pantalla
+  antes de que se lea nada. Se quitó del de la cartera.
+- **Un `flex: '1 1 260px'` con un botón al lado no cabe en 332 px** (260+8+88 = 356) y el botón cae a
+  otra fila: 45 px de alto por un cálculo de nada. `1 1 180px` los deja en la misma línea.
+- **Un texto de ayuda de 6 líneas es útil UNA vez** y ruido las trescientas siguientes: `<details>`.
+
+Y el hallazgo colateral: **9 botones del desglose de comisiones estaban a ~26 px de alto**
+(`padding:'5px 10px'` sin `minHeight`), muy por debajo de los **44 px** que garantiza `btnStyle()`.
+Un estilo escrito a mano se salta el mínimo táctil sin que nada falle — el guardián es usar
+`btnStyle()`, no recordarlo.
+
+## 📱 Segunda captura: el coste NO son los iconos, es que todo es una caja (03/09/2026)
+
+Alberto, sobre `/correduria/cliente/[id]`: «iconos muy grandes… ocupa mucha página». **Los iconos
+no eran el coste** (van a 13px) pero su lectura tenía media razón: eran **emoji**, y un ⭐/📞/✉️ a
+13px pesa mucho más que el trazo lucide del mismo tamaño. Lo que ocupaba la página, medido en
+`EditarCliente.tsx` y **cuadrado por los dos lados** (el CSS y la captura, escalando por el `campo`
+de 44px — la comprobación que faltó en el PR anterior):
+
+| | alto CSS |
+|---|---|
+| formulario «Añadir», **siempre desplegado** | **~246 px** |
+| 3 contactos, cada uno en su caja | ~313 px |
+| *pantalla útil de su móvil* | *~706 px* |
+
+**El 35% de la pantalla para teclear nueve dígitos**, en una ficha que se abre para LEER un teléfono
+y llamar. Un formulario permanente cobra a las trescientas consultas el precio de la vez que se da
+de alta un contacto: **se pliega en `<details>`**, y eso solo ya devuelve 200 px.
+
+🚨 **Un `flexWrap` en la fila de una lista da DOS alturas al mismo tipo de dato**, y se ve a simple
+vista: en la captura el primer teléfono medía ~58 px y el segundo ~84, porque solo el segundo
+llevaba «Hacer principal» (~150 px de rótulo) y a 332 px útiles los botones caían a otra línea.
+Quitar el `flexWrap` obliga a que quepa todo — y lo que hace que quepa es convertir el rótulo en
+icono, no encoger el botón.
+
+**`btnIcono(variante, tam)` en `components/ui.tsx`** es la primitiva para eso: botón cuadrado de
+44×44 (o 34 en `sm`) que **mantiene el mínimo táctil**, que es justo lo que se salta un estilo a
+mano. ⚠️ **NUNCA para una acción destructiva.** «Borrar» conserva su texto: es irreversible, y en
+las 19 pantallas de la correduría no hay **ni un** precedente de icono solo para algo así — lo que
+se gana en alto no compensa inventarlo. A icono van las acciones inocuas o idempotentes (marcar
+principal, fijar, copiar) y **siempre** con `aria-label` y `title`: el icono no es el nombre.
+
+**Y un contacto deja de ser una caja para ser una LÍNEA** con separador fino. Borde, fondo y radio
+se gastan POR FUNCIÓN (regla de este mismo fichero) y «soy un teléfono» no es una función — mismo
+criterio que `Bloque.tsx` en el rediseño de `/correduria`.
+
+⏸️ **Estado de la adopción, para quien siga:** el patrón «una caja por elemento» está en **19
+componentes** de la correduría (~42 `border: 1px solid var(--border)`, ~51 `flexWrap`). Migrado
+**solo `EditarCliente`**, que es el de la captura. NO se barre de golpe: manda la adopción POR
+GOTEO del `CLAUDE.md` de plataforma, y sin poder ver ninguna renderizada un barrido masivo es
+apostar 19 pantallas a ciegas. Las siguientes por uso serían Relaciones, Documentos y Siniestros.
+
+🪤 **Hallazgo colateral sin arreglar:** `className="edicion-fila"` aparece 4 veces en
+`EditarCliente.tsx` y **no tiene ninguna regla en `globals.css`**. Gancho muerto, la misma forma
+que el landmine de `var(--card)`: no falla, no se ve, y quien lo lea creerá que ahí hay responsive.
+
+<!-- verificado: 2026-09-03 -->

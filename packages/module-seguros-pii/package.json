@@ -2,7 +2,7 @@
   "name": "@central/module-seguros-pii",
   "version": "0.0.0",
   "private": true,
-  "description": "Primitivas de PII de la correduría (Grupo Asegura): cifrado AES-256-GCM de campos (v1:iv:ct:tag) e índice ciego HMAC-SHA256 para buscar por email/teléfono/DNI sin descifrar. Portado de la app asegura; DEBE producir exactamente los mismos hashes que ella (contrato de sincronía en src/index.ts).",
+  "description": "Primitivas de PII de la correduría (Grupo ASegura): cifrado AES-256-GCM de campos (v1:iv:ct:tag) e índice ciego HMAC-SHA256 para buscar por email/teléfono/DNI sin descifrar. Portado de la app asegura; DEBE producir exactamente los mismos hashes que ella (contrato de sincronía en src/index.ts).",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

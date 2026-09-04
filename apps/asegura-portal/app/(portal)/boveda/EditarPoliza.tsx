@@ -5,26 +5,30 @@ import { useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 
+import type { DatosAceptados } from './BuscarInmueble'
+import {
+  CamposPoliza,
+  MENSAJE_400,
+  MENSAJE_PRIMA_CERO,
+  campoDelError,
+  primaDesdeTexto,
+  type Campo,
+  type Errores,
+  type Formulario,
+  type RamoOpcion,
+} from './CamposPoliza'
+
 /**
  * Corrección a mano de una póliza que ha subido el propio cliente.
  *
- * Esta pantalla la abre gente de la calle desde su móvil, así que manda el
- * móvil: una columna, controles de 44 px y los `<input>` a 16 px (por debajo,
- * Safari en iPhone hace zoom al enfocar y descoloca la página). Todo eso lo dan
- * ya `.campo` y `.boton` de `globals.css`.
- *
- * 🚨 LA FECHA DE VENCIMIENTO **NO ES OBLIGATORIA**, Y NO SE DEBE «ARREGLAR».
- * Va la primera y destacada porque es el dato que permite avisar antes de que
- * la póliza venza — pero no lleva `required` ni bloquea el guardado, a
- * propósito: quien no la sabe se la inventaría, y una fecha inventada dispara
- * un aviso de renovación FALSO. Un hueco dice «no lo sabemos» y se puede
- * preguntar a la compañía; una fecha equivocada no se puede distinguir de una
- * buena. Es la regla de la casa «dato que NO hay ≠ dato que NO se ha mirado»:
- * mejor el hueco declarado que el dato inventado. Si alguien viene a ponerle un
- * `required`, esto es el porqué de que no lo tenga.
+ * Los cinco campos, sus textos y sus reglas de pantalla (móvil primero, la
+ * fecha destacada pero NO obligatoria, la prima a 0 que es un hueco) viven en
+ * `CamposPoliza.tsx`, compartidos con el alta a mano (`AnadirPoliza.tsx`). Aquí
+ * queda lo que es propio de CORREGIR: qué cambia respecto a lo guardado, y el
+ * tono del hueco cuando la póliza vino de un documento.
  */
 
-export type RamoOpcion = { valor: string; etiqueta: string }
+export type { RamoOpcion }
 
 export type PolizaEditable = {
   id: string
@@ -35,6 +39,32 @@ export type PolizaEditable = {
   /** `YYYY-MM-DD` o null: es lo que come `<input type="date">` y lo que espera el PATCH. */
   fechaVencimiento: string | null
   /**
+   * Los tres del VEHÍCULO. Solo se pintan si el ramo los tiene detrás (lo
+   * decide `CamposPoliza`), pero viajan siempre en el tipo: si dependieran del
+   * ramo también aquí, cambiar «auto» por «hogar» y volver perdería lo tecleado.
+   */
+  matricula: string | null
+  bastidor: string | null
+  fechaMatriculacion: string | null
+  /**
+   * Los campos propios del RAMO, tal cual están guardados en la columna
+   * `datos_ramo` (jsonb). `null` = no se ha declarado ninguno — que NO es lo
+   * mismo que `{}`, y por eso la columna nunca guarda un objeto vacío.
+   */
+  datosRamo: Record<string, string | number | boolean> | null
+  /**
+   * La referencia catastral del INMUEBLE (20 caracteres). Es COLUMNA y no una
+   * clave de `datos_ramo` porque identifica el BIEN y se consulta; la de 14 es
+   * la de la FINCA y el servidor la rechaza aparte.
+   */
+  referenciaCatastral: string | null
+  /**
+   * De dónde salió CADA campo de `datos_ramo`: `catastro` | `documento` |
+   * `declarado`. 76 m² que ha dicho el Catastro y 76 m² estimados a ojo no
+   * valen lo mismo, y sin esto no se distinguen.
+   */
+  datosRamoOrigen: Record<string, string> | null
+  /**
    * ¿Salió de un PDF o una foto que leyó la IA? Decide el TONO del hueco: si
    * hubo documento, un campo vacío es «no lo hemos encontrado en el documento»
    * (no se ha sabido leer), no «no existe». Mismo criterio que `NO_LEIDO` en
@@ -43,8 +73,6 @@ export type PolizaEditable = {
   deDocumento: boolean
 }
 
-type Campo = 'fechaVencimiento' | 'compania' | 'numeroPoliza' | 'ramo' | 'primaAnual'
-type Formulario = Record<Campo, string>
 type Valores = Omit<PolizaEditable, 'id' | 'deDocumento'>
 type Estado = 'reposo' | 'guardando' | 'guardado' | 'error'
 
@@ -59,34 +87,26 @@ type Cambios = {
   ramo?: string | null
   primaAnual?: number | null
   fechaVencimiento?: string | null
-}
-
-const MENSAJE_400: Record<Campo, string> = {
-  fechaVencimiento: 'Esa fecha no nos vale. Compruébala en tu póliza; si no la sabes, déjala en blanco.',
-  primaAnual: 'Esa prima no nos vale. Escríbela en euros al año, por ejemplo 320,50.',
-  compania: 'Ese nombre de compañía no nos vale. Escríbelo tal cual aparece en tu póliza.',
-  numeroPoliza: 'Ese número de póliza no nos vale. Cópialo tal cual aparece en tu póliza.',
-  ramo: 'Ese tipo de seguro no nos vale. Elige uno de la lista.',
-}
-
-/**
- * Un 400 se le enseña a la persona JUNTO AL CAMPO que lo ha provocado, no como
- * «error genérico»: si el backend dice qué campo falla, hay que decírselo donde
- * lo está escribiendo. El código del backend es un identificador, así que se
- * mapea por lo que nombra. Si no se reconoce, NO se adivina un campo: se enseña
- * el aviso general con el código literal, que es honesto y le sirve al soporte.
- */
-const CAMPO_POR_ERROR: ReadonlyArray<readonly [RegExp, Campo]> = [
-  [/venc|fecha/i, 'fechaVencimiento'],
-  [/prima/i, 'primaAnual'],
-  [/compan|compañ/i, 'compania'],
-  [/n(u|ú)mero/i, 'numeroPoliza'],
-  [/ramo/i, 'ramo'],
-]
-
-function campoDelError(codigo: string): Campo | null {
-  for (const [patron, campo] of CAMPO_POR_ERROR) if (patron.test(codigo)) return campo
-  return null
+  matricula?: string | null
+  bastidor?: string | null
+  fechaMatriculacion?: string | null
+  /**
+   * `datos_ramo` es UNA columna, así que no admite parche por claves: o se manda
+   * el objeto entero o no se manda. Ausente = no se toca; `null` = vaciar la
+   * columna. Los valores viajan como TEXTO tal cual se teclearon: quien decide
+   * qué es un número, un booleano o basura es `normalizarDatosRamo()` en el
+   * servidor, contra el catálogo del ramo — la misma regla que aplica la IA al
+   * leer un PDF. Convertirlos aquí sería una segunda opinión sobre lo mismo.
+   */
+  datosRamo?: Record<string, string> | null
+  referenciaCatastral?: string | null
+  /**
+   * Viajan SIEMPRE pegados a `datosRamo` y nunca solos: el servidor rechaza
+   * unos orígenes sin los datos a los que se refieren (`origen_sin_datos`),
+   * porque afirmar «esto lo dijo el Catastro» sobre un valor que no viene en
+   * el parche es una afirmación que nadie puede comprobar.
+   */
+  datosRamoOrigen?: Record<string, string> | null
 }
 
 function aFormulario(v: Valores): Formulario {
@@ -98,26 +118,51 @@ function aFormulario(v: Valores): Formulario {
     // En el input se teclea un número plano (320.5); el formato español
     // `320,50€` es para MOSTRAR, no para escribir.
     primaAnual: v.primaAnual == null ? '' : String(v.primaAnual),
+    matricula: v.matricula ?? '',
+    bastidor: v.bastidor ?? '',
+    fechaMatriculacion: v.fechaMatriculacion ?? '',
   }
 }
 
 /**
- * `null` = el hueco, y es válido (dejar la prima en blanco es una respuesta).
- * `'invalida'` = hay algo escrito que no es un número. `'cero'` va aparte porque
- * un 0 no es basura: es un hueco con forma de número, y a quien lo escribe hay
- * que decirle que deje el campo vacío, no que «no vale» (mismo criterio que
- * `normalizarPolizaLeida` en @central/module-seguros-portal).
+ * Lo guardado en `datos_ramo` → lo que se teclea en la pantalla. Todo a texto
+ * porque los `<input>` solo saben de texto; los booleanos vuelven a su
+ * vocabulario de tri-estado (`si`/`no`), y una clave AUSENTE se queda ausente:
+ * no se rellena con `''`, que en esta pantalla significaría «lo he borrado».
  */
-function primaDesdeTexto(t: string): number | null | 'invalida' | 'cero' {
-  const limpio = t.trim().replace(/[€\s]/g, '').replace(',', '.')
-  if (limpio === '') return null
-  const n = Number(limpio)
-  if (!Number.isFinite(n) || n < 0) return 'invalida'
-  if (n === 0) return 'cero'
-  return Math.round(n * 100) / 100
+function aFormularioRamo(datos: Valores['datosRamo']): Record<string, string> {
+  if (!datos) return {}
+  const salida: Record<string, string> = {}
+  for (const [k, v] of Object.entries(datos)) {
+    salida[k] = typeof v === 'boolean' ? (v ? 'si' : 'no') : String(v)
+  }
+  return salida
 }
 
-function calcularCambios(form: Formulario, base: Valores, prima: number | null): Cambios {
+/** Lo tecleado, sin los vacíos: un campo en blanco es «no lo sé», y no viaja. */
+function ramoDelFormulario(datos: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(datos).filter(([, v]) => v.trim() !== ''))
+}
+
+/**
+ * ¿Ha cambiado ALGO de los campos del ramo? Se compara por claves ordenadas
+ * para que reordenar el objeto no cuente como cambio; sin esto, cada guardado
+ * mandaría un parche que no cambia nada.
+ */
+function mismoRamo(a: Record<string, string>, b: Record<string, string>): boolean {
+  const ka = Object.keys(a).sort()
+  const kb = Object.keys(b).sort()
+  return ka.length === kb.length && ka.every((k, i) => k === kb[i] && a[k] === b[k])
+}
+
+function calcularCambios(
+  form: Formulario,
+  base: Valores,
+  prima: number | null,
+  datosRamo: Record<string, string>,
+  origenes: Record<string, string>,
+  referenciaCatastral: string | null,
+): Cambios {
   const c: Cambios = {}
   const compania = form.compania.trim() || null
   if (compania !== base.compania) c.compania = compania
@@ -128,6 +173,34 @@ function calcularCambios(form: Formulario, base: Valores, prima: number | null):
   if (prima !== base.primaAnual) c.primaAnual = prima
   const fechaVencimiento = form.fechaVencimiento || null
   if (fechaVencimiento !== base.fechaVencimiento) c.fechaVencimiento = fechaVencimiento
+  // Matrícula y bastidor se mandan en MAYÚSCULAS y sin espacios porque así es
+  // como los normaliza el servidor: comparar el texto crudo contra lo guardado
+  // marcaría como «cambio» un `1234 bcd` que ya está guardado como `1234BCD`,
+  // y cada guardado mandaría un parche que no cambia nada.
+  const matricula = form.matricula.trim().toUpperCase().replace(/[\s-]/g, '') || null
+  if (matricula !== base.matricula) c.matricula = matricula
+  const bastidor = form.bastidor.trim().toUpperCase().replace(/[\s-]/g, '') || null
+  if (bastidor !== base.bastidor) c.bastidor = bastidor
+  const fechaMatriculacion = form.fechaMatriculacion || null
+  if (fechaMatriculacion !== base.fechaMatriculacion) c.fechaMatriculacion = fechaMatriculacion
+
+  // Los del ramo: el objeto entero, y solo si difiere de lo guardado. Si al
+  // quitar los vacíos no queda ninguna clave, se manda `null` (vaciar la
+  // columna) y NO `{}`: un objeto vacío guardado sería un «no lo sé» disfrazado
+  // de dato, que es justo lo que la columna tiene prohibido.
+  const ramoNuevo = ramoDelFormulario(datosRamo)
+  const ramoBase = aFormularioRamo(base.datosRamo)
+  if (!mismoRamo(ramoNuevo, ramoBase)) {
+    c.datosRamo = Object.keys(ramoNuevo).length === 0 ? null : ramoNuevo
+    // Los orígenes se recortan a las claves que de verdad viajan: un origen
+    // huérfano —«los metros vienen del Catastro» cuando no hay metros— es lo
+    // que luego pinta un sello de «verificado» sobre un hueco. Si no queda
+    // ninguno, `null`, nunca `{}`.
+    const vivos = Object.fromEntries(Object.keys(ramoNuevo).map((k) => [k, origenes[k] ?? 'declarado']))
+    c.datosRamoOrigen = c.datosRamo === null || Object.keys(vivos).length === 0 ? null : vivos
+  }
+
+  if (referenciaCatastral !== base.referenciaCatastral) c.referenciaCatastral = referenciaCatastral
   return c
 }
 
@@ -138,6 +211,14 @@ function aplicar(base: Valores, c: Cambios): Valores {
     ramo: c.ramo !== undefined ? c.ramo : base.ramo,
     primaAnual: c.primaAnual !== undefined ? c.primaAnual : base.primaAnual,
     fechaVencimiento: c.fechaVencimiento !== undefined ? c.fechaVencimiento : base.fechaVencimiento,
+    matricula: c.matricula !== undefined ? c.matricula : base.matricula,
+    bastidor: c.bastidor !== undefined ? c.bastidor : base.bastidor,
+    fechaMatriculacion:
+      c.fechaMatriculacion !== undefined ? c.fechaMatriculacion : base.fechaMatriculacion,
+    datosRamo: c.datosRamo !== undefined ? c.datosRamo : base.datosRamo,
+    datosRamoOrigen: c.datosRamoOrigen !== undefined ? c.datosRamoOrigen : base.datosRamoOrigen,
+    referenciaCatastral:
+      c.referenciaCatastral !== undefined ? c.referenciaCatastral : base.referenciaCatastral,
   }
 }
 
@@ -158,11 +239,24 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     ramo: poliza.ramo,
     primaAnual: poliza.primaAnual,
     fechaVencimiento: poliza.fechaVencimiento,
+    matricula: poliza.matricula,
+    bastidor: poliza.bastidor,
+    fechaMatriculacion: poliza.fechaMatriculacion,
+    datosRamo: poliza.datosRamo,
+    datosRamoOrigen: poliza.datosRamoOrigen,
+    referenciaCatastral: poliza.referenciaCatastral,
   }))
   const [form, setForm] = useState<Formulario>(() => aFormulario(guardado))
+  const [datosRamo, setDatosRamo] = useState<Record<string, string>>(() =>
+    aFormularioRamo(guardado.datosRamo),
+  )
+  const [origenes, setOrigenes] = useState<Record<string, string>>(() => guardado.datosRamoOrigen ?? {})
+  const [referenciaCatastral, setReferenciaCatastral] = useState<string | null>(
+    () => guardado.referenciaCatastral,
+  )
   const [abierto, setAbierto] = useState(false)
   const [estado, setEstado] = useState<Estado>('reposo')
-  const [errores, setErrores] = useState<Partial<Record<Campo, string>>>({})
+  const [errores, setErrores] = useState<Errores>({})
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)
 
   function abrir() {
@@ -170,6 +264,11 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     // tarjetas y montar 50 formularios de golpe es la regla de rendimiento de
     // UI del monorepo hecha añicos.
     setForm(aFormulario(guardado))
+    // Se re-siembra desde lo GUARDADO, igual que el resto: abrir el editor
+    // enseña lo que hay en la BD, no lo que se dejó a medias la vez anterior.
+    setDatosRamo(aFormularioRamo(guardado.datosRamo))
+    setOrigenes(guardado.datosRamoOrigen ?? {})
+    setReferenciaCatastral(guardado.referenciaCatastral)
     setErrores({})
     setErrorGeneral(null)
     setEstado('reposo')
@@ -179,6 +278,32 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
   function cerrar() {
     setAbierto(false)
     setErrores({})
+    setErrorGeneral(null)
+  }
+
+  function escribirRamo(id: string, valor: string) {
+    setDatosRamo((d) => ({ ...d, [id]: valor }))
+    // Tecleado a mano es `declarado`, y pisa a un `catastro` anterior: si
+    // alguien corrige los metros que dio el Catastro, el dato ya no es del
+    // Catastro. Dejar el origen viejo sería el sello sobre un valor que nadie
+    // ha verificado.
+    setOrigenes((o) => ({ ...o, [id]: 'declarado' }))
+    setErrorGeneral(null)
+  }
+
+  /**
+   * Lo que la persona ACEPTA del Catastro. No entra nada por su cuenta: esto
+   * solo corre cuando ha pulsado «Usar estos datos» habiendo visto la
+   * dirección, el uso y la localidad del inmueble.
+   */
+  function aceptarCatastro(d: DatosAceptados) {
+    setDatosRamo((v) => ({ ...v, ...d.valores }))
+    setOrigenes((o) => {
+      const nuevo = { ...o }
+      for (const k of Object.keys(d.valores)) nuevo[k] = 'catastro'
+      return nuevo
+    })
+    setReferenciaCatastral(d.referencia)
     setErrorGeneral(null)
   }
 
@@ -197,13 +322,13 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
       setErrores({
         primaAnual:
           prima === 'cero'
-            ? 'Una prima de 0 € no nos dice nada. Si no la sabes, déjala en blanco.'
+            ? MENSAJE_PRIMA_CERO
             : MENSAJE_400.primaAnual,
       })
       return
     }
 
-    const cambios = calcularCambios(form, guardado, prima)
+    const cambios = calcularCambios(form, guardado, prima, datosRamo, origenes, referenciaCatastral)
     if (Object.keys(cambios).length === 0) {
       setErrorGeneral('No has cambiado nada, así que no hay nada que guardar.')
       return
@@ -260,7 +385,7 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
    * secas: se dice que no se ha encontrado en el papel. Un vacío se lee como
    * «no hay»; esto es «no lo hemos sabido leer», que es otra cosa.
    */
-  function ayudaHueco(campo: Exclude<Campo, 'fechaVencimiento'>): string | null {
+  function ayudaHueco(campo: 'compania' | 'numeroPoliza' | 'ramo' | 'primaAnual'): string | null {
     if (!poliza.deDocumento || guardado[campo] !== null) return null
     return 'No lo hemos encontrado en el documento'
   }
@@ -317,107 +442,24 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
 
       {abierto && (
         <form className="editor-form" onSubmit={guardar} noValidate>
-          {/* La fecha, la PRIMERA y destacada: es la que decide si podemos
-              avisar. Destacada ≠ obligatoria (ver la cabecera del fichero). */}
-          <div className="editor-campo editor-destacado">
-            <label htmlFor={`venc-${poliza.id}`}>Fecha de vencimiento</label>
-            <p className="editor-ayuda" id={`venc-ayuda-${poliza.id}`}>
-              Es lo que nos permite avisarte antes de que la póliza venza y no se te renueve sin querer.
-              <strong> Si no la sabes, déjala en blanco</strong> y lo comprobamos con tu compañía: una fecha
-              inventada nos haría avisarte el día que no es.
-            </p>
-            <input
-              id={`venc-${poliza.id}`}
-              className="campo"
-              type="date"
-              value={form.fechaVencimiento}
-              onChange={(e) => escribir('fechaVencimiento', e.target.value)}
-              aria-describedby={`venc-ayuda-${poliza.id}`}
-              aria-invalid={errores.fechaVencimiento ? true : undefined}
-              disabled={guardando}
-            />
-            {errores.fechaVencimiento && <p className="editor-error">{errores.fechaVencimiento}</p>}
-          </div>
-
-          <div className="editor-campo">
-            <label htmlFor={`comp-${poliza.id}`}>Compañía</label>
-            {ayudaHueco('compania') && <p className="editor-ayuda">{ayudaHueco('compania')}</p>}
-            <input
-              id={`comp-${poliza.id}`}
-              className="campo"
-              type="text"
-              value={form.compania}
-              onChange={(e) => escribir('compania', e.target.value)}
-              placeholder="Mapfre, Allianz…"
-              autoComplete="off"
-              aria-invalid={errores.compania ? true : undefined}
-              disabled={guardando}
-            />
-            {errores.compania && <p className="editor-error">{errores.compania}</p>}
-          </div>
-
-          <div className="editor-campo">
-            <label htmlFor={`num-${poliza.id}`}>Nº de póliza</label>
-            {ayudaHueco('numeroPoliza') && <p className="editor-ayuda">{ayudaHueco('numeroPoliza')}</p>}
-            <input
-              id={`num-${poliza.id}`}
-              className="campo"
-              type="text"
-              value={form.numeroPoliza}
-              onChange={(e) => escribir('numeroPoliza', e.target.value)}
-              autoComplete="off"
-              aria-invalid={errores.numeroPoliza ? true : undefined}
-              disabled={guardando}
-            />
-            {errores.numeroPoliza && <p className="editor-error">{errores.numeroPoliza}</p>}
-          </div>
-
-          <div className="editor-campo">
-            <label htmlFor={`ramo-${poliza.id}`}>Tipo de seguro</label>
-            {ayudaHueco('ramo') && <p className="editor-ayuda">{ayudaHueco('ramo')}</p>}
-            <select
-              id={`ramo-${poliza.id}`}
-              className="campo"
-              value={form.ramo}
-              onChange={(e) => escribir('ramo', e.target.value)}
-              aria-invalid={errores.ramo ? true : undefined}
-              disabled={guardando}
-            >
-              {/* «No lo sé» es una respuesta válida y explícita, no un hueco a
-                  rellenar con el primero de la lista. */}
-              <option value="">No lo sé</option>
-              {ramos.map((r) => (
-                <option key={r.valor} value={r.valor}>
-                  {r.etiqueta}
-                </option>
-              ))}
-            </select>
-            {errores.ramo && <p className="editor-error">{errores.ramo}</p>}
-          </div>
-
-          <div className="editor-campo">
-            <label htmlFor={`prima-${poliza.id}`}>Prima anual (€)</label>
-            <p className="editor-ayuda" id={`prima-ayuda-${poliza.id}`}>
-              {ayudaHueco('primaAnual') ??
-                (guardado.primaAnual == null
-                  ? 'Lo que pagas al año. Si no lo sabes, déjalo en blanco.'
-                  : `Ahora tienes anotado ${eur(guardado.primaAnual)}.`)}
-            </p>
-            <input
-              id={`prima-${poliza.id}`}
-              className="campo"
-              type="text"
-              inputMode="decimal"
-              value={form.primaAnual}
-              onChange={(e) => escribir('primaAnual', e.target.value)}
-              placeholder="320,50"
-              autoComplete="off"
-              aria-describedby={`prima-ayuda-${poliza.id}`}
-              aria-invalid={errores.primaAnual ? true : undefined}
-              disabled={guardando}
-            />
-            {errores.primaAnual && <p className="editor-error">{errores.primaAnual}</p>}
-          </div>
+          <CamposPoliza
+            idPrefix={poliza.id}
+            ramos={ramos}
+            form={form}
+            errores={errores}
+            escribir={escribir}
+            disabled={guardando}
+            ayudaHueco={ayudaHueco}
+            ayudaPrima={
+              guardado.primaAnual == null
+                ? 'Lo que pagas al año. Si no lo sabes, déjalo en blanco.'
+                : `Ahora tienes anotado ${eur(guardado.primaAnual)}.`
+            }
+            datosRamo={datosRamo}
+            escribirRamo={escribirRamo}
+            referenciaCatastral={referenciaCatastral ?? undefined}
+            aceptarCatastro={aceptarCatastro}
+          />
 
           {errorGeneral && (
             <p className="editor-error" role="alert">

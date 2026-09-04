@@ -147,6 +147,35 @@ model PortalPolizaDeclarada {
   ramo                 String?
   primaAnual           Decimal?          @map("prima_anual") @db.Decimal(10, 2)
   fechaVencimiento     DateTime?         @map("fecha_vencimiento") @db.Date
+  /// Del BIEN asegurado, no del contrato: viven aquí mientras no haya ficha de
+  /// vehículo propia. `null` = «no se sabe» (nadie lo ha leído ni escrito), que
+  /// NO es «el vehículo no tiene bastidor». Se validan en `lib/poliza-editable.ts`
+  /// (VIN de 17 sin I/O/Q, matrícula compactada) antes de llegar aquí.
+  matricula            String?
+  bastidor             String?
+  fechaMatriculacion   DateTime?         @map("fecha_matriculacion") @db.Date
+  /// Identificador del BIEN inmueble, el equivalente de la matrícula para hogar,
+  /// comercio y comunidades. Es COLUMNA y no una clave de `datosRamo` porque se
+  /// consulta e indexa («¿tengo otra póliza de esta misma vivienda?»).
+  /// 🚨 SOLO la del INMUEBLE (20 caracteres). Una de 14 es la de la FINCA —el
+  /// edificio— y traería los metros del edificio a una póliza de hogar: se
+  /// rechaza en `lib/poliza-editable.ts` con un error propio, no se guarda.
+  referenciaCatastral  String?           @map("referencia_catastral")
+  /// Campos DESCRIPTIVOS propios del ramo (hogar: metros y año; moto: cilindrada…),
+  /// según el catálogo de `@central/module-seguros-portal` (`campos-ramo.ts`). Es
+  /// un `jsonb` y no columnas porque el conjunto DEPENDE del ramo y nadie filtra
+  /// por ellos. `null` = no se ha declarado nada; nunca `{}` ni un `null` dentro
+  /// del JSON, que son «no lo sé» disfrazados de dato: se escribe `Prisma.DbNull`,
+  /// jamás `Prisma.JsonNull`.
+  datosRamo            Json?             @map("datos_ramo")
+  /// De dónde salió CADA campo de `datosRamo`: sus mismas claves → `catastro` |
+  /// `documento` | `declarado` (vocabulario de `@central/module-seguros-portal`).
+  /// 76 m² del Catastro y 76 m² estimados a ojo no valen lo mismo, y la
+  /// `procedencia` de la PÓLIZA no los distingue. Se reescribe SIEMPRE junto a
+  /// `datosRamo`: un origen sin su dato es una afirmación sobre algo que no
+  /// existe. Mismas reglas de NULL que su hermano (`Prisma.DbNull`, nunca
+  /// `JsonNull` ni `{}`).
+  datosRamoOrigen      Json?             @map("datos_ramo_origen")
   procedencia          PortalProcedencia @default(declarado)
   confirmadaPorUsuario Boolean           @default(false) @map("confirmada_por_usuario")
   documentoNombre      String?           @map("documento_nombre")

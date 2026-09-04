@@ -1,4 +1,10 @@
-# CLAUDE.md — apps/asegura-portal (portal del CLIENTE de Grupo Asegura)
+# CLAUDE.md — apps/asegura-portal (portal del CLIENTE de Grupo ASegura)
+
+> ✍️ **El nombre comercial se escribe «Grupo ASegura», con A y S mayúsculas** (dictado por Alberto,
+> 04/09/2026). El monograma «AS» del logo es el nombre: A de Alberto, S de Suárez. Escribirlo con
+> la ese minúscula no es una errata de estilo — se come la marca, y es lo que el autocorrector
+> escribe solo. Grafía canónica en BD: `seguros.corredurias.nombre`. Guardián en todo el repo:
+> `test/regression-nombre-comercial-asegura.test.ts`.
 
 > **Esta app la ve el ASEGURADO, no Alberto.** El panel del corredor es `apps/asegura` (lee
 > `apps/asegura/CLAUDE.md`) y la pantalla de trabajo de Alberto es `apps/plataforma` → `/correduria`.
@@ -90,7 +96,7 @@ cuenta con que quien la activa es el siguiente PR que toque la app**, no el bot�
 
 Cierre del 03/09. Las envs del portal están puestas en Vercel (`asegura-portal`, Production):
 `DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_FROM`
-(`Grupo Asegura <no-reply@envios.grupoasegura.es>`), `PORTAL_MAIL_REPLY_TO`
+(`Grupo ASegura <no-reply@envios.grupoasegura.es>`), `PORTAL_MAIL_REPLY_TO`
 (`hola@grupoasegura.es`, el buzón único de la correduría) y `PORTAL_PUBLIC_URL`.
 
 Lo que costó una noche entera y conviene no repetir:
@@ -466,17 +472,64 @@ Lo vigila `test/regression-portal-enlace-acceso.test.ts`.
 ⚠️ **No existen envs `PORTAL_SMTP_*`**: `createMailTransporter()` no recibe credenciales por parámetro,
 las lee él del entorno. Lo único que pone el portal es el `from`.
 
-## Rutas API (las tres que hay)
+## Rutas API
+
+⚠️ Esta tabla decía «las tres que hay» hasta el 04/09/2026 y ya se había quedado corta: existen
+además `PATCH /api/polizas/[id]` (corregir una póliza), `POST /api/siniestros` (el parte) y
+`POST /api/catastro`. Cuenta las carpetas de `app/api/` antes de citar un número.
 
 | Ruta | Entrada | Salida | Notas |
 |---|---|---|---|
 | `POST /api/acceso/solicitar` | `{ tipo: 'whatsapp'\|'email', destino }` (zod) | `{ ok }` · `400 datos_invalidos` · **`503 canal_no_disponible`** · **`502 envio_fallido`** | Guarda el código con `hashCanal(destino)`, nunca el email en claro |
 | `POST /api/acceso/verificar` | `{ tipo, destino, codigo }` (6 chars) | `{ ok, vinculo }` + cookie · `400 datos_invalidos\|sin_codigo` · `401 incorrecto\|caducado\|ya_usado\|bloqueado` | Coge el código **más reciente** de ese canal; el intento se cuenta siempre que sea `incorrecto`; crea la identidad si no la había; marca `usado_en` y `ultimo_acceso_en` en una transacción; **Fase 4:** llama a `vincularIdentidad()` con el email en claro y devuelve `vinculo` (`ok`/`ya_vinculada`/`sin_ficha`/`ambiguo`/`sin_clave`/`error`) sin bloquear |
 | `POST /api/polizas` | `multipart`, campo `documento` (PDF o imagen) | `{ id, datos, fuente }` · `401 sin_sesion` · `400 sin_fichero` · `413 fichero_grande` | `runtime = 'nodejs'`; tope **10 MB**; la identidad sale de `requireIdentidad()`, nunca del cuerpo |
+| `POST /api/catastro` | `{ direccion, municipio, provincia }` **o** `{ referencia }` (zod, con topes) | `200 ok` · **`300 elegir`** (varios inmuebles) · `401 sin_sesion` · `400 datos_invalidos` · `404 no_encontrado` · `409 via_ambigua` · `422 direccion_ilegible\|referencia_invalida` · **`502 catastro_no_responde`** | **Exige sesión**: sin ella sería un proxy anónimo contra el Catastro con nuestra IP. Solo CONSULTA (no escribe en la BD) y **no registra la dirección en ningún log**. Mira el `estado`, no el número |
 
 Pantallas: `/` (pedir + verificar código) y `/boveda` (`force-dynamic`, redirige a `/` sin sesión).
 **No hay `middleware.ts`**: cada ruta y cada página resuelve la sesión por su cuenta — que es
 precisamente lo que vigila el guardián.
+
+## 🧩 Los campos PROPIOS de cada tipo de seguro (04/09/2026)
+
+Al elegir el ramo, el formulario despliega SUS campos. El catálogo vive en el módulo puro
+(`packages/module-seguros-portal/src/campos-ramo.ts`) con `normalizarDatosRamo()`; la pantalla solo
+traduce `tipo` → control HTML. Lee su cabecera antes de tocar nada: esto es el resumen.
+
+- **Una columna `datos_ramo` (jsonb), no ~40 columnas.** El conjunto de campos depende del ramo y
+  nadie filtra por ellos: se leen enteros al abrir la ficha. 🚨 **Los identificadores del bien
+  (matrícula, bastidor, fecha de matriculación) NO van ahí: son columnas**, porque se consultan y se
+  indexan. La regla para el siguiente campo: si alguna consulta va a filtrar por él, es una columna.
+- **NULL y nunca `{}`.** Se escribe con `Prisma.DbNull`; `JsonNull` guardaría el literal `null` DENTRO
+  del JSON y se colaría por todas las guardas de NULL.
+- **El ramo que manda al validar un parche es el que la póliza VA A TENER.** El PATCH lee el ramo
+  guardado (filtrando por `identidadId`) antes de validar. Cambiar de ramo sin datos nuevos **borra**
+  los del viejo: sin catálogo en el ramo nuevo quedarían enterrados, invisibles en pantalla y
+  presentes en la columna. Y **sin ramo conocido, mandar `datosRamo` es un ERROR**, no un `null`
+  callado — aceptarlo vaciaría la columna en cada corrección de la prima sin que nada fallara.
+- **Ningún campo es obligatorio**, igual que el vencimiento, y **nada del art. 9 RGPD**: de
+  vida/salud/decesos se piden datos de CONTRATO (capital, modalidad, nº de asegurados), nunca de
+  salud, y `beneficiarios` es el TIPO de designación (herederos / designados / entidad), no nombres
+  de terceros que no han entrado al portal.
+- **Todo booleano es tri-estado, no checkbox**: «no me lo han preguntado» no puede colapsar en «ha
+  dicho que no» (mismo criterio que el parte de siniestro).
+- **`datosRamo`/`escribirRamo` son props OPCIONALES de `CamposPoliza`**, y eso es una salvaguarda: una
+  pantalla que no sabe LEER estos datos no puede ofrecerse a escribirlos, o el primer «guardar» sobre
+  campos vacíos los borraría en silencio.
+- **El orden del formulario importa**: «Tipo de seguro» va el 2º (bajo el vencimiento) porque de él
+  dependen los campos; el bloque específico va el ÚLTIMO, porque primero se pide lo que cualquiera
+  tiene delante y después lo que hay que ir a buscar.
+
+### Autorrelleno desde el Catastro (hogar, comercio, comunidades)
+
+`POST /api/catastro` (ver la tabla de rutas) da **metros, año de construcción y código postal** desde
+la dirección, vía `@central/core-catastro` — el equivalente para hogar de lo que la matrícula hace
+para auto. Los campos que puede rellenar llevan `desdeCatastro: true` en el catálogo.
+
+🚨 **El dato NO entra solo.** Se enseña y solo entra si la persona lo acepta, igual que la fecha
+estimada desde la matrícula: el Catastro puede estar desactualizado y quien firma la póliza es ella.
+Y los cinco estados de la respuesta están separados a propósito —no responde ≠ ahí no hay nada ≠ la
+dirección no se entiende ≠ la calle es ambigua ≠ hay quince pisos y no sabemos cuál es el suyo—
+porque colapsarlos convierte un «no lo sé» en un «no hay».
 
 ## 🧨 Landmines
 

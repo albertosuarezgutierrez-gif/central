@@ -114,12 +114,17 @@ export type PolizaPortal = {
    */
   procedencia: { importRef: string | null; eiacXmlHash: string | null }
   /** `null` = no visible en este nivel (no «sin prima»). `anual: null` = la compañía no la ha informado. */
-  prima: { anual: number | null; mensual: number | null; fraccionamiento: string | null } | null
+  /** `anual` es la prima NETA (`polizas.prima_anual`); `bruta` es lo que el cliente paga de verdad
+   *  (`prima_bruta`: neta + impuestos y recargos, y coincide con `prima_total` del recibo). Medido el
+   *  03/09/2026 en la 548238086: anual 67,86€, bruta 73,39€, recibo 73,39€. Enseñar solo la neta al
+   *  lado de un recibo mayor parece un error de cuentas. */
+  prima: { anual: number | null; bruta: number | null; mensual: number | null; fraccionamiento: string | null } | null
   /** `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel. */
   coberturas: { total: number; lista: string[] } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
-  siniestrosAbiertos: SiniestroPortal[]
+  /** `null` = no visible en este nivel. `[]` = no hay ninguno abierto. */
+  siniestrosAbiertos: SiniestroPortal[] | null
 }
 
 export type TitularPortal = {
@@ -337,6 +342,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         ? {
             // `Decimal` de Prisma → número ANTES de formatear; null se queda null.
             anual: p.primaAnual === null ? null : Number(p.primaAnual),
+            bruta: p.primaBruta === null ? null : Number(p.primaBruta),
             mensual: p.primaMensual === null ? null : Number(p.primaMensual),
             fraccionamiento: p.fraccionamiento,
           }
@@ -351,12 +357,18 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           }
         : null,
       recibos: ve.recibos ? resumirRecibosPortal(recs) : null,
-      siniestrosAbiertos: (siniestrosPor.get(p.id) ?? []).map((s) => ({
-        id: s.id,
-        estado: s.estado,
-        referencia: s.referencia,
-        fechaHora: s.fechaHora,
-      })),
+      // 🚨 `null` = NO VISIBLE EN TU NIVEL. `[]` = no hay ninguno abierto. Son
+      // cosas distintas y la UI dice cada una con sus palabras. Hasta el
+      // 04/09/2026 esto no miraba `ve` y un tercero con el alcance más bajo
+      // veía los siniestros abiertos de quien le autorizó.
+      siniestrosAbiertos: ve.siniestros
+        ? (siniestrosPor.get(p.id) ?? []).map((s) => ({
+            id: s.id,
+            estado: s.estado,
+            referencia: s.referencia,
+            fechaHora: s.fechaHora,
+          }))
+        : null,
     }
   }
 

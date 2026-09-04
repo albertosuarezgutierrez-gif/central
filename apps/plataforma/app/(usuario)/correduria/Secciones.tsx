@@ -56,6 +56,15 @@ export default function Secciones({ activa, contadores, onCambiar }: {
         display: 'flex', gap: 18, flexWrap: 'nowrap',
         overflowX: 'auto', borderBottom: '1px solid var(--border)',
         scrollbarWidth: 'thin', marginBottom: 20,
+        // PEGAJOSA: en móvil las colas largas (retención, renovaciones) miden
+        // varias pantallas, y sin esto hay que volver arriba del todo solo para
+        // cambiar de sección. El scroller es `LayoutShell` (`overflowY:'auto'`
+        // sin `overflowX`), así que el `top:0` es respecto a él; en móvil la
+        // barra del menú es `position:fixed` y no ocupa sitio en el flujo.
+        position: 'sticky', top: 0, zIndex: 5,
+        // El fondo es obligatorio: sin él el contenido se ve POR DEBAJO de las
+        // pestañas al desplazar, que es peor que no tenerlas pegadas.
+        background: 'var(--bg)',
       }}
     >
       {SECCIONES.map(k => {

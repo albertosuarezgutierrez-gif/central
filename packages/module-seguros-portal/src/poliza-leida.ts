@@ -29,6 +29,37 @@ export const RAMOS_POLIZA = [
 ] as const
 export type RamoPoliza = (typeof RAMOS_POLIZA)[number]
 
+/**
+ * Cómo se le llama a cada ramo DELANTE DEL CLIENTE. Una sola tabla para toda la
+ * app: el 03/09/2026 la bóveda pintaba «Responsabilidad civil» en la tarjeta de
+ * la póliza y `responsabilidad_civil` —el valor crudo del enum— dos dedos más
+ * arriba, en el calendario, porque cada pantalla traía su propio mapa (o
+ * ninguno). Un cliente no tiene por qué saber que eso es la misma cosa.
+ */
+export const ETIQUETA_RAMO: Record<RamoPoliza, string> = {
+  auto: 'Auto',
+  moto: 'Moto',
+  hogar: 'Hogar',
+  vida: 'Vida',
+  salud: 'Salud',
+  decesos: 'Decesos',
+  responsabilidad_civil: 'Responsabilidad civil',
+  comercio: 'Comercio',
+  comunidades: 'Comunidades',
+  otros: 'Otros',
+}
+
+/**
+ * Etiqueta de un ramo que puede venir de la BD como texto suelto. Un valor que
+ * no esté en la tabla se devuelve TAL CUAL en vez de caer a «Otros»: enseñar
+ * «Otros» por un ramo que sí existe pero no se ha etiquetado sería afirmar algo
+ * que no se ha mirado, y además esconde el hueco que hay que arreglar.
+ */
+export function etiquetaRamo(ramo: string | null | undefined): string | null {
+  if (ramo == null || ramo === '') return null
+  return (ETIQUETA_RAMO as Record<string, string>)[ramo] ?? ramo
+}
+
 export type PolizaLeida = {
   compania: string | null
   numeroPoliza: string | null

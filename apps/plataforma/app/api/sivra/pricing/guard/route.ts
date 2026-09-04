@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { tgAvisoAlerta } from '@/lib/telegram'
+import { decidirAutoResolucion, detalleAutoResolucion, clave as claveAlerta } from '@/lib/sivra/alertas-autoresolucion'
 import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
 import {
   decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza, decidirRitmoDestacado,
@@ -129,11 +130,23 @@ export async function GET(req: NextRequest) {
       WHERE dry_run = false
       ORDER BY property_id, rate_date, applied_at DESC
     ),
+    -- 🚨 Frescura POR PISO, no un MAX(snapshot_date) GLOBAL (bug hasta el 04/09/2026). Con el
+    -- máximo global, el día que falle el snapshot de UN piso ese piso desaparece entero del
+    -- detector: sus precios revertidos dejan de verse y el silencio se lee como «no hay ninguno».
+    -- Y no basta con coger la última fila de cada piso: comparar un snapshot viejo contra un
+    -- precio recién aplicado inventaría reversiones que no existen. Así que se exige que el piso
+    -- tenga snapshot de HOY (CTE frescos) y, dentro de eso, se toma su fila más reciente por fecha.
+    frescos AS (
+      SELECT property_id FROM rate_snapshots
+      WHERE rate_date >= CURRENT_DATE AND price_live IS NOT NULL
+      GROUP BY property_id HAVING MAX(snapshot_date) >= CURRENT_DATE
+    ),
     snap AS (
-      SELECT property_id, rate_date, price_live
-      FROM rate_snapshots
-      WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
-        AND price_live IS NOT NULL
+      SELECT DISTINCT ON (r.property_id, r.rate_date) r.property_id, r.rate_date, r.price_live
+      FROM rate_snapshots r
+      JOIN frescos f ON f.property_id = r.property_id
+      WHERE r.price_live IS NOT NULL AND r.rate_date >= CURRENT_DATE
+      ORDER BY r.property_id, r.rate_date, r.snapshot_date DESC
     )
     SELECT la.property_id, la.rate_date::text, la.new_price, snap.price_live AS base_now
     FROM last_applied la
@@ -142,6 +155,55 @@ export async function GET(req: NextRequest) {
       AND snap.price_live <> la.new_price
     ORDER BY la.property_id, la.rate_date
   `)
+
+  // ── Auto-resolución: cerrar sola la alerta cuyo problema ya no existe ────────────────────────
+  // Ver la cabecera de `lib/sivra/alertas-autoresolucion.ts`. Va AQUÍ, pegada a `reversions`,
+  // porque necesita el mismo veredicto de hoy: los hits actuales son la única prueba de que una
+  // alerta vieja sigue viva.
+  //
+  // 🚨 La lista de pisos comprobables se calcula POR PISO y no del `MAX(snapshot_date)` GLOBAL que
+  // usa la consulta de arriba. Con el máximo global, el día que falle el snapshot de un piso ese
+  // piso desaparece del detector, su ausencia de `reversions` se leería como «ya no pasa» y se
+  // cerrarían en silencio todas sus alertas vivas. Es el mismo fallo que el módulo previene, por la
+  // puerta de los datos. (El 04/09/2026 los cuatro pisos iban sincronizados: la trampa está armada
+  // pero no ha saltado todavía.)
+  let autoResueltas = 0
+  let autoResDetalle: string | null = null
+  try {
+    const frescos = await prisma.$queryRaw<{ property_id: string }[]>(Prisma.sql`
+      SELECT property_id
+      FROM rate_snapshots
+      WHERE rate_date >= CURRENT_DATE AND price_live IS NOT NULL
+      GROUP BY property_id
+      HAVING MAX(snapshot_date) >= CURRENT_DATE`)
+    const pisosComprobables = new Set(frescos.map(f => f.property_id))
+
+    const abiertas = await prisma.$queryRaw<{
+      id: string; tipo: string; property_id: string | null; fecha_ref: string | null
+    }[]>(Prisma.sql`
+      SELECT id::text, tipo, property_id, fecha_ref::text
+      FROM pricing_alerts WHERE resuelta = false`)
+
+    const decision = decidirAutoResolucion({
+      abiertas,
+      hitsActuales: new Set(reversions.map(r => claveAlerta(r.property_id, r.rate_date))),
+      pisosComprobables,
+    })
+    if (decision.resolver.length) {
+      // 🚨 `IN` con `Prisma.join` y NO `= ANY(${array})`: el landmine del 17/07/2026 dice que un
+      // array de Prisma revienta a través del pooler y que solo viajan bien los params ESCALARES.
+      // `Prisma.join` genera un placeholder por id, que es exactamente eso.
+      autoResueltas = await prisma.$executeRaw(Prisma.sql`
+        UPDATE pricing_alerts
+        SET resuelta = true, resuelta_at = now(), resuelta_por = 'auto'
+        WHERE id::text IN (${Prisma.join(decision.resolver)})`)
+    }
+    autoResDetalle = detalleAutoResolucion(decision)
+  } catch (e) {
+    // Un fallo aquí NO puede cerrar nada ni tumbar el guardián: se declara y se sigue. Lo contrario
+    // —tragárselo— dejaría el canal saturado otra vez sin que nada lo dijera.
+    autoResDetalle = `⚠️ no se pudo auto-resolver: ${String(e).slice(0, 120)}`
+  }
 
   // #3 Suelo de coste: pisos con ≥3 fechas futuras aplicadas al mínimo.
   const floorHits = await prisma.$queryRaw<{ property_id: string; dias: number; min_price: number }[]>(Prisma.sql`
@@ -725,7 +787,13 @@ export async function GET(req: NextRequest) {
     const ok = await pushAlert({
       tipo: "precio_revertido", prioridad: "alta", property_id: r.property_id,
       titulo: `${PROP_NAMES[r.property_id] ?? r.property_id}: precio revertido el ${r.rate_date}`,
-      detalle: `Fijamos ${r.new_price}€ base y ahora hay ${r.base_now}€ en Smoobu. Alguien o algo lo ha pisado en Smoobu.`,
+      // 🚨 El texto NO acusa a nadie (04/09/2026). Decía «alguien o algo lo ha pisado» y eso mandaba
+      // a buscar a una persona: de las 54 abiertas ese día, 51 se habían curado solas sin que nadie
+      // tocara nada, y 12 de las diferencias vivas eran un ×1,250 EXACTO repetido en los cuatro
+      // pisos — un factor así no lo teclea un humano. La causa sigue sin identificarse, así que el
+      // aviso describe el hecho y dice qué se sabe, en vez de proponer un culpable.
+      detalle: `Fijamos ${r.new_price}€ y en Smoobu hay ${r.base_now}€ (×${(r.base_now / (r.new_price || 1)).toFixed(3)}). `
+        + `Causa sin identificar: la mayoría se corrigen solas en pasadas siguientes. Si persiste varios días, mira las reglas de tarifa del piso en Smoobu.`,
       dato_actual: r.new_price, dato_mercado: r.base_now, fecha_ref: r.rate_date,
     })
     if (ok) { created++; newReversions.push(r) }
@@ -948,7 +1016,7 @@ export async function GET(req: NextRequest) {
   ].filter(Boolean).join(' · ')).catch(() => {})
 
   return NextResponse.json({
-    ok: !eventosIlegibles && !fantasmasIlegibles && !calibIlegible,
+    ok: !eventosIlegibles && !fantasmasIlegibles && !calibIlegible && !autoResDetalle?.startsWith('⚠️'),
     degradado: [
       eventosIlegibles
         ? "pricing_eventos_auto ilegible: los centinelas de evento (#7 y #8) NO se han evaluado en esta pasada"
@@ -959,6 +1027,7 @@ export async function GET(req: NextRequest) {
       calibIlegible
         ? `checks #12 (calibración) y #13 (recorrido) SIN evaluar: ${calibIlegible}`
         : null,
+      autoResDetalle?.startsWith('⚠️') ? autoResDetalle : null,
     ].filter(Boolean).join(" · ") || undefined,
     reversions: reversions.length,
     floor_hits: floorHits.length,
@@ -986,6 +1055,10 @@ export async function GET(req: NextRequest) {
     calibracion_evaluados: calibSettings.length - calibSinMuestra.length,
     recorrido_insuficiente: recorridoHits.length,
     alerts_created: created,
+    // Cierre automático: `auto_resueltas` a solas se leería como «no había nada que cerrar», y
+    // puede significar que no se pudo comprobar ningún piso. Por eso viaja con su detalle.
+    auto_resueltas: autoResueltas,
+    auto_resolucion: autoResDetalle ?? undefined,
     avisadas,
   })
 }

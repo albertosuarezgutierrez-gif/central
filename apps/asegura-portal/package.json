@@ -7,10 +7,13 @@
     "build": "npm run prisma:generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test lib/*.test.ts",
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
+    "@central/brand": "workspace:*",
     "@central/core-ai": "workspace:*",
+    "@central/core-catastro": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-identity": "workspace:*",
     "@central/module-seguros": "workspace:*",
