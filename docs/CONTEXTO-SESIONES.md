@@ -115,8 +115,12 @@
   **`seguros.backfill_dni_plan`** (solo uuids; DDL aplicada) al abrir `/correduria/mantenimiento` → de ahí sale el lote 7
   (mismo DNI). **PR #2260 mergeado y en producción (asegura + plataforma READY, 20:44 UTC). Lote 7 ESCRITO y
   probado en seco (`2026-09-04_fusion_mismo_dni_lote7.sql`: motor del lote 2, pares leídos de la foto, guardas de
-  identidad dentro); SIN ejecutar porque la foto sigue vacía: Alberto («lote 7», 04/09) tiene que abrir esa página
-  y luego se le enseña el pre-vuelo con nombres.** Segundo hallazgo: el cron `e2e-smoke`
+  identidad dentro). Foto hecha a las 21:03 UTC (PR #2267 mergeado): 620 grupos = 604 pares + 16 tríos; el
+  pre-vuelo pasa los 604 sin saltar guardas, pero DOS pares son personas distintas con el mismo DNI (249 Mejias
+  Heredia/Rios Vazquez, 366 Martin Verdugo/Verdugo Garcia) → lista `excluidos` en el script. ✅ **EJECUTADO con
+  el «ok» de Alberto (21:16-21:20 UTC): 602 fusiones, 958 pólizas movidas, 0 pólizas en lápida, 110 CIMA vivas
+  intactas.** Lección: el cliente SQL de Supabase corta a 60 s y la primera pasada se deshizo entera → el bloque
+  lee `information_schema` UNA vez y va en tandas de 150 (5 pasadas). Siguiente: escribir los 14.148 índices.** Segundo hallazgo: el cron `e2e-smoke`
   del repo `asegura` (06:00 UTC, retrasado a ~10:20) creaba un lead sintético diario en la cartera real desde el 02/09 y
   fallaba antes de su limpieza — borrados los 3 (+3 cotizaciones, 9 eventos). **Alberto debe desactivar ese workflow.**
 - **✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas (04/09/2026).** Alberto lo vio mal

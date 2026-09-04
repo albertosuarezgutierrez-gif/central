@@ -12,6 +12,8 @@
 -- IBAN y el domicilio de una en la ficha de la otra, y no se deshace con un UPDATE.
 --
 -- ── QUÉ ENTRA ──────────────────────────────────────────────────────────────────────────────────
+--   · Los pares que el pre-vuelo descartó con los nombres delante (lista `excluidos`): el mismo
+--     DNI con nombres de dos personas distintas es un DNI mal tecleado, no una gemela.
 --   · Solo grupos de EXACTAMENTE dos fichas. Los tríos se saltan con un `notice`: los decide una
 --     persona con los nombres delante, no un bucle.
 --   · Las dos fichas existen, son de la misma correduría y ninguna está ya en lápida.
@@ -34,6 +36,9 @@
 -- (CIMA entra dos veces al día) y el bloque revienta en vez de fusionar sobre datos caducados.
 --
 -- ── IDEMPOTENTE Y REVERSIBLE ────────────────────────────────────────────────────────────────────
+-- Se ejecuta en TANDAS (`tope` fusiones por pasada, hasta que una pasada haga 0): el cliente SQL
+-- de Supabase corta a los 60 s y el bloque es una sola transacción, así que una pasada que no
+-- cabe se deshace entera sin dejar rastro (pasó el 04/09/2026 a las 21:10 UTC).
 -- Un par ya fusionado por ESTE lote se salta con `notice`. La lápida NO se borra: queda con
 -- `merged_into_cliente_id` y una fila en `cliente_merge_log` con `snapshot_before` (la ficha
 -- entera) y `deps_repointed`. `cliente_merge_log` es append-only.
@@ -49,8 +54,28 @@ declare
   sup uuid; lap uuid; motivo_sup text;
   ra record; rb record;
   cima_a int; cima_b int; pol_a int; pol_b int;
-  r record; n int; deps jsonb; snap jsonb; heredados text[]; corr uuid; hsup text; hlap text;
+  n int; i int; deps jsonb; snap jsonb; heredados text[]; corr uuid; hsup text; hlap text;
   hechas int := 0; saltadas int := 0;
+  -- Tope de fusiones por pasada. El cliente SQL de Supabase corta a los 60 s y la primera
+  -- pasada (04/09/2026, 21:10 UTC) murió por ahí con 0 filas: el bloque es una sola transacción,
+  -- así que se deshizo entero. Como es idempotente (un par ya fusionado se salta), se corre en
+  -- tandas hasta que una pasada haga 0.
+  tope int := 150;
+  -- Las columnas heredables y las FKs que miran a clientes.id NO cambian dentro del bucle: se
+  -- leen UNA vez. Leerlas por par (information_schema, 600 veces × 50 columnas) era lo que se
+  -- comía el minuto.
+  col_nombre text[]; col_es_texto boolean[];
+  fk_tabla text[]; fk_col text[];
+  -- Pares que el pre-vuelo del 04/09/2026 descartó CON LOS NOMBRES DELANTE: mismo DNI en la foto
+  -- pero nombres de dos personas distintas (grupo 249: «Antonio Manuel Mejias Heredia» /
+  -- «Yolanda Rios Vazquez»; grupo 366: «Fernando Martin Verdugo» / «Catalina Verdugo Garcia»).
+  -- El identificador coincide, pero es el DATO el que está mal en una de las dos fichas — un DNI
+  -- tecleado en la ficha de otro en el volcado— y fundirlas mezclaría los papeles de dos personas.
+  -- Se saltan aquí para que el bloque sea el registro fiel de lo que se ejecutó.
+  excluidos uuid[] := array[
+    'd1a3da30-302b-4bd7-9a04-12fc888d2e8b', '5c38e0ad-8c90-407e-892b-6c11d2f32e9e',
+    '6739c179-24e3-4d06-9312-9f975e00333c', 'afd64eec-cce5-489d-bb7a-242d7661a340'
+  ]::uuid[];
 begin
   select * into foto from seguros.backfill_dni_plan where id = 1;
   if not found then
@@ -60,7 +85,30 @@ begin
     raise exception 'la foto del plan es de % (más de 24 h): refréscala antes de fusionar', foto.calculado_en;
   end if;
 
+  select array_agg(column_name::text order by column_name),
+         array_agg((data_type in ('character varying','text')) order by column_name)
+    into col_nombre, col_es_texto
+    from information_schema.columns
+   where table_schema='seguros' and table_name='clientes'
+     and column_name not in ('id','correduria_id','created_at','updated_at',
+                             'merged_into_cliente_id','import_ref');
+
+  select array_agg(tn order by tn, cn), array_agg(cn order by tn, cn) into fk_tabla, fk_col
+    from (
+      select distinct tc.table_name::text tn, kcu.column_name::text cn
+        from information_schema.table_constraints tc
+        join information_schema.key_column_usage kcu
+          on kcu.constraint_name=tc.constraint_name and kcu.table_schema=tc.table_schema
+        join information_schema.constraint_column_usage ccu
+          on ccu.constraint_name=tc.constraint_name and ccu.table_schema=tc.table_schema
+       where tc.constraint_type='FOREIGN KEY' and tc.table_schema='seguros'
+         and ccu.table_name='clientes' and ccu.column_name='id'
+         and not (tc.table_name='clientes' and kcu.column_name='merged_into_cliente_id')
+         and tc.table_name <> 'cliente_merge_log'
+    ) f;
+
   for g in select value from jsonb_array_elements(foto.choques) loop
+    exit when hechas >= tope;
     select array_agg(x::uuid) into fichas from jsonb_array_elements_text(g->'fichas') x;
 
     if array_length(fichas, 1) <> 2 then
@@ -68,6 +116,10 @@ begin
       saltadas := saltadas + 1; continue;
     end if;
     a := fichas[1]; b := fichas[2];
+    if a = any(excluidos) or b = any(excluidos) then
+      raise notice 'par %/% excluido en el pre-vuelo (nombres de dos personas distintas): se salta', a, b;
+      saltadas := saltadas + 1; continue;
+    end if;
 
     select * into ra from seguros.clientes where id = a;
     if not found then raise notice 'la ficha % ya no existe: se salta', a; saltadas := saltadas + 1; continue; end if;
@@ -144,49 +196,29 @@ begin
      where id = lap;
 
     -- 3. El superviviente hereda SOLO sus huecos (NULL o cadena vacía).
-    for r in
-      select column_name c from information_schema.columns
-       where table_schema='seguros' and table_name='clientes'
-         and column_name not in ('id','correduria_id','created_at','updated_at',
-                                 'merged_into_cliente_id','import_ref')
-       order by column_name
-    loop
-      if (select data_type from information_schema.columns
-           where table_schema='seguros' and table_name='clientes' and column_name=r.c)
-         in ('character varying','text') then
+    for i in 1 .. coalesce(array_length(col_nombre, 1), 0) loop
+      if col_es_texto[i] then
         execute format(
           'update seguros.clientes s set %1$I = l.%1$I from seguros.clientes l
             where s.id=$1 and l.id=$2
               and nullif(btrim(s.%1$I), '''') is null
-              and nullif(btrim(l.%1$I), '''') is not null', r.c)
+              and nullif(btrim(l.%1$I), '''') is not null', col_nombre[i])
           using sup, lap;
       else
         execute format(
           'update seguros.clientes s set %1$I = l.%1$I from seguros.clientes l
-            where s.id=$1 and l.id=$2 and s.%1$I is null and l.%1$I is not null', r.c)
+            where s.id=$1 and l.id=$2 and s.%1$I is null and l.%1$I is not null', col_nombre[i])
           using sup, lap;
       end if;
       get diagnostics n = row_count;
-      if n > 0 then heredados := heredados || r.c; end if;
+      if n > 0 then heredados := heredados || col_nombre[i]; end if;
     end loop;
 
-    -- 4. Reapuntar TODAS las FKs que miran a clientes.id, leyendo el catálogo.
-    for r in
-      select tc.table_name tn, kcu.column_name cn
-        from information_schema.table_constraints tc
-        join information_schema.key_column_usage kcu
-          on kcu.constraint_name=tc.constraint_name and kcu.table_schema=tc.table_schema
-        join information_schema.constraint_column_usage ccu
-          on ccu.constraint_name=tc.constraint_name and ccu.table_schema=tc.table_schema
-       where tc.constraint_type='FOREIGN KEY' and tc.table_schema='seguros'
-         and ccu.table_name='clientes' and ccu.column_name='id'
-         and not (tc.table_name='clientes' and kcu.column_name='merged_into_cliente_id')
-         and tc.table_name <> 'cliente_merge_log'
-       order by 1,2
-    loop
-      execute format('update seguros.%I set %I=$1 where %I=$2', r.tn, r.cn, r.cn) using sup, lap;
+    -- 4. Reapuntar TODAS las FKs que miran a clientes.id (lista leída del catálogo arriba).
+    for i in 1 .. coalesce(array_length(fk_tabla, 1), 0) loop
+      execute format('update seguros.%I set %I=$1 where %I=$2', fk_tabla[i], fk_col[i], fk_col[i]) using sup, lap;
       get diagnostics n = row_count;
-      deps := deps || jsonb_build_object(r.tn||'.'||r.cn, n);
+      deps := deps || jsonb_build_object(fk_tabla[i]||'.'||fk_col[i], n);
     end loop;
 
     -- 5. Lápida y libro de fusiones.
@@ -205,7 +237,7 @@ begin
     hechas := hechas + 1;
   end loop;
 
-  raise notice 'lote 7: % fusiones hechas, % grupos saltados', hechas, saltadas;
+  raise notice 'lote 7: % fusiones hechas, % grupos saltados (tope por pasada %)', hechas, saltadas, tope;
 end $$;
 
 -- ── PRE-VUELO (en seco, para enseñar los pares con nombre antes de ejecutar el bloque) ─────────
