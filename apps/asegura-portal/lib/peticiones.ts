@@ -275,78 +275,93 @@ export async function crearPeticion(datos: {
   }
 
   // ── Lo que ya había ──────────────────────────────────────────────────────
-  // Las dos consultas se lanzan pase lo que pase (de ahí `NINGUNA_FICHA`), y
-  // las dos acaban en la MISMA respuesta pública que un acierto o un fallo.
+  // La consulta se lanza pase lo que pase (de ahí `NINGUNA_FICHA`) y acaba en la
+  // MISMA respuesta pública que un acierto o un fallo.
   const hoy = new Date()
-  const [pendientes, autorizaciones] = await Promise.all([
-    prisma.portalPeticionAcceso.findMany({
-      where: {
-        solicitanteIdentidadId: identidadId,
-        destinatarioEmailHash: hash,
-        alcance,
-        concedidaEn: null,
-        rechazadaEn: null,
-        retiradaEn: null,
-        caducaEn: { gt: hoy },
-      },
-      select: { id: true },
-      take: 1,
-    }),
-    prisma.portalAutorizacion.findMany({
-      where: {
-        otorganteClienteId: destinatarioClienteId ?? NINGUNA_FICHA,
-        autorizadoClienteId: solicitanteClienteId ?? NINGUNA_FICHA,
-        alcance,
-        revocadoEn: null,
-      },
-      select: { aceptadoEn: true, caducaEn: true, revocadoEn: true },
-    }),
-  ])
+  const autorizaciones = await prisma.portalAutorizacion.findMany({
+    where: {
+      otorganteClienteId: destinatarioClienteId ?? NINGUNA_FICHA,
+      autorizadoClienteId: solicitanteClienteId ?? NINGUNA_FICHA,
+      alcance,
+      revocadoEn: null,
+    },
+    select: { aceptadoEn: true, caducaEn: true, revocadoEn: true },
+  })
   const yaAutorizado = autorizaciones.some((a) => estadoAutorizacion(a, hoy) === 'vigente')
 
   // ── La fila, SIEMPRE ─────────────────────────────────────────────────────
-  // También cuando ya había una pendiente o ya estaba autorizado: son dos de
-  // los cuatro estados que colapsan, y saltarse la escritura en ellos volvería
-  // a meter una diferencia medible. El cupo por solicitante (5/día) es lo que
-  // impide que eso se convierta en un vertedero.
+  // Se intenta escribir en los cuatro casos, también cuando no se resolvió
+  // ninguna ficha y cuando esa persona YA te tenía autorizado: saltarse la
+  // escritura en alguno metería una diferencia medible con el reloj entre
+  // respuestas que dicen lo mismo. Quien la rechaza, cuando ya se lo habías
+  // pedido, es la BD (ver el `catch`). El cupo por solicitante (5/día) es lo
+  // que impide que esto se convierta en un vertedero.
   //
   // `creadaEn` se pasa explícito para que `caducaEn` salga exactamente 30 días
   // después de ESE instante y no del que ponga la BD.
   const creadaEn = new Date()
-  await prisma.portalPeticionAcceso.create({
-    data: {
-      correduriaId,
-      solicitanteIdentidadId: identidadId,
-      solicitanteClienteId,
-      destinatarioEmailHash: hash,
-      // `null` = no había ninguna ficha, o había varias y no se adivina. Quien
-      // pidió no ve la diferencia.
-      destinatarioClienteId,
-      alcance,
-      // Texto de un tercero: se recorta y se normaliza en el módulo puro, se
-      // escapa al pintarlo, y no entra en ningún asunto de correo ni cabecera.
-      mensaje: normalizarMensajePeticion(datos.mensaje),
-      creadaEn,
-      caducaEn: caducidadPeticion(creadaEn),
-      ip: datos.ip,
-      userAgent: datos.userAgent,
-    },
-    select: { id: true },
-  })
+  let yaPendiente = false
+  try {
+    await prisma.portalPeticionAcceso.create({
+      data: {
+        correduriaId,
+        solicitanteIdentidadId: identidadId,
+        solicitanteClienteId,
+        destinatarioEmailHash: hash,
+        // `null` = no había ninguna ficha, o había varias y no se adivina. Quien
+        // pidió no ve la diferencia.
+        destinatarioClienteId,
+        alcance,
+        // Texto de un tercero: se recorta y se normaliza en el módulo puro, se
+        // escapa al pintarlo, y no entra en ningún asunto de correo ni cabecera.
+        mensaje: normalizarMensajePeticion(datos.mensaje),
+        creadaEn,
+        caducaEn: caducidadPeticion(creadaEn),
+        ip: datos.ip,
+        userAgent: datos.userAgent,
+      },
+      select: { id: true },
+    })
+  } catch (e) {
+    // 🚨 `idx_portal_peticion_pendiente` es UNIQUE por (solicitante, hash del
+    // destinatario) WHERE la petición sigue sin resolver: **la BD es quien
+    // decide** que ya se lo había pedido. Preguntarlo antes con un SELECT sería
+    // una carrera —dos clics seguidos crean dos filas y el destinatario recibe
+    // la misma pregunta dos veces—, así que se intenta escribir SIEMPRE y se
+    // recoge el choque. Que el intento se haga igual es lo que mantiene el
+    // trabajo observable: el INSERT sale en los dos casos.
+    //
+    // El choque NO es un error que contar hacia fuera: `ya_pendiente` es uno de
+    // los cuatro que colapsan en `registrada`. Y solo depende de lo que hizo
+    // QUIEN PIDE, así que tampoco dice nada del destinatario.
+    if (!esChoqueDePendiente(e)) throw e
+    yaPendiente = true
+  }
 
-  const resultado: ResultadoPeticion =
-    pendientes.length > 0
-      ? 'ya_pendiente'
-      : yaAutorizado
-        ? 'ya_autorizado'
-        : destinatarioClienteId !== null
-          ? 'creada'
-          : 'sin_destinatario'
+  const resultado: ResultadoPeticion = yaPendiente
+    ? 'ya_pendiente'
+    : yaAutorizado
+      ? 'ya_autorizado'
+      : destinatarioClienteId !== null
+        ? 'creada'
+        : 'sin_destinatario'
 
   // 🚨 La respuesta sale SIEMPRE por aquí. En el momento en que alguien devuelva
   // algo distinto según `resultado`, el portal empieza a contestar quién es
   // cliente de la correduría.
   return { ok: true, resultado, respuesta: respuestaPublica(resultado) }
+}
+
+/**
+ * El choque contra `idx_portal_peticion_pendiente`, y NADA más.
+ *
+ * Se mira el código de Prisma (`P2002`, violación de índice único) sin tragarse
+ * cualquier otro fallo: un `catch` que se comiera un error de BD dejaría a quien
+ * pide creyendo que su petición está registrada cuando no existe en ninguna
+ * parte, que es la peor mentira que puede contar el portal.
+ */
+function esChoqueDePendiente(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'P2002'
 }
 
 /**
