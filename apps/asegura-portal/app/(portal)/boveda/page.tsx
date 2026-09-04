@@ -215,6 +215,15 @@ export default async function Boveda() {
                     fechaVencimiento: p.fechaVencimiento
                       ? p.fechaVencimiento.toISOString().slice(0, 10)
                       : null,
+                    // `datos_ramo` es `jsonb`: Prisma lo entrega como `JsonValue`,
+                    // que incluye arrays y escalares. La pantalla solo sabe pintar
+                    // un objeto de campos, así que lo que no lo sea entra como
+                    // `null` («no hay nada declarado») en vez de reventar el
+                    // render con una fila corrupta.
+                    datosRamo:
+                      p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
+                        ? (p.datosRamo as Record<string, string | number | boolean>)
+                        : null,
                     matricula: p.matricula,
                     bastidor: p.bastidor,
                     // Columna `date`, igual que el vencimiento: medianoche UTC,

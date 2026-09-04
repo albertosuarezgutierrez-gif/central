@@ -71,6 +71,13 @@ async function altaConDocumento(req: Request, identidadId: string) {
       fechaMatriculacion: datos.fechaMatriculacion
         ? new Date(`${datos.fechaMatriculacion}T00:00:00Z`)
         : null,
+      // Los campos propios del RAMO que el documento traía, ya validados contra
+      // el catálogo del ramo detectado (`normalizarDatosRamo`, en el módulo
+      // puro): lo que la IA no supo leer bien no llega hasta aquí, llega `null`.
+      // `DbNull` es el NULL de SQL —la columna vacía, lo que `IS NULL` encuentra—
+      // y `JsonNull` guardaría el literal `null` DENTRO del JSON, que pasa todas
+      // las guardas de NULL. La distinción es la misma que la de `extraccionBruta`.
+      datosRamo: datos.datosRamo ?? Prisma.DbNull,
       // Siempre `declarado`: lo ha aportado el usuario. Que lo haya leído una IA
       // no lo convierte en dato verificado — al revés, es donde más se inventa.
       procedencia: 'declarado',
@@ -99,10 +106,17 @@ async function altaAMano(req: Request, identidadId: string) {
   if (!normalizado.ok) return NextResponse.json({ error: normalizado.error }, { status: 400 })
   const { datos } = normalizado
 
+  // `datosRamo` sale del resto a propósito: Prisma NO admite `null` en una
+  // columna `Json?`, y el `null` de `DatosAlta` («no se ha declarado ninguno»)
+  // tiene que llegar a la BD como `DbNull` (NULL de SQL) y nunca como `JsonNull`,
+  // que escribiría el literal `null` DENTRO del JSON y se colaría por `IS NULL`.
+  const { datosRamo, ...resto } = datos
+
   const poliza = await prisma.portalPolizaDeclarada.create({
     data: {
       identidadId,
-      ...datos,
+      ...resto,
+      datosRamo: datosRamo ?? Prisma.DbNull,
       // Sigue siendo un dato APORTADO por el cliente, no verificado contra la
       // compañía: `declarado`, igual que si viniera de un PDF.
       procedencia: 'declarado',

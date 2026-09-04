@@ -154,6 +154,13 @@ model PortalPolizaDeclarada {
   matricula            String?
   bastidor             String?
   fechaMatriculacion   DateTime?         @map("fecha_matriculacion") @db.Date
+  /// Campos DESCRIPTIVOS propios del ramo (hogar: metros y año; moto: cilindrada…),
+  /// según el catálogo de `@central/module-seguros-portal` (`campos-ramo.ts`). Es
+  /// un `jsonb` y no columnas porque el conjunto DEPENDE del ramo y nadie filtra
+  /// por ellos. `null` = no se ha declarado nada; nunca `{}` ni un `null` dentro
+  /// del JSON, que son «no lo sé» disfrazados de dato: se escribe `Prisma.DbNull`,
+  /// jamás `Prisma.JsonNull`.
+  datosRamo            Json?             @map("datos_ramo")
   procedencia          PortalProcedencia @default(declarado)
   confirmadaPorUsuario Boolean           @default(false) @map("confirmada_por_usuario")
   documentoNombre      String?           @map("documento_nombre")
