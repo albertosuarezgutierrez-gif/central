@@ -65,6 +65,22 @@
   repitiendo los diez campos del `Hallazgo` a mano (rompió justo al añadir `contacto`): ahora hay UN
   `hallazgoSinEnriquecer()`. 🚨 **Segundo choque del día con otra sesión sobre el mismo archivo** (el primero
   fue `BotonWhatsapp` en #2281): antes de construir sobre `/correduria`, mirar qué hay ya en `main`. PR #2290.
+- **💓 El vigía de latidos gritaba por agentes a los que aún NO les había tocado correr (04/09/2026, PR #2248).**
+  De los 6 rojos del parte, **4 eran falsa alarma por construcción**: `evaluarLatido` no distinguía «no
+  hay señal porque está roto» de «no hay señal porque se declaró anteayer». Las 5 rutinas cableadas el
+  02/09 salían en ROJO desde el minuto uno y las dos mensuales (día 1) iban a seguir 27 días — mientras
+  `facturas_correo`, diaria, latía al día siguiente: la maquinaria iba bien, fallaba el juicio. Cuarto
+  estado **`estreno`** + campo `vigiladoDesde` (obligatorio, con guardián); en el panel es GRIS, no verde.
+  🚨 Los otros 2 SÍ son reales y sus `nota` **mentían**: la de domótica decía «es el trial de IoT Core,
+  conocido» y esos errores son del 03/08 — hoy es `Tuya 2001 offline` + `1109` en el respaldo, con **3
+  reservas sin PIN** (una con el huésped dentro). Alberto decide dejar los dos rojos («la cerradura no
+  tiene conexión, para más adelante» · «SES déjalo rojo, es un pendiente real») → **`pendienteConocido`**:
+  se calla la INTERRUPCIÓN, no el registro (siguen en alerta en /operador/agentes). Tres candados con
+  test: marcador del parte —un código de Tuya nuevo vuelve a sonar el mismo día, y sin `detalle` no casa
+  nada—, fecha que caduca sola, y fuera del carril de auto-reparación. Para poder distinguirlo, el parte
+  de accesos pasó de «3 con ERROR» a nombrar los códigos (tres averías que mandaban a sitios opuestos se
+  veían idénticas). ⏸️ Fechas de revisión PROPUESTAS por mí: domótica 12/09 (el 14 entra una reserva de
+  20 noches), SES 06/10.
 - **🔧 Instrumentado `pricing_applied` y ACTIVADOS los mensajes de los 2 pisos de Busto (04/09/2026).** Alberto dio OK a
   las dos cosas. (1) `pricing_applied` gana `target_crudo`, `clamp_floor`, `clamp_ceil`, `rail_ancla` y
   **`rail_ancla_origen`** (migración aplicada a prod): son los 4 números sin los cuales la ida y vuelta de House era

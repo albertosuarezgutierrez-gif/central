@@ -18,6 +18,19 @@ export type EvalLatido = {
   horas: number | null
   /** Motivo legible para el aviso / log. */
   motivo: string
+  /**
+   * true = declarado hace poco y todavía sin señal, pero su primera pasada AÚN NO ha vencido.
+   * NO es alerta y NO es «está bien»: es el tercer estado, «todavía no se sabe». Va a la pantalla
+   * y al JSON, nunca a las alertas del Telegram.
+   */
+  estreno?: boolean
+  /**
+   * true = sigue siendo una avería (`alerta` sigue en true) pero es la que ya está declarada y
+   * fechada en `pendienteConocido`. El Telegram la aparta de las alertas; la pantalla NO.
+   */
+  pendiente?: boolean
+  /** Frase para el bloque de pendientes: motivo + hasta cuándo. */
+  pendienteNota?: string
 }
 
 /**
@@ -33,6 +46,30 @@ export type EvalLatido = {
  *   · ni intento ni pasada buena → no se está disparando (o no escribe huella)
  *   · intento fresco, ninguna pasada buena → se dispara y NO termina
  *   · pasada buena vieja → estuvo bien y dejó de estarlo
+ *
+ * 🚨 Y una CUARTA, que hasta el 04/09/2026 se colapsaba con la primera: **el estreno**. Un latido
+ * recién declarado no tiene fila, y «sin ninguna señal registrada» manda a buscar una avería que no
+ * existe todavía — el agente simplemente no ha tenido aún una pasada que dar. Medido ese día: las
+ * cuatro rutinas cableadas el 02/09 (`psd2_health_check` semanal, `fiscal_novedades` y
+ * `rrhh_compliance` mensuales día 1, `github_vigia` mensual día 15) salieron en ROJO desde el minuto
+ * uno, y las dos mensuales iban a seguir gritando **27 días** hasta su primera pasada del 01/10. El
+ * quinto de la tanda, `facturas_correo` (diario), latía al día siguiente: la maquinaria funcionaba: lo
+ * que fallaba era el juicio.
+ *
+ * Eso es exactamente lo que la regla de oro de este fichero prohíbe — «un monitor que da falsas
+ * alarmas se ignora y no sirve» — y la doctrina del CLAUDE.md raíz: **`NULL` es «todavía no se sabe»,
+ * no «está roto»**. La señal de que faltaba modelarlo estaba a la vista: tres entradas del registro
+ * (`ses_transporte`, `trading_watchdog`) llevaban escrito a mano en su `nota` «si dice sin ninguna
+ * señal recién desplegado, es el estreno, no una avería». Una salvedad repetida en prosa es un
+ * concepto que falta en el tipo.
+ *
+ * Por eso se pasa `vigiladoDesde` (cuándo se dio de alta la vigilancia). Sin ninguna señal y dentro
+ * de su primer `maxHoras` desde el alta → `estreno`, que NO alerta. `maxHoras` ya es «cadencia × ~1,2»,
+ * así que da margen para una pasada completa más holgura, y ni un minuto más: pasado eso, un agente
+ * que sigue sin latir SÍ es una avería y vuelve a rojo él solo, sin que nadie tenga que acordarse.
+ *
+ * ⚠️ El estreno solo aplica **sin ninguna señal**. Un agente que ya latía una vez no vuelve a
+ * estrenarse: si su huella envejece, es avería, por reciente que sea el alta.
  */
 export function evaluarLatido(params: {
   ahora: Date
@@ -40,20 +77,74 @@ export function evaluarLatido(params: {
   maxHoras: number
   ultimoIntento?: Date | null
   detalle?: string | null
+  /** Fecha de alta de la vigilancia (ISO). Ver el bloque de arriba: gobierna el estreno. */
+  vigiladoDesde?: string | Date | null
+  /** Avería ya declarada y fechada. Ver `AgenteVigilado.pendienteConocido`. */
+  pendienteConocido?: { motivo: string; revisarEl: string; mientras: string } | null
 }): EvalLatido {
-  const { ahora, ultimo, maxHoras, ultimoIntento = null, detalle = null } = params
+  const {
+    ahora, ultimo, maxHoras, ultimoIntento = null, detalle = null,
+    vigiladoDesde = null, pendienteConocido = null,
+  } = params
+
+  /**
+   * ¿El parte de HOY sigue siendo la avería que ya está declarada?
+   *
+   * Los tres «no» son deliberados y cada uno tapa una forma de convertir esto en un mute:
+   *   · sin `detalle` no casa NADA — un cron que dejó de escribir parte no puede heredar el permiso
+   *     de silencio del que sí lo escribía;
+   *   · el marcador se compara literal, así que un fallo distinto (otro código) vuelve a sonar;
+   *   · pasada `revisarEl` caduca solo. Se compara contra el FINAL de ese día (`T23:59:59Z`) para
+   *     que «revisar el 12» signifique el 12 entero y no las 00:00 del 12.
+   */
+  const pendienteVivo = (): { motivo: string; revisarEl: string } | null => {
+    if (!pendienteConocido || !detalle) return null
+    if (!detalle.includes(pendienteConocido.mientras)) return null
+    const limite = new Date(`${pendienteConocido.revisarEl}T23:59:59Z`)
+    if (Number.isNaN(limite.getTime()) || ahora > limite) return null
+    return pendienteConocido
+  }
+  const marcarPendiente = (r: EvalLatido): EvalLatido => {
+    const p = pendienteVivo()
+    if (!p) return r
+    return {
+      ...r,
+      pendiente: true,
+      pendienteNota: `${p.motivo} — declarado pendiente hasta el ${p.revisarEl}; ese día vuelve a sonar solo`,
+    }
+  }
   const horasDe = (d: Date) => (ahora.getTime() - d.getTime()) / 3_600_000
   const coletilla = detalle ? ` — último parte: «${detalle}»` : ''
   const hIntento = ultimoIntento ? horasDe(ultimoIntento) : null
 
   if (!ultimo) {
     if (hIntento !== null) {
-      return {
+      return marcarPendiente({
         alerta: true,
         horas: null,
         motivo:
           `se ejecuta pero NUNCA completa una pasada buena (último intento hace ${hIntento.toFixed(1)} h). ` +
           `No es que no se dispare: arranca y se queda a medias${coletilla}`,
+      })
+    }
+    // Estreno: se dio de alta hace poco y su primera pasada todavía no ha vencido.
+    const alta = vigiladoDesde ? new Date(vigiladoDesde) : null
+    if (alta && !Number.isNaN(alta.getTime())) {
+      const hAlta = horasDe(alta)
+      // `hAlta < 0` = alta con fecha futura (un dedazo al declararla). No se trata como estreno
+      // eterno: se ignora y cae a la alerta, que es el lado conservador.
+      if (hAlta >= 0 && hAlta <= maxHoras) {
+        const quedan = maxHoras - hAlta
+        const vence = new Date(alta.getTime() + maxHoras * 3_600_000)
+        return {
+          alerta: false,
+          estreno: true,
+          horas: null,
+          motivo:
+            `en estreno: vigilado desde hace ${hAlta.toFixed(1)} h y aún sin señal, pero su primera ` +
+            `pasada no vence hasta dentro de ${quedan.toFixed(1)} h (${vence.toISOString().slice(0, 10)}). ` +
+            'Todavía no se sabe: si sigue mudo pasada esa fecha, entonces sí es avería',
+        }
       }
     }
     return {
@@ -76,11 +167,11 @@ export function evaluarLatido(params: {
     const matiz = hIntento !== null && hIntento <= maxHoras
       ? `, aunque SÍ arrancó hace ${hIntento.toFixed(1)} h: o se queda a medias, o termina y se declara con problemas — lo dice el parte`
       : ''
-    return {
+    return marcarPendiente({
       alerta: true,
       horas,
       motivo: `${horas.toFixed(1)} h sin una pasada buena (umbral ${maxHoras} h)${matiz}${coletilla}`,
-    }
+    })
   }
   return { alerta: false, horas, motivo: `activo (${horas.toFixed(1)} h)` }
 }
@@ -93,6 +184,43 @@ export type AgenteVigilado = {
   maxHoras: number
   /** Qué hacer si salta (va en el aviso de Telegram). */
   nota: string
+  /**
+   * Fecha de alta de la vigilancia, `YYYY-MM-DD`. OBLIGATORIA: sin ella, un latido recién declarado
+   * sale en rojo con «sin ninguna señal registrada» desde el minuto uno y hasta su primera pasada
+   * —27 días en el caso de una rutina mensual—, que es justo la falsa alarma que este fichero existe
+   * para no dar (ver `evaluarLatido`). Es la fecha del commit que añade ESTA entrada, no la del alta
+   * del agente. Solo se usa mientras no haya ninguna señal: en cuanto el agente late una vez, deja
+   * de importar para siempre.
+   */
+  vigiladoDesde: string
+  /**
+   * Avería REAL, ya vista y decidida, que no se va a arreglar todavía (04/09/2026). No es un
+   * silenciador: es la diferencia entre «pendiente conocido» y «avería nueva», que hasta hoy se
+   * pintaban igual.
+   *
+   * 🚨 POR QUÉ HACÍA FALTA. El 04/09 Alberto decidió dejar dos rojos vivos a propósito —la cerradura
+   * de Bustos Tavera sin conexión y los establecimientos de SES sin dar de alta—. Los dos son
+   * pendientes de verdad, así que apagarlos sería mentir; pero gritarlos cada mañana durante semanas
+   * es la fatiga de alarma que acabábamos de quitar con el `estreno`, solo que por la otra puerta. Un
+   * parte que siempre trae dos rojos deja de leerse, y entonces el tercero tampoco se ve.
+   *
+   * Tres candados para que esto NO pueda convertirse en un mute:
+   *   1. `mientras` — marcador que TIENE que aparecer en el parte de hoy. Si el fallo cambia (otro
+   *      código de Tuya, otro motivo), deja de casar y vuelve a sonar. Un parte SIN detalle tampoco
+   *      casa: un cron que deja de correr grita igual que antes.
+   *   2. `revisarEl` — fecha en la que caduca. Pasada, vuelve a rojo él solo; nadie tiene que
+   *      acordarse de quitar nada.
+   *   3. Sigue contando como ALERTA para la pantalla y para `agente_salud`: lo que se calla es la
+   *      interrupción del Telegram, no el registro. `/operador/agentes` sigue diciendo la verdad.
+   */
+  pendienteConocido?: {
+    /** Por qué se sabe y por qué no se arregla hoy. Va en el parte. */
+    motivo: string
+    /** `YYYY-MM-DD`. Pasada esta fecha vuelve a alertar sin más. */
+    revisarEl: string
+    /** Marcador literal que debe contener el `detalle` para seguir siendo ESTE fallo. */
+    mientras: string
+  }
 }
 
 // Registro extensible. Añadir un agente = una fila aquí + su probe SQL en el route.
@@ -105,6 +233,7 @@ export type AgenteVigilado = {
 export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
     id: 'correduria_renovaciones',
+    vigiladoDesde: '2026-09-01',
     etiqueta: '🛡️ Renovaciones de la correduría (cron diario 06:30)',
     // Diario → 30 h: un tropiezo aislado pasa, dos días caídos saltan.
     maxHoras: 30,
@@ -119,6 +248,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'correduria_ingesta',
+    vigiladoDesde: '2026-09-01',
     etiqueta: '🛡️ Ingesta de CIMA — que los datos de las compañías entren (cron diario 06:45)',
     // Diario → 30 h, igual que el resto de los diarios: un tropiezo pasa, dos días saltan.
     maxHoras: 30,
@@ -137,24 +267,40 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'ses_transporte',
+    vigiladoDesde: '2026-08-21',
+    // Decisión de Alberto (04/09/2026): «déjalo rojo, es un pendiente real». Lo es —la tabla está
+    // vacía y la puerta al Ministerio no está montada—, pero hoy los partes los manda Chekin, así
+    // que no hay incumplimiento y no hay prisa. Lo que no puede pasar es que grite cada mañana
+    // hasta que se dé de alta: el parte se deja de leer y el día que SES falle de verdad no se ve.
+    // ⚠️ `revisarEl` es una PROPUESTA (un mes), no una fecha que él haya dado. Cámbiala si no cuadra.
+    pendienteConocido: {
+      motivo: 'sin establecimientos dados de alta; hoy los partes los manda Chekin, así que no corre prisa',
+      revisarEl: '2026-10-06',
+      mientras: 'no hay ningún establecimiento dado de alta',
+    },
     etiqueta: '🛂 Transporte con SES.HOSPEDAJES (parte de viajeros, cron diario 07:15)',
     // Diario a las 07:15 → 30 h dejan pasar un tropiezo aislado y cazan dos días caídos.
     maxHoras: 30,
     nota:
-      'No estamos pudiendo hablar con el Ministerio. Hoy NO manda partes nadie de esta casa (los ' +
-      'manda Chekin), así que esto no es todavía un incumplimiento — pero es la puerta por la que ' +
-      'van a ir, y si se cierra hay que saberlo ANTES de depender de ella. Lee el `detalle`, que ' +
-      'distingue las dos averías y son opuestas: «SES no responde» es ESPERAR (su entorno de ' +
-      'pruebas llevaba días dando 502 el 20/08/2026, y no se arregla desde aquí); «credenciales o ' +
-      'alta rechazadas» es ACTUAR, en el portal de SES, no en el repo. ' +
-      '🚨 Sospecha primero del CERTIFICADO si el detalle nombra TLS: la hoja de *.ses.mir.es ' +
+      'Hoy NO manda partes nadie de esta casa (los manda Chekin), así que esto no es todavía un ' +
+      'incumplimiento — pero es la puerta por la que van a ir, y si se cierra hay que saberlo ANTES ' +
+      'de depender de ella. 🚨 NO des por hecho que el Ministerio falla: lee el `detalle`, que ' +
+      'separa TRES averías que mandan a sitios distintos. ' +
+      '(1) «no hay ningún establecimiento dado de alta» NO es una caída: no se ha llegado a llamar ' +
+      'a nadie, la tabla `ses_establecimientos` está vacía. Es un pendiente de CONFIGURACIÓN — dar ' +
+      'de alta los pisos en /sivra/partes/establecimientos con sus credenciales del portal SES — y ' +
+      'es lo que este latido mide desde que existe (medido el 04/09/2026: 0 filas). ' +
+      '(2) «SES no responde» es ESPERAR: su entorno de pruebas llevaba días dando 502 el ' +
+      '20/08/2026, y no se arregla desde aquí. ' +
+      '(3) «credenciales o alta rechazadas» es ACTUAR, en el portal de SES, no en el repo. ' +
+      'Y sospecha primero del CERTIFICADO si el detalle nombra TLS: la hoja de *.ses.mir.es ' +
       'caducaba el 03/09/2026 y al rotarla puede cambiar la cadena; el bundle FNMT bueno está en ' +
       '`packages/module-ses/certs/ses-ca-bundle.pem` y se carga con NODE_EXTRA_CA_CERTS. ' +
-      'Y si el aviso dice «sin ninguna señal registrada» recién desplegado, es el estreno, no una ' +
-      'avería. Huella: agente_latidos.ses_transporte.',
+      'Huella: agente_latidos.ses_transporte.',
   },
   {
     id: 'pricing',
+    vigiladoDesde: '2026-07-21',
     etiqueta: '🏷️ Agente de pricing (SIVRA, sesión semanal)',
     // Semanal → 8 días de margen: solo salta si se salta una semana entera + un día.
     // La huella se mide POR PISO (el más viejo manda, ver la sonda en el route): la Rutina
@@ -169,6 +315,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'trading_watchdog',
+    vigiladoDesde: '2026-08-08',
     etiqueta: '🐕 Vigía de la pasada de trading (cron mar-sáb 06:30)',
     // 🚨 Vigila al VIGILANTE, no a la pasada. Los tres tramos de trading (NAV, /analizar, /puntuar)
     // los comprueba el propio `trading-watchdog`, que es más fino que esta lista porque sabe QUÉ
@@ -186,12 +333,11 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'nada, porque el único que los cruza es él. Revisa que `/api/cron/trading-watchdog` sigue en ' +
       '`CRON_JOBS` (lib/cron-dispatch.ts, `30 6 * * 2-6`) y sus logs en Vercel. OJO al leer el hueco: ' +
       'de sábado a martes son 72 h SIN avería — el umbral son 80 h por eso. ' +
-      'Y si el aviso dice «sin ninguna señal registrada» justo después de desplegar esta huella, es el ' +
-      'estreno, no una avería: la primera constancia la deja la primera pasada del cron (martes 06:30 ' +
-      'si se desplegó en fin de semana). Huella: agente_latidos.trading_watchdog.',
+      'Huella: agente_latidos.trading_watchdog.',
   },
   {
     id: 'reservas_booking_vigia',
+    vigiladoDesde: '2026-08-30',
     etiqueta: '🛎️ Vigía Booking↔Smoobu (reservas vistas por correo, cron cada 15 min)',
     // Cada 15 min → 3 h cazan un dispatcher tocado sin gritar por una pasada suelta perdida.
     maxHoras: 3,
@@ -204,6 +350,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'correo_triaje',
+    vigiladoDesde: '2026-07-21',
     etiqueta: '📧 Triaje de correo (cron cada 10 min)',
     // El cursor avanza en cada pasada; 6 h de margen tolera noches tranquilas y caza un cron muerto.
     maxHoras: 6,
@@ -211,6 +358,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'ialimp_pms',
+    vigiladoDesde: '2026-07-31',
     etiqueta: '🧹 Sincronización del PMS de ialimp (Smoobu/iCal, cron cada 10 min)',
     // Cadencia de 10 min → 6 h son 36 pasadas perdidas: no es un tropiezo, está muerta.
     maxHoras: 6,
@@ -223,6 +371,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'facturas_gmail',
+    vigiladoDesde: '2026-07-31',
     etiqueta: '🧾 Escaneo de facturas en Gmail (cron diario 06:15)',
     // Diario → 30 h deja margen para un día saltado sin dar la lata.
     maxHoras: 30,
@@ -236,6 +385,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'subastas_mercado',
+    vigiladoDesde: '2026-08-06',
     etiqueta: '🏘️ Mercado de subastas: comparables y chollos (cron diario 06:20)',
     // Diario → 30 h, igual que el resto de diarios: tolera un día saltado.
     maxHoras: 30,
@@ -249,6 +399,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_eventos',
+    vigiladoDesde: '2026-08-01',
     etiqueta: '🎪 Descubrimiento de eventos de Sevilla (Ticketmaster + búsqueda web, diario)',
     // Diarios (04:00 y 05:00) → 30 h deja pasar un día saltado sin dar la lata.
     maxHoras: 30,
@@ -263,6 +414,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_eventos_verificar',
+    vigiladoDesde: '2026-08-12',
     etiqueta: '🔍 Verificación automática de eventos previstos (diaria 05:30)',
     maxHoras: 30,
     nota:
@@ -278,6 +430,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_eventos_calendario',
+    vigiladoDesde: '2026-08-27',
     etiqueta: '📅 Calendario fijo de Sevilla (diario 03:30)',
     maxHoras: 30,
     nota:
@@ -296,6 +449,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_canal',
+    vigiladoDesde: '2026-08-19',
     etiqueta: '📐 Calibrado del canal Booking (diario 07:45)',
     maxHoras: 30,
     nota:
@@ -321,6 +475,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   // alarma diaria sin arreglo posible — exactamente el ruido que este vigía no puede permitirse.
   {
     id: 'sivra_mercado_booking',
+    vigiladoDesde: '2026-08-06',
     etiqueta: '🏨 Mercado real por fecha (rutina Booking, diaria)',
     // Diaria → 30 h deja pasar una pasada saltada sin dar la lata. La cobertura se ACUMULA (el
     // motor mira 120 días atrás), así que un día perdido no rompe nada; una semana perdida sí.
@@ -338,6 +493,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_pricing_apply',
+    vigiladoDesde: '2026-08-23',
     etiqueta: '💰 Motor de precios, pasada automática (08:30 · 14:30 · 20:30)',
     // 🚨 El umbral sale de la ARITMÉTICA del cron, no de copiar el 30 h de los diarios. Corre 3
     // veces al día, así que el hueco legítimo más largo es 20:30 → 08:30 = 12 h. El vigía comprueba
@@ -362,29 +518,51 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_domotica_acceso',
+    vigiladoDesde: '2026-08-31',
+    // Decisión de Alberto (04/09/2026): la cerradura no tiene conexión y se mira «más adelante».
+    // 🚨 `mientras` es la firma EXACTA de los códigos de hoy, con su paréntesis de cierre: si
+    // aparece un código más el marcador deja de casar y vuelve a sonar el mismo día. Y `revisarEl`
+    // NO es «dentro de un mes» a ojo: el 14/09 entra la reserva 154230951 (20 noches), así que el
+    // 12 es el último día en que reponer el PIN todavía sirve de algo.
+    // ⚠️ Las dos son PROPUESTAS mías, no fechas que él haya dado.
+    pendienteConocido: {
+      motivo: 'cerradura de Bustos Tavera sin conexión (2001) y el respaldo offline rechazado (1109); se mira en el piso',
+      revisarEl: '2026-09-12',
+      mientras: '(Tuya 1109, 2001)',
+    },
     etiqueta: '🔐 PIN por reserva de la cerradura (04:40 · 12:40 · 20:40)',
     // 3 pasadas/día → el hueco legítimo más largo es 20:40→04:40 = 8 h; el vigía mira a las 07:45.
     // 30 h salta al perder un día entero y se calla si solo falló una pasada.
     maxHoras: 30,
     nota:
-      'Los PIN temporales de Tuya por reserva no se están creando. Desde el 31/08/2026 ' +
-      'el mensaje de la víspera manda el PIN de ESA reserva, así que este cron está en el camino del ' +
-      'huésped. 🚦 Lo que NO pasa: nadie se queda en la puerta — sin PIN vivo el mensaje cae al ' +
-      'código MAESTRO de `sivra_codigos_acceso`, que abre igual (verificado 04/09/2026: los cuatro ' +
-      'pisos lo tienen). Lo que SÍ pasa: se reparte una llave permanente en vez de una que caduca ' +
-      'con la estancia, y en silencio. ⚠️ Este latido se pone rojo por DOS motivos distintos y hay ' +
-      'que leer el `detalle` para saber cuál: (a) el cron no corre — mira `ultimo_at`; (b) el cron ' +
-      'corre entero y hay cerraduras con ERROR — es el caso normal aquí, y entonces la avería es de ' +
-      'la cerradura, no del cron. 🚫 NO se cablea aquí la causa del error de turno: esta nota tuvo ' +
-      'un mes cableado el trial de IoT Core caducado como causa conocida, invitando a descartar el ' +
-      'aviso, y el 04/09/2026 el error real era otro (`Tuya 2001: device is offline` en Bustos ' +
-      'Tavera, que lleva 0 PIN creados de 10 intentos desde que existe). Un vigía que diagnostica ' +
-      'por ti lo que no ha mirado te convence de no mirar. La causa se lee en ' +
-      '`domotica_acceso_pin.detalle`. ' +
+      'Los PIN temporales de Tuya por reserva no se están creando. Desde el 31/08/2026 el mensaje ' +
+      'de la víspera manda el PIN de ESA reserva, así que esto está en el camino del huésped. ' +
+      '🚦 Lo que NO pasa: nadie se queda en la puerta — sin PIN vivo el mensaje cae al código ' +
+      'MAESTRO de `sivra_codigos_acceso`, que abre igual (verificado 04/09/2026: los cuatro pisos ' +
+      'lo tienen). Lo que SÍ pasa: se reparte una llave permanente en vez de una que caduca con la ' +
+      'estancia, y en silencio. ' +
+      '🚨 EMPIEZA POR EL `detalle`, y por el `motivo`: este latido se pone rojo por DOS motivos ' +
+      'distintos. (a) El cron no corre — mira `ultimo_at`. (b) «Se ejecuta y no termina» quiere ' +
+      'decir que el cron SÍ está corriendo y que lo que falla son los PIN: es otra avería y otro ' +
+      'sitio donde mirar, y es el caso normal aquí. El parte crudo de cada PIN está en ' +
+      '`domotica_acceso_pin.detalle->>\'error\'` (estado `error`) — léelo antes de creerte ninguna ' +
+      'hipótesis, esta incluida. Los códigos de Tuya medidos hasta hoy separan tres averías que ' +
+      'mandan a sitios OPUESTOS: «2001 device is offline» es la cerradura sin conexión ' +
+      '(batería/pasarela: se arregla EN EL PISO, no en el repo); «1109 param is illegal» sale en ' +
+      'la vía OFFLINE, que es justo el respaldo que debería salvar al 2001, así que un 2001+1109 ' +
+      'juntos dejan la reserva SIN PIN; «28841002 IoT Core subscription has expired» se renueva en ' +
+      'platform.tuya.com. ' +
+      '🚫 NO se cablea aquí la causa del error de turno, y NO des por hecho que es el IoT Core: ' +
+      'esa era la explicación cableada aquí durante un mes, invitando a descartar el aviso, y el ' +
+      '04/09/2026 ya era FALSA — sus últimos errores eran del 03/08 y lo que fallaba ese día era ' +
+      '2001+1109 en Bustos Tavera (0 PIN creados de 10 intentos desde que existe), con tres ' +
+      'reservas sin PIN, una con el huésped ya dentro. Un vigía que diagnostica por ti lo que no ' +
+      'ha mirado te convence de no mirar. ' +
       'Huella: agente_latidos.sivra_domotica_acceso.',
   },
   {
     id: 'sivra_mensajes_prog',
+    vigiladoDesde: '2026-08-31',
     etiqueta: '📬 Mensajes programados a huéspedes (cron cada 30 min)',
     // Cada 30 min → 6 h: caza medio día caído sin saltar por un tropiezo puntual del dispatcher.
     maxHoras: 6,
@@ -399,6 +577,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_extras_impago',
+    vigiladoDesde: '2026-08-28',
     etiqueta: '🍼 Extras del huésped, cobros pendientes (diario 07:00)',
     // Cron diario → 30 h, el umbral de los diarios: deja pasar una pasada saltada sin dar la lata.
     maxHoras: 30,
@@ -413,6 +592,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_pricing_guard',
+    vigiladoDesde: '2026-08-01',
     etiqueta: '🛡️ Guardián de precios (diario 07:30)',
     // Cron diario → 30 h deja pasar una pasada saltada sin dar la lata.
     maxHoras: 30,
@@ -427,6 +607,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'paper_tracker',
+    vigiladoDesde: '2026-08-23',
     etiqueta: '📊 Paper-tracker de trading (cron semanal lunes 10:00 UTC)',
     // Semanal → 192 h (8 días) de margen, mismo criterio que el de pricing: solo salta
     // si se pierde una semana entera + un día. Cron nuevo (18/08/2026, PR #1476) que ya
@@ -439,6 +620,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_prevision',
+    vigiladoDesde: '2026-08-30',
     etiqueta: '🔮 Foto diaria de la previsión por piso (diario 05:50)',
     // Diario → 30 h, el estándar de los diarios: tolera un día saltado.
     maxHoras: 30,
@@ -453,6 +635,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_rates_snapshot',
+    vigiladoDesde: '2026-08-24',
     etiqueta: '📸 Snapshot de precios y disponibilidad de Smoobu (diario 07:00)',
     // Diario → 30 h, el estándar de los diarios: tolera un día saltado.
     maxHoras: 30,
@@ -465,6 +648,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_resumen_diario',
+    vigiladoDesde: '2026-08-24',
     etiqueta: '📋 Resumen diario de pricing (cambios 24h + alertas, diario 09:00)',
     maxHoras: 30,
     nota:
@@ -475,6 +659,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_pilot_track',
+    vigiladoDesde: '2026-08-24',
     etiqueta: '🚁 Seguimiento del piloto de precios (veredictos + watchdog, diario 09:15)',
     maxHoras: 30,
     nota:
@@ -487,6 +672,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'sivra_experimentos',
+    vigiladoDesde: '2026-08-24',
     etiqueta: '🧪 Cierre de experimentos de pricing (¿la subida se reservó?, diario 08:00)',
     maxHoras: 30,
     nota:
@@ -498,6 +684,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'trading_operaciones',
+    vigiladoDesde: '2026-08-20',
     etiqueta: '📒 Libro de operaciones del bróker (pasada diaria, paso 1d)',
     // La pasada corre L-V ~20:15 UTC, así que el hueco legítimo más largo es viernes → lunes = 72 h.
     // 80 h evita saltar todos los lunes sin avería (mismo criterio que trading_watchdog).
@@ -525,6 +712,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   // propósito (cadencia real × ~1,2): mejor detectar tarde que dar falsas alarmas.
   {
     id: 'psd2_health_check',
+    vigiladoDesde: '2026-09-02',
     etiqueta: '🏦 Guardián del sync bancario PSD2 (rutina semanal, miércoles 09:00)',
     // Semanal → 8 días: una semana perdida salta.
     maxHoras: 192,
@@ -537,6 +725,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'facturas_correo',
+    vigiladoDesde: '2026-09-02',
     etiqueta: '🧾 Facturas por correo (rutina diaria 11:00, la de Claude — NO el cron facturas_gmail)',
     maxHoras: 30,
     nota:
@@ -547,6 +736,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'fiscal_novedades',
+    vigiladoDesde: '2026-09-02',
     etiqueta: '⚖️ Radar fiscal IRPF + ayudas (rutina mensual, día 1)',
     // Mensual → 35 días.
     maxHoras: 840,
@@ -557,6 +747,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'rrhh_compliance',
+    vigiladoDesde: '2026-09-02',
     etiqueta: '📋 Calendario de obligaciones RRHH (rutina mensual, día 1)',
     maxHoras: 840,
     nota:
@@ -565,6 +756,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   },
   {
     id: 'github_vigia',
+    vigiladoDesde: '2026-09-02',
     etiqueta: '🐙 Vigía GitHub/OSS: releases, npm outdated y CVE (rutina mensual, día 15)',
     maxHoras: 840,
     nota:
