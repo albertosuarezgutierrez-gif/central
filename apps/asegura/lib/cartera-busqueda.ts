@@ -243,12 +243,32 @@ const SELECT_CLIENTE = {
  * «cartera viva» que nadie ha verificado.
  */
 function aHallazgo(f: FilaCliente, porque: string): Hallazgo {
-  return {
+  return hallazgoSinEnriquecer({
     clienteId: f.id,
     nombre: `${f.nombre} ${f.apellidos}`.trim(),
     tipo: String(f.tipo),
     polizas: f._count.polizas,
     porque,
+  })
+}
+
+/**
+ * El ÚNICO sitio que sabe qué campos tiene un `Hallazgo` recién nacido.
+ *
+ * Existe porque no lo era: `porMatricula` repetía los diez campos a mano, así
+ * que añadir uno al tipo rompía ahí y solo ahí —pasó justo al añadir
+ * `contacto`— y el que se olvidara de actualizar no daría error, daría un
+ * campo con el valor por defecto de otro sitio.
+ *
+ * Todo lo que llega en `enriquecer()` nace en su valor de «no se ha mirado»,
+ * nunca en 0 ni en `[]`: es lo que deja a la pantalla distinguir «no hay» de
+ * «no se sabe».
+ */
+function hallazgoSinEnriquecer(
+  base: Pick<Hallazgo, 'clienteId' | 'nombre' | 'tipo' | 'polizas' | 'porque'>,
+): Hallazgo {
+  return {
+    ...base,
     polizasCima: null,
     ultimoVencimiento: null,
     vitalidad: 'desconocida',
@@ -361,19 +381,15 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
     limit ${LIMITE}
   `
   const conteos = await polizasDe(filas.map((f) => f.id))
-  const hallazgos: Hallazgo[] = filas.map((f) => ({
-    clienteId: f.id,
-    nombre: `${f.nombre} ${f.apellidos}`.trim(),
-    tipo: f.tipo,
-    polizas: conteos.get(f.id) ?? 0,
-    porque: `matrícula ${f.matricula}`,
-    polizasCima: null,
-    ultimoVencimiento: null,
-    vitalidad: 'desconocida',
-    hermanas: null,
-    aviso: null,
-    contacto: null,
-  }))
+  const hallazgos: Hallazgo[] = filas.map((f) =>
+    hallazgoSinEnriquecer({
+      clienteId: f.id,
+      nombre: `${f.nombre} ${f.apellidos}`.trim(),
+      tipo: f.tipo,
+      polizas: conteos.get(f.id) ?? 0,
+      porque: `matrícula ${f.matricula}`,
+    }),
+  )
   return bloque(c, hallazgos, await coberturaMatricula(correduriaId))
 }
 
@@ -800,7 +816,7 @@ async function contactosDe(
       where: { id: { in: ids }, correduriaId },
       select: { id: true, telefono: true, email: true },
     })
-    return new Map(
+    const mapa = new Map<string, Contacto>(
       filas.map((f) => [
         f.id,
         {
@@ -811,8 +827,58 @@ async function contactosDe(
         },
       ]),
     )
+    await rellenarEmailSecundario(correduriaId, mapa)
+    return mapa
   } catch {
     return null
+  }
+}
+
+/**
+ * Para las fichas SIN email en `clientes.email`, el primero de `cliente_emails`.
+ *
+ * 🚨 No es un adorno, y por eso vale una consulta: medido el 04/09/2026, **57
+ * fichas tienen email solo en esa tabla, y 5 de ellas están entre los 80
+ * clientes de la cartera viva** — uno de cada dieciséis. Sin esto, a cinco
+ * clientes REALES les faltaría el icono de correo teniéndolo, que es la forma
+ * silenciosa de este fallo: no se ve, porque el hueco es indistinguible del de
+ * los 27.000 que de verdad no tienen.
+ *
+ * Con el TELÉFONO no hace falta y no se hace: se midió igual y hay **cero**
+ * fichas con secundario y sin principal. Una consulta que no arregla nada es
+ * solo latencia.
+ *
+ * Solo entra cuando NO consta ninguno (`email === null` y no ilegible): si el
+ * principal está cifrado y no abre, el problema es la clave y lo dice la
+ * pantalla, no se tapa con otro correo.
+ *
+ * Si falla, se calla: el contacto se queda como estaba. Nunca se afirma menos
+ * de lo que ya se sabía.
+ */
+async function rellenarEmailSecundario(
+  correduriaId: string,
+  mapa: Map<string, Contacto>,
+): Promise<void> {
+  const huecos = [...mapa.entries()]
+    .filter(([, c]) => c.email === null && !c.emailIlegible)
+    .map(([id]) => id)
+  if (huecos.length === 0) return
+  try {
+    const db = prismaAsegura()
+    const filas = await db.clienteEmail.findMany({
+      where: { clienteId: { in: huecos }, correduriaId },
+      select: { clienteId: true, email: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    for (const f of filas) {
+      const c = mapa.get(f.clienteId)
+      // La primera que se pueda leer gana; las siguientes no la pisan.
+      if (!c || c.email !== null) continue
+      c.email = descifrarCampo(f.email)
+      c.emailIlegible = c.email === null && campoIlegible(f.email)
+    }
+  } catch {
+    // El principal ya está puesto; quedarse sin el secundario no empeora nada.
   }
 }
 
