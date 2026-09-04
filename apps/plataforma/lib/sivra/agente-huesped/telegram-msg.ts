@@ -37,7 +37,13 @@ export async function avisarAutoEnviado(ctx: Contexto, pregunta: string, dec: De
     lineaTraduccion(preguntaEs, otroIdioma, escapeHtml) +
     `\n\n<b>Enviado${idiomaNota}:</b>\n${escapeHtml(dec.reply || '')}` +
     lineaTraduccion(respuestaEs, otroIdioma, escapeHtml) +
-    `\n\n<i>ℹ️ Solo para tu información — enviado sin tu intervención (categoría «${escapeHtml(dec.categoria)}»).</i>`
+    `\n\n<i>ℹ️ Solo para tu información — enviado sin tu intervención (categoría «${escapeHtml(dec.categoria)}»).</i>` +
+    // El control de calidad caído ya no bloquea un intercambio de pura cortesía (`cortesia.ts`), pero
+    // eso NO puede volverse invisible: hasta ahora la única señal de que el clasificador estaba mudo
+    // era el aviso de revisión, y justo esos mensajes dejan de pedirla. Se declara aquí.
+    (dec.sin_verificar
+      ? `\n⚠️ <i>Salió <b>sin verificar</b>: el control de calidad no respondió. Se envió igual por ser pura cortesía (ni la pregunta pedía nada ni la respuesta da ningún dato). Si esto se repite, el clasificador lleva rato caído.</i>`
+      : '')
   await tgAviso('huespedes.borrador', cuerpo).catch(() => {})
 }
 // ¿Escalamos por FALTA DE INFORMACIÓN (y no por política: queja, dinero, cambios…)? Solo entonces

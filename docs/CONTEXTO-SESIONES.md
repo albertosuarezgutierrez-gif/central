@@ -30,6 +30,24 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026).**
+  Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
+  revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
+  saludo» tumbaba la detección → `es_cortesia=false`, la vía de cortesía ni se intentaba; (2) el
+  control de calidad caído (`DESCONOCIDO`) entra en `needs_human`, que es guarda común → tampoco
+  habría salido. Arreglar uno solo no cambiaba nada. Nuevo `cortesia.ts` (detector ancho + anclado, y
+  `respuestaSinDatos`); `DESCONOCIDO` ya no bloquea SOLO cuando ni la pregunta pide nada ni el
+  borrador da un dato, y el aviso de auto-envío lo DECLARA (`sin_verificar`). La decisión final se
+  extrajo a `auto.ts` puro: no tenía ni un test. 31 tests nuevos.
+- **🚨 APRENDIZAJE: medido, y está roto por tres sitios (04/09/2026, sin arreglar — pendiente de tu OK).**
+  (a) **No hay recuperación por similitud**: `contexto.ts` vuelca las 8 últimas filas del piso
+  (`ORDER BY created_at DESC LIMIT 8`), sin mirar si tienen que ver con la pregunta → 8 «gracias»
+  entierran lo enseñado. (b) `mensajes_aprendizaje` **no se le pasa al control de calidad** (solo
+  ficha+guía+`mensajes_hechos`) → sigue escalando por muy contestado que esté. (c) **6 de las 7 filas
+  de `mensajes_hechos` son la carta entera** (legacy previo a #2122, que puso el destilador el
+  02/09) y siguen inyectándose como «HECHOS DE ESTE PISO»: la id=3 lleva el **móvil de Alberto y el
+  nombre de una huésped**. (d) `registrarGap` compara por igualdad exacta → 4 avisos de phishing en
+  distintas palabras = 4 filas de `veces=1`.
 - **🚗 Campos por tipo de seguro + la fecha que sale de la matrícula, y la marca APLICADA (03/09/2026, PR #2235).**
   Alberto: «cuando seleccione un tipo de seguro, que despliegue los campos necesarios». Auto/moto →
   matrícula, fecha de matriculación y bastidor; otro ramo, nada (un tarificador pide todo siempre
