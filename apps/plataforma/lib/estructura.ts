@@ -61,6 +61,7 @@ export const VERTICALES: VerticalInfo[] = [
   { app: 'almacen', nombre: 'Almacén', sector: 'Eventos/catering', desc: 'Gestión de almacén de eventos/catering para el cliente Joaquín Jaén (maestro por familias/materiales).' },
   { app: 'asegura', nombre: 'Grupo ASegura', sector: 'Seguros', url: 'grupoasegura.com', desc: 'Correduría de seguros de Alberto. Esqueleto vivo (auth/layout); la cartera real sigue en el Supabase de Manuel Suárez, en traspaso.' },
   { app: 'asegura-portal', nombre: 'Portal del cliente (Asegura)', sector: 'Seguros', desc: 'Portal del ASEGURADO de Grupo ASegura (app aparte del panel del corredor). Identidad por código de un solo uso; el aislamiento entre clientes lo da el código, no RLS.' },
+  { app: 'asegura-web', nombre: 'Web pública (Asegura)', sector: 'Seguros', desc: 'Web de marketing de Grupo ASegura para el apex grupoasegura.com. Sin base de datos: el formulario reenvía al canal de leads de plataforma. La ve quien todavía NO es cliente.' },
   { app: 'housesevillana', nombre: 'House Sevillana', sector: 'Inmobiliario', url: 'housesevillana.es', desc: 'Landing pública del apartamento turístico (Calle Socorro 24, San Julián, Sevilla). Canal directo: motor de reservas, WhatsApp, teléfono.' },
   { app: 'mariscos', nombre: 'Mariscos González', sector: 'Pesca/mayorista', desc: 'Trazabilidad pesquera + etiquetado por peso (mayorista/pescadería de marisco). Recepción de partidas, envasado, etiqueta por canal.' },
 ]

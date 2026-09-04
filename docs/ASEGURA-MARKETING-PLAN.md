@@ -197,10 +197,38 @@ fondo es pagar por perder leads.
 4. **Registrar el consentimiento del formulario** en `consent_logs` con versión de texto. Hoy
    hay 2 filas en toda la base; la lista nueva se construye bien desde el primer registro.
 
-### Fase 2 — Web propia en el apex (mes 1)
+### Fase 2 — Web propia en el apex ✅ construida el 04/09/2026
 
-`apps/asegura-web`, app pública nueva (molde: `apps/housesevillana`), sobre
+`apps/asegura-web` existe ya en el repo, lista para desplegar sobre
 **`grupoasegura.com` + `www`**. `app.` se queda con el CRM, intacto.
+
+**Cómo está montada, y por qué así:**
+
+- **Sin base de datos.** No tiene Prisma, ni rol de BD, ni secreto de sesión. Es una web de
+  marketing: lo único que sale de ella es el formulario. Si algún día necesita credenciales,
+  la respuesta correcta casi siempre es mover esa función a `apps/asegura`, no traer la BD aquí.
+- **El formulario reutiliza el canal que ya funciona**: `POST /api/lead` reenvía desde el
+  servidor a `/api/publico/correduria/lead` de plataforma, que da de alta la ficha por el
+  puerto de asegura y avisa por Telegram. Cero lógica de negocio duplicada, y sin CORS.
+  🚨 El reenvío propaga la IP real del visitante (`x-forwarded-for`) **a propósito**: sin eso,
+  plataforma vería la misma IP para todos y su límite de 6 intentos/hora pasaría de ser por
+  persona a ser global — el séptimo lead legítimo del día se rechazaría solo.
+- **Los datos del mediador NO se escriben aquí**: salen de `MEDIADOR`
+  (`@central/module-seguros`), la misma fuente que el panel del corredor y el portal.
+- **La identidad visual tampoco**: sale de `MARCA_ASEGURA` (`@central/brand`), cuyos hex se
+  midieron del CSS de `app.grupoasegura.com`. La web pública y el CRM se parecen porque leen
+  el mismo sitio, no porque alguien copiara los colores a ojo.
+- **El copy tiene guardián**: `lib/ramos.test.ts` barre todas las páginas buscando claims de
+  ahorro, superlativos de precio y «garantizamos». Un texto que convierta la web en
+  asesoramiento (y arrastre análisis objetivo + IPID) pone el test en rojo antes de publicarse.
+- **El contrato del formulario tiene guardián**: `lib/contrato-lead.test.ts` lee el fuente de
+  plataforma y compara la lista de ramos. Si divergen, el visitante elegiría un ramo que
+  plataforma rechaza con un 422 — un lead perdido sin que nada falle.
+- **`HORARIO` está a `null` a propósito** y por eso la ficha JSON-LD omite `openingHours`: no
+  se ha confirmado el horario real, y publicar uno inventado hace que alguien llame y no le
+  cojan. Igual con el teléfono: ausente hasta que haya un número que alguien descuelgue.
+- Añadida a la matriz de `tests.yml` y con `ignoreCommand` en su `vercel.json` (con
+  `--sin-previews`), que es parte obligatoria del alta de cualquier app.
 
 - Home + **una página por ramo**, empezando por **hogar** (§1.2c), no los seis a la vez
 - **Quiénes somos con cara y nombre de Alberto** + clave DGSFP visible. Seguros es una compra de

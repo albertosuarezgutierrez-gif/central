@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **Web pública de la correduría: `apps/asegura-web` (04/09/2026).** 17 páginas (home · 6 ramos · «cambiar de
+  correduría» · quiénes somos · 3 legales · sitemap · robots · `/api/lead`), para el **apex `grupoasegura.com` +
+  `www`, que están LIBRES** (`app.` sirve el CRM y no se toca). **Sin BD**: el formulario reenvía por servidor al
+  canal que ya existe en plataforma 🚨 **propagando `x-forwarded-for`** — sin eso el límite de 6/hora por IP pasaría
+  a ser global y el 7º lead legítimo se rechazaría solo. Mediador desde `MEDIADOR`, colores desde `MARCA_ASEGURA`:
+  ni la clave DGSFP ni un hex se escriben ahí. Dos guardianes: el copy no puede prometer ahorros ni superlativos
+  (sería asesoramiento → análisis objetivo + IPID) y la lista de ramos se compara contra el fuente de plataforma.
+  `HORARIO` y teléfono **ausentes a propósito** hasta confirmarlos. Verde: 10 tests propios, 527 del guardián, tsc,
+  eslint y `next build`. Añadida a la matriz de `tests.yml`, a `VERTICALES` y con `ignoreCommand`. PR #2285.
+  ⏸️ **Falta lo que no puede hacer un agente**: atar el dominio al proyecto Vercel nuevo, `PLATAFORMA_URL`,
+  Google Business Profile y unificar `info@`→`hola@` en la web del repo `asegura`.
+
 - **Plan de marketing y captación de Grupo ASegura (04/09/2026).** Nuevo `docs/ASEGURA-MARKETING-PLAN.md`.
   Medido en BD: cartera viva **80 clientes / 110 pólizas (42 canceladas → 68 vivas)**, 1,4 pólizas/cliente,
   76% Sevilla, 81 de 110 en auto (el peor ramo para captar). **Los 32.520 leads son vía CERRADA**: 82,8% sin
