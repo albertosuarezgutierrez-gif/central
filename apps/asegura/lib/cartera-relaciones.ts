@@ -257,7 +257,7 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
     const ids = rel.map((r) => r.relacionadoId)
     const otros = await db.cliente.findMany({
       where: { id: { in: ids }, correduriaId },
-      select: { id: true, nombre: true, apellidos: true, tipo: true, mergedIntoClienteId: true },
+      select: { id: true, nombre: true, apellidos: true, tipo: true, mergedIntoClienteId: true, activo: true },
     })
     const vivas = await db.poliza.groupBy({
       by: ['clienteId'],
@@ -272,6 +272,11 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
         if (!o) return null
         // Una lápida de fusión: el vínculo sigue en la ficha superviviente, aquí no se pinta.
         if (o.mergedIntoClienteId) return null
+        // Una ficha DESCARTADA tampoco se ofrece: el vínculo sigue en la base
+        // (y vuelve solo si se restaura), pero no se pinta un enlace a una ficha
+        // que se quitó de la vista. La ESCRITURA sí sigue admitiéndola, para
+        // poder deshacer un vínculo de una ficha ya descartada.
+        if (!o.activo) return null
         return {
           ...r,
           nombre: `${o.nombre} ${o.apellidos}`.trim(),
@@ -334,6 +339,85 @@ export async function crearRelacion(
     ])
     await anotar(correduriaId, clienteId, `Relación añadida desde plataforma por ${entrada.actor}: ${tipo} (ficha ${entrada.relacionadoId})`)
     await anotar(correduriaId, entrada.relacionadoId, `Relación añadida desde plataforma por ${entrada.actor}: ${tipoInverso(tipo)} (ficha ${clienteId})`)
+    return devolver(correduriaId, clienteId)
+  } catch (e) {
+    return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }
+  }
+}
+
+/**
+ * Cambia el TIPO de un vínculo que ya existe, en los dos sentidos.
+ *
+ * 🚨 Por qué existe (Alberto, 04/09/2026, «¿cómo podría cambiar la relación?»):
+ * hasta hoy solo se podía CREAR y BORRAR. Corregir un vínculo mal anotado —el
+ * conductor de la furgoneta es «Empleado/a», no «Socio/a»— obligaba a quitarlo
+ * y volver a ponerlo, y eso REVOCA de paso la autorización del portal que
+ * hubiera (`borrarRelacion` lo hace a propósito, para dejar constancia). O sea:
+ * arreglar una etiqueta costaba el consentimiento. Peor todavía, el 409 de
+ * `crearRelacion` ya prometía por escrito «edita o borra el vínculo que hay» y
+ * la mitad de esa frase no existía.
+ *
+ * Lo que NO hace, a propósito: tocar la autorización. Si hay una viva y el tipo
+ * nuevo no admite autorizar («Sin vínculo»), se RECHAZA y se pide revocarla
+ * antes — dejar el consentimiento colgando de un vínculo que ya no lo soporta
+ * es exactamente el estado que nadie sabría leer después.
+ */
+export async function cambiarTipoRelacion(
+  correduriaId: string,
+  clienteId: string,
+  entrada: { relacionadoId: string; tipo: unknown; actor: string },
+): Promise<ResultadoRelacion> {
+  const tipo = tipoRelacion(entrada.tipo)
+  if (!tipo) return { ok: false, estado: 'invalido', motivo: 'Tipo de relación desconocido.', status: 422 }
+  if (entrada.relacionadoId === clienteId) return { ok: false, estado: 'invalido', motivo: 'Un cliente no se relaciona consigo mismo.', status: 422 }
+  try {
+    const db = prismaAsegura()
+    const idas = await db.clienteRelacion.findMany({
+      where: { correduriaId, clienteAId: clienteId, clienteBId: entrada.relacionadoId },
+      select: { id: true, tipoRelacion: true },
+    })
+    // «No hay vínculo» y «no se pudo mirar» no son lo mismo: el catch de abajo
+    // devuelve `error`, no este 404.
+    if (idas.length === 0) {
+      return { ok: false, estado: 'no_encontrado', motivo: 'Esas dos fichas no están relacionadas: anota el vínculo en vez de cambiarlo.', status: 404 }
+    }
+    if (idas.every((i) => i.tipoRelacion === tipo)) {
+      return { ok: false, estado: 'invalido', motivo: `El vínculo ya está anotado como «${tipo}».`, status: 422 }
+    }
+    if (!permiteAutorizar(tipo)) {
+      const vivas = await db.portalAutorizacion.count({
+        where: {
+          correduriaId,
+          revocadoEn: null,
+          OR: [
+            { otorganteClienteId: clienteId, autorizadoClienteId: entrada.relacionadoId },
+            { otorganteClienteId: entrada.relacionadoId, autorizadoClienteId: clienteId },
+          ],
+        },
+      })
+      if (vivas > 0) {
+        return {
+          ok: false,
+          estado: 'conflicto',
+          status: 409,
+          motivo: 'Hay una autorización del portal viva entre esas dos fichas, y «Sin vínculo» no admite autorizar. Revócala primero: así queda constancia de que la hubo y hasta cuándo.',
+        }
+      }
+    }
+    const inverso = tipoInverso(tipo)
+    const antes = idas[0].tipoRelacion
+    await db.$transaction([
+      db.clienteRelacion.updateMany({
+        where: { correduriaId, clienteAId: clienteId, clienteBId: entrada.relacionadoId },
+        data: { tipoRelacion: tipo },
+      }),
+      db.clienteRelacion.updateMany({
+        where: { correduriaId, clienteAId: entrada.relacionadoId, clienteBId: clienteId },
+        data: { tipoRelacion: inverso },
+      }),
+    ])
+    await anotar(correduriaId, clienteId, `Relación cambiada desde plataforma por ${entrada.actor}: ${antes} → ${tipo} (ficha ${entrada.relacionadoId})`)
+    await anotar(correduriaId, entrada.relacionadoId, `Relación cambiada desde plataforma por ${entrada.actor}: ${tipoInverso(antes)} → ${inverso} (ficha ${clienteId})`)
     return devolver(correduriaId, clienteId)
   } catch (e) {
     return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }

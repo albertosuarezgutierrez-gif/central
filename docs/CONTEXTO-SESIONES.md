@@ -39,12 +39,37 @@
   aparte, «no acreditan datos») y filtradas por `precedentes.ts` (puro, 10 tests): descarta fecha/importe/hora/
   disponibilidad/comprobación puntual/contacto. Guardián ampliado en `qa-hechos.test.ts`, probado en rojo.
 
+- **🛡️ /correduria: seis peticiones de Alberto desde el móvil, PR #2259 (04/09/2026).**
+  Cabecera visible fuera (~62px de la 1ª pantalla; el `<h1>` se oculta con `.solo-lectores`, no se
+  borra). La búsqueda vive ya en la URL (`?q=`) como la sección (`?s=`): volver con el navegador la
+  restaura — antes el remonte se llevaba el `useState('')`. Icono de WhatsApp junto a los móviles
+  (`urlWhatsapp()`, puro): si no se puede afirmar que es móvil NO se pinta nada. **Bug real:** una
+  póliza de RC ofrecía «Colisión» porque `responsabilidad_civil`, `comercio` y `otros` no estaban en
+  `RAMOS_POR_TIPO_POLIZA` y el `?? null` significa «ofrécelo todo»; ahora está el enum entero + 2
+  guardianes. Nuevo `cambiarTipoRelacion` (antes corregir una etiqueta obligaba a borrar, y borrar
+  REVOCA la autorización del portal). Y **descartar ficha** (`clientes.activo=false`, reversible; NO
+  borrado duro: CIMA la recrearía en silencio), con guarda de pólizas vivas por `esCarteraViva()` y
+  tres desenlaces —si no se puede contar, no se descarta—. Regla que deja: **descartar quita la ficha
+  de donde se MIRA, no de la base**; por eso 15 lecturas filtran `activo` y `coincidencias()` del alta
+  NO (el índice único por hash sigue vivo: filtrarla diría «ese teléfono está libre» y el alta moriría
+  en un P2002).
+  ⚠️ **Corrección a lo que este repo daba por sabido:** `siniestros.ts` afirmaba «no tenemos la tabla
+  oficial» del EIAC. **Sí la hay** — el estándar V07.1 completo está en el Drive de Alberto desde el
+  02/09 (`209_IAC_ESP_DOC…`, punto 10.2 «Claves») y además es libre y gratuito en cimaseg.es.
+  Pendientes: los conductores de GLOBAL 2 que CIMA manda sin ficha propia no admiten vínculo (falta
+  «crear ficha desde interviniente»); la reactivación al volver una póliza solo cubre lo que acuña
+  asegura, no la ingesta de CIMA (vive en el CRM); `apps/asegura-portal` no filtra `activo` (hoy
+  inocuo).
+
 - **🔁 «Sigue habiendo duplicidad» (04/09/2026).** Alberto vio dos Manuel Antonio y dos Pilar Piña Franco en `/correduria`:
   son el VOLCADO (`intranet:cli:N` / `asegura_app:cli2:N`), fuera del lote CIMA a propósito. Medido: **561 grupos** mismo
   nombre+teléfono (584 fichas de más), 0 con póliza viva, 517 pares con el mismo N legado — y la lápida de casi todos
   tiene DNI cifrado SIN hash, así que fusionar por nombre sería a ciegas. Puente hecho: el plan del backfill deja foto en
   **`seguros.backfill_dni_plan`** (solo uuids; DDL aplicada) al abrir `/correduria/mantenimiento` → de ahí sale el lote 7
-  (mismo DNI). **Pendiente: que Alberto abra esa página tras el deploy y me lo diga.** Segundo hallazgo: el cron `e2e-smoke`
+  (mismo DNI). **PR #2260 mergeado y en producción (asegura + plataforma READY, 20:44 UTC). Lote 7 ESCRITO y
+  probado en seco (`2026-09-04_fusion_mismo_dni_lote7.sql`: motor del lote 2, pares leídos de la foto, guardas de
+  identidad dentro); SIN ejecutar porque la foto sigue vacía: Alberto («lote 7», 04/09) tiene que abrir esa página
+  y luego se le enseña el pre-vuelo con nombres.** Segundo hallazgo: el cron `e2e-smoke`
   del repo `asegura` (06:00 UTC, retrasado a ~10:20) creaba un lead sintético diario en la cartera real desde el 02/09 y
   fallaba antes de su limpieza — borrados los 3 (+3 cotizaciones, 9 eventos). **Alberto debe desactivar ese workflow.**
 - **✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas (04/09/2026).** Alberto lo vio mal

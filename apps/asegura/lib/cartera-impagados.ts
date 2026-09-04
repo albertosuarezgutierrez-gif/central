@@ -146,7 +146,8 @@ export async function colaRetencion(
     where: {
       correduriaId,
       situacion: { in: [...SITUACIONES_IMPAGO] },
-      poliza: { mergedIntoPolizaId: null, cliente: { mergedIntoClienteId: null } },
+      // `activo: true`: una ficha descartada no aparece en la lista de impagos.
+      poliza: { mergedIntoPolizaId: null, cliente: { mergedIntoClienteId: null, activo: true } },
     },
     select: {
       id: true,
