@@ -119,24 +119,61 @@ export function leerSiniestros(v: unknown): SiniestroCartera[] | null {
 
 // ─── Ramo de la póliza → tipos de siniestro que encajan ──────────────────────
 //
-// `TIPOS_SINIESTRO` lleva ramo auto/hogar/general/salud/vida; las pólizas de
-// la cartera llevan `tipo` auto/moto/hogar/vida/salud/decesos/
-// responsabilidad_civil/comercio/comunidades/otros. Se ofrece el ramo que
-// encaja MÁS `general` (RC, defensa jurídica, «otro»), que vale para todos.
-// Si el tipo no se sabe mapear, se ofrecen todos: mejor elegir de más que no
-// poder abrirlo.
+// `TIPOS_SINIESTRO` (en `@central/module-seguros`) agrupa por ramo
+// auto/hogar/general/salud/vida; las pólizas de la cartera llevan `tipo`, que
+// es el enum `TipoSeguro` de asegura y tiene DIEZ valores exactos:
+// auto · moto · hogar · vida · salud · decesos · responsabilidad_civil ·
+// comercio · comunidades · otros. A cada uno se le ofrece su ramo MÁS
+// `general` (RC, defensa jurídica y «otro»), que vale para cualquier póliza.
+//
+// 🚨 Por qué está aquí escrito el enum ENTERO y no solo «los que se sabían»
+// (04/09/2026, Alberto): el formulario de apertura ofrecía «Colisión /
+// accidente de circulación» sobre una póliza de RESPONSABILIDAD CIVIL. La
+// causa era el `?? null` de abajo leído como «no lo sé, ofrécelo todo» sobre
+// tres tipos que simplemente no estaban en la tabla —`responsabilidad_civil`,
+// `comercio` y `otros`—, así que la mitad de la cartera de empresa podía abrir
+// un siniestro de lunas o de daños por agua sin que nada fallara. Un tipo que
+// falte en esta tabla NO es un caso raro: es la lista entera del enum menos lo
+// que alguien recordó el día que la escribió. Si se añade un valor a
+// `TipoSeguro`, se añade aquí.
+//
+// `otros` es el ÚNICO que se queda fuera a propósito: ahí «no se sabe de qué
+// es la póliza» es la verdad, y ofrecerlo todo es mejor que no poder abrir el
+// siniestro. Es la única puerta abierta, y es una decisión, no un olvido.
+//
+// ⚠️ Lo que esta tabla NO es: el catálogo de CIMA. CIMA guarda el tipo como
+// CÓDIGO EIAC («1107», «17») y no tenemos su tabla oficial —lo dice
+// `siniestros.ts` del módulo—, así que no se puede afirmar «CIMA ofrece esto
+// para el ramo X». Esto es NUESTRO catálogo, el de los siniestros que abre
+// Alberto desde la ficha; los de CIMA llegan con su código y se pintan como
+// código, no se eligen aquí.
 
 const RAMOS_POR_TIPO_POLIZA: Record<string, readonly string[]> = {
   auto: ['auto', 'general'],
   moto: ['auto', 'general'],
   hogar: ['hogar', 'general'],
+  // Un comercio y una comunidad sufren lo mismo que una casa —agua, incendio,
+  // robo, cristales, daños eléctricos, fenómenos atmosféricos—: es el ramo de
+  // DAÑOS al inmueble y a su contenido, aunque la clave del ramo se llame
+  // «hogar» por dónde nació. Lo que no sufren es una colisión.
   comunidades: ['hogar', 'general'],
+  comercio: ['hogar', 'general'],
+  // Una póliza de RC solo puede dar un siniestro de RC (o su defensa jurídica).
+  // No tiene coche ni inmueble que dañar: el objeto asegurado es el daño que tú
+  // causas a un tercero.
+  responsabilidad_civil: ['general'],
   salud: ['salud', 'general'],
   vida: ['vida', 'general'],
   decesos: ['vida', 'general'],
 }
 
-/** Los ramos de `TIPOS_SINIESTRO` a ofrecer para una póliza; `null` = todos. */
+/**
+ * Los ramos de `TIPOS_SINIESTRO` a ofrecer para una póliza; `null` = todos.
+ *
+ * `null` se devuelve en dos casos que son el MISMO «no se sabe de qué es esta
+ * póliza»: sin tipo (una póliza que asegura no clasifica) y `otros`. Cualquier
+ * otro valor del enum tiene su fila arriba.
+ */
 export function ramosSiniestroParaPoliza(tipoPoliza: string | null | undefined): readonly string[] | null {
   if (!tipoPoliza) return null
   return RAMOS_POR_TIPO_POLIZA[tipoPoliza] ?? null

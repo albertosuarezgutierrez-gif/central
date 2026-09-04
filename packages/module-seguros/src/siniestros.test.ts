@@ -12,9 +12,12 @@ import {
 
 const HOY = new Date('2026-09-02T12:00:00Z')
 
-test('siniestros: el tipo de CIMA es un código y se pinta como tal, sin inventarle nombre', () => {
-  assert.equal(etiquetaTipoSiniestro('1107'), 'código CIMA 1107')
-  assert.equal(etiquetaTipoSiniestro('17'), 'código CIMA 17')
+test('siniestros: el código de CIMA que está en la tabla EIAC se pinta con su nombre; el que no, como código', () => {
+  // Desde el 04/09/2026 tenemos la tabla oficial (ver `eiac-siniestros.ts`).
+  assert.equal(etiquetaTipoSiniestro('1107'), 'Otras Asistencias')
+  assert.equal(etiquetaTipoSiniestro('17'), 'Otras Causas')
+  // Fuera de la tabla no se inventa nombre.
+  assert.equal(etiquetaTipoSiniestro('9999'), 'código CIMA 9999')
   assert.equal(etiquetaTipoSiniestro('lunas'), 'Lunas y cristales')
   assert.equal(etiquetaTipoSiniestro(null), 'sin tipo')
   assert.equal(etiquetaTipoSiniestro('Texto libre'), 'Texto libre')

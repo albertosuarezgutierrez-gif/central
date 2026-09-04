@@ -28,6 +28,7 @@
 //   tecleada, `nota`.
 
 import {
+  WHERE_CARTERA_VIVA,
   coincidenciaBloquea,
   documentoAcredita,
   estadoDocumento,
@@ -73,7 +74,7 @@ export function campoIlegible(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.startsWith('v1:') && descifrarCampo(v) === null
 }
 
-type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; status: 404 | 409 | 422 | 500 }
+type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; polizasVivas?: number; status: 404 | 409 | 422 | 500 }
 
 function invalido(motivo: string, campo?: string): Fallo {
   return { ok: false, estado: 'invalido', motivo, campo, status: 422 }
@@ -102,7 +103,7 @@ function cifrado(tipo: TipoContacto | 'dni', valor: string): { cifrado: string; 
 async function clienteDe(correduriaId: string, clienteId: string) {
   return prismaAsegura().cliente.findFirst({
     where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
-    select: { id: true, nombre: true, apellidos: true, telefono: true, email: true },
+    select: { id: true, nombre: true, apellidos: true, telefono: true, email: true, activo: true },
   })
 }
 
@@ -112,6 +113,12 @@ async function clienteDe(correduriaId: string, clienteId: string) {
  * ¿Qué OTRAS fichas de la correduría tienen ya este DNI/teléfono/email?
  * Mira el principal (`clientes`) y también los secundarios de las tablas
  * hijas. Las lápidas de fusión no cuentan.
+ *
+ * 🚨 Las fichas DESCARTADAS (`activo = false`) SÍ cuentan aquí, a propósito: el
+ * índice único por hash de `clientes.telefono`/`email` sigue vivo aunque la
+ * ficha no se pinte, así que filtrarlas diría «ese teléfono está libre» y el
+ * alta moriría después en un P2002 sin explicación. Lo que hace descartar es
+ * quitar la ficha de donde se MIRA, no de la base.
  */
 export async function coincidencias(
   correduriaId: string,
@@ -483,6 +490,169 @@ export async function editarCliente(
   } catch (e) {
     if (esUnicoViolado(e)) return conflicto([], false)
     return fallo(e)
+  }
+}
+
+// ─── Descartar (borrado suave) ───────────────────────────────────────────────
+//
+// 🚨 Una ficha NO se borra: se DESCARTA (`clientes.activo = false`), y se puede
+// restaurar. Tres razones, y las tres son de este negocio:
+//
+//   1. **La ingesta de CIMA puede recrear la ficha.** Un DELETE duro se deshace
+//      solo, en silencio y sin dejar rastro de que alguien lo pidió.
+//   2. Cuelgan de ella `historial_interno`, relaciones, pólizas, recibos,
+//      siniestros y documentos: borrar la fila es borrar el expediente.
+//   3. Son 32.600 fichas. Un borrado irreversible a un clic sobre una cartera
+//      así es una pérdida de datos esperando a pasar.
+//
+// Descartar quita la ficha de DONDE SE MIRA (buscador, lista, resumen,
+// duplicados, sin-canal, impagados…), no de la base. La ficha en sí se sigue
+// abriendo por su URL —si no, no habría manera de restaurarla— y dice arriba
+// que está descartada.
+//
+// 🛡️ GUARDA DURA: una ficha con **alguna póliza VIVA** no se descarta. «Viva»
+// no se decide aquí: lo decide `esCarteraViva()` / `WHERE_CARTERA_VIVA` de
+// `@central/module-seguros`, que es la fuente única (`import_ref IS NULL` **o**
+// `eiac_xml_hash IS NOT NULL`). Y si ese recuento NO se puede hacer, tampoco se
+// descarta: «no se ha podido comprobar» es un tercer estado, no una vía libre
+// (regla global «dato que NO hay ≠ dato que NO se ha mirado»).
+
+export type ResultadoDescarte = { ok: true; activo: boolean; yaEstaba: boolean } | Fallo
+
+const MAX_MOTIVO = 500
+
+function motivoLimpio(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const t = v.replace(/\s+/g, ' ').trim()
+  return t === '' ? null : t.slice(0, MAX_MOTIVO)
+}
+
+/**
+ * Cuántas pólizas VIVAS tiene la ficha.
+ *
+ * Devuelve `null` cuando la consulta falla, y ese `null` NO se colapsa con 0
+ * aguas arriba: sin saberlo, no se descarta. Un `?? 0` aquí sería dar vía libre
+ * a un borrado suave sobre una cartera que nadie ha podido mirar.
+ */
+async function polizasVivasDe(correduriaId: string, clienteId: string): Promise<number | null> {
+  try {
+    return await prismaAsegura().poliza.count({
+      where: { AND: [{ clienteId, correduriaId, mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA] },
+    })
+  } catch (e) {
+    console.error('[cartera-edicion] no se pudieron contar las pólizas vivas:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+/**
+ * Descarta una ficha: deja de salir en el buscador, la lista y los contadores.
+ * Reversible con `restaurarCliente`.
+ *
+ * `yaEstaba: true` cuando la ficha ya estaba descartada: no es un error (el
+ * resultado pedido ya se cumple) y no se anota otra vez en el historial.
+ */
+export async function descartarCliente(
+  correduriaId: string,
+  clienteId: string,
+  actor: string,
+  motivo?: unknown,
+): Promise<ResultadoDescarte> {
+  if (typeof clienteId !== 'string' || clienteId.trim() === '') return invalido('Falta el cliente.', 'id')
+  const razon = motivoLimpio(motivo)
+  try {
+    const c = await clienteDe(correduriaId, clienteId)
+    if (!c) return noEncontrado()
+    if (!c.activo) return { ok: true, activo: false, yaEstaba: true }
+
+    const vivas = await polizasVivasDe(correduriaId, clienteId)
+    if (vivas === null) {
+      return {
+        ok: false,
+        estado: 'error',
+        motivo: 'no_se_pudo_comprobar_polizas',
+        status: 500,
+      }
+    }
+    if (vivas > 0) {
+      return {
+        ok: false,
+        estado: 'invalido',
+        motivo: 'tiene_polizas_vivas',
+        polizasVivas: vivas,
+        status: 422,
+      }
+    }
+
+    await prismaAsegura().cliente.updateMany({
+      where: { id: clienteId, correduriaId },
+      data: { activo: false, updatedAt: new Date() },
+    })
+    await anotarHistorial(
+      correduriaId,
+      clienteId,
+      'gestion',
+      `Ficha DESCARTADA desde plataforma por ${actor}${razon ? ` · motivo: ${razon}` : ' · sin motivo indicado'} (borrado suave: deja de salir en buscador y listas; se puede restaurar)`,
+    )
+    return { ok: true, activo: false, yaEstaba: false }
+  } catch (e) {
+    return fallo(e)
+  }
+}
+
+/** Devuelve una ficha descartada a la cartera. No toca nada más de la ficha. */
+export async function restaurarCliente(
+  correduriaId: string,
+  clienteId: string,
+  actor: string,
+  motivo?: unknown,
+): Promise<ResultadoDescarte> {
+  if (typeof clienteId !== 'string' || clienteId.trim() === '') return invalido('Falta el cliente.', 'id')
+  const razon = motivoLimpio(motivo)
+  try {
+    const c = await clienteDe(correduriaId, clienteId)
+    if (!c) return noEncontrado()
+    if (c.activo) return { ok: true, activo: true, yaEstaba: true }
+    await prismaAsegura().cliente.updateMany({
+      where: { id: clienteId, correduriaId },
+      data: { activo: true, updatedAt: new Date() },
+    })
+    await anotarHistorial(
+      correduriaId,
+      clienteId,
+      'gestion',
+      `Ficha RESTAURADA desde plataforma por ${actor}${razon ? ` · motivo: ${razon}` : ''}`,
+    )
+    return { ok: true, activo: true, yaEstaba: false }
+  } catch (e) {
+    return fallo(e)
+  }
+}
+
+/**
+ * Reactiva una ficha descartada porque ha vuelto a ser un cliente de verdad:
+ * ha entrado una póliza suya. Idempotente y sin ruido — si ya estaba activa no
+ * escribe nada.
+ *
+ * Es la contrapartida de la guarda: se descarta solo lo que no tiene pólizas
+ * vivas, así que en cuanto vuelve a tener una, la ficha vuelve. Best-effort a
+ * propósito: la póliza ya está creada y un fallo aquí no puede deshacerla.
+ */
+export async function reactivarPorPoliza(correduriaId: string, clienteId: string, porque: string): Promise<void> {
+  try {
+    const r = await prismaAsegura().cliente.updateMany({
+      where: { id: clienteId, correduriaId, activo: false },
+      data: { activo: true, updatedAt: new Date() },
+    })
+    if (r.count === 0) return
+    await anotarHistorial(
+      correduriaId,
+      clienteId,
+      'gestion',
+      `Ficha reactivada automáticamente: ${porque}. Estaba descartada y ha vuelto a tener una póliza.`,
+    )
+  } catch (e) {
+    console.error('[cartera-edicion] no se pudo reactivar la ficha descartada:', e instanceof Error ? e.message : e)
   }
 }
 

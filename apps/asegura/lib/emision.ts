@@ -14,6 +14,7 @@
 
 import { prepararPolizaEmitida, type CompaniaDgs, type ProyectoEmitido } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
+import { reactivarPorPoliza } from './cartera-edicion'
 
 /** Catálogo de compañías por código DGS. `null` = no se pudo leer (no es «vacío»). */
 export async function catalogoCompanias(): Promise<CompaniaDgs[] | null> {
@@ -83,5 +84,11 @@ export async function registrarPolizaEmitida(
               ${`Póliza emitida por Codeoscopic (proyecto ${entrada.proyecto.projectIdCodeoscopic}) en ${f.aseguradora}${f.numeroPoliza ? ` nº ${f.numeroPoliza}` : ''}; pendiente de confirmación por CIMA. ${r.avisos.length ? `Avisos: ${r.avisos.join(' · ')}` : ''} Por ${entrada.actor}`})`
     return creada.id
   })
+  // Una ficha DESCARTADA que vuelve a tener una póliza es un cliente otra vez:
+  // se reactiva sola. Es la contrapartida de la guarda de `descartarCliente`
+  // (solo se descarta lo que NO tiene pólizas vivas), y va DESPUÉS de la
+  // transacción a propósito: la póliza ya está acuñada y un fallo aquí no puede
+  // deshacerla — se registra y se sigue.
+  await reactivarPorPoliza(correduriaId, cliente.id, `se ha emitido la póliza ${f.numeroPoliza ?? '(sin número)'} de ${f.aseguradora}`)
   return { ok: true, polizaId, avisos: r.avisos }
 }

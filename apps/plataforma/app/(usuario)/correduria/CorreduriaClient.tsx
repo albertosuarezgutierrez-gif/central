@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { Shield, CalendarClock, Landmark, FolderOpen } from 'lucide-react'
-import { Pagina, PageHeader, Badge } from '@/components/ui'
+import { CalendarClock, Landmark, FolderOpen } from 'lucide-react'
+import { Pagina, Badge } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
@@ -228,11 +228,20 @@ export default function CorreduriaClient() {
 
   return (
     <Pagina ancho="tabla">
-      <PageHeader
-        titulo="Correduría"
-        icono={<Shield size={20} strokeWidth={1.75} />}
-        acciones={<AccionesCabecera />}
-      />
+      {/* ── SIN CABECERA VISIBLE (04/09/2026, pedido de Alberto) ────────────
+          El escudo + «Correduría» costaban ~62px de la primera pantalla
+          (38px de icono, 20px de h1 y 24px de `margin-bottom` del
+          `.page-header`) para decir dónde estás… en la pantalla que abres a
+          propósito y cuyo nombre ya sale en el menú lateral. En un móvil de
+          740px útiles eso es un 8% del alto para cero trabajo.
+
+          El `<h1>` NO se borra, se oculta a la vista: sin él la página se
+          queda sin encabezado para un lector de pantalla y para el título del
+          documento. Lo mismo hace `Bloque` con sus rótulos. */}
+      <h1 className="solo-lectores">Correduría</h1>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+        <AccionesCabecera />
+      </div>
 
       {/* ── EL BUSCADOR, SIEMPRE ────────────────────────────────────────────
           Lo primero y lo más usado. Va FUERA de las secciones a propósito: se
