@@ -694,6 +694,21 @@ que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míra
     el síntoma es idéntico a un build legítimamente ignorado, así que **compruébalo en el status de Vercel
     del PR en vez de darlo por hecho**.
     ialimp NO lo lleva a propósito: cliente vivo (Sique Brilla) → ahí sigue la regla «preview verde antes de main».
+    🔥 **Y LA TRAMPA CARA, medida el 04/09/2026 (PR #2281): `[preview]` NO es por app — es un
+    interruptor GLOBAL, y en un commit de MERGE construye las once.** El marcador levanta el veto
+    de `--sin-previews` en **todos** los proyectos a la vez (paso 1b del script mira solo el asunto,
+    no qué app es), así que lo único que después decide es el paso 3: «¿el commit toca esta app?».
+    Y el diff de un **commit de merge** contra su primer padre **es todo lo que traía `main`** —
+    incluidos `pnpm-lock.yaml` y el `package.json` raíz, que están en la lista de manifiestos. O sea:
+    marcar con `[preview]` un merge de `main` = **once builds de preview de golpe**, por un cambio
+    que solo tocaba una app. Medido: los 11 `Vercel – *` salieron `Deployment has completed`, **cero
+    `Canceled by Ignored Build Step`**. Es la misma familia que el incidente de los ~600 US$ (PR #904),
+    disparada por el mecanismo puesto para ahorrar.
+    **Cómo se pide una preview sin pagar diez:** el `[preview]` va en un commit **normal que toque solo
+    esa app**, y ese commit tiene que ser el **último** del push (el script lee el asunto del HEAD).
+    Si además hay que mergear `main`, mergea PRIMERO —sin marcador— y deja el commit marcado encima;
+    al revés, el merge se come el asunto y de paso construye todo. Y si el último commit acaba siendo
+    un merge, **quítale el `[preview]`** y renuncia a la preview antes que pagar once.
   - 🟡 **Y el falso positivo al revés (02/09/2026): «Building» NO significa que se vaya a construir.** Al
     empujar, el comentario de Vercel del PR pinta los proyectos en **Building** durante unos segundos y
     LUEGO pasan a `Ignored`: el `ignoreCommand` corre DENTRO del deployment, así que el estado intermedio

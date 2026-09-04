@@ -65,9 +65,16 @@ export function evaluarLatido(params: {
 
   const horas = horasDe(ultimo)
   if (horas > maxHoras) {
-    // Si sigue arrancando, el problema está en que no termina, no en el disparo.
+    // Si sigue arrancando, el problema NO está en el disparo. Pero cuál de los dos es se DECLARA,
+    // no se afirma: `registrarLatido(id, false, …)` lo escriben tanto los agentes que arrancan y
+    // mueren a medias (`'pasada en curso'`: facturas-scan, prevision-pisos, subastas-mercado,
+    // ses-latido) como los que llegan al final y se declaran con problemas (el programador de
+    // accesos: termina las 3 pasadas del día y reporta `ok=false` porque una cerradura da error).
+    // Decir «se ejecuta y no termina» a los segundos manda a mirar el reloj de la función cuando
+    // la avería está en el `detalle` — el mismo error de dirección que esta función nació para
+    // evitar, invertido. El parte va pegado detrás y distingue los dos casos.
     const matiz = hIntento !== null && hIntento <= maxHoras
-      ? `, aunque SÍ arrancó hace ${hIntento.toFixed(1)} h (se ejecuta y no termina)`
+      ? `, aunque SÍ arrancó hace ${hIntento.toFixed(1)} h: o se queda a medias, o termina y se declara con problemas — lo dice el parte`
       : ''
     return {
       alerta: true,
@@ -360,12 +367,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     // 30 h salta al perder un día entero y se calla si solo falló una pasada.
     maxHoras: 30,
     nota:
-      'El cron que crea y retira los PIN temporales de Tuya no está corriendo. Desde el 31/08/2026 ' +
+      'Los PIN temporales de Tuya por reserva no se están creando. Desde el 31/08/2026 ' +
       'el mensaje de la víspera manda el PIN de ESA reserva, así que este cron está en el camino del ' +
       'huésped. 🚦 Lo que NO pasa: nadie se queda en la puerta — sin PIN vivo el mensaje cae al ' +
-      'código MAESTRO, que abre igual. Lo que SÍ pasa: se reparte una llave permanente en vez de una ' +
-      'que caduca con la estancia, y en silencio. Mira el `detalle`: «con ERROR» en Bustos Tavera es ' +
-      'el trial de IoT Core caducado (conocido, se renueva en platform.tuya.com), no un fallo nuevo. ' +
+      'código MAESTRO de `sivra_codigos_acceso`, que abre igual (verificado 04/09/2026: los cuatro ' +
+      'pisos lo tienen). Lo que SÍ pasa: se reparte una llave permanente en vez de una que caduca ' +
+      'con la estancia, y en silencio. ⚠️ Este latido se pone rojo por DOS motivos distintos y hay ' +
+      'que leer el `detalle` para saber cuál: (a) el cron no corre — mira `ultimo_at`; (b) el cron ' +
+      'corre entero y hay cerraduras con ERROR — es el caso normal aquí, y entonces la avería es de ' +
+      'la cerradura, no del cron. 🚫 NO se cablea aquí la causa del error de turno: esta nota tuvo ' +
+      'un mes cableado el trial de IoT Core caducado como causa conocida, invitando a descartar el ' +
+      'aviso, y el 04/09/2026 el error real era otro (`Tuya 2001: device is offline` en Bustos ' +
+      'Tavera, que lleva 0 PIN creados de 10 intentos desde que existe). Un vigía que diagnostica ' +
+      'por ti lo que no ha mirado te convence de no mirar. La causa se lee en ' +
+      '`domotica_acceso_pin.detalle`. ' +
       'Huella: agente_latidos.sivra_domotica_acceso.',
   },
   {

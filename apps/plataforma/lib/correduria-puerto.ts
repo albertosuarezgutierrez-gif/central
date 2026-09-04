@@ -76,6 +76,21 @@ export type Hallazgo = {
    *  `[]` = se miró y no hay. Pintarlos igual diría «no hay duplicados». */
   hermanas: Hermana[] | null
   aviso: { clase: 'duplicado' | 'comparte'; texto: string; preferida: Hermana | null } | null
+  /**
+   * Teléfono y email del titular, para llamar/escribir desde el propio
+   * resultado. 🚨 `null` = asegura no lo manda (versión anterior) o no se pudo
+   * consultar. NO es «no tiene»: por eso la UI no pinta nada en ese caso, en
+   * vez de afirmar que no hay forma de contactar.
+   */
+  contacto: Contacto | null
+}
+
+export type Contacto = {
+  telefono: string | null
+  /** Hay valor guardado y la clave no lo abre. Se dice «cifrado», no «no hay». */
+  telefonoIlegible: boolean
+  email: string | null
+  emailIlegible: boolean
 }
 
 const VITALIDADES = new Set(['viva', 'historica', 'sin_fecha', 'desconocida'])
@@ -85,6 +100,23 @@ const VITALIDADES = new Set(['viva', 'historica', 'sin_fecha', 'desconocida'])
  *  (que no manda el campo) sigue sirviendo la búsqueda. */
 function vitalidad(v: unknown): Vitalidad {
   return typeof v === 'string' && VITALIDADES.has(v) ? (v as Vitalidad) : 'desconocida'
+}
+
+/**
+ * El bloque de contacto del hallazgo. Ausente o con forma rara → `null` («no
+ * se sabe»), NUNCA un objeto a ceros: eso diría «se ha mirado y no tiene»
+ * sobre una ficha que quizá sí tiene teléfono. Es la misma degradación que ya
+ * hace el bloque de recibos con una versión anterior de asegura.
+ */
+function contacto(v: unknown): Contacto | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  return {
+    telefono: cadena(o.telefono),
+    telefonoIlegible: o.telefonoIlegible === true,
+    email: cadena(o.email),
+    emailIlegible: o.emailIlegible === true,
+  }
 }
 
 function hermanas(v: unknown): Hermana[] | null {
@@ -162,6 +194,7 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
         ultimoVencimiento: cadena(x.ultimoVencimiento),
         vitalidad: vitalidad(x.vitalidad),
         hermanas: hs,
+        contacto: contacto(x.contacto),
         aviso:
           textoAviso === null || av == null
             ? null

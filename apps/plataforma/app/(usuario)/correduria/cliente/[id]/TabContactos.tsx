@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SIN_VINCULO, etiquetaRol, type PersonaDePolizas } from '@central/module-seguros'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
-import BotonWhatsapp from '../../BotonWhatsapp'
+import AccionesContacto from '../../AccionesContacto'
 import { btnStyle } from '@/components/ui'
 import type { Ficha, IntervinienteFicha } from '@/lib/ficha-asegura'
 import {
@@ -124,10 +124,11 @@ function PersonasPolizas({ ficha, personas }: { ficha: Ficha; personas: PersonaD
               ? <Link href={`/correduria/cliente/${p.fichaId}`}>{p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
               : (p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre'))}
           </span>
-          {/* El icono de WhatsApp solo sale si el número es un móvil; con un fijo
-              no se pinta nada en vez de un enlace que abriría un chat vacío. */}
-          {p.telefono && <> · <a href={`tel:${p.telefono.replace(/\s/g, '')}`}>📞 {p.telefono}</a><BotonWhatsapp telefono={p.telefono} compacto /></>}
-          {p.email && <> · <a href={`mailto:${p.email}`}>✉️</a></>}
+          {/* Llamar · WhatsApp · escribir a ESTA persona, no al tomador: son
+              los conductores habituales, y es a ellos a quien hay que llamar.
+              El icono de WhatsApp solo sale si el número es un móvil. */}
+          {p.telefono && <> · <a href={`tel:${p.telefono.replace(/\s/g, '')}`}>📞 {p.telefono}</a></>}
+          {' '}<AccionesContacto telefono={p.telefono} email={p.email} quien={p.nombre ?? 'esta persona'} />
 
           {/* Un papel por línea, cada uno con lo que se puede hacer con ÉL: lo
               que se quita es la fila de una póliza, no «a la persona». */}

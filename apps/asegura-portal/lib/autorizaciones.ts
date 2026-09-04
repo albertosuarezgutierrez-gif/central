@@ -44,7 +44,7 @@ import {
   type TipoOtorgante,
   type TituloRepresentacion,
 } from '@central/module-seguros-portal'
-import { permiteAutorizar, SIN_VINCULO } from '@central/module-seguros'
+import { permiteAutorizar, SIN_VINCULO, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 
 import { prisma } from './db'
 import { getIdentidad } from './session'
@@ -148,6 +148,12 @@ function puedeRevocarse(estado: EstadoAutorizacion, esMia: boolean): boolean {
   return esMia && ocupaElSitio(estado)
 }
 
+/** Tope de pólizas que se ofrecen para compartir de una en una. */
+const MAX_POLIZAS_OTORGABLES = 200
+
+/** Un uuid mal formado revienta dentro de Prisma con un 500 en vez de contestar. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** `nivel` es `text` con CHECK en la BD. Un valor fuera del vocabulario cae al nivel MÁS bajo. */
 function nivelDeVinculo(v: string): Nivel {
   return (NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta'
@@ -169,8 +175,28 @@ export type AutorizacionVista = {
   estado: EstadoAutorizacion
   otorganteClienteId: string
   otorganteNombre: string | null
-  autorizadoClienteId: string
+  /**
+   * A quién se autorizó, cuando es cliente de la correduría. `null` = no lo es
+   * y lo que hay es `autorizadoIdentidadId`: exactamente uno de los dos va
+   * relleno y lo obliga la BD.
+   */
+  autorizadoClienteId: string | null
+  /**
+   * A quién se autorizó cuando NO es cliente: su identidad del portal. De ella
+   * **no sabemos el nombre** —no hay ficha— y por eso `autorizadoNombre` es
+   * `null`: la pantalla dice «una persona invitada», no un nombre inventado.
+   */
+  autorizadoIdentidadId: string | null
   autorizadoNombre: string | null
+  /**
+   * La ÚNICA póliza que abre. `null` = **todas las del otorgante**, incluidas
+   * las que contrate mañana — y eso la pantalla lo tiene que decir con esas
+   * palabras, porque no es lo mismo prestarle a alguien la del coche que la
+   * cartera entera para siempre.
+   */
+  polizaId: string | null
+  /** Cómo se llama esa póliza para pintarla. `null` = todas, o ya no se puede leer. */
+  polizaEtiqueta: string | null
   /**
    * Con qué título representa a la sociedad quien recibe un apoderamiento
    * (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta,
@@ -220,7 +246,16 @@ export type Candidato = {
   autorizadoNombre: string | null
   tipoRelacion: string
   /** Alcances que ya ocupan sitio para esta pareja (pendientes o vigentes). */
-  yaConcedidos: Alcance[]
+  /**
+   * Los que ya ocupan sitio para esta pareja, **con la póliza a la que se
+   * concedieron** (`polizaId: null` = toda la ficha). La póliza va aquí porque
+   * sin ella la lista miente en las dos direcciones: haber compartido «ver» de
+   * toda la cartera desactivaría «ver» sobre una póliza suelta (que sí se puede
+   * conceder), y al revés. La clave del índice único de la BD es
+   * (otorgante, autorizado, COALESCE(póliza), alcance), y esta lista tiene que
+   * hablar de lo mismo que ella.
+   */
+  yaConcedidos: { alcance: Alcance; polizaId: string | null }[]
   /**
    * Qué es la ficha DESDE la que se concede. Va aquí para que la pantalla no lo
    * adivine por el nombre («…S.L.» no es un dato) ni lo pregunte: de una persona
@@ -235,6 +270,17 @@ export type Candidato = {
    * vocabulario acaban discrepando, y la que decide es la del backend.
    */
   alcancesPosibles: Alcance[]
+  /**
+   * Las pólizas VIVAS de la ficha que cede, para poder compartir UNA sola. La
+   * lista sale del backend y no del cliente por lo de siempre: el id que se
+   * mande de vuelta se vuelve a comprobar contra la ficha en `conceder()`, y
+   * además la FK compuesta de la BD no deja colar la de un tercero.
+   *
+   * Vacía = esa ficha no tiene ninguna póliza viva ahora mismo. La pantalla
+   * entonces no ofrece elegir: no hay nada entre lo que elegir, y un desplegable
+   * vacío se lee como «se ha roto».
+   */
+  polizas: { id: string; etiqueta: string }[]
 }
 
 export type AutorizacionesPortal = {
@@ -245,13 +291,6 @@ export type AutorizacionesPortal = {
   /** Las que otros me han concedido a mí. */
   recibidas: AutorizacionVista[]
   candidatos: Candidato[]
-}
-
-const SIN_NADA: AutorizacionesPortal = {
-  puedeAutorizar: false,
-  otorgadas: [],
-  recibidas: [],
-  candidatos: [],
 }
 
 type ResultadoConceder =
@@ -266,6 +305,8 @@ export type ErrorConceder =
   | 'nivel_insuficiente'
   | 'sin_relacion'
   | 'ya_concedida'
+  /** La póliza que se quería compartir no está en la ficha desde la que se cede. */
+  | 'poliza_no_es_tuya'
 
 type ResultadoResolver =
   | { ok: true; estado: EstadoAutorizacion }
@@ -313,8 +354,20 @@ async function fichasPorId(ids: string[]): Promise<Map<string, FichaVista>> {
  * la raíz: dato que NO hay ≠ dato que NO se ha mirado).
  */
 export async function autorizacionesDeIdentidad(identidadId: string): Promise<AutorizacionesPortal> {
+  // 🚨 Aquí había un `if (vinculos.length === 0) return` con una respuesta vacía
+  // de relleno, y era el MISMO
+  // corte que se quitó de `carteraDeIdentidad`: a un invitado sin ficha se le
+  // puede autorizar desde el 04/09/2026, y cortando por «no tiene vínculo» nunca
+  // vería en esta pantalla la autorización que le abrieron — o sea, no podría ni
+  // aceptarla ni revocarla, aunque `resolver()` sí la resolvería con su id. No
+  // fallaba: salía vacía, que es el modo de fallo que este portal persigue.
+  //
+  // Sin vínculo, `misIds` es `[]` y eso NO afloja ninguna frontera: los dos
+  // brazos de ficha (`in: []`) no casan con nada y lo único que queda en pie es
+  // `autorizadoIdentidadId`, que es exactamente esta identidad. `otorgablesIds`
+  // también queda vacío, así que `puedeAutorizar` es `false` y no se le ofrece
+  // conceder nada — que es lo correcto: no tiene pólizas que ceder.
   const vinculos = await fichasDeIdentidad(identidadId)
-  if (vinculos.length === 0) return SIN_NADA
 
   const misIds = vinculos.map((v) => v.clienteId)
   const misIdsSet = new Set(misIds)
@@ -328,7 +381,14 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
     // él esto devuelve las autorizaciones de la correduría entera.
     prisma.portalAutorizacion.findMany({
       where: {
-        OR: [{ otorganteClienteId: { in: misIds } }, { autorizadoClienteId: { in: misIds } }],
+        OR: [
+          { otorganteClienteId: { in: misIds } },
+          { autorizadoClienteId: { in: misIds } },
+          // 🚨 El tercer brazo (04/09/2026): a mí me pueden haber autorizado sin
+          // que yo sea cliente de nadie. Sin él, el invitado no ve ni que existe
+          // la autorización que le abrieron, y por tanto no puede revocarla.
+          { autorizadoIdentidadId: identidadId },
+        ],
       },
       orderBy: { otorgadoEn: 'desc' },
       take: MAX_AUTORIZACIONES,
@@ -350,7 +410,10 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
   const otorgadas = filas.filter((f) => misIdsSet.has(f.otorganteClienteId))
   // Si una autorización tuviera mis dos fichas (yo a mí mismo) cuenta como
   // otorgada y no se duplica: `otorgadas` y `recibidas` son listas disjuntas.
-  const recibidas = filas.filter((f) => !misIdsSet.has(f.otorganteClienteId) && misIdsSet.has(f.autorizadoClienteId))
+  const meAlcanza = (f: (typeof filas)[number]) =>
+    (f.autorizadoClienteId !== null && misIdsSet.has(f.autorizadoClienteId)) ||
+    f.autorizadoIdentidadId === identidadId
+  const recibidas = filas.filter((f) => !misIdsSet.has(f.otorganteClienteId) && meAlcanza(f))
 
   // El registro de accesos SOLO de las otorgadas. Los ids salen de `otorgadas`,
   // que ya está filtrada por mis fichas: no se filtra además por `identidadId`
@@ -404,14 +467,61 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
     if (!parejas.has(clave)) parejas.set(clave, { otorgante: mio, autorizado: otro, tipoRelacion: r.tipoRelacion })
   }
 
+  // Las pólizas vivas de mis fichas otorgables: lo que se puede compartir de una
+  // en una. `merged_into_poliza_id IS NULL` además de `WHERE_CARTERA_VIVA`
+  // porque una fusionada ya no es esa póliza, y ofrecerla sería conceder un
+  // acceso que la bóveda del otro no puede servir.
+  const polizasOtorgables = new Map<string, { id: string; etiqueta: string }[]>()
+  if (otorgablesIds.length > 0) {
+    const filasPolizas = await prisma.poliza.findMany({
+      where: { AND: [{ clienteId: { in: otorgablesIds }, mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA] },
+      select: { id: true, clienteId: true, aseguradora: true, numeroPoliza: true, tipo: true },
+      orderBy: [{ fechaVencimiento: 'desc' }, { createdAt: 'desc' }],
+      take: MAX_POLIZAS_OTORGABLES,
+    })
+    for (const p of filasPolizas) {
+      if (p.clienteId === null) continue
+      const partes = [p.aseguradora, p.tipo, p.numeroPoliza].filter((x): x is string => !!x && x.trim() !== '')
+      // Sin una sola pieza legible no se ofrece: un desplegable con un uuid o un
+      // hueco no es una elección, es una trampa.
+      if (partes.length === 0) continue
+      const g = polizasOtorgables.get(p.clienteId)
+      if (g) g.push({ id: p.id, etiqueta: partes.join(' · ') })
+      else polizasOtorgables.set(p.clienteId, [{ id: p.id, etiqueta: partes.join(' · ') }])
+    }
+  }
+
   const fichaPor = await fichasPorId([
     ...new Set([
       ...misIds,
       ...filas.map((f) => f.otorganteClienteId),
-      ...filas.map((f) => f.autorizadoClienteId),
+      // `null` cuando el autorizado es una identidad sin ficha: no hay nombre
+      // que pedir, y meter un `null` en el `in` traería filas de más.
+      ...filas.map((f) => f.autorizadoClienteId).filter((x): x is string => x !== null),
       ...[...parejas.values()].map((p) => p.autorizado),
     ]),
   ])
+  // Cómo se llama cada póliza concedida UNA A UNA, para que la pantalla no
+  // enseñe un uuid. Sale de la BD y no del cliente: la fila ya está filtrada por
+  // mis fichas o mi identidad, así que aquí no se puede pedir la de un tercero.
+  // 🚨 Se traen también las FUSIONADAS (sin `mergedIntoPolizaId: null`): una
+  // autorización que apunta a una fusionada sigue existiendo, y borrarla de la
+  // pantalla dejaría a José sin poder revocar lo que sí concedió.
+  const polizasCitadas = [...new Set(filas.map((f) => f.polizaId).filter((x): x is string => x !== null))]
+  const etiquetaPoliza = new Map<string, string>()
+  if (polizasCitadas.length > 0) {
+    const filasPoliza = await prisma.poliza.findMany({
+      where: { id: { in: polizasCitadas } },
+      select: { id: true, aseguradora: true, numeroPoliza: true, tipo: true },
+    })
+    for (const p of filasPoliza) {
+      const partes = [p.aseguradora, p.tipo, p.numeroPoliza].filter((x): x is string => !!x && x.trim() !== '')
+      // Sin una sola pieza legible no se inventa un nombre: se queda fuera del
+      // mapa y la vista lo dice como «una póliza» y no como algo que no es.
+      if (partes.length > 0) etiquetaPoliza.set(p.id, partes.join(' · '))
+    }
+  }
+
   const nombre = (id: string): string | null => fichaPor.get(id)?.nombre ?? null
   // `null` = la ficha no se pudo leer. NO se cae a `'fisica'` aquí: en el alta sí
   // (no conceder de más), pero al PINTAR una fila ya concedida un tipo inventado
@@ -437,7 +547,14 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
       otorganteClienteId: f.otorganteClienteId,
       otorganteNombre: nombre(f.otorganteClienteId),
       autorizadoClienteId: f.autorizadoClienteId,
-      autorizadoNombre: nombre(f.autorizadoClienteId),
+      autorizadoIdentidadId: f.autorizadoIdentidadId,
+      // Sin ficha no hay nombre, y **`null` es la respuesta correcta**: la
+      // pantalla dice «una persona invitada». Poner aquí el correo con el que
+      // pidió sería enseñárselo a quien concede, y el portal no lo guarda en
+      // claro justo para no poder hacer eso.
+      autorizadoNombre: f.autorizadoClienteId === null ? null : nombre(f.autorizadoClienteId),
+      polizaId: f.polizaId,
+      polizaEtiqueta: f.polizaId === null ? null : (etiquetaPoliza.get(f.polizaId) ?? null),
       otorgadoEn: f.otorgadoEn,
       aceptadoEn: f.aceptadoEn,
       caducaEn: f.caducaEn,
@@ -464,6 +581,7 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
     // apoderamiento sobre una ficha de la que no sabemos qué es.
     tipoOtorgante: tipoDe(p.otorgante) ?? 'fisica',
     alcancesPosibles: [...alcancesConcedibles(tipoDe(p.otorgante) ?? 'fisica')],
+    polizas: polizasOtorgables.get(p.otorgante) ?? [],
     yaConcedidos: vistasOtorgadas
       .filter(
         (v) =>
@@ -471,7 +589,7 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
           v.autorizadoClienteId === p.autorizado &&
           ocupaElSitio(v.estado),
       )
-      .map((v) => v.alcance),
+      .map((v) => ({ alcance: v.alcance, polizaId: v.polizaId })),
   }))
 
   return {
@@ -521,12 +639,33 @@ export async function conceder(datos: {
   otorganteClienteId: string
   autorizadoClienteId: string
   alcance: string
+  /**
+   * La ÚNICA póliza que se abre. `null`/ausente = todas las del otorgante, que
+   * es lo que significaban todas las autorizaciones antes del 04/09/2026 — y
+   * eso incluye las que contrate MAÑANA. El caso que lo pidió es el de empresa:
+   * el dueño quiere que su empleado vea la póliza de la nave y no la de su
+   * coche.
+   *
+   * 🚨 Que la póliza sea DEL OTORGANTE no se comprueba solo aquí: la FK es
+   * compuesta contra `polizas(cliente_id, id)`, así que un id manipulado lo
+   * rechaza la BD (23503). La comprobación de abajo existe para poder decirlo
+   * con palabras en vez de devolver un error de Postgres.
+   */
+  polizaId?: unknown
   /** Solo lo lleva la representación de una sociedad; en una física se ignora. */
   tituloRepresentacion?: unknown
   ip: string | null
   userAgent: string | null
 }): Promise<ResultadoConceder> {
   const { identidadId, otorganteClienteId, autorizadoClienteId } = datos
+  const polizaId = typeof datos.polizaId === 'string' && UUID.test(datos.polizaId) ? datos.polizaId : null
+  if (datos.polizaId !== undefined && datos.polizaId !== null && polizaId === null) {
+    return {
+      ok: false,
+      error: 'datos_invalidos',
+      mensaje: 'No hemos entendido qué póliza querías compartir. Vuelve a cargar la pantalla.',
+    }
+  }
 
   if (otorganteClienteId === autorizadoClienteId) {
     return {
@@ -650,8 +789,32 @@ export async function conceder(datos: {
 
   // Solo las que la BD considera vivas (`revocado_en IS NULL`), que son
   // exactamente las que el índice único parcial deja existir a la vez.
+  // La póliza tiene que ser DEL OTORGANTE y seguir viva. La BD lo repite con la
+  // FK compuesta contra `polizas(cliente_id, id)`, pero llegar hasta allí
+  // devolvería un 23503 de Postgres en vez de decir qué pasa. Una FUSIONADA
+  // tampoco vale: la lectura no la puede servir, así que conceder sobre ella
+  // sería abrir un acceso que no abre nada — el modo de fallo que no se ve.
+  if (polizaId !== null) {
+    const suya = await prisma.poliza.findFirst({
+      where: { id: polizaId, clienteId: otorganteClienteId, mergedIntoPolizaId: null },
+      select: { id: true },
+    })
+    if (suya === null) {
+      return {
+        ok: false,
+        error: 'poliza_no_es_tuya',
+        mensaje: 'Esa póliza ya no está en la ficha desde la que quieres compartirla. Vuelve a cargar la pantalla.',
+      }
+    }
+  }
+
+  // 🚨 `polizaId` va en el WHERE, y no es un detalle: desde el 04/09/2026 la
+  // clave del índice único es (otorgante, autorizado, COALESCE(póliza), alcance).
+  // Sin filtrar por la póliza, conceder la del coche encontraría la de la casa
+  // como «ya concedida» y se negaría a crearla — o peor, al revés: se enlazaría
+  // con una que no es.
   const previas = await prisma.portalAutorizacion.findMany({
-    where: { otorganteClienteId, autorizadoClienteId, alcance, revocadoEn: null },
+    where: { otorganteClienteId, autorizadoClienteId, alcance, polizaId, revocadoEn: null },
     select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
   })
   const hoy = new Date()
@@ -659,7 +822,10 @@ export async function conceder(datos: {
     return {
       ok: false,
       error: 'ya_concedida',
-      mensaje: 'Ya existe una autorización de ese tipo entre esas dos fichas.',
+      mensaje:
+        polizaId === null
+          ? 'Ya existe una autorización de ese tipo entre esas dos fichas.'
+          : 'Ya existe una autorización de ese tipo sobre esa póliza.',
     }
   }
 
@@ -692,6 +858,8 @@ export async function conceder(datos: {
     otorganteClienteId,
     autorizadoClienteId,
     alcance,
+    // `null` = todas las del otorgante, futuras incluidas.
+    polizaId,
     tituloRepresentacion: titulo,
     otorgadoPorIdentidadId: identidadId,
     caducaEn,
@@ -755,10 +923,10 @@ export async function resolver(datos: {
 }): Promise<ResultadoResolver> {
   const { identidadId, autorizacionId, accion } = datos
 
+  // 🚨 Sin vínculo NO se sale ya: a un invitado sin ficha se le puede autorizar
+  // desde el 04/09/2026, y si aquí se cortara no podría ni aceptar ni revocar lo
+  // que le abrieron. Su lado es `autorizadoIdentidadId`.
   const vinculos = await fichasDeIdentidad(identidadId)
-  if (vinculos.length === 0) {
-    return { ok: false, error: 'no_encontrada', mensaje: 'No hemos encontrado esa autorización.' }
-  }
   const misIds = vinculos.map((v) => v.clienteId)
 
   // El filtro por mis fichas va JUNTO al id, nunca un `findUnique({ id })` y un
@@ -767,12 +935,17 @@ export async function resolver(datos: {
   const fila = await prisma.portalAutorizacion.findFirst({
     where: {
       id: autorizacionId,
-      OR: [{ otorganteClienteId: { in: misIds } }, { autorizadoClienteId: { in: misIds } }],
+      OR: [
+        { otorganteClienteId: { in: misIds } },
+        { autorizadoClienteId: { in: misIds } },
+        { autorizadoIdentidadId: identidadId },
+      ],
     },
     select: {
       id: true,
       otorganteClienteId: true,
       autorizadoClienteId: true,
+      autorizadoIdentidadId: true,
       aceptadoEn: true,
       caducaEn: true,
       revocadoEn: true,
@@ -785,7 +958,9 @@ export async function resolver(datos: {
   const hoy = new Date()
   const estado = estadoAutorizacion(fila, hoy)
   const soyOtorgante = misIds.includes(fila.otorganteClienteId)
-  const soyAutorizado = misIds.includes(fila.autorizadoClienteId)
+  const soyAutorizado =
+    (fila.autorizadoClienteId !== null && misIds.includes(fila.autorizadoClienteId)) ||
+    fila.autorizadoIdentidadId === identidadId
 
   if (accion === 'aceptar') {
     // Acepta quien recibe el acceso, y solo él. Que el otorgante pudiera
@@ -885,15 +1060,20 @@ export async function registrarUso(identidadId: string, autorizacionIds: string[
 
   try {
     const vinculos = await fichasDeIdentidad(identidadId)
-    if (vinculos.length === 0) return { registrado: true, filas: 0 }
     const misIds = vinculos.map((v) => v.clienteId)
 
-    // Solo las que de verdad autorizan a una ficha MÍA. El `in` sobre ids
-    // repetidos no molesta: `[...new Set()]` los deja en uno.
+    // Solo las que de verdad me autorizan a MÍ: a una ficha mía o a mi
+    // identidad. El `in` sobre ids repetidos no molesta: `[...new Set()]` los
+    // deja en uno. Sin el brazo de la identidad, las visitas del invitado no se
+    // anotarían y el otorgante vería «no ha entrado nadie» sobre alguien que sí
+    // entró — que es peor que no tener registro.
     const validas = await prisma.portalAutorizacion.findMany({
       where: {
         id: { in: [...new Set(autorizacionIds)] },
-        autorizadoClienteId: { in: misIds },
+        OR: [
+          ...(misIds.length > 0 ? [{ autorizadoClienteId: { in: misIds } }] : []),
+          { autorizadoIdentidadId: identidadId },
+        ],
       },
       select: { id: true },
     })
