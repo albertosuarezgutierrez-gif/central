@@ -76,9 +76,13 @@ export async function backfillDniLookupHash(
   // con la clave; el lote SQL los lee de la BD. Solo ids: ni DNI, ni hash, ni
   // nombre. Si la foto falla no se pierde el plan (se devuelve igual): un GET
   // en seco no debe morir por una tabla de apoyo.
+  // Sin prefijar el schema: la conexión de la cartera ya trae `?schema=seguros`
+  // (lib/asegura-url.ts), como el resto de libs; un `seguros.x` en SQL crudo
+  // dispara el guardián de aislamiento, y aquí el ámbito ya viene en
+  // `correduriaId`, que se escribe en la propia fila.
   try {
     await db.$executeRaw`
-      insert into seguros.backfill_dni_plan (id, calculado_en, seco, correduria_id, resumen, choques)
+      insert into backfill_dni_plan (id, calculado_en, seco, correduria_id, resumen, choques)
       values (1, now(), ${opciones.seco}, ${correduriaId}::uuid,
               ${JSON.stringify(plan.resumen)}::jsonb, ${JSON.stringify(choques)}::jsonb)
       on conflict (id) do update
