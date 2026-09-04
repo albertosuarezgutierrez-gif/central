@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { MEDIADOR, FECHA_TEXTOS_LEGALES, VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
 
 export const metadata: Metadata = {
-  title: 'Cookies — Grupo Asegura',
+  title: 'Cookies — Grupo ASegura',
   description:
-    'El portal del cliente de Grupo Asegura usa una única cookie, técnica y necesaria para mantener la sesión. No hay analítica ni publicidad.',
+    'El portal del cliente de Grupo ASegura usa una única cookie, técnica y necesaria para mantener la sesión. No hay analítica ni publicidad.',
 }
 
 /**

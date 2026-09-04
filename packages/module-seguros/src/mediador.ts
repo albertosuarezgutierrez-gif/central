@@ -1,5 +1,5 @@
 /**
- * Datos canónicos del MEDIADOR (Grupo Asegura) para todo lo que se le enseña al
+ * Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al
  * cliente final: información precontractual del art. 19 de la Ley 16/2018 de
  * Distribución de Seguros (LDS), pies de página legales y políticas.
  *
@@ -42,7 +42,7 @@ export const FECHA_TEXTOS_LEGALES = '2026-09-04'
 
 export const MEDIADOR = {
   /** Nombre comercial. La persona que responde legalmente es `identidad`. */
-  marca: 'Grupo Asegura',
+  marca: 'Grupo ASegura',
   identidad: {
     nombre: 'Alberto Suárez Gutiérrez',
     nif: '28823484E',

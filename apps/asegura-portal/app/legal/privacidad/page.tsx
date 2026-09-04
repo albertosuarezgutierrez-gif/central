@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { MEDIADOR, FECHA_TEXTOS_LEGALES, VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
 
 export const metadata: Metadata = {
-  title: 'Política de privacidad — Grupo Asegura',
+  title: 'Política de privacidad — Grupo ASegura',
   description:
-    'Qué datos trata el portal del cliente de Grupo Asegura, con qué base legal, quién más los ve y cómo ejercer tus derechos.',
+    'Qué datos trata el portal del cliente de Grupo ASegura, con qué base legal, quién más los ve y cómo ejercer tus derechos.',
 }
 
 /**

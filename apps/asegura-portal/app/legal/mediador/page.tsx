@@ -9,7 +9,7 @@ import {
 } from '@central/module-seguros'
 
 export const metadata: Metadata = {
-  title: 'Información del mediador — Grupo Asegura',
+  title: 'Información del mediador — Grupo ASegura',
   description:
     'Información precontractual del mediador de seguros exigida por el artículo 19 de la Ley 16/2018 de Distribución de Seguros.',
 }

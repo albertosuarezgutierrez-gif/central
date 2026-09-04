@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { MEDIADOR, FECHA_TEXTOS_LEGALES, VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
 
 export const metadata: Metadata = {
-  title: 'Condiciones de uso — Grupo Asegura',
+  title: 'Condiciones de uso — Grupo ASegura',
   description:
-    'Qué es y qué no es el portal del cliente de Grupo Asegura: para qué sirve, qué no sustituye y de qué responde cada parte.',
+    'Qué es y qué no es el portal del cliente de Grupo ASegura: para qué sirve, qué no sustituye y de qué responde cada parte.',
 }
 
 /**
