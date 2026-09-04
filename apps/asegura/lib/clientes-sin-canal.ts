@@ -170,6 +170,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
     ) v on true
     where c.correduria_id = ${correduriaId}::uuid
       and c.merged_into_cliente_id is null
+      and c.activo
       and v.polizas_cima > 0
     order by c.apellidos, c.nombre
     limit ${LIMITE + 1}

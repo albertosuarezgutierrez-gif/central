@@ -112,16 +112,47 @@ test('interpretarSiniestro: 404 / 422 / 503 / 401 / 500 son estados distintos y 
   assert.equal(textoMotivoSiniestro('una frase ya hecha'), 'una frase ya hecha')
 })
 
-test('ramo de la póliza → tipos de siniestro: auto/hogar filtran (con los generales); lo demás, todos', () => {
+test('ramo de la póliza → tipos de siniestro: cada tipo del enum filtra; solo «otros» y el vacío ofrecen todo', () => {
   assert.deepEqual(ramosSiniestroParaPoliza('auto'), ['auto', 'general'])
   assert.deepEqual(ramosSiniestroParaPoliza('moto'), ['auto', 'general'])
   assert.deepEqual(ramosSiniestroParaPoliza('hogar'), ['hogar', 'general'])
+  assert.deepEqual(ramosSiniestroParaPoliza('comunidades'), ['hogar', 'general'])
+  assert.deepEqual(ramosSiniestroParaPoliza('comercio'), ['hogar', 'general'])
   assert.deepEqual(ramosSiniestroParaPoliza('salud'), ['salud', 'general'])
+  assert.deepEqual(ramosSiniestroParaPoliza('vida'), ['vida', 'general'])
   assert.deepEqual(ramosSiniestroParaPoliza('decesos'), ['vida', 'general'])
-  assert.equal(ramosSiniestroParaPoliza('comercio'), null)
+  // Lo que rompía: una póliza de RC ofrecía «Colisión / accidente de
+  // circulación» porque `responsabilidad_civil` no estaba en la tabla.
+  assert.deepEqual(ramosSiniestroParaPoliza('responsabilidad_civil'), ['general'])
+  // Los dos únicos «no se sabe de qué es esta póliza», y ahí sí se ofrece todo.
   assert.equal(ramosSiniestroParaPoliza('otros'), null)
   assert.equal(ramosSiniestroParaPoliza(null), null)
   assert.equal(ramosSiniestroParaPoliza(undefined), null)
+})
+
+test('ningún tipo del enum TipoSeguro se queda sin decisión salvo «otros»', () => {
+  // El enum `TipoSeguro` de `apps/asegura/prisma/asegura.prisma`, entero. Si se
+  // le añade un valor y no se mapea, este test cae — que es el punto: el
+  // agujero de RC fue exactamente un valor del enum que nadie mapeó.
+  const ENUM_TIPO_SEGURO = [
+    'auto', 'moto', 'hogar', 'vida', 'salud', 'decesos',
+    'responsabilidad_civil', 'comercio', 'comunidades', 'otros',
+  ]
+  for (const t of ENUM_TIPO_SEGURO) {
+    const ramos = ramosSiniestroParaPoliza(t)
+    if (t === 'otros') {
+      assert.equal(ramos, null, '«otros» ofrece todo a propósito')
+    } else {
+      assert.ok(Array.isArray(ramos) && ramos.length > 0, `${t} no tiene ramos de siniestro asignados`)
+      assert.ok(ramos.includes('general'), `${t} debería poder abrir al menos un siniestro general`)
+    }
+  }
+})
+
+test('una póliza que no es de auto NUNCA ofrece un siniestro de auto', () => {
+  for (const t of ['hogar', 'comunidades', 'comercio', 'responsabilidad_civil', 'salud', 'vida', 'decesos']) {
+    assert.ok(!(ramosSiniestroParaPoliza(t) ?? []).includes('auto'), `${t} ofrecía siniestros de auto`)
+  }
 })
 
 // ── La pantalla, leída como texto ────────────────────────────────────────────

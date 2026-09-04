@@ -44,7 +44,7 @@ export async function cotizacionesVivas(correduriaId: string, clienteId: string,
 export async function duplicadasCartera(correduriaId: string): Promise<GrupoDuplicado[] | null> {
   try {
     const filas = await prismaAsegura().poliza.findMany({
-      where: { correduriaId, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null },
+      where: { correduriaId, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, cliente: { activo: true } },
       select: { id: true, clienteId: true, numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true, idPolizaEntidad: true, estado: true },
     })
     return polizasDuplicadas(

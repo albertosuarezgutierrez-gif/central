@@ -179,7 +179,10 @@ async function cobertura(
 ): Promise<{ alcanzables: number; total: number } | null> {
   try {
     const db = prismaAsegura()
-    const base = { correduriaId, mergedIntoClienteId: null }
+    // `activo: true` también en la COBERTURA: si se contaran las descartadas,
+    // el «alcanza a 32.600 fichas» sería mayor que lo que la búsqueda puede
+    // devolver, y la explicación del vacío mentiría por arriba.
+    const base = { correduriaId, mergedIntoClienteId: null, activo: true }
     const [alcanzables, total] = await Promise.all([
       db.cliente.count({ where: { ...base, ...where } }),
       db.cliente.count({ where: base }),
@@ -249,6 +252,8 @@ async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResul
     where: {
       correduriaId,
       mergedIntoClienteId: null,
+      // Las DESCARTADAS no salen: descartar es quitarlas de donde se mira.
+      activo: true,
       AND: palabras.map((p) => ({
         OR: [
           { nombre: { contains: p, mode: 'insensitive' as const } },
@@ -262,7 +267,7 @@ async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResul
   })
   // El nombre está en claro en las 32.600: alcanza a toda la cartera.
   const total = await db.cliente
-    .count({ where: { correduriaId, mergedIntoClienteId: null } })
+    .count({ where: { correduriaId, mergedIntoClienteId: null, activo: true } })
     .catch(() => null)
   return bloque(
     c,
@@ -277,6 +282,7 @@ async function porCiudad(correduriaId: string, c: Criterio): Promise<BloqueResul
     where: {
       correduriaId,
       mergedIntoClienteId: null,
+      activo: true,
       ciudad: { contains: c.valor, mode: 'insensitive' },
     },
     select: SELECT_CLIENTE,
@@ -293,7 +299,7 @@ async function porCiudad(correduriaId: string, c: Criterio): Promise<BloqueResul
 async function porCodigoPostal(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
   const filas = await db.cliente.findMany({
-    where: { correduriaId, mergedIntoClienteId: null, codigoPostal: c.valor },
+    where: { correduriaId, mergedIntoClienteId: null, activo: true, codigoPostal: c.valor },
     select: SELECT_CLIENTE,
     orderBy: [{ apellidos: 'asc' }],
     take: LIMITE,
@@ -322,6 +328,7 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
     where p.correduria_id = ${correduriaId}::uuid
       and p.merged_into_poliza_id is null
       and cl.merged_into_cliente_id is null
+      and cl.activo
       and upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g'))
           like ${'%' + c.valor + '%'}
     limit ${LIMITE}
@@ -363,6 +370,7 @@ async function porRiesgo(correduriaId: string, c: Criterio): Promise<BloqueResul
     where p.correduria_id = ${correduriaId}::uuid
       and p.merged_into_poliza_id is null
       and cl.merged_into_cliente_id is null
+      and cl.activo
       and (
         ${esCp} and p.datos_especificos->>'cp' = ${c.valor}
         or (not ${esCp}) and unaccent(p.datos_especificos->>'localidad') ilike unaccent(${'%' + c.valor + '%'})
@@ -383,6 +391,7 @@ async function porRiesgo(correduriaId: string, c: Criterio): Promise<BloqueResul
       where p.correduria_id = ${correduriaId}::uuid
         and p.merged_into_poliza_id is null
         and cl.merged_into_cliente_id is null
+        and cl.activo
         and (
           ${esCp} and p.datos_especificos->>'cp' = ${c.valor}
           or (not ${esCp}) and p.datos_especificos->>'localidad' ilike ${'%' + c.valor + '%'}
@@ -452,6 +461,7 @@ async function porDireccion(correduriaId: string, c: Criterio): Promise<BloqueRe
     where p.correduria_id = ${correduriaId}::uuid
       and p.merged_into_poliza_id is null
       and cl.merged_into_cliente_id is null
+      and cl.activo
       and nullif(btrim(p.datos_especificos->>'direccion'), '') is not null
     limit ${MAX_DIRECCIONES}
   `
@@ -494,7 +504,7 @@ async function porNumeroPoliza(correduriaId: string, c: Criterio): Promise<Bloqu
       correduriaId,
       mergedIntoPolizaId: null,
       numeroPoliza: { contains: c.valor, mode: 'insensitive' },
-      cliente: { mergedIntoClienteId: null },
+      cliente: { mergedIntoClienteId: null, activo: true },
     },
     select: {
       numeroPoliza: true,
@@ -523,7 +533,7 @@ async function porHash(
   if (hash === null) return null
   const db = prismaAsegura()
   const filas = await db.cliente.findMany({
-    where: { correduriaId, mergedIntoClienteId: null, [campo]: hash },
+    where: { correduriaId, mergedIntoClienteId: null, activo: true, [campo]: hash },
     select: SELECT_CLIENTE,
     take: LIMITE,
   })
@@ -535,12 +545,12 @@ async function porHash(
     const hijas =
       campo === 'telefonoLookupHash'
         ? await db.clienteTelefono.findMany({
-            where: { correduriaId, telefonoLookupHash: hash, cliente: { mergedIntoClienteId: null } },
+            where: { correduriaId, telefonoLookupHash: hash, cliente: { mergedIntoClienteId: null, activo: true } },
             select: { cliente: { select: SELECT_CLIENTE } },
             take: LIMITE,
           })
         : await db.clienteEmail.findMany({
-            where: { correduriaId, emailLookupHash: hash, cliente: { mergedIntoClienteId: null } },
+            where: { correduriaId, emailLookupHash: hash, cliente: { mergedIntoClienteId: null, activo: true } },
             select: { cliente: { select: SELECT_CLIENTE } },
             take: LIMITE,
           })
@@ -706,6 +716,7 @@ async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaC
        and o.id <> c.id
        and o.correduria_id = c.correduria_id
        and o.merged_into_cliente_id is null
+       and o.activo
       where c.correduria_id = ${correduriaId}::uuid
         and c.telefono_lookup_hash is not null
         and c.id::text = any(${ids}::text[])
@@ -730,6 +741,7 @@ async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaC
         on o.id = pb.cliente_id
        and o.correduria_id = c.correduria_id
        and o.merged_into_cliente_id is null
+       and o.activo
        and not (o.dni_lookup_hash is not null and c.dni_lookup_hash is not null
                 and o.dni_lookup_hash <> c.dni_lookup_hash)
       where c.correduria_id = ${correduriaId}::uuid

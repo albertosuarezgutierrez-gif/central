@@ -152,6 +152,54 @@ export function interpretarEscritura(status: number, json: unknown): ResultadoEs
   return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
 }
 
+// ─── Descartar / restaurar una ficha ────────────────────────────────────────
+//
+// 🚨 No es un borrado: asegura pone `clientes.activo = false` y la ficha deja de
+// salir en el buscador, la lista y los contadores. Se deshace con «Restaurar».
+//
+// Los estados NO se colapsan, y aquí importa especialmente:
+//   · `no_encontrado` = se miró y esa ficha no está.
+//   · `error`         = no se ha podido hacer (o ni siquiera comprobar). NO es
+//                       lo mismo, y por eso `no_se_pudo_comprobar_polizas` es un
+//                       error y no un «adelante»: si asegura no ha podido contar
+//                       las pólizas vivas, la ficha NO se descarta.
+//   · `tiene_polizas_vivas` = se comprobó y sí las tiene, con cuántas.
+
+export type ResultadoDescarte =
+  | { estado: 'ok'; activo: boolean; yaEstaba: boolean }
+  | { estado: 'tiene_polizas_vivas'; polizasVivas: number | null }
+  | { estado: 'invalido'; motivo: string }
+  | { estado: 'no_encontrado' }
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+
+function entero(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.trunc(v) : null
+}
+
+/**
+ * `DELETE /api/operador/cliente` y `POST /api/operador/cliente?restaurar` → tipado.
+ *
+ * `polizasVivas: null` cuando asegura dice que las tiene pero no manda cuántas:
+ * la pantalla escribe «tiene pólizas vivas» sin número, jamás «tiene 0».
+ */
+export function interpretarDescarte(status: number, json: unknown): ResultadoDescarte {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (o.estado === 'sin_configurar' || status === 503) return { estado: 'sin_configurar' }
+  if (status === 404 || o.estado === 'no_encontrado') return { estado: 'no_encontrado' }
+  if (o.motivo === 'tiene_polizas_vivas') {
+    return { estado: 'tiene_polizas_vivas', polizasVivas: entero(o.polizasVivas) }
+  }
+  if (status === 422 || o.estado === 'invalido') {
+    return { estado: 'invalido', motivo: cadena(o.motivo) ?? 'datos no válidos' }
+  }
+  if (status === 200 && o.estado === 'ok') {
+    return { estado: 'ok', activo: o.activo === true, yaEstaba: o.yaEstaba === true }
+  }
+  return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
+}
+
 /** El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan. */
 export function textoMotivo(motivo: string): string {
   switch (motivo) {
@@ -165,6 +213,10 @@ export function textoMotivo(motivo: string): string {
       return 'la respuesta de asegura no tenía la forma esperada.'
     case 'asegura_error':
       return 'asegura respondió, pero no pudo escribir en su base de datos.'
+    case 'no_se_pudo_comprobar_polizas':
+      return 'no se ha podido comprobar si la ficha tiene pólizas vivas, así que NO se ha descartado. Vuelve a intentarlo.'
+    case 'tiene_polizas_vivas':
+      return 'la ficha tiene pólizas vivas: no se descarta.'
     case 'red':
       return 'no se pudo llegar a asegura (timeout, DNS o TLS).'
     default:
@@ -242,6 +294,16 @@ export function editarClienteAsegura(body: Record<string, unknown>): Promise<Ree
 /** `POST /api/operador/cliente` — alta. */
 export function altaClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/** `DELETE /api/operador/cliente` — DESCARTA la ficha (borrado suave, reversible). */
+export function descartarClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/cliente', { method: 'DELETE', body: JSON.stringify(body) })
+}
+
+/** `POST /api/operador/cliente?restaurar` — deshace el descarte. */
+export function restaurarClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/cliente?restaurar=1', { method: 'POST', body: JSON.stringify(body) })
 }
 
 /**
