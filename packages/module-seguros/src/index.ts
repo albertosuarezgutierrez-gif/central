@@ -475,3 +475,6 @@ export type {
 
 export { ordenPolizasFicha } from './orden-polizas.ts'
 export type { PolizaOrdenable } from './orden-polizas.ts'
+
+export { leerSitio, textoReparoSitio } from './sitio.ts'
+export type { Sitio, SitioLeido, ReparoSitio } from './sitio.ts'

@@ -1,8 +1,8 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { IdCard, KeyRound, Mail, MapPin, Phone, Star, Users } from 'lucide-react'
-import { etiquetaRol, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
+import { IdCard, KeyRound, Mail, MapPin, Pencil, Phone, Star, Users } from 'lucide-react'
+import { etiquetaRol, leerSitio, textoReparoSitio, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
 import BotonWhatsapp from '../../BotonWhatsapp'
 import EditarCliente from '../../EditarCliente'
@@ -176,6 +176,23 @@ export default function TabContactos({ ficha, personas }: {
 // ─── Teléfonos, correos y dirección de la PROPIA ficha ───────────────────────
 
 /**
+ * El desplegable que SÍ escribe vive al final de la pestaña, debajo de dos
+ * tarjetas: en un móvil queda a una pantalla y media de los datos que corrige,
+ * y de ahí el «no puedo modificar móvil ni mails» de Alberto (05/09/2026) — la
+ * edición existía y no se veía. La tira de arriba abre ese mismo desplegable en
+ * vez de duplicar el formulario, que es lo que crearía dos sitios donde se
+ * escribe lo mismo.
+ */
+const ID_EDITOR = 'editar-datos-cliente'
+
+function abrirEditor() {
+  const el = document.getElementById(ID_EDITOR)
+  if (!(el instanceof HTMLDetailsElement)) return
+  el.open = true
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+/**
  * La tira de contacto: lo que se LEE de la ficha, sin el formulario que lo
  * edita (ese vive plegado abajo, en `EditarCliente`, que sigue siendo el dueño
  * de la escritura). Aquí no se toca nada: son enlaces `tel:`/`mailto:` y el
@@ -235,6 +252,12 @@ function Contacto({ contactos, contacto }: {
       )}
 
       <Direccion c={contacto} />
+
+      <div>
+        <button type="button" onClick={abrirEditor} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
+          <Pencil size={14} strokeWidth={1.75} aria-hidden /> Modificar teléfonos, correos y dirección
+        </button>
+      </div>
     </div>
   )
 }
@@ -291,21 +314,43 @@ function Chip({ c }: { c: ContactoCliente }) {
 }
 
 /** Dónde vive. La calle va cifrada en la BD: «no se puede leer» ≠ «no consta». */
+/**
+ * Dónde vive la ficha. El sitio (CP + ciudad + provincia) NO se concatena a
+ * pelo: lo lee `leerSitio`, que solo afirma lo que se sostiene y devuelve lo
+ * que se contradice como reparos.
+ *
+ * 🚨 Medido el 05/09/2026 sobre las 31.809 fichas vivas: **473 tienen una
+ * provincia que contradice a su código postal** (386 dicen «Tarragona» con un
+ * CP 41xxx, o sea Sevilla) y **455 tienen un número en la ciudad** — el id de
+ * población del CRM viejo que la ingesta metió crudo. Todas del volcado
+ * `intranet:` de mayo; ninguna de CIMA. Antes se pintaban seguidas, igual que
+ * las que concuerdan: «41807 34304, Tarragona». La calle sí es la que hay.
+ */
 function Direccion({ c }: { c: ContactoFicha }) {
-  const sitio = [[c.codigoPostal, c.ciudad].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', ')
-  const texto = [c.direccion, sitio].filter(Boolean).join(' · ')
+  const sitio = leerSitio({ codigoPostal: c.codigoPostal, ciudad: c.ciudad, provincia: c.provincia })
+  const texto = [c.direccion, sitio.texto].filter(Boolean).join(' · ')
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13, color: 'var(--muted)', minWidth: 0 }}>
-      <MapPin size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto', marginTop: 2 }} />
-      {c.direccionIlegible ? (
-        <span title="Está guardada pero cifrada con una clave que asegura no puede abrir. No se ha borrado.">
-          La calle está guardada y no se puede leer (cifrada){sitio ? ` · ${sitio}` : ''}
-        </span>
-      ) : texto ? (
-        <span style={{ overflowWrap: 'anywhere' }}>{texto}</span>
-      ) : (
-        <span>No consta dirección en la ficha (se ha mirado).</span>
-      )}
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13, color: 'var(--muted)', minWidth: 0 }}>
+        <MapPin size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto', marginTop: 2 }} />
+        {c.direccionIlegible ? (
+          <span title="Está guardada pero cifrada con una clave que asegura no puede abrir. No se ha borrado.">
+            La calle está guardada y no se puede leer (cifrada){sitio.texto ? ` · ${sitio.texto}` : ''}
+          </span>
+        ) : texto ? (
+          <span style={{ overflowWrap: 'anywhere' }}>{texto}</span>
+        ) : (
+          <span>No consta dirección en la ficha (se ha mirado).</span>
+        )}
+      </div>
+      {/* Lo que no cuadra se dice ENTERO —qué guarda cada columna— porque es lo
+          único con lo que se puede corregir; ocultarlo dejaría a la ficha
+          diciendo media dirección sin explicar por qué falta la otra media. */}
+      {sitio.reparos.map((r) => (
+        <div key={r.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--muted)', paddingLeft: 20 }}>
+          ⚠️ {textoReparoSitio(r)}
+        </div>
+      ))}
     </div>
   )
 }
@@ -500,6 +545,7 @@ function Editor({ ficha }: { ficha: Ficha }) {
 
   return (
     <details
+      id={ID_EDITOR}
       onToggle={(e) => { const o = e.currentTarget.open; setAbierto(o); if (o) setMontado(true) }}
       style={{ borderTop: '1px solid var(--border)', marginTop: 20, paddingTop: 20 }}
     >
