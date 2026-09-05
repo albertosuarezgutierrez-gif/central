@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-05 · facturas-correo** · hizo: pasada diaria completa. Preflight `/api/internal/alerta`
+  200. Paso 0: Vía B sana (`_buzon_pdf` última copia 04/09, `dias_caido=1`); Vía A `gmail-adjuntos`
+  sigue sin provisionar (CONNECTION_CLOSED en esta sesión); `agente_salud` refrescado. Backlog
+  barrido por `search_threads` (no por el contador de `list_labels`): `PDF-pendiente`, `Revisar` y
+  `Extraccion-fallida` los tres a 0 hilos. Paso 4.0 (`v_facturas_sin_cargo`): 9 filas, todas ya en
+  `revisada_sin_cargo` de pasadas anteriores (Petroprix ago, 5× Pepephone, Giraldillo, CREATE
+  duplicada) — 0 en `sin_revisar`, nada que reabrir. Paso 1: 0 candidatos nuevos en Gmail
+  (`newer_than:2d`) — solo mensajes de huéspedes Booking, un ticket Smoobu y la circular del
+  colegio; Petroprix/Booking/Allianz de estos días ya venían con `Facturas/Procesada`. `_subir_aqui`
+  vacío; raíz `FACTURAS Apartamentos/2026` sin PDFs nuevos desde 05/08 (no reprocesada línea a
+  línea, son ficheros ya conocidos de pasadas previas). `_DUPLICADOS_BORRAR` no re-verificada hoy
+  (seguía en 21 avisos a 01/09, sin cambios reportados desde 17/08). Latido `facturas_correo`
+  enviado ok:true. dudas: —; fallos: —; PRs/commits: — (solo bitácora + `agente_salud`).
 - **2026-09-05 · mercado-booking** · hizo: 3ª pasada ACOTADA consecutiva por prioridad temporal
   (ídem 03/09 y 04/09), `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado
   medidas (6 fechas × 4 pisos, aforo correcto, incluye evento Campeonato Mundo Remo 01-08) → 240
