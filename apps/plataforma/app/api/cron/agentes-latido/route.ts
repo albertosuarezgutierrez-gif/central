@@ -195,7 +195,13 @@ const PROBES: Record<string, Prisma.Sql> = {
 }
 
 /**
- * Persiste el veredicto de UN agente en `agente_salud` para que lo pueda leer una pantalla.
+ * Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla.
+ *
+ * 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge
+ * que el propio agente se auto-declara, hoy solo `facturas-extraccion-pdf`— y el `CREATE TABLE IF
+ * NOT EXISTS` del 02/09 fue un no-op silencioso. Consecuencia: ~30 errores diarios
+ * `column "evaluado_at" does not exist` desde el 03/09 y el veredicto perdido igual que antes.
+ * `ok` (aquella) y `alerta` (esta) son además INVERSOS: fusionarlas invita al fallo de signo.
  *
  * Hasta el 02/09/2026 esto no existía: el vigía evaluaba los 27 agentes y TIRABA el resultado
  * (JSON de respuesta + Telegram). Con 8 rutinas sin ALERTA_TOKEN, ese trabajo desaparecía sin
@@ -215,7 +221,7 @@ async function guardarSalud(
 ): Promise<void> {
   try {
     await prisma.$executeRaw`
-      INSERT INTO agente_salud (agente, evaluado_at, alerta, horas, motivo, max_horas, etiqueta, nota, sonda_error)
+      INSERT INTO agente_veredicto (agente, evaluado_at, alerta, horas, motivo, max_horas, etiqueta, nota, sonda_error)
       VALUES (${ag.id}, ${evaluadoAt}, ${alerta}, ${horas}, ${motivo}, ${ag.maxHoras}, ${ag.etiqueta}, ${ag.nota}, ${sondaError})
       ON CONFLICT (agente) DO UPDATE SET
         evaluado_at = EXCLUDED.evaluado_at, alerta = EXCLUDED.alerta, horas = EXCLUDED.horas,
@@ -240,7 +246,7 @@ async function handler(req: NextRequest) {
   // desaparece: se persiste y va al JSON, y solo se asoma al Telegram cuando ya hay algo que contar.
   const estrenos: string[] = []
   // Averías REALES ya declaradas y fechadas (04/09/2026). Se apartan de las alertas del Telegram
-  // —no de la pantalla, ni de `agente_salud`: ahí siguen contando como alerta y en su color—
+  // —no de la pantalla, ni de `agente_veredicto`: ahí siguen contando como alerta y en su color—
   // porque lo que sobra es la interrupción diaria, no el registro.
   const pendientes: string[] = []
 
@@ -271,7 +277,7 @@ async function handler(req: NextRequest) {
         ultimo: ultimo?.toISOString() ?? null,
         ultimoIntento: ultimoIntento?.toISOString() ?? null,
       })
-      // Un pendiente declarado sigue siendo `alerta` (la pantalla y `agente_salud` lo pintan como
+      // Un pendiente declarado sigue siendo `alerta` (la pantalla y `agente_veredicto` lo pintan como
       // tal): lo único que cambia es que no entra en el bloque que interrumpe. Y va SIN la `nota`,
       // que es el runbook de «esto hay que mirarlo ahora» — aquí ya se miró y se decidió.
       if (ev.alerta && ev.pendiente) pendientes.push(`• <b>${ag.etiqueta}</b>: ${ev.pendienteNota}.`)

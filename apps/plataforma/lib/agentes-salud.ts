@@ -65,13 +65,18 @@ export async function getSaludAgentes(): Promise<Record<string, SaludAgente>> {
 /**
  * Veredicto persistido del vigía, por id de agente vigilado. Devuelve `{}` si la tabla no existe
  * todavía o la consulta falla: preferimos «no sé» a inventar un verde.
+ *
+ * ⚠️ Ese `catch` silencioso tiene un precio que se pagó del 03/09 al 05/09/2026: con la tabla
+ * inexistente (ver `2026-09-05_agente_veredicto.sql`), la pantalla volvió a pintar ⚪ «sin
+ * telemetría» sobre ~30 agentes y NADA dijo por qué — el único rastro era el `console.error` del
+ * cron. Preferir «no sé» a un verde falso sigue siendo correcto; darlo por normal, no.
  */
 export async function getSaludLatidos(): Promise<Record<string, SaludLatido>> {
   let filas: FilaSalud[]
   try {
     filas = await prisma.$queryRaw<FilaSalud[]>`
       SELECT agente, evaluado_at, alerta, horas, motivo, max_horas, etiqueta, nota, sonda_error
-      FROM agente_salud`
+      FROM agente_veredicto`
   } catch {
     return {}
   }

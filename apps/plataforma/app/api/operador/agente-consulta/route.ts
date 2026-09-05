@@ -40,7 +40,7 @@ async function vigia(ids: string[]): Promise<VigiaExpediente> {
   try {
     const filas = await prisma.$queryRaw<NonNullable<VigiaExpediente>[]>(Prisma.sql`
       SELECT evaluado_at::text AS evaluado_at, alerta, horas, max_horas, motivo, nota, sonda_error
-      FROM agente_salud WHERE agente = ANY(${ids}::text[])
+      FROM agente_veredicto WHERE agente = ANY(${ids}::text[])
       ORDER BY alerta DESC NULLS LAST, evaluado_at DESC
       LIMIT 1`)
     return filas[0] ?? null
