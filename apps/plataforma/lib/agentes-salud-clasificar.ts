@@ -1,5 +1,5 @@
 // lib/agentes-salud-clasificar.ts — decisión PURA sobre el veredicto que el vigía de agentes
-// (/api/cron/agentes-latido, diario 07:45 UTC) persiste en `agente_salud`. Vive aparte del
+// (/api/cron/agentes-latido, diario 07:45 UTC) persiste en `agente_veredicto`. Vive aparte del
 // fichero que consulta la BD para poder testearse con `node --test` sin arrastrar Prisma.
 //
 // Contexto (02/09/2026): hasta hoy el vigía evaluaba los 27 agentes de AGENTES_VIGILADOS cada

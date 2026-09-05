@@ -1,3 +1,9 @@
+-- ⚰️ NO APLICAR: esta migración quedó MUERTA y se sustituye por `2026-09-05_agente_veredicto.sql`.
+-- Su `CREATE TABLE IF NOT EXISTS agente_salud` es un NO-OP silencioso: esa tabla ya existía con
+-- OTRO esquema (`2026-07-12_agente_salud.sql`, el badge que escribe la skill `facturas-correo`).
+-- Nunca se aplicó, nunca falló al aplicarse, y el vigía llevaba desde el 03/09/2026 escribiendo
+-- contra columnas que no existen. Se conserva el archivo solo como registro de lo ocurrido.
+--
 -- Persistir el VEREDICTO del vigía de agentes (/api/cron/agentes-latido, diario 07:45 UTC).
 --
 -- Por qué existe (02/09/2026): el vigía evaluaba los 27 agentes de AGENTES_VIGILADOS cada día
