@@ -43,6 +43,15 @@
   el botón funciona igual (va a `asegura-portal.vercel.app`). El header roto de la captura es código
   de Manuel, en un repo que el clasificador me bloquea.
 
+- **🗄️ Archivar, no borrar: decisión de Alberto sobre las 26.463 fichas sin contacto (05/09/2026).**
+  «no la elimines, archívala y pon recordatorio en 6 meses… siempre habrá tiempo de borrarlo». Hecho:
+  los **26 leads sin canal que seguían activos** pasan a `activo = false` (quedan **0**; total archivado
+  26.463). **NO se tocaron los 39 clientes sin canal** —16 son CARTERA VIVA y esos se trabajan, no se
+  esconden— ni los 3.287 leads captables. Es reversible (`activo = true`) y no borra ninguna de las
+  ~25.694 pólizas del volcado, que son el único registro de lo vendido en 2013-2018.
+  ⏰ **Recordatorio a 05/03/2027** (`trig_01EGUg761QfoKdzPLYT1RedX`, sesión nueva) para decidir si se
+  borran o siguen guardadas. ⚠️ Se creó SIN conectores: esa sesión quizá no pueda medir la BD sola.
+
 - **📵 La cartera del volcado NO trae contacto: 26.810 fichas sin teléfono ni correo (05/09/2026).**
   Alberto: «tanta bbdd sin ningun tlf ni mail?». Verificado en los SEIS sitios donde podría estar (ficha,
   `cliente_emails`/`cliente_telefonos` —solo 2 fichas—, `poliza_intervinientes` —427 filas en total—,
