@@ -561,6 +561,92 @@ h1 {
   border-left: 4px solid var(--accent);
   background: var(--panel2);
 }
+/* 🚨 Y un filete por ESTADO: con dos pólizas en pantalla es lo que hace que la
+ * que tiene un problema se distinga de un vistazo, sin leer nada. Va después
+ * del de «es de otro» a propósito — un recibo devuelto en la póliza de tu padre
+ * sigue siendo lo urgente de esa fila. */
+.poliza-fila[data-estado='peligro'] .poliza-enlace {
+  border-left: 4px solid var(--negative);
+}
+.poliza-fila[data-estado='aviso'] .poliza-enlace {
+  border-left: 4px solid var(--warning);
+}
+
+/* ── «No lo sabemos», con forma propia ──────────────────────────────────────
+ *
+ * 🚨 El portal tenía la doctrina de los TRES estados escrita en la capa de
+ * datos (`lib/cartera-lectura.ts`: `null` = no visible · `0` = la compañía no
+ * lo ha informado · con contenido = el dato) y **ni un píxel que la
+ * expresara**: «tu compañía no nos ha informado de ningún recibo» se pintaba
+ * con el mismo gris de 13 px que todo lo demás. A alguien de 60 años eso se le
+ * lee como «está todo en orden», que es exactamente la afirmación que la regla
+ * de la casa prohíbe.
+ *
+ * El **borde discontinuo** es el que hace el trabajo, y viene del `Pendiente`
+ * de `apps/plataforma` (`components/ui.tsx`): discontinuo = «esto se rellenará»
+ * frente a un borde sólido, que en el resto de la interfaz significa un dato
+ * cerrado. El color va en `--muted` y NO en `--border`: de noche `--border`
+ * sobre el panel es casi invisible, y un aviso invisible no es un aviso. */
+.pendiente {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--muted);
+  background: none;
+  color: var(--muted);
+}
+/* La línea que ACOMPAÑA a la píldora: el hecho, en el color del texto, no en el
+ * gris de un metadato. La píldora dice «esto es un hueco»; la frase dice cuál. */
+.hueco {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+/* Alarma en tono NEGATIVO, con título. El portal solo sabía alarmar en ámbar
+ * (`.aviso-linea`), y el recibo devuelto —lo único que puede dejar a alguien
+ * sin cobertura sin que se entere— no es un aviso: es lo peor que dice la
+ * pantalla. Mismos tokens, otro tono. */
+.alarma {
+  background: var(--negative-bg);
+  border: 1px solid var(--negative);
+  border-radius: calc(var(--radius) * 0.8);
+  padding: 14px;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.alarma-titulo {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--negative);
+}
+.alarma p {
+  margin: 0;
+}
+/* 🖥 A ancho completo el botón primario ocupa 1.100 px y pesa más que la
+ * frase que lo justifica. `width:auto` desde 480 px: en el móvil sigue siendo
+ * una barra de 44 px de alto y de lado a lado, que es lo que se acierta con el
+ * pulgar. */
+.alarma .boton,
+.boton.auto {
+  margin-top: 10px;
+}
+@media (min-width: 480px) {
+  .alarma .boton,
+  .boton.auto {
+    width: auto;
+  }
+}
 
 /* ── La FICHA de una póliza ──────────────────────────────────────────────── */
 .volver {

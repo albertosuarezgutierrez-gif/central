@@ -1,7 +1,7 @@
 -- Fusión por MISMO NOMBRE + (mismo vehículo O misma póliza) — lote `fusion-vehiculo-poliza-2026-09-05`.
 --
--- ─── Qué queda después del lote 7 ───────────────────────────────────────────
--- El lote 7 se llevó los 104 pares que compartían el código de cliente del CRM
+-- ─── Qué queda después del lote 8 ───────────────────────────────────────────
+-- El lote 8 se llevó los 104 pares que compartían el código de cliente del CRM
 -- viejo. Alberto: «haz lo mismo con los 336 homónimos que quedan». No se puede
 -- con todos, y el dato dice por qué: de los **1.322 pares** que solo comparten
 -- el nombre, **277 tienen DNI DISTINTO** — están PROBADOS como personas
@@ -34,7 +34,7 @@
 --     hecha sobre un cliente de CIMA sí duele).
 -- Superviviente: la que más pólizas tiene; empate, la más antigua.
 --
--- Motor idéntico al del lote 7 (contactos UNIDOS, reapuntado de FKs por
+-- Motor idéntico al del lote 8 (contactos UNIDOS, reapuntado de FKs por
 -- catálogo, lápida + `cliente_merge_log` con `snapshot_before`). Reversible.
 do $$
 declare
@@ -115,7 +115,7 @@ begin
       raise exception 'el par %/% toca la cartera viva: se mira a mano', par.sup, par.lap;
     end if;
 
-    -- Contactos UNIDOS, no elegidos (igual que el lote 7).
+    -- Contactos UNIDOS, no elegidos (igual que el lote 8).
     if nullif(btrim(coalesce(l.telefono, '')), '') is not null
        and l.telefono_lookup_hash is distinct from s.telefono_lookup_hash
        and not exists (select 1 from seguros.cliente_telefonos t
@@ -217,7 +217,7 @@ begin
     values (corr, par.lap, par.sup,
       'mismo nombre y apellidos Y ' || (case when par.veh then 'MISMO VEHICULO (matricula compartida)' else 'MISMA POLIZA (numero + >=4 digitos)' end)
       || ', grupo de exactamente 2 fichas, ninguna en cartera viva y sin DNI contradictorio. Rescate de los '
-      || 'homonimos que el lote 7 no pudo probar por codigo de cliente: de los 1.322 pares que solo comparten '
+      || 'homonimos que el lote 8 no pudo probar por codigo de cliente: de los 1.322 pares que solo comparten '
       || 'nombre, 277 tienen DNI DISTINTO, asi que el nombre por si solo NO identifica. Autorizado por Alberto '
       || 'el 05/09/2026.',
       heredados, false, deps, snap, v_lote,

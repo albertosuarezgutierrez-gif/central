@@ -43,18 +43,41 @@
   el botón funciona igual (va a `asegura-portal.vercel.app`). El header roto de la captura es código
   de Manuel, en un repo que el clasificador me bloquea.
 
+- **🃏 El backfill se ejecutó, y el centinela no eran 20 fichas: eran 5.636 (05/09/2026).**
+  Alberto pulsó el botón: **8.000 índices escritos** (3.890 → 11.890), quedan **469** (una pulsación más) y
+  6.623 no se escriben nunca (5.645 centinelas + 936 ilegibles + 42 en choque). 🚨 **El grupo centinela es
+  5.615 fichas «Lead N» del volcado + 21 personas** —sin canal, aseguradora «(legacy)», 5.454 sin nº de
+  póliza— y la única con hash previo es **la ficha del propio Alberto**: [Probable] el importador rellenó el
+  DNI obligatorio con el del titular. Se vieron 20 porque sólo se miraron los grupos de choque, que son
+  `tipo='cliente'`. ⚠️ **Y el guardián tenía un agujero propio:** contaba «Lead 12345» como un nombre más, así
+  que 3 de los 5 grupos centinela eran **duplicados legítimos** sacados de la cola de fusión. Arreglado en
+  `tokensNombre` (PR #2356). **Pendiente de decidir: anular el DNI falso de esas 5.635 fichas.**
+
+- **🃏 El backfill del DNI: no había botón, y apareció un DNI CENTINELA en 20 fichas (05/09/2026).**
+  Alberto: «haz el backfill del dni». **No lo podía hacer nadie**: el `POST /api/operador/backfill-dni` existía
+  pero `/correduria/mantenimiento` decía «se lanza desde asegura» = un `curl` con el secreto a mano. Botón nuevo
+  en la pantalla (tandas + `restantes`, `UPDATE ... FROM (VALUES)` de 500 con reintento fila a fila). ⚠️ Y se
+  corrigió la frase que lo bloqueaba: «no hay botón mientras queden choques porque reventaría a la mitad» es
+  **falsa** — sólo se escriben las `rellenable`. 🚨 **Hallazgo: 20 fichas comparten un DNI con 20 nombres sin
+  relación y 19 correos distintos** (una en cartera viva). Es un centinela con letra correcta, así que
+  `looksLikeDniNieCif` no lo ve, y **el índice único no protege**: 14.990 de las 15.092 sin hash son `lead`.
+  Guardián `compartido` en la pieza pura (≥3 nombres distintos y ningún token común); columna `compartidos` en
+  la foto (DDL aplicada). Auditado el lote 7 del 04/09: **602 fusiones, ninguna de dos personas distintas**;
+  quedan 18 grupos (1 centinela, 2 con DNI contradictorio, 15 de tres o más fichas). PR #2351.
 - **🩺 «repara todo»: dos pendientes se caen de la lista por MEDIRLOS, y aparece uno legal (05/09/2026).**
   De la lista de Alberto solo una parte es tocable desde una sesión; lo que se pudo medir:
   · **`agente_salud` NO era una decisión pendiente.** Se resolvió el mismo 05/09 creando
   `agente_veredicto` aparte; la de julio sigue viva con dueño (`lib/finanzas.ts`). Está a 0 filas solo
   porque la migración entró a las **09:02 UTC** y el cron había pasado a las **07:45**. El INSERT
   exacto se ensayó contra producción en transacción con ROLLBACK: escribe bien (0 filas después).
-  · **El «UPDATE masivo sin autor» del 04/09 tiene autor: Alberto.** Es el backfill del índice ciego
-  de DNI (`clientes.dni_lookup_hash`), lanzado desde `/correduria/mantenimiento`. Prueba: los 1.086
-  clientes tocados tienen DNI **el 100%** (vs 73% del resto) y `seguros.backfill_dni_plan` tiene su
-  foto a las **21:03:28**, 13 min antes del UPDATE. No dejó `historial_interno` porque un índice
-  técnico no es un hecho de negocio. 🚫 La hipótesis «fueron las fusiones» se probó y es **falsa**:
-  los 1.086 están `activo=true` y esa noche no se desactivó ninguno.
+  · **El «UPDATE masivo sin autor» del 04/09** se atribuyó aquí a Alberto lanzando el backfill desde
+  `/correduria/mantenimiento`. ⚠️ **CORREGIDO horas después: era el LOTE 7 de fusión**, y la prueba es
+  exacta — las 1.086 filas con `updated_at` entre 21:16 y 21:19 son **602 lápidas + 484 supervivientes
+  del lote `fusion-dni-lote7-2026-09-04`**, y no queda ni una fuera. El motor de fusión **repone los
+  `*_lookup_hash` desde `snapshot_before`** (lección del lote 5), de ahí el hash. El 100% de DNI no
+  distinguía nada: el criterio del lote ERA el mismo DNI. Y la refutación de «fueron las fusiones»
+  miraba la columna equivocada (`activo`): una fusión no desactiva, marca `merged_into_cliente_id`.
+  🚨 Además la atribución era imposible: hasta el 05/09 **`/correduria/mantenimiento` no tenía botón**.
   · **`mercado-booking`: el objetivo SÍ está cumplido, medido** (4 aforos × jul-2027 y ago-2027, 4
   fechas con ≥3 comps cada uno; se pedían 3). El párrafo «PRIORIDAD TEMPORAL» sobra. Lo tiene que
   quitar Alberto: el prompt se LEE pero el API no deja escribirlo (rutina creada por `http_api`).
@@ -74,7 +97,7 @@
   que vence antes, y sin fecha al FINAL de su grupo** (una fecha ausente no es ni próxima ni lejana).
   🚫 **Y «haz lo mismo con los 336» no se puede**: de los **1.322 pares** que solo comparten nombre, **277 tienen
   DNI DISTINTO** (probados personas distintas) y **ninguno comparte DNI**. Solo 6 traían prueba de los lotes 4/5
-  (vehículo o póliza común) → **lote 8, 3 fusiones**: 1 cayó por DNI contradictorio («Jose Manuel Seijas Vazquez»,
+  (vehículo o póliza común) → **lote 9, 3 fusiones**: 1 cayó por DNI contradictorio («Jose Manuel Seijas Vazquez»,
   mismo coche y dos DNI: padre e hijo homónimos) y **2 por ser grupos de TRES**. ⚠️ Dije «5 fusionables» contando
   PARES: en un trío hay tres pares y la guarda `count(*)=2` los excluye a propósito. Visibles 5.102 → **5.099**,
   cartera viva 80 intacta, 0 pólizas huérfanas. También se anotó a mano que Manuel Suárez es hijo de José Suárez
@@ -1232,6 +1255,19 @@
   póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
 
 ---
+
+### 🚪 (05/09/2026) El portal pedía el código «cada vez»: no era la sesión, era la puerta
+
+Alberto: «cliente por codigo es un poco coñazo… cada vez q entra». Pedía un enlace mágico.
+- **La raíz `/` era el formulario de CLIENTE y no miraba la cookie.** Con la sesión de 30 días viva
+  se le seguía pidiendo el correo y el código. Ahora `page.tsx` es de servidor: `getIdentidad()` →
+  `redirect('/boveda')`; el formulario se movió a `app/Entrada.tsx`.
+- 🚨 **NO se hizo el enlace que canjea solo**: los sandboxes de correo que renderizan con navegador
+  ejecutan el JS y se comerían el código (`ya_usado`, y parece culpa del usuario). ⚠️ El argumento
+  del reenvío no vale para descartarlo — el código va en ese mismo correo.
+- Dos cepos nuevos (mutaciones vistas morder) y **dos guardianes que siguieron al fichero movido**.
+- Diseño: `.pendiente` (píldora de borde DISCONTINUO para «no lo sabemos», portada de plataforma),
+  `.alarma` (el recibo devuelto sube de ámbar a negativo con título) y filete izquierdo por estado.
 
 ### 🖥 (05/09/2026) El portal del cliente: lateral como plataforma, y QUÉ está asegurado
 

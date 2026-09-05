@@ -372,10 +372,12 @@ export {
 
 export {
   planBackfillDni,
+  tokensNombre,
   type FichaDni,
   type Destino,
   type FilaPlan,
   type GrupoChoque,
+  type GrupoCompartido,
   type PlanBackfillDni,
 } from './backfill-dni.ts'
 

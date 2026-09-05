@@ -161,7 +161,7 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
             urgencias de otra compañía a las tres de la mañana.
             Se enlaza, que además es donde se elige la póliza del parte. */}
         <p style={{ margin: 0 }}>
-          <Link className="boton" href="/boveda?vista=siniestro">
+          <Link className="boton auto" href="/boveda?vista=siniestro">
             Ver los teléfonos de {p.compania} y dar parte
           </Link>
         </p>
