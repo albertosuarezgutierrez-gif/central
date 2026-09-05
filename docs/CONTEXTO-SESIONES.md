@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📊 La web pública ya puede medir, y solo si le dejan (05/09/2026).** `apps/asegura-web` no tenía
+  **ni una línea** de PostHog ni de Cookiebot: crear las tres envs en Vercel (lo que estaba a punto de
+  hacerse) no habría hecho nada, porque no había código que las leyera. Ahora sí, y **fail-closed**:
+  `puedeMedir()` (puro, `lib/analitica.ts`) exige las tres cosas —CBID, clave y `statistics === true`—
+  y PostHog **no está en el bundle**, se baja de su CDN tras aceptar. Es la decisión contraria a la web
+  de Manuel, cuyo *fail-open* deja PostHog corriendo sin banner si falta la env (medido el 04/09).
+  `/legal/cookies` + botón de renovar (art. 7.3 RGPD), enlace en el footer y en el sitemap. 12 cepos en
+  `lib/analitica.test.ts`; 28 tests de la app, tsc 0, lint 0, build OK. PR #2385.
+  ✅ **Los 7 crons de `asegura` NO estaban rotos al cerrar: ya los había arreglado otra sesión** (revert
+  `cae77bd`, 14:05 UTC, de #818). Aquel PR repuntó los destinos a `grupoasegura.es` sobre una premisa
+  **no medida** (que la canonicalización rompía el `.com`), y lo que se midió después la desmiente:
+  `.es/api/crons/cima-pull` → **404**, `app.grupoasegura.com/api/crons/cima-pull` → **401** (la ruta
+  responde, sin redirect). Daño real: **UN run**, el de las 13:57; el de las 14:06 ya en verde. ⚠️ Y
+  **NO quitar** PostHog/Cookiebot del proyecto `asegura`: su fail-open dejaría el CRM midiendo sin
+  banner — lo correcto es dar de alta los dominios en el CBID.
+
 - **📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI (05/09/2026).** Lo del
   PR #2378 (idioma, consulta web, `importesNoRespaldados`, los hechos de transporte de los 4 pisos) se
   volcó a `sivra-maestro/references/contexto-y-agente-huesped.md`: vivía solo en la memoria y en el PR, y
