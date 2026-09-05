@@ -1,6 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarIngesta, saludDesdeRespuesta } from './ingesta-cima.ts'
+import {
+  interpretarIngesta,
+  saludDesdeRespuesta,
+  interpretarHuerfanas,
+  polizasDe,
+} from './ingesta-cima.ts'
 
 const OK = {
   estado: 'ok',
@@ -198,4 +203,94 @@ test('con los datos reales de Mapfre el veredicto llega degradado', () => {
   assert.equal(r.salud.estado, 'degradada')
   const mudas = (r.salud.silencio ?? []).filter(e => e.veredicto === 'silencio').map(e => e.entidad)
   assert.deepEqual(mudas, ['C0058'], 'solo Mapfre: Occident va dentro de su ritmo')
+})
+
+// ── La lista de huérfanas: `null` ≠ `[]` también en el transporte (05/09/2026) ─
+
+const HUERFANA = {
+  entidad: 'C0468',
+  entidadNombre: 'Occident',
+  clave: 'M00171',
+  idPolizaEntidad: 'BIDP036783',
+  recibos: 2,
+  siniestros: 0,
+  prima: 470.76,
+  ultimoEn: '2026-08-18',
+  enCartera: 'ausente',
+}
+
+test('el puerto de huérfanas responde bien: la lista llega entera', () => {
+  const h = interpretarHuerfanas(200, {
+    estado: 'ok', polizas: [HUERFANA], truncado: false, ocultasOtroAmbito: 0,
+  })
+  assert.equal(h.estado, 'ok')
+  if (h.estado !== 'ok') return
+  assert.equal(h.polizas.length, 1)
+  assert.equal(h.polizas[0].idPolizaEntidad, 'BIDP036783')
+  assert.equal(h.truncado, false)
+  assert.equal(h.ocultasOtroAmbito, 0)
+})
+
+test('🚨 un 404 (asegura vieja, sin ese puerto) NO es «no hay huérfanas»', () => {
+  const h = interpretarHuerfanas(404, null)
+  assert.deepEqual(h, { estado: 'sin_datos', motivo: 'puerto_no_desplegado' })
+  assert.equal(polizasDe(h), null)
+})
+
+test('🚨 error del puerto: viaja la CAUSA y NUNCA se degrada a lista vacía', () => {
+  const h = interpretarHuerfanas(200, { estado: 'error', causa: 'credenciales' })
+  assert.deepEqual(h, { estado: 'sin_datos', motivo: 'credenciales' })
+  assert.equal(polizasDe(h), null)
+})
+
+test('una sola fila ilegible degrada la lista ENTERA, no se queda con las buenas', () => {
+  const h = interpretarHuerfanas(200, {
+    estado: 'ok', polizas: [HUERFANA, { ...HUERFANA, enCartera: 'quizas' }], truncado: false,
+  })
+  assert.equal(h.estado, 'sin_datos')
+})
+
+test('🚨 `enCartera` se EXIGE: decide si se pide o se reprocesa y no se supone', () => {
+  const { enCartera: _fuera, ...sinEstado } = HUERFANA
+  const h = interpretarHuerfanas(200, { estado: 'ok', polizas: [sinEstado], truncado: false })
+  assert.equal(h.estado, 'sin_datos')
+})
+
+test('sin decir si recortó, se ASUME que sí (el estado conservador)', () => {
+  const h = interpretarHuerfanas(200, { estado: 'ok', polizas: [HUERFANA] })
+  assert.equal(h.estado === 'ok' && h.truncado, true)
+  // Y un recuento de ocultas que no viene es `null`, jamás 0.
+  assert.equal(h.estado === 'ok' ? h.ocultasOtroAmbito : 'x', null)
+})
+
+test('la lista llega hasta la salud, repartida por lo que hay que hacer', () => {
+  const r = interpretarIngesta(
+    200,
+    { estado: 'ok', cuarentena: [], huerfanas: 2, huerfanasResolubles: 1 },
+    {
+      estado: 'ok',
+      truncado: false,
+      ocultasOtroAmbito: 0,
+      polizas: [
+        HUERFANA,
+        { ...HUERFANA, idPolizaEntidad: '549570971', enCartera: 'viva' },
+      ],
+    } as never,
+  )
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.huerfanasReparto?.totalPedir, 1)
+  assert.equal(r.salud.huerfanasReparto?.totalReprocesar, 1)
+  assert.match(r.salud.motivos.join(' · '), /Occident \(C0468\) \/ clave M00171/)
+  assert.equal(r.huerfanasTruncadas, false)
+  assert.equal(r.huerfanasSinAmbito, 0)
+})
+
+test('🚨 sin listado, la salud lo DICE en vez de callarlo', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], huerfanas: 20 })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.huerfanasReparto, null)
+  assert.match(r.salud.motivos.join(' · '), /sé cuántas son, no cuáles/)
+  assert.equal(r.huerfanasSinAmbito, null)
 })

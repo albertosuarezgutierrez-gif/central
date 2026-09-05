@@ -23,6 +23,7 @@ import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-c
 import {
   detalleSalud,
   decidirAvisoIngesta,
+  textoHuerfanas,
   DIAS_RECORDATORIO_INGESTA,
   type SaludIngesta,
 } from '@central/module-seguros'
@@ -64,7 +65,18 @@ function firma(salud: SaludIngesta): string {
   // `null` (no comprobado) y `[]` (comprobado, ninguna) no pueden dar la misma
   // firma: si ayer no se pudo mirar y hoy sí, eso es un cambio que hay que ver.
   const silencio = salud.silencio === null ? '?' : mudas || '-'
-  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}`
+  // 🚨 Y las pólizas concretas que hay que PEDIR, no solo cuántas son. Si una
+  // entra y otra se resuelve el mismo día, el recuento no se mueve y la
+  // anti-repetición se comería el aviso — que es exactamente el fallo que ya
+  // dejó este vigía mudo 59 días. `?` (no se pudo listar) y `-` (se listó y no
+  // hay ninguna) tampoco pueden dar la misma firma.
+  const pedir = salud.huerfanasReparto === null
+    ? '?'
+    : salud.huerfanasReparto.pedir
+        .flatMap(g => g.polizas.map(n => `${g.entidad}/${g.clave ?? ''}/${n}`))
+        .sort()
+        .join(',') || '-'
+  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}`
 }
 
 /**
@@ -176,10 +188,29 @@ export async function GET(req: NextRequest) {
         'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
       : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
         'y su comisión tampoco.'
+    // 🎯 Y LO ACCIONABLE: los números de póliza concretos, agrupados por clave
+    // de mediador, para poder copiarlos a un correo a la compañía. Sin esto el
+    // aviso decía «17 no están en la cartera» y no había forma de saber cuáles
+    // (medido el 05/09/2026) — describir la pérdida no es poder pararla.
+    const pedidos = textoHuerfanas(salud.huerfanasReparto, {
+      // Todavía no hay pantalla para el resto: se manda al puerto, que es donde
+      // están de verdad. Mandar a `/correduria` prometería una lista que esa
+      // pantalla no enseña.
+      donde: 'el puerto <code>/api/operador/huerfanas</code> de asegura',
+    })
+    // Lo que el puerto no pudo atribuir a la correduría se declara: son
+    // huérfanas que la lista de arriba NO enseña, y callarlo haría que 17
+    // pareciera el total cuando es un suelo.
+    const sinAmbito = respuesta.estado === 'ok' && (respuesta.huerfanasSinAmbito ?? 0) > 0
+      ? `\n\n⚠️ Además hay ${respuesta.huerfanasSinAmbito} evento(s) de huérfana que no se han podido atribuir a la correduría: no salen en la lista.`
+      : ''
+    const recorte = respuesta.estado === 'ok' && respuesta.huerfanasTruncadas
+      ? '\n\n⚠️ El listado venía recortado: los recuentos por clave son un mínimo, no el total.'
+      : ''
     await tgAviso('correduria.ingesta',
       titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades + antiguedad + recado,
+      prima + entidades + pedidos + sinAmbito + recorte + antiguedad + recado,
     ).catch(() => {})
   }
 
@@ -190,6 +221,9 @@ export async function GET(req: NextRequest) {
     total: salud.total,
     recientes: salud.recientes,
     huerfanas: salud.huerfanas,
+    // `null` = no se ha podido listar cuáles. Nunca 0.
+    pedirACompania: salud.huerfanasReparto?.totalPedir ?? null,
+    reprocesables: salud.huerfanasReparto?.totalReprocesar ?? null,
     avisado: cambio && salud.estado === 'degradada',
     motivoAviso: decision.avisar ? decision.motivo : null,
     detalle,

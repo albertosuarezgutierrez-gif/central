@@ -47,6 +47,9 @@ export {
   HORAS_RECHAZO_RECIENTE,
   DIAS_RECORDATORIO_INGESTA,
   decidirAvisoIngesta,
+  repartirHuerfanas,
+  textoHuerfanas,
+  TOPE_POLIZAS_TELEGRAM,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
@@ -54,6 +57,10 @@ export {
   type EntradaRechazada,
   type MotivoAviso,
   type DecisionAviso,
+  type PolizaHuerfana,
+  type PolizaEnCartera,
+  type GrupoHuerfanas,
+  type RepartoHuerfanas,
 } from './ingesta.ts'
 export {
   veredictoEntidad,
