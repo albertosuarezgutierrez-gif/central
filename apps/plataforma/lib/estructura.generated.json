@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-05T08:24:25Z",
+  "generadoEn": "2026-09-05T09:42:36Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2080,11 +2080,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 31
+        "evidencias": 32
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 37
+        "evidencias": 39
       },
       "asegura-web": {
         "estado": "usado",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 35
       },
       "rrhh": {
         "estado": "no",
@@ -2192,7 +2192,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 31
       },
       "asegura-web": {
         "estado": "no",
@@ -3865,6 +3865,7 @@
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
+      "/api/operador/export-rgpd",
       "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/ingesta",
@@ -4730,6 +4731,7 @@
       "/api/cron/concursos-radar",
       "/api/cron/contable-proactivo",
       "/api/cron/correduria-ingesta",
+      "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
       "/api/cron/correduria-siniestros",
       "/api/cron/correo-digest",
@@ -5344,6 +5346,7 @@
       "agente_latidos",
       "agente_reparaciones",
       "agente_salud",
+      "agente_veredicto",
       "ai_usos",
       "ayudas_perfiles",
       "banca_destino_reglas",
@@ -6157,7 +6160,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1276,
+    "apis": 1278,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
