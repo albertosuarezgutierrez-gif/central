@@ -261,14 +261,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/09/2026) 📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría
+- (05/09/2026) 🔁 Un PR abierto de noche choca con `main` cada ~50 min, y siempre por el MISMO fichero
+- (04/09/2026) 🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría
+- (04/09/2026) 📵 «19 clientes ilocalizables» eran 15: el contacto vive en TRES sitios, no en la ficha
 - (04/09/2026) ✉️ Invitar por correo a quien NO está en la cartera
 - (04/09/2026) Web pública de la correduría: `apps/asegura-web`
 - (04/09/2026) Plan de marketing y captación de Grupo ASegura
 - (04/09/2026) 📧 El buscador ya llamaba, pero a 5 clientes vivos les faltaba el correo
 - (04/09/2026) 💓 El vigía de latidos gritaba por agentes a los que aún NO les había tocado correr
 - (04/09/2026) 🔧 Instrumentado `pricing_applied` y ACTIVADOS los mensajes de los 2 pisos de Busto
-- (04/09/2026) 📸 Quitar Smoobu de Busto: las indicaciones están listas, las FOTOS no
-- (04/09/2026) 📉 Las pasadas de pricing del 04/09: dos hallazgos y un agujero de instrumentación
-- (04/09/2026) 🔐 La cerradura que falla NO es la de Socorro
-- (04/09/2026) 📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp
 
