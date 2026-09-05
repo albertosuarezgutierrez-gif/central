@@ -47,6 +47,15 @@
  * quien no es. Por eso el grupo entero se marca `compartido` y **no se escribe
  * ninguno**, lead incluido.
  *
+ * ⚠️ CORREGIDO el 05/09/2026, al escribirlo de verdad: el grupo no son 20
+ * fichas, son **5.636** — las 20 personas de arriba más **5.615 fichas del
+ * volcado sin nombre** («Lead 12345»), todas con ese mismo documento, sin un
+ * solo canal de contacto, con pólizas de aseguradora «(legacy)» vencidas entre
+ * 2014 y 2018 y **5.454 de ellas sin número de póliza**. Se vieron 20 porque
+ * sólo se miraron los grupos de choque, y esos son `tipo='cliente'`; el bulto
+ * es `lead`, que es justo donde el índice único no protege. La cifra de 20
+ * medía lo que se había mirado, no lo que había.
+ *
  * Qué lo distingue de un duplicado de verdad, que es lo que sí se quiere
  * encontrar: **los nombres**. «Adela Gutiérrez Alcalá» y «Adela Alcalá» son la
  * misma persona escrita de dos formas y comparten tokens; veinte nombres sin un
@@ -277,14 +286,33 @@ function hayTokenComun(nombres: string[][]): boolean {
 }
 
 /**
+ * Cómo escribió el volcado «esta ficha no trae nombre»: `Lead 12345`.
+ *
+ * 🚨 Medido el 05/09/2026, y NO es un caso raro: **26.277 fichas se llaman así**
+ * —el 82% de la cartera—, ninguna de ellas tiene email ni teléfono, y entre las
+ * dos suman 25.694 pólizas, todas vencidas entre 2013 y 2018. O sea, es el
+ * marcador de hueco del sistema viejo, que creó una ficha por PÓLIZA.
+ */
+const MARCA_SIN_NOMBRE = 'lead'
+
+/**
  * Parte un nombre en tokens comparables: sin acentos, sin signos, en minúsculas
  * y **sin los números** que el volcado dejó pegados al apellido («Ángel 14386»,
  * «Chema 14134») — son el código de cliente del sistema viejo, no parte del
  * nombre, y contarlos haría distintos a dos nombres iguales.
+ *
+ * 🚨 Y «Lead 12345» devuelve `[]`, o sea «esta ficha no tiene nombre», que es
+ * justo lo que significa. Tratarlo como un nombre más costó caro (medido el
+ * 05/09/2026, el día siguiente a escribir esta pieza): las fichas del volcado
+ * que comparten DNI con una persona con nombre —sus propias pólizas viejas, la
+ * misma persona— sumaban «lead» como un nombre distinto más, y con eso tres de
+ * los cinco grupos centinela eran en realidad **duplicados legítimos** («Jose
+ * Angel 12950» + «Jose Angel Benedito Mauri» + dos `Lead N`). El guardián los
+ * sacaba de la cola de fusión, que es donde tenían que estar.
  */
 export function tokensNombre(nombre: string | null | undefined): string[] {
   if (nombre === null || nombre === undefined) return []
-  return nombre
+  const tokens = nombre
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
@@ -292,6 +320,10 @@ export function tokensNombre(nombre: string | null | undefined): string[] {
     .replace(/[^a-z0-9]+/g, ' ')
     .split(' ')
     .filter((t) => t !== '' && !/^\d+$/.test(t))
+  // Sólo cuando NO queda nada más: un «Lead» que viniera con apellidos de
+  // verdad sí sería un nombre, y no hay ninguno así en la cartera.
+  if (tokens.length > 0 && tokens.every((t) => t === MARCA_SIN_NOMBRE)) return []
+  return tokens
 }
 
 function anota(
