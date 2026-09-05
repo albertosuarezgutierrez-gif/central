@@ -11,6 +11,7 @@ const PATRONES: RegExp[] = [
 ]
 
 export function contieneDatoInventado(respuesta: string, fuentes: string): boolean {
+  if (importesNoRespaldados(respuesta, fuentes).length > 0) return true
   const src = normaliza(fuentes)
   for (const re of PATRONES) {
     const m = respuesta.match(re)
@@ -22,4 +23,43 @@ export function contieneDatoInventado(respuesta: string, fuentes: string): boole
     }
   }
   return false
+}
+
+// ── Importes en euros ──────────────────────────────────────────────────────────────────────
+//
+// 🚨 Los patrones de arriba NO cazan un precio: buscan códigos de 4+ dígitos, teléfonos y URLs, así
+// que el «unos 25-30€» que el agente se inventó para el taxi del aeropuerto (05/09/2026, reserva
+// 154375571) pasó limpio. Un importe es justo lo que un huésped apunta y luego reclama, y el precio
+// real de ese trayecto es una tarifa FIJA municipal: no es opinable, o está bien o está mal.
+//
+// Cualquier cifra en euros que no aparezca en las fuentes escala. Es deliberadamente estricto: el
+// coste de un falso positivo es que Alberto lea un borrador correcto, y el de un falso negativo es
+// un precio falso escrito por el anfitrión en el chat oficial de Booking.
+const RE_IMPORTE = /(?:€\s*(\d+(?:[.,]\d{1,2})?)|(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur\b|euros?\b))/gi
+// Rango: «25-30€», «25 a 30 euros», «25 to 30 EUR». La primera cifra no lleva marca de moneda, así
+// que sin esto solo se comprobaría la segunda y media mentira se colaría.
+const RE_RANGO = /(\d+(?:[.,]\d{1,2})?)\s*(?:-|–|a|to|bis)\s*(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur\b|euros?\b)/gi
+
+const valorDe = (s: string): number => Number(String(s).replace(',', '.'))
+
+// Todos los números que aparecen en las fuentes, normalizados (26 y 26,00 son el mismo importe).
+function numerosDe(texto: string): Set<number> {
+  const out = new Set<number>()
+  for (const m of (texto || '').matchAll(/\d+(?:[.,]\d{1,2})?/g)) {
+    const n = valorDe(m[0])
+    if (Number.isFinite(n)) out.add(n)
+  }
+  return out
+}
+
+export function importesNoRespaldados(respuesta: string, fuentes: string): number[] {
+  const enFuentes = numerosDe(fuentes)
+  const citados = new Set<number>()
+  for (const m of (respuesta || '').matchAll(RE_RANGO)) {
+    citados.add(valorDe(m[1])); citados.add(valorDe(m[2]))
+  }
+  for (const m of (respuesta || '').matchAll(RE_IMPORTE)) {
+    citados.add(valorDe(m[1] ?? m[2]))
+  }
+  return [...citados].filter(n => Number.isFinite(n) && !enFuentes.has(n)).sort((a, b) => a - b)
 }
