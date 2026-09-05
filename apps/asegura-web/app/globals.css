@@ -1412,8 +1412,11 @@ textarea.f-in {
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 
-/* La lista va DUPLICADA en el JSX; por eso el bucle acaba en -50 %: al llegar
-   ahí la segunda copia está donde estaba la primera y el salto no se ve. */
+/* La lista va TRIPLICADA en el JSX; por eso el bucle acaba en -33.3333 %: al
+   llegar ahí la segunda copia está donde estaba la primera y el salto no se ve.
+   Tres y no dos porque con dos el contenedor era más ancho que una copia y se
+   veía el hueco (ver la nota del JSX). Si cambias el número de copias, cambia
+   también este porcentaje: son el mismo ajuste escrito en dos sitios. */
 .companias ul {
   display: flex;
   width: max-content;
@@ -1433,9 +1436,27 @@ textarea.f-in {
   white-space: nowrap;
 }
 
+/* En móvil el desfile se veía casi vacío: con `--e8` de separación y el nombre
+   a 1.5rem, en 360 px de ancho solo caben DOS marcas y media, así que la banda
+   parecía tener dos compañías y un hueco. No es la lista la que se queda corta
+   —son siete—, es el paso del desfile. Se aprieta la separación y se baja el
+   cuerpo para que se lean tres o cuatro de una pasada.
+
+   El `--e8` de escritorio se conserva: ahí el ancho sobra y el aire es el que
+   hace que se lea como un muro de marcas y no como una lista. */
+@media (max-width: 559px) {
+  .companias ul {
+    gap: var(--e6);
+  }
+
+  .companias li {
+    font-size: 1.125rem;
+  }
+}
+
 @keyframes desfile {
   to {
-    transform: translateX(-50%);
+    transform: translateX(-33.3333%);
   }
 }
 

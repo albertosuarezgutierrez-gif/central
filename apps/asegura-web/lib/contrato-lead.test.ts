@@ -55,3 +55,33 @@ test('el honeypot y el tope de comentario coinciden con plataforma', () => {
   assert.ok(max, 'no se encontró MAX_COMENTARIO en plataforma')
   assert.equal(MAX_COMENTARIO, Number(max[1]), 'el tope del comentario no coincide: se aceptaría texto que allí se rechaza')
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cada página de ramo lleva su propio formulario con el desplegable YA marcado.
+// Si el slug del ramo no está entre los tipos, ese `defaultValue` no casa con
+// ninguna opción y hay que inventarse un apaño — que es lo que pasó hasta el
+// 05/09/2026: `responsabilidad-civil` marcaba «Comercio o empresa», así que el
+// lead llegaba diciendo que quería un seguro de comercio. No falla nada, el
+// dato es plausible, y por eso vivió sin que nadie lo viera.
+//
+// Este test es el que impide que se repita al añadir un ramo nuevo.
+test('cada ramo publicado tiene su opción en el desplegable', async () => {
+  const { RAMOS } = await import('./ramos.ts')
+
+  // Única excepción, y es de contenido, no de descuido: la página junta vida y
+  // salud porque se venden juntas, pero en el formulario son dos opciones
+  // distintas. Se marca «Vida» y quien viene por salud la cambia en un clic.
+  const JUNTA_DOS_TIPOS = new Set(['vida-y-salud'])
+
+  const sinOpcion = RAMOS.map((r) => r.slug)
+    .filter((slug) => !JUNTA_DOS_TIPOS.has(slug))
+    .filter((slug) => !(TIPOS_SEGURO as readonly string[]).includes(slug))
+
+  assert.deepEqual(
+    sinOpcion,
+    [],
+    `Estos ramos tienen página pero no opción propia en el formulario: ${sinOpcion.join(', ')}. ` +
+      'Su lead entraría marcado como otra cosa. Añade el slug a TIPOS_SEGURO_LEAD de plataforma ' +
+      'y a la copia de contrato-lead.ts (con su etiqueta), o declara aquí por qué ese ramo no la lleva.',
+  )
+})

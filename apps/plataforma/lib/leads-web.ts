@@ -27,7 +27,7 @@ import type { ResultadoEscritura } from './cliente-edicion-asegura'
 
 // ─── Formulario ──────────────────────────────────────────────────────────────
 
-export const TIPOS_SEGURO_LEAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'comunidades', 'comercio', 'otros'] as const
+export const TIPOS_SEGURO_LEAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'comunidades', 'comercio', 'responsabilidad-civil', 'otros'] as const
 export type TipoSeguroLead = (typeof TIPOS_SEGURO_LEAD)[number]
 
 export const ETIQUETA_TIPO_SEGURO: Record<TipoSeguroLead, string> = {
@@ -38,6 +38,7 @@ export const ETIQUETA_TIPO_SEGURO: Record<TipoSeguroLead, string> = {
   salud: 'Salud',
   comunidades: 'Comunidades',
   comercio: 'Comercio / empresa',
+  'responsabilidad-civil': 'Responsabilidad civil',
   otros: 'Otro seguro',
 }
 

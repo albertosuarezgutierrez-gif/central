@@ -32,6 +32,20 @@
 
 - **📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas (05/09/2026).** Alberto, desde el móvil: «no puedo modificar movil ni mails» y «a Manuel Piña Franco también le sale Tarragona». Dos fallos: (1) la pestaña Contactos dejaba añadir/borrar/hacer principal pero NO cambiar un valor — `cambiarContacto` acepta ahora `valor` (recifra + recalcula índice ciego + re-espeja la columna), el `col:telefono` del volcado se baja antes a la hija, la regla de duplicados sale a `duplicadoContacto()` compartida con el alta, y el editor —que vive a pantalla y media en móvil— se abre con un botón desde la tira de arriba; (2) el sitio se pintaba con un `join`: «41807 34304, Tarragona» = CP de Espartinas + id de población del CRM viejo + provincia falsa. Medido sobre 31.809 fichas vivas: **473 con provincia que contradice al CP** (386 «Tarragona» con CP 41xxx, todas `intranet:` de mayo, ninguna de CIMA), 455 con número en `ciudad`, 602 con el CP sin el cero. `leerSitio()` (puro, 9 tests) no afirma lo que se contradice y lo explica; **no sustituye** la provincia por la del CP (el equivocado puede ser cualquiera de los dos). PR #2410. **Pendiente:** lote SQL para corregir esas 473 y fusionar el duplicado de Manuel Antonio Piña Franco (la ficha buena dice ESPARTINAS/Sevilla) — con OK de Alberto.
 
+- **🏷️ Compañías del muro y el ramo que llegaba mal etiquetado (05/09/2026).** Alberto, viendo la web
+  ya en `grupoasegura.es`: «¿y los logos de más compañías?». En `seguros.companias_dgs` hay 15 filas
+  `activa`, pero 10 solo llevan «código verificado en el catálogo de Codeoscopic» — que es
+  **tarificable, no acuerdo**; publicarlas sería afirmar en falso sobre terceros. Alberto fija la
+  lista: las 4 con pólizas vivas + Generali, Fidelidade y **Asisa** (esta NO está en
+  `companias_dgs`: para emitir hará falta su código DGS). Se parte `COMPANIAS` en dos, porque
+  ampliar la única que había habría subido en silencio la cifra «Compañías con pólizas en cartera»
+  de 4 a 7. Marquesina TRIPLICADA (medido: una copia 964 px < contenedor 1104 → se veía el hueco) y
+  apretada en móvil (de 2 nombres visibles a 3-4). 🚨 Y el hallazgo caro: la página de
+  **responsabilidad civil preseleccionaba «Comercio o empresa»** porque RC no existía en
+  `TIPOS_SEGURO_LEAD` — el lead llegaba diciendo que quería comercio, plausible y falso. RC añadido
+  en plataforma + la copia, con guardián nuevo `cada ramo publicado tiene su opción` (probado por
+  mutación). PR #2408.
+
 - **🎨 `asegura-web`: una sola atmósfera, no diez bloques (05/09/2026).** Alberto: «te estás liando,
   hay que mezclar todas las ideas». Diagnóstico: los recursos ya estaban TODOS (aspecto de la landing
   de Manuel, ventana viva, foco con contadores, escáner), pero apilados como diez bloques blancos del

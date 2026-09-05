@@ -12,7 +12,7 @@
 // Si divergen, el test se pone rojo y dice cuál hay que tocar.
 
 /** Ramos que ofrece el desplegable. Debe coincidir con `TIPOS_SEGURO_LEAD`. */
-export const TIPOS_SEGURO = ['auto', 'moto', 'hogar', 'vida', 'salud', 'comunidades', 'comercio', 'otros'] as const
+export const TIPOS_SEGURO = ['auto', 'moto', 'hogar', 'vida', 'salud', 'comunidades', 'comercio', 'responsabilidad-civil', 'otros'] as const
 export type TipoSeguro = (typeof TIPOS_SEGURO)[number]
 
 /** Etiquetas visibles. Las de plataforma son para su panel; estas, para el público. */
@@ -24,6 +24,7 @@ export const ETIQUETA_TIPO: Record<TipoSeguro, string> = {
   salud: 'Salud',
   comunidades: 'Comunidad de propietarios',
   comercio: 'Comercio o empresa',
+  'responsabilidad-civil': 'Responsabilidad civil',
   otros: 'Otro / no lo tengo claro',
 }
 
