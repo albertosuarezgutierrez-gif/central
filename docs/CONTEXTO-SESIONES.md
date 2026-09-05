@@ -43,6 +43,18 @@
   el botón funciona igual (va a `asegura-portal.vercel.app`). El header roto de la captura es código
   de Manuel, en un repo que el clasificador me bloquea.
 
+- **🔗 Lote 10: los 18 grupos de mismo DNI, resueltos uno a uno (05/09/2026).**
+  Con el índice ya escrito, el criterio fuerte por fin veía la cartera entera. **15 fusiones, 33
+  lápidas, 15 supervivientes** (`fusion-dni-lote10-2026-09-05`) y **ninguna póliza perdida** — 70
+  antes, 70 después. El motor pasa a fusionar grupos de **N** (el del lote 7 solo sabía de pares y
+  saltaba los tríos); los uuid van **escritos a mano** en el lote, no leídos de la foto, porque la
+  foto se recalcula en cada visita y su ordinal no es estable.
+  🚫 **3 grupos NO se tocan, y ahí está el valor:** el 12 (Mejias Heredia / Yolanda Rios) y el 15
+  (Fernando Martin Verdugo / Catalina Verdugo Garcia) son **dos personas** con un DNI mal tecleado,
+  y el 10 es el centinela de 20 fichas. Fuera también «Elisa De paz campo» del grupo 5 (parcial).
+  🔎 El hallazgo bonito: «**Gerente Chapisa (sin apellidos)**» no era una persona sin nombre — mismo
+  DNI y mismo teléfono que **Francisco Javier Zamora Flores**, o sea él.
+
 - **🗄️ Archivar, no borrar: decisión de Alberto sobre las 26.463 fichas sin contacto (05/09/2026).**
   «no la elimines, archívala y pon recordatorio en 6 meses… siempre habrá tiempo de borrarlo». Hecho:
   los **26 leads sin canal que seguían activos** pasan a `activo = false` (quedan **0**; total archivado
