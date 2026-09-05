@@ -226,3 +226,65 @@ test('tokensNombre tira los códigos que el volcado pegó al apellido', () => {
   assert.deepEqual(tokensNombre('Proyecto Assento (sin apellidos)'), ['proyecto', 'assento'])
   assert.deepEqual(tokensNombre(null), [])
 })
+
+test('«Lead 12345» no es un nombre: es la marca de que la ficha no lo trae', () => {
+  assert.deepEqual(tokensNombre('Lead 12345'), [])
+  assert.deepEqual(tokensNombre('LEAD 20979'), [])
+  assert.deepEqual(tokensNombre('Lead'), [])
+  // Un apellido de verdad al lado sí cuenta: sólo se anula cuando no queda nada más.
+  assert.deepEqual(tokensNombre('Lead Villegas 133'), ['lead', 'villegas'])
+})
+
+test('las fichas sin nombre del volcado NO convierten un duplicado en centinela', () => {
+  // Caso real (05/09/2026, grupo 3 de la foto del plan): una persona repetida
+  // más sus dos fichas por-póliza del volcado. Contando «lead» como nombre
+  // salían 3 nombres distintos y el grupo se marcaba centinela, que lo sacaba
+  // de la cola de fusión — justo al revés de lo que hay que hacer con él.
+  const p = planBackfillDni(
+    [
+      ficha({ id: 'p1', dni: '12345678Z', nombre: 'Jose Angel 12950' }),
+      ficha({ id: 'p2', esCliente: false, dni: '12345678Z', nombre: 'Jose Angel Benedito Mauri' }),
+      ficha({ id: 'v1', esCliente: false, dni: '12345678Z', nombre: 'Lead 18478' }),
+      ficha({ id: 'v2', esCliente: false, dni: '12345678Z', nombre: 'Lead 19369' }),
+    ],
+    h,
+  )
+  assert.deepEqual(p.compartidos, [], 'no es un centinela: es la misma persona repetida')
+  assert.equal(p.resumen.compartidos, 0)
+  assert.equal(p.filas.find((f) => f.id === 'p1')?.destino, 'rellenable')
+})
+
+test('un grupo de puras fichas «Lead N» no se marca centinela', () => {
+  // Sin un solo nombre no se puede afirmar que sean personas distintas, y son
+  // la mitad de la cartera: marcarlas dejaría el backfill sin escribir nada.
+  const p = planBackfillDni(
+    [
+      ficha({ id: 'a', esCliente: false, dni: '12345678Z', nombre: 'Lead 1' }),
+      ficha({ id: 'b', esCliente: false, dni: '12345678Z', nombre: 'Lead 2' }),
+      ficha({ id: 'c', esCliente: false, dni: '12345678Z', nombre: 'Lead 3' }),
+    ],
+    h,
+  )
+  assert.deepEqual(p.compartidos, [])
+  assert.deepEqual(p.filas.map((f) => f.destino), ['rellenable', 'rellenable', 'rellenable'])
+})
+
+test('el centinela de verdad sigue saltando aunque lo entierren fichas sin nombre', () => {
+  // El grupo medido: 5.615 fichas «Lead N» y un puñado de personas sin relación
+  // entre sí. Las que mandan son las que tienen nombre.
+  const p = planBackfillDni(
+    [
+      ficha({ id: 'x1', esCliente: false, dni: '12345678Z', nombre: 'Alberto Suárez Gutiérrez' }),
+      ficha({ id: 'x2', esCliente: false, dni: '12345678Z', nombre: 'Chema 14134' }),
+      ficha({ id: 'x3', esCliente: false, dni: '12345678Z', nombre: 'Eva 12895' }),
+      ...Array.from({ length: 20 }, (_, i) =>
+        ficha({ id: `l${i}`, esCliente: false, dni: '12345678Z', nombre: `Lead ${i}` }),
+      ),
+    ],
+    h,
+  )
+  assert.equal(p.compartidos.length, 1)
+  assert.equal(p.compartidos[0].nombresDistintos, 3, 'las «Lead N» no cuentan como nombre')
+  assert.equal(p.compartidos[0].fichas.length, 23, 'pero sí entran en el grupo: llevan el DNI malo')
+  assert.equal(p.resumen.compartidos, 23)
+})

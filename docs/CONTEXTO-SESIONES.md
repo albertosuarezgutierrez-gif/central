@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🃏 El backfill se ejecutó, y el centinela no eran 20 fichas: eran 5.636 (05/09/2026).**
+  Alberto pulsó el botón: **8.000 índices escritos** (3.890 → 11.890), quedan **469** (una pulsación más) y
+  6.623 no se escriben nunca (5.645 centinelas + 936 ilegibles + 42 en choque). 🚨 **El grupo centinela es
+  5.615 fichas «Lead N» del volcado + 21 personas** —sin canal, aseguradora «(legacy)», 5.454 sin nº de
+  póliza— y la única con hash previo es **la ficha del propio Alberto**: [Probable] el importador rellenó el
+  DNI obligatorio con el del titular. Se vieron 20 porque sólo se miraron los grupos de choque, que son
+  `tipo='cliente'`. ⚠️ **Y el guardián tenía un agujero propio:** contaba «Lead 12345» como un nombre más, así
+  que 3 de los 5 grupos centinela eran **duplicados legítimos** sacados de la cola de fusión. Arreglado en
+  `tokensNombre` (PR #2356). **Pendiente de decidir: anular el DNI falso de esas 5.635 fichas.**
+
 - **🃏 El backfill del DNI: no había botón, y apareció un DNI CENTINELA en 20 fichas (05/09/2026).**
   Alberto: «haz el backfill del dni». **No lo podía hacer nadie**: el `POST /api/operador/backfill-dni` existía
   pero `/correduria/mantenimiento` decía «se lanza desde asegura» = un `curl` con el secreto a mano. Botón nuevo
