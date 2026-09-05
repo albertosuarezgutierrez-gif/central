@@ -1,8 +1,15 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { ETIQUETA_RAMO, etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
+import {
+  ETIQUETA_RAMO,
+  canalDeCompania,
+  etiquetaProcedencia,
+  plazoComunicacion,
+  type FilaCompania,
+} from '@central/module-seguros-portal'
 
+import { companiasConCanal } from '@/lib/canales-compania'
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
 import { eur } from '@/lib/dinero'
@@ -50,10 +57,14 @@ export default async function Boveda() {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
-  // Las tres lecturas parten de la misma sesión: la cartera por `portal_vinculo`
-  // de esta identidad, y la bóveda de declaradas y los partes por `identidadId`.
-  // Ninguna acepta un id que venga de fuera.
-  const [cartera, declaradas, partes] = await Promise.all([
+  // Las tres primeras lecturas parten de la misma sesión: la cartera por
+  // `portal_vinculo` de esta identidad, y la bóveda de declaradas y los partes
+  // por `identidadId`. Ninguna acepta un id que venga de fuera.
+  //
+  // La cuarta es de otra naturaleza y por eso no lleva identidad: `companias_dgs`
+  // es un catálogo público (códigos DGS y teléfonos que publican las propias
+  // compañías), no la cartera de nadie. Ver `lib/canales-compania.ts`.
+  const [cartera, declaradas, partes, companias] = await Promise.all([
     carteraDeIdentidad(identidad.id),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
@@ -61,6 +72,7 @@ export default async function Boveda() {
       take: 50,
     }),
     partesDeIdentidad(identidad.id),
+    companiasConCanal(),
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
@@ -79,12 +91,18 @@ export default async function Boveda() {
   // sale SIEMPRE de la cartera ya leída para esta identidad: ningún id de
   // póliza entra desde la request.
   const polizasParte: PolizaOpcionParte[] = [
-    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p))),
+    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p, companias))),
     ...cartera.autorizadas.flatMap((t) =>
-      t.polizas.map((p) => opcionCartera(p, t.nombre)),
+      t.polizas.map((p) => opcionCartera(p, companias, t.nombre)),
     ),
     ...declaradas.map((p) => ({
       valor: `declarada:${p.id}`,
+      // 🚨 El cruce es por nombre EXACTO y aquí es donde más falla, a propósito:
+      // el nombre de una póliza aportada lo leyó una IA de un PDF («MAPFRE
+      // ESPAÑA S.A.»), así que muchas caerán en «pídenoslo». Es el degradado
+      // correcto: una coincidencia aproximada acertaría casi siempre y alguna
+      // vez daría el teléfono de urgencias de OTRA compañía.
+      canal: canalDeCompania(p.compania, companias),
       etiqueta: [
         p.compania ?? 'Compañía sin identificar',
         p.ramo ? RAMO[p.ramo] ?? p.ramo : null,
@@ -484,9 +502,14 @@ function Coberturas({ p }: { p: PolizaPortal }) {
  * sin el nombre, dos pólizas de auto de la misma compañía son indistinguibles y
  * el parte acaba colgado de la del padre en vez de la del hijo.
  */
-function opcionCartera(p: PolizaPortal, titular?: string): PolizaOpcionParte {
+function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titular?: string): PolizaOpcionParte {
   return {
     valor: `cartera:${p.id}`,
+    // A quién acude el asegurado de ESA compañía. Viaja pegado a la opción para
+    // que la pantalla pueda cambiarlo al cambiar de póliza sin volver al
+    // servidor: el momento en el que alguien abre esto es justo el peor para
+    // esperar a una petición.
+    canal: canalDeCompania(p.compania, companias),
     etiqueta: [
       p.compania,
       RAMO[p.ramo] ?? p.ramo,

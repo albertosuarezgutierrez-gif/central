@@ -6,20 +6,48 @@
 
 ## 0. El dato que ordena todo lo demás
 
-**`portal_vinculo` = 0 filas. Nadie ha entrado al portal todavía.** Y de las
-**32.602 fichas de la cartera, solo 4.310 tienen `email_lookup_hash`** — el
-índice ciego por el que el portal engancha una identidad con su ficha.
+> 🔄 **Re-medido el 05/09/2026 contra la BD.** Las cifras del 03/09 que había aquí
+> («0 vínculos», «32.602 fichas / 4.310 con índice ciego») ya no son ciertas, y una
+> de ellas dejaba abierta una duda grave. Se corrigen abajo; el ORDEN que proponía
+> esta nota no cambia, porque el cuello de botella sigue siendo el mismo.
 
-Eso significa que **el cuello de botella no es el método de entrada: es a cuántos
-clientes se les puede abrir la puerta.** Añadir formas de entrar a un edificio en
-el que aún no ha entrado nadie mejora la foto, no el negocio. Caso medido: Pilar
-Piña Franco tiene dos fichas; la que tiene la relación con GLOBAL 2 **no tiene
-índice ciego**, y la que sí lo tiene está vacía. Entre con el email que entre,
-hoy no llega a nada.
+**✅ La duda que quedaba abierta está resuelta: la `PII_LOOKUP_KEY` del portal SÍ
+casa con la de `asegura`.** De los 2 vínculos que existen, **uno tiene
+`origen = email_hash`**: alguien se vinculó SOLO, sin intervención. El 03/09 quedó
+sin resolver si el caso del cliente que entró y vio la bóveda vacía fue por usar
+otro email o porque las claves diferían — y en ese segundo caso *ningún* cliente se
+habría vinculado nunca, sin un solo error en los logs. Ese escenario queda
+descartado por observación directa, no por inspección de envs.
+
+**Lo que sí sigue siendo el cuello de botella, y ahora medido donde importa:**
+
+| Medida (05/09/2026) | Valor |
+|---|---|
+| Identidades que han entrado al portal | 3 |
+| Vínculos (`portal_vinculo`) | 2 — uno `manual`, uno `email_hash` |
+| **Cartera VIVA: titulares** | **80** |
+| **Cartera VIVA: con email localizable** | **51** |
+| **Cartera VIVA: SIN email localizable** | **29** |
+| Toda la cartera: fichas (no fusionadas) | 31.947 |
+| Toda la cartera: con email localizable | 4.663 |
+
+🚨 **La cifra que decide es 29, no 4.663.** Más de uno de cada tres clientes VIVOS
+no tiene un email por el que el portal pueda encontrarle. A esos, **entren como
+entren** —código, Google, huella o WhatsApp—, la bóveda les sale vacía, y en
+pantalla eso es indistinguible de «no tienes seguros con nosotros».
+
+Los 28.000 y pico leads sin email son otro problema y no urge: no van a entrar
+mañana. Los 29 son personas concretas de la cartera de hoy.
+
+Añadir formas de entrar a un edificio en el que aún no ha entrado nadie mejora la
+foto, no el negocio. Caso medido el 03/09: una clienta con **dos fichas** —la que
+tiene la relación con la empresa NO tiene índice ciego, y la que sí lo tiene está
+vacía—. Entre con el email que entre, hoy no llega a nada. Ese caso es de fusión
+de duplicados, no de método de acceso.
 
 ## 1. Entrar con Google — pedido por Alberto (03/09/2026)
 
-**Estado real: no existe nada.** Medido en todo el monorepo: cero WebAuthn, cero
+**Estado real: no existe nada** (confirmado de nuevo el 05/09/2026). Medido en todo el monorepo: cero WebAuthn, cero
 passkeys, y el único Google OAuth es el de `apps/ia-rest` contra Drive/Blog
 (servidor a servidor, no login de personas). `apps/sivra` usa NextAuth con
 usuario y contraseña contra dos variables de entorno — es el acceso de Alberto,
@@ -28,7 +56,7 @@ no reutilizable. Lo de «casi terminado» no está en este repo.
 ⚠️ **Y hay un problema de fondo, no de implementación:** el portal vincula por el
 índice ciego del **email de la ficha**. Si el Google del cliente no es el email
 que la correduría tiene apuntado, entra y no ve nada — que es exactamente el
-fallo de Pilar, multiplicado. **Google login sin arreglar antes la cobertura de
+fallo de la clienta de las dos fichas, multiplicado. **Google login sin arreglar antes la cobertura de
 emails empeora el problema, no lo arregla.**
 
 Si se hace, el orden correcto es: (1) subir la cobertura del índice ciego, (2)
@@ -94,7 +122,8 @@ ha informado ninguna»**, no «no tienes ninguna». No se puede pintar igual.
 
 ## 7. Duplicados en la cartera
 
-Pilar tiene **dos fichas**, con emails y teléfonos distintos. Un cliente que se
+El caso medido tiene **dos fichas** de la misma persona, con emails y teléfonos
+distintos (se omite el nombre a propósito: esto es un doc del repo). Un cliente que se
 ve duplicado pierde la confianza que el portal intenta construir, y el
 duplicado además parte su historial. Antes de invitar a nadie conviene una
 pasada de fusión con la regla de la casa: **agrupar por identificador, nunca por

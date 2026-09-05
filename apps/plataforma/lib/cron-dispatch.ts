@@ -144,6 +144,12 @@ export const CRON_JOBS: CronJob[] = [
   // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
   // huella fresca. Avisa a Alberto para que LLAME al cliente y le haga seguimiento.
   { path: '/api/cron/correduria-siniestros', schedule: '50 6 * * *' },
+  // Partes del PORTAL sin abrir en la compañía: 06:55, el último de la tanda de
+  // correduría. Va detrás de siniestros (06:50) a propósito: si un parte ya se
+  // ha convertido en siniestro por CIMA, ese aviso llega primero y este ya no lo
+  // cuenta —sale de la lista por `comunicado`—, así que no se avisa dos veces de
+  // lo mismo. Vigila el plazo del art. 16 LCS, que hasta hoy no vigilaba nadie.
+  { path: '/api/cron/correduria-partes', schedule: '55 6 * * *' },
   { path: '/api/cron/facturas-scan', schedule: '15 6 * * *' },
   { path: '/api/cron/facturas-resumen-semanal', schedule: '15 9 * * 1' },
   { path: '/api/cron/categorizar-movimientos', schedule: '0 7 * * *' },

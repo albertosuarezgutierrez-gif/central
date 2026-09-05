@@ -553,6 +553,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:50, y solo cuando ha entrado alguno',
   },
   {
+    id: 'correduria.parte-sin-abrir', categoria: 'correduria',
+    titulo: 'Parte del cliente sin abrir en la compañía',
+    que: 'Partes que un cliente nos dio por el portal y que TODAVÍA no están abiertos en la entidad, con lo que queda del plazo del art. 16 LCS (7 días). Incluye los que ya has leído («recibido»): leerlo no lo comunica.',
+    cuando: 'Todos los días a las 08:55, y solo cuando entra uno nuevo o a uno se le echa el plazo encima',
+  },
+  {
     id: 'correduria.lead-nuevo', categoria: 'correduria',
     titulo: 'Lead nuevo desde la web',
     que: 'Alguien ha pedido presupuesto en /seguros: sus datos, qué quiere y el enlace a su ficha (o que no se pudo registrar).',
