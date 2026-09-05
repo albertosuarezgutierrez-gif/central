@@ -572,6 +572,24 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   distintos a propósito: **tener a quién llamar no es poder notificar** — el preaviso del art. 22 LCS va
   al TOMADOR. El nombre de un interviniente suelto va cifrado y NO cruza el puerto: de esos solo el
   recuento. Guardián: `test/regression-clientes-sin-canal.test.ts`.
+  🚨 **Y había un CUARTO sitio, encontrado el 05/09/2026 por el mismo camino: `cliente_relaciones`.**
+  Alberto, mirando la pantalla otra vez: «grupo elca ya tiene a pablo y aun aparece», «Studium es una
+  empresa y tiene a victor y berta». Los tres estaban declarados (Pablo Franco Ruz «Administración» de
+  GRUPO ELCA 83; Víctor «Empleado/a» y Berta «Accionista» del Instituto Studium) y la consulta miraba la
+  ficha, sus tablas hijas y los intervinientes de la póliza, pero no ahí. **Medido contra la BD ese día:
+  18 clientes de la cartera viva sin nada en su ficha · 14 ilocalizables con los tres sitios de antes ·
+  SEIS con el cuarto.** (La pantalla decía 16, cifra anterior a las fusiones del lote 10.)
+  ⚖️ **El familiar NO es un contacto de segunda.** Se iba a rotular «solo sirve para pedirle el correo» y
+  lo corrigió Alberto: «piensa q un cliente puede ser muy mayor y no tiene contacto… es mejor contactar
+  con el familiar». Comparte estado con el interviniente ajeno (`contacto_via_tercero`) y **viaja el
+  PARENTESCO** (`fichasAllegado: {clienteId, nombre, parentesco}`), que la pantalla pinta: llamar al hijo
+  y llamar a un desconocido no son lo mismo. Lo que no cambia es que tener a quién llamar sigue sin ser
+  poder notificar (art. 22 LCS, el preaviso va al TOMADOR).
+  ⚠️ **La consulta busca en las DOS direcciones de la relación a propósito.** El convenio del repo es
+  «fila A→B = B es <tipo> de A», pero el volcado NO lo respeta (en Studium hay una fila que se leería
+  «Berta es Empresa de Studium»), así que se enseña el `tipo_relacion` tal cual lo escribió el CRM y no se
+  afirma quién representa a quién. Y `distinct on (o.id)`: cada vínculo está dos veces y una misma persona
+  puede ser a la vez «Propietario» y «Empresa» — sin eso, saldría duplicada.
 - **`GET /poliza?id=`** (02/09/2026) — la ficha de UNA póliza: coberturas, todos los recibos, siniestros,
   intervinientes, nº de documentos (`null` si no se pudo contar) y la **copia gemela** (mismo `numero_poliza`
   en la otra cara: la de CIMA trae vencimiento y recibos, la del volcado la dirección del riesgo). La
