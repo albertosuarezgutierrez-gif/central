@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-05T07:58:26Z",
-  "sha": "0cad002aeb65eeea804035205a72882842170afa",
+  "generadoEn": "2026-09-05T08:24:25Z",
+  "sha": "c92e09ef8cd0e9beb495cd0d737380708af124e8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -54621,7 +54621,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f1bf27fe01b"
+      "hash": "bba983c58168"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/apartamentos/page.tsx",
@@ -88262,6 +88262,55 @@
       "hash": "888f692255ab"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/mensajes-prog/cobertura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/mensajes-prog/cobertura.ts — ¿está llegando el ciclo a los huéspedes? PURO. El latido del cron dice «5 reservas · 0 debidos · 0 enviados», y eso es exactamente lo mismo que decía el 05/09/2026 con el ciclo roto por dos sitios a la vez: el Dúplex sin activar desde el primer día, y la vísper",
+      "exporta": [
+        "revisarCobertura",
+        "claveAviso",
+        "textoCobertura"
+      ],
+      "funciones": [
+        {
+          "nombre": "aDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": "number | null",
+          "linea": 51
+        },
+        {
+          "nombre": "revisarCobertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCobertura",
+          "retorno": "Hallazgo[]",
+          "linea": 56
+        },
+        {
+          "nombre": "claveAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "h: Hallazgo, hoy: string",
+          "retorno": "string",
+          "linea": 113,
+          "resumen": "Clave de dedupe: una vez por hallazgo y día. El cron pasa 48 veces al día."
+        },
+        {
+          "nombre": "textoCobertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "hallazgos: Hallazgo[]",
+          "retorno": "string | null",
+          "linea": 123,
+          "resumen": "El texto del Telegram. `null` cuando no hay nada que decir — el día normal no manda nada."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "89d73f6f8c52"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/codigo-portal.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/mensajes-prog/codigo-portal.ts — QUÉ código del portal recibe el huésped. Hallazgo del 31/08/2026 (lo señaló Alberto): los teclados de Socorro y Bustos Tavera NO son cacharros sueltos, son cerraduras Tuya conectadas a la plataforma, y `domotica_acceso_pin` ya guarda un PIN POR RESERVA con ",
@@ -88299,6 +88348,7 @@
       "resumen": "lib/sivra/mensajes-prog/decidir.ts — qué mensajes del ciclo tocan HOY para una reserva. PURO. Ventanas (hora Madrid; el cron corre cada 30 min y esto decide si el hito ya \"abrió\" hoy): confirmacion en cuanto vemos la reserva acceso desde checkIn−7, a partir de las 09:00 vispera_llegada checkIn−1 ≥ 0",
       "exporta": [
         "claveHito",
+        "cubreAlHuesped",
         "hitosBloqueantes",
         "mensajesDebidos"
       ],
@@ -88336,12 +88386,21 @@
           "linea": 50
         },
         {
+          "nombre": "cubreAlHuesped",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "boolean",
+          "linea": 80,
+          "resumen": "¿Este hito deja al huésped cubierto? `enviado` porque llegó; `omitido` porque alguien decidió que no hacía falta. Lo demás NO cubre: una copia en sombra o un fallo no son una entrega."
+        },
+        {
           "nombre": "hitosBloqueantes",
           "kind": "function",
           "exportada": true,
           "params": "filas: HitoRegistrado[], activo: boolean,",
           "retorno": "",
-          "linea": 78,
+          "linea": 108,
           "resumen": "Qué hitos YA REGISTRADOS bloquean una emisión nueva. Una fila en `sombra` NO bloquea si el piso ya está ACTIVO: se generó para validar el texto y nunca llegó al huésped, así que darla por hecha lo dej"
         },
         {
@@ -88350,12 +88409,12 @@
           "exportada": true,
           "params": "r: ReservaMin, hoy: string, horaMadrid: string, yaHechos: Set<string>, emitidosHoy: Set<string> = new Set(),",
           "retorno": "Debido[]",
-          "linea": 93
+          "linea": 126
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fd6f652a44bf"
+      "hash": "5e68f539ad01"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/estado-panel.ts",
@@ -88371,7 +88430,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<EstadoCiclo>",
-          "linea": 34
+          "linea": 36
         }
       ],
       "tablas": [
@@ -88380,7 +88439,7 @@
         "mensajes_programados"
       ],
       "rutaApi": null,
-      "hash": "f5d57dff78b1"
+      "hash": "4b87b789655a"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/idioma-reserva.ts",
@@ -88427,7 +88486,7 @@
           "exportada": false,
           "params": "",
           "retorno": "",
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "cargarCodigos",
@@ -88435,7 +88494,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<Record<string, CodigosAcceso>>",
-          "linea": 65
+          "linea": 66
         },
         {
           "nombre": "cargarPinsReserva",
@@ -88443,7 +88502,7 @@
           "exportada": false,
           "params": "bookingIds: string[]",
           "retorno": "Promise<Map<string, string>>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "PIN por reserva de la cerradura Tuya (`domotica_acceso_pin`), SOLO los que están vivos AHORA. Tres filtros, los tres necesarios: `estado='activo'` (un PIN en error/borrado es un «no hay», nunca un cód"
         },
         {
@@ -88452,7 +88511,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<Set<string>>",
-          "linea": 93
+          "linea": 94
         },
         {
           "nombre": "cargarYaHechos",
@@ -88460,7 +88519,7 @@
           "exportada": false,
           "params": "bookingIds: string[]",
           "retorno": "Promise<Map<string, HitoRegistrado[]>>",
-          "linea": 102,
+          "linea": 103,
           "resumen": "Hitos ya registrados por reserva, CON su estado: una fila en `sombra` no vale lo mismo que una enviada (ver `hitosBloqueantes` en decidir.ts)."
         },
         {
@@ -88469,7 +88528,7 @@
           "exportada": false,
           "params": "secciones: { texto: string }[] | null",
           "retorno": "string",
-          "linea": 125,
+          "linea": 126,
           "resumen": "Enlace Chekin POR RESERVA: vive en la sección \"CHECK-IN OBLIGATORIO\" de su guest app."
         },
         {
@@ -88478,8 +88537,17 @@
           "exportada": false,
           "params": "apartmentId: unknown, departure: string, bookingId: string",
           "retorno": "Promise<boolean | null>",
-          "linea": 136,
+          "linea": 137,
           "resumen": "¿Queda libre el día de la salida (nadie entra ese día)? true/false verificado · null = no se pudo comprobar → la plantilla NO ofrece las 12:00 (mismo criterio conservador que el agente)."
+        },
+        {
+          "nombre": "revisarCoberturaDePasada",
+          "kind": "function",
+          "exportada": false,
+          "params": "reservas: any[], hoy: string, activos: Set<string>, yaHechosPorReserva: Map<string, HitoRegistrado[]>,",
+          "retorno": "Promise<string | null>",
+          "linea": 155,
+          "resumen": "Vigía de cobertura: quién llega sin sus instrucciones. Devuelve una nota para el latido, o null. 🚨 NO puede tumbar la pasada ni dejarla sin latido: es un observador. Si su propia consulta falla, lo D"
         },
         {
           "nombre": "pasadaMensajesProgramados",
@@ -88487,18 +88555,19 @@
           "exportada": true,
           "params": "deadline = Date.now() + 280_000",
           "retorno": "Promise<Resumen>",
-          "linea": 150
+          "linea": 216
         }
       ],
       "tablas": [
         "domotica_acceso_pin",
+        "mensajes_prog_avisos",
         "mensajes_prog_pisos",
         "mensajes_programados",
         "set",
         "sivra_codigos_acceso"
       ],
       "rutaApi": null,
-      "hash": "3e4e1fc4db0a"
+      "hash": "da91930919f7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/plantillas.ts",
@@ -93112,7 +93181,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 558
+          "linea": 566
         },
         {
           "nombre": "avisosDe",
@@ -93120,7 +93189,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 563,
+          "linea": 571,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -93129,13 +93198,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 573,
+          "linea": 581,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0e3db3b97d18"
+      "hash": "63c36b5f78fc"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -120569,7 +120638,7 @@
     }
   ],
   "resumen": {
-    "archivos": 2999,
-    "funciones": 9035
+    "archivos": 3000,
+    "funciones": 9041
   }
 }
