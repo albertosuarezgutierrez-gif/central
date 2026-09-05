@@ -39,10 +39,12 @@ import {
   autorizacionVigente,
   camposDeAlcances,
   camposVisibles,
+  describirBien,
   esAlcance,
   etiquetaNivelAlcances,
   NIVELES,
   type Alcance,
+  type BienAsegurado,
   type TipoOtorgante,
   type CamposVisibles,
   type Nivel,
@@ -125,6 +127,14 @@ export type PolizaPortal = {
   recibos: RecibosPortal | null
   /** `null` = no visible en este nivel. `[]` = no hay ninguno abierto. */
   siniestrosAbiertos: SiniestroPortal[] | null
+  /**
+   * QUÉ está asegurado. `cosa` (marca/modelo/matrícula) es dato del CONTRATO y
+   * se ve desde el nivel más bajo; `ubicacion` (la dirección del inmueble) es
+   * dato de la PERSONA y un tercero no la ve nunca si quien cede es física.
+   * En los dos, `null` = **no informado o no visible**, jamás «no tiene»: la
+   * pantalla no pinta nada, que es la regla de visibilidad del portal.
+   */
+  bien: BienAsegurado
 }
 
 export type TitularPortal = {
@@ -425,6 +435,18 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       // cosas distintas y la UI dice cada una con sus palabras. Hasta el
       // 04/09/2026 esto no miraba `ve` y un tercero con el alcance más bajo
       // veía los siniestros abiertos de quien le autorizó.
+      // 🚨 Los DOS campos se filtran por SU flag, no por uno común: `bien` es
+      // la cosa (visible desde `tarjeta`) y `direccionRiesgo` es dónde vive el
+      // titular (nunca a un tercero de una persona física). Un solo `if` aquí
+      // regalaría la dirección de una casa a quien solo pidió ver la compañía.
+      bien: (() => {
+        const b = describirBien(p.tipo, p.datosEspecificos)
+        return {
+          cosa: ve.bien ? b.cosa : null,
+          ubicacion: ve.direccionRiesgo ? b.ubicacion : null,
+          detalles: ve.bien ? b.detalles : [],
+        }
+      })(),
       siniestrosAbiertos: ve.siniestros
         ? (siniestrosPor.get(p.id) ?? []).map((s) => ({
             id: s.id,

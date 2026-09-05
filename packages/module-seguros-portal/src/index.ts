@@ -1,4 +1,9 @@
 export { NIVELES, camposVisibles } from './acceso.ts'
+// Qué COSA está asegurada (el coche, el piso). Lee `bien-asegurado.ts` antes de
+// tocarlo: `cosa` y `ubicacion` salen separados porque la dirección de un hogar
+// es un dato de la PERSONA y no la ve un tercero.
+export { describirBien, bienTieneAlgo, BIEN_VACIO } from './bien-asegurado.ts'
+export type { BienAsegurado } from './bien-asegurado.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
 export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
 export type { Procedencia } from './procedencia.ts'

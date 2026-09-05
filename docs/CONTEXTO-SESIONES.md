@@ -1146,6 +1146,25 @@
 
 ---
 
+### 🖥 (05/09/2026) El portal del cliente: lateral como plataforma, y QUÉ está asegurado
+
+Alberto, con la pantalla desplegada delante: «aprovecha poco la página vista en pc», «con ventana
+lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto».
+- **El armazón pasa a `app/(portal)/layout.tsx`**: se acabó el `maxWidth: 720` en línea por página
+  (~720 px de márgenes vacíos en un 1440). `NavPortal.tsx` es UN `<nav>` con dos formas — carril en
+  móvil, lateral de 256 px desde 1024. Sin hamburguesa: son cuatro secciones.
+- Medidas del **fuente** de la app de Manuel (no de una captura): radio 1.4rem, 24/18/16/14/12,
+  ritmo de 24, `tabular-nums`, botones en píldora. Playwright a 320/768/1440: 1→2→3 columnas, cero
+  desbordes.
+- **`describirBien()`** (módulo puro, 11 tests, 2 mutaciones vistas morder): el dato estaba en
+  `polizas.datos_especificos` y el rol YA tenía el GRANT — no se enseñaba. 🚨 `cosa` (matrícula) es
+  dato del contrato y se ve desde `tarjeta`; `ubicacion` (la dirección del hogar) es dato de la
+  PERSONA y entra en `NUNCA_A_UN_TERCERO`. Juntarlas regalaría una dirección a quien pidió ver una
+  compañía.
+- La póliza ajena se marca en la TARJETA (filete + «De {titular}»), no solo en el `<h2>` de la
+  sección: en rejilla ese título se sale de la vista.
+
+
 ### ⚖️ (05/09/2026) Bloque legal 0.3: el portal ya deja constancia de que informó — y sale una alerta de correo (PR #2326, mergeado)
 - El canje del código no dejaba **ninguna** fila de que se hubiera enseñado la información del mediador. La carga de la prueba es del mediador (art. 19 Ley 16/2018) y un acceso sin constancia **se ve igual que uno correcto**. Ahora escribe `lds_art19` en `portal_consentimiento` (la tabla existía desde Fase 1 sin que nadie escribiera).
 - **Va emparejado con la UI a propósito**: la fila afirma «se le enseñó», así que la pantalla de entrada lo dice junto al botón con los tres enlaces. Separarlos convertiría el registro en prueba fabricada — lo ata `test/regression-portal-consentimiento.test.ts` (8 cepos).

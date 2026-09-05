@@ -119,6 +119,76 @@ Lo que toca: subirla una vez a **Shared Environment Variables** del equipo y enl
 legible en un gestor de contraseñas para las irreversibles. Sin eso, un despiste deja la cartera
 inaccesible sin un solo error en los logs.
 
+## 🖥 El armazón (05/09/2026): lateral en escritorio, y QUÉ está asegurado
+
+Dos quejas de Alberto sobre la pantalla ya desplegada, el mismo día: *«aprovecha poco la página
+vista en pc»* / *«usar el mismo diseño para cliente como es mi página de plataforma, con ventana
+lateral»*, y después *«poca informacion... ni direccion en hogar, ni datos coche en auto»*.
+
+### El armazón vive en `app/(portal)/layout.tsx`, no en cada página
+
+Cada página abría su propio `<main style={{ maxWidth: 720 }}>` y pintaba la navegación pasándole
+a mano la sección activa. En un monitor de 1440 px eso dejaba **~720 px de márgenes vacíos**.
+Ahora el ancho y la navegación son del armazón y la página solo aporta contenido.
+
+- **`app/(portal)/NavPortal.tsx` es UN SOLO `<nav>` con dos formas**, no dos componentes: carril
+  horizontal en el móvil, lateral de **256 px** desde 1024 px. Lo decide `globals.css`. Dos árboles
+  distintos para la misma navegación es cómo se llega a que una sección exista en una pantalla y no
+  en la otra sin que nada falle.
+- La activa se deriva de `usePathname()` + `useSearchParams()`, por eso el `layout` lo envuelve en
+  `Suspense`: sin ese límite, `useSearchParams` arrastra toda la rama a renderizarse en cliente.
+- 📌 **Conmuta a 1024 y no a 768, que es donde conmuta la de Manuel.** Con el lateral de 256 px, a
+  768 el contenido se queda en ~500: media tablet gastada en cuatro enlaces. Su panel lo aguanta
+  porque tiene nueve secciones y tablas de doce columnas.
+- 📱 **No hay hamburguesa en el móvil, a propósito.** Son cuatro secciones; un botón que las
+  esconde detrás de un toque las hace menos visibles que enseñarlas.
+- Medido con Playwright (320 / 768 / 1440): 1 → 2 → 3 columnas de tarjeta, `scrollWidth` igual al
+  viewport en los tres, y el ítem de navegación a 44 px en móvil. El carril de pestañas **se
+  desliza él**, la página no.
+
+🚨 **Los tokens y las medidas salen del FUENTE de la app de Manuel, no de una captura**: radio
+`1.4rem` en tarjetas, 24/600 el título de página, 18/600 el de sección, 16/500 el de tarjeta,
+14 el cuerpo, 12 lo secundario, ritmo vertical de 24 px, `tabular-nums` en todo lo numérico,
+botones en **píldora** y anillo de foco de 3 px al 50 %.
+
+### `describirBien()`: qué COSA está asegurada — y la línea que no se cruza
+
+El dato estaba en `polizas.datos_especificos` (jsonb) y el rol **ya tenía el GRANT**: simplemente no
+se enseñaba. Medido en la cartera viva el 05/09/2026: `auto` trae marca/modelo/matrícula en **81 de
+81**, `moto` en 1 de 1, `hogar` trae dirección/localidad/CP en **2 de 2**. Sin eso, las dos pólizas
+de hogar de Occident de Alberto salían como dos tarjetas iguales separadas solo por un número de
+póliza que nadie se sabe de memoria.
+
+Las reglas puras están en `packages/module-seguros-portal/src/bien-asegurado.ts` — **lee su cabecera
+antes de tocarlo**. Lo que no se puede colapsar:
+
+| Campo | Qué es | Quién lo ve |
+|---|---|---|
+| `cosa` | marca, modelo, **matrícula** | Dato del CONTRATO → desde `tarjeta`. Quien conduce la furgoneta necesita saber cuál es |
+| `ubicacion` | la **dirección** del inmueble | Dato de la PERSONA → desde `completo`, y **nunca a un tercero** de una persona física |
+
+🚨 `direccionRiesgo` entra en `NUNCA_A_UN_TERCERO` (`autorizacion.ts`) por la misma razón que los
+siniestros abiertos el 04/09: la dirección de un hogar asegurado es **la casa donde duerme el
+titular**. Ni con `ver_economico`. Una SOCIEDAD sí la cede: la dirección de una nave es un dato de
+la empresa. **Juntar los dos campos en uno regalaría la dirección de una casa a quien solo pidió ver
+de qué compañía es el seguro — y no fallaría nada: saldría.**
+
+Y las dos de siempre: las claves que empiezan por `_` (hay un `_avant` del volcado) **no se leen
+nunca**, y los valores de cajón se anulan con la MISMA lista que el resto del paquete
+(`textoConDato`, exportada de `poliza-leida.ts` ese día para no tener dos listas). `null` = «la
+compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula: —».
+
+Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
+de terceros → 1 fallo; colar la dirección por `cosa` → 3).
+
+### Lo TUYO frente a lo que te DEJAN ver
+
+Hasta ese día la única diferencia entre una póliza propia y una ajena era el `<h2>` de la sección.
+Con las tarjetas en rejilla ese título se sale de la vista. Ahora la tarjeta ajena lleva **filete de
+acento Y etiqueta con el nombre del titular** (`data-de-otro` + `.cartera-de-otro`) — las dos cosas,
+porque el color solo no le dice nada a quien no distingue bien los tonos y el nombre es además el
+dato que hace falta: de quién es.
+
 ## Qué es, y por qué es una app APARTE de `apps/asegura`
 
 El producto no es «mira tus pólizas»: es **«aporta tus seguros»**. Mirar sirve a los 80 clientes vivos

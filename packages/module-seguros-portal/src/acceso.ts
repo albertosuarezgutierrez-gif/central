@@ -31,6 +31,27 @@ export type CamposVisibles = {
    * quien le autorizó. No fallaba nada: salían, y punto.
    */
   siniestros: boolean
+  /**
+   * QUÉ está asegurado: marca, modelo, matrícula. Es un dato de la COSA, así
+   * que lo ve hasta el nivel más bajo — quien conduce la furgoneta de su padre
+   * necesita saber cuál es la furgoneta, y ese es literalmente el ejemplo con
+   * el que se escribió este fichero.
+   */
+  bien: boolean
+  /**
+   * DÓNDE está el riesgo: la dirección del inmueble asegurado.
+   *
+   * 🚨 Va SEPARADO de `bien` a propósito, y es la distinción entera: la
+   * dirección de un hogar asegurado es **la casa donde duerme el titular**. Eso
+   * no es un dato del contrato, es un dato de la PERSONA, del mismo lado que su
+   * DNI — y por eso además está en `NUNCA_A_UN_TERCERO` (`autorizacion.ts`)
+   * cuando quien cede es una persona física, igual que sus siniestros abiertos.
+   * Una SOCIEDAD sí la cede: la dirección de una nave es un dato de la empresa.
+   *
+   * Colapsarlo con `bien` regalaría la dirección de una casa a quien solo pidió
+   * ver de qué compañía es el seguro. No fallaría nada: saldría.
+   */
+  direccionRiesgo: boolean
   iban: boolean
   dniTomador: boolean
   documentos: boolean
@@ -47,6 +68,8 @@ const TARJETA: CamposVisibles = {
   prima: false,
   recibos: false,
   siniestros: false,
+  bien: true,
+  direccionRiesgo: false,
   iban: false,
   dniTomador: false,
   documentos: false,
@@ -59,6 +82,7 @@ const COMPLETO: CamposVisibles = {
   prima: true,
   recibos: true,
   siniestros: true,
+  direccionRiesgo: true,
   iban: true,
   dniTomador: true,
   documentos: true,

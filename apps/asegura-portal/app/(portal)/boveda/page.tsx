@@ -2,9 +2,12 @@ import { redirect } from 'next/navigation'
 
 import {
   ETIQUETA_RAMO,
+  bienTieneAlgo,
   canalDeCompania,
+  describirBien,
   etiquetaProcedencia,
   plazoComunicacion,
+  type BienAsegurado,
   type FilaCompania,
 } from '@central/module-seguros-portal'
 
@@ -24,7 +27,6 @@ import { getIdentidad } from '@/lib/session'
 import Calendario from './Calendario'
 import { vistaDeBoveda } from '@central/module-seguros-portal'
 
-import { Pestanas } from '../Pestanas'
 import { EditarPoliza } from './EditarPoliza'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
@@ -156,15 +158,13 @@ export default async function Boveda({
   }))
 
   return (
-    <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mis seguros</h1>
-
-      {/* La pantalla del consentimiento sigue estando ARRIBA y a un toque, ahora
-          como una sección más de la barra: quien quiere saber quién le está
-          mirando los seguros —o quitárselo a alguien— no debería tener que
-          recorrer nada para encontrarlo. Antes era un enlace de 14px bajo el
-          título; era toda la navegación que tenía el portal. */}
-      <Pestanas activa={vista} />
+    <>
+      {/* El `<main>`, el ancho y la navegación los pone el armazón del grupo
+          (`app/(portal)/layout.tsx`). La pantalla del consentimiento sigue
+          estando a un toque, como una sección más de la navegación: quien
+          quiere saber quién le está mirando los seguros —o quitárselo a
+          alguien— no debería tener que recorrer nada para encontrarlo. */}
+      <h1>Mis seguros</h1>
 
       {vista === 'seguros' && (
         <>
@@ -217,7 +217,7 @@ export default async function Boveda({
           // la correduría van arriba, esto es lo que aporta la persona.
           <p className="suave" style={{ margin: 0 }}>Todavía no has añadido ninguna póliza.</p>
         ) : (
-          <ul className="cartera">
+          <ul className="cartera columna">
             {declaradas.map((p) => (
               <li key={p.id} className="cartera-card">
                 <h3>
@@ -227,6 +227,21 @@ export default async function Boveda({
                       «Responsabilidad civil», parecen dos cosas distintas. */}
                   {p.ramo && <span className="tenue"> · {RAMO[p.ramo] ?? p.ramo}</span>}
                 </h3>
+                {/* QUÉ está asegurado, con las MISMAS reglas que las de
+                    la cartera (`describirBien`): la matrícula sale de su
+                    columna y el resto del `datos_ramo` que la persona rellenó.
+                    Aquí no hay niveles que aplicar —estas pólizas son suyas—,
+                    pero sí la misma regla de callar lo que no se sabe. */}
+                <BienDeclarada
+                  ramo={p.ramo}
+                  matricula={p.matricula}
+                  referenciaCatastral={p.referenciaCatastral}
+                  datosRamo={
+                    p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
+                      ? (p.datosRamo as Record<string, unknown>)
+                      : null
+                  }
+                />
                 <div className="linea">
                   {p.numeroPoliza ? `Póliza ${p.numeroPoliza} · ` : ''}
                   {/* `Decimal` de Prisma: se convierte a número ANTES de formatear.
@@ -295,26 +310,25 @@ export default async function Boveda({
       <SubirPoliza ramos={RAMOS_OPCIONES} />
         </>
       )}
-    </main>
+    </>
   )
 }
 
 function Titular({ titular, propia }: { titular: TitularPortal; propia: boolean }) {
   return (
     <div style={{ marginBottom: 12 }}>
-      {!propia && (
-        <p className="suave" style={{ margin: '0 0 6px', fontSize: 14 }}>
-          Titular: <strong>{titular.nombre}</strong>
-        </p>
-      )}
       {titular.polizas.length === 0 ? (
         <p className="tenue" style={{ margin: 0, fontSize: 14 }}>
-          {propia ? `${titular.nombre}: sin pólizas vivas.` : 'Sin pólizas vivas.'}
+          {propia ? `${titular.nombre}: sin pólizas vivas.` : `${titular.nombre}: sin pólizas vivas.`}
         </p>
       ) : (
         <ul className="cartera">
           {titular.polizas.map((p) => (
-            <Card key={p.id} p={p} />
+            // 🚨 El nombre del titular viaja hasta la TARJETA cuando la póliza
+            // no es de esta persona, no se queda en un párrafo encima de la
+            // lista: con las tarjetas en rejilla ese párrafo se sale de la
+            // vista y una póliza ajena pasa a verse idéntica a una propia.
+            <Card key={p.id} p={p} deOtro={propia ? null : titular.nombre} />
           ))}
         </ul>
       )}
@@ -337,17 +351,35 @@ const CORREO_CORREDURIA = 'hola@grupoasegura.es'
  * un dato que esta persona no tiene derecho a ver, y anunciarlo solo genera una
  * pregunta que Alberto tiene que contestar.
  */
-function Card({ p }: { p: PolizaPortal }) {
+function Card({ p, deOtro }: { p: PolizaPortal; deOtro: string | null }) {
   const vence = fechaEs(p.fechaVencimiento)
   // `numeroPoliza === null` = la compañía no lo informó (el nivel `tarjeta` ya
   // lo enseña): se oculta, la cabecera ya identifica la póliza.
   const cabecera = [p.numeroPoliza && `Póliza ${p.numeroPoliza}`, vence && `Vence el ${vence}`].filter(Boolean)
 
   return (
-    <li className="cartera-card">
+    // `data-de-otro` marca la tarjeta con filete y fondo propios; la etiqueta
+    // de abajo dice DE QUIÉN es. Las dos cosas, no una: el color solo no sirve
+    // a quien no distingue bien los tonos, y el nombre es además el dato que
+    // hace falta para saber a quién llamar.
+    <li className="cartera-card" data-de-otro={deOtro ? 'si' : undefined}>
+      {deOtro && <span className="cartera-de-otro">De {deOtro}</span>}
       <h3>
         {p.compania} <span className="tenue">· {RAMO[p.ramo] ?? p.ramo}</span>
       </h3>
+
+      {/* 🚨 QUÉ está asegurado, pegado al título y no en la letra pequeña.
+          Alberto, 05/09/2026, con su pantalla delante: «poca informacion... ni
+          direccion en hogar, ni datos coche en auto». Sus dos pólizas de hogar
+          de la misma compañía salían como dos tarjetas iguales, separadas solo
+          por un número de póliza que nadie se sabe de memoria — y el dato
+          estaba en la BD desde el volcado.
+
+          Va por encima del aviso de recibo devuelto a propósito, y no lo
+          contradice: el aviso sigue siendo lo primero que se LEE como dato de
+          la póliza. Esto es la identidad de la tarjeta; un aviso de impago
+          sobre «una de tus dos casas» sin decir cuál es la que menos sirve. */}
+      <Bien bien={p.bien} />
 
       {/* ARRIBA DEL TODO y antes que ningún dato: un recibo devuelto es lo
           único de esta tarjeta que puede costarle la cobertura. */}
@@ -411,6 +443,64 @@ function Card({ p }: { p: PolizaPortal }) {
         ))}
       </div>
     </li>
+  )
+}
+
+/**
+ * Lo mismo para una póliza que ha aportado la propia persona.
+ *
+ * La matrícula vive en su COLUMNA (se consulta y se indexa) y el resto en el
+ * `datos_ramo`, así que se juntan antes de describir — `describirBien` no sabe
+ * de dónde viene cada clave, ni tiene por qué. La referencia catastral va
+ * aparte porque no identifica el bien para una persona: nadie reconoce su casa
+ * por ella, así que se dice detrás y en gris.
+ */
+function BienDeclarada({
+  ramo,
+  matricula,
+  referenciaCatastral,
+  datosRamo,
+}: {
+  ramo: string | null
+  matricula: string | null
+  referenciaCatastral: string | null
+  datosRamo: Record<string, unknown> | null
+}) {
+  const bien = describirBien(ramo, { ...(datosRamo ?? {}), ...(matricula ? { matricula } : {}) })
+  const algo = bienTieneAlgo(bien)
+  if (!algo && referenciaCatastral === null) return null
+  return (
+    <p className="cartera-bien">
+      {algo ? (bien.cosa ?? bien.ubicacion) : null}
+      {algo && bien.detalles.length > 0 && <span className="tenue"> · {bien.detalles.join(' · ')}</span>}
+      {referenciaCatastral !== null && (
+        <span className="tenue">
+          {algo ? ' · ' : ''}Ref. catastral {referenciaCatastral}
+        </span>
+      )}
+    </p>
+  )
+}
+
+/**
+ * QUÉ está asegurado: el coche, el piso.
+ *
+ * 🚨 No pinta NADA cuando no hay dato, y eso es deliberado: `null` aquí
+ * significa «la compañía no nos lo ha informado» **o** «tu nivel no lo ve», y
+ * ninguna de las dos cambia lo que esta persona puede hacer. Un «Matrícula: —»
+ * solo genera una pregunta que Alberto tiene que contestar. Es la regla de
+ * visibilidad del portal (`CLAUDE.md` de la app), no una omisión.
+ *
+ * Y `cosa` y `ubicacion` llegan ya filtradas por nivel desde
+ * `lib/cartera-lectura.ts`: aquí no se decide quién ve qué.
+ */
+function Bien({ bien }: { bien: BienAsegurado }) {
+  if (!bienTieneAlgo(bien)) return null
+  return (
+    <p className="cartera-bien">
+      {bien.cosa ?? bien.ubicacion}
+      {bien.detalles.length > 0 && <span className="tenue"> · {bien.detalles.join(' · ')}</span>}
+    </p>
   )
 }
 
