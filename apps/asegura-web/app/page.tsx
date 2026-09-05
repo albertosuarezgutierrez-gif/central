@@ -5,6 +5,8 @@ import { RAMOS } from '@/lib/ramos'
 import { PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
 import Reveal from '@/components/Reveal'
+import PanelDemo from '@/components/PanelDemo'
+import Cifras from '@/components/Cifras'
 
 export const metadata: Metadata = {
   title: 'Correduría de seguros en Sevilla',
@@ -103,6 +105,16 @@ function IconoRamo({ slug }: { slug: string }) {
  */
 const GARANTIAS = ['Sin coste para ti', 'Sin compromiso', `Corredor inscrito en la DGSFP`] as const
 
+/**
+ * Aseguradoras con pólizas VIVAS en la cartera.
+ *
+ * 🚨 Medido en la BD el 05/09/2026, no puesto de memoria: Mapfre 64, Allianz
+ * 26, Occident 19 y Reale 1 — las 110 pólizas vivas. Un muro de logos con una
+ * compañía con la que no se trabaja es una afirmación falsa sobre terceros, y
+ * de las caras.
+ */
+const COMPANIAS = ['Mapfre', 'Allianz', 'Occident', 'Reale'] as const
+
 const PASOS = [
   {
     titulo: 'Nos cuentas qué quieres mirar',
@@ -135,7 +147,7 @@ export default function Home() {
         <div className="hero-atmosfera" aria-hidden />
         <div className="hero-mancha a" aria-hidden />
         <div className="hero-mancha b" aria-hidden />
-        <div className="wrap">
+        <div className="wrap dos-columnas hero-cols">
           <Reveal>
             <span className="chip">
               <span className="chip-punto" aria-hidden />
@@ -170,6 +182,32 @@ export default function Home() {
               ))}
             </ul>
           </Reveal>
+          {/* La columna que se toca. Es lo que convierte la portada en algo
+              que se prueba en vez de algo que se lee. */}
+          <Reveal delay={0.15}>
+            <PanelDemo />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Marquesina de compañías. Los nombres NO son de relleno: son las
+          aseguradoras con pólizas VIVAS en la cartera, medidas en la BD el
+          05/09/2026 (Mapfre 64, Allianz 26, Occident 19, Reale 1). Si algún día
+          entra otra compañía, este array se actualiza desde el mismo sitio. */}
+      <section className="banda" style={{ padding: '32px 0' }} aria-label="Compañías con las que trabajamos">
+        <div className="wrap">
+          <p className="antetitulo" style={{ display: 'block', textAlign: 'center', marginBottom: 20 }}>
+            Compañías con las que trabajamos
+          </p>
+          <div className="companias">
+            <ul>
+              {[...COMPANIAS, ...COMPANIAS].map((c, i) => (
+                <li key={`${c}-${i}`} aria-hidden={i >= COMPANIAS.length}>
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 
@@ -178,8 +216,13 @@ export default function Home() {
         <div className="wrap">
           <Reveal className="seccion-tit">
             <p className="antetitulo">Qué revisamos</p>
+            {/* Sin número: `lib/ramos.ts` tiene SEIS ramos y el menú solo
+                enseña cinco (responsabilidad civil no está en la nav). Un
+                «cinco seguros» escrito a mano se queda desfasado el día que se
+                añada uno, y encima contradice a las tarjetas de debajo, que
+                salen todas de RAMOS. */}
             <h2 className="display" id="ramos-t">
-              Cinco seguros, <span className="destaca">un mismo criterio.</span>
+              Cada seguro, <span className="destaca">con el mismo criterio.</span>
             </h2>
             <p className="lead">Cada página cuenta qué conviene mirar en ese seguro antes de firmarlo.</p>
           </Reveal>
@@ -260,33 +303,28 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Banda oscura ────────────────────────────────────────────────── */}
-      <section className="seccion banda-oscura" aria-labelledby="dispersos-t">
-        <div className="banda-oscura-mancha a" aria-hidden />
-        <div className="banda-oscura-mancha b" aria-hidden />
-        <div className="wrap">
-          <Reveal>
-            <h2 className="display" id="dispersos-t" style={{ maxWidth: '20ch' }}>
-              Tus pólizas viven en cajones, correos y carpetas distintas.{' '}
-              <span className="destaca">Así no se puede decidir.</span>
-            </h2>
-            <div className="cifras">
-              <div className="cifra">
-                <strong>{RAMOS.length}</strong>
-                <span>Ramos que revisamos</span>
-              </div>
-              <div className="cifra">
-                <strong>0 €</strong>
-                <span>Lo que te cuesta el servicio</span>
-              </div>
-              <div className="cifra">
-                <strong>1</strong>
-                <span>Interlocutor, siempre el mismo</span>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
+      {/* ── Banda oscura, con foco que sigue al puntero y contadores ───── */}
+      <Cifras
+        titular={
+          <>
+            {'Tus pólizas viven en cajones, correos y carpetas distintas.'.split(' ').map((w, i) => (
+              <span key={i} style={{ transitionDelay: `${i * 45}ms` }}>
+                {w}&nbsp;
+              </span>
+            ))}
+            {'Así no se puede decidir.'.split(' ').map((w, i) => (
+              <span key={`b${i}`} className="destaca" style={{ transitionDelay: `${350 + i * 45}ms` }}>
+                {w}&nbsp;
+              </span>
+            ))}
+          </>
+        }
+        cifras={[
+          { valor: COMPANIAS.length, texto: 'Compañías con pólizas en cartera' },
+          { valor: RAMOS.length, texto: 'Ramos que revisamos' },
+          { valor: 0, estatico: '0 €', texto: 'Lo que te cuesta el servicio' },
+        ]}
+      />
 
       {/* ── Cambiar de correduría ───────────────────────────────────────── */}
       <section className="seccion banda" id="cambiar" aria-labelledby="cambiar-t">

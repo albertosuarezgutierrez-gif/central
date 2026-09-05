@@ -33,7 +33,12 @@ export default function Reveal({
     const obs = new IntersectionObserver(
       (entradas) => {
         for (const e of entradas) {
-          if (e.isIntersecting) {
+          // `isIntersecting` no basta: si se llega de un salto (un ancla, o el
+          // navegador restaurando el scroll) la sección puede quedar YA por
+          // encima del viewport sin haber intersectado nunca, y entonces se
+          // queda invisible para siempre. Eso no es una animación que no se
+          // ve: es contenido que no está.
+          if (e.isIntersecting || e.boundingClientRect.top < 0) {
             setVisible(true)
             obs.disconnect()
           }

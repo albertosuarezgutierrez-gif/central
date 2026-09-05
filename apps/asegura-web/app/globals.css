@@ -1105,3 +1105,359 @@ textarea.f-in {
     transform: none;
   }
 }
+
+/* ══ Piezas interactivas ══════════════════════════════════════════════════
+   Lo que separa su landing de una página bonita: se puede TOCAR. Aquí van los
+   estilos de las tres piezas que lo dan — el panel jugable, la marquesina de
+   compañías y la banda oscura con foco y contadores. */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  margin-bottom: var(--e4);
+}
+
+.chip-sel {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: var(--panel);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.chip-sel:hover {
+  border-color: color-mix(in oklab, var(--brand) 40%, transparent);
+  background: color-mix(in oklab, var(--brand) 4%, transparent);
+}
+
+.chip-sel.on {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+  box-shadow: var(--shadow-panel);
+}
+
+/* Ventana de ejemplo, con inclinación 3D. La transición es lo que convierte el
+   giro en algo suave: el ángulo lo pone el ratón, la suavidad esto. */
+.mock {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--panel);
+  box-shadow: var(--shadow-panel);
+  transition: transform 0.25s var(--curva), box-shadow 0.25s;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.mock:hover {
+  box-shadow: var(--shadow-float);
+}
+
+.mock-barra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--e3) var(--e4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.mock-punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  opacity: 0.45;
+  flex: none;
+}
+
+.mock-url {
+  margin-left: var(--e2);
+  padding: 3px 10px;
+  border-radius: var(--e2);
+  background: var(--panel);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 🚨 Que se lea SIEMPRE: lo de dentro de la ventana es inventado. */
+.mock-ejemplo {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: var(--pill);
+  background: color-mix(in oklab, var(--warn) 16%, transparent);
+  color: var(--warn);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex: none;
+}
+
+.mock-cuerpo {
+  padding: var(--e4);
+}
+
+.mock-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--e2);
+  margin-bottom: var(--e4);
+}
+
+.mock-tile {
+  padding: var(--e3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+.mock-tile span {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.mock-tile strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mock-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.mock-lista li {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: 10px var(--e3);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  animation: fila 0.3s var(--curva);
+}
+
+.mock-lista li:last-child {
+  border-bottom: 0;
+}
+
+@keyframes fila {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.mock-ramo {
+  font-weight: 700;
+}
+
+.mock-cia {
+  color: var(--muted);
+}
+
+.mock-vence {
+  margin-left: auto;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.mock-vacio {
+  margin: 0;
+  padding: var(--e5) 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Marquesina de compañías. Se desvanece por los lados en vez de cortarse. */
+.companias {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* La lista va DUPLICADA en el JSX; por eso el bucle acaba en -50 %: al llegar
+   ahí la segunda copia está donde estaba la primera y el salto no se ve. */
+.companias ul {
+  display: flex;
+  width: max-content;
+  gap: var(--e8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: desfile 30s linear infinite;
+}
+
+.companias li {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--muted2);
+  white-space: nowrap;
+}
+
+@keyframes desfile {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Banda oscura: foco que sigue al puntero y titular palabra a palabra. */
+.foco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.banda-oscura .wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.palabras > span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  transition: opacity 0.6s var(--curva), transform 0.6s var(--curva);
+}
+
+.banda-oscura.visible .palabras > span {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companias ul {
+    animation: none;
+  }
+  .palabras > span {
+    opacity: 1;
+    transform: none;
+  }
+  .mock {
+    transform: none !important;
+  }
+}
+
+/* El hero pasa a dos columnas en escritorio: texto y panel jugable. Debajo de
+   1024 px el panel va bajo el texto, porque a esa anchura una ventana de
+   ejemplo comprimida no se lee. */
+@media (min-width: 1024px) {
+  .hero-cols {
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+    gap: 56px;
+    align-items: center;
+  }
+}
+
+/* Distintivo «En vivo» sobre la ventana, con el punto que late. La onda es de
+   `box-shadow` y no de `transform`, como la de ia.rest: así late sin empujar
+   nada de alrededor. 1,8 s, spread 0 → 7px, alfa .5 → 0, con el 70 % como
+   punto de llegada (el 30 % restante es pausa muerta, y es lo que hace que se
+   lea como un latido y no como un parpadeo). */
+.mock-marco {
+  position: relative;
+}
+
+.mock-vivo {
+  position: absolute;
+  top: -13px;
+  right: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: var(--panel);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.mock-latido {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: latido 1.8s infinite;
+}
+
+@keyframes latido {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--ok) 50%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Cierre del guion: aparece cuando la secuencia termina. */
+.mock-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  margin-top: var(--e4);
+  padding-top: var(--e3);
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.mock-pie.visible {
+  opacity: 1;
+}
+
+.mock-ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.mock-coste {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mock-latido {
+    animation: none;
+  }
+  .mock-pie {
+    opacity: 1;
+  }
+}
