@@ -1178,6 +1178,30 @@
 
 ---
 
+### 🖥 (05/09/2026) El portal del cliente: lateral como plataforma, y QUÉ está asegurado
+
+Alberto, con la pantalla desplegada delante: «aprovecha poco la página vista en pc», «con ventana
+lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto».
+- **El armazón pasa a `app/(portal)/layout.tsx`**: se acabó el `maxWidth: 720` en línea por página
+  (~720 px de márgenes vacíos en un 1440). `NavPortal.tsx` es UN `<nav>` con dos formas — carril en
+  móvil, lateral de 256 px desde 1024. Sin hamburguesa: son cuatro secciones.
+- Medidas del **fuente** de la app de Manuel (no de una captura): radio 1.4rem, 24/18/16/14/12,
+  ritmo de 24, `tabular-nums`, botones en píldora. Playwright a 320/768/1440: 1→2→3 columnas, cero
+  desbordes.
+- **`describirBien()`** (módulo puro, 11 tests, 2 mutaciones vistas morder): el dato estaba en
+  `polizas.datos_especificos` y el rol YA tenía el GRANT — no se enseñaba. 🚨 `cosa` (matrícula) es
+  dato del contrato y se ve desde `tarjeta`; `ubicacion` (la dirección del hogar) es dato de la
+  PERSONA y entra en `NUNCA_A_UN_TERCERO`. Juntarlas regalaría una dirección a quien pidió ver una
+  compañía.
+- La póliza ajena se marca en la FILA (filete + «De {titular}»), no solo en el `<h2>` de la
+  sección: al hacer scroll ese título se sale de la vista.
+- **Y después, lista→ficha** («muy sucia la página»): `/boveda` es una lista de filas y cada póliza
+  tiene su `/boveda/poliza/[id]`. 🚨 El id de la URL **no consulta nada**: se lee la cartera
+  autorizada y se busca dentro; si no está, 404 (nunca 403). El recibo devuelto **se queda en la
+  fila** — es lo único que quita cobertura sin avisar. Los teléfonos de la compañía NO se repintan
+  ahí (viven con sus 4 cepos en `ParteSiniestro.tsx`). El guardián de aislamiento mordió por una
+  frase de un comentario: no quita comentarios antes de mirar.
+
 ### ⚖️ (05/09/2026, III) Bloque legal 0.5: la solicitud de supresión (art. 17) que NO borra
 
 - **0.4 mergeado** (PR #2336 → `0e5b7aad`): export del art. 15/20 servido por el puerto de operador.
@@ -1191,6 +1215,7 @@
   cartera sin poder nombrar `portalVinculo`): se deshizo la extracción en vez de exentar el cepo.
 - Verificado: 574 tests raíz (0 fallos) · module-seguros 425 · module-seguros-portal 237 · typecheck
   de `asegura` y `asegura-portal` limpio. Tres mutaciones del guardián nuevo comprobadas.
+
 
 ### ⚖️ (05/09/2026) Bloque legal 0.3: el portal ya deja constancia de que informó — y sale una alerta de correo (PR #2326, mergeado)
 - El canje del código no dejaba **ninguna** fila de que se hubiera enseñado la información del mediador. La carga de la prueba es del mediador (art. 19 Ley 16/2018) y un acceso sin constancia **se ve igual que uno correcto**. Ahora escribe `lds_art19` en `portal_consentimiento` (la tabla existía desde Fase 1 sin que nadie escribiera).

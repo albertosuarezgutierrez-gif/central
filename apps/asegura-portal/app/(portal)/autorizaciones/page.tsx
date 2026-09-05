@@ -1,10 +1,8 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { getIdentidad } from '@/lib/session'
 
 import { Autorizaciones } from './Autorizaciones'
-import { Pestanas } from '../Pestanas'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,14 +43,11 @@ export default async function AutorizacionesPage() {
   if (!identidad) redirect('/')
 
   return (
-    <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Quién puede ver mis seguros</h1>
-
-      {/* La MISMA barra que la bóveda, para que esto se lea como otra sección
-          del portal y no como una página suelta a la que se llegó por un
-          enlace. Antes la vuelta era un «Volver a mis seguros» al final del
-          todo, después de las siete secciones de autorizaciones. */}
-      <Pestanas activa="autorizaciones" />
+    <>
+      {/* El `<main>`, el ancho y la navegación los pone el armazón del grupo
+          (`app/(portal)/layout.tsx`): esta pantalla es una sección más del
+          portal, no una página suelta a la que se llegó por un enlace. */}
+      <h1>Quién puede ver mis seguros</h1>
 
       {/* Va en el servidor, fuera del componente que carga los datos, para que
           esto se lea SIEMPRE: aunque la petición falle, aunque no haya nadie a
@@ -83,10 +78,6 @@ export default async function AutorizacionesPage() {
       </section>
 
       <Autorizaciones />
-
-      <p style={{ margin: '4px 0 0', fontSize: 14 }}>
-        <Link href="/boveda">Volver a mis seguros</Link>
-      </p>
-    </main>
+    </>
   )
 }

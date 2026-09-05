@@ -99,6 +99,12 @@
 
   /* Alias de compatibilidad (los usan estilos inline ya escritos). Ojo: aquí
    * `--brand` NO se puede aliasar a `--primary` como antes — sería un ciclo. */
+  /* Alto de la barra de marca. Es un TOKEN y no un número suelto porque el
+   * lateral del escritorio se pega justo debajo (`top: var(--alto-barra)`): con
+   * dos valores independientes, cambiar el relleno de la barra deja el lateral
+   * flotando o tapado, y no falla nada. */
+  --alto-barra: 56px;
+
   --fondo: var(--bg);
   --texto: var(--text);
   --borde: var(--border);
@@ -134,6 +140,10 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Alternativas de Inter que él activa (`cv02` la «l» con cola, `cv11` la «a»
+   * de un piso). Cambian poco y cambian mucho: son lo que separa «Inter por
+   * defecto» de «Inter elegida». Si la fuente no carga, no pasa nada. */
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 a { color: inherit; }
@@ -142,7 +152,13 @@ input, select, textarea, button { font: inherit; }
  * claro (así se lee sobre negro), y blanco sobre él se pierde. El tinte de
  * marca con el texto normal encima funciona en los dos temas. */
 ::selection { background: var(--brand-soft); color: var(--text); }
-:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+/* Anillo de 3 px a media opacidad, como el suyo: una línea sólida de 2 px
+ * sobre un radio de 22 px se ve como un error de pintado. */
+:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--primary) 50%, transparent);
+  outline-offset: 2px;
+  border-radius: calc(var(--radius) * 0.8);
+}
 
 /* ── Cabecera de marca ──────────────────────────────────────────────────────
  * La ve el asegurado antes que nada: si el portal no dice de quién es, parece
@@ -150,47 +166,89 @@ input, select, textarea, button { font: inherit; }
 .marca-barra {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  min-height: var(--alto-barra);
+  padding: 8px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   /* Filete de acento: es lo único decorativo del portal y basta para que la
    * primera franja de pantalla ya sea de la correduría. */
   border-top: 3px solid var(--accent);
 }
-/* Barra de secciones del portal (Mis seguros · Un siniestro · Mis pólizas ·
- * Quién me ve). Son enlaces, no botones: la sección vive en la URL.
+/* ── Armazón del portal: lateral en escritorio, carril en móvil ────────────
  *
- * 📱 `overflow-x:auto` y no `flex-wrap`: con cuatro etiquetas en un móvil de
- * 320px, envolver a dos filas dobla la altura de la cabecera justo donde menos
- * sitio hay. Un carril que se desliza mantiene la altura y deja ver que hay
- * más a la derecha. `scrollbar-width:none` porque la barra del sistema encima
- * de 4 pestañas es ruido, no información.
+ * Medido del fuente de la app de Manuel (`app.grupoasegura.com`), no imitado de
+ * una captura: lateral de **256px** (`16rem`), cabecera de **56px**, y el
+ * contenido como **isla flotante** —margen de 8px, radio 1.4rem y sombra plana
+ * sobre el tono del lateral—. Esa isla es la mitad de la sensación de «app
+ * moderna»: sin ella son dos columnas pegadas.
  *
- * ⚠️ El scroll va AQUÍ y no en un contenedor de más arriba: si el que se
- * desliza fuese el padre, se llevaría la página entera con él. */
-.pestanas {
+ * 🚨 Un SOLO `<nav>` (`app/(portal)/NavPortal.tsx`) con dos formas. En el móvil
+ * es un carril horizontal; a partir de 1024 px se endereza y pasa a ser el
+ * lateral. Dos componentes distintos para la misma navegación es cómo se llega
+ * a que una sección exista en una pantalla y no en la otra sin que nada falle.
+ *
+ * 📌 **1024 y no 768, que es donde conmuta la suya.** Con el lateral de 256 px,
+ * a 768 el contenido se queda en ~500 px: media tablet gastada en cuatro
+ * enlaces. Su panel lo aguanta porque tiene nueve secciones y tablas de doce
+ * columnas; aquí son cuatro secciones y una o dos pólizas.
+ *
+ * 📱 Y en el móvil no hay hamburguesa a propósito: son cuatro secciones, y un
+ * botón que las esconde detrás de un toque las hace menos visibles que
+ * enseñarlas. Esta pantalla la abre gente de 50-70 años.
+ *
+ * 🚨 `grid-template-columns: minmax(0, 1fr)` NO es adorno: sin declarar las
+ * pistas, un grid las dimensiona con su contenido más ancho y una tabla o un
+ * formulario de dentro arrastra la página entera — anulando de paso su propio
+ * `overflow-x`. Es la trampa que documenta el `CLAUDE.md` de la raíz. */
+.portal-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  min-height: calc(100vh - var(--alto-barra));
+}
+
+/* El contenido. Se ensancha con la pantalla —era una columna fija de 720 px,
+ * que en un monitor de 1440 dejaba la mitad en blanco— pero con tope: una
+ * línea de texto de 2.000 px no se lee. Manuel no tiene un tope global (su
+ * panel usa 1600 y sus fichas 1024); una ficha de cliente es exactamente lo
+ * que es esta pantalla, así que el tope sale de ahí, con aire. */
+.portal-contenido {
+  min-width: 0;
+  padding: 20px 16px 48px;
+}
+.portal-contenido > * {
+  max-width: 1120px;
+}
+
+.portal-nav {
   display: flex;
   gap: 4px;
-  margin: 0 0 20px;
-  padding-bottom: 2px;
+  padding: 0 12px;
   overflow-x: auto;
   scrollbar-width: none;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.pestanas::-webkit-scrollbar {
+.portal-nav::-webkit-scrollbar {
   display: none;
 }
-.pestana {
+/* El hueco del `Suspense`: reserva la altura del carril para que el contenido
+ * no salte cuando la navegación se monta. */
+.portal-nav-hueco {
+  min-height: 45px;
+}
+
+.portal-nav-item {
   position: relative;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  /* 44px de alto: mínimo táctil de la regla de la casa. Esta barra la usa
-   * gente de 50-70 años desde el móvil. */
+  /* 44px: el mínimo táctil de la regla de la casa, y el mismo que él aplica en
+   * móvil antes de bajar a 32 en escritorio. */
   min-height: 44px;
   padding: 0 12px;
   font-size: 14px;
@@ -198,33 +256,86 @@ input, select, textarea, button { font: inherit; }
   color: var(--muted);
   text-decoration: none;
   white-space: nowrap;
-  border-radius: calc(var(--radius) * 0.6) calc(var(--radius) * 0.6) 0 0;
+  border-radius: calc(var(--radius) * 0.8) calc(var(--radius) * 0.8) 0 0;
   transition: color 150ms, background-color 150ms;
 }
-.pestana:hover {
+.portal-nav-item:hover {
   color: var(--text);
   background: var(--surface-hover, var(--panel2));
 }
 /* El subrayado de la activa es un `::after` que solo cambia de opacidad —el
- * mismo truco que la app del corredor—: nada que medir ni que animar. El
- * `-1px` lo monta sobre el borde de la barra en vez de debajo. */
-.pestana::after {
+ * mismo truco que su variante `line` de pestañas—: nada que medir ni animar. */
+.portal-nav-item::after {
   content: '';
   position: absolute;
   left: 8px;
   right: 8px;
   bottom: -1px;
   height: 2px;
-  background: var(--brand);
+  border-radius: 2px;
+  background: var(--text);
   opacity: 0;
   transition: opacity 150ms;
 }
-.pestana[data-activa]::after {
+.portal-nav-item[data-activa]::after {
   opacity: 1;
 }
-.pestana[data-activa] {
+.portal-nav-item[data-activa] {
   color: var(--text);
   font-weight: 600;
+}
+
+/* ── Escritorio: el carril se endereza y pasa a ser el lateral ───────────── */
+@media (min-width: 1024px) {
+  /* El fondo del armazón es el del LATERAL; la isla del contenido flota encima.
+   * Ese contraste de dos grises es lo que separa las dos zonas sin una línea. */
+  .portal-shell {
+    grid-template-columns: 256px minmax(0, 1fr);
+    background: var(--panel2);
+  }
+  .portal-nav {
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 8px;
+    overflow: visible;
+    background: none;
+    border-bottom: 0;
+    /* Sin borde derecho: lo que marca la frontera es la isla de la derecha. */
+    position: sticky;
+    top: var(--alto-barra);
+    max-height: calc(100vh - var(--alto-barra));
+    overflow-y: auto;
+  }
+  .portal-nav-hueco {
+    min-height: 0;
+  }
+  /* Ítem de lateral, con sus medidas: 32px de alto (44 es el mínimo TÁCTIL, y
+   * en escritorio se pincha con ratón), radio 1.4rem, texto de 14. */
+  .portal-nav-item {
+    justify-content: flex-start;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: calc(var(--radius) * 1.4);
+  }
+  /* El activo se marca con FONDO, no con filete: un subrayado de 2px en
+   * vertical no se lee como «estás aquí». Gris, no azul — en su lateral el
+   * activo es `sidebar-accent`, y el azul se reserva a las acciones. */
+  .portal-nav-item::after {
+    display: none;
+  }
+  .portal-nav-item[data-activa] {
+    background: var(--surface-active, var(--panel2));
+    color: var(--text);
+  }
+  /* La ISLA: el contenido flota sobre el tono del lateral. */
+  .portal-contenido {
+    background: var(--bg);
+    border-radius: calc(var(--radius) * 1.4);
+    box-shadow: var(--shadow);
+    margin: 8px 8px 8px 0;
+    padding: 28px 32px 56px;
+    min-height: calc(100vh - var(--alto-barra) - 16px);
+  }
 }
 
 /* Interruptor de tema. Empujado al extremo con `margin-left:auto`, que lo deja
@@ -287,56 +398,253 @@ input, select, textarea, button { font: inherit; }
   color: var(--muted);
 }
 
-/* ── Secciones y tarjetas ───────────────────────────────────────────────── */
+/* 📱 A 320 px la coletilla y el nombre se pelean por el sitio: la barra se parte
+ * en dos líneas y el botón de tema se sale de la pantalla (medido 05/09/2026).
+ * Lo prescindible es la coletilla — quién es la correduría ya lo dice el nombre
+ * que tiene al lado. */
+@media (max-width: 460px) {
+  .marca-coletilla { display: none; }
+}
+
+/* ── Secciones y tarjetas ─────────────────────────────────────────────────
+ *
+ * 📐 Las medidas salen del fuente de la app de Manuel, no de un ojo: radio
+ * 1.4rem, relleno 16px, y **24px de aire entre secciones**, que es el ritmo
+ * vertical dominante de su panel. La escala tipográfica es la suya: 24/600 el
+ * título de página, 18/600 el de sección, 16/500 el de tarjeta, 14 el cuerpo,
+ * 12 lo secundario — con `letter-spacing: -0.025em` en lo que pasa de 18px,
+ * que es lo que hace que un titular no parezca una etiqueta de formulario. */
 .seccion {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) * 1.4);
   box-shadow: var(--shadow);
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 16px;
+  margin-bottom: 24px;
 }
 .seccion h2 {
   font-family: var(--serif);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
+  line-height: 1.4;
   margin: 0 0 12px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 
 h1 {
   font-family: var(--serif);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+  margin: 0 0 16px;
+  text-wrap: balance;
 }
 
 /* ── Cards de la cartera ─────────────────────────────────────────────────
- * Una sola columna siempre: a 320 px no cabe otra cosa. */
+ *
+ * 🚨 `min(100%, 320px)` y no `320px` a secas: con el mínimo fijo, una pantalla
+ * de 300 px produce una pista de 320 y la página desborda. Con `min()` la
+ * tarjeta nunca es más ancha que su hueco, así que a 320 px es una columna y a
+ * partir de ~700 son dos o tres — que es justo el sitio que se estaba
+ * desaprovechando en el escritorio. */
 .cartera {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
+}
+/* Una sola columna, a la fuerza: las listas cuyas tarjetas llevan un formulario
+ * dentro (el editor de una póliza aportada). Un editor de 14 campos en una
+ * pista de 320 px es peor que uno ancho. */
+.cartera.columna {
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
 }
 .cartera-card {
+  position: relative;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
+  border-radius: calc(var(--radius) * 1.4);
+  padding: 16px;
   min-width: 0;
   background: var(--surface);
+  /* 🔢 `tabular-nums` en toda la tarjeta. No es un pulido: aquí casi todo son
+   * importes y fechas, y con cifras de ancho variable una columna de euros
+   * baila al recargar. Él lo aplica en todo lo numérico, sin excepción. */
+  font-variant-numeric: tabular-nums;
 }
-.cartera-card h3 {
+
+/* ── La LISTA de pólizas: una fila por póliza, no una tarjeta ──────────────
+ *
+ * 🚨 Por qué (05/09/2026). Alberto, sobre su propia bóveda: «muy sucia la
+ * página… resumen de lo q es, icono de ramo, datos principal, y ya pinchando
+ * entra en lo q sea». La pantalla pintaba coberturas, recibos, prima,
+ * vencimiento y chips DE TODAS las pólizas a la vez.
+ *
+ * 📱 La fila ENTERA es el enlace (no un «ver» al final): a 320 px un objetivo
+ * de 44 px de alto y de ancho completo se acierta sin mirar. Y `min-width: 0`
+ * en el cuerpo es lo que permite que el truncado funcione dentro de un flex —
+ * sin él, un texto largo empuja la fila fuera de la pantalla. */
+.polizas {
+  list-style: none;
   margin: 0;
-  font-size: 14px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.poliza-enlace {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.4);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 150ms, border-color 150ms;
+}
+.poliza-enlace:hover {
+  background: var(--surface-hover, var(--panel2));
+  border-color: var(--muted2);
+}
+/* El icono, en su cuadro tintado de marca. Es DECORACIÓN: dos pólizas de hogar
+ * de la misma compañía llevan el mismo, así que lo que distingue es el título. */
+.poliza-icono {
+  flex: 0 0 auto;
+  box-sizing: content-box;
+  width: 20px;
+  height: 20px;
+  padding: 8px;
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.poliza-cuerpo {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.poliza-titulo {
+  font-size: 15px;
   font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 }
-.cartera-card .linea {
+.poliza-meta {
   font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.poliza-cuerpo .chips {
+  margin-top: 6px;
+}
+.poliza-flecha {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted2);
+}
+/* La ajena, marcada también en la fila: filete de acento + la etiqueta «De X»
+ * que pinta el propio componente. Las dos cosas, porque el color solo no le
+ * dice nada a quien no distingue bien los tonos. */
+.poliza-fila[data-de-otro] .poliza-enlace {
+  border-left: 4px solid var(--accent);
+  background: var(--panel2);
+}
+
+/* ── La FICHA de una póliza ──────────────────────────────────────────────── */
+.volver {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+.volver a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.volver a:hover {
+  color: var(--text);
+}
+.ficha-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.ficha-subtitulo {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+/* Etiqueta + valor. Apilado por debajo de 420 px: a esa anchura dos columnas
+ * dejan el valor en un canal de ~120 px (misma razón que `.datos-leidos`). */
+.ficha-datos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px 16px;
+  margin: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.ficha-datos dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ficha-datos dd {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+/* Lo que cambia lo que el cliente puede esperar de nosotros (no poder avisarle)
+ * no se pinta en el gris de un metadato. */
+.ficha-datos dd.ojo {
+  color: var(--warning);
+  font-weight: 600;
+}
+@media (min-width: 420px) {
+  .ficha-datos {
+    grid-template-columns: minmax(9rem, 30%) minmax(0, 1fr);
+    gap: 8px 16px;
+  }
+  .ficha-datos dt {
+    font-size: 14px;
+  }
+  .ficha-datos dd {
+    margin: 0;
+  }
+}
+
+.cartera-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.375;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+/* QUÉ está asegurado. Va en el color del TEXTO, no en el gris de `.linea`: es
+ * lo que distingue dos pólizas de hogar de la misma compañía, y en gris se lee
+ * como un metadato más. Es la primera línea bajo el título por eso. */
+.cartera-bien {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.cartera-card .linea {
+  font-size: 14px;
   color: var(--muted);
   margin-top: 6px;
   overflow-wrap: anywhere;
@@ -354,16 +662,43 @@ h1 {
 /* ── Chips (píldoras) — mismas proporciones que los Badge de plataforma ── */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--primary-light);
+  /* Su `StatusBadge`: **borde tintado + fondo tintado + texto pleno**, no un
+   * fondo sólido. Con solo fondo, dos chips seguidos se funden en una mancha;
+   * el borde los separa y de noche los rescata del gris del panel. */
+  border: 1px solid var(--border);
+  background: var(--panel2);
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
-.chip.aviso { background: var(--warning-bg); color: var(--warning); }
-.chip.ok { background: var(--positive-bg); color: var(--positive); }
+.chip.aviso {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning);
+}
+.chip.ok {
+  background: var(--positive-bg);
+  border-color: color-mix(in oklab, var(--ok) 30%, var(--panel));
+  color: var(--positive);
+}
+/* El recibo devuelto en la lista: es lo único de una póliza que puede dejar a
+ * alguien sin cobertura sin que se entere, así que no se queda detrás del clic. */
+.chip.peligro {
+  background: var(--negative-bg);
+  border-color: color-mix(in oklab, var(--danger) 30%, var(--panel));
+  color: var(--negative);
+}
+/* «De {titular}»: de quién es una póliza que no es tuya. */
+.chip.acento {
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--panel));
+  color: var(--accent-ink);
+}
 
 .aviso-linea {
   background: var(--warning-bg);
@@ -409,12 +744,23 @@ h1 {
   padding: 11px 16px;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 10px;
+  /* 💊 Píldora. En su app **no hay un solo botón con esquina cuadrada**, y es
+   * de los cambios que más se notan por menos: un radio de 10px sobre una
+   * tarjeta de 22 px de radio es lo que hace que una pantalla parezca
+   * ensamblada con piezas de sitios distintos. */
+  border-radius: 999px;
   border: 1px solid var(--primary);
   background: var(--primary);
   color: #fff;
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
+}
+/* Su feedback de pulsación, con la salvaguarda de movimiento reducido (que él
+ * también tiene): un botón que no se hunde al tocarlo se siente muerto en el
+ * móvil, donde no hay hover que lo confirme. */
+@media (prefers-reduced-motion: no-preference) {
+  .boton:active,
+  .boton-subir:active { transform: scale(0.97); }
 }
 .boton:hover,
 .boton-subir:hover {
@@ -442,11 +788,23 @@ h1 {
   width: 100%;
   min-height: 44px;
   padding: 11px 12px;
+  /* 🍏 16px EN MÓVIL A PROPÓSITO: por debajo de eso, Safari de iOS hace zoom
+   * solo al enfocar el campo y deja la página descolocada. En escritorio baja
+   * a 14, que es el cuerpo del sistema. Es exactamente lo que hace él. */
   font-size: 16px;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.campo:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 30%, transparent);
+}
+@media (min-width: 768px) {
+  .campo { min-height: 38px; padding: 8px 12px; font-size: 14px; }
 }
 .campo::placeholder { color: var(--muted); }
 

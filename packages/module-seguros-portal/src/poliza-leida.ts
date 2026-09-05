@@ -114,12 +114,22 @@ const MARCADORES_SIN_DATO = new Set([
   '?',
 ])
 
-function texto(v: unknown): string | null {
+/**
+ * Una cadena con dato de verdad, o `null`.
+ *
+ * 🚨 Se EXPORTA (desde el 05/09/2026) para que `bien-asegurado.ts` use la misma
+ * lista de marcadores en vez de escribirse la suya. Dos listas de valores de
+ * cajón en el mismo paquete acaban divergiendo, y la que se quede corta deja
+ * pasar un «no consta» pintado como si fuera la matrícula del coche.
+ */
+export function textoConDato(v: unknown): string | null {
   if (typeof v !== 'string') return null
   const limpio = v.trim()
   if (MARCADORES_SIN_DATO.has(limpio.toLowerCase())) return null
   return limpio
 }
+
+const texto = textoConDato
 
 function numero(v: unknown): number | null {
   let n: number
