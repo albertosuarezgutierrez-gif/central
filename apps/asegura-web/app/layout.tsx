@@ -15,6 +15,8 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion } from '@central/module-seguros'
 import { NAV, PORTAL_URL, SITIO_URL } from '@/lib/sitio'
 import { fichaNegocio, jsonLd } from '@/lib/seo'
+import { COOKIEBOT_ID } from '@/lib/analitica'
+import Analitica from '@/components/Analitica'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITIO_URL),
@@ -110,8 +112,25 @@ main{overflow-wrap:anywhere}
           }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaNegocio()) }} />
+        {/* Gestor de consentimiento. Va en el <head> y no con `next/script`
+            para que el banner salga antes de que React hidrate: un banner que
+            aparece cuando la persona ya ha navegado llega tarde a lo único que
+            tiene que hacer. Si falta el `data-cbid` no se monta NADA — y sin
+            él tampoco arranca PostHog (`lib/analitica.ts`). */}
+        {COOKIEBOT_ID ? (
+          <script
+            id="Cookiebot"
+            src="https://consent.cookiebot.com/uc.js"
+            data-cbid={COOKIEBOT_ID}
+            data-blockingmode="auto"
+            type="text/javascript"
+            async
+          />
+        ) : null}
       </head>
       <body>
+        {/* Solo escucha el consentimiento y, si lo hay, arranca la medición. */}
+        <Analitica />
         <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--panel)' }}>
           <div style={{ ...contenedor, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 10, paddingBottom: 10 }}>
             <Link
@@ -157,6 +176,7 @@ main{overflow-wrap:anywhere}
               <Link href="/legal/informacion-mediador">Información del mediador</Link>
               <Link href="/legal/privacidad">Privacidad</Link>
               <Link href="/legal/aviso-legal">Aviso legal</Link>
+              <Link href="/legal/cookies">Cookies</Link>
               <Link href="/quienes-somos">Quiénes somos</Link>
             </nav>
           </div>

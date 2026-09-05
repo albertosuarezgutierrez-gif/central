@@ -117,6 +117,20 @@
   `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
   divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
   silencio). `HORARIO` y el teléfono están **ausentes a propósito** mientras no se confirmen.
+  📊 **Analítica CON consentimiento, y fail-CLOSED a propósito (05/09/2026).** PostHog detrás de
+  Cookiebot: la regla vive en una función pura, `puedeMedir()` de `lib/analitica.ts`, y **sin
+  `NEXT_PUBLIC_COOKIEBOT_ID` no se mide nada**. Es la decisión CONTRARIA a la web de Manuel, donde
+  `posthog-browser.ts` hace *fail-open* — sin esa env no pinta banner y arranca igual (medido en el
+  HTML vivo el 04/09: 0 apariciones de Cookiebot, PostHog corriendo; art. 22.2 LSSI). PostHog **no
+  viaja en el bundle**: el script se baja de su CDN solo tras aceptar, así que lo que no se ha
+  descargado no lo puede disparar un `if` mal escrito. Host por defecto **EU** (`eu.i.posthog.com`),
+  `disable_session_recording` (el formulario pide nombre, teléfono y correo) y `person_profiles:
+  identified_only`. Retirar el consentimiento **apaga** (`opt_out_capturing` + `reset(true)`), no solo
+  deja de arrancar. Página `/legal/cookies` con la declaración que publica Cookiebot y botón de
+  renovar (art. 7.3 RGPD). Lo vigila `lib/analitica.test.ts` (12 cepos, lee el fuente). ⚠️ **El CBID
+  tiene que tener `grupoasegura.es` dado de alta en el panel de Cookiebot**: un CBID atado solo a
+  `app.grupoasegura.com` no pinta banner aquí, y entonces esta app no mide — que es lo correcto, pero
+  silencioso.
   🔘 **Un solo acceso, y es el del CLIENTE (05/09/2026).** Botón «Área de clientes» en la cabecera y
   «Ya soy cliente · Mis seguros» junto al CTA de venta, los dos a `PORTAL_URL` (`lib/sitio.ts`, env
   `NEXT_PUBLIC_PORTAL_URL`; por defecto `asegura-portal.vercel.app`, que es donde el portal sirve HOY —

@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📊 La web pública ya puede medir, y solo si le dejan (05/09/2026).** `apps/asegura-web` no tenía
+  **ni una línea** de PostHog ni de Cookiebot: crear las tres envs en Vercel (lo que estaba a punto de
+  hacerse) no habría hecho nada, porque no había código que las leyera. Ahora sí, y **fail-closed**:
+  `puedeMedir()` (puro, `lib/analitica.ts`) exige las tres cosas —CBID, clave y `statistics === true`—
+  y PostHog **no está en el bundle**, se baja de su CDN tras aceptar. Es la decisión contraria a la web
+  de Manuel, cuyo *fail-open* deja PostHog corriendo sin banner si falta la env (medido el 04/09).
+  `/legal/cookies` + botón de renovar (art. 7.3 RGPD), enlace en el footer y en el sitemap. 12 cepos en
+  `lib/analitica.test.ts`; 28 tests de la app, tsc 0, lint 0, build OK. PR #PENDIENTE.
+  ⚠️ **Pendiente de Alberto, y es lo urgente:** los 7 workflows del repo `asegura` apuntan a
+  `grupoasegura.es`, que desde hoy sirve ESTA web y no tiene `/api/crons/*` — **`cima-pull` incluido**.
+  Hay que devolverlos a `app.grupoasegura.com`; no se pudo tocar (repo fuera del scope, `add_repo`
+  denegado) ni verificar por HTTP (el proxy bloquea los dos dominios). Y **NO quitar** PostHog/Cookiebot
+  del proyecto `asegura`: su fail-open dejaría el CRM midiendo sin banner. Lo correcto es dar de alta
+  los dominios en el CBID.
+
 - **🧲 La hoja de la nevera y su QR: existe (05/09/2026).** Alberto: «crear QR y ahí seleccionas si
   todas las pólizas, una o algunas… y el qr se puede borrar y se anularía el acceso». **No existía**:
   solo la decisión escrita en `apps/asegura-portal/CLAUDE.md`, redactada como si existiera. Ahora
