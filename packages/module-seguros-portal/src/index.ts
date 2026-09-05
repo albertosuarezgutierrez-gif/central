@@ -193,3 +193,15 @@ export {
   resumirHistorialSiniestros,
 } from './siniestro-historial.ts'
 export type { EstadoSiniestro, SiniestroHistorial } from './siniestro-historial.ts'
+export {
+  SITUACIONES_RECIBO,
+  reciboAnulado,
+  reciboAlCobro,
+  etiquetaSituacionRecibo,
+  tonoSituacionRecibo,
+  fechaReciboFiable,
+  ordenarRecibos,
+  estadoRecibos,
+  resumirRecibos,
+} from './recibo-historial.ts'
+export type { SituacionRecibo, ReciboHistorial, ResumenRecibos } from './recibo-historial.ts'

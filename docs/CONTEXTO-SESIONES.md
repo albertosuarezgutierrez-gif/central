@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧾 Los recibos del portal del cliente: el `anulado` no es «no pagado» (05/09/2026).**
+  Segunda mitad de «¿y los recibos? e historial siniestros?». Medido sobre los 183 recibos de la
+  cartera viva: **54 anulados, y 25 de ellos con importe NEGATIVO** (−1.268,18 € frente a +1.268,18 €:
+  extorno y su re-emisión) → fuera de la lista, pero **se dice** que están, que si no al cliente le
+  faltan movimientos al cuadrar con su banco. El hallazgo caro: **20 pólizas de las 110 vivas tenían
+  recibos y todos anulados**, y no pintaban NADA (el `total` los contaba, así que ni salía el hueco ni
+  quedaba nada que enseñar). Ahora son **TRES estados** (`sin_informar` / `solo_anulados` /
+  `con_recibos`) y el estado se calcula sobre la lista CRUDA. También fuera: `forma_pago` (código
+  `CC`/`OF`/`TA`) y la fecha centinela `0001-01-01`. Vocabulario en
+  `module-seguros-portal/src/recibo-historial.ts` (12 tests, 5 mutaciones vistas morder); pantalla en
+  `RecibosDePoliza`, en la ficha y antes de los siniestros. PR #2367.
+
 - **🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio (05/09/2026).**
   Captura suya: «Únete gratis», «Acceso correduría», header montado. Medido en Vercel: el apex `.es` y
   `www` están atados al proyecto **`asegura`** (el CRM), no a `asegura-web`; el plan de marketing decía
