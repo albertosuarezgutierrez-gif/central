@@ -65,6 +65,21 @@
   (migración aplicada). Y el `omitido` que se puso a mano esa mañana deja de funcionar de casualidad:
   `ESTADOS_HITO` + `cubreAlHuesped()` con sus tests, contado en `/apartamentos`. PR pendiente.
 
+- **🔧 Arreglado: el veredicto del vigía se va a su propia tabla, `agente_veredicto` (05/09/2026).**
+  Dos sistemas se llamaban igual por accidente: `agente_salud` de julio es el badge que el PROPIO
+  agente se auto-declara (hoy solo `facturas-extraccion-pdf`, lo lee `lib/finanzas.ts`), y el
+  veredicto del vigía es un juicio EXTERNO sobre 30 agentes. **NO se fusionan**: `ok` (aquella) y
+  `alerta` (esta) son INVERSOS, y un fallo de signo ahí pinta verde lo que está rojo. Tabla nueva +
+  los tres usos del esquema nuevo apuntados a ella (cron, `getSaludLatidos`, expediente del
+  god-panel); la de julio queda intacta y `/finanzas` no se toca. La migración muerta del 02/09 se
+  marca ⚰️ en su cabecera en vez de borrarla, para que se sepa qué pasó.
+  Comprobado ANTES de dar nada por bueno: `prisma_plataforma` tiene BYPASSRLS **e** INSERT/SELECT
+  sobre la tabla nueva (un GRANT que falta habría cambiado un error silencioso por otro), y el
+  INSERT exacto del cron se ensayó en una transacción con ROLLBACK. tsc 0 · 2.518 tests.
+  ⏳ **Sin verificar todavía:** que el cron escriba de verdad. Corre a las 07:45 UTC y hoy ya pasó;
+  la prueba es mirar mañana que `agente_veredicto` tenga ~30 filas y que /operador/agentes deje de
+  pintar ⚪. Hasta entonces sigue siendo un arreglo razonado, no medido.
+
 - **🚨 HALLAZGO AJENO al mirar los logs: el vigía de agentes lleva desde el 03/09 sin poder guardar
   NADA (05/09/2026).** Los runtime errors de plataforma traen ~30 líneas idénticas en
   `/api/cron/agentes-latido`: `column "evaluado_at" of relation "agente_salud" does not exist` (P2010),

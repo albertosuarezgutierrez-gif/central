@@ -210,7 +210,7 @@ export type AgenteVigilado = {
    *      casa: un cron que deja de correr grita igual que antes.
    *   2. `revisarEl` — fecha en la que caduca. Pasada, vuelve a rojo él solo; nadie tiene que
    *      acordarse de quitar nada.
-   *   3. Sigue contando como ALERTA para la pantalla y para `agente_salud`: lo que se calla es la
+   *   3. Sigue contando como ALERTA para la pantalla y para `agente_veredicto`: lo que se calla es la
    *      interrupción del Telegram, no el registro. `/operador/agentes` sigue diciendo la verdad.
    */
   pendienteConocido?: {
@@ -726,7 +726,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   // Las cinco de abajo eran vigías sin canal: 8 rutinas sin ALERTA_TOKEN, así que su Telegram no
   // salía, y además no escribían latido, así que tampoco se veían en ninguna pantalla. Un vigía
   // mudo y un vigía sin nada que reportar se ven igual: silencio. Ahora dejan latido por
-  // /api/internal/latido (allowlist en esa ruta) y el veredicto se persiste en `agente_salud`.
+  // /api/internal/latido (allowlist en esa ruta) y el veredicto se persiste en `agente_veredicto`.
   //
   // ⚠️ Hasta que sus prompts lleven el token, saldrán en ROJO con «sin ninguna señal registrada».
   // Es la verdad, no ruido: hoy están igual de mudas, solo que invisibles. Umbrales generosos a
