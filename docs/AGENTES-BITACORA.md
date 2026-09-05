@@ -15,6 +15,14 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-05 · conectores-vigia** · hizo: primera pasada real (antes solo sembrado a mano);
+  confirmó que la rutina corre sin ningún conector adjunto (`enabledInChat:false` en los ~30 de la
+  cuenta) → el Paso 3 (canario) es estructuralmente imposible desde aquí, documentado en
+  `VIGIA-CONECTORES.md` y `RUTINAS-PROGRAMADAS.md`; higiene de cuenta: Expedia en `needs_reconnect`
+  rompe una fuente de `pricing-agente` (degrada, no corta, por diseño resiliente); sin candidatos
+  nuevos para H1/H3. dudas: si Alberto quiere pagar la superficie de adjuntar Booking+IBKR
+  solo-lectura para poder cumplir el Paso 3 algún mes; fallos: —; PRs/commits: rama
+  `claude/vigilant-euler-kgm3ia`.
 - **2026-09-04 · mercado-booking** · hizo: 2ª pasada ACOTADA por prioridad temporal (agosto 2026,
   ídem 03/09), `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6
   fechas × 4 pisos con aforo correcto) → 240 comps `booking_mcp`, 0 sin respuesta, 0 propios
