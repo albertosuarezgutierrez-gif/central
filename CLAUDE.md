@@ -594,6 +594,26 @@ lag. Coincidir descarta que GitHub tenga el head VIEJO — **no** descarta que e
 siga sin procesarse. Son dos cosas distintas y el paso 1 de abajo solo detecta la primera. En la duda,
 esperar sigue siendo lo más barato: ninguna de las palancas cuesta menos que no hacer nada.
 
+🔁 **UNDÉCIMA medición (05/09/2026, PR #2369) — lo único que añade es que el `synchronize` de un
+PR que YA no es draft dispara con normalidad, y eso ya se sabía desde #1768.** Se anota igual para no
+perder la serie, y con lo que NO se midió dicho en voz alta:
+
+| paso | qué se hizo | ¿draft? | runs de los requeridos |
+|---|---|---|---|
+| 1 | push de la rama (token de App) | — | **no se miró** (así que este tramo no cuenta) |
+| 2 | PR abierto por la herramienta MCP | **sí** | **no se miró** |
+| 3 | des-draftear (`draft:false` por la API) | pasa a no | ✅ **19 runs** a los segundos (12:40:57), `event: pull_request`, `actor: albertosuarezgutierrez-gif` |
+| 4 | 2º push con contenido real, ya sin draft | **no** | ✅ **20 runs** (12:53:06), verdes en ~3,5 min, incluido `Ready to merge` |
+
+⚠️ **No aísla nada del paso 3**: como no se miró si había runs antes de des-draftear, no se puede decir
+si los disparó el des-draft o si ya venían de la apertura del PR. Es exactamente el error de método que
+el resto de esta sección lleva diez mediciones intentando evitar: **mira los runs ANTES de tocar cada
+palanca**, o la medición no sirve.
+
+🟡 Y se volvió a ver el falso positivo de Vercel del 02/09, esta vez **doce comentarios seguidos**
+pintando los proyectos en «Building» antes de acabar en `12 Skipped Deployments` / `Ignored`. Cero
+gasto de build. El estado que vale sigue siendo el FINAL, no el comentario que se reescribe solo.
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
    ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.

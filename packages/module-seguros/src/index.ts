@@ -257,6 +257,21 @@ export {
   type EstadoClienteDerivado,
 } from './estado-cliente.ts'
 export {
+  combinarPersonaContacto,
+  textoPersonaContacto,
+  tiposContactoSugeridos,
+  FUENTE_PERSONA_CONTACTO,
+  type PasoEscritura,
+  type ResultadoPersonaContacto,
+} from './persona-contacto.ts'
+export {
+  unificarPersonas,
+  saleEnPolizas,
+  type ListaPersonasFicha,
+  type PersonaFicha,
+  type VinculoUnible,
+} from './personas-ficha.ts'
+export {
   normalizarNumeroPoliza,
   polizasDuplicadas,
   type PolizaParaDuplicados,
