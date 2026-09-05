@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio (05/09/2026).**
+  Captura suya: «Únete gratis», «Acceso correduría», header montado. Medido en Vercel: el apex `.es` y
+  `www` están atados al proyecto **`asegura`** (el CRM), no a `asegura-web`; el plan de marketing decía
+  «no atado» y era falso. `clientes.grupoasegura.es` **ya existe en DNS** (IONOS) sin proyecto detrás.
+  Dictado: web 100 % venta, un botón a la intranet del cliente y **ningún acceso de corredor** (entra
+  por plataforma). Hecho en `asegura-web`: botón «Área de clientes» + CTA «Ya soy cliente» a
+  `PORTAL_URL` (env `NEXT_PUBLIC_PORTAL_URL`, default la URL viva del portal), cabecera en dos filas
+  medida con Playwright a 320/360/1024, guardián `lib/portal.test.ts` (4 cepos, 2 mutaciones probadas).
+  ⏸️ **Alberto en Vercel/IONOS:** mover `.es`+`www` a `asegura-web` · atar `clientes.` a `asegura-portal`
+  y CNAME a Vercel · `NEXT_PUBLIC_PORTAL_URL` y `PORTAL_PUBLIC_URL` al dominio nuevo. Hasta entonces
+  el botón funciona igual (va a `asegura-portal.vercel.app`). El header roto de la captura es código
+  de Manuel, en un repo que el clasificador me bloquea.
+
 - **🩺 «repara todo»: dos pendientes se caen de la lista por MEDIRLOS, y aparece uno legal (05/09/2026).**
   De la lista de Alberto solo una parte es tocable desde una sesión; lo que se pudo medir:
   · **`agente_salud` NO era una decisión pendiente.** Se resolvió el mismo 05/09 creando
