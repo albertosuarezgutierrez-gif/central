@@ -205,3 +205,15 @@ export {
   resumirRecibos,
 } from './recibo-historial.ts'
 export type { SituacionRecibo, ReciboHistorial, ResumenRecibos } from './recibo-historial.ts'
+export {
+  BYTES_TOKEN_HOJA,
+  MAX_HOJAS_VIVAS,
+  MAX_NOMBRE_HOJA,
+  normalizarTokenHoja,
+  normalizarNombreHoja,
+  estadoHoja,
+  seleccionHoja,
+  polizasDeLaHoja,
+  loQueVeQuienEscanea,
+} from './hoja-qr.ts'
+export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'

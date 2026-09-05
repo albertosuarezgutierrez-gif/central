@@ -1378,3 +1378,172 @@ h1 {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+/* ── La hoja de la nevera: la lista del portal ───────────────────────────── */
+.hojas {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.hoja-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.6);
+}
+/* Una hoja anulada NO se oculta: su dueño tiene que ver que la anuló y cuándo.
+   Se atenúa, que es distinto de desaparecer. */
+.hoja-fila[data-anulada='si'] {
+  opacity: 0.6;
+}
+.hoja-cuerpo {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+.hoja-titulo {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.hoja-meta {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.hoja-formulario {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.6);
+}
+.hoja-formulario .opciones {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+/* ── La hoja IMPRESA (`/hoja/[token]`) ──────────────────────────────────── */
+.hoja {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+  color: var(--text);
+}
+.hoja h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 600;
+}
+.hoja-polizas {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.hoja-poliza {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.6);
+  /* Que cada póliza no se parta entre dos folios: media ficha en el reverso de
+     la nevera no sirve de nada. */
+  break-inside: avoid;
+}
+.hoja-poliza h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.hoja-ramo {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+.hoja-bien {
+  margin: 6px 0 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.hoja-poliza dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 12px;
+  margin: 10px 0 0;
+  font-size: 14px;
+}
+.hoja-poliza dt {
+  color: var(--muted);
+}
+.hoja-poliza dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.hoja-vias {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.hoja-numero {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.hoja-horario {
+  color: var(--muted);
+}
+.hoja-nota {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.hoja-qr {
+  margin: 24px 0 0;
+  text-align: center;
+  break-inside: avoid;
+}
+.hoja-qr svg {
+  width: 128px;
+  height: 128px;
+}
+.hoja-pie {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* 🖨 Al imprimir: tinta negra sobre blanco y sin cajas grises. Un imán de nevera
+   impreso con el tema oscuro del móvil sale ilegible y gasta media cinta. */
+@media print {
+  .hoja {
+    max-width: none;
+    padding: 0;
+    color: #000;
+  }
+  .hoja-poliza {
+    border-color: #999;
+  }
+  .hoja-ramo,
+  .hoja-poliza dt,
+  .hoja-horario,
+  .hoja-nota,
+  .hoja-pie {
+    color: #333;
+  }
+  .hoja-qr svg {
+    width: 108px;
+    height: 108px;
+  }
+}
