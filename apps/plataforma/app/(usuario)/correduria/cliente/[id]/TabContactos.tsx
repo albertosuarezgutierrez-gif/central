@@ -1,13 +1,22 @@
 'use client'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { IdCard, Mail, MapPin, Phone, Star, Users } from 'lucide-react'
+import { IdCard, KeyRound, Mail, MapPin, Phone, Star, Users } from 'lucide-react'
 import { etiquetaRol, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
 import BotonWhatsapp from '../../BotonWhatsapp'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
 import { Badge, btnStyle } from '@/components/ui'
+import {
+  explicarPortal,
+  interpretarInvitacion,
+  interpretarPortal,
+  textoIdentidades,
+  textoInvitacion,
+  textoMotivoPortal,
+  type RespuestaPortal,
+} from '@/lib/portal-cliente-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import type { ContactoFicha, Ficha, IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { RelacionCartera } from '@/lib/relaciones-asegura'
@@ -136,6 +145,13 @@ export default function TabContactos({ ficha, personas }: {
           entra: leer un teléfono y marcarlo. */}
       <Bloque primero titulo="Teléfonos, correos y dirección" Icono={Phone}>
         <Contacto contactos={ficha.contactos} contacto={ficha.contacto} />
+      </Bloque>
+
+      {/* Si entra —o puede entrar— a ver sus seguros por su cuenta. Va aquí y no
+          en otra pestaña porque la respuesta depende de lo de arriba: sin correo
+          no hay invitación que mandar. */}
+      <Bloque titulo="Portal del cliente" Icono={KeyRound}>
+        <Portal clienteId={ficha.id} nombre={ficha.nombre} />
       </Bloque>
 
       {/* UNA lista: quién sale en sus pólizas y quién tiene vínculo declarado. */}
@@ -289,6 +305,156 @@ function Direccion({ c }: { c: ContactoFicha }) {
         <span style={{ overflowWrap: 'anywhere' }}>{texto}</span>
       ) : (
         <span>No consta dirección en la ficha (se ha mirado).</span>
+      )}
+    </div>
+  )
+}
+
+// ─── El portal del cliente ───────────────────────────────────────────────────
+
+/**
+ * ¿Este cliente entra al portal (`apps/asegura-portal`) a ver sus seguros? Y si
+ * no, ¿se le puede invitar?
+ *
+ * 🚨 Por qué esto PREGUNTA antes de ofrecer el botón. El portal vincula a una
+ * persona con su ficha por el índice ciego de su email, y solo si no es
+ * ambiguo. Así que hay un modo de fallo PEOR que no invitar: invitar a alguien
+ * cuyo correo no resuelve a esta ficha. Recibe el correo, entra, teclea su
+ * código… y ve una bóveda VACÍA, sin ningún error, como si no tuviera pólizas.
+ * Le habríamos dicho «aquí están tus seguros» y dentro no hay nada.
+ *
+ * Los siete estados no se colapsan en «no se puede invitar» porque cada uno se
+ * arregla en un sitio distinto: pedirle el correo al cliente · resolver un
+ * duplicado · mirar una variable de Vercel · volver a intentarlo. La frase de
+ * cada uno sale de `explicarPortal` (puro y con test), no de este JSX.
+ *
+ * ⏳ Y **cargando NO es un fallo**: mientras se pregunta se dice que se está
+ * preguntando, sin alarma ni botón. Pintar «no se ha podido comprobar» durante
+ * la carga sería inventar una avería una vez por visita.
+ */
+function Portal({ clienteId, nombre }: { clienteId: string; nombre: string }) {
+  const [datos, setDatos] = useState<RespuestaPortal | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [enviando, setEnviando] = useState(false)
+  const [aviso, setAviso] = useState<{ texto: string; ok: boolean } | null>(null)
+
+  const consultar = useCallback(async () => {
+    setCargando(true)
+    try {
+      const res = await fetch(`/api/correduria/cliente/portal?clienteId=${encodeURIComponent(clienteId)}`, {
+        cache: 'no-store',
+      })
+      setDatos(interpretarPortal(res.status, await res.json().catch(() => null)))
+    } catch {
+      setDatos({ estado: 'error', motivo: 'red' })
+    } finally {
+      setCargando(false)
+    }
+  }, [clienteId])
+
+  // El GET es gratis (no manda nada a nadie), así que se pregunta al abrir la
+  // pestaña. El POST, que escribe a una persona real, solo lo dispara un clic.
+  useEffect(() => { void consultar() }, [consultar])
+
+  async function invitar() {
+    setEnviando(true)
+    setAviso(null)
+    try {
+      const res = await fetch('/api/correduria/cliente/portal', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ clienteId }),
+      })
+      const r = interpretarInvitacion(res.status, await res.json().catch(() => null))
+      setAviso({ texto: textoInvitacion(r, nombre), ok: r.estado === 'ok' })
+      // Tras un envío con éxito se vuelve a PREGUNTAR en vez de suponer el
+      // estado nuevo: si ya entraba pasará a decir su último acceso, y si era
+      // una invitación seguirá diciendo que no entra nadie — porque el acceso
+      // lo abre el cliente con su código, no este botón.
+      if (r.estado === 'ok') await consultar()
+    } catch {
+      setAviso({ texto: textoInvitacion({ estado: 'error', motivo: 'red' }, nombre), ok: false })
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const marco: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }
+  const sutil: React.CSSProperties = { margin: 0, fontSize: 12, lineHeight: 1.5, color: 'var(--muted)' }
+
+  if (datos === null) {
+    return (
+      <div style={marco}>
+        <p style={sutil}>Comprobando si {nombre} entra al portal…</p>
+      </div>
+    )
+  }
+
+  if (datos.estado !== 'ok') {
+    // Ninguno de estos es «no tiene acceso»: son «no se ha podido mirar» (o el
+    // id ya no existe), y por eso llevan el botón de volver a preguntar en vez
+    // de un cartel rojo que invita a llamar al cliente.
+    const texto =
+      datos.estado === 'no_encontrado'
+        ? 'asegura dice que esta ficha ya no está en la correduría, así que no se puede mirar su acceso al portal.'
+        : datos.estado === 'sin_configurar'
+          ? 'El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET). No significa que este cliente no entre al portal: es que no se ha podido preguntar.'
+          : datos.estado === 'invalido'
+            ? `No se ha podido consultar: ${datos.motivo}`
+            : `No se ha podido comprobar si entra al portal: ${textoMotivoPortal(datos.motivo)} No significa que no pueda entrar.`
+    return (
+      <div style={marco}>
+        <p style={sutil}>{texto}</p>
+        <div>
+          <button type="button" disabled={cargando} onClick={() => void consultar()} style={{ ...btnStyle('sutil'), minHeight: 44 }}>
+            {cargando ? 'comprobando…' : 'Volver a comprobar'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const frase = explicarPortal(datos.portal)
+  return (
+    <div style={marco}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
+        <Badge tono={frase.tono}>{frase.titulo}</Badge>
+        {/* `null` = no se pudo contar, y lo dice con esas palabras: 0 sería una
+            afirmación («no entra nadie») sobre algo que no se ha mirado. */}
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{textoIdentidades(datos.portal.identidades)}</span>
+      </div>
+
+      <p style={{ ...sutil, maxWidth: '72ch' }}>{frase.queHacer}</p>
+
+      {frase.accion !== 'ninguna' && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            disabled={enviando || cargando}
+            onClick={() => void invitar()}
+            // `whiteSpace: 'normal'` + 44px: el rótulo lleva el nombre del
+            // cliente dentro y a 320px tiene que poder partirse sin desbordar.
+            style={{
+              ...btnStyle(frase.accion === 'invitar' ? 'primario' : 'secundario'),
+              whiteSpace: 'normal', textAlign: 'left', minHeight: 44,
+            }}
+          >
+            {enviando
+              ? 'enviando…'
+              : frase.accion === 'invitar'
+                ? `✉️ Invitar a ${nombre} al portal`
+                : `✉️ Reenviarle el enlace a ${nombre}`}
+          </button>
+        </div>
+      )}
+
+      {/* El desenlace, pegado al botón que lo produjo. El texto sale de
+          `textoInvitacion` (puro y con test): un «enviado» no puede salir de un
+          desenlace que no envió nada. */}
+      {aviso && (
+        <div role="status" style={{ fontSize: 12, color: aviso.ok ? 'var(--positive)' : 'var(--warning)', overflowWrap: 'anywhere' }}>
+          {aviso.texto}
+        </div>
       )}
     </div>
   )
