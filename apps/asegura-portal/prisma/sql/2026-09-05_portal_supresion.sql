@@ -1,7 +1,27 @@
--- ⏸️ NO APLICADA todavía. Se aplica contra la Supabase compartida (schema `seguros`)
--- en el mismo paso en que se despliega el portal con esta pantalla: una tabla sin
--- pantalla no recoge nada, y una pantalla sin tabla promete un derecho y falla al
+-- ✅ APLICADA el 05/09/2026 contra la Supabase compartida (schema `seguros`), migración
+-- `20260905100234_seguros_portal_supresion`. Verificado después: 15 columnas, 5 CHECK,
+-- 3 índices, y `has_table_privilege()` confirma que `prisma_asegura_portal` tiene
+-- SELECT/INSERT/UPDATE y **NO tiene DELETE**, y que `prisma_seguros` la lee y la
+-- actualiza (es quien resuelve).
+--
+-- 🦷 Los cepos se vieron MORDER en la BD real, en un bloque con rollback (un CHECK que
+-- nadie ha visto morder es una suposición): estado fuera del vocabulario → `23514` ·
+-- marcarla resuelta sin respuesta escrita → `23514` · prórroga sin motivo → `23514` ·
+-- dos pendientes de la misma identidad → `23505` (el índice único parcial). Los dos
+-- caminos válidos —alta, y resolverla CON respuesta— entran.
+--
+-- 🚨 Se aplicó TARDE, y esa es la lección que deja: el código que consulta esta tabla ya
+-- estaba en `main` y desplegado en producción (`dpl_Fe3pMt…`, commit `9c4b7370`) cuando
+-- la tabla todavía no existía. `lib/supresion.ts` consulta SIN `try/catch` a propósito,
+-- así que en esa ventana `/boveda` ENTERA habría reventado, no solo la sección nueva.
+-- No llegó a golpear a nadie —cero errores de esa ruta en el registro de Vercel, porque
+-- nadie entró—, pero fue suerte, no diseño. El orden correcto es el que ya decía esta
+-- cabecera y no se cumplió: **la DDL va en el MISMO paso que el despliegue**. Una tabla
+-- sin pantalla no recoge nada; una pantalla sin tabla promete un derecho y falla al
 -- guardarlo, que es peor que no ofrecerlo.
+--
+-- ♻️ Es reejecutable (`IF NOT EXISTS` en tabla, constraints e índices): volver a
+-- lanzarla no rompe nada ni duplica.
 --
 -- ⚠️ El GRANT del final es obligatorio, no decorativo: los permisos de este schema se
 -- conceden TABLA POR TABLA (ver `2026-09-02_portal_rol_vinculo_grants.sql`) y no hay
