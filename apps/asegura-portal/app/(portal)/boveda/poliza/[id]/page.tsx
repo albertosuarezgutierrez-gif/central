@@ -10,9 +10,10 @@ import {
   AvisoReciboDevuelto,
   Coberturas,
   ESTADO,
+  HistorialSiniestros,
   IconoRamo,
   RAMO,
-  Recibos,
+  RecibosDePoliza,
   tituloDePoliza,
   tituloEsBien,
 } from '../../PolizaVista'
@@ -140,9 +141,32 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
           )}
         </dl>
 
-        <Recibos p={p} />
         <Coberturas p={p} />
       </section>
+
+      {/* Los recibos van justo detrás de los datos y ANTES del historial de
+          siniestros: es el dinero, que es lo primero que un cliente comprueba.
+          La sección entera no se pinta cuando el nivel no la permite, y la
+          comprobación está DENTRO del componente para que no haya dos sitios
+          donde acordarse. */}
+      {p.recibos !== null && (
+        <section className="seccion" aria-labelledby="recibos-titulo">
+          <h2 id="recibos-titulo">Tus recibos de esta póliza</h2>
+          <RecibosDePoliza p={p} />
+        </section>
+      )}
+
+      {/* El historial va DESPUÉS de los datos de la póliza y ANTES del «si te ha
+          pasado algo»: se lee «esto es lo que te ha pasado» y justo debajo «y
+          esto es lo que haces si te pasa otra vez». No se pinta la sección
+          entera cuando el nivel no la permite — la comprobación está dentro del
+          componente, para que no haya dos sitios donde acordarse. */}
+      {p.siniestros !== null && (
+        <section className="seccion" aria-labelledby="siniestros-titulo">
+          <h2 id="siniestros-titulo">Tus siniestros de esta póliza</h2>
+          <HistorialSiniestros p={p} />
+        </section>
+      )}
 
       <section className="seccion" aria-labelledby="pasa-titulo">
         <h2 id="pasa-titulo">Si te ha pasado algo</h2>

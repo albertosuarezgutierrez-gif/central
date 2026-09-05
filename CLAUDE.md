@@ -98,9 +98,12 @@
   `canal_no_disponible` (503) NO es «el envío falló» (502). Tablas `portal_*` en el schema `seguros`.
   El aislamiento **no lo da RLS sino el código**, y lo vigila `test/regression-portal-aislamiento.test.ts`.
   Tiene `CLAUDE.md` propio desde el 02/09/2026 — ver `apps/asegura-portal/CLAUDE.md`.
-- **`apps/asegura-web`** — **web pública de marketing** de Grupo ASegura (04/09/2026), destinada al
-  **apex `grupoasegura.com` + `www`**, que estaban LIBRES: `app.grupoasegura.com` sirve el CRM de
-  Manuel y no se toca. Tercera app de la correduría y la única que ve alguien que aún no es cliente
+- **`apps/asegura-web`** — **web pública de marketing** de Grupo ASegura (04/09/2026). **Sirve en el
+  apex `grupoasegura.es` + `www` desde el 05/09/2026** (proyecto Vercel `asegura-web`, atado por Alberto
+  con Claude en Chrome); `app.grupoasegura.com` sirve el CRM de Manuel y no se toca. ⚠️ El `.com`
+  NO es suyo: su apex apunta a un parking de IONOS (`217.160.0.254`), y hasta ese día la app lo
+  llevaba como `SITIO_URL` por defecto — canonical y sitemap hacia un dominio vacío. Ahora el
+  defecto es el `.es` (`lib/sitio.ts`). Tercera app de la correduría y la única que ve alguien que aún no es cliente
   (`asegura` = corredor, `asegura-portal` = asegurado, `asegura-web` = quien todavía no lo es).
   🚨 **NO tiene base de datos a propósito**: sin Prisma, sin rol, sin secreto de sesión. El
   formulario sale por `POST /api/lead`, que **reenvía desde el servidor** al canal que ya existe
@@ -123,11 +126,12 @@
   `/operador`, `/login`, «Acceso correduría», «Únete gratis» o «Ya tengo cuenta» (el vocabulario de la
   web de Manuel). Cabecera en DOS filas a todo ancho (marca + botón / nav), medida con Playwright a
   320-360-1024: sin desbordar y sin pisar la marca.
-  🚨 **Lo que Alberto ve en `grupoasegura.es` NO es esta app: es el CRM de Manuel.** Medido en Vercel el
-  05/09: el apex `.es` y `www` están atados al proyecto `asegura`. Esta app **no tiene dominio** y no la
-  ve nadie. El arreglo no es de diseño: es mover `grupoasegura.es`+`www` a `asegura-web`, atar
-  `clientes.grupoasegura.es` a `asegura-portal` (existe en DNS, apunta a IONOS) y dejar
-  `app.grupoasegura.com` en `asegura` (ingesta de CIMA). Todo en paneles de Alberto.
+  🕰️ **Hasta la tarde del 05/09 lo que Alberto veía en `grupoasegura.es` era el CRM de Manuel**, no
+  esta app: el apex `.es` y `www` estaban atados al proyecto `asegura` y esta app no tenía dominio. Se
+  arregló en paneles, no en código: `.es`+`www` → `asegura-web`; `clientes.grupoasegura.es` →
+  `asegura-portal` (DNS en IONOS pendiente de repuntar); `app.grupoasegura.com` sigue en `asegura`
+  (ingesta de CIMA). ⚠️ `clientes` tiene **MX de IONOS**: un CNAME lo mataría, así que ahí va un
+  registro **A** a Vercel (el mismo `216.150.1.1` del apex), no el CNAME que sugiere el panel.
   Plan y diagnóstico en `docs/ASEGURA-MARKETING-PLAN.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)

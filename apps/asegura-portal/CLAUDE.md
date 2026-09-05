@@ -151,6 +151,65 @@ Ahora el ancho y la navegación son del armazón y la página solo aporta conten
 14 el cuerpo, 12 lo secundario, ritmo vertical de 24 px, `tabular-nums` en todo lo numérico,
 botones en **píldora** y anillo de foco de 3 px al 50 %.
 
+### 🗂 El historial de siniestros (05/09/2026) — y las tres cosas que se midieron antes
+
+Alberto, mirando el lateral: *«y los recibos? e historial siniestros?»*. **No existía:**
+`lib/cartera-lectura.ts` filtraba `estado IN ('abierto','en_tramitacion')`, así que de los **67
+siniestros de la cartera viva el portal enseñaba 7 y los 60 CERRADOS no los veía nadie**.
+
+Ahora la lectura trae el historial entero y `siniestrosAbiertos` **se deriva** de él, para que la
+guarda de nivel esté en un solo sitio. Reglas puras en
+`@central/module-seguros-portal` (`src/siniestro-historial.ts`, 9 tests).
+
+🚨 **Lo que se midió contra la BD antes de escribir la pantalla, porque cambió el diseño:**
+
+| Hallazgo | Consecuencia |
+|---|---|
+| **`siniestros.tipo` es un CÓDIGO NUMÉRICO** de la compañía (`1107`, `1915`, `1312`, `17`, `2102`…) | **No se pide ni se pinta.** Parecía el campo más útil («qué le pasó»); «Tipo 1107» no dice nada y encima parece un dato que significa algo. Cepo en `test/regression-portal-visibilidad.test.ts` sobre el bloque del `select` |
+| **No existe columna con la fecha de CIERRE.** `updated_at` es la última vez que se tocó la fila | No se dice «cerrado el X»: sería inventarse una fecha con aspecto de dato. Se dice el estado, y la fecha del **hecho** |
+| **El enum tiene CUATRO valores**: `abierto`, `en_tramitacion`, `cerrado`, `rechazado` | `rechazado` **no es** `cerrado` — uno se resolvió y el otro la compañía no lo asumió. Cuatro etiquetas distintas y tres tonos; un estado desconocido sale tal cual, nunca cae a «cerrado» |
+
+Y dos reglas de la casa aplicadas:
+- **El orden se hace en código, no en el `orderBy`**: en Postgres `DESC` implica `NULLS FIRST`, así
+  que los siniestros sin fecha se colarían arriba y enterrarían los que sí la tienen (la misma trampa
+  que ya mordió en la ficha del corredor, PR #2346). Una fecha ausente no es ni reciente ni antigua.
+- **`[] = «no nos consta ninguno»**, jamás «no has tenido ninguno»: la compañía los informa por EIAC
+  y puede no haberlo hecho. Lleva la píldora `.pendiente`, no una frase en gris.
+
+📌 **Va en la FICHA de cada póliza, no en una quinta pestaña**, y es deliberado: a la mayoría de los
+clientes esa pestaña les diría 0, y una sección casi siempre vacía no parece un producto moderno
+sino uno a medio hacer. Mismo razonamiento que la ausencia de hamburguesa.
+
+### 🧾 Los recibos (05/09/2026) — el `anulado` no es «no pagado», y 20 pólizas estaban mudas
+
+La otra mitad de la pregunta de Alberto. Los recibos ya se leían y se resumían, pero el bloque
+mentía por omisión. **Medido sobre los 183 recibos de la cartera viva:**
+
+| Hallazgo | Consecuencia en la pantalla |
+|---|---|
+| **`anulado` son 54, y de esos 25 tienen importe NEGATIVO** (extornos), 8 valen 0 € y 21 son positivos. El mínimo es **−1.268,18 €** y el máximo **+1.268,18 €**: el mismo número con los dos signos, o sea un extorno y su re-emisión | **No entran en la lista y ningún cubo los cuenta.** Un «recibo de −1.268,18 €» no informa a nadie: hace llamar. Pero se DICE que están ahí fuera, porque el cliente cuadra contra su banco y le faltarían movimientos |
+| **20 de las 110 pólizas vivas tienen recibos y TODOS son anulados** | Antes no pintaban **nada**: `total` contaba los anulados (así que no salía el hueco de «sin informar») y no quedaba ninguno que enseñar (así que la función devolvía `null`). Veinte pólizas mudas de ciento diez |
+| **`forma_pago` es un CÓDIGO**: `CC` (117), `OF` (6), `TA` (4), y 56 sin informar | No se pide al `select` ni se pinta. `CC` se adivina, `OF` no — mismo caso que `siniestros.tipo` |
+| **Hay una fecha CENTINELA**: un `pendiente` trae `fecha_emision` `0001-01-01` | `fechaReciboFiable()` la anula al leer. Es un «no lo sé» con forma de dato: pasa por `??`, por `IS NULL` y por cualquier `COALESCE`, y en pantalla saldría «01/01/0001» |
+
+🚨 **De ahí sale la regla de esta pantalla: son TRES estados, no dos.** `sin_informar` (la compañía
+no mandó nada — que NO es «estás al corriente») · `solo_anulados` (mandó, y está todo anulado) ·
+`con_recibos`. Las tres frases son distintas porque las tres situaciones lo son, y colapsar las dos
+primeras le diría a 20 clientes que su compañía no informó nada cuando sí informó. Lo decide
+`estadoRecibos()` de `@central/module-seguros-portal`, **sobre la lista CRUDA**: con la lista ya
+limpia de anulados, «todo anulado» y «no hay ninguno» son indistinguibles.
+
+Todo el vocabulario vive en `packages/module-seguros-portal/src/recibo-historial.ts` (qué es un
+anulado, qué está al cobro, qué fecha es de fiar, en qué orden van); `lib/cartera-lectura.ts` solo
+traduce la fila. **Un `pendiente` NO es un impago**: se pinta en acento, nunca en el rojo del
+devuelto — es la línea que ya se cruzó una vez en `/correduria` (PR #2179).
+
+El bloque entero es **un solo componente** (`RecibosDePoliza` en `PolizaVista.tsx`) a propósito:
+partirlo en «titular» + «lista» dejaba la frase de cada estado en dos ficheros. Va en la ficha de
+cada póliza, **antes** del historial de siniestros: es el dinero, que es lo primero que se mira.
+Cepos en `test/regression-portal-visibilidad.test.ts`.
+
+
 ### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
 
 Alberto: *«cliente por codigo es un poco coñazo»* y, al preguntarle si le pedía el código cada vez o

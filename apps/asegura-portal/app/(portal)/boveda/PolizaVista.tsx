@@ -1,4 +1,14 @@
-import { ETIQUETA_RAMO, bienTieneAlgo, describirBien, type BienAsegurado } from '@central/module-seguros-portal'
+import {
+  ETIQUETA_RAMO,
+  bienTieneAlgo,
+  describirBien,
+  etiquetaEstadoSiniestro,
+  resumirHistorialSiniestros,
+  tonoEstadoSiniestro,
+  type BienAsegurado,
+  tonoSituacionRecibo,
+  etiquetaSituacionRecibo,
+} from '@central/module-seguros-portal'
 
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
@@ -182,7 +192,7 @@ export function Bien({ bien }: { bien: BienAsegurado }) {
  *
  * 🚨 Y la línea que no se puede cruzar: un recibo **devuelto** no es un recibo
  * **pendiente/al cobro**. El pendiente está emitido y aún sin cargar — es
- * información neutra («tu próximo recibo») y vive en `<Recibos>`, jamás aquí.
+ * información neutra («tu próximo recibo») y vive en `<RecibosDePoliza>`, jamás aquí.
  * Pintar un pendiente como impago acusa de moroso a quien está al día; es
  * exactamente el fallo que se corrigió en `/correduria` (PR #2179).
  *
@@ -231,17 +241,29 @@ export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
 }
 
 /**
- * Recibos, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`.
+ * TODO el bloque de recibos de una póliza, en voz NEUTRA. Lo que alarma vive en
+ * `<AvisoReciboDevuelto>`.
+ *
+ * Es **un solo componente a propósito**: los tres estados de abajo se deciden en
+ * un único sitio. Partirlo en «titular» + «lista» dejaba la frase de cada estado
+ * en dos ficheros, y el día que alguien tocara uno la pantalla diría dos cosas
+ * distintas sobre lo mismo.
  *
  * - `recibos === null` → el nivel de esta persona no enseña recibos. No es una
  *   ausencia del dato: se oculta y no se menciona.
- * - `total === 0` → **la compañía no ha informado recibos**, que NO es «estás al
- *   corriente». Esa frase se dice entera porque el silencio sí se leería así.
+ * - `estado === 'sin_informar'` → **la compañía no ha informado recibos**, que
+ *   NO es «estás al corriente». La frase se dice entera porque el silencio sí se
+ *   leería así.
+ * - `estado === 'solo_anulados'` → informó recibos y **todos** están anulados.
+ *   Son 20 de las 110 pólizas vivas, y hasta hoy no pintaban NADA: ni el hueco
+ *   (el total contaba los anulados) ni una línea (no quedaba ninguno que
+ *   enseñar). Veinte pólizas mudas de ciento diez.
  */
-export function Recibos({ p }: { p: PolizaPortal }) {
+export function RecibosDePoliza({ p }: { p: PolizaPortal }) {
   if (p.recibos === null) return null
   const r = p.recibos
-  if (r.total === 0) {
+
+  if (r.estado === 'sin_informar') {
     return (
       <p className="hueco">
         <span className="pendiente">Sin informar</span>
@@ -250,6 +272,19 @@ export function Recibos({ p }: { p: PolizaPortal }) {
     )
   }
 
+  if (r.estado === 'solo_anulados') {
+    return (
+      <p className="hueco">
+        <span className="pendiente">Nada que enseñarte</span>
+        {r.anulados === 1
+          ? 'El único recibo que nos consta de esta póliza está anulado por tu compañía, así que no te cuenta ni como cobrado ni como pendiente.'
+          : `Los ${r.anulados} recibos que nos constan de esta póliza están anulados por tu compañía, así que no te cuentan ni como cobrados ni como pendientes.`}{' '}
+        Si esperabas ver un cobro aquí, dínoslo y lo miramos.
+      </p>
+    )
+  }
+
+  // El titular: lo próximo que se paga y lo último que se pagó.
   const partes: string[] = []
   if (r.proximoAlCobro) {
     // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
@@ -265,11 +300,58 @@ export function Recibos({ p }: { p: PolizaPortal }) {
     if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
     else if (cuando) partes.push(`último cobrado el ${cuando}`)
   }
-  // Ni un solo dato que enseñar (recibos sin importe ni fecha): no se pinta una
-  // línea vacía, y tampoco «ningún recibo al cobro», que se leería como «nada
-  // que pagar» sin que nadie lo haya comprobado.
-  if (partes.length === 0) return null
-  return <div className="linea">{partes.join(' · ')}</div>
+
+  return (
+    <>
+      {/* Ni un solo dato que enseñar (recibos sin importe ni fecha): no se pinta
+          una línea vacía, y tampoco «ningún recibo al cobro», que se leería como
+          «nada que pagar» sin que nadie lo haya comprobado. */}
+      {partes.length > 0 && <div className="linea">{partes.join(' · ')}</div>}
+      <ul className="recibos">
+        {r.historial.map((rec, i) => {
+          const tono = tonoSituacionRecibo(rec.situacion)
+          const emision = fechaEs(rec.fechaEmision)
+          const vence = fechaEs(rec.fechaVencimiento)
+          return (
+            // La `key` es el índice porque `poliza_recibos.id` NO se pide al
+            // `select`: traerlo solo para esto sería sacar un identificador de
+            // BD a la vista sin que nada de la pantalla lo use.
+            <li className="recibo" key={i} data-tono={tono}>
+              <span className="recibo-importe">
+                {/* `null` = el EIAC no traía un importe legible. Un 0€ inventado
+                    aquí sería un cobro que nadie hizo. */}
+                {rec.importe !== null ? eur(rec.importe) : <span className="pendiente">Sin importe</span>}
+              </span>
+              <span className={tono === 'devuelto' ? 'chip peligro' : tono === 'al-cobro' ? 'chip acento' : 'chip'}>
+                {etiquetaSituacionRecibo(rec.situacion)}
+              </span>
+              <span className="recibo-fechas">
+                {tono === 'al-cobro'
+                  ? vence
+                    ? `Vence el ${vence}`
+                    : 'Sin fecha de vencimiento'
+                  : emision
+                    ? `Emitido el ${emision}`
+                    : 'Sin fecha'}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+      {/* Se DICE que hay anulados fuera de la lista, en vez de que el cliente
+          eche cuentas y le falten. No se enseñan: son extornos y sus
+          re-emisiones, que se cancelan entre sí (los hay de −1.268,18€), y un
+          importe en negativo en esta lista no informa, hace llamar. */}
+      {r.anulados > 0 && (
+        <p className="suave" style={{ margin: '8px 0 0', fontSize: 13 }}>
+          {r.anulados === 1
+            ? 'Hay además un recibo anulado por tu compañía, que no se te cobró.'
+            : `Hay además ${r.anulados} recibos anulados por tu compañía, que no se te cobraron.`}{' '}
+          No se listan porque se cancelan entre sí.
+        </p>
+      )}
+    </>
+  )
 }
 
 /**
@@ -297,5 +379,77 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
       {c.lista.join(' · ')}
       {c.total > c.lista.length && ` y ${c.total - c.lista.length} más`}
     </div>
+  )
+}
+
+/**
+ * El HISTORIAL de siniestros de una póliza.
+ *
+ * Alberto: «y los recibos? e historial siniestros?». No existía — la lectura
+ * filtraba por `abierto|en_tramitacion`, así que de los 67 siniestros de la
+ * cartera viva se veían 7 y **los 60 cerrados no los veía nadie**.
+ *
+ * Los tres estados de la regla de la casa, y aquí importan los tres:
+ *
+ * - `null` = **tu nivel no llega**. No se pinta NADA, ni un «no visible»: a un
+ *   tercero, decirle que hay algo que no puede ver ya le cuenta que existe. Es
+ *   el mismo criterio que los siniestros abiertos (04/09/2026).
+ * - `[]` = **no nos consta ninguno**, que NO es «no has tenido ninguno». La
+ *   compañía los informa por EIAC y puede no haberlo hecho; afirmar lo segundo
+ *   es hablar de la vida de alguien sin haberla mirado. Por eso lleva la
+ *   píldora de hueco y no una frase en gris.
+ * - Con contenido = la lista, de lo más reciente a lo más antiguo.
+ *
+ * 🚨 Lo que NO se pinta, medido: el `tipo` (es un código numérico de la
+ * compañía: 1107, 1915, 1312…) y cualquier fecha de cierre (esa columna no
+ * existe — `updated_at` es la última vez que se tocó la fila, no el día que se
+ * cerró). Ni tramitador ni perito: gestión del corredor, regla de visibilidad.
+ */
+export function HistorialSiniestros({ p }: { p: PolizaPortal }) {
+  if (p.siniestros === null) return null
+  const lista = p.siniestros
+
+  if (lista.length === 0) {
+    return (
+      <p className="hueco">
+        <span className="pendiente">Sin informar</span>
+        No nos consta ningún siniestro en esta póliza. No significa que no hayas tenido ninguno: nos
+        los informa tu compañía.
+      </p>
+    )
+  }
+
+  const r = resumirHistorialSiniestros(lista)
+  return (
+    <>
+      <p className="suave" style={{ margin: '0 0 10px', fontSize: 13 }}>
+        {r.total === 1 ? '1 siniestro' : `${r.total} siniestros`}
+        {r.abiertos > 0 && ` · ${r.abiertos} sin cerrar`}
+      </p>
+      <ul className="siniestros">
+        {lista.map((s) => {
+          const cuando = fechaEs(s.fechaHora)
+          const tono = tonoEstadoSiniestro(s.estado)
+          return (
+            <li key={s.id} className="siniestro" data-tono={tono}>
+              <span className="siniestro-fecha">
+                {/* Es la fecha del HECHO, y se dice cuál es: sin la palabra, en
+                    una lista de siniestros se lee como la de resolución. */}
+                {cuando ? `Ocurrió el ${cuando}` : 'Sin fecha informada'}
+              </span>
+              <span
+                className={`chip${tono === 'abierto' ? ' aviso' : tono === 'rechazado' ? ' peligro' : ''}`}
+              >
+                {etiquetaEstadoSiniestro(s.estado)}
+              </span>
+              {/* La referencia es con lo que la compañía contesta al teléfono
+                  (informada en 67 de 67 de la cartera viva), así que va visible
+                  y en cifras tabulares para poder leerla en voz alta. */}
+              {s.referencia && <span className="siniestro-ref">Ref. {s.referencia}</span>}
+            </li>
+          )
+        })}
+      </ul>
+    </>
   )
 }

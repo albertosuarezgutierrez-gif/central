@@ -36,6 +36,8 @@
 // existe. `confirmadaCima` = CIMA la ha traído (`id_poliza_entidad`); una
 // emitida por nosotros aún sin confirmar se dice como tal.
 import {
+  ordenarHistorialSiniestros,
+  siniestroAbierto,
   autorizacionVigente,
   camposDeAlcances,
   camposVisibles,
@@ -46,6 +48,12 @@ import {
   type Alcance,
   type BienAsegurado,
   type TipoOtorgante,
+  ordenarRecibos,
+  estadoRecibos,
+  resumirRecibos,
+  fechaReciboFiable,
+  type ReciboHistorial,
+  type ResumenRecibos,
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
@@ -54,23 +62,31 @@ import { importeEiac, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '
 import { prisma } from './db'
 import { getIdentidad } from './session'
 
-export type ReciboPortal = {
-  situacion: string
-  /** `null` = el texto del EIAC no tenía forma de importe. No es 0€. */
-  importe: number | null
-  fechaEmision: Date | null
-  fechaVencimiento: Date | null
-  formaPago: string | null
-}
+/**
+ * Un recibo tal y como lo ve el cliente.
+ *
+ * 🚫 **`formaPago` NO está, y no es un olvido:** en la BD es un CÓDIGO del EIAC
+ * —en la cartera viva vale `CC` (117 recibos), `OF` (6) y `TA` (4), y 56 no lo
+ * traen—. `CC` se adivina, `OF` no, y pintar «OF» al lado de un importe es
+ * exactamente el mismo fallo que pintar «Tipo 1107» en un siniestro. No se pide
+ * al `select`, así que no hay nada que se pueda colar en pantalla por descuido.
+ */
+export type ReciboPortal = ReciboHistorial
 
-export type RecibosPortal = {
-  /** `0` = la compañía no ha informado recibos. NO es «al corriente». */
-  total: number
-  /** El siguiente al cobro (emitido/pendiente), el de vencimiento más próximo. */
-  proximoAlCobro: ReciboPortal | null
-  /** Devueltos: el cobro se intentó y falló. */
-  devueltos: number
-  ultimoCobrado: ReciboPortal | null
+export type RecibosPortal = ResumenRecibos & {
+  /**
+   * Qué se le puede decir al cliente. **Tres estados, no dos** — lo decide
+   * `estadoRecibos()` de `@central/module-seguros-portal`, que es donde está
+   * medido por qué: `solo_anulados` son 20 pólizas de las 110 vivas, y con el
+   * resumen anterior no pintaban absolutamente nada.
+   *
+   * 🚨 `sin_informar` significa que **la compañía no ha informado recibos**, y
+   * eso NO es «al corriente»: nadie lo ha comprobado. La pantalla lo dice con
+   * esas palabras porque el silencio se leería como lo contrario.
+   */
+  estado: 'sin_informar' | 'solo_anulados' | 'con_recibos'
+  /** Los que el cliente ve, del más reciente al más antiguo y sin los anulados. */
+  historial: ReciboPortal[]
 }
 
 /**
@@ -127,6 +143,17 @@ export type PolizaPortal = {
   recibos: RecibosPortal | null
   /** `null` = no visible en este nivel. `[]` = no hay ninguno abierto. */
   siniestrosAbiertos: SiniestroPortal[] | null
+  /**
+   * El HISTORIAL entero (los cuatro estados), del más reciente al más antiguo y
+   * con lo que no tiene fecha al final.
+   *
+   * `null` = no visible en este nivel — el MISMO permiso que los abiertos
+   * (`ve.siniestros`), porque un siniestro cerrado sigue siendo un hecho de la
+   * vida de su dueño, no un dato del contrato: si acaso es MÁS personal, porque
+   * es un historial. `[]` = **no nos consta ninguno**, que no es «no has tenido
+   * ninguno»: la compañía los informa por EIAC y puede no haberlo hecho.
+   */
+  siniestros: SiniestroPortal[] | null
   /**
    * QUÉ está asegurado. `cosa` (marca/modelo/matrícula) es dato del CONTRATO y
    * se ve desde el nivel más bajo; `ubicacion` (la dirección del inmueble) es
@@ -187,8 +214,6 @@ const COBERTURAS_EN_CARD = 4
 function nivelDeVinculo(v: string): Nivel {
   return (NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta'
 }
-
-const SITUACIONES_AL_COBRO = new Set(['pendiente', 'emitido'])
 
 export async function carteraDeSesion(): Promise<CarteraPortal | null> {
   const identidad = await getIdentidad()
@@ -363,18 +388,33 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               primaTotal: true,
               fechaEmision: true,
               fechaVencimiento: true,
-              formaPago: true,
+              // 🚨 `formaPago` NO se pide: es un código del EIAC (`CC`/`OF`/`TA`).
+              // Ver la cabecera de `ReciboPortal`.
             },
+            // El orden REAL se hace en código (`ordenarRecibos`): aquí un `desc`
+            // implicaría `NULLS FIRST` y subiría arriba lo que no tiene fecha.
             orderBy: { fechaEmision: 'desc' },
           }),
           prisma.siniestro.findMany({
-            where: { polizaId: { in: polizaIds }, estado: { in: ['abierto', 'en_tramitacion'] } },
+            // 🚨 Sin filtro de estado, y es el cambio (05/09/2026): antes decía
+            // `estado IN ('abierto','en_tramitacion')`, así que de los 67
+            // siniestros de la cartera viva el portal enseñaba 7 y los 60
+            // CERRADOS no los veía nadie. El historial es lo que un cliente
+            // pregunta al renovar.
+            where: { polizaId: { in: polizaIds } },
             select: {
               id: true,
               polizaId: true,
               estado: true,
               referencia: true,
               fechaHora: true,
+              // 🚨 `tipo` NO se pide, y no es un olvido: en la BD es un CÓDIGO
+              // NUMÉRICO de la compañía (`1107`, `1915`, `1312`, `17`…, medido
+              // en la cartera viva el 05/09/2026). «Tipo 1107» no le dice nada
+              // a un cliente y encima parece un dato que significa algo.
+              // Tampoco hay columna con la fecha de CIERRE: `updated_at` es la
+              // última vez que se tocó la fila, no el día que se cerró, y
+              // pintarlo como tal sería inventarse una fecha.
               // Ni tramitador ni perito, a propósito: son gestión del
               // corredor, no dato del cliente (ver `SiniestroPortal`). El cepo
               // `test/regression-portal-visibilidad.test.ts` falla si vuelven,
@@ -401,6 +441,20 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const aPortal = (p: (typeof polizas)[number], ve: CamposVisibles): PolizaPortal => {
     const cobs = coberturasPor.get(p.id) ?? []
     const recs = recibosPor.get(p.id) ?? []
+    // El historial se ordena AQUÍ y no en el `orderBy` de Prisma: en Postgres
+    // un `DESC` implica `NULLS FIRST`, así que los siniestros sin fecha se
+    // colarían arriba y enterrarían los que sí la tienen. Es la misma trampa
+    // que ya mordió en la ficha del corredor (PR #2346).
+    const historial: SiniestroPortal[] | null = ve.siniestros
+      ? ordenarHistorialSiniestros(
+          (siniestrosPor.get(p.id) ?? []).map((x) => ({
+            id: x.id,
+            estado: x.estado,
+            referencia: x.referencia,
+            fechaHora: x.fechaHora,
+          })),
+        )
+      : null
     return {
       id: p.id,
       compania: p.aseguradora,
@@ -430,7 +484,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               .slice(0, COBERTURAS_EN_CARD),
           }
         : null,
-      recibos: ve.recibos ? resumirRecibosPortal(recs) : null,
+      recibos: ve.recibos ? recibosDePoliza(recs) : null,
       // 🚨 `null` = NO VISIBLE EN TU NIVEL. `[]` = no hay ninguno abierto. Son
       // cosas distintas y la UI dice cada una con sus palabras. Hasta el
       // 04/09/2026 esto no miraba `ve` y un tercero con el alcance más bajo
@@ -447,14 +501,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           detalles: ve.bien ? b.detalles : [],
         }
       })(),
-      siniestrosAbiertos: ve.siniestros
-        ? (siniestrosPor.get(p.id) ?? []).map((s) => ({
-            id: s.id,
-            estado: s.estado,
-            referencia: s.referencia,
-            fechaHora: s.fechaHora,
-          }))
-        : null,
+      // Una sola lectura y una sola guarda: los abiertos se DERIVAN del
+      // historial con `siniestroAbierto()`, que es la fuente única del
+      // vocabulario. Dos listas de estados escritas a mano acaban divergiendo
+      // el día que la compañía añada uno, y el síntoma sería que un siniestro
+      // deja de contar como abierto sin que nada falle.
+      siniestros: historial,
+      siniestrosAbiertos: historial === null ? null : historial.filter((s) => siniestroAbierto(s.estado)),
     }
   }
 
@@ -570,26 +623,33 @@ type ReciboFila = {
   primaTotal: string | null
   fechaEmision: Date | null
   fechaVencimiento: Date | null
-  formaPago: string | null
 }
 
-/** Recibe la lista ordenada por emisión descendente. `anulado` no cuenta en ningún cubo. */
-function resumirRecibosPortal(lista: ReciboFila[]): RecibosPortal {
-  const aPortal = (r: ReciboFila): ReciboPortal => ({
+/**
+ * Los recibos de UNA póliza, tal y como los ve el cliente.
+ *
+ * Todo el vocabulario —qué es un anulado, qué está al cobro, qué fecha es de
+ * fiar y en qué orden van— vive en `@central/module-seguros-portal`, que es
+ * donde están medidos los 183 recibos de la cartera viva. Aquí solo se traduce
+ * la fila de la BD.
+ *
+ * 🚨 `estado` se calcula sobre la lista CRUDA (con anulados) y el resto sobre la
+ * limpia: es la única forma de distinguir «la compañía no informó nada» de
+ * «informó y está todo anulado», que eran las 20 pólizas mudas.
+ */
+function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
+  const crudos = lista.map((r) => ({
     situacion: (r.situacion ?? '').trim() || 'sin_informar',
     importe: importeEiac(r.primaTotal),
-    fechaEmision: r.fechaEmision,
-    fechaVencimiento: r.fechaVencimiento,
-    formaPago: r.formaPago,
-  })
-  const alCobro = lista
-    .filter((r) => SITUACIONES_AL_COBRO.has(r.situacion ?? ''))
-    .sort((a, b) => (a.fechaVencimiento?.getTime() ?? Infinity) - (b.fechaVencimiento?.getTime() ?? Infinity))
-  const cobrado = lista.find((r) => r.situacion === 'cobrado')
+    // Las fechas pasan por el filtro de centinelas: hay un recibo con
+    // `fecha_emision` 0001-01-01, que es un «no lo sé» con forma de dato.
+    fechaEmision: fechaReciboFiable(r.fechaEmision),
+    fechaVencimiento: fechaReciboFiable(r.fechaVencimiento),
+  }))
+  const historial = ordenarRecibos(crudos)
   return {
-    total: lista.length,
-    proximoAlCobro: alCobro[0] ? aPortal(alCobro[0]) : null,
-    devueltos: lista.filter((r) => r.situacion === 'devuelto').length,
-    ultimoCobrado: cobrado ? aPortal(cobrado) : null,
+    ...resumirRecibos(historial, crudos.length - historial.length),
+    estado: estadoRecibos(crudos),
+    historial,
   }
 }

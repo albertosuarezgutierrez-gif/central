@@ -50,6 +50,17 @@
   `tiposContactoSugeridos` en `@central/module-seguros` (8 tests): son DOS escrituras y «ficha creada, vínculo
   no» se dice entero para que el siguiente clic no duplique. NO se tocan `tipo`/`lead_estado` (columnas
   heredadas del CRM que la pantalla no usa: escribirlas sería una segunda verdad). PR #2369.
+- **🧾 Los recibos del portal del cliente: el `anulado` no es «no pagado» (05/09/2026).**
+  Segunda mitad de «¿y los recibos? e historial siniestros?». Medido sobre los 183 recibos de la
+  cartera viva: **54 anulados, y 25 de ellos con importe NEGATIVO** (−1.268,18 € frente a +1.268,18 €:
+  extorno y su re-emisión) → fuera de la lista, pero **se dice** que están, que si no al cliente le
+  faltan movimientos al cuadrar con su banco. El hallazgo caro: **20 pólizas de las 110 vivas tenían
+  recibos y todos anulados**, y no pintaban NADA (el `total` los contaba, así que ni salía el hueco ni
+  quedaba nada que enseñar). Ahora son **TRES estados** (`sin_informar` / `solo_anulados` /
+  `con_recibos`) y el estado se calcula sobre la lista CRUDA. También fuera: `forma_pago` (código
+  `CC`/`OF`/`TA`) y la fecha centinela `0001-01-01`. Vocabulario en
+  `module-seguros-portal/src/recibo-historial.ts` (12 tests, 5 mutaciones vistas morder); pantalla en
+  `RecibosDePoliza`, en la ficha y antes de los siniestros. PR #2367.
 
 - **🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio (05/09/2026).**
   Captura suya: «Únete gratis», «Acceso correduría», header montado. Medido en Vercel: el apex `.es` y
@@ -63,6 +74,18 @@
   y CNAME a Vercel · `NEXT_PUBLIC_PORTAL_URL` y `PORTAL_PUBLIC_URL` al dominio nuevo. Hasta entonces
   el botón funciona igual (va a `asegura-portal.vercel.app`). El header roto de la captura es código
   de Manuel, en un repo que el clasificador me bloquea.
+
+- **🔗 Lote 10: los 18 grupos de mismo DNI, resueltos uno a uno (05/09/2026).**
+  Con el índice ya escrito, el criterio fuerte por fin veía la cartera entera. **15 fusiones, 33
+  lápidas, 15 supervivientes** (`fusion-dni-lote10-2026-09-05`) y **ninguna póliza perdida** — 70
+  antes, 70 después. El motor pasa a fusionar grupos de **N** (el del lote 7 solo sabía de pares y
+  saltaba los tríos); los uuid van **escritos a mano** en el lote, no leídos de la foto, porque la
+  foto se recalcula en cada visita y su ordinal no es estable.
+  🚫 **3 grupos NO se tocan, y ahí está el valor:** el 12 (Mejias Heredia / Yolanda Rios) y el 15
+  (Fernando Martin Verdugo / Catalina Verdugo Garcia) son **dos personas** con un DNI mal tecleado,
+  y el 10 es el centinela de 20 fichas. Fuera también «Elisa De paz campo» del grupo 5 (parcial).
+  🔎 El hallazgo bonito: «**Gerente Chapisa (sin apellidos)**» no era una persona sin nombre — mismo
+  DNI y mismo teléfono que **Francisco Javier Zamora Flores**, o sea él.
 
 - **🗄️ Archivar, no borrar: decisión de Alberto sobre las 26.463 fichas sin contacto (05/09/2026).**
   «no la elimines, archívala y pon recordatorio en 6 meses… siempre habrá tiempo de borrarlo». Hecho:
@@ -1297,6 +1320,31 @@
   póliza: la ficha pinta «Cliente (CIMA)» por pólizas vivas. Buscador ya mira los teléfonos secundarios.
 
 ---
+
+### 🗂 (05/09/2026) El historial de siniestros del portal: 60 filas que no veía nadie
+
+Alberto: «y los recibos? e historial siniestros?». La lectura filtraba `abierto|en_tramitacion`, así
+que de 67 siniestros de la cartera viva se enseñaban 7.
+- Módulo puro `siniestro-historial.ts` (9 tests, 2 mutaciones vistas morder); `siniestrosAbiertos`
+  pasa a DERIVARSE del historial → la guarda de nivel queda en un solo sitio.
+- 🚨 Tres medidas contra la BD que cambiaron el diseño: **`tipo` es un código numérico** (1107, 1915…)
+  y no se pinta · **no existe fecha de cierre** (`updated_at` no lo es) · el enum tiene **CUATRO**
+  estados y `rechazado` ≠ `cerrado`.
+- Orden en código, no en `orderBy`: `DESC` en Postgres es `NULLS FIRST` y lo sin fecha se colaría
+  arriba. `[]` = «no nos consta», nunca «no has tenido».
+- Va en la ficha de cada póliza, no en una quinta pestaña (a casi todos les diría 0).
+
+### 🌐 (05/09/2026, IV) `grupoasegura.es` ya sirve la web de venta — y el código creía vivir en el `.com`
+Alberto, con Claude en Chrome, quitó `.es`+`www` del proyecto `asegura` (CRM de Manuel) y los ató a
+`asegura-web`: apex Valid al instante (su A ya era Vercel), `www` como 308 al apex y
+`clientes.grupoasegura.es` en `asegura-portal`, los dos pendientes del DNS de IONOS. Lo que Chrome no veía:
+`SITIO_URL` por defecto era `grupoasegura.com`, que apunta a un **parking de IONOS** (`217.160.0.254`) →
+canonical y sitemap hacia un dominio vacío. Defecto cambiado al `.es` + guardián `lib/sitio.test.ts`
+(muerde: 2 fallos con el `.com`). ⚠️ `clientes` tiene MX de IONOS: ahí va registro **A** `216.150.1.1`,
+no el CNAME del panel. ✅ DNS ya puesto en IONOS y los tres dominios en **Valid Configuration**; los MX de
+`clientes` siguen en pie. Pendiente de Alberto: las envs `NEXT_PUBLIC_PORTAL_URL`/`PORTAL_PUBLIC_URL` + redeploy
+— ⚠️ el `ignoreCommand` corre **también en un redeploy**, así que un «Canceled by Ignored Build Step» deja la
+env sin aplicar con el mismo aspecto que un despliegue bueno: hay que ver el deployment llegar a **Ready**.
 
 ### 🚪 (05/09/2026) El portal pedía el código «cada vez»: no era la sesión, era la puerta
 
