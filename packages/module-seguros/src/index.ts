@@ -451,3 +451,6 @@ export type {
   ExportRgpd,
   EntradaExport,
 } from './export-rgpd.ts'
+
+export { ordenPolizasFicha } from './orden-polizas.ts'
+export type { PolizaOrdenable } from './orden-polizas.ts'
