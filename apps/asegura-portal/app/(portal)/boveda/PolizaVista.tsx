@@ -212,11 +212,17 @@ export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
   const mailto = `mailto:${CORREO_CORREDURIA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
 
   return (
-    <div className="aviso-linea">
-      <strong>
+    // 🚨 En tono NEGATIVO y con título propio, no en el ámbar de un aviso más:
+    // es lo único de esta pantalla que puede dejar a alguien sin cobertura sin
+    // que se entere. El resto de la tarjeta son datos; esto es una alarma.
+    <div className="alarma" role="alert">
+      <p className="alarma-titulo">
         {devueltos === 1 ? 'Tienes un recibo devuelto' : `Tienes ${devueltos} recibos devueltos`}
-      </strong>{' '}
-      — el cobro se intentó y no salió. Mientras no se regularice, la compañía puede dejar de cubrirte.
+      </p>
+      <p>
+        El cobro se intentó y no salió. Mientras no se regularice, la compañía puede dejar de
+        cubrirte.
+      </p>
       <a className="boton" href={mailto}>
         Avisar a la correduría
       </a>
@@ -236,7 +242,12 @@ export function Recibos({ p }: { p: PolizaPortal }) {
   if (p.recibos === null) return null
   const r = p.recibos
   if (r.total === 0) {
-    return <div className="linea dicho">Tu compañía no nos ha informado de ningún recibo.</div>
+    return (
+      <p className="hueco">
+        <span className="pendiente">Sin informar</span>
+        Tu compañía no nos ha informado de ningún recibo. No significa que estés al corriente.
+      </p>
+    )
   }
 
   const partes: string[] = []
@@ -269,7 +280,13 @@ export function Recibos({ p }: { p: PolizaPortal }) {
 export function Coberturas({ p }: { p: PolizaPortal }) {
   if (p.coberturas === null) return null
   const c = p.coberturas
-  if (c.total === 0) return <div className="linea dicho">No nos consta el detalle de coberturas.</div>
+  if (c.total === 0)
+    return (
+      <p className="hueco">
+        <span className="pendiente">Sin informar</span>
+        No nos consta el detalle de tus coberturas. No significa que no las tengas.
+      </p>
+    )
   // `total > 0` con la lista vacía = las coberturas vienen sin descripción ni
   // código. Se dice cuántas hay, que es lo único cierto.
   if (c.lista.length === 0) {

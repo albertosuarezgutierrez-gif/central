@@ -151,6 +151,53 @@ Ahora el ancho y la navegación son del armazón y la página solo aporta conten
 14 el cuerpo, 12 lo secundario, ritmo vertical de 24 px, `tabular-nums` en todo lo numérico,
 botones en **píldora** y anillo de foco de 3 px al 50 %.
 
+### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
+
+Alberto: *«cliente por codigo es un poco coñazo»* y, al preguntarle si le pedía el código cada vez o
+solo la primera: **«cada vez q entra»**.
+
+**No era la sesión: era la puerta.** `app/page.tsx` era el formulario —un componente de CLIENTE— así
+que la raíz **nunca miraba la cookie**. Quien tenía su sesión de 30 días perfectamente viva veía
+igualmente «tu@email.com · Enviarme un código». No fallaba nada; simplemente nadie preguntaba quién
+eras. Ahora `page.tsx` es un componente de SERVIDOR que resuelve `getIdentidad()` y redirige a
+`/boveda`; el formulario vive en `app/Entrada.tsx`.
+
+🚨 **Y por eso NO se hizo el enlace que canjea solo al abrirse**, que era lo que Alberto pedía. Su
+queja era real y esta es la respuesta buena: quien ya entró **no ve ninguna pantalla de acceso**
+durante 30 días. La otra opción —que el enlace del correo abra sesión con el clic— sigue descartada:
+los sandboxes de correo que renderizan la página con un navegador de verdad **ejecutan el
+JavaScript**, se comerían el código y al usuario le saldría `ya_usado`, que parece culpa suya. Un
+auto-POST reduce el riesgo, no lo elimina; arreglar la puerta lo elimina entero.
+
+📌 **El argumento del reenvío NO vale para descartarlo**, y conviene tenerlo claro para no repetir un
+razonamiento falso: «quien reenvíe el correo entraría» es cierto, pero **el código va en ese mismo
+correo**, así que ese riesgo ya existe. Lo único que distingue al enlace mágico es el escáner.
+
+Dos cepos nuevos en `test/regression-portal-enlace-acceso.test.ts` (mutaciones vistas morder): la
+raíz no puede ser `'use client'` y tiene que llamar a `getIdentidad()` y redirigir. Y **dos guardianes
+siguieron al fichero movido** (`…-enlace-acceso` y `…-consentimiento` leen ahora `Entrada.tsx`): si
+alguien devuelve el formulario a `page.tsx`, el `leer()` falla y se entera.
+
+### 🎨 «No lo sabemos» ya tiene forma propia
+
+El portal tenía la doctrina de los tres estados escrita en la capa de datos y **ni un píxel que la
+expresara**: «tu compañía no nos ha informado de ningún recibo» se pintaba con el mismo gris de 13 px
+que el resto. A alguien de 60 años eso se le lee como «todo en orden».
+
+- **`.pendiente`** — píldora de **borde discontinuo**, portada del `Pendiente` de `apps/plataforma`.
+  Discontinuo = «esto se rellenará»; el resto de la interfaz usa borde sólido para datos cerrados. El
+  color va en `--muted` y **no** en `--border`: de noche `--border` sobre el panel es casi invisible,
+  y un aviso invisible no es un aviso.
+- **`.alarma`** — el recibo devuelto sube del ámbar de `.aviso-linea` a tono **negativo con título**.
+  Es lo único de la pantalla que puede dejar a alguien sin cobertura sin que se entere.
+- **Filete izquierdo por ESTADO** en la fila (`data-estado`), además del de «es de otro». Sin estado
+  no hay filete: pintar todas las filas de un color deja de significar nada.
+
+📌 Del inventario de `apps/plataforma` se descartó a propósito: la barra de filtros, el buscador, la
+paginación, la densidad de tabla (`min-width:880`), los contadores en la navegación, `lucide-react`
+(el portal ya hace lo mismo con 4 trazos SVG en línea a `strokeWidth 1.75`) y el `title=` como único
+portador de la explicación — **`title` no existe en táctil**, y aquí el texto va visible.
+
 ### La bóveda es una LISTA, y cada póliza tiene su FICHA
 
 Alberto, mirando la pantalla ya rediseñada: *«muy sucia la página… resumen de lo q es, icono de
