@@ -63,6 +63,22 @@
   impreso es un dato en papel**, justo lo que el QR existe para evitar. Se imprime solo la tarjeta
   —monograma, marca con DGSFP, «Tus seguros» y el QR a 200 px—; en pantalla no cambia nada. Aviso en
   la página de qué se imprime, para que la vista previa no parezca un fallo. PR pendiente de su OK.
+- **📵 El CUARTO sitio donde vive un contacto, y la pestaña Contactos apretada (05/09/2026).** PR #2391
+  (mergeado, `9d822946`) + PR nuevo. Alberto, mirando la pantalla: «grupo elca ya tiene a pablo y aun
+  aparece», «Studium tiene a victor y berta» — estaban en `cliente_relaciones`, que la consulta de
+  «Clientes sin canal» no miraba. **Medido contra la BD: 18 sin nada en su ficha · 14 ilocalizables con
+  los tres sitios de antes · SEIS con el cuarto.** (En pantalla ponía 16: cifra anterior al lote 10.)
+  🚨 Y una corrección de CRITERIO suya, no de código: «un cliente puede ser muy mayor... es mejor
+  contactar con el familiar» — el familiar NO es un contacto de segunda, así que un solo estado y **viaja
+  el parentesco** («Llama a Pablo Franco Ruz (administración)»). La consulta busca en las DOS direcciones
+  porque el volcado no respeta el convenio «A→B = B es <tipo> de A». Los SEIS restantes son trabajo de
+  Alberto; uno se llama «NO DISPONIBLE NO DISPONIBLE» y es un centinela, no un cliente sin datos.
+  🎨 «Contactos está muy mal aprovechada, ocupa todo mucho»: el coste FIJO de la pestaña era ~1.245px
+  (~1,8 pantallas de móvil) de marco y formulario vacío en la pantalla que se abre para LEER un teléfono.
+  Queda en ~310px: teléfonos/correos/dirección arriba como chips (`tel:`/`mailto:`/WhatsApp; la dirección
+  no se leía en ningún sitio, vivía como `value` de un input) y `EditarCliente` plegado con montaje
+  perezoso — **con badge en el rótulo de lo que no se ha podido leer ahí dentro, que plegar no puede
+  esconder trabajo**. Sin medir en navegador (no hay Playwright ni BD aquí): va con `[preview]`.
 
 - **✉️ «Invitar por correo»: la autorización pendiente ya se la cuenta alguien (05/09/2026).** Anotar
   que ELCA autoriza a Pablo dejaba la fila `pendiente` y **nadie avisaba a Pablo**: o Alberto escribía
