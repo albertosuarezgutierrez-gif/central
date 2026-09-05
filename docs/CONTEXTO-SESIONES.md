@@ -80,6 +80,18 @@
   perezoso — **con badge en el rótulo de lo que no se ha podido leer ahí dentro, que plegar no puede
   esconder trabajo**. Sin medir en navegador (no hay Playwright ni BD aquí): va con `[preview]`.
 
+- **🔍 Agente de SEO y redes para la correduría + backlog medido (05/09/2026).** Mergeado #2380
+  (`VERSION_TEXTOS_WEB`). Creada la skill **`seo-asegura`** (SEO, contenido y redes de
+  `grupoasegura.es`; rutina semanal pendiente) y el backlog `docs/ASEGURA-SEO-REDES-IDEAS.md` con la
+  auditoría técnica ya medida por subagentes: **cero imagen Open Graph** en toda la app (cada enlace
+  compartido sale sin imagen), `/cambiar-de-correduria` —la página de más intención— sin «Sevilla» en
+  title ni H1, las 6 páginas de ramo son callejones sin salida, `sitemap.lastModified` es la fecha del
+  build (frescura falsa), y `seo.ts:45` teclea la dirección a mano en vez de leerla de `MEDIADOR`.
+  Y `apps/plataforma/app/seguros` **sigue viva e indexable** compitiendo por las mismas consultas.
+  Dos correcciones al plan: el `info@`→`hola@` ya estaba **hecho** en `asegura-web` (lo daba por
+  abierto), y **Mapfre no lleva 5 meses sin ingesta: nunca ha entrado por el cron** (sus 153 recibos
+  tienen una sola fecha de creación, la del volcado; Allianz y Occident sí siguen entrando). Es el
+  64 % de la cartera, así que la comparación hogar-vs-auto puede estar sesgada → `agente-correduria`.
 - **✉️ «Invitar por correo»: la autorización pendiente ya se la cuenta alguien (05/09/2026).** Anotar
   que ELCA autoriza a Pablo dejaba la fila `pendiente` y **nadie avisaba a Pablo**: o Alberto escribía
   el correo a mano, o se caducaba sola a los 90 días. Botón en la fila de la persona (solo si está
