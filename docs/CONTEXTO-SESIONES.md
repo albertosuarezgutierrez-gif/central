@@ -45,6 +45,39 @@
   si ese WhatsApp es suyo o de Plus Ultra · poner `OPENROUTER_API_KEY` en el proyecto Vercel `asegura-portal`
   (sin ella la lectura de pólizas subidas devuelve «no hemos podido leer» SIEMPRE).
 
+- **👁️ Vigía de COBERTURA de los mensajes a huéspedes + el estado `omitido`, declarado (05/09/2026).**
+  El latido decía «5 reservas · 0 debidos · 0 enviados» exactamente igual con el ciclo roto por dos
+  sitios, así que ahora se vigila el RESULTADO, no el mecanismo: `mensajes-prog/cobertura.ts` (puro,
+  13 tests) canta quién entra en ≤2 días sin que le haya salido nada, el piso sin fila en
+  `mensajes_prog_pisos` (el caso del Dúplex) y los hitos en sombra de un piso ya activo. Telegram
+  `pisos.mensajes-cobertura` (catalogado), dedupe por hallazgo y día en `mensajes_prog_avisos`
+  (migración aplicada). Y el `omitido` que se puso a mano esa mañana deja de funcionar de casualidad:
+  `ESTADOS_HITO` + `cubreAlHuesped()` con sus tests, contado en `/apartamentos`. PR pendiente.
+
+- **🚨 HALLAZGO AJENO al mirar los logs: el vigía de agentes lleva desde el 03/09 sin poder guardar
+  NADA (05/09/2026).** Los runtime errors de plataforma traen ~30 líneas idénticas en
+  `/api/cron/agentes-latido`: `column "evaluado_at" of relation "agente_salud" does not exist` (P2010),
+  una por agente vigilado, cada día desde el 03/09 07:45 UTC. Causa medida: la migración
+  `prisma/sql/2026-09-02_agente_salud.sql` **nunca se aplicó** y su `CREATE TABLE IF NOT EXISTS` no
+  hizo nada porque YA existía una `agente_salud` distinta, la del `2026-07-12` — comprobado en BD, sus
+  columnas son `id, agente, ok, dias_caido, detalle, ultimo_ok, ultima_alerta_ts, cuenta_id,
+  actualizado_at`, ni rastro de `evaluado_at`. O sea, dos esquemas con el mismo nombre y el código
+  escribiendo contra el que no está. Es exactamente el fallo que el comentario de esa migración dice
+  querer evitar: el veredicto diario de los 30 agentes se calcula y se tira, y `/operador/agentes` no
+  lo puede leer. **No se toca sin decidirlo**: la tabla vieja existe y hay que elegir entre añadir
+  columnas o renombrarla, y eso es producción. Pendiente de Alberto.
+
+- **✅ Modo noche MERGEADO y comprobado en BD (05/09/2026).** PR #2312 en `main` (`2458f5f7`),
+  20/20 checks verdes y los 12 proyectos Vercel en `Ignored` (cero minutos de build; los comentarios
+  intermedios decían «Building», que es el falso positivo ya documentado — el estado que vale es el
+  final). Comprobado contra la Supabase compartida: las tres columnas existen con el tipo esperado
+  (`urgente_nocturno` NOT NULL DEFAULT false) y **la consulta EXACTA del barrido corre y devuelve 0
+  filas**, que es lo que debe devolver sin urgencias pendientes. 284/284 tests sobre `main`.
+  ⏳ **Lo que NO se ha probado y hay que decirlo:** el disparo real. `acusarNocturno` solo entra si
+  escala un mensaje entre las 21:00 y las 09:00, y esto se mergeó a las 09:47 de la mañana — no hay
+  forma de provocarlo sin escribirle a un huésped de verdad. La primera noche con un escalado es la
+  prueba; se mira `mensajes_pendientes_tg.acuse_nocturno_at` y el Telegram.
+
 - **🌙 MODO NOCHE del agente de huéspedes: el silencio de 21:00 a 09:00 deja de ser invisible (05/09/2026).**
   Alberto pidió «que a partir de las 21h el agente sea 100% autónomo». Se hizo lo contrario y se explicó
   por qué: `auto.ts` YA no mira la hora (lo apoyado en fuente sale solo a las 3 de la mañana), así que

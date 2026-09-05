@@ -381,6 +381,14 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Dos veces por hora',
   },
   {
+    // Aviso APARTE del anterior a propósito: aquel cuenta lo que SÍ salió y se puede silenciar sin
+    // perder nada; este dice quién llega SIN sus instrucciones, que es lo que no se puede callar.
+    id: 'pisos.mensajes-cobertura', categoria: 'pisos',
+    titulo: 'Huéspedes sin sus instrucciones de acceso',
+    que: 'Quién entra en los próximos días sin que le haya salido nada, y los pisos que no están recibiendo el ciclo.',
+    cuando: 'Solo cuando lo hay (una vez por caso y día)',
+  },
+  {
     id: 'pisos.reserva-vigia', categoria: 'pisos',
     titulo: 'Reserva de Booking que no está en Smoobu',
     que: 'El vigía compara los avisos de Booking con Smoobu y canta los agujeros (y cuándo se resuelven).',
