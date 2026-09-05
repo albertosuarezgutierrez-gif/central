@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-05T13:31:29Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-05T13:56:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 39 skills · 1282 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 39 skills · 1284 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -25,8 +25,8 @@
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
-- **Tablas (15):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_supresion, seguros.portal_vinculo
-- **Rutas API:** 17
+- **Tablas (17):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_supresion, seguros.portal_vinculo
+- **Rutas API:** 19
 ### asegura-web
 - **Módulos que usa:** module-seguros
 - **Capacidades:** —
@@ -261,6 +261,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/09/2026) 🧲 La hoja de la nevera y su QR: existe
 - (05/09/2026) 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra: fuera una pestaña
 - (05/09/2026) 👥 UNA lista de personas por ficha: se funden 👤 y 👪
 - (05/09/2026) 👤 Persona de contacto de una empresa: se crea su FICHA, no un campo
@@ -270,5 +271,4 @@
 - (05/09/2026) 🗄️ Archivar, no borrar: decisión de Alberto sobre las 26.463 fichas sin contacto
 - (05/09/2026) 📵 La cartera del volcado NO trae contacto: 26.810 fichas sin teléfono ni correo
 - (05/09/2026) 🃏 El backfill se ejecutó, y el centinela no eran 20 fichas: eran 5.636
-- (05/09/2026) 🃏 El backfill del DNI: no había botón, y apareció un DNI CENTINELA en 20 fichas
 
