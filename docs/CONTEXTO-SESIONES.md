@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 HALLAZGO AJENO al mirar los logs: el vigía de agentes lleva desde el 03/09 sin poder guardar
+  NADA (05/09/2026).** Los runtime errors de plataforma traen ~30 líneas idénticas en
+  `/api/cron/agentes-latido`: `column "evaluado_at" of relation "agente_salud" does not exist` (P2010),
+  una por agente vigilado, cada día desde el 03/09 07:45 UTC. Causa medida: la migración
+  `prisma/sql/2026-09-02_agente_salud.sql` **nunca se aplicó** y su `CREATE TABLE IF NOT EXISTS` no
+  hizo nada porque YA existía una `agente_salud` distinta, la del `2026-07-12` — comprobado en BD, sus
+  columnas son `id, agente, ok, dias_caido, detalle, ultimo_ok, ultima_alerta_ts, cuenta_id,
+  actualizado_at`, ni rastro de `evaluado_at`. O sea, dos esquemas con el mismo nombre y el código
+  escribiendo contra el que no está. Es exactamente el fallo que el comentario de esa migración dice
+  querer evitar: el veredicto diario de los 30 agentes se calcula y se tira, y `/operador/agentes` no
+  lo puede leer. **No se toca sin decidirlo**: la tabla vieja existe y hay que elegir entre añadir
+  columnas o renombrarla, y eso es producción. Pendiente de Alberto.
+
 - **✅ Modo noche MERGEADO y comprobado en BD (05/09/2026).** PR #2312 en `main` (`2458f5f7`),
   20/20 checks verdes y los 12 proyectos Vercel en `Ignored` (cero minutos de build; los comentarios
   intermedios decían «Building», que es el falso positivo ya documentado — el estado que vale es el
