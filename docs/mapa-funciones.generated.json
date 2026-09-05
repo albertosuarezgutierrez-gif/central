@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-05T11:52:05Z",
-  "sha": "eda35a78d8867fd8e0aaac545e60fc940fbc9f8f",
+  "generadoEn": "2026-09-05T13:14:17Z",
+  "sha": "a0e90c02f8c36314a499d6dd55fc7bb3bcf81f49",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3646,7 +3646,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 49,
+          "linea": 50,
           "resumen": "La ficha de UNA póliza de la cartera. ───────────────────────────────────────────────────────────────────────────── 🚨 EL ID DE LA URL NO CONSULTA NADA. Esta es la línea entera de esta página. Una rut"
         },
         {
@@ -3655,13 +3655,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 175,
+          "linea": 199,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a674102bca95"
+      "hash": "05e34530b828"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -3673,8 +3673,9 @@
         "BienDeclarada",
         "Bien",
         "AvisoReciboDevuelto",
-        "Recibos",
-        "Coberturas"
+        "RecibosDePoliza",
+        "Coberturas",
+        "HistorialSiniestros"
       ],
       "funciones": [
         {
@@ -3683,7 +3684,7 @@
           "exportada": true,
           "params": "{ ramo }: { ramo: string | null }",
           "retorno": null,
-          "linea": 78
+          "linea": 88
         },
         {
           "nombre": "tituloDePoliza",
@@ -3691,7 +3692,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "string",
-          "linea": 109,
+          "linea": 119,
           "resumen": "El titular de una fila: **qué cosa es**, no de qué compañía. Nadie se sabe su número de póliza y a casi nadie le dice nada «Occident» a secas cuando tiene dos con ellos. Lo que reconoce es su coche y "
         },
         {
@@ -3700,7 +3701,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "boolean",
-          "linea": 115,
+          "linea": 125,
           "resumen": "¿El titular de la fila ya es el bien? Decide qué queda para la segunda línea."
         },
         {
@@ -3709,7 +3710,7 @@
           "exportada": true,
           "params": "{ ramo, matricula, referenciaCatastral, datosRamo, }: { ramo: string | null matricula: string | null referenciaCatastral: string | null datosRamo: Record<string, unknown> | null }",
           "retorno": null,
-          "linea": 129,
+          "linea": 139,
           "resumen": "Lo mismo para una póliza que ha aportado la propia persona. La matrícula vive en su COLUMNA (se consulta y se indexa) y el resto en el `datos_ramo`, así que se juntan antes de describir — `describirBi"
         },
         {
@@ -3718,7 +3719,7 @@
           "exportada": true,
           "params": "{ bien }: { bien: BienAsegurado }",
           "retorno": null,
-          "linea": 168,
+          "linea": 178,
           "resumen": "QUÉ está asegurado: el coche, el piso. 🚨 No pinta NADA cuando no hay dato, y eso es deliberado: `null` aquí significa «la compañía no nos lo ha informado» **o** «tu nivel no lo ve», y ninguna de las "
         },
         {
@@ -3727,16 +3728,16 @@
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 198
+          "linea": 208
         },
         {
-          "nombre": "Recibos",
+          "nombre": "RecibosDePoliza",
           "kind": "function",
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 241,
-          "resumen": "Recibos, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`. - `recibos === null` → el nivel de esta persona no enseña recibos. No es una ausencia del dato: se oculta y no se menciona. - `to"
+          "linea": 262,
+          "resumen": "TODO el bloque de recibos de una póliza, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`. Es **un solo componente a propósito**: los tres estados de abajo se deciden en un único sitio. Pa"
         },
         {
           "nombre": "Coberturas",
@@ -3744,13 +3745,22 @@
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 280,
+          "linea": 362,
           "resumen": "Coberturas. `null` = el nivel no las enseña (se oculta); `total === 0` = **no nos consta el detalle**, que NO es «no tienes coberturas»: decirle eso a alguien que sí las tiene es empujarle a contratar"
+        },
+        {
+          "nombre": "HistorialSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ p }: { p: PolizaPortal }",
+          "retorno": null,
+          "linea": 408,
+          "resumen": "El HISTORIAL de siniestros de una póliza. Alberto: «y los recibos? e historial siniestros?». No existía — la lectura filtraba por `abierto|en_tramitacion`, así que de los 67 siniestros de la cartera v"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c37eff1433aa"
+      "hash": "8ccf6c7ceace"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx",
@@ -5001,7 +5011,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 187,
+          "linea": 214,
           "resumen": "`nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo."
         },
         {
@@ -5010,7 +5020,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CarteraPortal | null>",
-          "linea": 193
+          "linea": 218
         },
         {
           "nombre": "carteraDeIdentidad",
@@ -5018,21 +5028,21 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<CarteraPortal>",
-          "linea": 199
+          "linea": 224
         },
         {
-          "nombre": "resumirRecibosPortal",
+          "nombre": "recibosDePoliza",
           "kind": "function",
           "exportada": false,
           "params": "lista: ReciboFila[]",
           "retorno": "RecibosPortal",
-          "linea": 577,
-          "resumen": "Recibe la lista ordenada por emisión descendente. `anulado` no cuenta en ningún cubo."
+          "linea": 640,
+          "resumen": "Los recibos de UNA póliza, tal y como los ve el cliente. Todo el vocabulario —qué es un anulado, qué está al cobro, qué fecha es de fiar y en qué orden van— vive en `@central/module-seguros-portal`, q"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f6777d092270"
+      "hash": "44c0c4c38e68"
     },
     {
       "ruta": "apps/asegura-portal/lib/catastro-sugerencias.ts",
@@ -6559,13 +6569,13 @@
           "exportada": true,
           "params": "ruta: string",
           "retorno": "string",
-          "linea": 45,
+          "linea": 53,
           "resumen": "URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d8d1a15e6589"
+      "hash": "da9c5c99024f"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
@@ -56604,17 +56614,17 @@
           "exportada": true,
           "params": "{ ficha, personas }: { ficha: Ficha /** `null` = asegura no pudo leer quién interviene; NO es «no hay nadie». */ personas: PersonaDePolizas[] | null }",
           "retorno": null,
-          "linea": 32,
-          "resumen": "Con quién se habla de esta ficha: sus datos, quién sale en sus pólizas y qué vínculos están declarados. Los tres bloques viven juntos a propósito: la pregunta que traen es la misma («¿a quién llamo y "
+          "linea": 42,
+          "resumen": "Con quién se habla de esta ficha: **una sola lista de personas** y los datos de la propia ficha. 🚨 Hasta el 05/09/2026 eran DOS tarjetas —👤 quién sale en sus pólizas (lo que dice CIMA) y 👪 los vínc"
         },
         {
-          "nombre": "PersonasPolizas",
+          "nombre": "tipoPersonaDe",
           "kind": "function",
           "exportada": false,
-          "params": "{ ficha, personas }: { ficha: Ficha; personas: PersonaDePolizas[] | null }",
-          "retorno": null,
-          "linea": 71,
-          "resumen": "Con quién se puede hablar de esta ficha, agrupado por PERSONA y no por póliza: GLOBAL 2 tiene tres furgonetas con tres conductores distintos y esa gente estaba enterrada póliza por póliza. Quién sale "
+          "params": "ficha: Ficha",
+          "retorno": "'fisica' | 'juridica' | null",
+          "linea": 132,
+          "resumen": "Qué es la ficha, para ofrecer primero los vínculos de empresa en una sociedad. Solo se afirma con lo que asegura manda: `null` es «no se sabe», y adivinarlo por el nombre es justo lo que la regla de i"
         },
         {
           "nombre": "Papel",
@@ -56622,7 +56632,7 @@
           "exportada": false,
           "params": "{ papel, quien, linea, ocupado, onQuitar }: { papel: { rol: string; etiqueta: string | null } quien: string linea: Coincidencia ocupado: string | null onQuitar: (fila: IntervinienteFicha, quien: string, dondePoliza: string) => void }",
           "retorno": null,
-          "linea": 181,
+          "linea": 141,
           "resumen": "Un papel («conductor ocasional del 1234ABC») con lo que se puede hacer con él."
         },
         {
@@ -56631,23 +56641,23 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaQuitarInterviniente, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 241
+          "linea": 201
         },
         {
           "nombre": "lineaDe",
           "kind": "function",
           "exportada": false,
-          "params": "persona: PersonaDePolizas, rol: string, etiqueta: string | null, filas: IntervinienteFicha[], idsPorEtiqueta: Map<string, string[]>,",
+          "params": "persona: PersonaMinima, rol: string, etiqueta: string | null, filas: IntervinienteFicha[], idsPorEtiqueta: Map<string, string[]>,",
           "retorno": "Coincidencia",
-          "linea": 279
+          "linea": 239
         },
         {
           "nombre": "esLaMisma",
           "kind": "function",
           "exportada": false,
-          "params": "fila: IntervinienteFicha, persona: PersonaDePolizas",
+          "params": "fila: IntervinienteFicha, persona: PersonaMinima",
           "retorno": "boolean",
-          "linea": 303,
+          "linea": 263,
           "resumen": "¿Esta fila es de esta persona? Identificador primero (la ficha enlazada) y solo se cae al nombre cuando NINGUNA de las dos lo tiene. Dos fichas distintas no se funden jamás, coincida lo que coincida e"
         },
         {
@@ -56656,15 +56666,15 @@
           "exportada": false,
           "params": "n: string | null",
           "retorno": "string | null",
-          "linea": 310
+          "linea": 270
         },
         {
           "nombre": "papelesDe",
           "kind": "function",
           "exportada": false,
-          "params": "p: PersonaDePolizas",
+          "params": "p: { papeles: { rol: string; polizas: string[] }[] }",
           "retorno": "",
-          "linea": 316,
+          "linea": 276,
           "resumen": "Los papeles de una persona, uno por póliza (que es la unidad que se quita)."
         },
         {
@@ -56673,22 +56683,13 @@
           "exportada": false,
           "params": "ficha: Ficha",
           "retorno": "Map<string, string[]>",
-          "linea": 328,
+          "linea": 288,
           "resumen": "Etiqueta de póliza → sus ids. Es una lista porque dos pólizas pueden rotularse igual."
-        },
-        {
-          "nombre": "candidatasAVincular",
-          "kind": "function",
-          "exportada": false,
-          "params": "personas: PersonaDePolizas[] | null",
-          "retorno": "",
-          "linea": 344,
-          "resumen": "Las personas de sus pólizas a las que SE PUEDE declarar un vínculo hoy: tienen ficha propia y no tienen ninguno anotado. Sin ficha no hay a quién vincular, y con vínculo ya no hace falta ofrecerlo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e76ddccb83c0"
+      "hash": "c4dfc2300210"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabPolizas.tsx",
@@ -57407,7 +57408,7 @@
           "exportada": true,
           "params": "{ pendientes }: { pendientes: number }",
           "retorno": null,
-          "linea": 24,
+          "linea": 31,
           "resumen": "El botón que escribe el índice de búsqueda por DNI (paso 3 del backfill). 🚨 Existe desde el 05/09/2026 porque hasta ese día NO HABÍA NINGUNO. La pantalla calculaba el plan y decía «se lanza desde ase"
         },
         {
@@ -57416,7 +57417,7 @@
           "exportada": false,
           "params": "{ r }: { r: EscrituraBackfillDni }",
           "retorno": null,
-          "linea": 76
+          "linea": 89
         },
         {
           "nombre": "Nota",
@@ -57424,12 +57425,12 @@
           "exportada": false,
           "params": "{ children, alerta }: { children: React.ReactNode; alerta?: boolean }",
           "retorno": null,
-          "linea": 100
+          "linea": 116
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "825bc01516a4"
+      "hash": "6220fc2aad16"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/page.tsx",
@@ -57467,6 +57468,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4208c09033bb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/pendientes.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "quedanPorEscribir"
+      ],
+      "funciones": [
+        {
+          "nombre": "quedanPorEscribir",
+          "kind": "function",
+          "exportada": true,
+          "params": "segunElPlan: number, resultado: EscrituraBackfillDni | null,",
+          "retorno": "number",
+          "linea": 21,
+          "resumen": "Cuántos índices quedan por escribir, mirando el dato más FRESCO que haya. 🚨 Por qué no basta con la cifra del plan (05/09/2026, visto por Alberto en la pantalla): esa cifra se calcula al CARGAR la pá"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e8a588cd550a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/NuevoCliente.tsx",
@@ -58020,10 +58042,19 @@
           "nombre": "Relaciones",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, nombreFicha, inicial, sinVinculo = [], }: { clienteId: string nombreFicha: string inicial: RelacionCartera[] | null /** Personas que salen en SUS pólizas, con ficha propia y sin vínculo anotado. * Se ofrecen aquí para declararl",
+          "params": "{ clienteId, nombreFicha, inicial, personas = null, renderPapeles, tipoPersona = null, }: { clienteId: string nombreFicha: string inicial: RelacionCartera[] | null /** Qué es la ficha de la que cuelga el contacto. Solo ordena los tipos que ",
           "retorno": null,
-          "linea": 55,
+          "linea": 72,
           "resumen": "Relaciones de un cliente de la correduría (cónyuge, hijos, empresa…) y la AUTORIZACIÓN para ver los seguros del otro, desde la ficha de plataforma. Semántica (fijada en `@central/module-seguros/relaci"
+        },
+        {
+          "nombre": "FilaPersona",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: { p: PersonaFicha<RelacionCartera> nombreFicha: string ocupado: string | null renderPapeles?: (p: PersonaFicha<RelacionCartera>) => ",
+          "retorno": null,
+          "linea": 306,
+          "resumen": "UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada). Antes eran dos tarjetas separadas y la misma"
         },
         {
           "nombre": "Vinculo",
@@ -58031,7 +58062,8 @@
           "exportada": false,
           "params": "{ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo }: { r: RelacionCartera nombreFicha: string ocupado: string | null onAutorizar: ( r: RelacionCartera, autoriza: boolean, extra?: { alcance: AlcancePortal; tituloRepresentacion:",
           "retorno": null,
-          "linea": 240
+          "linea": 416,
+          "resumen": "Lo que hemos anotado NOSOTROS sobre esa persona: qué es de la ficha y si está autorizada a ver sus seguros. Ya no pinta el nombre ni su propio `<li>`: vive dentro de la fila de la persona, debajo de l"
         },
         {
           "nombre": "CambiarTipo",
@@ -58039,7 +58071,7 @@
           "exportada": false,
           "params": "{ r, enCurso, onCambiarTipo }: { r: RelacionCartera enCurso: boolean onCambiarTipo: (r: RelacionCartera, tipo: string) => void }",
           "retorno": null,
-          "linea": 356,
+          "linea": 534,
           "resumen": "«Cambiar el tipo» de un vínculo que ya existe. Va PLEGADO y en tono sutil a propósito: corregir una etiqueta es raro comparado con autorizar o quitar, y un desplegable abierto en cada vínculo conviert"
         },
         {
@@ -58048,7 +58080,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha, enCurso, onAutorizar }: { r: RelacionCartera nombreFicha: string enCurso: boolean onAutorizar: ( r: RelacionCartera, autoriza: boolean, extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | n",
           "retorno": null,
-          "linea": 410,
+          "linea": 588,
           "resumen": "El alta de una autorización cuando la ficha es una SOCIEDAD. Lo que se delega no es consentimiento de datos personales —una sociedad no los tiene— sino REPRESENTACIÓN mercantil, y por eso aquí sí cabe"
         },
         {
@@ -58057,25 +58089,25 @@
           "exportada": false,
           "params": "{ a, nombreOtro, nombreFicha }: { a: AutorizacionCartera | null nombreOtro: string nombreFicha: string }",
           "retorno": null,
-          "linea": 484,
+          "linea": 662,
           "resumen": "🚨 Los TRES estados en pantalla. El titular sale de `explicarEstadoAutorizacion` (puro y con test) para que la frase que decide Alberto no viva dentro del JSX, que es donde «pendiente» se convertiría "
         },
         {
           "nombre": "Anadir",
           "kind": "function",
           "exportada": false,
-          "params": "{ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, preseleccion }: { clienteId: string nombreFicha: string yaRelacionados: string[] ocupado: boolean onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones> /** Ficha",
+          "params": "{ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: { clienteId: string nombreFicha: string yaRelacionados: string[] ocupado: boolean onCrear: (body: Record<string, unknown>) => Promise<Respuesta",
           "retorno": null,
-          "linea": 521
+          "linea": 699
         },
         {
-          "nombre": "SinVinculo",
+          "nombre": "AltaPersona",
           "kind": "function",
           "exportada": false,
-          "params": "{ personas, nombreFicha, onDeclarar, onSinVinculo, ocupado }: { personas: SugerenciaVinculo[] nombreFicha: string onDeclarar: (p: SugerenciaVinculo) => void onSinVinculo: (p: SugerenciaVinculo) => void ocupado: string | null }",
+          "params": "{ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: { nombreFicha: string tipoPersona: 'fisica' | 'juridica' | null ocupado: boolean /** Lo que se tecleó en el buscador, para no escribir el nombre d",
           "retorno": null,
-          "linea": 696,
-          "resumen": "🚨 Alberto, 03/09/2026, sobre la ficha de José Suárez Salas: «Antonio Sevico, y aquí no aparece en Relaciones y autorizaciones». No era un fallo de lectura: Antonio tiene ficha propia (interviene como"
+          "linea": 905,
+          "resumen": "Crear la ficha de la persona que lleva los seguros de esta otra (el administrador de una sociedad, típicamente) y vincularla, sin salir de aquí. Por qué una ficha propia y no un campo «persona de cont"
         },
         {
           "nombre": "Aviso",
@@ -58083,7 +58115,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaRelaciones, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 745
+          "linea": 1132
         },
         {
           "nombre": "Campo",
@@ -58091,7 +58123,7 @@
           "exportada": false,
           "params": "{ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 762
+          "linea": 1149
         }
       ],
       "tablas": [
@@ -58099,7 +58131,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e2bbfacd2dbf"
+      "hash": "d7845c0655ea"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Renovaciones.tsx",
@@ -114497,6 +114529,168 @@
       "hash": "073c4ad492bf"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/recibo-historial.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Los RECIBOS que ve el cliente. Alberto, mirando el lateral del portal: «y los recibos? e historial siniestros?». El historial de siniestros se hizo el 05/09/2026; esto es la otra mitad. ───────────────────────────────────────────────────────────────────────────── 🚨 LO QUE SE MIDIÓ ANTES DE ESCRIBIR",
+      "exporta": [
+        "reciboAnulado",
+        "reciboAlCobro",
+        "etiquetaSituacionRecibo",
+        "tonoSituacionRecibo",
+        "fechaReciboFiable",
+        "ordenarRecibos",
+        "estadoRecibos",
+        "resumirRecibos"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizar",
+          "kind": "function",
+          "exportada": false,
+          "params": "situacion: string",
+          "retorno": "string",
+          "linea": 56
+        },
+        {
+          "nombre": "reciboAnulado",
+          "kind": "function",
+          "exportada": true,
+          "params": "situacion: string",
+          "retorno": "boolean",
+          "linea": 65,
+          "resumen": "¿Está anulado? **La fuente única**, y la guarda más importante de este fichero: un anulado no entra en la lista del cliente ni suma en ningún cubo (ver el punto 1 de la cabecera)."
+        },
+        {
+          "nombre": "reciboAlCobro",
+          "kind": "function",
+          "exportada": true,
+          "params": "situacion: string",
+          "retorno": "boolean",
+          "linea": 74,
+          "resumen": "¿Está al cobro? `emitido` y `pendiente` son la misma situación para el cliente: hay dinero por pagar. Hoy la cartera viva solo tiene `pendiente`, pero `emitido` está en el vocabulario de la BD y colap"
+        },
+        {
+          "nombre": "etiquetaSituacionRecibo",
+          "kind": "function",
+          "exportada": true,
+          "params": "situacion: string",
+          "retorno": "string",
+          "linea": 86,
+          "resumen": "Cómo se le dice la situación al cliente. Un valor fuera del vocabulario se devuelve **tal cual** en vez de caer a «cobrado»: mejor una palabra rara que alguien pregunta que una palabra tranquilizadora"
+        },
+        {
+          "nombre": "tonoSituacionRecibo",
+          "kind": "function",
+          "exportada": true,
+          "params": "situacion: string",
+          "retorno": "'cobrado' | 'al-cobro' | 'devuelto' | 'anulado'",
+          "linea": 108,
+          "resumen": "El tono con el que se pinta. `devuelto` NO es neutro: el cobro se intentó y falló, y es lo único de esta pantalla sobre lo que el cliente tiene que hacer algo."
+        },
+        {
+          "nombre": "fechaReciboFiable",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: Date | null | undefined",
+          "retorno": "Date | null",
+          "linea": 128,
+          "resumen": "Una fecha de la BD, o `null` si es un centinela. 🚨 Punto 4 de la cabecera: hay un recibo con `fecha_emision` `0001-01-01`. `NULL` al menos se ve; un año 1 es un «no lo sé» con forma de dato que pasa "
+        },
+        {
+          "nombre": "ordenarRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "recibos: readonly T[],",
+          "retorno": "T[]",
+          "linea": 144,
+          "resumen": "Los recibos que el cliente ve, del más reciente al más antiguo. Quita los anulados (punto 1) y ordena por emisión. 🚨 Los que **no tienen fecha van al FINAL**, no al principio: en Postgres `DESC` impl"
+        },
+        {
+          "nombre": "estadoRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "recibos: readonly { situacion: string }[],",
+          "retorno": "'sin_informar' | 'solo_anulados' | 'con_recibos'",
+          "linea": 167,
+          "resumen": "En qué estado está el bloque de recibos de una póliza. **Tres cosas distintas, tres frases distintas** — ver el punto 2 de la cabecera: - `sin_informar`: la compañía no ha mandado ni un recibo. NO es "
+        },
+        {
+          "nombre": "resumirRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "ordenados: readonly ReciboHistorial[], anulados: number,",
+          "retorno": "ResumenRecibos",
+          "linea": 191,
+          "resumen": "Recibe la lista **ya ordenada** por `ordenarRecibos` (o sea, sin anulados)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "984827f267ff"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/siniestro-historial.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "El HISTORIAL de siniestros que ve el cliente. Alberto, mirando el lateral del portal: «y los recibos? e historial siniestros?». No existía: `lib/cartera-lectura.ts` filtraba `estado IN ('abierto','en_tramitacion')`, así que de los 67 siniestros de la cartera viva el portal enseñaba 7 y **los 60 cerr",
+      "exporta": [
+        "siniestroAbierto",
+        "etiquetaEstadoSiniestro",
+        "tonoEstadoSiniestro",
+        "ordenarHistorialSiniestros",
+        "resumirHistorialSiniestros"
+      ],
+      "funciones": [
+        {
+          "nombre": "siniestroAbierto",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "boolean",
+          "linea": 54,
+          "resumen": "¿Sigue vivo? **La fuente única.** Estaba escrito a mano como un array en la consulta y otra vez en la pantalla. Dos listas del mismo vocabulario acaban divergiendo el día que la compañía añada un esta"
+        },
+        {
+          "nombre": "etiquetaEstadoSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "string",
+          "linea": 68,
+          "resumen": "Cómo se le dice el estado al cliente. Cuatro palabras distintas para cuatro cosas distintas — ver el punto 3 de la cabecera. Un valor fuera del vocabulario se devuelve tal cual en vez de caer a «cerra"
+        },
+        {
+          "nombre": "tonoEstadoSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "'abierto' | 'rechazado' | 'cerrado'",
+          "linea": 84,
+          "resumen": "El tono con el que se pinta cada estado. `rechazado` NO es neutro."
+        },
+        {
+          "nombre": "ordenarHistorialSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "siniestros: readonly T[],",
+          "retorno": "T[]",
+          "linea": 98,
+          "resumen": "El historial, del más reciente al más antiguo. 🚨 Los que **no tienen fecha van al FINAL**, no al principio. Es la misma trampa que el `ORDER BY fecha DESC` de la ficha del corredor: en Postgres `DESC"
+        },
+        {
+          "nombre": "resumirHistorialSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "siniestros: readonly { estado: string }[],",
+          "retorno": "",
+          "linea": 117,
+          "resumen": "Cuántos hay de cada cosa, para el titular de la sección. `total === 0` significa **«no nos consta ninguno»**, y quien lo pinte tiene que decirlo con esas palabras: la compañía informa los siniestros p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "540a73300a64"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/supresion.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "La **solicitud de supresión (art. 17 RGPD)** del portal. 🚨 Lo que este fichero NO hace, y es la mitad del diseño: **no borra nada**. El art. 17.3 excluye la supresión cuando el tratamiento es necesario «para el cumplimiento de una obligación legal» (b) o «para la formulación, el ejercicio o la defe",
@@ -116285,6 +116479,80 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f2699fadeabe"
+    },
+    {
+      "ruta": "packages/module-seguros/src/persona-contacto.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Dar de alta a la PERSONA DE CONTACTO de una ficha —el administrador de una sociedad, quien lleva de verdad sus seguros— sin salir de ella: se crea su ficha y se vincula, en dos escrituras encadenadas. Por qué una FICHA y no un campo «persona de contacto» dentro de la sociedad (Alberto, 05/09/2026): ",
+      "exporta": [
+        "tiposContactoSugeridos",
+        "combinarPersonaContacto",
+        "textoPersonaContacto"
+      ],
+      "funciones": [
+        {
+          "nombre": "tiposContactoSugeridos",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipoPersona: 'fisica' | 'juridica' | null | undefined",
+          "retorno": "readonly TipoRelacion[]",
+          "linea": 32,
+          "resumen": "Los vínculos que se ofrecen primero según lo que sea la ficha de la que cuelga el contacto. En una SOCIEDAD la persona de contacto es su administrador o un empleado; en una persona física, familia. `n"
+        },
+        {
+          "nombre": "combinarPersonaContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "alta: PasoEscritura, vinculo: PasoEscritura | null",
+          "retorno": "ResultadoPersonaContacto",
+          "linea": 58,
+          "resumen": "Qué ha pasado de verdad tras las dos escrituras. `vinculo === null` = todavía no se ha intentado (el alta falló, o falta el id). No es «falló el vínculo»: son cosas distintas y mandan a hacer cosas di"
+        },
+        {
+          "nombre": "textoPersonaContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoPersonaContacto, nombre: string, nombreFicha: string",
+          "retorno": "string",
+          "linea": 71,
+          "resumen": "Qué se le dice a Alberto en cada caso. Se queda aquí —y no en el JSX— porque la frase de `creada_sin_vinculo` es la que evita el duplicado: si esa dice «no se ha podido crear», el siguiente clic crea "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "19ad12d909ad"
+    },
+    {
+      "ruta": "packages/module-seguros/src/personas-ficha.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "UNA sola lista de personas por ficha: las que salen en sus pólizas (lo que dice CIMA) y las que tienen un vínculo declarado (lo que hemos anotado nosotros), fundidas por IDENTIDAD. Por qué se juntan: las dos tarjetas contestaban la MISMA pregunta —«¿a quién llamo y con qué derecho?»— y obligaban a l",
+      "exporta": [
+        "unificarPersonas",
+        "saleEnPolizas"
+      ],
+      "funciones": [
+        {
+          "nombre": "unificarPersonas",
+          "kind": "function",
+          "exportada": true,
+          "params": "personas: PersonaDePolizas[] | null, vinculos: readonly V[] | null,",
+          "retorno": "ListaPersonasFicha<V>",
+          "linea": 64,
+          "resumen": "Junta las dos fuentes en una lista. Se conserva el orden que trae `personasDePolizas` (ya decidido allí) y se anexan al final los vínculos que no salen en ninguna póliza, en su orden: son gente de la "
+        },
+        {
+          "nombre": "saleEnPolizas",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PersonaFicha<VinculoUnible>",
+          "retorno": "boolean",
+          "linea": 114,
+          "resumen": "Sale en alguna de sus pólizas (lo dice CIMA)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b8eb0b2c50e3"
     },
     {
       "ruta": "packages/module-seguros/src/prima-evolucion.ts",
@@ -121979,7 +122247,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3030,
-    "funciones": 9146
+    "archivos": 3035,
+    "funciones": 9167
   }
 }
