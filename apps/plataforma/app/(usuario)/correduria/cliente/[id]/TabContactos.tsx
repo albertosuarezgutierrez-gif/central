@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { IdCard, KeyRound, Mail, MapPin, Pencil, Phone, Star, Users } from 'lucide-react'
-import { etiquetaRol, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
+import { etiquetaRol, leerSitio, textoReparoSitio, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
 import BotonWhatsapp from '../../BotonWhatsapp'
 import EditarCliente from '../../EditarCliente'
@@ -314,21 +314,43 @@ function Chip({ c }: { c: ContactoCliente }) {
 }
 
 /** Dónde vive. La calle va cifrada en la BD: «no se puede leer» ≠ «no consta». */
+/**
+ * Dónde vive la ficha. El sitio (CP + ciudad + provincia) NO se concatena a
+ * pelo: lo lee `leerSitio`, que solo afirma lo que se sostiene y devuelve lo
+ * que se contradice como reparos.
+ *
+ * 🚨 Medido el 05/09/2026 sobre las 31.809 fichas vivas: **473 tienen una
+ * provincia que contradice a su código postal** (386 dicen «Tarragona» con un
+ * CP 41xxx, o sea Sevilla) y **455 tienen un número en la ciudad** — el id de
+ * población del CRM viejo que la ingesta metió crudo. Todas del volcado
+ * `intranet:` de mayo; ninguna de CIMA. Antes se pintaban seguidas, igual que
+ * las que concuerdan: «41807 34304, Tarragona». La calle sí es la que hay.
+ */
 function Direccion({ c }: { c: ContactoFicha }) {
-  const sitio = [[c.codigoPostal, c.ciudad].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', ')
-  const texto = [c.direccion, sitio].filter(Boolean).join(' · ')
+  const sitio = leerSitio({ codigoPostal: c.codigoPostal, ciudad: c.ciudad, provincia: c.provincia })
+  const texto = [c.direccion, sitio.texto].filter(Boolean).join(' · ')
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13, color: 'var(--muted)', minWidth: 0 }}>
-      <MapPin size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto', marginTop: 2 }} />
-      {c.direccionIlegible ? (
-        <span title="Está guardada pero cifrada con una clave que asegura no puede abrir. No se ha borrado.">
-          La calle está guardada y no se puede leer (cifrada){sitio ? ` · ${sitio}` : ''}
-        </span>
-      ) : texto ? (
-        <span style={{ overflowWrap: 'anywhere' }}>{texto}</span>
-      ) : (
-        <span>No consta dirección en la ficha (se ha mirado).</span>
-      )}
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13, color: 'var(--muted)', minWidth: 0 }}>
+        <MapPin size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto', marginTop: 2 }} />
+        {c.direccionIlegible ? (
+          <span title="Está guardada pero cifrada con una clave que asegura no puede abrir. No se ha borrado.">
+            La calle está guardada y no se puede leer (cifrada){sitio.texto ? ` · ${sitio.texto}` : ''}
+          </span>
+        ) : texto ? (
+          <span style={{ overflowWrap: 'anywhere' }}>{texto}</span>
+        ) : (
+          <span>No consta dirección en la ficha (se ha mirado).</span>
+        )}
+      </div>
+      {/* Lo que no cuadra se dice ENTERO —qué guarda cada columna— porque es lo
+          único con lo que se puede corregir; ocultarlo dejaría a la ficha
+          diciendo media dirección sin explicar por qué falta la otra media. */}
+      {sitio.reparos.map((r) => (
+        <div key={r.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--muted)', paddingLeft: 20 }}>
+          ⚠️ {textoReparoSitio(r)}
+        </div>
+      ))}
     </div>
   )
 }
