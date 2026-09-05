@@ -9,7 +9,12 @@
 //
 // De ahí la regla que gobierna este fichero: **no poder mirar NO es estar bien.**
 // Cualquier fallo de lectura acaba en `sin_datos`, jamás en «ok».
-import { saludIngesta, type SaludIngesta, type FicheroEnCuarentena } from '@central/module-seguros'
+import {
+  saludIngesta,
+  type SaludIngesta,
+  type FicheroEnCuarentena,
+  type EntradaRechazada,
+} from '@central/module-seguros'
 
 export type RespuestaIngesta =
   | { estado: 'sin_configurar' }
@@ -25,6 +30,25 @@ function esFichero(v: unknown): v is FicheroEnCuarentena {
   const claveOk = f.clave === undefined || f.clave === null || typeof f.clave === 'string'
   return typeof f.tipo === 'string' && typeof f.entidad === 'string'
     && typeof f.dias === 'number' && Number.isFinite(f.dias) && claveOk
+}
+
+/**
+ * Un envío rechazado tal y como lo manda el puerto.
+ *
+ * 🚨 `rechazos` ausente NO es `[]`: un `central-asegura` desplegado ANTES del
+ * 04/09/2026 no informa el campo, y convertir esa versión vieja en «se miró y no
+ * hay envíos rechazados» sería la misma mentira que este fichero existe para no
+ * contar. Ausente ⇒ `null` ⇒ el veredicto lo dice.
+ */
+function esRechazo(v: unknown): v is EntradaRechazada {
+  if (typeof v !== 'object' || v === null) return false
+  const r = v as Record<string, unknown>
+  const horasOk =
+    r.horasDesdeUltimo === null ||
+    (typeof r.horasDesdeUltimo === 'number' && Number.isFinite(r.horasDesdeUltimo))
+  const origenOk = r.origen === null || typeof r.origen === 'string'
+  return typeof r.evento === 'string' && typeof r.n === 'number' && Number.isFinite(r.n)
+    && horasOk && origenOk
 }
 
 /**
@@ -60,6 +84,13 @@ export function interpretarIngesta(status: number, json: unknown): RespuestaInge
       huerfanasResolubles: num(r.huerfanasResolubles),
       primaPerdida: num(r.primaPerdida),
       diasSinPersistir: dias,
+      // Una lista con alguna fila ilegible se degrada ENTERA a `null`: contar
+      // solo las que se entienden daría un número más bajo que la realidad, que
+      // es la forma tranquilizadora de equivocarse.
+      rechazos:
+        Array.isArray(r.rechazos) && r.rechazos.every(esRechazo)
+          ? (r.rechazos as EntradaRechazada[])
+          : null,
     }),
   }
 }

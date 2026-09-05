@@ -22,6 +22,21 @@ import Bloque from './Bloque'
  * que Alberto hable con uno de ellos por teléfono o en el despacho, le pide el
  * correo, lo apunta en su ficha y deja de salir en la lista.
  *
+ * ─── 🚨 Corregido el 04/09/2026: la ficha no es el único sitio ─────────────
+ * Lo cazó Alberto mirando esta pantalla: `Esquiansa` salía como «ilocalizable»
+ * cuando su contacto de siempre es Juan Manuel López Benjumea. El contacto de
+ * un cliente puede estar en tres sitios y hay que mirar los tres antes de
+ * afirmar que no se le puede localizar:
+ *   1. Su ficha.
+ *   2. **Su propio dato colgado de la PÓLIZA** y nunca copiado a la ficha. Es
+ *      el caso caro: el dato está en la base y el cron de avisos no lo ve.
+ *   3. Otra persona de su póliza (conductor habitual, propietario…).
+ * Medido ese día: de 19 sin contacto en la ficha, **solo 15 eran ilocalizables**.
+ *
+ * ⚖️ Y tener a quién llamar NO es poder notificar: el preaviso del art. 22 LCS
+ * va al TOMADOR. El tercero sirve para CONSEGUIR su correo, no para darlo por
+ * avisado — por eso son estados distintos y no un «localizable» tranquilizador.
+ *
  * ─── Lo que esta pantalla NO dice ──────────────────────────────────────────
  * · Solo mira si **hay algo** en la columna, no si el dato sirve: un correo
  *   viejo cuenta como «tiene canal» aunque rebote.
@@ -44,7 +59,22 @@ const ESTILO: Record<EstadoCanal, { label: string; tono: Tono; color: string; qu
     label: 'Ilocalizable',
     tono: 'negativo',
     color: 'var(--negative)',
-    que: 'Ni email ni teléfono: no le llega el aviso de vencimiento y no puede entrar al portal.',
+    que: 'Ni en su ficha, ni en su póliza, ni nadie más en ella: no hay forma de hablar con él, no le llega el aviso de vencimiento y no puede entrar al portal.',
+  },
+  // 🚨 Estos dos NO son «localizable»: son «hay por dónde tirar», y cada uno
+  // pide una acción distinta. Fundirlos con `con_ambos` volvería a esconder el
+  // hecho de que HOY no les llega el aviso (04/09/2026).
+  contacto_via_tercero: {
+    label: 'Solo por otra persona',
+    tono: 'aviso',
+    color: 'var(--warning)',
+    que: 'Él no tiene contacto, pero sí alguien de su póliza. Llámale para pedirle el correo del tomador: el aviso de vencimiento va al TOMADOR (art. 22 LCS), así que esto NO le deja avisado.',
+  },
+  canal_en_poliza: {
+    label: 'Su contacto está en la póliza',
+    tono: 'aviso',
+    color: 'var(--warning)',
+    que: 'Su propio email o teléfono existe, pero colgado de la póliza y no de su ficha. El aviso de vencimiento lee la ficha: hoy NO le sale nada. Se arregla copiándolo a su ficha.',
   },
   solo_telefono: {
     label: 'Solo teléfono',
@@ -75,9 +105,10 @@ const SUB = (
   <>
     Esto mira si <strong>hay algo</strong> en el email o el teléfono de la ficha, no si el dato
     sirve: un correo antiguo cuenta como canal aunque rebote. Los contactos no se muestran aquí
-    —van cifrados y esta lista no los necesita—; están en la ficha de cada cliente. Y solo entran
-    los clientes que llegan por CIMA: las ~32.500 fichas del volcado histórico son leads, no
-    clientes de hoy.
+    —van cifrados y esta lista no los necesita—; están en la ficha de cada cliente. «Sin nada en
+    su ficha» e «ilocalizable» <strong>no son lo mismo</strong>: el segundo mira además la póliza
+    y a quien esté en ella. Y solo entran los clientes que llegan por CIMA: las ~32.500 fichas del
+    volcado histórico son leads, no clientes de hoy.
   </>
 )
 
@@ -86,10 +117,14 @@ export default function SinCanal({
   primero,
 }: {
   /**
-   * Cuántos clientes de la cartera viva no tienen NINGÚN canal. `null` = no se
-   * sabe, y nunca 0: «0 ilocalizables» es la frase tranquilizadora que aquí
-   * nadie ha medido. Va en `null` también con la lista TRUNCADA — un recuento
-   * recortado saldría más bajo que la realidad, o sea un contador falso.
+   * Cuántos clientes de la cartera viva son ILOCALIZABLES: sin contacto en su
+   * ficha, ni en su póliza, ni de nadie más de la póliza. `null` = no se sabe,
+   * y nunca 0: «0 ilocalizables» es la frase tranquilizadora que aquí nadie ha
+   * medido. Va en `null` también con la lista TRUNCADA — un recuento recortado
+   * saldría más bajo que la realidad, o sea un contador falso.
+   *
+   * 🚨 NO es `sinNinguno` (que solo mira la ficha): esa confusión ponía un 19
+   * donde eran 15 (04/09/2026).
    */
   onContador?: (n: number | null) => void
   primero?: boolean
@@ -108,7 +143,7 @@ export default function SinCanal({
       .then((d: SinCanal) => {
         setDatos(d)
         // Una sola vez por carga, dentro del `.then` (en el render sería bucle).
-        avisar.current?.(d.estado === 'ok' && !d.truncado ? d.resumen.sinNinguno : null)
+        avisar.current?.(d.estado === 'ok' && !d.truncado ? d.resumen.ilocalizables : null)
       })
       .catch(() => {
         setDatos({ estado: 'error', motivo: 'red' })
@@ -150,24 +185,33 @@ export default function SinCanal({
   const visibles = filas.slice(0, ver)
   // `null` = no comprobado. Nunca se sustituye por 0: «0 ilocalizables» es la
   // frase tranquilizadora que aquí no se ha medido.
-  const sinNinguno = resumen.sinNinguno
+  //
+  // 🚨 El titular es `ilocalizables` (ni ficha, ni póliza, ni nadie), NO
+  // `sinNinguno` (solo mira la ficha). Confundirlos fue el fallo del 04/09/2026:
+  // decía «19 con los que NO se puede contactar» cuando eran 15.
+  const ilocalizables = resumen.ilocalizables
+  const rescatables = resumen.rescatables
+  // 🚨 Un ilocalizable cuyas pólizas ya no renuevan sigue siendo ilocalizable,
+  // pero NO hay nada que avisarle. Mezclarlos infla la alarma y manda a llamar
+  // a quien no toca (04/09/2026: 8 de 18 estaban así).
+  const sinRenovacion = resumen.ilocalizablesSinRenovacion
   const medido = resumen.vivos !== null
   // La alarma solo se enciende con gente medida al otro lado. Con `null` (no
   // comprobado) o con la lista truncada, el hueco se dice, no se destaca.
-  const hayAlarma = !datos.truncado && sinNinguno !== null && sinNinguno > 0
+  const hayAlarma = !datos.truncado && ilocalizables !== null && ilocalizables > 0
 
   return (
     <Bloque
       titulo={
-        sinNinguno === null
+        ilocalizables === null
           ? 'Clientes sin canal · sin comprobar'
-          : sinNinguno === 0
-            ? 'Todos los clientes vivos tienen algún canal'
-            : `${sinNinguno} cliente(s) con los que NO se puede contactar`
+          : ilocalizables === 0
+            ? 'Con todos los clientes vivos hay por dónde hablar'
+            : `${ilocalizables} cliente(s) con los que NO se puede contactar`
       }
       sub={SUB}
       Icono={PhoneOff}
-      tono={hayAlarma ? 'malo' : sinNinguno === null ? 'aviso' : 'neutral'}
+      tono={hayAlarma ? 'malo' : ilocalizables === null ? 'aviso' : 'neutral'}
       destacado={hayAlarma}
       primero={primero}
       accion={
@@ -183,12 +227,28 @@ export default function SinCanal({
         </p>
       )}
 
-      {sinNinguno !== null && sinNinguno > 0 && (
+      {ilocalizables !== null && ilocalizables > 0 && (
         <div style={{ border: '1px solid var(--negative)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
           <Badge tono="negativo">Ilocalizables</Badge>{' '}
-          <strong>A estos {sinNinguno} no les llega NADA</strong> —ni el aviso de vencimiento ni
-          la invitación al portal— y desde el sistema se ven igual que uno al que sí se avisó. La
-          próxima vez que hables con alguno, pídele el correo y apúntalo en su ficha.
+          <strong>A estos {ilocalizables} no les llega NADA</strong> —ni el aviso de vencimiento ni
+          la invitación al portal— y desde el sistema se ven igual que uno al que sí se avisó. No hay
+          contacto suyo en su ficha, ni en su póliza, ni de nadie más de la póliza. La próxima vez
+          que hables con alguno, pídele el correo y apúntalo en su ficha.
+          {sinRenovacion !== null && sinRenovacion > 0 && (
+            <>
+              {' '}Ojo: <strong>{sinRenovacion} de ellos ya no renuevan</strong> ninguna póliza, así
+              que no hay aviso que mandarles — salen marcados abajo.
+            </>
+          )}
+        </div>
+      )}
+
+      {rescatables !== null && rescatables > 0 && (
+        <div style={{ border: '1px solid var(--warning)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
+          <Badge tono="aviso">Hay por dónde tirar</Badge>{' '}
+          Otros <strong>{rescatables}</strong> no tienen contacto en su ficha, pero o su propio dato
+          está colgado de la póliza (se copia y listo) o hay otra persona en ella a la que llamar.
+          Salen abajo, marcados.
         </div>
       )}
 
@@ -234,7 +294,10 @@ function Recuento({ resumen }: { resumen: Extract<SinCanal, { estado: 'ok' }>['r
     { label: 'Con email', valor: resumen.conEmail },
     { label: 'Con teléfono', valor: resumen.conTelefono },
     { label: 'Con alguno', valor: resumen.conAlguno },
-    { label: 'Sin ninguno', valor: resumen.sinNinguno },
+    // Estos dos NO son sinónimos y por eso van los dos: el primero mira solo la
+    // ficha; el segundo, además, la póliza y a quien esté en ella.
+    { label: 'Sin nada en su ficha', valor: resumen.sinNinguno },
+    { label: 'Ilocalizables de verdad', valor: resumen.ilocalizables },
   ]
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -282,7 +345,11 @@ function Fila({ f }: { f: ClienteCanal }) {
       </div>
 
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-        {f.proximoVencimiento !== null ? (
+        {f.polizasQueRenuevan === 0 ? (
+          <span title="Todas sus pólizas están en un estado que ya no renueva (cancelada, vencida, fin de riesgo…)">
+            Ya no renueva ninguna póliza: no hay aviso de vencimiento que mandarle
+          </span>
+        ) : f.proximoVencimiento !== null ? (
           <>Renueva el {fmtFecha(f.proximoVencimiento)}</>
         ) : f.polizasSinFecha !== null && f.polizasSinFecha > 0 ? (
           <span title="Sus pólizas no traen fecha de vencimiento en la base">
@@ -296,6 +363,42 @@ function Fila({ f }: { f: ClienteCanal }) {
       </div>
 
       {e.que && <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{e.que}</div>}
+      <Pista f={f} />
+    </div>
+  )
+}
+
+/**
+ * A quién llamar cuando el contacto no está en la ficha del tomador.
+ *
+ * 🚨 Los intervinientes SUELTOS (sin ficha) llevan el nombre cifrado y el puerto
+ * no lo manda: de esos solo llega el recuento, y aquí se dice «míralo en la
+ * póliza» en vez de inventar un nombre. Un nombre que falta se declara, no se
+ * rellena.
+ */
+function Pista({ f }: { f: ClienteCanal }) {
+  if (f.estado !== 'contacto_via_tercero' && f.estado !== 'canal_en_poliza') return null
+  const otros = f.contactoDeOtros
+  const sinNombre = otros === null ? 0 : Math.max(0, otros - f.fichasContacto.length)
+
+  return (
+    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+      {f.estado === 'canal_en_poliza' && (
+        <>Su contacto está en {f.canalEnPoliza === 1 ? 'un interviniente' : `${f.canalEnPoliza} intervinientes`} de sus pólizas. </>
+      )}
+      {f.fichasContacto.length > 0 && (
+        <>
+          En su póliza:{' '}
+          {f.fichasContacto.map((c, i) => (
+            <span key={c.clienteId}>
+              {i > 0 && ', '}
+              <Link href={`/correduria/cliente/${c.clienteId}`}>{c.nombre}</Link>
+            </span>
+          ))}
+          .{' '}
+        </>
+      )}
+      {sinNombre > 0 && <>Y {sinNombre} más sin ficha propia (su nombre va cifrado, míralo en la póliza).</>}
     </div>
   )
 }

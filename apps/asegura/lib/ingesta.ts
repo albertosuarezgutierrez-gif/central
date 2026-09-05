@@ -10,11 +10,20 @@
  * Este puerto expone lo que hay que mirar. El veredicto lo pone el helper PURO
  * `saludIngesta` de `@central/module-seguros`; aquí solo se leen números.
  *
+ * 🚨 Ampliado el 04/09/2026 con los ENVÍOS RECHAZADOS, que es la misma avería
+ * por otra puerta. Ese día se midió que Codeoscopic lleva al menos 24 h
+ * mandándonos webhooks cada 30 minutos —autenticados, desde su IP— y que los
+ * estamos tirando TODOS por una diferencia de forma (mandan un array donde el
+ * validador espera un objeto). Nadie se enteró porque este vigía miraba la
+ * cuarentena de CIMA y las huérfanas, no la puerta de Codeoscopic. Un dato que
+ * llega y se rechaza se pierde igual que uno que no llega.
+ *
  * 🚨 Nada de PII: se cuentan ficheros y pólizas, no personas. Los identificadores
  * de póliza NO salen por aquí — para eso está la pantalla del corredor, que va
  * detrás de sesión.
  */
-import type { FicheroEnCuarentena } from '@central/module-seguros'
+import type { EntradaRechazada, FicheroEnCuarentena } from '@central/module-seguros'
+import { HORAS_RECHAZO_RECIENTE } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 export type EstadoIngestaPuerto =
@@ -27,6 +36,8 @@ export type EstadoIngestaPuerto =
       huerfanasResolubles: number
       primaPerdida: number | null
       diasSinPersistir: Record<string, number | null>
+      /** Envíos de un proveedor que rechazamos. `[]` = comprobado y no hay. */
+      rechazos: EntradaRechazada[]
     }
 
 /** Tipos de objeto EIAC que la ingesta persiste. El evento que lo confirma es
@@ -114,6 +125,26 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
         )
     `)
 
+    // 4. Lo que un proveedor nos MANDÓ y no aceptamos. Se agrupa por evento y
+    //    origen porque cada par manda a un sitio distinto a arreglarlo.
+    //    El patrón es por SUFIJO (`%_invalid_payload`) y no una lista cerrada de
+    //    nombres: si mañana entra otro proveedor con su propio evento de rechazo,
+    //    un vigía con la lista cableada lo dejaría fuera y volveríamos a no
+    //    enterarnos, que es justo lo que pasó aquí.
+    const rechazosRaw = await db.$queryRawUnsafe<
+      Array<{ evento: string; origen: string | null; n: bigint | null; horas: number | null }>
+    >(`
+      SELECT event_name AS evento,
+             NULLIF(btrim(source), '') AS origen,
+             COUNT(*) AS n,
+             EXTRACT(EPOCH FROM (now() - MAX(occurred_at))) / 3600 AS horas
+      FROM operational_events
+      WHERE (event_name LIKE '%_invalid_payload' OR event_name LIKE '%_rejected')
+        AND occurred_at > now() - ($1 || ' hours')::interval
+      GROUP BY event_name, NULLIF(btrim(source), '')
+      ORDER BY COUNT(*) DESC
+    `, String(HORAS_RECHAZO_RECIENTE))
+
     const fila = huerfanasRaw[0]
     return {
       estado: 'ok',
@@ -127,6 +158,17 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       huerfanasResolubles: Number(resolublesRaw[0]?.polizas ?? 0),
       primaPerdida: fila?.prima === null || fila?.prima === undefined ? null : Number(fila.prima),
       diasSinPersistir,
+      rechazos: rechazosRaw.map(r => ({
+        evento: r.evento,
+        origen: r.origen,
+        n: Number(r.n ?? 0),
+        // `null` si no se pudo calcular: sin la hora del último no se sabe si
+        // esto es de ahora o de hace un mes, y no se supone.
+        horasDesdeUltimo:
+          r.horas === null || r.horas === undefined || !Number.isFinite(Number(r.horas))
+            ? null
+            : Math.floor(Number(r.horas)),
+      })),
     }
   } catch {
     // Un fallo de lectura NO se sirve como «ingesta sana»: quien llama lo
