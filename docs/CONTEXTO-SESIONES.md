@@ -30,6 +30,29 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🩺 «repara todo»: dos pendientes se caen de la lista por MEDIRLOS, y aparece uno legal (05/09/2026).**
+  De la lista de Alberto solo una parte es tocable desde una sesión; lo que se pudo medir:
+  · **`agente_salud` NO era una decisión pendiente.** Se resolvió el mismo 05/09 creando
+  `agente_veredicto` aparte; la de julio sigue viva con dueño (`lib/finanzas.ts`). Está a 0 filas solo
+  porque la migración entró a las **09:02 UTC** y el cron había pasado a las **07:45**. El INSERT
+  exacto se ensayó contra producción en transacción con ROLLBACK: escribe bien (0 filas después).
+  · **El «UPDATE masivo sin autor» del 04/09 tiene autor: Alberto.** Es el backfill del índice ciego
+  de DNI (`clientes.dni_lookup_hash`), lanzado desde `/correduria/mantenimiento`. Prueba: los 1.086
+  clientes tocados tienen DNI **el 100%** (vs 73% del resto) y `seguros.backfill_dni_plan` tiene su
+  foto a las **21:03:28**, 13 min antes del UPDATE. No dejó `historial_interno` porque un índice
+  técnico no es un hecho de negocio. 🚫 La hipótesis «fueron las fusiones» se probó y es **falsa**:
+  los 1.086 están `activo=true` y esa noche no se desactivó ninguno.
+  · **`mercado-booking`: el objetivo SÍ está cumplido, medido** (4 aforos × jul-2027 y ago-2027, 4
+  fechas con ≥3 comps cada uno; se pedían 3). El párrafo «PRIORIDAD TEMPORAL» sobra. Lo tiene que
+  quitar Alberto: el prompt se LEE pero el API no deja escribirlo (rutina creada por `http_api`).
+  Debe quedar solo: `Ejecuta la skill mercado-booking` + `PLATAFORMA_URL=…` + `ALERTA_TOKEN=`.
+  · 🚨 **HALLAZGO NUEVO: `ses_transporte` nunca ha estado en verde.** `ultimo_ok_at` es **NULL** —no
+  es que se rompiera, es que no ha funcionado jamás— y hay **0 filas** en `ses_establecimientos`. Es
+  el parte de viajeros (RD 933/2021), obligación legal de hospedaje. Alta en `/sivra/partes/establecimientos`.
+  · ⛔ **Fuera de alcance de una sesión:** el repo `asegura` (el clasificador bloquea `add_repo`, así
+  que el workflow `e2e-smoke` que crea un lead sintético diario **sigue corriendo**), las envs de
+  Vercel, los emails a compañías (regla de comunicaciones salientes) y la cerradura de Bustos Tavera.
+
 - **📅 La pestaña Recibos parecía vacía por un ORDER BY, y los 336 homónimos NO se pueden fusionar (05/09/2026).**
   Alberto: «no aparece la fecha y otros datos». No faltaba el dato: **la ficha ordenaba las pólizas SOLO por
   `fechaVencimiento: desc`, y en Postgres `DESC` implica NULLS FIRST** — las 15 del volcado no tienen fecha, así
@@ -169,6 +192,8 @@
   querer evitar: el veredicto diario de los 30 agentes se calcula y se tira, y `/operador/agentes` no
   lo puede leer. **No se toca sin decidirlo**: la tabla vieja existe y hay que elegir entre añadir
   columnas o renombrarla, y eso es producción. Pendiente de Alberto.
+  ✅ **SUPERADO el mismo día**: no se tocó la vieja — se creó `agente_veredicto` aparte (entrada de
+  arriba). La de julio sigue viva y con dueño (`lib/finanzas.ts`), así que **no hay nada que decidir**.
 
 - **✅ Modo noche MERGEADO y comprobado en BD (05/09/2026).** PR #2312 en `main` (`2458f5f7`),
   20/20 checks verdes y los 12 proyectos Vercel en `Ignored` (cero minutos de build; los comentarios
@@ -265,7 +290,8 @@
   «sin estrenar, no roto». El vigía de ingesta ahora los mira (`rechazos` en `saludIngesta`). (2) **8 de 18
   sin canal solo tienen pólizas que ya no renuevan** y a tres se les pintaba fecha de renovación de una
   cancelada. (3) **UPDATE masivo sin autor conocido** en `seguros` a las 21:16-21:19 UTC (1.185 clientes,
-  959 pólizas, 0 altas, sin `historial_interno`, no es pg_cron ni el pull de CIMA) — pendiente para Alberto.
+  959 pólizas, 0 altas, sin `historial_interno`, no es pg_cron ni el pull de CIMA) — ✅ **IDENTIFICADO el
+  05/09: era el backfill del índice ciego de DNI**, del propio Alberto. Ver la entrada del 05/09.
 
 - **📵 «19 clientes ilocalizables» eran 15: el contacto vive en TRES sitios, no en la ficha (04/09/2026).**
   Lo vio Alberto en `/correduria`: `Esquiansa` salía «no se puede contactar» teniendo a Juan Manuel López
@@ -756,6 +782,10 @@
   cada mes). ⚠️ **Pendiente para Alberto (ya señalado el 29/08 y sigue sin quitarse):** la línea
   "PRIORIDAD TEMPORAL" vive en la config del disparo programado, fuera del repo — esta sesión no
   tiene acceso para borrarla, así que la próxima pasada la repetirá si no se quita a mano.
+  🔎 **Matizado el 05/09: una sesión SÍ puede LEER el prompt** (`list_triggers` lo trae en
+  `derived_state.prompt`); lo que rechaza el API es escribirlo, porque la rutina se creó vía
+  `http_api` y un agente solo edita las que él mismo creó. El texto exacto que hay que dejar está
+  en la entrada del 05/09.
 
 - **✅ El libro de comisiones vuelve a leer la cartera — incidente `asegura_error` CERRADO (03/09/2026).**
   Verificado tras el cron de las 07:30 UTC: **12 filas en `comisiones_devengo` + 4 en `comisiones_cobertura`,
