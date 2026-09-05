@@ -983,8 +983,9 @@ colapsar `sin_enlace` con `envio_fallido` y sumar la caducidad en meses hacen fa
 
 ## 🗑 «Borradme los datos» (05/09/2026) — la solicitud que NO borra
 
-Tabla `seguros.portal_supresion` (`prisma/sql/2026-09-05_portal_supresion.sql`, **sin aplicar
-todavía**: se aplica en el mismo paso en que se despliega la pantalla). Reglas puras en
+Tabla `seguros.portal_supresion` (`prisma/sql/2026-09-05_portal_supresion.sql`, **APLICADA el
+05/09/2026**, migración `20260905100234_seguros_portal_supresion`; los 4 cepos vistos morder en la
+BD real con rollback — ver su cabecera). Reglas puras en
 `packages/module-seguros-portal/src/supresion.ts`, BD en `lib/supresion.ts`, ruta
 `app/api/supresion/route.ts`, pantalla `app/(portal)/boveda/TusDatos.tsx`.
 
@@ -1016,6 +1017,13 @@ qué se suprime y qué se conserva, con su base legal (art. 12.4: la negativa pa
 no por orden de llegada**, con `resumen.vencidas` aparte. Sin ese puerto la solicitud viviría solo en
 la BD del portal y el plazo de un mes se incumpliría en silencio: es la regla de la casa («un aviso en
 una pantalla que nadie abre no existe») aplicada donde más caro sale.
+
+🚨 **Y la lección que dejó al aplicarla: se desplegó ANTES que la DDL.** El código que consulta la
+tabla entró en `main` y Vercel lo puso en producción (`dpl_Fe3pMt…`) con la tabla todavía sin crear.
+`lib/supresion.ts` consulta **sin `try/catch` a propósito**, así que en esa ventana `/boveda` entera
+habría reventado, no solo la sección nueva. No golpeó a nadie —cero errores de esa ruta en Vercel,
+porque nadie entró—, pero eso fue suerte. **La DDL de una tabla `portal_*` se aplica en el MISMO paso
+que el despliegue que la usa**, y esta cabecera ya lo decía antes de incumplirse.
 
 Cepos: `packages/module-seguros-portal/src/supresion.test.ts` (10) y
 `test/regression-portal-supresion.test.ts` (14). **Tres mutaciones comprobadas**: quitar la lista de
