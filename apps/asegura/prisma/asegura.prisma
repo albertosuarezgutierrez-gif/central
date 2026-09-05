@@ -191,93 +191,93 @@ enum SiniestroGravedad {
 }
 
 model Correduria {
-  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre             String             @db.VarChar(255)
-  cif                String             @unique @db.VarChar(20)
-  email              String             @db.VarChar(255)
-  telefono           String?            @db.VarChar(20)
-  direccion          String?
-  codigoPostal       String?            @map("codigo_postal") @db.VarChar(10)
-  ciudad             String?            @db.VarChar(100)
-  provincia          String?            @db.VarChar(100)
-  logoUrl            String?            @map("logo_url")
-  web                String?            @db.VarChar(255)
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre              String             @db.VarChar(255)
+  cif                 String             @unique @db.VarChar(20)
+  email               String             @db.VarChar(255)
+  telefono            String?            @db.VarChar(20)
+  direccion           String?
+  codigoPostal        String?            @map("codigo_postal") @db.VarChar(10)
+  ciudad              String?            @db.VarChar(100)
+  provincia           String?            @db.VarChar(100)
+  logoUrl             String?            @map("logo_url")
+  web                 String?            @db.VarChar(255)
   // Credenciales de WhatsApp Business DENTRO de la tabla (hoy NULL): campo de
   // secreto — nunca a un export ni a un log.
-  waPhoneNumberId    String?            @map("wa_phone_number_id") @db.VarChar(100)
-  waBusinessAccountId String?           @map("wa_business_account_id") @db.VarChar(100)
-  waAccessToken      String?            @map("wa_access_token")
-  plan               PlanSuscripcion    @default(trial)
-  planExpiresAt      DateTime?          @map("plan_expires_at") @db.Timestamp(6)
-  maxPolizas         Int                @default(500) @map("max_polizas")
-  recordatoriosDias  Json?              @map("recordatorios_dias")
-  recordatoriosCanal CanalRecordatorio? @map("recordatorios_canal")
-  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt          DateTime           @default(now()) @map("updated_at") @db.Timestamp(6)
+  waPhoneNumberId     String?            @map("wa_phone_number_id") @db.VarChar(100)
+  waBusinessAccountId String?            @map("wa_business_account_id") @db.VarChar(100)
+  waAccessToken       String?            @map("wa_access_token")
+  plan                PlanSuscripcion    @default(trial)
+  planExpiresAt       DateTime?          @map("plan_expires_at") @db.Timestamp(6)
+  maxPolizas          Int                @default(500) @map("max_polizas")
+  recordatoriosDias   Json?              @map("recordatorios_dias")
+  recordatoriosCanal  CanalRecordatorio? @map("recordatorios_canal")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime           @default(now()) @map("updated_at") @db.Timestamp(6)
 
-  clientes       Cliente[]
-  polizas        Poliza[]
-  siniestros     Siniestro[]
+  clientes   Cliente[]
+  polizas    Poliza[]
+  siniestros Siniestro[]
 
   @@map("corredurias")
 }
 
 model Cliente {
-  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  correduriaId        String            @map("correduria_id") @db.Uuid
-  usuarioId           String?           @map("usuario_id") @db.Uuid
-  nombre              String            @db.VarChar(255)
-  apellidos           String            @db.VarChar(255)
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId        String             @map("correduria_id") @db.Uuid
+  usuarioId           String?            @map("usuario_id") @db.Uuid
+  nombre              String             @db.VarChar(255)
+  apellidos           String             @db.VarChar(255)
   dni                 String? // cifrado
   telefono            String? // cifrado
   email               String? // cifrado
-  fechaNacimiento     String?           @map("fecha_nacimiento") // cifrado (fue date)
+  fechaNacimiento     String?            @map("fecha_nacimiento") // cifrado (fue date)
   direccion           String? // cifrado
-  codigoPostal        String?           @map("codigo_postal") @db.VarChar(10)
-  ciudad              String?           @db.VarChar(100)
-  provincia           String?           @db.VarChar(100)
-  waOptIn             Boolean           @default(false) @map("wa_opt_in")
-  waPhoneNumber       String?           @map("wa_phone_number") @db.VarChar(20)
+  codigoPostal        String?            @map("codigo_postal") @db.VarChar(10)
+  ciudad              String?            @db.VarChar(100)
+  provincia           String?            @db.VarChar(100)
+  waOptIn             Boolean            @default(false) @map("wa_opt_in")
+  waPhoneNumber       String?            @map("wa_phone_number") @db.VarChar(20)
   canalPreferido      CanalRecordatorio? @default(email) @map("canal_preferido")
   notas               String?
-  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt           DateTime          @default(now()) @map("updated_at") @db.Timestamp(6)
-  importRef           String?           @map("import_ref") @db.VarChar(100)
-  waOptOutAt          DateTime?         @map("wa_opt_out_at") @db.Timestamp(6)
-  waOptOutSource      String?           @map("wa_opt_out_source") @db.VarChar(30)
-  emailOptOutAt       DateTime?         @map("email_opt_out_at") @db.Timestamp(6)
-  emailOptOutSource   String?           @map("email_opt_out_source") @db.VarChar(30)
-  emailLookupHash     String?           @map("email_lookup_hash")
-  telefonoLookupHash  String?           @map("telefono_lookup_hash")
-  activo              Boolean           @default(true)
-  segmento            SegmentoCliente   @default(prospecto)
-  tipo                TipoCliente       @default(cliente)
-  dniLookupHash       String?           @map("dni_lookup_hash")
-  tipoPersona         TipoPersona?      @map("tipo_persona")
-  leadEstado          LeadEstado        @default(nuevo) @map("lead_estado")
-  cohortInvitedAt     DateTime?         @map("cohort_invited_at") @db.Timestamp(6)
-  comercialId         String?           @map("comercial_id") @db.Uuid
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime           @default(now()) @map("updated_at") @db.Timestamp(6)
+  importRef           String?            @map("import_ref") @db.VarChar(100)
+  waOptOutAt          DateTime?          @map("wa_opt_out_at") @db.Timestamp(6)
+  waOptOutSource      String?            @map("wa_opt_out_source") @db.VarChar(30)
+  emailOptOutAt       DateTime?          @map("email_opt_out_at") @db.Timestamp(6)
+  emailOptOutSource   String?            @map("email_opt_out_source") @db.VarChar(30)
+  emailLookupHash     String?            @map("email_lookup_hash")
+  telefonoLookupHash  String?            @map("telefono_lookup_hash")
+  activo              Boolean            @default(true)
+  segmento            SegmentoCliente    @default(prospecto)
+  tipo                TipoCliente        @default(cliente)
+  dniLookupHash       String?            @map("dni_lookup_hash")
+  tipoPersona         TipoPersona?       @map("tipo_persona")
+  leadEstado          LeadEstado         @default(nuevo) @map("lead_estado")
+  cohortInvitedAt     DateTime?          @map("cohort_invited_at") @db.Timestamp(6)
+  comercialId         String?            @map("comercial_id") @db.Uuid
   fuente              FuenteOrigen?
-  estadoCivil         String?           @map("estado_civil") @db.VarChar(40)
-  ocupacion           String?           @db.VarChar(120)
-  sector              String?           @db.VarChar(120)
-  cuentaBancaria      String?           @map("cuenta_bancaria") // cifrado, sin hash (no se busca)
-  saludo              String?           @db.VarChar(10)
-  direccionFiscal     String?           @map("direccion_fiscal") // cifrado
-  cpFiscal            String?           @map("cp_fiscal") @db.VarChar(10)
-  ciudadFiscal        String?           @map("ciudad_fiscal") @db.VarChar(100)
-  provinciaFiscal     String?           @map("provincia_fiscal") @db.VarChar(100)
-  mergedIntoClienteId String?           @map("merged_into_cliente_id") @db.Uuid // lápida de fusión
+  estadoCivil         String?            @map("estado_civil") @db.VarChar(40)
+  ocupacion           String?            @db.VarChar(120)
+  sector              String?            @db.VarChar(120)
+  cuentaBancaria      String?            @map("cuenta_bancaria") // cifrado, sin hash (no se busca)
+  saludo              String?            @db.VarChar(10)
+  direccionFiscal     String?            @map("direccion_fiscal") // cifrado
+  cpFiscal            String?            @map("cp_fiscal") @db.VarChar(10)
+  ciudadFiscal        String?            @map("ciudad_fiscal") @db.VarChar(100)
+  provinciaFiscal     String?            @map("provincia_fiscal") @db.VarChar(100)
+  mergedIntoClienteId String?            @map("merged_into_cliente_id") @db.Uuid // lápida de fusión
 
-  correduria    Correduria @relation(fields: [correduriaId], references: [id])
-  mergedInto    Cliente?   @relation("FusionCliente", fields: [mergedIntoClienteId], references: [id])
-  absorbidos    Cliente[]  @relation("FusionCliente")
-  telefonos     ClienteTelefono[]
-  emails        ClienteEmail[]
-  relacionesA   ClienteRelacion[] @relation("RelacionA")
-  relacionesB   ClienteRelacion[] @relation("RelacionB")
-  polizas       Poliza[]
-  siniestros    Siniestro[]
+  correduria     Correduria            @relation(fields: [correduriaId], references: [id])
+  mergedInto     Cliente?              @relation("FusionCliente", fields: [mergedIntoClienteId], references: [id])
+  absorbidos     Cliente[]             @relation("FusionCliente")
+  telefonos      ClienteTelefono[]
+  emails         ClienteEmail[]
+  relacionesA    ClienteRelacion[]     @relation("RelacionA")
+  relacionesB    ClienteRelacion[]     @relation("RelacionB")
+  polizas        Poliza[]
+  siniestros     Siniestro[]
   intervenciones PolizaInterviniente[]
 
   @@map("clientes")
@@ -334,51 +334,51 @@ model ClienteEmail {
 }
 
 model Poliza {
-  id                       String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  correduriaId             String           @map("correduria_id") @db.Uuid
-  clienteId                String           @map("cliente_id") @db.Uuid
-  tipo                     TipoSeguro
-  aseguradora              String           @db.VarChar(255)
-  numeroPoliza             String?          @map("numero_poliza") @db.VarChar(100)
+  id                      String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId            String           @map("correduria_id") @db.Uuid
+  clienteId               String           @map("cliente_id") @db.Uuid
+  tipo                    TipoSeguro
+  aseguradora             String           @db.VarChar(255)
+  numeroPoliza            String?          @map("numero_poliza") @db.VarChar(100)
   // fecha_inicio y fecha_vencimiento son NULLABLE (1.194 filas legacy a NULL,
   // medido 31/08). NULL = «pendiente», nunca «no vence».
-  fechaInicio              DateTime?        @map("fecha_inicio") @db.Date
-  fechaVencimiento         DateTime?        @map("fecha_vencimiento") @db.Date
-  primaAnual               Decimal?         @map("prima_anual") @db.Decimal(10, 2)
-  primaMensual             Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
-  estado                   EstadoPoliza     @default(activa)
-  datosEspecificos         Json?            @map("datos_especificos") // contiene direccion CIFRADA
-  coberturas               Json?
-  documentoUrl             String?          @map("documento_url")
-  createdAt                DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt                DateTime         @default(now()) @map("updated_at") @db.Timestamp(6)
-  importRef                String?          @map("import_ref") @db.VarChar(100)
-  origen                   PolizaOrigen     @default(gestionada_correduria)
-  companiaDeclarada        String?          @map("compania_declarada") @db.VarChar(255)
-  verificadoPorCorreduria  Boolean          @default(false) @map("verificado_por_correduria")
-  idPolizaEntidad          String?          @map("id_poliza_entidad") @db.VarChar(50)
-  codigoEntidadDgs         String?          @map("codigo_entidad_dgs") @db.VarChar(16)
-  ramoDgs                  String?          @map("ramo_dgs") @db.VarChar(8)
-  situacion                String?          @db.VarChar(4)
-  fechaEfectoInicial       DateTime?        @map("fecha_efecto_inicial") @db.Date
-  eiacXmlHash              String?          @map("eiac_xml_hash") @db.VarChar(64)
-  primaBruta               Decimal?         @map("prima_bruta") @db.Decimal(10, 2)
-  fraccionamiento          Fraccionamiento?
-  cuentaBancaria           String?          @map("cuenta_bancaria") // cifrado
-  comercialId              String?          @map("comercial_id") @db.Uuid
-  polizaPadreId            String?          @map("poliza_padre_id") @db.Uuid // cadena de renovaciones
-  auditarSeguimiento       Boolean          @default(false) @map("auditar_seguimiento")
-  oportunidadOrigenId      String?          @map("oportunidad_origen_id") @db.Uuid
-  polizaCompetencia        Json?            @map("poliza_competencia")
-  polizaSustituida         Json?            @map("poliza_sustituida")
-  mergedIntoPolizaId       String?          @map("merged_into_poliza_id") @db.Uuid // lápida de fusión
+  fechaInicio             DateTime?        @map("fecha_inicio") @db.Date
+  fechaVencimiento        DateTime?        @map("fecha_vencimiento") @db.Date
+  primaAnual              Decimal?         @map("prima_anual") @db.Decimal(10, 2)
+  primaMensual            Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
+  estado                  EstadoPoliza     @default(activa)
+  datosEspecificos        Json?            @map("datos_especificos") // contiene direccion CIFRADA
+  coberturas              Json?
+  documentoUrl            String?          @map("documento_url")
+  createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt               DateTime         @default(now()) @map("updated_at") @db.Timestamp(6)
+  importRef               String?          @map("import_ref") @db.VarChar(100)
+  origen                  PolizaOrigen     @default(gestionada_correduria)
+  companiaDeclarada       String?          @map("compania_declarada") @db.VarChar(255)
+  verificadoPorCorreduria Boolean          @default(false) @map("verificado_por_correduria")
+  idPolizaEntidad         String?          @map("id_poliza_entidad") @db.VarChar(50)
+  codigoEntidadDgs        String?          @map("codigo_entidad_dgs") @db.VarChar(16)
+  ramoDgs                 String?          @map("ramo_dgs") @db.VarChar(8)
+  situacion               String?          @db.VarChar(4)
+  fechaEfectoInicial      DateTime?        @map("fecha_efecto_inicial") @db.Date
+  eiacXmlHash             String?          @map("eiac_xml_hash") @db.VarChar(64)
+  primaBruta              Decimal?         @map("prima_bruta") @db.Decimal(10, 2)
+  fraccionamiento         Fraccionamiento?
+  cuentaBancaria          String?          @map("cuenta_bancaria") // cifrado
+  comercialId             String?          @map("comercial_id") @db.Uuid
+  polizaPadreId           String?          @map("poliza_padre_id") @db.Uuid // cadena de renovaciones
+  auditarSeguimiento      Boolean          @default(false) @map("auditar_seguimiento")
+  oportunidadOrigenId     String?          @map("oportunidad_origen_id") @db.Uuid
+  polizaCompetencia       Json?            @map("poliza_competencia")
+  polizaSustituida        Json?            @map("poliza_sustituida")
+  mergedIntoPolizaId      String?          @map("merged_into_poliza_id") @db.Uuid // lápida de fusión
 
-  correduria     Correduria @relation(fields: [correduriaId], references: [id])
-  cliente        Cliente    @relation(fields: [clienteId], references: [id])
-  polizaPadre    Poliza?    @relation("Renovacion", fields: [polizaPadreId], references: [id])
-  renovaciones   Poliza[]   @relation("Renovacion")
-  mergedInto     Poliza?    @relation("FusionPoliza", fields: [mergedIntoPolizaId], references: [id])
-  absorbidas     Poliza[]   @relation("FusionPoliza")
+  correduria     Correduria            @relation(fields: [correduriaId], references: [id])
+  cliente        Cliente               @relation(fields: [clienteId], references: [id])
+  polizaPadre    Poliza?               @relation("Renovacion", fields: [polizaPadreId], references: [id])
+  renovaciones   Poliza[]              @relation("Renovacion")
+  mergedInto     Poliza?               @relation("FusionPoliza", fields: [mergedIntoPolizaId], references: [id])
+  absorbidas     Poliza[]              @relation("FusionPoliza")
   coberturasRel  PolizaCobertura[]
   recibos        PolizaRecibo[]
   intervinientes PolizaInterviniente[]
@@ -440,24 +440,24 @@ model PolizaRecibo {
 }
 
 model PolizaInterviniente {
-  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  polizaId          String              @map("poliza_id") @db.Uuid
-  correduriaId      String              @map("correduria_id") @db.Uuid
-  rol               IntervinienteRol
-  clienteId         String?             @map("cliente_id") @db.Uuid
-  tipoRelacion      String?             @map("tipo_relacion") @db.VarChar(60)
-  nif               String? // cifrado
-  nifLookupHash     String?             @map("nif_lookup_hash")
-  nombre            String? // cifrado
-  apellidos         String? // cifrado
-  fechaNacimiento   String?             @map("fecha_nacimiento") // cifrado
-  telefono          String? // cifrado
-  email             String? // cifrado
-  fechaCarnet       String?             @map("fecha_carnet") // cifrado
-  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  respondeA         String?             @map("responde_a") @db.VarChar(120)
-  antiguedadCarnet  Int?                @map("antiguedad_carnet")
-  origen            IntervinienteOrigen @default(manual)
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  polizaId         String              @map("poliza_id") @db.Uuid
+  correduriaId     String              @map("correduria_id") @db.Uuid
+  rol              IntervinienteRol
+  clienteId        String?             @map("cliente_id") @db.Uuid
+  tipoRelacion     String?             @map("tipo_relacion") @db.VarChar(60)
+  nif              String? // cifrado
+  nifLookupHash    String?             @map("nif_lookup_hash")
+  nombre           String? // cifrado
+  apellidos        String? // cifrado
+  fechaNacimiento  String?             @map("fecha_nacimiento") // cifrado
+  telefono         String? // cifrado
+  email            String? // cifrado
+  fechaCarnet      String?             @map("fecha_carnet") // cifrado
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  respondeA        String?             @map("responde_a") @db.VarChar(120)
+  antiguedadCarnet Int?                @map("antiguedad_carnet")
+  origen           IntervinienteOrigen @default(manual)
 
   poliza  Poliza   @relation(fields: [polizaId], references: [id], onDelete: Cascade)
   cliente Cliente? @relation(fields: [clienteId], references: [id])
@@ -689,19 +689,19 @@ enum PortalParteEstado {
 }
 
 model PortalParteSiniestro {
-  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Quién lo mandó. La ficha de la cartera detrás (si la hay) sale de
   /// `portal_vinculo`; sin fila ahí no sabemos quién es, y eso se dice.
-  identidadId String @map("identidad_id") @db.Uuid
+  identidadId         String            @map("identidad_id") @db.Uuid
   /// Póliza de la CARTERA. Puede ser de OTRO cliente que le autorizó a verla.
-  polizaId          String? @map("poliza_id") @db.Uuid
-  polizaDeclaradaId String? @map("poliza_declarada_id") @db.Uuid
-  descripcion       String
+  polizaId            String?           @map("poliza_id") @db.Uuid
+  polizaDeclaradaId   String?           @map("poliza_declarada_id") @db.Uuid
+  descripcion         String
   /// NOT NULL: sin ella no hay plazo del art. 16 LCS que contar.
-  fechaHecho     DateTime @map("fecha_hecho") @db.Date
+  fechaHecho          DateTime          @map("fecha_hecho") @db.Date
   /// `HH:MM` y APROXIMADA. Texto, no `time`: una hora inventada es peor que ninguna.
-  horaAproximada String?  @map("hora_aproximada")
-  lugar          String?
+  horaAproximada      String?           @map("hora_aproximada")
+  lugar               String?
   /// 🚨 `null` = no lo ha contestado; `false` = ha dicho que no. No se colapsan:
   /// un parte con heridos se tramita en horas y otro espera al lunes.
   hayHeridos          Boolean?          @map("hay_heridos")
@@ -757,4 +757,117 @@ model PortalAutorizacion {
   @@index([otorganteClienteId])
   @@index([autorizadoClienteId])
   @@map("portal_autorizacion")
+}
+
+// ─── Lo que el asegurado tiene EN EL PORTAL, visto desde el panel del corredor ──
+// Espejo de las tablas `portal_*` que llenan `apps/asegura-portal` y su rol
+// `prisma_asegura_portal`. Aquí son **solo lectura**: existen para poder montar
+// el paquete del derecho de acceso (art. 15 RGPD) y de portabilidad (art. 20),
+// que se sirve por `/api/operador/export-rgpd`.
+//
+// 🚨 Por qué lo sirve ESTA app y no el portal: el rol del portal es
+// deliberadamente estrecho (sin BYPASSRLS, con GRANT por columnas) y **no puede
+// leer la cartera entera**. Darle permisos para un export sería abrir de par en
+// par, para un caso al año, lo que está cerrado el resto del tiempo — y un
+// secuestro de sesión se llevaría de golpe todo lo que hoy no alcanza.
+//
+// Sin relaciones, como sus tres hermanos de arriba: ids escalares, porque parte
+// de los modelos del portal no existen en este schema.
+
+enum PortalCanalTipo {
+  email
+  whatsapp
+
+  @@map("portal_canal_tipo")
+}
+
+enum PortalBienTipo {
+  vehiculo
+  vivienda
+  otro
+
+  @@map("portal_bien_tipo")
+}
+
+model PortalIdentidad {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre         String?
+  creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+
+  @@map("portal_identidad")
+}
+
+// 🔒 `valor_hash` NO se declara a propósito: es el correo pasado por HMAC y no
+// se puede deshacer. Enseñárselo al interesado como «tu correo» sería devolver
+// basura; el export lo dice con palabras en su lugar.
+model PortalCanal {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String          @map("identidad_id") @db.Uuid
+  tipo         PortalCanalTipo
+  verificadoEn DateTime?       @map("verificado_en") @db.Timestamptz(6)
+  creadoEn     DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_canal")
+}
+
+model PortalBien {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String         @map("identidad_id") @db.Uuid
+  tipo        PortalBienTipo
+  nombre      String
+  datos       Json           @default("{}")
+  creadoEn    DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_bien")
+}
+
+model PortalPolizaDeclarada {
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId          String            @map("identidad_id") @db.Uuid
+  bienId               String?           @map("bien_id") @db.Uuid
+  compania             String?
+  numeroPoliza         String?           @map("numero_poliza")
+  ramo                 String?
+  primaAnual           Decimal?          @map("prima_anual") @db.Decimal(10, 2)
+  fechaVencimiento     DateTime?         @map("fecha_vencimiento") @db.Date
+  matricula            String?
+  bastidor             String?
+  fechaMatriculacion   DateTime?         @map("fecha_matriculacion") @db.Date
+  referenciaCatastral  String?           @map("referencia_catastral")
+  datosRamo            Json?             @map("datos_ramo")
+  datosRamoOrigen      Json?             @map("datos_ramo_origen")
+  procedencia          PortalProcedencia @default(declarado)
+  confirmadaPorUsuario Boolean           @default(false) @map("confirmada_por_usuario")
+  documentoNombre      String?           @map("documento_nombre")
+  creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
+  actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
+
+  @@map("portal_poliza_declarada")
+}
+
+model PortalVinculo {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String   @map("identidad_id") @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  nivel        String   @default("gestionar")
+  origen       String
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([identidadId, clienteId])
+  @@map("portal_vinculo")
+}
+
+model PortalConsentimiento {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String   @map("identidad_id") @db.Uuid
+  tipo         String
+  otorgado     Boolean
+  versionTexto String   @map("version_texto")
+  ip           String?  @db.Inet
+  userAgent    String?  @map("user_agent")
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_consentimiento")
 }
