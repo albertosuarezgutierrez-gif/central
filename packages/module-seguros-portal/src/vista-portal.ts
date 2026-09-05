@@ -14,8 +14,29 @@
 // 3. **Para poder enlazar una pestaña concreta** desde un correo o un aviso
 //    («abre tu parte») sin inventar un segundo mecanismo.
 
-/** Las vistas del portal. `datos` no es un panel: es otra ruta. */
-export const VISTAS_BOVEDA = ['seguros', 'siniestro', 'polizas'] as const
+/**
+ * Las vistas del portal. `datos` no es un panel: es otra ruta.
+ *
+ * 🚨 **`polizas` desapareció el 05/09/2026**, y quien la mató fue Alberto
+ * mirando su propio portal: *«mis seguros y mis pólizas es lo mismo»*. Tenía
+ * razón en el síntoma y el fallo era del nombre, no suyo: en castellano
+ * «seguros» y «pólizas» son sinónimos, así que dos pestañas con esos dos
+ * nombres se leen como la misma. Y encima el argumento en contra ya estaba
+ * escrito aquí abajo —una pestaña que casi siempre dice cero parece un producto
+ * a medio hacer— cuando `portal_poliza_declarada` tenía **1 fila en toda la
+ * BD**.
+ *
+ * Lo que había detrás no se ha perdido: las pólizas que aporta el cliente van
+ * en la MISMA lista que su cartera, con la etiqueta «Añadida por ti» en cada
+ * fila. Ese cartel no es decoración: una póliza que se añadió él es una que la
+ * correduría NO gestiona, así que si llama por un siniestro de esa no hay ni
+ * datos ni relación con esa compañía.
+ *
+ * Un `?vista=polizas` viejo —un correo, un enlace guardado— cae por
+ * `vistaDeBoveda()` en `seguros`, que es exactamente donde ahora vive ese
+ * contenido. No hace falta redirección.
+ */
+export const VISTAS_BOVEDA = ['seguros', 'siniestro'] as const
 
 export type VistaBoveda = (typeof VISTAS_BOVEDA)[number]
 
@@ -53,10 +74,17 @@ export interface PestanaPortal {
 /**
  * Las pestañas, en orden.
  *
- * 📌 Son CUATRO y no nueve a propósito. El panel del corredor tiene nueve
+ * 📌 Son TRES y no nueve a propósito. El panel del corredor tiene nueve
  * entradas porque detrás de cada una hay cientos de filas; un asegurado entra
  * con una, dos o tres pólizas. Una pestaña «Siniestros» que casi siempre dice
  * cero no parece un producto moderno: parece un producto a medio hacer.
+ *
+ * Eran cuatro hasta el 05/09/2026, y la que sobraba era «Mis pólizas» — ver
+ * `VISTAS_BOVEDA`. De paso arregla algo que se veía en el móvil de Alberto: con
+ * cuatro, la última salía **cortada** («Qu…»). El carril hace scroll
+ * horizontal, pero con la barra oculta no hay ninguna pista de que se pueda
+ * arrastrar, así que «Quién me ve» solo la encontraba quien lo hiciera por
+ * casualidad. Con tres caben.
  *
  * La última no es un panel, es la otra ruta (`/autorizaciones`). Va en la misma
  * barra porque para quien la usa es «otra sección», no «otra página web».
@@ -65,7 +93,6 @@ export function pestanasPortal(): PestanaPortal[] {
   return [
     { vista: 'seguros', etiqueta: 'Mis seguros', href: '/boveda' },
     { vista: 'siniestro', etiqueta: 'Un siniestro', href: '/boveda?vista=siniestro' },
-    { vista: 'polizas', etiqueta: 'Mis pólizas', href: '/boveda?vista=polizas' },
     { vista: null, etiqueta: 'Quién me ve', href: '/autorizaciones' },
   ]
 }
