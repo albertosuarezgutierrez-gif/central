@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔑 La `PII_LOOKUP_KEY` del portal SÍ casa: alguien se vinculó SOLO (05/09/2026).** Quedaba abierto
+  desde el 03/09 si la clave del portal difería de la de `asegura` — en cuyo caso **ningún** cliente se
+  habría vinculado nunca y no lo habríamos sabido. Descartado por observación: de los 2 vínculos que hay,
+  uno tiene `origen = email_hash`. Re-medido lo demás y corregida `docs/ASEGURA-PORTAL-IDEAS.md`, que
+  citaba «0 vínculos / 32.602 fichas»: hoy son 3 identidades, 2 vínculos, 31.947 fichas y 4.663 con
+  índice ciego. 🚨 **Y la cifra que decide no es esa: de los 80 titulares de la CARTERA VIVA, 29 no
+  tienen email localizable.** A esos, entren con código, Google, huella o WhatsApp, la bóveda les sale
+  vacía — y eso es indistinguible de «no tienes seguros». Alberto preguntó por Google (ya lo pidió el
+  03/09); sigue en pie el orden escrito: cobertura → reclamar ficha por DNI/nº póliza → Google. Y si se
+  añade una puerta antes, **WhatsApp** está decidido en el spec como canal por defecto y solo espera la WABA.
+
 - **🚑 El parte del portal tiene DOS caminos, y hay vigía del plazo (05/09/2026).** Alberto trae el canal
   que faltaba: Occident da parte por **WhatsApp** (`+34917838383`, 9-21 L-V), la única de las 4 compañías
   de la cartera viva sin forma publicada de dar parte. Migración `2026-09-05_companias_whatsapp_horario.sql`
