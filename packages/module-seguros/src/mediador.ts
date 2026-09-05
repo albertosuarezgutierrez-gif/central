@@ -40,6 +40,39 @@ export const VERSION_TEXTOS_LEGALES = '2026-09-v4'
 /** Fecha de la última revisión de fondo de los textos legales (ISO, UTC). */
 export const FECHA_TEXTOS_LEGALES = '2026-09-05'
 
+/**
+ * Versión de los textos legales de la WEB PÚBLICA (`apps/asegura-web`).
+ *
+ * 🚨 Es una constante APARTE de `VERSION_TEXTOS_LEGALES` a propósito, y no por
+ * duplicar: son dos documentos distintos, con público distinto y con
+ * consecuencias distintas al cambiarlos.
+ *
+ * `VERSION_TEXTOS_LEGALES` no es solo un número que se pinta en un pie: se
+ * guarda en `seguros.portal_consentimiento.version_texto` y `necesitaRegistro()`
+ * la compara con la que cada cliente aceptó. Subirla obliga a **todos** los
+ * clientes del portal a volver a acreditar la información precontractual la
+ * próxima vez que entren.
+ *
+ * Cuando el 05/09/2026 la web pública añadió medición de visitas hubo que
+ * reescribir su apartado de cookies. Con una sola constante, ese cambio —que no
+ * toca en absoluto lo que un cliente del portal aceptó— habría hecho firmar de
+ * nuevo a la cartera entera y habría ensuciado el registro de consentimientos,
+ * que es una prueba. La alternativa era no subir la versión y dejar que el pie
+ * de una página reescrita siguiera anunciando la anterior, que es justo lo que
+ * la versión existe para impedir. De ahí las dos.
+ *
+ * Regla: cambia el fondo de una página de `apps/asegura-web` → sube esta. Cambia
+ * el fondo de una página del portal → sube la otra.
+ *
+ * Arranca en `w1`, que es la revisión que introdujo la medición de visitas. Lo
+ * que la web publicó ANTES de esta separación salió bajo `2026-09-v4`: la `w`
+ * evita que las dos series se confundan al leer un pie de página antiguo.
+ */
+export const VERSION_TEXTOS_WEB = '2026-09-w1'
+
+/** Fecha de la última revisión de fondo de los textos de la web pública. */
+export const FECHA_TEXTOS_WEB = '2026-09-05'
+
 export const MEDIADOR = {
   /** Nombre comercial. La persona que responde legalmente es `identidad`. */
   marca: 'Grupo ASegura',

@@ -59,7 +59,19 @@
   responde, sin redirect). Daño real: **UN run**, el de las 13:57; el de las 14:06 ya en verde. ⚠️ Y
   **NO quitar** PostHog/Cookiebot del proyecto `asegura`: su fail-open dejaría el CRM midiendo sin
   banner — lo correcto es dar de alta los dominios en el CBID.
-
+- 🔐 **Y un cabo que ese PR dejó suelto: la privacidad se reescribió sin subir la versión del texto.**
+  `VERSION_TEXTOS_LEGALES` seguía en `2026-09-v4` con un contenido que ya no era el de v4 — justo lo que
+  esa constante existe para impedir. Pero **subirla NO era la solución**: se SELLA en
+  `portal_consentimiento.version_texto`, así que reescribir el apartado de cookies de la web habría
+  obligado a los ~80 clientes del portal a volver a acreditar, ensuciando un registro cuyo único valor
+  es ser prueba. Nace **`VERSION_TEXTOS_WEB`** (`2026-09-w1`) para los textos de `asegura-web`, con test
+  que impide volver a colapsar las dos series. Regla: texto de la web → sube `_WEB`; texto del portal →
+  sube `_LEGALES`.
+- 🔁 **Y la lección de método del día: dos sesiones montaron la MISMA analítica en paralelo.** La de
+  #2385 llegó antes y es mejor (PostHog fuera del bundle, cepos que leen el fuente); la otra se
+  descartó entera al resolver el conflicto. Antes de empezar algo que «no existe», mirar si hay un PR
+  abierto tocándolo: `list_pull_requests` cuesta una llamada y aquí habría ahorrado una implementación
+  completa.
 - **📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI (05/09/2026).** Lo del
   PR #2378 (idioma, consulta web, `importesNoRespaldados`, los hechos de transporte de los 4 pisos) se
   volcó a `sivra-maestro/references/contexto-y-agente-huesped.md`: vivía solo en la memoria y en el PR, y

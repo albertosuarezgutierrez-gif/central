@@ -8,6 +8,8 @@ import {
   PUNTOS_PRECONTRACTUALES,
   VERSION_TEXTOS_LEGALES,
   FECHA_TEXTOS_LEGALES,
+  VERSION_TEXTOS_WEB,
+  FECHA_TEXTOS_WEB,
   lineaIdentificacion,
 } from './mediador.ts'
 
@@ -69,6 +71,19 @@ test('la version de los textos legales es sellable en un consentimiento', () => 
   // estable, dos consentimientos del mismo texto no se pueden comparar.
   assert.match(VERSION_TEXTOS_LEGALES, /^\d{4}-\d{2}-v\d+$/)
   assert.match(FECHA_TEXTOS_LEGALES, /^\d{4}-\d{2}-\d{2}$/)
+})
+
+test('la version de los textos de la web es distinta de la del portal', () => {
+  // Son dos series a propósito. `VERSION_TEXTOS_LEGALES` se sella en
+  // `portal_consentimiento.version_texto`: subirla obliga a TODOS los clientes
+  // del portal a volver a acreditar. Si alguien colapsa las dos en una sola
+  // constante, reescribir el apartado de cookies de la web pública haría firmar
+  // de nuevo a la cartera entera — y eso no falla, solo ocurre.
+  assert.notEqual(VERSION_TEXTOS_WEB, VERSION_TEXTOS_LEGALES)
+  // La `w` es lo que impide confundir un pie de página de la web con uno del
+  // portal cuando se leen los dos en un pantallazo antiguo.
+  assert.match(VERSION_TEXTOS_WEB, /^\d{4}-\d{2}-w\d+$/)
+  assert.match(FECHA_TEXTOS_WEB, /^\d{4}-\d{2}-\d{2}$/)
 })
 
 test('la correduria tiene UN solo correo, y es el que sale en todos los canales', () => {
