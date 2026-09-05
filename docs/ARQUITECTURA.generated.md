@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-05T13:31:29Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-05T14:53:16Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 39 skills · 1282 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 39 skills · 1286 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,12 +21,12 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 37
+- **Rutas API:** 38
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
-- **Tablas (15):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_supresion, seguros.portal_vinculo
-- **Rutas API:** 17
+- **Tablas (17):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_supresion, seguros.portal_vinculo
+- **Rutas API:** 19
 ### asegura-web
 - **Módulos que usa:** module-seguros
 - **Capacidades:** —
@@ -56,7 +56,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (132):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor…
-- **Rutas API:** 345
+- **Rutas API:** 346
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -261,14 +261,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/09/2026) ✉️ «Invitar por correo»: la autorización pendiente ya se la cuenta alguien
+- (05/09/2026) 📊 La web pública ya puede medir, y solo si le dejan
+- (05/09/2026) 📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI
+- (05/09/2026) 🔎 Si no está en la guía y el dato es de FUERA, el agente consulta internet
+- (05/09/2026) 🗣️ El borrador salía en ESPAÑOL con el huésped escribiendo en inglés
+- (05/09/2026) 🧲 La hoja de la nevera y su QR: existe
 - (05/09/2026) 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra: fuera una pestaña
 - (05/09/2026) 👥 UNA lista de personas por ficha: se funden 👤 y 👪
 - (05/09/2026) 👤 Persona de contacto de una empresa: se crea su FICHA, no un campo
 - (05/09/2026) 🧾 Los recibos del portal del cliente: el `anulado` no es «no pagado»
-- (05/09/2026) 🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio
-- (05/09/2026) 🔗 Lote 10: los 18 grupos de mismo DNI, resueltos uno a uno
-- (05/09/2026) 🗄️ Archivar, no borrar: decisión de Alberto sobre las 26.463 fichas sin contacto
-- (05/09/2026) 📵 La cartera del volcado NO trae contacto: 26.810 fichas sin teléfono ni correo
-- (05/09/2026) 🃏 El backfill se ejecutó, y el centinela no eran 20 fichas: eran 5.636
-- (05/09/2026) 🃏 El backfill del DNI: no había botón, y apareció un DNI CENTINELA en 20 fichas
 
