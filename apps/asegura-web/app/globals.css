@@ -490,6 +490,22 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
    sin aplicar. Medido a 320 px: la marca (156 px) y este botón (147 px) suman
    303 dentro de una caja de 288, y lo que se salía de la pantalla era el
    botón. Con esto bajan a 275. */
+/* En pantallas estrechas un botón de altura fija con `nowrap` implícito no
+   envuelve: se sale. Medido a 320 px con «Crear mi área con mi correo» — 313 px
+   dentro de un contenedor de 288, y con él se iba la página entera. Aquí el
+   botón pasa a poder ocupar dos líneas conservando los 48 px de área táctil.
+   `:not(.btn-sm)` deja fuera el de la cabecera, que tiene su propia medida. */
+@media (max-width: 559px) {
+  .btn:not(.btn-sm) {
+    max-width: 100%;
+    height: auto;
+    min-height: 48px;
+    padding: 12px var(--e4);
+    text-align: center;
+    white-space: normal;
+  }
+}
+
 @media (max-width: 559px) {
   .btn-sm {
     height: 40px;
@@ -1681,6 +1697,61 @@ textarea.f-in {
   .escaneo-campo,
   .escaneo .escaneo-valor {
     opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Botón de WhatsApp ──────────────────────────────────────────────────────
+   Flotante abajo a la derecha, que es donde la gente lo busca. Su color es el
+   de WhatsApp y no el de la marca A PROPÓSITO: aquí el verde no es decoración,
+   es lo que hace que se reconozca de un vistazo sin leer nada. Es el segundo
+   literal justificado de esta hoja, junto al blanco sobre el azul de marca.
+
+   `z-index` por debajo de la cabecera (50) para que al hacer scroll no se le
+   suba encima, y `env(safe-area-inset-*)` para no quedar bajo la barra de
+   gestos del iPhone. */
+.wsp {
+  position: fixed;
+  right: calc(var(--e5) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--e5) + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 6px 20px -4px rgb(37 211 102 / 0.5), 0 2px 6px rgb(0 0 0 / 0.18);
+  transition: transform 0.2s var(--curva), box-shadow 0.2s;
+}
+
+.wsp:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 26px -4px rgb(37 211 102 / 0.6), 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.wsp:active {
+  transform: scale(0.96);
+}
+
+/* En móvil, 56 px de botón sobre el borde tapan contenido; se acerca al borde
+   y se mantiene por encima de los 44 px de área táctil. */
+@media (max-width: 559px) {
+  .wsp {
+    right: calc(var(--e3) + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--e3) + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wsp {
+    transition: none;
+  }
+  .wsp:hover,
+  .wsp:active {
     transform: none;
   }
 }

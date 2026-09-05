@@ -237,6 +237,11 @@ export function tipoHueco(dec: EscaladoMin | null | undefined): TipoHueco {
   // algo que NO se pudo comprobar, gana eso: no se afirma un hueco que no se ha llegado a ver.
   if (/no se pudo verificar/.test(m)) return 'control_caido'
   if (/no cubre/.test(m)) return 'guia'
+  // Consulta a internet (`consulta-web.ts`): el asunto SIGUE siendo un hueco de la guía aunque el
+  // dato se haya encontrado fuera. Si esto no contara como hueco, lo que Alberto responda no se
+  // guardaría como hecho del piso y el agente pagaría la misma búsqueda cada vez que se lo
+  // pregunten. Que la búsqueda fallara no cambia el diagnóstico: el hueco es el mismo.
+  if (/no est[áa] en la gu[ií]a del piso/.test(m)) return 'guia'
   return 'ninguno'
 }
 

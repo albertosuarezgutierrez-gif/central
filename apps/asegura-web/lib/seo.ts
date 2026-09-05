@@ -22,9 +22,14 @@ import type { Ramo } from './ramos'
  *
  * 📌 Lo que NO se declara, y es a propósito:
  *   · `openingHours` mientras `HORARIO` sea `null` (no se ha confirmado).
- *   · `telephone` mientras no haya un número público confirmado. Un teléfono en
- *     JSON-LD es una promesa de que alguien coge: si no lo hay, se omite. Un
- *     campo ausente es la verdad; un campo inventado es una mentira estructurada.
+ *   · `aggregateRating`: ver abajo.
+ *
+ * ✅ `telephone` SÍ se declara desde el 05/09/2026: Alberto confirmó su móvil
+ * para publicarlo. Hasta entonces se omitía a propósito —un teléfono en
+ * JSON-LD es la promesa de que alguien coge—. Sale de `MEDIADOR`, no de aquí,
+ * porque el mismo número tiene que ir al pie, al botón de WhatsApp y a Google
+ * Business: si esta ficha y ese perfil declaran teléfonos distintos, Google
+ * reparte la señal local entre dos negocios.
  *   · `aggregateRating`: no se autopublica nunca. Las valoraciones las emite
  *     Google a partir de reseñas reales, y marcarlas a mano es motivo de acción
  *     manual.
@@ -37,6 +42,7 @@ export function fichaNegocio(): Record<string, unknown> {
     name: MEDIADOR.marca,
     url: SITIO_URL,
     email: MEDIADOR.identidad.email,
+    telephone: MEDIADOR.identidad.telefono,
     description:
       'Correduría de seguros en Sevilla. Analizamos entre varias compañías el seguro de hogar, comunidades, comercio, auto, vida y salud.',
     founder: { '@type': 'Person', name: MEDIADOR.identidad.nombre },

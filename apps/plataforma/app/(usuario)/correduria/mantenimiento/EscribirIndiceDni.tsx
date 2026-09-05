@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { btnStyle } from '@/components/ui'
 import type { EscrituraBackfillDni } from '@/lib/correduria-puerto'
+import { quedanPorEscribir } from './pendientes'
 
 /**
  * El botón que escribe el índice de búsqueda por DNI (paso 3 del backfill).
@@ -16,6 +17,12 @@ import type { EscrituraBackfillDni } from '@/lib/correduria-puerto'
  * antes de escribir nada, y eso ya consume parte de sus 300 s. Cada pulsación
  * devuelve cuántas quedan, y se repite hasta 0. Es idempotente (sólo toca
  * fichas con el hash a NULL), así que pulsar de más no rompe nada.
+ *
+ * ⚠️ **Corregido el 05/09/2026, y lo vio Alberto en la pantalla:** el botón
+ * seguía diciendo «Escribir 476 índices» justo encima de «✅ Escritos 476. No
+ * queda ninguno pendiente», porque su cifra venía del plan calculado al cargar
+ * la página. Ahora manda `restantes`, que lo cuenta quien acaba de escribir
+ * (`pendientes.ts`), y el botón desaparece cuando llega a 0.
  *
  * Y los tres estados de siempre en el resultado: si la conexión se corta, eso NO
  * es «no se ha escrito nada» — la escritura del otro lado puede haber terminado.
@@ -48,13 +55,19 @@ export default function EscribirIndiceDni({ pendientes }: { pendientes: number }
     }
   }
 
-  if (pendientes === 0 && r === null) return null
+  // La cifra del plan es de cuando cargó la página; en cuanto la escritura
+  // contesta, la que vale es la suya. Ver `pendientes.ts`.
+  const quedan = quedanPorEscribir(pendientes, r)
+
+  if (quedan === 0 && r === null) return null
 
   return (
     <div style={{ display: 'grid', gap: 8, justifyItems: 'start' }}>
-      <button style={btnStyle('primario')} onClick={escribir} disabled={enviando}>
-        {enviando ? 'Escribiendo…' : `Escribir ${Math.min(pendientes, TANDA).toLocaleString('es-ES')} índices`}
-      </button>
+      {quedan > 0 && (
+        <button style={btnStyle('primario')} onClick={escribir} disabled={enviando}>
+          {enviando ? 'Escribiendo…' : `Escribir ${Math.min(quedan, TANDA).toLocaleString('es-ES')} índices`}
+        </button>
+      )}
       {enviando && (
         <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
           Puede tardar un par de minutos: antes de escribir hay que descifrar el DNI de las {' '}
@@ -85,7 +98,10 @@ function Resultado({ r }: { r: EscrituraBackfillDni }) {
       ✅ Escritos <strong>{r.escritos.toLocaleString('es-ES')}</strong> índices.{' '}
       {r.restantes > 0
         ? `Quedan ${r.restantes.toLocaleString('es-ES')}: vuelve a pulsar.`
-        : 'No queda ninguno pendiente.'}
+        : 'No queda ninguno pendiente.'}{' '}
+      <span style={{ color: 'var(--muted)' }}>
+        Las cifras de arriba son de antes de escribir: tardan unos segundos en recalcularse.
+      </span>
       {r.fallidos > 0 && (
         <>
           {' '}

@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client'
 import type { Decision } from './decidir'
 import type { Contexto } from './contexto'
 import { necesitaTraduccionPregunta, traduccionUtil, lineaTraduccion, tipoHueco } from './reglas'
+import { derivaAEspanol } from './idioma-salida'
 
 const EMOJI = (urgente: boolean) => (urgente ? '🔴' : '💬')
 
@@ -17,6 +18,14 @@ async function traducirEs(txt: string): Promise<string> {
   } catch { return '' }
 }
 
+// El borrador salió en ESPAÑOL con un huésped que escribe en otro idioma. Pedir su «traducción al
+// español» devuelve el mismo texto y `traduccionUtil` la descarta → la línea 🔁 decía «no he podido
+// traducirlo al español», que se lee como un fallo de traducción cuando el fallo es de REDACCIÓN.
+// `decidir.ts` ya intenta corregirlo antes de llegar aquí; si no pudo, se dice con todas las letras.
+function avisoIdiomaEquivocado(lang: string): string {
+  return `\n<i>⚠️ <b>Este texto ha salido en ESPAÑOL</b> y el huésped escribe en ${lang.toUpperCase()} — reescríbelo con ✏️ Modificar antes de enviarlo.</i>`
+}
+
 // Copia INFORMATIVA (sin botones) de una respuesta que el agente ya envió SOLO (categoría graduada).
 // Alberto NO tiene que hacer nada: es solo para que vea lo que se está mandando en automático.
 // El mensaje del huésped tiene que poder leerse SIEMPRE en español (línea 🔁, lo pidió Alberto
@@ -25,9 +34,10 @@ async function traducirEs(txt: string): Promise<string> {
 // traducción falla, el hueco se declara en vez de callarse.
 export async function avisarAutoEnviado(ctx: Contexto, pregunta: string, dec: Decision): Promise<void> {
   const otroIdioma = ctx.lang !== 'es'
+  const respEnEspanol = derivaAEspanol(dec.reply || '', ctx.lang)
   const [pregEsRaw, respEsRaw] = await Promise.all([
     necesitaTraduccionPregunta(pregunta, ctx.lang) ? traducirEs(pregunta) : Promise.resolve(''),
-    otroIdioma ? traducirEs(dec.reply || '') : Promise.resolve(''),
+    otroIdioma && !respEnEspanol ? traducirEs(dec.reply || '') : Promise.resolve(''),
   ])
   const preguntaEs = traduccionUtil(pregunta, pregEsRaw)
   const respuestaEs = traduccionUtil(dec.reply || '', respEsRaw)
@@ -36,7 +46,7 @@ export async function avisarAutoEnviado(ctx: Contexto, pregunta: string, dec: De
     `\n\n<b>Huésped:</b> ${escapeHtml(pregunta)}` +
     lineaTraduccion(preguntaEs, otroIdioma, escapeHtml) +
     `\n\n<b>Enviado${idiomaNota}:</b>\n${escapeHtml(dec.reply || '')}` +
-    lineaTraduccion(respuestaEs, otroIdioma, escapeHtml) +
+    (respEnEspanol ? avisoIdiomaEquivocado(ctx.lang) : lineaTraduccion(respuestaEs, otroIdioma, escapeHtml)) +
     `\n\n<i>ℹ️ Solo para tu información — enviado sin tu intervención (categoría «${escapeHtml(dec.categoria)}»).</i>` +
     // El control de calidad caído ya no bloquea un intercambio de pura cortesía (`cortesia.ts`), pero
     // eso NO puede volverse invisible: hasta ahora la única señal de que el clasificador estaba mudo
@@ -69,9 +79,10 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   // idioma ≠ es se declara en el aviso en vez de omitir la línea 🔁 en silencio.
   const otroIdioma = ctx.lang !== 'es'
   // En paralelo: dos traducciones secuenciales se acercaban al límite de tiempo de la función.
+  const borradorEnEspanol = derivaAEspanol(dec.reply || '', ctx.lang)
   const [pregEsRaw, borrEsRaw] = await Promise.all([
     necesitaTraduccionPregunta(pregunta, ctx.lang) ? traducirEs(pregunta) : Promise.resolve(''),
-    otroIdioma && dec.reply ? traducirEs(dec.reply) : Promise.resolve(''),
+    otroIdioma && dec.reply && !borradorEnEspanol ? traducirEs(dec.reply) : Promise.resolve(''),
   ])
   const preguntaEs = traduccionUtil(pregunta, pregEsRaw)
   const borradorEs = traduccionUtil(dec.reply || '', borrEsRaw)
@@ -82,7 +93,7 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   const cuerpo = `<b>Huésped:</b> ${escapeHtml(pregunta)}` +
     lineaTraduccion(preguntaEs, otroIdioma, escapeHtml) +
     `\n\n<b>Borrador${idiomaNota}:</b>\n${escapeHtml(dec.reply || '(sin borrador — escribe tú con Modificar)')}` +
-    lineaTraduccion(borradorEs, otroIdioma && !!dec.reply, escapeHtml) +
+    (borradorEnEspanol ? avisoIdiomaEquivocado(ctx.lang) : lineaTraduccion(borradorEs, otroIdioma && !!dec.reply, escapeHtml)) +
     (noRespuesta ? `\n\nℹ️ <i>Parece un cierre de conversación — quizá no requiere respuesta.</i>` : '') +
     (dec.motivo ? `\n\n<i>${escapeHtml(dec.motivo)}</i>` : '') +
     // Si escalamos porque la pregunta NO queda cubierta por las fuentes, decirlo con nombre y
@@ -91,7 +102,18 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
     // conocimiento que falta (y lo que Alberto conteste se aprende como hecho), el segundo es que el
     // clasificador no respondió. Decir «no lo encuentro en la guía» con el control caído es afirmar un
     // hueco que nadie ha mirado — y hace parecer que el agente no aprende cuando el asunto SÍ está.
-    (hueco === 'guia'
+    // Datos traídos de internet: se dice de dónde salen. Un borrador con un precio o un horario que
+    // no está en la guía solo es verificable si el aviso trae el enlace — sin eso, Alberto tendría
+    // que buscarlo él, que es exactamente el trabajo que esto pretende ahorrarle.
+    (dec.consulta_web === 'ok'
+      ? `\n\n🔎 <b>Esto no está en la guía de ${escapeHtml(ctx.property)}: lo he consultado en internet.</b> Comprueba los datos antes de enviarlo.` +
+        (dec.fuentes_web?.length
+          ? `\n${dec.fuentes_web.slice(0, 4).map(u => `· ${escapeHtml(u)}`).join('\n')}`
+          : `\n<i>· la búsqueda no citó ninguna fuente — verifícalo por tu cuenta antes de enviarlo</i>`) +
+        `\nLo que le respondas se guarda como hecho de este piso y no tendré que buscarlo otra vez.`
+      : dec.consulta_web === 'fallida'
+      ? `\n\n⚠️ <b>Esto no está en la guía de ${escapeHtml(ctx.property)} y NO he podido consultarlo en internet</b> (la búsqueda falló). No es que el dato no exista: es que no lo he podido mirar.`
+      : hueco === 'guia'
       ? `\n\n❓ <b>Esto no lo encuentro en la guía de ${escapeHtml(ctx.property)}.</b> Lo que le respondas se guarda como hecho de este piso y lo usaré la próxima vez.`
       : hueco === 'control_caido'
         ? `\n\n⚠️ <b>No he podido verificar el borrador</b> (el control de calidad no respondió). No significa que falte en la guía de ${escapeHtml(ctx.property)} — solo que esta vez no lo he podido comprobar.`
@@ -129,11 +151,12 @@ export async function reproponerBorrador(
   opts: { borradorEs?: string } = {},
 ): Promise<void> {
   const idioma = pend.idioma || 'es'
+  const enEspanol = derivaAEspanol(borrador, idioma)
   let borradorEs = opts.borradorEs || ''
-  if (!borradorEs && idioma !== 'es' && borrador) borradorEs = await traducirEs(borrador)
+  if (!borradorEs && idioma !== 'es' && borrador && !enEspanol) borradorEs = await traducirEs(borrador)
   const idiomaNota = idioma !== 'es' ? ` <i>(en ${idioma.toUpperCase()})</i>` : ''
   const cuerpo = `✏️ <b>Borrador revisado${idiomaNota}</b> (reserva ${pend.booking_id}):\n${escapeHtml(borrador || '(vacío)')}` +
-    lineaTraduccion(traduccionUtil(borrador, borradorEs), idioma !== 'es' && !!borrador, escapeHtml) +
+    (enEspanol ? avisoIdiomaEquivocado(idioma) : lineaTraduccion(traduccionUtil(borrador, borradorEs), idioma !== 'es' && !!borrador, escapeHtml)) +
     `\n\nRevísalo y dale a ✅ Enviar, o sigue ajustando.`
   const botones: Boton[][] = [
     [{ texto: '✅ Enviar', callback: `hsp_send:${pend.booking_id}` }, { texto: '✏️ Modificar', callback: `hsp_edit:${pend.booking_id}` }],

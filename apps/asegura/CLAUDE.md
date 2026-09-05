@@ -572,6 +572,24 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   distintos a propósito: **tener a quién llamar no es poder notificar** — el preaviso del art. 22 LCS va
   al TOMADOR. El nombre de un interviniente suelto va cifrado y NO cruza el puerto: de esos solo el
   recuento. Guardián: `test/regression-clientes-sin-canal.test.ts`.
+  🚨 **Y había un CUARTO sitio, encontrado el 05/09/2026 por el mismo camino: `cliente_relaciones`.**
+  Alberto, mirando la pantalla otra vez: «grupo elca ya tiene a pablo y aun aparece», «Studium es una
+  empresa y tiene a victor y berta». Los tres estaban declarados (Pablo Franco Ruz «Administración» de
+  GRUPO ELCA 83; Víctor «Empleado/a» y Berta «Accionista» del Instituto Studium) y la consulta miraba la
+  ficha, sus tablas hijas y los intervinientes de la póliza, pero no ahí. **Medido contra la BD ese día:
+  18 clientes de la cartera viva sin nada en su ficha · 14 ilocalizables con los tres sitios de antes ·
+  SEIS con el cuarto.** (La pantalla decía 16, cifra anterior a las fusiones del lote 10.)
+  ⚖️ **El familiar NO es un contacto de segunda.** Se iba a rotular «solo sirve para pedirle el correo» y
+  lo corrigió Alberto: «piensa q un cliente puede ser muy mayor y no tiene contacto… es mejor contactar
+  con el familiar». Comparte estado con el interviniente ajeno (`contacto_via_tercero`) y **viaja el
+  PARENTESCO** (`fichasAllegado: {clienteId, nombre, parentesco}`), que la pantalla pinta: llamar al hijo
+  y llamar a un desconocido no son lo mismo. Lo que no cambia es que tener a quién llamar sigue sin ser
+  poder notificar (art. 22 LCS, el preaviso va al TOMADOR).
+  ⚠️ **La consulta busca en las DOS direcciones de la relación a propósito.** El convenio del repo es
+  «fila A→B = B es <tipo> de A», pero el volcado NO lo respeta (en Studium hay una fila que se leería
+  «Berta es Empresa de Studium»), así que se enseña el `tipo_relacion` tal cual lo escribió el CRM y no se
+  afirma quién representa a quién. Y `distinct on (o.id)`: cada vínculo está dos veces y una misma persona
+  puede ser a la vez «Propietario» y «Empresa» — sin eso, saldría duplicada.
 - **`GET /poliza?id=`** (02/09/2026) — la ficha de UNA póliza: coberturas, todos los recibos, siniestros,
   intervinientes, nº de documentos (`null` si no se pudo contar) y la **copia gemela** (mismo `numero_poliza`
   en la otra cara: la de CIMA trae vencimiento y recibos, la del volcado la dirección del riesgo). La
@@ -877,6 +895,23 @@ delante (`249` Antonio Manuel Mejías / Yolanda Ríos, `366` Catalina Verdugo / 
 son grupos de TRES o más fichas**, que la guarda `count(*) = 2` del lote 7 salta a propósito: tres
 fichas con el mismo DNI las decide una persona, no un bucle.
 
+✅ **Y esa persona los decidió: lote 10 (05/09/2026, `2026-09-05_fusion_mismo_dni_lote10.sql`,
+`fusion-dni-lote10-2026-09-05`).** Los 18 se pusieron delante de Alberto con nombre, teléfono y
+pólizas; aprobó 14 grupos completos + 1 parcial. Ejecutado a las 12:46 UTC: **15 fusiones, 33
+lápidas, 15 supervivientes, y ninguna póliza perdida** (70 antes, 70 después). Dos cambios de motor
+respecto al lote 7: fusiona grupos de **N** (elige un superviviente y le funde las demás de una en
+una, con el mismo orden de desempate) y **los uuid van escritos a mano en el lote, no leídos de la
+foto** — la foto se recalcula en cada visita a `/correduria/mantenimiento`, así que el ordinal de un
+grupo no es estable y solo los ids garantizan que lo ejecutado es lo aprobado.
+🚫 **Los 3 que NO se tocaron son la parte que importa:** el 12 (Antonio Manuel Mejías Heredia /
+Yolanda Ríos Vázquez) y el 15 (Fernando Martín Verdugo / Catalina Verdugo García) son **dos personas
+distintas** — el identificador coincide y el DATO está mal en una de las dos—, y el 10 es el
+centinela de 20 fichas. Fuera también la ficha de «Elisa De paz campo», que compartía grupo con dos
+«Juan Antonio Romero Lopez» sin tener nada que ver: ese grupo entró **parcial**.
+🔎 **Y un hallazgo que ningún criterio de nombre habría encontrado:** «Gerente Chapisa (sin
+apellidos)» no es una persona sin nombre — es **Francisco Javier Zamora Flores**, mismo DNI y mismo
+teléfono. Un cargo tecleado donde iba el nombre.
+
 🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ✅ EJECUTADO:
 el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un
 error». Las dos mitades ciertas y por motivos distintos:
@@ -1015,6 +1050,61 @@ reintento mande el mismo aviso dos veces. Si el sello falla se grita `ENVIADO PE
 Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), `ASEGURA_MAIL_FROM` y
 un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
 Guardián: `test/regression-portal-obligaciones.test.ts`.
+
+## ✉️ «Invitar por correo» — el aviso de acceso pendiente (05/09/2026)
+
+`POST /api/operador/cliente/relaciones/aviso` (Bearer de operador) escribe a la persona que tiene una
+autorización **pendiente** para que entre al portal y la confirme. Lo dispara Alberto con un botón en
+`plataforma` → `/correduria` → ficha del cliente; **nada lo llama solo**.
+
+**Por qué existe:** `autorizarVer()` anota el consentimiento (`origen='corredor'`) y la fila nace
+`aceptado_en IS NULL`, o sea sin abrir nada. Hasta hoy nadie se lo contaba al interesado: o Alberto
+escribía el correo a mano, o la autorización se caducaba sola a los 90 días. Un permiso que su
+destinatario no sabe que existe es un permiso que no existe.
+
+**Por qué el envío vive aquí** y no en `apps/asegura-portal`: la misma razón que el cron de avisos de
+arriba — el portal solo guarda hashes del canal y desde allí no hay destinatario al que escribir.
+
+**Las cuatro comprobaciones** (`lib/aviso-acceso.ts`), cada una con su código y su motivo, porque se
+arreglan de forma distinta y colapsarlas dejaría a Alberto sin saber si falta un correo o falla el
+proveedor:
+
+| desenlace | HTTP | qué significa |
+|---|---|---|
+| `ok` | 200 | el proveedor aceptó el mensaje (devuelve `caducaEn`) |
+| `no_encontrado` | 404 | alguna de las dos fichas no es de esta correduría |
+| `sin_pendiente` | 409 | no hay autorización pendiente entre ese par (o ya se aceptó, o caducó) |
+| `sin_email` | 422 | la ficha autorizada no tiene correo legible, o está de baja de correo |
+| `sin_portal` | 503 | `ASEGURA_PORTAL_URL` no es una https válida |
+| `error_envio` | 502 | el proveedor rechazó el mensaje |
+
+El estado «pendiente» lo decide `estadoAutorizacion()` del módulo puro sobre la fila, **no un `where`
+que dé por hecho que «sin aceptar» es «pendiente»**: una sin aceptar que ya pasó su fecha está
+caducada, y mandar a confirmarla lleva a una pantalla donde no hay nada que pulsar.
+
+🚨 **El destinatario sale SIEMPRE de la ficha autorizada, nunca de la petición** (regla 3 de
+`avisos-vencimiento.ts`): un destinatario que viaja en un JSON convierte este puerto en un relay de
+correo con la firma de la correduría.
+
+🚨 **Y esto NO acepta la autorización.** Sigue pendiente después del correo. La doble aceptación es el
+único punto del sistema donde se prueba que al otro lado está la persona que Alberto tiene en la
+cabeza —la dirección la teclea él, y puede ser un buzón compartido o tener una letra mal— y un botón
+del panel no puede saltársela.
+
+**Lo que el correo NO puede decir** (`lib/correo-aviso-acceso.ts`): quién le da el acceso y dónde
+confirmarlo, y nada más. Ni compañía, ni número de póliza, ni matrícula, ni prima, ni DNI — **ni
+siquiera qué alcance se le ha dado**, que ya es información sobre la cartera ajena. Misma lista que el
+correo de invitación del portal (`CAMPOS_PROHIBIDOS_EN_INVITACION`) y mismo cepo, que recorre el texto
+entero: `lib/correo-aviso-acceso.test.ts`.
+
+El enlace va a `/autorizaciones` del portal y **no lleva token**: la persona entra con SU correo y un
+código de un solo uso, y el portal la vincula sola a su ficha por el índice ciego del email
+(`apps/asegura-portal/lib/vinculo.ts`). Un enlace sin llave dentro se puede reenviar sin abrir nada.
+
+Envs: `ASEGURA_MAIL_FROM` (ya usada por el cron de avisos) + un proveedor de correo; opcionales
+`ASEGURA_MAIL_REPLY_TO` (el buzón al que escribir si no reconoce a quien le da el acceso) y
+`ASEGURA_PORTAL_URL` (por defecto `https://asegura-portal.vercel.app`, que es donde el portal sirve
+HOY; cuando `clientes.grupoasegura.es` esté repuntado a Vercel se cambia la env y no se toca código).
 
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se

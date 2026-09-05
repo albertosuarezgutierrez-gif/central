@@ -44,6 +44,145 @@
   especificidad). Guardián nuevo `lib/oscuro.test.ts` (probado por mutación). PR #2381, commit
   `976faac3e`. **Sin mergear a propósito: `grupoasegura.es` ya es producción y espera su visto bueno.**
 
+- **✉️ «Invitar por correo»: la autorización pendiente ya se la cuenta alguien (05/09/2026).** Anotar
+  que ELCA autoriza a Pablo dejaba la fila `pendiente` y **nadie avisaba a Pablo**: o Alberto escribía
+  el correo a mano, o se caducaba sola a los 90 días. Botón en la fila de la persona (solo si está
+  `pendiente`) → proxy de plataforma → puerto nuevo `/api/operador/cliente/relaciones/aviso` de asegura,
+  que es quien tiene el email descifrado. **No acepta nada**: la doble aceptación sigue siendo la única
+  prueba de identidad. El correo dice quién le da el acceso y dónde confirmarlo, y **nada más** —ni el
+  alcance, que ya es cartera ajena— con el mismo cepo que la invitación del portal. Cinco desenlaces sin
+  colapsar (`sin_email` es el único accionable) y ninguno de los cuatro fallos puede leerse como
+  enviado. **Pendiente:** `ASEGURA_MAIL_FROM` + proveedor de correo en el Vercel de asegura. PR #2386.
+
+- **📊 La web pública ya puede medir, y solo si le dejan (05/09/2026).** `apps/asegura-web` no tenía
+  **ni una línea** de PostHog ni de Cookiebot: crear las tres envs en Vercel (lo que estaba a punto de
+  hacerse) no habría hecho nada, porque no había código que las leyera. Ahora sí, y **fail-closed**:
+  `puedeMedir()` (puro, `lib/analitica.ts`) exige las tres cosas —CBID, clave y `statistics === true`—
+  y PostHog **no está en el bundle**, se baja de su CDN tras aceptar. Es la decisión contraria a la web
+  de Manuel, cuyo *fail-open* deja PostHog corriendo sin banner si falta la env (medido el 04/09).
+  `/legal/cookies` + botón de renovar (art. 7.3 RGPD), enlace en el footer y en el sitemap. 12 cepos en
+  `lib/analitica.test.ts`; 28 tests de la app, tsc 0, lint 0, build OK. **PR #2385 mergeado** (`4a3be3f`, 20/20 en verde).
+  🔌 **Pendiente de Alberto para que MIDA (hasta entonces no mide, y eso es lo correcto pero silencioso):**
+  `NEXT_PUBLIC_COOKIEBOT_ID` + `NEXT_PUBLIC_POSTHOG_KEY` en el proyecto Vercel `asegura-web` (son
+  `NEXT_PUBLIC_`: se hornean en el build → redeploy después), y **dar de alta `grupoasegura.es` en el
+  panel de Cookiebot** — un CBID atado solo a `app.grupoasegura.com` no pinta banner aquí.
+  ✅ **Los 7 crons de `asegura` NO estaban rotos al cerrar: ya los había arreglado otra sesión** (revert
+  `cae77bd`, 14:05 UTC, de #818). Aquel PR repuntó los destinos a `grupoasegura.es` sobre una premisa
+  **no medida** (que la canonicalización rompía el `.com`), y lo que se midió después la desmiente:
+  `.es/api/crons/cima-pull` → **404**, `app.grupoasegura.com/api/crons/cima-pull` → **401** (la ruta
+  responde, sin redirect). Daño real: **UN run**, el de las 13:57; el de las 14:06 ya en verde. ⚠️ Y
+  **NO quitar** PostHog/Cookiebot del proyecto `asegura`: su fail-open dejaría el CRM midiendo sin
+  banner — lo correcto es dar de alta los dominios en el CBID.
+- 🔐 **Y un cabo que ese PR dejó suelto: la privacidad se reescribió sin subir la versión del texto.**
+  `VERSION_TEXTOS_LEGALES` seguía en `2026-09-v4` con un contenido que ya no era el de v4 — justo lo que
+  esa constante existe para impedir. Pero **subirla NO era la solución**: se SELLA en
+  `portal_consentimiento.version_texto`, así que reescribir el apartado de cookies de la web habría
+  obligado a los ~80 clientes del portal a volver a acreditar, ensuciando un registro cuyo único valor
+  es ser prueba. Nace **`VERSION_TEXTOS_WEB`** (`2026-09-w1`) para los textos de `asegura-web`, con test
+  que impide volver a colapsar las dos series. Regla: texto de la web → sube `_WEB`; texto del portal →
+  sube `_LEGALES`.
+- 🔁 **Y la lección de método del día: dos sesiones montaron la MISMA analítica en paralelo.** La de
+  #2385 llegó antes y es mejor (PostHog fuera del bundle, cepos que leen el fuente); la otra se
+  descartó entera al resolver el conflicto. Antes de empezar algo que «no existe», mirar si hay un PR
+  abierto tocándolo: `list_pull_requests` cuesta una llamada y aquí habría ahorrado una implementación
+  completa.
+- **📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI (05/09/2026).** Lo del
+  PR #2378 (idioma, consulta web, `importesNoRespaldados`, los hechos de transporte de los 4 pisos) se
+  volcó a `sivra-maestro/references/contexto-y-agente-huesped.md`: vivía solo en la memoria y en el PR, y
+  esa referencia es lo que lee quien toca el agente. **CI:** el PR volvió a quedar `dirty` dos veces (main
+  avanzó con #2377 y #2382); el paso 3 del orden documentado —mergear `main` y empujar— disparó los 12
+  requeridos a los segundos, sin lag que esperar ni palancas raras. **Vercel:** un commit de MERGE **sin**
+  `[preview]` pinta las 12 apps en «Building» y acaba en **11 `Ignored` + `ialimp` `Ready`** (ialimp es la
+  única sin `--sin-previews`): NO son los once builds del PR #2281 —eso lo causa el marcador, no el merge—,
+  así que no se da la alarma desde el comentario intermedio. Las dos cosas anotadas en el CLAUDE.md raíz.
+
+- **🔎 Si no está en la guía y el dato es de FUERA, el agente consulta internet (05/09/2026).** Dictado de
+  Alberto: «en caso de duda que use la IA para consultar». Mismo incidente que el bug del idioma: a
+  «¿cómo llegamos del aeropuerto?» el modelo se inventó **dos** datos (taxi «25-30€» —el real es tarifa
+  fija municipal de 26€ L-V 7-21h / 29€ noches y festivos— y una parada del bus EA, «Puerta de Jerez»,
+  que ni existe en esa línea ni está a 10 min del piso). `consulta-web.ts` (puro, 12 tests): cuando el
+  control de calidad dice que la guía no cubre la pregunta **y** la pregunta es del ENTORNO (transporte,
+  monumentos, dónde comer, servicios, eventos) se llama a `buscarWeb` y se re-redacta el borrador con
+  los datos + sus URLs. 🚨 Lo consultado **NUNCA se auto-envía** (`webConsultada` fuerza `needs_human`,
+  guardián que lee el fuente) y una búsqueda fallida se DECLARA: «no he podido mirarlo» ≠ «no está en la
+  guía». Sigue contando como hueco de guía para que lo que responda Alberto se aprenda como hecho y no
+  se pague la búsqueda dos veces. Nada de esto aplica al PISO (internet no sabe si hay plancha) ni a lo
+  sensible/negativo. Además `importesNoRespaldados` en el guardrail: **ninguna cifra en € que no esté en
+  las fuentes pasa** — los patrones de antes solo miraban códigos de 4+ dígitos, teléfonos y URLs, por
+  eso el precio del taxi salió limpio. PR #2378. **Y el dato ya está en la guía** (`mensajes_hechos`
+  ids 10 y 11, `prop_house_sevillana`, `confirmado`, insertados a mano por Supabase): tarifa fija de
+  taxi 26€ (L-V 7-21h) / 29€ (noches, findes, festivos), EA 6€/8€ con sus paradas reales, y la
+  advertencia explícita de NO decir «Puerta de Jerez» ni «10 min andando». Así esa pregunta se
+  responde sola, sin gastar búsqueda. **Y los otros 3 pisos también** (ids 12-14, a petición de Alberto):
+  ahí va SOLO lo que vale para toda Sevilla —tarifa fija de taxi y precios/paradas del EA— con la orden
+  explícita de NO decir en qué parada bajarse ni cuántos minutos se anda hasta ESE piso, porque esa
+  distancia no está medida para ellos. El dato que no se tiene se declara, no se estima.
+
+- **🗣️ El borrador salía en ESPAÑOL con el huésped escribiendo en inglés (05/09/2026).** Caso real: reserva
+  154375571 (House Sevillana, Massimo). Todos los prompts del agente van en español y la orden «responde en
+  inglés» es UNA línea dentro del muro → el modelo deriva al idioma ambiental. Pasaba MUDO: el aviso decía
+  «Borrador (en EN)» (`ctx.lang` sí era 'en') y la línea 🔁 «no he podido traducirlo al español» —traducir
+  español a español devuelve lo mismo y `traduccionUtil` lo descarta—, así que un fallo de REDACCIÓN se leía
+  como uno de traducción; y con categoría auto-enviable, al huésped le llegaba en español. Red nueva
+  `lib/sivra/agente-huesped/idioma-salida.ts` (puro, 7 tests): detecta la deriva AL ESPAÑOL (solo esa, no se
+  arbitra entre en/fr/de/it) y traduce; si no puede, `fallo` → `needs_human` con motivo propio, nunca se
+  maquilla. Cableada en `decidir`, `redactar` y `retoque`; los tres avisos de Telegram dicen «⚠️ este texto ha
+  salido en ESPAÑOL» en vez de la línea 🔁 confusa. Refuerzo del idioma también en la ÚLTIMA línea del system.
+- **🧲 La hoja de la nevera y su QR: existe (05/09/2026).** Alberto: «crear QR y ahí seleccionas si
+  todas las pólizas, una o algunas… y el qr se puede borrar y se anularía el acceso». **No existía**:
+  solo la decisión escrita en `apps/asegura-portal/CLAUDE.md`, redactada como si existiera. Ahora
+  `/hoja/[token]`, pública e imprimible, con el QR en SVG desde el servidor (`qrcode@1.5.4`, la
+  misma versión que ia-rest y rrhh). 🔐 **Un token sin sesión es aceptable aquí porque la selección
+  lo acota**: enseña exactamente lo que va impreso en ese papel, así que no filtra nada que el papel
+  no filtre ya. Reglas: el QR lleva ENLACE no datos · lo que muestra se relee EN VIVO (vendes el
+  coche y desaparece sola) · **cero filas = TODAS, y eso incluye las futuras** (la pantalla lo dice,
+  cepo positivo) · anular no borra (sin DELETE en el rol) · token hasheado. Tabla `portal_hoja_qr`
+  aplicada el mismo día, con **5 cepos vistos morder en la BD real**. PR #2380.
+
+- **🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra: fuera una pestaña (05/09/2026).**
+  Alberto, mirando su portal: *«mis seguros y mis pólizas es lo mismo»*. **No lo eran** (cartera de
+  CIMA vs. lo que aporta él) **pero el fallo era del nombre**: en castellano son sinónimos, así que
+  la barra ofrecía dos puertas iguales. No se rebautizó, se **quitó**: `portal_poliza_declarada`
+  tenía **1 fila en toda la BD**, y `vista-portal.ts` ya argumentaba en contra de las pestañas casi
+  siempre vacías justo encima del código que la creaba. Ahora una sola lista en «Mis seguros», con
+  chip **«Añadida por ti»** en la FILA —no en la ficha— porque esa póliza **no la gestiona la
+  correduría** y el cliente tiene que saberlo antes de contar con ella. Ficha nueva
+  `/boveda/anadida/[id]` con la identidad DENTRO del `where` (2 mutaciones vistas morder). Cepo de
+  sinónimos en la barra. 📱 Y arregla la 4ª pestaña **cortada** en su móvil: con tres caben a 360+,
+  y por debajo de 380 se reparten el ancho (a 320 se salían 39 px). PR #2379.
+
+- **👥 UNA lista de personas por ficha: se funden 👤 y 👪 (05/09/2026).** Las dos tarjetas contestaban la
+  misma pregunta («¿a quién llamo y con qué derecho?») y la misma persona salía en las dos sin que nada lo
+  dijera. Ahora una sola tarjeta 👥 Personas: `unificarPersonas` (`packages/module-seguros/src/personas-ficha.ts`,
+  8 tests) funde **por FICHA, nunca por nombre** —dos homónimos con NIF distinto siguen siendo dos filas, y
+  quien CIMA no ha enlazado no se funde con nadie—, y cada fila conserva sus dos caras: 📄 lo que manda la
+  compañía (papeles por póliza, con su «quitar») y 👪 lo nuestro (vínculo + autorización). `Relaciones` es
+  dueño de la lista; los papeles entran como render-prop desde `TabContactos` porque son otra API. `null` de
+  cada fuente se dice por separado: ninguno es «no hay nadie». Mismo PR #2369.
+
+- **👤 Persona de contacto de una empresa: se crea su FICHA, no un campo (05/09/2026).** Duda de Alberto en
+  Grupo ELCA 83: quería apuntar a quien lleva sus seguros, que no es cliente. Se descartó un campo «persona de
+  contacto» dentro de la sociedad porque **esa persona es un futuro cliente**: con ficha propia nace 🕐 lead
+  (el estado se DERIVA, `estadoCliente`) y pasa a ✅ cliente sola cuando CIMA confirme su primera póliza. Nuevo
+  botón «Nueva persona de contacto» en 👪 Relaciones: alta + vínculo en un paso, con `fuente: recomendacion`,
+  reutilizando la ficha existente si el alta da 409 (anti-duplicado). **NO da acceso**: la autorización del
+  portal sigue siendo un acto aparte (consentimiento con alcance, caducidad y aceptación) — es el camino para
+  que el administrador acabe viendo las pólizas de la empresa y las suyas. `combinarPersonaContacto` +
+  `tiposContactoSugeridos` en `@central/module-seguros` (8 tests): son DOS escrituras y «ficha creada, vínculo
+  no» se dice entero para que el siguiente clic no duplique. NO se tocan `tipo`/`lead_estado` (columnas
+  heredadas del CRM que la pantalla no usa: escribirlas sería una segunda verdad). PR #2369.
+- **🧾 Los recibos del portal del cliente: el `anulado` no es «no pagado» (05/09/2026).**
+  Segunda mitad de «¿y los recibos? e historial siniestros?». Medido sobre los 183 recibos de la
+  cartera viva: **54 anulados, y 25 de ellos con importe NEGATIVO** (−1.268,18 € frente a +1.268,18 €:
+  extorno y su re-emisión) → fuera de la lista, pero **se dice** que están, que si no al cliente le
+  faltan movimientos al cuadrar con su banco. El hallazgo caro: **20 pólizas de las 110 vivas tenían
+  recibos y todos anulados**, y no pintaban NADA (el `total` los contaba, así que ni salía el hueco ni
+  quedaba nada que enseñar). Ahora son **TRES estados** (`sin_informar` / `solo_anulados` /
+  `con_recibos`) y el estado se calcula sobre la lista CRUDA. También fuera: `forma_pago` (código
+  `CC`/`OF`/`TA`) y la fecha centinela `0001-01-01`. Vocabulario en
+  `module-seguros-portal/src/recibo-historial.ts` (12 tests, 5 mutaciones vistas morder); pantalla en
+  `RecibosDePoliza`, en la ficha y antes de los siniestros. PR #2367.
+
 - **🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio (05/09/2026).**
   Captura suya: «Únete gratis», «Acceso correduría», header montado. Medido en Vercel: el apex `.es` y
   `www` están atados al proyecto **`asegura`** (el CRM), no a `asegura-web`; el plan de marketing decía
@@ -56,6 +195,18 @@
   y CNAME a Vercel · `NEXT_PUBLIC_PORTAL_URL` y `PORTAL_PUBLIC_URL` al dominio nuevo. Hasta entonces
   el botón funciona igual (va a `asegura-portal.vercel.app`). El header roto de la captura es código
   de Manuel, en un repo que el clasificador me bloquea.
+
+- **🔗 Lote 10: los 18 grupos de mismo DNI, resueltos uno a uno (05/09/2026).**
+  Con el índice ya escrito, el criterio fuerte por fin veía la cartera entera. **15 fusiones, 33
+  lápidas, 15 supervivientes** (`fusion-dni-lote10-2026-09-05`) y **ninguna póliza perdida** — 70
+  antes, 70 después. El motor pasa a fusionar grupos de **N** (el del lote 7 solo sabía de pares y
+  saltaba los tríos); los uuid van **escritos a mano** en el lote, no leídos de la foto, porque la
+  foto se recalcula en cada visita y su ordinal no es estable.
+  🚫 **3 grupos NO se tocan, y ahí está el valor:** el 12 (Mejias Heredia / Yolanda Rios) y el 15
+  (Fernando Martin Verdugo / Catalina Verdugo Garcia) son **dos personas** con un DNI mal tecleado,
+  y el 10 es el centinela de 20 fichas. Fuera también «Elisa De paz campo» del grupo 5 (parcial).
+  🔎 El hallazgo bonito: «**Gerente Chapisa (sin apellidos)**» no era una persona sin nombre — mismo
+  DNI y mismo teléfono que **Francisco Javier Zamora Flores**, o sea él.
 
 - **🗄️ Archivar, no borrar: decisión de Alberto sobre las 26.463 fichas sin contacto (05/09/2026).**
   «no la elimines, archívala y pon recordatorio en 6 meses… siempre habrá tiempo de borrarlo». Hecho:

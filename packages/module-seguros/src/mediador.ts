@@ -40,6 +40,39 @@ export const VERSION_TEXTOS_LEGALES = '2026-09-v4'
 /** Fecha de la última revisión de fondo de los textos legales (ISO, UTC). */
 export const FECHA_TEXTOS_LEGALES = '2026-09-05'
 
+/**
+ * Versión de los textos legales de la WEB PÚBLICA (`apps/asegura-web`).
+ *
+ * 🚨 Es una constante APARTE de `VERSION_TEXTOS_LEGALES` a propósito, y no por
+ * duplicar: son dos documentos distintos, con público distinto y con
+ * consecuencias distintas al cambiarlos.
+ *
+ * `VERSION_TEXTOS_LEGALES` no es solo un número que se pinta en un pie: se
+ * guarda en `seguros.portal_consentimiento.version_texto` y `necesitaRegistro()`
+ * la compara con la que cada cliente aceptó. Subirla obliga a **todos** los
+ * clientes del portal a volver a acreditar la información precontractual la
+ * próxima vez que entren.
+ *
+ * Cuando el 05/09/2026 la web pública añadió medición de visitas hubo que
+ * reescribir su apartado de cookies. Con una sola constante, ese cambio —que no
+ * toca en absoluto lo que un cliente del portal aceptó— habría hecho firmar de
+ * nuevo a la cartera entera y habría ensuciado el registro de consentimientos,
+ * que es una prueba. La alternativa era no subir la versión y dejar que el pie
+ * de una página reescrita siguiera anunciando la anterior, que es justo lo que
+ * la versión existe para impedir. De ahí las dos.
+ *
+ * Regla: cambia el fondo de una página de `apps/asegura-web` → sube esta. Cambia
+ * el fondo de una página del portal → sube la otra.
+ *
+ * Arranca en `w1`, que es la revisión que introdujo la medición de visitas. Lo
+ * que la web publicó ANTES de esta separación salió bajo `2026-09-v4`: la `w`
+ * evita que las dos series se confundan al leer un pie de página antiguo.
+ */
+export const VERSION_TEXTOS_WEB = '2026-09-w1'
+
+/** Fecha de la última revisión de fondo de los textos de la web pública. */
+export const FECHA_TEXTOS_WEB = '2026-09-05'
+
 export const MEDIADOR = {
   /** Nombre comercial. La persona que responde legalmente es `identidad`. */
   marca: 'Grupo ASegura',
@@ -64,6 +97,21 @@ export const MEDIADOR = {
      * unificarlo allí también, y ese cambio toca textos con `LegalVersionGate`.
      */
     email: 'hola@grupoasegura.es',
+    /**
+     * Móvil de Alberto, confirmado por él el 05/09/2026 para publicarlo en la
+     * web y usarlo como WhatsApp de contacto.
+     *
+     * 🚨 En E.164 y SIN espacios a propósito: es el formato que exige `wa.me/`
+     * y el que Google espera en `telephone` del JSON-LD. Para PINTARLO usa
+     * `telefonoLegible`, no este: un `+34637349990` de corrido en una web se
+     * lee mal y se copia peor.
+     *
+     * ⚠️ Es su número PERSONAL, no una línea de empresa. Publicarlo es
+     * irreversible: los rastreadores lo copian en horas. Si algún día hay una
+     * línea de la correduría (o la WABA que el portal espera para su canal de
+     * WhatsApp), se sustituye AQUÍ y cambia en todas las superficies a la vez.
+     */
+    telefono: '+34637349990',
   },
   /** Seguro de responsabilidad civil profesional, art. 156.3 Ley 16/2018. */
   responsabilidadCivil: {
@@ -156,4 +204,34 @@ export type IdPuntoPrecontractual = PuntoPrecontractual['id']
 export function lineaIdentificacion(): string {
   const { nombre, figura, claveDgsfp, nif } = MEDIADOR.identidad
   return `${nombre} · ${figura} inscrito en la DGSFP con clave ${claveDgsfp} · NIF ${nif}`
+}
+
+/**
+ * El teléfono, escrito como se lee: `+34 637 34 99 90`.
+ *
+ * Existe como función y no como una segunda constante para que **no puedan
+ * divergir**: dos cadenas con el mismo número escritas a mano acaban siendo
+ * dos números distintos el día que uno se corrige y el otro no, y en un
+ * teléfono de contacto eso significa llamadas que no llegan.
+ *
+ * Solo entiende el formato español (`+34` + 9 dígitos), que es el único que
+ * hay. Con cualquier otro devuelve el número tal cual, sin inventarse una
+ * agrupación que en ese país podría no significar nada.
+ */
+export function telefonoLegible(): string {
+  const t = MEDIADOR.identidad.telefono
+  const m = /^\+34(\d{3})(\d{2})(\d{2})(\d{2})$/.exec(t)
+  return m ? `+34 ${m[1]} ${m[2]} ${m[3]} ${m[4]}` : t
+}
+
+/**
+ * Enlace de WhatsApp al mediador, con el primer mensaje ya escrito.
+ *
+ * `wa.me` quiere el número **sin `+` y sin espacios**; con el `+` delante
+ * abre la app pero deja el chat en blanco, que es un fallo que no da error y
+ * solo se ve probándolo en un móvil de verdad.
+ */
+export function whatsappUrl(texto: string): string {
+  const numero = MEDIADOR.identidad.telefono.replace(/\D/g, '')
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`
 }

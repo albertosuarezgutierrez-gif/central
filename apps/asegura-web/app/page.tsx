@@ -281,6 +281,23 @@ export default function Home() {
                 El documento no se guarda, solo sus datos
               </li>
             </ul>
+            {/* 🚨 Esto NO es un «regístrate» de marketing: es lo que el portal
+                hace HOY, verificado en su código. `/api/acceso/solicitar` no
+                consulta la cartera antes de mandar el código, y `verificar`
+                crea la identidad si el canal no existía — o sea, entra
+                cualquiera con un correo, sin ser cliente, y puede subir sus
+                pólizas desde el primer minuto. Lo que un no-cliente NO tiene es
+                vínculo con la cartera: ve su espacio, no el nuestro. Por eso el
+                texto promete «tu espacio» y no «tus pólizas». */}
+            <div className="hero-cta" style={{ marginTop: 28 }}>
+              <a href={PORTAL_URL} className="btn btn-brand">
+                Crear mi área con mi correo
+                <Flecha />
+              </a>
+            </div>
+            <p className="tenue" style={{ margin: '14px 0 0', fontSize: 14 }}>
+              No hace falta ser cliente todavía: entras con tu correo, te llega un código y ya tienes tu espacio.
+            </p>
           </Reveal>
           <Reveal delay={0.1}>
             <Escaneo />

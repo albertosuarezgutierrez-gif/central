@@ -29,8 +29,8 @@ import Link from 'next/link'
 
 import {
   MEDIADOR,
-  FECHA_TEXTOS_LEGALES,
-  VERSION_TEXTOS_LEGALES,
+  FECHA_TEXTOS_WEB,
+  VERSION_TEXTOS_WEB,
 } from '@central/module-seguros'
 
 import { url } from '@/lib/sitio'
@@ -470,7 +470,7 @@ export default function Privacidad() {
         </section>
 
         <p style={version}>
-          Versión {VERSION_TEXTOS_LEGALES} · última revisión {FECHA_TEXTOS_LEGALES}
+          Versión {VERSION_TEXTOS_WEB} · última revisión {FECHA_TEXTOS_WEB}
         </p>
       </div>
     </main>

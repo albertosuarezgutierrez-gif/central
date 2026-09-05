@@ -180,6 +180,131 @@ Y dos reglas de la casa aplicadas:
 clientes esa pestaña les diría 0, y una sección casi siempre vacía no parece un producto moderno
 sino uno a medio hacer. Mismo razonamiento que la ausencia de hamburguesa.
 
+### 🧾 Los recibos (05/09/2026) — el `anulado` no es «no pagado», y 20 pólizas estaban mudas
+
+La otra mitad de la pregunta de Alberto. Los recibos ya se leían y se resumían, pero el bloque
+mentía por omisión. **Medido sobre los 183 recibos de la cartera viva:**
+
+| Hallazgo | Consecuencia en la pantalla |
+|---|---|
+| **`anulado` son 54, y de esos 25 tienen importe NEGATIVO** (extornos), 8 valen 0 € y 21 son positivos. El mínimo es **−1.268,18 €** y el máximo **+1.268,18 €**: el mismo número con los dos signos, o sea un extorno y su re-emisión | **No entran en la lista y ningún cubo los cuenta.** Un «recibo de −1.268,18 €» no informa a nadie: hace llamar. Pero se DICE que están ahí fuera, porque el cliente cuadra contra su banco y le faltarían movimientos |
+| **20 de las 110 pólizas vivas tienen recibos y TODOS son anulados** | Antes no pintaban **nada**: `total` contaba los anulados (así que no salía el hueco de «sin informar») y no quedaba ninguno que enseñar (así que la función devolvía `null`). Veinte pólizas mudas de ciento diez |
+| **`forma_pago` es un CÓDIGO**: `CC` (117), `OF` (6), `TA` (4), y 56 sin informar | No se pide al `select` ni se pinta. `CC` se adivina, `OF` no — mismo caso que `siniestros.tipo` |
+| **Hay una fecha CENTINELA**: un `pendiente` trae `fecha_emision` `0001-01-01` | `fechaReciboFiable()` la anula al leer. Es un «no lo sé» con forma de dato: pasa por `??`, por `IS NULL` y por cualquier `COALESCE`, y en pantalla saldría «01/01/0001» |
+
+🚨 **De ahí sale la regla de esta pantalla: son TRES estados, no dos.** `sin_informar` (la compañía
+no mandó nada — que NO es «estás al corriente») · `solo_anulados` (mandó, y está todo anulado) ·
+`con_recibos`. Las tres frases son distintas porque las tres situaciones lo son, y colapsar las dos
+primeras le diría a 20 clientes que su compañía no informó nada cuando sí informó. Lo decide
+`estadoRecibos()` de `@central/module-seguros-portal`, **sobre la lista CRUDA**: con la lista ya
+limpia de anulados, «todo anulado» y «no hay ninguno» son indistinguibles.
+
+Todo el vocabulario vive en `packages/module-seguros-portal/src/recibo-historial.ts` (qué es un
+anulado, qué está al cobro, qué fecha es de fiar, en qué orden van); `lib/cartera-lectura.ts` solo
+traduce la fila. **Un `pendiente` NO es un impago**: se pinta en acento, nunca en el rojo del
+devuelto — es la línea que ya se cruzó una vez en `/correduria` (PR #2179).
+
+El bloque entero es **un solo componente** (`RecibosDePoliza` en `PolizaVista.tsx`) a propósito:
+partirlo en «titular» + «lista» dejaba la frase de cada estado en dos ficheros. Va en la ficha de
+cada póliza, **antes** del historial de siniestros: es el dinero, que es lo primero que se mira.
+Cepos en `test/regression-portal-visibilidad.test.ts`.
+
+
+### 🧲 La hoja de la nevera y su QR (05/09/2026) — el token que SÍ se puede regalar
+
+Alberto: *«crear QR y ahí seleccionas si todas las pólizas, una o algunas… y luego se crea el QR»*,
+con *«el qr se puede borrar y se anularía el acceso»*. Hasta ese día la hoja **no existía**: lo único
+que había era la decisión escrita al final de la sección de los teléfonos, redactada como si
+existiera. Ahora sí: `/hoja/[token]`, pública, imprimible.
+
+🔐 **Por qué aquí un token de solo lectura SIN sesión es aceptable, y en otro sitio no.** La objeción
+obvia es «quien fotografíe la hoja entra». Cierto — y da igual: entra a ver **exactamente lo que ya
+está impreso en esa misma hoja**, porque la selección del QR y lo que se imprime son la misma lista.
+El papel es la premisa; el token no añade filtración sobre el papel. Lo que sí haría daño es un QR
+que abriera la cartera ENTERA — y por eso **la selección no es un adorno: es lo que acota el token**.
+Sin ella, esta pieza no se podría hacer.
+
+Las cinco reglas, con su sitio:
+
+| Regla | Dónde vive | Qué pasa si se rompe |
+|---|---|---|
+| **El QR lleva un ENLACE, no los datos** | `lib/enlace-hoja.ts` | Con los datos dentro, la imagen miente en cuanto cambie la póliza, y quien fotografíe la hoja se los lleva |
+| **Lo que enseña se lee EN VIVO** y se vuelve a filtrar por la cartera actual de su dueño | `polizasDeLaHoja()` | Vendes el coche y el imán de la nevera sigue diciendo que está asegurado |
+| **Cero filas de selección = TODAS**, y eso incluye las FUTURAS | tabla + `HojasQr.tsx` | Ensancha el acceso solo cada vez que se contrata algo. **La pantalla lo dice**, con cepo positivo |
+| **Anular NO borra**: `anulada_en`, y el rol no tiene DELETE | SQL + `anularHoja()` | Quien tiene el papel viejo lee «no existe», piensa que le falla el móvil y lo reintenta con prisa |
+| **El token se guarda HASHEADO** | `lib/hojas.ts` | Una tabla de hojas con sus enlaces legibles es una tabla de llaves |
+
+🚨 **Y la trampa del vocabulario, que es la que más cara sale:** como cero filas significa «todas»,
+crear una hoja cuyo formulario traía solo ids ajenos daría **el acceso más amplio a quien pidió el
+más estrecho**. Por eso `crearHoja()` rechaza con `sin_seleccion` en vez de crear, y los ids del
+formulario **nunca se insertan**: se parte de `polizasElegibles()` y la selección solo filtra.
+
+📌 **La página pública no consulta Prisma**, y no es estilo: al hacerlo, el cepo de aislamiento la
+marcó —con razón, porque una consulta sin `identidadId` a la vista es indistinguible de un olvido—.
+La lectura vive en `lib/hojas.ts`, que además expone `crearHojaDeSesion`/`anularHojaDeSesion` (misma
+forma que `lib/supresion.ts`) para que las rutas de API no lleven fontanería de sesión.
+
+📄 Lo que la hoja enseña: compañía, ramo, qué está asegurado, nº de póliza, vencimiento y a quién
+llamar **con la fecha de verificación impresa**. Nada de prima, recibos, siniestros, DNI ni dirección
+del riesgo — con cepo. Las aportadas salen sin teléfono y diciendo que no las lleva la correduría:
+no tenemos su compañía cruzada, así que un número ahí sería inventado.
+
+⚠️ **Y el hueco real, que es de negocio y no de código: Occident no tiene teléfono de voz.** Son 19
+pólizas cuya hoja dirá «WhatsApp, 9h a 21h L-V» donde las demás dicen un 900. En el arcén un sábado
+por la noche eso no sirve. Se arregla llamando a Occident, no aquí.
+
+Tabla `seguros.portal_hoja_qr` + `portal_hoja_qr_poliza`
+(`prisma/sql/2026-09-05_portal_hoja_qr.sql`, **APLICADA el 05/09/2026** — misma sesión que el
+despliegue, que es lo que la lección de `portal_supresion` obliga). **Cinco cepos vistos morder en la
+BD real** con limpieza posterior: token que no es hex (23514), las dos referencias a la vez (23514),
+ninguna (23514), la misma póliza dos veces (23505) y el nombre largo (23514). Reglas puras en
+`packages/module-seguros-portal/src/hoja-qr.ts` (11 tests); cepos de raíz en
+`test/regression-portal-hoja-qr.test.ts` (11, con seis mutaciones comprobadas).
+
+### 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra (05/09/2026)
+
+Alberto, mirando su propio portal en el móvil: *«mis seguros y mis pólizas es lo mismo… tengo lógica
+al desarrollar»*. **No eran lo mismo** —una era su cartera de CIMA y la otra lo que él aporta— **pero
+el fallo era del nombre, no suyo**: en castellano «seguros» y «pólizas» son sinónimos, así que la
+barra ofrecía dos puertas que prometían la misma cosa. Si el dueño de la correduría no las
+distingue, ningún cliente lo va a hacer.
+
+**El arreglo no fue rebautizarla: fue quitarla.** `portal_poliza_declarada` tenía **1 fila en toda la
+BD**, y el argumento en contra ya estaba escrito en `vista-portal.ts` desde el día que se montó —una
+pestaña que casi siempre dice cero parece un producto a medio hacer— justo encima del código que la
+creaba.
+
+Ahora hay **una sola lista** en «Mis seguros»: la cartera y las aportadas, con el mismo aspecto de
+fila. Y por eso el título de la sección ya **no** dice «en Grupo ASegura»: ahí dentro hay ahora
+pólizas que la correduría no lleva.
+
+🚨 **El chip «Añadida por ti» de cada fila NO es decoración, y no se quita.** Para el cliente las dos
+son «un seguro»; para la correduría no: la aportada **no la gestiona nadie de la casa**. Si llama por
+un siniestro de esa, no hay datos, no hay relación con esa compañía y nadie la ha revisado. Va en la
+FILA y no en la ficha porque un cartel que solo se ve tras un clic no existe para quien repasa la
+lista — la misma razón que la etiqueta «De {titular}» de `FilaPoliza`. Y la ficha lo repite entero
+con la píldora «No la gestionamos».
+
+- **`FilaDeclarada.tsx`** — la fila. Sin vencimiento conocido va en `aviso`: es lo único que le puede
+  pasar por encima sin enterarse, **y nadie se lo va a avisar** porque no la gestionamos.
+- **`/boveda/anadida/[id]`** — su ficha, con el editor dentro (antes era una tarjeta con el
+  formulario desplegado, que es lo que Alberto llamó «muy sucia la página» en la cartera).
+  🚨 Aquí la identidad va **DENTRO del `where`** junto al id, no comprobada en la línea siguiente: es
+  una tabla de una sola identidad y la guarda tiene que estar en la consulta. Cepo (con dos
+  mutaciones vistas morder) en `test/regression-portal-aislamiento.test.ts`.
+- **Un `?vista=polizas` viejo** —un correo, un enlace guardado— cae en `seguros` por el
+  comportamiento que `vistaDeBoveda()` ya tenía para valores desconocidos, que es exactamente donde
+  vive ahora ese contenido. No hizo falta redirección.
+- **Cepo nuevo de sinónimos** en `vista-portal.test.ts`: la barra no puede usar a la vez «seguro» y
+  «póliza», ni «siniestro» y «parte». No basta con que las etiquetas sean cadenas distintas.
+
+📱 **Y de paso arregla lo que se veía en su captura: la cuarta pestaña salía CORTADA** («Qu…») en un
+móvil de 390 px. El carril hace scroll horizontal con la barra oculta, así que «Quién me ve» solo la
+encontraba quien arrastrara por casualidad. Medido con Playwright: con tres, a 360/390/412 caben
+enteras; **a 320 seguían saliéndose 39 px**, así que por debajo de 380 se reparten el ancho a partes
+iguales (`flex: 1 1 0`), con los 44 px táctiles intactos. El `overflow-x` se queda como red por si
+algún día vuelve a haber una cuarta.
+
 ### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
 
 Alberto: *«cliente por codigo es un poco coñazo»* y, al preguntarle si le pedía el código cada vez o

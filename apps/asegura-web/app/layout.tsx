@@ -11,10 +11,13 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { MARCA_ASEGURA, emitirRootCss, emitirVariables, emitirVariablesOscuras } from '@central/brand'
-import { MEDIADOR, lineaIdentificacion } from '@central/module-seguros'
+import { MEDIADOR, lineaIdentificacion, telefonoLegible, whatsappUrl } from '@central/module-seguros'
 import { NAV, SITIO_URL } from '@/lib/sitio'
 import { fichaNegocio, jsonLd } from '@/lib/seo'
+import { COOKIEBOT_ID } from '@/lib/analitica'
+import Analitica from '@/components/Analitica'
 import Cabecera from '@/components/Cabecera'
+import Whatsapp from '@/components/Whatsapp'
 import './globals.css'
 
 /**
@@ -91,11 +94,33 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             colores por defecto antes de que cargue el CSS de la app. */}
         <style dangerouslySetInnerHTML={{ __html: CSS_MARCA }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaNegocio()) }} />
+        {/* Gestor de consentimiento. Va en el <head> y no con `next/script`
+            para que el banner salga antes de que React hidrate: un banner que
+            aparece cuando la persona ya ha navegado llega tarde a lo único que
+            tiene que hacer. Si falta el `data-cbid` no se monta NADA — y sin
+            él tampoco arranca PostHog (`lib/analitica.ts`). */}
+        {COOKIEBOT_ID ? (
+          <script
+            id="Cookiebot"
+            src="https://consent.cookiebot.com/uc.js"
+            data-cbid={COOKIEBOT_ID}
+            data-blockingmode="auto"
+            type="text/javascript"
+            async
+          />
+        ) : null}
       </head>
       <body>
+        {/* Solo escucha el consentimiento y, si lo hay, arranca la medición. */}
+        <Analitica />
+
         <Cabecera marca={MEDIADOR.marca} />
 
         <main>{children}</main>
+
+        {/* Flotante, en todas las páginas: el contacto directo no puede vivir
+            solo al final de la portada. */}
+        <Whatsapp />
 
         <footer className="pie">
           <div className="wrap pie-cols">
@@ -108,6 +133,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 {MEDIADOR.identidad.domicilio}
                 <br />
                 <a href={`mailto:${MEDIADOR.identidad.email}`}>{MEDIADOR.identidad.email}</a>
+                <br />
+                {/* `tel:` y no solo texto: en un móvil, un teléfono que no se
+                    pulsa obliga a copiarlo a mano. */}
+                <a href={`tel:${MEDIADOR.identidad.telefono}`}>{telefonoLegible()}</a>
+                {' · '}
+                <a href={whatsappUrl(`Hola ${MEDIADOR.marca}, tengo una consulta.`)} target="_blank" rel="noopener noreferrer">
+                  WhatsApp
+                </a>
               </p>
             </div>
             <div>

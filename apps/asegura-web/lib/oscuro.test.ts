@@ -49,15 +49,17 @@ test('la hoja NO reescribe a mano ningún color oscuro', () => {
     'volvieron los tokens sueltos de la banda oscura: el oscuro sale de la paleta de la marca, no de esta hoja',
   )
   // Un color literal sobrevive al día que su sección cambie de fondo, y
-  // entonces escribe blanco sobre blanco. La excepción legítima —y la única—
-  // es el texto que va SOBRE el azul de marca: ese azul es azul de día y de
-  // noche, así que su blanco no depende del tema. Se busca por bloque: color
-  // literal en una regla que no pinta su propio fondo de marca.
+  // entonces escribe blanco sobre blanco. La excepción legítima: cuando la
+  // MISMA regla declara su propio `background`, el contraste lo fija ella y no
+  // el tema — es el caso del blanco sobre el azul de marca (azul de día y de
+  // noche) y el del botón de WhatsApp, cuyo verde es de WhatsApp y no de aquí.
+  // Lo que este cepo persigue es el color literal a la deriva: el que hereda
+  // el fondo de su sección y deja de contrastar cuando esa sección cambia.
   const sospechosos: string[] = []
   for (const [, selector, cuerpo] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     const literal = cuerpo.match(/(?:^|;)\s*(?:color|border(?:-[a-z]+)?)\s*:\s*([^;]*(?:#|\brgba?\()[^;]*)/)
     if (!literal) continue
-    if (/background[^;]*var\(--brand/.test(cuerpo)) continue // texto sobre el azul de marca
+    if (/(?:^|;)\s*background(?:-color)?\s*:/.test(cuerpo)) continue // la regla fija su propio fondo
     sospechosos.push(`${selector.trim()} → ${literal[1].trim()}`)
   }
   assert.deepEqual(sospechosos, [], 'colores literales en la hoja: usa var(--text) / var(--muted) / var(--border)')

@@ -89,6 +89,7 @@ model PortalIdentidad {
   vinculos     PortalVinculo[]
   obligaciones PortalObligacion[]
   partes       PortalParteSiniestro[]
+  hojas        PortalHojaQr[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -938,5 +939,44 @@ model PortalSupresion {
 
   @@index([estado, recibidaEn])
   @@map("portal_supresion")
+  @@schema("seguros")
+}
+
+/// La HOJA de la nevera y su QR (05/09/2026).
+///
+/// 🚨 `tokenHash` es el HASH, nunca el token: en claro solo existe dentro del
+/// enlace que se mete en el QR. Y no hay `DELETE` concedido sobre estas dos
+/// tablas — anular es poner `anuladaEn`, porque quien tenga el papel viejo tiene
+/// que poder distinguir «esto ya no vale» de «esto no ha existido nunca».
+/// Reglas completas en `packages/module-seguros-portal/src/hoja-qr.ts`.
+model PortalHojaQr {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String    @map("identidad_id") @db.Uuid
+  tokenHash   String    @map("token_hash")
+  nombre      String?
+  creadaEn    DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  anuladaEn   DateTime? @map("anulada_en") @db.Timestamptz(6)
+  ultimoUsoEn DateTime? @map("ultimo_uso_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad      @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  polizas   PortalHojaQrPoliza[]
+
+  @@index([identidadId, creadaEn])
+  @@map("portal_hoja_qr")
+  @@schema("seguros")
+}
+
+/// La selección de una hoja. **Ninguna fila = TODAS**, igual que
+/// `portal_autorizacion.poliza_id` NULL — y eso incluye las pólizas futuras.
+/// Una fila apunta a una de la cartera O a una aportada, nunca a las dos.
+model PortalHojaQrPoliza {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hojaId            String  @map("hoja_id") @db.Uuid
+  polizaId          String? @map("poliza_id") @db.Uuid
+  polizaDeclaradaId String? @map("poliza_declarada_id") @db.Uuid
+
+  hoja PortalHojaQr @relation(fields: [hojaId], references: [id], onDelete: Cascade)
+
+  @@map("portal_hoja_qr_poliza")
   @@schema("seguros")
 }

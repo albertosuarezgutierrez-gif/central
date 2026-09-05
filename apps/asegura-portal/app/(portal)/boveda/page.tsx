@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 
 import {
   canalDeCompania,
-  etiquetaProcedencia,
   plazoComunicacion,
   type FilaCompania,
 } from '@central/module-seguros-portal'
@@ -10,22 +9,23 @@ import {
 import { companiasConCanal } from '@/lib/canales-compania'
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
-import { eur } from '@/lib/dinero'
 import {
   obligacionesDeIdentidad,
   polizasSinFechaDeVencimiento,
   sincronizarObligacionesDeIdentidad,
 } from '@/lib/obligaciones'
+import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
+import { FilaDeclarada } from './FilaDeclarada'
+import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
-import { BienDeclarada, RAMO } from './PolizaVista'
+import { RAMO } from './PolizaVista'
 import { vistaDeBoveda } from '@central/module-seguros-portal'
 
-import { EditarPoliza } from './EditarPoliza'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
 import { TusDatos } from './TusDatos'
@@ -57,7 +57,7 @@ export default async function Boveda({
   // La cuarta es de otra naturaleza y por eso no lleva identidad: `companias_dgs`
   // es un catálogo público (códigos DGS y teléfonos que publican las propias
   // compañías), no la cartera de nadie. Ver `lib/canales-compania.ts`.
-  const [cartera, declaradas, partes, companias] = await Promise.all([
+  const [cartera, declaradas, partes, companias, hojas, elegibles] = await Promise.all([
     carteraDeIdentidad(identidad.id),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
@@ -66,6 +66,8 @@ export default async function Boveda({
     }),
     partesDeIdentidad(identidad.id),
     companiasConCanal(),
+    hojasDeIdentidad(identidad.id),
+    polizasElegibles(identidad.id),
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
@@ -170,8 +172,19 @@ export default async function Boveda({
         <>
           <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
 
+      {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
+          su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,
+          que ya tenemos datos, o que alguna no la tengamos y el cliente la
+          añada para controlar». Para quien mira es la lista de lo que tiene
+          asegurado, y tenerla partida en dos pestañas con dos nombres que en
+          castellano son sinónimos era pedirle que adivinara.
+
+          Por eso el título ya NO dice «en {correduria}»: en esta lista hay
+          ahora pólizas que la correduría no lleva. Lo que dice de dónde sale
+          cada una es el cartel de su FILA, que va con ella cuando se hace
+          scroll — un encabezado de sección no. */}
       <section className="seccion" aria-labelledby="cartera-titulo">
-        <h2 id="cartera-titulo">Tus seguros en {correduria}</h2>
+        <h2 id="cartera-titulo">Tus seguros</h2>
         {!cartera.vinculada ? (
           // Sin vínculo ≠ sin pólizas: no hay ficha con este email. No se
           // inventan teléfonos ni emails de la correduría: solo `nombre` es legible.
@@ -186,6 +199,33 @@ export default async function Boveda({
         ) : (
           cartera.propias.map((t) => <Titular key={t.clienteId} titular={t} propia />)
         )}
+
+        {/* Las que ha añadido la persona, en la MISMA lista y con el mismo
+            aspecto. No llevan `<h3>` de titular porque no lo tienen: son suyas
+            por definición. Lo que las distingue es el chip «Añadida por ti» de
+            cada fila, y eso no es cosmético — ver `FilaDeclarada`. */}
+        {declaradas.length > 0 && (
+          <ul className="polizas">
+            {declaradas.map((d) => (
+              <FilaDeclarada
+                key={d.id}
+                p={{
+                  id: d.id,
+                  compania: d.compania,
+                  ramo: d.ramo,
+                  fechaVencimiento: d.fechaVencimiento,
+                  deDocumento: d.documentoNombre !== null,
+                }}
+              />
+            ))}
+          </ul>
+        )}
+
+        {/* El alta va DEBAJO de la lista y dentro de la misma sección: es una
+            acción sobre lo que se está mirando, no otra sección del portal. Las
+            opciones de ramo son las MISMAS que ofrece `EditarPoliza`: un alta a
+            mano y una corrección tienen que ofrecer la misma lista. */}
+        <SubirPoliza ramos={RAMOS_OPCIONES} />
       </section>
 
       {cartera.autorizadas.length > 0 && (
@@ -203,6 +243,15 @@ export default async function Boveda({
           barra son cuatro por decisión de diseño. Y va en la pantalla, no solo
           enlazado desde un texto legal: un derecho que solo se ejerce
           escribiendo un correo es un derecho con peaje. */}
+      {/* La hoja para imprimir va DESPUÉS de la lista y antes de «Tus datos»:
+          se crea a partir de lo que se acaba de mirar, así que tiene sentido
+          justo debajo — y no es una quinta pestaña, que es lo que Alberto acaba
+          de quitar de la barra. */}
+      <section className="seccion" aria-labelledby="hojas-titulo">
+        <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
+        <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
+      </section>
+
       <TusDatos inicial={supresiones} />
         </>
       )}
@@ -216,108 +265,6 @@ export default async function Boveda({
         <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
       )}
 
-      {vista === 'polizas' && (
-        <>
-      <section className="seccion" aria-labelledby="boveda-titulo">
-        <h2 id="boveda-titulo">Pólizas que has añadido tú</h2>
-        {declaradas.length === 0 ? (
-          // «Todavía no has añadido ninguna» — no «no tienes seguros»: los de
-          // la correduría van arriba, esto es lo que aporta la persona.
-          <p className="suave" style={{ margin: 0 }}>Todavía no has añadido ninguna póliza.</p>
-        ) : (
-          <ul className="cartera columna">
-            {declaradas.map((p) => (
-              <li key={p.id} className="cartera-card">
-                <h3>
-                  {p.compania ?? 'Compañía sin identificar'}
-                  {/* La MISMA etiqueta que ofrece el selector de `EditarPoliza`:
-                      si la tarjeta dice «responsabilidad_civil» y el desplegable
-                      «Responsabilidad civil», parecen dos cosas distintas. */}
-                  {p.ramo && <span className="tenue"> · {RAMO[p.ramo] ?? p.ramo}</span>}
-                </h3>
-                {/* QUÉ está asegurado, con las MISMAS reglas que las de
-                    la cartera (`describirBien`): la matrícula sale de su
-                    columna y el resto del `datos_ramo` que la persona rellenó.
-                    Aquí no hay niveles que aplicar —estas pólizas son suyas—,
-                    pero sí la misma regla de callar lo que no se sabe. */}
-                <BienDeclarada
-                  ramo={p.ramo}
-                  matricula={p.matricula}
-                  referenciaCatastral={p.referenciaCatastral}
-                  datosRamo={
-                    p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
-                      ? (p.datosRamo as Record<string, unknown>)
-                      : null
-                  }
-                />
-                <div className="linea">
-                  {p.numeroPoliza ? `Póliza ${p.numeroPoliza} · ` : ''}
-                  {/* `Decimal` de Prisma: se convierte a número ANTES de formatear.
-                      `null` sale como «—», jamás como «0,00€». */}
-                  {p.primaAnual == null ? 'Prima —' : `Prima ${eur(Number(p.primaAnual))}`}
-                </div>
-                <div className="nivel" style={{ marginTop: 4 }}>
-                  {etiquetaProcedencia(p.procedencia)}
-                </div>
-                {/* El vencimiento NO se pinta aquí: lo lleva entero `EditarPoliza`,
-                    que es quien puede decir «no sabemos cuándo vence» CON la acción
-                    al lado y quien refleja al instante lo que se acaba de guardar. */}
-                <EditarPoliza
-                  ramos={RAMOS_OPCIONES}
-                  poliza={{
-                    id: p.id,
-                    compania: p.compania,
-                    numeroPoliza: p.numeroPoliza,
-                    ramo: p.ramo,
-                    // `Decimal | null` → `number | null`. `null` NO es 0: es «no lo sabemos».
-                    primaAnual: p.primaAnual == null ? null : Number(p.primaAnual),
-                    referenciaCatastral: p.referenciaCatastral ?? null,
-                    // Un jsonb puede traer cualquier cosa; si no es un objeto plano
-                    // se degrada a `null` en vez de reventar el render. Un origen
-                    // ilegible es «no sabemos de dónde vino», no una excusa para
-                    // dejar de pintar la póliza entera.
-                    datosRamoOrigen:
-                      p.datosRamoOrigen && typeof p.datosRamoOrigen === 'object' && !Array.isArray(p.datosRamoOrigen)
-                        ? (Object.fromEntries(
-                            Object.entries(p.datosRamoOrigen as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
-                          ) as Record<string, string>)
-                        : null,
-                    // Columna `date`: llega como medianoche UTC, así que el ISO
-                    // recortado es exactamente el día, sin desfase de zona.
-                    fechaVencimiento: p.fechaVencimiento
-                      ? p.fechaVencimiento.toISOString().slice(0, 10)
-                      : null,
-                    // `datos_ramo` es `jsonb`: Prisma lo entrega como `JsonValue`,
-                    // que incluye arrays y escalares. La pantalla solo sabe pintar
-                    // un objeto de campos, así que lo que no lo sea entra como
-                    // `null` («no hay nada declarado») en vez de reventar el
-                    // render con una fila corrupta.
-                    datosRamo:
-                      p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
-                        ? (p.datosRamo as Record<string, string | number | boolean>)
-                        : null,
-                    matricula: p.matricula,
-                    bastidor: p.bastidor,
-                    // Columna `date`, igual que el vencimiento: medianoche UTC,
-                    // así que el ISO recortado es el día exacto y no se corre
-                    // uno según la zona del navegador.
-                    fechaMatriculacion: p.fechaMatriculacion
-                      ? p.fechaMatriculacion.toISOString().slice(0, 10)
-                      : null,
-                    deDocumento: p.documentoNombre !== null,
-                  }}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Las opciones de ramo son las MISMAS que las de `EditarPoliza`: un alta a mano
-          y una corrección ofrecen la misma lista. */}
-      <SubirPoliza ramos={RAMOS_OPCIONES} />
-        </>
-      )}
     </>
   )
 }
