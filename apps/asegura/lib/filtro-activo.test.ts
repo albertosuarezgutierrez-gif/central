@@ -83,7 +83,9 @@ test('el aviso de vencimiento NO se le manda a una ficha descartada', () => {
   // habla de «avisos activos», que es otra cosa.
   assert.match(
     fuente('avisos-vencimiento.ts'),
-    /cliente:\s*\{[^}]*activo:\s*true/s,
+    // Sin flag `s`: `[^}]` ya cruza saltos de línea por sí solo (y el flag pide
+    // target es2018, que este tsconfig no tiene).
+    /cliente:\s*\{[^}]*activo:\s*true/,
     'avisos-vencimiento.ts manda correos y su consulta no exige `cliente: { activo: true }`',
   )
 })

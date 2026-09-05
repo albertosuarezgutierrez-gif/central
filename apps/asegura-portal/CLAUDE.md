@@ -981,6 +981,53 @@ Cepos: `packages/module-seguros-portal/src/invitacion.test.ts` (10, con las muta
 colapsar `sin_enlace` con `envio_fallido` y sumar la caducidad en meses hacen fallar los suyos) y
 `apps/asegura-portal/lib/invitaciones.test.ts` (25).
 
+## 🗑 «Borradme los datos» (05/09/2026) — la solicitud que NO borra
+
+Tabla `seguros.portal_supresion` (`prisma/sql/2026-09-05_portal_supresion.sql`, **sin aplicar
+todavía**: se aplica en el mismo paso en que se despliega la pantalla). Reglas puras en
+`packages/module-seguros-portal/src/supresion.ts`, BD en `lib/supresion.ts`, ruta
+`app/api/supresion/route.ts`, pantalla `app/(portal)/boveda/TusDatos.tsx`.
+
+🚨 **No borra nada, y esa es la mitad del diseño.** El art. 17.3.b y el 17.3.e del RGPD excluyen la
+supresión cuando el tratamiento hace falta para cumplir una obligación legal o para defender
+reclamaciones, y una correduría tiene las dos (normativa de seguros y prevención del blanqueo). Las
+dos salidas fáciles están mal: un botón que borre de verdad destruye documentación que la ley obliga
+a guardar, y uno que diga «borrado» sin borrar es una mentira que se descubre sola. Lo obligatorio, y
+lo que hay construido, es **recibir, acusar y contestar en un mes** (art. 12.3) diciendo con nombres
+qué se suprime y qué se conserva, con su base legal (art. 12.4: la negativa parcial hay que motivarla).
+
+- **Las DOS listas se enseñan ANTES de pulsar**, no en la respuesta de dentro de un mes, y se
+  **calculan** (`loQueSeSuprime()` / `loQueSeConserva()`): una copia a mano en el JSX se desincroniza
+  en cuanto se añade una categoría, y entonces la pantalla promete un borrado que nadie va a hacer.
+- **El reloj arranca al pulsar**, no al abrirla el corredor: si arrancara al mirarla, no mirarla nunca
+  sería una forma de no incumplir jamás. `estadoPlazo()` da cuatro estados y **`vencido` no se
+  redondea a «urgente»**.
+- **Prorrogar exige motivo** (art. 12.3: hay que avisar dentro del primer mes). Prorrogar en silencio
+  incumple igual que no contestar, así que el sello sin motivo sería una prórroga inventada.
+- **Una pendiente bloquea otra** por índice único parcial en la BD, no por un `SELECT` y un `if`:
+  entre los dos cabe otra solicitud y dos relojes legales sobre el mismo caso. Una **resuelta no**
+  bloquea: el motivo de conservación decae, y una negativa de hace tres años no vale para siempre.
+- **Retirar ≠ denegar**, y no se borra la fila: el rol **no tiene DELETE** sobre la tabla. La
+  solicitud es la prueba de que ejerciste el derecho y de que se te atendió.
+- **El motivo es opcional**: el art. 17 no obliga a justificar la solicitud, y exigirlo sería un peaje.
+
+📌 **Y llega a una pantalla que Alberto abre.** La cola la sirve `apps/asegura` por
+`GET/POST /api/operador/supresiones` a `plataforma` → `/correduria`, **ordenada por el reloj legal y
+no por orden de llegada**, con `resumen.vencidas` aparte. Sin ese puerto la solicitud viviría solo en
+la BD del portal y el plazo de un mes se incumpliría en silencio: es la regla de la casa («un aviso en
+una pantalla que nadie abre no existe») aplicada donde más caro sale.
+
+Cepos: `packages/module-seguros-portal/src/supresion.test.ts` (10) y
+`test/regression-portal-supresion.test.ts` (14). **Tres mutaciones comprobadas**: quitar la lista de
+«lo que se conserva» de la pantalla, dar `DELETE` al rol del portal y permitir resolver sin texto
+hacen fallar el suyo.
+
+⚠️ **Y el guardián de aislamiento mordió al construirlo, con razón.** `correduriaUnica()` se sacó a un
+`lib/correduria.ts` suelto para no duplicarla, y ese fichero toca `prisma.correduria` —o sea, la
+cartera— sin poder nombrar `portalVinculo` ni resolver sesión. Se **deshizo la extracción**: la
+función se exporta desde `lib/peticiones.ts`, donde nació, y `lib/supresion.ts` la importa de ahí. Un
+exento nuevo en el cepo es una puerta abierta para siempre a cambio de nada.
+
 ## ☎️ El teléfono de la compañía (05/09/2026) — el sitio existe, los números los pone una persona
 
 Alberto quiere una **hoja imprimible** («la del frigorífico») con lo que hace falta después de un

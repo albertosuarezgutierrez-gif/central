@@ -139,7 +139,6 @@ export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
 export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas } from './canal-compania.ts'
-
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
 // existen en la BD pero NO se escriben: no hay pantalla que los pida.
@@ -152,3 +151,31 @@ export {
   normalizarUserAgent,
 } from './consentimiento.ts'
 export type { TipoConsentimiento, ConsentimientoGuardado } from './consentimiento.ts'
+
+// La solicitud de SUPRESIÓN (art. 17). Lee su cabecera antes de tocarla: este
+// módulo NO borra nada, y esa es la mitad del diseño — el art. 17.3.b y el
+// 17.3.e excluyen la supresión cuando hay deber legal de conservar o hace falta
+// para defender reclamaciones, y una correduría tiene los dos.
+export {
+  ESTADOS_SUPRESION,
+  DIAS_RESPUESTA,
+  DIAS_PRORROGA,
+  DIAS_AVISO,
+  ALCANCE_SUPRESION,
+  YA_PENDIENTE,
+  fechaLimite,
+  estadoPlazo,
+  diasRestantes,
+  loQueSeSuprime,
+  loQueSeConserva,
+  puedeRegistrar,
+} from './supresion.ts'
+export type { EstadoSupresion, EstadoPlazo, SolicitudSupresion, Alcance as AlcanceSupresion } from './supresion.ts'
+export {
+  VISTAS_BOVEDA,
+  VISTA_BOVEDA_POR_DEFECTO,
+  vistaDeBoveda,
+  pestanasPortal,
+  hrefDeVista,
+} from './vista-portal.ts'
+export type { VistaBoveda, PestanaPortal } from './vista-portal.ts'
