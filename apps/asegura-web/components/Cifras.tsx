@@ -73,7 +73,7 @@ export default function Cifras({ titular, cifras }: { titular: ReactNode; cifras
   return (
     <section
       ref={ref}
-      className={visible ? 'seccion banda-oscura visible' : 'seccion banda-oscura'}
+      className={visible ? 'seccion oscuro banda-oscura visible' : 'seccion oscuro banda-oscura'}
       aria-labelledby="dispersos-t"
       onMouseMove={(e) => {
         const r = e.currentTarget.getBoundingClientRect()

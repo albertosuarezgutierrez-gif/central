@@ -46,7 +46,10 @@ export default function Escaneo() {
 
   return (
     <div ref={ref} className={activo ? 'escaneo activo' : 'escaneo'} aria-hidden>
-      <div className="escaneo-hoja">
+      {/* `claro`: la hoja es un PAPEL. La sección donde vive es oscura, y una
+          hoja oscura sobre fondo oscuro deja de leerse como documento — que es
+          justo lo único que esta ilustración tiene que comunicar. */}
+      <div className="escaneo-hoja claro">
         <div className="escaneo-cabecera">
           <span className="escaneo-logo" />
           <span className="escaneo-titulo" />

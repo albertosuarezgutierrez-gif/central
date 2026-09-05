@@ -10,7 +10,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
+import { MARCA_ASEGURA, emitirRootCss, emitirVariables, emitirVariablesOscuras } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion } from '@central/module-seguros'
 import { NAV, SITIO_URL } from '@/lib/sitio'
 import { fichaNegocio, jsonLd } from '@/lib/seo'
@@ -31,6 +31,32 @@ import './globals.css'
  */
 const FRAUNCES =
   'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&display=swap'
+
+/**
+ * Hoja de tokens de la marca.
+ *
+ * Además del `:root` de siempre, emite los mismos tokens EN ÁMBITO para la
+ * clase `.oscuro`. Es lo que permite que la portada, la marquesina, el
+ * escáner, las cifras y el formulario compartan una sola atmósfera oscura sin
+ * un solo color escrito a mano en `globals.css`: cualquier componente que
+ * entre en una sección `.oscuro` se re-tematiza solo, porque se pinta con
+ * tokens y no con hex.
+ *
+ * ⚠️ Si la marca dejase de declarar paleta oscura, `emitirVariablesOscuras`
+ * devuelve cadena vacía y las secciones marcadas se verían CLARAS —es decir,
+ * el diseño se cae en silencio, que es el fallo que este monorepo persigue—.
+ * Por eso lo vigila `lib/oscuro.test.ts`.
+ */
+const OSCURAS = emitirVariablesOscuras(MARCA_ASEGURA)
+const CSS_MARCA = [
+  emitirRootCss(MARCA_ASEGURA),
+  OSCURAS ? `.oscuro{${OSCURAS};color-scheme:dark}` : '',
+  // Y el camino de vuelta. Lo pide una sola pieza, pero la pide de verdad: la
+  // hoja del escáner es un PAPEL, y un papel dentro de una sección oscura
+  // tiene que seguir siendo blanco o deja de leerse como documento. Con esto
+  // se marca `.claro` y recupera los tokens de día sin un solo hex a mano.
+  `.claro{${emitirVariables(MARCA_ASEGURA)};color-scheme:light}`,
+].join('')
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITIO_URL),
@@ -58,7 +84,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="stylesheet" href={FRAUNCES} />
         {/* Tokens de marca. Van en el head para que no haya un parpadeo con los
             colores por defecto antes de que cargue el CSS de la app. */}
-        <style dangerouslySetInnerHTML={{ __html: emitirRootCss(MARCA_ASEGURA) }} />
+        <style dangerouslySetInnerHTML={{ __html: CSS_MARCA }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaNegocio()) }} />
       </head>
       <body>
@@ -66,7 +92,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         <main>{children}</main>
 
-        <footer className="pie">
+        <footer className="pie oscuro">
           <div className="wrap pie-cols">
             <div>
               <h4>Grupo ASegura</h4>

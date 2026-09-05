@@ -52,14 +52,11 @@
      igual que en su app, donde Fraunces solo vive en la landing. */
   --display: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
 
-  /* 🚨 ÚNICO color literal de esta hoja. `surface-hero` es la banda casi negra
-     azulada de su landing, y el contrato de `Marca` de `@central/brand` no
-     modela esa superficie todavía (tiene fondo, panel y acento, no «banda
-     oscura de marketing»). El valor es el suyo, literal. Si algún día el
-     contrato crece, esto se va a `@central/brand` y desaparece de aquí. */
-  --hero-oscuro: oklch(0.195 0.014 270);
-  --hero-oscuro-texto: oklch(0.975 0.003 270);
-  --hero-oscuro-acento: oklch(0.78 0.14 264);
+  /* 📌 Aquí ya NO hay ningún color literal. Lo que antes eran tres variables
+     sueltas (`--hero-oscuro*`, copiadas a mano de la banda de su landing) es
+     ahora la clase `.oscuro`, y sus valores salen de la paleta oscura MEDIDA
+     de la marca — `MARCA_ASEGURA.paletaOscura`, leída del bloque `.dark` de
+     su app. Ver el bloque «Atmósfera» más abajo. */
 }
 
 *,
@@ -206,7 +203,8 @@ a {
 /* Contenedor de las páginas interiores. La home no lo usa: sus secciones son
    bandas a todo ancho y cada una monta su propio `.wrap` dentro. */
 .pagina {
-  padding-top: var(--e7);
+  /* 76 px de cabecera flotante + el aire de siempre. */
+  padding-top: calc(4.75rem + var(--e7));
   padding-bottom: var(--e8);
 }
 
@@ -214,9 +212,19 @@ a {
    Su gesto característico: arriba del todo es transparente y de 76 px; en
    cuanto se baja de 24 px se encoge a 56 px y se convierte en una PÍLDORA
    flotante con borde, sombra y desenfoque. La clase la pone `Cabecera.tsx`. */
+/* `fixed` y no `sticky`, y es una decisión de la atmósfera, no de gusto: con
+   `sticky` la cabecera ocupa su propia franja EN EL FLUJO, encima de la
+   portada. Sobre un fondo claro no se nota; sobre la portada oscura se veía
+   una barra blanca de 76 px cortando la página por arriba. Flotando, la
+   portada empieza en el píxel 0 y la cabecera va transparente encima, que es
+   lo que hace su landing.
+
+   Lo que esto obliga: el resto de páginas tienen que reservar ese hueco a mano
+   (`.pagina`), y la portada llevar más aire arriba. Está abajo. */
 .hdr {
-  position: sticky;
+  position: fixed;
   top: 0;
+  inset-inline: 0;
   z-index: 50;
 }
 
@@ -243,12 +251,16 @@ a {
   backdrop-filter: blur(24px);
 }
 
-/* Logo centrado en absoluto, como el suyo. Debajo de 1024 px la nav se
-   esconde, así que el centro queda libre. */
+/* 📌 Su logo va centrado en absoluto. Aquí NO, y es una divergencia medida:
+   su nav tiene tres anclas cortas y esta cinco páginas de ramo («Comercio y
+   empresa», «Cambiar de correduría»…). A 1280 px la nav llegaba hasta el
+   centro y el logo se pintaba ENCIMA, literalmente ilegible. Marca a la
+   izquierda, nav centrada en el hueco que queda. */
 .hdr-marca {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Primera en la fila aunque en el DOM venga después de la nav: el orden del
+     JSX se conserva por accesibilidad (la nav es lo primero que anuncia un
+     lector) y el orden visual lo pone aquí. */
+  order: -1;
   display: inline-flex;
   align-items: center;
   gap: var(--e2);
@@ -262,7 +274,7 @@ a {
 }
 
 .hdr-marca:hover {
-  transform: translateX(-50%) scale(1.04);
+  transform: scale(1.04);
 }
 
 .marca-tile {
@@ -288,9 +300,13 @@ a {
 .hdr-nav {
   display: none;
   align-items: center;
-  gap: var(--e1);
+  gap: 2px;
+  margin: 0 auto;
+  font-size: 0.875rem;
 }
 
+/* 1120 y no 1024: MEDIDO. A 1024 la marca, los seis enlaces y el botón suman
+   más que el contenedor y el botón se salía por la derecha de la pantalla. */
 @media (min-width: 1024px) {
   .hdr-nav {
     display: flex;
@@ -301,7 +317,7 @@ a {
    izquierda al pasar por encima. */
 .hdr-nav a {
   position: relative;
-  padding: var(--e2) var(--e3);
+  padding: var(--e2) 10px;
   border-radius: var(--pill);
   font-size: 0.875rem;
   font-weight: 600;
@@ -353,27 +369,40 @@ a {
     position: static;
     transform: none;
     margin-right: auto;
-    font-size: 0.9375rem;
-    gap: 6px;
+    font-size: 0.875rem;
+    gap: 5px;
   }
   .hdr-marca:hover {
     transform: scale(1.04);
   }
   .marca-tile {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
   }
   .marca-mono {
-    width: 16px;
-    height: 11px;
-  }
-  .btn-sm {
-    padding: 0 var(--e3);
+    width: 15px;
+    height: 10px;
   }
   .hdr-caja {
     gap: var(--e2);
     padding: 0;
   }
+}
+
+/* Arriba del todo la cabecera es transparente, así que sobre una portada
+   oscura escribiría en gris sobre casi negro. Se re-tematiza igual que las
+   secciones: cambiando los TOKENS en su ámbito, no el color de cada enlace —
+   así el día que la cabecera crezca (un menú, un segundo botón) el contraste
+   ya está resuelto.
+
+   El `:has()` es lo que evita una clase que Cabecera.tsx tendría que saber
+   poner: la cabecera vive en el layout y no sabe qué portada hay debajo. En
+   las páginas de ramo no hay `.hero.oscuro` y la regla no aplica sola. */
+body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-caja,
+body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
+  --text: oklch(0.97 0 0);
+  --muted: oklch(0.76 0 0);
+  --border: oklch(1 0 0 / 0.16);
 }
 
 /* Barra de progreso de lectura, como la suya. */
@@ -455,6 +484,20 @@ a {
   }
 }
 
+/* 🚨 Va DESPUÉS de `.btn-sm` a propósito, y no dentro del bloque de la
+   cabecera de más arriba: una media query no añade especificidad, así que una
+   override colocada antes de la regla base no gana nunca. Ahí estuvo semanas
+   sin aplicar. Medido a 320 px: la marca (156 px) y este botón (147 px) suman
+   303 dentro de una caja de 288, y lo que se salía de la pantalla era el
+   botón. Con esto bajan a 275. */
+@media (max-width: 559px) {
+  .btn-sm {
+    height: 40px;
+    padding: 0 10px;
+    font-size: 0.8125rem;
+  }
+}
+
 /* Su CTA principal lleva un barrido de brillo al pasar por encima. Es el
    detalle que hace que el botón parezca de una web cuidada y no de un
    formulario. */
@@ -507,7 +550,9 @@ a {
 .hero {
   position: relative;
   overflow: hidden;
-  padding: var(--e7) 0 var(--e8);
+  /* Arriba: los 76 px de la cabecera flotante + aire. Sin esto el titular
+     queda debajo de la nav. */
+  padding: calc(4.75rem + var(--e7)) 0 var(--e8);
 }
 
 .hero-atmosfera {
@@ -548,6 +593,26 @@ a {
   height: 34rem;
   background: color-mix(in oklab, var(--brand) 8%, transparent);
   filter: blur(150px);
+}
+
+/* Sobre blanco, una mancha de marca al 12 % ya se nota. Sobre casi negro, no:
+   hay que subirla o el fondo se ve plano, que es exactamente lo que estas
+   manchas vienen a evitar. Medido a ojo sobre la propia página, no copiado. */
+.hero.oscuro .hero-atmosfera {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--brand) 16%, transparent),
+    color-mix(in oklab, var(--brand) 5%, transparent),
+    transparent
+  );
+}
+
+.hero.oscuro .hero-mancha.a {
+  background: color-mix(in oklab, var(--brand) 26%, transparent);
+}
+
+.hero.oscuro .hero-mancha.b {
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
 }
 
 .hero h1 {
@@ -608,6 +673,34 @@ a {
   background: var(--brand-soft);
   color: var(--brand-ink);
 }
+
+/* ── Atmósfera oscura ───────────────────────────────────────────────────────
+   La pieza que cose la página entera, y la razón de que exista esta clase.
+   Antes cada recurso vivía en su bloque blanco: la portada, la marquesina, el
+   escáner y las cifras eran cuatro islas del mismo peso, y ninguna pegaba. El
+   arreglo NO fue añadir un quinto recurso, fue **fundirlos en una sola
+   atmósfera**: la página abre y cierra en oscuro y respira en claro por el
+   medio.
+
+   🔑 Cómo funciona, y por qué no hay ni un override por componente: `.oscuro`
+   redefine los TOKENS (`--bg`, `--panel`, `--border`, `--text`, `--muted`,
+   `--brand`…) en su propio ámbito. Como todo lo de esta hoja se pinta con esos
+   tokens y no con hex, la ventana de ejemplo, los chips, la hoja del escáner,
+   los campos del formulario y los botones se re-tematizan SOLOS al entrar en
+   una sección oscura. Añadir un componente nuevo no pide tocar nada aquí.
+
+   🚨 Los valores NO se escriben en este fichero: los inyecta `layout.tsx` con
+   `emitirVariablesOscuras(MARCA_ASEGURA)`, que es la paleta oscura medida del
+   bloque `.dark` de la app de la correduría. Poner aquí un `#111` a ojo es
+   justo lo que se acaba de quitar. */
+.oscuro {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* El azul de marca de día se apaga sobre casi negro; el de noche (más claro)
+   ya viene en los tokens que inyecta el layout, así que la itálica del titular
+   no necesita ningún color propio aquí. */
 
 .centrado {
   max-width: 42rem;
@@ -759,8 +852,12 @@ a.tarjeta:hover .tarjeta-mas svg {
 }
 
 @media (min-width: 900px) {
+  /* Su tarjeta es de 22rem y empuja el párrafo al fondo. Con TRES pasos de
+     texto corto ese gesto dejaba un agujero muerto de más de 150 px en medio
+     de la tarjeta: el mismo recurso, con menos texto, se lee como un fallo de
+     maquetación. 18rem conserva la proporción alta y quita el agujero. */
   .paso {
-    min-height: 22rem;
+    min-height: 18rem;
   }
   .paso:hover {
     transform: scale(1.04);
@@ -862,15 +959,11 @@ a.tarjeta:hover .tarjeta-mas svg {
 }
 
 /* ── Banda oscura con cifras ────────────────────────────────────────────── */
+/* Se monta SIEMPRE junto a `.oscuro` (ver `Cifras.tsx`): esta clase ya solo
+   aporta el foco y las manchas, no el color. */
 .banda-oscura {
   position: relative;
   overflow: hidden;
-  background: var(--hero-oscuro);
-  color: var(--hero-oscuro-texto);
-}
-
-.banda-oscura .display .destaca {
-  color: var(--hero-oscuro-acento);
 }
 
 .banda-oscura-mancha {
@@ -903,7 +996,7 @@ a.tarjeta:hover .tarjeta-mas svg {
   gap: var(--e7) var(--e5);
   margin-top: var(--e7);
   padding-top: var(--e7);
-  border-top: 1px solid rgb(255 255 255 / 0.1);
+  border-top: 1px solid var(--border);
 }
 
 @media (min-width: 768px) {
@@ -932,7 +1025,7 @@ a.tarjeta:hover .tarjeta-mas svg {
   margin-top: var(--e3);
   font-size: 0.875rem;
   font-weight: 600;
-  color: rgb(255 255 255 / 0.65);
+  color: var(--muted);
 }
 
 /* ── Preguntas ──────────────────────────────────────────────────────────── */
@@ -1037,9 +1130,12 @@ textarea.f-in {
 }
 
 /* ── Pie ────────────────────────────────────────────────────────────────── */
+/* El pie hereda los tokens de `.oscuro` (se lo pone el layout): el formulario
+   de cierre es oscuro, y un pie claro justo debajo partía la página en dos con
+   una línea horizontal que no significaba nada. */
 .pie {
   border-top: 1px solid var(--border);
-  background: var(--bg2);
+  background: var(--bg);
 }
 
 .pie-cols {
@@ -1480,9 +1576,9 @@ textarea.f-in {
   max-width: 340px;
   padding: var(--e5);
   border: 1px solid var(--border);
-  border-radius: var(--r-l);
+  border-radius: var(--r-lg);
   background: var(--panel);
-  box-shadow: var(--shadow-panel);
+  box-shadow: var(--shadow-float);
 }
 
 .escaneo-cabecera {

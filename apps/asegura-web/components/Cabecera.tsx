@@ -10,7 +10,7 @@
 // layout sigue siendo servidor.
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { NAV, PORTAL_URL } from '@/lib/sitio'
+import { NAV_CABECERA, PORTAL_URL } from '@/lib/sitio'
 
 /** Enlaces internos de la nav. En su web la nav son anclas de la propia home;
  *  aquí son las páginas de ramo, que es lo que esta web tiene que posicionar. */
@@ -35,13 +35,17 @@ export default function Cabecera({ marca }: { marca: string }) {
       <div className="progreso" style={{ transform: `scaleX(${avance})` }} aria-hidden />
       <header className={bajado ? 'hdr bajado' : 'hdr'}>
         <div className="wrap">
-          <div className="hdr-caja">
+          {/* La píldora flotante va SIEMPRE en oscuro (`oscuro` re-tematiza sus
+                tokens). Blanca se comía media pantalla cada vez que flotaba
+                sobre una sección oscura, que en esta página son la mayoría; en
+                oscuro se integra ahí y sigue destacando sobre las claras. */}
+            <div className={bajado ? 'hdr-caja oscuro' : 'hdr-caja'}>
             {/* Nav a la izquierda y logo centrado en absoluto, como él. Por
                 debajo de 1024 px la nav se esconde y el logo pasa a la
                 izquierda (regla en globals.css), que es lo que evita que el
                 botón le pise encima en el móvil. */}
             <nav className="hdr-nav" aria-label="Secciones">
-              {NAV.map((n) => (
+              {NAV_CABECERA.map((n) => (
                 <Link key={n.href} href={n.href}>
                   {n.texto}
                 </Link>

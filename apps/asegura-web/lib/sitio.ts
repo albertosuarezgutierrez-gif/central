@@ -80,6 +80,19 @@ export const NAV = [
 ] as const
 
 /**
+ * Lo que cabe en la CABECERA.
+ *
+ * 🚨 No es una preferencia: está MEDIDO. Con las seis entradas, la marca
+ * (171 px) + la nav (815 px) + el botón (147 px) suman ~1.145 px dentro de un
+ * contenedor de 1.104 px, y lo que se salía por la derecha de la pantalla era
+ * el botón «Área de clientes» — o sea, justo lo que el cliente viene a pulsar.
+ * Se recorta la nav, que es lo que sobra: «Cambiar de correduría» tiene su
+ * propia sección en la portada, su enlace en el pie y su página. Los ramos,
+ * que son lo que esta web posiciona, se quedan enteros.
+ */
+export const NAV_CABECERA = NAV.filter((n) => n.href.startsWith('/seguros/'))
+
+/**
  * Horario de atención.
  *
  * 🚨 `null` a propósito: **no se ha confirmado con Alberto**, y en una ficha de
