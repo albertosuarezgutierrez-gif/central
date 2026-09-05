@@ -36,16 +36,21 @@ const FRAUNCES =
  * Hoja de tokens de la marca.
  *
  * Además del `:root` de siempre, emite los mismos tokens EN ÁMBITO para la
- * clase `.oscuro`. Es lo que permite que la portada, la marquesina, el
- * escáner, las cifras y el formulario compartan una sola atmósfera oscura sin
- * un solo color escrito a mano en `globals.css`: cualquier componente que
- * entre en una sección `.oscuro` se re-tematiza solo, porque se pinta con
- * tokens y no con hex.
+ * clase `.oscuro`. La página es CLARA (decisión de Alberto, 05/09/2026, y es
+ * también lo que hace la landing de la correduría: clara casi entera con una
+ * sola banda oscura). Ese contraste único es la banda de cifras, y con esto se
+ * pinta sin un solo color escrito a mano en `globals.css`: cualquier
+ * componente que entre en una sección `.oscuro` se re-tematiza solo, porque se
+ * pinta con tokens y no con hex.
+ *
+ * 📌 Se deja emitido aunque hoy lo use una sola sección: el coste es una línea
+ * de CSS y es lo que permite mover el contraste de sitio —o añadir una segunda
+ * banda— sin volver a escribir colores a mano.
  *
  * ⚠️ Si la marca dejase de declarar paleta oscura, `emitirVariablesOscuras`
- * devuelve cadena vacía y las secciones marcadas se verían CLARAS —es decir,
- * el diseño se cae en silencio, que es el fallo que este monorepo persigue—.
- * Por eso lo vigila `lib/oscuro.test.ts`.
+ * devuelve cadena vacía y la banda de cifras se vería clara: texto pensado
+ * para fondo oscuro sobre fondo claro, sin que falle ningún build. Por eso lo
+ * vigila `lib/oscuro.test.ts`.
  */
 const OSCURAS = emitirVariablesOscuras(MARCA_ASEGURA)
 const CSS_MARCA = [
@@ -92,7 +97,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         <main>{children}</main>
 
-        <footer className="pie oscuro">
+        <footer className="pie">
           <div className="wrap pie-cols">
             <div>
               <h4>Grupo ASegura</h4>

@@ -144,7 +144,7 @@ export default function Home() {
   return (
     <>
       {/* ── Portada ─────────────────────────────────────────────────────── */}
-      <section className="hero oscuro">
+      <section className="hero">
         <div className="hero-atmosfera" aria-hidden />
         <div className="hero-mancha a" aria-hidden />
         <div className="hero-mancha b" aria-hidden />
@@ -195,7 +195,7 @@ export default function Home() {
           aseguradoras con pólizas VIVAS en la cartera, medidas en la BD el
           05/09/2026 (Mapfre 64, Allianz 26, Occident 19, Reale 1). Si algún día
           entra otra compañía, este array se actualiza desde el mismo sitio. */}
-      <section className="oscuro" style={{ padding: '8px 0 44px' }} aria-label="Compañías con las que trabajamos">
+      <section className="banda" style={{ padding: '32px 0' }} aria-label="Compañías con las que trabajamos">
         <div className="wrap">
           <p className="antetitulo" style={{ display: 'block', textAlign: 'center', marginBottom: 20 }}>
             Compañías con las que trabajamos
@@ -256,7 +256,7 @@ export default function Home() {
           póliza»: el fichero NO se persiste — solo su nombre y los datos
           extraídos. Eso, además de ser verdad, es el mejor argumento de los
           tres, así que se cuenta como tal. */}
-      <section className="seccion oscuro" id="subir" aria-labelledby="subir-t">
+      <section className="seccion" id="subir" aria-labelledby="subir-t">
         <div className="wrap dos-columnas">
           <Reveal>
             <p className="antetitulo">Tu póliza, sin teclear</p>
@@ -413,7 +413,7 @@ export default function Home() {
       </section>
 
       {/* ── Formulario ──────────────────────────────────────────────────── */}
-      <section className="seccion oscuro" id="presupuesto" aria-labelledby="pedir-t">
+      <section className="seccion banda" id="presupuesto" aria-labelledby="pedir-t">
         <div className="wrap">
           <Reveal className="seccion-tit centrado">
             <p className="antetitulo">Empieza aquí</p>

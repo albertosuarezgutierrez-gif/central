@@ -595,9 +595,10 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
   filter: blur(150px);
 }
 
-/* Sobre blanco, una mancha de marca al 12 % ya se nota. Sobre casi negro, no:
-   hay que subirla o el fondo se ve plano, que es exactamente lo que estas
-   manchas vienen a evitar. Medido a ojo sobre la propia página, no copiado. */
+/* 📌 Hoy la portada es CLARA y estas tres reglas no aplican. Se quedan porque
+   son la parte no obvia de probar la portada en oscuro: sobre blanco una
+   mancha de marca al 12 % ya se nota, y sobre casi negro no —hay que subirla o
+   el fondo se ve plano, que es justo lo que estas manchas vienen a evitar—. */
 .hero.oscuro .hero-atmosfera {
   background: linear-gradient(
     to bottom,
@@ -674,20 +675,22 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
   color: var(--brand-ink);
 }
 
-/* ── Atmósfera oscura ───────────────────────────────────────────────────────
-   La pieza que cose la página entera, y la razón de que exista esta clase.
-   Antes cada recurso vivía en su bloque blanco: la portada, la marquesina, el
-   escáner y las cifras eran cuatro islas del mismo peso, y ninguna pegaba. El
-   arreglo NO fue añadir un quinto recurso, fue **fundirlos en una sola
-   atmósfera**: la página abre y cierra en oscuro y respira en claro por el
-   medio.
+/* ── Contraste oscuro ───────────────────────────────────────────────────────
+   La web es CLARA (Alberto, 05/09/2026), como la landing de la correduría en
+   la que se mira: clara casi entera, con UNA banda oscura que corta el ritmo.
+   Aquí esa banda es la de cifras, y esta clase es lo que la pinta.
+
+   ⚠️ La tentación es repartir el oscuro por media página para «dar impacto».
+   Se probó ese mismo día —portada, marquesina, escáner y cierre en oscuro— y
+   el resultado invierte el efecto: cuando casi todo es oscuro, la banda deja
+   de cortar nada. El contraste vale porque es el único.
 
    🔑 Cómo funciona, y por qué no hay ni un override por componente: `.oscuro`
    redefine los TOKENS (`--bg`, `--panel`, `--border`, `--text`, `--muted`,
    `--brand`…) en su propio ámbito. Como todo lo de esta hoja se pinta con esos
-   tokens y no con hex, la ventana de ejemplo, los chips, la hoja del escáner,
-   los campos del formulario y los botones se re-tematizan SOLOS al entrar en
-   una sección oscura. Añadir un componente nuevo no pide tocar nada aquí.
+   tokens y no con hex, cualquier componente que entre ahí —la ventana de
+   ejemplo, los chips, un formulario— se re-tematiza SOLO. Mover el contraste
+   de sitio es mover una clase, no reescribir colores.
 
    🚨 Los valores NO se escriben en este fichero: los inyecta `layout.tsx` con
    `emitirVariablesOscuras(MARCA_ASEGURA)`, que es la paleta oscura medida del
@@ -1130,12 +1133,9 @@ textarea.f-in {
 }
 
 /* ── Pie ────────────────────────────────────────────────────────────────── */
-/* El pie hereda los tokens de `.oscuro` (se lo pone el layout): el formulario
-   de cierre es oscuro, y un pie claro justo debajo partía la página en dos con
-   una línea horizontal que no significaba nada. */
 .pie {
   border-top: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--bg2);
 }
 
 .pie-cols {

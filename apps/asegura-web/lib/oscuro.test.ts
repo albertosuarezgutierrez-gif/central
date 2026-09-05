@@ -63,10 +63,15 @@ test('la hoja NO reescribe a mano ningún color oscuro', () => {
   assert.deepEqual(sospechosos, [], 'colores literales en la hoja: usa var(--text) / var(--muted) / var(--border)')
 })
 
-test('la portada y el cierre van en oscuro', () => {
-  const home = leer('app', 'page.tsx')
-  assert.match(home, /className="hero oscuro"/, 'la portada dejó de ser oscura: la página vuelve a ser diez bloques blancos')
-  assert.match(home, /className="seccion oscuro" id="presupuesto"/, 'el formulario de cierre dejó de ser oscuro')
+test('el contraste oscuro existe y es UNO', () => {
+  // La web es clara. El oscuro es el corte de ritmo de la banda de cifras, y
+  // vale porque es el único: repartirlo por media página lo anula (se probó el
+  // 05/09/2026). Este cepo salta en las dos direcciones — si alguien quita la
+  // banda, y si alguien empieza a repartir `.oscuro` por la portada.
   const cifras = leer('components', 'Cifras.tsx')
-  assert.match(cifras, /seccion oscuro banda-oscura/, 'la banda de cifras perdió .oscuro y se quedaría sin fondo')
+  assert.match(cifras, /seccion oscuro banda-oscura/, 'la banda de cifras perdió .oscuro: se queda sin su fondo y con texto pensado para oscuro sobre claro')
+
+  const home = leer('app', 'page.tsx').replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+  const marcadas = [...home.matchAll(/className="[^"]*\boscuro\b[^"]*"/g)].map((m) => m[0])
+  assert.deepEqual(marcadas, [], `la portada volvió a repartir oscuro (${marcadas.join(', ')}): el contraste deja de cortar cuando deja de ser el único`)
 })
