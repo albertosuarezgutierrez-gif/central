@@ -430,3 +430,24 @@ export {
   urgenciaParte,
 } from './parte-vigilancia.ts'
 export type { ParteVigilado, UrgenciaParte, AvisoPartes } from './parte-vigilancia.ts'
+
+// El paquete del derecho de acceso (art. 15) y portabilidad (art. 20). Su
+// cabecera explica por qué un volcado de tablas NO es un export del art. 15 y
+// por qué solo lo aportado por la persona es portable.
+export {
+  CATEGORIAS_EXPORT,
+  FICHA_CATEGORIA,
+  INFORMACION_ART15,
+  MOTIVO_TEXTO,
+  construirExport,
+  esPortable,
+} from './export-rgpd.ts'
+export type {
+  CategoriaExport,
+  OrigenDatos,
+  BloqueExport,
+  MotivoAusencia,
+  InformacionArt15,
+  ExportRgpd,
+  EntradaExport,
+} from './export-rgpd.ts'
