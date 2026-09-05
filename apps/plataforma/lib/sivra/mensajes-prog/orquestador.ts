@@ -104,14 +104,19 @@ async function cargarYaHechos(bookingIds: string[]): Promise<Map<string, HitoReg
   if (!bookingIds.length) return out
   // IN con Prisma.join, no ANY(array): el pooler de Supabase falla con params array (landmine del
   // acotado de mapa_arquitectura, 17/07/2026) — solo params escalares.
-  const rows = await prisma.$queryRaw<{ booking_id: string; tipo: string; fecha_objetivo: Date; estado: string }[]>(Prisma.sql`
-    SELECT booking_id, tipo, fecha_objetivo, estado FROM mensajes_programados
+  // `de_hoy` se calcula en Postgres y en hora MADRID, la misma con la que decide `mensajesDebidos`:
+  // en UTC, un envío de las 23:30 de anoche saldría como «de hoy» durante media hora.
+  const rows = await prisma.$queryRaw<{ booking_id: string; tipo: string; fecha_objetivo: Date; estado: string; de_hoy: boolean }[]>(Prisma.sql`
+    SELECT booking_id, tipo, fecha_objetivo, estado,
+           (COALESCE(enviado_at, created_at) AT TIME ZONE 'Europe/Madrid')::date
+             = (now() AT TIME ZONE 'Europe/Madrid')::date AS de_hoy
+    FROM mensajes_programados
     WHERE booking_id IN (${Prisma.join(bookingIds)})
   `)
   for (const r of rows) {
     const f = r.fecha_objetivo instanceof Date ? r.fecha_objetivo.toISOString().slice(0, 10) : String(r.fecha_objetivo).slice(0, 10)
     if (!out.has(r.booking_id)) out.set(r.booking_id, [])
-    out.get(r.booking_id)!.push({ tipo: r.tipo, fechaObjetivo: f, estado: String(r.estado || '') })
+    out.get(r.booking_id)!.push({ tipo: r.tipo, fechaObjetivo: f, estado: String(r.estado || ''), emitidoHoy: r.de_hoy === true })
   }
   return out
 }
@@ -206,8 +211,8 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
     if (!r.checkIn || !r.checkOut) continue
 
     const activo = activos.has(propertyId)
-    const yaHechos = hitosBloqueantes(yaHechosPorReserva.get(bookingId) ?? [], activo)
-    const debidos = mensajesDebidos(r, hoy, hora, yaHechos)
+    const { bloqueantes, emitidosHoy } = hitosBloqueantes(yaHechosPorReserva.get(bookingId) ?? [], activo)
+    const debidos = mensajesDebidos(r, hoy, hora, bloqueantes, emitidosHoy)
     if (!debidos.length) continue
     res.debidos += debidos.length
 
