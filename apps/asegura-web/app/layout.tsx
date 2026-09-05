@@ -15,6 +15,9 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion } from '@central/module-seguros'
 import { NAV, PORTAL_URL, SITIO_URL } from '@/lib/sitio'
 import { fichaNegocio, jsonLd } from '@/lib/seo'
+import { CONFIG_ANALITICA } from '@/lib/analitica'
+import { Analitica } from '@/components/Analitica'
+import { CambiarCookies } from '@/components/CambiarCookies'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITIO_URL),
@@ -78,6 +81,26 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <head>
+        {/* Cookiebot va PRIMERO y como <script> normal, no como `next/script`:
+            es quien pinta el banner y quien decide si se puede medir, así que
+            no puede quedar por detrás de nada. Si no hay configuración de
+            analítica (`lib/analitica.ts`) no se carga: sin medición no hace
+            falta banner, y un banner que no gobierna nada solo entorpece.
+
+            Va en modo MANUAL (sin `data-blockingmode="auto"`): el bloqueo
+            automático reescribe las etiquetas de la página para retener
+            scripts, y aquí no hace falta porque PostHog no se carga como
+            etiqueta sino con un `import()` que ya está detrás del
+            consentimiento (`components/Analitica.tsx`). Menos piezas
+            reescribiendo el DOM, menos formas de romper la página. */}
+        {CONFIG_ANALITICA ? (
+          <script
+            id="Cookiebot"
+            src="https://consent.cookiebot.com/uc.js"
+            data-cbid={CONFIG_ANALITICA.cookiebotId}
+            type="text/javascript"
+          />
+        ) : null}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="stylesheet" href={MARCA_ASEGURA.tipografia.googleFontsHref} />
@@ -112,6 +135,8 @@ main{overflow-wrap:anywhere}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaNegocio()) }} />
       </head>
       <body>
+        {/* No pinta nada: escucha a Cookiebot y solo entonces carga PostHog. */}
+        <Analitica />
         <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--panel)' }}>
           <div style={{ ...contenedor, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 10, paddingBottom: 10 }}>
             <Link
@@ -158,6 +183,10 @@ main{overflow-wrap:anywhere}
               <Link href="/legal/privacidad">Privacidad</Link>
               <Link href="/legal/aviso-legal">Aviso legal</Link>
               <Link href="/quienes-somos">Quiénes somos</Link>
+              {/* Retirar el consentimiento tiene que costar lo mismo que darlo
+                  (art. 7.3 RGPD). Sin este enlace, el banner solo aparece una
+                  vez y quien acepta sin querer no tiene forma de volver atrás. */}
+              <CambiarCookies />
             </nav>
           </div>
         </footer>
