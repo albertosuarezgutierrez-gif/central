@@ -139,7 +139,6 @@ export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
 export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas } from './canal-compania.ts'
-
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
 // existen en la BD pero NO se escriben: no hay pantalla que los pida.
@@ -172,3 +171,11 @@ export {
   puedeRegistrar,
 } from './supresion.ts'
 export type { EstadoSupresion, EstadoPlazo, SolicitudSupresion, Alcance as AlcanceSupresion } from './supresion.ts'
+export {
+  VISTAS_BOVEDA,
+  VISTA_BOVEDA_POR_DEFECTO,
+  vistaDeBoveda,
+  pestanasPortal,
+  hrefDeVista,
+} from './vista-portal.ts'
+export type { VistaBoveda, PestanaPortal } from './vista-portal.ts'

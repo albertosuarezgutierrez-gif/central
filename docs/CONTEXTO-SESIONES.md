@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎨 El portal del cliente deja de ser una sola página, y el diseño se LEE del fuente de Manuel (05/09/2026).**
+  Alberto: «el aspecto, quiero que se vea más moderno» + «en vercel asegura tiene q estar el diseño de manuel».
+  Se clona el repo de `app.grupoasegura.com` y se leen sus tokens: **confirma** el `#3364ee` y el `16px` ya
+  medidos, y **corrige** los neutros (llevaban un azul puesto a ojo; los suyos son croma 0 a propósito).
+  `@central/brand` gana tema oscuro + superficies/elevación, todo opcional para no tocar a Joaquín Jaén.
+  🚨 Su `theme-store` decide que el portal del CLIENTE va en CLARO (el oscuro es del backoffice): se respeta.
+  `/boveda` pasa de **7 bloques y ~3.800 líneas en una sola URL** a 4 secciones por `?vista=` — el servidor
+  manda solo la que se pide. `packages/brand` no tenía script `test`: se añade (era invisible como housesevillana).
+  PR #2332. ⏸️ **Pendiente de Alberto: `hola@` no existe.** Lo usan `mediador.ts` (contacto legal del
+  mediador), `canal-email.ts` (reply-to del código de acceso) y `boveda/page.tsx`. Decidir `.es` o `.com`.
+
 - **🔌 conectores-vigia: primera pasada real (05/09/2026, PR #2295).** Confirmado (ya no
   «probablemente»): la rutina corre sin ningún conector adjunto — `ListConnectors` da
   `enabledInChat:false` en los ~30 de la cuenta → el paso canario (llamada real a Booking/IBKR)

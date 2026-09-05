@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import {
@@ -24,6 +23,9 @@ import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
+import { vistaDeBoveda } from '@central/module-seguros-portal'
+
+import { Pestanas } from '../Pestanas'
 import { EditarPoliza } from './EditarPoliza'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
@@ -55,7 +57,15 @@ const ESTADO: Record<string, string> = {
   competencia: 'En otra correduría',
 }
 
-export default async function Boveda() {
+export default async function Boveda({
+  searchParams,
+}: {
+  // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada:
+  // lo que decide qué datos se leen es la sesión de abajo, así que un valor
+  // raro aquí solo elige otra pestaña, nunca otros datos.
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const vista = vistaDeBoveda((await searchParams).vista)
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
@@ -170,14 +180,16 @@ export default async function Boveda() {
     <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mis seguros</h1>
 
-      {/* La pantalla del consentimiento. Va arriba y no escondida al final: quien
-          quiere saber quién le está mirando los seguros —o quitárselo a alguien—
-          no debería tener que recorrer toda la bóveda para encontrarlo. */}
-      <p style={{ margin: '0 0 16px', fontSize: 14 }}>
-        <Link href="/autorizaciones">Quién puede ver mis seguros</Link>
-      </p>
+      {/* La pantalla del consentimiento sigue estando ARRIBA y a un toque, ahora
+          como una sección más de la barra: quien quiere saber quién le está
+          mirando los seguros —o quitárselo a alguien— no debería tener que
+          recorrer nada para encontrarlo. Antes era un enlace de 14px bajo el
+          título; era toda la navegación que tenía el portal. */}
+      <Pestanas activa={vista} />
 
-      <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
+      {vista === 'seguros' && (
+        <>
+          <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
 
       <section className="seccion" aria-labelledby="cartera-titulo">
         <h2 id="cartera-titulo">Tus seguros en {correduria}</h2>
@@ -206,11 +218,27 @@ export default async function Boveda() {
         </section>
       )}
 
-      {/* El parte va ANTES de la bóveda de aportadas: quien entra con un
-          siniestro recién ocurrido tiene prisa, y la bóveda es una tarea
-          tranquila que puede esperar a mañana. */}
-      <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+      {/* El derecho de supresión (art. 17). Va aquí, dentro de la vista que la
+          persona abre por defecto y con el nombre que la política de privacidad
+          le da («Mis seguros → Tus datos»), y NO como una pestaña quinta: la
+          barra son cuatro por decisión de diseño. Y va en la pantalla, no solo
+          enlazado desde un texto legal: un derecho que solo se ejerce
+          escribiendo un correo es un derecho con peaje. */}
+      <TusDatos inicial={supresiones} />
+        </>
+      )}
 
+      {/* El parte tiene sección PROPIA, y sigue yendo antes que la bóveda de
+          aportadas en la barra: quien entra con un siniestro recién ocurrido
+          tiene prisa, y la bóveda es una tarea tranquila que puede esperar a
+          mañana. Antes había que bajar por delante de toda la cartera para
+          llegar aquí. */}
+      {vista === 'siniestro' && (
+        <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+      )}
+
+      {vista === 'polizas' && (
+        <>
       <section className="seccion" aria-labelledby="boveda-titulo">
         <h2 id="boveda-titulo">Pólizas que has añadido tú</h2>
         {declaradas.length === 0 ? (
@@ -294,12 +322,8 @@ export default async function Boveda() {
       {/* Las opciones de ramo son las MISMAS que las de `EditarPoliza`: un alta a mano
           y una corrección ofrecen la misma lista. */}
       <SubirPoliza ramos={RAMOS_OPCIONES} />
-
-      {/* El derecho de supresión (art. 17). Va en la pantalla que la persona
-          abre de verdad, no solo enlazado desde la política de privacidad: un
-          derecho que solo se ejerce escribiendo un correo es un derecho con
-          peaje. */}
-      <TusDatos inicial={supresiones} />
+        </>
+      )}
     </main>
   )
 }
