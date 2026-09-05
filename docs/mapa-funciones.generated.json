@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-05T15:41:12Z",
-  "sha": "03d8597caae39959bf08270f3b6e861aa558d094",
+  "generadoEn": "2026-09-05T18:13:53Z",
+  "sha": "d2467d30a4c1aecac2092268ce4ff174a61da5ab",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6673,12 +6673,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 143
+          "linea": 170
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d7f6c2e93dfa"
+      "hash": "8f24d85dd2bb"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -6758,7 +6758,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b4a35d36f910"
+      "hash": "9d4f46f1462e"
     },
     {
       "ruta": "apps/asegura-web/app/sitemap.ts",
@@ -84232,7 +84232,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 62
+          "linea": 63
         },
         {
           "nombre": "tipoSeguroLead",
@@ -84240,7 +84240,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TipoSeguroLead | null",
-          "linea": 66
+          "linea": 67
         },
         {
           "nombre": "revisarLeadWeb",
@@ -84248,7 +84248,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "LeadRevisado",
-          "linea": 77,
+          "linea": 78,
           "resumen": "Revisa lo que llega del formulario. Un solo motivo cada vez, con su campo, para que la pantalla señale la casilla. `motivo: 'bot'` = honeypot relleno: la ruta responde 200 «recibido» SIN hacer nada (n"
         },
         {
@@ -84257,7 +84257,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadWeb, 'tipoSeguro' | 'comentario'>",
           "retorno": "string",
-          "linea": 120,
+          "linea": 121,
           "resumen": "Lo que va en `notas` de la ficha nueva (y al historial del alta, que lo repite)."
         },
         {
@@ -84266,7 +84266,7 @@
           "exportada": true,
           "params": "lead: LeadWeb",
           "retorno": "string",
-          "linea": 129,
+          "linea": 130,
           "resumen": "El historial tipo `contacto` que se anota en una ficha que YA existía. Lleva el teléfono/email tecleados: pueden ser distintos de los de la ficha (es justo por lo que se ha encontrado), y Alberto nece"
         },
         {
@@ -84275,7 +84275,7 @@
           "exportada": true,
           "params": "r: ResultadoEscritura",
           "retorno": "ResultadoLead",
-          "linea": 154
+          "linea": 155
         },
         {
           "nombre": "urlFichaCliente",
@@ -84283,7 +84283,7 @@
           "exportada": true,
           "params": "id: string, base: string = process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_POR_DEFECTO",
           "retorno": "string",
-          "linea": 179
+          "linea": 180
         },
         {
           "nombre": "textoTelegramLead",
@@ -84291,13 +84291,13 @@
           "exportada": true,
           "params": "a: AvisoLead",
           "retorno": "string",
-          "linea": 200,
+          "linea": 201,
           "resumen": "HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "10dbadaec562"
+      "hash": "43d1d9c4119d"
     },
     {
       "ruta": "apps/plataforma/lib/limpiadoras-early.ts",
