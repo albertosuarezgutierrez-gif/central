@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-05T11:52:05Z",
-  "sha": "eda35a78d8867fd8e0aaac545e60fc940fbc9f8f",
+  "generadoEn": "2026-09-05T12:21:05Z",
+  "sha": "03b987cbbacec123aa0956b4b3b06440eb983042",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6559,13 +6559,13 @@
           "exportada": true,
           "params": "ruta: string",
           "retorno": "string",
-          "linea": 45,
+          "linea": 53,
           "resumen": "URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d8d1a15e6589"
+      "hash": "da9c5c99024f"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
