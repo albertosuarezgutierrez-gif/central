@@ -160,7 +160,7 @@ a uno al que sí se avisó.
 |---|---|---|
 | 0.1 | Confirmar **titular del registrador** de `grupoasegura.com` / `.es` | Vercel prueba DNS, no propiedad. Si el registrador es de Manuel, puede repuntar el DNS |
 | 0.2 | **Unificar `info@` → `hola@`** en la web pública | Incumplimiento abierto (§2.5) |
-| 0.3 | Verificar **dónde vive la clave `anon`** del proyecto Supabase | Ver §5 — riesgo de seguridad, y este plan da visibilidad a la marca |
+| 0.3 | ~~Verificar **dónde vive la clave `anon`**~~ ✅ **HECHO 05/09/2026** — ver §5: la clave es pública pero `seguros` no es alcanzable. **Ya no bloquea el lanzamiento.** El hallazgo real es del tenant demo de ia-rest |
 | 0.4 | **Google Business Profile** (San Juan de La Palma 28, 41003 Sevilla) | La acción de mayor retorno por hora de todo el plan, y gratis |
 | 0.5 | **Pedir reseña de Google a los 80 clientes actuales** | Un GBP con 0 reseñas no convierte. Es el activo local nº1 y no cuesta un euro |
 | 0.6 | **Google Search Console** + analítica **sin cookies** | Sin GSC no sabes por qué consultas entras. Sin cookies no hay banner (§2.3) |
@@ -300,21 +300,73 @@ Recomendación: **0 € en publicidad los primeros 3 meses**; el dinero va a dom
 
 ---
 
-## 5. Hallazgo de seguridad (no es marketing, pero lo bloquea)
+## 5. Hallazgo de seguridad — COMPROBADO el 05/09/2026
 
-El advisor de Supabase avisa de que **75 tablas del schema `seguros` tienen RLS desactivado** y
-quedan expuestas a los roles `anon` / `authenticated` — entre ellas las críticas `clientes`,
-`polizas`, `cliente_emails` y `cliente_telefonos`. Dentro hay DNI (60 % de las fichas), fecha
-de nacimiento (74 %) y ramos de salud/decesos/vida — **categoría especial del art. 9 RGPD** — de
-32.600 personas.
+> ⚠️ **Esta sección decía otra cosa y estaba equivocada.** Afirmaba que el schema `seguros`
+> —DNI, fecha de nacimiento y ramos de salud de 32.600 personas— estaba «expuesto a `anon`» y
+> que eso bloqueaba el lanzamiento. La premisa era el advisor de Supabase, que mira los GRANT y
+> el RLS pero **no mira si la API expone ese schema**. Se comprobó y no lo expone. Se deja
+> escrito el error porque la conclusión que sacó (bloquear el lanzamiento) era falsa, y la
+> verdadera está un sitio más allá.
 
-[Probable] El riesgo se materializa **solo si la clave `anon` de ese proyecto está publicada en
-algún sitio** (una app cliente, un bundle de navegador, un repo). **Eso hay que comprobarlo, no
-suponerlo.**
+### Lo que sí se ha medido
 
-Se anota aquí porque este plan consiste precisamente en **dar visibilidad pública a esta marca**.
-No se toca ahora (activar RLS sin políticas tumba todos los accesos), pero **la comprobación de
-dónde vive la clave `anon` es requisito previo al lanzamiento de la web** (acción 0.3).
+**1. La clave `anon` ES pública.** No era una hipótesis: `NEXT_PUBLIC_SUPABASE_ANON_KEY` se
+inlinea en el bundle de navegador de **9 ficheros cliente de `apps/ia-rest`**, uno de ellos
+`app/q/[token]` — la carta por QR, que abre cualquiera que escanee en una mesa. Un
+`NEXT_PUBLIC_*` no es un secreto y nunca lo fue; lo que importa es qué alcanza.
+
+**2. El schema `seguros` NO es alcanzable por esa clave.** Probado contra la API real (desde
+`pg_net`, porque el proxy de la sesión no llega a ese host):
+
+```
+GET /rest/v1/clientes   (Accept-Profile: seguros)  →  406 PGRST106
+"Only the following schemas are exposed: public, graphql_public, iarest"
+```
+
+**PostgREST solo expone `public`, `graphql_public` e `iarest`.** El RLS apagado en esas 75
+tablas es cierto y sigue siendo deuda —protege un solo cerrojo, el del gateway— pero **no hay
+brecha activa**: no se puede llegar a `seguros` desde fuera. La cartera **no bloquea el
+lanzamiento de la web**.
+
+**3. Lo que SÍ es alcanzable, y es el hallazgo de verdad.** De lo que la API sí expone:
+
+| Comprobación (con la clave pública) | Resultado |
+|---|---|
+| `public.v_movimientos_activos` (el libro del banco) | 200 · **0 filas** — la vista es `security_invoker`, el RLS de la tabla la protege |
+| `public.v_contab_pyg` | 200 · **0 filas** — ídem |
+| `iarest.camareros` | **206 · 7 filas** ← alcanzable |
+
+`iarest.camareros` es una vista `security_invoker` sobre `iarest.personal`, que **sí tiene RLS
+con política de tenant**. Devuelve datos igualmente por la letra pequeña de la política:
+
+```sql
+-- iarest.get_tenant_id()
+v_rid := current_setting('app.local_id', true);
+IF v_rid IS NULL OR v_rid = '' THEN
+  RETURN '00000000-0000-0000-0000-000000000001'::uuid;  -- «demo, mientras migra»
+END IF;
+```
+
+Una llamada HTTP anónima nunca fija `app.local_id`, así que **cae en el tenant demo**. Y el
+tenant demo tiene **7 personas con sus 7 PIN**, incluido un `super_admin`. Los GRANT le dan a
+`anon` además **INSERT / UPDATE / DELETE** (no se ha probado ninguna escritura). El mismo
+fallback gobierna las **252 tablas de `iarest` con RLS y SELECT para `anon`**.
+
+**Alcance real:** el tenant demo de ia-rest, no clientes reales — *salvo que alguna vez se haya
+sembrado un restaurante real bajo ese `local_id`*, que es lo primero que hay que mirar. El PIN
+de un `super_admin` demo es una credencial operativa del TPV, no un dato de relleno.
+
+**Qué NO se ha tocado, y por qué.** Quitar el fallback de `get_tenant_id()` es el arreglo de
+raíz, y es de una línea — pero ia-rest es un producto vivo y el comentario dice literalmente
+«para compatibilidad mientras migra». Cambiarlo a ciegas puede dejar restaurantes sin servicio.
+Revocar los GRANT a `anon` tiene el mismo riesgo: la carta por QR es anónima por diseño y
+necesita leer. **Es una decisión de Alberto, no un apaño de una sesión.**
+
+### Consecuencia para el plan
+
+La acción 0.3 («verificar dónde vive la clave `anon`») **queda hecha y deja de bloquear el
+lanzamiento de la web**. Lo que queda abierto es un asunto de ia-rest, no de la correduría.
 
 ---
 

@@ -11,9 +11,11 @@
 // Cualquier fallo de lectura acaba en `sin_datos`, jamás en «ok».
 import {
   saludIngesta,
+  silencioPorEntidad,
   type SaludIngesta,
   type FicheroEnCuarentena,
   type EntradaRechazada,
+  type EntidadIngesta,
 } from '@central/module-seguros'
 
 export type RespuestaIngesta =
@@ -49,6 +51,25 @@ function esRechazo(v: unknown): v is EntradaRechazada {
   const origenOk = r.origen === null || typeof r.origen === 'string'
   return typeof r.evento === 'string' && typeof r.n === 'number' && Number.isFinite(r.n)
     && horasOk && origenOk
+}
+
+/**
+ * El ritmo de envío de una compañía tal y como lo manda el puerto.
+ *
+ * 🚨 Misma regla que `esRechazo`: un `central-asegura` anterior al 05/09/2026 no
+ * informa `entidades`, y tratar esa versión vieja como «se miró y no hay ninguna
+ * compañía callada» sería justamente la avería que este vigía persigue. Ausente
+ * ⇒ `null` ⇒ el parte dice «sin comprobar».
+ */
+function esEntidad(v: unknown): v is EntidadIngesta {
+  if (typeof v !== 'object' || v === null) return false
+  const e = v as Record<string, unknown>
+  const numONull = (x: unknown) => x === null || (typeof x === 'number' && Number.isFinite(x))
+  const opcional = (x: unknown) => x === undefined || numONull(x)
+  return typeof e.entidad === 'string'
+    && numONull(e.diasSinFichero) && numONull(e.huecoMaximo)
+    && typeof e.huecosObservados === 'number' && Number.isFinite(e.huecosObservados)
+    && numONull(e.vivas) && numONull(e.vencidasEnSilencio) && opcional(e.vencen90d)
 }
 
 /**
@@ -90,6 +111,13 @@ export function interpretarIngesta(status: number, json: unknown): RespuestaInge
       rechazos:
         Array.isArray(r.rechazos) && r.rechazos.every(esRechazo)
           ? (r.rechazos as EntradaRechazada[])
+          : null,
+      // Mismo criterio de todo-o-nada: una lista con una fila ilegible se
+      // degrada ENTERA. Juzgar solo a las compañías que se entienden dejaría
+      // sin mirar precisamente a la que viene rara.
+      silencio:
+        Array.isArray(r.entidades) && r.entidades.every(esEntidad)
+          ? silencioPorEntidad(r.entidades as EntidadIngesta[])
           : null,
     }),
   }

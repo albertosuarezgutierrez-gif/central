@@ -157,3 +157,45 @@ test('un rechazo sin hora ni origen se acepta: son huecos declarados, no basura'
 test('un fallo de red sigue dejando los rechazos en «no comprobado»', () => {
   assert.equal(saludDesdeRespuesta({ estado: 'error', motivo: 'red' }).rechazos, null)
 })
+
+// ── Silencio por compañía (05/09/2026) ───────────────────────────────────────
+
+test('un puerto ANTIGUO (sin `entidades`) deja el silencio en null, no en «ninguna»', () => {
+  // Es la misma regla que ya protege a `rechazos`: una versión desplegada antes
+  // de que existiera el campo no puede leerse como «se miró y no hay ninguna
+  // compañía callada». Eso volvería a poner el vigía en verde sobre Mapfre.
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.silencio, null)
+})
+
+test('una fila de entidad ilegible degrada la lista ENTERA', () => {
+  // Juzgar solo a las compañías que se entienden dejaría fuera precisamente a
+  // la que viene rara, que es la candidata a estar rota.
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    entidades: [
+      { entidad: 'C0468', diasSinFichero: 6, huecoMaximo: 9, huecosObservados: 24, vivas: 19, vencidasEnSilencio: 0 },
+      { entidad: 'C0058', diasSinFichero: 'setenta y cuatro' },
+    ],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.silencio, null)
+})
+
+test('con los datos reales de Mapfre el veredicto llega degradado', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [], rechazos: [],
+    entidades: [
+      { entidad: 'C0058', diasSinFichero: 74, huecoMaximo: 2, huecosObservados: 2, vivas: 64, vencidasEnSilencio: 7, vencen90d: 12 },
+      { entidad: 'C0468', diasSinFichero: 6, huecoMaximo: 9, huecosObservados: 24, vivas: 19, vencidasEnSilencio: 0, vencen90d: 0 },
+    ],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.estado, 'degradada')
+  const mudas = (r.salud.silencio ?? []).filter(e => e.veredicto === 'silencio').map(e => e.entidad)
+  assert.deepEqual(mudas, ['C0058'], 'solo Mapfre: Occident va dentro de su ritmo')
+})

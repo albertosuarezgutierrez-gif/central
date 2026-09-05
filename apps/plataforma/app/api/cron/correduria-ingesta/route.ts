@@ -20,7 +20,7 @@ import { eur } from '@/lib/dinero'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-cima'
-import { detalleSalud } from '@central/module-seguros'
+import { detalleSalud, type SaludIngesta } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -35,8 +35,21 @@ const AGENTE = 'correduria_ingesta'
  *
  * ⚠️ Esto silencia la REPETICIÓN, no el aviso: la primera vez siempre suena.
  */
-function firma(estado: string, recientes: number, huerfanas: number | null): string {
-  return `${estado}:${recientes}:${huerfanas ?? '?'}`
+function firma(salud: SaludIngesta): string {
+  // 🚨 Las compañías MUDAS van en la firma. Sin ellas, con Mapfre ya callada la
+  // firma se queda en `degradada:0:0` para siempre y el día que enmudezca
+  // ADEMÁS Allianz no sonaría nada — que es justo el «si empeora, vuelve a
+  // sonar» que este dedupe promete. Van ordenadas para que el mismo conjunto
+  // produzca siempre la misma cadena.
+  const mudas = (salud.silencio ?? [])
+    .filter(e => e.veredicto === 'silencio')
+    .map(e => e.entidad)
+    .sort()
+    .join(',')
+  // `null` (no comprobado) y `[]` (comprobado, ninguna) no pueden dar la misma
+  // firma: si ayer no se pudo mirar y hoy sí, eso es un cambio que hay que ver.
+  const silencio = salud.silencio === null ? '?' : mudas || '-'
+  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}`
 }
 
 export async function GET(req: NextRequest) {
@@ -55,7 +68,7 @@ export async function GET(req: NextRequest) {
     anterior = filas[0]?.detalle ?? null
   } catch { anterior = null }
 
-  const actual = firma(salud.estado, salud.recientes, salud.huerfanas)
+  const actual = firma(salud)
   const cambio = anterior === null || !anterior.startsWith(actual)
   // El detalle guarda la firma delante para poder compararla mañana.
   const detalleGuardado = `${actual} · ${detalle}`
@@ -84,12 +97,22 @@ export async function GET(req: NextRequest) {
           .map(e => `${e.entidad}/${e.clave ?? 'sin clave legible'} (${e.n})`)
           .join(' · ')}`
       : ''
+    // Una compañía que deja de mandar no se arregla igual que un fichero
+    // atascado: aquí no hay nada que reprocesar, hay que llamar a la compañía o
+    // mirar el adaptador. Por eso lleva su propio titular y su propio recado.
+    const mudas = (salud.silencio ?? []).filter(e => e.veredicto === 'silencio')
+    const titular = mudas.length
+      ? `🛡️ <b>${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos</b>`
+      : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
+    const recado = mudas.length
+      ? '\n\nNo hay nada atascado que reprocesar: sencillamente no llega. ' +
+        'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
+      : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
+        'y su comisión tampoco.'
     await tgAviso('correduria.ingesta',
-      '🛡️ <b>Se están perdiendo datos de CIMA</b>\n' +
+      titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades +
-      '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
-      'y su comisión tampoco.',
+      prima + entidades + recado,
     ).catch(() => {})
   }
 
