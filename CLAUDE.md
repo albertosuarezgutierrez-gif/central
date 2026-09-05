@@ -114,6 +114,20 @@
   `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
   divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
   silencio). `HORARIO` y el teléfono están **ausentes a propósito** mientras no se confirmen.
+  🔘 **Un solo acceso, y es el del CLIENTE (05/09/2026).** Botón «Área de clientes» en la cabecera y
+  «Ya soy cliente · Mis seguros» junto al CTA de venta, los dos a `PORTAL_URL` (`lib/sitio.ts`, env
+  `NEXT_PUBLIC_PORTAL_URL`; por defecto `asegura-portal.vercel.app`, que es donde el portal sirve HOY —
+  cuando `clientes.grupoasegura.es` esté repuntado a Vercel, se cambia la env y listo). **NO hay «acceso
+  corredor» a propósito**: Alberto entra por plataforma. Lo vigila `lib/portal.test.ts`, que lee el
+  fuente: el botón montado, y ningún `href` ni texto hacia `app.grupoasegura.com`, `/correduria`,
+  `/operador`, `/login`, «Acceso correduría», «Únete gratis» o «Ya tengo cuenta» (el vocabulario de la
+  web de Manuel). Cabecera en DOS filas a todo ancho (marca + botón / nav), medida con Playwright a
+  320-360-1024: sin desbordar y sin pisar la marca.
+  🚨 **Lo que Alberto ve en `grupoasegura.es` NO es esta app: es el CRM de Manuel.** Medido en Vercel el
+  05/09: el apex `.es` y `www` están atados al proyecto `asegura`. Esta app **no tiene dominio** y no la
+  ve nadie. El arreglo no es de diseño: es mover `grupoasegura.es`+`www` a `asegura-web`, atar
+  `clientes.grupoasegura.es` a `asegura-portal` (existe en DNS, apunta a IONOS) y dejar
+  `app.grupoasegura.com` en `asegura` (ingesta de CIMA). Todo en paneles de Alberto.
   Plan y diagnóstico en `docs/ASEGURA-MARKETING-PLAN.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)

@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
 import { RAMOS } from '@/lib/ramos'
-import { url } from '@/lib/sitio'
+import { PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
 
 export const metadata: Metadata = {
@@ -60,6 +60,26 @@ export default function Home() {
             }}
           >
             Que me llamen
+          </a>{' '}
+          {/* Segundo clic para quien ya es cliente: su intranet, donde guarda
+              sus pólizas. Va al lado del CTA de venta, no escondido en el pie. */}
+          <a
+            href={PORTAL_URL}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              minHeight: 48,
+              padding: '0 22px',
+              background: 'var(--panel)',
+              color: 'var(--brand-ink)',
+              border: '1px solid var(--border)',
+              fontWeight: 700,
+              borderRadius: 12,
+              textDecoration: 'none',
+              marginTop: 8,
+            }}
+          >
+            Ya soy cliente · Mis seguros
           </a>
         </p>
       </section>

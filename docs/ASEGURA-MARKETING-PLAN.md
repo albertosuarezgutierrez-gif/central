@@ -101,7 +101,8 @@ ramo la fuente correcta es `seguros.poliza_recibos`, que es lo que se ha usado a
 | Única página pública | `/seguros` en `apps/plataforma` — 1 página, 3 bullets y un formulario, bajo el dominio de plataforma |
 | `app.grupoasegura.com` | Sirve el **CRM de Manuel** (proyecto Vercel `asegura`, repo `albertosuarezgutierrez-gif/asegura`, ya en la cuenta de Alberto) |
 | **Apex `grupoasegura.com` y `www.`** | **Libres — no atados a ningún proyecto Vercel** |
-| `grupoasegura.es` | No atado a ningún proyecto Vercel |
+| `grupoasegura.es` | ~~No atado a ningún proyecto Vercel~~ ❌ **FALSO — medido el 05/09/2026:** el apex `.es` y `www.grupoasegura.es` están ATADOS al proyecto Vercel **`asegura` (el CRM de Manuel)**. Es lo que Alberto vio al abrir `grupoasegura.es` en el móvil («Únete gratis», «Acceso correduría», header montado). El DNS del apex `.es` apunta a Vercel (`216.150.1.1`); el de `www` sigue en IONOS (`212.227.40.135`), así que `www` ni llega |
+| `clientes.grupoasegura.es` | **Existe en DNS** (IONOS, `212.227.40.135`) pero **no está atado a ningún proyecto Vercel**. Es el nombre que Alberto quiere para la intranet del cliente → hay que atarlo a `asegura-portal` y repuntar el CNAME a `cname.vercel-dns.com` |
 | sitemap · robots · JSON-LD · Open Graph | **Cero, en las tres apps** |
 | Analítica | **Ninguna** (el portal declara «una sola cookie, sin analítica ni terceros») |
 | Google Business Profile | No consta |

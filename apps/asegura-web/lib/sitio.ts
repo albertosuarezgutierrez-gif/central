@@ -24,6 +24,23 @@
  */
 export const SITIO_URL = (process.env.NEXT_PUBLIC_SITIO_URL || 'https://grupoasegura.com').replace(/\/+$/, '')
 
+/**
+ * Intranet del cliente (`apps/asegura-portal`), sin barra final.
+ *
+ * Es el ÚNICO acceso que esta web ofrece: el asegurado entra a ver y guardar
+ * sus pólizas. Decisión de Alberto (05/09/2026): la web es 100 % venta, y **no
+ * lleva enlace a la intranet de la correduría** — él entra por su panel de
+ * plataforma, no desde aquí. Un «Acceso corredor» en la web pública es una
+ * puerta que ningún cliente necesita y que enseña dónde está la trastienda.
+ *
+ * Sale de `NEXT_PUBLIC_PORTAL_URL`. El valor por defecto es la URL en la que
+ * el portal sirve HOY (`asegura-portal.vercel.app`), que funciona: un botón que
+ * apuntara al dominio bonito antes de que su DNS llegue a Vercel mandaría al
+ * cliente a IONOS. Cuando `clientes.grupoasegura.es` esté repuntado, se cambia
+ * la variable en Vercel y el botón sigue a ese dominio sin tocar código.
+ */
+export const PORTAL_URL = (process.env.NEXT_PUBLIC_PORTAL_URL || 'https://asegura-portal.vercel.app').replace(/\/+$/, '')
+
 /** URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`). */
 export function url(ruta: string): string {
   return `${SITIO_URL}${ruta.startsWith('/') ? ruta : `/${ruta}`}`

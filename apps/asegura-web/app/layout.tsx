@@ -13,7 +13,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import Link from 'next/link'
 import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion } from '@central/module-seguros'
-import { NAV, SITIO_URL } from '@/lib/sitio'
+import { NAV, PORTAL_URL, SITIO_URL } from '@/lib/sitio'
 import { fichaNegocio, jsonLd } from '@/lib/seo'
 
 export const metadata: Metadata = {
@@ -58,6 +58,22 @@ const enlaceNav: CSSProperties = {
   whiteSpace: 'nowrap',
 }
 
+const botonPortal: CSSProperties = {
+  // Mismo alto táctil que el nav; es el ÚNICO botón de acceso de la web, así
+  // que va en color de marca para que se distinga de las secciones comerciales.
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 44,
+  padding: '0 16px',
+  background: 'var(--brand)',
+  color: '#fff',
+  fontSize: 15,
+  fontWeight: 700,
+  borderRadius: 12,
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
+}
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
@@ -84,6 +100,12 @@ img{max-width:100%;height:auto}
    no el body. Es la regla de responsive del repo, aplicada de raíz. */
 main{overflow-wrap:anywhere}
 :focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:4px}
+/* Cabecera en DOS filas a todo ancho: marca + botón de clientes arriba, y el
+   nav de secciones en su propia fila debajo (con su scroll horizontal en
+   móvil). Seis secciones + botón no caben en una fila ni a 1024 px, y dejar
+   que flex decida dónde parte daba TRES filas en escritorio (marca / nav /
+   botón). Medido con Playwright a 320, 360 y 1024. */
+.hdr-nav{flex-basis:100%;margin-left:0!important;order:3}
 `,
           }}
         />
@@ -101,6 +123,7 @@ main{overflow-wrap:anywhere}
             {/* Nav horizontal con scroll propio en móvil: seis secciones no caben
                 en 320 px, y partirlas en dos filas deja la cabecera enorme. */}
             <nav
+              className="hdr-nav"
               aria-label="Secciones"
               style={{ display: 'flex', gap: 2, overflowX: 'auto', marginLeft: 'auto', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}
             >
@@ -110,6 +133,12 @@ main{overflow-wrap:anywhere}
                 </Link>
               ))}
             </nav>
+            {/* Único acceso de la web: la intranet del CLIENTE. Es <a> y no
+                <Link> porque es otro dominio. No hay «acceso corredor» a
+                propósito: Alberto entra por plataforma. */}
+            <a href={PORTAL_URL} style={{ ...botonPortal, marginLeft: 'auto' }}>
+              Área de clientes
+            </a>
           </div>
         </header>
 
