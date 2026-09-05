@@ -1472,6 +1472,15 @@ h1 {
   display: grid;
   gap: 8px;
   margin-top: 12px;
+  /* 🚨 Sin estas dos líneas el par sale ESCALONADO y de dos alturas: el
+     `align-items: stretch` por defecto estira uno a la altura de la fila y
+     `.boton.auto` le suma su `margin-top: 10px` al otro (ese margen se
+     escribió para un botón que sigue a un párrafo, no para una rejilla).
+     Medido a 600 px: 44 px contra 54, y 10 px de desfase. */
+  align-items: start;
+}
+.acciones > .boton {
+  margin-top: 0;
 }
 @media (min-width: 420px) {
   .acciones {
@@ -1771,7 +1780,16 @@ h1 {
 }
 /* 🔑 Lo único que alguien busca con prisa: el número más grande del papel.
    `nowrap` porque un teléfono partido en dos renglones se marca mal. */
+/* Se marca de un toque: con el teléfono fuera del papel, la pantalla es la
+   ÚNICA superficie donde vive ese número. Sin el azul de enlace y sin subrayado
+   a propósito — aquí el dato ES el número, no un sitio al que ir— pero con los
+   44 px táctiles de la regla de la casa. */
 .hoja-numero {
+  display: inline-block;
+  min-height: 44px;
+  padding: 6px 0;
+  color: inherit;
+  text-decoration: none;
   font-size: 20px;
   font-weight: 700;
   line-height: 1.25;
@@ -1805,7 +1823,11 @@ h1 {
 .hoja-solo-pantalla {
   margin: 16px 0 0;
   padding: 12px 14px;
-  border: 1px dashed var(--muted);
+  /* 🚨 Borde SÓLIDO. El discontinuo es de `.pendiente` y en este portal
+     significa «esto se rellenará» — es la única pieza del sistema que carga
+     ese significado, y gastarlo en una explicación permanente lo devalúa. */
+  border: 1px solid var(--border);
+  background: var(--panel2);
   border-radius: calc(var(--radius) * 0.6);
   color: var(--muted);
   font-size: 13px;
@@ -1881,10 +1903,24 @@ h1 {
     display: none !important;
   }
 
+  /* 🖼 La hoja es UNA TARJETA centrada en el folio, no un encabezado con
+     medio A4 en blanco debajo. El filete a todo lo ancho tenía sentido cuando
+     debajo iban tres fichas; sin ellas, quien dice «esto es un documento» es
+     el contorno, y el filete baja a hairline DENTRO de la tarjeta separando
+     identidad de código. */
+  body:has(> .hoja) {
+    display: grid;
+    place-content: center;
+    min-height: 100vh;
+  }
   .hoja {
-    max-width: none;
+    width: 96mm;
+    max-width: 100%;
     margin: 0;
-    padding: 0;
+    padding: 10mm 8mm;
+    border: 1px solid var(--text);
+    border-radius: 4mm;
+    break-inside: avoid;
   }
 
   /* 🚨 EN EL PAPEL NO VA NINGÚN DATO. Solo la marca, «Tus seguros» y el QR.
@@ -1907,37 +1943,64 @@ h1 {
    * el papel no da un teléfono. Se asume porque quien no tiene móvil está
    * llamando desde el de otro — y desde el de otro también se escanea.
    *
+   * 🚨 Y ESTO ES UNA ALLOW-LIST, no una lista de excepciones, que es la parte
+   * que de verdad importa. Antes se nombraban las cuatro clases a ocultar, y
+   * eso solo protege de lo que ya existe: la rama de error (hoja anulada / sin
+   * pólizas) imprimía su texto porque sus clases no estaban en la lista, y el
+   * día que alguien añadiera un `<p>` con el nombre del titular se imprimiría
+   * sin que nada fallara. Aquí se oculta TODO lo que cuelga de `.hoja` y se
+   * enseña solo la tarjeta; lo que se añada mañana nace sin imprimirse, que es
+   * el modo de fallo barato.
+   *
    * La ficha de mediador SÍ se queda: no es un dato del cliente, es la
    * identificación de la correduría (art. 19), y es lo que hace que el papel
    * parezca de una firma regulada y no una pegatina. */
-  .hoja-polizas,
-  .hoja-pie,
-  .hoja-fecha,
-  .hoja-solo-pantalla {
+  .hoja > * {
     display: none !important;
   }
+  .hoja > .hoja-masthead {
+    display: grid !important;
+  }
 
-  /* El cabezado pasa a ser la tarjeta ENTERA: centrada, con aire y con el QR
-     grande, que ahora es lo único que hay que poder escanear desde la nevera
-     sin acercarse. */
+  /* El masthead ES la tarjeta: marca, titular y QR en una columna centrada.
+     El QR es HIJO suyo (ver `Masthead` en la página), así que su `grid-area`
+     coloca de verdad y el bloque cierra entero. */
   .hoja-masthead {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'marca' 'titulo' 'qr';
     justify-items: center;
     text-align: center;
-    gap: 20px;
-    padding: 0 0 24px;
-    border-bottom: 2px solid var(--text);
+    gap: 16px;
+    padding: 0;
+    border-bottom: 0;
+  }
+  .hoja-titulo-bloque {
+    /* El filete se estrecha al ancho de la tarjeta y baja a hairline: a todo
+       lo ancho del folio era una línea que cortaba una página vacía en dos. */
+    width: 100%;
+    padding-bottom: 6mm;
+    border-bottom: 1px solid var(--border);
   }
   .hoja-titulo-bloque h1 {
-    font-size: 30px;
+    font-size: 26px;
+  }
+  /* 🚨 «Datos a día …» es honesto EN PANTALLA —ahí se lee en vivo— y una
+     mentira en el papel, donde no va ningún dato. Es lo único de la tarjeta
+     que se quita, y por eso es una regla suelta y no una excepción de la
+     allow-list: aquí se OCULTA, no se re-enseña. */
+  .hoja-fecha {
+    display: none !important;
   }
   .hoja-qr svg {
-    width: 200px;
-    height: 200px;
+    width: 52mm;
+    height: 52mm;
   }
+  /* 🚨 Sin `max-width`: el <p> tiene que ocupar el ancho de la tarjeta para
+     que `text-align: center` lo centre BAJO el QR. Con los 220 px de antes era
+     un bloque que arrancaba en el margen izquierdo del folio mientras el
+     código quedaba a 258 px — lo que más delataba el papel a medio hacer. */
   .hoja-qr p {
-    max-width: 220px;
-    font-size: 12px;
+    max-width: none;
+    font-size: 11px;
   }
 }

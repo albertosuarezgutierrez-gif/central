@@ -257,7 +257,6 @@ export function HojasQr({
   )
 }
 
-
 /**
  * Cada error dice una cosa distinta. `sin_enlace` no es «no se ha podido»: es
  * una avería NUESTRA, y decirlo evita que alguien reintente diez veces.

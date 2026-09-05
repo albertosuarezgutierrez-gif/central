@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🖼 La tarjeta impresa estaba PARTIDA EN DOS, y lo que la protegía era una deny-list (05/09/2026).**
+  Segunda pasada del agente de diseño antes de mergear, a petición de Alberto. El bloque del QR se
+  pintaba como HERMANO del masthead y `.hoja-qr` se coloca con `grid-area: qr` — regla que solo
+  significa algo si es HIJO: la fila `qr` quedaba vacía, el filete cortaba entre la marca y el
+  código, y la leyenda salía pegada al margen IZQUIERDO del folio (QR a 258 px). En pantalla no se
+  veía. **El QR es ahora hijo del `Masthead`** y el papel es una tarjeta de 96 mm centrada con
+  contorno (363×419, una página, idéntica en claro y oscuro). 🚨 Y lo que se ocultaba eran **cuatro
+  nombres de clase**: se comprobó que la rama de error SÍ se imprimía. Ahora es **allow-list**
+  (`.hoja > *` oculto, una sola excepción) y el cepo afirma esa FORMA + que lo impreso ES el cuerpo
+  de `Masthead` (3 mutaciones vistas morder). Se quita «Datos a día …» del papel: en pantalla es
+  honesto, en el papel es mentira. El teléfono de la ficha pasa a `tel:` (el WhatsApp NO). Y dos
+  cosas rotas de la tanda anterior: `.acciones` escalonaba 10 px desde 420 px, y
+  `.hoja-solo-pantalla` usaba el borde discontinuo reservado a `.pendiente`. ⚠️ Sin arreglo posible:
+  el navegador imprime la URL con el token en su propio pie de página.
+
 - **🖨 La hoja impresa, corregida: salía NEGRO SOBRE NEGRO desde el tema oscuro (05/09/2026).**
   Alberto pidió revisar el diseño «a nivel corporativo» y aclaró la cabecera: «TUS SEGUROS y nombre
   Grupo ASegura». La revisión (agente de diseño) destapó tres fallos mergeados horas antes: el

@@ -332,6 +332,47 @@ que dice qué se va a imprimir — sin él, la vista previa (un logo y un QR) pa
 el usuario cancela. Tres cepos nuevos en `test/regression-portal-hoja-qr.test.ts`, incluido el del
 aviso, que es positivo.
 
+🖼 **Y una segunda revisión, horas después, encontró que la tarjeta estaba PARTIDA EN DOS.** El
+bloque del QR se pintaba como HERMANO del masthead, y `.hoja-qr` se coloca con `grid-area: qr` — una
+regla que solo significa algo si es HIJO de la rejilla. Suelto, no hacía nada: la fila `qr` del
+masthead quedaba vacía, el filete de cierre cortaba entre la marca y el código, y la leyenda
+«Escanea…» arrancaba en el margen IZQUIERDO del folio mientras el QR estaba a 258 px (su
+`max-width: 220px` dentro de un `.hoja-qr` de 716 la convertía en un bloque estrecho pegado a la
+izquierda). En pantalla no se veía porque ahí `.hoja` mide 640. **El QR es ahora hijo del
+`Masthead`**, y el papel es una TARJETA de 96 mm centrada en el folio con contorno: el filete baja a
+hairline dentro de ella. Medido: 363×419 px centrada, leyenda centrada bajo el QR, **una página**, e
+idéntica imprimiendo desde el tema claro y el oscuro.
+
+🚨 **Y lo que se ocultaba era una DENY-LIST de cuatro nombres de clase, que es el fallo estructural.**
+Solo protege de lo que ya existe: se comprobó que **la rama de error** (hoja anulada / sin pólizas /
+no encontrada) **SÍ se imprimía** —«Hoja anulada», su explicación y `hola@grupoasegura.es`— porque sus
+clases no estaban en la lista. No era grave (no es dato del cliente) pero era la prueba: el día que
+alguien añada un `<p>` con el nombre del titular o un chip «2 pólizas», se imprime y nadie se entera.
+Ahora es una **allow-list**: `.hoja > *` a `display:none` y **una sola** excepción, `.hoja-masthead`.
+Lo que se añada mañana nace sin imprimirse, que es el modo de fallo barato. El cepo afirma esa FORMA
+—la regla base existe y el conjunto de excepciones es exactamente `{.hoja-masthead}`— más su
+corolario: **lo que se imprime ES el cuerpo de `Masthead`**, así que ahí no puede entrar ningún
+identificador de dato y sus llamadas solo pasan `titulo` y `qr`. Tres mutaciones vistas morder.
+
+📅 **Lo único de la tarjeta que se quita: «Datos a día …».** En pantalla es honesto (se lee en vivo) y
+en el papel es mentira, porque el papel no lleva ningún dato.
+
+⚠️ **Vía que el CSS no tapa, y hay que no prometer lo contrario:** el navegador imprime **la URL en su
+propio pie de página**, y ahí va el token de 64 hex. No añade filtración —quien tiene el papel puede
+escanear— pero contradice literalmente el «el papel es anónimo, la llave es el QR». Depende de la
+casilla «Encabezados y pies» del usuario, así que no está en nuestra mano.
+
+📞 **Y el teléfono de la ficha pasó a ser pulsable** (`tel:`, con los 44 px táctiles y sin el azul de
+enlace: aquí el dato ES el número). Con el teléfono fuera del papel, la pantalla es la ÚNICA
+superficie donde ese número existe, y se abre en el arcén con una mano. **El WhatsApp NO lleva
+enlace**: un `tel:` sobre él marcaría la línea de voz, que es justo lo que no se promete.
+
+🟠 De la misma revisión, dos cosas que la tanda anterior había roto: los dos botones de `.acciones`
+salían **escalonados 10 px y con dos alturas** desde 420 px (el `align-items: stretch` del grid
+estiraba uno y `.boton.auto` le sumaba a otro su margen, escrito para un botón que sigue a un
+párrafo), y `.hoja-solo-pantalla` usaba **borde discontinuo** — que en este portal es el significado
+reservado de `.pendiente` («esto se rellenará») y gastarlo en una explicación permanente lo devalúa.
+
 🦷 **Y una lección de método que ya va por la tercera vez hoy:** el cepo del mediador mordió por una
 frase de un COMENTARIO —la cabecera que explica por qué la clave DGSFP no se teclea la escribía
 literalmente para explicarlo—. Ahora quita los comentarios antes de mirar, como

@@ -124,7 +124,7 @@ test('el enlace del QR exige https y no se inventa un dominio', () => {
   assert.match(src, /url\.protocol !== 'https:'/, 'el token viaja en la URL: http lo pondría en claro')
 })
 
-test('EL PAPEL NO LLEVA NINGÚN DATO: al imprimir se oculta la lista de pólizas', () => {
+test('EL PAPEL NO LLEVA NINGÚN DATO: al imprimir se oculta TODO menos la tarjeta', () => {
   // 🚨 Decisión de Alberto (05/09/2026): «el que quiera info tiene que
   // escanear; si pone tlf no entra, y puede que quede obsoleto el tlf».
   //
@@ -133,16 +133,73 @@ test('EL PAPEL NO LLEVA NINGÚN DATO: al imprimir se oculta la lista de pólizas
   // mirar la vista previa, que casi nadie mira dos veces— se vería que el
   // papel se ha llevado las pólizas, los teléfonos y los números. Nadie se
   // entera hasta que hay un imán en una nevera ajena con los datos de alguien.
+  //
+  // 🚨 Y lo que se afirma aquí es la FORMA, no una lista de nombres. Hasta el
+  // 05/09/2026 el bloque nombraba las cuatro clases a ocultar, y eso solo
+  // protege de lo que ya existe: la rama de error (hoja anulada, sin pólizas)
+  // imprimía su texto porque sus clases no estaban en la lista. Un `<p>` nuevo
+  // con el nombre del titular saldría impreso sin que nada fallara.
   const css = leer('apps/asegura-portal/app/globals.css')
   const i = css.indexOf('@media print')
   assert.ok(i > 0, 'no encuentro el bloque de impresión')
   const bloque = css.slice(i)
+
   assert.match(
     bloque,
-    /\.hoja-polizas,[\s\S]{0,200}?display: none !important/,
-    'al imprimir, la lista de pólizas tiene que desaparecer: en el papel no va ningún dato',
+    /\.hoja > \*\s*\{[^}]*display:\s*none\s*!important/,
+    'la regla base tiene que ocultar TODO lo que cuelga de la hoja, no cuatro clases conocidas',
   )
-  assert.match(bloque, /\.hoja-pie,/, 'el pie con el correo tampoco va al papel')
+
+  // Y las excepciones son exactamente UNA. Añadir otra tiene que ser una
+  // decisión que rompe este test, no un `git push`.
+  const excepciones = [...bloque.matchAll(/\.hoja > (\.[a-z-]+)\s*\{([^}]*)\}/g)]
+    .filter(([, , cuerpo]) => /display:\s*(?!none)[a-z]/.test(cuerpo))
+    .map(([, sel]) => sel)
+  assert.deepEqual(
+    excepciones.sort(),
+    ['.hoja-masthead'],
+    'al papel solo vuelve la tarjeta: cualquier otra excepción imprime lo que lleve dentro',
+  )
+})
+
+test('lo que se imprime es EXACTAMENTE lo que pinta `Masthead`, y ahí no entra ningún dato', () => {
+  // Corolario del cepo de arriba, y el que de verdad caza: como al imprimir
+  // solo sobrevive `.hoja-masthead`, el papel es el cuerpo de ese componente.
+  // Si algún día recibe algo derivado de la cartera —el nombre del titular,
+  // «2 pólizas»— se imprime, y ningún nombre de clase lo impide.
+  const src = leer(PAGINA)
+  const sinComentarios = src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+
+  const desde = sinComentarios.indexOf('function Masthead(')
+  assert.ok(desde > 0, 'no encuentro el componente del masthead')
+  const cuerpo = sinComentarios.slice(desde, sinComentarios.indexOf('\n}', desde))
+  for (const dato of [
+    'numeroPoliza',
+    'compania',
+    'matricula',
+    'fechaVencimiento',
+    'visibles',
+    'declaradas',
+    'canal',
+    'prima',
+    'bien',
+  ]) {
+    assert.ok(!cuerpo.includes(dato), `\`${dato}\` no puede llegar al masthead: el masthead ES el papel`)
+  }
+
+  // Y por el otro lado: solo se le pasan el titular literal y el QR.
+  const llamadas = [...sinComentarios.matchAll(/<Masthead([^/>]*)\/>/g)].map(([, props]) => props.trim())
+  assert.ok(llamadas.length > 0, 'no encuentro ninguna llamada al masthead')
+  for (const props of llamadas) {
+    assert.match(
+      props,
+      /^titulo="[^"]*"( qr=\{qr\})?$/,
+      `el masthead solo recibe el titular y el QR; recibió: ${props}`,
+    )
+  }
 })
 
 test('la pantalla AVISA de que el papel sale sin datos', () => {

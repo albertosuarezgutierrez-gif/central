@@ -39,7 +39,7 @@ export const metadata = {
  * portal el contraojo de la «A» se cierra y desde dos metros es una mancha; y
  * en su cuadro de color sería un BACKGROUND, que Chrome descarta al imprimir.
  */
-function Masthead({ titulo }: { titulo: string }) {
+function Masthead({ titulo, qr }: { titulo: string; qr?: string | null }) {
   const hoy = new Date()
   return (
     <div className="hoja-masthead">
@@ -60,6 +60,20 @@ function Masthead({ titulo }: { titulo: string }) {
             es lo único que le dice a alguien «esto es viejo, escanea». */}
         <p className="hoja-fecha">Datos a día {fechaEs(hoy)}</p>
       </div>
+      {/* 🚨 El QR va DENTRO del masthead, y no es colocación: `.hoja-qr` se
+          posiciona con `grid-area: qr`, que solo significa algo si es HIJO de
+          la rejilla. Suelto como hermano, esa regla no hacía nada, la fila
+          `qr` del masthead quedaba vacía y el filete de cierre partía la
+          tarjeta en dos — con la marca arriba y el código desterrado abajo,
+          más la leyenda pegada al margen izquierdo del folio. */}
+      {qr && (
+        <div className="hoja-qr">
+          {/* El QR lleva el ENLACE, no los datos: la imagen no caduca y la
+              página detrás está siempre al día. */}
+          <div aria-hidden dangerouslySetInnerHTML={{ __html: qr }} />
+          <p>Escanea para ver esta hoja al día</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -167,16 +181,7 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
           titular Y en la barra del portal — el nombre dos veces en 40 px, y
           ni una palabra de qué era la hoja. Dictado de Alberto (05/09/2026):
           «a nivel corporativo TUS SEGUROS y nombre Grupo ASegura». */}
-      <Masthead titulo="Tus seguros" />
-
-      {qr && (
-        <div className="hoja-qr">
-          {/* El QR lleva el ENLACE, no los datos: la imagen no caduca y la
-              página detrás está siempre al día. */}
-          <div aria-hidden dangerouslySetInnerHTML={{ __html: qr }} />
-          <p>Escanea para ver esta hoja al día</p>
-        </div>
-      )}
+      <Masthead titulo="Tus seguros" qr={qr} />
 
       {/* 🚨 Qué se lleva el papel, dicho ANTES de que le den a imprimir. La
           vista previa enseña una tarjeta con el logo y el QR y nada más, y sin
@@ -277,7 +282,19 @@ function Telefonos({ canal }: { canal: CanalCompania }) {
                   la segunda, y en el salón de casa la primera. */}
               {v.tipo === 'whatsapp' ? 'WhatsApp' : v.uso === 'asistencia' ? 'Asistencia' : 'Dar parte'}
             </strong>{' '}
-            <span className="hoja-numero">{v.numero}</span>
+            {/* 🚨 Pulsable. Con el teléfono fuera del papel, ESTA es la única
+                superficie donde ese número existe, y se abre en el arcén con
+                una mano: un número que no se marca de un toque es el fallo de
+                la pieza. WhatsApp incluido — `tel:` sobre su número marca la
+                línea de voz, que es justo lo que NO se promete, así que el
+                enlace solo se pone cuando la vía es telefónica. */}
+            {v.tipo === 'whatsapp' ? (
+              <span className="hoja-numero">{v.numero}</span>
+            ) : (
+              <a className="hoja-numero" href={`tel:${v.numero.replace(/\s/g, '')}`}>
+                {v.numero}
+              </a>
+            )}
             {/* 🚨 El horario va con SU vía, no heredado: un canal de siniestros
                 sin horario se lee como «siempre», y esa es la promesa que se
                 rompe un sábado por la noche. */}
