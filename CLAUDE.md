@@ -733,6 +733,21 @@ que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míra
     proyectos, como en el incidente de los 600 US$» **dos veces**, leyendo esos comentarios intermedios.
     El estado que vale es el FINAL: `get_status` sobre el head del PR, donde cada `Vercel – *` dice
     `Canceled by Ignored Build Step`. No diagnostiques gasto desde un comentario que se reescribe solo.
+  - 🚦 **Y `Ignored` NO ES GRATIS DEL TODO: hay una SEGUNDA cuota, y esa sí la agota un agente
+    (04/09/2026).** El `ignoreCommand` corta el **build**, no la **creación del deployment**: Vercel
+    crea los once igualmente y solo después decide no construirlos. Y el límite
+    `api-deployments-paid-per-hour` (**450/h, de cuenta, no de proyecto**) cuenta **deployments
+    creados**. Medido: siete pushes seguidos a una rama de PR × 11 proyectos, más el tráfico del
+    automerge del repo, y la cuenta entera se quedó en `Resource is limited - try again in 60
+    minutes` — con **los despliegues de PRODUCCIÓN de `ia-rest`, `almacen`, `transporte` y
+    `house-sevillana-landing` fallando** por una rama que no tocaba ninguno de ellos.
+    🚨 Lo que esto CORRIGE: durante esa hora se informó tres veces de «0 gasto, todos `Ignored`».
+    Era cierto sobre los Build CPU Minutes y **falso sobre la cuota de deployments** — o sea, la
+    frase «Ignored = no cuesta nada» de este apartado vale para la factura y no para el límite. La
+    regla operativa es de RITMO, no de configuración: **empujar a una rama de PR cuesta 11
+    deployments cada vez**, así que se verifica en local (typecheck + tests, ver más abajo) y se
+    empuja UNA vez; encadenar pushes «a ver si arranca el CI» es justo lo que revienta la cuota.
+    Mergear un PR no crea previews. Y si aparece ese error, no es un fallo del repo: se espera.
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
