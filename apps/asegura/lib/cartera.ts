@@ -12,6 +12,7 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { registrarErrorCartera, type CausaErrorCartera } from './error-cartera'
+import { contactosDe, type Contacto } from './cartera-busqueda'
 
 /**
  * Lecturas de la Fase 1 sobre la cartera real. Reglas que no se negocian:
@@ -75,6 +76,18 @@ export type PolizaVencimiento = {
   /** Qué asegura la póliza, ya derivado y con su propio estado (conocido /
    *  no informado / cifrado / sin objeto). Nunca es una cadena vacía. */
   objeto: ObjetoAsegurado
+  /**
+   * Para llamar sin abrir la ficha. Es la MISMA pieza que el buscador
+   * (`contactosDe` de `cartera-busqueda.ts`), no una copia: el contrato de los
+   * tres estados —dato / «no consta» / «cifrado y no abre»— tiene que ser uno
+   * solo, o el mismo cliente sale contactable en una pantalla y no en otra.
+   *
+   * 🚨 `null` = no se pudo preguntar, NO «no tiene». Medido el 05/09/2026 sobre
+   * los próximos 90 días: 15 fichas, 9 con teléfono (60%) y 8 con email. Aquí
+   * el icono sale la mayoría de las veces —al revés que en el buscador, donde
+   * el 83% son leads muertos—, porque una póliza que vence es de un cliente.
+   */
+  contacto: Contacto | null
 }
 
 /**
@@ -206,6 +219,14 @@ export async function vencimientosProximos(
     }
   }
 
+  // Una sola consulta para toda la lista: las fichas se repiten (un cliente con
+  // tres pólizas que vencen sale tres veces) y descifrar por fila sería pagar
+  // tres veces por el mismo teléfono.
+  const contactos = await contactosDe(
+    correduriaId,
+    [...new Set(filas.map(f => f.cliente.id))],
+  )
+
   return filas.map(f => {
     const vencimiento = f.fechaVencimiento as Date
     const diasRestantes = diasHastaVencimiento(vencimiento, hoyRef)
@@ -229,6 +250,8 @@ export async function vencimientosProximos(
         datos: descifrarDireccion(f.datosEspecificos),
         coberturas: coberturasPorPoliza.get(f.id) ?? null,
       }),
+      // Si la consulta falló, `null` para todas: «no se ha podido mirar».
+      contacto: contactos?.get(f.cliente.id) ?? null,
     }
   })
 }

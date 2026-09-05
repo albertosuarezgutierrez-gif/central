@@ -42,6 +42,18 @@
   toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. **Pendiente de Alberto:** comprobar que esa
   huésped tiene sus códigos antes de las 15:00.
 
+- **📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría (05/09/2026).**
+  Cerrado lo que faltaba de la petición del 04/09: **Renovaciones**, que era la única lista de la
+  correduría sin ellos y justamente la cola comercial (medido: de las 15 fichas que vencen en 90 días,
+  **9 tienen teléfono y 8 email**). `contactosDe()` se **exporta** desde `apps/asegura/lib/cartera-busqueda.ts`
+  en vez de dejar un cuarto `descifrar` casi idéntico; el puerto de vencimientos manda ya `contacto` y en
+  plataforma lo lee el **mismo** `interpretarContacto` que el buscador y la retención — dos normalizadores
+  del mismo bloque harían que el icono saliera en una pantalla y no en otra para el MISMO cliente.
+  Una consulta por lista (un cliente con tres pólizas que vencen sale tres veces y no se descifra tres).
+  Tres estados intactos: sin bloque = «no se ha podido mirar» · todo a null = «no tiene» · ilegible =
+  «guardado y la clave PII no lo abre». Verificado: tsc asegura+plataforma, 22 tests del lector, suite
+  completa sin fallos y `next build`. **NO se ponen en `SinCanal`**: esa lista ES la de quien no tiene canal.
+
 - **🔁 Un PR abierto de noche choca con `main` cada ~50 min, y siempre por el MISMO fichero (05/09/2026).**
   El #2277 llegó a verde y `clean`, y volvió a `dirty` **cuatro veces** en poco más de una hora: #2290,
   #2285, #2283+#2248 y luego #2294. **Ninguna** fue conflicto de código —siempre `docs/CONTEXTO-SESIONES.md`,
@@ -52,6 +64,16 @@
   (¿ya está mergeado?) + `git merge-tree --write-tree HEAD origin/main` (¿hay conflicto?). ⚠️ La causa de
   fondo no es de este PR: la memoria es un fichero único que toda sesión edita al cerrar.
 
+- **🚦 `Ignored` no es gratis: la cuota que agotó un agente y tumbó 4 producciones (04/09/2026, PR #2248).**
+  Mergeando #2248 se dieron 7 pushes a la rama en ~40 min (`main` avanzaba cada ~5 min por el automerge y
+  reconflictaba `CONTEXTO-SESIONES.md`; CI tarda 3,5). Cada push crea **11 deployments** aunque 10 salgan
+  `Ignored` — el `ignoreCommand` corta el BUILD, no la CREACIÓN — y `api-deployments-paid-per-hour` (450/h,
+  **de cuenta**) reventó: producción de `ia-rest`, `almacen`, `transporte` y `house-sevillana-landing`
+  fallando por una rama que no las tocaba. Informé 3 veces «0 gasto, todo Ignored»: cierto sobre Build CPU
+  Minutes, **falso** sobre esa cuota. Escrito en `CLAUDE.md` (§ignoreCommand). Regla: verificar en local y
+  empujar UNA vez. 🔁 Para romper el bucle de conflictos, mi entrada de memoria se dejó **la segunda**, no
+  la primera: así las inserciones ajenas de arriba auto-mezclan. ⏸️ Alberto: activar `Allow auto-merge`
+  (Settings → General) — sigue desactivado y es lo que evita esta carrera.
 - **🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría (04/09/2026).**
   Al revisar el cuadro completo se encontró que el commit `19b74e641` llevaba **marcadores de conflicto
   sin resolver dentro de un template literal SQL** de `clientes-sin-canal.ts`: `tsc` los ve como cadena,
