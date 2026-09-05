@@ -1313,3 +1313,43 @@ h1 {
 /* Secundario: misma altura táctil (44 px) que el principal, sin competir con él. */
 .boton-secundario { background: transparent; color: var(--text); border-color: var(--border); }
 .boton-secundario:hover { background: var(--surface-2, transparent); border-color: var(--muted); }
+
+/* Recibos de una póliza. Mismo esqueleto que `.siniestro` a propósito: son dos
+   listas de la misma ficha y si divergen parecen dos productos distintos. */
+.recibos {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.recibo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: calc(var(--radius) * 0.6);
+  font-size: 13px;
+}
+/* Un recibo al cobro NO es un impago: acento, nunca el rojo del devuelto. */
+.recibo[data-tono='al-cobro'] {
+  border-left-color: var(--accent);
+}
+.recibo[data-tono='devuelto'] {
+  border-left-color: var(--negative);
+}
+.recibo-importe {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.recibo-fechas {
+  margin-left: auto;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}

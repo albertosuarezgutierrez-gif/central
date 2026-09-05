@@ -6,6 +6,8 @@ import {
   resumirHistorialSiniestros,
   tonoEstadoSiniestro,
   type BienAsegurado,
+  tonoSituacionRecibo,
+  etiquetaSituacionRecibo,
 } from '@central/module-seguros-portal'
 
 import type { PolizaPortal } from '@/lib/cartera-lectura'
@@ -190,7 +192,7 @@ export function Bien({ bien }: { bien: BienAsegurado }) {
  *
  * 🚨 Y la línea que no se puede cruzar: un recibo **devuelto** no es un recibo
  * **pendiente/al cobro**. El pendiente está emitido y aún sin cargar — es
- * información neutra («tu próximo recibo») y vive en `<Recibos>`, jamás aquí.
+ * información neutra («tu próximo recibo») y vive en `<RecibosDePoliza>`, jamás aquí.
  * Pintar un pendiente como impago acusa de moroso a quien está al día; es
  * exactamente el fallo que se corrigió en `/correduria` (PR #2179).
  *
@@ -239,17 +241,29 @@ export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
 }
 
 /**
- * Recibos, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`.
+ * TODO el bloque de recibos de una póliza, en voz NEUTRA. Lo que alarma vive en
+ * `<AvisoReciboDevuelto>`.
+ *
+ * Es **un solo componente a propósito**: los tres estados de abajo se deciden en
+ * un único sitio. Partirlo en «titular» + «lista» dejaba la frase de cada estado
+ * en dos ficheros, y el día que alguien tocara uno la pantalla diría dos cosas
+ * distintas sobre lo mismo.
  *
  * - `recibos === null` → el nivel de esta persona no enseña recibos. No es una
  *   ausencia del dato: se oculta y no se menciona.
- * - `total === 0` → **la compañía no ha informado recibos**, que NO es «estás al
- *   corriente». Esa frase se dice entera porque el silencio sí se leería así.
+ * - `estado === 'sin_informar'` → **la compañía no ha informado recibos**, que
+ *   NO es «estás al corriente». La frase se dice entera porque el silencio sí se
+ *   leería así.
+ * - `estado === 'solo_anulados'` → informó recibos y **todos** están anulados.
+ *   Son 20 de las 110 pólizas vivas, y hasta hoy no pintaban NADA: ni el hueco
+ *   (el total contaba los anulados) ni una línea (no quedaba ninguno que
+ *   enseñar). Veinte pólizas mudas de ciento diez.
  */
-export function Recibos({ p }: { p: PolizaPortal }) {
+export function RecibosDePoliza({ p }: { p: PolizaPortal }) {
   if (p.recibos === null) return null
   const r = p.recibos
-  if (r.total === 0) {
+
+  if (r.estado === 'sin_informar') {
     return (
       <p className="hueco">
         <span className="pendiente">Sin informar</span>
@@ -258,6 +272,19 @@ export function Recibos({ p }: { p: PolizaPortal }) {
     )
   }
 
+  if (r.estado === 'solo_anulados') {
+    return (
+      <p className="hueco">
+        <span className="pendiente">Nada que enseñarte</span>
+        {r.anulados === 1
+          ? 'El único recibo que nos consta de esta póliza está anulado por tu compañía, así que no te cuenta ni como cobrado ni como pendiente.'
+          : `Los ${r.anulados} recibos que nos constan de esta póliza están anulados por tu compañía, así que no te cuentan ni como cobrados ni como pendientes.`}{' '}
+        Si esperabas ver un cobro aquí, dínoslo y lo miramos.
+      </p>
+    )
+  }
+
+  // El titular: lo próximo que se paga y lo último que se pagó.
   const partes: string[] = []
   if (r.proximoAlCobro) {
     // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
@@ -273,11 +300,58 @@ export function Recibos({ p }: { p: PolizaPortal }) {
     if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
     else if (cuando) partes.push(`último cobrado el ${cuando}`)
   }
-  // Ni un solo dato que enseñar (recibos sin importe ni fecha): no se pinta una
-  // línea vacía, y tampoco «ningún recibo al cobro», que se leería como «nada
-  // que pagar» sin que nadie lo haya comprobado.
-  if (partes.length === 0) return null
-  return <div className="linea">{partes.join(' · ')}</div>
+
+  return (
+    <>
+      {/* Ni un solo dato que enseñar (recibos sin importe ni fecha): no se pinta
+          una línea vacía, y tampoco «ningún recibo al cobro», que se leería como
+          «nada que pagar» sin que nadie lo haya comprobado. */}
+      {partes.length > 0 && <div className="linea">{partes.join(' · ')}</div>}
+      <ul className="recibos">
+        {r.historial.map((rec, i) => {
+          const tono = tonoSituacionRecibo(rec.situacion)
+          const emision = fechaEs(rec.fechaEmision)
+          const vence = fechaEs(rec.fechaVencimiento)
+          return (
+            // La `key` es el índice porque `poliza_recibos.id` NO se pide al
+            // `select`: traerlo solo para esto sería sacar un identificador de
+            // BD a la vista sin que nada de la pantalla lo use.
+            <li className="recibo" key={i} data-tono={tono}>
+              <span className="recibo-importe">
+                {/* `null` = el EIAC no traía un importe legible. Un 0€ inventado
+                    aquí sería un cobro que nadie hizo. */}
+                {rec.importe !== null ? eur(rec.importe) : <span className="pendiente">Sin importe</span>}
+              </span>
+              <span className={tono === 'devuelto' ? 'chip peligro' : tono === 'al-cobro' ? 'chip acento' : 'chip'}>
+                {etiquetaSituacionRecibo(rec.situacion)}
+              </span>
+              <span className="recibo-fechas">
+                {tono === 'al-cobro'
+                  ? vence
+                    ? `Vence el ${vence}`
+                    : 'Sin fecha de vencimiento'
+                  : emision
+                    ? `Emitido el ${emision}`
+                    : 'Sin fecha'}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+      {/* Se DICE que hay anulados fuera de la lista, en vez de que el cliente
+          eche cuentas y le falten. No se enseñan: son extornos y sus
+          re-emisiones, que se cancelan entre sí (los hay de −1.268,18€), y un
+          importe en negativo en esta lista no informa, hace llamar. */}
+      {r.anulados > 0 && (
+        <p className="suave" style={{ margin: '8px 0 0', fontSize: 13 }}>
+          {r.anulados === 1
+            ? 'Hay además un recibo anulado por tu compañía, que no se te cobró.'
+            : `Hay además ${r.anulados} recibos anulados por tu compañía, que no se te cobraron.`}{' '}
+          No se listan porque se cancelan entre sí.
+        </p>
+      )}
+    </>
+  )
 }
 
 /**
