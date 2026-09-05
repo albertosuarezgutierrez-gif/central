@@ -22,20 +22,31 @@ import Bloque from './Bloque'
  * que Alberto hable con uno de ellos por teléfono o en el despacho, le pide el
  * correo, lo apunta en su ficha y deja de salir en la lista.
  *
- * ─── 🚨 Corregido el 04/09/2026: la ficha no es el único sitio ─────────────
- * Lo cazó Alberto mirando esta pantalla: `Esquiansa` salía como «ilocalizable»
- * cuando su contacto de siempre es Juan Manuel López Benjumea. El contacto de
- * un cliente puede estar en tres sitios y hay que mirar los tres antes de
- * afirmar que no se le puede localizar:
+ * ─── 🚨 La ficha no es el único sitio: son CUATRO (04 y 05/09/2026) ────────
+ * Los dos hallazgos los cazó Alberto mirando ESTA pantalla, no el código.
+ * El 04/09: `Esquiansa` salía «ilocalizable» teniendo a Juan Manuel López
+ * Benjumea de siempre. El 05/09: «grupo elca ya tiene a pablo y aun aparece»,
+ * «Studium es una empresa y tiene a victor y berta». Dónde puede vivir el
+ * contacto de un cliente, y hay que mirar los cuatro antes de afirmar que no
+ * se le puede localizar:
  *   1. Su ficha.
  *   2. **Su propio dato colgado de la PÓLIZA** y nunca copiado a la ficha. Es
  *      el caso caro: el dato está en la base y el cron de avisos no lo ve.
  *   3. Otra persona de su póliza (conductor habitual, propietario…).
- * Medido ese día: de 19 sin contacto en la ficha, **solo 15 eran ilocalizables**.
+ *   4. Un familiar o representante declarado en `cliente_relaciones` (Pablo es
+ *      la «Administración» de GRUPO ELCA 83; Víctor y Berta, del Studium).
+ * Medido el 05/09/2026 contra la BD: **18** clientes de la cartera viva no
+ * tienen nada en su ficha, **14** seguían sin contacto mirando solo los tres
+ * primeros, y con el cuarto quedan **SEIS**. (La pantalla decía 16 cuando
+ * Alberto la miró: es de antes de las fusiones del lote 10.)
  *
- * ⚖️ Y tener a quién llamar NO es poder notificar: el preaviso del art. 22 LCS
- * va al TOMADOR. El tercero sirve para CONSEGUIR su correo, no para darlo por
- * avisado — por eso son estados distintos y no un «localizable» tranquilizador.
+ * 🚨 **El familiar NO es un contacto de segunda**, y por eso su parentesco se
+ * pinta siempre. Alberto, 05/09/2026: «piensa q un cliente puede ser muy mayor
+ * y no tiene contacto… es mejor contactar con el familiar».
+ *
+ * ⚖️ Lo que sí sigue siendo cierto: tener a quién llamar no es poder notificar.
+ * El preaviso del art. 22 LCS va al TOMADOR — por eso «su dato mal guardado» y
+ * «el dato de otro» son estados distintos y no un «localizable» tranquilizador.
  *
  * ─── Lo que esta pantalla NO dice ──────────────────────────────────────────
  * · Solo mira si **hay algo** en la columna, no si el dato sirve: un correo
@@ -371,6 +382,12 @@ function Fila({ f }: { f: ClienteCanal }) {
 /**
  * A quién llamar cuando el contacto no está en la ficha del tomador.
  *
+ * 🚨 El PARENTESCO se pinta siempre («Llama a Pablo Franco Ruz (administración)»).
+ * Dictado por Alberto el 05/09/2026 al ver que la lista daba 16 ilocalizables
+ * teniendo diez de ellos a alguien declarado: «un cliente puede ser muy mayor y
+ * no tiene contacto… es mejor contactar con el familiar». Un nombre a secas no
+ * dice si estás llamando al hijo o a un desconocido.
+ *
  * 🚨 Los intervinientes SUELTOS (sin ficha) llevan el nombre cifrado y el puerto
  * no lo manda: de esos solo llega el recuento, y aquí se dice «míralo en la
  * póliza» en vez de inventar un nombre. Un nombre que falta se declara, no se
@@ -385,6 +402,19 @@ function Pista({ f }: { f: ClienteCanal }) {
     <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
       {f.estado === 'canal_en_poliza' && (
         <>Su contacto está en {f.canalEnPoliza === 1 ? 'un interviniente' : `${f.canalEnPoliza} intervinientes`} de sus pólizas. </>
+      )}
+      {f.fichasAllegado.length > 0 && (
+        <>
+          Llama a{' '}
+          {f.fichasAllegado.map((c, i) => (
+            <span key={c.clienteId}>
+              {i > 0 && ', '}
+              <Link href={`/correduria/cliente/${c.clienteId}`}>{c.nombre}</Link>
+              {' '}({c.parentesco.toLowerCase()})
+            </span>
+          ))}
+          .{' '}
+        </>
       )}
       {f.fichasContacto.length > 0 && (
         <>

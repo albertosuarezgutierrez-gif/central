@@ -491,8 +491,16 @@ export async function impagadosAsegura(): Promise<Impagados> {
 //   2. Su propio dato colgado de la PÓLIZA y nunca copiado a la ficha
 //      (`canalEnPoliza`). El cron de avisos lee la ficha → hoy no le sale nada.
 //   3. Otra persona de su póliza (`contactoDeOtros`): hay a quién llamar.
+//   4. 🚨 Un familiar o representante declarado en `cliente_relaciones`
+//      (`contactoDeAllegados`) — el CUARTO sitio, añadido el 05/09/2026 porque
+//      la lista seguía dando 16 ilocalizables cuando eran 6. Alberto: «grupo
+//      elca ya tiene a pablo y aun aparece», «Studium es una empresa y tiene a
+//      victor y berta». Pablo era la «Administración» de ELCA.
 // ⚖️ Tener a quién llamar NO es poder notificar: el preaviso del art. 22 LCS va
-// al TOMADOR. Por eso 2 y 3 son estados propios y no un «localizable» a secas.
+// al TOMADOR. Por eso 2, 3 y 4 son estados propios y no un «localizable» a secas.
+// 🚨 Pero ESO no los convierte en contactos de segunda: «un cliente puede ser
+// muy mayor y no tiene contacto… es mejor contactar con el familiar» (Alberto,
+// 05/09/2026). Para media cartera el hijo o la administración ES el canal.
 
 export type EstadoCanal =
   | 'sin_ninguno'
@@ -508,6 +516,10 @@ export type EstadoCanal =
  *  nombre cifrado y por eso solo cuenta, no se nombra. */
 export type FichaContacto = { clienteId: string; nombre: string }
 
+/** Un familiar o representante declarado, CON su parentesco: quien llama tiene
+ *  que saber si habla con el hijo o con la administración de la empresa. */
+export type FichaAllegado = { clienteId: string; nombre: string; parentesco: string }
+
 export type ClienteCanal = {
   clienteId: string
   nombre: string
@@ -519,9 +531,14 @@ export type ClienteCanal = {
   canalEnPoliza: number | null
   /** Personas distintas de él, localizables, en sus pólizas vivas. `null` = ídem. */
   contactoDeOtros: number | null
+  /** Familiares o representantes declarados y localizables. `null` = el puerto
+   *  no lo informa (asegura sin desplegar), que NO es «no tiene a nadie». */
+  contactoDeAllegados: number | null
   /** Las de arriba que tienen ficha (nombre en claro + enlace). Puede venir más
    *  corta que `contactoDeOtros`: los sueltos no tienen ficha. */
   fichasContacto: FichaContacto[]
+  /** Los allegados, con parentesco. */
+  fichasAllegado: FichaAllegado[]
   estado: EstadoCanal
   /** `null` = no se contó. NO es «no tiene pólizas» (estaría fuera de la lista). */
   polizasCima: number | null
@@ -581,14 +598,21 @@ export function derivarEstadoCanal(
   telefono: boolean | null,
   canalEnPoliza: number | null,
   contactoDeOtros: number | null,
+  contactoDeAllegados: number | null,
 ): EstadoCanal {
   if (email === null || telefono === null) return 'no_comprobado'
   if (email && telefono) return 'con_ambos'
   if (email) return 'solo_email'
   if (telefono) return 'solo_telefono'
-  if (canalEnPoliza === null || contactoDeOtros === null) return 'no_comprobado'
+  // Sin los TRES recuentos no se puede declarar a nadie ilocalizable. Una
+  // versión de asegura anterior al 05/09/2026 no manda `contactoDeAllegados`:
+  // entonces la pantalla dice «no comprobado» y se cura sola al desplegar, en
+  // vez de repetir el error que trajo aquí (afirmar 16 sobre 6).
+  if (canalEnPoliza === null || contactoDeOtros === null || contactoDeAllegados === null) {
+    return 'no_comprobado'
+  }
   if (canalEnPoliza > 0) return 'canal_en_poliza'
-  if (contactoDeOtros > 0) return 'contacto_via_tercero'
+  if (contactoDeOtros > 0 || contactoDeAllegados > 0) return 'contacto_via_tercero'
   return 'sin_ninguno'
 }
 
@@ -604,6 +628,23 @@ function leerFichasContacto(v: unknown): FichaContacto[] {
     const nombre = cadena(o.nombre)
     if (id === null || nombre === null || nombre.startsWith('v1:')) continue
     out.push({ clienteId: id, nombre })
+  }
+  return out
+}
+
+/** Ídem, conservando el parentesco. Sin parentesco legible se descarta: sigue
+ *  contado en `contactoDeAllegados`, pero no se dice «llama a X» a secas. */
+function leerFichasAllegado(v: unknown): FichaAllegado[] {
+  if (!Array.isArray(v)) return []
+  const out: FichaAllegado[] = []
+  for (const f of v) {
+    if (typeof f !== 'object' || f === null) continue
+    const o = f as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    const nombre = cadena(o.nombre)
+    const parentesco = cadena(o.parentesco)
+    if (id === null || nombre === null || parentesco === null || nombre.startsWith('v1:')) continue
+    out.push({ clienteId: id, nombre, parentesco })
   }
   return out
 }
@@ -633,6 +674,7 @@ export function interpretarSinCanal(status: number, json: unknown): SinCanal {
     const tieneTelefono = booleano(o.tieneTelefono)
     const canalEnPoliza = entero(o.canalEnPoliza)
     const contactoDeOtros = entero(o.contactoDeOtros)
+    const contactoDeAllegados = entero(o.contactoDeAllegados)
     filas.push({
       clienteId: id,
       nombre,
@@ -640,8 +682,12 @@ export function interpretarSinCanal(status: number, json: unknown): SinCanal {
       tieneTelefono,
       canalEnPoliza,
       contactoDeOtros,
+      contactoDeAllegados,
       fichasContacto: leerFichasContacto(o.fichasContacto),
-      estado: derivarEstadoCanal(tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros),
+      fichasAllegado: leerFichasAllegado(o.fichasAllegado),
+      estado: derivarEstadoCanal(
+        tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros, contactoDeAllegados,
+      ),
       polizasCima: entero(o.polizasCima),
       polizasQueRenuevan: entero(o.polizasQueRenuevan),
       proximoVencimiento: cadena(o.proximoVencimiento),
