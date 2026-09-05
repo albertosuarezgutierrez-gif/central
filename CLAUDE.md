@@ -102,6 +102,12 @@
   **apex `grupoasegura.com` + `www`**, que estaban LIBRES: `app.grupoasegura.com` sirve el CRM de
   Manuel y no se toca. Tercera app de la correduría y la única que ve alguien que aún no es cliente
   (`asegura` = corredor, `asegura-portal` = asegurado, `asegura-web` = quien todavía no lo es).
+  ⚠️ **DESPLEGADA NO ESTÁ, y desde el 05/09/2026 hay un solape que decidir:** ese día
+  `grupoasegura.es` (el `.es`, no el `.com`) pasó a servir la web del repo **`asegura`** de Manuel —
+  se le puso `NEXT_PUBLIC_SITE_URL=https://grupoasegura.es` y su canonicalización LOO-670 mandó
+  `app.grupoasegura.com` a redirigir 308 al apex. O sea: **el hueco que `asegura-web` venía a llenar ya
+  está ocupado por otra app**, con su `/siniestro` y sus 301 del WordPress viejo (PRs asegura#817/#818).
+  Antes de tocar nada aquí, decide cuál de las dos es la web pública: no se sirven las dos.
   🚨 **NO tiene base de datos a propósito**: sin Prisma, sin rol, sin secreto de sesión. El
   formulario sale por `POST /api/lead`, que **reenvía desde el servidor** al canal que ya existe
   (`/api/publico/correduria/lead` de plataforma → puerto de asegura → Telegram). Propaga
