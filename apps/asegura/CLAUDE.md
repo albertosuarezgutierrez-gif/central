@@ -683,6 +683,23 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   contrato de un cliente. Cuando exista entorno de pruebas: transporte multipart nuevo, candado
   `submit_in_flight_at`, y ampliar la excepción del guardián de gasto (hoy tumba cualquier `metodo: 'POST'`
   fuera de `cotizar.ts`).
+- **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
+  de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
+  `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo
+  legal de un mes corriendo por debajo** (art. 12.3) — el art. 17.3.b y el 17.3.e excluyen la supresión
+  cuando hay deber de conservar o hace falta defender reclamaciones, y la correduría tiene los dos.
+  `lib/supresiones.ts`; reglas puras y plazos en `@central/module-seguros-portal` (`supresion.ts`).
+  Este puerto **escribe**, a diferencia del resto de modelos `portal_*` del schema de esta app, que
+  son de solo lectura: resolver una solicitud es trabajo del corredor, no del portal.
+  - **Ordena el RELOJ, no la llegada** (vencido → urgente → en plazo), y `resumen.vencidas` va aparte:
+    es el único número que autoriza a decir que hay un plazo incumplido.
+  - 🚨 **Contestar EXIGE texto** (422 `sin_respuesta`). El art. 12.4 obliga a motivar la negativa
+    aunque sea parcial —y la parcial es el caso NORMAL aquí—; marcarla resuelta sin decir qué se
+    contestó apagaría el reloj sin acreditar nada, o sea, volvería invisible el incumplimiento justo
+    al producirse. La BD lo repite con su CHECK, porque un cepo solo en el código no protege a un
+    `UPDATE` escrito a mano. Prorrogar sin motivo tampoco se puede (422 `sin_motivo_prorroga`).
+  - Sin este puerto la solicitud viviría solo en la BD del portal, que es una pantalla que Alberto no
+    abre. Detalle en `apps/asegura-portal/CLAUDE.md`.
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en

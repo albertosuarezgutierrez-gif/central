@@ -20,12 +20,14 @@ import {
   sincronizarObligacionesDeIdentidad,
 } from '@/lib/obligaciones'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
 import { EditarPoliza } from './EditarPoliza'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
+import { TusDatos } from './TusDatos'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,6 +124,25 @@ export default async function Boveda() {
   // calculado en el navegador daría un número distinto al del servidor en el
   // primer render (aviso de hidratación) y otro más en cada zona horaria. La
   // página es `force-dynamic`, así que se recalcula en cada visita.
+  // Sus solicitudes del art. 17, con la identidad resuelta por la cookie
+  // (`lib/session`), no por el `identidad.id` que ya hay arriba: la puerta única
+  // es la puerta única también aquí.
+  //
+  // Sin `try/catch`: si la consulta falla, que suba. Una lista vacía haría pasar
+  // un fallo de BD por «no has pedido nada» en la pantalla donde decide si
+  // vuelve a pedirlo — y aquí lo que corre por debajo es un plazo legal. El
+  // `?? []` solo cubre el «no hay sesión», que en esta página es inalcanzable:
+  // más arriba ya se redirigió a `/` si no la había.
+  const supresiones = ((await supresionesDelUsuario()) ?? []).map((s) => ({
+    id: s.id,
+    recibidaEn: s.recibidaEn.toISOString(),
+    estado: s.estado,
+    plazo: s.plazo,
+    fechaLimite: s.fechaLimite.toISOString(),
+    resueltaEn: s.resueltaEn ? s.resueltaEn.toISOString() : null,
+    respuesta: s.respuesta,
+  }))
+
   const hoy = new Date()
   const partesEnviados: ParteEnviado[] = partes.map((p: PartePortal) => ({
     id: p.id,
@@ -273,6 +294,12 @@ export default async function Boveda() {
       {/* Las opciones de ramo son las MISMAS que las de `EditarPoliza`: un alta a mano
           y una corrección ofrecen la misma lista. */}
       <SubirPoliza ramos={RAMOS_OPCIONES} />
+
+      {/* El derecho de supresión (art. 17). Va en la pantalla que la persona
+          abre de verdad, no solo enlazado desde la política de privacidad: un
+          derecho que solo se ejerce escribiendo un correo es un derecho con
+          peaje. */}
+      <TusDatos inicial={supresiones} />
     </main>
   )
 }

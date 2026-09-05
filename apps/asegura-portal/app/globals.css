@@ -658,3 +658,30 @@ h1 {
 .nota-legal a:focus-visible {
   color: var(--text);
 }
+
+/* ── El derecho de supresión (art. 17 RGPD) ─────────────────────────────────
+ * Las DOS listas —lo que se borra y lo que se conserva— tienen el mismo peso
+ * visual a propósito: destacar la primera y arrinconar la segunda haría con el
+ * diseño lo que el copy tiene prohibido, dejar creer que se borra todo.
+ * A 320 px van apiladas; en cuanto caben, una al lado de la otra. */
+.tus-datos { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); }
+.supresion-intro { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+.supresion-alcance { display: grid; gap: 14px; margin-bottom: 14px; }
+@media (min-width: 560px) { .supresion-alcance { grid-template-columns: 1fr 1fr; } }
+.supresion-alcance h3 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+.supresion-alcance ul { margin: 0; padding-left: 18px; }
+.supresion-alcance li { font-size: 12px; line-height: 1.45; color: var(--muted); margin-bottom: 6px; }
+.supresion-alcance strong { color: var(--text); }
+.supresion-form textarea { width: 100%; box-sizing: border-box; }
+.supresion-plazo { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+.supresion-estado { font-size: 13px; line-height: 1.5; }
+.supresion-estado p { margin: 0 0 10px; }
+.supresion-historial { margin-top: 16px; }
+.supresion-historial h3 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+.supresion-historial ul { margin: 0; padding-left: 18px; }
+.supresion-historial li { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.supresion-respuesta { display: block; color: var(--text); }
+.opcional { font-weight: 400; color: var(--muted); }
+/* Secundario: misma altura táctil (44 px) que el principal, sin competir con él. */
+.boton-secundario { background: transparent; color: var(--text); border-color: var(--border); }
+.boton-secundario:hover { background: var(--surface-2, transparent); border-color: var(--muted); }
