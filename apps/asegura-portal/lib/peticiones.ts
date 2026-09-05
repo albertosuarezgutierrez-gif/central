@@ -231,7 +231,10 @@ export async function crearPeticion(datos: {
   // Las fusionadas (`merged_into_cliente_id`) no son candidatas por ninguna vía.
   const [directas, secundarias] = await Promise.all([
     prisma.cliente.findMany({
-      where: { emailLookupHash: hash, mergedIntoClienteId: null },
+      // Defensivo (05/09/2026): las fichas descartadas (`activo = false`) no tienen
+      // email hoy, así que por aquí no puede salir ninguna — el filtro está para que
+      // siga siendo verdad, no porque hubiera un fallo.
+      where: { emailLookupHash: hash, mergedIntoClienteId: null, activo: true },
       select: { id: true, correduriaId: true },
     }),
     prisma.clienteEmail.findMany({ where: { emailLookupHash: hash }, select: { clienteId: true } }),
@@ -248,7 +251,12 @@ export async function crearPeticion(datos: {
   // vez que aparece la misma idea y siempre por lo mismo — el trabajo
   // observable no puede depender de si esa persona está en la cartera.
   const vivas = await prisma.cliente.findMany({
-    where: { id: { in: idsSecundarios.length > 0 ? idsSecundarios : [NINGUNA_FICHA] }, mergedIntoClienteId: null },
+    // Defensivo, igual que arriba: una ficha descartada no tiene email.
+    where: {
+      id: { in: idsSecundarios.length > 0 ? idsSecundarios : [NINGUNA_FICHA] },
+      mergedIntoClienteId: null,
+      activo: true,
+    },
     select: { id: true, correduriaId: true },
   })
   for (const c of vivas) candidatos.push({ clienteId: c.id, correduriaId: c.correduriaId, principal: false })

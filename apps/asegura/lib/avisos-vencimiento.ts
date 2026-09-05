@@ -213,6 +213,13 @@ export async function ejecutarAvisosVencimiento(opts: {
           ...WHERE_CARTERA_VIVA,
           mergedIntoPolizaId: null,
           estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
+          // 🚨 Y la ficha del TOMADOR tiene que seguir viva. `activo = false` son
+          // las ~26.800 fichas descartadas del volcado (leads sin ningún dato de
+          // contacto): escribirle a una es mandar un correo de vencimiento a
+          // alguien que la correduría ya dio por bueno no tener. Es el único
+          // camino de esta app con efecto EXTERNO, así que el filtro va aquí y
+          // no solo en las pantallas.
+          cliente: { activo: true },
         },
         select: {
           id: true,
