@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✉️ «Invitar por correo»: la autorización pendiente ya se la cuenta alguien (05/09/2026).** Anotar
+  que ELCA autoriza a Pablo dejaba la fila `pendiente` y **nadie avisaba a Pablo**: o Alberto escribía
+  el correo a mano, o se caducaba sola a los 90 días. Botón en la fila de la persona (solo si está
+  `pendiente`) → proxy de plataforma → puerto nuevo `/api/operador/cliente/relaciones/aviso` de asegura,
+  que es quien tiene el email descifrado. **No acepta nada**: la doble aceptación sigue siendo la única
+  prueba de identidad. El correo dice quién le da el acceso y dónde confirmarlo, y **nada más** —ni el
+  alcance, que ya es cartera ajena— con el mismo cepo que la invitación del portal. Cinco desenlaces sin
+  colapsar (`sin_email` es el único accionable) y ninguno de los cuatro fallos puede leerse como enviado.
+
 - **📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI (05/09/2026).** Lo del
   PR #2378 (idioma, consulta web, `importesNoRespaldados`, los hechos de transporte de los 4 pisos) se
   volcó a `sivra-maestro/references/contexto-y-agente-huesped.md`: vivía solo en la memoria y en el PR, y

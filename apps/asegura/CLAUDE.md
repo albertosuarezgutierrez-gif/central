@@ -1033,6 +1033,61 @@ Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), 
 un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
 Guardián: `test/regression-portal-obligaciones.test.ts`.
 
+## ✉️ «Invitar por correo» — el aviso de acceso pendiente (05/09/2026)
+
+`POST /api/operador/cliente/relaciones/aviso` (Bearer de operador) escribe a la persona que tiene una
+autorización **pendiente** para que entre al portal y la confirme. Lo dispara Alberto con un botón en
+`plataforma` → `/correduria` → ficha del cliente; **nada lo llama solo**.
+
+**Por qué existe:** `autorizarVer()` anota el consentimiento (`origen='corredor'`) y la fila nace
+`aceptado_en IS NULL`, o sea sin abrir nada. Hasta hoy nadie se lo contaba al interesado: o Alberto
+escribía el correo a mano, o la autorización se caducaba sola a los 90 días. Un permiso que su
+destinatario no sabe que existe es un permiso que no existe.
+
+**Por qué el envío vive aquí** y no en `apps/asegura-portal`: la misma razón que el cron de avisos de
+arriba — el portal solo guarda hashes del canal y desde allí no hay destinatario al que escribir.
+
+**Las cuatro comprobaciones** (`lib/aviso-acceso.ts`), cada una con su código y su motivo, porque se
+arreglan de forma distinta y colapsarlas dejaría a Alberto sin saber si falta un correo o falla el
+proveedor:
+
+| desenlace | HTTP | qué significa |
+|---|---|---|
+| `ok` | 200 | el proveedor aceptó el mensaje (devuelve `caducaEn`) |
+| `no_encontrado` | 404 | alguna de las dos fichas no es de esta correduría |
+| `sin_pendiente` | 409 | no hay autorización pendiente entre ese par (o ya se aceptó, o caducó) |
+| `sin_email` | 422 | la ficha autorizada no tiene correo legible, o está de baja de correo |
+| `sin_portal` | 503 | `ASEGURA_PORTAL_URL` no es una https válida |
+| `error_envio` | 502 | el proveedor rechazó el mensaje |
+
+El estado «pendiente» lo decide `estadoAutorizacion()` del módulo puro sobre la fila, **no un `where`
+que dé por hecho que «sin aceptar» es «pendiente»**: una sin aceptar que ya pasó su fecha está
+caducada, y mandar a confirmarla lleva a una pantalla donde no hay nada que pulsar.
+
+🚨 **El destinatario sale SIEMPRE de la ficha autorizada, nunca de la petición** (regla 3 de
+`avisos-vencimiento.ts`): un destinatario que viaja en un JSON convierte este puerto en un relay de
+correo con la firma de la correduría.
+
+🚨 **Y esto NO acepta la autorización.** Sigue pendiente después del correo. La doble aceptación es el
+único punto del sistema donde se prueba que al otro lado está la persona que Alberto tiene en la
+cabeza —la dirección la teclea él, y puede ser un buzón compartido o tener una letra mal— y un botón
+del panel no puede saltársela.
+
+**Lo que el correo NO puede decir** (`lib/correo-aviso-acceso.ts`): quién le da el acceso y dónde
+confirmarlo, y nada más. Ni compañía, ni número de póliza, ni matrícula, ni prima, ni DNI — **ni
+siquiera qué alcance se le ha dado**, que ya es información sobre la cartera ajena. Misma lista que el
+correo de invitación del portal (`CAMPOS_PROHIBIDOS_EN_INVITACION`) y mismo cepo, que recorre el texto
+entero: `lib/correo-aviso-acceso.test.ts`.
+
+El enlace va a `/autorizaciones` del portal y **no lleva token**: la persona entra con SU correo y un
+código de un solo uso, y el portal la vincula sola a su ficha por el índice ciego del email
+(`apps/asegura-portal/lib/vinculo.ts`). Un enlace sin llave dentro se puede reenviar sin abrir nada.
+
+Envs: `ASEGURA_MAIL_FROM` (ya usada por el cron de avisos) + un proveedor de correo; opcionales
+`ASEGURA_MAIL_REPLY_TO` (el buzón al que escribir si no reconoce a quien le da el acceso) y
+`ASEGURA_PORTAL_URL` (por defecto `https://asegura-portal.vercel.app`, que es donde el portal sirve
+HOY; cuando `clientes.grupoasegura.es` esté repuntado a Vercel se cambia la env y no se toca código).
+
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se
   descargan los ficheros de las compañías, si usa Vercel Blob y qué dominios tiene.

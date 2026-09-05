@@ -29,11 +29,14 @@ import {
   esApoderamientoPortal,
   explicarEstadoAutorizacion,
   fechaLarga,
+  interpretarAviso,
   interpretarRelaciones,
+  textoAviso,
   textoMotivoRelaciones,
   type AlcancePortal,
   type AutorizacionCartera,
   type RelacionCartera,
+  type RespuestaAviso,
   type RespuestaRelaciones,
   type TituloRepresentacionPortal,
 } from '@/lib/relaciones-asegura'
@@ -99,6 +102,10 @@ export default function Relaciones({
   // ya con esa ficha elegida sin tocar el estado de otro componente mientras se
   // pinta (React lo prohíbe), y volver a pulsar el mismo nombre lo reabre.
   const [preseleccion, setPreseleccion] = useState<{ cand: Candidato; n: number } | null>(null)
+  // El desenlace del último aviso por correo, atado a la ficha a la que se
+  // escribió: es una respuesta sobre UNA persona y colgarla del banner general
+  // la dejaría lejos del botón que la produjo.
+  const [aviso, setAviso] = useState<{ fichaId: string; texto: string; ok: boolean } | null>(null)
 
   async function llamar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>): Promise<RespuestaRelaciones> {
     try {
@@ -167,6 +174,43 @@ export default function Relaciones({
           }
         : {}),
     })
+  }
+
+  /**
+   * Le escribe a la persona autorizada para que confirme el acceso.
+   *
+   * 🚨 Esto MANDA UN CORREO A UN TERCERO, así que sale de un clic de Alberto y
+   * de nada más: ni de un efecto al pintar, ni de un reintento automático, ni
+   * como parte de anotar la autorización. El `confirm` no es un adorno — dice a
+   * quién se le va a escribir antes de escribirle.
+   *
+   * Y NO acepta nada: la autorización sigue pendiente después. Lo único que
+   * cambia es que la persona se entera de que la tiene, que hasta hoy dependía
+   * de que Alberto escribiera el correo a mano.
+   */
+  function avisar(r: RelacionCartera) {
+    if (!confirm(`¿Enviar un correo a ${r.nombre} para que confirme el acceso a los seguros de ${nombreFicha}?\n\nSe le escribe a la dirección que tenga en su ficha. El correo dice quién le da el acceso y dónde confirmarlo; nada de sus pólizas.`)) return
+    void (async () => {
+      setOcupado(`aviso-${r.relacionadoId}`)
+      setAviso(null)
+      let resp: RespuestaAviso
+      try {
+        const res = await fetch('/api/correduria/cliente/relaciones/aviso', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ clienteId, relacionadoId: r.relacionadoId }),
+        })
+        resp = interpretarAviso(res.status, await res.json().catch(() => null))
+      } catch {
+        // Un fallo de red aquí es AMBIGUO: puede que el correo saliera. Se dice
+        // como lo que es y no como «no se ha enviado», que invitaría a reintentar
+        // a ciegas y a que la persona reciba dos.
+        resp = { estado: 'error', motivo: 'red' }
+      }
+      setAviso({ fichaId: r.relacionadoId, texto: textoAviso(resp, r.nombre), ok: resp.estado === 'ok' })
+      setOcupado(null)
+      if (resp.estado === 'ok') router.refresh()
+    })()
   }
 
   // «Revisado: no son nada» en un clic, sin pasar por el formulario. Es la
@@ -253,6 +297,8 @@ export default function Relaciones({
               ocupado={ocupado}
               renderPapeles={renderPapeles}
               onAutorizar={autorizar}
+              onAvisar={avisar}
+              aviso={aviso}
               onQuitar={quitar}
               onCambiarTipo={cambiarTipo}
               onDeclarar={(cand) => setPreseleccion((v) => ({ cand, n: (v?.n ?? 0) + 1 }))}
@@ -303,7 +349,7 @@ export default function Relaciones({
  * en una póliza es un hecho de la compañía y un vínculo es nuestro, y solo el
  * segundo abre las pólizas en el portal.
  */
-function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: {
+function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: {
   p: PersonaFicha<RelacionCartera>
   nombreFicha: string
   ocupado: string | null
@@ -313,6 +359,8 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onQu
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
   ) => void
+  onAvisar: (r: RelacionCartera) => void
+  aviso: { fichaId: string; texto: string; ok: boolean } | null
   onQuitar: (r: RelacionCartera) => void
   onCambiarTipo: (r: RelacionCartera, tipo: string) => void
   onDeclarar: (cand: Candidato) => void
@@ -364,6 +412,8 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onQu
           nombreFicha={nombreFicha}
           ocupado={ocupado}
           onAutorizar={onAutorizar}
+          onAvisar={onAvisar}
+          aviso={aviso}
           onQuitar={onQuitar}
           onCambiarTipo={onCambiarTipo}
         />
@@ -413,10 +463,12 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onQu
  * persona, debajo de lo que dice CIMA, para que las dos caras se lean juntas y
  * se siga viendo de dónde sale cada una.
  */
-function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo }: {
+function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo }: {
   r: RelacionCartera
   nombreFicha: string
   ocupado: string | null
+  onAvisar: (r: RelacionCartera) => void
+  aviso: { fichaId: string; texto: string; ok: boolean } | null
   onAutorizar: (
     r: RelacionCartera,
     autoriza: boolean,
@@ -429,7 +481,10 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo
   const enCurso =
     ocupado === `aut-${r.relacionadoId}` ||
     ocupado === `del-${r.relacionadoId}` ||
-    ocupado === `tipo-${r.relacionadoId}`
+    ocupado === `tipo-${r.relacionadoId}` ||
+    ocupado === `aviso-${r.relacionadoId}`
+  const avisando = ocupado === `aviso-${r.relacionadoId}`
+  const miAviso = aviso?.fichaId === r.relacionadoId ? aviso : null
   // `Sin vínculo` no es un parentesco: es la constancia de que se miró y no hay
   // ninguno. Ni se explica quién ve qué ni se ofrece autorizar (el puerto lo
   // rechaza igualmente con un 422, y el portal ni mira esas filas).
@@ -484,6 +539,15 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo
       )}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {/* Solo cuando hay algo que confirmar. En una VIGENTE no hay nada que
+            avisar (ya la aceptó) y en una caducada el correo llevaría a una
+            pantalla vacía; el puerto lo rechaza igual, pero un botón que no
+            puede funcionar no se pinta. */}
+        {r.autorizacion?.estado === 'pendiente' && (
+          <button type="button" disabled={enCurso} onClick={() => onAvisar(r)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            {avisando ? 'enviando…' : `✉️ Invitar por correo a ${r.nombre} a confirmarlo`}
+          </button>
+        )}
         {/* Hay algo que revocar mientras la autorización no esté ya cerrada: una
             PENDIENTE también se revoca (existe, aunque no abra nada todavía). */}
         {viva ? (
@@ -499,6 +563,15 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo
           Quitar relación
         </button>
       </div>
+
+      {/* El desenlace del correo, pegado al botón que lo produjo. El texto sale
+          de `textoAviso` (puro y con test): un «enviado» no puede salir de un
+          desenlace que no envió nada. */}
+      {miAviso && (
+        <div role="status" style={{ fontSize: 12, color: miAviso.ok ? 'var(--positive)' : 'var(--warning)', overflowWrap: 'anywhere' }}>
+          {miAviso.texto}
+        </div>
+      )}
 
       <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
 
