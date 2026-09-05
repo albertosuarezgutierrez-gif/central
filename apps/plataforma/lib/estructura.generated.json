@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-05T07:58:26Z",
+  "generadoEn": "2026-09-05T08:24:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5403,6 +5403,7 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
+      "mensajes_prog_avisos",
       "mensajes_prog_pisos",
       "mensajes_programados",
       "mercado_comparables",
