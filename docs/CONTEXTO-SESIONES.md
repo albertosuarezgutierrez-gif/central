@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔌 conectores-vigia: primera pasada real (05/09/2026, PR #2295).** Confirmado (ya no
+  «probablemente»): la rutina corre sin ningún conector adjunto — `ListConnectors` da
+  `enabledInChat:false` en los ~30 de la cuenta → el paso canario (llamada real a Booking/IBKR)
+  es imposible desde aquí tal como está montada. Higiene de cuenta: **Expedia en
+  `needs_reconnect`** (roto), lo usa `pricing-agente` como 2ª fuente de mercado y para demanda por
+  vuelos — sigue operando (diseño resiliente) pero degradado en silencio; requiere reconexión OAuth
+  de Alberto. Sin candidatos nuevos para H1/H3. Telegram enviado.
+
 - **✉️ Invitar por correo a quien NO está en la cartera (04/09/2026, PR #2283).** La TERCERA puerta de
   la autorización: José escribe un correo cualquiera y le abre sus seguros. 🚨 **El token del enlace NO
   abre sesión** —se lo comen los escáneres del correo, es una llave reenviable, y «aceptado por el que
