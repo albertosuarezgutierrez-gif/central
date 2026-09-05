@@ -417,11 +417,19 @@ function Portal({ clienteId, nombre }: { clienteId: string; nombre: string }) {
   const frase = explicarPortal(datos.portal)
   return (
     <div style={marco}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
-        <Badge tono={frase.tono}>{frase.titulo}</Badge>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
+        {/* El titular NO va en un `Badge`: ese lleva `whiteSpace: 'nowrap'` y el
+            de `ya_entra` arrastra la fecha dentro («Ya entra al portal · última
+            vez el 3 de septiembre de 2026»), que a 320px se sale de la pantalla
+            entera. Aquí el color lo dice todo y el texto puede partirse. */}
+        <span style={{ fontSize: 13, fontWeight: 600, color: COLOR_PORTAL[frase.tono], overflowWrap: 'anywhere', minWidth: 0 }}>
+          {frase.titulo}
+        </span>
         {/* `null` = no se pudo contar, y lo dice con esas palabras: 0 sería una
             afirmación («no entra nadie») sobre algo que no se ha mirado. */}
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{textoIdentidades(datos.portal.identidades)}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere', minWidth: 0 }}>
+          {textoIdentidades(datos.portal.identidades)}
+        </span>
       </div>
 
       <p style={{ ...sutil, maxWidth: '72ch' }}>{frase.queHacer}</p>
@@ -458,6 +466,14 @@ function Portal({ clienteId, nombre }: { clienteId: string; nombre: string }) {
       )}
     </div>
   )
+}
+
+/** El tono del estado → su token. Nada de hex: en oscuro un verde fijo deja de leerse. */
+const COLOR_PORTAL: Record<'neutral' | 'positivo' | 'negativo' | 'aviso', string> = {
+  neutral: 'var(--text)',
+  positivo: 'var(--positive)',
+  negativo: 'var(--negative)',
+  aviso: 'var(--warning)',
 }
 
 // ─── El formulario, plegado ──────────────────────────────────────────────────
