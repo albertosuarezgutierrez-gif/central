@@ -1,0 +1,614 @@
+/*
+ * Sistema visual del sitio público de Grupo ASegura.
+ *
+ * 🚨 Por qué existe este fichero, y no estilos inline como antes: un objeto
+ * `CSSProperties` no puede declarar `:hover`, `@media` ni `::before`. Sin esas
+ * tres cosas no hay diseño — hay un documento con colores. La primera versión
+ * de esta web (04/09/2026) era exactamente eso, y se veía así: tipografía por
+ * defecto, cero jerarquía, todo del mismo peso. Alberto lo dijo con una
+ * palabra el 05/09: «feísima».
+ *
+ * NINGÚN color se escribe aquí. Todos salen de los tokens que inyecta
+ * `@central/brand` (`MARCA_ASEGURA`) en el `<head>`: `--brand`, `--brand-ink`,
+ * `--brand-soft`, `--bg`, `--panel`, `--border`, `--text`, `--muted`… Escribir
+ * un hex en esta hoja rompería la casa de marcas: el día que se ajuste la
+ * paleta, la web pública dejaría de parecerse al resto de la correduría.
+ *
+ * Lo que SÍ se decide aquí es la escala: espaciado, tamaños de tipo, radios
+ * derivados y las tres roturas responsive. Está en un sitio para que se pueda
+ * cambiar de una vez, no tarjeta a tarjeta.
+ */
+
+:root {
+  /* Escala de espaciado. Progresión ~1.5×: el ojo lee el ritmo, no los píxeles. */
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 12px;
+  --e4: 16px;
+  --e5: 24px;
+  --e6: 32px;
+  --e7: 48px;
+  --e8: 72px;
+
+  /* Radios derivados del `--radio` de la marca (16px), como hace su app. */
+  --r-s: 10px;
+  --r-m: 14px;
+  --r-l: var(--radio, 16px);
+  --r-xl: 24px;
+
+  /* Ancho de lectura. 68ch es el largo de línea cómodo para texto corrido. */
+  --ancho: 1040px;
+  --lectura: 68ch;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+  /* Inter tiene alternativas tipográficas que solo se activan pidiéndolas. */
+  font-feature-settings: 'cv05' 1, 'ss01' 1;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: var(--e1);
+}
+
+/* ── Tipografía ─────────────────────────────────────────────────────────────
+   El salto de tamaño entre h1 y cuerpo es lo que crea jerarquía. Antes iba de
+   38 px a 16 px sin nada en medio y con el mismo peso visual: todo pesaba igual,
+   y cuando todo pesa igual el ojo no sabe por dónde empezar. */
+h1,
+h2,
+h3 {
+  font-family: var(--serif);
+  margin: 0 0 var(--e3);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(32px, 6vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+h2 {
+  font-size: clamp(22px, 3.6vw, 30px);
+  font-weight: 700;
+}
+
+h3 {
+  font-size: clamp(17px, 2.2vw, 19px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0 0 var(--e4);
+}
+
+a {
+  color: var(--brand);
+  text-underline-offset: 3px;
+}
+
+/* Un párrafo de más de ~90 caracteres por línea se lee mal en escritorio. */
+.lectura {
+  max-width: var(--lectura);
+}
+
+.lead {
+  font-size: clamp(17px, 2.1vw, 20px);
+  color: var(--muted);
+  max-width: var(--lectura);
+}
+
+.tenue {
+  color: var(--muted);
+}
+
+/* ── Contenedor ─────────────────────────────────────────────────────────── */
+.wrap {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  /* Este padding es lo único que impide que el texto toque el borde a 320 px. */
+  padding: 0 var(--e4);
+}
+
+/* ── Cabecera ───────────────────────────────────────────────────────────────
+   Pegada arriba y translúcida: en una web de captación el botón de contacto y
+   el del área de clientes tienen que estar siempre a un dedo de distancia.
+   `backdrop-filter` degrada solo (sin él queda un fondo sólido, que también
+   vale), así que no hace falta @supports. */
+.hdr {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in oklab, var(--panel) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.hdr-fila {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  flex-wrap: wrap;
+  padding-top: var(--e2);
+  padding-bottom: var(--e2);
+}
+
+.hdr-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  min-height: 44px;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* El monograma «AS» se pinta con `mask` y no con `<img>` a propósito: el SVG
+   viene con `fill="currentColor"`, y dentro de un `<img>` eso resuelve a negro
+   —el contexto no llega—. Con la máscara, el color lo pone el token de marca,
+   que es lo que el fichero pedía. Proporción del viewBox: 130×90. */
+.marca-tile {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-s);
+  background: var(--brand-soft);
+  flex: none;
+}
+
+.marca-mono {
+  width: 21px;
+  height: 15px;
+  background: var(--brand);
+  -webkit-mask: url('/brand/marca-asegura.svg') center / contain no-repeat;
+  mask: url('/brand/marca-asegura.svg') center / contain no-repeat;
+}
+
+/* Nav en su PROPIA fila hasta 900 px, y en la misma fila por encima.
+   Seis secciones más el botón no caben en una fila estrecha, y dejar que flex
+   decidiera dónde partir daba TRES filas en escritorio (medido con Playwright
+   el 05/09: marca / nav / botón). Aquí se decide explícitamente. */
+.hdr-nav {
+  display: flex;
+  gap: var(--e1);
+  order: 3;
+  flex-basis: 100%;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: var(--e1);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.hdr-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.hdr-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--e3);
+  border-radius: var(--r-s);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.hdr-nav a:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+@media (min-width: 900px) {
+  .hdr-nav {
+    order: 2;
+    flex-basis: auto;
+    margin-left: auto;
+    padding-bottom: 0;
+  }
+}
+
+/* ── Botones ────────────────────────────────────────────────────────────────
+   44 px de alto táctil en el nav, 52 px en las llamadas a la acción. La
+   mayoría del tráfico local de seguros entra desde el móvil. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e2);
+  min-height: 52px;
+  padding: 0 var(--e5);
+  border: 1px solid transparent;
+  border-radius: var(--r-m);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-brand {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: var(--shadow-panel);
+}
+
+.btn-brand:hover {
+  background: var(--brand-ink);
+  box-shadow: var(--shadow-float);
+}
+
+.btn-suave {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.btn-suave:hover {
+  background: var(--surface-hover);
+  border-color: var(--muted2);
+}
+
+/* El del área de clientes vive en la cabecera: más bajo, para no dominarla. */
+.btn-hdr {
+  min-height: 44px;
+  padding: 0 var(--e4);
+  font-size: 15px;
+  order: 2;
+  margin-left: auto;
+}
+
+@media (min-width: 900px) {
+  .btn-hdr {
+    order: 3;
+    margin-left: var(--e2);
+  }
+}
+
+/* ── Distintivo (la cápsula de la clave DGSFP) ─────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2) var(--e3);
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.chip-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex: none;
+}
+
+/* ── Portada ────────────────────────────────────────────────────────────────
+   La tarjeta va con el fondo tintado de marca (`--brand-soft`) en vez de a
+   sangre completa: el truco de `100vw` para romper el contenedor mete la barra
+   de scroll en la cuenta y produce desbordamiento horizontal, que es justo lo
+   que prohíbe la regla de responsive del repo. */
+.hero {
+  background: var(--brand-soft);
+  border-radius: var(--r-xl);
+  padding: clamp(24px, 5vw, 56px);
+  margin-bottom: var(--e6);
+}
+
+.hero h1 {
+  margin-top: var(--e4);
+  color: var(--brand-ink);
+}
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e3);
+  margin-top: var(--e5);
+}
+
+/* Tres argumentos, no un párrafo: se leen de un vistazo antes de decidir. */
+.confianza {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e4);
+  margin-bottom: var(--e7);
+}
+
+@media (min-width: 720px) {
+  .confianza {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.confianza-item {
+  padding-left: var(--e4);
+  border-left: 3px solid var(--brand);
+}
+
+.confianza-item strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: var(--e1);
+}
+
+.confianza-item span {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ── Secciones ──────────────────────────────────────────────────────────── */
+.seccion {
+  margin-bottom: var(--e8);
+}
+
+.seccion-tit {
+  margin-bottom: var(--e5);
+}
+
+.seccion-tit p {
+  margin: 0;
+}
+
+/* ── Rejilla de tarjetas ────────────────────────────────────────────────────
+   `minmax(0, …)` en las pistas no es decorativo: sin él, una pista implícita se
+   dimensiona con su contenido más ancho y arrastra la página entera (la trampa
+   documentada en el CLAUDE.md de la raíz). */
+.rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e4);
+}
+
+@media (min-width: 640px) {
+  .rejilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .rejilla {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.tarjeta {
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-l);
+  padding: var(--e5);
+  text-decoration: none;
+  color: var(--text);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+a.tarjeta:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+  box-shadow: var(--shadow-float);
+}
+
+.tarjeta-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: var(--e4);
+  border-radius: var(--r-s);
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+.tarjeta h3 {
+  margin-bottom: var(--e2);
+}
+
+.tarjeta p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.tarjeta-mas {
+  display: inline-block;
+  margin-top: var(--e3);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+/* ── Pasos numerados ────────────────────────────────────────────────────── */
+.pasos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e5);
+  counter-reset: paso;
+}
+
+@media (min-width: 720px) {
+  .pasos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.paso {
+  counter-increment: paso;
+}
+
+.paso::before {
+  content: counter(paso);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: var(--e3);
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.paso h3 {
+  margin-bottom: var(--e2);
+}
+
+.paso p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* ── Panel (bloques destacados y el formulario) ─────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-l);
+  padding: clamp(20px, 4vw, 36px);
+  box-shadow: var(--shadow-panel);
+}
+
+.panel-tinta {
+  background: var(--brand-soft);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* ── Formulario ─────────────────────────────────────────────────────────── */
+.f-lab {
+  display: block;
+  margin-bottom: var(--e2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.f-in {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--e3) var(--e4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-m);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px; /* < 16px hace que iOS haga zoom al enfocar. */
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+textarea.f-in {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.f-in:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+/* ── Pie ────────────────────────────────────────────────────────────────── */
+.pie {
+  border-top: 1px solid var(--border);
+  background: var(--panel2);
+  margin-top: var(--e8);
+}
+
+.pie-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e5);
+  padding-top: var(--e7);
+  padding-bottom: var(--e5);
+}
+
+@media (min-width: 720px) {
+  .pie-cols {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.pie h4 {
+  margin: 0 0 var(--e3);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+.pie-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  font-size: 14px;
+}
+
+.pie-lista a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.pie-lista a:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
+
+.pie-legal {
+  padding-bottom: var(--e6);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Quien prefiera menos movimiento no ve ninguno. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+  a.tarjeta:hover {
+    transform: none;
+  }
+}

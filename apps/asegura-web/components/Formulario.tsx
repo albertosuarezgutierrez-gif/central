@@ -12,21 +12,9 @@ import { useState, type CSSProperties, type FormEvent } from 'react'
 import Link from 'next/link'
 import { TIPOS_SEGURO, ETIQUETA_TIPO, CAMPO_HONEYPOT, MAX_COMENTARIO } from '@/lib/contrato-lead'
 
-const campo: CSSProperties = {
-  width: '100%',
-  boxSizing: 'border-box',
-  minHeight: 44,
-  padding: '10px 12px',
-  // 16 px exactos: por debajo, Safari en iPhone hace zoom al enfocar el campo y
-  // el visitante se queda con la página descuadrada a mitad del formulario.
-  fontSize: 16,
-  border: '1px solid var(--border)',
-  borderRadius: 10,
-  background: 'var(--bg)',
-  color: 'var(--text)',
-  fontFamily: 'inherit',
-}
-const etiqueta: CSSProperties = { display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 6 }
+// El aspecto de los campos (alto táctil, anillo de foco, los 16 px exactos que
+// evitan el zoom de Safari en iPhone) vive en `globals.css` como `.f-in` y
+// `.f-lab`. Aquí solo queda la rejilla, que es maquetación de este formulario.
 const fila: CSSProperties = { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }
 
 type Estado =
@@ -76,7 +64,8 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
     return (
       <div
         role="status"
-        style={{ background: 'var(--accent-soft)', color: 'var(--brand-ink)', borderRadius: 'var(--radio)', padding: '18px 20px', fontSize: 16, fontWeight: 600 }}
+        className="panel panel-tinta"
+        style={{ color: 'var(--brand-ink)', fontSize: 16, fontWeight: 600 }}
       >
         ✅ Recibido. Te llamamos en horario de oficina — te contesta una persona, no un formulario automático.
       </div>
@@ -90,22 +79,22 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
     <form onSubmit={enviar} noValidate>
       <div style={{ ...fila, marginBottom: 12 }}>
         <div>
-          <label style={etiqueta} htmlFor="nombre">
+          <label className="f-lab" htmlFor="nombre">
             Nombre
           </label>
-          <input id="nombre" name="nombre" autoComplete="given-name" style={{ ...campo, ...mal('nombre') }} />
+          <input id="nombre" name="nombre" autoComplete="given-name" className="f-in" style={mal('nombre')} />
         </div>
         <div>
-          <label style={etiqueta} htmlFor="apellidos">
+          <label className="f-lab" htmlFor="apellidos">
             Apellidos <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(opcional)</span>
           </label>
-          <input id="apellidos" name="apellidos" autoComplete="family-name" style={campo} />
+          <input id="apellidos" name="apellidos" autoComplete="family-name" className="f-in" />
         </div>
       </div>
 
       <div style={{ ...fila, marginBottom: 12 }}>
         <div>
-          <label style={etiqueta} htmlFor="telefono">
+          <label className="f-lab" htmlFor="telefono">
             Teléfono
           </label>
           <input
@@ -114,11 +103,11 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            style={{ ...campo, ...mal('telefono') }}
+            className="f-in" style={mal('telefono')}
           />
         </div>
         <div>
-          <label style={etiqueta} htmlFor="email">
+          <label className="f-lab" htmlFor="email">
             Correo
           </label>
           <input
@@ -127,7 +116,7 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
             type="email"
             inputMode="email"
             autoComplete="email"
-            style={{ ...campo, ...mal('email') }}
+            className="f-in" style={mal('email')}
           />
         </div>
       </div>
@@ -136,10 +125,10 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
       </p>
 
       <div style={{ marginBottom: 12 }}>
-        <label style={etiqueta} htmlFor="tipoSeguro">
+        <label className="f-lab" htmlFor="tipoSeguro">
           ¿Qué seguro quieres revisar?
         </label>
-        <select id="tipoSeguro" name="tipoSeguro" defaultValue={ramoPorDefecto ?? ''} style={{ ...campo, ...mal('tipoSeguro') }}>
+        <select id="tipoSeguro" name="tipoSeguro" defaultValue={ramoPorDefecto ?? ''} className="f-in" style={mal('tipoSeguro')}>
           <option value="">Elige una opción</option>
           {TIPOS_SEGURO.map((t) => (
             <option key={t} value={t}>
@@ -150,10 +139,10 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
       </div>
 
       <div style={{ marginBottom: 14 }}>
-        <label style={etiqueta} htmlFor="comentario">
+        <label className="f-lab" htmlFor="comentario">
           Cuéntanos lo justo <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(opcional)</span>
         </label>
-        <textarea id="comentario" name="comentario" rows={3} maxLength={MAX_COMENTARIO} style={{ ...campo, minHeight: 88, resize: 'vertical' }} />
+        <textarea id="comentario" name="comentario" rows={3} maxLength={MAX_COMENTARIO} className="f-in" />
         {/* 🚨 Nada de pedir aquí datos de salud, DNI ni matrículas: es un campo
             libre de una web pública. Lo que haga falta se pide después, por el
             canal correcto. */}
@@ -193,18 +182,14 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
 
       <button
         type="submit"
+        className="btn btn-brand"
         disabled={estado.fase === 'enviando' || !consentimiento}
         style={{
-          minHeight: 48,
           width: '100%',
-          padding: '0 20px',
-          fontSize: 16,
-          fontWeight: 700,
-          fontFamily: 'inherit',
-          color: '#fff',
-          background: consentimiento ? 'var(--brand)' : 'var(--muted2)',
-          border: 'none',
-          borderRadius: 12,
+          // Sin consentimiento el botón se apaga en vez de esconderse: que se
+          // vea deshabilitado dice DÓNDE está lo que falta; ocultarlo, no.
+          background: consentimiento ? undefined : 'var(--muted2)',
+          boxShadow: consentimiento ? undefined : 'none',
           cursor: consentimiento && estado.fase !== 'enviando' ? 'pointer' : 'not-allowed',
         }}
       >

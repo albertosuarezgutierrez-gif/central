@@ -1,20 +1,26 @@
 // Layout del sitio público de Grupo ASegura.
 //
 // La identidad visual NO se escribe aquí: se inyecta desde `@central/brand`
-// (`MARCA_ASEGURA`), cuyos hex se MIDIERON del CSS compilado de la app que ya
+// (`MARCA_ASEGURA`), cuyos hex se MIDIERON del CSS fuente de la app que ya
 // existe en `app.grupoasegura.com`. Poner colores a ojo en esta app haría que
 // la web pública y el CRM del mismo negocio no se parecieran, que es peor que
 // no tener web.
 //
+// El sistema visual (escala, rejillas, estados, roturas responsive) vive en
+// `globals.css`. Antes estaba en un `<style>` incrustado aquí y todo lo demás
+// en objetos `CSSProperties` inline — que no pueden declarar `:hover`, `@media`
+// ni `::before`, y por eso la web se veía como un documento sin maquetar.
+//
 // La ficha JSON-LD del negocio va en el layout y no en la home a propósito: es
 // la identidad del negocio, no de una página, y Google la quiere ver en todas.
 import type { Metadata } from 'next'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion } from '@central/module-seguros'
 import { NAV, PORTAL_URL, SITIO_URL } from '@/lib/sitio'
 import { fichaNegocio, jsonLd } from '@/lib/seo'
+import './globals.css'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITIO_URL),
@@ -36,44 +42,6 @@ export const metadata: Metadata = {
   // en una web de captación es la forma más silenciosa de no existir en Google.
 }
 
-const contenedor: CSSProperties = {
-  maxWidth: 960,
-  margin: '0 auto',
-  // El padding lateral es lo que impide que el texto toque el borde en 320 px.
-  padding: '0 16px',
-  boxSizing: 'border-box',
-}
-
-const enlaceNav: CSSProperties = {
-  // 44 px de alto táctil: regla de responsive del repo, y aquí importa porque
-  // la mayoría del tráfico local de seguros entra desde el móvil.
-  display: 'inline-flex',
-  alignItems: 'center',
-  minHeight: 44,
-  padding: '0 10px',
-  fontSize: 15,
-  fontWeight: 600,
-  color: 'var(--text)',
-  textDecoration: 'none',
-  whiteSpace: 'nowrap',
-}
-
-const botonPortal: CSSProperties = {
-  // Mismo alto táctil que el nav; es el ÚNICO botón de acceso de la web, así
-  // que va en color de marca para que se distinga de las secciones comerciales.
-  display: 'inline-flex',
-  alignItems: 'center',
-  minHeight: 44,
-  padding: '0 16px',
-  background: 'var(--brand)',
-  color: '#fff',
-  fontSize: 15,
-  fontWeight: 700,
-  borderRadius: 12,
-  textDecoration: 'none',
-  whiteSpace: 'nowrap',
-}
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
@@ -84,51 +52,22 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Tokens de marca. Van en el head para que no haya un parpadeo con los
             colores por defecto antes de que cargue el CSS de la app. */}
         <style dangerouslySetInnerHTML={{ __html: emitirRootCss(MARCA_ASEGURA) }} />
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-*,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.55;
-  -webkit-text-size-adjust:100%}
-h1,h2,h3{font-family:var(--serif);line-height:1.2;margin:0 0 12px}
-h1{font-size:clamp(26px,5vw,38px);font-weight:800;letter-spacing:-0.02em}
-h2{font-size:clamp(20px,3.4vw,26px);font-weight:700}
-p{margin:0 0 14px}
-a{color:var(--brand)}
-img{max-width:100%;height:auto}
-/* Ningún bloque ancho puede empujar la página: la tabla o el bloque scrollea,
-   no el body. Es la regla de responsive del repo, aplicada de raíz. */
-main{overflow-wrap:anywhere}
-:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:4px}
-/* Cabecera en DOS filas a todo ancho: marca + botón de clientes arriba, y el
-   nav de secciones en su propia fila debajo (con su scroll horizontal en
-   móvil). Seis secciones + botón no caben en una fila ni a 1024 px, y dejar
-   que flex decida dónde parte daba TRES filas en escritorio (marca / nav /
-   botón). Medido con Playwright a 320, 360 y 1024. */
-.hdr-nav{flex-basis:100%;margin-left:0!important;order:3}
-`,
-          }}
-        />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaNegocio()) }} />
       </head>
       <body>
-        <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--panel)' }}>
-          <div style={{ ...contenedor, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 10, paddingBottom: 10 }}>
-            <Link
-              href="/"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, fontWeight: 800, fontSize: 17, color: 'var(--brand-ink)', textDecoration: 'none' }}
-            >
+        <header className="hdr">
+          <div className="wrap hdr-fila">
+            <Link href="/" className="hdr-marca">
+              <span className="marca-tile" aria-hidden="true">
+                <span className="marca-mono" />
+              </span>
               {MEDIADOR.marca}
             </Link>
-            {/* Nav horizontal con scroll propio en móvil: seis secciones no caben
-                en 320 px, y partirlas en dos filas deja la cabecera enorme. */}
-            <nav
-              className="hdr-nav"
-              aria-label="Secciones"
-              style={{ display: 'flex', gap: 2, overflowX: 'auto', marginLeft: 'auto', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}
-            >
+            {/* Nav con scroll propio en móvil: seis secciones no caben en 320 px,
+                y partirlas en dos filas deja la cabecera enorme. */}
+            <nav className="hdr-nav" aria-label="Secciones">
               {NAV.map((n) => (
-                <Link key={n.href} href={n.href} style={enlaceNav}>
+                <Link key={n.href} href={n.href}>
                   {n.texto}
                 </Link>
               ))}
@@ -136,29 +75,51 @@ main{overflow-wrap:anywhere}
             {/* Único acceso de la web: la intranet del CLIENTE. Es <a> y no
                 <Link> porque es otro dominio. No hay «acceso corredor» a
                 propósito: Alberto entra por plataforma. */}
-            <a href={PORTAL_URL} style={{ ...botonPortal, marginLeft: 'auto' }}>
+            <a href={PORTAL_URL} className="btn btn-brand btn-hdr">
               Área de clientes
             </a>
           </div>
         </header>
 
-        <main style={{ ...contenedor, paddingTop: 24, paddingBottom: 48 }}>{children}</main>
+        <main className="wrap" style={{ paddingTop: 32 }}>
+          {children}
+        </main>
 
-        <footer style={{ borderTop: '1px solid var(--border)', background: 'var(--panel2)' }}>
-          <div style={{ ...contenedor, paddingTop: 24, paddingBottom: 32, fontSize: 13, color: 'var(--muted)' }}>
-            {/* Art. 19 Ley 16/2018: la identificación del mediador se ve SIEMPRE,
-                no solo si el visitante entra en una página aparte. */}
-            <p style={{ margin: '0 0 10px', fontWeight: 600, color: 'var(--text)' }}>{lineaIdentificacion()}</p>
-            <p style={{ margin: '0 0 14px' }}>
-              {MEDIADOR.identidad.domicilio} ·{' '}
-              <a href={`mailto:${MEDIADOR.identidad.email}`}>{MEDIADOR.identidad.email}</a>
-            </p>
-            <nav aria-label="Información legal" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}>
-              <Link href="/legal/informacion-mediador">Información del mediador</Link>
-              <Link href="/legal/privacidad">Privacidad</Link>
-              <Link href="/legal/aviso-legal">Aviso legal</Link>
-              <Link href="/quienes-somos">Quiénes somos</Link>
-            </nav>
+        <footer className="pie">
+          <div className="wrap pie-cols">
+            <div>
+              <h4>Grupo ASegura</h4>
+              {/* Art. 19 Ley 16/2018: la identificación del mediador se ve
+                  SIEMPRE, no solo si el visitante entra en una página aparte. */}
+              <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>{lineaIdentificacion()}</p>
+              <p className="tenue" style={{ margin: 0, fontSize: 14 }}>
+                {MEDIADOR.identidad.domicilio}
+                <br />
+                <a href={`mailto:${MEDIADOR.identidad.email}`}>{MEDIADOR.identidad.email}</a>
+              </p>
+            </div>
+            <div>
+              <h4>Seguros</h4>
+              <nav className="pie-lista" aria-label="Ramos">
+                {NAV.map((n) => (
+                  <Link key={n.href} href={n.href}>
+                    {n.texto}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            <div>
+              <h4>Información legal</h4>
+              <nav className="pie-lista" aria-label="Información legal">
+                <Link href="/legal/informacion-mediador">Información del mediador</Link>
+                <Link href="/legal/privacidad">Privacidad</Link>
+                <Link href="/legal/aviso-legal">Aviso legal</Link>
+                <Link href="/quienes-somos">Quiénes somos</Link>
+              </nav>
+            </div>
+          </div>
+          <div className="wrap pie-legal">
+            Somos correduría: mediamos con varias compañías y la comisión la paga la aseguradora, no el cliente.
           </div>
         </footer>
       </body>
