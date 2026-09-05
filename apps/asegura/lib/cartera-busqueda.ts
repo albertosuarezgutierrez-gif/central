@@ -802,11 +802,17 @@ async function hermanasDe(correduriaId: string, ids: string[]): Promise<HermanaC
 }
 
 /**
- * Teléfono y email principales de cada ficha, en UNA consulta para los ≤25
- * resultados. `null` (toda la consulta) = no se ha podido preguntar: aguas
- * arriba eso se pinta como «no comprobado», nunca como «no tiene».
+ * Teléfono y email principales de cada ficha, en UNA consulta. `null` (toda la
+ * consulta) = no se ha podido preguntar: aguas arriba eso se pinta como «no
+ * comprobado», nunca como «no tiene».
+ *
+ * Se EXPORTA (05/09/2026) porque la usa también la lista de renovaciones. Era
+ * la cuarta pantalla que necesitaba lo mismo, y las tres anteriores ya habían
+ * dejado tres `descifrar` casi idénticos por el repo: el quinto copia-pega es
+ * el que se olvida del `cliente_emails` y deja a un cliente sin icono teniendo
+ * correo. Un solo sitio que sepa leer el contacto de N fichas.
  */
-async function contactosDe(
+export async function contactosDe(
   correduriaId: string,
   ids: string[],
 ): Promise<Map<string, Contacto> | null> {
