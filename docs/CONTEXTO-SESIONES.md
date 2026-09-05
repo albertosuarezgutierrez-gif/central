@@ -43,6 +43,18 @@
   el botón funciona igual (va a `asegura-portal.vercel.app`). El header roto de la captura es código
   de Manuel, en un repo que el clasificador me bloquea.
 
+- **📵 La cartera del volcado NO trae contacto: 26.810 fichas sin teléfono ni correo (05/09/2026).**
+  Alberto: «tanta bbdd sin ningun tlf ni mail?». Verificado en los SEIS sitios donde podría estar (ficha,
+  `cliente_emails`/`cliente_telefonos` —solo 2 fichas—, `poliza_intervinientes` —427 filas en total—,
+  `wa_phone_number`, `notas`, y `polizas.datos_especificos`: 0 arrobas y 0 secuencias de 9 dígitos en 28.480).
+  🔑 **La prueba que lo cierra: `telefono_lookup_hash`/`email_lookup_hash` a 0.** Ese hash sobrevive al borrado
+  del cifrado, así que el dato **nunca entró** — la intranet exportó PÓLIZAS, no clientes (traía nombre, DNI,
+  ciudad/CP y cuenta para el recibo). **Captable = 3.287 leads + 1.750 clientes**; los 26.437 sin canal YA
+  están `activo=false` (fuera del buscador: filtra `activo` en las 10 consultas), así que la poda que Alberto
+  planteaba ya estaba hecha. Quedan sueltos **26 leads** sin canal activos y **39 clientes**, 16 de ellos
+  CARTERA VIVA → esos NO se archivan: son la pantalla `clientes-sin-canal` y hay que pedirles el correo.
+  ⚠️ Dos veces conté fichas sobre un `LEFT JOIN` con pólizas y di cifras infladas: `count(distinct)`.
+
 - **🃏 El backfill se ejecutó, y el centinela no eran 20 fichas: eran 5.636 (05/09/2026).**
   Alberto pulsó el botón: **8.000 índices escritos** (3.890 → 11.890), quedan **469** (una pulsación más) y
   6.623 no se escriben nunca (5.645 centinelas + 936 ilegibles + 42 en choque). 🚨 **El grupo centinela es
