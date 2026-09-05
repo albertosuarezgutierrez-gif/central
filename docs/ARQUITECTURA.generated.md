@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-04T23:02:58Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-05T07:18:31Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 39 skills · 1273 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 39 skills · 1275 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 33
+- **Rutas API:** 34
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
@@ -56,7 +56,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (130):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor, correo_reglas…
-- **Rutas API:** 341
+- **Rutas API:** 342
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -261,14 +261,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/09/2026) 📬 Smoobu ya NO manda mensajes automáticos: el ciclo es 100% nuestro
+- (05/09/2026) 📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría
+- (05/09/2026) 🔁 Un PR abierto de noche choca con `main` cada ~50 min, y siempre por el MISMO fichero
+- (04/09/2026) 🚦 `Ignored` no es gratis: la cuota que agotó un agente y tumbó 4 producciones
+- (04/09/2026) 🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría
+- (04/09/2026) 📵 «19 clientes ilocalizables» eran 15: el contacto vive en TRES sitios, no en la ficha
 - (04/09/2026) ✉️ Invitar por correo a quien NO está en la cartera
 - (04/09/2026) Web pública de la correduría: `apps/asegura-web`
 - (04/09/2026) Plan de marketing y captación de Grupo ASegura
 - (04/09/2026) 📧 El buscador ya llamaba, pero a 5 clientes vivos les faltaba el correo
-- (04/09/2026) 💓 El vigía de latidos gritaba por agentes a los que aún NO les había tocado correr
-- (04/09/2026) 🔧 Instrumentado `pricing_applied` y ACTIVADOS los mensajes de los 2 pisos de Busto
-- (04/09/2026) 📸 Quitar Smoobu de Busto: las indicaciones están listas, las FOTOS no
-- (04/09/2026) 📉 Las pasadas de pricing del 04/09: dos hallazgos y un agujero de instrumentación
-- (04/09/2026) 🔐 La cerradura que falla NO es la de Socorro
-- (04/09/2026) 📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp
 
