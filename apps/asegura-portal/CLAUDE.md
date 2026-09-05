@@ -741,6 +741,13 @@ y es el mismo buzón al que ya responde el `Reply-To` del correo del portal
 (`PORTAL_MAIL_REPLY_TO`), así que quien contesta a su código y quien presenta una queja llegan al
 mismo sitio. Dos buzones repartirían las quejas entre uno que se mira y otro que no, y el que no se
 mira incumple el plazo de un mes del SAC. Lo fija un cepo del test del módulo.
+✅ **El buzón EXISTE — lo confirmó Alberto el 05/09/2026** («ya existe hola@grupoasegura.es»), lo que
+cierra la alerta que quedó abierta el día anterior: la captura de su panel enseñaba los alias en
+`grupoasegura.COM` y ningún `hola@`, así que se dio por posible que el correo publicado en producción
+como SAC y canal de derechos RGPD **no recibiera**. ⚠️ Es su confirmación, **no una prueba de entrega**:
+nadie ha mandado un correo a ese buzón desde aquí y comprobado que llega (y no se hará sin que él lo
+pida — regla de comunicaciones salientes del CLAUDE.md raíz). Si algún día rebota, el sitio a mirar es
+`MEDIADOR.identidad.email` y el `PORTAL_MAIL_REPLY_TO` del proyecto Vercel, que son el mismo buzón.
 🚨 **Cabo suelto conocido:** la web pública (repo `asegura`) sigue publicando `info@grupoasegura.es`
 en sus Términos, en su política de privacidad y en `/info-mediador`. **Dos canales de reclamación
 distintos para el mismo mediador es una contradicción entre documentos legales publicados**, no una

@@ -12,6 +12,7 @@ import Retencion from './Retencion'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
 import PartesPortal from './PartesPortal'
+import Supresiones from './Supresiones'
 import Bloque from './Bloque'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import ListaCartera from './ListaCartera'
@@ -131,6 +132,7 @@ export default function CorreduriaClient() {
   // Contadores que los bloques reportan hacia arriba. `undefined` = todavía no
   // ha contestado; `null` = contestó que no se puede saber. No es lo mismo.
   const [nPartes, setNPartes] = useState<number | null | undefined>(undefined)
+  const [nSupresiones, setNSupresiones] = useState<number | null | undefined>(undefined)
   const [nRetencion, setNRetencion] = useState<number | null | undefined>(undefined)
   const [nSinCanal, setNSinCanal] = useState<number | null | undefined>(undefined)
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
@@ -193,9 +195,9 @@ export default function CorreduriaClient() {
 
   const contadores: ContadoresSeccion = {
     hoy: {
-      contador: agregarContadores([nPartes, nRetencion, nRenovaciones]),
+      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones]),
       tono: 'malo',
-      title: 'Partes sin atender, recibos que reclamar y renovaciones dentro del plazo de preaviso',
+      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar y renovaciones dentro del plazo de preaviso',
     },
     clientes: {
       // Aquí el número NO es trabajo pendiente, es cuántos clientes cumplen el
@@ -263,6 +265,13 @@ export default function CorreduriaClient() {
             porque quien lo mandó cree que su compañía ya lo sabe, y hasta que
             se abra allí no lo sabe nadie. */}
         <PartesPortal onContador={setNPartes} />
+
+        {/* Las solicitudes de supresión (art. 17 RGPD) que abre el cliente en
+            el portal. Van aquí arriba porque llevan un reloj legal de UN MES
+            corriendo desde que la persona pulsó —no desde que se miran—, y
+            porque hasta que existió este bloque ese plazo se incumplía solo, sin
+            que nada fallara ni saliera en ninguna pantalla. */}
+        <Supresiones onContador={setNSupresiones} />
 
         {/* Recibos devueltos y vencidos sin cobrar, por urgencia real (art. 15
             LCS). Es la pantalla comercial: lo único de aquí que se hace con el
