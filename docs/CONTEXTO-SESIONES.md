@@ -30,6 +30,41 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎨 `asegura-web`: una sola atmósfera, no diez bloques (05/09/2026).** Alberto: «te estás liando,
+  hay que mezclar todas las ideas». Diagnóstico: los recursos ya estaban TODOS (aspecto de la landing
+  de Manuel, ventana viva, foco con contadores, escáner), pero apilados como diez bloques blancos del
+  mismo peso. Se funden con `.oscuro`: tokens de marca redefinidos en ámbito, inyectados por el layout
+  desde `emitirVariablesOscuras(MARCA_ASEGURA)` (paleta MEDIDA de su `.dark`) → todo componente que
+  entra en una sección oscura se re-tematiza solo, cero overrides y cero hex a mano; desaparecen los
+  tres `--hero-oscuro*` literales. `.claro` es el camino de vuelta para la hoja del escáner (es un
+  papel). Al medir salieron fallos que YA existían: cabecera `sticky` (barra blanca de 76 px sobre la
+  portada) → `fixed`; logo centrado pisando la nav; el botón «Área de clientes» **fuera de pantalla** a
+  1024-1200 (marca+6 enlaces+botón = 1.145 px en 1.104) → `NAV_CABECERA` solo con ramos; la override de
+  `.btn-sm` para móvil estaba ANTES de la regla base y no aplicaba nunca (una media query no añade
+  especificidad). Guardián nuevo `lib/oscuro.test.ts` (probado por mutación). PR #2381, commit
+  `976faac3e`. **Alberto lo vio y prefirió CLARO**: la web se queda clara y el oscuro solo en la banda
+  de cifras — que además es lo que hace la landing de la correduría en la que se mira. En claro la
+  ventana del hero se lee mejor y los chips en azul sólido destacan. **PR #2381 mergeado** (`f341b2e8`).
+
+- **📞 `asegura-web`: WhatsApp, y los textos legales que MENTÍAN sobre las cookies (05/09/2026).**
+  Móvil de Alberto (confirmado por él) a `MEDIADOR.identidad.telefono` en E.164, con `telefonoLegible()`
+  y `whatsappUrl()` derivados —`wa.me` con «+» abre el chat en blanco, fallo que no da error—: botón
+  flotante, `tel:` en el pie y `telephone` en el JSON-LD. CTA «Crear mi área con mi correo»: verificado
+  en el código del portal que hoy entra CUALQUIERA con un correo, sin ser cliente, y puede subir pólizas.
+  🚨 **Auditoría legal:** privacidad y aviso legal decían «no hay analítica ni cookies de terceros, y por
+  eso no se te pide consentimiento» mientras el layout carga Cookiebot y PostHog — información falsa al
+  interesado (arts. 12-13 RGPD, 22.2 LSSI), no un texto viejo. Corregidos, con las bases jurídicas que
+  faltaban (medición 6.1.a, IP antiabuso 6.1.f) y los encargados nombrados; `VERSION_TEXTOS_WEB` → `w2`.
+  **Lección: subir la versión NO es revisar el texto** — `w1` la subió y dejó el texto mintiendo.
+  `/legal/cookies` era huérfana (solo desde Google) y tenía el único botón de retirar consentimiento
+  (art. 7.3 RGPD): ya está en el pie. Capa 1 del art. 13 completa en el formulario. Dos fallos MÍOS del
+  mismo día: `<main>` dentro de `<main>` en 4 páginas y la dirección del JSON-LD duplicando la de
+  `MEDIADOR` (guardián `lib/seo-nap.test.ts`). PR #2381.
+  **PENDIENTE y es lo más urgente:** `/api/acceso/solicitar` de `asegura-portal` **no tiene rate limit
+  ni valida que el destino sea un email** (`z.string().min(3)`), y la web pública ya enlaza ahí: es un
+  amplificador de correo con el dominio de Alberto. También pendiente: sign-off de abogado y si un
+  corredor persona física está obligado a DPO (art. 34 LOPDGDD).
+
 - **🖼 La tarjeta impresa estaba PARTIDA EN DOS, y lo que la protegía era una deny-list (05/09/2026).**
   Segunda pasada del agente de diseño antes de mergear, a petición de Alberto. El bloque del QR se
   pintaba como HERMANO del masthead y `.hoja-qr` se coloca con `grid-area: qr` — regla que solo
@@ -76,6 +111,12 @@
   el desempate. No da acceso a nada y el enlace **no lleva token**. Ocho desenlaces sin colapsar.
   ⏸️ **Pendiente de Alberto:** sin `ASEGURA_MAIL_FROM` + proveedor de correo en `central-asegura` el botón
   contesta `error_envio` — y le pasa igual a la invitación de autorizaciones mergeada esta mañana.
+  🚨 **Seguimiento:** el arreglo responsive del titular se quedó SIN COMMITEAR y el PR mergeó la
+  versión con `<Badge>`, que lleva `whiteSpace:'nowrap'`: el rótulo de `ya_entra` arrastra la fecha
+  entera («… última vez el 3 de septiembre de 2026») y desbordaba la pantalla a 320px. Va como
+  `<span>` coloreado por token (`COLOR_PORTAL`, cero hex) y con `overflowWrap:'anywhere'`.
+  Lección: un cambio de un agente **no está hecho hasta que está en un commit** — su informe decía
+  «span, cero hex» y lo mergeado era el `Badge`. Comprobar el árbol antes de dar el PR por cerrado.
 
 - **📵 El CUARTO sitio donde vive un contacto, y la pestaña Contactos apretada (05/09/2026).** PR #2391
   (mergeado, `9d822946`) + PR nuevo. Alberto, mirando la pantalla: «grupo elca ya tiene a pablo y aun

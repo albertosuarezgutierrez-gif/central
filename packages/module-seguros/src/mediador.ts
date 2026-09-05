@@ -67,8 +67,22 @@ export const FECHA_TEXTOS_LEGALES = '2026-09-05'
  * Arranca en `w1`, que es la revisión que introdujo la medición de visitas. Lo
  * que la web publicó ANTES de esta separación salió bajo `2026-09-v4`: la `w`
  * evita que las dos series se confundan al leer un pie de página antiguo.
+ *
+ * 🚨 `w2` (05/09/2026) corrige un fallo GRAVE de `w1`: se subió la versión
+ * al añadir la medición, pero los textos **no se reescribieron**. La política
+ * de privacidad y el aviso legal seguían diciendo «no hay analítica ni cookies
+ * de terceros, y por eso no se te pide consentimiento» mientras el layout
+ * cargaba Cookiebot y PostHog. Eso no es un texto viejo: es información falsa
+ * al interesado (arts. 12-13 RGPD y 22.2 LSSI) y, ante una inspección, prueba
+ * documental en contra. En `w2` los apartados de cookies dicen lo que el
+ * código hace, aparecen la base jurídica del consentimiento y la del control
+ * antiabuso por IP, y Cookiebot y PostHog se nombran como encargados.
+ *
+ * Lección, porque volverá a pasar: **subir la versión no es revisar el texto.**
+ * La constante solo acredita QUÉ estaba publicado; que lo publicado sea cierto
+ * hay que comprobarlo leyendo la página contra el código.
  */
-export const VERSION_TEXTOS_WEB = '2026-09-w1'
+export const VERSION_TEXTOS_WEB = '2026-09-w2'
 
 /** Fecha de la última revisión de fondo de los textos de la web pública. */
 export const FECHA_TEXTOS_WEB = '2026-09-05'
@@ -97,6 +111,21 @@ export const MEDIADOR = {
      * unificarlo allí también, y ese cambio toca textos con `LegalVersionGate`.
      */
     email: 'hola@grupoasegura.es',
+    /**
+     * Móvil de Alberto, confirmado por él el 05/09/2026 para publicarlo en la
+     * web y usarlo como WhatsApp de contacto.
+     *
+     * 🚨 En E.164 y SIN espacios a propósito: es el formato que exige `wa.me/`
+     * y el que Google espera en `telephone` del JSON-LD. Para PINTARLO usa
+     * `telefonoLegible`, no este: un `+34637349990` de corrido en una web se
+     * lee mal y se copia peor.
+     *
+     * ⚠️ Es su número PERSONAL, no una línea de empresa. Publicarlo es
+     * irreversible: los rastreadores lo copian en horas. Si algún día hay una
+     * línea de la correduría (o la WABA que el portal espera para su canal de
+     * WhatsApp), se sustituye AQUÍ y cambia en todas las superficies a la vez.
+     */
+    telefono: '+34637349990',
   },
   /** Seguro de responsabilidad civil profesional, art. 156.3 Ley 16/2018. */
   responsabilidadCivil: {
@@ -226,4 +255,34 @@ export function remitenteCorreo(env: string | undefined | null): string | null {
   // Una dirección sin arroba no es una dirección: no se disfraza con la marca.
   if (!direccion || !direccion.includes('@') || /\s/.test(direccion)) return null
   return `${MEDIADOR.marca} <${direccion}>`
+}
+
+/**
+ * El teléfono, escrito como se lee: `+34 637 34 99 90`.
+ *
+ * Existe como función y no como una segunda constante para que **no puedan
+ * divergir**: dos cadenas con el mismo número escritas a mano acaban siendo
+ * dos números distintos el día que uno se corrige y el otro no, y en un
+ * teléfono de contacto eso significa llamadas que no llegan.
+ *
+ * Solo entiende el formato español (`+34` + 9 dígitos), que es el único que
+ * hay. Con cualquier otro devuelve el número tal cual, sin inventarse una
+ * agrupación que en ese país podría no significar nada.
+ */
+export function telefonoLegible(): string {
+  const t = MEDIADOR.identidad.telefono
+  const m = /^\+34(\d{3})(\d{2})(\d{2})(\d{2})$/.exec(t)
+  return m ? `+34 ${m[1]} ${m[2]} ${m[3]} ${m[4]}` : t
+}
+
+/**
+ * Enlace de WhatsApp al mediador, con el primer mensaje ya escrito.
+ *
+ * `wa.me` quiere el número **sin `+` y sin espacios**; con el `+` delante
+ * abre la app pero deja el chat en blanco, que es un fallo que no da error y
+ * solo se ve probándolo en un móvil de verdad.
+ */
+export function whatsappUrl(texto: string): string {
+  const numero = MEDIADOR.identidad.telefono.replace(/\D/g, '')
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`
 }

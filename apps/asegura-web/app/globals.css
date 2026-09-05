@@ -1,0 +1,1766 @@
+/*
+ * Sistema visual del sitio público de Grupo ASegura.
+ *
+ * 🚨 De dónde sale, porque importa: es una REPRODUCCIÓN, medida del código
+ * fuente, de la landing que hizo Manuel en `app.grupoasegura.com` (repo
+ * `albertosuarezgutierrez-gif/asegura`, `src/components/landing/landing-page.tsx`
+ * y `src/app/globals.css`). Decisión de Alberto, 05/09/2026: «la de asegura de
+ * Manuel es la mejor, cópiala». Lo que se copia es el ASPECTO —escala,
+ * tipografía, radios, sombras, atmósfera, movimiento—, no su contenido: allí la
+ * web vende un CRM a corredores («Únete gratis», «Cotizador», «Acceso
+ * correduría») y aquí se venden seguros a personas.
+ *
+ * Aquella app es Tailwind v4; esta no usa Tailwind. Así que sus clases se han
+ * resuelto a valores concretos. Cuando un número parezca raro (2.55rem, 4.2rem,
+ * 2.2× de radio), es que ES el suyo.
+ *
+ * Los COLORES no se escriben aquí: salen de los tokens que inyecta
+ * `@central/brand` (`MARCA_ASEGURA`), que a su vez se midieron de ese mismo
+ * fuente. La única excepción está marcada abajo con su porqué.
+ */
+
+:root {
+  /* Escala de espaciado. */
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 12px;
+  --e4: 16px;
+  --e5: 24px;
+  --e6: 32px;
+  --e7: 48px;
+  --e8: 72px;
+
+  /* Radios. Su escala NO es la de Tailwind por defecto: multiplica el `--radius`
+     de 1rem por 0.6 / 0.8 / 1 / 1.4 / 1.8 / 2.2. Por eso sus tarjetas grandes
+     tienen 35 px de radio y parecen «blandas». */
+  --r-sm: 9.6px;
+  --r-md: 12.8px;
+  --r-lg: 16px;
+  --r-xl: 22.4px;
+  --r-2xl: 28.8px;
+  --r-3xl: 35.2px;
+  --pill: 9999px;
+
+  /* Su contenedor es max-w-6xl = 72rem. */
+  --ancho: 1152px;
+
+  /* Su curva única para todo el movimiento (= --ease-out-quint). */
+  --curva: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Serif display. NO sale de `@central/brand` a propósito (ver la nota de
+     `.display` más abajo): es una decisión de ESTA superficie de marketing,
+     igual que en su app, donde Fraunces solo vive en la landing. */
+  --display: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+
+  /* 📌 Aquí ya NO hay ningún color literal. Lo que antes eran tres variables
+     sueltas (`--hero-oscuro*`, copiadas a mano de la banda de su landing) es
+     ahora la clase `.oscuro`, y sus valores salen de la paleta oscura MEDIDA
+     de la marca — `MARCA_ASEGURA.paletaOscura`, leída del bloque `.dark` de
+     su app. Ver el bloque «Atmósfera» más abajo. */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  /* Sus alternativas de Inter, literales. */
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--brand) 50%, transparent);
+  outline-offset: 2px;
+  border-radius: var(--e1);
+}
+
+/* ── Tipografía ─────────────────────────────────────────────────────────────
+   🚨 Lo que de verdad separa su web de un documento: los titulares NO van en la
+   fuente del cuerpo. Van en **Fraunces**, una serif variable, a peso 500 y con
+   `letter-spacing: -0.025em`. El cuerpo sigue en Inter.
+
+   Fraunces se carga SOLO en esta app y no se sube a `@central/brand` a
+   propósito: allí está documentado que el portal del cliente la descarta
+   —su titular más grande es un h1 de 20 px, tamaño al que una serif no aporta
+   carácter y sí un segundo webfont en el móvil de quien viene de un correo—.
+   Aquí los titulares llegan a 67 px, que es justo donde esa letra existe. */
+.display {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  text-wrap: balance;
+  margin: 0;
+}
+
+/* Su recurso de acento, y es la firma de la marca: una parte del titular en
+   itálica y en el cobalto. Sin esto el titular es solo texto grande. */
+.destaca {
+  font-style: italic;
+  color: var(--brand);
+}
+
+h1.display {
+  font-size: 2.55rem;
+  line-height: 1.05;
+}
+
+h2.display {
+  font-size: 2rem;
+}
+
+@media (min-width: 640px) {
+  h1.display {
+    font-size: 3.75rem;
+  }
+  h2.display {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  h1.display {
+    font-size: 4.2rem;
+  }
+  h2.display {
+    font-size: 3rem;
+  }
+}
+
+/* Los títulos pequeños (tarjetas, pasos) NO son serif en su web: son Inter a
+   peso 800 con tracking apretado. Mezclarlo al revés es lo que hace que una
+   copia «se parezca pero no». */
+h3 {
+  margin: 0 0 var(--e2);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+p {
+  margin: 0 0 var(--e4);
+}
+
+a {
+  color: var(--brand);
+  text-underline-offset: 3px;
+}
+
+.lead {
+  font-size: 1.125rem;
+  line-height: 1.625;
+  color: var(--muted);
+  max-width: 32rem;
+}
+
+.tenue {
+  color: var(--muted);
+}
+
+/* Su «eyebrow»: mayúsculas pequeñas muy espaciadas sobre el titular. */
+.antetitulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  margin: 0 0 var(--e2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Contenedor ─────────────────────────────────────────────────────────── */
+.wrap {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 0 var(--e5);
+}
+
+@media (max-width: 400px) {
+  .wrap {
+    padding: 0 var(--e4);
+  }
+}
+
+/* Contenedor de las páginas interiores. La home no lo usa: sus secciones son
+   bandas a todo ancho y cada una monta su propio `.wrap` dentro. */
+.pagina {
+  /* 76 px de cabecera flotante + el aire de siempre. */
+  padding-top: calc(4.75rem + var(--e7));
+  padding-bottom: var(--e8);
+}
+
+/* ── Cabecera ───────────────────────────────────────────────────────────────
+   Su gesto característico: arriba del todo es transparente y de 76 px; en
+   cuanto se baja de 24 px se encoge a 56 px y se convierte en una PÍLDORA
+   flotante con borde, sombra y desenfoque. La clase la pone `Cabecera.tsx`. */
+/* `fixed` y no `sticky`, y es una decisión de la atmósfera, no de gusto: con
+   `sticky` la cabecera ocupa su propia franja EN EL FLUJO, encima de la
+   portada. Sobre un fondo claro no se nota; sobre la portada oscura se veía
+   una barra blanca de 76 px cortando la página por arriba. Flotando, la
+   portada empieza en el píxel 0 y la cabecera va transparente encima, que es
+   lo que hace su landing.
+
+   Lo que esto obliga: el resto de páginas tienen que reservar ese hueco a mano
+   (`.pagina`), y la portada llevar más aire arriba. Está abajo. */
+.hdr {
+  position: fixed;
+  top: 0;
+  inset-inline: 0;
+  z-index: 50;
+}
+
+.hdr-caja {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  height: 4.75rem;
+  padding: 0 var(--e1);
+  transition: margin 0.3s, height 0.3s, border-radius 0.3s, background-color 0.3s, box-shadow 0.3s,
+    backdrop-filter 0.3s, padding 0.3s;
+  border: 1px solid transparent;
+}
+
+.hdr.bajado .hdr-caja {
+  height: 3.5rem;
+  margin: var(--e3) 0;
+  padding: 0 var(--e4);
+  border-radius: var(--pill);
+  border-color: var(--border);
+  background: color-mix(in oklab, var(--panel) 80%, transparent);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(24px);
+}
+
+/* 📌 Su logo va centrado en absoluto. Aquí NO, y es una divergencia medida:
+   su nav tiene tres anclas cortas y esta cinco páginas de ramo («Comercio y
+   empresa», «Cambiar de correduría»…). A 1280 px la nav llegaba hasta el
+   centro y el logo se pintaba ENCIMA, literalmente ilegible. Marca a la
+   izquierda, nav centrada en el hueco que queda. */
+.hdr-marca {
+  /* Primera en la fila aunque en el DOM venga después de la nav: el orden del
+     JSX se conserva por accesibilidad (la nav es lo primero que anuncia un
+     lector) y el orden visual lo pone aquí. */
+  order: -1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-decoration: none;
+  transition: transform 0.2s;
+  white-space: nowrap;
+}
+
+.hdr-marca:hover {
+  transform: scale(1.04);
+}
+
+.marca-tile {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  background: var(--brand-soft);
+  flex: none;
+}
+
+/* El monograma «AS» se pinta con `mask` y no con `<img>`: el SVG viene con
+   `fill="currentColor"` y dentro de un `<img>` eso resuelve a negro. */
+.marca-mono {
+  width: 19px;
+  height: 13px;
+  background: var(--brand);
+  -webkit-mask: url('/brand/marca-asegura.svg') center / contain no-repeat;
+  mask: url('/brand/marca-asegura.svg') center / contain no-repeat;
+}
+
+.hdr-nav {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  margin: 0 auto;
+  font-size: 0.875rem;
+}
+
+/* 1120 y no 1024: MEDIDO. A 1024 la marca, los seis enlaces y el botón suman
+   más que el contenedor y el botón se salía por la derecha de la pantalla. */
+@media (min-width: 1024px) {
+  .hdr-nav {
+    display: flex;
+  }
+}
+
+/* Su enlace de nav: sin fondo, con un subrayado de 2px que crece desde la
+   izquierda al pasar por encima. */
+.hdr-nav a {
+  position: relative;
+  padding: var(--e2) 10px;
+  border-radius: var(--pill);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.hdr-nav a:hover {
+  color: var(--text);
+}
+
+.hdr-nav a::after {
+  content: '';
+  position: absolute;
+  left: var(--e3);
+  right: var(--e3);
+  bottom: -1px;
+  height: 2px;
+  border-radius: var(--pill);
+  background: var(--brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s;
+}
+
+.hdr-nav a:hover::after {
+  transform: scaleX(1);
+}
+
+.hdr-dcha {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+}
+
+/* En móvil el logo centrado se pisaría con el botón, así que ahí va a la
+   izquierda y el botón a la derecha. Medido, no supuesto.
+
+   Y las medidas de abajo tampoco son de gusto: a 360 px la marca completa más
+   el botón sumaban 363 px y la página desbordaba 3. Se recortan el cuerpo de
+   la marca y el padding del botón hasta que cabe, en vez de esconder el botón
+   (que es lo que el cliente viene a pulsar) o de tapar el desbordamiento con
+   un `overflow:hidden`, que lo oculta sin arreglarlo. */
+@media (max-width: 559px) {
+  .hdr-marca {
+    position: static;
+    transform: none;
+    margin-right: auto;
+    font-size: 0.875rem;
+    gap: 5px;
+  }
+  .hdr-marca:hover {
+    transform: scale(1.04);
+  }
+  .marca-tile {
+    width: 24px;
+    height: 24px;
+  }
+  .marca-mono {
+    width: 15px;
+    height: 10px;
+  }
+  .hdr-caja {
+    gap: var(--e2);
+    padding: 0;
+  }
+}
+
+/* Arriba del todo la cabecera es transparente, así que sobre una portada
+   oscura escribiría en gris sobre casi negro. Se re-tematiza igual que las
+   secciones: cambiando los TOKENS en su ámbito, no el color de cada enlace —
+   así el día que la cabecera crezca (un menú, un segundo botón) el contraste
+   ya está resuelto.
+
+   El `:has()` es lo que evita una clase que Cabecera.tsx tendría que saber
+   poner: la cabecera vive en el layout y no sabe qué portada hay debajo. En
+   las páginas de ramo no hay `.hero.oscuro` y la regla no aplica sola. */
+body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-caja,
+body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
+  --text: oklch(0.97 0 0);
+  --muted: oklch(0.76 0 0);
+  --border: oklch(1 0 0 / 0.16);
+}
+
+/* Barra de progreso de lectura, como la suya. */
+.progreso {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 55;
+  height: 2px;
+  transform-origin: left;
+  background: color-mix(in oklab, var(--brand) 80%, transparent);
+}
+
+/* ── Botones ────────────────────────────────────────────────────────────────
+   Los suyos son PÍLDORAS de 48 px, peso 500 (no 700), sin sombra, y se hunden
+   un 4 % al pulsar. El peso ligero es parte del acabado: un botón en negrita
+   dentro de esta tipografía se ve tosco. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e2);
+  height: 48px;
+  padding: 0 var(--e6);
+  border: 1px solid transparent;
+  border-radius: var(--pill);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, scale 0.15s;
+}
+
+.btn:active {
+  scale: 0.96;
+}
+
+.btn-brand {
+  background: var(--brand);
+  color: #fff;
+}
+
+.btn-brand:hover {
+  background: color-mix(in oklab, var(--brand) 80%, transparent);
+}
+
+.btn-outline {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.btn-outline:hover {
+  background: var(--bg2);
+}
+
+.btn-fantasma {
+  background: transparent;
+  color: var(--text);
+}
+
+.btn-fantasma:hover {
+  background: var(--surface-hover);
+}
+
+/* Los de la cabecera son bajos en escritorio pero conservan 44 px de área
+   táctil en móvil, igual que hace él. */
+.btn-sm {
+  height: 44px;
+  padding: 0 var(--e4);
+  font-size: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .btn-sm {
+    height: 36px;
+  }
+}
+
+/* 🚨 Va DESPUÉS de `.btn-sm` a propósito, y no dentro del bloque de la
+   cabecera de más arriba: una media query no añade especificidad, así que una
+   override colocada antes de la regla base no gana nunca. Ahí estuvo semanas
+   sin aplicar. Medido a 320 px: la marca (156 px) y este botón (147 px) suman
+   303 dentro de una caja de 288, y lo que se salía de la pantalla era el
+   botón. Con esto bajan a 275. */
+/* En pantallas estrechas un botón de altura fija con `nowrap` implícito no
+   envuelve: se sale. Medido a 320 px con «Crear mi área con mi correo» — 313 px
+   dentro de un contenedor de 288, y con él se iba la página entera. Aquí el
+   botón pasa a poder ocupar dos líneas conservando los 48 px de área táctil.
+   `:not(.btn-sm)` deja fuera el de la cabecera, que tiene su propia medida. */
+@media (max-width: 559px) {
+  .btn:not(.btn-sm) {
+    max-width: 100%;
+    height: auto;
+    min-height: 48px;
+    padding: 12px var(--e4);
+    text-align: center;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 559px) {
+  .btn-sm {
+    height: 40px;
+    padding: 0 10px;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Su CTA principal lleva un barrido de brillo al pasar por encima. Es el
+   detalle que hace que el botón parezca de una web cuidada y no de un
+   formulario. */
+.btn-brillo {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-brillo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.25), transparent);
+  transition: transform 0.7s ease-out;
+  pointer-events: none;
+}
+
+.btn-brillo:hover::before {
+  transform: translateX(100%);
+}
+
+/* ── Distintivo del hero ────────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: 6px 14px;
+  border-radius: var(--pill);
+  border: 1px solid color-mix(in oklab, var(--brand) 20%, transparent);
+  background: color-mix(in oklab, var(--brand) 6%, transparent);
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chip-punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex: none;
+}
+
+/* ── Portada ────────────────────────────────────────────────────────────────
+   Su «atmósfera»: un degradado vertical del color de marca al 7 % y dos
+   manchas circulares muy desenfocadas. Es lo que evita que el blanco se vea
+   plano. Aquí van con `position:absolute` dentro de un contenedor con
+   `overflow:hidden`, para no arrastrar la página a lo ancho. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  /* Arriba: los 76 px de la cabecera flotante + aire. Sin esto el titular
+     queda debajo de la nav. */
+  padding: calc(4.75rem + var(--e7)) 0 var(--e8);
+}
+
+.hero-atmosfera {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 42rem;
+  z-index: -2;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--brand) 7%, transparent),
+    color-mix(in oklab, var(--brand) 2%, transparent),
+    transparent
+  );
+}
+
+.hero-mancha {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-mancha.a {
+  top: -10rem;
+  right: -8%;
+  width: 44rem;
+  height: 44rem;
+  background: color-mix(in oklab, var(--brand) 12%, transparent);
+  filter: blur(160px);
+}
+
+.hero-mancha.b {
+  bottom: -13rem;
+  left: -12%;
+  width: 34rem;
+  height: 34rem;
+  background: color-mix(in oklab, var(--brand) 8%, transparent);
+  filter: blur(150px);
+}
+
+/* 📌 Hoy la portada es CLARA y estas tres reglas no aplican. Se quedan porque
+   son la parte no obvia de probar la portada en oscuro: sobre blanco una
+   mancha de marca al 12 % ya se nota, y sobre casi negro no —hay que subirla o
+   el fondo se ve plano, que es justo lo que estas manchas vienen a evitar—. */
+.hero.oscuro .hero-atmosfera {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--brand) 16%, transparent),
+    color-mix(in oklab, var(--brand) 5%, transparent),
+    transparent
+  );
+}
+
+.hero.oscuro .hero-mancha.a {
+  background: color-mix(in oklab, var(--brand) 26%, transparent);
+}
+
+.hero.oscuro .hero-mancha.b {
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
+}
+
+.hero h1 {
+  margin-top: var(--e5);
+}
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e3);
+  margin-top: var(--e6);
+}
+
+/* Su lista de tres garantías bajo los botones, con palomitas. */
+.garantias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2) var(--e5);
+  margin: var(--e6) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.garantias li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.garantias svg {
+  color: var(--brand);
+  flex: none;
+}
+
+/* ── Secciones ──────────────────────────────────────────────────────────── */
+.seccion {
+  padding: var(--e8) 0;
+}
+
+@media (min-width: 1024px) {
+  .seccion {
+    padding: 96px 0;
+  }
+}
+
+/* Su recurso para cambiar de ritmo: bandas a todo ancho con otro fondo. El
+   ancho completo se consigue sacando la sección del contenedor, no con `100vw`
+   (que cuenta la barra de scroll y desborda). */
+.banda {
+  background: var(--panel);
+}
+
+.banda-acento {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+/* ── Contraste oscuro ───────────────────────────────────────────────────────
+   La web es CLARA (Alberto, 05/09/2026), como la landing de la correduría en
+   la que se mira: clara casi entera, con UNA banda oscura que corta el ritmo.
+   Aquí esa banda es la de cifras, y esta clase es lo que la pinta.
+
+   ⚠️ La tentación es repartir el oscuro por media página para «dar impacto».
+   Se probó ese mismo día —portada, marquesina, escáner y cierre en oscuro— y
+   el resultado invierte el efecto: cuando casi todo es oscuro, la banda deja
+   de cortar nada. El contraste vale porque es el único.
+
+   🔑 Cómo funciona, y por qué no hay ni un override por componente: `.oscuro`
+   redefine los TOKENS (`--bg`, `--panel`, `--border`, `--text`, `--muted`,
+   `--brand`…) en su propio ámbito. Como todo lo de esta hoja se pinta con esos
+   tokens y no con hex, cualquier componente que entre ahí —la ventana de
+   ejemplo, los chips, un formulario— se re-tematiza SOLO. Mover el contraste
+   de sitio es mover una clase, no reescribir colores.
+
+   🚨 Los valores NO se escriben en este fichero: los inyecta `layout.tsx` con
+   `emitirVariablesOscuras(MARCA_ASEGURA)`, que es la paleta oscura medida del
+   bloque `.dark` de la app de la correduría. Poner aquí un `#111` a ojo es
+   justo lo que se acaba de quitar. */
+.oscuro {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* El azul de marca de día se apaga sobre casi negro; el de noche (más claro)
+   ya viene en los tokens que inyecta el layout, así que la itálica del titular
+   no necesita ningún color propio aquí. */
+
+.centrado {
+  max-width: 42rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.seccion-tit {
+  margin-bottom: var(--e7);
+}
+
+.seccion-tit .lead {
+  margin: var(--e4) 0 0;
+}
+
+.centrado .lead {
+  margin-inline: auto;
+}
+
+/* ── Reveal al entrar en pantalla ───────────────────────────────────────────
+   Su fade-up incluye un DESENFOQUE de 8 px que se va a 0. Es lo que hace que
+   la aparición se lea «editorial» y no «página que carga a trompicones». */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  filter: blur(8px);
+  transition: opacity 0.7s var(--curva), transform 0.7s var(--curva), filter 0.7s var(--curva);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* ── Rejilla de tarjetas ────────────────────────────────────────────────────
+   `minmax(0, …)` no es decorativo: sin él una pista implícita se dimensiona
+   con su contenido más ancho y arrastra la página entera. */
+.rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e4);
+}
+
+@media (min-width: 640px) {
+  .rejilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .rejilla {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.dos-columnas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e7);
+  align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .dos-columnas {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 64px;
+  }
+}
+
+.tarjeta {
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  padding: var(--e5);
+  text-decoration: none;
+  color: var(--text);
+  transition: transform 0.3s var(--curva), box-shadow 0.3s, border-color 0.3s, background-color 0.3s;
+}
+
+/* Su hover de tarjeta no es una sombra que crece: es una ESCALA. */
+a.tarjeta:hover {
+  transform: scale(1.03);
+  border-color: color-mix(in oklab, var(--brand) 40%, transparent);
+  box-shadow: var(--shadow-panel);
+}
+
+.tarjeta-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: var(--e4);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--brand) 10%, transparent);
+  color: var(--brand);
+}
+
+.tarjeta p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.tarjeta-mas {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--e3);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+a.tarjeta:hover .tarjeta-mas svg {
+  transform: translateX(4px);
+}
+
+.tarjeta-mas svg {
+  transition: transform 0.3s;
+}
+
+/* ── Pasos ──────────────────────────────────────────────────────────────── */
+.pasos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e4);
+  counter-reset: paso;
+}
+
+@media (min-width: 900px) {
+  .pasos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Sus tarjetas de paso son altas (4/5) y con 35 px de radio. */
+.paso {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--e6);
+  border-radius: var(--r-3xl);
+  background: var(--bg2);
+  counter-increment: paso;
+  transition: background-color 0.3s, transform 0.4s var(--curva);
+}
+
+@media (min-width: 900px) {
+  /* Su tarjeta es de 22rem y empuja el párrafo al fondo. Con TRES pasos de
+     texto corto ese gesto dejaba un agujero muerto de más de 150 px en medio
+     de la tarjeta: el mismo recurso, con menos texto, se lee como un fallo de
+     maquetación. 18rem conserva la proporción alta y quita el agujero. */
+  .paso {
+    min-height: 18rem;
+  }
+  .paso:hover {
+    transform: scale(1.04);
+  }
+}
+
+.paso:hover {
+  background: var(--brand-soft);
+}
+
+.paso::before {
+  content: counter(paso);
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--brand);
+  margin-bottom: var(--e4);
+}
+
+.paso h3 {
+  max-width: 13rem;
+}
+
+.paso p {
+  margin: auto 0 0;
+  padding-top: var(--e4);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* ── Credencial del corredor ────────────────────────────────────────────── */
+.credencial {
+  position: relative;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3xl);
+  padding: var(--e6);
+  box-shadow: var(--shadow-panel);
+}
+
+.credencial-halo {
+  position: absolute;
+  top: -5rem;
+  right: -5rem;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--brand) 10%, transparent);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+/* Su monograma va sobre un degradado del primario a su tinta oscura. */
+.credencial-mono {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(135deg, var(--brand), var(--brand-ink));
+  color: #fff;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.credencial-cita {
+  position: relative;
+  margin: var(--e5) 0 0;
+  padding-left: var(--e4);
+  border-left: 2px solid color-mix(in oklab, var(--brand) 30%, transparent);
+}
+
+.credencial-cita blockquote {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  line-height: 1.5;
+}
+
+.credencial-dgsfp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--e4);
+  padding: 4px 10px;
+  border-radius: var(--pill);
+  background: color-mix(in oklab, var(--brand) 10%, transparent);
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ── Banda oscura con cifras ────────────────────────────────────────────── */
+/* Se monta SIEMPRE junto a `.oscuro` (ver `Cifras.tsx`): esta clase ya solo
+   aporta el foco y las manchas, no el color. */
+.banda-oscura {
+  position: relative;
+  overflow: hidden;
+}
+
+.banda-oscura-mancha {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(150px);
+}
+
+.banda-oscura-mancha.a {
+  top: -6rem;
+  right: -6rem;
+  width: 32rem;
+  height: 32rem;
+  background: color-mix(in oklab, var(--brand) 20%, transparent);
+}
+
+.banda-oscura-mancha.b {
+  bottom: -8rem;
+  left: -6rem;
+  width: 28rem;
+  height: 28rem;
+  background: color-mix(in oklab, var(--brand) 12%, transparent);
+}
+
+.cifras {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--e7) var(--e5);
+  margin-top: var(--e7);
+  padding-top: var(--e7);
+  border-top: 1px solid var(--border);
+}
+
+@media (min-width: 768px) {
+  .cifras {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.cifra strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 3rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+@media (min-width: 1024px) {
+  .cifra strong {
+    font-size: 3.75rem;
+  }
+}
+
+.cifra span {
+  display: block;
+  margin-top: var(--e3);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* ── Preguntas ──────────────────────────────────────────────────────────── */
+.faq {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--panel);
+}
+
+.faq details {
+  border-bottom: 1px solid var(--border);
+}
+
+.faq details:last-child {
+  border-bottom: 0;
+}
+
+.faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e4);
+  padding: var(--e5);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color 0.2s;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary:hover {
+  background: var(--surface-hover);
+}
+
+.faq summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 0.3s;
+}
+
+.faq details[open] summary::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+.faq details > p {
+  margin: 0;
+  padding: 0 var(--e5) var(--e5);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* ── Panel (formulario) ─────────────────────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  padding: clamp(20px, 4vw, 36px);
+  box-shadow: var(--shadow-panel);
+}
+
+/* ── Formulario ─────────────────────────────────────────────────────────── */
+.f-lab {
+  display: block;
+  margin-bottom: var(--e2);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.f-in {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--e3) var(--e4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px; /* < 16px hace que iOS haga zoom al enfocar. */
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+textarea.f-in {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.f-in:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent);
+}
+
+/* ── Pie ────────────────────────────────────────────────────────────────── */
+.pie {
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.pie-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e6);
+  padding: var(--e8) 0 var(--e5);
+}
+
+@media (min-width: 640px) {
+  .pie-cols {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.pie h4 {
+  margin: 0 0 var(--e3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pie-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.875rem;
+}
+
+.pie-lista a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.pie-lista a:hover {
+  color: var(--brand);
+}
+
+.pie-legal {
+  padding: var(--e5) 0 var(--e6);
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* Quien prefiera menos movimiento no ve ninguno. Su web hace lo mismo. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  a.tarjeta:hover,
+  .paso:hover {
+    transform: none;
+  }
+}
+
+/* ══ Piezas interactivas ══════════════════════════════════════════════════
+   Lo que separa su landing de una página bonita: se puede TOCAR. Aquí van los
+   estilos de las tres piezas que lo dan — el panel jugable, la marquesina de
+   compañías y la banda oscura con foco y contadores. */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  margin-bottom: var(--e4);
+}
+
+.chip-sel {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: var(--panel);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.chip-sel:hover {
+  border-color: color-mix(in oklab, var(--brand) 40%, transparent);
+  background: color-mix(in oklab, var(--brand) 4%, transparent);
+}
+
+.chip-sel.on {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+  box-shadow: var(--shadow-panel);
+}
+
+/* Ventana de ejemplo, con inclinación 3D. La transición es lo que convierte el
+   giro en algo suave: el ángulo lo pone el ratón, la suavidad esto. */
+.mock {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--panel);
+  box-shadow: var(--shadow-panel);
+  transition: transform 0.25s var(--curva), box-shadow 0.25s;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.mock:hover {
+  box-shadow: var(--shadow-float);
+}
+
+.mock-barra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--e3) var(--e4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.mock-punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  opacity: 0.45;
+  flex: none;
+}
+
+.mock-url {
+  margin-left: var(--e2);
+  padding: 3px 10px;
+  border-radius: var(--e2);
+  background: var(--panel);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 🚨 Que se lea SIEMPRE: lo de dentro de la ventana es inventado. */
+.mock-ejemplo {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: var(--pill);
+  background: color-mix(in oklab, var(--warn) 16%, transparent);
+  color: var(--warn);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex: none;
+}
+
+.mock-cuerpo {
+  padding: var(--e4);
+}
+
+.mock-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--e2);
+  margin-bottom: var(--e4);
+}
+
+.mock-tile {
+  padding: var(--e3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+.mock-tile span {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.mock-tile strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mock-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.mock-lista li {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  padding: 10px var(--e3);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  animation: fila 0.3s var(--curva);
+}
+
+.mock-lista li:last-child {
+  border-bottom: 0;
+}
+
+@keyframes fila {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.mock-ramo {
+  font-weight: 700;
+}
+
+.mock-cia {
+  color: var(--muted);
+}
+
+.mock-vence {
+  margin-left: auto;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.mock-vacio {
+  margin: 0;
+  padding: var(--e5) 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Marquesina de compañías. Se desvanece por los lados en vez de cortarse. */
+.companias {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* La lista va DUPLICADA en el JSX; por eso el bucle acaba en -50 %: al llegar
+   ahí la segunda copia está donde estaba la primera y el salto no se ve. */
+.companias ul {
+  display: flex;
+  width: max-content;
+  gap: var(--e8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  animation: desfile 30s linear infinite;
+}
+
+.companias li {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--muted2);
+  white-space: nowrap;
+}
+
+@keyframes desfile {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Banda oscura: foco que sigue al puntero y titular palabra a palabra. */
+.foco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.banda-oscura .wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.palabras > span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  transition: opacity 0.6s var(--curva), transform 0.6s var(--curva);
+}
+
+.banda-oscura.visible .palabras > span {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companias ul {
+    animation: none;
+  }
+  .palabras > span {
+    opacity: 1;
+    transform: none;
+  }
+  .mock {
+    transform: none !important;
+  }
+}
+
+/* El hero pasa a dos columnas en escritorio: texto y panel jugable. Debajo de
+   1024 px el panel va bajo el texto, porque a esa anchura una ventana de
+   ejemplo comprimida no se lee. */
+@media (min-width: 1024px) {
+  .hero-cols {
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+    gap: 56px;
+    align-items: center;
+  }
+}
+
+/* Distintivo «En vivo» sobre la ventana, con el punto que late. La onda es de
+   `box-shadow` y no de `transform`, como la de ia.rest: así late sin empujar
+   nada de alrededor. 1,8 s, spread 0 → 7px, alfa .5 → 0, con el 70 % como
+   punto de llegada (el 30 % restante es pausa muerta, y es lo que hace que se
+   lea como un latido y no como un parpadeo). */
+.mock-marco {
+  position: relative;
+}
+
+.mock-vivo {
+  position: absolute;
+  top: -13px;
+  right: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: var(--panel);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.mock-latido {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: latido 1.8s infinite;
+}
+
+@keyframes latido {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--ok) 50%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Cierre del guion: aparece cuando la secuencia termina. */
+.mock-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  margin-top: var(--e4);
+  padding-top: var(--e3);
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.mock-pie.visible {
+  opacity: 1;
+}
+
+.mock-ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.mock-coste {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mock-latido {
+    animation: none;
+  }
+  .mock-pie {
+    opacity: 1;
+  }
+}
+
+/* ── «Sube tu póliza y la leemos» ───────────────────────────────────────────
+   La hoja, la línea que la barre y los campos que se rellenan detrás. Es el
+   equivalente en CSS a la Lottie `document-scan` de la landing de la
+   correduría, sin traerse el reproductor de Lottie (~60 KB de JS por una
+   ilustración). */
+.escaneo {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.escaneo-hoja {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 340px;
+  padding: var(--e5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-float);
+}
+
+.escaneo-cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding-bottom: var(--e4);
+  margin-bottom: var(--e4);
+  border-bottom: 1px solid var(--border);
+}
+
+.escaneo-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--e2);
+  background: var(--brand-soft);
+  flex: none;
+}
+
+.escaneo-titulo {
+  height: 9px;
+  width: 55%;
+  border-radius: var(--pill);
+  background: var(--bg2);
+}
+
+.escaneo-campo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  padding: 9px 0;
+  opacity: 0.28;
+  transition: opacity 0.45s var(--curva);
+}
+
+.escaneo.activo .escaneo-campo {
+  opacity: 1;
+}
+
+.escaneo-etiqueta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* El «valor» se dibuja creciendo de izquierda a derecha: es lo que hace que
+   parezca que se está rellenando y no que ya estaba. */
+.escaneo-valor {
+  height: 8px;
+  width: 92px;
+  border-radius: var(--pill);
+  background: var(--brand-soft);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--curva);
+}
+
+.escaneo.activo .escaneo-valor {
+  transform: scaleX(1);
+}
+
+/* La línea de barrido: baja una vez, no en bucle. Un escáner que no para
+   nunca es ruido en una portada. */
+.escaneo-linea {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--brand), transparent);
+  box-shadow: 0 0 18px 3px color-mix(in oklab, var(--brand) 35%, transparent);
+  opacity: 0;
+}
+
+.escaneo.activo .escaneo-linea {
+  animation: barrido 1.9s var(--curva) 1 forwards;
+}
+
+@keyframes barrido {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .escaneo-linea {
+    display: none;
+  }
+  .escaneo-campo,
+  .escaneo .escaneo-valor {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Botón de WhatsApp ──────────────────────────────────────────────────────
+   Flotante abajo a la derecha, que es donde la gente lo busca. Su color es el
+   de WhatsApp y no el de la marca A PROPÓSITO: aquí el verde no es decoración,
+   es lo que hace que se reconozca de un vistazo sin leer nada. Es el segundo
+   literal justificado de esta hoja, junto al blanco sobre el azul de marca.
+
+   `z-index` por debajo de la cabecera (50) para que al hacer scroll no se le
+   suba encima, y `env(safe-area-inset-*)` para no quedar bajo la barra de
+   gestos del iPhone. */
+.wsp {
+  position: fixed;
+  right: calc(var(--e5) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--e5) + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 6px 20px -4px rgb(37 211 102 / 0.5), 0 2px 6px rgb(0 0 0 / 0.18);
+  transition: transform 0.2s var(--curva), box-shadow 0.2s;
+}
+
+.wsp:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 26px -4px rgb(37 211 102 / 0.6), 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.wsp:active {
+  transform: scale(0.96);
+}
+
+/* En móvil, 56 px de botón sobre el borde tapan contenido; se acerca al borde
+   y se mantiene por encima de los 44 px de área táctil. */
+@media (max-width: 559px) {
+  .wsp {
+    right: calc(var(--e3) + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--e3) + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wsp {
+    transition: none;
+  }
+  .wsp:hover,
+  .wsp:active {
+    transform: none;
+  }
+}
+
+/* Matización de las cifras (la comisión la paga la aseguradora). Discreta,
+   pero legible: es información obligatoria, no una nota al pie decorativa. */
+.cifras-nota {
+  margin: var(--e5) 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted);
+}

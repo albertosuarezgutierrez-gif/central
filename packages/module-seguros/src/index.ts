@@ -419,6 +419,8 @@ export {
   FECHA_TEXTOS_WEB,
   lineaIdentificacion,
   remitenteCorreo,
+  telefonoLegible,
+  whatsappUrl,
   type CanalReclamacion,
   type IdCanalReclamacion,
   type PuntoPrecontractual,

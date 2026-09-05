@@ -7,8 +7,8 @@
 // `@central/module-seguros`, que es la que comparten el panel del corredor y el
 // portal del asegurado.
 import { MEDIADOR } from '@central/module-seguros'
-import { AMBITO, HORARIO, SITIO_URL, url } from './sitio'
-import type { Ramo } from './ramos'
+import { AMBITO, HORARIO, SITIO_URL, url } from './sitio.ts'
+import type { Ramo } from './ramos.ts'
 
 /**
  * Ficha del negocio: `InsuranceAgency`, que es un subtipo de `LocalBusiness` y
@@ -22,14 +22,36 @@ import type { Ramo } from './ramos'
  *
  * 📌 Lo que NO se declara, y es a propósito:
  *   · `openingHours` mientras `HORARIO` sea `null` (no se ha confirmado).
- *   · `telephone` mientras no haya un número público confirmado. Un teléfono en
- *     JSON-LD es una promesa de que alguien coge: si no lo hay, se omite. Un
- *     campo ausente es la verdad; un campo inventado es una mentira estructurada.
+ *   · `aggregateRating`: ver abajo.
+ *
+ * ✅ `telephone` SÍ se declara desde el 05/09/2026: Alberto confirmó su móvil
+ * para publicarlo. Hasta entonces se omitía a propósito —un teléfono en
+ * JSON-LD es la promesa de que alguien coge—. Sale de `MEDIADOR`, no de aquí,
+ * porque el mismo número tiene que ir al pie, al botón de WhatsApp y a Google
+ * Business: si esta ficha y ese perfil declaran teléfonos distintos, Google
+ * reparte la señal local entre dos negocios.
  *   · `aggregateRating`: no se autopublica nunca. Las valoraciones las emite
  *     Google a partir de reseñas reales, y marcarlas a mano es motivo de acción
  *     manual.
  */
+/**
+ * Parte el domicilio del mediador en calle y código postal.
+ *
+ * `MEDIADOR.identidad.domicilio` es una línea («San Juan de La Palma, nº 28,
+ * 41003 Sevilla») porque es como se lee en una web; schema.org los quiere
+ * separados. Si algún día esa cadena deja de encajar con este patrón, el CP se
+ * omite en vez de inventarse: un `postalCode` equivocado en la ficha local es
+ * peor que no declararlo.
+ */
+function partirDomicilio(): { calle: string; cp: string | null } {
+  const dom = MEDIADOR.identidad.domicilio
+  const m = /^(.*?),\s*(\d{5})\s+.*$/.exec(dom)
+  if (!m) return { calle: dom, cp: null }
+  return { calle: m[1].replace(/,?\s*n[ºo°]\s*/i, ', ').replace(/\s+/g, ' ').trim(), cp: m[2] }
+}
+
 export function fichaNegocio(): Record<string, unknown> {
+  const { calle, cp } = partirDomicilio()
   const ficha: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'InsuranceAgency',
@@ -37,13 +59,20 @@ export function fichaNegocio(): Record<string, unknown> {
     name: MEDIADOR.marca,
     url: SITIO_URL,
     email: MEDIADOR.identidad.email,
+    telephone: MEDIADOR.identidad.telefono,
     description:
       'Correduría de seguros en Sevilla. Analizamos entre varias compañías el seguro de hogar, comunidades, comercio, auto, vida y salud.',
     founder: { '@type': 'Person', name: MEDIADOR.identidad.nombre },
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'San Juan de La Palma, 28',
-      postalCode: '41003',
+      // 🚨 DERIVADO de `MEDIADOR.identidad.domicilio`, no escrito a mano. Lo
+      // estaba, y coincidía por suerte: es exactamente la segunda copia que la
+      // cabecera de este fichero dice querer evitar, y la que rompe el NAP el
+      // día que alguien corrija una sola de las dos.
+      streetAddress: calle,
+      // Se OMITE si no se pudo leer, en vez de mandar null: un campo ausente
+      // es la verdad, un `postalCode: null` es basura en la ficha.
+      ...(cp ? { postalCode: cp } : {}),
       addressLocality: AMBITO.ciudad,
       addressRegion: AMBITO.provincia,
       addressCountry: AMBITO.pais,

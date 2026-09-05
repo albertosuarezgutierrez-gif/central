@@ -35,10 +35,18 @@ test('PORTAL_URL es https y sin barra final', () => {
   assert.match(PORTAL_URL, /^https:\/\/[^/]+$/, `PORTAL_URL con forma rara: ${PORTAL_URL}`)
 })
 
+// El botón vive en `components/Cabecera.tsx` desde el rediseño del 05/09/2026
+// (la cabecera pasó a ser cliente para poder encogerse al hacer scroll). Se
+// comprueba ahí, y además que el layout SIGA montando la cabecera: si alguien
+// la quitase del layout, el botón estaría en un fichero que no renderiza nadie
+// y este guardián seguiría en verde mirando al sitio equivocado.
 test('la cabecera MONTA el botón al portal del cliente', () => {
+  const cab = sinComentarios(readFileSync(join(RAIZ, 'components', 'Cabecera.tsx'), 'utf8'))
+  assert.match(cab, /href=\{PORTAL_URL\}/, 'components/Cabecera.tsx ya no enlaza a PORTAL_URL: el cliente no tiene cómo entrar a su intranet desde la web')
+  assert.match(cab, /Área de clientes/, 'el botón perdió su rótulo')
+
   const layout = sinComentarios(readFileSync(join(RAIZ, 'app', 'layout.tsx'), 'utf8'))
-  assert.match(layout, /href=\{PORTAL_URL\}/, 'app/layout.tsx ya no enlaza a PORTAL_URL: el cliente no tiene cómo entrar a su intranet desde la web')
-  assert.match(layout, /Área de clientes/, 'el botón perdió su rótulo')
+  assert.match(layout, /<Cabecera\b/, 'el layout ya no monta <Cabecera>: el botón existiría en un fichero que no renderiza nadie')
 })
 
 test('la home ofrece el portal junto al CTA de venta', () => {
