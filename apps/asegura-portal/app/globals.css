@@ -637,3 +637,24 @@ h1 {
    canales distintos con horarios distintos, y a 320 px una nota al pie queda a
    dos dedos de scroll del número al que se refiere. */
 .canal-via-horario { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+
+/* Nota legal de la pantalla de entrada (art. 19 LDS). Pequeña pero legible:
+   un texto que nadie puede leer no informa a nadie, y esta línea es lo que
+   sostiene la acreditación que se guarda en `portal_consentimiento`. */
+.nota-legal {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.nota-legal a {
+  color: var(--muted);
+  text-decoration: underline;
+  /* 44 px de alto táctil sin romper el flujo del párrafo. */
+  display: inline-block;
+  padding: 2px 0;
+}
+.nota-legal a:hover,
+.nota-legal a:focus-visible {
+  color: var(--text);
+}

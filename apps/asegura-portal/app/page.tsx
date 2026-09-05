@@ -107,6 +107,27 @@ export default function Entrada() {
           <button onClick={verificar} className="boton" style={{ marginTop: 12 }}>
             Entrar
           </button>
+          {/* Esta línea NO es adorno legal: es lo que hace verdadera la fila
+              `lds_art19` que el canje escribe en `portal_consentimiento`. Si se
+              quita, el registro pasa a acreditar algo que no ocurrió. Va DEBAJO
+              del botón y antes de irse de la pantalla, que es donde el art. 19
+              LDS pide que esté: antes de operar, no después. */}
+          <p className="nota-legal">
+            Al entrar das por leída la{' '}
+            <a href="/legal/mediador" target="_blank" rel="noreferrer noopener">
+              información del mediador
+            </a>{' '}
+            y aceptas las{' '}
+            <a href="/legal/condiciones" target="_blank" rel="noreferrer noopener">
+              condiciones de uso
+            </a>
+            . Tratamos tus datos como cuenta la{' '}
+            <a href="/legal/privacidad" target="_blank" rel="noreferrer noopener">
+              política de privacidad
+            </a>
+            . Guardamos la fecha, la versión del texto, tu IP y tu navegador como
+            prueba de que se te informó.
+          </p>
         </>
       )}
 
