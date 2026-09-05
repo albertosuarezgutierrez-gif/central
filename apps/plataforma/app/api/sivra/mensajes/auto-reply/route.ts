@@ -7,6 +7,7 @@ import { decidir } from '@/lib/sivra/agente-huesped/decidir'
 import { detectLang, detectCategory } from '@/lib/sivra/agente-huesped/reglas'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
+import { barrerUltimoRecurso } from '@/lib/sivra/agente-huesped/noche-guardia'
 
 export const dynamic = 'force-dynamic'
 // El agente hace varias llamadas a IA por mensaje (decisión + traducciones), y el sondeo recorre
@@ -95,6 +96,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // MODO NOCHE — barrido del último recurso. Va ANTES de sondear los hilos y fuera del try grande a
+  // propósito: si Smoobu falla al listar hilos, un huésped que lleva 15 min esperando de madrugada
+  // seguiría sin salida. No corre en el simulacro (`dry=1`), que promete no enviar nada.
+  const ultimoRecurso = await barrerUltimoRecurso().catch(() => 0)
+
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })
@@ -137,7 +143,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, results, threads: threads.length, ...(debug ? { detalle } : {}) })
+    return NextResponse.json({ ok: true, results, threads: threads.length, ultimoRecurso, ...(debug ? { detalle } : {}) })
   } catch (e: any) {
     return NextResponse.json({ error: e.message, results }, { status: 500 })
   }

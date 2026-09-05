@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🌙 MODO NOCHE del agente de huéspedes: el silencio de 21:00 a 09:00 deja de ser invisible (05/09/2026).**
+  Alberto pidió «que a partir de las 21h el agente sea 100% autónomo». Se hizo lo contrario y se explicó
+  por qué: `auto.ts` YA no mira la hora (lo apoyado en fuente sale solo a las 3 de la mañana), así que
+  «autónomo de noche» solo añadiría autonomía sobre lo que el sistema marcó `needs_human` — sin nadie
+  que lo corrija. El agujero real era otro: lo que ESCALA de noche deja al huésped sin nada hasta las
+  09:00, y desde el código eso es idéntico a una conversación atendida (caso Mafalda, 154265696).
+  Ahora: acuse de recibo automático (texto fijo por idioma, sin IA — es la red de seguridad), aviso
+  🚨 por `tgSend` (no `tgAviso`: un interruptor apagado convertiría «te despierto» en silencio) si es
+  urgencia de acceso/avería, y a los 15 min sin respuesta se deriva al portal de reserva —**último**
+  recurso, decisión de Alberto: el portal no abre puertas y su llamada abre un caso contra el anfitrión.
+  `noche.ts` (puro, 7 tests) + `noche-guardia.ts`; barrido en `/api/sivra/mensajes/auto-reply`, ANTES de
+  sondear hilos para que un fallo de Smoobu no deje a nadie esperando. SQL aplicado en Supabase.
+  ⚠️ Detectado de paso: el borrador que Alberto aprobó tal cual metía el bloque de parkings **sin que
+  la huésped preguntara** (único mensaje del hilo, verificado en `mensajes_log`) — viola la regla de oro
+  de `parking.ts` y `aprenderCorreccion()` lo guardó como ejemplo bueno. Aprobar sin leer no es gratis.
+
 - **📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría (05/09/2026).**
   Cerrado lo que faltaba de la petición del 04/09: **Renovaciones**, que era la única lista de la
   correduría sin ellos y justamente la cola comercial (medido: de las 15 fichas que vencen en 90 días,
