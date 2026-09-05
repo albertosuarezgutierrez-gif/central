@@ -42,7 +42,28 @@
   1024-1200 (marca+6 enlaces+botón = 1.145 px en 1.104) → `NAV_CABECERA` solo con ramos; la override de
   `.btn-sm` para móvil estaba ANTES de la regla base y no aplicaba nunca (una media query no añade
   especificidad). Guardián nuevo `lib/oscuro.test.ts` (probado por mutación). PR #2381, commit
-  `976faac3e`. **Sin mergear a propósito: `grupoasegura.es` ya es producción y espera su visto bueno.**
+  `976faac3e`. **Alberto lo vio y prefirió CLARO**: la web se queda clara y el oscuro solo en la banda
+  de cifras — que además es lo que hace la landing de la correduría en la que se mira. En claro la
+  ventana del hero se lee mejor y los chips en azul sólido destacan. **PR #2381 mergeado** (`f341b2e8`).
+
+- **📞 `asegura-web`: WhatsApp, y los textos legales que MENTÍAN sobre las cookies (05/09/2026).**
+  Móvil de Alberto (confirmado por él) a `MEDIADOR.identidad.telefono` en E.164, con `telefonoLegible()`
+  y `whatsappUrl()` derivados —`wa.me` con «+» abre el chat en blanco, fallo que no da error—: botón
+  flotante, `tel:` en el pie y `telephone` en el JSON-LD. CTA «Crear mi área con mi correo»: verificado
+  en el código del portal que hoy entra CUALQUIERA con un correo, sin ser cliente, y puede subir pólizas.
+  🚨 **Auditoría legal:** privacidad y aviso legal decían «no hay analítica ni cookies de terceros, y por
+  eso no se te pide consentimiento» mientras el layout carga Cookiebot y PostHog — información falsa al
+  interesado (arts. 12-13 RGPD, 22.2 LSSI), no un texto viejo. Corregidos, con las bases jurídicas que
+  faltaban (medición 6.1.a, IP antiabuso 6.1.f) y los encargados nombrados; `VERSION_TEXTOS_WEB` → `w2`.
+  **Lección: subir la versión NO es revisar el texto** — `w1` la subió y dejó el texto mintiendo.
+  `/legal/cookies` era huérfana (solo desde Google) y tenía el único botón de retirar consentimiento
+  (art. 7.3 RGPD): ya está en el pie. Capa 1 del art. 13 completa en el formulario. Dos fallos MÍOS del
+  mismo día: `<main>` dentro de `<main>` en 4 páginas y la dirección del JSON-LD duplicando la de
+  `MEDIADOR` (guardián `lib/seo-nap.test.ts`). PR #2381.
+  **PENDIENTE y es lo más urgente:** `/api/acceso/solicitar` de `asegura-portal` **no tiene rate limit
+  ni valida que el destino sea un email** (`z.string().min(3)`), y la web pública ya enlaza ahí: es un
+  amplificador de correo con el dominio de Alberto. También pendiente: sign-off de abogado y si un
+  corredor persona física está obligado a DPO (art. 34 LOPDGDD).
 
 - **🖼 La tarjeta impresa estaba PARTIDA EN DOS, y lo que la protegía era una deny-list (05/09/2026).**
   Segunda pasada del agente de diseño antes de mergear, a petición de Alberto. El bloque del QR se
