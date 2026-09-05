@@ -42,7 +42,7 @@
   **responsabilidad civil preseleccionaba «Comercio o empresa»** porque RC no existía en
   `TIPOS_SEGURO_LEAD` — el lead llegaba diciendo que quería comercio, plausible y falso. RC añadido
   en plataforma + la copia, con guardián nuevo `cada ramo publicado tiene su opción` (probado por
-  mutación). PR #2405.
+  mutación). PR #2408.
 
 - **🎨 `asegura-web`: una sola atmósfera, no diez bloques (05/09/2026).** Alberto: «te estás liando,
   hay que mezclar todas las ideas». Diagnóstico: los recursos ya estaban TODOS (aspecto de la landing
