@@ -261,14 +261,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/09/2026) 🧾 Los recibos del portal del cliente: el `anulado` no es «no pagado»
 - (05/09/2026) 🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio
+- (05/09/2026) 🔗 Lote 10: los 18 grupos de mismo DNI, resueltos uno a uno
+- (05/09/2026) 🗄️ Archivar, no borrar: decisión de Alberto sobre las 26.463 fichas sin contacto
+- (05/09/2026) 📵 La cartera del volcado NO trae contacto: 26.810 fichas sin teléfono ni correo
 - (05/09/2026) 🃏 El backfill se ejecutó, y el centinela no eran 20 fichas: eran 5.636
 - (05/09/2026) 🃏 El backfill del DNI: no había botón, y apareció un DNI CENTINELA en 20 fichas
 - (05/09/2026) 🩺 «repara todo»: dos pendientes se caen de la lista por MEDIRLOS, y aparece uno legal
 - (05/09/2026) 📅 La pestaña Recibos parecía vacía por un ORDER BY, y los 336 homónimos NO se pueden fusionar
 - (05/09/2026) 🗑️ El reloj del art. 12.3 corría sin pantalla: supresiones en `/correduria`
-- (05/09/2026) 👥 «Sigue habiendo duplicidad ¿xq?»: no era el buscador, eran dos volcados sin cruzar
-- (05/09/2026) 🎨 El portal del cliente deja de ser una sola página, y el diseño se LEE del fuente de Manuel
-- (05/09/2026) 🔌 conectores-vigia: primera pasada real
-- (05/09/2026) 🔑 La `PII_LOOKUP_KEY` del portal SÍ casa: alguien se vinculó SOLO
 
