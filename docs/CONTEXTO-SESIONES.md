@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚑 El parte del portal tiene DOS caminos, y hay vigía del plazo (05/09/2026).** Alberto trae el canal
+  que faltaba: Occident da parte por **WhatsApp** (`+34917838383`, 9-21 L-V), la única de las 4 compañías
+  de la cartera viva sin forma publicada de dar parte. Migración `2026-09-05_companias_whatsapp_horario.sql`
+  (aplicada) + regla pura `canal-compania.ts`: el canal de la compañía se pinta **arriba, fuera del
+  formulario**, porque un parte que nos llega a nosotros NO comunica el siniestro a la entidad.
+  ⚠️ **El perfil se llama «Plus Ultra Siniestro y asistencia»**, que es OTRA compañía de la tabla (`C0517`
+  vs Occident `C0468`); se atribuye a Occident por el nombre verificado y la duda queda escrita en
+  `telefono_fuente` (revocado del rol del portal: es gestión). Y **NO es 24h**, de ahí `horario_siniestros`.
+  Segundo hallazgo: **no existía NINGÚN vigía de los partes** — el plazo del art. 16 LCS se calculaba y solo
+  se pintaba. Nuevo cron `correduria-partes` (06:55) + `parte-vigilancia.ts`: el corte es `comunicado`, así
+  que **`recibido` sigue vigilado** (es el estado que engaña), y la firma va por CUBO de urgencia para no
+  sonar los 7 días seguidos. PRs #2308 (mergeado) y **#2313**. **Pendiente de Alberto:** confirmar a Occident
+  si ese WhatsApp es suyo o de Plus Ultra · poner `OPENROUTER_API_KEY` en el proyecto Vercel `asegura-portal`
+  (sin ella la lectura de pólizas subidas devuelve «no hemos podido leer» SIEMPRE).
+
 - **📬 Smoobu ya NO manda mensajes automáticos: el ciclo es 100% nuestro (05/09/2026).** Alberto apagó
   las plantillas de Smoobu tras validar el ciclo entero en House Sevillana. Se activó el 4º piso
   (`prop_duplex_center` en `mensajes_prog_pisos`; no tenía reservas en la ventana, así que la activación

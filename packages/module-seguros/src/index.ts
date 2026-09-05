@@ -416,3 +416,17 @@ export {
   type MarcaSiniestros,
   type DecisionSiniestros,
 } from './siniestro-nuevo.ts'
+
+// El vigía de los partes del portal que nadie ha abierto todavía en la
+// compañía. Lee su cabecera: el corte es `comunicado`, y `recibido` —que
+// parece atendido— sigue dentro a propósito.
+export {
+  TOPE_AVISO_PARTES,
+  firmaPartes,
+  ordenarPorUrgencia,
+  partesPendientes,
+  textoAvisoPartes,
+  textoUrgencia,
+  urgenciaParte,
+} from './parte-vigilancia.ts'
+export type { ParteVigilado, UrgenciaParte, AvisoPartes } from './parte-vigilancia.ts'
