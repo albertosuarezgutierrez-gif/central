@@ -51,6 +51,36 @@ export function claveHito(tipo: string, fechaObjetivo: string): string {
   return `${tipo}:${fechaObjetivo}`
 }
 
+/** Los estados que puede tener una fila de `mensajes_programados`, con lo que significa cada uno.
+ *
+ * Están aquí —y no sueltos como literales por el orquestador— porque de esta tabla depende si a un
+ * huésped le llegan sus códigos: un estado que solo existe en la BD y en un `WHERE` es un estado que
+ * el código no sabe leer. `omitido` nació así el 05/09/2026 (se puso a mano para frenar una
+ * bienvenida duplicada) y funcionaba de casualidad, porque `hitosBloqueantes` bloquea todo lo que no
+ * sea `sombra`.
+ */
+export const ESTADOS_HITO = {
+  /** Generado y guardado, pero NO enviado: el piso todavía no tiene el interruptor subido. */
+  sombra: 'sin enviar (piso en sombra)',
+  /** Reclamado por una pasada y aún sin desenlace. El reintento lo recoge pasada 1 h. */
+  pendiente: 'reclamado, sin desenlace',
+  /** Entregado al huésped por Smoobu. */
+  enviado: 'entregado',
+  /** Smoobu rechazó el envío. Se reintenta en cada pasada. */
+  fallo: 'rechazado por Smoobu',
+  /** Decidido a mano que ESE mensaje no se manda (ya se dijo por otra vía, o duplicaría a otro).
+   *  No se reintenta, no se reclama y NO se cuenta como hueco: es una decisión, no un dato que falte. */
+  omitido: 'no se manda (decidido a mano)',
+} as const
+
+export type EstadoHito = keyof typeof ESTADOS_HITO
+
+/** ¿Este hito deja al huésped cubierto? `enviado` porque llegó; `omitido` porque alguien decidió que
+ *  no hacía falta. Lo demás NO cubre: una copia en sombra o un fallo no son una entrega. */
+export function cubreAlHuesped(estado: string): boolean {
+  return estado === 'enviado' || estado === 'omitido'
+}
+
 export type HitoRegistrado = {
   tipo: string
   fechaObjetivo: string
@@ -82,6 +112,9 @@ export function hitosBloqueantes(
   const bloqueantes = new Set<string>()
   const emitidosHoy = new Set<string>()
   for (const f of filas) {
+    // Conservador a propósito: bloquea TODO lo que no sea una sombra reclamable, estado
+    // desconocido incluido. Un estado nuevo que no bloqueara reenviaría el mensaje al huésped.
+    // `omitido` bloquea por aquí, y eso es exactamente lo que se quiere de él.
     if (activo && f.estado === 'sombra') continue
     const clave = claveHito(f.tipo, f.fechaObjetivo)
     bloqueantes.add(clave)
