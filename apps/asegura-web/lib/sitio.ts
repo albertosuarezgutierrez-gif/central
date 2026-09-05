@@ -17,12 +17,20 @@
  *
  * Sale de `NEXT_PUBLIC_SITIO_URL` para que el sitemap, los canonical y las
  * tarjetas Open Graph apunten al dominio de verdad desde el primer despliegue.
- * El valor por defecto es el apex de la marca: si la variable falta, las URL
+ * El valor por defecto es el apex donde la web SIRVE, `grupoasegura.es`
+ * (atado a este proyecto Vercel el 05/09/2026): si la variable falta, las URL
  * salen correctas igualmente en producción, y en una preview salen apuntando a
  * producción (que es preferible a emitir un canonical hacia una URL de preview,
  * porque eso sí ensucia el índice de Google).
+ *
+ * 🚨 NO poner aquí `grupoasegura.com`: ese apex existe pero apunta a un parking
+ * de IONOS (`217.160.0.254`, medido 05/09/2026). Con él por defecto, cada
+ * página servida en `.es` declaraba como canónica una URL que no carga, y el
+ * sitemap listaba 17 URL de un dominio vacío — un «no lo sé» disfrazado de
+ * valor que Google se cree. Si algún día el `.com` se ata a este proyecto,
+ * será como redirección al `.es`, no como canónico.
  */
-export const SITIO_URL = (process.env.NEXT_PUBLIC_SITIO_URL || 'https://grupoasegura.com').replace(/\/+$/, '')
+export const SITIO_URL = (process.env.NEXT_PUBLIC_SITIO_URL || 'https://grupoasegura.es').replace(/\/+$/, '')
 
 /**
  * Intranet del cliente (`apps/asegura-portal`), sin barra final.
