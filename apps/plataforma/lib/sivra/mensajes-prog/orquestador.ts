@@ -34,9 +34,10 @@ import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
 import { entradaMismoDiaLibre, sumarDias, restarDias } from '@/lib/sivra/agente-huesped/disponibilidad'
 import { parseGuestAppUrl, fetchGuiaSecciones } from '@/lib/sivra/agente-huesped/guest-app'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
-import { mensajesDebidos, hitosBloqueantes, type HitoRegistrado, type ReservaMin } from './decidir'
+import { mensajesDebidos, hitosBloqueantes, cubreAlHuesped, type HitoRegistrado, type ReservaMin } from './decidir'
 import { renderPlantilla, renderAsunto, type TipoMensaje, type DatosPlantilla } from './plantillas'
 import { traducirMensaje } from './traducir'
+import { revisarCobertura, claveAviso, textoCobertura } from './cobertura'
 import { ACCESO, codigosQueFaltan, type CodigosAcceso } from '../acceso'
 import { pinsPorReserva, elegirCodigoPortal } from './codigo-portal'
 import { decidirIdioma, notaIdioma } from './idioma-reserva'
@@ -145,6 +146,71 @@ async function lateOferta(apartmentId: unknown, departure: string, bookingId: st
     if (est === null) return null
     return entradaMismoDiaLibre(departure, est, bookingId)
   } catch { return null }
+}
+
+// Vigía de cobertura: quién llega sin sus instrucciones. Devuelve una nota para el latido, o null.
+//
+// 🚨 NO puede tumbar la pasada ni dejarla sin latido: es un observador. Si su propia consulta falla,
+// lo DICE (un vigía mudo es indistinguible de uno que no encuentra nada) y la pasada sigue.
+async function revisarCoberturaDePasada(
+  reservas: any[],
+  hoy: string,
+  activos: Set<string>,
+  yaHechosPorReserva: Map<string, HitoRegistrado[]>,
+): Promise<string | null> {
+  try {
+    const declarados = await prisma.$queryRaw<{ property_id: string }[]>(
+      Prisma.sql`SELECT property_id FROM mensajes_prog_pisos`,
+    )
+    const sombra = await prisma.$queryRaw<{ property_id: string; tipo: string }[]>(Prisma.sql`
+      SELECT DISTINCT property_id, tipo FROM mensajes_programados
+      WHERE estado = 'sombra' AND fecha_objetivo >= ${hoy}::date
+    `)
+
+    const hallazgos = revisarCobertura({
+      hoy,
+      reservas: reservas.map(b => {
+        const bookingId = String(b.id)
+        const propertyId = toPropertyId(b?.apartment?.id, String(b?.apartment?.name || ''))
+        return {
+          bookingId,
+          propertyId,
+          piso: ACCESO[propertyId]?.nombre ?? propertyId,
+          huesped: String(b?.['guest-name'] || b?.guestName || '').trim(),
+          checkIn: String(b?.arrival || ''),
+          // `cubreAlHuesped`, no `estado === 'enviado'`: un hito `omitido` es una decisión tomada
+          // («esto ya se lo he dicho por otra vía»), no un hueco — cantarlo cada pasada sería ruido.
+          hitosEnviados: (yaHechosPorReserva.get(bookingId) ?? [])
+            .filter(h => cubreAlHuesped(h.estado))
+            .map(h => h.tipo),
+        }
+      }),
+      pisosActivos: activos,
+      pisosConocidos: Object.entries(ACCESO).map(([propertyId, p]) => ({ propertyId, piso: p.nombre })),
+      pisosDeclarados: new Set(declarados.map(d => d.property_id)),
+      sombraPendiente: sombra.map(s => ({ propertyId: s.property_id, tipo: s.tipo })),
+    })
+    if (!hallazgos.length) return null
+
+    // Dedupe por hallazgo y día: el cron pasa 48 veces y esto se leería una sola vez.
+    const nuevos: typeof hallazgos = []
+    for (const h of hallazgos) {
+      const ins = await prisma.$queryRaw<{ clave: string }[]>(Prisma.sql`
+        INSERT INTO mensajes_prog_avisos (clave) VALUES (${claveAviso(h, hoy)})
+        ON CONFLICT (clave) DO NOTHING RETURNING clave
+      `)
+      if (ins.length) nuevos.push(h)
+    }
+    if (nuevos.length) {
+      const texto = textoCobertura(nuevos)
+      if (texto) await tgAviso('pisos.mensajes-cobertura', texto).catch(() => {})
+    }
+    // La nota del latido informa de TODOS los hallazgos vivos, no solo de los recién avisados: el
+    // dedupe silencia la repetición del Telegram, no el hecho.
+    return `⚠️ cobertura: ${hallazgos.map(h => h.clase).join(', ')}`
+  } catch (e: any) {
+    return `cobertura SIN COMPROBAR (${String(e?.message || e).slice(0, 60)})`
+  }
 }
 
 export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000): Promise<Resumen> {
@@ -332,6 +398,7 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
   }
 
   // 2) Reintentos: hitos en 'fallo' (o reclamados que se quedaron colgados a mitad de pasada).
+  // `omitido` NO entra a propósito: se puso a mano para que ese mensaje no salga.
   const pendientes = await prisma.$queryRaw<{ booking_id: string; property_id: string; tipo: string; fecha_objetivo: Date; cuerpo: string; intentos: number }[]>(Prisma.sql`
     SELECT booking_id, property_id, tipo, fecha_objetivo, cuerpo, intentos FROM mensajes_programados
     WHERE (estado = 'fallo' OR (estado = 'pendiente' AND created_at < now() - interval '1 hour'))
@@ -360,6 +427,12 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
   // 3) Telegram: cada sombra con su texto (es la validación de Alberto) + los avisos operativos.
   for (const a of avisosSombra) await tgAviso('pisos.mensajes-programados', a).catch(() => {})
   if (avisos.length) await tgAviso('pisos.mensajes-programados', `📬 <b>Mensajes programados</b>\n${avisos.map(a => escapeHtml(a)).join('\n')}`).catch(() => {})
+
+  // 4) Vigía de COBERTURA: no mide el mecanismo, mide a quién no le ha llegado nada. Va en su
+  // propio aviso y no toca `res.ok`: lo que descubre puede ser una decisión (un piso en sombra) y
+  // no una avería de la pasada, que es lo que el latido juzga.
+  const cobertura = await revisarCoberturaDePasada(reservas, hoy, activos, yaHechosPorReserva)
+  if (cobertura) res.detalle.push(cobertura)
 
   const detalle = `${res.reservas} reservas · ${res.debidos} debidos · ${res.sombra} sombra · ${res.enviados} enviados · ${res.fallos} fallos${res.detalle.length ? ' · ' + res.detalle.join(' · ') : ''}`
   res.ok = res.fallos === 0
