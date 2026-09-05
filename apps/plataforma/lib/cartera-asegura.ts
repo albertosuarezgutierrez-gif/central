@@ -11,6 +11,7 @@
 // obliga a adivinar cuál de los tres es (pasó el 31/08/2026).
 
 import type { ObjetoAsegurado } from '@central/module-seguros'
+import { interpretarContacto, type Contacto } from './correduria-puerto.ts'
 
 export type MotivoErrorCartera =
   | 'secreto_rechazado'   // asegura devolvió 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
@@ -138,6 +139,17 @@ export type PolizaVencimiento = {
    * arreglan en sitios distintos (desplegar vs. reclamar el dato a la compañía).
    */
   objeto: ObjetoAsegurado | null
+  /**
+   * Teléfono y email del tomador, para llamar desde la propia lista: esta tabla
+   * existe justo para eso (medido el 05/09/2026: de las 15 fichas que vencen en
+   * 90 días, 9 tienen teléfono y 8 email).
+   *
+   * 🚨 `null` NO es «no tiene con qué contactar»: es que asegura no manda el
+   * bloque (versión anterior) o no se pudo consultar. Dentro, `telefono: null`
+   * con `telefonoIlegible: false` sí es «se miró y no hay», y con `true` es
+   * «está guardado y la clave PII no lo abre» — que se arregla en otro sitio.
+   */
+  contacto: Contacto | null
 }
 
 const ESTADOS_OBJETO = new Set(['conocido', 'no_informado', 'cifrado', 'sin_objeto'])
@@ -197,6 +209,10 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
       prima: typeof f.prima === 'number' && Number.isFinite(f.prima) ? f.prima : null,
       fraccionamiento: typeof f.fraccionamiento === 'string' ? f.fraccionamiento : null,
       objeto: interpretarObjeto(f.objeto),
+      // Mismo normalizador que el buscador y la cola de retención: dos lecturas
+      // del mismo bloque harían que el icono saliera en una pantalla y no en
+      // otra para el MISMO cliente.
+      contacto: interpretarContacto(f.contacto),
     })
   }
   const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 90

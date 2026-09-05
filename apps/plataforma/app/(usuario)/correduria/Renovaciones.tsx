@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge, type Tono } from '@/components/ui'
 import { esAccionable } from './secciones'
+import AccionesContacto from './AccionesContacto'
 
 /**
  * Las pólizas que vencen: la máquina comercial de una correduría.
@@ -24,6 +25,7 @@ import { esAccionable } from './secciones'
  * trabajos distintos y la lista lo dice.
  */
 
+import type { Contacto } from '@/lib/correduria-puerto'
 import type { MotivoError } from './estado-puerto'
 import { MOTIVOS } from './estado-puerto'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
@@ -59,6 +61,10 @@ export type Vencimiento = {
   numeroPoliza: string | null; fechaVencimiento: string; dias: number
   urgencia: string; prima: number | null; fraccionamiento: string | null
   objeto: ObjetoAsegurado | null
+  /** `null` = asegura no manda el bloque de contacto (versión anterior o
+   *  consulta caída). NO es «no hay forma de llamarle»: por eso no se pinta
+   *  nada en vez de un icono apagado o un «sin teléfono». */
+  contacto: Contacto | null
 }
 
 export type RespVencimientos =
@@ -206,6 +212,20 @@ export default function Renovaciones({ datos, filtro }: {
                       <span title="La versión desplegada de asegura todavía no manda el id del cliente, así que no se puede enlazar su ficha">
                         {p.cliente}
                       </span>
+                    )}
+                    {/* Llamar · WhatsApp · escribir sin salir de la lista: esta
+                        tabla es la cola de trabajo comercial, y hasta ahora
+                        había que abrir la ficha solo para copiar el teléfono. */}
+                    {p.contacto && (
+                      <>
+                        {' '}
+                        <AccionesContacto
+                          telefono={p.contacto.telefono}
+                          email={p.contacto.email}
+                          ilegible={p.contacto.telefonoIlegible && p.contacto.emailIlegible}
+                          quien={p.cliente}
+                        />
+                      </>
                     )}
                     {p.numeroPoliza && (
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>nº {p.numeroPoliza}</div>

@@ -21,6 +21,8 @@
  * Todo aquí es puro: decide con números, sin BD ni red.
  */
 
+import { motivosSilencio, type SilencioEntidad } from './silencio-entidad.ts'
+
 /** Qué se sabe de la ingesta. Tres estados, nunca dos. */
 export type EstadoIngesta =
   /** Se ha podido mirar y no hay nada atascado reciente. */
@@ -111,6 +113,13 @@ export type EntradaSalud = {
    * eso no se colapsan.
    */
   rechazos?: EntradaRechazada[] | null
+  /**
+   * Veredicto por COMPAÑÍA sobre quién ha dejado de mandar. **`null` = no se ha
+   * podido mirar**, y se declara como hueco; nunca se colapsa con «todas
+   * mandan». Es la cuarta cara de la misma avería y la única que se dispara sin
+   * que llegue nada: ver `silencio-entidad.ts`.
+   */
+  silencio?: SilencioEntidad[] | null
 }
 
 export type SaludIngesta = {
@@ -134,6 +143,8 @@ export type SaludIngesta = {
   primaPerdida: number | null
   /** Entradas rechazadas recientes. `null` = no comprobado, nunca «no hay». */
   rechazos: EntradaRechazada[] | null
+  /** Quién ha dejado de mandar. `null` = no comprobado, nunca «nadie». */
+  silencio: SilencioEntidad[] | null
   /** Frases listas para el aviso. Vacío cuando no hay nada que decir. */
   motivos: string[]
 }
@@ -193,6 +204,7 @@ export function saludIngesta(
       huerfanasResolubles: null,
       primaPerdida: null,
       rechazos: null,
+      silencio: null,
       motivos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
     }
   }
@@ -258,10 +270,25 @@ export function saludIngesta(
     )
   }
 
+  // 🚨 La CUARTA cara, y la única que no deja rastro: la compañía que
+  // sencillamente deja de mandar. No hay cuarentena (nada llegó que atascar),
+  // ni huérfana, ni rechazo — así que sin esto es invisible por diseño. Mapfre
+  // estuvo 74 días callada con 64 pólizas vivas y este vigía en verde.
+  const silencio = Array.isArray(e.silencio) ? e.silencio : e.silencio === null ? null : null
+  if (silencio !== null) motivos.push(...motivosSilencio(silencio))
+  else if (e.silencio === null) {
+    motivos.push('No se ha podido comprobar si alguna compañía ha dejado de mandar.')
+  }
+  const mudas = (silencio ?? []).filter(x => x.veredicto === 'silencio')
+
   const hayPerdida =
-    recientes > 0 || (huerfanas !== null && huerfanas > 0) || rechazosRecientes.length > 0
+    recientes > 0 ||
+    (huerfanas !== null && huerfanas > 0) ||
+    rechazosRecientes.length > 0 ||
+    mudas.length > 0
   return {
     estado: hayPerdida ? 'degradada' : 'ok',
+    silencio,
     total,
     recientes,
     porEntidad,
@@ -281,7 +308,9 @@ export function detalleSalud(s: SaludIngesta): string {
     // Si no se pudieron mirar los rechazos, el «sin novedades» habla SOLO de la
     // cuarentena y hay que decirlo: prometer calma sobre una puerta que no se ha
     // abierto es el fallo que este módulo existe para no repetir.
-    const coletilla = s.rechazos === null ? ' · envíos rechazados: sin comprobar' : ''
+    const coletilla =
+      (s.rechazos === null ? ' · envíos rechazados: sin comprobar' : '') +
+      (s.silencio === null ? ' · silencio por compañía: sin comprobar' : '')
     return (s.total === 0
       ? 'ingesta CIMA: sin ficheros atascados'
       : `ingesta CIMA: sin novedades (${s.total} en backlog antiguo)`) + coletilla

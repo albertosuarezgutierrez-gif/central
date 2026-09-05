@@ -30,6 +30,38 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría (05/09/2026).**
+  Cerrado lo que faltaba de la petición del 04/09: **Renovaciones**, que era la única lista de la
+  correduría sin ellos y justamente la cola comercial (medido: de las 15 fichas que vencen en 90 días,
+  **9 tienen teléfono y 8 email**). `contactosDe()` se **exporta** desde `apps/asegura/lib/cartera-busqueda.ts`
+  en vez de dejar un cuarto `descifrar` casi idéntico; el puerto de vencimientos manda ya `contacto` y en
+  plataforma lo lee el **mismo** `interpretarContacto` que el buscador y la retención — dos normalizadores
+  del mismo bloque harían que el icono saliera en una pantalla y no en otra para el MISMO cliente.
+  Una consulta por lista (un cliente con tres pólizas que vencen sale tres veces y no se descifra tres).
+  Tres estados intactos: sin bloque = «no se ha podido mirar» · todo a null = «no tiene» · ilegible =
+  «guardado y la clave PII no lo abre». Verificado: tsc asegura+plataforma, 22 tests del lector, suite
+  completa sin fallos y `next build`. **NO se ponen en `SinCanal`**: esa lista ES la de quien no tiene canal.
+
+- **🔁 Un PR abierto de noche choca con `main` cada ~50 min, y siempre por el MISMO fichero (05/09/2026).**
+  El #2277 llegó a verde y `clean`, y volvió a `dirty` **cuatro veces** en poco más de una hora: #2290,
+  #2285, #2283+#2248 y luego #2294. **Ninguna** fue conflicto de código —siempre `docs/CONTEXTO-SESIONES.md`,
+  entradas del mismo día de sesiones distintas— pero cada vuelta cuesta ~4 min de CI porque el head cambia.
+  Método que funcionó las cuatro: mergear `main`, resolver conservando AMBOS lados, revalidar y empujar; y
+  **no mergear `main` cuando NO hay conflicto** aunque haya avanzado (reiniciar el CI por gusto alarga la
+  espera). Para comprobar barato, sin pedir el PR entero: `git merge-base --is-ancestor <head> origin/main`
+  (¿ya está mergeado?) + `git merge-tree --write-tree HEAD origin/main` (¿hay conflicto?). ⚠️ La causa de
+  fondo no es de este PR: la memoria es un fichero único que toda sesión edita al cerrar.
+
+- **🚦 `Ignored` no es gratis: la cuota que agotó un agente y tumbó 4 producciones (04/09/2026, PR #2248).**
+  Mergeando #2248 se dieron 7 pushes a la rama en ~40 min (`main` avanzaba cada ~5 min por el automerge y
+  reconflictaba `CONTEXTO-SESIONES.md`; CI tarda 3,5). Cada push crea **11 deployments** aunque 10 salgan
+  `Ignored` — el `ignoreCommand` corta el BUILD, no la CREACIÓN — y `api-deployments-paid-per-hour` (450/h,
+  **de cuenta**) reventó: producción de `ia-rest`, `almacen`, `transporte` y `house-sevillana-landing`
+  fallando por una rama que no las tocaba. Informé 3 veces «0 gasto, todo Ignored»: cierto sobre Build CPU
+  Minutes, **falso** sobre esa cuota. Escrito en `CLAUDE.md` (§ignoreCommand). Regla: verificar en local y
+  empujar UNA vez. 🔁 Para romper el bucle de conflictos, mi entrada de memoria se dejó **la segunda**, no
+  la primera: así las inserciones ajenas de arriba auto-mezclan. ⏸️ Alberto: activar `Allow auto-merge`
+  (Settings → General) — sigue desactivado y es lo que evita esta carrera.
 - **🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría (04/09/2026).**
   Al revisar el cuadro completo se encontró que el commit `19b74e641` llevaba **marcadores de conflicto
   sin resolver dentro de un template literal SQL** de `clientes-sin-canal.ts`: `tsc` los ve como cadena,
@@ -986,6 +1018,15 @@
 - ❌ **`mkt_score` sin filtro de liga: MEDIDO Y DESCARTADO.** La mediana de score con y sin liga difiere 0,0-0,2 puntos → mueve el factor de calidad un **0,8-1,6%**. El diagnóstico lo llamó «doble conteo» y en magnitud es ruido. No se toca.
 - ⏸️ **`noches_ref` vs ventana del corpus: medido, NO cambiado hoy.** El corpus es **86,5% de 2 noches** y Busto/Dúplex tienen `noches_ref=3` → `aBase` descuenta 12,73€/noche cuando el comparable lleva 19,10€ implícitos (**+5-7%**). Pero `noches_ref` es la estancia mediana REAL de nuestras reservas y para ESO es correcto: el arreglo es que `aBase` use la ventana del corpus, no cambiar el ajuste. Sequenciado tras converger el descenso — era el 4º cambio de precio del día.
 
+
+### 🔇 (05/09/2026) El vigía de CIMA medía a quien venía, no a quien deja de venir — Mapfre, 74 días
+
+- **`saludIngesta` tenía tres señales y las tres se disparan con algo que LLEGÓ y salió mal** (cuarentena, huérfanas, rechazos). `diasSinPersistir` parece taparlo pero mide por TIPO de objeto y agrega compañías: mientras UNA siga mandando recibos, el contador está a cero. **Mapfre (C0058) llevaba 74 días sin un fichero con su peor hueco histórico en 2 días, 64 pólizas vivas (58% de la cartera) y 7 renovaciones pasadas sin fichero** — y el vigía en verde con razón: no había nada atascado porque no había llegado nada.
+- **`silencio-entidad.ts` (`@central/module-seguros`, puro, 11 tests):** dos señales independientes — *ritmo roto* contra el propio récord de cada compañía (un umbral global acusaría a Reale, que manda cada 23 días, y tardaría un mes en ver a Mapfre) y *consecuencia medida* (renovación vencida sin fichero), que alarma **sin baremo**. Sobre los datos reales acusan a Mapfre y **solo** a Mapfre.
+- 🚨 **`MIN_HUECOS = 2` está calibrado con datos reales y hay test que lo fija:** Mapfre solo tiene **2 huecos observados** (sus 14 ficheros se agolpan en pocos días), así que exigir 3 habría silenciado el caso fundacional. `sin_base` (Reale, 1 hueco) NO es `ok`.
+- **La firma del dedupe del cron incluye ahora las compañías mudas.** Era `estado:recientes:huerfanas`: con Mapfre ya muda se quedaba en `degradada:0:0` para siempre y el día que enmudeciera **además** Allianz no habría sonado nada.
+- 🔐 **El hallazgo de seguridad del plan de marketing estaba MAL y se corrige en el propio doc.** La clave `anon` SÍ es pública (9 ficheros cliente de ia-rest, incluida la carta por QR), pero **PostgREST no expone `seguros`** (406 `PGRST106`: solo `public`, `graphql_public`, `iarest`) → la cartera **no bloquea el lanzamiento**. Lo alcanzable de verdad es `iarest.camareros`: **7 filas con sus PIN** porque `get_tenant_id()` cae al **tenant demo** cuando `app.local_id` no está fijado, y eso gobierna las 252 tablas de `iarest`. **No tocado**: quitar ese fallback puede dejar restaurantes sin servicio — decisión de Alberto.
+- ⚠️ **Proyecto Vercel `asegura-web`: creado y BIEN, pero el MCP de Vercel no lo ve.** `get_project`/`list_projects` devuelven 404 sobre `prj_MnuAvshNZg6vmRsfTkSmiX4RyCj9` — se llegó a anotar por error que estaba «fuera del equipo». El bot de Vercel del PR #2303 lo desmiente desde el lado de Vercel: aparece en `pisos-turisticos-projects/asegura-web` con Root Directory `apps/asegura-web` y evaluó el ignore-step del PR (`Ignored`). O sea: **existe, está en el equipo y está enganchado al repo**; el 404 es del conector, no del proyecto. Faltan solo sus envs (`PLATAFORMA_URL`, `NEXT_PUBLIC_SITIO_URL`) y el dominio. **No crear otro.**
 
 ### 🧊 (04/09/2026) La guarda de outlier paraba el descenso que el propio motor había empezado
 - Al recalibrar el ancla a la baja el 03/09 (#2192/#2228), `normalBase` cayó ~25% de golpe: **448 noches** de los 4 pisos pasaron a cumplir `old > normalBase × 1,4` **sin que nadie hubiera subido nada**, y se quedaron clavadas ARRIBA.

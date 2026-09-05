@@ -56,6 +56,17 @@ export {
   type DecisionAviso,
 } from './ingesta.ts'
 export {
+  veredictoEntidad,
+  silencioPorEntidad,
+  motivosSilencio,
+  MIN_HUECOS,
+  FACTOR_SILENCIO,
+  SUELO_DIAS,
+  type VeredictoEntidad,
+  type EntidadIngesta,
+  type SilencioEntidad,
+} from './silencio-entidad.ts'
+export {
   MARCADORES_SIN_DATO,
   CAMPOS_PERSONALES,
   autoLeidoVacio,

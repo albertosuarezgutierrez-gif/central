@@ -183,7 +183,39 @@ test('🚨 «no se pudieron mirar los rechazos» NO es «no hay rechazos»', () 
 
   const mirado = saludIngesta({ cuarentena: [], rechazos: [] })
   assert.deepEqual(mirado.rechazos, [])
+  assert.doesNotMatch(detalleSalud(mirado), /envíos rechazados: sin comprobar/)
+})
+
+// La simétrica de la anterior, en la puerta que se abrió el 05/09/2026: el
+// silencio por compañía tampoco puede darse por bueno sin haberlo mirado. Se
+// comprueba aquí y no en `silencio-entidad.test.ts` porque lo que se vigila es
+// que el PARTE lo diga, no que el helper lo calcule.
+test('🚨 «no se pudo mirar el silencio» NO es «ninguna compañía se ha callado»', () => {
+  const sinMirar = saludIngesta({ cuarentena: [] })
+  assert.equal(sinMirar.silencio, null, 'ausente ⇒ no comprobado, jamás []')
+  assert.match(detalleSalud(sinMirar), /silencio por compañía: sin comprobar/)
+
+  const mirado = saludIngesta({ cuarentena: [], rechazos: [], silencio: [] })
+  assert.deepEqual(mirado.silencio, [])
   assert.doesNotMatch(detalleSalud(mirado), /sin comprobar/)
+})
+
+test('una compañía muda pone la ingesta en DEGRADADA aunque no haya nada atascado', () => {
+  // El caso Mapfre: cuarentena vacía, cero huérfanas, cero rechazos — y aun así
+  // se están perdiendo datos. Sin esta rama el vigía seguiría en verde.
+  const s = saludIngesta({
+    cuarentena: [],
+    rechazos: [],
+    silencio: [
+      {
+        entidad: 'C0058', diasSinFichero: 74, huecoMaximo: 2, huecosObservados: 2,
+        vivas: 64, vencidasEnSilencio: 7, vencen90d: 12,
+        veredicto: 'silencio', motivos: ['C0058: 74 días sin mandar nada'],
+      },
+    ],
+  })
+  assert.equal(s.estado, 'degradada')
+  assert.match(detalleSalud(s), /C0058/)
 })
 
 test('la ingesta sin datos deja los rechazos en null, no en lista vacía', () => {

@@ -22,7 +22,7 @@
  * de póliza NO salen por aquí — para eso está la pantalla del corredor, que va
  * detrás de sesión.
  */
-import type { EntradaRechazada, FicheroEnCuarentena } from '@central/module-seguros'
+import type { EntradaRechazada, EntidadIngesta, FicheroEnCuarentena } from '@central/module-seguros'
 import { HORAS_RECHAZO_RECIENTE } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
@@ -38,6 +38,8 @@ export type EstadoIngestaPuerto =
       diasSinPersistir: Record<string, number | null>
       /** Envíos de un proveedor que rechazamos. `[]` = comprobado y no hay. */
       rechazos: EntradaRechazada[]
+      /** Ritmo de envío por compañía. `[]` = comprobado y no hay ninguna. */
+      entidades: EntidadIngesta[]
     }
 
 /** Tipos de objeto EIAC que la ingesta persiste. El evento que lo confirma es
@@ -145,9 +147,90 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       ORDER BY COUNT(*) DESC
     `, String(HORAS_RECHAZO_RECIENTE))
 
+    // 5. 🚨 QUIÉN HA DEJADO DE MANDAR — la avería que no deja rastro en nada de
+    //    lo anterior. Se compara a cada compañía con SU PROPIO ritmo (el mayor
+    //    hueco que se le ha visto nunca), no con una constante: Mapfre manda
+    //    cada día y medio, Reale cada 23. Un umbral global acusaría a Reale y
+    //    tardaría un mes en ver a Mapfre. El veredicto lo pone el helper PURO
+    //    `silencioPorEntidad`; aquí solo se leen números.
+    //
+    //    Los huecos se calculan sobre DÍAS DISTINTOS con fichero, no sobre
+    //    ficheros: una compañía que manda cinco ficheros el mismo martes tiene
+    //    cuatro huecos de cero, y esos ceros hunden el baremo hasta hacerlo
+    //    inservible.
+    const ritmoRaw = await db.$queryRawUnsafe<
+      Array<{ entidad: string | null; dias: number | null; hueco_max: number | null; huecos: bigint | null }>
+    >(`
+      WITH dias_con_fichero AS (
+        SELECT codigo_entidad AS entidad, descargado_at::date AS dia
+        FROM cima_ficheros
+        WHERE descargado_at IS NOT NULL AND codigo_entidad IS NOT NULL
+        GROUP BY 1, 2
+      ), huecos AS (
+        SELECT entidad, dia,
+               dia - lag(dia) OVER (PARTITION BY entidad ORDER BY dia) AS hueco
+        FROM dias_con_fichero
+      )
+      SELECT entidad,
+             (CURRENT_DATE - MAX(dia)) AS dias,
+             MAX(hueco) AS hueco_max,
+             COUNT(*) FILTER (WHERE hueco IS NOT NULL) AS huecos
+      FROM huecos GROUP BY entidad
+    `)
+
+    //    Y la consecuencia MEDIDA, que es la que no depende de ningún umbral:
+    //    pólizas vivas por compañía y renovaciones que vencieron DESDE su
+    //    último fichero sin que llegara nada. `esCarteraViva` en SQL:
+    //    `import_ref IS NULL OR eiac_xml_hash IS NOT NULL`.
+    const carteraRaw = await db.$queryRawUnsafe<
+      Array<{ entidad: string | null; vivas: bigint | null; vencidas: bigint | null; proximas: bigint | null }>
+    >(`
+      WITH ultimo AS (
+        SELECT codigo_entidad AS entidad, MAX(descargado_at::date) AS dia
+        FROM cima_ficheros WHERE codigo_entidad IS NOT NULL GROUP BY 1
+      ), viva AS (
+        SELECT codigo_entidad_dgs AS entidad, fecha_vencimiento
+        FROM polizas
+        WHERE codigo_entidad_dgs IS NOT NULL
+          AND (import_ref IS NULL OR eiac_xml_hash IS NOT NULL)
+      )
+      SELECT v.entidad,
+             COUNT(*) AS vivas,
+             COUNT(*) FILTER (
+               WHERE u.dia IS NOT NULL
+                 AND v.fecha_vencimiento >= u.dia
+                 AND v.fecha_vencimiento <= CURRENT_DATE
+             ) AS vencidas,
+             COUNT(*) FILTER (
+               WHERE v.fecha_vencimiento > CURRENT_DATE
+                 AND v.fecha_vencimiento <= CURRENT_DATE + 90
+             ) AS proximas
+      FROM viva v LEFT JOIN ultimo u ON u.entidad = v.entidad
+      GROUP BY v.entidad
+    `)
+
+    const porCartera = new Map(carteraRaw.map(r => [r.entidad ?? '', r]))
+    const entidades: EntidadIngesta[] = ritmoRaw.map(r => {
+      const clave = r.entidad ?? ''
+      const c = porCartera.get(clave)
+      const n = (v: bigint | null | undefined) => (v === null || v === undefined ? null : Number(v))
+      return {
+        entidad: clave || 'desconocida',
+        diasSinFichero: r.dias === null ? null : Math.floor(Number(r.dias)),
+        huecoMaximo: r.hueco_max === null ? null : Math.floor(Number(r.hueco_max)),
+        huecosObservados: Number(r.huecos ?? 0),
+        // Una compañía con ficheros pero sin fila de cartera tiene 0 vivas
+        // MEDIDAS (el LEFT JOIN sale de las vivas), no «no se sabe».
+        vivas: c ? Number(c.vivas ?? 0) : 0,
+        vencidasEnSilencio: c ? n(c.vencidas) : 0,
+        vencen90d: c ? n(c.proximas) : 0,
+      }
+    })
+
     const fila = huerfanasRaw[0]
     return {
       estado: 'ok',
+      entidades,
       cuarentena: cuarentenaRaw.map(f => ({
         tipo: f.tipo ?? 'desconocido',
         entidad: f.entidad ?? 'desconocida',
