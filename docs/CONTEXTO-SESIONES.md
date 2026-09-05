@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗑️ El reloj del art. 12.3 corría sin pantalla: supresiones en `/correduria` (05/09/2026).**
+  Cerrado el bloque legal 0.5 (PR #2339), el cliente ya puede pedir supresión desde el portal… y la
+  petición **no salía en ninguna pantalla que Alberto abra**: el puerto `/api/operador/supresiones` de
+  asegura existía sin consumidor. Un plazo legal de 30 días (60 con prórroga MOTIVADA) corriendo a
+  ciegas. Bloque `Supresiones.tsx` en la sección **Hoy**, rojo si hay vencidas; contestar y prorrogar
+  (la prórroga exige motivo o el botón no se habilita). Lectura pura en `lib/supresiones-asegura.ts`
+  + 17 cepos: estado/plazo desconocido → `null`, ningún fallo de lectura se vuelve lista vacía,
+  ilegibles contados, contador `null` (no `0`) para que la pestaña pinte `!`. `actor` = `session.email`
+  puesto por el servidor y el ÚLTIMO. Verde: 2.527 + 553 guardianes + 53 vitest, typecheck 0.
+  ✅ **`hola@grupoasegura.es` EXISTE** — lo confirmó Alberto; cierra la alerta del 04/09. Es su palabra,
+  no una prueba de entrega: nadie ha mandado un correo a ese buzón y comprobado que llega.
+
 - **👥 «Sigue habiendo duplicidad ¿xq?»: no era el buscador, eran dos volcados sin cruzar (05/09/2026).**
   Los dos volcados del CRM viejo (`intranet:` 30/05 y `asegura_app:` 21/06) se cargaron sin cruzarse, así
   que una misma persona entró dos veces. 🚨 **El id del `import_ref` NO sirve para cruzarlos**: de 3.443
@@ -1183,7 +1195,7 @@
 - Dentro de la **misma transacción** que el canje: si no se puede acreditar, el código no se consume. Sellado con `VERSION_TEXTOS_LEGALES` **importado** y solo si no consta esa versión: cien logins ≠ cien filas, pero cambiar el texto sí pide acreditación nueva.
 - **`avisos` y `comercial` NO se escriben** aunque el CHECK los admita: no hay casilla que los pida y `otorgado:true` sin marcar es fabricar consentimiento. Guardado en `necesitaRegistro`/`normalizarIp` (`module-seguros-portal`, 12 tests) — la IP inválida va a NULL: la columna es `inet` y un INSERT roto tumbaría el login.
 - Guardar IP y navegador es tratamiento nuevo → declarado en la política y **`VERSION_TEXTOS_LEGALES` → `2026-09-v3`** (todos los clientes vuelven a acreditar en su próximo acceso). Verde: 553 guardianes · 227 + 413 de módulos · typecheck de asegura-portal y asegura-web · CI 20/20.
-- 🚨 **ALERTA ABIERTA, correo del SAC.** La captura del panel de Alberto (05/09) muestra el correo en **`grupoasegura.COM`** (buzón `asuarez@` + alias `dpo@`, `info@`, `reclamaciones@`) y **ningún `hola@`**; `docs/TRASPASO-CORREDURIA.md` dice que `grupoasegura.es` **solo sirve `info@`**. O sea: **`hola@grupoasegura.es`, publicado en producción como SAC y canal de derechos RGPD, puede no existir** — una reclamación rebotaría con el plazo de un mes corriendo. Fallo de método: se metió el correo que dictó Alberto sin comprobarlo contra su infraestructura. **Pendiente de que él confirme dominio (.com vs .es) y prueba de entrega**; se le pasó un prompt para Claude Chrome. Los alias viejos **no se borran** (están en textos legales publicados): se redirigen.
+- ✅ **ALERTA CERRADA el 05/09/2026: Alberto confirmó que «ya existe hola@grupoasegura.es»** (es su palabra, NO una prueba de entrega: nadie ha mandado un correo a ese buzón y comprobado que llega). Lo que estaba abierto era esto: 🚨 **correo del SAC.** La captura del panel de Alberto (05/09) muestra el correo en **`grupoasegura.COM`** (buzón `asuarez@` + alias `dpo@`, `info@`, `reclamaciones@`) y **ningún `hola@`**; `docs/TRASPASO-CORREDURIA.md` dice que `grupoasegura.es` **solo sirve `info@`**. O sea: **`hola@grupoasegura.es`, publicado en producción como SAC y canal de derechos RGPD, puede no existir** — una reclamación rebotaría con el plazo de un mes corriendo. Fallo de método: se metió el correo que dictó Alberto sin comprobarlo contra su infraestructura. **Pendiente de que él confirme dominio (.com vs .es) y prueba de entrega**; se le pasó un prompt para Claude Chrome. Los alias viejos **no se borran** (están en textos legales publicados): se redirigen.
 - Del bloque 0 quedan **0.4** (export art. 15/20 por `apps/asegura`) y **0.5** (solicitud de supresión).
 
 ---
