@@ -109,15 +109,19 @@
   Por la mañana `grupoasegura.es` (el `.es`, no el `.com`) pasó a servir la web del repo **`asegura`** de
   Manuel (`NEXT_PUBLIC_SITE_URL=https://grupoasegura.es`, con su `/siniestro` y las 301 del WordPress
   viejo, PR asegura#817). Por la tarde se le quitó: medido a las 14:04 UTC, los dominios del proyecto
-  Vercel `asegura` son **solo** `app.grupoasegura.com` + los `*.vercel.app`. 🚨 **Y en el equipo Vercel
-  `pisos-turisticos-projects` NO existe ningún proyecto `asegura-web`**, así que desde aquí no se ve
-  qué sirve hoy el apex: **compruébalo, no lo supongas.**
+  Vercel `asegura` son **solo** `app.grupoasegura.com` + los `*.vercel.app`. **`asegura-web` SÍ está
+  desplegada**: proyecto Vercel `asegura-web` (`prj_MnuAvshNZg6vmRsfTkSmiX4RyCj9`, root
+  `apps/asegura-web`), y es quien sirve el apex desde esa tarde. 🚨 **Ojo con la herramienta:
+  `list_projects`/`get_project` del MCP de Vercel NO devuelven ese proyecto** (404 por id, y la lista
+  se queda en 12 sin él ni `alquiler`) — sí aparece en el comentario del bot de Vercel en los PRs. Con
+  esa lista incompleta se afirmó aquí que el proyecto «no existe»: **una lista que no lo trae no
+  demuestra que no esté.**
   💣 **La lección cara (misma tarde): un dominio que se mueve se lleva por delante las rutas de servicio,
   no solo las páginas.** Los seis workflows de crons de `asegura` se repuntaron a `grupoasegura.es`
   (asegura#818) dando por hecho —sin medirlo— que la canonicalización LOO-670 rompía el host viejo. No lo
   rompía: el run de `cima-pull` de las 09:12 UTC contra `app.grupoasegura.com` había salido en verde. El
   primer run tras el merge murió con `curl: (22) ... error: 404`, y con `cima-pull` cae `cima-health-alert`,
-  que es el vigilante que avisaría de que la ingesta se ha parado. Revertido en asegura#819. La regla:
+  que es el vigilante que avisaría de que la ingesta se ha parado. Revertido y verificado en asegura#819. La regla:
   **antes de mover un host en un cron, mira el código de respuesta del endpoint en los dos hosts**
   (404 = otra app; 401 = la ruta existe y te rechaza por credencial, que es lo que quieres ver).
   🚨 **NO tiene base de datos a propósito**: sin Prisma, sin rol, sin secreto de sesión. El

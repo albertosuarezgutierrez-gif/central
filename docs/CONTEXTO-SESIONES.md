@@ -33,8 +33,10 @@
 - **🌐 El apex `grupoasegura.es` cambió de manos DOS VECES en el día, y yo rompí la ingesta de CIMA por
   no medir (05/09/2026).** Por la mañana pasó a servir la web del repo `asegura` (#817: `/siniestro` + 8
   redirects 301 del WordPress). Por la tarde se le quitó: medido a las 14:04 UTC, el proyecto Vercel
-  `asegura` sirve **solo** `app.grupoasegura.com`, y en el equipo `pisos-turisticos-projects` **no existe
-  ningún proyecto `asegura-web`** — desde el repo no se ve quién sirve hoy el apex. **Compruébalo.**
+  `asegura` sirve **solo** `app.grupoasegura.com`, y el apex lo sirve ya el proyecto `asegura-web`
+  (`prj_MnuAvshNZg6vmRsfTkSmiX4RyCj9`, root `apps/asegura-web`). 🚨 **`list_projects`/`get_project` del
+  MCP de Vercel NO devuelven ese proyecto** (ni `alquiler`): con esa lista se afirmó que «no existe».
+  Una lista incompleta no demuestra una ausencia — el comentario del bot de Vercel en el PR sí lo trae.
 - 💣 **Y la lección cara: moví los 6 workflows de crons a `grupoasegura.es` (#818) SUPONIENDO que la
   canonicalización LOO-670 rompía el host viejo. No lo rompía** — el run de `cima-pull` de las 09:12 UTC
   contra `app.grupoasegura.com` estaba en verde. El primer run tras mi merge murió con
