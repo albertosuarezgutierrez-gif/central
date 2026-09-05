@@ -48,6 +48,17 @@
   `posthog-browser.ts` afirma lo contrario y es FALSO. Pendiente: `www` aún sirve el WordPress viejo ·
   sobrescribir la clave · preguntar a Manuel de quién es ese proyecto · declarar PostHog en la política de
   privacidad (pasa por la gobernanza del ADR-015) · runbook `cmp-cookiebot-setup.md` obsoleto en 4 puntos.
+- **🧲 La hoja de la nevera y su QR: existe (05/09/2026).** Alberto: «crear QR y ahí seleccionas si
+  todas las pólizas, una o algunas… y el qr se puede borrar y se anularía el acceso». **No existía**:
+  solo la decisión escrita en `apps/asegura-portal/CLAUDE.md`, redactada como si existiera. Ahora
+  `/hoja/[token]`, pública e imprimible, con el QR en SVG desde el servidor (`qrcode@1.5.4`, la
+  misma versión que ia-rest y rrhh). 🔐 **Un token sin sesión es aceptable aquí porque la selección
+  lo acota**: enseña exactamente lo que va impreso en ese papel, así que no filtra nada que el papel
+  no filtre ya. Reglas: el QR lleva ENLACE no datos · lo que muestra se relee EN VIVO (vendes el
+  coche y desaparece sola) · **cero filas = TODAS, y eso incluye las futuras** (la pantalla lo dice,
+  cepo positivo) · anular no borra (sin DELETE en el rol) · token hasheado. Tabla `portal_hoja_qr`
+  aplicada el mismo día, con **5 cepos vistos morder en la BD real**. PR #2380.
+
 - **🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra: fuera una pestaña (05/09/2026).**
   Alberto, mirando su portal: *«mis seguros y mis pólizas es lo mismo»*. **No lo eran** (cartera de
   CIMA vs. lo que aporta él) **pero el fallo era del nombre**: en castellano son sinónimos, así que

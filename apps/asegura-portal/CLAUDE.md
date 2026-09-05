@@ -210,6 +210,57 @@ cada póliza, **antes** del historial de siniestros: es el dinero, que es lo pri
 Cepos en `test/regression-portal-visibilidad.test.ts`.
 
 
+### 🧲 La hoja de la nevera y su QR (05/09/2026) — el token que SÍ se puede regalar
+
+Alberto: *«crear QR y ahí seleccionas si todas las pólizas, una o algunas… y luego se crea el QR»*,
+con *«el qr se puede borrar y se anularía el acceso»*. Hasta ese día la hoja **no existía**: lo único
+que había era la decisión escrita al final de la sección de los teléfonos, redactada como si
+existiera. Ahora sí: `/hoja/[token]`, pública, imprimible.
+
+🔐 **Por qué aquí un token de solo lectura SIN sesión es aceptable, y en otro sitio no.** La objeción
+obvia es «quien fotografíe la hoja entra». Cierto — y da igual: entra a ver **exactamente lo que ya
+está impreso en esa misma hoja**, porque la selección del QR y lo que se imprime son la misma lista.
+El papel es la premisa; el token no añade filtración sobre el papel. Lo que sí haría daño es un QR
+que abriera la cartera ENTERA — y por eso **la selección no es un adorno: es lo que acota el token**.
+Sin ella, esta pieza no se podría hacer.
+
+Las cinco reglas, con su sitio:
+
+| Regla | Dónde vive | Qué pasa si se rompe |
+|---|---|---|
+| **El QR lleva un ENLACE, no los datos** | `lib/enlace-hoja.ts` | Con los datos dentro, la imagen miente en cuanto cambie la póliza, y quien fotografíe la hoja se los lleva |
+| **Lo que enseña se lee EN VIVO** y se vuelve a filtrar por la cartera actual de su dueño | `polizasDeLaHoja()` | Vendes el coche y el imán de la nevera sigue diciendo que está asegurado |
+| **Cero filas de selección = TODAS**, y eso incluye las FUTURAS | tabla + `HojasQr.tsx` | Ensancha el acceso solo cada vez que se contrata algo. **La pantalla lo dice**, con cepo positivo |
+| **Anular NO borra**: `anulada_en`, y el rol no tiene DELETE | SQL + `anularHoja()` | Quien tiene el papel viejo lee «no existe», piensa que le falla el móvil y lo reintenta con prisa |
+| **El token se guarda HASHEADO** | `lib/hojas.ts` | Una tabla de hojas con sus enlaces legibles es una tabla de llaves |
+
+🚨 **Y la trampa del vocabulario, que es la que más cara sale:** como cero filas significa «todas»,
+crear una hoja cuyo formulario traía solo ids ajenos daría **el acceso más amplio a quien pidió el
+más estrecho**. Por eso `crearHoja()` rechaza con `sin_seleccion` en vez de crear, y los ids del
+formulario **nunca se insertan**: se parte de `polizasElegibles()` y la selección solo filtra.
+
+📌 **La página pública no consulta Prisma**, y no es estilo: al hacerlo, el cepo de aislamiento la
+marcó —con razón, porque una consulta sin `identidadId` a la vista es indistinguible de un olvido—.
+La lectura vive en `lib/hojas.ts`, que además expone `crearHojaDeSesion`/`anularHojaDeSesion` (misma
+forma que `lib/supresion.ts`) para que las rutas de API no lleven fontanería de sesión.
+
+📄 Lo que la hoja enseña: compañía, ramo, qué está asegurado, nº de póliza, vencimiento y a quién
+llamar **con la fecha de verificación impresa**. Nada de prima, recibos, siniestros, DNI ni dirección
+del riesgo — con cepo. Las aportadas salen sin teléfono y diciendo que no las lleva la correduría:
+no tenemos su compañía cruzada, así que un número ahí sería inventado.
+
+⚠️ **Y el hueco real, que es de negocio y no de código: Occident no tiene teléfono de voz.** Son 19
+pólizas cuya hoja dirá «WhatsApp, 9h a 21h L-V» donde las demás dicen un 900. En el arcén un sábado
+por la noche eso no sirve. Se arregla llamando a Occident, no aquí.
+
+Tabla `seguros.portal_hoja_qr` + `portal_hoja_qr_poliza`
+(`prisma/sql/2026-09-05_portal_hoja_qr.sql`, **APLICADA el 05/09/2026** — misma sesión que el
+despliegue, que es lo que la lección de `portal_supresion` obliga). **Cinco cepos vistos morder en la
+BD real** con limpieza posterior: token que no es hex (23514), las dos referencias a la vez (23514),
+ninguna (23514), la misma póliza dos veces (23505) y el nombre largo (23514). Reglas puras en
+`packages/module-seguros-portal/src/hoja-qr.ts` (11 tests); cepos de raíz en
+`test/regression-portal-hoja-qr.test.ts` (11, con seis mutaciones comprobadas).
+
 ### 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra (05/09/2026)
 
 Alberto, mirando su propio portal en el móvil: *«mis seguros y mis pólizas es lo mismo… tengo lógica
