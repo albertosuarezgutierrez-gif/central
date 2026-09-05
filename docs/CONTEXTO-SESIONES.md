@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✅ Modo noche MERGEADO y comprobado en BD (05/09/2026).** PR #2312 en `main` (`2458f5f7`),
+  20/20 checks verdes y los 12 proyectos Vercel en `Ignored` (cero minutos de build; los comentarios
+  intermedios decían «Building», que es el falso positivo ya documentado — el estado que vale es el
+  final). Comprobado contra la Supabase compartida: las tres columnas existen con el tipo esperado
+  (`urgente_nocturno` NOT NULL DEFAULT false) y **la consulta EXACTA del barrido corre y devuelve 0
+  filas**, que es lo que debe devolver sin urgencias pendientes. 284/284 tests sobre `main`.
+  ⏳ **Lo que NO se ha probado y hay que decirlo:** el disparo real. `acusarNocturno` solo entra si
+  escala un mensaje entre las 21:00 y las 09:00, y esto se mergeó a las 09:47 de la mañana — no hay
+  forma de provocarlo sin escribirle a un huésped de verdad. La primera noche con un escalado es la
+  prueba; se mira `mensajes_pendientes_tg.acuse_nocturno_at` y el Telegram.
+
 - **🌙 MODO NOCHE del agente de huéspedes: el silencio de 21:00 a 09:00 deja de ser invisible (05/09/2026).**
   Alberto pidió «que a partir de las 21h el agente sea 100% autónomo». Se hizo lo contrario y se explicó
   por qué: `auto.ts` YA no mira la hora (lo apoyado en fuente sale solo a las 3 de la mañana), así que
