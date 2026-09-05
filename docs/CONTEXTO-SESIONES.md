@@ -65,6 +65,20 @@
   (migración aplicada). Y el `omitido` que se puso a mano esa mañana deja de funcionar de casualidad:
   `ESTADOS_HITO` + `cubreAlHuesped()` con sus tests, contado en `/apartamentos`. PR pendiente.
 
+- **📌 Los dos arreglos del día, MERGEADOS y con seguimiento armado para el 06/09 (05/09/2026).**
+  `main` lleva ya el modo noche (#2312, `2458f5f7`), la memoria (#2316) y la tabla del vigía
+  (#2325, `17334189`), los tres con 20/20 checks. Lo que NINGUNO tiene todavía es medición del
+  efecto real, y por eso queda un recordatorio one-shot para el **06/09 08:15 UTC**: (1)
+  `agente_veredicto` debe tener ~30 filas tras la pasada de las 07:45 y cero errores `evaluado_at`
+  en los runtime errors; (2) el modo noche solo se puede dar por bueno si hay una fila con
+  `acuse_nocturno_at` relleno — **si nadie escribió de madrugada NO hay nada verificado**, y decir
+  lo contrario sería el falso verde de siempre.
+  ⚠️ El recordatorio va atado a ESTA sesión a propósito: un trigger de sesión nueva se crea **sin
+  conectores MCP** (el `.mcp.json` del repo solo trae `gmail-adjuntos`; Supabase, Vercel y GitHub
+  son conectores de cuenta), así que habría despertado a un agente sin forma de consultar la BD —
+  o sea, un «no he podido comprobarlo» indistinguible de un «está bien». Si aun así no llega,
+  la comprobación está escrita aquí arriba y se hace a mano.
+
 - **🔧 Arreglado: el veredicto del vigía se va a su propia tabla, `agente_veredicto` (05/09/2026).**
   Dos sistemas se llamaban igual por accidente: `agente_salud` de julio es el badge que el PROPIO
   agente se auto-declara (hoy solo `facturas-extraccion-pdf`, lo lee `lib/finanzas.ts`), y el
