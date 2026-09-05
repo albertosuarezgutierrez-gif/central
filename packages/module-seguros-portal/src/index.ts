@@ -139,3 +139,11 @@ export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
 export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas } from './canal-compania.ts'
+export {
+  VISTAS_BOVEDA,
+  VISTA_BOVEDA_POR_DEFECTO,
+  vistaDeBoveda,
+  pestanasPortal,
+  hrefDeVista,
+} from './vista-portal.ts'
+export type { VistaBoveda, PestanaPortal } from './vista-portal.ts'

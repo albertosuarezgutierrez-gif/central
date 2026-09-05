@@ -161,6 +161,72 @@ input, select, textarea, button { font: inherit; }
    * primera franja de pantalla ya sea de la correduría. */
   border-top: 3px solid var(--accent);
 }
+/* Barra de secciones del portal (Mis seguros · Un siniestro · Mis pólizas ·
+ * Quién me ve). Son enlaces, no botones: la sección vive en la URL.
+ *
+ * 📱 `overflow-x:auto` y no `flex-wrap`: con cuatro etiquetas en un móvil de
+ * 320px, envolver a dos filas dobla la altura de la cabecera justo donde menos
+ * sitio hay. Un carril que se desliza mantiene la altura y deja ver que hay
+ * más a la derecha. `scrollbar-width:none` porque la barra del sistema encima
+ * de 4 pestañas es ruido, no información.
+ *
+ * ⚠️ El scroll va AQUÍ y no en un contenedor de más arriba: si el que se
+ * desliza fuese el padre, se llevaría la página entera con él. */
+.pestanas {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 20px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+}
+.pestanas::-webkit-scrollbar {
+  display: none;
+}
+.pestana {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  /* 44px de alto: mínimo táctil de la regla de la casa. Esta barra la usa
+   * gente de 50-70 años desde el móvil. */
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: calc(var(--radius) * 0.6) calc(var(--radius) * 0.6) 0 0;
+  transition: color 150ms, background-color 150ms;
+}
+.pestana:hover {
+  color: var(--text);
+  background: var(--surface-hover, var(--panel2));
+}
+/* El subrayado de la activa es un `::after` que solo cambia de opacidad —el
+ * mismo truco que la app del corredor—: nada que medir ni que animar. El
+ * `-1px` lo monta sobre el borde de la barra en vez de debajo. */
+.pestana::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--brand);
+  opacity: 0;
+  transition: opacity 150ms;
+}
+.pestana[data-activa]::after {
+  opacity: 1;
+}
+.pestana[data-activa] {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* Interruptor de tema. Empujado al extremo con `margin-left:auto`, que lo deja
  * a la derecha sin tener que envolver el resto de la barra en otro contenedor.
  *
