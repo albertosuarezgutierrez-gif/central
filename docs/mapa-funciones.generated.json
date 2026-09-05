@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-05T11:52:05Z",
-  "sha": "eda35a78d8867fd8e0aaac545e60fc940fbc9f8f",
+  "generadoEn": "2026-09-05T12:57:18Z",
+  "sha": "7f2b415a4a1b05c2bdb3599ac2d5f38e50a8fb64",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3646,7 +3646,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 49,
+          "linea": 50,
           "resumen": "La ficha de UNA póliza de la cartera. ───────────────────────────────────────────────────────────────────────────── 🚨 EL ID DE LA URL NO CONSULTA NADA. Esta es la línea entera de esta página. Una rut"
         },
         {
@@ -3655,13 +3655,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 175,
+          "linea": 188,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a674102bca95"
+      "hash": "3556a2502307"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -3674,7 +3674,8 @@
         "Bien",
         "AvisoReciboDevuelto",
         "Recibos",
-        "Coberturas"
+        "Coberturas",
+        "HistorialSiniestros"
       ],
       "funciones": [
         {
@@ -3683,7 +3684,7 @@
           "exportada": true,
           "params": "{ ramo }: { ramo: string | null }",
           "retorno": null,
-          "linea": 78
+          "linea": 86
         },
         {
           "nombre": "tituloDePoliza",
@@ -3691,7 +3692,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "string",
-          "linea": 109,
+          "linea": 117,
           "resumen": "El titular de una fila: **qué cosa es**, no de qué compañía. Nadie se sabe su número de póliza y a casi nadie le dice nada «Occident» a secas cuando tiene dos con ellos. Lo que reconoce es su coche y "
         },
         {
@@ -3700,7 +3701,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "boolean",
-          "linea": 115,
+          "linea": 123,
           "resumen": "¿El titular de la fila ya es el bien? Decide qué queda para la segunda línea."
         },
         {
@@ -3709,7 +3710,7 @@
           "exportada": true,
           "params": "{ ramo, matricula, referenciaCatastral, datosRamo, }: { ramo: string | null matricula: string | null referenciaCatastral: string | null datosRamo: Record<string, unknown> | null }",
           "retorno": null,
-          "linea": 129,
+          "linea": 137,
           "resumen": "Lo mismo para una póliza que ha aportado la propia persona. La matrícula vive en su COLUMNA (se consulta y se indexa) y el resto en el `datos_ramo`, así que se juntan antes de describir — `describirBi"
         },
         {
@@ -3718,7 +3719,7 @@
           "exportada": true,
           "params": "{ bien }: { bien: BienAsegurado }",
           "retorno": null,
-          "linea": 168,
+          "linea": 176,
           "resumen": "QUÉ está asegurado: el coche, el piso. 🚨 No pinta NADA cuando no hay dato, y eso es deliberado: `null` aquí significa «la compañía no nos lo ha informado» **o** «tu nivel no lo ve», y ninguna de las "
         },
         {
@@ -3727,7 +3728,7 @@
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 198
+          "linea": 206
         },
         {
           "nombre": "Recibos",
@@ -3735,7 +3736,7 @@
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 241,
+          "linea": 249,
           "resumen": "Recibos, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`. - `recibos === null` → el nivel de esta persona no enseña recibos. No es una ausencia del dato: se oculta y no se menciona. - `to"
         },
         {
@@ -3744,13 +3745,22 @@
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 280,
+          "linea": 288,
           "resumen": "Coberturas. `null` = el nivel no las enseña (se oculta); `total === 0` = **no nos consta el detalle**, que NO es «no tienes coberturas»: decirle eso a alguien que sí las tiene es empujarle a contratar"
+        },
+        {
+          "nombre": "HistorialSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ p }: { p: PolizaPortal }",
+          "retorno": null,
+          "linea": 334,
+          "resumen": "El HISTORIAL de siniestros de una póliza. Alberto: «y los recibos? e historial siniestros?». No existía — la lectura filtraba por `abierto|en_tramitacion`, así que de los 67 siniestros de la cartera v"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c37eff1433aa"
+      "hash": "c12e42433c32"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx",
@@ -5001,7 +5011,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 187,
+          "linea": 200,
           "resumen": "`nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo."
         },
         {
@@ -5010,7 +5020,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CarteraPortal | null>",
-          "linea": 193
+          "linea": 206
         },
         {
           "nombre": "carteraDeIdentidad",
@@ -5018,7 +5028,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<CarteraPortal>",
-          "linea": 199
+          "linea": 212
         },
         {
           "nombre": "resumirRecibosPortal",
@@ -5026,13 +5036,13 @@
           "exportada": false,
           "params": "lista: ReciboFila[]",
           "retorno": "RecibosPortal",
-          "linea": 577,
+          "linea": 615,
           "resumen": "Recibe la lista ordenada por emisión descendente. `anulado` no cuenta en ningún cubo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f6777d092270"
+      "hash": "07737d65c897"
     },
     {
       "ruta": "apps/asegura-portal/lib/catastro-sugerencias.ts",
@@ -6559,13 +6569,13 @@
           "exportada": true,
           "params": "ruta: string",
           "retorno": "string",
-          "linea": 45,
+          "linea": 53,
           "resumen": "URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d8d1a15e6589"
+      "hash": "da9c5c99024f"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
@@ -57407,7 +57417,7 @@
           "exportada": true,
           "params": "{ pendientes }: { pendientes: number }",
           "retorno": null,
-          "linea": 24,
+          "linea": 31,
           "resumen": "El botón que escribe el índice de búsqueda por DNI (paso 3 del backfill). 🚨 Existe desde el 05/09/2026 porque hasta ese día NO HABÍA NINGUNO. La pantalla calculaba el plan y decía «se lanza desde ase"
         },
         {
@@ -57416,7 +57426,7 @@
           "exportada": false,
           "params": "{ r }: { r: EscrituraBackfillDni }",
           "retorno": null,
-          "linea": 76
+          "linea": 89
         },
         {
           "nombre": "Nota",
@@ -57424,12 +57434,12 @@
           "exportada": false,
           "params": "{ children, alerta }: { children: React.ReactNode; alerta?: boolean }",
           "retorno": null,
-          "linea": 100
+          "linea": 116
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "825bc01516a4"
+      "hash": "6220fc2aad16"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/page.tsx",
@@ -57467,6 +57477,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "4208c09033bb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/pendientes.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "quedanPorEscribir"
+      ],
+      "funciones": [
+        {
+          "nombre": "quedanPorEscribir",
+          "kind": "function",
+          "exportada": true,
+          "params": "segunElPlan: number, resultado: EscrituraBackfillDni | null,",
+          "retorno": "number",
+          "linea": 21,
+          "resumen": "Cuántos índices quedan por escribir, mirando el dato más FRESCO que haya. 🚨 Por qué no basta con la cifra del plan (05/09/2026, visto por Alberto en la pantalla): esa cifra se calcula al CARGAR la pá"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e8a588cd550a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/NuevoCliente.tsx",
@@ -114497,6 +114528,68 @@
       "hash": "073c4ad492bf"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/siniestro-historial.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "El HISTORIAL de siniestros que ve el cliente. Alberto, mirando el lateral del portal: «y los recibos? e historial siniestros?». No existía: `lib/cartera-lectura.ts` filtraba `estado IN ('abierto','en_tramitacion')`, así que de los 67 siniestros de la cartera viva el portal enseñaba 7 y **los 60 cerr",
+      "exporta": [
+        "siniestroAbierto",
+        "etiquetaEstadoSiniestro",
+        "tonoEstadoSiniestro",
+        "ordenarHistorialSiniestros",
+        "resumirHistorialSiniestros"
+      ],
+      "funciones": [
+        {
+          "nombre": "siniestroAbierto",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "boolean",
+          "linea": 54,
+          "resumen": "¿Sigue vivo? **La fuente única.** Estaba escrito a mano como un array en la consulta y otra vez en la pantalla. Dos listas del mismo vocabulario acaban divergiendo el día que la compañía añada un esta"
+        },
+        {
+          "nombre": "etiquetaEstadoSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "string",
+          "linea": 68,
+          "resumen": "Cómo se le dice el estado al cliente. Cuatro palabras distintas para cuatro cosas distintas — ver el punto 3 de la cabecera. Un valor fuera del vocabulario se devuelve tal cual en vez de caer a «cerra"
+        },
+        {
+          "nombre": "tonoEstadoSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "'abierto' | 'rechazado' | 'cerrado'",
+          "linea": 84,
+          "resumen": "El tono con el que se pinta cada estado. `rechazado` NO es neutro."
+        },
+        {
+          "nombre": "ordenarHistorialSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "siniestros: readonly T[],",
+          "retorno": "T[]",
+          "linea": 98,
+          "resumen": "El historial, del más reciente al más antiguo. 🚨 Los que **no tienen fecha van al FINAL**, no al principio. Es la misma trampa que el `ORDER BY fecha DESC` de la ficha del corredor: en Postgres `DESC"
+        },
+        {
+          "nombre": "resumirHistorialSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "siniestros: readonly { estado: string }[],",
+          "retorno": "",
+          "linea": 117,
+          "resumen": "Cuántos hay de cada cosa, para el titular de la sección. `total === 0` significa **«no nos consta ninguno»**, y quien lo pinte tiene que decirlo con esas palabras: la compañía informa los siniestros p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "540a73300a64"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/supresion.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "La **solicitud de supresión (art. 17 RGPD)** del portal. 🚨 Lo que este fichero NO hace, y es la mitad del diseño: **no borra nada**. El art. 17.3 excluye la supresión cuando el tratamiento es necesario «para el cumplimiento de una obligación legal» (b) o «para la formulación, el ejercicio o la defe",
@@ -121979,7 +122072,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3030,
-    "funciones": 9146
+    "archivos": 3032,
+    "funciones": 9153
   }
 }
