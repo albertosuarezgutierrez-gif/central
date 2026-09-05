@@ -97,8 +97,8 @@ ramo la fuente correcta es `seguros.poliza_recibos`, que es lo que se ha usado a
 
 | Activo | Estado |
 |---|---|
-| Web pública de marketing | **NO existe** |
-| Única página pública | `/seguros` en `apps/plataforma` — 1 página, 3 bullets y un formulario, bajo el dominio de plataforma |
+| Web pública de marketing | ~~**NO existe**~~ ✅ **existe y sirve**: `apps/asegura-web` en `grupoasegura.es` desde la tarde del 05/09/2026 |
+| `/seguros` en `apps/plataforma` | ⚠️ **SIGUE VIVA Y ES INDEXABLE** (medido 05/09/2026): pública en el middleware (`middleware.ts:59`), `metadata` sin `robots`, y plataforma **no tiene `robots.ts` ni `sitemap.ts`**. Manda los leads al **mismo** endpoint que la web nueva. Compite por «correduría de seguros» desde `plataforma-ten-flame.vercel.app` → el 301 de la Fase 2 sigue pendiente (idea D de `ASEGURA-SEO-REDES-IDEAS.md`). Y `public/mockup-correduria.html` se sirve público y rastreable |
 | `app.grupoasegura.com` | Sirve el **CRM de Manuel** (proyecto Vercel `asegura`, repo `albertosuarezgutierrez-gif/asegura`, ya en la cuenta de Alberto) |
 | **Apex `grupoasegura.com` y `www.`** | ~~Libres~~ **No son de Vercel: apuntan a un parking de IONOS (`217.160.0.254`, MX de IONOS; medido 05/09/2026).** No se usan como canónico: el canónico es el `.es` |
 | `grupoasegura.es` | ✅ **Desde el 05/09/2026 (tarde) sirve `apps/asegura-web`** — Alberto, con Claude en Chrome, quitó `.es`+`www` del proyecto `asegura` y los ató a `asegura-web` (apex Valid al instante porque su A ya era Vercel; `www` como 308 al apex, pendiente de CNAME en IONOS). Lo de abajo es el estado ANTERIOR, que explica por qué hacía falta |
@@ -144,9 +144,15 @@ a uno al que sí se avisó.
    «aceptar», y a reescribir `/legal/cookies` (LSSI art. 22.2). → Elegir analítica **sin cookies**.
 4. **Cada cotización de Avant2 cuesta 0,50 € y no es idempotente.** Ninguna campaña, vigilancia
    periódica ni botón público tarifica. Se vigila la fecha (gratis) y se tarifica una vez.
-5. **Contradicción legal abierta:** la web pública publica `info@grupoasegura.es` y el portal
-   `hola@grupoasegura.es`. Dos buzones de reclamación para el mismo mediador es un
-   incumplimiento. **Se unifica en `hola@` antes de dar visibilidad a la marca.**
+5. **~~Contradicción legal abierta~~ ✅ CERRADA en `apps/asegura-web` (medido 05/09/2026).** La
+   redacción de abajo se escribió cuando la web pública era la del **repo `asegura` antiguo**. En
+   la app nueva no hay contradicción: un grep de `info@|hola@|@grupoasegura` sobre toda
+   `apps/asegura-web` da **cero coincidencias literales** — la web nunca teclea una dirección, la
+   compone siempre desde `MEDIADOR.identidad.email` (`mediador.ts:99` = `hola@grupoasegura.es`), y
+   `mediador.test.ts:96` **prohíbe** que `info@` reaparezca. Sigue vivo, si acaso, en el CRM de
+   Manuel. *(Texto original: «la web pública publica `info@grupoasegura.es` y el portal
+   `hola@grupoasegura.es`; dos buzones de reclamación para el mismo mediador es un
+   incumplimiento».)*
 6. **Marca:** se escribe **«Grupo ASegura»** (A y S mayúsculas, el monograma del logo *es* el
    nombre). Protegido por `test/regression-nombre-comercial-asegura.test.ts`. Pero para SEO hay
    que asumir que la gente **teclea «asegura seguros sevilla»** en minúsculas: el contenido debe
@@ -173,10 +179,16 @@ Hecho: ver la tabla de §1.2(c). **Hogar renta ~69€/póliza/año contra ~41€
 del 22 % frente al 10 %. **Ramo prioritario: hogar**, como hipótesis de trabajo.
 
 🚨 **Y lo que salió de paso, que es un problema de negocio, no de marketing: falta la ingesta de
-Mapfre desde el 02/04/2026** — ~5 meses sin un solo recibo cobrado de la compañía que es el 64 %
-de la cartera. O CIMA dejó de traerla, o hay recibos sin conciliar. **Eso se mira antes que
-cualquier campaña**: si Mapfre no está entrando, el libro de comisiones miente y con él
-cualquier decisión de ramo.
+Mapfre.** **Corregido el 05/09/2026 con una medición nueva, y es peor de lo que decía esta
+línea:** no es que «falte desde el 02/04/2026», es que **Mapfre nunca ha entrado por el cron**.
+Agrupando `seguros.poliza_recibos` por entidad y **fecha de ingesta**, sus 153 recibos tienen una
+sola fecha de creación —`2026-06-24`, la del volcado inicial— mientras Allianz (C0109) y Occident
+(C0468) sí registran ingestas posteriores (última, `2026-08-24`). Su último `fecha_situacion` es
+del 29/03/2026.
+
+Es la compañía que es el **64 % de la cartera**. **Eso se mira antes que cualquier campaña**: si
+Mapfre no está entrando, el libro de comisiones miente y con él la comparación hogar-vs-auto de
+la que sale el ramo prioritario. Le toca a `agente-correduria`, no al agente de SEO.
 
 Lo que cierra la decisión (y no bloquea empezar): cerrar ese hueco de Mapfre y llegar a ~20
 pólizas de hogar medidas. Mientras tanto, **hogar se ataca como apuesta razonada, dicha como tal**.
@@ -269,8 +281,14 @@ fondo es pagar por perder leads.
   seguro del coche en la renovación», «preaviso de un mes para cancelar el seguro», «cómo
   cambiar de correduría», «qué cubre de verdad mi seguro de hogar»
 
+**Quién lo ejecuta: la skill `seo-asegura`** (creada el 05/09/2026), con rutina semanal pendiente
+de crear. Su backlog vivo —con la auditoría técnica de `apps/asegura-web` ya medida— está en
+**`docs/ASEGURA-SEO-REDES-IDEAS.md`**, que cubre también las **redes sociales**. No dupliques ahí
+la estrategia: esto es la estrategia; aquello es lo que cuesta cada pieza y qué la bloquea.
+
 Moldes reutilizables ya en el repo: `.claude/skills/seo-house-sevillana/` (metadatos, JSON-LD,
 keyword research, auditoría Next.js 15 App Router) y `docs/INFORME-SEO-iarest-2026-08-01.md`.
+⚠️ Esa skill es de **otro negocio** (un piso turístico): se copia el método, nunca el contenido.
 
 ⚠️ **Lección del agente SEO de ia-rest, que no aplicó ni un cambio:** su umbral de 30
 impresiones era inalcanzable sin tráfico. **No automatizar el SEO antes de tener tráfico.**
