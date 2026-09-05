@@ -49,7 +49,7 @@
   que el administrador acabe viendo las pólizas de la empresa y las suyas. `combinarPersonaContacto` +
   `tiposContactoSugeridos` en `@central/module-seguros` (8 tests): son DOS escrituras y «ficha creada, vínculo
   no» se dice entero para que el siguiente clic no duplique. NO se tocan `tipo`/`lead_estado` (columnas
-  heredadas del CRM que la pantalla no usa: escribirlas sería una segunda verdad). PR #PENDIENTE.
+  heredadas del CRM que la pantalla no usa: escribirlas sería una segunda verdad). PR #2369.
 
 - **🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio (05/09/2026).**
   Captura suya: «Únete gratis», «Acceso correduría», header montado. Medido en Vercel: el apex `.es` y
