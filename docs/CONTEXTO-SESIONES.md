@@ -30,6 +30,23 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **👥 «Sigue habiendo duplicidad ¿xq?»: no era el buscador, eran dos volcados sin cruzar (05/09/2026).**
+  Los dos volcados del CRM viejo (`intranet:` 30/05 y `asegura_app:` 21/06) se cargaron sin cruzarse, así
+  que una misma persona entró dos veces. 🚨 **El id del `import_ref` NO sirve para cruzarlos**: de 3.443
+  pares con el mismo id de origen, **3.005 tienen nombre distinto** — numeran independientemente y
+  coinciden por casualidad; fusionar por ahí habría mezclado 3.000 personas. Lo que sí prueba identidad es
+  nombre exacto **+ el código de cliente que el volcado dejó pegado al apellido** («garcia suarez 14354»).
+  Aplicado con OK de Alberto: **104 fusiones** (lote 7, contactos UNIDOS y no elegidos → 64 teléfonos y 98
+  emails salvados; 0 pólizas colgando de una lápida) y **462 leads sin ningún canal descartados**. Visibles
+  5.668 → **5.102**, cartera viva 80 intacta. Quedan **336 grupos de homónimos SIN prueba** (solo 2 con
+  identidad probada): no se fusionan. Su guarda abortó el lote entero por un par que partía el nombre de
+  otra forma — se apretó el criterio, no el cepo. 🐛 De paso: `avisos-vencimiento.ts` **no filtraba
+  `cliente.activo`**, o sea que se le podía mandar un correo de vencimiento a una ficha descartada (único
+  camino con efecto externo); + 6 puntos del portal, y guardián nuevo `filtro-activo.test.ts` porque ese
+  filtro ya se había perdido una vez. ⚠️ **El timeout de 60s del MCP de Supabase NO significa que la
+  transacción se abortara**: la fusión confirmó después de que el cliente cortara y la primera lectura la
+  dio por «intacta». Mirar el resultado, no el error.
+
 - **🎨 El portal del cliente deja de ser una sola página, y el diseño se LEE del fuente de Manuel (05/09/2026).**
   Alberto: «el aspecto, quiero que se vea más moderno» + «en vercel asegura tiene q estar el diseño de manuel».
   Se clona el repo de `app.grupoasegura.com` y se leen sus tokens: **confirma** el `#3364ee` y el `16px` ya
