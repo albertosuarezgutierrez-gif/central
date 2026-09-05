@@ -835,6 +835,48 @@ en cada GET/POST; `resumen` + `choques` como listas de uuid, sin DNI ni hash ni 
 se pueden calcular con la clave (aquí) y el lote de fusión se escribe desde la BD; antes se perdían al
 cerrar la respuesta. Abrir `/correduria/mantenimiento` en plataforma basta para refrescarla.
 
+✅ **PASO 3 EJECUTABLE DESDE LA PANTALLA (05/09/2026).** Hasta ese día el `POST` existía y **no había
+botón en ninguna parte**: `/correduria/mantenimiento` decía «se lanza desde asegura», que en la
+práctica era un `curl` con `ASEGURA_OPERADOR_SECRET` a mano. O sea, «haz el backfill del DNI» no lo
+podía hacer nadie. Ahora hay botón (`EscribirIndiceDni.tsx` → `POST /api/correduria/backfill-dni` →
+el puerto), en **tandas** (`{limite:N}`; descifrar 32.000 DNI ya consume parte de los 300 s) y con
+`restantes` para saber si hay que volver a pulsar. Es idempotente: el `UPDATE` lleva
+`dni_lookup_hash is null`.
+⚠️ **Y se corrigió una frase falsa que era la que bloqueaba todo:** «no hay botón mientras queden
+choques porque la escritura reventaría a la mitad». **No revienta.** El plan clasifica cada ficha
+antes de tocar nada y sólo se escriben las `rellenable`; la segunda ficha de un DNI repetido ni
+llega al `UPDATE`. Fusionar primero sigue siendo mejor (cada fusión = un hash más escribible), pero
+es cobertura, no un requisito. La escritura va en `UPDATE ... FROM (VALUES ...)` por tandas de 500,
+con reintento fila a fila si una tanda cae, para saber CUÁL falló.
+
+🃏 **EL DNI CENTINELA (05/09/2026) — un valor de cajón que SÍ parece un documento.** Al mirar los 18
+grupos de choque que quedaban tras el lote 7, uno no se parecía a los demás: **20 fichas comparten un
+mismo DNI con 20 nombres sin relación** («alberto suárez gutiérrez», «alejandro saez caro», «chema
+14134», «eva 12895»…) y **19 correos distintos**; una está en cartera viva. Es el mismo documento
+tecleado en la ficha de veinte personas, y `looksLikeDniNieCif` no lo filtra porque tiene la letra
+correcta. 🚨 **Y el índice único no protege de esto**: sólo cubre `tipo='cliente'`, y **14.990 de las
+15.092 fichas con DNI y sin hash son `lead`** — el hash se habría escrito sin que nada fallara, y a
+partir de ahí una búsqueda por ese DNI devolvería veinte personas y [Probable] la ingesta de CIMA,
+que engancha la póliza a la ficha POR ese hash, podría colgarle una póliza viva a quien no es.
+- **Guardián** en la pieza pura (destino `compartido`): ≥3 nombres distintos bajo el mismo DNI **y**
+  ningún token de nombre común a todas. Esas fichas **no se escriben nunca**, `lead` incluidos, y no
+  son candidatas a fusión: no hay a quién fusionar, hay un dato que corregir.
+- **Con DOS nombres NO se activa a propósito.** Ahí «Adela Gutiérrez Alcalá» / «Adela Alcalá» (la
+  misma persona, fusionada en el lote 7) y un DNI mal tecleado son indistinguibles; esos siguen
+  siendo `choca`, que es lo que los pone delante de una persona. El guardián caza el centinela, **no
+  todos los DNI equivocados**.
+- La foto guarda ahora `compartidos` (`2026-09-05_backfill_dni_plan_compartidos.sql`, aplicada):
+  desde SQL no se pueden recalcular sin las claves PII. ⚠️ `[]` en una foto anterior al 05/09/2026
+  significa «no se calcularon», no «no hay» — mírese `calculado_en`.
+
+📋 **Estado de los 620 grupos de choque (medido 05/09/2026):** **602 los fusionó el lote 7** el 04/09
+a las 21:16-21:19 (auditados: 572 con el nombre idéntico, 30 con variantes que comparten tokens —
+apellido suelto, erratas, el código pegado—; ninguna fusión de dos personas distintas). Quedan **18**:
+1 es el centinela, 2 son los pares con DNI contradictorio que el propio lote 7 excluyó con los nombres
+delante (`249` Antonio Manuel Mejías / Yolanda Ríos, `366` Catalina Verdugo / Fernando Martín) y **15
+son grupos de TRES o más fichas**, que la guarda `count(*) = 2` del lote 7 salta a propósito: tres
+fichas con el mismo DNI las decide una persona, no un bucle.
+
 🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ✅ EJECUTADO:
 el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un
 error». Las dos mitades ciertas y por motivos distintos:

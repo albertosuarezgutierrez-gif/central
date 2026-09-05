@@ -1,4 +1,10 @@
--- Fusión de los pares NOMBRE + CÓDIGO DE CLIENTE idénticos (lote `fusion-nombre-codigo-2026-09-05`).
+-- Lote 8 — fusión de los pares NOMBRE + CÓDIGO DE CLIENTE idénticos
+-- (lote `fusion-nombre-codigo-2026-09-05`).
+--
+-- ⚠️ Numeración corregida el 05/09/2026: este fichero y el de vehículo/póliza nacieron como
+-- «lote7» y «lote8», chocando con el `2026-09-04_fusion_mismo_dni_lote7.sql` del día anterior.
+-- Los valores de `lote` en `cliente_merge_log` son distintos (llevan fecha), así que no hay
+-- ningún dato mal; lo que había mal era el nombre del fichero.
 --
 -- ─── Qué duplicado ataca ────────────────────────────────────────────────────
 -- Alberto, viendo el buscador: «sigue habiendo duplicidad ¿xq?». No era el

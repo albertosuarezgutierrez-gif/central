@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Wrench } from 'lucide-react'
 import { planBackfillDni, type PlanBackfillDni } from '@/lib/correduria-puerto'
 import { PageHeader } from '@/components/ui'
+import EscribirIndiceDni from './EscribirIndiceDni'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,10 +15,14 @@ export const dynamic = 'force-dynamic'
  * pasada que se hace cuando toca. Meterlo en la pantalla que Alberto abre todas
  * las mañanas sería ruido permanente por una tarea de una tarde.
  *
- * 🚨 Esta página **no escribe nada**. El GET del puerto calcula el plan en seco;
- * escribir los hashes es el PASO 3 y solo puede ir después de fusionar los
- * choques, que se hacen por lote SQL con los nombres delante. Por eso aquí no
- * hay botón de escribir mientras `enChoque > 0`.
+ * ⚠️ **Corregido el 05/09/2026.** Aquí ponía que la página no escribe nada y que
+ * no hay botón mientras queden choques, «porque uno que promete escribir y
+ * revienta a la mitad es peor que no tenerlo». La escritura no revienta: el
+ * puerto clasifica cada ficha antes de tocar nada y sólo escribe las que no
+ * chocan. La consecuencia de aquella frase fue que «hacer el backfill» exigía un
+ * `curl` con el secreto de operador a mano — o sea, no lo podía hacer nadie.
+ * Ahora el botón está aquí, y los choques dejan de ser un bloqueo para ser lo
+ * que son: cobertura que falta hasta que se fusionen.
  */
 export default async function MantenimientoPage() {
   const plan = await planBackfillDni()
@@ -79,8 +84,9 @@ function BlindIndexDni({ plan }: { plan: PlanBackfillDni }) {
 
       <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
         <Cifra n={plan.rellenables} rotulo="se pueden rellenar" nota="tienen DNI, les falta el índice y no chocan con nadie" />
-        <Cifra n={plan.enChoque} rotulo="son un DNI repetido" nota="la misma persona dos veces: hay que fusionarlas ANTES de escribir" alerta={plan.enChoque > 0} />
+        <Cifra n={plan.enChoque} rotulo="son un DNI repetido" nota="la misma persona dos veces: se fusionan por lote SQL, y hasta entonces no se indexan" alerta={plan.enChoque > 0} />
         <Cifra n={plan.grupos} rotulo="grupos a fusionar" nota="cada grupo son las fichas que comparten un mismo DNI" />
+        <Cifra n={plan.compartidas} rotulo="con un DNI centinela" nota="un mismo documento escrito en fichas de personas distintas: no se fusiona, se corrige" alerta={plan.compartidas > 0} />
         <Cifra n={plan.ilegibles} rotulo="con el DNI ilegible" nota="no descifra o no parece un documento — NO es «sin DNI»" />
       </div>
 
@@ -95,19 +101,26 @@ function BlindIndexDni({ plan }: { plan: PlanBackfillDni }) {
         <p style={{ margin: 0, fontSize: 13 }}>
           ✅ No queda nada por hacer: todas las fichas con DNI tienen su índice.
         </p>
-      ) : plan.enChoque > 0 ? (
-        <p style={{ margin: 0, fontSize: 13 }}>
-          🚨 <strong>Primero se fusionan los {plan.grupos} grupos</strong>, y solo después se escriben los índices.
-          Al revés no se puede: la columna tiene un índice único y la segunda ficha de cada DNI repetido
-          haría fallar la escritura a la mitad. La fusión se prepara como un lote de SQL, con los nombres
-          delante, porque dos fichas con el mismo DNI son la misma persona pero el reparto de sus pólizas
-          no lo decide un botón.
-        </p>
       ) : (
-        <p style={{ margin: 0, fontSize: 13 }}>
-          Sin choques: los {plan.rellenables.toLocaleString('es-ES')} índices que faltan se pueden escribir
-          ya de una pasada. Se lanza desde asegura y deja el recuento de lo escrito.
-        </p>
+        <>
+          <p style={{ margin: 0, fontSize: 13 }}>
+            Se escriben los <strong>{plan.rellenables.toLocaleString('es-ES')}</strong> que no chocan con
+            nadie. Los {plan.enChoque.toLocaleString('es-ES')} de un DNI repetido se quedan como están: no
+            bloquean la escritura, pero tampoco se indexan hasta que se fusionen sus {plan.grupos} grupos
+            por lote de SQL — dos fichas con el mismo DNI son la misma persona, y el reparto de sus pólizas
+            no lo decide un botón.
+          </p>
+          {plan.compartidas > 0 && (
+            <p style={{ margin: 0, fontSize: 13 }}>
+              🚨 Y {plan.compartidas.toLocaleString('es-ES')} fichas llevan un <strong>DNI centinela</strong>
+              {' '}({plan.gruposCompartidos} documento{plan.gruposCompartidos === 1 ? '' : 's'} escrito
+              {plan.gruposCompartidos === 1 ? '' : 's'} en fichas de personas distintas). Ésas no se
+              indexan nunca: el documento está mal en alguna de ellas, y escribirlo haría que una búsqueda
+              por ese DNI devolviera a varias personas.
+            </p>
+          )}
+          <EscribirIndiceDni pendientes={plan.rellenables} />
+        </>
       )}
     </div>
   )
