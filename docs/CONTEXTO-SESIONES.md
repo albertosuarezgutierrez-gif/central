@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📅 La pestaña Recibos parecía vacía por un ORDER BY, y los 336 homónimos NO se pueden fusionar (05/09/2026).**
+  Alberto: «no aparece la fecha y otros datos». No faltaba el dato: **la ficha ordenaba las pólizas SOLO por
+  `fechaVencimiento: desc`, y en Postgres `DESC` implica NULLS FIRST** — las 15 del volcado no tienen fecha, así
+  que salían las 8 primeras filas, todas sin recibos, y las 5 vivas con importe y forma de pago quedaban al final.
+  Orden nuevo en `ordenPolizasFicha()` de `@central/module-seguros` (puro, 5 tests): **vivas primero, dentro lo
+  que vence antes, y sin fecha al FINAL de su grupo** (una fecha ausente no es ni próxima ni lejana).
+  🚫 **Y «haz lo mismo con los 336» no se puede**: de los **1.322 pares** que solo comparten nombre, **277 tienen
+  DNI DISTINTO** (probados personas distintas) y **ninguno comparte DNI**. Solo 6 traían prueba de los lotes 4/5
+  (vehículo o póliza común) → **lote 8, 3 fusiones**: 1 cayó por DNI contradictorio («Jose Manuel Seijas Vazquez»,
+  mismo coche y dos DNI: padre e hijo homónimos) y **2 por ser grupos de TRES**. ⚠️ Dije «5 fusionables» contando
+  PARES: en un trío hay tres pares y la guarda `count(*)=2` los excluye a propósito. Visibles 5.102 → **5.099**,
+  cartera viva 80 intacta, 0 pólizas huérfanas. También se anotó a mano que Manuel Suárez es hijo de José Suárez
+  Salas (el campo `tipo_relacion` mezcla parentescos y roles de póliza; `relacionesDeFicha` ya prioriza el
+  parentesco, así que bastó el dato).
+
 - **🗑️ El reloj del art. 12.3 corría sin pantalla: supresiones en `/correduria` (05/09/2026).**
   Cerrado el bloque legal 0.5 (PR #2339), el cliente ya puede pedir supresión desde el portal… y la
   petición **no salía en ninguna pantalla que Alberto abra**: el puerto `/api/operador/supresiones` de
