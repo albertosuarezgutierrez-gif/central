@@ -1,4 +1,9 @@
-import { loQueVeQuienEscanea, normalizarTokenHoja, polizasDeLaHoja } from '@central/module-seguros-portal'
+import {
+  etiquetaRamo,
+  loQueVeQuienEscanea,
+  normalizarTokenHoja,
+  polizasDeLaHoja,
+} from '@central/module-seguros-portal'
 
 import { canalDeCompania, type CanalCompania } from '@central/module-seguros-portal'
 import { companiasConCanal } from '@/lib/canales-compania'
@@ -7,11 +12,57 @@ import { fechaEs } from '@/lib/fechas'
 import { declaradasDeIdentidad, hojaPorToken, sellarUso, type DeclaradaEnHoja } from '@/lib/hojas'
 
 import { MEDIADOR } from '@central/module-seguros'
+import { MarcaAsegura } from '@/app/MarcaAsegura'
 import QRCode from 'qrcode'
 
 import { enlaceDeHoja } from '@/lib/enlace-hoja'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * 🚨 `noindex` explícito. La URL lleva el token dentro, y todo el argumento
+ * de seguridad de esta página —«el papel es la premisa»— da por hecho que esa
+ * dirección viaja SOLO en papel. Un buscador que la indexara la sacaría del
+ * papel sin que nadie se enterara.
+ */
+export const metadata = {
+  title: 'Tus seguros — Grupo ASegura',
+  robots: { index: false, follow: false },
+}
+
+/**
+ * El masthead del papel. La marca a la IZQUIERDA (primera fijación del
+ * barrido), qué es el papel en el centro y el QR a la derecha, donde llega el
+ * pulgar de quien sujeta el móvil con la hoja pegada a la nevera.
+ *
+ * 🚨 El monograma va a 40 px y en `currentColor`: a los 15 px de la barra del
+ * portal el contraojo de la «A» se cierra y desde dos metros es una mancha; y
+ * en su cuadro de color sería un BACKGROUND, que Chrome descarta al imprimir.
+ */
+function Masthead({ titulo }: { titulo: string }) {
+  const hoy = new Date()
+  return (
+    <div className="hoja-masthead">
+      <div className="hoja-marca">
+        <MarcaAsegura alto={40} className="hoja-monograma" />
+        <span className="hoja-identidad">
+          <span className="hoja-wordmark">{MEDIADOR.marca}</span>
+          {/* La clave DGSFP sale del MEDIADOR, nunca tecleada: dos copias de
+              `CS-F/0170` es una copia de más. */}
+          <span className="hoja-dgsfp">
+            Correduría de seguros · DGSFP {MEDIADOR.identidad.claveDgsfp}
+          </span>
+        </span>
+      </div>
+      <div className="hoja-titulo-bloque">
+        <h1>{titulo}</h1>
+        {/* Se lee EN VIVO, así que esta fecha es honesta — y dentro de un año
+            es lo único que le dice a alguien «esto es viejo, escanea». */}
+        <p className="hoja-fecha">Datos a día {fechaEs(hoy)}</p>
+      </div>
+    </div>
+  )
+}
 
 /**
  * La HOJA que se abre al escanear el QR del papel de la nevera.
@@ -67,8 +118,8 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
   if (que !== 'hoja') {
     return (
       <main className="hoja">
-        <h1>{MEDIADOR.marca}</h1>
-        <p className="hueco">
+        <Masthead titulo="Tus seguros" />
+        <p className="hueco" style={{ marginTop: 20 }}>
           <span className="pendiente">
             {que === 'anulada' ? 'Hoja anulada' : que === 'vacia' ? 'Sin pólizas' : 'No encontrada'}
           </span>
@@ -103,12 +154,29 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
   const qr =
     enlace === null
       ? null
-      : await QRCode.toString(enlace, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' })
+      : // `margin: 2` es la zona de silencio: a 0 el QR toca el papel y,
+        // pegado a un imán o al canto de un armario, la lectura se degrada de
+        // verdad. `Q` sube la corrección de errores del 15 % al 25 % — unos
+        // módulos más a cambio de aguantar un año de cocina.
+        await QRCode.toString(enlace, { type: 'svg', margin: 2, errorCorrectionLevel: 'Q' })
 
   return (
     <main className="hoja">
-      <h1>{MEDIADOR.marca}</h1>
-      <p className="suave">Tus seguros, para cuando haga falta.</p>
+      {/* 🚨 El titular dice QUÉ es el papel, no de quién es: la marca está a
+          su izquierda con el monograma. Antes ponía «Grupo ASegura» de
+          titular Y en la barra del portal — el nombre dos veces en 40 px, y
+          ni una palabra de qué era la hoja. Dictado de Alberto (05/09/2026):
+          «a nivel corporativo TUS SEGUROS y nombre Grupo ASegura». */}
+      <Masthead titulo="Tus seguros" />
+
+      {qr && (
+        <div className="hoja-qr">
+          {/* El QR lleva el ENLACE, no los datos: la imagen no caduca y la
+              página detrás está siempre al día. */}
+          <div aria-hidden dangerouslySetInnerHTML={{ __html: qr }} />
+          <p>Escanea para ver esta hoja al día</p>
+        </div>
+      )}
 
       <ul className="hoja-polizas">
         {visibles.map((p) => {
@@ -116,7 +184,9 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
           return (
             <li key={p.id} className="hoja-poliza">
               <h2>{p.compania}</h2>
-              <p className="hoja-ramo">{p.ramo}</p>
+              {/* `etiquetaRamo`, no el enum: el mismo seguro no puede
+                  llamarse «Auto» en pantalla y `auto` en el papel. */}
+              <p className="hoja-ramo">{etiquetaRamo(p.ramo)}</p>
               {p.bien.cosa && <p className="hoja-bien">{p.bien.cosa}</p>}
               <dl>
                 {p.numeroPoliza && (
@@ -128,7 +198,11 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
                 <dt>Vencimiento</dt>
                 {/* Sin fecha se DICE, no se deja el hueco: quien mire esto en el
                     arcén no puede quedarse con la duda de si está cubierto. */}
-                <dd>{fechaEs(p.fechaVencimiento) ?? 'no nos consta'}</dd>
+                {/* Un «no nos consta» con el peso de una fecha real es un
+                    hueco disfrazado de dato. */}
+                <dd className={p.fechaVencimiento === null ? 'sin-dato' : undefined}>
+                  {fechaEs(p.fechaVencimiento) ?? 'no nos consta'}
+                </dd>
               </dl>
               <Telefonos canal={canal} />
             </li>
@@ -138,7 +212,7 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
         {declaradas.map((d) => (
           <li key={d.id} className="hoja-poliza">
             <h2>{d.compania ?? 'Compañía sin identificar'}</h2>
-            <p className="hoja-ramo">{d.ramo ?? 'Tipo de seguro sin indicar'}</p>
+            <p className="hoja-ramo">{d.ramo ? etiquetaRamo(d.ramo) : 'Tipo de seguro sin indicar'}</p>
             {d.matricula && <p className="hoja-bien">{d.matricula}</p>}
             <dl>
               {d.numeroPoliza && (
@@ -148,7 +222,9 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
                 </>
               )}
               <dt>Vencimiento</dt>
-              <dd>{fechaEs(d.fechaVencimiento) ?? 'no nos consta'}</dd>
+              <dd className={d.fechaVencimiento === null ? 'sin-dato' : undefined}>
+                {fechaEs(d.fechaVencimiento) ?? 'no nos consta'}
+              </dd>
             </dl>
             {/* 🚨 Sin teléfonos: esta la añadió el cliente y la correduría no la
                 gestiona, así que no tenemos su compañía cruzada ni la hemos
@@ -159,15 +235,6 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
           </li>
         ))}
       </ul>
-
-      {qr && (
-        <div className="hoja-qr">
-          {/* El QR lleva el ENLACE, no los datos: la imagen no caduca y la
-              página detrás está siempre al día. */}
-          <div aria-hidden dangerouslySetInnerHTML={{ __html: qr }} />
-          <p className="suave">Escanea para abrir esta misma hoja actualizada.</p>
-        </div>
-      )}
 
       <p className="hoja-pie">
         {/* El punto de contacto es la correduría; el de la compañía va arriba,
@@ -203,7 +270,7 @@ function Telefonos({ canal }: { canal: CanalCompania }) {
             {/* 🚨 El horario va con SU vía, no heredado: un canal de siniestros
                 sin horario se lee como «siempre», y esa es la promesa que se
                 rompe un sábado por la noche. */}
-            {v.horario && <span className="hoja-horario"> · {v.horario}</span>}
+            {v.horario && <span className="hoja-horario">{v.horario}</span>}
           </li>
         ))}
       </ul>

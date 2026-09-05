@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { fechaEs } from '@/lib/fechas'
 import type { HojaResumen } from '@/lib/hojas'
 
 type Opcion = { id: string; etiqueta: string }
@@ -110,9 +111,13 @@ export function HojasQr({
         hoja se mantiene al día sola.
       </p>
 
+      {/* 🚨 `.confirmacion`, NO `.alarma`: esto se pintaba con el tono negativo
+          y el título salía en ROJO puro. El negativo está reservado a lo que
+          puede dejar a alguien sin cobertura, y gastarlo en una buena noticia
+          lo devalúa para cuando haga falta de verdad. */}
       {nuevo && (
-        <div className="alarma" role="status" style={{ borderColor: 'var(--accent)' }}>
-          <p className="alarma-titulo">Tu hoja está lista</p>
+        <div className="confirmacion" role="status">
+          <p className="confirmacion-titulo">Tu hoja está lista</p>
           {/* 🚨 Punto 2 de la cabecera: el enlace se enseña UNA vez. */}
           <p>
             Ábrela e imprímela ahora. <strong>Este enlace solo se ve esta vez</strong>: nosotros
@@ -125,7 +130,7 @@ export function HojasQr({
       )}
 
       {error && (
-        <p className="hueco" role="alert">
+        <p className="error-linea" role="alert">
           {error}
         </p>
       )}
@@ -148,12 +153,16 @@ export function HojasQr({
                       : `${h.cuantasElegidas} pólizas`}
                   {' · '}
                   {h.anuladaEn
-                    ? `anulada el ${fecha(h.anuladaEn)}`
+                    ? `anulada el ${fechaEs(h.anuladaEn)}`
                     : h.ultimoUsoEn
-                      ? `última vez escaneada el ${fecha(h.ultimoUsoEn)}`
+                      ? `última vez escaneada el ${fechaEs(h.ultimoUsoEn)}`
                       : 'nadie la ha escaneado todavía'}
                 </span>
               </span>
+              {/* El estado, en un chip: antes solo se sabía leyendo la línea
+                  de meta, y la fila entera iba atenuada por debajo del
+                  contraste mínimo. */}
+              {h.anuladaEn !== null && <span className="chip">Anulada</span>}
               {h.anuladaEn === null && (
                 <button type="button" className="boton-tenue" onClick={() => anular(h.id)}>
                   Anular
@@ -174,31 +183,39 @@ export function HojasQr({
         </button>
       ) : (
         <div className="hoja-formulario">
-          <label className="campo">
-            <span>Nombre (para distinguirla)</span>
+          {/* La forma de la casa (`CamposPoliza.tsx`): la etiqueta FUERA y
+              `.campo` en el CONTROL. Con `.campo` sobre el <label>, el
+              elemento se queda en `display:inline` —`width`, `min-height` y
+              `padding` inertes— y el <input> sale sin estilar, a 25 px. */}
+          <div className="editor-campo">
+            <label htmlFor="hoja-nombre">Nombre (para distinguirla)</label>
             <input
+              id="hoja-nombre"
+              className="campo"
               type="text"
               value={nombre}
               maxLength={60}
               placeholder="Nevera de casa"
               onChange={(e) => setNombre(e.target.value)}
             />
-          </label>
+          </div>
 
-          <fieldset className="campo">
+          <fieldset>
             <legend>Qué pólizas lleva</legend>
-            <label className="opcion">
-              <input type="radio" checked={todas} onChange={() => setTodas(true)} />
-              <span>
-                Todas mis pólizas
-                {/* 🚨 Punto 1: se dice, no se descubre. */}
-                <span className="tenue"> — también las que contrate más adelante</span>
-              </span>
-            </label>
-            <label className="opcion">
-              <input type="radio" checked={!todas} onChange={() => setTodas(false)} />
-              <span>Solo las que elija</span>
-            </label>
+            <div className="opciones">
+              <label className="opcion">
+                <input type="radio" checked={todas} onChange={() => setTodas(true)} />
+                <span>
+                  Todas mis pólizas
+                  {/* 🚨 Punto 1: se dice, no se descubre. */}
+                  <span className="tenue"> — también las que contrate más adelante</span>
+                </span>
+              </label>
+              <label className="opcion">
+                <input type="radio" checked={!todas} onChange={() => setTodas(false)} />
+                <span>Solo las que elija</span>
+              </label>
+            </div>
 
             {!todas && (
               <ul className="opciones">
@@ -240,10 +257,6 @@ export function HojasQr({
   )
 }
 
-function fecha(d: Date | string): string {
-  const f = typeof d === 'string' ? new Date(d) : d
-  return `${String(f.getUTCDate()).padStart(2, '0')}/${String(f.getUTCMonth() + 1).padStart(2, '0')}/${f.getUTCFullYear()}`
-}
 
 /**
  * Cada error dice una cosa distinta. `sin_enlace` no es «no se ha podido»: es

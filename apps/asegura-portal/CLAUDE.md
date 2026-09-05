@@ -261,6 +261,54 @@ ninguna (23514), la misma póliza dos veces (23505) y el nombre largo (23514). R
 `packages/module-seguros-portal/src/hoja-qr.ts` (11 tests); cepos de raíz en
 `test/regression-portal-hoja-qr.test.ts` (11, con seis mutaciones comprobadas).
 
+### 🖨 La hoja, corregida (05/09/2026) — y el folio NEGRO SOBRE NEGRO que llegó a producción
+
+Alberto pidió revisar el diseño «a nivel corporativo» y aclaró la cabecera: *«TUS SEGUROS y nombre
+Grupo ASegura»*. La revisión destapó tres fallos que se habían mergeado horas antes.
+
+🚨 **El grave: imprimir desde el TEMA OSCURO daba un folio negro con texto negro.** El bloque
+`@media print` parcheaba `.hoja` con `color:#000` y **no tocaba nada más**, así que el `body` seguía
+en `oklch(0.17 0 0)` —negro a sangre— y ese mismo `#000` dejaba el contenido invisible encima. Con
+los fondos desactivados (el defecto de Chrome) cambiaba de cara pero no se iba: cabecera y pie legal
+en blanco sobre blanco. Todo dependía de una casilla que el usuario no sabe que existe, **con el
+interruptor de tema a un toque en la barra de la propia hoja**.
+
+**El arreglo es re-declarar los TOKENS, no parchear clases**: dentro de `@media print` se redefinen
+`--bg`, `--text`, `--muted`, `--border`… a tinta negra sobre blanco. Así lo que se añada mañana nace
+ya bien sin que nadie se acuerde. ⚠️ El selector va **doblado** (`:root:root`) a propósito:
+`app/layout.tsx` inyecta `emitirRootCss(MARCA)` en un `<style>` del `<head>` SIN capa y DESPUÉS del
+`globals.css`, así que un `:root` normal pierde por orden.
+
+📄 **Y el armazón no va al papel.** `.marca-barra` (64 px, **con el interruptor de tema impreso**) y
+`PieLegal` (131 px, cuatro enlaces muertos) se heredaban a `/hoja/[token]` por estar dentro de
+`app/`: ~195 px y una **segunda página**. Se ocultan con `body:has(> .hoja)` en `@media print`, no con
+un root layout propio — eso obligaría a duplicar `SCRIPT_TEMA`, la tipografía y `emitirRootCss`, que
+es el modo de fallo que este repo persigue. La identificación del mediador del art. 19 **no se
+pierde**: en pantalla sigue el pie, y en el papel la pone el masthead con su clave DGSFP.
+
+🎨 **La cabecera, con la jerarquía que pidió Alberto:** monograma AS a **40 px y en negro pleno** a la
+izquierda (a los 15 px de la barra el contraojo de la «A» se cierra; y en su cuadro de color sería un
+*background*, que Chrome descarta al imprimir), «Grupo ASegura» + `Correduría de seguros · DGSFP
+CS-F/0170` sacado de `MEDIADOR`, **«Tus seguros»** de titular con la fecha del día, y el QR a la
+derecha. Cierra un filete de 2 px: es lo más barato y lo que más cambia — es lo que dice «documento».
+El titular dice QUÉ es el papel, no de quién es: antes ponía «Grupo ASegura» de titular **y** en la
+barra, el nombre dos veces en 40 px y ni una palabra de qué era la hoja.
+
+📞 **La jerarquía del teléfono estaba INVERTIDA:** la palabra `auto` se imprimía a 16 px y el 900 de
+la grúa a 14/400. Ahora el número es **20/700 con `nowrap`** (un teléfono partido en dos renglones se
+marca mal) y su etiqueta baja a versalita de 11 — la inversión etiqueta-pequeña / valor-grande de
+cualquier tarjeta de emergencia. Un filete parte la ficha en dos zonas: arriba *qué es*, abajo *a
+quién llamo*, que es lo que permite encontrar el número **sin leer nada**.
+
+Y dos más, de la misma tanda: **`.boton-tenue` no existía** (Anular y Cancelar salían como botones
+nativos de 25 px, contra los 44 de la regla de la casa) y **la confirmación se pintaba con `.alarma`**,
+o sea «Tu hoja está lista» en el rojo reservado a lo que deja a alguien sin cobertura — mientras el
+error usaba `.hueco` y susurraba en gris. Se añaden `.confirmacion` y `.error-linea`.
+
+📌 Medido con Playwright: **1 página en vez de 2**, sin desbordes de 320 a 1100 px, e idéntico
+imprimiendo desde el tema claro y el oscuro. El QR sube a `margin: 2` y corrección `Q`: la zona de
+silencio importa en un papel que va pegado a un imán.
+
 ### 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra (05/09/2026)
 
 Alberto, mirando su propio portal en el móvil: *«mis seguros y mis pólizas es lo mismo… tengo lógica

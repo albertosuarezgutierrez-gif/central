@@ -14,9 +14,10 @@
  *
  * El fichero de `public/` se queda: es la fuente y sirve para favicon/OG.
  */
-export function MarcaAsegura({ alto = 14 }: { alto?: number }) {
+export function MarcaAsegura({ alto = 14, className }: { alto?: number; className?: string }) {
   return (
     <svg
+      className={className}
       viewBox="0 0 130 90"
       height={alto}
       width={(alto * 130) / 90}

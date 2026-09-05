@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🖨 La hoja impresa, corregida: salía NEGRO SOBRE NEGRO desde el tema oscuro (05/09/2026).**
+  Alberto pidió revisar el diseño «a nivel corporativo» y aclaró la cabecera: «TUS SEGUROS y nombre
+  Grupo ASegura». La revisión (agente de diseño) destapó tres fallos mergeados horas antes: el
+  `@media print` parcheaba `.hoja` con `color:#000` **sin tocar el `body`**, así que desde el tema
+  oscuro el folio salía negro con el texto negro encima — y el interruptor de tema estaba a un toque
+  en la barra de la propia hoja. Arreglado **re-declarando los TOKENS** dentro de `@media print`
+  (selector doblado `:root:root`, porque `emitirRootCss` se inyecta sin capa y después). También:
+  la barra y el pie legal se llevaban ~195 px y una **segunda página** → ocultos con
+  `body:has(> .hoja)`, NO con un root layout propio (duplicaría `SCRIPT_TEMA` y la marca). Cabecera
+  nueva: monograma AS a 40 px en negro, DGSFP desde `MEDIADOR`, **«Tus seguros»** de titular, QR a la
+  derecha, filete de 2 px. El **teléfono pasa de 14/400 a 20/700**: antes la palabra «auto» se
+  imprimía más grande que el 900 de la grúa. Y `.boton-tenue` no existía (botones nativos de 25 px) y
+  la confirmación se pintaba con `.alarma`, en rojo. PR pendiente del OK de Alberto.
+
 - **🧲 La hoja de la nevera y su QR: existe (05/09/2026).** Alberto: «crear QR y ahí seleccionas si
   todas las pólizas, una o algunas… y el qr se puede borrar y se anularía el acceso». **No existía**:
   solo la decisión escrita en `apps/asegura-portal/CLAUDE.md`, redactada como si existiera. Ahora
