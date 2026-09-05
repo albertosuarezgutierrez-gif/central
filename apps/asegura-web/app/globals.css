@@ -1,26 +1,26 @@
 /*
  * Sistema visual del sitio público de Grupo ASegura.
  *
- * 🚨 Por qué existe este fichero, y no estilos inline como antes: un objeto
- * `CSSProperties` no puede declarar `:hover`, `@media` ni `::before`. Sin esas
- * tres cosas no hay diseño — hay un documento con colores. La primera versión
- * de esta web (04/09/2026) era exactamente eso, y se veía así: tipografía por
- * defecto, cero jerarquía, todo del mismo peso. Alberto lo dijo con una
- * palabra el 05/09: «feísima».
+ * 🚨 De dónde sale, porque importa: es una REPRODUCCIÓN, medida del código
+ * fuente, de la landing que hizo Manuel en `app.grupoasegura.com` (repo
+ * `albertosuarezgutierrez-gif/asegura`, `src/components/landing/landing-page.tsx`
+ * y `src/app/globals.css`). Decisión de Alberto, 05/09/2026: «la de asegura de
+ * Manuel es la mejor, cópiala». Lo que se copia es el ASPECTO —escala,
+ * tipografía, radios, sombras, atmósfera, movimiento—, no su contenido: allí la
+ * web vende un CRM a corredores («Únete gratis», «Cotizador», «Acceso
+ * correduría») y aquí se venden seguros a personas.
  *
- * NINGÚN color se escribe aquí. Todos salen de los tokens que inyecta
- * `@central/brand` (`MARCA_ASEGURA`) en el `<head>`: `--brand`, `--brand-ink`,
- * `--brand-soft`, `--bg`, `--panel`, `--border`, `--text`, `--muted`… Escribir
- * un hex en esta hoja rompería la casa de marcas: el día que se ajuste la
- * paleta, la web pública dejaría de parecerse al resto de la correduría.
+ * Aquella app es Tailwind v4; esta no usa Tailwind. Así que sus clases se han
+ * resuelto a valores concretos. Cuando un número parezca raro (2.55rem, 4.2rem,
+ * 2.2× de radio), es que ES el suyo.
  *
- * Lo que SÍ se decide aquí es la escala: espaciado, tamaños de tipo, radios
- * derivados y las tres roturas responsive. Está en un sitio para que se pueda
- * cambiar de una vez, no tarjeta a tarjeta.
+ * Los COLORES no se escriben aquí: salen de los tokens que inyecta
+ * `@central/brand` (`MARCA_ASEGURA`), que a su vez se midieron de ese mismo
+ * fuente. La única excepción está marcada abajo con su porqué.
  */
 
 :root {
-  /* Escala de espaciado. Progresión ~1.5×: el ojo lee el ritmo, no los píxeles. */
+  /* Escala de espaciado. */
   --e1: 4px;
   --e2: 8px;
   --e3: 12px;
@@ -30,15 +30,36 @@
   --e7: 48px;
   --e8: 72px;
 
-  /* Radios derivados del `--radio` de la marca (16px), como hace su app. */
-  --r-s: 10px;
-  --r-m: 14px;
-  --r-l: var(--radio, 16px);
-  --r-xl: 24px;
+  /* Radios. Su escala NO es la de Tailwind por defecto: multiplica el `--radius`
+     de 1rem por 0.6 / 0.8 / 1 / 1.4 / 1.8 / 2.2. Por eso sus tarjetas grandes
+     tienen 35 px de radio y parecen «blandas». */
+  --r-sm: 9.6px;
+  --r-md: 12.8px;
+  --r-lg: 16px;
+  --r-xl: 22.4px;
+  --r-2xl: 28.8px;
+  --r-3xl: 35.2px;
+  --pill: 9999px;
 
-  /* Ancho de lectura. 68ch es el largo de línea cómodo para texto corrido. */
-  --ancho: 1040px;
-  --lectura: 68ch;
+  /* Su contenedor es max-w-6xl = 72rem. */
+  --ancho: 1152px;
+
+  /* Su curva única para todo el movimiento (= --ease-out-quint). */
+  --curva: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Serif display. NO sale de `@central/brand` a propósito (ver la nota de
+     `.display` más abajo): es una decisión de ESTA superficie de marketing,
+     igual que en su app, donde Fraunces solo vive en la landing. */
+  --display: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+
+  /* 🚨 ÚNICO color literal de esta hoja. `surface-hero` es la banda casi negra
+     azulada de su landing, y el contrato de `Marca` de `@central/brand` no
+     modela esa superficie todavía (tiene fondo, panel y acento, no «banda
+     oscura de marketing»). El valor es el suyo, literal. Si algún día el
+     contrato crece, esto se va a `@central/brand` y desaparece de aquí. */
+  --hero-oscuro: oklch(0.195 0.014 270);
+  --hero-oscuro-texto: oklch(0.975 0.003 270);
+  --hero-oscuro-acento: oklch(0.78 0.14 264);
 }
 
 *,
@@ -55,8 +76,10 @@ body {
   font-size: 16px;
   line-height: 1.6;
   -webkit-text-size-adjust: 100%;
-  /* Inter tiene alternativas tipográficas que solo se activan pidiéndolas. */
-  font-feature-settings: 'cv05' 1, 'ss01' 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  /* Sus alternativas de Inter, literales. */
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 img {
@@ -65,40 +88,73 @@ img {
 }
 
 :focus-visible {
-  outline: 3px solid var(--brand);
+  outline: 3px solid color-mix(in oklab, var(--brand) 50%, transparent);
   outline-offset: 2px;
   border-radius: var(--e1);
 }
 
 /* ── Tipografía ─────────────────────────────────────────────────────────────
-   El salto de tamaño entre h1 y cuerpo es lo que crea jerarquía. Antes iba de
-   38 px a 16 px sin nada en medio y con el mismo peso visual: todo pesaba igual,
-   y cuando todo pesa igual el ojo no sabe por dónde empezar. */
-h1,
-h2,
-h3 {
-  font-family: var(--serif);
-  margin: 0 0 var(--e3);
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+   🚨 Lo que de verdad separa su web de un documento: los titulares NO van en la
+   fuente del cuerpo. Van en **Fraunces**, una serif variable, a peso 500 y con
+   `letter-spacing: -0.025em`. El cuerpo sigue en Inter.
+
+   Fraunces se carga SOLO en esta app y no se sube a `@central/brand` a
+   propósito: allí está documentado que el portal del cliente la descarta
+   —su titular más grande es un h1 de 20 px, tamaño al que una serif no aporta
+   carácter y sí un segundo webfont en el móvil de quien viene de un correo—.
+   Aquí los titulares llegan a 67 px, que es justo donde esa letra existe. */
+.display {
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
   text-wrap: balance;
+  margin: 0;
 }
 
-h1 {
-  font-size: clamp(32px, 6vw, 52px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
+/* Su recurso de acento, y es la firma de la marca: una parte del titular en
+   itálica y en el cobalto. Sin esto el titular es solo texto grande. */
+.destaca {
+  font-style: italic;
+  color: var(--brand);
 }
 
-h2 {
-  font-size: clamp(22px, 3.6vw, 30px);
-  font-weight: 700;
+h1.display {
+  font-size: 2.55rem;
+  line-height: 1.05;
 }
 
+h2.display {
+  font-size: 2rem;
+}
+
+@media (min-width: 640px) {
+  h1.display {
+    font-size: 3.75rem;
+  }
+  h2.display {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  h1.display {
+    font-size: 4.2rem;
+  }
+  h2.display {
+    font-size: 3rem;
+  }
+}
+
+/* Los títulos pequeños (tarjetas, pasos) NO son serif en su web: son Inter a
+   peso 800 con tracking apretado. Mezclarlo al revés es lo que hace que una
+   copia «se parezca pero no». */
 h3 {
-  font-size: clamp(17px, 2.2vw, 19px);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  margin: 0 0 var(--e2);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
 }
 
 p {
@@ -110,18 +166,27 @@ a {
   text-underline-offset: 3px;
 }
 
-/* Un párrafo de más de ~90 caracteres por línea se lee mal en escritorio. */
-.lectura {
-  max-width: var(--lectura);
-}
-
 .lead {
-  font-size: clamp(17px, 2.1vw, 20px);
+  font-size: 1.125rem;
+  line-height: 1.625;
   color: var(--muted);
-  max-width: var(--lectura);
+  max-width: 32rem;
 }
 
 .tenue {
+  color: var(--muted);
+}
+
+/* Su «eyebrow»: mayúsculas pequeñas muy espaciadas sobre el titular. */
+.antetitulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  margin: 0 0 var(--e2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -129,271 +194,458 @@ a {
 .wrap {
   max-width: var(--ancho);
   margin: 0 auto;
-  /* Este padding es lo único que impide que el texto toque el borde a 320 px. */
-  padding: 0 var(--e4);
+  padding: 0 var(--e5);
+}
+
+@media (max-width: 400px) {
+  .wrap {
+    padding: 0 var(--e4);
+  }
+}
+
+/* Contenedor de las páginas interiores. La home no lo usa: sus secciones son
+   bandas a todo ancho y cada una monta su propio `.wrap` dentro. */
+.pagina {
+  padding-top: var(--e7);
+  padding-bottom: var(--e8);
 }
 
 /* ── Cabecera ───────────────────────────────────────────────────────────────
-   Pegada arriba y translúcida: en una web de captación el botón de contacto y
-   el del área de clientes tienen que estar siempre a un dedo de distancia.
-   `backdrop-filter` degrada solo (sin él queda un fondo sólido, que también
-   vale), así que no hace falta @supports. */
+   Su gesto característico: arriba del todo es transparente y de 76 px; en
+   cuanto se baja de 24 px se encoge a 56 px y se convierte en una PÍLDORA
+   flotante con borde, sombra y desenfoque. La clase la pone `Cabecera.tsx`. */
 .hdr {
   position: sticky;
   top: 0;
-  z-index: 20;
-  background: color-mix(in oklab, var(--panel) 88%, transparent);
-  backdrop-filter: saturate(180%) blur(12px);
-  border-bottom: 1px solid var(--border-soft);
+  z-index: 50;
 }
 
-.hdr-fila {
+.hdr-caja {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--e2);
-  flex-wrap: wrap;
-  padding-top: var(--e2);
-  padding-bottom: var(--e2);
+  gap: var(--e3);
+  height: 4.75rem;
+  padding: 0 var(--e1);
+  transition: margin 0.3s, height 0.3s, border-radius 0.3s, background-color 0.3s, box-shadow 0.3s,
+    backdrop-filter 0.3s, padding 0.3s;
+  border: 1px solid transparent;
 }
 
+.hdr.bajado .hdr-caja {
+  height: 3.5rem;
+  margin: var(--e3) 0;
+  padding: 0 var(--e4);
+  border-radius: var(--pill);
+  border-color: var(--border);
+  background: color-mix(in oklab, var(--panel) 80%, transparent);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(24px);
+}
+
+/* Logo centrado en absoluto, como el suyo. Debajo de 1024 px la nav se
+   esconde, así que el centro queda libre. */
 .hdr-marca {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   gap: var(--e2);
-  min-height: 44px;
   font-weight: 800;
-  font-size: 17px;
+  font-size: 1rem;
   letter-spacing: -0.02em;
   color: var(--text);
   text-decoration: none;
+  transition: transform 0.2s;
+  white-space: nowrap;
 }
 
-/* El monograma «AS» se pinta con `mask` y no con `<img>` a propósito: el SVG
-   viene con `fill="currentColor"`, y dentro de un `<img>` eso resuelve a negro
-   —el contexto no llega—. Con la máscara, el color lo pone el token de marca,
-   que es lo que el fichero pedía. Proporción del viewBox: 130×90. */
+.hdr-marca:hover {
+  transform: translateX(-50%) scale(1.04);
+}
+
 .marca-tile {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-s);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
   background: var(--brand-soft);
   flex: none;
 }
 
+/* El monograma «AS» se pinta con `mask` y no con `<img>`: el SVG viene con
+   `fill="currentColor"` y dentro de un `<img>` eso resuelve a negro. */
 .marca-mono {
-  width: 21px;
-  height: 15px;
+  width: 19px;
+  height: 13px;
   background: var(--brand);
   -webkit-mask: url('/brand/marca-asegura.svg') center / contain no-repeat;
   mask: url('/brand/marca-asegura.svg') center / contain no-repeat;
 }
 
-/* Nav en su PROPIA fila hasta 900 px, y en la misma fila por encima.
-   Seis secciones más el botón no caben en una fila estrecha, y dejar que flex
-   decidiera dónde partir daba TRES filas en escritorio (medido con Playwright
-   el 05/09: marca / nav / botón). Aquí se decide explícitamente. */
 .hdr-nav {
-  display: flex;
-  gap: var(--e1);
-  order: 3;
-  flex-basis: 100%;
-  overflow-x: auto;
-  max-width: 100%;
-  padding-bottom: var(--e1);
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.hdr-nav::-webkit-scrollbar {
   display: none;
+  align-items: center;
+  gap: var(--e1);
 }
 
+@media (min-width: 1024px) {
+  .hdr-nav {
+    display: flex;
+  }
+}
+
+/* Su enlace de nav: sin fondo, con un subrayado de 2px que crece desde la
+   izquierda al pasar por encima. */
 .hdr-nav a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 var(--e3);
-  border-radius: var(--r-s);
-  font-size: 15px;
+  position: relative;
+  padding: var(--e2) var(--e3);
+  border-radius: var(--pill);
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--muted);
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.2s;
 }
 
 .hdr-nav a:hover {
-  background: var(--surface-hover);
   color: var(--text);
 }
 
-@media (min-width: 900px) {
-  .hdr-nav {
-    order: 2;
-    flex-basis: auto;
-    margin-left: auto;
-    padding-bottom: 0;
+.hdr-nav a::after {
+  content: '';
+  position: absolute;
+  left: var(--e3);
+  right: var(--e3);
+  bottom: -1px;
+  height: 2px;
+  border-radius: var(--pill);
+  background: var(--brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s;
+}
+
+.hdr-nav a:hover::after {
+  transform: scaleX(1);
+}
+
+.hdr-dcha {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+}
+
+/* En móvil el logo centrado se pisaría con el botón, así que ahí va a la
+   izquierda y el botón a la derecha. Medido, no supuesto.
+
+   Y las medidas de abajo tampoco son de gusto: a 360 px la marca completa más
+   el botón sumaban 363 px y la página desbordaba 3. Se recortan el cuerpo de
+   la marca y el padding del botón hasta que cabe, en vez de esconder el botón
+   (que es lo que el cliente viene a pulsar) o de tapar el desbordamiento con
+   un `overflow:hidden`, que lo oculta sin arreglarlo. */
+@media (max-width: 559px) {
+  .hdr-marca {
+    position: static;
+    transform: none;
+    margin-right: auto;
+    font-size: 0.9375rem;
+    gap: 6px;
+  }
+  .hdr-marca:hover {
+    transform: scale(1.04);
+  }
+  .marca-tile {
+    width: 26px;
+    height: 26px;
+  }
+  .marca-mono {
+    width: 16px;
+    height: 11px;
+  }
+  .btn-sm {
+    padding: 0 var(--e3);
+  }
+  .hdr-caja {
+    gap: var(--e2);
+    padding: 0;
   }
 }
 
+/* Barra de progreso de lectura, como la suya. */
+.progreso {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 55;
+  height: 2px;
+  transform-origin: left;
+  background: color-mix(in oklab, var(--brand) 80%, transparent);
+}
+
 /* ── Botones ────────────────────────────────────────────────────────────────
-   44 px de alto táctil en el nav, 52 px en las llamadas a la acción. La
-   mayoría del tráfico local de seguros entra desde el móvil. */
+   Los suyos son PÍLDORAS de 48 px, peso 500 (no 700), sin sombra, y se hunden
+   un 4 % al pulsar. El peso ligero es parte del acabado: un botón en negrita
+   dentro de esta tipografía se ve tosco. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--e2);
-  min-height: 52px;
-  padding: 0 var(--e5);
+  height: 48px;
+  padding: 0 var(--e6);
   border: 1px solid transparent;
-  border-radius: var(--r-m);
+  border-radius: var(--pill);
   font-family: inherit;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.15s, background 0.15s, border-color 0.15s;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, scale 0.15s;
 }
 
 .btn:active {
-  transform: translateY(1px);
+  scale: 0.96;
 }
 
 .btn-brand {
   background: var(--brand);
   color: #fff;
-  box-shadow: var(--shadow-panel);
 }
 
 .btn-brand:hover {
-  background: var(--brand-ink);
-  box-shadow: var(--shadow-float);
+  background: color-mix(in oklab, var(--brand) 80%, transparent);
 }
 
-.btn-suave {
-  background: var(--panel);
+.btn-outline {
+  background: var(--bg);
   color: var(--text);
   border-color: var(--border);
 }
 
-.btn-suave:hover {
+.btn-outline:hover {
+  background: var(--bg2);
+}
+
+.btn-fantasma {
+  background: transparent;
+  color: var(--text);
+}
+
+.btn-fantasma:hover {
   background: var(--surface-hover);
-  border-color: var(--muted2);
 }
 
-/* El del área de clientes vive en la cabecera: más bajo, para no dominarla. */
-.btn-hdr {
-  min-height: 44px;
+/* Los de la cabecera son bajos en escritorio pero conservan 44 px de área
+   táctil en móvil, igual que hace él. */
+.btn-sm {
+  height: 44px;
   padding: 0 var(--e4);
-  font-size: 15px;
-  order: 2;
-  margin-left: auto;
+  font-size: 0.875rem;
 }
 
-@media (min-width: 900px) {
-  .btn-hdr {
-    order: 3;
-    margin-left: var(--e2);
+@media (min-width: 768px) {
+  .btn-sm {
+    height: 36px;
   }
 }
 
-/* ── Distintivo (la cápsula de la clave DGSFP) ─────────────────────────────── */
+/* Su CTA principal lleva un barrido de brillo al pasar por encima. Es el
+   detalle que hace que el botón parezca de una web cuidada y no de un
+   formulario. */
+.btn-brillo {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-brillo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.25), transparent);
+  transition: transform 0.7s ease-out;
+  pointer-events: none;
+}
+
+.btn-brillo:hover::before {
+  transform: translateX(100%);
+}
+
+/* ── Distintivo del hero ────────────────────────────────────────────────── */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: var(--e2);
-  padding: var(--e2) var(--e3);
-  border-radius: 999px;
-  background: var(--brand-soft);
-  color: var(--brand-ink);
-  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: var(--pill);
+  border: 1px solid color-mix(in oklab, var(--brand) 20%, transparent);
+  background: color-mix(in oklab, var(--brand) 6%, transparent);
+  color: var(--brand);
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
 }
 
 .chip-punto {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--brand);
   flex: none;
 }
 
 /* ── Portada ────────────────────────────────────────────────────────────────
-   La tarjeta va con el fondo tintado de marca (`--brand-soft`) en vez de a
-   sangre completa: el truco de `100vw` para romper el contenedor mete la barra
-   de scroll en la cuenta y produce desbordamiento horizontal, que es justo lo
-   que prohíbe la regla de responsive del repo. */
+   Su «atmósfera»: un degradado vertical del color de marca al 7 % y dos
+   manchas circulares muy desenfocadas. Es lo que evita que el blanco se vea
+   plano. Aquí van con `position:absolute` dentro de un contenedor con
+   `overflow:hidden`, para no arrastrar la página a lo ancho. */
 .hero {
-  background: var(--brand-soft);
-  border-radius: var(--r-xl);
-  padding: clamp(24px, 5vw, 56px);
-  margin-bottom: var(--e6);
+  position: relative;
+  overflow: hidden;
+  padding: var(--e7) 0 var(--e8);
+}
+
+.hero-atmosfera {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 42rem;
+  z-index: -2;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--brand) 7%, transparent),
+    color-mix(in oklab, var(--brand) 2%, transparent),
+    transparent
+  );
+}
+
+.hero-mancha {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-mancha.a {
+  top: -10rem;
+  right: -8%;
+  width: 44rem;
+  height: 44rem;
+  background: color-mix(in oklab, var(--brand) 12%, transparent);
+  filter: blur(160px);
+}
+
+.hero-mancha.b {
+  bottom: -13rem;
+  left: -12%;
+  width: 34rem;
+  height: 34rem;
+  background: color-mix(in oklab, var(--brand) 8%, transparent);
+  filter: blur(150px);
 }
 
 .hero h1 {
-  margin-top: var(--e4);
-  color: var(--brand-ink);
+  margin-top: var(--e5);
 }
 
 .hero-cta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--e3);
-  margin-top: var(--e5);
+  margin-top: var(--e6);
 }
 
-/* Tres argumentos, no un párrafo: se leen de un vistazo antes de decidir. */
-.confianza {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--e4);
-  margin-bottom: var(--e7);
-}
-
-@media (min-width: 720px) {
-  .confianza {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.confianza-item {
-  padding-left: var(--e4);
-  border-left: 3px solid var(--brand);
-}
-
-.confianza-item strong {
-  display: block;
-  font-size: 15px;
-  margin-bottom: var(--e1);
-}
-
-.confianza-item span {
-  font-size: 14px;
+/* Su lista de tres garantías bajo los botones, con palomitas. */
+.garantias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2) var(--e5);
+  margin: var(--e6) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--muted);
+}
+
+.garantias li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.garantias svg {
+  color: var(--brand);
+  flex: none;
 }
 
 /* ── Secciones ──────────────────────────────────────────────────────────── */
 .seccion {
-  margin-bottom: var(--e8);
+  padding: var(--e8) 0;
+}
+
+@media (min-width: 1024px) {
+  .seccion {
+    padding: 96px 0;
+  }
+}
+
+/* Su recurso para cambiar de ritmo: bandas a todo ancho con otro fondo. El
+   ancho completo se consigue sacando la sección del contenedor, no con `100vw`
+   (que cuenta la barra de scroll y desborda). */
+.banda {
+  background: var(--panel);
+}
+
+.banda-acento {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+
+.centrado {
+  max-width: 42rem;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .seccion-tit {
-  margin-bottom: var(--e5);
+  margin-bottom: var(--e7);
 }
 
-.seccion-tit p {
-  margin: 0;
+.seccion-tit .lead {
+  margin: var(--e4) 0 0;
+}
+
+.centrado .lead {
+  margin-inline: auto;
+}
+
+/* ── Reveal al entrar en pantalla ───────────────────────────────────────────
+   Su fade-up incluye un DESENFOQUE de 8 px que se va a 0. Es lo que hace que
+   la aparición se lea «editorial» y no «página que carga a trompicones». */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  filter: blur(8px);
+  transition: opacity 0.7s var(--curva), transform 0.7s var(--curva), filter 0.7s var(--curva);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: none;
+  filter: none;
 }
 
 /* ── Rejilla de tarjetas ────────────────────────────────────────────────────
-   `minmax(0, …)` en las pistas no es decorativo: sin él, una pista implícita se
-   dimensiona con su contenido más ancho y arrastra la página entera (la trampa
-   documentada en el CLAUDE.md de la raíz). */
+   `minmax(0, …)` no es decorativo: sin él una pista implícita se dimensiona
+   con su contenido más ancho y arrastra la página entera. */
 .rejilla {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -412,116 +664,351 @@ a {
   }
 }
 
+.dos-columnas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e7);
+  align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .dos-columnas {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 64px;
+  }
+}
+
 .tarjeta {
   display: block;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--r-l);
+  border-radius: var(--r-2xl);
   padding: var(--e5);
   text-decoration: none;
   color: var(--text);
-  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  transition: transform 0.3s var(--curva), box-shadow 0.3s, border-color 0.3s, background-color 0.3s;
 }
 
+/* Su hover de tarjeta no es una sombra que crece: es una ESCALA. */
 a.tarjeta:hover {
-  transform: translateY(-2px);
-  border-color: var(--brand);
-  box-shadow: var(--shadow-float);
+  transform: scale(1.03);
+  border-color: color-mix(in oklab, var(--brand) 40%, transparent);
+  box-shadow: var(--shadow-panel);
 }
 
 .tarjeta-icono {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   margin-bottom: var(--e4);
-  border-radius: var(--r-s);
-  background: var(--brand-soft);
-  color: var(--brand-ink);
-}
-
-.tarjeta h3 {
-  margin-bottom: var(--e2);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--brand) 10%, transparent);
+  color: var(--brand);
 }
 
 .tarjeta p {
   margin: 0;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--muted);
 }
 
 .tarjeta-mas {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-top: var(--e3);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 700;
   color: var(--brand);
 }
 
-/* ── Pasos numerados ────────────────────────────────────────────────────── */
+a.tarjeta:hover .tarjeta-mas svg {
+  transform: translateX(4px);
+}
+
+.tarjeta-mas svg {
+  transition: transform 0.3s;
+}
+
+/* ── Pasos ──────────────────────────────────────────────────────────────── */
 .pasos {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--e5);
+  gap: var(--e4);
   counter-reset: paso;
 }
 
-@media (min-width: 720px) {
+@media (min-width: 900px) {
   .pasos {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
+/* Sus tarjetas de paso son altas (4/5) y con 35 px de radio. */
 .paso {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--e6);
+  border-radius: var(--r-3xl);
+  background: var(--bg2);
   counter-increment: paso;
+  transition: background-color 0.3s, transform 0.4s var(--curva);
+}
+
+@media (min-width: 900px) {
+  .paso {
+    min-height: 22rem;
+  }
+  .paso:hover {
+    transform: scale(1.04);
+  }
+}
+
+.paso:hover {
+  background: var(--brand-soft);
 }
 
 .paso::before {
   content: counter(paso);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  margin-bottom: var(--e3);
-  border-radius: 50%;
-  background: var(--brand);
-  color: #fff;
-  font-weight: 700;
-  font-size: 16px;
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--brand);
+  margin-bottom: var(--e4);
 }
 
 .paso h3 {
-  margin-bottom: var(--e2);
+  max-width: 13rem;
 }
 
 .paso p {
-  margin: 0;
-  font-size: 15px;
+  margin: auto 0 0;
+  padding-top: var(--e4);
+  font-size: 0.875rem;
   color: var(--muted);
 }
 
-/* ── Panel (bloques destacados y el formulario) ─────────────────────────── */
-.panel {
+/* ── Credencial del corredor ────────────────────────────────────────────── */
+.credencial {
+  position: relative;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--r-l);
-  padding: clamp(20px, 4vw, 36px);
+  border-radius: var(--r-3xl);
+  padding: var(--e6);
   box-shadow: var(--shadow-panel);
 }
 
-.panel-tinta {
-  background: var(--brand-soft);
-  border-color: transparent;
-  box-shadow: none;
+.credencial-halo {
+  position: absolute;
+  top: -5rem;
+  right: -5rem;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--brand) 10%, transparent);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+/* Su monograma va sobre un degradado del primario a su tinta oscura. */
+.credencial-mono {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(135deg, var(--brand), var(--brand-ink));
+  color: #fff;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.credencial-cita {
+  position: relative;
+  margin: var(--e5) 0 0;
+  padding-left: var(--e4);
+  border-left: 2px solid color-mix(in oklab, var(--brand) 30%, transparent);
+}
+
+.credencial-cita blockquote {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.125rem;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  line-height: 1.5;
+}
+
+.credencial-dgsfp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--e4);
+  padding: 4px 10px;
+  border-radius: var(--pill);
+  background: color-mix(in oklab, var(--brand) 10%, transparent);
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ── Banda oscura con cifras ────────────────────────────────────────────── */
+.banda-oscura {
+  position: relative;
+  overflow: hidden;
+  background: var(--hero-oscuro);
+  color: var(--hero-oscuro-texto);
+}
+
+.banda-oscura .display .destaca {
+  color: var(--hero-oscuro-acento);
+}
+
+.banda-oscura-mancha {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(150px);
+}
+
+.banda-oscura-mancha.a {
+  top: -6rem;
+  right: -6rem;
+  width: 32rem;
+  height: 32rem;
+  background: color-mix(in oklab, var(--brand) 20%, transparent);
+}
+
+.banda-oscura-mancha.b {
+  bottom: -8rem;
+  left: -6rem;
+  width: 28rem;
+  height: 28rem;
+  background: color-mix(in oklab, var(--brand) 12%, transparent);
+}
+
+.cifras {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--e7) var(--e5);
+  margin-top: var(--e7);
+  padding-top: var(--e7);
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+}
+
+@media (min-width: 768px) {
+  .cifras {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.cifra strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 3rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+@media (min-width: 1024px) {
+  .cifra strong {
+    font-size: 3.75rem;
+  }
+}
+
+.cifra span {
+  display: block;
+  margin-top: var(--e3);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.65);
+}
+
+/* ── Preguntas ──────────────────────────────────────────────────────────── */
+.faq {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--panel);
+}
+
+.faq details {
+  border-bottom: 1px solid var(--border);
+}
+
+.faq details:last-child {
+  border-bottom: 0;
+}
+
+.faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e4);
+  padding: var(--e5);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color 0.2s;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary:hover {
+  background: var(--surface-hover);
+}
+
+.faq summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 0.3s;
+}
+
+.faq details[open] summary::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+.faq details > p {
+  margin: 0;
+  padding: 0 var(--e5) var(--e5);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* ── Panel (formulario) ─────────────────────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  padding: clamp(20px, 4vw, 36px);
+  box-shadow: var(--shadow-panel);
 }
 
 /* ── Formulario ─────────────────────────────────────────────────────────── */
 .f-lab {
   display: block;
   margin-bottom: var(--e2);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -530,7 +1017,7 @@ a.tarjeta:hover {
   min-height: 48px;
   padding: var(--e3) var(--e4);
   border: 1px solid var(--border);
-  border-radius: var(--r-m);
+  border-radius: var(--r-md);
   background: var(--bg);
   color: var(--text);
   font-family: inherit;
@@ -546,25 +1033,23 @@ textarea.f-in {
 .f-in:focus {
   outline: none;
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px var(--brand-soft);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent);
 }
 
 /* ── Pie ────────────────────────────────────────────────────────────────── */
 .pie {
   border-top: 1px solid var(--border);
-  background: var(--panel2);
-  margin-top: var(--e8);
+  background: var(--bg2);
 }
 
 .pie-cols {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--e5);
-  padding-top: var(--e7);
-  padding-bottom: var(--e5);
+  gap: var(--e6);
+  padding: var(--e8) 0 var(--e5);
 }
 
-@media (min-width: 720px) {
+@media (min-width: 640px) {
   .pie-cols {
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -572,43 +1057,51 @@ textarea.f-in {
 
 .pie h4 {
   margin: 0 0 var(--e3);
-  font-size: 13px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted2);
 }
 
 .pie-lista {
   display: flex;
   flex-direction: column;
-  gap: var(--e2);
-  font-size: 14px;
+  gap: 10px;
+  font-size: 0.875rem;
 }
 
 .pie-lista a {
   color: var(--muted);
   text-decoration: none;
+  transition: color 0.15s;
 }
 
 .pie-lista a:hover {
   color: var(--brand);
-  text-decoration: underline;
 }
 
 .pie-legal {
-  padding-bottom: var(--e6);
-  font-size: 13px;
+  padding: var(--e5) 0 var(--e6);
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 
-/* Quien prefiera menos movimiento no ve ninguno. */
+/* Quien prefiera menos movimiento no ve ninguno. Su web hace lo mismo. */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
-  a.tarjeta:hover {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  a.tarjeta:hover,
+  .paso:hover {
     transform: none;
   }
 }

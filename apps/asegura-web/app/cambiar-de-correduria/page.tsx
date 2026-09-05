@@ -98,7 +98,7 @@ export default function CambiarDeCorreduria() {
   ])
 
   return (
-    <>
+    <div className="wrap pagina">
       {breadcrumb && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumb) }} />}
       {faq && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faq) }} />}
 
@@ -157,6 +157,6 @@ export default function CambiarDeCorreduria() {
         </p>
         <Formulario />
       </section>
-    </>
+    </div>
   )
 }

@@ -56,7 +56,7 @@ export default async function PaginaRamo({ params }: Props) {
   ])
 
   return (
-    <>
+    <div className="wrap pagina">
       {breadcrumb && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumb) }} />}
       {faq && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faq) }} />}
 
@@ -110,6 +110,6 @@ export default async function PaginaRamo({ params }: Props) {
         </p>
         <Formulario ramoPorDefecto={ramo.slug === 'vida-y-salud' ? 'vida' : ramo.slug === 'responsabilidad-civil' ? 'comercio' : ramo.slug} />
       </section>
-    </>
+    </div>
   )
 }
