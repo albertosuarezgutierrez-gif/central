@@ -36,6 +36,8 @@
 // existe. `confirmadaCima` = CIMA la ha traído (`id_poliza_entidad`); una
 // emitida por nosotros aún sin confirmar se dice como tal.
 import {
+  ordenarHistorialSiniestros,
+  siniestroAbierto,
   autorizacionVigente,
   camposDeAlcances,
   camposVisibles,
@@ -127,6 +129,17 @@ export type PolizaPortal = {
   recibos: RecibosPortal | null
   /** `null` = no visible en este nivel. `[]` = no hay ninguno abierto. */
   siniestrosAbiertos: SiniestroPortal[] | null
+  /**
+   * El HISTORIAL entero (los cuatro estados), del más reciente al más antiguo y
+   * con lo que no tiene fecha al final.
+   *
+   * `null` = no visible en este nivel — el MISMO permiso que los abiertos
+   * (`ve.siniestros`), porque un siniestro cerrado sigue siendo un hecho de la
+   * vida de su dueño, no un dato del contrato: si acaso es MÁS personal, porque
+   * es un historial. `[]` = **no nos consta ninguno**, que no es «no has tenido
+   * ninguno»: la compañía los informa por EIAC y puede no haberlo hecho.
+   */
+  siniestros: SiniestroPortal[] | null
   /**
    * QUÉ está asegurado. `cosa` (marca/modelo/matrícula) es dato del CONTRATO y
    * se ve desde el nivel más bajo; `ubicacion` (la dirección del inmueble) es
@@ -368,13 +381,25 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             orderBy: { fechaEmision: 'desc' },
           }),
           prisma.siniestro.findMany({
-            where: { polizaId: { in: polizaIds }, estado: { in: ['abierto', 'en_tramitacion'] } },
+            // 🚨 Sin filtro de estado, y es el cambio (05/09/2026): antes decía
+            // `estado IN ('abierto','en_tramitacion')`, así que de los 67
+            // siniestros de la cartera viva el portal enseñaba 7 y los 60
+            // CERRADOS no los veía nadie. El historial es lo que un cliente
+            // pregunta al renovar.
+            where: { polizaId: { in: polizaIds } },
             select: {
               id: true,
               polizaId: true,
               estado: true,
               referencia: true,
               fechaHora: true,
+              // 🚨 `tipo` NO se pide, y no es un olvido: en la BD es un CÓDIGO
+              // NUMÉRICO de la compañía (`1107`, `1915`, `1312`, `17`…, medido
+              // en la cartera viva el 05/09/2026). «Tipo 1107» no le dice nada
+              // a un cliente y encima parece un dato que significa algo.
+              // Tampoco hay columna con la fecha de CIERRE: `updated_at` es la
+              // última vez que se tocó la fila, no el día que se cerró, y
+              // pintarlo como tal sería inventarse una fecha.
               // Ni tramitador ni perito, a propósito: son gestión del
               // corredor, no dato del cliente (ver `SiniestroPortal`). El cepo
               // `test/regression-portal-visibilidad.test.ts` falla si vuelven,
@@ -401,6 +426,20 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const aPortal = (p: (typeof polizas)[number], ve: CamposVisibles): PolizaPortal => {
     const cobs = coberturasPor.get(p.id) ?? []
     const recs = recibosPor.get(p.id) ?? []
+    // El historial se ordena AQUÍ y no en el `orderBy` de Prisma: en Postgres
+    // un `DESC` implica `NULLS FIRST`, así que los siniestros sin fecha se
+    // colarían arriba y enterrarían los que sí la tienen. Es la misma trampa
+    // que ya mordió en la ficha del corredor (PR #2346).
+    const historial: SiniestroPortal[] | null = ve.siniestros
+      ? ordenarHistorialSiniestros(
+          (siniestrosPor.get(p.id) ?? []).map((x) => ({
+            id: x.id,
+            estado: x.estado,
+            referencia: x.referencia,
+            fechaHora: x.fechaHora,
+          })),
+        )
+      : null
     return {
       id: p.id,
       compania: p.aseguradora,
@@ -447,14 +486,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           detalles: ve.bien ? b.detalles : [],
         }
       })(),
-      siniestrosAbiertos: ve.siniestros
-        ? (siniestrosPor.get(p.id) ?? []).map((s) => ({
-            id: s.id,
-            estado: s.estado,
-            referencia: s.referencia,
-            fechaHora: s.fechaHora,
-          }))
-        : null,
+      // Una sola lectura y una sola guarda: los abiertos se DERIVAN del
+      // historial con `siniestroAbierto()`, que es la fuente única del
+      // vocabulario. Dos listas de estados escritas a mano acaban divergiendo
+      // el día que la compañía añada uno, y el síntoma sería que un siniestro
+      // deja de contar como abierto sin que nada falle.
+      siniestros: historial,
+      siniestrosAbiertos: historial === null ? null : historial.filter((s) => siniestroAbierto(s.estado)),
     }
   }
 

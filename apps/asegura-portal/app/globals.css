@@ -648,6 +648,62 @@ h1 {
   }
 }
 
+/* ── El historial de siniestros ────────────────────────────────────────────
+ *
+ * Filas, no tarjetas: son tres datos (cuándo · en qué estado · con qué
+ * referencia) y una lista de cinco tarjetas para eso es la «página sucia» otra
+ * vez. `flex-wrap` para que a 320 px la referencia caiga sola a su renglón en
+ * vez de empujar la fila fuera de la pantalla.
+ *
+ * El filete de la izquierda repite el criterio de `.poliza-fila`: solo lo que
+ * NO está resuelto se marca. Un siniestro cerrado es historia y se pinta
+ * neutro; pintarlos todos de un color deja de significar nada. */
+.siniestros {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.siniestro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: calc(var(--radius) * 0.6);
+  font-size: 13px;
+}
+.siniestro[data-tono='abierto'] {
+  border-left-color: var(--warning);
+}
+.siniestro[data-tono='rechazado'] {
+  border-left-color: var(--negative);
+}
+.siniestro-fecha {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+/* Cifras tabulares: la referencia se lee en voz alta por teléfono. */
+.siniestro-ref {
+  margin-left: auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 419px) {
+  /* A 320 px el `margin-left:auto` dejaría la referencia pegada al borde
+   * derecho y separada de su fila; mejor que empiece donde empieza todo. */
+  .siniestro-ref {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+}
+
 /* ── La FICHA de una póliza ──────────────────────────────────────────────── */
 .volver {
   margin: 0 0 12px;

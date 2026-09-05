@@ -65,23 +65,51 @@ test('los tres ceros siguen documentados como «no es que esté bien»', () => {
   assert.match(src, /ninguna cobertura informada/, 'el comentario de coberturas.total no puede desaparecer')
 })
 
-test('los siniestros abiertos pasan por el NIVEL, como la prima y los recibos', () => {
+test('los siniestros pasan por el NIVEL, como la prima y los recibos', () => {
   // 🚨 Este cepo nace de un agujero REAL (04/09/2026): `prima`, `coberturas` y
   // `recibos` preguntaban por `ve.*` y `siniestrosAbiertos` NO. Un tercero con
   // el alcance más bajo (`ver` → nivel `tarjeta`) veía los siniestros abiertos
   // de quien le autorizó: referencia, estado y fecha. No fallaba nada —salían—,
   // que es el modo de fallo que este portal persigue.
+  //
+  // 📌 Desde el 05/09/2026 la lectura trae el HISTORIAL entero (los cuatro
+  // estados, no solo los abiertos) y `siniestrosAbiertos` se DERIVA de él, así
+  // que la guarda tiene que estar en la lectura única. Un siniestro cerrado es
+  // igual de personal que uno abierto — si acaso más, porque es un historial.
   const src = leer(LECTURA)
   assert.match(
     src,
-    /siniestrosAbiertos:\s*ve\.siniestros/,
-    '`siniestrosAbiertos` tiene que preguntar por `ve.siniestros` antes de traer nada. ' +
-      'Un siniestro abierto es un hecho de la vida del titular, no un dato del contrato.',
+    /const historial[^=]*=\s*ve\.siniestros/,
+    'la lectura del historial tiene que preguntar por `ve.siniestros` antes de traer nada.',
+  )
+  assert.match(
+    src,
+    /siniestrosAbiertos:\s*historial === null \? null : historial\.filter/,
+    '`siniestrosAbiertos` se deriva del historial ya filtrado por nivel: si se lee aparte, ' +
+      'vuelve a haber dos sitios donde acordarse de la guarda y uno se olvidará.',
   )
   assert.match(
     src,
     /no visible en este nivel.*\n.*siniestrosAbiertos/i,
     'el tipo tiene que declarar que `null` es «no visible en tu nivel» y `[]` «no hay ninguno»: ' +
       'colapsarlos convierte un «no puedo enseñártelo» en un «no tiene».',
+  )
+})
+
+test('el historial NO trae el `tipo`: es un código numérico de la compañía', () => {
+  // 🚨 Medido en la cartera viva el 05/09/2026: `siniestros.tipo` vale `1107`,
+  // `1915`, `1312`, `17`, `2102`… Es el código de la compañía, no una palabra.
+  // Pintarlo sería peor que no pintar nada: «Tipo 1107» parece un dato que
+  // significa algo. El cepo mira el bloque del `select` de siniestros, no el
+  // fichero entero, porque `tipo` es también el nombre de la columna del RAMO
+  // de una póliza y ahí sí se lee.
+  const src = leer(LECTURA)
+  const i = src.indexOf('prisma.siniestro.findMany')
+  assert.ok(i > 0, 'no encuentro la consulta de siniestros')
+  const bloque = src.slice(i, src.indexOf('}),', i))
+  assert.doesNotMatch(
+    bloque,
+    /^\s*tipo:\s*true/m,
+    'el `select` de siniestros no puede pedir `tipo` mientras sea un código sin traducir',
   )
 })
