@@ -131,3 +131,11 @@ export {
   normalizarMensajeInvitacion,
 } from './invitacion.ts'
 export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './invitacion.ts'
+
+// A quién llama el cliente cuando acaba de pasarle algo. Lee su cabecera antes
+// de tocarlo: sus cuatro prohibiciones (no decir «no tiene», no decir «24 h»,
+// no pintar un WhatsApp como un teléfono, no cruzar de forma aproximada) son
+// las que acaban delante de alguien que acaba de tener un golpe.
+export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
+export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
+export { canalesDeLasPolizas } from './canal-compania.ts'

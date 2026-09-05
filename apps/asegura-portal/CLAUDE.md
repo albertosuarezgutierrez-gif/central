@@ -1018,6 +1018,72 @@ fuente y fecha entra.
 Allianz (26, `C0109`), Occident (19, `C0468`) y Reale (1, `C0613`). Las cuatro ya están en
 `companias_dgs` y su `nombre_comun` casa exacto con `polizas.aseguradora`.
 
+### 📲 Occident da parte por WhatsApp (05/09/2026)
+
+Lo trae Alberto con una captura del perfil verificado: *«catalana tiene whassap para apertura
+siniestros!!»*. Tapa exactamente el hueco que este repo tenía anotado ese mismo día en el
+`telefono_fuente` de C0468 — buscado en occident.com, no había número de siniestros.
+
+`prisma/sql/2026-09-05_companias_whatsapp_horario.sql` (aplicada) añade `whatsapp_siniestros` y
+`horario_siniestros`, y rehace el cepo de la fuente para que cubra también el canal nuevo.
+
+🚨 **Y trae dos avisos que NO se pueden perder por el camino:**
+
+1. **El perfil se llama «Plus Ultra Siniestro y asistencia» y la empresa verificada es «Occident».**
+   Plus Ultra es **otra compañía de esta misma tabla** (`C0517`, del mismo grupo). Se atribuye a
+   Occident porque el nombre verificado por Meta y la web del perfil son de Occident, que es la
+   señal fuerte, y **la duda queda escrita en `telefono_fuente`**. Si Occident confirma que esa
+   línea es solo de Plus Ultra, se mueve a `C0517` con un `UPDATE`. Son 19 pólizas: equivocarse
+   aquí manda a 19 clientes a la compañía que no es.
+2. **Atiende de 9h a 21h, de lunes a viernes — o sea, NO es 24 h.** Por eso existe
+   `horario_siniestros`: un canal de siniestros pintado sin horario se lee como «siempre», que es
+   la promesa que se rompe un sábado por la noche. Y por eso este canal **no puede ir a
+   `telefono_asistencia`**, que es la grúa.
+
+🚨 **`whatsapp_siniestros` NO es `telefono_siniestros`, y la línea de VOZ sigue a NULL.** Uno se
+marca y el otro es mensajería. Que un fijo de Madrid publicado como WhatsApp Business atienda además
+llamadas es probable — y «probable» no se imprime en la nevera de nadie. 🦷 `companias_dgs_whatsapp_e164`
+exige E.164 (`+34917838383`) y se vio morder con el número en formato de lectura: **23514**.
+
+🚫 **`telefono_fuente` se REVOCÓ del rol del portal** el mismo día: dejó de ser una nota neutra
+(hoy guarda la duda de Plus Ultra, lo que falta preguntar, y por qué el 900 102 978 —Defensa del
+Cliente— no puede ir ahí). Eso es gestión, y la gestión no llega al cliente. El rol ve **10
+columnas** de esa tabla y ni `notas` ni `telefono_fuente`.
+
+### 🚑 Los DOS caminos del parte, y por qué el primero no somos nosotros
+
+Dictado de Alberto (05/09/2026): *«los siniestros mejor intentar llamen a la compañía; nosotros como
+nos enteraremos por CIMA me avisas y llamar para ver cómo va y hacerle seguimiento»*. Lo implementa
+`CanalesCompania` en `app/(portal)/boveda/ParteSiniestro.tsx`, con las reglas puras en
+`packages/module-seguros-portal/src/canal-compania.ts`.
+
+- **El canal de la compañía se pinta ARRIBA, fuera del formulario y sin elegir póliza.** Si el
+  camino que de verdad abre el siniestro estuviera detrás de «Dar parte» → desplegar → elegir
+  póliza, estaría escondido justo de quien tiene prisa. Se enseñan las compañías de TODAS sus
+  pólizas (`canalesDeLasPolizas`), no la de la póliza seleccionada.
+- **Las cuatro frases prohibidas**, cada una con su cepo: «esta compañía no tiene teléfono»
+  (`null` = no lo hemos verificado → `TEXTO_SIN_CANAL`, «pídenoslo») · «24 h» (no existe ningún
+  dato que signifique «siempre») · un `href="tel:"` sobre un WhatsApp · un cruce
+  póliza→compañía **aproximado**.
+- **El cruce es por nombre EXACTO** y ahí es donde más falla, a propósito: el nombre de una póliza
+  APORTADA lo leyó una IA de un PDF («MAPFRE ESPAÑA S.A.»), así que muchas caen en «pídenoslo». Una
+  coincidencia aproximada acertaría casi siempre y alguna vez daría el teléfono de urgencias de
+  **otra** compañía — un fallo que no se ve hasta que alguien marca.
+- **La asistencia NO hereda `horario_siniestros`**: la grúa puede tener otro horario, y copiárselo
+  es inventarse el dato justo de la vía que se usa a la hora en la que el otro no atiende.
+- **Las compañías `sinDatos` NO se filtran de la lista.** Filtrarlas las hace desaparecer en
+  silencio, y eso se lee como «con esa no hay nada que hacer».
+
+Cepos: `packages/module-seguros-portal/src/canal-compania.test.ts` (11) y
+`test/regression-portal-canal-compania.test.ts` (5). ⚠️ Dos de los cepos de raíz **no mordieron a la
+primera** y se arreglaron: el de «24 h» cazaba «formato de 24 h» del campo de la hora (se acotó al
+bloque del canal), y el de las `sinDatos` dejaba pasar un `.filter()` posterior al helper. Un cepo
+que no se ha visto morder es una suposición.
+
+📌 Cartera viva al 05/09/2026: Mapfre `C0058` (64 pólizas, 900 122 122) · Allianz `C0109` (26,
+900 101 920; **asistencia a NULL a propósito** porque depende del ramo y la columna admite uno solo) ·
+Occident `C0468` (19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900).
+
 🔗 **Y el QR de esa hoja lleva un ENLACE, no los datos.** Un QR no caduca —es una imagen con un texto
 dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la
 póliza, y además cualquiera que fotografíe la hoja se los lleva. Con una URL, el QR es permanente y

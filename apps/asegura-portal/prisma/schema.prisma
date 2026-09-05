@@ -874,3 +874,30 @@ model ClienteRelacion {
   @@map("cliente_relaciones")
   @@schema("seguros")
 }
+
+/// El catálogo de compañías de la DGSFP, con el canal al que acude el asegurado
+/// después de un percance.
+///
+/// 🚨 GRANT: **sin `notas` ni `telefono_fuente`**. Las dos son gestión del
+/// corredor —la segunda guarda por qué un número no está y qué falta preguntar—
+/// y `telefono_fuente` se REVOCÓ el 05/09/2026 justo para que no se pueda
+/// declarar aquí por descuido. Recordatorio de la landmine: declarar una
+/// columna no concedida revienta la lectura ENTERA de la tabla con
+/// `permission denied for column`, no solo esa columna.
+///
+/// 📌 Esta tabla NO es cartera de nadie: es un catálogo público de códigos DGS y
+/// teléfonos publicados. Por eso su lectura no se filtra por identidad y no
+/// entra en la lista de modelos que vigila `test/regression-portal-aislamiento.test.ts`.
+model CompaniaDgs {
+  codigoDgs            String    @id @map("codigo_dgs") @db.VarChar(16)
+  nombreComun          String    @map("nombre_comun") @db.VarChar(255)
+  activa               Boolean
+  telefonoSiniestros   String?   @map("telefono_siniestros")
+  telefonoAsistencia   String?   @map("telefono_asistencia")
+  whatsappSiniestros   String?   @map("whatsapp_siniestros")
+  horarioSiniestros    String?   @map("horario_siniestros")
+  telefonoVerificadoEn DateTime? @map("telefono_verificado_en") @db.Date
+
+  @@map("companias_dgs")
+  @@schema("seguros")
+}
