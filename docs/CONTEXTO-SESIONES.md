@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎨 `asegura-web`: una sola atmósfera, no diez bloques (05/09/2026).** Alberto: «te estás liando,
+  hay que mezclar todas las ideas». Diagnóstico: los recursos ya estaban TODOS (aspecto de la landing
+  de Manuel, ventana viva, foco con contadores, escáner), pero apilados como diez bloques blancos del
+  mismo peso. Se funden con `.oscuro`: tokens de marca redefinidos en ámbito, inyectados por el layout
+  desde `emitirVariablesOscuras(MARCA_ASEGURA)` (paleta MEDIDA de su `.dark`) → todo componente que
+  entra en una sección oscura se re-tematiza solo, cero overrides y cero hex a mano; desaparecen los
+  tres `--hero-oscuro*` literales. `.claro` es el camino de vuelta para la hoja del escáner (es un
+  papel). Al medir salieron fallos que YA existían: cabecera `sticky` (barra blanca de 76 px sobre la
+  portada) → `fixed`; logo centrado pisando la nav; el botón «Área de clientes» **fuera de pantalla** a
+  1024-1200 (marca+6 enlaces+botón = 1.145 px en 1.104) → `NAV_CABECERA` solo con ramos; la override de
+  `.btn-sm` para móvil estaba ANTES de la regla base y no aplicaba nunca (una media query no añade
+  especificidad). Guardián nuevo `lib/oscuro.test.ts` (probado por mutación). PR #2381, commit
+  `976faac3e`. **Sin mergear a propósito: `grupoasegura.es` ya es producción y espera su visto bueno.**
+
 - **🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio (05/09/2026).**
   Captura suya: «Únete gratis», «Acceso correduría», header montado. Medido en Vercel: el apex `.es` y
   `www` están atados al proyecto **`asegura`** (el CRM), no a `asegura-web`; el plan de marketing decía
