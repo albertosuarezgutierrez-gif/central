@@ -1190,6 +1190,19 @@
 
 ---
 
+### 🚪 (05/09/2026) El portal pedía el código «cada vez»: no era la sesión, era la puerta
+
+Alberto: «cliente por codigo es un poco coñazo… cada vez q entra». Pedía un enlace mágico.
+- **La raíz `/` era el formulario de CLIENTE y no miraba la cookie.** Con la sesión de 30 días viva
+  se le seguía pidiendo el correo y el código. Ahora `page.tsx` es de servidor: `getIdentidad()` →
+  `redirect('/boveda')`; el formulario se movió a `app/Entrada.tsx`.
+- 🚨 **NO se hizo el enlace que canjea solo**: los sandboxes de correo que renderizan con navegador
+  ejecutan el JS y se comerían el código (`ya_usado`, y parece culpa del usuario). ⚠️ El argumento
+  del reenvío no vale para descartarlo — el código va en ese mismo correo.
+- Dos cepos nuevos (mutaciones vistas morder) y **dos guardianes que siguieron al fichero movido**.
+- Diseño: `.pendiente` (píldora de borde DISCONTINUO para «no lo sabemos», portada de plataforma),
+  `.alarma` (el recibo devuelto sube de ámbar a negativo con título) y filete izquierdo por estado.
+
 ### 🖥 (05/09/2026) El portal del cliente: lateral como plataforma, y QUÉ está asegurado
 
 Alberto, con la pantalla desplegada delante: «aprovecha poco la página vista en pc», «con ventana
