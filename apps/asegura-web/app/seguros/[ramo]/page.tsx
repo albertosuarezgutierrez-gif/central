@@ -108,7 +108,13 @@ export default async function PaginaRamo({ params }: Props) {
         <p style={{ color: 'var(--muted)', fontSize: 15 }}>
           Sin compromiso y sin coste. Te contesta una persona.
         </p>
-        <Formulario ramoPorDefecto={ramo.slug === 'vida-y-salud' ? 'vida' : ramo.slug === 'responsabilidad-civil' ? 'comercio' : ramo.slug} />
+        {/* El slug del ramo ES el valor del desplegable, salvo `vida-y-salud`,
+            que en el formulario son dos opciones distintas y hay que elegir
+            una: se marca «Vida», y quien venía por salud la cambia en un clic.
+            🚨 `responsabilidad-civil` marcaba «Comercio o empresa» hasta el
+            05/09/2026 porque no existía su opción: el lead llegaba diciendo que
+            quería un seguro de comercio, que es un dato plausible y falso. */}
+        <Formulario ramoPorDefecto={ramo.slug === 'vida-y-salud' ? 'vida' : ramo.slug} />
       </section>
     </div>
   )
