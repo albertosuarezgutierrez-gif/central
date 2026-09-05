@@ -13,7 +13,10 @@
  *      Es la misma regla 3 de `lib/avisos-vencimiento.ts`: un destinatario que
  *      viaja en un JSON convierte este puerto en un relay de correo.
  *   4. **Hay dónde mandarle.** Sin email legible no se «envía 0 correos»: se
- *      dice `sin_email`, que es lo que Alberto tiene que arreglar.
+ *      dice `sin_email`, que es lo que Alberto tiene que arreglar. La regla de
+ *      A QUÉ dirección se escribe vive desde el 05/09/2026 en `email-ficha.ts`,
+ *      compartida con la invitación al portal: dos copias de «cuál es el correo
+ *      de este cliente» divergen sin que nada falle.
  *
  * 🚨 Y lo que este puerto NO hace: **no acepta la autorización**. Sigue
  * pendiente después del correo, igual que antes. La doble aceptación es el
@@ -23,7 +26,7 @@
 import { estadoAutorizacion } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
-import { campoIlegible, descifrarCampo } from './cartera-edicion'
+import { emailDeFicha } from './email-ficha'
 import { enlaceDeAutorizaciones, enviarAvisoAcceso } from './correo-aviso-acceso'
 
 export type FalloAviso = 'no_encontrado' | 'sin_pendiente' | 'sin_email' | 'sin_portal' | 'error_envio'
@@ -31,31 +34,6 @@ export type FalloAviso = 'no_encontrado' | 'sin_pendiente' | 'sin_email' | 'sin_
 export type ResultadoAviso =
   | { ok: true; caducaEn: Date }
   | { ok: false; estado: FalloAviso; motivo: string; status: 404 | 409 | 422 | 502 | 503 }
-
-/** El correo al que se escribe: el principal de la ficha, y si no la columna. `null` = no hay ninguno legible. */
-async function emailDe(correduriaId: string, clienteId: string): Promise<string | null> {
-  const db = prismaAsegura()
-  const c = await db.cliente.findFirst({
-    where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
-    select: {
-      email: true,
-      emailOptOutAt: true,
-      emails: { orderBy: [{ esPrincipal: 'desc' }, { createdAt: 'asc' }], select: { email: true } },
-    },
-  })
-  if (!c) return null
-  // Una baja de correo manda sobre cualquier dirección que quede en la ficha.
-  if (c.emailOptOutAt) return null
-  for (const cifrado of [...c.emails.map((e) => e.email), c.email]) {
-    if (!cifrado) continue
-    // Ilegible ≠ inexistente: se salta y se sigue buscando, en vez de dar la
-    // ficha por «sin correo» cuando lo que pasa es que no se pudo descifrar.
-    if (campoIlegible(cifrado)) continue
-    const claro = descifrarCampo(cifrado)
-    if (claro && claro.trim() !== '') return claro.trim()
-  }
-  return null
-}
 
 /**
  * Avisa a `autorizadoId` de que `otorganteId` le ha dado acceso y está esperando
@@ -108,7 +86,7 @@ export async function avisarAccesoPendiente(
   // La más lejana: es hasta cuándo puede confirmar, que es lo que dice el correo.
   const caducaEn = pendientes.reduce((a, f) => (f.caducaEn > a ? f.caducaEn : a), pendientes[0].caducaEn)
 
-  const destino = await emailDe(correduriaId, entrada.autorizadoId)
+  const destino = await emailDeFicha(correduriaId, entrada.autorizadoId)
   if (!destino) {
     return {
       ok: false,

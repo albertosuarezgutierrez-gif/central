@@ -217,3 +217,5 @@ export {
   loQueVeQuienEscanea,
 } from './hoja-qr.ts'
 export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'
+export { elegirFicha } from './vinculo-elegir.ts'
+export type { Candidato, FichaElegida } from './vinculo-elegir.ts'

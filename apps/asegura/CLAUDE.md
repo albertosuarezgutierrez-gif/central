@@ -718,6 +718,44 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     `UPDATE` escrito a mano. Prorrogar sin motivo tampoco se puede (422 `sin_motivo_prorroga`).
   - Sin este puerto la solicitud viviría solo en la BD del portal, que es una pantalla que Alberto no
     abre. Detalle en `apps/asegura-portal/CLAUDE.md`.
+- **✉️ `GET/POST /api/operador/cliente/portal` (05/09/2026) — invitar a un CLIENTE al portal.**
+  Alberto: «no aparece el enviar invitación a la intranet». No aparecía porque **no existía**: el portal
+  lleva funcionando desde el 01/09 y la única forma de entrar era que el cliente supiera por su cuenta
+  que está ahí y fuera a pedir un código. Ni botón, ni correo. Es la regla del `CLAUDE.md` raíz —«un
+  aviso que sale por un canal que esa persona no abre es un aviso que no existe»— en su forma extrema:
+  el canal entero era invisible. `lib/invitacion-portal.ts` + `lib/correo-invitacion-portal.ts`.
+  🚨 **Predice ANTES de escribir, y con la MISMA función que el portal ejecutará después.** El portal
+  vincula persona↔ficha por el índice ciego del email y solo si no es ambiguo (`elegirFicha`), así que
+  hay un fallo peor que no invitar: invitar a alguien cuyo correo no resuelve a su ficha. Recibe el
+  correo, entra, teclea su código y ve una bóveda **vacía, sin ningún error**, como si no tuviera
+  pólizas. Por eso `elegirFicha` **subió de `apps/asegura-portal/lib/` a
+  `@central/module-seguros-portal`** en este mismo cambio (el fichero del portal queda como re-export):
+  predecir con una copia de la regla sería peor que no predecir — las dos darían 200 y divergirían en
+  silencio.
+  📊 **Medido el 05/09/2026 sobre los 80 clientes de cartera viva: 51 invitables** (48 resuelven por su
+  email principal y 3 por uno de contacto), **0 ambiguos** y **29 sin ningún correo** — que son los de
+  «Clientes sin canal». O sea, hoy el freno no es la ambigüedad: es que a 29 no hay por dónde escribir.
+  ⚠️ Una primera medición dio «5 ambiguos» y era falsa: contaba hashes de email compartidos **sin
+  aplicar el desempate** de `elegirFicha` (el email principal de una ficha gana al que aparece como
+  contacto en la de otro). Cuenta con la función, no con un `group by`.
+  🚫 **NO da acceso a nada.** No escribe `portal_vinculo` ni ninguna autorización: el acceso lo sigue
+  abriendo el cliente probando que es él con un código de un solo uso. Y **el enlace del correo no
+  lleva token** — un correo se reenvía y sobrevive en buzones compartidos; con llave dentro sería la
+  cartera regalada. El cepo `lib/correo-invitacion-portal.test.ts` lo fija, junto con que el texto no
+  nombre ni un campo de la cartera (`CAMPOS_PROHIBIDOS_EN_INVITACION`) ni cuántas pólizas tiene.
+  **Ocho desenlaces sin colapsar** porque se arreglan en sitios distintos: `sin_email` (pídele el
+  correo) · `ilegible` (clave PII, se arregla en Vercel, NO llamando al cliente) · `ambiguo` y
+  `resuelve_a_otra` (hay un duplicado que resolver) · `no_comprobado` (no se ha mirado ≠ no se puede) ·
+  `sin_portal` · `error_envio` · `no_encontrado`. El GET existe para que la pantalla pueda decir «ya
+  entra, última vez el …» ANTES de ofrecer botón: un botón que solo se evalúa pulsándolo es una apuesta.
+  🔁 **`lib/email-ficha.ts` (nuevo): a qué dirección se le escribe a una ficha, UNA regla y un sitio.**
+  Se extrajo de `aviso-acceso.ts` al necesitarla también aquí. Baja de correo manda sobre cualquier
+  dirección guardada; gana el principal; y un valor que la clave PII no abre se **salta** y se sigue
+  buscando (`ilegible` ≠ `sin_email`).
+  ⚠️ Trampa que cazó el typecheck: `computeEmailLookupHash` **normaliza por dentro** y devuelve
+  `string | null` (sin clave, o si lo guardado no tiene forma de correo) y **lanza** si la clave está
+  mal formada. Normalizar antes a mano crea una segunda ruta de normalización, que es justo el contrato
+  de sincronía que el paquete PII declara en su cabecera. Se le pasa el correo crudo.
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
