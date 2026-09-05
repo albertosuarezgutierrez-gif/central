@@ -51,7 +51,13 @@ export function claveHito(tipo: string, fechaObjetivo: string): string {
   return `${tipo}:${fechaObjetivo}`
 }
 
-export type HitoRegistrado = { tipo: string; fechaObjetivo: string; estado: string }
+export type HitoRegistrado = {
+  tipo: string
+  fechaObjetivo: string
+  estado: string
+  /** ¿Se emitió HOY (hora Madrid)? Distingue la víspera que salió ayer de la que sale hoy de rescate. */
+  emitidoHoy?: boolean
+}
 
 /** Qué hitos YA REGISTRADOS bloquean una emisión nueva.
  *
@@ -63,14 +69,25 @@ export type HitoRegistrado = { tipo: string; fechaObjetivo: string; estado: stri
  *
  * En sombra (piso aún inactivo) sí bloquean: si no, el mismo borrador se repetiría por Telegram en
  * cada pasada.
+ *
+ * Devuelve TAMBIÉN los hitos emitidos HOY, que no es lo mismo que «ya hecho»: la víspera de llegada
+ * se ancla siempre a `checkIn`, así que por su clave no se distingue la que salió AYER de la que
+ * sale hoy de rescate — y de esa diferencia depende que la bienvenida sea un segundo mensaje
+ * nuestro el mismo día.
  */
-export function hitosBloqueantes(filas: HitoRegistrado[], activo: boolean): Set<string> {
-  const out = new Set<string>()
+export function hitosBloqueantes(
+  filas: HitoRegistrado[],
+  activo: boolean,
+): { bloqueantes: Set<string>; emitidosHoy: Set<string> } {
+  const bloqueantes = new Set<string>()
+  const emitidosHoy = new Set<string>()
   for (const f of filas) {
     if (activo && f.estado === 'sombra') continue
-    out.add(claveHito(f.tipo, f.fechaObjetivo))
+    const clave = claveHito(f.tipo, f.fechaObjetivo)
+    bloqueantes.add(clave)
+    if (f.emitidoHoy) emitidosHoy.add(clave)
   }
-  return out
+  return { bloqueantes, emitidosHoy }
 }
 
 export function mensajesDebidos(
@@ -78,6 +95,7 @@ export function mensajesDebidos(
   hoy: string,
   horaMadrid: string,
   yaHechos: Set<string>,
+  emitidosHoy: Set<string> = new Set(),
 ): Debido[] {
   const dHoy = aDias(hoy)
   const dIn = aDias(r.checkIn)
@@ -110,7 +128,13 @@ export function mensajesDebidos(
     // Día de llegada. Última hora: si la víspera no salió ayer, sale HOY con los códigos ("hoy te
     // esperamos"), como único hito de acceso. La bienvenida solo si la víspera YA había salido
     // (con su fecha de ayer) — dos mensajes nuestros el mismo día serían la ristra de Smoobu.
-    const visperaAyer = yaHechos.has(claveHito('vispera_llegada', r.checkIn))
+    //
+    // 🚨 «Ya hecho» NO basta: la víspera se ancla a `checkIn` tanto si sale la víspera como si sale
+    // hoy de rescate, así que su clave es la misma en los dos casos. Sin `emitidosHoy`, una víspera
+    // rescatada esta mañana contaba como «salió ayer» y la bienvenida se emitía unas horas después
+    // — el mismo día, al mismo huésped. Medido con la reserva 154265696 el 05/09/2026.
+    const clave = claveHito('vispera_llegada', r.checkIn)
+    const visperaAyer = yaHechos.has(clave) && !emitidosHoy.has(clave)
     if (!visperaAyer) {
       debido('vispera_llegada', r.checkIn, true)
     } else if (min >= 8 * 60) {

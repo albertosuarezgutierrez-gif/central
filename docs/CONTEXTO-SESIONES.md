@@ -39,10 +39,17 @@
   así que un hito generado en SOMBRA quedaba «hecho» para siempre — la víspera CON LOS CÓDIGOS de esa misma
   reserva (Luxury Busto, llegada el 05/09) se generó 12 h antes de activarse el piso y no la iba a recibir
   nadie. Ahora `hitosBloqueantes` ignora las filas en sombra si el piso ya está activo y el reclamo las
-  toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. Mergeado (**PR #2305**) y desplegado.
-  ⏳ La pasada de las 07:07 UTC aún corrió con el código viejo (su latido trae el contador
-  `ya-de-Smoobu`, que este cambio elimina — ese texto es el canario de qué versión sirve); pendiente
-  de confirmar contra la de las 07:37 que la víspera de la 154265696 pasa de `sombra` a `enviado`. **Regla que deja: un mensaje que solo vio Alberto por Telegram
+  toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. Mergeado (**PR #2305**) y
+  ✅ **verificado en producción**: la pasada de las 07:37 UTC mandó la víspera con los códigos a esa
+  huésped, en PORTUGUÉS («Olá Mafalda… AQUI ESTÃO OS…»), más dos confirmaciones que el chequeo
+  retirado tenía bloqueadas. **Regla que deja: un mensaje que solo vio Alberto por Telegram no está
+  entregado** — al activar un piso hay que mirar qué hitos suyos quedaron en sombra.
+  🚨 **Y el rescate destapó un segundo defecto (PR #2310): `visperaAyer` no distinguía la víspera que
+  salió AYER de la que sale HOY de rescate** (las dos se anclan a `checkIn`, misma clave), así que la
+  bienvenida iba a salir a las 10:07 al mismo huésped el mismo día — la «ristra de Smoobu» que el
+  diseño evita. Se paró a mano en BD (`estado='omitido'`) y se arregló en código con `emitidosHoy`.
+  ⚠️ Coste asumido y medido: dos confirmaciones que Smoobu ya había mandado salieron de nuevo (los
+  hitos marcados «equivalente de Smoobu ya en el hilo» estaban en `sombra` y dejaron de bloquear). **Regla que deja: un mensaje que solo vio Alberto por Telegram
   no está entregado** — al activar un piso hay que mirar qué hitos suyos quedaron registrados en sombra.
 
 - **📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría (05/09/2026).**
