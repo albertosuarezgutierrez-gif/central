@@ -148,7 +148,23 @@ orden en §9.
     `ya_usado`—, y sin `PORTAL_PUBLIC_URL` https no se manda enlace, solo el código. WhatsApp **no
     existe** (no hay WABA): el canal es un puerto (`lib/canal.ts`) y `503 canal_no_disponible` («ese
     canal no está montado») **NO es** `502 envio_fallido` («el envío no salió»).
-18. **Avant2/Codeoscopic cuesta 0,50€ por consulta y NO es idempotente**: repetir la llamada crea
+19. 🚨 **El contacto de un cliente vive en TRES sitios, y afirmar «no se le puede
+    contactar» exige haber mirado los tres.** (1) su ficha; (2) **su propio dato
+    colgado de la PÓLIZA** —`poliza_intervinientes` cuyo `cliente_id` es él mismo:
+    CIMA lo trae y nadie lo copia a la ficha, así que el cron de avisos, que lee la
+    ficha, no le manda nada—; (3) otra persona de su póliza. Caso fundacional
+    (04/09/2026, lo vio Alberto en la pantalla): «19 clientes con los que NO se
+    puede contactar» de los que **solo 15 lo eran** — `Esquiansa` salía ilocalizable
+    teniendo a Juan Manuel López Benjumea de conductor habitual con ficha, email y
+    teléfono. ⚖️ Y no se funden en un «localizable»: **tener a quién llamar no es
+    poder notificar**, el preaviso del art. 22 LCS va al TOMADOR, así que un tercero
+    sirve para CONSEGUIR su correo, no para darlo por avisado. La lección de método:
+    la regla 13 ya decía la dirección contraria (el tomador no está en
+    `poliza_intervinientes`) y `contactoEfectivo()` ya lo resolvía para la FICHA —
+    pero nadie cruzó las dos pantallas, y `contactoEfectivo` además descartaba los
+    intervinientes del propio tomador. Guardián: `test/regression-clientes-sin-canal.test.ts`.
+
+20. **Avant2/Codeoscopic cuesta 0,50€ por consulta y NO es idempotente**: repetir la llamada crea
     otro proyecto y otro cargo. **Ningún botón público ni vigilancia periódica lo dispara.** Se
     vigila la FECHA (gratis) y se tarifica **una vez**, contra el cupo y el motivo de
     `seguros.codeoscopic_consumo`.

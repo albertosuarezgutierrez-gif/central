@@ -12,6 +12,43 @@
 // La pantalla no manda nada: sirve para que, cuando Alberto hable con uno de
 // ellos por teléfono o en el despacho, le pida el correo y deje de estar aquí.
 //
+// ─── 🚨 La ficha del tomador NO es el único sitio donde vive el contacto ────
+// Corregido el 04/09/2026, y el fallo lo cazó Alberto mirando la pantalla:
+// `Esquiansa` salía como «ilocalizable» cuando su contacto de siempre es Juan
+// Manuel López Benjumea. Esta consulta miraba SOLO las columnas de la ficha del
+// tomador, y con eso afirmaba «a estos no les llega NADA». Falso para 4 de 19.
+//
+// El contacto de un cliente puede estar en tres sitios, y hay que mirar los
+// tres antes de decir que no se le puede localizar:
+//
+//   1. Su ficha (`clientes.email/telefono`, `cliente_emails`, `cliente_telefonos`).
+//   2. 🚨 **Su propio dato colgado de la PÓLIZA** (`poliza_intervinientes` cuyo
+//      `cliente_id` es él mismo). Medido: le pasa a `Juan Manuel Duran Ibañez` y
+//      a `MORALES ISABEL MALDONADO` — CIMA trajo su email en el interviniente y
+//      nadie lo copió a la ficha. Este es el caso CARO: el dato está en la base
+//      y el cron de avisos (`avisos-vencimiento.ts`) no lo ve, porque lee la
+//      ficha. Se arregla copiándolo, no llamando a nadie.
+//   3. **Otra persona de su póliza** (conductor habitual, propietario, una ficha
+//      enlazada distinta). Ahí SÍ hay a quién llamar… pero ojo con la línea de
+//      abajo.
+//
+// ⚖️ **Tener a quién llamar NO es lo mismo que poder notificar.** El preaviso
+// del art. 22 LCS va al TOMADOR. Que el conductor habitual tenga móvil no
+// convierte a la empresa tomadora en avisada: sirve para CONSEGUIR su correo,
+// no para darla por avisada. Por eso los casos 2 y 3 son estados distintos y no
+// se funden en un «localizable» que tranquilizaría de más.
+//
+// ─── 🚨 Y una póliza CANCELADA no renueva (04/09/2026) ─────────────────────
+// La regla de cartera viva dice «CIMA la trae o la mantiene», NO «está en
+// vigor»: de las 110 vivas, **42 están canceladas**. Medido ese día: de los 18
+// clientes sin contacto, **8 solo tienen pólizas que ya no renuevan** —no hay
+// aviso de vencimiento que mandarles— y a tres se les pintaba «Renueva el …»
+// con la fecha de una póliza cancelada. `FERNANDO GOMEZ ARIZA` salía con
+// 10/01/2027 (la cancelada) cuando su renovación real es el 28/05/2027.
+// Qué estado sigue en juego lo decide `POLIZA_ESTADOS_VIGENTES` de
+// `@central/module-seguros` —la lista que ya reproduce la del CRM de origen—,
+// no un `<> 'cancelada'`: el enum tiene DIEZ valores.
+//
 // ─── Qué se cuenta como cliente (y qué NO) ──────────────────────────────────
 // 🚨 Cartera VIVA = las pólizas que CIMA trae o MANTIENE (regla única en
 // `cartera-viva.ts` de `@central/module-seguros`: `import_ref IS NULL` **o**
@@ -24,16 +61,23 @@
 // una lista de treinta mil filas.
 //
 // ─── PII: aquí NO se descifra nada ──────────────────────────────────────────
-// `clientes.email`/`telefono` y las tablas `cliente_emails`/`cliente_telefonos`
-// guardan el dato CIFRADO (`v1:iv:cipher:tag`). La pregunta de esta pantalla es
-// «¿hay ALGO en esa columna?», no «¿qué pone?», así que no se abre ni se manda
-// por el puerto ningún correo ni teléfono: solo el nombre (imprescindible para
-// saber a quién llamar) y booleanos. Para ver el contacto está su ficha.
+// `clientes.email`/`telefono`, `cliente_emails`/`cliente_telefonos` y también
+// `poliza_intervinientes.email`/`telefono`/`nombre` guardan el dato CIFRADO
+// (`v1:iv:cipher:tag`). La pregunta de esta pantalla es «¿hay ALGO en esa
+// columna?», no «¿qué pone?», así que no se abre ni se manda por el puerto
+// ningún correo ni teléfono: solo nombres de FICHA (que sí están en claro,
+// imprescindibles para saber a quién llamar) y booleanos. Para ver el contacto
+// está su ficha.
+//
+// 🚨 El nombre de un interviniente SUELTO (sin ficha enlazada) viene cifrado y
+// NO se manda: de esos solo viaja el recuento. Descifrarlo aquí sería sacar PII
+// por el puerto para una pantalla que no la necesita.
 //
 // Consecuencia honesta de esa decisión: esto mide PRESENCIA, no validez. Una
 // columna con un blob que no se pueda descifrar cuenta como «tiene canal»
 // aunque el envío luego falle. La pantalla lo dice; no se disfraza de garantía.
 
+import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 /** Tope de filas leídas. La cartera viva son decenas, no miles: si algún día se
@@ -41,7 +85,27 @@ import { aseguraConfigurada, prismaAsegura } from './asegura-db'
  *  en vez de devolver un número más pequeño que la realidad. */
 const LIMITE = 2000
 
-export type EstadoCanal = 'sin_ninguno' | 'solo_telefono' | 'solo_email' | 'con_ambos'
+/** Tope de fichas nombradas por cliente. Sirve para decir «llama a X», no para
+ *  volcar la póliza entera; el recuento de al lado dice cuántas hay en total. */
+const MAX_FICHAS = 5
+
+export type EstadoCanal =
+  /** Ni en su ficha, ni en su póliza, ni nadie más en ella. Ilocalizable de verdad. */
+  | 'sin_ninguno'
+  /** No hay nada suyo, pero SÍ de otra persona de su póliza. Hay a quién llamar
+   *  para pedirle el correo — no es a quién notificar (art. 22 LCS). */
+  | 'contacto_via_tercero'
+  /** 🚨 Su PROPIO email/teléfono existe, pero colgado de la póliza y no de su
+   *  ficha: el cron de avisos lee la ficha, así que hoy no le sale nada. Se
+   *  arregla copiando el dato, no llamando a nadie. */
+  | 'canal_en_poliza'
+  | 'solo_telefono'
+  | 'solo_email'
+  | 'con_ambos'
+
+/** Una ficha de persona localizable que aparece en las pólizas del cliente.
+ *  El nombre viene de `clientes`, que está EN CLARO; nunca de un interviniente. */
+export type FichaContacto = { clienteId: string; nombre: string }
 
 export type ClienteCanal = {
   clienteId: string
@@ -50,11 +114,25 @@ export type ClienteCanal = {
   tieneEmail: boolean
   /** ¿Hay algo en `clientes.telefono` o en `cliente_telefonos`? */
   tieneTelefono: boolean
+  /** 🚨 Intervinientes de sus pólizas vivas que son ÉL MISMO y traen contacto:
+   *  el dato es suyo y está en la base, solo que no en su ficha. */
+  canalEnPoliza: number
+  /** Personas DISTINTAS de él, localizables, en sus pólizas vivas. */
+  contactoDeOtros: number
+  /** Las de arriba que tienen ficha propia (con nombre en claro y enlace).
+   *  Puede venir más corta que `contactoDeOtros`: los intervinientes sueltos no
+   *  tienen ficha y su nombre va cifrado, así que solo cuentan. */
+  fichasContacto: FichaContacto[]
   estado: EstadoCanal
   /** Pólizas por CIMA de este cliente (siempre ≥ 1: por eso está en la lista). */
   polizasCima: number
-  /** La renovación más cercana de HOY en adelante. `null` = no la hay (ver los
-   *  dos contadores de abajo), NUNCA «no vence». */
+  /** De esas, las que siguen en un estado que puede renovar. **`0` = ninguna
+   *  renueva**: no hay aviso de vencimiento que mandarle, así que su falta de
+   *  contacto es cierta pero NO urgente. */
+  polizasQueRenuevan: number
+  /** La renovación más cercana de HOY en adelante, **contando SOLO pólizas en
+   *  estado que renueva**. `null` = no la hay (lo dicen los contadores de al
+   *  lado), NUNCA «no vence». */
   proximoVencimiento: string | null
   /** Pólizas vivas sin fecha de vencimiento: no se sabe cuándo renuevan. */
   polizasSinFecha: number
@@ -73,7 +151,18 @@ export type ClientesSinCanal = {
     conEmail: number | null
     conTelefono: number | null
     conAlguno: number | null
+    /** Sin contacto EN SU FICHA. Ojo: no es lo mismo que ilocalizable. */
     sinNinguno: number | null
+    /** 🚨 El número que encabeza la pantalla: ni en la ficha, ni en la póliza,
+     *  ni nadie más. Con estos NO hay forma de hablar. */
+    ilocalizables: number | null
+    /** Sin nada en la ficha pero con por dónde tirar (`canal_en_poliza` o
+     *  `contacto_via_tercero`). = `sinNinguno − ilocalizables`. */
+    rescatables: number | null
+    /** De los ilocalizables, los que **ninguna de sus pólizas renueva**. Siguen
+     *  siendo ilocalizables, pero no hay nada que avisarles: separarlos es la
+     *  diferencia entre una lista de llamadas y una lista de nombres. */
+    ilocalizablesSinRenovacion: number | null
   }
   truncado: boolean
 }
@@ -83,27 +172,46 @@ type FilaSql = {
   nombre: string
   tiene_email: boolean
   tiene_telefono: boolean
+  canal_en_poliza: number
+  contacto_de_otros: number
+  fichas_contacto: unknown
   polizas_cima: number
+  polizas_que_renuevan: number
   proximo_vencimiento: string | null
   polizas_sin_fecha: number
   prima: number | null
   polizas_sin_prima: number
 }
 
-/** Puro: el estado se deriva de los dos canales, no se guarda en ninguna parte. */
-export function estadoCanal(tieneEmail: boolean, tieneTelefono: boolean): EstadoCanal {
+/** Puro: el estado se deriva de dónde hay contacto, no se guarda en ninguna
+ *  parte. El orden de las preguntas importa —lo de la ficha manda sobre lo de la
+ *  póliza, y lo suyo sobre lo de un tercero— porque cada respuesta pide una
+ *  acción distinta. */
+export function estadoCanal(
+  tieneEmail: boolean,
+  tieneTelefono: boolean,
+  canalEnPoliza = 0,
+  contactoDeOtros = 0,
+): EstadoCanal {
   if (tieneEmail && tieneTelefono) return 'con_ambos'
   if (tieneEmail) return 'solo_email'
   if (tieneTelefono) return 'solo_telefono'
+  // Sin nada en la ficha. Antes de declararlo ilocalizable, los otros dos sitios.
+  if (canalEnPoliza > 0) return 'canal_en_poliza'
+  if (contactoDeOtros > 0) return 'contacto_via_tercero'
   return 'sin_ninguno'
 }
 
-/** Los ilocalizables primero; dentro de cada grupo, el que renueva antes. */
+/** Los ilocalizables primero; dentro de cada grupo, el que renueva antes.
+ *  `contacto_via_tercero` va por delante de `canal_en_poliza` porque el segundo
+ *  se arregla copiando un dato y el primero exige llamar a alguien. */
 const ORDEN: Record<EstadoCanal, number> = {
   sin_ninguno: 0,
-  solo_telefono: 1,
-  solo_email: 2,
-  con_ambos: 3,
+  contacto_via_tercero: 1,
+  canal_en_poliza: 2,
+  solo_telefono: 3,
+  solo_email: 4,
+  con_ambos: 5,
 }
 
 export function ordenarPorUrgencia(filas: ClienteCanal[]): ClienteCanal[] {
@@ -118,93 +226,225 @@ export function ordenarPorUrgencia(filas: ClienteCanal[]): ClienteCanal[] {
   })
 }
 
+/** Un nombre que empieza por `v1:` es un blob cifrado, no un nombre. Pintarlo
+ *  sería enseñar basura; mandarlo, sacar PII sin poder leerla. Se descarta y la
+ *  persona cuenta solo en el recuento. */
+export function nombreEnClaro(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const n = v.trim()
+  if (n === '' || n.startsWith('v1:')) return null
+  return n
+}
+
+/** Las fichas llegan como `jsonb`. Una fila rota se descarta (sigue contada en
+ *  `contactoDeOtros`), nunca se inventa un nombre. */
+function leerFichas(v: unknown): FichaContacto[] {
+  if (!Array.isArray(v)) return []
+  const out: FichaContacto[] = []
+  for (const f of v) {
+    if (typeof f !== 'object' || f === null) continue
+    const o = f as Record<string, unknown>
+    const id = typeof o.clienteId === 'string' && o.clienteId !== '' ? o.clienteId : null
+    const nombre = nombreEnClaro(o.nombre)
+    if (id === null || nombre === null) continue
+    out.push({ clienteId: id, nombre })
+    if (out.length >= MAX_FICHAS) break
+  }
+  return out
+}
+
 export async function clientesSinCanal(correduriaId: string): Promise<ClientesSinCanal> {
   const vacio: ClientesSinCanal = {
     filas: [],
-    resumen: { vivos: null, conEmail: null, conTelefono: null, conAlguno: null, sinNinguno: null },
+    resumen: {
+      vivos: null, conEmail: null, conTelefono: null, conAlguno: null,
+      sinNinguno: null, ilocalizables: null, rescatables: null,
+      ilocalizablesSinRenovacion: null,
+    },
     truncado: false,
   }
   if (!aseguraConfigurada()) return vacio
   const db = prismaAsegura()
+  // Copia mutable para la interpolación de Prisma: `POLIZA_ESTADOS_VIGENTES` es
+  // `readonly` (`as const`) y el driver espera un array normal.
+  const VIGENTES: string[] = [...POLIZA_ESTADOS_VIGENTES]
 
   // 🚨 El filtro de cartera viva es la línea que separa los ~80 clientes de hoy
   // de las ~32.500 fichas del volcado histórico. No se toca.
   // `nullif(btrim(...), '')` porque una cadena vacía es tan «sin canal» como un
   // NULL, y colarla como dato diría que sí se le puede escribir.
+  //
+  // La búsqueda de contacto en las pólizas va en un `lateral` APARTE y DESPUÉS
+  // de filtrar (`base` ya se queda en las decenas de clientes vivos): metida en
+  // el primer lateral se ejecutaría para las 32.600 fichas de la tabla.
   const filas = await db.$queryRaw<FilaSql[]>`
-    select
-      c.id::text as cliente_id,
-      btrim(concat_ws(' ', c.nombre, c.apellidos)) as nombre,
-      (
-        nullif(btrim(c.email), '') is not null
-        or exists (
-          select 1 from cliente_emails e
-          where e.cliente_id = c.id and nullif(btrim(e.email), '') is not null
-        )
-      ) as tiene_email,
-      (
-        nullif(btrim(c.telefono), '') is not null
-        or exists (
-          select 1 from cliente_telefonos t
-          where t.cliente_id = c.id and nullif(btrim(t.telefono), '') is not null
-        )
-      ) as tiene_telefono,
-      v.polizas_cima,
-      to_char(v.proximo_vencimiento, 'YYYY-MM-DD') as proximo_vencimiento,
-      v.polizas_sin_fecha,
-      v.prima,
-      v.polizas_sin_prima
-    from clientes c
-    join lateral (
+    with base as (
       select
-        count(*)::int as polizas_cima,
-        min(p.fecha_vencimiento) filter (where p.fecha_vencimiento >= current_date) as proximo_vencimiento,
-        count(*) filter (where p.fecha_vencimiento is null)::int as polizas_sin_fecha,
-        sum(coalesce(p.prima_anual, p.prima_bruta))::float8 as prima,
-        count(*) filter (where p.prima_anual is null and p.prima_bruta is null)::int as polizas_sin_prima
-      from polizas p
-      where p.cliente_id = c.id
-        and p.correduria_id = c.correduria_id
-        and (p.import_ref is null or p.eiac_xml_hash is not null)
-        and p.merged_into_poliza_id is null
-    ) v on true
-    where c.correduria_id = ${correduriaId}::uuid
-      and c.merged_into_cliente_id is null
-      and c.activo
-      and v.polizas_cima > 0
-    order by c.apellidos, c.nombre
+        c.id,
+        c.correduria_id,
+        btrim(concat_ws(' ', c.nombre, c.apellidos)) as nombre,
+        (
+          nullif(btrim(c.email), '') is not null
+          or exists (
+            select 1 from cliente_emails e
+            where e.cliente_id = c.id and nullif(btrim(e.email), '') is not null
+          )
+        ) as tiene_email,
+        (
+          nullif(btrim(c.telefono), '') is not null
+          or exists (
+            select 1 from cliente_telefonos t
+            where t.cliente_id = c.id and nullif(btrim(t.telefono), '') is not null
+          )
+        ) as tiene_telefono,
+        v.polizas_cima,
+        v.polizas_que_renuevan,
+        v.proximo_vencimiento,
+        v.polizas_sin_fecha,
+        v.prima,
+        v.polizas_sin_prima
+      from clientes c
+      join lateral (
+        select
+          count(*)::int as polizas_cima,
+          -- La lista de estados que renuevan viaja como parámetro desde
+          -- POLIZA_ESTADOS_VIGENTES: una sola fuente para el CRM, la ficha y
+          -- esta pantalla. Un estado NULL no cuenta como vigente, que es la
+          -- semántica que ya fija esEstadoVigente.
+          -- (Sin acentos graves aquí dentro: cierran el template literal.)
+          count(*) filter (where p.estado::text = any(${VIGENTES}))::int
+            as polizas_que_renuevan,
+          min(p.fecha_vencimiento) filter (
+            where p.fecha_vencimiento >= current_date
+              and p.estado::text = any(${VIGENTES})
+          ) as proximo_vencimiento,
+          count(*) filter (where p.fecha_vencimiento is null)::int as polizas_sin_fecha,
+          sum(coalesce(p.prima_anual, p.prima_bruta))::float8 as prima,
+          count(*) filter (where p.prima_anual is null and p.prima_bruta is null)::int as polizas_sin_prima
+        from polizas p
+        where p.cliente_id = c.id
+          and p.correduria_id = c.correduria_id
+          and (p.import_ref is null or p.eiac_xml_hash is not null)
+          and p.merged_into_poliza_id is null
+      ) v on true
+      where c.correduria_id = ${correduriaId}::uuid
+        and c.merged_into_cliente_id is null
+        -- 🚨 Los dados de baja no son «clientes a los que no se puede avisar»:
+        --    es que no hay que avisarles. Este filtro EXISTÍA y se perdió al
+        --    reescribir el fichero el 04/09/2026; sin él la lista crece con
+        --    gente de la que nadie espera nada.
+        and c.activo
+        and v.polizas_cima > 0
+    )
+    select
+      b.id::text as cliente_id,
+      b.nombre,
+      b.tiene_email,
+      b.tiene_telefono,
+      coalesce(w.canal_en_poliza, 0) as canal_en_poliza,
+      coalesce(w.contacto_de_otros, 0) as contacto_de_otros,
+      coalesce(w.fichas_contacto, '[]'::jsonb) as fichas_contacto,
+      b.polizas_cima,
+      b.polizas_que_renuevan,
+      to_char(b.proximo_vencimiento, 'YYYY-MM-DD') as proximo_vencimiento,
+      b.polizas_sin_fecha,
+      b.prima,
+      b.polizas_sin_prima
+    from base b
+    left join lateral (
+      select
+        count(*) filter (where x.es_el_mismo)::int as canal_en_poliza,
+        count(*) filter (where not x.es_el_mismo)::int as contacto_de_otros,
+        coalesce(
+          jsonb_agg(jsonb_build_object('clienteId', x.ficha_id, 'nombre', x.ficha_nombre))
+            filter (where not x.es_el_mismo and x.ficha_id is not null),
+          '[]'::jsonb
+        ) as fichas_contacto
+      from (
+        -- Una PERSONA, no una fila: el mismo conductor en tres pólizas no son
+        -- tres contactos. Sin ficha enlazada el interviniente es su propia
+        -- identidad (no hay NIF en claro con el que agrupar mejor).
+        select distinct on (coalesce(i.cliente_id::text, 'i:' || i.id::text))
+          (i.cliente_id = b.id) as es_el_mismo,
+          ic.id::text as ficha_id,
+          btrim(concat_ws(' ', ic.nombre, ic.apellidos)) as ficha_nombre
+        from polizas p
+        join poliza_intervinientes i on i.poliza_id = p.id
+        left join clientes ic on ic.id = i.cliente_id and ic.merged_into_cliente_id is null
+        where p.cliente_id = b.id
+          and p.correduria_id = b.correduria_id
+          and (p.import_ref is null or p.eiac_xml_hash is not null)
+          and p.merged_into_poliza_id is null
+          and (
+            nullif(btrim(i.email), '') is not null
+            or nullif(btrim(i.telefono), '') is not null
+            or nullif(btrim(ic.email), '') is not null
+            or nullif(btrim(ic.telefono), '') is not null
+            or exists (
+              select 1 from cliente_emails e
+              where e.cliente_id = ic.id and nullif(btrim(e.email), '') is not null
+            )
+            or exists (
+              select 1 from cliente_telefonos t
+              where t.cliente_id = ic.id and nullif(btrim(t.telefono), '') is not null
+            )
+          )
+        order by coalesce(i.cliente_id::text, 'i:' || i.id::text)
+      ) x
+    ) w on true
+    order by b.nombre
     limit ${LIMITE + 1}
   `
 
   const truncado = filas.length > LIMITE
   const leidas = truncado ? filas.slice(0, LIMITE) : filas
 
-  const todos: ClienteCanal[] = leidas.map((f) => ({
-    clienteId: f.cliente_id,
-    nombre: f.nombre,
-    tieneEmail: f.tiene_email === true,
-    tieneTelefono: f.tiene_telefono === true,
-    estado: estadoCanal(f.tiene_email === true, f.tiene_telefono === true),
-    polizasCima: f.polizas_cima,
-    proximoVencimiento: f.proximo_vencimiento ?? null,
-    polizasSinFecha: f.polizas_sin_fecha,
-    // Sin ninguna prima informada la suma de Postgres es NULL. Se queda en
-    // `null` («no se sabe cuánto hay en juego»), jamás en 0.
-    prima: typeof f.prima === 'number' && Number.isFinite(f.prima) ? f.prima : null,
-    polizasSinPrima: f.polizas_sin_prima,
-  }))
+  const todos: ClienteCanal[] = leidas.map((f) => {
+    const tieneEmail = f.tiene_email === true
+    const tieneTelefono = f.tiene_telefono === true
+    const canalEnPoliza = Number.isFinite(f.canal_en_poliza) ? f.canal_en_poliza : 0
+    const contactoDeOtros = Number.isFinite(f.contacto_de_otros) ? f.contacto_de_otros : 0
+    return {
+      clienteId: f.cliente_id,
+      nombre: f.nombre,
+      tieneEmail,
+      tieneTelefono,
+      canalEnPoliza,
+      contactoDeOtros,
+      fichasContacto: leerFichas(f.fichas_contacto),
+      estado: estadoCanal(tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros),
+      polizasCima: f.polizas_cima,
+      polizasQueRenuevan: Number.isFinite(f.polizas_que_renuevan) ? f.polizas_que_renuevan : 0,
+      proximoVencimiento: f.proximo_vencimiento ?? null,
+      polizasSinFecha: f.polizas_sin_fecha,
+      // Sin ninguna prima informada la suma de Postgres es NULL. Se queda en
+      // `null` («no se sabe cuánto hay en juego»), jamás en 0.
+      prima: typeof f.prima === 'number' && Number.isFinite(f.prima) ? f.prima : null,
+      polizasSinPrima: f.polizas_sin_prima,
+    }
+  })
 
   // Si la lista se truncó, cualquier recuento saldría MÁS BAJO que la realidad y
   // se leería como «hay menos ilocalizables de los que hay». Se declara «no
   // comprobado» (null) en vez de dar un número tranquilizador y falso.
+  const sinFicha = todos.filter((c) => !c.tieneEmail && !c.tieneTelefono)
   const resumen = truncado
-    ? { vivos: null, conEmail: null, conTelefono: null, conAlguno: null, sinNinguno: null }
+    ? {
+        vivos: null, conEmail: null, conTelefono: null, conAlguno: null,
+        sinNinguno: null, ilocalizables: null, rescatables: null,
+        ilocalizablesSinRenovacion: null,
+      }
     : {
         vivos: todos.length,
         conEmail: todos.filter((c) => c.tieneEmail).length,
         conTelefono: todos.filter((c) => c.tieneTelefono).length,
         conAlguno: todos.filter((c) => c.tieneEmail || c.tieneTelefono).length,
-        sinNinguno: todos.filter((c) => !c.tieneEmail && !c.tieneTelefono).length,
+        sinNinguno: sinFicha.length,
+        ilocalizables: todos.filter((c) => c.estado === 'sin_ninguno').length,
+        rescatables: sinFicha.filter((c) => c.estado !== 'sin_ninguno').length,
+        ilocalizablesSinRenovacion: todos.filter(
+          (c) => c.estado === 'sin_ninguno' && c.polizasQueRenuevan === 0,
+        ).length,
       }
 
   return {

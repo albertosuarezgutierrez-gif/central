@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { saludIngesta, detalleSalud, DIAS_CUARENTENA_RECIENTE } from './ingesta.ts'
+import { saludIngesta, detalleSalud, DIAS_CUARENTENA_RECIENTE, HORAS_RECHAZO_RECIENTE } from './ingesta.ts'
 
 const f = (tipo: string, entidad: string, dias: number) => ({ tipo, entidad, dias })
 
@@ -128,4 +128,60 @@ test('🚨 sin saber cuántas son resolubles NO se afirma ninguna de las dos cos
   const s = saludIngesta({ cuarentena: [], huerfanas: 20 })
   assert.equal(s.huerfanasResolubles, null)
   assert.doesNotMatch(s.motivos.join(' · '), /YA están en la cartera|no están en la cartera/)
+})
+
+// ── Envíos RECHAZADOS: la tercera cara de la misma avería (04/09/2026) ───────
+
+test('🚨 un envío que nos mandan y rechazamos degrada la ingesta', () => {
+  // Caso real: Codeoscopic manda un webhook cada 30 min, autenticado, y lo
+  // tiramos por una diferencia de forma. No deja fichero en cuarentena ni
+  // huérfana, así que sin esto la ingesta salía «ok» perdiendo datos.
+  const s = saludIngesta({
+    cuarentena: [],
+    rechazos: [
+      { evento: 'codeoscopic_webhook_invalid_payload', origen: 'webhook_codeoscopic', n: 23, horasDesdeUltimo: 0 },
+    ],
+  })
+  assert.equal(s.estado, 'degradada')
+  assert.match(s.motivos.join(' · '), /23 envío\(s\) RECHAZADOS/)
+  assert.match(s.motivos.join(' · '), /webhook_codeoscopic/)
+})
+
+test('un rechazo VIEJO informa pero no alarma: es historia, no avería en curso', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    rechazos: [
+      { evento: 'x_invalid_payload', origen: 'y', n: 5, horasDesdeUltimo: HORAS_RECHAZO_RECIENTE + 1 },
+    ],
+  })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.rechazos, [
+    { evento: 'x_invalid_payload', origen: 'y', n: 5, horasDesdeUltimo: HORAS_RECHAZO_RECIENTE + 1 },
+  ])
+})
+
+test('🚨 sin la hora del último rechazo NO se supone que es reciente ni que es viejo', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    rechazos: [{ evento: 'x_invalid_payload', origen: null, n: 9, horasDesdeUltimo: null }],
+  })
+  // No alarma (no consta que sea de ahora) pero el dato viaja para que se vea.
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.rechazos?.[0].n, 9)
+})
+
+test('🚨 «no se pudieron mirar los rechazos» NO es «no hay rechazos»', () => {
+  const sinMirar = saludIngesta({ cuarentena: [] })
+  assert.equal(sinMirar.rechazos, null, 'ausente ⇒ no comprobado, jamás []')
+  assert.match(detalleSalud(sinMirar), /envíos rechazados: sin comprobar/)
+
+  const mirado = saludIngesta({ cuarentena: [], rechazos: [] })
+  assert.deepEqual(mirado.rechazos, [])
+  assert.doesNotMatch(detalleSalud(mirado), /sin comprobar/)
+})
+
+test('la ingesta sin datos deja los rechazos en null, no en lista vacía', () => {
+  const s = saludIngesta({ cuarentena: null })
+  assert.equal(s.estado, 'sin_datos')
+  assert.equal(s.rechazos, null)
 })

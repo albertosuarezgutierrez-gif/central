@@ -56,6 +56,37 @@ export type FicheroEnCuarentena = {
  */
 export const DIAS_CUARENTENA_RECIENTE = 7
 
+/**
+ * Algo que un proveedor NOS MANDÓ y no supimos aceptar.
+ *
+ * 🚨 Caso fundacional (04/09/2026): `apps/asegura/CLAUDE.md` afirmaba que el
+ * webhook de Codeoscopic estaba «SIN ESTRENAR, no roto» y que «no se pierda
+ * tiempo arreglando eso». Medido ese día en `operational_events`: **23
+ * `codeoscopic_webhook_invalid_payload` en 24 h, uno cada 30 minutos**, desde
+ * la misma IP, con `authPresente: true` y UA `Apache-HttpAsyncClient (Java)`.
+ * O sea: su sistema mandando de verdad, autenticado, y nosotros tirándolo todo
+ * por una diferencia de FORMA (`rootType: "array"` contra un validador que
+ * espera un objeto).
+ *
+ * Y nadie se enteró en un día entero, porque este vigía miraba la cuarentena de
+ * CIMA y las huérfanas — pero no la puerta por la que entra Codeoscopic. Es
+ * literalmente la lección del módulo repetida en otra puerta: **se medía lo que
+ * no era**.
+ */
+export type EntradaRechazada = {
+  /** Nombre del evento, p. ej. `codeoscopic_webhook_invalid_payload`. */
+  evento: string
+  /** De dónde vino (`source` del evento). `null` = el evento no lo dice. */
+  origen: string | null
+  /** Cuántos en la ventana reciente. */
+  n: number
+  /** Horas desde el último. `null` = no se ha podido calcular. */
+  horasDesdeUltimo: number | null
+}
+
+/** Un rechazo de hace un mes es historia; uno de hoy es una avería en curso. */
+export const HORAS_RECHAZO_RECIENTE = 24
+
 export type EntradaSalud = {
   /** Ficheros en cuarentena. Lista vacía = comprobado que no hay. */
   cuarentena: FicheroEnCuarentena[] | null
@@ -74,6 +105,12 @@ export type EntradaSalud = {
    * `null` = no se ha podido distinguir.
    */
   huerfanasResolubles?: number | null
+  /**
+   * Lo que nos mandaron y rechazamos en la ventana reciente. **`[]` = se miró y
+   * no hay ninguno; `null` = NO se ha podido mirar**, que no es lo mismo y por
+   * eso no se colapsan.
+   */
+  rechazos?: EntradaRechazada[] | null
 }
 
 export type SaludIngesta = {
@@ -95,6 +132,8 @@ export type SaludIngesta = {
   /** Huérfanas cuya póliza YA está en la cartera (se arreglan reprocesando). */
   huerfanasResolubles: number | null
   primaPerdida: number | null
+  /** Entradas rechazadas recientes. `null` = no comprobado, nunca «no hay». */
+  rechazos: EntradaRechazada[] | null
   /** Frases listas para el aviso. Vacío cuando no hay nada que decir. */
   motivos: string[]
 }
@@ -153,6 +192,7 @@ export function saludIngesta(
       huerfanas: null,
       huerfanasResolubles: null,
       primaPerdida: null,
+      rechazos: null,
       motivos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
     }
   }
@@ -204,7 +244,22 @@ export function saludIngesta(
     if (dias !== null && dias > 30) motivos.push(`${tipo}: ${dias} días sin guardar ni uno`)
   }
 
-  const hayPerdida = recientes > 0 || (huerfanas !== null && huerfanas > 0)
+  // 🚨 La TERCERA cara: algo que sí llegó y no supimos aceptar. No deja fichero
+  // en cuarentena ni huérfana, así que sin esto es invisible — y se repite cada
+  // media hora, que es lo que lo hace caro.
+  const rechazos = Array.isArray(e.rechazos) ? e.rechazos : null
+  const rechazosRecientes = (rechazos ?? []).filter(
+    r => r.horasDesdeUltimo !== null && r.horasDesdeUltimo <= HORAS_RECHAZO_RECIENTE && r.n > 0,
+  )
+  for (const r of rechazosRecientes) {
+    motivos.push(
+      `${r.n} envío(s) RECHAZADOS en ${HORAS_RECHAZO_RECIENTE} h por ${r.origen ?? 'origen no informado'}` +
+      ` (${r.evento}): nos lo mandan y no lo aceptamos`,
+    )
+  }
+
+  const hayPerdida =
+    recientes > 0 || (huerfanas !== null && huerfanas > 0) || rechazosRecientes.length > 0
   return {
     estado: hayPerdida ? 'degradada' : 'ok',
     total,
@@ -214,6 +269,7 @@ export function saludIngesta(
     huerfanas,
     huerfanasResolubles,
     primaPerdida,
+    rechazos,
     motivos,
   }
 }
@@ -222,9 +278,13 @@ export function saludIngesta(
 export function detalleSalud(s: SaludIngesta): string {
   if (s.estado === 'sin_datos') return 'ingesta CIMA: no se ha podido comprobar'
   if (s.estado === 'ok') {
-    return s.total === 0
+    // Si no se pudieron mirar los rechazos, el «sin novedades» habla SOLO de la
+    // cuarentena y hay que decirlo: prometer calma sobre una puerta que no se ha
+    // abierto es el fallo que este módulo existe para no repetir.
+    const coletilla = s.rechazos === null ? ' · envíos rechazados: sin comprobar' : ''
+    return (s.total === 0
       ? 'ingesta CIMA: sin ficheros atascados'
-      : `ingesta CIMA: sin novedades (${s.total} en backlog antiguo)`
+      : `ingesta CIMA: sin novedades (${s.total} en backlog antiguo)`) + coletilla
   }
   return `ingesta CIMA DEGRADADA · ${s.motivos.join(' · ')}`
 }

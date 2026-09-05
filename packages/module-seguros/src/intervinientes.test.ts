@@ -34,9 +34,30 @@ test('la persona de contacto va antes que el conductor si las dos tienen teléfo
   assert.equal(c.quien?.nombre, 'K')
 })
 
-test('un interviniente que ES el tomador no aporta contacto nuevo', () => {
+test('🚨 el contacto del PROPIO tomador colgado de la póliza SÍ cuenta', () => {
+  // Corregido el 04/09/2026: este test afirmaba lo contrario («no aporta
+  // contacto nuevo») dando por hecho que el dato del tomador ya venía en su
+  // ficha. Medido contra la base, es falso: CIMA trae el email en la fila del
+  // interviniente y nadie lo copia. `MORALES ISABEL MALDONADO` (propietario,
+  // origen CIMA) y `Juan Manuel Duran Ibañez` salían «sin email» teniéndolo.
   const c = contactoEfectivo({ telefono: null, email: null }, [base({ telefono: '600', esTomador: true })])
-  assert.equal(c.telefono, null)
+  assert.equal(c.telefono, '600')
+  // Ni «tomador» (no está en su ficha, y el aviso de vencimiento lee la ficha)
+  // ni «interviniente» (no es de un tercero): es su propio dato, mal guardado.
+  assert.equal(c.viaTelefono, 'tomador_en_poliza')
+  // No se le atribuye a nadie: es él.
+  assert.equal(c.quien, null)
+})
+
+test('lo SUYO manda sobre lo de un tercero, aunque el tercero tenga mejor rol', () => {
+  // Copiar un dato a la ficha ≠ llamar a otra persona para pedirle el suyo.
+  const c = contactoEfectivo({ telefono: null, email: null }, [
+    base({ rol: 'contacto', nombre: 'K', telefono: '2' }),
+    base({ rol: 'propietario', telefono: '1', esTomador: true }),
+  ])
+  assert.equal(c.telefono, '1')
+  assert.equal(c.viaTelefono, 'tomador_en_poliza')
+  assert.equal(c.quien, null)
 })
 
 test('🚨 intervinientes sin mirar ≠ sin intervinientes', () => {

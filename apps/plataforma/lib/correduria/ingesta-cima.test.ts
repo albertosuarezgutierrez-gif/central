@@ -99,3 +99,61 @@ test('🚨 una clave con tipo raro no se cuela como dato', () => {
   })
   assert.equal(r.estado, 'error')
 })
+
+// ── Envíos rechazados por el puerto (04/09/2026) ────────────────────────────
+
+test('🚨 los envíos RECHAZADOS llegan hasta el veredicto y lo degradan', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [],
+    rechazos: [
+      { evento: 'codeoscopic_webhook_invalid_payload', origen: 'webhook_codeoscopic', n: 23, horasDesdeUltimo: 0 },
+    ],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.estado, 'degradada')
+  assert.match(r.salud.motivos.join(' · '), /23 envío\(s\) RECHAZADOS/)
+})
+
+test('🚨 un puerto VIEJO que no informa `rechazos` deja null, no lista vacía', () => {
+  // `central-asegura` desplegado antes de este cambio no manda el campo.
+  // Leerlo como «se miró y no hay» sería inventarse una comprobación.
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.rechazos, null)
+  assert.equal(r.salud.estado, 'ok')
+})
+
+test('🚨 una fila de rechazo ilegible degrada la lista ENTERA a «no comprobado»', () => {
+  // Quedarse con las que se entienden daría un recuento más bajo que la
+  // realidad, que es la forma tranquilizadora de equivocarse.
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [],
+    rechazos: [
+      { evento: 'a_invalid_payload', origen: 'x', n: 3, horasDesdeUltimo: 1 },
+      { evento: 'b_invalid_payload', origen: 'y', n: 'muchos', horasDesdeUltimo: 1 },
+    ],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.rechazos, null)
+})
+
+test('un rechazo sin hora ni origen se acepta: son huecos declarados, no basura', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [],
+    rechazos: [{ evento: 'a_invalid_payload', origen: null, n: 2, horasDesdeUltimo: null }],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.rechazos?.length, 1)
+  assert.equal(r.salud.estado, 'ok', 'sin hora no se puede afirmar que sea de ahora')
+})
+
+test('un fallo de red sigue dejando los rechazos en «no comprobado»', () => {
+  assert.equal(saludDesdeRespuesta({ estado: 'error', motivo: 'red' }).rechazos, null)
+})

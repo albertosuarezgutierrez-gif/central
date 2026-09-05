@@ -38,6 +38,32 @@
   vuelos — sigue operando (diseño resiliente) pero degradado en silencio; requiere reconexión OAuth
   de Alberto. Sin candidatos nuevos para H1/H3. Telegram enviado.
 
+- **🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría (04/09/2026).**
+  Al revisar el cuadro completo se encontró que el commit `19b74e641` llevaba **marcadores de conflicto
+  sin resolver dentro de un template literal SQL** de `clientes-sin-canal.ts`: `tsc` los ve como cadena,
+  el guardián los ve como texto y nadie ejecuta ese SQL en CI → 19/19 checks en verde sobre una consulta
+  que reventaría. Causa: leer `git merge` con `| tail -10` y el grep de marcadores con `| head`. Guardián
+  nuevo **`test/regression-sin-marcadores-conflicto.test.ts`** (recorre `git ls-files`, falla si el listado
+  viene vacío, cepo verificado). En la misma pasada se repuso **`and c.activo`**, que se había perdido al
+  reescribir el fichero, y se restauró `vigencia.ts`, que se sobrescribió sin haberlo leído.
+  Hallazgos de datos: (1) **Codeoscopic SÍ manda webhooks** —23 en 24 h, uno cada 30 min, autenticados— y
+  los rechazamos todos por mandar un array donde el validador espera objeto; `apps/asegura/CLAUDE.md` decía
+  «sin estrenar, no roto». El vigía de ingesta ahora los mira (`rechazos` en `saludIngesta`). (2) **8 de 18
+  sin canal solo tienen pólizas que ya no renuevan** y a tres se les pintaba fecha de renovación de una
+  cancelada. (3) **UPDATE masivo sin autor conocido** en `seguros` a las 21:16-21:19 UTC (1.185 clientes,
+  959 pólizas, 0 altas, sin `historial_interno`, no es pg_cron ni el pull de CIMA) — pendiente para Alberto.
+
+- **📵 «19 clientes ilocalizables» eran 15: el contacto vive en TRES sitios, no en la ficha (04/09/2026).**
+  Lo vio Alberto en `/correduria`: `Esquiansa` salía «no se puede contactar» teniendo a Juan Manuel López
+  Benjumea de conductor habitual, con ficha, email y teléfono. `clientes-sin-canal.ts` miraba SOLO las
+  columnas de la ficha del tomador. Medido: de 19, **2 tienen su PROPIO email en un interviniente de su
+  póliza y nadie lo copió a la ficha** (`MORALES ISABEL MALDONADO`, `Juan Manuel Duran Ibañez` — el cron
+  de avisos lee la ficha, así que no les llega) y **2 tienen a otra persona localizable** en ella.
+  Estados nuevos `canal_en_poliza` / `contacto_via_tercero`; el titular pasa a `resumen.ilocalizables`.
+  ⚖️ No se funden en «localizable»: el art. 22 LCS avisa al TOMADOR. Mismo agujero tapado en
+  `contactoEfectivo()` (descartaba los intervinientes del propio tomador; su test fijaba lo contrario).
+  Regla 19 de la skill `correduria-crm`. Guardián ampliado; 28/28 + 31/31, suite y typechecks en verde.
+
 - **✉️ Invitar por correo a quien NO está en la cartera (04/09/2026, PR #2283).** La TERCERA puerta de
   la autorización: José escribe un correo cualquiera y le abre sus seguros. 🚨 **El token del enlace NO
   abre sesión** —se lo comen los escáneres del correo, es una llave reenviable, y «aceptado por el que

@@ -15,6 +15,12 @@ export const dynamic = 'force-dynamic'
 // correo: el grupo que encabeza la lista es justamente el que no tiene ninguno
 // de los dos, así que mandarlos solo expondría PII de los demás sin que la
 // pantalla lo necesite. Para ver el contacto de alguien está su ficha.
+//
+// Sí viajan NOMBRES: el del cliente (hace falta para saber a quién llamar) y,
+// desde el 04/09/2026, el de las FICHAS de quien esté en su póliza y sí sea
+// localizable —sin eso la pantalla decía «ilocalizable» de gente con la que se
+// habla todos los años—. El nombre de un interviniente suelto va cifrado y NO se
+// manda: de esos solo el recuento.
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
