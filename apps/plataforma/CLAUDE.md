@@ -1606,6 +1606,23 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   - El vocabulario (estados y plazos) sale de `@central/module-seguros-portal`, no se reescribe aquí: con
     una lista por app, el día que se añada un estado la pantalla lo pinta como desconocido y el corredor
     deja de ver una petición **sin un solo error**. Hay cepo que compara ambas listas.
+- **🔑 «Portal del cliente» en la pestaña Contactos de la ficha (05/09/2026).** Alberto: «no aparece el
+  enviar invitación a la intranet». **No aparecía porque no existía**: el portal lleva funcionando desde
+  el 01/09 y la única forma de entrar era que el cliente supiera por su cuenta que está ahí. Bloque nuevo
+  en `cliente/[id]/TabContactos.tsx` sobre el proxy `/api/correduria/cliente/portal` (GET estado · POST
+  invitar) → puerto `/api/operador/cliente/portal` de asegura. Lector puro `lib/portal-cliente-asegura.ts`
+  + `test/regression-portal-cliente-asegura.test.ts` (11 cepos).
+  🚨 **Pregunta ANTES de ofrecer el botón**, y ese es el punto: el portal vincula persona↔ficha por el
+  índice ciego del email y solo si no es ambiguo, así que invitar a quien no resuelve es PEOR que no
+  invitar — recibe el correo, entra, teclea su código y ve una bóveda **vacía sin ningún error**. Los
+  siete estados (`ya_entra` · `invitable` · `ambiguo` · `resuelve_a_otra` · `sin_email` · `ilegible` ·
+  `no_comprobado`) no se colapsan: cada uno se arregla en un sitio distinto, y hay cepo de que las siete
+  frases son DISTINTAS. Medido: **51 invitables · 0 ambiguos · 29 sin correo** de los 80 vivos.
+  ⏳ **Cargando NO es un fallo** (se dice que se está preguntando, sin alarma ni botón) e
+  **`identidades: null` no es 0** («no se ha podido contar» ≠ «no entra nadie»).
+  🔁 Tras un envío con éxito se vuelve a PREGUNTAR en vez de suponer el estado: si era una invitación
+  seguirá diciendo que no entra nadie, **porque el acceso lo abre el cliente con su código, no el botón**.
+  El `actor` lo pone el servidor (`session.email`) y va el ÚLTIMO del cuerpo reenviado.
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no

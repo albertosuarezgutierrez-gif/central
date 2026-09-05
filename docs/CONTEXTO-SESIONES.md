@@ -63,6 +63,20 @@
   impreso es un dato en papel**, justo lo que el QR existe para evitar. Se imprime solo la tarjeta
   —monograma, marca con DGSFP, «Tus seguros» y el QR a 200 px—; en pantalla no cambia nada. Aviso en
   la página de qué se imprime, para que la vista previa no parezca un fallo. PR pendiente de su OK.
+- **🔑 Invitar a un cliente al portal: el canal entero era invisible (05/09/2026).** PR #2399. Alberto:
+  «no aparece el enviar invitación a la intranet». **No aparecía porque no existía** — el portal lleva
+  desde el 01/09 y la única forma de entrar era que el cliente lo supiera por su cuenta. Puerto
+  `/api/operador/cliente/portal` en asegura + bloque en la pestaña Contactos de plataforma.
+  🚨 Lo que define el diseño: el portal vincula persona↔ficha por el índice ciego del email y solo si no
+  es ambiguo, así que **invitar a quien no resuelve es peor que no invitar** (entra y ve una bóveda vacía
+  sin ningún error). Por eso predice antes de escribir y **con la MISMA función que el portal ejecutará**
+  — `elegirFicha` sube de `apps/asegura-portal/lib/` a `@central/module-seguros-portal`.
+  Medido: **51 invitables · 0 ambiguos · 29 sin correo** de los 80 vivos (los 29 son los de «Clientes sin
+  canal»). ⚠️ Una primera medición dio «5 ambiguos» y era falsa: contaba hashes compartidos sin aplicar
+  el desempate. No da acceso a nada y el enlace **no lleva token**. Ocho desenlaces sin colapsar.
+  ⏸️ **Pendiente de Alberto:** sin `ASEGURA_MAIL_FROM` + proveedor de correo en `central-asegura` el botón
+  contesta `error_envio` — y le pasa igual a la invitación de autorizaciones mergeada esta mañana.
+
 - **📵 El CUARTO sitio donde vive un contacto, y la pestaña Contactos apretada (05/09/2026).** PR #2391
   (mergeado, `9d822946`) + PR nuevo. Alberto, mirando la pantalla: «grupo elca ya tiene a pablo y aun
   aparece», «Studium tiene a victor y berta» — estaban en `cliente_relaciones`, que la consulta de
