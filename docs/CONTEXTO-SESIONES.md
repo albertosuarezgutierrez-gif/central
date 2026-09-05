@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔌 conectores-vigia: primera pasada real (05/09/2026, PR #2295).** Confirmado (ya no
+  «probablemente»): la rutina corre sin ningún conector adjunto — `ListConnectors` da
+  `enabledInChat:false` en los ~30 de la cuenta → el paso canario (llamada real a Booking/IBKR)
+  es imposible desde aquí tal como está montada. Higiene de cuenta: **Expedia en
+  `needs_reconnect`** (roto), lo usa `pricing-agente` como 2ª fuente de mercado y para demanda por
+  vuelos — sigue operando (diseño resiliente) pero degradado en silencio; requiere reconexión OAuth
+  de Alberto. Sin candidatos nuevos para H1/H3. Telegram enviado.
+
 - **🔑 La `PII_LOOKUP_KEY` del portal SÍ casa: alguien se vinculó SOLO (05/09/2026).** Quedaba abierto
   desde el 03/09 si la clave del portal difería de la de `asegura` — en cuyo caso **ningún** cliente se
   habría vinculado nunca y no lo habríamos sabido. Descartado por observación: de los 2 vínculos que hay,
@@ -188,6 +196,7 @@
   empujar UNA vez. 🔁 Para romper el bucle de conflictos, mi entrada de memoria se dejó **la segunda**, no
   la primera: así las inserciones ajenas de arriba auto-mezclan. ⏸️ Alberto: activar `Allow auto-merge`
   (Settings → General) — sigue desactivado y es lo que evita esta carrera.
+
 - **🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría (04/09/2026).**
   Al revisar el cuadro completo se encontró que el commit `19b74e641` llevaba **marcadores de conflicto
   sin resolver dentro de un template literal SQL** de `clientes-sin-canal.ts`: `tsc` los ve como cadena,
@@ -213,6 +222,7 @@
   ⚖️ No se funden en «localizable»: el art. 22 LCS avisa al TOMADOR. Mismo agujero tapado en
   `contactoEfectivo()` (descartaba los intervinientes del propio tomador; su test fijaba lo contrario).
   Regla 19 de la skill `correduria-crm`. Guardián ampliado; 28/28 + 31/31, suite y typechecks en verde.
+
 - **✉️ Invitar por correo a quien NO está en la cartera (04/09/2026, PR #2283).** La TERCERA puerta de
   la autorización: José escribe un correo cualquiera y le abre sus seguros. 🚨 **El token del enlace NO
   abre sesión** —se lo comen los escáneres del correo, es una llave reenviable, y «aceptado por el que
