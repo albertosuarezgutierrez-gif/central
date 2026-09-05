@@ -42,7 +42,12 @@
   nueva: monograma AS a 40 px en negro, DGSFP desde `MEDIADOR`, **«Tus seguros»** de titular, QR a la
   derecha, filete de 2 px. El **teléfono pasa de 14/400 a 20/700**: antes la palabra «auto» se
   imprimía más grande que el 900 de la grúa. Y `.boton-tenue` no existía (botones nativos de 25 px) y
-  la confirmación se pintaba con `.alarma`, en rojo. PR pendiente del OK de Alberto.
+  la confirmación se pintaba con `.alarma`, en rojo. 🚨 **Y luego Alberto cambió el producto: en el
+  papel NO VA NINGÚN DATO** («el que quiera info tiene que escanear; si pone tlf no entra, y puede
+  que quede obsoleto el tlf»). Su segundo argumento tumba el diseño de esa misma tarde: **un teléfono
+  impreso es un dato en papel**, justo lo que el QR existe para evitar. Se imprime solo la tarjeta
+  —monograma, marca con DGSFP, «Tus seguros» y el QR a 200 px—; en pantalla no cambia nada. Aviso en
+  la página de qué se imprime, para que la vista previa no parezca un fallo. PR pendiente de su OK.
 
 - **🧲 La hoja de la nevera y su QR: existe (05/09/2026).** Alberto: «crear QR y ahí seleccionas si
   todas las pólizas, una o algunas… y el qr se puede borrar y se anularía el acceso». **No existía**:

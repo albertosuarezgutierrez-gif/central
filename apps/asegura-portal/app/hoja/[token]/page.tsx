@@ -178,6 +178,17 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
         </div>
       )}
 
+      {/* 🚨 Qué se lleva el papel, dicho ANTES de que le den a imprimir. La
+          vista previa enseña una tarjeta con el logo y el QR y nada más, y sin
+          este aviso eso parece un fallo — el usuario le daría a cancelar
+          pensando que la página no ha cargado. */}
+      <p className="hoja-solo-pantalla">
+        <strong>Al imprimir sale solo la tarjeta de arriba</strong>: tu logo, «Tus seguros» y el
+        código. Los datos no se imprimen a propósito — así el papel no enseña tus pólizas a quien
+        pase por delante, y no se queda anticuado cuando tu compañía cambie un teléfono. Quien
+        necesite la información escanea el código y la ve al día.
+      </p>
+
       <ul className="hoja-polizas">
         {visibles.map((p) => {
           const canal = canalDeCompania(p.compania, companias)

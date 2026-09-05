@@ -1799,6 +1799,19 @@ h1 {
   font-size: 11px;
 }
 
+/* El aviso de qué se va a imprimir. Va SOLO en pantalla (`@media print` lo
+   oculta) y existe para que la vista previa —que enseña una tarjeta con un
+   QR y nada más— no parezca un fallo. */
+.hoja-solo-pantalla {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--muted);
+  border-radius: calc(var(--radius) * 0.6);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* 🖨 AL IMPRIMIR ─────────────────────────────────────────────────────────
  *
  * 🚨 Se re-declaran los TOKENS, no las clases, y eso arregla un fallo que
@@ -1873,23 +1886,58 @@ h1 {
     margin: 0;
     padding: 0;
   }
-  .hoja-masthead {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: 'marca titulo qr';
+
+  /* 🚨 EN EL PAPEL NO VA NINGÚN DATO. Solo la marca, «Tus seguros» y el QR.
+   *
+   * Decisión de Alberto (05/09/2026): «el que quiera info tiene que escanear;
+   * si pone tlf no entra, y puede que quede obsoleto el tlf».
+   *
+   * Los dos motivos son buenos y el segundo tumba el argumento contrario:
+   * un teléfono impreso ES un dato en papel, y toda esta pieza existe porque
+   * el QR lleva un ENLACE y no datos — con los datos escritos, el imán miente
+   * en cuanto la compañía cambie el número. Imprimir el 900 era contradecir
+   * la regla que sostiene el QR.
+   *
+   * Y de paso arregla lo que ningún tamaño de fuente tapaba: el papel deja de
+   * enseñarle a quien pasa por la cocina con quién tienes el coche, dónde
+   * vives o el número de tu póliza. El papel es anónimo; la llave es el QR, y
+   * el QR se anula desde el portal.
+   *
+   * ⚠️ Lo que se pierde, dicho en voz alta: con el móvil roto o sin cobertura
+   * el papel no da un teléfono. Se asume porque quien no tiene móvil está
+   * llamando desde el de otro — y desde el de otro también se escanea.
+   *
+   * La ficha de mediador SÍ se queda: no es un dato del cliente, es la
+   * identificación de la correduría (art. 19), y es lo que hace que el papel
+   * parezca de una firma regulada y no una pegatina. */
+  .hoja-polizas,
+  .hoja-pie,
+  .hoja-fecha,
+  .hoja-solo-pantalla {
+    display: none !important;
   }
-  .hoja-poliza {
-    border-color: #999;
-    border-radius: 6px;
-    box-shadow: none;
+
+  /* El cabezado pasa a ser la tarjeta ENTERA: centrada, con aire y con el QR
+     grande, que ahora es lo único que hay que poder escanear desde la nevera
+     sin acercarse. */
+  .hoja-masthead {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'marca' 'titulo' 'qr';
+    justify-items: center;
+    text-align: center;
+    gap: 20px;
+    padding: 0 0 24px;
+    border-bottom: 2px solid var(--text);
+  }
+  .hoja-titulo-bloque h1 {
+    font-size: 30px;
   }
   .hoja-qr svg {
-    width: 96px;
-    height: 96px;
+    width: 200px;
+    height: 200px;
   }
-  /* Desde la cuarta póliza, dos columnas: con una o dos fichas una rejilla
-     de dos deja el folio medio vacío, y con cuatro se iba a otra página. */
-  .hoja-polizas:has(> :nth-child(4)) {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 10px;
+  .hoja-qr p {
+    max-width: 220px;
+    font-size: 12px;
   }
 }

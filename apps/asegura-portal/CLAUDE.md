@@ -305,9 +305,38 @@ nativos de 25 px, contra los 44 de la regla de la casa) y **la confirmación se 
 o sea «Tu hoja está lista» en el rojo reservado a lo que deja a alguien sin cobertura — mientras el
 error usaba `.hueco` y susurraba en gris. Se añaden `.confirmacion` y `.error-linea`.
 
-📌 Medido con Playwright: **1 página en vez de 2**, sin desbordes de 320 a 1100 px, e idéntico
-imprimiendo desde el tema claro y el oscuro. El QR sube a `margin: 2` y corrección `Q`: la zona de
-silencio importa en un papel que va pegado a un imán.
+📌 Medido con Playwright: sin desbordes de 320 a 1100 px e idéntico imprimiendo desde el tema claro
+y el oscuro. El QR sube a `margin: 2` y corrección `Q`: la zona de silencio importa en un papel que
+va pegado a un imán.
+
+🚨 **Y horas después Alberto cambió el producto, con razón: EN EL PAPEL NO VA NINGÚN DATO.** Dictado:
+*«el que quiera info tiene que escanear; si pone tlf no entra, y puede que quede obsoleto el tlf»*.
+Lo que se imprime es **solo la tarjeta**: monograma, «Grupo ASegura» con su clave DGSFP, «Tus
+seguros» y el QR grande. Ni pólizas, ni teléfonos, ni vencimientos.
+
+El segundo argumento suyo es el que zanja la discusión, y tumba lo que se había construido esa misma
+tarde: **un teléfono impreso ES un dato en papel**, y toda esta pieza existe porque el QR lleva un
+ENLACE y no datos — con el número escrito, el imán miente en cuanto la compañía lo cambie. Imprimir
+el 900 contradecía la regla que sostiene el QR. De paso, el papel deja de enseñarle a quien pase por
+la cocina con qué compañía tienes el coche.
+
+⚠️ **Lo que se pierde, dicho en voz alta:** con el móvil roto o sin cobertura el papel no da ningún
+teléfono. Se asume porque quien no tiene móvil está llamando desde el de otro, y desde el de otro
+también se escanea. (El argumento contrario —«en el arcén el papel es lo único que queda»— se
+sostuvo hasta que se vio que un móvil muerto no impide escanear con otro.)
+
+📌 Se hace en `@media print` ocultando `.hoja-polizas`, `.hoja-pie` y `.hoja-fecha`, y el cabezado
+pasa a ser la tarjeta entera: centrada, con el titular a 30 px y el QR a 200. **En pantalla no cambia
+nada**: quien escanea sigue viéndolo todo. Y por eso la página lleva un aviso `.hoja-solo-pantalla`
+que dice qué se va a imprimir — sin él, la vista previa (un logo y un QR) parece un fallo de carga y
+el usuario cancela. Tres cepos nuevos en `test/regression-portal-hoja-qr.test.ts`, incluido el del
+aviso, que es positivo.
+
+🦷 **Y una lección de método que ya va por la tercera vez hoy:** el cepo del mediador mordió por una
+frase de un COMENTARIO —la cabecera que explica por qué la clave DGSFP no se teclea la escribía
+literalmente para explicarlo—. Ahora quita los comentarios antes de mirar, como
+`regression-portal-parte-siniestro.test.ts`. Al escribir un cepo que busca texto plano en un fichero
+de este portal, **asume que tus propios comentarios lo van a disparar**.
 
 ### 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra (05/09/2026)
 

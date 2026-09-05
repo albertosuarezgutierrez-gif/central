@@ -123,3 +123,55 @@ test('el enlace del QR exige https y no se inventa un dominio', () => {
   assert.match(src, /if \(!base\) return null/, 'sin dominio configurado no hay enlace')
   assert.match(src, /url\.protocol !== 'https:'/, 'el token viaja en la URL: http lo pondría en claro')
 })
+
+test('EL PAPEL NO LLEVA NINGÚN DATO: al imprimir se oculta la lista de pólizas', () => {
+  // 🚨 Decisión de Alberto (05/09/2026): «el que quiera info tiene que
+  // escanear; si pone tlf no entra, y puede que quede obsoleto el tlf».
+  //
+  // Es el cepo más frágil de esta pieza porque el fallo es INVISIBLE en
+  // pantalla: la página sigue enseñándolo todo, y solo al imprimir —o al
+  // mirar la vista previa, que casi nadie mira dos veces— se vería que el
+  // papel se ha llevado las pólizas, los teléfonos y los números. Nadie se
+  // entera hasta que hay un imán en una nevera ajena con los datos de alguien.
+  const css = leer('apps/asegura-portal/app/globals.css')
+  const i = css.indexOf('@media print')
+  assert.ok(i > 0, 'no encuentro el bloque de impresión')
+  const bloque = css.slice(i)
+  assert.match(
+    bloque,
+    /\.hoja-polizas,[\s\S]{0,200}?display: none !important/,
+    'al imprimir, la lista de pólizas tiene que desaparecer: en el papel no va ningún dato',
+  )
+  assert.match(bloque, /\.hoja-pie,/, 'el pie con el correo tampoco va al papel')
+})
+
+test('la pantalla AVISA de que el papel sale sin datos', () => {
+  // Cepo POSITIVO. Sin este aviso, la vista previa —una tarjeta con un QR y
+  // nada más— parece un fallo de carga, y el usuario le da a cancelar.
+  const src = leer(PAGINA)
+  assert.match(src, /hoja-solo-pantalla/, 'tiene que haber un aviso de qué se imprime')
+  assert.match(
+    src,
+    /Al imprimir sale solo la tarjeta/,
+    'y tiene que decir con todas las letras que los datos no salen',
+  )
+})
+
+test('el papel sigue llevando la identificación del mediador', () => {
+  // Lo único que NO se quita del papel: no es un dato del cliente, es la
+  // identificación de la correduría (art. 19 de la Ley 16/2018) y es lo que
+  // hace que la tarjeta parezca de una firma regulada. Sale de `MEDIADOR`,
+  // nunca tecleada: dos copias de la clave DGSFP es una copia de más.
+  const src = leer(PAGINA)
+  assert.match(src, /MEDIADOR\.identidad\.claveDgsfp/, 'la clave DGSFP sale del módulo, no del JSX')
+  // 🚨 Se quitan los COMENTARIOS antes de mirar. Sin esto el cepo se muerde a
+  // sí mismo: la cabecera que explica por qué la clave no se teclea la escribe
+  // literalmente para explicarlo. Mismo remedio que
+  // `test/regression-portal-parte-siniestro.test.ts`, y ya van tres veces hoy
+  // que un guardián de este portal muerde por una frase de un comentario.
+  const sinComentarios = src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+  assert.doesNotMatch(sinComentarios, /CS-F\/0170/, 'la clave no se teclea a mano en la pantalla')
+})
