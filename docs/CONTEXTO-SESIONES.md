@@ -1284,7 +1284,10 @@ Alberto, con Claude en Chrome, quitó `.es`+`www` del proyecto `asegura` (CRM de
 `SITIO_URL` por defecto era `grupoasegura.com`, que apunta a un **parking de IONOS** (`217.160.0.254`) →
 canonical y sitemap hacia un dominio vacío. Defecto cambiado al `.es` + guardián `lib/sitio.test.ts`
 (muerde: 2 fallos con el `.com`). ⚠️ `clientes` tiene MX de IONOS: ahí va registro **A** `216.150.1.1`,
-no el CNAME del panel. Pendiente de Alberto: DNS en IONOS + envs `NEXT_PUBLIC_PORTAL_URL`/`PORTAL_PUBLIC_URL`.
+no el CNAME del panel. ✅ DNS ya puesto en IONOS y los tres dominios en **Valid Configuration**; los MX de
+`clientes` siguen en pie. Pendiente de Alberto: las envs `NEXT_PUBLIC_PORTAL_URL`/`PORTAL_PUBLIC_URL` + redeploy
+— ⚠️ el `ignoreCommand` corre **también en un redeploy**, así que un «Canceled by Ignored Build Step» deja la
+env sin aplicar con el mismo aspecto que un despliegue bueno: hay que ver el deployment llegar a **Ready**.
 
 ### 🚪 (05/09/2026) El portal pedía el código «cada vez»: no era la sesión, era la puerta
 
