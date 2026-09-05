@@ -38,12 +38,13 @@
   de Manuel, cuyo *fail-open* deja PostHog corriendo sin banner si falta la env (medido el 04/09).
   `/legal/cookies` + botón de renovar (art. 7.3 RGPD), enlace en el footer y en el sitemap. 12 cepos en
   `lib/analitica.test.ts`; 28 tests de la app, tsc 0, lint 0, build OK. PR #2385.
-  ⚠️ **Pendiente de Alberto, y es lo urgente:** los 7 workflows del repo `asegura` apuntan a
-  `grupoasegura.es`, que desde hoy sirve ESTA web y no tiene `/api/crons/*` — **`cima-pull` incluido**.
-  Hay que devolverlos a `app.grupoasegura.com`; no se pudo tocar (repo fuera del scope, `add_repo`
-  denegado) ni verificar por HTTP (el proxy bloquea los dos dominios). Y **NO quitar** PostHog/Cookiebot
-  del proyecto `asegura`: su fail-open dejaría el CRM midiendo sin banner. Lo correcto es dar de alta
-  los dominios en el CBID.
+  ✅ **Los 7 crons de `asegura` NO estaban rotos al cerrar: ya los había arreglado otra sesión** (revert
+  `cae77bd`, 14:05 UTC, de #818). Aquel PR repuntó los destinos a `grupoasegura.es` sobre una premisa
+  **no medida** (que la canonicalización rompía el `.com`), y lo que se midió después la desmiente:
+  `.es/api/crons/cima-pull` → **404**, `app.grupoasegura.com/api/crons/cima-pull` → **401** (la ruta
+  responde, sin redirect). Daño real: **UN run**, el de las 13:57; el de las 14:06 ya en verde. ⚠️ Y
+  **NO quitar** PostHog/Cookiebot del proyecto `asegura`: su fail-open dejaría el CRM midiendo sin
+  banner — lo correcto es dar de alta los dominios en el CBID.
 
 - **📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI (05/09/2026).** Lo del
   PR #2378 (idioma, consulta web, `importesNoRespaldados`, los hechos de transporte de los 4 pisos) se
