@@ -139,6 +139,11 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/eventos/verificar', schedule: '30 5 * * *' },
   { path: '/api/cron/cima-liq', schedule: '30 7 * * *' },
   { path: '/api/cron/correduria-ingesta', schedule: '45 6 * * *' },
+  // Siniestros nuevos de la cartera: 06:50, justo DETRÁS del vigía de la ingesta (06:45) —
+  // si los datos de CIMA no están entrando, ese aviso llega primero y explica por qué este
+  // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
+  // huella fresca. Avisa a Alberto para que LLAME al cliente y le haga seguimiento.
+  { path: '/api/cron/correduria-siniestros', schedule: '50 6 * * *' },
   { path: '/api/cron/facturas-scan', schedule: '15 6 * * *' },
   { path: '/api/cron/facturas-resumen-semanal', schedule: '15 9 * * 1' },
   { path: '/api/cron/categorizar-movimientos', schedule: '0 7 * * *' },

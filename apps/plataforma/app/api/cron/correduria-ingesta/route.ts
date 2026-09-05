@@ -20,7 +20,12 @@ import { eur } from '@/lib/dinero'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-cima'
-import { detalleSalud, type SaludIngesta } from '@central/module-seguros'
+import {
+  detalleSalud,
+  decidirAvisoIngesta,
+  DIAS_RECORDATORIO_INGESTA,
+  type SaludIngesta,
+} from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -31,9 +36,19 @@ const AGENTE = 'correduria_ingesta'
  * Firma de lo que se ha visto hoy. Sirve para no repetir el MISMO aviso cada
  * mañana mientras la avería sigue abierta: el estado vive en el latido y en la
  * pantalla; el Telegram suena cuando algo CAMBIA (entra un fichero nuevo, o
- * aparece otra póliza huérfana). Si empeora, vuelve a sonar.
+ * aparece otra póliza huérfana).
  *
- * ⚠️ Esto silencia la REPETICIÓN, no el aviso: la primera vez siempre suena.
+ * 🚨 Y desde el 05/09/2026, TAMBIÉN cuando lleva demasiado sin cambiar. Ese día
+ * se midió que el atasco de siniestros de Occident llevaba **63 días** abierto,
+ * que el latido lo decía con todas las letras («SIN: 63 días sin guardar ni
+ * uno») y que el Telegram **no sonaba desde el 08/07**: la firma no cambiaba,
+ * así que la anti-repetición se había comido el aviso. Es la segunda vuelta del
+ * mismo fallo que este vigía vino a arreglar — la primera versión midió lo que
+ * no era y esta se silenció sola; las dos veces el resultado fue una pérdida
+ * activa en verde, y las dos se descubrieron mirando a mano.
+ *
+ * ⚠️ Silenciar la REPETICIÓN no es silenciar la AVERÍA. La regla vive en
+ * `decidirAvisoIngesta` del módulo puro, con su cepo.
  */
 function firma(salud: SaludIngesta): string {
   // 🚨 Las compañías MUDAS van en la firma. Sin ellas, con Mapfre ya callada la
@@ -52,6 +67,27 @@ function firma(salud: SaludIngesta): string {
   return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}`
 }
 
+/**
+ * La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`.
+ *
+ * Va delante y separada del texto humano por ` · `. El formato viejo era solo
+ * la firma, así que un `detalle` sin `|` se lee como «no se sabe cuándo se
+ * avisó» → y eso hace sonar (`primera`). Es lo correcto en el primer despliegue:
+ * suena una vez y a partir de ahí ya lleva la cuenta.
+ */
+function leerCabecera(detalle: string | null): { firma: string | null; aviso: Date | null; abierta: Date | null } {
+  if (detalle === null) return { firma: null, aviso: null, abierta: null }
+  const cabeza = detalle.split(' · ')[0] ?? ''
+  const [f, aviso, abierta] = cabeza.split('|')
+  const fecha = (v: string | undefined): Date | null => {
+    if (!v) return null
+    const d = new Date(v)
+    // Una fecha ilegible NO es «hace poco»: es «no lo sabemos», y eso avisa.
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  return { firma: f || null, aviso: fecha(aviso), abierta: fecha(abierta) }
+}
+
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
@@ -68,10 +104,32 @@ export async function GET(req: NextRequest) {
     anterior = filas[0]?.detalle ?? null
   } catch { anterior = null }
 
+  const ahora = new Date()
+  const previo = leerCabecera(anterior)
+  // `firma(salud)` desde el merge con main: la firma incluye ahora las
+  // compañías MUDAS, así que una que enmudece cuenta como cambio y suena sin
+  // esperar al recordatorio. Las dos cosas se suman, no se pisan.
   const actual = firma(salud)
-  const cambio = anterior === null || !anterior.startsWith(actual)
-  // El detalle guarda la firma delante para poder compararla mañana.
-  const detalleGuardado = `${actual} · ${detalle}`
+  // Desde cuándo consta abierta ESTA misma avería: se arrastra mientras la
+  // firma no cambie, y se reinicia cuando cambia. Es lo que permite decir
+  // «lleva 59 días» en vez de «otra vez esto».
+  const mismaAveria = previo.firma !== null && previo.firma === actual
+  const abiertaDesde = mismaAveria ? (previo.abierta ?? previo.aviso) : ahora
+
+  const decision = decidirAvisoIngesta({
+    firmaAnterior: previo.firma,
+    firmaActual: actual,
+    ultimoAvisoEn: previo.aviso,
+    abiertaDesde,
+    hoy: ahora,
+  })
+  const cambio = decision.avisar
+  // Si hoy no suena, se conserva la fecha del último aviso: reescribirla con
+  // `ahora` reiniciaría el reloj del recordatorio cada mañana y la avería no
+  // volvería a sonar NUNCA — que es exactamente el fallo que esto arregla.
+  const avisoGuardado = decision.avisar ? ahora : previo.aviso
+  const cabecera = `${actual}|${avisoGuardado?.toISOString() ?? ''}|${abiertaDesde?.toISOString() ?? ''}`
+  const detalleGuardado = `${cabecera} · ${detalle}`
 
   if (salud.estado === 'sin_datos') {
     await registrarLatido(AGENTE, false, detalleGuardado)
@@ -97,6 +155,15 @@ export async function GET(req: NextRequest) {
           .map(e => `${e.entidad}/${e.clave ?? 'sin clave legible'} (${e.n})`)
           .join(' · ')}`
       : ''
+    // El recordatorio dice CUÁNTO LLEVA, que es el dato que convierte «otra vez
+    // esto» en «esto hay que arreglarlo hoy». Sin él, el tercer aviso idéntico
+    // se lee como ruido y se vuelve a ignorar.
+    const antiguedad =
+      decision.avisar && decision.motivo === 'recordatorio'
+        ? decision.diasAbierta === null
+          ? `\n\n⏳ Sigue igual, y no consta desde cuándo. Vuelvo a avisar cada ${DIAS_RECORDATORIO_INGESTA} días mientras siga rota.`
+          : `\n\n⏳ <b>Lleva ${decision.diasAbierta} días así</b>, sin cambios. No es un aviso nuevo: es el mismo, que sigue sin arreglarse.`
+        : ''
     // Una compañía que deja de mandar no se arregla igual que un fichero
     // atascado: aquí no hay nada que reprocesar, hay que llamar a la compañía o
     // mirar el adaptador. Por eso lleva su propio titular y su propio recado.
@@ -112,7 +179,7 @@ export async function GET(req: NextRequest) {
     await tgAviso('correduria.ingesta',
       titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades + recado,
+      prima + entidades + antiguedad + recado,
     ).catch(() => {})
   }
 
@@ -124,6 +191,7 @@ export async function GET(req: NextRequest) {
     recientes: salud.recientes,
     huerfanas: salud.huerfanas,
     avisado: cambio && salud.estado === 'degradada',
+    motivoAviso: decision.avisar ? decision.motivo : null,
     detalle,
   })
 }

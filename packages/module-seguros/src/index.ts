@@ -45,11 +45,15 @@ export {
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
+  DIAS_RECORDATORIO_INGESTA,
+  decidirAvisoIngesta,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
   type FicheroEnCuarentena,
   type EntradaRechazada,
+  type MotivoAviso,
+  type DecisionAviso,
 } from './ingesta.ts'
 export {
   veredictoEntidad,
@@ -393,3 +397,15 @@ export {
   type PuntoPrecontractual,
   type IdPuntoPrecontractual,
 } from './mediador.ts'
+
+export {
+  TOPE_AVISO_SINIESTROS,
+  decidirSiniestrosNuevos,
+  detalleSiniestros,
+  textoAvisoSiniestros,
+  serializarMarca,
+  leerMarca,
+  type SiniestroEntrante,
+  type MarcaSiniestros,
+  type DecisionSiniestros,
+} from './siniestro-nuevo.ts'

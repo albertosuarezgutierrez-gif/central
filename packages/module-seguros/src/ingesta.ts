@@ -317,3 +317,73 @@ export function detalleSalud(s: SaludIngesta): string {
   }
   return `ingesta CIMA DEGRADADA · ${s.motivos.join(' · ')}`
 }
+
+// ── El recordatorio: por qué un aviso que se calla es un aviso roto ─────────
+//
+// 🚨 Medido el 05/09/2026, y es la segunda vuelta del MISMO fallo que este
+// módulo vino a arreglar.
+//
+// El vigía de la ingesta suena cuando la firma del estado CAMBIA, para no
+// repetirse cada mañana. Razonable — salvo cuando la avería se queda quieta:
+// del 08/07 al 05/09 el atasco de siniestros de Occident no varió, la firma
+// tampoco, y el Telegram **no volvió a sonar en 59 días**. El latido lo decía
+// («SIN: 63 días sin guardar ni uno») pero eso vive en una pantalla que nadie
+// abre a diario.
+//
+// O sea: la primera versión midió lo que no era (`ficherosError`, que valía
+// cero) y esta se silenció sola. Las dos veces el resultado fue el mismo —una
+// pérdida activa en verde— y las dos veces se descubrió mirando a mano.
+//
+// La regla: **silenciar la repetición NO es silenciar la avería.** Mientras
+// siga abierta, vuelve a sonar cada `DIAS_RECORDATORIO_INGESTA`, y el mensaje
+// dice cuánto lleva rota — que es justo el dato que convierte «otra vez esto»
+// en «esto hay que arreglarlo hoy».
+
+/** Cada cuánto vuelve a sonar una avería que sigue igual. Una semana: molesta
+ *  lo justo para no ignorarse, y no tanto como para silenciarse a mano. */
+export const DIAS_RECORDATORIO_INGESTA = 7
+
+export type MotivoAviso = 'primera' | 'cambio' | 'recordatorio'
+
+export type DecisionAviso =
+  | { avisar: false }
+  | { avisar: true; motivo: MotivoAviso; diasAbierta: number | null }
+
+/**
+ * ¿Hay que sonar hoy?
+ *
+ * - `primera`      — no consta que se haya avisado nunca. Suena siempre: perder
+ *                    un aviso es peor que duplicarlo.
+ * - `cambio`       — el estado ha cambiado (entró otro fichero, apareció otra
+ *                    huérfana). Suena, y el mensaje lo dirá.
+ * - `recordatorio` — sigue igual, pero lleva demasiado abierta.
+ *
+ * `ultimoAvisoEn = null` NO significa «hace poco»: significa **no lo sabemos**,
+ * y ante eso se avisa. Es la regla de la casa aplicada a una alarma — un hueco
+ * en el registro no puede convertirse en silencio.
+ */
+export function decidirAvisoIngesta(e: {
+  firmaAnterior: string | null
+  firmaActual: string
+  ultimoAvisoEn: Date | null
+  /** Desde cuándo consta abierta esta misma avería. `null` = no se sabe. */
+  abiertaDesde?: Date | null
+  hoy: Date
+  diasRecordatorio?: number
+}): DecisionAviso {
+  const dias = (a: Date, b: Date) => Math.floor((a.getTime() - b.getTime()) / 86_400_000)
+  const abierta =
+    e.abiertaDesde instanceof Date ? Math.max(0, dias(e.hoy, e.abiertaDesde)) : null
+
+  if (e.firmaAnterior === null || e.ultimoAvisoEn === null) {
+    return { avisar: true, motivo: 'primera', diasAbierta: abierta }
+  }
+  if (!e.firmaAnterior.startsWith(e.firmaActual)) {
+    return { avisar: true, motivo: 'cambio', diasAbierta: abierta }
+  }
+  const tope = e.diasRecordatorio ?? DIAS_RECORDATORIO_INGESTA
+  if (dias(e.hoy, e.ultimoAvisoEn) >= tope) {
+    return { avisar: true, motivo: 'recordatorio', diasAbierta: abierta }
+  }
+  return { avisar: false }
+}

@@ -266,6 +266,27 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.correduria_ingesta.',
   },
   {
+    id: 'correduria_siniestros',
+    vigiladoDesde: '2026-09-05',
+    etiqueta: '🚨 Siniestros nuevos de la cartera — avisar para llamar al cliente (cron diario 06:50)',
+    // Diario → 30 h, como el resto de los diarios: un tropiezo pasa, dos días saltan.
+    maxHoras: 30,
+    nota:
+      'Este vigía es el último eslabón de una cadena que se cortaba: el cliente da el parte a su ' +
+      'compañía, el siniestro entra por CIMA… y nadie avisaba a Alberto, así que el SEGUIMIENTO ' +
+      '—lo único que aporta la correduría cuando el siniestro ya está abierto— dependía de que ' +
+      'abriera la ficha por casualidad. Lee el `detalle`, que separa CUATRO cosas que no son la ' +
+      'misma: «NO se ha podido mirar» (puerto, secreto o BD de asegura) NO quiere decir que no ' +
+      'haya entrado ninguno; «primera pasada» es que se acaba de anclar la marca de agua y no se ' +
+      'manda el histórico a propósito; «ninguno (comprobado)» sí es que se miró y no hay; y «SIN ' +
+      'avisar» es que el Telegram no salió y se reintenta en la próxima pasada (la marca de agua ' +
+      'NO avanza si no se ha avisado — por eso un siniestro no puede perderse en silencio). ' +
+      '⚠️ Contexto medido el 05/09/2026: no entra un siniestro nuevo desde el 01/07/2026 porque ' +
+      'la ingesta de CIMA está atascada (21 ficheros SIN, 18 de Occident). Eso lo vigila ' +
+      '`correduria_ingesta`, no este: aquí un «ninguno» prolongado es el SÍNTOMA, no la avería. ' +
+      'Huella: agente_latidos.correduria_siniestros.',
+  },
+  {
     id: 'ses_transporte',
     vigiladoDesde: '2026-08-21',
     // Decisión de Alberto (04/09/2026): «déjalo rojo, es un pendiente real». Lo es —la tabla está
