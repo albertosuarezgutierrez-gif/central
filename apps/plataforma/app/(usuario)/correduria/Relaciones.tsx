@@ -2,8 +2,24 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { GRUPOS_RELACION, SIN_VINCULO, permiteAutorizar, type TipoRelacion } from '@central/module-seguros'
+import {
+  FUENTE_PERSONA_CONTACTO,
+  GRUPOS_RELACION,
+  SIN_VINCULO,
+  coincidenciaBloquea,
+  combinarPersonaContacto,
+  permiteAutorizar,
+  revisarAlta,
+  textoPersonaContacto,
+  tiposContactoSugeridos,
+  unificarPersonas,
+  type PersonaDePolizas,
+  type PersonaFicha,
+  type ResultadoPersonaContacto,
+  type TipoRelacion,
+} from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
+import AccionesContacto from './AccionesContacto'
 import {
   ALCANCE_TEXTO_PORTAL,
   TITULOS_REPRESENTACION_PORTAL,
@@ -21,6 +37,7 @@ import {
   type RespuestaRelaciones,
   type TituloRepresentacionPortal,
 } from '@/lib/relaciones-asegura'
+import { interpretarEscritura, textoMotivo as textoMotivoAlta, type ResultadoEscritura } from '@/lib/cliente-edicion-asegura'
 import type { RespuestaBusqueda } from '@/lib/ficha-asegura'
 
 /**
@@ -56,15 +73,23 @@ export default function Relaciones({
   clienteId,
   nombreFicha,
   inicial,
-  sinVinculo = [],
+  personas = null,
+  renderPapeles,
+  tipoPersona = null,
 }: {
   clienteId: string
   nombreFicha: string
   inicial: RelacionCartera[] | null
-  /** Personas que salen en SUS pólizas, con ficha propia y sin vínculo anotado.
-   *  Se ofrecen aquí para declararlas de un clic: antes salían en la tarjeta
-   *  👤 con un «se anota en Relaciones» y aquí no aparecían por ningún lado. */
-  sinVinculo?: SugerenciaVinculo[]
+  /** Qué es la ficha de la que cuelga el contacto. Solo ordena los tipos que se
+   *  ofrecen primero; `null` (no se sabe) no reordena nada. */
+  tipoPersona?: 'fisica' | 'juridica' | null
+  /** Quién sale en SUS pólizas (lo que dice CIMA). `null` = no se pudo leer.
+   *  Se funde con los vínculos por FICHA para que la lista sea una sola. */
+  personas?: PersonaDePolizas[] | null
+  /** Lo que se puede hacer con los papeles de una persona en las pólizas
+   *  (quitarla de una). Lo provee quien tiene ese estado y su puerto —
+   *  `TabContactos`—, porque es otra API y no tiene por qué vivir aquí. */
+  renderPapeles?: (p: PersonaFicha<RelacionCartera>) => React.ReactNode
 }) {
   const router = useRouter()
   const [lista, setLista] = useState<RelacionCartera[] | null>(inicial)
@@ -147,8 +172,8 @@ export default function Relaciones({
   // «Revisado: no son nada» en un clic, sin pasar por el formulario. Es la
   // respuesta correcta para la mayoría de los que salen ahí (Alberto, 03/09/2026:
   // «Antonio Sevico no tiene vinculación ninguna») y hasta hoy no se podía decir.
-  function sinVinculoDe(p: SugerenciaVinculo) {
-    void ejecutar(`nada-${p.fichaId}`, 'POST', { relacionadoId: p.fichaId, tipo: SIN_VINCULO })
+  function sinVinculoDe(fichaId: string) {
+    void ejecutar(`nada-${fichaId}`, 'POST', { relacionadoId: fichaId, tipo: SIN_VINCULO })
   }
 
   /**
@@ -165,6 +190,24 @@ export default function Relaciones({
     void ejecutar(`tipo-${r.relacionadoId}`, 'PATCH', { relacionadoId: r.relacionadoId, tipo })
   }
 
+  /**
+   * Alta de una ficha NUEVA desde aquí (la persona de contacto que no está en
+   * la cartera). Es la primera de las dos escrituras; la segunda es la relación,
+   * que sale por `onCrear` como cualquier otra.
+   */
+  async function altaPersona(body: Record<string, unknown>): Promise<ResultadoEscritura> {
+    try {
+      const res = await fetch('/api/correduria/cliente', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      return interpretarEscritura(res.status, await res.json().catch(() => null))
+    } catch {
+      return { estado: 'error', motivo: 'red' }
+    }
+  }
+
   function quitar(r: RelacionCartera) {
     // La relación se borra; la autorización NO se borra, se REVOCA — es la prueba
     // de que existió y hasta cuándo, y eso es justo lo que no se puede perder.
@@ -172,46 +215,54 @@ export default function Relaciones({
     void ejecutar(`del-${r.relacionadoId}`, 'DELETE', { relacionadoId: r.relacionadoId })
   }
 
+  // 🚨 UNA sola lista. La fusión es por FICHA y la hace un módulo puro y
+  // testeado: por nombre fundiría al padre y al hijo de la póliza del mismo
+  // coche en una fila con los dos teléfonos mezclados.
+  const { lista: gente, sinLeerPolizas, sinLeerVinculos } = unificarPersonas(personas, lista)
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
-      {lista === null ? (
+      {/* Dos huecos distintos, dos frases distintas: ninguno de los dos es «no hay nadie». */}
+      {sinLeerVinculos && (
         <div style={pendienteBox}>
-          ⚠️ No se han podido leer las relaciones de esta ficha (asegura no manda el bloque o no pudo
-          consultarlo). No significa que no tenga: significa que desde aquí no se ve. Se puede añadir
-          igualmente.
+          ⚠️ No se han podido leer los <strong>vínculos declarados</strong> de esta ficha (asegura no manda el
+          bloque o no pudo consultarlo). No significa que no tenga: significa que desde aquí no se ven. Se
+          puede añadir igualmente.
         </div>
-      ) : lista.length === 0 ? (
+      )}
+      {sinLeerPolizas && (
+        <div style={pendienteBox}>
+          ⚠️ No se ha podido leer <strong>quién interviene en sus pólizas</strong>. Lo de abajo puede estar
+          incompleto.
+        </div>
+      )}
+
+      {gente.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-          Sin relaciones anotadas: se ha mirado y no hay ninguna.
+          {sinLeerPolizas || sinLeerVinculos
+            ? 'No hay nada que enseñar de lo que sí se ha podido leer.'
+            : 'Nadie: ni sale gente en sus pólizas ni hay ningún vínculo anotado.'}
         </p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
-          {lista.map((r) => (
-            <Vinculo
-              key={r.relacionadoId}
-              r={r}
+          {gente.map((p) => (
+            <FilaPersona
+              key={p.clave}
+              p={p}
               nombreFicha={nombreFicha}
               ocupado={ocupado}
+              renderPapeles={renderPapeles}
               onAutorizar={autorizar}
               onQuitar={quitar}
               onCambiarTipo={cambiarTipo}
+              onDeclarar={(cand) => setPreseleccion((v) => ({ cand, n: (v?.n ?? 0) + 1 }))}
+              onSinVinculo={sinVinculoDe}
             />
           ))}
         </ul>
       )}
 
       {resultado && resultado.estado !== 'ok' && <Aviso r={resultado} />}
-
-      {/* `lista === null` = no se han podido leer las relaciones. Entonces no se sabe
-          quién tiene vínculo y quién no, y ofrecer «declarar» a todos sería afirmar
-          que no lo tienen: se calla (regla `null` ≠ `[]`). */}
-      <SinVinculo
-        personas={lista === null ? [] : sinVinculo.filter((p) => !lista.some((r) => r.relacionadoId === p.fichaId))}
-        nombreFicha={nombreFicha}
-        onDeclarar={(p) => setPreseleccion((v) => ({ cand: { id: p.fichaId, nombre: p.nombre, tipo: '', polizas: 0 }, n: (v?.n ?? 0) + 1 }))}
-        onSinVinculo={sinVinculoDe}
-        ocupado={ocupado}
-      />
 
       <Anadir
         key={preseleccion?.n ?? 0}
@@ -220,6 +271,8 @@ export default function Relaciones({
         yaRelacionados={lista ? lista.map((r) => r.relacionadoId) : []}
         ocupado={ocupado === 'add'}
         onCrear={(body) => ejecutar('add', 'POST', body)}
+        onAlta={altaPersona}
+        tipoPersona={tipoPersona}
         preseleccion={preseleccion?.cand ?? null}
       />
 
@@ -235,8 +288,131 @@ export default function Relaciones({
   )
 }
 
-// ─── Un vínculo ──────────────────────────────────────────────────────────────
+// ─── Una persona de la ficha ─────────────────────────────────────────────────
 
+/**
+ * UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como
+ * qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada).
+ *
+ * Antes eran dos tarjetas separadas y la misma persona salía en las dos sin que
+ * nada lo dijera: el conductor habitual arriba, el administrador autorizado
+ * abajo. La pregunta que traen es una sola —«¿a quién llamo y con qué
+ * derecho?»— y ahora se contesta en una fila.
+ *
+ * 🚨 Juntarlas NO es fundirlas: la procedencia se sigue viendo, porque un papel
+ * en una póliza es un hecho de la compañía y un vínculo es nuestro, y solo el
+ * segundo abre las pólizas en el portal.
+ */
+function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: {
+  p: PersonaFicha<RelacionCartera>
+  nombreFicha: string
+  ocupado: string | null
+  renderPapeles?: (p: PersonaFicha<RelacionCartera>) => React.ReactNode
+  onAutorizar: (
+    r: RelacionCartera,
+    autoriza: boolean,
+    extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+  ) => void
+  onQuitar: (r: RelacionCartera) => void
+  onCambiarTipo: (r: RelacionCartera, tipo: string) => void
+  onDeclarar: (cand: Candidato) => void
+  onSinVinculo: (fichaId: string) => void
+}) {
+  // `null` con `nombreIlegible` es «está cifrado y no abre», que no es lo mismo
+  // que no tener nombre. Se dicen las dos cosas, cada una con lo suyo.
+  const nombre = p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
+  const enCurso = ocupado === `nada-${p.fichaId}`
+  return (
+    <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
+        {p.fichaId
+          ? <Link href={`/correduria/cliente/${p.fichaId}`} style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{nombre}</Link>
+          : <span style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{nombre}</span>}
+        {/* Llamar a ESTA persona, no al titular: es la que conduce el coche. */}
+        {p.telefono && <a href={`tel:${p.telefono.replace(/\s/g, '')}`} style={{ fontSize: 13 }}>📞 {p.telefono}</a>}
+        <AccionesContacto telefono={p.telefono} email={p.email} quien={nombre} />
+      </div>
+
+      {/* De dónde sale cada una: la etiqueta es el dato, no un adorno. */}
+      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+        {p.papeles.length > 0 && <span>📄 sale en sus pólizas (lo manda la compañía)</span>}
+        {p.papeles.length > 0 && p.vinculo && <span> · </span>}
+        {p.vinculo && <span>👪 vínculo anotado por nosotros</span>}
+      </div>
+
+      {p.papeles.length > 0 && renderPapeles?.(p)}
+
+      {/* Dos filas con el mismo nombre no son un fallo de la pantalla: o son dos
+          personas (padre e hijo con NIF distinto) o son dos fichas de la misma
+          persona. Se dice cuál de las dos cosas es, y cuando no se sabe, se dice
+          que no se sabe — nunca se funden dos identidades. */}
+      {p.homonimia === 'distinta_persona' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+          👥 Hay otra persona con este mismo nombre en sus pólizas, con NIF distinto: son dos, no una.
+        </div>
+      )}
+      {p.homonimia === 'sin_distinguir' && (
+        <div style={{ fontSize: 11, color: 'var(--warning)' }}>
+          ⚠️ Aparece otra fila con este mismo nombre y no se puede distinguir (a alguna le falta el NIF):
+          puede ser la misma persona con la ficha duplicada. No se funden desde aquí.
+        </div>
+      )}
+
+      {p.vinculo ? (
+        <Vinculo
+          r={p.vinculo}
+          nombreFicha={nombreFicha}
+          ocupado={ocupado}
+          onAutorizar={onAutorizar}
+          onQuitar={onQuitar}
+          onCambiarTipo={onCambiarTipo}
+        />
+      ) : p.fichaId ? (
+        // Sin vínculo anotado no se afirma que no lo tenga: se ofrece decirlo,
+        // en los dos sentidos. «Revisado, no es nada suyo» es la respuesta
+        // correcta para la mayoría (un conductor ocasional no es familia) y
+        // hasta el 03/09/2026 no se podía decir.
+        <div style={bloqueVinculo}>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Sin vínculo anotado — nadie ha dicho aún qué es de {nombreFicha}.</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              disabled={enCurso}
+              onClick={() => onDeclarar({ id: p.fichaId as string, nombre, tipo: '', polizas: 0 })}
+              style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+            >
+              👪 Declarar qué es de {nombreFicha}
+            </button>
+            <button
+              type="button"
+              disabled={enCurso}
+              onClick={() => onSinVinculo(p.fichaId as string)}
+              style={{ ...btnStyle('sutil'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+            >
+              {enCurso ? 'anotando…' : '✅ Revisado: no es nada suyo'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ ...bloqueVinculo, fontSize: 12, color: 'var(--muted)' }}>
+          CIMA no la ha enlazado a una ficha propia, así que todavía no se le puede declarar un vínculo
+          ni darle acceso. Sale aquí porque interviene en sus pólizas.
+        </div>
+      )}
+    </li>
+  )
+}
+
+// ─── El bloque de vínculo de una fila ────────────────────────────────────────
+
+/**
+ * Lo que hemos anotado NOSOTROS sobre esa persona: qué es de la ficha y si está
+ * autorizada a ver sus seguros.
+ *
+ * Ya no pinta el nombre ni su propio `<li>`: vive dentro de la fila de la
+ * persona, debajo de lo que dice CIMA, para que las dos caras se lean juntas y
+ * se siga viendo de dónde sale cada una.
+ */
 function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo }: {
   r: RelacionCartera
   nombreFicha: string
@@ -264,11 +440,8 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo
   const esSociedad = r.tipoOtorgante === 'juridica'
   if (revisadoSinVinculo) {
     return (
-      <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
-          <Link href={ficha} style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{r.nombre}</Link>
-          <span style={{ fontSize: 13 }}>· revisado: no hay vínculo</span>
-        </div>
+      <div style={bloqueVinculo}>
+        <div style={{ fontSize: 13 }}>✅ revisado: no hay vínculo</div>
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>
           Sale en las pólizas de {nombreFicha} pero no es nada suyo. Queda anotado para no volver
           a preguntarlo, y <strong>no puede ver sus seguros</strong>: para autorizar a alguien hace
@@ -286,17 +459,16 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo
             respuesta rápida del día a día, y cuando resulta que sí lo había
             (el conductor ERA el hijo) se corrige sin perder nada. */}
         <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
-      </li>
+      </div>
     )
   }
   return (
-    <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
+    <div style={bloqueVinculo}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
-        <Link href={ficha} style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{r.nombre}</Link>
-        <span style={{ fontSize: 13 }}>· {r.tipo}</span>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>👪 {r.tipo}</span>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
           {/* null = asegura no las contó: no es «0 pólizas». */}
-          {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'}`}
+          {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'} suyas`}
         </span>
       </div>
 
@@ -337,8 +509,14 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onQuitar, onCambiarTipo
       {!viva && esSociedad && (
         <AnotarSociedad r={r} nombreFicha={nombreFicha} enCurso={enCurso} onAutorizar={onAutorizar} />
       )}
-    </li>
+    </div>
   )
+}
+
+/** El vínculo se separa de lo que dice CIMA con una línea, no con otra tarjeta. */
+const bloqueVinculo: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0,
+  borderTop: '1px solid var(--border)', paddingTop: 8,
 }
 
 /**
@@ -518,17 +696,24 @@ function EstadoAutorizacion({ a, nombreOtro, nombreFicha }: {
 
 type Candidato = { id: string; nombre: string; tipo: string; polizas: number }
 
-function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, preseleccion }: {
+function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: {
   clienteId: string
   nombreFicha: string
   yaRelacionados: string[]
   ocupado: boolean
   onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones>
+  /** Alta de una ficha que todavía no existe, para la persona de contacto. */
+  onAlta: (body: Record<string, unknown>) => Promise<ResultadoEscritura>
+  tipoPersona: 'fisica' | 'juridica' | null
   /** Ficha ya elegida desde «sin vínculo declarado»: se salta el buscador.
    *  El padre remonta este componente al cambiarla, así que basta con nacer con ella. */
   preseleccion: Candidato | null
 }) {
   const [abierto, setAbierto] = useState(preseleccion !== null)
+  // Dar de alta a alguien que NO está en la cartera. Se llega aquí por el botón
+  // de arriba o desde el «no está» de una búsqueda, y por eso hereda el término
+  // buscado: teclear el nombre dos veces era el sitio donde se abandonaba.
+  const [modoAlta, setModoAlta] = useState(false)
   const [q, setQ] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [busqueda, setBusqueda] = useState<RespuestaBusqueda | null>(null)
@@ -567,9 +752,30 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, pres
 
   if (!abierto) {
     return (
-      <div>
-        <button type="button" onClick={() => setAbierto(true)} style={btnStyle('secundario')}>➕ Añadir relación</button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" onClick={() => { setModoAlta(false); setAbierto(true) }} style={btnStyle('secundario')}>➕ Añadir relación</button>
+        {/* La persona que lleva los seguros de una sociedad casi nunca está en la
+            cartera: mandarla a /correduria/cliente/nuevo era perder la ficha,
+            volver y buscarla. Desde aquí se crea y se vincula de una vez. */}
+        <button type="button" onClick={() => { setModoAlta(true); setAbierto(true) }} style={btnStyle('secundario')}>
+          ➕ Nueva persona de contacto
+        </button>
       </div>
+    )
+  }
+
+  if (modoAlta) {
+    return (
+      <AltaPersona
+        nombreFicha={nombreFicha}
+        tipoPersona={tipoPersona}
+        ocupado={ocupado}
+        terminoInicial={q.trim()}
+        onAlta={onAlta}
+        onCrear={onCrear}
+        onCancelar={() => { setModoAlta(false); setAbierto(false) }}
+        onBuscar={() => setModoAlta(false)}
+      />
     )
   }
 
@@ -607,8 +813,13 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, pres
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>Término demasiado corto: escribe algo más.</div>
       )}
       {busqueda?.estado === 'ok' && busqueda.buscado && candidatos.length === 0 && (
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-          Nadie en la cartera con «{busqueda.termino}» que no esté ya relacionado. Si es alguien nuevo, dale de alta primero desde /correduria.
+        <div style={{ display: 'grid', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
+          <span>Nadie en la cartera con «{busqueda.termino}» que no esté ya relacionado.</span>
+          <div>
+            <button type="button" onClick={() => setModoAlta(true)} style={btnStyle('secundario', 'sm')}>
+              ➕ Darla de alta y vincularla a {nombreFicha}
+            </button>
+          </div>
         </div>
       )}
       {candidatos.length > 0 && !elegido && (
@@ -667,75 +878,251 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, pres
   )
 }
 
-// ─── Las que salen en sus pólizas y no tienen vínculo ────────────────────────
-
-export type SugerenciaVinculo = {
-  fichaId: string
-  nombre: string
-  papel: string
-  /** Hay otra fila con el mismo nombre y no se distinguen: puede ser la misma
-   *  persona con dos fichas, y una de ellas quizá ya tenga el vínculo puesto. */
-  ojoDuplicada: boolean
-}
+// ─── Alta de la persona de contacto ──────────────────────────────────────────
 
 /**
- * 🚨 Alberto, 03/09/2026, sobre la ficha de José Suárez Salas: «Antonio Sevico,
- * y aquí no aparece en Relaciones y autorizaciones».
+ * Crear la ficha de la persona que lleva los seguros de esta otra (el
+ * administrador de una sociedad, típicamente) y vincularla, sin salir de aquí.
  *
- * No era un fallo de lectura: Antonio tiene ficha propia (interviene como
- * conductor ocasional en 18 pólizas de la cartera) pero NADIE le anotó un
- * vínculo, y esta tarjeta solo pinta `cliente_relaciones`. La tarjeta 👤 lo
- * mandaba a anotarlo «en Relaciones y autorizaciones» y al llegar aquí había
- * que teclear su nombre en un buscador y acertar. Ahora sale, y con su botón.
+ * Por qué una ficha propia y no un campo «persona de contacto» dentro de la
+ * sociedad (Alberto, 05/09/2026): **esa persona es un futuro cliente**. El
+ * estado se DERIVA de sus pólizas, así que nace 🕐 Lead sola y pasará a
+ * ✅ Cliente el día que CIMA confirme la primera que le vendas, sin migrar nada.
+ * Con un campo de texto habría que crearla de cero ese día y se perdería todo lo
+ * anterior.
  *
- * Medido el 03/09/2026 en la cartera: 17 pares persona↔ficha así, en 15 fichas.
+ * 🚨 Son DOS escrituras y la segunda puede fallar sola. Lo que se pinta entonces
+ * lo decide `combinarPersonaContacto`, no este JSX: la frase de «creada pero sin
+ * vincular» es la que evita que el siguiente clic dé de alta una segunda ficha
+ * de la misma persona.
  *
- * Que estén aquí NO es un vínculo: es «esta persona sale en sus pólizas y no
- * has dicho qué es tuyo». La lista vacía se calla; no se inventa una relación.
+ * 🔒 Y lo que este formulario NO hace: dar acceso. Crear la ficha y anotar el
+ * vínculo no abre nada — la autorización del portal es un consentimiento con su
+ * alcance, su caducidad y su aceptación por parte de quien la recibe, y se anota
+ * después desde la fila del vínculo. Meterla aquí de paso la convertiría en una
+ * casilla marcada por defecto.
  */
-function SinVinculo({ personas, nombreFicha, onDeclarar, onSinVinculo, ocupado }: {
-  personas: SugerenciaVinculo[]
+function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: {
   nombreFicha: string
-  onDeclarar: (p: SugerenciaVinculo) => void
-  onSinVinculo: (p: SugerenciaVinculo) => void
-  ocupado: string | null
+  tipoPersona: 'fisica' | 'juridica' | null
+  ocupado: boolean
+  /** Lo que se tecleó en el buscador, para no escribir el nombre dos veces. */
+  terminoInicial: string
+  onAlta: (body: Record<string, unknown>) => Promise<ResultadoEscritura>
+  onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones>
+  onCancelar: () => void
+  onBuscar: () => void
 }) {
-  if (personas.length === 0) return null
+  const tipos = tiposContactoSugeridos(tipoPersona)
+  const [f, setF] = useState({ nombre: terminoInicial, apellidos: '', telefono: '', email: '' })
+  const [tipo, setTipo] = useState<TipoRelacion>(tipos[0])
+  const [observaciones, setObservaciones] = useState('')
+  const [trabajando, setTrabajando] = useState(false)
+  const [campoMal, setCampoMal] = useState<string | null>(null)
+  const [resAlta, setResAlta] = useState<ResultadoEscritura | null>(null)
+  const [resVinculo, setResVinculo] = useState<RespuestaRelaciones | null>(null)
+  const [resumen, setResumen] = useState<ResultadoPersonaContacto | null>(null)
+  /** Ficha que YA existía y se ha vinculado sin crear nada (el caso del 409). */
+  const [reutilizada, setReutilizada] = useState<string | null>(null)
+
+  const nombreCompleto = [f.nombre.trim(), f.apellidos.trim()].filter((x) => x !== '').join(' ') || 'esta persona'
+
+  function set<K extends keyof typeof f>(k: K, v: string) {
+    setF((prev) => ({ ...prev, [k]: v }))
+  }
+
+  async function vincular(id: string): Promise<RespuestaRelaciones> {
+    const r = await onCrear({ relacionadoId: id, tipo, observaciones: observaciones.trim() || undefined })
+    setResVinculo(r)
+    return r
+  }
+
+  async function crear(forzar = false) {
+    const rev = revisarAlta({ ...f, fuente: FUENTE_PERSONA_CONTACTO })
+    if (!rev.ok) {
+      setCampoMal(rev.campo ?? null)
+      setResAlta({ estado: 'invalido', motivo: rev.motivo, campo: rev.campo ?? null })
+      return
+    }
+    setCampoMal(null)
+    setTrabajando(true)
+    setResVinculo(null)
+    setResumen(null)
+    setReutilizada(null)
+    try {
+      // `tipoPersona` lo deduce el módulo del DNI y el puerto lo vuelve a
+      // deducir: mandarlo desde aquí sería una tercera opinión sobre lo mismo.
+      const { tipoPersona: _tp, ...alta } = rev.alta
+      void _tp
+      const ra = await onAlta({ ...alta, forzar })
+      setResAlta(ra)
+      if (ra.estado === 'invalido') setCampoMal(ra.campo)
+      const id = ra.estado === 'ok' ? ra.id : null
+      const rv = ra.estado === 'ok' && id ? await vincular(id) : null
+      setResumen(combinarPersonaContacto(
+        ra.estado === 'ok' ? { ok: true, id } : { ok: false },
+        rv === null ? null : { ok: rv.estado === 'ok' },
+      ))
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  /** Reintento del vínculo SOLO: la ficha ya existe y volver a darla de alta la duplicaría. */
+  async function reintentarVinculo(id: string) {
+    setTrabajando(true)
+    try {
+      const rv = await vincular(id)
+      setResumen(combinarPersonaContacto({ ok: true, id }, { ok: rv.estado === 'ok' }))
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  /** Vincular una ficha que ya estaba (la del 409): no se crea nada. */
+  async function usarExistente(c: { id: string; nombre: string }) {
+    setTrabajando(true)
+    try {
+      const rv = await vincular(c.id)
+      if (rv.estado === 'ok') {
+        setReutilizada(c.nombre)
+        setResAlta(null)
+        setResumen(null)
+      }
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  const ocupadoYa = ocupado || trabajando
+  const hecho = resumen?.estado === 'creada_y_vinculada' || reutilizada !== null
+
   return (
-    <div style={{ border: '1px dashed var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-      <div style={{ fontSize: 13, fontWeight: 700 }}>En sus pólizas, sin vínculo declarado</div>
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700 }}>Nueva persona de contacto de {nombreFicha}</div>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-        Salen en las pólizas de {nombreFicha} y tienen ficha propia, pero nadie ha anotado qué relación
-        tienen con {nombreFicha}. Declararla NO autoriza a nadie a ver nada: la autorización se da
-        después, con su botón.
+        Se crea su <strong>propia ficha</strong> y se vincula a {nombreFicha}. Nace como 🕐 lead —que es lo que
+        es— y pasará a cliente sola el día que le vendas algo y CIMA lo confirme.
       </div>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6 }}>
-        {personas.map((p) => (
-          <li key={p.fichaId} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Link href={`/correduria/cliente/${p.fichaId}`} style={{ fontSize: 13, fontWeight: 600, overflowWrap: 'anywhere' }}>{p.nombre}</Link>
-            {p.papel && <span style={{ fontSize: 12, color: 'var(--muted)' }}>· {p.papel}</span>}
-            <button type="button" onClick={() => onDeclarar(p)} style={{ ...btnStyle('secundario', 'sm'), whiteSpace: 'normal', textAlign: 'left' }}>
-              👪 Declarar vínculo
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <Campo label="Nombre *">
+          <input value={f.nombre} onChange={(e) => set('nombre', e.target.value)} style={{ ...campo, ...(campoMal === 'nombre' ? malo : {}) }} autoFocus />
+        </Campo>
+        <Campo label="Apellidos">
+          <input value={f.apellidos} onChange={(e) => set('apellidos', e.target.value)} style={{ ...campo, ...(campoMal === 'apellidos' ? malo : {}) }} />
+        </Campo>
+      </div>
+
+      {/* El teléfono y el email no son un adorno: son POR DONDE ENTRARÁ al
+          portal el día que se le autorice (la identidad se prueba con un código
+          de un solo uso a uno de los dos). Sin ninguno de los dos, ni se le
+          puede dar acceso ni se vuelve a encontrar la ficha. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <Campo label="Teléfono" ayuda="Hace falta el teléfono o el email: es por donde entrará al portal cuando le des acceso.">
+          <input type="tel" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} placeholder="600 000 000" style={{ ...campo, ...(campoMal === 'telefono' ? malo : {}) }} />
+        </Campo>
+        <Campo label="Email">
+          <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="nombre@dominio.es" style={{ ...campo, ...(campoMal === 'email' ? malo : {}) }} />
+        </Campo>
+      </div>
+
+      <Campo label={`¿Qué es de ${nombreFicha}?`} ayuda="Se lee desde esta ficha: «Administración» = la persona administra la sociedad.">
+        <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoRelacion)} style={campo}>
+          {tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </Campo>
+      <Campo label="Observaciones (opcional)">
+        <input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} style={campo} maxLength={500} />
+      </Campo>
+
+      {!hecho && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" disabled={ocupadoYa} onClick={() => void crear()} style={btnStyle('primario')}>
+            {ocupadoYa ? 'Guardando…' : 'Crear y vincular'}
+          </button>
+          <button type="button" disabled={ocupadoYa} onClick={onBuscar} style={btnStyle('sutil')}>Buscarla en la cartera</button>
+          <button type="button" disabled={ocupadoYa} onClick={onCancelar} style={btnStyle('sutil')}>Cancelar</button>
+        </div>
+      )}
+
+      {/* 🚨 Ya existe alguien con ese DNI, teléfono o email. Vincular la ficha que
+          hay es SIEMPRE mejor que crear otra: dos fichas de la misma persona no
+          se ven —y se descubren cuando una tiene las pólizas y la otra el móvil. */}
+      {resAlta?.estado === 'conflicto' && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px', color: 'var(--warning)', background: 'var(--warning-bg)' }}>
+          ⚠️ <strong>Ya hay una ficha con ese dato:</strong>
+          <ul style={{ margin: '4px 0', paddingLeft: 18 }}>
+            {resAlta.coincidencias.map((c) => (
+              <li key={`${c.por}-${c.id}`} style={{ marginBottom: 4 }}>
+                <Link href={`/correduria/cliente/${c.id}`} style={{ fontWeight: 600 }}>{c.nombre}</Link>{' '}
+                <span style={{ color: 'var(--muted)' }}>(mismo {c.por} · {c.tipo})</span>{' '}
+                <button type="button" disabled={ocupadoYa} onClick={() => void usarExistente(c)} style={btnStyle('secundario', 'sm')}>
+                  Es esta: vincularla
+                </button>
+              </li>
+            ))}
+            {resAlta.coincidencias.length === 0 && <li>asegura no dice con cuál.</li>}
+          </ul>
+          {coincidenciaBloquea(resAlta.coincidencias) || !resAlta.forzable ? (
+            <div>Con el mismo DNI es la misma persona: no se crea otra ficha.</div>
+          ) : (
+            <button type="button" disabled={ocupadoYa} onClick={() => void crear(true)} style={btnStyle('secundario')}>
+              Es otra persona: crearla igualmente (comparten teléfono/email)
             </button>
-            {/* La otra respuesta posible, y la más frecuente. Sin ella, esta lista
-                pediría el vínculo de un conductor ocasional hasta el fin de los días. */}
-            <button
-              type="button"
-              disabled={ocupado === `nada-${p.fichaId}`}
-              onClick={() => onSinVinculo(p)}
-              style={{ ...btnStyle('sutil', 'sm'), whiteSpace: 'normal', textAlign: 'left' }}
-            >
-              {ocupado === `nada-${p.fichaId}` ? 'Guardando…' : 'No hay vínculo'}
-            </button>
-            {p.ojoDuplicada && (
-              <span style={{ fontSize: 11, color: 'var(--warning)', flexBasis: '100%' }}>
-                ⚠️ Hay otra ficha con este mismo nombre en sus pólizas: mira arriba antes de declararlo,
-                que el vínculo puede estar ya puesto en la otra.
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
+          )}
+        </div>
+      )}
+
+      {resAlta && resAlta.estado !== 'ok' && resAlta.estado !== 'conflicto' && (
+        <div style={{ fontSize: 13, borderRadius: 8, padding: '8px 10px', color: 'var(--negative)', background: 'var(--negative-bg)' }}>
+          {resAlta.estado === 'invalido' ? `✖ ${textoMotivoAlta(resAlta.motivo)}` :
+            resAlta.estado === 'sin_configurar' ? '⏳ El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET). No se ha creado nada.' :
+            resAlta.estado === 'no_encontrado' ? 'asegura respondió «no encontrado» a un alta: revisa el puerto.' :
+            `⚠️ No se ha podido crear: ${textoMotivoAlta(resAlta.motivo)}`}
+        </div>
+      )}
+
+      {resumen && resumen.estado !== 'no_creada' && (
+        <div
+          style={{
+            fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px',
+            color: resumen.estado === 'creada_y_vinculada' ? 'var(--positive)' : 'var(--warning)',
+            background: resumen.estado === 'creada_y_vinculada' ? 'var(--positive-bg)' : 'var(--warning-bg)',
+          }}
+        >
+          {textoPersonaContacto(resumen, nombreCompleto, nombreFicha)}
+          {resumen.estado === 'creada_sin_vinculo' && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, alignItems: 'center' }}>
+              <button type="button" disabled={ocupadoYa} onClick={() => void reintentarVinculo(resumen.id)} style={btnStyle('secundario', 'sm')}>
+                Reintentar solo el vínculo
+              </button>
+              <Link href={`/correduria/cliente/${resumen.id}`} style={{ fontSize: 12 }}>abrir su ficha</Link>
+            </div>
+          )}
+          {resumen.estado === 'creada_y_vinculada' && (
+            <div style={{ marginTop: 6 }}>
+              <Link href={`/correduria/cliente/${resumen.id}`} style={{ fontSize: 12 }}>abrir la ficha de {nombreCompleto}</Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Por qué falló el vínculo, con el mismo aviso que el resto de la tarjeta. */}
+      {resumen?.estado === 'creada_sin_vinculo' && resVinculo && resVinculo.estado !== 'ok' && <Aviso r={resVinculo} />}
+
+      {reutilizada && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px', color: 'var(--positive)', background: 'var(--positive-bg)' }}>
+          ✅ {reutilizada} ya estaba en la cartera y se ha vinculado a {nombreFicha} (no se ha creado ninguna ficha
+          nueva). Todavía NO ve nada: el acceso al portal se le da aparte, con «Autorizar» en su fila.
+        </div>
+      )}
+
+      {hecho && (
+        <div>
+          <button type="button" onClick={onCancelar} style={btnStyle('secundario')}>Cerrar</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -775,6 +1162,9 @@ const campo: React.CSSProperties = {
   width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, padding: '10px 12px',
   borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 16,
 }
+/** Un campo que el módulo ha rechazado. `Campo` no lo sabe: se compone al vuelo. */
+const malo: React.CSSProperties = { borderColor: 'var(--negative)' }
+
 const pendienteBox: React.CSSProperties = {
   fontSize: 13, lineHeight: 1.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 10px',
 }

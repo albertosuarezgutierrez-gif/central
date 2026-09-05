@@ -108,7 +108,7 @@ function vitalidad(v: unknown): Vitalidad {
  * sobre una ficha que quizá sí tiene teléfono. Es la misma degradación que ya
  * hace el bloque de recibos con una versión anterior de asegura.
  */
-function contacto(v: unknown): Contacto | null {
+export function interpretarContacto(v: unknown): Contacto | null {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
   const o = v as Record<string, unknown>
   return {
@@ -194,7 +194,7 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
         ultimoVencimiento: cadena(x.ultimoVencimiento),
         vitalidad: vitalidad(x.vitalidad),
         hermanas: hs,
-        contacto: contacto(x.contacto),
+        contacto: interpretarContacto(x.contacto),
         aviso:
           textoAviso === null || av == null
             ? null
@@ -695,9 +695,22 @@ export async function sinCanalAsegura(): Promise<SinCanal> {
 //   2. FUSIONAR los choques por lote SQL, con los nombres delante de Alberto
 //   3. ESCRIBIR los hashes, ya sin conflicto posible
 //
-// Por eso aquí solo vive el paso 1. El paso 3 (`POST`) no se expone mientras
-// queden choques: un botón que promete escribir y revienta a la mitad es peor
-// que no tenerlo.
+// ⚠️ CORREGIDO el 05/09/2026: aquí ponía que el paso 3 no se expone «mientras
+// queden choques, porque un botón que promete escribir y revienta a la mitad es
+// peor que no tenerlo». **La escritura no revienta**: el plan clasifica cada
+// ficha antes de tocar nada y el POST sólo escribe las `rellenable`, así que la
+// segunda ficha de un DNI repetido ni siquiera llega al UPDATE. Con esa frase, y
+// sin botón en ninguna pantalla, «hacer el backfill» no lo podía hacer nadie:
+// exigía un `curl` con el secreto de operador a mano. Fusionar primero sigue
+// siendo mejor —cada fusión convierte un choque en un hash más que se puede
+// escribir— pero es más cobertura, no un requisito.
+//
+// 🚨 Y hay un cuarto estado que no estaba: el DNI CENTINELA. Un documento con
+// letra correcta tecleado en la ficha de varias personas distintas (medido: 20
+// fichas con 20 nombres sin relación y 19 correos distintos). No es un
+// duplicado, así que no se fusiona; y no se escribe NUNCA, tampoco en los
+// `lead` —que son 14.990 de las 15.092 sin hash— donde el índice único no
+// protege y el hash entraría sin que nada fallase.
 
 export type PlanBackfillDni =
   | { estado: 'sin_configurar' }
@@ -712,6 +725,10 @@ export type PlanBackfillDni =
       grupos: number
       /** DNI que no descifra o que no parece un documento. NO es «sin DNI». */
       ilegibles: number
+      /** Fichas de un DNI centinela: no se escriben ni se fusionan, se corrigen. */
+      compartidas: number
+      /** Cuántos DNI distintos están así. */
+      gruposCompartidos: number
       yaTiene: number
       sinDni: number
       total: number
@@ -741,14 +758,79 @@ export function interpretarPlanBackfill(status: number, json: unknown): PlanBack
   const r = (j.resumen ?? {}) as Record<string, unknown>
   const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
   const choques = Array.isArray(j.choques) ? j.choques.length : 0
+  const compartidos = Array.isArray(j.compartidos) ? j.compartidos.length : 0
   return {
     estado: 'ok',
     rellenables: n(r.rellenables),
     enChoque: n(r.enChoque),
     grupos: choques,
     ilegibles: n(r.ilegibles),
+    compartidas: n(r.compartidos),
+    gruposCompartidos: compartidos,
     yaTiene: n(r.yaTiene),
     sinDni: n(r.sinDni),
     total: n(r.total),
+  }
+}
+
+// ─── Paso 3: ESCRIBIR los hashes ─────────────────────────────────────────────
+
+export type EscrituraBackfillDni =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | {
+      estado: 'ok'
+      /** Hashes escritos en esta pasada. */
+      escritos: number
+      /** Cuántos quedan. `0` = terminado. */
+      restantes: number
+      /** Fichas que el plan daba por escribibles y la BD rechazó. Se dicen. */
+      fallidos: number
+    }
+
+/**
+ * Lanza la escritura. `limite` la parte en tandas: descifrar y hashear 32.000
+ * fichas ya consume parte de los 300 s del endpoint de asegura, así que una
+ * pasada sin tope puede no llegar. Se vuelve a pulsar hasta `restantes: 0`.
+ */
+export async function escribirBackfillDni(limite?: number): Promise<EscrituraBackfillDni> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/backfill-dni`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ confirmar: 'escribir', limite }),
+      cache: 'no-store',
+      // Muy por encima de los 8 s del resto del puerto: esto descifra la cartera
+      // entera antes de escribir. El endpoint de asegura declara `maxDuration = 300`.
+      signal: AbortSignal.timeout(290_000),
+    })
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    return interpretarEscrituraBackfill(res.status, json)
+  } catch {
+    // 🚨 Un timeout aquí NO dice que no se haya escrito nada: la transacción del
+    // otro lado puede haber terminado. Se dice así y se vuelve a mirar el plan.
+    return { estado: 'error', motivo: 'se cortó la conexión antes de recibir el resultado — vuelve a cargar la página para ver cuánto se escribió' }
+  }
+}
+
+/** Puro: separado para poder probarlo sin red. */
+export function interpretarEscrituraBackfill(status: number, json: unknown): EscrituraBackfillDni {
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
+  }
+  const j = (json ?? {}) as Record<string, unknown>
+  if (j.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (j.estado !== 'ok') {
+    const causa = typeof j.causa === 'string' ? j.causa : typeof j.motivo === 'string' ? j.motivo : `respuesta ${status}`
+    return { estado: 'error', motivo: causa }
+  }
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  return {
+    estado: 'ok',
+    escritos: n(j.escritos),
+    restantes: n(j.restantes),
+    fallidos: Array.isArray(j.fallidos) ? j.fallidos.length : 0,
   }
 }

@@ -210,7 +210,7 @@ export type AgenteVigilado = {
    *      casa: un cron que deja de correr grita igual que antes.
    *   2. `revisarEl` — fecha en la que caduca. Pasada, vuelve a rojo él solo; nadie tiene que
    *      acordarse de quitar nada.
-   *   3. Sigue contando como ALERTA para la pantalla y para `agente_salud`: lo que se calla es la
+   *   3. Sigue contando como ALERTA para la pantalla y para `agente_veredicto`: lo que se calla es la
    *      interrupción del Telegram, no el registro. `/operador/agentes` sigue diciendo la verdad.
    */
   pendienteConocido?: {
@@ -264,6 +264,27 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'el recibo llega de una póliza que en la cartera está con OTRO nombre de compañía (Occident, ' +
       'Catalana Occidente y Plus Ultra son el mismo grupo bajo C0468). ' +
       'Huella: agente_latidos.correduria_ingesta.',
+  },
+  {
+    id: 'correduria_siniestros',
+    vigiladoDesde: '2026-09-05',
+    etiqueta: '🚨 Siniestros nuevos de la cartera — avisar para llamar al cliente (cron diario 06:50)',
+    // Diario → 30 h, como el resto de los diarios: un tropiezo pasa, dos días saltan.
+    maxHoras: 30,
+    nota:
+      'Este vigía es el último eslabón de una cadena que se cortaba: el cliente da el parte a su ' +
+      'compañía, el siniestro entra por CIMA… y nadie avisaba a Alberto, así que el SEGUIMIENTO ' +
+      '—lo único que aporta la correduría cuando el siniestro ya está abierto— dependía de que ' +
+      'abriera la ficha por casualidad. Lee el `detalle`, que separa CUATRO cosas que no son la ' +
+      'misma: «NO se ha podido mirar» (puerto, secreto o BD de asegura) NO quiere decir que no ' +
+      'haya entrado ninguno; «primera pasada» es que se acaba de anclar la marca de agua y no se ' +
+      'manda el histórico a propósito; «ninguno (comprobado)» sí es que se miró y no hay; y «SIN ' +
+      'avisar» es que el Telegram no salió y se reintenta en la próxima pasada (la marca de agua ' +
+      'NO avanza si no se ha avisado — por eso un siniestro no puede perderse en silencio). ' +
+      '⚠️ Contexto medido el 05/09/2026: no entra un siniestro nuevo desde el 01/07/2026 porque ' +
+      'la ingesta de CIMA está atascada (21 ficheros SIN, 18 de Occident). Eso lo vigila ' +
+      '`correduria_ingesta`, no este: aquí un «ninguno» prolongado es el SÍNTOMA, no la avería. ' +
+      'Huella: agente_latidos.correduria_siniestros.',
   },
   {
     id: 'ses_transporte',
@@ -705,7 +726,7 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   // Las cinco de abajo eran vigías sin canal: 8 rutinas sin ALERTA_TOKEN, así que su Telegram no
   // salía, y además no escribían latido, así que tampoco se veían en ninguna pantalla. Un vigía
   // mudo y un vigía sin nada que reportar se ven igual: silencio. Ahora dejan latido por
-  // /api/internal/latido (allowlist en esa ruta) y el veredicto se persiste en `agente_salud`.
+  // /api/internal/latido (allowlist en esa ruta) y el veredicto se persiste en `agente_veredicto`.
   //
   // ⚠️ Hasta que sus prompts lleven el token, saldrán en ROJO con «sin ninguna señal registrada».
   // Es la verdad, no ruido: hoy están igual de mudas, solo que invisibles. Umbrales generosos a

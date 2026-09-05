@@ -19,6 +19,8 @@ export type EstadoPiso = {
   enviados: number
   enSombra: number
   fallos: number
+  /** Mensajes que se decidió a mano NO mandar. Ni entregados ni pendientes: decididos. */
+  omitidos: number
   ultimoEnvio: string | null
 }
 
@@ -57,6 +59,7 @@ export async function getEstadoCiclo(): Promise<EstadoCiclo> {
         enviados: cuenta('enviado'),
         enSombra: cuenta('sombra'),
         fallos: cuenta('fallo'),
+        omitidos: cuenta('omitido'),
         ultimoEnvio: enviadas.length
           ? new Date(Math.max(...enviadas.map(f => new Date(f.ultimo!).getTime()))).toISOString()
           : null,

@@ -64,6 +64,13 @@ export default function Privacidad() {
           mientras es válido (diez minutos) junto al número de intentos, y deja de servir en cuanto
           lo usas.
         </p>
+        <p>
+          Cuando entras dejamos además <strong>constancia de que se te informó</strong>: la fecha, la
+          versión exacta de estos textos legales, tu dirección IP y tu navegador. Es la prueba de que
+          la información del mediador estaba delante antes de que operaras, y la ley pone esa carga
+          de la prueba de nuestro lado (art. 19 de la Ley 16/2018). No la usamos para perfilarte ni
+          para medir tu navegación: se guarda una fila por cada versión de texto, no por cada visita.
+        </p>
 
         <h3>Lo que tú declaras</h3>
         <ul>
@@ -138,6 +145,10 @@ export default function Privacidad() {
               <tr>
                 <td>Conservar la documentación de la mediación</td>
                 <td>Obligación legal (art. 6.1.c RGPD)</td>
+              </tr>
+              <tr>
+                <td>Dejar constancia de que se te informó al entrar</td>
+                <td>Obligación legal (art. 6.1.c RGPD y art. 19 Ley 16/2018)</td>
               </tr>
               <tr>
                 <td>Atender tus derechos y tus reclamaciones</td>
@@ -228,6 +239,20 @@ export default function Privacidad() {
           <strong>oponerte</strong> a un tratamiento. Se piden escribiendo a{' '}
           <a href={`mailto:${identidad.email}`}>{identidad.email}</a> desde la dirección con la que
           entras al portal, o desde otra acreditando quién eres.
+        </p>
+        <p>
+          La <strong>supresión</strong> puedes pedirla además desde tu propia pantalla, en{' '}
+          <strong>Mis seguros → Tus datos</strong>, sin escribir ningún correo.
+        </p>
+        <p>
+          🚨 <strong>Sobre la supresión, con antelación:</strong> no podemos borrarlo todo, y
+          preferimos decírtelo antes de que lo pidas. La normativa de seguros y la de prevención del
+          blanqueo de capitales nos obligan a conservar la documentación de la mediación, y de un
+          contrato pueden derivarse responsabilidades después: el propio Reglamento lo prevé y excluye
+          la supresión en esos casos (art. 17.3.b y 17.3.e). Lo que sí hacemos es{' '}
+          <strong>contestarte en un mes diciéndote, con nombres, qué se ha suprimido y qué se
+          conserva y por qué</strong>. El alcance completo —lo que se borra y lo que no— lo tienes a
+          la vista en esa misma pantalla antes de pulsar nada.
         </p>
         <p>
           Contestamos en el plazo de un mes. Si no te contestamos o no estás conforme con la

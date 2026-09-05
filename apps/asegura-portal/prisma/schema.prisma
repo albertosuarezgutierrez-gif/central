@@ -874,3 +874,69 @@ model ClienteRelacion {
   @@map("cliente_relaciones")
   @@schema("seguros")
 }
+
+/// El catálogo de compañías de la DGSFP, con el canal al que acude el asegurado
+/// después de un percance.
+///
+/// 🚨 GRANT: **sin `notas` ni `telefono_fuente`**. Las dos son gestión del
+/// corredor —la segunda guarda por qué un número no está y qué falta preguntar—
+/// y `telefono_fuente` se REVOCÓ el 05/09/2026 justo para que no se pueda
+/// declarar aquí por descuido. Recordatorio de la landmine: declarar una
+/// columna no concedida revienta la lectura ENTERA de la tabla con
+/// `permission denied for column`, no solo esa columna.
+///
+/// 📌 Esta tabla NO es cartera de nadie: es un catálogo público de códigos DGS y
+/// teléfonos publicados. Por eso su lectura no se filtra por identidad y no
+/// entra en la lista de modelos que vigila `test/regression-portal-aislamiento.test.ts`.
+model CompaniaDgs {
+  codigoDgs            String    @id @map("codigo_dgs") @db.VarChar(16)
+  nombreComun          String    @map("nombre_comun") @db.VarChar(255)
+  activa               Boolean
+  telefonoSiniestros   String?   @map("telefono_siniestros")
+  telefonoAsistencia   String?   @map("telefono_asistencia")
+  whatsappSiniestros   String?   @map("whatsapp_siniestros")
+  horarioSiniestros    String?   @map("horario_siniestros")
+  telefonoVerificadoEn DateTime? @map("telefono_verificado_en") @db.Date
+
+  @@map("companias_dgs")
+  @@schema("seguros")
+}
+
+/// La solicitud del derecho de SUPRESIÓN (art. 17 RGPD).
+///
+/// 🚨 No es un borrado y no debe leerse como tal: el art. 17.3.b y el 17.3.e
+/// excluyen la supresión cuando hace falta cumplir una obligación legal o
+/// defender reclamaciones, y una correduría tiene las dos. Lo que esta tabla
+/// soporta es lo que sí es obligatorio: recibir, acusar y contestar en un mes
+/// (art. 12.3) diciendo qué se borra y qué se conserva, con su base legal
+/// (art. 12.4). Reglas y plazos en `@central/module-seguros-portal/supresion`.
+model PortalSupresion {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId    String    @map("correduria_id") @db.Uuid
+  identidadId     String    @map("identidad_id") @db.Uuid
+  /// La ficha de la cartera, si la hay. `null` NO es «no es cliente»: es «su
+  /// acceso no está enlazado con ninguna ficha». Un lead también puede pedirlo.
+  clienteId       String?   @map("cliente_id") @db.Uuid
+  /// Cuando la persona la envió, NO cuando el corredor la abre: es desde donde
+  /// corre el mes del art. 12.3.
+  recibidaEn      DateTime  @default(now()) @map("recibida_en") @db.Timestamptz(6)
+  estado          String    @default("recibida")
+  /// Sello de la prórroga del art. 12.3. Se pone al AVISAR, no al decidirla.
+  prorrogadaEn    DateTime? @map("prorrogada_en") @db.Timestamptz(6)
+  prorrogaMotivo  String?   @map("prorroga_motivo")
+  resueltaEn      DateTime? @map("resuelta_en") @db.Timestamptz(6)
+  /// Lo que se le contestó. Es lo que acredita el art. 12.4 cuando alguien
+  /// pregunte por qué no se borró todo.
+  respuesta       String?
+  resueltaPor     String?   @map("resuelta_por")
+  motivo          String?
+  /// Qué versión de los textos legales se le enseñó al pedirlo: sin ella no se
+  /// puede reconstruir qué se le dijo que se iba a conservar.
+  versionTextos   String    @map("version_textos")
+  ip              String?   @db.Inet
+  userAgent       String?   @map("user_agent")
+
+  @@index([estado, recibidaEn])
+  @@map("portal_supresion")
+  @@schema("seguros")
+}

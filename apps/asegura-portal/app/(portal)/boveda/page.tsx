@@ -1,31 +1,34 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { ETIQUETA_RAMO, etiquetaProcedencia, plazoComunicacion } from '@central/module-seguros-portal'
+import {
+  canalDeCompania,
+  plazoComunicacion,
+  type FilaCompania,
+} from '@central/module-seguros-portal'
 
+import { companiasConCanal } from '@/lib/canales-compania'
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
-import { eur } from '@/lib/dinero'
-import { fechaEs } from '@/lib/fechas'
 import {
   obligacionesDeIdentidad,
   polizasSinFechaDeVencimiento,
   sincronizarObligacionesDeIdentidad,
 } from '@/lib/obligaciones'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
-import { EditarPoliza } from './EditarPoliza'
+import { FilaDeclarada } from './FilaDeclarada'
+import { FilaPoliza } from './FilaPoliza'
+import { RAMO } from './PolizaVista'
+import { vistaDeBoveda } from '@central/module-seguros-portal'
+
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
+import { TusDatos } from './TusDatos'
 
 export const dynamic = 'force-dynamic'
-
-// La MISMA tabla que usa el calendario (`lib/obligaciones.ts`) y el módulo: un
-// mapa local aquí es como se llegó a pintar «Responsabilidad civil» en la
-// tarjeta y `responsabilidad_civil` en el calendario de la misma pantalla.
-const RAMO: Record<string, string> = ETIQUETA_RAMO
 
 /** Las opciones del selector de ramo salen del MISMO mapa que las etiquetas de
  *  arriba (que son las de `RAMOS_POLIZA`), para que la lista de la pantalla y la
@@ -33,27 +36,26 @@ const RAMO: Record<string, string> = ETIQUETA_RAMO
  *  `EditarPoliza` y `SubirPoliza` (alta a mano) son componentes de cliente. */
 const RAMOS_OPCIONES = Object.entries(RAMO).map(([valor, etiqueta]) => ({ valor, etiqueta }))
 
-const ESTADO: Record<string, string> = {
-  activa: 'En vigor',
-  en_vigor: 'En vigor',
-  en_renovacion: 'En renovación',
-  recibo_devuelto: 'Recibo devuelto',
-  cambio_clave: 'En vigor',
-  vencida: 'Vencida',
-  cancelada: 'Cancelada',
-  fin_riesgo: 'Fin de riesgo',
-  anula_al_vencimiento: 'Se anula al vencimiento',
-  competencia: 'En otra correduría',
-}
-
-export default async function Boveda() {
+export default async function Boveda({
+  searchParams,
+}: {
+  // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada:
+  // lo que decide qué datos se leen es la sesión de abajo, así que un valor
+  // raro aquí solo elige otra pestaña, nunca otros datos.
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const vista = vistaDeBoveda((await searchParams).vista)
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
-  // Las tres lecturas parten de la misma sesión: la cartera por `portal_vinculo`
-  // de esta identidad, y la bóveda de declaradas y los partes por `identidadId`.
-  // Ninguna acepta un id que venga de fuera.
-  const [cartera, declaradas, partes] = await Promise.all([
+  // Las tres primeras lecturas parten de la misma sesión: la cartera por
+  // `portal_vinculo` de esta identidad, y la bóveda de declaradas y los partes
+  // por `identidadId`. Ninguna acepta un id que venga de fuera.
+  //
+  // La cuarta es de otra naturaleza y por eso no lleva identidad: `companias_dgs`
+  // es un catálogo público (códigos DGS y teléfonos que publican las propias
+  // compañías), no la cartera de nadie. Ver `lib/canales-compania.ts`.
+  const [cartera, declaradas, partes, companias] = await Promise.all([
     carteraDeIdentidad(identidad.id),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
@@ -61,6 +63,7 @@ export default async function Boveda() {
       take: 50,
     }),
     partesDeIdentidad(identidad.id),
+    companiasConCanal(),
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
@@ -79,12 +82,18 @@ export default async function Boveda() {
   // sale SIEMPRE de la cartera ya leída para esta identidad: ningún id de
   // póliza entra desde la request.
   const polizasParte: PolizaOpcionParte[] = [
-    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p))),
+    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p, companias))),
     ...cartera.autorizadas.flatMap((t) =>
-      t.polizas.map((p) => opcionCartera(p, t.nombre)),
+      t.polizas.map((p) => opcionCartera(p, companias, t.nombre)),
     ),
     ...declaradas.map((p) => ({
       valor: `declarada:${p.id}`,
+      // 🚨 El cruce es por nombre EXACTO y aquí es donde más falla, a propósito:
+      // el nombre de una póliza aportada lo leyó una IA de un PDF («MAPFRE
+      // ESPAÑA S.A.»), así que muchas caerán en «pídenoslo». Es el degradado
+      // correcto: una coincidencia aproximada acertaría casi siempre y alguna
+      // vez daría el teléfono de urgencias de OTRA compañía.
+      canal: canalDeCompania(p.compania, companias),
       etiqueta: [
         p.compania ?? 'Compañía sin identificar',
         p.ramo ? RAMO[p.ramo] ?? p.ramo : null,
@@ -104,6 +113,25 @@ export default async function Boveda() {
   // calculado en el navegador daría un número distinto al del servidor en el
   // primer render (aviso de hidratación) y otro más en cada zona horaria. La
   // página es `force-dynamic`, así que se recalcula en cada visita.
+  // Sus solicitudes del art. 17, con la identidad resuelta por la cookie
+  // (`lib/session`), no por el `identidad.id` que ya hay arriba: la puerta única
+  // es la puerta única también aquí.
+  //
+  // Sin `try/catch`: si la consulta falla, que suba. Una lista vacía haría pasar
+  // un fallo de BD por «no has pedido nada» en la pantalla donde decide si
+  // vuelve a pedirlo — y aquí lo que corre por debajo es un plazo legal. El
+  // `?? []` solo cubre el «no hay sesión», que en esta página es inalcanzable:
+  // más arriba ya se redirigió a `/` si no la había.
+  const supresiones = ((await supresionesDelUsuario()) ?? []).map((s) => ({
+    id: s.id,
+    recibidaEn: s.recibidaEn.toISOString(),
+    estado: s.estado,
+    plazo: s.plazo,
+    fechaLimite: s.fechaLimite.toISOString(),
+    resueltaEn: s.resueltaEn ? s.resueltaEn.toISOString() : null,
+    respuesta: s.respuesta,
+  }))
+
   const hoy = new Date()
   const partesEnviados: ParteEnviado[] = partes.map((p: PartePortal) => ({
     id: p.id,
@@ -128,20 +156,31 @@ export default async function Boveda() {
   }))
 
   return (
-    <main style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Mis seguros</h1>
+    <>
+      {/* El `<main>`, el ancho y la navegación los pone el armazón del grupo
+          (`app/(portal)/layout.tsx`). La pantalla del consentimiento sigue
+          estando a un toque, como una sección más de la navegación: quien
+          quiere saber quién le está mirando los seguros —o quitárselo a
+          alguien— no debería tener que recorrer nada para encontrarlo. */}
+      <h1>Mis seguros</h1>
 
-      {/* La pantalla del consentimiento. Va arriba y no escondida al final: quien
-          quiere saber quién le está mirando los seguros —o quitárselo a alguien—
-          no debería tener que recorrer toda la bóveda para encontrarlo. */}
-      <p style={{ margin: '0 0 16px', fontSize: 14 }}>
-        <Link href="/autorizaciones">Quién puede ver mis seguros</Link>
-      </p>
+      {vista === 'seguros' && (
+        <>
+          <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
 
-      <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
+      {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
+          su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,
+          que ya tenemos datos, o que alguna no la tengamos y el cliente la
+          añada para controlar». Para quien mira es la lista de lo que tiene
+          asegurado, y tenerla partida en dos pestañas con dos nombres que en
+          castellano son sinónimos era pedirle que adivinara.
 
+          Por eso el título ya NO dice «en {correduria}»: en esta lista hay
+          ahora pólizas que la correduría no lleva. Lo que dice de dónde sale
+          cada una es el cartel de su FILA, que va con ella cuando se hace
+          scroll — un encabezado de sección no. */}
       <section className="seccion" aria-labelledby="cartera-titulo">
-        <h2 id="cartera-titulo">Tus seguros en {correduria}</h2>
+        <h2 id="cartera-titulo">Tus seguros</h2>
         {!cartera.vinculada ? (
           // Sin vínculo ≠ sin pólizas: no hay ficha con este email. No se
           // inventan teléfonos ni emails de la correduría: solo `nombre` es legible.
@@ -156,6 +195,33 @@ export default async function Boveda() {
         ) : (
           cartera.propias.map((t) => <Titular key={t.clienteId} titular={t} propia />)
         )}
+
+        {/* Las que ha añadido la persona, en la MISMA lista y con el mismo
+            aspecto. No llevan `<h3>` de titular porque no lo tienen: son suyas
+            por definición. Lo que las distingue es el chip «Añadida por ti» de
+            cada fila, y eso no es cosmético — ver `FilaDeclarada`. */}
+        {declaradas.length > 0 && (
+          <ul className="polizas">
+            {declaradas.map((d) => (
+              <FilaDeclarada
+                key={d.id}
+                p={{
+                  id: d.id,
+                  compania: d.compania,
+                  ramo: d.ramo,
+                  fechaVencimiento: d.fechaVencimiento,
+                  deDocumento: d.documentoNombre !== null,
+                }}
+              />
+            ))}
+          </ul>
+        )}
+
+        {/* El alta va DEBAJO de la lista y dentro de la misma sección: es una
+            acción sobre lo que se está mirando, no otra sección del portal. Las
+            opciones de ramo son las MISMAS que ofrece `EditarPoliza`: un alta a
+            mano y una corrección tienen que ofrecer la misma lista. */}
+        <SubirPoliza ramos={RAMOS_OPCIONES} />
       </section>
 
       {cartera.autorizadas.length > 0 && (
@@ -167,313 +233,52 @@ export default async function Boveda() {
         </section>
       )}
 
-      {/* El parte va ANTES de la bóveda de aportadas: quien entra con un
-          siniestro recién ocurrido tiene prisa, y la bóveda es una tarea
-          tranquila que puede esperar a mañana. */}
-      <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+      {/* El derecho de supresión (art. 17). Va aquí, dentro de la vista que la
+          persona abre por defecto y con el nombre que la política de privacidad
+          le da («Mis seguros → Tus datos»), y NO como una pestaña quinta: la
+          barra son cuatro por decisión de diseño. Y va en la pantalla, no solo
+          enlazado desde un texto legal: un derecho que solo se ejerce
+          escribiendo un correo es un derecho con peaje. */}
+      <TusDatos inicial={supresiones} />
+        </>
+      )}
 
-      <section className="seccion" aria-labelledby="boveda-titulo">
-        <h2 id="boveda-titulo">Pólizas que has añadido tú</h2>
-        {declaradas.length === 0 ? (
-          // «Todavía no has añadido ninguna» — no «no tienes seguros»: los de
-          // la correduría van arriba, esto es lo que aporta la persona.
-          <p className="suave" style={{ margin: 0 }}>Todavía no has añadido ninguna póliza.</p>
-        ) : (
-          <ul className="cartera">
-            {declaradas.map((p) => (
-              <li key={p.id} className="cartera-card">
-                <h3>
-                  {p.compania ?? 'Compañía sin identificar'}
-                  {/* La MISMA etiqueta que ofrece el selector de `EditarPoliza`:
-                      si la tarjeta dice «responsabilidad_civil» y el desplegable
-                      «Responsabilidad civil», parecen dos cosas distintas. */}
-                  {p.ramo && <span className="tenue"> · {RAMO[p.ramo] ?? p.ramo}</span>}
-                </h3>
-                <div className="linea">
-                  {p.numeroPoliza ? `Póliza ${p.numeroPoliza} · ` : ''}
-                  {/* `Decimal` de Prisma: se convierte a número ANTES de formatear.
-                      `null` sale como «—», jamás como «0,00€». */}
-                  {p.primaAnual == null ? 'Prima —' : `Prima ${eur(Number(p.primaAnual))}`}
-                </div>
-                <div className="nivel" style={{ marginTop: 4 }}>
-                  {etiquetaProcedencia(p.procedencia)}
-                </div>
-                {/* El vencimiento NO se pinta aquí: lo lleva entero `EditarPoliza`,
-                    que es quien puede decir «no sabemos cuándo vence» CON la acción
-                    al lado y quien refleja al instante lo que se acaba de guardar. */}
-                <EditarPoliza
-                  ramos={RAMOS_OPCIONES}
-                  poliza={{
-                    id: p.id,
-                    compania: p.compania,
-                    numeroPoliza: p.numeroPoliza,
-                    ramo: p.ramo,
-                    // `Decimal | null` → `number | null`. `null` NO es 0: es «no lo sabemos».
-                    primaAnual: p.primaAnual == null ? null : Number(p.primaAnual),
-                    referenciaCatastral: p.referenciaCatastral ?? null,
-                    // Un jsonb puede traer cualquier cosa; si no es un objeto plano
-                    // se degrada a `null` en vez de reventar el render. Un origen
-                    // ilegible es «no sabemos de dónde vino», no una excusa para
-                    // dejar de pintar la póliza entera.
-                    datosRamoOrigen:
-                      p.datosRamoOrigen && typeof p.datosRamoOrigen === 'object' && !Array.isArray(p.datosRamoOrigen)
-                        ? (Object.fromEntries(
-                            Object.entries(p.datosRamoOrigen as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
-                          ) as Record<string, string>)
-                        : null,
-                    // Columna `date`: llega como medianoche UTC, así que el ISO
-                    // recortado es exactamente el día, sin desfase de zona.
-                    fechaVencimiento: p.fechaVencimiento
-                      ? p.fechaVencimiento.toISOString().slice(0, 10)
-                      : null,
-                    // `datos_ramo` es `jsonb`: Prisma lo entrega como `JsonValue`,
-                    // que incluye arrays y escalares. La pantalla solo sabe pintar
-                    // un objeto de campos, así que lo que no lo sea entra como
-                    // `null` («no hay nada declarado») en vez de reventar el
-                    // render con una fila corrupta.
-                    datosRamo:
-                      p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
-                        ? (p.datosRamo as Record<string, string | number | boolean>)
-                        : null,
-                    matricula: p.matricula,
-                    bastidor: p.bastidor,
-                    // Columna `date`, igual que el vencimiento: medianoche UTC,
-                    // así que el ISO recortado es el día exacto y no se corre
-                    // uno según la zona del navegador.
-                    fechaMatriculacion: p.fechaMatriculacion
-                      ? p.fechaMatriculacion.toISOString().slice(0, 10)
-                      : null,
-                    deDocumento: p.documentoNombre !== null,
-                  }}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {/* El parte tiene sección PROPIA, y sigue yendo antes que la bóveda de
+          aportadas en la barra: quien entra con un siniestro recién ocurrido
+          tiene prisa, y la bóveda es una tarea tranquila que puede esperar a
+          mañana. Antes había que bajar por delante de toda la cartera para
+          llegar aquí. */}
+      {vista === 'siniestro' && (
+        <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+      )}
 
-      {/* Las opciones de ramo son las MISMAS que las de `EditarPoliza`: un alta a mano
-          y una corrección ofrecen la misma lista. */}
-      <SubirPoliza ramos={RAMOS_OPCIONES} />
-    </main>
+    </>
   )
 }
 
+/**
+ * Las pólizas de un titular, como LISTA.
+ *
+ * 🚨 El nombre del titular baja hasta cada FILA cuando la póliza no es de esta
+ * persona, en vez de quedarse en un párrafo encima de la lista: ese párrafo se
+ * sale de la vista al hacer scroll y una póliza ajena pasa a verse idéntica a
+ * una propia. Quien cree que la del coche de su padre es suya no llama a la
+ * compañía cuando hay que llamar.
+ */
 function Titular({ titular, propia }: { titular: TitularPortal; propia: boolean }) {
-  return (
-    <div style={{ marginBottom: 12 }}>
-      {!propia && (
-        <p className="suave" style={{ margin: '0 0 6px', fontSize: 14 }}>
-          Titular: <strong>{titular.nombre}</strong>
-        </p>
-      )}
-      {titular.polizas.length === 0 ? (
-        <p className="tenue" style={{ margin: 0, fontSize: 14 }}>
-          {propia ? `${titular.nombre}: sin pólizas vivas.` : 'Sin pólizas vivas.'}
-        </p>
-      ) : (
-        <ul className="cartera">
-          {titular.polizas.map((p) => (
-            <Card key={p.id} p={p} />
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-/** Buzón único de la correduría. No hay ninguna ruta de API para esto todavía:
- *  el aviso sale por el mismo canal que ya usa el correo del código
- *  (`PORTAL_MAIL_REPLY_TO`), y no se inventa un endpoint que no existe. */
-const CORREO_CORREDURIA = 'hola@grupoasegura.es'
-
-/**
- * Una póliza de la CARTERA.
- *
- * Regla de visibilidad del 03/09/2026 (ver `CLAUDE.md` de la app): lo que no
- * cambia una decisión del cliente **no se pinta vacío, se quita**; lo que sí la
- * cambia se dice con una frase entera. Por eso aquí no queda ni un «—», ni un
- * «no visible en tu nivel», ni un «pendiente»: un campo a `null` por nivel es
- * un dato que esta persona no tiene derecho a ver, y anunciarlo solo genera una
- * pregunta que Alberto tiene que contestar.
- */
-function Card({ p }: { p: PolizaPortal }) {
-  const vence = fechaEs(p.fechaVencimiento)
-  // `numeroPoliza === null` = la compañía no lo informó (el nivel `tarjeta` ya
-  // lo enseña): se oculta, la cabecera ya identifica la póliza.
-  const cabecera = [p.numeroPoliza && `Póliza ${p.numeroPoliza}`, vence && `Vence el ${vence}`].filter(Boolean)
-
-  return (
-    <li className="cartera-card">
-      <h3>
-        {p.compania} <span className="tenue">· {RAMO[p.ramo] ?? p.ramo}</span>
-      </h3>
-
-      {/* ARRIBA DEL TODO y antes que ningún dato: un recibo devuelto es lo
-          único de esta tarjeta que puede costarle la cobertura. */}
-      <AvisoReciboDevuelto p={p} />
-
-      {cabecera.length > 0 && <div className="linea">{cabecera.join(' · ')}</div>}
-
-      {/* Sin vencimiento no hay calendario: se dice, porque el silencio aquí se
-          lee como «ya te avisaremos» y no vamos a poder. */}
-      {p.fechaVencimiento === null && (
-        <div className="linea dicho ojo">
-          No sabemos cuándo vence
-          {p.vigencia === 'pendiente'
-            ? ': no podemos avisarte ni confirmarte que siga en vigor.'
-            : ', así que no podemos avisarte.'}
-        </div>
-      )}
-
-      {/* `prima === null` = el nivel no la enseña → se oculta.
-          `prima.anual === null` = la compañía no la ha informado → tampoco
-          cambia nada que el cliente pueda hacer, así que se oculta también.
-          Lo que NUNCA sale es un `0,00€` en lugar de un hueco. */}
-      {/* Lo que el cliente PAGA es la bruta (neta + impuestos y recargos = el
-          recibo). Con solo la neta al lado de «tu próximo recibo: 73,39€» la
-          pantalla parecía no saber sumar (captura de Alberto, 03/09/2026). Si la
-          bruta no está, se enseña la neta y se dice que lo es. */}
-      {p.prima !== null && (p.prima.bruta !== null || p.prima.anual !== null) && (
-        <div className="linea">
-          {p.prima.bruta !== null ? (
-            <>
-              Prima anual <strong>{eur(p.prima.bruta)}</strong>
-              <span className="tenue"> (impuestos incluidos)</span>
-            </>
-          ) : (
-            <>
-              Prima neta anual <strong>{eur(p.prima.anual as number)}</strong>
-              <span className="tenue"> (sin impuestos)</span>
-            </>
-          )}
-          {p.prima.fraccionamiento ? ` · ${p.prima.fraccionamiento}` : ''}
-        </div>
-      )}
-
-      <Recibos p={p} />
-      <Coberturas p={p} />
-
-      <div className="chips">
-        <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>{ESTADO[p.estado] ?? p.estado}</span>
-        {!p.confirmadaCima && <span className="chip aviso">pendiente de confirmación por la compañía</span>}
-        {/* Sin tramitador ni teléfono de gestión: el punto de contacto es la
-            correduría (regla de visibilidad, `CLAUDE.md` de la app). */}
-        {/* `null` = tu nivel no llega a los siniestros de esta póliza; NO se
-            pinta nada, porque un chip que dijera «no visible» le contaría a un
-            tercero que hay algo que mirar. `[]` = no hay ninguno abierto, y
-            tampoco se pinta: la ausencia de chip ya lo dice. */}
-        {(p.siniestrosAbiertos ?? []).map((s) => (
-          <span key={s.id} className="chip aviso">
-            siniestro {s.estado === 'en_tramitacion' ? 'en tramitación' : 'abierto'}
-            {s.referencia ? ` ${s.referencia}` : ''}
-          </span>
-        ))}
-      </div>
-    </li>
-  )
-}
-
-/**
- * 🚨 EL aviso de la pantalla: `devueltos > 0` significa que la compañía intentó
- * cobrar y NO pudo. Es lo único que puede dejar a esta persona sin cobertura
- * sin que ella se entere, así que va arriba y con una acción al lado.
- *
- * 🚨 Y la línea que no se puede cruzar: un recibo **devuelto** no es un recibo
- * **pendiente/al cobro**. El pendiente está emitido y aún sin cargar — es
- * información neutra («tu próximo recibo») y vive en `<Recibos>`, jamás aquí.
- * Pintar un pendiente como impago acusa de moroso a quien está al día; es
- * exactamente el fallo que se corrigió en `/correduria` (PR #2179).
- *
- * No se pinta ningún importe: `RecibosPortal` da el NÚMERO de devueltos, no su
- * cuantía, y el importe del próximo al cobro es de otro recibo. Poner ahí una
- * cifra que no es la del devuelto sería inventarla.
- */
-function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
-  const devueltos = p.recibos?.devueltos ?? 0
-  if (devueltos === 0) return null
-
-  const identifica = p.numeroPoliza ? `póliza ${p.numeroPoliza}` : `póliza de ${p.compania} (${RAMO[p.ramo] ?? p.ramo})`
-  const asunto = `Recibo devuelto · ${identifica}`
-  const cuerpo = [
-    'Hola:',
-    '',
-    `En el portal me aparece ${devueltos === 1 ? 'un recibo devuelto' : `${devueltos} recibos devueltos`} de mi ${identifica} con ${p.compania}.`,
-    'Quiero regularizarlo. ¿Me decís cómo?',
-    '',
-    'Gracias.',
-  ].join('\n')
-  const mailto = `mailto:${CORREO_CORREDURIA}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`
-
-  return (
-    <div className="aviso-linea">
-      <strong>
-        {devueltos === 1 ? 'Tienes un recibo devuelto' : `Tienes ${devueltos} recibos devueltos`}
-      </strong>{' '}
-      — el cobro se intentó y no salió. Mientras no se regularice, la compañía puede dejar de cubrirte.
-      <a className="boton" href={mailto}>
-        Avisar a la correduría
-      </a>
-    </div>
-  )
-}
-
-/**
- * Recibos, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`.
- *
- * - `recibos === null` → el nivel de esta persona no enseña recibos. No es una
- *   ausencia del dato: se oculta y no se menciona.
- * - `total === 0` → **la compañía no ha informado recibos**, que NO es «estás al
- *   corriente». Esa frase se dice entera porque el silencio sí se leería así.
- */
-function Recibos({ p }: { p: PolizaPortal }) {
-  if (p.recibos === null) return null
-  const r = p.recibos
-  if (r.total === 0) {
-    return <div className="linea dicho">Tu compañía no nos ha informado de ningún recibo.</div>
-  }
-
-  const partes: string[] = []
-  if (r.proximoAlCobro) {
-    // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
-    // se cuenta lo que se sabe (la fecha) y se calla lo que no.
-    const cuando = fechaEs(r.proximoAlCobro.fechaVencimiento)
-    const importe = r.proximoAlCobro.importe
-    if (importe !== null) partes.push(`Tu próximo recibo: ${eur(importe)}${cuando ? ` el ${cuando}` : ''}`)
-    else if (cuando) partes.push(`Tu próximo recibo vence el ${cuando}`)
-  }
-  if (r.ultimoCobrado) {
-    const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
-    const importe = r.ultimoCobrado.importe
-    if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
-    else if (cuando) partes.push(`último cobrado el ${cuando}`)
-  }
-  // Ni un solo dato que enseñar (recibos sin importe ni fecha): no se pinta una
-  // línea vacía, y tampoco «ningún recibo al cobro», que se leería como «nada
-  // que pagar» sin que nadie lo haya comprobado.
-  if (partes.length === 0) return null
-  return <div className="linea">{partes.join(' · ')}</div>
-}
-
-/**
- * Coberturas. `null` = el nivel no las enseña (se oculta); `total === 0` = **no
- * nos consta el detalle**, que NO es «no tienes coberturas»: decirle eso a
- * alguien que sí las tiene es empujarle a contratar lo que ya paga.
- */
-function Coberturas({ p }: { p: PolizaPortal }) {
-  if (p.coberturas === null) return null
-  const c = p.coberturas
-  if (c.total === 0) return <div className="linea dicho">No nos consta el detalle de coberturas.</div>
-  // `total > 0` con la lista vacía = las coberturas vienen sin descripción ni
-  // código. Se dice cuántas hay, que es lo único cierto.
-  if (c.lista.length === 0) {
-    return <div className="linea">{c.total === 1 ? '1 cobertura informada' : `${c.total} coberturas informadas`}</div>
+  if (titular.polizas.length === 0) {
+    return (
+      <p className="tenue" style={{ margin: '0 0 12px', fontSize: 14 }}>
+        {titular.nombre}: sin pólizas vivas.
+      </p>
+    )
   }
   return (
-    <div className="linea">
-      {c.lista.join(' · ')}
-      {c.total > c.lista.length && ` y ${c.total - c.lista.length} más`}
-    </div>
+    <ul className="polizas">
+      {titular.polizas.map((p) => (
+        <FilaPoliza key={p.id} p={p} deOtro={propia ? null : titular.nombre} />
+      ))}
+    </ul>
   )
 }
 
@@ -484,9 +289,14 @@ function Coberturas({ p }: { p: PolizaPortal }) {
  * sin el nombre, dos pólizas de auto de la misma compañía son indistinguibles y
  * el parte acaba colgado de la del padre en vez de la del hijo.
  */
-function opcionCartera(p: PolizaPortal, titular?: string): PolizaOpcionParte {
+function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titular?: string): PolizaOpcionParte {
   return {
     valor: `cartera:${p.id}`,
+    // A quién acude el asegurado de ESA compañía. Viaja pegado a la opción para
+    // que la pantalla pueda cambiarlo al cambiar de póliza sin volver al
+    // servidor: el momento en el que alguien abre esto es justo el peor para
+    // esperar a una petición.
+    canal: canalDeCompania(p.compania, companias),
     etiqueta: [
       p.compania,
       RAMO[p.ramo] ?? p.ramo,

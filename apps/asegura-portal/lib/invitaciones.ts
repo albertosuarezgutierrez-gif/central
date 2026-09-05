@@ -487,7 +487,10 @@ async function tieneAutorizacionViva(d: {
     const hashCiego = computeEmailLookupHash(d.email)
     const [directas, secundarias] = await Promise.all([
       prisma.cliente.findMany({
-        where: { emailLookupHash: hashCiego, mergedIntoClienteId: null },
+        // Defensivo (05/09/2026): las fichas descartadas (`activo = false`) no
+        // tienen email hoy, así que por aquí no puede salir ninguna — el filtro está
+        // para que siga siendo verdad, no porque hubiera un fallo.
+        where: { emailLookupHash: hashCiego, mergedIntoClienteId: null, activo: true },
         select: { id: true, correduriaId: true },
       }),
       prisma.clienteEmail.findMany({ where: { emailLookupHash: hashCiego }, select: { clienteId: true } }),
@@ -501,7 +504,8 @@ async function tieneAutorizacionViva(d: {
     const idsSecundarios = [...new Set(secundarias.map((e) => e.clienteId))].filter((id) => !yaPrincipales.has(id))
     if (idsSecundarios.length > 0) {
       const vivas = await prisma.cliente.findMany({
-        where: { id: { in: idsSecundarios }, mergedIntoClienteId: null },
+        // Defensivo, igual que arriba: una ficha descartada no tiene email.
+        where: { id: { in: idsSecundarios }, mergedIntoClienteId: null, activo: true },
         select: { id: true, correduriaId: true },
       })
       for (const c of vivas) candidatos.push({ clienteId: c.id, correduriaId: c.correduriaId, principal: false })

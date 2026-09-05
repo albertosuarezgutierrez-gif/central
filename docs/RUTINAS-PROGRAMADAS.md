@@ -317,7 +317,7 @@ caza lo que las sesiones del día no anotaron a mano.
 |---|---|
 | **Cuándo** | Mensual, **día 5**, ~04:00 CEST (el 15 lo ocupa `github-vigia`) |
 | **Prompt** | `Ejecuta la skill conectores-vigia` |
-| **MCPs / envs** | **Probablemente NINGÚN conector.** `SearchMcpRegistry`/`ListConnectors` parecen nativas del harness — la primera pasada lo verifica y lo deja escrito. **GitHub es nativo** al vincular el repo. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos). |
+| **MCPs / envs** | **CONFIRMADO (05/09/2026): NINGÚN conector.** `SearchMcpRegistry`/`ListConnectors` son nativas del harness (funcionan sin conector adjunto); `ListConnectors` devolvió `enabledInChat:false` en los ~30 conectores de la cuenta, y una búsqueda de herramientas `mcp__ibkr__*`/`mcp__booking__*` por nombre no encontró nada — o sea, el Paso 3 (canario) no puede ejecutarse desde esta rutina tal como está montada. **GitHub es nativo** al vincular el repo. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos). |
 | **Qué hace** | Cruza `docs/HUECOS-ABIERTOS.md` contra el registro de conectores; inventaría las APIs externas del repo buscando **fallback**; **canario** con llamada real sobre los endpoints de los que dependen las rutinas vivas; higiene de los ya conectados (sin uso, `installState: unknown`, con herramientas de escritura). |
 | **Resultado** | `docs/VIGIA-CONECTORES.md` siempre, **con fecha de pasada aunque no haya hallazgos** (sin fecha no se distingue «pasada limpia» de «rutina muerta»). Telegram si hay hallazgo. PR draft `claude/conectores-vigia-<fecha>` si hay trabajo que dejar hecho. Sin hallazgos → sin ruido. |
 

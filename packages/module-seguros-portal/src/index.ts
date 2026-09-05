@@ -1,4 +1,9 @@
 export { NIVELES, camposVisibles } from './acceso.ts'
+// Qué COSA está asegurada (el coche, el piso). Lee `bien-asegurado.ts` antes de
+// tocarlo: `cosa` y `ubicacion` salen separados porque la dirección de un hogar
+// es un dato de la PERSONA y no la ve un tercero.
+export { describirBien, bienTieneAlgo, BIEN_VACIO } from './bien-asegurado.ts'
+export type { BienAsegurado } from './bien-asegurado.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
 export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
 export type { Procedencia } from './procedencia.ts'
@@ -131,3 +136,72 @@ export {
   normalizarMensajeInvitacion,
 } from './invitacion.ts'
 export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './invitacion.ts'
+
+// A quién llama el cliente cuando acaba de pasarle algo. Lee su cabecera antes
+// de tocarlo: sus cuatro prohibiciones (no decir «no tiene», no decir «24 h»,
+// no pintar un WhatsApp como un teléfono, no cruzar de forma aproximada) son
+// las que acaban delante de alguien que acaba de tener un golpe.
+export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
+export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
+export { canalesDeLasPolizas } from './canal-compania.ts'
+// La acreditación de que se enseñó la información precontractual del mediador
+// (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
+// existen en la BD pero NO se escriben: no hay pantalla que los pida.
+export {
+  TIPOS_CONSENTIMIENTO,
+  TIPOS_QUE_SE_REGISTRAN,
+  USER_AGENT_MAX,
+  necesitaRegistro,
+  normalizarIp,
+  normalizarUserAgent,
+} from './consentimiento.ts'
+export type { TipoConsentimiento, ConsentimientoGuardado } from './consentimiento.ts'
+
+// La solicitud de SUPRESIÓN (art. 17). Lee su cabecera antes de tocarla: este
+// módulo NO borra nada, y esa es la mitad del diseño — el art. 17.3.b y el
+// 17.3.e excluyen la supresión cuando hay deber legal de conservar o hace falta
+// para defender reclamaciones, y una correduría tiene los dos.
+export {
+  ESTADOS_SUPRESION,
+  DIAS_RESPUESTA,
+  DIAS_PRORROGA,
+  DIAS_AVISO,
+  ALCANCE_SUPRESION,
+  YA_PENDIENTE,
+  fechaLimite,
+  estadoPlazo,
+  diasRestantes,
+  loQueSeSuprime,
+  loQueSeConserva,
+  puedeRegistrar,
+} from './supresion.ts'
+export type { EstadoSupresion, EstadoPlazo, SolicitudSupresion, Alcance as AlcanceSupresion } from './supresion.ts'
+export {
+  VISTAS_BOVEDA,
+  VISTA_BOVEDA_POR_DEFECTO,
+  vistaDeBoveda,
+  pestanasPortal,
+  hrefDeVista,
+} from './vista-portal.ts'
+export type { VistaBoveda, PestanaPortal } from './vista-portal.ts'
+export {
+  ESTADOS_SINIESTRO,
+  siniestroAbierto,
+  etiquetaEstadoSiniestro,
+  tonoEstadoSiniestro,
+  ordenarHistorialSiniestros,
+  resumirHistorialSiniestros,
+} from './siniestro-historial.ts'
+export type { EstadoSiniestro, SiniestroHistorial } from './siniestro-historial.ts'
+export {
+  SITUACIONES_RECIBO,
+  reciboAnulado,
+  reciboAlCobro,
+  etiquetaSituacionRecibo,
+  tonoSituacionRecibo,
+  fechaReciboFiable,
+  ordenarRecibos,
+  estadoRecibos,
+  resumirRecibos,
+} from './recibo-historial.ts'
+export type { SituacionRecibo, ReciboHistorial, ResumenRecibos } from './recibo-historial.ts'

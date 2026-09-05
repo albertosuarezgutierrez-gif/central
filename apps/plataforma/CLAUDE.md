@@ -1565,6 +1565,33 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `POST /api/operador/cliente/historial`). Tres estados internos (nueva · existente · no registrado); al
   usuario `{ok:true}` en los dos primeros y 502 en el tercero — y en el tercero el Telegram lleva los datos
   del formulario porque es el único rastro. Reglas puras y tests en `lib/leads-web.ts`.
+- **🗑️ Supresiones RGPD — el reloj del art. 12.3 se contesta AQUÍ (05/09/2026).** Desde el bloque legal
+  0.5, un cliente puede pedir la supresión de sus datos desde `apps/asegura-portal` (`/boveda`). Eso
+  arranca un plazo legal de **30 días** (prorrogable a 60 **motivando la prórroga**, art. 12.3 RGPD), y
+  hasta este PR **la petición se registraba y no salía en ninguna pantalla que Alberto abra**: el puerto
+  `/api/operador/supresiones` de asegura existía sin consumidor, o sea un reloj legal corriendo a ciegas.
+  Es exactamente la regla global «un aviso que sale por un canal que esa persona no abre es un aviso que
+  no existe», aplicada a un plazo con sanción detrás.
+  - Bloque **`Supresiones.tsx`** en la sección **Hoy** de `/correduria` (junto a partes y retención), con
+    `destacado` **rojo si hay alguna vencida** y ámbar si solo hay pendientes. Contesta (resuelta total /
+    parcial / denegada), y la **prórroga es un formulario aparte que exige motivo** — sin motivo el botón
+    no se habilita, porque una prórroga inmotivada no la ampara el art. 12.3.
+  - **Lectura pura y testeada** en `lib/supresiones-asegura.ts` + `test/regression-supresiones-asegura.test.ts`
+    (17 cepos). Los cuatro «no lo sé» que NO se colapsan: un estado o un plazo que el módulo no conoce
+    devuelve **`null`** (no un valor tranquilizador), **ningún fallo de lectura se convierte en lista
+    vacía** (la pantalla pinta el aviso en vez de callar), las filas ilegibles **se cuentan**, y el
+    contador de la pestaña es `null` —no `0`— cuando no se pudo leer, para que `agregarContadores` pinte
+    `!` en vez de esconder trabajo.
+  - `vencidas()` es el **único** número que autoriza a decir «plazo incumplido»; `pendientes()` es todo lo
+    que no está resuelto. Están separados a propósito: mezclarlos convertiría «tienes trabajo» en «has
+    incumplido la ley».
+  - El **`actor` lo pone el servidor** (`session.email`) y va el ÚLTIMO en el cuerpo que se reenvía al
+    puerto: un cliente que mandara su propio `actor` no puede firmar la respuesta con otro nombre. Mismo
+    patrón que `/api/correduria/partes`. Esta app **no toca la BD de la correduría**: reenvía con
+    `ASEGURA_OPERADOR_SECRET` y devuelve el mismo status y json del puerto.
+  - El vocabulario (estados y plazos) sale de `@central/module-seguros-portal`, no se reescribe aquí: con
+    una lista por app, el día que se añada un estado la pantalla lo pinta como desconocido y el corredor
+    deja de ver una petición **sin un solo error**. Hay cepo que compara ambas listas.
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no

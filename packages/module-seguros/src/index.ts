@@ -45,11 +45,22 @@ export {
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
+  DIAS_RECORDATORIO_INGESTA,
+  decidirAvisoIngesta,
+  repartirHuerfanas,
+  textoHuerfanas,
+  TOPE_POLIZAS_TELEGRAM,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
   type FicheroEnCuarentena,
   type EntradaRechazada,
+  type MotivoAviso,
+  type DecisionAviso,
+  type PolizaHuerfana,
+  type PolizaEnCartera,
+  type GrupoHuerfanas,
+  type RepartoHuerfanas,
 } from './ingesta.ts'
 export {
   veredictoEntidad,
@@ -246,6 +257,21 @@ export {
   type EstadoClienteDerivado,
 } from './estado-cliente.ts'
 export {
+  combinarPersonaContacto,
+  textoPersonaContacto,
+  tiposContactoSugeridos,
+  FUENTE_PERSONA_CONTACTO,
+  type PasoEscritura,
+  type ResultadoPersonaContacto,
+} from './persona-contacto.ts'
+export {
+  unificarPersonas,
+  saleEnPolizas,
+  type ListaPersonasFicha,
+  type PersonaFicha,
+  type VinculoUnible,
+} from './personas-ficha.ts'
+export {
   normalizarNumeroPoliza,
   polizasDuplicadas,
   type PolizaParaDuplicados,
@@ -361,10 +387,12 @@ export {
 
 export {
   planBackfillDni,
+  tokensNombre,
   type FichaDni,
   type Destino,
   type FilaPlan,
   type GrupoChoque,
+  type GrupoCompartido,
   type PlanBackfillDni,
 } from './backfill-dni.ts'
 
@@ -393,3 +421,53 @@ export {
   type PuntoPrecontractual,
   type IdPuntoPrecontractual,
 } from './mediador.ts'
+
+export {
+  TOPE_AVISO_SINIESTROS,
+  decidirSiniestrosNuevos,
+  detalleSiniestros,
+  textoAvisoSiniestros,
+  serializarMarca,
+  leerMarca,
+  type SiniestroEntrante,
+  type MarcaSiniestros,
+  type DecisionSiniestros,
+} from './siniestro-nuevo.ts'
+
+// El vigía de los partes del portal que nadie ha abierto todavía en la
+// compañía. Lee su cabecera: el corte es `comunicado`, y `recibido` —que
+// parece atendido— sigue dentro a propósito.
+export {
+  TOPE_AVISO_PARTES,
+  firmaPartes,
+  ordenarPorUrgencia,
+  partesPendientes,
+  textoAvisoPartes,
+  textoUrgencia,
+  urgenciaParte,
+} from './parte-vigilancia.ts'
+export type { ParteVigilado, UrgenciaParte, AvisoPartes } from './parte-vigilancia.ts'
+
+// El paquete del derecho de acceso (art. 15) y portabilidad (art. 20). Su
+// cabecera explica por qué un volcado de tablas NO es un export del art. 15 y
+// por qué solo lo aportado por la persona es portable.
+export {
+  CATEGORIAS_EXPORT,
+  FICHA_CATEGORIA,
+  INFORMACION_ART15,
+  MOTIVO_TEXTO,
+  construirExport,
+  esPortable,
+} from './export-rgpd.ts'
+export type {
+  CategoriaExport,
+  OrigenDatos,
+  BloqueExport,
+  MotivoAusencia,
+  InformacionArt15,
+  ExportRgpd,
+  EntradaExport,
+} from './export-rgpd.ts'
+
+export { ordenPolizasFicha } from './orden-polizas.ts'
+export type { PolizaOrdenable } from './orden-polizas.ts'

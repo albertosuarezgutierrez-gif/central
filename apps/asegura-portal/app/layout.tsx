@@ -2,8 +2,10 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 
 import './globals.css'
 import type { ReactNode } from 'react'
+import { InterruptorTema } from './InterruptorTema'
 import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
+import { SCRIPT_TEMA } from './tema'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
 // compilado de la app de Manuel (ver `packages/brand/src/marcas/asegura.ts`):
@@ -14,8 +16,13 @@ export const metadata = { title: 'Mis seguros — Grupo ASegura' }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
+        {/* Antes que NADA: fija el tema leyendo la preferencia guardada, de
+            forma síncrona, antes del primer pintado. Si esto se moviera más
+            abajo o se volviera `defer`, quien tiene el tema oscuro vería un
+            destello blanco a pantalla completa en cada carga. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
         {MARCA.tipografia.googleFontsHref && (
           <>
             <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -42,6 +49,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </span>
           <span className="marca-nombre">{MARCA.logos.wordmark}</span>
           <span className="marca-coletilla">Correduría de seguros</span>
+          {/* El interruptor va en la barra y no en un menú: es la única acción
+              de la cabecera, y esconder una sola cosa detrás de un menú cuesta
+              un toque más y un componente más. */}
+          <InterruptorTema />
         </header>
         {children}
         {/* En el layout raíz y no en el del portal: quien todavía no ha metido

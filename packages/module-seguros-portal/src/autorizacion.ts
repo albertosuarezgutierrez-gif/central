@@ -164,6 +164,12 @@ const NUNCA_A_UN_TERCERO = {
   // enseñando al dejar ver sus seguros. Ni siquiera con `ver_economico`, que
   // abre lo ECONÓMICO de la póliza y no los sucesos de quien la tiene.
   siniestros: false,
+  // La dirección de un hogar asegurado es la casa donde duerme el otorgante.
+  // Es un dato de la PERSONA, no del contrato: quien recibe «ver mis seguros»
+  // no está pidiendo —ni cree estar dando— dónde vive. Fuera hasta con
+  // `ver_economico`. Cuando quien cede es una SOCIEDAD esto no aplica: la
+  // dirección de una nave es un dato de la empresa (ver `NUNCA_NI_REPRESENTANDO`).
+  direccionRiesgo: false,
   abrirParte: false,
   crearPeticiones: false,
   autorizarTerceros: false,

@@ -683,6 +683,23 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   contrato de un cliente. Cuando exista entorno de pruebas: transporte multipart nuevo, candado
   `submit_in_flight_at`, y ampliar la excepción del guardián de gasto (hoy tumba cualquier `metodo: 'POST'`
   fuera de `cotizar.ts`).
+- **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
+  de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
+  `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo
+  legal de un mes corriendo por debajo** (art. 12.3) — el art. 17.3.b y el 17.3.e excluyen la supresión
+  cuando hay deber de conservar o hace falta defender reclamaciones, y la correduría tiene los dos.
+  `lib/supresiones.ts`; reglas puras y plazos en `@central/module-seguros-portal` (`supresion.ts`).
+  Este puerto **escribe**, a diferencia del resto de modelos `portal_*` del schema de esta app, que
+  son de solo lectura: resolver una solicitud es trabajo del corredor, no del portal.
+  - **Ordena el RELOJ, no la llegada** (vencido → urgente → en plazo), y `resumen.vencidas` va aparte:
+    es el único número que autoriza a decir que hay un plazo incumplido.
+  - 🚨 **Contestar EXIGE texto** (422 `sin_respuesta`). El art. 12.4 obliga a motivar la negativa
+    aunque sea parcial —y la parcial es el caso NORMAL aquí—; marcarla resuelta sin decir qué se
+    contestó apagaría el reloj sin acreditar nada, o sea, volvería invisible el incumplimiento justo
+    al producirse. La BD lo repite con su CHECK, porque un cepo solo en el código no protege a un
+    `UPDATE` escrito a mano. Prorrogar sin motivo tampoco se puede (422 `sin_motivo_prorroga`).
+  - Sin este puerto la solicitud viviría solo en la BD del portal, que es una pantalla que Alberto no
+    abre. Detalle en `apps/asegura-portal/CLAUDE.md`.
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
@@ -817,6 +834,65 @@ en cada GET/POST; `resumen` + `choques` como listas de uuid, sin DNI ni hash ni 
 `2026-09-04_backfill_dni_plan.sql`). Es el puente entre el paso 1 y el 2: los grupos de mismo DNI solo
 se pueden calcular con la clave (aquí) y el lote de fusión se escribe desde la BD; antes se perdían al
 cerrar la respuesta. Abrir `/correduria/mantenimiento` en plataforma basta para refrescarla.
+
+✅ **PASO 3 EJECUTABLE DESDE LA PANTALLA (05/09/2026).** Hasta ese día el `POST` existía y **no había
+botón en ninguna parte**: `/correduria/mantenimiento` decía «se lanza desde asegura», que en la
+práctica era un `curl` con `ASEGURA_OPERADOR_SECRET` a mano. O sea, «haz el backfill del DNI» no lo
+podía hacer nadie. Ahora hay botón (`EscribirIndiceDni.tsx` → `POST /api/correduria/backfill-dni` →
+el puerto), en **tandas** (`{limite:N}`; descifrar 32.000 DNI ya consume parte de los 300 s) y con
+`restantes` para saber si hay que volver a pulsar. Es idempotente: el `UPDATE` lleva
+`dni_lookup_hash is null`.
+⚠️ **Y se corrigió una frase falsa que era la que bloqueaba todo:** «no hay botón mientras queden
+choques porque la escritura reventaría a la mitad». **No revienta.** El plan clasifica cada ficha
+antes de tocar nada y sólo se escriben las `rellenable`; la segunda ficha de un DNI repetido ni
+llega al `UPDATE`. Fusionar primero sigue siendo mejor (cada fusión = un hash más escribible), pero
+es cobertura, no un requisito. La escritura va en `UPDATE ... FROM (VALUES ...)` por tandas de 500,
+con reintento fila a fila si una tanda cae, para saber CUÁL falló.
+
+🃏 **EL DNI CENTINELA (05/09/2026) — un valor de cajón que SÍ parece un documento.** Al mirar los 18
+grupos de choque que quedaban tras el lote 7, uno no se parecía a los demás: **20 fichas comparten un
+mismo DNI con 20 nombres sin relación** («alberto suárez gutiérrez», «alejandro saez caro», «chema
+14134», «eva 12895»…) y **19 correos distintos**; una está en cartera viva. Es el mismo documento
+tecleado en la ficha de veinte personas, y `looksLikeDniNieCif` no lo filtra porque tiene la letra
+correcta. 🚨 **Y el índice único no protege de esto**: sólo cubre `tipo='cliente'`, y **14.990 de las
+15.092 fichas con DNI y sin hash son `lead`** — el hash se habría escrito sin que nada fallara, y a
+partir de ahí una búsqueda por ese DNI devolvería veinte personas y [Probable] la ingesta de CIMA,
+que engancha la póliza a la ficha POR ese hash, podría colgarle una póliza viva a quien no es.
+- **Guardián** en la pieza pura (destino `compartido`): ≥3 nombres distintos bajo el mismo DNI **y**
+  ningún token de nombre común a todas. Esas fichas **no se escriben nunca**, `lead` incluidos, y no
+  son candidatas a fusión: no hay a quién fusionar, hay un dato que corregir.
+- **Con DOS nombres NO se activa a propósito.** Ahí «Adela Gutiérrez Alcalá» / «Adela Alcalá» (la
+  misma persona, fusionada en el lote 7) y un DNI mal tecleado son indistinguibles; esos siguen
+  siendo `choca`, que es lo que los pone delante de una persona. El guardián caza el centinela, **no
+  todos los DNI equivocados**.
+- La foto guarda ahora `compartidos` (`2026-09-05_backfill_dni_plan_compartidos.sql`, aplicada):
+  desde SQL no se pueden recalcular sin las claves PII. ⚠️ `[]` en una foto anterior al 05/09/2026
+  significa «no se calcularon», no «no hay» — mírese `calculado_en`.
+
+📋 **Estado de los 620 grupos de choque (medido 05/09/2026):** **602 los fusionó el lote 7** el 04/09
+a las 21:16-21:19 (auditados: 572 con el nombre idéntico, 30 con variantes que comparten tokens —
+apellido suelto, erratas, el código pegado—; ninguna fusión de dos personas distintas). Quedan **18**:
+1 es el centinela, 2 son los pares con DNI contradictorio que el propio lote 7 excluyó con los nombres
+delante (`249` Antonio Manuel Mejías / Yolanda Ríos, `366` Catalina Verdugo / Fernando Martín) y **15
+son grupos de TRES o más fichas**, que la guarda `count(*) = 2` del lote 7 salta a propósito: tres
+fichas con el mismo DNI las decide una persona, no un bucle.
+
+✅ **Y esa persona los decidió: lote 10 (05/09/2026, `2026-09-05_fusion_mismo_dni_lote10.sql`,
+`fusion-dni-lote10-2026-09-05`).** Los 18 se pusieron delante de Alberto con nombre, teléfono y
+pólizas; aprobó 14 grupos completos + 1 parcial. Ejecutado a las 12:46 UTC: **15 fusiones, 33
+lápidas, 15 supervivientes, y ninguna póliza perdida** (70 antes, 70 después). Dos cambios de motor
+respecto al lote 7: fusiona grupos de **N** (elige un superviviente y le funde las demás de una en
+una, con el mismo orden de desempate) y **los uuid van escritos a mano en el lote, no leídos de la
+foto** — la foto se recalcula en cada visita a `/correduria/mantenimiento`, así que el ordinal de un
+grupo no es estable y solo los ids garantizan que lo ejecutado es lo aprobado.
+🚫 **Los 3 que NO se tocaron son la parte que importa:** el 12 (Antonio Manuel Mejías Heredia /
+Yolanda Ríos Vázquez) y el 15 (Fernando Martín Verdugo / Catalina Verdugo García) son **dos personas
+distintas** — el identificador coincide y el DATO está mal en una de las dos—, y el 10 es el
+centinela de 20 fichas. Fuera también la ficha de «Elisa De paz campo», que compartía grupo con dos
+«Juan Antonio Romero Lopez» sin tener nada que ver: ese grupo entró **parcial**.
+🔎 **Y un hallazgo que ningún criterio de nombre habría encontrado:** «Gerente Chapisa (sin
+apellidos)» no es una persona sin nombre — es **Francisco Javier Zamora Flores**, mismo DNI y mismo
+teléfono. Un cargo tecleado donde iba el nombre.
 
 🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ✅ EJECUTADO:
 el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un

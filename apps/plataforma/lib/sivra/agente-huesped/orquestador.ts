@@ -3,6 +3,8 @@ import { construirContexto } from './contexto'
 import { detectLang, detectCategory, tipoHueco } from './reglas'
 import { decidir, type Decision } from './decidir'
 import { decidirAutoEnvio } from './auto'
+import { esModoNoche } from './noche'
+import { acusarNocturno } from './noche-guardia'
 import { aprendizajesRelevantes, hechosRelevantes } from './similitud'
 import { recomendar } from './recomendar'
 import { enviarAlHuesped } from './enviar'
@@ -193,6 +195,13 @@ export async function procesarMensajeHuesped(
 
     await proponerPorTelegram(ctx, pregunta, dec)
     await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: dec.needs_human, auto_sent: false, edited: false })
+    // 4) MODO NOCHE (05/09/2026). Fuera del horario de atención, el borrador se queda en Telegram
+    //    hasta que Alberto lo vea — y si escala a las 23:30, el huésped no recibe NADA hasta las
+    //    09:00. Ese silencio es indistinguible, desde el código, de una conversación atendida. El
+    //    modo noche NO redacta ni auto-envía respuestas: acusa recibo y, si es urgencia de acceso o
+    //    avería, despierta a Alberto (ver `noche.ts`). Va DESPUÉS de proponer porque el barrido del
+    //    último recurso se apoya en la fila de `mensajes_pendientes_tg` que crea la propuesta.
+    if (esModoNoche()) await acusarNocturno(ctx, pregunta).catch(() => {})
     return { accion: 'propuesto_telegram' }
   } catch (e) {
     // Falló a mitad (IA caída, etc.): liberar el reclamo para no perder el mensaje (se reintenta).

@@ -98,9 +98,12 @@
   `canal_no_disponible` (503) NO es «el envío falló» (502). Tablas `portal_*` en el schema `seguros`.
   El aislamiento **no lo da RLS sino el código**, y lo vigila `test/regression-portal-aislamiento.test.ts`.
   Tiene `CLAUDE.md` propio desde el 02/09/2026 — ver `apps/asegura-portal/CLAUDE.md`.
-- **`apps/asegura-web`** — **web pública de marketing** de Grupo ASegura (04/09/2026), destinada al
-  **apex `grupoasegura.com` + `www`**, que estaban LIBRES: `app.grupoasegura.com` sirve el CRM de
-  Manuel y no se toca. Tercera app de la correduría y la única que ve alguien que aún no es cliente
+- **`apps/asegura-web`** — **web pública de marketing** de Grupo ASegura (04/09/2026). **Sirve en el
+  apex `grupoasegura.es` + `www` desde el 05/09/2026** (proyecto Vercel `asegura-web`, atado por Alberto
+  con Claude en Chrome); `app.grupoasegura.com` sirve el CRM de Manuel y no se toca. ⚠️ El `.com`
+  NO es suyo: su apex apunta a un parking de IONOS (`217.160.0.254`), y hasta ese día la app lo
+  llevaba como `SITIO_URL` por defecto — canonical y sitemap hacia un dominio vacío. Ahora el
+  defecto es el `.es` (`lib/sitio.ts`). Tercera app de la correduría y la única que ve alguien que aún no es cliente
   (`asegura` = corredor, `asegura-portal` = asegurado, `asegura-web` = quien todavía no lo es).
   ⚠️ **DESPLEGADA NO ESTÁ, y desde el 05/09/2026 hay un solape que decidir:** ese día
   `grupoasegura.es` (el `.es`, no el `.com`) pasó a servir la web del repo **`asegura`** de Manuel —
@@ -120,6 +123,21 @@
   `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
   divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
   silencio). `HORARIO` y el teléfono están **ausentes a propósito** mientras no se confirmen.
+  🔘 **Un solo acceso, y es el del CLIENTE (05/09/2026).** Botón «Área de clientes» en la cabecera y
+  «Ya soy cliente · Mis seguros» junto al CTA de venta, los dos a `PORTAL_URL` (`lib/sitio.ts`, env
+  `NEXT_PUBLIC_PORTAL_URL`; por defecto `asegura-portal.vercel.app`, que es donde el portal sirve HOY —
+  cuando `clientes.grupoasegura.es` esté repuntado a Vercel, se cambia la env y listo). **NO hay «acceso
+  corredor» a propósito**: Alberto entra por plataforma. Lo vigila `lib/portal.test.ts`, que lee el
+  fuente: el botón montado, y ningún `href` ni texto hacia `app.grupoasegura.com`, `/correduria`,
+  `/operador`, `/login`, «Acceso correduría», «Únete gratis» o «Ya tengo cuenta» (el vocabulario de la
+  web de Manuel). Cabecera en DOS filas a todo ancho (marca + botón / nav), medida con Playwright a
+  320-360-1024: sin desbordar y sin pisar la marca.
+  🕰️ **Hasta la tarde del 05/09 lo que Alberto veía en `grupoasegura.es` era el CRM de Manuel**, no
+  esta app: el apex `.es` y `www` estaban atados al proyecto `asegura` y esta app no tenía dominio. Se
+  arregló en paneles, no en código: `.es`+`www` → `asegura-web`; `clientes.grupoasegura.es` →
+  `asegura-portal` (DNS en IONOS pendiente de repuntar); `app.grupoasegura.com` sigue en `asegura`
+  (ingesta de CIMA). ⚠️ `clientes` tiene **MX de IONOS**: un CNAME lo mataría, así que ahí va un
+  registro **A** a Vercel (el mismo `216.150.1.1` del apex), no el CNAME que sugiere el panel.
   Plan y diagnóstico en `docs/ASEGURA-MARKETING-PLAN.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
@@ -560,8 +578,51 @@ Esto **confirma la séptima y contradice la octava**: des-draftear a secas no re
 llegaron en draft, solo arma la rama. Las dos siguen medidas, así que la conclusión honesta sigue
 siendo que **el des-draft a veces basta y a veces no** — pero el orden de abajo funcionó en las nueve.
 
+🔬 **DÉCIMA medición (05/09/2026, PR #2341) — y es el A/B más LIMPIO de toda esta sección, porque
+mata lo que quedaba de las explicaciones por sujeto.** Abierto **en draft por la herramienta MCP**
+→ los 12 requeridos arrancan **al instante** (10:14:10), sin des-draftear, sin merge de `main` y sin
+segundo push; los 19 en verde antes de las 10:17.
+
+Lo que lo hace valioso no es que funcionara, es **contra qué se compara**: el PR #2339, veintidós
+minutos antes, en la **misma sesión**, sobre la **misma rama** (mismo nombre, recreada desde `main`
+tras mergearse), con la **misma identidad**, abierto por el **mismo método** y también **en draft**
+— y ese salió **mudo**. Dos PRs consecutivos, todo lo controlable idéntico, resultados opuestos.
+
+Con eso ya no queda en pie ninguna de las hipótesis por sujeto: **no es la identidad** (la misma),
+**no es el método** (el mismo), **no es el draft** (los dos lo eran) y **no es el token de la App**
+(las dos ramas se empujaron igual). Lo único que las separa es *cuándo* ocurrieron, que es justo lo
+que decía la hipótesis del lag de la SEXTA. Sigue sin haber causa medida; lo que sí queda es que
+buscarla por el lado de «quién y cómo» está agotado.
+
+⚠️ **Y un matiz del procedimiento del #1962 que conviene tener claro, porque se aplicó y engañó:** en
+#2339 se comprobó que `git ls-remote` y el `head.sha` del PR **coincidían** y se dio por descartado el
+lag. Coincidir descarta que GitHub tenga el head VIEJO — **no** descarta que el evento del `pull_request`
+siga sin procesarse. Son dos cosas distintas y el paso 1 de abajo solo detecta la primera. En la duda,
+esperar sigue siendo lo más barato: ninguna de las palancas cuesta menos que no hacer nada.
+
+🔁 **UNDÉCIMA medición (05/09/2026, PR #2369) — lo único que añade es que el `synchronize` de un
+PR que YA no es draft dispara con normalidad, y eso ya se sabía desde #1768.** Se anota igual para no
+perder la serie, y con lo que NO se midió dicho en voz alta:
+
+| paso | qué se hizo | ¿draft? | runs de los requeridos |
+|---|---|---|---|
+| 1 | push de la rama (token de App) | — | **no se miró** (así que este tramo no cuenta) |
+| 2 | PR abierto por la herramienta MCP | **sí** | **no se miró** |
+| 3 | des-draftear (`draft:false` por la API) | pasa a no | ✅ **19 runs** a los segundos (12:40:57), `event: pull_request`, `actor: albertosuarezgutierrez-gif` |
+| 4 | 2º push con contenido real, ya sin draft | **no** | ✅ **20 runs** (12:53:06), verdes en ~3,5 min, incluido `Ready to merge` |
+
+⚠️ **No aísla nada del paso 3**: como no se miró si había runs antes de des-draftear, no se puede decir
+si los disparó el des-draft o si ya venían de la apertura del PR. Es exactamente el error de método que
+el resto de esta sección lleva diez mediciones intentando evitar: **mira los runs ANTES de tocar cada
+palanca**, o la medición no sirve.
+
+🟡 Y se volvió a ver el falso positivo de Vercel del 02/09, esta vez **doce comentarios seguidos**
+pintando los proyectos en «Building» antes de acabar en `12 Skipped Deployments` / `Ignored`. Cero
+gasto de build. El estado que vale sigue siendo el FINAL, no el comentario que se reescribe solo.
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
+   ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.
 2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
    (el merge de `main` sirve, y encima es trabajo obligatorio si hay conflicto). Des-draftear a secas no basta.
 3. **¿Coinciden, ya no es draft y sigue mudo?** → mergea `main` igualmente (es un push con contenido real).
@@ -569,8 +630,9 @@ siendo que **el des-draft a veces basta y a veces no** — pero el orden de abaj
    rama nueva por iniciativa del agente, y tocar el ruleset.
 
 **Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
-de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
-cortos.
+de las versiones de esta sección.** Llevamos diez mediciones y cada modelo que ha pasado por aquí ha
+escrito su explicación y la ha visto caer con el PR siguiente. Añade la medición; no reescribas las
+anteriores para que encajen.
 
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
@@ -739,6 +801,21 @@ que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míra
     proyectos, como en el incidente de los 600 US$» **dos veces**, leyendo esos comentarios intermedios.
     El estado que vale es el FINAL: `get_status` sobre el head del PR, donde cada `Vercel – *` dice
     `Canceled by Ignored Build Step`. No diagnostiques gasto desde un comentario que se reescribe solo.
+  - 🚦 **Y `Ignored` NO ES GRATIS DEL TODO: hay una SEGUNDA cuota, y esa sí la agota un agente
+    (04/09/2026).** El `ignoreCommand` corta el **build**, no la **creación del deployment**: Vercel
+    crea los once igualmente y solo después decide no construirlos. Y el límite
+    `api-deployments-paid-per-hour` (**450/h, de cuenta, no de proyecto**) cuenta **deployments
+    creados**. Medido: siete pushes seguidos a una rama de PR × 11 proyectos, más el tráfico del
+    automerge del repo, y la cuenta entera se quedó en `Resource is limited - try again in 60
+    minutes` — con **los despliegues de PRODUCCIÓN de `ia-rest`, `almacen`, `transporte` y
+    `house-sevillana-landing` fallando** por una rama que no tocaba ninguno de ellos.
+    🚨 Lo que esto CORRIGE: durante esa hora se informó tres veces de «0 gasto, todos `Ignored`».
+    Era cierto sobre los Build CPU Minutes y **falso sobre la cuota de deployments** — o sea, la
+    frase «Ignored = no cuesta nada» de este apartado vale para la factura y no para el límite. La
+    regla operativa es de RITMO, no de configuración: **empujar a una rama de PR cuesta 11
+    deployments cada vez**, así que se verifica en local (typecheck + tests, ver más abajo) y se
+    empuja UNA vez; encadenar pushes «a ver si arranca el CI» es justo lo que revienta la cuota.
+    Mergear un PR no crea previews. Y si aparece ese error, no es un fallo del repo: se espera.
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las

@@ -30,6 +30,7 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 import { DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
+import { ordenPolizasFicha } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
 import { cotizacionesVivas, historialCliente, type HistorialFila } from './cartera-historial'
@@ -519,10 +520,11 @@ export async function fichaCliente(
           }),
         },
       }
-    }),
+    }).sort(ordenPolizasFicha),
     siniestros: siniestros.map(mapSiniestro),
   }
 }
+
 
 /**
  * El objeto de la póliza; si CIMA no lo informa y la gemela del volcado sí,

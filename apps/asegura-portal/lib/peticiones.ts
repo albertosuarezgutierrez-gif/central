@@ -231,7 +231,10 @@ export async function crearPeticion(datos: {
   // Las fusionadas (`merged_into_cliente_id`) no son candidatas por ninguna vía.
   const [directas, secundarias] = await Promise.all([
     prisma.cliente.findMany({
-      where: { emailLookupHash: hash, mergedIntoClienteId: null },
+      // Defensivo (05/09/2026): las fichas descartadas (`activo = false`) no tienen
+      // email hoy, así que por aquí no puede salir ninguna — el filtro está para que
+      // siga siendo verdad, no porque hubiera un fallo.
+      where: { emailLookupHash: hash, mergedIntoClienteId: null, activo: true },
       select: { id: true, correduriaId: true },
     }),
     prisma.clienteEmail.findMany({ where: { emailLookupHash: hash }, select: { clienteId: true } }),
@@ -248,7 +251,12 @@ export async function crearPeticion(datos: {
   // vez que aparece la misma idea y siempre por lo mismo — el trabajo
   // observable no puede depender de si esa persona está en la cartera.
   const vivas = await prisma.cliente.findMany({
-    where: { id: { in: idsSecundarios.length > 0 ? idsSecundarios : [NINGUNA_FICHA] }, mergedIntoClienteId: null },
+    // Defensivo, igual que arriba: una ficha descartada no tiene email.
+    where: {
+      id: { in: idsSecundarios.length > 0 ? idsSecundarios : [NINGUNA_FICHA] },
+      mergedIntoClienteId: null,
+      activo: true,
+    },
     select: { id: true, correduriaId: true },
   })
   for (const c of vivas) candidatos.push({ clienteId: c.id, correduriaId: c.correduriaId, principal: false })
@@ -364,17 +372,26 @@ function esChoqueDePendiente(e: unknown): boolean {
   return typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'P2002'
 }
 
+
 /**
- * La única correduría de la casa, para quien pide sin tener ficha (los ~32.520
- * leads). **Lanza** si hubiera 0 o más de 1: elegir sería adivinar, y una
- * petición colgada de la correduría equivocada no se la encuentra nadie. Mismo
+ * La única correduría de la casa, para quien escribe sin tener ficha (los
+ * ~32.520 leads). **Lanza** si hubiera 0 o más de 1: elegir sería adivinar, y
+ * una fila colgada de la correduría equivocada no se la encuentra nadie. Mismo
  * cepo que `correduriaUnica()` de `apps/asegura`.
+ *
+ * 📌 Se EXPORTA desde aquí, donde nació, y no desde un `lib/correduria.ts`
+ * suelto: consulta `prisma.correduria`, o sea la cartera, y el guardián de
+ * aislamiento exige que todo fichero que la toque nombre `portalVinculo` y
+ * resuelva la sesión. Un fichero de una función no puede hacer ni lo uno ni lo
+ * otro, así que sacarla habría costado un exento nuevo en el cepo —una puerta
+ * abierta para siempre— a cambio de nada. Lo que sí importa (una sola copia de
+ * la decisión) se consigue igual: `lib/supresion.ts` la importa de aquí.
  */
-async function correduriaUnica(): Promise<string> {
+export async function correduriaUnica(): Promise<string> {
   const corredurias = await prisma.correduria.findMany({ select: { id: true }, take: 2 })
   if (corredurias.length === 0) throw new Error('sin_correduria: no hay ninguna correduría en la base')
   if (corredurias.length > 1) {
-    throw new Error('correduria_ambigua: hay más de una correduría y esta petición no está vinculada a ninguna')
+    throw new Error('correduria_ambigua: hay más de una correduría y esta fila no está vinculada a ninguna')
   }
   return corredurias[0].id
 }

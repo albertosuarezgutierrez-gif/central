@@ -100,8 +100,10 @@ ramo la fuente correcta es `seguros.poliza_recibos`, que es lo que se ha usado a
 | Web pública de marketing | **NO existe** |
 | Única página pública | `/seguros` en `apps/plataforma` — 1 página, 3 bullets y un formulario, bajo el dominio de plataforma |
 | `app.grupoasegura.com` | Sirve el **CRM de Manuel** (proyecto Vercel `asegura`, repo `albertosuarezgutierrez-gif/asegura`, ya en la cuenta de Alberto) |
-| **Apex `grupoasegura.com` y `www.`** | **Libres — no atados a ningún proyecto Vercel** |
-| `grupoasegura.es` | No atado a ningún proyecto Vercel |
+| **Apex `grupoasegura.com` y `www.`** | ~~Libres~~ **No son de Vercel: apuntan a un parking de IONOS (`217.160.0.254`, MX de IONOS; medido 05/09/2026).** No se usan como canónico: el canónico es el `.es` |
+| `grupoasegura.es` | ✅ **Desde el 05/09/2026 (tarde) sirve `apps/asegura-web`** — Alberto, con Claude en Chrome, quitó `.es`+`www` del proyecto `asegura` y los ató a `asegura-web` (apex Valid al instante porque su A ya era Vercel; `www` como 308 al apex, pendiente de CNAME en IONOS). Lo de abajo es el estado ANTERIOR, que explica por qué hacía falta |
+| `grupoasegura.es` (antes) | ~~No atado a ningún proyecto Vercel~~ ❌ **FALSO — medido el 05/09/2026:** el apex `.es` y `www.grupoasegura.es` están ATADOS al proyecto Vercel **`asegura` (el CRM de Manuel)**. Es lo que Alberto vio al abrir `grupoasegura.es` en el móvil («Únete gratis», «Acceso correduría», header montado). El DNS del apex `.es` apunta a Vercel (`216.150.1.1`); el de `www` sigue en IONOS (`212.227.40.135`), así que `www` ni llega |
+| `clientes.grupoasegura.es` | **Existe en DNS** (IONOS, `212.227.40.135`) pero **no está atado a ningún proyecto Vercel**. Es el nombre que Alberto quiere para la intranet del cliente → hay que atarlo a `asegura-portal` y repuntar el CNAME a `cname.vercel-dns.com` |
 | sitemap · robots · JSON-LD · Open Graph | **Cero, en las tres apps** |
 | Analítica | **Ninguna** (el portal declara «una sola cookie, sin analítica ni terceros») |
 | Google Business Profile | No consta |
@@ -199,8 +201,8 @@ fondo es pagar por perder leads.
 
 ### Fase 2 — Web propia en el apex ✅ construida el 04/09/2026
 
-`apps/asegura-web` existe ya en el repo, lista para desplegar sobre
-**`grupoasegura.com` + `www`**. `app.` se queda con el CRM, intacto.
+`apps/asegura-web` existe ya en el repo y **desde el 05/09/2026 sirve en `grupoasegura.es` + `www`**
+(no en el `.com`, que es un parking de IONOS). `app.` se queda con el CRM, intacto.
 
 **Cómo está montada, y por qué así:**
 

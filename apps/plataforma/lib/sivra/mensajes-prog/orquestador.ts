@@ -5,13 +5,20 @@
 //   · piso NO activado en `mensajes_prog_pisos` → MODO SOMBRA: se registra + copia a Telegram,
 //     nada llega al huésped (así se valida el ciclo entero con reservas reales sin riesgo);
 //   · piso activado → envía por Smoobu (`enviarAlHuesped`), con reintentos si el envío falla
-//     (Smoobu se cae de vez en cuando — el registro sabe qué quedó pendiente).
+//     (Smoobu se cae de vez en cuando — el registro sabe qué quedó pendiente). Los hitos que
+//     quedaron registrados en SOMBRA se re-emiten de verdad al activar el piso (ver
+//     `hitosBloqueantes`): una copia que solo vio Alberto por Telegram no es un mensaje entregado.
+//
+// 🚨 Las plantillas automáticas de Smoobu están APAGADAS desde el 05/09/2026 (decisión de Alberto,
+// tras validar el ciclo entero en House Sevillana): este cron es el ÚNICO que habla con el huésped
+// en los hitos del ciclo. Por eso ya no existe el chequeo «¿ya lo mandó Smoobu?»
+// (`equivalentes-smoobu.ts`), que era andamio de la transición: sin plantillas al otro lado solo
+// podía silenciar mensajes NUESTROS —de hecho se tragó la bienvenida de la reserva 154265696— y
+// costaba una llamada a la API de Smoobu por reserva y pasada.
 //
 // Guardas clave:
 //   · Reclamo atómico en `mensajes_programados` (UNIQUE booking+tipo+fecha_objetivo) ANTES de
 //     enviar: dos pasadas simultáneas no pueden duplicar un hito.
-//   · «¿Ya lo mandó Smoobu?» (pedido por Alberto): si la plantilla equivalente de Smoobu está en
-//     el hilo, el hito se marca hecho SIN enviar y Telegram avisa de qué plantilla apagar.
 //   · Un código NULL en BD jamás se inventa: la plantilla declara el hueco y Telegram lo canta.
 //   · La lista de reservas viene con showCancellation=false y se consulta EN VIVO en cada pasada:
 //     a una reserva cancelada no se le envía nada (el registro de lo YA enviado queda para la
@@ -27,10 +34,10 @@ import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
 import { entradaMismoDiaLibre, sumarDias, restarDias } from '@/lib/sivra/agente-huesped/disponibilidad'
 import { parseGuestAppUrl, fetchGuiaSecciones } from '@/lib/sivra/agente-huesped/guest-app'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
-import { mensajesDebidos, claveHito, type ReservaMin } from './decidir'
+import { mensajesDebidos, hitosBloqueantes, cubreAlHuesped, type HitoRegistrado, type ReservaMin } from './decidir'
 import { renderPlantilla, renderAsunto, type TipoMensaje, type DatosPlantilla } from './plantillas'
 import { traducirMensaje } from './traducir'
-import { yaLoMandoSmoobu, type MsgHilo } from './equivalentes-smoobu'
+import { revisarCobertura, claveAviso, textoCobertura } from './cobertura'
 import { ACCESO, codigosQueFaltan, type CodigosAcceso } from '../acceso'
 import { pinsPorReserva, elegirCodigoPortal } from './codigo-portal'
 import { decidirIdioma, notaIdioma } from './idioma-reserva'
@@ -45,7 +52,6 @@ type Resumen = {
   sombra: number
   enviados: number
   fallos: number
-  saltadosSmoobu: number
   detalle: string[]
 }
 
@@ -92,34 +98,28 @@ async function cargarPisosActivos(): Promise<Set<string>> {
   return new Set(rows.map(r => r.property_id))
 }
 
-async function cargarYaHechos(bookingIds: string[]): Promise<Map<string, Set<string>>> {
-  const out = new Map<string, Set<string>>()
+// Hitos ya registrados por reserva, CON su estado: una fila en `sombra` no vale lo mismo que una
+// enviada (ver `hitosBloqueantes` en decidir.ts).
+async function cargarYaHechos(bookingIds: string[]): Promise<Map<string, HitoRegistrado[]>> {
+  const out = new Map<string, HitoRegistrado[]>()
   if (!bookingIds.length) return out
   // IN con Prisma.join, no ANY(array): el pooler de Supabase falla con params array (landmine del
   // acotado de mapa_arquitectura, 17/07/2026) — solo params escalares.
-  const rows = await prisma.$queryRaw<{ booking_id: string; tipo: string; fecha_objetivo: Date }[]>(Prisma.sql`
-    SELECT booking_id, tipo, fecha_objetivo FROM mensajes_programados
+  // `de_hoy` se calcula en Postgres y en hora MADRID, la misma con la que decide `mensajesDebidos`:
+  // en UTC, un envío de las 23:30 de anoche saldría como «de hoy» durante media hora.
+  const rows = await prisma.$queryRaw<{ booking_id: string; tipo: string; fecha_objetivo: Date; estado: string; de_hoy: boolean }[]>(Prisma.sql`
+    SELECT booking_id, tipo, fecha_objetivo, estado,
+           (COALESCE(enviado_at, created_at) AT TIME ZONE 'Europe/Madrid')::date
+             = (now() AT TIME ZONE 'Europe/Madrid')::date AS de_hoy
+    FROM mensajes_programados
     WHERE booking_id IN (${Prisma.join(bookingIds)})
   `)
   for (const r of rows) {
     const f = r.fecha_objetivo instanceof Date ? r.fecha_objetivo.toISOString().slice(0, 10) : String(r.fecha_objetivo).slice(0, 10)
-    if (!out.has(r.booking_id)) out.set(r.booking_id, new Set())
-    out.get(r.booking_id)!.add(claveHito(r.tipo, f))
+    if (!out.has(r.booking_id)) out.set(r.booking_id, [])
+    out.get(r.booking_id)!.push({ tipo: r.tipo, fechaObjetivo: f, estado: String(r.estado || ''), emitidoHoy: r.de_hoy === true })
   }
   return out
-}
-
-// Hilo de la reserva reducido a lo que necesita `yaLoMandoSmoobu`.
-async function hiloReserva(bookingId: string): Promise<MsgHilo[] | null> {
-  try {
-    const d: any = await smoobuFetch(`/api/reservations/${bookingId}/messages?pageSize=50`, { cache: 'no-store' }).then(r => r.json())
-    const msgs: any[] = Array.isArray(d?.messages) ? d.messages : []
-    return msgs.map(m => ({
-      from: Number(m?.type) === 1 ? 'guest' as const : 'host' as const,
-      subject: String(m?.subject || ''),
-      text: String(m?.message || ''),
-    }))
-  } catch { return null }
 }
 
 // Enlace Chekin POR RESERVA: vive en la sección "CHECK-IN OBLIGATORIO" de su guest app.
@@ -148,9 +148,74 @@ async function lateOferta(apartmentId: unknown, departure: string, bookingId: st
   } catch { return null }
 }
 
+// Vigía de cobertura: quién llega sin sus instrucciones. Devuelve una nota para el latido, o null.
+//
+// 🚨 NO puede tumbar la pasada ni dejarla sin latido: es un observador. Si su propia consulta falla,
+// lo DICE (un vigía mudo es indistinguible de uno que no encuentra nada) y la pasada sigue.
+async function revisarCoberturaDePasada(
+  reservas: any[],
+  hoy: string,
+  activos: Set<string>,
+  yaHechosPorReserva: Map<string, HitoRegistrado[]>,
+): Promise<string | null> {
+  try {
+    const declarados = await prisma.$queryRaw<{ property_id: string }[]>(
+      Prisma.sql`SELECT property_id FROM mensajes_prog_pisos`,
+    )
+    const sombra = await prisma.$queryRaw<{ property_id: string; tipo: string }[]>(Prisma.sql`
+      SELECT DISTINCT property_id, tipo FROM mensajes_programados
+      WHERE estado = 'sombra' AND fecha_objetivo >= ${hoy}::date
+    `)
+
+    const hallazgos = revisarCobertura({
+      hoy,
+      reservas: reservas.map(b => {
+        const bookingId = String(b.id)
+        const propertyId = toPropertyId(b?.apartment?.id, String(b?.apartment?.name || ''))
+        return {
+          bookingId,
+          propertyId,
+          piso: ACCESO[propertyId]?.nombre ?? propertyId,
+          huesped: String(b?.['guest-name'] || b?.guestName || '').trim(),
+          checkIn: String(b?.arrival || ''),
+          // `cubreAlHuesped`, no `estado === 'enviado'`: un hito `omitido` es una decisión tomada
+          // («esto ya se lo he dicho por otra vía»), no un hueco — cantarlo cada pasada sería ruido.
+          hitosEnviados: (yaHechosPorReserva.get(bookingId) ?? [])
+            .filter(h => cubreAlHuesped(h.estado))
+            .map(h => h.tipo),
+        }
+      }),
+      pisosActivos: activos,
+      pisosConocidos: Object.entries(ACCESO).map(([propertyId, p]) => ({ propertyId, piso: p.nombre })),
+      pisosDeclarados: new Set(declarados.map(d => d.property_id)),
+      sombraPendiente: sombra.map(s => ({ propertyId: s.property_id, tipo: s.tipo })),
+    })
+    if (!hallazgos.length) return null
+
+    // Dedupe por hallazgo y día: el cron pasa 48 veces y esto se leería una sola vez.
+    const nuevos: typeof hallazgos = []
+    for (const h of hallazgos) {
+      const ins = await prisma.$queryRaw<{ clave: string }[]>(Prisma.sql`
+        INSERT INTO mensajes_prog_avisos (clave) VALUES (${claveAviso(h, hoy)})
+        ON CONFLICT (clave) DO NOTHING RETURNING clave
+      `)
+      if (ins.length) nuevos.push(h)
+    }
+    if (nuevos.length) {
+      const texto = textoCobertura(nuevos)
+      if (texto) await tgAviso('pisos.mensajes-cobertura', texto).catch(() => {})
+    }
+    // La nota del latido informa de TODOS los hallazgos vivos, no solo de los recién avisados: el
+    // dedupe silencia la repetición del Telegram, no el hecho.
+    return `⚠️ cobertura: ${hallazgos.map(h => h.clase).join(', ')}`
+  } catch (e: any) {
+    return `cobertura SIN COMPROBAR (${String(e?.message || e).slice(0, 60)})`
+  }
+}
+
 export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000): Promise<Resumen> {
   await registrarLatido(AGENTE, false, 'intento: pasada arrancada')
-  const res: Resumen = { ok: true, reservas: 0, debidos: 0, sombra: 0, enviados: 0, fallos: 0, saltadosSmoobu: 0, detalle: [] }
+  const res: Resumen = { ok: true, reservas: 0, debidos: 0, sombra: 0, enviados: 0, fallos: 0, detalle: [] }
   const { fecha: hoy, hora } = hoyMadrid()
 
   // 1) Reservas vivas en la ventana. Si Smoobu no responde, la pasada se declara mala y se vuelve:
@@ -211,16 +276,11 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
     }
     if (!r.checkIn || !r.checkOut) continue
 
-    const yaHechos = yaHechosPorReserva.get(bookingId) ?? new Set<string>()
-    const debidos = mensajesDebidos(r, hoy, hora, yaHechos)
+    const activo = activos.has(propertyId)
+    const { bloqueantes, emitidosHoy } = hitosBloqueantes(yaHechosPorReserva.get(bookingId) ?? [], activo)
+    const debidos = mensajesDebidos(r, hoy, hora, bloqueantes, emitidosHoy)
     if (!debidos.length) continue
     res.debidos += debidos.length
-
-    const activo = activos.has(propertyId)
-    // El hilo solo hace falta para el chequeo «¿ya lo mandó Smoobu?», que solo aplica con el piso
-    // ACTIVO (en sombra las plantillas de Smoobu siguen encendidas a propósito: avisar de cada una
-    // sería puro ruido, y la copia sombra se quiere generar igualmente para validar el texto).
-    const hilo = activo ? await hiloReserva(bookingId) : []
 
     // Datos comunes de la reserva para las plantillas.
     const horario = horarioPiso(propertyId, String(b?.['check-in'] || '').trim(), String(b?.['check-out'] || '').trim())
@@ -232,22 +292,6 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
 
     for (const deb of debidos) {
       if (Date.now() > deadline) break
-
-      // ¿Smoobu ya mandó su equivalente? Marcado como hecho SIN enviar + aviso de qué apagar.
-      // Con el hilo ilegible (null) NO se afirma nada: el hito se deja para la próxima pasada.
-      if (activo && hilo === null) { res.detalle.push(`${bookingId}: hilo ilegible — ${deb.tipo} pospuesto`); continue }
-      if (activo && hilo !== null && yaLoMandoSmoobu(deb.tipo, hilo)) {
-        const ins = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
-          INSERT INTO mensajes_programados (booking_id, property_id, tipo, fecha_objetivo, idioma, estado, cuerpo, error)
-          VALUES (${bookingId}, ${propertyId}, ${deb.tipo}, ${deb.fechaObjetivo}::date, 'es', 'sombra', '', 'equivalente de Smoobu ya en el hilo')
-          ON CONFLICT (booking_id, tipo, fecha_objetivo) DO NOTHING RETURNING id
-        `)
-        if (ins.length) {
-          res.saltadosSmoobu++
-          avisos.push(`↔️ ${ACCESO[propertyId].nombre} · reserva ${bookingId}: Smoobu ya mandó su plantilla equivalente a «${deb.tipo}» — apágala en Smoobu para que el ciclo sea nuestro.`)
-        }
-        continue
-      }
 
       // Enlace Chekin por reserva, solo para los hitos que lo usan.
       let chekinUrl = ''
@@ -292,10 +336,18 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
         : { texto: cuerpoEs, idioma: lang.idioma }
 
       // Reclamo atómico ANTES de enviar: si otra pasada lo insertó, este hito ya no es nuestro.
+      //
+      // Con el piso ACTIVO, una fila en `sombra` sí se reclama (DO UPDATE ... WHERE estado='sombra'):
+      // es el hito que se registró mientras el piso aún validaba y que nunca llegó al huésped. El
+      // WHERE lo mantiene atómico y no puede pisar una fila 'enviado'/'pendiente'/'fallo'.
       const claim = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
         INSERT INTO mensajes_programados (booking_id, property_id, tipo, fecha_objetivo, idioma, estado, cuerpo)
         VALUES (${bookingId}, ${propertyId}, ${deb.tipo}, ${deb.fechaObjetivo}::date, ${idioma}, ${activo ? 'pendiente' : 'sombra'}, ${texto})
-        ON CONFLICT (booking_id, tipo, fecha_objetivo) DO NOTHING RETURNING id
+        ON CONFLICT (booking_id, tipo, fecha_objetivo) DO UPDATE
+          SET idioma = EXCLUDED.idioma, estado = EXCLUDED.estado, cuerpo = EXCLUDED.cuerpo,
+              error = NULL, created_at = now()
+          WHERE mensajes_programados.estado = 'sombra' AND ${activo}::boolean
+        RETURNING id
       `)
       if (!claim.length) continue
 
@@ -346,6 +398,7 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
   }
 
   // 2) Reintentos: hitos en 'fallo' (o reclamados que se quedaron colgados a mitad de pasada).
+  // `omitido` NO entra a propósito: se puso a mano para que ese mensaje no salga.
   const pendientes = await prisma.$queryRaw<{ booking_id: string; property_id: string; tipo: string; fecha_objetivo: Date; cuerpo: string; intentos: number }[]>(Prisma.sql`
     SELECT booking_id, property_id, tipo, fecha_objetivo, cuerpo, intentos FROM mensajes_programados
     WHERE (estado = 'fallo' OR (estado = 'pendiente' AND created_at < now() - interval '1 hour'))
@@ -375,7 +428,13 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
   for (const a of avisosSombra) await tgAviso('pisos.mensajes-programados', a).catch(() => {})
   if (avisos.length) await tgAviso('pisos.mensajes-programados', `📬 <b>Mensajes programados</b>\n${avisos.map(a => escapeHtml(a)).join('\n')}`).catch(() => {})
 
-  const detalle = `${res.reservas} reservas · ${res.debidos} debidos · ${res.sombra} sombra · ${res.enviados} enviados · ${res.fallos} fallos · ${res.saltadosSmoobu} ya-de-Smoobu${res.detalle.length ? ' · ' + res.detalle.join(' · ') : ''}`
+  // 4) Vigía de COBERTURA: no mide el mecanismo, mide a quién no le ha llegado nada. Va en su
+  // propio aviso y no toca `res.ok`: lo que descubre puede ser una decisión (un piso en sombra) y
+  // no una avería de la pasada, que es lo que el latido juzga.
+  const cobertura = await revisarCoberturaDePasada(reservas, hoy, activos, yaHechosPorReserva)
+  if (cobertura) res.detalle.push(cobertura)
+
+  const detalle = `${res.reservas} reservas · ${res.debidos} debidos · ${res.sombra} sombra · ${res.enviados} enviados · ${res.fallos} fallos${res.detalle.length ? ' · ' + res.detalle.join(' · ') : ''}`
   res.ok = res.fallos === 0
   await registrarLatido(AGENTE, res.ok, detalle)
   return res

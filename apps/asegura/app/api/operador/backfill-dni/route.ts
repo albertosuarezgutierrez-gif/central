@@ -18,6 +18,9 @@ export const maxDuration = 300
  * Es el paso 1 de los tres que explica `packages/module-seguros/src/backfill-dni.ts`.
  * El paso 2 (fusionar los choques) es un lote SQL con el OK de Alberto delante
  * de los nombres; el 3 es el POST de aquí.
+ *
+ * Devuelve también `compartidos`: los DNI escritos en fichas de personas
+ * distintas (centinelas). Ésos NO son candidatos a fusión y no se escriben nunca.
  */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -40,10 +43,20 @@ export async function GET(req: Request) {
  *
  * Idempotente: sólo toca fichas con `dni_lookup_hash` a NULL, así que repetirlo
  * no cambia nada. Las que chocan se quedan como están a propósito — escribirlas
- * exigiría decidir quién sobrevive, y eso no lo decide un endpoint.
+ * exigiría decidir quién sobrevive, y eso no lo decide un endpoint. Las de un
+ * DNI centinela tampoco, y ésas no se escribirán nunca: no hay a quién fusionar,
+ * hay un dato que corregir.
  *
- * Pide `{"confirmar":"escribir"}` en el cuerpo: es una escritura sobre 15.800
- * fichas de la cartera y no debe salir de un `curl` a medio escribir.
+ * 🚨 **Un choque pendiente NO bloquea la escritura**, y durante un tiempo esta
+ * pantalla dijo lo contrario. El plan clasifica cada ficha antes de tocar nada y
+ * aquí sólo se escriben las `rellenable`: la segunda ficha de un DNI repetido no
+ * llega al `UPDATE`, así que no puede reventarlo. Fusionar primero sigue siendo
+ * mejor —cada fusión convierte un choque en un hash más que se puede escribir—,
+ * pero es más cobertura, no un requisito.
+ *
+ * Pide `{"confirmar":"escribir"}` en el cuerpo: es una escritura sobre ~15.000
+ * fichas de la cartera y no debe salir de un `curl` a medio escribir. Admite
+ * `{"limite":N}` para escribir por tandas.
  */
 export async function POST(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -56,9 +69,12 @@ export async function POST(req: Request) {
         { status: 422 },
       )
     }
+    const limite = typeof body.limite === 'number' && Number.isFinite(body.limite) && body.limite > 0
+      ? Math.floor(body.limite)
+      : undefined
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
-    const r = await backfillDniLookupHash(correduria.id, { seco: false })
+    const r = await backfillDniLookupHash(correduria.id, { seco: false, limite })
     return NextResponse.json({ estado: 'ok', ...r })
   } catch (e) {
     return NextResponse.json(
