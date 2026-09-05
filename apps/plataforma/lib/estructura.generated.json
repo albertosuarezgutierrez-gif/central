@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-05T08:24:25Z",
+  "generadoEn": "2026-09-05T11:52:05Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2080,11 +2080,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 31
+        "evidencias": 33
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 37
+        "evidencias": 42
       },
       "asegura-web": {
         "estado": "usado",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 36
       },
       "rrhh": {
         "estado": "no",
@@ -2188,11 +2188,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 34
       },
       "asegura-web": {
         "estado": "no",
@@ -2216,7 +2216,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "estado": "no",
@@ -3865,6 +3865,7 @@
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
+      "/api/operador/export-rgpd",
       "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/ingesta",
@@ -3876,6 +3877,7 @@
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
       "/api/operador/siniestros-nuevos",
+      "/api/operador/supresiones",
       "/api/operador/vencimientos"
     ],
     "asegura-portal": [
@@ -3894,7 +3896,8 @@
       "/api/polizas/[id]",
       "/api/siniestros",
       "/api/siniestros/[id]/adjuntos",
-      "/api/siniestros/[id]/adjuntos/[documentoId]"
+      "/api/siniestros/[id]/adjuntos/[documentoId]",
+      "/api/supresion"
     ],
     "asegura-web": [
       "/api/lead"
@@ -4698,6 +4701,7 @@
       "/api/contable/chat",
       "/api/contable/feedback",
       "/api/correduria",
+      "/api/correduria/backfill-dni",
       "/api/correduria/buscar",
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
@@ -4717,6 +4721,7 @@
       "/api/correduria/partes",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
+      "/api/correduria/supresiones",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -4730,6 +4735,7 @@
       "/api/cron/concursos-radar",
       "/api/cron/contable-proactivo",
       "/api/cron/correduria-ingesta",
+      "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
       "/api/cron/correduria-siniestros",
       "/api/cron/correo-digest",
@@ -5211,6 +5217,7 @@
       "seguros.portal_parte_siniestro",
       "seguros.portal_peticion_acceso",
       "seguros.portal_poliza_declarada",
+      "seguros.portal_supresion",
       "seguros.portal_vinculo"
     ],
     "asegura-web": [],
@@ -5344,6 +5351,7 @@
       "agente_latidos",
       "agente_reparaciones",
       "agente_salud",
+      "agente_veredicto",
       "ai_usos",
       "ayudas_perfiles",
       "banca_destino_reglas",
@@ -6157,7 +6165,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1276,
+    "apis": 1282,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
