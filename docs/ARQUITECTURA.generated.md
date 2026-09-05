@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-05T08:24:25Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-05T09:28:24Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 39 skills · 1276 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 39 skills · 1277 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -55,8 +55,8 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (131):** agente_latidos, agente_reparaciones, agente_salud, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor, correo_reglas…
-- **Rutas API:** 342
+- **Tablas (132):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor…
+- **Rutas API:** 343
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -261,14 +261,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (05/09/2026) 🔌 conectores-vigia: primera pasada real
+- (05/09/2026) 🔑 La `PII_LOOKUP_KEY` del portal SÍ casa: alguien se vinculó SOLO
+- (05/09/2026) 🚑 El parte del portal tiene DOS caminos, y hay vigía del plazo
 - (05/09/2026) 👁️ Vigía de COBERTURA de los mensajes a huéspedes + el estado `omitido`, declarado
+- (05/09/2026) 📌 Los dos arreglos del día, MERGEADOS y con seguimiento armado para el 06/09
+- (05/09/2026) 🔧 Arreglado: el veredicto del vigía se va a su propia tabla, `agente_veredicto`
 - (05/09/2026) 🚨 HALLAZGO AJENO al mirar los logs: el vigía de agentes lleva desde el 03/09 sin poder guardar NADA
 - (05/09/2026) ✅ Modo noche MERGEADO y comprobado en BD
 - (05/09/2026) 🌙 MODO NOCHE del agente de huéspedes: el silencio de 21:00 a 09:00 deja de ser invisible
 - (05/09/2026) 📬 Smoobu ya NO manda mensajes automáticos: el ciclo es 100% nuestro
-- (05/09/2026) 📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría
-- (05/09/2026) 🔁 Un PR abierto de noche choca con `main` cada ~50 min, y siempre por el MISMO fichero
-- (04/09/2026) 🚦 `Ignored` no es gratis: la cuota que agotó un agente y tumbó 4 producciones
-- (04/09/2026) 🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría
-- (04/09/2026) 📵 «19 clientes ilocalizables» eran 15: el contacto vive en TRES sitios, no en la ficha
 
