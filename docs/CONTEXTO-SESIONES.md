@@ -39,6 +39,17 @@
   (migración aplicada). Y el `omitido` que se puso a mano esa mañana deja de funcionar de casualidad:
   `ESTADOS_HITO` + `cubreAlHuesped()` con sus tests, contado en `/apartamentos`. PR pendiente.
 
+- **✅ Auditoría diaria (ligera), 05/09/2026 — sin 🔴, dos huecos de doc por `apps/asegura-web`.**
+  Rango: ~40 commits desde la ligera de ayer, casi todo correduría (portal, siniestros, contacto
+  sin canal) y el alta de `apps/asegura-web`. Heartbeat: `sivra_eventos_verificar` ⛔ 50,5h
+  (búsqueda OpenRouter caída, ya conocido como intermitente) y `facturas_correo` con lectura previa
+  a su ventana de las 11:00 (no es avería). Correduría: CIMA late, cuarentena de 130 ficheros sin
+  procesar sigue siendo el backlog ya documentado (nada nuevo). Pricing sano (`oscilantes=8`, sin
+  rail roto). PR #2317 (radiografía) y #2295 ya cubrían su parte; #2313 en conflicto, es de otra
+  sesión. Detalle completo en `docs/AUDITORIA-2026-09.md`. PR de esta pasada: carril 1 (registro,
+  auto-merge) + carril 2 draft (`asegura-web` sin `CLAUDE.md` propio ni fila en
+  `FUENTES-DE-VERDAD.md`, y el conteo de "12 apps" de `CLAUDE.md` desfasado a 13).
+
 - **🚨 HALLAZGO AJENO al mirar los logs: el vigía de agentes lleva desde el 03/09 sin poder guardar
   NADA (05/09/2026).** Los runtime errors de plataforma traen ~30 líneas idénticas en
   `/api/cron/agentes-latido`: `column "evaluado_at" of relation "agente_salud" does not exist` (P2010),

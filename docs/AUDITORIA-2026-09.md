@@ -126,4 +126,80 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## ✅ Pasada ligera — 05/09/2026
+
+**Rango:** ~40 commits desde la ligera de ayer (04/09) hasta hoy (`0cad002`). Volumen muy alto en
+correduría (`apps/asegura`, `apps/asegura-portal`, `apps/plataforma` `/correduria`): siniestros con
+teléfonos por compañía, invitaciones/peticiones de acceso al portal, "contacto sin canal", vigía de
+silencio por entidad. Nace **`apps/asegura-web`** (web pública de marketing, sin BD). También modo
+noche del agente de huéspedes (mergeado y comprobado en BD) y un fix de la bienvenida de sivra.
+
+### Heartbeat de crons/agentes (2-bis)
+⛔ **`sivra_eventos_verificar`** — 50,5h sin pasada OK (umbral 30h). Detalle: búsqueda web caída +
+un JSON de OpenRouter no parseable para una fecha. Es la misma familia de fallo intermitente que ya
+señaló la pasada del 04/09 ("dentro de umbral, sin patrón de caída sostenida") — hoy cruza el
+umbral, pero sigue sin patrón de caída sostenida (fallos puntuales de búsqueda, no un cron muerto).
+No se abre PR por esto; a vigilar si se repite mañana.
+🟡 **`facturas_correo`** — 46,9h desde su última pasada buena, pero la rutina es diaria a las 11:00
+y la consulta se hizo antes de esa hora: la última pasada registrada fue `ok=true`, así que es
+timing de la consulta, no una avería (regla NULL≠0: no comprobado ≠ roto).
+Ya conocidos, sin cambio: `ses_transporte` (sin establecimiento dado de alta, pendiente 06/10) y
+`sivra_domotica_acceso` (4 cerraduras en ERROR, Tuya, pendiente 12/09). Sin intentos de reparación
+automática en 7 días para ninguno de los dos. Resto de la lista (29 agentes) dentro de umbral.
+
+### 🛡️ Salud de la correduría (2-quater) — sin 🔴, backlog ya documentado
+Latidos `correduria_renovaciones`/`correduria_ingesta` ✅. `cima_pull_completed` late (hace ~17h,
+dentro de 30h) pero **`processed=0`** en los 3 últimos eventos con `queueDepth=130` constante
+(`modo=real`) — es la cuarentena ya reportada por `correduria_ingesta` (C0058 con 74 días sin
+mandar nada, "SIN" 64 días sin guardar). No es un empeoramiento medido hoy, sigue igual que el
+04/09. Codeoscopic: 0 cotizaciones/0€ en 7 días. Aislamiento: los 4 cepos (`regression-asegura-
+aislamiento`, `regression-portal-aislamiento`, `regression-asegura-operador-publico`,
+`regression-correduria-puerto`) existen y los recoge `test:guardia` (glob `test/*.test.ts`). §21
+sigue pausada a propósito.
+
+### 💰 Salud del precio SIVRA (2bis) — sin 🔴
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · última pasada hace 0,7h con 70
+noches escritas. 🟠 `oscilantes=8` (subió de 5 el 04/09 a 8 hoy — vigilar si sigue creciendo, no
+cruza umbral de acción). Los 4 pisos con `enabled`/`apply_enabled=true` y `min_price` fijado
+(65/85/300/72€); sin palancas apagadas en silencio.
+
+### Backlog de PRs de rutinas + salud del automerge (2-ter)
+`rutinas-automerge.yml` con runs constantes en la última hora — vigilante vivo. PRs `claude/*`
+abiertos relevantes: **#2317** (regenerar radiografía, ya en vuelo por `auditoria.yml`, no
+duplicado por esta pasada), **#2313** (código real de otra sesión, `mergeable_state=dirty`, no es
+de esta auditoría arreglarlo), **#2295** (`conectores-vigia`, docs/registro, 12 checks verdes pero
+`dirty` desde hace ~6h — por debajo del umbral de 24h del registro, pero con CI verde solo le falta
+resolver el conflicto; queda anotado para la próxima pasada si sigue así), **#2262** (draft,
+bitácora, ~11h sin actividad, por debajo del umbral de 7 días).
+
+### 🟡 Hallazgo carril 2: `apps/asegura-web` nació sin dos piezas de doc
+1. **Sin `CLAUDE.md` propio.** El resto de apps de la correduría (`asegura`, `asegura-portal`) lo
+   tienen desde el mismo día de su alta; `asegura-web` llevaba su detalle solo en el bullet raíz de
+   `CLAUDE.md`. Se creó `apps/asegura-web/CLAUDE.md` (extraído del bullet) y se añadió el puntero
+   `Tiene CLAUDE.md propio — ver apps/asegura-web/CLAUDE.md` al bullet raíz.
+2. **`docs/FUENTES-DE-VERDAD.md` no mapeaba `apps/asegura-web/**`.** Añadida la fila.
+3. **`CLAUDE.md` decía «la matriz de tests.yml son 12 apps»**; con `asegura-web` ya son 13
+   (`ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen, mariscos, asegura,
+   asegura-portal, asegura-web, housesevillana`). Corregido el conteo y la lista.
+   (El mismo conteo aparece también en `.claude/commands/auditoria-diaria.md`, que ya se auto-
+   advierte de no fiarse del número literal — no se tocó, sigue diciendo "recuenta con `ls apps`".)
+
+Estos tres cambian ficheros de comportamiento (`CLAUDE.md`, `docs/FUENTES-DE-VERDAD.md`), así que
+van al PR draft de carril 2 bajo el harness de tareas de GitHub, no auto-aplicados a `main`.
+
+### Reconciliación memoria/skills — sin más huecos
+`docs/SKILLS.md` y `.claude/skills/correduria-crm/SKILL.md` al día (no mencionan `asegura-web` y es
+correcto: es marketing sin BD, fuera del CRM). `docs/HUECOS-ABIERTOS.md` sin huecos de correduría
+que cerrar (los únicos vivos son de trading, sin cambios este rango). ⚠️ **No se pudo listar
+sesiones** (herramienta de sesiones remotas no adjunta en este entorno): no se cruzaron
+conversaciones sin commit contra memoria/PR — no se afirma que no haya pendientes perdidos, solo
+que no se ha podido mirar. El resto del rango se autodocumentó commit a commit en
+`docs/CONTEXTO-SESIONES.md` (verificado contra el `git log --stat`).
+
+### Manuales / rotación
+Ningún commit del rango toca `apps/ia-rest/**` (manuales no aplica). Sin rotación mensual pendiente
+(septiembre sigue abierto, 9 entradas vivas tras la de hoy).
+
+---
+<!-- verificado: 2026-09-05 -->
