@@ -57,12 +57,26 @@ export default function TabContactos({ ficha, personas }: {
 
       {/* Quién es de quién y quién autoriza a quién a ver sus seguros. `null` = no se pudo leer, no «sin familia». */}
       <Tarjeta titulo="👪 Relaciones y autorizaciones">
-        <Relaciones clienteId={ficha.id} nombreFicha={ficha.nombre} inicial={ficha.relaciones} sinVinculo={sinVinculo} />
+        <Relaciones
+          clienteId={ficha.id}
+          nombreFicha={ficha.nombre}
+          inicial={ficha.relaciones}
+          sinVinculo={sinVinculo}
+          tipoPersona={tipoPersonaDe(ficha)}
+        />
       </Tarjeta>
     </>
   )
 }
 
+
+/** Qué es la ficha, para ofrecer primero los vínculos de empresa en una sociedad.
+ *  Solo se afirma con lo que asegura manda: `null` es «no se sabe», y adivinarlo
+ *  por el nombre es justo lo que la regla de identidad prohíbe. */
+function tipoPersonaDe(ficha: Ficha): 'fisica' | 'juridica' | null {
+  const t = ficha.identidad?.tipoPersona
+  return t === 'fisica' || t === 'juridica' ? t : null
+}
 
 // Con quién se puede hablar de esta ficha, agrupado por PERSONA y no por
 // póliza: GLOBAL 2 tiene tres furgonetas con tres conductores distintos y esa
@@ -112,6 +126,8 @@ function PersonasPolizas({ ficha, personas }: { ficha: Ficha; personas: PersonaD
         {ficha.polizas.length === 0
           ? 'Todavía no tiene pólizas en la cartera.'
           : 'En sus pólizas no aparece nadie más que la propia ficha: la compañía no manda más intervinientes.'}
+        {' '}Si hay una persona que lleva sus seguros y la compañía no la manda, se apunta abajo, en{' '}
+        <strong>👪 Relaciones y autorizaciones</strong> → «Nueva persona de contacto».
       </p>
     )
   }

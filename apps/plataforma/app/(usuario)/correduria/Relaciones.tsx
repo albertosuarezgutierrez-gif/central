@@ -2,7 +2,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { GRUPOS_RELACION, SIN_VINCULO, permiteAutorizar, type TipoRelacion } from '@central/module-seguros'
+import {
+  FUENTE_PERSONA_CONTACTO,
+  GRUPOS_RELACION,
+  SIN_VINCULO,
+  coincidenciaBloquea,
+  combinarPersonaContacto,
+  permiteAutorizar,
+  revisarAlta,
+  textoPersonaContacto,
+  tiposContactoSugeridos,
+  type ResultadoPersonaContacto,
+  type TipoRelacion,
+} from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import {
   ALCANCE_TEXTO_PORTAL,
@@ -21,6 +33,7 @@ import {
   type RespuestaRelaciones,
   type TituloRepresentacionPortal,
 } from '@/lib/relaciones-asegura'
+import { interpretarEscritura, textoMotivo as textoMotivoAlta, type ResultadoEscritura } from '@/lib/cliente-edicion-asegura'
 import type { RespuestaBusqueda } from '@/lib/ficha-asegura'
 
 /**
@@ -57,10 +70,14 @@ export default function Relaciones({
   nombreFicha,
   inicial,
   sinVinculo = [],
+  tipoPersona = null,
 }: {
   clienteId: string
   nombreFicha: string
   inicial: RelacionCartera[] | null
+  /** Qué es la ficha de la que cuelga el contacto. Solo ordena los tipos que se
+   *  ofrecen primero; `null` (no se sabe) no reordena nada. */
+  tipoPersona?: 'fisica' | 'juridica' | null
   /** Personas que salen en SUS pólizas, con ficha propia y sin vínculo anotado.
    *  Se ofrecen aquí para declararlas de un clic: antes salían en la tarjeta
    *  👤 con un «se anota en Relaciones» y aquí no aparecían por ningún lado. */
@@ -165,6 +182,24 @@ export default function Relaciones({
     void ejecutar(`tipo-${r.relacionadoId}`, 'PATCH', { relacionadoId: r.relacionadoId, tipo })
   }
 
+  /**
+   * Alta de una ficha NUEVA desde aquí (la persona de contacto que no está en
+   * la cartera). Es la primera de las dos escrituras; la segunda es la relación,
+   * que sale por `onCrear` como cualquier otra.
+   */
+  async function altaPersona(body: Record<string, unknown>): Promise<ResultadoEscritura> {
+    try {
+      const res = await fetch('/api/correduria/cliente', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      return interpretarEscritura(res.status, await res.json().catch(() => null))
+    } catch {
+      return { estado: 'error', motivo: 'red' }
+    }
+  }
+
   function quitar(r: RelacionCartera) {
     // La relación se borra; la autorización NO se borra, se REVOCA — es la prueba
     // de que existió y hasta cuándo, y eso es justo lo que no se puede perder.
@@ -220,6 +255,8 @@ export default function Relaciones({
         yaRelacionados={lista ? lista.map((r) => r.relacionadoId) : []}
         ocupado={ocupado === 'add'}
         onCrear={(body) => ejecutar('add', 'POST', body)}
+        onAlta={altaPersona}
+        tipoPersona={tipoPersona}
         preseleccion={preseleccion?.cand ?? null}
       />
 
@@ -518,17 +555,24 @@ function EstadoAutorizacion({ a, nombreOtro, nombreFicha }: {
 
 type Candidato = { id: string; nombre: string; tipo: string; polizas: number }
 
-function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, preseleccion }: {
+function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: {
   clienteId: string
   nombreFicha: string
   yaRelacionados: string[]
   ocupado: boolean
   onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones>
+  /** Alta de una ficha que todavía no existe, para la persona de contacto. */
+  onAlta: (body: Record<string, unknown>) => Promise<ResultadoEscritura>
+  tipoPersona: 'fisica' | 'juridica' | null
   /** Ficha ya elegida desde «sin vínculo declarado»: se salta el buscador.
    *  El padre remonta este componente al cambiarla, así que basta con nacer con ella. */
   preseleccion: Candidato | null
 }) {
   const [abierto, setAbierto] = useState(preseleccion !== null)
+  // Dar de alta a alguien que NO está en la cartera. Se llega aquí por el botón
+  // de arriba o desde el «no está» de una búsqueda, y por eso hereda el término
+  // buscado: teclear el nombre dos veces era el sitio donde se abandonaba.
+  const [modoAlta, setModoAlta] = useState(false)
   const [q, setQ] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [busqueda, setBusqueda] = useState<RespuestaBusqueda | null>(null)
@@ -567,9 +611,30 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, pres
 
   if (!abierto) {
     return (
-      <div>
-        <button type="button" onClick={() => setAbierto(true)} style={btnStyle('secundario')}>➕ Añadir relación</button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" onClick={() => { setModoAlta(false); setAbierto(true) }} style={btnStyle('secundario')}>➕ Añadir relación</button>
+        {/* La persona que lleva los seguros de una sociedad casi nunca está en la
+            cartera: mandarla a /correduria/cliente/nuevo era perder la ficha,
+            volver y buscarla. Desde aquí se crea y se vincula de una vez. */}
+        <button type="button" onClick={() => { setModoAlta(true); setAbierto(true) }} style={btnStyle('secundario')}>
+          ➕ Nueva persona de contacto
+        </button>
       </div>
+    )
+  }
+
+  if (modoAlta) {
+    return (
+      <AltaPersona
+        nombreFicha={nombreFicha}
+        tipoPersona={tipoPersona}
+        ocupado={ocupado}
+        terminoInicial={q.trim()}
+        onAlta={onAlta}
+        onCrear={onCrear}
+        onCancelar={() => { setModoAlta(false); setAbierto(false) }}
+        onBuscar={() => setModoAlta(false)}
+      />
     )
   }
 
@@ -607,8 +672,13 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, pres
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>Término demasiado corto: escribe algo más.</div>
       )}
       {busqueda?.estado === 'ok' && busqueda.buscado && candidatos.length === 0 && (
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-          Nadie en la cartera con «{busqueda.termino}» que no esté ya relacionado. Si es alguien nuevo, dale de alta primero desde /correduria.
+        <div style={{ display: 'grid', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
+          <span>Nadie en la cartera con «{busqueda.termino}» que no esté ya relacionado.</span>
+          <div>
+            <button type="button" onClick={() => setModoAlta(true)} style={btnStyle('secundario', 'sm')}>
+              ➕ Darla de alta y vincularla a {nombreFicha}
+            </button>
+          </div>
         </div>
       )}
       {candidatos.length > 0 && !elegido && (
@@ -661,6 +731,255 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, pres
       {!elegido && (
         <div>
           <button type="button" onClick={() => setAbierto(false)} style={btnStyle('sutil')}>Cancelar</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Alta de la persona de contacto ──────────────────────────────────────────
+
+/**
+ * Crear la ficha de la persona que lleva los seguros de esta otra (el
+ * administrador de una sociedad, típicamente) y vincularla, sin salir de aquí.
+ *
+ * Por qué una ficha propia y no un campo «persona de contacto» dentro de la
+ * sociedad (Alberto, 05/09/2026): **esa persona es un futuro cliente**. El
+ * estado se DERIVA de sus pólizas, así que nace 🕐 Lead sola y pasará a
+ * ✅ Cliente el día que CIMA confirme la primera que le vendas, sin migrar nada.
+ * Con un campo de texto habría que crearla de cero ese día y se perdería todo lo
+ * anterior.
+ *
+ * 🚨 Son DOS escrituras y la segunda puede fallar sola. Lo que se pinta entonces
+ * lo decide `combinarPersonaContacto`, no este JSX: la frase de «creada pero sin
+ * vincular» es la que evita que el siguiente clic dé de alta una segunda ficha
+ * de la misma persona.
+ *
+ * 🔒 Y lo que este formulario NO hace: dar acceso. Crear la ficha y anotar el
+ * vínculo no abre nada — la autorización del portal es un consentimiento con su
+ * alcance, su caducidad y su aceptación por parte de quien la recibe, y se anota
+ * después desde la fila del vínculo. Meterla aquí de paso la convertiría en una
+ * casilla marcada por defecto.
+ */
+function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: {
+  nombreFicha: string
+  tipoPersona: 'fisica' | 'juridica' | null
+  ocupado: boolean
+  /** Lo que se tecleó en el buscador, para no escribir el nombre dos veces. */
+  terminoInicial: string
+  onAlta: (body: Record<string, unknown>) => Promise<ResultadoEscritura>
+  onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones>
+  onCancelar: () => void
+  onBuscar: () => void
+}) {
+  const tipos = tiposContactoSugeridos(tipoPersona)
+  const [f, setF] = useState({ nombre: terminoInicial, apellidos: '', telefono: '', email: '' })
+  const [tipo, setTipo] = useState<TipoRelacion>(tipos[0])
+  const [observaciones, setObservaciones] = useState('')
+  const [trabajando, setTrabajando] = useState(false)
+  const [campoMal, setCampoMal] = useState<string | null>(null)
+  const [resAlta, setResAlta] = useState<ResultadoEscritura | null>(null)
+  const [resVinculo, setResVinculo] = useState<RespuestaRelaciones | null>(null)
+  const [resumen, setResumen] = useState<ResultadoPersonaContacto | null>(null)
+  /** Ficha que YA existía y se ha vinculado sin crear nada (el caso del 409). */
+  const [reutilizada, setReutilizada] = useState<string | null>(null)
+
+  const nombreCompleto = [f.nombre.trim(), f.apellidos.trim()].filter((x) => x !== '').join(' ') || 'esta persona'
+
+  function set<K extends keyof typeof f>(k: K, v: string) {
+    setF((prev) => ({ ...prev, [k]: v }))
+  }
+
+  async function vincular(id: string): Promise<RespuestaRelaciones> {
+    const r = await onCrear({ relacionadoId: id, tipo, observaciones: observaciones.trim() || undefined })
+    setResVinculo(r)
+    return r
+  }
+
+  async function crear(forzar = false) {
+    const rev = revisarAlta({ ...f, fuente: FUENTE_PERSONA_CONTACTO })
+    if (!rev.ok) {
+      setCampoMal(rev.campo ?? null)
+      setResAlta({ estado: 'invalido', motivo: rev.motivo, campo: rev.campo ?? null })
+      return
+    }
+    setCampoMal(null)
+    setTrabajando(true)
+    setResVinculo(null)
+    setResumen(null)
+    setReutilizada(null)
+    try {
+      // `tipoPersona` lo deduce el módulo del DNI y el puerto lo vuelve a
+      // deducir: mandarlo desde aquí sería una tercera opinión sobre lo mismo.
+      const { tipoPersona: _tp, ...alta } = rev.alta
+      void _tp
+      const ra = await onAlta({ ...alta, forzar })
+      setResAlta(ra)
+      if (ra.estado === 'invalido') setCampoMal(ra.campo)
+      const id = ra.estado === 'ok' ? ra.id : null
+      const rv = ra.estado === 'ok' && id ? await vincular(id) : null
+      setResumen(combinarPersonaContacto(
+        ra.estado === 'ok' ? { ok: true, id } : { ok: false },
+        rv === null ? null : { ok: rv.estado === 'ok' },
+      ))
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  /** Reintento del vínculo SOLO: la ficha ya existe y volver a darla de alta la duplicaría. */
+  async function reintentarVinculo(id: string) {
+    setTrabajando(true)
+    try {
+      const rv = await vincular(id)
+      setResumen(combinarPersonaContacto({ ok: true, id }, { ok: rv.estado === 'ok' }))
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  /** Vincular una ficha que ya estaba (la del 409): no se crea nada. */
+  async function usarExistente(c: { id: string; nombre: string }) {
+    setTrabajando(true)
+    try {
+      const rv = await vincular(c.id)
+      if (rv.estado === 'ok') {
+        setReutilizada(c.nombre)
+        setResAlta(null)
+        setResumen(null)
+      }
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  const ocupadoYa = ocupado || trabajando
+  const hecho = resumen?.estado === 'creada_y_vinculada' || reutilizada !== null
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700 }}>Nueva persona de contacto de {nombreFicha}</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        Se crea su <strong>propia ficha</strong> y se vincula a {nombreFicha}. Nace como 🕐 lead —que es lo que
+        es— y pasará a cliente sola el día que le vendas algo y CIMA lo confirme.
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <Campo label="Nombre *">
+          <input value={f.nombre} onChange={(e) => set('nombre', e.target.value)} style={{ ...campo, ...(campoMal === 'nombre' ? malo : {}) }} autoFocus />
+        </Campo>
+        <Campo label="Apellidos">
+          <input value={f.apellidos} onChange={(e) => set('apellidos', e.target.value)} style={{ ...campo, ...(campoMal === 'apellidos' ? malo : {}) }} />
+        </Campo>
+      </div>
+
+      {/* El teléfono y el email no son un adorno: son POR DONDE ENTRARÁ al
+          portal el día que se le autorice (la identidad se prueba con un código
+          de un solo uso a uno de los dos). Sin ninguno de los dos, ni se le
+          puede dar acceso ni se vuelve a encontrar la ficha. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <Campo label="Teléfono" ayuda="Hace falta el teléfono o el email: es por donde entrará al portal cuando le des acceso.">
+          <input type="tel" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} placeholder="600 000 000" style={{ ...campo, ...(campoMal === 'telefono' ? malo : {}) }} />
+        </Campo>
+        <Campo label="Email">
+          <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="nombre@dominio.es" style={{ ...campo, ...(campoMal === 'email' ? malo : {}) }} />
+        </Campo>
+      </div>
+
+      <Campo label={`¿Qué es de ${nombreFicha}?`} ayuda="Se lee desde esta ficha: «Administración» = la persona administra la sociedad.">
+        <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoRelacion)} style={campo}>
+          {tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </Campo>
+      <Campo label="Observaciones (opcional)">
+        <input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} style={campo} maxLength={500} />
+      </Campo>
+
+      {!hecho && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" disabled={ocupadoYa} onClick={() => void crear()} style={btnStyle('primario')}>
+            {ocupadoYa ? 'Guardando…' : 'Crear y vincular'}
+          </button>
+          <button type="button" disabled={ocupadoYa} onClick={onBuscar} style={btnStyle('sutil')}>Buscarla en la cartera</button>
+          <button type="button" disabled={ocupadoYa} onClick={onCancelar} style={btnStyle('sutil')}>Cancelar</button>
+        </div>
+      )}
+
+      {/* 🚨 Ya existe alguien con ese DNI, teléfono o email. Vincular la ficha que
+          hay es SIEMPRE mejor que crear otra: dos fichas de la misma persona no
+          se ven —y se descubren cuando una tiene las pólizas y la otra el móvil. */}
+      {resAlta?.estado === 'conflicto' && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px', color: 'var(--warning)', background: 'var(--warning-bg)' }}>
+          ⚠️ <strong>Ya hay una ficha con ese dato:</strong>
+          <ul style={{ margin: '4px 0', paddingLeft: 18 }}>
+            {resAlta.coincidencias.map((c) => (
+              <li key={`${c.por}-${c.id}`} style={{ marginBottom: 4 }}>
+                <Link href={`/correduria/cliente/${c.id}`} style={{ fontWeight: 600 }}>{c.nombre}</Link>{' '}
+                <span style={{ color: 'var(--muted)' }}>(mismo {c.por} · {c.tipo})</span>{' '}
+                <button type="button" disabled={ocupadoYa} onClick={() => void usarExistente(c)} style={btnStyle('secundario', 'sm')}>
+                  Es esta: vincularla
+                </button>
+              </li>
+            ))}
+            {resAlta.coincidencias.length === 0 && <li>asegura no dice con cuál.</li>}
+          </ul>
+          {coincidenciaBloquea(resAlta.coincidencias) || !resAlta.forzable ? (
+            <div>Con el mismo DNI es la misma persona: no se crea otra ficha.</div>
+          ) : (
+            <button type="button" disabled={ocupadoYa} onClick={() => void crear(true)} style={btnStyle('secundario')}>
+              Es otra persona: crearla igualmente (comparten teléfono/email)
+            </button>
+          )}
+        </div>
+      )}
+
+      {resAlta && resAlta.estado !== 'ok' && resAlta.estado !== 'conflicto' && (
+        <div style={{ fontSize: 13, borderRadius: 8, padding: '8px 10px', color: 'var(--negative)', background: 'var(--negative-bg)' }}>
+          {resAlta.estado === 'invalido' ? `✖ ${textoMotivoAlta(resAlta.motivo)}` :
+            resAlta.estado === 'sin_configurar' ? '⏳ El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET). No se ha creado nada.' :
+            resAlta.estado === 'no_encontrado' ? 'asegura respondió «no encontrado» a un alta: revisa el puerto.' :
+            `⚠️ No se ha podido crear: ${textoMotivoAlta(resAlta.motivo)}`}
+        </div>
+      )}
+
+      {resumen && resumen.estado !== 'no_creada' && (
+        <div
+          style={{
+            fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px',
+            color: resumen.estado === 'creada_y_vinculada' ? 'var(--positive)' : 'var(--warning)',
+            background: resumen.estado === 'creada_y_vinculada' ? 'var(--positive-bg)' : 'var(--warning-bg)',
+          }}
+        >
+          {textoPersonaContacto(resumen, nombreCompleto, nombreFicha)}
+          {resumen.estado === 'creada_sin_vinculo' && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, alignItems: 'center' }}>
+              <button type="button" disabled={ocupadoYa} onClick={() => void reintentarVinculo(resumen.id)} style={btnStyle('secundario', 'sm')}>
+                Reintentar solo el vínculo
+              </button>
+              <Link href={`/correduria/cliente/${resumen.id}`} style={{ fontSize: 12 }}>abrir su ficha</Link>
+            </div>
+          )}
+          {resumen.estado === 'creada_y_vinculada' && (
+            <div style={{ marginTop: 6 }}>
+              <Link href={`/correduria/cliente/${resumen.id}`} style={{ fontSize: 12 }}>abrir la ficha de {nombreCompleto}</Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Por qué falló el vínculo, con el mismo aviso que el resto de la tarjeta. */}
+      {resumen?.estado === 'creada_sin_vinculo' && resVinculo && resVinculo.estado !== 'ok' && <Aviso r={resVinculo} />}
+
+      {reutilizada && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px', color: 'var(--positive)', background: 'var(--positive-bg)' }}>
+          ✅ {reutilizada} ya estaba en la cartera y se ha vinculado a {nombreFicha} (no se ha creado ninguna ficha
+          nueva). Todavía NO ve nada: el acceso al portal se le da aparte, con «Autorizar» en su fila.
+        </div>
+      )}
+
+      {hecho && (
+        <div>
+          <button type="button" onClick={onCancelar} style={btnStyle('secundario')}>Cerrar</button>
         </div>
       )}
     </div>
@@ -775,6 +1094,9 @@ const campo: React.CSSProperties = {
   width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, padding: '10px 12px',
   borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 16,
 }
+/** Un campo que el módulo ha rechazado. `Campo` no lo sabe: se compone al vuelo. */
+const malo: React.CSSProperties = { borderColor: 'var(--negative)' }
+
 const pendienteBox: React.CSSProperties = {
   fontSize: 13, lineHeight: 1.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 10px',
 }

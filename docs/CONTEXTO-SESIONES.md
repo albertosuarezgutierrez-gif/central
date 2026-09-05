@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **👤 Persona de contacto de una empresa: se crea su FICHA, no un campo (05/09/2026).** Duda de Alberto en
+  Grupo ELCA 83: quería apuntar a quien lleva sus seguros, que no es cliente. Se descartó un campo «persona de
+  contacto» dentro de la sociedad porque **esa persona es un futuro cliente**: con ficha propia nace 🕐 lead
+  (el estado se DERIVA, `estadoCliente`) y pasa a ✅ cliente sola cuando CIMA confirme su primera póliza. Nuevo
+  botón «Nueva persona de contacto» en 👪 Relaciones: alta + vínculo en un paso, con `fuente: recomendacion`,
+  reutilizando la ficha existente si el alta da 409 (anti-duplicado). **NO da acceso**: la autorización del
+  portal sigue siendo un acto aparte (consentimiento con alcance, caducidad y aceptación) — es el camino para
+  que el administrador acabe viendo las pólizas de la empresa y las suyas. `combinarPersonaContacto` +
+  `tiposContactoSugeridos` en `@central/module-seguros` (8 tests): son DOS escrituras y «ficha creada, vínculo
+  no» se dice entero para que el siguiente clic no duplique. NO se tocan `tipo`/`lead_estado` (columnas
+  heredadas del CRM que la pantalla no usa: escribirlas sería una segunda verdad). PR #PENDIENTE.
+
 - **🔘 La web que Alberto ve en `grupoasegura.es` es la de Manuel; la nuestra no tiene dominio (05/09/2026).**
   Captura suya: «Únete gratis», «Acceso correduría», header montado. Medido en Vercel: el apex `.es` y
   `www` están atados al proyecto **`asegura`** (el CRM), no a `asegura-web`; el plan de marketing decía
