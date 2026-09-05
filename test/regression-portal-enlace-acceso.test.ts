@@ -55,7 +55,11 @@ test('con https se construye el enlace con destino y codigo escapados', () => {
 })
 
 test('el enlace NO canjea el codigo: no hay ruta GET que abra sesion', () => {
-  const src = leer('apps/asegura-portal/app/page.tsx')
+  // 📌 El formulario se movió de `app/page.tsx` a `app/Entrada.tsx` el
+  // 05/09/2026, cuando la raíz pasó a ser un componente de SERVIDOR que mira si
+  // ya hay sesión. El cepo sigue al fichero; si un día vuelve a `page.tsx`, el
+  // `leer()` falla y se entera alguien.
+  const src = leer('apps/asegura-portal/app/Entrada.tsx')
   // La pantalla lee los parámetros y los pre-rellena, pero el canje sigue
   // siendo el POST que dispara la persona.
   assert.match(src, /searchParams|URLSearchParams/, 'la pantalla lee el enlace')
@@ -65,6 +69,18 @@ test('el enlace NO canjea el codigo: no hay ruta GET que abra sesion', () => {
     /useEffect\([^)]*\)\s*=>\s*\{[^}]*verificar\(\)/s,
     'el enlace no puede canjear solo al abrirse',
   )
+})
+
+test('la RAIZ mira si ya hay sesion antes de pedir nada', () => {
+  // 🚨 El cepo del 05/09/2026. `/` era el formulario de cliente y no miraba la
+  // cookie: quien ya había entrado veía otra vez «Enviarme un código» con su
+  // sesión de 30 días viva, y la conclusión razonable era «me lo pide cada
+  // vez». No fallaba nada — la puerta no preguntaba quién eras. Es además lo
+  // que hace innecesario un enlace mágico que canjee solo.
+  const src = leer('apps/asegura-portal/app/page.tsx')
+  assert.doesNotMatch(src, /^'use client'/m, 'la raíz tiene que resolverse en el servidor para leer la cookie')
+  assert.match(src, /getIdentidad\(\)/, 'la raíz resuelve la sesión por la puerta única')
+  assert.match(src, /redirect\(['"]\/boveda['"]\)/, 'con sesión viva se entra directo, sin pedir código')
 })
 
 test('el correo manda el codigo aunque no haya enlace', () => {

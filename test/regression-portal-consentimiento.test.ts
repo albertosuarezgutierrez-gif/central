@@ -14,7 +14,11 @@ import { readFileSync } from 'node:fs'
  */
 
 const RUTA = 'apps/asegura-portal/app/api/acceso/verificar/route.ts'
-const PANTALLA = 'apps/asegura-portal/app/page.tsx'
+// 📌 El formulario de entrada se movió de `app/page.tsx` a `app/Entrada.tsx` el
+// 05/09/2026: la raíz pasó a ser un componente de SERVIDOR que mira si ya hay
+// sesión (ver la cabecera de `app/page.tsx`). El cepo sigue al fichero — si un
+// día vuelve, el `leer()` falla y se entera alguien.
+const PANTALLA = 'apps/asegura-portal/app/Entrada.tsx'
 const PRIVACIDAD = 'apps/asegura-portal/app/legal/privacidad/page.tsx'
 
 const leer = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')

@@ -45,7 +45,15 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
   const devueltos = p.recibos?.devueltos ?? 0
 
   return (
-    <li className="poliza-fila" data-de-otro={deOtro ? 'si' : undefined}>
+    <li
+      className="poliza-fila"
+      data-de-otro={deOtro ? 'si' : undefined}
+      // El filete de la izquierda dice el ESTADO de un vistazo. `peligro` solo
+      // para lo que quita cobertura; una póliza vencida o en renovación es
+      // `aviso`. Sin estado no hay filete: la mayoría de las filas están bien y
+      // pintarlas todas de un color deja de significar nada.
+      data-estado={devueltos > 0 ? 'peligro' : p.vigencia !== 'vigente' ? 'aviso' : undefined}
+    >
       <Link href={`/boveda/poliza/${p.id}`} className="poliza-enlace">
         <IconoRamo ramo={p.ramo} />
         <span className="poliza-cuerpo">
