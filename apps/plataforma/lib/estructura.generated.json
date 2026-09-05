@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-05T13:31:29Z",
+  "generadoEn": "2026-09-05T15:41:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -380,7 +380,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 36
       },
       "rrhh": {
         "estado": "usado",
@@ -460,7 +460,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 3
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2080,15 +2080,15 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 37
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 43
+        "evidencias": 47
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 14
       },
       "housesevillana": {
         "estado": "no",
@@ -2134,7 +2134,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 13
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2188,11 +2188,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 9
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 39
       },
       "asegura-web": {
         "estado": "no",
@@ -2729,8 +2729,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "asegura-portal": {
         "presente": false,
@@ -2757,8 +2757,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -3854,7 +3854,9 @@
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
       "/api/operador/cliente/historial",
+      "/api/operador/cliente/portal",
       "/api/operador/cliente/relaciones",
+      "/api/operador/cliente/relaciones/aviso",
       "/api/operador/clientes",
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/lineas",
@@ -3887,6 +3889,8 @@
       "/api/autorizaciones/[id]",
       "/api/catastro",
       "/api/catastro/sugerir",
+      "/api/hojas",
+      "/api/hojas/[id]",
       "/api/invitaciones",
       "/api/invitaciones/[id]",
       "/api/invitaciones/responder",
@@ -4708,7 +4712,9 @@
       "/api/correduria/catastro",
       "/api/correduria/cliente",
       "/api/correduria/cliente/contactos",
+      "/api/correduria/cliente/portal",
       "/api/correduria/cliente/relaciones",
+      "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
@@ -5211,6 +5217,8 @@
       "seguros.portal_canal",
       "seguros.portal_codigo",
       "seguros.portal_consentimiento",
+      "seguros.portal_hoja_qr",
+      "seguros.portal_hoja_qr_poliza",
       "seguros.portal_identidad",
       "seguros.portal_invitacion",
       "seguros.portal_obligacion",
@@ -5667,6 +5675,11 @@
       "description": "Recordatorio mensual de obligaciones legales pendientes de implementar en la vertical RRHH (Portal del Empleado). Lee el roadmap, filtra los ítems 🔴 obligatorios no completados y genera un informe de plazos. Úsala el primer día de cada mes o cuando Alberto quiera un pulso del estado de compliance de RRHH."
     },
     {
+      "id": "seo-asegura",
+      "name": "seo-asegura",
+      "description": "Agente de SEO, contenido y redes sociales de la web pública de Grupo ASegura (grupoasegura.es, apps/asegura-web). Úsalo si Alberto pide \"mejora el SEO de la correduría\", \"escribe un post/artículo para la web o para redes\", \"¿cómo vamos de posicionamiento?\", o al disparo de la rutina semanal. NO publica en redes ni envía nada a terceros: deja borradores. NUNCA tarifica."
+    },
+    {
       "id": "seo-house-sevillana",
       "name": "seo-house-sevillana",
       "description": "SEO especializado para la landing page del apartamento turístico House Sevillana (Sevilla, centro histórico, Calle Socorro 24 — barrio de San Julián, 290 m², 6 dormitorios, 4 baños, parking privado). Cubre generación de metadatos (title, meta description, Open Graph, Twitter Cards), schema.org JSON-LD (LodgingBusiness, FAQPage, BreadcrumbList), keyword research multi-idioma (ES/EN/FR/DE/IT), reescritura de copy con foco en conversión y reservas directas para esquivar la comisión de Booking del 19,72%, auditoría SEO técnica para Next.js 15 App Router, y configuración multi-idioma con hreflang. Usa esta skill SIEMPRE que Alberto pida cualquier cosa relacionada con SEO, posicionamiento, metadatos, schema, keywords, copy de la landing, auditoría web, hreflang o multi-idioma de House Sevillana, aunque no diga la palabra SEO explícitamente."
@@ -5801,12 +5814,12 @@
         "capacidad": "qr-portal",
         "label": "QR / portal cliente",
         "tiene": [
+          "asegura",
           "ia-rest"
         ],
         "falta": [
           "almacen",
           "alquiler",
-          "asegura",
           "asegura-portal",
           "asegura-web",
           "housesevillana",
@@ -6164,8 +6177,8 @@
     "verticales": 13,
     "packages": 40,
     "capacidades": 23,
-    "skills": 39,
-    "apis": 1282,
+    "skills": 40,
+    "apis": 1288,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
