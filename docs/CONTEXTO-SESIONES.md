@@ -43,7 +43,11 @@
   se pague la búsqueda dos veces. Nada de esto aplica al PISO (internet no sabe si hay plancha) ni a lo
   sensible/negativo. Además `importesNoRespaldados` en el guardrail: **ninguna cifra en € que no esté en
   las fuentes pasa** — los patrones de antes solo miraban códigos de 4+ dígitos, teléfonos y URLs, por
-  eso el precio del taxi salió limpio. PR #2378.
+  eso el precio del taxi salió limpio. PR #2378. **Y el dato ya está en la guía** (`mensajes_hechos`
+  ids 10 y 11, `prop_house_sevillana`, `confirmado`, insertados a mano por Supabase): tarifa fija de
+  taxi 26€ (L-V 7-21h) / 29€ (noches, findes, festivos), EA 6€/8€ con sus paradas reales, y la
+  advertencia explícita de NO decir «Puerta de Jerez» ni «10 min andando». Así esa pregunta se
+  responde sola, sin gastar búsqueda. **Los otros 3 pisos NO lo tienen** (las distancias son suyas).
 
 - **🗣️ El borrador salía en ESPAÑOL con el huésped escribiendo en inglés (05/09/2026).** Caso real: reserva
   154375571 (House Sevillana, Massimo). Todos los prompts del agente van en español y la orden «responde en
