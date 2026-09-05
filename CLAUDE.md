@@ -633,6 +633,23 @@ palanca**, o la medición no sirve.
 pintando los proyectos en «Building» antes de acabar en `12 Skipped Deployments` / `Ignored`. Cero
 gasto de build. El estado que vale sigue siendo el FINAL, no el comentario que se reescribe solo.
 
+✅ **DUODÉCIMA medición (05/09/2026, PR #2378) — el paso 3 del orden de abajo funcionó tal cual, y no
+hizo falta nada más.** El PR llevaba rato **fuera de draft** y con el head ya procesado (`git ls-remote`
+== `head.sha`, o sea sin lag que esperar), pero `mergeable_state: "dirty"`: `main` había avanzado dos
+veces mientras se trabajaba. Resuelto el conflicto (en `docs/CONTEXTO-SESIONES.md`, dos entradas del
+MISMO día que se conservan las dos, no son versiones rivales) y empujado el merge → **los 12 requeridos
+arrancan a los segundos** (`event: pull_request`, `actor: albertosuarezgutierrez-gif`). No añade teoría
+nueva: es la enésima vez que **un push con contenido real sobre un PR que no es draft dispara**.
+
+🟢 **Y un dato de Vercel que quita una falsa alarma: un commit de MERGE SIN `[preview]` NO construye las
+once.** Al empujarlo, los comentarios del bot pintaron **las 12 apps en «Building» y 0 Skipped** —peor
+pinta que nunca, y es justo la combinación que en el PR #2281 costó once builds—, pero convergió a
+**11 `Ignored` + `ialimp` `Ready`**, que es lo correcto: ialimp es la única app sin `--sin-previews`
+(cliente vivo). La diferencia con #2281 es el **marcador**, no el commit de merge: `[preview]` es lo que
+levanta el veto global; sin él, que el merge toque `pnpm-lock.yaml` solo importa para el paso 3 del
+script, que igualmente no construye porque el veto sigue en pie. **No des la alarma desde el comentario
+intermedio** (dos sesiones seguidas han estado a punto): el estado que vale es el final.
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
    ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.
