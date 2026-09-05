@@ -1461,3 +1461,130 @@ textarea.f-in {
     opacity: 1;
   }
 }
+
+/* ── «Sube tu póliza y la leemos» ───────────────────────────────────────────
+   La hoja, la línea que la barre y los campos que se rellenan detrás. Es el
+   equivalente en CSS a la Lottie `document-scan` de la landing de la
+   correduría, sin traerse el reproductor de Lottie (~60 KB de JS por una
+   ilustración). */
+.escaneo {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.escaneo-hoja {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 340px;
+  padding: var(--e5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-l);
+  background: var(--panel);
+  box-shadow: var(--shadow-panel);
+}
+
+.escaneo-cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding-bottom: var(--e4);
+  margin-bottom: var(--e4);
+  border-bottom: 1px solid var(--border);
+}
+
+.escaneo-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--e2);
+  background: var(--brand-soft);
+  flex: none;
+}
+
+.escaneo-titulo {
+  height: 9px;
+  width: 55%;
+  border-radius: var(--pill);
+  background: var(--bg2);
+}
+
+.escaneo-campo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  padding: 9px 0;
+  opacity: 0.28;
+  transition: opacity 0.45s var(--curva);
+}
+
+.escaneo.activo .escaneo-campo {
+  opacity: 1;
+}
+
+.escaneo-etiqueta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* El «valor» se dibuja creciendo de izquierda a derecha: es lo que hace que
+   parezca que se está rellenando y no que ya estaba. */
+.escaneo-valor {
+  height: 8px;
+  width: 92px;
+  border-radius: var(--pill);
+  background: var(--brand-soft);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--curva);
+}
+
+.escaneo.activo .escaneo-valor {
+  transform: scaleX(1);
+}
+
+/* La línea de barrido: baja una vez, no en bucle. Un escáner que no para
+   nunca es ruido en una portada. */
+.escaneo-linea {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--brand), transparent);
+  box-shadow: 0 0 18px 3px color-mix(in oklab, var(--brand) 35%, transparent);
+  opacity: 0;
+}
+
+.escaneo.activo .escaneo-linea {
+  animation: barrido 1.9s var(--curva) 1 forwards;
+}
+
+@keyframes barrido {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .escaneo-linea {
+    display: none;
+  }
+  .escaneo-campo,
+  .escaneo .escaneo-valor {
+    opacity: 1;
+    transform: none;
+  }
+}

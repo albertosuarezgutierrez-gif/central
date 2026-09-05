@@ -7,6 +7,7 @@ import Formulario from '@/components/Formulario'
 import Reveal from '@/components/Reveal'
 import PanelDemo from '@/components/PanelDemo'
 import Cifras from '@/components/Cifras'
+import Escaneo from '@/components/Escaneo'
 
 export const metadata: Metadata = {
   title: 'Correduría de seguros en Sevilla',
@@ -242,6 +243,47 @@ export default function Home() {
                 </Link>
               ))}
             </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── Sube la póliza y la leemos ───────────────────────────────────
+          🚨 El copy dice EXACTAMENTE lo que hace `apps/asegura-portal`
+          (`lib/extraer-poliza.ts` + `app/api/polizas/route.ts`), ni un paso
+          más: lee el documento y deja la ficha rellena, que la persona
+          confirma (`confirmadaPorUsuario` nace en `false`, la procedencia es
+          `declarado`). NO dice «el agente se encarga de todo» ni «guardamos tu
+          póliza»: el fichero NO se persiste — solo su nombre y los datos
+          extraídos. Eso, además de ser verdad, es el mejor argumento de los
+          tres, así que se cuenta como tal. */}
+      <section className="seccion" id="subir" aria-labelledby="subir-t">
+        <div className="wrap dos-columnas">
+          <Reveal>
+            <p className="antetitulo">Tu póliza, sin teclear</p>
+            <h2 className="display" id="subir-t">
+              Súbela y la <span className="destaca">leemos por ti.</span>
+            </h2>
+            <p className="lead">
+              Un PDF o una foto con el móvil. Sacamos la compañía, el número, el vencimiento y las coberturas, y te
+              dejamos la ficha rellena en tu área de clientes para que la revises.
+            </p>
+            <ul className="garantias" style={{ marginTop: 24 }}>
+              <li>
+                <Check />
+                Vale un PDF o una foto
+              </li>
+              <li>
+                <Check />
+                Confirmas tú: nada se da por bueno solo
+              </li>
+              <li>
+                <Check />
+                El documento no se guarda, solo sus datos
+              </li>
+            </ul>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <Escaneo />
           </Reveal>
         </div>
       </section>
