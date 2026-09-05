@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría (05/09/2026).**
+  Cerrado lo que faltaba de la petición del 04/09: **Renovaciones**, que era la única lista de la
+  correduría sin ellos y justamente la cola comercial (medido: de las 15 fichas que vencen en 90 días,
+  **9 tienen teléfono y 8 email**). `contactosDe()` se **exporta** desde `apps/asegura/lib/cartera-busqueda.ts`
+  en vez de dejar un cuarto `descifrar` casi idéntico; el puerto de vencimientos manda ya `contacto` y en
+  plataforma lo lee el **mismo** `interpretarContacto` que el buscador y la retención — dos normalizadores
+  del mismo bloque harían que el icono saliera en una pantalla y no en otra para el MISMO cliente.
+  Una consulta por lista (un cliente con tres pólizas que vencen sale tres veces y no se descifra tres).
+  Tres estados intactos: sin bloque = «no se ha podido mirar» · todo a null = «no tiene» · ilegible =
+  «guardado y la clave PII no lo abre». Verificado: tsc asegura+plataforma, 22 tests del lector, suite
+  completa sin fallos y `next build`. **NO se ponen en `SinCanal`**: esa lista ES la de quien no tiene canal.
+
 - **🔁 Un PR abierto de noche choca con `main` cada ~50 min, y siempre por el MISMO fichero (05/09/2026).**
   El #2277 llegó a verde y `clean`, y volvió a `dirty` **cuatro veces** en poco más de una hora: #2290,
   #2285, #2283+#2248 y luego #2294. **Ninguna** fue conflicto de código —siempre `docs/CONTEXTO-SESIONES.md`,

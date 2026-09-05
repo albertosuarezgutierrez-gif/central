@@ -147,3 +147,47 @@ test('objeto: una forma rara degrada a null y NO tumba la fila entera', () => {
   const r = interpretarVencimientos(200, { ...VENC_OK, polizas: [{ ...FILA_OK, objeto: 42 }] })
   assert.equal(r.estado, 'ok')
 })
+
+// ── Contacto en la lista de renovaciones (05/09/2026) ───────────────────────
+// La tabla existe para llamar, así que el teléfono viaja con la fila. Los tres
+// estados no se pueden colapsar: sin bloque = «no se ha podido mirar»; con
+// bloque y todo a null = «se miró y no hay»; ilegible = «está y no se abre».
+
+test('vencimientos: sin bloque de contacto llega null, NUNCA un contacto a ceros', () => {
+  const r = interpretarVencimientos(200, VENC_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].contacto, null)
+})
+
+test('vencimientos: un contacto vacío SÍ afirma que no hay teléfono ni email', () => {
+  const con = {
+    ...VENC_OK,
+    polizas: [{ ...FILA_OK, contacto: { telefono: null, telefonoIlegible: false, email: null, emailIlegible: false } }],
+  }
+  const r = interpretarVencimientos(200, con)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') {
+    assert.deepEqual(r.polizas[0].contacto, {
+      telefono: null, telefonoIlegible: false, email: null, emailIlegible: false,
+    })
+  }
+})
+
+test('vencimientos: el teléfono cifrado no se confunde con no tenerlo', () => {
+  const con = {
+    ...VENC_OK,
+    polizas: [{ ...FILA_OK, contacto: { telefono: null, telefonoIlegible: true, email: 'a@b.es', emailIlegible: false } }],
+  }
+  const r = interpretarVencimientos(200, con)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') {
+    assert.equal(r.polizas[0].contacto?.telefonoIlegible, true)
+    assert.equal(r.polizas[0].contacto?.email, 'a@b.es')
+  }
+})
+
+test('vencimientos: un contacto con forma rara degrada a null y NO tumba la lista', () => {
+  const r = interpretarVencimientos(200, { ...VENC_OK, polizas: [{ ...FILA_OK, contacto: 'jose@ejemplo.es' }] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].contacto, null)
+})

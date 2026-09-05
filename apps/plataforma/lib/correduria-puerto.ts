@@ -108,7 +108,7 @@ function vitalidad(v: unknown): Vitalidad {
  * sobre una ficha que quizá sí tiene teléfono. Es la misma degradación que ya
  * hace el bloque de recibos con una versión anterior de asegura.
  */
-function contacto(v: unknown): Contacto | null {
+export function interpretarContacto(v: unknown): Contacto | null {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
   const o = v as Record<string, unknown>
   return {
@@ -194,7 +194,7 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
         ultimoVencimiento: cadena(x.ultimoVencimiento),
         vitalidad: vitalidad(x.vitalidad),
         hermanas: hs,
-        contacto: contacto(x.contacto),
+        contacto: interpretarContacto(x.contacto),
         aviso:
           textoAviso === null || av == null
             ? null
