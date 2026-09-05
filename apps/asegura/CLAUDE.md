@@ -877,6 +877,23 @@ delante (`249` Antonio Manuel Mejías / Yolanda Ríos, `366` Catalina Verdugo / 
 son grupos de TRES o más fichas**, que la guarda `count(*) = 2` del lote 7 salta a propósito: tres
 fichas con el mismo DNI las decide una persona, no un bucle.
 
+✅ **Y esa persona los decidió: lote 10 (05/09/2026, `2026-09-05_fusion_mismo_dni_lote10.sql`,
+`fusion-dni-lote10-2026-09-05`).** Los 18 se pusieron delante de Alberto con nombre, teléfono y
+pólizas; aprobó 14 grupos completos + 1 parcial. Ejecutado a las 12:46 UTC: **15 fusiones, 33
+lápidas, 15 supervivientes, y ninguna póliza perdida** (70 antes, 70 después). Dos cambios de motor
+respecto al lote 7: fusiona grupos de **N** (elige un superviviente y le funde las demás de una en
+una, con el mismo orden de desempate) y **los uuid van escritos a mano en el lote, no leídos de la
+foto** — la foto se recalcula en cada visita a `/correduria/mantenimiento`, así que el ordinal de un
+grupo no es estable y solo los ids garantizan que lo ejecutado es lo aprobado.
+🚫 **Los 3 que NO se tocaron son la parte que importa:** el 12 (Antonio Manuel Mejías Heredia /
+Yolanda Ríos Vázquez) y el 15 (Fernando Martín Verdugo / Catalina Verdugo García) son **dos personas
+distintas** — el identificador coincide y el DATO está mal en una de las dos—, y el 10 es el
+centinela de 20 fichas. Fuera también la ficha de «Elisa De paz campo», que compartía grupo con dos
+«Juan Antonio Romero Lopez» sin tener nada que ver: ese grupo entró **parcial**.
+🔎 **Y un hallazgo que ningún criterio de nombre habría encontrado:** «Gerente Chapisa (sin
+apellidos)» no es una persona sin nombre — es **Francisco Javier Zamora Flores**, mismo DNI y mismo
+teléfono. Un cargo tecleado donde iba el nombre.
+
 🃏 **Lote 6 (03/09/2026, `2026-09-03_purga_intervinientes_comodin_lote6.sql`) — ✅ EJECUTADO:
 el COMODÍN del volcado.** Alberto, desde la ficha de Pilar: «Matito no se puede borrar, es un
 error». Las dos mitades ciertas y por motivos distintos:
