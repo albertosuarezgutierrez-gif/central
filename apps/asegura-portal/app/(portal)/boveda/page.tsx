@@ -14,12 +14,14 @@ import {
   polizasSinFechaDeVencimiento,
   sincronizarObligacionesDeIdentidad,
 } from '@/lib/obligaciones'
+import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
 import { FilaDeclarada } from './FilaDeclarada'
+import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
 import { RAMO } from './PolizaVista'
 import { vistaDeBoveda } from '@central/module-seguros-portal'
@@ -55,7 +57,7 @@ export default async function Boveda({
   // La cuarta es de otra naturaleza y por eso no lleva identidad: `companias_dgs`
   // es un catálogo público (códigos DGS y teléfonos que publican las propias
   // compañías), no la cartera de nadie. Ver `lib/canales-compania.ts`.
-  const [cartera, declaradas, partes, companias] = await Promise.all([
+  const [cartera, declaradas, partes, companias, hojas, elegibles] = await Promise.all([
     carteraDeIdentidad(identidad.id),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
@@ -64,6 +66,8 @@ export default async function Boveda({
     }),
     partesDeIdentidad(identidad.id),
     companiasConCanal(),
+    hojasDeIdentidad(identidad.id),
+    polizasElegibles(identidad.id),
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
@@ -239,6 +243,15 @@ export default async function Boveda({
           barra son cuatro por decisión de diseño. Y va en la pantalla, no solo
           enlazado desde un texto legal: un derecho que solo se ejerce
           escribiendo un correo es un derecho con peaje. */}
+      {/* La hoja para imprimir va DESPUÉS de la lista y antes de «Tus datos»:
+          se crea a partir de lo que se acaba de mirar, así que tiene sentido
+          justo debajo — y no es una quinta pestaña, que es lo que Alberto acaba
+          de quitar de la barra. */}
+      <section className="seccion" aria-labelledby="hojas-titulo">
+        <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
+        <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
+      </section>
+
       <TusDatos inicial={supresiones} />
         </>
       )}
