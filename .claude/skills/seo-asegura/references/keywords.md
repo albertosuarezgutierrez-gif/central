@@ -42,7 +42,10 @@ provincia. La señal se agota en la palabra «Sevilla».
 
 ## 3. Marca — hay que vigilarla, no ganarla
 
-`grupoasegura`, `grupo asegura sevilla`, `alberto suárez seguros`.
+`grupoasegura`, `Grupo ASegura Sevilla`, `alberto suárez seguros`.
+
+> Las consultas se escriben aquí **con la marca bien escrita**, aunque quien busca teclee de otra
+> forma: Google no distingue mayúsculas, y `test/regression-nombre-comercial-asegura.test.ts` sí.
 
 🚨 **Convive con el CRM en `app.grupoasegura.com`**, que es otra web del mismo negocio. Y hasta
 que se retire, `apps/plataforma/app/seguros` compite por «correduría de seguros» desde
