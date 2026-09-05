@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-05T13:31:29Z",
+  "generadoEn": "2026-09-05T14:54:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -380,7 +380,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 36
       },
       "rrhh": {
         "estado": "usado",
@@ -460,7 +460,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2080,11 +2080,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 35
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 43
+        "evidencias": 46
       },
       "asegura-web": {
         "estado": "usado",
@@ -2188,11 +2188,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 7
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 38
       },
       "asegura-web": {
         "estado": "no",
@@ -3855,6 +3855,7 @@
       "/api/operador/cliente/contactos",
       "/api/operador/cliente/historial",
       "/api/operador/cliente/relaciones",
+      "/api/operador/cliente/relaciones/aviso",
       "/api/operador/clientes",
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/lineas",
@@ -3887,6 +3888,8 @@
       "/api/autorizaciones/[id]",
       "/api/catastro",
       "/api/catastro/sugerir",
+      "/api/hojas",
+      "/api/hojas/[id]",
       "/api/invitaciones",
       "/api/invitaciones/[id]",
       "/api/invitaciones/responder",
@@ -4709,6 +4712,7 @@
       "/api/correduria/cliente",
       "/api/correduria/cliente/contactos",
       "/api/correduria/cliente/relaciones",
+      "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
@@ -5211,6 +5215,8 @@
       "seguros.portal_canal",
       "seguros.portal_codigo",
       "seguros.portal_consentimiento",
+      "seguros.portal_hoja_qr",
+      "seguros.portal_hoja_qr_poliza",
       "seguros.portal_identidad",
       "seguros.portal_invitacion",
       "seguros.portal_obligacion",
@@ -6165,7 +6171,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1282,
+    "apis": 1286,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
