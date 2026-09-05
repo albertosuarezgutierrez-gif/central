@@ -233,3 +233,33 @@ test('fase 4: el schema del portal no declara columnas que el rol no puede leer'
       `Cada consulta a ese modelo fallará en la BD, y si el GRANT se ampliara, el portal leería PII:\n  - ${infracciones.join('\n  - ')}`,
   )
 })
+
+test('la ficha de una póliza AÑADIDA lleva la identidad DENTRO del where', () => {
+  // 🚨 Nace el 05/09/2026, al fundir «Mis pólizas» en «Mis seguros»: esas filas
+  // pasan a tener ficha propia en `/boveda/anadida/[id]`, y una ruta con un id
+  // en la URL es el sitio exacto donde se filtra una bóveda ajena.
+  //
+  // Aquí la regla se cumple distinto que en la ficha de la CARTERA (que lee
+  // primero todo lo autorizado y busca el id dentro): estas filas son de una
+  // identidad y de nadie más, así que la guarda va en la CONSULTA. Leer por id
+  // y comprobar el dueño en la línea siguiente compila, typechequea y funciona…
+  // hasta que alguien mueva esa comprobación o la envuelva en un `if`.
+  const src = readFileSync(
+    join(process.cwd(), 'apps/asegura-portal/app/(portal)/boveda/anadida/[id]/page.tsx'),
+    'utf8',
+  )
+  const i = src.indexOf('prisma.portalPolizaDeclarada')
+  assert.ok(i > 0, 'no encuentro la consulta de la ficha de una póliza añadida')
+  const bloque = src.slice(i, src.indexOf('})', i))
+  assert.match(
+    bloque,
+    /where:\s*\{[^}]*identidadId:\s*identidad\.id/,
+    'la identidad tiene que ir DENTRO del `where`, junto al id de la URL',
+  )
+  assert.doesNotMatch(
+    bloque,
+    /findUnique/,
+    'un `findUnique` solo acepta la clave única, así que la identidad se quedaría fuera del `where` ' +
+      'y la comprobación acabaría en un `if` posterior, que es justo lo que se puede perder',
+  )
+})

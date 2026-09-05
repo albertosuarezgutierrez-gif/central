@@ -210,6 +210,50 @@ cada póliza, **antes** del historial de siniestros: es el dinero, que es lo pri
 Cepos en `test/regression-portal-visibilidad.test.ts`.
 
 
+### 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra (05/09/2026)
+
+Alberto, mirando su propio portal en el móvil: *«mis seguros y mis pólizas es lo mismo… tengo lógica
+al desarrollar»*. **No eran lo mismo** —una era su cartera de CIMA y la otra lo que él aporta— **pero
+el fallo era del nombre, no suyo**: en castellano «seguros» y «pólizas» son sinónimos, así que la
+barra ofrecía dos puertas que prometían la misma cosa. Si el dueño de la correduría no las
+distingue, ningún cliente lo va a hacer.
+
+**El arreglo no fue rebautizarla: fue quitarla.** `portal_poliza_declarada` tenía **1 fila en toda la
+BD**, y el argumento en contra ya estaba escrito en `vista-portal.ts` desde el día que se montó —una
+pestaña que casi siempre dice cero parece un producto a medio hacer— justo encima del código que la
+creaba.
+
+Ahora hay **una sola lista** en «Mis seguros»: la cartera y las aportadas, con el mismo aspecto de
+fila. Y por eso el título de la sección ya **no** dice «en Grupo ASegura»: ahí dentro hay ahora
+pólizas que la correduría no lleva.
+
+🚨 **El chip «Añadida por ti» de cada fila NO es decoración, y no se quita.** Para el cliente las dos
+son «un seguro»; para la correduría no: la aportada **no la gestiona nadie de la casa**. Si llama por
+un siniestro de esa, no hay datos, no hay relación con esa compañía y nadie la ha revisado. Va en la
+FILA y no en la ficha porque un cartel que solo se ve tras un clic no existe para quien repasa la
+lista — la misma razón que la etiqueta «De {titular}» de `FilaPoliza`. Y la ficha lo repite entero
+con la píldora «No la gestionamos».
+
+- **`FilaDeclarada.tsx`** — la fila. Sin vencimiento conocido va en `aviso`: es lo único que le puede
+  pasar por encima sin enterarse, **y nadie se lo va a avisar** porque no la gestionamos.
+- **`/boveda/anadida/[id]`** — su ficha, con el editor dentro (antes era una tarjeta con el
+  formulario desplegado, que es lo que Alberto llamó «muy sucia la página» en la cartera).
+  🚨 Aquí la identidad va **DENTRO del `where`** junto al id, no comprobada en la línea siguiente: es
+  una tabla de una sola identidad y la guarda tiene que estar en la consulta. Cepo (con dos
+  mutaciones vistas morder) en `test/regression-portal-aislamiento.test.ts`.
+- **Un `?vista=polizas` viejo** —un correo, un enlace guardado— cae en `seguros` por el
+  comportamiento que `vistaDeBoveda()` ya tenía para valores desconocidos, que es exactamente donde
+  vive ahora ese contenido. No hizo falta redirección.
+- **Cepo nuevo de sinónimos** en `vista-portal.test.ts`: la barra no puede usar a la vez «seguro» y
+  «póliza», ni «siniestro» y «parte». No basta con que las etiquetas sean cadenas distintas.
+
+📱 **Y de paso arregla lo que se veía en su captura: la cuarta pestaña salía CORTADA** («Qu…») en un
+móvil de 390 px. El carril hace scroll horizontal con la barra oculta, así que «Quién me ve» solo la
+encontraba quien arrastrara por casualidad. Medido con Playwright: con tres, a 360/390/412 caben
+enteras; **a 320 seguían saliéndose 39 px**, así que por debajo de 380 se reparten el ancho a partes
+iguales (`flex: 1 1 0`), con los 44 px táctiles intactos. El `overflow-x` se queda como red por si
+algún día vuelve a haber una cuarta.
+
 ### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
 
 Alberto: *«cliente por codigo es un poco coñazo»* y, al preguntarle si le pedía el código cada vez o
