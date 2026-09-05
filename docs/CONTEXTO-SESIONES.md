@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🃏 El backfill del DNI: no había botón, y apareció un DNI CENTINELA en 20 fichas (05/09/2026).**
+  Alberto: «haz el backfill del dni». **No lo podía hacer nadie**: el `POST /api/operador/backfill-dni` existía
+  pero `/correduria/mantenimiento` decía «se lanza desde asegura» = un `curl` con el secreto a mano. Botón nuevo
+  en la pantalla (tandas + `restantes`, `UPDATE ... FROM (VALUES)` de 500 con reintento fila a fila). ⚠️ Y se
+  corrigió la frase que lo bloqueaba: «no hay botón mientras queden choques porque reventaría a la mitad» es
+  **falsa** — sólo se escriben las `rellenable`. 🚨 **Hallazgo: 20 fichas comparten un DNI con 20 nombres sin
+  relación y 19 correos distintos** (una en cartera viva). Es un centinela con letra correcta, así que
+  `looksLikeDniNieCif` no lo ve, y **el índice único no protege**: 14.990 de las 15.092 sin hash son `lead`.
+  Guardián `compartido` en la pieza pura (≥3 nombres distintos y ningún token común); columna `compartidos` en
+  la foto (DDL aplicada). Auditado el lote 7 del 04/09: **602 fusiones, ninguna de dos personas distintas**;
+  quedan 18 grupos (1 centinela, 2 con DNI contradictorio, 15 de tres o más fichas). PR pendiente de merge.
+
 - **📅 La pestaña Recibos parecía vacía por un ORDER BY, y los 336 homónimos NO se pueden fusionar (05/09/2026).**
   Alberto: «no aparece la fecha y otros datos». No faltaba el dato: **la ficha ordenaba las pólizas SOLO por
   `fechaVencimiento: desc`, y en Postgres `DESC` implica NULLS FIRST** — las 15 del volcado no tienen fecha, así
@@ -38,7 +50,7 @@
   que vence antes, y sin fecha al FINAL de su grupo** (una fecha ausente no es ni próxima ni lejana).
   🚫 **Y «haz lo mismo con los 336» no se puede**: de los **1.322 pares** que solo comparten nombre, **277 tienen
   DNI DISTINTO** (probados personas distintas) y **ninguno comparte DNI**. Solo 6 traían prueba de los lotes 4/5
-  (vehículo o póliza común) → **lote 8, 3 fusiones**: 1 cayó por DNI contradictorio («Jose Manuel Seijas Vazquez»,
+  (vehículo o póliza común) → **lote 9, 3 fusiones**: 1 cayó por DNI contradictorio («Jose Manuel Seijas Vazquez»,
   mismo coche y dos DNI: padre e hijo homónimos) y **2 por ser grupos de TRES**. ⚠️ Dije «5 fusionables» contando
   PARES: en un trío hay tres pares y la guarda `count(*)=2` los excluye a propósito. Visibles 5.102 → **5.099**,
   cartera viva 80 intacta, 0 pólizas huérfanas. También se anotó a mano que Manuel Suárez es hijo de José Suárez
