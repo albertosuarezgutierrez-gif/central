@@ -30,12 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **🌐 `grupoasegura.es` ya es LA web — y el dominio es ÚNICO por diseño, no dos que conviven (05/09/2026).**
-  Con `NEXT_PUBLIC_SITE_URL=https://grupoasegura.es`, la canonicalización LOO-670 del repo `asegura`
-  (`src/proxy.ts` + `lib/http/app-origin.ts`) hace que **`app.grupoasegura.com` redirija 308 al apex**: sin
-  allowlist, no se puede servir por los dos. Su matcher incluye `/(api|trpc)(.*)` («Always run for API routes»),
-  y eso **rompió 6 workflows** que llamaban al host viejo con `curl -fsS` SIN `-L` — entre ellos `cima-pull`, la
-  ingesta de cartera (arreglado en asegura#818; antes #817: `/siniestro` + 8 redirects 301 del WordPress).
+- **🌐 El apex `grupoasegura.es` cambió de manos DOS VECES en el día, y yo rompí la ingesta de CIMA por
+  no medir (05/09/2026).** Por la mañana pasó a servir la web del repo `asegura` (#817: `/siniestro` + 8
+  redirects 301 del WordPress). Por la tarde se le quitó: medido a las 14:04 UTC, el proyecto Vercel
+  `asegura` sirve **solo** `app.grupoasegura.com`, y en el equipo `pisos-turisticos-projects` **no existe
+  ningún proyecto `asegura-web`** — desde el repo no se ve quién sirve hoy el apex. **Compruébalo.**
+- 💣 **Y la lección cara: moví los 6 workflows de crons a `grupoasegura.es` (#818) SUPONIENDO que la
+  canonicalización LOO-670 rompía el host viejo. No lo rompía** — el run de `cima-pull` de las 09:12 UTC
+  contra `app.grupoasegura.com` estaba en verde. El primer run tras mi merge murió con
+  `curl: (22) ... error: 404`, y con `cima-pull` cae `cima-health-alert`, su propio vigilante: silencio
+  doble. Revertido y verificado en asegura#819. **Antes de mover un host en un cron, mira el código de
+  respuesta en los dos** (404 = otra app · 401 = la ruta existe y te rechaza por credencial).
 - 🚨 **El ruleset de `asegura` NO SE APLICA** («rulesets won't be enforced on this private repository until you
   move to GitHub Team»): `require-loo-reference` nunca fue obligatorio y `main` va sin protección real. Y
   `mergeable_state: "unstable"` significa **mergeable**, no bloqueado — leerlo como «bloqueado» me costó media
