@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗣️ El borrador salía en ESPAÑOL con el huésped escribiendo en inglés (05/09/2026).** Caso real: reserva
+  154375571 (House Sevillana, Massimo). Todos los prompts del agente van en español y la orden «responde en
+  inglés» es UNA línea dentro del muro → el modelo deriva al idioma ambiental. Pasaba MUDO: el aviso decía
+  «Borrador (en EN)» (`ctx.lang` sí era 'en') y la línea 🔁 «no he podido traducirlo al español» —traducir
+  español a español devuelve lo mismo y `traduccionUtil` lo descarta—, así que un fallo de REDACCIÓN se leía
+  como uno de traducción; y con categoría auto-enviable, al huésped le llegaba en español. Red nueva
+  `lib/sivra/agente-huesped/idioma-salida.ts` (puro, 7 tests): detecta la deriva AL ESPAÑOL (solo esa, no se
+  arbitra entre en/fr/de/it) y traduce; si no puede, `fallo` → `needs_human` con motivo propio, nunca se
+  maquilla. Cableada en `decidir`, `redactar` y `retoque`; los tres avisos de Telegram dicen «⚠️ este texto ha
+  salido en ESPAÑOL» en vez de la línea 🔁 confusa. Refuerzo del idioma también en la ÚLTIMA línea del system.
+
 - **👥 UNA lista de personas por ficha: se funden 👤 y 👪 (05/09/2026).** Las dos tarjetas contestaban la
   misma pregunta («¿a quién llamo y con qué derecho?») y la misma persona salía en las dos sin que nada lo
   dijera. Ahora una sola tarjeta 👥 Personas: `unificarPersonas` (`packages/module-seguros/src/personas-ficha.ts`,

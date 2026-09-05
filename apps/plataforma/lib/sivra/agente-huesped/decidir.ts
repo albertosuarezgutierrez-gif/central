@@ -25,6 +25,7 @@ import { esSolicitudLateCheckout, esDespedida } from './reglas'
 import { esCierre, esIntercambioDeCortesia } from './cortesia'
 import { precedentesEstables, bloquePrecedentes } from './precedentes'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
+import { asegurarIdioma } from './idioma-salida'
 
 export type Decision = {
   reply: string
@@ -265,7 +266,7 @@ ${lateBlock}
 ${llegadaBlock}
 ${resenaBlock}
 
-Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
+Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ESCRITO EN ${LANG_NAME[ctx.lang] || 'English'} (todas estas instrucciones están en español, pero el mensaje NO va en español salvo que ese sea el idioma del huésped). Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
 
   // Hilo de la conversación como contexto (últimos 15, ambos lados) + el turno actual a responder.
   // Sin contrato JSON: el modelo solo tiene que escribir un mensaje, que es lo que hace con fiabilidad.
@@ -298,6 +299,17 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   if (!reply) {
     return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA sin respuesta', fuente: 'ia' }
   }
+
+  // RED DE IDIOMA (05/09/2026): todas estas instrucciones están en español y la orden «responde en
+  // inglés» es una línea dentro del muro, así que el modelo deriva al idioma ambiental y devuelve el
+  // borrador en español. Pasaba en silencio: el aviso lo etiquetaba «(en EN)» —`ctx.lang` sí era 'en'—
+  // y la línea 🔁 salía «no he podido traducirlo al español», que se lee como un fallo de traducción y
+  // no como lo que era. Si la categoría permitía auto-envío, al huésped le llegaba en español.
+  const idiomaSalida = await asegurarIdioma(reply, ctx.lang, (m, o) => aiComplete(m, { ...o, timeoutMs: HUESPED_TIMEOUT_MS }))
+  reply = idiomaSalida.texto
+  // La traducción falló y el texto sigue en el idioma equivocado: no se manda solo. Enviar un mensaje
+  // en un idioma que el huésped no eligió es peor que hacer esperar a que Alberto lo mire.
+  const idiomaEquivocado = idiomaSalida.fallo
 
   // Red determinista sobre la DESPEDIDA: si el borrador cierra con una fórmula de viaje o de adiós
   // que no toca en esta fase, se poda cuando va aislada en su frase; si va entretejida con contenido
@@ -338,7 +350,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   const dentroDeLaVentana = ventanaVerificada && !pideMasAllaDeLaVentana(pregunta, SALIDA_FLEX_HASTA)
   const escalaSalida = lateCheckout && !dentroDeLaVentana
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || escalaSalida || bloqueaSinVerificar || cierreFueraDeFase || coherencia.incoherente
+  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || escalaSalida || bloqueaSinVerificar || cierreFueraDeFase || coherencia.incoherente || idiomaEquivocado
 
   // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
   // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
@@ -352,7 +364,9 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   // guardas en el orquestador (needs_human=false), así que un mensaje sensible/negativo nunca cuela.
   const es_cortesia = esCierre(pregunta) || esDespedida(pregunta)
 
-  const motivo = inventado
+  const motivo = idiomaEquivocado
+    ? `el borrador salió en español y el huésped escribe en ${LANG_NAME[ctx.lang] || ctx.lang} — no he podido traducirlo, revísalo antes de enviarlo`
+    : inventado
     ? 'guardrail: dato no presente en las fuentes'
     : sensible
       ? 'mensaje sensible (queja/dinero/cambios/emergencia)'
