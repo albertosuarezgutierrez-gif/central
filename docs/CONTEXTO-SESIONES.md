@@ -37,7 +37,11 @@
   y PostHog **no está en el bundle**, se baja de su CDN tras aceptar. Es la decisión contraria a la web
   de Manuel, cuyo *fail-open* deja PostHog corriendo sin banner si falta la env (medido el 04/09).
   `/legal/cookies` + botón de renovar (art. 7.3 RGPD), enlace en el footer y en el sitemap. 12 cepos en
-  `lib/analitica.test.ts`; 28 tests de la app, tsc 0, lint 0, build OK. PR #2385.
+  `lib/analitica.test.ts`; 28 tests de la app, tsc 0, lint 0, build OK. **PR #2385 mergeado** (`4a3be3f`, 20/20 en verde).
+  🔌 **Pendiente de Alberto para que MIDA (hasta entonces no mide, y eso es lo correcto pero silencioso):**
+  `NEXT_PUBLIC_COOKIEBOT_ID` + `NEXT_PUBLIC_POSTHOG_KEY` en el proyecto Vercel `asegura-web` (son
+  `NEXT_PUBLIC_`: se hornean en el build → redeploy después), y **dar de alta `grupoasegura.es` en el
+  panel de Cookiebot** — un CBID atado solo a `app.grupoasegura.com` no pinta banner aquí.
   ✅ **Los 7 crons de `asegura` NO estaban rotos al cerrar: ya los había arreglado otra sesión** (revert
   `cae77bd`, 14:05 UTC, de #818). Aquel PR repuntó los destinos a `grupoasegura.es` sobre una premisa
   **no medida** (que la canonicalización rompía el `.com`), y lo que se midió después la desmiente:
