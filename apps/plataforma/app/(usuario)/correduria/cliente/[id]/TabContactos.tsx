@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { IdCard, KeyRound, Mail, MapPin, Phone, Star, Users } from 'lucide-react'
+import { IdCard, KeyRound, Mail, MapPin, Pencil, Phone, Star, Users } from 'lucide-react'
 import { etiquetaRol, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
 import BotonWhatsapp from '../../BotonWhatsapp'
@@ -176,6 +176,23 @@ export default function TabContactos({ ficha, personas }: {
 // ─── Teléfonos, correos y dirección de la PROPIA ficha ───────────────────────
 
 /**
+ * El desplegable que SÍ escribe vive al final de la pestaña, debajo de dos
+ * tarjetas: en un móvil queda a una pantalla y media de los datos que corrige,
+ * y de ahí el «no puedo modificar móvil ni mails» de Alberto (05/09/2026) — la
+ * edición existía y no se veía. La tira de arriba abre ese mismo desplegable en
+ * vez de duplicar el formulario, que es lo que crearía dos sitios donde se
+ * escribe lo mismo.
+ */
+const ID_EDITOR = 'editar-datos-cliente'
+
+function abrirEditor() {
+  const el = document.getElementById(ID_EDITOR)
+  if (!(el instanceof HTMLDetailsElement)) return
+  el.open = true
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+/**
  * La tira de contacto: lo que se LEE de la ficha, sin el formulario que lo
  * edita (ese vive plegado abajo, en `EditarCliente`, que sigue siendo el dueño
  * de la escritura). Aquí no se toca nada: son enlaces `tel:`/`mailto:` y el
@@ -235,6 +252,12 @@ function Contacto({ contactos, contacto }: {
       )}
 
       <Direccion c={contacto} />
+
+      <div>
+        <button type="button" onClick={abrirEditor} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
+          <Pencil size={14} strokeWidth={1.75} aria-hidden /> Modificar teléfonos, correos y dirección
+        </button>
+      </div>
     </div>
   )
 }
@@ -500,6 +523,7 @@ function Editor({ ficha }: { ficha: Ficha }) {
 
   return (
     <details
+      id={ID_EDITOR}
       onToggle={(e) => { const o = e.currentTarget.open; setAbierto(o); if (o) setMontado(true) }}
       style={{ borderTop: '1px solid var(--border)', marginTop: 20, paddingTop: 20 }}
     >
