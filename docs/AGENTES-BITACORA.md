@@ -31,6 +31,14 @@
   seguidas gastando el cupo entero de 24 ventanas en repetir una comprobación ya cerrada.
   dudas: —; fallos: — (la disponibilidad 1/4 del escaparate es del conector); PRs/commits: —
   (solo bitácora y BD vía endpoints, sin tocar código).
+
+- **2026-09-05 · ialimp-client-health** · hizo: pasada semanal Sique Brilla (`empresa_id`
+  05edacff-…). PMS sync OK (Smoobu, `last_sync_at` 05/09 08:30, sin `sync_error`, 41
+  `cleaning_sessions` en 7 días); programaciones sin cubrir: 0; impagos activos: 0. Todo
+  verde → sin aviso Telegram (consistente con que Sique Brilla ya no opera desde ialimp,
+  solo desde `/invitado/limpieza`; lo que sigue vivo aquí es el sync PMS de infraestructura).
+  dudas: —; fallos: —; PRs/commits: esta entrada.
+
 - **2026-09-04 · mercado-booking** · hizo: 2ª pasada ACOTADA por prioridad temporal (agosto 2026,
   ídem 03/09), `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6
   fechas × 4 pisos con aforo correcto) → 240 comps `booking_mcp`, 0 sin respuesta, 0 propios
