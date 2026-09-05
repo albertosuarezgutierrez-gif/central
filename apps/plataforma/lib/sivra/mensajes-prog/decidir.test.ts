@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mensajesDebidos, claveHito, type ReservaMin } from './decidir.ts'
+import { mensajesDebidos, claveHito, hitosBloqueantes, type ReservaMin } from './decidir.ts'
 
 const R: ReservaMin = {
   bookingId: '1', propertyId: 'prop_duplex_center',
@@ -73,4 +73,33 @@ test('una modificación que mueve la llegada crea claves nuevas (los hitos se vu
   const ya = new Set([claveHito('acceso', '2026-09-13'), claveHito('confirmacion', '2026-09-13')])
   const movida: ReservaMin = { ...R, checkIn: '2026-09-15', checkOut: '2026-09-22' }
   assert.deepEqual(tipos(mensajesDebidos(movida, '2026-09-10', '10:00', ya)), ['acceso', 'confirmacion'])
+})
+
+// ── hitosBloqueantes ────────────────────────────────────────────────────────
+test('sombra NO bloquea con el piso ya activo (se re-emite de verdad)', () => {
+  const filas = [{ tipo: 'vispera_llegada', fechaObjetivo: '2026-09-05', estado: 'sombra' }]
+  assert.equal(hitosBloqueantes(filas, true).size, 0)
+})
+
+test('sombra SÍ bloquea con el piso inactivo (si no, Telegram repetiría el borrador)', () => {
+  const filas = [{ tipo: 'vispera_llegada', fechaObjetivo: '2026-09-05', estado: 'sombra' }]
+  assert.ok(hitosBloqueantes(filas, false).has(claveHito('vispera_llegada', '2026-09-05')))
+})
+
+test('enviado/pendiente/fallo bloquean siempre', () => {
+  for (const estado of ['enviado', 'pendiente', 'fallo']) {
+    const filas = [{ tipo: 'bienvenida', fechaObjetivo: '2026-09-05', estado }]
+    assert.ok(hitosBloqueantes(filas, true).has(claveHito('bienvenida', '2026-09-05')), estado)
+  }
+})
+
+// Caso real 05/09/2026 (reserva 154265696, Luxury Busto): la víspera con los CÓDIGOS quedó en
+// sombra 12 h antes de activarse el piso. Con el piso ya activo, el día de llegada tiene que salir.
+test('la víspera en sombra sale el día de llegada una vez activo el piso', () => {
+  const r = { bookingId: '154265696', propertyId: 'prop_luxury_busto', checkIn: '2026-09-05', checkOut: '2026-09-08', noches: 3 }
+  const filas = [{ tipo: 'vispera_llegada', fechaObjetivo: '2026-09-05', estado: 'sombra' }]
+  const debidos = mensajesDebidos(r, '2026-09-05', '09:37', hitosBloqueantes(filas, true))
+  const v = debidos.find(d => d.tipo === 'vispera_llegada')
+  assert.ok(v, 'debe re-emitirse la víspera con los códigos')
+  assert.equal(v!.llegadaHoy, true)
 })

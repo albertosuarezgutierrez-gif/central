@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📬 Smoobu ya NO manda mensajes automáticos: el ciclo es 100% nuestro (05/09/2026).** Alberto apagó
+  las plantillas de Smoobu tras validar el ciclo entero en House Sevillana. Se activó el 4º piso
+  (`prop_duplex_center` en `mensajes_prog_pisos`; no tenía reservas en la ventana, así que la activación
+  fue limpia) y se retiró el chequeo `equivalentes-smoobu.ts`: sin plantillas al otro lado solo podía
+  silenciar mensajes NUESTROS (su regex `/BIENVENIDO/i` casa con nuestra propia plantilla, y se tragó la
+  bienvenida de la reserva 154265696). 🚨 **Bug de fondo, el caro:** `cargarYaHechos` no miraba el estado,
+  así que un hito generado en SOMBRA quedaba «hecho» para siempre — la víspera CON LOS CÓDIGOS de esa misma
+  reserva (Luxury Busto, llegada el 05/09) se generó 12 h antes de activarse el piso y no la iba a recibir
+  nadie. Ahora `hitosBloqueantes` ignora las filas en sombra si el piso ya está activo y el reclamo las
+  toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. **Pendiente de Alberto:** comprobar que esa
+  huésped tiene sus códigos antes de las 15:00.
+
 - **🔁 Un PR abierto de noche choca con `main` cada ~50 min, y siempre por el MISMO fichero (05/09/2026).**
   El #2277 llegó a verde y `clean`, y volvió a `dirty` **cuatro veces** en poco más de una hora: #2290,
   #2285, #2283+#2248 y luego #2294. **Ninguna** fue conflicto de código —siempre `docs/CONTEXTO-SESIONES.md`,
