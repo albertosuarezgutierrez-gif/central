@@ -64,6 +64,13 @@ export default function Privacidad() {
           mientras es válido (diez minutos) junto al número de intentos, y deja de servir en cuanto
           lo usas.
         </p>
+        <p>
+          Cuando entras dejamos además <strong>constancia de que se te informó</strong>: la fecha, la
+          versión exacta de estos textos legales, tu dirección IP y tu navegador. Es la prueba de que
+          la información del mediador estaba delante antes de que operaras, y la ley pone esa carga
+          de la prueba de nuestro lado (art. 19 de la Ley 16/2018). No la usamos para perfilarte ni
+          para medir tu navegación: se guarda una fila por cada versión de texto, no por cada visita.
+        </p>
 
         <h3>Lo que tú declaras</h3>
         <ul>
@@ -138,6 +145,10 @@ export default function Privacidad() {
               <tr>
                 <td>Conservar la documentación de la mediación</td>
                 <td>Obligación legal (art. 6.1.c RGPD)</td>
+              </tr>
+              <tr>
+                <td>Dejar constancia de que se te informó al entrar</td>
+                <td>Obligación legal (art. 6.1.c RGPD y art. 19 Ley 16/2018)</td>
               </tr>
               <tr>
                 <td>Atender tus derechos y tus reclamaciones</td>

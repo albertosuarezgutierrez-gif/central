@@ -139,3 +139,16 @@ export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
 export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas } from './canal-compania.ts'
+
+// La acreditación de que se enseñó la información precontractual del mediador
+// (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
+// existen en la BD pero NO se escriben: no hay pantalla que los pida.
+export {
+  TIPOS_CONSENTIMIENTO,
+  TIPOS_QUE_SE_REGISTRAN,
+  USER_AGENT_MAX,
+  necesitaRegistro,
+  normalizarIp,
+  normalizarUserAgent,
+} from './consentimiento.ts'
+export type { TipoConsentimiento, ConsentimientoGuardado } from './consentimiento.ts'
