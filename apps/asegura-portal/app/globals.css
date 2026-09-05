@@ -22,34 +22,47 @@
  */
 @layer portal-base {
   :root {
-    /* Superficies y texto — mismos nombres que emite @central/brand. */
-    --bg: #f6f7f9;
-    --panel: #ffffff;
-    --panel2: #f8fafd;
-    --border: #e5e7eb;
-    --border-soft: #eef1f6;
-    --text: #0f172a;
-    --muted: #64748b;
-    --muted2: #94a3b8;
+    /* Superficies y texto — mismos nombres que emite @central/brand.
+     *
+     * 🚨 Estos respaldos valen los MISMOS valores que `MARCA_ASEGURA`, no unos
+     * genéricos. Antes eran el índigo `#4f46e5` de Tailwind y unos grises
+     * azulados: si la inyección de marca fallaba, la pantalla no se rompía —
+     * se quedaba con el aspecto de plantilla, que es el fallo que nadie ve. */
+    --bg: oklch(0.992 0 0);
+    --panel: oklch(1 0 0);
+    --panel2: oklch(0.97 0 0);
+    --border: oklch(0.905 0 0);
+    --border-soft: oklch(0.94 0 0);
+    --text: oklch(0.18 0 0);
+    --muted: oklch(0.52 0 0);
+    --muted2: oklch(0.62 0 0);
 
     /* Marca. `--brand` es la identidad; `--accent` el decorativo (filetes). */
-    --brand: #4f46e5;
-    --brand-ink: #4338ca;
-    --brand-soft: rgba(79, 70, 229, 0.1);
-    --accent: #6366f1;
-    --accent-ink: #4338ca;
-    --accent-soft: #eef2ff;
+    --brand: #3364ee;
+    --brand-ink: oklch(0.34 0.13 265);
+    --brand-soft: oklch(0.95 0.045 265);
+    --accent: #497cfd;
+    --accent-ink: #2f5fd9;
+    --accent-soft: #e3efff;
 
     /* Estados. Deliberadamente fuera del azul de marca: un aviso pintado del
      * color de la marca deja de leerse como aviso. */
-    --ok: #059669;
-    --warn: #b45309;
-    --danger: #dc2626;
+    --ok: oklch(0.55 0.12 160);
+    --warn: #9a6510;
+    --danger: oklch(0.577 0.245 27.325);
+
+    /* Superficies de interacción y elevación. Sombras PLANAS: lo que separa
+     * una tarjeta del fondo es un anillo de 1px, no una nube gris. */
+    --surface-hover: oklch(0.965 0 0);
+    --surface-active: oklch(0.945 0 0);
+    --shadow-panel: 0 0 0 1px oklch(0.2 0 0 / 0.05), 0 1px 2px oklch(0.2 0 0 / 0.05), 0 8px 22px -10px oklch(0.2 0 0 / 0.10);
+    --shadow-float: 0 2px 4px oklch(0.2 0 0 / 0.05), 0 8px 20px -6px oklch(0.2 0 0 / 0.10), 0 0 0 1px oklch(0.2 0 0 / 0.05);
+    --shadow-over: 0 12px 32px -8px oklch(0.2 0 0 / 0.14), 0 4px 10px oklch(0.2 0 0 / 0.06), 0 0 0 1px oklch(0.2 0 0 / 0.06);
 
     /* Tipografía y forma. */
     --serif: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    --radio: 14px;
+    --radio: 16px;
   }
 }
 
@@ -67,14 +80,22 @@
   --warning: var(--warn);
 
   /* Tintes de estado: la marca no los declara (solo el color pleno), así que
-   * se quedan aquí. */
-  --positive-bg: #ecfdf5;
-  --negative-bg: #fef2f2;
-  --warning-bg: #fffbeb;
-  --warning-border: #fcd34d;
+   * se derivan aquí.
+   *
+   * 🚨 Antes eran hex claros FIJOS (`#ecfdf5`, `#fef2f2`, `#fffbeb`). Con el
+   * tema oscuro eso deja de ser una elección estética y pasa a ser un fallo de
+   * legibilidad: un aviso con fondo casi blanco y texto claro encima, de
+   * noche, no se lee. Con `color-mix` sobre `--panel` el tinte sigue al tema
+   * solo — de día es el mismo pastel de siempre y de noche un velo sobre el
+   * gris del panel. */
+  --positive-bg: color-mix(in oklab, var(--ok) 12%, var(--panel));
+  --negative-bg: color-mix(in oklab, var(--danger) 12%, var(--panel));
+  --warning-bg: color-mix(in oklab, var(--warn) 14%, var(--panel));
+  --warning-border: color-mix(in oklab, var(--warn) 40%, var(--panel));
 
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --shadow-lift: 0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 32px -12px rgba(15, 23, 42, 0.14);
+  /* Sombras: siguen a la marca, con respaldo por si emite una sin elevación. */
+  --shadow: var(--shadow-panel, 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06));
+  --shadow-lift: var(--shadow-float, 0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 32px -12px rgba(15, 23, 42, 0.14));
 
   /* Alias de compatibilidad (los usan estilos inline ya escritos). Ojo: aquí
    * `--brand` NO se puede aliasar a `--primary` como antes — sería un ciclo. */
@@ -92,10 +113,12 @@
   --ok-fondo: var(--positive-bg);
   --ok-texto: var(--positive);
 
-  /* El portal lo abre gente en su móvil, a veces con el tema oscuro del
-   * sistema. Igual que plataforma, se fija claro: un tema oscuro a medias se ve
-   * peor que no tenerlo. */
-  color-scheme: only light;
+  /* ⚠️ Aquí ponía `color-scheme: only light`, con el comentario «un tema oscuro
+   * a medias se ve peor que no tenerlo». Era cierto: hasta el 05/09/2026 no
+   * había tema oscuro. Ahora lo hay COMPLETO —los 47 tokens, no unos cuantos—
+   * y lo emite `@central/brand` junto a los colores de cada tema, así que el
+   * `color-scheme` correcto lo pone el bloque de marca y no puede quedarse
+   * desincronizado de los colores. Fijarlo aquí lo volvería a romper. */
 }
 
 *,
@@ -115,7 +138,10 @@ body {
 
 a { color: inherit; }
 input, select, textarea, button { font: inherit; }
-::selection { background: var(--primary); color: #fff; }
+/* La selección no puede llevar `color:#fff` fijo: de noche el primario es MÁS
+ * claro (así se lee sobre negro), y blanco sobre él se pierde. El tinte de
+ * marca con el texto normal encima funciona en los dos temas. */
+::selection { background: var(--brand-soft); color: var(--text); }
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
 
 /* ── Cabecera de marca ──────────────────────────────────────────────────────
@@ -135,6 +161,42 @@ input, select, textarea, button { font: inherit; }
    * primera franja de pantalla ya sea de la correduría. */
   border-top: 3px solid var(--accent);
 }
+/* Interruptor de tema. Empujado al extremo con `margin-left:auto`, que lo deja
+ * a la derecha sin tener que envolver el resto de la barra en otro contenedor.
+ *
+ * 44px de lado: es el mínimo táctil de la regla de la casa, y esta barra la usa
+ * gente mayor desde el móvil. Los 18px del icono viven centrados dentro. */
+.tema-boton {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.tema-boton:hover {
+  background: var(--surface-hover, var(--panel2));
+  color: var(--text);
+}
+.tema-boton:active {
+  background: var(--surface-active, var(--panel2));
+}
+/* El hueco que se reserva mientras el componente aún no sabe qué tema hay: sin
+ * borde ni fondo, solo ocupa sitio para que la barra no dé un salto. */
+.tema-boton-hueco {
+  border-color: transparent;
+  background: none;
+  cursor: default;
+}
+
 .marca-escudo {
   display: inline-flex;
   align-items: center;
