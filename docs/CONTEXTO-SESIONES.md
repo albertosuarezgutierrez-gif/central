@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔎 Si no está en la guía y el dato es de FUERA, el agente consulta internet (05/09/2026).** Dictado de
+  Alberto: «en caso de duda que use la IA para consultar». Mismo incidente que el bug del idioma: a
+  «¿cómo llegamos del aeropuerto?» el modelo se inventó **dos** datos (taxi «25-30€» —el real es tarifa
+  fija municipal de 26€ L-V 7-21h / 29€ noches y festivos— y una parada del bus EA, «Puerta de Jerez»,
+  que ni existe en esa línea ni está a 10 min del piso). `consulta-web.ts` (puro, 12 tests): cuando el
+  control de calidad dice que la guía no cubre la pregunta **y** la pregunta es del ENTORNO (transporte,
+  monumentos, dónde comer, servicios, eventos) se llama a `buscarWeb` y se re-redacta el borrador con
+  los datos + sus URLs. 🚨 Lo consultado **NUNCA se auto-envía** (`webConsultada` fuerza `needs_human`,
+  guardián que lee el fuente) y una búsqueda fallida se DECLARA: «no he podido mirarlo» ≠ «no está en la
+  guía». Sigue contando como hueco de guía para que lo que responda Alberto se aprenda como hecho y no
+  se pague la búsqueda dos veces. Nada de esto aplica al PISO (internet no sabe si hay plancha) ni a lo
+  sensible/negativo. Además `importesNoRespaldados` en el guardrail: **ninguna cifra en € que no esté en
+  las fuentes pasa** — los patrones de antes solo miraban códigos de 4+ dígitos, teléfonos y URLs, por
+  eso el precio del taxi salió limpio. PR #2378.
+
 - **🗣️ El borrador salía en ESPAÑOL con el huésped escribiendo en inglés (05/09/2026).** Caso real: reserva
   154375571 (House Sevillana, Massimo). Todos los prompts del agente van en español y la orden «responde en
   inglés» es UNA línea dentro del muro → el modelo deriva al idioma ambiental. Pasaba MUDO: el aviso decía

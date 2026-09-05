@@ -102,7 +102,18 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
     // conocimiento que falta (y lo que Alberto conteste se aprende como hecho), el segundo es que el
     // clasificador no respondió. Decir «no lo encuentro en la guía» con el control caído es afirmar un
     // hueco que nadie ha mirado — y hace parecer que el agente no aprende cuando el asunto SÍ está.
-    (hueco === 'guia'
+    // Datos traídos de internet: se dice de dónde salen. Un borrador con un precio o un horario que
+    // no está en la guía solo es verificable si el aviso trae el enlace — sin eso, Alberto tendría
+    // que buscarlo él, que es exactamente el trabajo que esto pretende ahorrarle.
+    (dec.consulta_web === 'ok'
+      ? `\n\n🔎 <b>Esto no está en la guía de ${escapeHtml(ctx.property)}: lo he consultado en internet.</b> Comprueba los datos antes de enviarlo.` +
+        (dec.fuentes_web?.length
+          ? `\n${dec.fuentes_web.slice(0, 4).map(u => `· ${escapeHtml(u)}`).join('\n')}`
+          : `\n<i>· la búsqueda no citó ninguna fuente — verifícalo por tu cuenta antes de enviarlo</i>`) +
+        `\nLo que le respondas se guarda como hecho de este piso y no tendré que buscarlo otra vez.`
+      : dec.consulta_web === 'fallida'
+      ? `\n\n⚠️ <b>Esto no está en la guía de ${escapeHtml(ctx.property)} y NO he podido consultarlo en internet</b> (la búsqueda falló). No es que el dato no exista: es que no lo he podido mirar.`
+      : hueco === 'guia'
       ? `\n\n❓ <b>Esto no lo encuentro en la guía de ${escapeHtml(ctx.property)}.</b> Lo que le respondas se guarda como hecho de este piso y lo usaré la próxima vez.`
       : hueco === 'control_caido'
         ? `\n\n⚠️ <b>No he podido verificar el borrador</b> (el control de calidad no respondió). No significa que falte en la guía de ${escapeHtml(ctx.property)} — solo que esta vez no lo he podido comprobar.`
