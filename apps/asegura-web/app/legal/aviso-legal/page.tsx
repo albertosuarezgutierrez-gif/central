@@ -136,8 +136,11 @@ const version: CSSProperties = {
 export default function AvisoLegal() {
   const { identidad, marca } = MEDIADOR
 
+  // `div` y no `main`: el `<main>` lo pone el layout desde el rediseño del
+  // 05/09/2026, y anidar dos es HTML inválido — un lector de pantalla deja de
+  // saber cuál es el contenido principal de la página.
   return (
-    <main style={main}>
+    <div style={main}>
       <div style={contenedor}>
         <header>
           <p style={antetitulo}>Aviso legal</p>
@@ -262,8 +265,13 @@ export default function AvisoLegal() {
             <Link href="/legal/privacidad" style={enlace}>
               política de privacidad
             </Link>
-            . Este sitio solo utiliza las cookies técnicas imprescindibles para funcionar: no hay
-            analítica ni cookies de terceros, y por eso no se te pide consentimiento para ellas.
+            . Este sitio usa cookies técnicas imprescindibles para funcionar, y cookies de medición
+            de audiencia <strong>solo si las aceptas</strong> en el aviso que aparece al entrar. El
+            detalle, y el botón para cambiar de opinión, están en la{' '}
+            <Link href="/legal/cookies" style={enlace}>
+              política de cookies
+            </Link>
+            .
           </p>
         </section>
 
@@ -305,6 +313,6 @@ export default function AvisoLegal() {
           Versión {VERSION_TEXTOS_WEB} · última revisión {FECHA_TEXTOS_WEB}
         </p>
       </div>
-    </main>
+    </div>
   )
 }

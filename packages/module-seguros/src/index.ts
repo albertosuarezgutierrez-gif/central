@@ -418,6 +418,8 @@ export {
   VERSION_TEXTOS_WEB,
   FECHA_TEXTOS_WEB,
   lineaIdentificacion,
+  telefonoLegible,
+  whatsappUrl,
   type CanalReclamacion,
   type IdCanalReclamacion,
   type PuntoPrecontractual,

@@ -6,6 +6,8 @@
 // algo falso sobre datos personales, que es peor que no decir nada.
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { VERSION_TEXTOS_WEB, FECHA_TEXTOS_WEB } from '@central/module-seguros'
+import { url } from '@/lib/sitio'
 import { COOKIEBOT_ID } from '@/lib/analitica'
 import BotonCookies from '@/components/BotonCookies'
 
@@ -13,11 +15,16 @@ export const metadata: Metadata = {
   title: 'Política de cookies',
   description:
     'Qué cookies usa la web de Grupo ASegura, para qué sirven y cómo cambiar o retirar tu consentimiento en cualquier momento.',
+  // Como las otras tres legales: sin canonical, una página que está en el
+  // sitemap puede indexarse por varias URLs y repartir la señal.
+  alternates: { canonical: url('/legal/cookies') },
 }
 
 export default function Cookies() {
   return (
-    <>
+    // `wrap pagina` porque desde el rediseño del 05/09/2026 el `<main>` del
+    // layout ya no lleva contenedor: sin esto el texto va de borde a borde.
+    <div className="wrap pagina">
       <h1>Política de cookies</h1>
 
       <p>
@@ -71,6 +78,13 @@ export default function Cookies() {
         Cómo tratamos los datos personales que nos das tú (por ejemplo, al pedir presupuesto) está en{' '}
         <Link href="/legal/privacidad">la política de privacidad</Link>.
       </p>
-    </>
+
+      {/* Las otras tres legales cierran igual. Sin versión no se puede saber
+          qué texto estaba vigente cuando alguien dio su consentimiento, que es
+          justo lo que hay que poder acreditar. */}
+      <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 32 }}>
+        Versión {VERSION_TEXTOS_WEB} · última revisión {FECHA_TEXTOS_WEB}
+      </p>
+    </div>
   )
 }
