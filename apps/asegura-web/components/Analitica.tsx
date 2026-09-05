@@ -1,132 +1,125 @@
 'use client'
-
-// Medición de visitas, con el consentimiento como interruptor.
+// Puente entre el consentimiento (Cookiebot) y la medición (PostHog).
 //
-// El orden importa y es este, sin atajos:
+// La regla que gobierna este archivo está en `lib/analitica.ts` y es una
+// función pura y testeada, `puedeMedir()`. Aquí no se decide nada: aquí se
+// obedece. Si alguna vez hay que cambiar cuándo se mide, se cambia allí y el
+// cepo de `lib/analitica.test.ts` lo valida — no se añade una condición suelta
+// en un `useEffect`, que es donde estas cosas se pudren sin que nada falle.
 //
-//   1. El layout carga Cookiebot en el `<head>` (script normal, no `next/script`:
-//      tiene que estar ANTES que cualquier otra cosa, y es lo único que pinta el
-//      banner).
-//   2. Este componente NO carga PostHog al montarse. Se queda escuchando.
-//   3. Solo cuando Cookiebot dice que hay consentimiento de **estadística** se
-//      importa `posthog-js` —importación dinámica, así que ni siquiera está en
-//      el bundle inicial de quien no acepta— y se inicializa.
-//   4. Si el visitante retira el consentimiento, se deja de medir en el acto.
-//
-// 🚨 Qué se mide y qué NO, y por qué:
-//
-// - `autocapture: false`. Por defecto PostHog registra cada clic con el texto
-//   del elemento pulsado. Esta web tiene un formulario donde la gente escribe
-//   su nombre y su teléfono para pedir un seguro —y en vida o salud, tienden a
-//   contar de más—. Un autocapture sobre eso acaba metiendo datos personales,
-//   y a veces del art. 9, en una herramienta de analítica. No compensa: lo que
-//   hace falta para decidir dónde invertir es qué páginas se ven y cuántos
-//   formularios salen, no dónde pincha cada uno.
-// - `disable_session_recording: true`. Grabar la sesión de alguien rellenando
-//   sus datos es exactamente el mismo problema, en vídeo.
-// - `person_profiles: 'never'`. Nadie inicia sesión aquí: no hay a quién
-//   identificar. Sin perfiles de persona se siguen contando visitantes únicos
-//   y no se construye una ficha de nadie.
-//
-// (En el CRM del otro repo pasaba justo lo contrario: mandaba el identificador
-// del usuario que iniciaba sesión sin mirar el consentimiento. Por eso aquí la
-// captura de eventos vive solo en el navegador y detrás del banner.)
+// 🚨 PostHog NO viaja en el bundle. El script se descarga de su CDN **solo**
+// cuando el visitante ya ha aceptado. Un `import posthog from 'posthog-js'`
+// habría metido ~50 KB en cada carga de una web de captación y, sobre todo,
+// habría dejado la librería lista para arrancar por accidente: lo que no está
+// descargado no se puede disparar por un `if` mal escrito.
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
+import { COOKIEBOT_ID, POSTHOG_HOST, POSTHOG_KEY, puedeMedir, scriptPostHog, type Consentimiento } from '@/lib/analitica'
 
-import { CONFIG_ANALITICA } from '@/lib/analitica'
-
-/** Lo que Cookiebot deja en `window`. Solo se declara lo que se usa. */
-type VentanaConCookiebot = Window & {
-  Cookiebot?: { consent?: { statistics?: boolean } }
+type PostHogMin = {
+  init: (key: string, opciones: Record<string, unknown>) => void
+  capture: (evento: string, props?: Record<string, unknown>) => void
+  opt_out_capturing: () => void
+  reset: (borrarId?: boolean) => void
 }
 
-function hayConsentimientoEstadistico(): boolean {
-  if (typeof window === 'undefined') return false
-  // Sin objeto `Cookiebot` (script bloqueado, sin red, dominio no dado de alta)
-  // la respuesta es NO. Es la lectura conservadora: ante la duda no se mide.
-  return (window as VentanaConCookiebot).Cookiebot?.consent?.statistics === true
-}
-
-export function Analitica() {
-  const ruta = usePathname()
-  /** ¿Se llegó a llamar a `init`? Se lleva aquí y no leyendo internos de PostHog. */
-  const iniciado = useRef(false)
-  /**
-   * Última URL ya contada.
-   *
-   * Es lo que impide contar dos veces la página de entrada: la primera vista la
-   * manda quien llegue antes —el efecto del consentimiento o el de la ruta—, y
-   * el otro se encuentra la URL ya apuntada y no hace nada. Sin esto, aceptar
-   * el banner en la home la contaría dos veces y el embudo empezaría torcido.
-   */
-  const ultimaUrl = useRef<string | null>(null)
-
-  async function medirVista() {
-    if (!CONFIG_ANALITICA) return
-    if (!hayConsentimientoEstadistico()) return
-    const url = window.location.href
-    if (ultimaUrl.current === url) return
-
-    const { default: posthog } = await import('posthog-js')
-    if (!iniciado.current) {
-      posthog.init(CONFIG_ANALITICA.clave, {
-        api_host: CONFIG_ANALITICA.host,
-        autocapture: false,
-        disable_session_recording: true,
-        person_profiles: 'never',
-        // La vista de página la manda este componente, que es el que sabe de
-        // las navegaciones internas de Next. Dejarlo en `true` contaría dos
-        // veces la primera página.
-        capture_pageview: false,
-      })
-      iniciado.current = true
-    }
-    posthog.opt_in_capturing()
-    ultimaUrl.current = url
-    posthog.capture('$pageview', { $current_url: url })
+declare global {
+  interface Window {
+    Cookiebot?: { consent?: Consentimiento; renew?: () => void }
+    posthog?: PostHogMin
   }
+}
 
-  // Arranque y parada según el consentimiento.
+const CONFIG = { cookiebotId: COOKIEBOT_ID, posthogKey: POSTHOG_KEY }
+
+/** Eventos con los que Cookiebot avisa de que el consentimiento cambió. */
+const EVENTOS = ['CookiebotOnConsentReady', 'CookiebotOnAccept', 'CookiebotOnDecline'] as const
+
+export default function Analitica() {
+  const pathname = usePathname()
+  // `arrancado` distingue «nunca se inició» de «se inició y ahora lo retiran»:
+  // en el segundo caso hay que apagarlo explícitamente, no basta con no medir.
+  const arrancado = useRef(false)
+  const cargando = useRef(false)
+
   useEffect(() => {
-    if (!CONFIG_ANALITICA) return
+    // Sin gestor de consentimiento o sin clave no hay nada que hacer, y esta es
+    // la puerta que en la otra web estaba abierta.
+    if (!CONFIG.cookiebotId || !CONFIG.posthogKey) return
 
-    const alAceptar = () => void medirVista()
-    const alRechazar = () => {
-      void import('posthog-js').then(({ default: posthog }) => {
-        if (iniciado.current) posthog.opt_out_capturing()
-      })
+    function arrancar() {
+      if (arrancado.current || cargando.current) return
+      cargando.current = true
+      const s = document.createElement('script')
+      s.src = scriptPostHog(POSTHOG_HOST)
+      s.async = true
+      s.onload = () => {
+        cargando.current = false
+        if (!window.posthog || !puedeMedir(window.Cookiebot?.consent, CONFIG)) return
+        window.posthog.init(POSTHOG_KEY, {
+          api_host: POSTHOG_HOST,
+          // Los pageviews los manda esta misma componente al cambiar de ruta:
+          // con el App Router, la navegación no recarga la página y el captador
+          // automático se pierde las visitas a partir de la segunda.
+          capture_pageview: false,
+          capture_pageleave: true,
+          // Una web pública se visita de forma anónima. Sin esto, PostHog crea
+          // un perfil de persona por cada visitante y acabaríamos guardando
+          // datos personales de gente que solo miró la página de hogar.
+          person_profiles: 'identified_only',
+          // 🚨 Nunca: el formulario de leads pide nombre, teléfono y correo, y
+          // una grabación de sesión los captura tecleados aunque el campo se
+          // enmascare mal. No compensa para lo que esta web necesita medir.
+          disable_session_recording: true,
+        })
+        arrancado.current = true
+        window.posthog.capture('$pageview')
+      }
+      s.onerror = () => {
+        cargando.current = false
+      }
+      document.head.appendChild(s)
     }
 
-    // Si el visitante ya había aceptado en una visita anterior, Cookiebot no
-    // enseña el banner: el evento que llega es `CookiebotOnConsentReady`.
-    window.addEventListener('CookiebotOnConsentReady', alAceptar)
-    window.addEventListener('CookiebotOnAccept', alAceptar)
-    window.addEventListener('CookiebotOnDecline', alRechazar)
-    // Y si Cookiebot ya había terminado antes de que React montara esto, no va
-    // a volver a disparar ningún evento: se comprueba a mano una vez.
-    void medirVista()
+    function apagar() {
+      if (!arrancado.current || !window.posthog) return
+      window.posthog.opt_out_capturing()
+      // `true` borra también el id del dispositivo: retirar el consentimiento
+      // tiene que dejar de identificar, no solo dejar de enviar.
+      window.posthog.reset(true)
+      arrancado.current = false
+    }
 
+    function revisar() {
+      if (puedeMedir(window.Cookiebot?.consent, CONFIG)) arrancar()
+      else apagar()
+    }
+
+    // El evento `CookiebotOnConsentReady` puede haber saltado antes de que React
+    // hidratara, así que además de suscribirse hay que mirar el estado actual.
+    revisar()
+    for (const e of EVENTOS) window.addEventListener(e, revisar)
     return () => {
-      window.removeEventListener('CookiebotOnConsentReady', alAceptar)
-      window.removeEventListener('CookiebotOnAccept', alAceptar)
-      window.removeEventListener('CookiebotOnDecline', alRechazar)
+      for (const e of EVENTOS) window.removeEventListener(e, revisar)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Vista de página en cada navegación interna. Next no recarga el documento al
-  // ir de /seguros/hogar a /seguros/auto, así que sin esto toda la web
-  // aparecería como una sola visita a la página de entrada.
-  //
-  // Se lee `window.location.href` en vez de `useSearchParams()` a propósito:
-  // ese hook obliga a envolver el árbol en un `<Suspense>` y a renderizar la
-  // página entera en cliente, y aquí solo hacen falta los parámetros (las UTM
-  // de una campaña), que ya están en la URL.
+  // Pageview por navegación. `$current_url` lo lee PostHog de `location.href`,
+  // así que los UTM de la query entran solos sin tener que leer searchParams
+  // (que en el App Router obligaría a envolver esto en un Suspense).
   useEffect(() => {
-    void medirVista()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ruta])
+    if (!arrancado.current || !window.posthog) return
+    window.posthog.capture('$pageview')
+  }, [pathname])
 
   return null
+}
+
+/**
+ * Reabre el diálogo de Cookiebot. Lo usa la página de cookies para que el
+ * visitante pueda cambiar de opinión: sin una forma visible de retirar el
+ * consentimiento, pedirlo no vale (art. 7.3 RGPD).
+ */
+export function renovarConsentimiento() {
+  window.Cookiebot?.renew?.()
 }

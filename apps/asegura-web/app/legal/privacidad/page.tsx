@@ -10,15 +10,9 @@
 // 🚨 Tres cosas que se dicen aquí porque son ciertas HOY, y que hay que
 // cambiar EN EL MISMO PR el día que deje de serlo:
 //
-//   1. **Hay medición de visitas, y está detrás del consentimiento.** Desde el
-//      05/09/2026 la web usa PostHog (región europea) tras un banner de
-//      Cookiebot. El apartado 7 lo describe. Lo que se mide y lo que NO se mide
-//      está decidido en `components/Analitica.tsx` —sin autocaptura de clics,
-//      sin grabación de sesión y sin perfiles de persona— y lo vigila
-//      `lib/analitica.test.ts`, que impide que PostHog pueda cargarse si
-//      Cookiebot no está configurado. Si esa configuración cambia, este
-//      apartado cambia EN EL MISMO PR: una política que promete menos
-//      medición de la que hay es la forma cara de equivocarse.
+//   1. **No hay analítica ni cookies de terceros.** Solo las técnicas
+//      imprescindibles. Si algún día se añade una medición, esta página se
+//      reescribe y aparece un banner de consentimiento: no al revés.
 //   2. **No se declara Delegado de Protección de Datos.** Que exista o no es un
 //      hecho, no una redacción — ver el comentario de `mediador.ts`. Mientras no
 //      esté confirmado y con un buzón que se sepa que recibe correo, los
@@ -231,30 +225,6 @@ const BASES = [
   },
 ] as const
 
-/**
- * Las cookies que el sitio puede instalar. Son las de verdad, no una lista tipo.
- *
- * 🚨 Tiene que coincidir con lo que hace `components/Analitica.tsx`. Si ahí se
- * añade una herramienta, aquí aparece su fila EN EL MISMO PR: una política de
- * cookies incompleta no es un descuido de redacción, es la infracción.
- */
-const COOKIES = [
-  {
-    nombre: 'CookieConsent',
-    categoria: 'Necesaria',
-    proveedor: 'Cookiebot (Usercentrics A/S)',
-    para: 'Guarda qué has elegido en el banner, para no volver a preguntártelo en cada página.',
-    duracion: '1 año',
-  },
-  {
-    nombre: 'ph_…_posthog',
-    categoria: 'Estadística',
-    proveedor: 'PostHog (región europea)',
-    para: 'Distingue una visita de otra para poder contar visitantes y páginas vistas. Solo se instala si aceptas.',
-    duracion: '1 año',
-  },
-] as const
-
 export default function Privacidad() {
   const { identidad, marca } = MEDIADOR
 
@@ -322,18 +292,7 @@ export default function Privacidad() {
           <h3 style={h3}>Lo que no tratamos aquí</h3>
           <p style={parrafoUltimo}>
             Este sitio no pide contraseñas, ni datos bancarios, ni datos de pago: no se contrata ni
-            se cobra nada desde la web. Tampoco te perfila, ni graba lo que haces en pantalla, ni
-            registra lo que escribes: la medición de visitas del apartado 7 cuenta páginas vistas,
-            no personas.
-          </p>
-
-          <h3 style={h3}>Lo que se mide de tu navegación</h3>
-          <p style={parrafoUltimo}>
-            Si aceptas las cookies de estadística, se registran las páginas que ves, desde qué
-            página llegaste y datos técnicos aproximados (tipo de dispositivo, navegador, idioma y
-            una localización a nivel de ciudad deducida de tu IP, que no se guarda). Sirve para
-            saber qué secciones interesan y desde dónde llega la gente. Si no aceptas, no se
-            registra nada de esto.
+            se cobra nada desde la web. Tampoco recoge estadísticas de navegación ni te perfila.
           </p>
 
           <h3 style={h3}>Datos de salud</h3>
@@ -390,14 +349,6 @@ export default function Privacidad() {
               alojamiento del sitio, el correo y las herramientas de gestión de la correduría—, que
               tratan los datos por cuenta nuestra, con contrato de encargo del art. 28 RGPD y
               siguiendo nuestras instrucciones.
-            </li>
-            <li>
-              <strong>Los dos proveedores de la medición</strong>, y solo si la aceptas:{' '}
-              <strong>Cookiebot</strong> (Usercentrics A/S, Dinamarca), que registra tu elección
-              sobre las cookies, y <strong>PostHog</strong>, que cuenta las páginas vistas. La
-              medición está configurada contra la <strong>región europea</strong> de PostHog, así
-              que esos datos se alojan en la Unión Europea. Los dos tratan los datos por cuenta
-              nuestra con contrato de encargo del art. 28 RGPD.
             </li>
             <li>
               <strong>La Administración</strong> y los tribunales, cuando una norma nos obligue a
@@ -497,44 +448,13 @@ export default function Privacidad() {
           <h2 id="cookies" style={h2}>
             7. Cookies
           </h2>
-          <p style={parrafo}>
-            La primera vez que entras aparece un banner con dos opciones claras. Hasta que elijas,
-            no se instala ninguna cookie que no sea imprescindible, y{' '}
-            <strong>rechazar es tan fácil como aceptar</strong>: son dos botones del mismo tamaño y
-            en el mismo sitio, sin casillas premarcadas y sin que haya que entrar en ningún menú
-            para decir que no (art. 22.2 de la LSSI y criterio de la AEPD).
-          </p>
-          <p style={parrafo}>
-            Estas son todas las cookies que puede usar el sitio. No hay ninguna más:
-          </p>
-          <ul style={fichas}>
-            {COOKIES.map((c) => (
-              <li key={c.nombre} style={ficha}>
-                <p style={fichaTitulo}>
-                  {c.nombre} · {c.categoria}
-                </p>
-                <p style={fichaBase}>
-                  {c.para} · Proveedor: {c.proveedor} · Duración: {c.duracion}
-                </p>
-              </li>
-            ))}
-          </ul>
-          <p style={{ ...parrafo, marginTop: 16 }}>
-            <strong>No hay cookies de publicidad</strong>, ni píxeles de redes sociales, ni
-            seguimiento entre sitios web. Tampoco se graba tu sesión en vídeo ni se registran tus
-            clics ni lo que escribes en el formulario: la analítica está configurada expresamente
-            sin autocaptura y sin grabación, porque en un formulario de seguros se acaban
-            escribiendo datos personales que no tienen por qué llegar a una herramienta de medición.
-          </p>
-          <p style={parrafo}>
-            <strong>Puedes cambiar de opinión cuando quieras</strong> desde el enlace «Cambiar
-            preferencias de cookies» que hay en el pie de todas las páginas, o borrando las cookies
-            desde tu navegador. Retirar el consentimiento no afecta a la licitud de lo que se hizo
-            mientras estaba dado.
-          </p>
           <p style={parrafoUltimo}>
-            Si rechazas las cookies de estadística, la web funciona igual: solo dejamos de contar la
-            visita.
+            Este sitio usa <strong>únicamente las cookies técnicas imprescindibles</strong> para que
+            las páginas se sirvan y el formulario funcione. No hay cookies de analítica, ni de
+            publicidad, ni de terceros, ni píxeles de seguimiento: no medimos tu navegación ni la
+            compartimos con nadie. Por eso no aparece ningún banner de consentimiento — la ley no lo
+            exige para las cookies estrictamente necesarias. Si algún día se añadiera cualquier otra
+            cookie, esta página se reescribiría antes y se te pediría permiso.
           </p>
         </section>
 

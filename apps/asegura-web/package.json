@@ -13,7 +13,6 @@
     "@central/brand": "workspace:*",
     "@central/module-seguros": "workspace:*",
     "next": "^15.5.18",
-    "posthog-js": "^1.427.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -1,64 +1,96 @@
-// Guardián de la invariante «sin banner no hay medición».
+// Guardián del consentimiento: sin banner NO hay medición.
 //
-// Lo que vigila no es que el código compile —eso ya lo hace tsc— sino que no se
-// pueda llegar por descuido al único estado inaceptable: PostHog cargado sin
-// que Cookiebot esté configurado, es decir, midiendo al visitante sin haberle
-// preguntado (art. 22.2 LSSI). Ese estado no da ningún error: la web se ve
-// perfecta y los datos entran. Por eso hace falta un test y no basta con leer.
+// El fallo que este archivo impide está medido en la otra web de la correduría
+// (04/09/2026): allí PostHog arranca aunque falte el identificador de Cookiebot,
+// así que una variable de entorno olvidada deja cookies de análisis instaladas
+// sin permiso (art. 22.2 LSSI). Es un fallo que NO se ve — la web funciona y los
+// datos llegan; lo único que falta es el banner. De ahí que se pruebe la regla
+// pura Y el fuente: ni tsc ni `next build` miran si alguien quitó un `if`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { leerConfigAnalitica } from './analitica.ts'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { POSTHOG_HOST, puedeMedir, scriptPostHog } from './analitica.ts'
 
-const CLAVE = 'phc_wa9fxuRhoAicHxKcuFxL7WBZnw8NgmxCsRfFyWb5DLJN'
-const HOST = 'https://eu.i.posthog.com'
-const CBID = '5d75b875-d14c-4eb1-881c-371cb8629db6'
+const RAIZ = join(import.meta.dirname, '..')
+const COMPLETA = { cookiebotId: 'cbid-de-prueba', posthogKey: 'phc_prueba' }
 
-const COMPLETA = {
-  NEXT_PUBLIC_POSTHOG_KEY: CLAVE,
-  NEXT_PUBLIC_POSTHOG_HOST: HOST,
-  NEXT_PUBLIC_COOKIEBOT_ID: CBID,
+/** Quita comentarios para mirar solo lo que se EJECUTA. */
+function sinComentarios(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 }
 
-test('con las tres variables bien, la medición se configura', () => {
-  assert.deepEqual(leerConfigAnalitica(COMPLETA), { clave: CLAVE, host: HOST, cookiebotId: CBID })
+const ANALITICA = sinComentarios(readFileSync(join(RAIZ, 'components', 'Analitica.tsx'), 'utf8'))
+const LAYOUT = sinComentarios(readFileSync(join(RAIZ, 'app', 'layout.tsx'), 'utf8'))
+
+test('SIN gestor de consentimiento no se mide, aunque el visitante hubiera aceptado', () => {
+  // Este es el caso exacto del fallo de la app de Manuel: la env de Cookiebot
+  // no está puesta y la medición arranca igual.
+  assert.equal(puedeMedir({ statistics: true }, { ...COMPLETA, cookiebotId: '' }), false)
 })
 
-test('SIN Cookiebot no hay medición, aunque PostHog esté completo', () => {
-  // Es LA invariante: medir sin banner es medir sin consentimiento.
-  assert.equal(leerConfigAnalitica({ ...COMPLETA, NEXT_PUBLIC_COOKIEBOT_ID: undefined }), null)
-  assert.equal(leerConfigAnalitica({ ...COMPLETA, NEXT_PUBLIC_COOKIEBOT_ID: '' }), null)
+test('sin clave de PostHog no se mide', () => {
+  assert.equal(puedeMedir({ statistics: true }, { ...COMPLETA, posthogKey: '' }), false)
 })
 
-test('un CBID con errata NO se acepta: sin banner real, medir sería sin consentimiento', () => {
-  for (const malo of ['5d75b875', 'CBID-PENDIENTE', 'null', 'undefined', '5d75b875-d14c-4eb1-881c']) {
-    assert.equal(leerConfigAnalitica({ ...COMPLETA, NEXT_PUBLIC_COOKIEBOT_ID: malo }), null, malo)
+test('«todavía no ha contestado» NO es un sí', () => {
+  assert.equal(puedeMedir(null, COMPLETA), false)
+  assert.equal(puedeMedir(undefined, COMPLETA), false)
+  assert.equal(puedeMedir({}, COMPLETA), false)
+})
+
+test('rechazar la medición se respeta', () => {
+  assert.equal(puedeMedir({ statistics: false }, COMPLETA), false)
+  // Aceptar marketing no autoriza a medir: son categorías distintas.
+  assert.equal(puedeMedir({ marketing: true, preferences: true }, COMPLETA), false)
+})
+
+test('con consentimiento explícito y todo configurado, se mide', () => {
+  assert.equal(puedeMedir({ statistics: true }, COMPLETA), true)
+})
+
+test('el host por defecto de PostHog está en la UE', () => {
+  // Un defecto apuntando a la nube de EE. UU. sacaría del EEE los datos de
+  // visitantes españoles sin que nada fallara ni se notara.
+  assert.match(POSTHOG_HOST, /^https:\/\/eu\./, `POSTHOG_HOST fuera de la UE: ${POSTHOG_HOST}`)
+})
+
+test('la URL del script de PostHog no duplica la barra', () => {
+  assert.equal(scriptPostHog('https://eu.i.posthog.com/'), 'https://eu.i.posthog.com/static/array.js')
+})
+
+test('PostHog solo se inicializa detrás de puedeMedir()', () => {
+  assert.match(ANALITICA, /puedeMedir\(/, 'components/Analitica.tsx ya no consulta la regla de consentimiento')
+  // La única llamada a init tiene que estar en el mismo archivo que la guarda.
+  const inits = ANALITICA.match(/\.init\(/g) ?? []
+  assert.equal(inits.length, 1, `se esperaba UNA llamada a init, hay ${inits.length}`)
+  assert.match(ANALITICA, /opt_out_capturing\(\)/, 'retirar el consentimiento tiene que apagar la medición, no solo dejar de arrancarla')
+})
+
+test('las grabaciones de sesión están desactivadas', () => {
+  // El formulario de leads pide nombre, teléfono y correo: una grabación los
+  // captura tecleados aunque el enmascarado falle.
+  assert.match(ANALITICA, /disable_session_recording:\s*true/, 'session recording activo en una web con formulario de datos personales')
+})
+
+test('PostHog NO viaja en el bundle: se carga de su CDN tras consentir', () => {
+  for (const f of ['components/Analitica.tsx', 'app/layout.tsx', 'lib/analitica.ts']) {
+    const src = sinComentarios(readFileSync(join(RAIZ, f), 'utf8'))
+    assert.doesNotMatch(src, /from\s+['"]posthog-js['"]/, `${f} importa posthog-js: la librería quedaría cargada antes de que nadie acepte`)
   }
 })
 
-test('sin clave de PostHog no se configura nada (tampoco el banner suelto)', () => {
-  assert.equal(leerConfigAnalitica({ ...COMPLETA, NEXT_PUBLIC_POSTHOG_KEY: undefined }), null)
-  // Una clave con otra forma es casi siempre una variable pegada a medias.
-  assert.equal(leerConfigAnalitica({ ...COMPLETA, NEXT_PUBLIC_POSTHOG_KEY: 'phc_corta' }), null)
+test('el layout monta el gestor de consentimiento y solo si hay identificador', () => {
+  assert.match(LAYOUT, /<Analitica \/>/, 'app/layout.tsx ya no monta <Analitica />: la web dejaría de medir sin que nada fallara')
+  assert.match(LAYOUT, /COOKIEBOT_ID \?/, 'el script de Cookiebot ya no está condicionado a que exista el identificador')
+  assert.match(LAYOUT, /consent\.cookiebot\.com\/uc\.js/, 'el layout ya no carga el gestor de consentimiento')
 })
 
-test('un host a medias se rechaza en vez de mandar los eventos a nuestro dominio', () => {
-  // Sin esquema, PostHog resolvería la URL contra grupoasegura.es: 404 nuestros
-  // y cero visitas medidas, sin un solo error visible.
-  for (const malo of ['eu.i.posthog.com', 'http://eu.i.posthog.com', '/ingest', '']) {
-    assert.equal(leerConfigAnalitica({ ...COMPLETA, NEXT_PUBLIC_POSTHOG_HOST: malo }), null, malo)
+test('no hay otros rastreadores colados en la web', () => {
+  // Cualquier script de terceros que mida se somete a la misma puerta. Si
+  // alguien añade uno directo en el HTML, este cepo lo caza.
+  const PROHIBIDO = [/googletagmanager\.com/, /google-analytics\.com/, /connect\.facebook\.net/, /hotjar/i, /clarity\.ms/]
+  for (const re of PROHIBIDO) {
+    assert.doesNotMatch(LAYOUT, re, `app/layout.tsx carga un rastreador fuera del consentimiento: ${re}`)
   }
-})
-
-test('del host se conserva solo el origen, sin barra ni ruta', () => {
-  const c = leerConfigAnalitica({ ...COMPLETA, NEXT_PUBLIC_POSTHOG_HOST: 'https://eu.i.posthog.com/' })
-  assert.equal(c?.host, 'https://eu.i.posthog.com')
-})
-
-test('los espacios de un copiar-pegar no rompen la configuración', () => {
-  const c = leerConfigAnalitica({
-    NEXT_PUBLIC_POSTHOG_KEY: `  ${CLAVE} `,
-    NEXT_PUBLIC_POSTHOG_HOST: ` ${HOST}`,
-    NEXT_PUBLIC_COOKIEBOT_ID: `${CBID}  `,
-  })
-  assert.deepEqual(c, { clave: CLAVE, host: HOST, cookiebotId: CBID })
 })

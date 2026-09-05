@@ -30,45 +30,34 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **📊 La web pública ya mide visitas, y el interruptor es el consentimiento (05/09/2026).** PostHog
-  (región EU) detrás de un banner de Cookiebot en `apps/asegura-web`. La invariante, en
-  `lib/analitica.ts` + 7 tests: **las tres variables se validan JUNTAS y sin Cookiebot no hay PostHog**
-  — un CBID con errata o un host sin `https://` apagan la medición entera en vez de arrancar a medias,
-  que es el único estado inaceptable (mide sin preguntar, art. 22.2 LSSI) y el que desde fuera se ve
-  idéntico a una web bien configurada. `components/Analitica.tsx` carga PostHog por `import()` solo tras
-  el consentimiento. 🚨 **Sin autocaptura de clics, sin grabación de sesión y sin perfiles de persona**:
-  el formulario recoge nombre y teléfono —y en vida/salud, del art. 9—, y eso no va a una herramienta de
-  analítica. Se cuentan páginas, no personas. Privacidad reescrita (§2, §4, §7) con las dos cookies reales.
-- 🔐 **Y una separación que ese texto obligaba: `VERSION_TEXTOS_LEGALES` se SELLA en
-  `portal_consentimiento.version_texto`.** Subirla por reescribir el apartado de cookies de la web habría
-  obligado a los ~80 clientes del portal a volver a acreditar, ensuciando un registro cuyo único valor es
-  ser prueba. Nace `VERSION_TEXTOS_WEB` (`2026-09-w1`) para los textos de `asegura-web`, con test que
-  impide volver a colapsar las dos series. Falta: las 3 envs en el proyecto Vercel `asegura-web`.
-- **🌐 El apex `grupoasegura.es` cambió de manos DOS VECES en el día, y yo rompí la ingesta de CIMA por
-  no medir (05/09/2026).** Por la mañana pasó a servir la web del repo `asegura` (#817: `/siniestro` + 8
-  redirects 301 del WordPress). Por la tarde se le quitó: medido a las 14:04 UTC, el proyecto Vercel
-  `asegura` sirve **solo** `app.grupoasegura.com`, y el apex lo sirve ya el proyecto `asegura-web`
-  (`prj_MnuAvshNZg6vmRsfTkSmiX4RyCj9`, root `apps/asegura-web`). 🚨 **`list_projects`/`get_project` del
-  MCP de Vercel NO devuelven ese proyecto** (ni `alquiler`): con esa lista se afirmó que «no existe».
-  Una lista incompleta no demuestra una ausencia — el comentario del bot de Vercel en el PR sí lo trae.
-- 💣 **Y la lección cara: moví los 6 workflows de crons a `grupoasegura.es` (#818) SUPONIENDO que la
-  canonicalización LOO-670 rompía el host viejo. No lo rompía** — el run de `cima-pull` de las 09:12 UTC
-  contra `app.grupoasegura.com` estaba en verde. El primer run tras mi merge murió con
-  `curl: (22) ... error: 404`, y con `cima-pull` cae `cima-health-alert`, su propio vigilante: silencio
-  doble. Revertido y verificado en asegura#819. **Antes de mover un host en un cron, mira el código de
-  respuesta en los dos** (404 = otra app · 401 = la ruta existe y te rechaza por credencial).
-- 🚨 **El ruleset de `asegura` NO SE APLICA** («rulesets won't be enforced on this private repository until you
-  move to GitHub Team»): `require-loo-reference` nunca fue obligatorio y `main` va sin protección real. Y
-  `mergeable_state: "unstable"` significa **mergeable**, no bloqueado — leerlo como «bloqueado» me costó media
-  mañana persiguiendo un ticket de Linear que no hacía falta.
-- 📧 Alias `hola@` e `info@grupoasegura.es` → `asuarez@grupoasegura.com` (único buzón real; los alias son gratis
-  e ilimitados). `info@.es` era el SAC publicado en `/info-mediador` y en los términos, y **no existía**: rebotaba.
-- 📊 Cookiebot de alta (CBID `5d75b875-…`). La `NEXT_PUBLIC_POSTHOG_KEY` de Vercel apunta **desde mayo a un
-  proyecto que NO es de Alberto**, y `posthog-server.ts` manda `distinctId: user.id` **sin comprobar
-  consentimiento**; el del navegador sí es fail-closed en prod (`cookiebot.ts:77`) — ojo, el comentario de
-  `posthog-browser.ts` afirma lo contrario y es FALSO. Pendiente: `www` aún sirve el WordPress viejo ·
-  sobrescribir la clave · preguntar a Manuel de quién es ese proyecto · declarar PostHog en la política de
-  privacidad (pasa por la gobernanza del ADR-015) · runbook `cmp-cookiebot-setup.md` obsoleto en 4 puntos.
+- **📊 La web pública ya puede medir, y solo si le dejan (05/09/2026).** `apps/asegura-web` no tenía
+  **ni una línea** de PostHog ni de Cookiebot: crear las tres envs en Vercel (lo que estaba a punto de
+  hacerse) no habría hecho nada, porque no había código que las leyera. Ahora sí, y **fail-closed**:
+  `puedeMedir()` (puro, `lib/analitica.ts`) exige las tres cosas —CBID, clave y `statistics === true`—
+  y PostHog **no está en el bundle**, se baja de su CDN tras aceptar. Es la decisión contraria a la web
+  de Manuel, cuyo *fail-open* deja PostHog corriendo sin banner si falta la env (medido el 04/09).
+  `/legal/cookies` + botón de renovar (art. 7.3 RGPD), enlace en el footer y en el sitemap. 12 cepos en
+  `lib/analitica.test.ts`; 28 tests de la app, tsc 0, lint 0, build OK. PR #2385.
+  ✅ **Los 7 crons de `asegura` NO estaban rotos al cerrar: ya los había arreglado otra sesión** (revert
+  `cae77bd`, 14:05 UTC, de #818). Aquel PR repuntó los destinos a `grupoasegura.es` sobre una premisa
+  **no medida** (que la canonicalización rompía el `.com`), y lo que se midió después la desmiente:
+  `.es/api/crons/cima-pull` → **404**, `app.grupoasegura.com/api/crons/cima-pull` → **401** (la ruta
+  responde, sin redirect). Daño real: **UN run**, el de las 13:57; el de las 14:06 ya en verde. ⚠️ Y
+  **NO quitar** PostHog/Cookiebot del proyecto `asegura`: su fail-open dejaría el CRM midiendo sin
+  banner — lo correcto es dar de alta los dominios en el CBID.
+- 🔐 **Y un cabo que ese PR dejó suelto: la privacidad se reescribió sin subir la versión del texto.**
+  `VERSION_TEXTOS_LEGALES` seguía en `2026-09-v4` con un contenido que ya no era el de v4 — justo lo que
+  esa constante existe para impedir. Pero **subirla NO era la solución**: se SELLA en
+  `portal_consentimiento.version_texto`, así que reescribir el apartado de cookies de la web habría
+  obligado a los ~80 clientes del portal a volver a acreditar, ensuciando un registro cuyo único valor
+  es ser prueba. Nace **`VERSION_TEXTOS_WEB`** (`2026-09-w1`) para los textos de `asegura-web`, con test
+  que impide volver a colapsar las dos series. Regla: texto de la web → sube `_WEB`; texto del portal →
+  sube `_LEGALES`.
+- 🔁 **Y la lección de método del día: dos sesiones montaron la MISMA analítica en paralelo.** La de
+  #2385 llegó antes y es mejor (PostHog fuera del bundle, cepos que leen el fuente); la otra se
+  descartó entera al resolver el conflicto. Antes de empezar algo que «no existe», mirar si hay un PR
+  abierto tocándolo: `list_pull_requests` cuesta una llamada y aquí habría ahorrado una implementación
+  completa.
 - **📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI (05/09/2026).** Lo del
   PR #2378 (idioma, consulta web, `importesNoRespaldados`, los hechos de transporte de los 4 pisos) se
   volcó a `sivra-maestro/references/contexto-y-agente-huesped.md`: vivía solo en la memoria y en el PR, y
