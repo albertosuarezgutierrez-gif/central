@@ -980,3 +980,45 @@ mismo, la pantalla del invitado dice «solo a una de sus pólizas» **sin nombra
 Cepos: `packages/module-seguros-portal/src/invitacion.test.ts` (10, con las mutaciones comprobadas:
 colapsar `sin_enlace` con `envio_fallido` y sumar la caducidad en meses hacen fallar los suyos) y
 `apps/asegura-portal/lib/invitaciones.test.ts` (25).
+
+## ☎️ El teléfono de la compañía (05/09/2026) — el sitio existe, los números los pone una persona
+
+Alberto quiere una **hoja imprimible** («la del frigorífico») con lo que hace falta después de un
+percance: compañía, nº de póliza, tomador y **a quién llamar**. Ese teléfono no estaba en ninguna
+parte: medido el 04/09/2026, el único `telefono` de todo el schema que no es de una persona es el de
+`corredurias`.
+
+`prisma/sql/2026-09-05_companias_telefonos.sql` (aplicada) añade a `companias_dgs`
+`telefono_siniestros`, `telefono_asistencia`, `telefono_fuente` y `telefono_verificado_en`, con
+`SELECT` por columnas para `prisma_asegura_portal`.
+
+🚨 **Los números se dejaron a NULL a propósito.** Desde el contenedor de la sesión la política de red
+bloquea `mapfre.es`, `allianz.es`, `occident.com` y `reale.es` (comprobado con las cuatro), y lo único
+alcanzable son comparadores que **se contradicen entre sí** — para Mapfre salen 918 366 240,
+918 365 365 y 900 822 822 según quién lo cuente. Un teléfono de siniestros equivocado impreso en un
+imán de nevera es peor que no tener ninguno: alguien lo marca a las 3 de la mañana después de un
+golpe. **No se rellenan desde un agente; los pone una persona contra la fuente.**
+
+🦷 **El cepo `companias_dgs_telefono_con_fuente`** impide guardar un número sin decir de dónde salió y
+cuándo se comprobó. Visto morder: el `UPDATE` con solo el número devuelve **23514**, y el mismo con
+fuente y fecha entra.
+
+**Reglas para cuando se pinte la hoja:**
+
+- **`NULL` = «no lo hemos verificado», NUNCA «esta compañía no tiene»** ni un hueco en blanco. La hoja
+  dice «pídenoslo» — es la regla de la casa aplicada al caso donde más caro sale.
+- **Son DOS números y no se colapsan**: dar parte ≠ asistencia 24h. En el arcén hace falta el segundo.
+- **El teléfono de la CORREDURÍA va primero**, y el de la compañía debajo con su etiqueta de urgencia.
+  El punto de contacto es Alberto (regla de visibilidad del 03/09), pero quitarle a un cliente el
+  número de la grúa para forzar que llame al corredor es un mal negocio el día que le pase de verdad.
+- **La hoja lleva impresa la fecha de verificación.** Un número leído hace tres años falla igual que
+  uno equivocado, y en el mismo momento.
+
+📌 Cartera viva medida el 05/09/2026: **solo cuatro compañías** — Mapfre (64 pólizas, `C0058`),
+Allianz (26, `C0109`), Occident (19, `C0468`) y Reale (1, `C0613`). Las cuatro ya están en
+`companias_dgs` y su `nombre_comun` casa exacto con `polizas.aseguradora`.
+
+🔗 **Y el QR de esa hoja lleva un ENLACE, no los datos.** Un QR no caduca —es una imagen con un texto
+dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la
+póliza, y además cualquiera que fotografíe la hoja se los lleva. Con una URL, el QR es permanente y
+la página detrás está siempre al día. Es la opción simple, no la complicada.
