@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-05T13:31:29Z",
+  "generadoEn": "2026-09-05T14:40:48Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -380,7 +380,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 36
       },
       "rrhh": {
         "estado": "usado",
@@ -2084,7 +2084,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 43
+        "evidencias": 46
       },
       "asegura-web": {
         "estado": "usado",
@@ -2192,7 +2192,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 38
       },
       "asegura-web": {
         "estado": "no",
@@ -3887,6 +3887,8 @@
       "/api/autorizaciones/[id]",
       "/api/catastro",
       "/api/catastro/sugerir",
+      "/api/hojas",
+      "/api/hojas/[id]",
       "/api/invitaciones",
       "/api/invitaciones/[id]",
       "/api/invitaciones/responder",
@@ -5211,6 +5213,8 @@
       "seguros.portal_canal",
       "seguros.portal_codigo",
       "seguros.portal_consentimiento",
+      "seguros.portal_hoja_qr",
+      "seguros.portal_hoja_qr_poliza",
       "seguros.portal_identidad",
       "seguros.portal_invitacion",
       "seguros.portal_obligacion",
@@ -6165,7 +6169,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1282,
+    "apis": 1284,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
