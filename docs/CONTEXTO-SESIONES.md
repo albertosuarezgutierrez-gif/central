@@ -30,6 +30,23 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **👥 «Sigue habiendo duplicidad ¿xq?»: no era el buscador, eran dos volcados sin cruzar (05/09/2026).**
+  Los dos volcados del CRM viejo (`intranet:` 30/05 y `asegura_app:` 21/06) se cargaron sin cruzarse, así
+  que una misma persona entró dos veces. 🚨 **El id del `import_ref` NO sirve para cruzarlos**: de 3.443
+  pares con el mismo id de origen, **3.005 tienen nombre distinto** — numeran independientemente y
+  coinciden por casualidad; fusionar por ahí habría mezclado 3.000 personas. Lo que sí prueba identidad es
+  nombre exacto **+ el código de cliente que el volcado dejó pegado al apellido** («garcia suarez 14354»).
+  Aplicado con OK de Alberto: **104 fusiones** (lote 7, contactos UNIDOS y no elegidos → 64 teléfonos y 98
+  emails salvados; 0 pólizas colgando de una lápida) y **462 leads sin ningún canal descartados**. Visibles
+  5.668 → **5.102**, cartera viva 80 intacta. Quedan **336 grupos de homónimos SIN prueba** (solo 2 con
+  identidad probada): no se fusionan. Su guarda abortó el lote entero por un par que partía el nombre de
+  otra forma — se apretó el criterio, no el cepo. 🐛 De paso: `avisos-vencimiento.ts` **no filtraba
+  `cliente.activo`**, o sea que se le podía mandar un correo de vencimiento a una ficha descartada (único
+  camino con efecto externo); + 6 puntos del portal, y guardián nuevo `filtro-activo.test.ts` porque ese
+  filtro ya se había perdido una vez. ⚠️ **El timeout de 60s del MCP de Supabase NO significa que la
+  transacción se abortara**: la fusión confirmó después de que el cliente cortara y la primera lectura la
+  dio por «intacta». Mirar el resultado, no el error.
+
 - **🎨 El portal del cliente deja de ser una sola página, y el diseño se LEE del fuente de Manuel (05/09/2026).**
   Alberto: «el aspecto, quiero que se vea más moderno» + «en vercel asegura tiene q estar el diseño de manuel».
   Se clona el repo de `app.grupoasegura.com` y se leen sus tokens: **confirma** el `#3364ee` y el `16px` ya
@@ -1163,6 +1180,20 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   compañía.
 - La póliza ajena se marca en la TARJETA (filete + «De {titular}»), no solo en el `<h2>` de la
   sección: en rejilla ese título se sale de la vista.
+
+### ⚖️ (05/09/2026, III) Bloque legal 0.5: la solicitud de supresión (art. 17) que NO borra
+
+- **0.4 mergeado** (PR #2336 → `0e5b7aad`): export del art. 15/20 servido por el puerto de operador.
+- **0.5 construido**: `portal_supresion` (DDL **sin aplicar**), módulo puro `supresion.ts`, ruta y
+  pantalla «Tus datos» en la bóveda, y `GET/POST /api/operador/supresiones` en `apps/asegura`.
+- 🚨 **No borra a propósito** (art. 17.3.b y 17.3.e): lo obligatorio es recibir, acusar y contestar en
+  un mes. Las dos listas —lo que se borra y lo que no— se enseñan ANTES de pulsar y se calculan.
+- La cola la ordena el **reloj legal**, no la llegada, y llega a `plataforma` → `/correduria`: sin ese
+  puerto el plazo se incumpliría en silencio.
+- El **guardián de aislamiento mordió** al sacar `correduriaUnica()` a un fichero suelto (toca la
+  cartera sin poder nombrar `portalVinculo`): se deshizo la extracción en vez de exentar el cepo.
+- Verificado: 574 tests raíz (0 fallos) · module-seguros 425 · module-seguros-portal 237 · typecheck
+  de `asegura` y `asegura-portal` limpio. Tres mutaciones del guardián nuevo comprobadas.
 
 
 ### ⚖️ (05/09/2026) Bloque legal 0.3: el portal ya deja constancia de que informó — y sale una alerta de correo (PR #2326, mergeado)

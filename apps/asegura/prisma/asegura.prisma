@@ -871,3 +871,32 @@ model PortalConsentimiento {
 
   @@map("portal_consentimiento")
 }
+
+/// Las solicitudes del derecho de SUPRESIÓN que llegan por el portal del cliente.
+///
+/// 🚨 No es una cola de borrados: es una cola de RESPUESTAS con un plazo legal de
+/// un mes corriendo por debajo (art. 12.3 RGPD). Aquí sí se ESCRIBE —resolverla
+/// es trabajo del corredor, no del portal—, a diferencia del resto de modelos
+/// `portal_*` de este schema, que son de solo lectura.
+model PortalSupresion {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId   String    @map("correduria_id") @db.Uuid
+  identidadId    String    @map("identidad_id") @db.Uuid
+  /// `null` NO es «no es cliente»: es «su acceso no está enlazado con ninguna
+  /// ficha». Un lead también ejerce el derecho.
+  clienteId      String?   @map("cliente_id") @db.Uuid
+  recibidaEn     DateTime  @default(now()) @map("recibida_en") @db.Timestamptz(6)
+  estado         String    @default("recibida")
+  prorrogadaEn   DateTime? @map("prorrogada_en") @db.Timestamptz(6)
+  prorrogaMotivo String?   @map("prorroga_motivo")
+  resueltaEn     DateTime? @map("resuelta_en") @db.Timestamptz(6)
+  respuesta      String?
+  resueltaPor    String?   @map("resuelta_por")
+  motivo         String?
+  versionTextos  String    @map("version_textos")
+  ip             String?   @db.Inet
+  userAgent      String?   @map("user_agent")
+
+  @@index([estado, recibidaEn])
+  @@map("portal_supresion")
+}
