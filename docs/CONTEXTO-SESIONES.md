@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏷️ Compañías del muro y el ramo que llegaba mal etiquetado (05/09/2026).** Alberto, viendo la web
+  ya en `grupoasegura.es`: «¿y los logos de más compañías?». En `seguros.companias_dgs` hay 15 filas
+  `activa`, pero 10 solo llevan «código verificado en el catálogo de Codeoscopic» — que es
+  **tarificable, no acuerdo**; publicarlas sería afirmar en falso sobre terceros. Alberto fija la
+  lista: las 4 con pólizas vivas + Generali, Fidelidade y **Asisa** (esta NO está en
+  `companias_dgs`: para emitir hará falta su código DGS). Se parte `COMPANIAS` en dos, porque
+  ampliar la única que había habría subido en silencio la cifra «Compañías con pólizas en cartera»
+  de 4 a 7. Marquesina TRIPLICADA (medido: una copia 964 px < contenedor 1104 → se veía el hueco) y
+  apretada en móvil (de 2 nombres visibles a 3-4). 🚨 Y el hallazgo caro: la página de
+  **responsabilidad civil preseleccionaba «Comercio o empresa»** porque RC no existía en
+  `TIPOS_SEGURO_LEAD` — el lead llegaba diciendo que quería comercio, plausible y falso. RC añadido
+  en plataforma + la copia, con guardián nuevo `cada ramo publicado tiene su opción` (probado por
+  mutación). PR #2408.
+
 - **🎨 `asegura-web`: una sola atmósfera, no diez bloques (05/09/2026).** Alberto: «te estás liando,
   hay que mezclar todas las ideas». Diagnóstico: los recursos ya estaban TODOS (aspecto de la landing
   de Manuel, ventana viva, foco con contadores, escáner), pero apilados como diez bloques blancos del
