@@ -125,6 +125,12 @@
   el desempate. No da acceso a nada y el enlace **no lleva token**. Ocho desenlaces sin colapsar.
   ⏸️ **Pendiente de Alberto:** sin `ASEGURA_MAIL_FROM` + proveedor de correo en `central-asegura` el botón
   contesta `error_envio` — y le pasa igual a la invitación de autorizaciones mergeada esta mañana.
+  🚨 **Seguimiento:** el arreglo responsive del titular se quedó SIN COMMITEAR y el PR mergeó la
+  versión con `<Badge>`, que lleva `whiteSpace:'nowrap'`: el rótulo de `ya_entra` arrastra la fecha
+  entera («… última vez el 3 de septiembre de 2026») y desbordaba la pantalla a 320px. Va como
+  `<span>` coloreado por token (`COLOR_PORTAL`, cero hex) y con `overflowWrap:'anywhere'`.
+  Lección: un cambio de un agente **no está hecho hasta que está en un commit** — su informe decía
+  «span, cero hex» y lo mergeado era el `Badge`. Comprobar el árbol antes de dar el PR por cerrado.
 
 - **📵 El CUARTO sitio donde vive un contacto, y la pestaña Contactos apretada (05/09/2026).** PR #2391
   (mergeado, `9d822946`) + PR nuevo. Alberto, mirando la pantalla: «grupo elca ya tiene a pablo y aun
