@@ -645,6 +645,23 @@ levanta el veto global; sin él, que el merge toque `pnpm-lock.yaml` solo import
 script, que igualmente no construye porque el veto sigue en pie. **No des la alarma desde el comentario
 intermedio** (dos sesiones seguidas han estado a punto): el estado que vale es el final.
 
+✅ **DECIMOTERCERA medición (05/09/2026, PR #2386) — abierto en draft por MCP y los 19 arrancaron al
+instante, y esta vez SÍ se miró antes de tocar nada.** Rama empujada con el token de la App (**0 runs**,
+comprobado), PR abierto **en draft** por la herramienta MCP → **19 runs a los segundos**, sin
+des-draftear, sin merge de `main` y sin segundo push; verdes en ~3,5 min, incluido `Ready to merge`.
+
+Corrige el error de método de la UNDÉCIMA, que anotó lo mismo sin haber mirado los runs antes del
+des-draft y por eso no aislaba nada. Aquí el tramo sí cuenta: **el draft no silenció**. Es el mismo
+resultado que #1777, #1779, #1940 y #2341 — y el contrario que #2029, #2277 y #2339, abiertos igual.
+Sigue sin haber causa, y la conclusión de la DÉCIMA se mantiene: buscarla por el lado de «quién y
+cómo» está agotado.
+
+⚠️ **Y el merge NO fue inmediato aunque los 20 checks estuvieran verdes:** entre abrir el PR y pulsar
+merge, `main` avanzó (#2385) y el `merge_pull_request` devolvió **405 «Pull Request has merge
+conflicts»**. No es un fallo del CI ni del ruleset: es el paso 1 del orden de abajo llegando por la
+otra punta. Se resuelve igual — mergear `main` en la rama, conservar las DOS entradas del mismo día en
+`docs/CONTEXTO-SESIONES.md` (no son versiones rivales) y empujar.
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
    ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.

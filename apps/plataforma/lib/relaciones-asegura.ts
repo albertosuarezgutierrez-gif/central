@@ -283,6 +283,73 @@ export function interpretarRelaciones(status: number, json: unknown): RespuestaR
   return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
 }
 
+/**
+ * El resultado de avisar por correo de una autorización pendiente.
+ *
+ * 🚨 Cinco desenlaces y NINGUNO se colapsa con otro, porque se arreglan de forma
+ * distinta y el que los mira decide qué hacer después: `sin_email` es «ponle un
+ * correo a la ficha», `sin_pendiente` es «no hay nada que confirmar» (o ya está
+ * confirmado, o caducó), `sin_portal` y `error_envio` son averías nuestras y
+ * el segundo se reintenta. Un «no se pudo avisar» genérico dejaría a Alberto
+ * mandando el correo a mano sin saber por qué.
+ */
+export type RespuestaAviso =
+  | { estado: 'ok'; caducaEn: string | null }
+  | { estado: 'sin_pendiente'; motivo: string }
+  | { estado: 'sin_email'; motivo: string }
+  | { estado: 'sin_portal'; motivo: string }
+  | { estado: 'error_envio'; motivo: string }
+  | { estado: 'invalido'; motivo: string }
+  | { estado: 'error'; motivo: string }
+
+const ESTADOS_AVISO = ['sin_pendiente', 'sin_email', 'sin_portal', 'error_envio', 'invalido'] as const
+
+export function interpretarAviso(status: number, json: unknown): RespuestaAviso {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 200 && o.estado === 'ok') {
+    // La fecha es un extra: si no viene o no se puede leer, el aviso SALIÓ igual.
+    // Convertir eso en un error diría que no se ha escrito un correo que ya está enviado.
+    const iso = cadena(o.caducaEn)
+    const t = iso ? new Date(iso) : null
+    return { estado: 'ok', caducaEn: t && !Number.isNaN(t.getTime()) ? (iso as string) : null }
+  }
+  // El estado del puerto manda sobre el código HTTP: los dos vienen del mismo
+  // sitio, pero el estado dice CUÁL de los cinco es.
+  for (const e of ESTADOS_AVISO) {
+    if (o.estado === e) return { estado: e, motivo: cadena(o.motivo) ?? e }
+  }
+  if (o.estado === 'sin_configurar' || status === 503) {
+    return { estado: 'sin_portal', motivo: cadena(o.motivo) ?? 'asegura no está configurada.' }
+  }
+  return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
+}
+
+/**
+ * La frase de pantalla, PURA y con test, para que «se ha enviado» no pueda
+ * salir de un desenlace que no envió nada.
+ */
+export function textoAviso(r: RespuestaAviso, nombre: string): string {
+  switch (r.estado) {
+    case 'ok':
+      return (
+        `✅ Correo enviado a ${nombre}. Sigue pendiente hasta que lo confirme desde el portal` +
+        (r.caducaEn ? `, y se cierra solo el ${fechaLarga(r.caducaEn)}` : '') +
+        '.'
+      )
+    case 'sin_email':
+      return `📭 ${nombre} no tiene ningún correo en su ficha (o está de baja de correo): añádeselo y vuelve a intentarlo. No se ha enviado nada.`
+    case 'sin_pendiente':
+      return `🕐 No hay ninguna autorización pendiente de confirmar para ${nombre}. No se ha enviado nada.`
+    case 'sin_portal':
+      return `⚠️ No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
+    case 'error_envio':
+      return `⚠️ El proveedor de correo no aceptó el mensaje, así que NO le ha llegado. Vuelve a intentarlo.`
+    default:
+      return `⚠️ No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
+  }
+}
+
 /** El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan. */
 export function textoMotivoRelaciones(motivo: string): string {
   switch (motivo) {
@@ -346,4 +413,15 @@ export function autorizarRelacionAsegura(body: Record<string, unknown>): Promise
 /** `DELETE` — `{clienteId, relacionadoId, actor}`: quita el vínculo (los dos sentidos). */
 export function borrarRelacionAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente/relaciones', { method: 'DELETE', body: JSON.stringify(body) })
+}
+
+/**
+ * `POST …/relaciones/aviso` — `{clienteId, relacionadoId, actor}`: escribe al
+ * relacionado para que confirme el acceso que la ficha le ha dado.
+ *
+ * 🚨 Manda un correo a un TERCERO, así que no es un `PATCH` más: lo dispara
+ * Alberto pulsando, nunca un efecto de pantalla ni un reintento automático.
+ */
+export function avisarAccesoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/relaciones/aviso', { method: 'POST', body: JSON.stringify(body) })
 }

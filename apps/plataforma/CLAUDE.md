@@ -1532,6 +1532,20 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   Antonia» (enlace). Es un consentimiento del titular: queda quién y cuándo en `historial_interno` de las dos
   fichas. `relaciones === null` = no se pudo leer (nunca «sin familia»); `[]` sí es «se miró y no hay». Los datos
   vienen de `cliente_relaciones` (1.708 filas del CRM ya cargadas). El portal del cliente aún NO los usa.
+- **✉️ «Invitar por correo» — la autorización pendiente ya se la cuenta alguien (05/09/2026).** Anotar
+  el consentimiento dejaba la fila `pendiente` y **nadie avisaba al interesado**: o Alberto escribía el
+  correo a mano, o se caducaba sola a los 90 días. Botón en la fila de la persona (solo cuando
+  `autorizacion.estado === 'pendiente'`) → `POST /api/correduria/cliente/relaciones/aviso` → puerto de
+  asegura, que es quien tiene el email descifrado. **`confirm` antes de mandar y `actor` desde la
+  sesión**: es un correo a un tercero, así que sale de un clic de Alberto y de nada más (regla global
+  de comunicaciones salientes) y queda en el historial de las dos fichas quién escribió.
+  🚨 **No acepta nada**: la autorización sigue pendiente. Lo que se gana es que la persona se entere.
+  🚨 **Cinco desenlaces sin colapsar** (`interpretarAviso`/`textoAviso` en `lib/relaciones-asegura.ts`,
+  puros y con test): `ok` · `sin_email` («no tiene correo en su ficha», que es lo único accionable) ·
+  `sin_pendiente` · `sin_portal` · `error_envio`. **Ninguno de los cuatro fallos puede leerse como que
+  el correo salió** —hay cepo que lo comprueba sobre el texto—, y un fallo de red se declara ambiguo en
+  vez de invitar a reintentar a ciegas y que la persona reciba dos. La `caducaEn` es un EXTRA: si no
+  viene o no se puede leer, el aviso SALIÓ igual y decir lo contrario sería negar un correo ya enviado.
 - **🕘 Estado derivado en la cabecera, historial plegado y aviso de duplicadas (02/09/2026).** El rótulo de la
   ficha sale de `ficha.estado` (asegura lo deriva: cliente / con presupuesto / lead / ex-cliente, con `motivo` en
   el `title`); las pólizas `viva && !confirmadaCima` van a un bloque «📝 Emitidas, pendientes de confirmación por
