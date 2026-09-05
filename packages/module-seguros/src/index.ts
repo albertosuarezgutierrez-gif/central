@@ -386,3 +386,15 @@ export {
   type PuntoPrecontractual,
   type IdPuntoPrecontractual,
 } from './mediador.ts'
+
+export {
+  TOPE_AVISO_SINIESTROS,
+  decidirSiniestrosNuevos,
+  detalleSiniestros,
+  textoAvisoSiniestros,
+  serializarMarca,
+  leerMarca,
+  type SiniestroEntrante,
+  type MarcaSiniestros,
+  type DecisionSiniestros,
+} from './siniestro-nuevo.ts'

@@ -539,6 +539,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 09:30',
   },
   {
+    id: 'correduria.siniestro-nuevo', categoria: 'correduria',
+    titulo: 'Siniestro nuevo de un cliente',
+    que: 'Un siniestro que ha entrado por CIMA (o sea, YA abierto en la compañía): quién es el cliente, qué compañía, qué póliza, cuándo pasó y la referencia, para llamarle y hacerle seguimiento.',
+    cuando: 'Todos los días a las 08:50, y solo cuando ha entrado alguno',
+  },
+  {
     id: 'correduria.lead-nuevo', categoria: 'correduria',
     titulo: 'Lead nuevo desde la web',
     que: 'Alguien ha pedido presupuesto en /seguros: sus datos, qué quiere y el enlace a su ficha (o que no se pudo registrar).',
