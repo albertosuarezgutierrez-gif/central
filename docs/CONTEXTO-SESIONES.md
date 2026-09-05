@@ -47,7 +47,10 @@
   ids 10 y 11, `prop_house_sevillana`, `confirmado`, insertados a mano por Supabase): tarifa fija de
   taxi 26€ (L-V 7-21h) / 29€ (noches, findes, festivos), EA 6€/8€ con sus paradas reales, y la
   advertencia explícita de NO decir «Puerta de Jerez» ni «10 min andando». Así esa pregunta se
-  responde sola, sin gastar búsqueda. **Los otros 3 pisos NO lo tienen** (las distancias son suyas).
+  responde sola, sin gastar búsqueda. **Y los otros 3 pisos también** (ids 12-14, a petición de Alberto):
+  ahí va SOLO lo que vale para toda Sevilla —tarifa fija de taxi y precios/paradas del EA— con la orden
+  explícita de NO decir en qué parada bajarse ni cuántos minutos se anda hasta ESE piso, porque esa
+  distancia no está medida para ellos. El dato que no se tiene se declara, no se estima.
 
 - **🗣️ El borrador salía en ESPAÑOL con el huésped escribiendo en inglés (05/09/2026).** Caso real: reserva
   154375571 (House Sevillana, Massimo). Todos los prompts del agente van en español y la orden «responde en
