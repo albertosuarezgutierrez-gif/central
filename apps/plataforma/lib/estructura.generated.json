@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-04T23:02:58Z",
+  "generadoEn": "2026-09-05T07:06:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "no",
@@ -3874,6 +3874,7 @@
       "/api/operador/resumen",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
+      "/api/operador/siniestros-nuevos",
       "/api/operador/vencimientos"
     ],
     "asegura-portal": [
@@ -4729,6 +4730,7 @@
       "/api/cron/contable-proactivo",
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-renovaciones",
+      "/api/cron/correduria-siniestros",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -6153,7 +6155,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 39,
-    "apis": 1273,
+    "apis": 1275,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
