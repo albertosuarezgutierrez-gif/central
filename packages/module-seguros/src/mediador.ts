@@ -190,3 +190,40 @@ export function lineaIdentificacion(): string {
   const { nombre, figura, claveDgsfp, nif } = MEDIADOR.identidad
   return `${nombre} · ${figura} inscrito en la DGSFP con clave ${claveDgsfp} · NIF ${nif}`
 }
+
+/**
+ * Remitente de un correo de la correduría, con el nombre visible SIEMPRE
+ * tomado de `MEDIADOR.marca`.
+ *
+ * 🚨 Esto existe por un fallo MEDIDO el 05/09/2026: las variables de entorno
+ * `PORTAL_MAIL_FROM` y `ASEGURA_MAIL_FROM` llevaban la marca con la ese
+ * minúscula, así que **todos los correos al asegurado salían con el nombre
+ * comercial comido**. El guardián del nombre comercial
+ * (`test/regression-nombre-comercial-asegura.test.ts`) no lo vio y no podía
+ * verlo: barre `git ls-files`, y el valor de una env de Vercel no está en el
+ * repo. Peor todavía, media docena de esas variables son de tipo Secret, que
+ * el panel ni siquiera deja releer — o sea que ahí la revisión a ojo tampoco
+ * llega nunca.
+ *
+ * La salida no es revisar mejor: es que el nombre **no se pueda escribir en una
+ * env**. La env aporta la DIRECCIÓN (que sí depende del dominio verificado en
+ * el proveedor de envío) y el nombre lo pone el repo, donde ya está protegido.
+ *
+ * Acepta las dos formas por compatibilidad, así que no hay que tocar ninguna
+ * variable para que empiece a funcionar:
+ *   - `"Lo que sea <no-reply@envios.grupoasegura.es>"` → se ignora el nombre
+ *   - `"no-reply@envios.grupoasegura.es"` → se le pone el nombre
+ *
+ * Devuelve `null` si no hay dirección utilizable: quien llama ya trata eso como
+ * avería de configuración, y un remitente inventado sería peor que no enviar.
+ */
+export function remitenteCorreo(env: string | undefined | null): string | null {
+  const bruto = (env ?? '').trim()
+  if (!bruto) return null
+  // Con `<...>` la dirección es lo de dentro; sin ellos, el valor entero.
+  const entreAngulos = bruto.match(/<([^>]+)>/)
+  const direccion = (entreAngulos ? entreAngulos[1] : bruto).trim()
+  // Una dirección sin arroba no es una dirección: no se disfraza con la marca.
+  if (!direccion || !direccion.includes('@') || /\s/.test(direccion)) return null
+  return `${MEDIADOR.marca} <${direccion}>`
+}
