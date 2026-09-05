@@ -1146,6 +1146,20 @@
 
 ---
 
+### ⚖️ (05/09/2026, III) Bloque legal 0.5: la solicitud de supresión (art. 17) que NO borra
+
+- **0.4 mergeado** (PR #2336 → `0e5b7aad`): export del art. 15/20 servido por el puerto de operador.
+- **0.5 construido**: `portal_supresion` (DDL **sin aplicar**), módulo puro `supresion.ts`, ruta y
+  pantalla «Tus datos» en la bóveda, y `GET/POST /api/operador/supresiones` en `apps/asegura`.
+- 🚨 **No borra a propósito** (art. 17.3.b y 17.3.e): lo obligatorio es recibir, acusar y contestar en
+  un mes. Las dos listas —lo que se borra y lo que no— se enseñan ANTES de pulsar y se calculan.
+- La cola la ordena el **reloj legal**, no la llegada, y llega a `plataforma` → `/correduria`: sin ese
+  puerto el plazo se incumpliría en silencio.
+- El **guardián de aislamiento mordió** al sacar `correduriaUnica()` a un fichero suelto (toca la
+  cartera sin poder nombrar `portalVinculo`): se deshizo la extracción en vez de exentar el cepo.
+- Verificado: 574 tests raíz (0 fallos) · module-seguros 425 · module-seguros-portal 237 · typecheck
+  de `asegura` y `asegura-portal` limpio. Tres mutaciones del guardián nuevo comprobadas.
+
 ### ⚖️ (05/09/2026) Bloque legal 0.3: el portal ya deja constancia de que informó — y sale una alerta de correo (PR #2326, mergeado)
 - El canje del código no dejaba **ninguna** fila de que se hubiera enseñado la información del mediador. La carga de la prueba es del mediador (art. 19 Ley 16/2018) y un acceso sin constancia **se ve igual que uno correcto**. Ahora escribe `lds_art19` en `portal_consentimiento` (la tabla existía desde Fase 1 sin que nadie escribiera).
 - **Va emparejado con la UI a propósito**: la fila afirma «se le enseñó», así que la pantalla de entrada lo dice junto al botón con los tres enlaces. Separarlos convertiría el registro en prueba fabricada — lo ata `test/regression-portal-consentimiento.test.ts` (8 cepos).

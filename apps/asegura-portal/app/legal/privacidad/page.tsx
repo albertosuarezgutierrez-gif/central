@@ -241,6 +241,20 @@ export default function Privacidad() {
           entras al portal, o desde otra acreditando quién eres.
         </p>
         <p>
+          La <strong>supresión</strong> puedes pedirla además desde tu propia pantalla, en{' '}
+          <strong>Mis seguros → Tus datos</strong>, sin escribir ningún correo.
+        </p>
+        <p>
+          🚨 <strong>Sobre la supresión, con antelación:</strong> no podemos borrarlo todo, y
+          preferimos decírtelo antes de que lo pidas. La normativa de seguros y la de prevención del
+          blanqueo de capitales nos obligan a conservar la documentación de la mediación, y de un
+          contrato pueden derivarse responsabilidades después: el propio Reglamento lo prevé y excluye
+          la supresión en esos casos (art. 17.3.b y 17.3.e). Lo que sí hacemos es{' '}
+          <strong>contestarte en un mes diciéndote, con nombres, qué se ha suprimido y qué se
+          conserva y por qué</strong>. El alcance completo —lo que se borra y lo que no— lo tienes a
+          la vista en esa misma pantalla antes de pulsar nada.
+        </p>
+        <p>
           Contestamos en el plazo de un mes. Si no te contestamos o no estás conforme con la
           respuesta, puedes reclamar ante la{' '}
           <a href="https://www.aepd.es" rel="noreferrer noopener" target="_blank">
