@@ -221,10 +221,12 @@ function Contacto({ nombre, c, intervinientes, piiClave, contactos, polizas }: {
   /** Para decir de QUÉ póliza sale el número prestado (la matrícula, si es auto). */
   polizas: { id: string; matricula: string | null; numeroPoliza: string | null }[]
 }) {
-  // «(+N)» = hay más aparte del principal; se ven y editan en ✏️ Datos del cliente.
+  // «(+N)» = hay más aparte del principal. Desde el 05/09/2026 se LEEN en la
+  // pestaña Contactos, arriba del todo, sin abrir nada; editarlos sigue siendo
+  // cosa del formulario plegado de esa misma pestaña.
   const masTel = contactos && contactos.telefonos.length > 1 ? contactos.telefonos.length - 1 : 0
   const masEmail = contactos && contactos.emails.length > 1 ? contactos.emails.length - 1 : 0
-  const mas = (n: number) => n > 0 ? <span style={{ fontSize: 11, color: 'var(--muted)' }} title={`${n} más en la ficha (✏️ Datos del cliente)`}> (+{n})</span> : null
+  const mas = (n: number) => n > 0 ? <span style={{ fontSize: 11, color: 'var(--muted)' }} title={`${n} más, en la pestaña Contactos`}> (+{n})</span> : null
   const causaPii = piiClave === null ? 'la clave no abre este dato (asegura no dice por qué: versión anterior)' : CAUSA_PII[piiClave] ?? `estado de clave desconocido: ${piiClave}`
   const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
   const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
