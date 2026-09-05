@@ -45,12 +45,34 @@ export {
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
+  DIAS_RECORDATORIO_INGESTA,
+  decidirAvisoIngesta,
+  repartirHuerfanas,
+  textoHuerfanas,
+  TOPE_POLIZAS_TELEGRAM,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
   type FicheroEnCuarentena,
   type EntradaRechazada,
+  type MotivoAviso,
+  type DecisionAviso,
+  type PolizaHuerfana,
+  type PolizaEnCartera,
+  type GrupoHuerfanas,
+  type RepartoHuerfanas,
 } from './ingesta.ts'
+export {
+  veredictoEntidad,
+  silencioPorEntidad,
+  motivosSilencio,
+  MIN_HUECOS,
+  FACTOR_SILENCIO,
+  SUELO_DIAS,
+  type VeredictoEntidad,
+  type EntidadIngesta,
+  type SilencioEntidad,
+} from './silencio-entidad.ts'
 export {
   MARCADORES_SIN_DATO,
   CAMPOS_PERSONALES,
@@ -382,3 +404,29 @@ export {
   type PuntoPrecontractual,
   type IdPuntoPrecontractual,
 } from './mediador.ts'
+
+export {
+  TOPE_AVISO_SINIESTROS,
+  decidirSiniestrosNuevos,
+  detalleSiniestros,
+  textoAvisoSiniestros,
+  serializarMarca,
+  leerMarca,
+  type SiniestroEntrante,
+  type MarcaSiniestros,
+  type DecisionSiniestros,
+} from './siniestro-nuevo.ts'
+
+// El vigía de los partes del portal que nadie ha abierto todavía en la
+// compañía. Lee su cabecera: el corte es `comunicado`, y `recibido` —que
+// parece atendido— sigue dentro a propósito.
+export {
+  TOPE_AVISO_PARTES,
+  firmaPartes,
+  ordenarPorUrgencia,
+  partesPendientes,
+  textoAvisoPartes,
+  textoUrgencia,
+  urgenciaParte,
+} from './parte-vigilancia.ts'
+export type { ParteVigilado, UrgenciaParte, AvisoPartes } from './parte-vigilancia.ts'

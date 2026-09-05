@@ -236,7 +236,7 @@ test('avería declarada y dentro de plazo → sigue en alerta, pero marcada pend
     ahora, ultimo: viejo, maxHoras: 30, detalle: '2 cerradura(s) · 3 con ERROR (Tuya 1109, 2001)',
     pendienteConocido: PEND,
   })
-  // Sigue siendo alerta a propósito: la pantalla y `agente_salud` tienen que seguir diciendo la
+  // Sigue siendo alerta a propósito: la pantalla y `agente_veredicto` tienen que seguir diciendo la
   // verdad. Lo único que se aparta es la interrupción del Telegram.
   assert.equal(r.alerta, true)
   assert.equal(r.pendiente, true)

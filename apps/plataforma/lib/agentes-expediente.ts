@@ -41,7 +41,7 @@ export type LatidoExpediente = {
   detalle: string | null
 }
 
-/** El veredicto persistido del vigía (`agente_salud`), si lo hay. */
+/** El veredicto persistido del vigía (`agente_veredicto`), si lo hay. */
 export type VigiaExpediente = {
   evaluado_at: string | null
   alerta: boolean | null
@@ -121,7 +121,7 @@ está en las tablas de su propio trabajo (ver «Implementado en»).`)
   // ── Vigía ───────────────────────────────────────────────────────────────────────────────────
   if (e.vigia) {
     const v = e.vigia
-    partes.push(`# Último veredicto del vigía (tabla agente_salud)
+    partes.push(`# Último veredicto del vigía (tabla agente_veredicto)
 - Evaluado: ${fecha(v.evaluado_at)}
 - ¿Alerta?: ${v.alerta === true ? 'SÍ' : v.alerta === false ? 'no' : 'no consta'}
 - Desfase medido: ${v.horas != null ? `${Math.round(v.horas)} h` : 'no consta'} (umbral ${v.max_horas ?? 'no consta'} h)
@@ -129,7 +129,7 @@ está en las tablas de su propio trabajo (ver «Implementado en»).`)
 - Nota: ${v.nota || '(ninguna)'}
 - ¿Falló la propia comprobación?: ${v.sonda_error ? `SÍ — ${v.sonda_error}` : 'no'}`)
   } else {
-    partes.push(`# Último veredicto del vigía (tabla agente_salud)
+    partes.push(`# Último veredicto del vigía (tabla agente_veredicto)
 No consta: el vigía no vigila a este agente, o todavía no ha pasado por él.`)
   }
 

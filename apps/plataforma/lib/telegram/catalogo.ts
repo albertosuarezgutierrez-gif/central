@@ -381,6 +381,14 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Dos veces por hora',
   },
   {
+    // Aviso APARTE del anterior a propósito: aquel cuenta lo que SÍ salió y se puede silenciar sin
+    // perder nada; este dice quién llega SIN sus instrucciones, que es lo que no se puede callar.
+    id: 'pisos.mensajes-cobertura', categoria: 'pisos',
+    titulo: 'Huéspedes sin sus instrucciones de acceso',
+    que: 'Quién entra en los próximos días sin que le haya salido nada, y los pisos que no están recibiendo el ciclo.',
+    cuando: 'Solo cuando lo hay (una vez por caso y día)',
+  },
+  {
     id: 'pisos.reserva-vigia', categoria: 'pisos',
     titulo: 'Reserva de Booking que no está en Smoobu',
     que: 'El vigía compara los avisos de Booking con Smoobu y canta los agujeros (y cuándo se resuelven).',
@@ -537,6 +545,18 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Liquidaciones de comisiones (CIMA)',
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',
     cuando: 'Todos los días a las 09:30',
+  },
+  {
+    id: 'correduria.siniestro-nuevo', categoria: 'correduria',
+    titulo: 'Siniestro nuevo de un cliente',
+    que: 'Un siniestro que ha entrado por CIMA (o sea, YA abierto en la compañía): quién es el cliente, qué compañía, qué póliza, cuándo pasó y la referencia, para llamarle y hacerle seguimiento.',
+    cuando: 'Todos los días a las 08:50, y solo cuando ha entrado alguno',
+  },
+  {
+    id: 'correduria.parte-sin-abrir', categoria: 'correduria',
+    titulo: 'Parte del cliente sin abrir en la compañía',
+    que: 'Partes que un cliente nos dio por el portal y que TODAVÍA no están abiertos en la entidad, con lo que queda del plazo del art. 16 LCS (7 días). Incluye los que ya has leído («recibido»): leerlo no lo comunica.',
+    cuando: 'Todos los días a las 08:55, y solo cuando entra uno nuevo o a uno se le echa el plazo encima',
   },
   {
     id: 'correduria.lead-nuevo', categoria: 'correduria',

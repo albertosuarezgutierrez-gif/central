@@ -35,10 +35,10 @@
  * nadie puede decir después QUÉ se aceptó. Se sube a mano cada vez que cambie
  * el fondo de cualquiera de las páginas legales (no por una errata).
  */
-export const VERSION_TEXTOS_LEGALES = '2026-09-v2'
+export const VERSION_TEXTOS_LEGALES = '2026-09-v3'
 
 /** Fecha de la última revisión de fondo de los textos legales (ISO, UTC). */
-export const FECHA_TEXTOS_LEGALES = '2026-09-04'
+export const FECHA_TEXTOS_LEGALES = '2026-09-05'
 
 export const MEDIADOR = {
   /** Nombre comercial. La persona que responde legalmente es `identidad`. */

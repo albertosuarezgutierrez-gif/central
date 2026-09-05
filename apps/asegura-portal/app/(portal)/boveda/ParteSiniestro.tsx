@@ -7,6 +7,10 @@ import {
   DESCRIPCION_MIN,
   DIAS_COMUNICACION_LCS,
   LUGAR_MAX,
+  canalesDeLasPolizas,
+  TEXTO_SIN_CANAL,
+  type CanalCompania,
+  type ViaCanal,
 } from '@central/module-seguros-portal'
 // Del módulo puro, que no importa `node:*` ni red: se puede cargar desde un
 // componente de cliente. La revisión del fichero es LA MISMA que hace el
@@ -64,6 +68,13 @@ export type PolizaOpcionParte = {
   /** `cartera:<uuid>` o `declarada:<uuid>`. Se parte por el primer `:`. */
   valor: string
   etiqueta: string
+  /**
+   * A quién acude el asegurado de ESA compañía. Lo compone `page.tsx` con
+   * `canalDeCompania()` y viaja pegado a la opción para que la pantalla no
+   * tenga que volver al servidor: el momento en que alguien abre esto es el
+   * peor posible para esperar a una petición.
+   */
+  canal: CanalCompania
 }
 
 /**
@@ -335,6 +346,102 @@ const ESTADO_FICHERO: Record<EstadoFichero, { texto: string; clase: string }> = 
   // El «no ha entrado» va SIEMPRE acompañado del motivo, que se pinta debajo.
   // Un estado en rojo sin explicación deja a la persona reintentando lo mismo.
   error: { texto: 'no ha entrado', clase: 'adjunto-estado error' },
+}
+
+/**
+ * El PRIMER camino: la compañía.
+ *
+ * ── Por qué esto está fuera del formulario, y arriba ────────────────────────
+ *
+ * Decisión de Alberto (05/09/2026): «los siniestros mejor intentar llamen a la
+ * compañía; nosotros nos enteramos por CIMA y hacemos el seguimiento». Y el
+ * motivo jurídico está en la cabecera de este fichero: **un parte que nos llega
+ * a nosotros no es un siniestro comunicado a la entidad.** Si el camino que sí
+ * lo comunica estuviera detrás de «Dar parte» → desplegar → elegir póliza,
+ * estaría escondido justo para quien tiene prisa.
+ *
+ * Por eso no depende de la póliza elegida: se pintan las compañías de TODAS sus
+ * pólizas. Con una sola compañía es un bloque; con cuatro son cuatro.
+ */
+function CanalesCompania({ polizas }: { polizas: readonly PolizaOpcionParte[] }) {
+  const canales = canalesDeLasPolizas(polizas.map((p) => p.canal))
+  if (canales.length === 0) return null
+
+  return (
+    <div className="canal-caja">
+      <h3 className="canal-titulo">Si acaba de pasar, díselo también a tu compañía</h3>
+      {/* 🚨 Esta frase es la que evita el peor fallo del portal: que alguien nos
+          avise, se quede tranquilo y no haga nada más. No promete que nosotros
+          lo abramos «rápido»: dice qué abre el siniestro y qué no. */}
+      <p className="editor-ayuda">
+        Es su aviso el que abre el siniestro. Avisarnos a nosotros no lo abre — lo tramitamos después,
+        en cuanto lo veamos, y te hacemos el seguimiento. Los dos caminos son compatibles y no molesta
+        hacer los dos.
+      </p>
+      {canales.map((c) => (
+        <BloqueCanal key={c.nombre} canal={c} />
+      ))}
+    </div>
+  )
+}
+
+function BloqueCanal({ canal }: { canal: CanalCompania }) {
+  return (
+    <div className="canal-bloque">
+      <p className="canal-compania">{canal.nombre}</p>
+      {canal.sinDatos ? (
+        // 🚨 «No lo hemos verificado», NUNCA «esta compañía no tiene». El texto
+        // vive en el módulo puro con su test para que no se convierta en un
+        // hueco en blanco, que es como se lee un «no hay».
+        <p className="editor-ayuda">{TEXTO_SIN_CANAL}</p>
+      ) : (
+        <>
+          {canal.vias.map((v) => (
+            <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? v.uso : 'wa'}-${v.numero}`} via={v} />
+          ))}
+          {canal.verificadoEn !== null && (
+            // Un número comprobado hace tres años falla igual que uno
+            // equivocado, y en el mismo momento. Se dice cuándo se miró.
+            <p className="canal-fecha">Comprobado el {textoFecha(canal.verificadoEn)}</p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * 🚨 El `switch` sobre `tipo` es obligatorio, y por eso `ViaCanal` es una unión
+ * discriminada y no un `{ etiqueta, valor }`.
+ *
+ * Un WhatsApp **no lleva `href="tel:"`**. Que un fijo publicado como WhatsApp
+ * Business atienda además voz es probable, y «probable» no es lo que se le
+ * ofrece marcar a alguien que acaba de tener un golpe: si la línea no atiende
+ * voz, la llamada no da error — da un tono que no contesta nadie.
+ *
+ * Y el horario se pinta solo cuando lo hay. **Nada dice «24 h»**: no existe
+ * ningún dato en la tabla que signifique «siempre», así que rellenar ese hueco
+ * sería la promesa que se rompe un sábado por la noche.
+ */
+function ViaCanalEnlace({ via }: { via: ViaCanal }) {
+  if (via.tipo === 'whatsapp') {
+    return (
+      <a className="canal-via" href={via.enlace} target="_blank" rel="noreferrer noopener">
+        <span className="canal-via-que">Dar parte por WhatsApp</span>
+        <span className="canal-via-num">{via.numero}</span>
+        {via.horario !== null && <span className="canal-via-horario">Atiende {via.horario}</span>}
+      </a>
+    )
+  }
+
+  const que = via.uso === 'siniestros' ? 'Dar parte por teléfono' : 'Asistencia en carretera y urgencias'
+  return (
+    <a className="canal-via" href={`tel:${via.numero.replace(/\s/g, '')}`}>
+      <span className="canal-via-que">{que}</span>
+      <span className="canal-via-num">{via.numero}</span>
+      {via.horario !== null && <span className="canal-via-horario">Atiende {via.horario}</span>}
+    </a>
+  )
 }
 
 export function ParteSiniestro({
@@ -627,6 +734,8 @@ export function ParteSiniestro({
   return (
     <section className="seccion" aria-labelledby={`${uid}-titulo`}>
       <h2 id={`${uid}-titulo`}>Un siniestro</h2>
+
+      <CanalesCompania polizas={polizas} />
 
       {/* La confirmación vive FUERA del formulario, así sigue en pantalla cuando
           el formulario ya se ha cerrado. */}

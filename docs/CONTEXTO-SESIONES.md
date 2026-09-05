@@ -38,6 +38,151 @@
   vuelos — sigue operando (diseño resiliente) pero degradado en silencio; requiere reconexión OAuth
   de Alberto. Sin candidatos nuevos para H1/H3. Telegram enviado.
 
+- **🔑 La `PII_LOOKUP_KEY` del portal SÍ casa: alguien se vinculó SOLO (05/09/2026).** Quedaba abierto
+  desde el 03/09 si la clave del portal difería de la de `asegura` — en cuyo caso **ningún** cliente se
+  habría vinculado nunca y no lo habríamos sabido. Descartado por observación: de los 2 vínculos que hay,
+  uno tiene `origen = email_hash`. Re-medido lo demás y corregida `docs/ASEGURA-PORTAL-IDEAS.md`, que
+  citaba «0 vínculos / 32.602 fichas»: hoy son 3 identidades, 2 vínculos, 31.947 fichas y 4.663 con
+  índice ciego. 🚨 **Y la cifra que decide no es esa: de los 80 titulares de la CARTERA VIVA, 29 no
+  tienen email localizable.** A esos, entren con código, Google, huella o WhatsApp, la bóveda les sale
+  vacía — y eso es indistinguible de «no tienes seguros». Alberto preguntó por Google (ya lo pidió el
+  03/09); sigue en pie el orden escrito: cobertura → reclamar ficha por DNI/nº póliza → Google. Y si se
+  añade una puerta antes, **WhatsApp** está decidido en el spec como canal por defecto y solo espera la WABA.
+
+- **🚑 El parte del portal tiene DOS caminos, y hay vigía del plazo (05/09/2026).** Alberto trae el canal
+  que faltaba: Occident da parte por **WhatsApp** (`+34917838383`, 9-21 L-V), la única de las 4 compañías
+  de la cartera viva sin forma publicada de dar parte. Migración `2026-09-05_companias_whatsapp_horario.sql`
+  (aplicada) + regla pura `canal-compania.ts`: el canal de la compañía se pinta **arriba, fuera del
+  formulario**, porque un parte que nos llega a nosotros NO comunica el siniestro a la entidad.
+  ⚠️ **El perfil se llama «Plus Ultra Siniestro y asistencia»**, que es OTRA compañía de la tabla (`C0517`
+  vs Occident `C0468`); se atribuye a Occident por el nombre verificado y la duda queda escrita en
+  `telefono_fuente` (revocado del rol del portal: es gestión). Y **NO es 24h**, de ahí `horario_siniestros`.
+  Segundo hallazgo: **no existía NINGÚN vigía de los partes** — el plazo del art. 16 LCS se calculaba y solo
+  se pintaba. Nuevo cron `correduria-partes` (06:55) + `parte-vigilancia.ts`: el corte es `comunicado`, así
+  que **`recibido` sigue vigilado** (es el estado que engaña), y la firma va por CUBO de urgencia para no
+  sonar los 7 días seguidos. PRs #2308 (mergeado) y **#2313**. **Pendiente de Alberto:** confirmar a Occident
+  si ese WhatsApp es suyo o de Plus Ultra · poner `OPENROUTER_API_KEY` en el proyecto Vercel `asegura-portal`
+  (sin ella la lectura de pólizas subidas devuelve «no hemos podido leer» SIEMPRE).
+
+- **👁️ Vigía de COBERTURA de los mensajes a huéspedes + el estado `omitido`, declarado (05/09/2026).**
+  El latido decía «5 reservas · 0 debidos · 0 enviados» exactamente igual con el ciclo roto por dos
+  sitios, así que ahora se vigila el RESULTADO, no el mecanismo: `mensajes-prog/cobertura.ts` (puro,
+  13 tests) canta quién entra en ≤2 días sin que le haya salido nada, el piso sin fila en
+  `mensajes_prog_pisos` (el caso del Dúplex) y los hitos en sombra de un piso ya activo. Telegram
+  `pisos.mensajes-cobertura` (catalogado), dedupe por hallazgo y día en `mensajes_prog_avisos`
+  (migración aplicada). Y el `omitido` que se puso a mano esa mañana deja de funcionar de casualidad:
+  `ESTADOS_HITO` + `cubreAlHuesped()` con sus tests, contado en `/apartamentos`. PR pendiente.
+
+- **🔧 Arreglado: el veredicto del vigía se va a su propia tabla, `agente_veredicto` (05/09/2026).**
+  Dos sistemas se llamaban igual por accidente: `agente_salud` de julio es el badge que el PROPIO
+  agente se auto-declara (hoy solo `facturas-extraccion-pdf`, lo lee `lib/finanzas.ts`), y el
+  veredicto del vigía es un juicio EXTERNO sobre 30 agentes. **NO se fusionan**: `ok` (aquella) y
+  `alerta` (esta) son INVERSOS, y un fallo de signo ahí pinta verde lo que está rojo. Tabla nueva +
+  los tres usos del esquema nuevo apuntados a ella (cron, `getSaludLatidos`, expediente del
+  god-panel); la de julio queda intacta y `/finanzas` no se toca. La migración muerta del 02/09 se
+  marca ⚰️ en su cabecera en vez de borrarla, para que se sepa qué pasó.
+  Comprobado ANTES de dar nada por bueno: `prisma_plataforma` tiene BYPASSRLS **e** INSERT/SELECT
+  sobre la tabla nueva (un GRANT que falta habría cambiado un error silencioso por otro), y el
+  INSERT exacto del cron se ensayó en una transacción con ROLLBACK. tsc 0 · 2.518 tests.
+  ⏳ **Sin verificar todavía:** que el cron escriba de verdad. Corre a las 07:45 UTC y hoy ya pasó;
+  la prueba es mirar mañana que `agente_veredicto` tenga ~30 filas y que /operador/agentes deje de
+  pintar ⚪. Hasta entonces sigue siendo un arreglo razonado, no medido.
+
+- **🚨 HALLAZGO AJENO al mirar los logs: el vigía de agentes lleva desde el 03/09 sin poder guardar
+  NADA (05/09/2026).** Los runtime errors de plataforma traen ~30 líneas idénticas en
+  `/api/cron/agentes-latido`: `column "evaluado_at" of relation "agente_salud" does not exist` (P2010),
+  una por agente vigilado, cada día desde el 03/09 07:45 UTC. Causa medida: la migración
+  `prisma/sql/2026-09-02_agente_salud.sql` **nunca se aplicó** y su `CREATE TABLE IF NOT EXISTS` no
+  hizo nada porque YA existía una `agente_salud` distinta, la del `2026-07-12` — comprobado en BD, sus
+  columnas son `id, agente, ok, dias_caido, detalle, ultimo_ok, ultima_alerta_ts, cuenta_id,
+  actualizado_at`, ni rastro de `evaluado_at`. O sea, dos esquemas con el mismo nombre y el código
+  escribiendo contra el que no está. Es exactamente el fallo que el comentario de esa migración dice
+  querer evitar: el veredicto diario de los 30 agentes se calcula y se tira, y `/operador/agentes` no
+  lo puede leer. **No se toca sin decidirlo**: la tabla vieja existe y hay que elegir entre añadir
+  columnas o renombrarla, y eso es producción. Pendiente de Alberto.
+
+- **✅ Modo noche MERGEADO y comprobado en BD (05/09/2026).** PR #2312 en `main` (`2458f5f7`),
+  20/20 checks verdes y los 12 proyectos Vercel en `Ignored` (cero minutos de build; los comentarios
+  intermedios decían «Building», que es el falso positivo ya documentado — el estado que vale es el
+  final). Comprobado contra la Supabase compartida: las tres columnas existen con el tipo esperado
+  (`urgente_nocturno` NOT NULL DEFAULT false) y **la consulta EXACTA del barrido corre y devuelve 0
+  filas**, que es lo que debe devolver sin urgencias pendientes. 284/284 tests sobre `main`.
+  ⏳ **Lo que NO se ha probado y hay que decirlo:** el disparo real. `acusarNocturno` solo entra si
+  escala un mensaje entre las 21:00 y las 09:00, y esto se mergeó a las 09:47 de la mañana — no hay
+  forma de provocarlo sin escribirle a un huésped de verdad. La primera noche con un escalado es la
+  prueba; se mira `mensajes_pendientes_tg.acuse_nocturno_at` y el Telegram.
+
+- **🌙 MODO NOCHE del agente de huéspedes: el silencio de 21:00 a 09:00 deja de ser invisible (05/09/2026).**
+  Alberto pidió «que a partir de las 21h el agente sea 100% autónomo». Se hizo lo contrario y se explicó
+  por qué: `auto.ts` YA no mira la hora (lo apoyado en fuente sale solo a las 3 de la mañana), así que
+  «autónomo de noche» solo añadiría autonomía sobre lo que el sistema marcó `needs_human` — sin nadie
+  que lo corrija. El agujero real era otro: lo que ESCALA de noche deja al huésped sin nada hasta las
+  09:00, y desde el código eso es idéntico a una conversación atendida (caso Mafalda, 154265696).
+  Ahora: acuse de recibo automático (texto fijo por idioma, sin IA — es la red de seguridad), aviso
+  🚨 por `tgSend` (no `tgAviso`: un interruptor apagado convertiría «te despierto» en silencio) si es
+  urgencia de acceso/avería, y a los 15 min sin respuesta se deriva al portal de reserva —**último**
+  recurso, decisión de Alberto: el portal no abre puertas y su llamada abre un caso contra el anfitrión.
+  `noche.ts` (puro, 7 tests) + `noche-guardia.ts`; barrido en `/api/sivra/mensajes/auto-reply`, ANTES de
+  sondear hilos para que un fallo de Smoobu no deje a nadie esperando. SQL aplicado en Supabase.
+  ⚠️ Detectado de paso: el borrador que Alberto aprobó tal cual metía el bloque de parkings **sin que
+  la huésped preguntara** (único mensaje del hilo, verificado en `mensajes_log`) — viola la regla de oro
+  de `parking.ts` y `aprenderCorreccion()` lo guardó como ejemplo bueno. Aprobar sin leer no es gratis.
+
+- **📬 Smoobu ya NO manda mensajes automáticos: el ciclo es 100% nuestro (05/09/2026).** Alberto apagó
+  las plantillas de Smoobu tras validar el ciclo entero en House Sevillana. Se activó el 4º piso
+  (`prop_duplex_center` en `mensajes_prog_pisos`; no tenía reservas en la ventana, así que la activación
+  fue limpia) y se retiró el chequeo `equivalentes-smoobu.ts`: sin plantillas al otro lado solo podía
+  silenciar mensajes NUESTROS (su regex `/BIENVENIDO/i` casa con nuestra propia plantilla, y se tragó la
+  bienvenida de la reserva 154265696). 🚨 **Bug de fondo, el caro:** `cargarYaHechos` no miraba el estado,
+  así que un hito generado en SOMBRA quedaba «hecho» para siempre — la víspera CON LOS CÓDIGOS de esa misma
+  reserva (Luxury Busto, llegada el 05/09) se generó 12 h antes de activarse el piso y no la iba a recibir
+  nadie. Ahora `hitosBloqueantes` ignora las filas en sombra si el piso ya está activo y el reclamo las
+  toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. Mergeado (**PR #2305**) y
+  ✅ **verificado en producción**: la pasada de las 07:37 UTC mandó la víspera con los códigos a esa
+  huésped, en PORTUGUÉS («Olá Mafalda… AQUI ESTÃO OS…»), más dos confirmaciones que el chequeo
+  retirado tenía bloqueadas. **Regla que deja: un mensaje que solo vio Alberto por Telegram no está
+  entregado** — al activar un piso hay que mirar qué hitos suyos quedaron en sombra.
+  🚨 **Y el rescate destapó un segundo defecto (PR #2310): `visperaAyer` no distinguía la víspera que
+  salió AYER de la que sale HOY de rescate** (las dos se anclan a `checkIn`, misma clave), así que la
+  bienvenida iba a salir a las 10:07 al mismo huésped el mismo día — la «ristra de Smoobu» que el
+  diseño evita. Se paró a mano en BD (`estado='omitido'`) y se arregló en código con `emitidosHoy`.
+  ⚠️ Coste asumido y medido: dos confirmaciones que Smoobu ya había mandado salieron de nuevo (los
+  hitos marcados «equivalente de Smoobu ya en el hilo» estaban en `sombra` y dejaron de bloquear). **Regla que deja: un mensaje que solo vio Alberto por Telegram
+  no está entregado** — al activar un piso hay que mirar qué hitos suyos quedaron registrados en sombra.
+
+- **📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría (05/09/2026).**
+  Cerrado lo que faltaba de la petición del 04/09: **Renovaciones**, que era la única lista de la
+  correduría sin ellos y justamente la cola comercial (medido: de las 15 fichas que vencen en 90 días,
+  **9 tienen teléfono y 8 email**). `contactosDe()` se **exporta** desde `apps/asegura/lib/cartera-busqueda.ts`
+  en vez de dejar un cuarto `descifrar` casi idéntico; el puerto de vencimientos manda ya `contacto` y en
+  plataforma lo lee el **mismo** `interpretarContacto` que el buscador y la retención — dos normalizadores
+  del mismo bloque harían que el icono saliera en una pantalla y no en otra para el MISMO cliente.
+  Una consulta por lista (un cliente con tres pólizas que vencen sale tres veces y no se descifra tres).
+  Tres estados intactos: sin bloque = «no se ha podido mirar» · todo a null = «no tiene» · ilegible =
+  «guardado y la clave PII no lo abre». Verificado: tsc asegura+plataforma, 22 tests del lector, suite
+  completa sin fallos y `next build`. **NO se ponen en `SinCanal`**: esa lista ES la de quien no tiene canal.
+
+- **🔁 Un PR abierto de noche choca con `main` cada ~50 min, y siempre por el MISMO fichero (05/09/2026).**
+  El #2277 llegó a verde y `clean`, y volvió a `dirty` **cuatro veces** en poco más de una hora: #2290,
+  #2285, #2283+#2248 y luego #2294. **Ninguna** fue conflicto de código —siempre `docs/CONTEXTO-SESIONES.md`,
+  entradas del mismo día de sesiones distintas— pero cada vuelta cuesta ~4 min de CI porque el head cambia.
+  Método que funcionó las cuatro: mergear `main`, resolver conservando AMBOS lados, revalidar y empujar; y
+  **no mergear `main` cuando NO hay conflicto** aunque haya avanzado (reiniciar el CI por gusto alarga la
+  espera). Para comprobar barato, sin pedir el PR entero: `git merge-base --is-ancestor <head> origin/main`
+  (¿ya está mergeado?) + `git merge-tree --write-tree HEAD origin/main` (¿hay conflicto?). ⚠️ La causa de
+  fondo no es de este PR: la memoria es un fichero único que toda sesión edita al cerrar.
+
+- **🚦 `Ignored` no es gratis: la cuota que agotó un agente y tumbó 4 producciones (04/09/2026, PR #2248).**
+  Mergeando #2248 se dieron 7 pushes a la rama en ~40 min (`main` avanzaba cada ~5 min por el automerge y
+  reconflictaba `CONTEXTO-SESIONES.md`; CI tarda 3,5). Cada push crea **11 deployments** aunque 10 salgan
+  `Ignored` — el `ignoreCommand` corta el BUILD, no la CREACIÓN — y `api-deployments-paid-per-hour` (450/h,
+  **de cuenta**) reventó: producción de `ia-rest`, `almacen`, `transporte` y `house-sevillana-landing`
+  fallando por una rama que no las tocaba. Informé 3 veces «0 gasto, todo Ignored»: cierto sobre Build CPU
+  Minutes, **falso** sobre esa cuota. Escrito en `CLAUDE.md` (§ignoreCommand). Regla: verificar en local y
+  empujar UNA vez. 🔁 Para romper el bucle de conflictos, mi entrada de memoria se dejó **la segunda**, no
+  la primera: así las inserciones ajenas de arriba auto-mezclan. ⏸️ Alberto: activar `Allow auto-merge`
+  (Settings → General) — sigue desactivado y es lo que evita esta carrera.
+
 - **🚨 Empujé un merge a medias y el CI lo dio VERDE — más tres hallazgos en la correduría (04/09/2026).**
   Al revisar el cuadro completo se encontró que el commit `19b74e641` llevaba **marcadores de conflicto
   sin resolver dentro de un template literal SQL** de `clientes-sin-canal.ts`: `tsc` los ve como cadena,
@@ -976,6 +1121,17 @@
 
 ---
 
+### ⚖️ (05/09/2026) Bloque legal 0.3: el portal ya deja constancia de que informó — y sale una alerta de correo (PR #2326, mergeado)
+- El canje del código no dejaba **ninguna** fila de que se hubiera enseñado la información del mediador. La carga de la prueba es del mediador (art. 19 Ley 16/2018) y un acceso sin constancia **se ve igual que uno correcto**. Ahora escribe `lds_art19` en `portal_consentimiento` (la tabla existía desde Fase 1 sin que nadie escribiera).
+- **Va emparejado con la UI a propósito**: la fila afirma «se le enseñó», así que la pantalla de entrada lo dice junto al botón con los tres enlaces. Separarlos convertiría el registro en prueba fabricada — lo ata `test/regression-portal-consentimiento.test.ts` (8 cepos).
+- Dentro de la **misma transacción** que el canje: si no se puede acreditar, el código no se consume. Sellado con `VERSION_TEXTOS_LEGALES` **importado** y solo si no consta esa versión: cien logins ≠ cien filas, pero cambiar el texto sí pide acreditación nueva.
+- **`avisos` y `comercial` NO se escriben** aunque el CHECK los admita: no hay casilla que los pida y `otorgado:true` sin marcar es fabricar consentimiento. Guardado en `necesitaRegistro`/`normalizarIp` (`module-seguros-portal`, 12 tests) — la IP inválida va a NULL: la columna es `inet` y un INSERT roto tumbaría el login.
+- Guardar IP y navegador es tratamiento nuevo → declarado en la política y **`VERSION_TEXTOS_LEGALES` → `2026-09-v3`** (todos los clientes vuelven a acreditar en su próximo acceso). Verde: 553 guardianes · 227 + 413 de módulos · typecheck de asegura-portal y asegura-web · CI 20/20.
+- 🚨 **ALERTA ABIERTA, correo del SAC.** La captura del panel de Alberto (05/09) muestra el correo en **`grupoasegura.COM`** (buzón `asuarez@` + alias `dpo@`, `info@`, `reclamaciones@`) y **ningún `hola@`**; `docs/TRASPASO-CORREDURIA.md` dice que `grupoasegura.es` **solo sirve `info@`**. O sea: **`hola@grupoasegura.es`, publicado en producción como SAC y canal de derechos RGPD, puede no existir** — una reclamación rebotaría con el plazo de un mes corriendo. Fallo de método: se metió el correo que dictó Alberto sin comprobarlo contra su infraestructura. **Pendiente de que él confirme dominio (.com vs .es) y prueba de entrega**; se le pasó un prompt para Claude Chrome. Los alias viejos **no se borran** (están en textos legales publicados): se redirigen.
+- Del bloque 0 quedan **0.4** (export art. 15/20 por `apps/asegura`) y **0.5** (solicitud de supresión).
+
+---
+
 ### ⚖️ (04/09/2026, III) El portal del asegurado no tenía NADA legal: bloque 0.1+0.2 puesto (PR #2245, mergeado)
 - El portal pedía el correo sin identificar al mediador ni decir qué se hacía con el dato: cero pie legal, cero políticas. Incumplía art. 19 Ley 16/2018 y art. 13 RGPD desde que se desplegó.
 - **Fuente única nueva** `packages/module-seguros/src/mediador.ts` (DGSFP `CS-F/0170`, RC, no-exclusividad, canales SAC→DGSFP→AEPD, `VERSION_TEXTOS_LEGALES` para sellar `portal_consentimiento`), 8 tests. La comparte el panel del corredor.
@@ -995,6 +1151,15 @@
 - ❌ **`mkt_score` sin filtro de liga: MEDIDO Y DESCARTADO.** La mediana de score con y sin liga difiere 0,0-0,2 puntos → mueve el factor de calidad un **0,8-1,6%**. El diagnóstico lo llamó «doble conteo» y en magnitud es ruido. No se toca.
 - ⏸️ **`noches_ref` vs ventana del corpus: medido, NO cambiado hoy.** El corpus es **86,5% de 2 noches** y Busto/Dúplex tienen `noches_ref=3` → `aBase` descuenta 12,73€/noche cuando el comparable lleva 19,10€ implícitos (**+5-7%**). Pero `noches_ref` es la estancia mediana REAL de nuestras reservas y para ESO es correcto: el arreglo es que `aBase` use la ventana del corpus, no cambiar el ajuste. Sequenciado tras converger el descenso — era el 4º cambio de precio del día.
 
+
+### 🔇 (05/09/2026) El vigía de CIMA medía a quien venía, no a quien deja de venir — Mapfre, 74 días
+
+- **`saludIngesta` tenía tres señales y las tres se disparan con algo que LLEGÓ y salió mal** (cuarentena, huérfanas, rechazos). `diasSinPersistir` parece taparlo pero mide por TIPO de objeto y agrega compañías: mientras UNA siga mandando recibos, el contador está a cero. **Mapfre (C0058) llevaba 74 días sin un fichero con su peor hueco histórico en 2 días, 64 pólizas vivas (58% de la cartera) y 7 renovaciones pasadas sin fichero** — y el vigía en verde con razón: no había nada atascado porque no había llegado nada.
+- **`silencio-entidad.ts` (`@central/module-seguros`, puro, 11 tests):** dos señales independientes — *ritmo roto* contra el propio récord de cada compañía (un umbral global acusaría a Reale, que manda cada 23 días, y tardaría un mes en ver a Mapfre) y *consecuencia medida* (renovación vencida sin fichero), que alarma **sin baremo**. Sobre los datos reales acusan a Mapfre y **solo** a Mapfre.
+- 🚨 **`MIN_HUECOS = 2` está calibrado con datos reales y hay test que lo fija:** Mapfre solo tiene **2 huecos observados** (sus 14 ficheros se agolpan en pocos días), así que exigir 3 habría silenciado el caso fundacional. `sin_base` (Reale, 1 hueco) NO es `ok`.
+- **La firma del dedupe del cron incluye ahora las compañías mudas.** Era `estado:recientes:huerfanas`: con Mapfre ya muda se quedaba en `degradada:0:0` para siempre y el día que enmudeciera **además** Allianz no habría sonado nada.
+- 🔐 **El hallazgo de seguridad del plan de marketing estaba MAL y se corrige en el propio doc.** La clave `anon` SÍ es pública (9 ficheros cliente de ia-rest, incluida la carta por QR), pero **PostgREST no expone `seguros`** (406 `PGRST106`: solo `public`, `graphql_public`, `iarest`) → la cartera **no bloquea el lanzamiento**. Lo alcanzable de verdad es `iarest.camareros`: **7 filas con sus PIN** porque `get_tenant_id()` cae al **tenant demo** cuando `app.local_id` no está fijado, y eso gobierna las 252 tablas de `iarest`. **No tocado**: quitar ese fallback puede dejar restaurantes sin servicio — decisión de Alberto.
+- ⚠️ **Proyecto Vercel `asegura-web`: creado y BIEN, pero el MCP de Vercel no lo ve.** `get_project`/`list_projects` devuelven 404 sobre `prj_MnuAvshNZg6vmRsfTkSmiX4RyCj9` — se llegó a anotar por error que estaba «fuera del equipo». El bot de Vercel del PR #2303 lo desmiente desde el lado de Vercel: aparece en `pisos-turisticos-projects/asegura-web` con Root Directory `apps/asegura-web` y evaluó el ignore-step del PR (`Ignored`). O sea: **existe, está en el equipo y está enganchado al repo**; el 404 es del conector, no del proyecto. Faltan solo sus envs (`PLATAFORMA_URL`, `NEXT_PUBLIC_SITIO_URL`) y el dominio. **No crear otro.**
 
 ### 🧊 (04/09/2026) La guarda de outlier paraba el descenso que el propio motor había empezado
 - Al recalibrar el ancla a la baja el 03/09 (#2192/#2228), `normalBase` cayó ~25% de golpe: **448 noches** de los 4 pisos pasaron a cumplir `old > normalBase × 1,4` **sin que nadie hubiera subido nada**, y se quedaron clavadas ARRIBA.

@@ -51,11 +51,84 @@ export function claveHito(tipo: string, fechaObjetivo: string): string {
   return `${tipo}:${fechaObjetivo}`
 }
 
+/** Los estados que puede tener una fila de `mensajes_programados`, con lo que significa cada uno.
+ *
+ * Están aquí —y no sueltos como literales por el orquestador— porque de esta tabla depende si a un
+ * huésped le llegan sus códigos: un estado que solo existe en la BD y en un `WHERE` es un estado que
+ * el código no sabe leer. `omitido` nació así el 05/09/2026 (se puso a mano para frenar una
+ * bienvenida duplicada) y funcionaba de casualidad, porque `hitosBloqueantes` bloquea todo lo que no
+ * sea `sombra`.
+ */
+export const ESTADOS_HITO = {
+  /** Generado y guardado, pero NO enviado: el piso todavía no tiene el interruptor subido. */
+  sombra: 'sin enviar (piso en sombra)',
+  /** Reclamado por una pasada y aún sin desenlace. El reintento lo recoge pasada 1 h. */
+  pendiente: 'reclamado, sin desenlace',
+  /** Entregado al huésped por Smoobu. */
+  enviado: 'entregado',
+  /** Smoobu rechazó el envío. Se reintenta en cada pasada. */
+  fallo: 'rechazado por Smoobu',
+  /** Decidido a mano que ESE mensaje no se manda (ya se dijo por otra vía, o duplicaría a otro).
+   *  No se reintenta, no se reclama y NO se cuenta como hueco: es una decisión, no un dato que falte. */
+  omitido: 'no se manda (decidido a mano)',
+} as const
+
+export type EstadoHito = keyof typeof ESTADOS_HITO
+
+/** ¿Este hito deja al huésped cubierto? `enviado` porque llegó; `omitido` porque alguien decidió que
+ *  no hacía falta. Lo demás NO cubre: una copia en sombra o un fallo no son una entrega. */
+export function cubreAlHuesped(estado: string): boolean {
+  return estado === 'enviado' || estado === 'omitido'
+}
+
+export type HitoRegistrado = {
+  tipo: string
+  fechaObjetivo: string
+  estado: string
+  /** ¿Se emitió HOY (hora Madrid)? Distingue la víspera que salió ayer de la que sale hoy de rescate. */
+  emitidoHoy?: boolean
+}
+
+/** Qué hitos YA REGISTRADOS bloquean una emisión nueva.
+ *
+ * Una fila en `sombra` NO bloquea si el piso ya está ACTIVO: se generó para validar el texto y
+ * nunca llegó al huésped, así que darla por hecha lo deja sin ese mensaje para siempre. Con las
+ * plantillas de Smoobu apagadas (05/09/2026) eso ya no es "validar sin riesgo": es un mensaje
+ * perdido. Caso fundacional: la víspera con los CÓDIGOS de la reserva 154265696 (Luxury Busto) se
+ * generó en sombra 12 h ANTES de activarse el piso; con Smoobu apagado nadie se los mandó.
+ *
+ * En sombra (piso aún inactivo) sí bloquean: si no, el mismo borrador se repetiría por Telegram en
+ * cada pasada.
+ *
+ * Devuelve TAMBIÉN los hitos emitidos HOY, que no es lo mismo que «ya hecho»: la víspera de llegada
+ * se ancla siempre a `checkIn`, así que por su clave no se distingue la que salió AYER de la que
+ * sale hoy de rescate — y de esa diferencia depende que la bienvenida sea un segundo mensaje
+ * nuestro el mismo día.
+ */
+export function hitosBloqueantes(
+  filas: HitoRegistrado[],
+  activo: boolean,
+): { bloqueantes: Set<string>; emitidosHoy: Set<string> } {
+  const bloqueantes = new Set<string>()
+  const emitidosHoy = new Set<string>()
+  for (const f of filas) {
+    // Conservador a propósito: bloquea TODO lo que no sea una sombra reclamable, estado
+    // desconocido incluido. Un estado nuevo que no bloqueara reenviaría el mensaje al huésped.
+    // `omitido` bloquea por aquí, y eso es exactamente lo que se quiere de él.
+    if (activo && f.estado === 'sombra') continue
+    const clave = claveHito(f.tipo, f.fechaObjetivo)
+    bloqueantes.add(clave)
+    if (f.emitidoHoy) emitidosHoy.add(clave)
+  }
+  return { bloqueantes, emitidosHoy }
+}
+
 export function mensajesDebidos(
   r: ReservaMin,
   hoy: string,
   horaMadrid: string,
   yaHechos: Set<string>,
+  emitidosHoy: Set<string> = new Set(),
 ): Debido[] {
   const dHoy = aDias(hoy)
   const dIn = aDias(r.checkIn)
@@ -88,7 +161,13 @@ export function mensajesDebidos(
     // Día de llegada. Última hora: si la víspera no salió ayer, sale HOY con los códigos ("hoy te
     // esperamos"), como único hito de acceso. La bienvenida solo si la víspera YA había salido
     // (con su fecha de ayer) — dos mensajes nuestros el mismo día serían la ristra de Smoobu.
-    const visperaAyer = yaHechos.has(claveHito('vispera_llegada', r.checkIn))
+    //
+    // 🚨 «Ya hecho» NO basta: la víspera se ancla a `checkIn` tanto si sale la víspera como si sale
+    // hoy de rescate, así que su clave es la misma en los dos casos. Sin `emitidosHoy`, una víspera
+    // rescatada esta mañana contaba como «salió ayer» y la bienvenida se emitía unas horas después
+    // — el mismo día, al mismo huésped. Medido con la reserva 154265696 el 05/09/2026.
+    const clave = claveHito('vispera_llegada', r.checkIn)
+    const visperaAyer = yaHechos.has(clave) && !emitidosHoy.has(clave)
     if (!visperaAyer) {
       debido('vispera_llegada', r.checkIn, true)
     } else if (min >= 8 * 60) {
