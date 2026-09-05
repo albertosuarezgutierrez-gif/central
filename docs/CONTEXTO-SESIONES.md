@@ -1166,7 +1166,7 @@
 ### ⚖️ (05/09/2026, III) Bloque legal 0.5: la solicitud de supresión (art. 17) que NO borra
 
 - **0.4 mergeado** (PR #2336 → `0e5b7aad`): export del art. 15/20 servido por el puerto de operador.
-- **0.5 construido**: `portal_supresion` (DDL **sin aplicar**), módulo puro `supresion.ts`, ruta y
+- **0.5 mergeado** (#2339) y **DDL APLICADA** (`20260905100234`, 4 cepos vistos morder): módulo puro, ruta y
   pantalla «Tus datos» en la bóveda, y `GET/POST /api/operador/supresiones` en `apps/asegura`.
 - 🚨 **No borra a propósito** (art. 17.3.b y 17.3.e): lo obligatorio es recibir, acusar y contestar en
   un mes. Las dos listas —lo que se borra y lo que no— se enseñan ANTES de pulsar y se calculan.

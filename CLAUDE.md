@@ -554,8 +554,31 @@ Esto **confirma la séptima y contradice la octava**: des-draftear a secas no re
 llegaron en draft, solo arma la rama. Las dos siguen medidas, así que la conclusión honesta sigue
 siendo que **el des-draft a veces basta y a veces no** — pero el orden de abajo funcionó en las nueve.
 
+🔬 **DÉCIMA medición (05/09/2026, PR #2341) — y es el A/B más LIMPIO de toda esta sección, porque
+mata lo que quedaba de las explicaciones por sujeto.** Abierto **en draft por la herramienta MCP**
+→ los 12 requeridos arrancan **al instante** (10:14:10), sin des-draftear, sin merge de `main` y sin
+segundo push; los 19 en verde antes de las 10:17.
+
+Lo que lo hace valioso no es que funcionara, es **contra qué se compara**: el PR #2339, veintidós
+minutos antes, en la **misma sesión**, sobre la **misma rama** (mismo nombre, recreada desde `main`
+tras mergearse), con la **misma identidad**, abierto por el **mismo método** y también **en draft**
+— y ese salió **mudo**. Dos PRs consecutivos, todo lo controlable idéntico, resultados opuestos.
+
+Con eso ya no queda en pie ninguna de las hipótesis por sujeto: **no es la identidad** (la misma),
+**no es el método** (el mismo), **no es el draft** (los dos lo eran) y **no es el token de la App**
+(las dos ramas se empujaron igual). Lo único que las separa es *cuándo* ocurrieron, que es justo lo
+que decía la hipótesis del lag de la SEXTA. Sigue sin haber causa medida; lo que sí queda es que
+buscarla por el lado de «quién y cómo» está agotado.
+
+⚠️ **Y un matiz del procedimiento del #1962 que conviene tener claro, porque se aplicó y engañó:** en
+#2339 se comprobó que `git ls-remote` y el `head.sha` del PR **coincidían** y se dio por descartado el
+lag. Coincidir descarta que GitHub tenga el head VIEJO — **no** descarta que el evento del `pull_request`
+siga sin procesarse. Son dos cosas distintas y el paso 1 de abajo solo detecta la primera. En la duda,
+esperar sigue siendo lo más barato: ninguna de las palancas cuesta menos que no hacer nada.
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
+   ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.
 2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
    (el merge de `main` sirve, y encima es trabajo obligatorio si hay conflicto). Des-draftear a secas no basta.
 3. **¿Coinciden, ya no es draft y sigue mudo?** → mergea `main` igualmente (es un push con contenido real).
@@ -563,8 +586,9 @@ siendo que **el des-draft a veces basta y a veces no** — pero el orden de abaj
    rama nueva por iniciativa del agente, y tocar el ruleset.
 
 **Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
-de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
-cortos.
+de las versiones de esta sección.** Llevamos diez mediciones y cada modelo que ha pasado por aquí ha
+escrito su explicación y la ha visto caer con el PR siguiente. Añade la medición; no reescribas las
+anteriores para que encajen.
 
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
