@@ -64,6 +64,90 @@
   —monograma, marca con DGSFP, «Tus seguros» y el QR a 200 px—; en pantalla no cambia nada. Aviso en
   la página de qué se imprime, para que la vista previa no parezca un fallo. PR pendiente de su OK.
 
+- **✉️ «Invitar por correo»: la autorización pendiente ya se la cuenta alguien (05/09/2026).** Anotar
+  que ELCA autoriza a Pablo dejaba la fila `pendiente` y **nadie avisaba a Pablo**: o Alberto escribía
+  el correo a mano, o se caducaba sola a los 90 días. Botón en la fila de la persona (solo si está
+  `pendiente`) → proxy de plataforma → puerto nuevo `/api/operador/cliente/relaciones/aviso` de asegura,
+  que es quien tiene el email descifrado. **No acepta nada**: la doble aceptación sigue siendo la única
+  prueba de identidad. El correo dice quién le da el acceso y dónde confirmarlo, y **nada más** —ni el
+  alcance, que ya es cartera ajena— con el mismo cepo que la invitación del portal. Cinco desenlaces sin
+  colapsar (`sin_email` es el único accionable) y ninguno de los cuatro fallos puede leerse como
+  enviado. **Pendiente:** `ASEGURA_MAIL_FROM` + proveedor de correo en el Vercel de asegura. PR #2386.
+
+- **📊 La web pública ya puede medir, y solo si le dejan (05/09/2026).** `apps/asegura-web` no tenía
+  **ni una línea** de PostHog ni de Cookiebot: crear las tres envs en Vercel (lo que estaba a punto de
+  hacerse) no habría hecho nada, porque no había código que las leyera. Ahora sí, y **fail-closed**:
+  `puedeMedir()` (puro, `lib/analitica.ts`) exige las tres cosas —CBID, clave y `statistics === true`—
+  y PostHog **no está en el bundle**, se baja de su CDN tras aceptar. Es la decisión contraria a la web
+  de Manuel, cuyo *fail-open* deja PostHog corriendo sin banner si falta la env (medido el 04/09).
+  `/legal/cookies` + botón de renovar (art. 7.3 RGPD), enlace en el footer y en el sitemap. 12 cepos en
+  `lib/analitica.test.ts`; 28 tests de la app, tsc 0, lint 0, build OK. **PR #2385 mergeado** (`4a3be3f`, 20/20 en verde).
+  🔌 **Pendiente de Alberto para que MIDA (hasta entonces no mide, y eso es lo correcto pero silencioso):**
+  `NEXT_PUBLIC_COOKIEBOT_ID` + `NEXT_PUBLIC_POSTHOG_KEY` en el proyecto Vercel `asegura-web` (son
+  `NEXT_PUBLIC_`: se hornean en el build → redeploy después), y **dar de alta `grupoasegura.es` en el
+  panel de Cookiebot** — un CBID atado solo a `app.grupoasegura.com` no pinta banner aquí.
+  ✅ **Los 7 crons de `asegura` NO estaban rotos al cerrar: ya los había arreglado otra sesión** (revert
+  `cae77bd`, 14:05 UTC, de #818). Aquel PR repuntó los destinos a `grupoasegura.es` sobre una premisa
+  **no medida** (que la canonicalización rompía el `.com`), y lo que se midió después la desmiente:
+  `.es/api/crons/cima-pull` → **404**, `app.grupoasegura.com/api/crons/cima-pull` → **401** (la ruta
+  responde, sin redirect). Daño real: **UN run**, el de las 13:57; el de las 14:06 ya en verde. ⚠️ Y
+  **NO quitar** PostHog/Cookiebot del proyecto `asegura`: su fail-open dejaría el CRM midiendo sin
+  banner — lo correcto es dar de alta los dominios en el CBID.
+- 🔐 **Y un cabo que ese PR dejó suelto: la privacidad se reescribió sin subir la versión del texto.**
+  `VERSION_TEXTOS_LEGALES` seguía en `2026-09-v4` con un contenido que ya no era el de v4 — justo lo que
+  esa constante existe para impedir. Pero **subirla NO era la solución**: se SELLA en
+  `portal_consentimiento.version_texto`, así que reescribir el apartado de cookies de la web habría
+  obligado a los ~80 clientes del portal a volver a acreditar, ensuciando un registro cuyo único valor
+  es ser prueba. Nace **`VERSION_TEXTOS_WEB`** (`2026-09-w1`) para los textos de `asegura-web`, con test
+  que impide volver a colapsar las dos series. Regla: texto de la web → sube `_WEB`; texto del portal →
+  sube `_LEGALES`.
+- 🔁 **Y la lección de método del día: dos sesiones montaron la MISMA analítica en paralelo.** La de
+  #2385 llegó antes y es mejor (PostHog fuera del bundle, cepos que leen el fuente); la otra se
+  descartó entera al resolver el conflicto. Antes de empezar algo que «no existe», mirar si hay un PR
+  abierto tocándolo: `list_pull_requests` cuesta una llamada y aquí habría ahorrado una implementación
+  completa.
+- **📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI (05/09/2026).** Lo del
+  PR #2378 (idioma, consulta web, `importesNoRespaldados`, los hechos de transporte de los 4 pisos) se
+  volcó a `sivra-maestro/references/contexto-y-agente-huesped.md`: vivía solo en la memoria y en el PR, y
+  esa referencia es lo que lee quien toca el agente. **CI:** el PR volvió a quedar `dirty` dos veces (main
+  avanzó con #2377 y #2382); el paso 3 del orden documentado —mergear `main` y empujar— disparó los 12
+  requeridos a los segundos, sin lag que esperar ni palancas raras. **Vercel:** un commit de MERGE **sin**
+  `[preview]` pinta las 12 apps en «Building» y acaba en **11 `Ignored` + `ialimp` `Ready`** (ialimp es la
+  única sin `--sin-previews`): NO son los once builds del PR #2281 —eso lo causa el marcador, no el merge—,
+  así que no se da la alarma desde el comentario intermedio. Las dos cosas anotadas en el CLAUDE.md raíz.
+
+- **🔎 Si no está en la guía y el dato es de FUERA, el agente consulta internet (05/09/2026).** Dictado de
+  Alberto: «en caso de duda que use la IA para consultar». Mismo incidente que el bug del idioma: a
+  «¿cómo llegamos del aeropuerto?» el modelo se inventó **dos** datos (taxi «25-30€» —el real es tarifa
+  fija municipal de 26€ L-V 7-21h / 29€ noches y festivos— y una parada del bus EA, «Puerta de Jerez»,
+  que ni existe en esa línea ni está a 10 min del piso). `consulta-web.ts` (puro, 12 tests): cuando el
+  control de calidad dice que la guía no cubre la pregunta **y** la pregunta es del ENTORNO (transporte,
+  monumentos, dónde comer, servicios, eventos) se llama a `buscarWeb` y se re-redacta el borrador con
+  los datos + sus URLs. 🚨 Lo consultado **NUNCA se auto-envía** (`webConsultada` fuerza `needs_human`,
+  guardián que lee el fuente) y una búsqueda fallida se DECLARA: «no he podido mirarlo» ≠ «no está en la
+  guía». Sigue contando como hueco de guía para que lo que responda Alberto se aprenda como hecho y no
+  se pague la búsqueda dos veces. Nada de esto aplica al PISO (internet no sabe si hay plancha) ni a lo
+  sensible/negativo. Además `importesNoRespaldados` en el guardrail: **ninguna cifra en € que no esté en
+  las fuentes pasa** — los patrones de antes solo miraban códigos de 4+ dígitos, teléfonos y URLs, por
+  eso el precio del taxi salió limpio. PR #2378. **Y el dato ya está en la guía** (`mensajes_hechos`
+  ids 10 y 11, `prop_house_sevillana`, `confirmado`, insertados a mano por Supabase): tarifa fija de
+  taxi 26€ (L-V 7-21h) / 29€ (noches, findes, festivos), EA 6€/8€ con sus paradas reales, y la
+  advertencia explícita de NO decir «Puerta de Jerez» ni «10 min andando». Así esa pregunta se
+  responde sola, sin gastar búsqueda. **Y los otros 3 pisos también** (ids 12-14, a petición de Alberto):
+  ahí va SOLO lo que vale para toda Sevilla —tarifa fija de taxi y precios/paradas del EA— con la orden
+  explícita de NO decir en qué parada bajarse ni cuántos minutos se anda hasta ESE piso, porque esa
+  distancia no está medida para ellos. El dato que no se tiene se declara, no se estima.
+
+- **🗣️ El borrador salía en ESPAÑOL con el huésped escribiendo en inglés (05/09/2026).** Caso real: reserva
+  154375571 (House Sevillana, Massimo). Todos los prompts del agente van en español y la orden «responde en
+  inglés» es UNA línea dentro del muro → el modelo deriva al idioma ambiental. Pasaba MUDO: el aviso decía
+  «Borrador (en EN)» (`ctx.lang` sí era 'en') y la línea 🔁 «no he podido traducirlo al español» —traducir
+  español a español devuelve lo mismo y `traduccionUtil` lo descarta—, así que un fallo de REDACCIÓN se leía
+  como uno de traducción; y con categoría auto-enviable, al huésped le llegaba en español. Red nueva
+  `lib/sivra/agente-huesped/idioma-salida.ts` (puro, 7 tests): detecta la deriva AL ESPAÑOL (solo esa, no se
+  arbitra entre en/fr/de/it) y traduce; si no puede, `fallo` → `needs_human` con motivo propio, nunca se
+  maquilla. Cableada en `decidir`, `redactar` y `retoque`; los tres avisos de Telegram dicen «⚠️ este texto ha
+  salido en ESPAÑOL» en vez de la línea 🔁 confusa. Refuerzo del idioma también en la ÚLTIMA línea del system.
 - **🧲 La hoja de la nevera y su QR: existe (05/09/2026).** Alberto: «crear QR y ahí seleccionas si
   todas las pólizas, una o algunas… y el qr se puede borrar y se anularía el acceso». **No existía**:
   solo la decisión escrita en `apps/asegura-portal/CLAUDE.md`, redactada como si existiera. Ahora

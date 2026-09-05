@@ -18,8 +18,8 @@
 // Manuel López Benjumea. Esta consulta miraba SOLO las columnas de la ficha del
 // tomador, y con eso afirmaba «a estos no les llega NADA». Falso para 4 de 19.
 //
-// El contacto de un cliente puede estar en tres sitios, y hay que mirar los
-// tres antes de decir que no se le puede localizar:
+// El contacto de un cliente puede estar en CUATRO sitios, y hay que mirar los
+// cuatro antes de decir que no se le puede localizar:
 //
 //   1. Su ficha (`clientes.email/telefono`, `cliente_emails`, `cliente_telefonos`).
 //   2. 🚨 **Su propio dato colgado de la PÓLIZA** (`poliza_intervinientes` cuyo
@@ -29,14 +29,36 @@
 //      y el cron de avisos (`avisos-vencimiento.ts`) no lo ve, porque lee la
 //      ficha. Se arregla copiándolo, no llamando a nadie.
 //   3. **Otra persona de su póliza** (conductor habitual, propietario, una ficha
-//      enlazada distinta). Ahí SÍ hay a quién llamar… pero ojo con la línea de
-//      abajo.
+//      enlazada distinta).
+//   4. 🚨 **Un familiar o representante declarado en `cliente_relaciones`** —
+//      añadido el 05/09/2026, y lo cazó Alberto otra vez mirando la pantalla:
+//      «grupo elca ya tiene a pablo y aun aparece», «Studium es una empresa y
+//      tiene a victor y berta». Los tres estaban declarados (Pablo Franco Ruz
+//      como «Administración» de GRUPO ELCA 83; Víctor y Berta en el Instituto
+//      Studium) y esta consulta no miraba ahí. **Medido ese día contra la BD:
+//      18 clientes de la cartera viva no tienen nada en su ficha, 14 seguían
+//      sin contacto mirando los tres sitios de antes, y con el cuarto quedan
+//      SEIS.** (En pantalla ponía 16: esa cifra es de antes de las fusiones del
+//      lote 10 y no se ha vuelto a medir — la buena es la de arriba.)
 //
-// ⚖️ **Tener a quién llamar NO es lo mismo que poder notificar.** El preaviso
-// del art. 22 LCS va al TOMADOR. Que el conductor habitual tenga móvil no
-// convierte a la empresa tomadora en avisada: sirve para CONSEGUIR su correo,
-// no para darla por avisada. Por eso los casos 2 y 3 son estados distintos y no
-// se funden en un «localizable» que tranquilizaría de más.
+// 🚨 **Y el 4 no es un contacto de segunda.** Se estuvo a punto de rotularlo
+// «solo sirve para pedirle el correo». Alberto: «piensa q un cliente puede ser
+// muy mayor y no tiene contacto… es mejor contactar con el familiar». Para un
+// cliente mayor o para una empresa, el hijo o la administración ES el canal.
+// Por eso el 3 y el 4 comparten estado (`contacto_via_tercero`) y la pantalla
+// pinta el PARENTESCO: llamar al hijo y llamar a un desconocido no son lo mismo.
+//
+// ⚖️ **Tener a quién llamar sigue sin ser poder notificar.** El preaviso del
+// art. 22 LCS va al TOMADOR: que su hijo tenga móvil no da por avisada a la
+// persona. Por eso el caso 2 (su dato, mal guardado) y los casos 3-4 (el dato
+// de otro) son estados distintos y no se funden en un «localizable» que
+// tranquilizaría de más.
+//
+// ⚠️ La DIRECCIÓN de la relación no se usa: el convenio del repo es «fila A→B =
+// B es <tipo> de A», pero el volcado no lo respeta (en Studium hay una fila que
+// se leería «Berta es Empresa de Studium»). Se busca en los dos sentidos y se
+// enseña el parentesco tal cual lo escribió el CRM, sin afirmar quién
+// representa a quién.
 //
 // ─── 🚨 Y una póliza CANCELADA no renueva (04/09/2026) ─────────────────────
 // La regla de cartera viva dice «CIMA la trae o la mantiene», NO «está en
@@ -92,8 +114,19 @@ const MAX_FICHAS = 5
 export type EstadoCanal =
   /** Ni en su ficha, ni en su póliza, ni nadie más en ella. Ilocalizable de verdad. */
   | 'sin_ninguno'
-  /** No hay nada suyo, pero SÍ de otra persona de su póliza. Hay a quién llamar
-   *  para pedirle el correo — no es a quién notificar (art. 22 LCS). */
+  /**
+   * No hay nada suyo, pero SÍ de alguien de su entorno: otra persona de su
+   * póliza, o un familiar / representante declarado en `cliente_relaciones`.
+   *
+   * 🚨 **Esto NO es un contacto de segunda.** Se estuvo a punto de rotularlo
+   * como «solo sirve para pedirle el correo», y Alberto lo corrigió el
+   * 05/09/2026: «un cliente puede ser muy mayor y no tiene contacto… es mejor
+   * contactar con el familiar». Para media cartera el hijo o la administración
+   * de la empresa ES el canal, no un rodeo.
+   *
+   * ⚖️ Lo que sí sigue siendo cierto y no es opinión: el preaviso del art. 22
+   * LCS va al TOMADOR. Tener a quién llamar no da por notificada a la empresa.
+   */
   | 'contacto_via_tercero'
   /** 🚨 Su PROPIO email/teléfono existe, pero colgado de la póliza y no de su
    *  ficha: el cron de avisos lee la ficha, así que hoy no le sale nada. Se
@@ -107,6 +140,18 @@ export type EstadoCanal =
  *  El nombre viene de `clientes`, que está EN CLARO; nunca de un interviniente. */
 export type FichaContacto = { clienteId: string; nombre: string }
 
+/**
+ * Una persona LOCALIZABLE declarada en `cliente_relaciones` — el hijo, la
+ * administración de la empresa, el contacto designado.
+ *
+ * 🚨 **El parentesco viaja, y no es adorno.** Dictado por Alberto (05/09/2026):
+ * «piensa q un cliente puede ser muy mayor y no tiene contacto… es mejor
+ * contactar con el familiar». Sin el parentesco la pantalla diría «llama a
+ * Pablo Franco Ruz» sin decir que Pablo ES la administración de esa empresa, y
+ * quien llama no sabe si está molestando a un desconocido.
+ */
+export type FichaAllegado = { clienteId: string; nombre: string; parentesco: string }
+
 export type ClienteCanal = {
   clienteId: string
   nombre: string
@@ -119,10 +164,15 @@ export type ClienteCanal = {
   canalEnPoliza: number
   /** Personas DISTINTAS de él, localizables, en sus pólizas vivas. */
   contactoDeOtros: number
+  /** 🚨 Personas localizables declaradas en `cliente_relaciones` — el CUARTO
+   *  sitio donde vive un contacto, y el que faltaba hasta el 05/09/2026. */
+  contactoDeAllegados: number
   /** Las de arriba que tienen ficha propia (con nombre en claro y enlace).
    *  Puede venir más corta que `contactoDeOtros`: los intervinientes sueltos no
    *  tienen ficha y su nombre va cifrado, así que solo cuentan. */
   fichasContacto: FichaContacto[]
+  /** Las de `contactoDeAllegados`, con su parentesco. */
+  fichasAllegado: FichaAllegado[]
   estado: EstadoCanal
   /** Pólizas por CIMA de este cliente (siempre ≥ 1: por eso está en la lista). */
   polizasCima: number
@@ -175,6 +225,8 @@ type FilaSql = {
   canal_en_poliza: number
   contacto_de_otros: number
   fichas_contacto: unknown
+  contacto_de_allegados: number
+  fichas_allegado: unknown
   polizas_cima: number
   polizas_que_renuevan: number
   proximo_vencimiento: string | null
@@ -192,13 +244,14 @@ export function estadoCanal(
   tieneTelefono: boolean,
   canalEnPoliza = 0,
   contactoDeOtros = 0,
+  contactoDeAllegados = 0,
 ): EstadoCanal {
   if (tieneEmail && tieneTelefono) return 'con_ambos'
   if (tieneEmail) return 'solo_email'
   if (tieneTelefono) return 'solo_telefono'
   // Sin nada en la ficha. Antes de declararlo ilocalizable, los otros dos sitios.
   if (canalEnPoliza > 0) return 'canal_en_poliza'
-  if (contactoDeOtros > 0) return 'contacto_via_tercero'
+  if (contactoDeOtros > 0 || contactoDeAllegados > 0) return 'contacto_via_tercero'
   return 'sin_ninguno'
 }
 
@@ -248,6 +301,25 @@ function leerFichas(v: unknown): FichaContacto[] {
     const nombre = nombreEnClaro(o.nombre)
     if (id === null || nombre === null) continue
     out.push({ clienteId: id, nombre })
+    if (out.length >= MAX_FICHAS) break
+  }
+  return out
+}
+
+/** Igual que `leerFichas`, pero conservando el parentesco. Una fila sin
+ *  parentesco legible se descarta: «llama a alguien» sin decir quién es no
+ *  ayuda a nadie, y sigue contada en `contactoDeAllegados`. */
+function leerAllegados(v: unknown): FichaAllegado[] {
+  if (!Array.isArray(v)) return []
+  const out: FichaAllegado[] = []
+  for (const f of v) {
+    if (typeof f !== 'object' || f === null) continue
+    const o = f as Record<string, unknown>
+    const id = typeof o.clienteId === 'string' && o.clienteId !== '' ? o.clienteId : null
+    const nombre = nombreEnClaro(o.nombre)
+    const parentesco = typeof o.parentesco === 'string' ? o.parentesco.trim() : ''
+    if (id === null || nombre === null || parentesco === '') continue
+    out.push({ clienteId: id, nombre, parentesco })
     if (out.length >= MAX_FICHAS) break
   }
   return out
@@ -344,6 +416,8 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       coalesce(w.canal_en_poliza, 0) as canal_en_poliza,
       coalesce(w.contacto_de_otros, 0) as contacto_de_otros,
       coalesce(w.fichas_contacto, '[]'::jsonb) as fichas_contacto,
+      coalesce(rl.contacto_de_allegados, 0) as contacto_de_allegados,
+      coalesce(rl.fichas_allegado, '[]'::jsonb) as fichas_allegado,
       b.polizas_cima,
       b.polizas_que_renuevan,
       to_char(b.proximo_vencimiento, 'YYYY-MM-DD') as proximo_vencimiento,
@@ -392,6 +466,57 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
         order by coalesce(i.cliente_id::text, 'i:' || i.id::text)
       ) x
     ) w on true
+    -- 🚨 EL CUARTO SITIO. Hasta el 05/09/2026 esta consulta miraba la ficha, sus
+    -- tablas hijas y los intervinientes de la póliza, y con eso declaraba a 16
+    -- clientes «ilocalizables». Alberto miró la pantalla: «grupo elca ya tiene a
+    -- pablo y aun aparece», «Studium es una empresa y tiene a victor y berta».
+    -- Los tres estaban en cliente_relaciones — Pablo como «Administración» de
+    -- ELCA, Víctor como «Empleado/a» y Berta como «Accionista» de Studium.
+    -- Medido ese día: 18 sin nada en su ficha, 14 ilocalizables con los tres
+    -- sitios de antes, SEIS con este cuarto.
+    --
+    -- ⚠️ La dirección de la relación NO se usa para nada aquí. El convenio del
+    -- repo es «fila A→B = B es <tipo> de A», pero el volcado no lo respeta (en
+    -- Studium hay una fila que se leería «Berta es Empresa de Studium»), así que
+    -- afirmar quién representa a quién sería inventarse un dato. Se busca en las
+    -- DOS direcciones y se enseña el parentesco tal cual lo escribió el CRM.
+    left join lateral (
+      select
+        count(*)::int as contacto_de_allegados,
+        coalesce(
+          jsonb_agg(jsonb_build_object(
+            'clienteId', y.ficha_id, 'nombre', y.ficha_nombre, 'parentesco', y.parentesco)),
+          '[]'::jsonb
+        ) as fichas_allegado
+      from (
+        -- Una PERSONA, no una fila: cada vínculo está dos veces (un sentido por
+        -- fila) y una misma persona puede ser a la vez «Propietario» y «Empresa».
+        select distinct on (o.id)
+          o.id::text as ficha_id,
+          btrim(concat_ws(' ', o.nombre, o.apellidos)) as ficha_nombre,
+          r.tipo_relacion as parentesco
+        from cliente_relaciones r
+        join clientes o
+          on o.id = case when r.cliente_a_id = b.id then r.cliente_b_id else r.cliente_a_id end
+         and o.merged_into_cliente_id is null
+         and o.correduria_id = b.correduria_id
+        where (r.cliente_a_id = b.id or r.cliente_b_id = b.id)
+          and o.id <> b.id
+          and (
+            nullif(btrim(o.email), '') is not null
+            or nullif(btrim(o.telefono), '') is not null
+            or exists (
+              select 1 from cliente_emails e
+              where e.cliente_id = o.id and nullif(btrim(e.email), '') is not null
+            )
+            or exists (
+              select 1 from cliente_telefonos t
+              where t.cliente_id = o.id and nullif(btrim(t.telefono), '') is not null
+            )
+          )
+        order by o.id, r.tipo_relacion
+      ) y
+    ) rl on true
     order by b.nombre
     limit ${LIMITE + 1}
   `
@@ -404,6 +529,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
     const tieneTelefono = f.tiene_telefono === true
     const canalEnPoliza = Number.isFinite(f.canal_en_poliza) ? f.canal_en_poliza : 0
     const contactoDeOtros = Number.isFinite(f.contacto_de_otros) ? f.contacto_de_otros : 0
+    const contactoDeAllegados = Number.isFinite(f.contacto_de_allegados) ? f.contacto_de_allegados : 0
     return {
       clienteId: f.cliente_id,
       nombre: f.nombre,
@@ -411,8 +537,10 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       tieneTelefono,
       canalEnPoliza,
       contactoDeOtros,
+      contactoDeAllegados,
       fichasContacto: leerFichas(f.fichas_contacto),
-      estado: estadoCanal(tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros),
+      fichasAllegado: leerAllegados(f.fichas_allegado),
+      estado: estadoCanal(tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros, contactoDeAllegados),
       polizasCima: f.polizas_cima,
       polizasQueRenuevan: Number.isFinite(f.polizas_que_renuevan) ? f.polizas_que_renuevan : 0,
       proximoVencimiento: f.proximo_vencimiento ?? null,

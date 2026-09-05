@@ -105,6 +105,25 @@
   llevaba como `SITIO_URL` por defecto — canonical y sitemap hacia un dominio vacío. Ahora el
   defecto es el `.es` (`lib/sitio.ts`). Tercera app de la correduría y la única que ve alguien que aún no es cliente
   (`asegura` = corredor, `asegura-portal` = asegurado, `asegura-web` = quien todavía no lo es).
+  ⚠️ **El apex cambió de manos DOS VECES el 05/09/2026 — mira quién lo sirve HOY antes de tocar nada.**
+  Por la mañana `grupoasegura.es` (el `.es`, no el `.com`) pasó a servir la web del repo **`asegura`** de
+  Manuel (`NEXT_PUBLIC_SITE_URL=https://grupoasegura.es`, con su `/siniestro` y las 301 del WordPress
+  viejo, PR asegura#817). Por la tarde se le quitó: medido a las 14:04 UTC, los dominios del proyecto
+  Vercel `asegura` son **solo** `app.grupoasegura.com` + los `*.vercel.app`. **`asegura-web` SÍ está
+  desplegada**: proyecto Vercel `asegura-web` (`prj_MnuAvshNZg6vmRsfTkSmiX4RyCj9`, root
+  `apps/asegura-web`), y es quien sirve el apex desde esa tarde. 🚨 **Ojo con la herramienta:
+  `list_projects`/`get_project` del MCP de Vercel NO devuelven ese proyecto** (404 por id, y la lista
+  se queda en 12 sin él ni `alquiler`) — sí aparece en el comentario del bot de Vercel en los PRs. Con
+  esa lista incompleta se afirmó aquí que el proyecto «no existe»: **una lista que no lo trae no
+  demuestra que no esté.**
+  💣 **La lección cara (misma tarde): un dominio que se mueve se lleva por delante las rutas de servicio,
+  no solo las páginas.** Los seis workflows de crons de `asegura` se repuntaron a `grupoasegura.es`
+  (asegura#818) dando por hecho —sin medirlo— que la canonicalización LOO-670 rompía el host viejo. No lo
+  rompía: el run de `cima-pull` de las 09:12 UTC contra `app.grupoasegura.com` había salido en verde. El
+  primer run tras el merge murió con `curl: (22) ... error: 404`, y con `cima-pull` cae `cima-health-alert`,
+  que es el vigilante que avisaría de que la ingesta se ha parado. Revertido y verificado en asegura#819. La regla:
+  **antes de mover un host en un cron, mira el código de respuesta del endpoint en los dos hosts**
+  (404 = otra app; 401 = la ruta existe y te rechaza por credencial, que es lo que quieres ver).
   🚨 **NO tiene base de datos a propósito**: sin Prisma, sin rol, sin secreto de sesión. El
   formulario sale por `POST /api/lead`, que **reenvía desde el servidor** al canal que ya existe
   (`/api/publico/correduria/lead` de plataforma → puerto de asegura → Telegram). Propaga
@@ -117,6 +136,20 @@
   `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
   divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
   silencio). `HORARIO` y el teléfono están **ausentes a propósito** mientras no se confirmen.
+  📊 **Analítica CON consentimiento, y fail-CLOSED a propósito (05/09/2026).** PostHog detrás de
+  Cookiebot: la regla vive en una función pura, `puedeMedir()` de `lib/analitica.ts`, y **sin
+  `NEXT_PUBLIC_COOKIEBOT_ID` no se mide nada**. Es la decisión CONTRARIA a la web de Manuel, donde
+  `posthog-browser.ts` hace *fail-open* — sin esa env no pinta banner y arranca igual (medido en el
+  HTML vivo el 04/09: 0 apariciones de Cookiebot, PostHog corriendo; art. 22.2 LSSI). PostHog **no
+  viaja en el bundle**: el script se baja de su CDN solo tras aceptar, así que lo que no se ha
+  descargado no lo puede disparar un `if` mal escrito. Host por defecto **EU** (`eu.i.posthog.com`),
+  `disable_session_recording` (el formulario pide nombre, teléfono y correo) y `person_profiles:
+  identified_only`. Retirar el consentimiento **apaga** (`opt_out_capturing` + `reset(true)`), no solo
+  deja de arrancar. Página `/legal/cookies` con la declaración que publica Cookiebot y botón de
+  renovar (art. 7.3 RGPD). Lo vigila `lib/analitica.test.ts` (12 cepos, lee el fuente). ⚠️ **El CBID
+  tiene que tener `grupoasegura.es` dado de alta en el panel de Cookiebot**: un CBID atado solo a
+  `app.grupoasegura.com` no pinta banner aquí, y entonces esta app no mide — que es lo correcto, pero
+  silencioso.
   🔘 **Un solo acceso, y es el del CLIENTE (05/09/2026).** Botón «Área de clientes» en la cabecera y
   «Ya soy cliente · Mis seguros» junto al CTA de venta, los dos a `PORTAL_URL` (`lib/sitio.ts`, env
   `NEXT_PUBLIC_PORTAL_URL`; por defecto `asegura-portal.vercel.app`, que es donde el portal sirve HOY —
@@ -613,6 +646,40 @@ palanca**, o la medición no sirve.
 🟡 Y se volvió a ver el falso positivo de Vercel del 02/09, esta vez **doce comentarios seguidos**
 pintando los proyectos en «Building» antes de acabar en `12 Skipped Deployments` / `Ignored`. Cero
 gasto de build. El estado que vale sigue siendo el FINAL, no el comentario que se reescribe solo.
+
+✅ **DUODÉCIMA medición (05/09/2026, PR #2378) — el paso 3 del orden de abajo funcionó tal cual, y no
+hizo falta nada más.** El PR llevaba rato **fuera de draft** y con el head ya procesado (`git ls-remote`
+== `head.sha`, o sea sin lag que esperar), pero `mergeable_state: "dirty"`: `main` había avanzado dos
+veces mientras se trabajaba. Resuelto el conflicto (en `docs/CONTEXTO-SESIONES.md`, dos entradas del
+MISMO día que se conservan las dos, no son versiones rivales) y empujado el merge → **los 12 requeridos
+arrancan a los segundos** (`event: pull_request`, `actor: albertosuarezgutierrez-gif`). No añade teoría
+nueva: es la enésima vez que **un push con contenido real sobre un PR que no es draft dispara**.
+
+🟢 **Y un dato de Vercel que quita una falsa alarma: un commit de MERGE SIN `[preview]` NO construye las
+once.** Al empujarlo, los comentarios del bot pintaron **las 12 apps en «Building» y 0 Skipped** —peor
+pinta que nunca, y es justo la combinación que en el PR #2281 costó once builds—, pero convergió a
+**11 `Ignored` + `ialimp` `Ready`**, que es lo correcto: ialimp es la única app sin `--sin-previews`
+(cliente vivo). La diferencia con #2281 es el **marcador**, no el commit de merge: `[preview]` es lo que
+levanta el veto global; sin él, que el merge toque `pnpm-lock.yaml` solo importa para el paso 3 del
+script, que igualmente no construye porque el veto sigue en pie. **No des la alarma desde el comentario
+intermedio** (dos sesiones seguidas han estado a punto): el estado que vale es el final.
+
+✅ **DECIMOTERCERA medición (05/09/2026, PR #2386) — abierto en draft por MCP y los 19 arrancaron al
+instante, y esta vez SÍ se miró antes de tocar nada.** Rama empujada con el token de la App (**0 runs**,
+comprobado), PR abierto **en draft** por la herramienta MCP → **19 runs a los segundos**, sin
+des-draftear, sin merge de `main` y sin segundo push; verdes en ~3,5 min, incluido `Ready to merge`.
+
+Corrige el error de método de la UNDÉCIMA, que anotó lo mismo sin haber mirado los runs antes del
+des-draft y por eso no aislaba nada. Aquí el tramo sí cuenta: **el draft no silenció**. Es el mismo
+resultado que #1777, #1779, #1940 y #2341 — y el contrario que #2029, #2277 y #2339, abiertos igual.
+Sigue sin haber causa, y la conclusión de la DÉCIMA se mantiene: buscarla por el lado de «quién y
+cómo» está agotado.
+
+⚠️ **Y el merge NO fue inmediato aunque los 20 checks estuvieran verdes:** entre abrir el PR y pulsar
+merge, `main` avanzó (#2385) y el `merge_pull_request` devolvió **405 «Pull Request has merge
+conflicts»**. No es un fallo del CI ni del ruleset: es el paso 1 del orden de abajo llegando por la
+otra punta. Se resuelve igual — mergear `main` en la rama, conservar las DOS entradas del mismo día en
+`docs/CONTEXTO-SESIONES.md` (no son versiones rivales) y empujar.
 
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).

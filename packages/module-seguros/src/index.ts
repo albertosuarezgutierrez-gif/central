@@ -415,6 +415,8 @@ export {
   PUNTOS_PRECONTRACTUALES,
   VERSION_TEXTOS_LEGALES,
   FECHA_TEXTOS_LEGALES,
+  VERSION_TEXTOS_WEB,
+  FECHA_TEXTOS_WEB,
   lineaIdentificacion,
   type CanalReclamacion,
   type IdCanalReclamacion,

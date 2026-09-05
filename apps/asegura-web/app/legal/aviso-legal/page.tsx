@@ -7,7 +7,7 @@
 //
 // 🚨 Cada frase de esta página es una afirmación sobre lo que el sitio hace. Si
 // el sitio cambia —se añade un área privada, un pago, una contratación en
-// línea— esta página cambia EN EL MISMO PR y sube `VERSION_TEXTOS_LEGALES`. Un
+// línea— esta página cambia EN EL MISMO PR y sube `VERSION_TEXTOS_WEB`. Un
 // aviso legal que describe una versión anterior del sitio no es un texto
 // desactualizado: es información falsa al usuario.
 import type { CSSProperties } from 'react'
@@ -16,8 +16,8 @@ import Link from 'next/link'
 
 import {
   MEDIADOR,
-  FECHA_TEXTOS_LEGALES,
-  VERSION_TEXTOS_LEGALES,
+  FECHA_TEXTOS_WEB,
+  VERSION_TEXTOS_WEB,
 } from '@central/module-seguros'
 
 import { AMBITO, SITIO_URL, url } from '@/lib/sitio'
@@ -302,7 +302,7 @@ export default function AvisoLegal() {
         </section>
 
         <p style={version}>
-          Versión {VERSION_TEXTOS_LEGALES} · última revisión {FECHA_TEXTOS_LEGALES}
+          Versión {VERSION_TEXTOS_WEB} · última revisión {FECHA_TEXTOS_WEB}
         </p>
       </div>
     </main>

@@ -196,6 +196,53 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   `ctx.lang`, que hereda el idioma de la reserva si el mensaje no da señal), aplica también a la copia
   informativa de auto-envíos (`avisarAutoEnviado`), y un fallo de traducción con idioma ≠ es se DECLARA
   («no he podido traducirlo al español») en vez de omitir la línea en silencio.
+  - **🚨 Y el 05/09/2026 se vio que ese «no he podido traducirlo» tapaba OTRO fallo: el borrador salía
+    en ESPAÑOL con el huésped escribiendo en inglés** (reserva 154375571, House Sevillana, Massimo). Todos
+    los prompts van en español y la orden «responde en inglés» es UNA línea dentro del muro → el modelo
+    deriva al idioma ambiental. Pasaba **mudo**: `ctx.lang` SÍ era `'en'` (la etiqueta «Borrador (en EN)»
+    era correcta y no delataba nada) y la 🔁 pedía traducir al español un texto YA español → el modelo
+    devuelve lo mismo, `traduccionUtil` lo descarta por idéntico y sale «no he podido traducirlo». O sea:
+    **un fallo de REDACCIÓN se leía como uno de traducción**, y con categoría auto-enviable le llegaba al
+    huésped en español. Red nueva **`idioma-salida.ts`** (puro, 7 tests): `derivaAEspanol` detecta **solo la
+    deriva AL ESPAÑOL** —no se arbitra entre `en`/`fr`/`de`/`it`, donde `detectLang` no distingue con
+    fiabilidad y un falso positivo reescribiría un borrador correcto— y traduce; si falla o vuelve igual de
+    española devuelve `fallo` y el aviso dice **«⚠️ Este texto ha salido en ESPAÑOL»**, nunca se maquilla.
+    Cableada en `decidir.ts`, `redactar.ts` y `retoque.ts`. Refuerzo del idioma también en la ÚLTIMA línea
+    del system prompt (no solo en medio del muro). PR #2378.
+- **🔎 Lo que NO está en la guía y es del ENTORNO se consulta en internet (05/09/2026, PR #2378).** Dictado de
+  Alberto: «en caso de duda que use la IA para consultar». Mismo mensaje que el bug del idioma: a «¿cómo
+  llegamos del aeropuerto?» el modelo se inventó **dos** datos —taxi «25-30€» (el real es **tarifa fija
+  municipal**: 26€ L-V 7-21h / 29€ noches, findes y festivos) y una parada del bus EA, «Puerta de Jerez», que
+  **ni existe en esa línea** ni está a 10 min del piso—. **`consulta-web.ts`** (puro, 12 tests): cuando el
+  control de calidad dice que la INFORMACIÓN no cubre la pregunta **y** `preguntaDeEntorno` la reconoce como
+  del entorno (transporte, monumentos y entradas, dónde comer, servicios cercanos, eventos, clima; regex en
+  es/en/fr/de/it), llama a `buscarWeb` y re-redacta el borrador con los datos **y sus URLs**. Cuatro límites
+  deliberados, todos con guardián que lee el fuente (`consulta-web-guardian.test.ts`):
+  - **Solo el entorno, NUNCA el piso.** Internet no sabe si este apartamento tiene plancha: preguntarle es
+    pagar una búsqueda para que el modelo rellene el hueco con más aplomo. Lo del piso escala como hueco de guía.
+  - **Lo consultado NO se auto-envía jamás:** `webConsultada` fuerza `needs_human` y las fuentes viajan al
+    aviso (🔎 + hasta 4 URLs). El problema no fue que faltara el dato, fue **afirmarlo sin fuente**.
+  - **Una búsqueda fallida se DECLARA** («no he podido mirarlo» ≠ «no está en la guía»).
+  - **Nada de esto para lo sensible ni lo negativo**: una queja o un cobro no se resuelven con internet.
+  Sigue contando como **hueco de guía** (`tipoHueco` devuelve `'guia'` también para «no está en la guía del
+  piso»), así que lo que responda Alberto se aprende como hecho y la búsqueda no se paga dos veces.
+- **💶 `importesNoRespaldados` — el guardrail que faltaba (05/09/2026, `guardrail.ts`, +5 tests).**
+  `contieneDatoInventado` solo miraba códigos de 4+ dígitos, teléfonos y URLs: **ninguna cifra en euros**, y
+  por eso el «25-30€» del taxi pasó limpio. Ahora cualquier importe en € que no esté en las fuentes escala
+  —rangos incluidos (`25-30€`), normalizando `26€` == `26,00 €`—. Es estricto a propósito: un falso positivo
+  cuesta que Alberto lea un borrador correcto; un falso negativo es **un precio falso escrito por el anfitrión
+  en el chat oficial de Booking**. No confundir con `importeSospechoso` de `extras.ts`, que es del CATÁLOGO de
+  extras del piso; éste vale para cualquier cifra, venga de donde venga.
+- **🚕 El transporte del aeropuerto YA ESTÁ EN LA GUÍA de los 4 pisos** (`mensajes_hechos`, `confirmado`,
+  insertados a mano por Supabase el 05/09/2026), para que esa pregunta se responda sola sin gastar búsqueda:
+  - **ids 10-11 · `prop_house_sevillana`:** tarifa fija de taxi (26€ / 29€), EA 6€/8€ con sus paradas reales
+    (Santa Justa · San Bernardo · Prado de San Sebastián · Plaza de Armas), 04:30-01:00 cada 12-20 min, **y la
+    advertencia explícita de NO decir «Puerta de Jerez» ni «10 min andando»**.
+  - **ids 12-14 · `prop_busto_reform`, `prop_luxury_busto`, `prop_duplex_center`:** SOLO lo que vale para toda
+    Sevilla (tarifa de taxi y precios/paradas del EA) **más la orden explícita de NO decir en qué parada
+    bajarse ni cuántos minutos se anda hasta ESE piso** — esa distancia no está medida para ellos. El dato que
+    no se tiene se declara, no se estima. ⚠️ Los ~20-25 min de Plaza de Armas a Calle Socorro 24 son una
+    **estimación sin medir**, pendiente de confirmar con Alberto.
 - **Idempotencia:** `claveDedup` + `claimMensaje` (atómico) → no reprocesa/duplica entre sondeo y webhook.
 - **🚨 La «graduación por categorías» YA NO EXISTE (verificado en el código el 28/08/2026).** Este
   apartado decía que había una allowlist en `graduacion.ts` y que «quejas/dinero/cambios NUNCA se

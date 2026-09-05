@@ -24,5 +24,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: url('/legal/informacion-mediador'), lastModified: ahora, changeFrequency: 'yearly', priority: 0.3 },
     { url: url('/legal/privacidad'), lastModified: ahora, changeFrequency: 'yearly', priority: 0.3 },
     { url: url('/legal/aviso-legal'), lastModified: ahora, changeFrequency: 'yearly', priority: 0.3 },
+    { url: url('/legal/cookies'), lastModified: ahora, changeFrequency: 'yearly', priority: 0.3 },
   ]
 }

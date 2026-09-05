@@ -137,26 +137,26 @@ test('🚨 sin nada en la ficha pero con SU dato en la póliza NO es «ilocaliza
   // El caso de `Juan Manuel Duran Ibañez` y `MORALES ISABEL MALDONADO`: CIMA
   // trajo su email en el interviniente y nadie lo copió a la ficha. El dato es
   // SUYO y está en la base; lo que falla es que el cron de avisos lee la ficha.
-  assert.equal(derivarEstadoCanal(false, false, 1, 0), 'canal_en_poliza')
+  assert.equal(derivarEstadoCanal(false, false, 1, 0, 0), 'canal_en_poliza')
 })
 
 test('🚨 sin nada suyo pero con otra persona en la póliza tampoco es «ilocalizable»', () => {
   // El caso de `Esquiansa` → Juan Manuel López Benjumea. Hay a quién llamar.
-  assert.equal(derivarEstadoCanal(false, false, 0, 1), 'contacto_via_tercero')
+  assert.equal(derivarEstadoCanal(false, false, 0, 1, 0), 'contacto_via_tercero')
 })
 
 test('lo SUYO manda sobre lo de un tercero: son acciones distintas', () => {
   // Copiar un dato a la ficha ≠ llamar a alguien para pedirle el correo.
-  assert.equal(derivarEstadoCanal(false, false, 1, 3), 'canal_en_poliza')
+  assert.equal(derivarEstadoCanal(false, false, 1, 3, 0), 'canal_en_poliza')
 })
 
 test('🚨 sin saber lo de la póliza NO se declara a nadie ilocalizable', () => {
   // Un puerto viejo no manda esos recuentos. Con el hueco, el estado conservador
   // es «no comprobado»: afirmar «no le llega NADA» es justo el fallo del 04/09.
-  assert.equal(derivarEstadoCanal(false, false, null, 0), 'no_comprobado')
-  assert.equal(derivarEstadoCanal(false, false, 0, null), 'no_comprobado')
+  assert.equal(derivarEstadoCanal(false, false, null, 0, 0), 'no_comprobado')
+  assert.equal(derivarEstadoCanal(false, false, 0, null, 0), 'no_comprobado')
   // …pero un cliente que SÍ tiene canal propio no necesita ese dato para nada.
-  assert.equal(derivarEstadoCanal(true, true, null, null), 'con_ambos')
+  assert.equal(derivarEstadoCanal(true, true, null, null, null), 'con_ambos')
 })
 
 test('🚨 la consulta mira los intervinientes, no solo la ficha del tomador', () => {
@@ -186,7 +186,7 @@ test('🚨 el nombre CIFRADO de un interviniente no se pinta ni se manda', () =>
     estado: 'ok',
     filas: [{
       clienteId: 'c1', nombre: 'Esquiansa', tieneEmail: false, tieneTelefono: false,
-      canalEnPoliza: 0, contactoDeOtros: 2,
+      canalEnPoliza: 0, contactoDeOtros: 2, contactoDeAllegados: 0,
       fichasContacto: [
         { clienteId: 'p1', nombre: 'Juan Manuel Lopez Benjumea' },
         { clienteId: 'p2', nombre: 'v1:TjaDV+QB:9mwrzk:qUYBLy8H' },
@@ -226,7 +226,7 @@ test('el estado NO se cree lo que venga en el JSON: se deriva', () => {
     estado: 'ok',
     filas: [{
       clienteId: 'c1', nombre: 'X', tieneEmail: false, tieneTelefono: false,
-      canalEnPoliza: 0, contactoDeOtros: 0, estado: 'con_ambos',
+      canalEnPoliza: 0, contactoDeOtros: 0, contactoDeAllegados: 0, estado: 'con_ambos',
     }],
     resumen: { vivos: 79, conEmail: 44, conTelefono: 52, conAlguno: 53, sinNinguno: 26 },
   })
@@ -345,4 +345,55 @@ test('🚨 «no renueva» viaja por el puerto como null cuando no se informa', (
   if (r.estado !== 'ok') return
   assert.equal(r.filas[0].polizasQueRenuevan, null, 'ausente ⇒ no comprobado, jamás 0')
   assert.equal(r.resumen.ilocalizablesSinRenovacion, null)
+})
+
+test('🚨 EL CUARTO SITIO: un familiar declarado tampoco deja a nadie ilocalizable', () => {
+  // Alberto, 05/09/2026, mirando la pantalla: «grupo elca ya tiene a pablo y aun
+  // aparece». Pablo Franco Ruz es la «Administración» de Grupo ELCA 83 y estaba
+  // en `cliente_relaciones`, el único de los cuatro sitios que no se miraba.
+  // Medido contra la BD ese día: 18 sin nada en su ficha, 14 ilocalizables
+  // con los tres sitios de antes, SEIS con este cuarto.
+  assert.equal(derivarEstadoCanal(false, false, 0, 0, 1), 'contacto_via_tercero')
+  // Y sin ese recuento no se puede declarar a nadie ilocalizable: un asegura sin
+  // desplegar no lo manda, y afirmar sobre el hueco es el fallo de siempre.
+  assert.equal(derivarEstadoCanal(false, false, 0, 0, null), 'no_comprobado')
+})
+
+test('la consulta busca en cliente_relaciones, en LAS DOS direcciones', () => {
+  // El convenio «A→B = B es <tipo> de A» no lo respeta el volcado (hay una fila
+  // que se leería «Berta es Empresa de Studium»), así que buscar en un solo
+  // sentido perdería la mitad de los contactos.
+  assert.match(SQL, /from cliente_relaciones r/i)
+  assert.match(SQL, /r\.cliente_a_id = b\.id or r\.cliente_b_id = b\.id/i)
+  // El allegado tiene que ser localizable Y de la misma correduría.
+  assert.match(SQL, /o\.correduria_id = b\.correduria_id/i)
+})
+
+test('🚨 el parentesco viaja y se pinta: no es lo mismo el hijo que un desconocido', () => {
+  const r = interpretarSinCanal(200, {
+    estado: 'ok',
+    filas: [{
+      clienteId: 'c1', nombre: 'Grupo ELCA 83', tieneEmail: false, tieneTelefono: false,
+      canalEnPoliza: 0, contactoDeOtros: 0, contactoDeAllegados: 2,
+      fichasAllegado: [
+        { clienteId: 'p1', nombre: 'Pablo Franco Ruz', parentesco: 'Administración' },
+        { clienteId: 'p2', nombre: 'Sin parentesco' },
+      ],
+    }],
+    resumen: {},
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  // Sin parentesco legible NO se nombra —«llama a X» sin decir quién es no sirve—
+  // pero sigue contado: se declara el hueco, no se borra la persona.
+  assert.deepEqual(r.filas[0].fichasAllegado, [
+    { clienteId: 'p1', nombre: 'Pablo Franco Ruz', parentesco: 'Administración' },
+  ])
+  assert.equal(r.filas[0].contactoDeAllegados, 2)
+  assert.equal(r.filas[0].estado, 'contacto_via_tercero')
+})
+
+test('la pantalla enseña el parentesco, no solo el nombre', () => {
+  assert.match(PANTALLA, /fichasAllegado/)
+  assert.match(PANTALLA, /parentesco/)
 })
