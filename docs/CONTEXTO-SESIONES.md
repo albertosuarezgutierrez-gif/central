@@ -45,6 +45,22 @@
   si ese WhatsApp es suyo o de Plus Ultra · poner `OPENROUTER_API_KEY` en el proyecto Vercel `asegura-portal`
   (sin ella la lectura de pólizas subidas devuelve «no hemos podido leer» SIEMPRE).
 
+- **🌙 MODO NOCHE del agente de huéspedes: el silencio de 21:00 a 09:00 deja de ser invisible (05/09/2026).**
+  Alberto pidió «que a partir de las 21h el agente sea 100% autónomo». Se hizo lo contrario y se explicó
+  por qué: `auto.ts` YA no mira la hora (lo apoyado en fuente sale solo a las 3 de la mañana), así que
+  «autónomo de noche» solo añadiría autonomía sobre lo que el sistema marcó `needs_human` — sin nadie
+  que lo corrija. El agujero real era otro: lo que ESCALA de noche deja al huésped sin nada hasta las
+  09:00, y desde el código eso es idéntico a una conversación atendida (caso Mafalda, 154265696).
+  Ahora: acuse de recibo automático (texto fijo por idioma, sin IA — es la red de seguridad), aviso
+  🚨 por `tgSend` (no `tgAviso`: un interruptor apagado convertiría «te despierto» en silencio) si es
+  urgencia de acceso/avería, y a los 15 min sin respuesta se deriva al portal de reserva —**último**
+  recurso, decisión de Alberto: el portal no abre puertas y su llamada abre un caso contra el anfitrión.
+  `noche.ts` (puro, 7 tests) + `noche-guardia.ts`; barrido en `/api/sivra/mensajes/auto-reply`, ANTES de
+  sondear hilos para que un fallo de Smoobu no deje a nadie esperando. SQL aplicado en Supabase.
+  ⚠️ Detectado de paso: el borrador que Alberto aprobó tal cual metía el bloque de parkings **sin que
+  la huésped preguntara** (único mensaje del hilo, verificado en `mensajes_log`) — viola la regla de oro
+  de `parking.ts` y `aprenderCorreccion()` lo guardó como ejemplo bueno. Aprobar sin leer no es gratis.
+
 - **📬 Smoobu ya NO manda mensajes automáticos: el ciclo es 100% nuestro (05/09/2026).** Alberto apagó
   las plantillas de Smoobu tras validar el ciclo entero en House Sevillana. Se activó el 4º piso
   (`prop_duplex_center` en `mensajes_prog_pisos`; no tenía reservas en la ventana, así que la activación
@@ -54,8 +70,18 @@
   así que un hito generado en SOMBRA quedaba «hecho» para siempre — la víspera CON LOS CÓDIGOS de esa misma
   reserva (Luxury Busto, llegada el 05/09) se generó 12 h antes de activarse el piso y no la iba a recibir
   nadie. Ahora `hitosBloqueantes` ignora las filas en sombra si el piso ya está activo y el reclamo las
-  toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. **Pendiente de Alberto:** comprobar que esa
-  huésped tiene sus códigos antes de las 15:00.
+  toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. Mergeado (**PR #2305**) y
+  ✅ **verificado en producción**: la pasada de las 07:37 UTC mandó la víspera con los códigos a esa
+  huésped, en PORTUGUÉS («Olá Mafalda… AQUI ESTÃO OS…»), más dos confirmaciones que el chequeo
+  retirado tenía bloqueadas. **Regla que deja: un mensaje que solo vio Alberto por Telegram no está
+  entregado** — al activar un piso hay que mirar qué hitos suyos quedaron en sombra.
+  🚨 **Y el rescate destapó un segundo defecto (PR #2310): `visperaAyer` no distinguía la víspera que
+  salió AYER de la que sale HOY de rescate** (las dos se anclan a `checkIn`, misma clave), así que la
+  bienvenida iba a salir a las 10:07 al mismo huésped el mismo día — la «ristra de Smoobu» que el
+  diseño evita. Se paró a mano en BD (`estado='omitido'`) y se arregló en código con `emitidosHoy`.
+  ⚠️ Coste asumido y medido: dos confirmaciones que Smoobu ya había mandado salieron de nuevo (los
+  hitos marcados «equivalente de Smoobu ya en el hilo» estaban en `sombra` y dejaron de bloquear). **Regla que deja: un mensaje que solo vio Alberto por Telegram
+  no está entregado** — al activar un piso hay que mirar qué hitos suyos quedaron registrados en sombra.
 
 - **📞 Los iconos de llamar/WhatsApp/escribir, ya en las CUATRO pantallas de la correduría (05/09/2026).**
   Cerrado lo que faltaba de la petición del 04/09: **Renovaciones**, que era la única lista de la
