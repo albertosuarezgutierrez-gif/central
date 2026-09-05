@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **👥 UNA lista de personas por ficha: se funden 👤 y 👪 (05/09/2026).** Las dos tarjetas contestaban la
+  misma pregunta («¿a quién llamo y con qué derecho?») y la misma persona salía en las dos sin que nada lo
+  dijera. Ahora una sola tarjeta 👥 Personas: `unificarPersonas` (`packages/module-seguros/src/personas-ficha.ts`,
+  8 tests) funde **por FICHA, nunca por nombre** —dos homónimos con NIF distinto siguen siendo dos filas, y
+  quien CIMA no ha enlazado no se funde con nadie—, y cada fila conserva sus dos caras: 📄 lo que manda la
+  compañía (papeles por póliza, con su «quitar») y 👪 lo nuestro (vínculo + autorización). `Relaciones` es
+  dueño de la lista; los papeles entran como render-prop desde `TabContactos` porque son otra API. `null` de
+  cada fuente se dice por separado: ninguno es «no hay nadie». Mismo PR #2369.
+
 - **👤 Persona de contacto de una empresa: se crea su FICHA, no un campo (05/09/2026).** Duda de Alberto en
   Grupo ELCA 83: quería apuntar a quien lleva sus seguros, que no es cliente. Se descartó un campo «persona de
   contacto» dentro de la sociedad porque **esa persona es un futuro cliente**: con ficha propia nace 🕐 lead

@@ -1,13 +1,12 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { SIN_VINCULO, etiquetaRol, type PersonaDePolizas } from '@central/module-seguros'
+import { etiquetaRol, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
-import AccionesContacto from '../../AccionesContacto'
 import { btnStyle } from '@/components/ui'
 import type { Ficha, IntervinienteFicha } from '@/lib/ficha-asegura'
+import type { RelacionCartera } from '@/lib/relaciones-asegura'
 import {
   interpretarQuitarInterviniente,
   textoMotivoInterviniente,
@@ -16,14 +15,25 @@ import {
 import { Tarjeta, etiquetaPoliza } from './piezas'
 
 /**
- * Con quién se habla de esta ficha: sus datos, quién sale en sus pólizas y qué
- * vínculos están declarados.
+ * Con quién se habla de esta ficha: **una sola lista de personas** y los datos
+ * de la propia ficha.
  *
- * Los tres bloques viven juntos a propósito: la pregunta que traen es la misma
- * («¿a quién llamo y con qué derecho?»), y separarlos obligaba a saltar de una
- * pestaña a otra para contestarla. Es también lo que permite que 👪 ofrezca
- * declarar el vínculo de quien sale en 👤 sin vínculo: las dos tarjetas comen
- * de la MISMA lista de personas, calculada una vez en la página.
+ * 🚨 Hasta el 05/09/2026 eran DOS tarjetas —👤 quién sale en sus pólizas (lo que
+ * dice CIMA) y 👪 los vínculos declarados (lo nuestro)— y la misma persona salía
+ * en las dos sin que nada lo dijera: el conductor habitual arriba, el
+ * administrador autorizado abajo, y cruzarlas era cosa del que miraba. La
+ * pregunta que traen es una sola: «¿a quién llamo y con qué derecho?».
+ *
+ * La fusión la hace `unificarPersonas` (módulo puro, testeado) **por FICHA y
+ * nunca por nombre**, y cada fila conserva sus dos caras por separado: fundir la
+ * procedencia sería borrar de dónde sale cada dato, y solo el vínculo abre las
+ * pólizas en el portal del cliente.
+ *
+ * El reparto de responsabilidades: `Relaciones` es el dueño de la lista y de
+ * todo lo que se escribe en `cliente_relaciones`; lo que se puede hacer con los
+ * PAPELES de una persona en las pólizas (quitarla de una) se le pasa como
+ * `renderPapeles`, porque es otra API —`/api/correduria/intervinientes`— y su
+ * estado vive aquí.
  *
  * Es un client component porque desde aquí se QUITA a una persona de una póliza
  * (03/09/2026). Todo lo que recibe son datos planos del puerto; la página que lo
@@ -34,61 +44,10 @@ export default function TabContactos({ ficha, personas }: {
   /** `null` = asegura no pudo leer quién interviene; NO es «no hay nadie». */
   personas: PersonaDePolizas[] | null
 }) {
-  const sinVinculo = candidatasAVincular(personas)
-  return (
-    <>
-      {/* Con quién se habla de verdad. «Relaciones» solo enseña lo declarado a
-          mano y casi nadie lo tiene; esto es quién sale en SUS pólizas, que es
-          lo que CIMA sí nos dice (Alberto, 02/09/2026). */}
-      <Tarjeta titulo="👤 Personas en sus pólizas">
-        <PersonasPolizas ficha={ficha} personas={personas} />
-      </Tarjeta>
-
-      {/* Editar: contactos (libres), dirección (libre) e identidad (solo con DNI recibido). */}
-      <Tarjeta titulo="✏️ Datos del cliente">
-        <EditarCliente
-          clienteId={ficha.id}
-          contactos={ficha.contactos}
-          identidad={ficha.identidad}
-          contacto={ficha.contacto}
-          documentos={ficha.documentos}
-        />
-      </Tarjeta>
-
-      {/* Quién es de quién y quién autoriza a quién a ver sus seguros. `null` = no se pudo leer, no «sin familia». */}
-      <Tarjeta titulo="👪 Relaciones y autorizaciones">
-        <Relaciones
-          clienteId={ficha.id}
-          nombreFicha={ficha.nombre}
-          inicial={ficha.relaciones}
-          sinVinculo={sinVinculo}
-          tipoPersona={tipoPersonaDe(ficha)}
-        />
-      </Tarjeta>
-    </>
-  )
-}
-
-
-/** Qué es la ficha, para ofrecer primero los vínculos de empresa en una sociedad.
- *  Solo se afirma con lo que asegura manda: `null` es «no se sabe», y adivinarlo
- *  por el nombre es justo lo que la regla de identidad prohíbe. */
-function tipoPersonaDe(ficha: Ficha): 'fisica' | 'juridica' | null {
-  const t = ficha.identidad?.tipoPersona
-  return t === 'fisica' || t === 'juridica' ? t : null
-}
-
-// Con quién se puede hablar de esta ficha, agrupado por PERSONA y no por
-// póliza: GLOBAL 2 tiene tres furgonetas con tres conductores distintos y esa
-// gente estaba enterrada póliza por póliza. Quién sale y cómo se agrupa lo
-// decide `personasDePolizas`, testeado aparte.
-function PersonasPolizas({ ficha, personas }: { ficha: Ficha; personas: PersonaDePolizas[] | null }) {
   const router = useRouter()
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [resultado, setResultado] = useState<RespuestaQuitarInterviniente | null>(null)
 
-  // Con `personas === null` no se pinta nada de esto, así que aquí la lista de
-  // filas siempre existe; el `?? []` es solo para no cargar el tipo.
   const filas = ficha.intervinientes ?? []
   const idsPorEtiqueta = etiquetasDePolizas(ficha)
 
@@ -118,80 +77,65 @@ function PersonasPolizas({ ficha, personas }: { ficha: Ficha; personas: PersonaD
     }
   }
 
-  // Tres estados, no dos: no es lo mismo «no se ha podido mirar» que «no hay nadie».
-  if (personas === null) return <p style={{ fontSize: 13, color: 'var(--muted)' }}>asegura no ha podido leer quién interviene en sus pólizas.</p>
-  if (personas.length === 0) {
+  /** Lo que dice CIMA de una persona: un papel por póliza, con lo que se puede
+   *  hacer con él. Va como render-prop dentro de la fila que pinta `Relaciones`. */
+  function renderPapeles(p: PersonaFicha<RelacionCartera>) {
+    const quien = p.nombre ?? 'esta persona'
     return (
-      <p style={{ fontSize: 13, color: 'var(--muted)' }}>
-        {ficha.polizas.length === 0
-          ? 'Todavía no tiene pólizas en la cartera.'
-          : 'En sus pólizas no aparece nadie más que la propia ficha: la compañía no manda más intervinientes.'}
-        {' '}Si hay una persona que lleva sus seguros y la compañía no la manda, se apunta abajo, en{' '}
-        <strong>👪 Relaciones y autorizaciones</strong> → «Nueva persona de contacto».
-      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, fontSize: 13 }}>
+        {papelesDe(p).map((papel, n) => (
+          <Papel
+            key={`${papel.rol}-${papel.etiqueta ?? ''}-${n}`}
+            papel={papel}
+            quien={quien}
+            linea={lineaDe(p, papel.rol, papel.etiqueta, filas, idsPorEtiqueta)}
+            ocupado={ocupado}
+            onQuitar={quitar}
+          />
+        ))}
+      </div>
     )
   }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10, fontSize: 13 }}>
-      {personas.map(p => (
-        <div key={p.clave} style={{ minWidth: 0 }}>
-          <span style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
-            {p.fichaId
-              ? <Link href={`/correduria/cliente/${p.fichaId}`}>{p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
-              : (p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre'))}
-          </span>
-          {/* Llamar · WhatsApp · escribir a ESTA persona, no al tomador: son
-              los conductores habituales, y es a ellos a quien hay que llamar.
-              El icono de WhatsApp solo sale si el número es un móvil. */}
-          {p.telefono && <> · <a href={`tel:${p.telefono.replace(/\s/g, '')}`}>📞 {p.telefono}</a></>}
-          {' '}<AccionesContacto telefono={p.telefono} email={p.email} quien={p.nombre ?? 'esta persona'} />
+    <>
+      {/* UNA lista: quién sale en sus pólizas y quién tiene vínculo declarado. */}
+      <Tarjeta titulo="👥 Personas">
+        <Relaciones
+          clienteId={ficha.id}
+          nombreFicha={ficha.nombre}
+          inicial={ficha.relaciones}
+          personas={personas}
+          renderPapeles={renderPapeles}
+          tipoPersona={tipoPersonaDe(ficha)}
+        />
+        {resultado && resultado.estado !== 'ok' && <Aviso r={resultado} />}
+      </Tarjeta>
 
-          {/* Un papel por línea, cada uno con lo que se puede hacer con ÉL: lo
-              que se quita es la fila de una póliza, no «a la persona». */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, marginTop: 2 }}>
-            {papelesDe(p).map((papel, n) => (
-              <Papel
-                key={`${papel.rol}-${papel.etiqueta ?? ''}-${n}`}
-                papel={papel}
-                quien={p.nombre ?? 'esta persona'}
-                linea={lineaDe(p, papel.rol, papel.etiqueta, filas, idsPorEtiqueta)}
-                ocupado={ocupado}
-                onQuitar={quitar}
-              />
-            ))}
-          </div>
-
-          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-            {p.relacionDeclarada
-              ? (p.relacionDeclarada === SIN_VINCULO
-                  ? '✅ revisado: no hay vínculo — sale en sus pólizas y no es nada suyo'
-                  : `👪 ${p.relacionDeclarada}`)
-              : p.fichaId
-                ? 'sin vínculo declarado — abajo, en 👪 Relaciones y autorizaciones, hay un botón para anotarlo'
-                : 'CIMA no la ha enlazado a una ficha propia: no se le puede declarar un vínculo todavía'}
-          </div>
-          {/* Dos filas con el mismo nombre no son un fallo de la pantalla: o son dos
-              personas (padre e hijo con NIF distinto) o son dos fichas de la misma
-              persona. Se dice cuál de las dos cosas es, y cuando no se sabe, se dice
-              que no se sabe — nunca se funden dos identidades. */}
-          {p.homonimia === 'distinta_persona' && (
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-              👥 Hay otra persona con este mismo nombre en sus pólizas, con NIF distinto: son dos, no una.
-            </div>
-          )}
-          {p.homonimia === 'sin_distinguir' && (
-            <div style={{ fontSize: 11, color: 'var(--warning)' }}>
-              ⚠️ Aparece otra fila con este mismo nombre y no se puede distinguir (a alguna le falta el NIF):
-              puede ser la misma persona con la ficha duplicada. No se funden desde aquí.
-            </div>
-          )}
-        </div>
-      ))}
-
-      {resultado && resultado.estado !== 'ok' && <Aviso r={resultado} />}
-    </div>
+      {/* Editar: contactos (libres), dirección (libre) e identidad (solo con DNI recibido). */}
+      <Tarjeta titulo="✏️ Datos del cliente">
+        <EditarCliente
+          clienteId={ficha.id}
+          contactos={ficha.contactos}
+          identidad={ficha.identidad}
+          contacto={ficha.contacto}
+          documentos={ficha.documentos}
+        />
+      </Tarjeta>
+    </>
   )
 }
+
+/** Qué es la ficha, para ofrecer primero los vínculos de empresa en una sociedad.
+ *  Solo se afirma con lo que asegura manda: `null` es «no se sabe», y adivinarlo
+ *  por el nombre es justo lo que la regla de identidad prohíbe. */
+function tipoPersonaDe(ficha: Ficha): 'fisica' | 'juridica' | null {
+  const t = ficha.identidad?.tipoPersona
+  return t === 'fisica' || t === 'juridica' ? t : null
+}
+
+/** Lo que `lineaDe` necesita saber de una persona: su identidad, nada más. */
+type PersonaMinima = { fichaId: string | null; nombre: string | null }
 
 /** Un papel («conductor ocasional del 1234ABC») con lo que se puede hacer con él. */
 function Papel({ papel, quien, linea, ocupado, onQuitar }: {
@@ -293,7 +237,7 @@ type Coincidencia =
   | { estado: 'ninguna' }
 
 function lineaDe(
-  persona: PersonaDePolizas,
+  persona: PersonaMinima,
   rol: string,
   etiqueta: string | null,
   filas: IntervinienteFicha[],
@@ -316,7 +260,7 @@ function lineaDe(
  * solo se cae al nombre cuando NINGUNA de las dos lo tiene. Dos fichas distintas
  * no se funden jamás, coincida lo que coincida el nombre.
  */
-function esLaMisma(fila: IntervinienteFicha, persona: PersonaDePolizas): boolean {
+function esLaMisma(fila: IntervinienteFicha, persona: PersonaMinima): boolean {
   if (fila.fichaId !== null || persona.fichaId !== null) return fila.fichaId !== null && fila.fichaId === persona.fichaId
   const a = normalizar(fila.nombre)
   const b = normalizar(persona.nombre)
@@ -329,7 +273,7 @@ function normalizar(n: string | null): string | null {
 }
 
 /** Los papeles de una persona, uno por póliza (que es la unidad que se quita). */
-function papelesDe(p: PersonaDePolizas): { rol: string; etiqueta: string | null }[] {
+function papelesDe(p: { papeles: { rol: string; polizas: string[] }[] }): { rol: string; etiqueta: string | null }[] {
   const out: { rol: string; etiqueta: string | null }[] = []
   for (const x of p.papeles) {
     // Sin etiqueta de póliza el papel se pinta igual («propietario»), pero no se
@@ -352,25 +296,3 @@ function etiquetasDePolizas(ficha: Ficha): Map<string, string[]> {
   return m
 }
 
-/**
- * Las personas de sus pólizas a las que SE PUEDE declarar un vínculo hoy:
- * tienen ficha propia y no tienen ninguno anotado. Sin ficha no hay a quién
- * vincular, y con vínculo ya no hace falta ofrecerlo.
- */
-function candidatasAVincular(personas: PersonaDePolizas[] | null): { fichaId: string; nombre: string; papel: string; ojoDuplicada: boolean }[] {
-  const out = new Map<string, { fichaId: string; nombre: string; papel: string; ojoDuplicada: boolean }>()
-  for (const p of personas ?? []) {
-    // Sin nombre legible no se puede ofrecer un botón que diga a quién vincula.
-    if (p.fichaId === null || p.relacionDeclarada !== null || p.nombre === null) continue
-    if (out.has(p.fichaId)) continue
-    out.set(p.fichaId, {
-      fichaId: p.fichaId,
-      nombre: p.nombre,
-      papel: p.papeles.map(x => etiquetaRol(x.rol)).join(' · '),
-      // Otra fila se llama igual y no se puede distinguir: declarar el vínculo
-      // aquí puede acabar en dos relaciones con la misma persona, una por ficha.
-      ojoDuplicada: p.homonimia === 'sin_distinguir',
-    })
-  }
-  return [...out.values()]
-}
