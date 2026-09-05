@@ -1277,6 +1277,15 @@
 
 ---
 
+### 🌐 (05/09/2026, IV) `grupoasegura.es` ya sirve la web de venta — y el código creía vivir en el `.com`
+Alberto, con Claude en Chrome, quitó `.es`+`www` del proyecto `asegura` (CRM de Manuel) y los ató a
+`asegura-web`: apex Valid al instante (su A ya era Vercel), `www` como 308 al apex y
+`clientes.grupoasegura.es` en `asegura-portal`, los dos pendientes del DNS de IONOS. Lo que Chrome no veía:
+`SITIO_URL` por defecto era `grupoasegura.com`, que apunta a un **parking de IONOS** (`217.160.0.254`) →
+canonical y sitemap hacia un dominio vacío. Defecto cambiado al `.es` + guardián `lib/sitio.test.ts`
+(muerde: 2 fallos con el `.com`). ⚠️ `clientes` tiene MX de IONOS: ahí va registro **A** `216.150.1.1`,
+no el CNAME del panel. Pendiente de Alberto: DNS en IONOS + envs `NEXT_PUBLIC_PORTAL_URL`/`PORTAL_PUBLIC_URL`.
+
 ### 🚪 (05/09/2026) El portal pedía el código «cada vez»: no era la sesión, era la puerta
 
 Alberto: «cliente por codigo es un poco coñazo… cada vez q entra». Pedía un enlace mágico.
