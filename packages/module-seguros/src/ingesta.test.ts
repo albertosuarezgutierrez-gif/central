@@ -1,6 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { saludIngesta, detalleSalud, DIAS_CUARENTENA_RECIENTE, HORAS_RECHAZO_RECIENTE } from './ingesta.ts'
+import {
+  saludIngesta,
+  detalleSalud,
+  DIAS_CUARENTENA_RECIENTE,
+  HORAS_RECHAZO_RECIENTE,
+  decidirAvisoIngesta,
+} from './ingesta.ts'
 
 const f = (tipo: string, entidad: string, dias: number) => ({ tipo, entidad, dias })
 
@@ -184,4 +190,80 @@ test('la ingesta sin datos deja los rechazos en null, no en lista vacía', () =>
   const s = saludIngesta({ cuarentena: null })
   assert.equal(s.estado, 'sin_datos')
   assert.equal(s.rechazos, null)
+})
+
+// ── El recordatorio ────────────────────────────────────────────────────────
+//
+// Este bloque existe por una avería REAL medida el 05/09/2026: el atasco de
+// siniestros de Occident llevaba 63 días abierto, el latido lo decía, y el
+// Telegram no sonaba desde el 08/07 porque la firma del estado no cambiaba.
+// La anti-repetición se había comido el aviso.
+
+const HOY = new Date('2026-09-05T06:45:00Z')
+
+test('la primera vez suena siempre, aunque no conste avería previa', () => {
+  const d = decidirAvisoIngesta({ firmaAnterior: null, firmaActual: 'degradada:3:20', ultimoAvisoEn: null, hoy: HOY })
+  assert.equal(d.avisar, true)
+  assert.equal(d.avisar && d.motivo, 'primera')
+})
+
+test('sin fecha del último aviso se avisa: `null` es «no lo sabemos», no «hace poco»', () => {
+  // Es la regla de la casa aplicada a una alarma. Un hueco en el registro no
+  // puede convertirse en silencio — y aquí el silencio cuesta dos meses.
+  const d = decidirAvisoIngesta({
+    firmaAnterior: 'degradada:3:20 · lo que sea',
+    firmaActual: 'degradada:3:20',
+    ultimoAvisoEn: null,
+    hoy: HOY,
+  })
+  assert.equal(d.avisar, true)
+  assert.equal(d.avisar && d.motivo, 'primera')
+})
+
+test('si el estado cambia, suena', () => {
+  const d = decidirAvisoIngesta({
+    firmaAnterior: 'degradada:3:20 · lo que sea',
+    firmaActual: 'degradada:4:21',
+    ultimoAvisoEn: new Date('2026-09-04T06:45:00Z'),
+    hoy: HOY,
+  })
+  assert.equal(d.avisar, true)
+  assert.equal(d.avisar && d.motivo, 'cambio')
+})
+
+test('si NO cambia pero lleva una semana, suena igual — este es el cepo que faltaba', () => {
+  const d = decidirAvisoIngesta({
+    firmaAnterior: 'degradada:3:20 · lo que sea',
+    firmaActual: 'degradada:3:20',
+    ultimoAvisoEn: new Date('2026-08-29T06:45:00Z'), // 7 días
+    abiertaDesde: new Date('2026-07-08T00:00:00Z'),
+    hoy: HOY,
+  })
+  assert.equal(d.avisar, true)
+  assert.equal(d.avisar && d.motivo, 'recordatorio')
+  // El mensaje tiene que poder decir cuánto lleva rota: es lo que convierte
+  // «otra vez esto» en «esto hay que arreglarlo hoy».
+  assert.equal(d.avisar && d.diasAbierta, 59)
+})
+
+test('si no cambia y avisó ayer, se calla: silenciar la REPETICIÓN sigue estando bien', () => {
+  const d = decidirAvisoIngesta({
+    firmaAnterior: 'degradada:3:20 · lo que sea',
+    firmaActual: 'degradada:3:20',
+    ultimoAvisoEn: new Date('2026-09-04T06:45:00Z'),
+    hoy: HOY,
+  })
+  assert.equal(d.avisar, false)
+})
+
+test('`abiertaDesde` desconocido NO se convierte en 0 días', () => {
+  // Un 0 se leería como «se acaba de romper» y quitaría toda la urgencia.
+  const d = decidirAvisoIngesta({
+    firmaAnterior: 'degradada:3:20 · x',
+    firmaActual: 'degradada:3:20',
+    ultimoAvisoEn: new Date('2026-08-01T06:45:00Z'),
+    hoy: HOY,
+  })
+  assert.equal(d.avisar, true)
+  assert.equal(d.avisar && d.diasAbierta, null)
 })

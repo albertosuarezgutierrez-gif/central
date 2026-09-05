@@ -45,11 +45,15 @@ export {
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
+  DIAS_RECORDATORIO_INGESTA,
+  decidirAvisoIngesta,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
   type FicheroEnCuarentena,
   type EntradaRechazada,
+  type MotivoAviso,
+  type DecisionAviso,
 } from './ingesta.ts'
 export {
   MARCADORES_SIN_DATO,
