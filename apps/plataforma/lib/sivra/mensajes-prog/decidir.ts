@@ -51,6 +51,28 @@ export function claveHito(tipo: string, fechaObjetivo: string): string {
   return `${tipo}:${fechaObjetivo}`
 }
 
+export type HitoRegistrado = { tipo: string; fechaObjetivo: string; estado: string }
+
+/** Qué hitos YA REGISTRADOS bloquean una emisión nueva.
+ *
+ * Una fila en `sombra` NO bloquea si el piso ya está ACTIVO: se generó para validar el texto y
+ * nunca llegó al huésped, así que darla por hecha lo deja sin ese mensaje para siempre. Con las
+ * plantillas de Smoobu apagadas (05/09/2026) eso ya no es "validar sin riesgo": es un mensaje
+ * perdido. Caso fundacional: la víspera con los CÓDIGOS de la reserva 154265696 (Luxury Busto) se
+ * generó en sombra 12 h ANTES de activarse el piso; con Smoobu apagado nadie se los mandó.
+ *
+ * En sombra (piso aún inactivo) sí bloquean: si no, el mismo borrador se repetiría por Telegram en
+ * cada pasada.
+ */
+export function hitosBloqueantes(filas: HitoRegistrado[], activo: boolean): Set<string> {
+  const out = new Set<string>()
+  for (const f of filas) {
+    if (activo && f.estado === 'sombra') continue
+    out.add(claveHito(f.tipo, f.fechaObjetivo))
+  }
+  return out
+}
+
 export function mensajesDebidos(
   r: ReservaMin,
   hoy: string,

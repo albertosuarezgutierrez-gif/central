@@ -264,9 +264,22 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 ## Mensajes PROGRAMADOS a huéspedes (31/08/2026 — sustituto de los automáticos de Smoobu)
 Ciclo de reserva NUESTRO (confirmación → acceso a 7 días → víspera con códigos → bienvenida →
 estancia → víspera de salida → post-salida), cron `/api/sivra/mensajes/programados` cada 30 min
-(`CRON_JOBS`). **Arranca en MODO SOMBRA**: `mensajes_prog_pisos` (fila ausente/`activo=false` =
-sombra → todo va a Telegram, nada al huésped); se activa piso a piso y entonces hay que APAGAR las
-plantillas de Smoobu (el chequeo `equivalentes-smoobu.ts` evita duplicados mientras tanto y avisa).
+(`CRON_JOBS`). Interruptor por piso en `mensajes_prog_pisos` (fila ausente/`activo=false` = MODO
+SOMBRA → todo va a Telegram, nada al huésped).
+🚨 **Desde el 05/09/2026 los CUATRO pisos están activos y las plantillas de Smoobu están APAGADAS**
+(decisión de Alberto tras validar el ciclo entero en House Sevillana): este cron es el ÚNICO que
+habla con el huésped en los hitos del ciclo. Consecuencias, las dos medidas ese día:
+- El chequeo «¿ya lo mandó Smoobu?» (`equivalentes-smoobu.ts`) **se retiró**. Era andamio de la
+  transición y, sin plantillas al otro lado, solo podía silenciar mensajes NUESTROS: su regex
+  `/BIENVENIDO/i` casa con nuestra propia plantilla («¡Bienvenido/a, …»), y de hecho se tragó la
+  bienvenida de la reserva 154265696. Además costaba una llamada a la API de Smoobu por reserva y pasada.
+- 🚨 **Una fila en `sombra` YA NO bloquea el envío real** (`hitosBloqueantes` en `decidir.ts`, y el
+  reclamo del orquestador la reclama con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`). Antes
+  `cargarYaHechos` no miraba el estado, así que un hito generado mientras el piso validaba quedaba
+  «hecho» para siempre y el huésped no lo recibía nunca. **Caso fundacional (05/09/2026):** la
+  víspera CON LOS CÓDIGOS de la reserva 154265696 (Luxury Busto, llegada ese mismo día) se generó en
+  sombra a las 09:37 del 04/09 y el piso se activó a las 21:34 — 12 horas después. En sombra sigue
+  bloqueando, o Telegram repetiría el mismo borrador en cada pasada.
 - Fuente única de acceso: **`lib/sivra/acceso.ts`** (dirección, pasos, fotos, mapas; Dúplex: llaves
   FUERA, en Javier Lasso de la Vega 7). **Los códigos NO están en el repo**: tabla
   `sivra_codigos_acceso` (BD, rotable; NULL = se declara, no se inventa).
