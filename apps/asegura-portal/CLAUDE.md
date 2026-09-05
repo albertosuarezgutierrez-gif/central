@@ -151,6 +151,35 @@ Ahora el ancho y la navegación son del armazón y la página solo aporta conten
 14 el cuerpo, 12 lo secundario, ritmo vertical de 24 px, `tabular-nums` en todo lo numérico,
 botones en **píldora** y anillo de foco de 3 px al 50 %.
 
+### 🗂 El historial de siniestros (05/09/2026) — y las tres cosas que se midieron antes
+
+Alberto, mirando el lateral: *«y los recibos? e historial siniestros?»*. **No existía:**
+`lib/cartera-lectura.ts` filtraba `estado IN ('abierto','en_tramitacion')`, así que de los **67
+siniestros de la cartera viva el portal enseñaba 7 y los 60 CERRADOS no los veía nadie**.
+
+Ahora la lectura trae el historial entero y `siniestrosAbiertos` **se deriva** de él, para que la
+guarda de nivel esté en un solo sitio. Reglas puras en
+`@central/module-seguros-portal` (`src/siniestro-historial.ts`, 9 tests).
+
+🚨 **Lo que se midió contra la BD antes de escribir la pantalla, porque cambió el diseño:**
+
+| Hallazgo | Consecuencia |
+|---|---|
+| **`siniestros.tipo` es un CÓDIGO NUMÉRICO** de la compañía (`1107`, `1915`, `1312`, `17`, `2102`…) | **No se pide ni se pinta.** Parecía el campo más útil («qué le pasó»); «Tipo 1107» no dice nada y encima parece un dato que significa algo. Cepo en `test/regression-portal-visibilidad.test.ts` sobre el bloque del `select` |
+| **No existe columna con la fecha de CIERRE.** `updated_at` es la última vez que se tocó la fila | No se dice «cerrado el X»: sería inventarse una fecha con aspecto de dato. Se dice el estado, y la fecha del **hecho** |
+| **El enum tiene CUATRO valores**: `abierto`, `en_tramitacion`, `cerrado`, `rechazado` | `rechazado` **no es** `cerrado` — uno se resolvió y el otro la compañía no lo asumió. Cuatro etiquetas distintas y tres tonos; un estado desconocido sale tal cual, nunca cae a «cerrado» |
+
+Y dos reglas de la casa aplicadas:
+- **El orden se hace en código, no en el `orderBy`**: en Postgres `DESC` implica `NULLS FIRST`, así
+  que los siniestros sin fecha se colarían arriba y enterrarían los que sí la tienen (la misma trampa
+  que ya mordió en la ficha del corredor, PR #2346). Una fecha ausente no es ni reciente ni antigua.
+- **`[] = «no nos consta ninguno»**, jamás «no has tenido ninguno»: la compañía los informa por EIAC
+  y puede no haberlo hecho. Lleva la píldora `.pendiente`, no una frase en gris.
+
+📌 **Va en la FICHA de cada póliza, no en una quinta pestaña**, y es deliberado: a la mayoría de los
+clientes esa pestaña les diría 0, y una sección casi siempre vacía no parece un producto moderno
+sino uno a medio hacer. Mismo razonamiento que la ausencia de hamburguesa.
+
 ### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
 
 Alberto: *«cliente por codigo es un poco coñazo»* y, al preguntarle si le pedía el código cada vez o

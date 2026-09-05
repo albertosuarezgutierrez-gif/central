@@ -1,4 +1,12 @@
-import { ETIQUETA_RAMO, bienTieneAlgo, describirBien, type BienAsegurado } from '@central/module-seguros-portal'
+import {
+  ETIQUETA_RAMO,
+  bienTieneAlgo,
+  describirBien,
+  etiquetaEstadoSiniestro,
+  resumirHistorialSiniestros,
+  tonoEstadoSiniestro,
+  type BienAsegurado,
+} from '@central/module-seguros-portal'
 
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
@@ -297,5 +305,77 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
       {c.lista.join(' · ')}
       {c.total > c.lista.length && ` y ${c.total - c.lista.length} más`}
     </div>
+  )
+}
+
+/**
+ * El HISTORIAL de siniestros de una póliza.
+ *
+ * Alberto: «y los recibos? e historial siniestros?». No existía — la lectura
+ * filtraba por `abierto|en_tramitacion`, así que de los 67 siniestros de la
+ * cartera viva se veían 7 y **los 60 cerrados no los veía nadie**.
+ *
+ * Los tres estados de la regla de la casa, y aquí importan los tres:
+ *
+ * - `null` = **tu nivel no llega**. No se pinta NADA, ni un «no visible»: a un
+ *   tercero, decirle que hay algo que no puede ver ya le cuenta que existe. Es
+ *   el mismo criterio que los siniestros abiertos (04/09/2026).
+ * - `[]` = **no nos consta ninguno**, que NO es «no has tenido ninguno». La
+ *   compañía los informa por EIAC y puede no haberlo hecho; afirmar lo segundo
+ *   es hablar de la vida de alguien sin haberla mirado. Por eso lleva la
+ *   píldora de hueco y no una frase en gris.
+ * - Con contenido = la lista, de lo más reciente a lo más antiguo.
+ *
+ * 🚨 Lo que NO se pinta, medido: el `tipo` (es un código numérico de la
+ * compañía: 1107, 1915, 1312…) y cualquier fecha de cierre (esa columna no
+ * existe — `updated_at` es la última vez que se tocó la fila, no el día que se
+ * cerró). Ni tramitador ni perito: gestión del corredor, regla de visibilidad.
+ */
+export function HistorialSiniestros({ p }: { p: PolizaPortal }) {
+  if (p.siniestros === null) return null
+  const lista = p.siniestros
+
+  if (lista.length === 0) {
+    return (
+      <p className="hueco">
+        <span className="pendiente">Sin informar</span>
+        No nos consta ningún siniestro en esta póliza. No significa que no hayas tenido ninguno: nos
+        los informa tu compañía.
+      </p>
+    )
+  }
+
+  const r = resumirHistorialSiniestros(lista)
+  return (
+    <>
+      <p className="suave" style={{ margin: '0 0 10px', fontSize: 13 }}>
+        {r.total === 1 ? '1 siniestro' : `${r.total} siniestros`}
+        {r.abiertos > 0 && ` · ${r.abiertos} sin cerrar`}
+      </p>
+      <ul className="siniestros">
+        {lista.map((s) => {
+          const cuando = fechaEs(s.fechaHora)
+          const tono = tonoEstadoSiniestro(s.estado)
+          return (
+            <li key={s.id} className="siniestro" data-tono={tono}>
+              <span className="siniestro-fecha">
+                {/* Es la fecha del HECHO, y se dice cuál es: sin la palabra, en
+                    una lista de siniestros se lee como la de resolución. */}
+                {cuando ? `Ocurrió el ${cuando}` : 'Sin fecha informada'}
+              </span>
+              <span
+                className={`chip${tono === 'abierto' ? ' aviso' : tono === 'rechazado' ? ' peligro' : ''}`}
+              >
+                {etiquetaEstadoSiniestro(s.estado)}
+              </span>
+              {/* La referencia es con lo que la compañía contesta al teléfono
+                  (informada en 67 de 67 de la cartera viva), así que va visible
+                  y en cifras tabulares para poder leerla en voz alta. */}
+              {s.referencia && <span className="siniestro-ref">Ref. {s.referencia}</span>}
+            </li>
+          )
+        })}
+      </ul>
+    </>
   )
 }

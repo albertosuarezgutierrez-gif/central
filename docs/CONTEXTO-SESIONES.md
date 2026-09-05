@@ -1277,6 +1277,19 @@
 
 ---
 
+### 🗂 (05/09/2026) El historial de siniestros del portal: 60 filas que no veía nadie
+
+Alberto: «y los recibos? e historial siniestros?». La lectura filtraba `abierto|en_tramitacion`, así
+que de 67 siniestros de la cartera viva se enseñaban 7.
+- Módulo puro `siniestro-historial.ts` (9 tests, 2 mutaciones vistas morder); `siniestrosAbiertos`
+  pasa a DERIVARSE del historial → la guarda de nivel queda en un solo sitio.
+- 🚨 Tres medidas contra la BD que cambiaron el diseño: **`tipo` es un código numérico** (1107, 1915…)
+  y no se pinta · **no existe fecha de cierre** (`updated_at` no lo es) · el enum tiene **CUATRO**
+  estados y `rechazado` ≠ `cerrado`.
+- Orden en código, no en `orderBy`: `DESC` en Postgres es `NULLS FIRST` y lo sin fecha se colaría
+  arriba. `[]` = «no nos consta», nunca «no has tenido».
+- Va en la ficha de cada póliza, no en una quinta pestaña (a casi todos les diría 0).
+
 ### 🌐 (05/09/2026, IV) `grupoasegura.es` ya sirve la web de venta — y el código creía vivir en el `.com`
 Alberto, con Claude en Chrome, quitó `.es`+`www` del proyecto `asegura` (CRM de Manuel) y los ató a
 `asegura-web`: apex Valid al instante (su A ya era Vercel), `www` como 308 al apex y

@@ -184,3 +184,12 @@ export {
   hrefDeVista,
 } from './vista-portal.ts'
 export type { VistaBoveda, PestanaPortal } from './vista-portal.ts'
+export {
+  ESTADOS_SINIESTRO,
+  siniestroAbierto,
+  etiquetaEstadoSiniestro,
+  tonoEstadoSiniestro,
+  ordenarHistorialSiniestros,
+  resumirHistorialSiniestros,
+} from './siniestro-historial.ts'
+export type { EstadoSiniestro, SiniestroHistorial } from './siniestro-historial.ts'
